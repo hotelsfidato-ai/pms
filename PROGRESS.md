@@ -23,9 +23,10 @@ DATABASE   db/tests/run.sh   22 migrations · 51 assertions
 ```
 
 **The seam measure:** `diff` of all 46 files under `src/pages` and
-`src/components` against the CP9 baseline — **ZERO changed**. Nine repository
-modules have moved from an in-memory store onto a real database and not one
-screen has noticed.
+`src/components` against the CP9 baseline — **ZERO changed**. All twelve
+repository modules have moved from an in-memory store onto a real database and
+not one screen has noticed. That was the claim the seam made for six
+checkpoints before anything tested it.
 
 ---
 
