@@ -1,9 +1,10 @@
 import { Menu, Search } from "lucide-react";
 import { cn } from "@/lib/cn";
 import { useUi } from "@/lib/ui";
+import { useRole } from "@/lib/session";
 import { canAccess } from "@/lib/permissions";
 import { NotificationBell } from "./NotificationBell";
-import { RoleSwitcher } from "./RoleSwitcher";
+import { AccountMenu } from "./AccountMenu";
 
 /* ══════════════════════════════════════════════════════════════════
    TOP BAR
@@ -13,7 +14,7 @@ import { RoleSwitcher } from "./RoleSwitcher";
    ══════════════════════════════════════════════════════════════════ */
 
 export function TopBar() {
-  const role = useUi((s) => s.role);
+  const role = useRole();
   const setCommandOpen = useUi((s) => s.setCommandOpen);
   const setMobileNavOpen = useUi((s) => s.setMobileNavOpen);
 
@@ -71,7 +72,7 @@ export function TopBar() {
 
         <div className="w-px h-6 bg-grey-200 mx-1" />
 
-        <RoleSwitcher />
+        <AccountMenu />
       </div>
     </header>
   );

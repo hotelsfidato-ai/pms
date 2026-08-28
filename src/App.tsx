@@ -1,16 +1,41 @@
-import { useEffect } from "react";
+import { useEffect, useRef } from "react";
 import {
   BrowserRouter, Routes, Route, Navigate, useParams,
 } from "react-router";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { AppShell } from "@/components/app/AppShell";
 import { useUi } from "@/lib/ui";
+import { useSession } from "@/lib/session";
 import DashboardPage from "@/pages/Dashboard";
 import StayViewPage from "@/pages/StayView";
 import HousekeepingPage from "@/pages/Housekeeping";
 import ArrivalsPage from "@/pages/Arrivals";
 import InHousePage from "@/pages/InHouse";
 import FoliosPage from "@/pages/Folios";
+import ManagerReportPage from "@/pages/reports/ManagerReport";
+import {
+  MonthlyOccupancyPage, MonthlyStatisticsPage, YearlyStatisticsPage,
+} from "@/pages/reports/Statistics";
+import {
+  CityLedgerPage, NoShowPage, LodgingTaxPage,
+} from "@/pages/reports/Ledgers";
+import ReportsIndexPage from "@/pages/reports/Index";
+import {
+  GuestsPage, CompaniesPage, PropertiesPage, NotificationsPage,
+  RoomTypesPage, RatePlansPage,
+} from "@/pages/Directory";
+import {
+  UsersPage, RolesPage, AuditLogPage, IntegrationsPage,
+  SettingsPage, AdminPropertiesPage,
+} from "@/pages/admin/Admin";
+import ReservationsPage from "@/pages/Reservations";
+import {
+  PaymentsPage, InvoicesPage, PropertyCityLedgerPage,
+} from "@/pages/Billing";
+import RatesPage from "@/pages/Rates";
+import NightAuditPage from "@/pages/NightAudit";
+import WalkInsPage from "@/pages/WalkIns";
+import SignInPage from "@/pages/SignIn";
 import DesignSystemPage from "@/pages/DesignSystem";
 import PlaceholderPage from "@/pages/Placeholder";
 
@@ -34,6 +59,52 @@ const queryClient = new QueryClient({
   },
 });
 
+/**
+ * Nothing renders until the session has been settled one way or the
+ * other. Rendering the shell first and redirecting after would flash a
+ * signed-in interface at someone who is not signed in.
+ */
+/**
+ * The sign-in screen, and the way back off it.
+ *
+ * Without this a successful sign-in leaves the person staring at the
+ * form they just completed — the session changed and nothing moved,
+ * which reads as a failure even though it worked.
+ */
+function SignInRoute() {
+  const status = useSession((s) => s.status);
+  if (status === "signed-in") return <Navigate to="/" replace />;
+  return <SignInPage />;
+}
+
+function RequireSession() {
+  const status = useSession((s) => s.status);
+  const restore = useSession((s) => s.restore);
+  const started = useRef(false);
+
+  useEffect(() => {
+    if (started.current) return;
+    started.current = true;
+    restore();
+  }, [restore]);
+
+  if (status === "starting") {
+    return (
+      <div
+        className="min-h-dvh grid place-items-center bg-grey-50"
+        role="status"
+        aria-live="polite"
+      >
+        <p className="text-base text-grey-500">Checking your session…</p>
+      </div>
+    );
+  }
+
+  if (status === "signed-out") return <Navigate to="/signin" replace />;
+
+  return <AppShell />;
+}
+
 /** Keeps the store in step with the property named in the URL. */
 function PropertyScope() {
   const { code } = useParams();
@@ -50,39 +121,14 @@ function PropertyIndex() {
   return <Navigate to={`/h/${code}/stay`} replace />;
 }
 
-/* Group-level routes. */
-const GROUP: Array<[path: string, title: string, carries: string, cp: string]> = [
-  ["/properties", "Properties", "the property list, read-only — adding one is under Administration", "CP6"],
-  ["/guests", "Guests", "the guest database, with duplicates visible and a merge action", "CP5"],
-  ["/companies", "Companies", "corporate accounts and their city-ledger balances", "CP6"],
-  ["/reports/manager", "Manager Report", "Today, PTD and YTD across revenue, payments and three ledgers", "CP6"],
-  ["/reports/city-ledger", "City Ledger report", "opening, debit, credit and closing per account", "CP6"],
-  ["/reports/no-show", "No Show report", "no-shows for the business date — usually empty, and still prints", "CP6"],
-  ["/reports/monthly-occupancy", "Monthly Occupancy", "occupancy percentage by day of month", "CP6"],
-  ["/reports/monthly-stats", "Monthly Statistics", "daily grid: available, sold, ADR, RevPAR, pax, tax", "CP6"],
-  ["/reports/yearly-stats", "Yearly Statistics", "the same grid by month, with grand total", "CP6"],
-  ["/reports/lodging-tax", "Lodging Tax", "statutory Excel export with two-level CGST and SGST headers", "CP6"],
-  ["/reports", "Reports", "the report taxonomy, favouritable", "CP6"],
-  ["/admin/properties", "Properties", "add a property — one form, no infrastructure", "CP6"],
-  ["/admin/users", "Users", "staff accounts and their property access", "CP6"],
-  ["/admin/roles", "Roles & permissions", "the live permission matrix, from src/lib/permissions", "CP6"],
-  ["/admin/audit-log", "Audit log", "who changed what, and when — append-only", "CP6"],
-  ["/admin/integrations", "Integrations", "channel manager and POS connection status", "CP6"],
-  ["/admin/settings", "Settings", "tax rates, check-in times, invoice series", "CP6"],
-  ["/notifications", "Notifications", "arrivals, overdue balances and failed channel syncs", "CP6"],
-];
+/* What is left unbuilt, and honestly labelled.
 
-/* Property-level routes, all under /h/:code/. */
+   Cashiering and POS are not placeholders for want of time. Neither
+   has been specified: Sattva runs live in eZee today, so POS here is
+   a migration off a working system rather than a new build, and
+   guessing at either would put a screen in front of someone that
+   contradicts what they use every day.                             */
 const PROPERTY: Array<[segment: string, title: string, carries: string, cp: string]> = [
-  ["walk-ins", "Walk-ins", "walk-ins taken today — the flow itself starts from an empty cell in Stay View", "CP5"],
-  ["room-types", "Room types", "Superior and Deluxe, with occupancy limits and rack rates", "CP6"],
-  ["rate-plans", "Rate plans", "EP, CP and MAP, and what each includes", "CP6"],
-  ["payments", "Payments", "receipts by method: cash, UPI, card, GoMMT, room posting", "CP6"],
-  ["city-ledger", "City ledger", "Agoda, Booking.com, Expedia and go-MMT balances", "CP6"],
-  ["reservations", "Reservations", "the full book — three tabs: arrivals, in house, departures", "CP5"],
-  ["invoices", "Invoices", "issued invoices, with the Georgia print preview", "CP6"],
-  ["rates", "Rates", "the rate grid, editable cells", "CP6"],
-  ["night-audit", "Night audit", "run and log — posts once, twice-run is refused", "CP6"],
   ["cashiering", "Cashiering", "unspecified — placeholder until the live flow is observed", "—"],
   ["pos", "POS", "unspecified — Sattva is live in eZee today, so this is a migration", "—"],
 ];
@@ -92,17 +138,32 @@ export default function App() {
     <QueryClientProvider client={queryClient}>
       <BrowserRouter>
         <Routes>
-          <Route element={<AppShell />}>
+          <Route path="/signin" element={<SignInRoute />} />
+
+          <Route element={<RequireSession />}>
             {/* Group level */}
             <Route path="/" element={<DashboardPage />} />
             <Route path="/design-system" element={<DesignSystemPage />} />
-            {GROUP.map(([path, title, carries, cp]) => (
-              <Route
-                key={path}
-                path={path}
-                element={<PlaceholderPage title={title} carries={carries} checkpoint={cp} />}
-              />
-            ))}
+            <Route path="/reports/manager" element={<ManagerReportPage />} />
+            <Route path="/reports/city-ledger" element={<CityLedgerPage />} />
+            <Route path="/reports/no-show" element={<NoShowPage />} />
+            <Route path="/reports/monthly-occupancy" element={<MonthlyOccupancyPage />} />
+            <Route path="/reports/monthly-stats" element={<MonthlyStatisticsPage />} />
+            <Route path="/reports/yearly-stats" element={<YearlyStatisticsPage />} />
+            <Route path="/reports/lodging-tax" element={<LodgingTaxPage />} />
+            <Route path="/reports" element={<ReportsIndexPage />} />
+
+            <Route path="/properties" element={<PropertiesPage />} />
+            <Route path="/guests" element={<GuestsPage />} />
+            <Route path="/companies" element={<CompaniesPage />} />
+            <Route path="/notifications" element={<NotificationsPage />} />
+
+            <Route path="/admin/properties" element={<AdminPropertiesPage />} />
+            <Route path="/admin/users" element={<UsersPage />} />
+            <Route path="/admin/roles" element={<RolesPage />} />
+            <Route path="/admin/audit-log" element={<AuditLogPage />} />
+            <Route path="/admin/integrations" element={<IntegrationsPage />} />
+            <Route path="/admin/settings" element={<SettingsPage />} />
 
             {/* Property level */}
             <Route
@@ -136,6 +197,42 @@ export default function App() {
             <Route
               path="/h/:code/folios"
               element={<><PropertyScope /><FoliosPage /></>}
+            />
+            <Route
+              path="/h/:code/reservations"
+              element={<><PropertyScope /><ReservationsPage /></>}
+            />
+            <Route
+              path="/h/:code/walk-ins"
+              element={<><PropertyScope /><WalkInsPage /></>}
+            />
+            <Route
+              path="/h/:code/room-types"
+              element={<><PropertyScope /><RoomTypesPage /></>}
+            />
+            <Route
+              path="/h/:code/rate-plans"
+              element={<><PropertyScope /><RatePlansPage /></>}
+            />
+            <Route
+              path="/h/:code/rates"
+              element={<><PropertyScope /><RatesPage /></>}
+            />
+            <Route
+              path="/h/:code/payments"
+              element={<><PropertyScope /><PaymentsPage /></>}
+            />
+            <Route
+              path="/h/:code/invoices"
+              element={<><PropertyScope /><InvoicesPage /></>}
+            />
+            <Route
+              path="/h/:code/city-ledger"
+              element={<><PropertyScope /><PropertyCityLedgerPage /></>}
+            />
+            <Route
+              path="/h/:code/night-audit"
+              element={<><PropertyScope /><NightAuditPage /></>}
             />
             {PROPERTY.map(([segment, title, carries, cp]) => (
               <Route

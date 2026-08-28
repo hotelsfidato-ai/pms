@@ -1,5 +1,6 @@
-import { readStays, readRooms, balanceOf } from "../store";
-import { EXTRA_ROOM_DATES, PROPERTY_ID } from "../fixtures/property";
+import { listAllRooms } from "./rooms";
+import { listStays, listOpenFolios } from "./stays";
+import { EXTRA_ROOM_DATES } from "../fixtures/property";
 import type { Stay } from "./types";
 
 /* ══════════════════════════════════════════════════════════════════
@@ -121,21 +122,39 @@ export async function getStayView(
   businessDate: string,
   length = 14,
 ): Promise<StayViewData | null> {
-  if (hotelId !== PROPERTY_ID) return null;
+  if (!hotelId) return null;
 
   const dates = windowFrom(start, length);
   const first = dates[0]!;
   const last = dates[dates.length - 1]!;
 
+  /* Fetched ONCE, then everything below is pure computation. Reaching
+     for the transport inside the per-room loop would have made this
+     eighteen requests, and eighteen chances for the chart to disagree
+     with itself halfway down. */
+  const [allRooms, allStays, openFolios] = await Promise.all([
+    listAllRooms(hotelId),
+    listStays(hotelId),
+    listOpenFolios(hotelId),
+  ]);
+
+  if (allRooms.length === 0) return null;
+
+  /* A folio only appears in `openFolios` when it carries a balance,
+     so absent IS zero. Looking each one up separately would have been
+     eighty-three more requests to learn the same thing. */
+  const balances = new Map(openFolios.map((f) => [f.stayId, f.balance]));
+  const balanceOf = (stayId: string) => balances.get(stayId) ?? 0;
+
   const sellableOn = (roomNumber: string, date: string) => {
-    const room = readRooms().find((r) => r.number === roomNumber);
+    const room = allRooms.find((r) => r.number === roomNumber);
     if (!room) return false;
-    return room.housekeeping !== "out-of-service" || EXTRA_ROOM_DATES.includes(date);
+    return room.status !== "out-of-service" || EXTRA_ROOM_DATES.includes(date);
   };
 
-  const rooms: ChartRoom[] = readRooms().map((room) => {
-    const bars: ChartBar[] = readStays()
-      .filter((s) => s.hotelId === hotelId && s.roomNumber === room.number)
+  const rooms: ChartRoom[] = allRooms.map((room) => {
+    const bars: ChartBar[] = allStays
+      .filter((s) => s.roomNumber === room.number)
       .map((s) => {
         const { from, to } = occupiedDates(s);
         if (to < first || from > last) return null;
@@ -156,16 +175,16 @@ export async function getStayView(
       .filter((b): b is ChartBar => b !== null)
       .sort((a, b) => a.startIndex - b.startIndex);
 
-    const live = readStays().filter(
-      (s) => s.hotelId === hotelId && s.roomNumber === room.number && s.status !== "cancelled",
+    const live = allStays.filter(
+      (s) => s.roomNumber === room.number && s.status !== "cancelled",
     );
 
     return {
       number: room.number,
       type: room.type,
       floor: room.floor,
-      housekeeping: room.housekeeping,
-      outOfService: room.housekeeping === "out-of-service",
+      housekeeping: room.status,
+      outOfService: room.status === "out-of-service",
       bars,
       /* All four read STATUS where status is what changes. A room is
          occupied when someone has actually checked in, not merely
@@ -176,13 +195,13 @@ export async function getStayView(
         arriving: live.some((s) => s.status === "due-in" && s.arrival === businessDate),
         reserved: live.some((s) => s.status === "due-in" && s.arrival > businessDate),
         dueOut: live.some((s) => s.status === "due-out" || (s.status === "in-house" && s.departure === businessDate)),
-        dirty: room.housekeeping === "dirty",
+        dirty: room.status === "dirty",
       },
     };
   });
 
   /* Group by room type, in the order the property declares them. */
-  const types = [...new Set(readRooms().map((r) => r.type))];
+  const types = [...new Set(allRooms.map((r) => r.type))];
   const roomTypes: ChartRoomType[] = types.map((type) => {
     const ofType = rooms.filter((r) => r.type === type);
     return {

@@ -4,7 +4,7 @@ import {
   FileText, Wallet, Plug, ScrollText,
   UserCog, Palette, BookOpen, Home, ClipboardList, type LucideIcon,
 } from "lucide-react";
-import { canAccess, type Resource, type Role } from "@/lib/permissions";
+import { can, canAccess, type Resource, type Role } from "@/lib/permissions";
 
 /* ══════════════════════════════════════════════════════════════════
    PMS NAVIGATION
@@ -89,6 +89,7 @@ const SECTIONS: NavSection[] = [
       { label: "Properties", to: "/properties", icon: Hotel, resource: "hotel", matchPrefix: true },
       { label: "Room types", to: "/h/:code/room-types", icon: LayoutDashboard, resource: "room_config" },
       { label: "Rate plans", to: "/h/:code/rate-plans", icon: Wallet, resource: "rate" },
+      { label: "Rates", to: "/h/:code/rates", icon: BarChart3, resource: "rate" },
     ],
   },
   {
@@ -104,6 +105,9 @@ const SECTIONS: NavSection[] = [
     label: "Reports",
     items: [
       { label: "Night Audit", to: "/h/:code/night-audit", icon: BarChart3, resource: "report" },
+      /* The index first — it is the taxonomy, and the seven below are
+         the shortcuts a manager pins for themselves. */
+      { label: "All reports", to: "/reports", icon: FileText, resource: "report" },
       { label: "Manager Report", to: "/reports/manager", icon: BarChart3, resource: "report" },
       { label: "City Ledger", to: "/reports/city-ledger", icon: Building2, resource: "report" },
       { label: "No Show", to: "/reports/no-show", icon: CalendarCheck, resource: "report" },
@@ -121,6 +125,14 @@ const SECTIONS: NavSection[] = [
         label: "Administration", to: "/admin/users", icon: Settings,
         resource: "user", matchPrefix: true,
         children: [
+          /* Every role can READ the property list — that entry lives
+             under Inventory. This one is about adding one, so it is
+             gated on the create grant. Without that override the front
+             desk inherits an /admin path through its read access. */
+          {
+            label: "Properties", to: "/admin/properties", icon: Hotel, resource: "hotel",
+            canSee: (role) => can(role, "create", "hotel"),
+          },
           { label: "Users", to: "/admin/users", icon: UserCog, resource: "user" },
           { label: "Roles & permissions", to: "/admin/roles", icon: ShieldCheck, resource: "role" },
           { label: "Integrations", to: "/admin/integrations", icon: Plug, resource: "integration" },

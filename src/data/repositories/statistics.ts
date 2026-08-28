@@ -1,10 +1,8 @@
 import {
-  PROPERTY_ID,
   property,
   dailyAvailableRooms,
   nightsSoldPerDay,
-  dailyOccupancy,
-} from "../fixtures/property";
+  dailyOccupancy, isDemoProperty } from "../fixtures/property";
 import type { DayStatistics, PeriodStatistics } from "./types";
 
 /* ══════════════════════════════════════════════════════════════════
@@ -29,7 +27,7 @@ export async function listDailyStatistics(
   from = PTD_FROM,
   to = PTD_TO,
 ): Promise<DayStatistics[]> {
-  if (hotelId !== PROPERTY_ID) return [];
+  if (!isDemoProperty(hotelId)) return [];
   return Object.keys(dailyAvailableRooms)
     .filter((d) => inRange(d, from, to))
     .sort()
@@ -46,7 +44,7 @@ export async function getPeriodStatistics(
   from = PTD_FROM,
   to = PTD_TO,
 ): Promise<PeriodStatistics | null> {
-  if (hotelId !== PROPERTY_ID) return null;
+  if (!isDemoProperty(hotelId)) return null;
 
   const days = await listDailyStatistics(hotelId, from, to);
   const availableRoomNights = days.reduce((t, d) => t + d.availableRooms, 0);
@@ -79,7 +77,7 @@ export async function getPeriodStatistics(
 
 /** Headline numbers for the top of the Stay View. */
 export async function getTodaySnapshot(hotelId: string, date = "2026-08-25") {
-  if (hotelId !== PROPERTY_ID) return null;
+  if (!isDemoProperty(hotelId)) return null;
   const available = dailyAvailableRooms[date] ?? 0;
   const sold = nightsSoldPerDay[date] ?? 0;
   return {

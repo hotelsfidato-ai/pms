@@ -2,6 +2,7 @@ import { NavLink, useLocation } from "react-router";
 import { PanelLeftClose, PanelLeftOpen } from "lucide-react";
 import { cn } from "@/lib/cn";
 import { useUi } from "@/lib/ui";
+import { useRole } from "@/lib/session";
 import { navigationFor, type NavItem } from "./navigation";
 import { Tooltip } from "@/components/ui";
 
@@ -12,7 +13,7 @@ import { Tooltip } from "@/components/ui";
    ══════════════════════════════════════════════════════════════════ */
 
 export function Sidebar({ onNavigate }: { onNavigate?: () => void }) {
-  const role = useUi((s) => s.role);
+  const role = useRole();
   const hotelId = useUi((s) => s.hotelId);
   const collapsed = useUi((s) => s.sidebarCollapsed);
   const toggle = useUi((s) => s.toggleSidebar);

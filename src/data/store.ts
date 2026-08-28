@@ -1,5 +1,5 @@
 import { stays as seedStays, folios as seedFolios, type Stay } from "./fixtures/reservations";
-import { roomInventory } from "./fixtures/property";
+import { roomInventory, BUSINESS_DATE } from "./fixtures/property";
 
 /* ══════════════════════════════════════════════════════════════════
    THE MUTABLE STORE
@@ -62,6 +62,14 @@ function seedPostings(): Posting[] {
   for (const f of seedFolios) {
     const stay = seedStays.find((s) => s.id === f.stayId);
     if (!stay) continue;
+
+    /* A booking that has not arrived has an empty folio. Charges post
+       when the guest is in the house; before that the tariff is an
+       expectation, not money owed. Seeding them anyway put charges
+       dated a week ahead into the audit log, into every guest's total
+       spend, and into the year-to-date column of the Manager Report. */
+    if (stay.arrival > BUSINESS_DATE) continue;
+
     const at = `${stay.arrival}T12:00:00Z`;
 
     if (f.roomCharges > 0) {
@@ -89,13 +97,27 @@ function seedPostings(): Posting[] {
         createdAt: at, user: "admin",
       });
     }
+    /* Money cannot have been received after today. A settlement posted
+       on a departure that has not happened yet would put a receipt in
+       the future — visible on Payments, on the audit log, and in every
+       balance derived from them. So a departed stay settles at
+       check-out, a stay still in the house shows what was taken at
+       check-in, and a booking that has not arrived carries no receipt
+       at all: whatever the OTA is holding has not reached this hotel. */
     if (f.payments > 0) {
-      out.push({
-        id: nextId("post"), folioId: f.stayId, businessDate: stay.departure,
-        category: "Payment", description: "Settlement",
-        amount: -f.payments, tax: 0, kind: "payment", method: "Cash",
-        reversed: false, createdAt: `${stay.departure}T11:00:00Z`, user: "admin",
-      });
+      const receivedOn =
+        stay.departure <= BUSINESS_DATE ? { date: stay.departure, time: "11:00:00Z", label: "Settlement" }
+          : stay.arrival <= BUSINESS_DATE ? { date: stay.arrival, time: "14:30:00Z", label: "Deposit at check-in" }
+          : null;
+
+      if (receivedOn) {
+        out.push({
+          id: nextId("post"), folioId: f.stayId, businessDate: receivedOn.date,
+          category: "Payment", description: receivedOn.label,
+          amount: -f.payments, tax: 0, kind: "payment", method: "Cash",
+          reversed: false, createdAt: `${receivedOn.date}T${receivedOn.time}`, user: "admin",
+        });
+      }
     }
   }
   return out;

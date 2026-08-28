@@ -1,22 +1,42 @@
-import { groups } from "../fixtures/reservations";
-import { readStays, balanceOf, postingsFor } from "../store";
+import { api, ApiError } from "@/lib/api";
+import { BUSINESS_DATE } from "../fixtures/property";
 import type { Stay, Folio } from "./types";
 
 /* ══════════════════════════════════════════════════════════════════
-   STAYS AND FOLIOS
+   STAYS AND FOLIOS — over HTTP, as of CP9
 
-   Every query takes `hotelId` first, and filters on it before doing
-   anything else. That is not ceremony while there is one property —
-   it is the shape the database already enforces with RLS, and the
-   reason adding six more properties is a data change, not a rewrite.
+   Every query takes `hotelId` first. That is not ceremony while there
+   is one property — it is the shape RLS already enforces, and it is
+   why adding six more is a data change rather than a rewrite.
+
+   THE FILTERING STAYS HERE, not in the API. Arrivals, in-house and
+   departures are three questions about one list, and eighty-three
+   rows is not a dataset worth three endpoints that can disagree with
+   each other. One request, cached by TanStack, sliced three ways —
+   which is exactly what the in-memory store did, so the swap changes
+   the transport and nothing else.
+
+   Folios moved WITH stays rather than after. A folio is keyed by its
+   reservation id; swapping stays alone would have left the interface
+   asking for postings under a uuid the store has never seen, and
+   every folio would have read zero. Silently.
    ══════════════════════════════════════════════════════════════════ */
 
 /** The business date the demo is pinned to — the Night Audit's "As On Date". */
-export const BUSINESS_DATE = "2026-08-25";
+export { BUSINESS_DATE } from "../fixtures/property";
 
-const forHotel = (hotelId: string) => readStays().filter((s) => s.hotelId === hotelId);
 const clone = <T,>(rows: T[]): T[] => rows.map((r) => ({ ...r }));
-const round = (n: number) => Math.round(n * 100) / 100;
+
+/** A property the caller cannot see is empty, not an error. */
+async function fetchStays(hotelId: string): Promise<Stay[]> {
+  if (!hotelId) return [];
+  try {
+    return await api<Stay[]>(`/api/hotels/${hotelId}/stays`);
+  } catch (error) {
+    if (error instanceof ApiError && error.status === 404) return [];
+    throw error;
+  }
+}
 
 export interface StayFilter {
   status?: Stay["status"][];
@@ -33,7 +53,7 @@ export async function listStays(
   hotelId: string,
   filter: StayFilter = {},
 ): Promise<Stay[]> {
-  let rows = forHotel(hotelId);
+  let rows = await fetchStays(hotelId);
 
   if (filter.status?.length) rows = rows.filter((s) => filter.status!.includes(s.status));
   if (filter.source?.length) rows = rows.filter((s) => filter.source!.includes(s.source));
@@ -56,21 +76,27 @@ export async function listStays(
 }
 
 export async function getStay(hotelId: string, id: string): Promise<Stay | null> {
-  return forHotel(hotelId).find((s) => s.id === id) ?? null;
+  if (!hotelId || !id) return null;
+  try {
+    return await api<Stay>(`/api/hotels/${hotelId}/stays/${id}`);
+  } catch (error) {
+    if (error instanceof ApiError && error.status === 404) return null;
+    throw error;
+  }
 }
 
 /* ── The front desk's three working lists ──────────────────────────
    Named for what a clerk is doing, not for a status value.        ═══ */
 
 export async function listArrivals(hotelId: string, date = BUSINESS_DATE) {
-  const rows = forHotel(hotelId).filter(
+  const rows = (await fetchStays(hotelId)).filter(
     (s) => s.arrival === date && s.status !== "cancelled",
   );
   return clone(rows).sort((a, b) => a.roomNumber.localeCompare(b.roomNumber));
 }
 
 export async function listInHouse(hotelId: string, date = BUSINESS_DATE) {
-  const rows = forHotel(hotelId).filter(
+  const rows = (await fetchStays(hotelId)).filter(
     (s) =>
       s.status !== "cancelled" &&
       !s.isDayUse &&
@@ -81,7 +107,7 @@ export async function listInHouse(hotelId: string, date = BUSINESS_DATE) {
 }
 
 export async function listDepartures(hotelId: string, date = BUSINESS_DATE) {
-  const rows = forHotel(hotelId).filter(
+  const rows = (await fetchStays(hotelId)).filter(
     (s) => s.departure === date && s.status !== "cancelled",
   );
   return clone(rows).sort((a, b) => a.roomNumber.localeCompare(b.roomNumber));
@@ -97,45 +123,67 @@ export async function listVacant(hotelId: string, date = BUSINESS_DATE) {
 /* ── Folios ───────────────────────────────────────────────────────── */
 
 export async function getFolio(hotelId: string, stayId: string): Promise<Folio | null> {
-  const stay = await getStay(hotelId, stayId);
-  if (!stay) return null;
-
-  /* Derived from the ledger, never stored — see src/data/store.ts. */
-  const lines = postingsFor(stayId).filter((p) => !p.reversed);
-  const charges = lines.filter((p) => p.kind !== "payment");
-  const payments = lines.filter((p) => p.kind === "payment");
-  const balance = balanceOf(stayId);
-
-  return {
-    stayId,
-    roomCharges: round(charges.filter((p) => p.amount > 0).reduce((t, p) => t + p.amount, 0)),
-    extraCharges: 0,
-    tax: round(charges.reduce((t, p) => t + p.tax, 0)),
-    discount: round(-charges.filter((p) => p.amount < 0).reduce((t, p) => t + p.amount, 0)),
-    payments: round(-payments.reduce((t, p) => t + p.amount, 0)),
-    balance,
-    status: balance === 0 ? "settled" : "open",
-  };
+  if (!hotelId || !stayId) return null;
+  try {
+    return await api<Folio>(`/api/hotels/${hotelId}/stays/${stayId}/folio`);
+  } catch (error) {
+    /* An unknown stay is null, not a folio of zeros — a zeroed folio
+       reads as "settled", which is the wrong answer to "does this
+       guest owe anything". */
+    if (error instanceof ApiError && error.status === 404) return null;
+    throw error;
+  }
 }
 
 /** Folios still carrying a balance — includes overpayments, which are negative. */
-export async function listOpenFolios(hotelId: string): Promise<Array<Folio & { stay: Stay }>> {
-  const out: Array<Folio & { stay: Stay }> = [];
-  for (const stay of forHotel(hotelId)) {
-    const folio = await getFolio(hotelId, stay.id);
-    if (folio && folio.balance !== 0) out.push({ ...folio, stay });
-  }
-  return out.sort((a, b) => a.balance - b.balance);
+export async function listOpenFolios(
+  hotelId: string,
+): Promise<Array<Folio & { stay: Stay }>> {
+  if (!hotelId) return [];
+
+  const [folios, stays] = await Promise.all([
+    api<Folio[]>(`/api/hotels/${hotelId}/folios`).catch((error) => {
+      if (error instanceof ApiError && error.status === 404) return [];
+      throw error;
+    }),
+    fetchStays(hotelId),
+  ]);
+
+  const byId = new Map(stays.map((s) => [s.id, s]));
+
+  return folios
+    .filter((f) => byId.has(f.stayId))
+    .map((f) => ({ ...f, stay: byId.get(f.stayId)! }))
+    .sort((a, b) => a.balance - b.balance);
 }
 
 /* ── Groups ───────────────────────────────────────────────────────── */
 
-export async function listGroups(hotelId: string) {
-  return groups.filter((g) => g.hotelId === hotelId).map((g) => ({ ...g }));
+export interface StayGroup {
+  id: string;
+  hotelId: string;
+  name: string;
+  reference: string;
+  rooms: number;
+  arrival: string;
+  departure: string;
 }
 
-export async function listGroupMembers(hotelId: string, groupId: string): Promise<Stay[]> {
-  return clone(forHotel(hotelId).filter((s) => s.groupId === groupId));
+export async function listGroups(hotelId: string): Promise<StayGroup[]> {
+  if (!hotelId) return [];
+  try {
+    return await api<StayGroup[]>(`/api/hotels/${hotelId}/groups`);
+  } catch (error) {
+    if (error instanceof ApiError && error.status === 404) return [];
+    throw error;
+  }
+}
+
+export async function listGroupMembers(
+  hotelId: string,
+  groupId: string,
+): Promise<Stay[]> {
+  return clone((await fetchStays(hotelId)).filter((s) => s.groupId === groupId));
 }
 
 /* ══════════════════════════════════════════════════════════════════
@@ -150,29 +198,14 @@ export async function listGroupMembers(hotelId: string, groupId: string): Promis
 export const staysRepo = {
   list: listStays,
   get: getStay,
-  listArrivals,
-  listInHouse,
-  listDepartures,
-  listVacant,
-  getFolio,
-  listOpenFolios,
-  listGroups,
-  listGroupMembers,
-  BUSINESS_DATE,
-
-  /** Composite helpers some callers expect. */
-  async checkIn(hotelId: string, stayId: string, roomNumber?: string) {
-    const { checkIn } = await import("./operations");
-    return checkIn(hotelId, stayId, {
-      roomNumber: roomNumber ?? "",
-      adults: 1, children: 0, ratePlan: "CP",
-      idCaptured: true, businessDate: BUSINESS_DATE, user: "front desk",
-    });
-  },
-  async checkOut(hotelId: string, stayId: string) {
-    const { checkOut } = await import("./operations");
-    return checkOut(hotelId, stayId, "front desk");
-  },
+  arrivals: listArrivals,
+  inHouse: listInHouse,
+  departures: listDepartures,
+  vacant: listVacant,
+  folio: getFolio,
+  openFolios: listOpenFolios,
+  groups: listGroups,
+  groupMembers: listGroupMembers,
 };
 
 export const stayRepo = staysRepo;

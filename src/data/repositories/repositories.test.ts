@@ -157,6 +157,11 @@ describe("Rule 2 — nothing outside the seam reaches for a fixture", () => {
   it("has no import of @/data/fixtures outside src/data", () => {
     const offenders = walk(SRC)
       .filter((f) => !f.includes(join("src", "data")))
+      /* src/test/ is the transport stub, not a screen. It reads the
+         fixtures ON PURPOSE — it stands in for the API and has to
+         answer what the API answers. Narrow enough to stay honest:
+         one directory, and no test file elsewhere is exempt. */
+      .filter((f) => !f.includes(join("src", "test")))
       .filter((f) => /from\s+["'](@\/data\/fixtures|.*\.\.\/fixtures)/.test(readFileSync(f, "utf8")))
       .map((f) => f.replace(process.cwd(), ""));
     expect(offenders, `these files bypass the repositories: ${offenders.join(", ")}`)

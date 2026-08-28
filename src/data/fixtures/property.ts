@@ -114,6 +114,39 @@ for (const date of Object.keys(dailyAvailableRooms)) {
 // Also export the raw data for repositories that need it
 export { dailyAvailableRooms, nightsSoldPerDay };
 
+/**
+ * The date the demo is pinned to — the Night Audit's "As On Date".
+ * It lives here because the fixtures are calibrated against it and
+ * the store seeds from it; the repositories re-export it.
+ */
+/**
+ * The hotel CODE this property has in Postgres. `hotels.code` is what
+ * appears in a URL — migration 002 says so — and it is what a person
+ * can read back over the phone.
+ */
+export const PROPERTY_CODE = "5EL";
+
+/**
+ * ⚠ TRANSITIONAL, and it has a removal condition.
+ *
+ * CP9 moves the repositories from this fixture onto HTTP one module at
+ * a time. While that is half-done, a screen passes the id the SWAPPED
+ * modules use ("5EL") to modules that have not swapped yet and still
+ * expect "5-elements-akkalkot".
+ *
+ * Without this they returned an empty array — the dashboard showed
+ * three properties and 0% occupancy for all of them, with no error
+ * anywhere. A silent zero on a report an owner reads is the worst
+ * failure this project has, and it appeared the moment the first
+ * module moved.
+ *
+ * DELETE THIS, and every caller, when the last module is on HTTP.
+ */
+export const isDemoProperty = (hotelId: string): boolean =>
+  hotelId === PROPERTY_ID || hotelId === PROPERTY_CODE;
+
+export const BUSINESS_DATE = "2026-08-25";
+
 export const property = {
   id: PROPERTY_ID,
   name: "5 Elements Akkalkot",
@@ -131,7 +164,7 @@ export const property = {
   tax: { cgst: 2.5, sgst: 2.5 },
   financialYearStart: "04-01", // 1 April
   // Two series observed in production: 5EFH-prefixed and plain zero-padded numeric
-  invoiceSeries: [{ prefix: "5EFH", next: 154 }, { prefix: "", next: 39, pad: 6 }],
+  invoiceSeries: [{ prefix: "5EFH", next: 154 }, { prefix: "", next: 39, pad: 6 }] as Array<{ prefix: string; next: number; pad?: number }>,
   posOutlets: [{ id: "sattva", name: "Sattva", categories: ["Food", "Beverages"] }],
   paymentMethods: ["Cash", "UPI", "Credit Card", "Debit Card", "GoMMT", "Google Pay", "Room Posting"],
   // Calibration metadata — verified by the assertions above

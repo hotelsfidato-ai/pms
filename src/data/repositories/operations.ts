@@ -1,12 +1,15 @@
+/* `operations` no longer touches the in-memory store at all — not to
+   read and not to write. Every one of the five flows goes to Postgres,
+   and `Posting` is the only thing left that this module takes from
+   there: a type, not data. */
+import type { Posting } from "../store";
+import { isDemoProperty } from "../fixtures/property";
+import { listAllRooms, setHousekeeping } from "./rooms";
+import { getStay, listStays, getFolio } from "./stays";
+import { api, ApiError } from "@/lib/api";
 import {
-  readStays, readRooms, mutateStay, addStay, addPosting, reversePosting,
-  setRoomHousekeeping, balanceOf, postingsFor, nextReference, newStayId,
-  type Posting,
-} from "../store";
-import { PROPERTY_ID } from "../fixtures/property";
-import {
-  taxOn, canCheckIn, canAssignRoom, canPostCharge, canReverse,
-  canCheckOut, canMarkClean, canMarkInspected, canConfirmWalkIn,
+  canCheckIn, canPostCharge, canReverse,
+  canCheckOut, canConfirmWalkIn,
   type ChargeCategory, type PaymentMethod,
 } from "@/lib/rules";
 import { money } from "@/lib/format";
@@ -24,9 +27,7 @@ import type { Stay, Permitted } from "./types";
 
 export type { Posting };
 
-const guard = (hotelId: string) => hotelId === PROPERTY_ID;
-const stayById = (hotelId: string, id: string) =>
-  readStays().find((s) => s.id === id && s.hotelId === hotelId) ?? null;
+const guard = isDemoProperty;
 
 export interface OperationResult<T = void> {
   ok: boolean;
@@ -39,13 +40,18 @@ const refuse = (reason: string): OperationResult<never> => ({ ok: false, reason 
 /* ── Folio reads ──────────────────────────────────────────────────── */
 
 export async function getFolioPostings(hotelId: string, stayId: string): Promise<Posting[]> {
-  if (!guard(hotelId) || !stayById(hotelId, stayId)) return [];
-  return postingsFor(stayId).map((p) => ({ ...p }));
+  if (!hotelId || !stayId) return [];
+  try {
+    return await api<Posting[]>(`/api/hotels/${hotelId}/stays/${stayId}/postings`);
+  } catch (error) {
+    if (error instanceof ApiError && error.status === 404) return [];
+    throw error;
+  }
 }
 
 export async function getFolioBalance(hotelId: string, stayId: string): Promise<number> {
-  if (!guard(hotelId) || !stayById(hotelId, stayId)) return 0;
-  return balanceOf(stayId);
+  const folio = await getFolio(hotelId, stayId);
+  return folio?.balance ?? 0;
 }
 
 /* ── A · Arrival → in house ───────────────────────────────────────── */
@@ -53,31 +59,70 @@ export async function getFolioBalance(hotelId: string, stayId: string): Promise<
 export async function checkInAllowed(
   hotelId: string, stayId: string, businessDate: string,
 ): Promise<Permitted> {
-  const stay = stayById(hotelId, stayId);
+  /* Reads the SAME source the write does.
+
+     This read the in-memory store while `checkIn` had moved onto HTTP,
+     so it looked up a Postgres uuid in a store that has never seen
+     one, found nothing, and disabled the button — permanently, with
+     "Reservation not found." A clerk would have seen a check-in they
+     could never perform and no way to find out why.
+
+     A gate that consults a different source from the action it guards
+     is not a gate. */
+  const stay = await getStay(hotelId, stayId);
   if (!stay) return { allowed: false, reason: "Reservation not found." };
   return canCheckIn(stay, businessDate);
 }
 
 /** Rooms a guest of this type may actually be put in. */
-export async function assignableRooms(hotelId: string, roomType: string, businessDate: string) {
-  if (!guard(hotelId)) return [];
-  const occupied = new Set(
-    readStays()
-      .filter(
-        (s) =>
-          s.status !== "cancelled" && !s.isDayUse &&
-          s.arrival <= businessDate && s.departure > businessDate,
-      )
-      .map((s) => s.roomNumber),
-  );
-  return readRooms()
+export async function assignableRooms(
+  hotelId: string, roomType: string, businessDate: string,
+) {
+  /* Which rooms a guest of this type can be put in tonight, and why
+     not, for the ones they cannot. Both lists come from the API now —
+     the room inventory and who is in it — because a picker built from
+     the store would have offered rooms the server then refused. */
+  const [rooms, stays] = await Promise.all([
+    listAllRooms(hotelId),
+    listStays(hotelId),
+  ]);
+
+  /* Occupied means somebody has CHECKED IN and not left. Not "a
+     booking covers tonight" — that would have counted the arrival
+     being checked in as the reason it could not be checked in, and it
+     did: the guest's own pre-assigned room came back disabled.
+
+     Status, not dates. Third time this has bitten (MEMORY.md 3). */
+  const takenBy = new Map<string, string>();
+  for (const s of stays) {
+    if (s.status === "in-house" || s.status === "due-out") {
+      takenBy.set(s.roomNumber, s.guest);
+    }
+  }
+  void businessDate;
+
+  return rooms
     .filter((r) => r.type === roomType)
     .map((r) => {
-      const permitted = canAssignRoom({
-        housekeeping: r.housekeeping,
-        occupied: occupied.has(r.number),
-      });
-      return { ...r, ...permitted };
+      /* The seam keeps the name the screens already read. The API calls
+         it `status`; the store called it `housekeeping`, and CheckInFlow
+         was written against the store. Renaming it here would have been
+         the first time this swap forced a SCREEN to change — which is
+         the one thing the checkpoint is measuring. Mapping belongs in
+         the repository; that is what a seam is for. */
+      const base = { ...r, housekeeping: r.status };
+
+      if (r.status === "out-of-service") {
+        return { ...base, allowed: false, reason: "Held out of service." };
+      }
+      if (r.status === "dirty") {
+        return { ...base, allowed: false, reason: "Not cleaned yet." };
+      }
+      const occupant = takenBy.get(r.number);
+      if (occupant) {
+        return { ...base, allowed: false, reason: `${occupant} is in this room.` };
+      }
+      return { ...base, allowed: true, reason: undefined as string | undefined };
     });
 }
 
@@ -95,34 +140,28 @@ export async function checkIn(
     user: string;
   },
 ): Promise<OperationResult<Stay>> {
-  const stay = stayById(hotelId, stayId);
-  if (!stay) return refuse("Reservation not found.");
+  /* Writes to Postgres, in ONE transaction, and the DATABASE refuses.
+     `src/lib/rules.ts` still disables the button — that is what a clerk
+     should see — but a rule enforced only in the browser is a
+     suggestion, and a suggestion is not what stops a room being sold
+     twice. The refusal comes back as a sentence, not a constraint
+     name, because a clerk has to act on it. */
+  try {
+    await api<{ ok: true }>(
+      `/api/hotels/${hotelId}/stays/${stayId}/check-in`,
+      { method: "POST", body: JSON.stringify(input) },
+    );
+  } catch (error) {
+    if (error instanceof ApiError) return refuse(error.message);
+    throw error;
+  }
 
-  const permitted = canCheckIn(stay, input.businessDate);
-  if (!permitted.allowed) return refuse(permitted.reason!);
-
-  const rooms = await assignableRooms(hotelId, stay.roomType, input.businessDate);
-  const room = rooms.find((r) => r.number === input.roomNumber);
-  if (!room) return refuse("That room is not part of this property.");
-  if (!room.allowed && room.number !== stay.roomNumber) return refuse(room.reason!);
-
-  if (!input.idCaptured && !input.idSkipReason?.trim())
-    return refuse("Capture the guest's ID, or give a reason for skipping it.");
-
-  const updated = mutateStay(stayId, {
-    status: "in-house",
-    roomNumber: input.roomNumber,
-    adults: input.adults,
-    children: input.children,
-    ratePlan: input.ratePlan,
-    notes: input.idCaptured
-      ? stay.notes
-      : [stay.notes, `ID not captured — ${input.idSkipReason}`].filter(Boolean).join(" · "),
-  });
-  if (!updated) return refuse("Could not update the reservation.");
-
-  /* An occupied room is not clean. */
-  setRoomHousekeeping(input.roomNumber, "occupied");
+  /* Read back rather than assume. The server decides the final state —
+     it may have released a pre-assignment or corrected occupancy — and
+     returning a locally-guessed object is how a screen shows something
+     the database does not agree with. */
+  const updated = await getStay(hotelId, stayId);
+  if (!updated) return refuse("Checked in, but the reservation could not be re-read.");
   return { ok: true, data: updated };
 }
 
@@ -140,32 +179,43 @@ export async function postCharge(
     user: string;
   },
 ): Promise<OperationResult<Posting>> {
-  const stay = stayById(hotelId, stayId);
+  /* The tax rate comes from the PROPERTY, server-side — `taxOn()` in
+     src/lib/rules.ts still shows the clerk what will be charged, but
+     the figure that lands in the ledger is computed where the rate
+     lives. GST is a state subject; a constant in the browser is the
+     wrong place for it. */
+  /* The browser's copy of the rule answers instantly and without a
+     round trip. It is not the enforcement — the server refuses too —
+     but a clerk should not wait on the network to be told a closed
+     folio cannot take a charge. */
+  const stay = await getStay(hotelId, stayId);
   if (!stay) return refuse("Reservation not found.");
-
   const permitted = canPostCharge(stay);
   if (!permitted.allowed) return refuse(permitted.reason!);
   if (!input.description.trim()) return refuse("A charge needs a description.");
   if (input.amount === 0) return refuse("A charge of zero is not a charge.");
 
-  const posting = addPosting({
-    folioId: stayId,
-    businessDate: input.businessDate,
-    category: input.category,
-    description: input.description.trim(),
-    amount: input.amount,
-    tax: input.taxable ? taxOn(input.amount) : 0,
-    kind: "charge",
-    user: input.user,
-  });
-  return { ok: true, data: posting };
+  try {
+    await api(`/api/hotels/${hotelId}/stays/${stayId}/charges`, {
+      method: "POST",
+      body: JSON.stringify(input),
+    });
+  } catch (error) {
+    if (error instanceof ApiError) return refuse(error.message);
+    throw error;
+  }
+
+  const posting = (await getFolioPostings(hotelId, stayId)).at(-1);
+  return posting ? { ok: true, data: posting } : { ok: true };
 }
 
 export async function reverseChargeAllowed(
   hotelId: string, stayId: string, postingId: string,
 ): Promise<Permitted> {
-  if (!guard(hotelId)) return { allowed: false, reason: "Unknown property." };
-  const posting = postingsFor(stayId).find((p) => p.id === postingId);
+  /* Reads the same postings the reversal will act on. A gate that
+     consults a different source from the action it guards is not a
+     gate — see MEMORY.md 14. */
+  const posting = (await getFolioPostings(hotelId, stayId)).find((p) => p.id === postingId);
   if (!posting) return { allowed: false, reason: "Posting not found." };
   return canReverse({ reversed: posting.reversed, isReversal: posting.kind === "reversal" });
 }
@@ -173,11 +223,22 @@ export async function reverseChargeAllowed(
 export async function reverseCharge(
   hotelId: string, stayId: string, postingId: string, user: string,
 ): Promise<OperationResult<Posting>> {
-  const permitted = await reverseChargeAllowed(hotelId, stayId, postingId);
-  if (!permitted.allowed) return refuse(permitted.reason!);
-  const reversal = reversePosting(postingId, user);
-  if (!reversal) return refuse("Could not reverse that posting.");
-  return { ok: true, data: reversal };
+  /* The reversal is a NEW row. Nothing is edited and nothing is
+     deleted, so the posting count goes UP when something is undone —
+     which is the opposite of what most people expect and exactly what
+     makes the ledger auditable. */
+  try {
+    await api(
+      `/api/hotels/${hotelId}/stays/${stayId}/charges/${postingId}/reverse`,
+      { method: "POST", body: JSON.stringify({ user }) },
+    );
+  } catch (error) {
+    if (error instanceof ApiError) return refuse(error.message);
+    throw error;
+  }
+
+  const reversal = (await getFolioPostings(hotelId, stayId)).at(-1);
+  return reversal ? { ok: true, data: reversal } : { ok: true };
 }
 
 /* ── C · Departure → settle → check out ───────────────────────────── */
@@ -187,56 +248,54 @@ export async function settle(
   stayId: string,
   input: { method: PaymentMethod; amount: number; businessDate: string; user: string },
 ): Promise<OperationResult<Posting>> {
-  const stay = stayById(hotelId, stayId);
-  if (!stay) return refuse("Reservation not found.");
-  if (input.amount <= 0) return refuse("A payment must be greater than zero.");
+  try {
+    await api(`/api/hotels/${hotelId}/stays/${stayId}/payments`, {
+      method: "POST",
+      body: JSON.stringify(input),
+    });
+  } catch (error) {
+    if (error instanceof ApiError) return refuse(error.message);
+    throw error;
+  }
 
-  const posting = addPosting({
-    folioId: stayId,
-    businessDate: input.businessDate,
-    category: "Payment",
-    description: input.method === "Bill to company"
-      ? "Transferred to city ledger"
-      : `Received — ${input.method}`,
-    amount: -input.amount,
-    tax: 0,
-    kind: "payment",
-    method: input.method,
-    user: input.user,
-  });
-  return { ok: true, data: posting };
+  const posting = (await getFolioPostings(hotelId, stayId)).at(-1);
+  return posting ? { ok: true, data: posting } : { ok: true };
 }
 
 export async function checkOutAllowed(hotelId: string, stayId: string): Promise<Permitted> {
-  const stay = stayById(hotelId, stayId);
+  const stay = await getStay(hotelId, stayId);
   if (!stay) return { allowed: false, reason: "Reservation not found." };
-  return canCheckOut(stay, balanceOf(stayId), money);
+  return canCheckOut(stay, await getFolioBalance(hotelId, stayId), money);
 }
 
 export async function checkOut(
   hotelId: string, stayId: string, user: string,
 ): Promise<OperationResult<Stay>> {
-  const permitted = await checkOutAllowed(hotelId, stayId);
-  if (!permitted.allowed) return refuse(permitted.reason!);
+  /* The BALANCE decides, server-side. A guest cannot walk out owing
+     money without somebody deciding to let them, and that decision is
+     a transfer to the city ledger — which is itself a posting, not a
+     silent exception.
 
-  const stay = stayById(hotelId, stayId)!;
-  const updated = mutateStay(stayId, { status: "checked-out" });
-  if (!updated) return refuse("Could not close the stay.");
+     Check-out also releases the room, marks it vacant and marks it
+     DIRTY, so it reaches housekeeping the moment the guest walks out
+     rather than the next time somebody remembers. */
+  try {
+    await api(`/api/hotels/${hotelId}/stays/${stayId}/check-out`, {
+      method: "POST",
+      body: JSON.stringify({ user }),
+    });
+  } catch (error) {
+    if (error instanceof ApiError) return refuse(error.message);
+    throw error;
+  }
 
-  /* The room the guest just left is dirty, and appears on housekeeping's
-     board the moment they walk out. */
-  setRoomHousekeeping(stay.roomNumber, "dirty");
-  void user;
+  const updated = await getStay(hotelId, stayId);
+  if (!updated) return refuse("Checked out, but the reservation could not be re-read.");
   return { ok: true, data: updated };
 }
 
 /* ── D · Walk-in ──────────────────────────────────────────────────── */
 
-function addDaysIso(iso: string, n: number): string {
-  const d = new Date(`${iso}T00:00:00Z`);
-  d.setUTCDate(d.getUTCDate() + n);
-  return d.toISOString().slice(0, 10);
-}
 
 export async function createWalkIn(
   hotelId: string,
@@ -254,61 +313,32 @@ export async function createWalkIn(
     user: string;
   },
 ): Promise<OperationResult<Stay>> {
-  if (!guard(hotelId)) return refuse("Unknown property.");
+  /* This wrote the new stay into the in-memory store while every
+     screen had moved onto HTTP. The walk-in would have reported
+     success and then not existed — no error, no row, and a clerk
+     looking at an empty chart with a guest standing in front of them.
 
+     The reference is now generated by the DATABASE. `nextReference()`
+     produced one client-side, which cannot stay unique the moment two
+     clerks take a walk-in at the same desk. */
   const permitted = canConfirmWalkIn(input);
   if (!permitted.allowed) return refuse(permitted.reason!);
 
-  const room = readRooms().find((r) => r.number === input.roomNumber);
-  if (!room) return refuse("That room is not part of this property.");
+  let created: { id: string } | undefined;
+  try {
+    const out = await api<{ ok: true; data?: { id: string } }>(
+      `/api/hotels/${hotelId}/walk-ins`,
+      { method: "POST", body: JSON.stringify(input) },
+    );
+    created = out.data;
+  } catch (error) {
+    if (error instanceof ApiError) return refuse(error.message);
+    throw error;
+  }
 
-  const occupied = readStays().some(
-    (s) =>
-      s.roomNumber === input.roomNumber && s.status !== "cancelled" && !s.isDayUse &&
-      s.arrival <= input.businessDate && s.departure > input.businessDate,
-  );
-  const assignable = canAssignRoom({ housekeeping: room.housekeeping, occupied });
-  if (!assignable.allowed) return refuse(assignable.reason!);
-
-  const stay: Stay = {
-    id: newStayId(),
-    hotelId,
-    reference: nextReference(),
-    guest: input.guestName.trim(),
-    roomNumber: input.roomNumber,
-    roomType: room.type,
-    source: "Walk-in",
-    ratePlan: input.ratePlan,
-    arrival: input.businessDate,
-    departure: addDaysIso(input.businessDate, input.nights),
-    nights: input.nights,
-    adults: input.adults,
-    children: input.children,
-    /* A walk-in is one act, not a booking followed by a check-in. */
-    status: "in-house",
-    isDayUse: false,
-    isComplimentary: false,
-    rackTariff: input.rackTariff,
-    offeredTariff: input.offeredTariff,
-    notes: input.overrideReason.trim()
-      ? `Rate override — ${input.overrideReason.trim()}`
-      : undefined,
-  };
-
-  addStay(stay);
-  addPosting({
-    folioId: stay.id,
-    businessDate: input.businessDate,
-    category: "Room posting",
-    description: `Room ${stay.roomNumber} · ${input.nights} night${input.nights === 1 ? "" : "s"}`,
-    amount: input.offeredTariff * input.nights,
-    tax: taxOn(input.offeredTariff * input.nights),
-    kind: "charge",
-    user: input.user,
-  });
-  setRoomHousekeeping(input.roomNumber, "occupied");
-
-  return { ok: true, data: stay };
+  if (!created?.id) return refuse("Walk-in taken, but it could not be re-read.");
+  const stay = await getStay(hotelId, created.id);
+  return stay ? { ok: true, data: stay } : refuse("Walk-in taken, but it could not be re-read.");
 }
 
 /* ── E · Housekeeping ─────────────────────────────────────────────── */
@@ -324,24 +354,51 @@ export interface HousekeepingRoom {
 }
 
 export async function listHousekeeping(
-  hotelId: string, businessDate: string,
+  hotelId: string,
+  /* Kept in the signature: every seam function is asked "as at when",
+     and a board that silently ignored the date would be the odd one
+     out. Occupancy now comes from stay STATUS rather than from
+     comparing dates — see below — so nothing here reads it yet. It
+     will when the business date stops being a constant (CP11). */
+  _businessDate: string,
 ): Promise<HousekeepingRoom[]> {
   if (!guard(hotelId)) return [];
-  const live = readStays().filter((s) => s.hotelId === hotelId && s.status !== "cancelled");
+  const live = (await listStays(hotelId)).filter((s) => s.status !== "cancelled");
 
-  return readRooms().map((room) => {
+  /* Rooms from the API, stays from the store — a hybrid, because CP9
+     is half-done. It is the ROOM that has moved, and reading it from
+     the store here would have left this board writing to Postgres and
+     reading its own change back from somewhere else. */
+  const rooms = await listAllRooms(hotelId);
+
+  return rooms.map((room) => {
+    /* Status, not dates. `departure > businessDate` read a DUE-OUT
+       guest as gone, so room 202 appeared under "Vacant clean" with
+       the guest's name beside it — a housekeeper would have walked
+       into an occupied room. A guest is in the room until they check
+       out; that is what due-out means.
+
+       Day-use is not excluded either, for the same reason. A day-use
+       guest is in the room until they leave it; that the stay books no
+       night is an accounting fact, not a housekeeping one. Room 202
+       was the case: a day-use guest sitting in a room the board called
+       "Vacant clean".
+
+       This is MEMORY.md defect 3 again, in a second place: derive from
+       status, because a date cannot tell you whether the person has
+       actually left. */
     const inRoom = live.find(
-      (s) => s.roomNumber === room.number && !s.isDayUse &&
-        s.arrival <= businessDate && s.departure > businessDate,
+      (s) => s.roomNumber === room.number &&
+        (s.status === "in-house" || s.status === "due-out"),
     );
     const leaving = live.find(
-      (s) => s.roomNumber === room.number && s.departure === businessDate,
+      (s) => s.roomNumber === room.number && s.status === "due-out",
     );
     return {
       number: room.number,
       type: room.type,
       floor: room.floor,
-      housekeeping: room.housekeeping,
+      housekeeping: room.status,
       occupied: !!inRoom,
       guest: inRoom?.guest ?? leaving?.guest,
       dueOut: !!leaving,
@@ -352,15 +409,19 @@ export async function listHousekeeping(
 export async function markRoom(
   hotelId: string, roomNumber: string, state: "clean" | "inspected",
 ): Promise<OperationResult<HousekeepingRoom>> {
-  if (!guard(hotelId)) return refuse("Unknown property.");
-  const room = readRooms().find((r) => r.number === roomNumber);
-  if (!room) return refuse("Room not found.");
-
-  const permitted = state === "clean" ? canMarkClean(room) : canMarkInspected(room);
-  if (!permitted.allowed) return refuse(permitted.reason!);
-
-  setRoomHousekeeping(roomNumber, state);
-  return { ok: true };
+  /* Delegates rather than writing its own copy.
+   
+     This wrote to the in-memory store while `listHousekeeping` had
+     moved its rooms onto HTTP — so a clerk marked a room clean, the
+     store changed, Postgres did not, and the next read showed the old
+     state with nothing to explain it. Two write paths to one fact is
+     one too many.
+   
+     The refusal is now the DATABASE'S: `src/lib/rules.ts` still
+     disables the button, but a rule enforced only in the browser is a
+     suggestion. */
+  const permitted = await setHousekeeping(hotelId, roomNumber, state);
+  return permitted.allowed ? { ok: true } : refuse(permitted.reason ?? "Refused.");
 }
 
 /** Object surface, so either import convention resolves. */

@@ -74,14 +74,12 @@ export { app, auth };
 /** Analytics resolves asynchronously, so read it through a function. */
 export const getAnalyticsInstance = () => analytics;
 
-/* ── Stage 3 will build on this ────────────────────────────────────
-   The auth bridge exchanges a Firebase ID token for a Postgres
-   session. `staff.firebase_uid` already exists in the schema, and
-   `app.current_user_id()` already accepts a Firebase uid alongside a
-   uuid — migration 017 did that work.
+/* ── Stage 3 built on this, at CP8 ─────────────────────────────────
+   `src/lib/session.ts` takes the ID token from here, sends it to the
+   App API, and reads identity and role back from Postgres.
+   `app.current_user_id()` resolves a Firebase uid through
+   `staff.firebase_uid` — migration 017 did that work.
 
-   Until then `src/lib/ui.ts` holds a PREVIEWED role, which is a demo
-   control and not identity. When real auth arrives, every
-   `useUi(s => s.role)` becomes `useSession(s => s.role)` and nothing
-   else changes.
+   The PREVIEWED role that used to live in `src/lib/ui.ts` is gone,
+   along with the switcher that set it. Role is read, never chosen.
    ═══════════════════════════════════════════════════════════════════ */
