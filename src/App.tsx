@@ -8,6 +8,9 @@ import { useUi } from "@/lib/ui";
 import DashboardPage from "@/pages/Dashboard";
 import StayViewPage from "@/pages/StayView";
 import HousekeepingPage from "@/pages/Housekeeping";
+import ArrivalsPage from "@/pages/Arrivals";
+import InHousePage from "@/pages/InHouse";
+import FoliosPage from "@/pages/Folios";
 import DesignSystemPage from "@/pages/DesignSystem";
 import PlaceholderPage from "@/pages/Placeholder";
 
@@ -71,17 +74,12 @@ const GROUP: Array<[path: string, title: string, carries: string, cp: string]> =
 
 /* Property-level routes, all under /h/:code/. */
 const PROPERTY: Array<[segment: string, title: string, carries: string, cp: string]> = [
-  ["arrivals", "Arrivals", "today's expected arrivals, with check-in from the row", "CP5"],
-  ["arrivals/upcoming", "Upcoming arrivals", "the next fourteen days of expected arrivals", "CP5"],
-  ["in-house", "In house", "every occupied room, with folio balance and departure date", "CP5"],
-  ["in-house/due-out", "Due out", "rooms departing today, with balances still open", "CP5"],
   ["walk-ins", "Walk-ins", "walk-ins taken today — the flow itself starts from an empty cell in Stay View", "CP5"],
   ["room-types", "Room types", "Superior and Deluxe, with occupancy limits and rack rates", "CP6"],
   ["rate-plans", "Rate plans", "EP, CP and MAP, and what each includes", "CP6"],
   ["payments", "Payments", "receipts by method: cash, UPI, card, GoMMT, room posting", "CP6"],
   ["city-ledger", "City ledger", "Agoda, Booking.com, Expedia and go-MMT balances", "CP6"],
   ["reservations", "Reservations", "the full book — three tabs: arrivals, in house, departures", "CP5"],
-  ["folios", "Folios", "open accounts, including overpayments and disputes", "CP5"],
   ["invoices", "Invoices", "issued invoices, with the Georgia print preview", "CP6"],
   ["rates", "Rates", "the rate grid, editable cells", "CP6"],
   ["night-audit", "Night audit", "run and log — posts once, twice-run is refused", "CP6"],
@@ -118,6 +116,26 @@ export default function App() {
             <Route
               path="/h/:code/housekeeping"
               element={<><PropertyScope /><HousekeepingPage /></>}
+            />
+            <Route
+              path="/h/:code/arrivals"
+              element={<><PropertyScope /><ArrivalsPage /></>}
+            />
+            <Route
+              path="/h/:code/arrivals/upcoming"
+              element={<><PropertyScope /><ArrivalsPage /></>}
+            />
+            <Route
+              path="/h/:code/in-house"
+              element={<><PropertyScope /><InHousePage /></>}
+            />
+            <Route
+              path="/h/:code/in-house/due-out"
+              element={<><PropertyScope /><InHousePage /></>}
+            />
+            <Route
+              path="/h/:code/folios"
+              element={<><PropertyScope /><FoliosPage /></>}
             />
             {PROPERTY.map(([segment, title, carries, cp]) => (
               <Route
