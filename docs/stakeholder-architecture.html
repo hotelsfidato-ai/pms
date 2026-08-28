@@ -1,0 +1,352 @@
+<title>Seven Properties, One System</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap">
+
+<style>
+  :root{
+    --ink-900:#031728; --ink-800:#0b2135; --ink-700:#142b3a;
+    --orange:#df6128; --tangerine:#eb8c00; --yellow:#ffb600; --rose:#db536a; --red:#e0301e;
+    --success:#1f6f5c; --info:#2b6cb0;
+    --grey-700:#354552; --grey-600:#4c5b67; --grey-500:#67737e; --grey-400:#9aa2a9;
+    --grey-300:#ccd0d4; --grey-200:#e2e5e8; --grey-100:#eef0f2; --grey-50:#f7f8f9;
+    --page:#f7f8f9; --card:#ffffff; --hairline:#e2e5e8;
+    --accent-from:#fe611f; --accent-to:#f4bf54;
+  }
+  @media (prefers-color-scheme:dark){:root:not([data-theme="light"]){
+    --ink-900:#eef0f2; --ink-800:#dfe3e7; --ink-700:#ccd0d4;
+    --orange:#f0813f; --tangerine:#f2a62e; --yellow:#ffc42e; --rose:#e8798c; --red:#f0604e;
+    --success:#3fa98c; --info:#5b9bd8;
+    --grey-700:#b8c1c9; --grey-600:#a3adb6; --grey-500:#8e9aa4; --grey-400:#6e7a84;
+    --grey-300:#3a454f; --grey-200:#1e2c37; --grey-100:#16222b; --grey-50:#0e1a23;
+    --page:#0a131a; --card:#101e29; --hairline:#1e2c37;
+  }}
+  :root[data-theme="dark"]{
+    --ink-900:#eef0f2; --ink-800:#dfe3e7; --ink-700:#ccd0d4;
+    --orange:#f0813f; --tangerine:#f2a62e; --yellow:#ffc42e; --rose:#e8798c; --red:#f0604e;
+    --success:#3fa98c; --info:#5b9bd8;
+    --grey-700:#b8c1c9; --grey-600:#a3adb6; --grey-500:#8e9aa4; --grey-400:#6e7a84;
+    --grey-300:#3a454f; --grey-200:#1e2c37; --grey-100:#16222b; --grey-50:#0e1a23;
+    --page:#0a131a; --card:#101e29; --hairline:#1e2c37;
+  }
+
+  *{box-sizing:border-box}
+  body{
+    margin:0; padding:0 24px 90px; background:var(--page); color:var(--grey-700);
+    font-family:"Inter",-apple-system,"Segoe UI",Roboto,sans-serif;
+    font-size:15px; line-height:1.62; -webkit-font-smoothing:antialiased;
+    font-feature-settings:"cv02","cv03","cv04","cv11";
+  }
+  .wrap{max-width:1080px;margin:0 auto}
+  .tabular{font-variant-numeric:tabular-nums;font-feature-settings:"tnum"}
+
+  /* ---------- masthead ---------- */
+  header.top{padding:72px 0 34px}
+  .mark{width:44px;height:auto;display:block;margin-bottom:26px}
+  .eyebrow{font-size:11px;font-weight:600;letter-spacing:.16em;text-transform:uppercase;
+    color:var(--orange);margin:0 0 14px}
+  h1{font-size:clamp(32px,5.6vw,52px);font-weight:600;letter-spacing:-.021em;line-height:1.04;
+    color:var(--ink-900);margin:0 0 18px;text-wrap:balance;max-width:18ch}
+  .lede{font-size:18px;line-height:1.55;color:var(--grey-500);margin:0;max-width:56ch}
+
+  h2{font-size:22px;font-weight:600;letter-spacing:-.014em;color:var(--ink-900);
+    margin:56px 0 6px;padding-top:22px;border-top:1px solid var(--grey-300)}
+  .h2sub{font-size:14.5px;color:var(--grey-500);margin:0 0 22px;max-width:66ch}
+  h3{font-size:17px;font-weight:600;letter-spacing:-.014em;color:var(--ink-900);margin:30px 0 10px}
+  p{margin:0 0 14px;max-width:68ch}
+  strong{color:var(--ink-900);font-weight:600}
+
+  /* ---------- figure ---------- */
+  figure{margin:0 0 22px;background:var(--card);border:1px solid var(--hairline);
+    border-radius:10px;padding:30px 26px 20px;overflow-x:auto}
+  figure svg{display:block;width:100%;min-width:760px;height:auto}
+  figcaption{margin-top:18px;padding-top:15px;border-top:1px solid var(--hairline);
+    font-size:14px;color:var(--grey-500);min-width:760px}
+
+  /* ---------- stat row ---------- */
+  .stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:14px;margin-bottom:28px}
+  .stat{background:var(--card);border:1px solid var(--hairline);border-radius:10px;padding:18px 20px}
+  .stat .n{font-size:24px;font-weight:600;color:var(--ink-900);letter-spacing:-.014em;
+    font-variant-numeric:tabular-nums;line-height:1.1}
+  .stat .l{font-size:12px;color:var(--grey-500);margin-top:6px;line-height:1.4}
+
+  /* ---------- cards ---------- */
+  .grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(268px,1fr));gap:14px;margin-bottom:22px}
+  .card{background:var(--card);border:1px solid var(--hairline);border-radius:10px;padding:20px 22px}
+  .card h4{font-size:15px;font-weight:600;color:var(--ink-900);margin:0 0 8px;letter-spacing:-.014em}
+  .card p{font-size:14px;color:var(--grey-500);margin:0;line-height:1.55}
+  .card .ic{font-size:11px;font-weight:600;letter-spacing:.11em;text-transform:uppercase;
+    color:var(--orange);margin-bottom:9px}
+
+  /* ---------- table ---------- */
+  .scroller{overflow-x:auto;border:1px solid var(--hairline);border-radius:10px;background:var(--card);margin-bottom:22px}
+  table{border-collapse:collapse;width:100%;min-width:600px;font-size:14px}
+  th{font-size:11px;font-weight:600;letter-spacing:.09em;text-transform:uppercase;color:var(--grey-500);
+    text-align:left;padding:13px 18px;border-bottom:1px solid var(--grey-300);white-space:nowrap}
+  td{padding:13px 18px;border-bottom:1px solid var(--hairline);vertical-align:top;line-height:1.5}
+  tbody tr:last-child td{border-bottom:none}
+  td.k{color:var(--ink-900);font-weight:600;white-space:nowrap}
+  td.num{font-variant-numeric:tabular-nums;white-space:nowrap}
+
+  .pill{display:inline-block;font-size:11px;font-weight:600;letter-spacing:.05em;
+    padding:3px 9px;border-radius:10px;border:1px solid;white-space:nowrap}
+  .pill.done{color:var(--success);border-color:var(--success)}
+  .pill.next{color:var(--tangerine);border-color:var(--tangerine)}
+  .pill.later{color:var(--grey-400);border-color:var(--grey-300)}
+
+  .note{background:var(--card);border:1px solid var(--hairline);border-left:3px solid var(--orange);
+    border-radius:10px;padding:19px 23px;margin-bottom:22px;max-width:70ch}
+  .note.good{border-left-color:var(--success)}
+  .note h4{font-size:11px;font-weight:600;letter-spacing:.11em;text-transform:uppercase;
+    color:var(--orange);margin:0 0 9px}
+  .note.good h4{color:var(--success)}
+  .note p{font-size:14.5px}.note p:last-child{margin-bottom:0}
+
+  footer{margin-top:60px;padding-top:20px;border-top:1px solid var(--grey-300);
+    font-size:12.5px;color:var(--grey-400);max-width:68ch;line-height:1.7}
+</style>
+
+<div class="wrap">
+
+  <header class="top">
+    <svg class="mark" viewBox="0 0 985 1082" role="img" aria-label="Fidato">
+      <defs><linearGradient id="fg" gradientUnits="userSpaceOnUse" x1="-27" y1="588" x2="983" y2="501">
+        <stop offset="0" stop-color="#FE611F"/><stop offset="1" stop-color="#F4BF54"/></linearGradient></defs>
+      <path fill="url(#fg)" d="M362 674.17c12.98-4.99 37.97-13.52 47.52-19.22-1.89 13.34-23.55 71.31-30.07 85.42-37.9 89.67-93.99 247.45-191.65 281.61-92.34 31.66-133.05-43.37-118.18-111.59 25.27-115.18 196-186.8 292.38-236.22zm-357.21 250.21c3.99 196.99 210.63 205.32 325.21 64.67 85.84-118.79 111.33-227.78 156.7-354.67 103.86-15.71 173.85-22.62 264.44-31.16 66.67-6.28 216.41 16.73 206.37-89.73-145.09 13.67-311.51 34.53-456.36 54.71 2.25-15.28 12.35-71.38 24.01-78.34l85.76-30c69.99-24.7 133.04-64.47 194.13-105.68 97.14-70.96 206.42-211.08 98.62-321.78-57.01-50.14-162.33-27.12-217.06 17.03-95.81 76.37-130.95 164.31-165.5 274.62-14.38 45.9-24.15 91.06-35.32 139.15-40.28 5.68-95.72 15.06-135.5 22.65-1.86 55.4-4.53 76.36 52.5 71.87 22.24-1.75 44.86-6.62 66.55-9.09-8.32 32.62-18.36 65.42-27.4 98.2-114.35 51.79-297.35 128.51-403.72 227.78-19.62 18.31-33.85 31.55-33.43 49.77z"/>
+    </svg>
+    <p class="eyebrow">Fidato Hotels · Property Management System</p>
+    <h1>Seven properties, one system</h1>
+    <p class="lede">A single platform running every Fidato hotel — front desk, housekeeping, restaurant and billing — with each property working independently and the group seeing all of them at once.</p>
+  </header>
+
+  <div class="stats">
+    <div class="stat"><div class="n">7</div><div class="l">Properties, one system</div></div>
+    <div class="stat"><div class="n">175</div><div class="l">Rooms managed</div></div>
+    <div class="stat"><div class="n">₹3.15L</div><div class="l">Saved per year on distribution</div></div>
+    <div class="stat"><div class="n">1 step</div><div class="l">To add the eighth property</div></div>
+  </div>
+
+  <h2>How it fits together</h2>
+  <p class="h2sub">Every person who touches the system, what they use it for, and where the information actually lives.</p>
+
+  <figure>
+    <svg viewBox="0 0 940 700" role="img" aria-label="Staff at seven properties and group management all use one application. It runs front desk, housekeeping, restaurant billing and reporting. All information is held in one secure database where each property's records are separated from the others. The system connects outward to booking sites through a channel manager, to the Fidato central reservation system, and to an off-site backup.">
+      <defs>
+        <marker id="ar" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+          <path d="M0 0 L10 5 L0 10 z" fill="currentColor"/></marker>
+        <marker id="aro" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+          <path d="M0 0 L10 5 L0 10 z" fill="#df6128"/></marker>
+        <linearGradient id="hero" x1="0" y1="0" x2="1" y2="0">
+          <stop offset="0" stop-color="#fe611f"/><stop offset="1" stop-color="#f4bf54"/></linearGradient>
+      </defs>
+
+      <!-- ============ PEOPLE ============ -->
+      <text x="30" y="26" font-family="Inter,sans-serif" font-size="11" font-weight="600"
+            letter-spacing="1.6" fill="currentColor" opacity=".45">WHO USES IT</text>
+
+      <!-- seven properties -->
+      <rect x="30" y="42" width="470" height="96" rx="10" fill="none" stroke="currentColor" stroke-width="1.4" opacity=".55"/>
+      <text x="46" y="66" font-family="Inter,sans-serif" font-size="13" font-weight="600" fill="currentColor">Staff at each of the seven properties</text>
+      <text x="46" y="85" font-family="Inter,sans-serif" font-size="11.5" fill="currentColor" opacity=".6">Front desk · Housekeeping · Restaurant · Accounts</text>
+      <g font-family="Inter,sans-serif" font-size="10.5" font-weight="600" fill="#df6128">
+        <rect x="46"  y="98" width="52" height="24" rx="5" fill="none" stroke="#df6128" stroke-width="1.2"/><text x="72"  y="114" text-anchor="middle">FH01</text>
+        <rect x="106" y="98" width="52" height="24" rx="5" fill="none" stroke="#df6128" stroke-width="1.2"/><text x="132" y="114" text-anchor="middle">FH02</text>
+        <rect x="166" y="98" width="52" height="24" rx="5" fill="none" stroke="#df6128" stroke-width="1.2"/><text x="192" y="114" text-anchor="middle">FH03</text>
+        <rect x="226" y="98" width="52" height="24" rx="5" fill="none" stroke="#df6128" stroke-width="1.2"/><text x="252" y="114" text-anchor="middle">FH04</text>
+        <rect x="286" y="98" width="52" height="24" rx="5" fill="none" stroke="#df6128" stroke-width="1.2"/><text x="312" y="114" text-anchor="middle">FH05</text>
+        <rect x="346" y="98" width="52" height="24" rx="5" fill="none" stroke="#df6128" stroke-width="1.2"/><text x="372" y="114" text-anchor="middle">FH06</text>
+        <rect x="406" y="98" width="52" height="24" rx="5" fill="none" stroke="#df6128" stroke-width="1.2"/><text x="432" y="114" text-anchor="middle">FH07</text>
+      </g>
+
+      <!-- group management -->
+      <rect x="530" y="42" width="380" height="96" rx="10" fill="none" stroke="currentColor" stroke-width="1.4" opacity=".55"/>
+      <text x="546" y="66" font-family="Inter,sans-serif" font-size="13" font-weight="600" fill="currentColor">Group management</text>
+      <text x="546" y="85" font-family="Inter,sans-serif" font-size="11.5" fill="currentColor" opacity=".6">Owners · General managers · Finance</text>
+      <text x="546" y="112" font-family="Inter,sans-serif" font-size="11.5" fill="#1f6f5c" font-weight="600">Sees all seven at once</text>
+
+      <path d="M265 138 L265 172" stroke="currentColor" stroke-width="1.4" fill="none" marker-end="url(#ar)"/>
+      <path d="M720 138 L720 172" stroke="currentColor" stroke-width="1.4" fill="none" marker-end="url(#ar)"/>
+
+      <!-- ============ THE APP ============ -->
+      <rect x="30" y="176" width="880" height="118" rx="10" fill="none" stroke="url(#hero)" stroke-width="2.2"/>
+      <text x="46" y="202" font-family="Inter,sans-serif" font-size="15" font-weight="600" fill="currentColor">One application — browser, tablet or phone</text>
+      <text x="46" y="222" font-family="Inter,sans-serif" font-size="11.5" fill="currentColor" opacity=".6">Nothing to install. Housekeeping works on a phone, on the floor, even where the signal drops.</text>
+      <g font-family="Inter,sans-serif" font-size="11" fill="currentColor">
+        <rect x="46"  y="238" width="128" height="40" rx="6" fill="none" stroke="currentColor" opacity=".45"/>
+        <text x="110" y="255" text-anchor="middle" font-weight="600">Front desk</text>
+        <text x="110" y="270" text-anchor="middle" opacity=".6" font-size="10">Arrivals · check-in</text>
+
+        <rect x="184" y="238" width="128" height="40" rx="6" fill="none" stroke="currentColor" opacity=".45"/>
+        <text x="248" y="255" text-anchor="middle" font-weight="600">Housekeeping</text>
+        <text x="248" y="270" text-anchor="middle" opacity=".6" font-size="10">Room status</text>
+
+        <rect x="322" y="238" width="128" height="40" rx="6" fill="none" stroke="currentColor" opacity=".45"/>
+        <text x="386" y="255" text-anchor="middle" font-weight="600">Restaurant</text>
+        <text x="386" y="270" text-anchor="middle" opacity=".6" font-size="10">Charge to room</text>
+
+        <rect x="460" y="238" width="128" height="40" rx="6" fill="none" stroke="currentColor" opacity=".45"/>
+        <text x="524" y="255" text-anchor="middle" font-weight="600">Billing &amp; GST</text>
+        <text x="524" y="270" text-anchor="middle" opacity=".6" font-size="10">Invoices</text>
+
+        <rect x="598" y="238" width="128" height="40" rx="6" fill="none" stroke="currentColor" opacity=".45"/>
+        <text x="662" y="255" text-anchor="middle" font-weight="600">Night audit</text>
+        <text x="662" y="270" text-anchor="middle" opacity=".6" font-size="10">Day close</text>
+
+        <rect x="736" y="238" width="128" height="40" rx="6" fill="none" stroke="currentColor" opacity=".45"/>
+        <text x="800" y="255" text-anchor="middle" font-weight="600">Reports</text>
+        <text x="800" y="270" text-anchor="middle" opacity=".6" font-size="10">Group &amp; property</text>
+      </g>
+
+      <path d="M470 294 L470 330" stroke="currentColor" stroke-width="1.6" fill="none" marker-end="url(#ar)"/>
+
+      <!-- ============ THE SEPARATION ============ -->
+      <rect x="30" y="334" width="880" height="62" rx="10" fill="none" stroke="#1f6f5c" stroke-width="2" stroke-dasharray="6 4"/>
+      <text x="470" y="360" text-anchor="middle" font-family="Inter,sans-serif" font-size="13.5" font-weight="600" fill="#1f6f5c">Each property sees only its own guests, rooms and money</text>
+      <text x="470" y="380" text-anchor="middle" font-family="Inter,sans-serif" font-size="11.5" fill="currentColor" opacity=".65">Enforced by the database itself — not by the app, and not by hiding buttons</text>
+
+      <path d="M470 396 L470 428" stroke="currentColor" stroke-width="1.6" fill="none" marker-end="url(#ar)"/>
+
+      <!-- ============ DATA ============ -->
+      <rect x="30" y="432" width="560" height="128" rx="10" fill="none" stroke="currentColor" stroke-width="1.6"/>
+      <text x="46" y="457" font-family="Inter,sans-serif" font-size="14" font-weight="600" fill="currentColor">One secure database</text>
+      <text x="46" y="476" font-family="Inter,sans-serif" font-size="11.5" fill="currentColor" opacity=".6">Runs on the group's own server. Nothing is shared with a third party.</text>
+
+      <rect x="46" y="488" width="252" height="26" rx="5" fill="none" stroke="#df6128" opacity=".7"/>
+      <text x="58" y="505" font-family="Inter,sans-serif" font-size="10.5" fill="#df6128" font-weight="600">SHARED ACROSS THE GROUP</text>
+      <rect x="46" y="518" width="252" height="28" rx="5" fill="none" stroke="currentColor" opacity=".4"/>
+      <text x="58" y="536" font-family="Inter,sans-serif" font-size="10.5" fill="currentColor" opacity=".75">Guests · Companies · Staff · Properties</text>
+
+      <rect x="310" y="488" width="264" height="26" rx="5" fill="none" stroke="#1f6f5c" opacity=".7"/>
+      <text x="322" y="505" font-family="Inter,sans-serif" font-size="10.5" fill="#1f6f5c" font-weight="600">SEPARATE PER PROPERTY</text>
+      <rect x="310" y="518" width="264" height="28" rx="5" fill="none" stroke="currentColor" opacity=".4"/>
+      <text x="322" y="536" font-family="Inter,sans-serif" font-size="10.5" fill="currentColor" opacity=".75">Bookings · Rooms · Bills · Payments</text>
+
+      <!-- backup -->
+      <rect x="614" y="432" width="296" height="128" rx="10" fill="none" stroke="#1f6f5c" stroke-width="1.6"/>
+      <text x="630" y="457" font-family="Inter,sans-serif" font-size="14" font-weight="600" fill="#1f6f5c">Off-site backup</text>
+      <text x="630" y="477" font-family="Inter,sans-serif" font-size="11.5" fill="currentColor" opacity=".65">A second copy, held with a different</text>
+      <text x="630" y="493" font-family="Inter,sans-serif" font-size="11.5" fill="currentColor" opacity=".65">provider entirely.</text>
+      <text x="630" y="519" font-family="Inter,sans-serif" font-size="11.5" fill="currentColor" opacity=".65">If the main server is ever lost, the</text>
+      <text x="630" y="535" font-family="Inter,sans-serif" font-size="11.5" fill="currentColor" opacity=".65">business is not.</text>
+
+      <path d="M590 496 L610 496" stroke="#1f6f5c" stroke-width="1.6" fill="none" marker-end="url(#ar)" color="#1f6f5c"/>
+
+      <!-- ============ OUTWARD ============ -->
+      <text x="30" y="596" font-family="Inter,sans-serif" font-size="11" font-weight="600"
+            letter-spacing="1.6" fill="currentColor" opacity=".45">WHAT IT CONNECTS TO</text>
+
+      <rect x="30" y="610" width="280" height="66" rx="10" fill="none" stroke="#df6128" stroke-width="1.5"/>
+      <text x="46" y="634" font-family="Inter,sans-serif" font-size="13" font-weight="600" fill="#df6128">Booking sites</text>
+      <text x="46" y="654" font-family="Inter,sans-serif" font-size="11" fill="currentColor" opacity=".65">Booking.com · MakeMyTrip · Agoda · Goibibo</text>
+      <text x="46" y="669" font-family="Inter,sans-serif" font-size="10.5" fill="currentColor" opacity=".5">Rates and availability kept in step automatically</text>
+
+      <rect x="330" y="610" width="280" height="66" rx="10" fill="none" stroke="#df6128" stroke-width="1.5"/>
+      <text x="346" y="634" font-family="Inter,sans-serif" font-size="13" font-weight="600" fill="#df6128">Fidato CRS</text>
+      <text x="346" y="654" font-family="Inter,sans-serif" font-size="11" fill="currentColor" opacity=".65">The existing system for 32 partner hotels</text>
+      <text x="346" y="669" font-family="Inter,sans-serif" font-size="10.5" fill="currentColor" opacity=".5">Owned rooms sell alongside partner rooms</text>
+
+      <rect x="630" y="610" width="280" height="66" rx="10" fill="none" stroke="currentColor" stroke-width="1.4" opacity=".6"/>
+      <text x="646" y="634" font-family="Inter,sans-serif" font-size="13" font-weight="600" fill="currentColor">Guest messaging</text>
+      <text x="646" y="654" font-family="Inter,sans-serif" font-size="11" fill="currentColor" opacity=".65">WhatsApp · Email · Accounting</text>
+      <text x="646" y="669" font-family="Inter,sans-serif" font-size="10.5" fill="currentColor" opacity=".5">Confirmations and invoices sent automatically</text>
+
+      <path d="M170 560 L170 604" stroke="#df6128" stroke-width="1.4" fill="none" marker-end="url(#aro)"/>
+      <path d="M470 560 L470 604" stroke="#df6128" stroke-width="1.4" fill="none" marker-end="url(#aro)"/>
+      <path d="M770 566 L770 604" stroke="currentColor" stroke-width="1.4" fill="none" marker-end="url(#ar)" opacity=".6"/>
+    </svg>
+    <figcaption>Everyone works in the same application; what each person sees depends on which properties they are responsible for. A front-desk clerk at one hotel sees that hotel. An owner sees all seven. The separation is enforced by the database itself, so it holds no matter which screen is being used.</figcaption>
+  </figure>
+
+  <h2>What makes this different from buying one</h2>
+  <p class="h2sub">Three things a standard product does not give a group of this shape.</p>
+
+  <div class="grid">
+    <div class="card">
+      <div class="ic">One</div>
+      <h4>The group view is native, not a report</h4>
+      <p>Occupancy, revenue and arrivals across all seven properties on one screen, live. Not seven logins and a spreadsheet on Monday morning.</p>
+    </div>
+    <div class="card">
+      <div class="ic">Two</div>
+      <h4>A guest is one person, everywhere</h4>
+      <p>Someone who stays in Agra in March and Pune in June is recognised as a returning guest. Their history follows them — and so does a barring, which cannot be walked around by booking a different property.</p>
+    </div>
+    <div class="card">
+      <div class="ic">Three</div>
+      <h4>It feeds the existing CRS</h4>
+      <p>Rooms at owned properties can be sold through the same system already selling 32 partner hotels. No off-the-shelf product does this, because no off-the-shelf product knows the CRS exists.</p>
+    </div>
+  </div>
+
+  <div class="note good">
+    <h4>Adding the eighth property</h4>
+    <p>One entry in the admin screen. No new software, no new server, no installation at the property, no downtime for the other seven. The property appears on the group dashboard immediately and its manager can sign in the same day.</p>
+  </div>
+
+  <h2>What it costs, and what it replaces</h2>
+
+  <div class="scroller">
+    <table>
+      <thead><tr><th>Item</th><th>Today</th><th>With this system</th><th>Change</th></tr></thead>
+      <tbody>
+        <tr>
+          <td class="k">Distribution to booking sites</td>
+          <td class="num">₹4.20 lakh / year</td>
+          <td class="num">₹1.05 lakh / year</td>
+          <td class="num" style="color:var(--success);font-weight:600">− ₹3.15 lakh</td>
+        </tr>
+        <tr>
+          <td class="k">Property management software</td>
+          <td class="num">₹7.00 lakh / year <span style="color:var(--grey-400)">(quoted)</span></td>
+          <td class="num">₹0.14 lakh / year</td>
+          <td class="num" style="color:var(--success);font-weight:600">− ₹6.86 lakh</td>
+        </tr>
+        <tr>
+          <td class="k">One-off build</td>
+          <td class="num">—</td>
+          <td class="num">₹4–8 lakh</td>
+          <td class="num">Recovered in 14–18 months</td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+
+  <p>The distribution saving is available <strong>immediately and independently</strong> — it does not depend on the system being finished, or on building rather than buying.</p>
+
+  <h2>Where the project stands</h2>
+  <p class="h2sub">Built means built and tested, not designed.</p>
+
+  <div class="scroller">
+    <table>
+      <thead><tr><th>Stage</th><th>What it delivers</th><th>Status</th></tr></thead>
+      <tbody>
+        <tr><td class="k">Foundation</td><td>The database — every guest, booking, room and rupee, with the separation between properties</td><td><span class="pill done">Built &amp; tested</span></td></tr>
+        <tr><td class="k">Interface</td><td>Every screen, on the Fidato identity</td><td><span class="pill next">In progress</span></td></tr>
+        <tr><td class="k">Front desk</td><td>Book, check in, charge, settle, check out</td><td><span class="pill later">Next</span></td></tr>
+        <tr><td class="k">Housekeeping</td><td>Room status on a phone, working offline</td><td><span class="pill later">Planned</span></td></tr>
+        <tr><td class="k">Restaurant &amp; billing</td><td>Charge to room, GST invoices, statutory returns</td><td><span class="pill later">Planned</span></td></tr>
+        <tr><td class="k">Distribution</td><td>Booking sites kept in step automatically</td><td><span class="pill later">Planned</span></td></tr>
+        <tr><td class="k">Group reporting</td><td>All seven properties on one dashboard</td><td><span class="pill later">Planned</span></td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <div class="note">
+    <h4>The foundation is finished and proven</h4>
+    <p>The part that holds the money — bookings, bills, payments and the separation between properties — is <strong>built and tested against a live database</strong>, not designed on paper. Fifty-one automated checks confirm that a clerk at one property cannot see another's guests, that a bill can never be quietly edited, that the same room cannot be sold twice, and that a charge cannot be added to a day already closed.</p>
+    <p>Those checks run again on every change, so the guarantees do not quietly stop being true as the system grows.</p>
+  </div>
+
+  <h2>First property live in about eleven weeks</h2>
+
+  <p>The plan deliberately puts <strong>one property into real use early</strong> rather than launching all seven at once. That property runs front desk, housekeeping and billing for a full week — including seven nightly closes — before the rollout continues.</p>
+
+  <p>Everything after that adds capability to a system already working, rather than working towards a launch date. If something is wrong, it is wrong at one front desk on a Tuesday, not at seven on the same morning.</p>
+
+  <footer>
+    Fidato Hotels · Property Management System · architecture overview for stakeholders · 27 August 2026.<br>
+    Figures in Indian rupees. Software pricing reflects a written quotation of ₹1 lakh per property per year and remains subject to negotiation. Distribution saving assumes 175 rooms at the rate currently offered.<br>
+    Prepared alongside the technical architecture, data model and audit records held with the project.
+  </footer>
+
+</div>

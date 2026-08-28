@@ -1,0 +1,359 @@
+@import "tailwindcss";
+
+/* ══════════════════════════════════════════════════════════════════
+   FIDATO HOSPITALITY PLATFORM — DESIGN TOKENS
+   Source: Fidato Hotels Visual-Identity-Guidance.pdf (p.13)
+   See docs/design-system.md for documented deviations.
+   ══════════════════════════════════════════════════════════════════ */
+
+@theme {
+  /* ── Brand ink (Fidato Black) ─────────────────────────────────── */
+  --color-ink-950: #010d17;
+  --color-ink-900: #031728;
+  --color-ink-800: #0b2135;
+  --color-ink-700: #142b3a;
+  --color-ink-600: #24384a;
+
+  /* ── Grey ramp (from guide) ───────────────────────────────────── */
+  --color-grey-700: #354552;
+  --color-grey-600: #4c5b67;
+  --color-grey-500: #67737e;
+  --color-grey-400: #9aa2a9;
+  --color-grey-300: #ccd0d4;
+  --color-grey-200: #e2e5e8;
+  --color-grey-100: #eef0f2;
+  --color-grey-50: #f7f8f9;
+
+  /* ── Five warm brand colours (from guide) ─────────────────────── */
+  --color-brand-yellow: #ffb600;
+  --color-brand-tangerine: #eb8c00;
+  --color-brand-orange: #df6128;
+  --color-brand-rose: #db536a;
+  --color-brand-red: #e0301e;
+
+  /* Tints for surfaces / soft badges */
+  --color-brand-orange-50: #fdf1eb;
+  --color-brand-orange-100: #f9dccd;
+  --color-brand-orange-600: #c4521d;
+  --color-brand-orange-700: #a34314;
+  --color-brand-yellow-50: #fff8e6;
+  --color-brand-yellow-100: #ffedbf;
+  --color-brand-rose-50: #fdeef0;
+  --color-brand-rose-100: #f8d4da;
+  --color-brand-red-50: #fdeceb;
+  --color-brand-red-100: #f9d0cc;
+  --color-brand-tangerine-50: #fdf4e6;
+
+  /* ── Documented palette extension ──────────────────────────────
+     The brand guide has no success colour. An ERP cannot express
+     confirmed / paid / synced without one. This muted teal-green is
+     tuned to sit beside the warm palette rather than fight it.
+     Flagged in docs/design-system.md for brand review.           */
+  --color-success: #1f6f5c;
+  --color-success-50: #eaf4f1;
+  --color-success-100: #cde5de;
+  --color-success-600: #1a5f4f;
+
+  /* Info — neutral blue drawn from the ink family, not the warm set */
+  --color-info: #2b6cb0;
+  --color-info-50: #ebf2f9;
+  --color-info-100: #d2e2f2;
+
+  /* ── Logo accent gradient (mark only, never on buttons) ───────── */
+  --color-accent-from: #fe611f;
+  --color-accent-to: #f4bf54;
+
+  /* ── Typography ───────────────────────────────────────────────── */
+  --font-sans: "Inter Variable", "Inter", -apple-system, BlinkMacSystemFont,
+    "Segoe UI", Roboto, sans-serif;
+  --font-serif: Georgia, "ITC Charter", "Times New Roman", serif;
+  --font-mono: ui-monospace, "SF Mono", "Cascadia Mono", Menlo, monospace;
+
+  /* Type scale — tight display tracking, comfortable body */
+  --text-2xs: 0.6875rem;
+  --text-2xs--line-height: 1rem;
+  --text-xs: 0.75rem;
+  --text-xs--line-height: 1.125rem;
+  --text-sm: 0.8125rem;
+  --text-sm--line-height: 1.25rem;
+  --text-base: 0.875rem;
+  --text-base--line-height: 1.375rem;
+  --text-md: 0.9375rem;
+  --text-md--line-height: 1.5rem;
+  --text-lg: 1.0625rem;
+  --text-lg--line-height: 1.625rem;
+  --text-xl: 1.25rem;
+  --text-xl--line-height: 1.75rem;
+  --text-2xl: 1.5rem;
+  --text-2xl--line-height: 2rem;
+  --text-3xl: 1.875rem;
+  --text-3xl--line-height: 2.25rem;
+  --text-4xl: 2.25rem;
+  --text-4xl--line-height: 2.5rem;
+
+  /* ── Radius — 10px house radius ───────────────────────────────── */
+  --radius-xs: 4px;
+  --radius-sm: 6px;
+  --radius-DEFAULT: 8px;
+  --radius-md: 10px;
+  --radius-lg: 12px;
+  --radius-xl: 16px;
+
+  /* ── Elevation — overlays only; surfaces use hairline borders ─── */
+  --shadow-overlay: 0 12px 32px -8px rgb(3 23 40 / 0.18),
+    0 2px 8px -2px rgb(3 23 40 / 0.08);
+  --shadow-popover: 0 8px 24px -6px rgb(3 23 40 / 0.14),
+    0 1px 4px rgb(3 23 40 / 0.06);
+  --shadow-raise: 0 1px 2px rgb(3 23 40 / 0.06);
+
+  /* ── Motion — 150-200ms ease-out only ─────────────────────────── */
+  --ease-out-quiet: cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+/* ══════════════════════════════════════════════════════════════════
+   BASE
+   ══════════════════════════════════════════════════════════════════ */
+
+@layer base {
+  * {
+    border-color: var(--color-grey-200);
+  }
+
+  html {
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    text-rendering: optimizeLegibility;
+  }
+
+  body {
+    background-color: var(--color-grey-50);
+    color: var(--color-ink-900);
+    font-family: var(--font-sans);
+    font-size: var(--text-base);
+    line-height: var(--text-base--line-height);
+    font-feature-settings: "cv02", "cv03", "cv04", "cv11";
+  }
+
+  /* Headings carry the tighter display tracking that reads "premium" */
+  h1,
+  h2,
+  h3,
+  h4 {
+    letter-spacing: -0.014em;
+    font-weight: 600;
+  }
+
+  h1 {
+    letter-spacing: -0.021em;
+  }
+
+  /* Money, dates and counts must never jitter between rows */
+  .tabular,
+  th[data-numeric],
+  td[data-numeric] {
+    font-variant-numeric: tabular-nums;
+    font-feature-settings: "tnum";
+  }
+
+  ::selection {
+    background-color: var(--color-brand-orange-100);
+    color: var(--color-ink-900);
+  }
+
+  /* Focus ring — single consistent treatment across the whole app */
+  :focus-visible {
+    outline: 2px solid var(--color-brand-orange);
+    outline-offset: 2px;
+    border-radius: var(--radius-xs);
+  }
+}
+
+/* ══════════════════════════════════════════════════════════════════
+   UTILITIES
+   ══════════════════════════════════════════════════════════════════ */
+
+@utility hairline-b {
+  border-bottom: 1px solid var(--color-grey-200);
+}
+
+@utility hairline-t {
+  border-top: 1px solid var(--color-grey-200);
+}
+
+@utility surface {
+  background-color: #fff;
+  border: 1px solid var(--color-grey-200);
+  border-radius: var(--radius-md);
+}
+
+@utility brand-gradient {
+  background-image: linear-gradient(
+    100deg,
+    var(--color-accent-from),
+    var(--color-accent-to)
+  );
+}
+
+/* Scrollbars — quiet, macOS-like */
+@layer utilities {
+  .scrollbar-quiet {
+    scrollbar-width: thin;
+    scrollbar-color: var(--color-grey-300) transparent;
+  }
+
+  .scrollbar-quiet::-webkit-scrollbar {
+    width: 10px;
+    height: 10px;
+  }
+
+  .scrollbar-quiet::-webkit-scrollbar-track {
+    background: transparent;
+  }
+
+  .scrollbar-quiet::-webkit-scrollbar-thumb {
+    background-color: var(--color-grey-300);
+    border-radius: 999px;
+    border: 3px solid transparent;
+    background-clip: content-box;
+  }
+
+  .scrollbar-quiet::-webkit-scrollbar-thumb:hover {
+    background-color: var(--color-grey-400);
+  }
+
+  /* Respect reduced-motion across every animated surface */
+  @media (prefers-reduced-motion: reduce) {
+    *,
+    *::before,
+    *::after {
+      animation-duration: 0.01ms !important;
+      animation-iteration-count: 1 !important;
+      transition-duration: 0.01ms !important;
+    }
+  }
+}
+
+/* ══════════════════════════════════════════════════════════════════
+   OVERLAY MOTION
+   Radix drives [data-state] on every floating surface. These three
+   classes cover the whole app, so motion stays consistent and no
+   external animation plugin is needed.
+   ══════════════════════════════════════════════════════════════════ */
+
+@keyframes fidato-fade-in {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes fidato-fade-out {
+  from { opacity: 1; }
+  to { opacity: 0; }
+}
+
+@keyframes fidato-pop-in {
+  from { opacity: 0; transform: translate(-50%, -50%) scale(0.97); }
+  to { opacity: 1; transform: translate(-50%, -50%) scale(1); }
+}
+
+@keyframes fidato-pop-out {
+  from { opacity: 1; transform: translate(-50%, -50%) scale(1); }
+  to { opacity: 0; transform: translate(-50%, -50%) scale(0.97); }
+}
+
+@keyframes fidato-menu-in {
+  from { opacity: 0; transform: scale(0.96); }
+  to { opacity: 1; transform: scale(1); }
+}
+
+@keyframes fidato-menu-out {
+  from { opacity: 1; transform: scale(1); }
+  to { opacity: 0; transform: scale(0.96); }
+}
+
+@keyframes fidato-slide-in-right {
+  from { transform: translateX(100%); }
+  to { transform: translateX(0); }
+}
+
+@keyframes fidato-slide-out-right {
+  from { transform: translateX(0); }
+  to { transform: translateX(100%); }
+}
+
+@layer components {
+  /* Backdrops */
+  .motion-fade[data-state="open"] {
+    animation: fidato-fade-in 150ms var(--ease-out-quiet);
+  }
+  .motion-fade[data-state="closed"] {
+    animation: fidato-fade-out 120ms var(--ease-out-quiet);
+  }
+
+  /* Centred dialogs — already translated by their positioning classes */
+  .motion-pop[data-state="open"] {
+    animation: fidato-pop-in 160ms var(--ease-out-quiet);
+  }
+  .motion-pop[data-state="closed"] {
+    animation: fidato-pop-out 120ms var(--ease-out-quiet);
+  }
+
+  /* Menus, popovers, tooltips */
+  .motion-menu[data-state="open"],
+  .motion-menu[data-state="delayed-open"] {
+    animation: fidato-menu-in 140ms var(--ease-out-quiet);
+  }
+  .motion-menu[data-state="closed"] {
+    animation: fidato-menu-out 110ms var(--ease-out-quiet);
+  }
+
+  /* Right-hand drawers */
+  .motion-drawer[data-state="open"] {
+    animation: fidato-slide-in-right 200ms var(--ease-out-quiet);
+  }
+  .motion-drawer[data-state="closed"] {
+    animation: fidato-slide-out-right 160ms var(--ease-out-quiet);
+  }
+
+  /* Left-hand drawer — the mobile navigation */
+  .motion-drawer-left[data-state="open"] {
+    animation: fidato-slide-in-left 200ms var(--ease-out-quiet);
+  }
+  .motion-drawer-left[data-state="closed"] {
+    animation: fidato-slide-out-left 160ms var(--ease-out-quiet);
+  }
+
+  /* Toasts enter from the bottom-right, no exit animation needed */
+  .motion-toast {
+    animation: fidato-toast-in 200ms var(--ease-out-quiet);
+  }
+}
+
+@keyframes fidato-slide-in-left {
+  from { transform: translateX(-100%); }
+  to { transform: translateX(0); }
+}
+
+@keyframes fidato-slide-out-left {
+  from { transform: translateX(0); }
+  to { transform: translateX(-100%); }
+}
+
+@keyframes fidato-toast-in {
+  from { opacity: 0; transform: translateY(8px) scale(0.98); }
+  to { opacity: 1; transform: translateY(0) scale(1); }
+}
+
+/* Print — invoices and report covers use the brand serif */
+@media print {
+  body {
+    background: #fff;
+  }
+
+  .no-print {
+    display: none !important;
+  }
+
+  .print-serif {
+    font-family: var(--font-serif);
+  }
+}

@@ -1,0 +1,261 @@
+<title>What the Live System Reveals</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;700&display=swap">
+
+<style>
+  :root{--ink:#031728;--orange:#df6128;--tangerine:#eb8c00;--yellow:#ffb600;--rose:#db536a;
+    --red:#e0301e;--success:#1f6f5c;--info:#2b6cb0;
+    --grey-700:#354552;--grey-500:#67737e;--grey-400:#9aa2a9;--grey-300:#ccd0d4;--grey-200:#e2e5e8;
+    --page:#f7f8f9;--card:#fff;--hairline:#e2e5e8;--code-bg:#f7f8f9;}
+  @media (prefers-color-scheme:dark){:root:not([data-theme="light"]){
+    --ink:#eef0f2;--orange:#f0813f;--tangerine:#f2a62e;--yellow:#ffc42e;--rose:#e8798c;
+    --red:#f0604e;--success:#3fa98c;--info:#5b9bd8;
+    --grey-700:#b8c1c9;--grey-500:#8e9aa4;--grey-400:#6e7a84;--grey-300:#3a454f;--grey-200:#1e2c37;
+    --page:#0a131a;--card:#101e29;--hairline:#1e2c37;--code-bg:#0a151e;}}
+  :root[data-theme="dark"]{--ink:#eef0f2;--orange:#f0813f;--tangerine:#f2a62e;--yellow:#ffc42e;
+    --rose:#e8798c;--red:#f0604e;--success:#3fa98c;--info:#5b9bd8;
+    --grey-700:#b8c1c9;--grey-500:#8e9aa4;--grey-400:#6e7a84;--grey-300:#3a454f;--grey-200:#1e2c37;
+    --page:#0a131a;--card:#101e29;--hairline:#1e2c37;--code-bg:#0a151e;}
+
+  *{box-sizing:border-box}
+  body{margin:0;padding:0 24px 84px;background:var(--page);color:var(--grey-700);
+    font-family:"Inter",-apple-system,"Segoe UI",sans-serif;font-size:15px;line-height:1.62;
+    -webkit-font-smoothing:antialiased}
+  .wrap{max-width:1020px;margin:0 auto}
+  .tabular{font-variant-numeric:tabular-nums}
+  header{padding:66px 0 28px;border-bottom:1px solid var(--hairline);margin-bottom:30px}
+  .eyebrow{font-size:11px;font-weight:600;letter-spacing:.15em;text-transform:uppercase;color:var(--orange);margin:0 0 13px}
+  h1{font-size:clamp(30px,5vw,46px);font-weight:600;letter-spacing:-.021em;line-height:1.05;
+    color:var(--ink);margin:0 0 16px;text-wrap:balance;max-width:19ch}
+  .lede{font-size:17.5px;color:var(--grey-500);margin:0;max-width:60ch}
+  h2{font-size:21px;font-weight:600;letter-spacing:-.014em;color:var(--ink);margin:50px 0 6px;
+    padding-top:20px;border-top:1px solid var(--grey-300)}
+  .h2sub{font-size:14px;color:var(--grey-500);margin:0 0 20px;max-width:70ch}
+  h3{font-size:16px;font-weight:600;letter-spacing:-.014em;color:var(--ink);margin:28px 0 9px}
+  p{margin:0 0 14px;max-width:70ch}
+  strong{color:var(--ink);font-weight:600}
+  code{font-family:"JetBrains Mono",Consolas,monospace;font-size:.85em;background:var(--code-bg);
+    border:1px solid var(--hairline);border-radius:4px;padding:.1em .34em;color:var(--ink)}
+
+  .scroller{overflow-x:auto;border:1px solid var(--hairline);border-radius:10px;background:var(--card);margin-bottom:20px}
+  table{border-collapse:collapse;width:100%;min-width:640px;font-size:14px}
+  th{font-size:10.5px;font-weight:600;letter-spacing:.09em;text-transform:uppercase;color:var(--grey-500);
+    text-align:left;padding:12px 16px;border-bottom:1px solid var(--grey-300);white-space:nowrap}
+  td{padding:12px 16px;border-bottom:1px solid var(--hairline);vertical-align:top;line-height:1.5}
+  tbody tr:last-child td{border-bottom:none}
+  td.k{color:var(--ink);font-weight:600;white-space:nowrap}
+  .num{font-variant-numeric:tabular-nums;white-space:nowrap}
+  tr.gap td:first-child{box-shadow:inset 3px 0 0 var(--red)}
+  tr.ok td:first-child{box-shadow:inset 3px 0 0 var(--success)}
+  tr.warn td:first-child{box-shadow:inset 3px 0 0 var(--yellow)}
+
+  .note{background:var(--card);border:1px solid var(--hairline);border-left:3px solid var(--grey-400);
+    border-radius:10px;padding:18px 22px;margin-bottom:22px;max-width:72ch}
+  .note.stop{border-left-color:var(--red)}
+  .note.warn{border-left-color:var(--yellow)}
+  .note.good{border-left-color:var(--success)}
+  .note h4{font-size:11px;font-weight:600;letter-spacing:.11em;text-transform:uppercase;margin:0 0 9px;color:var(--grey-500)}
+  .note.stop h4{color:var(--red)}.note.warn h4{color:var(--tangerine)}.note.good h4{color:var(--success)}
+  .note p{font-size:14.5px}.note p:last-child{margin-bottom:0}
+
+  .stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:13px;margin-bottom:26px}
+  .stat{background:var(--card);border:1px solid var(--hairline);border-radius:10px;padding:16px 18px;border-top:3px solid var(--orange)}
+  .stat.r{border-top-color:var(--red)}
+  .stat.g{border-top-color:var(--success)}
+  .stat .n{font-size:23px;font-weight:600;color:var(--ink);letter-spacing:-.014em;font-variant-numeric:tabular-nums;line-height:1.1}
+  .stat .l{font-size:11.5px;color:var(--grey-500);margin-top:6px;line-height:1.4}
+
+  ul.n{margin:0 0 15px;padding-left:19px;max-width:70ch}
+  ul.n li{margin-bottom:7px;font-size:14.5px}
+
+  pre{margin:11px 0 0;background:var(--code-bg);border:1px solid var(--hairline);border-radius:6px;
+    padding:13px 15px;overflow-x:auto;font-family:"JetBrains Mono",monospace;font-size:12.5px;line-height:1.6;color:var(--ink)}
+  footer{margin-top:56px;padding-top:19px;border-top:1px solid var(--grey-300);font-size:12.5px;color:var(--grey-400);max-width:70ch;line-height:1.7}
+</style>
+
+<div class="wrap">
+
+  <header>
+    <p class="eyebrow">Fidato PMS · Reference analysis</p>
+    <h1>What the live system reveals</h1>
+    <p class="lede">Sixteen screens from eZee running <strong>5 Elements By Fidato Hotels</strong> in Akkalkot — real property, real guests, real money. Far more useful than a demo, and it changes several things we had assumed.</p>
+  </header>
+
+  <div class="stats">
+    <div class="stat r"><div class="n">17</div><div class="l">Rooms at this property — not 25</div></div>
+    <div class="stat"><div class="n">4</div><div class="l">Room types, one of which is a hall</div></div>
+    <div class="stat"><div class="n">10</div><div class="l">Payment methods, incl. four OTAs</div></div>
+    <div class="stat g"><div class="n">21</div><div class="l">Gaps found in our schema</div></div>
+  </div>
+
+  <h2>The number that changes the commercial case</h2>
+
+  <div class="note stop">
+    <h4>This property has 17 rooms, not 25</h4>
+    <p>The Stay View header reads <strong>All 17 · Vacant 16 · Occupied 1 · Dirty 9</strong>, and Total Rooms on the Rates screen confirms <span class="num">17</span> across every date.</p>
+    <p>Every commercial figure I have produced assumed <strong>175 rooms across seven properties</strong>, from an average of 25. If 17 is closer to typical, the group is nearer <strong>120 rooms</strong> — and the STAAH quote at ₹50 per room per month becomes about <span class="num">₹6,000</span> a month rather than ₹8,750, or <span class="num">₹72,000</span> a year rather than ₹1.05 lakh.</p>
+    <p>That makes the channel-manager saving <em>larger</em>, not smaller, since the current cost is per property. But <strong>the stakeholder document currently states 175 rooms and needs correcting.</strong> Please confirm the real room count at each of the seven.</p>
+  </div>
+
+  <h2>Nine things the real system does that our schema cannot</h2>
+  <p class="h2sub">Found by reading the screens rather than by imagining requirements.</p>
+
+  <div class="scroller">
+    <table>
+      <thead><tr><th>What eZee does</th><th>Evidence</th><th>Our schema</th></tr></thead>
+      <tbody>
+        <tr class="gap">
+          <td class="k">Sells non-room spaces</td>
+          <td><strong>"Pancham Hall"</strong> sits in the room-type list with 0 inventory and N/A rates — a banquet hall managed as a sellable type</td>
+          <td>Assumes every <code>room_type</code> is rooms. A hall has no nights, no housekeeping status, and is sold by the day or session</td>
+        </tr>
+        <tr class="gap">
+          <td class="k">Rate plans carry the meal plan</td>
+          <td><code>Superior - CP (Breakfast)</code> and <code>Superior - Room Only (EP)</code> are separate sellable plans per room type</td>
+          <td>011 added <code>meal_plan</code> to reservations. <strong>Confirmed correct</strong> — but rate plans themselves are unbuilt, and the naming convention is now known</td>
+        </tr>
+        <tr class="gap">
+          <td class="k">Rate floors and ceilings</td>
+          <td>A whole <strong>Rate Threshold</strong> screen — Deluxe CP min <span class="num">1,904.76</span>, max <span class="num">6,000</span></td>
+          <td>Nothing. This is what stops a fat-finger sending ₹340 to the OTAs instead of ₹3,400</td>
+        </tr>
+        <tr class="gap">
+          <td class="k">Derived rate plans</td>
+          <td>A <strong>"Hide Derived Rate Plans"</strong> checkbox, and refresh icons beside CP rows</td>
+          <td>No derivation. CP is presumably EP plus a breakfast amount, maintained automatically</td>
+        </tr>
+        <tr class="gap">
+          <td class="k">Tax-inclusive or exclusive, per property</td>
+          <td>Settings asks outright: <em>"work with tax already included in the room rate, or added separately on top?"</em>. Rates screen states <strong>Tax Exclusive</strong></td>
+          <td>Tax stored per posting, but no property-level convention. Get this wrong and every rate is out by 5–12%</td>
+        </tr>
+        <tr class="gap">
+          <td class="k">Rounding policy</td>
+          <td>Round-Off Type <strong>Manual</strong>, Round-Off Limit <span class="num">1</span>, "Add Up Round Off To Rates"</td>
+          <td><code>numeric(12,2)</code> gives precision but no policy. Indian hotels round to the rupee, and where that rounding lands must be deliberate</td>
+        </tr>
+        <tr class="gap">
+          <td class="k">Configurable weekend</td>
+          <td>Weekend days checkboxes — <strong>SUN and SAT</strong> ticked</td>
+          <td>Nothing. Weekend pricing needs to know which days those are, and it is not universal</td>
+        </tr>
+        <tr class="gap">
+          <td class="k">Extra adult and child pricing</td>
+          <td>Rates screen radio: <strong>Base / Extra Adult / Extra Child</strong> rates</td>
+          <td><code>occupancy</code> exists on reservations; no pricing dimension for it</td>
+        </tr>
+        <tr class="gap">
+          <td class="k">Payment methods are data, not code</td>
+          <td>Ten configurable methods with On/Off toggles — including <strong>Agoda, Expedia, GoMMT, Travel Guru/Yatra</strong> as payment types</td>
+          <td><code>payments.method</code> is a <code>CHECK</code> constraint with fixed values. <strong>It must become a table</strong> — OTAs collect and remit, so each is a settlement route</td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+
+  <div class="note warn">
+    <h4>The rate-threshold numbers give away the tax model</h4>
+    <p>Those thresholds are oddly precise: <span class="num">1,904.76</span> · <span class="num">2,475.24</span> · <span class="num">5,713.33</span> · <span class="num">11,238.10</span> · <span class="num">33,714.29</span>.</p>
+    <p><span class="num">1,904.76 × 1.05 = 2,000.00</span>. <span class="num">11,238.10 × 1.05 = 11,800</span>. These are <strong>tax-exclusive values derived from round tax-inclusive intentions</strong> — somebody thought "minimum ₹2,000 including tax" and the system stored the exclusive figure.</p>
+    <p>That confirms the GST slabs in play and tells us the UI must let a manager enter either and see both. Storing only one is how a rate ends up 5% wrong on an OTA.</p>
+  </div>
+
+  <h2>The real module map</h2>
+  <p class="h2sub">From the navigation screenshots. This is what a complete PMS contains, as operated by this group today.</p>
+
+  <div class="scroller">
+    <table>
+      <thead><tr><th>Module</th><th>Contains</th><th>Our plan</th></tr></thead>
+      <tbody>
+        <tr class="ok"><td class="k">Stay View</td><td>The tape chart — the main working screen</td><td>Stage 4</td></tr>
+        <tr class="ok"><td class="k">Reservations</td><td>List, Departed, In-house · Merge Group · Export</td><td>Stage 4</td></tr>
+        <tr class="warn"><td class="k">Rates &amp; Availability</td><td>Rates · Promotions · <strong>Rate Threshold</strong></td><td>Stage 9 — thresholds and promotions were not planned</td></tr>
+        <tr class="warn"><td class="k">Distribution</td><td><strong>Auto Stopsell · Channel Logs · Guest Message</strong></td><td>Stage 9 — none of these three were planned</td></tr>
+        <tr class="warn"><td class="k">Guest</td><td>Guest Database · Front Desk Operations · <strong>Lost and Found</strong></td><td>Lost and Found unplanned</td></tr>
+        <tr class="gap"><td class="k">Cashiering</td><td>Cashiering Center · <strong>Cash Drawer</strong> · Travel Agent DB · <strong>Business Source</strong> · <strong>Sales Person DB</strong> · Company DB · <strong>Expense Voucher</strong> · POS · Exchange Rate</td><td><strong>Almost entirely unplanned.</strong> Shift cash reconciliation and commercial attribution are a whole missing dimension</td></tr>
+        <tr class="warn"><td class="k">Housekeeping</td><td>House Status · <strong>Maintenance Block</strong> · <strong>Work Order/Task</strong></td><td>Stage 6 — maintenance blocks are distinct from out-of-order and were not modelled</td></tr>
+        <tr class="ok"><td class="k">Night Audit</td><td>Run · Log · <strong>Insert Transaction</strong></td><td>Stage 5 — but manual posting during audit was not planned</td></tr>
+        <tr class="warn"><td class="k">Reports</td><td>Reservation · Front Office · Back Office · <strong>Audit</strong> · Statistical · Graphs, with favourites</td><td>Stage 10 — the report taxonomy is now known</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <h3>The commercial dimension we are missing entirely</h3>
+
+  <p>Cashiering holds <strong>Business Source</strong>, <strong>Market Segment</strong>, <strong>Sales Person Database</strong> and <strong>Travel Agent Database</strong> — and the Guest Statistics dashboard reports <em>Top Business Source Analysis</em> broken down by <code>makemytrip</code> and <code>Booking.com</code>.</p>
+
+  <p>Our schema has <code>reservations.source</code> as a five-value <code>CHECK</code> constraint. That is not enough to answer <strong>"which channel, which agent and which segment produced this revenue"</strong>, which is the question a group owner asks first. It needs to be a set of related tables, not an enum.</p>
+
+  <div class="note stop">
+    <h4>Cash Drawer and Expense Voucher — the shift is missing</h4>
+    <p>A front desk operates in <strong>shifts</strong>. Cash goes in, petty cash goes out, and at handover the drawer is counted and reconciled against what the system says should be there.</p>
+    <p>Nothing in our model represents a shift, a drawer, or a cash-out. Without it there is no way to establish which clerk was accountable for a discrepancy — and that is the single most common source of loss in a hotel.</p>
+  </div>
+
+  <h2>Things our schema gets right, confirmed against reality</h2>
+
+  <div class="scroller">
+    <table>
+      <thead><tr><th>Our decision</th><th>Confirmed by</th></tr></thead>
+      <tbody>
+        <tr class="ok"><td class="k">Meal plans matter</td><td>EP and CP are literally in the rate plan names. The CTO audit called this and it was right</td></tr>
+        <tr class="ok"><td class="k">Group-level guests, with a merge problem</td><td>The Guest Database shows <strong>"Vishal Powar" twice</strong> with different Expedia proxy addresses, and <strong>"Riddhi Gaherwar" twice</strong>. Duplicates are real, and an <strong>Audit Trail</strong> button sits beside the list</td></tr>
+        <tr class="ok"><td class="k">Adults and children counted separately</td><td>Every reservation row shows both, e.g. <span class="num">5</span> adults <span class="num">0</span> children</td></tr>
+        <tr class="ok"><td class="k">Balance is a first-class figure</td><td>Reservations list ends Total · Paid · <strong>Balance</strong>, with outstanding amounts in red</td></tr>
+        <tr class="ok"><td class="k">Property timezone matters</td><td>Settings pins <strong>[GMT+05:30] IST</strong> explicitly, exactly as migration 017 assumed</td></tr>
+        <tr class="ok"><td class="k">Occupancy per date, per room type</td><td>Stay View footer carries Available Inventory and Occupancy% per day</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <h2>Statuses we do not have</h2>
+
+  <p>The Reports menu names reservation states our <code>CHECK</code> constraint does not allow:</p>
+
+  <ul class="n">
+    <li><strong>Void</strong> — distinct from cancelled. A void never happened; a cancellation happened and was undone. They report differently, and conflating them corrupts cancellation analysis</li>
+    <li><strong>Release</strong> — a held booking that lapsed rather than being cancelled by anyone</li>
+    <li><strong>Voucher number</strong>, carried alongside the reservation number. Two identifiers, because the OTA issues one and the property issues the other</li>
+  </ul>
+
+  <pre><code>-- current
+check (status in ('tentative','confirmed','checked_in',
+                  'checked_out','no_show','cancelled'))
+
+-- reality also needs
+                  'void',      -- struck from the record
+                  'released'   -- a hold that lapsed</code></pre>
+
+  <h2>What this changes for Stage 1</h2>
+  <p class="h2sub">The interface stage, which is what the builder starts on.</p>
+
+  <p><strong>The Stay View is the product.</strong> It is the screen a front desk lives in all day, and these screenshots show exactly what it must carry: the filter pills across the top (All / Vacant / Occupied / Reserved / Blocked / Due Out / Dirty), room types collapsible with per-date availability <em>and rate</em> in the same cell, booking bars spanning dates with source icons, and the Available Inventory and Occupancy strip pinned to the bottom.</p>
+
+  <p><strong>Density is the aesthetic.</strong> This is fourteen days across seventeen rooms on one screen with no scrolling, and that is not an accident — it is what a duty manager needs. Our design system already says <em>"dense tables, quiet rows"</em>; these screens are what that means in practice.</p>
+
+  <p><strong>Two per-room icons</strong> sit beside every room number in the Stay View, before any booking. Those carry room-level flags — likely notes and maintenance. Worth confirming what they are before building the row.</p>
+
+  <div class="note good">
+    <h4>Use these as the functional reference, and the CRS as the visual one</h4>
+    <p>eZee shows <strong>what a screen must contain</strong>. It does not show what it should look like — that comes from <code>brand/</code>, and the two should not be confused.</p>
+    <p>Where eZee and the Fidato design system disagree on appearance, <strong>the design system wins.</strong> Where they disagree on what information a screen carries, <strong>eZee wins</strong>, because it is running a real property today.</p>
+  </div>
+
+  <h2>What I need confirmed</h2>
+
+  <ul class="n">
+    <li><strong>Room count at each of the seven properties.</strong> This one has 17; every commercial figure so far assumed an average of 25</li>
+    <li><strong>Is "Pancham Hall" typical?</strong> Do other properties sell banquet halls, conference rooms or lawns — and are those booked by the day, the session, or the night?</li>
+    <li><strong>What are the two icons</strong> beside each room number in the Stay View?</li>
+    <li><strong>Which reports are actually used?</strong> The menu lists dozens; the starred favourites suggest only a handful matter</li>
+    <li><strong>Is POS live at any property today,</strong> or is Cashiering → POS unused? That decides whether Stage 7 is a bridge or a migration</li>
+  </ul>
+
+  <footer>
+    Analysis of sixteen screenshots from eZee / ipms247 · <b>5 Elements By Fidato Hotels</b>, Akkalkot, property 62100 · captured 27 August 2026.<br>
+    Screens covered: Stay View · Reservations · Rates · Rate Threshold · Guest Database · Guest Statistics · navigation (six panels) · Reports menu · Property Profile · Amenities · Payment methods · Format Preferences.<br>
+    Real guest names and contact details appear in these screenshots. This document deliberately reproduces none of them beyond what is needed to evidence the duplicate-record finding.
+  </footer>
+
+</div>
