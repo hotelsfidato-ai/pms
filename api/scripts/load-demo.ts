@@ -1,7 +1,7 @@
 import pg from "pg";
 import { fileURLToPath } from "node:url";
 import {
-  property, roomInventory, PROPERTY_ID,
+  property, roomInventory, PROPERTY_ID, EXTRA_ROOM_DATES,
 } from "../../src/data/fixtures/property.ts";
 import { stays, folios, groups } from "../../src/data/fixtures/reservations.ts";
 
@@ -200,6 +200,44 @@ async function main() {
     }
     const sellable = roomInventory.filter((r) => r.status !== "out-of-service").length;
     say(`${roomInventory.length} rooms · ${sellable} sellable · 2 room types`);
+
+    /* ── Room blocks — the availability curve ─────────────────────
+       Room 308 is out of service, EXCEPT for 8–13 August, when the
+       real Monthly Statistics export shows 18 available rooms instead
+       of 17. That week is what makes the arithmetic close:
+
+           19 × 17 + 6 × 18 = 431 available room-nights
+           132 / 431        = 30.63%
+
+       Until migration 022 this curve lived only in a TypeScript
+       fixture, so every occupancy figure in the product was reading a
+       number the database did not know. Now it is two blocks either
+       side of the week the room was back, and the 431 is DERIVED. */
+    const blocked = roomInventory.filter((r) => r.status === "out-of-service");
+    for (const room of blocked) {
+      const back = [...EXTRA_ROOM_DATES].sort();
+      const first = back[0];
+      const last = back[back.length - 1];
+
+      if (!first || !last) {
+        await client.query(
+          `insert into room_blocks (hotel_id, room_id, from_date, to_date, reason, note)
+           values ($1, $2, '2026-01-01', null, 'out_of_service', $3)`,
+          [hotelId, roomIds.get(room.number), "Held out of service."],
+        );
+        continue;
+      }
+
+      await client.query(
+        `insert into room_blocks (hotel_id, room_id, from_date, to_date, reason, note)
+         values ($1, $2, '2026-01-01', $3::date - 1, 'out_of_service', $4),
+                ($1, $2, $5::date + 1, null,        'out_of_service', $4)`,
+        [hotelId, roomIds.get(room.number), first,
+         `Back in inventory ${first} to ${last} — see the Monthly Statistics export.`,
+         last],
+      );
+    }
+    say(`${blocked.length} room blocked, back in inventory for ${EXTRA_ROOM_DATES.length} days`);
 
     /* ── Guests ───────────────────────────────────────────────────
        Grouped by name, which is exactly what the interface does. The
@@ -474,6 +512,15 @@ async function main() {
        inferred from `agreed_rate = 0` until then, which works only
        while nothing else is booked at zero — a comp is a decision, a
        zero rate is a price, and they merely coincided here. */
+    /* Availability is now DERIVED, so the 431 is a check on the
+       database rather than a number the product carries. */
+    const { rows: [avail] } = await client.query<{ nights: string }>(
+      `select sum(app.sellable_rooms($1, d::date))::text as nights
+         from generate_series(date '2026-08-01', date '2026-08-25', interval '1 day') d`,
+      [hotelId],
+    );
+    const availableNights = Number(avail!.nights);
+
     const { rows: [check] } = await client.query<{ sold: string }>(
       `select count(*)::text as sold
          from reservations r, generate_series(r.check_in, r.check_out - 1, interval '1 day') d
@@ -484,6 +531,16 @@ async function main() {
       [hotelId],
     );
     const sold = Number(check!.sold);
+
+    if (availableNights !== 431) {
+      throw new Error(
+        `Calibration drift: Postgres says ${availableNights} available ` +
+          `room-nights over 1–25 August; the real Monthly Statistics export ` +
+          `says 431 (19 days x 17 rooms + 6 days x 18). Occupancy divides by ` +
+          `this, so every percentage in the product would be wrong. Nothing ` +
+          `was committed.`,
+      );
+    }
 
     if (sold !== 132) {
       throw new Error(
@@ -496,7 +553,9 @@ async function main() {
 
     await client.query("commit");
     console.log();
+    say(`available room-nights 1–25 August: ${availableNights}`);
     say(`room-nights sold 1–25 August: ${sold}`);
+    say(`occupancy: ${((sold / availableNights) * 100).toFixed(2)}%`);
     say("matches the fixtures and the real Night Audit export ✓");
   } catch (error) {
     await client.query("rollback").catch(() => {});
