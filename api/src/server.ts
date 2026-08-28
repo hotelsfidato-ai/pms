@@ -11,6 +11,7 @@ import { folios } from "./routes/folios.ts";
 import { operations } from "./routes/operations.ts";
 import { statistics } from "./routes/statistics.ts";
 import { reports } from "./routes/reports.ts";
+import { manager } from "./routes/manager.ts";
 
 /* ══════════════════════════════════════════════════════════════════
    THE APP API — MASTER.md §5
@@ -106,6 +107,7 @@ app.route("/api/hotels", folios);
 app.route("/api/hotels", operations);
 app.route("/api/hotels", statistics);
 app.route("/api/hotels", reports);
+app.route("/api/hotels", manager);
 
 app.onError((error, c) => {
   if (error instanceof Unauthenticated) {

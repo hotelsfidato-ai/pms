@@ -385,15 +385,30 @@ async function main() {
         date: string, category: string, description: string,
         amount: number, tax: number,
       ) => {
-        await client.query(
+        const { rows: [made] } = await client.query<{ id: string }>(
           `insert into folio_postings
              (hotel_id, folio_id, business_date, category, description,
               amount, tax_rate, tax_amount)
-           values ($1,$2,$3,$4,$5,$6,$7,$8)`,
+           values ($1,$2,$3,$4,$5,$6,$7,$8)
+           returning id::text`,
           [hotelId, folioId, date, category, description,
            round2(amount), tax ? 5 : 0, round2(tax)],
         );
         postings += 1;
+
+        /* A payment is TWO rows: the posting is the money, the
+           `payments` row is how it arrived. The endpoint writes both;
+           this wrote only the posting, so the Manager Report — which
+           breaks receipts down by method — showed ₹0 while the Monthly
+           Statistics grid showed ₹3,97,041. Two screens, one truth,
+           and the seed was the one lying. */
+        if (category === "payment") {
+          await client.query(
+            `insert into payments (hotel_id, posting_id, method, amount)
+             values ($1, $2::bigint, 'cash', $3)`,
+            [hotelId, made!.id, round2(-amount)],
+          );
+        }
       };
 
       /* Charges post when the guest is in the house. A booking that
