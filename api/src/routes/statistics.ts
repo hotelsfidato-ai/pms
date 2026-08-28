@@ -74,6 +74,9 @@ interface DayRow {
   complimentary: number;
   pax: number;
   room_revenue: string;
+  extra_charges: string;
+  tax: string;
+  receipt: string;
 }
 
 async function daily(
@@ -96,25 +99,36 @@ async function daily(
           and d::date between $2::date and $3::date
         group by d::date
      ),
-     revenue as (
-       select fp.business_date as date,
-              sum(fp.amount) as amount
+     live as (
+       select fp.*
          from folio_postings fp
         where fp.hotel_id = $1
-          and fp.category = 'room'
           and fp.reverses_id is null
           and not exists (
             select 1 from folio_postings rev where rev.reverses_id = fp.id
           )
           and fp.business_date between $2::date and $3::date
-        group by fp.business_date
+     ),
+     revenue as (
+       select business_date as date,
+              sum(amount) filter (where category = 'room')                as room,
+              sum(amount) filter (where category not in
+                    ('room','payment','discount','tax','refund'))         as extra,
+              sum(tax_amount) + coalesce(
+                    sum(amount) filter (where category = 'tax'), 0)       as tax,
+              -sum(amount) filter (where category = 'payment')            as receipt
+         from live
+        group by business_date
      )
      select days.date::text                              as date,
             app.sellable_rooms($1, days.date)            as available,
             coalesce(sold.sold, 0)                       as sold,
             coalesce(comp.n, 0)                          as complimentary,
             coalesce(pax.pax, 0)                         as pax,
-            coalesce(revenue.amount, 0)::text            as room_revenue
+            coalesce(revenue.room, 0)::text              as room_revenue,
+            coalesce(revenue.extra, 0)::text             as extra_charges,
+            coalesce(revenue.tax, 0)::text               as tax,
+            coalesce(revenue.receipt, 0)::text           as receipt
        from days
        left join sold    on sold.date    = days.date
        left join comp    on comp.date    = days.date
@@ -198,6 +212,92 @@ statistics.get("/:code/statistics/snapshot", async (c) => {
       vacant: day.available - day.sold,
       occupancyPct: pct(day.sold, day.available),
     };
+  });
+
+  return body ? c.json(body) : c.json({ error: "No such property." }, 404);
+});
+
+
+/* ── Monthly Statistics — one row per day ─────────────────────────
+   The same daily() the period figures use, so the grid and the
+   headline can never disagree about what a day earned. `Expense` is
+   nothing this system records; it prints as zero because the real
+   export prints a column, not because the figure is known to be zero.
+   ═══════════════════════════════════════════════════════════════ */
+
+statistics.get("/:code/statistics/monthly", async (c) => {
+  const from = c.req.query("from") ?? "2026-08-01";
+  const to = c.req.query("to") ?? "2026-08-31";
+
+  const body = await withSession(c.get("subject"), async (client) => {
+    const hotelId = await hotelIdFor(client, c.req.param("code"));
+    if (!hotelId) return null;
+
+    return (await daily(client, hotelId, from, to)).map((d) => {
+      const room = Number(d.room_revenue);
+      return {
+        date: d.date,
+        availableRooms: d.available,
+        nightSold: d.sold,
+        complimentary: d.complimentary,
+        occupancyPct: pct(d.sold, d.available),
+        adr: money(room, d.sold),
+        revPar: money(room, d.available),
+        pax: d.pax,
+        roomCharges: room,
+        extraCharges: Number(d.extra_charges),
+        tax: Number(d.tax),
+        receipt: Number(d.receipt),
+        expense: 0,
+      };
+    });
+  });
+
+  return body ? c.json(body) : c.json({ error: "No such property." }, 404);
+});
+
+/* ── Yearly Statistics — the same columns, one row per month ──── */
+
+statistics.get("/:code/statistics/yearly", async (c) => {
+  const year = Number(c.req.query("year") ?? 2026);
+
+  const body = await withSession(c.get("subject"), async (client) => {
+    const hotelId = await hotelIdFor(client, c.req.param("code"));
+    if (!hotelId) return null;
+
+    const out = [];
+    for (let m = 0; m < 12; m++) {
+      const first = new Date(Date.UTC(year, m, 1));
+      const last = new Date(Date.UTC(year, m + 1, 0));
+      const from = first.toISOString().slice(0, 10);
+      const to = last.toISOString().slice(0, 10);
+
+      const days = await daily(client, hotelId, from, to);
+      const available = days.reduce((t, d) => t + d.available, 0);
+      const sold = days.reduce((t, d) => t + d.sold, 0);
+      const room =
+        Math.round(days.reduce((t, d) => t + Number(d.room_revenue), 0) * 100) / 100;
+
+      out.push({
+        month: `${year}-${String(m + 1).padStart(2, "0")}`,
+        monthLabel: first.toLocaleString("en-GB", { month: "long", timeZone: "UTC" }),
+        availableRooms: available,
+        nightSold: sold,
+        complimentary: days.reduce((t, d) => t + d.complimentary, 0),
+        occupancyPct: pct(sold, available),
+        adr: money(room, sold),
+        revPar: money(room, available),
+        pax: days.reduce((t, d) => t + d.pax, 0),
+        roomCharges: room,
+        extraCharges:
+          Math.round(days.reduce((t, d) => t + Number(d.extra_charges), 0) * 100) / 100,
+        tax: Math.round(days.reduce((t, d) => t + Number(d.tax), 0) * 100) / 100,
+        receipt:
+          Math.round(days.reduce((t, d) => t + Number(d.receipt), 0) * 100) / 100,
+        expense: 0,
+      });
+    }
+    return out;
   });
 
   return body ? c.json(body) : c.json({ error: "No such property." }, 404);
