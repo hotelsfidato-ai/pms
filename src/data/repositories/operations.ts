@@ -3,7 +3,6 @@
    and `Posting` is the only thing left that this module takes from
    there: a type, not data. */
 import type { Posting } from "../store";
-import { isDemoProperty } from "../fixtures/property";
 import { listAllRooms, setHousekeeping } from "./rooms";
 import { getStay, listStays, getFolio } from "./stays";
 import { api, ApiError } from "@/lib/api";
@@ -27,7 +26,6 @@ import type { Stay, Permitted } from "./types";
 
 export type { Posting };
 
-const guard = isDemoProperty;
 
 export interface OperationResult<T = void> {
   ok: boolean;
@@ -362,7 +360,7 @@ export async function listHousekeeping(
      will when the business date stops being a constant (CP11). */
   _businessDate: string,
 ): Promise<HousekeepingRoom[]> {
-  if (!guard(hotelId)) return [];
+  if (!hotelId) return [];
   const live = (await listStays(hotelId)).filter((s) => s.status !== "cancelled");
 
   /* Rooms from the API, stays from the store — a hybrid, because CP9

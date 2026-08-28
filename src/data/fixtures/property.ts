@@ -126,25 +126,6 @@ export { dailyAvailableRooms, nightsSoldPerDay };
  */
 export const PROPERTY_CODE = "5EL";
 
-/**
- * ⚠ TRANSITIONAL, and it has a removal condition.
- *
- * CP9 moves the repositories from this fixture onto HTTP one module at
- * a time. While that is half-done, a screen passes the id the SWAPPED
- * modules use ("5EL") to modules that have not swapped yet and still
- * expect "5-elements-akkalkot".
- *
- * Without this they returned an empty array — the dashboard showed
- * three properties and 0% occupancy for all of them, with no error
- * anywhere. A silent zero on a report an owner reads is the worst
- * failure this project has, and it appeared the moment the first
- * module moved.
- *
- * DELETE THIS, and every caller, when the last module is on HTTP.
- */
-export const isDemoProperty = (hotelId: string): boolean =>
-  hotelId === PROPERTY_ID || hotelId === PROPERTY_CODE;
-
 export const BUSINESS_DATE = "2026-08-25";
 
 export const property = {
