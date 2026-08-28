@@ -163,19 +163,19 @@ manager.get("/:code/reports/manager", async (c) => {
       windowFor(client, hotelId, FY_START, asOn),
     ]);
 
+    /* Blocked is derived below as physical minus sellable. An earlier
+       version also selected a `blocked` column here whose condition
+       compared two constants — it would have returned 0 or EVERY room,
+       and nothing read it. Dead code that names a real figure is worse
+       than none: the next reader trusts it. */
     const { rows: hotel } = await client.query<{
-      currency: string; rooms: string; blocked: string;
+      currency: string; rooms: string;
     }>(
       `select h.currency,
               (select count(*) from rooms r
-                where r.hotel_id = h.id and r.is_active)::text          as rooms,
-              (select count(*) from rooms r
-                where r.hotel_id = h.id and r.is_active
-                  and app.sellable_rooms(h.id, $2::date) < (
-                    select count(*) from rooms r2
-                     where r2.hotel_id = h.id and r2.is_active))::text  as blocked
+                where r.hotel_id = h.id and r.is_active)::text as rooms
          from hotels h where h.id = $1`,
-      [hotelId, asOn],
+      [hotelId],
     );
 
     const cur = hotel[0]!;
