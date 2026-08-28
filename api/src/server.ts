@@ -12,6 +12,7 @@ import { operations } from "./routes/operations.ts";
 import { statistics } from "./routes/statistics.ts";
 import { reports } from "./routes/reports.ts";
 import { manager } from "./routes/manager.ts";
+import { directory } from "./routes/directory.ts";
 
 /* ══════════════════════════════════════════════════════════════════
    THE APP API — MASTER.md §5
@@ -108,6 +109,7 @@ app.route("/api/hotels", operations);
 app.route("/api/hotels", statistics);
 app.route("/api/hotels", reports);
 app.route("/api/hotels", manager);
+app.route("/api/hotels", directory);
 
 app.onError((error, c) => {
   if (error instanceof Unauthenticated) {

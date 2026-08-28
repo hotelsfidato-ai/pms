@@ -8,7 +8,7 @@ Every entry here cost something. Read it before you repeat it.
 
 **Every one of these had `tsc -b` clean, tests passing, and a clean production
 build. Every one was caught only by opening the page and reading it.** That is
-now sixteen defects. The habit is not optional.
+now seventeen defects. The habit is not optional.
 
 ### 1 · Tailwind was entirely non-functional
 
@@ -258,6 +258,36 @@ takes five seconds and would have found this the moment stays moved.
 Corollary, now true and worth keeping true: `operations.ts` imports nothing from
 `src/data/store.ts` but a type. When a module still imports data from the thing
 it replaced, it is not finished.
+
+### 17 · A backtick in a SQL comment, and a check that could not catch it
+
+Three times — stays.ts, operations.ts, directory.ts — a comment written
+INSIDE a SQL template literal quoted a column name the way prose does. The
+backtick closes the literal, and `tsc` then reports a syntax error several lines
+later pointing at whatever token first failed to parse. The real cause is
+invisible.
+
+**Symptom: `TS1005: ',' expected` on a line that looks fine, inside a file with
+SQL template literals. Look for a backtick in a comment above it.**
+
+I tried to make it a test twice, and both attempts are worth recording:
+
+- The first was **vacuous**. It scanned for a comment-with-backtick inside a
+  template literal — but the offending backtick had already terminated that
+  literal, so the scanner never saw the comment. I inserted the bug, ran the
+  test, and it passed. The exact failure this project has recorded twice
+  already, written by me while writing the guard against it.
+- The second **worked and was still wrong**: a blunt "no backtick in any block
+  comment" caught the bug and also flagged every file-header comment, which are
+  outside any literal and perfectly safe. A check that cries wolf is one people
+  learn to ignore.
+
+Deleted both. **`tsc` catches this every time** — the cost was never a shipped
+bug, only diagnosis time, and a note naming the symptom buys back more of that
+than a broad rule would.
+
+**Rule: before writing a guard, ask what already catches the thing. If the
+compiler does, the gap is the ERROR MESSAGE, and a test cannot improve it.**
 
 ---
 

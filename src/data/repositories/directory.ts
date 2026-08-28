@@ -1,19 +1,35 @@
-import { readStays, readPostings, readRooms, balanceOf } from "../store";
-import { property, isDemoProperty } from "../fixtures/property";
+import { api, ApiError } from "@/lib/api";
 import { ROLES, ROLE_LABELS, ROLE_DESCRIPTIONS, type Role } from "@/lib/permissions";
+import { property } from "../fixtures/property";
 import { BUSINESS_DATE } from "./stays";
 
 /* ══════════════════════════════════════════════════════════════════
-   DIRECTORY — guests, companies, staff, and the audit trail
+   DIRECTORY — over HTTP, as of CP9e
 
-   All derived. A guest is not a separate record in Stage 1; it is
-   what you get when you group stays by name. That is deliberate —
-   modelling a guest table before the merge rules are decided would
-   bake in a shape nobody has agreed.
+   Guests, companies, staff, the audit trail, and what the property is
+   configured as.
+
+   Two things here are still NOT from the database, and both are
+   deliberate rather than unfinished:
+
+     · The ROLE MATRIX is `src/lib/permissions.ts`. It is the single
+       source the navigation, every disabled button and the API all
+       read. Serving it over HTTP would make it two sources.
+
+     · INTEGRATION STATUS is a statement about the PROJECT, not about
+       a hotel. There is no table for it because there is nothing to
+       store: STAAH is quoted, Sattva is live in eZee, the CRS runs 32
+       properties. Those are facts about a plan.
    ══════════════════════════════════════════════════════════════════ */
 
-const guard = isDemoProperty;
-const round = (n: number) => Math.round(n * 100) / 100;
+async function fetchOr<T>(path: string, empty: T): Promise<T> {
+  try {
+    return await api<T>(path);
+  } catch (error) {
+    if (error instanceof ApiError && error.status === 404) return empty;
+    throw error;
+  }
+}
 
 /* ── Guests ──────────────────────────────────────────────────────── */
 
@@ -30,79 +46,25 @@ export interface GuestRecord {
   openBalance: number;
   sources: string[];
   /**
-   * Two stays under one name that overlap in time. Either these are
-   * two different people who share a name — in which case grouping
-   * them is wrong — or something was entered twice. A guest who
-   * simply booked through Agoda once and walked in the next month is
-   * NOT flagged: that is one guest behaving normally, and a warning
-   * that fires on half the list is a warning nobody reads.
+   * Two stays under one name that OVERLAP. Either these are two people
+   * sharing a name — in which case grouping them is wrong — or
+   * something was entered twice. A guest who simply booked through
+   * Agoda once and walked in the next month is NOT flagged: that is one
+   * guest behaving normally, and a warning that fires on half the list
+   * is a warning nobody reads.
    */
   possibleDuplicate: boolean;
 }
 
 export async function listGuests(hotelId: string): Promise<GuestRecord[]> {
-  if (!guard(hotelId)) return [];
-
-  const stays = readStays();
-  const postings = readPostings().filter((p) => !p.reversed);
-  const byName = new Map<string, typeof stays>();
-
-  for (const s of stays) {
-    const key = s.guest.trim().toLowerCase();
-    if (!byName.has(key)) byName.set(key, []);
-    byName.get(key)!.push(s);
-  }
-
-  return [...byName.entries()]
-    .map(([key, list]) => {
-      const ids = new Set(list.map((s) => s.id));
-      const spend = round(
-        postings
-          .filter((p) => ids.has(p.folioId) && p.kind !== "payment")
-          .reduce((t, p) => t + p.amount + p.tax, 0),
-      );
-      const sources = [...new Set(list.map((s) => s.source))];
-
-      const past = list
-        .filter((s) => s.departure <= BUSINESS_DATE)
-        .map((s) => s.departure)
-        .sort();
-      const future = list
-        .filter((s) => s.arrival > BUSINESS_DATE && s.status !== "cancelled")
-        .map((s) => s.arrival)
-        .sort();
-
-      /* One person cannot be in two rooms on the same night. */
-      const live = list.filter((s) => s.status !== "cancelled" && s.status !== "no-show");
-      let overlaps = false;
-      for (let i = 0; i < live.length && !overlaps; i++) {
-        for (let j = i + 1; j < live.length; j++) {
-          const a = live[i]!;
-          const b = live[j]!;
-          if (a.arrival < b.departure && b.arrival < a.departure) {
-            overlaps = true;
-            break;
-          }
-        }
-      }
-
-      return {
-        id: key,
-        name: list[0]!.guest,
-        stays: list.length,
-        nights: list.reduce((t, s) => t + s.nights, 0),
-        lastStay: past.pop() ?? null,
-        nextStay: future.shift() ?? null,
-        totalSpend: spend,
-        openBalance: round(list.reduce((t, s) => t + balanceOf(s.id), 0)),
-        sources,
-        possibleDuplicate: overlaps,
-      };
-    })
-    .sort((a, b) => b.stays - a.stays || a.name.localeCompare(b.name));
+  if (!hotelId) return [];
+  return fetchOr<GuestRecord[]>(
+    `/api/hotels/${hotelId}/guests?asOn=${BUSINESS_DATE}`,
+    [],
+  );
 }
 
-/* ── Companies — the booking sources that carry an account ───────── */
+/* ── Companies ───────────────────────────────────────────────────── */
 
 export interface CompanyRecord {
   id: string;
@@ -116,43 +78,9 @@ export interface CompanyRecord {
   commissionPct: number | null;
 }
 
-const OTA = ["Agoda", "Booking.com", "Expedia", "go-MMT"];
-/* The group's own brand and the front desk. Neither pays commission. */
-const DIRECT = ["Walk-in", "Fidato Hotels"];
-
 export async function listCompanies(hotelId: string): Promise<CompanyRecord[]> {
-  if (!guard(hotelId)) return [];
-
-  const stays = readStays();
-  const postings = readPostings().filter((p) => !p.reversed);
-  const bySource = new Map<string, typeof stays>();
-
-  for (const s of stays) {
-    if (!bySource.has(s.source)) bySource.set(s.source, []);
-    bySource.get(s.source)!.push(s);
-  }
-
-  return [...bySource.entries()]
-    .map(([source, list]) => {
-      const ids = new Set(list.map((s) => s.id));
-      return {
-        id: source.toLowerCase().replace(/[^a-z0-9]/g, "-"),
-        name: source,
-        kind: OTA.includes(source) ? "OTA" as const
-          : DIRECT.includes(source) ? "Direct" as const
-          : "Corporate" as const,
-        bookings: list.length,
-        roomNights: list.reduce((t, s) => t + s.nights, 0),
-        revenue: round(
-          postings
-            .filter((p) => ids.has(p.folioId) && p.kind !== "payment")
-            .reduce((t, p) => t + p.amount + p.tax, 0),
-        ),
-        openBalance: round(list.reduce((t, s) => t + balanceOf(s.id), 0)),
-        commissionPct: null,
-      };
-    })
-    .sort((a, b) => b.revenue - a.revenue);
+  if (!hotelId) return [];
+  return fetchOr<CompanyRecord[]>(`/api/hotels/${hotelId}/companies`, []);
 }
 
 /* ── Staff ───────────────────────────────────────────────────────── */
@@ -169,13 +97,17 @@ export interface StaffRecord {
 }
 
 /**
- * Stage 1 has no authentication, so there are no real accounts. These
- * are the roles the permission matrix defines, shown as the people who
- * would hold them — enough to exercise the screen without inventing
- * staff who do not exist.
+ * Stage 3 brought authentication but not user administration, so there
+ * are no accounts to list beyond the ones seeded for development.
+ * These are the roles the permission matrix defines, shown as the
+ * people who would hold them — enough to exercise the screen without
+ * inventing staff nobody hired.
+ *
+ * `staff_hotels` IS readable to a group admin now (migration 020), so
+ * this becomes a real list the moment there are real accounts.
  */
 export async function listStaff(hotelId: string): Promise<StaffRecord[]> {
-  if (!guard(hotelId)) return [];
+  if (!hotelId) return [];
   return ROLES.filter((r) => r !== "automation").map((role) => ({
     id: `role-${role}`,
     name: ROLE_LABELS[role],
@@ -208,34 +140,12 @@ export interface AuditEntry {
 
 /**
  * The ledger IS the audit trail for money — it is append-only, so every
- * posting and every reversal is already a permanent record. Nothing here
- * is stored twice.
+ * posting and every reversal is already a permanent record. Nothing is
+ * stored twice to produce this.
  */
 export async function listAuditLog(hotelId: string): Promise<AuditEntry[]> {
-  if (!guard(hotelId)) return [];
-
-  const stays = readStays();
-  const byId = new Map(stays.map((s) => [s.id, s]));
-
-  return readPostings()
-    .filter((p) => byId.has(p.folioId))
-    .map((p) => {
-      const stay = byId.get(p.folioId)!;
-      return {
-        id: p.id,
-        at: p.createdAt,
-        businessDate: p.businessDate,
-        actor: p.user,
-        action:
-          p.kind === "reversal" ? "Reversed a posting"
-            : p.kind === "payment" ? "Took a payment"
-            : "Posted a charge",
-        subject: `${stay.guest} · room ${stay.roomNumber}`,
-        detail: p.description,
-        kind: p.kind,
-      };
-    })
-    .sort((a, b) => b.at.localeCompare(a.at));
+  if (!hotelId) return [];
+  return fetchOr<AuditEntry[]>(`/api/hotels/${hotelId}/audit-log`, []);
 }
 
 /* ── Integrations ────────────────────────────────────────────────── */
@@ -264,7 +174,7 @@ export async function listIntegrations(): Promise<Integration[]> {
     },
     {
       id: "firebase", name: "Firebase", kind: "Platform", status: "connected",
-      detail: "Initialised for analytics. The authentication bridge is not yet wired — the interface still runs on demo data.",
+      detail: "Authentication is wired: a token reaches Postgres and comes back with that person's properties. A service account is still needed before anyone can sign in with a password.",
       stage: "Stage 3",
     },
     {
@@ -284,44 +194,33 @@ export interface SettingGroup {
 }
 
 export async function getSettings(hotelId: string): Promise<SettingGroup[]> {
-  if (!guard(hotelId)) return [];
+  if (!hotelId) return [];
+  const groups = await fetchOr<SettingGroup[]>(
+    `/api/hotels/${hotelId}/settings`,
+    [],
+  );
+  if (groups.length === 0) return [];
 
+  /* Two groups the database has no home for, appended rather than
+     invented into it.
+
+     The invoice SERIES is real — 5EFH154 is the next number this hotel
+     will print — but nothing issues one yet, so it stays in the fixture
+     beside the note explaining why. The POS outlet is a migration off
+     eZee, not a configured thing. Both carry the stage that makes them
+     real. */
   return [
+    ...groups,
     {
-      title: "Property",
-      rows: [
-        { label: "Name", value: property.name },
-        { label: "Address", value: property.address },
-        { label: "GSTIN", value: `${property.gstin} — demo, not a real GSTIN` },
-        { label: "Currency", value: property.currency },
-        { label: "Time zone", value: property.timezone },
-      ],
-    },
-    {
-      title: "Operations",
-      rows: [
-        { label: "Check-in", value: property.checkInTime },
-        { label: "Check-out", value: property.checkOutTime },
-        { label: "Sellable rooms", value: String(property.rooms) },
-        { label: "Room types", value: property.roomTypes.join(" · ") },
-        { label: "Rate plans", value: property.rateTypes.join(" · ") },
-      ],
-    },
-    {
-      title: "Tax and billing",
-      note: "Rates are fixed by statute. Changing them is an administrative act, not a preference — they become editable at Stage 8.",
-      rows: [
-        { label: "CGST", value: `${property.tax.cgst}%`, editableAt: "Stage 8" },
-        { label: "SGST", value: `${property.tax.sgst}%`, editableAt: "Stage 8" },
-        { label: "Financial year starts", value: "1 April" },
-        {
-          label: "Invoice series",
-          value: property.invoiceSeries
-            .map((s) => (s.prefix ? `${s.prefix}${s.next}` : String(s.next).padStart(s.pad ?? 6, "0")))
-            .join(" · "),
-          editableAt: "Stage 8",
-        },
-      ],
+      title: "Invoice series",
+      note: "Not issued by this system yet — see the Invoices screen for why.",
+      rows: property.invoiceSeries.map((s) => ({
+        label: s.prefix || "Numeric",
+        value: s.prefix
+          ? `${s.prefix}${s.next}`
+          : String(s.next).padStart(s.pad ?? 6, "0"),
+        editableAt: "Stage 8",
+      })),
     },
     {
       title: "Point of sale",
@@ -345,24 +244,12 @@ export interface RoomTypeRecord {
   numbers: string[];
 }
 
-const RACK: Record<string, number> = { Superior: 4099, Deluxe: 3699 };
-
 export async function listRoomTypes(hotelId: string): Promise<RoomTypeRecord[]> {
-  if (!guard(hotelId)) return [];
-  const rooms = readRooms();
-  const types = [...new Set(rooms.map((r) => r.type))];
-
-  return types.map((type) => {
-    const of = rooms.filter((r) => r.type === type);
-    return {
-      type,
-      rooms: of.length,
-      sellable: of.filter((r) => r.housekeeping !== "out-of-service").length,
-      maxOccupancy: Math.max(...of.map((r) => r.maxOccupancy)),
-      rackRate: RACK[type] ?? 0,
-      numbers: of.map((r) => r.number).sort(),
-    };
-  });
+  if (!hotelId) return [];
+  return fetchOr<RoomTypeRecord[]>(
+    `/api/hotels/${hotelId}/room-types?asOn=${BUSINESS_DATE}`,
+    [],
+  );
 }
 
 export interface RatePlanRecord {
@@ -374,10 +261,5 @@ export interface RatePlanRecord {
 }
 
 export async function listRatePlans(): Promise<RatePlanRecord[]> {
-  return [
-    { code: "EP", name: "European Plan", includes: "Room only", seenAs: null },
-    { code: "CP", name: "Continental Plan", includes: "Room and breakfast", seenAs: "Deluxe CP" },
-    { code: "MAP", name: "Modified American Plan", includes: "Room, breakfast and one meal", seenAs: null },
-    { code: "Room Only", name: "Room Only", includes: "Room only — the live system lists this alongside EP", seenAs: "Room Only" },
-  ];
+  return fetchOr<RatePlanRecord[]>("/api/hotels/rate-plans", []);
 }
