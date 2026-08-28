@@ -3,7 +3,7 @@
 Updated after every finished section. **Nothing here is a claim until the gates
 below are green and the screen has been opened.**
 
-Last updated: **28 August 2026** · after `billing` and `notifications` — **the seam is complete**
+Last updated: **28 August 2026** · after **CP11 — the business date comes from the database**
 
 ---
 
@@ -15,18 +15,25 @@ FRONTEND   tsc -b            0 errors
            build             clean
 
 API        tsc --noEmit      0 errors
-           vitest run        10 passed   (live Postgres, as pms_app)
+           vitest run        17 passed   (live Postgres, as pms_app)
 
-DATABASE   db/tests/run.sh   22 migrations · 51 assertions
+DATABASE   db/tests/run.sh   23 migrations · 55 assertions
                              7 isolation checks · exit 0
            load-demo         431 available · 132 sold · 30.63% ✓
 ```
 
+⚠ **The database gate was lying until this checkpoint.** `run.sh` filtered psql
+errors with a pattern that could not match psql's output format, and never read
+the exit status. A whole `do $$` block aborted, seven assertions vanished, and
+the run printed *"all 44 assertions passed"*. Fixed and then proved by
+reintroducing the exact bug. Defect 18 in `MEMORY.md`.
+
 **The seam measure:** `diff` of all 46 files under `src/pages` and
 `src/components` against the CP9 baseline — **ZERO changed**. All twelve
-repository modules have moved from an in-memory store onto a real database and
-not one screen has noticed. That was the claim the seam made for six
-checkpoints before anything tested it.
+repository modules have moved from an in-memory store onto a real database, and
+now the business date has too — a value read in **70 places** across those 46
+files, moved from a hardcoded constant to a per-property database query without
+one screen noticing.
 
 ---
 
@@ -56,14 +63,45 @@ reads that store's data any more.
 
 ---
 
+## CP11 — the business date ✅
+
+`BUSINESS_DATE` was `"2026-08-25"`, a literal in a fixtures file, read in 70
+places. It is now `app.business_date(hotel)`: **the day after the last
+COMPLETED night audit**, falling back to the property's configured date.
+
+Three properties, three different operating days, live right now:
+
+```
+5EL   5 Elements Akkalkot     2026-08-25    configured; no audit has run
+AGR   Fidato Agra             2027-04-02    the day after its completed audit
+PUN   Fidato Pune             2026-08-28    configured
+```
+
+A failed or still-running audit does **not** advance the day. That is asserted,
+not assumed — five database assertions and six API tests.
+
+**The defect this uncovered was worse than the constant.** Four write paths
+dated postings from the server's wall clock:
+
+> A clerk settles a bill at 00:40. The night audit for the 25th has not run, so
+> the hotel is still operating in the 25th. The clock says the 26th. The receipt
+> lands on the 26th, the night audit closes the 25th without it, and the day's
+> cash never balances.
+
+All four now resolve the date from the database inside the same transaction as
+the write. Proved by restoring the wall clock in one line and watching the test
+fail.
+
+---
+
 ## The stages
 
 ```
 1  Frontend shell and screens        ████████████  36 screens, 2 placeholders
 2  Repository layer behind the seam  ████████████  12 of 12 modules
 3  Auth bridge — Firebase            ███████████░  works; needs a service account
-4  Front desk + folio, end to end    ███████████░  flows and reports done
-5  Night audit                       ░░░░░░░░░░░░
+4  Front desk + folio, end to end    ████████████  flows, reports, dating
+5  Night audit                       ██░░░░░░░░░░  the date it sets is live
 6  Housekeeping, mobile, offline     ███████░░░░░  board writes to Postgres
 7  POS bridge (a MIGRATION)          ░░░░░░░░░░░░
 8  Billing, GST, Form C              ██░░░░░░░░░░  lodging tax derives
@@ -73,7 +111,7 @@ reads that store's data any more.
 12 Hardening and go-live             ░░░░░░░░░░░░
 ```
 
-**About 60%.**
+**About 63%.**
 
 ---
 
@@ -96,6 +134,8 @@ guests                       30 · 2 flagged for overlapping stays
 receipts             59 · ₹3,97,042 · all methods recorded
 departed folios      60 · 58 settled · 1 outstanding · 1 overpaid
 notifications         6 · 1 arrival · 3 owing · 1 refund · 1 room held
+
+business date         5EL 2026-08-25 · AGR 2027-04-02 · PUN 2026-08-28
 ```
 
 ---
@@ -103,13 +143,10 @@ notifications         6 · 1 arrival · 3 owing · 1 refund · 1 room held
 ## What is left in this stage
 
 ```
-1 · CP11             business date from night_audit_runs, per hotel.
-                     BUSINESS_DATE is still a constant, and two properties
-                     cannot sit on different dates until it is not.
-2 · CP12             concurrency — the two EXCLUDE constraints have never
+1 · CP12             concurrency — the two EXCLUDE constraints have never
                      been raced — and a proven restore. A backup that has
                      never been restored is not a backup.
-3 · retire src/data/store.ts and the in-memory fixtures it seeds, once
+2 · retire src/data/store.ts and the in-memory fixtures it seeds, once
     the demo loader is the only thing that reads them.
 ```
 

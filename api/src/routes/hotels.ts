@@ -26,6 +26,7 @@ interface HotelRow {
   currency: string;
   check_in_time: string;
   check_out_time: string;
+  business_date: string;
 }
 
 hotels.get("/", async (c) => {
@@ -37,7 +38,13 @@ hotels.get("/", async (c) => {
     const { rows } = await client.query<HotelRow>(
       `select id, code, name, city, state, gstin, timezone, currency,
               to_char(check_in_time,  'HH24:MI') as check_in_time,
-              to_char(check_out_time, 'HH24:MI') as check_out_time
+              to_char(check_out_time, 'HH24:MI') as check_out_time,
+              /* Each property's OWN operating day. Two hotels are
+                 routinely on different dates: one has run its night
+                 audit and the other has not. Returned per row for
+                 exactly that reason — there is no group business
+                 date to return instead. */
+              to_char(app.business_date(id), 'YYYY-MM-DD') as business_date
          from hotels
         where is_active
         order by code`,
@@ -59,6 +66,7 @@ hotels.get("/", async (c) => {
         currency: h.currency,
         checkInTime: h.check_in_time,
         checkOutTime: h.check_out_time,
+        businessDate: h.business_date,
       })),
     };
   });

@@ -1,5 +1,6 @@
 import { stays as seedStays, folios as seedFolios, type Stay } from "./fixtures/reservations";
-import { roomInventory, BUSINESS_DATE } from "./fixtures/property";
+import { roomInventory, FIXTURE_BUSINESS_DATE as BUSINESS_DATE }
+  from "./fixtures/property";
 
 /* ══════════════════════════════════════════════════════════════════
    THE MUTABLE STORE

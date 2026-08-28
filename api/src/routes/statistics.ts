@@ -1,6 +1,7 @@
 import { Hono } from "hono";
 import { withSession } from "../auth.ts";
 import type { Client } from "../db.ts";
+import { businessDateFor, monthStart, monthEnd } from "../businessDate.ts";
 
 /* ══════════════════════════════════════════════════════════════════
    STATISTICS — occupancy, ADR, RevPAR
@@ -144,12 +145,15 @@ const pct = (a: number, b: number) => (b ? Math.round((a / b) * 10000) / 100 : 0
 const money = (a: number, b: number) => (b ? Math.round((a / b) * 100) / 100 : 0);
 
 statistics.get("/:code/statistics/daily", async (c) => {
-  const from = c.req.query("from") ?? "2026-08-01";
-  const to = c.req.query("to") ?? "2026-08-25";
+  const fromParam = c.req.query("from");
+  const toParam = c.req.query("to");
 
   const body = await withSession(c.get("subject"), async (client) => {
     const hotelId = await hotelIdFor(client, c.req.param("code"));
     if (!hotelId) return null;
+    const bd = await businessDateFor(client, hotelId);
+    const from = fromParam ?? monthStart(bd);
+    const to = toParam ?? bd;
 
     return (await daily(client, hotelId, from, to)).map((d) => ({
       date: d.date,
@@ -163,12 +167,15 @@ statistics.get("/:code/statistics/daily", async (c) => {
 });
 
 statistics.get("/:code/statistics/period", async (c) => {
-  const from = c.req.query("from") ?? "2026-08-01";
-  const to = c.req.query("to") ?? "2026-08-25";
+  const fromParam = c.req.query("from");
+  const toParam = c.req.query("to");
 
   const body = await withSession(c.get("subject"), async (client) => {
     const hotelId = await hotelIdFor(client, c.req.param("code"));
     if (!hotelId) return null;
+    const bd = await businessDateFor(client, hotelId);
+    const from = fromParam ?? monthStart(bd);
+    const to = toParam ?? bd;
 
     const days = await daily(client, hotelId, from, to);
 
@@ -196,11 +203,13 @@ statistics.get("/:code/statistics/period", async (c) => {
 });
 
 statistics.get("/:code/statistics/snapshot", async (c) => {
-  const date = c.req.query("date") ?? "2026-08-25";
+  const dateParam = c.req.query("date");
 
   const body = await withSession(c.get("subject"), async (client) => {
     const hotelId = await hotelIdFor(client, c.req.param("code"));
     if (!hotelId) return null;
+    const bd = await businessDateFor(client, hotelId);
+    const date = dateParam ?? bd;
 
     const day = (await daily(client, hotelId, date, date))[0];
     if (!day) return null;
@@ -226,12 +235,15 @@ statistics.get("/:code/statistics/snapshot", async (c) => {
    ═══════════════════════════════════════════════════════════════ */
 
 statistics.get("/:code/statistics/monthly", async (c) => {
-  const from = c.req.query("from") ?? "2026-08-01";
-  const to = c.req.query("to") ?? "2026-08-31";
+  const fromParam = c.req.query("from");
+  const toParam = c.req.query("to");
 
   const body = await withSession(c.get("subject"), async (client) => {
     const hotelId = await hotelIdFor(client, c.req.param("code"));
     if (!hotelId) return null;
+    const bd = await businessDateFor(client, hotelId);
+    const from = fromParam ?? monthStart(bd);
+    const to = toParam ?? monthEnd(bd);
 
     return (await daily(client, hotelId, from, to)).map((d) => {
       const room = Number(d.room_revenue);

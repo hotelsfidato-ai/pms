@@ -1,6 +1,7 @@
 import { Hono } from "hono";
 import { withSession } from "../auth.ts";
 import type { Client } from "../db.ts";
+import { businessDateFor } from "../businessDate.ts";
 
 /* ══════════════════════════════════════════════════════════════════
    DIRECTORY — guests, companies, staff, and the audit trail
@@ -43,11 +44,13 @@ const LIVE = `
 /* ── Guests ──────────────────────────────────────────────────────── */
 
 directory.get("/:code/guests", async (c) => {
-  const asOn = c.req.query("asOn") ?? "2026-08-25";
+  const asOnParam = c.req.query("asOn");
 
   const body = await withSession(c.get("subject"), async (client) => {
     const hotelId = await hotelIdFor(client, c.req.param("code"));
     if (!hotelId) return null;
+    const bd = await businessDateFor(client, hotelId);
+    const asOn = asOnParam ?? bd;
 
     const { rows } = await client.query<{
       id: string; name: string; stays: string; nights: string;
@@ -196,11 +199,13 @@ directory.get("/:code/companies", async (c) => {
 /* ── Room types and rate plans ───────────────────────────────────── */
 
 directory.get("/:code/room-types", async (c) => {
-  const asOn = c.req.query("asOn") ?? "2026-08-25";
+  const asOnParam = c.req.query("asOn");
 
   const body = await withSession(c.get("subject"), async (client) => {
     const hotelId = await hotelIdFor(client, c.req.param("code"));
     if (!hotelId) return null;
+    const bd = await businessDateFor(client, hotelId);
+    const asOn = asOnParam ?? bd;
 
     const { rows } = await client.query<{
       type: string; rooms: string; sellable: string;

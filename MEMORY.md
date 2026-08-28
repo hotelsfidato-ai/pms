@@ -291,6 +291,72 @@ compiler does, the gap is the ERROR MESSAGE, and a test cannot improve it.**
 
 ---
 
+### 18 · A test runner that reported success while a whole file errored
+
+`db/tests/run.sh` piped the suite into `grep -iE "^ERROR"` and checked nothing.
+Two independent failures, and each one hid the other:
+
+- psql prefixes its diagnostics — `psql:db/tests/suite.sql:389: ERROR:` — so a
+  pattern anchored at `^ERROR` matched **none of them**. The filter could not
+  report the one thing it existed to report.
+- The pipeline's exit status was never read, so `ON_ERROR_STOP=1` did its job
+  and nobody asked.
+
+Result: a `do $$` block aborted on an undefined variable, the seven assertions
+after it never ran, and the run printed **"all 44 assertions passed"** — seven
+FEWER than the run before it, reported as success.
+
+**An assertion count that can only fall in silence is not a gate. Compare it to
+the last run, or a deleted test looks exactly like a passing one.**
+
+Fixed, then *proved* by reintroducing the exact bug: the run now stops with the
+error quoted. Same family as defect 10 (the guard behind `if [ -f ]` whose file
+never existed) and defect 17 (a check whose pattern could not match its target).
+
+---
+
+### 19 · The wall clock standing in for the business date, on four write paths
+
+Found while removing the `BUSINESS_DATE` constant. Twelve API handlers defaulted
+a date parameter to the literal `"2026-08-25"`, which was merely wrong for a
+second property. Four **write** paths defaulted to
+`new Date().toISOString().slice(0, 10)`, which was wrong for the first one:
+
+> A clerk settles a bill at 00:40. The night audit for the 25th has not run, so
+> the hotel is still operating in the 25th. The wall clock says the 26th. The
+> receipt lands on the 26th, the night audit closes the 25th without it, and the
+> day's cash never balances. Nobody can find the money, because it is filed
+> under a day the hotel had not reached yet.
+
+**A hotel's date advances when its night audit COMPLETES, not at midnight.**
+That is the entire reason the concept exists. `now()` is never the business
+date, and two properties are routinely on different ones — 5EL sat on
+2026-08-25, Agra on 2027-04-02 and Pune on 2026-08-28 the day this was written.
+
+---
+
+### 20 · Wiring two of the three paths, and the screen finding the third
+
+`BUSINESS_DATE` moved behind the seam and was set in `useSession.setHotelId`
+and in the session load. Both correct. Opening `/h/AGR/arrivals` still showed
+Agra's rooms under **5 Elements' date**, because a deep link changes the
+property through a third path: a route effect calling `useUi.setHotelId` — a
+*different store*, keyed by CODE where the session is keyed by UUID.
+
+`tsc`, 81 tests and a clean build all passed. Nothing connected the three.
+
+**Rule (again — this is defect 9 and 14 in a new costume): trace from the
+BUTTON, not the module.** When two stores can name the same thing, find every
+writer before claiming one of them is the place. The fix was to give the seam a
+`selectProperty(codeOrId)` that both stores funnel through, so neither has to
+remember.
+
+**And: `grep` for the constant, then grep again after.** The last literal
+`"2026-08-25"` in `src/` was in `admin.ts`, in a repository nobody had thought
+about, showing one property's date on another property's settings screen.
+
+---
+
 ## Verification traps
 
 ### Never test a Tailwind utility by injecting the class at runtime

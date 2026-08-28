@@ -1,5 +1,6 @@
 import { create } from "zustand";
 import { persist } from "zustand/middleware";
+import { selectProperty } from "@/data/repositories/businessDate";
 
 /* ══════════════════════════════════════════════════════════════════
    UI STATE
@@ -50,7 +51,14 @@ export const useUi = create<UiState>()(
       /* The hotel CODE, as Postgres names it. Was the fixture's slug
          until CP9 moved the properties repository onto HTTP. */
       hotelId: "5EL",
-      setHotelId: (hotelId) => set({ hotelId }),
+      setHotelId: (hotelId) => {
+        /* The business date follows the property. This is the path a
+           deep link takes — App.tsx calls it from a route effect — and
+           leaving it out is how /h/AGR/arrivals came to show Agra's
+           rooms under 5 Elements' date. */
+        selectProperty(hotelId);
+        set({ hotelId });
+      },
       favouriteReports: [],
       toggleFavouriteReport: (path) =>
         set((s) => ({

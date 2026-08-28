@@ -1,6 +1,7 @@
 import { Hono } from "hono";
 import { withSession } from "../auth.ts";
 import type { Client } from "../db.ts";
+import { businessDateFor, monthStart } from "../businessDate.ts";
 
 /* ══════════════════════════════════════════════════════════════════
    THE MANAGER REPORT — the daily flash
@@ -150,12 +151,15 @@ const METHOD_LABELS: Array<[string, string]> = [
 ];
 
 manager.get("/:code/reports/manager", async (c) => {
-  const asOn = c.req.query("asOn") ?? "2026-08-25";
-  const ptdFrom = c.req.query("ptdFrom") ?? "2026-08-01";
+  const asOnParam = c.req.query("asOn");
+  const ptdFromParam = c.req.query("ptdFrom");
 
   const body = await withSession(c.get("subject"), async (client) => {
     const hotelId = await hotelIdFor(client, c.req.param("code"));
     if (!hotelId) return null;
+    const bd = await businessDateFor(client, hotelId);
+    const asOn = asOnParam ?? bd;
+    const ptdFrom = ptdFromParam ?? monthStart(bd);
 
     const [today, ptd, ytd] = await Promise.all([
       windowFor(client, hotelId, asOn, asOn),

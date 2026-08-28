@@ -1,5 +1,5 @@
 import { api, ApiError } from "@/lib/api";
-import { BUSINESS_DATE } from "../fixtures/property";
+import { BUSINESS_DATE } from "./businessDate";
 import type { Stay, Folio } from "./types";
 
 /* ══════════════════════════════════════════════════════════════════
@@ -23,7 +23,7 @@ import type { Stay, Folio } from "./types";
    ══════════════════════════════════════════════════════════════════ */
 
 /** The business date the demo is pinned to — the Night Audit's "As On Date". */
-export { BUSINESS_DATE } from "../fixtures/property";
+export { BUSINESS_DATE } from "./businessDate";
 
 const clone = <T,>(rows: T[]): T[] => rows.map((r) => ({ ...r }));
 

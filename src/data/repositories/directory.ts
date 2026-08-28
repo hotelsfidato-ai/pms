@@ -1,7 +1,7 @@
 import { api, ApiError } from "@/lib/api";
 import { ROLES, ROLE_LABELS, ROLE_DESCRIPTIONS, type Role } from "@/lib/permissions";
 import { property } from "../fixtures/property";
-import { BUSINESS_DATE } from "./stays";
+import { BUSINESS_DATE } from "./businessDate";
 
 /* ══════════════════════════════════════════════════════════════════
    DIRECTORY — over HTTP, as of CP9e

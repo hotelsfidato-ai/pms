@@ -10,6 +10,9 @@ import {
   type ApiHotel, type ApiScope,
 } from "./api";
 import type { Role } from "./permissions";
+import { useUi } from "./ui";
+import { registerBusinessDates, selectProperty }
+  from "@/data/repositories/businessDate";
 
 /* ══════════════════════════════════════════════════════════════════
    THE SESSION
@@ -140,7 +143,14 @@ export const useSession = create<SessionState>()((set, get) => ({
     set({ status: "signed-out", scope: null, hotels: [], hotelId: null, error: null });
   },
 
-  setHotelId: (id) => set({ hotelId: id }),
+  setHotelId: (id) => {
+    /* Before the id changes, not after. Every screen reads
+       BUSINESS_DATE synchronously during the render this triggers,
+       and a render between the two would show the new property's
+       rooms under the old property's date. */
+    selectProperty(id);
+    set({ hotelId: id });
+  },
 
   restore: () => {
     /* A dev session left in this tab. Checked before Firebase, because
@@ -177,6 +187,16 @@ async function load(set: (partial: Partial<SessionState>) => void) {
   /* Which property to open in. A group admin has no grants, so fall
      back to the first readable one rather than showing an empty shell. */
   const first = scope.hotels[0]?.hotelId ?? hotels[0]?.id ?? null;
+
+  /* The property's operating day, into the seam, BEFORE status becomes
+     "signed-in". App.tsx holds every screen behind a loading state until
+     then, so no screen can observe the unset value. */
+  registerBusinessDates(hotels);
+  if (first) selectProperty(first);
+  /* And then onto whatever property the interface is actually showing.
+     `useUi.hotelId` holds a CODE and persists across reloads, so it can
+     already name a different property than the one `first` picked. */
+  selectProperty(useUi.getState().hotelId);
 
   set({ status: "signed-in", scope, hotels, hotelId: first, busy: false, error: null });
 }

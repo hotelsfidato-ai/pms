@@ -132,6 +132,10 @@ export interface ApiHotel {
   currency: string;
   checkInTime: string;
   checkOutTime: string;
+  /* This property's OWN operating day. Two hotels are routinely on
+     different dates — one has run its night audit and the other has
+     not — so it arrives per hotel, not once for the group. */
+  businessDate: string;
 }
 
 export interface ApiScope {

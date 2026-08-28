@@ -310,9 +310,10 @@ end $$;
 -- 017 production readiness — Firebase, timezone, seed hygiene
 -- =============================================================================
 do $$
-declare s uuid; a uuid; n int;
+declare s uuid; a uuid; p uuid; n int;
 begin
   select id into a from hotels where code='AGR';
+  select id into p from hotels where code='PUN';   -- the second property
 
   -- P1/P2: a Firebase-shaped uid must resolve to a staff row
   update staff set firebase_uid='kJ8mN2pQ4rS6tU8vW0xY1zA3bC5d'
@@ -342,9 +343,48 @@ begin
   select count(*) into n from hotels where name like 'REPLACE%';
   perform test.ok('seed hygiene','no placeholder properties remain', n = 0, n || ' left');
 
-  -- P4: business date follows the property, not the server
-  perform test.ok('timezone','business_date uses the property timezone',
-    app.business_date(a) = (now() at time zone 'Asia/Kolkata')::date);
+  -- P4: the business date is the property's OPERATING day, not the clock.
+  --
+  --     Until 023 this compared app.business_date() to the wall clock in the
+  --     property's timezone. That described the old definition — "what day is
+  --     it there" — which is a different question and only coincidentally the
+  --     same answer. A hotel whose night audit failed last night is still
+  --     operating in the earlier day, and every figure must agree with it.
+  --
+  --     Asserted against KNOWN dates, not against a re-statement of the
+  --     function's own SQL. A test that recomputes the implementation passes
+  --     whatever the implementation does.
+  --
+  --     Agra completed an audit for 2027-04-01 further up this suite, so its
+  --     operating day is the 2nd.
+  perform test.ok('business date','is the day after the last COMPLETED audit',
+    app.business_date(a) = date '2027-04-02', app.business_date(a)::text);
+
+  -- A run that FAILED must not move the day. This is the whole reason the
+  -- status is checked: a hotel does not reach tomorrow because someone
+  -- started an audit, only because one finished.
+  insert into night_audit_runs (hotel_id, business_date, status)
+  values (a, '2027-05-01', 'failed');
+  perform test.ok('business date','a FAILED audit does not advance the day',
+    app.business_date(a) = date '2027-04-02', app.business_date(a)::text);
+
+  update night_audit_runs set status = 'completed', completed_at = now()
+   where hotel_id = a and business_date = '2027-05-01';
+  perform test.ok('business date','a COMPLETED audit advances it',
+    app.business_date(a) = date '2027-05-02', app.business_date(a)::text);
+
+  delete from night_audit_runs where hotel_id = a and business_date = '2027-05-01';
+
+  -- P4c: a property with no audit runs falls back to its configured date,
+  --      and the two properties are therefore on DIFFERENT days. That is not
+  --      an edge case — it is the normal state of a group at 02:00, and the
+  --      thing a single BUSINESS_DATE constant could never express.
+  perform test.ok('business date','no audit yet falls back to the property',
+    app.business_date(p) = (select business_date from hotels where id = p),
+    app.business_date(p)::text);
+  perform test.ok('business date','two properties sit on different days',
+    app.business_date(a) <> app.business_date(p),
+    app.business_date(a)::text || ' vs ' || app.business_date(p)::text);
   perform test.ok('timezone','financial year resolves per property',
     app.current_fin_year(a) ~ '^\d{4}-\d{2}$', app.current_fin_year(a));
 end $$;

@@ -71,9 +71,36 @@ done
 green "  ✓ $(ls "$ROOT"/db/migrations/*.sql | wc -l | tr -d ' ') migrations applied"
 
 echo "── harness + suite ────────────────────────────────────────"
-PGPASSWORD=$SUPERPASS "$PSQL" $S -d "$DB" -v ON_ERROR_STOP=1 -q \
-  -f "$ROOT/db/tests/harness.sql" -f "$ROOT/db/tests/suite.sql" 2>&1 \
-  | grep -iE "^ERROR" | head -5
+#
+# (!) THIS USED TO PIPE STRAIGHT INTO `grep -iE "^ERROR"` AND CHECK NOTHING.
+#     Two failures at once, and each one hid the other:
+#
+#       1. psql prefixes its diagnostics -- `psql:db/tests/suite.sql:389:
+#          ERROR:` -- so a pattern anchored at ^ERROR matched none of them.
+#          The filter could not report the thing it existed to report.
+#       2. The pipeline's exit status was never read, so ON_ERROR_STOP=1 did
+#          its job and nobody asked.
+#
+#     Together: a `do $$` block aborted on an undefined variable, the seven
+#     assertions after it never ran, and the run printed "all 44 assertions
+#     passed" -- SEVEN FEWER than the run before it, reported as success.
+#     A count that can only fall in silence is not a gate.
+#
+SUITE_OUT=$(PGPASSWORD=$SUPERPASS "$PSQL" $S -d "$DB" -v ON_ERROR_STOP=1 -q   -f "$ROOT/db/tests/harness.sql" -f "$ROOT/db/tests/suite.sql" 2>&1)
+SUITE_RC=$?
+
+if [ $SUITE_RC -ne 0 ]; then
+  red "  x the suite did not finish -- every assertion after it never ran"
+  echo "$SUITE_OUT" | grep -iE "(ERROR|FATAL):" | head -10 | sed 's/^/      /'
+  exit 1
+fi
+
+# Belt and braces: an error inside a nested block can still leave psql at 0.
+if echo "$SUITE_OUT" | grep -qiE "(ERROR|FATAL):"; then
+  red "  x the suite reported an error"
+  echo "$SUITE_OUT" | grep -iE "(ERROR|FATAL):" | head -10 | sed 's/^/      /'
+  exit 1
+fi
 
 # RLS suite runs as the application role — a superuser bypasses RLS and would
 # report success on a completely open database.

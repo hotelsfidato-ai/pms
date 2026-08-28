@@ -4,6 +4,8 @@ import {
   dailyAvailableRooms, nightsSoldPerDay,
 } from "@/data/fixtures/property";
 import { stays, folios, groups } from "@/data/fixtures/reservations";
+import { setBusinessDate } from "@/data/repositories/businessDate";
+import { FIXTURE_BUSINESS_DATE } from "@/data/fixtures/property";
 
 /* ══════════════════════════════════════════════════════════════════
    TEST SETUP — the transport, stubbed once
@@ -207,3 +209,28 @@ vi.mock("@/lib/api", () => ({
     throw new StubApiError(404, "No such property.");
   },
 }));
+
+/* ── The business date, which the session normally supplies ───────── */
+
+/*
+   In the running app `src/lib/session.ts` calls `setBusinessDate()`
+   with the value the API returned for the selected property, and it
+   does so before any screen renders. Tests have no session, so the
+   harness plays that part.
+
+   The value is the FIXTURE date, and that is the point: every figure
+   these tests assert — 431 available room-nights, 132 sold, ADR
+   ₹3,178.63 — is calibrated to the real eZee export for 1–25 August
+   2026. A test running against a different business date would be
+   asserting numbers derived from one window against a dataset built
+   for another.
+
+   Setting it here rather than defaulting it in the module is
+   deliberate. The default is the empty string, so a screen that ever
+   renders without a session shows blank dates and throws on date
+   arithmetic — loudly wrong, at the point of the mistake. When this
+   line was missing, 26 tests failed with `Invalid time value` inside
+   `addDays`, which is exactly the alarm a silent fallback to
+   "2026-08-25" would have suppressed.
+*/
+setBusinessDate(FIXTURE_BUSINESS_DATE);

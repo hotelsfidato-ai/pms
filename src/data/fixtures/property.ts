@@ -126,7 +126,17 @@ export { dailyAvailableRooms, nightsSoldPerDay };
  */
 export const PROPERTY_CODE = "5EL";
 
-export const BUSINESS_DATE = "2026-08-25";
+/**
+ * The day the demo dataset is pinned to.
+ *
+ * NOT the business date — that comes from `app.business_date()`
+ * per property and lives in `repositories/businessDate.ts`. This is
+ * the anchor the generated fixtures are built around, and it must
+ * stay fixed: 431 available room-nights, 132 sold and ADR ₹3,178.63
+ * all reconcile to the real eZee export for 1–25 August 2026. Move
+ * this and the calibration stops meaning anything.
+ */
+export const FIXTURE_BUSINESS_DATE = "2026-08-25";
 
 export const property = {
   id: PROPERTY_ID,

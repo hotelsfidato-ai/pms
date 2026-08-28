@@ -39,6 +39,10 @@ const signedIn = (overrides: Partial<ReturnType<typeof useSession.getState>> = {
         id: AGRA_HOTEL, code: "AGR", name: "Fidato Agra", city: "Agra",
         state: "UP", gstin: null, timezone: "Asia/Kolkata", currency: "INR",
         checkInTime: "14:00", checkOutTime: "11:00",
+        /* A DIFFERENT date from the demo property's 25 August, on
+           purpose: this is Agra, and two properties do not share an
+           operating day. */
+        businessDate: "2026-08-24",
       },
     ],
     hotelId: AGRA_HOTEL,

@@ -151,16 +151,22 @@ async function main() {
        which clones room types from the group templates. This property
        has its own two, taken from the real exports. */
     const { rows: [hotel] } = await client.query<{ id: string }>(
+      /* business_date pins the property to the day the export was
+         taken. Without it the column defaults to current_date and the
+         demo silently reports whatever day the loader ran on — every
+         arrival list empty, every occupancy figure zero, and nothing
+         to point at as the cause. */
       `insert into hotels (code, name, city, state, gstin, timezone,
                            check_in_time, check_out_time,
-                           address_line, phone, email, cgst_rate, sgst_rate)
-       values ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13)
+                           address_line, phone, email, cgst_rate, sgst_rate,
+                           business_date)
+       values ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14)
        returning id`,
       [
         HOTEL_CODE, property.name, "Akkalkot", "MH", property.gstin,
         property.timezone, property.checkInTime, property.checkOutTime,
         property.address, property.phone, property.email,
-        property.tax.cgst, property.tax.sgst,
+        property.tax.cgst, property.tax.sgst, BUSINESS_DATE,
       ],
     );
     const hotelId = hotel!.id;
@@ -580,7 +586,16 @@ async function main() {
   }
 }
 
-/** The business date the demo is pinned to. Re-exported by the fixtures. */
+/**
+ * The day the demo dataset is anchored to.
+ *
+ * NOT the business date the application reads — that comes from
+ * app.business_date() per property, and this value is what gets
+ * WRITTEN into hotels.business_date so the two agree. It must stay
+ * fixed: 431 available room-nights, 132 sold, ADR ₹3,178.63 and room
+ * revenue ₹4,19,578.76 all reconcile to the real eZee Night Audit
+ * export for 1–25 August 2026.
+ */
 const BUSINESS_DATE = "2026-08-25";
 
 if (process.argv[1] === fileURLToPath(import.meta.url)) {

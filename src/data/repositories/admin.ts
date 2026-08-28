@@ -1,3 +1,4 @@
+import { BUSINESS_DATE } from "./businessDate";
 import {
   ROLES, ROLE_LABELS, ROLE_DESCRIPTIONS, ASSIGNABLE_ROLES,
   permissionMatrix, type Role,
@@ -48,7 +49,11 @@ export async function getMatrix() {
 
 export async function getAdminSettings(): Promise<AdminSettings> {
   return {
-    businessDate: "2026-08-25",
+    /* The property's own operating day, not a literal. This was the
+       last "2026-08-25" left in src/ after CP11 — an admin screen
+       showing 5 Elements' date while sitting in Agra, which is exactly
+       the failure CP11 removed everywhere else. */
+    businessDate: BUSINESS_DATE,
     financialYearStart: "04-01",
     currency: "INR",
     defaultRole: "front_desk",

@@ -1,6 +1,7 @@
 import { Hono } from "hono";
 import { withSession } from "../auth.ts";
 import type { Client } from "../db.ts";
+import { businessDateFor, monthStart } from "../businessDate.ts";
 
 /* ══════════════════════════════════════════════════════════════════
    THE STATUTORY REPORTS
@@ -44,12 +45,15 @@ const LIVE_POSTINGS = `
 /* ── No show ─────────────────────────────────────────────────────── */
 
 reports.get("/:code/reports/no-show", async (c) => {
-  const from = c.req.query("from") ?? "2026-08-01";
-  const to = c.req.query("to") ?? "2026-08-25";
+  const fromParam = c.req.query("from");
+  const toParam = c.req.query("to");
 
   const body = await withSession(c.get("subject"), async (client) => {
     const hotelId = await hotelIdFor(client, c.req.param("code"));
     if (!hotelId) return null;
+    const bd = await businessDateFor(client, hotelId);
+    const from = fromParam ?? monthStart(bd);
+    const to = toParam ?? bd;
 
     const { rows } = await client.query<{
       reference: string; guest: string; room_type: string;
@@ -96,12 +100,15 @@ reports.get("/:code/reports/no-show", async (c) => {
 /* ── City ledger ─────────────────────────────────────────────────── */
 
 reports.get("/:code/reports/city-ledger", async (c) => {
-  const from = c.req.query("from") ?? "2026-08-01";
-  const to = c.req.query("to") ?? "2026-08-25";
+  const fromParam = c.req.query("from");
+  const toParam = c.req.query("to");
 
   const body = await withSession(c.get("subject"), async (client) => {
     const hotelId = await hotelIdFor(client, c.req.param("code"));
     if (!hotelId) return null;
+    const bd = await businessDateFor(client, hotelId);
+    const from = fromParam ?? monthStart(bd);
+    const to = toParam ?? bd;
 
     const { rows } = await client.query<{
       account: string; debit: string; credit: string; closing: string;
@@ -156,12 +163,15 @@ reports.get("/:code/reports/city-ledger", async (c) => {
 /* ── Lodging tax ─────────────────────────────────────────────────── */
 
 reports.get("/:code/reports/lodging-tax", async (c) => {
-  const from = c.req.query("from") ?? "2026-08-01";
-  const to = c.req.query("to") ?? "2026-08-25";
+  const fromParam = c.req.query("from");
+  const toParam = c.req.query("to");
 
   const body = await withSession(c.get("subject"), async (client) => {
     const hotelId = await hotelIdFor(client, c.req.param("code"));
     if (!hotelId) return null;
+    const bd = await businessDateFor(client, hotelId);
+    const from = fromParam ?? monthStart(bd);
+    const to = toParam ?? bd;
 
     /* CGST and SGST are half the total each, by statute — 2.5 + 2.5
        below the ₹7,500 tariff threshold, where every property in this

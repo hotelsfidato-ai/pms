@@ -1,6 +1,7 @@
 import { Hono } from "hono";
 import { withSession, type Session } from "../auth.ts";
 import type { Client } from "../db.ts";
+import { resolveDate } from "../businessDate.ts";
 
 /* ══════════════════════════════════════════════════════════════════
    THE FLOWS THAT WRITE
@@ -49,6 +50,10 @@ interface CheckInBody {
   ratePlan?: string;
   idCaptured?: boolean;
   idSkipReason?: string;
+  /* Absent means "the property's own operating day", resolved from the
+     database. It used to mean the server's wall clock, which dated a
+     00:40 settlement to tomorrow — filed under a day the hotel had not
+     reached, and missing from the night audit that closed the real one. */
   businessDate?: string;
   user?: string;
 }
@@ -297,7 +302,7 @@ operations.post("/:code/stays/:id/charges", async (c) => {
           amount, tax_rate, tax_amount)
        values ($1,$2,$3,$4,$5,$6,$7,$8)
        returning id::text`,
-      [hotelId, folioId, body.businessDate ?? new Date().toISOString().slice(0, 10),
+      [hotelId, folioId, await resolveDate(client, hotelId, body.businessDate),
        CATEGORY[body.category ?? "Miscellaneous"] ?? "misc",
        description, amount, taxRate, taxAmount],
     );
@@ -404,7 +409,7 @@ operations.post("/:code/stays/:id/payments", async (c) => {
        values ($1,$2,$3,'payment',$4,$5,0,0)
        returning id::text`,
       [hotelId, folioId,
-       body.businessDate ?? new Date().toISOString().slice(0, 10),
+       await resolveDate(client, hotelId, body.businessDate),
        method === "city_ledger"
          ? "Transferred to city ledger"
          : `Received — ${body.method}`,
@@ -542,7 +547,7 @@ operations.post("/:code/walk-ins", async (c) => {
     const roomNumber = body.roomNumber?.trim();
     if (!roomNumber) return refuse("Choose a room.");
 
-    const businessDate = body.businessDate ?? new Date().toISOString().slice(0, 10);
+    const businessDate = await resolveDate(client, hotelId, body.businessDate);
 
     const { rows: roomRows } = await client.query<{
       id: string; room_type_id: string; housekeeping_status: string;

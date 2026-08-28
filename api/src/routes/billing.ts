@@ -1,6 +1,7 @@
 import { Hono } from "hono";
 import { withSession } from "../auth.ts";
 import type { Client } from "../db.ts";
+import { businessDateFor } from "../businessDate.ts";
 
 /* ══════════════════════════════════════════════════════════════════
    BILLING — receipts, billable folios, rates, and the night audit
@@ -176,12 +177,14 @@ billing.get("/:code/billable", async (c) => {
 /* ── Rates ───────────────────────────────────────────────────────── */
 
 billing.get("/:code/rates", async (c) => {
-  const from = c.req.query("from") ?? "2026-08-25";
+  const fromParam = c.req.query("from");
   const days = Number(c.req.query("days") ?? 14);
 
   const body = await withSession(c.get("subject"), async (client) => {
     const hotelId = await hotelIdFor(client, c.req.param("code"));
     if (!hotelId) return null;
+    const bd = await businessDateFor(client, hotelId);
+    const from = fromParam ?? bd;
 
     /* Rack against achieved. Rack is flat because there is no published
        rate calendar — every difference in the achieved line is
@@ -255,11 +258,13 @@ billing.get("/:code/rates", async (c) => {
 /* ── Night audit — the pre-flight checklist ──────────────────────── */
 
 billing.get("/:code/night-audit", async (c) => {
-  const asOn = c.req.query("asOn") ?? "2026-08-25";
+  const asOnParam = c.req.query("asOn");
 
   const body = await withSession(c.get("subject"), async (client) => {
     const hotelId = await hotelIdFor(client, c.req.param("code"));
     if (!hotelId) return null;
+    const bd = await businessDateFor(client, hotelId);
+    const asOn = asOnParam ?? bd;
 
     const { rows } = await client.query<{
       outstanding: string; due_out: string; owing: string;
@@ -380,12 +385,14 @@ billing.get("/:code/night-audit", async (c) => {
    ═══════════════════════════════════════════════════════════════ */
 
 billing.get("/:code/notifications", async (c) => {
-  const asOn = c.req.query("asOn") ?? "2026-08-25";
+  const asOnParam = c.req.query("asOn");
   const code = c.req.param("code");
 
   const body = await withSession(c.get("subject"), async (client) => {
     const hotelId = await hotelIdFor(client, code);
     if (!hotelId) return null;
+    const bd = await businessDateFor(client, hotelId);
+    const asOn = asOnParam ?? bd;
 
     const { rows } = await client.query<{
       kind: string; id: string; label: string; detail: string; amount: string | null;

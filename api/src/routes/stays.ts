@@ -1,6 +1,7 @@
 import { Hono } from "hono";
 import { withSession } from "../auth.ts";
 import type { Client } from "../db.ts";
+import { businessDateFor } from "../businessDate.ts";
 
 /* ══════════════════════════════════════════════════════════════════
    STAYS — a reservation joined to the room it is in
@@ -23,8 +24,6 @@ import type { Client } from "../db.ts";
    ══════════════════════════════════════════════════════════════════ */
 
 export const stays = new Hono<{ Variables: { subject: string } }>();
-
-const BUSINESS_DATE = "2026-08-25";
 
 /** The database's vocabulary, and the interface's, are not the same. */
 const SOURCE_LABEL: Record<string, string> = {
@@ -163,11 +162,12 @@ async function hotelIdFor(client: Client, code: string) {
 
 stays.get("/:code/stays", async (c) => {
   const code = c.req.param("code");
-  const businessDate = c.req.query("asOn") ?? BUSINESS_DATE;
+  const asOn = c.req.query("asOn");
 
   const body = await withSession(c.get("subject"), async (client) => {
     const hotelId = await hotelIdFor(client, code);
     if (!hotelId) return null;
+    const businessDate = asOn ?? (await businessDateFor(client, hotelId));
 
     const { rows } = await client.query<StayRow>(
       `${SELECT} order by r.check_in, rm.number nulls last`,
@@ -181,11 +181,12 @@ stays.get("/:code/stays", async (c) => {
 
 stays.get("/:code/stays/:id", async (c) => {
   const code = c.req.param("code");
-  const businessDate = c.req.query("asOn") ?? BUSINESS_DATE;
+  const asOn = c.req.query("asOn");
 
   const body = await withSession(c.get("subject"), async (client) => {
     const hotelId = await hotelIdFor(client, code);
     if (!hotelId) return null;
+    const businessDate = asOn ?? (await businessDateFor(client, hotelId));
 
     const { rows } = await client.query<StayRow>(
       `${SELECT} and r.id = $2`,

@@ -1,6 +1,6 @@
 import {
   PROPERTY_ID,
-  BUSINESS_DATE,
+  FIXTURE_BUSINESS_DATE as BUSINESS_DATE,
   roomInventory,
   nightsSoldPerDay,
   dailyAvailableRooms,

@@ -1,6 +1,6 @@
 import { api, ApiError } from "@/lib/api";
 import { property } from "../fixtures/property";
-import { BUSINESS_DATE } from "./stays";
+import { BUSINESS_DATE } from "./businessDate";
 
 /* ══════════════════════════════════════════════════════════════════
    REPORT DATA — over HTTP, as of CP9e
