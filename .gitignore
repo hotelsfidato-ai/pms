@@ -25,3 +25,4 @@ dist-ssr
 
 # TypeScript
 *.tsbuildinfo
+vitest.config.ts.timestamp-*
