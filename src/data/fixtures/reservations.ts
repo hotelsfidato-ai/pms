@@ -1,5 +1,6 @@
 import {
   PROPERTY_ID,
+  BUSINESS_DATE,
   roomInventory,
   nightsSoldPerDay,
   dailyAvailableRooms,
@@ -374,6 +375,10 @@ function folioFor(s: Stay): Folio {
 
 const generatedStays = generate(notableStays);
 
+/* The awkward folios, written by hand. These are the cases the screens
+   exist to show — an overpayment, a comp, a disputed group bill — and
+   their figures are deliberate, so the calibration above leaves them
+   alone. */
 const notableFolios: Folio[] = [
   { stayId: "stay-overpaid", roomCharges: 4000, extraCharges: 0, tax: 200, discount: 0, payments: 4984, balance: -784, status: "open" },
   { stayId: "stay-comp", roomCharges: 0, extraCharges: 0, tax: 0, discount: 0, payments: 0, balance: 0, status: "settled" },
@@ -387,6 +392,107 @@ const notableFolios: Folio[] = [
   { stayId: "stay-crossmonth", roomCharges: 8700, extraCharges: 0, tax: 435, discount: 0, payments: 3000, balance: 6135, status: "open" },
   { stayId: "stay-cancelled", roomCharges: 0, extraCharges: 0, tax: 0, discount: 0, payments: 0, balance: 0, status: "written-off" },
 ];
+
+
+/* ══════════════════════════════════════════════════════════════════
+   CALIBRATE THE MONEY, NOT ONLY THE NIGHTS
+
+   The fixture has always asserted its NIGHT counts — 132 sold of 431
+   available, which is what makes occupancy 30.63%. It never asserted
+   its REVENUE, and the generated tariffs summed to ₹3,76,745.54 while
+   the real export says ₹4,19,578.77.
+
+   Nobody noticed for a simple reason: `getPeriodStatistics` read ADR
+   from `property._calibration` instead of from the folios. So the
+   dashboard and the Manager Report printed ₹3,178.63 while this
+   fixture's own ledger said ₹2,854.13 — two numbers, one of them
+   shown, and no test comparing them.
+
+   TWO THINGS HAD TO BE RIGHT, and each was wrong on one attempt:
+
+   · THE POPULATION. A charge posts when a guest ARRIVES, so the
+     revenue in the 1–25 August window belongs to stays arriving in it,
+     not to every stay on the file. Scaling across all of them pushed
+     the total DOWN to ₹3,25,688.
+
+   · WHAT EACH STAY IS WORTH. A notable stay's folio is hand-written —
+     `stay-crossmonth` carries ₹8,700 regardless of its tariff — and the
+     ledger posts THAT, not tariff × nights. Measuring the notable ones
+     the generated way left the total ₹9,300 short.
+
+   So this runs after `notableFolios`, and asks each stay what the
+   LEDGER will actually hold. The notable rates are left untouched:
+   a ₹1,800 day-use, a ₹2,857 override, a comp at zero are the cases
+   the screens exist to show.
+   ══════════════════════════════════════════════════════════════════ */
+
+const TARGET_ROOM_REVENUE = 419578.77;
+const REVENUE_FROM = "2026-08-01";
+const REVENUE_TO = BUSINESS_DATE;
+
+const inWindow = (s: Stay) =>
+  !s.isComplimentary && s.arrival >= REVENUE_FROM && s.arrival <= REVENUE_TO;
+
+/** What this stay will actually put on the ledger. */
+const ledgerRoomCharge = (s: Stay): number => {
+  const written = notableFolios.find((f) => f.stayId === s.id);
+  if (written) return written.roomCharges;
+  return s.offeredTariff * Math.max(s.nights, 1);
+};
+
+const revenueOf = (list: Stay[]) =>
+  list.filter(inWindow).reduce((t, s) => t + ledgerRoomCharge(s), 0);
+
+{
+  const fixed = revenueOf(notableStays);
+  const scalable = generatedStays.filter(inWindow);
+  const current = revenueOf(scalable);
+
+  if (current <= 0) {
+    throw new Error("Fixture drift: no generated revenue in the window to calibrate.");
+  }
+
+  const factor = (TARGET_ROOM_REVENUE - fixed) / current;
+  if (factor <= 0) {
+    throw new Error(
+      `Fixture drift: the notable stays alone are worth ₹${fixed.toFixed(2)}, ` +
+        `which already exceeds the ₹${TARGET_ROOM_REVENUE} target.`,
+    );
+  }
+
+  for (const stay of scalable) {
+    stay.offeredTariff = Math.round(stay.offeredTariff * factor * 100) / 100;
+  }
+
+  /* Rounding leaves a few paise. They go on the largest generated stay,
+     where a rupee either way is invisible, rather than letting the
+     total miss its own assertion. */
+  const residue =
+    Math.round((TARGET_ROOM_REVENUE - revenueOf([...notableStays, ...generatedStays])) * 100) / 100;
+
+  if (Math.abs(residue) >= 0.01) {
+    const biggest = [...scalable].sort(
+      (a, b) => ledgerRoomCharge(b) - ledgerRoomCharge(a),
+    )[0];
+    if (biggest) {
+      biggest.offeredTariff =
+        Math.round((biggest.offeredTariff + residue / Math.max(biggest.nights, 1)) * 100) / 100;
+    }
+  }
+}
+
+/* The assertion that would have caught this from the beginning. */
+{
+  const actual = Math.round(revenueOf([...notableStays, ...generatedStays]) * 100) / 100;
+  if (Math.abs(actual - TARGET_ROOM_REVENUE) > 1) {
+    throw new Error(
+      `Fixture drift: room revenue in ${REVENUE_FROM}..${REVENUE_TO} is ` +
+        `₹${actual.toFixed(2)}, the real Night Audit export says ` +
+        `₹${TARGET_ROOM_REVENUE}. ADR would read ₹${(actual / 132).toFixed(2)} ` +
+        `instead of ₹3,178.63.`,
+    );
+  }
+}
 
 export const stays: Stay[] = [...notableStays, ...generatedStays];
 export const folios: Folio[] = [
