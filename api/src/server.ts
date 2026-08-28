@@ -9,6 +9,7 @@ import { property } from "./routes/property.ts";
 import { stays } from "./routes/stays.ts";
 import { folios } from "./routes/folios.ts";
 import { operations } from "./routes/operations.ts";
+import { statistics } from "./routes/statistics.ts";
 
 /* ══════════════════════════════════════════════════════════════════
    THE APP API — MASTER.md §5
@@ -102,6 +103,7 @@ app.route("/api/hotels", property);
 app.route("/api/hotels", stays);
 app.route("/api/hotels", folios);
 app.route("/api/hotels", operations);
+app.route("/api/hotels", statistics);
 
 app.onError((error, c) => {
   if (error instanceof Unauthenticated) {

@@ -1,5 +1,8 @@
 import { vi } from "vitest";
-import { property, roomInventory, PROPERTY_CODE } from "@/data/fixtures/property";
+import {
+  property, roomInventory, PROPERTY_CODE,
+  dailyAvailableRooms, nightsSoldPerDay,
+} from "@/data/fixtures/property";
 import { stays, folios, groups } from "@/data/fixtures/reservations";
 
 /* ══════════════════════════════════════════════════════════════════
@@ -131,6 +134,71 @@ vi.mock("@/lib/api", () => ({
 
     if (path === `/api/hotels/${PROPERTY_CODE}/groups`) {
       return groups.map((g) => ({ ...g, hotelId: PROPERTY_CODE }));
+    }
+
+
+    /* Statistics. The real route derives these in SQL — sellable rooms
+       from `room_blocks`, sold nights from reservations, revenue from
+       the folios. The stub reproduces the same ANSWERS from the same
+       calibrated fixtures, so the assertions about 431/132/30.63 keep
+       meaning something here while api/test proves the SQL against a
+       real database. */
+    const statsRange = path.match(
+      new RegExp(`^/api/hotels/${PROPERTY_CODE}/statistics/(daily|period)`),
+    );
+    if (statsRange) {
+      const url = new URL(path, "http://x");
+      const from = url.searchParams.get("from") ?? "2026-08-01";
+      const to = url.searchParams.get("to") ?? "2026-08-25";
+
+      const days = Object.keys(dailyAvailableRooms)
+        .filter((d) => d >= from && d <= to)
+        .sort()
+        .map((date) => {
+          const available = dailyAvailableRooms[date] ?? 0;
+          const sold = nightsSoldPerDay[date] ?? 0;
+          return {
+            date,
+            availableRooms: available,
+            roomsSold: sold,
+            occupancyPct: available
+              ? Math.round((sold / available) * 10000) / 100
+              : 0,
+          };
+        });
+
+      if (statsRange[1] === "daily") return days;
+
+      const availableRoomNights = days.reduce((t, d) => t + d.availableRooms, 0);
+      const roomsSold = days.reduce((t, d) => t + d.roomsSold, 0);
+      const roomRevenue = property._calibration.roomRevenue;
+
+      /* Rates from the TOTALS, never averaged from daily averages. */
+      return {
+        from, to, availableRoomNights, roomsSold,
+        occupancyPct: availableRoomNights
+          ? Math.round((roomsSold / availableRoomNights) * 10000) / 100 : 0,
+        adr: roomsSold ? Math.round((roomRevenue / roomsSold) * 100) / 100 : 0,
+        revpar: availableRoomNights
+          ? Math.round((roomRevenue / availableRoomNights) * 100) / 100 : 0,
+        roomRevenue,
+      };
+    }
+
+    const snapshot = path.match(
+      new RegExp(`^/api/hotels/${PROPERTY_CODE}/statistics/snapshot`),
+    );
+    if (snapshot) {
+      const date =
+        new URL(path, "http://x").searchParams.get("date") ?? "2026-08-25";
+      const available = dailyAvailableRooms[date] ?? 0;
+      const sold = nightsSoldPerDay[date] ?? 0;
+      return {
+        date, available, sold,
+        vacant: available - sold,
+        occupancyPct: available
+          ? Math.round((sold / available) * 10000) / 100 : 0,
+      };
     }
 
     /* Every other property answers 404 — the same reply a code the

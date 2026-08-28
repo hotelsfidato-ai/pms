@@ -1,42 +1,57 @@
-import {
-  property,
-  dailyAvailableRooms,
-  nightsSoldPerDay,
-  dailyOccupancy, isDemoProperty } from "../fixtures/property";
+import { api, ApiError } from "@/lib/api";
+import { BUSINESS_DATE } from "../fixtures/property";
 import type { DayStatistics, PeriodStatistics } from "./types";
 
 /* ══════════════════════════════════════════════════════════════════
-   STATISTICS
+   STATISTICS — over HTTP, as of CP9e
 
-   The figures the Manager Report and the Monthly Statistics report
-   are built from. Calibrated to the real PTD window, 1–25 August
-   2026 — 431 available room-nights, 132 sold, 30.63% occupancy.
+   Every figure is now DERIVED by SQL. Nothing here is carried by the
+   product, and that is a change worth naming:
 
-   ADR and RevPAR follow the standard definitions:
-     ADR    = room revenue / rooms sold
-     RevPAR = room revenue / available room-nights
+   Until migration 022 the availability curve — 17 rooms most days, 18
+   on 8–13 August — lived in a TypeScript fixture, because nothing in
+   the schema could say when a room was sellable. And ADR came from
+   `property._calibration`, a constant the demo's own folios did not
+   support: the dashboard printed ₹3,178.63 while the ledger said
+   ₹2,854.13.
+
+   Both are fixed. `app.sellable_rooms()` gives the denominator, the
+   folios give the revenue, and the calibration has stopped being data
+   the product carries and become a CHECK on what the database says:
+
+       431 available · 132 sold · 30.63%
+       ADR ₹3,178.63 · RevPAR ₹973.50
+
+   If any of those move, the query is wrong — not the number.
    ══════════════════════════════════════════════════════════════════ */
 
+/** The window the Manager Report's PTD column covers. */
 export const PTD_FROM = "2026-08-01";
-export const PTD_TO = "2026-08-25";
+export const PTD_TO = BUSINESS_DATE;
 
-const inRange = (d: string, from: string, to: string) => d >= from && d <= to;
+const range = (from: string, to: string) =>
+  `from=${encodeURIComponent(from)}&to=${encodeURIComponent(to)}`;
+
+/** A property the caller cannot see has no statistics, not an error. */
+async function fetchOr<T>(path: string, empty: T): Promise<T> {
+  try {
+    return await api<T>(path);
+  } catch (error) {
+    if (error instanceof ApiError && error.status === 404) return empty;
+    throw error;
+  }
+}
 
 export async function listDailyStatistics(
   hotelId: string,
   from = PTD_FROM,
   to = PTD_TO,
 ): Promise<DayStatistics[]> {
-  if (!isDemoProperty(hotelId)) return [];
-  return Object.keys(dailyAvailableRooms)
-    .filter((d) => inRange(d, from, to))
-    .sort()
-    .map((date) => ({
-      date,
-      availableRooms: dailyAvailableRooms[date] ?? 0,
-      roomsSold: nightsSoldPerDay[date] ?? 0,
-      occupancyPct: dailyOccupancy[date] ?? 0,
-    }));
+  if (!hotelId) return [];
+  return fetchOr<DayStatistics[]>(
+    `/api/hotels/${hotelId}/statistics/daily?${range(from, to)}`,
+    [],
+  );
 }
 
 export async function getPeriodStatistics(
@@ -44,47 +59,30 @@ export async function getPeriodStatistics(
   from = PTD_FROM,
   to = PTD_TO,
 ): Promise<PeriodStatistics | null> {
-  if (!isDemoProperty(hotelId)) return null;
-
-  const days = await listDailyStatistics(hotelId, from, to);
-  const availableRoomNights = days.reduce((t, d) => t + d.availableRooms, 0);
-  const roomsSold = days.reduce((t, d) => t + d.roomsSold, 0);
-
-  /* Room revenue is taken from the report for the calibrated window.
-     Outside it, it is derived from the same ADR so the numbers stay
-     internally consistent rather than silently wrong. */
-  const isCalibratedWindow = from === PTD_FROM && to === PTD_TO;
-  const adr = property._calibration.adr;
-  const roomRevenue = isCalibratedWindow
-    ? property._calibration.roomRevenue
-    : Math.round(roomsSold * adr * 100) / 100;
-
-  return {
-    from,
-    to,
-    availableRoomNights,
-    roomsSold,
-    occupancyPct: availableRoomNights
-      ? Math.round((roomsSold / availableRoomNights) * 10000) / 100
-      : 0,
-    adr: roomsSold ? Math.round((roomRevenue / roomsSold) * 100) / 100 : 0,
-    revpar: availableRoomNights
-      ? Math.round((roomRevenue / availableRoomNights) * 100) / 100
-      : 0,
-    roomRevenue,
-  };
+  if (!hotelId) return null;
+  return fetchOr<PeriodStatistics | null>(
+    `/api/hotels/${hotelId}/statistics/period?${range(from, to)}`,
+    null,
+  );
 }
 
 /** Headline numbers for the top of the Stay View. */
-export async function getTodaySnapshot(hotelId: string, date = "2026-08-25") {
-  if (!isDemoProperty(hotelId)) return null;
-  const available = dailyAvailableRooms[date] ?? 0;
-  const sold = nightsSoldPerDay[date] ?? 0;
-  return {
-    date,
-    available,
-    sold,
-    vacant: available - sold,
-    occupancyPct: dailyOccupancy[date] ?? 0,
-  };
+export async function getTodaySnapshot(hotelId: string, date = BUSINESS_DATE) {
+  if (!hotelId) return null;
+  return fetchOr<{
+    date: string;
+    available: number;
+    sold: number;
+    vacant: number;
+    occupancyPct: number;
+  } | null>(
+    `/api/hotels/${hotelId}/statistics/snapshot?date=${encodeURIComponent(date)}`,
+    null,
+  );
 }
+
+export const statisticsRepo = {
+  daily: listDailyStatistics,
+  period: getPeriodStatistics,
+  snapshot: getTodaySnapshot,
+};
