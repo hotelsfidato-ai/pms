@@ -26,3 +26,8 @@ dist-ssr
 # TypeScript
 *.tsbuildinfo
 vitest.config.ts.timestamp-*
+
+# Local environment. .env.example is committed as the template.
+.env
+.env.local
+.env.*.local
