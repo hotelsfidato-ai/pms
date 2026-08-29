@@ -456,3 +456,74 @@ describe("voiding a bill", () => {
     expect((await res.json() as { ok: boolean }).ok).toBe(false);
   });
 });
+
+/* ── What the PMS side shows ──────────────────────────────────────── */
+
+describe("the PMS can see what an outlet sent", () => {
+  const asOwner = async (path: string) => {
+    const db = await admin();
+    let ownerId: string;
+    try {
+      ownerId = (await db.query<{ id: string }>(
+        "select id from staff where email = 'owner@fidato.in'",
+      )).rows[0]!.id;
+    } finally {
+      await db.end();
+    }
+    return app.request(`/api/hotels${path}`, {
+      headers: { "x-dev-staff-id": ownerId },
+    });
+  };
+
+  it("lists outlets without ever exposing a key", async () => {
+    const body = (await (await asOwner("/5EL/pos/outlets")).json()) as
+      Array<Record<string, unknown>>;
+
+    expect(Array.isArray(body)).toBe(true);
+    for (const o of body) {
+      /* Not the key, and not the HASH. The hash is what an attacker
+         would need to know they had guessed right. */
+      expect(Object.keys(o)).not.toContain("apiKeyHash");
+      expect(Object.keys(o)).not.toContain("api_key_hash");
+      expect(Object.keys(o)).not.toContain("key");
+      expect(typeof o["hasKey"]).toBe("boolean");
+    }
+  });
+
+  it("returns REFUSED bills, which is the point of the screen", async () => {
+    /* A bill that landed is already on the guest folio. A bill that was
+       refused is visible nowhere else, and "the restaurant says they
+       charged it, the folio says otherwise" is the argument this table
+       exists to end. */
+    const r = ref("pms-refused");
+    await post("/tickets", { ticketRef: r, room: "___", amount: 50 });
+
+    const body = (await (await asOwner("/5EL/pos/tickets")).json()) as {
+      rows: Array<{ ticketRef: string; status: string; reason: string | null;
+                    guest: string | null }>;
+    };
+
+    const mine = body.rows.find((t) => t.ticketRef === r);
+    expect(mine, "a refused bill is missing from the PMS view").toBeTruthy();
+    expect(mine!.status).toBe("rejected");
+    expect(mine!.reason, "a refusal with no reason settles nothing").toBeTruthy();
+    /* Null, not a placeholder guest. It never reached a folio. */
+    expect(mine!.guest).toBeNull();
+  });
+
+  it("scopes to the property, not the group", async () => {
+    /* The tickets route resolves the hotel from the code and RLS does
+       the rest. A bill at Pune must not appear under 5EL. */
+    const body = (await (await asOwner("/PUN/pos/tickets")).json()) as {
+      rows: Array<{ outlet: string }>;
+    };
+    const here = (await (await asOwner("/5EL/pos/tickets")).json()) as {
+      rows: Array<{ ticketRef: string }>;
+    };
+    const refs = new Set(here.rows.map((t) => t.ticketRef));
+    for (const t of body.rows) {
+      expect(refs.has((t as unknown as { ticketRef: string }).ticketRef))
+        .toBe(false);
+    }
+  });
+});

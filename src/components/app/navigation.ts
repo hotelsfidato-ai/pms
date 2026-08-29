@@ -2,7 +2,7 @@ import {
   LayoutDashboard, CalendarCheck, Users, Building2, Hotel, Receipt,
   BarChart3, Bell, Settings, ShieldCheck, CalendarRange,
   FileText, Wallet, Plug, ScrollText,
-  UserCog, Palette, BookOpen, Home, ClipboardList, type LucideIcon, ShieldAlert,
+  UserCog, Palette, BookOpen, Home, ClipboardList, type LucideIcon, ShieldAlert, UtensilsCrossed,
 } from "lucide-react";
 import { can, canAccess, type Resource, type Role } from "@/lib/permissions";
 
@@ -104,6 +104,10 @@ const SECTIONS: NavSection[] = [
          same desk, and burying it under Reports is how a 24-hour
          deadline gets missed. It sits where somebody will see it. */
       { label: "Form C", to: "/h/:code/form-c", icon: ShieldAlert, resource: "customer" },
+      /* What the restaurant sent and what was refused. Under Finance
+         because the argument it settles is about money on a folio, and
+         the person settling it is the one who bills. */
+      { label: "Point of sale", to: "/h/:code/pos", icon: UtensilsCrossed, resource: "invoice" },
     ],
   },
   {

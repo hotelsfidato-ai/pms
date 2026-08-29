@@ -38,6 +38,7 @@ import {
 import InvoicesPage from "@/pages/Invoices";
 import FormCPage from "@/pages/FormC";
 import InvoicePage from "@/pages/Invoice";
+import PosPage from "@/pages/Pos";
 import {
   GuestLedgerPage, CashierShiftPage, GstSalesPage, CFormPage,
 } from "@/pages/reports/Compliance";
@@ -139,7 +140,9 @@ function PropertyIndex() {
    contradicts what they use every day.                             */
 const PROPERTY: Array<[segment: string, title: string, carries: string, cp: string]> = [
   ["cashiering", "Cashiering", "unspecified — placeholder until the live flow is observed", "—"],
-  ["pos", "POS", "unspecified — Sattva is live in eZee today, so this is a migration", "—"],
+  /* POS left this list when the bridge got an interface. Its note said
+     "Sattva is live in eZee today, so this is a migration" — still true
+     of the TILL, and no longer true of the boundary it posts across. */
 ];
 
 export default function App() {
@@ -242,6 +245,10 @@ export default function App() {
             <Route
               path="/h/:code/form-c"
               element={<><PropertyScope /><FormCPage /></>}
+            />
+            <Route
+              path="/h/:code/pos"
+              element={<><PropertyScope /><PosPage /></>}
             />
             {/* An invoice number contains slashes — 5EL/2026-27/00001 — so
                 the segment has to swallow them. `*` after the param is how

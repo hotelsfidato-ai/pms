@@ -3,7 +3,7 @@
 Updated after every finished section. **Nothing here is a claim until the gates
 below are green and the screen has been opened.**
 
-Last updated: **29 August 2026** · Phase 1 items 1–3 and 6 — **the fixtures are gone**
+Last updated: **29 August 2026** · Phase 1 items 1–4 and 6 — **five of seven**
 
 ---
 
@@ -15,7 +15,7 @@ FRONTEND   tsc -b            0 errors
            build             clean
 
 API        tsc --noEmit      0 errors
-           npm test          67 passed   (live Postgres, as pms_app)
+           npm test          70 passed   (live Postgres, as pms_app)
                              loads the demo fixture first — see below
 
 DATABASE   db/tests/run.sh   27 migrations · 67 assertions
@@ -93,6 +93,34 @@ dated postings from the server's wall clock:
 All four now resolve the date from the database inside the same transaction as
 the write. Proved by restoring the wall clock in one line and watching the test
 fail.
+
+---
+
+## Phase 1 · item 4 — the POS view ✅
+
+`/h/:code/pos` was a placeholder reading *"unspecified — Sattva is live in eZee
+today, so this is a migration"*. Still true of the TILL. What changed is that
+the bridge it posts across exists, was tested, and had no interface — so
+settling a restaurant-charge dispute meant running SQL.
+
+**The refusals are the point.** A bill that landed is already on the guest's
+folio; a bill that was REFUSED is visible nowhere else, and *"the restaurant
+says they charged it, the folio says otherwise"* is the argument this page ends.
+They sit at the top of the screen with their reason, above everything else.
+
+```
+SAT-7002  Sameer Gokhale  room 202   ₹504     voided
+SAT-7001  Sameer Gokhale  room 202   ₹1,302   on the folio
+SAT-7003  nobody — refused           ₹900     refused
+          Room 308 cannot be charged: nobody is checked in there.
+```
+
+An outlet with no API key shows **no key** in red: a restaurant that believes it
+is connected and is not finds out at the end of a shift, with a till full of
+charges nobody can place.
+
+Not a till. No menu, no orders, no tables — those belong to the POS, which is a
+separate system. **One placeholder route left, down from two.**
 
 ---
 
@@ -398,7 +426,7 @@ retried. Ledger nets to zero, room revenue still ₹4,19,578.76.
 4  Front desk + folio, end to end    ████████████  flows, reports, dating
 5  Night audit                       ██████████░░  runs, posts, rolls the date
 6  Housekeeping, mobile, offline     ███████░░░░░  board writes to Postgres
-7  POS bridge (a MIGRATION)          ██████░░░░░░  the seam is built and tested
+7  POS bridge (a MIGRATION)          ███████░░░░░  bridge tested, PMS view built
 8  Billing, GST, Form C              ██░░░░░░░░░░  lodging tax derives
 9  Rates, availability, STAAH        ██░░░░░░░░░░  room_blocks landed
 10 Group dashboard and reports       ███████████░  11 of 11 reports, all SQL

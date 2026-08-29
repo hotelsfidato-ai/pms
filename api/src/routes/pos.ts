@@ -519,3 +519,96 @@ posAdmin.get("/:code/pos/outlets", async (c) => {
 
   return body ? c.json(body) : c.json({ error: "No such property." }, 404);
 });
+
+/* ── Every bill an outlet sent, refusals included ─────────────────── */
+
+/**
+ * What the POS screen reads.
+ *
+ * The REFUSALS are the point. A charge that landed is visible on the
+ * guest's folio already; a charge that was refused is visible nowhere
+ * else, and "the restaurant says they charged it, the folio says
+ * otherwise" is the argument this table exists to settle.
+ *
+ * Person-facing, so it goes through the bearer gate. The `/api/pos`
+ * routes are the machine's door.
+ */
+posAdmin.get("/:code/pos/tickets", async (c) => {
+  const fromParam = c.req.query("from");
+  const toParam = c.req.query("to");
+
+  const body = await withSession(c.get("subject"), async (client) => {
+    const { rows: hotel } = await client.query<{ id: string }>(
+      "select id from hotels where code = $1",
+      [c.req.param("code").toUpperCase()],
+    );
+    if (!hotel[0]) return null;
+    const hotelId = hotel[0].id;
+
+    const { rows: bd } = await client.query<{ d: string }>(
+      "select to_char(app.business_date($1), 'YYYY-MM-DD') as d", [hotelId],
+    );
+    const to = toParam ?? bd[0]!.d;
+    const from = fromParam ?? `${to.slice(0, 7)}-01`;
+
+    const { rows } = await client.query<{
+      id: string; outlet: string; outlet_name: string; ticket_ref: string;
+      status: string; reject_reason: string | null; amount: string;
+      tax_amount: string; business_date: string; received_at: string;
+      guest: string | null; room: string | null; posting_id: string | null;
+      void_posting_id: string | null; items: string | null;
+    }>(
+      `select t.id::text, o.code as outlet, o.name as outlet_name,
+              t.ticket_ref, t.status, t.reject_reason,
+              t.amount::text, t.tax_amount::text,
+              to_char(t.business_date,'YYYY-MM-DD') as business_date,
+              to_char(t.received_at, 'DD Mon, HH24:MI') as received_at,
+              g.full_name as guest,
+              (select rm.number from room_assignments ra
+                 join rooms rm on rm.id = ra.room_id
+                where ra.reservation_id = r.id
+                order by ra.released_at nulls first, ra.from_date desc
+                limit 1) as room,
+              t.posting_id::text, t.void_posting_id::text,
+              t.items::text
+         from pos_tickets t
+         join pos_outlets o on o.id = t.outlet_id
+         left join folios f on f.id = t.folio_id
+         left join reservations r on r.id = f.reservation_id
+         left join guests g on g.id = r.guest_id
+        where t.hotel_id = $1
+          and t.business_date between $2::date and $3::date
+        order by t.received_at desc
+        limit 500`,
+      [hotelId, from, to],
+    );
+
+    return {
+      from, to,
+      rows: rows.map((r) => ({
+        id: r.id,
+        outlet: r.outlet,
+        outletName: r.outlet_name,
+        /* The POS's own bill number, which is also the idempotency key.
+           Shown because it is what a waiter reads off their terminal
+           when they ring the front desk. */
+        ticketRef: r.ticket_ref,
+        status: r.status,
+        reason: r.reject_reason,
+        amount: Math.round(Number(r.amount) * 100) / 100,
+        tax: Math.round(Number(r.tax_amount) * 100) / 100,
+        businessDate: r.business_date,
+        receivedAt: r.received_at,
+        /* Null on a refused bill — it never reached a folio, which is
+           the whole reason somebody is looking at this screen. */
+        guest: r.guest,
+        room: r.room,
+        postingId: r.posting_id,
+        voidPostingId: r.void_posting_id,
+        items: r.items ? (JSON.parse(r.items) as unknown) : null,
+      })),
+    };
+  });
+
+  return body ? c.json(body) : c.json({ error: "No such property." }, 404);
+});
