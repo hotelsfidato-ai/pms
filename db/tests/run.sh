@@ -163,3 +163,22 @@ fi
 
 TOTAL=$(PGPASSWORD=$SUPERPASS "$PSQL" $S -d "$DB" -tAc "select count(*) from test.results")
 green "  all $TOTAL assertions passed"
+
+# -----------------------------------------------------------------------------
+# The demo is gone, and saying so is the whole point.
+# -----------------------------------------------------------------------------
+# $DB defaults to `fidato` -- the same database the API and the app use -- and
+# this script drops it from zero. That is correct: proving the migrations apply
+# to an empty database is exactly what it is for.
+#
+# What is NOT obvious is that it leaves the app EMPTY. Run the gates in the
+# wrong order (api tests, which load the demo, and then this) and you are left
+# with a PMS showing two test properties and four reservations, with nothing
+# anywhere saying why. Open a screen at that point and you are verifying an
+# empty database -- a check that passes because there is nothing to fail.
+#
+# One line prevents an afternoon of it.
+if [ "${1:-}" != "--keep" ]; then
+  printf '\n  \033[33mnote\033[0m  %s was rebuilt, so the demo is gone.\n' "$DB"
+  printf '        Bring it back with:  cd api && npm run load-demo\n'
+fi

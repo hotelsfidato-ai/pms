@@ -967,6 +967,30 @@ accident.
 
 ---
 
+### 52 · The gate that empties the thing you are about to check
+
+`db/tests/run.sh` has `DB="${DB:-fidato}"` — the same database the API and the
+app use — and drops it from zero. That is correct and is the whole point: you
+cannot prove migrations apply to an empty database using a full one.
+
+What it does not do is say so. Run the gates as
+`api npm test` → `db/tests/run.sh` and the second wipes what the first loaded.
+Found during an audit: the app was showing 5EL with 83 reservations, and the
+database had three hotels and four.
+
+The danger is not the empty database, it is what you do next. **Open a screen
+at that point and the check passes because there is nothing left to fail** —
+the same shape as defect 22, where a self-test ran against fixtures that had
+been deleted and returned early. A verification with nothing to verify reports
+success.
+
+`run.sh` now prints the recovery line when it rebuilds. Correct order is
+run.sh → api test → vitest → verify-backup.
+
+**A test that rebuilds shared state owes you a sentence about what it took.**
+
+---
+
 ## Verification traps
 
 ### Never test a Tailwind utility by injecting the class at runtime

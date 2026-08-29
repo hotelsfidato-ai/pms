@@ -479,21 +479,39 @@ retried. Ledger nets to zero, room revenue still ₹4,19,578.76.
 ## The stages
 
 ```
-1  Frontend shell and screens        ████████████  36 screens, 2 placeholders
+1  Frontend shell and screens        ████████████  36 screens, 1 placeholder
 2  Repository layer behind the seam  ████████████  12 of 12 modules
 3  Auth bridge — Firebase            ███████████░  works; needs a service account
 4  Front desk + folio, end to end    ████████████  flows, reports, dating
 5  Night audit                       ██████████░░  runs, posts, rolls the date
 6  Housekeeping, mobile             █████████░░░  board writes to Postgres
 7  POS bridge (a MIGRATION)          ███████░░░░░  bridge tested, PMS view built
-8  Billing, GST, Form C              ██░░░░░░░░░░  lodging tax derives
+8  Billing, GST, Form C              ████████░░░░  invoices, credit notes, C
 9  Rates, availability, STAAH        ██░░░░░░░░░░  room_blocks landed
 10 Group dashboard and reports       ███████████░  11 of 11 reports, all SQL
 11 CRS bridge                        ░░░░░░░░░░░░
 12 Hardening and go-live             ████░░░░░░░░  backup proven, races proven
 ```
 
-**About 84%.**
+**About 87%.**
+
+---
+
+## The gates have an order, and it is not the obvious one
+
+```
+1  db/tests/run.sh          rebuilds `fidato` FROM ZERO
+2  cd api && npm test       loads the demo, then tests
+3  npx vitest run           frontend
+4  db/verify-backup.sh      scratch database, drops it after
+```
+
+Step 1 drops the database the app uses. Run it *after* step 2 and the demo is
+gone — the app shows two test properties and four reservations, and nothing
+anywhere says why. Opening a screen at that point verifies an empty database,
+which is a check that passes because there is nothing left to fail.
+
+`run.sh` now says so on the way out. Recovery is `cd api && npm run load-demo`.
 
 ---
 
