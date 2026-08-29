@@ -385,6 +385,44 @@ invoices.get("/:code/invoices", async (c) => {
   return body ? c.json(body) : c.json({ error: "No such property." }, 404);
 });
 
+/* ── The series itself ────────────────────────────────────────────── */
+
+invoices.get("/:code/invoice-series", async (c) => {
+  const body = await withSession(c.get("subject"), async (client) => {
+    const hotelId = await hotelIdFor(client, c.req.param("code"));
+    if (!hotelId) return null;
+
+    const { rows } = await client.query<{
+      fin_year: string; prefix: string; next_number: string; issued: string;
+    }>(
+      `select s.fin_year, s.prefix, s.next_number::text,
+              (select count(*) from invoices i
+                where i.hotel_id = s.hotel_id and i.fin_year = s.fin_year)::text
+                as issued
+         from invoice_series s
+        where s.hotel_id = $1
+        order by s.fin_year desc`,
+      [hotelId],
+    );
+
+    return rows.map((r) => ({
+      prefix: r.prefix,
+      finYear: r.fin_year,
+      /* The number the NEXT invoice will carry, formatted exactly as
+         app.next_invoice_number() will format it. Two spellings of the
+         same number is how a series appears to skip one. */
+      next: `${r.prefix}/${r.fin_year}/${String(r.next_number).padStart(5, "0")}`,
+      issued: Number(r.issued),
+      note:
+        Number(r.issued) === 0
+          ? "Nothing issued in this year yet."
+          : `${r.issued} issued in ${r.fin_year}.`,
+    }));
+  });
+
+  return body ? c.json(body) : c.json({ error: "No such property." }, 404);
+});
+
 /* ── Correct one ──────────────────────────────────────────────────── */
 
 invoices.post("/:code/invoices/:number{.+}/credit-note", async (c) => {

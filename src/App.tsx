@@ -30,8 +30,13 @@ import {
 } from "@/pages/admin/Admin";
 import ReservationsPage from "@/pages/Reservations";
 import {
-  PaymentsPage, InvoicesPage, PropertyCityLedgerPage,
+  PaymentsPage, PropertyCityLedgerPage,
 } from "@/pages/Billing";
+/* Invoices moved out of Billing.tsx when issuing landed. Three screens
+   in one file was already a stretch; a fourth with a mutation in it
+   was not. */
+import InvoicesPage from "@/pages/Invoices";
+import FormCPage from "@/pages/FormC";
 import RatesPage from "@/pages/Rates";
 import NightAuditPage from "@/pages/NightAudit";
 import WalkInsPage from "@/pages/WalkIns";
@@ -225,6 +230,10 @@ export default function App() {
             <Route
               path="/h/:code/invoices"
               element={<><PropertyScope /><InvoicesPage /></>}
+            />
+            <Route
+              path="/h/:code/form-c"
+              element={<><PropertyScope /><FormCPage /></>}
             />
             <Route
               path="/h/:code/city-ledger"

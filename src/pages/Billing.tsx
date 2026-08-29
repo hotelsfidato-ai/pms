@@ -1,17 +1,16 @@
 import { useQuery } from "@tanstack/react-query";
 import { useParams } from "react-router";
-import { FileText, Receipt } from "lucide-react";
 import { cn } from "@/lib/cn";
-import { money, dateShort, dateTime, dateLong } from "@/lib/format";
+import { money, dateTime, dateLong } from "@/lib/format";
 import { useUi } from "@/lib/ui";
 import {
   Page, PageHeader, Card, CardBody, DataTable, StatusPill, Skeleton,
-  type Column, type Tone,
+  type Column,
 } from "@/components/ui";
 import {
-  listPayments, paymentsByMethod, listBillable, getInvoiceSeries,
+  listPayments, paymentsByMethod,
   getCityLedger, PTD_FROM, BUSINESS_DATE,
-  type PaymentRow, type BillableRow, type CityLedgerRow,
+  type PaymentRow, type CityLedgerRow,
 } from "@/data/repositories";
 
 /* ══════════════════════════════════════════════════════════════════
@@ -138,126 +137,13 @@ export function PaymentsPage() {
   );
 }
 
-/* ── Invoices ────────────────────────────────────────────────────── */
+/* Invoices moved to src/pages/Invoices.tsx when issuing landed. Three
+   screens in one file was already a stretch; a fourth carrying a
+   mutation was not. BILL_TONE, BILL_LABEL and the billable columns went
+   with it — they described that page and nothing else here. */
 
-const BILL_TONE: Record<BillableRow["status"], Tone> = {
-  settled: "success",
-  outstanding: "danger",
-  overpaid: "info",
-};
-
-const BILL_LABEL: Record<BillableRow["status"], string> = {
-  settled: "Ready to bill",
-  outstanding: "Balance due",
-  overpaid: "Refund due",
-};
-
-const BILLABLE_COLUMNS: Column<BillableRow>[] = [
-  {
-    key: "guest", header: "Guest",
-    cell: (b) => (
-      <div className="min-w-0">
-        <p className="truncate">{b.guest}</p>
-        <p className="text-2xs text-grey-500 tabular">
-          room {b.roomNumber} · {b.reference}
-        </p>
-      </div>
-    ),
-  },
-  {
-    key: "stay", header: "Stay", hideBelow: "md",
-    cell: (b) => (
-      <span className="tabular text-grey-600">
-        {dateShort(b.arrival)} – {dateShort(b.departure)}
-      </span>
-    ),
-  },
-  { key: "nights", header: "Nights", numeric: true, hideBelow: "sm", cell: (b) => <span className="tabular">{b.nights}</span> },
-  { key: "charges", header: "Charges", numeric: true, cell: (b) => <span className="tabular">{money(b.charges)}</span> },
-  { key: "tax", header: "Tax", numeric: true, hideBelow: "lg", cell: (b) => <span className="tabular">{money(b.tax)}</span> },
-  { key: "paid", header: "Received", numeric: true, cell: (b) => <span className="tabular">{money(b.paid)}</span> },
-  {
-    key: "status", header: "Status",
-    cell: (b) => (
-      <StatusPill tone={BILL_TONE[b.status]}>
-        {BILL_LABEL[b.status]}
-        {b.status !== "settled" && ` ${money(Math.abs(b.balance))}`}
-      </StatusPill>
-    ),
-  },
-];
-
-export function InvoicesPage() {
-  const hotelId = useHotel();
-
-  const rows = useQuery({
-    queryKey: ["billable", hotelId],
-    queryFn: () => listBillable(hotelId),
-  });
-  const series = useQuery({
-    queryKey: ["invoice-series", hotelId],
-    queryFn: () => getInvoiceSeries(hotelId),
-  });
-
-  const ready = (rows.data ?? []).filter((b) => b.status === "settled").length;
-
-  return (
-    <Page>
-      <PageHeader
-        title="Invoices"
-        description="Departed stays and what each is owed or owes. Nothing here has been issued a number."
-        badge={
-          rows.data ? (
-            <StatusPill tone={ready ? "success" : "neutral"}>{ready} ready to bill</StatusPill>
-          ) : undefined
-        }
-      />
-
-      <div className="flex items-start gap-3 rounded-md border border-grey-200 bg-grey-50 p-3.5 mb-5">
-        <FileText className="size-4 text-grey-400 shrink-0 mt-0.5" />
-        <div className="min-w-0">
-          <p className="text-base font-medium text-ink-900">No invoice number has been issued</p>
-          <p className="text-sm text-grey-600 mt-0.5 leading-relaxed">
-            The series below is the hotel's real GST sequence. A number shown here but
-            never printed on a filed return leaves a hole in that sequence, and a hole
-            in a GST series is a question from an assessor. Issuing moves to this screen
-            at Stage 8, when the numbers are recorded rather than displayed.
-          </p>
-          {series.data && (
-            <div className="flex flex-wrap gap-x-6 gap-y-1 mt-2.5">
-              {series.data.map((s) => (
-                <div key={s.prefix}>
-                  <span className="text-2xs text-grey-500">{s.prefix} — next </span>
-                  <span className="text-sm tabular font-medium text-ink-900">{s.next}</span>
-                </div>
-              ))}
-            </div>
-          )}
-        </div>
-      </div>
-
-      <Card>
-        <DataTable<BillableRow>
-          rows={rows.data ?? []}
-          columns={BILLABLE_COLUMNS}
-          rowKey={(b) => b.stayId}
-          loading={rows.isLoading}
-          error={rows.error}
-          onRetry={() => rows.refetch()}
-          empty={
-            <div className="text-center py-10">
-              <Receipt className="size-6 text-grey-300 mx-auto mb-3" />
-              <p className="text-md font-semibold text-ink-900">Nothing has departed yet</p>
-              <p className="text-base text-grey-500 mt-1.5">
-                A folio becomes billable when the guest checks out.
-              </p>
-            </div>
-          }
-        />
-      </Card>
-    </Page>
-  );
-}
+/* InvoicesPage moved to src/pages/Invoices.tsx when issuing landed —
+   see the note on the import in App.tsx. */
 
 /* ── City ledger, at the property ────────────────────────────────── */
 

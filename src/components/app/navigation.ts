@@ -2,7 +2,7 @@ import {
   LayoutDashboard, CalendarCheck, Users, Building2, Hotel, Receipt,
   BarChart3, Bell, Settings, ShieldCheck, CalendarRange,
   FileText, Wallet, Plug, ScrollText,
-  UserCog, Palette, BookOpen, Home, ClipboardList, type LucideIcon,
+  UserCog, Palette, BookOpen, Home, ClipboardList, type LucideIcon, ShieldAlert,
 } from "lucide-react";
 import { can, canAccess, type Resource, type Role } from "@/lib/permissions";
 
@@ -99,6 +99,11 @@ const SECTIONS: NavSection[] = [
       { label: "Invoices", to: "/h/:code/invoices", icon: FileText, resource: "invoice", matchPrefix: true },
       { label: "Payments", to: "/h/:code/payments", icon: Wallet, resource: "payment" },
       { label: "City ledger", to: "/h/:code/city-ledger", icon: Building2, resource: "commission" },
+      /* Form C is a COMPLIANCE obligation about guests, not a finance
+         document — but it is filed by the same person who bills, at the
+         same desk, and burying it under Reports is how a 24-hour
+         deadline gets missed. It sits where somebody will see it. */
+      { label: "Form C", to: "/h/:code/form-c", icon: ShieldAlert, resource: "customer" },
     ],
   },
   {

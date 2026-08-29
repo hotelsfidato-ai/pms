@@ -3,7 +3,7 @@
 Updated after every finished section. **Nothing here is a claim until the gates
 below are green and the screen has been opened.**
 
-Last updated: **29 August 2026** · after **tax invoices and the Form C register**
+Last updated: **29 August 2026** · after **the invoice and Form C screens — Stage 8 closes**
 
 ---
 
@@ -136,6 +136,16 @@ to out-of-state guests is the commonest GST error in Indian hospitality.
 **An issued invoice cannot be changed by anyone**, superuser included — a
 trigger, not a grant. A wrong one is corrected by a CREDIT NOTE carrying its
 own number, with every figure negated so the two sum to nothing.
+
+**Both have screens now.** `/h/:code/invoices` lists what is ready to bill with
+an Issue button per row, the property's real series from the database, and every
+number ever allocated. `/h/:code/form-c` is the register. Driven through the
+browser: issued `5EL/2026-27/00001`, watched the series advance to `00002`, and
+recorded an FRRO reference against a foreign guest at Pune.
+
+Rule 6 on both: an overpaid folio shows a DISABLED Issue button carrying its
+reason; an already-billed stay shows its invoice NUMBER where the button was,
+rather than vanishing from the list.
 
 **Form C is a REGISTER, not a filing.** This system cannot file with the FRRO;
 that happens on the government portal. It names every foreign national who owes
@@ -293,7 +303,7 @@ retried. Ledger nets to zero, room revenue still ₹4,19,578.76.
 12 Hardening and go-live             ████░░░░░░░░  backup proven, races proven
 ```
 
-**About 79%.**
+**About 82%.**
 
 ---
 
@@ -325,9 +335,9 @@ business date         5EL 2026-08-25 · AGR 2027-04-02 · PUN 2026-08-28
 ## What is left in this stage
 
 ```
-1 · SCREENS          invoices and Form C have no interface. Both work
-                     over HTTP and neither has a page, so issuing a bill
-                     currently means curl. This is the honest gap.
+1 · a PRINTABLE      an invoice exists as JSON and a row in a table. No
+    invoice          guest has ever been handed one. A tax invoice that
+                     cannot be printed is not finished.
 2 · offline          Stage 6 asked for it. Zero service-worker files.
 3 · retire src/data/store.ts and the in-memory fixtures it seeds.
 ```

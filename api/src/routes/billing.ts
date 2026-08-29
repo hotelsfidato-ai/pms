@@ -109,6 +109,7 @@ billing.get("/:code/billable", async (c) => {
       stay_id: string; reference: string; guest: string; room: string | null;
       room_type: string; source: string; arrival: string; departure: string;
       nights: number; charges: string; tax: string; paid: string; balance: string;
+      invoice: string | null;
     }>(
       `with live as (
          select fp.*, f.reservation_id
@@ -140,7 +141,18 @@ billing.get("/:code/billable", async (c) => {
               coalesce((select -sum(amount) from live
                          where reservation_id = r.id and category = 'payment'), 0)::text   as paid,
               coalesce((select sum(amount + tax_amount) from live
-                         where reservation_id = r.id), 0)::text                            as balance
+                         where reservation_id = r.id), 0)::text                            as balance,
+              -- The invoice already issued against this stay, if any.
+              -- A departed folio that has been billed is not "ready to
+              -- bill", and showing it as such invites a clerk to press a
+              -- button that can only tell them off. Reported rather than
+              -- filtered out, so the stay keeps its link to the number.
+              (select i.number from invoices i
+                 join folios f2 on f2.id = i.folio_id
+                where f2.reservation_id = r.id and i.credits_id is null
+                  and not exists (select 1 from invoices cn
+                                   where cn.credits_id = i.id)
+                limit 1) as invoice
          from reservations r
          join guests g      on g.id  = r.guest_id
          join room_types rt on rt.id = r.room_type_id
@@ -168,6 +180,8 @@ billing.get("/:code/billable", async (c) => {
         balance,
         status:
           balance > 0.5 ? "outstanding" : balance < -0.5 ? "overpaid" : "settled",
+        /* Null until a tax invoice has been issued against this stay. */
+        invoice: b.invoice,
       };
     });
   });

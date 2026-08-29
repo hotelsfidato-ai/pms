@@ -626,6 +626,43 @@ wrongly, or ignored.**
 
 ---
 
+### 35 · A counter that was honest until it wasn't
+
+`getInvoiceSeries()` read the FIXTURE, and its comment said exactly why:
+
+> "Still from the fixture rather than the database, because there is no
+> `invoice_series` row to read until something issues from it. Modelling a
+> counter nothing increments would suggest it is being kept."
+
+Correct — right up to the moment issuing landed. The screen then showed the
+fictional `5EFH154` **beside real invoice numbers from the real series**, which
+is worse than the placeholder it was: a placeholder next to nothing reads as a
+placeholder; a placeholder next to real data reads as data.
+
+**A stub's comment is its removal condition, and meeting it is not the same as
+noticing you met it.** Third time in three checkpoints something carried its
+own condition and needed finding: `isDemoProperty()`, the night audit's Run
+button, and this.
+
+**When a stage lands, grep for the stubs that named it.**
+
+---
+
+### 36 · A list that invited a button it could only refuse
+
+After issuing, the Invoices screen still read "58 ready to bill" and still
+offered Issue on the stay just billed. The API would have answered
+`duplicate`, so nothing would break — but a clerk would press it, get an
+ambiguous result, and learn to distrust the screen.
+
+Fixed by making `billable` report the invoice already issued against each
+stay, so the row shows its NUMBER where the button was.
+
+**Reported, not filtered out.** Hiding the row would break the stay's link to
+its number and send someone hunting for where the invoice went.
+
+---
+
 ## Verification traps
 
 ### Never test a Tailwind utility by injecting the class at runtime

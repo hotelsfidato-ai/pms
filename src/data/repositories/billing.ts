@@ -1,5 +1,4 @@
 import { api, ApiError } from "@/lib/api";
-import { property } from "../fixtures/property";
 import { BUSINESS_DATE } from "./businessDate";
 
 /* ══════════════════════════════════════════════════════════════════
@@ -94,6 +93,14 @@ export interface BillableRow {
   balance: number;
   /** Only a settled folio can be invoiced. */
   status: "settled" | "outstanding" | "overpaid";
+  /**
+   * The tax invoice already issued against this stay, or null.
+   *
+   * A departed folio that has been billed is not "ready to bill". The
+   * row stays visible — it keeps the stay's link to its number — but
+   * the Issue button becomes the number.
+   */
+  invoice: string | null;
 }
 
 export async function listBillable(hotelId: string): Promise<BillableRow[]> {
@@ -103,27 +110,28 @@ export async function listBillable(hotelId: string): Promise<BillableRow[]> {
 
 export interface InvoiceSeriesState {
   prefix: string;
+  /** The financial year the series belongs to — GST numbering resets. */
+  finYear: string;
   next: string;
+  issued: number;
   note: string;
 }
 
 /**
- * What the next invoice number WOULD be. Nothing consumes it, and that
- * is the point — see the note on the Invoices screen.
+ * The property's real GST invoice series, from the database.
  *
- * Still from the fixture rather than the database, because there is no
- * `invoice_series` row to read until something issues from it. Modelling
- * a counter nothing increments would suggest it is being kept.
+ * This read the FIXTURE until Stage 8, and its comment said why: "there
+ * is no `invoice_series` row to read until something issues from it.
+ * Modelling a counter nothing increments would suggest it is being
+ * kept." That was right, and it stopped being true the moment issuing
+ * landed — a fictional counter shown beside real invoice numbers is
+ * worse than the honest placeholder it replaced.
  */
 export async function getInvoiceSeries(hotelId: string): Promise<InvoiceSeriesState[]> {
   if (!hotelId) return [];
-  return property.invoiceSeries.map((s) => ({
-    prefix: s.prefix || "Numeric",
-    next: s.prefix ? `${s.prefix}${s.next}` : String(s.next).padStart(s.pad ?? 6, "0"),
-    note: s.prefix
-      ? "The GST series the hotel prints today."
-      : "The internal series, zero-padded.",
-  }));
+  return fetchOr<InvoiceSeriesState[]>(
+    `/api/hotels/${hotelId}/invoice-series`, [],
+  );
 }
 
 /* ── Rates ───────────────────────────────────────────────────────── */
@@ -218,5 +226,134 @@ export interface NightAuditResult {
 export async function runNightAudit(hotelId: string): Promise<NightAuditResult> {
   return api<NightAuditResult>(`/api/hotels/${hotelId}/night-audit/run`, {
     method: "POST",
+  });
+}
+
+
+/* ══════════════════════════════════════════════════════════════════
+   TAX INVOICES — Stage 8
+
+   The InvoicesPage carried a notice for eight checkpoints saying that
+   issuing would move to that screen "at Stage 8, when the numbers are
+   recorded rather than displayed". These are what records them.
+
+   A number shown but never recorded leaves a hole in a GST series, and
+   a hole in a GST series is a question from an assessor — which is why
+   nothing here generates a number for display.
+   ══════════════════════════════════════════════════════════════════ */
+
+export interface IssuedInvoice {
+  number: string;
+  recipient: string | null;
+  total: number;
+  taxTotal: number;
+  issuedAt: string;
+  businessDate: string | null;
+  isCreditNote: boolean;
+  /** The credit note that cancelled this one, if any. */
+  creditedBy: string | null;
+}
+
+export interface InvoiceLine {
+  description: string;
+  category: string;
+  amount: number;
+  taxRate: number;
+  taxAmount: number;
+  date: string;
+}
+
+export interface InvoiceDetail {
+  number: string;
+  finYear: string;
+  issuedAt: string;
+  issuedBy: string | null;
+  businessDate: string | null;
+  supplier: {
+    name: string; address: string | null; city: string | null;
+    state: string | null; gstin: string | null;
+  };
+  recipient: { name: string | null; gstin: string | null; address: string | null };
+  /** The PROPERTY's state, always — IGST Act s.12(3)(b). */
+  placeOfSupply: string | null;
+  sacCode: string;
+  lines: InvoiceLine[];
+  taxableValue: number;
+  cgst: { rate: number; amount: number };
+  sgst: { rate: number; amount: number };
+  taxTotal: number;
+  total: number;
+  creditsInvoiceId: string | null;
+  reason: string | null;
+  creditedBy: string | null;
+}
+
+export async function listInvoices(hotelId: string): Promise<IssuedInvoice[]> {
+  if (!hotelId) return [];
+  return fetchOr<IssuedInvoice[]>(`/api/hotels/${hotelId}/invoices`, []);
+}
+
+export async function getInvoice(
+  hotelId: string, number: string,
+): Promise<InvoiceDetail | null> {
+  if (!hotelId || !number) return null;
+  return fetchOr<InvoiceDetail | null>(
+    `/api/hotels/${hotelId}/invoices/${encodeURIComponent(number)}`, null,
+  );
+}
+
+/** Issue a tax invoice for a stay. The number comes from the database. */
+export async function issueInvoice(
+  hotelId: string, stayId: string,
+): Promise<{ ok: boolean; number?: string; reason?: string; duplicate?: boolean }> {
+  return api(`/api/hotels/${hotelId}/stays/${stayId}/invoice`, { method: "POST" });
+}
+
+/** Correct an issued invoice. It is never edited. */
+export async function issueCreditNote(
+  hotelId: string, number: string, reason: string,
+): Promise<{ ok: boolean; number?: string; reason?: string }> {
+  return api(
+    `/api/hotels/${hotelId}/invoices/${encodeURIComponent(number)}/credit-note`,
+    { method: "POST", body: JSON.stringify({ reason }) },
+  );
+}
+
+/* ── Form C ───────────────────────────────────────────────────────── */
+
+export interface FormCRow {
+  reservationId: string;
+  guest: string;
+  nationality: string;
+  /** Null when no document has been recorded. Somebody has to go and ask. */
+  passport: string | null;
+  room: string;
+  arrived: string;
+  dueBy: string;
+  overdue: boolean;
+  filed: boolean;
+  reference: string | null;
+}
+
+export interface FormCRegister {
+  /** The API says this in its own body. It is not decoration. */
+  note: string;
+  due: number;
+  overdue: number;
+  rows: FormCRow[];
+}
+
+export async function getFormC(hotelId: string): Promise<FormCRegister | null> {
+  if (!hotelId) return null;
+  return fetchOr<FormCRegister | null>(`/api/hotels/${hotelId}/form-c`, null);
+}
+
+/** Record that a filing happened. The PMS does not file. */
+export async function recordFormC(
+  hotelId: string, reservationId: string, reference: string, notes?: string,
+): Promise<{ ok: boolean; reason?: string }> {
+  return api(`/api/hotels/${hotelId}/form-c/${reservationId}`, {
+    method: "POST",
+    body: JSON.stringify({ reference, ...(notes ? { notes } : {}) }),
   });
 }
