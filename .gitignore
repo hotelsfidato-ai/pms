@@ -31,3 +31,7 @@ vitest.config.ts.timestamp-*
 .env
 .env.local
 .env.*.local
+
+# Backups are data, not source. db/verify-backup.sh proves the tooling;
+# the dumps themselves belong wherever production keeps them.
+db/backups/

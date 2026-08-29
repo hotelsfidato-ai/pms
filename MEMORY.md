@@ -494,6 +494,67 @@ exactly that reason.
 
 ---
 
+### 28 · A constraint the schema documents at length and does not have
+
+`005_reservations.sql` spends fifteen lines explaining
+`reservations_no_double_booking` — "not unlikely, not the app checks first, but
+rejected by Postgres". A concurrency test tried to race it and found
+**`pg_constraint` had never heard of it**.
+
+`011_model_additions.sql` drops `reservations.room_id`, and dropping a column
+drops every constraint depending on it. That is right: a single room_id could
+not record a room move, and the protection moved to `ra_no_double_booking` on
+`room_assignments`. But anyone reading 005 — which is where you look when you
+ask "are we protected from double booking" — would believe it was still there.
+
+**A migration is history and cannot be rewritten, so the note is the fix.**
+005 now says what happens to it and where the guarantee went.
+
+**Testing a thing is how you find out whether it is there.** Six checkpoints
+of comments asserted this constraint; the first test written against it found
+nothing to test.
+
+---
+
+### 29 · Racing a lock with `Promise.all`, which cannot resolve
+
+The first concurrency helper opened two transactions, issued both inserts, and
+`await Promise.all([...])` before committing either. It hung for twenty seconds
+and failed on a timeout.
+
+**An EXCLUDE constraint does not reject the second writer — it BLOCKS it**,
+holding the statement open until the first transaction ends. Which is the
+guarantee under test. Waiting for both statements before committing either is
+a deadlock by construction.
+
+The shape that works: `Promise.race` to see which statement landed, commit that
+one, then await the other — which unblocks the instant the winner commits and
+returns the exclusion violation. That is also the order it happens in at a
+front desk.
+
+Both guards were then proved by DROPPING them and watching the tests fail:
+*"The same room was assigned to two guests for the same nights"* and *"The
+posting was reversed TWICE"*.
+
+---
+
+### 30 · The same wrong question, asked in a second place
+
+`db/verify-backup.sh` checked receipts with `sum(amount) from payments` and
+reported ₹3,97,141.93 against an expected ₹3,97,041.93. Exactly ₹100 out — the
+API suite posts a payment and reverses it, the ledger entry cancels, the
+receipt row stays.
+
+That is **defect 25 again**, in a file written after defect 25 was recorded and
+fixed. Correcting a query in one place does not correct the question in
+another.
+
+**When a figure has a definition, the definition belongs in one place.** The
+Manager Report, the API test and the backup verifier all needed "money the
+hotel actually has", and all three wrote it out longhand.
+
+---
+
 ## Verification traps
 
 ### Never test a Tailwind utility by injecting the class at runtime

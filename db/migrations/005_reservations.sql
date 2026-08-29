@@ -74,6 +74,23 @@ create table if not exists reservations (
 --
 -- The WHERE clause means cancelled and no-show bookings release their room.
 -- -----------------------------------------------------------------------------
+-- ⚠ THIS CONSTRAINT NO LONGER EXISTS AFTER A FULL MIGRATION RUN.
+--
+--   011_model_additions.sql drops `reservations.room_id`, and dropping a
+--   column drops every constraint that depends on it. That is deliberate: a
+--   single room_id could not record a room MOVE, and the constraint actively
+--   prevented one, because the new room's dates overlapped the old booking.
+--
+--   The protection did not go away — it moved one table over, to
+--   `ra_no_double_booking` on room_assignments, which is what actually holds
+--   a room now. Every claim in the fifteen lines above is still true of the
+--   system; none of it is true of THIS table any more.
+--
+--   Left in place rather than deleted because migrations are history: 005 ran
+--   as written, and rewriting it would make the file disagree with what the
+--   database did. The note is the fix. Found when a concurrency test tried to
+--   race a constraint that pg_constraint had never heard of.
+--
 -- Guarded so the file is re-runnable. `add constraint` has no IF NOT EXISTS
 -- form, so a bare ALTER TABLE here fails the second time the migration runs
 -- and takes the rest of the file with it under ON_ERROR_STOP.

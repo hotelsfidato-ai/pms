@@ -3,7 +3,7 @@
 Updated after every finished section. **Nothing here is a claim until the gates
 below are green and the screen has been opened.**
 
-Last updated: **29 August 2026** · after **the night audit runs — Stage 5 closes**
+Last updated: **29 August 2026** · after **backup, restore and the concurrency races**
 
 ---
 
@@ -15,11 +15,12 @@ FRONTEND   tsc -b            0 errors
            build             clean
 
 API        tsc --noEmit      0 errors
-           npm test          38 passed   (live Postgres, as pms_app)
+           npm test          40 passed   (live Postgres, as pms_app)
                              loads the demo fixture first — see below
 
 DATABASE   db/tests/run.sh   24 migrations · 62 assertions
                              7 isolation checks · exit 0
+BACKUP     verify-backup.sh  dumped, RESTORED, 13 checks · exit 0
            load-demo         431 available · 132 sold · 30.63% ✓
 ```
 
@@ -92,6 +93,54 @@ dated postings from the server's wall clock:
 All four now resolve the date from the database inside the same transaction as
 the write. Proved by restoring the wall clock in one line and watching the test
 fail.
+
+---
+
+## Backup, restore, and the races — Stage 12 begins ✅
+
+```bash
+./db/backup.sh                 # a dump
+./db/verify-backup.sh          # dump → RESTORE → check → drop
+./db/restore.sh --latest       # put it back
+```
+
+**`verify-backup.sh` is the only one that matters.** A backup that has never
+been restored is not a backup. It restores into a scratch database and asserts
+the figures that must come back — ₹4,19,578.76 room revenue, ₹3,97,041.93
+receipts, 25 RLS tables, 37 policies, all three folio triggers. A dump that
+restores cleanly but returns ₹0 in receipts has lost the payments table, and
+only a check that names a figure would catch it. `pg_restore` exiting 0 would
+not.
+
+Proved by making a dump with `--exclude-table=payments` and watching it refuse:
+
+```
+x receipts   ERROR:  relation "payments" does not exist
+1 check(s) failed. RESTORING THIS FILE WOULD NOT GIVE YOU YOUR HOTEL BACK.
+```
+
+`restore.sh` is written for whoever runs it at 03:00: it prints what the target
+currently holds in properties and reservations, makes a safety copy of what it
+is about to destroy, and requires the database NAME typed out. `--yes` is
+refused for the live database.
+
+**Two guards raced, and both proved by removing them:**
+
+```
+ra_no_double_booking          drop it → "The same room was assigned to two
+                              guests for the same nights."
+folio_postings_one_reversal   drop it → "The posting was reversed TWICE."
+```
+
+An EXCLUDE constraint does not reject the second writer — it BLOCKS it until
+the first transaction ends. That is the guarantee, and it is why the first
+version of the test helper hung for twenty seconds.
+
+**And a constraint that was not there.** `005_reservations.sql` documents
+`reservations_no_double_booking` at length; `pg_constraint` has never heard of
+it, because 011 drops the column it depends on. The protection moved to
+`room_assignments` — correct — but 005 read as though reservations were
+guarded. A note now says otherwise. Found by testing it.
 
 ---
 
@@ -191,10 +240,10 @@ retried. Ledger nets to zero, room revenue still ₹4,19,578.76.
 9  Rates, availability, STAAH        ██░░░░░░░░░░  room_blocks landed
 10 Group dashboard and reports       ████████░░░░  7 of 11 reports, all SQL
 11 CRS bridge                        ░░░░░░░░░░░░
-12 Hardening and go-live             ░░░░░░░░░░░░
+12 Hardening and go-live             ████░░░░░░░░  backup proven, races proven
 ```
 
-**About 71%.**
+**About 74%.**
 
 ---
 
@@ -226,15 +275,18 @@ business date         5EL 2026-08-25 · AGR 2027-04-02 · PUN 2026-08-28
 ## What is left in this stage
 
 ```
-1 · CP12             concurrency — the two EXCLUDE constraints have never
-                     been raced — and a proven restore. A backup that has
-                     never been restored is not a backup. ZERO backup
-                     files exist today.
-2 · invoices         app.next_invoice_number() has existed since 011 and
+1 · invoices         app.next_invoice_number() has existed since 011 and
                      has never been called. No GST invoice is issued, and
-                     Form C is unbuilt.
+                     Form C is unbuilt. This is Stage 8, and it is the
+                     largest remaining gap that does not need you.
+2 · offline          Stage 6 asked for it. Zero service-worker files.
 3 · retire src/data/store.ts and the in-memory fixtures it seeds.
 ```
+
+**What backup does NOT cover.** The dump lands on the same disk as the
+database, which is a copy that dies in the same fire. Getting it off-box is one
+line and depends on where production lives — still question 1 below. Nothing is
+scheduled either; that is cron, or the managed provider's own backups.
 
 **The audit is not scheduled.** Somebody presses the button. A hotel that
 forgets simply stays on yesterday — which is safe, and visible on every
