@@ -3,7 +3,7 @@
 Updated after every finished section. **Nothing here is a claim until the gates
 below are green and the screen has been opened.**
 
-Last updated: **29 August 2026** · Phase 1 item 1 — **passport capture at check-in**
+Last updated: **29 August 2026** · Phase 1 items 1–3 — **capture, and the four missing reports**
 
 ---
 
@@ -15,7 +15,7 @@ FRONTEND   tsc -b            0 errors
            build             clean
 
 API        tsc --noEmit      0 errors
-           npm test          59 passed   (live Postgres, as pms_app)
+           npm test          67 passed   (live Postgres, as pms_app)
                              loads the demo fixture first — see below
 
 DATABASE   db/tests/run.sh   26 migrations · 67 assertions
@@ -93,6 +93,35 @@ dated postings from the server's wall clock:
 All four now resolve the date from the database inside the same transaction as
 the write. Proved by restoring the wall clock in one line and watching the test
 fail.
+
+---
+
+## Phase 1 · items 2 and 3 — the four missing reports ✅
+
+Each was on the reports index with a `stage:` note where its path should have
+been. **Zero reports now carry one.**
+
+```
+/reports/guest-ledger    every folio that moved, opening to closing
+/reports/cashier-shift   what each cashier took, by method
+/reports/gst-sales       invoice-level GSTR-1 extract
+/reports/c-form          foreign arrivals, documents, and what was filed
+```
+
+Two of those notes were CONDITIONS, and both had been met: the GST register
+needed the invoice series live (Stage 8) and the C-Form report needed passport
+capture (item 1, this morning).
+
+**Building the Guest Ledger found a defect in the Manager Report.** It claimed
+₹4,60,697.76 of revenue against a ledger holding ₹4,59,697.76. `w.discount` was
+fetched, typed, and never read — so the total was higher than the ledger by
+every discount the property had given, and its own rows did not subtract to its
+own closing balance. Second time a Manager Report column has been selected and
+not read.
+
+The two now agree to the paisa: **₹4,59,697.76 − ₹3,97,041.93 = ₹62,655.83**,
+and a test asserts they always will — proved by restoring the bug and watching
+it fail.
 
 ---
 
@@ -338,7 +367,7 @@ retried. Ledger nets to zero, room revenue still ₹4,19,578.76.
 7  POS bridge (a MIGRATION)          ██████░░░░░░  the seam is built and tested
 8  Billing, GST, Form C              ██░░░░░░░░░░  lodging tax derives
 9  Rates, availability, STAAH        ██░░░░░░░░░░  room_blocks landed
-10 Group dashboard and reports       ████████░░░░  7 of 11 reports, all SQL
+10 Group dashboard and reports       ███████████░  11 of 11 reports, all SQL
 11 CRS bridge                        ░░░░░░░░░░░░
 12 Hardening and go-live             ████░░░░░░░░  backup proven, races proven
 ```

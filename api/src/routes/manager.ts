@@ -192,7 +192,21 @@ manager.get("/:code/reports/manager", async (c) => {
       extra: Partial<{ total: boolean; indent: boolean }> = {},
     ) => ({ label, today: pick(today), ptd: pick(ptd), ytd: pick(ytd), ...extra });
 
-    const net = (w: Window) => round(w.room + w.extra);
+    /* DISCOUNT COMES OFF.
+       `w.discount` was fetched, typed, and never read — so the revenue
+       total was higher than the ledger by every discount the property
+       had given. It showed ₹4,60,697.76 against a ledger holding
+       ₹4,59,697.76, and its own rows did not subtract to its own
+       closing balance.
+
+       Found by building the Guest Ledger over the same postings and
+       watching two reports of one figure disagree by exactly ₹1,000 —
+       which was the single discount in the demo. Second time in this
+       project a Manager Report column has been selected and not read.
+
+       Stored positive (`-sum(amount)` over negative postings), so it
+       subtracts. */
+    const net = (w: Window) => round(w.room + w.extra - w.discount);
     const gross = (w: Window) => round(net(w) + w.tax);
     const paidTotal = (w: Window) =>
       round(Object.values(w.payments).reduce((t, n) => t + n, 0));
@@ -203,6 +217,11 @@ manager.get("/:code/reports/manager", async (c) => {
          true zero rather than a gap. */
       three("Cancellation Revenue", () => 0),
       three("Extra Charges", (w) => w.extra),
+      /* Shown, so the total below is derivable from the rows above it.
+         A total nobody can reconstruct from what is printed is a total
+         nobody can check. Negated for display because it reduces
+         revenue, and a positive number under "Discount" reads as one. */
+      three("Discount", (w) => (w.discount ? -w.discount : 0)),
       three("SGST", (w) => round(w.tax / 2), { indent: true }),
       three("CGST", (w) => round(w.tax / 2), { indent: true }),
       three("Total Revenue without Tax", net, { total: true }),

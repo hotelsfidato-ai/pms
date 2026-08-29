@@ -38,6 +38,9 @@ import {
 import InvoicesPage from "@/pages/Invoices";
 import FormCPage from "@/pages/FormC";
 import InvoicePage from "@/pages/Invoice";
+import {
+  GuestLedgerPage, CashierShiftPage, GstSalesPage, CFormPage,
+} from "@/pages/reports/Compliance";
 import RatesPage from "@/pages/Rates";
 import NightAuditPage from "@/pages/NightAudit";
 import WalkInsPage from "@/pages/WalkIns";
@@ -157,6 +160,10 @@ export default function App() {
             <Route path="/reports/monthly-stats" element={<MonthlyStatisticsPage />} />
             <Route path="/reports/yearly-stats" element={<YearlyStatisticsPage />} />
             <Route path="/reports/lodging-tax" element={<LodgingTaxPage />} />
+            <Route path="/reports/guest-ledger" element={<GuestLedgerPage />} />
+            <Route path="/reports/cashier-shift" element={<CashierShiftPage />} />
+            <Route path="/reports/gst-sales" element={<GstSalesPage />} />
+            <Route path="/reports/c-form" element={<CFormPage />} />
             <Route path="/reports" element={<ReportsIndexPage />} />
 
             <Route path="/properties" element={<PropertiesPage />} />

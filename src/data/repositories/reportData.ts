@@ -165,3 +165,128 @@ export async function getLodgingTax(
 
 /** The name printed at the head of every report. */
 export const REPORT_PROPERTY = property.name;
+
+/* ══════════════════════════════════════════════════════════════════
+   THE FOUR REPORTS THAT WERE LISTED AND NEVER BUILT
+
+   Each one appeared on the reports index with a `stage:` note instead
+   of a path. Two of those notes were conditions, and both are met:
+
+     "needs the invoice series to be live first"   Stage 8
+     "needs passport capture at check-in"          Phase 1 item 1
+   ══════════════════════════════════════════════════════════════════ */
+
+export interface GuestLedgerRow {
+  folioId: string;
+  reference: string;
+  guest: string;
+  room: string;
+  status: string;
+  /** The balance strictly BEFORE the window opened. */
+  opening: number;
+  charges: number;
+  payments: number;
+  closing: number;
+}
+
+export interface GuestLedger {
+  from: string;
+  to: string;
+  rows: GuestLedgerRow[];
+}
+
+export async function getGuestLedger(
+  hotelId: string, from: string, to: string,
+): Promise<GuestLedger | null> {
+  if (!hotelId) return null;
+  return fetchOr<GuestLedger | null>(
+    `/api/hotels/${hotelId}/reports/guest-ledger?from=${from}&to=${to}`, null,
+  );
+}
+
+export interface CashierShiftRow {
+  staffId: string | null;
+  /** Null where the posting predates staff attribution. Not "System". */
+  cashier: string | null;
+  method: string;
+  count: number;
+  amount: number;
+}
+
+export interface CashierShift {
+  from: string;
+  to: string;
+  rows: CashierShiftRow[];
+}
+
+export async function getCashierShift(
+  hotelId: string, from: string, to: string,
+): Promise<CashierShift | null> {
+  if (!hotelId) return null;
+  return fetchOr<CashierShift | null>(
+    `/api/hotels/${hotelId}/reports/cashier-shift?from=${from}&to=${to}`, null,
+  );
+}
+
+export interface GstSalesRow {
+  number: string;
+  issued: string;
+  recipient: string | null;
+  gstin: string | null;
+  placeOfSupply: string | null;
+  sac: string;
+  taxable: number;
+  cgst: number;
+  sgst: number;
+  total: number;
+  /** Set on a credit note: the invoice it cancels. */
+  creditsInvoice: string | null;
+}
+
+export interface GstSales {
+  from: string;
+  to: string;
+  rows: GstSalesRow[];
+}
+
+export async function getGstSales(
+  hotelId: string, from: string, to: string,
+): Promise<GstSales | null> {
+  if (!hotelId) return null;
+  return fetchOr<GstSales | null>(
+    `/api/hotels/${hotelId}/reports/gst-sales?from=${from}&to=${to}`, null,
+  );
+}
+
+export interface CFormRow {
+  guest: string;
+  nationality: string;
+  /** Null where nothing was captured — shown, not hidden. */
+  passport: string | null;
+  passportExpiry: string | null;
+  visaNumber: string | null;
+  visaExpiry: string | null;
+  address: string | null;
+  room: string;
+  arrived: string;
+  departed: string;
+  reference: string | null;
+  filedAt: string | null;
+}
+
+export interface CFormReport {
+  from: string;
+  to: string;
+  /** The API says this in its own body. It is not decoration. */
+  note: string;
+  rows: CFormRow[];
+}
+
+export async function getCForm(
+  hotelId: string, from: string, to: string,
+): Promise<CFormReport | null> {
+  if (!hotelId) return null;
+  return fetchOr<CFormReport | null>(
+    `/api/hotels/${hotelId}/reports/c-form?from=${from}&to=${to}`, null,
+  );
+}

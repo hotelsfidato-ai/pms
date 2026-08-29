@@ -773,6 +773,49 @@ on the opener.
 
 ---
 
+### 43 · A revenue total that ignored every discount
+
+The Manager Report reported **₹4,60,697.76** of revenue against a ledger
+holding **₹4,59,697.76**. `w.discount` was fetched from the database, given a
+type, put on the `Window` object — and never read:
+
+```ts
+const net = (w: Window) => round(w.room + w.extra);   // no discount
+```
+
+So the total was higher than the ledger by every discount the property had
+ever given, and the report's own rows **did not subtract to its own closing
+balance** — 4,60,698 − 3,97,042 is 63,656, and it printed 62,656.
+
+Found by building the Guest Ledger over the same postings and watching two
+reports of one figure disagree by exactly ₹1,000, which was the single discount
+in the fixture.
+
+**Second time a Manager Report column has been selected and not read** — the
+first was the dead `blocked` SQL that compared two constants. A column fetched
+and unused is worse than one never fetched: it looks accounted for.
+
+Discount is now a printed ROW as well as a subtraction, because **a total
+nobody can reconstruct from the rows above it is a total nobody can check.**
+
+---
+
+### 44 · A GST register dated by the wall clock
+
+`reports/gst-sales` filtered invoices on `issued_at::date`. An invoice raised
+at 09:00 on the 29th for a stay that closed on the 25th fell **outside an
+August register entirely** — the demo returned zero rows against a property
+that had issued one.
+
+A GST return is filed by DOCUMENT date, and a hotel's document date is the day
+it was operating in, not the moment somebody pressed the button. Filtering and
+display both use `business_date` now; `issued_at` remains the audit timestamp.
+
+**Every date in a hotel system has to answer "whose day is this?" before it
+answers "when".**
+
+---
+
 ## Verification traps
 
 ### Never test a Tailwind utility by injecting the class at runtime
