@@ -1,27 +1,36 @@
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { useState } from "react";
 import { useParams, Link } from "react-router";
 import { Check, AlertTriangle, ArrowRight, MoonStar } from "lucide-react";
 import { cn } from "@/lib/cn";
-import { dateLong } from "@/lib/format";
+import { dateLong, money } from "@/lib/format";
 import { useUi } from "@/lib/ui";
+import { useSession } from "@/lib/session";
 import {
   Page, PageHeader, Card, CardBody, Button, StatusPill, Skeleton, Tooltip,
   ErrorState,
 } from "@/components/ui";
-import { getNightAudit } from "@/data/repositories";
+import { describeError } from "@/components/ui/States";
+import { getNightAudit, runNightAudit, type NightAuditResult }
+  from "@/data/repositories";
 
 /* ══════════════════════════════════════════════════════════════════
    NIGHT AUDIT
 
    The checklist is the part a manager reads; the roll-over is the
-   part the machine does. Only the first of those is honest to build
-   today, because the business date is a constant in this stage —
-   posting room charges without advancing the date would double-charge
-   every occupied room the next time anyone pressed the button.
+   part the machine does.
 
-   So Run is disabled with its reason on the face of it (Rule 6), and
-   everything the audit would check is computed live from the same
-   ledger every other screen reads.
+   Run was disabled for six checkpoints, with the reason written on it:
+   "the business date is a constant in this stage — posting room
+   charges without advancing the date would double-charge every
+   occupied room the next time anyone pressed the button." CP11 met
+   that condition. The date comes from night_audit_runs now, and this
+   button is what writes to it.
+
+   `canRun` is not computed here. It comes from the same function the
+   server uses to refuse the request, so a button that looks pressable
+   and a request that gets refused cannot disagree — which is what
+   Rule 6 is actually for.
    ══════════════════════════════════════════════════════════════════ */
 
 export default function NightAuditPage() {
@@ -32,6 +41,27 @@ export default function NightAuditPage() {
   const { data, isLoading, error, refetch } = useQuery({
     queryKey: ["night-audit", hotelId],
     queryFn: () => getNightAudit(hotelId),
+  });
+
+  const queryClient = useQueryClient();
+  const [result, setResult] = useState<NightAuditResult | null>(null);
+
+  const run = useMutation({
+    mutationFn: () => runNightAudit(hotelId),
+    onSuccess: async (r) => {
+      setResult(r);
+      /* The business date has MOVED. Two things are now stale, and
+         only invalidating the first is how this shipped broken once:
+
+           · every cached query, computed against the old date
+           · BUSINESS_DATE itself, which the session learned at sign-in
+             and nothing else updates
+
+         Refresh first. Invalidating queries that then refetch against
+         a stale date just caches the wrong answer again. */
+      await useSession.getState().refresh();
+      await queryClient.invalidateQueries();
+    },
   });
 
   const attention = data?.checks.filter((c) => c.state === "attention") ?? [];
@@ -130,11 +160,53 @@ export default function NightAuditPage() {
               <Tooltip content={data.canRun.reason ?? ""}>
                 {/* Rule 6: refused, visible, and explained — not removed. */}
                 <span className="shrink-0">
-                  <Button disabled={!data.canRun.allowed}>Run night audit</Button>
+                  <Button
+                    disabled={!data.canRun.allowed || run.isPending}
+                    onClick={() => run.mutate()}
+                  >
+                    {run.isPending ? "Closing the day…" : "Run night audit"}
+                  </Button>
                 </span>
               </Tooltip>
             </CardBody>
           </Card>
+
+          {run.isError && (
+            <Card className="mt-4 border-red-200 bg-red-50/50">
+              <CardBody>
+                <p className="text-sm text-red-900">
+                  {describeError(run.error).message ??
+                    "The day was not closed. Nothing was changed."}
+                </p>
+              </CardBody>
+            </Card>
+          )}
+
+          {result?.ok && (
+            <Card className="mt-4 border-green-200 bg-green-50/50">
+              <CardBody className="space-y-1.5">
+                <p className="text-sm font-medium text-green-900">
+                  {dateLong(result.businessDate)} is closed.
+                  {result.nextBusinessDate
+                    ? ` The property is now operating in ${dateLong(result.nextBusinessDate)}.`
+                    : ""}
+                </p>
+                <p className="text-2xs text-green-800">
+                  {result.roomsPosted ?? 0} room
+                  {result.roomsPosted === 1 ? "" : "s"} posted
+                  {typeof result.revenuePosted === "number"
+                    ? ` · ${money(result.revenuePosted)}`
+                    : ""}
+                  {result.complimentary
+                    ? ` · ${result.complimentary} complimentary, not charged`
+                    : ""}
+                  {result.noShows
+                    ? ` · ${result.noShows} no-show${result.noShows === 1 ? "" : "s"}`
+                    : ""}
+                </p>
+              </CardBody>
+            </Card>
+          )}
         </>
       )}
     </Page>

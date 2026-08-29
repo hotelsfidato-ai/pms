@@ -85,6 +85,17 @@ interface SessionState {
   signInAsDev: (subject: string) => Promise<void>;
   signOut: () => Promise<void>;
   setHotelId: (id: string) => void;
+  /**
+   * Re-read identity, scope and every property's BUSINESS DATE.
+   *
+   * Needed because the night audit MOVES a date. Before this existed,
+   * closing a day updated the database and left the whole interface
+   * reading the old one: the audit's own success card said "now
+   * operating in 26 August" while the header two lines above it still
+   * said "Closing 25 August". Nothing was broken; the client had
+   * simply never been told.
+   */
+  refresh: () => Promise<void>;
   /** Called once at start-up to restore a session Firebase already holds. */
   restore: () => void;
 }
@@ -141,6 +152,10 @@ export const useSession = create<SessionState>()((set, get) => ({
     setDevSubject(null);
     if (auth?.currentUser) await firebaseSignOut(auth);
     set({ status: "signed-out", scope: null, hotels: [], hotelId: null, error: null });
+  },
+
+  refresh: async () => {
+    await load(set);
   },
 
   setHotelId: (id) => {

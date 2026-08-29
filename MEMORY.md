@@ -450,6 +450,50 @@ in its hook. **Read `Test Files`, not only `Tests`.**
 
 ---
 
+### 26 · The date moved and the interface never found out
+
+The night audit closed 25 August, the success card said *"the property is now
+operating in Wednesday, 26 August"* — and the header two lines above it still
+said **"Closing Tuesday, 25 August"**. So did Arrivals, Folios, the tape chart
+and every report.
+
+`queryClient.invalidateQueries()` was called and did its job. What it could not
+fix is that `BUSINESS_DATE` is a module binding the SESSION sets at sign-in, and
+nothing else writes to it. Refetching against a stale date just re-caches the
+wrong answer.
+
+**When a write changes something a cache key is built FROM, invalidate the key
+source before the cache.** `useSession.refresh()` now runs first, then the
+queries.
+
+Only visible by opening the screen: `tsc`, 81 tests and a clean build all
+passed, and the two contradictory dates were four lines apart on one card.
+
+---
+
+### 27 · Fixtures that test the audit, and the audit that ate the fixture
+
+Two lessons from one file.
+
+**A one-night stay checked in TODAY is due out TOMORROW.** The first version of
+the night-audit test created `checkInAtPune(1, …)` and expected it to block
+today's close. It did not, and the failure cascaded into three other tests that
+inherited the leftover guest. Obvious written down; wrong in the code.
+
+**A test that runs the audit twice is not testing idempotence.** The first run
+ADVANCES the date, so the second closes a *different* day and posts a different
+night — two charges, both correct. The only thing that can double-charge is a
+run interrupted after posting and before completing, so that is what the test
+now simulates.
+
+And the wider one: **the calibrated fixture is now mutable.** Since the audit
+landed, closing a day at 5EL moves it, and doing so by hand once left seven
+tests failing with `expected '2026-08-27' to be '2026-08-25'`. Nothing was
+broken — the fixture had been *operated*. `npm test` loads the demo first for
+exactly that reason.
+
+---
+
 ## Verification traps
 
 ### Never test a Tailwind utility by injecting the class at runtime

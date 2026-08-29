@@ -8,10 +8,11 @@
     "dev": "tsx watch src/server.ts",
     "start": "node --experimental-strip-types src/server.ts",
     "typecheck": "tsc --noEmit",
-    "test": "vitest run",
+    "test": "tsx scripts/load-demo.ts && vitest run",
     "load-demo": "tsx scripts/load-demo.ts",
     "serve": "node scripts/free-port.mjs && tsx src/server.ts",
-    "pos:outlet": "tsx scripts/pos-outlet.ts"
+    "pos:outlet": "tsx scripts/pos-outlet.ts",
+    "test:only": "vitest run"
   },
   "dependencies": {
     "@hono/node-server": "^1.13.7",

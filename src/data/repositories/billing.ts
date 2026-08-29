@@ -189,3 +189,34 @@ export async function getNightAudit(hotelId: string): Promise<NightAuditState | 
     null,
   );
 }
+
+/** What one completed audit did. */
+export interface NightAuditResult {
+  ok: boolean;
+  reason?: string;
+  businessDate: string;
+  nextBusinessDate?: string;
+  roomsPosted?: number;
+  revenuePosted?: number;
+  complimentary?: number;
+  noShows?: number;
+  duplicate?: boolean;
+  blockers?: Array<{ id: string; reason: string; rooms: string[] }>;
+}
+
+/**
+ * Close the day.
+ *
+ * The only call in this system that MOVES a business date. Everything
+ * else reads one.
+ *
+ * A refusal comes back as `{ ok: false, reason }` with a 409, which
+ * `api()` surfaces as an ApiError carrying the body — the same shape
+ * every other guarded action uses, so the screen shows the reason
+ * rather than a status code.
+ */
+export async function runNightAudit(hotelId: string): Promise<NightAuditResult> {
+  return api<NightAuditResult>(`/api/hotels/${hotelId}/night-audit/run`, {
+    method: "POST",
+  });
+}

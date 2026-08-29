@@ -2,6 +2,7 @@ import { Hono } from "hono";
 import { withSession } from "../auth.ts";
 import type { Client } from "../db.ts";
 import { businessDateFor } from "../businessDate.ts";
+import { blockersFor } from "./nightAudit.ts";
 
 /* ══════════════════════════════════════════════════════════════════
    BILLING — receipts, billable folios, rates, and the night audit
@@ -306,6 +307,25 @@ billing.get("/:code/night-audit", async (c) => {
     const next = new Date(`${asOn}T00:00:00Z`);
     next.setUTCDate(next.getUTCDate() + 1);
 
+    /* ONE definition of whether the day may close, shared with
+       POST /night-audit/run. Rule 6 works only if the disabled button
+       and the server's refusal are the same answer. */
+    const blockers = await blockersFor(client, hotelId, asOn);
+    const canRun = {
+      allowed: blockers.length === 0,
+      ...(blockers.length
+        ? { reason: blockers.map((b) => b.reason).join(" ") }
+        : {}),
+    };
+
+    const { rows: last } = await client.query<{ d: string }>(
+      `select to_char(max(business_date), 'DD Mon YYYY') as d
+         from night_audit_runs
+        where hotel_id = $1 and status = 'completed'`,
+      [hotelId],
+    );
+    const lastRun = last[0]?.d ?? null;
+
     const n = (v: string) => Number(v);
 
     return {
@@ -360,12 +380,15 @@ billing.get("/:code/night-audit", async (c) => {
           link: `/h/${c.req.param("code")}/admin/audit-log`,
         },
       ],
-      canRun: {
-        allowed: false,
-        reason:
-          "The business date is fixed in this stage, so the roll-over has nowhere to go. Posting room charges without advancing the date would double-charge every occupied room the next time it ran.",
-      },
-      lastRun: null,
+      /* Was hard-coded `allowed: false` with the reason "the business
+         date is fixed in this stage, so the roll-over has nowhere to
+         go". That condition was written down when the limitation was
+         added, and CP11 met it — the date now comes from
+         night_audit_runs. Both now come from the audit itself, so the
+         button and the server cannot disagree about whether a day can
+         close. */
+      canRun,
+      lastRun,
     };
   });
 

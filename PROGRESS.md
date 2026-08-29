@@ -3,7 +3,7 @@
 Updated after every finished section. **Nothing here is a claim until the gates
 below are green and the screen has been opened.**
 
-Last updated: **29 August 2026** · after **the POS bridge — Stage 7 opens**
+Last updated: **29 August 2026** · after **the night audit runs — Stage 5 closes**
 
 ---
 
@@ -15,7 +15,8 @@ FRONTEND   tsc -b            0 errors
            build             clean
 
 API        tsc --noEmit      0 errors
-           vitest run        31 passed   (live Postgres, as pms_app)
+           npm test          38 passed   (live Postgres, as pms_app)
+                             loads the demo fixture first — see below
 
 DATABASE   db/tests/run.sh   24 migrations · 62 assertions
                              7 isolation checks · exit 0
@@ -94,6 +95,47 @@ fail.
 
 ---
 
+## The night audit — Stage 5 ✅
+
+**A property can close a day.** Until now none ever had:
+`app.business_date()` read an empty `night_audit_runs` and returned each
+hotel's configured date. This is the only thing in the system that MOVES a
+business date; everything else reads one.
+
+```
+GET  /api/hotels/:code/night-audit/can-run   may this day close?
+POST /api/hotels/:code/night-audit/run       close it
+GET  /api/hotels/:code/night-audit/runs      what has been closed
+```
+
+In one transaction: refuse if a human decision is outstanding → open the run →
+post one night's room charge per in-house stay → mark the arrivals that never
+came as no-shows → mark the run completed, **which is what advances the date**.
+
+That order is not bookkeeping. `012_integrity.sql` rejects any posting onto a
+date with a COMPLETED run, so the audit's own charges must land while the run
+is still `running`. Flip the status first and the audit refuses its own work.
+
+**What it will not do:** check anybody out. A guest still showing due-out is a
+question for a person — did they leave, or are they staying? Those have
+opposite consequences for the room and the bill. The audit refuses and names
+the rooms (Rule 6), and the screen's button is disabled with that same reason,
+computed by the same function the server refuses with.
+
+**No retention is charged on a no-show.** Whether one is billed depends on the
+rate's cancellation terms, which this system does not model. A guessed charge
+would be worse than none.
+
+Driven through the browser: 25 August closed, the date rolled to the 26th, and
+Arrivals, the header and every report followed it.
+
+**The Run button was disabled for six checkpoints** with its reason written on
+it — *"the business date is a constant in this stage"*. CP11 met that
+condition, so it is live. Same removal-condition discipline as
+`isDemoProperty()`.
+
+---
+
 ## The POS bridge — Stage 7 opens ✅
 
 **The POS is not built here and will not be** — you are building it. What is
@@ -142,7 +184,7 @@ retried. Ledger nets to zero, room revenue still ₹4,19,578.76.
 2  Repository layer behind the seam  ████████████  12 of 12 modules
 3  Auth bridge — Firebase            ███████████░  works; needs a service account
 4  Front desk + folio, end to end    ████████████  flows, reports, dating
-5  Night audit                       ██░░░░░░░░░░  the date it sets is live
+5  Night audit                       ██████████░░  runs, posts, rolls the date
 6  Housekeeping, mobile, offline     ███████░░░░░  board writes to Postgres
 7  POS bridge (a MIGRATION)          ██████░░░░░░  the seam is built and tested
 8  Billing, GST, Form C              ██░░░░░░░░░░  lodging tax derives
@@ -152,7 +194,7 @@ retried. Ledger nets to zero, room revenue still ₹4,19,578.76.
 12 Hardening and go-live             ░░░░░░░░░░░░
 ```
 
-**About 66%.**
+**About 71%.**
 
 ---
 
@@ -184,15 +226,19 @@ business date         5EL 2026-08-25 · AGR 2027-04-02 · PUN 2026-08-28
 ## What is left in this stage
 
 ```
-1 · Stage 5          the night audit RUN. Nothing can close a date yet —
-                     the checklist reads, the date model waits for it.
-                     This is the largest remaining gap.
-2 · CP12             concurrency — the two EXCLUDE constraints have never
+1 · CP12             concurrency — the two EXCLUDE constraints have never
                      been raced — and a proven restore. A backup that has
-                     never been restored is not a backup.
-3 · retire src/data/store.ts and the in-memory fixtures it seeds, once
-    the demo loader is the only thing that reads them.
+                     never been restored is not a backup. ZERO backup
+                     files exist today.
+2 · invoices         app.next_invoice_number() has existed since 011 and
+                     has never been called. No GST invoice is issued, and
+                     Form C is unbuilt.
+3 · retire src/data/store.ts and the in-memory fixtures it seeds.
 ```
+
+**The audit is not scheduled.** Somebody presses the button. A hotel that
+forgets simply stays on yesterday — which is safe, and visible on every
+screen, but it is not automatic and should not be described as if it were.
 
 **A POS screen in the PMS** is not built: no page lists outlets, their bills,
 or their refusals. The bridge works without one — a POS posts, the charges

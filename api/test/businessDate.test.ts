@@ -29,7 +29,23 @@ import { monthStart, monthEnd, businessDateFor } from "../src/businessDate.ts";
 let ownerStaffId: string;
 let demoHotelId: string;
 
-const PINNED = "2026-08-25";      // hotels.business_date for 5EL
+/*
+   hotels.business_date for 5EL, as the demo loader sets it.
+
+   This is a literal on purpose — the figures these tests assert are
+   calibrated to the real eZee export for 1–25 August 2026, and a test
+   that read the date from the database would agree with whatever it
+   found and prove nothing.
+
+   It does mean the suite must start from a freshly loaded fixture.
+   Since the night audit landed, 5EL can be MOVED — closing a day
+   advances it — and running the audit against the demo property by
+   hand once left seven tests failing here with `expected '2026-08-27'
+   to be '2026-08-25'`. Nothing was broken; the fixture had simply been
+   operated. `npm test` now loads the demo first for that reason;
+   `npm run test:only` skips the load when you know the state is clean.
+*/
+const PINNED = "2026-08-25";
 
 beforeAll(async () => {
   const admin = new (await import("pg")).default.Pool({
