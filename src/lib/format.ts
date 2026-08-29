@@ -178,3 +178,96 @@ export function humanise(value: string): string {
     .replace(/([a-z])([A-Z])/g, "$1 $2")
     .replace(/\b\w/g, (c) => c.toUpperCase());
 }
+
+/* ── Amount in words ─────────────────────────────────────────────── */
+
+const ONES = [
+  "", "One", "Two", "Three", "Four", "Five", "Six", "Seven", "Eight", "Nine",
+  "Ten", "Eleven", "Twelve", "Thirteen", "Fourteen", "Fifteen", "Sixteen",
+  "Seventeen", "Eighteen", "Nineteen",
+];
+
+const TENS = [
+  "", "", "Twenty", "Thirty", "Forty", "Fifty", "Sixty", "Seventy", "Eighty",
+  "Ninety",
+];
+
+/** 0–99, and 0 is empty rather than "Zero" — callers compose. */
+function underHundred(n: number): string {
+  if (n < 20) return ONES[n]!;
+  const t = TENS[Math.floor(n / 10)]!;
+  const o = ONES[n % 10]!;
+  return o ? `${t} ${o}` : t;
+}
+
+/** 0–999. */
+function underThousand(n: number): string {
+  const h = Math.floor(n / 100);
+  const rest = underHundred(n % 100);
+  if (!h) return rest;
+  return rest ? `${ONES[h]} Hundred ${rest}` : `${ONES[h]} Hundred`;
+}
+
+/**
+ * An amount written out, in INDIAN numbering, for a tax invoice.
+ *
+ * Not a nicety. A tax invoice states the total in words as well as
+ * figures, and the words are what settles a dispute about a smudged
+ * or altered figure — which is the entire reason the convention
+ * exists.
+ *
+ * INDIAN grouping, not international: crore (10^7) and lakh (10^5),
+ * so ₹1,23,45,678 is "One Crore Twenty Three Lakh Forty Five Thousand
+ * Six Hundred Seventy Eight". Writing "Twelve Million" on an Indian
+ * invoice is wrong in the way that gets a document sent back.
+ *
+ * Paise are stated separately — "and Fifty Paise" — because rounding
+ * them into the rupee figure would make the words disagree with the
+ * numerals beside them, and the words are the tie-breaker.
+ *
+ * ROUNDING. Every amount reaching here comes from Postgres `numeric(12,2)`
+ * via `Number()`, so it already has exactly two decimal places and
+ * `Math.round(v * 100)` is exact for it. Hand it 1.005 — three places,
+ * which the database cannot produce — and you get 1.00, because the
+ * float nearest 1.005 is 1.00499999999999989. That is arithmetically
+ * right for the value actually held and would still be surprising, so:
+ * do not do money arithmetic in JavaScript and then print the words.
+ * Sum in SQL and print what came back.
+ */
+export function amountInWords(value: number): string {
+  if (!Number.isFinite(value)) return "—";
+
+  const negative = value < 0;
+  const abs = Math.abs(value);
+
+  /* Round to paise FIRST. `Math.round(x * 100)` on a float that is
+     already the sum of other floats is where a rupee goes missing. */
+  const totalPaise = Math.round(abs * 100);
+  const rupees = Math.floor(totalPaise / 100);
+  const paise = totalPaise % 100;
+
+  const parts: string[] = [];
+  const crore = Math.floor(rupees / 10_000_000);
+  const lakh = Math.floor((rupees % 10_000_000) / 100_000);
+  const thousand = Math.floor((rupees % 100_000) / 1_000);
+  const rest = rupees % 1_000;
+
+  if (crore) parts.push(`${underThousand(crore)} Crore`);
+  if (lakh) parts.push(`${underThousand(lakh)} Lakh`);
+  if (thousand) parts.push(`${underThousand(thousand)} Thousand`);
+  if (rest) parts.push(underThousand(rest));
+
+  const rupeeWords = parts.length ? parts.join(" ") : "Zero";
+
+  /* "One Rupee", not "One Rupees". A document that cannot manage the
+     singular invites doubt about the figures on it. Same for paise. */
+  const rupeeUnit = rupees === 1 ? "Rupee" : "Rupees";
+  const paiseUnit = paise === 1 ? "Paisa" : "Paise";
+
+  const words = paise
+    ? `${rupeeWords} ${rupeeUnit} and ${underHundred(paise)} ${paiseUnit}`
+    : `${rupeeWords} ${rupeeUnit}`;
+
+  /* A credit note is a negative document and says so in words too. */
+  return `${negative ? "Minus " : ""}${words} Only`;
+}

@@ -37,6 +37,7 @@ import {
    was not. */
 import InvoicesPage from "@/pages/Invoices";
 import FormCPage from "@/pages/FormC";
+import InvoicePage from "@/pages/Invoice";
 import RatesPage from "@/pages/Rates";
 import NightAuditPage from "@/pages/NightAudit";
 import WalkInsPage from "@/pages/WalkIns";
@@ -234,6 +235,13 @@ export default function App() {
             <Route
               path="/h/:code/form-c"
               element={<><PropertyScope /><FormCPage /></>}
+            />
+            {/* An invoice number contains slashes — 5EL/2026-27/00001 — so
+                the segment has to swallow them. `*` after the param is how
+                react-router spells "the rest of the path". */}
+            <Route
+              path="/h/:code/invoices/doc/*"
+              element={<><PropertyScope /><InvoicePage /></>}
             />
             <Route
               path="/h/:code/city-ledger"

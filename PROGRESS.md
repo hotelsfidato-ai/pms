@@ -3,7 +3,7 @@
 Updated after every finished section. **Nothing here is a claim until the gates
 below are green and the screen has been opened.**
 
-Last updated: **29 August 2026** · after **the invoice and Form C screens — Stage 8 closes**
+Last updated: **29 August 2026** · after **the printed tax invoice — Stage 8 done**
 
 ---
 
@@ -11,7 +11,7 @@ Last updated: **29 August 2026** · after **the invoice and Form C screens — S
 
 ```
 FRONTEND   tsc -b            0 errors
-           vitest run        81 passed · 6 files
+           vitest run        89 passed · 7 files
            build             clean
 
 API        tsc --noEmit      0 errors
@@ -136,6 +136,19 @@ to out-of-state guests is the commonest GST error in Indian hospitality.
 **An issued invoice cannot be changed by anyone**, superuser included — a
 trigger, not a grant. A wrong one is corrected by a CREDIT NOTE carrying its
 own number, with every figure negated so the two sum to nothing.
+
+**And it prints.** `/h/:code/invoices/doc/<number>` is an A4 tax invoice a
+guest can be handed: supplier block with GSTIN, consecutive number, recipient,
+SAC 996311, place of supply with the statutory reason, line items, CGST and
+SGST as SEPARATE lines with their rates, total, **amount in words in Indian
+numbering** (crore and lakh, not million), and a signature block. Nothing on it
+is recalculated — a print view doing its own arithmetic could disagree with the
+ledger, and the guest would hold the wrong document while the accounts held the
+right one.
+
+A credit note prints as a credit note: every figure negative, "Minus ... Only"
+in words, and a banner naming the invoice it cancels. The cancelled invoice
+carries the matching banner, so neither can be read as live on its own.
 
 **Both have screens now.** `/h/:code/invoices` lists what is ready to bill with
 an Issue button per row, the property's real series from the database, and every
@@ -303,7 +316,7 @@ retried. Ledger nets to zero, room revenue still ₹4,19,578.76.
 12 Hardening and go-live             ████░░░░░░░░  backup proven, races proven
 ```
 
-**About 82%.**
+**About 84%.**
 
 ---
 
@@ -335,12 +348,16 @@ business date         5EL 2026-08-25 · AGR 2027-04-02 · PUN 2026-08-28
 ## What is left in this stage
 
 ```
-1 · a PRINTABLE      an invoice exists as JSON and a row in a table. No
-    invoice          guest has ever been handed one. A tax invoice that
-                     cannot be printed is not finished.
-2 · offline          Stage 6 asked for it. Zero service-worker files.
+1 · offline          Stage 6 asked for it. Zero service-worker files.
+2 · channel manager  Stage 9. STAAH is quoted and unbuilt.
 3 · retire src/data/store.ts and the in-memory fixtures it seeds.
 ```
+
+**What Stage 8 still lacks:** e-invoicing. Above ₹5 crore turnover an Indian
+business must register each B2B invoice with the IRP and print the IRN and its
+QR code. Not built, and not guessed at — whether this group crosses that
+threshold is a question for its accountant, and the answer changes what the
+document must carry.
 
 **What backup does NOT cover.** The dump lands on the same disk as the
 database, which is a copy that dies in the same fire. Getting it off-box is one

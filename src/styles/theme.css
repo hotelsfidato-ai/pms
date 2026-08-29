@@ -357,3 +357,54 @@
     font-family: var(--font-serif);
   }
 }
+
+/* ── The printed tax invoice ─────────────────────────────────────── */
+/*
+   A4 with real margins, because this page is handed to a guest and
+   filed by an accountant — not screenshotted.
+
+   `.no-print` already hides screen furniture. What this adds is the
+   page geometry, and two rules that matter more than they look:
+
+     · a table row must not break across pages. A line item split in
+       half across a page boundary is the kind of thing that gets a
+       document questioned.
+     · backgrounds must actually print. Browsers drop them by default,
+       which would silently remove the "Cancelled" banner from a
+       credited invoice and leave it reading as live.
+*/
+@page {
+  size: A4;
+  margin: 16mm 14mm;
+}
+
+@media print {
+  html, body {
+    /* Points, not pixels: the page has a physical size now. */
+    font-size: 10.5pt;
+  }
+
+  /* Without this the amber cancellation banner prints as bare text. */
+  * {
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+  }
+
+  article {
+    max-width: none;
+  }
+
+  tr, section, footer {
+    break-inside: avoid;
+  }
+
+  thead {
+    display: table-header-group;   /* repeat headers on a second page */
+  }
+
+  /* The signature block belongs at the foot of the LAST page, not
+     floating under a short table. */
+  footer {
+    break-before: avoid;
+  }
+}

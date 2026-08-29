@@ -284,6 +284,8 @@ export interface InvoiceDetail {
   taxTotal: number;
   total: number;
   creditsInvoiceId: string | null;
+  /** The number of the invoice this note cancels. */
+  creditsNumber: string | null;
   reason: string | null;
   creditedBy: string | null;
 }

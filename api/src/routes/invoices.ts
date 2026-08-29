@@ -259,6 +259,11 @@ invoices.get("/:code/invoices/:number{.+}", async (c) => {
               i.taxable_value::text, i.cgst_total::text, i.sgst_total::text,
               i.tax_total::text, i.total::text,
               i.credits_id::text, i.reason,
+              -- The NUMBER of the invoice this note cancels. The id is a
+              -- uuid, and "cancels 7f3a-..." on a printed document tells
+              -- a guest nothing.
+              (select o.number from invoices o where o.id = i.credits_id)
+                as credits_number,
               i.folio_id::text,
               h.name as hotel_name, h.address_line as hotel_address,
               h.city as hotel_city, h.state as hotel_state,
@@ -337,6 +342,7 @@ invoices.get("/:code/invoices/:number{.+}", async (c) => {
       total: Number(i["total"]),
       /* A credit note has these; a tax invoice does not. */
       creditsInvoiceId: i["credits_id"],
+      creditsNumber: i["credits_number"],
       reason: i["reason"],
       creditedBy: credit[0]?.number ?? null,
     };

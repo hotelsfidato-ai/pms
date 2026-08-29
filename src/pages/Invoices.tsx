@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { useParams } from "react-router";
+import { useParams, Link } from "react-router";
 import { FileText, Receipt, FileCheck2 } from "lucide-react";
 import { cn } from "@/lib/cn";
 import { money } from "@/lib/format";
@@ -79,12 +79,18 @@ const BILLABLE_COLUMNS: Column<BillableRow>[] = [
 
 /* ── Issued ───────────────────────────────────────────────────────── */
 
-const ISSUED_COLUMNS: Column<IssuedInvoice>[] = [
+function issuedColumns(hotelId: string): Column<IssuedInvoice>[] {
+  return [
   {
     key: "number", header: "Number",
     cell: (i) => (
       <div className="min-w-0">
-        <p className="tabular font-medium truncate">{i.number}</p>
+        <Link
+          to={`/h/${hotelId}/invoices/doc/${i.number}`}
+          className="tabular font-medium truncate text-brand hover:underline"
+        >
+          {i.number}
+        </Link>
         {i.isCreditNote && <p className="text-2xs text-brand-red">credit note</p>}
       </div>
     ),
@@ -125,7 +131,8 @@ const ISSUED_COLUMNS: Column<IssuedInvoice>[] = [
         <StatusPill tone="success">issued</StatusPill>
       ),
   },
-];
+  ];
+}
 
 export default function InvoicesPage() {
   const hotelId = useHotel();
@@ -170,7 +177,12 @@ export default function InvoicesPage() {
            where the invoice went. */
         if (b.invoice) {
           return (
-            <span className="tabular text-2xs text-grey-500">{b.invoice}</span>
+            <Link
+              to={`/h/${hotelId}/invoices/doc/${b.invoice}`}
+              className="tabular text-2xs text-brand hover:underline"
+            >
+              {b.invoice}
+            </Link>
           );
         }
         const reason =
@@ -293,7 +305,7 @@ export default function InvoicesPage() {
       <Card>
         <DataTable<IssuedInvoice>
           rows={invoices.data ?? []}
-          columns={ISSUED_COLUMNS}
+          columns={issuedColumns(hotelId)}
           rowKey={(i) => i.number}
           loading={invoices.isLoading}
           error={invoices.error}

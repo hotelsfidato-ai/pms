@@ -31,9 +31,11 @@ export function AppShell() {
 
   return (
     <TooltipProvider delayDuration={400}>
-      <div className="flex h-screen overflow-hidden bg-grey-50">
-        {/* Desktop rail */}
-        <div className="hidden lg:block">
+      <div className="flex h-screen overflow-hidden bg-grey-50 print:block print:h-auto print:overflow-visible">
+        {/* Desktop rail. `no-print` because a printed tax invoice with a
+            navigation sidebar down its left edge is not a tax invoice —
+            and the invoice page cannot hide the shell from inside it. */}
+        <div className="hidden lg:block no-print">
           <Sidebar />
         </div>
 
@@ -53,8 +55,12 @@ export function AppShell() {
 
         {/* Main column */}
         <div className="flex flex-col flex-1 min-w-0">
-          <TopBar />
-          <main className="flex-1 overflow-y-auto scrollbar-quiet">
+          <div className="no-print contents">
+            <TopBar />
+          </div>
+          {/* `overflow-y-auto` clips to the viewport, which on paper means
+             ONE page and the rest silently gone. Released for print. */}
+          <main className="flex-1 overflow-y-auto scrollbar-quiet print:overflow-visible">
             <Outlet />
           </main>
         </div>

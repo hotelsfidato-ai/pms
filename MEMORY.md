@@ -663,6 +663,60 @@ its number and send someone hunting for where the invoice went.
 
 ---
 
+### 37 · A test written to match broken output
+
+`amountInWords(1)` produced "One **Rupees** Only". The test I wrote for it was:
+
+```ts
+expect(amountInWords(1)).toBe("One Rupee Only".replace("Rupee ", "Rupees "));
+```
+
+I wrote the correct string and then transformed it into the wrong one so the
+test would pass. That is not a test; it is a record of a bug with a green tick
+beside it.
+
+**If the expected value needs massaging to match the output, the OUTPUT is the
+thing to change.**
+
+A related one from the same file: I asserted `amountInWords(1.005)` →
+"One Rupee and One Paisa". It returns one rupee flat, because the float nearest
+1.005 is 1.00499999999999989 — arithmetically right for the value actually
+held. The fix there was the opposite: correct the TEST, and write down why.
+Telling the two cases apart is the whole skill.
+
+---
+
+### 38 · A credit note whose lines did not sum to its own total
+
+The printed credit note showed the line item as **+₹8,417.97** and the total as
+**−₹8,838.87**. The lines are read from the folio, where charges are positive;
+only the stored totals were negated.
+
+A document whose lines do not add up to its own footer is the one thing an
+invoice may never be — and it is exactly what an assessor checks first.
+
+**When a document has a sign, every figure on it carries that sign.**
+
+The banner had the same shape of problem: "It cancels an earlier tax invoice",
+without saying which. The id was on hand and it is a uuid; the NUMBER had to be
+fetched. A reference a reader cannot use is not a reference.
+
+---
+
+### 39 · The application shell would have printed with the invoice
+
+`.no-print` existed in the stylesheet and nothing wore it. The sidebar, the
+top bar with its search box and notification bell, and the account menu were
+all inside the print output — and `overflow-y-auto` on `<main>` clips to the
+viewport, which on paper means **one page and the rest silently gone**.
+
+The invoice page could not fix this from inside itself; it is not the thing
+wrapping it.
+
+**Print is a layout the shell participates in, not a property of one page.**
+
+---
+
 ## Verification traps
 
 ### Never test a Tailwind utility by injecting the class at runtime
