@@ -82,6 +82,9 @@ export default function ReservationsPage() {
             onClick={() => setFilter(f.key)}
             className={cn(
               "inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md text-base font-medium",
+              /* These are how the screen is filtered, tapped more than
+                 anything else on it, and 35px under a thumb. */
+              "pointer-coarse:min-h-11",
               "border transition-colors duration-150",
               filter === f.key
                 ? "bg-ink-900 border-ink-900 text-white"

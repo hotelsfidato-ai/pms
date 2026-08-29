@@ -1,0 +1,82 @@
+import { Link } from "react-router";
+import { ShieldOff } from "lucide-react";
+import { useRole } from "@/lib/session";
+import { ROLE_LABELS, type Resource } from "@/lib/permissions";
+import { mayReach } from "./navigation";
+import { Page } from "@/components/ui";
+
+/* ══════════════════════════════════════════════════════════════════
+   A ROUTE THE ROLE MAY ACTUALLY REACH
+
+   Until this existed there was NO route guard. The sidebar filtered
+   what it showed — `canSee(role)` on every nav item — and nothing at
+   all stopped a front-desk clerk typing /admin/users into the address
+   bar. They got the page.
+
+   Row Level Security saved the data: the clerk saw one staff row,
+   their own, because `staff_self` is the only policy that admitted
+   them. So the leak was the page SHELL, not the roster. That is the
+   good half of a bad finding, and it is exactly what defence in depth
+   is supposed to look like — but a clerk should not reach an
+   administration page at all, and "the database will refuse them"
+   is not a reason to hand them the door.
+
+   NAVIGATION HIDING IS NOT ACCESS CONTROL. It is a courtesy that
+   keeps a sidebar short. But the two must agree, so this guard asks
+   the navigation itself rather than re-deriving the answer — the first
+   version asked `canAccess(role, resource)` and let a clerk into
+   /admin/properties, whose sidebar entry overrides that with a
+   stricter test.
+
+   WHY THIS REFUSES RATHER THAN REDIRECTS
+
+   A silent bounce to the dashboard reads as a bug — the clerk clicks
+   a link somebody sent them and lands somewhere else with no
+   explanation, and rings the front desk about it. Rule 6 again: say
+   what was refused and why.
+   ══════════════════════════════════════════════════════════════════ */
+
+export function RequireAccess({
+  path,
+  resource,
+  children,
+}: {
+  /** The nav path this route corresponds to. The guard asks the
+      NAVIGATION whether this role may reach it, so a hidden link and a
+      refused page cannot disagree — which they did the first time this
+      component asked `canAccess` while the sidebar asked something
+      stricter for /admin/properties. */
+  path: string;
+  /** Only for the wording of the refusal. */
+  resource: Resource;
+  children: React.ReactNode;
+}) {
+  const role = useRole();
+
+  if (mayReach(role, path)) return <>{children}</>;
+
+  return (
+    <Page>
+      <div className="max-w-lg mx-auto text-center py-16">
+        <div className="size-11 rounded-full bg-grey-100 grid place-items-center mx-auto mb-4">
+          <ShieldOff className="size-5 text-grey-400" />
+        </div>
+        <h1 className="text-lg font-semibold text-ink-900">
+          This page is not part of your role
+        </h1>
+        <p className="text-base text-grey-600 mt-2 leading-relaxed">
+          You are signed in as{" "}
+          <span className="font-medium text-ink-900">{ROLE_LABELS[role]}</span>,
+          which does not include {resource.replace(/_/g, " ")}. If you need it,
+          the person who set up your account can change your role.
+        </p>
+        <Link
+          to="/"
+          className="inline-block mt-5 text-sm text-brand hover:underline"
+        >
+          Back to the dashboard
+        </Link>
+      </div>
+    </Page>
+  );
+}

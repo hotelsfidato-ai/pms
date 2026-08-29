@@ -131,6 +131,7 @@ function Tab({
       to={to}
       className={cn(
         "relative px-3 py-2.5 text-base font-medium whitespace-nowrap",
+        "pointer-coarse:min-h-11 pointer-coarse:inline-flex pointer-coarse:items-center",
         "border-b-2 -mb-px transition-colors duration-150",
         active
           ? "text-ink-900 border-brand-orange"

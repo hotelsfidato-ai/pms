@@ -31,6 +31,33 @@ export interface NavItem {
 const visible = (role: Role, item: NavItem): boolean =>
   item.canSee ? item.canSee(role) : canAccess(role, item.resource);
 
+/**
+ * Whether a role may REACH a path — the same question the sidebar asks
+ * about whether to show its link.
+ *
+ * ONE predicate, deliberately. The route guard first asked
+ * `canAccess(role, resource)` while the sidebar asked whatever the item
+ * said, and /admin/properties overrides that with a stricter
+ * `can(role, "create", "hotel")` — put there when a read grant leaked
+ * that page to the front desk. So the link was hidden and the page was
+ * reachable: the exact disagreement a guard exists to remove,
+ * reintroduced by the guard.
+ *
+ * Unknown paths return TRUE. This answers "does the navigation forbid
+ * this", and a path the navigation has never heard of — a stay view, a
+ * printed invoice — is not forbidden by it.
+ */
+export function mayReach(role: Role, path: string): boolean {
+  for (const section of SECTIONS) {
+    for (const item of section.items) {
+      for (const entry of [item, ...(item.children ?? [])]) {
+        if (entry.to === path) return visible(role, entry);
+      }
+    }
+  }
+  return true;
+}
+
 export interface NavSection {
   label?: string;
   items: NavItem[];

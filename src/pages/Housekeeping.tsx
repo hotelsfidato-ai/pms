@@ -4,7 +4,7 @@ import { useParams } from "react-router";
 import { Check, CloudOff, RefreshCw, Sparkle, Wrench, BedDouble } from "lucide-react";
 import { cn } from "@/lib/cn";
 import { useUi } from "@/lib/ui";
-import { Page, PageHeader, StatusPill, Button, toast } from "@/components/ui";
+import { Page, PageHeader, StatusPill, toast } from "@/components/ui";
 import {
   listHousekeeping, markRoom, BUSINESS_DATE, type HousekeepingRoom,
 } from "@/data/repositories";
@@ -15,9 +15,9 @@ import {
    Designed for a phone held one-handed in a stairwell. Tap targets,
    not mouse targets: every control is at least 44px.
 
-   An offline change QUEUES VISIBLY. A housekeeper needs to know their
-   work was recorded even when the signal has gone — an action that
-   silently does nothing is worse than one that refuses.
+   A change made with no signal is HELD VISIBLY. A housekeeper needs
+   to know their work was recorded even when the signal has gone — an
+   action that silently does nothing is worse than one that refuses.
    ══════════════════════════════════════════════════════════════════ */
 
 const GROUPS = [
@@ -40,9 +40,24 @@ export default function HousekeepingPage() {
   const hotelId = params.code ?? fallback;
   const qc = useQueryClient();
 
-  /* Simulated connectivity. Real offline sync is Stage 6; what this
-     proves now is that the interface tells the truth about it. */
-  const [online, setOnline] = useState(true);
+  /* The browser already knows, and this used to ask a button instead.
+     `useState(true)` that only "Simulate offline" ever changed meant
+     that on a phone which genuinely lost signal in a stairwell the
+     flag stayed TRUE, the write threw past the handler, and the
+     housekeeper's tap did nothing at all — no toast, no queue, no
+     refusal. The demo prop was hiding the only case that matters. */
+  const [online, setOnline] = useState(() => navigator.onLine);
+
+  useEffect(() => {
+    const up = () => setOnline(true);
+    const down = () => setOnline(false);
+    window.addEventListener("online", up);
+    window.addEventListener("offline", down);
+    return () => {
+      window.removeEventListener("online", up);
+      window.removeEventListener("offline", down);
+    };
+  }, []);
   const [queue, setQueue] = useState<QueuedChange[]>([]);
   const [seq, setSeq] = useState(0);
 
@@ -56,30 +71,60 @@ export default function HousekeepingPage() {
     if (!online || queue.length === 0) return;
     let cancelled = false;
     (async () => {
+      const stuck: QueuedChange[] = [];
+      let sent = 0;
       for (const change of queue) {
         if (cancelled) return;
-        await markRoom(hotelId, change.roomNumber, change.state);
+        try {
+          await markRoom(hotelId, change.roomNumber, change.state);
+          sent += 1;
+        } catch {
+          /* Signal went again mid-drain. Keep the rest: the entire
+             point of the queue is that a tap is not lost. */
+          stuck.push(change);
+        }
       }
       if (cancelled) return;
-      setQueue([]);
-      qc.invalidateQueries();
-      toast.success(`${queue.length} change${queue.length === 1 ? "" : "s"} synced`);
+      setQueue(stuck);
+      if (sent > 0) {
+        qc.invalidateQueries();
+        toast.success(`${sent} change${sent === 1 ? "" : "s"} synced`);
+      }
+      /* Nothing got through, so navigator.onLine was wrong — it reports
+         true on a wifi with no route out. Believe the wire over the
+         flag and wait for a real 'online' event, because `queue` is a
+         dependency of this effect and retrying here would spin. */
+      if (sent === 0 && stuck.length > 0) setOnline(false);
     })();
     return () => { cancelled = true; };
   }, [online, queue, hotelId, qc]);
 
+  /* Held on this phone and drained in order. Not a service worker and
+     not a sync engine — the group asked for a web app, not an
+     installed one. This is only the difference between keeping a
+     housekeeper's tap and dropping it. */
+  const hold = (room: HousekeepingRoom, state: "clean" | "inspected") => {
+    setSeq((n) => n + 1);
+    setQueue((q) => [...q, { id: seq, roomNumber: room.number, state }]);
+    toast.warning(
+      "Saved on this phone",
+      `Room ${room.number} will sync when signal returns.`,
+    );
+  };
+
   const apply = async (room: HousekeepingRoom, state: "clean" | "inspected") => {
-    if (!online) {
-      setSeq((n) => n + 1);
-      setQueue((q) => [...q, { id: seq, roomNumber: room.number, state }]);
-      toast.warning("Saved offline", `Room ${room.number} will sync when signal returns.`);
-      return;
-    }
-    const res = await markRoom(hotelId, room.number, state);
-    if (res.ok) {
-      qc.invalidateQueries();
-    } else {
-      toast.error("Could not update", res.reason);
+    if (!online) return hold(room, state);
+
+    /* The attempt is the real test. A THROWN fetch means the write
+       never left the phone, so the change is held. An ApiError is a
+       different thing entirely — the server heard it and said no,
+       and retrying will not change its mind. */
+    try {
+      const res = await markRoom(hotelId, room.number, state);
+      if (res.ok) qc.invalidateQueries();
+      else toast.error("Could not update", res.reason);
+    } catch {
+      hold(room, state);
     }
   };
 
@@ -98,7 +143,7 @@ export default function HousekeepingPage() {
         description="Tap a room to move it on. Clean, then inspected."
       />
 
-      {/* Connectivity — a real board would read navigator.onLine */}
+      {/* Connectivity, read from the browser rather than asserted. */}
       <div
         className={cn(
           "flex items-center gap-3 rounded-md border p-3 mb-5",
@@ -120,9 +165,6 @@ export default function HousekeepingPage() {
             </p>
           )}
         </div>
-        <Button variant="secondary" size="sm" onClick={() => setOnline((v) => !v)}>
-          {online ? "Simulate offline" : "Reconnect"}
-        </Button>
       </div>
 
       <div className="space-y-6">

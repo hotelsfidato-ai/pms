@@ -65,6 +65,39 @@ const SOURCE_ICON: Record<string, typeof Globe> = {
 /** 14 date columns after a fixed room column. */
 const GRID = "grid-cols-[132px_repeat(14,minmax(0,1fr))]";
 
+/* A tape chart is a wide instrument, and `1fr` columns do not refuse
+   to be small — they just get smaller. On a 375px phone the fourteen
+   days came out at SEVENTEEN pixels each: narrower than the numbers
+   printed in them. Nothing was broken and nothing looked broken in a
+   screenshot; measuring is what found it.
+
+   There is no responsive trick that fits fourteen days on a phone.
+   The honest answer is the one the rest of the app already uses for a
+   wide table — let it scroll inside its own container, so the body
+   never scrolls sideways and each day keeps a usable width.
+
+   132px room column + 14 days at 44px. Above 748px this does nothing:
+   `1fr` expands past the minimum and the desktop chart is untouched. */
+const CHART_MIN_W = "min-w-[748px]";
+
+/* When the chart pans, the room number must not leave with it —
+   scrolling to Friday and losing which room you are reading is worse
+   than not scrolling at all. Sticky is inert without overflow, so
+   this too costs the desktop nothing. */
+const ROOM_COL = "sticky left-0";
+
+/* Stacking, once, in one place. The bars and the room column were
+   both z-10, which is not a tie the browser breaks in your favour:
+   it paints in DOM order, the bars come later, and panning the
+   chart slid every booking straight over the room numbers.
+
+   Only the screenshot showed it. Every measurement said the column
+   was pinned, and it was — it was also underneath.
+
+       30  date header, occupancy footer  (pinned top / bottom)
+       20  room column                    (pinned left)
+       10  reservation bars               (scroll with the chart) */
+
 export default function StayViewPage() {
   const params = useParams();
   const fallbackHotel = useUi((s) => s.hotelId);
@@ -213,6 +246,7 @@ export default function StayViewPage() {
               onClick={() => setPill(p)}
               className={cn(
                 "inline-flex items-center gap-1.5 h-7 px-2.5 rounded-full text-2xs font-medium",
+                "pointer-coarse:min-h-11",
                 "border transition-colors duration-150",
                 pill === p
                   ? "bg-ink-900 text-white border-ink-900"
@@ -229,11 +263,17 @@ export default function StayViewPage() {
       </div>
 
       {/* ── The chart ────────────────────────────────────────────── */}
-      <div className="flex-1 min-h-0 overflow-y-auto scrollbar-quiet">
-        <div className="min-w-0">
+      <div className="flex-1 min-h-0 overflow-auto scrollbar-quiet">
+        <div className={CHART_MIN_W}>
           {/* Date header */}
-          <div className={cn("grid sticky top-0 z-20 bg-grey-50 border-b border-grey-200", GRID)}>
-            <div className="px-3 py-2 text-2xs font-semibold uppercase tracking-wide text-grey-500 border-r border-grey-200">
+          <div className={cn("grid sticky top-0 z-30 bg-grey-50 border-b border-grey-200", GRID)}>
+            <div className={cn(
+              "px-3 py-2 text-2xs font-semibold uppercase tracking-wide text-grey-500 border-r border-grey-200",
+              /* The corner: pinned in both directions, so it outranks
+                 the row cells that slide under it AND the date header
+                 it sits inside. Opaque, or the chart shows through. */
+              ROOM_COL, "z-10 bg-grey-50",
+            )}>
               Room
             </div>
             {dates.map((d) => (
@@ -279,7 +319,11 @@ export default function StayViewPage() {
                     onClick={() =>
                       setCollapsed((c) => ({ ...c, [group.type]: !isCollapsed }))
                     }
-                    className="flex items-center gap-1.5 px-2.5 py-1.5 text-left border-r border-grey-200 hover:bg-grey-200/50 transition-colors duration-150"
+                    className={cn(
+                      "flex items-center gap-1.5 px-2.5 py-1.5 text-left border-r border-grey-200",
+                      "hover:bg-grey-200/50 transition-colors duration-150",
+                      ROOM_COL, "z-20 bg-grey-100",
+                    )}
                     aria-expanded={!isCollapsed}
                   >
                     {isCollapsed ? (
@@ -323,7 +367,12 @@ export default function StayViewPage() {
                     data-room-row={room.number}
                     className={cn("grid border-b border-grey-100 group", GRID)}
                   >
-                    <div className="flex items-center gap-1.5 px-2.5 h-9 border-r border-grey-200">
+                    <div className={cn(
+                      "flex items-center gap-1.5 px-2.5 h-9 border-r border-grey-200",
+                      /* bg-white and not transparent: the day cells
+                         slide underneath this, not behind the page. */
+                      ROOM_COL, "z-20 bg-white",
+                    )}>
                       <span className="text-sm font-medium text-ink-900 tabular">
                         {room.number}
                       </span>
@@ -380,8 +429,11 @@ export default function StayViewPage() {
           })}
 
           {/* Pinned footer */}
-          <div className={cn("grid sticky bottom-0 z-20 bg-white border-t-2 border-ink-900", GRID)}>
-            <div className="px-2.5 py-1.5 border-r border-grey-200">
+          <div className={cn("grid sticky bottom-0 z-30 bg-white border-t-2 border-ink-900", GRID)}>
+            <div className={cn(
+              "px-2.5 py-1.5 border-r border-grey-200",
+              ROOM_COL, "z-10 bg-white",
+            )}>
               <div className="text-2xs font-semibold uppercase tracking-wide text-grey-500 leading-tight">
                 Available
               </div>

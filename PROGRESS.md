@@ -3,7 +3,7 @@
 Updated after every finished section. **Nothing here is a claim until the gates
 below are green and the screen has been opened.**
 
-Last updated: **29 August 2026** · Phase 1 items 1–4 and 6 — **five of seven**
+Last updated: **29 August 2026** · **Phase 1 complete — seven of seven**
 
 ---
 
@@ -11,7 +11,7 @@ Last updated: **29 August 2026** · Phase 1 items 1–4 and 6 — **five of seve
 
 ```
 FRONTEND   tsc -b            0 errors
-           vitest run        89 passed · 7 files
+           vitest run        101 passed · 8 files
            build             clean
 
 API        tsc --noEmit      0 errors
@@ -93,6 +93,65 @@ dated postings from the server's wall clock:
 All four now resolve the date from the database inside the same transaction as
 the write. Proved by restoring the wall clock in one line and watching the test
 fail.
+
+---
+
+## Phase 1 · item 7 — permissions verified per role ✅
+
+There was **no route guard at all**. `grep -c 'RequireRole\|canAccess' src/App.tsx`
+returned `0`. The sidebar filtered what it *showed*; nothing stopped a
+front-desk clerk typing `/admin/users`. Verified live as the Agra clerk — the
+page rendered.
+
+Row Level Security saved the data (the clerk saw one staff row, their own), so
+the leak was the page **shell**, not the roster. That is defence in depth doing
+its job, and it is not a reason to hand a clerk the door.
+
+`RequireAccess` asks the **navigation** — `mayReach(role, path)` — rather than
+re-deriving the answer from the permission matrix. The first version asked
+`canAccess(role, resource)` and let a clerk into `/admin/properties`, whose nav
+entry overrides that with a stricter test. A hidden link and a reachable page
+is the exact disagreement a guard exists to remove, and the guard had
+reintroduced it. The test caught it.
+
+It refuses rather than redirects: a silent bounce to the dashboard reads as a
+bug, and Rule 6 says name what was refused and why.
+
+Proved it can fail by removing the guard from `/admin/users` and watching the
+test go red.
+
+---
+
+## Phase 1 · item 5 — the mobile pass ✅
+
+23 screens opened at 375px. **No screen scrolls the body sideways** — that held
+before this pass and still holds.
+
+What did not hold was everything measured rather than looked at. Four defects,
+all invisible in a screenshot except the last, which was invisible in a
+measurement:
+
+| | found |
+|---|---|
+| 48 | every `Button` size a mouse target — 60 primary actions at 32px |
+| 49 | housekeeping's "offline" was a button, and a real drop threw silently |
+| 50 | the tape chart gave each day **17px** on a phone |
+| 51 | the pinned room column painted *underneath* the booking bars |
+
+The fixes key off `pointer-coarse:`, not a breakpoint. What makes a control
+hard to press is the finger, not the window width, and the browser already
+knows which it has. Verified in both directions — coarse gives 44px, fine gives
+32px — so the desktop keeps its density. The tape chart at 1440px is unchanged:
+75px columns, no scrollbar.
+
+Housekeeping's own room controls were already `size-11`. That screen was built
+for a phone and measured like it.
+
+**Known limit, stated rather than fixed:** inside the tape chart the day cells
+(36px) and reservation bars (24px) are chart geometry, not list controls —
+making them 44px would halve how many rooms fit on screen. The chart is now
+pannable with the room column pinned, which is the thing that makes it usable
+at all. A one-night booking is the marginal target; a multi-day one is wide.
 
 ---
 
@@ -425,7 +484,7 @@ retried. Ledger nets to zero, room revenue still ₹4,19,578.76.
 3  Auth bridge — Firebase            ███████████░  works; needs a service account
 4  Front desk + folio, end to end    ████████████  flows, reports, dating
 5  Night audit                       ██████████░░  runs, posts, rolls the date
-6  Housekeeping, mobile, offline     ███████░░░░░  board writes to Postgres
+6  Housekeeping, mobile             █████████░░░  board writes to Postgres
 7  POS bridge (a MIGRATION)          ███████░░░░░  bridge tested, PMS view built
 8  Billing, GST, Form C              ██░░░░░░░░░░  lodging tax derives
 9  Rates, availability, STAAH        ██░░░░░░░░░░  room_blocks landed

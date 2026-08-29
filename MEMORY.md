@@ -886,6 +886,87 @@ open database."* I wrote the assertions in the wrong file anyway.
 
 ---
 
+### 48 · Every button in the system was a mouse target
+
+`SIZES` in `Button.tsx` ran `sm: h-8` (32px), `md: h-9` (36px) — only `lg`
+reached 44px. The invoices screen at 375px rendered **sixty** "Issue" buttons,
+the primary action of the page, at 32px.
+
+Nothing looked wrong. A screenshot of that page reads as a normal dense table;
+the number is the only thing that says otherwise. Found by measuring every
+control on 23 screens, not by looking at them.
+
+The fix keys off `pointer-coarse:`, **not** a `sm:` breakpoint. What makes a
+control hard to press is the finger, not the window width — a 32px button is
+fine in a narrow desktop window and miss-prone on a phone, and the browser
+already knows which one it is. `min-height` beats `height` in the cascade, so
+the desktop row keeps its density and grows only under a thumb. Verified in
+both directions: coarse → 44, fine → 32.
+
+**Measure tap targets. Do not look at them.**
+
+---
+
+### 49 · A connectivity flag that was a button, and a failure that vanished
+
+Housekeeping had `const [online, setOnline] = useState(true)` with a
+"Simulate offline" button as the only thing that ever changed it. So on a real
+phone that genuinely lost signal in a stairwell — the exact case the screen was
+designed for — the flag stayed `true`.
+
+Worse, `setHousekeeping` converts an `ApiError` into `{allowed:false}` but
+**re-throws** anything else. A dropped connection is a `TypeError`, not an
+`ApiError`, so it threw straight past `apply`: no toast, no queue, no refusal.
+The file's own header says *"an action that silently does nothing is worse than
+one that refuses"*, and that is precisely what it did.
+
+The demo prop was hiding the only case that mattered. `navigator.onLine` plus
+the `online`/`offline` events costs nothing and is true.
+
+One trap in the repair: `navigator.onLine` reports `true` on a wifi with no
+route out, so a failed drain sets `online = false` rather than retrying —
+`queue` is a dependency of that effect and a retry there spins.
+
+**A simulated condition tests the simulation.**
+
+---
+
+### 50 · Seventeen pixels per day
+
+The tape chart is `grid-cols-[132px_repeat(14,minmax(0,1fr))]`. `1fr` columns
+do not refuse to get small, they just get smaller: at 375px the fourteen days
+came out at **17px each**, narrower than the numbers printed in them.
+
+No overflow, no error, nothing in any test. A wide instrument does not announce
+that it stopped fitting.
+
+The answer was not a redesign — it was the one the rest of the app already
+uses for a wide table: a minimum width and a scroll container, so the body
+never scrolls sideways and each day keeps 44px. Above 748px `1fr` expands past
+the minimum and the desktop chart is byte-for-byte what it was. Confirmed at
+1440px: 75px columns, no scrollbar.
+
+---
+
+### 51 · Pinned, and underneath
+
+Panning the chart is useless if the room number leaves with it, so the room
+column got `sticky left-0 z-10`. The reservation bars were **also** `z-10`.
+
+That is not a tie the browser breaks in your favour: equal z-index falls back
+to DOM order, the bars come later, and every booking slid straight over the
+room numbers. Rooms with a reservation lost their number entirely.
+
+Every measurement said the column was pinned, and it was — `roomColumnStaysPut:
+true`. It was also invisible. **Only the screenshot showed it.** Three sticky
+layers now have their order written down in one place next to the constant,
+because this is exactly the kind of thing the next person rebalances by
+accident.
+
+**A measurement confirms geometry. It does not confirm you can see the thing.**
+
+---
+
 ## Verification traps
 
 ### Never test a Tailwind utility by injecting the class at runtime

@@ -39,6 +39,7 @@ import InvoicesPage from "@/pages/Invoices";
 import FormCPage from "@/pages/FormC";
 import InvoicePage from "@/pages/Invoice";
 import PosPage from "@/pages/Pos";
+import { RequireAccess } from "@/components/app/RequireAccess";
 import {
   GuestLedgerPage, CashierShiftPage, GstSalesPage, CFormPage,
 } from "@/pages/reports/Compliance";
@@ -174,12 +175,54 @@ export default function App() {
             <Route path="/companies" element={<CompaniesPage />} />
             <Route path="/notifications" element={<NotificationsPage />} />
 
-            <Route path="/admin/properties" element={<AdminPropertiesPage />} />
-            <Route path="/admin/users" element={<UsersPage />} />
-            <Route path="/admin/roles" element={<RolesPage />} />
-            <Route path="/admin/audit-log" element={<AuditLogPage />} />
-            <Route path="/admin/integrations" element={<IntegrationsPage />} />
-            <Route path="/admin/settings" element={<SettingsPage />} />
+            <Route
+              path="/admin/properties"
+              element={
+                <RequireAccess path="/admin/properties" resource="hotel">
+                  <AdminPropertiesPage />
+                </RequireAccess>
+              }
+            />
+            <Route
+              path="/admin/users"
+              element={
+                <RequireAccess path="/admin/users" resource="user">
+                  <UsersPage />
+                </RequireAccess>
+              }
+            />
+            <Route
+              path="/admin/roles"
+              element={
+                <RequireAccess path="/admin/roles" resource="role">
+                  <RolesPage />
+                </RequireAccess>
+              }
+            />
+            <Route
+              path="/admin/audit-log"
+              element={
+                <RequireAccess path="/admin/audit-log" resource="audit_log">
+                  <AuditLogPage />
+                </RequireAccess>
+              }
+            />
+            <Route
+              path="/admin/integrations"
+              element={
+                <RequireAccess path="/admin/integrations" resource="integration">
+                  <IntegrationsPage />
+                </RequireAccess>
+              }
+            />
+            <Route
+              path="/admin/settings"
+              element={
+                <RequireAccess path="/admin/settings" resource="setting">
+                  <SettingsPage />
+                </RequireAccess>
+              }
+            />
 
             {/* Property level */}
             <Route

@@ -107,9 +107,11 @@ export function UsersPage() {
       <p className="flex items-start gap-2 text-xs text-grey-500 mt-4 leading-relaxed">
         <Info className="size-3.5 shrink-0 mt-0.5" />
         <span>
-          Stage 1 has no sign-in, so these are the roles the matrix defines rather
-          than real accounts. Real staff arrive with the auth bridge at Stage 3 —
-          inventing them now would put names in front of people that nobody chose.
+          These are real accounts, read from the database. What you can see of
+          them follows your role: a group administrator sees everybody, and
+          anyone else sees themselves and the people rostered at their own
+          properties. Password sign-in still needs a Firebase service account;
+          the accounts and their property grants do not.
         </span>
       </p>
     </Page>

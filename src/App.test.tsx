@@ -164,3 +164,65 @@ describe("the session guard", () => {
     expect(screen.queryByRole("button", { name: /viewing as/i })).toBeNull();
   });
 });
+
+/* ══════════════════════════════════════════════════════════════════
+   ROUTES A ROLE MAY NOT REACH
+
+   There was no route guard. The sidebar filtered what it SHOWED —
+   `canSee(role)` on every nav item — and nothing stopped a front-desk
+   clerk typing /admin/users into the address bar. They got the page.
+
+   Row Level Security saved the data: the clerk saw one staff row,
+   their own. So the leak was the page SHELL rather than the roster,
+   which is defence in depth working — and is not a reason to hand a
+   clerk the door.
+
+   NAVIGATION HIDING IS NOT ACCESS CONTROL.
+   ══════════════════════════════════════════════════════════════════ */
+
+describe("administration routes", () => {
+  const ADMIN_ROUTES = [
+    "/admin/users",
+    "/admin/roles",
+    "/admin/properties",
+    "/admin/audit-log",
+    "/admin/integrations",
+    "/admin/settings",
+  ];
+
+  for (const path of ADMIN_ROUTES) {
+    it(`refuses ${path} to a front-desk clerk`, async () => {
+      go(path);
+      signedIn();                       // the default identity is a clerk
+      render(<App />);
+
+      expect(
+        await screen.findByRole("heading", {
+          name: /not part of your role/i,
+        }),
+        `${path} rendered for a front-desk clerk`,
+      ).toBeDefined();
+    });
+  }
+
+  it("lets a group administrator through", async () => {
+    go("/admin/users");
+    signedIn({
+      scope: {
+        staffId: "11111111-1111-1111-1111-111111111111",
+        email: "owner@fidato.in",
+        fullName: "Group Owner",
+        isGroupAdmin: true,
+        hotels: [],
+      },
+    });
+    render(<App />);
+
+    /* The refusal must NOT appear. Asserting the page's own heading as
+       well, because "the refusal is absent" would also be true of a
+       blank screen. */
+    expect(await screen.findByRole("heading", { name: /users/i })).toBeDefined();
+    expect(screen.queryByRole("heading", { name: /not part of your role/i }))
+      .toBeNull();
+  });
+});

@@ -132,7 +132,13 @@ export default function NightAuditPage() {
                   {c.link && c.count > 0 && (
                     <Link
                       to={c.link}
-                      className="inline-flex items-center gap-1.5 text-sm text-brand-orange hover:underline shrink-0 mt-0.5"
+                      className={cn(
+                        "inline-flex items-center gap-1.5 text-sm text-brand-orange hover:underline shrink-0 mt-0.5",
+                        /* The action on the card, not a word in a
+                           sentence — 53x20px is a link, and this is
+                           a button wearing a link's clothes. */
+                        "pointer-coarse:min-h-11",
+                      )}
                     >
                       Open
                       <ArrowRight className="size-3.5" />
