@@ -48,7 +48,24 @@ interface CheckInBody {
   adults?: number;
   children?: number;
   ratePlan?: string;
-  idCaptured?: boolean;
+  /* The DOCUMENT, not a claim that one was seen.
+     `idCaptured: boolean` used to be the whole of it: the client
+     asserted a passport had been looked at, the server filed the
+     assertion into a note, and guest_documents — which has existed
+     since migration 013 — was never written to. Capture is now derived
+     from whether a document actually arrived, which is not something a
+     client can lie about. */
+  identity?: {
+    idType?: string;
+    idNumber?: string;
+    nationality?: string;
+    passportExpiry?: string;
+    visaNumber?: string;
+    visaExpiry?: string;
+    addressLine?: string;
+    city?: string;
+    country?: string;
+  };
   idSkipReason?: string;
   /* Absent means "the property's own operating day", resolved from the
      database. It used to mean the server's wall clock, which dated a
@@ -80,8 +97,10 @@ operations.post("/:code/stays/:id/check-in", async (c) => {
         check_out: string;
         room_type_id: string;
         notes: string | null;
+        guest_id: string;
       }>(
-        `select id, status, check_in::text, check_out::text, room_type_id, notes
+        `select id, status, check_in::text, check_out::text, room_type_id,
+                notes, guest_id
            from reservations
           where hotel_id = $1 and id = $2
           for update`,
@@ -104,8 +123,23 @@ operations.post("/:code/stays/:id/check-in", async (c) => {
         );
       }
 
-      if (!body.idCaptured && !body.idSkipReason?.trim()) {
-        return refuse("Capture the guest's ID, or give a reason for skipping it.");
+      /* A document is captured when a TYPE and a NUMBER arrive together.
+         Either alone is a half-filled form, and the database refuses it
+         anyway (gd_number_present, 026) — better to say so in a sentence
+         than to let a check constraint surface as an error code. */
+      const identity = body.identity;
+      const captured = Boolean(
+        identity?.idType && identity.idNumber?.trim(),
+      );
+
+      if (!captured && !body.idSkipReason?.trim()) {
+        return refuse(
+          "Record the guest's ID document — type and number — or give a " +
+            "reason for skipping it.",
+        );
+      }
+      if (identity?.idType && !identity.idNumber?.trim()) {
+        return refuse(`A ${identity.idType} needs its number.`);
       }
 
       const roomNumber = body.roomNumber?.trim();
@@ -154,7 +188,7 @@ operations.post("/:code/stays/:id/check-in", async (c) => {
         return refuse(`Room ${roomNumber} is held by ${clash[0].reference} for part of that stay.`);
       }
 
-      const notes = body.idCaptured
+      const notes = captured
         ? stay.notes
         : [stay.notes, `ID not captured — ${body.idSkipReason}`]
             .filter(Boolean)
@@ -172,6 +206,63 @@ operations.post("/:code/stays/:id/check-in", async (c) => {
         [hotelId, stayId, body.adults ?? null, body.children ?? null,
          body.ratePlan === "Room Only" ? "RO" : body.ratePlan ?? null, notes],
       );
+
+      /* ── The document ────────────────────────────────────────────
+         In the SAME transaction as the check-in. A guest who is in
+         house with a document that failed to save is exactly the state
+         an FRRO inspection finds and nobody can explain — so either
+         both land or neither does.
+
+         Upsert, because a returning guest already has a row and 013
+         made guest_id the primary key. 026 added the UPDATE policy
+         that makes this possible at all; before it, a second visit
+         could not be recorded.
+
+         COALESCE on every field: a clerk capturing a passport number
+         today must not blank the address somebody recorded last year.
+         Only what was actually typed is written. */
+      if (captured && identity) {
+        await client.query(
+          `insert into guest_documents
+             (guest_id, id_type, id_number, passport_expiry, visa_number,
+              visa_expiry, address_line, city, country,
+              captured_by, captured_at)
+           values ($1,$2,$3,$4::date,$5,$6::date,$7,$8,$9,
+                   app.current_user_id(), now())
+           on conflict (guest_id) do update set
+             id_type         = excluded.id_type,
+             id_number       = excluded.id_number,
+             passport_expiry = coalesce(excluded.passport_expiry,
+                                        guest_documents.passport_expiry),
+             visa_number     = coalesce(excluded.visa_number,
+                                        guest_documents.visa_number),
+             visa_expiry     = coalesce(excluded.visa_expiry,
+                                        guest_documents.visa_expiry),
+             address_line    = coalesce(excluded.address_line,
+                                        guest_documents.address_line),
+             city            = coalesce(excluded.city, guest_documents.city),
+             country         = coalesce(excluded.country, guest_documents.country),
+             captured_by     = excluded.captured_by,
+             captured_at     = excluded.captured_at`,
+          [stay.guest_id, identity.idType, identity.idNumber!.trim(),
+           identity.passportExpiry || null, identity.visaNumber || null,
+           identity.visaExpiry || null, identity.addressLine || null,
+           identity.city || null, identity.country || null],
+        );
+      }
+
+      /* Nationality lives on the GUEST, not the document — it is a fact
+         about the person, and it is what the Form C register filters
+         on. Only written when supplied: the column defaults to 'IN',
+         and overwriting a recorded nationality with a default because
+         a form field was left empty would remove a foreign national
+         from the register entirely. */
+      if (identity?.nationality?.trim()) {
+        await client.query(
+          "update guests set nationality = $2 where id = $1",
+          [stay.guest_id, identity.nationality.trim().toUpperCase()],
+        );
+      }
 
       /* Replace rather than add. A booking pre-assigned to one room and
          checked into another must not end up holding both. */

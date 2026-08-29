@@ -145,6 +145,31 @@ async function main() {
         [HOTEL_CODE],
       );
       await client.query("delete from hotels where code = $1", [HOTEL_CODE]);
+
+      /* ── The guests the hotel left behind ────────────────────────
+         `guests` carries no hotel_id — a guest belongs to the GROUP, so a
+         returning one does not re-present their passport at each property
+         (013_policies.sql). Which means dropping the hotel cascades its
+         reservations and leaves every guest standing.
+
+         Reloading eight times left 279 guest rows behind a demo that claims
+         30, and 214 of them had no stay anywhere. The Directory counted
+         them; app.identity_missing() scanned them. Nobody noticed, because
+         nothing had ever counted guests against the figure the demo
+         promises.
+
+         Only those with NO reservation at ANY property go: a guest shared
+         with Agra or Pune is still somebody's guest. */
+      await client.query("alter table guests disable trigger guests_no_delete");
+      const orphans = await client.query(
+        `delete from guests g
+          where not exists (select 1 from reservations r
+                             where r.guest_id = g.id)`,
+      );
+      await client.query("alter table guests enable trigger guests_no_delete");
+      if (orphans.rowCount) {
+        say(`released ${orphans.rowCount} guests with no remaining stay`);
+      }
       await client.query(
         "alter table folio_postings enable trigger folio_postings_append_only",
       );
@@ -590,6 +615,27 @@ async function main() {
     say(`room-nights sold 1–25 August: ${sold}`);
     say(`occupancy: ${((sold / availableNights) * 100).toFixed(2)}%`);
     say("matches the fixtures and the real Night Audit export ✓");
+
+    /* No guest left standing without a stay.
+    
+       `guests` has no hotel_id, so dropping the property cascades its
+       reservations and leaves the people behind. Eight reloads had put
+       279 rows behind a demo that promises 30, and nothing counted.
+       Verified here rather than trusted, because the cleanup is three
+       lines above and a cleanup nobody measures is one nobody knows
+       failed. */
+    const stranded = await client.query<{ n: string }>(
+      `select count(*)::text as n from guests g
+        where not exists (select 1 from reservations r
+                           where r.guest_id = g.id)`,
+    );
+    if (Number(stranded.rows[0]!.n) > 0) {
+      throw new Error(
+        `${stranded.rows[0]!.n} guests have no stay at any property. ` +
+          `Each reload leaks the previous set, and the Directory counts ` +
+          `them.`,
+      );
+    }
   } catch (error) {
     await client.query("rollback").catch(() => {});
     throw error;

@@ -717,6 +717,62 @@ wrapping it.
 
 ---
 
+### 40 · A boolean where a document should have been
+
+Check-in sent `idCaptured: true`. The client asserted a passport had been
+looked at, the server filed the assertion into a note, and
+**`guest_documents` — a table since migration 013 — was never written to by
+anything.** A hotel could tick that box ten thousand times and have no passport
+number in the database.
+
+Two things it broke downstream, both of which had been sitting there:
+
+- the Form C register printed "not on record" for every foreign national
+- the C-Form report on the reports index still said *"needs passport capture at
+  check-in"*, which had been true for the whole project
+
+**Capture is DERIVED from a document arriving, never asserted by a client.** A
+type and a number, or a stated reason for skipping. Nothing else counts.
+
+And 013 had a SELECT policy and an INSERT policy and **no UPDATE** — with
+`guest_id` as the primary key, so a returning guest's renewed visa could not be
+recorded at all. The second insert conflicted and there was no other way in.
+
+---
+
+### 41 · The demo loader leaked its guests, 249 of them
+
+`guests` carries no `hotel_id` — a guest belongs to the group, so a returning
+one does not re-present their passport at each property. Which means the
+loader's `delete from hotels` cascades the reservations and **leaves every
+guest standing**.
+
+Eight reloads had left **279 guest rows behind a demo that promises 30**, and
+214 of them had no stay at any property. The Directory counted them.
+`app.identity_missing()` scanned them. Nothing had ever compared the guest
+count to the figure the demo advertises, so nothing said a word.
+
+Found by opening a screen: eight rows named "Lata Bhosale".
+
+**A fixture that grows every time you reload it is not a fixture.** The loader
+now releases guests with no stay anywhere — and then COUNTS them, because a
+cleanup nobody measures is one nobody knows failed (defect 25, again).
+
+---
+
+### 42 · Splicing by the first match when the pattern appears twice
+
+`{!idCaptured && (` occurs twice in CheckInFlow: once opening the skip-reason
+field in the ID step, once in the review step. A script that took
+`next(... if line == ...)` replaced the wrong one and left the file
+syntactically broken in a way `tsc` reported three lines further down.
+
+**When editing by pattern, check how many times the pattern occurs.** Anchor on
+something unique inside the block — here, the sentence `ID not captured` — not
+on the opener.
+
+---
+
 ## Verification traps
 
 ### Never test a Tailwind utility by injecting the class at runtime

@@ -3,7 +3,7 @@
 Updated after every finished section. **Nothing here is a claim until the gates
 below are green and the screen has been opened.**
 
-Last updated: **29 August 2026** · after **the printed tax invoice — Stage 8 done**
+Last updated: **29 August 2026** · Phase 1 item 1 — **passport capture at check-in**
 
 ---
 
@@ -15,10 +15,10 @@ FRONTEND   tsc -b            0 errors
            build             clean
 
 API        tsc --noEmit      0 errors
-           npm test          52 passed   (live Postgres, as pms_app)
+           npm test          59 passed   (live Postgres, as pms_app)
                              loads the demo fixture first — see below
 
-DATABASE   db/tests/run.sh   25 migrations · 62 assertions
+DATABASE   db/tests/run.sh   26 migrations · 67 assertions
                              7 isolation checks · exit 0
 BACKUP     verify-backup.sh  dumped, RESTORED, 13 checks · exit 0
            load-demo         431 available · 132 sold · 30.63% ✓
@@ -93,6 +93,33 @@ dated postings from the server's wall clock:
 All four now resolve the date from the database inside the same transaction as
 the write. Proved by restoring the wall clock in one line and watching the test
 fail.
+
+---
+
+## Phase 1 · item 1 — identity capture ✅
+
+Check-in asked a clerk to "Capture ID document", flipped a boolean, and stored
+NOTHING. `guest_documents` had existed since migration 013 and nothing had ever
+written to it — so the Form C register printed "not on record" for every
+foreign national, and the C-Form report still carried the note *"needs passport
+capture at check-in"*.
+
+The ID step now takes a real document: nationality, type, number, and — only
+for a foreign national — passport expiry, visa number, visa expiry and address
+abroad. **Capture is DERIVED from a document arriving, never asserted by the
+client.** A type with no number is refused in a sentence before the database
+refuses it as a constraint.
+
+Driven in the browser end to end: an Aadhaar for an Indian guest (no visa
+fields shown), a passport for a British one (FRRO block appears), and the
+review step now prints what was recorded. The Form C register shows the real
+number.
+
+Two more defects found on the way. 013 had a SELECT and an INSERT policy and
+**no UPDATE** — a returning guest's renewed visa could not be recorded at all.
+And the demo loader **leaked its guests**: `guests` has no `hotel_id`, so
+dropping the property left them standing, and eight reloads had put **279 rows
+behind a demo that promises 30**.
 
 ---
 

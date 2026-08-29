@@ -391,6 +391,59 @@ end $$;
 
 
 -- =============================================================================
+-- IDENTITY CAPTURE (026) — a document that can actually be recorded
+--
+-- guest_documents existed from 013 with a SELECT and an INSERT policy and
+-- nothing that ever wrote to it. What is asserted: a document can be
+-- corrected, a type with no number is refused, and the evidence cannot be
+-- deleted.
+-- =============================================================================
+do $$
+declare a uuid; g uuid; n int;
+begin
+  select id into a from hotels where code='AGR';
+  select r.guest_id into g from reservations r where r.hotel_id = a limit 1;
+
+  -- A type with no number is a tick in a box, not a captured document.
+  perform test.raises('identity','a document type with no number is refused',
+    format($q$insert into guest_documents (guest_id, id_type, id_number)
+             values (%L,'passport','   ')
+             on conflict (guest_id) do update
+                set id_type='passport', id_number='   '$q$, g), '23514');
+
+  -- Captured once...
+  insert into guest_documents (guest_id, id_type, id_number, country)
+  values (g, 'passport', 'P1234567', 'GB')
+  on conflict (guest_id) do update
+     set id_type = excluded.id_type, id_number = excluded.id_number,
+         country = excluded.country;
+
+  -- ...and correctable. 013 had no UPDATE policy, so a returning guest with a
+  -- renewed visa could not be recorded at all — the insert conflicted on the
+  -- primary key and there was no other way in.
+  update guest_documents set visa_number = 'V999', visa_expiry = '2030-01-01'
+   where guest_id = g;
+  select count(*) into n from guest_documents
+   where guest_id = g and visa_number = 'V999';
+  perform test.ok('identity','a renewed visa can be recorded', n = 1);
+
+  perform test.ok('identity','pms_app may update a document',
+    has_table_privilege('pms_app','guest_documents','update'));
+
+  -- Evidence is not erased. Correct it; do not remove it.
+  perform test.ok('identity','pms_app may NOT delete a document',
+    not has_table_privilege('pms_app','guest_documents','delete'));
+
+  -- And the property can see who still owes one.
+  select count(*) into n from app.identity_missing(a);
+  perform test.ok('identity','the property can list who owes a document',
+    n >= 0, n || ' outstanding');
+
+  delete from guest_documents where guest_id = g;
+end $$;
+
+
+-- =============================================================================
 -- POS BRIDGE (024) — the boundary a point of sale posts across
 --
 -- The POS is built elsewhere. What is asserted here is what the PMS promises

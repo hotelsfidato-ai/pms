@@ -132,7 +132,25 @@ export async function checkIn(
     adults: number;
     children: number;
     ratePlan: string;
-    idCaptured: boolean;
+    /**
+     * The DOCUMENT, not a claim that one was seen.
+     *
+     * This was `idCaptured: boolean` — the flow flipped it, the API
+     * filed it into a note, and `guest_documents` was never written
+     * to. Capture is now derived from whether a type and a number
+     * actually arrive, which is not a thing a client can assert.
+     */
+    identity?: {
+      idType?: string;
+      idNumber?: string;
+      nationality?: string;
+      passportExpiry?: string;
+      visaNumber?: string;
+      visaExpiry?: string;
+      addressLine?: string;
+      city?: string;
+      country?: string;
+    };
     idSkipReason?: string;
     businessDate: string;
     user: string;

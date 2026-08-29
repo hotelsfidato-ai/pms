@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { Check, LogIn, IdCard, BedDouble, Users, Sparkle } from "lucide-react";
+import { Check, LogIn, BedDouble, Users, Sparkle } from "lucide-react";
 import { cn } from "@/lib/cn";
 import { money } from "@/lib/format";
 import {
@@ -38,8 +38,21 @@ export function CheckInFlow({
   const [adults, setAdults] = useState(stay.adults);
   const [children, setChildren] = useState(stay.children);
   const [roomNumber, setRoomNumber] = useState(stay.roomNumber);
-  const [idCaptured, setIdCaptured] = useState(false);
+  /* The document itself. This was `idCaptured: boolean` — a toggle that
+     said a passport had been looked at and stored nothing. */
+  const [idType, setIdType] = useState("");
+  const [idNumber, setIdNumber] = useState("");
+  const [nationality, setNationality] = useState("IN");
+  const [passportExpiry, setPassportExpiry] = useState("");
+  const [visaNumber, setVisaNumber] = useState("");
+  const [visaExpiry, setVisaExpiry] = useState("");
+  const [addressLine, setAddressLine] = useState("");
   const [idSkipReason, setIdSkipReason] = useState("");
+
+  /* Captured means a TYPE and a NUMBER. Derived, never asserted — the
+     server derives it the same way and cannot be told otherwise. */
+  const idCaptured = Boolean(idType && idNumber.trim());
+  const isForeign = nationality.trim().toUpperCase() !== "IN";
   const [ratePlan, setRatePlan] = useState(stay.ratePlan);
 
   const permitted = useQuery({
@@ -161,26 +174,95 @@ export function CheckInFlow({
                 Indian properties must record a guest's identity document.
                 It can be skipped, but the reason is kept on the folio.
               </p>
-              <button
-                type="button"
-                onClick={() => setIdCaptured(!idCaptured)}
-                className={cn(
-                  "w-full flex items-center gap-3 px-4 h-14 rounded-md border transition-colors duration-150",
-                  idCaptured
-                    ? "border-success bg-success-50"
-                    : "border-grey-300 border-dashed bg-white hover:border-grey-400",
-                )}
-              >
-                <IdCard className={cn("size-5", idCaptured ? "text-success" : "text-grey-400")} />
-                <span className="text-base text-ink-900">
-                  {idCaptured ? "ID captured" : "Capture ID document"}
-                </span>
-                {idCaptured && <Check className="size-4 text-success ml-auto" />}
-              </button>
 
-              {!idCaptured && (
-                <Field label="Reason for skipping" required>
+              <Field label="Nationality" hint="Anything other than IN puts this stay on the Form C register.">
+                {({ id }) => (
+                  <Input
+                    id={id}
+                    value={nationality}
+                    onChange={(e) => setNationality(e.target.value.toUpperCase())}
+                    placeholder="IN"
+                    maxLength={2}
+                    className="w-24"
+                  />
+                )}
+              </Field>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <Field label="Document">
                   {({ id }) => (
+                    <NativeSelect
+                      id={id}
+                      value={idType}
+                      onChange={(e) => setIdType(e.target.value)}
+                    >
+                      <option value="">Not recorded</option>
+                      {/* Exactly the types gd_id_type_valid permits. A
+                          fifth option here would be refused by the
+                          database as a constraint name. */}
+                      <option value="passport">Passport</option>
+                      <option value="aadhaar">Aadhaar</option>
+                      <option value="driving_licence">Driving licence</option>
+                      <option value="voter">Voter ID</option>
+                      <option value="other">Other</option>
+                    </NativeSelect>
+                  )}
+                </Field>
+
+                <Field label="Number" required={Boolean(idType)}>
+                  {({ id }) => (
+                    <Input
+                      id={id}
+                      value={idNumber}
+                      onChange={(e) => setIdNumber(e.target.value)}
+                      placeholder={idType === "passport" ? "P1234567" : "Document number"}
+                      disabled={!idType}
+                    />
+                  )}
+                </Field>
+              </div>
+
+              {/* Only for a foreign national. Asking an Indian guest for a
+                  visa number is how a form teaches people to leave fields
+                  blank. */}
+              {isForeign && (
+                <div className="space-y-3 border-l-2 border-brand-yellow pl-3.5">
+                  <p className="text-2xs text-grey-600">
+                    A foreign national must be reported to the FRRO within 24
+                    hours of arrival. These fields go on that filing.
+                  </p>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                    <Field label="Passport expiry">
+                      {({ id }) => (
+                        <Input id={id} type="date" value={passportExpiry}
+                          onChange={(e) => setPassportExpiry(e.target.value)} />
+                      )}
+                    </Field>
+                    <Field label="Visa number">
+                      {({ id }) => (
+                        <Input id={id} value={visaNumber}
+                          onChange={(e) => setVisaNumber(e.target.value)} />
+                      )}
+                    </Field>
+                    <Field label="Visa expiry">
+                      {({ id }) => (
+                        <Input id={id} type="date" value={visaExpiry}
+                          onChange={(e) => setVisaExpiry(e.target.value)} />
+                      )}
+                    </Field>
+                    <Field label="Address abroad">
+                      {({ id }) => (
+                        <Input id={id} value={addressLine}
+                          onChange={(e) => setAddressLine(e.target.value)} />
+                      )}
+                    </Field>
+                  </div>
+                </div>
+              )}
+
+                {!idCaptured && (
+                  <Field label="Reason for skipping" required>
+                    {({ id }) => (
                     <Input
                       id={id}
                       value={idSkipReason}
@@ -234,8 +316,22 @@ export function CheckInFlow({
                   <Users className="inline size-3.5 -mt-0.5 mr-1" />
                   {adults} adult{adults === 1 ? "" : "s"}{children ? `, ${children} child` : ""} · {ratePlan}
                 </p>
-                {!idCaptured && (
-                  <p className="text-brand-yellow">ID not captured — {idSkipReason}</p>
+                {idCaptured ? (
+                  /* What was actually recorded. This showed NOTHING when a
+                     document HAD been captured, so a clerk confirming a
+                     check-in could not see the passport number they had
+                     just typed — the one screen where checking it is free. */
+                  <p className="tabular">
+                    {idType === "driving_licence"
+                      ? "Driving licence"
+                      : idType.charAt(0).toUpperCase() + idType.slice(1)}
+                    {" "}{idNumber}
+                    {isForeign ? " · " + nationality : ""}
+                  </p>
+                ) : (
+                  <p className="text-brand-yellow">
+                    ID not captured — {idSkipReason}
+                  </p>
                 )}
               </div>
             </div>
@@ -263,7 +359,21 @@ export function CheckInFlow({
               onClick={async () => {
                 const res = await checkIn(hotelId, stay.id, {
                   roomNumber, adults, children, ratePlan,
-                  idCaptured, idSkipReason, businessDate, user: USER,
+                  /* Sent only when there is something to send. An empty
+                     object would look like a capture to anything counting
+                     keys rather than reading them. */
+                  ...(idCaptured
+                    ? {
+                        identity: {
+                          idType, idNumber: idNumber.trim(), nationality,
+                          ...(passportExpiry ? { passportExpiry } : {}),
+                          ...(visaNumber ? { visaNumber } : {}),
+                          ...(visaExpiry ? { visaExpiry } : {}),
+                          ...(addressLine ? { addressLine } : {}),
+                        },
+                      }
+                    : {}),
+                  idSkipReason, businessDate, user: USER,
                 });
                 if (res.ok) {
                   toast.success(
