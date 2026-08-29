@@ -2,7 +2,7 @@
    read and not to write. Every one of the five flows goes to Postgres,
    and `Posting` is the only thing left that this module takes from
    there: a type, not data. */
-import type { Posting } from "../store";
+import type { Posting } from "./types";
 import { listAllRooms, setHousekeeping } from "./rooms";
 import { getStay, listStays, getFolio } from "./stays";
 import { api, ApiError } from "@/lib/api";

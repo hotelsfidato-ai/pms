@@ -267,3 +267,77 @@ begin
 end $$;
 
 \echo '  ✓ rls.sql — isolation proven as pms_app, not as a superuser'
+
+-- -----------------------------------------------------------------------------
+-- STAFF VISIBILITY (027) — the owner sees all, a property sees its own
+-- -----------------------------------------------------------------------------
+-- `staff` carried ONE policy, `staff_self`, so every caller saw exactly one
+-- row: their own. Including the group owner, who could not administer users.
+--
+-- It went unnoticed because the frontend generated that list from the
+-- permission matrix instead of reading it. The moment it read the database the
+-- gap appeared.
+--
+-- Asserted HERE rather than in suite.sql because suite.sql runs as the
+-- superuser, which bypasses RLS. Written there first, it reported
+-- "a clerk cannot see another property's staff: 1 leaked" against policies
+-- that were correct.
+-- -----------------------------------------------------------------------------
+
+-- As the CLERK.
+select set_config('app.user_id', current_setting('test.clerk'), false);
+
+do $$
+declare seen int; mine int; theirs int;
+begin
+  select count(*) into seen from staff;
+  select count(*) into mine from staff where id = app.current_user_id();
+
+  if mine <> 1 then
+    raise exception 'A clerk cannot see their own staff row (% found). '
+                    'staff_self is broken.', mine;
+  end if;
+
+  -- Nobody from another property. The clerk is rostered at one hotel and the
+  -- other clerk at a different one, so the colleague policy must not admit
+  -- them.
+  select count(*) into theirs
+    from staff s
+   where s.id <> app.current_user_id()
+     and not exists (
+       select 1 from staff_hotels mine2
+         join staff_hotels theirs2 on theirs2.hotel_id = mine2.hotel_id
+        where mine2.staff_id = app.current_user_id()
+          and theirs2.staff_id = s.id
+     );
+
+  if theirs > 0 then
+    raise exception 'A clerk can see % staff they share no property with. '
+                    'The Users screen leaks the group roster.', theirs;
+  end if;
+
+  raise notice '  ✓ a clerk sees % staff: themselves and colleagues only', seen;
+end $$;
+
+-- As the OWNER.
+select set_config('app.user_id', current_setting('test.owner'), false);
+
+do $$
+declare seen int; total int;
+begin
+  select count(*) into seen  from staff;
+  select count(*) into total from staff;
+
+  /* The owner is a group admin and holds NO staff_hotels rows — reaching
+     everything through app.auth_hotel_ids() and, for this table, through
+     app.is_group_admin(). Both had to be SECURITY DEFINER: a policy on
+     `staff` that reads `staff` recurses forever, and 020's staff_hotels_admin
+     read `staff` inline, which closed the loop the moment anything on `staff`
+     referenced staff_hotels. */
+  if seen < 3 then
+    raise exception 'A group admin sees only % staff rows. The owner cannot '
+                    'administer users.', seen;
+  end if;
+
+  raise notice '  ✓ group admin: sees all % staff rows', seen;
+end $$;

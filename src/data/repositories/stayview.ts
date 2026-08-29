@@ -1,6 +1,5 @@
 import { listAllRooms } from "./rooms";
 import { listStays, listOpenFolios } from "./stays";
-import { EXTRA_ROOM_DATES } from "../fixtures/property";
 import type { Stay } from "./types";
 
 /* ══════════════════════════════════════════════════════════════════
@@ -146,11 +145,29 @@ export async function getStayView(
   const balances = new Map(openFolios.map((f) => [f.stayId, f.balance]));
   const balanceOf = (stayId: string) => balances.get(stayId) ?? 0;
 
-  const sellableOn = (roomNumber: string, date: string) => {
-    const room = allRooms.find((r) => r.number === roomNumber);
-    if (!room) return false;
-    return room.status !== "out-of-service" || EXTRA_ROOM_DATES.includes(date);
-  };
+    /* Whether a room could be SOLD on a date.
+
+       This asked `room.status !== "out-of-service" ||
+       EXTRA_ROOM_DATES.includes(date)` — a hardcoded list of six
+       August dates in a fixture file, because nothing in the schema
+       recorded why a room came back into inventory for a week.
+       Migration 022 records it, and every room now arrives carrying
+       its block ranges.
+
+       INCLUSIVE on both ends, matching app.sellable_rooms exactly:
+       `p_date >= b.from_date and (b.to_date is null or p_date <= b.to_date)`.
+       The first version of this predicate wrote `date < b.to` from
+       habit — half-open, like the daterange the booking constraints
+       use — and would have shifted the boundary by one day, making the
+       tape chart disagree with the occupancy denominator on two dates
+       out of every block. A block with no `to` is open-ended. */
+    const sellableOn = (roomNumber: string, date: string) => {
+      const room = allRooms.find((r) => r.number === roomNumber);
+      if (!room) return false;
+      return !room.blocks.some(
+        (b) => date >= b.from && (b.to === null || date <= b.to),
+      );
+    };
 
   const rooms: ChartRoom[] = allRooms.map((room) => {
     const bars: ChartBar[] = allStays

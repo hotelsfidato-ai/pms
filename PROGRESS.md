@@ -3,7 +3,7 @@
 Updated after every finished section. **Nothing here is a claim until the gates
 below are green and the screen has been opened.**
 
-Last updated: **29 August 2026** · Phase 1 items 1–3 — **capture, and the four missing reports**
+Last updated: **29 August 2026** · Phase 1 items 1–3 and 6 — **the fixtures are gone**
 
 ---
 
@@ -18,8 +18,8 @@ API        tsc --noEmit      0 errors
            npm test          67 passed   (live Postgres, as pms_app)
                              loads the demo fixture first — see below
 
-DATABASE   db/tests/run.sh   26 migrations · 67 assertions
-                             7 isolation checks · exit 0
+DATABASE   db/tests/run.sh   27 migrations · 67 assertions
+                             9 isolation checks · exit 0
 BACKUP     verify-backup.sh  dumped, RESTORED, 13 checks · exit 0
            load-demo         431 available · 132 sold · 30.63% ✓
 ```
@@ -93,6 +93,40 @@ dated postings from the server's wall clock:
 All four now resolve the date from the database inside the same transaction as
 the write. Proved by restoring the wall clock in one line and watching the test
 fail.
+
+---
+
+## Phase 1 · item 6 — the in-memory store is gone ✅
+
+```
+src/data/store.ts                DELETED (236 lines)
+fixture imports in repositories  0   (was 6)
+```
+
+Four things were still derived from fixture constants, and **every one carried
+a written condition that had been met**:
+
+```
+roomCountForDate      "moves when room blocks are modelled"    — 022 did
+tape chart sellable   the same six hardcoded August dates      — 022 did
+invoice series        "nothing issues one yet"                 — Stage 8 does
+POS outlets           "a migration off eZee, not configured"   — the bridge is
+staff list            "real the moment there are real accounts" — there are
+```
+
+Two were dead code with no callers at all. The rest now read the database: room
+blocks arrive on every room, and the tape chart's predicate matches
+`app.sellable_rooms` **inclusively on both ends** — the first version wrote
+`date < b.to` from habit and would have shifted the boundary a day.
+
+**Reading the real staff list found that nobody could read it.** `staff`
+carried one policy, `staff_self`, so every caller saw one row — including the
+owner, who could not administer users. A screen that invents its data cannot
+discover that the data is unreachable.
+
+Fixing it uncovered a **latent recursion cycle** dormant since migration 020:
+`staff_hotels_admin` read `staff` inline, which was harmless until something on
+`staff` read `staff_hotels`. Closed at its source.
 
 ---
 

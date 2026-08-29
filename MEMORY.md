@@ -816,6 +816,76 @@ answers "when".**
 
 ---
 
+### 45 · The owner could not see who worked for him
+
+`staff` carried exactly ONE policy:
+
+```sql
+staff_self   (id = app.current_user_id())
+```
+
+So every caller saw one row — their own — **including the group owner**. The
+Users screen would have listed one person to everybody and a group admin could
+not administer users at all.
+
+It went unnoticed for the whole project because the frontend GENERATED that
+list from the permission matrix: one invented person per role, all at a
+property named from a fixture. The moment it read the database the gap
+appeared.
+
+**A screen that invents its data cannot discover that the data is unreachable.**
+
+Fixed with two policies — a group admin reads everybody, and anyone reads staff
+they share a property with — asserted in `rls.sql` as `pms_app`.
+
+---
+
+### 46 · A recursion cycle that was already there, waiting
+
+The obvious admin policy reads `staff` to find out whether the caller is a
+group admin:
+
+```sql
+using (exists (select 1 from staff me
+                where me.id = app.current_user_id() and me.is_group_admin))
+```
+
+A policy ON `staff` that SELECTS FROM `staff` evaluates itself forever.
+Postgres said `infinite recursion detected in policy for relation "staff"`.
+
+The fix is the SECURITY DEFINER pattern `app.current_user_id()` already uses —
+but the interesting part is what it uncovered: **`staff_hotels_admin`, added in
+migration 020, read `staff` inline**. Harmless while nothing on `staff` read
+`staff_hotels`. The new colleague policy reads it, and the loop closed:
+
+```
+staff  →  staff_hotels  →  staff  →  ...
+```
+
+A latent cycle, dormant for six migrations, waiting for whoever next wrote a
+policy in that direction. Rewritten at its source rather than routed around.
+
+**When a policy needs a fact about the caller, get it from a SECURITY DEFINER
+function — never from a table that is itself protected.**
+
+---
+
+### 47 · Assertions about RLS, written where RLS does not apply
+
+The staff-visibility assertions went into `db/tests/suite.sql` first. It runs
+as the **superuser**, which bypasses Row Level Security completely — so they
+reported *"a clerk cannot see another property's staff: 1 leaked"* against
+policies that were correct, and the "sees everybody" one passed for a reason
+that had nothing to do with policy.
+
+`rls.sql` exists for exactly this and connects as `pms_app`. Its own header
+says so: *"a superuser bypasses RLS and would report success on a completely
+open database."* I wrote the assertions in the wrong file anyway.
+
+**Before asserting who can see what, check which role the test connects as.**
+
+---
+
 ## Verification traps
 
 ### Never test a Tailwind utility by injecting the class at runtime

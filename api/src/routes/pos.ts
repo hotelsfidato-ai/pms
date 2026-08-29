@@ -1,6 +1,7 @@
 import { Hono } from "hono";
 import { createHash, randomBytes, randomUUID } from "node:crypto";
 import { withUser, type Client } from "../db.ts";
+import { withSession } from "../auth.ts";
 import { businessDateFor } from "../businessDate.ts";
 
 /* ══════════════════════════════════════════════════════════════════
@@ -36,6 +37,16 @@ import { businessDateFor } from "../businessDate.ts";
    ══════════════════════════════════════════════════════════════════ */
 
 export const pos = new Hono<{ Variables: { outlet: Outlet } }>();
+
+/**
+ * The PERSON-facing half of the POS bridge.
+ *
+ * Mounted under /api/hotels, so it goes through the bearer-token
+ * gate like every other screen. `pos` is the machine's door and
+ * takes an outlet key; the two must not share a router, or a
+ * settings screen would need an outlet key to read a list.
+ */
+export const posAdmin = new Hono<{ Variables: { subject: string } }>();
 
 export interface Outlet {
   outletId: string;
@@ -456,3 +467,55 @@ function isUniqueViolation(error: unknown): boolean {
 
 /** Used by scripts/tests that need a client without a route. */
 export type PosClient = Client;
+
+/* ── The outlets configured at a property ─────────────────────────── */
+
+/**
+ * Read by the settings screen, which listed outlets from a FIXTURE
+ * until this existed — with a note saying "the POS outlet is a
+ * migration off eZee, not a configured thing". The bridge made it a
+ * configured thing.
+ *
+ * Mounted on the hotels router, not the POS one: this is a PERSON
+ * asking what is configured at their property, authenticated as a
+ * person. The `/api/pos` routes are the machine's door and take an
+ * outlet key.
+ */
+posAdmin.get("/:code/pos/outlets", async (c) => {
+  const body = await withSession(c.get("subject"), async (client) => {
+    const { rows: hotel } = await client.query<{ id: string }>(
+      "select id from hotels where code = $1",
+      [c.req.param("code").toUpperCase()],
+    );
+    if (!hotel[0]) return null;
+
+    const { rows } = await client.query<{
+      code: string; name: string; category: string;
+      has_key: boolean; is_active: boolean; bills: string;
+    }>(
+      `select o.code, o.name, o.category,
+              (o.api_key_hash is not null) as has_key,
+              o.is_active,
+              (select count(*) from pos_tickets t
+                where t.outlet_id = o.id)::text as bills
+         from pos_outlets o
+        where o.hotel_id = $1
+        order by o.code`,
+      [hotel[0].id],
+    );
+
+    return rows.map((r) => ({
+      code: r.code,
+      name: r.name,
+      category: r.category,
+      /* Never the key, and never the hash. A settings screen has no
+         reason to carry either, and the hash is what an attacker would
+         need to know they had guessed right. */
+      hasKey: r.has_key,
+      isActive: r.is_active,
+      bills: Number(r.bills),
+    }));
+  });
+
+  return body ? c.json(body) : c.json({ error: "No such property." }, 404);
+});

@@ -1,5 +1,38 @@
 export type { Stay, Folio, StayStatus, Source } from "../fixtures/reservations";
 
+/**
+ * One line of the append-only ledger.
+ *
+ * Copied verbatim from `src/data/store.ts` — the in-memory
+ * implementation every repository read before CP9 moved them onto
+ * Postgres. By the end the store held no data anything read; this type
+ * was the last thing importing it, and the file was 1,331 lines of
+ * fixture kept alive by a single `import type`.
+ *
+ * Verbatim matters: the first attempt at moving it wrote a plausible
+ * shape from memory — `date`, `reversesId` — instead of the real one.
+ * A type that is nearly right compiles and then disagrees with the
+ * data at runtime.
+ */
+export interface Posting {
+  id: string;
+  folioId: string;               // the stay it belongs to
+  businessDate: string;
+  category: string;
+  description: string;
+  /** Positive is money owed by the guest; negative is money received. */
+  amount: number;
+  tax: number;
+  kind: "charge" | "payment" | "reversal";
+  /** Set on a reversal, naming the posting it undoes. */
+  reversalOf?: string;
+  /** Set on the original once it has been reversed. */
+  reversed: boolean;
+  method?: string;               // payments only
+  createdAt: string;
+  user: string;
+}
+
 /* ══════════════════════════════════════════════════════════════════
    The shapes screens are allowed to know about.
 
@@ -8,6 +41,13 @@ export type { Stay, Folio, StayStatus, Source } from "../fixtures/reservations";
    the fixtures folder disappears and these signatures do not.
    ══════════════════════════════════════════════════════════════════ */
 
+export interface RoomBlock {
+  from: string;
+  /** Null means open-ended — the room is out until somebody says otherwise. */
+  to: string | null;
+  reason: string | null;
+}
+
 export interface Room {
   number: string;
   type: string;
@@ -15,6 +55,16 @@ export interface Room {
   /** Independent of occupancy — a room can be occupied and dirty. */
   status: string;
   maxOccupancy: number;
+  /**
+   * The date ranges this room is out of inventory.
+   *
+   * `status` says whether a room is out TODAY. It cannot say a room was
+   * back in inventory for six days in August, which is what the real
+   * export shows and what the tape chart has to draw — and which the
+   * frontend answered from a hardcoded list of six dates until
+   * migration 022 modelled room_blocks.
+   */
+  blocks: RoomBlock[];
 }
 
 export interface Property {

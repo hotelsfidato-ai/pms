@@ -132,9 +132,25 @@ property.get("/:code/rooms", async (c) => {
       floor: number | null;
       housekeeping_status: string;
       max_occupancy: number;
+      blocks: string | null;
     }>(
+      /* The DATES a room is out of inventory, alongside its current
+         housekeeping status.
+
+         `housekeeping_status = 'out_of_service'` says a room is out
+         TODAY. It cannot say a room was back in inventory for six days
+         in August, which is what the real export shows and what the
+         tape chart has to draw. Until 022 modelled room_blocks the
+         frontend answered that from a hardcoded list of six dates in a
+         fixture file. */
       `select r.number, rt.name as type, r.floor,
-              r.housekeeping_status, rt.max_occupancy
+              r.housekeeping_status, rt.max_occupancy,
+              (select json_agg(json_build_object(
+                        'from', to_char(b.from_date,'YYYY-MM-DD'),
+                        'to',   to_char(b.to_date,'YYYY-MM-DD'),
+                        'reason', b.reason))
+                 from room_blocks b
+                where b.room_id = r.id)::text as blocks
          from rooms r
          join room_types rt on rt.id = r.room_type_id
         where r.hotel_id = $1 and r.is_active
@@ -148,6 +164,14 @@ property.get("/:code/rooms", async (c) => {
       floor: r.floor ?? 0,
       status: HOUSEKEEPING_OUT[r.housekeeping_status] ?? r.housekeeping_status,
       maxOccupancy: r.max_occupancy,
+      /* Half-open, as the schema stores them: a block from the 8th to
+         the 14th covers the 8th through the 13th. The tape chart draws
+         a room as sellable on a date when NO block covers it. */
+      blocks: r.blocks
+        ? (JSON.parse(r.blocks) as Array<{
+            from: string; to: string; reason: string | null;
+          }>)
+        : [],
     }));
   });
 

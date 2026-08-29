@@ -1,7 +1,7 @@
 import { api, ApiError } from "@/lib/api";
-import { ROLES, ROLE_LABELS, ROLE_DESCRIPTIONS, type Role } from "@/lib/permissions";
-import { property } from "../fixtures/property";
+import { ROLE_LABELS, ROLE_DESCRIPTIONS, type Role } from "@/lib/permissions";
 import { BUSINESS_DATE } from "./businessDate";
+import { ROLE_FROM_DB } from "@/lib/session";
 
 /* ══════════════════════════════════════════════════════════════════
    DIRECTORY — over HTTP, as of CP9e
@@ -106,18 +106,51 @@ export interface StaffRecord {
  * `staff_hotels` IS readable to a group admin now (migration 020), so
  * this becomes a real list the moment there are real accounts.
  */
+/** What the API returns: database vocabulary, untranslated. */
+interface ApiStaff {
+  id: string;
+  name: string;
+  email: string;
+  role: string | null;
+  roles: string[];
+  isGroupAdmin: boolean;
+  properties: string | null;
+  status: "active" | "inactive";
+}
+
 export async function listStaff(hotelId: string): Promise<StaffRecord[]> {
   if (!hotelId) return [];
-  return ROLES.filter((r) => r !== "automation").map((role) => ({
-    id: `role-${role}`,
-    name: ROLE_LABELS[role],
-    email: `${role.replace("_", ".")}@fidatohotels.com`,
-    role,
-    roleLabel: ROLE_LABELS[role],
-    properties: [property.name],
-    status: "active" as const,
-    lastSeen: null,
-  }));
+  /* This generated one fake person per role from the permission
+     matrix, all at a property named from a fixture. Its own comment
+     carried the removal condition — "staff_hotels IS readable to a
+     group admin now, so this becomes a real list the moment there are
+     real accounts" — and there are. Password sign-in is still
+     stubbed; the staff rows and their grants are not.
+
+     RLS filters it, so a clerk sees themselves and a group admin sees
+     everybody, from the same request.
+
+     The db role is translated HERE rather than in the API: the API
+     speaks the schema's vocabulary (`gm`, `read_only`) and the
+     permission matrix speaks its own (`manager`, `viewer`). One map,
+     already written, in src/lib/session.ts. */
+  const rows = await fetchOr<ApiStaff[]>(
+    `/api/hotels/${hotelId}/staff`, []);
+
+  return rows.map((r) => {
+    const role: Role = ROLE_FROM_DB[r.role ?? ""] ?? "viewer";
+    return {
+      id: r.id,
+      name: r.name,
+      email: r.email,
+      role,
+      roleLabel: ROLE_LABELS[role],
+      properties: r.properties ? [r.properties] : [],
+      status: r.status,
+      /* Nothing records a last sign-in yet. A dash, not a guess. */
+      lastSeen: null,
+    };
+  });
 }
 
 export function roleDescription(role: Role) {
@@ -201,33 +234,47 @@ export async function getSettings(hotelId: string): Promise<SettingGroup[]> {
   );
   if (groups.length === 0) return [];
 
-  /* Two groups the database has no home for, appended rather than
-     invented into it.
+  /* Both of these used to be appended from the fixture, with a note
+     explaining why the database had no home for them:
 
-     The invoice SERIES is real — 5EFH154 is the next number this hotel
-     will print — but nothing issues one yet, so it stays in the fixture
-     beside the note explaining why. The POS outlet is a migration off
-     eZee, not a configured thing. Both carry the stage that makes them
-     real. */
+       "The invoice SERIES is real — 5EFH154 is the next number this
+        hotel will print — but nothing issues one yet."
+       "The POS outlet is a migration off eZee, not a configured thing."
+
+     Both stopped being true. Stage 8 issues invoices from
+     `invoice_series`, and the POS bridge configures real outlets in
+     `pos_outlets`. A settings screen showing 5EFH154 beside a real
+     series that says 5EL/2026-27/00002 is worse than one showing
+     nothing: a placeholder next to nothing reads as a placeholder,
+     and next to real data it reads as data. */
+  const [series, outlets] = await Promise.all([
+    fetchOr<Array<{ finYear: string; next: string; note: string }>>(
+      `/api/hotels/${hotelId}/invoice-series`, []),
+    fetchOr<Array<{ code: string; name: string; category: string;
+                    hasKey: boolean; isActive: boolean }>>(
+      `/api/hotels/${hotelId}/pos/outlets`, []),
+  ]);
+
   return [
     ...groups,
     {
       title: "Invoice series",
-      note: "Not issued by this system yet — see the Invoices screen for why.",
-      rows: property.invoiceSeries.map((s) => ({
-        label: s.prefix || "Numeric",
-        value: s.prefix
-          ? `${s.prefix}${s.next}`
-          : String(s.next).padStart(s.pad ?? 6, "0"),
-        editableAt: "Stage 8",
+      rows: series.map((s) => ({
+        label: s.finYear,
+        value: s.next,
+        note: s.note,
       })),
     },
     {
       title: "Point of sale",
-      rows: property.posOutlets.map((o) => ({
+      /* An outlet with no key cannot post. Said plainly, because a
+         restaurant that thinks it is connected and is not will find
+         out at the end of a shift. */
+      rows: outlets.map((o) => ({
         label: o.name,
-        value: o.categories.join(" · "),
-        editableAt: "Stage 7",
+        value: o.isActive
+          ? (o.hasKey ? o.category : `${o.category} · no key issued`)
+          : `${o.category} · inactive`,
       })),
     },
   ];

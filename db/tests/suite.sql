@@ -391,6 +391,21 @@ end $$;
 
 
 -- =============================================================================
+-- STAFF VISIBILITY (027) is asserted in db/tests/rls.sql, not here.
+--
+-- This suite runs as the SUPERUSER, which bypasses Row Level Security
+-- completely. Assertions about who can see whom pass or fail for reasons
+-- that have nothing to do with the policies — the first version of them
+-- reported "a clerk cannot see another property's staff: 1 leaked" against
+-- policies that were correct, because the superuser sees everything.
+--
+-- rls.sql exists for exactly this and connects as pms_app. Its own header
+-- says so: "a superuser bypasses RLS and would report success on a
+-- completely open database."
+-- =============================================================================
+
+
+-- =============================================================================
 -- IDENTITY CAPTURE (026) — a document that can actually be recorded
 --
 -- guest_documents existed from 013 with a SELECT and an INSERT policy and

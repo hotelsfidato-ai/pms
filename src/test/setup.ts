@@ -94,6 +94,20 @@ vi.mock("@/lib/api", () => ({
         floor: r.floor,
         status: r.status,
         maxOccupancy: r.maxOccupancy,
+          /* The block ranges the real endpoint returns, derived here
+             from the same six dates the tape chart used to read out of
+             a fixture. 308 is out of service except 8-13 August, which
+             is what the real Monthly Statistics export shows.
+
+             INCLUSIVE on both ends, matching app.sellable_rooms: the
+             room is out THROUGH 7 August and again from the 14th. */
+          blocks:
+            r.status === "out-of-service"
+              ? [
+                  { from: "2026-01-01", to: "2026-08-07", reason: "out_of_service" },
+                  { from: "2026-08-14", to: null, reason: "out_of_service" },
+                ]
+              : [],
       }));
     }
 

@@ -1,5 +1,4 @@
 import { api, ApiError } from "@/lib/api";
-import { property } from "../fixtures/property";
 import { BUSINESS_DATE } from "./businessDate";
 
 /* ══════════════════════════════════════════════════════════════════
@@ -164,7 +163,8 @@ export async function getLodgingTax(
 }
 
 /** The name printed at the head of every report. */
-export const REPORT_PROPERTY = property.name;
+/* `REPORT_PROPERTY = property.name` lived here and had no callers.
+   Every report reads the property from the API it already calls. */
 
 /* ══════════════════════════════════════════════════════════════════
    THE FOUR REPORTS THAT WERE LISTED AND NEVER BUILT

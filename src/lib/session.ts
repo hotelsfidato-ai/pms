@@ -41,7 +41,7 @@ import { registerBusinessDates, selectProperty }
  * The mapping is explicit and total, so a new database role is a
  * compile error here rather than a silent fall-through to `viewer`.
  */
-const ROLE_FROM_DB: Record<string, Role> = {
+export const ROLE_FROM_DB: Record<string, Role> = {
   owner: "owner",
   gm: "manager",
   front_desk: "front_desk",

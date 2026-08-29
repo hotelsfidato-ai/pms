@@ -1,5 +1,4 @@
 import { api, ApiError } from "@/lib/api";
-import { EXTRA_ROOM_DATES, BASE_ROOM_COUNT, PHYSICAL_ROOM_COUNT } from "../fixtures/property";
 import type { Room, Permitted } from "./types";
 
 /* ══════════════════════════════════════════════════════════════════
@@ -41,18 +40,12 @@ export async function getRoom(hotelId: string, number: string): Promise<Room | n
   return (await listAllRooms(hotelId)).find((r) => r.number === number) ?? null;
 }
 
-/**
- * How many rooms could be sold on a given date. 308 returns for six days.
- *
- * Still calibration metadata rather than data: the six dates come from
- * the real Monthly Statistics export, which shows Available Rooms of 18
- * on 8–13 August. Nothing in the schema records why a room came back
- * into inventory for a week, so nothing in the database can answer
- * this yet. It moves when room blocks are modelled.
- */
-export function roomCountForDate(date: string): number {
-  return EXTRA_ROOM_DATES.includes(date) ? PHYSICAL_ROOM_COUNT : BASE_ROOM_COUNT;
-}
+/* `roomCountForDate` lived here and had NO callers.
+   Its own comment carried the removal condition — "it moves when room
+   blocks are modelled" — and migration 022 modelled them. What the
+   tape chart actually needed was per-room block ranges, which now
+   arrive on every room. A dead function that names a real figure is
+   worse than none: the next reader trusts it. */
 
 export async function setHousekeeping(
   hotelId: string,
@@ -82,7 +75,6 @@ export const roomsRepo = {
   listAll: listAllRooms,
   listSellable: listSellableRooms,
   get: getRoom,
-  countForDate: roomCountForDate,
   setHousekeeping,
   updateRoomStatus: setHousekeeping,
 };

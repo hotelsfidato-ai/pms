@@ -267,27 +267,60 @@ directory.get("/rate-plans", async (c) => {
 
 /* ── Staff and access ────────────────────────────────────────────── */
 
+
+/**
+ * The real staff list.
+ *
+ * The frontend generated this from the permission matrix — one fake
+ * person per role, all at one property named from a fixture — with a
+ * comment carrying its own removal condition: "`staff_hotels` IS
+ * readable to a group admin now, so this becomes a real list the moment
+ * there are real accounts."
+ *
+ * There are. Password sign-in is still stubbed; the staff rows and
+ * their property grants are not.
+ *
+ * RLS does the filtering. `staff_self` and the `staff_hotels` policies
+ * decide what a caller may see, so a front-desk clerk running this gets
+ * themselves and a group admin gets everybody — from the same SQL.
+ */
 directory.get("/:code/staff", async (c) => {
   const body = await withSession(c.get("subject"), async (client) => {
     const hotelId = await hotelIdFor(client, c.req.param("code"));
     if (!hotelId) return null;
 
-    /* Readable only by a group admin — `staff_hotels_admin`, migration
-       020. A clerk sees their own row and nothing else, which is why
-       this list is short or empty for them rather than an error. */
     const { rows } = await client.query<{
-      staff_id: string; role: string; hotel_name: string;
+      id: string; full_name: string; email: string;
+      is_group_admin: boolean; is_active: boolean;
+      roles: string | null; properties: string | null;
     }>(
-      `select sh.staff_id, sh.role, h.name as hotel_name
-         from staff_hotels sh
-         join hotels h on h.id = sh.hotel_id
-        order by h.name, sh.role`,
+      `select s.id::text, s.full_name, s.email::text,
+              s.is_group_admin, s.is_active,
+              (select string_agg(distinct sh.role, ',' order by sh.role)
+                 from staff_hotels sh where sh.staff_id = s.id) as roles,
+              (select string_agg(distinct h.name, ', ' order by h.name)
+                 from staff_hotels sh
+                 join hotels h on h.id = sh.hotel_id
+                where sh.staff_id = s.id) as properties
+         from staff s
+        order by s.is_group_admin desc, s.full_name`,
     );
 
     return rows.map((r) => ({
-      staffId: r.staff_id,
-      role: r.role,
-      property: r.hotel_name,
+      id: r.id,
+      name: r.full_name,
+      email: r.email,
+      /* A group admin holds NO staff_hotels rows and reaches everything
+         — app.auth_hotel_ids() accounts for that. Reporting an empty
+         role list beside the flag would read as "no access" when the
+         truth is the opposite. */
+      role: r.is_group_admin ? "owner" : (r.roles?.split(",")[0] ?? null),
+      roles: r.roles ? r.roles.split(",") : [],
+      isGroupAdmin: r.is_group_admin,
+      properties: r.is_group_admin
+        ? "every property"
+        : (r.properties ?? null),
+      status: r.is_active ? "active" : "inactive",
     }));
   });
 
@@ -415,3 +448,4 @@ directory.get("/:code/settings", async (c) => {
 
   return body ? c.json(body) : c.json({ error: "No such property." }, 404);
 });
+
