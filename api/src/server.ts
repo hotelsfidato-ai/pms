@@ -16,6 +16,7 @@ import { directory } from "./routes/directory.ts";
 import { billing } from "./routes/billing.ts";
 import { pos, outletFor, type Outlet } from "./routes/pos.ts";
 import { nightAudit } from "./routes/nightAudit.ts";
+import { invoices } from "./routes/invoices.ts";
 
 /* ══════════════════════════════════════════════════════════════════
    THE APP API — MASTER.md §5
@@ -147,6 +148,7 @@ app.route("/api/hotels", manager);
 app.route("/api/hotels", directory);
 app.route("/api/hotels", billing);
 app.route("/api/hotels", nightAudit);
+app.route("/api/hotels", invoices);
 
 /* A POS mounts at its OWN prefix, not under /api/hotels. It does not
    know a hotel code and must not need one: its key resolves to exactly

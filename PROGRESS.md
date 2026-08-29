@@ -3,7 +3,7 @@
 Updated after every finished section. **Nothing here is a claim until the gates
 below are green and the screen has been opened.**
 
-Last updated: **29 August 2026** · after **backup, restore and the concurrency races**
+Last updated: **29 August 2026** · after **tax invoices and the Form C register**
 
 ---
 
@@ -15,10 +15,10 @@ FRONTEND   tsc -b            0 errors
            build             clean
 
 API        tsc --noEmit      0 errors
-           npm test          40 passed   (live Postgres, as pms_app)
+           npm test          52 passed   (live Postgres, as pms_app)
                              loads the demo fixture first — see below
 
-DATABASE   db/tests/run.sh   24 migrations · 62 assertions
+DATABASE   db/tests/run.sh   25 migrations · 62 assertions
                              7 isolation checks · exit 0
 BACKUP     verify-backup.sh  dumped, RESTORED, 13 checks · exit 0
            load-demo         431 available · 132 sold · 30.63% ✓
@@ -93,6 +93,56 @@ dated postings from the server's wall clock:
 All four now resolve the date from the database inside the same transaction as
 the write. Proved by restoring the wall clock in one line and watching the test
 fail.
+
+---
+
+## Tax invoices and Form C — Stage 8 ✅
+
+`invoice_series` and `app.next_invoice_number()` had existed since migration
+011 and **nothing had ever called them**. The schema was right and unused,
+which looks finished.
+
+```
+POST /api/hotels/:code/stays/:id/invoice            issue
+GET  /api/hotels/:code/invoices                     list
+GET  /api/hotels/:code/invoices/:number             one, with its lines
+POST /api/hotels/:code/invoices/:number/credit-note correct it
+GET  /api/hotels/:code/form-c                       who owes a filing
+POST /api/hotels/:code/form-c/:reservationId        record that one happened
+```
+
+A real invoice, driven end to end:
+
+```
+5EL/2026-27/00001   ·  29 Aug 2026
+supplier    5 Elements Akkalkot, MH   GSTIN 27AAAAA0000A1Z5
+recipient   go-MMT
+place of supply  MH        SAC 996311
+
+  Room 204 · 2 nights        4,762.00   @5.0%   tax 238.10
+  Extras                        681.00   @0.0%   tax   0.00
+
+  taxable value              5,443.00
+  CGST @ 2.5%                  136.08
+  SGST @ 2.5%                  136.07
+  TOTAL                      5,715.15
+```
+
+**Place of supply is the PROPERTY's state, always** — IGST Act s.12(3)(b).
+Accommodation is supplied where the hotel is, so a hotel invoice is intra-state
+(CGST+SGST), never IGST, even for a guest who flew in from Delhi. Charging IGST
+to out-of-state guests is the commonest GST error in Indian hospitality.
+
+**An issued invoice cannot be changed by anyone**, superuser included — a
+trigger, not a grant. A wrong one is corrected by a CREDIT NOTE carrying its
+own number, with every figure negated so the two sum to nothing.
+
+**Form C is a REGISTER, not a filing.** This system cannot file with the FRRO;
+that happens on the government portal. It names every foreign national who owes
+a filing, shows the 24-hour deadline, marks the overdue ones, and records the
+acknowledgement reference — and refuses to record a filing without one,
+because a register with no evidence reads as compliance and is not. The
+response says so in its own body, not only in a comment.
 
 ---
 
@@ -243,7 +293,7 @@ retried. Ledger nets to zero, room revenue still ₹4,19,578.76.
 12 Hardening and go-live             ████░░░░░░░░  backup proven, races proven
 ```
 
-**About 74%.**
+**About 79%.**
 
 ---
 
@@ -275,10 +325,9 @@ business date         5EL 2026-08-25 · AGR 2027-04-02 · PUN 2026-08-28
 ## What is left in this stage
 
 ```
-1 · invoices         app.next_invoice_number() has existed since 011 and
-                     has never been called. No GST invoice is issued, and
-                     Form C is unbuilt. This is Stage 8, and it is the
-                     largest remaining gap that does not need you.
+1 · SCREENS          invoices and Form C have no interface. Both work
+                     over HTTP and neither has a page, so issuing a bill
+                     currently means curl. This is the honest gap.
 2 · offline          Stage 6 asked for it. Zero service-worker files.
 3 · retire src/data/store.ts and the in-memory fixtures it seeds.
 ```

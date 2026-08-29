@@ -116,6 +116,15 @@ async function main() {
       await client.query(
         "alter table folio_postings disable trigger folio_postings_append_only",
       );
+      /* And invoices, for the same reason and with the same caveat.
+         Dropping the property cascades to its folios and therefore to
+         any tax invoice issued against them, and `invoices_immutable`
+         refuses that — correctly, for every invoice that was ever
+         handed to a guest. Reloading a demo property is an
+         administrative act; nothing in `api/src` may do this. */
+      await client.query(
+        "alter table invoices disable trigger invoices_immutable",
+      );
       /* Order matters, and the constraints spell it out.
 
          `reservation_groups.lead_hotel_id` has no ON DELETE CASCADE —
@@ -138,6 +147,9 @@ async function main() {
       await client.query("delete from hotels where code = $1", [HOTEL_CODE]);
       await client.query(
         "alter table folio_postings enable trigger folio_postings_append_only",
+      );
+      await client.query(
+        "alter table invoices enable trigger invoices_immutable",
       );
       await client.query("alter table hotels enable trigger hotels_no_delete");
       await client.query("commit");

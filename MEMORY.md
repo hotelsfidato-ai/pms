@@ -555,6 +555,77 @@ hotel actually has", and all three wrote it out longhand.
 
 ---
 
+### 31 · An invoice that taxed the tax
+
+The demo's real eZee export records tax on extras as its own posting: category
+`'tax'`, the money in `amount`, nothing in `tax_amount`. The first invoice
+summed every non-payment row into the taxable value, which put **₹925 of tax
+into the taxable base** and then charged CGST and SGST on it.
+
+Tax on tax, on a document a guest hands to their accountant.
+
+**A posting's CATEGORY says what it is; the populated field does not.** The
+split is now by category — supplies (with `discount` reducing them) into
+taxable value, `tax` postings into tax — and the printed lines exclude tax
+rows so the page cannot disagree with its own footer.
+
+---
+
+### 32 · Reading a migration instead of the database, twice more
+
+Writing Stage 8 I read `004_guests.sql` and used `guests.id_number`. That
+column moved to `guest_documents` in 013, because a group-level read let a
+clerk at any property see the passport of a guest who had only stayed
+elsewhere.
+
+That is the same mistake as defect 28 — trusting the file that CREATED a thing
+over the database that now holds it. Twice in two checkpoints.
+
+**Before writing SQL against a table, ask the database what its columns are.**
+`information_schema.columns` takes five seconds; the migration that created the
+table may be nine files out of date.
+
+---
+
+### 33 · A partial index cannot see other rows
+
+`unique (folio_id) where credits_id is null` looked like "one invoice per
+folio". It is stricter than that: once an invoice is credited, GST requires a
+CORRECTED invoice, and the index still counts the credited one. A predicate
+cannot ask whether some other row points at this one.
+
+The harm being prevented was a double-click producing two numbers for one
+stay — a **race, not a rule**. Held now with `pg_advisory_xact_lock` on the
+folio for the length of the issuing transaction: the second click waits, finds
+the first invoice, and is answered with it.
+
+**Ask whether the thing being prevented is a rule or a race.** Rules go in
+constraints. Races go in locks. A constraint used for a race is usually too
+strict in a way nobody notices until the exception case arrives.
+
+---
+
+### 34 · A verifier that fails on sound backups
+
+`db/verify-backup.sh` asserted `count(*) = 25` tables with RLS and `= 37`
+policies. Migration 025 added one of each, and a completely sound backup
+reported **two failures**. It also asserted the demo property's figures against
+a dump taken after `db/tests/run.sh`, which rebuilds with test fixtures only —
+**eight failures, nothing wrong**.
+
+A verifier that cries wolf is worse than none: people learn to disregard it,
+and it is the one thing they must not disregard.
+
+Both fixed by asking better questions. The structural check is now the
+INVARIANT — *no table carrying `hotel_id` lacks RLS or a policy* — which stays
+true when a table is added. The data checks run only when the demo is in the
+dump, and say so when it is not.
+
+**A check that must be edited on every migration will eventually be edited
+wrongly, or ignored.**
+
+---
+
 ## Verification traps
 
 ### Never test a Tailwind utility by injecting the class at runtime

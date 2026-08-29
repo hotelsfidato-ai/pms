@@ -116,16 +116,47 @@ check() {                       # check <label> <sql> <expected>
 
 H="(select id from hotels where code='5EL')"
 
-check "properties" \
+# ── Is the calibrated demo in this dump? ─────────────────────────────────────
+#
+# The data checks below name figures from the demo property, which reconciles
+# to a real eZee export. A production backup has no demo in it, and neither
+# does one taken straight after db/tests/run.sh — which rebuilds with the test
+# fixtures only.
+#
+# The first version asserted them unconditionally and reported EIGHT failures
+# against a backup that was completely sound, which is the worst thing a
+# verifier can do: it teaches people to disregard it.
+#
+# So the STRUCTURAL checks always run — they are what a restore has to give
+# back anywhere — and the data checks run only when there is data to check.
+DEMO=$(PGPASSWORD=$SUPERPASS "$PSQL" $S -d "$SCRATCH" -tAc   "select count(*) from hotels where code='5EL'" 2>/dev/null | tr -d ' ')
+
+if [ "$DEMO" = "1" ]; then
+  echo "  (the calibrated demo property is present — checking its figures too)"
+else
+  echo "  (no demo property in this dump — checking structure only)"
+fi
+echo
+
+data_check() {                  # skipped when the demo is absent
+  if [ "$DEMO" = "1" ]; then
+    check "$1" "$2" "$3"
+  else
+    printf "  [2m-[0m %-34s %s
+" "$1" "not in this dump"
+  fi
+}
+
+data_check "properties" \
   "select count(*) from hotels" "3"
 
-check "rooms at 5EL" \
+data_check "rooms at 5EL" \
   "select count(*) from rooms where hotel_id=$H" "18"
 
-check "reservations at 5EL" \
+data_check "reservations at 5EL" \
   "select count(*) from reservations where hotel_id=$H" "83"
 
-check "room revenue 1-25 Aug" \
+data_check "room revenue 1-25 Aug" \
   "select to_char(sum(amount),'FM9999999.99') from folio_postings
     where category='room' and hotel_id=$H
       and business_date between '2026-08-01' and '2026-08-25'" \
@@ -137,7 +168,7 @@ check "room revenue 1-25 Aug" \
 # suite posts a payment and then reverses it - the ledger entry cancels and
 # the receipt row stays. Correct behaviour; wrong question. Same mistake as
 # MEMORY.md defect 25, in a second place.
-check "receipts" \
+data_check "receipts" \
   "select to_char(sum(p.amount),'FM9999999.99')
      from payments p
      join folio_postings fp on fp.id = p.posting_id
@@ -146,18 +177,34 @@ check "receipts" \
                        where rev.reverses_id = fp.id)" \
   "397041.93"
 
-check "ledger rows" \
+data_check "ledger rows" \
   "select case when count(*) > 100 then 'many' else 'suspiciously few' end
      from folio_postings where hotel_id=$H" "many"
 
 # Structure, not just data. A dump can carry every row and lose the thing that
 # keeps them correct — and RLS is the whole tenancy model here.
-check "tables with RLS" \
-  "select count(*) from pg_tables t join pg_class c on c.relname=t.tablename
-    where t.schemaname='public' and c.relrowsecurity" "25"
+# RLS, as an INVARIANT rather than a count.
+#
+# These were `count(*) = 25` and `= 37`. Migration 025 added one table and
+# one policy, and a sound backup reported two failures - a check that must
+# be edited on every migration is a check that will eventually be edited
+# wrongly, or ignored.
+#
+# What actually matters is that NOTHING carrying a hotel_id is readable
+# across properties. That claim does not change when a table is added.
+check "hotel-scoped tables without RLS" \
+  "select count(*) from information_schema.columns c
+     join pg_class pc on pc.relname = c.table_name
+     join pg_namespace n on n.oid = pc.relnamespace and n.nspname = 'public'
+    where c.table_schema = 'public' and c.column_name = 'hotel_id'
+      and not pc.relrowsecurity" "0"
 
-check "policies" \
-  "select count(*) from pg_policies where schemaname='public'" "37"
+check "hotel-scoped tables without a policy" \
+  "select count(*) from information_schema.columns c
+    where c.table_schema = 'public' and c.column_name = 'hotel_id'
+      and not exists (select 1 from pg_policies p
+                       where p.schemaname = 'public'
+                         and p.tablename = c.table_name)" "0"
 
 # The append-only rule is a TRIGGER, not a constraint. A dump that lost it
 # would restore every row and quietly permit a clerk to delete a posting.
