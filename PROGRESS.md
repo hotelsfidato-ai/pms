@@ -3,7 +3,7 @@
 Updated after every finished section. **Nothing here is a claim until the gates
 below are green and the screen has been opened.**
 
-Last updated: **28 August 2026** · after **CP11 — the business date comes from the database**
+Last updated: **29 August 2026** · after **the POS bridge — Stage 7 opens**
 
 ---
 
@@ -15,9 +15,9 @@ FRONTEND   tsc -b            0 errors
            build             clean
 
 API        tsc --noEmit      0 errors
-           vitest run        17 passed   (live Postgres, as pms_app)
+           vitest run        31 passed   (live Postgres, as pms_app)
 
-DATABASE   db/tests/run.sh   23 migrations · 55 assertions
+DATABASE   db/tests/run.sh   24 migrations · 62 assertions
                              7 isolation checks · exit 0
            load-demo         431 available · 132 sold · 30.63% ✓
 ```
@@ -94,6 +94,47 @@ fail.
 
 ---
 
+## The POS bridge — Stage 7 opens ✅
+
+**The POS is not built here and will not be** — you are building it. What is
+built is the boundary it posts across, so it can be written against a contract
+instead of a guess. Full spec: `docs/POS-INTEGRATION.md`.
+
+```
+GET  /api/pos/rooms              which rooms can I charge?
+POST /api/pos/tickets            charge this bill to that room
+GET  /api/pos/tickets/:ref       did my last request land?
+POST /api/pos/tickets/:ref/void  that bill was voided
+```
+
+Four guarantees, each asserted rather than asserted-to:
+
+```
+a retry after a timeout returns the SAME posting, never a second charge
+a bill takes the HOTEL's operating day, not the POS's clock
+a void REVERSES — two rows, net zero; nothing is ever deleted
+a room with two open folios is REFUSED, not guessed at
+```
+
+**Authentication is a machine key**, sha256-hashed, resolving to a service
+account with the `pos` role at exactly one property — so RLS scopes a POS the
+way it scopes a clerk, and no endpoint takes a hotel code. A terminal in
+Akkalkot cannot address a folio in Agra.
+
+```bash
+npm run pos:outlet -- --hotel 5EL --code SATTVA --name "Sattva Restaurant"
+```
+
+Prints the key once. It is never stored, only its digest — a database dump is
+not the ability to charge guests.
+
+**Driven end to end against the live database**, not just unit-tested: an
+outlet provisioned, 8 chargeable rooms listed, a bill charged, retried
+(same posting id), recovered after a simulated timeout, voided, and the void
+retried. Ledger nets to zero, room revenue still ₹4,19,578.76.
+
+---
+
 ## The stages
 
 ```
@@ -103,7 +144,7 @@ fail.
 4  Front desk + folio, end to end    ████████████  flows, reports, dating
 5  Night audit                       ██░░░░░░░░░░  the date it sets is live
 6  Housekeeping, mobile, offline     ███████░░░░░  board writes to Postgres
-7  POS bridge (a MIGRATION)          ░░░░░░░░░░░░
+7  POS bridge (a MIGRATION)          ██████░░░░░░  the seam is built and tested
 8  Billing, GST, Form C              ██░░░░░░░░░░  lodging tax derives
 9  Rates, availability, STAAH        ██░░░░░░░░░░  room_blocks landed
 10 Group dashboard and reports       ████████░░░░  7 of 11 reports, all SQL
@@ -111,7 +152,7 @@ fail.
 12 Hardening and go-live             ░░░░░░░░░░░░
 ```
 
-**About 63%.**
+**About 66%.**
 
 ---
 
@@ -143,12 +184,20 @@ business date         5EL 2026-08-25 · AGR 2027-04-02 · PUN 2026-08-28
 ## What is left in this stage
 
 ```
-1 · CP12             concurrency — the two EXCLUDE constraints have never
+1 · Stage 5          the night audit RUN. Nothing can close a date yet —
+                     the checklist reads, the date model waits for it.
+                     This is the largest remaining gap.
+2 · CP12             concurrency — the two EXCLUDE constraints have never
                      been raced — and a proven restore. A backup that has
                      never been restored is not a backup.
-2 · retire src/data/store.ts and the in-memory fixtures it seeds, once
+3 · retire src/data/store.ts and the in-memory fixtures it seeds, once
     the demo loader is the only thing that reads them.
 ```
+
+**A POS screen in the PMS** is not built: no page lists outlets, their bills,
+or their refusals. The bridge works without one — a POS posts, the charges
+appear on the folio like any other — but somebody settling a dispute currently
+needs SQL. Worth a screen once the POS exists to argue with.
 
 Then Stage 4 closes and Stage 5 begins: the night audit *run*.
 

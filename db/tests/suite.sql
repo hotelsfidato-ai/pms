@@ -388,3 +388,82 @@ begin
   perform test.ok('timezone','financial year resolves per property',
     app.current_fin_year(a) ~ '^\d{4}-\d{2}$', app.current_fin_year(a));
 end $$;
+
+
+-- =============================================================================
+-- POS BRIDGE (024) — the boundary a point of sale posts across
+--
+-- The POS is built elsewhere. What is asserted here is what the PMS promises
+-- it: that a retry cannot double charge, that a bill must reach the ledger or
+-- say why it did not, and that a void reverses rather than deletes.
+-- =============================================================================
+do $$
+declare
+  a uuid; v_staff uuid; v_outlet uuid; v_folio uuid; n int;
+begin
+  select id into a from hotels where code='AGR';
+  select id into v_staff from staff where email='agra@fidato.in';
+
+  insert into pos_outlets (hotel_id, code, name, category, staff_id)
+  values (a, 'SATTVA', 'Sattva Restaurant', 'food', v_staff)
+  returning id into v_outlet;
+
+  select f.id into v_folio from folios f where f.hotel_id = a limit 1;
+
+  -- ---------- idempotency: the guarantee the whole bridge rests on ----------
+  insert into pos_tickets (hotel_id, outlet_id, ticket_ref, folio_id,
+                           business_date, amount, status, posting_id)
+  select a, v_outlet, 'BILL-001', v_folio, app.business_date(a), 450,
+         'posted', fp.id
+    from folio_postings fp where fp.folio_id = v_folio limit 1;
+
+  perform test.raises('pos','the same bill number twice is refused',
+    format($q$insert into pos_tickets (hotel_id, outlet_id, ticket_ref,
+                                       business_date, amount, status,
+                                       reject_reason)
+             values (%L,%L,'BILL-001',current_date,450,'rejected','dup')$q$,
+           a, v_outlet), '23505');
+
+  -- ---------- a bill either lands on the ledger, or says why not ----------
+  perform test.raises('pos','a posted ticket with no posting is refused',
+    format($q$insert into pos_tickets (hotel_id, outlet_id, ticket_ref,
+                                       business_date, amount, status)
+             values (%L,%L,'BILL-002',current_date,100,'posted')$q$,
+           a, v_outlet));
+
+  perform test.raises('pos','a rejection without a reason is refused',
+    format($q$insert into pos_tickets (hotel_id, outlet_id, ticket_ref,
+                                       business_date, amount, status)
+             values (%L,%L,'BILL-003',current_date,100,'rejected')$q$,
+           a, v_outlet));
+
+  perform test.raises('pos','a void with no reversing posting is refused',
+    format($q$insert into pos_tickets (hotel_id, outlet_id, ticket_ref,
+                                       business_date, amount, status,
+                                       posting_id)
+             values (%L,%L,'BILL-004',current_date,100,'voided',
+                     (select id from folio_postings limit 1))$q$,
+           a, v_outlet));
+
+  -- ---------- the outlet's revenue category is constrained ----------
+  perform test.raises('pos','an outlet cannot invent a revenue category',
+    format($q$insert into pos_outlets (hotel_id, code, name, category, staff_id)
+             values (%L,'BAD','x','souvenirs',%L)$q$, a, v_staff), '23514');
+
+  -- ---------- a bill that was sent cannot be erased ----------
+  perform test.ok('pos','pms_app has no DELETE on pos_tickets',
+    not has_table_privilege('pms_app','pos_tickets','delete'));
+
+  -- ---------- chargeable rooms: checked in, folio open ----------
+  select count(*) into n from app.pos_chargeable_rooms(a);
+  perform test.ok('pos','chargeable rooms are all checked in with open folios',
+    n = (select count(*) from reservations r
+           join folios f on f.reservation_id = r.id
+           join room_assignments ra on ra.reservation_id = r.id
+                                   and ra.released_at is null
+          where r.hotel_id = a and r.status='checked_in' and f.status='open'),
+    n || ' rooms');
+
+  delete from pos_tickets where outlet_id = v_outlet;
+  delete from pos_outlets where id = v_outlet;
+end $$;

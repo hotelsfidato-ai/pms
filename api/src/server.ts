@@ -14,6 +14,7 @@ import { reports } from "./routes/reports.ts";
 import { manager } from "./routes/manager.ts";
 import { directory } from "./routes/directory.ts";
 import { billing } from "./routes/billing.ts";
+import { pos, outletFor, type Outlet } from "./routes/pos.ts";
 
 /* ══════════════════════════════════════════════════════════════════
    THE APP API — MASTER.md §5
@@ -24,7 +25,15 @@ import { billing } from "./routes/billing.ts";
    exists to make sure the right person's name is on the transaction.
    ══════════════════════════════════════════════════════════════════ */
 
-type Env = { Variables: { subject: string } };
+type Env = {
+  Variables: {
+    subject: string;
+    /* Set only on /api/pos requests. Optional because a person's
+       request has no outlet, and the type should say so rather than
+       let a handler read one that was never resolved. */
+    outlet?: Outlet;
+  };
+};
 
 const app = new Hono<Env>();
 
@@ -91,6 +100,30 @@ app.get("/health", async (c) => {
    Applied as middleware rather than per route, so a new route is
    authenticated by existing rather than by remembering.           ═══ */
 app.use("/api/*", async (c, next) => {
+  /* Two credential schemes, one gate.
+     A POS is a machine: it presents an outlet key, not a person's
+     bearer token. It would have been easier to narrow the matcher
+     above to /api/hotels/* and let the POS routes authenticate
+     themselves — and that would have quietly removed the property
+     this comment claims, that a NEW route under /api is authenticated
+     by existing rather than by remembering. The next route added
+     under /api would have been open.
+     So the gate learns the second scheme instead. Neither path can be
+     skipped, and both end at a staff id that RLS understands. */
+  if (c.req.path.startsWith("/api/pos")) {
+    const outlet = await outletFor(c.req.header("x-pos-key"));
+    if (!outlet) {
+      return c.json({ ok: false, reason: "Unknown or inactive POS key." }, 401);
+    }
+    c.set("outlet", outlet);
+    /* The outlet's SERVICE ACCOUNT. Everything downstream runs through
+       withUser() as this staff row, so a POS is scoped by exactly the
+       same policies as a clerk. */
+    c.set("subject", outlet.staffId);
+    await next();
+    return;
+  }
+
   try {
     c.set("subject", await subjectFor(c.req.raw.headers));
   } catch (error) {
@@ -112,6 +145,12 @@ app.route("/api/hotels", reports);
 app.route("/api/hotels", manager);
 app.route("/api/hotels", directory);
 app.route("/api/hotels", billing);
+
+/* A POS mounts at its OWN prefix, not under /api/hotels. It does not
+   know a hotel code and must not need one: its key resolves to exactly
+   one outlet at exactly one property, so a misconfigured terminal
+   cannot address a hotel it was never issued for. */
+app.route("/api/pos", pos);
 
 app.onError((error, c) => {
   if (error instanceof Unauthenticated) {

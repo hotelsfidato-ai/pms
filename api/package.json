@@ -10,7 +10,8 @@
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
     "load-demo": "tsx scripts/load-demo.ts",
-    "serve": "node scripts/free-port.mjs && tsx src/server.ts"
+    "serve": "node scripts/free-port.mjs && tsx src/server.ts",
+    "pos:outlet": "tsx scripts/pos-outlet.ts"
   },
   "dependencies": {
     "@hono/node-server": "^1.13.7",

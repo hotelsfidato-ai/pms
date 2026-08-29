@@ -357,6 +357,99 @@ about, showing one property's date on another property's settings screen.
 
 ---
 
+### 21 · A grant list that read as a restriction
+
+```sql
+grant select, insert, update on pos_outlets to pms_app;
+-- No DELETE on either.
+```
+
+The comment was false. `010_roles.sql` sets
+`alter default privileges ... grant select, insert, update, DELETE on tables
+to pms_app`, so **every new table in this schema arrives with DELETE already
+granted**. Naming three privileges adds nothing and withholds nothing — it only
+makes the file look like it restricted something.
+
+**Only `revoke` takes a privilege away.** That is why `014_simulation_fixes.sql`
+revokes on `folio_postings` rather than re-granting.
+
+Caught by an assertion that checked `has_table_privilege` instead of trusting
+the grant statement. **Assert the privilege, never the DDL that was meant to
+set it.**
+
+---
+
+### 22 · A self-test that could not run, in a file lecturing about self-tests
+
+Migration 024 ended with a `do $$` block proving the POS idempotency index
+worked: insert a bill number twice, expect a unique violation. It returned
+early when there was no hotel to test against — and **migration 017 deletes the
+REPLACE placeholder properties**, so at 024's turn there are none. The block
+proved nothing.
+
+Found by deleting `unique (outlet_id, ticket_ref)` and watching all 24
+migrations apply cleanly.
+
+This is defect 10's exact shape, written into a file whose own header lectures
+about defect 10. Two rules came out of it:
+
+- **A self-test that can skip must fail instead.** The skip path now raises.
+- **Assertions belong where the fixtures are** — `suite.sql`, which has real
+  properties and real staff, and whose count run.sh now compares between runs.
+
+---
+
+### 23 · One room, two guests — and code that picked whichever came first
+
+`app.pos_chargeable_rooms` returned room 201 twice: Rekha Gaikwad due out on
+25 August, Tanvi Bhide arrived on 25 August, both `checked_in` with unreleased
+assignments. That is not corrupt data — it is an ordinary **same-day
+changeover**, and on that date the room genuinely has two open folios.
+
+The POS charge path took `rows[0]`. It would have been right most days and
+silently wrong on turnover days, billing a departing guest for the arriving
+guest's dinner.
+
+**The PMS cannot know which guest ate, so it must not guess.** It now refuses,
+names both guests, returns both folio ids, and accepts `folioId` to settle it.
+
+And a distinction that fell out of it: **a refusal that asks a question is not
+recorded; a final refusal is.** Recording the ambiguity as `rejected` would
+have hit the unique index and blocked that bill number forever, when the POS
+is expected to resend it with the same number once a person picks the guest.
+
+---
+
+### 24 · A convenience UPDATE against an append-only ledger
+
+The POS charge wrote the posting, wrote the ticket, then ran
+`update folio_postings set source_id = …` to link them. Postgres refused:
+`permission denied for table folio_postings`. `014_simulation_fixes.sql`
+revokes UPDATE because the ledger is append-only, and **a convenience write is
+still a write**.
+
+Fixed by generating the ticket's uuid in the API before either insert, so one
+pass writes both sides of the link.
+
+---
+
+### 25 · A cleanup that worked and a measurement that did not
+
+The POS tests void everything they post, so the ledger nets to zero. The
+`afterAll` that *checked* this joined `folio_postings` to `pos_tickets` on
+`t.outlet_id = $1` with no correlation between the two — a cross join. Every
+posting was summed once per ticket, and it reported **-367,575 against a ledger
+that was actually balanced**.
+
+A false alarm is not the harmless direction of a broken check. It trains people
+to ignore the check.
+
+**Before believing a number a test reports, ask what it summed.** And note the
+earlier miss: `grep -E "Tests |×"` showed `31 passed` while the FILE had failed
+in its hook. **Read `Test Files`, not only `Tests`.**
+
+---
+
 ## Verification traps
 
 ### Never test a Tailwind utility by injecting the class at runtime
