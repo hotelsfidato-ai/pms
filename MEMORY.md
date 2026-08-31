@@ -1263,6 +1263,61 @@ thing.
 
 ---
 
+### 65 · The invented prices had a second home in the frontend
+
+032 removed the prices the templates shipped. It did not remove `RACK`:
+
+```ts
+// src/data/repositories/stayview.ts
+export const RACK: Record<string, number> = { Superior: 4099, Deluxe: 3699 };
+```
+
+Read in two places, and the second is the one that mattered:
+
+* the tape chart — `RACK[type] ?? 0`, so a property whose types are not
+  called Superior or Deluxe showed **₹0** across the whole chart
+* **WalkInFlow** — `RACK[room.type] ?? 4099`, so a clerk taking a walk-in
+  at such a property saw a tariff of **₹4,099** pre-filled, and the
+  "is this a discount that needs a reason?" check measured against that
+  same invention
+
+I had fixed this one layer down the day before — the API now refuses a
+walk-in with no rate — and the form above it still filled one in.
+
+**The same defect had two homes and fixing the database did not visit the
+second.** Exactly the shape of defect 63, where building the POS menu
+correctly did not prompt me to check room types. Grep for the VALUE, not
+just the mechanism: `4099` would have found this in seconds.
+
+The rate now travels from `room_types.base_rate` through the rooms
+endpoint to both callers, and is null when unset. The chart prints a dash.
+
+---
+
+### 66 · Two controls on the busiest screen that did nothing
+
+The tape chart carried:
+
+```tsx
+<Segmented value="Room type" onChange={() => undefined} ... />
+<Button size="sm">Assign room</Button>
+```
+
+A grouping toggle hardcoded to one value that discarded every change, and
+a button with no handler at all. Both sat in the header of the screen a
+clerk looks at most.
+
+A scan of every `<Button>` and every `on*={() => undefined}` in `src/`
+found exactly these two plus one false positive (a `DialogTrigger asChild`,
+correctly wired). So the class was small — but nobody had ever counted it,
+and the user found them by clicking.
+
+Floor grouping was implementable with no API change: every room already
+carried its floor. **A control that promises a view the data can already
+produce is worse than one that is missing.**
+
+---
+
 ## Verification traps
 
 ### Never test a Tailwind utility by injecting the class at runtime

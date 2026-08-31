@@ -8,7 +8,7 @@ import {
   Button, Field, Input, NativeSelect, StatusPill, toast,
   Dialog, DialogContent,
 } from "@/components/ui";
-import { createWalkIn, listStays, getRoom, RACK } from "@/data/repositories";
+import { createWalkIn, listStays, getRoom } from "@/data/repositories";
 
 /* ══════════════════════════════════════════════════════════════════
    FLOW D — the walk-in at 23:40
@@ -54,12 +54,28 @@ export function WalkInFlow({
     enabled: open && guestName.trim().length >= 2,
   });
 
-  const rack = room.data ? (RACK[room.data.type] ?? 4099) : 4099;
-  const offered = rate === "" ? rack : Number(rate) || 0;
-  const needsReason = rateOverrideNeedsReason(rack, offered);
+  /* THE RATE IS THE HOTEL'S, NOT THIS FILE'S.
+
+     This read `RACK[room.data.type] ?? 4099` — a table of two names
+     held in the frontend, defaulting to 4,099 for anything else. At a
+     property with no "Superior" or "Deluxe" a clerk was shown a
+     pre-filled tariff nobody at Fidato had ever chosen, and the
+     override check below measured "is this a discount?" against that
+     same invention.
+
+     Now it comes from the room's own type. Null when the hotel has not
+     set one — 032 stopped the templates shipping prices — and a null
+     rack means there is nothing to pre-fill and nothing to discount
+     from, so the clerk types the tariff and no reason is demanded. */
+  const rack = room.data?.rackRate ?? null;
+  const typed = rate === "" ? null : Number(rate) || 0;
+  const offered = typed ?? rack ?? 0;
+  const needsReason =
+    rack === null ? false : rateOverrideNeedsReason(rack, offered);
 
   const permitted = canConfirmWalkIn({
-    guestName, nights, offeredTariff: offered, rackTariff: rack, overrideReason,
+    guestName, nights, offeredTariff: offered, rackTariff: rack ?? offered,
+    overrideReason,
   });
 
   /* Distinct guests already known by that name — a walk-in is often a
@@ -151,14 +167,21 @@ export function WalkInFlow({
             )}
           </Field>
 
-          <Field label="Rate per night" hint={`Rack is ${money(rack)}`}>
+          <Field
+            label="Rate per night"
+            hint={
+              rack === null
+                ? "This room type has no rate set, so there is nothing to compare against. Enter what the guest is paying."
+                : `Rack is ${money(rack)}`
+            }
+          >
             {({ id }) => (
               <Input
                 id={id}
                 numeric
                 value={rate}
                 onChange={(e) => setRate(e.target.value)}
-                placeholder={String(rack)}
+                placeholder={rack === null ? "Tariff" : String(rack)}
               />
             )}
           </Field>
@@ -169,7 +192,8 @@ export function WalkInFlow({
               <p className="flex items-start gap-2 text-sm text-[#8a6300]">
                 <AlertTriangle className="size-4 shrink-0 mt-0.5" />
                 <span>
-                  {money(rack - offered)} below rack — {Math.round(((rack - offered) / rack) * 100)}% off.
+                  {money((rack ?? 0) - offered)} below rack —{" "}
+                  {Math.round((((rack ?? 0) - offered) / (rack || 1)) * 100)}% off.
                   The reason is kept on the reservation.
                 </span>
               </p>
@@ -206,7 +230,7 @@ export function WalkInFlow({
             onClick={async () => {
               const res = await createWalkIn(hotelId, {
                 guestName, roomNumber, nights, adults, children, ratePlan,
-                rackTariff: rack, offeredTariff: offered,
+                rackTariff: rack ?? offered, offeredTariff: offered,
                 overrideReason, businessDate: date, user: USER,
               });
               if (res.ok) {

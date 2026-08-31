@@ -57,6 +57,9 @@ const BAR_LABEL: Record<BarTone, string> = {
 const PILLS = ["All", "Vacant", "Occupied", "Arrivals", "Reserved", "Blocked", "Due Out", "Dirty"] as const;
 type Pill = (typeof PILLS)[number];
 
+/** How the chart's rows are grouped. */
+type GroupBy = "type" | "floor";
+
 const SOURCE_ICON: Record<string, typeof Globe> = {
   "Walk-in": User,
   "Fidato Hotels": Building2,
@@ -109,6 +112,7 @@ export default function StayViewPage() {
   /* Open on the business date so the chart shows today first. */
   const [start, setStart] = useState(BUSINESS_DATE);
   const [pill, setPill] = useState<Pill>("All");
+  const [groupBy, setGroupBy] = useState<GroupBy>("type");
   const [collapsed, setCollapsed] = useState<Record<string, boolean>>({});
 
   const { data, isLoading } = useQuery({
@@ -171,6 +175,43 @@ export default function StayViewPage() {
 
   const { dates, roomTypes, footer, counts } = data;
 
+  /* Regroup by floor when asked.
+
+     The per-date availability numbers on a type group are that TYPE's
+     inventory, so they cannot simply be reused under a floor heading —
+     a floor holding four of ten Superiors would otherwise claim the
+     whole type's availability. They are summed from the rooms actually
+     on the floor instead, and the rate is dropped: a floor has no one
+     rate, and printing one type's would be picking a number. */
+  const groups = groupBy === "type"
+    ? roomTypes
+    : [...new Set(roomTypes.flatMap((g) => g.rooms.map((r) => r.floor)))]
+        .sort((a, b) => a - b)
+        .map((floor) => {
+          const rooms = roomTypes
+            .flatMap((g) => g.rooms)
+            .filter((r) => r.floor === floor)
+            .sort((a, b) => a.number.localeCompare(b.number));
+          return {
+            type: floor === 0 ? "Ground floor" : `Floor ${floor}`,
+            rooms,
+            perDate: dates.map((date, i) => ({
+              date,
+              available: rooms.filter(
+                (r) =>
+                  !r.outOfService &&
+                  !r.bars.some(
+                    (b) =>
+                      b.tone !== "void" &&
+                      b.startIndex <= i &&
+                      b.startIndex + b.span - 1 >= i,
+                  ),
+              ).length,
+              rate: null,
+            })),
+          };
+        });
+
   /** Which rooms the active filter pill leaves on screen.
 
       This reads the SAME `room.state` the pill counts are computed
@@ -223,10 +264,17 @@ export default function StayViewPage() {
           </div>
 
           <div className="ml-auto flex items-center gap-2">
-            <Segmented<string>
-              value="Room type"
-              onChange={() => undefined}
-              options={[{ value: "Room type", label: "Room type" }, { value: "Floor", label: "Floor" }]}
+            {/* This was `value="Room type"` with `onChange={() => undefined}`
+                — a toggle offering a view it could not produce. Every room
+                already carries its floor, so grouping by it costs nothing
+                but was never wired. */}
+            <Segmented<GroupBy>
+              value={groupBy}
+              onChange={setGroupBy}
+              options={[
+                { value: "type", label: "Room type" },
+                { value: "floor", label: "Floor" },
+              ]}
             />
             <Button size="sm">
               <Plus className="size-4" />
@@ -305,7 +353,7 @@ export default function StayViewPage() {
           </div>
 
           {/* Room type groups */}
-          {roomTypes.map((group) => {
+          {groups.map((group) => {
             const isCollapsed = collapsed[group.type] ?? false;
             const visibleRooms = group.rooms.filter(roomVisible);
             if (visibleRooms.length === 0) return null;
@@ -354,7 +402,13 @@ export default function StayViewPage() {
                         {cell.available}
                       </div>
                       <div className="text-2xs text-grey-500 tabular">
-                        {(cell.rate / 1000).toFixed(1)}k
+                        {/* A dash when the hotel has not priced this type.
+                            It used to read "0.0k" for every property whose
+                            room types were not called Superior or Deluxe,
+                            which looks like a rate rather than an absence. */}
+                        {cell.rate === null
+                          ? "—"
+                          : `${(cell.rate / 1000).toFixed(1)}k`}
                       </div>
                     </div>
                   ))}

@@ -55,6 +55,12 @@ export interface Room {
   /** Independent of occupancy — a room can be occupied and dirty. */
   status: string;
   maxOccupancy: number;
+  /** The room type's rack rate, as the hotel set it.
+   *
+   *  NULL when nobody has set one — a real state since 032, which
+   *  stopped the templates shipping invented prices. The interface
+   *  shows a dash and asks for a tariff rather than filling one in. */
+  rackRate: number | null;
   /**
    * The date ranges this room is out of inventory.
    *

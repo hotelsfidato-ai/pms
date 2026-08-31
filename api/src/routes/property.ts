@@ -132,6 +132,7 @@ property.get("/:code/rooms", async (c) => {
       floor: number | null;
       housekeeping_status: string;
       max_occupancy: number;
+      base_rate: string | null;
       blocks: string | null;
     }>(
       /* The DATES a room is out of inventory, alongside its current
@@ -143,8 +144,17 @@ property.get("/:code/rooms", async (c) => {
          tape chart has to draw. Until 022 modelled room_blocks the
          frontend answered that from a hardcoded list of six dates in a
          fixture file. */
+      /* rt.base_rate comes back so the interface never has to invent a
+         price. It did: `RACK` in stayview.ts and WalkInFlow.tsx held
+         { Superior: 4099, Deluxe: 3699 } and fell back to 4099 for
+         anything else — so a walk-in at a property those two names do
+         not exist at arrived pre-filled at a figure nobody chose.
+
+         Nullable since 032. A room type with no rate yet is a real
+         state and the interface shows a dash for it. */
       `select r.number, rt.name as type, r.floor,
               r.housekeeping_status, rt.max_occupancy,
+              rt.base_rate::text,
               (select json_agg(json_build_object(
                         'from', to_char(b.from_date,'YYYY-MM-DD'),
                         'to',   to_char(b.to_date,'YYYY-MM-DD'),
@@ -164,6 +174,8 @@ property.get("/:code/rooms", async (c) => {
       floor: r.floor ?? 0,
       status: HOUSEKEEPING_OUT[r.housekeeping_status] ?? r.housekeeping_status,
       maxOccupancy: r.max_occupancy,
+      /* null, not 0. Zero is a claim the room is free. */
+      rackRate: r.base_rate === null ? null : Number(r.base_rate),
       /* Half-open, as the schema stores them: a block from the 8th to
          the 14th covers the 8th through the 13th. The tape chart draws
          a room as sellable on a date when NO block covers it. */

@@ -10,7 +10,15 @@ import type { Stay } from "./types";
    asks for a window and gets back exactly what it draws.
    ══════════════════════════════════════════════════════════════════ */
 
-export const RACK: Record<string, number> = { Superior: 4099, Deluxe: 3699 };
+/* RACK used to live here — { Superior: 4099, Deluxe: 3699 } — and the
+   chart read `RACK[type] ?? 0` for its per-date rate. Two consequences,
+   both wrong: a property whose types are not called Superior or Deluxe
+   showed ₹0 across the whole chart, and any hotel that changed its
+   prices had a frontend constant quietly disagreeing with its own
+   database.
+
+   The rate now comes from the room type, through the rooms endpoint,
+   and is null when the hotel has not set one. */
 
 export type BarTone =
   | "in-house" | "confirmed" | "tentative" | "due-out" | "no-show" | "void";
@@ -49,7 +57,7 @@ export interface ChartRoom {
 export interface ChartRoomType {
   type: string;
   rooms: ChartRoom[];
-  perDate: Array<{ date: string; available: number; rate: number }>;
+  perDate: Array<{ date: string; available: number; rate: number | null }>;
 }
 
 export interface ChartFooter {
@@ -219,6 +227,11 @@ export async function getStayView(
 
   /* Group by room type, in the order the property declares them. */
   const types = [...new Set(allRooms.map((r) => r.type))];
+
+  /* One rate per type, taken from the rooms themselves. Every room of a
+     type carries the same one, so the first is the answer. */
+  const rackFor = (type: string): number | null =>
+    allRooms.find((r) => r.type === type)?.rackRate ?? null;
   const roomTypes: ChartRoomType[] = types.map((type) => {
     const ofType = rooms.filter((r) => r.type === type);
     return {
@@ -234,9 +247,13 @@ export async function getStayView(
         return {
           date,
           available: sellable.length - taken.length,
-          /* Rack rate. A published rate calendar is Stage 9 — inventing
-             one here would be inventing pricing the property has not set. */
-          rate: RACK[type] ?? 0,
+          /* The type's own rack rate, or null. A published rate CALENDAR
+             — different rates on different dates — is still Stage 9;
+             this is the one rate the property has set, repeated across
+             the window, which is the truth until a calendar exists.
+
+             Null and not 0: the chart prints a dash. */
+          rate: rackFor(type),
         };
       }),
     };

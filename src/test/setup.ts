@@ -87,6 +87,9 @@ vi.mock("@/lib/api", () => ({
       };
     }
 
+    /* Calibrated to the demo, matching RACK in load-demo.ts. */
+    const RACK: Record<string, number> = { Superior: 4099, Deluxe: 3699 };
+
     if (path === `/api/hotels/${PROPERTY_CODE}/rooms`) {
       return roomInventory.map((r) => ({
         number: r.number,
@@ -94,6 +97,12 @@ vi.mock("@/lib/api", () => ({
         floor: r.floor,
         status: r.status,
         maxOccupancy: r.maxOccupancy,
+        /* The rack rate the real endpoint now returns from
+           room_types.base_rate. The demo property's calibrated rates,
+           the same ones load-demo.ts sets. Nullable in the schema — a
+           type nobody has priced yet — and the chart prints a dash for
+           that rather than a zero. */
+        rackRate: RACK[r.type] ?? null,
           /* The block ranges the real endpoint returns, derived here
              from the same six dates the tape chart used to read out of
              a fixture. 308 is out of service except 8-13 August, which
