@@ -218,7 +218,18 @@ billing.get("/:code/rates", async (c) => {
            from generate_series($2::date, $2::date + ($3 - 1), interval '1 day') d
        ),
        types as (
-         select id, name, base_rate from room_types
+         /* sort_order is SELECTED here because the query below groups and
+            orders by it. It was not, so every call to this endpoint died
+            on 'column t.sort_order does not exist' -- and the Rates
+            screen showed an empty state that read like "Stage 9 has not
+            landed yet" rather than "this request failed".
+
+            An empty screen and a broken one look identical.
+
+            (No backticks: this comment is inside a template literal, and
+            one would end it. operations.ts already carries the same
+            warning, which I had read.) */
+         select id, name, base_rate, sort_order from room_types
           where hotel_id = $1 and is_active
        )
        select t.name as room_type, t.base_rate, dates.date::text,

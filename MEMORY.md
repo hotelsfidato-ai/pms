@@ -1357,6 +1357,58 @@ build.
 
 ---
 
+### 69 · A screen that looked deliberately empty and was simply broken
+
+`GET /:code/rates` in billing.ts built a CTE:
+
+```sql
+types as (select id, name, base_rate from room_types ...)
+...
+group by t.id, t.name, t.base_rate, t.sort_order
+order by t.sort_order
+```
+
+`sort_order` is not in the CTE. **Every call to that endpoint has always
+returned 500.** The Rates screen therefore showed an empty state — and I
+audited it twice, recording it both times as *"a real screen with an honest
+empty state pointing at Stage 9"*.
+
+It was not honest. It was a failed request wearing the same clothes.
+
+**An empty screen and a broken one are indistinguishable from the outside.**
+The only thing that separates them is checking the response, which an audit
+that walks screens does not do. Two audits called this correct.
+
+---
+
+### 70 · Two different questions arriving at one path
+
+The new rate-management endpoints were written as `/:code/rates` — which
+billing.ts already owned. Hono matches the first mount, so my handler never
+ran and the request fell through to the broken one, whose 500 I then spent a
+round trip attributing to my own query.
+
+They are genuinely different questions: `/rates` is the rate CALENDAR
+(availability and achieved ADR by date), and what a room COSTS is what the
+navigation has always called rate-plans. Moved there.
+
+**Grep the route table before adding a route.** Nothing warns you; the older
+mount just wins, quietly.
+
+---
+
+### 71 · Backticks inside a template literal, after reading the warning
+
+Annotating the CTE fix, I put `column t.sort_order does not exist` in
+backticks — inside a SQL template literal, which ends it. Three parse errors.
+
+`operations.ts` carries this exact warning, in a comment, about the second
+time it happened there: *"A backtick inside one ends it — that is the second
+time, so: no backticks in SQL."* I had read that comment earlier in the same
+session while looking at the assignment insert.
+
+---
+
 ## Verification traps
 
 ### Never test a Tailwind utility by injecting the class at runtime

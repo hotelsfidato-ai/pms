@@ -858,3 +858,100 @@ begin
   perform test.ok('no shipped prices','the price fixture does not outlive the test',
     n = 0, n || ' left behind');
 end $$;
+
+
+-- =============================================================================
+-- RATES (033) — what a room costs, on a date, on a plan
+-- =============================================================================
+-- The load-bearing assertion is the overlap one. Two prices covering one day
+-- for one room type on one plan means the hotel cannot say what the room
+-- costs, and the person who finds out is a guest at a checkout.
+-- =============================================================================
+do $$
+declare
+  a uuid; v_type uuid; v_admin uuid; p numeric;
+begin
+  select id into a from hotels where code='AGR';
+  select id into v_type from room_types where hotel_id = a and code = 'STD';
+  select id into v_admin from staff where is_group_admin limit 1;
+
+  -- ---------- an unpriced room is NULL, not zero ----------
+  update room_types set base_rate = null where id = v_type;
+  perform test.ok('rates','an unpriced room type answers null, not zero',
+    app.rate_for(v_type, 'EP', date '2026-08-25') is null);
+
+  -- ---------- the rack rate answers when no rate row covers the date ----------
+  update room_types set base_rate = 3000 where id = v_type;
+  perform test.ok('rates','the rack rate answers when nothing else does',
+    app.rate_for(v_type, 'EP', date '2026-08-25') = 3000);
+
+  -- ---------- a rate row wins over the rack ----------
+  insert into rates (hotel_id, room_type_id, meal_plan, price,
+                     valid_from, valid_to, label, created_by)
+  values (a, v_type, 'EP', 3500, date '2026-12-01', date '2027-01-01',
+          'Winter', v_admin);
+
+  perform test.ok('rates','a covering rate beats the rack rate',
+    app.rate_for(v_type, 'EP', date '2026-12-14') = 3500);
+  perform test.ok('rates','and only inside its own range',
+    app.rate_for(v_type, 'EP', date '2026-11-30') = 3000);
+
+  -- ---------- half-open, like every other range in this schema ----------
+  -- A season to the 1st of January covers the 31st of December and not the
+  -- 1st. Getting this wrong double-prices one day a year, every year.
+  perform test.ok('rates','the last day of a range is excluded',
+    app.rate_for(v_type, 'EP', date '2027-01-01') = 3000);
+  perform test.ok('rates','the first day of a range is included',
+    app.rate_for(v_type, 'EP', date '2026-12-01') = 3500);
+
+  -- ---------- plans are priced apart ----------
+  insert into rates (hotel_id, room_type_id, meal_plan, price,
+                     valid_from, created_by)
+  values (a, v_type, 'CP', 4200, date '2026-01-01', v_admin);
+
+  perform test.ok('rates','breakfast is a different price from room only',
+    app.rate_for(v_type, 'CP', date '2026-12-14') = 4200
+    and app.rate_for(v_type, 'EP', date '2026-12-14') = 3500);
+
+  -- ---------- TWO PRICES FOR ONE DAY IS REFUSED ----------
+  perform test.raises('rates','two rates covering one day are refused',
+    format($q$insert into rates (hotel_id, room_type_id, meal_plan, price,
+                                 valid_from, valid_to)
+              values (%L,%L,'EP',9999,'2026-12-10','2026-12-20')$q$,
+           a, v_type), '23P01');
+
+  -- ---------- and an open-ended one cannot swallow an existing range ----------
+  perform test.raises('rates','an open-ended rate cannot overlap a season',
+    format($q$insert into rates (hotel_id, room_type_id, meal_plan, price,
+                                 valid_from)
+              values (%L,%L,'EP',9999,'2026-01-01')$q$, a, v_type), '23P01');
+
+  -- ---------- a backwards range is refused ----------
+  perform test.raises('rates','a range that ends before it starts is refused',
+    format($q$insert into rates (hotel_id, room_type_id, meal_plan, price,
+                                 valid_from, valid_to)
+              values (%L,%L,'MAP',1000,'2026-06-01','2026-05-01')$q$,
+           a, v_type), '23514');
+
+  -- ---------- a negative price is refused ----------
+  perform test.raises('rates','a negative price is refused',
+    format($q$insert into rates (hotel_id, room_type_id, meal_plan, price,
+                                 valid_from)
+              values (%L,%L,'AP',-1,'2026-01-01')$q$, a, v_type), '23514');
+
+  -- ---------- a plan must be one the system knows ----------
+  perform test.raises('rates','a made-up meal plan is refused',
+    format($q$insert into rates (hotel_id, room_type_id, meal_plan, price,
+                                 valid_from)
+              values (%L,%L,'BRUNCH',1000,'2026-01-01')$q$, a, v_type), '23503');
+
+  -- ---------- this migration priced nothing ----------
+  -- The group's rule: no defaults. A rates table that arrived with rows in
+  -- it would be the same defect 032 removed from the room type templates.
+  perform test.ok('rates','no migration wrote a rate of its own',
+    (select count(*) from rates
+      where created_by is null and label is null) = 0);
+
+  delete from rates where hotel_id = a and room_type_id = v_type;
+  update room_types set base_rate = null where id = v_type;
+end $$;

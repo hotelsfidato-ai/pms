@@ -198,3 +198,87 @@ export async function revokeAccess(
     throw error;
   }
 }
+
+/* ── Rates — what a room costs ────────────────────────────────────── */
+
+export interface RateRoomType {
+  id: string;
+  code: string;
+  name: string;
+  /** NULL until the hotel sets one. Never 0 — see migration 032. */
+  rackRate: number | null;
+  maxOccupancy: number;
+  rooms: number;
+}
+
+export interface RateRule {
+  id: string;
+  roomTypeId: string;
+  roomType: string;
+  mealPlan: string;
+  price: number;
+  from: string;
+  /** null is open-ended, which is what a rack rate is. */
+  to: string | null;
+  label: string | null;
+  setBy: string | null;
+  isCurrent: boolean;
+}
+
+export interface RatesBoard {
+  businessDate: string;
+  roomTypes: RateRoomType[];
+  mealPlans: { code: string; name: string; includes: string }[];
+  rates: RateRule[];
+}
+
+export async function getRates(hotelId: string): Promise<RatesBoard | null> {
+  if (!hotelId) return null;
+  try {
+    return await api<RatesBoard>(`/api/hotels/${hotelId}/rate-plans`);
+  } catch {
+    return null;
+  }
+}
+
+export async function setRackRate(
+  hotelId: string, roomTypeId: string, rate: number | null,
+): Promise<AdminResult<{ roomType: string }>> {
+  try {
+    return await api(`/api/hotels/${hotelId}/room-types/${roomTypeId}/rate`, {
+      method: "PUT",
+      body: JSON.stringify({ rate }),
+    });
+  } catch (error) {
+    if (error instanceof ApiError) {
+      const p = error.body as { reason?: string } | undefined;
+      return { ok: false, reason: p?.reason ?? error.message };
+    }
+    throw error;
+  }
+}
+
+export function addRate(
+  hotelId: string,
+  input: {
+    roomTypeId: string; mealPlan: string; price: number;
+    from: string; to?: string | null; label?: string;
+  },
+): Promise<AdminResult<{ roomType: string }>> {
+  return write(`/api/hotels/${hotelId}/rate-plans`, input);
+}
+
+export async function removeRate(
+  hotelId: string, rateId: string,
+): Promise<AdminResult> {
+  try {
+    await api(`/api/hotels/${hotelId}/rate-plans/${rateId}`, { method: "DELETE" });
+    return { ok: true };
+  } catch (error) {
+    if (error instanceof ApiError) {
+      const p = error.body as { reason?: string } | undefined;
+      return { ok: false, reason: p?.reason ?? error.message };
+    }
+    throw error;
+  }
+}

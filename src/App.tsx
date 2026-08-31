@@ -22,7 +22,7 @@ import {
 import ReportsIndexPage from "@/pages/reports/Index";
 import {
   GuestsPage, CompaniesPage, PropertiesPage, NotificationsPage,
-  RoomTypesPage, RatePlansPage,
+  RoomTypesPage,
 } from "@/pages/Directory";
 import {
   UsersPage, RolesPage, AuditLogPage, IntegrationsPage,
@@ -32,6 +32,7 @@ import ReservationsPage from "@/pages/Reservations";
 import TillPage from "@/pages/Till";
 import BillPage from "@/pages/Bill";
 import MenuPage from "@/pages/Menu";
+import RatePlansEditor from "@/pages/RatePlans";
 import AdminConsolePage from "@/pages/admin/Console";
 import { IS_DEV } from "@/components/app/navigation";
 import {
@@ -292,7 +293,7 @@ export default function App() {
             />
             <Route
               path="/h/:code/rate-plans"
-              element={<><PropertyScope /><RatePlansPage /></>}
+              element={<><PropertyScope /><RatePlansEditor /></>}
             />
             <Route
               path="/h/:code/rates"

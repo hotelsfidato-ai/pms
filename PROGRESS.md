@@ -18,7 +18,7 @@ API        tsc --noEmit      0 errors
            npm test          82 passed   (live Postgres, as pms_app)
                              loads the demo fixture first — see below
 
-DATABASE   db/tests/run.sh   32 migrations · 99 assertions
+DATABASE   db/tests/run.sh   33 migrations · 112 assertions
                              9 isolation checks · exit 0
 BACKUP     verify-backup.sh  dumped, RESTORED, 13 checks · exit 0
            load-demo         431 available · 132 sold · 30.63% ✓
@@ -606,17 +606,17 @@ retried. Ledger nets to zero, room revenue still ₹4,19,578.76.
 6  Housekeeping, mobile             █████████░░░  board writes to Postgres
 7  POS bridge (a MIGRATION)          ██████████░░  bridge tested, PMS view built
 8  Billing, GST, Form C              ████████░░░░  invoices, credit notes, C
-9  Rates, availability, STAAH        ██░░░░░░░░░░  room_blocks landed
+9  Rates, availability, STAAH        ███████░░░░░  rates, seasons, plans
 10 Group dashboard and reports       ███████████░  11 of 11 reports, all SQL
 11 CRS bridge / SU                    ░░░░░░░░░░░░  post-launch, by decision
 12 Hardening and go-live             ███████░░░░░  backup, races, provisioning
 ```
 
-**104 of 144 — 72%.** Add the filled blocks above and divide by 144. That
+**109 of 144 — 76%.** Add the filled blocks above and divide by 144. That
 sum is the number; it is not typed separately, because it was for three
 audits running and drifted to "about 90%" while the bars said 70.
 
-**Launch scope — 104 of 132, 79%.** Stage 11 (CRS / SU) is a feature
+**Launch scope — 109 of 132, 83%.** Stage 11 (CRS / SU) is a feature
 iteration to be built after launch, by the group's decision, so it is out of
 the denominator. Nothing else changes: no code was written against SU, which
 is why removing it costs nothing to remove.
