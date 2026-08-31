@@ -1091,6 +1091,34 @@ not add up, and they are correct.
 
 ---
 
+### 58 · A headline that stopped agreeing with the table above it
+
+PROGRESS.md carried a stage table of twelve bars and, immediately under it,
+**"About 90%."**
+
+The bars sum to 101 of 144. That is **70%**.
+
+Nothing computed the headline. It read 84%, then 87%, then 90% — bumped by
+hand each time a section landed, while the bars it was supposedly summarising
+were edited separately. Two numbers describing one thing, only one of them
+derived, and the derived one was never read.
+
+It survived three audits *of this very file* because an audit checks whether
+the gates pass and the screens open. Nobody adds up a bar chart.
+
+This is the rule the whole project runs on — never invent a number, a dash is
+an honest answer — broken in the one document whose entire job is to report
+numbers, and broken by the person enforcing it everywhere else.
+
+The fix is not a better estimate. It is that the file now says *"add the
+filled blocks and divide by 144"*, so the arithmetic is visible to anyone
+reading it and cannot silently disagree with itself.
+
+**A summary figure that is not derived from the thing it summarises is a
+second source of truth, and it will drift.**
+
+---
+
 ## Verification traps
 
 ### Never test a Tailwind utility by injecting the class at runtime

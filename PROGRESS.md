@@ -552,11 +552,23 @@ retried. Ledger nets to zero, room revenue still ₹4,19,578.76.
 8  Billing, GST, Form C              ████████░░░░  invoices, credit notes, C
 9  Rates, availability, STAAH        ██░░░░░░░░░░  room_blocks landed
 10 Group dashboard and reports       ███████████░  11 of 11 reports, all SQL
-11 CRS bridge                        ░░░░░░░░░░░░
+11 CRS bridge / SU                    ░░░░░░░░░░░░  post-launch, by decision
 12 Hardening and go-live             ████░░░░░░░░  backup proven, races proven
 ```
 
-**About 90%.**
+**101 of 144 — 70%.** Add the filled blocks above and divide by 144. That
+sum is the number; it is not typed separately, because it was for three
+audits running and drifted to "about 90%" while the bars said 70.
+
+**Launch scope — 101 of 132, 77%.** Stage 11 (CRS / SU) is a feature
+iteration to be built after launch, by the group's decision, so it is out of
+the denominator. Nothing else changes: no code was written against SU, which
+is why removing it costs nothing to remove.
+
+A caveat that matters more than either figure: **every stage is weighted the
+same and they are nowhere near the same size.** Stage 1 is 39 screens. Stage
+11 is one bridge. Treat these as a map of what is untouched, not as a
+schedule.
 
 ---
 
