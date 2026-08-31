@@ -117,6 +117,30 @@ afterAll(async () => {
       "POS test charges are still live on guest folios. Every report that " +
         "sums extra charges has drifted.",
     ).toBe(0);
+
+    /* And take the fixture itself back out.
+
+       Voiding the charges was only half of it. This test's outlet stayed
+       behind in 5EL, so the POS screen of the property the demo exists to
+       show listed "Test outlet" as a real one — a fixture visible in the
+       application, which is the same leak as the demo loader's 249 orphaned
+       guests. The reversals stay on the folios, because those are ledger
+       rows and they net to zero; the BILLS go, because they are this test's
+       and nobody should meet them. */
+    await db.query(
+      "delete from pos_tickets where outlet_id = $1", [outletId],
+    );
+    await db.query("delete from pos_outlets where id = $1", [outletId]);
+
+    const { rows: left } = await db.query<{ n: string }>(
+      `select count(*)::text as n from pos_outlets
+        where code = 'TESTPOS'`,
+    );
+    expect(
+      Number(left[0]!.n),
+      "The POS test outlet is still in the database and will show on the " +
+        "POS screen as a real outlet.",
+    ).toBe(0);
   } finally {
     await db.end();
   }

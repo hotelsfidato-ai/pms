@@ -991,6 +991,35 @@ run.sh → api test → vitest → verify-backup.
 
 ---
 
+### 54 · Test fixtures with a seat in the application
+
+An audit of the database, not of any failing test, found `TESTPOS / "Test
+outlet"` sitting in **5EL** — the property the whole demo exists to show — and
+`TILL / "Till Test Outlet"` plus a ₹100 `Test Dish` in AGR. The POS screen
+listed them as real outlets.
+
+Two different causes, one shape:
+
+* `api/test/pos.test.ts` voided every charge it posted (defect 25 taught it
+  that) and then left the OUTLET behind. Undoing the money is not the same as
+  undoing the fixture.
+* The db suite's till block *could not* clean up: `on delete cascade` from
+  `pos_orders` fires the freeze trigger on every line, so a settled order
+  cannot be deleted at all. The trigger was right; the teardown was
+  impossible.
+
+For the second, lifting the trigger to dismantle its own fixture is the
+established answer here, not a workaround — `api/scripts/load-demo.ts` lifts
+`folio_postings_append_only` for exactly the same reason.
+
+Both teardowns now ASSERT that nothing survived, because a cleanup nobody
+measures is a cleanup nobody knows failed — the same sentence that had to be
+written for defect 25, about the same file.
+
+**Voiding the transaction is not cleaning up the fixture.**
+
+---
+
 ## Verification traps
 
 ### Never test a Tailwind utility by injecting the class at runtime

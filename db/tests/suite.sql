@@ -667,4 +667,30 @@ begin
   -- run; a paid bill outliving the test is the point, not a leak.
   perform test.raises('pos till','a settled order cannot be deleted at all',
     format($q$delete from pos_orders where id = %L$q$, v_open), '23000');
+
+  -- ---------- and then take the fixture back out ----------
+  -- The assertion above is true and the trigger is right, but leaving the
+  -- row behind put "Till Test Outlet" and a ₹100 "Test Dish" into Fidato
+  -- Agra, where the POS screen listed them as real. A fixture visible in the
+  -- application is the leak the demo loader had with 249 orphaned guests.
+  --
+  -- LIFTING the trigger to clean up is the established answer here, not a
+  -- workaround: api/scripts/load-demo.ts lifts folio_postings_append_only
+  -- for exactly the same reason. The rule holds for everything that is not
+  -- deliberately dismantling its own fixture, which is the only thing that
+  -- ever should.
+  alter table pos_order_lines disable trigger pos_order_lines_frozen;
+  delete from pos_order_lines where order_id = v_open;
+  delete from pos_orders where id = v_open;
+  alter table pos_order_lines enable trigger pos_order_lines_frozen;
+
+  delete from pos_menu_items where id = v_item;
+  delete from pos_menu_categories where id = v_cat;
+  delete from pos_outlets where id = v_outlet;
+
+  -- Assert the teardown rather than trusting it: a cleanup nobody measures
+  -- is a cleanup nobody knows failed.
+  select count(*) into n from pos_outlets where code = 'TILL';
+  perform test.ok('pos till','the test fixture does not outlive the test',
+    n = 0, n || ' left behind');
 end $$;
