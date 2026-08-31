@@ -824,15 +824,33 @@ Then Stage 4 closes and Stage 5 begins: the night audit *run*.
 
 ## Still needing a person
 
-1. **Where Postgres lives in production.** Recommendation on file:
-   DigitalOcean managed, $15/mo. The constraint across every free tier is
-   backups, not storage. Nothing ships until this is answered.
-2. **A Firebase service account key.** Until one exists, nobody signs in with
-   a password. The real path is written; only the token check is stubbed.
-3. **Names and room counts for six of the seven properties.**
-4. **Should every clerk be able to enumerate all seven properties?**
-   `hotels_read` currently says yes.
-5. **The commercial question** — under ~₹4 lakh a year for the group, buying
+Ordered by what blocks the most. Nothing in this list is code — every one of
+them is a fact only the group has.
+
+1. **The Oracle instance: its public IP, and a domain name.** *Answered:*
+   Oracle Cloud free tier is the choice. Still needed is the box itself —
+   until there is an address, nothing can be deployed, TLS cannot be issued,
+   and Firebase cannot be told which origin to trust. **This blocks all of
+   Stage 12.** The free tier gives no managed backups, so `db/backup.sh` and
+   a cron entry become the whole backup story rather than a second copy.
+2. **A Firebase service account key** (JSON, from the Firebase console →
+   Project settings → Service accounts). Until one exists nobody signs in with
+   a password — the real `firebase_uid` path is written and only the token
+   check is stubbed, and the API refuses to start stubbed with
+   `NODE_ENV=production`. **This blocks real sign-in.**
+3. **Names and room counts for six of the seven properties.** Only 5 Elements
+   Akkalkot is configured. Each property needs its rooms entered — there are
+   no default rooms and no default prices, by instruction.
+4. **Cancellation terms per property, if any.** The screen is built and ships
+   empty. A property that never bills a no-show needs nothing here; one that
+   does needs somebody to write the numbers down, because the system will not
+   invent them.
+5. **Whether the admin console comes off its development-only gate.** It is
+   `devOnly` today, for testing, as asked.
+6. **Per-hotel custom roles: yes or no.** Recommendation on file, twice: no.
+   The eight roles in `staff_hotels` cover the group, and per-property roles
+   multiply the permission surface by seven for a case nobody has hit.
+7. **The commercial question** — under ~₹4 lakh a year for the group, buying
    eZee wins and this stops.
 
 ---
