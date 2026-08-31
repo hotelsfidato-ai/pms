@@ -790,3 +790,71 @@ begin
     format($q$select app.provision_property('ZZZ','Nowhere','Nowhere', %L)$q$, good),
     '42501');
 end $$;
+
+
+-- =============================================================================
+-- NO SHIPPED PRICES (032)
+-- =============================================================================
+-- A property created through the admin console used to arrive priced from a
+-- template — ₹3,500 Standard, ₹4,800 Deluxe — numbers invented when the
+-- templates were written and chosen by nobody at the hotel. They would have
+-- shown on the tape chart, defaulted a walk-in's tariff, and reached a folio.
+--
+-- The group's rule is that prices are not fixed, are updated by the team, and
+-- are standard nowhere. The POS menu already worked this way; this is the same
+-- rule applied to the thing that was breaking it.
+-- =============================================================================
+do $$
+declare v_hotel uuid; n int; priced int;
+begin
+  -- ---------- the template carries no price at all ----------
+  select count(*) into n
+    from information_schema.columns
+   where table_name = 'room_type_templates' and column_name = 'default_rate';
+  perform test.ok('no shipped prices','the room template has no rate column',
+    n = 0);
+
+  -- ---------- a new property arrives unpriced ----------
+  v_hotel := app.provision_property_unchecked('PRC','Price Test','Nowhere');
+
+  select count(*) into n      from room_types where hotel_id = v_hotel;
+  select count(*) into priced from room_types
+   where hotel_id = v_hotel and base_rate is not null;
+
+  perform test.ok('no shipped prices','a new property gets its room types',
+    n > 0, n || ' types');
+  perform test.ok('no shipped prices','and not one of them has a price',
+    priced = 0, priced || ' arrived priced');
+
+  -- ---------- an unpriced type is NULL, never zero ----------
+  -- Zero is a claim: the room is free. It would post a zero room charge at
+  -- the night audit and halve the day's ADR with nothing looking wrong.
+  select count(*) into n
+    from room_types where hotel_id = v_hotel and base_rate = 0;
+  perform test.ok('no shipped prices','an unset rate is null, not zero',
+    n = 0, n || ' priced at zero');
+
+  -- ---------- a rate can still be set, and refuses nonsense ----------
+  update room_types set base_rate = 2500
+   where hotel_id = v_hotel and code = 'STD';
+  perform test.ok('no shipped prices','a rate can be set once the hotel has one',
+    (select base_rate from room_types
+      where hotel_id = v_hotel and code = 'STD') = 2500);
+
+  perform test.raises('no shipped prices','a negative rate is refused',
+    format($q$update room_types set base_rate = -1 where hotel_id = %L$q$,
+           v_hotel), '23514');
+
+  -- ---------- and the fixture goes ----------
+  -- `hotels_no_delete` refuses a plain delete — "A property is deactivated,
+  -- never deleted" — which is correct and caught this teardown. Lifting it
+  -- for one statement is what load-demo.ts does for the same trigger; the
+  -- cascade takes the room types and the invoice series with it.
+  alter table hotels disable trigger hotels_no_delete;
+  delete from hotels where id = v_hotel;
+  alter table hotels enable trigger hotels_no_delete;
+
+  select count(*) into n from hotels where code = 'PRC';
+  perform test.ok('no shipped prices','the price fixture does not outlive the test',
+    n = 0, n || ' left behind');
+end $$;

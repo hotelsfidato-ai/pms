@@ -1214,6 +1214,55 @@ the navigation at all"* and the test above it had just proved it was.
 
 ---
 
+### 63 · The system shipped prices nobody at the hotel had chosen
+
+`room_type_templates` carried a `default_rate`, and `provision_property()`
+copied it onto every new property:
+
+```
+Standard ₹3,500   Deluxe ₹4,800   Executive ₹6,000   Suite ₹7,500
+```
+
+Invented when the templates were written. A property created through the new
+admin console arrived priced — on the tape chart, defaulting a walk-in's
+tariff, and reaching a folio — looking exactly like the hotel's own rates,
+because everything else on that screen is.
+
+The POS menu had this right from the start: 028 ships no dish and no price and
+says so in its header. **The same rule was being broken one table over by code
+written months earlier, and building the menu correctly did not prompt anyone
+to check.**
+
+Found only because the group said, in passing, that prices are updated by the
+team and standard nowhere.
+
+The rate is now NULL until somebody sets it, not zero — zero is a claim that
+the room is free, and it would post a zero room charge at the night audit and
+halve the day's ADR with nothing looking wrong.
+
+**A default value is a claim about the customer's business.**
+
+---
+
+### 64 · Rewriting a function from memory to remove one line from it
+
+032 needed `provision_property_unchecked` to stop copying the template rate.
+I retyped the whole body and dropped
+`on conflict (hotel_id, fin_year) do nothing` from the invoice-series insert
+— which matters, because 025 also opens a series from a trigger on `hotels`.
+Provisioning died on a duplicate key at the very first fixture in the suite.
+
+Then, in the same migration, I added a loader update to set the demo's rack
+rates "since the templates no longer do" — without checking. `load-demo.ts`
+already set them from a `RACK` constant and always had. My update overwrote a
+calibrated Deluxe rate of 3699 with 4200.
+
+Two mistakes, one shape: **acting on what I assumed a file contained instead
+of reading it.** When the point of a change is to remove one thing, remove one
+thing.
+
+---
+
 ## Verification traps
 
 ### Never test a Tailwind utility by injecting the class at runtime

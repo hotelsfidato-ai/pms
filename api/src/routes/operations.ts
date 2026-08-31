@@ -642,7 +642,7 @@ operations.post("/:code/walk-ins", async (c) => {
 
     const { rows: roomRows } = await client.query<{
       id: string; room_type_id: string; housekeeping_status: string;
-      occupancy_status: string; base_rate: string;
+      occupancy_status: string; base_rate: string | null;
     }>(
       `select rm.id, rm.room_type_id, rm.housekeeping_status,
               rm.occupancy_status, rt.base_rate
@@ -698,7 +698,24 @@ operations.post("/:code/walk-ins", async (c) => {
       [hotelId],
     );
 
-    const offered = body.offeredTariff ?? Number(room.base_rate);
+    /* A NULL RACK RATE MUST REFUSE, NOT DEFAULT TO NOTHING.
+
+       This was `body.offeredTariff ?? Number(room.base_rate)`, which was
+       safe only while base_rate could not be null. 032 made it nullable —
+       the system ships no price and the hotel enters its own — and
+       `Number(null)` is 0, so a walk-in into an unpriced room type would
+       have been checked in free, posted a zero room charge at the night
+       audit, and halved the day's ADR without anything looking wrong. */
+    const rack = room.base_rate === null ? null : Number(room.base_rate);
+    const offered = body.offeredTariff ?? rack;
+
+    if (offered === null || !Number.isFinite(offered)) {
+      return refuse(
+        `That room type has no rate set, so there is ` +
+        `nothing to charge. Enter a tariff for this stay, or set the rate ` +
+        `for the room type first.`,
+      );
+    }
     const notes = body.overrideReason?.trim()
       ? `Rate override — ${body.overrideReason.trim()}`
       : null;
