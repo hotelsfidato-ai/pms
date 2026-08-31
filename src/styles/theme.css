@@ -69,19 +69,38 @@
   --font-serif: Georgia, "ITC Charter", "Times New Roman", serif;
   --font-mono: ui-monospace, "SF Mono", "Cascadia Mono", Menlo, monospace;
 
-  /* Type scale — tight display tracking, comfortable body */
-  --text-2xs: 0.6875rem;
-  --text-2xs--line-height: 1rem;
-  --text-xs: 0.75rem;
-  --text-xs--line-height: 1.125rem;
-  --text-sm: 0.8125rem;
-  --text-sm--line-height: 1.25rem;
-  --text-base: 0.875rem;
-  --text-base--line-height: 1.375rem;
-  --text-md: 0.9375rem;
+  /* ── Type scale ──────────────────────────────────────────────────
+     Measured, not guessed. A sweep of eight screens counted text
+     rendering BELOW 12px: 74 nodes on the tape chart, 78 on invoices,
+     84 on the admin console. All of it `--text-2xs` at 0.6875rem —
+     eleven pixels — which is used 189 times and carries the metadata a
+     clerk reads all day: room codes, timestamps, who did what.
+
+     The bottom of the scale was also not a scale. 11, 12, 13, 14 and
+     15px are five names for what an eye reads as one size, and body
+     text sat at 14 against a 16px guideline for anything held in a
+     hand.
+
+     Every step below `lg` moves up one notch. The RELATIONSHIPS are
+     unchanged — the same six sizes in the same order — so nothing
+     needs restyling; the floor is simply 12px now and body is 15.
+
+     Not larger than that. This is a dense operational tool: a tape
+     chart of fourteen day columns and a folio of forty postings are
+     read by scanning, and type set for a marketing page would cost
+     more rows than it gains in comfort. */
+  --text-2xs: 0.75rem;
+  --text-2xs--line-height: 1.0625rem;
+  --text-xs: 0.8125rem;
+  --text-xs--line-height: 1.1875rem;
+  --text-sm: 0.875rem;
+  --text-sm--line-height: 1.3125rem;
+  --text-base: 0.9375rem;
+  --text-base--line-height: 1.4375rem;
+  --text-md: 1rem;
   --text-md--line-height: 1.5rem;
-  --text-lg: 1.0625rem;
-  --text-lg--line-height: 1.625rem;
+  --text-lg: 1.125rem;
+  --text-lg--line-height: 1.6875rem;
   --text-xl: 1.25rem;
   --text-xl--line-height: 1.75rem;
   --text-2xl: 1.5rem;

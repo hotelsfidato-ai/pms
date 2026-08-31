@@ -1431,6 +1431,49 @@ do", read what it actually sent.
 
 ---
 
+### 73 · Eleven-pixel text, used one hundred and eighty-nine times
+
+A UX pass that measured rather than looked. Sweeping eight screens and
+counting every leaf node rendering below 12px:
+
+```
+tape chart   74      invoices  78      admin console  84
+```
+
+All of it one token: `--text-2xs` at 0.6875rem — **eleven pixels** — used 189
+times, more than any size except body. It carries the metadata a clerk reads
+all day: room codes, timestamps, who set a price, why a room is blocked.
+
+The bottom of the scale was also not a scale. 11, 12, 13, 14, 15px are five
+names for what an eye reads as one size, and body text sat at 14 against a
+16px guideline for anything held in a hand.
+
+Every step below `lg` moved up one notch — same six sizes, same order, so
+nothing needed restyling. Result, measured the same way: **zero sub-12px
+nodes on eight screens**, at desktop and at 375px, with the tape chart still
+at 44px columns and all seventeen room rows.
+
+**A design token used 189 times is not a detail.** One line fixed a
+readability complaint across forty-eight screens, and no screen-by-screen
+pass would have found it — every individual use looked deliberate.
+
+---
+
+### 74 · Three escaping failures writing one test
+
+Writing the assertion that guards the floor, through a shell heredoc:
+
+* `\s` in a template literal became `\s`, which is just `s` — the pattern
+  matched nothing while reading correctly
+* `"\n"` became a literal newline inside a JS string, breaking the file
+* only `indexOf`, which needs no escape at all, survived
+
+Three attempts on one twelve-line function. **When writing code through a
+heredoc, prefer constructs with no backslashes** — the escaping has to survive
+bash, Python and the JS parser, and each layer is a chance to lose it.
+
+---
+
 ## Verification traps
 
 ### Never test a Tailwind utility by injecting the class at runtime

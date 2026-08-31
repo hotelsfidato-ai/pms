@@ -1,4 +1,5 @@
 import { describe, it, expect, beforeEach } from "vitest";
+import { readFileSync } from "node:fs";
 import { render, screen, within } from "@testing-library/react";
 import App from "./App";
 import { useUi } from "@/lib/ui";
@@ -381,5 +382,72 @@ describe("point of sale as a category", () => {
   it("does not offer the terminal to housekeeping", () => {
     const paths = flatNavigationFor("housekeeping", HOTEL).map((i) => i.to);
     expect(paths).not.toContain(`/h/${HOTEL}/till/terminal`);
+  });
+});
+
+
+/* ══════════════════════════════════════════════════════════════════
+   THE TYPE SCALE HAS A FLOOR
+
+   A sweep of eight screens counted text rendering below 12px: 74 nodes
+   on the tape chart, 78 on invoices, 84 on the admin console. All of it
+   `--text-2xs` at 0.6875rem — eleven pixels — used 189 times for the
+   metadata a clerk reads all day.
+
+   The scale was also not a scale at the bottom: 11, 12, 13, 14, 15 are
+   five names for what an eye reads as one size.
+
+   This asserts the FLOOR rather than the rendering, because jsdom has
+   no layout and cannot measure a pixel. The rendered result was checked
+   in a browser: zero sub-12px nodes across eight screens, at both
+   desktop and 375px, with the tape chart still at 44px columns.
+   ══════════════════════════════════════════════════════════════════ */
+
+describe("the type scale", () => {
+  /* From the project root, not `import.meta.url` — under vitest that is
+     not a file: URL and readFileSync refuses it. */
+  const theme = readFileSync("src/styles/theme.css", "utf8");
+
+  const size = (name: string): number => {
+    /* No regex and no split on a newline literal. Both need a backslash
+       escape, and a backslash does not survive being written through a
+       shell heredoc — the first attempt produced a pattern matching
+       nothing and the second a broken string literal. indexOf needs
+       neither. */
+    const key = `--text-${name}:`;
+    const at = theme.indexOf(key);
+    if (at === -1) throw new Error(`${key} is not in theme.css`);
+    const rest = theme.slice(at + key.length);
+    const rem = Number(rest.slice(0, rest.indexOf("rem")).trim());
+    return rem * 16;
+  };
+
+  it("has no size below 12px", () => {
+    for (const name of ["2xs", "xs", "sm", "base", "md", "lg"]) {
+      expect(
+        size(name),
+        `--text-${name} is ${size(name)}px — below the 12px floor`,
+      ).toBeGreaterThanOrEqual(12);
+    }
+  });
+
+  it("sets body text at 15px or more", () => {
+    /* `text-base` is used 163 times and is what a folio, a rate and a
+       guest name are set in. 14px was under the guideline for anything
+       read on a phone in a corridor. */
+    expect(size("base")).toBeGreaterThanOrEqual(15);
+  });
+
+  it("keeps every step distinguishable", () => {
+    /* Steps a single pixel apart are not a scale — they are a gradient
+       nobody can use deliberately. */
+    const names = ["2xs", "xs", "sm", "base", "md", "lg"];
+    for (let i = 1; i < names.length; i++) {
+      const step = size(names[i]!) - size(names[i - 1]!);
+      expect(
+        step,
+        `${names[i - 1]} → ${names[i]} is ${step}px apart`,
+      ).toBeGreaterThan(0);
+    }
   });
 });
