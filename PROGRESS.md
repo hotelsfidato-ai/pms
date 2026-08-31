@@ -3,7 +3,7 @@
 Updated after every finished section. **Nothing here is a claim until the gates
 below are green and the screen has been opened.**
 
-Last updated: **29 August 2026** · **Phase 1 complete — seven of seven**
+Last updated: **31 August 2026** · **Phase 1 complete · Phase 2 complete — the till is built in**
 
 ---
 
@@ -93,6 +93,69 @@ dated postings from the server's wall clock:
 All four now resolve the date from the database inside the same transaction as
 the write. Proved by restoring the wall clock in one line and watching the test
 fail.
+
+---
+
+## Phase 2 — the POS built INTO the system ✅
+
+You asked for the POS built in, not bolted on. The shape was decided by
+a constraint that was already in the schema:
+
+```
+pos_tickets: check (status = 'rejected' or posting_id is not null)
+```
+
+*Anything not refused actually reached the ledger.* An **open** order has
+not reached it and must not — the charge does not exist until somebody
+settles. So the till could not use `pos_tickets` as its working state, and
+rather than relax that invariant it got its own tables and posts **through
+the same door an outside POS uses**.
+
+That is the load-bearing decision. The in-house till has no privileged path
+to the ledger: it earns its folio posting exactly as Sattva would, so the
+idempotency, the one-room-two-guests refusal and the append-only posting did
+not have to be written a second time.
+
+```
+pos_orders ──settle to room──► pos_tickets ──► folio_postings
+  (open, being added to)         (Stage 7)      (append-only)
+```
+
+A CASH sale never touches a folio, so it never creates a ticket.
+
+**What was built**
+
+| | |
+|---|---|
+| `028_pos_till.sql` | menu, orders, lines · RLS forced · DELETE revoked · two triggers |
+| `api/src/routes/till.ts` | menu, rooms, orders, lines, settle, abandon |
+| `/h/:code/till` | the till — open, add, strike, settle |
+| `/h/:code/menu` | the hotel's own prices |
+| `/h/:code/till/bill/:id` | the printed bill, 80mm thermal |
+| demo menu | in the **loader**, with the invented guest names |
+
+**Three things the database taught this build**
+
+`fp_tax_consistent` requires `tax_amount = round(amount × rate/100, 2)`, and
+a posting carries ONE rate. A bill of 5% food and 18% water therefore cannot
+be a single posting, and a blended rate does not rescue it — 680 at an
+effective 5.76% computes to 39.17 against an actual 39.20. **The settle now
+posts one row per rate**, which is also what GST says: two rates are two
+supplies.
+
+`pos_orders_room_has_ticket` refused a test teardown that tried to null the
+ticket link. The constraint was right and the teardown was backwards.
+
+`pos_order_lines_frozen` blocked the demo loader from deleting its own
+property. The first fix made the trigger tolerate a missing parent — which
+also let a settled order be deleted outright, and the db suite said so
+immediately. The narrow answer was to lift it in the loader, which is what
+that file already does for three other triggers.
+
+**The bill prints paise.** The first version showed CGST 16 + SGST 16 +
+CGST 4 + SGST 4 against a total of 719 — those add to 40 while the real tax
+is 39.20. A guest checking the arithmetic on a document they are paying
+finds it does not add up, and they are right.
 
 ---
 
@@ -479,13 +542,13 @@ retried. Ledger nets to zero, room revenue still ₹4,19,578.76.
 ## The stages
 
 ```
-1  Frontend shell and screens        ████████████  36 screens, 1 placeholder
+1  Frontend shell and screens        ████████████  39 screens, 1 placeholder
 2  Repository layer behind the seam  ████████████  12 of 12 modules
 3  Auth bridge — Firebase            ███████████░  works; needs a service account
 4  Front desk + folio, end to end    ████████████  flows, reports, dating
 5  Night audit                       ██████████░░  runs, posts, rolls the date
 6  Housekeeping, mobile             █████████░░░  board writes to Postgres
-7  POS bridge (a MIGRATION)          ███████░░░░░  bridge tested, PMS view built
+7  POS bridge (a MIGRATION)          ██████████░░  bridge tested, PMS view built
 8  Billing, GST, Form C              ████████░░░░  invoices, credit notes, C
 9  Rates, availability, STAAH        ██░░░░░░░░░░  room_blocks landed
 10 Group dashboard and reports       ███████████░  11 of 11 reports, all SQL
@@ -493,7 +556,7 @@ retried. Ledger nets to zero, room revenue still ₹4,19,578.76.
 12 Hardening and go-live             ████░░░░░░░░  backup proven, races proven
 ```
 
-**About 87%.**
+**About 90%.**
 
 ---
 

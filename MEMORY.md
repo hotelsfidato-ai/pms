@@ -1020,6 +1020,77 @@ written for defect 25, about the same file.
 
 ---
 
+### 55 · One posting cannot carry two tax rates
+
+The till's first settle posted a single folio row with `tax_rate 0` and the
+whole tax in `tax_amount`. Postgres rejected it on the spot:
+
+```
+violates check constraint "fp_tax_consistent"
+```
+
+015 requires `tax_amount = round(amount * tax_rate / 100, 2)` within a paisa,
+and a posting carries ONE rate. The demo menu mixes 5% food with 18% packaged
+water **on purpose**, so this was not an edge case — it was the second bill
+anyone would ring up.
+
+A blended rate does not rescue it either: 680 at an effective 5.76% computes
+to 39.17 against an actual 39.20, three paise outside the tolerance.
+
+The constraint is right and GST agrees with it — two rates are two taxable
+supplies, and the Sales Register reports them separately. **The settle posts
+one row per rate**, and the guest's folio shows the split with the rate in
+the description so one restaurant bill becoming two lines is explicable.
+
+**A check constraint that fires on your first real case is a specification
+you had not read yet.**
+
+---
+
+### 56 · Fixing the trigger instead of the caller
+
+`pos_order_lines_frozen` blocked the demo loader from deleting its own
+property: `delete from hotels` cascades to `pos_orders` and to
+`pos_order_lines` by two different paths, and the order can be gone before
+its lines are reached, so the trigger read a NULL status as "settled".
+
+The fix I reached for first was to make the trigger tolerate a missing
+parent. It looked reasonable. It also let `delete from pos_orders` remove a
+settled order outright, and the db suite failed within seconds:
+
+```
+pos till | a settled order cannot be deleted at all | expected a failure,
+                                                      statement succeeded
+```
+
+The narrow answer was to lift the trigger in the loader — which is what that
+file already does for `hotels_no_delete`, `folio_postings_append_only` and
+`invoices_immutable`. Three precedents were sitting in the same function.
+
+**When a guard is inconvenient, check whether the codebase already has a
+sanctioned way to step around it before weakening the guard.**
+
+---
+
+### 57 · Rupees on a document somebody pays from
+
+The printed bill used `money()`, which rounds to the whole rupee. It showed:
+
+```
+CGST 2.5%   ₹16        SGST 2.5%   ₹16
+CGST 9%      ₹4        SGST 9%      ₹4
+TOTAL                            ₹719
+```
+
+Those components add to ₹40. The real tax is ₹39.20 and the real total
+₹719.20. Nothing was miscalculated — the ledger had it right to the paisa —
+but a guest checking the arithmetic on a bill they are paying finds it does
+not add up, and they are correct.
+
+`money()` for a dashboard, `moneyPrecise()` for anything a person is handed.
+
+---
+
 ## Verification traps
 
 ### Never test a Tailwind utility by injecting the class at runtime

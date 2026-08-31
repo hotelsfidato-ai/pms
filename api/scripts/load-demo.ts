@@ -125,6 +125,25 @@ async function main() {
       await client.query(
         "alter table invoices disable trigger invoices_immutable",
       );
+      /* And the till, for the third time and the same reason.
+
+         `pos_order_lines_frozen` refuses to let a paid bill change,
+         including being deleted — and dropping the property cascades
+         to its orders and therefore to their lines. Postgres removes
+         the parent order BEFORE the cascade reaches the lines, so the
+         trigger sees a NULL status and refuses:
+
+             Order f38da989 is <NULL>, so its lines cannot change.
+
+         The first attempt at this made the trigger tolerate a missing
+         parent instead. That looked reasonable and was wrong: it also
+         let `delete from pos_orders` remove a settled order outright,
+         and the db suite said so immediately. Lifting it here is the
+         narrower answer and the one this file already uses three
+         times over. */
+      await client.query(
+        "alter table pos_order_lines disable trigger pos_order_lines_frozen",
+      );
       /* Order matters, and the constraints spell it out.
 
          `reservation_groups.lead_hotel_id` has no ON DELETE CASCADE —
@@ -175,6 +194,9 @@ async function main() {
       );
       await client.query(
         "alter table invoices enable trigger invoices_immutable",
+      );
+      await client.query(
+        "alter table pos_order_lines enable trigger pos_order_lines_frozen",
       );
       await client.query("alter table hotels enable trigger hotels_no_delete");
       await client.query("commit");
@@ -599,6 +621,70 @@ async function main() {
           `was committed.`,
       );
     }
+
+    /* ── A menu to sell from ──────────────────────────────────────────
+       Here and NOT in a migration, for the same reason the guest names
+       are here: these are invented. Nobody has seen Sattva's card, so
+       these dishes and these prices are a demonstration, not Fidato's
+       menu. A migration that shipped them would put invented rupees on
+       a screen that looks like the real system.
+
+       The hotel enters its own through /h/:code/till/menu. When it
+       does, this seed stops mattering. */
+    const MENU: [string, [string, number, number][]][] = [
+      ["Starters", [
+        ["Paneer Tikka", 320, 5], ["Veg Manchurian", 280, 5],
+        ["Chicken 65", 360, 5], ["Papad Masala", 90, 5],
+      ]],
+      ["Main course", [
+        ["Dal Tadka", 260, 5], ["Paneer Butter Masala", 340, 5],
+        ["Chicken Curry", 420, 5], ["Veg Biryani", 310, 5],
+        ["Jeera Rice", 180, 5], ["Butter Roti", 40, 5],
+      ]],
+      ["Beverages", [
+        /* Packaged water is 18% and not 5%. A bill mixing rates is the
+           normal case, which is why tax lives on the item. */
+        ["Masala Chai", 60, 5], ["Fresh Lime Soda", 120, 5],
+        ["Packaged Water 1L", 40, 18], ["Cold Coffee", 160, 5],
+      ]],
+      ["Desserts", [
+        ["Gulab Jamun", 140, 5], ["Ice Cream", 120, 5],
+      ]],
+    ];
+
+    for (const [category, items] of MENU) {
+      const { rows: [cat] } = await client.query<{ id: string }>(
+        `insert into pos_menu_categories (hotel_id, name, sort_order)
+         values ($1,$2,$3)
+         on conflict (hotel_id, name) do update set is_active = true
+         returning id`,
+        [hotelId, category, MENU.findIndex(([c]) => c === category)],
+      );
+      for (const [name, price, tax] of items) {
+        await client.query(
+          `insert into pos_menu_items
+             (hotel_id, category_id, name, price, tax_rate)
+           values ($1,$2,$3,$4,$5)
+           on conflict (hotel_id, category_id, name)
+             do update set price = excluded.price, tax_rate = excluded.tax_rate`,
+          [hotelId, cat!.id, name, price, tax],
+        );
+      }
+    }
+
+    /* An outlet for the till to open orders against. The BRIDGE outlets
+       carry an api_key_hash because a machine authenticates with one;
+       this one has none, because the people using it authenticate as
+       themselves. That is the difference between the two doors. */
+    const { rows: [tillStaff] } = await client.query<{ id: string }>(
+      `select id from staff where email = 'owner@fidato.in'`,
+    );
+    await client.query(
+      `insert into pos_outlets (hotel_id, code, name, category, staff_id)
+       values ($1,'REST','Fidato Restaurant','food',$2)
+       on conflict (hotel_id, code) do nothing`,
+      [hotelId, tillStaff!.id],
+    );
 
     if (sold !== 132) {
       throw new Error(

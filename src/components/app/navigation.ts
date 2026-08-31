@@ -135,6 +135,14 @@ const SECTIONS: NavSection[] = [
          because the argument it settles is about money on a folio, and
          the person settling it is the one who bills. */
       { label: "Point of sale", to: "/h/:code/pos", icon: UtensilsCrossed, resource: "invoice" },
+      /* The till is a different job from reading what a till sent, and a
+         different person does it. It sits next to its sibling so nobody
+         has to learn that "Point of sale" is the read-only one. */
+      { label: "Till", to: "/h/:code/till", icon: Receipt, resource: "payment" },
+      /* The prices, which are the hotel's. Behind the same permission as
+         rates, because setting what a dish costs is the same kind of act
+         as setting what a room costs. */
+      { label: "Menu", to: "/h/:code/menu", icon: UtensilsCrossed, resource: "rate" },
     ],
   },
   {

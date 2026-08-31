@@ -1,5 +1,5 @@
 import { useQuery } from "@tanstack/react-query";
-import { useParams } from "react-router";
+import { useParams, Link } from "react-router";
 import { UtensilsCrossed, KeyRound, AlertTriangle } from "lucide-react";
 import { cn } from "@/lib/cn";
 import { money, dateLong } from "@/lib/format";
@@ -31,9 +31,11 @@ import {
 
    WHAT IT IS NOT
 
-   Not a till. No menu, no orders, no tables — those belong to the POS,
-   which is a separate system built elsewhere. This is the PMS looking
-   at what arrived.
+   Not the till. No menu, no orders, no tables — this screen watches
+   the BOUNDARY. Stage 8 built the PMS's own till on /till, and it
+   posts across this same boundary rather than around it, so what
+   arrives here now includes the hotel's own restaurant as well as
+   Sattva's.
    ══════════════════════════════════════════════════════════════════ */
 
 function useHotel(): string {
@@ -175,14 +177,17 @@ export default function PosPage() {
         <UtensilsCrossed className="size-4 text-grey-400 shrink-0 mt-0.5" />
         <div className="min-w-0">
           <p className="text-base font-medium text-ink-900">
-            This is not a till
+            This is the outside door
           </p>
           <p className="text-sm text-grey-600 mt-0.5 leading-relaxed">
-            The POS is a separate system. Menus, orders and tables live there;
-            this is the PMS looking at what arrived. Charges reach a guest folio
-            through an outlet key — a retry after a timeout returns the original
-            posting rather than charging twice, and a void reverses rather than
-            deleting.
+            An outside point of sale presents a key and posts a finished bill
+            here — a retry after a timeout returns the original posting rather
+            than charging twice, and a void reverses rather than deleting. The
+            PMS has its own till on the{" "}
+            <Link to="../till" relative="path" className="text-brand hover:underline">
+              Till
+            </Link>{" "}
+            screen, and it comes through this same door.
           </p>
         </div>
       </div>

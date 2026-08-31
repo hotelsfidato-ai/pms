@@ -57,6 +57,13 @@ export class ApiError extends Error {
   constructor(
     readonly status: number,
     message: string,
+    /** The parsed error body, when there was one.
+
+        A refusal often carries more than a sentence. The till answers a
+        room with two open folios with the reason AND both guests, so
+        the waiter can pick one — and that payload used to be dropped
+        here, leaving "Request failed (409)" and no way to choose. */
+    readonly body?: unknown,
   ) {
     super(message);
     this.name = "ApiError";
@@ -108,11 +115,16 @@ export async function api<T>(path: string, init: RequestInit = {}): Promise<T> {
 
   if (!response.ok) {
     const body = (await response.json().catch(() => null)) as
-      | { error?: string }
+      | { error?: string; reason?: string }
       | null;
+    /* `error` first, because that is what every route written before
+       the till returns and what `setHousekeeping` reads. `reason` is
+       the till's shape — a refusal a person acts on rather than a
+       fault. Falling through to neither is still a real failure. */
     throw new ApiError(
       response.status,
-      body?.error ?? `Request failed (${response.status}).`,
+      body?.error ?? body?.reason ?? `Request failed (${response.status}).`,
+      body ?? undefined,
     );
   }
 

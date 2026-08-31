@@ -34,6 +34,7 @@ export * from "./notifications";
 export * from "./admin";
 export * from "./directory";
 export * from "./billing";
+export * from "./till";
 
 
 /* ── Query keys ────────────────────────────────────────────────────

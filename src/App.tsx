@@ -29,6 +29,9 @@ import {
   SettingsPage, AdminPropertiesPage,
 } from "@/pages/admin/Admin";
 import ReservationsPage from "@/pages/Reservations";
+import TillPage from "@/pages/Till";
+import BillPage from "@/pages/Bill";
+import MenuPage from "@/pages/Menu";
 import {
   PaymentsPage, PropertyCityLedgerPage,
 } from "@/pages/Billing";
@@ -288,6 +291,19 @@ export default function App() {
             <Route
               path="/h/:code/form-c"
               element={<><PropertyScope /><FormCPage /></>}
+            />
+            {/* The till writes; /pos reads what an outside one sent. */}
+            <Route
+              path="/h/:code/till"
+              element={<><PropertyScope /><TillPage /></>}
+            />
+            <Route
+              path="/h/:code/menu"
+              element={<><PropertyScope /><MenuPage /></>}
+            />
+            <Route
+              path="/h/:code/till/bill/:id"
+              element={<><PropertyScope /><BillPage /></>}
             />
             <Route
               path="/h/:code/pos"
