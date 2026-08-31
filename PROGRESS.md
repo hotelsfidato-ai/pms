@@ -3,7 +3,7 @@
 Updated after every finished section. **Nothing here is a claim until the gates
 below are green and the screen has been opened.**
 
-Last updated: **31 August 2026** · **Phase 1 complete · Phase 2 complete — the till is built in**
+Last updated: **31 August 2026** · **Phase 1 complete · Phase 2 complete · the buildable backlog closed — out-of-order rooms, housekeeping assignment, cancellation terms, report CSV**
 
 ---
 
@@ -11,14 +11,14 @@ Last updated: **31 August 2026** · **Phase 1 complete · Phase 2 complete — t
 
 ```
 FRONTEND   tsc -b            0 errors
-           vitest run        108 passed · 8 files
+           vitest run        122 passed · 9 files
            build             clean
 
 API        tsc --noEmit      0 errors
            npm test          83 passed   (live Postgres, as pms_app)
                              loads the demo fixture first — see below
 
-DATABASE   db/tests/run.sh   34 migrations · 120 assertions
+DATABASE   db/tests/run.sh   37 migrations · 138 assertions
                              9 isolation checks · exit 0
 BACKUP     verify-backup.sh  dumped, RESTORED, 13 checks · exit 0
            load-demo         431 available · 132 sold · 30.63% ✓
@@ -36,6 +36,102 @@ repository modules have moved from an in-memory store onto a real database, and
 now the business date has too — a value read in **70 places** across those 46
 files, moved from a hardcoded constant to a per-property database query without
 one screen noticing.
+
+---
+
+## The buildable backlog, closed ✅
+
+Five things had been named as buildable-without-an-answer. All five are built,
+opened in a browser, and behind the gates.
+
+### Rooms come out of inventory, and go back
+
+`room_blocks` had been modelled since migration 022 and the tape chart drew
+from it. **Nothing had ever written a row** — a housekeeper finding a broken
+shower had nowhere to record it, and every block in the database came from the
+demo loader.
+
+A block is a **period**, not a switch: a room out from Thursday for the
+plumber, or out with no return date at all for refurbishment. A switch cannot
+say either, and cannot answer what was sellable last Tuesday — which is what
+occupancy divides by.
+
+* Refused while a guest is in the room, and the refusal **names them**.
+* The room returns **dirty, never clean**. A fortnight of refurbishment needs
+  looking at before somebody sleeps in it, and "clean" is a claim nobody has
+  checked. The toast says so.
+* The board's old *"Out of order"* was a text label — a state a room could get
+  into with nothing offering a way out. It is a button now.
+
+Driven through the browser both ways: vacant-clean 10 → 9 and out-of-service
+1 → 2 on the way out; dirty 0 → 1 on the way back.
+
+### The housekeeping board became a work list
+
+It showed every room in the property to whoever opened it. That is a status
+display. A housekeeper arriving at eight has one question — **which rooms are
+mine** — and the board could not answer it, so the answer stayed on the
+supervisor's paper sheet and the board was decoration beside it.
+
+Asked directly, the answer was *rooms assigned to a named housekeeper*. Not a
+floor, not a wing, not a shift.
+
+* The assignment carries a **date**. A room is not assigned to somebody
+  forever; and dated, the record can answer who was responsible for 204 on the
+  night a guest complained.
+* One housekeeper per room per day, held by a constraint. Two people told to
+  clean 204 is how 204 is cleaned twice and 205 not at all.
+* Filter chips per person, with counts, plus **Unassigned** — the one a
+  supervisor needs before the shift, because those are the rooms that go
+  uncleaned when everybody assumes somebody else has them.
+
+**Who can be assigned is everyone with access to the property**, not only
+staff whose role is `housekeeping`. Checked before building: across all three
+properties that role is held by **nobody**. Filtering on it would have shipped
+a dropdown empty at every property on day one.
+
+The control is a native `<select>` on purpose — it opens the OS picker on a
+phone, thumb-sized and one-handed, and is the same control on the desk.
+
+### Cancellation terms, and the no-show charge that follows
+
+Stage 5 said *"No retention is charged on a no-show — whether one is billed
+depends on the rate's cancellation terms, which this system does not model. A
+guessed charge would be worse than none."* It is modelled now.
+
+**It ships empty, and that is the feature.** A property that has not written
+its terms down has none, and the audit charges nothing — exactly what it did
+before. Same rule as the prices: the system must not invent a figure nobody at
+the hotel agreed to.
+
+* **Cancelling and not turning up are priced separately.** Different acts,
+  different money.
+* **NULL is not zero.** A booking with no terms has no agreement behind it; a
+  booking with terms saying *nothing* has one. The audit reports them apart —
+  `retentionCharged` beside `noShowsWithoutTerms` — because rolling them
+  together hides the second entirely.
+* **Terms are frozen onto the booking**, the same reason `agreed_rate` is a
+  column: terms a guest agreed to in March are the March terms. A hotel
+  changing its mind in June must not move them. Held by a test.
+* The retention posts as **`misc`, not `room`** — no room was occupied, and
+  posting it as room revenue would inflate ADR on a night nobody slept there.
+  Taxed at the accommodation rate, per CBIC circular 178/10/2022; posting it
+  at zero would be a tax determination too, and a wrong one.
+
+**A property-chosen default is not a shipped default.** One policy may be
+marked *use for new bookings*; a trigger copies it onto every booking however
+it is made. Without that the whole feature could never fire — see defect 81.
+
+### Reports export
+
+Every report printed and nothing else — the Lodging Tax report is specified as
+a statutory **Excel** export and had a Print button, which is the one thing an
+accountant cannot paste into a return. Seven reports now export CSV with a BOM
+(verified by bytes: `EF BB BF`), CRLF endings, and leading `=`/`+`/`-`/`@`
+neutralised so a guest named `=cmd` cannot execute on open.
+
+Found on the way: `Ledgers.tsx` had `onExportExcel={() => window.print()}` — an
+Excel button that opened a print dialogue.
 
 ---
 
@@ -602,8 +698,8 @@ retried. Ledger nets to zero, room revenue still ₹4,19,578.76.
 2  Repository layer behind the seam  ████████████  12 of 12 modules
 3  Auth bridge — Firebase            ███████████░  works; needs a service account
 4  Front desk + folio, end to end    ████████████  flows, reports, dating
-5  Night audit                       ██████████░░  runs, posts, rolls the date
-6  Housekeeping, mobile             █████████░░░  board writes to Postgres
+5  Night audit                       ███████████░  posts, rolls, retains
+6  Housekeeping, mobile              ██████████░░  assigned, and rooms come out
 7  POS — bridge, till and terminal   ████████████  its own category
 8  Billing, GST, Form C              ████████░░░░  invoices, credit notes, C
 9  Rates, availability, STAAH        ███████░░░░░  rates, seasons, plans
@@ -612,11 +708,9 @@ retried. Ledger nets to zero, room revenue still ₹4,19,578.76.
 12 Hardening and go-live             ███████░░░░░  backup, races, provisioning
 ```
 
-**111 of 144 — 77%.** Add the filled blocks above and divide by 144. That
-sum is the number; it is not typed separately, because it was for three
-audits running and drifted to "about 90%" while the bars said 70.
+**113 of 144 — 78%.** Add the filled blocks above and divide by 144. That sum is the number; it is not typed separately, because it was for three audits running and drifted to "about 90%" while the bars said 70.
 
-**Launch scope — 111 of 132, 84%.** Stage 11 (CRS / SU) is a feature
+**Launch scope — 113 of 132, 86%.** Stage 11 (CRS / SU) is a feature
 iteration to be built after launch, by the group's decision, so it is out of
 the denominator. Nothing else changes: no code was written against SU, which
 is why removing it costs nothing to remove.
@@ -679,11 +773,10 @@ business date         5EL 2026-08-25 · AGR 2027-04-02 · PUN 2026-08-28
 3 · retire src/data/store.ts and the in-memory fixtures it seeds.
 ```
 
-**What Stage 8 still lacks:** e-invoicing. Above ₹5 crore turnover an Indian
-business must register each B2B invoice with the IRP and print the IRN and its
-QR code. Not built, and not guessed at — whether this group crosses that
-threshold is a question for its accountant, and the answer changes what the
-document must carry.
+**E-invoicing: asked and answered — NOT required.** Above ₹5 crore turnover an
+Indian business must register each B2B invoice with the IRP and print the IRN
+and its QR code. The group is under that threshold, so this is deliberately not
+built. It becomes required the year turnover crosses it.
 
 **What backup does NOT cover.** The dump lands on the same disk as the
 database, which is a copy that dies in the same fire. Getting it off-box is one

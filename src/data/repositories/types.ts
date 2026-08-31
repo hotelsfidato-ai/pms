@@ -42,6 +42,10 @@ export interface Posting {
    ══════════════════════════════════════════════════════════════════ */
 
 export interface RoomBlock {
+  /* Without this nothing could ever LIFT a block. The projection
+     returned a reason and two dates, so the interface could draw a
+     room as out of order and offer no way back. */
+  id: string;
   from: string;
   /** Null means open-ended — the room is out until somebody says otherwise. */
   to: string | null;

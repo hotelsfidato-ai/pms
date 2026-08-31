@@ -1037,3 +1037,237 @@ begin
   select count(*) into n from pos_outlets where code='KOTT';
   perform test.ok('kot','the KOT fixture does not outlive the test', n = 0);
 end $$;
+
+
+-- =============================================================================
+-- CANCELLATION TERMS — 036, 037
+-- =============================================================================
+-- The night audit charged nothing on a no-show because nothing modelled what
+-- one costs. These assert the two halves of the fix and, more importantly, the
+-- thing that must stay true: NULL is not zero. A booking with no terms has no
+-- agreement behind it; a booking with terms saying 'nothing' has one. The
+-- audit reports them differently and they must never collapse together.
+-- =============================================================================
+do $$
+declare
+  v_hotel uuid; v_guest uuid; v_type uuid;
+  v_pol uuid; v_pol2 uuid; v_res uuid; n int;
+begin
+  v_hotel := app.provision_property_unchecked('CXL','Terms Test','Nowhere');
+  select id into v_type from room_types where hotel_id = v_hotel limit 1;
+
+  -- `guests` is group-level: no hotel_id, like `staff`. A person who stays at
+  -- Akkalkot in March and Pune in June is one guest.
+  insert into guests (full_name)
+  values ('Terms Tester') returning id into v_guest;
+
+  -- ---------- ships with nothing ----------
+  select count(*) into n from cancellation_policies where hotel_id = v_hotel;
+  perform test.ok('cancellation terms','a new property has no terms', n = 0,
+    n || ' arrived');
+
+  -- ---------- a booking made with no policy carries no terms ----------
+  insert into reservations
+    (hotel_id, reference, guest_id, room_type_id, check_in, check_out,
+     agreed_rate, adults)
+  values (v_hotel, app.next_reference(v_hotel), v_guest, v_type,
+          '2026-03-01', '2026-03-03', 4000, 1)
+  returning id into v_res;
+
+  perform test.ok('cancellation terms','a booking with no policy has no basis',
+    (select cancel_basis from reservations where id = v_res) is null);
+
+  -- THE assertion. Null, not zero: nobody agreed to anything, which is not
+  -- the same as agreeing that nothing is owed.
+  perform test.ok('cancellation terms','retention is NULL, never zero',
+    app.retention_for(v_res, 'no_show') is null);
+
+  -- ---------- a basis without its figure is refused ----------
+  perform test.raises('cancellation terms','percent with no percentage refused',
+    format($q$insert into cancellation_policies
+               (hotel_id, name, cancel_basis, no_show_basis)
+             values (%L,'Broken','percent','nothing')$q$, v_hotel), '23514');
+
+  perform test.raises('cancellation terms','a percentage over 100 is refused',
+    format($q$insert into cancellation_policies
+               (hotel_id, name, cancel_basis, cancel_percent, no_show_basis)
+             values (%L,'Greedy','percent',140,'nothing')$q$, v_hotel), '23514');
+
+  -- ---------- the property writes its terms ----------
+  insert into cancellation_policies
+    (hotel_id, name, free_until_hours,
+     cancel_basis, no_show_basis, no_show_percent)
+  values (v_hotel, 'Standard', 24, 'first_night', 'percent', 75)
+  returning id into v_pol;
+
+  -- Still nothing frozen: a policy that has not been chosen applies to nobody.
+  insert into reservations
+    (hotel_id, reference, guest_id, room_type_id, check_in, check_out,
+     agreed_rate, adults)
+  values (v_hotel, app.next_reference(v_hotel), v_guest, v_type,
+          '2026-04-01', '2026-04-03', 4000, 1)
+  returning id into v_res;
+
+  perform test.ok('cancellation terms','an unchosen policy applies to nobody',
+    (select cancel_basis from reservations where id = v_res) is null);
+
+  -- ---------- the property chooses it ----------
+  update cancellation_policies set applies_to_new_bookings = true
+   where id = v_pol;
+
+  insert into reservations
+    (hotel_id, reference, guest_id, room_type_id, check_in, check_out,
+     agreed_rate, adults)
+  values (v_hotel, app.next_reference(v_hotel), v_guest, v_type,
+          '2026-05-01', '2026-05-03', 4000, 1)
+  returning id into v_res;
+
+  perform test.ok('cancellation terms','the chosen policy freezes onto a booking',
+    (select cancel_terms from reservations where id = v_res) = 'Standard');
+
+  -- 4000 x 2 nights x 75% = 6000. The arithmetic, not just the wiring.
+  perform test.ok('cancellation terms','a no-show retains the agreed share',
+    app.retention_for(v_res, 'no_show') = 6000,
+    coalesce(app.retention_for(v_res,'no_show')::text,'null'));
+
+  -- first_night is one night at the agreed rate, whatever the length of stay.
+  perform test.ok('cancellation terms','a cancellation retains one night',
+    app.retention_for(v_res, 'cancel') = 4000,
+    coalesce(app.retention_for(v_res,'cancel')::text,'null'));
+
+  -- ---------- the terms do not move under a booking ----------
+  -- The whole reason they are copied. A hotel changing its mind in June must
+  -- not change what a guest agreed to in March.
+  update cancellation_policies set no_show_percent = 100 where id = v_pol;
+  perform test.ok('cancellation terms','changing the policy does not move a booking',
+    app.retention_for(v_res, 'no_show') = 6000,
+    coalesce(app.retention_for(v_res,'no_show')::text,'null'));
+
+  -- ---------- only one policy can claim new bookings ----------
+  insert into cancellation_policies
+    (hotel_id, name, cancel_basis, no_show_basis)
+  values (v_hotel, 'Second', 'nothing', 'nothing')
+  returning id into v_pol2;
+
+  perform test.raises('cancellation terms','two default policies are refused',
+    format($q$update cancellation_policies
+                set applies_to_new_bookings = true where id = %L$q$, v_pol2),
+    '23505');
+
+  -- ---------- a policy of 'nothing' is zero, and that is not null ----------
+  update cancellation_policies set applies_to_new_bookings = false where id = v_pol;
+  update cancellation_policies set applies_to_new_bookings = true where id = v_pol2;
+
+  insert into reservations
+    (hotel_id, reference, guest_id, room_type_id, check_in, check_out,
+     agreed_rate, adults)
+  values (v_hotel, app.next_reference(v_hotel), v_guest, v_type,
+          '2026-06-01', '2026-06-03', 4000, 1)
+  returning id into v_res;
+
+  perform test.ok('cancellation terms','terms of nothing retain zero, not null',
+    app.retention_for(v_res, 'no_show') = 0,
+    coalesce(app.retention_for(v_res,'no_show')::text,'null'));
+
+  delete from reservations where hotel_id = v_hotel;
+  delete from cancellation_policies where hotel_id = v_hotel;
+  /* The guest goes too, and the guard has to be lifted to do it. `guests` is
+     the one table a delete is refused on — "stay history and the audit trail
+     depend on the row", 015 — which is right for a hotel and wrong for a
+     fixture.
+
+     ⚠ FOUND BY LEAVING IT IN. The suite rebuilds `fidato` from zero and then
+     load-demo runs against what the suite left, so a test guest with no stay
+     is not harmless: load-demo's own hygiene check counts guests belonging to
+     no property and refused to load — "1 guests have no stay at any
+     property". A leaked fixture broke the next gate, exactly as that check
+     was written to catch. */
+  alter table guests disable trigger guests_no_delete;
+  delete from guests where id = v_guest;
+  alter table guests enable trigger guests_no_delete;
+end $$;
+
+
+-- =============================================================================
+-- HOUSEKEEPING ASSIGNMENT — 035
+-- =============================================================================
+-- The board showed every room to everybody, which is a status display and not
+-- a work list. These hold the two rules that make it one: a room belongs to
+-- one person on a day, and that person works at this property.
+-- =============================================================================
+do $$
+declare
+  v_hotel uuid; v_room uuid; v_staff uuid; v_other uuid; n int;
+begin
+  select id into v_hotel from hotels where code = 'CXL';
+
+  /* The provisioned property has room TYPES and no rooms — the group's rule
+     is that the owner adds those, the same rule that keeps prices out. So the
+     test makes its own rather than assuming one is there. */
+  insert into rooms (hotel_id, room_type_id, number, floor)
+  select v_hotel, id, '901', 9 from room_types where hotel_id = v_hotel limit 1
+  returning id into v_room;
+
+  insert into staff (email, full_name)
+  values ('hk.test@example.com', 'Housekeeper Test') returning id into v_staff;
+  insert into staff_hotels (staff_id, hotel_id, role)
+  values (v_staff, v_hotel, 'housekeeping');
+
+  -- Somebody at a property this room is not at.
+  insert into staff (email, full_name)
+  values ('hk.elsewhere@example.com', 'Elsewhere') returning id into v_other;
+
+  insert into housekeeping_assignments (hotel_id, room_id, work_date, staff_id)
+  values (v_hotel, v_room, '2026-07-01', v_staff);
+
+  perform test.ok('housekeeping','a room can be given to a named person',
+    (select staff_id from housekeeping_assignments
+      where room_id = v_room and work_date = '2026-07-01') = v_staff);
+
+  -- ---------- one housekeeper per room per day ----------
+  -- Two people told to clean 204 is how 204 is cleaned twice and 205 not at all.
+  perform test.raises('housekeeping','a second person for the same day is refused',
+    format($q$insert into housekeeping_assignments
+               (hotel_id, room_id, work_date, staff_id)
+             values (%L,%L,'2026-07-01',%L)$q$, v_hotel, v_room, v_staff),
+    '23505');
+
+  -- ---------- the same room, the next day, is a different question ----------
+  insert into housekeeping_assignments (hotel_id, room_id, work_date, staff_id)
+  values (v_hotel, v_room, '2026-07-02', v_staff);
+  select count(*) into n from housekeeping_assignments where room_id = v_room;
+  perform test.ok('housekeeping','tomorrow is its own assignment', n = 2,
+    n || ' rows');
+
+  -- ---------- D7: you cannot be given work where you do not work ----------
+  -- The comment in 012 described this exact case long before there was an
+  -- assignment table to attach it to.
+  perform test.raises('housekeeping','somebody with no access here is refused',
+    format($q$insert into housekeeping_assignments
+               (hotel_id, room_id, work_date, staff_id)
+             values (%L,%L,'2026-07-03',%L)$q$, v_hotel, v_room, v_other),
+    'P0001');
+
+  delete from housekeeping_assignments where hotel_id = v_hotel;
+  delete from rooms where id = v_room;
+  delete from staff_hotels where staff_id in (v_staff, v_other);
+  delete from staff where id in (v_staff, v_other);
+
+  select count(*) into n from staff where email like 'hk.%@example.com';
+  perform test.ok('housekeeping','the fixture does not outlive the test', n = 0);
+
+  /* And the property, which both this block and the cancellation-terms block
+     above share.
+
+     ⚠ FOUND BY verify-backup, not by the suite. Every assertion passed with
+     CXL still standing; the backup check counts properties and said
+     "properties 4 (expected 3)". A test fixture that survives its test is
+     indistinguishable from real data in a restore. */
+  alter table hotels disable trigger hotels_no_delete;
+  delete from hotels where id = v_hotel;
+  alter table hotels enable trigger hotels_no_delete;
+
+  select count(*) into n from hotels where code = 'CXL';
+  perform test.ok('housekeeping','the terms fixture does not outlive it either',
+    n = 0, n || ' left behind');
+end $$;

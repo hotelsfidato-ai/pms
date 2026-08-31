@@ -33,6 +33,7 @@ import TillPage from "@/pages/Till";
 import BillPage from "@/pages/Bill";
 import MenuPage from "@/pages/Menu";
 import RatePlansEditor from "@/pages/RatePlans";
+import CancellationTermsPage from "@/pages/CancellationTerms";
 import TerminalPage from "@/pages/Terminal";
 import KitchenPage from "@/pages/Kitchen";
 import AdminConsolePage from "@/pages/admin/Console";
@@ -296,6 +297,10 @@ export default function App() {
             <Route
               path="/h/:code/rate-plans"
               element={<><PropertyScope /><RatePlansEditor /></>}
+            />
+            <Route
+              path="/h/:code/cancellation-terms"
+              element={<><PropertyScope /><CancellationTermsPage /></>}
             />
             <Route
               path="/h/:code/rates"

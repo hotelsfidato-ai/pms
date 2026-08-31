@@ -130,6 +130,7 @@ const SECTIONS: NavSection[] = [
       { label: "Room types", to: "/h/:code/room-types", icon: LayoutDashboard, resource: "room_config" },
       { label: "Rate plans", to: "/h/:code/rate-plans", icon: Wallet, resource: "rate" },
       { label: "Rates", to: "/h/:code/rates", icon: BarChart3, resource: "rate" },
+      { label: "Cancellation terms", to: "/h/:code/cancellation-terms", icon: ShieldAlert, resource: "rate" },
     ],
   },
   {

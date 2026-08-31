@@ -1,5 +1,6 @@
 import { Hono } from "hono";
 import { withSession } from "../auth.ts";
+import { businessDateFor } from "../businessDate.ts";
 import type { Client } from "../db.ts";
 
 /* ══════════════════════════════════════════════════════════════════
@@ -156,9 +157,11 @@ property.get("/:code/rooms", async (c) => {
               r.housekeeping_status, rt.max_occupancy,
               rt.base_rate::text,
               (select json_agg(json_build_object(
+                        'id',   b.id::text,
                         'from', to_char(b.from_date,'YYYY-MM-DD'),
                         'to',   to_char(b.to_date,'YYYY-MM-DD'),
-                        'reason', b.reason))
+                        'reason', b.reason)
+                        order by b.from_date)
                  from room_blocks b
                 where b.room_id = r.id)::text as blocks
          from rooms r
@@ -181,7 +184,7 @@ property.get("/:code/rooms", async (c) => {
          a room as sellable on a date when NO block covers it. */
       blocks: r.blocks
         ? (JSON.parse(r.blocks) as Array<{
-            from: string; to: string; reason: string | null;
+            id: string; from: string; to: string; reason: string | null;
           }>)
         : [],
     }));
@@ -236,4 +239,125 @@ property.put("/:code/rooms/:number/housekeeping", async (c) => {
 
   if (!result) return c.json({ error: "No such property." }, 404);
   return c.json(result, result.allowed ? 200 : 409);
+});
+
+/* ── Taking a room out of inventory ───────────────────────────────────
+   `room_blocks` has existed since 022 with a reason, dates and an
+   author. The tape chart draws from it. Nothing has ever written to it,
+   so a housekeeper finding a broken shower could not record it and the
+   only blocks in the system came from the demo loader.
+   ═══════════════════════════════════════════════════════════════════ */
+property.post("/:code/rooms/:number/block", async (c) => {
+  type Body = { reason?: string; from?: string; to?: string | null; note?: string };
+  const input = await c.req.json<Body>().catch(() => ({}) as Body);
+
+  const REASONS = [
+    "out_of_service", "out_of_order", "refurbishment",
+    "house_use", "owner_occupied",
+  ];
+  if (!input.reason || !REASONS.includes(input.reason)) {
+    return c.json({ ok: false, reason: "Why is the room coming out?" }, 409);
+  }
+  const from = input.from;
+  if (!from) {
+    return c.json({ ok: false, reason: "From which date?" }, 409);
+  }
+  if (input.to && input.to < from) {
+    return c.json({
+      ok: false,
+      reason: "A block cannot end before it starts.",
+    }, 409);
+  }
+
+  const body = await withSession(c.get("subject"), async (client, session) => {
+    const hotel = await resolve(client, c.req.param("code"));
+    if (!hotel) return null;
+
+    const { rows: room } = await client.query<{ id: string }>(
+      `select id::text from rooms
+        where hotel_id = $1 and number = $2 and is_active`,
+      [hotel.id, c.req.param("number")],
+    );
+    if (!room[0]) {
+      return { ok: false, reason: `There is no room ${c.req.param("number")} here.` };
+    }
+
+    /* A room with somebody in it is not a room you can take out. The
+       tape chart would draw it blocked while a guest slept in it, and
+       the night audit would still post their room charge. */
+    const { rows: occupied } = await client.query<{ guest: string }>(
+      `select g.full_name as guest
+         from room_assignments ra
+         join reservations r on r.id = ra.reservation_id
+         join guests g on g.id = r.guest_id
+        where ra.room_id = $1 and ra.released_at is null
+          and r.status = 'checked_in'
+        limit 1`,
+      [room[0].id],
+    );
+    if (occupied[0]) {
+      return {
+        ok: false,
+        reason: `${occupied[0].guest} is in that room. Move them out first.`,
+      };
+    }
+
+    const { rows } = await client.query<{ id: string }>(
+      `insert into room_blocks
+         (hotel_id, room_id, from_date, to_date, reason, note, created_by)
+       values ($1,$2,$3::date,$4::date,$5,$6,$7)
+       returning id::text`,
+      [hotel.id, room[0].id, from, input.to ?? null,
+       input.reason, input.note?.trim() || null, session.staffId],
+    );
+
+    /* The room's own status too, when the block starts today or earlier
+       — the board reads `housekeeping_status`, the chart reads the
+       block, and the two disagreeing is how a room gets sold twice. */
+    if (from <= (await businessDateFor(client, hotel.id))) {
+      await client.query(
+        `update rooms set housekeeping_status = 'out_of_service' where id = $1`,
+        [room[0].id],
+      );
+    }
+
+    return { ok: true as const, id: rows[0]!.id };
+  });
+
+  if (!body) return c.json({ error: "No such property." }, 404);
+  return c.json(body, "ok" in body && body.ok ? 200 : 409);
+});
+
+property.delete("/:code/rooms/:number/block/:id", async (c) => {
+  const body = await withSession(c.get("subject"), async (client) => {
+    const hotel = await resolve(client, c.req.param("code"));
+    if (!hotel) return null;
+
+    const { rows: room } = await client.query<{ id: string }>(
+      `select id::text from rooms where hotel_id = $1 and number = $2`,
+      [hotel.id, c.req.param("number")],
+    );
+    if (!room[0]) return { ok: false, reason: "No such room." };
+
+    const { rowCount } = await client.query(
+      `delete from room_blocks
+        where id = $1 and room_id = $2 and hotel_id = $3`,
+      [c.req.param("id"), room[0].id, hotel.id],
+    );
+    if (!rowCount) return { ok: false, reason: "That block is not here." };
+
+    /* Back into inventory DIRTY, never clean. A room that has been out
+       for a fortnight of refurbishment needs looking at before somebody
+       sleeps in it, and "clean" is a claim nobody has checked. */
+    await client.query(
+      `update rooms set housekeeping_status = 'dirty'
+        where id = $1 and housekeeping_status = 'out_of_service'`,
+      [room[0].id],
+    );
+
+    return { ok: true as const };
+  });
+
+  if (!body) return c.json({ error: "No such property." }, 404);
+  return c.json(body, "ok" in body && body.ok ? 200 : 409);
 });

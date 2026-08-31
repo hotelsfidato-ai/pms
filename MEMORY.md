@@ -1528,6 +1528,106 @@ market standard actually does found a missing act, not a missing style.
 
 ---
 
+### 77 · The API does not reload, and I read a stale endpoint as a bug
+
+`Put back` on an out-of-order room failed. The log said `string_to_uuid` on
+`$1`, which meant the frontend had sent `undefined` where a block id belonged.
+
+The block id was there. I had added it to the projection in `property.ts` and
+the type had compiled. What I had not done was **restart the API**: `npm run
+serve` is `tsx src/server.ts` with no watch, so every edit under `api/src`
+sits inert until the process is killed. The running server was still returning
+blocks with no `id`.
+
+**After any `api/src` edit, restart before testing.** `npx tsc --noEmit`
+passing proves the code compiles, not that it is the code answering the port.
+
+---
+
+### 78 · I wrote a folio posting from memory, again
+
+Defects 64 and 67 were rewriting SQL from memory instead of reading the
+schema. I did it a third time, on the retention posting, and invented:
+
+* a `kind` column — the real one is `category`
+* a value `'charge'` — `category` is a CHECK list of twelve, and `'charge'`
+  is not among them
+* an `idempotency_key` taking a string — it is a **uuid**
+
+The insert would have failed on all three. Ten seconds of
+`grep -A 30 "create table if not exists folio_postings"` was the whole fix.
+
+It also turned out no idempotency key was needed at all: the update above it
+matches `status = 'confirmed'` and has already moved those rows to `no_show`,
+so a second audit run selects none of them. **The mechanism was already
+idempotent; I was about to add machinery to guarantee something that was
+guaranteed.**
+
+---
+
+### 79 · A test fixture broke the gate after the one it passed
+
+The new suite left a guest called 'Terms Tester' behind — I had decided not to
+delete it, reasoning that the suite rebuilds the database from zero so nothing
+could leak.
+
+Nothing leaks **into the suite**. `db/tests/run.sh` rebuilds `fidato` and then
+`load-demo` runs against what the suite left, and load-demo's own hygiene
+check counts guests belonging to no property:
+
+```
+load-demo failed: 1 guests have no stay at any property.
+```
+
+All 137 assertions had passed. The gate order is not decoration — each gate
+runs against the previous one's leavings, so **"clean enough for my test" is
+not the standard; "clean" is.**
+
+`guests` refuses deletes (015, `guests_no_delete`). Lifting the trigger for
+one statement is the established idiom in this suite — `hotels_no_delete` and
+`pos_order_lines_frozen` are both lifted the same way.
+
+---
+
+### 80 · verify-backup caught what the suite could not
+
+Same turn, same cause, different gate: the test property `CXL` outlived its
+test. Every assertion passed. Then:
+
+```
+x  properties   4   (expected 3)
+```
+
+The suite asserts what it was told to assert. `verify-backup` asserts what a
+restored database should *look like*, which is a different question and the
+only one that catches a fixture nobody thought to count. **A leftover fixture
+is indistinguishable from real data in a restore.**
+
+---
+
+### 81 · A feature that could never fire
+
+Cancellation terms were nearly shipped as decoration. The migration modelled
+policies, the audit read terms frozen on the booking, the screen wrote
+policies — and **nothing put a policy onto a booking**, so
+`app.retention_for` returned null for every reservation that would ever exist
+and the audit went on charging nothing.
+
+Every piece worked. The feature did not. Caught by asking what would actually
+happen on the next night audit rather than whether the screen saved.
+
+The fix needed two things that were not obvious from either end: a trigger, so
+terms attach however the booking is made (walk-in, reservation, demo loader,
+and the channel manager later), and a property-chosen default — which is
+**not** a shipped default. The rule is that the *system* must not invent
+figures nobody agreed to. A hotel marking its own written policy as the one
+that applies is the hotel stating its terms, which is the opposite.
+
+**Before claiming a feature: name the moment it fires, and check something
+reaches that moment.**
+
+---
+
 ## Verification traps
 
 ### Never test a Tailwind utility by injecting the class at runtime

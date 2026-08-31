@@ -18,6 +18,7 @@ import { pos, posAdmin, outletFor, type Outlet } from "./routes/pos.ts";
 import { till } from "./routes/till.ts";
 import { admin } from "./routes/admin.ts";
 import { rates } from "./routes/rates.ts";
+import { housekeeping } from "./routes/housekeeping.ts";
 import { nightAudit } from "./routes/nightAudit.ts";
 import { invoices } from "./routes/invoices.ts";
 
@@ -172,6 +173,7 @@ app.route("/api/hotels", till);
    property is not scoped to a property. */
 app.route("/api", admin);
 app.route("/api/hotels", rates);
+app.route("/api/hotels", housekeeping);
 
 /* A POS mounts at its OWN prefix, not under /api/hotels. It does not
    know a hotel code and must not need one: its key resolves to exactly

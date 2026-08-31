@@ -85,6 +85,14 @@ export function GuestLedgerPage() {
       title="Guest Ledger"
       period={`${dateShort(PTD_FROM)} to ${dateShort(BUSINESS_DATE)}`}
       meta={`Date From ${dateShort(PTD_FROM)} To ${dateShort(BUSINESS_DATE)}   Folios that moved in the window`}
+      csv={() => ({
+        headers: ["Reference", "Guest", "Room", "Status",
+                  "Opening", "Charges", "Payments", "Closing"],
+        rows: rows.map((r) => [
+          r.reference, r.guest, r.room, r.status,
+          r.opening, r.charges, r.payments, r.closing,
+        ]),
+      })}
     >
       {isLoading ? <Loading /> : (
         <>
@@ -181,6 +189,17 @@ export function CashierShiftPage() {
       title="Cashier Shift"
       period={dateShort(BUSINESS_DATE)}
       meta={`Business date ${dateShort(BUSINESS_DATE)}   Receipts by cashier and method`}
+      csv={() => ({
+        headers: ["Cashier", "Method", "Receipts", "Amount"],
+        /* Named columns, not Object.values. Key order is not column
+           order, and a report that silently reshuffles when somebody
+           adds a field is worse than one that fails to compile. */
+        rows: rows.map((r) => [
+          /* A dash, never "System". 042 established that a posting with
+             no attributed staff says so. */
+          r.cashier ?? "—", r.method, r.count, r.amount,
+        ]),
+      })}
     >
       {isLoading ? <Loading /> : (
         <>
@@ -266,6 +285,21 @@ export function GstSalesPage() {
       title="GST Sales Register"
       period={`${dateShort(PTD_FROM)} to ${dateShort(BUSINESS_DATE)}`}
       meta={`GSTR-1 extract   Every document issued in the period, credit notes included`}
+      csv={() => ({
+        /* The columns a GSTR-1 upload wants. Credit notes carry their
+           own row with the invoice they credit, because that is how the
+           return reads them — not as an adjustment to the original. */
+        headers: [
+          "Invoice number", "Issued", "Recipient", "Recipient GSTIN",
+          "Place of supply", "SAC", "Taxable value",
+          "CGST", "SGST", "Total", "Credits invoice",
+        ],
+        rows: rows.map((r) => [
+          r.number, r.issued, r.recipient ?? "", r.gstin ?? "",
+          r.placeOfSupply ?? "", r.sac,
+          r.taxable, r.cgst, r.sgst, r.total, r.creditsInvoice ?? "",
+        ]),
+      })}
     >
       {isLoading ? <Loading /> : (
         <>
@@ -356,6 +390,22 @@ export function CFormPage() {
       title="Form C — Foreign Nationals"
       period={`${dateShort(PTD_FROM)} to ${dateShort(BUSINESS_DATE)}`}
       meta={`Arrivals in the period   ${unfiled} awaiting an FRRO reference`}
+      csv={() => ({
+        headers: [
+          "Guest", "Nationality", "Passport", "Passport expiry",
+          "Visa number", "Visa expiry", "Address", "Room",
+          "Arrived", "Departed", "FRRO reference", "Filed at",
+        ],
+        /* Blanks, not "unknown". A missing passport number on a Form C
+           extract is a fact the person filing has to see and chase —
+           filling it with a placeholder hides exactly the row that
+           needs attention. */
+        rows: rows.map((r) => [
+          r.guest, r.nationality, r.passport ?? "", r.passportExpiry ?? "",
+          r.visaNumber ?? "", r.visaExpiry ?? "", r.address ?? "", r.room,
+          r.arrived, r.departed, r.reference ?? "", r.filedAt ?? "",
+        ]),
+      })}
     >
       {isLoading ? <Loading /> : (
         <>

@@ -293,18 +293,66 @@ nightAudit.post("/:code/night-audit/run", async (c) => {
        'confirmed' would carry it into tomorrow's arrivals list, where
        a clerk would look for a guest who is a day gone.
 
-       NO retention is charged here. Whether a no-show is billed
-       depends on the rate's cancellation terms, which this system does
-       not model yet. Charging a guess would be worse than charging
-       nothing: nothing is visibly missing, a wrong number is not. */
-    const { rowCount: noShows } = await client.query(
-      `update reservations
+       Retention comes from the terms FROZEN ON THE BOOKING (036), and
+       only from there. A booking made before the property wrote its
+       terms down carries none, `app.retention_for` returns null for
+       it, and the audit charges nothing — which is what it did for
+       every booking until now. Null is not zero: zero is a decision
+       that nothing is owed, null is the absence of any agreement, and
+       they are counted separately below so the run can say which. */
+    const { rows: missed } = await client.query<{
+      id: string; folio_id: string | null; retention: string | null;
+    }>(
+      `update reservations r
           set status = 'no_show'
-        where hotel_id = $1
-          and status = 'confirmed'
-          and check_in <= $2::date`,
+        where r.hotel_id = $1
+          and r.status = 'confirmed'
+          and r.check_in <= $2::date
+      returning r.id::text,
+                (select f.id::text from folios f
+                  where f.reservation_id = r.id
+                  order by f.opened_at limit 1) as folio_id,
+                app.retention_for(r.id, 'no_show')::text as retention`,
       [hotelId, businessDate],
     );
+    const noShows = missed.length;
+
+    /* A retention is a CHARGE on the guest's folio, posted like any
+       other. Not a separate ledger and not a note: the guest owes it,
+       and the city ledger and the GST register both have to see it. */
+    let retained = 0;
+    let untermed = 0;
+    for (const m of missed) {
+      const amount = m.retention === null ? null : Number(m.retention);
+      if (amount === null) { untermed += 1; continue; }
+      if (amount <= 0 || !m.folio_id) continue;
+
+      /* Category `misc`, deliberately NOT `room`. No room was
+         occupied, and posting this as room revenue would put it in
+         ADR and occupancy — inflating the rate the hotel thinks it
+         achieved on a night nobody slept there.
+
+         Taxed at the same rate as the accommodation would have been.
+         That is the treatment CBIC set out in circular 178/10/2022:
+         a cancellation charge is ancillary to the principal supply
+         and carries its rate. Posting it at zero would be a tax
+         determination too — that it is exempt — and a wrong one.
+
+         No idempotency key: the update above matches `status =
+         'confirmed'` and has already moved these rows to `no_show`,
+         so a second run of the audit selects none of them. */
+      const retTax = Math.round(amount * taxRate) / 100;
+      await client.query(
+        `insert into folio_postings
+           (hotel_id, folio_id, business_date, category, description,
+            amount, tax_rate, tax_amount, source_type, posted_by)
+         values ($1,$2,$3::date,'misc',$4,$5,$6,$7,'night_audit',
+                 app.current_user_id())`,
+        [hotelId, m.folio_id, businessDate,
+         "Retention — no-show", amount, taxRate, retTax],
+      );
+      retained += amount;
+    }
 
     /* ── Close it. THIS is what moves the date. ───────────────────── */
     await client.query(
@@ -312,7 +360,7 @@ nightAudit.post("/:code/night-audit/run", async (c) => {
           set status = 'completed', completed_at = now(),
               rooms_posted = $2, revenue_posted = $3, no_shows = $4
         where id = $1`,
-      [runId, roomsPosted, revenuePosted, noShows ?? 0],
+      [runId, roomsPosted, revenuePosted, noShows],
     );
 
     const next = await businessDateFor(client, hotelId);
@@ -324,7 +372,13 @@ nightAudit.post("/:code/night-audit/run", async (c) => {
       roomsPosted,
       revenuePosted: Math.round(revenuePosted * 100) / 100,
       complimentary,
-      noShows: noShows ?? 0,
+      noShows,
+      /* Reported apart. `retentionCharged` is money now owed;
+         `noShowsWithoutTerms` is the count the property could have
+         billed for and cannot, because the booking carries no terms.
+         Rolling them together would hide the second entirely. */
+      retentionCharged: Math.round(retained * 100) / 100,
+      noShowsWithoutTerms: untermed,
     } as Record<string, unknown>;
   });
 

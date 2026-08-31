@@ -479,3 +479,74 @@ export const operationsRepo = {
   createWalkIn,
   listHousekeeping, markRoom,
 };
+
+/* ══════════════════════════════════════════════════════════════════
+   WHOSE ROOMS ARE THESE
+
+   The board listed every room in the property to whoever opened it.
+   That is a status display; a housekeeper needs a work list. These
+   read and write the named assignment behind it.
+   ══════════════════════════════════════════════════════════════════ */
+
+export interface Housekeeper {
+  id: string;
+  name: string;
+  role: string;
+}
+
+export interface RoomAssignment {
+  room: string;
+  staffId: string;
+  staffName: string;
+  role: string | null;
+  note: string | null;
+}
+
+export async function listHousekeepers(hotelId: string): Promise<Housekeeper[]> {
+  if (!hotelId) return [];
+  try {
+    return await api<Housekeeper[]>(`/api/hotels/${hotelId}/housekeepers`);
+  } catch {
+    return [];
+  }
+}
+
+export async function listRoomAssignments(
+  hotelId: string, date?: string,
+): Promise<{ date: string; assignments: RoomAssignment[] }> {
+  if (!hotelId) return { date: "", assignments: [] };
+  const q = date ? `?date=${encodeURIComponent(date)}` : "";
+  return await api<{ date: string; assignments: RoomAssignment[] }>(
+    `/api/hotels/${hotelId}/housekeeping/assignments${q}`,
+  );
+}
+
+export async function assignHousekeeper(
+  hotelId: string, roomNumber: string, staffId: string,
+  opts: { date?: string; note?: string } = {},
+): Promise<{ ok: true; staffName: string; date: string } | { ok: false; reason: string }> {
+  try {
+    return await api(
+      `/api/hotels/${hotelId}/housekeeping/assignments/${encodeURIComponent(roomNumber)}`,
+      { method: "PUT", body: JSON.stringify({ staffId, ...opts }) },
+    );
+  } catch (e) {
+    return { ok: false as const,
+             reason: e instanceof Error ? e.message : "Not assigned." };
+  }
+}
+
+export async function unassignHousekeeper(
+  hotelId: string, roomNumber: string, date?: string,
+): Promise<{ ok: true } | { ok: false; reason: string }> {
+  const q = date ? `?date=${encodeURIComponent(date)}` : "";
+  try {
+    return await api(
+      `/api/hotels/${hotelId}/housekeeping/assignments/${encodeURIComponent(roomNumber)}${q}`,
+      { method: "DELETE" },
+    );
+  } catch (e) {
+    return { ok: false as const,
+             reason: e instanceof Error ? e.message : "Not unassigned." };
+  }
+}

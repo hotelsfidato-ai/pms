@@ -53,6 +53,16 @@ export function CityLedgerPage() {
       title="City Ledger — Summary"
       period={`${dateShort(PTD_FROM)} to ${dateShort(BUSINESS_DATE)}`}
       meta={`Date From ${dateShort(PTD_FROM)} To ${dateShort(BUSINESS_DATE)}   Ignore zero balance account`}
+      csv={() => ({
+        headers: ["Account", "Contact", "Phone", "Opening", "Debit", "Credit", "Closing"],
+        /* Raw numbers, not the formatted strings on screen. An export
+           somebody has to strip currency symbols out of before summing
+           is an export that wasted their afternoon. */
+        rows: rows.map((r) => [
+          r.account, r.contact, r.phone ?? "",
+          r.opening, r.debit, r.credit, r.closing ?? 0,
+        ]),
+      })}
     >
       {isLoading ? (
         <div className="p-5 space-y-2">
@@ -190,7 +200,22 @@ export function LodgingTaxPage() {
       title="Lodging Tax Report"
       period={`${dateShort(PTD_FROM)} to ${dateShort(BUSINESS_DATE)}`}
       meta="Filed with authorities — the format is fixed, not ours to redesign"
-      onExportExcel={() => window.print()}
+      csv={() => ({
+        /* The real export's own columns, in its own order. This report
+           is filed with an authority: its shape is not ours to improve,
+           and an accountant reconciling it against last month's should
+           not have to notice anything changed. */
+        headers: [
+          "Date", "From bill", "To bill", "Total bill", "Total room rent",
+          "Non taxable", "CGST net", "CGST tax", "SGST net", "SGST tax",
+          "Service charges", "Other bills", "Less discount", "Round off",
+        ],
+        rows: (data ?? []).map((r) => [
+          r.date, r.fromBill, r.toBill, r.totalBill, r.totalRoomRent,
+          r.nonTaxable, r.cgstNet, r.cgstTax, r.sgstNet, r.sgstTax,
+          r.serviceCharges, r.otherBills, r.lessDiscount, r.roundOff,
+        ]),
+      })}
     >
       {isLoading ? (
         <div className="p-5 space-y-2">

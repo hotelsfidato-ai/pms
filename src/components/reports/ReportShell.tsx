@@ -3,6 +3,7 @@ import { Printer, FileSpreadsheet, FileText } from "lucide-react";
 import { cn } from "@/lib/cn";
 import { dateShort } from "@/lib/format";
 import { Button, Card } from "@/components/ui";
+import { toCsv, downloadCsv, reportFilename } from "@/lib/csv";
 
 /* ══════════════════════════════════════════════════════════════════
    REPORT SHELL
@@ -23,7 +24,7 @@ export function ReportShell({
   period,
   children,
   onExportPdf,
-  onExportExcel,
+  csv,
   /** Shown above the table — the report's own header line. */
   meta,
 }: {
@@ -32,7 +33,17 @@ export function ReportShell({
   period: string;
   children: ReactNode;
   onExportPdf?: () => void;
-  onExportExcel?: () => void;
+  /** The report's own rows, for the export.
+   *
+   *  A FUNCTION rather than an array so a report with ten thousand rows
+   *  does not build the whole export on every render just in case
+   *  somebody clicks.
+   *
+   *  This replaced `onExportExcel`, which one report passed as
+   *  `() => window.print()` — a button labelled Excel that opened a
+   *  print dialogue. A control that lies about what it does is worse
+   *  than one that is missing. */
+  csv?: () => { headers: string[]; rows: unknown[][] };
   meta?: ReactNode;
 }) {
   const stamp = new Date().toLocaleString("en-IN", {
@@ -59,10 +70,23 @@ export function ReportShell({
               PDF
             </Button>
           )}
-          {onExportExcel && (
-            <Button variant="secondary" size="sm" onClick={onExportExcel}>
+          {csv && (
+            <Button
+              variant="secondary"
+              size="sm"
+              onClick={() => {
+                const { headers, rows } = csv();
+                downloadCsv(
+                  reportFilename(property, title, period),
+                  toCsv(headers, rows),
+                );
+              }}
+            >
               <FileSpreadsheet className="size-4" />
-              Excel
+              {/* CSV and not "Excel". It writes a .csv, Excel opens it,
+                  and a label naming a product the file is not is the
+                  same lie in a smaller font. */}
+              CSV
             </Button>
           )}
         </div>

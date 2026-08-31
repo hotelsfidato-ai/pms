@@ -84,3 +84,54 @@ export const roomRepo = roomsRepo;
 
 /** Older name, kept so existing callers keep resolving. */
 export const listRooms = listSellableRooms;
+
+/* ══════════════════════════════════════════════════════════════════
+   TAKING A ROOM OUT OF INVENTORY
+
+   `room_blocks` has existed since migration 022 with a reason, dates
+   and an author, and the tape chart draws from it. Nothing ever wrote
+   to it: a housekeeper finding a broken shower had nowhere to record
+   it, and the only blocks in the system came from the demo loader.
+   ══════════════════════════════════════════════════════════════════ */
+
+export const BLOCK_REASONS = [
+  { value: "out_of_order", label: "Out of order — something is broken" },
+  { value: "out_of_service", label: "Out of service — held back deliberately" },
+  { value: "refurbishment", label: "Refurbishment" },
+  { value: "house_use", label: "House use — staff, storage, an office" },
+  { value: "owner_occupied", label: "Owner occupied" },
+] as const;
+
+export async function blockRoom(
+  hotelId: string,
+  roomNumber: string,
+  input: { reason: string; from: string; to?: string | null; note?: string },
+): Promise<{ ok: true; id: string } | { ok: false; reason: string }> {
+  try {
+    return await api(
+      `/api/hotels/${hotelId}/rooms/${encodeURIComponent(roomNumber)}/block`,
+      { method: "POST", body: JSON.stringify(input) },
+    );
+  } catch (e) {
+    return {
+      ok: false as const,
+      reason: e instanceof Error ? e.message : "The room was not taken out.",
+    };
+  }
+}
+
+export async function unblockRoom(
+  hotelId: string, roomNumber: string, blockId: string,
+): Promise<{ ok: true } | { ok: false; reason: string }> {
+  try {
+    return await api(
+      `/api/hotels/${hotelId}/rooms/${encodeURIComponent(roomNumber)}/block/${blockId}`,
+      { method: "DELETE" },
+    );
+  } catch (e) {
+    return {
+      ok: false as const,
+      reason: e instanceof Error ? e.message : "The room was not put back.",
+    };
+  }
+}

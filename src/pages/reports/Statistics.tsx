@@ -158,6 +158,18 @@ export function MonthlyStatisticsPage() {
       title="Monthly Statistics"
       period="August 2026"
       meta="Month August, 2026   Show Unposted Inclusions Charges   No"
+      csv={() => ({
+        headers: [
+          "Date", "Available", "Night sold", "Complimentary", "Occupancy %",
+          "ADR", "RevPAR", "Pax", "Room charges", "Extra", "Tax",
+          "Receipt", "Expense",
+        ],
+        rows: rows.map((r) => [
+          r.date, r.availableRooms, r.nightSold, r.complimentary,
+          r.occupancyPct, r.adr, r.revPar, r.pax,
+          r.roomCharges, r.extraCharges, r.tax, r.receipt, r.expense,
+        ]),
+      })}
     >
       {isLoading ? (
         <div className="p-5 space-y-2">
