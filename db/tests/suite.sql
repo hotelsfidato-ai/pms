@@ -535,3 +535,136 @@ begin
   delete from pos_tickets where outlet_id = v_outlet;
   delete from pos_outlets where id = v_outlet;
 end $$;
+
+
+-- =============================================================================
+-- THE TILL (028) — the POS built into the PMS
+-- =============================================================================
+-- 024 proves the BRIDGE: an outside till posts a finished bill. These prove
+-- the till's own rules, and the one that matters most is that a paid bill
+-- stops being editable. Everything else on this screen is convenience; that
+-- one is the difference between a record and a draft.
+-- =============================================================================
+do $$
+declare
+  a uuid; v_staff uuid; v_outlet uuid; v_cat uuid; v_item uuid;
+  v_order uuid; v_open uuid; bd date; n int; g numeric; t numeric;
+begin
+  select id into a from hotels where code='AGR';
+  select id into v_staff from staff where email='agra@fidato.in';
+  bd := app.business_date(a);
+
+  insert into pos_outlets (hotel_id, code, name, category, staff_id)
+  values (a, 'TILL', 'Till Test Outlet', 'food', v_staff)
+  returning id into v_outlet;
+
+  insert into pos_menu_categories (hotel_id, name)
+  values (a, 'Test Category') returning id into v_cat;
+
+  insert into pos_menu_items (hotel_id, category_id, name, price, tax_rate)
+  values (a, v_cat, 'Test Dish', 100.00, 5.00) returning id into v_item;
+
+  -- ---------- order numbers run per hotel per operating day ----------
+  insert into pos_orders (hotel_id, outlet_id, order_no, business_date, opened_by)
+  values (a, v_outlet, app.pos_next_order_no(a, bd), bd, v_staff)
+  returning id into v_open;
+
+  perform test.ok('pos till','order number carries the business date',
+    (select order_no from pos_orders where id = v_open)
+      like to_char(bd,'YYYYMMDD') || '-%',
+    (select order_no from pos_orders where id = v_open));
+
+  -- ---------- the total excludes struck lines ----------
+  insert into pos_order_lines
+    (order_id, hotel_id, item_id, name, qty, unit_price, tax_rate, added_by)
+  values (v_open, a, v_item, 'Test Dish', 2, 100.00, 5.00, v_staff);
+
+  insert into pos_order_lines
+    (order_id, hotel_id, item_id, name, qty, unit_price, tax_rate, added_by,
+     voided, voided_by, voided_at)
+  values (v_open, a, v_item, 'Test Dish', 5, 100.00, 5.00, v_staff,
+          true, v_staff, now());
+
+  select gross, tax into g, t from app.pos_order_total(v_open);
+
+  -- 2 x 100 = 200 net, 5% = 10 tax, 210 gross. The struck 5 must not appear:
+  -- if voided lines counted this would be 910.
+  perform test.ok('pos till','a struck line is not charged for',
+    g = 210.00 and t = 10.00, 'gross ' || g || ' tax ' || t);
+
+  -- ---------- a paid bill cannot be edited ----------
+  update pos_orders
+     set status='settled', settled_by=v_staff, settled_at=now(),
+         payment_method='cash'
+   where id = v_open;
+
+  perform test.raises('pos till','a settled order takes no new line',
+    format($q$insert into pos_order_lines
+               (order_id, hotel_id, name, qty, unit_price, tax_rate, added_by)
+             values (%L,%L,'Sneaked in',1,50,5,%L)$q$, v_open, a, v_staff),
+    '23000');
+
+  perform test.raises('pos till','a settled order''s line cannot be re-priced',
+    format($q$update pos_order_lines set unit_price = 1
+              where order_id = %L$q$, v_open), '23000');
+
+  perform test.raises('pos till','a settled order''s line cannot be deleted',
+    format($q$delete from pos_order_lines where order_id = %L$q$, v_open),
+    '23000');
+
+  -- ---------- and cannot be reopened to get around that ----------
+  perform test.raises('pos till','a settled order cannot be reopened',
+    format($q$update pos_orders set status='open' where id = %L$q$, v_open),
+    '23000');
+
+  -- ---------- settled means somebody settled it ----------
+  perform test.raises('pos till','"paid" with nobody''s name on it is refused',
+    format($q$insert into pos_orders
+               (hotel_id, outlet_id, order_no, business_date, opened_by, status)
+             values (%L,%L,'X-1',%L,%L,'settled')$q$, a, v_outlet, bd, v_staff),
+    '23514');
+
+  -- ---------- a room charge must carry its ticket ----------
+  -- Without this an order reads as paid to a room while no folio posting
+  -- exists -- the bill everybody believes is on the folio and is not.
+  perform test.raises('pos till','a room settlement without a ticket is refused',
+    format($q$insert into pos_orders
+               (hotel_id, outlet_id, order_no, business_date, opened_by,
+                status, settled_by, settled_at, payment_method)
+             values (%L,%L,'X-2',%L,%L,'settled',%L,now(),'room')$q$,
+           a, v_outlet, bd, v_staff, v_staff),
+    '23514');
+
+  -- ---------- an abandoned order says why ----------
+  perform test.raises('pos till','an abandoned order names its reason',
+    format($q$insert into pos_orders
+               (hotel_id, outlet_id, order_no, business_date, opened_by, status)
+             values (%L,%L,'X-3',%L,%L,'abandoned')$q$, a, v_outlet, bd, v_staff),
+    '23514');
+
+  -- ---------- a sold line is evidence ----------
+  perform test.ok('pos till','pms_app has no DELETE on pos_order_lines',
+    not has_table_privilege('pms_app','pos_order_lines','delete'));
+  perform test.ok('pos till','pms_app has no DELETE on pos_orders',
+    not has_table_privilege('pms_app','pos_orders','delete'));
+
+  -- ---------- the menu ships empty ----------
+  -- Prices are the hotel's. A migration that seeded a dish would put a number
+  -- on a screen that looks like Fidato's and is invented.
+  select count(*) into n from pos_menu_items
+   where hotel_id = a and id <> v_item;
+  perform test.ok('pos till','no migration invented a menu item',
+    n = 0, n || ' unexplained items');
+
+  -- ---------- and it cannot be deleted to get around THAT ----------
+  -- Found by trying to tear this test down. `on delete cascade` from
+  -- pos_orders fires the same BEFORE DELETE trigger on every line, so a
+  -- settled order cannot be removed at all -- not by the API, which has no
+  -- DELETE, and not by the superuser, which does.
+  --
+  -- That is the correct answer for a financial record, and it is why there
+  -- is no teardown below. The suite rebuilds the database from zero on every
+  -- run; a paid bill outliving the test is the point, not a leak.
+  perform test.raises('pos till','a settled order cannot be deleted at all',
+    format($q$delete from pos_orders where id = %L$q$, v_open), '23000');
+end $$;
