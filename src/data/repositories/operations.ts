@@ -440,6 +440,36 @@ export async function markRoom(
   return permitted.allowed ? { ok: true } : refuse(permitted.reason ?? "Refused.");
 }
 
+/**
+ * Give a booking a room ahead of arrival.
+ *
+ * Check-in assigns a room AT arrival; this is the night before. The
+ * tape chart's "Assign room" button had no handler at all, so the only
+ * way a reservation ever got a room was by checking the guest in.
+ *
+ * Every refusal comes back with its reason: the room is taken for part
+ * of the stay, it is out of service, the guest already has one. Rule 6.
+ */
+export async function assignRoom(
+  hotelId: string, stayId: string, roomNumber: string,
+): Promise<
+  | { ok: true; room: string; guest: string; typeChanged: boolean; typeName: string }
+  | { ok: false; reason: string }
+> {
+  try {
+    return await api(`/api/hotels/${hotelId}/stays/${stayId}/assign`, {
+      method: "POST",
+      body: JSON.stringify({ roomNumber }),
+    });
+  } catch (error) {
+    if (error instanceof ApiError) {
+      const payload = error.body as { reason?: string } | undefined;
+      return { ok: false, reason: payload?.reason ?? error.message };
+    }
+    throw error;
+  }
+}
+
 /** Object surface, so either import convention resolves. */
 export const operationsRepo = {
   getFolioPostings, getFolioBalance,

@@ -1318,6 +1318,45 @@ produce is worse than one that is missing.**
 
 ---
 
+### 67 · Guessing a constraint's allowed values, twice in one session
+
+The assign-room insert used `reason = 'assignment'`. `ra_reason_valid` allows
+exactly six: arrival, move, upgrade, downgrade, fault, group_consolidation.
+Postgres refused it and the route answered 500.
+
+Earlier the same day I rewrote a provisioning function from memory and dropped
+an `on conflict` clause (defect 64). Same shape, twice: **acting on what I
+assumed the schema contained instead of reading it.** One `pg_get_constraintdef`
+would have taken ten seconds.
+
+`arrival` is the right value — this IS the assignment for their arrival, it
+just happens the night before. A type change is surfaced to the clerk rather
+than encoded as upgrade/downgrade, because nothing here RANKS the room types
+and picking a direction would be inventing again.
+
+---
+
+### 68 · Counting across every property and reporting it as one
+
+I claimed "four reservations have no room assigned" and built a dialog for
+them. The dialog then correctly said **"Every arrival has a room."**
+
+The count was right and the claim was wrong: those four were at AGR and PUN.
+5EL — the property on screen — had none. My query grouped nothing:
+
+```sql
+select count(*) from reservations r where ... -- no hotel filter
+```
+
+In a system whose entire architecture is per-property isolation, a query with
+no `hotel_id` in it is not a measurement of anything a user can see.
+
+**The screen showing "none" was the thing that caught it**, which is the whole
+argument for opening it rather than trusting the number that motivated the
+build.
+
+---
+
 ## Verification traps
 
 ### Never test a Tailwind utility by injecting the class at runtime

@@ -781,3 +781,120 @@ operations.post("/:code/walk-ins", async (c) => {
   if (!result) return c.json({ error: "No such property." }, 404);
   return c.json(result, result.ok ? 200 : 409);
 });
+
+/* ── Assigning a room before arrival ──────────────────────────────────
+   Check-in assigns a room AT arrival. This assigns one ahead of it —
+   a confirmed booking that has a room TYPE and no room number yet.
+
+   The tape chart's "Assign room" button had no handler at all, so the
+   only way a reservation ever got a room was by checking the guest in.
+   A hotel that pre-allocates its arrivals the night before could not.
+   ═══════════════════════════════════════════════════════════════════ */
+operations.post("/:code/stays/:id/assign", async (c) => {
+  const body = await c.req.json<{ roomNumber?: string }>()
+    .catch(() => ({}) as { roomNumber?: string });
+
+  const roomNumber = body.roomNumber?.trim();
+  if (!roomNumber) return c.json(refuse("Which room?"), 409);
+
+  const result = await withSession(c.get("subject"), async (client) => {
+    const hotelId = await hotelIdFor(client, c.req.param("code"));
+    if (!hotelId) return null;
+    const stayId = c.req.param("id");
+
+    const { rows: stay } = await client.query<{
+      status: string; check_in: string; check_out: string;
+      room_type_id: string; guest: string; assigned: string | null;
+    }>(
+      `select r.status,
+              to_char(r.check_in,'YYYY-MM-DD')  as check_in,
+              to_char(r.check_out,'YYYY-MM-DD') as check_out,
+              r.room_type_id::text, g.full_name as guest,
+              (select rm.number from room_assignments ra
+                 join rooms rm on rm.id = ra.room_id
+                where ra.reservation_id = r.id and ra.released_at is null
+                limit 1) as assigned
+         from reservations r
+         join guests g on g.id = r.guest_id
+        where r.id = $1 and r.hotel_id = $2`,
+      [stayId, hotelId],
+    );
+    if (!stay[0]) return refuse("No such reservation.");
+
+    if (stay[0].assigned) {
+      /* Named, because "already assigned" without the room number
+         leaves the clerk to go and look. */
+      return refuse(
+        `${stay[0].guest} is already in room ${stay[0].assigned}. Move them ` +
+        `from the room rather than assigning a second one.`,
+      );
+    }
+    if (!["confirmed", "checked_in"].includes(stay[0].status)) {
+      return refuse(
+        `This booking is ${stay[0].status}, so there is nothing to put in a room.`,
+      );
+    }
+
+    const { rows: room } = await client.query<{
+      id: string; room_type_id: string; type_name: string; oos: boolean;
+    }>(
+      `select rm.id::text, rm.room_type_id::text, rt.name as type_name,
+              (rm.housekeeping_status = 'out_of_service') as oos
+         from rooms rm
+         join room_types rt on rt.id = rm.room_type_id
+        where rm.hotel_id = $1 and rm.number = $2 and rm.is_active`,
+      [hotelId, roomNumber],
+    );
+    if (!room[0]) return refuse(`There is no room ${roomNumber} here.`);
+    if (room[0].oos) {
+      return refuse(`Room ${roomNumber} is out of service.`);
+    }
+
+    /* A different room TYPE is allowed but said out loud. Upgrades and
+       downgrades happen constantly; silently changing what the guest
+       booked does not. */
+    const typeChanged = room[0].room_type_id !== stay[0].room_type_id;
+
+    try {
+      /* 'arrival' and not 'assignment'. `ra_reason_valid` allows exactly
+         arrival, move, upgrade, downgrade, fault, group_consolidation.
+         I invented a seventh and Postgres refused the insert with a 500.
+
+         This IS the assignment for their arrival; it just happens before
+         they get here. A type change is surfaced to the clerk rather than
+         recorded as upgrade/downgrade, because nothing here ranks the
+         types and guessing the direction would be inventing again.
+
+         Second time this shape has cost a round trip today: read the
+         constraint, do not guess the value. */
+      await client.query(
+        `insert into room_assignments
+           (hotel_id, reservation_id, room_id, from_date, to_date, reason)
+         values ($1,$2,$3,$4::date,$5::date,'arrival')`,
+        [hotelId, stayId, room[0].id, stay[0].check_in, stay[0].check_out],
+      );
+    } catch (error) {
+      /* The EXCLUDE constraint refuses two stays overlapping in one
+         room. That is the guarantee; this turns it into a sentence. */
+      const e = error as { code?: string } | undefined;
+      if (e?.code === "23P01" || e?.code === "23505") {
+        return refuse(
+          `Room ${roomNumber} is taken for part of ${stay[0].check_in} to ` +
+          `${stay[0].check_out}. Pick another room, or shorten the stay.`,
+        );
+      }
+      throw error;
+    }
+
+    return {
+      ok: true as const,
+      room: roomNumber,
+      guest: stay[0].guest,
+      typeChanged,
+      typeName: room[0].type_name,
+    };
+  });
+
+  if (!result) return c.json({ error: "No such property." }, 404);
+  return c.json(result, "ok" in result && result.ok ? 200 : 409);
+});

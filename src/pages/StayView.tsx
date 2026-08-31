@@ -3,11 +3,12 @@ import { useQuery } from "@tanstack/react-query";
 import { useParams, useSearchParams } from "react-router";
 import {
   ChevronDown, ChevronRight, ChevronLeft, Globe, User, Building2,
-  Sparkle, Wrench, Plus,
+  Sparkle, Wrench,
 } from "lucide-react";
 import { cn } from "@/lib/cn";
 import { money, dateShort } from "@/lib/format";
 import { useUi } from "@/lib/ui";
+import { AssignRoomFlow } from "@/components/flows/AssignRoomFlow";
 import {
   Page, Button, Segmented, Tooltip, StatusPill,
   Drawer, DrawerContent, Skeleton, DetailList, DetailRow, Tabs, TabsList,
@@ -276,10 +277,11 @@ export default function StayViewPage() {
                 { value: "floor", label: "Floor" },
               ]}
             />
-            <Button size="sm">
-              <Plus className="size-4" />
-              Assign room
-            </Button>
+            {/* Was a <Button> with no onClick — it looked live and did
+                nothing. The flow it needed did not exist: check-in
+                assigns a room AT arrival, and nothing assigned one
+                before it. */}
+            <AssignRoomFlow hotelId={hotelId} />
           </div>
         </div>
 
