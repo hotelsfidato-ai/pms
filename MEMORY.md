@@ -1119,6 +1119,62 @@ second source of truth, and it will drift.**
 
 ---
 
+### 59 · Every member of staff could list every property
+
+`hotels_read` was `using ( app.is_active_staff() )`. Anybody who could sign in
+could enumerate the whole group — code, name, city, **GSTIN**, and each
+property's current operating day.
+
+Every other scoped table was correct. No guest data and not one rupee ever
+crossed a tenant boundary; RLS held everywhere it was asked to. The roster of
+properties itself was the one thing nobody had scoped.
+
+Worse than the policy was the comment sitting above the query that used it:
+
+> *"No hotel filter. RLS applies `hotels_read`, so an Agra clerk and the group
+> owner run the same SQL and get different rows."*
+
+They ran the same SQL and got the **same** rows. A comment describing an
+intention the code does not implement is worse than no comment, because the
+comment is what gets read.
+
+**Found by USE, not by test.** Nothing failed. I created a clerk through the
+new admin API, rostered them at one property, asked the API what they could
+see, and it named all four. It had been true since the policy was written.
+
+Two things fell out of fixing it:
+
+* The obvious policy — `id in (select app.auth_hotel_ids())` — recurses to
+  `stack depth limit exceeded`. That function READS `hotels` to answer "all of
+  them" for an admin, and SECURITY DEFINER does not disable row security; it
+  runs as the owner, and `hotels` has FORCE RLS, so the owner is subject too.
+  **A policy on a table must not read that table**, even through a definer.
+
+* The RLS test for "a clerk cannot grant themselves another property" found
+  its target with `select from hotels where not exists (...)`. Once the leak
+  was closed that subquery returned nothing, the insert touched no rows, and
+  the test failed while the policy was right. **A test that enumerates the
+  thing it is proving you cannot enumerate is written the wrong way round.**
+
+---
+
+### 60 · A read-only admin section, underneath as well as on top
+
+`grep -c '<input|<form|onSubmit|<Button'` on the admin page returned **0**, and
+there was not a single admin write endpoint. That much was visible.
+
+What was not: the database refused too. Every policy on `staff` and
+`staff_hotels` was a SELECT policy, so "can the owner add a member of staff"
+was answered no by Postgres regardless of what any screen offered. Building the
+form first would have produced a screen that looked finished and failed on
+submit.
+
+**Check the bottom layer before building the top one.** The provisioning
+function was ready and waiting; the staff policies were not, and both facts
+were one query away.
+
+---
+
 ## Verification traps
 
 ### Never test a Tailwind utility by injecting the class at runtime

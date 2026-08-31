@@ -19,8 +19,8 @@ on conflict (email) do nothing;
 select set_config('app.user_id',
        (select id::text from staff where email='owner@fidato.in'), false);
 
-select app.provision_property('AGR','Fidato Agra','Agra','UP','09AAAAA0000A1Z5');
-select app.provision_property('PUN','Fidato Pune','Pune','MH','27BBBBB0000B1Z5');
+select app.provision_property_unchecked('AGR','Fidato Agra','Agra','UP','09AAAAA0000A1Z5');
+select app.provision_property_unchecked('PUN','Fidato Pune','Pune','MH','27BBBBB0000B1Z5');
 
 insert into staff_hotels (staff_id, hotel_id, role)
 select s.id, h.id, 'front_desk' from staff s, hotels h
@@ -54,7 +54,7 @@ begin
   perform test.ok('provisioning','property gets room types cloned',
     (select count(*) from room_types where hotel_id=a) = 4);
   perform test.raises('provisioning','duplicate hotel code refused',
-    $q$select app.provision_property('AGR','Dup','X')$q$);
+    $q$select app.provision_property_unchecked('AGR','Dup','X')$q$);
 
   -- ---------- tenancy integrity (D1) ---------------------------------------
   perform test.raises('integrity','room cannot use another property''s room type',
@@ -693,4 +693,100 @@ begin
   select count(*) into n from pos_outlets where code = 'TILL';
   perform test.ok('pos till','the test fixture does not outlive the test',
     n = 0, n || ' left behind');
+end $$;
+
+
+-- =============================================================================
+-- THE PROVISIONING KEY (029) — no structural change without it
+-- =============================================================================
+-- Two guards, and they answer different questions. require_group_admin() asks
+-- WHO. require_provisioning_key() asks whether this DEPLOYMENT permits the act
+-- at all. A stolen admin session passes the first and must not pass the second.
+--
+-- The most valuable assertion here is the last one: a database with no key
+-- configured provisions nothing, for anybody.
+-- =============================================================================
+do $$
+declare
+  v_admin uuid; v_clerk uuid; good text; bad text; n int;
+begin
+  select id into v_admin from staff where email = current_setting('test.owner_email', true);
+  if v_admin is null then
+    select id into v_admin from staff where is_group_admin limit 1;
+  end if;
+  select id into v_clerk from staff where not is_group_admin limit 1;
+
+  good := encode(digest('test-provisioning-key', 'sha256'), 'hex');
+  bad  := encode(digest('not-the-key', 'sha256'), 'hex');
+
+  insert into provisioning_keys (label, key_hash, created_by)
+  values ('suite', good, v_admin);
+
+  -- ---------- the key is never stored ----------
+  -- The row holds a digest. Somebody holding this table, or a backup of it,
+  -- provisions nothing.
+  select count(*) into n from provisioning_keys
+   where key_hash = 'test-provisioning-key';
+  perform test.ok('provisioning key','the key itself is not in the table',
+    n = 0);
+
+  -- ---------- a valid digest passes ----------
+  perform app.require_provisioning_key(good);
+  perform test.ok('provisioning key','an active key is accepted', true);
+
+  -- ---------- a wrong one does not ----------
+  perform test.raises('provisioning key','a wrong key is refused',
+    format($q$select app.require_provisioning_key(%L)$q$, bad), '42501');
+
+  -- ---------- and neither does none ----------
+  perform test.raises('provisioning key','a missing key is refused',
+    $q$select app.require_provisioning_key(null)$q$, '42501');
+
+  -- ---------- a revoked key stops working ----------
+  update provisioning_keys
+     set is_active = false, revoked_at = now(), revoked_by = v_admin
+   where key_hash = good;
+
+  perform test.raises('provisioning key','a revoked key is refused',
+    format($q$select app.require_provisioning_key(%L)$q$, good), '42501');
+
+  update provisioning_keys
+     set is_active = true, revoked_at = null, revoked_by = null
+   where key_hash = good;
+
+  -- ---------- revoking means revoking ----------
+  -- A row that is active and revoked is a key somebody believes is dead.
+  perform test.raises('provisioning key','a key cannot be revoked and active',
+    format($q$update provisioning_keys set revoked_at = now(),
+             revoked_by = %L where key_hash = %L$q$, v_admin, good), '23514');
+
+  -- ---------- the application cannot read the hashes ----------
+  -- Handing pms_app the digests is handing an attacker something to grind
+  -- offline. The SECURITY DEFINER function is the only way in.
+  perform test.ok('provisioning key','pms_app cannot read the key table',
+    not has_table_privilege('pms_app','provisioning_keys','select'));
+
+  perform test.ok('provisioning key','pms_app can still check a key',
+    has_function_privilege('pms_app',
+      'app.require_provisioning_key(text)', 'execute'));
+
+  -- ---------- the door refuses; the mechanism still works ----------
+  -- provision_property() now needs a key. The renamed mechanism does not,
+  -- because migrations and the demo loader run as the owner with no session.
+  perform test.raises('provisioning key','provisioning without a key is refused',
+    $q$select app.provision_property('ZZZ','Nowhere','Nowhere', null)$q$,
+    '42501');
+
+  select count(*) into n from hotels where code = 'ZZZ';
+  perform test.ok('provisioning key','a refused provision created nothing',
+    n = 0, n || ' hotels named ZZZ');
+
+  delete from provisioning_keys where key_hash = good;
+
+  -- ---------- WITH NO KEY CONFIGURED, NOTHING PROVISIONS ----------
+  -- The state that matters most. A production box where nobody has minted a
+  -- key cannot have a property created on it by anyone at all.
+  perform test.raises('provisioning key','with no key configured, nobody provisions',
+    format($q$select app.provision_property('ZZZ','Nowhere','Nowhere', %L)$q$, good),
+    '42501');
 end $$;

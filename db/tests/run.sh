@@ -147,7 +147,13 @@ OWNER=$(PGPASSWORD=$SUPERPASS "$PSQL" $S -d "$DB" -tAc \
 RLS_OUT=$(PGPASSWORD=$APPPASS "$PSQL" -h $PGHOST -p $PGPORT -U pms_app -d "$DB"   -q -v ON_ERROR_STOP=1 -v clerk="$CLERK" -v other="$OTHER" -v owner="$OWNER"   -f "$ROOT/db/tests/rls.sql" 2>&1)
 RLS_STATUS=$?
 
-echo "$RLS_OUT" | sed '/^$/d' | sed 's/^psql:[^ ]*://' | head -20
+# head -40, not 20. The isolation checks grew past twenty lines when the
+# admin-write policies landed, and the tail of the file — every assertion
+# about who may administer — stopped being displayed. The exit status was
+# still checked, so nothing was SWALLOWED; it was just invisible, which is
+# how a real failure in there would first be noticed as "odd, that used to
+# print more".
+echo "$RLS_OUT" | sed '/^$/d' | sed 's/^psql:[^ ]*://' | head -40
 
 if [ $RLS_STATUS -ne 0 ]; then
   red "  x ISOLATION FAILED - a tenant can reach another tenant data."

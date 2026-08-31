@@ -18,7 +18,7 @@ API        tsc --noEmit      0 errors
            npm test          82 passed   (live Postgres, as pms_app)
                              loads the demo fixture first — see below
 
-DATABASE   db/tests/run.sh   28 migrations · 81 assertions
+DATABASE   db/tests/run.sh   31 migrations · 92 assertions
                              9 isolation checks · exit 0
 BACKUP     verify-backup.sh  dumped, RESTORED, 13 checks · exit 0
            load-demo         431 available · 132 sold · 30.63% ✓
@@ -93,6 +93,46 @@ dated postings from the server's wall clock:
 All four now resolve the date from the database inside the same transaction as
 the write. Proved by restoring the wall clock in one line and watching the test
 fail.
+
+---
+
+## Administration — the writes, and the key that gates them ⏳
+
+The admin section was read-only **in the interface and underneath it**.
+`grep -c '<input|<form'` on the admin page returned 0, there was not one admin
+write endpoint, and every policy on `staff` and `staff_hotels` was a SELECT
+policy. Building the form first would have produced a screen that looked
+finished and failed on submit.
+
+**Done**
+
+| | |
+|---|---|
+| `029_provisioning_key.sql` | no structural change without a key — the hash is stored, never the key |
+| `030_admin_writes.sql` | admins may write `staff` and `staff_hotels`; nobody promotes themselves; the last admin cannot be removed |
+| `031_property_visibility.sql` | **a clerk sees only the properties they work at** |
+| `api/src/routes/admin.ts` | create property · create staff · grant and revoke access · deactivate · the admin overview |
+
+Assertions 81 → 92, and six new isolation checks that run as `pms_app` rather
+than as the superuser.
+
+**The key.** `app.require_group_admin()` asks *who*; the key asks whether this
+*deployment* permits the act at all. A stolen admin session passes the first
+and must not pass the second. Its most valuable state is absent: a box with no
+key minted cannot have a property created on it by anyone, including whoever
+holds the superuser password.
+
+**A leak found by using it, not by testing it.** `hotels_read` was
+`app.is_active_staff()` — every member of staff could list every property in
+the group, GSTIN included. No guest data and no money ever crossed a boundary;
+the roster did. Nothing failed. I created a clerk through the new API,
+rostered them at one property, and asked what they could see: all four.
+
+**Still to build**
+
+The screens. The API is complete and driven end to end by hand — create a
+property, create a clerk, grant them access, watch the property list shrink to
+one for them and stay whole for the owner — but no form calls any of it yet.
 
 ---
 

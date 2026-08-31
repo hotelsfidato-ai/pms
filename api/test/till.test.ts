@@ -170,7 +170,13 @@ const as = (path: string, init?: RequestInit) =>
   });
 
 const post = (path: string, body?: unknown) =>
-  as(path, { method: "POST", body: body ? JSON.stringify(body) : undefined });
+  /* The key is spread in rather than set to undefined: with
+     exactOptionalPropertyTypes, `body: undefined` is not the same as
+     no body at all, and RequestInit means the second one. */
+  as(path, {
+    method: "POST",
+    ...(body === undefined ? {} : { body: JSON.stringify(body) }),
+  });
 
 /** Open an order tagged so afterAll can find what it charged. */
 async function openOrder(label: string) {

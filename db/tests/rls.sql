@@ -341,3 +341,151 @@ begin
 
   raise notice '  ✓ group admin: sees all % staff rows', seen;
 end $$;
+
+-- -----------------------------------------------------------------------------
+-- ADMIN WRITES (030) — who may administer, tested as the roles themselves
+-- -----------------------------------------------------------------------------
+-- In rls.sql and not suite.sql, for defect 47's reason: suite.sql runs as the
+-- superuser, which bypasses RLS entirely and would report success against a
+-- completely open database.
+-- -----------------------------------------------------------------------------
+
+-- As the CLERK.
+select set_config('app.user_id', current_setting('test.clerk'), false);
+
+do $$
+declare n int;
+begin
+  -- ---------- a clerk cannot create staff ----------
+  begin
+    insert into staff (email, full_name) values ('intruder@x.in','Intruder');
+    raise exception 'A clerk inserted a staff row. Anyone who can sign in can '
+                    'now create an account.';
+  exception when insufficient_privilege or others then
+    if sqlerrm like 'A clerk inserted%' then raise; end if;
+  end;
+  raise notice '  ✓ a clerk cannot create staff';
+
+  -- ---------- a clerk cannot widen their own reach ----------
+  -- staff_hotels is what app.auth_hotel_ids() reads. A clerk who can insert
+  -- here can add themselves to every property in the group.
+  begin
+    /* The other property is NAMED, not discovered. This originally found one
+       with `select from hotels where not exists (...)` — which worked only
+       while `hotels_read` let a clerk see the whole group. Once 031 scoped
+       that, the subquery returned nothing, the insert touched no rows, and
+       the test failed by its own assertion while the policy was correct.
+
+       A test that has to enumerate the thing it is proving you cannot
+       enumerate is testing the wrong way round.
+
+       Through current_setting and not `:'other'` — psql does not interpolate
+       its variables inside a dollar-quoted block, which the header of this
+       very file warns about and which I walked into anyway. */
+    insert into staff_hotels (staff_id, hotel_id, role)
+    values (app.current_user_id(),
+            current_setting('test.other_hotel')::uuid, 'front_desk');
+    raise exception 'A clerk granted themselves access to another property.';
+  exception when insufficient_privilege or others then
+    if sqlerrm like 'A clerk granted%' then raise; end if;
+  end;
+  raise notice '  ✓ a clerk cannot grant themselves another property';
+
+  -- ---------- a clerk cannot make themselves an admin ----------
+  begin
+    update staff set is_group_admin = true where id = app.current_user_id();
+    raise exception 'A clerk promoted themselves to group administrator.';
+  exception when insufficient_privilege or others then
+    if sqlerrm like 'A clerk promoted%' then raise; end if;
+  end;
+  raise notice '  ✓ a clerk cannot promote themselves';
+end $$;
+
+do $$
+declare seen int; mine int;
+begin
+  -- ---------- a clerk sees only the properties they work at ----------
+  -- `hotels_read` was `app.is_active_staff()` until 031: anybody who could
+  -- sign in could list every property in the group, its GSTIN included.
+  -- Every OTHER table was scoped correctly, so no guest data and no money
+  -- ever leaked — the roster of properties itself did.
+  --
+  -- Found by USE, not by test: a clerk created through the new admin API and
+  -- rostered at one property asked the API what it could see, and it named
+  -- all four.
+  select count(*) into seen from hotels;
+  select count(*) into mine
+    from hotels where id in (select app.auth_hotel_ids());
+
+  if seen <> mine then
+    raise exception 'A clerk can list % properties but works at %. The '
+                    'property roster leaks the whole group.', seen, mine;
+  end if;
+  raise notice '  ✓ a clerk lists % properties, exactly the ones they work at', seen;
+end $$;
+
+-- As the OWNER.
+select set_config('app.user_id', current_setting('test.owner'), false);
+
+do $$
+declare v_new uuid; v_hotel uuid; n int;
+begin
+  -- ---------- an admin can create staff and grant access ----------
+  /* on conflict, because this file must survive being run twice.
+
+     It did not: the block below aborts on its own assertion if a guard
+     is missing, skipping the cleanup at the end, and the NEXT run then
+     died on `duplicate key value violates unique constraint
+     "staff_email_key"` before reaching a single assertion.
+
+     run.sh never saw it — it rebuilds the database from zero every time,
+     so the leftover row could not exist there. It only appeared when the
+     file was run twice by hand against a live database, which is exactly
+     how somebody debugging a policy would run it. */
+  insert into staff (email, full_name)
+  values ('rls-admin-test@fidato.in','RLS Admin Test')
+  on conflict (email) do update set full_name = excluded.full_name
+  returning id into v_new;
+
+  select id into v_hotel from hotels limit 1;
+  insert into staff_hotels (staff_id, hotel_id, role)
+  values (v_new, v_hotel, 'front_desk');
+
+  select count(*) into n from staff_hotels where staff_id = v_new;
+  raise notice '  ✓ a group admin can create staff and grant access (% row)', n;
+
+  -- ---------- and cannot demote themselves ----------
+  begin
+    update staff set is_group_admin = false where id = app.current_user_id();
+    raise exception 'An admin removed their OWN administrator access.';
+  exception when insufficient_privilege or others then
+    if sqlerrm like 'An admin removed%' then raise; end if;
+  end;
+  raise notice '  ✓ an admin cannot change their own administrator access';
+
+  -- ---------- and a staff row is never deleted ----------
+  -- Found by trying to tear this test down. 030 grants admins INSERT and
+  -- UPDATE on `staff` and deliberately NOT delete: their name is on
+  -- audit_log.actor, on folio_postings.posted_by and on every invoice they
+  -- issued, and a deleted row makes all of it unattributable.
+  --
+  -- So the cleanup below revokes ACCESS and DEACTIVATES, which is what the
+  -- API's own endpoint does, and the failed delete became this assertion.
+  delete from staff_hotels where staff_id = v_new;
+
+  delete from staff where id = v_new;
+  select count(*) into n from staff where id = v_new;
+  if n <> 1 then
+    raise exception 'A staff row was DELETED. Every posting, invoice and '
+                    'audit entry that names them is now unattributable.';
+  end if;
+  raise notice '  ✓ a staff row cannot be deleted, only deactivated';
+
+  update staff set is_active = false where id = v_new;
+
+  select count(*) into n from staff_hotels where staff_id = v_new;
+  if n <> 0 then
+    raise exception 'The admin-write test left % access rows behind.', n;
+  end if;
+  raise notice '  ✓ the admin-write fixture holds no access afterwards';
+end $$;

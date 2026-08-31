@@ -16,6 +16,7 @@ import { directory } from "./routes/directory.ts";
 import { billing } from "./routes/billing.ts";
 import { pos, posAdmin, outletFor, type Outlet } from "./routes/pos.ts";
 import { till } from "./routes/till.ts";
+import { admin } from "./routes/admin.ts";
 import { nightAudit } from "./routes/nightAudit.ts";
 import { invoices } from "./routes/invoices.ts";
 
@@ -154,6 +155,9 @@ app.route("/api/hotels", posAdmin);
 /* The till is person-facing and sits behind the same bearer gate as
    every other /api/hotels route. `pos` below is the machine door. */
 app.route("/api/hotels", till);
+/* Administration. Mounted at /api, not /api/hotels — creating a
+   property is not scoped to a property. */
+app.route("/api", admin);
 
 /* A POS mounts at its OWN prefix, not under /api/hotels. It does not
    know a hotel code and must not need one: its key resolves to exactly

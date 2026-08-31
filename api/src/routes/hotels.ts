@@ -34,7 +34,20 @@ hotels.get("/", async (c) => {
 
   const body = await withSession(subject, async (client, session: Session) => {
     /* No hotel filter. RLS applies `hotels_read`, so an Agra clerk and
-       the group owner run the same SQL and get different rows. */
+       the group owner run the same SQL and get different rows.
+
+       That sentence was FALSE until migration 031. `hotels_read` was
+       `app.is_active_staff()` — anyone who could sign in listed every
+       property in the group, GSTIN included. Every other table was
+       scoped correctly, so no guest and no money ever leaked; the
+       roster of properties did.
+
+       It was found by using the new admin API rather than by any test:
+       a clerk created and rostered at one property asked this endpoint
+       what it could see, and it named all four. The comment had
+       described the intention for months while the policy did
+       something else, which is the worst pair — the comment is what
+       anybody reads. */
     const { rows } = await client.query<HotelRow>(
       `select id, code, name, city, state, gstin, timezone, currency,
               to_char(check_in_time,  'HH24:MI') as check_in_time,
