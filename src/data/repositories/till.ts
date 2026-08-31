@@ -205,6 +205,21 @@ export function voidLine(
   );
 }
 
+/**
+ * Change a line's quantity.
+ *
+ * Zero strikes it — a waiter counting down to none means the same as
+ * pressing the cross, and the struck line stays visible either way.
+ */
+export function setLineQty(
+  hotelId: string, orderId: string, lineId: string, qty: number,
+): Promise<TillResult> {
+  return write(
+    `/api/hotels/${hotelId}/till/orders/${orderId}/lines/${lineId}/qty`,
+    { qty },
+  );
+}
+
 export function settleOrder(
   hotelId: string, orderId: string,
   method: "room" | "cash" | "card" | "upi",

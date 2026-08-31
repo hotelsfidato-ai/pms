@@ -1474,6 +1474,33 @@ bash, Python and the JS parser, and each layer is a chance to lose it.
 
 ---
 
+### 75 · A till that made six taps into six lines
+
+Tapping a dish inserted a row unconditionally. A table ordering six butter
+rotis produced six rows reading **"1 x Butter Roti"** — on the kitchen copy
+and on the guest's bill. I had seen it on screen two turns earlier
+(`1x Paneer Tikka` twice in one bill) and read it as test noise.
+
+Every till in the trade increments instead, and a waiter expects it to. The
+match is on the item AND the note, because "Paneer Tikka" and "Paneer Tikka,
+no chilli" are two different things to a kitchen and must stay two rows.
+
+Three more standard controls were missing entirely, all of them supported by
+the API already:
+
+* **quantity stepper** — "make that two rather than three" meant striking the
+  line and re-adding, which leaves a cancelled row on the kitchen copy for
+  something the guest is still getting
+* **per-line notes** — the column and the endpoint have carried one since 028
+  and nothing ever sent it, so "no chilli" reached the kitchen by shouting
+* **menu search** — fine across sixteen demo items, unusable across a real card
+
+**The API had the capability and the interface never offered it.** Worth
+checking, for any endpoint, whether anything actually calls it with the
+optional arguments.
+
+---
+
 ## Verification traps
 
 ### Never test a Tailwind utility by injecting the class at runtime

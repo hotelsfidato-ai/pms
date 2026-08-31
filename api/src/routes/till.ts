@@ -457,11 +457,34 @@ till.post("/:code/till/orders/:id/lines", async (c) => {
 
     /* Price and tax are COPIED onto the line. A menu price that rises
        next month must not silently re-price a bill printed today. */
-    await client.query(
+      /* Increment first. Only if nothing matched does a row get added. */
+      const { rowCount: bumped } = await client.query(
+        `update pos_order_lines
+            set qty = qty + $1
+          where order_id = $2
+            and item_id = $3
+            and not voided
+            and note is not distinct from $4`,
+        [qty, orderId, input.itemId, input.note?.trim() || null],
+      );
+
+      if (!bumped) await client.query(
+      /* TAPPING THE SAME DISH TWICE MEANS TWO OF IT, NOT TWO LINES.
+
+         This inserted unconditionally, so a table ordering six butter
+         rotis produced six rows reading "1x Butter Roti" — six taps, six
+         lines on the kitchen copy, six lines on the guest's bill. Every
+         till in the trade increments instead, and a waiter expects it to.
+
+         The match is on the item AND the note: "Paneer Tikka" and
+         "Paneer Tikka, no chilli" are different things to a kitchen and
+         must stay different rows. A struck line is not matched either —
+         re-adding something that was cancelled starts fresh. */
       `insert into pos_order_lines
          (order_id, hotel_id, item_id, name, qty, unit_price, tax_rate,
           note, added_by)
-       values ($1,$2,$3,$4,$5,$6,$7,$8,$9)`,
+       values ($1,$2,$3,$4,$5,$6,$7,$8,$9)
+       on conflict do nothing`,
       [orderId, hotelId, input.itemId, item[0].name, qty,
        item[0].price, item[0].tax_rate, input.note?.trim() || null, session.staffId],
     );
@@ -734,6 +757,63 @@ till.post("/:code/till/orders/:id/abandon", async (c) => {
       [reason, orderId, hotelId],
     );
     if (!rowCount) return refuse("That order is not open.");
+
+    return { ok: true as const, ...(await readOrder(client, orderId))! };
+  });
+
+  if (!result) return c.json({ error: "No such property." }, 404);
+  return c.json(result, "ok" in result && result.ok ? 200 : 409);
+});
+
+/* ── Changing a quantity ──────────────────────────────────────────────
+   Every till in the trade puts +/- on a line. Without it, "make that two
+   rather than three" means striking the line and re-adding — which leaves
+   a cancelled row on the kitchen copy for something the guest is still
+   getting, and reads as a mistake nobody made.
+   ═══════════════════════════════════════════════════════════════════ */
+till.post("/:code/till/orders/:id/lines/:lineId/qty", async (c) => {
+  type Body = { qty?: number };
+  const input = await c.req.json<Body>().catch(() => ({}) as Body);
+
+  const qty = Number(input.qty);
+  if (!Number.isFinite(qty) || qty < 0) {
+    return c.json(refuse("A quantity cannot be negative."), 409);
+  }
+
+  const result = await withSession(c.get("subject"), async (client, session) => {
+    const hotelId = await hotelFor(client, c.req.param("code"));
+    if (!hotelId) return null;
+    const orderId = c.req.param("id");
+
+    const { rows: order } = await client.query<{ status: string }>(
+      `select status from pos_orders where id = $1 and hotel_id = $2`,
+      [orderId, hotelId],
+    );
+    if (!order[0]) return refuse("No such order.");
+    if (order[0].status !== "open") {
+      return refuse(`This order is ${order[0].status} and cannot be changed.`);
+    }
+
+    if (qty === 0) {
+      /* Down to nothing is a strike, not a delete. A waiter counting to
+         zero means the same thing as pressing the cross, and the line
+         stays visible either way — 028 keeps struck lines because a
+         manager settling a dispute wants to see them. */
+      const { rowCount } = await client.query(
+        `update pos_order_lines
+            set voided = true, voided_by = $1, voided_at = now()
+          where id = $2 and order_id = $3 and not voided`,
+        [session.staffId, c.req.param("lineId"), orderId],
+      );
+      if (!rowCount) return refuse("That line is already struck.");
+    } else {
+      const { rowCount } = await client.query(
+        `update pos_order_lines set qty = $1
+          where id = $2 and order_id = $3 and not voided`,
+        [qty, c.req.param("lineId"), orderId],
+      );
+      if (!rowCount) return refuse("That line is struck, or is not here.");
+    }
 
     return { ok: true as const, ...(await readOrder(client, orderId))! };
   });

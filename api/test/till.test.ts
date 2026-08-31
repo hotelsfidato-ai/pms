@@ -255,25 +255,75 @@ describe("an order", () => {
     const order = await openOrder("void");
     const tikka = await menuItem("Paneer Tikka");
 
+    /* The same dish twice is a quantity, not a second line.
+
+       This test used to add 1 then 4 and reach for `lines[1]`, because
+       the API inserted unconditionally: a table ordering six rotis got
+       six rows reading "1x Butter Roti", on the kitchen copy and on the
+       guest's bill. Every till in the trade increments instead. */
     await post(`/api/hotels/5EL/till/orders/${order.id}/lines`,
       { itemId: tikka.id, qty: 1 });
     const added = await post(`/api/hotels/5EL/till/orders/${order.id}/lines`,
       { itemId: tikka.id, qty: 4 });
     const before = (await added.json()) as {
-      gross: number; lines: { id: string }[];
+      gross: number; lines: { id: string; qty: number }[];
     };
+    expect(before.lines.length, "the same dish opened a second line").toBe(1);
+    expect(before.lines[0]!.qty).toBe(5);
     expect(before.gross).toBe(1680);  // 5 x 320 + 5%
 
+    /* A NOTE makes it a different thing. "Paneer Tikka" and "Paneer
+       Tikka, no chilli" are two dishes to a kitchen and must not merge. */
+    const noted = await post(`/api/hotels/5EL/till/orders/${order.id}/lines`,
+      { itemId: tikka.id, qty: 1, note: "no chilli" });
+    const withNote = (await noted.json()) as { lines: { note: string | null }[] };
+    expect(withNote.lines.length, "a note merged into the plain line").toBe(2);
+    expect(withNote.lines.some((l) => l.note === "no chilli")).toBe(true);
+
     const res = await post(
-      `/api/hotels/5EL/till/orders/${order.id}/lines/${before.lines[1]!.id}/void`,
+      `/api/hotels/5EL/till/orders/${order.id}/lines/${before.lines[0]!.id}/void`,
     );
     const after = (await res.json()) as {
       gross: number; lines: { voided: boolean }[];
     };
 
-    expect(after.gross).toBe(336);              // only the 1 remains
+    expect(after.gross).toBe(336);              // only the noted one remains
     expect(after.lines.length).toBe(2);         // the struck one is still THERE
     expect(after.lines.filter((l) => l.voided).length).toBe(1);
+
+    await post(`/api/hotels/5EL/till/orders/${order.id}/abandon`,
+      { reason: "test" });
+  });
+
+  it("changes a quantity without striking and re-adding", async () => {
+    const order = await openOrder("qty");
+    const tikka = await menuItem("Paneer Tikka");
+    const first = await post(`/api/hotels/5EL/till/orders/${order.id}/lines`,
+      { itemId: tikka.id, qty: 3 });
+    const body = (await first.json()) as { lines: { id: string }[] };
+    const lineId = body.lines[0]!.id;
+
+    const down = await post(
+      `/api/hotels/5EL/till/orders/${order.id}/lines/${lineId}/qty`, { qty: 2 });
+    const two = (await down.json()) as { gross: number; lines: { qty: number }[] };
+    expect(two.lines[0]!.qty).toBe(2);
+    expect(two.gross).toBe(672);   // 2 x 320 + 5%
+
+    /* Zero is a strike, not a delete. A waiter counting down to none
+       means the same as pressing the cross, and 028 keeps struck lines
+       either way — a manager settling a dispute wants to see them. */
+    const zero = await post(
+      `/api/hotels/5EL/till/orders/${order.id}/lines/${lineId}/qty`, { qty: 0 });
+    const none = (await zero.json()) as {
+      gross: number; lines: { voided: boolean }[];
+    };
+    expect(none.gross).toBe(0);
+    expect(none.lines.length, "the struck line was deleted").toBe(1);
+    expect(none.lines[0]!.voided).toBe(true);
+
+    const bad = await post(
+      `/api/hotels/5EL/till/orders/${order.id}/lines/${lineId}/qty`, { qty: -1 });
+    expect(bad.status).toBe(409);
 
     await post(`/api/hotels/5EL/till/orders/${order.id}/abandon`,
       { reason: "test" });

@@ -15,7 +15,7 @@ FRONTEND   tsc -b            0 errors
            build             clean
 
 API        tsc --noEmit      0 errors
-           npm test          82 passed   (live Postgres, as pms_app)
+           npm test          83 passed   (live Postgres, as pms_app)
                              loads the demo fixture first — see below
 
 DATABASE   db/tests/run.sh   33 migrations · 112 assertions

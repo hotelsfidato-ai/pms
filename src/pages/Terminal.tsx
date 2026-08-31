@@ -3,7 +3,7 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useParams, Link } from "react-router";
 import {
   UtensilsCrossed, X, BedDouble, Banknote, CreditCard, Smartphone,
-  ArrowLeft, Printer, Lock,
+  ArrowLeft, Printer, Lock, Search, Minus, Plus, MessageSquare,
 } from "lucide-react";
 import { cn } from "@/lib/cn";
 import { moneyPrecise } from "@/lib/format";
@@ -11,7 +11,7 @@ import { useUi } from "@/lib/ui";
 import { toast } from "@/components/ui";
 import {
   getMenu, listOrders, getOrder, listChargeableRooms,
-  openOrder, addLine, voidLine, settleOrder, abandonOrder,
+  openOrder, addLine, voidLine, setLineQty, settleOrder, abandonOrder,
   listPosOutlets, BUSINESS_DATE,
   type MenuItem,
 } from "@/data/repositories";
@@ -73,6 +73,10 @@ export default function TerminalPage() {
   const [busy, setBusy] = useState(false);
   const [settling, setSettling] = useState(false);
   const [room, setRoom] = useState("");
+  /* A sixteen-item demo menu fits on a screen. A real card does not, and
+     scrolling for "Jeera Rice" while a table waits is how a waiter ends
+     up writing on paper instead. */
+  const [find, setFind] = useState("");
   const [choices, setChoices] = useState<
     { folioId: string; guest: string }[] | null
   >(null);
@@ -134,6 +138,25 @@ export default function TerminalPage() {
   const add = async (item: MenuItem) => {
     if (!orderId) return;
     const res = await addLine(hotelId, orderId, item.id, 1);
+    if (!res.ok) return toast.error("Not added", res.reason);
+    refresh();
+  };
+
+  const setQty = async (lineId: string, qty: number) => {
+    if (!orderId) return;
+    const res = await setLineQty(hotelId, orderId, lineId, qty);
+    if (!res.ok) return toast.error("Not changed", res.reason);
+    refresh();
+  };
+
+  const note = async (item: MenuItem) => {
+    if (!orderId) return;
+    /* Modifiers. The column and the API have carried a note per line
+       since 028 and nothing ever sent one, so "no chilli" reached the
+       kitchen by shouting. */
+    const text = window.prompt(`Anything to say about the ${item.name}?`);
+    if (text === null) return;
+    const res = await addLine(hotelId, orderId, item.id, 1, text.trim() || undefined);
     if (!res.ok) return toast.error("Not added", res.reason);
     refresh();
   };
@@ -313,15 +336,32 @@ export default function TerminalPage() {
             </div>
           ) : (
             <div className="space-y-6">
+              <div className="relative">
+                <Search className="size-4 text-grey-400 absolute left-4 top-1/2 -translate-y-1/2" />
+                <input
+                  value={find}
+                  onChange={(e) => setFind(e.target.value)}
+                  placeholder="Find a dish"
+                  aria-label="Find a dish"
+                  className="w-full h-14 pl-11 pr-4 rounded-lg border border-grey-300 text-base"
+                />
+              </div>
               {(menu.data ?? []).map((cat) => (
-                <section key={cat.id}>
+                <section key={cat.id} className={cn(
+                  /* A heading over nothing is worse than no heading. */
+                  cat.items.some((i) => i.name.toLowerCase()
+                    .includes(find.trim().toLowerCase())) ? "" : "hidden",
+                )}>
                   <h2 className="text-md font-semibold text-ink-900 mb-2.5">
                     {cat.name}
                   </h2>
                   <div className="grid gap-2.5 sm:grid-cols-2 xl:grid-cols-3">
-                    {cat.items.map((item) => (
+                    {cat.items
+                      .filter((i) => i.name.toLowerCase()
+                        .includes(find.trim().toLowerCase()))
+                      .map((item) => (
+                      <div key={item.id} className="relative">
                       <button
-                        key={item.id}
                         type="button"
                         onClick={() => void add(item)}
                         disabled={!item.isActive || order?.status !== "open"}
@@ -347,6 +387,21 @@ export default function TerminalPage() {
                           </span>
                         </span>
                       </button>
+                      {/* Modifiers, as their own control. A long press is
+                          invisible to somebody who has not been told about
+                          it, and this is a screen new staff are put in
+                          front of on their first shift. */}
+                      <button
+                        type="button"
+                        onClick={() => void note(item)}
+                        disabled={!item.isActive || order?.status !== "open"}
+                        aria-label={`Add ${item.name} with a note`}
+                        title="Add with a note"
+                        className="absolute top-1.5 right-1.5 size-9 grid place-items-center rounded-md text-grey-300 hover:text-brand-orange hover:bg-brand-orange-50 disabled:opacity-0"
+                      >
+                        <MessageSquare className="size-4" />
+                      </button>
+                      </div>
                     ))}
                   </div>
                 </section>
@@ -391,29 +446,68 @@ export default function TerminalPage() {
               <ul className="flex-1 min-h-0 overflow-y-auto p-3 space-y-1.5">
                 {order.lines.map((l) => (
                   <li key={l.id} className={cn(
-                    "flex items-center gap-2", l.voided && "opacity-45",
+                    "py-1", l.voided && "opacity-45",
                   )}>
-                    <span className="tabular text-base text-grey-500 w-8 shrink-0">
-                      {l.qty}×
-                    </span>
-                    <span className={cn(
-                      "flex-1 min-w-0 text-base text-ink-900 truncate",
-                      l.voided && "line-through",
-                    )}>
-                      {l.name}
-                    </span>
-                    <span className="tabular text-base text-ink-900">
-                      {moneyPrecise(l.qty * l.unitPrice)}
-                    </span>
-                    {!l.voided && order.status === "open" && (
-                      <button
-                        type="button"
-                        onClick={() => void strike(l.id)}
-                        aria-label={`Strike ${l.name}`}
-                        className="size-12 grid place-items-center rounded-md text-grey-400 hover:text-brand-red hover:bg-red-50 shrink-0"
-                      >
-                        <X className="size-5" />
-                      </button>
+                    <div className="flex items-center gap-2">
+                      <span className={cn(
+                        "flex-1 min-w-0 text-base text-ink-900 truncate",
+                        l.voided && "line-through",
+                      )}>
+                        {l.name}
+                      </span>
+                      <span className="tabular text-base text-ink-900">
+                        {moneyPrecise(l.qty * l.unitPrice)}
+                      </span>
+                    </div>
+
+                    {/* The note, under the dish it belongs to. It reaches
+                        the kitchen copy, so it has to be visible to the
+                        person who typed it. */}
+                    {l.note && (
+                      <p className="text-2xs text-brand-orange mt-0.5 pl-0.5">
+                        {l.note}
+                      </p>
+                    )}
+
+                    {!l.voided && order.status === "open" ? (
+                      /* A STEPPER, not a strike-and-retype. "Make that two
+                         rather than three" used to mean cancelling the line
+                         and adding it again, which left a struck row on the
+                         kitchen copy for something the guest is still
+                         getting. */
+                      <div className="flex items-center gap-1 mt-1">
+                        <button
+                          type="button"
+                          onClick={() => void setQty(l.id, l.qty - 1)}
+                          aria-label={`One fewer ${l.name}`}
+                          className="size-11 grid place-items-center rounded-md border border-grey-200 text-grey-600 hover:border-grey-400"
+                        >
+                          <Minus className="size-4" />
+                        </button>
+                        <span className="w-10 text-center tabular text-base text-ink-900">
+                          {l.qty}
+                        </span>
+                        <button
+                          type="button"
+                          onClick={() => void setQty(l.id, l.qty + 1)}
+                          aria-label={`One more ${l.name}`}
+                          className="size-11 grid place-items-center rounded-md border border-grey-200 text-grey-600 hover:border-grey-400"
+                        >
+                          <Plus className="size-4" />
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => void strike(l.id)}
+                          aria-label={`Strike ${l.name}`}
+                          className="size-11 grid place-items-center rounded-md text-grey-400 hover:text-brand-red hover:bg-red-50 ml-auto"
+                        >
+                          <X className="size-4" />
+                        </button>
+                      </div>
+                    ) : (
+                      <p className="text-2xs text-grey-500 tabular mt-0.5">
+                        {l.qty} × {moneyPrecise(l.unitPrice)}
+                      </p>
                     )}
                   </li>
                 ))}
