@@ -252,10 +252,12 @@ async function readOrder(client: Client, orderId: string) {
   const { rows: lines } = await client.query<{
     id: string; name: string; qty: string; unit_price: string;
     tax_rate: string; note: string | null; voided: boolean;
+    kot_status: string;
     added_by_name: string;
   }>(
     `select l.id::text, l.name, l.qty::text, l.unit_price::text,
-            l.tax_rate::text, l.note, l.voided, s.full_name as added_by_name
+            l.tax_rate::text, l.note, l.voided, l.kot_status,
+            s.full_name as added_by_name
        from pos_order_lines l
        join staff s on s.id = l.added_by
       where l.order_id = $1
@@ -297,6 +299,9 @@ async function readOrder(client: Client, orderId: string) {
       taxRate: Number(l.tax_rate),
       note: l.note,
       voided: l.voided,
+      /* pending until a waiter sends it. The till shows which dishes the
+         kitchen has, so a second KOT does not re-fire the starters. */
+      kotStatus: l.kot_status,
       addedBy: l.added_by_name,
     })),
     net: Number(total[0]!.net),
@@ -816,6 +821,139 @@ till.post("/:code/till/orders/:id/lines/:lineId/qty", async (c) => {
     }
 
     return { ok: true as const, ...(await readOrder(client, orderId))! };
+  });
+
+  if (!result) return c.json({ error: "No such property." }, 404);
+  return c.json(result, "ok" in result && result.ok ? 200 : 409);
+});
+
+/* ── Sending to the kitchen ───────────────────────────────────────────
+   KOT and BILL are two different acts. A table orders starters, the
+   kitchen starts on them, the table orders mains twenty minutes later,
+   and the bill happens once at the end. Collapsing them — which this
+   till did — means the kitchen hears about the food when the guest asks
+   to pay.
+
+   Only PENDING lines are sent. Firing the whole order again would put
+   the starters back on the pass while they are being eaten.
+   ═══════════════════════════════════════════════════════════════════ */
+till.post("/:code/till/orders/:id/kot", async (c) => {
+  const result = await withSession(c.get("subject"), async (client) => {
+    const hotelId = await hotelFor(client, c.req.param("code"));
+    if (!hotelId) return null;
+    const orderId = c.req.param("id");
+
+    const { rows: order } = await client.query<{ status: string }>(
+      `select status from pos_orders where id = $1 and hotel_id = $2`,
+      [orderId, hotelId],
+    );
+    if (!order[0]) return refuse("No such order.");
+    if (order[0].status !== "open") {
+      return refuse(`This order is ${order[0].status}. Nothing to send.`);
+    }
+
+    const { rowCount: sent } = await client.query(
+      `update pos_order_lines
+          set kot_status = 'sent', kot_sent_at = now()
+        where order_id = $1 and not voided and kot_status = 'pending'`,
+      [orderId],
+    );
+
+    if (!sent) {
+      return refuse(
+        "Everything on this order is already with the kitchen. Add "
+        + "something first.",
+      );
+    }
+
+    return {
+      ok: true as const,
+      sent,
+      ...(await readOrder(client, orderId))!,
+    };
+  });
+
+  if (!result) return c.json({ error: "No such property." }, 404);
+  return c.json(result, "ok" in result && result.ok ? 200 : 409);
+});
+
+/* ── The pass ─────────────────────────────────────────────────────────
+   Every line the kitchen holds, oldest first. Sorted by when it was
+   SENT and not when it was rung up: a dish added to an old order still
+   goes to the back of the queue, because that is when the kitchen
+   learned about it.
+   ═══════════════════════════════════════════════════════════════════ */
+till.get("/:code/kitchen", async (c) => {
+  const body = await withSession(c.get("subject"), async (client) => {
+    const hotelId = await hotelFor(client, c.req.param("code"));
+    if (!hotelId) return null;
+
+    const { rows } = await client.query<{
+      id: string; order_no: string; table_ref: string | null;
+      order_type: string; outlet: string; name: string; qty: string;
+      note: string | null; kot_status: string; waited: string;
+      voided: boolean; was_sent_when_voided: boolean;
+    }>(
+      `select l.id::text, o.order_no, o.table_ref, o.order_type,
+              ou.code as outlet, l.name, l.qty::text, l.note,
+              l.kot_status,
+              extract(epoch from (now() - l.kot_sent_at))::int::text as waited,
+              l.voided, l.was_sent_when_voided
+         from pos_order_lines l
+         join pos_orders o  on o.id = l.order_id
+         join pos_outlets ou on ou.id = o.outlet_id
+        where l.hotel_id = $1
+          and l.kot_status in ('sent', 'preparing', 'ready')
+          and o.status = 'open'
+        order by l.kot_sent_at`,
+      [hotelId],
+    );
+
+    return {
+      lines: rows.map((r) => ({
+        id: r.id,
+        orderNo: r.order_no,
+        table: r.table_ref,
+        orderType: r.order_type,
+        outlet: r.outlet,
+        name: r.name,
+        qty: Number(r.qty),
+        note: r.note,
+        status: r.kot_status,
+        /* Seconds since it reached the kitchen. The pass sorts and
+           colours by this — a dish waiting eleven minutes is the only
+           thing on that screen that matters. */
+        waitedSeconds: Number(r.waited),
+        /* A struck line the kitchen already had. Shown so the pass can
+           stop cooking it, rather than having the ticket vanish. */
+        cancelled: r.voided && r.was_sent_when_voided,
+      })),
+    };
+  });
+
+  return body ? c.json(body) : c.json({ error: "No such property." }, 404);
+});
+
+till.post("/:code/kitchen/lines/:lineId/:to", async (c) => {
+  const to = c.req.param("to");
+  if (!["preparing", "ready", "served"].includes(to)) {
+    return c.json(refuse("A dish moves to preparing, ready or served."), 409);
+  }
+
+  const result = await withSession(c.get("subject"), async (client) => {
+    const hotelId = await hotelFor(client, c.req.param("code"));
+    if (!hotelId) return null;
+
+    const { rowCount } = await client.query(
+      `update pos_order_lines set kot_status = $1
+        where id = $2 and hotel_id = $3 and not voided
+          and kot_status <> 'pending'`,
+      [to, c.req.param("lineId"), hotelId],
+    );
+    if (!rowCount) {
+      return refuse("That dish is not with the kitchen, or was cancelled.");
+    }
+    return { ok: true as const, status: to };
   });
 
   if (!result) return c.json({ error: "No such property." }, 404);

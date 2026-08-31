@@ -18,7 +18,7 @@ API        tsc --noEmit      0 errors
            npm test          83 passed   (live Postgres, as pms_app)
                              loads the demo fixture first — see below
 
-DATABASE   db/tests/run.sh   33 migrations · 112 assertions
+DATABASE   db/tests/run.sh   34 migrations · 120 assertions
                              9 isolation checks · exit 0
 BACKUP     verify-backup.sh  dumped, RESTORED, 13 checks · exit 0
            load-demo         431 available · 132 sold · 30.63% ✓

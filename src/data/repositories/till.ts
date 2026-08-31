@@ -40,7 +40,29 @@ export interface OrderLine {
   /** Struck, not removed. A manager settling a dispute wants to see
       that a dish was added and cancelled four times. */
   voided: boolean;
+  /** pending · sent · preparing · ready · served.
+   *
+   *  `pending` until a waiter sends the ticket. The till shows it so a
+   *  second KOT does not re-fire the starters while they are being
+   *  eaten. */
+  kotStatus: string;
   addedBy: string;
+}
+
+export interface KitchenLine {
+  id: string;
+  orderNo: string;
+  table: string | null;
+  orderType: string;
+  outlet: string;
+  name: string;
+  qty: number;
+  note: string | null;
+  status: string;
+  /** Since it reached the kitchen. The pass sorts and colours by this. */
+  waitedSeconds: number;
+  /** Struck after the kitchen already had it — stop cooking. */
+  cancelled: boolean;
 }
 
 export interface Order {
@@ -218,6 +240,47 @@ export function setLineQty(
     `/api/hotels/${hotelId}/till/orders/${orderId}/lines/${lineId}/qty`,
     { qty },
   );
+}
+
+/**
+ * Send the pending lines to the kitchen.
+ *
+ * KOT and BILL are different acts. Only PENDING lines go — firing the
+ * whole order again would put the starters back on the pass while they
+ * are being eaten.
+ */
+export function sendToKitchen(
+  hotelId: string, orderId: string,
+): Promise<TillResult> {
+  return write(`/api/hotels/${hotelId}/till/orders/${orderId}/kot`);
+}
+
+export async function getKitchen(hotelId: string): Promise<KitchenLine[]> {
+  if (!hotelId) return [];
+  try {
+    const body = await api<{ lines: KitchenLine[] }>(
+      `/api/hotels/${hotelId}/kitchen`,
+    );
+    return body.lines;
+  } catch {
+    return [];
+  }
+}
+
+export async function moveKitchenLine(
+  hotelId: string, lineId: string, to: "preparing" | "ready" | "served",
+): Promise<{ ok: boolean; reason?: string }> {
+  try {
+    await api(`/api/hotels/${hotelId}/kitchen/lines/${lineId}/${to}`,
+      { method: "POST" });
+    return { ok: true };
+  } catch (error) {
+    if (error instanceof ApiError) {
+      const p = error.body as { reason?: string } | undefined;
+      return { ok: false, reason: p?.reason ?? error.message };
+    }
+    throw error;
+  }
 }
 
 export function settleOrder(

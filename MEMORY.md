@@ -1501,6 +1501,33 @@ optional arguments.
 
 ---
 
+### 76 · A till the kitchen never heard from
+
+The POS could take an order and settle a bill. Nothing in between. A waiter
+rang up a biryani and then **walked to the pass and said "biryani"** — exactly
+what the paper system already did, so the till was making nobody's job easier.
+
+Petpooja, Posist, Gofrugal — every POS in this market treats **KOT** and
+**BILL** as different acts, because they happen at different times to
+different people. Save-and-KOT fires the kitchen several times per table while
+the guest keeps ordering; Bill happens once, when they leave. Collapsing them
+means either the kitchen learns about the order at payment, or the bill is
+settled before the food is cooked.
+
+Two design points worth keeping:
+
+* **Status lives on the LINE, not the order.** A table's starters are served
+  while its mains are on the fire. An order-level status cannot say that, and
+  the pass needs to know which DISHES are ready.
+* **A struck line the kitchen already had is a VOID, not a disappearance.**
+  Cancelling something nobody started is free; cancelling something in a pan
+  costs food, and the ticket must say CANCELLED rather than vanish.
+
+**"Take inspiration from X" was worth taking literally.** Looking at what the
+market standard actually does found a missing act, not a missing style.
+
+---
+
 ## Verification traps
 
 ### Never test a Tailwind utility by injecting the class at runtime

@@ -3,7 +3,7 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useParams, Link } from "react-router";
 import {
   UtensilsCrossed, X, BedDouble, Banknote, CreditCard, Smartphone,
-  ArrowLeft, Printer, Lock, Search, Minus, Plus, MessageSquare,
+  ArrowLeft, Printer, Lock, Search, Minus, Plus, MessageSquare, Flame,
 } from "lucide-react";
 import { cn } from "@/lib/cn";
 import { moneyPrecise } from "@/lib/format";
@@ -11,7 +11,8 @@ import { useUi } from "@/lib/ui";
 import { toast } from "@/components/ui";
 import {
   getMenu, listOrders, getOrder, listChargeableRooms,
-  openOrder, addLine, voidLine, setLineQty, settleOrder, abandonOrder,
+  openOrder, addLine, voidLine, setLineQty, sendToKitchen,
+  settleOrder, abandonOrder,
   listPosOutlets, BUSINESS_DATE,
   type MenuItem,
 } from "@/data/repositories";
@@ -165,6 +166,16 @@ export default function TerminalPage() {
     if (!orderId) return;
     const res = await voidLine(hotelId, orderId, lineId);
     if (!res.ok) return toast.error("Not struck", res.reason);
+    refresh();
+  };
+
+  const kot = async () => {
+    if (!orderId) return;
+    setBusy(true);
+    const res = await sendToKitchen(hotelId, orderId);
+    setBusy(false);
+    if (!res.ok) return toast.error("Not sent", res.reason);
+    toast.success("With the kitchen", "They can start on it now.");
     refresh();
   };
 
@@ -468,6 +479,16 @@ export default function TerminalPage() {
                         {l.note}
                       </p>
                     )}
+                    {/* Which dishes the kitchen already holds, so a second
+                        KOT visibly sends only what is new. */}
+                    {!l.voided && l.kotStatus !== "pending" && (
+                      <p className="text-2xs text-grey-500 mt-0.5 pl-0.5">
+                        {l.kotStatus === "sent" ? "with the kitchen"
+                          : l.kotStatus === "preparing" ? "on the fire"
+                          : l.kotStatus === "ready" ? "at the pass"
+                          : "served"}
+                      </p>
+                    )}
 
                     {!l.voided && order.status === "open" ? (
                       /* A STEPPER, not a strike-and-retype. "Make that two
@@ -605,6 +626,23 @@ export default function TerminalPage() {
                   </div>
                 ) : (
                   <div className="space-y-2">
+                    {/* KOT FIRST, and above the settle actions, because it
+                        is the act that happens several times per table
+                        while settling happens once. A till that offered
+                        only "pay" taught waiters to bill early. */}
+                    <button
+                      type="button"
+                      disabled={busy || !order.lines.some(
+                        (l) => !l.voided && l.kotStatus === "pending")}
+                      onClick={() => void kot()}
+                      className="w-full h-16 rounded-lg bg-ink-900 text-white text-lg font-semibold inline-flex items-center justify-center gap-2 disabled:opacity-40"
+                    >
+                      <Flame className="size-5" />
+                      {order.lines.some(
+                        (l) => !l.voided && l.kotStatus === "pending")
+                        ? "Send to the kitchen"
+                        : "Kitchen has it all"}
+                    </button>
                     <button
                       type="button"
                       disabled={order.lines.filter((l) => !l.voided).length === 0}

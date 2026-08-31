@@ -955,3 +955,85 @@ begin
   delete from rates where hotel_id = a and room_type_id = v_type;
   update room_types set base_rate = null where id = v_type;
 end $$;
+
+
+-- =============================================================================
+-- THE KITCHEN TICKET (034)
+-- =============================================================================
+-- KOT and BILL are two different acts. A table orders starters, the kitchen
+-- starts on them, the table orders mains twenty minutes later, and the bill
+-- happens once. Collapsing them — which this till did until 034 — means the
+-- kitchen hears about the food when the guest asks to pay.
+-- =============================================================================
+do $$
+declare
+  a uuid; v_staff uuid; v_outlet uuid; v_cat uuid; v_item uuid;
+  v_order uuid; bd date; n int;
+begin
+  select id into a from hotels where code='AGR';
+  select id into v_staff from staff where email='agra@fidato.in';
+  bd := app.business_date(a);
+
+  insert into pos_outlets (hotel_id, code, name, category, staff_id)
+  values (a,'KOTT','KOT Test','food',v_staff) returning id into v_outlet;
+  insert into pos_menu_categories (hotel_id, name)
+  values (a,'KOT Cat') returning id into v_cat;
+  insert into pos_menu_items (hotel_id, category_id, name, price, tax_rate)
+  values (a,v_cat,'KOT Dish',100,5) returning id into v_item;
+
+  insert into pos_orders (hotel_id, outlet_id, order_no, business_date, opened_by)
+  values (a,v_outlet,app.pos_next_order_no(a,bd),bd,v_staff)
+  returning id into v_order;
+
+  insert into pos_order_lines
+    (order_id, hotel_id, item_id, name, qty, unit_price, tax_rate, added_by)
+  values (v_order,a,v_item,'KOT Dish',1,100,5,v_staff);
+
+  -- ---------- ringing it up does NOT tell the kitchen ----------
+  -- Otherwise every hesitation over the menu fires a ticket.
+  perform test.ok('kot','a new line is pending, not sent',
+    (select kot_status from pos_order_lines where order_id = v_order) = 'pending');
+
+  -- ---------- a pending line has no sent time, a sent one must ----------
+  perform test.raises('kot','a sent line must say when',
+    format($q$update pos_order_lines set kot_status='sent'
+            where order_id=%L$q$, v_order), '23514');
+
+  update pos_order_lines set kot_status='sent', kot_sent_at=now()
+   where order_id = v_order;
+  perform test.ok('kot','a sent line carries its time', true);
+
+  -- ---------- the kitchen can only be told about real states ----------
+  perform test.raises('kot','a made-up kitchen state is refused',
+    format($q$update pos_order_lines set kot_status='burnt'
+            where order_id=%L$q$, v_order), '23514');
+
+  -- ---------- cancelling something the kitchen HAS is recorded ----------
+  -- Cancelling a dish nobody started is free. Cancelling one on the fire
+  -- costs food, and the pass must be told rather than have it vanish.
+  update pos_order_lines
+     set voided=true, voided_by=v_staff, voided_at=now()
+   where order_id = v_order;
+
+  perform test.ok('kot','a strike after the kitchen had it is marked',
+    (select was_sent_when_voided from pos_order_lines
+      where order_id = v_order) = true);
+
+  -- ---------- an order knows how it is being taken ----------
+  perform test.ok('kot','an order defaults to dine-in',
+    (select order_type from pos_orders where id = v_order) = 'dine_in');
+  perform test.raises('kot','a made-up order type is refused',
+    format($q$update pos_orders set order_type='telepathy' where id=%L$q$,
+           v_order), '23514');
+
+  alter table pos_order_lines disable trigger pos_order_lines_frozen;
+  delete from pos_order_lines where order_id = v_order;
+  delete from pos_orders where id = v_order;
+  alter table pos_order_lines enable trigger pos_order_lines_frozen;
+  delete from pos_menu_items where id = v_item;
+  delete from pos_menu_categories where id = v_cat;
+  delete from pos_outlets where id = v_outlet;
+
+  select count(*) into n from pos_outlets where code='KOTT';
+  perform test.ok('kot','the KOT fixture does not outlive the test', n = 0);
+end $$;

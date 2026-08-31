@@ -2,7 +2,7 @@ import {
   LayoutDashboard, CalendarCheck, Users, Building2, Hotel, Receipt,
   BarChart3, Bell, Settings, ShieldCheck, CalendarRange,
   FileText, Wallet, Plug, ScrollText,
-  UserCog, Palette, Terminal, MonitorSmartphone, BookOpen, Home, ClipboardList, type LucideIcon, ShieldAlert, UtensilsCrossed,
+  UserCog, Palette, Terminal, MonitorSmartphone, BookOpen, Home, ClipboardList, type LucideIcon, ShieldAlert, UtensilsCrossed, Flame,
 } from "lucide-react";
 import { can, canAccess, type Resource, type Role } from "@/lib/permissions";
 
@@ -168,6 +168,10 @@ const SECTIONS: NavSection[] = [
         label: "Terminal", to: "/h/:code/till/terminal",
         icon: MonitorSmartphone, resource: "payment",
       },
+      /* The pass. A wall screen in the kitchen, behind the same
+         permission as the till — the people who cook and the people who
+         ring up are the same restaurant. */
+      { label: "Kitchen", to: "/h/:code/kitchen", icon: Flame, resource: "payment" },
       /* The prices, which are the hotel's. Behind the same permission as
          rates, because setting what a dish costs is the same kind of act
          as setting what a room costs. */
