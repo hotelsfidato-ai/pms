@@ -16,7 +16,13 @@ export type { Stay, Folio, StayStatus, Source } from "../fixtures/reservations";
  */
 export interface Posting {
   id: string;
-  folioId: string;               // the stay it belongs to
+  /** The folio this line sits on. A stay may have two — a company
+      paying the room while the guest pays their own bar tab. */
+  folioId: string;
+  stayId: string;
+  billTo: string;
+  /** Null on a guest folio, never a missing name. */
+  company: string | null;
   businessDate: string;
   category: string;
   description: string;

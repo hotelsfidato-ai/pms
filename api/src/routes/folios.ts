@@ -1,5 +1,6 @@
 import { Hono } from "hono";
 import { withSession } from "../auth.ts";
+import { businessDateFor } from "../businessDate.ts";
 import type { Client } from "../db.ts";
 
 /* ══════════════════════════════════════════════════════════════════
@@ -146,6 +147,9 @@ folios.get("/:code/stays/:id/postings", async (c) => {
 
     const { rows } = await client.query<{
       id: string;
+      folio_id: string;
+      bill_to: string;
+      company: string | null;
       business_date: string;
       category: string;
       description: string;
@@ -156,20 +160,30 @@ folios.get("/:code/stays/:id/postings", async (c) => {
       created_at: string;
       posted_by: string | null;
     }>(
-      `select fp.id::text, fp.business_date::text, fp.category, fp.description,
+      `select fp.id::text, fp.folio_id::text, f.bill_to, co.name as company,
+              fp.business_date::text, fp.category, fp.description,
               fp.amount, fp.tax_amount, fp.reverses_id::text,
               exists (select 1 from folio_postings r where r.reverses_id = fp.id) as reversed,
               fp.created_at::text, fp.posted_by::text
          from folio_postings fp
          join folios f on f.id = fp.folio_id
+         left join companies co on co.id = f.company_id
         where f.hotel_id = $1 and f.reservation_id = $2
-        order by fp.business_date, fp.id`,
+        order by f.opened_at, fp.business_date, fp.id`,
       [hotelId, c.req.param("id")],
     );
 
     return rows.map((p) => ({
       id: p.id,
-      folioId: c.req.param("id"),
+      /* The REAL folio, not the stay. This returned the stay id under
+         the name `folioId` — harmless while every stay had exactly one
+         folio, and wrong the moment one has two: the panel could not
+         tell which bill a line was on, which is the only question
+         split billing asks. */
+      folioId: p.folio_id,
+      stayId: c.req.param("id"),
+      billTo: p.bill_to,
+      company: p.company,
       businessDate: p.business_date,
       category: p.category,
       description: p.description,
@@ -187,4 +201,286 @@ folios.get("/:code/stays/:id/postings", async (c) => {
   });
 
   return body ? c.json(body) : c.json({ error: "Not found." }, 404);
+});
+
+
+/* ══════════════════════════════════════════════════════════════════
+   SPLIT BILLING
+
+   Migration 006 says it plainly: "a company pays the room while the
+   guest pays their own bar tab, which is two folios on one stay. Model
+   that from the start; retrofitting split billing is genuinely
+   painful." The model was built. Nothing ever used it — every stay got
+   exactly one folio, and `bill_to` and `company_id` were columns no
+   code had ever written.
+
+   So the commonest corporate arrangement in an Indian hotel could not
+   be expressed, and the front desk settled it by issuing one bill and
+   letting the company argue about the bar.
+
+   A TRANSFER IS TWO POSTINGS, NEVER A MOVE
+
+   The ledger is append-only and a wrong posting is REVERSED with its
+   own row. Moving a charge between folios by updating `folio_id` would
+   be an edit — the one thing this ledger does not permit — and it
+   would silently change a folio that may already have been invoiced.
+
+   So a transfer REVERSES the line on the folio it is leaving and posts
+   a fresh one on the folio it joins. Three rows exist afterwards and
+   all three are true: the charge happened, it was taken off this bill,
+   it went onto that one.
+   ══════════════════════════════════════════════════════════════════ */
+
+/** Every folio on one stay, each with its own balance. */
+folios.get("/:code/stays/:id/folios", async (c) => {
+  const body = await withSession(c.get("subject"), async (client) => {
+    const hotelId = await hotelIdFor(client, c.req.param("code"));
+    if (!hotelId) return null;
+
+    const { rows } = await client.query<{
+      id: string; bill_to: string; company_id: string | null;
+      company: string | null; status: string; balance: string;
+      lines: string;
+    }>(
+      `select f.id::text, f.bill_to, f.company_id::text,
+              c.name as company, f.status,
+              coalesce((
+                select sum(fp.amount + fp.tax_amount)
+                  from folio_postings fp
+                 where fp.folio_id = f.id
+                   and fp.reverses_id is null
+                   and not exists (select 1 from folio_postings rev
+                                    where rev.reverses_id = fp.id)
+              ), 0)::text as balance,
+              coalesce((
+                select count(*) from folio_postings fp
+                 where fp.folio_id = f.id
+                   and fp.reverses_id is null
+                   and not exists (select 1 from folio_postings rev
+                                    where rev.reverses_id = fp.id)
+              ), 0)::text as lines
+         from folios f
+         left join companies c on c.id = f.company_id
+        where f.hotel_id = $1 and f.reservation_id = $2
+        order by f.opened_at`,
+      [hotelId, c.req.param("id")],
+    );
+
+    return rows.map((r) => ({
+      id: r.id,
+      billTo: r.bill_to,
+      companyId: r.company_id,
+      /* A company folio always names its company — the schema refuses
+         one that does not — so a null here is a guest folio, not a
+         missing name. The interface says "Guest", never a dash. */
+      company: r.company,
+      status: r.status,
+      balance: Math.round(Number(r.balance) * 100) / 100,
+      lines: Number(r.lines),
+    }));
+  });
+
+  return body ? c.json(body) : c.json({ error: "Not found." }, 404);
+});
+
+/** Open a second folio on a stay. */
+folios.post("/:code/stays/:id/folios", async (c) => {
+  type Body = { billTo?: string; companyId?: string };
+  const input = await c.req.json<Body>().catch(() => ({}) as Body);
+
+  const billTo = input.billTo ?? "company";
+  if (billTo !== "guest" && billTo !== "company") {
+    return c.json({ ok: false, reason: "Who settles this folio?" }, 409);
+  }
+  if (billTo === "company" && !input.companyId) {
+    return c.json({ ok: false, reason: "Which company is paying?" }, 409);
+  }
+
+  const body = await withSession(c.get("subject"), async (client) => {
+    const hotelId = await hotelIdFor(client, c.req.param("code"));
+    if (!hotelId) return null;
+
+    const { rows: stay } = await client.query(
+      "select 1 from reservations where hotel_id = $1 and id = $2",
+      [hotelId, c.req.param("id")],
+    );
+    if (!stay.length) return { ok: false, reason: "No such stay." };
+
+    if (input.companyId) {
+      /* Named back on refusal rather than letting the foreign key say
+         23503.
+
+         ⚠ `companies` is GROUP-level — no hotel_id, like `guests`. One
+         corporate account is billable at every property in the group,
+         which is the point of a group. This check filtered on a column
+         that does not exist and would have refused every company at
+         every property. */
+      const { rows: co } = await client.query(
+        "select 1 from companies where id = $1 and is_active",
+        [input.companyId],
+      );
+      if (!co.length) {
+        return { ok: false, reason: "That company is not on file." };
+      }
+    }
+
+    const { rows } = await client.query<{ id: string }>(
+      `insert into folios (hotel_id, reservation_id, bill_to, company_id)
+       values ($1,$2,$3,$4) returning id::text`,
+      [hotelId, c.req.param("id"), billTo,
+       billTo === "company" ? input.companyId : null],
+    );
+    return { ok: true as const, id: rows[0]!.id };
+  });
+
+  if (!body) return c.json({ error: "No such property." }, 404);
+  return c.json(body, "ok" in body && body.ok ? 200 : 409);
+});
+
+/** Move one charge onto another folio on the same stay. */
+folios.post("/:code/postings/:id/transfer", async (c) => {
+  type Body = { toFolioId?: string };
+  const input = await c.req.json<Body>().catch(() => ({}) as Body);
+  if (!input.toFolioId) {
+    return c.json({ ok: false, reason: "Which folio does it go to?" }, 409);
+  }
+
+  const body = await withSession(c.get("subject"), async (client) => {
+    const hotelId = await hotelIdFor(client, c.req.param("code"));
+    if (!hotelId) return null;
+
+    const { rows: src } = await client.query<{
+      id: string; folio_id: string; reservation_id: string;
+      business_date: string; category: string; description: string;
+      amount: string; tax_rate: string; tax_amount: string;
+      folio_status: string;
+    }>(
+      `select fp.id::text, fp.folio_id::text, f.reservation_id::text,
+              fp.business_date::text, fp.category, fp.description,
+              fp.amount::text, fp.tax_rate::text, fp.tax_amount::text,
+              f.status as folio_status
+         from folio_postings fp
+         join folios f on f.id = fp.folio_id
+        where fp.id = $1 and fp.hotel_id = $2`,
+      [c.req.param("id"), hotelId],
+    );
+    const line = src[0];
+    if (!line) return { ok: false, reason: "That charge is not here." };
+
+    /* Already reversed, or itself a reversal. Transferring either would
+       put a charge on the new folio that no longer exists on the old. */
+    if (line.category === "payment") {
+      return {
+        ok: false,
+        reason: "A payment stays where it was taken. Refund it instead.",
+      };
+    }
+    const { rows: dead } = await client.query(
+      `select 1 from folio_postings
+        where reverses_id = $1
+           or (id = $1 and reverses_id is not null)`,
+      [line.id],
+    );
+    if (dead.length) {
+      return { ok: false, reason: "That charge has already been reversed." };
+    }
+
+    if (line.folio_id === input.toFolioId) {
+      return { ok: false, reason: "It is already on that folio." };
+    }
+
+    /* The destination has to be on the SAME STAY. Without this a charge
+       could be moved onto a stranger's bill, and the two folios would
+       both look correct. */
+    const { rows: dest } = await client.query<{ status: string }>(
+      `select status from folios
+        where id = $1 and hotel_id = $2 and reservation_id = $3`,
+      [input.toFolioId, hotelId, line.reservation_id],
+    );
+    if (!dest[0]) {
+      return { ok: false, reason: "That folio is not on this stay." };
+    }
+    if (dest[0].status !== "open") {
+      return { ok: false, reason: "That folio is closed." };
+    }
+    if (line.folio_status !== "open") {
+      return { ok: false, reason: "This folio is closed." };
+    }
+
+    /* BOTH rows land on the CURRENT business date, never the charge's
+       own. D4 refuses any posting to a date the night audit has
+       closed, and its message says exactly what to do: "post to the
+       current date instead". It is also the right accounting — a
+       closed day is closed, and a transfer agreed this morning is
+       this morning's movement, not a retrospective edit of a night
+       already reported. The original date rides in the description so
+       the trail still reads. */
+    const today = await businessDateFor(client, hotelId);
+    const on = line.business_date === today
+      ? line.description
+      : `${line.description} (${line.business_date})`;
+
+    /* Off this bill — a reversing row, pointed at the original, which
+       is what makes the pair cancel rather than merely annotate. */
+    await client.query(
+      `insert into folio_postings
+         (hotel_id, folio_id, business_date, category, description,
+          amount, tax_rate, tax_amount, reverses_id, posted_by)
+       values ($1,$2,$3::date,$4,$5,$6,$7,$8,$9,app.current_user_id())`,
+      [hotelId, line.folio_id, today, line.category,
+       `Transferred out — ${on}`,
+       -Number(line.amount), line.tax_rate, -Number(line.tax_amount),
+       line.id],
+    );
+
+    /* And onto that one. A fresh charge, not a copy of a reversed row:
+       it is the same money arriving on a different account. */
+    const { rows: moved } = await client.query<{ id: string }>(
+      `insert into folio_postings
+         (hotel_id, folio_id, business_date, category, description,
+          amount, tax_rate, tax_amount, source_type, posted_by)
+       values ($1,$2,$3::date,$4,$5,$6,$7,$8,'transfer',
+               app.current_user_id())
+       returning id::text`,
+      [hotelId, input.toFolioId, today, line.category,
+       `Transferred in — ${on}`,
+       line.amount, line.tax_rate, line.tax_amount],
+    );
+
+    return { ok: true as const, id: moved[0]!.id };
+  });
+
+  if (!body) return c.json({ error: "No such property." }, 404);
+  return c.json(body, "ok" in body && body.ok ? 200 : 409);
+});
+
+
+/* ── Companies a bill can be addressed to ─────────────────────────────
+   NOT `/:code/companies`. That endpoint answers a different question —
+   revenue by ACCOUNT — and merges the `companies` table with booking
+   sources under `coalesce(co.name, source)`, grouped by name with a
+   SLUGGED id. Perfect for the directory screen it was written for, and
+   useless for a picker: passing its id to anything expecting a company
+   produces `invalid input syntax for type uuid: "fidato-hotels"`.
+
+   Found exactly that way, by driving the split-billing dialog.
+
+   Group-level, like `guests`: one corporate account is billable at
+   every property in the group, which is the point of a group.
+   ═══════════════════════════════════════════════════════════════════ */
+folios.get("/:code/billing-companies", async (c) => {
+  const body = await withSession(c.get("subject"), async (client) => {
+    const hotelId = await hotelIdFor(client, c.req.param("code"));
+    if (!hotelId) return null;
+
+    const { rows } = await client.query<{
+      id: string; name: string; gstin: string | null;
+    }>(
+      `select id::text, name, nullif(gstin, '') as gstin
+         from companies where is_active order by name`,
+    );
+    return rows;
+  });
+
+  return body ? c.json(body) : c.json({ error: "No such property." }, 404);
 });

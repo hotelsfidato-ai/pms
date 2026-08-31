@@ -1628,6 +1628,54 @@ reaches that moment.**
 
 ---
 
+### 82 · A field called `folioId` that held a stay id
+
+The postings endpoint returned `folioId: c.req.param("id")` — the
+**reservation** id, under the name of the folio. Harmless for as long as every
+stay had exactly one folio, which is why it survived: the two were
+interchangeable and nothing could tell.
+
+They stop being interchangeable the moment split billing exists, and then the
+panel cannot say which bill a line is on — the only question split billing
+asks. The type even carried the contradiction in a comment:
+`folioId: string; // the stay it belongs to`.
+
+**A name that has been wrong since it was written looks right until a second
+case appears.** Worth checking any identifier whose comment has to explain
+that it means something other than its name.
+
+---
+
+### 83 · A picker keyed by a slug, into a column expecting a uuid
+
+The split-billing dialog listed companies from `listCompanies()`, which is the
+DIRECTORY's accounts report: it merges the `companies` table with booking
+sources under `coalesce(co.name, source)`, groups by name, and keys the result
+by a **slug**. Exactly right for the screen it was written for.
+
+Passing that id to anything that wants a company produced:
+
+```
+invalid input syntax for type uuid: "fidato-hotels"
+```
+
+The dialog looked correct — it listed real names — and did nothing. No toast,
+no error on screen, because the failure was a 500 the repo swallowed.
+
+Two things fell out of it:
+
+* **The list being plausible is not the list being right.** Names that read
+  correctly hid an id shape that could never work.
+* **Reusing a repository function because its name matches is not reuse.**
+  `listCompanies` answers "how much revenue per account", not "who can be
+  billed". A new endpoint returning real rows with real uuids was the fix.
+
+Found only by driving the dialog. Both tsc passes were clean and the DB tests
+were green — nothing static could see it, because the slug is a perfectly good
+string right up to the moment Postgres reads it.
+
+---
+
 ## Verification traps
 
 ### Never test a Tailwind utility by injecting the class at runtime

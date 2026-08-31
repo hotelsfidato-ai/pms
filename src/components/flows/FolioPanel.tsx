@@ -1,6 +1,9 @@
 import { useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { Undo2, Plus, Receipt, LogOut, Printer } from "lucide-react";
+import {
+  Undo2, Plus, Receipt, LogOut, Printer, ArrowLeftRight,
+  Split as SplitIcon,
+} from "lucide-react";
 import { cn } from "@/lib/cn";
 import { money, dateShort } from "@/lib/format";
 import {
@@ -10,11 +13,14 @@ import {
 import {
   Button, Field, Input, NativeSelect, StatusPill, Tooltip, toast,
   Dialog, DialogContent, DialogTrigger,
+  DropdownMenu, DropdownMenuTrigger, DropdownMenuContent,
+  DropdownMenuItem, DropdownMenuLabel,
 } from "@/components/ui";
 import {
   getFolioPostings, getFolioBalance, postCharge, reverseCharge,
   settle, checkOut, checkOutAllowed, reverseChargeAllowed,
-  type Posting, type Stay,
+  listStayFolios, openFolio, transferPosting, listBillingCompanies,
+  type Posting, type Stay, type StayFolio,
 } from "@/data/repositories";
 
 /* ══════════════════════════════════════════════════════════════════
@@ -54,18 +60,31 @@ export function FolioPanel({
     queryKey: ["checkout-allowed", hotelId, stay.id, balance.data],
     queryFn: () => checkOutAllowed(hotelId, stay.id),
   });
+  const stayFolios = useQuery({
+    queryKey: ["stay-folios", hotelId, stay.id],
+    queryFn: () => listStayFolios(hotelId, stay.id),
+  });
 
-  const lines = postings.data ?? [];
+  /* null is every bill at once. A stay with one folio never sees the
+     strip, so this stays null and the ledger reads exactly as before. */
+  const [only, setOnly] = useState<string | null>(null);
+
+  const folios = stayFolios.data ?? [];
+  const all = postings.data ?? [];
+  const lines = only === null ? all : all.filter((p) => p.folioId === only);
   const due = balance.data ?? 0;
 
   return (
     <div className="space-y-5">
       <BalanceHeader stay={stay} balance={due} />
 
+      <FolioStrip folios={folios} active={only} onPick={setOnly} />
+
       <LedgerList
         lines={lines}
         hotelId={hotelId}
         stayId={stay.id}
+        folios={folios}
         onChanged={refresh}
       />
 
@@ -84,6 +103,7 @@ export function FolioPanel({
           onDone={refresh}
         />
         <InvoiceDialog stay={stay} lines={lines} balance={due} />
+        <SplitBillButton hotelId={hotelId} stayId={stay.id} onDone={refresh} />
       </div>
 
       {/* Rule 6 — blocked, visible, and it says why */}
@@ -135,11 +155,12 @@ function BalanceHeader({ stay, balance }: { stay: Stay; balance: number }) {
 }
 
 function LedgerList({
-  lines, hotelId, stayId, onChanged,
+  lines, hotelId, stayId, folios, onChanged,
 }: {
   lines: Posting[];
   hotelId: string;
   stayId: string;
+  folios: StayFolio[];
   onChanged: () => void;
 }) {
   if (lines.length === 0) {
@@ -205,6 +226,12 @@ function LedgerList({
                 )}
               </div>
 
+              <TransferButton
+                hotelId={hotelId}
+                posting={p}
+                folios={folios}
+                onDone={onChanged}
+              />
               <ReverseButton
                 hotelId={hotelId}
                 stayId={stayId}
@@ -603,5 +630,223 @@ function Row({
         {value}
       </span>
     </div>
+  );
+}
+
+/* ══════════════════════════════════════════════════════════════════
+   THE BILLS ON THIS STAY
+
+   006 modelled two folios on one stay — "a company pays the room while
+   the guest pays their own bar tab" — and nothing ever opened a second
+   one. The commonest corporate arrangement in an Indian hotel was
+   settled by issuing one bill and letting the company argue about the
+   bar.
+
+   Shown only once there is something to show. A leisure guest with one
+   folio does not need a tab strip explaining that they have one bill,
+   so the strip appears when a second folio exists and the button that
+   creates one sits with the other actions.
+   ══════════════════════════════════════════════════════════════════ */
+function FolioStrip({
+  folios, active, onPick,
+}: {
+  folios: StayFolio[];
+  active: string | null;
+  onPick: (id: string | null) => void;
+}) {
+  if (folios.length < 2) return null;
+
+  return (
+    <div className="flex items-center gap-2 overflow-x-auto -mx-1 px-1 pb-1">
+      <FolioTab
+        label="Everything"
+        balance={folios.reduce((n, f) => n + f.balance, 0)}
+        active={active === null}
+        onClick={() => onPick(null)}
+      />
+      {folios.map((f) => (
+        <FolioTab
+          key={f.id}
+          /* A guest folio has no company and that is not a gap. */
+          label={f.billTo === "company" ? f.company ?? "Company" : "Guest"}
+          balance={f.balance}
+          active={active === f.id}
+          onClick={() => onPick(f.id)}
+        />
+      ))}
+    </div>
+  );
+}
+
+function FolioTab({ label, balance, active, onClick }: {
+  label: string; balance: number; active: boolean; onClick: () => void;
+}) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      aria-pressed={active}
+      className={cn(
+        "shrink-0 min-h-11 px-3.5 rounded-md border text-left",
+        "transition-colors duration-150 cursor-pointer",
+        active
+          ? "border-brand-orange bg-brand-orange-50"
+          : "border-grey-200 bg-white hover:border-grey-300",
+      )}
+    >
+      <span className="block text-sm text-grey-600">{label}</span>
+      <span className="block text-base tabular font-medium text-ink-900">
+        {money(balance)}
+      </span>
+    </button>
+  );
+}
+
+/** Open a second bill on this stay. */
+function SplitBillButton({ hotelId, stayId, onDone }: {
+  hotelId: string; stayId: string; onDone: () => void;
+}) {
+  const [open, setOpen] = useState(false);
+  const [companyId, setCompanyId] = useState("");
+  const [busy, setBusy] = useState(false);
+
+  /* listCompanies() is the DIRECTORY's accounts report — it merges the
+     companies table with booking sources and keys the result by a
+     slug, so its id is not a uuid and the insert failed with
+     `invalid input syntax for type uuid: "fidato-hotels"`. */
+  const companies = useQuery({
+    queryKey: ["billing-companies", hotelId],
+    queryFn: () => listBillingCompanies(hotelId),
+    enabled: open,
+  });
+
+  const save = async () => {
+    setBusy(true);
+    const res = await openFolio(hotelId, stayId, {
+      billTo: "company", companyId,
+    });
+    setBusy(false);
+    if (!res.ok) return toast.error("Not opened", res.reason);
+    toast.success(
+      "Second bill opened",
+      "Move charges onto it from the ledger above.",
+    );
+    setOpen(false);
+    onDone();
+  };
+
+  const list = companies.data ?? [];
+
+  return (
+    <>
+      <Button variant="secondary" onClick={() => setOpen(true)}>
+        <SplitIcon className="size-4" />
+        Split the bill
+      </Button>
+
+      <Dialog open={open} onOpenChange={setOpen}>
+        <DialogContent
+          title="Split the bill"
+          description="A second folio on this stay, settled by a company."
+        >
+          {list.length === 0 ? (
+            /* No invented company, and no free-text one either: a
+               company on a bill is a GSTIN and an address on a
+               statutory document, not a name somebody typed. */
+            <p className="text-base text-grey-600">
+              No companies are on file yet. Add one under Companies
+              first — a company bill carries their GSTIN and address.
+            </p>
+          ) : (
+            <div className="space-y-4">
+              <Field label="Who is paying the second bill?" required>
+                {({ id }) => (
+                  <NativeSelect
+                    id={id}
+                    value={companyId}
+                    onChange={(e) => setCompanyId(e.target.value)}
+                  >
+                    <option value="">Choose a company…</option>
+                    {list.map((co) => (
+                      <option key={co.id} value={co.id}>{co.name}</option>
+                    ))}
+                  </NativeSelect>
+                )}
+              </Field>
+
+              <div className="flex justify-end">
+                <Button
+                  onClick={() => void save()}
+                  disabled={busy || !companyId}
+                >
+                  Open the second bill
+                </Button>
+              </div>
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
+    </>
+  );
+}
+
+/** Move one charge onto another bill on this stay. */
+function TransferButton({
+  hotelId, posting, folios, onDone,
+}: {
+  hotelId: string; posting: Posting; folios: StayFolio[]; onDone: () => void;
+}) {
+  const [busy, setBusy] = useState(false);
+
+  /* Nothing to move it to, nothing to move. A payment stays where it
+     was taken and a reversed line no longer exists — both refused by
+     the server too, but a button that only ever says no is worse than
+     no button. */
+  const targets = folios.filter(
+    (f) => f.id !== posting.folioId && f.status === "open",
+  );
+  if (
+    targets.length === 0
+    || posting.reversed
+    || posting.kind !== "charge"
+  ) return null;
+
+  const move = async (toFolioId: string) => {
+    setBusy(true);
+    const res = await transferPosting(hotelId, posting.id, toFolioId);
+    setBusy(false);
+    if (!res.ok) return toast.error("Not moved", res.reason);
+    toast.success(
+      "Moved",
+      "Reversed on one bill and posted on the other — nothing was edited.",
+    );
+    onDone();
+  };
+
+  return (
+    <DropdownMenu>
+      <DropdownMenuTrigger asChild>
+        <button
+          type="button"
+          disabled={busy}
+          aria-label={`Move ${posting.description} to another bill`}
+          className={cn(
+            "shrink-0 flex items-center justify-center size-9 rounded-md",
+            "text-grey-400 hover:text-ink-900 hover:bg-grey-50",
+            "cursor-pointer transition-colors duration-150",
+          )}
+        >
+          <ArrowLeftRight className="size-4" />
+        </button>
+      </DropdownMenuTrigger>
+      <DropdownMenuContent>
+        <DropdownMenuLabel>Move to</DropdownMenuLabel>
+        {targets.map((f) => (
+          <DropdownMenuItem key={f.id} onSelect={() => void move(f.id)}>
+            {f.billTo === "company" ? f.company ?? "Company" : "Guest"}
+          </DropdownMenuItem>
+        ))}
+      </DropdownMenuContent>
+    </DropdownMenu>
   );
 }

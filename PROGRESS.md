@@ -18,7 +18,7 @@ API        tsc --noEmit      0 errors
            npm test          83 passed   (live Postgres, as pms_app)
                              loads the demo fixture first — see below
 
-DATABASE   db/tests/run.sh   37 migrations · 138 assertions
+DATABASE   db/tests/run.sh   37 migrations · 146 assertions
                              9 isolation checks · exit 0
 BACKUP     verify-backup.sh  dumped, RESTORED, 13 checks · exit 0
            load-demo         431 available · 132 sold · 30.63% ✓
@@ -121,6 +121,32 @@ the hotel agreed to.
 **A property-chosen default is not a shipped default.** One policy may be
 marked *use for new bookings*; a trigger copies it onto every booking however
 it is made. Without that the whole feature could never fire — see defect 81.
+
+### Split billing, five migrations after it was modelled
+
+Migration 006 said it plainly in 2025: *"a company pays the room while the
+guest pays their own bar tab, which is two folios on one stay. Model that from
+the start; retrofitting split billing is genuinely painful."* The model was
+built. **Nothing ever used it** — every stay got one folio, and `bill_to` and
+`company_id` were columns no code had ever written, so the commonest corporate
+arrangement in an Indian hotel was settled by issuing one bill and letting the
+company argue about the bar.
+
+**A transfer is two postings, never a move.** The ledger is append-only and a
+folio may already have been invoiced, so a charge leaving one bill is
+*reversed* there and *posted fresh* on the other. Three rows exist afterwards
+and all three are true: the charge happened, it came off this bill, it went
+onto that one.
+
+Both rows land on the **current** business date, never the charge's own — D4
+refuses any posting to a night the audit has closed, and its message says
+exactly what to do. It is also the right accounting: a transfer agreed this
+morning is this morning's movement, not a retrospective edit of a night
+already reported.
+
+The suite's assertion is **conservation**: two folios together must hold
+exactly what the one folio held. Driven in the browser on a real stay —
+Everything ₹7,085 before and after, Guest ₹0, Agoda ₹7,085.
 
 ### Reports export
 
@@ -701,16 +727,16 @@ retried. Ledger nets to zero, room revenue still ₹4,19,578.76.
 5  Night audit                       ███████████░  posts, rolls, retains
 6  Housekeeping, mobile              ██████████░░  assigned, and rooms come out
 7  POS — bridge, till and terminal   ████████████  its own category
-8  Billing, GST, Form C              ████████░░░░  invoices, credit notes, C
+8  Billing, GST, Form C              █████████░░░  invoices, credit notes, split
 9  Rates, availability, STAAH        ███████░░░░░  rates, seasons, plans
 10 Group dashboard and reports       ███████████░  11 of 11 reports, all SQL
 11 CRS bridge / SU                    ░░░░░░░░░░░░  post-launch, by decision
 12 Hardening and go-live             ███████░░░░░  backup, races, provisioning
 ```
 
-**113 of 144 — 78%.** Add the filled blocks above and divide by 144. That sum is the number; it is not typed separately, because it was for three audits running and drifted to "about 90%" while the bars said 70.
+**114 of 144 — 79%.** Add the filled blocks above and divide by 144. That sum is the number; it is not typed separately, because it was for three audits running and drifted to "about 90%" while the bars said 70.
 
-**Launch scope — 113 of 132, 86%.** Stage 11 (CRS / SU) is a feature
+**Launch scope — 114 of 132, 86%.** Stage 11 (CRS / SU) is a feature
 iteration to be built after launch, by the group's decision, so it is out of
 the denominator. Nothing else changes: no code was written against SU, which
 is why removing it costs nothing to remove.

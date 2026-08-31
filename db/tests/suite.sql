@@ -1271,3 +1271,152 @@ begin
   perform test.ok('housekeeping','the terms fixture does not outlive it either',
     n = 0, n || ' left behind');
 end $$;
+
+
+-- =============================================================================
+-- SPLIT BILLING — the model 006 built and nothing used
+-- =============================================================================
+-- "A company pays the room while the guest pays their own bar tab, which is two
+-- folios on one stay. Model that from the start; retrofitting split billing is
+-- genuinely painful." It was modelled. `bill_to` and `company_id` were then
+-- columns no code had ever written.
+--
+-- The assertion that matters is CONSERVATION: a transfer must not create or
+-- destroy money. Three rows exist afterwards and the two folios together must
+-- hold exactly what the one folio held before.
+-- =============================================================================
+do $$
+declare
+  v_hotel uuid; v_guest uuid; v_type uuid; v_res uuid; v_co uuid;
+  v_guest_folio uuid; v_co_folio uuid; v_line bigint;
+  before_total numeric; after_total numeric; n int;
+begin
+  v_hotel := app.provision_property_unchecked('SPL','Split Test','Nowhere');
+  select id into v_type from room_types where hotel_id = v_hotel limit 1;
+
+  insert into guests (full_name) values ('Split Tester') returning id into v_guest;
+  -- Group-level, like `guests`: one corporate account billable at every
+  -- property in the group, which is the point of a group.
+  insert into companies (name) values ('Acme Ltd') returning id into v_co;
+
+  insert into reservations
+    (hotel_id, reference, guest_id, room_type_id, check_in, check_out,
+     agreed_rate, adults)
+  values (v_hotel, app.next_reference(v_hotel), v_guest, v_type,
+          '2026-03-01', '2026-03-03', 5000, 1)
+  returning id into v_res;
+
+  insert into folios (hotel_id, reservation_id, bill_to)
+  values (v_hotel, v_res, 'guest') returning id into v_guest_folio;
+
+  -- ---------- a company folio must name its company ----------
+  perform test.raises('split billing','a company folio with no company is refused',
+    format($q$insert into folios (hotel_id, reservation_id, bill_to)
+             values (%L,%L,'company')$q$, v_hotel, v_res), '23514');
+
+  insert into folios (hotel_id, reservation_id, bill_to, company_id)
+  values (v_hotel, v_res, 'company', v_co) returning id into v_co_folio;
+
+  perform test.ok('split billing','one stay carries two folios',
+    (select count(*) from folios where reservation_id = v_res) = 2);
+
+  -- ---------- a room charge and a bar tab on the guest folio ----------
+  insert into folio_postings
+    (hotel_id, folio_id, business_date, category, description,
+     amount, tax_rate, tax_amount)
+  values (v_hotel, v_guest_folio, '2026-03-01', 'room', 'Room · 1 night',
+          5000, 12, 600)
+  returning id into v_line;
+
+  insert into folio_postings
+    (hotel_id, folio_id, business_date, category, description,
+     amount, tax_rate, tax_amount)
+  values (v_hotel, v_guest_folio, '2026-03-01', 'beverage', 'Bar', 800, 5, 40);
+
+  select sum(amount + tax_amount) into before_total
+    from folio_postings where hotel_id = v_hotel;
+
+  -- ---------- the transfer: a reversal AND a fresh posting ----------
+  -- Exactly what the endpoint does, written out so the arithmetic is the
+  -- thing under test rather than the HTTP.
+  insert into folio_postings
+    (hotel_id, folio_id, business_date, category, description,
+     amount, tax_rate, tax_amount, reverses_id)
+  values (v_hotel, v_guest_folio, '2026-03-01', 'room',
+          'Transferred out — Room · 1 night', -5000, 12, -600, v_line);
+
+  insert into folio_postings
+    (hotel_id, folio_id, business_date, category, description,
+     amount, tax_rate, tax_amount, source_type)
+  values (v_hotel, v_co_folio, '2026-03-01', 'room',
+          'Transferred in — Room · 1 night', 5000, 12, 600, 'transfer');
+
+  -- ---------- money is conserved ----------
+  -- The single most important property here. Live postings only: the reversal
+  -- and the row it points at both drop out, which is what makes the pair
+  -- cancel rather than merely annotate.
+  select coalesce(sum(fp.amount + fp.tax_amount), 0) into after_total
+    from folio_postings fp
+   where fp.hotel_id = v_hotel
+     and fp.reverses_id is null
+     and not exists (select 1 from folio_postings rev
+                      where rev.reverses_id = fp.id);
+
+  perform test.ok('split billing','a transfer neither creates nor destroys money',
+    after_total = 6440, after_total::text || ' vs 6440');
+
+  -- ---------- and it landed on the right bills ----------
+  perform test.ok('split billing','the room is on the company folio',
+    (select coalesce(sum(fp.amount + fp.tax_amount),0)
+       from folio_postings fp
+      where fp.folio_id = v_co_folio
+        and fp.reverses_id is null
+        and not exists (select 1 from folio_postings rev
+                         where rev.reverses_id = fp.id)) = 5600);
+
+  perform test.ok('split billing','the bar stayed with the guest',
+    (select coalesce(sum(fp.amount + fp.tax_amount),0)
+       from folio_postings fp
+      where fp.folio_id = v_guest_folio
+        and fp.reverses_id is null
+        and not exists (select 1 from folio_postings rev
+                         where rev.reverses_id = fp.id)) = 840);
+
+  -- ---------- the ledger is still append-only ----------
+  -- The reason a transfer is two rows and not an UPDATE of folio_id.
+  perform test.raises('split billing','a posting cannot be moved by editing it',
+    format($q$update folio_postings set folio_id = %L where id = %L$q$,
+           v_co_folio, v_line), 'P0001');
+
+  -- ---------- the reversal carries consistent tax ----------
+  -- fp_tax_consistent (015) refuses a row whose tax does not follow from its
+  -- own rate. A negative reversal has to satisfy it too, and does.
+  perform test.raises('split billing','a reversal with mismatched tax is refused',
+    format($q$insert into folio_postings
+               (hotel_id, folio_id, business_date, category, description,
+                amount, tax_rate, tax_amount)
+             values (%L,%L,'2026-03-01','room','Bad', -1000, 12, -5)$q$,
+           v_hotel, v_guest_folio), '23514');
+
+  /* The ledger refuses a delete — "post a reversing entry instead" — which is
+     the rule this whole block exists to respect. Lifted for the teardown, the
+     same way the suite lifts hotels_no_delete and pos_order_lines_frozen. */
+  alter table folio_postings disable trigger folio_postings_append_only;
+  delete from folio_postings where hotel_id = v_hotel;
+  alter table folio_postings enable trigger folio_postings_append_only;
+
+  delete from folios where hotel_id = v_hotel;
+  delete from reservations where hotel_id = v_hotel;
+  delete from companies where id = v_co;
+
+  alter table guests disable trigger guests_no_delete;
+  delete from guests where id = v_guest;
+  alter table guests enable trigger guests_no_delete;
+
+  alter table hotels disable trigger hotels_no_delete;
+  delete from hotels where id = v_hotel;
+  alter table hotels enable trigger hotels_no_delete;
+
+  select count(*) into n from hotels where code = 'SPL';
+  perform test.ok('split billing','the fixture does not outlive the test', n = 0);
+end $$;
