@@ -226,3 +226,57 @@ describe("administration routes", () => {
       .toBeNull();
   });
 });
+
+
+/* ══════════════════════════════════════════════════════════════════
+   THE TILL, IN THE NAVIGATION
+
+   Phase 2 added three routes and no frontend test — the whole till was
+   covered by 12 API tests and one pass through a browser by hand. The
+   API tests prove the money; these prove that the right people can
+   reach the screen and the wrong ones cannot, which is the half a
+   route guard exists for.
+   ══════════════════════════════════════════════════════════════════ */
+
+describe("the till in the navigation", () => {
+  it("is reachable by the people who take money", () => {
+    for (const role of ["owner", "manager", "front_desk", "finance"] as const) {
+      const paths = flatNavigationFor(role, HOTEL).map((i) => i.to);
+      expect(paths, `${role} cannot reach the till`)
+        .toContain(`/h/${HOTEL}/till`);
+    }
+  });
+
+  it("is not offered to housekeeping", () => {
+    /* A housekeeper has no business opening a restaurant bill, and
+       `payment` is the permission that says so. If this ever passes by
+       accident it means the till was hung off a resource housekeeping
+       holds. */
+    const paths = flatNavigationFor("housekeeping", HOTEL).map((i) => i.to);
+    expect(paths).not.toContain(`/h/${HOTEL}/till`);
+    expect(paths).not.toContain(`/h/${HOTEL}/menu`);
+  });
+
+  it("keeps the menu behind the same permission as rates", () => {
+    /* Setting what a dish costs is the same kind of act as setting what
+       a room costs, so it sits behind `rate`. Front desk can read rates
+       and must not be able to reprice the menu — this asserts the two
+       screens agree about who may. */
+    const desk = flatNavigationFor("front_desk", HOTEL).map((i) => i.to);
+    const owner = flatNavigationFor("owner", HOTEL).map((i) => i.to);
+
+    expect(owner).toContain(`/h/${HOTEL}/menu`);
+    expect(
+      desk.includes(`/h/${HOTEL}/menu`),
+      "the menu and the rate screen disagree about who may set a price",
+    ).toBe(desk.includes(`/h/${HOTEL}/rates`));
+  });
+
+  it("does not resolve :code in either till path", () => {
+    const paths = flatNavigationFor("owner", HOTEL)
+      .map((i) => i.to)
+      .filter((p) => p.includes("/till") || p.includes("/menu"));
+    expect(paths.length).toBeGreaterThan(0);
+    expect(paths.every((p) => !p.includes(":code"))).toBe(true);
+  });
+});

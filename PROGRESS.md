@@ -11,14 +11,14 @@ Last updated: **31 August 2026** · **Phase 1 complete · Phase 2 complete — t
 
 ```
 FRONTEND   tsc -b            0 errors
-           vitest run        101 passed · 8 files
+           vitest run        105 passed · 8 files
            build             clean
 
 API        tsc --noEmit      0 errors
-           npm test          70 passed   (live Postgres, as pms_app)
+           npm test          82 passed   (live Postgres, as pms_app)
                              loads the demo fixture first — see below
 
-DATABASE   db/tests/run.sh   27 migrations · 67 assertions
+DATABASE   db/tests/run.sh   28 migrations · 81 assertions
                              9 isolation checks · exit 0
 BACKUP     verify-backup.sh  dumped, RESTORED, 13 checks · exit 0
            load-demo         431 available · 132 sold · 30.63% ✓
