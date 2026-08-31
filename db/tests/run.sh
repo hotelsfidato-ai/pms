@@ -46,7 +46,25 @@ if [ "${1:-}" != "--keep" ]; then
   if [ $? -ne 0 ]; then
     red "  x Could not drop $DB:"
     echo "$DROP_OUT" | sed 's/^/      /'
-    red "    Something is still connected. Stop the API and try again."
+
+    # Two very different failures used to print the same advice. A server
+    # that is not running fails here exactly like a database that is still
+    # in use, and this said "stop the API and try again" for both -- so the
+    # suggested fix could not possibly work, and the real cause (postgres
+    # was down) went unnamed. That is the same shape as the error this
+    # block's own comment above is about: help three steps from the cause.
+    case "$DROP_OUT" in
+      *"Connection refused"*|*"could not connect"*|*"failed: "*)
+        red "    Postgres is not running on this port -- nothing is connected,"
+        red "    there is nothing to connect TO. Start it with:"
+        echo "      pg_ctl -D <datadir> -o '-p 55432' -w start"
+        echo "    Note the port: the data directory has no port line, so a"
+        echo "    plain start comes up on 5432 and every URL here expects 55432."
+        ;;
+      *)
+        red "    Something is still connected. Stop the API and try again."
+        ;;
+    esac
     exit 1
   fi
 
