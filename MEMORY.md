@@ -1409,6 +1409,28 @@ session while looking at the assignment insert.
 
 ---
 
+### 72 · I contaminated my own reproduction, then reported it as a defect
+
+The terminal appeared to create phantom empty orders. I cleared the `pos_orders`
+table, reloaded the page, waited, and found an order with five lines — and said
+so: *"reproduced with zero clicks"*, *"a real bug"*.
+
+It was not. The browser still had the previous page live, holding an open order
+in React state and earlier queued interactions resolving into it. Clearing the
+database underneath a running client and then reloading is not a clean slate; it
+is two states colliding.
+
+With a genuine clean slate and `read_network_requests` watching, loading the
+terminal issues **only GETs**. Zero orders, zero lines afterwards. The phantom
+rows were my own automation — `tap()` calls and a coordinate click landing on a
+re-rendered layout.
+
+**Clear the client, not just the database.** And the network log answered in one
+call what three rounds of theorising did not: when asking "what did this page
+do", read what it actually sent.
+
+---
+
 ## Verification traps
 
 ### Never test a Tailwind utility by injecting the class at runtime

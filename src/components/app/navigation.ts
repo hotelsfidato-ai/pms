@@ -2,7 +2,7 @@ import {
   LayoutDashboard, CalendarCheck, Users, Building2, Hotel, Receipt,
   BarChart3, Bell, Settings, ShieldCheck, CalendarRange,
   FileText, Wallet, Plug, ScrollText,
-  UserCog, Palette, Terminal, BookOpen, Home, ClipboardList, type LucideIcon, ShieldAlert, UtensilsCrossed,
+  UserCog, Palette, Terminal, MonitorSmartphone, BookOpen, Home, ClipboardList, type LucideIcon, ShieldAlert, UtensilsCrossed,
 } from "lucide-react";
 import { can, canAccess, type Resource, type Role } from "@/lib/permissions";
 
@@ -144,18 +144,37 @@ const SECTIONS: NavSection[] = [
          same desk, and burying it under Reports is how a 24-hour
          deadline gets missed. It sits where somebody will see it. */
       { label: "Form C", to: "/h/:code/form-c", icon: ShieldAlert, resource: "customer" },
-      /* What the restaurant sent and what was refused. Under Finance
-         because the argument it settles is about money on a folio, and
-         the person settling it is the one who bills. */
-      { label: "Point of sale", to: "/h/:code/pos", icon: UtensilsCrossed, resource: "invoice" },
-      /* The till is a different job from reading what a till sent, and a
-         different person does it. It sits next to its sibling so nobody
-         has to learn that "Point of sale" is the read-only one. */
+    ],
+  },
+  {
+    /* POINT OF SALE IS ITS OWN CATEGORY.
+
+       These three lived under Finance, on the reasoning that a POS
+       argument is about money on a folio. That was true when the only
+       POS screen was a read-only view of what an outside till had sent.
+
+       It stopped being true when the till itself was built. Taking an
+       order, pricing a menu and settling a bill are a restaurant's work,
+       done by restaurant staff on a restaurant's terminal — not the
+       front office's. Burying them under Finance made a waiter scroll
+       past folios and the city ledger to reach the till. */
+    label: "Point of sale",
+    items: [
+      /* The till, first, because it is the one somebody stands at. */
       { label: "Till", to: "/h/:code/till", icon: Receipt, resource: "payment" },
+      /* A dedicated screen for a fixed terminal: no sidebar, no chrome,
+         one outlet, targets sized for a thumb rather than a mouse. */
+      {
+        label: "Terminal", to: "/h/:code/till/terminal",
+        icon: MonitorSmartphone, resource: "payment",
+      },
       /* The prices, which are the hotel's. Behind the same permission as
          rates, because setting what a dish costs is the same kind of act
          as setting what a room costs. */
       { label: "Menu", to: "/h/:code/menu", icon: UtensilsCrossed, resource: "rate" },
+      /* What an OUTSIDE till sent and what was refused. Read-only, and
+         named so nobody mistakes it for the till above. */
+      { label: "Bridge", to: "/h/:code/pos", icon: Plug, resource: "invoice" },
     ],
   },
   {

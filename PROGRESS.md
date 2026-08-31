@@ -604,7 +604,7 @@ retried. Ledger nets to zero, room revenue still ₹4,19,578.76.
 4  Front desk + folio, end to end    ████████████  flows, reports, dating
 5  Night audit                       ██████████░░  runs, posts, rolls the date
 6  Housekeeping, mobile             █████████░░░  board writes to Postgres
-7  POS bridge (a MIGRATION)          ██████████░░  bridge tested, PMS view built
+7  POS — bridge, till and terminal   ████████████  its own category
 8  Billing, GST, Form C              ████████░░░░  invoices, credit notes, C
 9  Rates, availability, STAAH        ███████░░░░░  rates, seasons, plans
 10 Group dashboard and reports       ███████████░  11 of 11 reports, all SQL
@@ -612,11 +612,11 @@ retried. Ledger nets to zero, room revenue still ₹4,19,578.76.
 12 Hardening and go-live             ███████░░░░░  backup, races, provisioning
 ```
 
-**109 of 144 — 76%.** Add the filled blocks above and divide by 144. That
+**111 of 144 — 77%.** Add the filled blocks above and divide by 144. That
 sum is the number; it is not typed separately, because it was for three
 audits running and drifted to "about 90%" while the bars said 70.
 
-**Launch scope — 109 of 132, 83%.** Stage 11 (CRS / SU) is a feature
+**Launch scope — 111 of 132, 84%.** Stage 11 (CRS / SU) is a feature
 iteration to be built after launch, by the group's decision, so it is out of
 the denominator. Nothing else changes: no code was written against SU, which
 is why removing it costs nothing to remove.

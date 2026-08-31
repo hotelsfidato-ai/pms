@@ -33,6 +33,7 @@ import TillPage from "@/pages/Till";
 import BillPage from "@/pages/Bill";
 import MenuPage from "@/pages/Menu";
 import RatePlansEditor from "@/pages/RatePlans";
+import TerminalPage from "@/pages/Terminal";
 import AdminConsolePage from "@/pages/admin/Console";
 import { IS_DEV } from "@/components/app/navigation";
 import {
@@ -319,6 +320,13 @@ export default function App() {
             <Route
               path="/h/:code/menu"
               element={<><PropertyScope /><MenuPage /></>}
+            />
+            {/* Before /till/bill/:id, and both before /till itself —
+                react-router picks the most specific, but keeping them in
+                this order makes the intent readable. */}
+            <Route
+              path="/h/:code/till/terminal"
+              element={<><PropertyScope /><TerminalPage /></>}
             />
             <Route
               path="/h/:code/till/bill/:id"

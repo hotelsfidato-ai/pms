@@ -332,3 +332,54 @@ describe("the admin console", () => {
     ).toBe(true);
   });
 });
+
+
+/* ══════════════════════════════════════════════════════════════════
+   POINT OF SALE IS ITS OWN CATEGORY
+
+   Till, Terminal, Menu and Bridge lived under Finance, on the reasoning
+   that a POS argument is about money on a folio. That held while the
+   only POS screen was a read-only view of what an outside till sent.
+
+   It stopped holding when the till itself was built: taking an order
+   and pricing a menu are a restaurant's work, and a waiter was being
+   made to scroll past folios and the city ledger to reach the till.
+   ══════════════════════════════════════════════════════════════════ */
+
+describe("point of sale as a category", () => {
+  it("is a section of its own, not a corner of Finance", () => {
+    const sections = navigationFor("owner", HOTEL);
+    const pos = sections.find((s) => s.label === "Point of sale");
+    expect(pos, "there is no Point of sale section").toBeTruthy();
+
+    const finance = sections.find((s) => s.label === "Finance");
+    const financePaths = (finance?.items ?? []).map((i) => i.to);
+    expect(
+      financePaths.some((p) => p.includes("/till")),
+      "the till is still buried under Finance",
+    ).toBe(false);
+  });
+
+  it("carries the till, the terminal, the menu and the bridge", () => {
+    const paths = flatNavigationFor("owner", HOTEL).map((i) => i.to);
+    for (const p of ["till", "till/terminal", "menu", "pos"]) {
+      expect(paths, `the POS section is missing ${p}`)
+        .toContain(`/h/${HOTEL}/${p}`);
+    }
+  });
+
+  it("keeps the terminal behind the same permission as the till", () => {
+    /* A terminal that a role could reach but not use would be a screen
+       that refuses everything it offers. */
+    const till = navItemFor("/h/:code/till");
+    const terminal = navItemFor("/h/:code/till/terminal");
+    expect(till, "no till entry").toBeTruthy();
+    expect(terminal, "no terminal entry").toBeTruthy();
+    expect(terminal!.resource).toBe(till!.resource);
+  });
+
+  it("does not offer the terminal to housekeeping", () => {
+    const paths = flatNavigationFor("housekeeping", HOTEL).map((i) => i.to);
+    expect(paths).not.toContain(`/h/${HOTEL}/till/terminal`);
+  });
+});
