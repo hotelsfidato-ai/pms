@@ -1175,6 +1175,45 @@ were one query away.
 
 ---
 
+### 61 · A custom header that fails as "the server is down"
+
+`x-provisioning-key` was not in the API's CORS `allowHeaders`. The browser's
+preflight was rejected, `fetch` rejected without detail, and the screen showed:
+
+> *Could not reach http://localhost:8787. Check the API is running, and that
+> it allows this origin.*
+
+The API was running. `curl` succeeded against the same endpoint in the same
+second, which is exactly the shape that sends you looking at the server.
+
+The message is not wrong — `src/lib/api.ts` names both possibilities on
+purpose, because the browser withholds the difference between a dead server
+and a blocked preflight. But a new custom header is the far more likely of
+the two, and the allowlist is the first place to look.
+
+`x-pos-key` is deliberately NOT in that list: an outside till is a machine
+calling from a server, with no preflight to satisfy.
+
+**A new request header is a CORS change, and its failure looks nothing like
+one.**
+
+---
+
+### 62 · A one-level scan of a two-level menu
+
+`navItemFor(path)` walked `section.items` and returned undefined for
+`/admin/console` — a path the sidebar was visibly rendering at the time.
+
+Nav items nest: the whole `/admin` group is one parent entry with children,
+and `flatNavigationFor` walks `item.children` while my accessor did not. The
+two disagreed about what the navigation contains, which is precisely the
+disagreement an accessor exists to prevent.
+
+Caught immediately because the assertion said *"the admin console is not in
+the navigation at all"* and the test above it had just proved it was.
+
+---
+
 ## Verification traps
 
 ### Never test a Tailwind utility by injecting the class at runtime

@@ -2,7 +2,7 @@ import {
   LayoutDashboard, CalendarCheck, Users, Building2, Hotel, Receipt,
   BarChart3, Bell, Settings, ShieldCheck, CalendarRange,
   FileText, Wallet, Plug, ScrollText,
-  UserCog, Palette, BookOpen, Home, ClipboardList, type LucideIcon, ShieldAlert, UtensilsCrossed,
+  UserCog, Palette, Terminal, BookOpen, Home, ClipboardList, type LucideIcon, ShieldAlert, UtensilsCrossed,
 } from "lucide-react";
 import { can, canAccess, type Resource, type Role } from "@/lib/permissions";
 
@@ -25,11 +25,24 @@ export interface NavItem {
    * Overrides the default "any grant on `resource`" visibility test.
    */
   canSee?: (role: Role) => boolean;
+  /** Hidden outside a development build, whatever the role. */
+  devOnly?: boolean;
 }
 
-/** Whether the given role should see this entry at all. */
-const visible = (role: Role, item: NavItem): boolean =>
-  item.canSee ? item.canSee(role) : canAccess(role, item.resource);
+/** True in `vite dev` and in the test runner, false in a production build. */
+export const IS_DEV = import.meta.env.DEV;
+
+/** Whether the given role should see this entry at all.
+ *
+ *  `devOnly` is checked FIRST and is not a permission. A screen that can
+ *  create tenants should not be reachable in production because somebody
+ *  happens to hold the right role — it should not be there at all. The
+ *  route is gated separately in App.tsx, because hiding a link has never
+ *  been access control. */
+const visible = (role: Role, item: NavItem): boolean => {
+  if (item.devOnly && !IS_DEV) return false;
+  return item.canSee ? item.canSee(role) : canAccess(role, item.resource);
+};
 
 /**
  * Whether a role may REACH a path — the same question the sidebar asks
@@ -182,12 +195,51 @@ const SECTIONS: NavSection[] = [
           { label: "Integrations", to: "/admin/integrations", icon: Plug, resource: "integration" },
           { label: "Audit log", to: "/admin/audit-log", icon: ScrollText, resource: "audit_log" },
           { label: "Settings", to: "/admin/settings", icon: Settings, resource: "setting" },
+          /* The console CREATES things — properties, people, access. It is
+             the only screen in the system that manufactures a tenant, so it
+             stays out of production builds until the group says otherwise. */
+          {
+            label: "Console", to: "/admin/console", icon: Terminal,
+            resource: "hotel", devOnly: true,
+            canSee: (role) => can(role, "create", "hotel"),
+          },
         ],
       },
       { label: "Design system", to: "/design-system", icon: Palette, resource: "dashboard" },
     ],
   },
 ];
+
+/**
+ * The navigation's own declaration for a path, unfiltered.
+ *
+ * `flatNavigationFor` answers "may this role see it", which depends on
+ * `import.meta.env.DEV` among other things — and inside a test runner that
+ * is always true. So a test that only checks the filtered output cannot
+ * tell a `devOnly` entry from an ordinary one. This exposes the entry
+ * itself so the flag can be asserted directly.
+ */
+export function navItemFor(path: string): NavItem | undefined {
+  /* Recursive, because items nest — the whole /admin group sits inside
+     one parent entry, and a one-level scan finds nothing there while
+     `flatNavigationFor` happily returns it. That mismatch is how the
+     first version of this returned undefined for a path the sidebar was
+     visibly rendering. */
+  const find = (items: NavItem[]): NavItem | undefined => {
+    for (const item of items) {
+      if (item.to === path) return item;
+      const inChildren = find(item.children ?? []);
+      if (inChildren) return inChildren;
+    }
+    return undefined;
+  };
+
+  for (const section of SECTIONS) {
+    const found = find(section.items);
+    if (found) return found;
+  }
+  return undefined;
+}
 
 /** Sections and items the given role can actually reach. */
 /** Substitutes the property into any `/h/:code/...` path. */

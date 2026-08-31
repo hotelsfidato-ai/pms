@@ -32,6 +32,8 @@ import ReservationsPage from "@/pages/Reservations";
 import TillPage from "@/pages/Till";
 import BillPage from "@/pages/Bill";
 import MenuPage from "@/pages/Menu";
+import AdminConsolePage from "@/pages/admin/Console";
+import { IS_DEV } from "@/components/app/navigation";
 import {
   PaymentsPage, PropertyCityLedgerPage,
 } from "@/pages/Billing";
@@ -218,6 +220,22 @@ export default function App() {
                 </RequireAccess>
               }
             />
+            {/* The console is gated on the ROUTE, not only in the
+                navigation. Hiding a link has never been access control —
+                that lesson cost a defect earlier in this build, when a
+                clerk could type /admin/users and get the page. In a
+                production build this route does not exist at all, so
+                there is nothing to type. */}
+            {IS_DEV && (
+              <Route
+                path="/admin/console"
+                element={
+                  <RequireAccess path="/admin/console" resource="hotel">
+                    <AdminConsolePage />
+                  </RequireAccess>
+                }
+              />
+            )}
             <Route
               path="/admin/settings"
               element={

@@ -11,7 +11,7 @@ Last updated: **31 August 2026** · **Phase 1 complete · Phase 2 complete — t
 
 ```
 FRONTEND   tsc -b            0 errors
-           vitest run        105 passed · 8 files
+           vitest run        108 passed · 8 files
            build             clean
 
 API        tsc --noEmit      0 errors
@@ -128,11 +128,27 @@ the group, GSTIN included. No guest data and no money ever crossed a boundary;
 the roster did. Nothing failed. I created a clerk through the new API,
 rostered them at one property, and asked what they could see: all four.
 
-**Still to build**
+**The console** — `/admin/console`, **development builds only**
 
-The screens. The API is complete and driven end to end by hand — create a
-property, create a clerk, grant them access, watch the property list shrink to
-one for them and stay whole for the owner — but no form calls any of it yet.
+Overview (properties, rooms, people, and how many can sign in and reach
+nothing), create a property, create a person, grant and revoke access,
+deactivate, fourteen days of activity, and the most recent changes with the
+person who made them.
+
+Gated in three places, and the third is the one that holds:
+
+```
+navigation   devOnly, filtered by import.meta.env.DEV
+route        wrapped in IS_DEV && (...) in App.tsx
+bundle       the component is tree-shaken out of a production build
+```
+
+Verified by building and grepping: "Provisioning key" appears nowhere in
+`dist/assets`. Hiding a link has never been access control, and this screen
+manufactures tenants.
+
+Driven through the real form: a wrong key is refused with its reason, the
+right one creates the property and says what it did.
 
 ---
 

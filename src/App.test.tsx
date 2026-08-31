@@ -3,7 +3,7 @@ import { render, screen, within } from "@testing-library/react";
 import App from "./App";
 import { useUi } from "@/lib/ui";
 import { useSession } from "@/lib/session";
-import { navigationFor, flatNavigationFor } from "@/components/app/navigation";
+import { navigationFor, flatNavigationFor, navItemFor } from "@/components/app/navigation";
 
 /* ══════════════════════════════════════════════════════════════════
    Routing per PHASE-1-FRONTEND §1.2:
@@ -278,5 +278,57 @@ describe("the till in the navigation", () => {
       .filter((p) => p.includes("/till") || p.includes("/menu"));
     expect(paths.length).toBeGreaterThan(0);
     expect(paths.every((p) => !p.includes(":code"))).toBe(true);
+  });
+});
+
+
+/* ══════════════════════════════════════════════════════════════════
+   THE ADMIN CONSOLE IS DEVELOPMENT ONLY
+
+   It is the one screen that manufactures a tenant — a property, its
+   invoice series, its folio namespace — and creates the people who can
+   reach it. Until the group says otherwise it stays out of production
+   builds entirely.
+
+   Gated in three places, and the third is the one that actually holds:
+
+     the navigation   devOnly, filtered by import.meta.env.DEV
+     the route        wrapped in `IS_DEV && (...)` in App.tsx
+     the bundle       the component is tree-shaken out of a prod build
+
+   The first two are checked here. The third was checked by building and
+   grepping: "Provisioning key" appears nowhere in dist/assets.
+   ══════════════════════════════════════════════════════════════════ */
+
+describe("the admin console", () => {
+  it("is offered to somebody who may create a property", () => {
+    /* Vitest runs with import.meta.env.DEV true, which is the same
+       condition the dev build uses — so this asserts the visible case. */
+    const paths = flatNavigationFor("owner", HOTEL).map((i) => i.to);
+    expect(paths).toContain("/admin/console");
+  });
+
+  it("is not offered to anyone who may not", () => {
+    for (const role of ["front_desk", "housekeeping", "finance", "manager"] as const) {
+      const paths = flatNavigationFor(role, HOTEL).map((i) => i.to);
+      expect(paths, `${role} is offered the admin console`)
+        .not.toContain("/admin/console");
+    }
+  });
+
+  it("carries devOnly, which is what keeps it out of production", () => {
+    /* Asserted on the DECLARATION rather than on the filtered output,
+       because the filter's other input — import.meta.env.DEV — cannot be
+       false inside this runner. If somebody drops the flag, the nav test
+       above still passes and only this one notices. */
+    const item = navItemFor("/admin/console");
+
+    expect(item, "the admin console is not in the navigation at all")
+      .toBeTruthy();
+    expect(
+      item!.devOnly,
+      "the admin console lost devOnly — it would ship to production, " +
+        "where it can create properties and administrators",
+    ).toBe(true);
   });
 });

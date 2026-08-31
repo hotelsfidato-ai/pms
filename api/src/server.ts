@@ -62,7 +62,19 @@ app.use(
   "*",
   cors({
     origin: originAllowed,
-    allowHeaders: ["authorization", "content-type", "x-dev-staff-id"],
+    /* A custom header the browser does not already know about needs
+       naming here or its preflight fails, and the failure arrives as
+       "could not reach the server" — indistinguishable from the API
+       being down. The admin console spent a round of debugging on
+       exactly that after `x-provisioning-key` was added.
+
+       `x-pos-key` is NOT here on purpose: an outside till is a machine
+       calling from a server, not a browser, and it has no preflight to
+       satisfy. Adding it would advertise the header to every origin. */
+    allowHeaders: [
+      "authorization", "content-type", "x-dev-staff-id",
+      "x-provisioning-key",
+    ],
     credentials: true,
   }),
 );
