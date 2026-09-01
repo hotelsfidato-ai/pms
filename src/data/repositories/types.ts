@@ -1,4 +1,65 @@
-export type { Stay, Folio, StayStatus, Source } from "../fixtures/reservations";
+/* ══════════════════════════════════════════════════════════════════
+   Stay, Folio, and what they are allowed to be
+
+   Copied VERBATIM out of `src/data/fixtures/reservations.ts`, which is
+   test data. Until now `types.ts` re-exported them from there:
+
+       export type { Stay, Folio, StayStatus, Source }
+         from "../fixtures/reservations";
+
+   One `export type` was enough to keep the whole module alive through
+   the bundler, so 26 KB of invented bookings — twenty guest names, a
+   fifteen-row reservation table, and the RACK prices that caused
+   defects 63 and 65 — shipped inside the bundle a real hotel loads.
+
+   This is the SECOND time. The comment below on `Posting` describes
+   the same thing happening to `src/data/store.ts`: "this type was the
+   last thing importing it, and the file was 1,331 lines of fixture
+   kept alive by a single import type". The remedy was the same then.
+
+   A type that production depends on does not live in a fixture.
+   ══════════════════════════════════════════════════════════════════ */
+
+export type StayStatus =
+  | "due-in" | "in-house" | "due-out" | "checked-out" | "no-show" | "cancelled";
+
+export type Source =
+  | "Walk-in" | "Fidato Hotels" | "Agoda" | "Booking.com" | "Expedia" | "go-MMT";
+
+export interface Stay {
+  id: string;
+  hotelId: string;
+  reference: string;
+  guest: string;
+  roomNumber: string;
+  roomType: string;
+  source: Source;
+  ratePlan: string;
+  arrival: string;          // ISO date
+  departure: string;        // ISO date — equal to arrival for day-use
+  nights: number;           // 0 for day-use
+  adults: number;
+  children: number;
+  status: StayStatus;
+  isDayUse: boolean;
+  isComplimentary: boolean;
+  rackTariff: number;       // per night, before discount
+  offeredTariff: number;    // per night, after discount
+  groupId?: string;
+  notes?: string;
+}
+
+export interface Folio {
+  stayId: string;
+  roomCharges: number;
+  extraCharges: number;
+  tax: number;
+  discount: number;
+  payments: number;
+  /** charges + tax − discount − payments. Negative means the guest overpaid. */
+  balance: number;
+  status: "open" | "settled" | "disputed" | "written-off";
+}
 
 /**
  * One line of the append-only ledger.

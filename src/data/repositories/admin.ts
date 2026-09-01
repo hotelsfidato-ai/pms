@@ -62,14 +62,6 @@ export async function getAdminSettings(): Promise<AdminSettings> {
   };
 }
 
-/** Object surface, so either import convention resolves. */
-export const adminRepo = {
-  listRoles,
-  listAssignableRoles,
-  getMatrix,
-  settings: getAdminSettings,
-};
-
 /* ══════════════════════════════════════════════════════════════════
    THE WRITES
 

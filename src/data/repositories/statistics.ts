@@ -83,9 +83,3 @@ export async function getTodaySnapshot(hotelId: string, date = BUSINESS_DATE) {
     null,
   );
 }
-
-export const statisticsRepo = {
-  daily: listDailyStatistics,
-  period: getPeriodStatistics,
-  snapshot: getTodaySnapshot,
-};

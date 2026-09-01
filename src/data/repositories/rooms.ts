@@ -69,19 +69,7 @@ export async function setHousekeeping(
   }
 }
 
-/** Object surface, for callers written against `roomsRepo.list(...)`. */
-export const roomsRepo = {
-  list: listAllRooms,
-  listAll: listAllRooms,
-  listSellable: listSellableRooms,
-  get: getRoom,
-  setHousekeeping,
-  updateRoomStatus: setHousekeeping,
-};
-
 /** Alias some callers use. */
-export const roomRepo = roomsRepo;
-
 /** Older name, kept so existing callers keep resolving. */
 export const listRooms = listSellableRooms;
 

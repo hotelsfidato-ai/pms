@@ -229,7 +229,12 @@ const SECTIONS: NavSection[] = [
           },
         ],
       },
-      { label: "Design system", to: "/design-system", icon: Palette, resource: "dashboard" },
+      /* devOnly, like the admin console. It is a component showcase —
+         developer documentation, not a screen anybody at a hotel has a
+         reason to open, and it carries its own sample guest names into
+         the bundle. */
+      { label: "Design system", to: "/design-system", icon: Palette,
+        resource: "dashboard", devOnly: true },
     ],
   },
 ];

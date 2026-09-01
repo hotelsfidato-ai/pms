@@ -31,46 +31,14 @@ import {
      e.g. 3,476.20 + 173.80 = 3,650.00
    ══════════════════════════════════════════════════════════════════ */
 
-export type StayStatus =
-  | "due-in" | "in-house" | "due-out" | "checked-out" | "no-show" | "cancelled";
-
-export type Source =
-  | "Walk-in" | "Fidato Hotels" | "Agoda" | "Booking.com" | "Expedia" | "go-MMT";
-
-export interface Stay {
-  id: string;
-  hotelId: string;
-  reference: string;
-  guest: string;
-  roomNumber: string;
-  roomType: string;
-  source: Source;
-  ratePlan: string;
-  arrival: string;          // ISO date
-  departure: string;        // ISO date — equal to arrival for day-use
-  nights: number;           // 0 for day-use
-  adults: number;
-  children: number;
-  status: StayStatus;
-  isDayUse: boolean;
-  isComplimentary: boolean;
-  rackTariff: number;       // per night, before discount
-  offeredTariff: number;    // per night, after discount
-  groupId?: string;
-  notes?: string;
-}
-
-export interface Folio {
-  stayId: string;
-  roomCharges: number;
-  extraCharges: number;
-  tax: number;
-  discount: number;
-  payments: number;
-  /** charges + tax − discount − payments. Negative means the guest overpaid. */
-  balance: number;
-  status: "open" | "settled" | "disputed" | "written-off";
-}
+/* The types live in `@/data/repositories/types` now. They were
+   defined here, and one `export type` re-export in types.ts kept
+   this entire fixture — guest names, bookings and all — inside the
+   production bundle. Imported back so the fixture is checked
+   against the same shape production uses. */
+import type { Stay, Folio, StayStatus, Source }
+  from "@/data/repositories/types";
+export type { Stay, Folio, StayStatus, Source };
 
 /* ── Constants from the real exports ──────────────────────────────── */
 

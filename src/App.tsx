@@ -178,7 +178,12 @@ export default function App() {
           <Route element={<RequireSession />}>
             {/* Group level */}
             <Route path="/" element={<DashboardPage />} />
-            <Route path="/design-system" element={<DesignSystemPage />} />
+            {/* Hiding it in the nav is not removing it: the route would
+                still resolve for anyone who typed the path, and the page
+                would still be in the bundle. */}
+            {import.meta.env.DEV && (
+              <Route path="/design-system" element={<DesignSystemPage />} />
+            )}
             <Route path="/reports/manager" element={<ManagerReportPage />} />
             <Route path="/reports/city-ledger" element={<CityLedgerPage />} />
             <Route path="/reports/no-show" element={<NoShowPage />} />

@@ -348,10 +348,3 @@ export async function toggleItem(
     throw error;
   }
 }
-
-/** Object surface, so either import convention resolves. */
-export const tillRepo = {
-  getMenu, listOrders, getOrder, listChargeableRooms,
-  openOrder, addLine, voidLine, settleOrder, abandonOrder,
-  addCategory, addItem, toggleItem,
-};

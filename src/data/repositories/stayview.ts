@@ -300,12 +300,3 @@ export async function getStayViewCounts(
   const view = await getStayView(hotelId, date, date);
   return view?.counts ?? {};
 }
-
-/** Object surface, so either import convention resolves. */
-export const stayViewRepo = {
-  get: getStayView,
-  counts: getStayViewCounts,
-  addDays,
-  isWeekend,
-  windowFrom,
-};

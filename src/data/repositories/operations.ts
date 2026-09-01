@@ -470,16 +470,6 @@ export async function assignRoom(
   }
 }
 
-/** Object surface, so either import convention resolves. */
-export const operationsRepo = {
-  getFolioPostings, getFolioBalance,
-  checkInAllowed, assignableRooms, checkIn,
-  postCharge, reverseChargeAllowed, reverseCharge,
-  settle, checkOutAllowed, checkOut,
-  createWalkIn,
-  listHousekeeping, markRoom,
-};
-
 /* ══════════════════════════════════════════════════════════════════
    WHOSE ROOMS ARE THESE
 

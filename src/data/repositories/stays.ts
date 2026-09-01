@@ -185,27 +185,3 @@ export async function listGroupMembers(
 ): Promise<Stay[]> {
   return clone((await fetchStays(hotelId)).filter((s) => s.groupId === groupId));
 }
-
-/* ══════════════════════════════════════════════════════════════════
-   OBJECT SURFACE
-
-   The same functions, exposed as `staysRepo`, because callers in this
-   project use both conventions. One implementation, two surfaces, so
-   neither style of import can fail — and there is no second copy of
-   the logic to drift.
-   ══════════════════════════════════════════════════════════════════ */
-
-export const staysRepo = {
-  list: listStays,
-  get: getStay,
-  arrivals: listArrivals,
-  inHouse: listInHouse,
-  departures: listDepartures,
-  vacant: listVacant,
-  folio: getFolio,
-  openFolios: listOpenFolios,
-  groups: listGroups,
-  groupMembers: listGroupMembers,
-};
-
-export const stayRepo = staysRepo;
