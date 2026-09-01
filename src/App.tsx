@@ -1,7 +1,14 @@
 import { useEffect, useRef } from "react";
 import {
-  BrowserRouter, Routes, Route, Navigate, useParams,
+  BrowserRouter, HashRouter, Routes, Route, Navigate, useParams,
 } from "react-router";
+import { DEMO } from "@/lib/demo";
+
+/* The preview build is one file opened from a static host with no
+   rewrite rule, so a path route 404s the moment anybody reloads or
+   deep-links. A hash route cannot: the server never sees it. Paths
+   everywhere else, because they are the better URLs. */
+const Router = DEMO ? HashRouter : BrowserRouter;
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { AppShell } from "@/components/app/AppShell";
 import { useUi } from "@/lib/ui";
@@ -158,7 +165,7 @@ const PROPERTY: Array<[segment: string, title: string, carries: string, cp: stri
 export default function App() {
   return (
     <QueryClientProvider client={queryClient}>
-      <BrowserRouter>
+      <Router>
         <Routes>
           <Route path="/signin" element={<SignInRoute />} />
 
@@ -377,7 +384,7 @@ export default function App() {
             <Route path="*" element={<Navigate to="/" replace />} />
           </Route>
         </Routes>
-      </BrowserRouter>
+      </Router>
     </QueryClientProvider>
   );
 }

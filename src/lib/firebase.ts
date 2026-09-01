@@ -41,7 +41,12 @@ const config = {
 /** True when every required value is present. */
 export const isConfigured = Boolean(
   config.apiKey && config.projectId && config.appId,
-);
+)
+  /* Not in the preview build. Firebase would open connections to
+     Google that a static host's CSP blocks, and an auth SDK with
+     nothing to authenticate against only produces console noise and a
+     sign-in screen nobody can get past. */
+  && import.meta.env.VITE_DEMO_MODE !== "1";
 
 let app: FirebaseApp | null = null;
 let auth: Auth | null = null;

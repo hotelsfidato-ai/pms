@@ -4,7 +4,12 @@
     {
       "name": "fidato-pms",
       "runtimeExecutable": "cmd",
-      "runtimeArgs": ["/c", "npm", "run", "dev"],
+      "runtimeArgs": [
+        "/c",
+        "npm",
+        "run",
+        "dev"
+      ],
       "port": 5173,
       "autoPort": false
     },
@@ -12,8 +17,27 @@
       "name": "fidato-api",
       "cwd": "api",
       "runtimeExecutable": "cmd",
-      "runtimeArgs": ["/c", "npm", "run", "dev"],
+      "runtimeArgs": [
+        "/c",
+        "npm",
+        "run",
+        "dev"
+      ],
       "port": 8787,
+      "autoPort": false
+    },
+    {
+      "name": "fidato-preview",
+      "cwd": "dist-preview",
+      "runtimeExecutable": "cmd",
+      "runtimeArgs": [
+        "/c",
+        "python",
+        "-m",
+        "http.server",
+        "4599"
+      ],
+      "port": 4599,
       "autoPort": false
     }
   ]

@@ -1,4 +1,5 @@
 import { auth } from "./firebase";
+import { DEMO, recorded, DEMO_REFUSAL } from "./demo";
 
 /* ══════════════════════════════════════════════════════════════════
    THE API CLIENT
@@ -93,6 +94,25 @@ async function headers(): Promise<HeadersInit> {
 }
 
 export async function api<T>(path: string, init: RequestInit = {}): Promise<T> {
+  /* ── The preview build ──────────────────────────────────────────
+     No server exists, so requests are answered from the snapshot.
+     Placed before the fetch rather than around it: a build that tried
+     the network first would sit through a timeout on every screen. */
+  if (DEMO) {
+    const method = (init.method ?? "GET").toUpperCase();
+    if (method !== "GET") {
+      /* Refused, not ignored. A write that silently does nothing is the
+         exact defect this project keeps finding; 409 is the status the
+         seam already reads as "a refusal a person acts on". */
+      throw new ApiError(409, DEMO_REFUSAL, { reason: DEMO_REFUSAL });
+    }
+    const hit = recorded(path);
+    if (hit !== undefined) return hit as T;
+    /* Nothing recorded. Named honestly rather than pretending to be a
+       network fault, so the gap is findable rather than mysterious. */
+    throw new ApiError(404, "Not part of this preview snapshot.");
+  }
+
   let response: Response;
 
   try {

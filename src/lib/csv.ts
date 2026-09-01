@@ -49,6 +49,38 @@ export function toCsv(headers: string[], rows: unknown[][]): string {
   return lines.join("\r\n");
 }
 
+/* The published preview runs inside a viewer that will not let a page
+   download anything on its own — `<a download>` is inert there, blob
+   href included. A report's CSV button would appear to work and do
+   nothing, which is the defect this project keeps finding.
+
+   `claude.use("downloads")` is the mediated path: the viewer sees a
+   confirmation and may decline. It exists only inside that viewer, so
+   this is a FEATURE TEST rather than a build flag — the same file
+   served from an ordinary web server takes the link path below. */
+async function offerThroughViewer(
+  filename: string, body: string,
+): Promise<boolean> {
+  const host = (globalThis as {
+    claude?: { use?: (name: string) => Promise<unknown> };
+  }).claude;
+  if (typeof host?.use !== "function") return false;
+
+  try {
+    const downloads = (await host.use("downloads")) as
+      | { save: (r: { filename: string; data: string }) => Promise<unknown> }
+      | null;
+    if (!downloads) return false;
+    await downloads.save({ filename, data: body });
+  } catch {
+    /* Declined, rate-limited, or unavailable. Handled either way: the
+       viewer has already been shown the outcome, and falling through
+       to a link that cannot work would only look like a second
+       failure. */
+  }
+  return true;
+}
+
 /**
  * Hand the file to the browser.
  *
@@ -61,13 +93,23 @@ export function downloadCsv(filename: string, csv: string): void {
      is. A literal BOM in source survives until an editor, a linter
      or a git filter decides to tidy it, and its absence shows up
      as mojibake in somebody else's spreadsheet weeks later. */
-  const blob = new Blob([`\uFEFF${csv}`], {
+  const name = filename.endsWith(".csv") ? filename : `${filename}.csv`;
+  const body = `\uFEFF${csv}`;
+
+  void offerThroughViewer(name, body).then((handled) => {
+    if (!handled) saveByLink(name, body);
+  });
+}
+
+/** The ordinary browser path: a blob, and a link, clicked. */
+function saveByLink(name: string, body: string): void {
+  const blob = new Blob([body], {
     type: "text/csv;charset=utf-8",
   });
   const url = URL.createObjectURL(blob);
   const a = document.createElement("a");
   a.href = url;
-  a.download = filename.endsWith(".csv") ? filename : `${filename}.csv`;
+  a.download = name;
   document.body.append(a);
   a.click();
   a.remove();

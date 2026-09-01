@@ -2,7 +2,10 @@ import { useState } from "react";
 import { Plus, Download, Trash2, Search, Star } from "lucide-react";
 import { cn } from "@/lib/cn";
 import logoFull from "@/assets/brand/logo-full.svg";
-import logoMark from "@/assets/brand/logo-mark.svg";
+/* `?inline` forces a data URI. Vite leaves SVG imported as a module
+   URL on disk whatever assetsInlineLimit says, and in the
+   single-file preview build a second file is a 404. */
+import logoMark from "@/assets/brand/logo-mark.svg?inline";
 import {
   Page, PageHeader, Card, CardHeader, CardBody, Section, Button, Input,
   Textarea, NativeSelect, Checkbox, Switch, Field, StatusPill, Skeleton,

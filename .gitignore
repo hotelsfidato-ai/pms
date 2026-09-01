@@ -35,3 +35,7 @@ vitest.config.ts.timestamp-*
 # Backups are data, not source. db/verify-backup.sh proves the tooling;
 # the dumps themselves belong wherever production keeps them.
 db/backups/
+
+# The preview build. Regenerate with `npm run build:preview` — a 1.9 MB
+# generated file in git would make every rebuild a diff nobody can read.
+dist-preview/
