@@ -45,6 +45,15 @@ if command -v dnf >/dev/null; then
   # reads like a typo rather than a missing repository.
   dnf -y install oracle-epel-release-el9 2>/dev/null \
     || dnf -y install epel-release 2>/dev/null || true
+  # PostgreSQL 16, not the AppStream default of 13. The schema was built and
+  # tested against 17.6 — nothing in it needs newer than 13, but there is no
+  # reason to run a live hotel on a version this suite has never seen.
+  #
+  # `|| true` because the module name has moved between OL9 point releases and
+  # a missing module must not abort the install — the version check after the
+  # database is up is what actually enforces this.
+  dnf -y module reset postgresql 2>/dev/null || true
+  dnf -y module enable postgresql:16 2>/dev/null || true
   dnf -y install nginx postgresql-server postgresql-contrib certbot \
                  python3-certbot-nginx git
   [ -d /var/lib/pgsql/data/base ] || postgresql-setup --initdb
@@ -153,6 +162,16 @@ sudo -u postgres psql -qc \
 sudo -u postgres psql -tAc \
   "select 1 from pg_database where datname='$DB_NAME'" | grep -q 1 || \
   sudo -u postgres createdb -O postgres "$DB_NAME"
+
+# The version actually running, said out loud. The module enable above is
+# best-effort, so without this a silent fall back to PostgreSQL 13 would only
+# surface as odd behaviour months later. 13 runs this schema — the suite has
+# simply never been pointed at it.
+PGVER="$(sudo -u postgres psql -tAc "show server_version" | cut -d. -f1)"
+echo "  PostgreSQL $PGVER"
+if [ "$PGVER" -lt 14 ]; then
+  echo "  ⚠ PostgreSQL $PGVER — the suite was proven on 17.6. It will run, but this is a version nobody has tested this schema against."
+fi
 
 say "Migrations"
 for f in "$APP_DIR"/db/migrations/*.sql; do
