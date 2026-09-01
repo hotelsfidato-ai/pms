@@ -20,11 +20,21 @@ is wrong.
 
 ### 1 · The box
 
-Oracle Cloud free tier, **Ampere A1** (ARM) — 4 OCPU / 24 GB is the free
+Oracle Cloud, **Ampere A1** (ARM) — 4 OCPU / 24 GB is the Always Free
 allowance and is far more than this needs. Ubuntu 22.04 or Oracle Linux 9;
 the script detects which.
 
-Take note of the **public IP**.
+**Add a payment method first.** Ampere A1 capacity is routinely exhausted for
+trial accounts — the console answers "Out of capacity for shape
+VM.Standard.A1.Flex" and keeps answering it. Upgrading to Pay As You Go clears
+that queue. The Always Free allowance stays free after the upgrade; you are
+billed only for what exceeds it, and nothing here does. Set a **budget alert**
+at ₹1 anyway, so an accidental over-provision is a notification rather than a
+surprise.
+
+Take note of the **public IP**, and add your SSH public key when the instance
+is created — Oracle does not offer password login, and there is no way to add
+a key afterwards without console access.
 
 ### 2 · Open the ports in the Oracle console
 

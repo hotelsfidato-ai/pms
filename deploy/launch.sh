@@ -40,6 +40,11 @@ say "Packages"
 # assume: the wrong package manager fails halfway and leaves a broken box.
 if command -v dnf >/dev/null; then
   PKG=dnf
+  # certbot and its nginx plugin are not in Oracle Linux's own repos —
+  # they come from EPEL, and without it the install fails on a line that
+  # reads like a typo rather than a missing repository.
+  dnf -y install oracle-epel-release-el9 2>/dev/null \
+    || dnf -y install epel-release 2>/dev/null || true
   dnf -y install nginx postgresql-server postgresql-contrib certbot \
                  python3-certbot-nginx git
   [ -d /var/lib/pgsql/data/base ] || postgresql-setup --initdb
@@ -54,8 +59,12 @@ fi
 
 if ! command -v node >/dev/null || \
    [ "$(node -v | cut -d. -f1 | tr -d v)" -lt "$NODE_MAJOR" ]; then
-  curl -fsSL "https://rpm.nodesource.com/setup_${NODE_MAJOR}.x" -o /tmp/ns.sh \
-    2>/dev/null || curl -fsSL "https://deb.nodesource.com/setup_${NODE_MAJOR}.x" -o /tmp/ns.sh
+  # Chosen by package manager, not by which download happens to succeed:
+  # rpm.nodesource.com serves its script to anybody who asks, Ubuntu
+  # included, where running it then fails obscurely.
+  if [ "$PKG" = dnf ]; then NS=rpm; else NS=deb; fi
+  curl -fsSL "https://${NS}.nodesource.com/setup_${NODE_MAJOR}.x" -o /tmp/ns.sh \
+    || die "Could not fetch the NodeSource installer."
   bash /tmp/ns.sh
   $PKG -y install nodejs
 fi
@@ -97,6 +106,30 @@ say "The service account (unix)"
 # is the app directory and the Postgres socket.
 id -u fidato >/dev/null 2>&1 \n  || useradd --system --no-create-home --shell /usr/sbin/nologin fidato
 chown -R fidato:fidato "$APP_DIR"
+
+# -----------------------------------------------------------------------------
+say "Who Postgres will listen to"
+# -----------------------------------------------------------------------------
+# Oracle Linux ships pg_hba.conf with `ident` for host connections. The API
+# connects as pms_app over 127.0.0.1 WITH A PASSWORD, and ident refuses that —
+# so everything below would succeed, the service would start, and every request
+# would fail with "Ident authentication failed for user pms_app". A working
+# install that cannot reach its own database.
+#
+# Only the loopback lines are touched. `local` (unix socket, peer auth) is left
+# exactly as it is: that is how `sudo -u postgres psql` works above, and how
+# ADMIN_DATABASE_URL reaches the schema owner without a password anywhere.
+HBA="$(sudo -u postgres psql -tAc 'show hba_file' | tr -d '[:space:]')"
+if [ -f "$HBA" ]; then
+  cp -n "$HBA" "$HBA.before-fidato" 2>/dev/null || true
+  sed -i -E 's#^([[:space:]]*host[[:space:]]+all[[:space:]]+all[[:space:]]+(127\.0\.0\.1/32|::1/128)[[:space:]]+).*$#\1scram-sha-256#' "$HBA"
+  grep -qE '^[[:space:]]*host[[:space:]]+all[[:space:]]+all[[:space:]]+127\.0\.0\.1/32[[:space:]]+scram-sha-256' "$HBA" \
+    || echo "host    all             all             127.0.0.1/32            scram-sha-256" >> "$HBA"
+  systemctl reload postgresql
+  echo "  $HBA — loopback set to scram-sha-256"
+else
+  echo "  could not locate pg_hba.conf; leaving authentication as found"
+fi
 
 # -----------------------------------------------------------------------------
 say "The database"
