@@ -720,7 +720,7 @@ retried. Ledger nets to zero, room revenue still ₹4,19,578.76.
 ## The stages
 
 ```
-1  Frontend shell and screens        ████████████  48 routes, 1 placeholder
+1  Frontend shell and screens        ████████████  61 routes, none placeholder
 2  Repository layer behind the seam  ████████████  12 of 12 modules
 3  Auth bridge — Firebase            ███████████░  works; needs a service account
 4  Front desk + folio, end to end    ████████████  flows, reports, dating
@@ -731,12 +731,12 @@ retried. Ledger nets to zero, room revenue still ₹4,19,578.76.
 9  Rates, availability, STAAH        ███████░░░░░  rates, seasons, plans
 10 Group dashboard and reports       ███████████░  11 of 11 reports, all SQL
 11 CRS bridge / SU                    ░░░░░░░░░░░░  post-launch, by decision
-12 Hardening and go-live             ███████░░░░░  backup, races, provisioning
+12 Hardening and go-live             █████████░░░  + launch.sh, preflight, nginx
 ```
 
-**114 of 144 — 79%.** Add the filled blocks above and divide by 144. That sum is the number; it is not typed separately, because it was for three audits running and drifted to "about 90%" while the bars said 70.
+**116 of 144 — 81%.** Add the filled blocks above and divide by 144. That sum is the number; it is not typed separately, because it was for three audits running and drifted to "about 90%" while the bars said 70.
 
-**Launch scope — 114 of 132, 86%.** Stage 11 (CRS / SU) is a feature
+**Launch scope — 116 of 132, 88%.** Stage 11 (CRS / SU) is a feature
 iteration to be built after launch, by the group's decision, so it is out of
 the denominator. Nothing else changes: no code was written against SU, which
 is why removing it costs nothing to remove.
