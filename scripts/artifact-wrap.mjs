@@ -18,7 +18,7 @@ import { readFileSync, writeFileSync } from "node:fs";
    it, and the inlined bundle is two megabytes.
    ══════════════════════════════════════════════════════════════════ */
 
-const src = readFileSync("dist-preview/index.html", "utf8");
+const src = readFileSync("dist-artifact/index.html", "utf8");
 
 const grabAll = (tag) => {
   const out = [];
@@ -48,7 +48,7 @@ const page = [
   ...scripts,
 ].join("\n");
 
-writeFileSync("dist-preview/artifact.html", page);
+writeFileSync("dist-artifact/artifact.html", page);
 
 const mb = (n) => (n / 1048576).toFixed(2);
 console.log(`  title      ${title}`);

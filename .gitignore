@@ -39,3 +39,4 @@ db/backups/
 # The preview build. Regenerate with `npm run build:preview` — a 1.9 MB
 # generated file in git would make every rebuild a diff nobody can read.
 dist-preview/
+dist-artifact/

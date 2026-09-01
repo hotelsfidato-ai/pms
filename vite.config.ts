@@ -15,9 +15,15 @@ import path from 'path'
 export default defineConfig(({ mode }) => {
   // The MODE, not process.env: Vite does not put .env files on
   // process.env, so reading VITE_DEMO_MODE here would always be
-  // undefined and the preview would quietly build as a normal
-  // multi-file app that cannot open without a server.
-  const single = mode === 'preview'
+  // undefined and the build would quietly come out wrong.
+  //
+  // TWO demo builds, because they are hosted differently:
+  //   preview   Firebase Hosting — hashed cacheable assets and a
+  //             rewrite, so routes stay real paths
+  //   artifact  one self-contained file — no host and no rewrite, so
+  //             routing has to be hash-based and assets inlined
+  const single = mode === 'artifact'
+  const demo = mode === 'preview' || mode === 'artifact'
 
   return {
   plugins: [
@@ -33,7 +39,7 @@ export default defineConfig(({ mode }) => {
          property's bookings stayed in the production bundle — a real
          hotel shipping a fictional hotel's guests. Verified by
          grepping the built bundle, not by reading the config. */
-      ...(single ? {} : {
+      ...(demo ? {} : {
         '@/data/demo-snapshot.json':
           path.resolve(__dirname, './src/data/empty-snapshot.json'),
       }),
@@ -44,7 +50,13 @@ export default defineConfig(({ mode }) => {
     // The snapshot pushes the bundle past Vite's default warning. It is
     // one file on purpose; the warning is not telling us anything.
     chunkSizeWarningLimit: single ? 8000 : 500,
-    outDir: single ? 'dist-preview' : 'dist',
+    /* Three builds, three directories. This was keyed to `single`, so
+       `--mode preview` wrote to dist/ and overwrote the PRODUCTION
+       build with demo data — the bundle deploy/launch.sh serves,
+       quietly carrying a fictional hotel. */
+    outDir: mode === 'artifact' ? 'dist-artifact'
+      : mode === 'preview' ? 'dist-preview'
+      : 'dist',
     // Everything as a data URI in the preview. An asset left on disk is
     // a second file to host, and in a single-file build it is a 404 the
     // moment anything renders it.

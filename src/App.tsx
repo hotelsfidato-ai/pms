@@ -2,13 +2,19 @@ import { useEffect, useRef } from "react";
 import {
   BrowserRouter, HashRouter, Routes, Route, Navigate, useParams,
 } from "react-router";
-import { DEMO } from "@/lib/demo";
 
-/* The preview build is one file opened from a static host with no
-   rewrite rule, so a path route 404s the moment anybody reloads or
-   deep-links. A hash route cannot: the server never sees it. Paths
-   everywhere else, because they are the better URLs. */
-const Router = DEMO ? HashRouter : BrowserRouter;
+/* Hash routing belongs to the SINGLE-FILE build, not to demo data.
+   That file is opened with no server and no rewrite rule, so a path
+   route 404s the moment anybody reloads or deep-links, and a hash
+   route cannot because the server never sees it.
+
+   Firebase Hosting rewrites every path to index.html, so the build
+   that goes there keeps real paths — which are the URLs a client will
+   bookmark. Keying this to DEMO instead put a hash on the hosted
+   build too, and only clicking a nav link showed it. */
+const Router = import.meta.env.VITE_SINGLE_FILE === "1"
+  ? HashRouter
+  : BrowserRouter;
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { AppShell } from "@/components/app/AppShell";
 import { useUi } from "@/lib/ui";
