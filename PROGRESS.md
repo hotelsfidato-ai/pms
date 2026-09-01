@@ -727,7 +727,7 @@ retried. Ledger nets to zero, room revenue still ₹4,19,578.76.
 5  Night audit                       ███████████░  posts, rolls, retains
 6  Housekeeping, mobile              ██████████░░  assigned, and rooms come out
 7  POS — bridge, till and terminal   ████████████  its own category
-8  Billing, GST, Form C              █████████░░░  invoices, credit notes, split
+8  Billing, GST, Form C              █████████░░░  invoices, split, Form C
 9  Rates, availability, STAAH        ███████░░░░░  rates, seasons, plans
 10 Group dashboard and reports       ███████████░  11 of 11 reports, all SQL
 11 CRS bridge / SU                    ░░░░░░░░░░░░  post-launch, by decision
@@ -797,7 +797,20 @@ business date         5EL 2026-08-25 · AGR 2027-04-02 · PUN 2026-08-28
 1 · offline          Stage 6 asked for it. Zero service-worker files.
 2 · channel manager  Stage 9. STAAH is quoted and unbuilt.
 3 · retire src/data/store.ts and the in-memory fixtures it seeds.
+4 · issue a credit note. Nothing in the interface can.
 ```
+
+**A credit note can be READ and cannot be WRITTEN.** Found by this audit, not
+by a gate. Everything exists except the act: the endpoint
+(`POST /:code/invoices/:number/credit-note`), the repository function
+(`issueCreditNote`), and an invoice screen that renders a credit note properly
+— *"This is a credit note"*, the cancelled-invoice banner, the lot. But
+`issueCreditNote` is referenced by **nothing**: not a screen, not a repository
+object, not a test. The two credit notes in the database were put there by the
+demo loader, which is the only thing that has ever made one.
+
+So a clerk who bills the wrong guest cannot cancel the invoice. The same shape
+as defect 81 — every piece built, and no path to the moment it fires.
 
 **E-invoicing: asked and answered — NOT required.** Above ₹5 crore turnover an
 Indian business must register each B2B invoice with the IRP and print the IRN
