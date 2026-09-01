@@ -83,6 +83,30 @@ node -v | grep -qE "^v(2[2-9]|[3-9][0-9])" \
 systemctl enable --now postgresql nginx
 
 # -----------------------------------------------------------------------------
+say "Unattended security updates"
+# -----------------------------------------------------------------------------
+# The one thing added beyond the minimum, because it is the only risk that grows
+# on its own. Nobody is going to log into this box for months; without it the
+# kernel and openssl sit at whatever version was current the day it was built.
+#
+# SECURITY updates only, not every update. A box that upgrades everything
+# unattended is a box that changes under a hotel with nobody watching.
+if command -v dnf >/dev/null; then
+  dnf -y install dnf-automatic
+  sed -i 's/^upgrade_type.*/upgrade_type = security/' /etc/dnf/automatic.conf
+  sed -i 's/^apply_updates.*/apply_updates = yes/'    /etc/dnf/automatic.conf
+  systemctl enable --now dnf-automatic.timer
+  echo "  dnf-automatic — security updates only, applied nightly"
+else
+  apt-get -y install unattended-upgrades
+  dpkg-reconfigure -f noninteractive unattended-upgrades
+  echo "  unattended-upgrades enabled"
+fi
+echo "  ⚠ Reboots are NOT automatic. A kernel update sits until somebody reboots."
+echo "    Ksplice is free on Oracle Linux on OCI and removes that gap — worth"
+echo "    setting up once the system is live and you can afford to experiment."
+
+# -----------------------------------------------------------------------------
 say "The firewall"
 # -----------------------------------------------------------------------------
 # Oracle's free tier ships with almost everything shut, in TWO places: the
