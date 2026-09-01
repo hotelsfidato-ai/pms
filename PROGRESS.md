@@ -720,7 +720,7 @@ retried. Ledger nets to zero, room revenue still ₹4,19,578.76.
 ## The stages
 
 ```
-1  Frontend shell and screens        ████████████  61 routes, none placeholder
+1  Frontend shell and screens        ████████████  61 routes · 1 placeholder, unlinked
 2  Repository layer behind the seam  ████████████  12 of 12 modules
 3  Auth bridge — Firebase            ███████████░  works; needs a service account
 4  Front desk + folio, end to end    ████████████  flows, reports, dating
