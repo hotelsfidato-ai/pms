@@ -197,6 +197,32 @@ if [ "$PGVER" -lt 14 ]; then
   echo "  ⚠ PostgreSQL $PGVER — the suite was proven on 17.6. It will run, but this is a version nobody has tested this schema against."
 fi
 
+# -----------------------------------------------------------------------------
+say "Sizing Postgres for the box"
+# -----------------------------------------------------------------------------
+# Postgres ships with shared_buffers at 128 MB, which is a default chosen to
+# start anywhere, not to run anything. On 12 GB it is absurd.
+#
+# It also solves a problem specific to Oracle's free tier. Oracle RECLAIMS an
+# idle Always Free instance when, across seven days, CPU AND network AND memory
+# are all under 20%. A property system for thirty-five staff is comfortably
+# under on CPU and network — memory is the one we can honestly hold above the
+# line, because a database given room to cache is a database doing its job.
+#
+# 25% of RAM is the ordinary recommendation for shared_buffers. Here it also
+# keeps the instance alive.
+MEM_MB="$(free -m | awk '/^Mem:/{print $2}')"
+SHARED="$(( MEM_MB / 4 ))MB"
+PGCONF="$(sudo -u postgres psql -tAc 'show config_file' | tr -d '[:space:]')"
+if [ -f "$PGCONF" ]; then
+  sed -i "s/^#*shared_buffers.*/shared_buffers = $SHARED/" "$PGCONF"
+  sed -i "s/^#*effective_cache_size.*/effective_cache_size = $(( MEM_MB / 2 ))MB/" "$PGCONF"
+  systemctl restart postgresql
+  echo "  shared_buffers = $SHARED  (of ${MEM_MB}MB)"
+else
+  echo "  could not locate postgresql.conf — left at defaults"
+fi
+
 say "Migrations"
 for f in "$APP_DIR"/db/migrations/*.sql; do
   sudo -u postgres psql -q -v ON_ERROR_STOP=1 -d "$DB_NAME" -f "$f" \
