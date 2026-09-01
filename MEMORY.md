@@ -1719,6 +1719,107 @@ likely to be wrong.
 
 ---
 
+### 85 · I quoted a platform limit from memory, in three documents, for days
+
+Told the user Oracle's Always Free Ampere allowance was **4 OCPU / 24 GB**. It
+is **2 OCPU / 12 GB** — 1,500 OCPU-hours and 9,000 GB-hours a month, which
+divided by 730 is 2.05 and 12.3, and which Oracle's own page states in those
+words.
+
+The figure went into the infrastructure strategy, the runbook and the free-tier
+table, each time with confident headroom arithmetic built on top: *"half
+spare"*, *"3× spare"*, *"you may split it across up to four VMs"*. All wrong,
+and wrong in the direction that would have let somebody over-provision into a
+bill.
+
+It only surfaced because the user sent the documentation link. **I never
+fetched it.** The page is public, unauthenticated, and one tool call away, and
+I wrote three documents around a number I had not checked.
+
+**A third-party limit is not something to remember. It is something to look
+up** — they change, and the whole value of stating one is that it is right.
+Fetch the page, quote it, and say when it was fetched.
+
+---
+
+### 86 · The rule I did not go looking for
+
+The same page carries a policy I had never mentioned: Oracle **reclaims** an
+idle Always Free instance when, across seven days, CPU *and* network *and*
+memory are all under 20%.
+
+A property system for thirty-five staff is under on CPU and network almost
+always. The instance we were about to build could have been taken back, and
+nothing in three documents warned about it.
+
+This is the more serious half of defect 85. Getting a number wrong is a
+correction; **not knowing a rule exists is not knowing what you do not know.**
+Reading the source would have surfaced both at once.
+
+The fix is honest rather than a trick: `shared_buffers` at 25% of RAM is the
+ordinary recommendation for any Postgres, is better for the database, and
+holds memory above the threshold so the seven-day test can never be satisfied.
+
+---
+
+### 87 · Four confident wrong answers about one screen
+
+Walking the user through Oracle's image picker, in order:
+
+* **"Avoid Minimal."** The only `aarch64` Ubuntu builds Oracle offers *are* the
+  Minimal ones.
+* **"Confidential computing is why your shape list is empty."** Every Ubuntu row
+  on that screen carries that label. It names what the image *supports*. The
+  empty list was the blank Availability Domain — which I had flagged in the
+  same message, so I had both facts and picked the wrong one.
+* **"Pick the build with aarch64 in the name"** — for Oracle Linux, which does
+  not put the architecture in the name at all.
+* And underneath all three, **"Ubuntu, because fewer workarounds in
+  `launch.sh`"** — while having already written those workarounds. They were
+  work done, not a cost. The user pushed back and was right.
+
+Each answer was delivered with the confidence of the one before. **When a user
+sends a screenshot, the screen is the evidence and my recollection is not.**
+Read what is actually on it — the Security column said the same thing on every
+row, which alone should have killed the confidential-computing theory.
+
+---
+
+### 88 · I argued for a tool, then found the better argument was against it
+
+Proposed switching nginx for Caddy on the grounds it would "remove the DNS
+timing failure mode entirely". It does not. Caddy still needs the name
+resolving for Let's Encrypt; it retries rather than failing. I had oversold the
+one benefit that mattered.
+
+Asked to decide, the honest answer was the opposite of what I had recommended a
+message earlier — and the deciding reason was one I had not raised: swapping
+the TLS layer of a script that has **never run** trades a known-but-untested
+path for an unfamiliar one, on the night it first executes.
+
+Same shape as the Vault recommendation, where I argued the real gain was that a
+leaked backup would not carry the key — then checked and found `db/backup.sh`
+is `pg_dump` only and never archived files. **The risk I was solving did not
+exist.**
+
+**Check the premise before building the argument on it.** Both times the
+argument was fine and the premise was invented.
+
+---
+
+### 89 · Renumbering breaks cross-references, every single time
+
+Four rounds of restructuring the runbook, and every one silently broke the
+"see step N" references — *"you need it at step 30"* when there were 28,
+*"step 16 (the 443 rule)"* pointing at `Install git and clone`.
+
+They break because the numbers are generated and the references are prose. The
+document looks fine; only following a reference finds it.
+
+**Now checked on every republish** by resolving each `step N` back to its title
+and printing what it lands on. Caught it three times after that.
+
+
 ## Verification traps
 
 ### Never test a Tailwind utility by injecting the class at runtime
