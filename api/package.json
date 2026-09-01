@@ -12,6 +12,8 @@
     "load-demo": "tsx scripts/load-demo.ts",
     "serve": "node scripts/free-port.mjs && tsx src/server.ts",
     "pos:outlet": "tsx scripts/pos-outlet.ts",
+    "preflight": "tsx scripts/preflight.ts",
+    "link-staff": "tsx scripts/link-staff.ts",
     "test:only": "vitest run"
   },
   "dependencies": {

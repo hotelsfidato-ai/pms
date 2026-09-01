@@ -1676,6 +1676,49 @@ string right up to the moment Postgres reads it.
 
 ---
 
+### 84 · The preflight passed every check by not being able to see
+
+Wrote `api/scripts/preflight.ts` to catch the ways a deployment can start,
+look correct, and be wrong. Ran it. Ten green ticks, two honest failures.
+
+Then checked the green ones against the database:
+
+```
+  ✓ no demo properties          → AGR and PUN both present
+  ✓ no development uids         → dev-owner, dev-agra, dev-pune, all active
+```
+
+It connects with `DATABASE_URL`, which is `pms_app` — the **application**
+role. Every query therefore ran under row level security with no session set,
+`app.auth_hotel_ids()` returned the empty set, and every table read as empty.
+`select count(*) from hotels` returned 0, so "no demo properties" passed.
+
+**The file written to catch checks that pass without seeing was itself a check
+that passed without seeing.**
+
+Two things came out of it:
+
+* **Any tool that audits the database must prove it can see the database
+  first.** The fix is not "use a superuser" — it is an assertion that fails
+  when nothing is visible, so the failure mode is impossible rather than
+  merely unlikely. `ADMIN_DATABASE_URL` is preferred; a zero-row `hotels` is
+  fatal whatever the cause.
+* **The same bug was in `link-staff.ts`**, written minutes earlier. `--list`
+  printed an empty list against six staff, and a link would have updated zero
+  rows and reported success. One wrong assumption, applied twice, in the two
+  files whose entire job is to be trusted about state.
+
+Earlier, the same file had a second version of the same fault: run through
+`npm run` it never loaded `api/.env`, so it read no `ALLOW_DEV_AUTH` at all
+and reported **"dev auth is off"** against a box whose `.env` sets it to 1.
+A green tick over the exact hole it exists to find.
+
+**Run the checker against a state you already know is bad, and confirm it
+says so.** Green on the first run is not evidence; it is the thing most
+likely to be wrong.
+
+---
+
 ## Verification traps
 
 ### Never test a Tailwind utility by injecting the class at runtime
