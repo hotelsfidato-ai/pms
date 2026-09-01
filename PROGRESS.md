@@ -730,16 +730,23 @@ retried. Ledger nets to zero, room revenue still ₹4,19,578.76.
 8  Billing, GST, Form C              █████████░░░  invoices, split, Form C
 9  Rates, availability, STAAH        ███████░░░░░  rates, seasons, plans
 10 Group dashboard and reports       ███████████░  11 of 11 reports, all SQL
-11 CRS bridge / SU                    ░░░░░░░░░░░░  post-launch, by decision
+11 CRS bridge / SU                    ░░░░░░░░░░░░  now IN scope, after go-live
 12 Hardening and go-live             █████████░░░  + launch.sh, preflight, nginx
+13 POS upgrade — Petpooja-informed   ███░░░░░░░░░  tables, variations, day end
+14 Modules + banquet                  ░░░░░░░░░░░░  per-hotel toggle, banquet hall
 ```
 
-**116 of 144 — 81%.** Add the filled blocks above and divide by 144. That sum is the number; it is not typed separately, because it was for three audits running and drifted to "about 90%" while the bars said 70.
+**Stages 13 and 14 are new scope, not newly-found incompletion.** Stage 7 met
+the target it was given — bridge, till, terminal, kitchen pass. Then the target
+moved: twenty screenshots of Petpooja set a higher bar, and two module
+requirements arrived with it. Lowering stage 7 would misreport what happened, so
+the new work is its own row. Detail in `POS-PROGRESS.md`.
 
-**Launch scope — 116 of 132, 88%.** Stage 11 (CRS / SU) is a feature
-iteration to be built after launch, by the group's decision, so it is out of
-the denominator. Nothing else changes: no code was written against SU, which
-is why removing it costs nothing to remove.
+**119 of 168 — 71%.** Add the filled blocks above and divide by 168. That sum is the number; it is not typed separately, because it was for three audits running and drifted to "about 90%" while the bars said 70.
+
+**Go-live scope — 116 of 132, 88%.** What has to be true for a real hotel to run on this: stages 1–10 and 12. The CRS bridge (11), the POS upgrade (13) and the modules (14) are all real work, and not one of them stops a guest checking in, a folio settling or a night closing.
+
+**The two figures are both honest and they measure different things.** 71% is progress against everything now asked for. 88% is readiness to open the doors. The gap between them is the upgrade programme, and it should not delay go-live.
 
 A caveat that matters more than either figure: **every stage is weighted the
 same and they are nowhere near the same size.** Stage 1 is 39 screens. Stage
