@@ -40,3 +40,7 @@ db/backups/
 # generated file in git would make every rebuild a diff nobody can read.
 dist-preview/
 dist-artifact/
+
+# Firebase CLI's local deploy cache — a hash of what was last uploaded.
+# Machine-local, changes on every deploy, means nothing to anyone else.
+.firebase/
