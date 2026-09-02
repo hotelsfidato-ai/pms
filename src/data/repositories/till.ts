@@ -150,6 +150,24 @@ export interface Order {
   /** gross + roundOff. What the guest actually hands over. */
   payable: number;
   tenders: Tender[];
+
+  /* ── The header ──────────────────────────────────────────────────
+     `covers` is people EATING, not seats. Average per cover is the
+     metric a restaurant runs on, and a table for two that seats six
+     says nothing. Null means nobody recorded it — which is excluded
+     from the average, not counted as one. */
+  covers: number | null;
+  /** Who took the order. Not `openedBy`, which on a shared terminal is
+      one person for the whole evening. */
+  waiter: string | null;
+  orderType: "dine_in" | "takeaway" | "room_service" | "delivery";
+  customerName: string | null;
+  customerPhone: string | null;
+  customerAddress: string | null;
+  customerLocality: string | null;
+  /** Parked. A table on drinks and not ready for food should not be a
+      bill a waiter has to remember. */
+  heldAt: string | null;
 }
 
 /** One payment against a bill. Several when the guest paid two ways. */
@@ -609,4 +627,57 @@ export async function clearTable(
   hotelId: string, orderId: string,
 ): Promise<{ ok: boolean; reason?: string }> {
   return simplePost(`/api/hotels/${hotelId}/till/orders/${orderId}/clear`);
+}
+
+/* ── The order header ─────────────────────────────────────────────
+   ONE call for five fields, because they are one panel. Four calls
+   would mean a waiter who fills it in and taps away produces four
+   writes, three of which can fail on their own and leave the header
+   half entered with nothing saying which half.
+
+   Only what is PASSED is written — sending `covers` must not blank the
+   waiter somebody set a minute ago. */
+export interface OrderHeader {
+  covers?: number | null;
+  waiterId?: string | null;
+  orderType?: Order["orderType"];
+  customerName?: string | null;
+  customerPhone?: string | null;
+  customerAddress?: string | null;
+  customerLocality?: string | null;
+  held?: boolean;
+}
+
+export async function setOrderHeader(
+  hotelId: string, orderId: string, header: OrderHeader,
+): Promise<TillResult> {
+  try {
+    const result = await api<Order & { ok: true }>(
+      `/api/hotels/${hotelId}/till/orders/${orderId}`,
+      { method: "PATCH", body: JSON.stringify(header) },
+    );
+    return { ok: true, order: result };
+  } catch (error) {
+    if (error instanceof ApiError) {
+      const p = error.body as { reason?: string } | undefined;
+      return { ok: false, reason: p?.reason ?? error.message };
+    }
+    throw error;
+  }
+}
+
+/** Everyone with access to this property. Nobody holds a `waiter` role,
+    and inventing one would leave the list empty on the first evening —
+    the same answer housekeeping gives, for the same reason. */
+export async function listWaiters(
+  hotelId: string,
+): Promise<{ id: string; name: string }[]> {
+  if (!hotelId) return [];
+  try {
+    const body = await api<{ waiters: { id: string; name: string }[] }>(
+      `/api/hotels/${hotelId}/till/waiters`);
+    return body.waiters;
+  } catch {
+    return [];
+  }
 }

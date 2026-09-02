@@ -77,9 +77,10 @@ export default function FloorPage() {
     const res = await openOrderOnTable(hotelId, "REST", table.id);
     setBusy(null);
     if (!res.ok) return toast.error("Not opened", res.reason);
-    /* Straight to the bill. A waiter tapping a free table means "I am
-       taking an order", not "show me an empty order". */
-    navigate(`/h/${hotelId}/till`);
+    /* Straight to THAT bill, named in the URL. Landing on the list is
+       how a waiter opens a second order on the same table, because the
+       first one looked like it had not worked. */
+    navigate(`/h/${hotelId}/till?order=${res.order.id}`);
   };
 
   const print = async (table: FloorTable) => {
@@ -230,7 +231,8 @@ export default function FloorPage() {
                             <button
                               type="button"
                               aria-label={`Open ${t.label}`}
-                              onClick={() => navigate(`/h/${hotelId}/till`)}
+                              onClick={() => navigate(
+                                `/h/${hotelId}/till?order=${t.orderId}`)}
                               className="size-11 grid place-items-center rounded-md border border-grey-300 bg-white text-grey-600 hover:text-ink-900 cursor-pointer transition-colors duration-200"
                             >
                               <Eye className="size-4" />

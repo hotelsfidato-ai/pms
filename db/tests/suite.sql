@@ -2212,3 +2212,134 @@ begin
   select count(*) into n from hotels where code = 'TRF';
   perform test.ok('floor','the fixture does not outlive the test', n = 0);
 end $$;
+
+
+-- =============================================================================
+-- The order header  (048)
+-- =============================================================================
+do $$
+declare
+  v_hotel uuid; v_other uuid; v_staff uuid; v_stranger uuid;
+  v_outlet uuid; v_cat uuid; v_item uuid; v_order uuid;
+  n int; per numeric;
+begin
+  insert into hotels (code, name, city, timezone)
+  values ('TRG', 'Cover fixture', 'Akkalkot', 'Asia/Kolkata')
+  returning id into v_hotel;
+  insert into hotels (code, name, city, timezone)
+  values ('TRH', 'Another property', 'Pune', 'Asia/Kolkata')
+  returning id into v_other;
+
+  select id into v_staff from staff limit 1;
+  insert into staff_hotels (staff_id, hotel_id, role)
+  values (v_staff, v_hotel, 'pos') on conflict do nothing;
+
+  -- Somebody who works only at the OTHER property.
+  insert into staff (full_name, email, is_active)
+  values ('Stranger Waiter', 'stranger@trh.test', true)
+  returning id into v_stranger;
+  insert into staff_hotels (staff_id, hotel_id, role)
+  values (v_stranger, v_other, 'pos');
+
+  insert into pos_outlets (hotel_id, code, name, staff_id)
+  values (v_hotel, 'TRGO', 'Cover outlet', v_staff) returning id into v_outlet;
+  insert into pos_menu_categories (hotel_id, name)
+  values (v_hotel, 'Food') returning id into v_cat;
+  insert into pos_menu_items (hotel_id, category_id, name, price, tax_rate)
+  values (v_hotel, v_cat, 'Thali', 500.00, 5.00) returning id into v_item;
+
+  insert into pos_orders (hotel_id, outlet_id, order_no, business_date, opened_by)
+  values (v_hotel, v_outlet, 'TRG-1', current_date, v_staff)
+  returning id into v_order;
+
+  -- ---------- covers ----------
+  perform test.raises('covers','zero covers is not an order',
+    format($q$update pos_orders set covers = 0 where id = %L$q$, v_order),
+    '23514');
+
+  update pos_orders set covers = 4 where id = v_order;
+  perform test.ok('covers','a table of four is recorded',
+    (select covers from pos_orders where id = v_order) = 4);
+
+  -- ---------- the waiter works here ----------
+  -- Same rule 012 states for housekeeping, for the same reason: per-waiter
+  -- figures for somebody who was never in the building still add up.
+  perform test.raises('covers','a waiter from another property is refused',
+    format($q$update pos_orders set waiter_id = %L where id = %L$q$,
+           v_stranger, v_order), 'P0001');
+
+  update pos_orders set waiter_id = v_staff where id = v_order;
+  perform test.ok('covers','and one who works here is not',
+    (select waiter_id from pos_orders where id = v_order) = v_staff);
+
+  -- ---------- you cannot deliver to nobody ----------
+  insert into pos_order_lines
+    (order_id, hotel_id, item_id, name, qty, unit_price, tax_rate, added_by)
+  values (v_order, v_hotel, v_item, 'Thali', 4, 500.00, 5.00, v_staff);
+
+  update pos_orders set order_type = 'delivery' where id = v_order;
+  perform test.ok('covers','switching to delivery is allowed while open',
+    (select order_type from pos_orders where id = v_order) = 'delivery',
+    'the constraint must not fire the moment somebody taps the tab');
+
+  -- A delivery with no number reaches the kitchen, gets cooked, and cannot
+  -- leave the building.
+  perform test.raises('covers','a delivery cannot be settled with no phone number',
+    format($q$update pos_orders
+                set status='settled', settled_by=%L, settled_at=now(),
+                    payment_method='cash'
+              where id = %L$q$, v_staff, v_order), '23514');
+
+  update pos_orders set customer_phone = '9000000004',
+                        customer_name = 'A Guest'
+   where id = v_order;
+  update pos_orders
+     set status='settled', settled_by=v_staff, settled_at=now(),
+         payment_method='cash'
+   where id = v_order;
+  perform test.ok('covers','with a number it settles',
+    (select status from pos_orders where id = v_order) = 'settled');
+
+  -- ---------- average per cover ----------
+  select per_cover into per
+    from app.pos_average_cover(v_hotel, current_date, current_date);
+  -- 4 thalis at 500 plus 5% is 2100, over 4 covers.
+  perform test.ok('covers','revenue per person, not per table',
+    per = 525.00, 'per cover ' || per);
+
+  -- An order with no covers is EXCLUDED, not counted as one. Counting it as
+  -- one drags the average down by exactly the amount of the carelessness.
+  insert into pos_orders
+    (hotel_id, outlet_id, order_no, business_date, opened_by,
+     status, settled_by, settled_at, payment_method)
+  values (v_hotel, v_outlet, 'TRG-2', current_date, v_staff,
+          'settled', v_staff, now(), 'cash');
+
+  select per_cover into per
+    from app.pos_average_cover(v_hotel, current_date, current_date);
+  perform test.ok('covers','an order with no covers does not drag the average',
+    per = 525.00, 'still ' || per);
+
+  select orders into n
+    from app.pos_average_cover(v_hotel, current_date, current_date);
+  perform test.ok('covers','and is not counted as an order either', n = 1);
+
+  -- ---------- teardown ----------
+  alter table pos_order_lines disable trigger pos_order_lines_frozen;
+  delete from pos_order_lines where hotel_id = v_hotel;
+  alter table pos_order_lines enable trigger pos_order_lines_frozen;
+
+  delete from pos_orders where hotel_id = v_hotel;
+  delete from pos_menu_items where hotel_id = v_hotel;
+  delete from pos_menu_categories where hotel_id = v_hotel;
+  delete from pos_outlets where hotel_id = v_hotel;
+  delete from staff_hotels where hotel_id in (v_hotel, v_other);
+  delete from staff where id = v_stranger;
+
+  alter table hotels disable trigger hotels_no_delete;
+  delete from hotels where id in (v_hotel, v_other);
+  alter table hotels enable trigger hotels_no_delete;
+
+  select count(*) into n from hotels where code in ('TRG', 'TRH');
+  perform test.ok('covers','the fixture does not outlive the test', n = 0);
+end $$;

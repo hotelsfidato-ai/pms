@@ -1314,3 +1314,161 @@ describe("the floor", () => {
       .toMatch(/not in this outlet/i);
   });
 });
+
+/* ══════════════════════════════════════════════════════════════════
+   THE ORDER HEADER
+
+   One endpoint for five fields, because they are one panel. Four
+   endpoints would mean a waiter who fills it in and taps away produces
+   four writes, three of which can fail on their own and leave the
+   header half entered with nothing saying which half.
+   ══════════════════════════════════════════════════════════════════ */
+
+describe("the order header", () => {
+  it("takes covers, a waiter and a channel in one call", async () => {
+    const order = await openOrder("header");
+
+    const { rows: waiters } = await (async () => {
+      const res = await as("/api/hotels/5EL/till/waiters");
+      expect(res.status).toBe(200);
+      return { rows: ((await res.json()) as { waiters: { id: string }[] }).waiters };
+    })();
+    expect(waiters.length).toBeGreaterThan(0);
+
+    const res = await app.request(`/api/hotels/5EL/till/orders/${order.id}`, {
+      method: "PATCH",
+      headers: {
+        "x-dev-staff-id": ownerStaffId,
+        "content-type": "application/json",
+      },
+      body: JSON.stringify({
+        covers: 4, waiterId: waiters[0]!.id, orderType: "room_service",
+      }),
+    });
+    expect(res.status, await res.clone().text()).toBe(200);
+
+    const body = (await res.json()) as {
+      covers: number; waiter: string; orderType: string;
+    };
+    expect(body.covers).toBe(4);
+    expect(body.waiter).toBeTruthy();
+    /* order_type has been in the schema since 034 and nothing set it. */
+    expect(body.orderType).toBe("room_service");
+  });
+
+  it("writes only what was sent", async () => {
+    const order = await openOrder("header-partial");
+    const patch = (b: unknown) =>
+      app.request(`/api/hotels/5EL/till/orders/${order.id}`, {
+        method: "PATCH",
+        headers: {
+          "x-dev-staff-id": ownerStaffId,
+          "content-type": "application/json",
+        },
+        body: JSON.stringify(b),
+      });
+
+    await patch({ covers: 6, customerName: "Mrs Rao" });
+    const after = (await (await patch({ covers: 8 })).json()) as {
+      covers: number; customerName: string | null;
+    };
+
+    /* A patch that wrote every column would blank the name each time
+       somebody corrected the covers. */
+    expect(after.covers).toBe(8);
+    expect(after.customerName).toBe("Mrs Rao");
+  });
+
+  it("refuses zero covers by name, not by constraint", async () => {
+    const order = await openOrder("header-zero");
+    const res = await app.request(`/api/hotels/5EL/till/orders/${order.id}`, {
+      method: "PATCH",
+      headers: {
+        "x-dev-staff-id": ownerStaffId,
+        "content-type": "application/json",
+      },
+      body: JSON.stringify({ covers: 0 }),
+    });
+    expect(res.status).toBe(409);
+    expect(((await res.json()) as { reason: string }).reason)
+      .toMatch(/how many people/i);
+  });
+
+  it("cannot settle a delivery with nobody to deliver to", async () => {
+    const order = await openOrder("header-delivery");
+    const item = await menuItem("Paneer Tikka");
+    await post(`/api/hotels/5EL/till/orders/${order.id}/lines`,
+      { itemId: item.id, qty: 1 });
+
+    await app.request(`/api/hotels/5EL/till/orders/${order.id}`, {
+      method: "PATCH",
+      headers: {
+        "x-dev-staff-id": ownerStaffId,
+        "content-type": "application/json",
+      },
+      body: JSON.stringify({ orderType: "delivery" }),
+    });
+
+    /* Cooked, and then it cannot leave the building. */
+    const refused = await post(
+      `/api/hotels/5EL/till/orders/${order.id}/settle`, { method: "cash" });
+    expect(refused.status).toBe(409);
+
+    await app.request(`/api/hotels/5EL/till/orders/${order.id}`, {
+      method: "PATCH",
+      headers: {
+        "x-dev-staff-id": ownerStaffId,
+        "content-type": "application/json",
+      },
+      body: JSON.stringify({ customerPhone: "9000000007" }),
+    });
+
+    const settled = await post(
+      `/api/hotels/5EL/till/orders/${order.id}/settle`, { method: "cash" });
+    expect(settled.status, await settled.clone().text()).toBe(200);
+  });
+
+  it("holds an order and lets it go again", async () => {
+    const order = await openOrder("header-hold");
+    const patch = (b: unknown) =>
+      app.request(`/api/hotels/5EL/till/orders/${order.id}`, {
+        method: "PATCH",
+        headers: {
+          "x-dev-staff-id": ownerStaffId,
+          "content-type": "application/json",
+        },
+        body: JSON.stringify(b),
+      });
+
+    const held = (await (await patch({ held: true })).json()) as {
+      heldAt: string | null;
+    };
+    expect(held.heldAt).toBeTruthy();
+
+    const back = (await (await patch({ held: false })).json()) as {
+      heldAt: string | null;
+    };
+    expect(back.heldAt).toBeNull();
+  });
+
+  it("refuses a header change on a settled bill", async () => {
+    const order = await openOrder("header-settled");
+    const item = await menuItem("Paneer Tikka");
+    await post(`/api/hotels/5EL/till/orders/${order.id}/lines`,
+      { itemId: item.id, qty: 1 });
+    await post(`/api/hotels/5EL/till/orders/${order.id}/settle`,
+      { method: "cash" });
+
+    const res = await app.request(`/api/hotels/5EL/till/orders/${order.id}`, {
+      method: "PATCH",
+      headers: {
+        "x-dev-staff-id": ownerStaffId,
+        "content-type": "application/json",
+      },
+      body: JSON.stringify({ covers: 2 }),
+    });
+    expect(res.status).toBe(409);
+    expect(((await res.json()) as { reason: string }).reason)
+      .toMatch(/settled/i);
+  });
+});

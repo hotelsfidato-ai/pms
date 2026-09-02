@@ -347,6 +347,10 @@ async function readOrder(client: Client, orderId: string) {
     payment_method: string | null; opened_by_name: string;
     discount_type: string | null; discount_value: string | null;
     discount_reason: string | null;
+    covers: number | null; waiter_name: string | null; order_type: string;
+    customer_name: string | null; customer_phone: string | null;
+    customer_address: string | null; customer_locality: string | null;
+    held_at: string | null;
     settled_by_name: string | null; settled_at: string | null;
     abandoned_reason: string | null; ticket_id: string | null;
   }>(
@@ -360,6 +364,9 @@ async function readOrder(client: Client, orderId: string) {
             to_char(o.business_date,'YYYY-MM-DD') as business_date,
             o.payment_method,
             o.discount_type, o.discount_value::text, o.discount_reason,
+            o.covers, s3.full_name as waiter_name, o.order_type,
+            o.customer_name, o.customer_phone, o.customer_address,
+            o.customer_locality, o.held_at::text,
             s1.full_name as opened_by_name,
             s2.full_name as settled_by_name,
             to_char(o.settled_at,'DD Mon, HH24:MI') as settled_at,
@@ -369,6 +376,7 @@ async function readOrder(client: Client, orderId: string) {
        join hotels h on h.id = o.hotel_id
        join staff s1 on s1.id = o.opened_by
        left join staff s2 on s2.id = o.settled_by
+       left join staff s3 on s3.id = o.waiter_id
       where o.id = $1`,
     [orderId],
   );
@@ -438,6 +446,18 @@ async function readOrder(client: Client, orderId: string) {
     settledAt: h.settled_at,
     abandonedReason: h.abandoned_reason,
     ticketId: h.ticket_id,
+
+    /* The header. `covers` is people eating, not seats — average per
+       cover is the metric a restaurant runs on, and a table for two
+       that seats six says nothing. */
+    covers: h.covers,
+    waiter: h.waiter_name,
+    orderType: h.order_type,
+    customerName: h.customer_name,
+    customerPhone: h.customer_phone,
+    customerAddress: h.customer_address,
+    customerLocality: h.customer_locality,
+    heldAt: h.held_at,
     lines: lines.map((l) => ({
       id: l.id,
       name: l.name,
@@ -1332,6 +1352,136 @@ till.post("/:code/till/orders/:id/clear", async (c) => {
   return c.json(result, "ok" in result && result.ok ? 200 : 409);
 });
 
+
+/* ── The order header ─────────────────────────────────────────────
+   Covers, waiter, customer and channel — the five icons above the bill.
+
+   ONE endpoint, because they are one panel. Four endpoints would mean a
+   waiter who fills the panel in and taps away produces four writes,
+   three of which can fail on their own and leave the header half
+   entered with nothing saying which half.
+
+   Every field is OPTIONAL and only what is SENT is written. Sending
+   `covers` must not blank the waiter somebody set a minute ago. */
+
+till.patch("/:code/till/orders/:id", async (c) => {
+  type HeaderBody = {
+    covers?: number | null;
+    waiterId?: string | null;
+    orderType?: string;
+    customerName?: string | null;
+    customerPhone?: string | null;
+    customerAddress?: string | null;
+    customerLocality?: string | null;
+    held?: boolean;
+  };
+  const input = await c.req.json<HeaderBody>().catch(() => ({}) as HeaderBody);
+
+  const TYPES = ["dine_in", "takeaway", "room_service", "delivery"];
+  if (input.orderType !== undefined && !TYPES.includes(input.orderType)) {
+    return c.json(refuse("Dine in, takeaway, room service or delivery."), 409);
+  }
+  if (input.covers !== undefined && input.covers !== null
+      && (!Number.isInteger(input.covers) || input.covers < 1)) {
+    /* Zero covers is a table nobody is sitting at. Named here so the
+       waiter is not shown a constraint violation for a typo. */
+    return c.json(refuse("How many people are eating?"), 409);
+  }
+
+  const result = await withSession(c.get("subject"), async (client) => {
+    const hotelId = await hotelFor(client, c.req.param("code"));
+    if (!hotelId) return null;
+    const orderId = c.req.param("id");
+
+    const { rows: order } = await client.query<{ status: string }>(
+      `select status from pos_orders where id = $1 and hotel_id = $2`,
+      [orderId, hotelId],
+    );
+    if (!order[0]) return refuse("No such order.");
+    if (order[0].status !== "open") {
+      return refuse(`This order is ${order[0].status} and cannot be changed.`);
+    }
+
+    /* Only what was sent. A patch that wrote every column would blank
+       the waiter each time somebody changed the covers. */
+    const sets: string[] = [];
+    const args: unknown[] = [];
+    const set = (col: string, value: unknown) => {
+      args.push(value);
+      sets.push(`${col} = $${args.length}`);
+    };
+
+    if (input.covers !== undefined) set("covers", input.covers);
+    if (input.waiterId !== undefined) set("waiter_id", input.waiterId);
+    if (input.orderType !== undefined) set("order_type", input.orderType);
+    if (input.customerName !== undefined) {
+      set("customer_name", input.customerName?.trim() || null);
+    }
+    if (input.customerPhone !== undefined) {
+      set("customer_phone", input.customerPhone?.trim() || null);
+    }
+    if (input.customerAddress !== undefined) {
+      set("customer_address", input.customerAddress?.trim() || null);
+    }
+    if (input.customerLocality !== undefined) {
+      set("customer_locality", input.customerLocality?.trim() || null);
+    }
+    /* Parked. A table that has ordered drinks and is not ready for food
+       should not be a bill a waiter has to remember. */
+    if (input.held !== undefined) {
+      sets.push(input.held ? "held_at = now()" : "held_at = null");
+    }
+
+    if (!sets.length) return refuse("Nothing to change.");
+
+    args.push(orderId, hotelId);
+    try {
+      await client.query(
+        `update pos_orders set ${sets.join(", ")}, updated_at = now()
+          where id = $${args.length - 1} and hotel_id = $${args.length}`,
+        args,
+      );
+    } catch (error) {
+      /* The waiter-scope trigger raises a sentence. Passing it through
+         beats "internal error" for something the person can fix by
+         picking a different name. */
+      const message = error instanceof Error ? error.message : String(error);
+      if (message.includes("does not work at this property")) {
+        return refuse("That person does not work at this property.");
+      }
+      throw error;
+    }
+
+    return { ok: true as const, ...(await readOrder(client, orderId))! };
+  });
+
+  if (!result) return c.json({ error: "No such property." }, 404);
+  return c.json(result, "ok" in result && result.ok ? 200 : 409);
+});
+
+/* Who can be named as the waiter. Everyone with access to this property
+   — the same answer housekeeping gives, and for the same reason: nobody
+   holds a `waiter` role, and inventing one would leave the list empty on
+   the first evening. */
+till.get("/:code/till/waiters", async (c) => {
+  const body = await withSession(c.get("subject"), async (client) => {
+    const hotelId = await hotelFor(client, c.req.param("code"));
+    if (!hotelId) return null;
+
+    const { rows } = await client.query<{ id: string; name: string }>(
+      `select s.id::text, s.full_name as name
+         from staff s
+         join staff_hotels sh on sh.staff_id = s.id
+        where sh.hotel_id = $1 and s.is_active
+        order by s.full_name`,
+      [hotelId],
+    );
+    return { waiters: rows };
+  });
+
+  return body ? c.json(body) : c.json({ error: "No such property." }, 404);
+});
+
 /* ── Settling ─────────────────────────────────────────────────────── */
 
 till.post("/:code/till/orders/:id/settle", async (c) => {
@@ -1410,10 +1560,12 @@ till.post("/:code/till/orders/:id/settle", async (c) => {
     const { rows: order } = await client.query<{
       status: string; order_no: string; outlet_id: string;
       business_date: string; outlet_name: string; category: string;
+      order_type: string; customer_phone: string | null;
     }>(
       `select o.status, o.order_no, o.outlet_id::text,
               to_char(o.business_date,'YYYY-MM-DD') as business_date,
-              ou.name as outlet_name, ou.category
+              ou.name as outlet_name, ou.category,
+              o.order_type, o.customer_phone
          from pos_orders o
          join pos_outlets ou on ou.id = o.outlet_id
         where o.id = $1 and o.hotel_id = $2`,
@@ -1422,6 +1574,19 @@ till.post("/:code/till/orders/:id/settle", async (c) => {
     if (!order[0]) return refuse("No such order.");
     if (order[0].status !== "open") {
       return refuse(`This order is already ${order[0].status}.`);
+    }
+
+    /* YOU CANNOT DELIVER TO NOBODY, and the database says so at
+       settlement. Reached here first so the biller gets a sentence they
+       can act on instead of a 500 — the constraint is the guarantee, and
+       this is the reason.
+
+       Caught by its own test, which expected a refusal and got an
+       internal error. */
+    if (order[0].order_type === "delivery" && !order[0].customer_phone) {
+      return refuse(
+        "This is a delivery with no phone number. It will be cooked and " +
+        "then it cannot leave the building — take a number first.");
     }
 
     const { rows: t } = await client.query<{

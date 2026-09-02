@@ -1,11 +1,12 @@
 import { useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { useParams } from "react-router";
+import { useParams, useSearchParams } from "react-router";
 import {
   UtensilsCrossed, Plus, X, Receipt, BedDouble, Banknote,
   CreditCard, Smartphone, Printer, Percent, Split,
 } from "lucide-react";
 import { DishDialog } from "@/components/flows/DishDialog";
+import { OrderHeaderPanel } from "@/components/flows/OrderHeaderPanel";
 import { cn } from "@/lib/cn";
 import { money } from "@/lib/format";
 import { useUi } from "@/lib/ui";
@@ -55,7 +56,13 @@ export default function TillPage() {
   const hotelId = useHotel();
   const qc = useQueryClient();
 
-  const [openId, setOpenId] = useState<string | null>(null);
+  /* The floor sends the order it just opened. Tapping a free table means
+     "I am taking an order", not "show me the list again" — and landing on
+     the list is how a waiter ends up opening a second order on the same
+     table because the first one looked like it had not worked. */
+  const [searchParams] = useSearchParams();
+  const [openId, setOpenId] = useState<string | null>(
+    searchParams.get("order"));
   const [table, setTable] = useState("");
   const [busy, setBusy] = useState(false);
   /* The dish whose variation or sides are being chosen, or null. */
@@ -736,6 +743,15 @@ function OrderPanel({
       </div>
 
       <CardBody>
+        {/* Above the lines, because it describes the ORDER and the lines
+            describe the food. A waiter setting covers is answering a
+            question about the table, not about a dish. */}
+        <OrderHeaderPanel
+          order={order}
+          hotelId={hotelId}
+          onChanged={onChanged}
+        />
+
         {live.length === 0 ? (
           <div className="text-center py-6">
             <UtensilsCrossed className="size-5 text-grey-300 mx-auto mb-2" />
