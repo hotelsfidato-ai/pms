@@ -1,4 +1,5 @@
-import { useQuery } from "@tanstack/react-query";
+import { useState } from "react";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useParams, Link } from "react-router";
 import { Check, Minus, Plug, ShieldCheck, Info } from "lucide-react";
 import { cn } from "@/lib/cn";
@@ -9,11 +10,12 @@ import {
 } from "@/lib/permissions";
 import {
   Page, PageHeader, Card, CardBody, CardHeader, DataTable, StatusPill,
-  Skeleton, Avatar, Tooltip, ErrorState, type Column, type Tone,
+  Skeleton, Avatar, Tooltip, ErrorState, Switch, toast,
+  type Column, type Tone,
 } from "@/components/ui";
 import {
   listStaff, listAuditLog, listIntegrations, getSettings, getMatrix,
-  listProperties, roleDescription,
+  listProperties, roleDescription, getModules, setModule,
   type StaffRecord, type AuditEntry, type Integration,
 } from "@/data/repositories";
 
@@ -367,6 +369,79 @@ export function IntegrationsPage() {
 
 /* ── Settings ────────────────────────────────────────────────────── */
 
+/* ══════════════════════════════════════════════════════════════════
+   MODULES
+
+   Not every property in the group runs a restaurant, and one with no
+   kitchen should not be showing its staff a menu screen that will
+   never have anything in it.
+
+   TURNING THIS OFF DOES TWO THINGS, and the second is the one that
+   matters: the navigation section disappears, AND the API refuses the
+   till and kitchen routes — including the door an outside till comes
+   through. A hidden nav entry is still a URL anybody can type, so
+   hiding alone would not be disabling.
+   ══════════════════════════════════════════════════════════════════ */
+
+const MODULE_COPY: Record<string, { label: string; note: string }> = {
+  pos: {
+    label: "Point of sale",
+    note: "The till, the kitchen pass and the menu. Turning it off also " +
+      "stops an outside till posting bills to this property.",
+  },
+  banquet: {
+    label: "Banquet hall",
+    note: "Not built yet. Off everywhere, and listed so it is clear that " +
+      "the switch is missing rather than the hall.",
+  },
+};
+
+function ModulesCard({ hotelId }: { hotelId: string }) {
+  const queryClient = useQueryClient();
+  const [busy, setBusy] = useState<string | null>(null);
+
+  const modules = useQuery({
+    queryKey: ["modules", hotelId],
+    queryFn: () => getModules(hotelId),
+    enabled: Boolean(hotelId),
+  });
+
+  const toggle = async (module: string, enabled: boolean) => {
+    setBusy(module);
+    const result = await setModule(hotelId, module, enabled);
+    setBusy(null);
+    if (!result.ok) return toast.error("Not changed", result.reason);
+    toast.success(
+      enabled ? "Turned on" : "Turned off",
+      `${MODULE_COPY[module]?.label ?? module} at this property.`,
+    );
+    /* The sidebar reads the same query key, so it rebuilds with this. */
+    void queryClient.invalidateQueries({ queryKey: ["modules", hotelId] });
+  };
+
+  return (
+    <Card>
+      <CardHeader
+        title="Modules"
+        description="What this property runs. Off means the screens go and the API refuses them."
+      />
+      <CardBody className="pt-0 space-y-4">
+        {Object.entries(modules.data ?? {}).map(([module, enabled]) => (
+          <Switch
+            key={module}
+            checked={enabled}
+            disabled={busy === module || module === "banquet"}
+            onCheckedChange={(next) => void toggle(module, next)}
+            label={MODULE_COPY[module]?.label ?? module}
+            description={MODULE_COPY[module]?.note}
+          />
+        ))}
+        {modules.isLoading && <Skeleton className="h-16 w-full" />}
+      </CardBody>
+    </Card>
+  );
+}
+
 export function SettingsPage() {
   const hotelId = useHotel();
   const { data, isLoading, error, refetch } = useQuery({
@@ -393,6 +468,7 @@ export function SettingsPage() {
         <Skeleton className="h-96 w-full" />
       ) : (
         <div className="space-y-4">
+          <ModulesCard hotelId={hotelId} />
           {(data ?? []).map((group) => (
             <Card key={group.title}>
               <CardHeader title={group.title} description={group.note} />

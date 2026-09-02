@@ -540,3 +540,37 @@ export async function unassignHousekeeper(
              reason: e instanceof Error ? e.message : "Not unassigned." };
   }
 }
+
+/* ── Void — which is not cancel ────────────────────────────────────
+   Cancelled HAPPENED and was undone: it may carry a cancellation
+   charge, and it belongs in cancellation statistics because a guest
+   did something a hotel wants to measure.
+
+   Void NEVER HAPPENED. A duplicate, a test, a booking typed against
+   the wrong property. It must stay out of those statistics too, or it
+   inflates a number somebody makes decisions from.
+
+   Neither is deleted. A booking that vanishes is one nobody can
+   account for. */
+
+export async function voidStay(
+  hotelId: string, stayId: string, reason: string,
+): Promise<OperationResult<{ reference: string }>> {
+  try {
+    const body = await api<{ ok: true; data: { reference: string } }>(
+      `/api/hotels/${hotelId}/stays/${stayId}/void`,
+      { method: "POST", body: JSON.stringify({ reason }) },
+    );
+    return { ok: true, data: body.data };
+  } catch (error) {
+    if (error instanceof ApiError) {
+      /* The server's refusal, verbatim. It knows things this side does
+         not — whether the folio has been posted to, whether the guest
+         already arrived — and its wording tells the clerk what to do
+         instead. Replacing it with "could not void" throws that away. */
+      const p = error.body as { reason?: string } | undefined;
+      return refuse(p?.reason ?? error.message);
+    }
+    throw error;
+  }
+}

@@ -54,6 +54,12 @@ interface StayRow {
   is_complimentary: boolean;
   notes: string | null;
   group_id: string | null;
+  is_vip: boolean;
+  is_single_lady: boolean;
+  business_source: string | null;
+  market_segment: string | null;
+  sales_person: string | null;
+  void_reason: string | null;
 }
 
 const SELECT = `
@@ -71,7 +77,14 @@ const SELECT = `
          r.check_in::text, r.check_out::text,
          r.adults, r.children, r.status, r.is_day_use,
          r.agreed_rate, rt.base_rate, r.is_complimentary,
-         r.notes, r.group_id
+         r.notes, r.group_id,
+         /* The marks that change what a clerk DOES. VIP travels with the
+            GUEST — somebody who is one this visit was one last visit —
+            and the single-lady flag sits on the RESERVATION, because the
+            same person travelling with family is a different allocation. */
+         gu.is_vip, r.is_single_lady,
+         r.business_source, r.market_segment, r.sales_person,
+         r.void_reason
     from reservations r
     join guests gu     on gu.id = r.guest_id
     join room_types rt on rt.id = r.room_type_id
@@ -149,6 +162,21 @@ function toStay(row: StayRow, hotelCode: string, businessDate: string) {
     offeredTariff: Number(row.agreed_rate),
     ...(row.group_id ? { groupId: row.group_id } : {}),
     ...(row.notes ? { notes: row.notes } : {}),
+
+    /* Marks a clerk acts on. Always present rather than spread in only
+       when true: a screen that has to distinguish "not a VIP" from
+       "the field is missing" ends up doing both badly. */
+    isVip: row.is_vip,
+    isSingleLady: row.is_single_lady,
+
+    /* Where the booking came from. Nullable and left null — an unknown
+       segment shows as a dash, never as "Direct" or "Other", because a
+       guess here becomes a line in a source-mix report an owner makes
+       decisions from. */
+    businessSource: row.business_source,
+    marketSegment: row.market_segment,
+    salesPerson: row.sales_person,
+    ...(row.void_reason ? { voidReason: row.void_reason } : {}),
   };
 }
 

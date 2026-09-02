@@ -15,6 +15,7 @@ import {
   TabsTrigger, TabsContent,
 } from "@/components/ui";
 import { CheckInFlow } from "@/components/flows/CheckInFlow";
+import { VoidFlow } from "@/components/flows/VoidFlow";
 import { FolioPanel } from "@/components/flows/FolioPanel";
 import { WalkInFlow } from "@/components/flows/WalkInFlow";
 import {
@@ -538,11 +539,18 @@ export default function StayViewPage() {
                 <div className="space-y-5 pt-1">
                   <StayDetail bar={selected} />
                   {selected.stay.status === "due-in" && (
-                    <CheckInFlow
-                      hotelId={hotelId}
-                      stay={selected.stay}
-                      businessDate={BUSINESS_DATE}
-                    />
+                    <>
+                      <CheckInFlow
+                        hotelId={hotelId}
+                        stay={selected.stay}
+                        businessDate={BUSINESS_DATE}
+                      />
+                      {/* Only before arrival. A guest who checked in cannot
+                          un-arrive, and the server refuses it anyway — but
+                          offering a button that always fails is worse than
+                          not offering it. */}
+                      <VoidFlow hotelId={hotelId} stay={selected.stay} />
+                    </>
                   )}
                 </div>
               </TabsContent>
@@ -635,6 +643,14 @@ function StayDetail({ bar }: { bar: ChartBar }) {
         {s.isComplimentary && <StatusPill tone="accent">Complimentary</StatusPill>}
         {s.isDayUse && <StatusPill tone="neutral">Day use</StatusPill>}
         {s.groupId && <StatusPill tone="accent">Group</StatusPill>}
+        {/* The two marks a clerk acts on before the guest reaches the
+            desk: the room is checked ahead of a VIP, and a woman
+            travelling alone is placed away from stairwells and service
+            corridors. Neither is read out at the counter. */}
+        {s.isVip && <StatusPill tone="accent">VIP</StatusPill>}
+        {s.isSingleLady && (
+          <StatusPill tone="info">Single lady — placement</StatusPill>
+        )}
       </div>
 
       <DetailList>
@@ -645,6 +661,13 @@ function StayDetail({ bar }: { bar: ChartBar }) {
         <DetailRow label="Nights"><span className="tabular">{s.isDayUse ? "Day use" : s.nights}</span></DetailRow>
         <DetailRow label="Party"><span className="tabular">{s.adults} adult{s.adults === 1 ? "" : "s"}{s.children ? `, ${s.children} child` : ""}</span></DetailRow>
         <DetailRow label="Source">{s.source}</DetailRow>
+        {/* A dash, never a guess. An invented segment becomes a line in
+            a source-mix report an owner sets policy from. */}
+        <DetailRow label="Segment">{s.marketSegment ?? "—"}</DetailRow>
+        <DetailRow label="Business source">{s.businessSource ?? "—"}</DetailRow>
+        {s.salesPerson && (
+          <DetailRow label="Sold by">{s.salesPerson}</DetailRow>
+        )}
         <DetailRow label="Rate plan">{s.ratePlan}</DetailRow>
         <DetailRow label="Rack rate"><span className="tabular">{money(s.rackTariff)}</span></DetailRow>
         <DetailRow label="Offered">
@@ -657,6 +680,18 @@ function StayDetail({ bar }: { bar: ChartBar }) {
           </span>
         </DetailRow>
       </DetailList>
+
+      {s.voidReason && (
+        <div className="rounded-md bg-red-50 border border-red-200 p-3">
+          <p className="text-2xs font-semibold uppercase tracking-wide text-brand-red mb-1">
+            Voided
+          </p>
+          <p className="text-sm text-grey-700 leading-relaxed">
+            {s.voidReason} — this booking is on the record as never having
+            happened, and is left out of revenue and cancellation figures alike.
+          </p>
+        </div>
+      )}
 
       {s.notes && (
         <div className="rounded-md bg-grey-50 border border-grey-200 p-3">

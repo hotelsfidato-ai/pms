@@ -98,9 +98,24 @@ function countsAsSold(s: Stay): boolean {
 
 const GROUP_ID = "grp-pancham-aug08";
 
+/* The fields no fixture here is about.
+
+   Spread rather than repeated on eight literals: these exist so the
+   objects satisfy `Stay`, and a fixture that spells out `isVip: false`
+   eight times reads as though the value mattered to the test. Any
+   fixture that IS about one of them overrides it after the spread. */
+const UNREMARKABLE = {
+  isVip: false,
+  isSingleLady: false,
+  businessSource: null,
+  marketSegment: null,
+  salesPerson: null,
+} as const;
+
 const notableStays: Stay[] = [
   {
     /* Overpaid folio — the real Night Audit shows balance −784.00 */
+    ...UNREMARKABLE,
     id: "stay-overpaid", hotelId: PROPERTY_ID, reference: "FH-2608-5001",
     guest: "Kalyani Rege", roomNumber: "301", roomType: "Deluxe",
     source: "Fidato Hotels", ratePlan: "Room Only",
@@ -113,6 +128,7 @@ const notableStays: Stay[] = [
   {
     /* Complimentary at ₹0, Var % = −100. The report counts comps
        separately from sold rooms, and so do we. */
+    ...UNREMARKABLE,
     id: "stay-comp", hotelId: PROPERTY_ID, reference: "FH-2608-5002",
     guest: "Kapil Ganjoo", roomNumber: "206", roomType: "Superior",
     source: "Fidato Hotels", ratePlan: "CP",
@@ -124,6 +140,7 @@ const notableStays: Stay[] = [
   },
   {
     /* Day-use: arrival and departure on the same date, zero nights */
+    ...UNREMARKABLE,
     id: "stay-dayuse", hotelId: PROPERTY_ID, reference: "FH-2608-5003",
     guest: "Sameer Gokhale", roomNumber: "202", roomType: "Superior",
     source: "Walk-in", ratePlan: "Room Only",
@@ -135,6 +152,7 @@ const notableStays: Stay[] = [
   },
   /* Back-to-back turnover on room 204 — two guests, one date boundary */
   {
+    ...UNREMARKABLE,
     id: "stay-turn-out", hotelId: PROPERTY_ID, reference: "FH-2608-5004",
     guest: "Ganesh Patil", roomNumber: "204", roomType: "Superior",
     source: "go-MMT", ratePlan: "CP",
@@ -144,6 +162,7 @@ const notableStays: Stay[] = [
     rackTariff: 4099, offeredTariff: 2381,
   },
   {
+    ...UNREMARKABLE,
     id: "stay-turn-in", hotelId: PROPERTY_ID, reference: "FH-2608-5005",
     guest: "Lata Bhosale", roomNumber: "204", roomType: "Superior",
     source: "Agoda", ratePlan: "CP",
@@ -156,6 +175,7 @@ const notableStays: Stay[] = [
   /* Group — Pancham Hall function, three rooms on one reference.
      Placed on the weekend the real month actually filled. */
   {
+    ...UNREMARKABLE,
     id: "stay-grp-1", hotelId: PROPERTY_ID, reference: "FH-2608-5010",
     guest: "Aditya Rane", roomNumber: "302", roomType: "Deluxe",
     source: "Fidato Hotels", ratePlan: "MAP",
@@ -166,6 +186,7 @@ const notableStays: Stay[] = [
     notes: "Pancham Hall function block — the weekend that filled the house.",
   },
   {
+    ...UNREMARKABLE,
     id: "stay-grp-2", hotelId: PROPERTY_ID, reference: "FH-2608-5010",
     guest: "Kavita Salunkhe", roomNumber: "303", roomType: "Deluxe",
     source: "Fidato Hotels", ratePlan: "MAP",
@@ -175,6 +196,7 @@ const notableStays: Stay[] = [
     rackTariff: 3699, offeredTariff: 3100, groupId: GROUP_ID,
   },
   {
+    ...UNREMARKABLE,
     id: "stay-grp-3", hotelId: PROPERTY_ID, reference: "FH-2608-5010",
     guest: "Pramod Jadhav", roomNumber: "305", roomType: "Deluxe",
     source: "Fidato Hotels", ratePlan: "MAP",
@@ -185,6 +207,7 @@ const notableStays: Stay[] = [
   },
   {
     /* Crosses the month boundary — departs 2 September */
+    ...UNREMARKABLE,
     id: "stay-crossmonth", hotelId: PROPERTY_ID, reference: "FH-2608-5020",
     guest: "Farida Contractor", roomNumber: "307", roomType: "Deluxe",
     source: "Booking.com", ratePlan: "CP",
@@ -196,6 +219,7 @@ const notableStays: Stay[] = [
   },
   {
     /* Cancelled, so the room was released and can be resold */
+    ...UNREMARKABLE,
     id: "stay-cancelled", hotelId: PROPERTY_ID, reference: "FH-2608-5030",
     guest: "Ritu Chavan", roomNumber: "210", roomType: "Superior",
     source: "Expedia", ratePlan: "Room Only",
@@ -286,6 +310,7 @@ function generate(preplaced: Stay[]): Stay[] {
 
       seq++;
       stays.push({
+        ...UNREMARKABLE,
         id: `stay-${seq}`,
         hotelId: PROPERTY_ID,
         reference: `FH-2608-${String(4800 + seq).padStart(4, "0")}`,

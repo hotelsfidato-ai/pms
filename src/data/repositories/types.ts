@@ -47,6 +47,25 @@ export interface Stay {
   offeredTariff: number;    // per night, after discount
   groupId?: string;
   notes?: string;
+  /* ── Marks a clerk acts on ───────────────────────────────────────
+     VIP travels with the GUEST — somebody who is one this visit was
+     one last visit. The single-lady flag sits on the RESERVATION: the
+     same person travelling with family is a different allocation, and
+     it drives room placement away from stairwells and service
+     corridors. It is not announced at the desk. */
+  isVip: boolean;
+  isSingleLady: boolean;
+
+  /* ── Where the booking came from ─────────────────────────────────
+     Null stays null. An unknown segment renders as a dash, never as
+     "Direct" or "Other" — a guess here becomes a line in a source-mix
+     report somebody sets policy from. */
+  businessSource: string | null;
+  marketSegment: string | null;
+  salesPerson: string | null;
+
+  /** Present only on a voided booking. */
+  voidReason?: string;
 }
 
 export interface Folio {

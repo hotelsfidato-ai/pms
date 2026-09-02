@@ -238,7 +238,7 @@ describe("void is not cancel", () => {
         `insert into room_assignments
            (hotel_id, reservation_id, room_id, from_date, to_date, created_by)
          values ($1,$2,$3, current_date + 30, current_date + 32, $4)`,
-        [b.hotelId, b.id, room.rows?.[0]?.id ?? room[0]!.id, ownerStaffId]);
+        [b.hotelId, b.id, room[0]!.id, ownerStaffId]);
     } finally {
       await db.end();
     }
