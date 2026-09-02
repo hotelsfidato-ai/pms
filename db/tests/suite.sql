@@ -1630,3 +1630,163 @@ begin
   select count(*) into n from hotels where code = 'PDC';
   perform test.ok('pos discount','the fixture does not outlive the test', n = 0);
 end $$;
+
+
+-- =============================================================================
+-- Modules, void, and the indicators  (041–043)
+-- =============================================================================
+do $$
+declare
+  v_hotel uuid; v_other uuid; v_staff uuid; v_guest uuid;
+  v_type uuid; v_room1 uuid; v_room2 uuid; v_far uuid; v_res uuid;
+  n int;
+begin
+  insert into hotels (code, name, city, timezone)
+  values ('TRB', 'Track B fixture', 'Akkalkot', 'Asia/Kolkata')
+  returning id into v_hotel;
+
+  insert into hotels (code, name, city, timezone)
+  values ('TRC', 'Another property', 'Pune', 'Asia/Kolkata')
+  returning id into v_other;
+
+  select id into v_staff from staff limit 1;
+  insert into staff_hotels (staff_id, hotel_id, role)
+  values (v_staff, v_hotel, 'gm'), (v_staff, v_other, 'gm')
+  on conflict do nothing;
+
+  -- ---------- modules: absent means ON for pos, OFF for banquet ----------
+  -- The default must never be "off", or deploying 041 would silently close
+  -- the till at the one property already using it.
+  perform test.ok('modules','a property with no row still has its POS',
+    app.module_enabled(v_hotel, 'pos'));
+
+  perform test.ok('modules','banquet is off until somebody turns it on',
+    not app.module_enabled(v_hotel, 'banquet'),
+    'nothing implements it yet');
+
+  insert into hotel_modules (hotel_id, module, is_enabled, changed_by)
+  values (v_hotel, 'pos', false, v_staff);
+
+  perform test.ok('modules','turning the POS off takes effect',
+    not app.module_enabled(v_hotel, 'pos'));
+
+  perform test.ok('modules','and does not reach the other property',
+    app.module_enabled(v_other, 'pos'));
+
+  perform test.raises('modules','an unknown module is refused',
+    format($q$insert into hotel_modules (hotel_id, module)
+             values (%L,'spa')$q$, v_hotel), '23514');
+
+  -- ---------- rooms, and the connecting door ----------
+  insert into room_types (hotel_id, code, name, base_occupancy, max_occupancy)
+  values (v_hotel, 'DLX', 'Deluxe', 2, 3) returning id into v_type;
+
+  insert into rooms (hotel_id, room_type_id, number, floor)
+  values (v_hotel, v_type, 'T204', 2) returning id into v_room1;
+  insert into rooms (hotel_id, room_type_id, number, floor)
+  values (v_hotel, v_type, 'T205', 2) returning id into v_room2;
+
+  insert into room_types (hotel_id, code, name, base_occupancy, max_occupancy)
+  values (v_other, 'DLX', 'Deluxe', 2, 3) returning id into v_far;
+  insert into rooms (hotel_id, room_type_id, number, floor)
+  values (v_other, v_far, 'X101', 1) returning id into v_far;
+
+  update rooms set connected_room_id = v_room2 where id = v_room1;
+
+  -- A door opens both ways. Stored one-sided, a clerk searching from 205 is
+  -- told there is no connecting room and splits a family across a floor.
+  perform test.ok('indicators','a connecting door points both ways',
+    (select connected_room_id from rooms where id = v_room2) = v_room1);
+
+  perform test.raises('indicators','a room cannot connect to itself',
+    format($q$update rooms set connected_room_id = %L where id = %L$q$,
+           v_room1, v_room1), 'P0001');
+
+  perform test.raises('indicators','connecting rooms are at the same property',
+    format($q$update rooms set connected_room_id = %L where id = %L$q$,
+           v_far, v_room1), 'P0001');
+
+  update rooms set connected_room_id = null where id = v_room1;
+  perform test.ok('indicators','clearing one side clears the other',
+    (select connected_room_id from rooms where id = v_room2) is null);
+
+  -- ---------- void, and why it is not cancel ----------
+  insert into guests (full_name, phone, is_vip)
+  values ('Track B guest', '9000000001', true) returning id into v_guest;
+
+  perform test.ok('indicators','VIP travels with the guest, not the booking',
+    (select is_vip from guests where id = v_guest));
+
+  insert into reservations
+    (hotel_id, guest_id, room_type_id, reference, check_in, check_out,
+     adults, status, source, created_by, is_single_lady, agreed_rate,
+     business_source, market_segment, sales_person)
+  values (v_hotel, v_guest, v_type, 'TRB-1',
+          current_date + 1, current_date + 3, 1, 'confirmed', 'direct',
+          /* A fixture rate. No price is ever shipped — this one exists only
+             so the row satisfies its NOT NULL and dies with the test. */
+          v_staff, true, 1234.00,
+          'Corporate account', 'corporate', 'A Seller')
+  returning id into v_res;
+
+  perform test.ok('indicators','the single-lady flag is on the RESERVATION',
+    (select is_single_lady from reservations where id = v_res),
+    'the same person with family is a different allocation');
+
+  perform test.ok('sources','a booking records segment, source and seller',
+    (select market_segment || '/' || business_source || '/' || sales_person
+       from reservations where id = v_res)
+      = 'corporate/Corporate account/A Seller');
+
+  -- A void with no explanation is a booking nobody can account for.
+  perform test.raises('void','voiding without a reason is refused',
+    format($q$update reservations set status = 'void' where id = %L$q$, v_res),
+    '23514');
+
+  perform test.raises('void','a blank reason is not a reason',
+    format($q$update reservations
+                set status='void', void_reason='  ', voided_by=%L,
+                    voided_at=now()
+              where id = %L$q$, v_staff, v_res), '23514');
+
+  -- ---------- a voided booking holds no room ----------
+  insert into room_assignments
+    (hotel_id, reservation_id, room_id, from_date, to_date, created_by)
+  values (v_hotel, v_res, v_room1, current_date + 1, current_date + 3, v_staff);
+
+  update reservations
+     set status='void', void_reason='entered twice',
+         voided_by=v_staff, voided_at=now()
+   where id = v_res;
+
+  -- The assignment is what makes a room unavailable. Left behind, it holds a
+  -- room out of inventory for a stay that never existed — found weeks later by
+  -- a clerk who cannot sell a room that looks empty.
+  select count(*) into n from room_assignments
+   where reservation_id = v_res and released_at is null;
+  perform test.ok('void','voiding releases the room it was holding', n = 0);
+
+  perform test.ok('void','void and cancelled are different statuses',
+    (select status from reservations where id = v_res) = 'void',
+    'one never happened, the other happened and was undone');
+
+  -- ---------- teardown ----------
+  delete from room_assignments where hotel_id = v_hotel;
+  delete from reservations where hotel_id = v_hotel;
+  update rooms set connected_room_id = null where hotel_id = v_hotel;
+  delete from rooms where hotel_id in (v_hotel, v_other);
+  delete from room_types where hotel_id in (v_hotel, v_other);
+  delete from hotel_modules where hotel_id = v_hotel;
+  delete from staff_hotels where hotel_id in (v_hotel, v_other);
+
+  alter table guests disable trigger guests_no_delete;
+  delete from guests where id = v_guest;
+  alter table guests enable trigger guests_no_delete;
+
+  alter table hotels disable trigger hotels_no_delete;
+  delete from hotels where id in (v_hotel, v_other);
+  alter table hotels enable trigger hotels_no_delete;
+
+  select count(*) into n from hotels where code in ('TRB', 'TRC');
+  perform test.ok('modules','the fixture does not outlive the test', n = 0);
+end $$;

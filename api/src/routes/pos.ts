@@ -93,10 +93,23 @@ export async function outletFor(key: string | undefined): Promise<Outlet | null>
     }>(`select * from app.pos_outlet_for_key($1)`, [hashKey(key)]);
 
     const r = rows[0];
-    return r
-      ? { outletId: r.outlet_id, hotelId: r.hotel_id, staffId: r.staff_id,
-          code: r.code, name: r.name, category: r.category }
-      : null;
+    if (!r) return null;
+
+    /* The module gate reaches the OUTSIDE till too. A property whose POS
+       has been turned off must not keep accepting bills through the
+       bridge — that would be the interface hiding a screen while the
+       door behind it stayed open, which is the exact failure the gate on
+       till.ts exists to prevent.
+
+       Resolving to null makes it indistinguishable from an unknown key,
+       and that is right: a key that must not work should not be told
+       whether it is the key or the property that is wrong. */
+    const { rows: gate } = await client.query<{ enabled: boolean }>(
+      `select app.module_enabled($1, 'pos') as enabled`, [r.hotel_id]);
+    if (!gate[0]!.enabled) return null;
+
+    return { outletId: r.outlet_id, hotelId: r.hotel_id, staffId: r.staff_id,
+             code: r.code, name: r.name, category: r.category };
   });
 }
 

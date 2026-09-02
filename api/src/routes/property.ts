@@ -361,3 +361,66 @@ property.delete("/:code/rooms/:number/block/:id", async (c) => {
   if (!body) return c.json({ error: "No such property." }, 404);
   return c.json(body, "ok" in body && body.ok ? 200 : 409);
 });
+
+/* ── Modules ──────────────────────────────────────────────────────
+   Which of them this property has. Not every hotel in the group runs
+   a restaurant, and a property with no kitchen should not be showing
+   its staff a menu screen that will never have anything in it. */
+
+property.get("/:code/modules", async (c) => {
+  const body = await withSession(c.get("subject"), async (client) => {
+    const hotel = await resolve(client, c.req.param("code"));
+    if (!hotel) return null;
+    const hotelId = hotel.id;
+
+    /* Read through app.module_enabled rather than the table, so this
+       answers exactly what the gate on the routes answers. Reading the
+       rows directly would report "no row" as off and disagree with the
+       API that is still serving the till. */
+    const { rows } = await client.query<{ module: string; enabled: boolean }>(
+      `select m.module, app.module_enabled($1, m.module) as enabled
+         from (values ('pos'), ('banquet')) as m(module)`,
+      [hotelId],
+    );
+    return { modules: rows.map((r) => ({ module: r.module, enabled: r.enabled })) };
+  });
+
+  if (!body) return c.json({ error: "No such property." }, 404);
+  return c.json(body);
+});
+
+property.post("/:code/modules/:module", async (c) => {
+  type Body = { enabled?: boolean };
+  const input = await c.req.json<Body>().catch(() => ({}) as Body);
+  const module = c.req.param("module");
+
+  if (!["pos", "banquet"].includes(module)) {
+    return c.json({ reason: `There is no "${module}" module.` }, 409);
+  }
+  if (typeof input.enabled !== "boolean") {
+    return c.json({ reason: "On or off?" }, 409);
+  }
+
+  const result = await withSession(c.get("subject"), async (client, session) => {
+    const hotel = await resolve(client, c.req.param("code"));
+    if (!hotel) return null;
+    const hotelId = hotel.id;
+
+    /* Who and when. A module that quietly stopped working is a support
+       call; one somebody switched off on a date is an answer. */
+    await client.query(
+      `insert into hotel_modules (hotel_id, module, is_enabled, changed_by)
+       values ($1,$2,$3,$4)
+       on conflict (hotel_id, module) do update
+          set is_enabled = excluded.is_enabled,
+              changed_by = excluded.changed_by,
+              changed_at = now()`,
+      [hotelId, module, input.enabled, session.staffId],
+    );
+
+    return { ok: true as const, module, enabled: input.enabled };
+  });
+
+  if (!result) return c.json({ error: "No such property." }, 404);
+  return c.json(result);
+});

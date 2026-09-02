@@ -1,4 +1,5 @@
 import { Hono } from "hono";
+import type { Context, Next } from "hono";
 import { randomUUID } from "node:crypto";
 import { withSession } from "../auth.ts";
 import { businessDateFor } from "../businessDate.ts";
@@ -36,6 +37,46 @@ async function hotelFor(client: Client, code: string): Promise<string | null> {
     [code.toUpperCase()],
   );
   return rows[0]?.id ?? null;
+}
+
+/* ── The module gate ──────────────────────────────────────────────
+   Not every property has a restaurant. HIDING THE SCREEN IS NOT
+   DISABLING IT — a hidden nav entry is still a URL anybody can type,
+   and the endpoint behind it would answer happily.
+
+   So the API refuses independently of the interface, which is the
+   shape Rule 6 asks for everywhere: the screen shows the reason, and
+   the server does not rely on the screen having shown it.
+
+   Absent means ENABLED. A property that never had a row keeps its
+   till, because turning something off is an act somebody performs and
+   never a side effect of a deploy. */
+till.use("/:code/till/*", moduleGate);
+till.use("/:code/kitchen", moduleGate);
+till.use("/:code/kitchen/*", moduleGate);
+
+async function moduleGate(
+  c: Context<{ Variables: { subject: string } }>,
+  next: Next,
+) {
+  const code = c.req.param("code");
+  if (!code) return c.json({ error: "No such property." }, 404);
+
+  const allowed = await withSession(c.get("subject"), async (client) => {
+    const hotelId = await hotelFor(client, code);
+    if (!hotelId) return null;
+    const { rows } = await client.query<{ enabled: boolean }>(
+      `select app.module_enabled($1, 'pos') as enabled`, [hotelId]);
+    return rows[0]!.enabled;
+  });
+
+  if (allowed === null) return c.json({ error: "No such property." }, 404);
+  if (!allowed) {
+    return c.json(refuse(
+      "This property has no point of sale. Turn it on in the property's " +
+      "settings if that is wrong."), 403);
+  }
+  await next();
 }
 
 /* ── The menu ─────────────────────────────────────────────────────── */

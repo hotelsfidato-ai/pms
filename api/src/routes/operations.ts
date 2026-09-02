@@ -898,3 +898,90 @@ operations.post("/:code/stays/:id/assign", async (c) => {
   if (!result) return c.json({ error: "No such property." }, 404);
   return c.json(result, "ok" in result && result.ok ? 200 : 409);
 });
+
+/* ── Void — which is not cancel ────────────────────────────────────
+   Cancelled HAPPENED and was undone: it may carry a cancellation
+   charge, and it belongs in cancellation statistics because a guest
+   did something a hotel wants to measure.
+
+   Void NEVER HAPPENED. A duplicate, a test, a booking typed against
+   the wrong property. No charge, no revenue, and it must stay out of
+   cancellation statistics too — counting it there inflates a number
+   somebody makes decisions from.
+
+   Both stay on the record. Neither is deleted, for the same reason a
+   struck POS line is kept: a booking that vanishes is one nobody can
+   account for. */
+
+operations.post("/:code/stays/:id/void", async (c) => {
+  type VoidBody = { reason?: string };
+  const input = await c.req.json<VoidBody>().catch(() => ({}) as VoidBody);
+
+  const reason = input.reason?.trim();
+  if (!reason) {
+    return c.json(refuse(
+      "Why is this being voided? “Entered twice”, “wrong property”, " +
+      "“test booking”. It stays on the record with this reason."), 409);
+  }
+
+  const result = await withSession(c.get("subject"), async (client, session) => {
+    const hotelId = await hotelIdFor(client, c.req.param("code"));
+    if (!hotelId) return null;
+    const stayId = c.req.param("id");
+
+    const { rows } = await client.query<{
+      status: string; reference: string;
+    }>(
+      `select status, reference from reservations
+        where id = $1 and hotel_id = $2`,
+      [stayId, hotelId],
+    );
+    const stay = rows[0];
+    if (!stay) return refuse("No such booking.");
+
+    if (stay.status === "void") return refuse("This booking is already void.");
+
+    /* A guest who arrived cannot un-arrive. Voiding a stay somebody
+       occupied would remove a night the hotel actually sold. */
+    if (["checked_in", "checked_out"].includes(stay.status)) {
+      return refuse(
+        `${stay.reference} has been checked ${stay.status === "checked_in" ? "in" : "out"}. ` +
+        "A stay that happened cannot be made not to have happened — " +
+        "reverse the charges instead.");
+    }
+
+    /* THE LINE BETWEEN VOID AND CANCEL. Money on the folio means the
+       booking was real enough to be billed, and erasing it would take
+       a posting out of an append-only ledger by the back door. */
+    const { rows: posted } = await client.query<{ n: string }>(
+      `select count(*)::text as n
+         from folio_postings p
+         join folios f on f.id = p.folio_id
+        where f.reservation_id = $1`,
+      [stayId],
+    );
+    if (Number(posted[0]!.n) > 0) {
+      return refuse(
+        `${stay.reference} already has charges on its folio. That is a ` +
+        "cancellation, not a void — cancel it so the terms and any charge " +
+        "are applied.");
+    }
+
+    await client.query(
+      `update reservations
+          set status = 'void', void_reason = $1, voided_by = $2,
+              voided_at = now(), updated_at = now()
+        where id = $3`,
+      [reason, session.staffId, stayId],
+    );
+
+    /* The room comes back on its own — a trigger in 043 releases the
+       assignment, because a voided booking holding a room out of
+       inventory is found weeks later by a clerk who cannot sell a room
+       that looks empty. */
+    return { ok: true as const, data: { reference: stay.reference } };
+  });
+
+  if (!result) return c.json({ error: "No such property." }, 404);
+  return c.json(result, "ok" in result && result.ok ? 200 : 409);
+});
