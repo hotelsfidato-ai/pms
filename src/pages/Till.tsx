@@ -5,6 +5,7 @@ import {
   UtensilsCrossed, Plus, X, Receipt, BedDouble, Banknote,
   CreditCard, Smartphone, Printer, Percent, Split,
 } from "lucide-react";
+import { DishDialog } from "@/components/flows/DishDialog";
 import { cn } from "@/lib/cn";
 import { money } from "@/lib/format";
 import { useUi } from "@/lib/ui";
@@ -57,6 +58,8 @@ export default function TillPage() {
   const [openId, setOpenId] = useState<string | null>(null);
   const [table, setTable] = useState("");
   const [busy, setBusy] = useState(false);
+  /* The dish whose variation or sides are being chosen, or null. */
+  const [asking, setAsking] = useState<MenuItem | null>(null);
 
   const orders = useQuery({
     queryKey: ["till-orders", hotelId, BUSINESS_DATE],
@@ -90,10 +93,31 @@ export default function TillPage() {
     refresh();
   };
 
+  /* A dish with something to ASK opens the dialog. A plain item goes
+     straight onto the bill — a dialog that always appears is a tap a
+     waiter pays for on every single item, all shift. */
   const add = async (item: MenuItem) => {
     if (!openId) return;
+    if (item.variations.length > 0 || item.addonGroups.length > 0) {
+      setAsking(item);
+      return;
+    }
     const res = await addLine(hotelId, openId, item.id, 1);
     if (!res.ok) return toast.error("Not added", res.reason);
+    refresh();
+  };
+
+  const addChosen = async (
+    itemId: string, qty: number, note: string,
+    variationId?: string, addonIds?: string[],
+  ) => {
+    if (!openId) return;
+    setBusy(true);
+    const res = await addLine(hotelId, openId, itemId, qty,
+      note.trim() || undefined, variationId, addonIds);
+    setBusy(false);
+    if (!res.ok) return toast.error("Not added", res.reason);
+    setAsking(null);
     refresh();
   };
 
@@ -269,6 +293,14 @@ export default function TillPage() {
           )}
         </div>
       </div>
+      <DishDialog
+        item={asking}
+        open={asking !== null}
+        onOpenChange={(o) => { if (!o) setAsking(null); }}
+        onAdd={(id, qty, note, variationId, addonIds) =>
+          void addChosen(id, qty, note, variationId, addonIds)}
+        busy={busy}
+      />
     </Page>
   );
 }
@@ -719,14 +751,24 @@ function OrderPanel({
                 className={cn(
                   "flex items-center gap-2",
                   line.voided && "opacity-45",
+                  /* A side is indented under its dish, exactly as the
+                     printed kitchen docket has it. Flat, the bill reads
+                     "Bhaaji Pau / Sides: Onions" as two dishes. */
+                  line.isAddon && "pl-5",
                 )}
               >
-                <span className="tabular text-sm text-grey-500 w-7 shrink-0">
+                <span className={cn(
+                  "tabular text-sm shrink-0",
+                  line.isAddon ? "w-6 text-grey-400" : "w-7 text-grey-500",
+                )}>
                   {line.qty}×
                 </span>
                 <span
                   className={cn(
-                    "flex-1 min-w-0 text-base text-ink-900 truncate",
+                    "flex-1 min-w-0 truncate",
+                    line.isAddon
+                      ? "text-sm text-grey-600"
+                      : "text-base text-ink-900",
                     line.voided && "line-through",
                   )}
                 >

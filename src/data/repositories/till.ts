@@ -16,10 +16,50 @@ import { api, ApiError } from "@/lib/api";
 export interface MenuItem {
   id: string;
   name: string;
+  /** The item's own price. **Meaningless once it has variations** — the
+      variation carries the price, and the database refuses a line that
+      names none. */
   price: number;
   /** Per ITEM, not per outlet: 5% on food, 18% on packaged water. */
   taxRate: number;
   isActive: boolean;
+
+  /** What a fast biller types. Null for most items. */
+  shortCode: string | null;
+  /** THREE states. `null` means nobody has said, and it must not render
+      as the green mark — an unmarked dish is not a vegetarian one. */
+  isVeg: boolean | null;
+  isFavourite: boolean;
+  /** "We are out of paneer", until this moment. A timestamp rather than
+      a flag somebody must remember to unset. */
+  offUntil: string | null;
+  offReason: string | null;
+
+  /** Oil ₹300, Butter ₹400. Empty for most of a menu. */
+  variations: MenuVariation[];
+  addonGroups: AddonGroup[];
+}
+
+export interface MenuVariation {
+  id: string;
+  label: string;
+  price: number;
+}
+
+export interface AddonGroup {
+  id: string;
+  label: string;
+  /** `minSelect` above zero makes the group a required choice. */
+  minSelect: number;
+  maxSelect: number | null;
+  addons: Addon[];
+}
+
+export interface Addon {
+  id: string;
+  label: string;
+  price: number;
+  offUntil: string | null;
 }
 
 export interface MenuCategory {
@@ -47,6 +87,13 @@ export interface OrderLine {
    *  eaten. */
   kotStatus: string;
   addedBy: string;
+
+  /** Set on an ADD-ON line, naming the dish it belongs to. The bill and
+      the kitchen docket both indent on it, exactly as the printed
+      ticket does. */
+  parentLineId: string | null;
+  isAddon: boolean;
+  variationId: string | null;
 }
 
 export interface KitchenLine {
@@ -242,10 +289,16 @@ export function openOrder(
 }
 
 export function addLine(
-  hotelId: string, orderId: string, itemId: string, qty: number, note?: string,
+  hotelId: string, orderId: string, itemId: string, qty: number,
+  note?: string,
+  /* Chosen in the dish dialog. A dish WITH variations requires one and
+     the server refuses without it; a dish with none must not be sent
+     one. Sides always start a new line rather than joining one whose
+     add-ons nobody checked. */
+  variationId?: string, addonIds?: string[],
 ): Promise<TillResult> {
   return write(`/api/hotels/${hotelId}/till/orders/${orderId}/lines`,
-    { itemId, qty, note });
+    { itemId, qty, note, variationId, addonIds });
 }
 
 export function voidLine(

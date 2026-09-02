@@ -672,6 +672,62 @@ async function main() {
       }
     }
 
+    /* ── ONE DISH THAT IS NOT ONE PRICE ──────────────────────────
+       Every other item on this menu is name-price-tax, which is what
+       most of a menu is. This one is the shape the rest of the trade
+       assumes: a variation carrying the price, and sides that print
+       indented under the dish on the kitchen docket.
+
+       Seeded because the feature is invisible without it — a menu with
+       no variations makes the dialog look like dead code. */
+    const { rows: [starters] } = await client.query<{ id: string }>(
+      `select id from pos_menu_categories
+        where hotel_id = $1 and name = 'Starters'`, [hotelId]);
+
+    if (starters) {
+      const { rows: [dish] } = await client.query<{ id: string }>(
+        `insert into pos_menu_items
+           (hotel_id, category_id, name, price, tax_rate, short_code, is_veg)
+         values ($1,$2,'Bhaaji Pau',300,5,'BP',true)
+         on conflict (hotel_id, category_id, name) do update
+            set short_code = excluded.short_code, is_veg = excluded.is_veg
+         returning id`,
+        [hotelId, starters.id]);
+
+      for (const [label, price, sort] of [
+        ["Oil", 300, 1], ["Butter", 400, 2],
+      ] as [string, number, number][]) {
+        await client.query(
+          `insert into pos_item_variations
+             (hotel_id, item_id, label, price, sort_order)
+           values ($1,$2,$3,$4,$5)
+           on conflict (item_id, label) do update set price = excluded.price`,
+          [hotelId, dish!.id, label, price, sort]);
+      }
+
+      const { rows: [group] } = await client.query<{ id: string }>(
+        `insert into pos_addon_groups (hotel_id, label, min_select, max_select)
+         values ($1,'Sides',0,4)
+         on conflict (hotel_id, label) do update set max_select = 4
+         returning id`, [hotelId]);
+
+      for (const [label, sort] of [
+        ["Onions", 1], ["Coriander Chutney", 2],
+        ["Curd", 3], ["Pudina Chutney", 4],
+      ] as [string, number][]) {
+        await client.query(
+          `insert into pos_addons (hotel_id, group_id, label, price, sort_order)
+           values ($1,$2,$3,25,$4)
+           on conflict (group_id, label) do update set price = 25`,
+          [hotelId, group!.id, label, sort]);
+      }
+
+      await client.query(
+        `insert into pos_item_addon_groups (item_id, group_id)
+         values ($1,$2) on conflict do nothing`,
+        [dish!.id, group!.id]);
+    }
+
     /* An outlet for the till to open orders against. The BRIDGE outlets
        carry an api_key_hash because a machine authenticates with one;
        this one has none, because the people using it authenticate as
