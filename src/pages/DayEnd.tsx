@@ -1,0 +1,723 @@
+import { useState, useMemo } from "react";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { useParams } from "react-router";
+import {
+  Check, Lock, AlertTriangle, Banknote, ArrowDownLeft, ArrowUpRight,
+  Wallet, HandCoins, Plus,
+} from "lucide-react";
+import { cn } from "@/lib/cn";
+import { money, moneyPrecise } from "@/lib/format";
+import { useUi } from "@/lib/ui";
+import {
+  Page, PageHeader, Card, CardBody, CardHeader, Button, Field, fieldProps, Input,
+  NativeSelect, Textarea, Skeleton, EmptyState, toast,
+  Dialog, DialogContent, DialogClose,
+} from "@/components/ui";
+import {
+  getDayEnd, recordMovement, countDrawer, closeDay,
+  type DayEnd, type MovementKind,
+} from "@/data/repositories";
+
+/* ══════════════════════════════════════════════════════════════════
+   THE DAY END
+
+   Three steps, in the order the money is actually reconciled:
+
+     Overview  →  Cash  →  Finalize
+
+   THE NIGHT AUDIT'S SHAPE, deliberately, and not a second one. The
+   hotel's audit refuses to close while something is wrong and NAMES
+   it, because the two possible truths lead to opposite postings and
+   only a person at the desk knows which. A restaurant close has the
+   same character: an open bill and an uncleared table are questions
+   a person answers.
+
+   A DRAWER THAT DOES NOT BALANCE IS NOT ONE OF THEM. The money is
+   already whatever it is, and a shift that cannot close is worse
+   than a difference written down with a reason. So the variance is
+   shown loudly, in one place, BEFORE the close — and then it closes.
+
+   THE STEPS DO NOT LOCK. A cashier who has counted and then sees a
+   bill still open has to go back, and a wizard that only moves
+   forward would be closed and reopened rather than used.
+   ══════════════════════════════════════════════════════════════════ */
+
+function useHotel(): string {
+  const params = useParams();
+  const fallback = useUi((s) => s.hotelId);
+  return params["code"] ?? fallback;
+}
+
+type Step = "overview" | "cash" | "finalize";
+
+const STEPS: { id: Step; label: string; hint: string }[] = [
+  { id: "overview", label: "Overview", hint: "What the shift did" },
+  { id: "cash",     label: "Cash",     hint: "What is in the tin" },
+  { id: "finalize", label: "Finalize", hint: "Close the day" },
+];
+
+/* The notes and coins in circulation. Nobody counts a ₹1 coin into a
+   restaurant till, and offering it is a row people tab past. */
+const DENOMINATIONS = [500, 200, 100, 50, 20, 10, 5, 2];
+
+const MOVEMENTS: { kind: MovementKind; label: string; hint: string;
+                   sign: -1 | 1; icon: typeof Plus }[] = [
+  { kind: "expense",        label: "Expense",    sign: -1, icon: ArrowUpRight,
+    hint: "Paid out of the drawer — a delivery of vegetables, a repair" },
+  { kind: "top_up",         label: "Cash in",    sign: 1,  icon: ArrowDownLeft,
+    hint: "Change brought from the safe" },
+  { kind: "withdrawal",     label: "To the safe", sign: -1, icon: Lock,
+    hint: "Cash taken out mid-shift" },
+  { kind: "due_collection", label: "Due paid",   sign: 1,  icon: HandCoins,
+    hint: "A bill settled to an account, paid now in cash" },
+];
+
+const METHOD_LABEL: Record<string, string> = {
+  cash: "Cash", card: "Card", upi: "UPI",
+  room: "To a room", due: "Due", comp: "Complimentary",
+};
+
+export default function DayEndPage() {
+  const hotelId = useHotel();
+  const qc = useQueryClient();
+  const [step, setStep] = useState<Step>("overview");
+
+  const day = useQuery({
+    queryKey: ["day-end", hotelId],
+    queryFn: () => getDayEnd(hotelId),
+  });
+
+  const refresh = () => void qc.invalidateQueries({ queryKey: ["day-end", hotelId] });
+
+  if (day.isLoading) {
+    return (
+      <Page>
+        <PageHeader title="Day end" description="Loading…" />
+        <Skeleton className="h-64" />
+      </Page>
+    );
+  }
+  if (!day.data) {
+    return (
+      <Page>
+        <PageHeader title="Day end" />
+        <EmptyState
+          title="No outlet"
+          description="This property has no restaurant configured."
+        />
+      </Page>
+    );
+  }
+
+  const d = day.data;
+
+  return (
+    <Page>
+      <PageHeader
+        title="Day end"
+        description={`${d.outlet.name} · ${d.businessDate}`}
+        badge={d.closedAt ? (
+          <span className="inline-flex items-center gap-1.5 rounded-full bg-green-50 border border-success px-3 py-1 text-sm text-success-dark">
+            <Lock className="size-3.5" />
+            Closed {d.closedAt}{d.closedBy ? ` by ${d.closedBy}` : ""}
+          </span>
+        ) : undefined}
+      />
+
+      <Steps current={step} onPick={setStep} blockers={d.blockers.length} />
+
+      {step === "overview" && <Overview day={d} />}
+      {step === "cash" && (
+        <CashStep hotelId={hotelId} day={d} onDone={refresh} />
+      )}
+      {step === "finalize" && (
+        <Finalize hotelId={hotelId} day={d} onDone={refresh}
+                  onBack={() => setStep("cash")} />
+      )}
+    </Page>
+  );
+}
+
+/* ── The three steps ──────────────────────────────────────────────
+   Touch targets, because this is done at a terminal at midnight by
+   somebody who has been standing for nine hours. */
+function Steps({ current, onPick, blockers }: {
+  current: Step; onPick: (s: Step) => void; blockers: number;
+}) {
+  return (
+    <div className="grid grid-cols-3 gap-2 mb-6">
+      {STEPS.map((s, i) => {
+        const active = s.id === current;
+        return (
+          <button
+            key={s.id}
+            type="button"
+            onClick={() => onPick(s.id)}
+            className={cn(
+              "min-h-14 px-4 py-2.5 rounded-lg border text-left cursor-pointer",
+              "transition-colors duration-150",
+              active
+                ? "bg-ink-900 border-ink-900 text-white"
+                : "bg-white border-grey-300 hover:border-grey-400",
+            )}
+          >
+            <span className="flex items-center gap-2">
+              <span className={cn(
+                "size-6 rounded-full grid place-items-center text-xs font-semibold shrink-0",
+                active ? "bg-white/20" : "bg-grey-100 text-grey-600",
+              )}>
+                {i + 1}
+              </span>
+              <span className="min-w-0">
+                <span className="block text-base font-medium truncate">
+                  {s.label}
+                  {s.id === "finalize" && blockers > 0 && (
+                    <span className="ml-1.5 text-warning">·</span>
+                  )}
+                </span>
+                <span className={cn(
+                  "block text-xs truncate",
+                  active ? "text-white/70" : "text-grey-500",
+                )}>
+                  {s.hint}
+                </span>
+              </span>
+            </span>
+          </button>
+        );
+      })}
+    </div>
+  );
+}
+
+/* ── Step one: what the shift did ────────────────────────────────── */
+function Overview({ day }: { day: DayEnd }) {
+  const s = day.summary;
+  const methods = Object.entries(s.byMethod)
+    .sort(([, a], [, b]) => b - a);
+
+  return (
+    <div className="space-y-6">
+      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+        <Figure label="Settled" value={money(s.settledValue)}
+                sub={`${s.settledOrders} ${s.settledOrders === 1 ? "bill" : "bills"}`} />
+        {/* Not "cancelled and forgotten" — every one carries a reason,
+            and the total is what walked out of the door. */}
+        <Figure label="Walked out" value={money(s.abandonedValue)}
+                sub={`${s.abandonedOrders} abandoned`}
+                tone={s.abandonedOrders > 0 ? "warn" : undefined} />
+        <Figure label="Discount given" value={money(s.discountGiven)}
+                sub="Off the settled bills" />
+        <Figure label="Complimentary" value={String(s.compOrders)}
+                sub={s.compOrders === 1 ? "bill, nothing to pay" : "bills, nothing to pay"} />
+      </div>
+
+      <Card>
+        <CardHeader title="How the money arrived" />
+        <CardBody>
+          {methods.length === 0 ? (
+            <p className="text-grey-500">Nothing has been settled yet today.</p>
+          ) : (
+            <dl className="divide-y divide-grey-200">
+              {methods.map(([method, amount]) => (
+                <div key={method} className="flex items-baseline justify-between py-2.5">
+                  <dt className="text-base">{METHOD_LABEL[method] ?? method}</dt>
+                  <dd className="text-base font-medium tabular">{money(amount)}</dd>
+                </div>
+              ))}
+            </dl>
+          )}
+          {/* The distinction the drawer stands or falls on. */}
+          <p className="mt-3 text-sm text-grey-500">
+            Only cash reaches the drawer. A card settlement and a bill
+            charged to a room are business done — they are not in the tin.
+          </p>
+        </CardBody>
+      </Card>
+    </div>
+  );
+}
+
+function Figure({ label, value, sub, tone }: {
+  label: string; value: string; sub: string; tone?: "warn";
+}) {
+  return (
+    <Card>
+      <CardBody>
+        <p className="text-sm text-grey-500">{label}</p>
+        <p className={cn(
+          "mt-1 text-2xl font-semibold tabular",
+          tone === "warn" ? "text-warning-dark" : "text-ink-900",
+        )}>
+          {value}
+        </p>
+        <p className="mt-0.5 text-sm text-grey-500">{sub}</p>
+      </CardBody>
+    </Card>
+  );
+}
+
+/* ── Step two: what is in the tin ─────────────────────────────────
+   The arithmetic somebody argues about, laid out as a sum rather
+   than as a total, so the disagreement lands on a line and not on
+   the answer. */
+function CashStep({ hotelId, day, onDone }: {
+  hotelId: string; day: DayEnd; onDone: () => void;
+}) {
+  const closed = Boolean(day.closedAt);
+
+  /* Seeded from the count that exists, so re-opening the step shows
+     what was typed rather than an empty grid. */
+  const [counts, setCounts] = useState<Record<number, string>>(() => {
+    const seed: Record<number, string> = {};
+    for (const d of day.cash.denominations) seed[d.value] = String(d.count);
+    return seed;
+  });
+  const [opening, setOpening] = useState(String(day.cash.opening));
+  const [saving, setSaving] = useState(false);
+
+  const counted = useMemo(
+    () => DENOMINATIONS.reduce(
+      (sum, v) => sum + v * (Number(counts[v]) || 0), 0),
+    [counts]);
+
+  const openingNum = Number(opening) || 0;
+  /* The expected figure the server sent already includes the opening it
+     has on file. Re-typing it here changes the sum, so the difference
+     is shown against the opening on screen. */
+  const expected = day.cash.expected - day.cash.opening + openingNum;
+  const variance = counted - expected;
+
+  const save = async () => {
+    setSaving(true);
+    const res = await countDrawer(hotelId, {
+      opening: openingNum,
+      denominations: DENOMINATIONS
+        .map((v) => ({ value: v, count: Number(counts[v]) || 0 }))
+        .filter((d) => d.count > 0),
+    });
+    setSaving(false);
+    if (!res.ok) return toast.error("Not saved", res.reason);
+    toast.success("Count saved", `${money(counted)} in the drawer.`);
+    onDone();
+  };
+
+  return (
+    <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_360px]">
+      <div className="space-y-6">
+        <Card>
+          <CardHeader
+            title="Count the drawer"
+            description="Notes and coins, as they come out of the tin."
+          />
+          <CardBody className="space-y-4">
+            <Field label="Opening float"
+                   hint="What was in the tin at the start of the shift.">
+              {(f) => (
+                <Input
+                  {...fieldProps(f)}
+                  type="number" inputMode="decimal" min={0}
+                  value={opening} disabled={closed}
+                  onChange={(e) => setOpening(e.target.value)}
+                  className="h-12 text-lg tabular"
+                />
+              )}
+            </Field>
+
+            <div className="grid gap-2 sm:grid-cols-2">
+              {DENOMINATIONS.map((value) => {
+                const n = Number(counts[value]) || 0;
+                return (
+                  <div key={value}
+                       className="flex items-center gap-3 rounded-lg border border-grey-200 px-3 py-2">
+                    <span className="w-14 text-base font-medium tabular shrink-0">
+                      ₹{value}
+                    </span>
+                    <span className="text-grey-400">×</span>
+                    <Input
+                      type="number" inputMode="numeric" min={0}
+                      value={counts[value] ?? ""} disabled={closed}
+                      placeholder="0"
+                      onChange={(e) => setCounts(
+                        (c) => ({ ...c, [value]: e.target.value }))}
+                      className="h-12 w-24 text-lg tabular"
+                      aria-label={`Number of ₹${value} notes`}
+                    />
+                    {/* A dash, not a zero. Nobody counted zero here. */}
+                    <span className="ml-auto text-base tabular text-grey-600">
+                      {n > 0 ? money(value * n) : "—"}
+                    </span>
+                  </div>
+                );
+              })}
+            </div>
+
+            {!closed && (
+              <Button onClick={save} disabled={saving} className="h-12 w-full text-base">
+                {saving ? "Saving…" : `Save the count — ${money(counted)}`}
+              </Button>
+            )}
+          </CardBody>
+        </Card>
+
+        <Movements hotelId={hotelId} day={day} onDone={onDone} />
+      </div>
+
+      <div className="space-y-4">
+        <Card>
+          <CardHeader title="The sum" />
+          <CardBody>
+            <dl className="divide-y divide-grey-200">
+              <Line label="Opening float" value={openingNum} />
+              <Line label="Cash taken"
+                    value={day.summary.byMethod["cash"] ?? 0} />
+              {MOVEMENTS.map((m) => {
+                const total = day.movements
+                  .filter((x) => x.kind === m.kind)
+                  .reduce((s, x) => s + x.amount, 0);
+                if (total === 0) return null;
+                return (
+                  <Line key={m.kind} label={m.label}
+                        value={m.sign * total} signed />
+                );
+              })}
+              <div className="flex items-baseline justify-between py-3">
+                <dt className="text-base font-medium">Expected</dt>
+                <dd className="text-lg font-semibold tabular">
+                  {moneyPrecise(expected)}
+                </dd>
+              </div>
+              <div className="flex items-baseline justify-between py-3">
+                <dt className="text-base font-medium">Counted</dt>
+                <dd className="text-lg font-semibold tabular">
+                  {counted > 0 ? moneyPrecise(counted) : "—"}
+                </dd>
+              </div>
+            </dl>
+
+            {/* Loud, and in one place. */}
+            <Variance amount={counted > 0 ? variance : null} />
+          </CardBody>
+        </Card>
+      </div>
+    </div>
+  );
+}
+
+function Line({ label, value, signed }: {
+  label: string; value: number; signed?: boolean;
+}) {
+  return (
+    <div className="flex items-baseline justify-between py-2.5">
+      <dt className="text-base text-grey-600">{label}</dt>
+      <dd className="text-base tabular">
+        {signed && value > 0 ? "+" : ""}
+        {signed && value < 0 ? "−" : ""}
+        {money(Math.abs(value))}
+      </dd>
+    </div>
+  );
+}
+
+function Variance({ amount }: { amount: number | null }) {
+  if (amount === null) {
+    return (
+      <p className="mt-4 rounded-lg bg-grey-50 border border-grey-200 px-4 py-3 text-base text-grey-600">
+        Nothing counted yet.
+      </p>
+    );
+  }
+  const balanced = Math.abs(amount) < 0.01;
+  return (
+    <div className={cn(
+      "mt-4 rounded-lg border px-4 py-3",
+      balanced ? "bg-green-50 border-success"
+               : "bg-yellow-50 border-brand-yellow",
+    )}>
+      <p className="flex items-center gap-2 text-base font-medium">
+        {balanced
+          ? <><Check className="size-4 text-success" /> The drawer balances</>
+          : <><AlertTriangle className="size-4 text-warning-dark" />
+              {amount > 0 ? "Over" : "Short"} by {moneyPrecise(Math.abs(amount))}</>}
+      </p>
+      {!balanced && (
+        <p className="mt-1 text-sm text-grey-600">
+          This does not stop the close. It has to be written down.
+        </p>
+      )}
+    </div>
+  );
+}
+
+/* ── Money in and out that is not a sale ─────────────────────────── */
+function Movements({ hotelId, day, onDone }: {
+  hotelId: string; day: DayEnd; onDone: () => void;
+}) {
+  const [open, setOpen] = useState(false);
+  const [kind, setKind] = useState<MovementKind>("expense");
+  const [amount, setAmount] = useState("");
+  const [reason, setReason] = useState("");
+  const [saving, setSaving] = useState(false);
+
+  const closed = Boolean(day.closedAt);
+  const chosen = MOVEMENTS.find((m) => m.kind === kind)!;
+
+  const submit = async () => {
+    setSaving(true);
+    const res = await recordMovement(hotelId, {
+      kind, amount: Number(amount), reason,
+    });
+    setSaving(false);
+    if (!res.ok) return toast.error("Not recorded", res.reason);
+    setOpen(false); setAmount(""); setReason("");
+    toast.success("Recorded", `${chosen.label} — ${money(Number(amount))}`);
+    onDone();
+  };
+
+  return (
+    <Card>
+      <CardHeader
+        title="In and out of the drawer"
+        description="Money that was not a sale."
+        actions={!closed && (
+          <Button variant="secondary" onClick={() => setOpen(true)}
+                  className="h-11">
+            <Plus className="size-4" /> Record
+          </Button>
+        )}
+      />
+      <CardBody>
+        {day.movements.length === 0 ? (
+          <p className="text-grey-500">
+            Nothing has gone in or out of the drawer today.
+          </p>
+        ) : (
+          <ul className="divide-y divide-grey-200">
+            {day.movements.map((m) => {
+              const spec = MOVEMENTS.find((x) => x.kind === m.kind);
+              const Icon = spec?.icon ?? Wallet;
+              return (
+                <li key={m.id} className="flex items-start gap-3 py-3">
+                  <Icon className={cn(
+                    "size-4 mt-1 shrink-0",
+                    spec?.sign === 1 ? "text-success" : "text-grey-500",
+                  )} />
+                  <div className="min-w-0 flex-1">
+                    <p className="text-base">{m.reason}</p>
+                    <p className="text-sm text-grey-500">
+                      {spec?.label ?? m.kind} · {m.recordedBy} · {m.at}
+                    </p>
+                  </div>
+                  <span className="text-base font-medium tabular shrink-0">
+                    {spec?.sign === 1 ? "+" : "−"}{money(m.amount)}
+                  </span>
+                </li>
+              );
+            })}
+          </ul>
+        )}
+      </CardBody>
+
+      <Dialog open={open} onOpenChange={setOpen}>
+        <DialogContent title="Money in or out">
+          <div className="space-y-4">
+            <Field label="What happened">
+              {(f) => (
+                <NativeSelect
+                  {...fieldProps(f)}
+                  value={kind}
+                  onChange={(e) => setKind(e.target.value as MovementKind)}
+                  className="h-12 text-base"
+                >
+                  {MOVEMENTS.map((m) => (
+                    <option key={m.kind} value={m.kind}>{m.label}</option>
+                  ))}
+                </NativeSelect>
+              )}
+            </Field>
+            <p className="-mt-2 text-sm text-grey-500">{chosen.hint}</p>
+
+            <Field label="How much">
+              {(f) => (
+                <Input
+                  {...fieldProps(f)}
+                  type="number" inputMode="decimal" min={0}
+                  value={amount} onChange={(e) => setAmount(e.target.value)}
+                  className="h-12 text-lg tabular" autoFocus
+                />
+              )}
+            </Field>
+
+            {/* Always. An unexplained hundred rupees out of a till is the
+                thing a day end exists to surface, and "misc" is what
+                people type when the field is optional. */}
+            <Field label="What was it for"
+                   hint="This is the line somebody asks about tomorrow.">
+              {(f) => (
+                <Textarea
+                  {...fieldProps(f)}
+                  rows={2} value={reason}
+                  onChange={(e) => setReason(e.target.value)}
+                />
+              )}
+            </Field>
+
+            <div className="flex gap-2">
+              <DialogClose asChild>
+                <Button variant="secondary" className="h-12 flex-1">Cancel</Button>
+              </DialogClose>
+              <Button
+                onClick={submit}
+                disabled={saving || !amount || !reason.trim()}
+                className="h-12 flex-1"
+              >
+                Record
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
+    </Card>
+  );
+}
+
+/* ── Step three: close it ─────────────────────────────────────────
+   The blockers first, each one named, because a refusal a person
+   cannot act on is worse than no refusal. */
+function Finalize({ hotelId, day, onDone, onBack }: {
+  hotelId: string; day: DayEnd; onDone: () => void; onBack: () => void;
+}) {
+  const [why, setWhy] = useState(day.cash.varianceReason ?? "");
+  const [closing, setClosing] = useState(false);
+
+  if (day.closedAt) {
+    return (
+      <Card>
+        <CardBody className="py-10 text-center">
+          <Lock className="mx-auto size-8 text-success" />
+          <p className="mt-3 text-lg font-medium">
+            {day.businessDate} is closed
+          </p>
+          <p className="mt-1 text-grey-600">
+            {day.closedAt}{day.closedBy ? ` by ${day.closedBy}` : ""}
+          </p>
+          {day.cash.varianceReason && (
+            <p className="mt-3 text-base text-grey-600">
+              “{day.cash.varianceReason}”
+            </p>
+          )}
+          <p className="mt-4 text-sm text-grey-500">
+            A correction is a movement on today, not an edit of yesterday.
+          </p>
+        </CardBody>
+      </Card>
+    );
+  }
+
+  const variance = day.cash.variance;
+  const needsReason = variance !== null && Math.abs(variance) >= 0.01;
+
+  const close = async () => {
+    setClosing(true);
+    const res = await closeDay(hotelId, { varianceReason: why });
+    setClosing(false);
+    if (!res.ok) return toast.error("Not closed", res.reason);
+    toast.success("Day closed", `${day.businessDate} is finalised.`);
+    onDone();
+  };
+
+  return (
+    <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_360px]">
+      <Card>
+        <CardHeader
+          title="Before it closes"
+          description="Only what a person has to decide."
+        />
+        <CardBody>
+          {day.blockers.length === 0 ? (
+            <p className="flex items-center gap-2 text-base">
+              <Check className="size-4 text-success" />
+              Nothing is outstanding.
+            </p>
+          ) : (
+            <ul className="space-y-3">
+              {day.blockers.map((b) => (
+                <li key={b.id}
+                    className="rounded-lg border border-brand-yellow bg-yellow-50 px-4 py-3">
+                  <p className="flex items-start gap-2 text-base">
+                    <AlertTriangle className="size-4 mt-0.5 shrink-0 text-warning-dark" />
+                    {b.reason}
+                  </p>
+                  {/* Named, so nobody hunts the floor for it. */}
+                  {b.detail && (
+                    <p className="mt-1 pl-6 text-base font-medium tabular">
+                      {b.detail}
+                    </p>
+                  )}
+                </li>
+              ))}
+            </ul>
+          )}
+        </CardBody>
+      </Card>
+
+      <Card>
+        <CardHeader title="The drawer" />
+        <CardBody>
+          <dl className="divide-y divide-grey-200">
+            <Line label="Expected" value={day.cash.expected} />
+            <div className="flex items-baseline justify-between py-2.5">
+              <dt className="text-base text-grey-600">Counted</dt>
+              <dd className="text-base tabular">
+                {day.cash.counted === null ? "—" : money(day.cash.counted)}
+              </dd>
+            </div>
+          </dl>
+
+          <Variance amount={variance} />
+
+          {needsReason && (
+            <Field label="Why" className="mt-4"
+                   hint="What a manager needs tomorrow is the sentence, not the number.">
+              {(f) => (
+                <Textarea
+                  {...fieldProps(f)}
+                  rows={3} value={why}
+                  onChange={(e) => setWhy(e.target.value)}
+                />
+              )}
+            </Field>
+          )}
+
+          {day.cash.counted === null && (
+            <p className="mt-4 text-base text-grey-600">
+              The drawer has not been counted.{" "}
+              <button type="button" onClick={onBack}
+                      className="underline cursor-pointer">
+                Count it
+              </button>{" "}
+              first.
+            </p>
+          )}
+
+          <Button
+            onClick={close}
+            disabled={
+              closing
+              || day.blockers.length > 0
+              || day.cash.counted === null
+              || (needsReason && !why.trim())
+            }
+            className="mt-4 h-12 w-full text-base"
+          >
+            <Banknote className="size-4" />
+            {closing ? "Closing…" : `Close ${day.businessDate}`}
+          </Button>
+          <p className="mt-2 text-center text-sm text-grey-500">
+            A closed day cannot be edited.
+          </p>
+        </CardBody>
+      </Card>
+    </div>
+  );
+}

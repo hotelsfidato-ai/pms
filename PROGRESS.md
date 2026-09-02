@@ -732,7 +732,7 @@ retried. Ledger nets to zero, room revenue still ₹4,19,578.76.
 10 Group dashboard and reports       ███████████░  11 of 11 reports, all SQL
 11 CRS bridge / SU                    ░░░░░░░░░░░░  now IN scope, after go-live
 12 Hardening and go-live             █████████░░░  + launch.sh, preflight, nginx
-13 POS upgrade — Petpooja-informed   ███████████░  11 whole — only day end remains
+13 POS upgrade — Petpooja-informed   ████████████  12 of 12 — the day end closes
 14 Modules + banquet                  █░░░░░░░░░░░  POS toggle whole; banquet is the other 11
 15 PMS upgrade — eZee-informed        ████░░░░░░░░  2 whole, 4 half — every grid lacks a screen
 ```
@@ -801,10 +801,30 @@ the one thing this file is not allowed to do.
  6 table entity                      12 printed KOT docket
 ```
 
-**None complete. Two half-units**, and both are the same shape — code that exists
-elsewhere and was never wired to the till: `roundOff` (`src/lib/rules.ts:56`, used
-by the folio) and `order_type` (`034_kot.sql`, four values, displayed by the
-kitchen pass and set by nothing).
+That list was written when **none were complete**, with two half-units of the
+same shape — code that existed elsewhere and had never been wired to the till:
+`roundOff` (`src/lib/rules.ts:56`, used by the folio) and `order_type`
+(`034_kot.sql`, four values, displayed by the kitchen pass and set by nothing).
+
+**All twelve are now whole**, each with a database, an API and a screen that was
+opened before it was called done. The last was 11, and it is the one the list
+under-described: the day end is not a cash box. It is the night audit's shape
+applied to a restaurant — refuse while a person still has to decide, and NAME
+what they have to decide.
+
+Migration 050 with 17 assertions, 8 API tests, and the three-step screen at
+`src/pages/DayEnd.tsx`. Two things in it are worth keeping in mind:
+
+**Expected cash counts cash and nothing else.** A card settlement never touched
+the tin and a bill charged to a room reached a folio; counting either would
+leave the drawer permanently "short" by the amount of business done properly.
+
+**A drawer that does not balance does not stop the close.** Only an open bill
+and an uncleared table do, because those are the two questions nobody but a
+person can answer. The money is already whatever it is, and a shift that cannot
+close is worse than a difference written down with a reason — so the variance is
+computed in one place and shown *before* the close, then recorded with the
+sentence a manager actually needs tomorrow.
 
 The order board with timers is deliberately outside this stage: it earns its place
 only if delivery or pick-up is actually taken.
@@ -815,7 +835,7 @@ moved: twenty screenshots of Petpooja set a higher bar, and two module
 requirements arrived with it. Lowering stage 7 would misreport what happened, so
 the new work is its own row. Detail in `POS-PROGRESS.md`.
 
-**132 of 180 — 73%.** Add the filled blocks above and divide by 168. That sum is the number; it is not typed separately, because it was for three audits running and drifted to "about 90%" while the bars said 70. It moved from 119 when stage 13’s three unfounded blocks came off.
+**133 of 180 — 74%.** Add the filled blocks above and divide by 180 — fifteen stages of twelve. That sum is the number; it is not typed separately, because it was for three audits running and drifted to "about 90%" while the bars said 70. It moved from 119 when stage 13’s three unfounded blocks came off, and to 133 when the day end finished stage 13.
 
 **Go-live scope — 116 of 132, 88% — unchanged.** What has to be true for a real hotel to run on this: stages 1–10 and 12. The CRS bridge (11), the POS upgrade (13), the modules (14) and the PMS upgrade (15) are all real work, and not one of them stops a guest checking in, a folio settling or a night closing.
 

@@ -45,6 +45,7 @@ import ReservationsPage from "@/pages/Reservations";
 import TillPage from "@/pages/Till";
 import FloorPage from "@/pages/Floor";
 import DocketPage from "@/pages/Docket";
+import DayEndPage from "@/pages/DayEnd";
 import BillPage from "@/pages/Bill";
 import MenuPage from "@/pages/Menu";
 import RatePlansEditor from "@/pages/RatePlans";
@@ -352,6 +353,13 @@ export default function App() {
             <Route
               path="/h/:code/menu"
               element={<><PropertyScope /><MenuPage /></>}
+            />
+            {/* Before /till/bill/:id and /till/orders/:id — a literal
+                segment beats a parameter, but the order makes it read
+                that way to a person too. */}
+            <Route
+              path="/h/:code/till/day-end"
+              element={<><PropertyScope /><DayEndPage /></>}
             />
             {/* Before /till/bill/:id, and both before /till itself —
                 react-router picks the most specific, but keeping them in

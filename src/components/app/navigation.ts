@@ -2,7 +2,7 @@ import {
   LayoutDashboard, CalendarCheck, Users, Building2, Hotel, Receipt,
   BarChart3, Bell, Settings, ShieldCheck, CalendarRange,
   FileText, Wallet, Plug, ScrollText,
-  UserCog, Palette, Terminal, MonitorSmartphone, BookOpen, Home, ClipboardList, type LucideIcon, ShieldAlert, UtensilsCrossed, Flame, LayoutGrid,
+  UserCog, Palette, Terminal, MonitorSmartphone, BookOpen, Home, ClipboardList, type LucideIcon, ShieldAlert, UtensilsCrossed, Flame, LayoutGrid, Banknote,
 } from "lucide-react";
 import { can, canAccess, type Resource, type Role } from "@/lib/permissions";
 
@@ -190,6 +190,14 @@ const SECTIONS: NavSection[] = [
          rates, because setting what a dish costs is the same kind of act
          as setting what a room costs. */
       { label: "Menu", to: "/h/:code/menu", icon: UtensilsCrossed, resource: "rate" },
+      /* Where the shift ends. Last, because it is — and beside the
+         till rather than under Finance, for the same reason the till
+         is here: a cashier counting a drawer at midnight is doing
+         restaurant work, not the front office's. */
+      {
+        label: "Day end", to: "/h/:code/till/day-end",
+        icon: Banknote, resource: "payment",
+      },
       /* What an OUTSIDE till sent and what was refused. Read-only, and
          named so nobody mistakes it for the till above. */
       { label: "Bridge", to: "/h/:code/pos", icon: Plug, resource: "invoice" },

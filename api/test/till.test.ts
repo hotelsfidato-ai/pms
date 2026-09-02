@@ -1609,3 +1609,198 @@ describe("the kitchen docket", () => {
     expect(res.status).toBe(404);
   });
 });
+
+/* ══════════════════════════════════════════════════════════════════
+   DAY END
+
+   The night audit's shape, in a restaurant: refuse while something is
+   wrong and NAME it. An open bill and an uncleared table are questions
+   a person answers.
+
+   A drawer that does not balance is NOT one of them. The money is
+   already whatever it is, and a shift that cannot close is worse than a
+   difference written down with a reason.
+   ══════════════════════════════════════════════════════════════════ */
+
+describe("day end", () => {
+  afterAll(async () => {
+    const db = await admin();
+    try {
+      await db.query("delete from pos_denominations");
+      await db.query("delete from pos_day_ends");
+      await db.query("delete from pos_cash_movements");
+    } finally {
+      await db.end();
+    }
+  });
+
+  const dayEnd = async () => {
+    const res = await as("/api/hotels/5EL/till/day-end?outlet=REST");
+    expect(res.status).toBe(200);
+    return (await res.json()) as {
+      businessDate: string;
+      summary: { settledOrders: number; settledValue: number;
+                 byMethod: Record<string, number> };
+      blockers: { id: string; reason: string; detail: string | null }[];
+      cash: { opening: number; expected: number; counted: number | null;
+              variance: number | null };
+      movements: { kind: string; amount: number; reason: string }[];
+      closedAt: string | null;
+    };
+  };
+
+  it("names the open bill that stops the close", async () => {
+    const order = await openOrder("dayend-open");
+    const item = await menuItem("Paneer Tikka");
+    await post(`/api/hotels/5EL/till/orders/${order.id}/lines`,
+      { itemId: item.id, qty: 1 });
+
+    const body = await dayEnd();
+    const blocker = body.blockers.find((b) => b.id === "open_orders");
+    expect(blocker, "an open bill must stop the close").toBeTruthy();
+    /* The refusal names the bill, so a person knows which one to go and
+       settle rather than hunting the floor. */
+    expect(blocker!.detail).toContain(order.orderNo);
+    expect(blocker!.reason).toMatch(/will not decide which/i);
+
+    const close = await post("/api/hotels/5EL/till/day-end/close", {});
+    expect(close.status).toBe(409);
+
+    await post(`/api/hotels/5EL/till/orders/${order.id}/settle`,
+      { method: "cash" });
+  });
+
+  it("expects cash in the drawer, and nothing else", async () => {
+    const cashOrder = await openOrder("dayend-cash");
+    const cardOrder = await openOrder("dayend-card");
+    const item = await menuItem("Paneer Tikka");
+    await post(`/api/hotels/5EL/till/orders/${cashOrder.id}/lines`,
+      { itemId: item.id, qty: 1 });
+    await post(`/api/hotels/5EL/till/orders/${cardOrder.id}/lines`,
+      { itemId: item.id, qty: 1 });
+
+    const before = await dayEnd();
+
+    await post(`/api/hotels/5EL/till/orders/${cashOrder.id}/settle`,
+      { method: "cash" });
+    await post(`/api/hotels/5EL/till/orders/${cardOrder.id}/settle`,
+      { method: "card" });
+
+    const after = await dayEnd();
+    const cashBill = after.summary.byMethod["cash"]! - (before.summary.byMethod["cash"] ?? 0);
+
+    /* A card settlement never touched the tin. Counting it would leave
+       the drawer permanently short by the amount of business done
+       properly. */
+    expect(after.cash.expected - before.cash.expected).toBeCloseTo(cashBill, 2);
+    expect(after.summary.byMethod["card"]).toBeGreaterThan(0);
+  });
+
+  it("refuses a movement with no reason", async () => {
+    const res = await post("/api/hotels/5EL/till/day-end/movements",
+      { kind: "expense", amount: 300 });
+    expect(res.status).toBe(409);
+    /* "Misc" is what people type when the field is optional. */
+    expect(((await res.json()) as { reason: string }).reason)
+      .toMatch(/what was it for/i);
+  });
+
+  it("moves the expectation when money goes in and out", async () => {
+    const before = await dayEnd();
+
+    await post("/api/hotels/5EL/till/day-end/movements",
+      { kind: "expense", amount: 300, reason: "vegetables" });
+    await post("/api/hotels/5EL/till/day-end/movements",
+      { kind: "top_up", amount: 500, reason: "change from the safe" });
+
+    const after = await dayEnd();
+    expect(after.cash.expected - before.cash.expected).toBeCloseTo(200, 2);
+    expect(after.movements.map((m) => m.kind).sort())
+      .toEqual(["expense", "top_up"]);
+  });
+
+  it("counts the drawer by denomination", async () => {
+    const res = await post("/api/hotels/5EL/till/day-end/count", {
+      opening: 2000,
+      denominations: [
+        { value: 500, count: 4 }, { value: 100, count: 3 },
+        { value: 50, count: 2 },
+      ],
+    });
+    expect(res.status, await res.clone().text()).toBe(200);
+
+    const body = await dayEnd();
+    /* 2000 + 300 + 100 */
+    expect(body.cash.counted).toBe(2400);
+    expect(body.cash.opening).toBe(2000);
+    /* The one figure anybody argues about, worked out before the close
+       rather than discovered after it. */
+    expect(body.cash.variance).toBeCloseTo(2400 - body.cash.expected, 2);
+  });
+
+  /* Every other test in this file opens an order and leaves it. That is
+     twenty-five open bills, and the blocker finds all of them — which is
+     the blocker working, not a fault. A real day end has the same
+     requirement, so the close tests below clear the floor first. */
+  const clearTheFloor = async () => {
+    const db = await admin();
+    try {
+      const { rows } = await db.query<{ id: string }>(
+        `select o.id::text from pos_orders o
+           join pos_outlets ou on ou.id = o.outlet_id
+           join hotels h on h.id = o.hotel_id
+          where h.code = '5EL' and ou.code = 'REST'
+            and (o.status = 'open'
+                 or (o.status = 'settled' and o.cleared_at is null
+                     and o.table_id is not null))`);
+      for (const r of rows) {
+        await db.query(
+          `update pos_orders
+              set status = case when status = 'open' then 'abandoned' else status end,
+                  abandoned_reason = case when status = 'open'
+                                          then 'test teardown' else abandoned_reason end,
+                  cleared_at = coalesce(cleared_at, now())
+            where id = $1`, [r.id]);
+      }
+    } finally {
+      await db.end();
+    }
+  };
+
+  it("refuses to close on a difference with no explanation", async () => {
+    await clearTheFloor();
+    const body = await dayEnd();
+    expect(Math.abs(body.cash.variance!)).toBeGreaterThan(0);
+
+    const res = await post("/api/hotels/5EL/till/day-end/close", {});
+    expect(res.status).toBe(409);
+    const reason = ((await res.json()) as { reason: string }).reason;
+    expect(reason).toMatch(/over|short/i);
+    /* And says it closes once there is a sentence. */
+    expect(reason).toMatch(/say why/i);
+  });
+
+  it("closes with the reason, and stays closed", async () => {
+    const res = await post("/api/hotels/5EL/till/day-end/close",
+      { varianceReason: "counted twice, not found" });
+    expect(res.status, await res.clone().text()).toBe(200);
+
+    const body = await dayEnd();
+    expect(body.closedAt).toBeTruthy();
+
+    const again = await post("/api/hotels/5EL/till/day-end/close",
+      { varianceReason: "again" });
+    expect(again.status).toBe(409);
+    expect(((await again.json()) as { reason: string }).reason)
+      .toMatch(/already closed/i);
+  });
+
+  it("will not take a movement against a closed day", async () => {
+    const res = await post("/api/hotels/5EL/till/day-end/movements",
+      { kind: "expense", amount: 50, reason: "late delivery" });
+    expect(res.status).toBe(409);
+    /* A correction is a movement on TODAY, not an edit of yesterday. */
+    expect(((await res.json()) as { reason: string }).reason)
+      .toMatch(/against today/i);
+  });
+});

@@ -1482,6 +1482,335 @@ till.get("/:code/till/waiters", async (c) => {
   return body ? c.json(body) : c.json({ error: "No such property." }, 404);
 });
 
+
+/* ── Day end ──────────────────────────────────────────────────────
+   Three steps: the overview, the cash count, and the close.
+
+   THE SAME SHAPE AS THE NIGHT AUDIT, and not a second one. The hotel's
+   audit refuses while something is wrong and NAMES it. A restaurant
+   close has the same character — an open bill and an uncleared table
+   are questions a person answers, not conditions a job can decide.
+
+   A drawer that does not balance is NOT one of them. The money is
+   already whatever it is, and a shift that cannot close is worse than
+   a difference that is written down with a reason. */
+
+till.get("/:code/till/day-end", async (c) => {
+  const body = await withSession(c.get("subject"), async (client) => {
+    const hotelId = await hotelFor(client, c.req.param("code"));
+    if (!hotelId) return null;
+
+    const outletCode = (c.req.query("outlet") ?? "REST").toUpperCase();
+    const { rows: outlet } = await client.query<{ id: string; name: string }>(
+      `select id::text, name from pos_outlets
+        where hotel_id = $1 and code = $2 and is_active`,
+      [hotelId, outletCode],
+    );
+    if (!outlet[0]) return null;
+
+    /* The hotel's operating day, not the clock. A close started at 00:40
+       is closing the evening that is still being served. */
+    const businessDate = c.req.query("date")
+      ?? await businessDateFor(client, hotelId);
+
+    const { rows: summary } = await client.query<{
+      settled_orders: number; settled_value: string;
+      abandoned_orders: number; abandoned_value: string;
+      comp_orders: number; discount_given: string;
+      by_method: Record<string, string>;
+    }>(
+      `select settled_orders, settled_value::text, abandoned_orders,
+              abandoned_value::text, comp_orders, discount_given::text,
+              by_method
+         from app.pos_day_summary($1, $2::date)`,
+      [outlet[0].id, businessDate],
+    );
+
+    const { rows: blockers } = await client.query<{
+      id: string; reason: string; detail: string | null;
+    }>(
+      `select id, reason, detail from app.pos_day_end_blockers($1, $2::date)`,
+      [outlet[0].id, businessDate],
+    );
+
+    const { rows: movements } = await client.query<{
+      id: string; kind: string; amount: string; reason: string;
+      recorded_by_name: string; recorded_at: string;
+    }>(
+      `select m.id::text, m.kind, m.amount::text, m.reason,
+              s.full_name as recorded_by_name,
+              to_char(m.recorded_at, 'HH24:MI') as recorded_at
+         from pos_cash_movements m
+         join staff s on s.id = m.recorded_by
+        where m.outlet_id = $1 and m.business_date = $2::date
+        order by m.recorded_at`,
+      [outlet[0].id, businessDate],
+    );
+
+    const { rows: day } = await client.query<{
+      id: string; opening_cash: string; counted_cash: string | null;
+      variance_reason: string | null; closed_at: string | null;
+      closed_by_name: string | null;
+    }>(
+      `select d.id::text, d.opening_cash::text, d.counted_cash::text,
+              d.variance_reason, to_char(d.closed_at, 'DD Mon, HH24:MI') as closed_at,
+              s.full_name as closed_by_name
+         from pos_day_ends d
+         left join staff s on s.id = d.closed_by
+        where d.outlet_id = $1 and d.business_date = $2::date`,
+      [outlet[0].id, businessDate],
+    );
+
+    const { rows: expected } = await client.query<{ amount: string }>(
+      `select app.pos_expected_cash($1, $2::date)::text as amount`,
+      [outlet[0].id, businessDate],
+    );
+
+    const denominations = day[0]
+      ? (await client.query<{ value: string; count: number }>(
+          `select value::text, count from pos_denominations
+            where day_end_id = $1 order by value desc`, [day[0].id])).rows
+      : [];
+
+    const counted = day[0]?.counted_cash;
+    const expectedCash = Number(expected[0]!.amount);
+
+    return {
+      outlet: { code: outletCode, name: outlet[0].name },
+      businessDate,
+      summary: {
+        settledOrders: summary[0]!.settled_orders,
+        settledValue: Number(summary[0]!.settled_value),
+        abandonedOrders: summary[0]!.abandoned_orders,
+        abandonedValue: Number(summary[0]!.abandoned_value),
+        compOrders: summary[0]!.comp_orders,
+        discountGiven: Number(summary[0]!.discount_given),
+        byMethod: Object.fromEntries(
+          Object.entries(summary[0]!.by_method ?? {})
+            .map(([k, v]) => [k, Number(v)])),
+      },
+      /* What a PERSON must decide before this can close. */
+      blockers,
+      movements: movements.map((m) => ({
+        id: m.id, kind: m.kind, amount: Number(m.amount),
+        reason: m.reason, recordedBy: m.recorded_by_name, at: m.recorded_at,
+      })),
+      cash: {
+        opening: Number(day[0]?.opening_cash ?? 0),
+        expected: expectedCash,
+        counted: counted === null || counted === undefined ? null : Number(counted),
+        /* The one figure anybody argues about, worked out in one place
+           and shown BEFORE the close rather than discovered after it. */
+        variance: counted === null || counted === undefined
+          ? null : Number(counted) - expectedCash,
+        varianceReason: day[0]?.variance_reason ?? null,
+        denominations: denominations.map((d) => ({
+          value: Number(d.value), count: d.count,
+        })),
+      },
+      closedAt: day[0]?.closed_at ?? null,
+      closedBy: day[0]?.closed_by_name ?? null,
+    };
+  });
+
+  return body ? c.json(body) : c.json({ error: "No such property." }, 404);
+});
+
+till.post("/:code/till/day-end/movements", async (c) => {
+  type MoveBody = {
+    outlet?: string; kind?: string; amount?: number; reason?: string;
+  };
+  const input = await c.req.json<MoveBody>().catch(() => ({}) as MoveBody);
+
+  const KINDS = ["expense", "top_up", "withdrawal", "due_collection"];
+  if (!input.kind || !KINDS.includes(input.kind)) {
+    return c.json(refuse("Money out, money in, to the safe, or a due paid?"), 409);
+  }
+  if (!Number.isFinite(Number(input.amount)) || Number(input.amount) <= 0) {
+    return c.json(refuse("How much?"), 409);
+  }
+  /* ALWAYS. An unexplained hundred rupees out of a till is the thing a
+     day end exists to surface, and "misc" is what people type when the
+     field is optional. */
+  const reason = input.reason?.trim();
+  if (!reason) {
+    return c.json(refuse("What was it for? This is the line somebody asks about."), 409);
+  }
+
+  const result = await withSession(c.get("subject"), async (client, session) => {
+    const hotelId = await hotelFor(client, c.req.param("code"));
+    if (!hotelId) return null;
+
+    const { rows: outlet } = await client.query<{ id: string }>(
+      `select id::text from pos_outlets
+        where hotel_id = $1 and code = $2 and is_active`,
+      [hotelId, (input.outlet ?? "REST").toUpperCase()],
+    );
+    if (!outlet[0]) return refuse("No such outlet.");
+
+    const businessDate = await businessDateFor(client, hotelId);
+
+    const { rows: closed } = await client.query<{ closed_at: string | null }>(
+      `select closed_at::text from pos_day_ends
+        where outlet_id = $1 and business_date = $2::date`,
+      [outlet[0].id, businessDate],
+    );
+    if (closed[0]?.closed_at) {
+      /* A correction is a movement on TODAY, not an edit of yesterday. */
+      return refuse(
+        "That day is closed. Record it against today instead.");
+    }
+
+    await client.query(
+      `insert into pos_cash_movements
+         (hotel_id, outlet_id, business_date, kind, amount, reason, recorded_by)
+       values ($1,$2,$3,$4,$5,$6,$7)`,
+      [hotelId, outlet[0].id, businessDate, input.kind,
+       Number(input.amount).toFixed(2), reason, session.staffId],
+    );
+
+    return { ok: true as const };
+  });
+
+  if (!result) return c.json({ error: "No such property." }, 404);
+  return c.json(result, "ok" in result && result.ok ? 200 : 409);
+});
+
+till.post("/:code/till/day-end/count", async (c) => {
+  type CountBody = {
+    outlet?: string; opening?: number;
+    denominations?: { value: number; count: number }[];
+  };
+  const input = await c.req.json<CountBody>().catch(() => ({}) as CountBody);
+
+  const result = await withSession(c.get("subject"), async (client) => {
+    const hotelId = await hotelFor(client, c.req.param("code"));
+    if (!hotelId) return null;
+
+    const { rows: outlet } = await client.query<{ id: string }>(
+      `select id::text from pos_outlets
+        where hotel_id = $1 and code = $2 and is_active`,
+      [hotelId, (input.outlet ?? "REST").toUpperCase()],
+    );
+    if (!outlet[0]) return refuse("No such outlet.");
+
+    const businessDate = await businessDateFor(client, hotelId);
+
+    const { rows: day } = await client.query<{ id: string; closed_at: string | null }>(
+      `insert into pos_day_ends
+         (hotel_id, outlet_id, business_date, opening_cash)
+       values ($1,$2,$3,$4)
+       on conflict (outlet_id, business_date) do update
+          set opening_cash = coalesce($4, pos_day_ends.opening_cash)
+       returning id::text, closed_at::text`,
+      [hotelId, outlet[0].id, businessDate,
+       input.opening === undefined ? 0 : Number(input.opening).toFixed(2)],
+    );
+    const dayId = day[0]!.id;
+
+    if (input.denominations) {
+      /* Replaced wholesale. A count is one act — somebody empties the tin
+         and counts it — and merging a new count into an old one leaves
+         denominations nobody typed this time. */
+      await client.query(
+        `delete from pos_denominations where day_end_id = $1`, [dayId]);
+      for (const d of input.denominations) {
+        if (!Number.isFinite(d.value) || d.value <= 0) continue;
+        if (!Number.isInteger(d.count) || d.count < 0) continue;
+        if (d.count === 0) continue;
+        await client.query(
+          `insert into pos_denominations (day_end_id, value, count)
+           values ($1,$2,$3)`, [dayId, d.value, d.count]);
+      }
+
+      const { rows: total } = await client.query<{ total: string }>(
+        `select coalesce(sum(value * count), 0)::text as total
+           from pos_denominations where day_end_id = $1`, [dayId]);
+      await client.query(
+        `update pos_day_ends set counted_cash = $1 where id = $2`,
+        [total[0]!.total, dayId]);
+    }
+
+    return { ok: true as const };
+  });
+
+  if (!result) return c.json({ error: "No such property." }, 404);
+  return c.json(result, "ok" in result && result.ok ? 200 : 409);
+});
+
+till.post("/:code/till/day-end/close", async (c) => {
+  type CloseBody = { outlet?: string; varianceReason?: string };
+  const input = await c.req.json<CloseBody>().catch(() => ({}) as CloseBody);
+
+  const result = await withSession(c.get("subject"), async (client, session) => {
+    const hotelId = await hotelFor(client, c.req.param("code"));
+    if (!hotelId) return null;
+
+    const { rows: outlet } = await client.query<{ id: string }>(
+      `select id::text from pos_outlets
+        where hotel_id = $1 and code = $2 and is_active`,
+      [hotelId, (input.outlet ?? "REST").toUpperCase()],
+    );
+    if (!outlet[0]) return refuse("No such outlet.");
+
+    const businessDate = await businessDateFor(client, hotelId);
+
+    /* The night audit's rule. Only what a person must decide, and the
+       refusal names it. */
+    const { rows: blockers } = await client.query<{ reason: string }>(
+      `select reason from app.pos_day_end_blockers($1, $2::date)`,
+      [outlet[0].id, businessDate],
+    );
+    if (blockers.length) {
+      return { ok: false as const, reason: blockers.map((b) => b.reason).join(" "),
+               blockers };
+    }
+
+    const { rows: day } = await client.query<{
+      id: string; counted_cash: string | null; closed_at: string | null;
+    }>(
+      `select id::text, counted_cash::text, closed_at::text from pos_day_ends
+        where outlet_id = $1 and business_date = $2::date`,
+      [outlet[0].id, businessDate],
+    );
+    if (!day[0]) return refuse("Count the drawer first.");
+    if (day[0].closed_at) return refuse("That day is already closed.");
+    if (day[0].counted_cash === null) return refuse("Count the drawer first.");
+
+    const { rows: expected } = await client.query<{ amount: string }>(
+      `select app.pos_expected_cash($1, $2::date)::text as amount`,
+      [outlet[0].id, businessDate],
+    );
+    const variance =
+      Number(day[0].counted_cash) - Number(expected[0]!.amount);
+
+    /* A difference is RECORDED, not refused — but it must say why. The
+       money is already whatever it is; what a manager needs tomorrow is
+       the sentence, not the number on its own. */
+    if (Math.abs(variance) >= 0.01 && !input.varianceReason?.trim()) {
+      return refuse(
+        `The drawer is ${variance > 0 ? "over" : "short"} by ` +
+        `₹${Math.abs(variance).toFixed(2)}. Say why, and it closes.`);
+    }
+
+    await client.query(
+      `update pos_day_ends
+          set variance_reason = $1, closed_by = $2, closed_at = now()
+        where id = $3`,
+      [input.varianceReason?.trim() || null, session.staffId, day[0].id],
+    );
+
+    return {
+      ok: true as const, businessDate, variance,
+      counted: Number(day[0].counted_cash),
+      expected: Number(expected[0]!.amount),
+    };
+  });
+
+  if (!result) return c.json({ error: "No such property." }, 404);
+  return c.json(result, "ok" in result && result.ok ? 200 : 409);
+});
+
 /* ── Settling ─────────────────────────────────────────────────────── */
 
 till.post("/:code/till/orders/:id/settle", async (c) => {

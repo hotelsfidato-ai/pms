@@ -733,3 +733,113 @@ export async function getDocket(
     return null;
   }
 }
+
+/* ── The day end ──────────────────────────────────────────────────
+   Three steps, as the screens have it:
+
+     Day End Overview  →  Cash Calculations  →  Finalize
+
+   The same shape as the night audit and deliberately not a second
+   one. An open bill and an uncleared table are questions a person
+   answers; a drawer that does not balance is not one of them — the
+   money is already whatever it is, and a shift that cannot close is
+   worse than a difference written down with a reason. */
+
+export type MovementKind =
+  | "expense"        // paid out: vegetables, a repair
+  | "top_up"         // put in: change from the safe
+  | "withdrawal"     // taken out: cash to the safe mid-shift
+  | "due_collection"; // a bill settled to an account, paid later in cash
+
+export interface DayEnd {
+  outlet: { code: string; name: string };
+  /** The hotel's operating day, not the clock. A close started at 00:40
+      is closing the evening that is still being served. */
+  businessDate: string;
+  summary: {
+    settledOrders: number;
+    settledValue: number;
+    abandonedOrders: number;
+    abandonedValue: number;
+    compOrders: number;
+    discountGiven: number;
+    byMethod: Record<string, number>;
+  };
+  /** What a PERSON must decide before this can close. Empty is the
+      only state in which the Finalize button does anything. */
+  blockers: { id: string; reason: string; detail: string | null }[];
+  movements: {
+    id: string; kind: MovementKind; amount: number;
+    reason: string; recordedBy: string; at: string;
+  }[];
+  cash: {
+    opening: number;
+    /** Opening + cash taken + money in − money out. CASH ONLY: a card
+        settlement never touched the tin. */
+    expected: number;
+    /** Null until somebody counts. Not zero — nobody counted zero. */
+    counted: number | null;
+    variance: number | null;
+    varianceReason: string | null;
+    denominations: { value: number; count: number }[];
+  };
+  closedAt: string | null;
+  closedBy: string | null;
+}
+
+export async function getDayEnd(
+  hotelId: string, outlet = "REST",
+): Promise<DayEnd | null> {
+  if (!hotelId) return null;
+  try {
+    return await api<DayEnd>(
+      `/api/hotels/${hotelId}/till/day-end?outlet=${outlet}`);
+  } catch {
+    return null;
+  }
+}
+
+export async function recordMovement(
+  hotelId: string,
+  input: { outlet?: string; kind: MovementKind; amount: number; reason: string },
+): Promise<Refusal> {
+  return till(hotelId, "day-end/movements", input);
+}
+
+/** The count, replaced wholesale. Somebody empties the tin and counts
+    it — merging a new count into an old one leaves denominations
+    nobody typed this time. */
+export async function countDrawer(
+  hotelId: string,
+  input: { outlet?: string; opening: number;
+           denominations: { value: number; count: number }[] },
+): Promise<Refusal> {
+  return till(hotelId, "day-end/count", input);
+}
+
+export async function closeDay(
+  hotelId: string,
+  input: { outlet?: string; varianceReason?: string },
+): Promise<Refusal> {
+  return till(hotelId, "day-end/close", input);
+}
+
+/** One shape for all three, because all three refuse the same way. */
+type Refusal = { ok: true } | { ok: false; reason: string };
+
+async function till(
+  hotelId: string, path: string, body: unknown,
+): Promise<Refusal> {
+  try {
+    await api(`/api/hotels/${hotelId}/till/${path}`, {
+      method: "POST", body: JSON.stringify(body),
+    });
+    return { ok: true };
+  } catch (error) {
+    if (error instanceof ApiError) {
+      const p = error.body as { reason?: string } | undefined;
+      return { ok: false, reason: p?.reason ?? error.message };
+    }
+    throw error;
+  }
+}

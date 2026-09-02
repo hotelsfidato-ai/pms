@@ -1888,6 +1888,50 @@ years that weight is a 4, and re-scoring on the user's actual criterion
 **When an implementation departs from a written design, the departure
 is the deliverable — say it out loud, in the same breath as the code.**
 
+### 92 · The dev database was empty and I blamed the code
+
+The day-end screen showed **"No outlet"**. The route was right, the API
+route existed, the API tests were green. I went looking for the bug in
+the code I had just written.
+
+There was no bug. `db/tests/run.sh` **rebuilds from zero**, and it had
+run — so the demo was gone, and with it every outlet. The runner even
+says so:
+
+```
+note  fidato was rebuilt, so the demo is gone.
+      Bring it back with:  cd api && npm run load-demo
+```
+
+Two things then compounded it. I probed the database as `pms_app` to
+check, got `0 hotels`, and nearly concluded the whole database was
+empty — **`pms_app` is subject to RLS with no session set, so it sees
+nothing by design.** That probe can never answer "is there data here".
+And once the database had been dropped under a running API, its
+connection pool was poisoned: every request failed with `database
+"fidato" does not exist` long after the database was back.
+
+**Before debugging a "missing data" symptom: check that the demo is
+loaded, probe as a superuser, and restart anything holding a pool.**
+Three cheap checks that between them explain nearly every empty screen
+on this project.
+
+### 93 · The refusal did not agree with itself
+
+`app.pos_day_end_blockers` pluralised its subject and not its pronouns:
+
+> There **is 1 bill** still open. Settle **them**, or close **them**
+> unpaid with a reason.
+
+It reads fine in a migration and badly on a screen, which is the only
+place anybody ever reads it. Caught by opening the page, not by the 17
+assertions that check the function's behaviour — **a test asserts what
+a sentence does, never how it reads.**
+
+The same applied to the second blocker: *"1 table has … Clear them"*.
+Both now branch on the count for the whole sentence rather than
+splicing a plural noun into a fixed frame.
+
 ## Verification traps
 
 ### Never test a Tailwind utility by injecting the class at runtime

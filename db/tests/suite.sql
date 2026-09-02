@@ -2347,3 +2347,211 @@ begin
   select count(*) into n from hotels where code in ('TRG', 'TRH');
   perform test.ok('covers','the fixture does not outlive the test', n = 0);
 end $$;
+
+
+-- =============================================================================
+-- Day end  (050)
+-- =============================================================================
+-- The arithmetic somebody argues about at the end of a shift, and the two
+-- questions a close will not answer for them.
+-- =============================================================================
+do $$
+declare
+  v_hotel uuid; v_staff uuid; v_outlet uuid; v_cat uuid; v_item uuid;
+  v_section uuid; v_table uuid;
+  v_cash uuid; v_card uuid; v_open uuid; v_day uuid;
+  d date; n int; expected numeric; settled numeric; blockers int;
+begin
+  d := date '2026-07-15';
+
+  insert into hotels (code, name, city, timezone)
+  values ('TRJ', 'Day end fixture', 'Akkalkot', 'Asia/Kolkata')
+  returning id into v_hotel;
+
+  select id into v_staff from staff limit 1;
+  insert into staff_hotels (staff_id, hotel_id, role)
+  values (v_staff, v_hotel, 'pos') on conflict do nothing;
+
+  insert into pos_outlets (hotel_id, code, name, staff_id)
+  values (v_hotel, 'TRJO', 'Day end outlet', v_staff) returning id into v_outlet;
+  insert into pos_menu_categories (hotel_id, name)
+  values (v_hotel, 'Food') returning id into v_cat;
+  insert into pos_menu_items (hotel_id, category_id, name, price, tax_rate)
+  values (v_hotel, v_cat, 'Thali', 1000.00, 0.00) returning id into v_item;
+
+  insert into pos_sections (hotel_id, outlet_id, name)
+  values (v_hotel, v_outlet, 'Main') returning id into v_section;
+  insert into pos_tables (hotel_id, section_id, label)
+  values (v_hotel, v_section, 'T1') returning id into v_table;
+
+  -- ---------- a cash bill, and a card bill ----------
+  /* Opened, rung, THEN settled — the order a till does it in. Created as
+     settled first, `pos_order_lines_frozen` refuses the lines, and it is
+     right to: a paid bill takes no edits. */
+  insert into pos_orders (hotel_id, outlet_id, order_no, business_date, opened_by)
+  values (v_hotel, v_outlet, 'TRJ-1', d, v_staff) returning id into v_cash;
+  insert into pos_order_lines
+    (order_id, hotel_id, item_id, name, qty, unit_price, tax_rate, added_by)
+  values (v_cash, v_hotel, v_item, 'Thali', 2, 1000.00, 0.00, v_staff);
+  insert into pos_order_tenders (order_id, hotel_id, method, amount, taken_by)
+  values (v_cash, v_hotel, 'cash', 2000.00, v_staff);
+  update pos_orders set status='settled', settled_by=v_staff,
+                        settled_at=now(), payment_method='cash'
+   where id = v_cash;
+
+  insert into pos_orders (hotel_id, outlet_id, order_no, business_date, opened_by)
+  values (v_hotel, v_outlet, 'TRJ-2', d, v_staff) returning id into v_card;
+  insert into pos_order_lines
+    (order_id, hotel_id, item_id, name, qty, unit_price, tax_rate, added_by)
+  values (v_card, v_hotel, v_item, 'Thali', 3, 1000.00, 0.00, v_staff);
+  insert into pos_order_tenders (order_id, hotel_id, method, amount, taken_by)
+  values (v_card, v_hotel, 'card', 3000.00, v_staff);
+  update pos_orders set status='settled', settled_by=v_staff,
+                        settled_at=now(), payment_method='card'
+   where id = v_card;
+
+  -- ---------- the drawer ----------
+  insert into pos_day_ends (hotel_id, outlet_id, business_date, opening_cash)
+  values (v_hotel, v_outlet, d, 2000.00) returning id into v_day;
+
+  -- CASH ONLY. A card settlement never touched the tin, and counting it
+  -- would leave the drawer permanently short by the amount of business done
+  -- properly.
+  expected := app.pos_expected_cash(v_outlet, d);
+  perform test.ok('day end','the card sale is not expected in the drawer',
+    expected = 4000.00, 'opening 2000 + cash 2000, not + card 3000 = ' || expected);
+
+  insert into pos_cash_movements
+    (hotel_id, outlet_id, business_date, kind, amount, reason, recorded_by)
+  values (v_hotel, v_outlet, d, 'expense', 300.00, 'vegetables', v_staff),
+         (v_hotel, v_outlet, d, 'top_up', 500.00, 'change from the safe', v_staff),
+         (v_hotel, v_outlet, d, 'withdrawal', 1000.00, 'to the safe', v_staff);
+
+  expected := app.pos_expected_cash(v_outlet, d);
+  perform test.ok('day end','money in and out of the tin moves the expectation',
+    expected = 3200.00, '4000 + 500 - 300 - 1000 = ' || expected);
+
+  perform test.raises('day end','a movement without a reason is refused',
+    format($q$insert into pos_cash_movements
+               (hotel_id, outlet_id, business_date, kind, amount, reason,
+                recorded_by)
+             values (%L,%L,%L,'expense',100,'  ',%L)$q$,
+           v_hotel, v_outlet, d, v_staff), '23514');
+
+  perform test.raises('day end','and neither is one of an unknown kind',
+    format($q$insert into pos_cash_movements
+               (hotel_id, outlet_id, business_date, kind, amount, reason,
+                recorded_by)
+             values (%L,%L,%L,'borrowed',100,'a friend',%L)$q$,
+           v_hotel, v_outlet, d, v_staff), '23514');
+
+  -- ---------- the overview ----------
+  select settled_orders, settled_value into n, settled
+    from app.pos_day_summary(v_outlet, d);
+  perform test.ok('day end','the overview counts what was settled',
+    n = 2 and settled = 5000.00, n || ' orders, ' || settled);
+
+  perform test.ok('day end','and how the money arrived',
+    (select by_method from app.pos_day_summary(v_outlet, d))
+      = '{"cash": 2000.00, "card": 3000.00}'::jsonb,
+    (select by_method::text from app.pos_day_summary(v_outlet, d)));
+
+  -- ---------- what stops a close ----------
+  select count(*) into blockers from app.pos_day_end_blockers(v_outlet, d);
+  perform test.ok('day end','nothing stops a clean day', blockers = 0);
+
+  insert into pos_orders (hotel_id, outlet_id, order_no, business_date,
+                          opened_by, table_id)
+  values (v_hotel, v_outlet, 'TRJ-3', d, v_staff, v_table)
+  returning id into v_open;
+
+  select count(*) into blockers from app.pos_day_end_blockers(v_outlet, d);
+  -- The night audit's rule, in a restaurant: only what a PERSON must decide.
+  perform test.ok('day end','an open bill stops it', blockers = 1);
+
+  perform test.ok('day end','and the refusal names the bill',
+    (select detail from app.pos_day_end_blockers(v_outlet, d)
+      where id = 'open_orders') = 'TRJ-3');
+
+  update pos_orders
+     set status='settled', settled_by=v_staff, settled_at=now(),
+         payment_method='cash'
+   where id = v_open;
+
+  select count(*) into blockers from app.pos_day_end_blockers(v_outlet, d);
+  perform test.ok('day end','a settled bill on an uncleared table also stops it',
+    blockers = 1, 'so tomorrow starts with an empty floor');
+
+  update pos_orders set cleared_at = now() where id = v_open;
+  select count(*) into blockers from app.pos_day_end_blockers(v_outlet, d);
+  perform test.ok('day end','and clearing it lets the day close', blockers = 0);
+
+  -- ---------- the count ----------
+  insert into pos_denominations (day_end_id, value, count)
+  values (v_day, 500, 6), (v_day, 100, 2), (v_day, 50, 4);
+
+  perform test.ok('day end','the notes add up to what was counted',
+    (select sum(value * count) from pos_denominations where day_end_id = v_day)
+      = 3400.00);
+
+  perform test.raises('day end','a negative count is not a count',
+    format($q$update pos_denominations set count = -1
+              where day_end_id = %L and value = 500$q$, v_day), '23514');
+
+  -- ---------- closing ----------
+  perform test.raises('day end','closing without counting is refused',
+    format($q$update pos_day_ends
+                set closed_at = now(), closed_by = %L where id = %L$q$,
+           v_staff, v_day), '23514');
+
+  update pos_day_ends
+     set counted_cash = 3400.00,
+         variance_reason = 'two hundred over, not found',
+         closed_by = v_staff, closed_at = now()
+   where id = v_day;
+
+  -- A count that does not match is RECORDED, not refused. The money is
+  -- already whatever it is, and a shift that cannot close is worse.
+  perform test.ok('day end','a difference closes with a reason, not a refusal',
+    (select closed_at is not null from pos_day_ends where id = v_day));
+
+  perform test.raises('day end','a closed day stays closed',
+    format($q$update pos_day_ends set counted_cash = 9999 where id = %L$q$,
+           v_day), 'P0001');
+
+  -- ---------- teardown ----------
+  delete from pos_denominations where day_end_id = v_day;
+  delete from pos_day_ends where hotel_id = v_hotel;
+  delete from pos_cash_movements where hotel_id = v_hotel;
+
+  /* The room-ticket check is deferred, so its events are still pending
+     and ALTER TABLE refuses to touch the table. Fire them now: every bill
+     here settled to cash or card, so there is nothing for it to object to. */
+  set constraints all immediate;
+
+  /* Tenders on a settled bill are evidence, and 038 refuses to remove
+     them. Lifted for the teardown rather than weakened, the same way this
+     suite lifts pos_order_lines_frozen. */
+  alter table pos_order_tenders disable trigger pos_order_tenders_no_delete_settled;
+  delete from pos_order_tenders where hotel_id = v_hotel;
+  alter table pos_order_tenders enable trigger pos_order_tenders_no_delete_settled;
+
+  alter table pos_order_lines disable trigger pos_order_lines_frozen;
+  delete from pos_order_lines where hotel_id = v_hotel;
+  alter table pos_order_lines enable trigger pos_order_lines_frozen;
+
+  delete from pos_orders where hotel_id = v_hotel;
+  delete from pos_tables where hotel_id = v_hotel;
+  delete from pos_sections where hotel_id = v_hotel;
+  delete from pos_menu_items where hotel_id = v_hotel;
+  delete from pos_menu_categories where hotel_id = v_hotel;
+  delete from pos_outlets where hotel_id = v_hotel;
+  delete from staff_hotels where hotel_id = v_hotel;
+
+  alter table hotels disable trigger hotels_no_delete;
+  delete from hotels where id = v_hotel;
+  alter table hotels enable trigger hotels_no_delete;
+
+  select count(*) into n from hotels where code = 'TRJ';
+  perform test.ok('day end','the fixture does not outlive the test', n = 0);
+end $$;
