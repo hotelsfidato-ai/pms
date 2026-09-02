@@ -10,7 +10,35 @@ import { DEMO, recorded, DEMO_REFUSAL } from "./demo";
    is the exception: who you are is not repository data.
    ══════════════════════════════════════════════════════════════════ */
 
-const BASE = import.meta.env.VITE_API_URL ?? "http://localhost:8787";
+/* WHERE THE API LIVES IS A RUNTIME FACT, NOT A BUILD-TIME ONE.
+
+   Vite inlines VITE_* at build. Baking the address in means moving the
+   backend — to another provider, to a standby during an outage — forces
+   a rebuild and redeploy of every client that talks to it. That is the
+   opposite of the portability this system is designed around, and it is
+   the one thing that would actually tie us to a vendor.
+
+   `config.json` sits beside index.html. Moving the backend becomes
+   editing one file and redeploying static assets: seconds, no rebuild,
+   no DNS wait.
+
+   The build-time value remains the fallback, so local development and
+   the demo build need no extra file and behave exactly as before. */
+const FALLBACK_BASE = import.meta.env.VITE_API_URL ?? "http://localhost:8787";
+
+let baseResolution: Promise<string> | null = null;
+
+function apiBase(): Promise<string> {
+  /* Resolved once per page load and memoised. Same-origin, so it costs
+     no preflight; a missing or malformed file falls back rather than
+     breaking every screen, because an unreachable API is a far more
+     legible failure than an app that will not start. */
+  baseResolution ??= fetch("/config.json", { cache: "no-store" })
+    .then((r) => (r.ok ? (r.json() as Promise<{ apiUrl?: string }>) : null))
+    .then((c) => c?.apiUrl?.trim() || FALLBACK_BASE)
+    .catch(() => FALLBACK_BASE);
+  return baseResolution;
+}
 
 /**
  * Development only, and it mirrors the API's own `ALLOW_DEV_AUTH`.
@@ -113,10 +141,12 @@ export async function api<T>(path: string, init: RequestInit = {}): Promise<T> {
     throw new ApiError(404, "Not part of this preview snapshot.");
   }
 
+  const base = await apiBase();
+
   let response: Response;
 
   try {
-    response = await fetch(`${BASE}${path}`, {
+    response = await fetch(`${base}${path}`, {
       ...init,
       headers: { ...(await headers()), ...init.headers },
     });
@@ -128,7 +158,7 @@ export async function api<T>(path: string, init: RequestInit = {}): Promise<T> {
     throw new ApiError(
       0,
       import.meta.env.DEV
-        ? `Could not reach ${BASE}. Check the API is running, and that it allows this origin.`
+        ? `Could not reach ${base}. Check the API is running, and that it allows this origin.`
         : "Could not reach the server. Try again in a moment.",
     );
   }

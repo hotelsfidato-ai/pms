@@ -200,6 +200,37 @@ loyalty, and a blacklist that can be walked around by booking elsewhere.
 `app.provision_property()` clones ~90% from templates; you supply the ~10% unique. No migration,
 no deploy, no restart.
 
+### M4 resolved — how the browser reaches the API
+
+For a while `deploy/launch.sh` served the frontend off the VPS on one origin.
+That removed the CORS question instead of answering it, and it contradicted the
+Hosting ✅ above without saying so. Reverted; the approved shape is what ships.
+
+| | Served by | Address |
+|---|---|---|
+| The app | Firebase Hosting | `pms.…` (or the free `web.app`) |
+| The API | Oracle, nginx → 127.0.0.1:8787 | `api.…` |
+
+Four clients already speak to this API — the staff app, the admin console, the
+tills and the CRS — so **one shared origin was never a design that could hold**.
+The decision is not hosting convenience; it is that the API is the contract.
+
+Three things make the split safe, and all three are checked rather than assumed:
+
+* **`CORS_ORIGIN` is a LIST** (`api/src/env.ts`). A single string capped the
+  system at one browser client forever.
+* **`maxAge: 86400`** (`api/src/server.ts`). Without it Chrome re-preflights
+  about every five seconds, so a busy front desk pays a round trip continually.
+* **The preflight checks every origin** and names the offending entry. A
+  mismatch renders a blank screen with no error a clerk can report, which is the
+  single worst failure mode this shape introduces.
+
+**The frontend resolves the API address at RUNTIME**, from a `config.json` beside
+`index.html` (`src/lib/api.ts`). Vite inlines `VITE_*` at build, so baking it in
+meant moving the backend forced a rebuild of every client — the one thing that
+genuinely tied this system to a vendor. Editing that file and redeploying static
+assets is now the whole failover procedure: seconds, no rebuild, no DNS wait.
+
 ### Runtime topology
 
 ```
@@ -417,7 +448,7 @@ Full detail: `docs/architecture-review.html`. Four are defects in work produced 
 
 ### Medium
 **M1** secrets management undesigned · **M2** no DPDP retention/deletion policy ·
-**M3** business-date boundary rule unspecified · **M4** Firebase↔VPS CORS undesigned ·
+**M3** business-date boundary rule unspecified · ~~**M4** Firebase↔VPS CORS undesigned~~ **designed — see below** ·
 **M5** no rate limiting; staff offboarding has two undocumented steps
 
 ### Confirmed sound (12)

@@ -53,7 +53,7 @@ const STARTED_AT = new Date().toISOString();
    so pinning one origin means the first port collision looks like the
    API being down. Production pins exactly one origin and nothing else. */
 const originAllowed = (origin: string): string | null => {
-  if (origin === env.corsOrigin) return origin;
+  if (env.corsOrigins.includes(origin)) return origin;
   if (!env.isProduction && /^https?:\/\/localhost(:\d+)?$/.test(origin)) {
     return origin;
   }
@@ -78,6 +78,13 @@ app.use(
       "x-provisioning-key",
     ],
     credentials: true,
+
+    /* Without this the browser sends its own default, which in Chrome
+       is about five seconds — so a clerk working steadily re-pays a
+       preflight round trip every few seconds, on every method and
+       header combination. A day is the ceiling browsers will honour
+       and the allow-list above changes only on deploy. */
+    maxAge: 86400,
   }),
 );
 

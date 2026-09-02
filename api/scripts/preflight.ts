@@ -90,20 +90,34 @@ async function main() {
   }
 
   /* ── The browser must be allowed to talk to this ───────────────── */
-  const cors = e["CORS_ORIGIN"] ?? "";
-  if (!cors) {
-    fail("CORS origin set", "CORS_ORIGIN is unset.");
-  } else if (production && /localhost|127\.0\.0\.1/.test(cors)) {
-    fail("CORS origin is not localhost",
-      `CORS_ORIGIN is ${cors}. Every request from the real site will be `
-      + "blocked by the browser, and the screens go empty with no error "
-      + "anybody can see.");
-  } else if (production && cors.startsWith("http://")) {
-    fail("CORS origin is https",
-      `CORS_ORIGIN is ${cors}. Firebase will not hand a token to an `
-      + "insecure origin.", false);
+  /* A LIST now, because the frontend is no longer served off this box.
+     The staff app, the admin console, the tills and the CRS are separate
+     origins, and the app's origin is the one thing that must be right or
+     every screen goes empty with no error a clerk can report. Check each
+     entry, and name the offender rather than the whole string. */
+  const origins = (e["CORS_ORIGIN"] ?? "")
+    .split(",").map((o) => o.trim()).filter(Boolean);
+
+  if (origins.length === 0) {
+    fail("CORS origins set",
+      "CORS_ORIGIN is unset. The API will refuse every browser request, "
+      + "and the browser will report it as the server being unreachable.");
   } else {
-    pass("CORS origin set", cors);
+    const local = origins.filter((o) => /localhost|127\.0\.0\.1/.test(o));
+    const insecure = origins.filter((o) => o.startsWith("http://"));
+
+    if (production && local.length > 0) {
+      fail("CORS origins are not localhost",
+        `CORS_ORIGIN contains ${local.join(", ")}. That is a development `
+        + "address. Requests from the real site will be blocked by the "
+        + "browser and the screens will go empty.");
+    } else if (production && insecure.length > 0) {
+      fail("CORS origins are https",
+        `CORS_ORIGIN contains ${insecure.join(", ")}. Firebase will not `
+        + "hand a token to an insecure origin.", false);
+    } else {
+      pass("CORS origins set", origins.join(", "));
+    }
   }
 
   /* ── The database ──────────────────────────────────────────────── */

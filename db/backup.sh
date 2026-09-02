@@ -29,11 +29,31 @@
 # =============================================================================
 set -uo pipefail
 
-PGBIN="${PGBIN:-C:/Users/rozar/AppData/Local/Temp/claude/D--PMS-FIDATO/6f5bb0bf-ad16-442f-bd1d-566b371924fa/scratchpad/pg/pgsql/bin}"
-PGPORT="${PGPORT:-55432}"
-PGHOST="${PGHOST:-127.0.0.1}"
-SUPER="${SUPER:-postgres}"
-SUPERPASS="${SUPERPASS:-pw}"
+# WHICH pg_dump, AND WHERE IT LISTENS
+#
+# This script runs in two places that share nothing: a Windows
+# development box with a throwaway cluster on a high port, and the
+# server, where cron runs it nightly against the unix socket.
+#
+# It used to hardcode the Windows path and `pg_dump.exe`. Installed on
+# the server as /usr/local/bin/fidato-backup it therefore failed EVERY
+# NIGHT, exited 1, and wrote into a log file nobody reads. A backup that
+# silently does not exist is worse than none, because you stop worrying
+# about it. Detect rather than assume.
+if command -v pg_dump >/dev/null 2>&1; then
+  PGDUMP="$(command -v pg_dump)"
+  PGHOST="${PGHOST:-/var/run/postgresql}"   # socket: peer auth, no password
+  PGPORT="${PGPORT:-5432}"
+  SUPER="${SUPER:-postgres}"
+  SUPERPASS="${SUPERPASS:-}"
+else
+  PGBIN="${PGBIN:-C:/Users/rozar/AppData/Local/Temp/claude/D--PMS-FIDATO/6f5bb0bf-ad16-442f-bd1d-566b371924fa/scratchpad/pg/pgsql/bin}"
+  PGDUMP="$PGBIN/pg_dump.exe"
+  PGHOST="${PGHOST:-127.0.0.1}"
+  PGPORT="${PGPORT:-55432}"
+  SUPER="${SUPER:-postgres}"
+  SUPERPASS="${SUPERPASS:-pw}"
+fi
 DB="${DB:-fidato}"
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 
@@ -46,13 +66,18 @@ FILE="$OUTDIR/${DB}-${STAMP}.dump"
 red()   { printf "\033[31m%s\033[0m\n" "$1"; }
 green() { printf "\033[32m%s\033[0m\n" "$1"; }
 
+if [ ! -x "$PGDUMP" ]; then
+  red "  x no pg_dump at $PGDUMP - NOT a backup."
+  exit 1
+fi
+
 echo "-- backing up $DB ------------------------------------------"
 
 # --no-owner / --no-acl: the dump restores into a database whose roles may not
 # exist yet. Ownership and grants come from db/migrations/010_roles.sql, which
 # is the one place that should ever define them — a dump that carried its own
 # would silently diverge from the migrations after the first schema change.
-PGPASSWORD=$SUPERPASS "$PGBIN/pg_dump.exe" \
+PGPASSWORD="$SUPERPASS" "$PGDUMP" \
   -h "$PGHOST" -p "$PGPORT" -U "$SUPER" \
   -Fc --no-owner --no-acl \
   -f "$FILE" "$DB" 2>&1 | sed 's/^/    /'

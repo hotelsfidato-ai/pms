@@ -5,7 +5,13 @@
 # Run ON the server, as a user with sudo:
 #
 #     git clone <repo> /opt/fidato && cd /opt/fidato
-#     sudo DOMAIN=pms.example.com EMAIL=you@example.com deploy/launch.sh
+#     sudo DOMAIN=api.example.com EMAIL=you@example.com #          APP_ORIGIN=https://pms.example.com deploy/launch.sh
+#
+# DOMAIN is where the API answers. APP_ORIGIN is where the frontend is
+# served from - Firebase Hosting - and is the origin the browser sends,
+# so it is what CORS must allow. They are two different names on purpose:
+# this box is a data server, and the app is a client of it exactly as the
+# till and the CRS are. Several origins may be listed, comma-separated.
 #
 # Idempotent. Running it again upgrades in place: it re-pulls, re-migrates,
 # rebuilds the frontend and restarts the service. It does NOT re-issue a
@@ -23,6 +29,9 @@ set -euo pipefail
 
 DOMAIN="${DOMAIN:?set DOMAIN=pms.example.com}"
 EMAIL="${EMAIL:?set EMAIL=you@example.com — certbot needs it for expiry warnings}"
+APP_ORIGIN="${APP_ORIGIN:?set APP_ORIGIN=https://pms.example.com — where the frontend is served.
+  This is the origin the browser sends and the only one CORS will accept. Get it
+  wrong and every screen goes empty with no error a clerk can report.}"
 APP_DIR="${APP_DIR:-/opt/fidato}"
 DB_NAME="${DB_NAME:-fidato}"
 DB_USER="${DB_USER:-pms_app}"
@@ -240,7 +249,7 @@ DATABASE_URL=postgres://$DB_USER:$DB_PASS@127.0.0.1:5432/$DB_NAME
 ADMIN_DATABASE_URL=postgres://postgres@/$DB_NAME?host=/var/run/postgresql
 PORT=8787
 NODE_ENV=production
-CORS_ORIGIN=https://$DOMAIN
+CORS_ORIGIN=$APP_ORIGIN
 FIREBASE_PROJECT_ID=poms-fad05
 # Paste the WHOLE service account JSON on one line. Not a path to it.
 FIREBASE_SERVICE_ACCOUNT=
@@ -250,44 +259,32 @@ ENVEOF
 else
   # An existing file is never overwritten; only the origin is kept current,
   # because that is the one value a re-run can legitimately change.
-  sed -i "s#^CORS_ORIGIN=.*#CORS_ORIGIN=https://$DOMAIN#" "$ENV_FILE"
+  sed -i "s#^CORS_ORIGIN=.*#CORS_ORIGIN=$APP_ORIGIN#" "$ENV_FILE"
   echo "  api/.env kept (CORS origin refreshed)"
 fi
 
-# The frontend needs the API's public origin baked in at BUILD time — Vite
-# inlines VITE_* at build, so changing it later means rebuilding, not
-# restarting.
-FE_ENV="$APP_DIR/.env.production"
-cat > "$FE_ENV" <<FEEOF
-VITE_API_URL=https://$DOMAIN
-VITE_FIREBASE_API_KEY=AIzaSyCx1hqJ9Q1xRwtu6O3jeOT_eMdgwE3zUZs
-VITE_FIREBASE_AUTH_DOMAIN=poms-fad05.firebaseapp.com
-VITE_FIREBASE_PROJECT_ID=poms-fad05
-VITE_FIREBASE_STORAGE_BUCKET=poms-fad05.firebasestorage.app
-VITE_FIREBASE_MESSAGING_SENDER_ID=575257818677
-VITE_FIREBASE_APP_ID=1:575257818677:web:3823708636d4fc8592237c
-VITE_FIREBASE_MEASUREMENT_ID=G-32J438GWVV
-FEEOF
-# No VITE_ALLOW_DEV_AUTH. Its absence is what turns the dev sign-in buttons off.
+# NOTHING VITE_* IS WRITTEN HERE ANY MORE. The frontend is built and
+# deployed to Firebase Hosting, not served off this box, and it resolves
+# this API's address at RUNTIME from its own config.json - see
+# src/lib/api.ts. That is what lets the backend move to another provider
+# without rebuilding every client that talks to it.
 
-chown fidato:fidato "$ENV_FILE" "$FE_ENV" "$DB_PASS_FILE" 2>/dev/null || true
+chown fidato:fidato "$ENV_FILE" "$DB_PASS_FILE" 2>/dev/null || true
 
 # -----------------------------------------------------------------------------
 say "Build"
 # -----------------------------------------------------------------------------
 cd "$APP_DIR"
+# API dependencies only. The frontend is not built here: `npm ci` across the
+# whole workspace drags a full toolchain onto a 2-OCPU box to produce assets
+# that Firebase serves anyway.
 npm ci --omit=dev --prefix "$APP_DIR/api"
-npm ci
-npm run build
-[ -d "$APP_DIR/dist" ] || die "No dist/ — the frontend build produced nothing."
-# nginx reads dist/ as its own user and traverses every parent to reach it.
 chown -R fidato:fidato "$APP_DIR"
-chmod o+x "$APP_DIR" "$APP_DIR/dist"
 
 # -----------------------------------------------------------------------------
 say "nginx and TLS"
 # -----------------------------------------------------------------------------
-sed "s/__DOMAIN__/$DOMAIN/g; s#__ROOT__#$APP_DIR/dist#g" \
+sed "s/__DOMAIN__/$DOMAIN/g" \
   "$APP_DIR/deploy/nginx.conf" > /etc/nginx/conf.d/fidato.conf
 nginx -t || die "nginx rejected the configuration."
 systemctl reload nginx
@@ -318,9 +315,22 @@ say "Backups"
 # The free tier has no managed backups, so this cron entry IS the backup story.
 # Nightly at 03:00, after any plausible night audit.
 install -m 755 "$APP_DIR/db/backup.sh" /usr/local/bin/fidato-backup
-cat > /etc/cron.d/fidato-backup <<'CRONEOF'
-0 3 * * * root /usr/local/bin/fidato-backup >> /var/log/fidato-backup.log 2>&1
+
+# Runs as `postgres`, NOT root. The script reaches the database over the unix
+# socket under peer authentication, and root is not postgres. Scheduled as root
+# it would fail every night into a log nobody reads - which is exactly how this
+# system spent its first weeks believing it had backups.
+BACKUP_DIR="${BACKUP_DIR:-/var/backups/fidato}"
+install -d -o postgres -g postgres -m 700 "$BACKUP_DIR"
+: > /var/log/fidato-backup.log
+chown postgres:postgres /var/log/fidato-backup.log
+cat > /etc/cron.d/fidato-backup <<CRONEOF
+0 3 * * * postgres /usr/local/bin/fidato-backup $BACKUP_DIR >> /var/log/fidato-backup.log 2>&1
 CRONEOF
+
+# Prove it works NOW rather than finding out at 03:00 that it never did.
+runuser -u postgres -- /usr/local/bin/fidato-backup "$BACKUP_DIR"   || die "The nightly backup failed on its very first run. Fix this before
+  anything else - every other failure here is recoverable and this one is not."
 echo "  nightly at 03:00 — ON THE SAME DISK. See README: a copy that dies in"
 echo "  the same fire is not a backup. Getting it off-box is one more step."
 

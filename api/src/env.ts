@@ -67,7 +67,18 @@ export const env = {
 
   allowDevAuth,
 
-  corsOrigin: process.env["CORS_ORIGIN"] ?? "http://localhost:5173",
+  /* A LIST, not one origin. The staff app, the admin console and any
+     future client are separate origins the moment the frontend stops
+     being served off this box, and a single string caps the system at
+     one browser client forever — which is the ceiling you meet first
+     when the till, the CRS and the console all want in.
+
+     Comma-separated. The variable keeps its name so an existing .env
+     with one value still works unchanged. */
+  corsOrigins: (process.env["CORS_ORIGIN"] ?? "http://localhost:5173")
+    .split(",")
+    .map((o) => o.trim())
+    .filter(Boolean),
 } as const;
 
 if (allowDevAuth) {

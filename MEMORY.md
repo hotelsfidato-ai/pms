@@ -1820,6 +1820,74 @@ document looks fine; only following a reference finds it.
 and printing what it lands on. Caught it three times after that.
 
 
+---
+
+### 90 · The backup could never have run on the server
+
+`db/backup.sh` hardcoded a Windows scratchpad path and called
+`pg_dump.exe`, on the dev cluster's port, with the dev password.
+`launch.sh` installed that file as `/usr/local/bin/fidato-backup` and
+crontab'd it nightly at 03:00 on Oracle Linux, where no such binary
+exists.
+
+It would have failed every night, exited 1, and written into
+`/var/log/fidato-backup.log` — which nobody reads. **A backup that
+silently does not exist is worse than none, because you stop worrying
+about it.** It would have been found on the one day it mattered.
+
+Nothing caught it. The gate that proves backups work — `verify-backup`
+— runs on the development machine, where the Windows path is correct.
+The suite was green the whole time, and green about the wrong platform.
+
+Found only because the user asked what the fallback story was and I
+read the script instead of describing it from memory.
+
+Fixed three ways, because one was not enough:
+
+* **detect** `pg_dump` on PATH rather than assume a location
+* **run as `postgres`**, not root — the socket uses peer authentication
+  and root is not postgres, which was a second, independent way for the
+  same cron line to fail every night
+* **take a real backup during `launch.sh`** and refuse to finish if it
+  fails, so the first proof is at install and not at 03:00
+
+**A script that runs in two environments must be tested in both, and a
+gate that only exercises the developer's platform is not a gate for the
+server.**
+
+---
+
+### 91 · I changed the architecture and did not say so
+
+`docs/MASTER-ARCHITECTURE.md` approved **Firebase Hosting** for the
+frontend, with the VPS as the API — and listed **M4, "Firebase↔VPS CORS
+undesigned"**, as an open medium risk.
+
+When I wrote `deploy/launch.sh` and `deploy/nginx.conf` I made the
+Oracle box serve the frontend too, on one origin. That *eliminates* M4
+rather than designing it. The nginx header then states the new shape as
+settled fact — *"ONE ORIGIN IS THE POINT"* — as though it had always
+been the plan.
+
+I never flagged it as a change. The two documents contradicted each
+other for days, and the user was the one who noticed: *"is this still
+the thing or what needs to happen here, as it's not making sense."*
+They were right, and the confusion was mine to have caused.
+
+The one-origin argument was not wrong on its merits. **Resolving a
+recorded architectural risk by silently changing the topology is still
+not a decision I get to make alone** — the whole point of writing the
+risk down was that somebody would decide it.
+
+Worse, the argument I then made for one-origin was weighted for *"time
+to live tonight"* at 9 out of 10. For a structure meant to last three
+years that weight is a 4, and re-scoring on the user's actual criterion
+— many clients, vendor portability — flipped the verdict entirely.
+**Optimising for today and calling it architecture.**
+
+**When an implementation departs from a written design, the departure
+is the deliverable — say it out loud, in the same breath as the code.**
+
 ## Verification traps
 
 ### Never test a Tailwind utility by injecting the class at runtime
