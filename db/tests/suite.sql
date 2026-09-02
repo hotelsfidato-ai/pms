@@ -1420,3 +1420,159 @@ begin
   select count(*) into n from hotels where code = 'SPL';
   perform test.ok('split billing','the fixture does not outlive the test', n = 0);
 end $$;
+
+
+-- =============================================================================
+-- POS discount, round off, and split tender  (038)
+-- =============================================================================
+-- The discount comes off the NET and is apportioned across TAX RATES. A
+-- restaurant selling 5% food beside 18% bar must reduce each rate's taxable
+-- value in proportion, or the per-rate folio postings are wrong — a split that
+-- was a defect once already.
+--
+-- Apportioning by proportion leaves a paise residue. It is absorbed by the
+-- largest rate group so the parts always sum to the whole, because a bill that
+-- is a paise out is a bill the guest is holding.
+-- =============================================================================
+do $$
+declare
+  v_hotel uuid; v_staff uuid; v_outlet uuid; v_order uuid; v_order2 uuid;
+  r record; n int;
+begin
+  insert into hotels (code, name, city, timezone)
+  values ('PDC', 'Discount fixture', 'Akkalkot', 'Asia/Kolkata') returning id into v_hotel;
+
+  select id into v_staff from staff limit 1;
+  insert into staff_hotels (staff_id, hotel_id, role)
+  values (v_staff, v_hotel, 'pos') on conflict do nothing;
+
+  insert into pos_outlets (hotel_id, code, name, staff_id)
+  values (v_hotel, 'PDCO', 'Discount outlet', v_staff) returning id into v_outlet;
+
+  -- ---------- two rates, a discount that divides cleanly ----------
+  insert into pos_orders (hotel_id, outlet_id, order_no, business_date,
+                          opened_by, discount_amount, discount_reason)
+  values (v_hotel, v_outlet, 'PDC-1', current_date, v_staff, 100.00, 'manager comp')
+  returning id into v_order;
+
+  insert into pos_order_lines (order_id, hotel_id, name, qty, unit_price, tax_rate, added_by)
+  values (v_order, v_hotel, 'Food', 1, 700.00, 5.00,  v_staff),
+         (v_order, v_hotel, 'Beer', 1, 300.00, 18.00, v_staff);
+
+  select * into r from app.pos_order_total(v_order);
+
+  -- 700 keeps 70 of the discount, 300 keeps 30. Tax is 5% of 630 plus 18% of
+  -- 270 = 31.50 + 48.60. Applied to the GROSS instead it would be 84.30.
+  perform test.ok('pos discount','discount is apportioned across tax rates, not taken off the gross',
+    r.tax = 80.10, 'tax ' || r.tax);
+  perform test.ok('pos discount','taxable is net less the discount',
+    r.taxable = 900.00 and r.net = 1000.00, 'taxable ' || r.taxable);
+  perform test.ok('pos discount','gross is taxable plus tax',
+    r.gross = 980.10, 'gross ' || r.gross);
+
+  -- ---------- three rates, a discount that does not ----------
+  insert into pos_orders (hotel_id, outlet_id, order_no, business_date,
+                          opened_by, discount_amount, discount_reason, round_off)
+  values (v_hotel, v_outlet, 'PDC-2', current_date, v_staff, 100.00, 'three ways', -0.10)
+  returning id into v_order2;
+
+  insert into pos_order_lines (order_id, hotel_id, name, qty, unit_price, tax_rate, added_by)
+  values (v_order2, v_hotel, 'A', 1, 333.33, 5.00,  v_staff),
+         (v_order2, v_hotel, 'B', 1, 333.33, 12.00, v_staff),
+         (v_order2, v_hotel, 'C', 1, 333.34, 18.00, v_staff);
+
+  select * into r from app.pos_order_total(v_order2);
+
+  -- Each share rounds to 33.33 and they sum to 99.99. The missing paise must
+  -- land on the largest group or the discount silently shrinks.
+  perform test.ok('pos discount','the rounding residue is absorbed, not lost',
+    r.discount = 100.00, 'discount ' || r.discount);
+  perform test.ok('pos discount','round off reaches the payable',
+    r.payable = r.gross - 0.10, 'payable ' || r.payable);
+
+  -- ---------- a discount cannot exceed the bill ----------
+  update pos_orders set discount_amount = 99999.00 where id = v_order;
+  select * into r from app.pos_order_total(v_order);
+  perform test.ok('pos discount','a discount is capped at the bill, never negative',
+    r.discount = 1000.00 and r.payable = 0.00, 'payable ' || r.payable);
+  update pos_orders set discount_amount = 100.00 where id = v_order;
+
+  -- ---------- the reason is not optional ----------
+  perform test.raises('pos discount','a discount without a reason is refused',
+    format($q$update pos_orders set discount_amount = 50, discount_reason = null
+              where id = %L$q$, v_order), '23514');
+
+  perform test.raises('pos discount','a blank reason is not a reason',
+    format($q$update pos_orders set discount_amount = 50, discount_reason = '   '
+              where id = %L$q$, v_order), '23514');
+
+  -- A round off is pennies. Anything larger is a discount avoiding the reason.
+  perform test.raises('pos discount','a round off larger than a rupee is refused',
+    format($q$update pos_orders set round_off = -5.00 where id = %L$q$, v_order),
+    '23514');
+
+  -- ---------- tenders ----------
+  insert into pos_order_tenders (order_id, hotel_id, method, amount, tendered, taken_by)
+  values (v_order, v_hotel, 'cash', 500.00, 500.00, v_staff);
+
+  perform test.ok('pos discount','tenders short of the bill do not cover it',
+    not app.pos_tenders_cover_bill(v_order));
+
+  insert into pos_order_tenders (order_id, hotel_id, method, amount, taken_by)
+  values (v_order, v_hotel, 'card', 480.10, v_staff);
+
+  perform test.ok('pos discount','cash plus card settles the discounted bill',
+    app.pos_tenders_cover_bill(v_order));
+
+  perform test.raises('pos discount','a zero tender is not a payment',
+    format($q$insert into pos_order_tenders
+               (order_id, hotel_id, method, amount, taken_by)
+             values (%L,%L,'cash',0,%L)$q$, v_order, v_hotel, v_staff), '23514');
+
+  perform test.raises('pos discount','cash tendered cannot be less than the amount taken',
+    format($q$insert into pos_order_tenders
+               (order_id, hotel_id, method, amount, tendered, taken_by)
+             values (%L,%L,'cash',100,50,%L)$q$, v_order, v_hotel, v_staff), '23514');
+
+  perform test.raises('pos discount','only cash is tendered',
+    format($q$insert into pos_order_tenders
+               (order_id, hotel_id, method, amount, tendered, taken_by)
+             values (%L,%L,'card',100,100,%L)$q$, v_order, v_hotel, v_staff), '23514');
+
+  -- ---------- a settled bill's tenders are evidence ----------
+  update pos_orders set status='settled', settled_by=v_staff, settled_at=now(),
+                        payment_method='split'
+   where id = v_order;
+
+  perform test.raises('pos discount','tenders on a settled order cannot be removed',
+    format($q$delete from pos_order_tenders where order_id = %L$q$, v_order),
+    'P0001');
+
+  -- ---------- teardown ----------
+  /* The room-ticket check is deferred, so its events are still pending and
+     ALTER TABLE refuses to touch the table. Fire them now: this order settles
+     to cash and card, so there is nothing for that check to object to. */
+  set constraints all immediate;
+
+  /* A settled order cannot be reopened and its tenders cannot be removed.
+     Both guards are lifted for the teardown, the same way this suite lifts
+     pos_order_lines_frozen and hotels_no_delete. */
+  alter table pos_order_tenders disable trigger pos_order_tenders_no_delete_settled;
+  delete from pos_order_tenders where hotel_id = v_hotel;
+  alter table pos_order_tenders enable trigger pos_order_tenders_no_delete_settled;
+
+  alter table pos_order_lines disable trigger pos_order_lines_frozen;
+  delete from pos_order_lines where hotel_id = v_hotel;
+  alter table pos_order_lines enable trigger pos_order_lines_frozen;
+
+  delete from pos_orders  where hotel_id = v_hotel;
+  delete from pos_outlets where hotel_id = v_hotel;
+  delete from staff_hotels where hotel_id = v_hotel;
+
+  alter table hotels disable trigger hotels_no_delete;
+  delete from hotels where id = v_hotel;
+  alter table hotels enable trigger hotels_no_delete;
+
+  select count(*) into n from hotels where code = 'PDC';
+  perform test.ok('pos discount','the fixture does not outlive the test', n = 0);
+end $$;

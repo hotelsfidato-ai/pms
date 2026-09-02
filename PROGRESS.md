@@ -732,9 +732,30 @@ retried. Ledger nets to zero, room revenue still ₹4,19,578.76.
 10 Group dashboard and reports       ███████████░  11 of 11 reports, all SQL
 11 CRS bridge / SU                    ░░░░░░░░░░░░  now IN scope, after go-live
 12 Hardening and go-live             █████████░░░  + launch.sh, preflight, nginx
-13 POS upgrade — Petpooja-informed   ███░░░░░░░░░  tables, variations, day end
+13 POS upgrade — Petpooja-informed   ░░░░░░░░░░░░  0 of 12 — two half-units, listed below
 14 Modules + banquet                  ░░░░░░░░░░░░  per-hotel toggle, banquet hall
 ```
+
+**Stage 13’s twelve units, so the bar has a basis.** It read 3 for a day with
+nothing written down to justify it — a number typed rather than derived, which is
+the one thing this file is not allowed to do.
+
+```
+ 1 item on/off with a duration        7 floor view with sections
+ 2 discount with a reason             8 variations
+ 3 round off ON THE TILL              9 add-ons / modifiers
+ 4 split tender                      10 covers, waiter, customer on the order
+ 5 customer paid / change due         11 day end + cash + denomination
+ 6 table entity                      12 printed KOT docket
+```
+
+**None complete. Two half-units**, and both are the same shape — code that exists
+elsewhere and was never wired to the till: `roundOff` (`src/lib/rules.ts:56`, used
+by the folio) and `order_type` (`034_kot.sql`, four values, displayed by the
+kitchen pass and set by nothing).
+
+The order board with timers is deliberately outside this stage: it earns its place
+only if delivery or pick-up is actually taken.
 
 **Stages 13 and 14 are new scope, not newly-found incompletion.** Stage 7 met
 the target it was given — bridge, till, terminal, kitchen pass. Then the target
@@ -742,7 +763,7 @@ moved: twenty screenshots of Petpooja set a higher bar, and two module
 requirements arrived with it. Lowering stage 7 would misreport what happened, so
 the new work is its own row. Detail in `POS-PROGRESS.md`.
 
-**119 of 168 — 71%.** Add the filled blocks above and divide by 168. That sum is the number; it is not typed separately, because it was for three audits running and drifted to "about 90%" while the bars said 70.
+**116 of 168 — 69%.** Add the filled blocks above and divide by 168. That sum is the number; it is not typed separately, because it was for three audits running and drifted to "about 90%" while the bars said 70. It moved from 119 when stage 13’s three unfounded blocks came off.
 
 **Go-live scope — 116 of 132, 88%.** What has to be true for a real hotel to run on this: stages 1–10 and 12. The CRS bridge (11), the POS upgrade (13) and the modules (14) are all real work, and not one of them stops a guest checking in, a folio settling or a night closing.
 

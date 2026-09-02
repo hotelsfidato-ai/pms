@@ -228,5 +228,10 @@ stock-take, not recipe-level depletion.
 
 ---
 
-*Audited 1 September 2026 against `cp6`. POS today: 6 tables, 44 endpoints,
-4 screens (till, terminal, kitchen pass, menu), 22 database assertions.*
+*Audited 1 September 2026 against `cp6`, re-counted against the repository on
+2 September. POS today: **6 tables, 44 endpoints** (12 till-facing under
+`x-pos-key`, 32 staff-facing), **5 screens** (POS overview, till, terminal,
+kitchen pass, menu), **29 database assertions** (pos 7, pos till 14, kot 8).*
+
+*Nothing in the plan below has been started. The work since this audit went into
+the Oracle deployment, the split-architecture correction and the backup fix.*
