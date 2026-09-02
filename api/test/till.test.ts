@@ -121,6 +121,14 @@ afterAll(async () => {
         `select order_no from pos_orders where id = any($1::uuid[])`, [ids],
       );
 
+      /* Tenders too. The delete cascades into pos_order_tenders, whose
+         BEFORE DELETE trigger refuses to let a settled bill's payments be
+         removed — which is right, and is why it is lifted here rather
+         than weakened. How money was taken is evidence. */
+      await db.query(
+        "alter table pos_order_tenders disable trigger " +
+        "pos_order_tenders_no_delete_settled",
+      );
       await db.query(
         "alter table pos_order_lines disable trigger pos_order_lines_frozen",
       );
@@ -132,6 +140,10 @@ afterAll(async () => {
       } finally {
         await db.query(
           "alter table pos_order_lines enable trigger pos_order_lines_frozen",
+        );
+        await db.query(
+          "alter table pos_order_tenders enable trigger " +
+          "pos_order_tenders_no_delete_settled",
         );
       }
 
@@ -535,6 +547,239 @@ describe("cash", () => {
         [`${order.orderNo}%`],
       );
       expect(Number(rows[0]!.n)).toBe(0);
+    } finally {
+      await db.end();
+    }
+  });
+});
+
+/* ══════════════════════════════════════════════════════════════════
+   DISCOUNT, ROUND OFF AND SPLIT TENDER
+
+   The db suite proves the arithmetic. These prove the ROUTES, and one
+   of them is the reason this block exists: a DISCOUNTED bill charged
+   to a room must post the DISCOUNTED amount. The settle path used to
+   compute its own per-rate split from the lines, which was correct
+   until discounts existed — the guest would hold a discounted bill and
+   the folio would receive the full amount, days before anyone noticed.
+   ══════════════════════════════════════════════════════════════════ */
+
+type Order = {
+  id: string; orderNo: string;
+  net: number; discount: number; taxable: number; tax: number;
+  gross: number; roundOff: number; payable: number;
+  discountType: string | null; discountValue: number | null;
+  discountReason: string | null;
+  tenders: { method: string; amount: number; change: number | null }[];
+};
+
+async function orderWithTwoRates(label: string) {
+  const order = await openOrder(label);
+  const food = await menuItem("Paneer Tikka");
+  const water = await menuItem("Packaged Water 1L");
+  await post(`/api/hotels/5EL/till/orders/${order.id}/lines`,
+    { itemId: food.id, qty: 1 });
+  await post(`/api/hotels/5EL/till/orders/${order.id}/lines`,
+    { itemId: water.id, qty: 1 });
+  return order;
+}
+
+describe("a discount has to say why", () => {
+  it("refuses an amount with no reason", async () => {
+    const order = await orderWithTwoRates("no-reason");
+    const res = await post(`/api/hotels/5EL/till/orders/${order.id}/discount`,
+      { type: "fixed", value: 50 });
+    expect(res.status).toBe(409);
+    expect(((await res.json()) as { reason: string }).reason)
+      .toMatch(/why/i);
+  });
+
+  it("refuses more than 100 percent", async () => {
+    const order = await orderWithTwoRates("over-100");
+    const res = await post(`/api/hotels/5EL/till/orders/${order.id}/discount`,
+      { type: "percent", value: 120, reason: "generous" });
+    expect(res.status).toBe(409);
+  });
+
+  it("stores what was entered, not only what it came to", async () => {
+    const order = await orderWithTwoRates("percent");
+    const res = await post(`/api/hotels/5EL/till/orders/${order.id}/discount`,
+      { type: "percent", value: 10, reason: "manager comp" });
+    expect(res.status).toBe(200);
+    const body = (await res.json()) as Order;
+
+    /* 10% is the record. Recomputing it from the amount later fails the
+       moment a line is added or struck. */
+    expect(body.discountType).toBe("percent");
+    expect(body.discountValue).toBe(10);
+    expect(body.discountReason).toBe("manager comp");
+    expect(body.discount).toBeCloseTo(Math.round(body.net * 10) / 100, 2);
+  });
+
+  it("takes the discount off the NET, so tax falls with it", async () => {
+    const order = await orderWithTwoRates("tax-falls");
+    const before = (await (await as(
+      `/api/hotels/5EL/till/orders/${order.id}`)).json()) as Order;
+
+    const after = (await (await post(
+      `/api/hotels/5EL/till/orders/${order.id}/discount`,
+      { type: "fixed", value: 100, reason: "complaint" })).json()) as Order;
+
+    expect(after.taxable).toBeCloseTo(after.net - 100, 2);
+    /* Off the gross instead, tax would not move at all. That is the bug
+       this assertion exists to catch. */
+    expect(after.tax).toBeLessThan(before.tax);
+    expect(after.gross).toBeCloseTo(after.taxable + after.tax, 2);
+  });
+});
+
+describe("round off", () => {
+  it("brings the payable to a whole rupee, and stays under one", async () => {
+    const order = await orderWithTwoRates("round");
+    const res = await post(
+      `/api/hotels/5EL/till/orders/${order.id}/round-off`, { apply: true });
+    expect(res.status).toBe(200);
+    const body = (await res.json()) as Order;
+
+    expect(Math.abs(body.roundOff)).toBeLessThan(1);
+    expect(body.payable).toBeCloseTo(Math.round(body.gross), 2);
+    expect(body.payable).toBeCloseTo(body.gross + body.roundOff, 2);
+  });
+
+  it("applied twice does not compound", async () => {
+    const order = await orderWithTwoRates("round-twice");
+    await post(`/api/hotels/5EL/till/orders/${order.id}/round-off`,
+      { apply: true });
+    const twice = (await (await post(
+      `/api/hotels/5EL/till/orders/${order.id}/round-off`,
+      { apply: true })).json()) as Order;
+
+    expect(Math.abs(twice.roundOff)).toBeLessThan(1);
+    expect(twice.payable).toBeCloseTo(Math.round(twice.gross), 2);
+  });
+});
+
+describe("split tender", () => {
+  it("refuses payments that do not add up to the bill", async () => {
+    const order = await orderWithTwoRates("short");
+    const now = (await (await as(
+      `/api/hotels/5EL/till/orders/${order.id}`)).json()) as Order;
+
+    const res = await post(`/api/hotels/5EL/till/orders/${order.id}/settle`, {
+      tenders: [{ method: "cash", amount: Number((now.payable - 10).toFixed(2)) }],
+    });
+    expect(res.status).toBe(409);
+    expect(((await res.json()) as { reason: string }).reason)
+      .toMatch(/come to/i);
+  });
+
+  it("takes part cash and part card, and derives the change", async () => {
+    const order = await orderWithTwoRates("split");
+    const now = (await (await as(
+      `/api/hotels/5EL/till/orders/${order.id}`)).json()) as Order;
+
+    const cash = 100;
+    const card = Number((now.payable - cash).toFixed(2));
+    const res = await post(`/api/hotels/5EL/till/orders/${order.id}/settle`, {
+      tenders: [
+        { method: "cash", amount: cash, tendered: 500 },
+        { method: "card", amount: card, reference: "4242" },
+      ],
+    });
+    expect(res.status, await res.clone().text()).toBe(200);
+    const body = (await res.json()) as Order & { paymentMethod: string };
+
+    expect(body.paymentMethod).toBe("split");
+    expect(body.tenders).toHaveLength(2);
+    /* Change is derived, never stored: a stored figure is one more thing
+       that can disagree with the arithmetic. */
+    expect(body.tenders.find((t) => t.method === "cash")!.change).toBe(400);
+    expect(body.tenders.find((t) => t.method === "card")!.change).toBeNull();
+  });
+
+  it("refuses a room mixed with anything else", async () => {
+    const order = await orderWithTwoRates("room-mix");
+    const now = (await (await as(
+      `/api/hotels/5EL/till/orders/${order.id}`)).json()) as Order;
+
+    const res = await post(`/api/hotels/5EL/till/orders/${order.id}/settle`, {
+      tenders: [
+        { method: "room", amount: Number((now.payable - 50).toFixed(2)) },
+        { method: "cash", amount: 50 },
+      ],
+    });
+    expect(res.status).toBe(409);
+    /* Not a limitation being apologised for. There is no defensible way
+       to choose which tax rate a partial room payment settles. */
+    expect(((await res.json()) as { reason: string }).reason)
+      .toMatch(/in full/i);
+  });
+
+  it("records one tender even for an ordinary single-method bill", async () => {
+    const order = await orderWithTwoRates("single");
+    const res = await post(`/api/hotels/5EL/till/orders/${order.id}/settle`,
+      { method: "cash" });
+    expect(res.status).toBe(200);
+    const body = (await res.json()) as Order;
+
+    /* Uniform on purpose: the drawer reconciles the same way whether the
+       biller used Cash or the Part button. */
+    expect(body.tenders).toHaveLength(1);
+    expect(body.tenders[0]!.method).toBe("cash");
+    expect(body.tenders[0]!.amount).toBeCloseTo(body.payable, 2);
+  });
+});
+
+describe("a discounted bill charged to a room", () => {
+  it("posts the DISCOUNTED amount to the folio, not the full one", async () => {
+    const order = await orderWithTwoRates("room-discount");
+    await post(`/api/hotels/5EL/till/orders/${order.id}/discount`,
+      { type: "fixed", value: 100, reason: "manager comp" });
+
+    const now = (await (await as(
+      `/api/hotels/5EL/till/orders/${order.id}`)).json()) as Order;
+
+    const rooms = (await (await as("/api/hotels/5EL/till/rooms")).json()) as {
+      rooms: { room: string }[];
+    };
+    const room = rooms.rooms[0];
+    expect(room, "the demo has no chargeable room").toBeTruthy();
+
+    /* A changeover day leaves two folios open on one room, and the bridge
+       refuses rather than charging whichever the database returned first.
+       The till answers by naming the guest — so the test does what the
+       screen does, instead of picking a room that happens to be simple. */
+    let res = await post(`/api/hotels/5EL/till/orders/${order.id}/settle`,
+      { method: "room", room: room!.room });
+
+    if (res.status === 409) {
+      const asked = (await res.clone().json()) as {
+        choices?: { folioId: string }[];
+      };
+      expect(asked.choices, await res.clone().text()).toBeTruthy();
+      res = await post(`/api/hotels/5EL/till/orders/${order.id}/settle`, {
+        method: "room", room: room!.room,
+        folioId: asked.choices![0]!.folioId,
+      });
+    }
+    expect(res.status, await res.clone().text()).toBe(200);
+
+    const db = await admin();
+    try {
+      const { rows } = await db.query<{ total: string }>(
+        `select coalesce(sum(fp.amount + fp.tax_amount), 0)::text as total
+           from folio_postings fp
+           join pos_tickets t on t.posting_id = fp.id
+          where t.ticket_ref like $1`,
+        [`${order.orderNo}%`],
+      );
+
+      /* The whole point. Before app.pos_order_by_rate existed, this
+         posted `net + tax` computed from the raw lines and came to the
+         UNDISCOUNTED total — a folio that does not match the bill in
+         the guest's hand. */
+      expect(Number(rows[0]!.total)).toBeCloseTo(now.gross, 2);
+      expect(Number(rows[0]!.total)).toBeLessThan(now.net + now.tax);
     } finally {
       await db.end();
     }

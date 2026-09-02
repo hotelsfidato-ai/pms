@@ -223,6 +223,8 @@ async function readOrder(client: Client, orderId: string) {
     hotel_name: string; hotel_city: string | null; hotel_gstin: string | null;
     table_ref: string | null; status: string; business_date: string;
     payment_method: string | null; opened_by_name: string;
+    discount_type: string | null; discount_value: string | null;
+    discount_reason: string | null;
     settled_by_name: string | null; settled_at: string | null;
     abandoned_reason: string | null; ticket_id: string | null;
   }>(
@@ -235,6 +237,7 @@ async function readOrder(client: Client, orderId: string) {
             o.table_ref, o.status,
             to_char(o.business_date,'YYYY-MM-DD') as business_date,
             o.payment_method,
+            o.discount_type, o.discount_value::text, o.discount_reason,
             s1.full_name as opened_by_name,
             s2.full_name as settled_by_name,
             to_char(o.settled_at,'DD Mon, HH24:MI') as settled_at,
@@ -269,9 +272,28 @@ async function readOrder(client: Client, orderId: string) {
      here. One definition, used by the till, the bill and the
      settlement, so the three cannot disagree about what a guest owes. */
   const { rows: total } = await client.query<{
-    net: string; tax: string; gross: string;
-  }>(`select net::text, tax::text, gross::text from app.pos_order_total($1)`,
+    net: string; discount: string; taxable: string; tax: string;
+    gross: string; round_off: string; payable: string;
+  }>(`select net::text, discount::text, taxable::text, tax::text,
+             gross::text, round_off::text, payable::text
+        from app.pos_order_total($1)`,
     [orderId]);
+
+  /* What was actually taken, and how. One row for an ordinary bill,
+     several when the guest paid part cash and part card. Empty while the
+     order is open — nothing has been taken yet. */
+  const { rows: tenders } = await client.query<{
+    id: string; method: string; amount: string;
+    tendered: string | null; reference: string | null; taken_by_name: string;
+  }>(
+    `select t.id::text, t.method, t.amount::text, t.tendered::text,
+            t.reference, s.full_name as taken_by_name
+       from pos_order_tenders t
+       join staff s on s.id = t.taken_by
+      where t.order_id = $1
+      order by t.id`,
+    [orderId],
+  );
 
   const h = head[0];
   return {
@@ -305,8 +327,29 @@ async function readOrder(client: Client, orderId: string) {
       addedBy: l.added_by_name,
     })),
     net: Number(total[0]!.net),
+    /* The discount as APPLIED, which is what the arithmetic used. type and
+       value are what the biller entered, and are what the bill prints —
+       "10% off" rather than a number whose origin nobody can reconstruct. */
+    discount: Number(total[0]!.discount),
+    discountType: h.discount_type,
+    discountValue: h.discount_value === null ? null : Number(h.discount_value),
+    discountReason: h.discount_reason,
+    taxable: Number(total[0]!.taxable),
     tax: Number(total[0]!.tax),
     gross: Number(total[0]!.gross),
+    roundOff: Number(total[0]!.round_off),
+    payable: Number(total[0]!.payable),
+    tenders: tenders.map((t) => ({
+      id: t.id,
+      method: t.method,
+      amount: Number(t.amount),
+      tendered: t.tendered === null ? null : Number(t.tendered),
+      /* Change is derived, never stored. A stored figure is one more thing
+         that can disagree with the arithmetic. */
+      change: t.tendered === null ? null : Number(t.tendered) - Number(t.amount),
+      reference: t.reference,
+      takenBy: t.taken_by_name,
+    })),
   };
 }
 
@@ -534,14 +577,226 @@ till.post("/:code/till/orders/:id/lines/:lineId/void", async (c) => {
   return c.json(result, "ok" in result && result.ok ? 200 : 409);
 });
 
+/* ── The discount ─────────────────────────────────────────────────
+   A discount is allowed and it must say WHY. A till with nowhere to
+   record one does not stop discounts happening — it moves them
+   somewhere invisible, and the biller voids a line instead. */
+
+till.post("/:code/till/orders/:id/discount", async (c) => {
+  type DiscountBody = { type?: string; value?: number; reason?: string };
+  const input = await c.req.json<DiscountBody>().catch(() => ({}) as DiscountBody);
+
+  const type = input.type;
+  if (type !== "percent" && type !== "fixed") {
+    return c.json(refuse("A discount is a percentage or a fixed amount."), 409);
+  }
+
+  const value = Number(input.value);
+  if (!Number.isFinite(value) || value <= 0) {
+    return c.json(refuse("How much is the discount?"), 409);
+  }
+  if (type === "percent" && value > 100) {
+    return c.json(
+      refuse("More than 100% is a refund, not a discount."), 409);
+  }
+
+  /* The reason is the whole point. An amount with nobody's explanation
+     attached is an unauditable hole in revenue, which is worse than
+     not offering the feature at all. */
+  const reason = input.reason?.trim();
+  if (!reason) {
+    return c.json(
+      refuse("Why is this discounted? A staff meal, a complaint, a manager's call."),
+      409,
+    );
+  }
+
+  const result = await withSession(c.get("subject"), async (client) => {
+    const hotelId = await hotelFor(client, c.req.param("code"));
+    if (!hotelId) return null;
+    const orderId = c.req.param("id");
+
+    const { rows: order } = await client.query<{ status: string }>(
+      `select status from pos_orders where id = $1 and hotel_id = $2`,
+      [orderId, hotelId],
+    );
+    if (!order[0]) return refuse("No such order.");
+    if (order[0].status !== "open") {
+      return refuse(`This order is ${order[0].status} and cannot be changed.`);
+    }
+
+    const { rows: t } = await client.query<{ net: string }>(
+      `select net::text from app.pos_order_total($1)`, [orderId]);
+    if (Number(t[0]!.net) <= 0) {
+      return refuse("There is nothing on this order to discount.");
+    }
+
+    /* A percentage is resolved to money ONCE, here, and stored. Never
+       recomputed on read: a bill printed at 10% off would silently
+       change the moment somebody added a line to the order. */
+    const amount = type === "percent"
+      ? (await client.query<{ amount: string }>(
+          `select app.pos_discount_for($1, $2)::text as amount`,
+          [orderId, value])).rows[0]!.amount
+      : value;
+
+    await client.query(
+      `update pos_orders
+          set discount_type = $1, discount_value = $2,
+              discount_amount = $3, discount_reason = $4, updated_at = now()
+        where id = $5`,
+      [type, value, amount, reason, orderId],
+    );
+
+    return { ok: true as const, ...(await readOrder(client, orderId))! };
+  });
+
+  if (!result) return c.json({ error: "No such property." }, 404);
+  return c.json(result, "ok" in result && result.ok ? 200 : 409);
+});
+
+till.post("/:code/till/orders/:id/discount/clear", async (c) => {
+  const result = await withSession(c.get("subject"), async (client) => {
+    const hotelId = await hotelFor(client, c.req.param("code"));
+    if (!hotelId) return null;
+    const orderId = c.req.param("id");
+
+    const { rowCount } = await client.query(
+      `update pos_orders
+          set discount_type = null, discount_value = null,
+              discount_amount = 0, discount_reason = null, updated_at = now()
+        where id = $1 and hotel_id = $2 and status = 'open'`,
+      [orderId, hotelId],
+    );
+    if (!rowCount) return refuse("No open order here, or it is already settled.");
+
+    return { ok: true as const, ...(await readOrder(client, orderId))! };
+  });
+
+  if (!result) return c.json({ error: "No such property." }, 404);
+  return c.json(result, "ok" in result && result.ok ? 200 : 409);
+});
+
+/* ── Round off ────────────────────────────────────────────────────
+   To the nearest rupee, so the biller takes a note rather than
+   counting coins. Its own column because it is its own line on the
+   bill and its own row in the day book — and the database caps it
+   under a rupee so it cannot become a discount avoiding the reason. */
+
+till.post("/:code/till/orders/:id/round-off", async (c) => {
+  type RoundBody = { apply?: boolean };
+  const input = await c.req.json<RoundBody>().catch(() => ({}) as RoundBody);
+
+  const result = await withSession(c.get("subject"), async (client) => {
+    const hotelId = await hotelFor(client, c.req.param("code"));
+    if (!hotelId) return null;
+    const orderId = c.req.param("id");
+
+    const { rows: order } = await client.query<{ status: string }>(
+      `select status from pos_orders where id = $1 and hotel_id = $2`,
+      [orderId, hotelId],
+    );
+    if (!order[0]) return refuse("No such order.");
+    if (order[0].status !== "open") {
+      return refuse(`This order is ${order[0].status} and cannot be changed.`);
+    }
+
+    if (input.apply === false) {
+      await client.query(
+        `update pos_orders set round_off = 0, updated_at = now() where id = $1`,
+        [orderId]);
+      return { ok: true as const, ...(await readOrder(client, orderId))! };
+    }
+
+    /* Computed from the gross, with round_off already zeroed, so
+       applying it twice does not compound. */
+    await client.query(
+      `update pos_orders set round_off = 0 where id = $1`, [orderId]);
+
+    const { rows: t } = await client.query<{ gross: string }>(
+      `select gross::text from app.pos_order_total($1)`, [orderId]);
+    const gross = Number(t[0]!.gross);
+    const adjustment = Math.round(gross) - gross;
+
+    await client.query(
+      `update pos_orders set round_off = $1, updated_at = now() where id = $2`,
+      [adjustment.toFixed(2), orderId],
+    );
+
+    return { ok: true as const, ...(await readOrder(client, orderId))! };
+  });
+
+  if (!result) return c.json({ error: "No such property." }, 404);
+  return c.json(result, "ok" in result && result.ok ? 200 : 409);
+});
+
 /* ── Settling ─────────────────────────────────────────────────────── */
 
 till.post("/:code/till/orders/:id/settle", async (c) => {
-  type SettleBody = { method?: string; room?: string; folioId?: string };
+  type Tender = {
+    method?: string; amount?: number; tendered?: number; reference?: string;
+  };
+  type SettleBody = {
+    method?: string; room?: string; folioId?: string; tenders?: Tender[];
+  };
   const input = await c.req.json<SettleBody>().catch(() => ({}) as SettleBody);
 
-  const method = input.method;
-  if (!method || !["room", "cash", "card", "upi"].includes(method)) {
+  const METHODS = ["room", "cash", "card", "upi"];
+
+  /* Two shapes reach here. `method` alone is the ordinary bill: one way,
+     the whole amount. `tenders` is the Part button — several payments that
+     must add up. Both end as rows in pos_order_tenders, so the drawer
+     reconciles the same way regardless of which was used. */
+  const raw = Array.isArray(input.tenders) ? input.tenders : null;
+  let tenders: {
+    method: string; amount: number;
+    tendered: number | null; reference: string | null;
+  }[] | null = null;
+
+  if (raw) {
+    if (raw.length === 0) {
+      return c.json(refuse("Add at least one payment."), 409);
+    }
+    for (const t of raw) {
+      if (!t.method || !METHODS.includes(t.method)) {
+        return c.json(refuse("Each payment is room, cash, card or upi."), 409);
+      }
+      if (!Number.isFinite(Number(t.amount)) || Number(t.amount) <= 0) {
+        return c.json(refuse("Every payment needs an amount above zero."), 409);
+      }
+      if (t.tendered !== undefined && t.method !== "cash") {
+        return c.json(
+          refuse("Only cash is tendered — a card pays its own amount."), 409);
+      }
+      if (t.tendered !== undefined && Number(t.tendered) < Number(t.amount)) {
+        return c.json(
+          refuse("The cash handed over is less than the amount being taken."),
+          409);
+      }
+    }
+    tenders = raw.map((t) => ({
+      method: t.method!,
+      amount: Number(t.amount),
+      tendered: t.tendered === undefined ? null : Number(t.tendered),
+      reference: t.reference?.trim() || null,
+    }));
+
+    /* A room charge reaches the folio as one posting per tax rate. Paying
+       PART of a bill to a room would mean apportioning that part across
+       rates again, and there is no defensible way to choose which rate a
+       partial payment settles. Refused with a reason rather than guessed. */
+    if (tenders.some((t) => t.method === "room") && tenders.length > 1) {
+      return c.json(refuse(
+        "A bill going to a room has to go there in full. Split it between " +
+        "cash, card and UPI, or charge the whole bill to the room."), 409);
+    }
+  }
+
+  const method = tenders
+    ? (tenders.length === 1 ? tenders[0]!.method : "split")
+    : input.method;
+
+  if (!method || !(METHODS.includes(method) || method === "split")) {
     return c.json(refuse("How was this paid — room, cash, card or upi?"), 409);
   }
 
@@ -568,13 +823,14 @@ till.post("/:code/till/orders/:id/settle", async (c) => {
     }
 
     const { rows: t } = await client.query<{
-      net: string; tax: string; gross: string;
-    }>(`select net::text, tax::text, gross::text from app.pos_order_total($1)`,
+      net: string; discount: string; tax: string;
+      gross: string; payable: string;
+    }>(`select net::text, discount::text, tax::text, gross::text,
+               payable::text from app.pos_order_total($1)`,
       [orderId]);
 
-    /* Only the net is needed here — the per-rate split below does its
-       own arithmetic, from the same function, in the database. */
     const net = Number(t[0]!.net);
+    const payable = Number(t[0]!.payable);
 
     /* An empty bill is not a sale. Settling one would put a zero-value
        ticket on a folio and a zero row in the shift count, which is
@@ -585,6 +841,40 @@ till.post("/:code/till/orders/:id/settle", async (c) => {
       );
     }
 
+    /* The tenders must equal the bill exactly. Short is a drawer that will
+       not reconcile at day end; over is change that was never given. */
+    if (tenders) {
+      const taken = tenders.reduce((a, t) => a + t.amount, 0);
+      if (Math.abs(taken - payable) > 0.005) {
+        return refuse(
+          `The payments come to ₹${taken.toFixed(2)} and the bill is ` +
+          `₹${payable.toFixed(2)}.`,
+        );
+      }
+    }
+
+    /* Everything comped. There is no payment to record, and a tender row
+       must carry a positive amount, so the bill settles with none. */
+    const rows = payable <= 0
+      ? []
+      : tenders ?? [{
+          method: method === "split" ? "cash" : method,
+          amount: payable, tendered: null, reference: null,
+        }];
+
+    const writeTenders = async () => {
+      for (const t of rows) {
+        await client.query(
+          `insert into pos_order_tenders
+             (order_id, hotel_id, method, amount, tendered, reference, taken_by)
+           values ($1,$2,$3,$4,$5,$6,$7)`,
+          [orderId, hotelId, t.method, t.amount.toFixed(2),
+           t.tendered === null ? null : t.tendered.toFixed(2),
+           t.reference, session.staffId],
+        );
+      }
+    };
+
     /* ── Cash, card, upi: nothing touches a folio ────────────────── */
     if (method !== "room") {
       await client.query(
@@ -594,6 +884,7 @@ till.post("/:code/till/orders/:id/settle", async (c) => {
           where id = $3`,
         [session.staffId, method, orderId],
       );
+      await writeTenders();
       return { ok: true as const, ...(await readOrder(client, orderId))! };
     }
 
@@ -653,15 +944,20 @@ till.post("/:code/till/orders/:id/settle", async (c) => {
        separately. The first version of this posted one row with
        tax_rate 0 and the tax in tax_amount; the database rejected it
        immediately, which is the constraint doing its job. */
+    /* app.pos_order_by_rate, NOT a second copy of the arithmetic here.
+       This query used to compute the split itself from the lines, which was
+       correct until discounts existed and silently wrong afterwards: the
+       guest holds a discounted bill and the folio receives the full amount.
+       Nobody notices at the till, because the till's own total is right.
+
+       `taxable` is the discounted net — what the folio must actually be
+       charged. */
     const { rows: byRate } = await client.query<{
       tax_rate: string; net: string; tax: string;
     }>(
-      `select tax_rate::text,
-              sum(round(qty * unit_price, 2))::text as net,
-              sum(round(qty * unit_price * tax_rate / 100.0, 2))::text as tax
-         from pos_order_lines
-        where order_id = $1 and not voided
-        group by tax_rate
+      `select tax_rate::text, taxable::text as net, tax::text
+         from app.pos_order_by_rate($1)
+        where taxable > 0
         order by tax_rate`,
       [orderId],
     );
@@ -725,6 +1021,11 @@ till.post("/:code/till/orders/:id/settle", async (c) => {
          reached the folio, and a split bill reached it twice. */
       [session.staffId, tickets[0], orderId],
     );
+
+    /* After the ticket exists. The room-tender trigger is deferred so the
+       order would not matter, but writing it in the order a person would
+       read is worth more than relying on that. */
+    await writeTenders();
 
     return {
       ok: true as const,

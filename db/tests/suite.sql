@@ -1437,7 +1437,7 @@ end $$;
 do $$
 declare
   v_hotel uuid; v_staff uuid; v_outlet uuid; v_order uuid; v_order2 uuid;
-  r record; n int;
+  r record; n int; rate_taxable numeric; rate_tax numeric;
 begin
   insert into hotels (code, name, city, timezone)
   values ('PDC', 'Discount fixture', 'Akkalkot', 'Asia/Kolkata') returning id into v_hotel;
@@ -1516,6 +1516,29 @@ begin
   perform test.raises('pos discount','a round off larger than a rupee is refused',
     format($q$update pos_orders set round_off = -5.00 where id = %L$q$, v_order),
     '23514');
+
+  -- ---------- the per-rate breakdown IS what reaches the folio ----------
+  -- The room-settle path posts one folio row per tax rate. Before 040 it
+  -- computed that split itself, straight from the lines, so a discounted bill
+  -- charged to a room posted the FULL amount: the guest holds a discounted
+  -- bill and the folio disagrees, days later, where nobody can reconstruct why.
+  select coalesce(sum(taxable), 0), coalesce(sum(tax), 0)
+    into rate_taxable, rate_tax
+    from app.pos_order_by_rate(v_order2);
+
+  perform test.ok('pos discount','the per-rate rows sum to the order total',
+    (select taxable from app.pos_order_total(v_order2)) = rate_taxable
+    and (select tax from app.pos_order_total(v_order2)) = rate_tax,
+    'by rate ' || rate_taxable || ' + ' || rate_tax);
+
+  perform test.ok('pos discount','every rate carries a share of the discount',
+    not exists (select 1 from app.pos_order_by_rate(v_order2) where discount = 0),
+    'three rates, three shares');
+
+  perform test.ok('pos discount','tax per rate is charged on the discounted value',
+    (select tax from app.pos_order_by_rate(v_order2) where tax_rate = 18.00)
+      < round(333.34 * 0.18, 2),
+    'discounted 18% tax is below the undiscounted 60.00');
 
   -- ---------- percentage or fixed, and the bill must say which ----------
   perform test.raises('pos discount','a discount amount with no type is refused',
