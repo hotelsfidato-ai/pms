@@ -5,7 +5,7 @@ import { cn } from "@/lib/cn";
 import { money } from "@/lib/format";
 import { rateOverrideNeedsReason, canConfirmWalkIn } from "@/lib/rules";
 import {
-  Button, Field, Input, NativeSelect, StatusPill, toast,
+  Button, Field, Input, NativeSelect, StatusPill, Switch, toast,
   Dialog, DialogContent,
 } from "@/components/ui";
 import { createWalkIn, listStays, getRoom } from "@/data/repositories";
@@ -42,6 +42,17 @@ export function WalkInFlow({
   const [ratePlan, setRatePlan] = useState("CP");
   const [rate, setRate] = useState("");
   const [overrideReason, setOverrideReason] = useState("");
+
+  /* Where the booking came from, and the placement flag. All optional:
+     a clerk with somebody standing at the desk must not be blocked on a
+     field they do not know the answer to. But it is asked HERE, because
+     it cannot be back-filled — a month later nobody remembers which
+     agent sent a walk-in, and the source-mix report is built from
+     exactly this. */
+  const [segment, setSegment] = useState("");
+  const [businessSource, setBusinessSource] = useState("");
+  const [salesPerson, setSalesPerson] = useState("");
+  const [singleLady, setSingleLady] = useState(false);
 
   const room = useQuery({
     queryKey: ["room", hotelId, roomNumber],
@@ -87,6 +98,10 @@ export function WalkInFlow({
   const reset = () => {
     setGuestName(""); setNights(1); setAdults(2); setChildren(0);
     setRatePlan("CP"); setRate(""); setOverrideReason("");
+    /* Cleared too. A source left over from the last walk-in would be
+       attributed to the next guest, silently, and nobody would find it. */
+    setSegment(""); setBusinessSource(""); setSalesPerson("");
+    setSingleLady(false);
   };
 
   return (
@@ -167,6 +182,54 @@ export function WalkInFlow({
             )}
           </Field>
 
+          <div className="grid grid-cols-2 gap-3">
+            <Field label="Segment" hint="Leave blank if unknown">
+              {({ id }) => (
+                <NativeSelect id={id} value={segment}
+                  onChange={(e) => setSegment(e.target.value)}>
+                  {/* Blank is a real option and stays null. An unknown
+                      segment must never become "Other" — that is a guess
+                      that turns into a line in a report an owner sets
+                      policy from. */}
+                  <option value="">—</option>
+                  {["Corporate", "Leisure", "Group", "Crew", "Government"]
+                    .map((m) => <option key={m}>{m}</option>)}
+                </NativeSelect>
+              )}
+            </Field>
+            <Field label="Business source" hint="Agent, company, planner">
+              {({ id }) => (
+                <Input
+                  id={id}
+                  value={businessSource}
+                  onChange={(e) => setBusinessSource(e.target.value)}
+                  placeholder="—"
+                />
+              )}
+            </Field>
+          </div>
+
+          <Field label="Sold by" hint="Optional">
+            {({ id }) => (
+              <Input
+                id={id}
+                value={salesPerson}
+                onChange={(e) => setSalesPerson(e.target.value)}
+                placeholder="—"
+              />
+            )}
+          </Field>
+
+          {/* A safety practice, not a demographic note. It drives room
+              placement away from stairwells and service corridors, and
+              it is not read out at the desk. */}
+          <Switch
+            checked={singleLady}
+            onCheckedChange={setSingleLady}
+            label="Woman travelling alone"
+            description="Placed away from stairwells and service corridors. Not announced at the desk."
+          />
+
           <Field
             label="Rate per night"
             hint={
@@ -232,6 +295,8 @@ export function WalkInFlow({
                 guestName, roomNumber, nights, adults, children, ratePlan,
                 rackTariff: rack ?? offered, offeredTariff: offered,
                 overrideReason, businessDate: date, user: USER,
+                businessSource, marketSegment: segment, salesPerson,
+                isSingleLady: singleLady,
               });
               if (res.ok) {
                 toast.success(

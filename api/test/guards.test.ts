@@ -264,3 +264,106 @@ describe("void is not cancel", () => {
     }
   });
 });
+
+describe("a walk-in records where it came from", () => {
+  let made: string | null = null;
+
+  afterAll(async () => {
+    if (!made) return;
+    const db = await admin();
+    try {
+      await db.query(
+        `delete from room_assignments where reservation_id = $1`, [made]);
+      await db.query(
+        "alter table folio_postings disable trigger folio_postings_append_only");
+      try {
+        await db.query(
+          `delete from folio_postings where folio_id in
+             (select id from folios where reservation_id = $1)`, [made]);
+      } finally {
+        await db.query(
+          "alter table folio_postings enable trigger folio_postings_append_only");
+      }
+      await db.query(`delete from folios where reservation_id = $1`, [made]);
+      await db.query(`delete from reservations where id = $1`, [made]);
+      await db.query("alter table guests disable trigger guests_no_delete");
+      try {
+        await db.query(
+          `delete from guests where full_name = 'Source Test Guest'`);
+      } finally {
+        await db.query("alter table guests enable trigger guests_no_delete");
+      }
+    } finally {
+      await db.end();
+    }
+  });
+
+  it("stores the segment, the source and the seller", async () => {
+    const db = await admin();
+    let room: string;
+    try {
+      /* A room nobody is in, so the walk-in is not fighting the demo. */
+      const { rows } = await db.query<{ number: string }>(
+        `select rm.number from rooms rm
+           join hotels h on h.id = rm.hotel_id
+          where h.code = '5EL'
+            and not exists (
+              select 1 from room_assignments a
+               where a.room_id = rm.id and a.released_at is null)
+          limit 1`);
+      expect(rows[0], "the demo has no free room").toBeTruthy();
+      room = rows[0]!.number;
+    } finally {
+      await db.end();
+    }
+
+    const res = await post("/5EL/walk-ins", {
+      guestName: "Source Test Guest",
+      roomNumber: room, nights: 1, adults: 1, children: 0,
+      ratePlan: "CP", rackTariff: 4000, offeredTariff: 4000,
+      overrideReason: "", businessDate: "2026-08-25", user: "test",
+      businessSource: "Sharma Travels",
+      marketSegment: "Corporate",
+      salesPerson: "R Patil",
+      isSingleLady: true,
+    });
+    expect(res.status, await res.clone().text()).toBe(200);
+    made = ((await res.json()) as { data: { id: string } }).data.id;
+
+    const check = await admin();
+    try {
+      const { rows } = await check.query<{
+        business_source: string | null; market_segment: string | null;
+        sales_person: string | null; is_single_lady: boolean;
+      }>(
+        `select business_source, market_segment, sales_person, is_single_lady
+           from reservations where id = $1`, [made]);
+
+      expect(rows[0]!.business_source).toBe("Sharma Travels");
+      expect(rows[0]!.market_segment).toBe("Corporate");
+      expect(rows[0]!.sales_person).toBe("R Patil");
+      expect(rows[0]!.is_single_lady).toBe(true);
+    } finally {
+      await check.end();
+    }
+  });
+
+  it("leaves an unanswered field NULL, not an empty string", async () => {
+    const res = await as(`/5EL/stays/${made}`);
+    expect(res.status).toBe(200);
+
+    /* The distinction matters downstream. An empty string sorts and
+       groups as its own category in a source-mix report and reads as a
+       real answer somebody gave; null renders as a dash. */
+    const db = await admin();
+    try {
+      const { rows } = await db.query<{ n: string }>(
+        `select count(*)::text as n from reservations
+          where business_source = '' or market_segment = ''
+             or sales_person = ''`);
+      expect(rows[0]!.n).toBe("0");
+    } finally {
+      await db.end();
+    }
+  });
+});

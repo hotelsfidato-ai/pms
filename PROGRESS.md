@@ -734,7 +734,7 @@ retried. Ledger nets to zero, room revenue still ₹4,19,578.76.
 12 Hardening and go-live             █████████░░░  + launch.sh, preflight, nginx
 13 POS upgrade — Petpooja-informed   ████░░░░░░░░  discount, round off, split tender, change
 14 Modules + banquet                  ███░░░░░░░░░  POS toggle whole; banquet untouched
-15 PMS upgrade — eZee-informed        ███░░░░░░░░░  void, indicators, sources shown
+15 PMS upgrade — eZee-informed        ████░░░░░░░░  void, sources whole; VIP still read-only
 ```
 
 **Stage 13 reads 4, and those four are finished** — database, API and screen.
@@ -757,11 +757,15 @@ enabled** — the default is never "off", or shipping it would have closed the t
 at the property already using it. What remains there is a settings screen to
 flip it from, and the whole of banquet.
 
-Stage 15 reads 3: **void** end to end, and **indicators** and **sources** now
-reaching a screen. Not counted higher because nothing yet WRITES a segment or a
-VIP flag — the detail panel reads them and shows a dash where they are absent,
-which is a display, not a workflow. Room move, groups and the two grids are the
-nine that remain.
+Stage 15 reads 4. **Void** and **sources** are whole — the walk-in captures
+segment, business source, seller and the placement flag at the desk, because none
+of it can be back-filled: a month later nobody remembers which agent sent a
+walk-in. Blank stays **NULL**, never the empty string, which would otherwise sort
+as its own category in the report and read as a real answer somebody gave.
+
+**Indicators are half.** The single-lady flag is written at the walk-in; VIP sits
+on the guest and nothing sets it yet, so the detail panel reads it and no screen
+writes it. Room move, groups and the two grids are the eight that remain.
 
 **Stage 15 is new scope, on the same rule as 13 and 14.** A batch of screenshots
 of the current PMS set a higher bar for reservations, inventory and rates than
@@ -796,7 +800,7 @@ moved: twenty screenshots of Petpooja set a higher bar, and two module
 requirements arrived with it. Lowering stage 7 would misreport what happened, so
 the new work is its own row. Detail in `POS-PROGRESS.md`.
 
-**126 of 180 — 70%.** Add the filled blocks above and divide by 168. That sum is the number; it is not typed separately, because it was for three audits running and drifted to "about 90%" while the bars said 70. It moved from 119 when stage 13’s three unfounded blocks came off.
+**127 of 180 — 71%.** Add the filled blocks above and divide by 168. That sum is the number; it is not typed separately, because it was for three audits running and drifted to "about 90%" while the bars said 70. It moved from 119 when stage 13’s three unfounded blocks came off.
 
 **Go-live scope — 116 of 132, 88% — unchanged.** What has to be true for a real hotel to run on this: stages 1–10 and 12. The CRS bridge (11), the POS upgrade (13), the modules (14) and the PMS upgrade (15) are all real work, and not one of them stops a guest checking in, a folio settling or a night closing.
 

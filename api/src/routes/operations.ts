@@ -623,6 +623,11 @@ operations.post("/:code/walk-ins", async (c) => {
     adults?: number; children?: number; ratePlan?: string;
     rackTariff?: number; offeredTariff?: number;
     overrideReason?: string; businessDate?: string;
+    /* Where it came from, captured AT THE DESK. This cannot be
+       back-filled — a month later nobody remembers which agent sent a
+       walk-in, and the source-mix report is built from exactly this. */
+    businessSource?: string; marketSegment?: string; salesPerson?: string;
+    isSingleLady?: boolean;
   };
 
   const result = await withSession(c.get("subject"), async (client): Promise<Outcome | null> => {
@@ -724,13 +729,22 @@ operations.post("/:code/walk-ins", async (c) => {
       `insert into reservations
          (hotel_id, reference, guest_id, room_type_id, check_in, check_out,
           adults, children, occupancy, agreed_rate, status, source,
-          meal_plan, notes)
-       values ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,'checked_in','walk_in',$11,$12)
+          meal_plan, notes,
+          business_source, market_segment, sales_person, is_single_lady)
+       values ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,'checked_in','walk_in',$11,$12,
+               $13,$14,$15,$16)
        returning id`,
       [hotelId, refRows[0]?.reference, guestRows[0]?.id, room.room_type_id,
        businessDate, checkOut, body.adults ?? 1, body.children ?? 0,
        (body.adults ?? 1) + (body.children ?? 0), offered,
-       body.ratePlan === "Room Only" ? "RO" : body.ratePlan ?? null, notes],
+       body.ratePlan === "Room Only" ? "RO" : body.ratePlan ?? null, notes,
+       /* Blank stays NULL. An empty segment must not become the string
+          "" — it would sort and group as its own category in the report
+          and read as a real answer somebody gave. */
+       body.businessSource?.trim() || null,
+       body.marketSegment?.trim() || null,
+       body.salesPerson?.trim() || null,
+       body.isSingleLady === true],
     );
     const stayId = made[0]!.id;
 

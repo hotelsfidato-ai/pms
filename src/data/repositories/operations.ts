@@ -327,6 +327,14 @@ export async function createWalkIn(
     overrideReason: string;
     businessDate: string;
     user: string;
+    /* Captured AT THE DESK, because it cannot be back-filled. A month
+       later nobody remembers which agent sent a walk-in, and the
+       source-mix report is built from exactly this. Optional: a clerk
+       with a queue must not be blocked on a field they do not know. */
+    businessSource?: string;
+    marketSegment?: string;
+    salesPerson?: string;
+    isSingleLady?: boolean;
   },
 ): Promise<OperationResult<Stay>> {
   /* This wrote the new stay into the in-memory store while every
