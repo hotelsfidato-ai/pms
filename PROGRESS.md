@@ -733,8 +733,8 @@ retried. Ledger nets to zero, room revenue still ₹4,19,578.76.
 11 CRS bridge / SU                    ░░░░░░░░░░░░  now IN scope, after go-live
 12 Hardening and go-live             █████████░░░  + launch.sh, preflight, nginx
 13 POS upgrade — Petpooja-informed   ████░░░░░░░░  discount, round off, split tender, change
-14 Modules + banquet                  ███░░░░░░░░░  POS toggle whole; banquet untouched
-15 PMS upgrade — eZee-informed        ████░░░░░░░░  void, sources whole; VIP still read-only
+14 Modules + banquet                  █░░░░░░░░░░░  POS toggle whole; banquet is the other 11
+15 PMS upgrade — eZee-informed        ████░░░░░░░░  2 whole, 4 half — every grid lacks a screen
 ```
 
 **Stage 13 reads 4, and those four are finished** — database, API and screen.
@@ -749,6 +749,21 @@ full amount.** Nobody notices at the till, because the till's own total is right
 The apportionment now lives in `app.pos_order_by_rate` and the total is built from
 it, so there is one copy of the arithmetic instead of two — two copies being
 exactly how the folio and the till drifted apart.
+
+**Stage 14 read 3 for a day and derives to 1.** The POS toggle is ONE unit —
+table, route gate, bridge gate, navigation and a settings switch — and banquet
+is the other eleven: venues, bookings, sessions, package rates, folio posting.
+Counting a finished small thing as three because it took a while is the same
+overcounting stage 13 was corrected for this morning, and this is the second
+time in one day. **The bars are now derived from a written unit list, not
+typed.**
+
+**Stage 15 derives to 4: two whole and four halves.** Void and sources are done
+end to end. Indicators are half — the single-lady flag is written at the walk-in,
+VIP is read and nothing sets it. The inventory grid, the rates grid and the
+restrictions each have a database and an API and **no screen**, which is half of
+each: the arithmetic was the hard part and found three real bugs, but a revenue
+manager with no screen gets nothing.
 
 **What stages 14 and 15 currently hold.** Stage 14 is the POS toggle, whole:
 `hotel_modules`, a gate on the till and kitchen routes, the same gate inside the
@@ -800,7 +815,7 @@ moved: twenty screenshots of Petpooja set a higher bar, and two module
 requirements arrived with it. Lowering stage 7 would misreport what happened, so
 the new work is its own row. Detail in `POS-PROGRESS.md`.
 
-**127 of 180 — 71%.** Add the filled blocks above and divide by 168. That sum is the number; it is not typed separately, because it was for three audits running and drifted to "about 90%" while the bars said 70. It moved from 119 when stage 13’s three unfounded blocks came off.
+**125 of 180 — 69%.** Add the filled blocks above and divide by 168. That sum is the number; it is not typed separately, because it was for three audits running and drifted to "about 90%" while the bars said 70. It moved from 119 when stage 13’s three unfounded blocks came off.
 
 **Go-live scope — 116 of 132, 88% — unchanged.** What has to be true for a real hotel to run on this: stages 1–10 and 12. The CRS bridge (11), the POS upgrade (13), the modules (14) and the PMS upgrade (15) are all real work, and not one of them stops a guest checking in, a folio settling or a night closing.
 
