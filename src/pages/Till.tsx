@@ -3,19 +3,21 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useParams } from "react-router";
 import {
   UtensilsCrossed, Plus, X, Receipt, BedDouble, Banknote,
-  CreditCard, Smartphone, Printer,
+  CreditCard, Smartphone, Printer, Percent, Split,
 } from "lucide-react";
 import { cn } from "@/lib/cn";
 import { money } from "@/lib/format";
 import { useUi } from "@/lib/ui";
 import {
   Page, PageHeader, Card, CardBody, StatusPill, Button, toast,
+  Dialog, DialogContent, Field, fieldProps, Input, NativeSelect,
 } from "@/components/ui";
 import {
   getMenu, listOrders, getOrder, listChargeableRooms,
   openOrder, addLine, voidLine, settleOrder, abandonOrder,
+  applyDiscount, clearDiscount, setRoundOff, settleSplit,
   BUSINESS_DATE,
-  type Order, type MenuItem, type OrderSummary,
+  type Order, type MenuItem, type OrderSummary, type TenderInput,
 } from "@/data/repositories";
 
 /* ══════════════════════════════════════════════════════════════════
@@ -224,7 +226,11 @@ export default function TillPage() {
               busy={busy}
               setBusy={setBusy}
               onStrike={strike}
+              /* Settling or abandoning FINISHES a bill, so the panel
+                 closes. Discounting it does not — the biller is still
+                 standing at the same order and about to take payment. */
               onDone={() => { setOpenId(null); refresh(); }}
+              onChanged={refresh}
             />
           )}
 
@@ -301,20 +307,327 @@ function OrderRow({ order, active, onOpen }: {
   );
 }
 
+/* ══════════════════════════════════════════════════════════════════
+   THE DISCOUNT DIALOG
+
+   A discount is allowed and it must say WHY. The reason is not a
+   nicety — an amount with nobody's explanation attached is an
+   unauditable hole in revenue, and a till that offers the amount
+   without the reason is worse than one that offers neither.
+
+   Percentage and fixed both, because the BILL prints what was chosen.
+   "10% off" and "₹115.70 off" are the same money and a different
+   statement to a guest querying it next month.
+   ══════════════════════════════════════════════════════════════════ */
+function DiscountDialog({
+  order, hotelId, open, onOpenChange, onDone,
+}: {
+  order: Order;
+  hotelId: string;
+  open: boolean;
+  onOpenChange: (o: boolean) => void;
+  onDone: () => void;
+}) {
+  const [type, setType] = useState<"percent" | "fixed">(
+    order.discountType ?? "percent");
+  const [value, setValue] = useState(
+    order.discountValue === null ? "" : String(order.discountValue));
+  const [reason, setReason] = useState(order.discountReason ?? "");
+  const [busy, setBusy] = useState(false);
+
+  const amount = Number(value);
+  const preview = !Number.isFinite(amount) || amount <= 0
+    ? null
+    : type === "percent"
+      ? Math.round(order.net * amount) / 100
+      : amount;
+
+  const tooMuch = preview !== null
+    && (type === "percent" ? amount > 100 : preview > order.net);
+
+  const apply = async () => {
+    setBusy(true);
+    const res = await applyDiscount(hotelId, order.id, type, amount,
+      reason.trim());
+    setBusy(false);
+    if (!res.ok) return toast.error("Not discounted", res.reason);
+    onOpenChange(false);
+    onDone();
+  };
+
+  const remove = async () => {
+    setBusy(true);
+    const res = await clearDiscount(hotelId, order.id);
+    setBusy(false);
+    if (!res.ok) return toast.error("Not removed", res.reason);
+    onOpenChange(false);
+    onDone();
+  };
+
+  return (
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent
+        title="Discount this bill"
+        description="Off the net, so the tax falls with it."
+        size="sm"
+        footer={
+          <div className="flex gap-2 w-full">
+            {order.discount > 0 && (
+              <Button variant="ghost" size="lg" loading={busy}
+                onClick={() => void remove()}>
+                Remove
+              </Button>
+            )}
+            <div className="flex-1" />
+            <Button variant="secondary" size="lg"
+              onClick={() => onOpenChange(false)}>
+              Cancel
+            </Button>
+            <Button
+              size="lg"
+              loading={busy}
+              disabled={!reason.trim() || preview === null || tooMuch}
+              onClick={() => void apply()}
+            >
+              Apply
+            </Button>
+          </div>
+        }
+      >
+        <div className="space-y-4">
+          <div className="flex gap-2">
+            {(["percent", "fixed"] as const).map((t) => (
+              <button
+                key={t}
+                type="button"
+                onClick={() => setType(t)}
+                className={cn(
+                  "flex-1 h-11 rounded-md border text-base font-medium cursor-pointer",
+                  "transition-colors duration-200",
+                  type === t
+                    ? "border-brand-orange bg-orange-50 text-brand-orange"
+                    : "border-grey-300 text-grey-600 hover:bg-grey-50",
+                )}
+              >
+                {t === "percent" ? "Percentage" : "Fixed amount"}
+              </button>
+            ))}
+          </div>
+
+          <Field label={type === "percent" ? "Percent off" : "Amount off"} required>
+            {(f) => (
+              <Input
+                {...fieldProps(f)}
+                type="number"
+                inputMode="decimal"
+                value={value}
+                onChange={(e) => setValue(e.target.value)}
+                placeholder={type === "percent" ? "10" : "100.00"}
+                autoFocus
+              />
+            )}
+          </Field>
+
+          {/* Shown before it is applied, because a biller pressing 10 for
+              "ten percent" and getting ₹10 off is the mistake this
+              prevents. */}
+          {preview !== null && !tooMuch && (
+            <p className="text-sm text-grey-600">
+              Takes <span className="tabular font-medium text-ink-900">
+                {money(preview)}
+              </span> off {money(order.net)}.
+            </p>
+          )}
+          {tooMuch && (
+            <p className="text-sm text-brand-red">
+              That is more than the bill. A discount cannot make it negative.
+            </p>
+          )}
+
+          <Field
+            label="Why"
+            required
+            hint="A staff meal, a complaint, a manager's call. It stays on the record."
+          >
+            {(f) => (
+              <Input
+                {...fieldProps(f)}
+                value={reason}
+                onChange={(e) => setReason(e.target.value)}
+                placeholder="Manager comp"
+              />
+            )}
+          </Field>
+        </div>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
+/* ══════════════════════════════════════════════════════════════════
+   PART — several payments against one bill
+
+   They must add up to the payable exactly. Short is a drawer that will
+   not reconcile at day end; over is change that was never given.
+
+   Room is not offered here. A bill going to a folio has to go there in
+   full: paying PART of it to a room would mean apportioning that part
+   across tax rates again, and there is no defensible way to choose
+   which rate a partial payment settles.
+   ══════════════════════════════════════════════════════════════════ */
+function SplitPanel({
+  order, hotelId, busy, setBusy, onCancel, onDone,
+}: {
+  order: Order;
+  hotelId: string;
+  busy: boolean;
+  setBusy: (b: boolean) => void;
+  onCancel: () => void;
+  onDone: () => void;
+}) {
+  const [rows, setRows] = useState<TenderInput[]>([
+    { method: "cash", amount: 0 },
+  ]);
+
+  const taken = rows.reduce((a, r) => a + (Number(r.amount) || 0), 0);
+  const left = Math.round((order.payable - taken) * 100) / 100;
+  const balanced = Math.abs(left) < 0.005;
+
+  const cash = rows.find((r) => r.method === "cash");
+  const change = cash?.tendered !== undefined && cash.tendered !== null
+    ? Math.round((Number(cash.tendered) - Number(cash.amount)) * 100) / 100
+    : null;
+
+  const set = (i: number, patch: Partial<TenderInput>) =>
+    setRows((rs) => rs.map((r, n) => (n === i ? { ...r, ...patch } : r)));
+
+  const settle = async () => {
+    setBusy(true);
+    const res = await settleSplit(hotelId, order.id,
+      rows.filter((r) => Number(r.amount) > 0));
+    setBusy(false);
+    if (!res.ok) return toast.error("Not settled", res.reason);
+    toast.success("Settled", `${money(order.payable)} across ${rows.length}`);
+    onDone();
+  };
+
+  return (
+    <div className="mt-3.5 space-y-2">
+      {rows.map((r, i) => (
+        <div key={i} className="flex gap-2">
+          <NativeSelect
+            value={r.method}
+            onChange={(e) => set(i, {
+              method: e.target.value as TenderInput["method"],
+              /* Only cash is handed over — carrying a tendered figure
+                 onto a card would be a change calculation nobody made. */
+              ...(e.target.value === "cash" ? {} : { tendered: undefined }),
+            })}
+            className="w-28"
+          >
+            <option value="cash">Cash</option>
+            <option value="card">Card</option>
+            <option value="upi">UPI</option>
+          </NativeSelect>
+          <Input
+            type="number"
+            inputMode="decimal"
+            value={r.amount || ""}
+            onChange={(e) => set(i, { amount: Number(e.target.value) })}
+            placeholder="Amount"
+            className="flex-1 tabular"
+          />
+          {rows.length > 1 && (
+            <button
+              type="button"
+              onClick={() => setRows((rs) => rs.filter((_, n) => n !== i))}
+              aria-label="Remove this payment"
+              className="size-11 grid place-items-center rounded-md text-grey-400 hover:text-brand-red hover:bg-red-50 shrink-0 cursor-pointer"
+            >
+              <X className="size-4" />
+            </button>
+          )}
+        </div>
+      ))}
+
+      {cash && (
+        <div className="flex gap-2 items-center">
+          <span className="text-sm text-grey-600 w-28 shrink-0">Cash given</span>
+          <Input
+            type="number"
+            inputMode="decimal"
+            value={cash.tendered ?? ""}
+            onChange={(e) => set(rows.indexOf(cash), {
+              tendered: e.target.value === "" ? undefined : Number(e.target.value),
+            })}
+            placeholder="500"
+            className="flex-1 tabular"
+          />
+        </div>
+      )}
+
+      <Button
+        variant="ghost"
+        size="lg"
+        className="w-full"
+        onClick={() => setRows((rs) => [...rs,
+          { method: "card", amount: Math.max(left, 0) }])}
+      >
+        <Plus className="size-4" />
+        Another payment
+      </Button>
+
+      <div className="border-t border-grey-200 pt-2.5 space-y-1">
+        <Row label="Bill" value={money(order.payable)} />
+        <Row label="Taken" value={money(taken)} />
+        {!balanced && (
+          <Row
+            label={left > 0 ? "Still to take" : "Over by"}
+            value={money(Math.abs(left))}
+            strong
+          />
+        )}
+        {change !== null && change > 0 && (
+          <Row label="Change due" value={money(change)} strong />
+        )}
+      </div>
+
+      <Button
+        size="lg"
+        className="w-full"
+        loading={busy}
+        disabled={!balanced}
+        onClick={() => void settle()}
+      >
+        <Receipt className="size-4" />
+        {balanced ? "Settle" : `${money(Math.abs(left))} ${left > 0 ? "short" : "over"}`}
+      </Button>
+      <Button variant="ghost" size="lg" className="w-full" onClick={onCancel}>
+        Cancel
+      </Button>
+    </div>
+  );
+}
+
 function OrderPanel({
-  order, hotelId, busy, setBusy, onStrike, onDone,
+  order, hotelId, busy, setBusy, onStrike, onDone, onChanged,
 }: {
   order: Order;
   hotelId: string;
   busy: boolean;
   setBusy: (b: boolean) => void;
   onStrike: (lineId: string) => void;
+  /** The bill is finished — settled or closed unpaid. */
   onDone: () => void;
+  /** The bill changed but is still open. */
+  onChanged: () => void;
 }) {
   const [choices, setChoices] = useState<
     { folioId: string; guest: string }[] | null
   >(null);
   const [room, setRoom] = useState("");
+  const [discounting, setDiscounting] = useState(false);
+  const [splitting, setSplitting] = useState(false);
 
   const rooms = useQuery({
     queryKey: ["till-rooms", hotelId],
@@ -345,6 +658,14 @@ function OrderPanel({
       res.guest ? `${money(order.gross)} to ${res.guest}` : money(order.gross),
     );
     onDone();
+  };
+
+  const roundOff = async () => {
+    setBusy(true);
+    const res = await setRoundOff(hotelId, order.id, order.roundOff === 0);
+    setBusy(false);
+    if (!res.ok) return toast.error("Not rounded", res.reason);
+    onChanged();
   };
 
   const abandon = async () => {
@@ -431,9 +752,34 @@ function OrderPanel({
 
         <div className="border-t border-grey-200 pt-2.5 space-y-1">
           <Row label="Net" value={money(order.net)} />
+          {order.discount > 0 && (
+            <>
+              {/* The rate, not just the money. A guest querying the bill
+                  next month needs the statement that was actually made. */}
+              <Row
+                label={order.discountType === "percent"
+                  ? `Discount ${order.discountValue}%`
+                  : "Discount"}
+                value={`-${money(order.discount)}`}
+              />
+              <Row label="Taxable" value={money(order.taxable)} />
+            </>
+          )}
           <Row label="Tax" value={money(order.tax)} />
-          <Row label="Total" value={money(order.gross)} strong />
+          {order.roundOff !== 0 && (
+            <Row
+              label="Round off"
+              value={`${order.roundOff > 0 ? "+" : ""}${money(order.roundOff)}`}
+            />
+          )}
+          <Row label="Total" value={money(order.payable)} strong />
         </div>
+
+        {order.discountReason && (
+          <p className="text-sm text-grey-600 mt-1.5">
+            Discounted — {order.discountReason}
+          </p>
+        )}
 
         {settled ? (
           <div className="mt-3.5 space-y-2">
@@ -486,8 +832,37 @@ function OrderPanel({
               </Button>
             </div>
           </div>
+        ) : splitting ? (
+          <SplitPanel
+            order={order} hotelId={hotelId} busy={busy} setBusy={setBusy}
+            onCancel={() => setSplitting(false)}
+            onDone={onDone}
+          />
         ) : (
           <div className="mt-3.5 space-y-2">
+            {/* Before the payment buttons, because the bill has to be
+                right before it is taken. */}
+            <div className="grid grid-cols-2 gap-2">
+              <Button
+                variant="secondary"
+                size="lg"
+                disabled={live.length === 0}
+                onClick={() => setDiscounting(true)}
+              >
+                <Percent className="size-4" />
+                {order.discount > 0 ? "Change discount" : "Discount"}
+              </Button>
+              <Button
+                variant="secondary"
+                size="lg"
+                loading={busy}
+                disabled={live.length === 0}
+                onClick={() => void roundOff()}
+              >
+                {order.roundOff !== 0 ? "Undo round off" : "Round off"}
+              </Button>
+            </div>
+
             <div className="flex gap-2">
               <input
                 list="chargeable-rooms"
@@ -531,6 +906,17 @@ function OrderPanel({
               ))}
             </div>
 
+            <Button
+              variant="secondary"
+              size="lg"
+              className="w-full"
+              disabled={live.length === 0}
+              onClick={() => setSplitting(true)}
+            >
+              <Split className="size-4" />
+              Part — pay two ways
+            </Button>
+
             <Button variant="ghost" size="lg" className="w-full"
               onClick={() => void abandon()} loading={busy}>
               Close unpaid
@@ -538,6 +924,14 @@ function OrderPanel({
           </div>
         )}
       </CardBody>
+
+      <DiscountDialog
+        order={order}
+        hotelId={hotelId}
+        open={discounting}
+        onOpenChange={setDiscounting}
+        onDone={onChanged}
+      />
     </Card>
   );
 }

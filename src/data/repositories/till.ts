@@ -85,9 +85,38 @@ export interface Order {
   abandonedReason: string | null;
   ticketId: string | null;
   lines: OrderLine[];
+
   net: number;
+  /** As APPLIED, which is what the arithmetic used. */
+  discount: number;
+  /** What the biller ENTERED, and what the bill prints. "10% off" reads
+      differently from "₹115.70 off" even when the money is identical, and
+      recomputing the rate from the amount fails once a line moves. */
+  discountType: "percent" | "fixed" | null;
+  discountValue: number | null;
+  discountReason: string | null;
+  taxable: number;
   tax: number;
   gross: number;
+  /** Signed, and under a rupee. Its own line on the bill. */
+  roundOff: number;
+  /** gross + roundOff. What the guest actually hands over. */
+  payable: number;
+  tenders: Tender[];
+}
+
+/** One payment against a bill. Several when the guest paid two ways. */
+export interface Tender {
+  id: string;
+  method: "room" | "cash" | "card" | "upi";
+  amount: number;
+  /** Cash handed over. Null for every other method. */
+  tendered: number | null;
+  /** Derived from `tendered`, never stored — a stored figure is one more
+      thing that can disagree with the arithmetic. */
+  change: number | null;
+  reference: string | null;
+  takenBy: string;
 }
 
 export interface OrderSummary {
@@ -255,6 +284,35 @@ export function sendToKitchen(
   return write(`/api/hotels/${hotelId}/till/orders/${orderId}/kot`);
 }
 
+/**
+ * Discount an open bill.
+ *
+ * A discount is allowed and it must say WHY. A till with nowhere to record
+ * one does not stop discounts happening — it moves them somewhere invisible,
+ * and the biller strikes a line instead.
+ */
+export function applyDiscount(
+  hotelId: string, orderId: string,
+  type: "percent" | "fixed", value: number, reason: string,
+): Promise<TillResult> {
+  return write(`/api/hotels/${hotelId}/till/orders/${orderId}/discount`,
+    { type, value, reason });
+}
+
+export function clearDiscount(
+  hotelId: string, orderId: string,
+): Promise<TillResult> {
+  return write(`/api/hotels/${hotelId}/till/orders/${orderId}/discount/clear`);
+}
+
+/** To the nearest rupee, so the biller takes a note rather than coins. */
+export function setRoundOff(
+  hotelId: string, orderId: string, apply: boolean,
+): Promise<TillResult> {
+  return write(`/api/hotels/${hotelId}/till/orders/${orderId}/round-off`,
+    { apply });
+}
+
 export async function getKitchen(hotelId: string): Promise<KitchenLine[]> {
   if (!hotelId) return [];
   try {
@@ -290,6 +348,34 @@ export function settleOrder(
 ): Promise<TillResult> {
   return write(`/api/hotels/${hotelId}/till/orders/${orderId}/settle`,
     { method, room, folioId });
+}
+
+/** What the biller is handing the till for one of several payments. */
+export interface TenderInput {
+  method: "room" | "cash" | "card" | "upi";
+  amount: number;
+  /** Cash only. The change is worked out from it. */
+  tendered?: number;
+  /** Card last four, a UPI reference. Never validated — the shape differs
+      per method and a wrong format must not stop a guest leaving. */
+  reference?: string;
+}
+
+/**
+ * Settle a bill across several payments — the Part button.
+ *
+ * They must add up to the payable exactly. Short is a drawer that will not
+ * reconcile at day end; over is change that was never given.
+ *
+ * A room payment has to be the ONLY one. Paying part of a bill to a room
+ * would mean apportioning that part across tax rates again, and there is no
+ * defensible way to choose which rate a partial payment settles.
+ */
+export function settleSplit(
+  hotelId: string, orderId: string, tenders: TenderInput[],
+): Promise<TillResult> {
+  return write(`/api/hotels/${hotelId}/till/orders/${orderId}/settle`,
+    { tenders });
 }
 
 export function abandonOrder(
