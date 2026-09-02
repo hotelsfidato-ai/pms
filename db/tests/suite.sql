@@ -1790,3 +1790,129 @@ begin
   select count(*) into n from hotels where code in ('TRB', 'TRC');
   perform test.ok('modules','the fixture does not outlive the test', n = 0);
 end $$;
+
+
+-- =============================================================================
+-- Restrictions, and the inventory grid  (044)
+-- =============================================================================
+do $$
+declare
+  v_hotel uuid; v_staff uuid; v_type uuid; v_room uuid;
+  v_guest uuid; v_res uuid; n int; m int; d date;
+begin
+  d := date '2026-06-10';
+
+  insert into hotels (code, name, city, timezone)
+  values ('TRD', 'Track C fixture', 'Akkalkot', 'Asia/Kolkata')
+  returning id into v_hotel;
+
+  select id into v_staff from staff limit 1;
+  insert into staff_hotels (staff_id, hotel_id, role)
+  values (v_staff, v_hotel, 'gm') on conflict do nothing;
+
+  insert into room_types (hotel_id, code, name, base_occupancy, max_occupancy)
+  values (v_hotel, 'STD', 'Standard', 2, 3) returning id into v_type;
+
+  insert into rooms (hotel_id, room_type_id, number, floor)
+  values (v_hotel, v_type, 'C101', 1) returning id into v_room;
+  insert into rooms (hotel_id, room_type_id, number, floor)
+  values (v_hotel, v_type, 'C102', 1);
+
+  -- ---------- the grid, before anything happens ----------
+  select sellable into n from app.inventory_grid(v_hotel, d, d);
+  perform test.ok('inventory','two rooms, two sellable', n = 2);
+
+  -- ---------- a block's LAST DAY is still blocked ----------
+  -- The first version of 044 used `date < to_date` where 022 uses `<=`, and
+  -- lost a night off every block. It showed up as 432 sellable room-nights
+  -- against a figure that has been 431 since the demo was calibrated.
+  insert into room_blocks (hotel_id, room_id, from_date, to_date, reason, created_by)
+  values (v_hotel, v_room, d, d, 'out_of_order', v_staff);
+
+  select sellable into n from app.inventory_grid(v_hotel, d, d);
+  perform test.ok('inventory','a one-day block covers that day', n = 1,
+    'to_date is inclusive, as app.sellable_rooms has always had it');
+
+  select sellable into n from app.inventory_grid(v_hotel, d + 1, d + 1);
+  perform test.ok('inventory','and does not cover the next', n = 2);
+
+  delete from room_blocks where hotel_id = v_hotel;
+
+  -- ---------- occupied and sold are different, and both are right ----------
+  insert into guests (full_name, phone)
+  values ('Track C guest', '9000000003') returning id into v_guest;
+
+  insert into reservations
+    (hotel_id, guest_id, room_type_id, reference, check_in, check_out,
+     adults, status, source, created_by, agreed_rate, is_complimentary)
+  values (v_hotel, v_guest, v_type, 'TRD-1', d, d + 1, 1, 'confirmed',
+          'direct', v_staff, 0, true)
+  returning id into v_res;
+
+  select occupied, sold into n, m from app.inventory_grid(v_hotel, d, d);
+  perform test.ok('inventory','a complimentary room is OCCUPIED', n = 1,
+    'it cannot be sold to anybody else');
+  perform test.ok('inventory','but it is not SOLD', m = 0,
+    'a free room would drag ADR to nothing');
+
+  select available into n from app.inventory_grid(v_hotel, d, d);
+  perform test.ok('inventory','availability subtracts the comp, not the sale',
+    n = 1);
+
+  -- A voided booking holds nothing at all.
+  update reservations
+     set status='void', void_reason='never happened',
+         voided_by=v_staff, voided_at=now()
+   where id = v_res;
+
+  select occupied into n from app.inventory_grid(v_hotel, d, d);
+  perform test.ok('inventory','a voided booking holds no room', n = 0);
+
+  -- ---------- restrictions ----------
+  insert into rate_restrictions
+    (hotel_id, room_type_id, for_date, stop_sell, set_by)
+  values (v_hotel, v_type, d, true, v_staff);
+
+  select count(*) into n from rate_restrictions where hotel_id = v_hotel;
+  perform test.ok('restrictions','a stop sell is stored', n = 1);
+
+  -- A minimum above the maximum accepts nothing at all, and reads on the grid
+  -- as two innocent numbers.
+  perform test.raises('restrictions','a minimum above the maximum is refused',
+    format($q$update rate_restrictions set min_nights = 5, max_nights = 2
+              where hotel_id = %L$q$, v_hotel), '23514');
+
+  perform test.raises('restrictions','zero nights is not a minimum',
+    format($q$update rate_restrictions set min_nights = 0
+              where hotel_id = %L$q$, v_hotel), '23514');
+
+  -- ---------- a row that says nothing should not exist ----------
+  -- Two representations of "unrestricted" is how a grid shows a mark where
+  -- there is none, and how a count of restricted dates comes back wrong.
+  update rate_restrictions
+     set stop_sell = false, closed_arrival = false, closed_departure = false,
+         min_nights = null, max_nights = null
+   where hotel_id = v_hotel;
+
+  select count(*) into n from rate_restrictions where hotel_id = v_hotel;
+  perform test.ok('restrictions','clearing every rule removes the row', n = 0,
+    'absent already means unrestricted');
+
+  -- ---------- teardown ----------
+  delete from rate_restrictions where hotel_id = v_hotel;
+  delete from reservations where hotel_id = v_hotel;
+  delete from rooms where hotel_id = v_hotel;
+  delete from room_types where hotel_id = v_hotel;
+  delete from staff_hotels where hotel_id = v_hotel;
+
+  alter table guests disable trigger guests_no_delete;
+  delete from guests where id = v_guest;
+  alter table guests enable trigger guests_no_delete;
+
+  alter table hotels disable trigger hotels_no_delete;
+  delete from hotels where id = v_hotel;
+  alter table hotels enable trigger hotels_no_delete;
+
+  select count(*) into n from hotels where code = 'TRD';
+  perform test.ok('inventory','the fixture does not outlive the test', n = 0);
+end $$;

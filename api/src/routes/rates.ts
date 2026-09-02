@@ -423,3 +423,228 @@ rates.put("/:code/cancellation-policies/:id/default", async (c) => {
   if (!result) return c.json({ error: "No such property." }, 404);
   return c.json(result, "ok" in result && result.ok ? 200 : 409);
 });
+
+/* ── The two grids ────────────────────────────────────────────────
+   The screens a revenue manager lives in: what is left to sell, and
+   what it costs. One request each, because a grid that fetches a cell
+   at a time is a grid nobody scrolls twice. */
+
+/** A window, clamped. A year of cells is a request nobody meant. */
+function windowFor(c: { req: { query: (k: string) => string | undefined } },
+                   fallback: string) {
+  const from = c.req.query("from") ?? fallback;
+  const asked = c.req.query("to");
+  const to = asked ?? from;
+  const days =
+    (Date.parse(`${to}T00:00:00Z`) - Date.parse(`${from}T00:00:00Z`))
+    / 86_400_000;
+  return {
+    from,
+    /* 90 days is four screens of scrolling and the longest a season is
+       ever set in one go. Beyond that the answer is an export. */
+    to: Number.isFinite(days) && days > 90
+      ? new Date(Date.parse(`${from}T00:00:00Z`) + 90 * 86_400_000)
+          .toISOString().slice(0, 10)
+      : to,
+  };
+}
+
+rates.get("/:code/inventory", async (c) => {
+  const body = await withSession(c.get("subject"), async (client) => {
+    const hotelId = await hotelFor(client, c.req.param("code"));
+    if (!hotelId) return null;
+    const { from, to } = windowFor(c, await businessDateFor(client, hotelId));
+
+    const { rows } = await client.query<{
+      room_type_id: string; room_type: string; for_date: string;
+      sellable: number; occupied: number; sold: number; available: number;
+    }>(
+      `select room_type_id::text, room_type, for_date::text,
+              sellable, occupied, sold, available
+         from app.inventory_grid($1, $2, $3)`,
+      [hotelId, from, to],
+    );
+
+    /* Restrictions come back in the same request. Two round trips for
+       one grid is how a cell renders open for a moment and then closes
+       under somebody's cursor. */
+    const { rows: rules } = await client.query<{
+      room_type_id: string; for_date: string;
+      stop_sell: boolean; closed_arrival: boolean; closed_departure: boolean;
+      min_nights: number | null; max_nights: number | null;
+    }>(
+      `select room_type_id::text, for_date::text, stop_sell,
+              closed_arrival, closed_departure, min_nights, max_nights
+         from rate_restrictions
+        where hotel_id = $1 and for_date between $2 and $3`,
+      [hotelId, from, to],
+    );
+
+    return {
+      from, to,
+      cells: rows.map((r) => ({
+        roomTypeId: r.room_type_id,
+        roomType: r.room_type,
+        date: r.for_date,
+        sellable: r.sellable,
+        /* Both, deliberately. `occupied` is what a revenue manager must
+           subtract — a comped room cannot be sold to anybody else —
+           and `sold` is the statistics definition that feeds occupancy
+           and ADR. A grid showing one of them disagrees with the
+           Manager Report while both are right. */
+        occupied: r.occupied,
+        sold: r.sold,
+        available: r.available,
+      })),
+      restrictions: rules.map((r) => ({
+        roomTypeId: r.room_type_id,
+        date: r.for_date,
+        stopSell: r.stop_sell,
+        closedArrival: r.closed_arrival,
+        closedDeparture: r.closed_departure,
+        minNights: r.min_nights,
+        maxNights: r.max_nights,
+      })),
+    };
+  });
+
+  if (!body) return c.json({ error: "No such property." }, 404);
+  return c.json(body);
+});
+
+rates.get("/:code/rate-grid", async (c) => {
+  const body = await withSession(c.get("subject"), async (client) => {
+    const hotelId = await hotelFor(client, c.req.param("code"));
+    if (!hotelId) return null;
+    const { from, to } = windowFor(c, await businessDateFor(client, hotelId));
+
+    /* A rate is stored as a RANGE, and the grid is per DAY. Expanding
+       here rather than in the browser keeps one definition of which
+       season covers a date — the same reason app.pos_order_by_rate
+       exists. */
+    const { rows } = await client.query<{
+      room_type_id: string; room_type: string; meal_plan: string;
+      for_date: string; price: string; label: string | null;
+    }>(
+      `select r.room_type_id::text, rt.name as room_type, r.meal_plan,
+              d::date::text as for_date, r.price::text, r.label
+         from rates r
+         join room_types rt on rt.id = r.room_type_id
+         cross join lateral generate_series(
+           greatest(r.valid_from, $2::date),
+           least(r.valid_to, $3::date),
+           interval '1 day') d
+        where r.hotel_id = $1
+          and r.valid_from <= $3::date and r.valid_to >= $2::date
+        order by rt.name, r.meal_plan, d`,
+      [hotelId, from, to],
+    );
+
+    /* THE ROWS COME FROM WHAT THE PROPERTY SELLS, NOT FROM WHAT HAS
+       BEEN PRICED.
+
+       The first version derived them from `rates`, and the demo caught
+       it immediately: `rates` has zero rows, because no price ever
+       ships — seven assertions guard that. So the grid had no rows at
+       all, and there was nowhere to type the FIRST price. A revenue
+       manager opening an unpriced property must see the empty cells;
+       that is the entire point of the screen.
+
+       Room type × meal plan, which is exactly the shape `rates` is
+       keyed on. */
+    const { rows: plans } = await client.query<{
+      room_type_id: string; room_type: string; meal_plan: string;
+    }>(
+      `select rt.id::text as room_type_id, rt.name as room_type, mp.code as meal_plan
+         from room_types rt
+         cross join meal_plans mp
+        where rt.hotel_id = $1
+        order by rt.name, mp.code`,
+      [hotelId],
+    );
+
+    return {
+      from, to,
+      plans: plans.map((p) => ({
+        roomTypeId: p.room_type_id, roomType: p.room_type,
+        mealPlan: p.meal_plan,
+      })),
+      cells: rows.map((r) => ({
+        roomTypeId: r.room_type_id, roomType: r.room_type,
+        mealPlan: r.meal_plan, date: r.for_date,
+        price: Number(r.price), season: r.label,
+      })),
+    };
+  });
+
+  if (!body) return c.json({ error: "No such property." }, 404);
+  return c.json(body);
+});
+
+rates.post("/:code/restrictions", async (c) => {
+  type Body = {
+    roomTypeId?: string; from?: string; to?: string;
+    stopSell?: boolean; closedArrival?: boolean; closedDeparture?: boolean;
+    minNights?: number | null; maxNights?: number | null;
+  };
+  const input = await c.req.json<Body>().catch(() => ({}) as Body);
+
+  if (!input.roomTypeId || !input.from) {
+    return c.json({ reason: "Which room type, and from when?" }, 409);
+  }
+
+  const min = input.minNights ?? null;
+  const max = input.maxNights ?? null;
+  if (min !== null && max !== null && min > max) {
+    /* Named here as well as refused by the constraint. Two innocent
+       numbers on a grid that between them accept nothing at all is not
+       something a person spots by reading it back. */
+    return c.json({
+      reason: `A minimum of ${min} nights and a maximum of ${max} accepts ` +
+        "no booking at all.",
+    }, 409);
+  }
+
+  const result = await withSession(c.get("subject"), async (client, session) => {
+    const hotelId = await hotelFor(client, c.req.param("code"));
+    if (!hotelId) return null;
+
+    const to = input.to ?? input.from!;
+
+    /* Applied across a range in one statement. A revenue manager closing
+       a wedding weekend sets three days at once, and doing it a day at a
+       time leaves the middle one open if the second call fails. */
+    await client.query(
+      `insert into rate_restrictions
+         (hotel_id, room_type_id, for_date, stop_sell, closed_arrival,
+          closed_departure, min_nights, max_nights, set_by)
+       select $1, $2, d::date, $4, $5, $6, $7, $8, $9
+         from generate_series($3::date, $10::date, interval '1 day') d
+       on conflict (hotel_id, room_type_id, for_date) do update
+          set stop_sell = excluded.stop_sell,
+              closed_arrival = excluded.closed_arrival,
+              closed_departure = excluded.closed_departure,
+              min_nights = excluded.min_nights,
+              max_nights = excluded.max_nights,
+              set_by = excluded.set_by,
+              set_at = now()`,
+      [hotelId, input.roomTypeId, input.from,
+       input.stopSell === true, input.closedArrival === true,
+       input.closedDeparture === true, min, max, session.staffId, to],
+    );
+
+    /* A row saying nothing is removed by a trigger, so the count here is
+       of dates that actually carry a rule. */
+    const { rows } = await client.query<{ n: string }>(
+      `select count(*)::text as n from rate_restrictions
+        where hotel_id = $1 and room_type_id = $2
+          and for_date between $3 and $4`,
+      [hotelId, input.roomTypeId, input.from, to],
+    );
+
+    return { ok: true as const, dates: Number(rows[0]!.n) };
+  });
+
+  if (!result) return c.json({ error: "No such property." }, 404);
+  return c.json(result);
+});
