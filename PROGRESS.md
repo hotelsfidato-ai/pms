@@ -732,7 +732,7 @@ retried. Ledger nets to zero, room revenue still ₹4,19,578.76.
 10 Group dashboard and reports       ███████████░  11 of 11 reports, all SQL
 11 CRS bridge / SU                    ░░░░░░░░░░░░  now IN scope, after go-live
 12 Hardening and go-live             █████████░░░  + launch.sh, preflight, nginx
-13 POS upgrade — Petpooja-informed   ██████░░░░░░  + variations, add-ons, item and store on/off
+13 POS upgrade — Petpooja-informed   ███████░░░░░  7 whole — tables, day end and KOT remain
 14 Modules + banquet                  █░░░░░░░░░░░  POS toggle whole; banquet is the other 11
 15 PMS upgrade — eZee-informed        ████░░░░░░░░  2 whole, 4 half — every grid lacks a screen
 ```
@@ -815,7 +815,7 @@ moved: twenty screenshots of Petpooja set a higher bar, and two module
 requirements arrived with it. Lowering stage 7 would misreport what happened, so
 the new work is its own row. Detail in `POS-PROGRESS.md`.
 
-**127 of 180 — 71%.** Add the filled blocks above and divide by 168. That sum is the number; it is not typed separately, because it was for three audits running and drifted to "about 90%" while the bars said 70. It moved from 119 when stage 13’s three unfounded blocks came off.
+**128 of 180 — 71%.** Add the filled blocks above and divide by 168. That sum is the number; it is not typed separately, because it was for three audits running and drifted to "about 90%" while the bars said 70. It moved from 119 when stage 13’s three unfounded blocks came off.
 
 **Go-live scope — 116 of 132, 88% — unchanged.** What has to be true for a real hotel to run on this: stages 1–10 and 12. The CRS bridge (11), the POS upgrade (13), the modules (14) and the PMS upgrade (15) are all real work, and not one of them stops a guest checking in, a folio settling or a night closing.
 
