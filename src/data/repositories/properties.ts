@@ -1,4 +1,4 @@
-import { api } from "@/lib/api";
+import { api, ApiError } from "@/lib/api";
 import type { Property } from "./types";
 
 /* ══════════════════════════════════════════════════════════════════
@@ -56,3 +56,46 @@ export async function defaultPropertyId(): Promise<string> {
 
 /* Room queries live in ./rooms — one home each, so `export *` from the
    seam index cannot become ambiguous. */
+
+/**
+ * Which modules a property has.
+ *
+ * Not every hotel in the group runs a restaurant, and one with no kitchen
+ * should not be showing its staff a menu screen that will never have
+ * anything in it.
+ *
+ * A property with no rows keeps its POS. The default is never "off", or
+ * shipping this would close the till at a property that was using it.
+ */
+export async function getModules(
+  hotelId: string,
+): Promise<Record<string, boolean>> {
+  if (!hotelId) return {};
+  try {
+    const body = await api<{ modules: { module: string; enabled: boolean }[] }>(
+      `/api/hotels/${hotelId}/modules`,
+    );
+    return Object.fromEntries(body.modules.map((m) => [m.module, m.enabled]));
+  } catch {
+    /* Unreadable is not the same as off. Returning {} keeps every section
+       visible and lets the API give the reason, rather than making a
+       network hiccup look like a property losing its restaurant. */
+    return {};
+  }
+}
+
+export async function setModule(
+  hotelId: string, module: string, enabled: boolean,
+): Promise<{ ok: boolean; reason?: string }> {
+  try {
+    await api(`/api/hotels/${hotelId}/modules/${module}`,
+      { method: "POST", body: JSON.stringify({ enabled }) });
+    return { ok: true };
+  } catch (error) {
+    if (error instanceof ApiError) {
+      const p = error.body as { reason?: string } | undefined;
+      return { ok: false, reason: p?.reason ?? error.message };
+    }
+    throw error;
+  }
+}

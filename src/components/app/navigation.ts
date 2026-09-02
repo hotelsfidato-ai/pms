@@ -72,6 +72,8 @@ export function mayReach(role: Role, path: string): boolean {
 }
 
 export interface NavSection {
+  /** When set, the section is hidden at properties without this module. */
+  module?: string;
   label?: string;
   items: NavItem[];
 }
@@ -160,6 +162,14 @@ const SECTIONS: NavSection[] = [
        front office's. Burying them under Finance made a waiter scroll
        past folios and the city ledger to reach the till. */
     label: "Point of sale",
+    /* Not every property has a restaurant. A section a hotel does not have
+       is not greyed out with a reason — a clerk cannot act on "your hotel
+       has no kitchen", so showing it is noise. It is simply absent.
+
+       The API refuses these routes independently, so this is the tidy half
+       of the feature and not the enforcement. A hidden nav entry is still
+       a URL anybody can type. */
+    module: "pos",
     items: [
       /* The till, first, because it is the one somebody stands at. */
       { label: "Till", to: "/h/:code/till", icon: Receipt, resource: "payment" },
@@ -276,8 +286,17 @@ function resolve(path: string, code: string): string {
   return path.replace(":code", code);
 }
 
-export function navigationFor(role: Role, code = ""): NavSection[] {
-  return SECTIONS.map((section) => ({
+export function navigationFor(
+  role: Role, code = "", modules?: Record<string, boolean>,
+): NavSection[] {
+  return SECTIONS
+    /* `undefined` means not loaded yet, and a section is kept while the
+       answer is unknown. Hiding it first and showing it a moment later
+       makes the sidebar jump under somebody's cursor, which is worse than
+       briefly offering a link the API will refuse with a reason. */
+    .filter((section) =>
+      !section.module || modules === undefined || modules[section.module] !== false)
+    .map((section) => ({
     ...section,
     items: section.items
       .map((item) => ({

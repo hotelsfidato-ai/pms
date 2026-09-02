@@ -1,3 +1,4 @@
+import { useQuery } from "@tanstack/react-query";
 import { NavLink, useLocation } from "react-router";
 import { PanelLeftClose, PanelLeftOpen } from "lucide-react";
 import { cn } from "@/lib/cn";
@@ -5,6 +6,7 @@ import { useUi } from "@/lib/ui";
 import { useRole } from "@/lib/session";
 import { navigationFor, type NavItem } from "./navigation";
 import { Tooltip } from "@/components/ui";
+import { getModules } from "@/data/repositories";
 
 /* ══════════════════════════════════════════════════════════════════
    SIDEBAR
@@ -18,7 +20,17 @@ export function Sidebar({ onNavigate }: { onNavigate?: () => void }) {
   const collapsed = useUi((s) => s.sidebarCollapsed);
   const toggle = useUi((s) => s.toggleSidebar);
   const location = useLocation();
-  const sections = navigationFor(role, hotelId);
+  /* Undefined until it answers, and navigationFor keeps a section while
+     the answer is unknown — hiding it and showing it a moment later makes
+     the sidebar jump under somebody's cursor. */
+  const modules = useQuery({
+    queryKey: ["modules", hotelId],
+    queryFn: () => getModules(hotelId),
+    enabled: Boolean(hotelId),
+    staleTime: 5 * 60_000,
+  });
+
+  const sections = navigationFor(role, hotelId, modules.data);
 
   return (
     <aside
