@@ -487,3 +487,58 @@ export async function toggleItem(
     throw error;
   }
 }
+
+/* ── Off, and back on ─────────────────────────────────────────────
+   `toggleItem` above is the PERMANENT one: a dish taken off the card,
+   which is a menu decision. This is the shift decision — out of paneer
+   until eight — and it is a different act with a different word for it.
+
+   A DURATION, never a switch. Off with no end is a dish that stays off
+   for a week because whoever took it off went home, and nobody can say
+   since when. */
+
+export type OffFor = "2h" | "4h" | "8h" | "24h" | "next_business_day" | "custom";
+
+export async function takeItemOff(
+  hotelId: string, itemId: string, until: OffFor,
+  reason?: string, customUntil?: string,
+): Promise<{ ok: boolean; reason?: string }> {
+  return simplePost(
+    `/api/hotels/${hotelId}/till/menu/items/${itemId}/off`,
+    { until, reason, customUntil });
+}
+
+export async function putItemBack(
+  hotelId: string, itemId: string,
+): Promise<{ ok: boolean; reason?: string }> {
+  return simplePost(`/api/hotels/${hotelId}/till/menu/items/${itemId}/on`);
+}
+
+export async function setOutletClosed(
+  hotelId: string, outlet: string,
+  closed: boolean, until?: OffFor, reason?: string,
+): Promise<{ ok: boolean; reason?: string }> {
+  return simplePost(
+    `/api/hotels/${hotelId}/till/outlet/${outlet}/closed`,
+    { closed, until, reason });
+}
+
+/** A refusal a person can act on, or nothing. The shape used by every
+    write on this page that has no order to hand back. */
+async function simplePost(
+  path: string, body?: unknown,
+): Promise<{ ok: boolean; reason?: string }> {
+  try {
+    await api(path, {
+      method: "POST",
+      ...(body ? { body: JSON.stringify(body) } : {}),
+    });
+    return { ok: true };
+  } catch (error) {
+    if (error instanceof ApiError) {
+      const p = error.body as { reason?: string } | undefined;
+      return { ok: false, reason: p?.reason ?? error.message };
+    }
+    throw error;
+  }
+}

@@ -546,13 +546,35 @@ till.post("/:code/till/orders", async (c) => {
     const hotelId = await hotelFor(client, c.req.param("code"));
     if (!hotelId) return null;
 
-    const { rows: outlet } = await client.query<{ id: string }>(
-      `select id::text from pos_outlets
+    const { rows: outlet } = await client.query<{
+      id: string; name: string;
+      closed_until: string | null; closed_reason: string | null;
+    }>(
+      `select id::text, name, closed_until::text, closed_reason
+         from pos_outlets
         where hotel_id = $1 and code = $2 and is_active`,
       [hotelId, input.outlet!.toUpperCase()],
     );
     if (!outlet[0]) {
       return refuse(`No active outlet with code ${input.outlet}.`);
+    }
+
+    /* THE STORE IS SHUT. Not the same as the module being off — that is
+       a configuration change made in settings, and this is a Tuesday
+       when the kitchen stopped serving early.
+
+       Says WHEN it reopens, because a waiter refused with no time has
+       to go and find somebody to ask. */
+    if (outlet[0].closed_until
+        && Date.parse(outlet[0].closed_until) > Date.now()) {
+      const back = new Date(outlet[0].closed_until)
+        .toLocaleString("en-IN", {
+          weekday: "short", hour: "2-digit", minute: "2-digit",
+        });
+      return refuse(
+        `${outlet[0].name} is closed` +
+        `${outlet[0].closed_reason ? ` — ${outlet[0].closed_reason}` : ""}. ` +
+        `Open again ${back}.`);
     }
 
     /* The hotel's operating day, resolved here. A waiter opening an
@@ -962,6 +984,177 @@ till.post("/:code/till/orders/:id/round-off", async (c) => {
     );
 
     return { ok: true as const, ...(await readOrder(client, orderId))! };
+  });
+
+  if (!result) return c.json({ error: "No such property." }, 404);
+  return c.json(result, "ok" in result && result.ok ? 200 : 409);
+});
+
+
+/* ── Off, and back on ─────────────────────────────────────────────
+   The most-used menu action in a live kitchen, and the one that has to
+   take three seconds: paneer runs out mid-service and a waiter is
+   already at a table asking for it.
+
+   A DURATION, not a switch. "Off" with no end is a dish that stays off
+   for a week because the person who took it off went home. The choices
+   are the ones a kitchen actually thinks in — a couple of hours, the
+   rest of the shift, the rest of the day. */
+
+/** Turns what the screen offers into the moment it comes back. */
+function offUntilFor(
+  choice: string | undefined, custom: string | undefined,
+  businessDate: string,
+): Date | null | "bad" {
+  switch (choice) {
+    case "2h":  return new Date(Date.now() + 2 * 3600_000);
+    case "4h":  return new Date(Date.now() + 4 * 3600_000);
+    case "8h":  return new Date(Date.now() + 8 * 3600_000);
+    case "24h": return new Date(Date.now() + 24 * 3600_000);
+    case "next_business_day":
+      /* Midnight ending the hotel's operating day, plus a whole day.
+         Deliberately the BUSINESS date and not the clock: a kitchen
+         closing out at 00:40 is still working yesterday's service, and
+         "back tomorrow" must not mean "back in twenty minutes". */
+      return new Date(
+        Date.parse(`${businessDate}T00:00:00Z`) + 2 * 86_400_000);
+    case "custom": {
+      if (!custom) return "bad";
+      const at = Date.parse(custom);
+      if (!Number.isFinite(at) || at <= Date.now()) return "bad";
+      return new Date(at);
+    }
+    default: return "bad";
+  }
+}
+
+till.post("/:code/till/menu/items/:id/off", async (c) => {
+  type OffBody = { until?: string; customUntil?: string; reason?: string };
+  const input = await c.req.json<OffBody>().catch(() => ({}) as OffBody);
+
+  const result = await withSession(c.get("subject"), async (client) => {
+    const hotelId = await hotelFor(client, c.req.param("code"));
+    if (!hotelId) return null;
+
+    const businessDate = await businessDateFor(client, hotelId);
+    const until = offUntilFor(input.until, input.customUntil, businessDate);
+    if (until === "bad") {
+      return refuse("For how long — two hours, four, eight, the rest of the day?");
+    }
+
+    const { rowCount } = await client.query(
+      `update pos_menu_items
+          set off_until = $1, off_reason = $2, updated_at = now()
+        where id = $3 and hotel_id = $4`,
+      [until, input.reason?.trim() || null, c.req.param("id"), hotelId],
+    );
+    if (!rowCount) return refuse("No such item on the menu.");
+
+    return { ok: true as const, offUntil: until?.toISOString() ?? null };
+  });
+
+  if (!result) return c.json({ error: "No such property." }, 404);
+  return c.json(result, "ok" in result && result.ok ? 200 : 409);
+});
+
+till.post("/:code/till/menu/items/:id/on", async (c) => {
+  const result = await withSession(c.get("subject"), async (client) => {
+    const hotelId = await hotelFor(client, c.req.param("code"));
+    if (!hotelId) return null;
+
+    /* Cleared, not set to now(). A past timestamp reads as "it was off
+       until then", which is a fact nobody needs and which makes the
+       five states on the screen ambiguous. */
+    const { rowCount } = await client.query(
+      `update pos_menu_items
+          set off_until = null, off_reason = null, updated_at = now()
+        where id = $1 and hotel_id = $2`,
+      [c.req.param("id"), hotelId],
+    );
+    if (!rowCount) return refuse("No such item on the menu.");
+
+    return { ok: true as const };
+  });
+
+  if (!result) return c.json({ error: "No such property." }, 404);
+  return c.json(result, "ok" in result && result.ok ? 200 : 409);
+});
+
+till.post("/:code/till/addons/:id/off", async (c) => {
+  type OffBody = { until?: string; customUntil?: string };
+  const input = await c.req.json<OffBody>().catch(() => ({}) as OffBody);
+
+  const result = await withSession(c.get("subject"), async (client) => {
+    const hotelId = await hotelFor(client, c.req.param("code"));
+    if (!hotelId) return null;
+
+    const businessDate = await businessDateFor(client, hotelId);
+    const until = offUntilFor(input.until, input.customUntil, businessDate);
+    if (until === "bad") return refuse("For how long?");
+
+    const { rowCount } = await client.query(
+      `update pos_addons set off_until = $1 where id = $2 and hotel_id = $3`,
+      [until, c.req.param("id"), hotelId],
+    );
+    if (!rowCount) return refuse("No such add-on.");
+    return { ok: true as const, offUntil: until?.toISOString() ?? null };
+  });
+
+  if (!result) return c.json({ error: "No such property." }, 404);
+  return c.json(result, "ok" in result && result.ok ? 200 : 409);
+});
+
+till.post("/:code/till/addons/:id/on", async (c) => {
+  const result = await withSession(c.get("subject"), async (client) => {
+    const hotelId = await hotelFor(client, c.req.param("code"));
+    if (!hotelId) return null;
+    const { rowCount } = await client.query(
+      `update pos_addons set off_until = null where id = $1 and hotel_id = $2`,
+      [c.req.param("id"), hotelId],
+    );
+    if (!rowCount) return refuse("No such add-on.");
+    return { ok: true as const };
+  });
+
+  if (!result) return c.json({ error: "No such property." }, 404);
+  return c.json(result, "ok" in result && result.ok ? 200 : 409);
+});
+
+/* ── The store itself ─────────────────────────────────────────────
+   A kitchen that has stopped serving, without turning the whole module
+   off in settings — that is a configuration change, and this is a
+   Tuesday. */
+
+till.post("/:code/till/outlet/:outlet/closed", async (c) => {
+  type ClosedBody = {
+    closed?: boolean; until?: string; customUntil?: string; reason?: string;
+  };
+  const input = await c.req.json<ClosedBody>().catch(() => ({}) as ClosedBody);
+
+  const result = await withSession(c.get("subject"), async (client) => {
+    const hotelId = await hotelFor(client, c.req.param("code"));
+    if (!hotelId) return null;
+
+    if (input.closed === false) {
+      const { rowCount } = await client.query(
+        `update pos_outlets set closed_until = null, closed_reason = null
+          where code = upper($1) and hotel_id = $2`,
+        [c.req.param("outlet"), hotelId]);
+      if (!rowCount) return refuse("No such outlet.");
+      return { ok: true as const, closedUntil: null };
+    }
+
+    const businessDate = await businessDateFor(client, hotelId);
+    const until = offUntilFor(input.until, input.customUntil, businessDate);
+    if (until === "bad") return refuse("Closed until when?");
+
+    const { rowCount } = await client.query(
+      `update pos_outlets set closed_until = $1, closed_reason = $2
+        where code = upper($3) and hotel_id = $4`,
+      [until, input.reason?.trim() || null, c.req.param("outlet"), hotelId]);
+    if (!rowCount) return refuse("No such outlet.");
+
+    return { ok: true as const, closedUntil: until?.toISOString() ?? null };
   });
 
   if (!result) return c.json({ error: "No such property." }, 404);

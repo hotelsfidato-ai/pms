@@ -7,10 +7,12 @@ import { moneyPrecise } from "@/lib/format";
 import { useUi } from "@/lib/ui";
 import {
   Page, PageHeader, Card, CardBody, Button, StatusPill, toast,
+  Dialog, DialogContent, Field, fieldProps, Input,
 } from "@/components/ui";
 import {
-  getMenu, addCategory, addItem, toggleItem,
-  type MenuCategory,
+  getMenu, addCategory, addItem, toggleItem, takeItemOff, putItemBack,
+  type OffFor,
+  type MenuCategory, type MenuItem,
 } from "@/data/repositories";
 
 /* ══════════════════════════════════════════════════════════════════
@@ -148,6 +150,122 @@ export default function MenuPage() {
   );
 }
 
+/* ══════════════════════════════════════════════════════════════════
+   OUT OF PANEER, UNTIL EIGHT
+
+   The most-used menu action in a live kitchen, and it has to take
+   three seconds — a waiter is already at a table asking for it.
+
+   A DURATION, never a switch. "Off" with no end is a dish that stays
+   off for a week because whoever took it off went home, and nobody can
+   say since when. A time answers both questions, and answers the
+   second one to the guest at the table.
+   ══════════════════════════════════════════════════════════════════ */
+const OFF_FOR: { key: OffFor; label: string }[] = [
+  { key: "2h", label: "2 hours" },
+  { key: "4h", label: "4 hours" },
+  { key: "8h", label: "8 hours" },
+  { key: "24h", label: "24 hours" },
+  { key: "next_business_day", label: "Tomorrow" },
+];
+
+function OffControl({ item, hotelId, onDone }: {
+  item: MenuItem; hotelId: string; onDone: () => void;
+}) {
+  const [open, setOpen] = useState(false);
+  const [reason, setReason] = useState("");
+  const [busy, setBusy] = useState(false);
+
+  const off = item.offUntil !== null
+    && Date.parse(item.offUntil) > Date.now();
+
+  const back = off
+    ? new Date(item.offUntil!).toLocaleTimeString("en-IN",
+        { hour: "2-digit", minute: "2-digit" })
+    : null;
+
+  const takeOff = async (until: OffFor) => {
+    setBusy(true);
+    const res = await takeItemOff(hotelId, item.id, until, reason.trim());
+    setBusy(false);
+    if (!res.ok) return toast.error("Not changed", res.reason);
+    setOpen(false);
+    setReason("");
+    toast.success(`${item.name} is off`, `Back in ${
+      OFF_FOR.find((o) => o.key === until)?.label.toLowerCase()}.`);
+    onDone();
+  };
+
+  const putBack = async () => {
+    setBusy(true);
+    const res = await putItemBack(hotelId, item.id);
+    setBusy(false);
+    if (!res.ok) return toast.error("Not changed", res.reason);
+    toast.success(`${item.name} is back on`);
+    onDone();
+  };
+
+  if (off) {
+    return (
+      <Button variant="secondary" size="sm" loading={busy}
+        onClick={() => void putBack()}>
+        {/* When, not just whether. A waiter asked "is it back?" needs a
+            time, and the row is where they look. */}
+        Off till {back} — put back
+      </Button>
+    );
+  }
+
+  return (
+    <>
+      <Button variant="ghost" size="sm" onClick={() => setOpen(true)}>
+        Out of stock
+      </Button>
+
+      <Dialog open={open} onOpenChange={setOpen}>
+        <DialogContent
+          title={`${item.name} is off`}
+          description="For how long? It comes back on by itself."
+          size="sm"
+          footer={
+            <Button variant="secondary" size="lg"
+              onClick={() => setOpen(false)}>
+              Cancel
+            </Button>
+          }
+        >
+          <div className="space-y-4">
+            <Field label="Why" hint="Shown to the waiter who tries to ring it">
+              {(f) => (
+                <Input
+                  {...fieldProps(f)}
+                  value={reason}
+                  onChange={(e) => setReason(e.target.value)}
+                  placeholder="Out of paneer"
+                  autoFocus
+                />
+              )}
+            </Field>
+            <div className="grid grid-cols-2 gap-2">
+              {OFF_FOR.map((o) => (
+                <Button
+                  key={o.key}
+                  variant="secondary"
+                  size="lg"
+                  loading={busy}
+                  onClick={() => void takeOff(o.key)}
+                >
+                  {o.label}
+                </Button>
+              ))}
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
+    </>
+  );
+}
+
 function CategoryCard({ category, hotelId, onChanged }: {
   category: MenuCategory; hotelId: string; onChanged: () => void;
 }) {
@@ -212,6 +330,18 @@ function CategoryCard({ category, hotelId, onChanged }: {
             <span className="tabular text-base text-ink-900 shrink-0 w-20 text-right">
               {moneyPrecise(item.price)}
             </span>
+            {/* TWO DIFFERENT ACTS, and the words are different because
+                the decisions are.
+
+                "Out of paneer" is a shift decision with an end on it.
+                "Take off the card" is a menu decision with none — and
+                a dish taken off the card is still off tomorrow, which
+                is exactly what nobody wants from the first one. */}
+            <OffControl
+              item={item}
+              hotelId={hotelId}
+              onDone={onChanged}
+            />
             <Button
               variant="ghost"
               size="sm"

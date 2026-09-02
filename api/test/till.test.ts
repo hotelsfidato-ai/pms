@@ -1003,3 +1003,156 @@ describe("a dish sold by variation", () => {
     }
   });
 });
+
+/* ══════════════════════════════════════════════════════════════════
+   OFF, AND BACK ON
+
+   "We are out of paneer" is the most-used menu action in a live
+   kitchen, and it has to take three seconds — a waiter is already at a
+   table asking for it.
+
+   A DURATION, not a switch. Off with no end is a dish that stays off
+   for a week because the person who took it off went home, and nobody
+   can say since when.
+   ══════════════════════════════════════════════════════════════════ */
+
+describe("taking a dish off the menu", () => {
+  let itemId: string;
+  let itemName: string;
+
+  beforeAll(async () => {
+    const db = await admin();
+    try {
+      const { rows } = await db.query<{ id: string; name: string }>(
+        `select i.id::text, i.name from pos_menu_items i
+           join hotels h on h.id = i.hotel_id
+          where h.code = '5EL' and i.name = 'Paneer Tikka'`);
+      itemId = rows[0]!.id;
+      itemName = rows[0]!.name;
+    } finally {
+      await db.end();
+    }
+  });
+
+  afterAll(async () => {
+    const db = await admin();
+    try {
+      await db.query(
+        `update pos_menu_items set off_until = null, off_reason = null
+          where id = $1`, [itemId]);
+      await db.query(`update pos_outlets set closed_until = null,
+                             closed_reason = null`);
+    } finally {
+      await db.end();
+    }
+  });
+
+  it("refuses an off with no duration", async () => {
+    const res = await post(`/api/hotels/5EL/till/menu/items/${itemId}/off`,
+      { reason: "out of paneer" });
+    expect(res.status).toBe(409);
+    /* Off with no end is the failure this feature exists to prevent. */
+    expect(((await res.json()) as { reason: string }).reason)
+      .toMatch(/how long/i);
+  });
+
+  it("takes it off for four hours, and says when it is back", async () => {
+    const res = await post(`/api/hotels/5EL/till/menu/items/${itemId}/off`,
+      { until: "4h", reason: "out of paneer" });
+    expect(res.status, await res.clone().text()).toBe(200);
+    const body = (await res.json()) as { offUntil: string };
+
+    const hours = (Date.parse(body.offUntil) - Date.now()) / 3_600_000;
+    expect(hours).toBeGreaterThan(3.9);
+    expect(hours).toBeLessThan(4.1);
+  });
+
+  it("refuses to be rung, and tells the table when it returns", async () => {
+    const order = await openOrder("off-dish");
+    const res = await post(`/api/hotels/5EL/till/orders/${order.id}/lines`,
+      { itemId, qty: 1 });
+    expect(res.status).toBe(409);
+
+    const reason = ((await res.json()) as { reason: string }).reason;
+    /* A refusal with no time sends the waiter to find somebody to ask. */
+    expect(reason).toMatch(/out of paneer/i);
+    expect(reason).toMatch(/back after/i);
+  });
+
+  it("comes back on, and the timestamp is CLEARED not backdated", async () => {
+    const res = await post(`/api/hotels/5EL/till/menu/items/${itemId}/on`);
+    expect(res.status).toBe(200);
+
+    const db = await admin();
+    try {
+      const { rows } = await db.query<{ off_until: string | null }>(
+        `select off_until::text from pos_menu_items where id = $1`, [itemId]);
+      /* A past timestamp reads as "it was off until then" — a fact
+         nobody needs, and one that makes the five states on the screen
+         ambiguous. */
+      expect(rows[0]!.off_until).toBeNull();
+    } finally {
+      await db.end();
+    }
+
+    const order = await openOrder("back-on");
+    const add = await post(`/api/hotels/5EL/till/orders/${order.id}/lines`,
+      { itemId, qty: 1 });
+    expect(add.status, `${itemName} did not come back`).toBe(200);
+  });
+
+  it("a custom time in the past is not a duration", async () => {
+    const res = await post(`/api/hotels/5EL/till/menu/items/${itemId}/off`,
+      { until: "custom", customUntil: "2020-01-01T00:00:00Z" });
+    expect(res.status).toBe(409);
+  });
+});
+
+describe("closing the store", () => {
+  afterAll(async () => {
+    const db = await admin();
+    try {
+      await db.query(
+        `update pos_outlets set closed_until = null, closed_reason = null`);
+    } finally {
+      await db.end();
+    }
+  });
+
+  it("refuses a new order, and says when it reopens", async () => {
+    const shut = await post("/api/hotels/5EL/till/outlet/REST/closed",
+      { closed: true, until: "2h", reason: "kitchen stopped early" });
+    expect(shut.status, await shut.clone().text()).toBe(200);
+
+    const res = await post("/api/hotels/5EL/till/orders",
+      { outlet: "REST", table: "TILLTEST shut" });
+    expect(res.status).toBe(409);
+
+    const reason = ((await res.json()) as { reason: string }).reason;
+    expect(reason).toMatch(/closed/i);
+    expect(reason).toMatch(/kitchen stopped early/i);
+    /* When, not just whether. */
+    expect(reason).toMatch(/open again/i);
+  });
+
+  it("is not the same as the module being off", async () => {
+    /* A shut store still has its screens: a biller can settle the bills
+       already open, print them and count the drawer. Turning the MODULE
+       off is a configuration change and takes the whole till away. */
+    const menu = await as("/api/hotels/5EL/till/menu");
+    expect(menu.status).toBe(200);
+
+    const orders = await as("/api/hotels/5EL/till/orders");
+    expect(orders.status).toBe(200);
+  });
+
+  it("reopens", async () => {
+    const open = await post("/api/hotels/5EL/till/outlet/REST/closed",
+      { closed: false });
+    expect(open.status).toBe(200);
+
+    const res = await post("/api/hotels/5EL/till/orders",
+      { outlet: "REST", table: "TILLTEST reopened" });
+    expect(res.status, await res.clone().text()).toBe(200);
+  });
+});
