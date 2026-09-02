@@ -732,9 +732,22 @@ retried. Ledger nets to zero, room revenue still ₹4,19,578.76.
 10 Group dashboard and reports       ███████████░  11 of 11 reports, all SQL
 11 CRS bridge / SU                    ░░░░░░░░░░░░  now IN scope, after go-live
 12 Hardening and go-live             █████████░░░  + launch.sh, preflight, nginx
-13 POS upgrade — Petpooja-informed   ░░░░░░░░░░░░  0 of 12 — two half-units, listed below
+13 POS upgrade — Petpooja-informed   ██░░░░░░░░░░  4 units have a database and no screen
 14 Modules + banquet                  ░░░░░░░░░░░░  per-hotel toggle, banquet hall
+15 PMS upgrade — eZee-informed        ░░░░░░░░░░░░  room move, groups, inventory grid
 ```
+
+**Stage 13 reads 2, and that is four half-units rather than two finished ones.**
+Discount, round off, split tender and customer-paid all have their database layer
+and their assertions (migrations 038 and 039, 21 assertions). **Not one of them is
+reachable from a screen.** The bar cannot show halves, so it shows two and this
+sentence says what two means.
+
+**Stage 15 is new scope, on the same rule as 13 and 14.** A batch of screenshots
+of the current PMS set a higher bar for reservations, inventory and rates than
+stages 4, 8 and 9 were given. Those stages met their targets; marking them down
+would misreport what happened, so the new work is its own row. Detail in
+`PMS-PROGRESS.md`.
 
 **Stage 13’s twelve units, so the bar has a basis.** It read 3 for a day with
 nothing written down to justify it — a number typed rather than derived, which is
@@ -763,9 +776,9 @@ moved: twenty screenshots of Petpooja set a higher bar, and two module
 requirements arrived with it. Lowering stage 7 would misreport what happened, so
 the new work is its own row. Detail in `POS-PROGRESS.md`.
 
-**116 of 168 — 69%.** Add the filled blocks above and divide by 168. That sum is the number; it is not typed separately, because it was for three audits running and drifted to "about 90%" while the bars said 70. It moved from 119 when stage 13’s three unfounded blocks came off.
+**118 of 180 — 66%.** Add the filled blocks above and divide by 168. That sum is the number; it is not typed separately, because it was for three audits running and drifted to "about 90%" while the bars said 70. It moved from 119 when stage 13’s three unfounded blocks came off.
 
-**Go-live scope — 116 of 132, 88%.** What has to be true for a real hotel to run on this: stages 1–10 and 12. The CRS bridge (11), the POS upgrade (13) and the modules (14) are all real work, and not one of them stops a guest checking in, a folio settling or a night closing.
+**Go-live scope — 116 of 132, 88% — unchanged.** What has to be true for a real hotel to run on this: stages 1–10 and 12. The CRS bridge (11), the POS upgrade (13), the modules (14) and the PMS upgrade (15) are all real work, and not one of them stops a guest checking in, a folio settling or a night closing.
 
 **The two figures are both honest and they measure different things.** 71% is progress against everything now asked for. 88% is readiness to open the doors. The gap between them is the upgrade programme, and it should not delay go-live.
 
