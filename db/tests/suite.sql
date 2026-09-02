@@ -1451,8 +1451,10 @@ begin
 
   -- ---------- two rates, a discount that divides cleanly ----------
   insert into pos_orders (hotel_id, outlet_id, order_no, business_date,
-                          opened_by, discount_amount, discount_reason)
-  values (v_hotel, v_outlet, 'PDC-1', current_date, v_staff, 100.00, 'manager comp')
+                          opened_by, discount_amount, discount_reason,
+                          discount_type, discount_value)
+  values (v_hotel, v_outlet, 'PDC-1', current_date, v_staff, 100.00, 'manager comp',
+          'fixed', 100.00)
   returning id into v_order;
 
   insert into pos_order_lines (order_id, hotel_id, name, qty, unit_price, tax_rate, added_by)
@@ -1472,8 +1474,10 @@ begin
 
   -- ---------- three rates, a discount that does not ----------
   insert into pos_orders (hotel_id, outlet_id, order_no, business_date,
-                          opened_by, discount_amount, discount_reason, round_off)
-  values (v_hotel, v_outlet, 'PDC-2', current_date, v_staff, 100.00, 'three ways', -0.10)
+                          opened_by, discount_amount, discount_reason, round_off,
+                          discount_type, discount_value)
+  values (v_hotel, v_outlet, 'PDC-2', current_date, v_staff, 100.00, 'three ways', -0.10,
+          'fixed', 100.00)
   returning id into v_order2;
 
   insert into pos_order_lines (order_id, hotel_id, name, qty, unit_price, tax_rate, added_by)
@@ -1491,25 +1495,52 @@ begin
     r.payable = r.gross - 0.10, 'payable ' || r.payable);
 
   -- ---------- a discount cannot exceed the bill ----------
-  update pos_orders set discount_amount = 99999.00 where id = v_order;
+  update pos_orders set discount_amount = 99999.00, discount_value = 99999.00
+   where id = v_order;
   select * into r from app.pos_order_total(v_order);
   perform test.ok('pos discount','a discount is capped at the bill, never negative',
     r.discount = 1000.00 and r.payable = 0.00, 'payable ' || r.payable);
-  update pos_orders set discount_amount = 100.00 where id = v_order;
+  update pos_orders set discount_amount = 100.00, discount_value = 100.00
+   where id = v_order;
 
   -- ---------- the reason is not optional ----------
   perform test.raises('pos discount','a discount without a reason is refused',
-    format($q$update pos_orders set discount_amount = 50, discount_reason = null
-              where id = %L$q$, v_order), '23514');
+    format($q$update pos_orders set discount_amount = 50, discount_value = 50,
+                     discount_reason = null where id = %L$q$, v_order), '23514');
 
   perform test.raises('pos discount','a blank reason is not a reason',
-    format($q$update pos_orders set discount_amount = 50, discount_reason = '   '
-              where id = %L$q$, v_order), '23514');
+    format($q$update pos_orders set discount_amount = 50, discount_value = 50,
+                     discount_reason = '   ' where id = %L$q$, v_order), '23514');
 
   -- A round off is pennies. Anything larger is a discount avoiding the reason.
   perform test.raises('pos discount','a round off larger than a rupee is refused',
     format($q$update pos_orders set round_off = -5.00 where id = %L$q$, v_order),
     '23514');
+
+  -- ---------- percentage or fixed, and the bill must say which ----------
+  perform test.raises('pos discount','a discount amount with no type is refused',
+    format($q$update pos_orders set discount_amount = 50, discount_value = 50,
+                     discount_type = null where id = %L$q$, v_order), '23514');
+
+  perform test.raises('pos discount','a fixed discount whose value disagrees with the amount',
+    format($q$update pos_orders set discount_amount = 50, discount_value = 75,
+                     discount_type = 'fixed' where id = %L$q$, v_order), '23514');
+
+  perform test.raises('pos discount','more than 100 percent is a refund in disguise',
+    format($q$update pos_orders set discount_amount = 50, discount_value = 120,
+                     discount_type = 'percent' where id = %L$q$, v_order), '23514');
+
+  -- 10% of a 1000.00 net is 100.00, computed once and stored — never recomputed
+  -- on read, or adding a line would silently move an already printed bill.
+  perform test.ok('pos discount','a percentage resolves to money off the net',
+    app.pos_discount_for(v_order, 10) = 100.00,
+    'ten percent = ' || app.pos_discount_for(v_order, 10));
+
+  update pos_orders set discount_type = 'percent', discount_value = 10,
+                        discount_amount = app.pos_discount_for(v_order, 10)
+   where id = v_order;
+  perform test.ok('pos discount','a percentage discount stores what was entered',
+    (select discount_value from pos_orders where id = v_order) = 10);
 
   -- ---------- tenders ----------
   insert into pos_order_tenders (order_id, hotel_id, method, amount, tendered, taken_by)
