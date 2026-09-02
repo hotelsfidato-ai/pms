@@ -732,16 +732,23 @@ retried. Ledger nets to zero, room revenue still ₹4,19,578.76.
 10 Group dashboard and reports       ███████████░  11 of 11 reports, all SQL
 11 CRS bridge / SU                    ░░░░░░░░░░░░  now IN scope, after go-live
 12 Hardening and go-live             █████████░░░  + launch.sh, preflight, nginx
-13 POS upgrade — Petpooja-informed   ██░░░░░░░░░░  4 units have a database and no screen
+13 POS upgrade — Petpooja-informed   ████░░░░░░░░  discount, round off, split tender, change
 14 Modules + banquet                  ░░░░░░░░░░░░  per-hotel toggle, banquet hall
 15 PMS upgrade — eZee-informed        ░░░░░░░░░░░░  room move, groups, inventory grid
 ```
 
-**Stage 13 reads 2, and that is four half-units rather than two finished ones.**
-Discount, round off, split tender and customer-paid all have their database layer
-and their assertions (migrations 038 and 039, 21 assertions). **Not one of them is
-reachable from a screen.** The bar cannot show halves, so it shows two and this
-sentence says what two means.
+**Stage 13 reads 4, and those four are finished** — database, API and screen.
+Discount with a mandatory reason, round off to the rupee, split tender, and the
+change due from cash given. Migrations 038–40, 24 database assertions and 11 API
+tests behind them, and each one opened in a browser before it was called done.
+
+The one worth naming is 040. The room-settle path computed its own per-rate split
+straight from the lines, which was correct until discounts existed and silently
+wrong afterwards: **the guest holds a discounted bill and the folio receives the
+full amount.** Nobody notices at the till, because the till's own total is right.
+The apportionment now lives in `app.pos_order_by_rate` and the total is built from
+it, so there is one copy of the arithmetic instead of two — two copies being
+exactly how the folio and the till drifted apart.
 
 **Stage 15 is new scope, on the same rule as 13 and 14.** A batch of screenshots
 of the current PMS set a higher bar for reservations, inventory and rates than
@@ -776,7 +783,7 @@ moved: twenty screenshots of Petpooja set a higher bar, and two module
 requirements arrived with it. Lowering stage 7 would misreport what happened, so
 the new work is its own row. Detail in `POS-PROGRESS.md`.
 
-**118 of 180 — 66%.** Add the filled blocks above and divide by 168. That sum is the number; it is not typed separately, because it was for three audits running and drifted to "about 90%" while the bars said 70. It moved from 119 when stage 13’s three unfounded blocks came off.
+**120 of 180 — 67%.** Add the filled blocks above and divide by 168. That sum is the number; it is not typed separately, because it was for three audits running and drifted to "about 90%" while the bars said 70. It moved from 119 when stage 13’s three unfounded blocks came off.
 
 **Go-live scope — 116 of 132, 88% — unchanged.** What has to be true for a real hotel to run on this: stages 1–10 and 12. The CRS bridge (11), the POS upgrade (13), the modules (14) and the PMS upgrade (15) are all real work, and not one of them stops a guest checking in, a folio settling or a night closing.
 
