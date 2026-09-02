@@ -2,7 +2,7 @@ import {
   LayoutDashboard, CalendarCheck, Users, Building2, Hotel, Receipt,
   BarChart3, Bell, Settings, ShieldCheck, CalendarRange,
   FileText, Wallet, Plug, ScrollText,
-  UserCog, Palette, Terminal, MonitorSmartphone, BookOpen, Home, ClipboardList, type LucideIcon, ShieldAlert, UtensilsCrossed, Flame,
+  UserCog, Palette, Terminal, MonitorSmartphone, BookOpen, Home, ClipboardList, type LucideIcon, ShieldAlert, UtensilsCrossed, Flame, LayoutGrid,
 } from "lucide-react";
 import { can, canAccess, type Resource, type Role } from "@/lib/permissions";
 
@@ -171,7 +171,10 @@ const SECTIONS: NavSection[] = [
        a URL anybody can type. */
     module: "pos",
     items: [
-      /* The till, first, because it is the one somebody stands at. */
+      /* The FLOOR first, because that is where a shift starts: a waiter
+         walks to a table before there is a bill to stand at. */
+      { label: "Floor", to: "/h/:code/floor", icon: LayoutGrid, resource: "payment" },
+      /* The till, the one somebody stands at. */
       { label: "Till", to: "/h/:code/till", icon: Receipt, resource: "payment" },
       /* A dedicated screen for a fixed terminal: no sidebar, no chrome,
          one outlet, targets sized for a thumb rather than a mouse. */

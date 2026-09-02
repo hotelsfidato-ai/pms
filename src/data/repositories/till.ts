@@ -542,3 +542,71 @@ async function simplePost(
     throw error;
   }
 }
+
+/* ── The floor ────────────────────────────────────────────────────
+   Every table with whatever is sitting on it, in one request. A grid
+   that fetched a tile at a time would flicker as it filled, and a
+   waiter reads the whole room at once or not at all. */
+
+/** blank · running · kot · printed · paid — DERIVED from the order,
+    never stored. A stored colour is a sixth thing to keep in step, and
+    the one that will be wrong on the night a manager is watching. */
+export type TableState = "blank" | "running" | "kot" | "printed" | "paid";
+
+export interface FloorTable {
+  id: string;
+  label: string;
+  seats: number | null;
+  row: number;
+  col: number;
+  orderId: string | null;
+  orderNo: string | null;
+  state: TableState;
+  /** How long the table has been sitting. The number a manager scans
+      the room for. Null when nothing is on it. */
+  minutes: number | null;
+  payable: number | null;
+}
+
+export interface FloorSection {
+  id: string;
+  name: string;
+  tables: FloorTable[];
+}
+
+export interface Floor {
+  outlet: { code: string; name: string; closedUntil: string | null } | null;
+  sections: FloorSection[];
+}
+
+export async function getFloor(
+  hotelId: string, outlet = "REST",
+): Promise<Floor> {
+  if (!hotelId) return { outlet: null, sections: [] };
+  try {
+    return await api<Floor>(
+      `/api/hotels/${hotelId}/till/floor?outlet=${encodeURIComponent(outlet)}`);
+  } catch {
+    return { outlet: null, sections: [] };
+  }
+}
+
+export function openOrderOnTable(
+  hotelId: string, outlet: string, tableId: string,
+): Promise<TillResult> {
+  return write(`/api/hotels/${hotelId}/till/orders`, { outlet, tableId });
+}
+
+export function markPrinted(
+  hotelId: string, orderId: string,
+): Promise<TillResult> {
+  return write(`/api/hotels/${hotelId}/till/orders/${orderId}/printed`);
+}
+
+/** Frees the table. Refused while the bill is unsettled — clearing one
+    takes a live order off the floor with money on it. */
+export async function clearTable(
+  hotelId: string, orderId: string,
+): Promise<{ ok: boolean; reason?: string }> {
+  return simplePost(`/api/hotels/${hotelId}/till/orders/${orderId}/clear`);
+}

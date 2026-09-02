@@ -1156,3 +1156,161 @@ describe("closing the store", () => {
     expect(res.status, await res.clone().text()).toBe(200);
   });
 });
+
+/* ══════════════════════════════════════════════════════════════════
+   THE FLOOR, THROUGH THE ROUTES
+
+   The five colours are DERIVED. The db suite walks one table through
+   all of them; these prove the route hands the screen the same answer,
+   and that a table cannot end up with two live bills on it.
+   ══════════════════════════════════════════════════════════════════ */
+
+type FloorTable = {
+  id: string; label: string; seats: number | null;
+  orderId: string | null; state: string;
+  minutes: number | null; payable: number | null;
+};
+
+describe("the floor", () => {
+  let sectionId: string;
+  let ac4: string;
+  let ac5: string;
+
+  beforeAll(async () => {
+    const db = await admin();
+    try {
+      const { rows: o } = await db.query<{ id: string; hotel: string }>(
+        `select po.id::text, po.hotel_id::text as hotel from pos_outlets po
+           join hotels h on h.id = po.hotel_id
+          where h.code = '5EL' and po.code = 'REST'`);
+
+      const { rows: s } = await db.query<{ id: string }>(
+        `insert into pos_sections (hotel_id, outlet_id, name, sort_order)
+         values ($1,$2,'FLOORTEST A/C',1) returning id::text`,
+        [o[0]!.hotel, o[0]!.id]);
+      sectionId = s[0]!.id;
+
+      const { rows: t } = await db.query<{ id: string; label: string }>(
+        `insert into pos_tables (hotel_id, section_id, label, seats, row_no, col_no)
+         values ($1,$2,'FT4',4,1,1),($1,$2,'FT5',2,1,2)
+         returning id::text, label`, [o[0]!.hotel, sectionId]);
+      ac4 = t.find((r) => r.label === "FT4")!.id;
+      ac5 = t.find((r) => r.label === "FT5")!.id;
+    } finally {
+      await db.end();
+    }
+  });
+
+  afterAll(async () => {
+    const db = await admin();
+    try {
+      await db.query(
+        "alter table pos_order_lines disable trigger pos_order_lines_frozen");
+      try {
+        await db.query(
+          `delete from pos_order_lines where order_id in
+             (select id from pos_orders where table_id in ($1,$2))`, [ac4, ac5]);
+      } finally {
+        await db.query(
+          "alter table pos_order_lines enable trigger pos_order_lines_frozen");
+      }
+      await db.query(`delete from pos_orders where table_id in ($1,$2)`, [ac4, ac5]);
+      await db.query(`delete from pos_tables where section_id = $1`, [sectionId]);
+      await db.query(`delete from pos_sections where id = $1`, [sectionId]);
+    } finally {
+      await db.end();
+    }
+  });
+
+  const floor = async () => {
+    const res = await as("/api/hotels/5EL/till/floor?outlet=REST");
+    expect(res.status).toBe(200);
+    const body = (await res.json()) as {
+      sections: { name: string; tables: FloorTable[] }[];
+    };
+    return body.sections.find((s) => s.name === "FLOORTEST A/C")!;
+  };
+
+  it("returns every table, grouped by section", async () => {
+    const section = await floor();
+    expect(section.tables.map((t) => t.label)).toEqual(["FT4", "FT5"]);
+    /* Empty tables are the point of a floor view — a grid that only
+       showed occupied ones would answer the wrong question. */
+    expect(section.tables.every((t) => t.state === "blank")).toBe(true);
+  });
+
+  it("walks a table from running to paid to blank", async () => {
+    const opened = await post("/api/hotels/5EL/till/orders",
+      { outlet: "REST", tableId: ac4 });
+    expect(opened.status, await opened.clone().text()).toBe(200);
+    const order = (await opened.json()) as { id: string; table: string };
+
+    /* The table's LABEL is copied onto the order, so a bill reprinted
+       next year reads the same even if the floor is rearranged. */
+    expect(order.table).toBe("FT4");
+
+    let t = (await floor()).tables.find((x) => x.label === "FT4")!;
+    expect(t.state).toBe("running");
+    expect(t.orderId).toBe(order.id);
+
+    const item = await menuItem("Paneer Tikka");
+    await post(`/api/hotels/5EL/till/orders/${order.id}/lines`,
+      { itemId: item.id, qty: 1 });
+
+    t = (await floor()).tables.find((x) => x.label === "FT4")!;
+    expect(t.state, "still running until the kitchen has it").toBe("running");
+    expect(t.payable).toBeGreaterThan(0);
+
+    await post(`/api/hotels/5EL/till/orders/${order.id}/kot`);
+    t = (await floor()).tables.find((x) => x.label === "FT4")!;
+    expect(t.state).toBe("kot");
+
+    await post(`/api/hotels/5EL/till/orders/${order.id}/printed`);
+    t = (await floor()).tables.find((x) => x.label === "FT4")!;
+    /* Printed outranks KOT: the guest is paying, which is what the
+       waiter needs to see from across the room. */
+    expect(t.state).toBe("printed");
+
+    await post(`/api/hotels/5EL/till/orders/${order.id}/settle`,
+      { method: "cash" });
+    t = (await floor()).tables.find((x) => x.label === "FT4")!;
+    expect(t.state, "settled but not reset").toBe("paid");
+
+    const cleared = await post(`/api/hotels/5EL/till/orders/${order.id}/clear`);
+    expect(cleared.status).toBe(200);
+    t = (await floor()).tables.find((x) => x.label === "FT4")!;
+    expect(t.state).toBe("blank");
+  });
+
+  it("refuses to clear a table with an unsettled bill on it", async () => {
+    const opened = await post("/api/hotels/5EL/till/orders",
+      { outlet: "REST", tableId: ac5 });
+    const order = (await opened.json()) as { id: string };
+
+    const res = await post(`/api/hotels/5EL/till/orders/${order.id}/clear`);
+    expect(res.status).toBe(409);
+    /* Clearing an open bill takes a live order off the floor with money
+       on it — the guests are still sitting there. */
+    expect(((await res.json()) as { reason: string }).reason)
+      .toMatch(/not been settled/i);
+  });
+
+  it("refuses a second live order on the same table, by name", async () => {
+    const res = await post("/api/hotels/5EL/till/orders",
+      { outlet: "REST", tableId: ac5 });
+    expect(res.status).toBe(409);
+    /* Named before the unique index gets to it, so the waiter is told
+       WHICH bill is already running rather than meeting a constraint. */
+    const reason = ((await res.json()) as { reason: string }).reason;
+    expect(reason).toMatch(/FT5 already has/i);
+    expect(reason).toMatch(/running on it/i);
+  });
+
+  it("refuses a table from another outlet", async () => {
+    const res = await post("/api/hotels/5EL/till/orders",
+      { outlet: "REST", tableId: "00000000-0000-0000-0000-000000000000" });
+    expect(res.status).toBe(409);
+    expect(((await res.json()) as { reason: string }).reason)
+      .toMatch(/not in this outlet/i);
+  });
+});

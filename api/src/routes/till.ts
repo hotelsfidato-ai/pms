@@ -538,7 +538,7 @@ till.get("/:code/till/orders", async (c) => {
 });
 
 till.post("/:code/till/orders", async (c) => {
-  type OpenBody = { outlet?: string; table?: string };
+  type OpenBody = { outlet?: string; table?: string; tableId?: string };
   const input = await c.req.json<OpenBody>().catch(() => ({}) as OpenBody);
   if (!input.outlet) return c.json(refuse("Which outlet is this order for?"), 409);
 
@@ -586,13 +586,47 @@ till.post("/:code/till/orders", async (c) => {
       [hotelId, businessDate],
     );
 
+    /* A TABLE FROM THE FLOOR, or free text. Both are real: a floor plan
+       does not have to cover everywhere food is served, and "Poolside"
+       is still an answer. When a table IS named, its label is copied
+       into table_ref so a bill reprinted next year reads the same even
+       if the floor has been rearranged since. */
+    let tableId: string | null = null;
+    let tableRef: string | null = input.table?.trim() || null;
+
+    if (input.tableId) {
+      const { rows: t } = await client.query<{ id: string; label: string }>(
+        `select t.id::text, t.label from pos_tables t
+           join pos_sections s on s.id = t.section_id
+          where t.id = $1 and s.outlet_id = $2 and t.is_active`,
+        [input.tableId, outlet[0].id],
+      );
+      if (!t[0]) return refuse("That table is not in this outlet.");
+      tableId = t[0].id;
+      tableRef = t[0].label;
+
+      /* Named before the unique index gets to it. Two open orders on one
+         table is two bills nobody can tell apart, and the floor would
+         show whichever came back first. */
+      const { rows: busy } = await client.query<{ order_no: string }>(
+        `select order_no from pos_orders
+          where table_id = $1 and cleared_at is null and status = 'open'`,
+        [tableId],
+      );
+      if (busy[0]) {
+        return refuse(
+          `${t[0].label} already has ${busy[0].order_no} running on it.`);
+      }
+    }
+
     const { rows } = await client.query<{ id: string }>(
       `insert into pos_orders
-         (hotel_id, outlet_id, order_no, table_ref, business_date, opened_by)
-       values ($1,$2,$3,$4,$5,$6)
+         (hotel_id, outlet_id, order_no, table_ref, business_date, opened_by,
+          table_id)
+       values ($1,$2,$3,$4,$5,$6,$7)
        returning id::text`,
-      [hotelId, outlet[0].id, no[0]!.order_no, input.table?.trim() || null,
-       businessDate, session.staffId],
+      [hotelId, outlet[0].id, no[0]!.order_no, tableRef,
+       businessDate, session.staffId, tableId],
     );
 
     return { ok: true as const, ...(await readOrder(client, rows[0]!.id))! };
@@ -1155,6 +1189,143 @@ till.post("/:code/till/outlet/:outlet/closed", async (c) => {
     if (!rowCount) return refuse("No such outlet.");
 
     return { ok: true as const, closedUntil: until?.toISOString() ?? null };
+  });
+
+  if (!result) return c.json({ error: "No such property." }, 404);
+  return c.json(result, "ok" in result && result.ok ? 200 : 409);
+});
+
+
+/* ── The floor ────────────────────────────────────────────────────
+   Every table with whatever is sitting on it, in ONE request. A grid
+   that fetches a tile at a time flickers as it fills, and a waiter
+   reads the whole room at once or not at all. */
+
+till.get("/:code/till/floor", async (c) => {
+  const body = await withSession(c.get("subject"), async (client) => {
+    const hotelId = await hotelFor(client, c.req.param("code"));
+    if (!hotelId) return null;
+
+    const code = (c.req.query("outlet") ?? "REST").toUpperCase();
+    const { rows: outlet } = await client.query<{
+      id: string; name: string; closed_until: string | null;
+    }>(
+      `select id::text, name, closed_until::text from pos_outlets
+        where hotel_id = $1 and code = $2 and is_active`,
+      [hotelId, code],
+    );
+    if (!outlet[0]) return { sections: [], outlet: null };
+
+    const { rows } = await client.query<{
+      section_id: string; section: string; table_id: string; label: string;
+      seats: number | null; row_no: number; col_no: number;
+      order_id: string | null; order_no: string | null; state: string;
+      minutes: number | null; payable: string | null;
+    }>(
+      `select section_id::text, section, table_id::text, label, seats,
+              row_no, col_no, order_id::text, order_no, state, minutes,
+              payable::text
+         from app.pos_floor($1)`,
+      [outlet[0].id],
+    );
+
+    /* Grouped here rather than in the browser: the SQL already returns
+       them in section then row then column order, and re-sorting on the
+       client is a second opinion about the same thing. */
+    const sections: {
+      id: string; name: string;
+      tables: {
+        id: string; label: string; seats: number | null;
+        row: number; col: number;
+        orderId: string | null; orderNo: string | null;
+        state: string; minutes: number | null; payable: number | null;
+      }[];
+    }[] = [];
+
+    for (const r of rows) {
+      let section = sections.find((s) => s.id === r.section_id);
+      if (!section) {
+        section = { id: r.section_id, name: r.section, tables: [] };
+        sections.push(section);
+      }
+      section.tables.push({
+        id: r.table_id, label: r.label, seats: r.seats,
+        row: r.row_no, col: r.col_no,
+        orderId: r.order_id, orderNo: r.order_no,
+        /* blank · running · kot · printed · paid. Derived, so the tile
+           cannot disagree with the bill behind it. */
+        state: r.state,
+        minutes: r.minutes,
+        payable: r.payable === null ? null : Number(r.payable),
+      });
+    }
+
+    return {
+      outlet: { code, name: outlet[0].name, closedUntil: outlet[0].closed_until },
+      sections,
+    };
+  });
+
+  if (!body) return c.json({ error: "No such property." }, 404);
+  return c.json(body);
+});
+
+/* ── Printed, and cleared ─────────────────────────────────────────
+   The two moments that make "printed" and "paid" different colours.
+   Neither is a state somebody sets by hand on the tile: printing marks
+   the order, and clearing the table is what a waiter does when the
+   guests have gone. */
+
+till.post("/:code/till/orders/:id/printed", async (c) => {
+  const result = await withSession(c.get("subject"), async (client) => {
+    const hotelId = await hotelFor(client, c.req.param("code"));
+    if (!hotelId) return null;
+
+    /* The FIRST print is what the colour means — the guest has the bill
+       in front of them. Reprinting because the paper jammed does not
+       restart that, so the timestamp is only set once. */
+    const { rowCount } = await client.query(
+      `update pos_orders set printed_at = coalesce(printed_at, now())
+        where id = $1 and hotel_id = $2`,
+      [c.req.param("id"), hotelId],
+    );
+    if (!rowCount) return refuse("No such order.");
+    return { ok: true as const, ...(await readOrder(client, c.req.param("id")))! };
+  });
+
+  if (!result) return c.json({ error: "No such property." }, 404);
+  return c.json(result, "ok" in result && result.ok ? 200 : 409);
+});
+
+till.post("/:code/till/orders/:id/clear", async (c) => {
+  const result = await withSession(c.get("subject"), async (client) => {
+    const hotelId = await hotelFor(client, c.req.param("code"));
+    if (!hotelId) return null;
+    const orderId = c.req.param("id");
+
+    const { rows } = await client.query<{
+      status: string; order_no: string; cleared_at: string | null;
+    }>(
+      `select status, order_no, cleared_at::text from pos_orders
+        where id = $1 and hotel_id = $2`,
+      [orderId, hotelId],
+    );
+    if (!rows[0]) return refuse("No such order.");
+    if (rows[0].cleared_at) return refuse("That table is already clear.");
+
+    /* AN OPEN BILL IS NOT A FREE TABLE. Clearing one would take a live
+       order off the floor with money on it — the guests are still
+       sitting there and nobody can see what they have had. */
+    if (rows[0].status === "open") {
+      return refuse(
+        `${rows[0].order_no} has not been settled. Take payment, or close it ` +
+        "unpaid with a reason.");
+    }
+
+    await client.query(
+      `update pos_orders set cleared_at = now() where id = $1`, [orderId]);
+
+    return { ok: true as const, orderNo: rows[0].order_no };
   });
 
   if (!result) return c.json({ error: "No such property." }, 404);

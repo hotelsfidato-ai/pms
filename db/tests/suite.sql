@@ -2073,3 +2073,142 @@ begin
   select count(*) into n from hotels where code = 'TRE';
   perform test.ok('variations','the fixture does not outlive the test', n = 0);
 end $$;
+
+
+-- =============================================================================
+-- The floor  (047)
+-- =============================================================================
+-- The five colours are DERIVED. These walk one table through every one of
+-- them, because a stored status is the thing that will be wrong on the night
+-- a manager is watching the floor and a derived one cannot be.
+-- =============================================================================
+do $$
+declare
+  v_hotel uuid; v_staff uuid; v_outlet uuid; v_cat uuid; v_item uuid;
+  v_section uuid; v_t1 uuid; v_t2 uuid;
+  v_order uuid; v_line bigint; n int; st text; mins int; pay numeric;
+begin
+  insert into hotels (code, name, city, timezone)
+  values ('TRF', 'Floor fixture', 'Akkalkot', 'Asia/Kolkata')
+  returning id into v_hotel;
+
+  select id into v_staff from staff limit 1;
+  insert into staff_hotels (staff_id, hotel_id, role)
+  values (v_staff, v_hotel, 'pos') on conflict do nothing;
+
+  insert into pos_outlets (hotel_id, code, name, staff_id)
+  values (v_hotel, 'TRFO', 'Floor outlet', v_staff) returning id into v_outlet;
+
+  insert into pos_menu_categories (hotel_id, name)
+  values (v_hotel, 'Food') returning id into v_cat;
+  insert into pos_menu_items (hotel_id, category_id, name, price, tax_rate)
+  values (v_hotel, v_cat, 'Thali', 200.00, 5.00) returning id into v_item;
+
+  insert into pos_sections (hotel_id, outlet_id, name, sort_order)
+  values (v_hotel, v_outlet, 'A/C', 1) returning id into v_section;
+
+  insert into pos_tables (hotel_id, section_id, label, seats, row_no, col_no)
+  values (v_hotel, v_section, 'AC4', 4, 1, 1) returning id into v_t1;
+  insert into pos_tables (hotel_id, section_id, label, seats, row_no, col_no)
+  values (v_hotel, v_section, 'AC5', 2, 1, 2) returning id into v_t2;
+
+  -- ---------- blank ----------
+  select count(*) into n from app.pos_floor(v_outlet);
+  perform test.ok('floor','every table appears, empty or not', n = 2);
+
+  select state into st from app.pos_floor(v_outlet) where label = 'AC4';
+  perform test.ok('floor','a table with nothing on it is blank', st = 'blank');
+
+  -- ---------- running ----------
+  insert into pos_orders (hotel_id, outlet_id, order_no, business_date,
+                          opened_by, table_id, opened_at)
+  values (v_hotel, v_outlet, 'TRF-1', current_date, v_staff, v_t1,
+          now() - interval '20 minutes')
+  returning id into v_order;
+
+  select state, minutes into st, mins
+    from app.pos_floor(v_outlet) where label = 'AC4';
+  perform test.ok('floor','an order with nothing rung is running', st = 'running');
+  -- The tile shows how long the table has been sitting, which is the number a
+  -- manager scans the room for.
+  perform test.ok('floor','and the tile knows how long it has been sitting',
+    mins between 19 and 21, 'minutes ' || mins);
+
+  insert into pos_order_lines
+    (order_id, hotel_id, item_id, name, qty, unit_price, tax_rate, added_by)
+  values (v_order, v_hotel, v_item, 'Thali', 2, 200.00, 5.00, v_staff)
+  returning id into v_line;
+
+  select state, payable into st, pay
+    from app.pos_floor(v_outlet) where label = 'AC4';
+  perform test.ok('floor','still running until the kitchen has it', st = 'running');
+  perform test.ok('floor','the tile carries the running total',
+    pay = 420.00, 'payable ' || pay);
+
+  -- ---------- kot ----------
+  update pos_order_lines set kot_status = 'sent', kot_sent_at = now()
+   where id = v_line;
+  select state into st from app.pos_floor(v_outlet) where label = 'AC4';
+  perform test.ok('floor','food in the kitchen shows as KOT', st = 'kot');
+
+  -- ---------- printed ----------
+  update pos_orders set printed_at = now() where id = v_order;
+  select state into st from app.pos_floor(v_outlet) where label = 'AC4';
+  perform test.ok('floor','a printed bill outranks the KOT colour', st = 'printed',
+    'the guest is paying, which is what the waiter needs to see');
+
+  -- ---------- paid ----------
+  update pos_orders
+     set status = 'settled', settled_by = v_staff, settled_at = now(),
+         payment_method = 'cash'
+   where id = v_order;
+  select state into st from app.pos_floor(v_outlet) where label = 'AC4';
+  perform test.ok('floor','settled but not reset is PAID, not blank', st = 'paid',
+    'the table still needs clearing');
+
+  -- ---------- and back to blank ----------
+  update pos_orders set cleared_at = now() where id = v_order;
+  select state into st from app.pos_floor(v_outlet) where label = 'AC4';
+  perform test.ok('floor','clearing the table frees it', st = 'blank');
+
+  perform test.raises('floor','a cleared table cannot be un-cleared',
+    format($q$update pos_orders set cleared_at = null where id = %L$q$, v_order),
+    'P0001');
+
+  -- ---------- one live order per table ----------
+  -- Two open orders on one table is two bills nobody can tell apart, and the
+  -- floor would show whichever the database returned first.
+  insert into pos_orders (hotel_id, outlet_id, order_no, business_date,
+                          opened_by, table_id)
+  values (v_hotel, v_outlet, 'TRF-2', current_date, v_staff, v_t2);
+
+  perform test.raises('floor','a table takes one live order, not two',
+    format($q$insert into pos_orders
+               (hotel_id, outlet_id, order_no, business_date, opened_by, table_id)
+             values (%L,%L,'TRF-3',current_date,%L,%L)$q$,
+           v_hotel, v_outlet, v_staff, v_t2), '23505');
+
+  -- ---------- sections keep their tables ----------
+  select count(*) into n from app.pos_floor(v_outlet) where section = 'A/C';
+  perform test.ok('floor','tables come back under their section', n = 2);
+
+  -- ---------- teardown ----------
+  alter table pos_order_lines disable trigger pos_order_lines_frozen;
+  delete from pos_order_lines where hotel_id = v_hotel;
+  alter table pos_order_lines enable trigger pos_order_lines_frozen;
+
+  delete from pos_orders   where hotel_id = v_hotel;
+  delete from pos_tables   where hotel_id = v_hotel;
+  delete from pos_sections where hotel_id = v_hotel;
+  delete from pos_menu_items where hotel_id = v_hotel;
+  delete from pos_menu_categories where hotel_id = v_hotel;
+  delete from pos_outlets  where hotel_id = v_hotel;
+  delete from staff_hotels where hotel_id = v_hotel;
+
+  alter table hotels disable trigger hotels_no_delete;
+  delete from hotels where id = v_hotel;
+  alter table hotels enable trigger hotels_no_delete;
+
+  select count(*) into n from hotels where code = 'TRF';
+  perform test.ok('floor','the fixture does not outlive the test', n = 0);
+end $$;

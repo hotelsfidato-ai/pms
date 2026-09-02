@@ -43,6 +43,7 @@ import {
 } from "@/pages/admin/Admin";
 import ReservationsPage from "@/pages/Reservations";
 import TillPage from "@/pages/Till";
+import FloorPage from "@/pages/Floor";
 import BillPage from "@/pages/Bill";
 import MenuPage from "@/pages/Menu";
 import RatePlansEditor from "@/pages/RatePlans";
@@ -340,6 +341,12 @@ export default function App() {
             <Route
               path="/h/:code/till"
               element={<><PropertyScope /><TillPage /></>}
+            />
+            {/* The room, before the bill. A waiter opens an order by
+                tapping a table, not by typing its name. */}
+            <Route
+              path="/h/:code/floor"
+              element={<><PropertyScope /><FloorPage /></>}
             />
             <Route
               path="/h/:code/menu"

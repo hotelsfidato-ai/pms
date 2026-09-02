@@ -672,6 +672,12 @@ async function main() {
       }
     }
 
+    /* ── THE FLOOR ───────────────────────────────────────────────
+       A/C, Non A/C and Bar, because that is how a real restaurant is
+       divided and how a waiter finds a table — by walking to a section
+       first. A flat list of thirty is a list nobody scans.
+
+       Seeded AFTER the outlet exists, below. */
     /* ── ONE DISH THAT IS NOT ONE PRICE ──────────────────────────
        Every other item on this menu is name-price-tax, which is what
        most of a menu is. This one is the shape the rest of the trade
@@ -741,6 +747,45 @@ async function main() {
        on conflict (hotel_id, code) do nothing`,
       [hotelId, tillStaff!.id],
     );
+
+
+    /* The room. Three sections, laid out in a grid a waiter can learn:
+       the same table is always in the same place, which is what makes
+       muscle memory work on a screen that is jabbed at.
+
+       No colour is stored on any of this — the tile derives it from the
+       order sitting on the table. */
+    const { rows: [restOutlet] } = await client.query<{ id: string }>(
+      `select id from pos_outlets where hotel_id = $1 and code = 'REST'`,
+      [hotelId]);
+
+    const FLOOR: [string, number, string[]][] = [
+      ["A/C", 1, ["AC1", "AC2", "AC3", "AC4", "AC5", "AC6",
+                  "AC7", "AC8", "AC9", "AC10"]],
+      ["Non A/C", 2, ["N1", "N2", "N3", "N4", "N5", "N6"]],
+      ["Bar", 3, ["B1", "B2", "B3", "B4"]],
+    ];
+
+    for (const [name, order, labels] of FLOOR) {
+      const { rows: [section] } = await client.query<{ id: string }>(
+        `insert into pos_sections (hotel_id, outlet_id, name, sort_order)
+         values ($1,$2,$3,$4)
+         on conflict (outlet_id, name) do update set is_active = true
+         returning id`,
+        [hotelId, restOutlet!.id, name, order]);
+
+      for (const [i, label] of labels.entries()) {
+        await client.query(
+          `insert into pos_tables
+             (hotel_id, section_id, label, seats, row_no, col_no)
+           values ($1,$2,$3,$4,$5,$6)
+           on conflict (section_id, label) do nothing`,
+          /* Four across, which is what fits a terminal held in portrait
+             without the tiles becoming too small to hit. */
+          [hotelId, section!.id, label, i % 3 === 0 ? 6 : 4,
+           Math.floor(i / 4), i % 4]);
+      }
+    }
 
     if (sold !== 132) {
       throw new Error(
