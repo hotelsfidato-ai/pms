@@ -349,10 +349,23 @@ export function setLineQty(
  * whole order again would put the starters back on the pass while they
  * are being eaten.
  */
-export function sendToKitchen(
+export async function sendToKitchen(
   hotelId: string, orderId: string,
-): Promise<TillResult> {
-  return write(`/api/hotels/${hotelId}/till/orders/${orderId}/kot`);
+): Promise<TillResult & { kotNo?: number }> {
+  /* The docket number comes back with the send, so the till can offer
+     the paper without asking again — and so a waiter who wants it knows
+     which number to expect out of the machine. */
+  try {
+    const result = await api<Order & { ok: true; kotNo: number }>(
+      `/api/hotels/${hotelId}/till/orders/${orderId}/kot`, { method: "POST" });
+    return { ok: true, order: result, kotNo: result.kotNo };
+  } catch (error) {
+    if (error instanceof ApiError) {
+      const p = error.body as { reason?: string } | undefined;
+      return { ok: false, reason: p?.reason ?? error.message };
+    }
+    throw error;
+  }
 }
 
 /**
@@ -679,5 +692,44 @@ export async function listWaiters(
     return body.waiters;
   } catch {
     return [];
+  }
+}
+
+/* ── The kitchen docket ───────────────────────────────────────────
+   One BATCH of lines, not the order. Starters, then mains, then the
+   dessert somebody changed their mind about: three dockets, three
+   numbers, one bill.
+
+   No prices on it, and there never will be. A chef reading a docket is
+   deciding what to cook and in what order; a column of rupees is noise
+   on a rail above a hotplate. */
+export interface Docket {
+  kotNo: number;
+  orderNo: string;
+  table: string | null;
+  orderType: string;
+  outlet: string;
+  hotel: string;
+  sentAt: string | null;
+  lines: {
+    id: string;
+    /** Set on a side, naming the dish it goes on. The paper indents. */
+    parentId: string | null;
+    name: string;
+    qty: number;
+    note: string | null;
+    isAddon: boolean;
+  }[];
+}
+
+export async function getDocket(
+  hotelId: string, orderId: string, kotNo: number,
+): Promise<Docket | null> {
+  if (!hotelId || !orderId || !Number.isInteger(kotNo)) return null;
+  try {
+    return await api<Docket>(
+      `/api/hotels/${hotelId}/till/orders/${orderId}/kot/${kotNo}`);
+  } catch {
+    return null;
   }
 }

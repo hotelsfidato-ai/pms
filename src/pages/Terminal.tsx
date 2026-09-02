@@ -175,7 +175,16 @@ export default function TerminalPage() {
     const res = await sendToKitchen(hotelId, orderId);
     setBusy(false);
     if (!res.ok) return toast.error("Not sent", res.reason);
-    toast.success("With the kitchen", "They can start on it now.");
+    toast.success(
+      `KOT ${res.kotNo} is with the kitchen`,
+      "They can start on it now.");
+    /* The paper, for kitchens that run on it. The pass screen already
+       has the same lines and is better — oldest first, colour by wait —
+       so this opens alongside rather than instead. */
+    if (res.kotNo) {
+      window.open(
+        `/h/${hotelId}/till/orders/${orderId}/kot/${res.kotNo}`, "_blank");
+    }
     refresh();
   };
 

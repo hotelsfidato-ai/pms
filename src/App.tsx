@@ -44,6 +44,7 @@ import {
 import ReservationsPage from "@/pages/Reservations";
 import TillPage from "@/pages/Till";
 import FloorPage from "@/pages/Floor";
+import DocketPage from "@/pages/Docket";
 import BillPage from "@/pages/Bill";
 import MenuPage from "@/pages/Menu";
 import RatePlansEditor from "@/pages/RatePlans";
@@ -362,6 +363,12 @@ export default function App() {
             <Route
               path="/h/:code/till/terminal"
               element={<><PropertyScope /><TerminalPage /></>}
+            />
+            {/* The docket, before the bill route so :id does not
+                swallow it. No prices on this one, ever. */}
+            <Route
+              path="/h/:code/till/orders/:id/kot/:no"
+              element={<><PropertyScope /><DocketPage /></>}
             />
             <Route
               path="/h/:code/till/bill/:id"

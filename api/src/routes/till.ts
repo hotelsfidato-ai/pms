@@ -1911,8 +1911,12 @@ till.post("/:code/till/orders/:id/kot", async (c) => {
     if (!hotelId) return null;
     const orderId = c.req.param("id");
 
-    const { rows: order } = await client.query<{ status: string }>(
-      `select status from pos_orders where id = $1 and hotel_id = $2`,
+    const { rows: order } = await client.query<{
+      status: string; outlet_id: string; business_date: string;
+    }>(
+      `select status, outlet_id::text,
+              to_char(business_date,'YYYY-MM-DD') as business_date
+         from pos_orders where id = $1 and hotel_id = $2`,
       [orderId, hotelId],
     );
     if (!order[0]) return refuse("No such order.");
@@ -1920,11 +1924,26 @@ till.post("/:code/till/orders/:id/kot", async (c) => {
       return refuse(`This order is ${order[0].status}. Nothing to send.`);
     }
 
+    /* THE DOCKET NUMBER GOES WITH THE BATCH, not the order. Starters,
+       then mains, then the dessert somebody changed their mind about:
+       three dockets, three numbers, one bill. A kitchen holding three
+       pieces of paper that all say KOT-5 cannot tell the chef which is
+       which.
+
+       Taken inside the same statement that sends the lines, so two
+       waiters sending at once cannot both read the same number and
+       print it twice. */
+    const { rows: next } = await client.query<{ no: number }>(
+      `select app.pos_next_kot_no($1, $2::date) as no`,
+      [order[0].outlet_id, order[0].business_date],
+    );
+    const kotNo = next[0]!.no;
+
     const { rowCount: sent } = await client.query(
       `update pos_order_lines
-          set kot_status = 'sent', kot_sent_at = now()
+          set kot_status = 'sent', kot_sent_at = now(), kot_no = $2
         where order_id = $1 and not voided and kot_status = 'pending'`,
-      [orderId],
+      [orderId, kotNo],
     );
 
     if (!sent) {
@@ -1937,12 +1956,78 @@ till.post("/:code/till/orders/:id/kot", async (c) => {
     return {
       ok: true as const,
       sent,
+      /* Handed back so the till can print THIS docket without asking
+         again — and so a waiter who wants the paper knows which number
+         to expect out of the machine. */
+      kotNo,
       ...(await readOrder(client, orderId))!,
     };
   });
 
   if (!result) return c.json({ error: "No such property." }, 404);
   return c.json(result, "ok" in result && result.ok ? 200 : 409);
+});
+
+/* ── One docket, for printing ─────────────────────────────────────
+   What the kitchen printer gets: the batch that went out under this
+   number, dishes with their add-ons nested underneath. The pass screen
+   stays and is better than paper — oldest first, colour by wait, a
+   struck dish shown loudly — but most kitchens run on the docket. */
+
+till.get("/:code/till/orders/:id/kot/:no", async (c) => {
+  const body = await withSession(c.get("subject"), async (client) => {
+    const hotelId = await hotelFor(client, c.req.param("code"));
+    if (!hotelId) return null;
+    const orderId = c.req.param("id");
+    const kotNo = Number(c.req.param("no"));
+    if (!Number.isInteger(kotNo)) return null;
+
+    const { rows: head } = await client.query<{
+      order_no: string; table_ref: string | null; order_type: string;
+      outlet_name: string; hotel_name: string; sent_at: string | null;
+    }>(
+      `select o.order_no, o.table_ref, o.order_type,
+              ou.name as outlet_name, h.name as hotel_name,
+              to_char(min(l.kot_sent_at), 'DD/MM/YY HH24:MI') as sent_at
+         from pos_orders o
+         join pos_outlets ou on ou.id = o.outlet_id
+         join hotels h on h.id = o.hotel_id
+         join pos_order_lines l on l.order_id = o.id and l.kot_no = $3
+        where o.id = $1 and o.hotel_id = $2
+        group by o.order_no, o.table_ref, o.order_type, ou.name, h.name`,
+      [orderId, hotelId, kotNo],
+    );
+    if (!head[0]) return null;
+
+    const { rows } = await client.query<{
+      line_id: string; parent_id: string | null; name: string;
+      qty: string; note: string | null; is_addon: boolean;
+    }>(
+      `select line_id::text, parent_id::text, name, qty::text, note, is_addon
+         from app.pos_kot($1, $2)`,
+      [orderId, kotNo],
+    );
+
+    return {
+      kotNo,
+      orderNo: head[0].order_no,
+      table: head[0].table_ref,
+      orderType: head[0].order_type,
+      outlet: head[0].outlet_name,
+      hotel: head[0].hotel_name,
+      sentAt: head[0].sent_at,
+      lines: rows.map((r) => ({
+        id: r.line_id,
+        parentId: r.parent_id,
+        name: r.name,
+        qty: Number(r.qty),
+        note: r.note,
+        isAddon: r.is_addon,
+      })),
+    };
+  });
+
+  return body ? c.json(body) : c.json({ error: "No such docket." }, 404);
 });
 
 /* ── The pass ─────────────────────────────────────────────────────────

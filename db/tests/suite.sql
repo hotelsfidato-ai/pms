@@ -999,7 +999,10 @@ begin
     format($q$update pos_order_lines set kot_status='sent'
             where order_id=%L$q$, v_order), '23514');
 
-  update pos_order_lines set kot_status='sent', kot_sent_at=now()
+  /* A docket number goes with the send. The constraint says a sent line
+     has one and a pending line does not — either alone is a line the
+     kitchen holds with no ticket, or a ticket for nothing. */
+  update pos_order_lines set kot_status='sent', kot_sent_at=now(), kot_no=1
    where order_id = v_order;
   perform test.ok('kot','a sent line carries its time', true);
 
@@ -2146,7 +2149,8 @@ begin
     pay = 420.00, 'payable ' || pay);
 
   -- ---------- kot ----------
-  update pos_order_lines set kot_status = 'sent', kot_sent_at = now()
+  update pos_order_lines set kot_status = 'sent', kot_sent_at = now(),
+                             kot_no = 1
    where id = v_line;
   select state into st from app.pos_floor(v_outlet) where label = 'AC4';
   perform test.ok('floor','food in the kitchen shows as KOT', st = 'kot');

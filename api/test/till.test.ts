@@ -1472,3 +1472,140 @@ describe("the order header", () => {
       .toMatch(/settled/i);
   });
 });
+
+/* ══════════════════════════════════════════════════════════════════
+   THE KITCHEN DOCKET
+
+   The number belongs to a BATCH of lines, not to the order. Starters,
+   then mains, then a dessert somebody changed their mind about: three
+   dockets, three numbers, one bill. A kitchen holding three pieces of
+   paper that all say KOT-5 cannot tell the chef which is which.
+   ══════════════════════════════════════════════════════════════════ */
+
+describe("the kitchen docket", () => {
+  it("numbers each send separately, on one bill", async () => {
+    const order = await openOrder("kot-batches");
+    const tikka = await menuItem("Paneer Tikka");
+    const roti = await menuItem("Butter Roti");
+
+    await post(`/api/hotels/5EL/till/orders/${order.id}/lines`,
+      { itemId: tikka.id, qty: 1 });
+    const first = await post(`/api/hotels/5EL/till/orders/${order.id}/kot`);
+    expect(first.status).toBe(200);
+    const one = (await first.json()) as { kotNo: number; sent: number };
+
+    await post(`/api/hotels/5EL/till/orders/${order.id}/lines`,
+      { itemId: roti.id, qty: 2 });
+    const second = await post(`/api/hotels/5EL/till/orders/${order.id}/kot`);
+    const two = (await second.json()) as { kotNo: number; sent: number };
+
+    /* Two dockets, two numbers, one bill. */
+    expect(two.kotNo).toBe(one.kotNo + 1);
+    expect(one.sent).toBe(1);
+    expect(two.sent).toBe(1);
+  });
+
+  it("sends only what has not gone, and refuses when nothing is left", async () => {
+    const order = await openOrder("kot-nothing-left");
+    const item = await menuItem("Paneer Tikka");
+    await post(`/api/hotels/5EL/till/orders/${order.id}/lines`,
+      { itemId: item.id, qty: 1 });
+    await post(`/api/hotels/5EL/till/orders/${order.id}/kot`);
+
+    const again = await post(`/api/hotels/5EL/till/orders/${order.id}/kot`);
+    expect(again.status).toBe(409);
+    /* Firing the whole order again would put the starters back on the
+       pass while they are being eaten. */
+    expect(((await again.json()) as { reason: string }).reason)
+      .toMatch(/already with the kitchen/i);
+  });
+
+  it("prints add-ons nested under their dish, with the note", async () => {
+    const order = await openOrder("kot-nested");
+    const db = await admin();
+    let dishId: string; let varId: string; let addonId: string;
+    try {
+      const { rows } = await db.query<{
+        item: string; variation: string; addon: string;
+      }>(
+        `select i.id::text as item,
+                (select v.id::text from pos_item_variations v
+                  where v.item_id = i.id and v.label = 'Butter') as variation,
+                (select a.id::text from pos_addons a
+                  where a.label = 'Onions' and a.hotel_id = i.hotel_id) as addon
+           from pos_menu_items i
+           join hotels h on h.id = i.hotel_id
+          where h.code = '5EL' and i.name = 'Bhaaji Pau'`);
+      dishId = rows[0]!.item;
+      varId = rows[0]!.variation;
+      addonId = rows[0]!.addon;
+    } finally {
+      await db.end();
+    }
+
+    await post(`/api/hotels/5EL/till/orders/${order.id}/lines`, {
+      itemId: dishId, qty: 1, variationId: varId,
+      addonIds: [addonId], note: "Less Spicy",
+    });
+    const sent = await post(`/api/hotels/5EL/till/orders/${order.id}/kot`);
+    const { kotNo } = (await sent.json()) as { kotNo: number };
+
+    const res = await as(
+      `/api/hotels/5EL/till/orders/${order.id}/kot/${kotNo}`);
+    expect(res.status).toBe(200);
+    const docket = (await res.json()) as {
+      kotNo: number; table: string | null; orderType: string;
+      lines: { id: string; parentId: string | null; name: string;
+               qty: number; note: string | null; isAddon: boolean }[];
+    };
+
+    expect(docket.kotNo).toBe(kotNo);
+    const dish = docket.lines.find((l) => !l.isAddon)!;
+    const side = docket.lines.find((l) => l.isAddon)!;
+
+    expect(dish.name).toBe("Bhaaji Pau (Butter)");
+    expect(dish.note).toBe("Less Spicy");
+    /* The whole point of the printed form: a chef reads the dish, then
+       indented, what goes on it. Flat, the sides get plated alone. */
+    expect(side.parentId).toBe(dish.id);
+    expect(side.name).toBe("Sides: Onions");
+
+    /* And the dish comes before its own side. */
+    expect(docket.lines.indexOf(dish)).toBeLessThan(docket.lines.indexOf(side));
+  });
+
+  it("leaves a struck dish off the paper", async () => {
+    const order = await openOrder("kot-struck");
+    const tikka = await menuItem("Paneer Tikka");
+    const roti = await menuItem("Butter Roti");
+    await post(`/api/hotels/5EL/till/orders/${order.id}/lines`,
+      { itemId: tikka.id, qty: 1 });
+    await post(`/api/hotels/5EL/till/orders/${order.id}/lines`,
+      { itemId: roti.id, qty: 1 });
+
+    const sent = await post(`/api/hotels/5EL/till/orders/${order.id}/kot`);
+    const { kotNo } = (await sent.json()) as { kotNo: number };
+
+    const current = (await (await as(
+      `/api/hotels/5EL/till/orders/${order.id}`)).json()) as {
+      lines: { id: string; name: string }[];
+    };
+    const toStrike = current.lines.find((l) => l.name === "Butter Roti")!;
+    await post(
+      `/api/hotels/5EL/till/orders/${order.id}/lines/${toStrike.id}/void`);
+
+    const docket = (await (await as(
+      `/api/hotels/5EL/till/orders/${order.id}/kot/${kotNo}`)).json()) as {
+      lines: { name: string }[];
+    };
+    /* A dish cancelled after the docket printed has its own loud line on
+       the pass. Reprinting it here would put it back on the chef's rail. */
+    expect(docket.lines.map((l) => l.name)).toEqual(["Paneer Tikka"]);
+  });
+
+  it("has no docket for a number that was never sent", async () => {
+    const order = await openOrder("kot-missing");
+    const res = await as(`/api/hotels/5EL/till/orders/${order.id}/kot/999`);
+    expect(res.status).toBe(404);
+  });
+});
