@@ -1916,3 +1916,160 @@ begin
   select count(*) into n from hotels where code = 'TRD';
   perform test.ok('inventory','the fixture does not outlive the test', n = 0);
 end $$;
+
+
+-- =============================================================================
+-- Variations and add-ons  (045)
+-- =============================================================================
+-- The dish from the screenshots, built for real: Bhaaji Pau at Oil 300 or
+-- Butter 400, with Sides at 25 each, and the rules that stop a bill going
+-- wrong quietly.
+-- =============================================================================
+do $$
+declare
+  v_hotel uuid; v_staff uuid; v_outlet uuid; v_cat uuid;
+  v_dish uuid; v_plain uuid; v_oil uuid; v_butter uuid;
+  v_group uuid; v_onion uuid; v_chutney uuid;
+  v_order uuid; v_line bigint; v_addon bigint; n int; g numeric;
+begin
+  insert into hotels (code, name, city, timezone)
+  values ('TRE', 'Variation fixture', 'Akkalkot', 'Asia/Kolkata')
+  returning id into v_hotel;
+
+  select id into v_staff from staff limit 1;
+  insert into staff_hotels (staff_id, hotel_id, role)
+  values (v_staff, v_hotel, 'pos') on conflict do nothing;
+
+  insert into pos_outlets (hotel_id, code, name, staff_id)
+  values (v_hotel, 'TREO', 'Variation outlet', v_staff) returning id into v_outlet;
+
+  insert into pos_menu_categories (hotel_id, name)
+  values (v_hotel, 'Indian') returning id into v_cat;
+
+  insert into pos_menu_items (hotel_id, category_id, name, price, tax_rate, short_code, is_veg)
+  values (v_hotel, v_cat, 'Bhaaji Pau', 300.00, 5.00, 'BP', true)
+  returning id into v_dish;
+
+  insert into pos_menu_items (hotel_id, category_id, name, price, tax_rate)
+  values (v_hotel, v_cat, 'Papad', 90.00, 5.00) returning id into v_plain;
+
+  -- ---------- a short code is typed blind, so it must be unique ----------
+  perform test.raises('variations','a short code cannot be shared',
+    format($q$insert into pos_menu_items
+               (hotel_id, category_id, name, price, tax_rate, short_code)
+             values (%L,%L,'Bhaaji Pau Special',350,5,'bp')$q$, v_hotel, v_cat),
+    '23505');
+
+  -- ---------- variations ----------
+  insert into pos_item_variations (hotel_id, item_id, label, price)
+  values (v_hotel, v_dish, 'Oil', 300.00) returning id into v_oil;
+  insert into pos_item_variations (hotel_id, item_id, label, price)
+  values (v_hotel, v_dish, 'Butter', 400.00) returning id into v_butter;
+
+  insert into pos_orders (hotel_id, outlet_id, order_no, business_date, opened_by)
+  values (v_hotel, v_outlet, 'TRE-1', current_date, v_staff) returning id into v_order;
+
+  -- THE DANGEROUS CASE, and it is silent. A dish gains variations, and a till
+  -- that still rings the ITEM charges pos_menu_items.price — a number nobody
+  -- has looked at since. The guest pays a price that is on no menu.
+  perform test.raises('variations','a dish sold by variation refuses a line without one',
+    format($q$insert into pos_order_lines
+               (order_id, hotel_id, item_id, name, qty, unit_price, tax_rate, added_by)
+             values (%L,%L,%L,'Bhaaji Pau',1,300,5,%L)$q$,
+           v_order, v_hotel, v_dish, v_staff), 'P0001');
+
+  perform test.raises('variations','and refuses one belonging to another dish',
+    format($q$insert into pos_order_lines
+               (order_id, hotel_id, item_id, variation_id, name, qty,
+                unit_price, tax_rate, added_by)
+             values (%L,%L,%L,%L,'Papad (Butter)',1,400,5,%L)$q$,
+           v_order, v_hotel, v_plain, v_butter, v_staff), 'P0001');
+
+  -- A dish with NO variations is unaffected: most of a menu is like this.
+  insert into pos_order_lines
+    (order_id, hotel_id, item_id, name, qty, unit_price, tax_rate, added_by)
+  values (v_order, v_hotel, v_plain, 'Papad', 1, 90.00, 5.00, v_staff);
+  perform test.ok('variations','a dish with no variations needs none',
+    (select count(*) from pos_order_lines where order_id = v_order) = 1);
+
+  insert into pos_order_lines
+    (order_id, hotel_id, item_id, variation_id, name, qty, unit_price, tax_rate, added_by)
+  values (v_order, v_hotel, v_dish, v_butter, 'Bhaaji Pau (Butter)', 1, 400.00, 5.00, v_staff)
+  returning id into v_line;
+
+  -- ---------- add-ons ----------
+  insert into pos_addon_groups (hotel_id, label, min_select, max_select)
+  values (v_hotel, 'Sides', 0, 4) returning id into v_group;
+  insert into pos_addons (hotel_id, group_id, label, price)
+  values (v_hotel, v_group, 'Onions', 25.00) returning id into v_onion;
+  insert into pos_addons (hotel_id, group_id, label, price)
+  values (v_hotel, v_group, 'Coriander Chutney', 25.00) returning id into v_chutney;
+  insert into pos_item_addon_groups (item_id, group_id) values (v_dish, v_group);
+
+  insert into pos_order_lines
+    (order_id, hotel_id, addon_id, parent_line_id, name, qty, unit_price,
+     tax_rate, added_by)
+  values (v_order, v_hotel, v_onion, v_line, 'Sides: Onions', 1, 25.00, 5.00, v_staff)
+  returning id into v_addon;
+
+  insert into pos_order_lines
+    (order_id, hotel_id, addon_id, parent_line_id, name, qty, unit_price,
+     tax_rate, added_by)
+  values (v_order, v_hotel, v_chutney, v_line, 'Sides: Coriander Chutney', 1,
+          25.00, 5.00, v_staff);
+
+  -- An add-on is a LINE, so the totals already count it. That is the whole
+  -- reason it is modelled this way rather than as a money column somebody
+  -- would have had to teach four other functions about.
+  select gross into g from app.pos_order_total(v_order);
+  perform test.ok('variations','an add-on is a line, so the total already has it',
+    g = round((90 + 400 + 25 + 25) * 1.05, 2),
+    'gross ' || g);
+
+  -- ---------- one level, and no deeper ----------
+  -- The check constraint says a child is an add-on. It does NOT say the parent
+  -- is a dish — both rows being add-ons satisfies it.
+  perform test.raises('variations','an add-on cannot hang off another add-on',
+    format($q$insert into pos_order_lines
+               (order_id, hotel_id, addon_id, parent_line_id, name, qty,
+                unit_price, tax_rate, added_by)
+             values (%L,%L,%L,%L,'Sides: Onions',1,25,5,%L)$q$,
+           v_order, v_hotel, v_onion, v_addon, v_staff), 'P0001');
+
+  -- ---------- striking the dish strikes what was added to it ----------
+  -- Otherwise the onions survive the Bhaaji Pau: 25 rupees for a side to a
+  -- dish that was struck, appearing on the bill under nothing.
+  update pos_order_lines
+     set voided = true, voided_by = v_staff, voided_at = now()
+   where id = v_line;
+
+  select count(*) into n from pos_order_lines
+   where parent_line_id = v_line and not voided;
+  perform test.ok('variations','striking a dish strikes its add-ons', n = 0);
+
+  select gross into g from app.pos_order_total(v_order);
+  perform test.ok('variations','and the bill falls by the dish AND the sides',
+    g = round(90 * 1.05, 2), 'gross ' || g);
+
+  -- ---------- teardown ----------
+  alter table pos_order_lines disable trigger pos_order_lines_frozen;
+  delete from pos_order_lines where hotel_id = v_hotel;
+  alter table pos_order_lines enable trigger pos_order_lines_frozen;
+
+  delete from pos_orders where hotel_id = v_hotel;
+  delete from pos_item_addon_groups where group_id = v_group;
+  delete from pos_addons where hotel_id = v_hotel;
+  delete from pos_addon_groups where hotel_id = v_hotel;
+  delete from pos_item_variations where hotel_id = v_hotel;
+  delete from pos_menu_items where hotel_id = v_hotel;
+  delete from pos_menu_categories where hotel_id = v_hotel;
+  delete from pos_outlets where hotel_id = v_hotel;
+  delete from staff_hotels where hotel_id = v_hotel;
+
+  alter table hotels disable trigger hotels_no_delete;
+  delete from hotels where id = v_hotel;
+  alter table hotels enable trigger hotels_no_delete;
+
+  select count(*) into n from hotels where code = 'TRE';
+  perform test.ok('variations','the fixture does not outlive the test', n = 0);
+end $$;

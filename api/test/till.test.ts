@@ -785,3 +785,221 @@ describe("a discounted bill charged to a room", () => {
     }
   });
 });
+
+/* ══════════════════════════════════════════════════════════════════
+   VARIATIONS AND ADD-ONS, THROUGH THE ROUTES
+
+   The db suite proves the rules. These prove the till cannot get a
+   price wrong, and the dangerous case is the quiet one: a dish GAINS
+   variations, and a till that still rings the item charges
+   `pos_menu_items.price` — a number nobody has looked at since, and
+   one that is on no menu.
+   ══════════════════════════════════════════════════════════════════ */
+
+describe("a dish sold by variation", () => {
+  let dishId: string;
+  let oilId: string;
+  let butterId: string;
+  let onionId: string;
+  let groupId: string;
+
+  beforeAll(async () => {
+    const db = await admin();
+    try {
+      const { rows: h } = await db.query<{ id: string }>(
+        `select id from hotels where code = '5EL'`);
+      const { rows: cat } = await db.query<{ id: string }>(
+        `select id from pos_menu_categories where hotel_id = $1 limit 1`,
+        [h[0]!.id]);
+
+      const { rows: i } = await db.query<{ id: string }>(
+        `insert into pos_menu_items
+           (hotel_id, category_id, name, price, tax_rate, short_code, is_veg)
+         values ($1,$2,'VARTEST Bhaaji Pau',300,5,'VTBP',true)
+         returning id::text`,
+        [h[0]!.id, cat[0]!.id]);
+      dishId = i[0]!.id;
+
+      const { rows: v } = await db.query<{ id: string; label: string }>(
+        `insert into pos_item_variations (hotel_id, item_id, label, price)
+         values ($1,$2,'Oil',300),($1,$2,'Butter',400)
+         returning id::text, label`, [h[0]!.id, dishId]);
+      oilId = v.find((r) => r.label === "Oil")!.id;
+      butterId = v.find((r) => r.label === "Butter")!.id;
+
+      const { rows: g } = await db.query<{ id: string }>(
+        `insert into pos_addon_groups (hotel_id, label, min_select, max_select)
+         values ($1,'VARTEST Sides',0,4) returning id::text`, [h[0]!.id]);
+      groupId = g[0]!.id;
+
+      const { rows: a } = await db.query<{ id: string }>(
+        `insert into pos_addons (hotel_id, group_id, label, price)
+         values ($1,$2,'Onions',25) returning id::text`, [h[0]!.id, groupId]);
+      onionId = a[0]!.id;
+
+      await db.query(
+        `insert into pos_item_addon_groups (item_id, group_id) values ($1,$2)`,
+        [dishId, groupId]);
+    } finally {
+      await db.end();
+    }
+  });
+
+  afterAll(async () => {
+    const db = await admin();
+    try {
+      /* THE LINES GO FIRST. A describe-level afterAll runs BEFORE the
+         file-level one, so the orders these lines belong to are still
+         there — and pos_order_lines.addon_id references what this is
+         about to delete. The foreign key is right and the order was
+         backwards.
+
+         The frozen trigger is lifted rather than weakened, the same way
+         this file's own teardown does it. */
+      await db.query(
+        "alter table pos_order_lines disable trigger pos_order_lines_frozen");
+      try {
+        await db.query(
+          `delete from pos_order_lines
+            where item_id = $1
+               or variation_id in (select id from pos_item_variations
+                                    where item_id = $1)
+               or addon_id in (select id from pos_addons where group_id = $2)`,
+          [dishId, groupId]);
+      } finally {
+        await db.query(
+          "alter table pos_order_lines enable trigger pos_order_lines_frozen");
+      }
+
+      await db.query(`delete from pos_item_addon_groups where group_id = $1`, [groupId]);
+      await db.query(`delete from pos_addons where group_id = $1`, [groupId]);
+      await db.query(`delete from pos_addon_groups where id = $1`, [groupId]);
+      await db.query(`delete from pos_item_variations where item_id = $1`, [dishId]);
+      await db.query(`delete from pos_menu_items where id = $1`, [dishId]);
+    } finally {
+      await db.end();
+    }
+  });
+
+  it("carries its variations and sides on the menu", async () => {
+    const res = await as("/api/hotels/5EL/till/menu");
+    const body = (await res.json()) as {
+      categories: {
+        items: {
+          name: string; shortCode: string | null; isVeg: boolean | null;
+          variations: { label: string; price: number }[];
+          addonGroups: { label: string; addons: { label: string; price: number }[] }[];
+        }[];
+      }[];
+    };
+    const dish = body.categories.flatMap((c) => c.items)
+      .find((i) => i.name === "VARTEST Bhaaji Pau")!;
+
+    expect(dish.variations.map((v) => v.label).sort()).toEqual(["Butter", "Oil"]);
+    expect(dish.addonGroups[0]!.addons[0]!.label).toBe("Onions");
+    expect(dish.shortCode).toBe("VTBP");
+    expect(dish.isVeg).toBe(true);
+  });
+
+  it("refuses to be rung without choosing one", async () => {
+    const order = await openOrder("var-none");
+    const res = await post(`/api/hotels/5EL/till/orders/${order.id}/lines`,
+      { itemId: dishId, qty: 1 });
+    expect(res.status).toBe(409);
+    /* Named before the constraint gets to it, or the waiter sees a
+       database error for something they could have fixed. */
+    expect(((await res.json()) as { reason: string }).reason)
+      .toMatch(/sold by variation/i);
+  });
+
+  it("prices from the VARIATION, not the item", async () => {
+    const order = await openOrder("var-price");
+    const res = await post(`/api/hotels/5EL/till/orders/${order.id}/lines`,
+      { itemId: dishId, qty: 1, variationId: butterId });
+    expect(res.status, await res.clone().text()).toBe(200);
+    const body = (await res.json()) as {
+      lines: { name: string; unitPrice: number }[];
+    };
+
+    /* 400, not the item's 300. */
+    expect(body.lines[0]!.unitPrice).toBe(400);
+    expect(body.lines[0]!.name).toBe("VARTEST Bhaaji Pau (Butter)");
+  });
+
+  it("adds the sides as child lines under the dish", async () => {
+    const order = await openOrder("var-addons");
+    const res = await post(`/api/hotels/5EL/till/orders/${order.id}/lines`,
+      { itemId: dishId, qty: 1, variationId: oilId, addonIds: [onionId] });
+    expect(res.status, await res.clone().text()).toBe(200);
+    const body = (await res.json()) as {
+      lines: { id: string; name: string; isAddon: boolean;
+               parentLineId: string | null }[];
+      gross: number;
+    };
+
+    const dish = body.lines.find((l) => !l.isAddon)!;
+    const side = body.lines.find((l) => l.isAddon)!;
+    expect(side.parentLineId).toBe(dish.id);
+    expect(side.name).toBe("VARTEST Sides: Onions");
+
+    /* An add-on is a LINE, so the total already has it: 300 + 25 at 5%. */
+    expect(body.gross).toBeCloseTo(Math.round((300 + 25) * 1.05 * 100) / 100, 2);
+  });
+
+  it("strikes the sides when the dish is struck", async () => {
+    const order = await openOrder("var-void");
+    const made = (await (await post(
+      `/api/hotels/5EL/till/orders/${order.id}/lines`,
+      { itemId: dishId, qty: 1, variationId: oilId, addonIds: [onionId] })).json()) as {
+      lines: { id: string; isAddon: boolean }[];
+    };
+    const dish = made.lines.find((l) => !l.isAddon)!;
+
+    const res = await post(
+      `/api/hotels/5EL/till/orders/${order.id}/lines/${dish.id}/void`);
+    expect(res.status).toBe(200);
+    const body = (await res.json()) as {
+      lines: { isAddon: boolean; voided: boolean }[]; gross: number;
+    };
+
+    /* Otherwise the onions survive the dish: 25 rupees for a side to
+       something that was struck, on the bill under nothing. */
+    expect(body.lines.filter((l) => l.isAddon).every((l) => l.voided)).toBe(true);
+    expect(body.gross).toBe(0);
+  });
+
+  it("refuses a side the dish does not offer", async () => {
+    const order = await openOrder("var-wrong-side");
+    const db = await admin();
+    let stray: string;
+    try {
+      const { rows: h } = await db.query<{ id: string }>(
+        `select id from hotels where code = '5EL'`);
+      const { rows: g } = await db.query<{ id: string }>(
+        `insert into pos_addon_groups (hotel_id, label) values ($1,'VARTEST Other')
+         returning id::text`, [h[0]!.id]);
+      const { rows: a } = await db.query<{ id: string }>(
+        `insert into pos_addons (hotel_id, group_id, label, price)
+         values ($1,$2,'Pickle',10) returning id::text`, [h[0]!.id, g[0]!.id]);
+      stray = a[0]!.id;
+    } finally {
+      await db.end();
+    }
+
+    const res = await post(`/api/hotels/5EL/till/orders/${order.id}/lines`,
+      { itemId: dishId, qty: 1, variationId: oilId, addonIds: [stray] });
+    expect(res.status).toBe(409);
+    /* Named, not silently dropped. A side the guest asked for that never
+       reaches the kitchen is a complaint at the table. */
+    expect(((await res.json()) as { reason: string }).reason)
+      .toMatch(/not offered with this dish/i);
+
+    const clean = await admin();
+    try {
+      await clean.query(`delete from pos_addons where label = 'Pickle'`);
+      await clean.query(`delete from pos_addon_groups where label = 'VARTEST Other'`);
+    } finally {
+      await clean.end();
+    }
+  });
+});

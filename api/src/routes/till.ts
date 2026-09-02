@@ -90,13 +90,18 @@ till.get("/:code/till/menu", async (c) => {
       category_id: string; category: string; id: string | null;
       name: string | null; price: string | null; tax_rate: string | null;
       is_active: boolean | null; sort_order: number;
+      short_code: string | null; is_veg: boolean | null;
+      is_favourite: boolean | null; off_until: string | null;
+      off_reason: string | null;
     }>(
       /* Left join, so a category with nothing in it still appears.
          A kitchen that has created "Desserts" and not filled it needs
          to see the empty shelf, not wonder where it went. */
       `select c.id::text as category_id, c.name as category,
               i.id::text, i.name, i.price::text, i.tax_rate::text,
-              i.is_active, coalesce(i.sort_order, 0) as sort_order
+              i.is_active, coalesce(i.sort_order, 0) as sort_order,
+              i.short_code, i.is_veg, i.is_favourite,
+              i.off_until::text, i.off_reason
          from pos_menu_categories c
          left join pos_menu_items i on i.category_id = c.id
         where c.hotel_id = $1 and c.is_active
@@ -106,8 +111,17 @@ till.get("/:code/till/menu", async (c) => {
 
     const byCategory = new Map<string, {
       id: string; name: string;
-      items: { id: string; name: string; price: number; taxRate: number;
-               isActive: boolean }[];
+      items: {
+        id: string; name: string; price: number; taxRate: number;
+        isActive: boolean; shortCode: string | null;
+        isVeg: boolean | null; isFavourite: boolean;
+        offUntil: string | null; offReason: string | null;
+        variations: { id: string; label: string; price: number }[];
+        addonGroups: {
+          id: string; label: string; minSelect: number; maxSelect: number | null;
+          addons: { id: string; label: string; price: number; offUntil: string | null }[];
+        }[];
+      }[];
     }>();
 
     for (const r of rows) {
@@ -123,8 +137,75 @@ till.get("/:code/till/menu", async (c) => {
           price: Number(r.price),
           taxRate: Number(r.tax_rate),
           isActive: r.is_active ?? false,
+          shortCode: r.short_code,
+          /* NULL is a real answer: nobody has said whether this is veg,
+             and the third state must not render as the green mark. */
+          isVeg: r.is_veg,
+          isFavourite: r.is_favourite ?? false,
+          offUntil: r.off_until,
+          offReason: r.off_reason,
+          variations: [],
+          addonGroups: [],
         });
       }
+    }
+
+    /* Variations and add-ons in two more queries rather than a join that
+       multiplies rows. A dish with two variations and four sides would
+       come back eight times, and the reassembly is then the thing that
+       has a bug in it. */
+    const { rows: variations } = await client.query<{
+      item_id: string; id: string; label: string; price: string;
+    }>(
+      `select v.item_id::text, v.id::text, v.label, v.price::text
+         from pos_item_variations v
+         join pos_menu_items i on i.id = v.item_id
+        where i.hotel_id = $1 and v.is_active
+        order by v.sort_order, v.price`,
+      [hotelId],
+    );
+
+    const { rows: addons } = await client.query<{
+      item_id: string; group_id: string; group_label: string;
+      min_select: number; max_select: number | null;
+      id: string; label: string; price: string; off_until: string | null;
+    }>(
+      `select ig.item_id::text, g.id::text as group_id, g.label as group_label,
+              g.min_select, g.max_select,
+              a.id::text, a.label, a.price::text, a.off_until::text
+         from pos_item_addon_groups ig
+         join pos_addon_groups g on g.id = ig.group_id
+         join pos_addons a on a.group_id = g.id
+        where g.hotel_id = $1 and a.is_active
+        order by ig.sort_order, g.label, a.sort_order, a.label`,
+      [hotelId],
+    );
+
+    const items = new Map(
+      [...byCategory.values()].flatMap((c2) => c2.items.map((i) => [i.id, i] as const)),
+    );
+
+    for (const v of variations) {
+      items.get(v.item_id)?.variations.push({
+        id: v.id, label: v.label, price: Number(v.price),
+      });
+    }
+
+    for (const a of addons) {
+      const item = items.get(a.item_id);
+      if (!item) continue;
+      let group = item.addonGroups.find((g) => g.id === a.group_id);
+      if (!group) {
+        group = {
+          id: a.group_id, label: a.group_label,
+          minSelect: a.min_select, maxSelect: a.max_select, addons: [],
+        };
+        item.addonGroups.push(group);
+      }
+      group.addons.push({
+        id: a.id, label: a.label, price: Number(a.price),
+        offUntil: a.off_until,
+      });
     }
 
     return { categories: [...byCategory.values()] };
@@ -298,10 +379,13 @@ async function readOrder(client: Client, orderId: string) {
     tax_rate: string; note: string | null; voided: boolean;
     kot_status: string;
     added_by_name: string;
+    parent_line_id: string | null;
+    variation_id: string | null; addon_id: string | null;
   }>(
     `select l.id::text, l.name, l.qty::text, l.unit_price::text,
             l.tax_rate::text, l.note, l.voided, l.kot_status,
-            s.full_name as added_by_name
+            s.full_name as added_by_name,
+            l.parent_line_id::text, l.variation_id::text, l.addon_id::text
        from pos_order_lines l
        join staff s on s.id = l.added_by
       where l.order_id = $1
@@ -366,6 +450,12 @@ async function readOrder(client: Client, orderId: string) {
          kitchen has, so a second KOT does not re-fire the starters. */
       kotStatus: l.kot_status,
       addedBy: l.added_by_name,
+      /* An add-on names the dish it belongs to. The bill and the kitchen
+         docket both indent on this: "Sides: Onions" under "Bhaaji Pau
+         (Butter)", exactly as the printed ticket does. */
+      parentLineId: l.parent_line_id,
+      isAddon: l.addon_id !== null,
+      variationId: l.variation_id,
     })),
     net: Number(total[0]!.net),
     /* The discount as APPLIED, which is what the arithmetic used. type and
@@ -501,7 +591,14 @@ till.get("/:code/till/orders/:id", async (c) => {
 });
 
 till.post("/:code/till/orders/:id/lines", async (c) => {
-  type LineBody = { itemId?: string; qty?: number; note?: string };
+  type LineBody = {
+    itemId?: string; qty?: number; note?: string;
+    /* Chosen in the dish dialog, both optional. A dish with variations
+       REQUIRES one and the database refuses without it; a dish with
+       none must not be sent one. */
+    variationId?: string;
+    addonIds?: string[];
+  };
   const input = await c.req.json<LineBody>().catch(() => ({}) as LineBody);
 
   const qty = Number(input.qty ?? 1);
@@ -534,30 +631,80 @@ till.post("/:code/till/orders/:id/lines", async (c) => {
 
     const { rows: item } = await client.query<{
       name: string; price: string; tax_rate: string; is_active: boolean;
+      off_until: string | null; off_reason: string | null;
+      variation_count: string;
     }>(
-      `select name, price::text, tax_rate::text, is_active
-         from pos_menu_items where id = $1 and hotel_id = $2`,
+      `select i.name, i.price::text, i.tax_rate::text, i.is_active,
+              i.off_until::text, i.off_reason,
+              (select count(*)::text from pos_item_variations v
+                where v.item_id = i.id and v.is_active) as variation_count
+         from pos_menu_items i where i.id = $1 and i.hotel_id = $2`,
       [input.itemId, hotelId],
     );
     if (!item[0]) return refuse("No such item on the menu.");
     if (!item[0].is_active) {
       return refuse(`${item[0].name} is off the menu today.`);
     }
+    /* "We are out of paneer", until a time. Says WHEN it comes back, so
+       the waiter can tell the table rather than just be refused. */
+    if (item[0].off_until && Date.parse(item[0].off_until) > Date.now()) {
+      const back = new Date(item[0].off_until)
+        .toLocaleTimeString("en-IN", { hour: "2-digit", minute: "2-digit" });
+      return refuse(
+        `${item[0].name} is off${item[0].off_reason ? ` — ${item[0].off_reason}` : ""}. ` +
+        `Back after ${back}.`);
+    }
+
+    /* THE PRICE COMES FROM THE VARIATION, NOT THE ITEM.
+
+       A dish that gains an Oil and a Butter has a `price` column nobody
+       has looked at since. Charging it would put a number on the bill
+       that is on no menu — so the database refuses, and this names the
+       reason before the constraint does. */
+    let name = item[0].name;
+    let unitPrice = item[0].price;
+
+    if (Number(item[0].variation_count) > 0) {
+      if (!input.variationId) {
+        return refuse(`${item[0].name} is sold by variation. Choose one.`);
+      }
+      const { rows: v } = await client.query<{ label: string; price: string }>(
+        `select label, price::text from pos_item_variations
+          where id = $1 and item_id = $2 and is_active`,
+        [input.variationId, input.itemId],
+      );
+      if (!v[0]) return refuse("That variation is not on this dish.");
+      name = `${item[0].name} (${v[0].label})`;
+      unitPrice = v[0].price;
+    } else if (input.variationId) {
+      return refuse(`${item[0].name} has no variations.`);
+    }
 
     /* Price and tax are COPIED onto the line. A menu price that rises
        next month must not silently re-price a bill printed today. */
       /* Increment first. Only if nothing matched does a row get added. */
-      const { rowCount: bumped } = await client.query(
+      /* Add-ons make two lines DIFFERENT even when the dish and note
+         match — a Bhaaji Pau with onions is not the same thing to a
+         kitchen as one without. Sent with add-ons, it always starts a
+         new line rather than joining one whose sides nobody checked. */
+      const wantsAddons = (input.addonIds?.length ?? 0) > 0;
+      const { rowCount: bumped } = wantsAddons ? { rowCount: 0 } : await client.query(
         `update pos_order_lines
             set qty = qty + $1
           where order_id = $2
             and item_id = $3
+            and variation_id is not distinct from $5
+            and parent_line_id is null
+            and not exists (select 1 from pos_order_lines a
+                             where a.parent_line_id = pos_order_lines.id
+                               and not a.voided)
             and not voided
             and note is not distinct from $4`,
-        [qty, orderId, input.itemId, input.note?.trim() || null],
+        [qty, orderId, input.itemId, input.note?.trim() || null,
+         input.variationId ?? null],
       );
 
-      if (!bumped) await client.query(
+      const added = !bumped ? await client.query<{ id: string }>(
       /* TAPPING THE SAME DISH TWICE MEANS TWO OF IT, NOT TWO LINES.
 
          This inserted unconditionally, so a table ordering six butter
@@ -570,13 +717,63 @@ till.post("/:code/till/orders/:id/lines", async (c) => {
          must stay different rows. A struck line is not matched either —
          re-adding something that was cancelled starts fresh. */
       `insert into pos_order_lines
-         (order_id, hotel_id, item_id, name, qty, unit_price, tax_rate,
-          note, added_by)
-       values ($1,$2,$3,$4,$5,$6,$7,$8,$9)
-       on conflict do nothing`,
-      [orderId, hotelId, input.itemId, item[0].name, qty,
-       item[0].price, item[0].tax_rate, input.note?.trim() || null, session.staffId],
-    );
+         (order_id, hotel_id, item_id, variation_id, name, qty, unit_price,
+          tax_rate, note, added_by)
+       values ($1,$2,$3,$10,$4,$5,$6,$7,$8,$9)
+       returning id`,
+      [orderId, hotelId, input.itemId, name, qty,
+       unitPrice, item[0].tax_rate, input.note?.trim() || null, session.staffId,
+       input.variationId ?? null],
+    ) : null;
+
+    /* ── The sides, as child lines ────────────────────────────────
+       An add-on is a LINE. It carries its own name, price, quantity and
+       tax rate, so the totals, the discount apportionment and the
+       per-rate folio posting all handle it without being taught
+       anything new — and striking the dish strikes them, by trigger.
+
+       Its own tax rate comes from the DISH, not the add-on: onions
+       served on a plate of Bhaaji Pau are taxed as what they are part
+       of, and a side sold at a different rate to the thing it garnishes
+       would split one dish across two folio postings. */
+    const parentId = added?.rows[0]?.id;
+    if (parentId && input.addonIds?.length) {
+      const { rows: chosen } = await client.query<{
+        id: string; label: string; price: string; group_label: string;
+        off_until: string | null;
+      }>(
+        `select a.id::text, a.label, a.price::text, g.label as group_label,
+                a.off_until::text
+           from pos_addons a
+           join pos_addon_groups g on g.id = a.group_id
+          where a.id = any($1::uuid[]) and a.hotel_id = $2 and a.is_active
+            and exists (select 1 from pos_item_addon_groups ig
+                         where ig.group_id = a.group_id and ig.item_id = $3)`,
+        [input.addonIds, hotelId, input.itemId],
+      );
+
+      /* Named, not silently dropped. An add-on the guest asked for that
+         does not reach the kitchen is a complaint at the table. */
+      if (chosen.length !== input.addonIds.length) {
+        return refuse(
+          "One of those sides is not offered with this dish, or is off today.");
+      }
+
+      for (const a of chosen) {
+        if (a.off_until && Date.parse(a.off_until) > Date.now()) {
+          return refuse(`${a.label} is off today.`);
+        }
+        await client.query(
+          `insert into pos_order_lines
+             (order_id, hotel_id, addon_id, parent_line_id, name, qty,
+              unit_price, tax_rate, added_by)
+           values ($1,$2,$3,$4,$5,$6,$7,$8,$9)`,
+          [orderId, hotelId, a.id, parentId,
+           `${a.group_label}: ${a.label}`, qty, a.price,
+           item[0].tax_rate, session.staffId],
+        );
+      }
+    }
 
     return { ok: true as const, ...(await readOrder(client, orderId))! };
   });
