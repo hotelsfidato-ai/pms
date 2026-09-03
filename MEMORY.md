@@ -2280,6 +2280,49 @@ a column that was never set.
 
 **Count the columns before naming the value.**
 
+### 114 · The leak was load-bearing
+
+Fixing `nightAudit.test.ts` so it cleaned up after itself broke
+`concurrency.test.ts`, whose own error message explained why:
+
+> "No folio at Pune to reverse against. This test cannot prove
+>  anything — run the night audit tests first, which create one."
+
+It was passing because another file left debris behind. **A test that
+depends on another test's leftovers passes until somebody runs it
+alone**, and the dependency was written down as a hint rather than
+recognised as a fault.
+
+It now opens its own folio and removes it.
+
+### 115 · Order is part of a teardown
+
+Both new teardowns failed on foreign keys the first time: `folios` and
+`form_c_filings` name the reservation, so deleting bookings first
+leaves keys pointing at nothing. The same lesson as 101, where
+`amend_stay` resized the room hold before moving the booking.
+
+**A teardown is a migration run backwards, and it has the same
+ordering rules.**
+
+### 116 · Measure the leak, do not count the greps
+
+Grepping for files that `insert` but never `delete` found two. Measuring
+row counts against a clean load found **four**, and the two the grep
+missed were the ones leaking most — they had a partial teardown, so
+they matched the "cleans up" pattern while cleaning up almost nothing.
+
+```
+before   guests +7   reservations +6   postings +35
+after    guests  0   reservations  0   postings +24
+```
+
+The 24 that remain are POS test lines on a real demo folio, deliberately
+kept: they are ledger rows, they net to zero, and deleting from an
+append-only ledger to tidy a demo is worse than the untidiness. Verified
+by balance, not by assumption — the folio reads 3,890.08 before and
+after.
+
 ## Verification traps
 
 ### Never test a Tailwind utility by injecting the class at runtime

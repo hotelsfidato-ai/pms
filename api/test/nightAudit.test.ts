@@ -59,6 +59,11 @@ const businessDate = async (): Promise<string> => {
   }
 };
 
+/* The night audit RUNS that existed before this file did. Recorded so the
+   teardown can remove the ones this file caused and nothing else — deleting
+   every run for Pune would take out whatever else put them there. */
+let auditRunsBefore: string[] = [];
+
 beforeAll(async () => {
   const db = await admin();
   try {
@@ -71,12 +76,67 @@ beforeAll(async () => {
       "select id from hotels where code = 'PUN'",
     );
     puneId = hotel.rows[0]!.id;
+
+    const { rows } = await db.query<{ d: string }>(
+      `select business_date::text as d from night_audit_runs
+        where hotel_id = $1`, [puneId]);
+    auditRunsBefore = rows.map((r) => r.d);
   } finally {
     await db.end();
   }
 });
 
-afterAll(async () => { await closePool(); });
+/* Until this existed, `afterAll` closed the pool and deleted nothing. Every
+   run of this file left FIVE guests, FIVE reservations, their folios, their
+   room assignments and around thirty-five postings in the demo database —
+   measured against a clean load, not guessed.
+
+   The damage is not the row count. It is that somebody opening the app after
+   a test run sees phantom guests, phantom bookings and test money on folios,
+   and cannot tell them from real ones. Defect 54, and the fourth file found
+   with this shape.
+
+   Everything this file creates carries `NA-<pid>`, so the teardown has always
+   had what it needed. */
+afterAll(async () => {
+  const db = await admin();
+  try {
+    const mine = `${tag}-%`;
+    const guests = `${tag} %`;
+
+    await db.query(
+      "alter table folio_postings disable trigger folio_postings_append_only");
+    await db.query(
+      `delete from folio_postings where folio_id in (
+         select f.id from folios f
+          join reservations r on r.id = f.reservation_id
+         where r.reference like $1)`, [mine]);
+    await db.query(
+      "alter table folio_postings enable trigger folio_postings_append_only");
+
+    await db.query(
+      `delete from folios where reservation_id in (
+         select id from reservations where reference like $1)`, [mine]);
+    await db.query(
+      `delete from room_assignments where reservation_id in (
+         select id from reservations where reference like $1)`, [mine]);
+    await db.query(
+      "delete from reservations where reference like $1", [mine]);
+
+    await db.query("alter table guests disable trigger guests_no_delete");
+    await db.query("delete from guests where full_name like $1", [guests]);
+    await db.query("alter table guests enable trigger guests_no_delete");
+
+    /* Only the runs this file caused. */
+    await db.query(
+      `delete from night_audit_runs
+        where hotel_id = $1 and not (business_date::text = any($2))`,
+      [puneId, auditRunsBefore]);
+  } finally {
+    await db.end();
+  }
+  await closePool();
+});
 
 /**
  * Put a guest in a room at Pune, checked in, on the current business

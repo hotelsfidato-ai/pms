@@ -63,7 +63,55 @@ beforeAll(async () => {
   }
 });
 
-afterAll(async () => { await closePool(); });
+/* This closed the pool and deleted nothing, so every run left a foreign
+   guest, their identity document and a Form C reservation in the demo.
+   Everything here carries `INV-<pid>`, so the teardown always had what it
+   needed. */
+afterAll(async () => {
+  const db = await admin();
+  try {
+    const mine = `${tag}-%`;
+    const guests = `${tag} %`;
+
+    await db.query(
+      "alter table folio_postings disable trigger folio_postings_append_only");
+    await db.query(
+      `delete from folio_postings where folio_id in (
+         select f.id from folios f join reservations r on r.id = f.reservation_id
+          where r.reference like $1)`, [mine]);
+    await db.query(
+      "alter table folio_postings enable trigger folio_postings_append_only");
+
+    await db.query(
+      `delete from invoices where folio_id in (
+         select f.id from folios f join reservations r on r.id = f.reservation_id
+          where r.reference like $1)`, [mine]).catch(() => undefined);
+    await db.query(
+      `delete from folios where reservation_id in (
+         select id from reservations where reference like $1)`, [mine]);
+    await db.query(
+      `delete from room_assignments where reservation_id in (
+         select id from reservations where reference like $1)`, [mine]);
+    /* form_c_filings names the reservation too — this whole file is about
+       Form C, so of course it does. It has to go before the booking it
+       points at. */
+    await db.query(
+      `delete from form_c_filings where reservation_id in (
+         select id from reservations where reference like $1)`, [mine])
+      .catch(() => undefined);
+    await db.query("delete from reservations where reference like $1", [mine]);
+    await db.query(
+      `delete from guest_documents where guest_id in (
+         select id from guests where full_name like $1)`, [guests]);
+
+    await db.query("alter table guests disable trigger guests_no_delete");
+    await db.query("delete from guests where full_name like $1", [guests]);
+    await db.query("alter table guests enable trigger guests_no_delete");
+  } finally {
+    await db.end();
+  }
+  await closePool();
+});
 
 /** A stay with charges on it, and no invoice yet. */
 async function invoiceableStay(): Promise<string> {

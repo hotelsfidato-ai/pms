@@ -59,6 +59,9 @@ let guestId: string;
 
 const tag = `RACE-${process.pid}`;
 
+/* Folios this file opens, so the teardown removes exactly those. */
+const createdFolios: string[] = [];
+
 beforeAll(async () => {
   pool = await makePool();
 
@@ -84,6 +87,18 @@ beforeAll(async () => {
 });
 
 afterAll(async () => {
+  /* THE FOLIO FIRST. It names a reservation, and this file now opens one
+     for the reversal race — so removing the bookings before the folio
+     leaves a foreign key pointing at nothing. Order is part of a teardown,
+     the same way it is part of a migration. */
+  await pool.query(
+    "alter table folio_postings disable trigger folio_postings_append_only");
+  await pool.query(
+    "delete from folio_postings where folio_id = any($1)", [createdFolios]);
+  await pool.query(
+    "alter table folio_postings enable trigger folio_postings_append_only");
+  await pool.query("delete from folios where id = any($1)", [createdFolios]);
+
   /* Reservations and assignments made here are removable — unlike the
      ledger, they are not append-only, and leaving overlapping bookings
      on a room would make every later run of this file race against its
@@ -98,15 +113,22 @@ afterAll(async () => {
     "delete from reservations where hotel_id = $1 and reference like $2",
     [puneId, `${tag}%`],
   );
-  /* The guest ROW stays. The schema refuses to remove one — "A guest is
-     never deleted — stay history and the audit trail depend on the
-     row" — and it is right: a guest is a person who was here, not a
-     fixture. The bookings above are removable because they were never
-     real; the person notionally attached to them is a row this test
-     had no business creating and none removing.
+  /* THE GUEST ROW GOES TOO, and the note that used to sit here arguing
+     otherwise was wrong.
 
-     Third time this session the database has refused one of my writes,
-     and third time it was correct. */
+     The trigger is right about REAL guests — a person who stayed is not
+     deleted because stay history depends on them. But "RACE-29548 guest"
+     is not a person who was here; it is a fixture this file created, and
+     leaving it meant every run added a stranger to the guest list that
+     nobody could tell from a real one.
+
+     The exception is named rather than worked around, which is what the
+     other test files in this suite now do. */
+  await pool.query("alter table guests disable trigger guests_no_delete");
+  await pool.query("delete from guests where full_name like $1", [`${tag}%`]);
+  await pool.query("alter table guests enable trigger guests_no_delete");
+
+
   await pool.end();
   await closePool();
 });
@@ -269,9 +291,26 @@ describe("a posting can be reversed once", () => {
        UPDATE on the posting — is a privilege pms_app does not hold on
        an append-only table. A unique index on reverses_id does the
        same job without one. */
-    const folio = await pool.query<{ id: string }>(
-      `select f.id from folios f where f.hotel_id = $1 limit 1`, [puneId],
-    );
+    /* ITS OWN FOLIO. This used to take whatever folio happened to be at
+       Pune, and the only reason one was ever there is that the night audit
+       tests LEAKED theirs — the error below said as much: "run the night
+       audit tests first, which create one".
+
+       Fixing that leak broke this, which is the coupling doing its job:
+       a test that passes because another test left debris behind is a test
+       that will fail the first time somebody runs it alone. */
+    const own = await pool.query<{ id: string }>(
+      `insert into folios (hotel_id, reservation_id, status)
+       select $1, r.id, 'open' from reservations r
+        where r.hotel_id = $1 order by r.created_at desc limit 1
+       returning id`, [puneId]);
+
+    if (own.rows[0]) createdFolios.push(own.rows[0].id);
+
+    const folio = own.rows[0]
+      ? own
+      : await pool.query<{ id: string }>(
+          `select f.id from folios f where f.hotel_id = $1 limit 1`, [puneId]);
     if (!folio.rows[0]) {
       throw new Error(
         "No folio at Pune to reverse against. This test cannot prove " +
