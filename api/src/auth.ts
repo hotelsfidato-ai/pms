@@ -66,14 +66,34 @@ export async function subjectFor(headers: Headers): Promise<string> {
   const token = header.slice("Bearer ".length).trim();
   if (!token) throw new Unauthenticated("Empty bearer token.");
 
+  /* Resolve the app OUTSIDE the try. A missing or malformed service
+     account is a fault in the deployment, not in the caller's token, and
+     inside the catch below it came back as "Token rejected." — sending an
+     operator to debug a perfectly good credential while the real problem
+     was that the process had never been given one. It is logged loudly and
+     answered as a 500, because it is our failure and not theirs. */
+  let app: App;
   try {
-    const decoded = await getAuth(firebase()).verifyIdToken(token, true);
+    app = firebase();
+  } catch (error) {
+    console.error("[auth] cannot verify tokens:",
+      error instanceof Error ? error.message : error);
+    throw error;
+  }
+
+  try {
+    const decoded = await getAuth(app).verifyIdToken(token, true);
     return decoded.uid;
-  } catch {
-    /* Never echo the library's message back to the caller — it
+  } catch (error) {
+    /* Never echo the library's message back to the CALLER — it
        distinguishes "expired" from "wrong project" from "revoked",
        which is a probing aid and tells a legitimate user nothing
-       they can act on beyond "sign in again". */
+       they can act on beyond "sign in again".
+
+       It goes to the server log, though. A rejection nobody can see the
+       reason for is a rejection nobody can fix. */
+    console.warn("[auth] token rejected:",
+      error instanceof Error ? error.message : error);
     throw new Unauthenticated("Token rejected.");
   }
 }

@@ -722,7 +722,7 @@ retried. Ledger nets to zero, room revenue still ₹4,19,578.76.
 ```
 1  Frontend shell and screens        ████████████  61 routes · 1 placeholder, unlinked
 2  Repository layer behind the seam  ████████████  12 of 12 modules
-3  Auth bridge — Firebase            ███████████░  works; needs a service account
+3  Auth bridge — Firebase            ████████████  service account installed, verified
 4  Front desk + folio, end to end    ████████████  flows, reports, dating
 5  Night audit                       ███████████░  posts, rolls, retains
 6  Housekeeping, mobile              ██████████░░  assigned, and rooms come out
@@ -835,7 +835,13 @@ moved: twenty screenshots of Petpooja set a higher bar, and two module
 requirements arrived with it. Lowering stage 7 would misreport what happened, so
 the new work is its own row. Detail in `POS-PROGRESS.md`.
 
-**133 of 180 — 74%.** Add the filled blocks above and divide by 180 — fifteen stages of twelve. That sum is the number; it is not typed separately, because it was for three audits running and drifted to "about 90%" while the bars said 70. It moved from 119 when stage 13’s three unfounded blocks came off, and to 133 when the day end finished stage 13.
+**134 of 180 — 74%.** Add the filled blocks above and divide by 180 — fifteen stages of twelve. That sum is the number; it is not typed separately, because it was for three audits running and drifted to "about 90%" while the bars said 70. It moved from 119 when stage 13’s three unfounded blocks came off, to 133 when the day end finished stage 13, and to 134 when stage 3 got its service account.
+
+**Stage 3’s twelfth unit, written down so the move has a basis.** The bar read 11 with one line of explanation — *“works; needs a service account”* — and that is the unit. It is now installed in `api/.env` (gitignored) and **verified against Google**, not merely parsed: the credential was accepted, the project’s one user listed, a real ID token minted through the same exchange a browser sign-in uses, and that token verified with this service account.
+
+Migration 051 links that account to a staff row, because the other half of an auth bridge is the half nobody tests: **a Firebase account with no matching staff row authenticates perfectly and then sees nothing at all** — every policy resolves through `app.current_user_id()`, and no row means no hotels, an empty application and no message explaining why. `DDRtG1cUhdds8iWzMwJ4u2ZMB5n2` now resolves to a group admin who can see all three properties.
+
+**What is NOT verified: a real browser sign-in on this machine.** AVG intercepts TLS here, and the preview server launches the API without the `NODE_EXTRA_CA_CERTS` that makes Node trust the interception, so the API alone cannot fetch Google’s signing keys. A machine setting, not a code fault, and not a thing Oracle Linux has — but it means the last step of that unit was proven by script rather than by a person typing a password.
 
 **Go-live scope — 116 of 132, 88% — unchanged.** What has to be true for a real hotel to run on this: stages 1–10 and 12. The CRS bridge (11), the POS upgrade (13), the modules (14) and the PMS upgrade (15) are all real work, and not one of them stops a guest checking in, a folio settling or a night closing.
 

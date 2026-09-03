@@ -1932,6 +1932,54 @@ The same applied to the second blocker: *"1 table has … Clear them"*.
 Both now branch on the count for the whole sentence rather than
 splicing a plural noun into a fixed frame.
 
+### 94 · A config fault that reported itself as a bad token
+
+`subjectFor` called `firebase()` **inside** the try block that catches
+verification failures. A process with no service account therefore
+answered a perfectly valid token with **"Token rejected."** — sending
+whoever is debugging it to look at Firebase, the clock, the project id,
+anything except the one thing actually wrong: this server was never
+given a credential.
+
+The rule the catch was protecting is right — never tell a caller
+*why* a token failed, because "expired" versus "wrong project" versus
+"revoked" is a probing aid. But that rule is about the **caller**. It
+was silently applied to the **operator** too, and they are the one
+person who needs the reason.
+
+Now: the app is resolved outside the try; a configuration fault is
+logged and raised as our failure, not theirs; and a genuine rejection
+still answers "Token rejected." while writing the real reason to the
+server log.
+
+### 95 · AVG breaks real Firebase auth on this machine only
+
+Real tokens were rejected with `UNABLE_TO_VERIFY_LEAF_SIGNATURE`.
+**AVG Antivirus intercepts TLS on this machine**, so Google's
+certificate chain terminates in AVG's own root — which Node trusts only
+when `NODE_EXTRA_CA_CERTS` points at `C:\ProgramData\AVG\Antivirus\wscert.pem`.
+
+The Git Bash profile sets it, so anything run from the Bash tool works.
+**The preview server launches the API without it**, so the API alone
+could not verify a token. That is why the same token verified in a
+script and failed one HTTP call later — the difference was never the
+token, it was which process opened the socket.
+
+```
+NODE_EXTRA_CA_CERTS unset  →  every real Firebase sign-in fails locally
+ALLOW_DEV_AUTH=1           →  unaffected, which is why nobody noticed
+```
+
+Not a code defect and **not a production problem** — Oracle Linux has
+no interception. Fix it once at the machine level rather than per-shell:
+
+```
+setx NODE_EXTRA_CA_CERTS "C:\ProgramData\AVG\Antivirus\wscert.pem"
+```
+
+**When two processes disagree about the same input, compare their
+environments before you compare their code.**
+
 ## Verification traps
 
 ### Never test a Tailwind utility by injecting the class at runtime
