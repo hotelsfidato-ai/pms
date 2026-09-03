@@ -978,6 +978,36 @@ Then Stage 4 closes and Stage 5 begins: the night audit *run*.
 
 ---
 
+## The upgrade path is broken, and it is named
+
+`db/tests/run.sh` rebuilds from ZERO, so it proves the migrations work on an
+empty database and nothing else. **Run them a second time — which is what every
+deploy after the first one does — and 8 of 59 abort.** Measured, not estimated:
+
+```
+005_reservations.sql        column "room_id" does not exist
+009_provisioning.sql        column "default_rate" of room_type_templates does not exist
+011_model_additions.sql     column "room_id" does not exist
+013_policies.sql            policy "guests_read" already exists
+014_simulation_fixes.sql    policy "gd_capture" already exists
+025_invoices_form_c.sql     stack depth limit exceeded
+028_pos_till.sql            cannot change return type of existing function
+029_provisioning_key.sql    function provision_property_unchecked(...) already exists
+```
+
+Three separate causes. `create policy` has no `if not exists`, so 013 and 014
+need `drop policy if exists` first. 028 and 029 need `drop function if exists`
+for **every** signature — the fault defect 117 records. And 005, 009 and 011 add
+a column and then use it in the same file, so on a re-run the `add column if not
+exists` is skipped and the statement below it references a column that the
+FIRST run created under a different shape.
+
+Nothing is at risk today: the database exists and is not rebuilt. It becomes a
+blocker the first time a second deployment runs against a live one, which is
+the day it is hardest to fix. **Half a day, and it does not need the domain.**
+
+---
+
 ## Still needing a person
 
 Ordered by what blocks the most. Nothing in this list is code — every one of

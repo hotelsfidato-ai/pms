@@ -4,6 +4,31 @@ Every entry here cost something. Read it before you repeat it.
 
 ---
 
+## Ten faults that repeat
+
+118 entries below is a reference, not a reading list. These are the patterns
+that have recurred, with the count and the check that would have caught each.
+**If you read nothing else here, read this.**
+
+| # | The fault | Seen | The check |
+|---|-----------|------|-----------|
+| 1 | **Answered from memory instead of the file.** Quoted a function, a screen, a limit or a schema I had not opened. | 32 · 64 · 78 · 85 · 87 · 90 · 91 · 108 | Open the file in the same turn you describe it. |
+| 2 | **Claimed it worked without opening the screen.** Typecheck, tests and build all clean; the page was blank, inert or wrong. | 17 defects | Open the screen. Every time. |
+| 3 | **Test debris left in the shared demo database.** Phantom guests and bookings nobody can tell from real ones. | 27 · 41 · 54 · 79 · 100 · 112 · 114 · 115 · 116 | Count rows before and after a run — do not grep for teardowns. |
+| 4 | **A test that could not fail.** Vacuous assertion, swallowed error, filtered exit status, wrong verb. | 8 · 18 · 22 · 25 · 34 · 37 · 47 · 84 · 97 · 111 | Break it on purpose and watch it go red. |
+| 5 | **Invented a number.** A price, a total, an occupancy, a zero standing in for "nobody knows". | 5 · 35 · 43 · 58 · 63 · 65 · 68 · 106 | A dash is honest; a zero is a claim. Derive it or show a dash. |
+| 6 | **A rule written in N places, wrong in one.** The copy nobody remembered was the one that ran. | 30 · 65 · 96 · 102 | Grep the constant before you write the second copy. One definition. |
+| 7 | **Order of operations against a guard.** Resized before moving, deleted a parent before a child, re-enabled a trigger mid-teardown. | 101 · 103 · 104 · 115 | A teardown is a migration run backwards, with the same ordering rules. |
+| 8 | **Blamed the code for the environment.** Empty database, stale API, TLS interception, my own contaminated reproduction. | 72 · 77 · 92 · 94 · 95 · 109 | Reproduce twice, from clean, before naming it a bug. |
+| 9 | **Guessed the schema instead of querying it.** Constraint values, column names, a uuid column fed a slug. | 13 · 28 · 67 · 82 · 83 · 113 | `\d table` costs one command. Column POSITION is not column NAME. |
+| 10 | **Built every piece and never wired the act.** The endpoint, the function and the screen all existed; nothing called them. | 16 · 24 · 81 · 118 | Trace the click through to the write before calling it done. |
+
+Two habits sit under all ten: **read the source in the turn you describe it**,
+and **measure rather than infer**. Nine of the ten were caught by an audit or by
+opening a page — not by a gate.
+
+---
+
 ## Defects that passed every gate
 
 **Every one of these had `tsc -b` clean, tests passing, and a clean production
@@ -2322,6 +2347,37 @@ kept: they are ledger rows, they net to zero, and deleting from an
 append-only ledger to tidy a demo is worse than the untidiness. Verified
 by balance, not by assumption — the folio reads 3,890.08 before and
 after.
+
+### 117 · Two migrations of mine were not re-runnable
+
+Found by an audit, not a gate, because the gate rebuilds from zero and a
+first run is the one case that always works.
+
+`053` wrote `COMMENT ON FUNCTION app.set_rate` with no argument list. Correct
+until `057` adds a second overload — then both exist on a re-run, the name is
+ambiguous, and the whole migration aborts. `057` dropped the OLD signature
+before creating its own and never dropped its own, so its second run collided
+with itself.
+
+**Every `create function` needs `drop function if exists` for EVERY signature
+it will ever have, and every `COMMENT ON FUNCTION` needs its argument list.**
+An overload added three migrations later reaches back and breaks an older file
+that was correct when it was written.
+
+### 118 · A route that could never run, under one that could
+
+I added `GET /:code/groups` to `api/src/routes/groups.ts`. It never executed
+once: `stays.ts` is mounted first on the same prefix and already had that path.
+Hono matches the first registration, so my handler was dead code that
+typechecked, built and looked right in the diff.
+
+The existing route also had the bug I was about to fix somewhere else — it was
+counting void bookings into the group.
+
+**Before adding a route, grep the path across every router, and check the mount
+order in the app file.** A duplicate path is not an error anywhere in the
+stack; it is silently ignored, and the half you did not write is the half that
+serves.
 
 ## Verification traps
 
