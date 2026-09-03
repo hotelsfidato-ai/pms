@@ -2555,3 +2555,248 @@ begin
   select count(*) into n from hotels where code = 'TRJ';
   perform test.ok('day end','the fixture does not outlive the test', n = 0);
 end $$;
+
+
+-- =============================================================================
+-- Rate grid  (052)
+-- =============================================================================
+-- Two bugs the API's own copy of the rule had, and the reason there is now one
+-- copy instead of four.
+-- =============================================================================
+do $$
+declare
+  v_hotel uuid; v_staff uuid; v_type uuid; n int; p numeric; s text;
+begin
+  select id into v_staff from staff limit 1;
+
+  insert into hotels (code, name, city, timezone)
+  values ('RGT', 'Rate grid fixture', 'Akkalkot', 'Asia/Kolkata')
+  returning id into v_hotel;
+  insert into staff_hotels (staff_id, hotel_id, role)
+  values (v_staff, v_hotel, 'gm') on conflict do nothing;
+
+  -- No base_rate: this type has been created and never priced, which is the
+  -- state every property starts in because no price ever ships.
+  insert into room_types (hotel_id, code, name, base_occupancy, max_occupancy,
+                          base_rate, sort_order)
+  values (v_hotel, 'STD', 'Standard', 2, 3, null, 1)
+  returning id into v_type;
+
+  -- ---------- an unpriced property still has a grid ----------
+  select count(*) into n
+    from app.rate_grid(v_hotel, date '2026-08-01', date '2026-08-05');
+  -- 1 type × 5 meal plans × 5 days. Five, not the four seeded by 011: 020
+  -- added Room Only afterwards, which is exactly why this is counted from
+  -- meal_plans rather than written as a number.
+  perform test.ok('rate grid','an unpriced property still has every cell',
+    n = 5 * (select count(*) from meal_plans),
+    '1 type x ' || (select count(*) from meal_plans) || ' plans x 5 days, got ' || n);
+
+  select price into p from app.rate_grid(v_hotel, date '2026-08-01', date '2026-08-01')
+   where meal_plan = 'EP';
+  perform test.ok('rate grid','and an unpriced cell is NULL, not zero',
+    p is null, 'an unpriced room is not a free room');
+
+  -- ---------- the rack rate, which has no end ----------
+  insert into rates (hotel_id, room_type_id, meal_plan, price,
+                     valid_from, valid_to, label, created_by)
+  values (v_hotel, v_type, 'EP', 2500, date '2026-08-01', null, 'Rack', v_staff);
+
+  select count(*) into n
+    from app.rate_grid(v_hotel, date '2026-08-01', date '2026-08-20')
+   where meal_plan = 'EP' and price = 2500;
+  -- The API's own version filtered on `valid_to >= from`, which against NULL
+  -- is NULL — so the commonest rate a hotel has produced NO cells at all, and
+  -- the screen read as "nothing has been priced".
+  perform test.ok('rate grid','an open-ended rack rate covers every day',
+    n = 20, 'valid_to is null must not filter the row out; got ' || n);
+  -- 20 here is 20 DAYS on one plan, not a plan count — unaffected by 020.
+
+  -- ---------- a season is half-open ----------
+  insert into rates (hotel_id, room_type_id, meal_plan, price,
+                     valid_from, valid_to, label, created_by)
+  values (v_hotel, v_type, 'CP', 3200, date '2026-08-01', date '2026-08-15',
+          'Season', v_staff);
+
+  select count(*) into n
+    from app.rate_grid(v_hotel, date '2026-08-01', date '2026-08-20')
+   where meal_plan = 'CP' and season = 'Season';
+  -- 1st to 15th covers the 1st through the 14th, like every other range in
+  -- this schema. Including valid_to made two contiguous seasons both claim the
+  -- boundary, and the grid showed the outgoing price on the incoming day.
+  perform test.ok('rate grid','a season from the 1st to the 15th covers 14 days',
+    n = 14, 'half-open, like room_blocks and reservations; got ' || n);
+
+  select season into s from app.rate_grid(v_hotel, date '2026-08-15', date '2026-08-15')
+   where meal_plan = 'CP';
+  perform test.ok('rate grid','and the 15th belongs to whatever comes next',
+    s is null, 'got season = ' || coalesce(s, 'null'));
+
+  -- ---------- two seasons meeting ----------
+  insert into rates (hotel_id, room_type_id, meal_plan, price,
+                     valid_from, valid_to, label, created_by)
+  values (v_hotel, v_type, 'CP', 4100, date '2026-08-15', date '2026-08-25',
+          'Peak', v_staff);
+
+  select count(*) into n
+    from app.rate_grid(v_hotel, date '2026-08-01', date '2026-08-20')
+   where meal_plan = 'CP';
+  perform test.ok('rate grid','contiguous seasons produce one cell per day',
+    n = 20, 'not 21 with the boundary counted twice; got ' || n);
+
+  select price into p from app.rate_grid(v_hotel, date '2026-08-15', date '2026-08-15')
+   where meal_plan = 'CP';
+  perform test.ok('rate grid','and the boundary day takes the NEW price',
+    p = 4100, 'got ' || coalesce(p::text, 'null'));
+
+  select price into p from app.rate_grid(v_hotel, date '2026-08-14', date '2026-08-14')
+   where meal_plan = 'CP';
+  perform test.ok('rate grid','while the day before takes the old one',
+    p = 3200, 'got ' || coalesce(p::text, 'null'));
+
+  -- ---------- a plan nobody priced stays empty ----------
+  select price into p from app.rate_grid(v_hotel, date '2026-08-01', date '2026-08-01')
+   where meal_plan = 'AP';
+  perform test.ok('rate grid','a meal plan with no rate is still a dash',
+    p is null, 'AP was never priced and must not inherit EP');
+
+  -- ---------- teardown ----------
+  delete from rates where hotel_id = v_hotel;
+  delete from room_types where hotel_id = v_hotel;
+  delete from staff_hotels where hotel_id = v_hotel;
+
+  alter table hotels disable trigger hotels_no_delete;
+  delete from hotels where id = v_hotel;
+  alter table hotels enable trigger hotels_no_delete;
+
+  select count(*) into n from hotels where code = 'RGT';
+  perform test.ok('rate grid','the fixture does not outlive the test', n = 0);
+end $$;
+
+
+-- =============================================================================
+-- Setting a price  (053)
+-- =============================================================================
+-- The rack-rate split is the case that loses a property its pricing, so it is
+-- asserted from both ends rather than by counting rows.
+-- =============================================================================
+do $$
+declare
+  v_hotel uuid; v_staff uuid; v_type uuid; p numeric; n int;
+begin
+  select id into v_staff from staff limit 1;
+
+  insert into hotels (code, name, city, timezone)
+  values ('SRT', 'Set rate fixture', 'Akkalkot', 'Asia/Kolkata')
+  returning id into v_hotel;
+  insert into staff_hotels (staff_id, hotel_id, role)
+  values (v_staff, v_hotel, 'gm') on conflict do nothing;
+
+  insert into room_types (hotel_id, code, name, base_occupancy, max_occupancy,
+                          base_rate, sort_order)
+  values (v_hotel, 'STD', 'Standard', 2, 3, null, 1)
+  returning id into v_type;
+
+  -- ---------- the first price on an empty property ----------
+  perform app.set_rate(v_hotel, v_type, 'EP', date '2026-08-01', null,
+                       2500, 'Rack', v_staff);
+  select price into p from app.rate_grid(v_hotel, date '2026-12-25', date '2026-12-25')
+   where meal_plan = 'EP';
+  perform test.ok('set rate','an open-ended rate reaches December',
+    p = 2500, 'got ' || coalesce(p::text, 'null'));
+
+  -- ---------- a weekend inside it: THE SPLIT ----------
+  perform app.set_rate(v_hotel, v_type, 'EP', date '2026-08-14',
+                       date '2026-08-17', 4200, 'Wedding', v_staff);
+
+  select price into p from app.rate_grid(v_hotel, date '2026-08-14', date '2026-08-14')
+   where meal_plan = 'EP';
+  perform test.ok('set rate','the weekend takes the new price',
+    p = 4200, 'got ' || coalesce(p::text, 'null'));
+
+  select price into p from app.rate_grid(v_hotel, date '2026-08-16', date '2026-08-16')
+   where meal_plan = 'EP';
+  perform test.ok('set rate','through its last covered day',
+    p = 4200, '14th to 17th covers the 16th; got ' || coalesce(p::text, 'null'));
+
+  select price into p from app.rate_grid(v_hotel, date '2026-08-13', date '2026-08-13')
+   where meal_plan = 'EP';
+  perform test.ok('set rate','the day before is still the rack rate',
+    p = 2500, 'got ' || coalesce(p::text, 'null'));
+
+  -- The half that gets forgotten. Trimming the rack rate and never
+  -- re-creating its tail leaves the property with NO price from the 17th on,
+  -- and nothing on the screen says so — the cells just go quiet.
+  select price into p from app.rate_grid(v_hotel, date '2026-08-17', date '2026-08-17')
+   where meal_plan = 'EP';
+  perform test.ok('set rate','and the rack rate RESUMES after it',
+    p = 2500, 'the tail of a split range must survive; got '
+              || coalesce(p::text, 'null'));
+
+  select price into p from app.rate_grid(v_hotel, date '2027-06-01', date '2027-06-01')
+   where meal_plan = 'EP';
+  perform test.ok('set rate','still open ended, a year later',
+    p = 2500, 'got ' || coalesce(p::text, 'null'));
+
+  -- ---------- overwriting a range whole ----------
+  perform app.set_rate(v_hotel, v_type, 'EP', date '2026-08-14',
+                       date '2026-08-17', 4800, 'Wedding', v_staff);
+  select count(*) into n from rates
+   where hotel_id = v_hotel and meal_plan = 'EP' and price = 4200;
+  perform test.ok('set rate','re-pricing the same range replaces it',
+    n = 0, 'the old row must not survive beside the new one');
+
+  select price into p from app.rate_grid(v_hotel, date '2026-08-15', date '2026-08-15')
+   where meal_plan = 'EP';
+  perform test.ok('set rate','and the new price is what shows',
+    p = 4800, 'got ' || coalesce(p::text, 'null'));
+
+  -- ---------- clearing ----------
+  perform app.set_rate(v_hotel, v_type, 'EP', date '2026-08-14',
+                       date '2026-08-17', null, null, v_staff);
+  select price into p from app.rate_grid(v_hotel, date '2026-08-15', date '2026-08-15')
+   where meal_plan = 'EP';
+  -- Cleared, so what shows is whatever covers it otherwise. Here that is
+  -- nothing: the rack rate was split around this range and never re-joined.
+  perform test.ok('set rate','clearing a range writes no price at all',
+    p is null, 'a cleared cell is a dash, never a zero; got '
+               || coalesce(p::text, 'null'));
+
+  select count(*) into n from rates
+   where hotel_id = v_hotel and meal_plan = 'EP' and price = 0;
+  perform test.ok('set rate','and never a zero row',
+    n = 0, 'an unpriced room is not a free room');
+
+  -- ---------- refusals ----------
+  perform test.raises('set rate','a range that ends before it starts is refused',
+    format($q$select app.set_rate(%L,%L,'CP',date '2026-09-10',
+                                  date '2026-09-01',1000,null,%L)$q$,
+           v_hotel, v_type, v_staff), 'P0001');
+
+  perform test.raises('set rate','and so is a negative price',
+    format($q$select app.set_rate(%L,%L,'CP',date '2026-09-01',
+                                  date '2026-09-10',-1,null,%L)$q$,
+           v_hotel, v_type, v_staff), 'P0001');
+
+  -- ---------- one plan does not touch another ----------
+  perform app.set_rate(v_hotel, v_type, 'CP', date '2026-08-01', null,
+                       3100, 'Rack CP', v_staff);
+  select price into p from app.rate_grid(v_hotel, date '2026-08-15', date '2026-08-15')
+   where meal_plan = 'CP';
+  perform test.ok('set rate','pricing CP leaves EP alone', p = 3100);
+  select price into p from app.rate_grid(v_hotel, date '2026-08-15', date '2026-08-15')
+   where meal_plan = 'EP';
+  perform test.ok('set rate','and EP stays cleared', p is null);
+
+  -- ---------- teardown ----------
+  delete from rates where hotel_id = v_hotel;
+  delete from room_types where hotel_id = v_hotel;
+  delete from staff_hotels where hotel_id = v_hotel;
+
+  alter table hotels disable trigger hotels_no_delete;
+  delete from hotels where id = v_hotel;
+  alter table hotels enable trigger hotels_no_delete;
+
+  select count(*) into n from hotels where code = 'SRT';
+  perform test.ok('set rate','the fixture does not outlive the test', n = 0);
+end $$;

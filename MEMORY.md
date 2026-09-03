@@ -1980,6 +1980,53 @@ setx NODE_EXTRA_CA_CERTS "C:\ProgramData\AVG\Antivirus\wscert.pem"
 **When two processes disagree about the same input, compare their
 environments before you compare their code.**
 
+### 96 · The fourth copy of a rule was the wrong one
+
+`rates.valid_to` is nullable and its ranges are half-open. That is
+written correctly in three places — the exclusion constraint in 033,
+`is_current` on the rate-plan list, and `app.rate_for`. The rate-grid
+route was a fourth copy and got both halves wrong:
+
+```
+and r.valid_to >= $2::date        -- NULL >= date is NULL, not true
+least(r.valid_to, $3::date)       -- includes valid_to; the range is [)
+```
+
+So **an open-ended rack rate produced no cells at all** — the commonest
+rate a property has, rendering the grid identical to "nothing has been
+priced yet" — and **a season covered one day too many**, which made two
+contiguous seasons both claim the boundary and showed the outgoing
+price on the incoming day.
+
+Neither was visible from any test, because the only assertion on that
+route inserted a fixed three-day range and asserted three cells: it
+encoded the inclusive behaviour rather than checking it. Found by
+writing two rows into a scratch database and counting.
+
+**A rule written in four places will be wrong in one.** The grid now
+calls `app.rate_for`, and `app.set_rate` (053) owns the write side for
+the same reason — the channel manager will price dates too.
+
+### 97 · A test helper that quietly performed the wrong verb
+
+`as()` in `api/test/inventory.test.ts` took only a path:
+
+```ts
+const as = (path: string) => app.request(`/api/hotels${path}`, {
+  headers: { "x-dev-staff-id": ownerStaffId } });
+```
+
+Passing `{ method: "PUT", body }` to it did not fail — the argument was
+**ignored**, and a GET went out instead. The route answered 200 with a
+grid, so five assertions downstream failed for reasons that had nothing
+to do with what they were testing: writes appeared to do nothing, and
+two refusal tests reported "expected 200 to be 409" about requests that
+were never refusals to begin with.
+
+Twenty minutes went into the write path before the helper. **When
+several unrelated assertions fail at once, suspect the thing they
+share.**
+
 ## Verification traps
 
 ### Never test a Tailwind utility by injecting the class at runtime

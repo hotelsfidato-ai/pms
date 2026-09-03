@@ -2,7 +2,7 @@ import {
   LayoutDashboard, CalendarCheck, Users, Building2, Hotel, Receipt,
   BarChart3, Bell, Settings, ShieldCheck, CalendarRange,
   FileText, Wallet, Plug, ScrollText,
-  UserCog, Palette, Terminal, MonitorSmartphone, BookOpen, Home, ClipboardList, type LucideIcon, ShieldAlert, UtensilsCrossed, Flame, LayoutGrid, Banknote,
+  UserCog, Palette, Terminal, MonitorSmartphone, BookOpen, Home, ClipboardList, type LucideIcon, ShieldAlert, UtensilsCrossed, Flame, LayoutGrid, Banknote, Table2,
 } from "lucide-react";
 import { can, canAccess, type Resource, type Role } from "@/lib/permissions";
 
@@ -131,7 +131,13 @@ const SECTIONS: NavSection[] = [
       { label: "Properties", to: "/properties", icon: Hotel, resource: "hotel", matchPrefix: true },
       { label: "Room types", to: "/h/:code/room-types", icon: LayoutDashboard, resource: "room_config" },
       { label: "Rate plans", to: "/h/:code/rate-plans", icon: Wallet, resource: "rate" },
-      { label: "Rates", to: "/h/:code/rates", icon: BarChart3, resource: "rate" },
+      /* The daily working grid: what is left, and what it costs. Named
+         "calendar" rather than "rates" because the entry below already
+         carries that word and means something else — that one looks
+         BACKWARDS at what rooms achieved, this one forwards at what
+         they will be sold for. */
+      { label: "Rate calendar", to: "/h/:code/grids", icon: Table2, resource: "rate" },
+      { label: "Rate performance", to: "/h/:code/rates", icon: BarChart3, resource: "rate" },
       { label: "Cancellation terms", to: "/h/:code/cancellation-terms", icon: ShieldAlert, resource: "rate" },
     ],
   },

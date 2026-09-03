@@ -46,6 +46,7 @@ import TillPage from "@/pages/Till";
 import FloorPage from "@/pages/Floor";
 import DocketPage from "@/pages/Docket";
 import DayEndPage from "@/pages/DayEnd";
+import GridsPage from "@/pages/Grids";
 import BillPage from "@/pages/Bill";
 import MenuPage from "@/pages/Menu";
 import RatePlansEditor from "@/pages/RatePlans";
@@ -353,6 +354,13 @@ export default function App() {
             <Route
               path="/h/:code/menu"
               element={<><PropertyScope /><MenuPage /></>}
+            />
+            {/* The revenue manager's day: how many rooms are left, and
+                what they cost. One window, two tabs, because the two
+                questions are asked together. */}
+            <Route
+              path="/h/:code/grids"
+              element={<><PropertyScope /><GridsPage /></>}
             />
             {/* Before /till/bill/:id and /till/orders/:id — a literal
                 segment beats a parameter, but the order makes it read

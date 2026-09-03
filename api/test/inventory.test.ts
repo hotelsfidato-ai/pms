@@ -46,9 +46,18 @@ afterAll(async () => {
   await closePool();
 });
 
-const as = (path: string) =>
+/* `init` is spread in rather than ignored. It was a GET-only helper, so a
+   test that passed `{ method: "PUT" }` silently performed a GET — which
+   answered 200 and wrote nothing, and every assertion downstream then failed
+   for a reason that had nothing to do with what it was testing. */
+const as = (path: string, init?: RequestInit) =>
   app.request(`/api/hotels${path}`, {
-    headers: { "x-dev-staff-id": ownerStaffId },
+    ...init,
+    headers: {
+      "x-dev-staff-id": ownerStaffId,
+      "content-type": "application/json",
+      ...(init?.headers ?? {}),
+    },
   });
 
 const post = (path: string, body?: unknown) =>
@@ -168,50 +177,180 @@ describe("restrictions", () => {
 });
 
 describe("the rate grid", () => {
-  it("lists every plan even when NOTHING is priced", async () => {
-    const res = await as("/5EL/rate-grid?from=2026-08-25&to=2026-08-27");
+  const grid = async (from: string, to: string) => {
+    const res = await as(`/5EL/rate-grid?from=${from}&to=${to}`);
     expect(res.status).toBe(200);
-    const body = (await res.json()) as {
+    return (await res.json()) as {
       plans: { roomType: string; mealPlan: string }[];
-      cells: { date: string; price: number; season: string | null }[];
+      cells: { roomTypeId: string; date: string; price: number | null;
+               season: string | null; source: "rate" | "rack" | null }[];
     };
+  };
+
+  const put = (body: unknown) =>
+    as("/5EL/rate-grid", { method: "PUT", body: JSON.stringify(body) });
+
+  const cleanup = async () => {
+    const db = await admin();
+    try { await db.query("delete from rates where hotel_id = (select id from hotels where code='5EL')"); }
+    finally { await db.end(); }
+  };
+  afterAll(cleanup);
+
+  it("gives every cell a row even when NOTHING is priced", async () => {
+    const body = await grid("2026-08-25", "2026-08-27");
 
     /* The demo ships NO PRICES — `rates` is empty, and seven assertions
-       guard that it stays so. The rows must still be there, or there is
-       nowhere to type the first price and the screen is useless at
-       exactly the moment it matters most. */
+       guard that it stays so. The cells must still be there, because the
+       empty ones ARE the screen: a grid built only from rows that exist
+       in `rates` has nowhere to type the first price, which is the state
+       every new property is in. */
     expect(body.plans.length).toBeGreaterThan(0);
-    expect(body.cells).toHaveLength(0);
+    expect(body.cells.length).toBe(body.plans.length * 3);
+
+    /* Nothing is in `rates`, so no cell was priced FOR ITS DATE. */
+    expect(body.cells.every((c) => c.source !== "rate")).toBe(true);
+
+    /* What they do show is the room type's own rack rate, which is the
+       price a booking would genuinely use today — 5EL's real rates, not
+       an invented default (032 deleted those). The screen has to mark it
+       as inherited: ₹4,099 because somebody priced this Saturday and
+       ₹4,099 because nobody has looked at it are different facts. */
+    expect(body.cells.some((c) => c.source === "rack")).toBe(true);
+    /* And never a zero. A room nobody has priced is not a free room. */
+    expect(body.cells.every((c) => c.price !== 0)).toBe(true);
   });
 
-  it("expands a season into days once something IS priced", async () => {
+  it("expands a season into days, half-open", async () => {
+    const plans = (await grid("2026-08-25", "2026-08-25")).plans;
+    const type = plans[0]!;
+    const typeId = (await grid("2026-08-25", "2026-08-25"))
+      .cells[0]!.roomTypeId;
+
+    const res = await put({
+      roomTypeId: typeId, mealPlan: type.mealPlan,
+      from: "2026-08-25", to: "2026-08-27", price: 3999, label: "GRIDTEST",
+    });
+    expect(res.status, await res.clone().text()).toBe(200);
+
+    const body = await grid("2026-08-24", "2026-08-28");
+    const mine = body.cells.filter((c) => c.season === "GRIDTEST");
+    /* 25th to 27th covers the 25th and 26th. Half-open, like room_blocks
+       and reservations and every other range here — the API used to
+       include the end date, so two contiguous seasons both claimed the
+       boundary and the grid showed the outgoing price on the incoming
+       day. */
+    expect(mine).toHaveLength(2);
+    expect(mine.map((c) => c.date)).toEqual(["2026-08-25", "2026-08-26"]);
+    expect(mine[0]!.price).toBe(3999);
+    expect(mine[0]!.source).toBe("rate");
+
+    await cleanup();
+  });
+
+  it("shows an open-ended rack rate on every day it covers", async () => {
+    const first = (await grid("2026-08-25", "2026-08-25")).cells[0]!;
+    const plan = (await grid("2026-08-25", "2026-08-25")).plans[0]!;
+
+    const res = await put({
+      roomTypeId: first.roomTypeId, mealPlan: plan.mealPlan,
+      from: "2026-08-01", to: null, price: 2500, label: "RACKTEST",
+    });
+    expect(res.status, await res.clone().text()).toBe(200);
+
+    /* `valid_to` is NULL for a rack rate, which is the commonest rate a
+       property has. The old query filtered on `valid_to >= from`, and
+       against NULL that is NULL rather than true — so the row vanished
+       and the grid read as "nothing has been priced yet". */
+    const body = await grid("2026-12-24", "2026-12-26");
+    const mine = body.cells.filter((c) => c.season === "RACKTEST");
+    expect(mine).toHaveLength(3);
+    expect(mine.every((c) => c.price === 2500)).toBe(true);
+
+    await cleanup();
+  });
+
+  it("splits the rack rate around a weekend and puts the tail back", async () => {
+    const first = (await grid("2026-08-25", "2026-08-25")).cells[0]!;
+    const plan = (await grid("2026-08-25", "2026-08-25")).plans[0]!;
+    const of = (c: { roomTypeId: string }) => c.roomTypeId === first.roomTypeId;
+
+    await put({ roomTypeId: first.roomTypeId, mealPlan: plan.mealPlan,
+                from: "2026-08-01", to: null, price: 2500 });
+    await put({ roomTypeId: first.roomTypeId, mealPlan: plan.mealPlan,
+                from: "2026-08-14", to: "2026-08-17", price: 4200 });
+
+    const body = await grid("2026-08-13", "2026-08-18");
+    const mine = body.cells.filter((c) => of(c) && c.season === null)
+      .filter((c) => body.plans[0] && true);
+    const priceOn = (d: string) =>
+      body.cells.find((c) => of(c) && c.date === d)!.price;
+
+    expect(priceOn("2026-08-13")).toBe(2500);
+    expect(priceOn("2026-08-14")).toBe(4200);
+    expect(priceOn("2026-08-16")).toBe(4200);
+    /* The half that gets forgotten. Trim the rack rate for the weekend
+       and never re-create its tail, and the property has no price at all
+       from the 17th onward — with nothing on screen saying so. */
+    expect(priceOn("2026-08-17")).toBe(2500);
+    expect(mine.length).toBeGreaterThanOrEqual(0);
+
+    await cleanup();
+  });
+
+  it("clears a cell to a dash rather than to zero", async () => {
+    const first = (await grid("2026-08-25", "2026-08-25")).cells[0]!;
+    const plan = (await grid("2026-08-25", "2026-08-25")).plans[0]!;
+
+    await put({ roomTypeId: first.roomTypeId, mealPlan: plan.mealPlan,
+                from: "2026-08-25", to: "2026-08-27", price: 3999 });
+    const res = await put({ roomTypeId: first.roomTypeId, mealPlan: plan.mealPlan,
+                            from: "2026-08-25", to: "2026-08-27", price: null });
+    expect(res.status, await res.clone().text()).toBe(200);
+
+    const body = await grid("2026-08-25", "2026-08-26");
+    const mine = body.cells.filter((c) => c.roomTypeId === first.roomTypeId
+      && c.date === "2026-08-25");
+    /* Cleared, so nothing was priced for the date — it falls back to the
+       room type again rather than to a zero somebody would have to
+       explain later. */
+    expect(mine[0]!.source).not.toBe("rate");
+
     const db = await admin();
-    let typeId: string;
     try {
-      const { rows } = await db.query<{ id: string; hotel: string }>(
-        `select rt.id::text, rt.hotel_id::text as hotel from room_types rt
-           join hotels h on h.id = rt.hotel_id where h.code = '5EL' limit 1`);
-      typeId = rows[0]!.id;
-      await db.query(
-        `insert into rates (hotel_id, room_type_id, meal_plan, price,
-                            valid_from, valid_to, label, created_by)
-         values ($1,$2,'EP',3999,'2026-08-25','2026-08-27','GRIDTEST',
-                 (select id from staff where email='owner@fidato.in'))`,
-        [rows[0]!.hotel, typeId]);
+      const { rows } = await db.query<{ n: string }>(
+        "select count(*)::text as n from rates where price = 0");
+      expect(Number(rows[0]!.n), "clearing must not write a zero row").toBe(0);
     } finally { await db.end(); }
 
-    const res = await as("/5EL/rate-grid?from=2026-08-25&to=2026-08-27");
-    const body = (await res.json()) as {
-      cells: { date: string; price: number; season: string | null }[];
-    };
-    const mine = body.cells.filter((c) => c.season === "GRIDTEST");
-    /* A rate is stored as a RANGE and the grid is per day. Three days
-       in, three cells out. */
-    expect(mine).toHaveLength(3);
-    expect(mine[0]!.price).toBe(3999);
+    await cleanup();
+  });
 
-    const clean = await admin();
-    try { await clean.query("delete from rates where label = 'GRIDTEST'"); }
-    finally { await clean.end(); }
+  it("refuses a range that ends before it starts", async () => {
+    const first = (await grid("2026-08-25", "2026-08-25")).cells[0]!;
+    const plan = (await grid("2026-08-25", "2026-08-25")).plans[0]!;
+    const res = await put({ roomTypeId: first.roomTypeId, mealPlan: plan.mealPlan,
+                            from: "2026-09-10", to: "2026-09-01", price: 1000 });
+    expect(res.status).toBe(409);
+    expect(((await res.json()) as { reason: string }).reason)
+      .toMatch(/after its start/i);
+  });
+
+  it("refuses a room type that belongs to another property", async () => {
+    const db = await admin();
+    let foreign: string;
+    try {
+      const { rows } = await db.query<{ id: string }>(
+        `select rt.id::text from room_types rt
+           join hotels h on h.id = rt.hotel_id
+          where h.code <> '5EL' limit 1`);
+      foreign = rows[0]!.id;
+    } finally { await db.end(); }
+
+    const res = await put({ roomTypeId: foreign, mealPlan: "EP",
+                            from: "2026-08-25", to: "2026-08-27", price: 1000 });
+    expect(res.status).toBe(409);
+    expect(((await res.json()) as { reason: string }).reason)
+      .toMatch(/no such room type/i);
   });
 });

@@ -734,7 +734,7 @@ retried. Ledger nets to zero, room revenue still ₹4,19,578.76.
 12 Hardening and go-live             █████████░░░  + launch.sh, preflight, nginx
 13 POS upgrade — Petpooja-informed   ████████████  12 of 12 — the day end closes
 14 Modules + banquet                  █░░░░░░░░░░░  POS toggle whole; banquet is the other 11
-15 PMS upgrade — eZee-informed        ████░░░░░░░░  2 whole, 4 half — every grid lacks a screen
+15 PMS upgrade — eZee-informed        █████░░░░░░░  the three grids now have screens
 ```
 
 **Stage 13 reads 4, and those four are finished** — database, API and screen.
@@ -835,7 +835,13 @@ moved: twenty screenshots of Petpooja set a higher bar, and two module
 requirements arrived with it. Lowering stage 7 would misreport what happened, so
 the new work is its own row. Detail in `POS-PROGRESS.md`.
 
-**134 of 180 — 74%.** Add the filled blocks above and divide by 180 — fifteen stages of twelve. That sum is the number; it is not typed separately, because it was for three audits running and drifted to "about 90%" while the bars said 70. It moved from 119 when stage 13’s three unfounded blocks came off, to 133 when the day end finished stage 13, and to 134 when stage 3 got its service account.
+**135 of 180 — 75%.** Add the filled blocks above and divide by 180 — fifteen stages of twelve. That sum is the number; it is not typed separately, because it was for three audits running and drifted to "about 90%" while the bars said 70. It moved from 119 when stage 13’s three unfounded blocks came off, to 133 when the day end finished stage 13, to 134 when stage 3 got its service account, and to 135 when the rate calendar gave stage 15's three grids their screens.
+
+**Stage 15's arithmetic, because a bar without one is what this file keeps being corrected for.** Its twelve units are the ranked backlog in `PMS-PROGRESS.md`. Void and sources are whole (2). Indicators stay half — the single-lady flag is written at the walk-in and VIP is still read by the panel and set by nothing (0.5). The inventory grid, the rate grid and the restrictions each had a database and an API and no screen, which was half of each; all three now have one, so they are 3 rather than 1.5.
+
+That sums to **5.5, and the bar reads 5.** Rounded down deliberately: the half belongs to indicators, which is genuinely unfinished, and this file has been corrected three times for bars that were generous. Room move, the group panel, multi-room booking, amend stay, extra adult and child, and work orders are the seven that remain.
+
+**Stage 9 does not move, and that is deliberate.** The rate calendar is plainly the screen stage 9 was missing, and the temptation is to add a block for it. But stage 9's twelve units have never been written down — like ten of the other eleven go-live stages — so any move would be a number typed rather than derived, which is the exact fault corrected three times already. It moves when its units are listed.
 
 **Stage 3’s twelfth unit, written down so the move has a basis.** The bar read 11 with one line of explanation — *“works; needs a service account”* — and that is the unit. It is now installed in `api/.env` (gitignored) and **verified against Google**, not merely parsed: the credential was accepted, the project’s one user listed, a real ID token minted through the same exchange a browser sign-in uses, and that token verified with this service account.
 

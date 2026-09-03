@@ -518,67 +518,142 @@ rates.get("/:code/rate-grid", async (c) => {
     if (!hotelId) return null;
     const { from, to } = windowFor(c, await businessDateFor(client, hotelId));
 
-    /* A rate is stored as a RANGE, and the grid is per DAY. Expanding
-       here rather than in the browser keeps one definition of which
-       season covers a date — the same reason app.pos_order_by_rate
-       exists. */
+    /* ONE DEFINITION. This route used to expand the ranges itself, and its
+       copy of the rule disagreed with the other three in two ways that both
+       hid real prices: an open-ended rack rate (`valid_to` null) was filtered
+       out entirely, and a season covered one day too many because the range
+       is half-open everywhere else in the schema.
+
+       app.rate_grid delegates to app.rate_for, which is the same function the
+       exclusion constraint and the rate-plan list already agree with. */
     const { rows } = await client.query<{
       room_type_id: string; room_type: string; meal_plan: string;
-      for_date: string; price: string; label: string | null;
+      meal_plan_name: string; for_date: string;
+      price: string | null; season: string | null; source: string | null;
     }>(
-      `select r.room_type_id::text, rt.name as room_type, r.meal_plan,
-              d::date::text as for_date, r.price::text, r.label
-         from rates r
-         join room_types rt on rt.id = r.room_type_id
-         cross join lateral generate_series(
-           greatest(r.valid_from, $2::date),
-           least(r.valid_to, $3::date),
-           interval '1 day') d
-        where r.hotel_id = $1
-          and r.valid_from <= $3::date and r.valid_to >= $2::date
-        order by rt.name, r.meal_plan, d`,
+      `select room_type_id::text, room_type, meal_plan, meal_plan_name,
+              for_date::text, price::text, season, source
+         from app.rate_grid($1, $2, $3)`,
       [hotelId, from, to],
     );
 
-    /* THE ROWS COME FROM WHAT THE PROPERTY SELLS, NOT FROM WHAT HAS
-       BEEN PRICED.
-
-       The first version derived them from `rates`, and the demo caught
-       it immediately: `rates` has zero rows, because no price ever
-       ships — seven assertions guard that. So the grid had no rows at
-       all, and there was nowhere to type the FIRST price. A revenue
-       manager opening an unpriced property must see the empty cells;
-       that is the entire point of the screen.
-
-       Room type × meal plan, which is exactly the shape `rates` is
-       keyed on. */
-    const { rows: plans } = await client.query<{
-      room_type_id: string; room_type: string; meal_plan: string;
-    }>(
-      `select rt.id::text as room_type_id, rt.name as room_type, mp.code as meal_plan
-         from room_types rt
-         cross join meal_plans mp
-        where rt.hotel_id = $1
-        order by rt.name, mp.code`,
-      [hotelId],
-    );
+    /* Every cell comes back, including the ones nobody has priced. That is
+       the point of the screen: no price ever ships, so a new property is
+       ENTIRELY empty, and a grid built only from rows that exist in `rates`
+       would have nowhere to type the first one. */
+    const plans = new Map<string, {
+      roomTypeId: string; roomType: string;
+      mealPlan: string; mealPlanName: string;
+    }>();
+    for (const r of rows) {
+      const key = `${r.room_type_id}/${r.meal_plan}`;
+      if (!plans.has(key)) {
+        plans.set(key, {
+          roomTypeId: r.room_type_id, roomType: r.room_type,
+          mealPlan: r.meal_plan, mealPlanName: r.meal_plan_name,
+        });
+      }
+    }
 
     return {
       from, to,
-      plans: plans.map((p) => ({
-        roomTypeId: p.room_type_id, roomType: p.room_type,
-        mealPlan: p.meal_plan,
-      })),
+      plans: [...plans.values()],
       cells: rows.map((r) => ({
         roomTypeId: r.room_type_id, roomType: r.room_type,
         mealPlan: r.meal_plan, date: r.for_date,
-        price: Number(r.price), season: r.label,
+        /* NULL travels as null, never as 0. An unpriced room is not a free
+           one, and the screen renders a dash. */
+        price: r.price === null ? null : Number(r.price),
+        season: r.season,
+        /* "rate" — priced for this date. "rack" — nobody has, and this is
+           the room type's own rate. Two different facts that look identical
+           if the screen renders them the same way. */
+        source: r.source as "rate" | "rack" | null,
       })),
     };
   });
 
   if (!body) return c.json({ error: "No such property." }, 404);
   return c.json(body);
+});
+
+/* Setting a price from the grid.
+
+   The rearranging this needs — splitting the rack rate around a wedding
+   weekend and putting its tail back afterwards — lives in app.set_rate, not
+   here. The channel manager will write prices too when STAAH lands, and two
+   callers doing the same range arithmetic is how the folio and the till drifted
+   apart in 040. */
+rates.put("/:code/rate-grid", async (c) => {
+  type Body = {
+    roomTypeId?: string; mealPlan?: string;
+    from?: string; to?: string | null;
+    price?: number | null; label?: string;
+  };
+  const input = await c.req.json<Body>().catch(() => ({}) as Body);
+
+  if (!input.roomTypeId) return c.json(refuse("Which room type?"), 409);
+  if (!input.mealPlan) return c.json(refuse("Which meal plan?"), 409);
+  if (!input.from) return c.json(refuse("From which date?"), 409);
+
+  /* null is a CLEARED cell and is allowed. undefined is a caller that forgot
+     the field, and clearing a property's prices because a key was missing
+     from a JSON body is not a thing this should do quietly. */
+  const clearing = input.price === null;
+  const price = clearing ? null : Number(input.price);
+  if (!clearing && (!Number.isFinite(price) || (price as number) < 0)) {
+    return c.json(refuse("A price is zero or more, or empty to clear it."), 409);
+  }
+
+  if (input.to && input.to <= input.from) {
+    return c.json(refuse(
+      "The end of a range has to be after its start. The last day is not "
+      + "included, so a price through the 31st ends on the 1st of the next "
+      + "month.",
+    ), 409);
+  }
+
+  try {
+    const result = await withSession(c.get("subject"), async (client, session) => {
+      const hotelId = await hotelFor(client, c.req.param("code"));
+      if (!hotelId) return null;
+
+      /* The room type has to belong to THIS property. Without this the id is
+         a hotel_id the caller supplies, and RLS would not save us — the
+         insert names p_hotel separately. */
+      const { rows: owned } = await client.query<{ name: string }>(
+        `select name from room_types where id = $1 and hotel_id = $2`,
+        [input.roomTypeId, hotelId],
+      );
+      if (!owned[0]) return refuse("No such room type here.");
+
+      await client.query(
+        `select app.set_rate($1, $2, $3, $4::date, $5::date, $6, $7, $8)`,
+        [hotelId, input.roomTypeId, input.mealPlan, input.from,
+         input.to ?? null, price, input.label ?? null, session.staffId],
+      );
+
+      return {
+        ok: true as const,
+        roomType: owned[0].name,
+        cleared: clearing,
+      };
+    });
+
+    if (!result) return c.json({ error: "No such property." }, 404);
+    return c.json(result, "ok" in result && result.ok ? 200 : 409);
+  } catch (error) {
+    const reason = reasonFor(error, { plan: input.mealPlan });
+    if (reason) return c.json(refuse(reason), 409);
+    /* app.set_rate raises its own refusals with a hint attached — a range that
+       ends before it starts, a negative price. They are the caller's to fix,
+       so they come back named rather than as a 500. */
+    const message = error instanceof Error ? error.message : "";
+    if (/rate range ends after it starts|a price is zero or more/.test(message)) {
+      return c.json(refuse(message), 409);
+    }
+    throw error;
+  }
 });
 
 rates.post("/:code/restrictions", async (c) => {
