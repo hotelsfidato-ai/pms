@@ -5,6 +5,7 @@ import { cn } from "@/lib/cn";
 import { moneyPrecise, amountInWords, dateLong } from "@/lib/format";
 import { useUi } from "@/lib/ui";
 import { Button, Skeleton, ErrorState } from "@/components/ui";
+import { CreditNoteFlow } from "@/components/flows/CreditNoteFlow";
 import { getInvoice } from "@/data/repositories";
 
 /* ══════════════════════════════════════════════════════════════════
@@ -125,10 +126,23 @@ export default function InvoicePage() {
           <ArrowLeft className="size-4" />
           All invoices
         </Link>
-        <Button onClick={() => window.print()}>
-          <Printer className="size-4" />
-          Print
-        </Button>
+        <div className="flex items-center gap-2">
+          {/* Only on a live tax invoice. A credit note cannot be credited,
+              and one that is already cancelled has nothing left to cancel —
+              the server refuses both by name, but offering a button that
+              always fails is worse than not offering it. */}
+          {!isCreditNote && !data.creditedBy && (
+            <CreditNoteFlow
+              hotelId={hotelId}
+              number={data.number}
+              total={moneyPrecise(data.total)}
+            />
+          )}
+          <Button onClick={() => window.print()}>
+            <Printer className="size-4" />
+            Print
+          </Button>
+        </div>
       </div>
 
       <article

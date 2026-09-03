@@ -3446,3 +3446,131 @@ begin
   select count(*) into n from hotels where code = 'EXP';
   perform test.ok('extra persons','the fixture does not outlive the test', n = 0);
 end $$;
+
+
+-- =============================================================================
+-- Work orders  (058)
+-- =============================================================================
+-- The distinction this table exists for: a work order is not a room block.
+-- Most orders take no room out at all, and conflating them means a dripping
+-- tap costs a night's revenue.
+-- =============================================================================
+do $$
+declare
+  v_hotel uuid; v_other uuid; v_staff uuid; v_type uuid;
+  v_room uuid; v_far uuid; v_block uuid; v_order uuid;
+  n int; t text;
+begin
+  select id into v_staff from staff limit 1;
+
+  insert into hotels (code, name, city, timezone)
+  values ('WOT', 'Work order fixture', 'Akkalkot', 'Asia/Kolkata')
+  returning id into v_hotel;
+  insert into hotels (code, name, city, timezone)
+  values ('WOX', 'Other property', 'Pune', 'Asia/Kolkata')
+  returning id into v_other;
+  insert into staff_hotels (staff_id, hotel_id, role)
+  values (v_staff, v_hotel, 'gm') on conflict do nothing;
+
+  insert into room_types (hotel_id, code, name, base_occupancy, max_occupancy,
+                          base_rate, sort_order)
+  values (v_hotel, 'STD', 'Standard', 2, 3, null, 1) returning id into v_type;
+  insert into rooms (hotel_id, room_type_id, number, floor, is_active)
+  values (v_hotel, v_type, '204', 2, true) returning id into v_room;
+
+  insert into room_types (hotel_id, code, name, base_occupancy, max_occupancy,
+                          base_rate, sort_order)
+  values (v_other, 'STD', 'Standard', 2, 3, null, 1) returning id into v_type;
+  insert into rooms (hotel_id, room_type_id, number, floor, is_active)
+  values (v_other, v_type, '999', 9, true) returning id into v_far;
+
+  -- ---------- the dripping tap ----------
+  insert into work_orders (hotel_id, room_id, title, category, priority,
+                           raised_by)
+  values (v_hotel, v_room, 'Dripping tap in the bathroom', 'plumbing',
+          'normal', v_staff)
+  returning id into v_order;
+
+  select count(*) into n from app.work_orders_open(v_hotel);
+  perform test.ok('work orders','an open order is outstanding', n = 1);
+
+  select blocks_room into t from app.work_orders_open(v_hotel) limit 1;
+  -- THE DISTINCTION. A dripping tap does not take the room out, and a system
+  -- that can only express "out of service" costs a night's revenue for one.
+  perform test.ok('work orders','and it takes no room out of service',
+    (select not blocks_room from app.work_orders_open(v_hotel) limit 1));
+
+  -- ---------- the broken air conditioner in July ----------
+  insert into room_blocks (hotel_id, room_id, from_date, to_date, reason,
+                           note, created_by)
+  values (v_hotel, v_room, current_date, current_date + 2, 'out_of_order',
+          'AC compressor', v_staff)
+  returning id into v_block;
+
+  insert into work_orders (hotel_id, room_id, block_id, title, category,
+                           priority, raised_by)
+  values (v_hotel, v_room, v_block, 'Air conditioner not cooling',
+          'electrical', 'urgent', v_staff);
+
+  perform test.ok('work orders','one that DID take the room out says so',
+    (select bool_or(blocks_room) from app.work_orders_open(v_hotel)));
+
+  -- ---------- urgent first ----------
+  select title into t from app.work_orders_open(v_hotel) limit 1;
+  perform test.ok('work orders','urgent work is at the top',
+    t = 'Air conditioner not cooling', 'got ' || t);
+
+  -- ---------- not every order is about a room ----------
+  insert into work_orders (hotel_id, title, category, priority, raised_by)
+  values (v_hotel, 'Lift making a noise', 'maintenance', 'high', v_staff);
+  perform test.ok('work orders','a lift needs no room',
+    (select count(*) from app.work_orders_open(v_hotel) where room is null) = 1);
+
+  -- ---------- closing ----------
+  perform test.raises('work orders','closing without saying what was done is refused',
+    format($q$update work_orders set status='done', closed_at=now(),
+                                     closed_by=%L where id=%L$q$,
+           v_staff, v_order), '23514');
+
+  update work_orders
+     set status = 'done', closed_at = now(), closed_by = v_staff,
+         resolution = 'Washer replaced'
+   where id = v_order;
+
+  select count(*) into n from app.work_orders_open(v_hotel);
+  perform test.ok('work orders','a closed order leaves the list', n = 2);
+
+  select count(*) into n from work_orders where hotel_id = v_hotel;
+  -- "How many times have we fixed this room this year" is the question a
+  -- manager actually asks, and a table holding only open work cannot answer it.
+  perform test.ok('work orders','but stays on the record', n = 3);
+
+  -- ---------- refusals ----------
+  perform test.raises('work orders','a room at another property is refused',
+    format($q$insert into work_orders (hotel_id, room_id, title, raised_by)
+              values (%L,%L,'Wrong property',%L)$q$,
+           v_hotel, v_far, v_staff), 'P0001');
+
+  perform test.raises('work orders','and an order with no title',
+    format($q$insert into work_orders (hotel_id, title, raised_by)
+              values (%L,'   ',%L)$q$, v_hotel, v_staff), '23514');
+
+  perform test.raises('work orders','and an unknown priority',
+    format($q$insert into work_orders (hotel_id, title, priority, raised_by)
+              values (%L,'Something','whenever',%L)$q$, v_hotel, v_staff),
+    '23514');
+
+  -- ---------- teardown ----------
+  delete from work_orders where hotel_id = v_hotel;
+  delete from room_blocks where hotel_id = v_hotel;
+  delete from rooms where hotel_id in (v_hotel, v_other);
+  delete from room_types where hotel_id in (v_hotel, v_other);
+  delete from staff_hotels where hotel_id = v_hotel;
+
+  alter table hotels disable trigger hotels_no_delete;
+  delete from hotels where id in (v_hotel, v_other);
+  alter table hotels enable trigger hotels_no_delete;
+
+  select count(*) into n from hotels where code in ('WOT','WOX');
+  perform test.ok('work orders','the fixture does not outlive the test', n = 0);
+end $$;

@@ -314,14 +314,34 @@ export async function issueInvoice(
   return api(`/api/hotels/${hotelId}/stays/${stayId}/invoice`, { method: "POST" });
 }
 
-/** Correct an issued invoice. It is never edited. */
+/**
+ * Cancels an issued invoice by issuing a credit note against it.
+ *
+ * AN INVOICE IS NEVER EDITED and never deleted — a GST document that
+ * changes after it was given to a guest is the one an auditor asks
+ * about. The correction is its own numbered document that points back
+ * at the original.
+ *
+ * The refusals come back as `{ ok: false, reason }` rather than as an
+ * exception, because every one of them is something a person at the
+ * desk has to act on: the invoice is already credited, it IS a credit
+ * note, the reason is missing. Rule 6.
+ */
 export async function issueCreditNote(
   hotelId: string, number: string, reason: string,
-): Promise<{ ok: boolean; number?: string; reason?: string }> {
-  return api(
-    `/api/hotels/${hotelId}/invoices/${encodeURIComponent(number)}/credit-note`,
-    { method: "POST", body: JSON.stringify({ reason }) },
-  );
+): Promise<{ ok: true; number: string } | { ok: false; reason: string }> {
+  try {
+    return await api(
+      `/api/hotels/${hotelId}/invoices/${encodeURIComponent(number)}/credit-note`,
+      { method: "POST", body: JSON.stringify({ reason }) },
+    );
+  } catch (error) {
+    if (error instanceof ApiError) {
+      const p = error.body as { reason?: string } | undefined;
+      return { ok: false, reason: p?.reason ?? error.message };
+    }
+    throw error;
+  }
 }
 
 /* ── Form C ───────────────────────────────────────────────────────── */

@@ -2177,6 +2177,37 @@ were testing.
 The fixture now selects `where max_occupancy > base_occupancy`. **Pick
 a fixture by the property the test depends on, not by `limit 1`.**
 
+### 108 · I planned to build a screen that already existed
+
+The 1.4 plan said the module switch was missing its screen: *"the gate,
+the table and the disappearing navigation are all built and tested;
+what is missing is the screen to flip it from."*
+
+It was not missing. `ModulesCard` sits inside `SettingsPage`, routed at
+`/admin/settings`, in the navigation, **not development-gated**, and it
+works — Point of sale on, Banquet hall off and disabled with "Not built
+yet".
+
+I had written that plan item from what I remembered of the codebase
+rather than from the codebase. Opening the screen took thirty seconds
+and would have saved building a duplicate.
+
+**Before planning to build something, look for it.** The plan is not
+the source of truth about what exists; the repository is.
+
+### 109 · The demo was gone again, and I read the symptom as a bug
+
+Work orders answered 404 from a route that was plainly correct. The
+cause was that `db/tests/run.sh` had rebuilt from zero and I had not
+reloaded the demo — so `5EL` did not exist, and every lookup for it
+failed honestly.
+
+**This is defect 92, by me, a second time.** The runner prints the
+reminder in its own output and I read past it twice.
+
+The rule, written plainly: **`db/tests/run.sh` is always followed by
+`cd api && npm run load-demo`.** Not sometimes. Every time.
+
 ## Verification traps
 
 ### Never test a Tailwind utility by injecting the class at runtime

@@ -2,7 +2,7 @@ import {
   LayoutDashboard, CalendarCheck, Users, Building2, Hotel, Receipt,
   BarChart3, Bell, Settings, ShieldCheck, CalendarRange,
   FileText, Wallet, Plug, ScrollText,
-  UserCog, Palette, Terminal, MonitorSmartphone, BookOpen, Home, ClipboardList, type LucideIcon, ShieldAlert, UtensilsCrossed, Flame, LayoutGrid, Banknote, Table2, BookPlus,
+  UserCog, Palette, Terminal, MonitorSmartphone, BookOpen, Home, ClipboardList, type LucideIcon, ShieldAlert, UtensilsCrossed, Flame, LayoutGrid, Banknote, Table2, BookPlus, Wrench,
 } from "lucide-react";
 import { can, canAccess, type Resource, type Role } from "@/lib/permissions";
 
@@ -108,6 +108,10 @@ const SECTIONS: NavSection[] = [
       },
       { label: "Walk-ins", to: "/h/:code/walk-ins", icon: BookOpen, resource: "reservation" },
       { label: "Housekeeping", to: "/h/:code/housekeeping", icon: ClipboardList, resource: "inventory" },
+      /* Beside housekeeping, because that is who finds most of it — and
+         separate from a room block, because most work orders take no room
+         out of service. */
+      { label: "Work orders", to: "/h/:code/work-orders", icon: Wrench, resource: "room_config" },
     ],
   },
   {

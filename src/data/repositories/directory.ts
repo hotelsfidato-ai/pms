@@ -310,3 +310,30 @@ export interface RatePlanRecord {
 export async function listRatePlans(): Promise<RatePlanRecord[]> {
   return fetchOr<RatePlanRecord[]>("/api/hotels/rate-plans", []);
 }
+
+
+/**
+ * Marks a guest as a VIP, or unmarks them.
+ *
+ * IT TRAVELS WITH THE GUEST, not the booking — somebody who is a VIP
+ * this visit was one last visit, which is why `is_vip` sits on
+ * `guests`. Marking them on one stay marks them on the next.
+ *
+ * The column has been readable since 043 and writable by nothing:
+ * half a feature, with the visible half the wrong half.
+ */
+export async function setGuestVip(
+  hotelId: string, guestId: string, isVip: boolean,
+): Promise<{ ok: true; guest: string } | { ok: false; reason: string }> {
+  try {
+    return await api(`/api/hotels/${hotelId}/guests/${guestId}/vip`, {
+      method: "POST", body: JSON.stringify({ isVip }),
+    });
+  } catch (error) {
+    if (error instanceof ApiError) {
+      const p = error.body as { reason?: string } | undefined;
+      return { ok: false, reason: p?.reason ?? error.message };
+    }
+    throw error;
+  }
+}

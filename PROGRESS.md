@@ -734,7 +734,7 @@ retried. Ledger nets to zero, room revenue still ₹4,19,578.76.
 12 Hardening and go-live             █████████░░░  + launch.sh, preflight, nginx
 13 POS upgrade — Petpooja-informed   ████████████  12 of 12 — the day end closes
 14 Modules + banquet                  █░░░░░░░░░░░  POS toggle whole; banquet is the other 11
-15 PMS upgrade — eZee-informed        ██████████░░  1.2 complete — only VIP and work orders
+15 PMS upgrade — eZee-informed        ████████████  12 of 12 — the backlog is clear
 ```
 
 **Stage 13 reads 4, and those four are finished** — database, API and screen.
@@ -835,7 +835,18 @@ moved: twenty screenshots of Petpooja set a higher bar, and two module
 requirements arrived with it. Lowering stage 7 would misreport what happened, so
 the new work is its own row. Detail in `POS-PROGRESS.md`.
 
-**140 of 180 — 78%.** Add the filled blocks above and divide by 180 — fifteen stages of twelve. That sum is the number; it is not typed separately, because it was for three audits running and drifted to "about 90%" while the bars said 70. It moved from 119 when stage 13’s three unfounded blocks came off, to 133 when the day end finished stage 13, to 134 when stage 3 got its service account, to 135 when the rate calendar gave stage 15's three grids their screens, to 136 with the room move, to 137 with amend stay, to 138 with the group panel, and to 140 when extra-person pricing and multi-room booking finished 1.2.
+**142 of 180 — 79%.** Add the filled blocks above and divide by 180 — fifteen stages of twelve. That sum is the number; it is not typed separately, because it was for three audits running and drifted to "about 90%" while the bars said 70. It moved from 119 when stage 13’s three unfounded blocks came off, to 133 when the day end finished stage 13, to 134 when stage 3 got its service account, to 135 when the rate calendar gave stage 15's three grids their screens, to 136 with the room move, to 137 with amend stay, to 138 with the group panel, to 140 when extra-person pricing and multi-room booking finished 1.2, and to 142 with VIP and work orders.
+
+**Stage 15 is 12 of 12 and the ranked backlog in `PMS-PROGRESS.md` is clear.** VIP was the last half-unit: readable since 043 and writable by nothing, which is half a feature with the visible half being the wrong half — a clerk could see the mark and never make one. Work orders were the twelfth.
+
+**A work order is NOT a room block, and 058 exists to keep them apart.** A dripping tap does not take a room out of service; a broken air conditioner in July does, and then there are two rows — the block says the room cannot be sold, the order says who is fixing it. A system that could only express "out of order" cost a night's revenue for a tap. Closed orders are kept, because *how many times have we fixed this room this year* is the question a manager actually asks.
+
+**Stage 8 does NOT move for the credit note, and that is deliberate.** The
+hole is real and now closed — `issueCreditNote` had existed since the invoice work and was called by NOTHING — the endpoint, the repository function and the screen that renders a credit note all shipped, and the only credit notes in the database came from the demo loader. A clerk who billed the wrong guest had no way back. It is one button, and it was found by an audit rather than by a gate.
+
+But stage 8's twelve units have never been written down, so adding a block for this would be a number typed rather than derived — the same reason stage 9 did not move when the rate calendar plainly completed it. Both move when their units are listed, and the consistency matters more than the point.
+
+**The module switch needed nothing.** The plan said its screen was missing; the screen exists, is in the navigation, is not development-gated, and works — Point of sale on, Banquet hall off and disabled with *"Not built yet"*. That plan item was wrong and no duplicate was built.
 
 **Stage 15 is 10 of 12, and the two that remain are named.** Indicators are still half — VIP is read by the guest panel and set by nothing — and work orders have not started. Everything else on the ranked backlog in `PMS-PROGRESS.md` is whole: room move, void, sources, the group panel, the three grids, multi-room booking, amend stay, and extra adult and child.
 

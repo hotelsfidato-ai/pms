@@ -54,6 +54,9 @@ export interface Stay {
      it drives room placement away from stairwells and service
      corridors. It is not announced at the desk. */
   isVip: boolean;
+  /** VIP travels with the GUEST, so setting it needs the guest's id
+      rather than the booking's. */
+  guestId?: string;
   isSingleLady: boolean;
 
   /* ── Where the booking came from ─────────────────────────────────

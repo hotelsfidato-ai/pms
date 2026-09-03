@@ -187,3 +187,160 @@ housekeeping.delete("/:code/housekeeping/assignments/:number", async (c) => {
   if (!body) return c.json({ error: "No such property." }, 404);
   return c.json(body, "ok" in body && body.ok ? 200 : 409);
 });
+
+/* ══════════════════════════════════════════════════════════════════
+   WORK ORDERS
+
+   A dripping tap in 204. Until 058 the only thing this system could
+   do with that was take the room out of service — the wrong answer
+   for a tap, and it costs a night's revenue.
+
+   A WORK ORDER IS NOT A ROOM BLOCK. Most take no room out at all. A
+   broken air conditioner in July does, and then there are two rows:
+   the block says the room cannot be sold, the order says who is
+   fixing it, and the order points at the block.
+   ══════════════════════════════════════════════════════════════════ */
+
+housekeeping.get("/:code/work-orders", async (c) => {
+  const body = await withSession(c.get("subject"), async (client) => {
+    const hotel = await resolve(client, c.req.param("code"));
+    if (!hotel) return null;
+
+    const { rows } = await client.query<{
+      id: string; room: string | null; title: string; detail: string | null;
+      category: string; priority: string; status: string;
+      raised_by: string | null; raised_at: string;
+      assigned_to: string | null; days_open: number; blocks_room: boolean;
+    }>(
+      `select id::text, room, title, detail, category, priority, status,
+              raised_by, to_char(raised_at,'YYYY-MM-DD') as raised_at,
+              assigned_to, days_open, blocks_room
+         from app.work_orders_open($1)`,
+      [hotel.id],
+    );
+
+    /* Closed work is asked for separately. "How many times have we fixed
+       this room this year" is a different question from "what is
+       outstanding", and mixing them buries the second. */
+    const { rows: done } = await client.query<{ n: string }>(
+      `select count(*)::text as n from work_orders
+        where hotel_id = $1 and status in ('done','cancelled')`,
+      [hotel.id],
+    );
+
+    return {
+      orders: rows.map((r) => ({
+        id: r.id, room: r.room, title: r.title, detail: r.detail,
+        category: r.category, priority: r.priority, status: r.status,
+        raisedBy: r.raised_by, raisedAt: r.raised_at,
+        assignedTo: r.assigned_to, daysOpen: r.days_open,
+        blocksRoom: r.blocks_room,
+      })),
+      closed: Number(done[0]!.n),
+    };
+  });
+
+  return body ? c.json(body) : c.json({ error: "No such property." }, 404);
+});
+
+housekeeping.post("/:code/work-orders", async (c) => {
+  type Body = {
+    roomNumber?: string; title?: string; detail?: string;
+    category?: string; priority?: string;
+  };
+  const input = await c.req.json<Body>().catch(() => ({}) as Body);
+
+  const title = input.title?.trim();
+  if (!title) {
+    return c.json({ ok: false, reason: "What needs fixing?" }, 409);
+  }
+
+  const result = await withSession(c.get("subject"), async (client, session) => {
+    const hotel = await resolve(client, c.req.param("code"));
+    if (!hotel) return null;
+
+    let roomId: string | null = null;
+    const number = input.roomNumber?.trim();
+    if (number) {
+      const { rows } = await client.query<{ id: string }>(
+        `select id::text from rooms where hotel_id = $1 and number = $2`,
+        [hotel.id, number]);
+      if (!rows[0]) {
+        return { ok: false as const, reason: `There is no room ${number} here.` };
+      }
+      roomId = rows[0].id;
+    }
+    /* No room is a real answer, not a missing one — a lift, a generator,
+       the lobby door. */
+
+    try {
+      const { rows } = await client.query<{ id: string }>(
+        `insert into work_orders
+           (hotel_id, room_id, title, detail, category, priority, raised_by)
+         values ($1,$2,$3,nullif($4,''),$5,$6,$7)
+         returning id::text`,
+        [hotel.id, roomId, title, input.detail?.trim() ?? "",
+         input.category ?? "maintenance", input.priority ?? "normal",
+         session.staffId]);
+      return { ok: true as const, id: rows[0]!.id };
+    } catch (error) {
+      const e = error as { code?: string; message?: string } | undefined;
+      if (e?.code === "23514") {
+        return { ok: false as const,
+                 reason: "That category or priority is not one this uses." };
+      }
+      if (e?.code === "P0001" && e.message) {
+        return { ok: false as const, reason: e.message };
+      }
+      throw error;
+    }
+  });
+
+  if (!result) return c.json({ error: "No such property." }, 404);
+  return c.json(result, "ok" in result && result.ok ? 200 : 409);
+});
+
+housekeeping.patch("/:code/work-orders/:id", async (c) => {
+  type Body = { status?: string; assignedTo?: string | null; resolution?: string };
+  const input = await c.req.json<Body>().catch(() => ({}) as Body);
+
+  const closing = input.status === "done" || input.status === "cancelled";
+  if (closing && !input.resolution?.trim()) {
+    /* The database refuses this too. Naming it here means the person sees a
+       sentence rather than a constraint name — and "fixed" is what people
+       write when the field is optional, which is useless in November. */
+    return c.json({ ok: false,
+      reason: "Say what was done. It is the line somebody reads next time." },
+      409);
+  }
+
+  const result = await withSession(c.get("subject"), async (client, session) => {
+    const hotel = await resolve(client, c.req.param("code"));
+    if (!hotel) return null;
+
+    const { rows } = await client.query<{ title: string }>(
+      `update work_orders
+          set status      = coalesce($1, status),
+              assigned_to = case when $2::text is null then assigned_to
+                                 when $2 = '' then null
+                                 else $2::uuid end,
+              resolution  = case when $3::text is null then resolution
+                                 else $3 end,
+              closed_by   = case when $1 in ('done','cancelled')
+                                 then $4::uuid else closed_by end,
+              closed_at   = case when $1 in ('done','cancelled')
+                                 then now() else closed_at end
+        where id = $5 and hotel_id = $6
+        returning title`,
+      [input.status ?? null,
+       input.assignedTo === undefined ? null : (input.assignedTo ?? ""),
+       input.resolution?.trim() ?? null, session.staffId,
+       c.req.param("id"), hotel.id]);
+
+    if (!rows[0]) return { ok: false as const, reason: "No such work order." };
+    return { ok: true as const, title: rows[0].title };
+  });
+
+  if (!result) return c.json({ error: "No such property." }, 404);
+  return c.json(result, "ok" in result && result.ok ? 200 : 409);
+});

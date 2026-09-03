@@ -1,5 +1,5 @@
 import { useState, useMemo, useEffect } from "react";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useParams, useSearchParams } from "react-router";
 import {
   ChevronDown, ChevronRight, ChevronLeft, Globe, User, Building2,
@@ -12,7 +12,7 @@ import { AssignRoomFlow } from "@/components/flows/AssignRoomFlow";
 import {
   Page, Button, Segmented, Tooltip, StatusPill,
   Drawer, DrawerContent, Skeleton, DetailList, DetailRow, Tabs, TabsList,
-  TabsTrigger, TabsContent,
+  TabsTrigger, TabsContent, toast,
 } from "@/components/ui";
 import { CheckInFlow } from "@/components/flows/CheckInFlow";
 import { VoidFlow } from "@/components/flows/VoidFlow";
@@ -22,6 +22,7 @@ import { FolioPanel } from "@/components/flows/FolioPanel";
 import { WalkInFlow } from "@/components/flows/WalkInFlow";
 import {
   getStayView, getStay, queryKeys, BUSINESS_DATE, addDays, isWeekend,
+  setGuestVip,
   type ChartBar, type ChartRoom, type BarTone, type Stay,
 } from "@/data/repositories";
 
@@ -643,6 +644,43 @@ function BookingBar({ bar, onOpen }: { bar: ChartBar; onOpen: () => void }) {
   );
 }
 
+/* ── Marking a VIP ────────────────────────────────────────────────
+   Not a switch in a settings panel. The moment somebody knows is the
+   moment they are looking at the booking, and a mark that needs a
+   different screen is a mark nobody makes. */
+function VipToggle({ stay }: { stay: Stay }) {
+  const params = useParams();
+  const fallbackHotel = useUi((st) => st.hotelId);
+  const hotelId = params.code ?? fallbackHotel;
+  const queryClient = useQueryClient();
+  const [busy, setBusy] = useState(false);
+
+  const toggle = async () => {
+    if (!stay.guestId) return;
+    setBusy(true);
+    const result = await setGuestVip(hotelId, stay.guestId, !stay.isVip);
+    setBusy(false);
+    if (!result.ok) return toast.error("Not changed", result.reason);
+    toast.success(
+      stay.isVip ? "No longer marked VIP" : "Marked VIP",
+      `${result.guest} — this holds for their next visit too.`);
+    void queryClient.invalidateQueries();
+  };
+
+  return (
+    <button
+      type="button"
+      onClick={() => void toggle()}
+      disabled={busy}
+      aria-pressed={stay.isVip}
+      className="text-xs text-grey-500 hover:text-ink-900 underline
+                 cursor-pointer disabled:opacity-50"
+    >
+      {stay.isVip ? "Remove VIP" : "Mark VIP"}
+    </button>
+  );
+}
+
 function StayDetail({ bar }: { bar: ChartBar }) {
   const s: Stay = bar.stay;
   return (
@@ -672,6 +710,11 @@ function StayDetail({ bar }: { bar: ChartBar }) {
         {s.isSingleLady && (
           <StatusPill tone="info">Single lady — placement</StatusPill>
         )}
+        {/* Readable since 043 and writable by nothing until now, which is
+            half a feature with the visible half being the wrong half: a
+            clerk could see the mark and never make one. It sets the flag
+            on the GUEST, so it holds for their next visit too. */}
+        {s.guestId && <VipToggle stay={s} />}
       </div>
 
       <DetailList>

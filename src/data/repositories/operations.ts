@@ -679,3 +679,73 @@ export async function voidStay(
     throw error;
   }
 }
+
+/* ══════════════════════════════════════════════════════════════════
+   WORK ORDERS
+
+   A dripping tap in 204. A work order is NOT a room block: most take
+   no room out of service, and a system that can only say "out of
+   order" costs a night's revenue for a tap.
+   ══════════════════════════════════════════════════════════════════ */
+
+export interface WorkOrder {
+  id: string;
+  /** Null for anything that is not a room — a lift, the lobby door. */
+  room: string | null;
+  title: string;
+  detail: string | null;
+  category: string;
+  priority: string;
+  status: string;
+  raisedBy: string | null;
+  raisedAt: string;
+  /** Null while nobody has picked it up, which is a real state. */
+  assignedTo: string | null;
+  daysOpen: number;
+  /** True when the fault also took the room out of service. */
+  blocksRoom: boolean;
+}
+
+export async function listWorkOrders(
+  hotelId: string,
+): Promise<{ orders: WorkOrder[]; closed: number }> {
+  if (!hotelId) return { orders: [], closed: 0 };
+  try {
+    return await api<{ orders: WorkOrder[]; closed: number }>(
+      `/api/hotels/${hotelId}/work-orders`);
+  } catch {
+    return { orders: [], closed: 0 };
+  }
+}
+
+export async function raiseWorkOrder(
+  hotelId: string,
+  input: { roomNumber?: string; title: string; detail?: string;
+           category?: string; priority?: string },
+): Promise<{ ok: true; id: string } | { ok: false; reason: string }> {
+  return workOrderCall(`/api/hotels/${hotelId}/work-orders`, "POST", input);
+}
+
+/** Assign it, start it, or close it. Closing requires saying what was done. */
+export async function updateWorkOrder(
+  hotelId: string, id: string,
+  input: { status?: string; assignedTo?: string | null; resolution?: string },
+): Promise<{ ok: true; title: string } | { ok: false; reason: string }> {
+  return workOrderCall(
+    `/api/hotels/${hotelId}/work-orders/${id}`, "PATCH", input);
+}
+
+async function workOrderCall(
+  path: string, method: string, body: unknown,
+): Promise<never | { ok: true; id: string; title: string }
+  | { ok: false; reason: string }> {
+  try {
+    return await api(path, { method, body: JSON.stringify(body) });
+  } catch (error) {
+    if (error instanceof ApiError) {
+      const p = error.body as { reason?: string } | undefined;
+      return { ok: false, reason: p?.reason ?? error.message };
+    }
+    throw error;
+  }
+}

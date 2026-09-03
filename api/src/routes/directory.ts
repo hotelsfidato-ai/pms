@@ -141,6 +141,47 @@ directory.get("/:code/guests", async (c) => {
 const OTA = ["Agoda", "Booking.com", "Expedia", "go-MMT"];
 const DIRECT = ["Walk-in", "Fidato Hotels"];
 
+/* ── Marking a guest ───────────────────────────────────────────────
+   `guests.is_vip` has been read by the stay panel since 043 and written by
+   NOTHING — half a feature, with the visible half being the wrong half: a
+   clerk could see the mark and never make one.
+
+   IT TRAVELS WITH THE GUEST, not the booking. Somebody who is a VIP this
+   visit was one last visit, which is the whole reason the column is on
+   `guests` and not on `reservations`. */
+directory.post("/:code/guests/:id/vip", async (c) => {
+  const input = await c.req.json<{ isVip?: boolean }>()
+    .catch(() => ({}) as { isVip?: boolean });
+  const isVip = input.isVip === true;
+
+  const result = await withSession(c.get("subject"), async (client) => {
+    const hotelId = await hotelIdFor(client, c.req.param("code"));
+    if (!hotelId) return null;
+
+    /* A guest carries no hotel_id — they belong to the group, so a returning
+       one does not re-present their passport at another property. The scope
+       check is therefore "has this guest ever stayed with us", which RLS
+       already answers through `reservations`. */
+    const { rows } = await client.query<{ name: string }>(
+      `update guests set is_vip = $1
+        where id = $2
+          and exists (select 1 from reservations r
+                       where r.guest_id = guests.id and r.hotel_id = $3)
+       returning full_name as name`,
+      [isVip, c.req.param("id"), hotelId],
+    );
+    if (!rows[0]) {
+      return { ok: false as const,
+               reason: "That guest has never stayed here." };
+    }
+
+    return { ok: true as const, guest: rows[0].name, isVip };
+  });
+
+  if (!result) return c.json({ error: "No such property." }, 404);
+  return c.json(result, "ok" in result && result.ok ? 200 : 409);
+});
+
 directory.get("/:code/companies", async (c) => {
   const body = await withSession(c.get("subject"), async (client) => {
     const hotelId = await hotelIdFor(client, c.req.param("code"));
