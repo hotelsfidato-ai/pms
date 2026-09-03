@@ -41,7 +41,8 @@ export function AccountMenu() {
           type="button"
           aria-label={`${scope.fullName}, ${ROLE_LABELS[role]}. Account and property`}
           className={cn(
-            "flex items-center gap-2.5 h-9 pl-1.5 pr-2.5 rounded-md",
+            /* 44 on touch, 36 on the console. */
+            "flex items-center gap-2.5 h-11 lg:h-9 pl-1.5 pr-2.5 rounded-md",
             "border border-grey-200 bg-white",
             "hover:border-grey-300 hover:bg-grey-50",
             "transition-colors duration-150",

@@ -2208,6 +2208,38 @@ reminder in its own output and I read past it twice.
 The rule, written plainly: **`db/tests/run.sh` is always followed by
 `cd api && npm run load-demo`.** Not sometimes. Every time.
 
+### 110 · A button that did something other than what it said
+
+The top bar carried:
+
+```tsx
+onClick={() => setMobileNavOpen(true)}   // Placeholder - AI panel dropped
+aria-label="Open AI assistant"
+```
+
+Pressing "Open AI assistant" opened the **navigation drawer**. The
+comment beside it said the panel had been dropped, so this was known
+and left in.
+
+A control that does something other than what it says is worse than no
+control: somebody presses it, gets the nav, and stops trusting the
+header. Removed. The `ai` resource stays in `permissions.ts` with a
+note, so the permission does not have to be re-invented.
+
+**A placeholder that still responds to a click is not a placeholder.**
+
+### 111 · Measuring during a route transition
+
+The look-and-feel audit scripted `pushState` → wait 1200ms → measure,
+across thirteen routes. It reported header targets under 44px that were
+44px when measured on a settled page: React was still swapping the tree
+when the ruler came out.
+
+The finding was mine, not the app's, and I nearly recorded it as a
+regression. **When an automated measurement disagrees with a direct
+one, suspect the measurement first** — especially anything that samples
+mid-navigation.
+
 ## Verification traps
 
 ### Never test a Tailwind utility by injecting the class at runtime

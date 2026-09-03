@@ -50,7 +50,9 @@ export function NotificationBell() {
       <DrawerTrigger asChild>
         <button
           type="button"
-          className="relative p-2 rounded-md text-grey-500 hover:bg-grey-100 hover:text-ink-900 transition-colors duration-150"
+          /* 44 on touch, 36 on the desktop console. It was p-2 — 34px —
+             on every width. */
+          className="relative size-11 lg:size-9 grid place-items-center rounded-md text-grey-500 hover:bg-grey-100 hover:text-ink-900 transition-colors duration-150"
           aria-label={`Notifications${unread ? `, ${unread} unread` : ""}`}
         >
           <Bell className="size-[18px]" />

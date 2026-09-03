@@ -69,6 +69,11 @@ export const RESOURCES = [
   "integration",
   "audit_log",
   "setting",
+  /* Kept although nothing reads it yet. The header button that did was
+     removed in the look-and-feel pass because it opened the navigation
+     drawer instead of an AI panel that had been dropped — the resource
+     stays so the permission does not have to be re-invented when there
+     is something behind it. */
   "ai",
 ] as const;
 

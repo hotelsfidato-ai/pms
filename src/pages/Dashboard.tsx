@@ -20,9 +20,11 @@ import {
 
 interface Row {
   property: Property;
-  occupancyPct: number;
-  adr: number;
-  revpar: number;
+  /** Null when the statistics did not come back. Not zero — a property
+      whose figures failed to load is not one that sold nothing. */
+  occupancyPct: number | null;
+  adr: number | null;
+  revpar: number | null;
   arrivals: number;
   dirty: number;
 }
@@ -34,11 +36,18 @@ async function buildRows(): Promise<Row[]> {
       const stats = await getPeriodStatistics(property.id);
       const arrivals = await listArrivals(property.id, BUSINESS_DATE);
       const counts = await getStayViewCounts(property.id, BUSINESS_DATE);
+      /* NULL WHEN THE FIGURES DID NOT COME BACK, not zero. A property
+         whose statistics failed to load is not one that sold nothing —
+         and 0% occupancy beside ₹0 ADR on a group dashboard is the
+         shape of a real bad night, so nobody looks twice at it.
+
+         `dirty` is different: the count genuinely IS zero when no room
+         is dirty, and a dash there would read as "we do not know". */
       return {
         property,
-        occupancyPct: stats?.occupancyPct ?? 0,
-        adr: stats?.adr ?? 0,
-        revpar: stats?.revpar ?? 0,
+        occupancyPct: stats?.occupancyPct ?? null,
+        adr: stats?.adr ?? null,
+        revpar: stats?.revpar ?? null,
         arrivals: arrivals.length,
         dirty: counts.Dirty ?? 0,
       };
@@ -66,15 +75,30 @@ const columns: Column<Row>[] = [
   },
   {
     key: "occ", header: "Occupancy", numeric: true,
-    cell: (r) => <span className="tabular font-medium">{r.occupancyPct}%</span>,
+    cell: (r) => (
+      <span className="tabular font-medium">
+        {r.occupancyPct === null
+          ? <span className="text-grey-300">—</span>
+          : `${r.occupancyPct}%`}
+      </span>
+    ),
   },
   {
     key: "adr", header: "ADR", numeric: true,
-    cell: (r) => <span className="tabular">{money(r.adr)}</span>,
+    cell: (r) => (
+      <span className="tabular">
+        {r.adr === null ? <span className="text-grey-300">—</span> : money(r.adr)}
+      </span>
+    ),
   },
   {
     key: "revpar", header: "RevPAR", numeric: true,
-    cell: (r) => <span className="tabular">{money(r.revpar)}</span>,
+    cell: (r) => (
+      <span className="tabular">
+        {r.revpar === null
+          ? <span className="text-grey-300">—</span> : money(r.revpar)}
+      </span>
+    ),
   },
   {
     key: "arrivals", header: "Arrivals due", numeric: true,
@@ -120,7 +144,13 @@ export default function DashboardPage() {
         <div className="flex items-baseline gap-6 flex-wrap mt-2">
           <div>
             <p className="text-2xl font-semibold tabular">{group?.rooms ?? "—"}</p>
-            <p className="text-xs opacity-80">rooms across {data?.length ?? 0} propert{data?.length === 1 ? "y" : "ies"}</p>
+            <p className="text-xs opacity-80">
+              {/* A dash while it loads. "rooms across 0 properties" is a
+                  sentence about a group that does not exist. */}
+              {data === undefined
+                ? "across the group"
+                : `rooms across ${data.length} propert${data.length === 1 ? "y" : "ies"}`}
+            </p>
           </div>
           <div>
             <p className="text-2xl font-semibold tabular">{group?.arrivals ?? "—"}</p>

@@ -111,8 +111,8 @@ export default function GridsPage() {
       <Page>
         <PageHeader title="Inventory and rates" />
         <EmptyState
-          title="Nothing to show"
-          description="This property has no room types yet."
+          title="No room types"
+          description="Add room types to this property and both grids fill in."
         />
       </Page>
     );
@@ -251,7 +251,7 @@ function InventoryGrid({ hotelId, dates, cells, restrictions, onDone }: {
   if (types.length === 0) {
     return (
       <EmptyState title="No room types"
-        description="Add room types to this property and they will appear here." />
+        description="Add room types to this property and both grids fill in." />
     );
   }
 
@@ -388,8 +388,8 @@ function RateGrid({ hotelId, dates, plans, cells, onDone }: {
 
   if (plans.length === 0) {
     return (
-      <EmptyState title="Nothing to price"
-        description="Add room types to this property and they will appear here." />
+      <EmptyState title="No room types"
+        description="Add room types to this property and both grids fill in." />
     );
   }
 
