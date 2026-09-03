@@ -2240,6 +2240,46 @@ regression. **When an automated measurement disagrees with a direct
 one, suspect the measurement first** — especially anything that samples
 mid-navigation.
 
+### 112 · A test staff row that had been an employee for months
+
+`api/test/pos.test.ts` creates a staff member for its outlet:
+
+```ts
+insert into staff (email, full_name, is_group_admin)
+values ('pos+test@fidatohotels.com', 'POS test outlet', false)
+```
+
+The `false` is **is_group_admin**, not `is_active` — which defaults to
+true. The teardown deleted the outlet and never the staff row, and its
+own guard asserted only that the outlet was gone.
+
+So "POS test outlet" has been an active employee of 5EL, in every staff
+picker in the application. It surfaced when the cashier handover asked
+who the drawer could be given to and offered an outlet.
+
+**Deleting it is wrong**: `folio_postings.posted_by` references it, and
+a posting that loses its author is worse than a stale row. It is now
+retired — `is_active = false` — which every picker already filters on,
+and the fixture reactivates it on conflict so it establishes its own
+precondition instead of inheriting the last run's.
+
+**Third piece of test debris found in one session** (identity.test.ts,
+this, and the demo rebuild). The pattern is always the same: a fixture
+writes to the shared demo database and cleans up the object it was
+thinking about, not the rows around it.
+
+**A guard that checks one of the things a fixture created is not a
+teardown check.**
+
+### 113 · Reading a column position as a column name
+
+I read the `false` above as `is_active` and said so. It is the third
+positional argument — `is_group_admin`. Checking took one look at the
+insert's column list, and the wrong reading would have sent the fix at
+a column that was never set.
+
+**Count the columns before naming the value.**
+
 ## Verification traps
 
 ### Never test a Tailwind utility by injecting the class at runtime

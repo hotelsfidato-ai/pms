@@ -50,6 +50,7 @@ import GridsPage from "@/pages/Grids";
 import GroupPanelPage from "@/pages/GroupPanel";
 import NewBookingPage from "@/pages/NewBooking";
 import WorkOrdersPage from "@/pages/WorkOrders";
+import CashieringPage from "@/pages/Cashiering";
 import BillPage from "@/pages/Bill";
 import MenuPage from "@/pages/Menu";
 import RatePlansEditor from "@/pages/RatePlans";
@@ -168,12 +169,16 @@ function PropertyIndex() {
    a migration off a working system rather than a new build, and
    guessing at either would put a screen in front of someone that
    contradicts what they use every day.                             */
-const PROPERTY: Array<[segment: string, title: string, carries: string, cp: string]> = [
-  ["cashiering", "Cashiering", "unspecified — placeholder until the live flow is observed", "—"],
-  /* POS left this list when the bridge got an interface. Its note said
-     "Sattva is live in eZee today, so this is a migration" — still true
-     of the TILL, and no longer true of the boundary it posts across. */
-];
+/* EMPTY, AND THAT IS THE POINT. Every route in the application now has a
+   screen behind it.
+
+   Cashiering was the last entry and its note said why it was here:
+   "unspecified — placeholder until the live flow is observed". It has now
+   been observed — a front-desk shift close — and it is built.
+
+   The machinery stays because the next unobserved thing belongs here rather
+   than as a route that renders nothing. */
+const PROPERTY: Array<[segment: string, title: string, carries: string, cp: string]> = [];
 
 export default function App() {
   return (
@@ -369,6 +374,12 @@ export default function App() {
             <Route
               path="/h/:code/book"
               element={<><PropertyScope /><NewBookingPage /></>}
+            />
+            {/* The front desk drawer: open with a float, take receipts,
+                count, hand over. */}
+            <Route
+              path="/h/:code/cashiering"
+              element={<><PropertyScope /><CashieringPage /></>}
             />
             {/* What needs fixing. Not the same as a room being out. */}
             <Route

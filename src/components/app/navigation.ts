@@ -154,6 +154,10 @@ const SECTIONS: NavSection[] = [
       { label: "Folios", to: "/h/:code/folios", icon: Receipt, resource: "invoice", matchPrefix: true },
       { label: "Invoices", to: "/h/:code/invoices", icon: FileText, resource: "invoice", matchPrefix: true },
       { label: "Payments", to: "/h/:code/payments", icon: Wallet, resource: "payment" },
+      /* The drawer somebody is holding right now. Beside the folios and
+         payments it reconciles against, not under reports — a report is
+         read afterwards, this is used during the shift. */
+      { label: "Cashiering", to: "/h/:code/cashiering", icon: Wallet, resource: "payment" },
       { label: "City ledger", to: "/h/:code/city-ledger", icon: Building2, resource: "commission" },
       /* Form C is a COMPLIANCE obligation about guests, not a finance
          document — but it is filed by the same person who bills, at the

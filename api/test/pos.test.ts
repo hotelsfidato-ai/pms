@@ -44,9 +44,14 @@ beforeAll(async () => {
     hotelId = h.rows[0]!.id;
 
     const staff = await db.query<{ id: string }>(
-      `insert into staff (email, full_name, is_group_admin)
-       values ('pos+test@fidatohotels.com', 'POS test outlet', false)
-       on conflict (email) do update set full_name = excluded.full_name
+      /* `is_active = true` on conflict, because the teardown now retires
+         this row rather than deleting it — the postings it authored keep
+         their author — and a fixture has to establish its own
+         preconditions rather than inherit whatever the last run left. */
+      `insert into staff (email, full_name, is_group_admin, is_active)
+       values ('pos+test@fidatohotels.com', 'POS test outlet', false, true)
+       on conflict (email) do update
+          set full_name = excluded.full_name, is_active = true
        returning id`,
     );
     await db.query(
@@ -132,6 +137,28 @@ afterAll(async () => {
     );
     await db.query("delete from pos_outlets where id = $1", [outletId]);
 
+    /* THE STAFF ROW TOO. The outlet was cleaned up and its staff member was
+       not, so "POS test outlet" has been a permanent, active employee of 5EL
+       appearing in every staff picker in the application. The `false` in the
+       insert above is `is_group_admin`, not `is_active` — `is_active`
+       defaults to true, so it was never even inactive.
+
+       It surfaced when the cashier handover asked who the drawer could be
+       given to and offered an outlet. */
+    /* DEACTIVATED, NOT DELETED. The row is referenced by folio_postings —
+       every bill this outlet posted names it as the author — and a posting
+       that loses its author is worse than a stale staff row. Same reasoning
+       as guests: people are retired, not erased.
+
+       Deactivating is enough, because every picker in the application
+       filters on is_active. */
+    await db.query(
+      `delete from staff_hotels where staff_id in (
+         select id from staff where email = 'pos+test@fidatohotels.com')`);
+    await db.query(
+      `update staff set is_active = false
+        where email = 'pos+test@fidatohotels.com'`);
+
     const { rows: left } = await db.query<{ n: string }>(
       `select count(*)::text as n from pos_outlets
         where code = 'TESTPOS'`,
@@ -140,6 +167,15 @@ afterAll(async () => {
       Number(left[0]!.n),
       "The POS test outlet is still in the database and will show on the " +
         "POS screen as a real outlet.",
+    ).toBe(0);
+
+    const { rows: ghost } = await db.query<{ n: string }>(
+      `select count(*)::text as n from staff
+        where email = 'pos+test@fidatohotels.com' and is_active`);
+    expect(
+      Number(ghost[0]!.n),
+      "The POS test staff row is still ACTIVE and will show in every staff " +
+        "picker as a real person — it did, in the cashier handover.",
     ).toBe(0);
   } finally {
     await db.end();

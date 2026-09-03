@@ -720,7 +720,7 @@ retried. Ledger nets to zero, room revenue still ₹4,19,578.76.
 ## The stages
 
 ```
-1  Frontend shell and screens        ████████████  61 routes · 1 placeholder, unlinked
+1  Frontend shell and screens        ████████████  62 routes · no placeholders left
 2  Repository layer behind the seam  ████████████  12 of 12 modules
 3  Auth bridge — Firebase            ████████████  service account installed, verified
 4  Front desk + folio, end to end    ████████████  flows, reports, dating
@@ -836,6 +836,10 @@ requirements arrived with it. Lowering stage 7 would misreport what happened, so
 the new work is its own row. Detail in `POS-PROGRESS.md`.
 
 **142 of 180 — 79%.** Add the filled blocks above and divide by 180 — fifteen stages of twelve. That sum is the number; it is not typed separately, because it was for three audits running and drifted to "about 90%" while the bars said 70. It moved from 119 when stage 13’s three unfounded blocks came off, to 133 when the day end finished stage 13, to 134 when stage 3 got its service account, to 135 when the rate calendar gave stage 15's three grids their screens, to 136 with the room move, to 137 with amend stay, to 138 with the group panel, to 140 when extra-person pricing and multi-room booking finished 1.2, and to 142 with VIP and work orders.
+
+**Cashiering is built, and the placeholder list in `App.tsx` is now empty.** It was the last route in the application rendering nothing, and its own note said why: *"unspecified — placeholder until the live flow is observed."* It has been observed — a front-desk shift close — and 059 builds it in the POS day end's shape rather than as a second idea about cash.
+
+**Expected cash is scoped by TIMESTAMP, not business date.** One person can work two shifts in an operating day, and keyed on the date the second would open holding every rupee of the first — the cashier coming on duty starts thousands over and nobody can say why. No bar moves for it: stage 1's twelve units have never been written down either, and 62 routes with no placeholder is what the bar already claimed.
 
 **Stage 15 is 12 of 12 and the ranked backlog in `PMS-PROGRESS.md` is clear.** VIP was the last half-unit: readable since 043 and writable by nothing, which is half a feature with the visible half being the wrong half — a clerk could see the mark and never make one. Work orders were the twelfth.
 

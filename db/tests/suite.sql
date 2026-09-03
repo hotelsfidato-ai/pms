@@ -3574,3 +3574,174 @@ begin
   select count(*) into n from hotels where code in ('WOT','WOX');
   perform test.ok('work orders','the fixture does not outlive the test', n = 0);
 end $$;
+
+
+-- =============================================================================
+-- The front desk shift  (059)
+-- =============================================================================
+-- Expected cash is scoped by TIMESTAMP, not business date, because one person
+-- can work two shifts in an operating day — and the second inheriting the
+-- first's takings is a variance nobody can explain.
+-- =============================================================================
+do $$
+declare
+  v_hotel uuid; v_staff uuid; v_other uuid; v_type uuid; v_guest uuid;
+  v_res uuid; v_folio uuid; v_shift uuid; v_second uuid; v_post bigint;
+  n int; e numeric; d date := date '2026-08-12';
+begin
+  select id into v_staff from staff order by id limit 1;
+  select id into v_other from staff order by id desc limit 1;
+
+  insert into hotels (code, name, city, timezone)
+  values ('CSH', 'Cashier fixture', 'Akkalkot', 'Asia/Kolkata')
+  returning id into v_hotel;
+  /* BOTH cashiers need access to the property: a trigger refuses a posting
+     whose posted_by cannot see the hotel, which is the guard working. The
+     second one exists to prove their takings stay out of the first one's
+     drawer, so they have to be able to take money here at all. */
+  insert into staff_hotels (staff_id, hotel_id, role)
+  values (v_staff, v_hotel, 'front_desk'),
+         (v_other, v_hotel, 'front_desk') on conflict do nothing;
+
+  perform test.ok('cashier shift','the fixture has two distinct cashiers',
+    v_staff <> v_other, 'otherwise the drawer-scoping assertion proves nothing');
+
+  insert into room_types (hotel_id, code, name, base_occupancy, max_occupancy,
+                          base_rate, sort_order)
+  values (v_hotel, 'STD', 'Standard', 2, 3, null, 1) returning id into v_type;
+  insert into guests (full_name) values ('Cashier fixture guest')
+  returning id into v_guest;
+  insert into reservations (hotel_id, guest_id, room_type_id, reference,
+                            check_in, check_out, agreed_rate, status)
+  values (v_hotel, v_guest, v_type, 'CSH-1', d, d + 1, 3000, 'checked_in')
+  returning id into v_res;
+  insert into folios (hotel_id, reservation_id) values (v_hotel, v_res)
+  returning id into v_folio;
+
+  -- ---------- the first shift ----------
+  insert into cashier_shifts (hotel_id, staff_id, business_date, opening_cash,
+                              opened_at, opened_by)
+  values (v_hotel, v_staff, d, 2000, now() - interval '4 hours', v_staff)
+  returning id into v_shift;
+
+  e := app.cashier_expected_cash(v_shift);
+  perform test.ok('cashier shift','an untouched drawer holds its float',
+    e = 2000, 'got ' || e);
+
+  -- a cash receipt, taken by this cashier during this shift
+  insert into folio_postings (hotel_id, folio_id, business_date, category,
+                              description, amount, tax_rate, tax_amount,
+                              source_type, posted_by, created_at)
+  values (v_hotel, v_folio, d, 'payment', 'Cash', -5000, 0, 0, 'front_desk',
+          v_staff, now() - interval '3 hours')
+  returning id into v_post;
+  insert into payments (hotel_id, posting_id, method, amount)
+  values (v_hotel, v_post, 'cash', 5000);
+
+  e := app.cashier_expected_cash(v_shift);
+  perform test.ok('cashier shift','a cash receipt reaches the drawer',
+    e = 7000, '2000 + 5000; got ' || e);
+
+  -- a CARD receipt never touched it
+  insert into folio_postings (hotel_id, folio_id, business_date, category,
+                              description, amount, tax_rate, tax_amount,
+                              source_type, posted_by, created_at)
+  values (v_hotel, v_folio, d, 'payment', 'Card', -4000, 0, 0, 'front_desk',
+          v_staff, now() - interval '3 hours')
+  returning id into v_post;
+  insert into payments (hotel_id, posting_id, method, amount)
+  values (v_hotel, v_post, 'card', 4000);
+
+  e := app.cashier_expected_cash(v_shift);
+  perform test.ok('cashier shift','a card receipt does not',
+    e = 7000, 'counting it leaves the desk permanently short; got ' || e);
+
+  -- somebody ELSE's cash is not in this drawer
+  insert into folio_postings (hotel_id, folio_id, business_date, category,
+                              description, amount, tax_rate, tax_amount,
+                              source_type, posted_by, created_at)
+  values (v_hotel, v_folio, d, 'payment', 'Cash', -900, 0, 0, 'front_desk',
+          v_other, now() - interval '3 hours')
+  returning id into v_post;
+  insert into payments (hotel_id, posting_id, method, amount)
+  values (v_hotel, v_post, 'cash', 900);
+
+  e := app.cashier_expected_cash(v_shift);
+  perform test.ok('cashier shift','and neither does another cashier''s',
+    e = 7000, 'got ' || e);
+
+  -- ---------- money in and out ----------
+  insert into cashier_movements (hotel_id, shift_id, kind, amount, reason,
+                                 recorded_by)
+  values (v_hotel, v_shift, 'expense', 300, 'courier', v_staff),
+         (v_hotel, v_shift, 'top_up', 500, 'change from the safe', v_staff);
+
+  e := app.cashier_expected_cash(v_shift);
+  perform test.ok('cashier shift','money in and out moves the expectation',
+    e = 7200, '7000 + 500 - 300; got ' || e);
+
+  perform test.raises('cashier shift','a movement with no reason is refused',
+    format($q$insert into cashier_movements (hotel_id, shift_id, kind, amount,
+                                             reason, recorded_by)
+              values (%L,%L,'expense',100,'  ',%L)$q$,
+           v_hotel, v_shift, v_staff), '23514');
+
+  -- ---------- one open drawer per person ----------
+  perform test.raises('cashier shift','a second open shift is refused',
+    format($q$insert into cashier_shifts (hotel_id, staff_id, business_date)
+              values (%L,%L,%L)$q$, v_hotel, v_staff, d), '23505');
+
+  -- ---------- closing, and handing over ----------
+  perform test.raises('cashier shift','closing without counting is refused',
+    format($q$update cashier_shifts set closed_at = now(), closed_by = %L
+              where id = %L$q$, v_staff, v_shift), '23514');
+
+  update cashier_shifts
+     set counted_cash = 7000, variance_reason = 'two hundred short, not found',
+         closed_by = v_staff, closed_at = now(), handed_to = v_other
+   where id = v_shift;
+
+  perform test.ok('cashier shift','a difference closes with a reason',
+    (select closed_at is not null from cashier_shifts where id = v_shift));
+  perform test.ok('cashier shift','and the drawer is handed to somebody',
+    (select handed_to from cashier_shifts where id = v_shift) = v_other);
+
+  perform test.raises('cashier shift','a closed shift stays closed',
+    format($q$update cashier_shifts set counted_cash = 1 where id = %L$q$,
+           v_shift), 'P0001');
+
+  -- ---------- THE SECOND SHIFT, SAME DAY, SAME PERSON ----------
+  insert into cashier_shifts (hotel_id, staff_id, business_date, opening_cash,
+                              opened_at, opened_by)
+  values (v_hotel, v_staff, d, 1000, now(), v_staff)
+  returning id into v_second;
+
+  e := app.cashier_expected_cash(v_second);
+  -- Keyed on the business date this would be 1000 + every rupee of the first
+  -- shift, and the person coming on duty would start 5,000 over.
+  perform test.ok('cashier shift','a second shift inherits none of the first',
+    e = 1000, 'time-scoped, not date-scoped; got ' || e);
+
+  -- ---------- teardown ----------
+  delete from cashier_denominations where shift_id in (v_shift, v_second);
+  delete from cashier_movements where hotel_id = v_hotel;
+  delete from cashier_shifts where hotel_id = v_hotel;
+  delete from payments where hotel_id = v_hotel;
+  alter table folio_postings disable trigger folio_postings_append_only;
+  delete from folio_postings where hotel_id = v_hotel;
+  alter table folio_postings enable trigger folio_postings_append_only;
+  delete from folios where hotel_id = v_hotel;
+  delete from reservations where hotel_id = v_hotel;
+  alter table guests disable trigger guests_no_delete;
+  delete from guests where id = v_guest;
+  alter table guests enable trigger guests_no_delete;
+  delete from room_types where hotel_id = v_hotel;
+  delete from staff_hotels where hotel_id = v_hotel;
+
+  alter table hotels disable trigger hotels_no_delete;
+  delete from hotels where id = v_hotel;
+  alter table hotels enable trigger hotels_no_delete;
+
+  select count(*) into n from hotels where code = 'CSH';
+  perform test.ok('cashier shift','the fixture does not outlive the test', n = 0);
+end $$;
