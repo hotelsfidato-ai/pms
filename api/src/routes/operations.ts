@@ -913,6 +913,141 @@ operations.post("/:code/stays/:id/assign", async (c) => {
   return c.json(result, "ok" in result && result.ok ? 200 : 409);
 });
 
+/* ── Moving a guest ───────────────────────────────────────────────
+   The assign endpoint above already tells a clerk to "move them from the
+   room rather than assigning a second one". This is that.
+
+   THE MONEY IS NOT TOUCHED unless the caller says so. The audit posts
+   `reservations.agreed_rate`, snapshotted at booking and deliberately never
+   looked up again, so a move reprices nothing by itself. Nights already
+   posted are never rewritten either — the guest genuinely slept in the old
+   room, and the ledger is append-only.
+
+   What CAN change is the rate from here onward, and only because the audit
+   posts one night at a time. It is optional, and the room type changing is
+   the case that makes it worth asking about. */
+operations.post("/:code/stays/:id/move", async (c) => {
+  type Body = {
+    roomNumber?: string; from?: string; reason?: string;
+    /* Optional. Applies to nights not yet posted, which is every night from
+       tonight on — a posted night is history. */
+    agreedRate?: number;
+  };
+  const input = await c.req.json<Body>().catch(() => ({}) as Body);
+
+  const roomNumber = input.roomNumber?.trim();
+  if (!roomNumber) return c.json(refuse("Which room?"), 409);
+  if (!input.from) return c.json(refuse("Moving from which night?"), 409);
+
+  const REASONS = ["move", "upgrade", "downgrade", "fault", "group_consolidation"];
+  const reason = input.reason ?? "move";
+  if (!REASONS.includes(reason)) {
+    return c.json(refuse("Why are they moving?"), 409);
+  }
+
+  if (input.agreedRate !== undefined
+      && (!Number.isFinite(input.agreedRate) || input.agreedRate < 0)) {
+    return c.json(refuse("A rate is zero or more."), 409);
+  }
+
+  const result = await withSession(c.get("subject"), async (client, session) => {
+    const hotelId = await hotelIdFor(client, c.req.param("code"));
+    if (!hotelId) return null;
+    const stayId = c.req.param("id");
+
+    const { rows: stay } = await client.query<{
+      status: string; guest: string; room_type_id: string;
+    }>(
+      `select r.status, g.full_name as guest, r.room_type_id::text
+         from reservations r join guests g on g.id = r.guest_id
+        where r.id = $1 and r.hotel_id = $2`,
+      [stayId, hotelId],
+    );
+    if (!stay[0]) return refuse("No such reservation.");
+    if (!["confirmed", "checked_in"].includes(stay[0].status)) {
+      return refuse(
+        `This booking is ${stay[0].status}, so there is nobody to move.`);
+    }
+
+    const { rows: room } = await client.query<{
+      id: string; room_type_id: string; type_name: string; oos: boolean;
+    }>(
+      `select rm.id::text, rm.room_type_id::text, rt.name as type_name,
+              (rm.housekeeping_status = 'out_of_service') as oos
+         from rooms rm join room_types rt on rt.id = rm.room_type_id
+        where rm.hotel_id = $1 and rm.number = $2 and rm.is_active`,
+      [hotelId, roomNumber],
+    );
+    if (!room[0]) return refuse(`There is no room ${roomNumber} here.`);
+    if (room[0].oos) return refuse(`Room ${roomNumber} is out of service.`);
+
+    try {
+      const { rows: moved } = await client.query<{
+        left_room: string; nights_before: number; nights_after: number;
+      }>(
+        `select left_room, nights_before, nights_after
+           from app.move_room($1,$2,$3,$4::date,$5,$6)`,
+        [hotelId, stayId, room[0].id, input.from, reason, session.staffId],
+      );
+
+      if (input.agreedRate !== undefined) {
+        await client.query(
+          `update reservations set agreed_rate = $1 where id = $2`,
+          [input.agreedRate.toFixed(2), stayId]);
+      }
+
+      return {
+        ok: true as const,
+        guest: stay[0].guest,
+        from: moved[0]!.left_room,
+        to: roomNumber,
+        nightsBefore: moved[0]!.nights_before,
+        nightsAfter: moved[0]!.nights_after,
+        /* Said out loud rather than done quietly, the same as on assign. */
+        typeChanged: room[0].room_type_id !== stay[0].room_type_id,
+        typeName: room[0].type_name,
+        rateChanged: input.agreedRate !== undefined,
+      };
+    } catch (error) {
+      const e = error as { code?: string; message?: string } | undefined;
+      /* The EXCLUDE constraint is the guarantee; this turns it into a
+         sentence a clerk can act on. */
+      if (e?.code === "23P01" || e?.code === "23505") {
+        return refuse(
+          `Room ${roomNumber} is taken for part of that time. Pick another ` +
+          `room, or move them on a different night.`);
+      }
+      /* app.move_room raises its own, already written for a person. */
+      if (e?.code === "P0001" && e.message) return refuse(e.message);
+      throw error;
+    }
+  });
+
+  if (!result) return c.json({ error: "No such property." }, 404);
+  return c.json(result, "ok" in result && result.ok ? 200 : 409);
+});
+
+operations.post("/:code/stays/:id/unassign", async (c) => {
+  const result = await withSession(c.get("subject"), async (client) => {
+    const hotelId = await hotelIdFor(client, c.req.param("code"));
+    if (!hotelId) return null;
+
+    try {
+      const { rows } = await client.query<{ room: string }>(
+        `select app.unassign_room($1,$2) as room`,
+        [hotelId, c.req.param("id")]);
+      return { ok: true as const, room: rows[0]!.room };
+    } catch (error) {
+      const e = error as { code?: string; message?: string } | undefined;
+      if (e?.code === "P0001" && e.message) return refuse(e.message);
+      throw error;
+    }
+  });
+
+  if (!result) return c.json({ error: "No such property." }, 404);
+  return c.json(result, "ok" in result && result.ok ? 200 : 409);
+});
+
 /* ── Void — which is not cancel ────────────────────────────────────
    Cancelled HAPPENED and was undone: it may carry a cancellation
    charge, and it belongs in cancellation statistics because a guest

@@ -2027,6 +2027,38 @@ Twenty minutes went into the write path before the helper. **When
 several unrelated assertions fail at once, suspect the thing they
 share.**
 
+### 98 · The browser's clock instead of the hotel's day
+
+`MoveRoomFlow` defaulted its date field to `new Date()`. Opened on a
+stay running 25–27 August, it offered **3 September** — the real date —
+and the server correctly refused it as outside the stay, leaving a
+clerk with a rejection and no idea what they had done wrong.
+
+The rule was already written down and I broke it anyway: **never
+`now()`, always the hotel's operating day.** A property whose night
+audit has not run is still on yesterday, and the difference is not
+cosmetic — it is which night a move takes effect on.
+
+The other flows already took `businessDate` as a prop. Mine now does
+too, clamped into the stay at both ends so the field always opens on a
+night that can be chosen.
+
+**Found by opening the dialog. Types were clean, 122 frontend tests
+passed, and neither could see it** — nothing in either knows what day
+the hotel thinks it is.
+
+### 99 · Say the most actionable true thing, not the first one found
+
+`app.move_room` looked for the live assignment before validating the
+date. A move date past check-out has no assignment covering it, so it
+answered *"this booking is not in a room on 2027-04-20"* — true, and
+useless. It sends a clerk to look at the room assignment when the real
+problem is that the date is not part of the stay.
+
+Checks now run date-first. **When several refusals are all true, the
+order they are tested in decides which one the person reads**, and that
+choice is design, not implementation detail.
+
 ## Verification traps
 
 ### Never test a Tailwind utility by injecting the class at runtime

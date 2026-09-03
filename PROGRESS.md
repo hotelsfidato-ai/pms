@@ -734,7 +734,7 @@ retried. Ledger nets to zero, room revenue still ₹4,19,578.76.
 12 Hardening and go-live             █████████░░░  + launch.sh, preflight, nginx
 13 POS upgrade — Petpooja-informed   ████████████  12 of 12 — the day end closes
 14 Modules + banquet                  █░░░░░░░░░░░  POS toggle whole; banquet is the other 11
-15 PMS upgrade — eZee-informed        █████░░░░░░░  the three grids now have screens
+15 PMS upgrade — eZee-informed        ██████░░░░░░  grids and the room move
 ```
 
 **Stage 13 reads 4, and those four are finished** — database, API and screen.
@@ -835,7 +835,11 @@ moved: twenty screenshots of Petpooja set a higher bar, and two module
 requirements arrived with it. Lowering stage 7 would misreport what happened, so
 the new work is its own row. Detail in `POS-PROGRESS.md`.
 
-**135 of 180 — 75%.** Add the filled blocks above and divide by 180 — fifteen stages of twelve. That sum is the number; it is not typed separately, because it was for three audits running and drifted to "about 90%" while the bars said 70. It moved from 119 when stage 13’s three unfounded blocks came off, to 133 when the day end finished stage 13, to 134 when stage 3 got its service account, and to 135 when the rate calendar gave stage 15's three grids their screens.
+**136 of 180 — 76%.** Add the filled blocks above and divide by 180 — fifteen stages of twelve. That sum is the number; it is not typed separately, because it was for three audits running and drifted to "about 90%" while the bars said 70. It moved from 119 when stage 13’s three unfounded blocks came off, to 133 when the day end finished stage 13, to 134 when stage 3 got its service account, to 135 when the rate calendar gave stage 15's three grids their screens, and to 136 with the room move.
+
+**Room move was the highest-value item on the backlog and it needed no migration to the model.** `room_assignments` has been keyed by DATE RANGE since 011 and already carried `released_at` and a `reason` listing move, upgrade, downgrade and fault. What was missing was the act: 054 splits the assignment at a date, the old room keeping the nights already slept in it.
+
+**It also answers the open question about re-rating, structurally rather than by choosing.** The audit posts `reservations.agreed_rate`, snapshotted at booking and deliberately never looked up again so a rate plan changing in June cannot reprice a booking made in March. A move therefore reprices nothing by itself, and nights already posted are history in an append-only ledger. What a clerk *can* do is set a new rate on the move, which reaches only nights not yet charged because the audit posts one at a time. Adjusting a night already billed stays what it always was: a folio adjustment with a reason beside it.
 
 **Stage 15's arithmetic, because a bar without one is what this file keeps being corrected for.** Its twelve units are the ranked backlog in `PMS-PROGRESS.md`. Void and sources are whole (2). Indicators stay half — the single-lady flag is written at the walk-in and VIP is still read by the panel and set by nothing (0.5). The inventory grid, the rate grid and the restrictions each had a database and an API and no screen, which was half of each; all three now have one, so they are 3 rather than 1.5.
 

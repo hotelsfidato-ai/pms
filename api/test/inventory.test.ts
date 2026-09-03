@@ -281,8 +281,6 @@ describe("the rate grid", () => {
                 from: "2026-08-14", to: "2026-08-17", price: 4200 });
 
     const body = await grid("2026-08-13", "2026-08-18");
-    const mine = body.cells.filter((c) => of(c) && c.season === null)
-      .filter((c) => body.plans[0] && true);
     const priceOn = (d: string) =>
       body.cells.find((c) => of(c) && c.date === d)!.price;
 
@@ -293,7 +291,6 @@ describe("the rate grid", () => {
        and never re-create its tail, and the property has no price at all
        from the 17th onward — with nothing on screen saying so. */
     expect(priceOn("2026-08-17")).toBe(2500);
-    expect(mine.length).toBeGreaterThanOrEqual(0);
 
     await cleanup();
   });

@@ -2800,3 +2800,179 @@ begin
   select count(*) into n from hotels where code = 'SRT';
   perform test.ok('set rate','the fixture does not outlive the test', n = 0);
 end $$;
+
+
+-- =============================================================================
+-- Room move  (054)
+-- =============================================================================
+-- The split has to free the old room from the move date and not one night
+-- earlier or later, because both mistakes are invisible until somebody cannot
+-- book a room that is empty — or walks into one that is not.
+-- =============================================================================
+do $$
+declare
+  v_hotel uuid; v_staff uuid; v_type uuid;
+  v_203 uuid; v_305 uuid; v_401 uuid;
+  v_guest uuid; v_res uuid; v_other uuid;
+  n int; before_n int; after_n int; v_left text; d date;
+begin
+  select id into v_staff from staff limit 1;
+
+  insert into hotels (code, name, city, timezone)
+  values ('MVT', 'Move fixture', 'Akkalkot', 'Asia/Kolkata')
+  returning id into v_hotel;
+  insert into staff_hotels (staff_id, hotel_id, role)
+  values (v_staff, v_hotel, 'gm') on conflict do nothing;
+
+  insert into room_types (hotel_id, code, name, base_occupancy, max_occupancy,
+                          base_rate, sort_order)
+  values (v_hotel, 'STD', 'Standard', 2, 3, null, 1) returning id into v_type;
+
+  insert into rooms (hotel_id, room_type_id, number, floor, is_active)
+  values (v_hotel, v_type, '203', 2, true) returning id into v_203;
+  insert into rooms (hotel_id, room_type_id, number, floor, is_active)
+  values (v_hotel, v_type, '305', 3, true) returning id into v_305;
+  insert into rooms (hotel_id, room_type_id, number, floor, is_active)
+  values (v_hotel, v_type, '401', 4, true) returning id into v_401;
+
+  -- Guests are GROUP level, not hotel scoped: a returning guest does not
+  -- re-present their passport at another property.
+  insert into guests (full_name) values ('Mover fixture')
+  returning id into v_guest;
+
+  insert into reservations (hotel_id, guest_id, room_type_id, reference,
+                            check_in, check_out, agreed_rate, status)
+  values (v_hotel, v_guest, v_type, 'MVT-1',
+          date '2026-08-01', date '2026-08-06', 3000, 'checked_in')
+  returning id into v_res;
+
+  insert into room_assignments (hotel_id, reservation_id, room_id,
+                                from_date, to_date, reason)
+  values (v_hotel, v_res, v_203, date '2026-08-01', date '2026-08-06', 'arrival');
+
+  -- ---------- the move ----------
+  select m.left_room, m.nights_before, m.nights_after
+    into v_left, before_n, after_n
+    from app.move_room(v_hotel, v_res, v_305, date '2026-08-03', 'move', v_staff) m;
+
+  perform test.ok('room move','it says which room was left', v_left = '203');
+  perform test.ok('room move','two nights stay with the old room',
+    before_n = 2, '1st and 2nd; got ' || before_n);
+  perform test.ok('room move','three nights go to the new one',
+    after_n = 3, '3rd, 4th and 5th; got ' || after_n);
+
+  select count(*) into n from room_assignments
+   where reservation_id = v_res and released_at is null;
+  perform test.ok('room move','the stay has two live assignments', n = 2);
+
+  select to_date into d from room_assignments
+   where reservation_id = v_res and room_id = v_203 and released_at is null;
+  perform test.ok('room move','the old room is given up ON the move date',
+    d = date '2026-08-03', 'got ' || d);
+
+  -- ---------- the freed room is genuinely free ----------
+  -- The half-open range means somebody may check into 203 on the 3rd. Off by
+  -- one in either direction and either a room sits empty and unbookable, or
+  -- two guests are sent to the same door.
+  insert into reservations (hotel_id, guest_id, room_type_id, reference,
+                            check_in, check_out, agreed_rate, status)
+  values (v_hotel, v_guest, v_type, 'MVT-2',
+          date '2026-08-03', date '2026-08-05', 3000, 'confirmed')
+  returning id into v_other;
+
+  insert into room_assignments (hotel_id, reservation_id, room_id,
+                                from_date, to_date, reason)
+  values (v_hotel, v_other, v_203, date '2026-08-03', date '2026-08-05', 'arrival');
+  perform test.ok('room move','and can be sold from that date',
+    true, 'the exclusion constraint accepted it');
+
+  -- And NOT from the night before, because the mover is still in it then.
+  -- This needs its own booking that legitimately covers the 2nd: an
+  -- assignment outside its reservation's dates is refused by a different
+  -- guard first, which is what the earlier version of this assertion
+  -- accidentally proved.
+  declare v_early uuid;
+  begin
+    insert into reservations (hotel_id, guest_id, room_type_id, reference,
+                              check_in, check_out, agreed_rate, status)
+    values (v_hotel, v_guest, v_type, 'MVT-EARLY',
+            date '2026-08-02', date '2026-08-04', 3000, 'confirmed')
+    returning id into v_early;
+
+    perform test.raises('room move','but not from the night before',
+      format($q$insert into room_assignments (hotel_id, reservation_id, room_id,
+                                              from_date, to_date, reason)
+                values (%L,%L,%L,date '2026-08-02',date '2026-08-04','arrival')$q$,
+             v_hotel, v_early, v_203), '23P01');
+  end;
+
+  -- ---------- money is untouched ----------
+  perform test.ok('room move','the agreed rate is not touched',
+    (select agreed_rate from reservations where id = v_res) = 3000,
+    'the audit posts agreed_rate, and a move is not a repricing');
+
+  -- ---------- refusals ----------
+  perform test.raises('room move','moving into the same room is refused',
+    format($q$select app.move_room(%L,%L,%L,date '2026-08-04','move',%L)$q$,
+           v_hotel, v_res, v_305, v_staff), 'P0001');
+
+  perform test.raises('room move','and a date outside the stay',
+    format($q$select app.move_room(%L,%L,%L,date '2026-08-20','move',%L)$q$,
+           v_hotel, v_res, v_401, v_staff), 'P0001');
+
+  -- ---------- moving on the first night ----------
+  -- Nobody slept in the room, so it is released whole rather than left as a
+  -- zero-length row that ra_dates_ordered would refuse anyway.
+  insert into reservations (hotel_id, guest_id, room_type_id, reference,
+                            check_in, check_out, agreed_rate, status)
+  values (v_hotel, v_guest, v_type, 'MVT-3',
+          date '2026-09-01', date '2026-09-04', 3000, 'confirmed')
+  returning id into v_other;
+  insert into room_assignments (hotel_id, reservation_id, room_id,
+                                from_date, to_date, reason)
+  values (v_hotel, v_other, v_203, date '2026-09-01', date '2026-09-04', 'arrival');
+
+  select m.nights_before into before_n
+    from app.move_room(v_hotel, v_other, v_401, date '2026-09-01', 'fault', v_staff) m;
+  perform test.ok('room move','moving on the first night keeps no nights',
+    before_n = 0, 'got ' || before_n);
+
+  select count(*) into n from room_assignments
+   where reservation_id = v_other and released_at is null;
+  perform test.ok('room move','and leaves one live assignment, not two', n = 1);
+
+  -- ---------- unassign ----------
+  select app.unassign_room(v_hotel, v_other) into v_left;
+  perform test.ok('room move','unassign says which room', v_left = '401');
+
+  select count(*) into n from room_assignments
+   where reservation_id = v_other and released_at is null;
+  perform test.ok('room move','and leaves nothing live', n = 0);
+
+  select count(*) into n from room_assignments where reservation_id = v_other;
+  -- Releasing is not deleting: "who was in 401 last Tuesday" keeps an answer.
+  perform test.ok('room move','while the history stays', n = 2);
+
+  perform test.raises('room move','unassigning twice is refused',
+    format($q$select app.unassign_room(%L,%L)$q$, v_hotel, v_other), 'P0001');
+
+  -- ---------- teardown ----------
+  delete from room_assignments where hotel_id = v_hotel;
+  delete from reservations where hotel_id = v_hotel;
+  /* 015 forbids deleting a guest — stay history depends on the row. A fixture
+     is the one exception, and it says so rather than leaving a stranger in
+     the guest list. */
+  alter table guests disable trigger guests_no_delete;
+  delete from guests where id = v_guest;
+  alter table guests enable trigger guests_no_delete;
+  delete from rooms where hotel_id = v_hotel;
+  delete from room_types where hotel_id = v_hotel;
+  delete from staff_hotels where hotel_id = v_hotel;
+
+  alter table hotels disable trigger hotels_no_delete;
+  delete from hotels where id = v_hotel;
+  alter table hotels enable trigger hotels_no_delete;
+
+  select count(*) into n from hotels where code = 'MVT';
+  perform test.ok('room move','the fixture does not outlive the test', n = 0);
+end $$;

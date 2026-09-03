@@ -16,6 +16,7 @@ import {
 } from "@/components/ui";
 import { CheckInFlow } from "@/components/flows/CheckInFlow";
 import { VoidFlow } from "@/components/flows/VoidFlow";
+import { MoveRoomFlow } from "@/components/flows/MoveRoomFlow";
 import { FolioPanel } from "@/components/flows/FolioPanel";
 import { WalkInFlow } from "@/components/flows/WalkInFlow";
 import {
@@ -551,6 +552,16 @@ export default function StayViewPage() {
                           not offering it. */}
                       <VoidFlow hotelId={hotelId} stay={selected.stay} />
                     </>
+                  )}
+                  {/* A move needs somebody to be IN a room, so it appears
+                      once they have arrived and until they leave. Before
+                      arrival the room is changed by assigning a different
+                      one, which is a different act and already has its
+                      own button on the chart. */}
+                  {(selected.stay.status === "in-house"
+                    || selected.stay.status === "due-out") && (
+                    <MoveRoomFlow hotelId={hotelId} stay={selected.stay}
+                                  businessDate={BUSINESS_DATE} />
                   )}
                 </div>
               </TabsContent>

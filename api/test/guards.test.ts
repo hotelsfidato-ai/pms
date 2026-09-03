@@ -367,3 +367,187 @@ describe("a walk-in records where it came from", () => {
     }
   });
 });
+
+/* ══════════════════════════════════════════════════════════════════
+   MOVING A GUEST
+
+   Room 203 to 305 on night three. The thing that has to be right is
+   the seam: 203 free FROM the move date and not a night either side,
+   because both mistakes are invisible until somebody cannot book an
+   empty room, or two guests are sent to the same door.
+
+   And the money. The audit posts `reservations.agreed_rate`,
+   snapshotted at booking, so a move reprices nothing on its own —
+   that is a decision somebody makes, not a side effect.
+   ══════════════════════════════════════════════════════════════════ */
+
+describe("moving a guest between rooms", () => {
+  /* A stay of its own, so this cannot disturb the calibration the
+     inventory grid is checked against. */
+  let stayId: string;
+  let firstRoom: string;
+  let secondRoom: string;
+  let guestId: string;
+
+  beforeAll(async () => {
+    const db = await admin();
+    try {
+      const { rows: h } = await db.query<{ id: string }>(
+        "select id from hotels where code = '5EL'");
+      const hotel = h[0]!.id;
+
+      const { rows: rooms } = await db.query<{ id: string; number: string }>(
+        `select id::text, number from rooms
+          where hotel_id = $1 and is_active
+            and housekeeping_status <> 'out_of_service'
+          order by number limit 2`, [hotel]);
+      firstRoom = rooms[0]!.number;
+      secondRoom = rooms[1]!.number;
+
+      const { rows: g } = await db.query<{ id: string }>(
+        `insert into guests (full_name) values ('Move Test Guest')
+         returning id::text`);
+      guestId = g[0]!.id;
+
+      const { rows: r } = await db.query<{ id: string }>(
+        `insert into reservations (hotel_id, guest_id, room_type_id, reference,
+                                   check_in, check_out, agreed_rate, status)
+         select $1, $2, rm.room_type_id, 'MOVETEST-1',
+                date '2027-03-01', date '2027-03-06', 3000, 'checked_in'
+           from rooms rm where rm.id = $3
+         returning id::text`, [hotel, guestId, rooms[0]!.id]);
+      stayId = r[0]!.id;
+
+      await db.query(
+        `insert into room_assignments (hotel_id, reservation_id, room_id,
+                                       from_date, to_date, reason)
+         values ($1,$2,$3,date '2027-03-01',date '2027-03-06','arrival')`,
+        [hotel, stayId, rooms[0]!.id]);
+    } finally { await db.end(); }
+  });
+
+  afterAll(async () => {
+    const db = await admin();
+    try {
+      await db.query("delete from room_assignments where reservation_id = $1", [stayId]);
+      await db.query("delete from reservations where id = $1", [stayId]);
+      await db.query("alter table guests disable trigger guests_no_delete");
+      await db.query("delete from guests where id = $1", [guestId]);
+      await db.query("alter table guests enable trigger guests_no_delete");
+    } finally { await db.end(); }
+  });
+
+  const liveRooms = async () => {
+    const db = await admin();
+    try {
+      const { rows } = await db.query<{ number: string; from: string; to: string }>(
+        `select rm.number, ra.from_date::text as from, ra.to_date::text as to
+           from room_assignments ra join rooms rm on rm.id = ra.room_id
+          where ra.reservation_id = $1 and ra.released_at is null
+          order by ra.from_date`, [stayId]);
+      return rows;
+    } finally { await db.end(); }
+  };
+
+  it("splits the stay at the move date", async () => {
+    const res = await post(`/5EL/stays/${stayId}/move`, {
+      roomNumber: secondRoom, from: "2027-03-03", reason: "move",
+    });
+    expect(res.status, await res.clone().text()).toBe(200);
+    const body = (await res.json()) as {
+      from: string; to: string; nightsBefore: number; nightsAfter: number;
+    };
+    expect(body.from).toBe(firstRoom);
+    expect(body.to).toBe(secondRoom);
+    expect(body.nightsBefore).toBe(2);
+    expect(body.nightsAfter).toBe(3);
+
+    const live = await liveRooms();
+    expect(live).toHaveLength(2);
+    /* The seam. 203 is given up ON the 3rd — half-open, so somebody may
+       check into it that night. */
+    expect(live[0]).toMatchObject({ number: firstRoom, to: "2027-03-03" });
+    expect(live[1]).toMatchObject({ number: secondRoom, from: "2027-03-03" });
+  });
+
+  it("leaves the agreed rate alone", async () => {
+    const db = await admin();
+    try {
+      const { rows } = await db.query<{ rate: string }>(
+        "select agreed_rate::text as rate from reservations where id = $1",
+        [stayId]);
+      /* A move is not a repricing. The audit posts this number, and
+         nights already posted are history either way. */
+      expect(Number(rows[0]!.rate)).toBe(3000);
+    } finally { await db.end(); }
+  });
+
+  it("changes it only when asked", async () => {
+    const res = await post(`/5EL/stays/${stayId}/move`, {
+      roomNumber: firstRoom, from: "2027-03-04",
+      reason: "downgrade", agreedRate: 2400,
+    });
+    expect(res.status, await res.clone().text()).toBe(200);
+    expect(((await res.json()) as { rateChanged: boolean }).rateChanged).toBe(true);
+
+    const db = await admin();
+    try {
+      const { rows } = await db.query<{ rate: string }>(
+        "select agreed_rate::text as rate from reservations where id = $1",
+        [stayId]);
+      expect(Number(rows[0]!.rate)).toBe(2400);
+    } finally { await db.end(); }
+  });
+
+  it("refuses the room they are already in, by name", async () => {
+    const res = await post(`/5EL/stays/${stayId}/move`, {
+      roomNumber: firstRoom, from: "2027-03-05",
+    });
+    expect(res.status).toBe(409);
+    expect(((await res.json()) as { reason: string }).reason)
+      .toMatch(/already in/i);
+  });
+
+  it("refuses a date outside the stay", async () => {
+    const res = await post(`/5EL/stays/${stayId}/move`, {
+      roomNumber: secondRoom, from: "2027-04-20",
+    });
+    expect(res.status).toBe(409);
+    expect(((await res.json()) as { reason: string }).reason)
+      .toMatch(/outside the stay/i);
+  });
+
+  it("refuses a room that does not exist here", async () => {
+    const res = await post(`/5EL/stays/${stayId}/move`, {
+      roomNumber: "9999", from: "2027-03-05",
+    });
+    expect(res.status).toBe(409);
+    expect(((await res.json()) as { reason: string }).reason)
+      .toMatch(/no room 9999/i);
+  });
+
+  it("takes them out of the room, and says which", async () => {
+    const res = await post(`/5EL/stays/${stayId}/unassign`, {});
+    expect(res.status, await res.clone().text()).toBe(200);
+    expect(((await res.json()) as { room: string }).room).toBeTruthy();
+
+    expect(await liveRooms()).toHaveLength(0);
+
+    const db = await admin();
+    try {
+      const { rows } = await db.query<{ n: string }>(
+        `select count(*)::text as n from room_assignments
+          where reservation_id = $1`, [stayId]);
+      /* Releasing is not deleting. "Who was in that room last Tuesday"
+         has to keep an answer. */
+      expect(Number(rows[0]!.n)).toBeGreaterThan(0);
+    } finally { await db.end(); }
+  });
+
+  it("and refuses to do it twice", async () => {
+    const res = await post(`/5EL/stays/${stayId}/unassign`, {});
+    expect(res.status).toBe(409);
+    expect(((await res.json()) as { reason: string }).reason)
+      .toMatch(/not in a room/i);
+  });
+});

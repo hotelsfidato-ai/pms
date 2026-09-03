@@ -478,6 +478,65 @@ export async function assignRoom(
   }
 }
 
+/**
+ * Moves a guest from one room to another partway through a stay.
+ *
+ * `from` is the first night in the NEW room. Everything before it
+ * stays with the old room, because the guest slept there.
+ *
+ * THE MONEY IS NOT TOUCHED unless `agreedRate` is given. The night
+ * audit posts the reservation's agreed rate, snapshotted at booking
+ * and never looked up again, so a move reprices nothing by itself —
+ * and nights already posted are history in any case. Passing a rate
+ * changes what the audit charges from tonight forward.
+ */
+export async function moveRoom(
+  hotelId: string, stayId: string,
+  input: {
+    roomNumber: string; from: string;
+    reason?: "move" | "upgrade" | "downgrade" | "fault" | "group_consolidation";
+    agreedRate?: number;
+  },
+): Promise<
+  | { ok: true; guest: string; from: string; to: string;
+      nightsBefore: number; nightsAfter: number;
+      typeChanged: boolean; typeName: string; rateChanged: boolean }
+  | { ok: false; reason: string }
+> {
+  try {
+    return await api(`/api/hotels/${hotelId}/stays/${stayId}/move`, {
+      method: "POST", body: JSON.stringify(input),
+    });
+  } catch (error) {
+    if (error instanceof ApiError) {
+      const payload = error.body as { reason?: string } | undefined;
+      return { ok: false, reason: payload?.reason ?? error.message };
+    }
+    throw error;
+  }
+}
+
+/**
+ * Takes a booking out of its room without putting it in another.
+ * The assignment row stays — releasing is not deleting, and "who was
+ * in 203 last Tuesday" has to keep an answer.
+ */
+export async function unassignRoom(
+  hotelId: string, stayId: string,
+): Promise<{ ok: true; room: string } | { ok: false; reason: string }> {
+  try {
+    return await api(`/api/hotels/${hotelId}/stays/${stayId}/unassign`, {
+      method: "POST", body: JSON.stringify({}),
+    });
+  } catch (error) {
+    if (error instanceof ApiError) {
+      const payload = error.body as { reason?: string } | undefined;
+      return { ok: false, reason: payload?.reason ?? error.message };
+    }
+    throw error;
+  }
+}
+
 /* ══════════════════════════════════════════════════════════════════
    WHOSE ROOMS ARE THESE
 
