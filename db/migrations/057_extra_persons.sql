@@ -170,6 +170,9 @@ grant execute on function app.tariff_for(uuid, text, date, int, int) to pms_app;
 -- and every existing call becomes ambiguous.
 -- -----------------------------------------------------------------------------
 drop function if exists app.set_rate(uuid, uuid, text, date, date, numeric, text, uuid);
+/* AND THE NEW SIGNATURE TOO, so this file can be applied twice — which the
+   deployment does, because it re-runs every migration on every install. */
+drop function if exists app.set_rate(uuid, uuid, text, date, date, numeric, text, uuid, numeric, numeric);
 
 create function app.set_rate(
   p_hotel       uuid,
@@ -256,7 +259,7 @@ begin
   return n;
 end $$;
 
-comment on function app.set_rate is
+comment on function app.set_rate(uuid, uuid, text, date, date, numeric, text, uuid, numeric, numeric) is
   'Sets a price over a half-open date range, splitting and trimming whatever '
   'already covers it. A NULL price clears the range rather than writing a zero. '
   'The extra-person prices travel with the season, because an extra bed costs '

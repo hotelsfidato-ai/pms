@@ -120,7 +120,10 @@ begin
   return n;
 end $$;
 
-comment on function app.set_rate is
+/* QUALIFIED WITH ITS SIGNATURE. 057 adds a second overload, and on a
+   re-run both exist — an unqualified COMMENT ON FUNCTION is then
+   ambiguous and the whole migration fails. */
+comment on function app.set_rate(uuid, uuid, text, date, date, numeric, text, uuid) is
   'Sets a price over a half-open date range, splitting and trimming whatever '
   'already covers it so the exclusion constraint is never violated. A NULL '
   'price clears the range rather than writing a zero — an unpriced room is not '
