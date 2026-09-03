@@ -6,7 +6,7 @@ Every entry here cost something. Read it before you repeat it.
 
 ## Ten faults that repeat
 
-118 entries below is a reference, not a reading list. These are the patterns
+119 entries below is a reference, not a reading list. These are the patterns
 that have recurred, with the count and the check that would have caught each.
 **If you read nothing else here, read this.**
 
@@ -19,7 +19,7 @@ that have recurred, with the count and the check that would have caught each.
 | 5 | **Invented a number.** A price, a total, an occupancy, a zero standing in for "nobody knows". | 5 · 35 · 43 · 58 · 63 · 65 · 68 · 106 | A dash is honest; a zero is a claim. Derive it or show a dash. |
 | 6 | **A rule written in N places, wrong in one.** The copy nobody remembered was the one that ran. | 30 · 65 · 96 · 102 | Grep the constant before you write the second copy. One definition. |
 | 7 | **Order of operations against a guard.** Resized before moving, deleted a parent before a child, re-enabled a trigger mid-teardown. | 101 · 103 · 104 · 115 | A teardown is a migration run backwards, with the same ordering rules. |
-| 8 | **Blamed the code for the environment.** Empty database, stale API, TLS interception, my own contaminated reproduction. | 72 · 77 · 92 · 94 · 95 · 109 | Reproduce twice, from clean, before naming it a bug. |
+| 8 | **Blamed the code for the environment**, or broke the environment myself. Empty database, stale API, TLS interception, a contaminated reproduction, a destructive measurement. | 72 · 77 · 92 · 94 · 95 · 109 · 119 | Reproduce twice from clean. Measure on a scratch copy, never the live one. |
 | 9 | **Guessed the schema instead of querying it.** Constraint values, column names, a uuid column fed a slug. | 13 · 28 · 67 · 82 · 83 · 113 | `\d table` costs one command. Column POSITION is not column NAME. |
 | 10 | **Built every piece and never wired the act.** The endpoint, the function and the screen all existed; nothing called them. | 16 · 24 · 81 · 118 | Trace the click through to the write before calling it done. |
 
@@ -2378,6 +2378,34 @@ counting void bookings into the group.
 order in the app file.** A duplicate path is not an error anywhere in the
 stack; it is silently ignored, and the half you did not write is the half that
 serves.
+
+### 119 · I measured destructively against the working database
+
+To count how many migrations survive a second run, I ran all 59 against the
+live `fidato`. Eight failed — which was the answer I wanted — but a failing
+migration does not fail *cleanly*. `psql` runs statements one at a time, so
+`013_policies.sql` applied roughly half its policies and aborted at the first
+one that already existed.
+
+The half it applied put `staff`'s RLS policy back to a version that calls
+`app.is_group_admin()`, which reads `staff`. Any insert into `hotels` then
+recursed until the stack limit. The demo loader died, 5EL was gone, and the
+symptom appeared three steps from the cause — exactly the shape defect 46 and
+defect 92 are about.
+
+Then `drop database` failed too: `could not open file "global/2964"`. The
+cluster's `pg_db_role_setting` catalog was gone, so the documented recovery
+(`db/tests/run.sh`) could not run either. The cluster had to be rebuilt with
+`initdb`.
+
+**A destructive measurement belongs on a scratch copy.** `db/verify-backup.sh`
+already builds one and drops it afterwards; the same pattern was available and
+I did not reach for it. The measurement was worth having and cost an hour it
+did not need to.
+
+**And a half-applied migration is a state no migration produces.** It is not
+"the old schema" or "the new schema" — it is one neither the tests nor the
+application has ever seen.
 
 ## Verification traps
 
