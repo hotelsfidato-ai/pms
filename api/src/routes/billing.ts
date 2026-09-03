@@ -112,7 +112,7 @@ billing.get("/:code/billable", async (c) => {
       invoice: string | null;
     }>(
       `with live as (
-         select fp.*, f.reservation_id
+         select fp.*
            from folio_postings fp
            join folios f on f.id = fp.folio_id
           where fp.hotel_id = $1
@@ -297,7 +297,7 @@ billing.get("/:code/night-audit", async (c) => {
       to_post: string; dirty: string; reversals: string;
     }>(
       `with live as (
-         select fp.*, f.reservation_id
+         select fp.*
            from folio_postings fp
            join folios f on f.id = fp.folio_id
           where fp.hotel_id = $1
@@ -446,7 +446,7 @@ billing.get("/:code/notifications", async (c) => {
       kind: string; id: string; label: string; detail: string; amount: string | null;
     }>(
       `with live as (
-         select fp.*, f.reservation_id
+         select fp.*
            from folio_postings fp
            join folios f on f.id = fp.folio_id
           where fp.hotel_id = $1

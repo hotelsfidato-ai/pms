@@ -47,6 +47,7 @@ import FloorPage from "@/pages/Floor";
 import DocketPage from "@/pages/Docket";
 import DayEndPage from "@/pages/DayEnd";
 import GridsPage from "@/pages/Grids";
+import GroupPanelPage from "@/pages/GroupPanel";
 import BillPage from "@/pages/Bill";
 import MenuPage from "@/pages/Menu";
 import RatePlansEditor from "@/pages/RatePlans";
@@ -361,6 +362,11 @@ export default function App() {
             <Route
               path="/h/:code/grids"
               element={<><PropertyScope /><GridsPage /></>}
+            />
+            {/* One group: its rooms, and who pays for which. */}
+            <Route
+              path="/h/:code/groups/:id"
+              element={<><PropertyScope /><GroupPanelPage /></>}
             />
             {/* Before /till/bill/:id and /till/orders/:id — a literal
                 segment beats a parameter, but the order makes it read

@@ -734,7 +734,7 @@ retried. Ledger nets to zero, room revenue still ₹4,19,578.76.
 12 Hardening and go-live             █████████░░░  + launch.sh, preflight, nginx
 13 POS upgrade — Petpooja-informed   ████████████  12 of 12 — the day end closes
 14 Modules + banquet                  █░░░░░░░░░░░  POS toggle whole; banquet is the other 11
-15 PMS upgrade — eZee-informed        ███████░░░░░  grids, room move, amend stay
+15 PMS upgrade — eZee-informed        ████████░░░░  + the group panel
 ```
 
 **Stage 13 reads 4, and those four are finished** — database, API and screen.
@@ -835,7 +835,11 @@ moved: twenty screenshots of Petpooja set a higher bar, and two module
 requirements arrived with it. Lowering stage 7 would misreport what happened, so
 the new work is its own row. Detail in `POS-PROGRESS.md`.
 
-**137 of 180 — 76%.** Add the filled blocks above and divide by 180 — fifteen stages of twelve. That sum is the number; it is not typed separately, because it was for three audits running and drifted to "about 90%" while the bars said 70. It moved from 119 when stage 13’s three unfounded blocks came off, to 133 when the day end finished stage 13, to 134 when stage 3 got its service account, to 135 when the rate calendar gave stage 15's three grids their screens, to 136 with the room move, and to 137 with amend stay.
+**138 of 180 — 77%.** Add the filled blocks above and divide by 180 — fifteen stages of twelve. That sum is the number; it is not typed separately, because it was for three audits running and drifted to "about 90%" while the bars said 70. It moved from 119 when stage 13’s three unfounded blocks came off, to 133 when the day end finished stage 13, to 134 when stage 3 got its service account, to 135 when the rate calendar gave stage 15's three grids their screens, to 136 with the room move, to 137 with amend stay, and to 138 with the group panel.
+
+**The group panel settled the last open decision from the model, not by choosing.** "One folio or one per room" was never a fork: 006 built `folios` many-per-reservation and made `reservation_id` nullable *precisely* so a master could exist. A group is BOTH — a host account and each room's own folio — and 056 only added the other end of the link plus a per-room routing switch. Per room, because a group is rarely uniform: the couple's own room is usually settled by them.
+
+**And it found the trap that migration is mostly about.** The night audit decided it had already charged a stay by asking whether the FOLIO held a room charge for the date. Correct while every stay has its own folio; point twelve rooms at one master and it becomes *charge the first, skip the other eleven, every night* — with the run's own summary reporting what it posted, so nothing looks wrong. The check is now per stay, `folio_postings` carries `reservation_id`, and a trigger fills it in so no writer can forget.
 
 **Amend stay was the one the backlog called dangerous, and it was right.** Until 055 the interface could create a booking and cancel one, with nothing in between — no path to add a night. The danger is that the ROOM HOLD has to move with the booking: a reservation saying six nights while `room_assignments` holds four looks correct on every screen until the sixth night's guest opens an occupied door. If the room is taken for the nights being added, the whole call rolls back and the refusal names it.
 

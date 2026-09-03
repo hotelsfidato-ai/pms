@@ -30,6 +30,7 @@ export * from "./notifications";
 export * from "./admin";
 export * from "./directory";
 export * from "./billing";
+export * from "./groups";
 export * from "./rates";
 export * from "./till";
 

@@ -1,0 +1,112 @@
+import { api, ApiError } from "@/lib/api";
+
+/* ══════════════════════════════════════════════════════════════════
+   A GROUP, AND WHO PAYS FOR IT
+
+   Twelve rooms under "Sharma Wedding". The host settles the
+   accommodation; every guest pays their own bar tab.
+
+   That was never a choice between one folio and twelve. `folios` has
+   been many-per-reservation since 006, with `reservation_id` nullable
+   precisely so a master could exist — the group is BOTH: a master
+   folio for the host, and each room's own folio for its extras.
+
+   TWO BALANCES, NEVER ONE. What the host owes and what the guests owe
+   are different debts settled by different people, and one combined
+   number tells nobody what to collect from whom.
+   ══════════════════════════════════════════════════════════════════ */
+
+export interface GroupRoom {
+  reservationId: string;
+  reference: string;
+  guest: string;
+  /** Null once they have left — the assignment is released, and
+      inventing a room number for somebody who has gone would put them
+      back in it. */
+  room: string | null;
+  roomType: string;
+  checkIn: string;
+  checkOut: string;
+  nights: number;
+  status: string;
+  agreedRate: number;
+  /** True when this room's charge goes to the host's account. Per
+      room, not per group: the couple's own room is usually settled by
+      them while the rest go to the host. */
+  routed: boolean;
+  /** What is on this stay's OWN folio — its extras, and its room
+      charge too when it is not routed. */
+  balance: number;
+}
+
+export interface GroupMasterLine {
+  date: string;
+  description: string;
+  category: string;
+  amount: number;
+  /** Which room the line is for. A master folio holding twelve room
+      charges is unreadable without it. */
+  room: string | null;
+}
+
+export interface GroupDetail {
+  id: string;
+  name: string;
+  blockCode: string | null;
+  company: string | null;
+  notes: string | null;
+  rooms: GroupRoom[];
+  /** Null until somebody opens one. Most groups never need one —
+      a block where everybody settles their own room has no host
+      account to keep. */
+  master: { id: string; balance: number; lines: GroupMasterLine[] } | null;
+  /** The sum of the rooms' own folios. Kept apart from the master's
+      balance on purpose. */
+  guestBalance: number;
+}
+
+export async function getGroup(
+  hotelId: string, groupId: string,
+): Promise<GroupDetail | null> {
+  if (!hotelId || !groupId) return null;
+  try {
+    return await api<GroupDetail>(`/api/hotels/${hotelId}/groups/${groupId}`);
+  } catch {
+    return null;
+  }
+}
+
+type Refused = { ok: true } | { ok: false; reason: string };
+
+/** Opens the host's account. Calling it twice is not an error — the
+    second call returns the one that already exists. */
+export async function openMasterFolio(
+  hotelId: string, groupId: string,
+): Promise<Refused> {
+  return post(`/api/hotels/${hotelId}/groups/${groupId}/master`, {});
+}
+
+/**
+ * Says whether this room's charge goes to the host.
+ *
+ * ROOM CHARGES ONLY. A bar tab follows whoever signed for it, which
+ * is the arrangement every hotel operates and the one a guest expects.
+ */
+export async function routeRoomToGroup(
+  hotelId: string, stayId: string, toGroup: boolean,
+): Promise<Refused> {
+  return post(`/api/hotels/${hotelId}/stays/${stayId}/routing`, { toGroup });
+}
+
+async function post(path: string, body: unknown): Promise<Refused> {
+  try {
+    await api(path, { method: "POST", body: JSON.stringify(body) });
+    return { ok: true };
+  } catch (error) {
+    if (error instanceof ApiError) {
+      const p = error.body as { reason?: string } | undefined;
+      return { ok: false, reason: p?.reason ?? error.message };
+    }
+    throw error;
+  }
+}

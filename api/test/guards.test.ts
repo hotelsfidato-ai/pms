@@ -680,3 +680,101 @@ describe("amending a stay", () => {
     } finally { await db.end(); }
   });
 });
+
+/* ══════════════════════════════════════════════════════════════════
+   GROUPS — twelve rooms and one host
+
+   The refusals matter more than the happy path here, because both
+   failure modes are silent: a tick that does nothing, and a charge
+   that lands nowhere.
+   ══════════════════════════════════════════════════════════════════ */
+
+describe("group billing", () => {
+  let groupId: string;
+  let routedStay: string;
+  let loneStay: string;
+
+  beforeAll(async () => {
+    const db = await admin();
+    try {
+      const { rows } = await db.query<{ id: string; group_id: string }>(
+        `select r.id::text, r.group_id::text as group_id
+           from reservations r
+           join hotels h on h.id = r.hotel_id
+          where h.code = '5EL' and r.group_id is not null
+          limit 1`);
+      routedStay = rows[0]!.id;
+      groupId = rows[0]!.group_id;
+
+      const { rows: lone } = await db.query<{ id: string }>(
+        `select r.id::text from reservations r
+           join hotels h on h.id = r.hotel_id
+          where h.code = '5EL' and r.group_id is null limit 1`);
+      loneStay = lone[0]!.id;
+    } finally { await db.end(); }
+  });
+
+  afterAll(async () => {
+    const db = await admin();
+    try {
+      await db.query("update reservations set route_room_to_group = false");
+      await db.query("delete from folios where group_id is not null");
+    } finally { await db.end(); }
+  });
+
+  it("refuses to route a booking that is in no group, by name", async () => {
+    const res = await post(`/5EL/stays/${loneStay}/routing`, { toGroup: true });
+    expect(res.status).toBe(409);
+    expect(((await res.json()) as { reason: string }).reason)
+      .toMatch(/not in a group/i);
+  });
+
+  it("refuses to route when the group has no master yet", async () => {
+    const db = await admin();
+    try { await db.query("delete from folios where group_id = $1", [groupId]); }
+    finally { await db.end(); }
+
+    /* app.folio_for_room_charge WOULD fall back to the stay's own folio —
+       deliberately, because a charge landing nowhere is worse than one on
+       the wrong account. But a clerk who ticked "host pays" and got a
+       silent fallback would never know the tick did nothing. */
+    const res = await post(`/5EL/stays/${routedStay}/routing`, { toGroup: true });
+    expect(res.status).toBe(409);
+    expect(((await res.json()) as { reason: string }).reason)
+      .toMatch(/no open master folio/i);
+  });
+
+  it("opens the master, and opening it twice is not an error", async () => {
+    const first = await post(`/5EL/groups/${groupId}/master`, {});
+    expect(first.status, await first.clone().text()).toBe(200);
+    expect(((await first.json()) as { created: boolean }).created).toBe(true);
+
+    const again = await post(`/5EL/groups/${groupId}/master`, {});
+    expect(again.status).toBe(200);
+    const body = (await again.json()) as { created: boolean; id: string };
+    expect(body.created).toBe(false);
+    expect(body.id).toBeTruthy();
+  });
+
+  it("routes the room once there is somewhere to route it to", async () => {
+    const res = await post(`/5EL/stays/${routedStay}/routing`, { toGroup: true });
+    expect(res.status, await res.clone().text()).toBe(200);
+    expect(((await res.json()) as { routed: boolean }).routed).toBe(true);
+  });
+
+  it("keeps the two balances apart", async () => {
+    const res = await as(`/5EL/groups/${groupId}`);
+    expect(res.status).toBe(200);
+    const body = (await res.json()) as {
+      rooms: { routed: boolean }[];
+      master: { balance: number } | null;
+      guestBalance: number;
+    };
+    expect(body.master).not.toBeNull();
+    expect(body.rooms.some((r) => r.routed)).toBe(true);
+    /* Two figures, never summed into one. What the host owes and what the
+       guests owe are collected from different people. */
+    expect(typeof body.guestBalance).toBe("number");
+    expect(typeof body.master!.balance).toBe("number");
+  });
+});

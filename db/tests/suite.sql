@@ -3153,3 +3153,178 @@ begin
   select count(*) into n from hotels where code = 'AMD';
   perform test.ok('amend stay','the fixture does not outlive the test', n = 0);
 end $$;
+
+
+-- =============================================================================
+-- Group billing  (056)
+-- =============================================================================
+-- The assertion that matters is the one about the night audit's idempotency
+-- check. Per FOLIO it is correct while every stay has its own; point three
+-- rooms at one master and it charges the first and skips the rest, every
+-- night, while the run's summary reports what it posted and looks fine.
+-- =============================================================================
+do $$
+declare
+  v_hotel uuid; v_staff uuid; v_type uuid; v_guest uuid;
+  v_group uuid; v_master uuid;
+  v_a uuid; v_b uuid; v_c uuid; v_fa uuid; v_fb uuid; v_fc uuid;
+  n int; bal numeric; f uuid; d date;
+begin
+  select id into v_staff from staff limit 1;
+  d := date '2026-08-10';
+
+  insert into hotels (code, name, city, timezone)
+  values ('GRP', 'Group fixture', 'Akkalkot', 'Asia/Kolkata')
+  returning id into v_hotel;
+  insert into staff_hotels (staff_id, hotel_id, role)
+  values (v_staff, v_hotel, 'gm') on conflict do nothing;
+
+  insert into room_types (hotel_id, code, name, base_occupancy, max_occupancy,
+                          base_rate, sort_order)
+  values (v_hotel, 'STD', 'Standard', 2, 3, null, 1) returning id into v_type;
+
+  insert into guests (full_name) values ('Group fixture guest')
+  returning id into v_guest;
+
+  insert into reservation_groups (name, lead_hotel_id)
+  values ('Sharma Wedding fixture', v_hotel) returning id into v_group;
+
+  -- three rooms in the group
+  insert into reservations (hotel_id, guest_id, room_type_id, reference,
+                            check_in, check_out, agreed_rate, status, group_id,
+                            route_room_to_group)
+  values (v_hotel, v_guest, v_type, 'GRP-A', d, d + 3, 3000, 'checked_in',
+          v_group, true) returning id into v_a;
+  insert into reservations (hotel_id, guest_id, room_type_id, reference,
+                            check_in, check_out, agreed_rate, status, group_id,
+                            route_room_to_group)
+  values (v_hotel, v_guest, v_type, 'GRP-B', d, d + 3, 3000, 'checked_in',
+          v_group, true) returning id into v_b;
+  -- the couple's own room, settled by them
+  insert into reservations (hotel_id, guest_id, room_type_id, reference,
+                            check_in, check_out, agreed_rate, status, group_id,
+                            route_room_to_group)
+  values (v_hotel, v_guest, v_type, 'GRP-C', d, d + 3, 3000, 'checked_in',
+          v_group, false) returning id into v_c;
+
+  insert into folios (hotel_id, reservation_id) values (v_hotel, v_a) returning id into v_fa;
+  insert into folios (hotel_id, reservation_id) values (v_hotel, v_b) returning id into v_fb;
+  insert into folios (hotel_id, reservation_id) values (v_hotel, v_c) returning id into v_fc;
+  insert into folios (hotel_id, group_id) values (v_hotel, v_group) returning id into v_master;
+
+  -- ---------- a folio belongs to exactly one thing ----------
+  perform test.raises('group billing','a folio attached to neither is refused',
+    format($q$insert into folios (hotel_id) values (%L)$q$, v_hotel), '23514');
+
+  perform test.raises('group billing','and one attached to both',
+    format($q$insert into folios (hotel_id, reservation_id, group_id)
+              values (%L,%L,%L)$q$, v_hotel, v_a, v_group), '23514');
+
+  perform test.raises('group billing','a group has one open master, not two',
+    format($q$insert into folios (hotel_id, group_id) values (%L,%L)$q$,
+           v_hotel, v_group), '23505');
+
+  -- ---------- where a room charge goes ----------
+  perform test.ok('group billing','a routed stay charges the master',
+    app.folio_for_room_charge(v_a) = v_master);
+  perform test.ok('group billing','an unrouted one charges its own folio',
+    app.folio_for_room_charge(v_c) = v_fc);
+
+  update reservations set group_id = null, route_room_to_group = false where id = v_b;
+  perform test.ok('group billing','and a stay in no group charges its own',
+    app.folio_for_room_charge(v_b) = v_fb);
+  update reservations set group_id = v_group, route_room_to_group = true where id = v_b;
+
+  -- A charge must always land somewhere. Closing the master must not make
+  -- the charge vanish — silently posting nothing is worse than posting to
+  -- the wrong account, because nobody ever sees it.
+  update folios set status = 'closed' where id = v_master;
+  perform test.ok('group billing','a closed master falls back, never to null',
+    app.folio_for_room_charge(v_a) = v_fa);
+  update folios set status = 'open' where id = v_master;
+
+  -- ---------- THE TRAP ----------
+  -- Two routed rooms, one master, one night. The old check asked whether the
+  -- FOLIO held a room charge tonight, so the second room was skipped.
+  insert into folio_postings (hotel_id, folio_id, reservation_id, business_date,
+                              category, description, amount, tax_rate,
+                              tax_amount, source_type, posted_by)
+  values (v_hotel, v_master, v_a, d, 'room', 'Room 101 · 1 night',
+          3000, 12, 360, 'night_audit', v_staff);
+
+  select count(*) into n
+    from folio_postings fp
+   where fp.folio_id = v_master and fp.category = 'room' and fp.business_date = d;
+  perform test.ok('group billing','the master holds room A''s charge', n = 1);
+
+  -- Per FOLIO this says "already charged" and skips room B for ever.
+  select count(*) into n
+    from folio_postings fp
+   where fp.reservation_id = v_b and fp.category = 'room' and fp.business_date = d;
+  perform test.ok('group billing','but room B has NOT been charged tonight',
+    n = 0, 'per stay, not per folio — otherwise eleven of twelve rooms are free');
+
+  insert into folio_postings (hotel_id, folio_id, reservation_id, business_date,
+                              category, description, amount, tax_rate,
+                              tax_amount, source_type, posted_by)
+  values (v_hotel, v_master, v_b, d, 'room', 'Room 102 · 1 night',
+          3000, 12, 360, 'night_audit', v_staff);
+
+  select sum(amount + tax_amount) into bal
+    from folio_postings where folio_id = v_master;
+  perform test.ok('group billing','so the master carries both rooms',
+    bal = 6720.00, 'two rooms at 3000 + 12%; got ' || bal);
+
+  -- ---------- extras stay with the guest ----------
+  -- A bar tab follows whoever signed for it. Routing is room charges only.
+  insert into folio_postings (hotel_id, folio_id, reservation_id, business_date,
+                              category, description, amount, tax_rate,
+                              tax_amount, source_type, posted_by)
+  values (v_hotel, v_fa, v_a, d, 'beverage', 'Bar', 800, 18, 144, 'pos', v_staff);
+
+  select sum(amount + tax_amount) into bal
+    from folio_postings where folio_id = v_master;
+  perform test.ok('group billing','and the master is untouched by a bar tab',
+    bal = 6720.00, 'got ' || bal);
+
+  -- ---------- the panel ----------
+  select count(*) into n from app.group_rooms(v_hotel, v_group);
+  perform test.ok('group billing','the panel lists every room in the group', n = 3);
+
+  select balance into bal from app.group_rooms(v_hotel, v_group)
+   where reference = 'GRP-A';
+  -- The stay's OWN balance: the bar tab only. Its room charge is the host's.
+  perform test.ok('group billing','a routed room owes only its extras',
+    bal = 944.00, 'the room charge is on the master; got ' || bal);
+
+  select count(*) into n from app.group_rooms(v_hotel, v_group) where routed;
+  perform test.ok('group billing','and the panel says which rooms are routed',
+    n = 2);
+
+  update reservations set status = 'void', void_reason = 'fixture',
+         voided_by = v_staff, voided_at = now() where id = v_c;
+  select count(*) into n from app.group_rooms(v_hotel, v_group);
+  perform test.ok('group billing','a void booking is not one of the rooms',
+    n = 2, 'it never happened');
+
+  -- ---------- teardown ----------
+  alter table folio_postings disable trigger folio_postings_append_only;
+  delete from folio_postings where hotel_id = v_hotel;
+  alter table folio_postings enable trigger folio_postings_append_only;
+  delete from folios where hotel_id = v_hotel;
+  delete from room_assignments where hotel_id = v_hotel;
+  delete from reservations where hotel_id = v_hotel;
+  delete from reservation_groups where id = v_group;
+  alter table guests disable trigger guests_no_delete;
+  delete from guests where id = v_guest;
+  alter table guests enable trigger guests_no_delete;
+  delete from room_types where hotel_id = v_hotel;
+  delete from staff_hotels where hotel_id = v_hotel;
+
+  alter table hotels disable trigger hotels_no_delete;
+  delete from hotels where id = v_hotel;
+  alter table hotels enable trigger hotels_no_delete;
+
+  select count(*) into n from hotels where code = 'GRP';
+  perform test.ok('group billing','the fixture does not outlive the test', n = 0);
+end $$;

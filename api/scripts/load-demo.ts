@@ -158,6 +158,28 @@ async function main() {
           where hotel_id = (select id from hotels where code = $1)`,
         [HOTEL_CODE],
       );
+      /* A MASTER FOLIO NAMES THE GROUP TOO (056). Unlinking the
+         reservations is no longer enough: a group's host account points
+         straight at it, and `folios.group_id` has no cascade — deliberately,
+         because a financial record should not disappear because something
+         upstream was tidied. It carries hotel_id, so it WOULD have gone with
+         the hotel; the hotel is dropped after the group, so it has to go
+         first and explicitly. Its postings go with it, and the ledger's
+         append-only trigger is already lifted for the whole teardown above,
+         and re-arming it here breaks every delete that comes after. */
+      await client.query(
+        `delete from folio_postings where folio_id in (
+           select f.id from folios f
+            join reservation_groups g on g.id = f.group_id
+           where g.lead_hotel_id = (select id from hotels where code = $1))`,
+        [HOTEL_CODE],
+      );
+      await client.query(
+        `delete from folios where group_id in (
+           select id from reservation_groups
+            where lead_hotel_id = (select id from hotels where code = $1))`,
+        [HOTEL_CODE],
+      );
       await client.query(
         `delete from reservation_groups
           where lead_hotel_id = (select id from hotels where code = $1)`,

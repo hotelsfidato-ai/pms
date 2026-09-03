@@ -2098,6 +2098,54 @@ agree and a trigger enforces it, the order of the writes is part of the
 design** — and if the second write then fails, the caller made one
 statement, so the whole thing rolls back and the booking is untouched.
 
+### 102 · A new column with a name the join already had
+
+056 added `folio_postings.reservation_id`. Four queries did:
+
+```sql
+select fp.*, f.reservation_id from folio_postings fp join folios f ...
+```
+
+`fp.*` now carries the same name, so the CTE had two columns called
+`reservation_id` and **every later reference became ambiguous**. Three
+endpoints broke at once — the folio list, the notification count and
+the night-audit checklist — from a migration that only added a column.
+
+One test caught it. The other two endpoints have no coverage, which is
+why the error surfaced in the server log rather than in a gate.
+
+**Before adding a column, grep the joins for its name.** And the fix
+was to delete the redundant half rather than alias it: the posting's
+own reservation is the better answer, because on a master folio the
+folio has none.
+
+### 103 · The backfill only fixes rows that already exist
+
+The same migration backfilled the new column from the folio. That
+handles history and nothing else: `load-demo` kept inserting postings
+without it, so the night audit's new per-stay check saw no charge and
+**charged every stay a second time**.
+
+A backfill is a one-time statement; the invariant it establishes needs
+something that keeps holding. A `before insert` trigger now fills the
+column from the folio, so no writer — present or future, application or
+script — can produce a posting the audit cannot see.
+
+**If a column must always be set, make the database set it.** Two tests
+failed within a minute of the check changing, which is the only reason
+this was not shipped.
+
+### 104 · Re-enabling a guard halfway through a teardown
+
+`load-demo` disables `folio_postings_append_only` for its whole
+teardown and re-enables it at the end. I added a delete in the middle
+with its own disable/enable pair — and the `enable` re-armed the
+trigger for every delete that came after, breaking the load.
+
+**Check whether the guard is already lifted before lifting it.** A
+symmetrical-looking pair is not safe when the outer scope owns the same
+switch.
+
 ## Verification traps
 
 ### Never test a Tailwind utility by injecting the class at runtime

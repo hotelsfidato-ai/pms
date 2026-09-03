@@ -223,12 +223,18 @@ nightAudit.post("/:code/night-audit/run", async (c) => {
 
     /* ── One night's room charge, per in-house stay ────────────────── */
     const { rows: stays } = await client.query<{
-      folio_id: string; room: string; rate: string; comp: boolean;
+      reservation_id: string; folio_id: string; room: string;
+      rate: string; comp: boolean; routed: boolean;
     }>(
-      `select f.id as folio_id,
+      `select r.id::text as reservation_id,
+              /* WHERE THE CHARGE GOES, in one definition. A stay routed to
+                 its group posts to the master folio; everything else posts
+                 to its own. */
+              app.folio_for_room_charge(r.id)::text as folio_id,
               coalesce(rm.number, '—') as room,
               r.agreed_rate::text as rate,
-              r.is_complimentary as comp
+              r.is_complimentary as comp,
+              (r.route_room_to_group and r.group_id is not null) as routed
          from reservations r
          join folios f on f.reservation_id = r.id and f.status = 'open'
          left join room_assignments ra on ra.reservation_id = r.id
@@ -239,13 +245,20 @@ nightAudit.post("/:code/night-audit/run", async (c) => {
           -- A day-use room is sold and vacated inside one day. It has
           -- no night to charge for.
           and not r.is_day_use
-          -- Not already charged for tonight. This is what makes an
-          -- interrupted audit safe to restart: the charge is the thing
-          -- that must not happen twice, so the check is on the charge,
-          -- not on the run.
+          /* Not already charged for tonight. This is what makes an
+             interrupted audit safe to restart: the charge is the thing
+             that must not happen twice, so the check is on the charge,
+             not on the run.
+
+             PER STAY, NOT PER FOLIO. It used to ask whether the folio
+             held a room charge for tonight, which is identical while
+             every stay has its own folio — and silently wrong the moment
+             a group routes twelve rooms to one master: charge the first,
+             skip the other eleven, every night, and the run's summary
+             reports what it posted so nothing looks amiss. */
           and not exists (
             select 1 from folio_postings fp
-             where fp.folio_id = f.id
+             where fp.reservation_id = r.id
                and fp.category = 'room'
                and fp.business_date = $2::date
           )
@@ -274,11 +287,13 @@ nightAudit.post("/:code/night-audit/run", async (c) => {
 
       await client.query(
         `insert into folio_postings
-           (hotel_id, folio_id, business_date, category, description,
-            amount, tax_rate, tax_amount, source_type, posted_by)
-         values ($1,$2,$3::date,'room',$4,$5,$6,$7,'night_audit',
+           (hotel_id, folio_id, reservation_id, business_date, category,
+            description, amount, tax_rate, tax_amount, source_type, posted_by)
+         values ($1,$2,$3,$4::date,'room',$5,$6,$7,$8,'night_audit',
                  app.current_user_id())`,
-        [hotelId, stay.folio_id, businessDate,
+        [hotelId, stay.folio_id, stay.reservation_id, businessDate,
+         /* The room number is on every line, and it has to be: a master
+            folio holding twelve of these is unreadable otherwise. */
          `Room ${stay.room} · 1 night`,
          amount, taxRate, taxAmount],
       );

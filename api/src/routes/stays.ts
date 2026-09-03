@@ -243,14 +243,27 @@ stays.get("/:code/groups", async (c) => {
       rooms: string;
       arrival: string;
       departure: string;
+      master_balance: string | null;
     }>(
       `select g.id, g.name, g.block_code,
               count(r.id)::text            as rooms,
               min(r.check_in)::text        as arrival,
-              max(r.check_out)::text       as departure
+              max(r.check_out)::text       as departure,
+              /* What the HOST owes, separately from what the guests do.
+                 Null when the group has no master folio, which is most of
+                 them — a block where everybody settles their own room
+                 needs no host account. */
+              (select sum(fp.amount + fp.tax_amount)::text
+                 from folios f
+                 join folio_postings fp on fp.folio_id = f.id
+                where f.group_id = g.id) as master_balance
          from reservation_groups g
          join reservations r on r.group_id = g.id
         where r.hotel_id = $1
+          /* A void booking never happened, so it is not one of the group's
+             rooms and must not be counted as one. Same rule 042 wrote for
+             every other count. */
+          and r.status <> 'void'
         group by g.id, g.name, g.block_code
         order by min(r.check_in)`,
       [hotelId],
@@ -264,6 +277,7 @@ stays.get("/:code/groups", async (c) => {
       rooms: Number(g.rooms),
       arrival: g.arrival,
       departure: g.departure,
+      masterBalance: g.master_balance === null ? null : Number(g.master_balance),
     }));
   });
 

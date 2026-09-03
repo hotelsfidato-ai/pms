@@ -18,6 +18,7 @@ import { pos, posAdmin, outletFor, type Outlet } from "./routes/pos.ts";
 import { till } from "./routes/till.ts";
 import { admin } from "./routes/admin.ts";
 import { rates } from "./routes/rates.ts";
+import { groups } from "./routes/groups.ts";
 import { housekeeping } from "./routes/housekeeping.ts";
 import { nightAudit } from "./routes/nightAudit.ts";
 import { invoices } from "./routes/invoices.ts";
@@ -163,6 +164,7 @@ app.use("/api/*", async (c, next) => {
 app.route("/api/hotels", hotels);
 app.route("/api/hotels", property);
 app.route("/api/hotels", stays);
+app.route("/api/hotels", groups);
 app.route("/api/hotels", folios);
 app.route("/api/hotels", operations);
 app.route("/api/hotels", statistics);

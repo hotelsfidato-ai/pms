@@ -45,7 +45,14 @@ interface FolioRow {
  */
 const FOLIO_SELECT = `
   with live as (
-    select fp.*, f.reservation_id
+    /* fp.* CARRIES reservation_id SINCE 056, so the folio's own is no longer
+       selected alongside it — two columns of one name made every later
+       reference ambiguous and broke this endpoint, the notification count and
+       the night-audit checklist together.
+
+       The posting's is the better answer anyway: on a master folio the folio
+       has no reservation, and the posting names the stay the line is for. */
+    select fp.*
       from folio_postings fp
       join folios f on f.id = fp.folio_id
      where f.hotel_id = $1
