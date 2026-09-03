@@ -17,6 +17,7 @@ import {
 import { CheckInFlow } from "@/components/flows/CheckInFlow";
 import { VoidFlow } from "@/components/flows/VoidFlow";
 import { MoveRoomFlow } from "@/components/flows/MoveRoomFlow";
+import { AmendStayFlow } from "@/components/flows/AmendStayFlow";
 import { FolioPanel } from "@/components/flows/FolioPanel";
 import { WalkInFlow } from "@/components/flows/WalkInFlow";
 import {
@@ -562,6 +563,15 @@ export default function StayViewPage() {
                     || selected.stay.status === "due-out") && (
                     <MoveRoomFlow hotelId={hotelId} stay={selected.stay}
                                   businessDate={BUSINESS_DATE} />
+                  )}
+                  {/* Dates and party size, for anything not yet over. The
+                      server refuses a departed or cancelled booking and says
+                      why, but offering a button that always fails is worse
+                      than not offering it. */}
+                  {(selected.stay.status === "due-in"
+                    || selected.stay.status === "in-house"
+                    || selected.stay.status === "due-out") && (
+                    <AmendStayFlow hotelId={hotelId} stay={selected.stay} />
                   )}
                 </div>
               </TabsContent>

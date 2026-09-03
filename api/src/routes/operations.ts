@@ -1027,6 +1027,85 @@ operations.post("/:code/stays/:id/move", async (c) => {
   return c.json(result, "ok" in result && result.ok ? 200 : 409);
 });
 
+/* ── Amending a stay ──────────────────────────────────────────────
+   Dates and party size. The room hold moves with the booking, because a
+   booking that says six nights while the room is held for four is invisible
+   on every screen until the sixth night's guest opens an occupied door.
+
+   The rate is deliberately not here. `agreed_rate` is snapshotted at booking,
+   so two extra nights are charged at the rate the guest agreed to — which is
+   what a guest expects, and changing it is somebody's decision rather than a
+   side effect of extending a stay. */
+operations.patch("/:code/stays/:id", async (c) => {
+  type Body = {
+    checkIn?: string; checkOut?: string;
+    adults?: number; children?: number;
+  };
+  const input = await c.req.json<Body>().catch(() => ({}) as Body);
+
+  const result = await withSession(c.get("subject"), async (client, session) => {
+    const hotelId = await hotelIdFor(client, c.req.param("code"));
+    if (!hotelId) return null;
+    const stayId = c.req.param("id");
+
+    /* Every field is optional and absent means UNCHANGED, so the current row
+       is read first. A PATCH that treated a missing key as null would shorten
+       a stay to nothing because a form did not send a field. */
+    const { rows: now } = await client.query<{
+      check_in: string; check_out: string;
+      adults: number; children: number; guest: string;
+    }>(
+      `select to_char(r.check_in,'YYYY-MM-DD')  as check_in,
+              to_char(r.check_out,'YYYY-MM-DD') as check_out,
+              r.adults, r.children, g.full_name as guest
+         from reservations r join guests g on g.id = r.guest_id
+        where r.id = $1 and r.hotel_id = $2`,
+      [stayId, hotelId],
+    );
+    if (!now[0]) return refuse("No such reservation.");
+
+    const checkIn  = input.checkIn  ?? now[0].check_in;
+    const checkOut = input.checkOut ?? now[0].check_out;
+    const adults   = input.adults   ?? now[0].adults;
+    const children = input.children ?? now[0].children;
+
+    try {
+      const { rows } = await client.query<{
+        nights_before: number; nights_after: number; room_held: string | null;
+      }>(
+        `select nights_before, nights_after, room_held
+           from app.amend_stay($1,$2,$3::date,$4::date,$5::smallint,$6::smallint,$7)`,
+        [hotelId, stayId, checkIn, checkOut, adults, children, session.staffId],
+      );
+
+      return {
+        ok: true as const,
+        guest: now[0].guest,
+        checkIn, checkOut, adults, children,
+        nightsBefore: rows[0]!.nights_before,
+        nightsAfter: rows[0]!.nights_after,
+        roomHeld: rows[0]!.room_held,
+      };
+    } catch (error) {
+      const e = error as { code?: string; message?: string } | undefined;
+      if (e?.code === "23P01" || e?.code === "23505") {
+        /* The room is taken for the nights being added. The booking is
+           untouched — the whole call rolled back — so the sentence says what
+           to do rather than what half-happened. */
+        return refuse(
+          `${now[0].guest} is in a room that is taken for part of ${checkIn}` +
+          ` to ${checkOut}. Move them to another room first, or pick` +
+          ` different dates.`);
+      }
+      if (e?.code === "P0001" && e.message) return refuse(e.message);
+      throw error;
+    }
+  });
+
+  if (!result) return c.json({ error: "No such property." }, 404);
+  return c.json(result, "ok" in result && result.ok ? 200 : 409);
+});
+
 operations.post("/:code/stays/:id/unassign", async (c) => {
   const result = await withSession(c.get("subject"), async (client) => {
     const hotelId = await hotelIdFor(client, c.req.param("code"));

@@ -734,7 +734,7 @@ retried. Ledger nets to zero, room revenue still ₹4,19,578.76.
 12 Hardening and go-live             █████████░░░  + launch.sh, preflight, nginx
 13 POS upgrade — Petpooja-informed   ████████████  12 of 12 — the day end closes
 14 Modules + banquet                  █░░░░░░░░░░░  POS toggle whole; banquet is the other 11
-15 PMS upgrade — eZee-informed        ██████░░░░░░  grids and the room move
+15 PMS upgrade — eZee-informed        ███████░░░░░  grids, room move, amend stay
 ```
 
 **Stage 13 reads 4, and those four are finished** — database, API and screen.
@@ -835,7 +835,11 @@ moved: twenty screenshots of Petpooja set a higher bar, and two module
 requirements arrived with it. Lowering stage 7 would misreport what happened, so
 the new work is its own row. Detail in `POS-PROGRESS.md`.
 
-**136 of 180 — 76%.** Add the filled blocks above and divide by 180 — fifteen stages of twelve. That sum is the number; it is not typed separately, because it was for three audits running and drifted to "about 90%" while the bars said 70. It moved from 119 when stage 13’s three unfounded blocks came off, to 133 when the day end finished stage 13, to 134 when stage 3 got its service account, to 135 when the rate calendar gave stage 15's three grids their screens, and to 136 with the room move.
+**137 of 180 — 76%.** Add the filled blocks above and divide by 180 — fifteen stages of twelve. That sum is the number; it is not typed separately, because it was for three audits running and drifted to "about 90%" while the bars said 70. It moved from 119 when stage 13’s three unfounded blocks came off, to 133 when the day end finished stage 13, to 134 when stage 3 got its service account, to 135 when the rate calendar gave stage 15's three grids their screens, to 136 with the room move, and to 137 with amend stay.
+
+**Amend stay was the one the backlog called dangerous, and it was right.** Until 055 the interface could create a booking and cancel one, with nothing in between — no path to add a night. The danger is that the ROOM HOLD has to move with the booking: a reservation saying six nights while `room_assignments` holds four looks correct on every screen until the sixth night's guest opens an occupied door. If the room is taken for the nights being added, the whole call rolls back and the refusal names it.
+
+It also refuses a departure before a night already charged. The ledger is append-only, so that posting cannot quietly vanish — and should not, because the guest may owe it. Reverse it on the folio first, where the reason sits beside it.
 
 **Room move was the highest-value item on the backlog and it needed no migration to the model.** `room_assignments` has been keyed by DATE RANGE since 011 and already carried `released_at` and a `reason` listing move, upgrade, downgrade and fault. What was missing was the act: 054 splits the assignment at a date, the old room keeping the nights already slept in it.
 

@@ -517,6 +517,44 @@ export async function moveRoom(
 }
 
 /**
+ * Changes a booking's dates or party size.
+ *
+ * Every field is optional and absent means UNCHANGED — the server
+ * reads the current row and fills the gaps, so a form that does not
+ * send a field cannot shorten a stay to nothing.
+ *
+ * The room hold moves with the booking. If the room is taken for the
+ * nights being added, nothing changes at all: the whole call rolls
+ * back, and the refusal says to move them first.
+ *
+ * The rate is deliberately not amendable here. `agreed_rate` is
+ * snapshotted at booking, so extra nights are charged at the rate the
+ * guest agreed to.
+ */
+export async function amendStay(
+  hotelId: string, stayId: string,
+  input: { checkIn?: string; checkOut?: string;
+           adults?: number; children?: number },
+): Promise<
+  | { ok: true; guest: string; checkIn: string; checkOut: string;
+      adults: number; children: number;
+      nightsBefore: number; nightsAfter: number; roomHeld: string | null }
+  | { ok: false; reason: string }
+> {
+  try {
+    return await api(`/api/hotels/${hotelId}/stays/${stayId}`, {
+      method: "PATCH", body: JSON.stringify(input),
+    });
+  } catch (error) {
+    if (error instanceof ApiError) {
+      const payload = error.body as { reason?: string } | undefined;
+      return { ok: false, reason: payload?.reason ?? error.message };
+    }
+    throw error;
+  }
+}
+
+/**
  * Takes a booking out of its room without putting it in another.
  * The assignment row stays — releasing is not deleting, and "who was
  * in 203 last Tuesday" has to keep an answer.

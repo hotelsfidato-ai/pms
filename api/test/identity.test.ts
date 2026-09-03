@@ -64,7 +64,45 @@ beforeAll(async () => {
   }
 });
 
-afterAll(async () => { await closePool(); });
+/* Every fixture here is tagged `ID-<pid>`, and until this existed NONE of
+   them were cleaned up: each run left reservations — several of them
+   CHECKED IN — holding real rooms in the demo database. The damage is not
+   the rows, it is that they hold inventory: a later amendment or move is
+   then refused because a room is "taken", by a guest who does not exist.
+
+   Same shape as defect 54. A test that writes to the demo owns putting it
+   back. */
+afterAll(async () => {
+  const db = await admin();
+  try {
+    const mine = `${tag}-%`;
+    const guests = `${tag} guest %`;
+
+    await db.query("alter table folio_postings disable trigger folio_postings_append_only");
+    await db.query(
+      `delete from folio_postings where folio_id in (
+         select f.id from folios f join reservations r on r.id = f.reservation_id
+          where r.reference like $1)`, [mine]);
+    await db.query("alter table folio_postings enable trigger folio_postings_append_only");
+
+    await db.query(
+      `delete from folios where reservation_id in (
+         select id from reservations where reference like $1)`, [mine]);
+    await db.query(
+      `delete from room_assignments where reservation_id in (
+         select id from reservations where reference like $1)`, [mine]);
+    await db.query("delete from guest_documents where guest_id in (select id from guests where full_name like $1)", [guests])
+      .catch(() => undefined);
+    await db.query("delete from reservations where reference like $1", [mine]);
+
+    await db.query("alter table guests disable trigger guests_no_delete");
+    await db.query("delete from guests where full_name like $1", [guests]);
+    await db.query("alter table guests enable trigger guests_no_delete");
+  } finally {
+    await db.end();
+  }
+  await closePool();
+});
 
 /**
  * Create a confirmed arrival at Pune for today, with a clean free room

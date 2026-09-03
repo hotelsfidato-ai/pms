@@ -2976,3 +2976,180 @@ begin
   select count(*) into n from hotels where code = 'MVT';
   perform test.ok('room move','the fixture does not outlive the test', n = 0);
 end $$;
+
+
+-- =============================================================================
+-- Amending a stay  (055)
+-- =============================================================================
+-- The room hold moving WITH the booking is the assertion that matters. A
+-- booking that says six nights while the room is held for four is invisible on
+-- every screen until the sixth night's guest opens an occupied door.
+-- =============================================================================
+do $$
+declare
+  v_hotel uuid; v_staff uuid; v_type uuid; v_small uuid;
+  v_101 uuid; v_102 uuid; v_guest uuid; v_res uuid; v_other uuid; v_folio uuid;
+  n int; before_n int; after_n int; v_room text; d date;
+begin
+  select id into v_staff from staff limit 1;
+
+  insert into hotels (code, name, city, timezone)
+  values ('AMD', 'Amend fixture', 'Akkalkot', 'Asia/Kolkata')
+  returning id into v_hotel;
+  insert into staff_hotels (staff_id, hotel_id, role)
+  values (v_staff, v_hotel, 'gm') on conflict do nothing;
+
+  insert into room_types (hotel_id, code, name, base_occupancy, max_occupancy,
+                          base_rate, sort_order)
+  values (v_hotel, 'STD', 'Standard', 2, 3, null, 1) returning id into v_type;
+  insert into room_types (hotel_id, code, name, base_occupancy, max_occupancy,
+                          base_rate, sort_order)
+  values (v_hotel, 'SGL', 'Single', 1, 1, null, 2) returning id into v_small;
+
+  insert into rooms (hotel_id, room_type_id, number, floor, is_active)
+  values (v_hotel, v_type, '101', 1, true) returning id into v_101;
+  insert into rooms (hotel_id, room_type_id, number, floor, is_active)
+  values (v_hotel, v_type, '102', 1, true) returning id into v_102;
+
+  insert into guests (full_name) values ('Amend fixture guest')
+  returning id into v_guest;
+
+  insert into reservations (hotel_id, guest_id, room_type_id, reference,
+                            check_in, check_out, adults, children,
+                            agreed_rate, status)
+  values (v_hotel, v_guest, v_type, 'AMD-1',
+          date '2026-08-10', date '2026-08-14', 2, 0, 3000, 'confirmed')
+  returning id into v_res;
+
+  insert into room_assignments (hotel_id, reservation_id, room_id,
+                                from_date, to_date, reason)
+  values (v_hotel, v_res, v_101, date '2026-08-10', date '2026-08-14', 'arrival');
+
+  -- ---------- extending ----------
+  select m.nights_before, m.nights_after, m.room_held
+    into before_n, after_n, v_room
+    from app.amend_stay(v_hotel, v_res, date '2026-08-10', date '2026-08-16',
+                        2::smallint, 0::smallint, v_staff) m;
+
+  perform test.ok('amend stay','four nights become six',
+    before_n = 4 and after_n = 6, before_n || ' -> ' || after_n);
+  perform test.ok('amend stay','and it says which room was held', v_room = '101');
+
+  select to_date into d from room_assignments
+   where reservation_id = v_res and released_at is null;
+  -- THE ONE THAT MATTERS. A booking saying six nights while the room is held
+  -- for four is invisible until somebody opens an occupied door.
+  perform test.ok('amend stay','the room hold moves with the booking',
+    d = date '2026-08-16', 'got ' || d);
+
+  -- ---------- the room being taken refuses the extension ----------
+  insert into reservations (hotel_id, guest_id, room_type_id, reference,
+                            check_in, check_out, agreed_rate, status)
+  values (v_hotel, v_guest, v_type, 'AMD-2',
+          date '2026-08-20', date '2026-08-24', 3000, 'confirmed')
+  returning id into v_other;
+  insert into room_assignments (hotel_id, reservation_id, room_id,
+                                from_date, to_date, reason)
+  values (v_hotel, v_other, v_101, date '2026-08-20', date '2026-08-24', 'arrival');
+
+  perform test.raises('amend stay','extending into a taken room is refused',
+    format($q$select app.amend_stay(%L,%L,date '2026-08-10',date '2026-08-22',
+                                    2::smallint,0::smallint,%L)$q$,
+           v_hotel, v_res, v_staff), '23P01');
+
+  -- And the booking is unchanged, because the whole thing rolled back.
+  select check_out into d from reservations where id = v_res;
+  perform test.ok('amend stay','and the booking is left alone when it is',
+    d = date '2026-08-16', 'got ' || d);
+
+  -- ---------- shortening below a charged night ----------
+  insert into folios (hotel_id, reservation_id) values (v_hotel, v_res)
+  returning id into v_folio;
+  insert into folio_postings (hotel_id, folio_id, business_date, category,
+                              description, amount, tax_rate, tax_amount,
+                              source_type, posted_by)
+  values (v_hotel, v_folio, date '2026-08-12', 'room', 'Room charge',
+          3000, 12, 360, 'night_audit', v_staff);
+
+  perform test.raises('amend stay','leaving before a charged night is refused',
+    format($q$select app.amend_stay(%L,%L,date '2026-08-10',date '2026-08-12',
+                                    2::smallint,0::smallint,%L)$q$,
+           v_hotel, v_res, v_staff), 'P0001');
+
+  -- Departing on the 13th still covers the night of the 12th, so it is fine.
+  select m.nights_after into after_n
+    from app.amend_stay(v_hotel, v_res, date '2026-08-10', date '2026-08-13',
+                        2::smallint, 0::smallint, v_staff) m;
+  perform test.ok('amend stay','but leaving the morning after it is fine',
+    after_n = 3, 'a charge dated the 12th pays for the night of the 12th');
+
+  -- ---------- a reversed charge stops blocking ----------
+  insert into folio_postings (hotel_id, folio_id, business_date, category,
+                              description, amount, tax_rate, tax_amount,
+                              source_type, posted_by, reverses_id)
+  select v_hotel, v_folio, date '2026-08-12', 'room', 'Reversal',
+         -3000, 12, -360, 'night_audit', v_staff, fp.id
+    from folio_postings fp
+   where fp.folio_id = v_folio and fp.reverses_id is null;
+
+  select m.nights_after into after_n
+    from app.amend_stay(v_hotel, v_res, date '2026-08-10', date '2026-08-12',
+                        2::smallint, 0::smallint, v_staff) m;
+  -- There is no `reversed` flag; a reversal is its own row. Reading the
+  -- original as still live would keep refusing a perfectly good amendment.
+  perform test.ok('amend stay','a reversed charge no longer blocks it',
+    after_n = 2, 'got ' || after_n);
+
+  -- ---------- arrival is a fact once it has happened ----------
+  update reservations set status = 'checked_in' where id = v_res;
+  perform test.raises('amend stay','a checked-in arrival cannot move',
+    format($q$select app.amend_stay(%L,%L,date '2026-08-11',date '2026-08-14',
+                                    2::smallint,0::smallint,%L)$q$,
+           v_hotel, v_res, v_staff), 'P0001');
+
+  -- ---------- occupancy ----------
+  perform test.raises('amend stay','more people than the room sleeps is refused',
+    format($q$select app.amend_stay(%L,%L,date '2026-08-10',date '2026-08-14',
+                                    3::smallint,2::smallint,%L)$q$,
+           v_hotel, v_res, v_staff), 'P0001');
+
+  perform test.raises('amend stay','and a stay with no adults',
+    format($q$select app.amend_stay(%L,%L,date '2026-08-10',date '2026-08-14',
+                                    0::smallint,1::smallint,%L)$q$,
+           v_hotel, v_res, v_staff), 'P0001');
+
+  perform test.raises('amend stay','and a departure before the arrival',
+    format($q$select app.amend_stay(%L,%L,date '2026-08-14',date '2026-08-10',
+                                    2::smallint,0::smallint,%L)$q$,
+           v_hotel, v_res, v_staff), 'P0001');
+
+  -- ---------- a booking that is over ----------
+  update reservations set status = 'checked_out' where id = v_other;
+  perform test.raises('amend stay','a departed booking is history',
+    format($q$select app.amend_stay(%L,%L,date '2026-08-20',date '2026-08-26',
+                                    2::smallint,0::smallint,%L)$q$,
+           v_hotel, v_other, v_staff), 'P0001');
+
+  -- ---------- teardown ----------
+  /* The ledger is append-only and says so with a trigger. A fixture is the
+     one exception, and it names the exception rather than working around it. */
+  alter table folio_postings disable trigger folio_postings_append_only;
+  delete from folio_postings where hotel_id = v_hotel;
+  alter table folio_postings enable trigger folio_postings_append_only;
+  delete from folios where hotel_id = v_hotel;
+  delete from room_assignments where hotel_id = v_hotel;
+  delete from reservations where hotel_id = v_hotel;
+  alter table guests disable trigger guests_no_delete;
+  delete from guests where id = v_guest;
+  alter table guests enable trigger guests_no_delete;
+  delete from rooms where hotel_id = v_hotel;
+  delete from room_types where hotel_id = v_hotel;
+  delete from staff_hotels where hotel_id = v_hotel;
+
+  alter table hotels disable trigger hotels_no_delete;
+  delete from hotels where id = v_hotel;
+  alter table hotels enable trigger hotels_no_delete;
+
+  select count(*) into n from hotels where code = 'AMD';
+  perform test.ok('amend stay','the fixture does not outlive the test', n = 0);
+end $$;

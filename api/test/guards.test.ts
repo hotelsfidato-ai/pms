@@ -551,3 +551,132 @@ describe("moving a guest between rooms", () => {
       .toMatch(/not in a room/i);
   });
 });
+
+/* ══════════════════════════════════════════════════════════════════
+   AMENDING A STAY
+
+   The room hold moving WITH the booking is the assertion that
+   matters. A booking claiming six nights while the room is held for
+   four is invisible on every screen until somebody opens an occupied
+   door.
+   ══════════════════════════════════════════════════════════════════ */
+
+describe("amending a stay", () => {
+  let stayId: string;
+  let guestId: string;
+  let roomId: string;
+
+  const patch = (body: unknown) =>
+    app.request(`/api/hotels/5EL/stays/${stayId}`, {
+      method: "PATCH",
+      headers: {
+        "x-dev-staff-id": ownerStaffId,
+        "content-type": "application/json",
+      },
+      body: JSON.stringify(body),
+    });
+
+  const held = async () => {
+    const db = await admin();
+    try {
+      const { rows } = await db.query<{ to: string }>(
+        `select to_date::text as to from room_assignments
+          where reservation_id = $1 and released_at is null`, [stayId]);
+      return rows[0]?.to ?? null;
+    } finally { await db.end(); }
+  };
+
+  beforeAll(async () => {
+    const db = await admin();
+    try {
+      const { rows: h } = await db.query<{ id: string }>(
+        "select id from hotels where code = '5EL'");
+      const { rows: rm } = await db.query<{ id: string }>(
+        `select id::text from rooms
+          where hotel_id = $1 and is_active
+            and housekeeping_status <> 'out_of_service'
+          order by number desc limit 1`, [h[0]!.id]);
+      roomId = rm[0]!.id;
+
+      const { rows: g } = await db.query<{ id: string }>(
+        `insert into guests (full_name) values ('Amend Test Guest')
+         returning id::text`);
+      guestId = g[0]!.id;
+
+      const { rows: r } = await db.query<{ id: string }>(
+        `insert into reservations (hotel_id, guest_id, room_type_id, reference,
+                                   check_in, check_out, adults, children,
+                                   agreed_rate, status)
+         select $1, $2, rm.room_type_id, 'AMENDTEST-1',
+                date '2027-05-01', date '2027-05-05', 2, 0, 3000, 'confirmed'
+           from rooms rm where rm.id = $3
+         returning id::text`, [h[0]!.id, guestId, roomId]);
+      stayId = r[0]!.id;
+
+      await db.query(
+        `insert into room_assignments (hotel_id, reservation_id, room_id,
+                                       from_date, to_date, reason)
+         values ($1,$2,$3,date '2027-05-01',date '2027-05-05','arrival')`,
+        [h[0]!.id, stayId, roomId]);
+    } finally { await db.end(); }
+  });
+
+  afterAll(async () => {
+    const db = await admin();
+    try {
+      await db.query("delete from room_assignments where reservation_id = $1", [stayId]);
+      await db.query("delete from reservations where id = $1", [stayId]);
+      await db.query("alter table guests disable trigger guests_no_delete");
+      await db.query("delete from guests where id = $1", [guestId]);
+      await db.query("alter table guests enable trigger guests_no_delete");
+    } finally { await db.end(); }
+  });
+
+  it("extends the stay and the room hold together", async () => {
+    const res = await patch({ checkOut: "2027-05-08" });
+    expect(res.status, await res.clone().text()).toBe(200);
+    const body = (await res.json()) as {
+      nightsBefore: number; nightsAfter: number; roomHeld: string | null;
+    };
+    expect(body.nightsBefore).toBe(4);
+    expect(body.nightsAfter).toBe(7);
+    expect(body.roomHeld).toBeTruthy();
+
+    /* The assertion this whole feature exists for. */
+    expect(await held()).toBe("2027-05-08");
+  });
+
+  it("treats a missing field as unchanged, not as null", async () => {
+    /* A PATCH that read a missing key as null would shorten the stay to
+       nothing because a form did not send a field. */
+    const res = await patch({ adults: 3 });
+    expect(res.status, await res.clone().text()).toBe(200);
+    const body = (await res.json()) as { checkOut: string; adults: number };
+    expect(body.checkOut).toBe("2027-05-08");
+    expect(body.adults).toBe(3);
+  });
+
+  it("refuses more people than the room type sleeps, by name", async () => {
+    const res = await patch({ adults: 9, children: 4 });
+    expect(res.status).toBe(409);
+    expect(((await res.json()) as { reason: string }).reason)
+      .toMatch(/will not fit|sleeps/i);
+  });
+
+  it("refuses a departure before the arrival", async () => {
+    const res = await patch({ checkOut: "2027-04-01" });
+    expect(res.status).toBe(409);
+    expect(((await res.json()) as { reason: string }).reason)
+      .toMatch(/ends after it starts/i);
+  });
+
+  it("leaves everything alone when it refuses", async () => {
+    expect(await held()).toBe("2027-05-08");
+    const db = await admin();
+    try {
+      const { rows } = await db.query<{ out: string }>(
+        `select check_out::text as out from reservations where id = $1`, [stayId]);
+      expect(rows[0]!.out).toBe("2027-05-08");
+    } finally { await db.end(); }
+  });
+});

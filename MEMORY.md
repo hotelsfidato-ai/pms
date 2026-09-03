@@ -2059,6 +2059,45 @@ Checks now run date-first. **When several refusals are all true, the
 order they are tested in decides which one the person reads**, and that
 choice is design, not implementation detail.
 
+### 100 · A test file that had never cleaned up after itself
+
+`api/test/identity.test.ts` ended with:
+
+```ts
+afterAll(async () => { await closePool(); });
+```
+
+It closed the pool and deleted nothing. Every run since it was written
+left reservations in the DEMO database — five of them found, **three
+checked in** — holding rooms 201, 204 and 205.
+
+The rows are not the damage. **They hold inventory**, so a later
+amendment or room move is refused because a room is "taken" by a guest
+who does not exist, and the refusal is perfectly worded and completely
+misleading. This is defect 54 again, in a file nobody had looked at.
+
+Found while investigating why an amendment was refused — the refusal
+turned out to be legitimate, and the debris turned up beside it.
+
+**A test that writes to the demo owns putting it back.** The fixtures
+were already tagged `ID-<pid>`, so the teardown had everything it
+needed and simply did not exist.
+
+Worth checking the other files the same way rather than waiting for the
+next confusing refusal.
+
+### 101 · Order of operations against a guard
+
+`app.amend_stay` resized the room hold before moving the booking, and a
+trigger keeps every assignment inside its reservation's dates — so
+extending a stay raised *"assignment 10th..16th falls outside the
+booking 10th..14th"*, refusing the exact thing being asked for.
+
+The booking moves first, then the hold follows. **When two rows must
+agree and a trigger enforces it, the order of the writes is part of the
+design** — and if the second write then fails, the caller made one
+statement, so the whole thing rolls back and the booking is untouched.
+
 ## Verification traps
 
 ### Never test a Tailwind utility by injecting the class at runtime
