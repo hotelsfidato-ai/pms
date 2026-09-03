@@ -495,6 +495,8 @@ function PriceDialog({ hotelId, target, onClose, onDone }: {
     target.price === null ? "" : String(target.price));
   const [until, setUntil] = useState(target.date);
   const [label, setLabel] = useState("");
+  const [extraAdult, setExtraAdult] = useState("");
+  const [extraChild, setExtraChild] = useState("");
   const [saving, setSaving] = useState(false);
   const first = useRef<HTMLInputElement>(null);
 
@@ -516,6 +518,11 @@ function PriceDialog({ hotelId, target, onClose, onDone }: {
       to: addDays(until, 1),
       price: clearing ? null : Number(price),
       ...(label.trim() ? { label: label.trim() } : {}),
+      /* Empty is NOT zero. An unpriced extra adult makes the whole tariff
+         unknown, which is the honest answer — a quiet zero would quote the
+         couple's price for three people. */
+      ...(extraAdult.trim() === "" ? {} : { extraAdult: Number(extraAdult) }),
+      ...(extraChild.trim() === "" ? {} : { extraChild: Number(extraChild) }),
     });
     setSaving(false);
     if (!res.ok) return toast.error("Not saved", res.reason);
@@ -552,6 +559,34 @@ function PriceDialog({ hotelId, target, onClose, onDone }: {
               />
             )}
           </Field>
+
+          <div className="grid grid-cols-2 gap-3">
+            <Field label="Extra adult"
+                   hint="Per night, beyond the room's base occupancy.">
+              {(f) => (
+                <Input
+                  {...fieldProps(f)}
+                  type="number" inputMode="decimal" min={0}
+                  value={extraAdult}
+                  onChange={(e) => setExtraAdult(e.target.value)}
+                  placeholder="—"
+                  className="h-12 text-base tabular"
+                />
+              )}
+            </Field>
+            <Field label="Extra child" hint="Left empty means nobody has priced it.">
+              {(f) => (
+                <Input
+                  {...fieldProps(f)}
+                  type="number" inputMode="decimal" min={0}
+                  value={extraChild}
+                  onChange={(e) => setExtraChild(e.target.value)}
+                  placeholder="—"
+                  className="h-12 text-base tabular"
+                />
+              )}
+            </Field>
+          </div>
 
           <Field label="Season name" hint="Optional. “Diwali week”, “Wedding”.">
             {(f) => (

@@ -219,3 +219,164 @@ groups.post("/:code/stays/:id/routing", async (c) => {
   if (!result) return c.json({ error: "No such property." }, 404);
   return c.json(result, "ok" in result && result.ok ? 200 : 409);
 });
+
+
+/* ── Booking several rooms at once ─────────────────────────────────
+   A wedding party wants four Deluxes and two Superiors for the same three
+   nights. Six bookings typed one at a time is six chances to mistype a date,
+   and nothing afterwards says they belong together.
+
+   A GROUP IS CREATED ONLY FOR MORE THAN ONE ROOM. A single booking that
+   happens to go through this path is just a booking — inventing a group of
+   one puts a row in every group list that nobody means.
+
+   THE RATE IS NOT GUESSED. app.tariff_for answers NULL when any part of the
+   party is unpriced, and this refuses by name rather than quietly charging
+   for two people in a room of three. The caller may override with a rate
+   somebody agreed, which is what a negotiated block is.
+
+   AVAILABILITY IS REPORTED, NOT ENFORCED. A reservation is for a room TYPE;
+   deliberate overbooking is something every hotel does, and 005 separated
+   type from room precisely so it stays possible. The summary says how many
+   are left; the clerk decides. */
+groups.post("/:code/bookings", async (c) => {
+  type Line = {
+    roomTypeId?: string; mealPlan?: string;
+    adults?: number; children?: number;
+    rooms?: number; agreedRate?: number;
+  };
+  type Body = {
+    guestName?: string; phone?: string; email?: string;
+    checkIn?: string; checkOut?: string;
+    groupName?: string; blockCode?: string;
+    source?: string; businessSource?: string; marketSegment?: string;
+    lines?: Line[];
+  };
+  const input = await c.req.json<Body>().catch(() => ({}) as Body);
+
+  const guestName = input.guestName?.trim();
+  if (!guestName) return c.json(refuse("Whose booking is it?"), 409);
+  if (!input.checkIn || !input.checkOut) {
+    return c.json(refuse("Which nights?"), 409);
+  }
+  if (input.checkOut <= input.checkIn) {
+    return c.json(refuse(
+      "A stay ends after it starts. The night of departure is not charged, "
+      + "so a guest leaving on the 5th has their last night on the 4th."), 409);
+  }
+
+  const lines = (input.lines ?? []).filter((l) => l.roomTypeId);
+  if (lines.length === 0) return c.json(refuse("Which rooms?"), 409);
+
+  const total = lines.reduce((n, l) => n + Math.max(1, l.rooms ?? 1), 0);
+  if (total > 40) {
+    /* Not a policy — a guard against a typo in the quantity box turning into
+       four hundred reservations nobody can undo one at a time. */
+    return c.json(refuse(
+      `${total} rooms in one booking looks like a mistake. Split it, or say `
+      + "so and it can be raised."), 409);
+  }
+
+  const result = await withSession(c.get("subject"), async (client) => {
+    const hotelId = await hotelFor(client, c.req.param("code"));
+    if (!hotelId) return null;
+
+    /* One guest for the whole booking. A block belongs to whoever made it;
+       individual names are filled in as the rooming list arrives, which is
+       usually days later and often never for a wedding. */
+    const { rows: guest } = await client.query<{ id: string }>(
+      `insert into guests (full_name, phone, email)
+       values ($1, nullif($2,''), nullif($3,''))
+       returning id::text`,
+      [guestName, input.phone?.trim() ?? "", input.email?.trim() ?? ""]);
+    const guestId = guest[0]!.id;
+
+    let groupId: string | null = null;
+    if (total > 1) {
+      const { rows: g } = await client.query<{ id: string }>(
+        `insert into reservation_groups (name, block_code, lead_hotel_id)
+         values ($1, nullif($2,''), $3) returning id::text`,
+        [input.groupName?.trim() || `${guestName} — ${total} rooms`,
+         input.blockCode?.trim() ?? "", hotelId]);
+      groupId = g[0]!.id;
+    }
+
+    const made: { reference: string; roomType: string; rate: number }[] = [];
+
+    for (const line of lines) {
+      const { rows: rt } = await client.query<{
+        name: string; max: number;
+      }>(`select name, max_occupancy as max from room_types
+           where id = $1 and hotel_id = $2`, [line.roomTypeId, hotelId]);
+      if (!rt[0]) return refuse("One of those room types is not here.");
+
+      const adults = line.adults ?? 1;
+      const children = line.children ?? 0;
+      if (adults + children > rt[0].max) {
+        return refuse(
+          `${adults + children} people will not fit a ${rt[0].name} — it `
+          + `sleeps ${rt[0].max}.`);
+      }
+
+      /* The FIRST night's tariff, and the clerk sees the whole breakdown
+         before submitting. agreed_rate is one number the audit posts every
+         night — that is what "snapshotted at booking" means — so a stay
+         crossing a season is charged what was agreed, not what the calendar
+         says on night four. */
+      let rate = line.agreedRate ?? null;
+      if (rate === null) {
+        const { rows: t } = await client.query<{
+          total: string | null; unpriced: string | null;
+        }>(
+          `select total::text, unpriced
+             from app.tariff_for($1,$2,$3::date,$4,$5)`,
+          [line.roomTypeId, line.mealPlan ?? "EP", input.checkIn,
+           adults, children]);
+        if (t[0]?.total === null || t[0]?.total === undefined) {
+          return refuse(
+            `${rt[0].name} has no price for ${t[0]?.unpriced ?? "this party"}. `
+            + "Set it on the rate calendar, or enter a rate for this booking.");
+        }
+        rate = Number(t[0].total);
+      }
+
+      for (let i = 0; i < Math.max(1, line.rooms ?? 1); i += 1) {
+        const { rows: ref } = await client.query<{ reference: string }>(
+          `select 'FH-' || to_char(now(),'DDMM') || '-' ||
+                  lpad((coalesce(max(substring(reference from '[0-9]+$')::int),
+                        5000) + 1)::text, 4, '0') as reference
+             from reservations where hotel_id = $1`, [hotelId]);
+
+        await client.query(
+          `insert into reservations
+             (hotel_id, reference, guest_id, room_type_id, check_in, check_out,
+              adults, children, occupancy, agreed_rate, status, source,
+              meal_plan, group_id, business_source, market_segment)
+           values ($1,$2,$3,$4,$5::date,$6::date,$7,$8,$9,$10,'confirmed',$11,
+                   $12,$13,$14,$15)`,
+          [hotelId, ref[0]!.reference, guestId, line.roomTypeId,
+           input.checkIn, input.checkOut, adults, children, adults + children,
+           rate, input.source ?? "direct", line.mealPlan ?? "EP", groupId,
+           /* Blank stays NULL, never "" — an empty segment would sort as its
+              own category in the source-mix report and read as an answer. */
+           input.businessSource?.trim() || null,
+           input.marketSegment?.trim() || null],
+        );
+        made.push({ reference: ref[0]!.reference, roomType: rt[0].name,
+                    rate: Number(rate) });
+      }
+    }
+
+    return {
+      ok: true as const,
+      groupId,
+      rooms: made.length,
+      guest: guestName,
+      bookings: made,
+      nightly: made.reduce((sum, m) => sum + m.rate, 0),
+    };
+  });
+
+  if (!result) return c.json({ error: "No such property." }, 404);
+  return c.json(result, "ok" in result && result.ok ? 200 : 409);
+});

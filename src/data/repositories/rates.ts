@@ -152,6 +152,9 @@ export async function setRate(
     roomTypeId: string; mealPlan: string;
     from: string; to?: string | null;
     price: number | null; label?: string;
+    /* An extra bed costs more in Diwali week than in June, so these
+       travel with the season rather than living on a settings page. */
+    extraAdult?: number | null; extraChild?: number | null;
   },
 ): Promise<Refusal> {
   return write(hotelId, "rate-grid", "PUT", input);
@@ -187,5 +190,49 @@ async function write(
       return { ok: false, reason: p?.reason ?? error.message };
     }
     throw error;
+  }
+}
+
+/* ── What a party actually pays ────────────────────────────────────
+   Per night, because a season can change mid-stay and one nightly
+   figure would be wrong for half of it. */
+
+export interface TariffNight {
+  night: string;
+  base: number | null;
+  extraAdults: number;
+  adultRate: number | null;
+  extraChildren: number;
+  childRate: number | null;
+  total: number | null;
+  /** Names what has no price, when something does not. */
+  unpriced: string | null;
+}
+
+export interface Tariff {
+  roomType: string;
+  nights: TariffNight[];
+  /** NULL when ANY night is unpriced. Summing the rest would quote a
+      number short by a night nobody notices. */
+  total: number | null;
+  unpriced: string | null;
+}
+
+export async function getTariff(
+  hotelId: string,
+  input: { roomTypeId: string; mealPlan?: string; from: string; to: string;
+           adults: number; children: number },
+): Promise<Tariff | null> {
+  if (!hotelId || !input.roomTypeId) return null;
+  const q = new URLSearchParams({
+    roomType: input.roomTypeId,
+    mealPlan: input.mealPlan ?? "EP",
+    from: input.from, to: input.to,
+    adults: String(input.adults), children: String(input.children),
+  });
+  try {
+    return await api<Tariff>(`/api/hotels/${hotelId}/tariff?${q.toString()}`);
+  } catch {
+    return null;
   }
 }

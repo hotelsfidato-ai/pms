@@ -778,3 +778,142 @@ describe("group billing", () => {
     expect(typeof body.master!.balance).toBe("number");
   });
 });
+
+/* ══════════════════════════════════════════════════════════════════
+   BOOKING SEVERAL ROOMS AT ONCE
+
+   Four Deluxes and two Superiors for the same three nights. The
+   refusals matter: a rate quietly guessed for a party the room type
+   has not been priced for is discovered at check-out.
+   ══════════════════════════════════════════════════════════════════ */
+
+describe("booking several rooms", () => {
+  let typeId: string;
+  let smallType: string;
+  let smallMax: number;
+  const made: string[] = [];
+
+  beforeAll(async () => {
+    const db = await admin();
+    try {
+      const { rows } = await db.query<{ id: string; max: number }>(
+        `select rt.id::text, rt.max_occupancy as max
+           from room_types rt join hotels h on h.id = rt.hotel_id
+          where h.code = '5EL' and rt.max_occupancy > rt.base_occupancy
+          order by rt.sort_order limit 1`);
+      typeId = rows[0]!.id;
+
+      const { rows: small } = await db.query<{ id: string; max: number }>(
+        `select rt.id::text, rt.max_occupancy as max
+           from room_types rt join hotels h on h.id = rt.hotel_id
+          where h.code = '5EL' order by rt.max_occupancy limit 1`);
+      smallType = small[0]!.id;
+      smallMax = small[0]!.max;
+    } finally { await db.end(); }
+  });
+
+  afterAll(async () => {
+    const db = await admin();
+    try {
+      await db.query(
+        `delete from reservations where reference = any($1)`, [made]);
+      await db.query(
+        `delete from reservation_groups where name like 'BOOKTEST%'`);
+      await db.query("alter table guests disable trigger guests_no_delete");
+      await db.query("delete from guests where full_name = 'Booking Test'");
+      await db.query("alter table guests enable trigger guests_no_delete");
+    } finally { await db.end(); }
+  });
+
+  const book = (body: unknown) => post("/5EL/bookings", body);
+
+  it("creates one group and several rooms", async () => {
+    const res = await book({
+      guestName: "Booking Test",
+      checkIn: "2027-09-01", checkOut: "2027-09-04",
+      groupName: "BOOKTEST wedding",
+      lines: [
+        { roomTypeId: typeId, mealPlan: "EP", adults: 2, rooms: 3 },
+        { roomTypeId: typeId, mealPlan: "EP", adults: 1, rooms: 1 },
+      ],
+    });
+    expect(res.status, await res.clone().text()).toBe(200);
+    const body = (await res.json()) as {
+      groupId: string | null; rooms: number;
+      bookings: { reference: string; rate: number }[];
+    };
+    expect(body.rooms).toBe(4);
+    expect(body.groupId).toBeTruthy();
+    expect(body.bookings).toHaveLength(4);
+    for (const b of body.bookings) made.push(b.reference);
+  });
+
+  it("does not invent a group for a single room", async () => {
+    const res = await book({
+      guestName: "Booking Test",
+      checkIn: "2027-09-10", checkOut: "2027-09-12",
+      lines: [{ roomTypeId: typeId, mealPlan: "EP", adults: 2, rooms: 1 }],
+    });
+    expect(res.status, await res.clone().text()).toBe(200);
+    const body = (await res.json()) as {
+      groupId: string | null; bookings: { reference: string }[];
+    };
+    /* A group of one puts a row in every group list that nobody means. */
+    expect(body.groupId).toBeNull();
+    for (const b of body.bookings) made.push(b.reference);
+  });
+
+  it("refuses a party the room type cannot sleep", async () => {
+    const res = await book({
+      guestName: "Booking Test",
+      checkIn: "2027-09-01", checkOut: "2027-09-03",
+      lines: [{ roomTypeId: smallType, adults: smallMax + 3, rooms: 1 }],
+    });
+    expect(res.status).toBe(409);
+    expect(((await res.json()) as { reason: string }).reason)
+      .toMatch(/will not fit|sleeps/i);
+  });
+
+  it("refuses a departure before the arrival", async () => {
+    const res = await book({
+      guestName: "Booking Test",
+      checkIn: "2027-09-10", checkOut: "2027-09-01",
+      lines: [{ roomTypeId: typeId, adults: 2, rooms: 1 }],
+    });
+    expect(res.status).toBe(409);
+    expect(((await res.json()) as { reason: string }).reason)
+      .toMatch(/ends after it starts/i);
+  });
+
+  it("refuses a quantity that looks like a typo", async () => {
+    const res = await book({
+      guestName: "Booking Test",
+      checkIn: "2027-09-01", checkOut: "2027-09-03",
+      lines: [{ roomTypeId: typeId, adults: 2, rooms: 400 }],
+    });
+    expect(res.status).toBe(409);
+    /* Not a policy — a guard against four hundred reservations nobody can
+       undo one at a time. */
+    expect(((await res.json()) as { reason: string }).reason)
+      .toMatch(/looks like a mistake/i);
+  });
+
+  it("refuses when the party has no price, and says what is missing", async () => {
+    const db = await admin();
+    try {
+      await db.query(
+        "update room_types set extra_adult_rate = null where id = $1", [typeId]);
+    } finally { await db.end(); }
+
+    const res = await book({
+      guestName: "Booking Test",
+      checkIn: "2027-09-01", checkOut: "2027-09-03",
+      /* Three adults in a room that sleeps three, with no extra-adult rate.
+         Charging the couple's price here is discovered at check-out. */
+      lines: [{ roomTypeId: typeId, adults: 3, rooms: 1 }],
+    });
+    expect(res.status).toBe(409);
+    expect(((await res.json()) as { reason: string }).reason)
+      .toMatch(/extra adult/i);
+  });
+});

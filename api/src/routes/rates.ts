@@ -589,6 +589,9 @@ rates.put("/:code/rate-grid", async (c) => {
     roomTypeId?: string; mealPlan?: string;
     from?: string; to?: string | null;
     price?: number | null; label?: string;
+    /* An extra bed costs more in Diwali week than in June, so these travel
+       with the season rather than living on a settings page. */
+    extraAdult?: number | null; extraChild?: number | null;
   };
   const input = await c.req.json<Body>().catch(() => ({}) as Body);
 
@@ -628,9 +631,10 @@ rates.put("/:code/rate-grid", async (c) => {
       if (!owned[0]) return refuse("No such room type here.");
 
       await client.query(
-        `select app.set_rate($1, $2, $3, $4::date, $5::date, $6, $7, $8)`,
+        `select app.set_rate($1,$2,$3,$4::date,$5::date,$6,$7,$8,$9,$10)`,
         [hotelId, input.roomTypeId, input.mealPlan, input.from,
-         input.to ?? null, price, input.label ?? null, session.staffId],
+         input.to ?? null, price, input.label ?? null, session.staffId,
+         input.extraAdult ?? null, input.extraChild ?? null],
       );
 
       return {
@@ -654,6 +658,90 @@ rates.put("/:code/rate-grid", async (c) => {
     }
     throw error;
   }
+});
+
+/* ── What a party actually pays ────────────────────────────────────
+   A booking screen has to be able to say "the third adult has no price"
+   rather than quietly quoting for two. app.tariff_for returns a NULL total
+   with `unpriced` naming what is missing, and this passes that through
+   untouched — filling it in here with a zero is the mistake the whole
+   function exists to prevent. */
+rates.get("/:code/tariff", async (c) => {
+  const q = c.req.query();
+  if (!q["roomType"] || !q["from"] || !q["to"]) {
+    return c.json(refuse("Which room type, and for which nights?"), 409);
+  }
+
+  const adults = Number(q["adults"] ?? 1);
+  const children = Number(q["children"] ?? 0);
+  if (!Number.isInteger(adults) || adults < 1) {
+    return c.json(refuse("A stay has at least one adult."), 409);
+  }
+  if (!Number.isInteger(children) || children < 0) {
+    return c.json(refuse("Children cannot be negative."), 409);
+  }
+
+  const body = await withSession(c.get("subject"), async (client) => {
+    const hotelId = await hotelFor(client, c.req.param("code"));
+    if (!hotelId) return null;
+
+    const { rows: owned } = await client.query<{ name: string; max: number }>(
+      `select name, max_occupancy as max from room_types
+        where id = $1 and hotel_id = $2`,
+      [q["roomType"], hotelId]);
+    if (!owned[0]) return refuse("No such room type here.");
+
+    if (adults + children > owned[0].max) {
+      return refuse(
+        `${adults + children} people will not fit a ${owned[0].name} — it `
+        + `sleeps ${owned[0].max}.`);
+    }
+
+    /* One row per night, because a season can change mid-stay and a single
+       nightly figure would be wrong for half of it. */
+    const { rows } = await client.query<{
+      night: string; base: string | null;
+      extra_adults: number; adult_rate: string | null;
+      extra_children: number; child_rate: string | null;
+      total: string | null; unpriced: string | null;
+    }>(
+      `select d::date::text as night, t.base::text, t.extra_adults,
+              t.adult_rate::text, t.extra_children, t.child_rate::text,
+              t.total::text, t.unpriced
+         from generate_series($3::date, $4::date - 1, interval '1 day') d
+         cross join lateral app.tariff_for($1, $2, d::date, $5, $6) t`,
+      [q["roomType"], q["mealPlan"] ?? "EP", q["from"], q["to"],
+       adults, children],
+    );
+
+    const nights = rows.map((r) => ({
+      night: r.night,
+      base: r.base === null ? null : Number(r.base),
+      extraAdults: r.extra_adults,
+      adultRate: r.adult_rate === null ? null : Number(r.adult_rate),
+      extraChildren: r.extra_children,
+      childRate: r.child_rate === null ? null : Number(r.child_rate),
+      total: r.total === null ? null : Number(r.total),
+      unpriced: r.unpriced,
+    }));
+
+    /* One unpriced night makes the STAY unpriced. Summing the rest would
+       quote a number that is short by a night nobody notices. */
+    const missing = [...new Set(nights.filter((n) => n.unpriced)
+      .map((n) => n.unpriced!))];
+
+    return {
+      roomType: owned[0].name,
+      nights,
+      total: missing.length
+        ? null
+        : nights.reduce((sum, n) => sum + (n.total ?? 0), 0),
+      unpriced: missing.length ? missing.join(", ") : null,
+    };
+  });
+
+  if (!body) return c.json({ error: "No such property." }, 404);
+  return c.json(body, "ok" in body && body.ok === false ? 409 : 200);
 });
 
 rates.post("/:code/restrictions", async (c) => {

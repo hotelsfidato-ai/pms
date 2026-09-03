@@ -734,7 +734,7 @@ retried. Ledger nets to zero, room revenue still ₹4,19,578.76.
 12 Hardening and go-live             █████████░░░  + launch.sh, preflight, nginx
 13 POS upgrade — Petpooja-informed   ████████████  12 of 12 — the day end closes
 14 Modules + banquet                  █░░░░░░░░░░░  POS toggle whole; banquet is the other 11
-15 PMS upgrade — eZee-informed        ████████░░░░  + the group panel
+15 PMS upgrade — eZee-informed        ██████████░░  1.2 complete — only VIP and work orders
 ```
 
 **Stage 13 reads 4, and those four are finished** — database, API and screen.
@@ -835,7 +835,11 @@ moved: twenty screenshots of Petpooja set a higher bar, and two module
 requirements arrived with it. Lowering stage 7 would misreport what happened, so
 the new work is its own row. Detail in `POS-PROGRESS.md`.
 
-**138 of 180 — 77%.** Add the filled blocks above and divide by 180 — fifteen stages of twelve. That sum is the number; it is not typed separately, because it was for three audits running and drifted to "about 90%" while the bars said 70. It moved from 119 when stage 13’s three unfounded blocks came off, to 133 when the day end finished stage 13, to 134 when stage 3 got its service account, to 135 when the rate calendar gave stage 15's three grids their screens, to 136 with the room move, to 137 with amend stay, and to 138 with the group panel.
+**140 of 180 — 78%.** Add the filled blocks above and divide by 180 — fifteen stages of twelve. That sum is the number; it is not typed separately, because it was for three audits running and drifted to "about 90%" while the bars said 70. It moved from 119 when stage 13’s three unfounded blocks came off, to 133 when the day end finished stage 13, to 134 when stage 3 got its service account, to 135 when the rate calendar gave stage 15's three grids their screens, to 136 with the room move, to 137 with amend stay, to 138 with the group panel, and to 140 when extra-person pricing and multi-room booking finished 1.2.
+
+**Stage 15 is 10 of 12, and the two that remain are named.** Indicators are still half — VIP is read by the guest panel and set by nothing — and work orders have not started. Everything else on the ranked backlog in `PMS-PROGRESS.md` is whole: room move, void, sources, the group panel, the three grids, multi-room booking, amend stay, and extra adult and child.
+
+**Extra persons follow the same rule as every other price here.** Nothing ships, and an unpriced third adult makes the whole tariff NULL rather than adding zero — `app.tariff_for` names what is missing so a booking screen can say *"no price for the extra adult"* instead of quietly quoting for two. The prices live beside the season's, because an extra bed costs more in Diwali week than in June.
 
 **The group panel settled the last open decision from the model, not by choosing.** "One folio or one per room" was never a fork: 006 built `folios` many-per-reservation and made `reservation_id` nullable *precisely* so a master could exist. A group is BOTH — a host account and each room's own folio — and 056 only added the other end of the link plus a per-room routing switch. Per room, because a group is rarely uniform: the couple's own room is usually settled by them.
 

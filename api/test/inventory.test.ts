@@ -351,3 +351,102 @@ describe("the rate grid", () => {
       .toMatch(/no such room type/i);
   });
 });
+
+/* ══════════════════════════════════════════════════════════════════
+   WHAT A PARTY PAYS
+
+   The assertion that matters is the unpriced one. A quote that
+   silently omits the third adult is discovered at check-out, by a
+   guest, and the number looked perfectly reasonable until then.
+   ══════════════════════════════════════════════════════════════════ */
+
+describe("the tariff", () => {
+  let typeId: string;
+  let maxOcc: number;
+
+  const quote = async (adults: number, children: number) => {
+    const res = await as(
+      `/5EL/tariff?roomType=${typeId}&mealPlan=EP&from=2027-07-01`
+      + `&to=2027-07-03&adults=${adults}&children=${children}`);
+    return { status: res.status, body: await res.json() };
+  };
+
+  beforeAll(async () => {
+    const db = await admin();
+    try {
+      /* A type that can actually TAKE a third person. 5EL's Superior sleeps
+         two, so quoting three adults there is refused — correctly, and the
+         refusal has its own test below. */
+      const { rows } = await db.query<{ id: string; max: number; base: number }>(
+        `select rt.id::text, rt.max_occupancy as max, rt.base_occupancy as base
+           from room_types rt join hotels h on h.id = rt.hotel_id
+          where h.code = '5EL' and rt.max_occupancy > rt.base_occupancy
+          order by rt.sort_order limit 1`);
+      typeId = rows[0]!.id;
+      maxOcc = rows[0]!.max;
+      await db.query(
+        `update room_types set extra_adult_rate = null, extra_child_rate = null
+          where id = $1`, [typeId]);
+    } finally { await db.end(); }
+  });
+
+  afterAll(async () => {
+    const db = await admin();
+    try {
+      await db.query(
+        `update room_types set extra_adult_rate = null, extra_child_rate = null
+          where id = $1`, [typeId]);
+    } finally { await db.end(); }
+  });
+
+  it("prices a couple from the room type's own rate", async () => {
+    const { status, body } = await quote(2, 0);
+    expect(status).toBe(200);
+    const q = body as { total: number | null; nights: { total: number | null }[] };
+    /* Two nights, and the demo's real rack rate — not an invented default. */
+    expect(q.nights).toHaveLength(2);
+    expect(q.total).toBeGreaterThan(0);
+  });
+
+  it("refuses to quote a third adult nobody has priced", async () => {
+    const { body } = await quote(3, 0);
+    const q = body as { total: number | null; unpriced: string | null };
+    /* Adding zero here quotes the couple's price for three people. */
+    expect(q.total).toBeNull();
+    expect(q.unpriced).toMatch(/extra adult/i);
+  });
+
+  it("prices them once somebody does", async () => {
+    const db = await admin();
+    try {
+      await db.query(
+        "update room_types set extra_adult_rate = 900 where id = $1", [typeId]);
+    } finally { await db.end(); }
+
+    const two = await quote(2, 0);
+    const three = await quote(3, 0);
+    const a = (two.body as { total: number }).total;
+    const b = (three.body as { total: number | null }).total;
+    expect(b).not.toBeNull();
+    /* Two nights, one extra adult each. */
+    expect(b! - a).toBe(1800);
+  });
+
+  it("lets a child take a free base slot", async () => {
+    const alone = await quote(1, 1);
+    const q = alone.body as {
+      total: number | null; nights: { extraChildren: number }[];
+    };
+    /* One adult and one child in a room that sleeps two is nobody extra.
+       Charging the toddler while an identical room with two adults pays
+       nothing is arithmetic a guest notices at the desk. */
+    expect(q.nights.every((n) => n.extraChildren === 0)).toBe(true);
+    expect(q.total).not.toBeNull();
+  });
+
+  it("refuses a party the room cannot sleep, by name", async () => {
+    const { status, body } = await quote(maxOcc + 2, 0);
+    expect(status).toBe(409);
+    expect((body as { reason: string }).reason).toMatch(/will not fit|sleeps/i);
+  });
+});

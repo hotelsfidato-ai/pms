@@ -2,7 +2,7 @@ import {
   LayoutDashboard, CalendarCheck, Users, Building2, Hotel, Receipt,
   BarChart3, Bell, Settings, ShieldCheck, CalendarRange,
   FileText, Wallet, Plug, ScrollText,
-  UserCog, Palette, Terminal, MonitorSmartphone, BookOpen, Home, ClipboardList, type LucideIcon, ShieldAlert, UtensilsCrossed, Flame, LayoutGrid, Banknote, Table2,
+  UserCog, Palette, Terminal, MonitorSmartphone, BookOpen, Home, ClipboardList, type LucideIcon, ShieldAlert, UtensilsCrossed, Flame, LayoutGrid, Banknote, Table2, BookPlus,
 } from "lucide-react";
 import { can, canAccess, type Resource, type Role } from "@/lib/permissions";
 
@@ -123,6 +123,9 @@ const SECTIONS: NavSection[] = [
       },
       { label: "Guests", to: "/guests", icon: Users, resource: "customer", matchPrefix: true },
       { label: "Companies", to: "/companies", icon: Building2, resource: "company", matchPrefix: true },
+      /* One guest, one set of nights, several rooms — and a group made
+         for them automatically when there is more than one. */
+      { label: "New booking", to: "/h/:code/book", icon: BookPlus, resource: "reservation" },
     ],
   },
   {

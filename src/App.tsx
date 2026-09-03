@@ -48,6 +48,7 @@ import DocketPage from "@/pages/Docket";
 import DayEndPage from "@/pages/DayEnd";
 import GridsPage from "@/pages/Grids";
 import GroupPanelPage from "@/pages/GroupPanel";
+import NewBookingPage from "@/pages/NewBooking";
 import BillPage from "@/pages/Bill";
 import MenuPage from "@/pages/Menu";
 import RatePlansEditor from "@/pages/RatePlans";
@@ -362,6 +363,11 @@ export default function App() {
             <Route
               path="/h/:code/grids"
               element={<><PropertyScope /><GridsPage /></>}
+            />
+            {/* One guest, one set of nights, as many rooms as they need. */}
+            <Route
+              path="/h/:code/book"
+              element={<><PropertyScope /><NewBookingPage /></>}
             />
             {/* One group: its rooms, and who pays for which. */}
             <Route

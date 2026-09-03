@@ -2146,6 +2146,37 @@ trigger for every delete that came after, breaking the load.
 symmetrical-looking pair is not safe when the outer scope owns the same
 switch.
 
+### 105 · `||` on an array with an untyped literal
+
+```sql
+v_missing := v_missing || 'the room';   -- malformed array literal
+```
+
+Postgres cannot tell whether `'the room'` is an element or an array, and
+tries to parse it AS an array. `array_append(v_missing, 'the room')` is
+unambiguous. Cost one round trip on a function that was otherwise right.
+
+### 106 · An empty list reduces to zero, and zero is a claim
+
+The booking summary showed **₹0** before any room was added. `reduce`
+over an empty array gives 0, and every other surface in this project
+has been corrected for exactly this: a dash means "nothing chosen
+yet", a zero means "this is free".
+
+It is the same rule as the unpriced rate cell and the missing host
+account, and it still got written. **Whenever a total is computed by
+summing, ask what it shows when there is nothing to sum.**
+
+### 107 · Picking a fixture by sort order instead of by what it needs
+
+A tariff test selected the first room type and quoted three adults into
+it. 5EL's Superior sleeps two, so the API refused — correctly — and two
+assertions failed for a reason that had nothing to do with what they
+were testing.
+
+The fixture now selects `where max_occupancy > base_occupancy`. **Pick
+a fixture by the property the test depends on, not by `limit 1`.**
+
 ## Verification traps
 
 ### Never test a Tailwind utility by injecting the class at runtime

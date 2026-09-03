@@ -3328,3 +3328,121 @@ begin
   select count(*) into n from hotels where code = 'GRP';
   perform test.ok('group billing','the fixture does not outlive the test', n = 0);
 end $$;
+
+
+-- =============================================================================
+-- Extra persons  (057)
+-- =============================================================================
+-- Who counts as extra, and what happens when nobody has priced them. The
+-- second is the one that matters: a total that silently omits the third
+-- person is discovered at check-out, by a guest.
+-- =============================================================================
+do $$
+declare
+  v_hotel uuid; v_staff uuid; v_type uuid; n int;
+  t record; d date := date '2026-08-10';
+begin
+  select id into v_staff from staff limit 1;
+
+  insert into hotels (code, name, city, timezone)
+  values ('EXP', 'Extra person fixture', 'Akkalkot', 'Asia/Kolkata')
+  returning id into v_hotel;
+  insert into staff_hotels (staff_id, hotel_id, role)
+  values (v_staff, v_hotel, 'gm') on conflict do nothing;
+
+  -- Sleeps two, takes four. Nothing priced at all, as every property starts.
+  insert into room_types (hotel_id, code, name, base_occupancy, max_occupancy,
+                          base_rate, sort_order)
+  values (v_hotel, 'STD', 'Standard', 2, 4, null, 1) returning id into v_type;
+
+  -- ---------- who is extra ----------
+  select * into t from app.tariff_for(v_type, 'EP', d, 3, 0);
+  perform test.ok('extra persons','a third adult is one extra adult',
+    t.extra_adults = 1 and t.extra_children = 0);
+
+  select * into t from app.tariff_for(v_type, 'EP', d, 2, 1);
+  perform test.ok('extra persons','a child beside two adults is one extra child',
+    t.extra_adults = 0 and t.extra_children = 1);
+
+  select * into t from app.tariff_for(v_type, 'EP', d, 1, 1);
+  -- A child takes a free base slot. Charging a couple's toddler while an
+  -- identical room with two adults pays nothing is arithmetic a guest notices.
+  perform test.ok('extra persons','one adult and one child are nobody extra',
+    t.extra_adults = 0 and t.extra_children = 0);
+
+  select * into t from app.tariff_for(v_type, 'EP', d, 1, 2);
+  perform test.ok('extra persons','one adult and two children is one extra child',
+    t.extra_adults = 0 and t.extra_children = 1);
+
+  select * into t from app.tariff_for(v_type, 'EP', d, 2, 0);
+  perform test.ok('extra persons','and a couple is nobody extra',
+    t.extra_adults = 0 and t.extra_children = 0);
+
+  -- ---------- unpriced is not free ----------
+  perform test.ok('extra persons','an unpriced room has no total',
+    t.total is null and t.unpriced = 'the room');
+
+  update room_types set base_rate = 3000 where id = v_type;
+  select * into t from app.tariff_for(v_type, 'EP', d, 2, 0);
+  perform test.ok('extra persons','pricing the room prices a couple',
+    t.total = 3000);
+
+  select * into t from app.tariff_for(v_type, 'EP', d, 3, 0);
+  -- THE ONE THAT MATTERS. Adding zero here quotes 3000 for three people, and
+  -- nobody finds out until check-out.
+  perform test.ok('extra persons','but a third adult with no rate has NO total',
+    t.total is null, 'an unpriced extra person is not a free one');
+  perform test.ok('extra persons','and the screen is told which',
+    t.unpriced = 'the extra adult', 'got ' || coalesce(t.unpriced, 'null'));
+
+  update room_types set extra_adult_rate = 800 where id = v_type;
+  select * into t from app.tariff_for(v_type, 'EP', d, 3, 0);
+  perform test.ok('extra persons','the room type''s own rate is the fallback',
+    t.total = 3800 and t.unpriced is null, 'got ' || coalesce(t.total::text,'null'));
+
+  -- ---------- the season wins ----------
+  insert into rates (hotel_id, room_type_id, meal_plan, price, valid_from,
+                     valid_to, label, extra_adult, created_by)
+  values (v_hotel, v_type, 'EP', 5000, d, d + 5, 'Diwali', 1500, v_staff);
+
+  select * into t from app.tariff_for(v_type, 'EP', d, 3, 0);
+  -- An extra bed costs more in Diwali week, which is why the price lives
+  -- beside the season's and not on a settings page.
+  perform test.ok('extra persons','a season prices its own extra bed',
+    t.total = 6500, '5000 + 1500; got ' || coalesce(t.total::text,'null'));
+
+  select * into t from app.tariff_for(v_type, 'EP', d + 9, 3, 0);
+  perform test.ok('extra persons','and outside it the fallback returns',
+    t.total = 3800, 'got ' || coalesce(t.total::text,'null'));
+
+  -- ---------- children, separately ----------
+  select * into t from app.tariff_for(v_type, 'EP', d, 2, 1);
+  perform test.ok('extra persons','an unpriced child has no total either',
+    t.total is null and t.unpriced = 'the extra child');
+
+  update room_types set extra_child_rate = 500 where id = v_type;
+  select * into t from app.tariff_for(v_type, 'EP', d, 3, 1);
+  perform test.ok('extra persons','and both are counted once priced',
+    t.total = 7000, '5000 + 1500 + 500; got ' || coalesce(t.total::text,'null'));
+
+  select * into t from app.tariff_for(v_type, 'EP', d + 9, 3, 1);
+  perform test.ok('extra persons','both missing names both',
+    t.total = 4300, 'fallback 3000 + 800 + 500; got '
+                    || coalesce(t.total::text,'null'));
+
+  -- ---------- refusals ----------
+  perform test.raises('extra persons','a negative extra rate is refused',
+    format($q$update room_types set extra_adult_rate = -1 where id = %L$q$,
+           v_type), '23514');
+
+  -- ---------- teardown ----------
+  delete from rates where hotel_id = v_hotel;
+  delete from room_types where hotel_id = v_hotel;
+  delete from staff_hotels where hotel_id = v_hotel;
+  alter table hotels disable trigger hotels_no_delete;
+  delete from hotels where id = v_hotel;
+  alter table hotels enable trigger hotels_no_delete;
+
+  select count(*) into n from hotels where code = 'EXP';
+  perform test.ok('extra persons','the fixture does not outlive the test', n = 0);
+end $$;

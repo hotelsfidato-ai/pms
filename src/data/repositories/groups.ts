@@ -110,3 +110,49 @@ async function post(path: string, body: unknown): Promise<Refused> {
     throw error;
   }
 }
+
+
+/* ── Booking several rooms at once ─────────────────────────────────
+   Four Deluxes and two Superiors for the same three nights. A group
+   is created only for MORE than one room — inventing a group of one
+   puts a row in every group list that nobody means. */
+
+export interface BookingLine {
+  roomTypeId: string;
+  mealPlan?: string;
+  adults?: number;
+  children?: number;
+  rooms?: number;
+  /** A rate somebody negotiated. Absent means "use the calendar", and
+      the server refuses rather than guessing when the calendar has no
+      price for the party. */
+  agreedRate?: number;
+}
+
+export async function createBooking(
+  hotelId: string,
+  input: {
+    guestName: string; phone?: string; email?: string;
+    checkIn: string; checkOut: string;
+    groupName?: string; blockCode?: string;
+    source?: string; businessSource?: string; marketSegment?: string;
+    lines: BookingLine[];
+  },
+): Promise<
+  | { ok: true; groupId: string | null; rooms: number; guest: string;
+      bookings: { reference: string; roomType: string; rate: number }[];
+      nightly: number }
+  | { ok: false; reason: string }
+> {
+  try {
+    return await api(`/api/hotels/${hotelId}/bookings`, {
+      method: "POST", body: JSON.stringify(input),
+    });
+  } catch (error) {
+    if (error instanceof ApiError) {
+      const p = error.body as { reason?: string } | undefined;
+      return { ok: false, reason: p?.reason ?? error.message };
+    }
+    throw error;
+  }
+}
