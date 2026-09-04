@@ -78,6 +78,13 @@ app.use(
     allowHeaders: [
       "authorization", "content-type", "x-dev-staff-id",
       "x-provisioning-key",
+      /* The offline outbox sends this on every retry so a held write
+         cannot be applied twice. Missing from this list it cost a
+         second round of debugging on the very fault the paragraph
+         above warns about: the preflight answers 204, the real request
+         is blocked, and the drain reports the server as unreachable
+         while the server is plainly up. */
+      "idempotency-key",
     ],
     credentials: true,
 

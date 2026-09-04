@@ -1,3 +1,4 @@
+/// <reference types="vite-plugin-pwa/client" />
 /// <reference types="vite/client" />
 
 /* Typed environment. Vite only exposes vars prefixed VITE_ to the client. */

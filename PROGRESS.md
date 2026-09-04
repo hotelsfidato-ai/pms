@@ -11,8 +11,8 @@ Last updated: **31 August 2026** · **Phase 1 complete · Phase 2 complete · th
 
 ```
 FRONTEND   tsc -b            0 errors
-           vitest run        122 passed · 9 files
-           build             clean
+           vitest run        136 passed · 10 files
+           build             clean · service worker, 17 precached
 
 API        tsc --noEmit      0 errors
            npm test          200 passed · 12 files  (live Postgres, as pms_app)
@@ -725,7 +725,7 @@ retried. Ledger nets to zero, room revenue still ₹4,19,578.76.
 3  Auth bridge — Firebase            ████████████  service account installed, verified
 4  Front desk + folio, end to end    ████████████  flows, reports, dating
 5  Night audit                       ███████████░  11 of 12 — nobody runs it unattended
-6  Housekeeping, mobile              ██████████░░  assigned, and rooms come out
+6  Housekeeping, mobile              ████████████  12 of 12 — it works with the line down
 7  POS — bridge, till and terminal   ████████████  its own category
 8  Billing, GST, Form C              ███████████░  11 of 12 — e-invoicing is not required
 9  Rates, availability, STAAH        ███████░░░░░  rates, seasons, plans
@@ -835,7 +835,7 @@ moved: twenty screenshots of Petpooja set a higher bar, and two module
 requirements arrived with it. Lowering stage 7 would misreport what happened, so
 the new work is its own row. Detail in `POS-PROGRESS.md`.
 
-**156 of 180 — 87%.** Add the filled blocks above and divide by 180 — fifteen stages of twelve. That sum is the number; it is not typed separately, because it was for three audits running and drifted to "about 90%" while the bars said 70. It moved from 119 when stage 13’s three unfounded blocks came off, to 133 when the day end finished stage 13, to 134 when stage 3 got its service account, to 135 when the rate calendar gave stage 15's three grids their screens, to 136 with the room move, to 137 with amend stay, to 138 with the group panel, to 140 when extra-person pricing and multi-room booking finished 1.2, to 142 with VIP and work orders, to 153 when the banquet hall finished stage 14 — eleven blocks, the largest single move this file has recorded, because stage 14 had one filled block since it was written and the module it named did not exist — and to 156 when stages 5, 8 and 10 were given the unit lists they had never had, which moved 8 from 9 to 11 and 10 from 11 to 12.
+**158 of 180 — 88%.** Add the filled blocks above and divide by 180 — fifteen stages of twelve. That sum is the number; it is not typed separately, because it was for three audits running and drifted to "about 90%" while the bars said 70. It moved from 119 when stage 13’s three unfounded blocks came off, to 133 when the day end finished stage 13, to 134 when stage 3 got its service account, to 135 when the rate calendar gave stage 15's three grids their screens, to 136 with the room move, to 137 with amend stay, to 138 with the group panel, to 140 when extra-person pricing and multi-room booking finished 1.2, to 142 with VIP and work orders, to 153 when the banquet hall finished stage 14 — eleven blocks, the largest single move this file has recorded, because stage 14 had one filled block since it was written and the module it named did not exist — and to 156 when stages 5, 8 and 10 were given the unit lists they had never had, which moved 8 from 9 to 11 and 10 from 11 to 12, and to 158 when offline finished stage 6.
 
 **Cashiering is built, and the placeholder list in `App.tsx` is now empty.** It was the last route in the application rendering nothing, and its own note said why: *"unspecified — placeholder until the live flow is observed."* It has been observed — a front-desk shift close — and 059 builds it in the POS day end's shape rather than as a second idea about cash.
 
@@ -1045,6 +1045,62 @@ was refused by a CHECK that named neither events nor the reason.
 060 and 061, 21 database assertions, 14 API tests, three screens opened
 before this was written — diary, function, and halls and packages — at
 desktop and at 375px.
+
+---
+
+## Offline
+
+The group asked for a PWA that keeps working with no connection, holds
+what people do, and syncs when the line returns. It does.
+
+**THE PART THAT SHAPED EVERYTHING: not all of it can be offline, and the
+reason is not technical.** A GST invoice number comes from a statutory
+per-property, per-financial-year series. Two clerks offline both minting
+`5EL/2026-27/00042` hand two guests the same invoice number, and you
+cannot re-number an invoice a guest has driven away with. There is no
+repair, so there is no queueing it.
+
+So `src/lib/offline.ts` holds ONE list, in the seam, in three tiers:
+
+```
+refuse       invoices · night audit · payments · cashier shift
+             bill settlement · banquet confirm · charges and reversals
+queue-warn   check-in, assign, walk-in
+queue        housekeeping · work orders · VIP · POS orders · kitchen
+             menu availability · banquet enquiry
+```
+
+**An unlisted write is REFUSED, not queued.** A route added next year
+must not silently inherit "hold it and hope" — queueing guesses that
+replaying it later is safe, and that guess is what the list exists to
+stop being made per-screen. 14 assertions guard the list, including the
+ordering that keeps `/till/orders/:id/settle` above `/till/orders`.
+
+**What was actually built.** `vite-plugin-pwa` for the shell, so the
+application OPENS with no line — a dropped connection was a white
+screen before, and nothing underneath it could matter. An IndexedDB
+outbox that survives a reload. TanStack Query persisted to IndexedDB
+behind an allow-list, because a passport scan does not belong in a
+browser store on a machine four people share. And the idempotency key
+that has sat unused in `folio_postings` since migration 011 — its
+comment reads *"Offline tolerance guarantees retries"* — now minted
+when a person taps, reused on every retry, and honoured by 062 for work
+orders and banquet enquiries too.
+
+**Proved with the server stopped**, which is the only way any of it
+could be. Tap a room offline, reload — still signed in, screens render
+from cache, the change is still held. Start the API: it drains by
+itself and `rooms.housekeeping_status` for 209 reads `inspected`.
+
+Four defects came out of it, all of which passed typecheck, tests and
+build: the session signed the clerk out on a dropped line (125), the
+CORS header list broke every retry in the file that warns about exactly
+that (126), Housekeeping's in-memory queue both lost work and hid the
+durable one (127), and the auto-drain was keyed on the trigger rather
+than the data so it could only fire before the data arrived (128).
+
+**Still online-only, deliberately:** anything that takes money, issues a
+statutory number, or claims a scarce resource other than a room.
 
 ---
 

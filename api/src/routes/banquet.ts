@@ -291,15 +291,31 @@ banquet.post("/:code/banquet/events", async (c) => {
       [hotelId, businessDate],
     );
 
+    /* One telephone call is one enquiry, however many times a tablet
+       that lost signal resends it. See 062. */
+    const idem = c.req.header("idempotency-key") ?? null;
+
+    if (idem) {
+      const { rows: already } = await client.query<{ id: string; reference: string }>(
+        `select id::text, reference from banquet_events
+          where hotel_id = $1 and idempotency_key = $2`, [hotelId, idem]);
+      if (already[0]) {
+        return {
+          ok: true as const, id: already[0].id,
+          reference: already[0].reference, warning: null,
+        };
+      }
+    }
+
     try {
       const { rows } = await client.query<{ id: string; reference: string }>(
         `insert into banquet_events
            (hotel_id, venue_id, reference, title, event_type, business_date,
             starts_at, ends_at, host_name, host_phone, host_email,
             guest_id, company_id, pax_expected, agreed_amount, notes,
-            registered_by)
+            registered_by, idempotency_key)
          values ($1,$2,$3,$4,$5,$6::date,$7::timestamptz,$8::timestamptz,
-                 $9,$10,$11,$12,$13,$14,$15,$16,$17)
+                 $9,$10,$11,$12,$13,$14,$15,$16,$17,$18)
          returning id::text, reference`,
         [hotelId, venueId, refRows[0]!.reference, title,
          input.eventType ?? null, businessDate, startsAt, endsAt,
@@ -310,7 +326,7 @@ banquet.post("/:code/banquet/events", async (c) => {
             default rate; only what a person actually submitted is stored,
             and undefined means unpriced. */
          input.agreedAmount ?? null,
-         input.notes ?? null, session.staffId],
+         input.notes ?? null, session.staffId, idem],
       );
       return {
         ok: true as const, id: rows[0]!.id, reference: rows[0]!.reference,

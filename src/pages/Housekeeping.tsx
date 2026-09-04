@@ -1,10 +1,14 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useParams } from "react-router";
 import {
   Check, CloudOff, RefreshCw, Sparkle, Wrench, BedDouble, UserRound,
 } from "lucide-react";
 import { cn } from "@/lib/cn";
+import { HeldError } from "@/lib/api";
+import {
+  isOnline, watchConnection, list as outboxList, subscribe as outboxSubscribe,
+} from "@/lib/offline";
 import { useUi } from "@/lib/ui";
 import { Page, PageHeader, StatusPill, toast } from "@/components/ui";
 import {
@@ -44,10 +48,13 @@ const GROUPS = [
    collide with a staff id regardless: those are uuids. */
 const UNASSIGNED = "unassigned";
 
+/* WAS a local queue type. The queue now lives in IndexedDB, shared
+   with every other screen, so this is only how a room's held change is
+   READ back for display. */
 interface QueuedChange {
-  id: number;
+  id: string;
   roomNumber: string;
-  state: "clean" | "inspected";
+  state: string;
 }
 
 export default function HousekeepingPage() {
@@ -61,21 +68,61 @@ export default function HousekeepingPage() {
      that on a phone which genuinely lost signal in a stairwell the
      flag stayed TRUE, the write threw past the handler, and the
      housekeeper's tap did nothing at all — no toast, no queue, no
-     refusal. The demo prop was hiding the only case that matters. */
-  const [online, setOnline] = useState(() => navigator.onLine);
+     refusal. The demo prop was hiding the only case that matters.
+
+     NOW READ FROM ONE PLACE. This screen kept its own answer from
+     `navigator.onLine` while the shell kept another from whether
+     requests were actually arriving, and the two disagreed on screen:
+     the banner here said "Online" above a bar saying "No connection",
+     in the one situation that matters — the wifi up and the line down.
+
+     `isOnline()` is the shared answer, and it believes a failed
+     request over the browser's optimism. */
+  const [online, setOnline] = useState(() => isOnline());
+
+  useEffect(() => watchConnection(() => setOnline(isOnline())), []);
+  /* THE QUEUE IS NOT THIS SCREEN'S ANY MORE.
+
+     It used to be `useState`, which meant a refresh lost it — the phone
+     locking, the tab closing, the browser reclaiming memory. A
+     housekeeper who tapped four rooms on a stairwell and then unlocked
+     their phone had tapped nothing, with no message saying so. That is
+     the same fault the queue was built to prevent, moved one layer out,
+     and it was found by pressing reload with the API stopped.
+
+     Every write now goes through `api()`, which holds it in IndexedDB
+     when the request cannot leave the phone, and the shell drains it.
+     One queue, one drain, one place that decides what may be held. */
+  const [held, setHeld] = useState<QueuedChange[]>([]);
+
+  const readHeld = useCallback(() => {
+    void outboxList().then((entries) => {
+      setHeld(
+        entries
+          .filter((e) => e.status === "waiting")
+          .map((e) => {
+            /* The room number is in the path, which is also what the
+               tier rule matches on, so the two cannot drift apart. */
+            const room = /\/rooms\/([^/]+)\/housekeeping/.exec(e.path)?.[1];
+            if (!room) return null;
+            const state = (() => {
+              try {
+                return (JSON.parse(e.body ?? "{}") as { state?: string }).state ?? "";
+              } catch {
+                return "";
+              }
+            })();
+            return { id: e.id, roomNumber: decodeURIComponent(room), state };
+          })
+          .filter((x): x is QueuedChange => x !== null),
+      );
+    });
+  }, []);
 
   useEffect(() => {
-    const up = () => setOnline(true);
-    const down = () => setOnline(false);
-    window.addEventListener("online", up);
-    window.addEventListener("offline", down);
-    return () => {
-      window.removeEventListener("online", up);
-      window.removeEventListener("offline", down);
-    };
-  }, []);
-  const [queue, setQueue] = useState<QueuedChange[]>([]);
-  const [seq, setSeq] = useState(0);
+    readHeld();
+    return outboxSubscribe(readHeld);
+  }, [readHeld]);
 
   const rooms = useQuery({
     queryKey: ["housekeeping", hotelId, BUSINESS_DATE],
@@ -122,65 +169,26 @@ export default function HousekeepingPage() {
     await qc.invalidateQueries({ queryKey: ["hk-assignments"] });
   };
 
-  /* When signal returns, the queue drains in the order it was made. */
-  useEffect(() => {
-    if (!online || queue.length === 0) return;
-    let cancelled = false;
-    (async () => {
-      const stuck: QueuedChange[] = [];
-      let sent = 0;
-      for (const change of queue) {
-        if (cancelled) return;
-        try {
-          await markRoom(hotelId, change.roomNumber, change.state);
-          sent += 1;
-        } catch {
-          /* Signal went again mid-drain. Keep the rest: the entire
-             point of the queue is that a tap is not lost. */
-          stuck.push(change);
-        }
-      }
-      if (cancelled) return;
-      setQueue(stuck);
-      if (sent > 0) {
-        qc.invalidateQueries();
-        toast.success(`${sent} change${sent === 1 ? "" : "s"} synced`);
-      }
-      /* Nothing got through, so navigator.onLine was wrong — it reports
-         true on a wifi with no route out. Believe the wire over the
-         flag and wait for a real 'online' event, because `queue` is a
-         dependency of this effect and retrying here would spin. */
-      if (sent === 0 && stuck.length > 0) setOnline(false);
-    })();
-    return () => { cancelled = true; };
-  }, [online, queue, hotelId, qc]);
-
-  /* Held on this phone and drained in order. Not a service worker and
-     not a sync engine — the group asked for a web app, not an
-     installed one. This is only the difference between keeping a
-     housekeeper's tap and dropping it. */
-  const hold = (room: HousekeepingRoom, state: "clean" | "inspected") => {
-    setSeq((n) => n + 1);
-    setQueue((q) => [...q, { id: seq, roomNumber: room.number, state }]);
-    toast.warning(
-      "Saved on this phone",
-      `Room ${room.number} will sync when signal returns.`,
-    );
-  };
-
   const apply = async (room: HousekeepingRoom, state: "clean" | "inspected") => {
-    if (!online) return hold(room, state);
+    /* ALWAYS ATTEMPTED. The old version checked `online` first and held
+       the tap without trying, which meant a wifi that was up with no
+       route out — the commonest hotel failure — took the slow path
+       every time and the queue never learned otherwise.
 
-    /* The attempt is the real test. A THROWN fetch means the write
-       never left the phone, so the change is held. An ApiError is a
-       different thing entirely — the server heard it and said no,
-       and retrying will not change its mind. */
+       The attempt is the test. `api()` decides: it arrives, or it is
+       held, or it is refused with a reason. */
     try {
       const res = await markRoom(hotelId, room.number, state);
       if (res.ok) qc.invalidateQueries();
       else toast.error("Could not update", res.reason);
-    } catch {
-      hold(room, state);
+    } catch (error) {
+      /* HeldError only — a refusal comes back through `res.ok` above,
+         because the repository converts an ApiError into a reason. */
+      if (error instanceof HeldError) {
+        toast.warning("Saved on this phone", error.message);
+        return;
+      }
+      throw error;
     }
   };
 
@@ -197,7 +205,7 @@ export default function HousekeepingPage() {
       ? all.filter((r) => r.occupied && r.housekeeping !== "out-of-service")
       : all.filter((r) => !r.occupied && r.housekeeping === key);
 
-  const queuedFor = (number: string) => queue.filter((q) => q.roomNumber === number);
+  const queuedFor = (number: string) => held.filter((q) => q.roomNumber === number);
 
   return (
     <Page className="max-w-2xl">
@@ -222,9 +230,9 @@ export default function HousekeepingPage() {
           <p className="text-base text-ink-900">
             {online ? "Online" : "Offline"}
           </p>
-          {queue.length > 0 && (
+          {held.length > 0 && (
             <p className="text-sm text-[#8a6300] tabular" data-queue-count>
-              {queue.length} change{queue.length === 1 ? "" : "s"} waiting to sync
+              {held.length} change{held.length === 1 ? "" : "s"} waiting to sync
             </p>
           )}
         </div>

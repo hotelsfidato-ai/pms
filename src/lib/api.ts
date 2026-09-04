@@ -1,3 +1,6 @@
+import {
+  ruleFor, enqueue, noteReachable, noteUnreachable,
+} from "./offline";
 import { auth } from "./firebase";
 import { DEMO, recorded, DEMO_REFUSAL } from "./demo";
 
@@ -28,7 +31,10 @@ const FALLBACK_BASE = import.meta.env.VITE_API_URL ?? "http://localhost:8787";
 
 let baseResolution: Promise<string> | null = null;
 
-function apiBase(): Promise<string> {
+/* Exported for the outbox drain, which has to build the same request
+   this file would have built — same base, same auth. A second copy of
+   either is a second thing to get wrong. */
+export function apiBase(): Promise<string> {
   /* Resolved once per page load and memoised. Same-origin, so it costs
      no preflight; a missing or malformed file falls back rather than
      breaking every screen, because an unreachable API is a far more
@@ -82,6 +88,34 @@ export const setDevSubject = (subject: string | null) => {
   }
 };
 
+/**
+ * A write that never left the machine and is now in the outbox.
+ *
+ * NOT an ApiError, and that is the whole design. Every repository in
+ * this codebase already ends its catch with
+ *
+ *     if (error instanceof ApiError) return { allowed: false, reason };
+ *     throw error;
+ *
+ * so a held write propagates past all of them untouched, and a screen
+ * sees it as thrown rather than as a refusal. Making this an ApiError
+ * would have `setHousekeeping` convert a successful queue into
+ * "Could not update" — which is defect 49 exactly: the ApiError
+ * conversion swallowing the one case the feature exists for.
+ */
+export class HeldError extends Error {
+  constructor(
+    message: string,
+    readonly entryId: string,
+    /** True when the person should be told this is not confirmed —
+        a check-in, where another desk may take the room first. */
+    readonly warn: boolean,
+  ) {
+    super(message);
+    this.name = "HeldError";
+  }
+}
+
 export class ApiError extends Error {
   constructor(
     readonly status: number,
@@ -104,7 +138,7 @@ export class ApiError extends Error {
   }
 }
 
-async function headers(): Promise<HeadersInit> {
+export async function authHeaders(): Promise<HeadersInit> {
   const base: Record<string, string> = { "content-type": "application/json" };
 
   if (devAuth && devSubject) {
@@ -148,20 +182,76 @@ export async function api<T>(path: string, init: RequestInit = {}): Promise<T> {
   try {
     response = await fetch(`${base}${path}`, {
       ...init,
-      headers: { ...(await headers()), ...init.headers },
+      headers: { ...(await authHeaders()), ...init.headers },
     });
   } catch {
-    /* fetch rejects without detail when the request never happened, and
+    /* ── The request never happened ──────────────────────────────
+       fetch rejects without detail when nothing left the machine, and
        a blocked CORS preflight looks exactly like a dead server from
-       here — the browser withholds the difference on purpose. Naming
-       both beats confidently naming the wrong one. */
-    throw new ApiError(
-      0,
-      import.meta.env.DEV
-        ? `Could not reach ${base}. Check the API is running, and that it allows this origin.`
-        : "Could not reach the server. Try again in a moment.",
+       here — the browser withholds the difference on purpose.
+
+       THIS IS ALSO WHERE OFFLINE LIVES, because it is the one place
+       every request in the application already passes through. A tier
+       decided per screen is a rule written forty times, and defect 96
+       is what that costs.
+
+       `navigator.onLine` is not consulted. It reports TRUE on a wifi
+       with no route out — the commonest hotel failure, where the
+       access point is up and the line is down — and defect 49 paid
+       for believing it. A request that did not arrive is the evidence. */
+    noteUnreachable();
+
+    const method = (init.method ?? "GET").toUpperCase();
+
+    if (method === "GET" || method === "HEAD") {
+      /* Reads are NOT queued. They are answered from the query cache,
+         which can say how old the answer is; a read held for later is
+         a question nobody is still asking. */
+      throw new ApiError(
+        0,
+        import.meta.env.DEV
+          ? `Could not reach ${base}. Check the API is running, and that it allows this origin.`
+          : "Could not reach the server. Showing the last data received.",
+      );
+    }
+
+    const rule = ruleFor(path, method);
+
+    if (rule.tier === "refuse") {
+      /* REFUSED, not silently dropped and not optimistically queued.
+         The demo build takes the same position for the same reason:
+         "a write that silently does nothing is the exact defect this
+         project keeps finding". The sentence says why and what to do
+         instead, because a refusal a person cannot act on is just a
+         failure with better manners. */
+      throw new ApiError(503, rule.reason!, { reason: rule.reason });
+    }
+
+    /* Held. The idempotency key is minted inside enqueue, once, and
+       reused on every retry — `folio_postings.idempotency_key` has
+       waited for this since migration 011. */
+    const entry = await enqueue({
+      label: rule.label,
+      path,
+      method,
+      body: typeof init.body === "string" ? init.body : undefined,
+      hotelId: path.match(/\/api\/hotels\/([^/]+)/)?.[1] ?? "",
+    });
+
+    throw new HeldError(
+      rule.tier === "queue-warn"
+        ? `${rule.label} is held and will be sent when the connection is back. `
+          + "It is not confirmed until then — the room could be taken by "
+          + "another desk in the meantime."
+        : `${rule.label} is held and will be sent when the connection is back.`,
+      entry.id,
+      rule.tier === "queue-warn",
     );
   }
+
+  /* Something answered, so the line is up whatever navigator.onLine
+     believes. A 500 is still evidence of reachability. */
+  noteReachable();
 
   if (!response.ok) {
     const body = (await response.json().catch(() => null)) as

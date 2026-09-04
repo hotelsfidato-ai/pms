@@ -6,14 +6,14 @@ Every entry here cost something. Read it before you repeat it.
 
 ## Ten faults that repeat
 
-124 entries below is a reference, not a reading list. These are the patterns
+128 entries below is a reference, not a reading list. These are the patterns
 that have recurred, with the count and the check that would have caught each.
 **If you read nothing else here, read this.**
 
 | # | The fault | Seen | The check |
 |---|-----------|------|-----------|
 | 1 | **Answered from memory instead of the file.** Quoted a function, a screen, a limit or a schema I had not opened. | 32 · 64 · 78 · 85 · 87 · 90 · 91 · 108 | Open the file in the same turn you describe it. |
-| 2 | **Claimed it worked without opening the screen.** Typecheck, tests and build all clean; the page was blank, inert, clipped or wrong. | 18 defects | Open the screen. Every time, and at 375px too. |
+| 2 | **Claimed it worked without opening the screen.** Typecheck, tests and build all clean; the page was blank, inert, clipped, or signed the clerk out. | 19 defects | Open the screen. Every time, at 375px, and with the server stopped. |
 | 3 | **Test debris left in the shared demo database.** Phantom guests and bookings nobody can tell from real ones. | 27 · 41 · 54 · 79 · 100 · 112 · 114 · 115 · 116 | Count rows before and after a run — do not grep for teardowns. |
 | 4 | **A test that could not fail.** Vacuous assertion, swallowed error, filtered exit status, wrong verb. | 8 · 18 · 22 · 25 · 34 · 37 · 47 · 84 · 97 · 111 | Break it on purpose and watch it go red. |
 | 5 | **Invented a number.** A price, a total, an occupancy, a zero standing in for "nobody knows". | 5 · 35 · 43 · 58 · 63 · 65 · 68 · 106 | A dash is honest; a zero is a claim. Derive it or show a dash. |
@@ -2622,6 +2622,75 @@ end if;
 
 **A conditional protects execution, not parsing.** Anything naming a column
 that may not exist goes inside `execute`.
+
+### 125 · A dropped line signed the clerk out
+
+Every `restore` path in `session.ts` ended `load(set).catch(() => set({
+status: "signed-out" }))`. Correct for a 401 and wrong for everything
+else — and with no connection, everything else is what happens.
+
+So reloading a page offline put the clerk on the sign-in screen. Which
+cannot be completed, because signing in also needs the server. Every
+screen cached for offline use and every held change in the outbox sat
+behind a form that could not be filled in.
+
+The whole offline feature was useless and nothing said so: it
+typechecked, 122 tests passed, the build was clean. **Found by stopping
+the API and pressing reload**, which is the only way it could have been
+found.
+
+The last good session is now kept for a week and restored on a NETWORK
+failure. A 401 still signs out and clears it, because that is the
+server saying who you are — the one answer worth believing.
+
+### 126 · The same CORS header trap, in the file that warns about it
+
+Adding `idempotency-key` to the drain's requests broke every retry. The
+preflight answered 204 and the real request failed with `ERR_FAILED`,
+which reads as the server being unreachable while it is plainly up.
+
+`server.ts` has a paragraph directly above the header list:
+
+> *"A custom header the browser does not already know about needs
+> naming here or its preflight fails, and the failure arrives as 'could
+> not reach the server' — indistinguishable from the API being down.
+> The admin console spent a round of debugging on exactly that after
+> `x-provisioning-key` was added."*
+
+I added a header without reading the list I was adding it to. **A
+warning only works if it is read before the change, not after the
+symptom.**
+
+### 127 · A queue in useState is not a queue
+
+Housekeeping held a tap safely since defect 49 and lost it on the next
+reload — `useState`, so a locked phone, a closed tab or a crash
+discarded work somebody believed they had done. The same fault the
+queue was built to prevent, moved one layer out.
+
+Worse, it hid the durable one. Because it checked `online` and held the
+tap WITHOUT ATTEMPTING, the request never reached `api()` and the
+IndexedDB outbox stayed empty. Two queues, and the one that caught the
+common case was the one that lost work.
+
+The screen now always attempts; `api()` decides. One queue, one drain.
+
+**Proved by measurement.** Tap offline, reload, and the change is still
+there — then the line comes back, it drains, and `rooms.housekeeping_
+status` for 209 reads `inspected`.
+
+### 128 · An effect that could only fire before its data arrived
+
+The auto-drain was keyed on `[online]`. Entries load from IndexedDB
+after mount, so on a fresh page the effect had already run against an
+empty list, and `online` never changed to re-run it. A held change sat
+under a working "Send now" button that nobody should have needed.
+
+The manual path working is what made this hard to see — the feature
+looked finished.
+
+**An effect keyed on the trigger and not on the data runs at the one
+moment the data is guaranteed absent.**
 
 ## Verification traps
 

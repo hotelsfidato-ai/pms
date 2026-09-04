@@ -141,6 +141,7 @@ export const useSession = create<SessionState>()((set, get) => ({
       await load(set);
     } catch (error) {
       setDevSubject(null);
+    forgetSession();
       set({
         busy: false,
         status: "signed-out",
@@ -174,7 +175,7 @@ export const useSession = create<SessionState>()((set, get) => ({
        would be a dead end. `/api/hotels` is in the snapshot, so this
        loads the real scope straight out of it. */
     if (DEMO) {
-      void load(set).catch(() => set({ status: "signed-out" }));
+      loadOrRecall(set, () => set({ status: "signed-out" }));
       return;
     }
 
@@ -182,7 +183,7 @@ export const useSession = create<SessionState>()((set, get) => ({
        the dev path is the one in use when there is no service account. */
     const dev = getDevSubject();
     if (dev) {
-      void load(set).catch(() => {
+      loadOrRecall(set, () => {
         setDevSubject(null);
         set({ status: "signed-out" });
       });
@@ -200,10 +201,125 @@ export const useSession = create<SessionState>()((set, get) => ({
         if (get().status !== "signed-in") set({ status: "signed-out" });
         return;
       }
-      void load(set).catch(() => set({ status: "signed-out" }));
+      loadOrRecall(set, () => set({ status: "signed-out" }));
     });
   },
 }));
+
+
+/* ══════════════════════════════════════════════════════════════════
+   THE SESSION SURVIVES AN OUTAGE
+
+   `load()` reads identity and scope from the server, and every caller
+   used to write `.catch(() => set({ status: "signed-out" }))`. That is
+   correct for a 401 and wrong for everything else — and offline,
+   EVERYTHING ELSE is what happens.
+
+   The effect was that reloading a page with no connection put the
+   clerk on the sign-in screen. Which cannot be completed, because
+   signing in also needs the server. Every screen cached for offline
+   use, every held change in the outbox, all of it unreachable behind a
+   form that could not be filled in.
+
+   Found by stopping the API and pressing reload, which is the only way
+   it could have been found: nothing about it fails a typecheck, a test
+   or a build.
+
+   SO THE LAST GOOD SESSION IS KEPT. On a network failure it is
+   restored and the person stays where they were. On a real 401 it is
+   discarded and they are signed out, because that is the server saying
+   who they are — the one answer worth believing.
+
+   WHAT IS STORED: their own name, email and which properties they may
+   see. Nothing about a guest. It is what "stay signed in" already
+   means everywhere else, and it is the signed-in person's own
+   identity, which they are looking at anyway. */
+const SESSION_KEY = "fidato-last-session";
+
+interface Remembered {
+  scope: ApiScope;
+  hotels: ApiHotel[];
+  at: number;
+}
+
+function remember(scope: ApiScope, hotels: ApiHotel[]) {
+  try {
+    localStorage.setItem(SESSION_KEY,
+      JSON.stringify({ scope, hotels, at: Date.now() } satisfies Remembered));
+  } catch {
+    /* Private window, or storage full. The app works; it just will not
+       survive a reload offline. */
+  }
+}
+
+function recall(): Remembered | null {
+  try {
+    const raw = localStorage.getItem(SESSION_KEY);
+    if (!raw) return null;
+    const r = JSON.parse(raw) as Remembered;
+    /* A WEEK. Long enough for any outage a hotel actually has, short
+       enough that a machine left in a drawer does not open into
+       somebody's account months later. */
+    if (Date.now() - r.at > 7 * 24 * 60 * 60 * 1000) return null;
+    return r;
+  } catch {
+    return null;
+  }
+}
+
+export function forgetSession() {
+  try {
+    localStorage.removeItem(SESSION_KEY);
+  } catch {
+    /* Nothing depends on this succeeding. */
+  }
+}
+
+/** True when the request never arrived, as opposed to being refused.
+    `ApiError(0)` is what api.ts raises for a dead line. */
+function isNetworkFailure(error: unknown): boolean {
+  return error instanceof ApiError && error.status === 0;
+}
+
+/**
+ * What every `restore` path does when `load()` fails.
+ *
+ * A refusal signs out. A dropped line does not — it puts the person
+ * back where they were, with what was true when the line was last up.
+ */
+function loadOrRecall(
+  set: (partial: Partial<SessionState>) => void,
+  onSignedOut: () => void,
+) {
+  void load(set).catch((error: unknown) => {
+    if (!isNetworkFailure(error)) {
+      forgetSession();
+      onSignedOut();
+      return;
+    }
+
+    const last = recall();
+    if (!last) {
+      /* Nothing to fall back to — a first run with no connection. */
+      onSignedOut();
+      return;
+    }
+
+    registerBusinessDates(last.hotels);
+    const first = last.scope.hotels[0]?.hotelId ?? last.hotels[0]?.id ?? null;
+    if (first) selectProperty(first);
+    selectProperty(useUi.getState().hotelId);
+
+    set({
+      status: "signed-in",
+      scope: last.scope,
+      hotels: last.hotels,
+      hotelId: first,
+      busy: false,
+      error: null,
+    });
+  });
+}
 
 /** Reads identity and scope from Postgres. The one source for both. */
 async function load(set: (partial: Partial<SessionState>) => void) {
@@ -222,6 +338,10 @@ async function load(set: (partial: Partial<SessionState>) => void) {
      `useUi.hotelId` holds a CODE and persists across reloads, so it can
      already name a different property than the one `first` picked. */
   selectProperty(useUi.getState().hotelId);
+
+  /* Kept so a reload with no connection lands on the application
+     rather than on a sign-in form that cannot be completed. */
+  remember(scope, hotels);
 
   set({ status: "signed-in", scope, hotels, hotelId: first, busy: false, error: null });
 }

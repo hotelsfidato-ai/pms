@@ -6,6 +6,7 @@ import * as DialogPrimitive from "@radix-ui/react-dialog";
 import { useUi } from "@/lib/ui";
 import { Sidebar } from "./Sidebar";
 import { TopBar } from "./TopBar";
+import { OfflineBar } from "./OfflineBar";
 import { Toaster, TooltipProvider } from "@/components/ui";
 
 /* ══════════════════════════════════════════════════════════════════
@@ -78,6 +79,12 @@ export function AppShell() {
           )}
 
           <main className="flex-1 overflow-y-auto scrollbar-quiet print:overflow-visible">
+            {/* INSIDE the scroll region and sticky, so it rides the top
+                of whatever screen is open rather than pushing the whole
+                shell down. Held work belongs to the person, not to the
+                page they happen to be on. Hidden when printing: an
+                invoice does not carry the desk's sync state. */}
+            <div className="print:hidden"><OfflineBar /></div>
             <Outlet />
           </main>
         </div>

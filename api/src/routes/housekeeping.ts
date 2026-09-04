@@ -273,16 +273,38 @@ housekeeping.post("/:code/work-orders", async (c) => {
     /* No room is a real answer, not a missing one — a lift, a generator,
        the lobby door. */
 
+    /* THE CLIENT'S KEY, minted when somebody TAPPED — not when the
+       request was sent. A tablet that loses signal in a lift resends,
+       and without this a dripping tap becomes two dripping taps in the
+       maintenance list. 011 wrote the same mechanism for the ledger and
+       said why; 062 adds it here.
+
+       `on conflict do nothing` then returns no row, so the existing
+       order is fetched and reported as success. It IS success: the work
+       order the person asked for exists. */
+    const idem = c.req.header("idempotency-key") ?? null;
+
     try {
       const { rows } = await client.query<{ id: string }>(
         `insert into work_orders
-           (hotel_id, room_id, title, detail, category, priority, raised_by)
-         values ($1,$2,$3,nullif($4,''),$5,$6,$7)
+           (hotel_id, room_id, title, detail, category, priority, raised_by,
+            idempotency_key)
+         values ($1,$2,$3,nullif($4,''),$5,$6,$7,$8)
+         on conflict (hotel_id, idempotency_key)
+           where idempotency_key is not null do nothing
          returning id::text`,
         [hotel.id, roomId, title, input.detail?.trim() ?? "",
          input.category ?? "maintenance", input.priority ?? "normal",
-         session.staffId]);
-      return { ok: true as const, id: rows[0]!.id };
+         session.staffId, idem]);
+
+      if (!rows[0]) {
+        const { rows: already } = await client.query<{ id: string }>(
+          `select id::text from work_orders
+            where hotel_id = $1 and idempotency_key = $2`, [hotel.id, idem]);
+        /* Already raised by an earlier attempt of this same tap. */
+        return { ok: true as const, id: already[0]!.id, duplicate: true };
+      }
+      return { ok: true as const, id: rows[0].id };
     } catch (error) {
       const e = error as { code?: string; message?: string } | undefined;
       if (e?.code === "23514") {

@@ -2,6 +2,7 @@ import { defineConfig } from 'vite'
 import react from '@vitejs/plugin-react'
 import tailwindcss from '@tailwindcss/vite'
 import { viteSingleFile } from 'vite-plugin-singlefile'
+import { VitePWA } from 'vite-plugin-pwa'
 import path from 'path'
 
 /* The preview build is ONE html file: script, styles and the captured
@@ -30,6 +31,70 @@ export default defineConfig(({ mode }) => {
     react(),
     tailwindcss(),
     ...(single ? [viteSingleFile()] : []),
+
+    /* ── The service worker ──────────────────────────────────────────
+       PRODUCTION ONLY, and that is not a detail. The `artifact` build
+       inlines everything into one file with no host and no asset
+       paths — a service worker there has nothing to cache and a scope
+       it cannot claim. The `preview` build is a demo somebody opens
+       once; caching it means shipping a stale fictional hotel that
+       will not go away when it is replaced.
+
+       WHAT IT CACHES: the application shell — the HTML, the JavaScript,
+       the CSS, the fonts and the icon. That is what stops a dropped
+       connection being a white screen, which is what it is today.
+
+       WHAT IT DOES NOT CACHE: anything under /api. Deliberately, and
+       this is the decision most likely to be undone by somebody being
+       helpful later. Cached API responses and TanStack Query's own
+       cache are two stores that answer the same question, and the day
+       they disagree the screen shows one while the code reasons about
+       the other. Reads are cached ONCE, in the query layer, where the
+       age of the data can be shown to the person reading it.
+
+       A folio balance from an unknown time, presented as current, is
+       worse than no balance at all. */
+    ...(demo ? [] : [VitePWA({
+      /* Not autoUpdate. That activates a new worker and reloads, and a
+         reload lands mid-check-in as easily as it lands on an idle
+         screen. The desk is told, and chooses. */
+      registerType: 'prompt',
+      includeAssets: ['icon.svg'],
+      manifest: {
+        name: 'Fidato PMS',
+        short_name: 'Fidato',
+        description: 'Property management for Fidato Hotels.',
+        theme_color: '#df6128',
+        background_color: '#ffffff',
+        display: 'standalone',
+        orientation: 'any',
+        start_url: '/',
+        scope: '/',
+        icons: [
+          { src: '/icon.svg', sizes: 'any', type: 'image/svg+xml', purpose: 'any' },
+          { src: '/icon.svg', sizes: 'any', type: 'image/svg+xml', purpose: 'maskable' },
+        ],
+      },
+      workbox: {
+        globPatterns: ['**/*.{js,css,html,svg,woff,woff2}'],
+        /* Every route is client-side, so a hard refresh on
+           /h/5EL/banquet must serve index.html rather than 404. The
+           same job deploy/nginx.conf does online. */
+        navigateFallback: '/index.html',
+        /* THE API IS NEVER SERVED FROM THE CACHE. Without this the
+           fallback above answers a failed POST with the HTML shell,
+           and the caller parses a page as JSON. */
+        navigateFallbackDenylist: [/^\/api\//],
+        cleanupOutdatedCaches: true,
+      },
+      devOptions: {
+        /* Off in dev. A service worker holding the previous build is
+           the single most confusing thing that can happen to somebody
+           editing a screen — defect 77 is the same shape with a stale
+           API, and it cost an afternoon. */
+        enabled: false,
+      },
+    })]),
   ],
   resolve: {
     alias: {

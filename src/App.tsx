@@ -15,7 +15,9 @@ import {
 const Router = import.meta.env.VITE_SINGLE_FILE === "1"
   ? HashRouter
   : BrowserRouter;
-import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { QueryClient } from "@tanstack/react-query";
+import { PersistQueryClientProvider } from "@tanstack/react-query-persist-client";
+import { queryPersister } from "@/lib/persist";
 import { AppShell } from "@/components/app/AppShell";
 import { useUi } from "@/lib/ui";
 import { useSession } from "@/lib/session";
@@ -99,9 +101,33 @@ const queryClient = new QueryClient({
   defaultOptions: {
     /* Stage 1 has no network, so retries and refetching are noise. The
        client exists because Rule 5 lives in its keys. */
-    queries: { retry: false, refetchOnWindowFocus: false, staleTime: Infinity },
+    queries: {
+      retry: false,
+      refetchOnWindowFocus: false,
+      staleTime: Infinity,
+      /* KEPT FOR A WEEK, so a screen opened with no connection has
+         something to show. Without this the cache is memory-only and a
+         reload offline is a blank application — which is what the
+         housekeeper on a stairwell landing actually gets today.
+
+         A week rather than forever: data older than that is more
+         likely to mislead than to help, and the age is shown anyway. */
+      gcTime: 7 * 24 * 60 * 60 * 1000,
+    },
   },
 });
+
+/* Read once when a screen opens with no connection. Anything not named
+   here is fetched or absent — never silently stale.
+
+   The rule for adding to this list: would a person be misled by seeing
+   this from an hour ago, without being told? If yes, it does not go in. */
+const PERSISTED = new Set([
+  "properties", "property", "rooms",
+  "arrivals", "in-house", "departures",
+  "tape-chart", "floor", "housekeeping",
+  "work-orders", "banquet-diary", "banquet-setup",
+]);
 
 /**
  * Nothing renders until the session has been settled one way or the
@@ -185,7 +211,26 @@ const PROPERTY: Array<[segment: string, title: string, carries: string, cp: stri
 
 export default function App() {
   return (
-    <QueryClientProvider client={queryClient}>
+    <PersistQueryClientProvider
+      client={queryClient}
+      persistOptions={{
+        persister: queryPersister,
+        maxAge: 7 * 24 * 60 * 60 * 1000,
+        /* WHAT IS WRITTEN TO DISK, and this list is a privacy decision
+           as much as a technical one. A shared front-desk machine keeps
+           this cache after the clerk walks away, so only what a screen
+           needs in order to open offline is kept — the floor, today's
+           movements, the rooms. Guest documents, folios and reports are
+           NOT persisted: a passport scan does not belong in a browser
+           store on a machine four people use. */
+        dehydrateOptions: {
+          shouldDehydrateQuery: (query) => {
+            const key = String(query.queryKey[0] ?? "");
+            return PERSISTED.has(key);
+          },
+        },
+      }}
+    >
       <Router>
         <Routes>
           <Route path="/signin" element={<SignInRoute />} />
@@ -475,6 +520,6 @@ export default function App() {
           </Route>
         </Routes>
       </Router>
-    </QueryClientProvider>
+    </PersistQueryClientProvider>
   );
 }
