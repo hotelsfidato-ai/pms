@@ -10,7 +10,7 @@ import {
   Input, NativeSelect, Skeleton, toast,
 } from "@/components/ui";
 import {
-  getInventory, getTariff, createBooking, type Tariff,
+  getInventory, getTariff, createBooking, listCompanies, type Tariff,
 } from "@/data/repositories";
 
 /* ══════════════════════════════════════════════════════════════════
@@ -74,12 +74,30 @@ export default function NewBookingPage() {
 
   const [guestName, setGuestName] = useState("");
   const [phone, setPhone] = useState("");
+  const [email, setEmail] = useState("");
+  /* WHERE THE BOOKING CAME FROM. The endpoint has accepted `source`
+     since it was written and this form never sent one, so every
+     booking made here landed with no channel against it — and the
+     Booking sources screen, which exists to answer "which agent sent
+     what", could only report what the demo loader had put in.
+
+     Built, accepted, and wired to nothing: the same shape as the
+     credit note in defect 81. */
+  const [source, setSource] = useState("");
   const [groupName, setGroupName] = useState("");
   const [from, setFrom] = useState<string | null>(null);
   const [to, setTo] = useState<string | null>(null);
   const [lines, setLines] = useState<Line[]>([]);
   const [saving, setSaving] = useState(false);
   const [nextKey, setNextKey] = useState(1);
+
+  /* Every account the property books through. Walk-in and the
+     property's own site are in here too — a direct booking has a
+     source, it is just not an agent. */
+  const sources = useQuery({
+    queryKey: ["companies", hotelId],
+    queryFn: () => listCompanies(hotelId),
+  });
 
   /* The inventory answers two things at once: which room types exist,
      with their ids, and how many are left on the chosen nights. */
@@ -137,6 +155,8 @@ export default function NewBookingPage() {
     const res = await createBooking(hotelId, {
       guestName: guestName.trim(),
       phone: phone.trim(),
+      ...(email.trim() ? { email: email.trim() } : {}),
+      ...(source ? { source } : {}),
       checkIn: from, checkOut: to,
       ...(groupName.trim() ? { groupName: groupName.trim() } : {}),
       lines: lines.map((l) => ({
@@ -196,6 +216,34 @@ export default function NewBookingPage() {
                     <Input {...fieldProps(f)} value={phone} type="tel"
                       onChange={(e) => setPhone(e.target.value)}
                       className="h-12 text-base" />
+                  )}
+                </Field>
+              </div>
+
+              <div className="grid gap-3 sm:grid-cols-2">
+                <Field label="Email">
+                  {(f) => (
+                    <Input {...fieldProps(f)} value={email} type="email"
+                      onChange={(e) => setEmail(e.target.value)}
+                      className="h-12 text-base" />
+                  )}
+                </Field>
+                <Field label="Booking source"
+                       hint="What the Booking sources report counts.">
+                  {(f) => (
+                    <NativeSelect {...fieldProps(f)} value={source}
+                      onChange={(e) => setSource(e.target.value)}
+                      className="h-12 text-base">
+                      {/* Blank stays first and is a real answer. A clerk
+                          who does not know must not be made to guess,
+                          and a guessed channel is worse than none —
+                          it makes the commission report confidently
+                          wrong instead of visibly incomplete. */}
+                      <option value="">Not recorded</option>
+                      {(sources.data ?? []).map((c) => (
+                        <option key={c.id} value={c.name}>{c.name}</option>
+                      ))}
+                    </NativeSelect>
                   )}
                 </Field>
               </div>
