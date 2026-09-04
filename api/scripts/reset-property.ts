@@ -92,10 +92,21 @@ const CLEAR: [table: string, how: string][] = [
    about real data; clearing a property is an administrative act and
    nothing in api/src may perform it. */
 const GUARDS: [table: string, trigger: string][] = [
-  ["folio_postings", "folio_postings_append_only"],
-  ["invoices",       "invoices_immutable"],
-  ["pos_order_lines", "pos_order_lines_frozen"],
-  ["guests",         "guests_no_delete"],
+  /* READ OUT OF pg_trigger, not remembered. The first list had four of
+     these and the run died on the fifth — "tenders on a settled order
+     cannot be removed" — a third of the way through, which is the
+     worst place for a clearing script to stop. */
+  ["folio_postings",    "folio_postings_append_only"],
+  ["folio_postings",    "folio_postings_closed_date"],
+  ["invoices",          "invoices_immutable"],
+  ["pos_order_lines",   "pos_order_lines_frozen"],
+  ["pos_order_lines",   "pos_order_lines_void_cascade"],
+  ["pos_order_tenders", "pos_order_tenders_no_delete_settled"],
+  ["pos_orders",        "pos_orders_no_reopen"],
+  ["pos_orders",        "pos_orders_clear_final"],
+  ["reservations",      "reservations_void_releases"],
+  ["room_assignments",  "ra_within_stay"],
+  ["guests",            "guests_no_delete"],
 ];
 
 async function main() {

@@ -284,6 +284,14 @@ operations.post("/:code/stays/:id/check-in", async (c) => {
          body.ratePlan === "Room Only" ? "RO" : body.ratePlan ?? null, notes],
       );
 
+      /* AND A FOLIO, IF THERE IS NOT ONE. Bookings now open theirs at
+         the moment they are made, but every one taken before that fix
+         has none — and a guest checked in without a folio cannot be
+         charged for anything, by the till or the desk. `folioFor` opens one on demand and returns the existing one
+         otherwise, so this costs a lookup and closes the gap for every
+         booking already in the database. */
+      await folioFor(client, hotelId, stayId);
+
       /* THE BOOKING MOVES WITH THE GUEST. Written before the early
          record below so both land in one transaction — a stay that
          checked in but still says it arrives tomorrow is worse than

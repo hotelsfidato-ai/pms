@@ -351,14 +351,15 @@ groups.post("/:code/bookings", async (c) => {
                         5000) + 1)::text, 4, '0') as reference
              from reservations where hotel_id = $1`, [hotelId]);
 
-        await client.query(
+        const { rows: booked } = await client.query<{ id: string }>(
           `insert into reservations
              (hotel_id, reference, guest_id, room_type_id, check_in, check_out,
               adults, children, occupancy, agreed_rate, status, source,
               meal_plan, group_id, business_source, market_segment,
               expected_arrival)
            values ($1,$2,$3,$4,$5::date,$6::date,$7,$8,$9,$10,'confirmed',$11,
-                   $12,$13,$14,$15,$16::time)`,
+                   $12,$13,$14,$15,$16::time)
+           returning id::text`,
           [hotelId, ref[0]!.reference, guestId, line.roomTypeId,
            input.checkIn, input.checkOut, adults, children, adults + children,
            rate, input.source ?? "direct", line.mealPlan ?? "EP", groupId,
@@ -371,6 +372,22 @@ groups.post("/:code/bookings", async (c) => {
               nobody gave. */
            input.expectedArrival?.trim() || null],
         );
+
+        /* A BOOKING NEEDS SOMEWHERE TO PUT MONEY, from the moment it
+           exists. Nothing created a folio for a reservation made here:
+           the walk-in opened one and this did not, so a guest booked
+           through the interface was checked in with nowhere to bill —
+           the till could not charge their room, and check-out had
+           nothing to settle.
+
+           At BOOKING rather than at check-in, because most guests here
+           pay a token amount when they book. A deposit taken before
+           arrival needs a folio to land in, and one created at arrival
+           is a day too late. */
+        await client.query(
+          `insert into folios (hotel_id, reservation_id, status)
+           values ($1, $2, 'open')`,
+          [hotelId, booked[0]!.id]);
         made.push({ reference: ref[0]!.reference, roomType: rt[0].name,
                     rate: Number(rate) });
       }

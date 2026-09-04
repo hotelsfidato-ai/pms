@@ -67,6 +67,19 @@ export default function KitchenPage() {
   const board = useQuery({
     queryKey: ["kitchen", hotelId],
     queryFn: () => getKitchen(hotelId),
+    /* THE POLL BELOW IS NOT ENOUGH ON ITS OWN. A pass screen usually
+       sits in a background tab while the waiter is on the till, and a
+       browser throttles a background setInterval to about once a
+       minute — so the board somebody turned to look at was up to a
+       minute behind, which is exactly long enough to stop trusting it.
+
+       These two together mean it is fresh when it is LOOKED AT: the
+       poll while it is in front of somebody, the focus refetch the
+       instant it comes back into view. Both are needed; neither is. */
+    refetchInterval: 10_000,
+    refetchIntervalInBackground: true,
+    refetchOnWindowFocus: true,
+    staleTime: 0,
   });
 
   /* A pass screen is never touched. Without a poll it shows the order

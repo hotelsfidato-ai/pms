@@ -72,8 +72,10 @@ export function CheckInFlow({
   });
 
   const rooms = useQuery({
-    queryKey: ["assignable", hotelId, stay.roomType, businessDate],
-    queryFn: () => assignableRooms(hotelId, stay.roomType, businessDate),
+    queryKey: ["assignable", hotelId, stay.roomType, businessDate,
+               stay.roomNumber],
+    queryFn: () => assignableRooms(hotelId, stay.roomType, businessDate,
+                                   stay.roomNumber),
     enabled: open,
   });
 

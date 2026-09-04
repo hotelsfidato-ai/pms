@@ -815,6 +815,15 @@ describe("booking several rooms", () => {
   afterAll(async () => {
     const db = await admin();
     try {
+      /* FOLIOS FIRST. A booking opens its folio the moment it is
+         made — a guest has to have somewhere to put a deposit — so
+         `folios.reservation_id` now points at every one of these and
+         deleting the reservation first violates the foreign key.
+
+         A teardown is a migration run backwards. Same rule as 115. */
+      await db.query(
+        `delete from folios where reservation_id in (
+           select id from reservations where reference = any($1))`, [made]);
       await db.query(
         `delete from reservations where reference = any($1)`, [made]);
       await db.query(

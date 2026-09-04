@@ -75,6 +75,9 @@ export async function checkInAllowed(
 /** Rooms a guest of this type may actually be put in. */
 export async function assignableRooms(
   hotelId: string, roomType: string, businessDate: string,
+  /** The room this booking is ALREADY on, if any. Always offered,
+      whatever its type — see below. */
+  currentRoom?: string | null,
 ) {
   /* Which rooms a guest of this type can be put in tonight, and why
      not, for the ones they cannot. Both lists come from the API now —
@@ -100,7 +103,20 @@ export async function assignableRooms(
   void businessDate;
 
   return rooms
-    .filter((r) => r.type === roomType)
+    /* THE ROOM THEY ARE ALREADY ON IS ALWAYS OFFERED. Filtering to the
+       booked type alone hid it whenever the two disagreed — a Deluxe
+       booking pre-assigned to a Superior, which the desk does when it
+       upgrades somebody or works around a fault.
+
+       The flow seeds its selection from `stay.roomNumber`, so the room
+       was SELECTED AND ABSENT: the picker showed eight rooms, none of
+       them highlighted, and the one the desk had already chosen was
+       nowhere. Nothing said why.
+
+       A decision somebody already made is not a decision this screen
+       gets to hide. */
+    .filter((r) => r.type === roomType
+      || (currentRoom != null && r.number === currentRoom))
     .map((r) => {
       /* The seam keeps the name the screens already read. The API calls
          it `status`; the store called it `housekeeping`, and CheckInFlow
@@ -117,7 +133,7 @@ export async function assignableRooms(
         return { ...base, allowed: false, reason: "Not cleaned yet." };
       }
       const occupant = takenBy.get(r.number);
-      if (occupant) {
+      if (occupant && r.number !== currentRoom) {
         return { ...base, allowed: false, reason: `${occupant} is in this room.` };
       }
       return { ...base, allowed: true, reason: undefined as string | undefined };

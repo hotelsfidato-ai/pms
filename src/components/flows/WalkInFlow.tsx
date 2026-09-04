@@ -37,6 +37,15 @@ export function WalkInFlow({
 
   const [guestName, setGuestName] = useState("");
   const [nights, setNights] = useState(1);
+  /* NO GUARD MEANT A DOUBLE PRESS BOOKED TWICE. The button stayed live
+     through the request, so two taps sent two walk-ins: the first put
+     a guest in the room and the second came back "Somebody is already
+     in that room" — the desk saw only the refusal and believed nothing
+     had happened, while a guest was checked in behind it.
+
+     A room is a scarce resource and this flow takes it in one act, so
+     it is exactly the button that must not be pressable twice. */
+  const [busy, setBusy] = useState(false);
   const [adults, setAdults] = useState(2);
   const [children, setChildren] = useState(0);
   const [ratePlan, setRatePlan] = useState("CP");
@@ -340,9 +349,11 @@ export function WalkInFlow({
                independently, but a clerk should find out while the
                family is still standing there and a bigger room can be
                chosen -- not after pressing the one button. */
-            disabled={!permitted.allowed || overCapacity}
+            disabled={!permitted.allowed || overCapacity || busy}
             data-walkin-confirm
             onClick={async () => {
+              if (busy) return;
+              setBusy(true);
               const res = await createWalkIn(hotelId, {
                 guestName, roomNumber, nights, adults, children, ratePlan,
                 rackTariff: rack ?? offered, offeredTariff: offered,
@@ -350,6 +361,7 @@ export function WalkInFlow({
                 businessSource, marketSegment: segment, salesPerson,
                 isSingleLady: singleLady,
               });
+              setBusy(false);
               if (res.ok) {
                 toast.success(
                   `${guestName} is in house`,
@@ -364,7 +376,7 @@ export function WalkInFlow({
             }}
           >
             <UserPlus className="size-4" />
-            Confirm and check in
+            {busy ? "Checking in…" : "Confirm and check in"}
           </Button>
         </div>
       </DialogContent>

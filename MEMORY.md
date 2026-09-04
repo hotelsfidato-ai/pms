@@ -6,7 +6,7 @@ Every entry here cost something. Read it before you repeat it.
 
 ## Ten faults that repeat
 
-143 entries below is a reference, not a reading list. These are the patterns
+146 entries below is a reference, not a reading list. These are the patterns
 that have recurred, with the count and the check that would have caught each.
 **If you read nothing else here, read this.**
 
@@ -2971,6 +2971,46 @@ The actions are one component now, imported by both. **A comment
 asserting two things are the same is the weakest possible guarantee of
 it**, and it survived because nothing ever needed them to differ until
 something did.
+
+### 144 · A booking with nowhere to put money
+
+A reservation made through the interface never got a folio. The walk-in
+opened one and `POST /bookings` did not, so a guest booked normally was
+checked in with no bill: the till could not charge their room, the desk
+could not take a deposit, and check-out had nothing to settle.
+
+It looked like a POS fault — "the POS is not detecting the rooms" — and
+the POS was right. `/till/rooms` lists rooms with an OPEN FOLIO, and
+there wasn''t one. The screen furthest from the cause is the one that
+reports it.
+
+The folio opens at BOOKING now, not at check-in, because most guests
+here pay a token amount when they book and a deposit taken before
+arrival needs somewhere to land. Check-in also calls `folioFor` as a
+safety net for every booking taken before the fix.
+
+### 145 · A button that could be pressed twice took two rooms
+
+The walk-in had no busy guard. Two taps sent two walk-ins: the first
+put a guest in the room, the second came back "Somebody is already in
+that room" — so the desk saw a refusal, believed nothing had happened,
+and a guest was checked in behind it.
+
+A room is a scarce resource and the walk-in takes one in a single act.
+That is exactly the button that must not be pressable twice.
+
+### 146 · The room they were already in was not on the list
+
+The check-in room picker filtered to the booked room type. The flow
+seeds its selection from `stay.roomNumber`, so whenever a booking was
+pre-assigned to a room of another type — an upgrade, a fault worked
+around — the room was SELECTED AND ABSENT: eight rooms, none
+highlighted, and the one the desk had already chosen nowhere.
+
+The assigned room is always offered now, whatever its type, and is not
+refused for being occupied by the very stay being checked in.
+
+**A decision somebody already made is not one a screen gets to hide.**
 
 ## Verification traps
 

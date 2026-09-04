@@ -109,6 +109,16 @@ export default function TerminalPage() {
     queryKey: ["till-rooms", hotelId],
     queryFn: () => listChargeableRooms(hotelId),
     enabled: settling,
+    /* WHO IS IN THE HOUSE CHANGES ALL EVENING. The global staleTime is
+       Infinity, so this list was fetched once and cached for the life
+       of the tab — a guest who checked in after the terminal opened
+       could never be charged to their room, and the waiter would be
+       told to reload a till.
+
+       Zero here means every time the settle panel opens it asks
+       again, which is exactly as often as the answer matters. */
+    staleTime: 0,
+    refetchOnWindowFocus: true,
   });
 
   /* A terminal is left running. Without this it shows this morning's
