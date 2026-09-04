@@ -1038,8 +1038,9 @@ desktop and at 375px.
 ## The upgrade path is broken, and it is named
 
 `db/tests/run.sh` rebuilds from ZERO, so it proves the migrations work on an
-empty database and nothing else. **Run them a second time — which is what every
-deploy after the first one does — and 8 of 59 abort.** Measured, not estimated:
+empty database and nothing else. 060 and 061 were each checked against a
+second run and pass; the eight below are older. **Run them a second time — which is what every
+deploy after the first one does — and 8 of 61 abort.** Measured, not estimated:
 
 ```
 005_reservations.sql        column "room_id" does not exist

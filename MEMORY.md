@@ -27,6 +27,102 @@ Two habits sit under all ten: **read the source in the turn you describe it**,
 and **measure rather than infer**. Nine of the ten were caught by an audit or by
 opening a page — not by a gate.
 
+And three of these rows are not ten separate mistakes but three decisions
+still in force. They are written up as **D1-D3** in the section above,
+because a fault whose cause is still standing comes back wearing
+different clothes.
+
+---
+
+## Decisions that keep producing defects
+
+A defect is a thing that went wrong once. A DECISION is the thing that
+keeps producing them. This section is for the second kind, because
+fixing eleven symptoms and leaving the cause in place is how a fault
+comes back wearing different clothes.
+
+---
+
+### D1 · The tests share the database the app is using
+
+**The decision:** all 12 files in `api/test/` connect to the live
+`fidato` database — the same one the demo loader fills, the same one
+the dev server serves, the same one somebody is clicking around in.
+
+**What it has produced so far:**
+
+| | |
+|---|---|
+| 27 · 41 · 54 · 79 · 100 | fixtures left behind, seen by users as real |
+| 112 | a test staff row that had been "an employee" for months |
+| 114 · 115 · 116 | four files leaking 7 guests, 6 bookings, 35 postings a run |
+| **120** | a teardown that deleted a REAL booking somebody had just made |
+| 92 · 109 | the demo wiped by a gate, twice read as a code bug |
+
+That is **eleven defects from one decision**, and they alternate
+direction: clean up too little and the demo fills with phantoms, clean
+up too much and real work disappears. Both are the same root — a test
+that has to reason about which rows are somebody else's is a test doing
+a job it should never have been given.
+
+**The tell:** every one of these fixes made the teardown *cleverer*.
+`id <> all($2)`, pid-tagged fixture names, `moduleBefore`, recording ids
+in `beforeAll`. That cleverness is load-bearing and it is all pure
+overhead — it exists only because the database is shared.
+
+**THE PATTERN IS ALREADY IN THIS REPO AND WAS NEVER APPLIED HERE.**
+`db/verify-backup.sh` creates a scratch database, restores into it,
+asserts, and drops it *whether it passes or fails* — its own comment
+says "It is never the database the app uses." `db/tests/run.sh` builds
+from zero for the same reason. The API tests are the one gate that
+skipped it.
+
+**What to do instead:** give `api/test` its own database — created from
+the migrations plus the demo loader, torn down at the end. Then no
+teardown needs to know what was already there, defect 120 cannot happen
+in either direction, and the tests can run while somebody is using the
+app.
+
+**Cost:** a `globalSetup` for vitest and a connection string. Half a
+day. It removes the teardown code from twelve files rather than adding
+to it.
+
+**Until then**, the rule that keeps the damage bounded: **delete by what
+you created, never by tenant.** `where hotel_id = $1` in a teardown is
+the shape of defect 120.
+
+---
+
+### D2 · Measuring against the working database
+
+**The decision** (defect 119): to find out how many migrations survive a
+re-run, I ran all 59 against live `fidato`. Eight failed, which was the
+answer — and a failing migration does not fail cleanly. Half of
+`013_policies.sql` applied, `staff`'s RLS policy went recursive, and
+then `drop database` failed too because the cluster's catalog was
+damaged. The cluster had to be rebuilt.
+
+**The same root as D1**: a destructive act aimed at the one database
+that matters. And the same fix was already sitting in
+`db/verify-backup.sh`.
+
+**The rule:** a measurement that can change state runs on a scratch
+copy. If the question is "what happens when I run this against a real
+database", the answer is worth having and the database is worth
+copying first.
+
+---
+
+### D3 · Building where the shell has to parse what I wrote
+
+**The decision** (defects 74, 122): writing files with prose,
+apostrophes and dollar-quoted SQL through `cat << 'EOF'`. Six failures
+across two sessions, all identical, none about the content.
+
+**The rule:** the file tool writes files. A script that edits files gets
+written with the file tool too, then run. Reach for a heredoc only for
+something with no quotes in it.
+
 ---
 
 ## Defects that passed every gate
