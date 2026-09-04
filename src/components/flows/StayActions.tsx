@@ -1,9 +1,11 @@
 import { useState } from "react";
-import { CalendarRange, ArrowLeftRight, Ban } from "lucide-react";
+import { CalendarRange, ArrowLeftRight, Ban, Repeat, Gift } from "lucide-react";
 import { Menu, MenuItem, MenuLabel, MenuSeparator } from "@/components/ui";
 import { AmendStayFlow } from "@/components/flows/AmendStayFlow";
 import { MoveRoomFlow } from "@/components/flows/MoveRoomFlow";
 import { VoidFlow } from "@/components/flows/VoidFlow";
+import { ExchangeRoomFlow } from "@/components/flows/ExchangeRoomFlow";
+import { InclusionsFlow } from "@/components/flows/InclusionsFlow";
 import type { Stay } from "@/data/repositories";
 
 /* ══════════════════════════════════════════════════════════════════
@@ -23,6 +25,8 @@ export function StayActions({ hotelId, stay, businessDate }: {
   const [amend, setAmend] = useState(false);
   const [move, setMove] = useState(false);
   const [voiding, setVoiding] = useState(false);
+  const [swap, setSwap] = useState(false);
+  const [inclusions, setInclusions] = useState(false);
 
   const arrived = stay.status === "in-house" || stay.status === "due-out";
   /* The statuses this type actually has. `void` is a BAR TONE on the
@@ -61,6 +65,26 @@ export function StayActions({ hotelId, stay, businessDate }: {
           >
             Move to another room
           </MenuItem>
+          <MenuItem
+            icon={Repeat}
+            onSelect={() => setSwap(true)}
+            disabled={!arrived}
+            reason={
+              /* An exchange swaps two OCCUPIED rooms. Before arrival
+                 there is nothing to swap, and the other half of the
+                 pair has to be in the house too — which the flow
+                 itself says when nobody is. */
+              over ? "This stay is over."
+                   : "They have not arrived yet."
+            }
+          >
+            Exchange with another guest
+          </MenuItem>
+
+          <MenuLabel>The rate</MenuLabel>
+          <MenuItem icon={Gift} onSelect={() => setInclusions(true)}>
+            What this booking includes
+          </MenuItem>
 
           <MenuSeparator />
           <MenuItem
@@ -85,6 +109,16 @@ export function StayActions({ hotelId, stay, businessDate }: {
       <VoidFlow
         hotelId={hotelId} stay={stay}
         open={voiding} onOpenChange={setVoiding}
+      />
+      {arrived && (
+        <ExchangeRoomFlow
+          hotelId={hotelId} stay={stay} businessDate={businessDate}
+          open={swap} onOpenChange={setSwap}
+        />
+      )}
+      <InclusionsFlow
+        hotelId={hotelId} stay={stay}
+        open={inclusions} onOpenChange={setInclusions}
       />
       {arrived && (
         <MoveRoomFlow

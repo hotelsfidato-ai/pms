@@ -4033,3 +4033,148 @@ begin
   select count(*) into n from hotels where code = 'ELT';
   perform test.ok('early late','the fixture does not outlive the test', n = 0);
 end $$;
+
+
+-- =============================================================================
+-- Exchanging two rooms, and what a rate includes  (065)
+-- =============================================================================
+-- The exchange exists because two sequential moves CANNOT work:
+-- `ra_no_double_booking` is checked per statement, so writing A into B's room
+-- while B still holds it collides every time, at any speed.
+-- =============================================================================
+do $$
+declare
+  v_hotel uuid; v_staff uuid; v_type uuid;
+  v_ga uuid; v_gb uuid; v_ra uuid; v_rb uuid;
+  v_r1 uuid; v_r2 uuid;
+  n int; t text; d date := date '2026-08-10';
+begin
+  select id into v_staff from staff order by id limit 1;
+
+  insert into hotels (code, name, city, timezone)
+  values ('XCH', 'Exchange fixture', 'Akkalkot', 'Asia/Kolkata')
+  returning id into v_hotel;
+  insert into room_types (hotel_id, code, name, base_occupancy, max_occupancy,
+                          base_rate, sort_order)
+  values (v_hotel, 'STD', 'Standard', 2, 3, null, 1) returning id into v_type;
+
+  insert into rooms (hotel_id, room_type_id, number) values (v_hotel, v_type, '1')
+  returning id into v_r1;
+  insert into rooms (hotel_id, room_type_id, number) values (v_hotel, v_type, '2')
+  returning id into v_r2;
+
+  insert into guests (full_name) values ('Exchange A') returning id into v_ga;
+  insert into guests (full_name) values ('Exchange B') returning id into v_gb;
+
+  insert into reservations (hotel_id, guest_id, room_type_id, reference,
+                            check_in, check_out, agreed_rate, status)
+  values (v_hotel, v_ga, v_type, 'XCH-A', d, d + 4, 2000, 'checked_in')
+  returning id into v_ra;
+  insert into reservations (hotel_id, guest_id, room_type_id, reference,
+                            check_in, check_out, agreed_rate, status)
+  values (v_hotel, v_gb, v_type, 'XCH-B', d, d + 4, 2000, 'checked_in')
+  returning id into v_rb;
+
+  insert into room_assignments (hotel_id, reservation_id, room_id,
+                                from_date, to_date, reason)
+  values (v_hotel, v_ra, v_r1, d, d + 4, 'arrival'),
+         (v_hotel, v_rb, v_r2, d, d + 4, 'arrival');
+
+  -- ---------- two moves cannot do this ----------
+  -- The reason the function exists, asserted rather than asserted about.
+  perform test.raises('exchange','writing A into B''s occupied room is refused',
+    format($q$insert into room_assignments (hotel_id, reservation_id, room_id,
+                                            from_date, to_date, reason)
+              values (%L,%L,%L,%L,%L,'move')$q$,
+           v_hotel, v_ra, v_r2, d + 2, d + 4), '23P01');
+
+  -- ---------- a reason is not optional ----------
+  perform test.raises('exchange','an exchange with no reason is refused',
+    format($q$select app.exchange_rooms(%L,%L,%L,%L,'  ',%L)$q$,
+           v_hotel, v_ra, v_rb, d + 2, v_staff), 'P0001');
+
+  perform test.raises('exchange','and a guest cannot swap with themselves',
+    format($q$select app.exchange_rooms(%L,%L,%L,%L,'x',%L)$q$,
+           v_hotel, v_ra, v_ra, d + 2, v_staff), 'P0001');
+
+  -- ---------- the swap ----------
+  perform app.exchange_rooms(v_hotel, v_ra, v_rb, d + 2,
+                             'Couple wanted the quiet side.', v_staff);
+
+  select rm.number into t
+    from room_assignments ra join rooms rm on rm.id = ra.room_id
+   where ra.reservation_id = v_ra and ra.released_at is null
+     and ra.from_date = d + 2;
+  perform test.ok('exchange','A ends up in B''s room', t = '2', 'got ' || t);
+
+  select rm.number into t
+    from room_assignments ra join rooms rm on rm.id = ra.room_id
+   where ra.reservation_id = v_rb and ra.released_at is null
+     and ra.from_date = d + 2;
+  perform test.ok('exchange','and B in A''s', t = '1', 'got ' || t);
+
+  -- ---------- the nights already slept stay where they were slept ----------
+  select count(*) into n
+    from room_assignments ra join rooms rm on rm.id = ra.room_id
+   where ra.reservation_id = v_ra and rm.number = '1'
+     and ra.from_date = d and ra.to_date = d + 2;
+  perform test.ok('exchange','the first two nights stay in the old room', n = 1,
+    'a swap does not rewrite where somebody already slept');
+
+  -- ---------- nobody is double booked afterwards ----------
+  select count(*) into n
+    from room_assignments a
+    join room_assignments b on b.room_id = a.room_id and b.id <> a.id
+   where a.hotel_id = v_hotel and a.released_at is null
+     and b.released_at is null
+     and daterange(a.from_date, a.to_date, '[)')
+      && daterange(b.from_date, b.to_date, '[)');
+  perform test.ok('exchange','and no room is held twice', n = 0);
+
+  -- ---------- an empty room is a MOVE, not an exchange ----------
+  perform test.raises('exchange','swapping with an empty room is refused',
+    format($q$select app.exchange_rooms(%L,%L,%L,%L,'x',%L)$q$,
+           v_hotel, v_ra, gen_random_uuid(), d + 3, v_staff), 'P0001');
+
+  -- ---------- inclusions ship none, and price none ----------
+  select count(*) into n from inclusions where hotel_id = v_hotel;
+  perform test.ok('inclusions','a new property has none', n = 0,
+    'a shipped inclusion prints on a folio at a hotel that does not serve it');
+
+  insert into inclusions (hotel_id, name) values (v_hotel, 'Breakfast for two');
+  select count(*) into n from inclusions
+   where hotel_id = v_hotel and default_rate is null;
+  perform test.ok('inclusions','one added without a price is NULL, not zero',
+    n = 1, 'null means included; zero is a price');
+
+  perform test.raises('inclusions','a negative rate is refused',
+    format($q$update inclusions set default_rate = -1 where hotel_id = %L$q$,
+           v_hotel), '23514');
+
+  insert into reservation_inclusions (hotel_id, reservation_id, name, added_by)
+  values (v_hotel, v_ra, 'Airport pickup, 06:10 arrival', v_staff);
+  perform test.ok('inclusions','a booking can carry one off-list',
+    (select count(*) from reservation_inclusions where reservation_id = v_ra) = 1);
+
+  perform test.raises('inclusions','a quantity of zero is refused',
+    format($q$insert into reservation_inclusions
+                (hotel_id, reservation_id, name, quantity, added_by)
+              values (%L,%L,'x',0,%L)$q$, v_hotel, v_ra, v_staff), '23514');
+
+  -- ---------- teardown ----------
+  delete from reservation_inclusions where hotel_id = v_hotel;
+  delete from inclusions where hotel_id = v_hotel;
+  delete from room_assignments where hotel_id = v_hotel;
+  delete from reservations where hotel_id = v_hotel;
+  alter table guests disable trigger guests_no_delete;
+  delete from guests where id in (v_ga, v_gb);
+  alter table guests enable trigger guests_no_delete;
+  delete from rooms where hotel_id = v_hotel;
+  delete from room_types where hotel_id = v_hotel;
+  alter table hotels disable trigger hotels_no_delete;
+  delete from hotels where id = v_hotel;
+  alter table hotels enable trigger hotels_no_delete;
+
+  select count(*) into n from hotels where code = 'XCH';
+  perform test.ok('exchange','the fixture does not outlive the test', n = 0);
+end $$;
