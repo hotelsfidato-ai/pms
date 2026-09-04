@@ -48,6 +48,10 @@ export interface OutboxEntry {
   /** Minted at enqueue, reused on every retry. The whole point. */
   idempotencyKey: string;
   hotelId: string;
+  /** The person who ACTED, captured at the tap. A front desk is a
+      shared machine, and an entry must not be sent as somebody else
+      just because they are the one signed in when the line returns. */
+  subject: string;
   queuedAt: number;
   attempts: number;
   status: OutboxStatus;

@@ -1099,6 +1099,19 @@ that (126), Housekeeping's in-memory queue both lost work and hid the
 durable one (127), and the auto-drain was keyed on the trigger rather
 than the data so it could only fire before the data arrived (128).
 
+**IT IS PER DEVICE, AND THAT IS THE THING TO UNDERSTAND ABOUT IT.** The
+outbox, the read cache and the remembered session all live in the
+browser on the machine that made them. A phone's held taps are on that
+phone; nobody else can send them, and if it is lost they are lost with
+it. That is what "held on this phone" means and the toast says exactly
+that.
+
+**A shared desk needed one more thing.** One PC, one browser profile,
+four clerks: an entry now records the person who ACTED, and the drain
+sends only theirs. The morning clerk's held check-in waits for them
+rather than landing under the evening clerk's name — defect 129, and
+the reason `banquet_events.registered_by` is NOT NULL.
+
 **Still online-only, deliberately:** anything that takes money, issues a
 statutory number, or claims a scarce resource other than a room.
 

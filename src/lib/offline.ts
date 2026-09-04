@@ -245,6 +245,10 @@ if (typeof window !== "undefined") {
 export interface DrainResult {
   sent: number;
   rejected: number;
+  /** Entries belonging to somebody else who was using this machine.
+      Not an error and not a failure — they go when that person signs
+      in again. */
+  heldForOthers: number;
   /** True when the network gave out again part way. */
   stopped: boolean;
 }
@@ -266,14 +270,30 @@ let draining = false;
  */
 export async function drain(
   send: (entry: OutboxEntry) => Promise<Response>,
+  /** Only this person's held work is sent. Everything else waits for
+      them to sign in again. */
+  subject: string,
 ): Promise<DrainResult> {
-  if (draining) return { sent: 0, rejected: 0, stopped: false };
+  if (draining) return { sent: 0, rejected: 0, heldForOthers: 0, stopped: false };
   draining = true;
-  const result: DrainResult = { sent: 0, rejected: 0, stopped: false };
+  const result: DrainResult = { sent: 0, rejected: 0, heldForOthers: 0, stopped: false };
 
   try {
     for (const entry of await list()) {
       if (entry.status === "rejected") continue;
+
+      /* SOMEBODY ELSE'S ACT. A shared front-desk machine has one
+         browser profile and four clerks; sending the morning clerk's
+         check-in under the evening clerk's token would put the wrong
+         name on it forever, and an append-only ledger does not forget.
+
+         It waits. `heldForOthers` tells the screen to say so, rather
+         than leaving a count that never goes down and never explains
+         itself. */
+      if (subject && entry.subject && entry.subject !== subject) {
+        result.heldForOthers += 1;
+        continue;
+      }
 
       let response: Response;
       try {

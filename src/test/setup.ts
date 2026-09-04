@@ -45,9 +45,19 @@ class StubApiError extends Error {
 
 vi.mock("@/lib/api", () => ({
   ApiError: StubApiError,
+  /* Thrown by api() when a write is held in the outbox. Repositories
+     rethrow it BECAUSE it is not an ApiError, so the stub has to be a
+     distinct class here too or a held write would look like a refusal. */
+  HeldError: class StubHeldError extends Error {},
   devAuth: false,
   setDevSubject: () => {},
   getDevSubject: () => null,
+  /* The shell renders OfflineBar, which asks who is signed in so it
+     only drains this person's held work. Missing from the mock it took
+     out fifteen tests that have nothing to do with offline. */
+  currentSubject: () => "stub-staff",
+  apiBase: async () => "",
+  authHeaders: async () => ({}),
 
   getSession: async () => ({
     scope: {

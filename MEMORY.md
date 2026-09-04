@@ -6,7 +6,7 @@ Every entry here cost something. Read it before you repeat it.
 
 ## Ten faults that repeat
 
-128 entries below is a reference, not a reading list. These are the patterns
+130 entries below is a reference, not a reading list. These are the patterns
 that have recurred, with the count and the check that would have caught each.
 **If you read nothing else here, read this.**
 
@@ -2691,6 +2691,44 @@ looked finished.
 
 **An effect keyed on the trigger and not on the data runs at the one
 moment the data is guaranteed absent.**
+
+### 129 · The queue forgot whose work it was
+
+The outbox recorded what was done and not who did it, and the drain
+sent everything with `authHeaders()` — whoever is signed in NOW.
+
+A front desk is one machine, one browser profile and four clerks. The
+morning clerk holds a check-in during an outage and goes home; the
+evening clerk signs in and the queue drains under their token. The
+ledger then says the evening clerk checked that guest in, and an
+append-only ledger does not forget.
+
+This project puts "who said so" in the schema everywhere —
+`banquet_events.registered_by` is NOT NULL for exactly this reason, and
+its comment says a hall booked with nobody's name against it is the
+state the module exists to end. The queue was quietly undoing that.
+
+An entry now carries the subject captured AT THE TAP, and the drain
+sends only that person's work. Somebody else's waits, and the bar says
+so rather than showing a count that never moves — a clerk watching "3
+held" sit there will conclude the feature is broken.
+
+**Offline moves an act away from the moment it happened. Everything the
+act depended on has to travel with it, and identity is part of the
+act.**
+
+### 130 · A module mock is a second copy of an interface, and it drifts
+
+Adding `currentSubject` to `api.ts` broke **fifteen tests in
+`App.test.tsx`** — none of them about offline, sign-in, or anything the
+export touches. `src/test/setup.ts` mocks `@/lib/api` wholesale, so any
+export the shell reaches for and the mock lacks is a hard failure
+across every test that renders the shell.
+
+The failure names the missing export, so it is quick to fix. The point
+is the shape: **a `vi.mock` factory is an interface that has to be
+maintained in lockstep with the real module, and nothing enforces it.**
+Adding an export to a mocked module means opening the mock.
 
 ## Verification traps
 

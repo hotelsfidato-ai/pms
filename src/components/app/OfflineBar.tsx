@@ -2,7 +2,7 @@ import { useEffect, useState, useCallback } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import { CloudOff, RefreshCw, AlertTriangle, X } from "lucide-react";
 import { cn } from "@/lib/cn";
-import { apiBase, authHeaders } from "@/lib/api";
+import { apiBase, authHeaders, currentSubject } from "@/lib/api";
 import {
   drain, list, remove, subscribe, watchConnection, isOnline,
   type OutboxEntry,
@@ -70,7 +70,7 @@ export function OfflineBar() {
         },
         ...(entry.body === undefined ? {} : { body: entry.body }),
       });
-    });
+    }, currentSubject());
     setSending(false);
     setOnline(isOnline());
     refresh();
@@ -81,7 +81,15 @@ export function OfflineBar() {
     }
   }, [qc, refresh]);
 
-  const waitingCount = entries.filter((e) => e.status === "waiting").length;
+  /* MINE, and SOMEBODY ELSE'S. A front desk is one machine and four
+     clerks, so the queue can hold work that is not this person's to
+     send — it would land under the wrong name, and an append-only
+     ledger does not forget. Counted apart because they need different
+     sentences: one is "sending", the other is "waiting for Priya". */
+  const me = currentSubject();
+  const mine = entries.filter((e) => e.status === "waiting" && (!e.subject || e.subject === me));
+  const theirs = entries.filter((e) => e.status === "waiting" && e.subject && e.subject !== me);
+  const waitingCount = mine.length;
 
   /* Try as soon as the line looks up AND there is something to send.
      Keyed on the connection alone this never fired on a fresh load: entries
@@ -98,11 +106,12 @@ export function OfflineBar() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [online, waitingCount]);
 
-  const waiting = entries.filter((e) => e.status === "waiting");
+  const waiting = mine;
   const refused = entries.filter((e) => e.status === "rejected");
 
-  if (online && waiting.length === 0 && refused.length === 0) return null;
-  if (dismissed && online && refused.length === 0) return null;
+  if (online && waiting.length === 0 && refused.length === 0
+      && theirs.length === 0) return null;
+  if (dismissed && online && refused.length === 0 && theirs.length === 0) return null;
 
   return (
     <div className="sticky top-0 z-30 flex flex-col gap-px">
@@ -136,6 +145,23 @@ export function OfflineBar() {
               ))}
             </ul>
           </div>
+        </div>
+      )}
+
+      {/* ── Somebody else's, on this machine ─────────────────────
+          Not an error, and not this person's to send. Named so the
+          count does not sit there unexplained: a clerk seeing "3 held"
+          that never moves will decide the feature is broken. */}
+      {theirs.length > 0 && (
+        <div className="flex flex-wrap items-center gap-x-3 gap-y-1 border-b
+                        border-grey-200 bg-grey-50 px-5 py-2 sm:px-7">
+          <CloudOff className="size-4 shrink-0 text-grey-500" />
+          <p className="text-sm text-grey-600">
+            {theirs.length === 1
+              ? "1 change was made by someone else signed in on this device."
+              : `${theirs.length} changes were made by someone else signed in on this device.`}
+            {" They will send when that person signs in again."}
+          </p>
         </div>
       )}
 

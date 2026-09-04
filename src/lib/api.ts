@@ -138,6 +138,24 @@ export class ApiError extends Error {
   }
 }
 
+/**
+ * Who is signed in, as a stable identifier.
+ *
+ * Used to stamp an outbox entry with the person who ACTED, because a
+ * front desk is a shared machine: one PC, four clerks, one browser
+ * profile. Without this a change queued by the morning clerk drains
+ * under whoever is signed in when the line returns, and `raised_by`,
+ * `posted_by` and `checked_in_by` all name the wrong person.
+ *
+ * This project puts "who said so" in the schema everywhere —
+ * `banquet_events.registered_by` is NOT NULL for exactly that reason —
+ * and the queue was quietly throwing it away.
+ */
+export function currentSubject(): string {
+  if (devAuth && devSubject) return devSubject;
+  return auth?.currentUser?.uid ?? "";
+}
+
 export async function authHeaders(): Promise<HeadersInit> {
   const base: Record<string, string> = { "content-type": "application/json" };
 
@@ -236,6 +254,9 @@ export async function api<T>(path: string, init: RequestInit = {}): Promise<T> {
       method,
       body: typeof init.body === "string" ? init.body : undefined,
       hotelId: path.match(/\/api\/hotels\/([^/]+)/)?.[1] ?? "",
+      /* WHOSE ACT THIS WAS. Not who happens to be signed in when the
+         line comes back. */
+      subject: currentSubject(),
     });
 
     throw new HeldError(
