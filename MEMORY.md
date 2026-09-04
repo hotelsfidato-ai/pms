@@ -6,7 +6,7 @@ Every entry here cost something. Read it before you repeat it.
 
 ## Ten faults that repeat
 
-135 entries below is a reference, not a reading list. These are the patterns
+136 entries below is a reference, not a reading list. These are the patterns
 that have recurred, with the count and the check that would have caught each.
 **If you read nothing else here, read this.**
 
@@ -2814,6 +2814,41 @@ route existed, every endpoint answered 200, every screen rendered.
 **A screen that cannot be found from the navigation does not exist to
 the person looking for it.** When a screen ships, the menu entry is
 part of shipping it.
+
+### 136 · The menu slid off the screen, and `sr-only` did it
+
+On Housekeeping alone, the whole document scrolled: the sidebar rode up
+and off the top, leaving one strip of it visible. Every other page was
+fine, which made it look like a Housekeeping fault and it was a shell
+one.
+
+`sr-only` is `position: absolute` by definition. **An absolutely
+positioned element is clipped only by an ancestor that is its
+CONTAINING BLOCK** — a static ancestor's `overflow: hidden` does not
+apply to it at all. `main` was static, so every hidden label anchored
+to the page itself and escaped the shell's `overflow-hidden`.
+
+Housekeeping has one per room card down a long grid. The furthest sat
+at 1662px in a 900px window, and the document grew to match:
+
+```
+housekeeping   docScrollHeight 1662   window scrolls   aside top -500
+every other    docScrollHeight  900   no scroll        aside top    0
+```
+
+`position: relative` on `main` anchors them and fixes the class, not
+the instance.
+
+**Two measurement errors on the way, both mine.** I first blamed the
+sidebar nav, because clipped content still reports a bounding box past
+the viewport — `getBoundingClientRect` does not know about an
+ancestor's overflow. And my first "what is escaping" check walked
+ancestors for `overflow` without checking `position`, so it found
+nothing and I nearly concluded the scroll was a viewport-emulation
+artefact.
+
+**When something escapes `overflow: hidden`, look at what its
+containing block is before looking at anything else.**
 
 ## Verification traps
 

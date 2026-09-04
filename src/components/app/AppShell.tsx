@@ -78,7 +78,22 @@ export function AppShell() {
             </div>
           )}
 
-          <main className="flex-1 overflow-y-auto scrollbar-quiet print:overflow-visible">
+          {/* `relative`, and it is not cosmetic. An absolutely positioned
+              element is clipped only by an ancestor that is its CONTAINING
+              BLOCK, and a static ancestor's `overflow` does not apply to it.
+              `main` was static, so every `sr-only` label on the page — they
+              are `position: absolute` by definition — anchored to the page
+              itself and escaped the shell's `overflow-hidden`.
+
+              On Housekeeping, with one per room card down a long grid, the
+              furthest sat at 1662px in a 900px window. The DOCUMENT then
+              scrolled, which drags the sidebar off the top of the screen:
+              the menu slides away and the whole thing looks unmoored. Every
+              other page was fine, which is what made it look like a
+              Housekeeping bug rather than a shell one.
+
+              Anchoring them here fixes the class of fault, not the instance. */}
+          <main className="relative flex-1 overflow-y-auto scrollbar-quiet print:overflow-visible">
             {/* INSIDE the scroll region and sticky, so it rides the top
                 of whatever screen is open rather than pushing the whole
                 shell down. Held work belongs to the person, not to the

@@ -348,7 +348,10 @@ function RoomCard({
         /* `h-full` so every card in a row is the same height whatever
            its assignee name does. Without it a long name makes one card
            taller and the row reads as broken. */
-        "h-full flex flex-col gap-2 rounded-lg border bg-white p-3",
+        /* `relative` so this card's own hidden label belongs to it
+           rather than to the page. The shell now anchors these anyway;
+           this keeps the card correct on its own terms. */
+        "relative h-full flex flex-col gap-2 rounded-lg border bg-white p-3",
         "transition-colors duration-150",
         pending ? "border-brand-yellow bg-brand-yellow-50/40" : "border-grey-200",
       )}
