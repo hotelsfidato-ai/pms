@@ -37,10 +37,22 @@ const nightsBetween = (from: string, to: string) =>
   Math.round((Date.parse(`${to}T00:00:00Z`) - Date.parse(`${from}T00:00:00Z`))
     / 86_400_000);
 
-export function AmendStayFlow({ hotelId, stay }: {
+export function AmendStayFlow({
+  hotelId, stay, open: openProp, onOpenChange,
+}: {
   hotelId: string; stay: Stay;
+  /* CONTROLLED WHEN GIVEN. Passed both, the flow hides its own button
+     and the caller opens it — which is what lets it sit in a menu
+     without every flow being rewritten. Passed neither, it behaves
+     exactly as it always did. */
+  open?: boolean; onOpenChange?: (o: boolean) => void;
 }) {
-  const [open, setOpen] = useState(false);
+  const [ownOpen, setOwnOpen] = useState(false);
+  const controlled = openProp !== undefined;
+  const open = controlled ? openProp : ownOpen;
+  const setOpen = (o: boolean) => {
+    if (controlled) onOpenChange?.(o); else setOwnOpen(o);
+  };
   const [checkIn, setCheckIn] = useState(stay.arrival);
   const [checkOut, setCheckOut] = useState(stay.departure);
   const [adults, setAdults] = useState(String(stay.adults));
@@ -90,13 +102,15 @@ export function AmendStayFlow({ hotelId, stay }: {
 
   return (
     <>
-      <Button
-        variant="secondary" size="lg" className="w-full"
-        onClick={() => setOpen(true)}
-      >
-        <CalendarRange className="size-4" />
-        Change dates or guests
-      </Button>
+      {!controlled && (
+        <Button
+          variant="secondary" size="lg" className="w-full"
+          onClick={() => setOpen(true)}
+        >
+          <CalendarRange className="size-4" />
+          Change dates or guests
+        </Button>
+      )}
 
       <Dialog open={open} onOpenChange={setOpen}>
         <DialogContent

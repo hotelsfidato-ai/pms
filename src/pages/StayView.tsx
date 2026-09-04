@@ -13,11 +13,10 @@ import {
   Page, Button, Segmented, Tooltip, StatusPill,
   Drawer, DrawerContent, Skeleton, DetailList, DetailRow, Tabs, TabsList,
   TabsTrigger, TabsContent, toast,
+
 } from "@/components/ui";
 import { CheckInFlow } from "@/components/flows/CheckInFlow";
-import { VoidFlow } from "@/components/flows/VoidFlow";
-import { MoveRoomFlow } from "@/components/flows/MoveRoomFlow";
-import { AmendStayFlow } from "@/components/flows/AmendStayFlow";
+import { StayActions } from "@/components/flows/StayActions";
 import { FolioPanel } from "@/components/flows/FolioPanel";
 import { WalkInFlow } from "@/components/flows/WalkInFlow";
 import {
@@ -541,39 +540,28 @@ export default function StayViewPage() {
               <TabsContent value="stay">
                 <div className="space-y-5 pt-1">
                   <StayDetail bar={selected} />
+
+                  {/* ── The one act, and then everything else ──────────
+                      Check in is the reason this panel is open on an
+                      arrival, so it stays a button. The rest — amend,
+                      move, void — are rare, and a column of rare
+                      buttons pushes the guest's details off a phone.
+
+                      A menu that swallowed check-in would be tidying at
+                      the guest's expense. */}
                   {selected.stay.status === "due-in" && (
-                    <>
-                      <CheckInFlow
-                        hotelId={hotelId}
-                        stay={selected.stay}
-                        businessDate={BUSINESS_DATE}
-                      />
-                      {/* Only before arrival. A guest who checked in cannot
-                          un-arrive, and the server refuses it anyway — but
-                          offering a button that always fails is worse than
-                          not offering it. */}
-                      <VoidFlow hotelId={hotelId} stay={selected.stay} />
-                    </>
+                    <CheckInFlow
+                      hotelId={hotelId}
+                      stay={selected.stay}
+                      businessDate={BUSINESS_DATE}
+                    />
                   )}
-                  {/* A move needs somebody to be IN a room, so it appears
-                      once they have arrived and until they leave. Before
-                      arrival the room is changed by assigning a different
-                      one, which is a different act and already has its
-                      own button on the chart. */}
-                  {(selected.stay.status === "in-house"
-                    || selected.stay.status === "due-out") && (
-                    <MoveRoomFlow hotelId={hotelId} stay={selected.stay}
-                                  businessDate={BUSINESS_DATE} />
-                  )}
-                  {/* Dates and party size, for anything not yet over. The
-                      server refuses a departed or cancelled booking and says
-                      why, but offering a button that always fails is worse
-                      than not offering it. */}
-                  {(selected.stay.status === "due-in"
-                    || selected.stay.status === "in-house"
-                    || selected.stay.status === "due-out") && (
-                    <AmendStayFlow hotelId={hotelId} stay={selected.stay} />
-                  )}
+
+                  <StayActions
+                    hotelId={hotelId}
+                    stay={selected.stay}
+                    businessDate={BUSINESS_DATE}
+                  />
                 </div>
               </TabsContent>
               <TabsContent value="folio">

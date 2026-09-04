@@ -13,3 +13,4 @@ export * from "./Combobox";
 export * from "./DatePicker";
 export * from "./PageHeader";
 export * from "./FilterBar";
+export * from "./Menu";

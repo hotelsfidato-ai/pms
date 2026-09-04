@@ -32,8 +32,18 @@ import type { Stay } from "@/data/repositories";
    answer; it shows the one that comes back.
    ══════════════════════════════════════════════════════════════════ */
 
-export function VoidFlow({ hotelId, stay }: { hotelId: string; stay: Stay }) {
-  const [open, setOpen] = useState(false);
+export function VoidFlow({
+  hotelId, stay, open: openProp, onOpenChange,
+}: {
+  hotelId: string; stay: Stay;
+  open?: boolean; onOpenChange?: (o: boolean) => void;
+}) {
+  const [ownOpen, setOwnOpen] = useState(false);
+  const controlled = openProp !== undefined;
+  const open = controlled ? openProp : ownOpen;
+  const setOpen = (o: boolean) => {
+    if (controlled) onOpenChange?.(o); else setOwnOpen(o);
+  };
   const [reason, setReason] = useState("");
   const [busy, setBusy] = useState(false);
   const queryClient = useQueryClient();
@@ -60,15 +70,17 @@ export function VoidFlow({ hotelId, stay }: { hotelId: string; stay: Stay }) {
 
   return (
     <>
-      <Button
-        variant="secondary"
-        size="lg"
-        className="w-full"
-        onClick={() => setOpen(true)}
-      >
-        <Ban className="size-4" />
-        Void this booking
-      </Button>
+      {!controlled && (
+        <Button
+          variant="secondary"
+          size="lg"
+          className="w-full"
+          onClick={() => setOpen(true)}
+        >
+          <Ban className="size-4" />
+          Void this booking
+        </Button>
+      )}
 
       <Dialog open={open} onOpenChange={setOpen}>
         <DialogContent

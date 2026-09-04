@@ -8,6 +8,7 @@ import {
   Tabs, TabsList, TabsTrigger, TabsContent, type Column, type Tone,
 } from "@/components/ui";
 import { CheckInFlow } from "@/components/flows/CheckInFlow";
+import { StayActions } from "@/components/flows/StayActions";
 import { FolioPanel } from "@/components/flows/FolioPanel";
 import type { Stay } from "@/data/repositories";
 
@@ -254,6 +255,18 @@ export function StayTable({
                       businessDate={businessDate}
                     />
                   )}
+
+                  {/* THE SAME ACTIONS THE TAPE CHART OFFERS. This file
+                      carried a comment saying it was "the same panel the
+                      tape chart opens"; it was a second copy of it, and
+                      a menu added to the chart's panel appeared on no
+                      list screen at all. Shared for real now, so the two
+                      cannot drift again. */}
+                  <StayActions
+                    hotelId={hotelId}
+                    stay={selected}
+                    businessDate={businessDate}
+                  />
                 </div>
               </TabsContent>
 

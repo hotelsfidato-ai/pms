@@ -50,10 +50,19 @@ const REASONS: { value: string; label: string; hint: string }[] = [
     hint: "Rearranging so a group is on one floor" },
 ];
 
-export function MoveRoomFlow({ hotelId, stay, businessDate }: {
+export function MoveRoomFlow({
+  hotelId, stay, businessDate, open: openProp, onOpenChange,
+}: {
   hotelId: string; stay: Stay; businessDate: string;
+  /* Controlled when both are given, so this can sit in a menu. */
+  open?: boolean; onOpenChange?: (o: boolean) => void;
 }) {
-  const [open, setOpen] = useState(false);
+  const [ownOpen, setOwnOpen] = useState(false);
+  const controlled = openProp !== undefined;
+  const open = controlled ? openProp : ownOpen;
+  const setOpen = (o: boolean) => {
+    if (controlled) onOpenChange?.(o); else setOwnOpen(o);
+  };
   const [room, setRoom] = useState("");
   const [reason, setReason] = useState("move");
   const [rate, setRate] = useState("");
@@ -126,13 +135,15 @@ export function MoveRoomFlow({ hotelId, stay, businessDate }: {
 
   return (
     <>
-      <Button
-        variant="secondary" size="lg" className="w-full"
-        onClick={() => setOpen(true)}
-      >
-        <ArrowRightLeft className="size-4" />
-        Move to another room
-      </Button>
+      {!controlled && (
+        <Button
+          variant="secondary" size="lg" className="w-full"
+          onClick={() => setOpen(true)}
+        >
+          <ArrowRightLeft className="size-4" />
+          Move to another room
+        </Button>
+      )}
 
       <Dialog open={open} onOpenChange={setOpen}>
         <DialogContent

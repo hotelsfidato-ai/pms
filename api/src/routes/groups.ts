@@ -250,6 +250,10 @@ groups.post("/:code/bookings", async (c) => {
     checkIn?: string; checkOut?: string;
     groupName?: string; blockCode?: string;
     source?: string; businessSource?: string; marketSegment?: string;
+    /* The hour they said they would arrive. Optional, and NULL when
+       they did not say — which is most bookings. Nothing should hold a
+       room against a time nobody gave. */
+    expectedArrival?: string;
     lines?: Line[];
   };
   const input = await c.req.json<Body>().catch(() => ({}) as Body);
@@ -351,16 +355,21 @@ groups.post("/:code/bookings", async (c) => {
           `insert into reservations
              (hotel_id, reference, guest_id, room_type_id, check_in, check_out,
               adults, children, occupancy, agreed_rate, status, source,
-              meal_plan, group_id, business_source, market_segment)
+              meal_plan, group_id, business_source, market_segment,
+              expected_arrival)
            values ($1,$2,$3,$4,$5::date,$6::date,$7,$8,$9,$10,'confirmed',$11,
-                   $12,$13,$14,$15)`,
+                   $12,$13,$14,$15,$16::time)`,
           [hotelId, ref[0]!.reference, guestId, line.roomTypeId,
            input.checkIn, input.checkOut, adults, children, adults + children,
            rate, input.source ?? "direct", line.mealPlan ?? "EP", groupId,
            /* Blank stays NULL, never "" — an empty segment would sort as its
               own category in the source-mix report and read as an answer. */
            input.businessSource?.trim() || null,
-           input.marketSegment?.trim() || null],
+           input.marketSegment?.trim() || null,
+           /* NULL when they did not say, which is most bookings. Never
+              midnight — nothing should hold a room against a time
+              nobody gave. */
+           input.expectedArrival?.trim() || null],
         );
         made.push({ reference: ref[0]!.reference, roomType: rt[0].name,
                     rate: Number(rate) });

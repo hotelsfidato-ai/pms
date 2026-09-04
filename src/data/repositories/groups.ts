@@ -136,6 +136,9 @@ export async function createBooking(
     checkIn: string; checkOut: string;
     groupName?: string; blockCode?: string;
     source?: string; businessSource?: string; marketSegment?: string;
+    /** The hour they said they would arrive, 24-hour. Absent when they
+        did not say — which is most bookings, and is not midnight. */
+    expectedArrival?: string;
     lines: BookingLine[];
   },
 ): Promise<

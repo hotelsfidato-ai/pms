@@ -6,7 +6,7 @@ Every entry here cost something. Read it before you repeat it.
 
 ## Ten faults that repeat
 
-142 entries below is a reference, not a reading list. These are the patterns
+143 entries below is a reference, not a reading list. These are the patterns
 that have recurred, with the count and the check that would have caught each.
 **If you read nothing else here, read this.**
 
@@ -2952,6 +2952,25 @@ correct and unusable at the same time.
 **Demo data with a date in it stops being a demonstration and becomes
 an obstacle the moment somebody tries to do real work.** `npm run
 reset` clears a property and brings it to today.
+
+### 143 · "The same panel" was a second copy of it
+
+`StayTable.tsx` opens a detail drawer under a comment reading
+
+> *the same panel the tape chart opens, so nothing is relearned*
+
+It is not the same panel. It is a second implementation of one, and the
+comment is what made it look settled. A More options menu added to the
+chart''s panel appeared on Arrivals, In-house and every other list
+screen exactly nowhere — which is most of the places a clerk opens a
+stay from.
+
+Found by building the menu, opening Arrivals, and not seeing it.
+
+The actions are one component now, imported by both. **A comment
+asserting two things are the same is the weakest possible guarantee of
+it**, and it survived because nothing ever needed them to differ until
+something did.
 
 ## Verification traps
 

@@ -84,6 +84,10 @@ export default function NewBookingPage() {
      Built, accepted, and wired to nothing: the same shape as the
      credit note in defect 81. */
   const [source, setSource] = useState("");
+  /* The hour they said they would arrive. Blank is the ordinary case
+     and stays blank — a form that demanded an hour would get a made-up
+     one, and somebody would then hold a room against it. */
+  const [expected, setExpected] = useState("");
   const [groupName, setGroupName] = useState("");
   const [from, setFrom] = useState<string | null>(null);
   const [to, setTo] = useState<string | null>(null);
@@ -157,6 +161,7 @@ export default function NewBookingPage() {
       phone: phone.trim(),
       ...(email.trim() ? { email: email.trim() } : {}),
       ...(source ? { source } : {}),
+      ...(expected ? { expectedArrival: expected } : {}),
       checkIn: from, checkOut: to,
       ...(groupName.trim() ? { groupName: groupName.trim() } : {}),
       lines: lines.map((l) => ({
@@ -259,6 +264,17 @@ export default function NewBookingPage() {
                       className="h-12 text-base" />
                   )}
                 </Field>
+                <Field label="Expected check-in"
+                       hint="If they said. Blank is fine — most do not.">
+                  {(f) => (
+                    <Input {...fieldProps(f)} type="time" value={expected}
+                      onChange={(e) => setExpected(e.target.value)}
+                      className="h-12 text-base" />
+                  )}
+                </Field>
+              </div>
+
+              <div className="grid gap-3 sm:grid-cols-2">
                 <Field label="Departure"
                        hint={nights > 0
                          ? `${nights} ${nights === 1 ? "night" : "nights"}`
