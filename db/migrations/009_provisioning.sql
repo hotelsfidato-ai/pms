@@ -40,14 +40,54 @@ create table if not exists room_type_templates (
   unique (template_set, code)
 );
 
-insert into room_type_templates (template_set, code, name, base_occupancy, max_occupancy, default_rate, sort_order) values
-  ('standard', 'STD', 'Standard',       2, 3, 3500.00, 1),
-  ('standard', 'DLX', 'Deluxe',         2, 3, 4800.00, 2),
-  ('standard', 'EXE', 'Executive',      2, 3, 6000.00, 3),
-  ('standard', 'STE', 'Suite',          2, 4, 7500.00, 4),
-  ('resort',   'CTG', 'Cottage',        2, 4, 6500.00, 1),
-  ('resort',   'VIL', 'Villa',          2, 6, 12000.00, 2)
-on conflict (template_set, code) do nothing;
+/* THESE RATES DO NOT SURVIVE THE MIGRATION SET. 032 drops `default_rate`
+   entirely — "the system shipped prices nobody at the hotel had chosen",
+   defect 63 — so on a redeploy this column is gone and the INSERT fails with
+   `column "default_rate" ... does not exist`, after the table above has
+   already been created.
+
+   The values are left here rather than stripped because the provisioning
+   function in 010 and 014 still reads `t.default_rate`, and those files run
+   before 032 does. Rewriting history to remove them would mean editing three
+   migrations to change a column that is deleted a few files later anyway.
+   What matters is the end state, and the end state has no default rate.
+
+   EXECUTE, for the reason 011's backfill gives: a reference to a dropped
+   column fails at parse time, on the branch that never runs. */
+do $seed$
+begin
+  if exists (
+    select 1 from information_schema.columns
+     where table_name = 'room_type_templates' and column_name = 'default_rate'
+  ) then
+    execute $sql$
+      insert into room_type_templates (template_set, code, name, base_occupancy,
+                                       max_occupancy, default_rate, sort_order)
+      values
+        ('standard', 'STD', 'Standard',  2, 3,  3500.00, 1),
+        ('standard', 'DLX', 'Deluxe',    2, 3,  4800.00, 2),
+        ('standard', 'EXE', 'Executive', 2, 3,  6000.00, 3),
+        ('standard', 'STE', 'Suite',     2, 4,  7500.00, 4),
+        ('resort',   'CTG', 'Cottage',   2, 4,  6500.00, 1),
+        ('resort',   'VIL', 'Villa',     2, 6, 12000.00, 2)
+      on conflict (template_set, code) do nothing
+    $sql$;
+  else
+    /* Post-032: the templates still describe the ROOMS, which is what they
+       are for. They just carry no price, because nobody at the property
+       chose one. */
+    insert into room_type_templates (template_set, code, name, base_occupancy,
+                                     max_occupancy, sort_order)
+    values
+      ('standard', 'STD', 'Standard',  2, 3, 1),
+      ('standard', 'DLX', 'Deluxe',    2, 3, 2),
+      ('standard', 'EXE', 'Executive', 2, 3, 3),
+      ('standard', 'STE', 'Suite',     2, 4, 4),
+      ('resort',   'CTG', 'Cottage',   2, 4, 1),
+      ('resort',   'VIL', 'Villa',     2, 6, 2)
+    on conflict (template_set, code) do nothing;
+  end if;
+end $seed$;
 
 
 -- -----------------------------------------------------------------------------

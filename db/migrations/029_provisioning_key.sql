@@ -134,6 +134,32 @@ comment on function app.require_provisioning_key(text) is
 -- with a key) and `posAdmin` (a person with a session).
 -- -----------------------------------------------------------------------------
 
+/* RE-RUNNABLE. A rename is a one-way move: on a second deploy 009 and 014
+   have recreated the seven-argument `provision_property`, while
+   `provision_property_unchecked` still exists from the first run — and this
+   statement aborts with "function ... already exists".
+
+   Clearing both first is deliberate rather than merely convenient: the point
+   of the rename is that `_unchecked` holds whatever 009 and 014 most
+   recently defined. Keeping the old copy would leave a deploy running last
+   year's provisioning logic under a name nobody thinks to look at.
+
+   The eight-argument door goes too, because it depends on `_unchecked`. It
+   is recreated below. */
+do $rerun$
+begin
+  if exists (
+    select 1 from pg_proc p
+      join pg_namespace n on n.oid = p.pronamespace
+     where n.nspname = 'app' and p.proname = 'provision_property_unchecked'
+  ) then
+    drop function if exists
+      app.provision_property(text,text,text,text,text,text,text,text);
+    drop function if exists
+      app.provision_property_unchecked(text,text,text,text,text,text,text);
+  end if;
+end $rerun$;
+
 alter function app.provision_property(text, text, text, text, text, text, text)
   rename to provision_property_unchecked;
 

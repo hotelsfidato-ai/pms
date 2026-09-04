@@ -374,7 +374,16 @@ comment on function app.pos_next_order_no(uuid, date) is
 -- Rounded per line, then summed. Rounding the sum instead moves paise on a
 -- bill somebody is holding.
 -- -----------------------------------------------------------------------------
-create or replace function app.pos_order_total(p_order uuid)
+/* `create or replace` cannot widen a function's OUT parameters, and 038 and
+   040 both widen this one. On a redeploy the current function has seven
+   columns and this statement offers three, so it aborts with "cannot change
+   return type of existing function" — halfway through, with everything above
+   it already applied.
+
+   038 learned this and wrote the fix into its own comment. 028 predates it. */
+drop function if exists app.pos_order_total(uuid);
+
+create function app.pos_order_total(p_order uuid)
 returns table (net numeric, tax numeric, gross numeric)
 language sql stable as $$
   select

@@ -152,13 +152,32 @@ alter table reservations drop constraint if exists reservations_no_double_bookin
 
 -- Migrate existing assignments. Dead bookings come across already released, so
 -- they keep their history without holding a room hostage.
-insert into room_assignments (hotel_id, reservation_id, room_id, from_date, to_date,
-                              reason, released_at)
-select hotel_id, id, room_id, check_in, check_out, 'arrival',
-       case when status in ('confirmed','checked_in') then null else now() end
-  from reservations
- where room_id is not null
-on conflict do nothing;
+/* THE BACKFILL ONLY EXISTS WHILE THE OLD COLUMN DOES. `drop column if exists`
+   below is re-runnable; this SELECT above it was not, and on a redeploy it
+   fails with `column "room_id" does not exist` — after the new table has been
+   created, so the file aborts halfway with the schema in a state no migration
+   produces.
+
+   Wrapped in EXECUTE because the planner parses the whole statement even on
+   the branch that never runs, and a reference to a dropped column fails at
+   parse time no matter what the `if` says. */
+do $backfill$
+begin
+  if exists (
+    select 1 from information_schema.columns
+     where table_name = 'reservations' and column_name = 'room_id'
+  ) then
+    execute $sql$
+      insert into room_assignments (hotel_id, reservation_id, room_id,
+                                    from_date, to_date, reason, released_at)
+      select hotel_id, id, room_id, check_in, check_out, 'arrival',
+             case when status in ('confirmed','checked_in') then null else now() end
+        from reservations
+       where room_id is not null
+      on conflict do nothing
+    $sql$;
+  end if;
+end $backfill$;
 
 alter table reservations drop column if exists room_id;
 

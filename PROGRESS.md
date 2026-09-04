@@ -898,7 +898,12 @@ schedule.
 2  cd api && npm test       loads the demo, then tests
 3  npx vitest run           frontend
 4  db/verify-backup.sh      scratch database, drops it after
+5  db/tests/rerun.sh        scratch database, migrates it TWICE
 ```
+
+Step 5 answers the question step 1 cannot: every deploy after the first
+applies these files to a database that already has them. It touches nothing
+the app uses.
 
 Step 1 drops the database the app uses. Run it *after* step 2 and the demo is
 gone — the app shows two test properties and four reservations, and nothing
@@ -1035,34 +1040,47 @@ desktop and at 375px.
 
 ---
 
-## The upgrade path is broken, and it is named
+## The upgrade path, closed
 
-`db/tests/run.sh` rebuilds from ZERO, so it proves the migrations work on an
-empty database and nothing else. 060 and 061 were each checked against a
-second run and pass; the eight below are older. **Run them a second time — which is what every
-deploy after the first one does — and 8 of 61 abort.** Measured, not estimated:
+`db/tests/run.sh` rebuilds from ZERO, so it only ever proved the FIRST run.
+Every deploy after the first applies the same files to a database that already
+has most of them, which is a different question and nothing was asking it.
+
+**8 of 61 aborted. All 61 are now re-runnable**, proved by
+`db/tests/rerun.sh` — which builds a scratch database, migrates it twice, and
+drops it whether it passes or fails. It is never the database the app uses,
+because finding this out by hand against the live one cost a cluster rebuild
+this morning (defect 119, decision D2).
+
+Four distinct causes, and none of them was exotic:
 
 ```
-005_reservations.sql        column "room_id" does not exist
-009_provisioning.sql        column "default_rate" of room_type_templates does not exist
-011_model_additions.sql     column "room_id" does not exist
-013_policies.sql            policy "guests_read" already exists
-014_simulation_fixes.sql    policy "gd_capture" already exists
-025_invoices_form_c.sql     stack depth limit exceeded
-028_pos_till.sql            cannot change return type of existing function
-029_provisioning_key.sql    function provision_property_unchecked(...) already exists
+013 · 014   create policy has no IF NOT EXISTS form      +11 drop policy
+028         create or replace cannot widen OUT params    +1  drop function
+029         a rename is a one-way move                   guarded
+005 · 009 · 011   a column a later migration deletes     guarded on the column
+014         a dependent FK dropped after its key         reordered
 ```
 
-Three separate causes. `create policy` has no `if not exists`, so 013 and 014
-need `drop policy if exists` first. 028 and 029 need `drop function if exists`
-for **every** signature — the fault defect 117 records. And 005, 009 and 011 add
-a column and then use it in the same file, so on a re-run the `add column if not
-exists` is skipped and the statement below it references a column that the
-FIRST run created under a different shape.
+**Three of them had already been solved elsewhere in this same directory.**
+038's comment reads *"Dropped explicitly rather than discovered as 'cannot
+change return type of existing function' halfway through a deploy"* — 028
+predates it and never got the fix. 005's comment says *"Guarded so the file is
+re-runnable"*, and it guards the constraint while the column it names is the
+half that goes missing. Thinking about re-runnability is not the same as being
+re-runnable.
 
-Nothing is at risk today: the database exists and is not rebuilt. It becomes a
-blocker the first time a second deployment runs against a live one, which is
-the day it is hardest to fix. **Half a day, and it does not need the domain.**
+**The parse-time trap, worth knowing before writing the next one.** Guarding a
+statement in `if exists (...) then` is not enough when the statement names a
+dropped column: PL/pgSQL parses the whole block, including the branch that
+never runs, so it fails anyway. Those go inside `execute $sql$ ... $sql$`.
+
+**What this was costing:** nothing at all, until the first redeploy against a
+live database — and then everything, because migration 005 aborts *part way*.
+A half-applied migration is a state no migration produces: not the old schema,
+not the new one, and one nothing has ever been tested against. That is exactly
+what happened to the development cluster this morning, and it needed `initdb`
+to recover.
 
 ---
 

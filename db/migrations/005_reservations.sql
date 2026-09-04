@@ -94,12 +94,24 @@ create table if not exists reservations (
 -- Guarded so the file is re-runnable. `add constraint` has no IF NOT EXISTS
 -- form, so a bare ALTER TABLE here fails the second time the migration runs
 -- and takes the rest of the file with it under ON_ERROR_STOP.
+-- AND guarded on the COLUMN, which the paragraph above missed. 011 replaces
+-- this single `room_id` with the `room_assignments` table and drops the
+-- column, so on a redeploy the constraint is absent — the test above passes —
+-- and the column it names is absent too. The statement then fails with
+-- `column "room_id" does not exist`, which reads like a schema fault and is
+-- really this file being run a second time.
+--
+-- Thinking about re-runnability is not the same as being re-runnable: the
+-- guard was written, and it guarded the wrong half.
 do $$
 begin
   if not exists (
     select 1 from pg_constraint
      where conname = 'reservations_no_double_booking'
        and conrelid = 'reservations'::regclass
+  ) and exists (
+    select 1 from information_schema.columns
+     where table_name = 'reservations' and column_name = 'room_id'
   ) then
     alter table reservations
       add constraint reservations_no_double_booking

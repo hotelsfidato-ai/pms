@@ -6,7 +6,7 @@ Every entry here cost something. Read it before you repeat it.
 
 ## Ten faults that repeat
 
-122 entries below is a reference, not a reading list. These are the patterns
+124 entries below is a reference, not a reading list. These are the patterns
 that have recurred, with the count and the check that would have caught each.
 **If you read nothing else here, read this.**
 
@@ -2562,6 +2562,44 @@ The content was never the problem and neither was the quoting style.
 written with the file tool, or through a script written with the file
 tool.** After the first failure that was already the right answer; I
 paid for it twice more.
+
+### 123 · A guard that guarded the wrong half
+
+`005_reservations.sql` wraps its exclusion constraint in a check that the
+constraint does not already exist, under a comment that says *"Guarded so the
+file is re-runnable."* It is not. 011 drops the `room_id` column the
+constraint names, so on a redeploy the constraint is absent — the guard passes
+— and the column is absent too, and the statement fails.
+
+The author thought about re-runnability, wrote a guard, and guarded the
+condition that was easier to see rather than the one that breaks.
+
+Three of the eight non-re-runnable migrations were like this, and **three of
+the fixes already existed elsewhere in the same directory**: 038 solved the
+function-signature problem and wrote the lesson into its own comment while 028
+sat two hundred lines away without it.
+
+**A pattern solved once is not solved. Grep for it.**
+
+### 124 · A guard cannot save a statement the parser has already read
+
+Wrapping the room_id backfill in `if exists (... column ...) then` did not
+work. PL/pgSQL parses the entire block when the function is created, including
+branches that never execute, so a reference to a dropped column fails at parse
+time no matter what the condition says.
+
+```sql
+if exists (...) then
+  insert into ... select room_id ...      -- fails even when false
+end if;
+
+if exists (...) then
+  execute $sql$ insert into ... $sql$;    -- correct
+end if;
+```
+
+**A conditional protects execution, not parsing.** Anything naming a column
+that may not exist goes inside `execute`.
 
 ## Verification traps
 

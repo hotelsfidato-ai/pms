@@ -113,6 +113,7 @@ $$;
 -- -----------------------------------------------------------------------------
 drop policy if exists gd_write_by_reservation on guest_documents;
 
+drop policy if exists gd_capture on guest_documents;
 create policy gd_capture on guest_documents
   for insert
   with check ( app.is_active_staff() );
@@ -232,19 +233,31 @@ revoke insert, update, delete on schema_migrations from pms_app;
 -- folio_postings(id), so nothing stops a payment at Agra settling a charge at
 -- Pune — and RLS then hides the mismatch, exactly as D1 described.
 -- -----------------------------------------------------------------------------
+/* ORDER. Both foreign keys below reference `folio_postings (hotel_id, id)`,
+   so they DEPEND on the unique constraint that names those columns. On a
+   first run neither exists yet and any order works; on a redeploy both exist,
+   and dropping the unique constraint first fails with
+
+     cannot drop constraint folio_postings_hotel_id_key ... because other
+     objects depend on it
+
+   halfway through the file. Dependents come off first, the key is replaced,
+   and they go back on — a migration run backwards, then forwards. The same
+   ordering rule defect 115 records for teardowns. */
+alter table payments        drop constraint if exists payments_posting_id_fkey;
+alter table payments        drop constraint if exists payments_posting_same_hotel;
+alter table folio_postings  drop constraint if exists folio_postings_reverses_id_fkey;
+alter table folio_postings  drop constraint if exists folio_postings_reverses_same_hotel;
+
 alter table folio_postings drop constraint if exists folio_postings_hotel_id_key;
 alter table folio_postings add constraint folio_postings_hotel_id_key unique (hotel_id, id);
 
-alter table payments drop constraint if exists payments_posting_id_fkey;
-alter table payments drop constraint if exists payments_posting_same_hotel;
 alter table payments
   add constraint payments_posting_same_hotel
   foreign key (hotel_id, posting_id) references folio_postings (hotel_id, id);
 
 -- Same for the ledger's self-reference: a reversal must reverse a posting at
 -- the same property.
-alter table folio_postings drop constraint if exists folio_postings_reverses_id_fkey;
-alter table folio_postings drop constraint if exists folio_postings_reverses_same_hotel;
 alter table folio_postings
   add constraint folio_postings_reverses_same_hotel
   foreign key (hotel_id, reverses_id) references folio_postings (hotel_id, id);

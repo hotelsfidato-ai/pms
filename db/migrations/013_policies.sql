@@ -148,15 +148,18 @@ $$;
 
 drop policy if exists staff_access on guests;
 
+drop policy if exists guests_read on guests;
 create policy guests_read on guests
   for select using ( app.is_active_staff() );
 
+drop policy if exists guests_insert on guests;
 create policy guests_insert on guests
   for insert with check ( app.is_active_staff() );
 
 -- Anyone may correct a name or a phone number. Only a manager may change the
 -- blacklist — enforced by the trigger below, because a policy cannot see which
 -- COLUMN changed.
+drop policy if exists guests_update on guests;
 create policy guests_update on guests
   for update using ( app.is_active_staff() );
 
@@ -210,6 +213,7 @@ drop policy if exists hotel_isolation on room_status_log;
 drop policy if exists rsl_read on room_status_log;
 create policy rsl_read on room_status_log
   for select using ( hotel_id in (select app.auth_hotel_ids()) );
+drop policy if exists rsl_insert on room_status_log;
 create policy rsl_insert on room_status_log
   for insert with check ( hotel_id in (select app.auth_hotel_ids()) );
 
@@ -237,6 +241,7 @@ alter table invoices force row level security;
 drop policy if exists invoices_scope on invoices;
 create policy invoices_scope on invoices
   for select using ( hotel_id in (select app.auth_hotel_ids()) );
+drop policy if exists invoices_issue on invoices;
 create policy invoices_issue on invoices
   for insert with check ( hotel_id in (select app.auth_hotel_ids()) );
 -- Deliberately no update or delete. An issued invoice is issued.
@@ -294,18 +299,23 @@ create policy sm_read on schema_migrations for select using ( true );
 -- `companies`: credit limits are commercial terms, not front-desk data.
 -- -----------------------------------------------------------------------------
 drop policy if exists staff_access on hotels;
+drop policy if exists hotels_read on hotels;
 create policy hotels_read on hotels
   for select using ( app.is_active_staff() );
+drop policy if exists hotels_manage on hotels;
 create policy hotels_manage on hotels
   for update using ( app.is_manager() ) with check ( app.is_manager() );
 -- No insert policy: properties arrive only through app.provision_property().
 -- No delete policy: a property is deactivated, never removed.
 
 drop policy if exists staff_access on companies;
+drop policy if exists companies_read on companies;
 create policy companies_read on companies
   for select using ( app.is_active_staff() );
+drop policy if exists companies_write on companies;
 create policy companies_write on companies
   for insert with check ( app.is_active_staff() );
+drop policy if exists companies_update on companies;
 create policy companies_update on companies
   for update using ( app.is_manager() ) with check ( app.is_manager() );
 
