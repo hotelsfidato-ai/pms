@@ -114,6 +114,11 @@ async function main() {
       occupancy: 0.39, seed: 113,
     });
 
+    /* A restaurant service at Akkalkot: tables open, dishes on the
+       pass, some already cooking. Without it the kitchen screen is
+       empty and reads as broken. */
+    const service = await fillRestaurant(client);
+
     await client.query("commit");
 
     /* ── And it did not move ────────────────────────────────────── */
@@ -129,6 +134,7 @@ async function main() {
     console.log();
     say(`${made.guests} more guests`);
     say(`${made.stays} more stays · ${made.postings} more postings`);
+    say(`${service.orders} open tables · ${service.onThePass} dishes on the pass`);
     say(`1–25 August at Akkalkot: still ${after} room-nights sold ✓`);
   } catch (error) {
     await client.query("rollback").catch(() => {});
@@ -182,6 +188,19 @@ async function clearOwnRows(client: pg.Client) {
   }
   await client.query(
     `delete from guests where full_name like $1`, [`%[${TAG}]`]);
+
+  /* Its own restaurant service. `pos_order_lines_frozen` refuses to
+     let a paid bill change and is right to; these are unpaid demo
+     tables, and the guard is lifted for exactly these statements. */
+  await client.query(
+    "alter table pos_order_lines disable trigger pos_order_lines_frozen");
+  await client.query(
+    `delete from pos_order_lines where order_id in (
+       select id from pos_orders where order_no like $1)`, [`${TAG}-%`]);
+  await client.query(
+    `delete from pos_orders where order_no like $1`, [`${TAG}-%`]);
+  await client.query(
+    "alter table pos_order_lines enable trigger pos_order_lines_frozen");
 
   await client.query("alter table guests enable trigger guests_no_delete");
   await client.query(
@@ -359,6 +378,111 @@ async function fill(
       }
     }
   }
+}
+
+
+/* ══════════════════════════════════════════════════════════════════
+   A SERVICE IN THE RESTAURANT
+
+   The kitchen screen shows lines whose `kot_status` is sent, preparing
+   or ready, on an OPEN order. The demo had five orders — all of them
+   left over from the test suite — and every single line was `pending`,
+   because nothing had ever fired a KOT.
+
+   So the pass was empty, and an empty pass looks exactly like a broken
+   pass. It is the screen a chef stands in front of all evening, and it
+   demonstrated nothing.
+
+   THE THREE STATES ARE ALL REPRESENTED, because that is what the board
+   is for: ordered, on the fire, at the pass. A demo showing one column
+   filled and two empty teaches the wrong thing about the screen.
+
+   One table is left with nothing fired — a waiter still taking the
+   order — because that is the state that explains why "Send to the
+   kitchen" exists.
+   ══════════════════════════════════════════════════════════════════ */
+async function fillRestaurant(client: pg.Client) {
+  const rand = seeded(9001);
+
+  const { rows: hotel } = await client.query<{ id: string; bd: string }>(
+    `select id, business_date::text as bd from hotels where code = '5EL'`);
+  if (!hotel[0]) return { orders: 0, onThePass: 0 };
+  const hotelId = hotel[0].id;
+
+  const { rows: outlet } = await client.query<{ id: string }>(
+    `select id from pos_outlets where hotel_id = $1 and code = 'REST'`,
+    [hotelId]);
+  if (!outlet[0]) return { orders: 0, onThePass: 0 };
+
+  const { rows: staff } = await client.query<{ id: string }>(
+    `select s.id from staff s join staff_hotels sh on sh.staff_id = s.id
+      where sh.hotel_id = $1 and s.is_active limit 1`, [hotelId]);
+  if (!staff[0]) return { orders: 0, onThePass: 0 };
+
+  const { rows: items } = await client.query<{
+    id: string; name: string; price: string; tax: string;
+  }>(
+    `select id, name, price::text, tax_rate::text as tax
+       from pos_menu_items where hotel_id = $1 and is_active
+      order by name`, [hotelId]);
+  if (items.length === 0) return { orders: 0, onThePass: 0 };
+
+  const { rows: tables } = await client.query<{ label: string }>(
+    `select t.label from pos_tables t
+       join pos_sections sec on sec.id = t.section_id
+      where sec.outlet_id = $1 order by t.label limit 12`, [outlet[0].id]);
+
+  /* label, how many lines, and what the kitchen has done with them. */
+  const PLAN: [string, number, "pending" | "sent" | "preparing" | "ready"][] = [
+    ["AC1", 4, "ready"],
+    ["AC2", 3, "preparing"],
+    ["AC4", 5, "sent"],
+    ["AC5", 2, "sent"],
+    ["N2",  3, "preparing"],
+    ["B1",  2, "pending"],
+  ];
+
+  let made = 0, onThePass = 0;
+
+  for (const [fallbackLabel, count, state] of PLAN) {
+    const label = tables.find((t) => t.label === fallbackLabel)?.label
+      ?? fallbackLabel;
+    made += 1;
+
+    const { rows: order } = await client.query<{ id: string }>(
+      `insert into pos_orders
+         (hotel_id, outlet_id, order_no, table_ref, business_date,
+          status, order_type, opened_by, covers)
+       values ($1,$2,$3,$4,$5::date,'open','dine_in',$6,$7)
+       returning id`,
+      [hotelId, outlet[0].id, `${TAG}-${String(made).padStart(3, "0")}`,
+       label, hotel[0].bd, staff[0].id, 2 + Math.floor(rand() * 4)]);
+
+    for (let i = 0; i < count; i += 1) {
+      const item = items[Math.floor(rand() * items.length)]!;
+      const sent = state !== "pending";
+      await client.query(
+        `insert into pos_order_lines
+           (order_id, hotel_id, item_id, name, qty, unit_price, tax_rate,
+            added_by, kot_status, kot_sent_at, kot_no)
+         values ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11)`,
+        [order[0]!.id, hotelId, item.id, item.name,
+         1 + Math.floor(rand() * 2), item.price, item.tax, staff[0].id,
+         state,
+         /* Staggered, so the waiting time on the board is a range and
+            not one number repeated — the chef reads that column to
+            decide what to cook next. */
+         /* Under 5 minutes is calm, 5-10 is warm, over 10 turns red —
+            Kitchen.tsx line 165. Spread across all three so the board
+            shows its colour coding, but weighted to calm: a demo where
+            every dish is late teaches a chef to ignore the red. */
+         sent ? new Date(Date.now() - Math.floor(rand() * 13 + 1) * 60000) : null,
+         sent ? 1 : null]);
+      if (sent) onThePass += 1;
+    }
+  }
+
+  return { orders: made, onThePass };
 }
 
 if (process.argv[1] === fileURLToPath(import.meta.url)) {

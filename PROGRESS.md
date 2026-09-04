@@ -1133,6 +1133,132 @@ statutory number, or claims a scarce resource other than a room.
 
 ---
 
+## What a market-leading HMS has that this does not
+
+Measured against what Oracle OPERA Cloud, Mews, Cloudbeds, eZee, IDS
+Next, Hotelogix and RoomRaccoon ship as standard. **This is domain
+knowledge about the category, not a live survey of competitor pricing
+pages** — the feature set of a hotel PMS is stable, but if a specific
+claim matters commercially, check it before quoting it.
+
+The 22 blocks still open on the board are one question. This is a
+different one: not "what did we plan and not finish" but "what does a
+hotel buying software in 2026 expect to be there".
+
+### It earns or loses money — build before or soon after go-live
+
+```
+1  CHANNEL MANAGER            OTA rates and inventory, two ways
+2  BOOKING ENGINE             direct bookings off the property's own site
+3  PAYMENT GATEWAY            actually taking money, not recording that it arrived
+4  GUEST MESSAGING            WhatsApp above all, in this market
+5  TALLY EXPORT               what the accountant asks for first
+```
+
+**1 · The channel manager is the single largest gap.** Stage 9 carries
+five blocks for it and STAAH is quoted and unbuilt. Without it somebody
+re-types every Agoda and go-MMT booking into this system by hand, and
+inventory is corrected by hand on six extranets. Two rooms sold twice
+is then a matter of time rather than a possibility. Everything else on
+this page is worth less than this.
+
+**2 · There is no booking engine.** Every competitor bundles one,
+because a direct booking pays no commission — the Booking sources
+screen puts that at 44% direct today, and a booking engine is how that
+number grows. Nothing in this system takes a reservation from a guest.
+
+**3 · Money is recorded, never taken.** `payments` knows cash, card and
+UPI *as facts about something that already happened*. No prepayment, no
+payment link, no card held against a no-show, no refund. A guest cannot
+pay a deposit to hold a room. In India that means Razorpay, PayU or
+CCAvenue, and UPI links.
+
+**4 · Nothing is ever sent to a guest.** No booking confirmation, no
+pre-arrival message, no folio by email, no feedback request. In this
+market WhatsApp is the channel, not email — and this is one of the
+cheapest gaps on the page to close.
+
+**5 · Nothing reaches the accounts.** Every Indian hotel of this size
+runs Tally. Reports print and export CSV; none of them speak to it.
+
+### Expected on any comparison sheet
+
+```
+ 6  Web check-in, digital registration card, e-signature
+ 7  Passport / ID scanning with OCR
+ 8  Stores and purchase — F&B and housekeeping stock, indents, GRN
+ 9  Laundry — guest billing and linen
+10  Packages and inclusions sold as items (airport pickup, cake, spa)
+11  Corporate and agent CONTRACTS — negotiated rates and allotments
+12  Commission tracking and OTA reconciliation
+13  Reputation — Google and TripAdvisor reviews in one place
+14  Loyalty or membership
+15  Task management, wake-up calls, lost and found
+```
+
+**11 is closer than it looks.** `companies` and the city ledger exist;
+what is missing is a contracted rate per account and an allotment —
+"Agoda holds four Deluxes until 48 hours out". **12 is visible as a
+hole already**: the Booking sources screen has a Commission column that
+prints a dash on every row.
+
+### Revenue management — where the money is left
+
+```
+16  Forecast, pace and pickup — on the books versus this time last year
+17  Rate shopping and parity — what the competition is charging
+18  Yield rules — the rate moves with occupancy, automatically
+19  Budget versus actual
+```
+
+Every report here looks BACKWARDS. There is no screen that answers
+"what does next month look like, and is it ahead of last year" — which
+is the question a revenue manager opens a system to ask.
+
+### Hardware, and mostly later
+
+```
+20  Door locks (Onity, Salto, Hafele)      21  PABX call billing
+22  Minibar and IPTV                       23  Energy management
+```
+
+Worth doing when a property asks. None of it blocks anything.
+
+### Deliberately not built, and still correct
+
+**E-invoicing / IRN** — required above ₹5 crore turnover, and the group
+is under it. **The night audit stays manual** — a hotel that forgets
+simply stays on yesterday, which is safe and visible.
+
+### What this has that most of them do not
+
+Not a gap, and worth knowing when comparing:
+
+- **It works with the line down.** A durable outbox, held work that
+  survives a reload, and a tiered list of what may be queued. eZee,
+  Cloudbeds and OPERA are all online-only. In a hotel on an Indian
+  broadband line this is a genuine operational difference.
+- **An append-only ledger.** A wrong posting is reversed with its own
+  row and a reason, never edited. Most mid-market systems let a
+  supervisor edit a folio line.
+- **Row-level security per property**, enforced by the database rather
+  than by the screens.
+- **Availability derived, never stored** — it cannot drift.
+- **No price is ever invented.** Unpriced reads as a dash everywhere,
+  not a zero.
+
+### If it were a sequence
+
+```
+now      channel manager · booking engine · payment gateway
+next     WhatsApp · Tally · web check-in · stores
+then     contracts and allotments · commission reconciliation
+later    forecasting and yield · reputation · loyalty
+when asked   door locks · PABX · minibar
+```
+
+---
+
 ## Three bars that had no arithmetic behind them
 
 Ten of the fifteen stages have never had their twelve units written down, so
