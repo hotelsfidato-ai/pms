@@ -6,7 +6,7 @@ Every entry here cost something. Read it before you repeat it.
 
 ## Ten faults that repeat
 
-138 entries below is a reference, not a reading list. These are the patterns
+140 entries below is a reference, not a reading list. These are the patterns
 that have recurred, with the count and the check that would have caught each.
 **If you read nothing else here, read this.**
 
@@ -2880,6 +2880,36 @@ and calling it overpaid reads as a mistake somebody has to correct
 rather than money already in hand.
 
 It says "in advance" until they have left, and "overpaid" only after.
+
+### 139 · The same reason, twice, because I did not read the line below
+
+The check-in trigger already passed its refusal to a `Tooltip`. I added
+a paragraph showing the same sentence and shipped both, so the reason
+appeared on hover AND under the button.
+
+Two lines apart in the same file. I read the one I was changing and not
+the one after it.
+
+The paragraph is the half worth keeping: a tooltip needs a pointer, and
+on the tablet at the front desk it can never be opened at all.
+
+### 140 · run.sh again, for the third time
+
+Ran `db/tests/run.sh` to check new assertions, then opened a screen
+and found "This property did not load". The API log said
+`permission denied for schema app`, which reads as a grant fault, and
+underneath it said `database "fidato" does not exist`.
+
+Neither was the cause. run.sh REBUILDS FROM ZERO — its own closing note
+says so — and I had not reloaded the demo. Two hotels instead of three,
+5EL missing, and every screen honestly reporting an empty database.
+
+Defects 92 and 109 are the same event. The note exists, the gate order
+in PROGRESS.md documents it, and I still lost fifteen minutes to a
+permission error that was not a permission error.
+
+**After run.sh, reload the demo. Before reading any screen, count the
+hotels.**
 
 ## Verification traps
 

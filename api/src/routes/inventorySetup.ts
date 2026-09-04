@@ -251,6 +251,68 @@ inventorySetup.patch("/:code/rooms/:number", async (c) => {
   return c.json(result, "ok" in result && result.ok ? 200 : 409);
 });
 
+
+/* ── The property's own clock and its exception charges ───────────
+   063 gave the system an opinion about the hour a guest arrives, and
+   nothing could set it. Check-in time, check-out time and both charges
+   were reachable only through a database session — which makes the
+   whole feature unusable by the people it is for, and is the same hole
+   room types had this morning.
+
+   NO CHARGE IS INVENTED. Sending null clears one, and a cleared charge
+   means "we do not charge for this" — a real and common answer, and
+   not the same as charging zero. */
+inventorySetup.patch("/:code/front-desk", async (c) => {
+  type Body = {
+    checkInTime?: string; checkOutTime?: string;
+    earlyCheckinCharge?: number | null;
+    lateCheckoutCharge?: number | null;
+  };
+  const input = await c.req.json<Body>().catch(() => ({}) as Body);
+
+  const clock = /^([01]\d|2[0-3]):[0-5]\d$/;
+  for (const [label, value] of [
+    ["Check-in time", input.checkInTime],
+    ["Check-out time", input.checkOutTime],
+  ] as const) {
+    if (value !== undefined && !clock.test(value)) {
+      return c.json(refuse(`${label} is a 24-hour time, like 13:00.`), 409);
+    }
+  }
+  for (const [label, value] of [
+    ["The early arrival charge", input.earlyCheckinCharge],
+    ["The late departure charge", input.lateCheckoutCharge],
+  ] as const) {
+    if (value !== undefined && value !== null
+        && (!Number.isFinite(value) || value < 0)) {
+      return c.json(refuse(`${label} is zero or more, or blank for none.`), 409);
+    }
+  }
+
+  const result = await withSession(c.get("subject"), async (client) => {
+    const hotelId = await hotelFor(client, c.req.param("code"));
+    if (!hotelId) return null;
+
+    await client.query(
+      `update hotels set
+         check_in_time  = coalesce($2::time, check_in_time),
+         check_out_time = coalesce($3::time, check_out_time),
+         early_checkin_charge = case when $4::boolean
+           then $5::numeric else early_checkin_charge end,
+         late_checkout_charge = case when $6::boolean
+           then $7::numeric else late_checkout_charge end
+       where id = $1`,
+      [hotelId,
+       input.checkInTime ?? null, input.checkOutTime ?? null,
+       Object.hasOwn(input, "earlyCheckinCharge"), input.earlyCheckinCharge ?? null,
+       Object.hasOwn(input, "lateCheckoutCharge"), input.lateCheckoutCharge ?? null]);
+    return { ok: true as const };
+  });
+
+  if (!result) return c.json({ error: "No such property." }, 404);
+  return c.json(result, "ok" in result && result.ok ? 200 : 409);
+});
+
 /* ── What is there now ────────────────────────────────────────────── */
 
 inventorySetup.get("/:code/room-setup", async (c) => {
@@ -289,7 +351,24 @@ inventorySetup.get("/:code/room-setup", async (c) => {
         order by r.number`,
       [hotelId]);
 
+    const { rows: h } = await client.query<{
+      cin: string; cout: string; early: string | null; late: string | null;
+    }>(
+      `select to_char(check_in_time,'HH24:MI') as cin,
+              to_char(check_out_time,'HH24:MI') as cout,
+              early_checkin_charge::text as early,
+              late_checkout_charge::text as late
+         from hotels where id = $1`, [hotelId]);
+
     return {
+      frontDesk: {
+        checkInTime: h[0]!.cin,
+        checkOutTime: h[0]!.cout,
+        /* NULL, never 0. "We do not charge" is a decision; zero is a
+           price, and the screens show a dash for the first. */
+        earlyCheckinCharge: h[0]!.early === null ? null : Number(h[0]!.early),
+        lateCheckoutCharge: h[0]!.late === null ? null : Number(h[0]!.late),
+      },
       types: types.map((t) => ({
         id: t.id, code: t.code, name: t.name,
         baseOccupancy: t.base, maxOccupancy: t.max, sortOrder: t.sort,

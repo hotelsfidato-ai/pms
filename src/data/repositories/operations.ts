@@ -124,6 +124,29 @@ export async function assignableRooms(
     });
 }
 
+export interface EarlyArrival {
+  isEarly: boolean;
+  checkInTime: string;
+  checkOutTime: string;
+  /** Null when the property does not charge. Not zero — a dash on
+      screen, because "we do not charge" and "we charge nothing" are
+      different sentences and only one of them is a decision. */
+  charge: number | null;
+  lateCharge: number | null;
+}
+
+/** The property's clock and its charges, from the server. */
+export async function earlyArrival(
+  hotelId: string,
+): Promise<EarlyArrival | null> {
+  if (!hotelId) return null;
+  try {
+    return await api<EarlyArrival>(`/api/hotels/${hotelId}/early-arrival`);
+  } catch {
+    return null;
+  }
+}
+
 export async function checkIn(
   hotelId: string,
   stayId: string,
@@ -152,6 +175,13 @@ export async function checkIn(
       country?: string;
     };
     idSkipReason?: string;
+    /* Why the room was given before the property's check-in time, and
+       whether the charge for it was waived. The server decides WHETHER
+       this is early — the clock is the property's, not the tablet's,
+       and a device with the wrong time must not be able to make an
+       early arrival look ordinary. */
+    earlyReason?: string;
+    waiveEarly?: boolean;
     businessDate: string;
     user: string;
   },

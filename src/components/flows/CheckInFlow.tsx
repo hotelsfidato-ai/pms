@@ -7,7 +7,9 @@ import {
   Button, Field, Input, NativeSelect, StatusPill, Tooltip, toast,
   Dialog, DialogContent, DialogTrigger,
 } from "@/components/ui";
-import { checkIn, assignableRooms, checkInAllowed, type Stay } from "@/data/repositories";
+import {
+  checkIn, assignableRooms, checkInAllowed, earlyArrival, type Stay,
+} from "@/data/repositories";
 
 /* ══════════════════════════════════════════════════════════════════
    FLOW A — arrival to in house
@@ -48,6 +50,8 @@ export function CheckInFlow({
   const [visaExpiry, setVisaExpiry] = useState("");
   const [addressLine, setAddressLine] = useState("");
   const [idSkipReason, setIdSkipReason] = useState("");
+  const [earlyReason, setEarlyReason] = useState("");
+  const [waiveEarly, setWaiveEarly] = useState(false);
 
   /* Captured means a TYPE and a NUMBER. Derived, never asserted — the
      server derives it the same way and cannot be told otherwise. */
@@ -59,6 +63,14 @@ export function CheckInFlow({
     queryKey: ["checkin-allowed", hotelId, stay.id, stay.status],
     queryFn: () => checkInAllowed(hotelId, stay.id, businessDate),
   });
+  /* Is it early, and what does the property charge? Asked of the
+     server so the answer is the property's clock, not the device's. */
+  const early = useQuery({
+    queryKey: ["early-checkin", hotelId],
+    queryFn: () => earlyArrival(hotelId),
+    enabled: open,
+  });
+
   const rooms = useQuery({
     queryKey: ["assignable", hotelId, stay.roomType, businessDate],
     queryFn: () => assignableRooms(hotelId, stay.roomType, businessDate),
@@ -96,7 +108,12 @@ export function CheckInFlow({
       onOpenChange={(o) => { setOpen(o); if (!o) setStep(0); }}
     >
       <DialogTrigger asChild>
-        {reason ? <Tooltip content={reason}>{trigger}</Tooltip> : trigger}
+        {/* NO TOOLTIP. It carried the same sentence the paragraph
+            below the button now shows, so the reason appeared twice —
+            once on hover and once in the panel. And a tooltip needs a
+            pointer: on the tablet at the front desk it can never be
+            opened at all, which makes it the wrong half to keep. */}
+        {trigger}
       </DialogTrigger>
 
       <DialogContent
@@ -303,6 +320,51 @@ export function CheckInFlow({
                   </NativeSelect>
                 )}
               </Field>
+              {/* ── ARRIVING EARLY ─────────────────────────────────
+                  Shown only when the property says so. `isEarly` comes
+                  from the SERVER, against the property's clock — a
+                  tablet with the wrong time set must not be able to
+                  make an early arrival look like an ordinary one, and
+                  the server refuses independently either way. */}
+              {early.data?.isEarly && (
+                <div className="rounded-md border border-brand-yellow-200 bg-brand-yellow-50 p-3 space-y-2.5">
+                  <p className="text-sm text-[#8a6300]">
+                    Rooms are ready from {early.data.checkInTime}.
+                    {early.data.charge === null
+                      ? " This property does not charge for an early arrival."
+                      : ` An early arrival is ${money(early.data.charge)}.`}
+                  </p>
+                  <Field label="Why the room is being given early" required>
+                    {({ id }) => (
+                      <Input
+                        id={id}
+                        value={earlyReason}
+                        onChange={(e) => setEarlyReason(e.target.value)}
+                        placeholder="Overnight train, room vacant and clean"
+                      />
+                    )}
+                  </Field>
+                  {early.data.charge !== null && (
+                    <label className="flex items-start gap-2.5 cursor-pointer">
+                      <input
+                        type="checkbox"
+                        checked={waiveEarly}
+                        onChange={(e) => setWaiveEarly(e.target.checked)}
+                        className="mt-0.5 size-4 accent-brand-orange cursor-pointer"
+                      />
+                      <span className="text-sm text-[#8a6300]">
+                        Waive the charge.
+                        {" "}
+                        <span className="text-grey-600">
+                          The reason is still recorded, and its absence
+                          from the bill is visible.
+                        </span>
+                      </span>
+                    </label>
+                  )}
+                </div>
+              )}
+
               <div className="rounded-md bg-grey-50 border border-grey-200 p-3 space-y-1.5">
                 <Line label="Rack rate" value={money(stay.rackTariff)} muted />
                 <Line
@@ -364,7 +426,14 @@ export function CheckInFlow({
 
           {step < 4 ? (
             <Button
-              disabled={step === 2 && !idCaptured && !idSkipReason.trim()}
+              disabled={
+                (step === 2 && !idCaptured && !idSkipReason.trim())
+                /* The server refuses without it anyway. Disabling here
+                   too means the clerk finds out on the step that asks,
+                   not on the one that finishes. */
+                || (step === 3 && (early.data?.isEarly ?? false)
+                    && !earlyReason.trim())
+              }
               onClick={() => setStep((s) => s + 1)}
             >
               Continue

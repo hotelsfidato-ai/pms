@@ -45,6 +45,11 @@ const refuse = (reason: string): Outcome => ({ ok: false, reason });
 
 interface CheckInBody {
   roomNumber?: string;
+  /* Why the room was given before the property's check-in time, and
+     whether the charge for it was waived. 063 refuses to record the
+     one without the other. */
+  earlyReason?: string;
+  waiveEarly?: boolean;
   adults?: number;
   children?: number;
   ratePlan?: string;
@@ -142,6 +147,39 @@ operations.post("/:code/stays/:id/check-in", async (c) => {
         return refuse(`A ${identity.idType} needs its number.`);
       }
 
+      /* ── ARRIVING EARLY ───────────────────────────────────────
+         The property sells the night from its check-in time. Before
+         that hour the room is still yesterday's — either being cleaned
+         or still occupied — so letting somebody in is a decision, not
+         a formality.
+
+         It is ALLOWED. This is a hotel, and a guest off an overnight
+         train is a normal Tuesday. What it is not is silent: somebody
+         says why, their name goes on it, and if the property charges
+         for it the charge reaches the folio.
+
+         Asked in the PROPERTY'S timezone by one function, so this
+         screen and the check-out screen cannot come to different
+         conclusions about the same clock. */
+      const { rows: earlyRows } = await client.query<{ early: boolean }>(
+        `select app.arrival_is_early($1, now()) as early`, [hotelId]);
+      const isEarly = earlyRows[0]?.early ?? false;
+
+      if (isEarly && !body.earlyReason?.trim()) {
+        const { rows: t } = await client.query<{ t: string; charge: string | null }>(
+          `select to_char(check_in_time,'HH24:MI') as t,
+                  early_checkin_charge::text as charge
+             from hotels where id = $1`, [hotelId]);
+        const charge = t[0]?.charge;
+        return refuse(
+          `Rooms are ready from ${t[0]?.t ?? "the check-in time"}. `
+          + "An early arrival needs a reason and somebody to allow it"
+          + (charge
+              ? `, and carries a ${Number(charge).toFixed(2)} charge.`
+              : ". The property does not charge for one.")
+        );
+      }
+
       const roomNumber = body.roomNumber?.trim();
       if (!roomNumber) return refuse("Choose a room.");
 
@@ -206,6 +244,49 @@ operations.post("/:code/stays/:id/check-in", async (c) => {
         [hotelId, stayId, body.adults ?? null, body.children ?? null,
          body.ratePlan === "Room Only" ? "RO" : body.ratePlan ?? null, notes],
       );
+
+      /* WHO ALLOWED IT, AND WHY. Written with the timestamp, because
+         the constraint in 063 refuses one without the other — an early
+         arrival recorded with no reason answers nothing anybody asks
+         three months later. */
+      if (isEarly) {
+        await client.query(
+          `update reservations
+              set early_checkin_at = now(),
+                  early_checkin_reason = $3,
+                  early_checkin_by = $4
+            where hotel_id = $1 and id = $2`,
+          [hotelId, stayId, body.earlyReason!.trim(), session.staffId]);
+
+        /* And onto the folio, if the property charges. `waiveEarly` is
+           the clerk deciding not to — a decision worth being able to
+           make, and worth being visible by its absence on the bill. */
+        if (!body.waiveEarly) {
+          /* CGST + SGST, which is how this schema stores it — there is
+             no single `gst_rate` column and assuming one is how a
+             charge lands with no tax on it. */
+          const { rows: h } = await client.query<{ charge: string | null; tax: string }>(
+            `select early_checkin_charge::text as charge,
+                    (coalesce(cgst_rate,0) + coalesce(sgst_rate,0))::text as tax
+               from hotels where id = $1`, [hotelId]);
+          const amount = h[0]?.charge === null || h[0]?.charge === undefined
+            ? null : Number(h[0].charge);
+          if (amount !== null && amount > 0) {
+            const rate = Number(h[0]!.tax);
+            const tax = Math.round(amount * rate) / 100;
+            await client.query(
+              `insert into folio_postings
+                 (hotel_id, folio_id, business_date, category, description,
+                  amount, tax_rate, tax_amount, source_type, posted_by)
+               select $1, f.id, $2::date, 'misc', 'Early check-in',
+                      $3, $4, $5, 'front_desk', $6
+                 from folios f
+                where f.reservation_id = $7 and f.status = 'open'
+                limit 1`,
+              [hotelId, businessDate, amount, rate, tax, session.staffId, stayId]);
+          }
+        }
+      }
 
       /* ── The document ────────────────────────────────────────────
          In the SAME transaction as the check-in. A guest who is in
@@ -520,10 +601,53 @@ operations.post("/:code/stays/:id/payments", async (c) => {
   return c.json(result, result.ok ? 200 : 409);
 });
 
+/* ── Is an arrival right now early, and what does it cost? ─────────
+   Asked of the SERVER, against the property's clock. A tablet with the
+   wrong time set must not be able to make an early arrival look like an
+   ordinary one — and the check-in route refuses independently either
+   way, so this is what the screen shows, never what it decides. */
+operations.get("/:code/early-arrival", async (c) => {
+  const body = await withSession(c.get("subject"), async (client) => {
+    const hotelId = await hotelIdFor(client, c.req.param("code"));
+    if (!hotelId) return null;
+    const { rows } = await client.query<{
+      early: boolean; t: string; charge: string | null;
+      late_t: string; late_charge: string | null;
+    }>(
+      `select app.arrival_is_early(id, now()) as early,
+              to_char(check_in_time,'HH24:MI') as t,
+              early_checkin_charge::text as charge,
+              to_char(check_out_time,'HH24:MI') as late_t,
+              late_checkout_charge::text as late_charge
+         from hotels where id = $1`, [hotelId]);
+    const r = rows[0];
+    if (!r) return null;
+    return {
+      isEarly: r.early,
+      checkInTime: r.t,
+      checkOutTime: r.late_t,
+      /* NULL, not 0. A property that does not charge for an early
+         arrival is not the same as one charging nothing, and the
+         screens show a dash rather than a zero. */
+      charge: r.charge === null ? null : Number(r.charge),
+      lateCharge: r.late_charge === null ? null : Number(r.late_charge),
+    };
+  });
+  return body ? c.json(body) : c.json({ error: "No such property." }, 404);
+});
+
 /* ── Check out ───────────────────────────────────────────────────── */
 
 operations.post("/:code/stays/:id/check-out", async (c) => {
-  const result = await withSession(c.get("subject"), async (client): Promise<Outcome | null> => {
+  type CheckOutBody = {
+    /* Why they stayed past the check-out time, and whether the charge
+       was waived. 063 refuses the record without the reason. */
+    lateReason?: string;
+    waiveLate?: boolean;
+  };
+  const body = (await c.req.json().catch(() => ({}))) as CheckOutBody;
+
+  const result = await withSession(c.get("subject"), async (client, session): Promise<Outcome | null> => {
     const hotelId = await hotelIdFor(client, c.req.param("code"));
     if (!hotelId) return null;
 
@@ -538,6 +662,73 @@ operations.post("/:code/stays/:id/check-out", async (c) => {
     if (!stay) return refuse("Reservation not found.");
     if (stay.status === "checked_out") return refuse("This stay has already departed.");
     if (stay.status !== "checked_in") return refuse("Only a checked-in guest can check out.");
+
+    /* ── LEAVING LATE ───────────────────────────────────────────────
+       The mirror of arriving early, and the same shape: allowed, never
+       silent. A guest still in the room at four has kept it out of
+       tonight's inventory, and housekeeping cannot turn it around for
+       an arrival that is already on the chart.
+
+       Checked BEFORE the balance, deliberately. A late charge is part
+       of what they owe, so testing the balance first would pass them
+       on a total that is about to change — and then refuse the
+       check-out they were just told they could have. */
+    const { rows: lateRows } = await client.query<{ late: boolean }>(
+      `select app.departure_is_late($1, now()) as late`, [hotelId]);
+    const isLate = lateRows[0]?.late ?? false;
+
+    if (isLate && !body.lateReason?.trim()) {
+      const { rows: t } = await client.query<{ t: string; charge: string | null }>(
+        `select to_char(check_out_time,'HH24:MI') as t,
+                late_checkout_charge::text as charge
+           from hotels where id = $1`, [hotelId]);
+      const charge = t[0]?.charge;
+      return refuse(
+        `Check-out was ${t[0]?.t ?? "earlier"}. A late departure needs a `
+        + "reason and somebody to allow it"
+        + (charge
+            ? `, and carries a ${Number(charge).toFixed(2)} charge.`
+            : ". The property does not charge for one.")
+      );
+    }
+
+    /* Recorded and charged BEFORE the balance is tested, so the guest
+       settles the whole bill including this. */
+    if (isLate) {
+      await client.query(
+        `update reservations
+            set late_checkout_at = now(),
+                late_checkout_reason = $3,
+                late_checkout_by = $4
+          where hotel_id = $1 and id = $2`,
+        [hotelId, stayId, body.lateReason!.trim(), session.staffId]);
+
+      if (!body.waiveLate) {
+        const { rows: h } = await client.query<{
+          charge: string | null; tax: string; bd: string;
+        }>(
+          `select late_checkout_charge::text as charge,
+                  (coalesce(cgst_rate,0) + coalesce(sgst_rate,0))::text as tax,
+                  business_date::text as bd
+             from hotels where id = $1`, [hotelId]);
+        const amount = h[0]?.charge === null || h[0]?.charge === undefined
+          ? null : Number(h[0].charge);
+        if (amount !== null && amount > 0) {
+          const rate = Number(h[0]!.tax);
+          const tax = Math.round(amount * rate) / 100;
+          await client.query(
+            `insert into folio_postings
+               (hotel_id, folio_id, business_date, category, description,
+                amount, tax_rate, tax_amount, source_type, posted_by)
+             select $1, f.id, $2::date, 'misc', 'Late check-out',
+                    $3, $4, $5, 'front_desk', $6
+               from folios f
+              where f.reservation_id = $7 and f.status = 'open'
+              limit 1`,
+            [hotelId, h[0]!.bd, amount, rate, tax, session.staffId, stayId]);
+        }
+      }
+    }
 
     /* The balance decides. A guest cannot walk out owing money without
        somebody deciding to let them — and that decision is a transfer

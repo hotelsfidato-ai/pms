@@ -46,7 +46,19 @@ export interface RoomSetup {
   occupied: boolean;
 }
 
+export interface FrontDeskSettings {
+  /** 24-hour, the property's own clock. */
+  checkInTime: string;
+  checkOutTime: string;
+  /** Null when the property does not charge. Not zero — "we do not
+      charge" is a decision and "we charge nothing" is a price, and the
+      screens show a dash for the first. */
+  earlyCheckinCharge: number | null;
+  lateCheckoutCharge: number | null;
+}
+
 export interface RoomSetupView {
+  frontDesk: FrontDeskSettings;
   types: RoomTypeSetup[];
   rooms: RoomSetup[];
 }
@@ -122,4 +134,17 @@ async function call<T>(
     }
     throw error;
   }
+}
+
+/** The hours the property sells the night between, and what an
+    exception costs. Sending null for a charge clears it. */
+export async function amendFrontDesk(
+  hotelId: string,
+  input: {
+    checkInTime?: string; checkOutTime?: string;
+    earlyCheckinCharge?: number | null;
+    lateCheckoutCharge?: number | null;
+  },
+): Promise<Result> {
+  return call(`/api/hotels/${hotelId}/front-desk`, "PATCH", input);
 }

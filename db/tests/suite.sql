@@ -3931,3 +3931,105 @@ begin
   select count(*) into n from hotels where code in ('BQT','BQT2');
   perform test.ok('banquet','the fixture does not outlive the test', n = 0);
 end $$;
+
+
+-- =============================================================================
+-- Arriving early, leaving late  (063)
+-- =============================================================================
+-- The property's clock, not the server's. A hotel in Akkalkot closes its day
+-- in Asia/Kolkata, and comparing a UTC timestamp against a local 13:00 is how
+-- a guest arriving at 14:30 gets billed for an early arrival.
+-- =============================================================================
+do $$
+declare
+  v_hotel uuid; v_staff uuid; v_type uuid; v_guest uuid; v_res uuid;
+  n int; b boolean;
+begin
+  select id into v_staff from staff order by id limit 1;
+
+  insert into hotels (code, name, city, timezone, check_in_time, check_out_time)
+  values ('ELT', 'Early late fixture', 'Akkalkot', 'Asia/Kolkata',
+          '13:00', '11:00')
+  returning id into v_hotel;
+
+  -- ---------- nothing is charged until somebody says so ----------
+  select count(*) into n from hotels
+   where id = v_hotel
+     and (early_checkin_charge is not null or late_checkout_charge is not null);
+  perform test.ok('early late','a new property charges for neither', n = 0,
+    'a shipped charge is a price nobody chose');
+
+  -- ---------- the clock, in the PROPERTY'S timezone ----------
+  b := app.arrival_is_early(v_hotel, timestamptz '2026-08-25 09:00+05:30');
+  perform test.ok('early late','09:00 local is early', b);
+
+  b := app.arrival_is_early(v_hotel, timestamptz '2026-08-25 14:30+05:30');
+  perform test.ok('early late','14:30 local is not', not b,
+    'against a UTC clock this reads 09:00 and bills an early arrival');
+
+  b := app.departure_is_late(v_hotel, timestamptz '2026-08-25 16:00+05:30');
+  perform test.ok('early late','16:00 local is a late departure', b);
+
+  b := app.departure_is_late(v_hotel, timestamptz '2026-08-25 10:30+05:30');
+  perform test.ok('early late','10:30 local is not', not b);
+
+  -- ---------- the exact boundary belongs to the guest ----------
+  b := app.arrival_is_early(v_hotel, timestamptz '2026-08-25 13:00+05:30');
+  perform test.ok('early late','arriving exactly at check-in time is not early',
+    not b, 'the hour the property opens is the guest''s, not a charge');
+
+  -- ---------- a reason is not optional ----------
+  insert into room_types (hotel_id, code, name, base_occupancy, max_occupancy,
+                          base_rate, sort_order)
+  values (v_hotel, 'STD', 'Standard', 2, 3, null, 1) returning id into v_type;
+  insert into guests (full_name) values ('Early late fixture guest')
+  returning id into v_guest;
+  insert into reservations (hotel_id, guest_id, room_type_id, reference,
+                            check_in, check_out, agreed_rate, status)
+  values (v_hotel, v_guest, v_type, 'ELT-1', date '2026-08-25',
+          date '2026-08-26', 3000, 'confirmed')
+  returning id into v_res;
+
+  perform test.raises('early late','an early arrival with no reason is refused',
+    format($q$update reservations set early_checkin_at = now() where id = %L$q$,
+           v_res), '23514');
+
+  perform test.raises('early late','and with a reason but nobody''s name',
+    format($q$update reservations
+                set early_checkin_at = now(), early_checkin_reason = 'train'
+              where id = %L$q$, v_res), '23514');
+
+  update reservations
+     set early_checkin_at = now(),
+         early_checkin_reason = 'Overnight train, room vacant and clean.',
+         early_checkin_by = v_staff
+   where id = v_res;
+  perform test.ok('early late','both together are accepted',
+    (select early_checkin_at is not null from reservations where id = v_res));
+
+  perform test.raises('early late','a late departure with no reason is refused',
+    format($q$update reservations set late_checkout_at = now() where id = %L$q$,
+           v_res), '23514');
+
+  -- ---------- a charge is a number somebody typed ----------
+  perform test.raises('early late','a negative charge is refused',
+    format($q$update hotels set early_checkin_charge = -1 where id = %L$q$,
+           v_hotel), '23514');
+
+  update hotels set early_checkin_charge = 1000 where id = v_hotel;
+  perform test.ok('early late','and a real one is kept',
+    (select early_checkin_charge from hotels where id = v_hotel) = 1000);
+
+  -- ---------- teardown ----------
+  delete from reservations where hotel_id = v_hotel;
+  alter table guests disable trigger guests_no_delete;
+  delete from guests where id = v_guest;
+  alter table guests enable trigger guests_no_delete;
+  delete from room_types where hotel_id = v_hotel;
+  alter table hotels disable trigger hotels_no_delete;
+  delete from hotels where id = v_hotel;
+  alter table hotels enable trigger hotels_no_delete;
+
+  select count(*) into n from hotels where code = 'ELT';
+  perform test.ok('early late','the fixture does not outlive the test', n = 0);
+end $$;
