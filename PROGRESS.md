@@ -899,7 +899,12 @@ schedule.
 3  npx vitest run           frontend
 4  db/verify-backup.sh      scratch database, drops it after
 5  db/tests/rerun.sh        scratch database, migrates it TWICE
+6  npm run build:all        production, preview AND artifact
 ```
+
+Step 6 exists because there are three builds with different plugins and
+different outputs, the gate only ever ran the first, and two of them
+were broken for a day while everything stayed green — defect 134.
 
 Only step 1 touches `fidato`. Steps 2, 4 and 5 each build a database,
 use it and drop it — so the API tests can now run while somebody is
@@ -972,6 +977,17 @@ as defect 81 — every piece built, and no path to the moment it fires.
 Indian business must register each B2B invoice with the IRP and print the IRN
 and its QR code. The group is under that threshold, so this is deliberately not
 built. It becomes required the year turnover crosses it.
+
+**The demo is two loaders, in one order.** `npm run demo` runs both:
+`load-demo` builds the calibrated August at Akkalkot, then
+`demo-history` adds April to July there and a season at Agra and Pune.
+The order is not a preference — `load-demo` drops and rebuilds 5EL, so
+running it second erases the history.
+
+`demo-history` counts room-nights sold in 1–25 August before and after
+itself and refuses to finish if the number moved. That window is the
+calibration the whole project is checked against, and a history loader
+is the obvious suspect the day it drifts.
 
 **What backup does NOT cover.** The dump lands on the same disk as the
 database, which is a copy that dies in the same fire. Getting it off-box is one

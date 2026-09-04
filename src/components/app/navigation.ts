@@ -255,6 +255,18 @@ const SECTIONS: NavSection[] = [
       { label: "Monthly Statistics", to: "/reports/monthly-stats", icon: BarChart3, resource: "report" },
       { label: "Yearly Statistics", to: "/reports/yearly-stats", icon: BarChart3, resource: "report" },
       { label: "Lodging Tax", to: "/reports/lodging-tax", icon: FileText, resource: "report" },
+      /* FOUR THAT WERE BUILT AND NOT LISTED. The index says "11 of 11
+         built" and this menu offered seven — so the GST Sales Register,
+         the one an accountant needs every month to file GSTR-1, was
+         reachable only by somebody who thought to open All reports
+         first and read down it.
+
+         A screen that exists and cannot be found from the navigation is
+         a screen that does not exist to the person looking for it. */
+      { label: "GST Sales Register", to: "/reports/gst-sales", icon: ScrollText, resource: "report" },
+      { label: "Form F / C-Form", to: "/reports/c-form", icon: ShieldCheck, resource: "report" },
+      { label: "Guest Ledger", to: "/reports/guest-ledger", icon: BookOpen, resource: "report" },
+      { label: "Cashier Shift", to: "/reports/cashier-shift", icon: Banknote, resource: "report" },
     ],
   },
   {

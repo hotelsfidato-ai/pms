@@ -112,6 +112,19 @@ export default defineConfig(({ mode }) => {
     },
   },
   build: {
+    /* `virtual:pwa-register` is created by VitePWA, which runs for the
+       PRODUCTION build only. The demo and artifact builds have no
+       plugin and therefore no module, and Rollup resolves imports at
+       build time — so the try/catch around the dynamic import in
+       src/lib/sw.ts cannot save it. Both builds failed outright, and
+       nothing caught it because the gate builds production and stops.
+
+       Declared external rather than silenced: the import is genuinely
+       absent here, and the guarded call in sw.ts already handles it
+       being unavailable at runtime. */
+    rollupOptions: demo
+      ? { external: [/^virtual:pwa-register/] }
+      : {},
     // The snapshot pushes the bundle past Vite's default warning. It is
     // one file on purpose; the warning is not telling us anything.
     chunkSizeWarningLimit: single ? 8000 : 500,

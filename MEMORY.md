@@ -6,7 +6,7 @@ Every entry here cost something. Read it before you repeat it.
 
 ## Ten faults that repeat
 
-133 entries below is a reference, not a reading list. These are the patterns
+135 entries below is a reference, not a reading list. These are the patterns
 that have recurred, with the count and the check that would have caught each.
 **If you read nothing else here, read this.**
 
@@ -2774,6 +2774,46 @@ reporting it.
 
 **When a screenshot says something is clipped, measure before
 believing it.**
+
+### 134 · A build variant nobody builds
+
+`src/lib/sw.ts` imports `virtual:pwa-register` inside a try/catch,
+which reads as careful and is not. The module is created by VitePWA,
+and VitePWA runs for the PRODUCTION build only — Rollup resolves
+imports at build time, so the catch never gets a chance.
+
+Both demo builds had been failing outright since the offline work
+landed:
+
+```
+[vite]: Rollup failed to resolve import "virtual:pwa-register"
+```
+
+Nothing caught it because the gate runs `npm run build` and stops, and
+this project has THREE builds — production, preview and artifact — with
+different plugins, different aliases and different output directories.
+Two of them were broken for a day and the gates were green throughout.
+
+`npm run build:all` builds all three, and the deploy step runs it.
+
+**A try/catch around a dynamic import does not make a missing module
+optional at build time.** Declare it external where it is genuinely
+absent.
+
+### 135 · Four reports built, listed, and unreachable
+
+The reports index says "11 of 11 built" and the sidebar offered seven.
+The GST Sales Register — the one an accountant opens every month to
+file GSTR-1 — was reachable only by somebody who thought to open All
+reports first and read down it. So were Form C, the Guest Ledger and
+the Cashier Shift.
+
+Found by the owner looking at his own navigation, not by a gate. Every
+route existed, every endpoint answered 200, every screen rendered.
+
+**A screen that cannot be found from the navigation does not exist to
+the person looking for it.** When a screen ships, the menu entry is
+part of shipping it.
 
 ## Verification traps
 
