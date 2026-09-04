@@ -37,7 +37,7 @@ import {
 import ReportsIndexPage from "@/pages/reports/Index";
 import {
   GuestsPage, CompaniesPage, PropertiesPage, NotificationsPage,
-  RoomTypesPage,
+
 } from "@/pages/Directory";
 import {
   UsersPage, RolesPage, AuditLogPage, IntegrationsPage,
@@ -53,6 +53,7 @@ import GroupPanelPage from "@/pages/GroupPanel";
 import NewBookingPage from "@/pages/NewBooking";
 import WorkOrdersPage from "@/pages/WorkOrders";
 import BanquetPage from "@/pages/Banquet";
+import RoomSetupPage from "@/pages/RoomSetup";
 import BanquetEventPage from "@/pages/BanquetEvent";
 import BanquetSetupPage from "@/pages/BanquetSetup";
 import CashieringPage from "@/pages/Cashiering";
@@ -370,7 +371,7 @@ export default function App() {
             />
             <Route
               path="/h/:code/room-types"
-              element={<><PropertyScope /><RoomTypesPage /></>}
+              element={<><PropertyScope /><RoomSetupPage /></>}
             />
             <Route
               path="/h/:code/rate-plans"

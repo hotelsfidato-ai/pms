@@ -126,7 +126,11 @@ const SECTIONS: NavSection[] = [
         ],
       },
       { label: "Guests", to: "/guests", icon: Users, resource: "customer", matchPrefix: true },
-      { label: "Companies", to: "/companies", icon: Building2, resource: "company", matchPrefix: true },
+      /* Not "Companies". A company is a corporate account; this is where
+         the business came FROM — Agoda, go-MMT, the walk-in. Somebody
+         looking for their OTA performance read "Companies" and went
+         past it. */
+      { label: "Booking sources", to: "/companies", icon: Building2, resource: "company", matchPrefix: true },
       /* One guest, one set of nights, several rooms — and a group made
          for them automatically when there is more than one. */
       { label: "New booking", to: "/h/:code/book", icon: BookPlus, resource: "reservation" },

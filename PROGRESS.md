@@ -731,7 +731,7 @@ retried. Ledger nets to zero, room revenue still ₹4,19,578.76.
 9  Rates, availability, STAAH        ███████░░░░░  rates, seasons, plans
 10 Group dashboard and reports       ████████████  12 of 12 — the dashboard and eleven reports
 11 CRS bridge / SU                    ░░░░░░░░░░░░  now IN scope, after go-live
-12 Hardening and go-live             █████████░░░  + launch.sh, preflight, nginx
+12 Hardening and go-live             ██████████░░  + launch.sh, preflight, nginx, pushed
 13 POS upgrade — Petpooja-informed   ████████████  12 of 12 — the day end closes
 14 Modules + banquet                  ████████████  12 of 12 — the hall cannot be sold twice
 15 PMS upgrade — eZee-informed        ████████████  12 of 12 — the backlog is clear
@@ -1282,7 +1282,7 @@ them is a fact only the group has.
 
 ## Working agreement
 
-- **Commit locally. Do not push.** (Owner's instruction, 28 August.)
+- **Push to `hotelsfidato-ai/pms`.** (Owner's instruction, 4 September, replacing "commit locally, do not push" from 28 August.) Verified before the first push: `api/.env` is gitignored and has never been tracked, no private key appears anywhere in history, and the four tracked `.env` files are examples with empty values.
 - Open the screen before claiming it works. Seventeen defects have passed
   `tsc`, the tests and a clean build while the page was broken — `MEMORY.md`.
 - Never invent a number. A dash is an honest answer; a zero is not.

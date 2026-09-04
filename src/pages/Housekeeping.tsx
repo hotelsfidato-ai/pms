@@ -207,8 +207,16 @@ export default function HousekeepingPage() {
 
   const queuedFor = (number: string) => held.filter((q) => q.roomNumber === number);
 
+  /* WAS max-w-2xl. That was right when every room was a full-width row
+     and the page was read top to bottom on a phone — 672px keeps a line
+     readable. It is wrong for a grid of cards: on a desk it threw away
+     500px of a 1177px column and drew two columns where four fit, which
+     is most of why this looked like a ladder.
+
+     max-w-6xl still stops the cards stretching absurdly on a very wide
+     monitor. */
   return (
-    <Page className="max-w-2xl">
+    <Page className="max-w-6xl">
       <PageHeader
         title="Housekeeping"
         description="Tap a room to move it on. Clean, then inspected."
@@ -278,13 +286,22 @@ export default function HousekeepingPage() {
           const list = bucket(group.key);
           if (list.length === 0) return null;
           return (
-            <section key={group.key} data-hk-group={group.key}>
+            <section key={group.key} data-hk-group={group.key} className="@container">
               <div className="flex items-center gap-2 mb-2.5">
                 <h2 className="text-md font-semibold text-ink-900">{group.label}</h2>
                 <StatusPill tone={group.tone}>{list.length}</StatusPill>
               </div>
 
-              <ul className="space-y-2">
+              {/* CARDS IN A GRID, not a ladder of full-width rows. On a
+                  desk that list put the room number at the far left and
+                  its two buttons at the far right with a metre of
+                  nothing between them, and eighteen rooms ran well past
+                  the fold. A card is scanned; a row that wide is read.
+
+                  Container, not viewport: this page sits beside a 264px
+                  sidebar, so the window's width is not this column's —
+                  the same trap the till menu had. */}
+              <ul className="grid gap-2.5 @md:grid-cols-2 @3xl:grid-cols-3 @5xl:grid-cols-4">
                 {list.map((room) => (
                   <li key={room.number}>
                     <RoomCard
@@ -328,17 +345,26 @@ function RoomCard({
     <div
       data-hk-room={room.number}
       className={cn(
-        "flex items-center gap-3 rounded-md border bg-white p-3",
-        pending ? "border-brand-yellow" : "border-grey-200",
+        /* `h-full` so every card in a row is the same height whatever
+           its assignee name does. Without it a long name makes one card
+           taller and the row reads as broken. */
+        "h-full flex flex-col gap-2 rounded-lg border bg-white p-3",
+        "transition-colors duration-150",
+        pending ? "border-brand-yellow bg-brand-yellow-50/40" : "border-grey-200",
       )}
     >
-      <div className="min-w-0 flex-1">
-        <div className="flex items-center gap-2">
-          <span className="text-lg font-semibold text-ink-900 tabular">{room.number}</span>
+      <div className="min-w-0">
+        <div className="flex items-baseline gap-2 flex-wrap">
+          <span className="text-xl font-semibold text-ink-900 tabular leading-none">
+            {room.number}
+          </span>
           <span className="text-sm text-grey-500">{room.type}</span>
           {room.dueOut && <StatusPill tone="warning">Due out</StatusPill>}
+          {room.occupied && !blocked && (
+            <BedDouble className="size-3.5 text-grey-400 shrink-0" />
+          )}
         </div>
-        <p className="text-sm text-grey-500 truncate mt-0.5">
+        <p className="text-sm text-grey-500 truncate mt-1">
           {room.occupied ? room.guest ?? "Occupied" : `Floor ${room.floor}`}
         </p>
         {pending && (
@@ -383,8 +409,10 @@ function RoomCard({
         )}
       </div>
 
-      {/* 44px tap targets — a phone, one-handed, in a stairwell */}
-      <div className="flex items-center gap-2 shrink-0">
+      {/* 44px tap targets — a phone, one-handed, in a stairwell.
+          `mt-auto` pins this to the bottom of the card so the buttons
+          line up across a row whatever the text above them does. */}
+      <div className="flex items-center gap-2 mt-auto pt-1">
         {blocked ? (
           /* This was a text label. A room could get INTO this state and
              the board offered nothing to get it out again — the only
@@ -442,9 +470,9 @@ function RoomCard({
             </button>
           </>
         )}
-        {room.occupied && !blocked && (
-          <BedDouble className="size-4 text-grey-300 ml-1" />
-        )}
+        {/* The bed moved up beside the room number, where it reads as
+            "this one has somebody in it" rather than trailing the
+            buttons like a third control. */}
         {!blocked && (
           <OutOfOrderFlow
             hotelId={hotelId}

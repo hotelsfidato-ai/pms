@@ -34,6 +34,7 @@ export * from "./groups";
 export * from "./rates";
 export * from "./till";
 export * from "./banquet";
+export * from "./roomSetup";
 
 
 /* ── Query keys ────────────────────────────────────────────────────

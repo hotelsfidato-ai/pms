@@ -20,6 +20,7 @@ import { admin } from "./routes/admin.ts";
 import { rates } from "./routes/rates.ts";
 import { groups } from "./routes/groups.ts";
 import { banquet } from "./routes/banquet.ts";
+import { inventorySetup } from "./routes/inventorySetup.ts";
 import { housekeeping } from "./routes/housekeeping.ts";
 import { nightAudit } from "./routes/nightAudit.ts";
 import { invoices } from "./routes/invoices.ts";
@@ -191,6 +192,7 @@ app.route("/api/hotels", till);
 app.route("/api", admin);
 app.route("/api/hotels", rates);
 app.route("/api/hotels", banquet);
+app.route("/api/hotels", inventorySetup);
 app.route("/api/hotels", housekeeping);
 
 /* A POS mounts at its OWN prefix, not under /api/hotels. It does not
