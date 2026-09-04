@@ -6,7 +6,7 @@ Every entry here cost something. Read it before you repeat it.
 
 ## Ten faults that repeat
 
-140 entries below is a reference, not a reading list. These are the patterns
+142 entries below is a reference, not a reading list. These are the patterns
 that have recurred, with the count and the check that would have caught each.
 **If you read nothing else here, read this.**
 
@@ -2910,6 +2910,48 @@ permission error that was not a permission error.
 
 **After run.sh, reload the demo. Before reading any screen, count the
 hotels.**
+
+### 141 · A gate that compared a value with itself
+
+Check-in read
+
+    const businessDate = body.businessDate ?? stay.check_in;
+
+and then refused when `stay.check_in > businessDate`. With no date from
+the client — which is every call the interface makes — the fallback IS
+the booking''s own arrival, so the comparison was a date against itself
+and could never be true.
+
+**The arrival-date guard has never fired.** A guest booked for next week
+could be checked in today, silently, with the reservation still saying
+it starts next week: the night audit would not charge tonight and the
+tape chart would show the room empty with somebody asleep in it.
+
+Found while deliberately trying to make the guard refuse, and being
+told `{"ok":true}`.
+
+Defect 14 exactly — a gate reading a different source from the action
+it guards. The hotel''s `business_date` is the only honest answer; the
+client''s is now an override for the audit''s own replay and nothing
+else.
+
+**A default that makes a comparison trivially false is worse than no
+comparison, because the code reads as though it checks something.**
+
+### 142 · The refusal was right and the data was wrong
+
+Reported as "check-in is not letting me do today''s guest", with a
+screenshot of "This booking arrives on 2026-09-04. It cannot be checked
+in early."
+
+Both true. The property''s business date was 2026-08-25 and the real
+date was 2026-09-04 — the demo pins Akkalkot ten days in the past, so
+every genuine arrival looked like a future booking. The system was
+correct and unusable at the same time.
+
+**Demo data with a date in it stops being a demonstration and becomes
+an obstacle the moment somebody tries to do real work.** `npm run
+reset` clears a property and brings it to today.
 
 ## Verification traps
 

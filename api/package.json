@@ -13,6 +13,7 @@
     "load-demo": "tsx scripts/load-demo.ts",
     "demo-history": "tsx scripts/demo-history.ts",
     "demo": "tsx scripts/load-demo.ts && tsx scripts/demo-history.ts",
+    "reset": "tsx scripts/reset-property.ts",
     "serve": "node scripts/free-port.mjs && tsx src/server.ts",
     "pos:outlet": "tsx scripts/pos-outlet.ts",
     "preflight": "tsx scripts/preflight.ts",

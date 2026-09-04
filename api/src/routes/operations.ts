@@ -121,10 +121,49 @@ operations.post("/:code/stays/:id/check-in", async (c) => {
       if (stay.status === "no_show") return refuse("This booking was marked a no-show.");
       if (stay.status !== "confirmed") return refuse("Only a confirmed booking can be checked in.");
 
-      const businessDate = body.businessDate ?? stay.check_in;
-      if (stay.check_in > businessDate) {
+      /* THE PROPERTY'S DATE, NOT THE BOOKING'S. This read
+         `body.businessDate ?? stay.check_in`, so when the client sent
+         no date it fell back to the booking's OWN arrival — and
+         `stay.check_in > businessDate` compared a value against itself.
+         The arrival-date guard could never fire. A guest booked for
+         next week checked in today, silently, with the reservation
+         still saying it starts next week: the night audit would not
+         charge tonight and the tape chart would show the room empty
+         with somebody asleep in it.
+
+         Defect 14's shape exactly — a gate reading a different source
+         from the action it guards. The hotel's business date is the
+         only honest answer, and the client's is accepted only as an
+         override for the audit's own replay. */
+      const { rows: bdRows } = await client.query<{ bd: string }>(
+        `select business_date::text as bd from hotels where id = $1`,
+        [hotelId]);
+      const businessDate = body.businessDate ?? bdRows[0]!.bd;
+
+      /* ── ARRIVING A DAY OR MORE EARLY ─────────────────────────────
+         This used to be a flat refusal: "it cannot be checked in
+         early". That is not how a hotel works. A guest whose booking
+         starts tomorrow turns up tonight, the room is free, and the
+         desk puts them in it — the decision is availability and
+         judgement, not a rule.
+
+         So it is allowed WITH A REASON, and the booking moves with the
+         guest: the arrival becomes today, which is what actually
+         happened. Leaving check_in in the future while the guest is in
+         the room is the state that makes every report disagree with
+         the floor — the night audit would not charge tonight, and the
+         tape chart would show the room empty with somebody asleep in
+         it.
+
+         The room is still checked for the WHOLE stay below, so an
+         early arrival into a room somebody else has tomorrow is
+         refused on availability, by name. */
+      const earlyByDays = stay.check_in > businessDate;
+      if (earlyByDays && !body.earlyReason?.trim()) {
         return refuse(
-          `This booking arrives on ${stay.check_in}. It cannot be checked in early.`,
+          `This booking arrives on ${stay.check_in}, not today. It can be `
+          + "checked in early if a room is free — give a reason and it moves "
+          + "to today.",
         );
       }
 
@@ -245,11 +284,22 @@ operations.post("/:code/stays/:id/check-in", async (c) => {
          body.ratePlan === "Room Only" ? "RO" : body.ratePlan ?? null, notes],
       );
 
+      /* THE BOOKING MOVES WITH THE GUEST. Written before the early
+         record below so both land in one transaction — a stay that
+         checked in but still says it arrives tomorrow is worse than
+         either state on its own. */
+      if (earlyByDays) {
+        await client.query(
+          `update reservations set check_in = $3::date
+            where hotel_id = $1 and id = $2`,
+          [hotelId, stayId, businessDate]);
+      }
+
       /* WHO ALLOWED IT, AND WHY. Written with the timestamp, because
          the constraint in 063 refuses one without the other — an early
          arrival recorded with no reason answers nothing anybody asks
          three months later. */
-      if (isEarly) {
+      if (isEarly || earlyByDays) {
         await client.query(
           `update reservations
               set early_checkin_at = now(),
@@ -261,7 +311,7 @@ operations.post("/:code/stays/:id/check-in", async (c) => {
         /* And onto the folio, if the property charges. `waiveEarly` is
            the clerk deciding not to — a decision worth being able to
            make, and worth being visible by its absence on the bill. */
-        if (!body.waiveEarly) {
+        if (!body.waiveEarly && isEarly) {
           /* CGST + SGST, which is how this schema stores it — there is
              no single `gst_rate` column and assuming one is how a
              charge lands with no tax on it. */

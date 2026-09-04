@@ -2,7 +2,7 @@ import { useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { Check, LogIn, BedDouble, Users, Sparkle } from "lucide-react";
 import { cn } from "@/lib/cn";
-import { money } from "@/lib/format";
+import { money, dateShort } from "@/lib/format";
 import {
   Button, Field, Input, NativeSelect, StatusPill, Tooltip, toast,
   Dialog, DialogContent, DialogTrigger,
@@ -77,7 +77,23 @@ export function CheckInFlow({
     enabled: open,
   });
 
-  const allowed = permitted.data?.allowed ?? false;
+  /* TWO KINDS OF EARLY, and they are not the same thing.
+
+       by the CLOCK   the booking is for today, but it is before the
+                      hour the property lets rooms go
+       by the DATE    the booking is for a later day and the guest is
+                      standing here now
+
+     The second used to be a flat refusal. It is a normal Tuesday: the
+     room is free, the desk puts them in it, and the booking moves to
+     today so the night audit charges for the night they actually
+     slept. Both need a reason; the server refuses without one either
+     way. */
+  const earlyByDate = stay.arrival > businessDate;
+  const earlyByClock = early.data?.isEarly ?? false;
+  const isEarly = earlyByClock || earlyByDate;
+
+  const allowed = (permitted.data?.allowed ?? false) || earlyByDate;
   const reason = permitted.data?.reason;
 
   /* THE REASON, not just a dead button. `canCheckIn` produces a real
@@ -326,13 +342,16 @@ export function CheckInFlow({
                   tablet with the wrong time set must not be able to
                   make an early arrival look like an ordinary one, and
                   the server refuses independently either way. */}
-              {early.data?.isEarly && (
+              {isEarly && (
                 <div className="rounded-md border border-brand-yellow-200 bg-brand-yellow-50 p-3 space-y-2.5">
                   <p className="text-sm text-[#8a6300]">
-                    Rooms are ready from {early.data.checkInTime}.
-                    {early.data.charge === null
+                    {earlyByDate
+                      ? `This booking is for ${dateShort(stay.arrival)}. Checking `
+                        + "in now moves it to today, so tonight is charged."
+                      : `Rooms are ready from ${early.data?.checkInTime ?? ""}.`}
+                    {earlyByClock && (early.data?.charge == null
                       ? " This property does not charge for an early arrival."
-                      : ` An early arrival is ${money(early.data.charge)}.`}
+                      : ` An early arrival is ${money(early.data.charge)}.`)}
                   </p>
                   <Field label="Why the room is being given early" required>
                     {({ id }) => (
@@ -344,7 +363,7 @@ export function CheckInFlow({
                       />
                     )}
                   </Field>
-                  {early.data.charge !== null && (
+                  {earlyByClock && early.data?.charge != null && (
                     <label className="flex items-start gap-2.5 cursor-pointer">
                       <input
                         type="checkbox"
@@ -431,8 +450,7 @@ export function CheckInFlow({
                 /* The server refuses without it anyway. Disabling here
                    too means the clerk finds out on the step that asks,
                    not on the one that finishes. */
-                || (step === 3 && (early.data?.isEarly ?? false)
-                    && !earlyReason.trim())
+                || (step === 3 && isEarly && !earlyReason.trim())
               }
               onClick={() => setStep((s) => s + 1)}
             >
