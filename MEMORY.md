@@ -43,13 +43,13 @@ comes back wearing different clothes.
 
 ---
 
-### D1 · The tests share the database the app is using
+### D1 · The tests shared the database the app was using — CLOSED
 
 **The decision:** all 12 files in `api/test/` connect to the live
 `fidato` database — the same one the demo loader fills, the same one
 the dev server serves, the same one somebody is clicking around in.
 
-**What it has produced so far:**
+**What it produced before it was fixed:**
 
 | | |
 |---|---|
@@ -83,13 +83,35 @@ teardown needs to know what was already there, defect 120 cannot happen
 in either direction, and the tests can run while somebody is using the
 app.
 
-**Cost:** a `globalSetup` for vitest and a connection string. Half a
-day. It removes the teardown code from twelve files rather than adding
-to it.
+**FIXED.** `api/scripts/with-test-db.sh` creates `fidato_test_<pid>`,
+applies the 61 migrations, seeds the fixtures and the demo, runs vitest
+against it, and drops it whether it passes or fails. `npm test` points
+there; `npm run test:live` keeps the old behaviour for anyone who
+deliberately wants it.
 
-**Until then**, the rule that keeps the damage bounded: **delete by what
-you created, never by tenant.** `where hotel_id = $1` in a teardown is
-the shape of defect 120.
+**Proved by measurement, not by reading the script.** A real banquet
+booking was put into live `fidato`, every table in the database counted,
+the full suite run, and every table counted again:
+
+```
+54 tables · unchanged · BQ-LIVE-0001 still there
+```
+
+Under the previous arrangement that run deleted it.
+
+**Two things it did NOT do**, so this entry is not read as more than it
+is. The demo staff come from `db/tests/suite.sql` rather than a
+migration, so the wrapper has to apply the suite before the loader —
+`load-demo` fails on `undefined.id` several hundred rows in otherwise,
+which reads like a loader bug and is a missing fixture. And the
+defensive teardowns in the twelve test files were KEPT rather than
+deleted: they are now belt-and-braces instead of load-bearing, and
+`test:live` still exists, so removing them would trade a real safety net
+for tidiness.
+
+**The rule still stands for anything that touches a shared database:
+delete by what you created, never by tenant.** `where hotel_id = $1` in
+a teardown is the shape of defect 120.
 
 ---
 

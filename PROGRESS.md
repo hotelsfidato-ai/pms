@@ -895,11 +895,15 @@ schedule.
 
 ```
 1  db/tests/run.sh          rebuilds `fidato` FROM ZERO
-2  cd api && npm test       loads the demo, then tests
+2  cd api && npm test       its OWN database, built and dropped per run
 3  npx vitest run           frontend
 4  db/verify-backup.sh      scratch database, drops it after
 5  db/tests/rerun.sh        scratch database, migrates it TWICE
 ```
+
+Only step 1 touches `fidato`. Steps 2, 4 and 5 each build a database,
+use it and drop it — so the API tests can now run while somebody is
+using the app, which is the fix for decision D1 in `MEMORY.md`.
 
 Step 5 answers the question step 1 cannot: every deploy after the first
 applies these files to a database that already has them. It touches nothing
@@ -909,6 +913,10 @@ Step 1 drops the database the app uses. Run it *after* step 2 and the demo is
 gone — the app shows two test properties and four reservations, and nothing
 anywhere says why. Opening a screen at that point verifies an empty database,
 which is a check that passes because there is nothing left to fail.
+
+**Step 2 no longer reloads the demo into `fidato`**, because it no longer uses
+it. After step 1, bring the demo back yourself with `cd api && npm run
+load-demo`.
 
 `run.sh` now says so on the way out. Recovery is `cd api && npm run load-demo`.
 
