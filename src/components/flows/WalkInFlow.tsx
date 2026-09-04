@@ -54,11 +54,20 @@ export function WalkInFlow({
   const [salesPerson, setSalesPerson] = useState("");
   const [singleLady, setSingleLady] = useState(false);
 
+  /* Derived, never stored. The party is what the two counters say and
+     the capacity is what the room type says — neither is a third
+     number anybody can set, which is how the two would drift. */
+  const party = Math.max(1, adults) + Math.max(0, children);
+
   const room = useQuery({
     queryKey: ["room", hotelId, roomNumber],
     queryFn: () => getRoom(hotelId, roomNumber),
     enabled: open && !!roomNumber,
   });
+  const overCapacity =
+    room.data !== null && room.data !== undefined
+    && party > room.data.maxOccupancy;
+
   const existing = useQuery({
     queryKey: ["guest-search", hotelId, guestName],
     queryFn: () => listStays(hotelId, { search: guestName }),
@@ -145,6 +154,45 @@ export function WalkInFlow({
                 </li>
               ))}
             </ul>
+          )}
+
+          {/* ── WILL THEY FIT ───────────────────────────────────────
+              A walk-in is the ONE path where the clerk is looking at
+              the actual family and counting them, and it was the one
+              that never asked. The booking form has refused an
+              over-full party since it was written; this took five into
+              a double without a word.
+
+              Shown before they type rather than after they submit: the
+              capacity is on screen while the number is being set, so
+              the answer arrives while it is still a choice. The server
+              refuses independently either way. */}
+          {room.data && (
+            <div className={cn(
+              "rounded-md border p-3 text-sm",
+              overCapacity
+                ? "border-brand-red-100 bg-red-50 text-brand-red"
+                : "border-grey-200 bg-grey-50 text-grey-600",
+            )}>
+              {overCapacity ? (
+                <>
+                  <span className="font-medium">
+                    {party} will not fit room {roomNumber}.
+                  </span>{" "}
+                  A {room.data.type} sleeps {room.data.maxOccupancy}. Put them
+                  in a larger room, or split them across two.
+                </>
+              ) : (
+                <>
+                  Room {roomNumber} is a {room.data.type} and sleeps{" "}
+                  {room.data.maxOccupancy}.
+                  {party > 0 && ` ${party} in the party.`}
+                  {room.data.maxOccupancy - party > 0
+                    && ` Room for ${room.data.maxOccupancy - party} more.`}
+                  {room.data.maxOccupancy === party && " That is full."}
+                </>
+              )}
+            </div>
           )}
 
           <div className="grid grid-cols-3 gap-3">
@@ -288,7 +336,11 @@ export function WalkInFlow({
           {/* ONE action. Not "book" then "check in". */}
           <Button
             className="w-full"
-            disabled={!permitted.allowed}
+            /* Over capacity blocks it here too. The server refuses
+               independently, but a clerk should find out while the
+               family is still standing there and a bigger room can be
+               chosen -- not after pressing the one button. */
+            disabled={!permitted.allowed || overCapacity}
             data-walkin-confirm
             onClick={async () => {
               const res = await createWalkIn(hotelId, {

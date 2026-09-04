@@ -889,9 +889,11 @@ operations.post("/:code/walk-ins", async (c) => {
     const { rows: roomRows } = await client.query<{
       id: string; room_type_id: string; housekeeping_status: string;
       occupancy_status: string; base_rate: string | null;
+      type_name: string; max_occupancy: number;
     }>(
       `select rm.id, rm.room_type_id, rm.housekeeping_status,
-              rm.occupancy_status, rt.base_rate
+              rm.occupancy_status, rt.base_rate,
+              rt.name as type_name, rt.max_occupancy
          from rooms rm
          join room_types rt on rt.id = rm.room_type_id
         where rm.hotel_id = $1 and rm.number = $2 and rm.is_active`,
@@ -905,6 +907,25 @@ operations.post("/:code/walk-ins", async (c) => {
     if (room.housekeeping_status === "dirty") {
       return refuse("That room has not been cleaned yet.");
     }
+    /* ── WILL THEY FIT? ──────────────────────────────────────────
+       The booking form has refused an over-full party since it was
+       written -- "3 people will not fit a Superior, it sleeps 2" -- and
+       the walk-in never asked. So the one path where a clerk is
+       standing in front of the actual family, counting them, was the
+       one that would take five into a double.
+
+       The same question, asked in both places, because a rule enforced
+       on one route and not the other is not a rule. */
+    const party = Math.max(1, Number(body.adults ?? 1))
+      + Math.max(0, Number(body.children ?? 0));
+    if (party > room.max_occupancy) {
+      return refuse(
+        `${party} people will not fit a ${room.type_name} — it sleeps `
+        + `${room.max_occupancy}. Put them in a larger room, or split them `
+        + "across two.",
+      );
+    }
+
     if (room.occupancy_status === "occupied") {
       return refuse("Somebody is already in that room.");
     }
