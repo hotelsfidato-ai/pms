@@ -3745,3 +3745,189 @@ begin
   select count(*) into n from hotels where code = 'CSH';
   perform test.ok('cashier shift','the fixture does not outlive the test', n = 0);
 end $$;
+
+
+-- =============================================================================
+-- The banquet hall  (060, 061)
+-- =============================================================================
+-- The one thing this module exists to stop is a hall sold twice. Everything
+-- else here is in service of that, or of the rule that nothing ships a price.
+-- =============================================================================
+do $$
+declare
+  v_hotel uuid; v_gm uuid; v_hall uuid; v_small uuid; v_other_hotel uuid;
+  v_other_hall uuid; v_ev uuid; v_second uuid; v_folio uuid; v_pkg uuid;
+  n int; t numeric; u text; d date := date '2026-11-14';
+begin
+  select id into v_gm from staff order by id limit 1;
+
+  insert into hotels (code, name, city, timezone)
+  values ('BQT', 'Banquet fixture', 'Akkalkot', 'Asia/Kolkata')
+  returning id into v_hotel;
+  insert into staff_hotels (staff_id, hotel_id, role)
+  values (v_gm, v_hotel, 'gm') on conflict do nothing;
+
+  insert into hotels (code, name, city, timezone)
+  values ('BQT2', 'Banquet fixture two', 'Pune', 'Asia/Kolkata')
+  returning id into v_other_hotel;
+
+  -- ---------- the halls ----------
+  insert into banquet_venues (hotel_id, name, seated_capacity, floating_capacity)
+  values (v_hotel, 'Emerald Hall', 250, 400) returning id into v_hall;
+  insert into banquet_venues (hotel_id, name, seated_capacity)
+  values (v_hotel, 'Boardroom', 20) returning id into v_small;
+  insert into banquet_venues (hotel_id, name)
+  values (v_other_hotel, 'A hall at the other property')
+  returning id into v_other_hall;
+
+  perform test.ok('banquet','a hall ships with no price',
+    (select default_rate is null from banquet_venues where id = v_hall),
+    'a default rate is an option somebody sets, never a number we invent');
+
+  -- ---------- registering a function ----------
+  insert into banquet_events (hotel_id, venue_id, reference, title, business_date,
+                              starts_at, ends_at, host_name, pax_expected,
+                              registered_by)
+  values (v_hotel, v_hall, 'BQ-001', 'Sharma sangeet', d,
+          d + time '18:00', d + time '23:00', 'Mr Sharma', 220, v_gm)
+  returning id into v_ev;
+
+  perform test.ok('banquet','a new function is an enquiry, not a booking',
+    (select status from banquet_events where id = v_ev) = 'enquiry');
+
+  perform test.ok('banquet','and it is unpriced',
+    (select agreed_amount is null from banquet_events where id = v_ev));
+
+  -- ---------- till when ----------
+  perform test.raises('banquet','a function that ends before it starts is refused',
+    format($q$insert into banquet_events (hotel_id, venue_id, reference, title,
+                business_date, starts_at, ends_at, host_name, registered_by)
+              values (%L,%L,'BQ-BAD','backwards',%L,%L,%L,'x',%L)$q$,
+           v_hotel, v_hall, d, d + time '22:00', d + time '19:00', v_gm),
+    '23514');
+
+  -- ---------- somebody registered it ----------
+  perform test.raises('banquet','a function with no name against it is refused',
+    format($q$insert into banquet_events (hotel_id, venue_id, reference, title,
+                business_date, starts_at, ends_at, host_name)
+              values (%L,%L,'BQ-NON','anonymous',%L,%L,%L,'x')$q$,
+           v_hotel, v_hall, d, d + time '18:00', d + time '20:00'),
+    '23502');
+
+  -- ---------- the hall belongs to this property ----------
+  perform test.raises('banquet','a hall at another property is refused',
+    format($q$insert into banquet_events (hotel_id, venue_id, reference, title,
+                business_date, starts_at, ends_at, host_name, registered_by)
+              values (%L,%L,'BQ-XH','wrong hotel',%L,%L,%L,'x',%L)$q$,
+           v_hotel, v_other_hall, d, d + time '18:00', d + time '20:00', v_gm),
+    'P0001');
+
+  -- ---------- AN ENQUIRY DOES NOT HOLD THE HALL ----------
+  insert into banquet_events (hotel_id, venue_id, reference, title, business_date,
+                              starts_at, ends_at, host_name, registered_by)
+  values (v_hotel, v_hall, 'BQ-002', 'Verma reception', d,
+          d + time '19:00', d + time '23:30', 'Mrs Verma', v_gm)
+  returning id into v_second;
+
+  perform test.ok('banquet','two enquiries may want the same evening',
+    (select count(*) from banquet_events
+      where venue_id = v_hall and status = 'enquiry') = 2,
+    'refusing the second loses a booking that was never made');
+
+  -- ---------- confirming takes it ----------
+  select app.confirm_banquet_event(v_ev, v_gm) into v_folio;
+
+  perform test.ok('banquet','confirming holds the hall',
+    (select status from banquet_events where id = v_ev) = 'confirmed');
+
+  perform test.ok('banquet','and opens a folio for the function',
+    v_folio is not null and
+    (select event_id from folios where id = v_folio) = v_ev,
+    'a folio that bills an event, not a stay -- 060 widened the CHECK for it');
+
+  -- ---------- THE HALL CANNOT BE SOLD TWICE ----------
+  perform test.raises('banquet','the overlapping function cannot also be confirmed',
+    format($q$select app.confirm_banquet_event(%L,%L)$q$, v_second, v_gm),
+    'P0001');
+
+  begin
+    perform app.confirm_banquet_event(v_second, v_gm);
+    perform test.ok('banquet','and the refusal NAMES what is in the hall',
+      false, 'it did not refuse at all');
+  exception when others then
+    perform test.ok('banquet','and the refusal NAMES what is in the hall',
+      sqlerrm like '%Sharma sangeet%' and sqlerrm like '%BQ-001%',
+      'unavailable is not actionable; got: ' || sqlerrm);
+  end;
+
+  -- ---------- half-open, so back-to-back is not a clash ----------
+  perform test.ok('banquet','a function starting when another ends does not clash',
+    not exists (select 1 from app.banquet_conflicts(
+      v_hall, d + time '23:00', d + time '23:59')),
+    'the first runs to 23:00 and ranges are half-open');
+
+  -- ---------- a cancelled function releases the hall ----------
+  update banquet_events
+     set status = 'cancelled', cancel_reason = 'family postponed',
+         cancelled_by = v_gm, cancelled_at = now()
+   where id = v_ev;
+
+  perform test.ok('banquet','a cancelled function gives the hall back',
+    not exists (select 1 from app.banquet_conflicts(
+      v_hall, d + time '18:00', d + time '23:00')));
+
+  perform test.raises('banquet','and a cancellation has to say why',
+    format($q$update banquet_events set status='cancelled', cancel_reason=null
+              where id = %L$q$, v_second), '23514');
+
+  -- ---------- the calendar shows an empty hall ----------
+  select count(*) into n from app.banquet_calendar(v_hotel, d, d)
+   where venue_name = 'Boardroom' and event_id is null;
+  perform test.ok('banquet','a hall with nothing in it is still a row', n = 1,
+    'an empty hall is the answer somebody is looking for');
+
+  -- ---------- FOOD IS OPTIONAL, AND UNPRICED POISONS THE TOTAL ----------
+  update banquet_events set agreed_amount = 60000 where id = v_second;
+
+  select total, unpriced into t, u from app.banquet_event_total(v_second);
+  perform test.ok('banquet','a hall with no catering totals to the hall',
+    t = 60000 and u is null, 'a meeting that feeds nobody is a whole booking');
+
+  insert into banquet_packages (hotel_id, name, rate_per_head)
+  values (v_hotel, 'Dinner buffet', null) returning id into v_pkg;
+
+  perform test.ok('banquet','a package ships with no price',
+    (select rate_per_head is null from banquet_packages where id = v_pkg));
+
+  insert into banquet_event_packages (hotel_id, event_id, package_id, name,
+                                      pax, rate_per_head, added_by)
+  values (v_hotel, v_second, v_pkg, 'Dinner buffet', 200, null, v_gm);
+
+  select total, unpriced into t, u from app.banquet_event_total(v_second);
+  perform test.ok('banquet','an unpriced course makes the whole total NULL',
+    t is null, 'quoting 60,000 while 200 plates are unpriced is the worst answer');
+  perform test.ok('banquet','and the total names the unpriced line',
+    u like '%Dinner buffet%', 'got: ' || coalesce(u, 'null'));
+
+  update banquet_event_packages set rate_per_head = 850 where event_id = v_second;
+
+  select total, unpriced into t, u from app.banquet_event_total(v_second);
+  perform test.ok('banquet','priced, the food joins the total',
+    t = 230000 and u is null,
+    '60000 + 200 x 850; got ' || coalesce(t::text,'null'));
+
+  -- ---------- teardown ----------
+  delete from banquet_event_packages where hotel_id = v_hotel;
+  delete from banquet_packages where hotel_id = v_hotel;
+  delete from folios where hotel_id = v_hotel;
+  delete from banquet_events where hotel_id = v_hotel;
+  delete from banquet_venues where hotel_id in (v_hotel, v_other_hotel);
+  delete from staff_hotels where hotel_id = v_hotel;
+
+  alter table hotels disable trigger hotels_no_delete;
+  delete from hotels where id in (v_hotel, v_other_hotel);
+  alter table hotels enable trigger hotels_no_delete;
+
+  select count(*) into n from hotels where code in ('BQT','BQT2');
+  perform test.ok('banquet','the fixture does not outlive the test', n = 0);
+end $$;

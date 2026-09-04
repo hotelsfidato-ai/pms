@@ -15,10 +15,10 @@ FRONTEND   tsc -b            0 errors
            build             clean
 
 API        tsc --noEmit      0 errors
-           npm test          83 passed   (live Postgres, as pms_app)
+           npm test          200 passed · 12 files  (live Postgres, as pms_app)
                              loads the demo fixture first — see below
 
-DATABASE   db/tests/run.sh   37 migrations · 146 assertions
+DATABASE   db/tests/run.sh   61 migrations · 386 assertions
                              9 isolation checks · exit 0
 BACKUP     verify-backup.sh  dumped, RESTORED, 13 checks · exit 0
            load-demo         431 available · 132 sold · 30.63% ✓
@@ -733,7 +733,7 @@ retried. Ledger nets to zero, room revenue still ₹4,19,578.76.
 11 CRS bridge / SU                    ░░░░░░░░░░░░  now IN scope, after go-live
 12 Hardening and go-live             █████████░░░  + launch.sh, preflight, nginx
 13 POS upgrade — Petpooja-informed   ████████████  12 of 12 — the day end closes
-14 Modules + banquet                  █░░░░░░░░░░░  POS toggle whole; banquet is the other 11
+14 Modules + banquet                  ████████████  12 of 12 — the hall cannot be sold twice
 15 PMS upgrade — eZee-informed        ████████████  12 of 12 — the backlog is clear
 ```
 
@@ -835,7 +835,7 @@ moved: twenty screenshots of Petpooja set a higher bar, and two module
 requirements arrived with it. Lowering stage 7 would misreport what happened, so
 the new work is its own row. Detail in `POS-PROGRESS.md`.
 
-**142 of 180 — 79%.** Add the filled blocks above and divide by 180 — fifteen stages of twelve. That sum is the number; it is not typed separately, because it was for three audits running and drifted to "about 90%" while the bars said 70. It moved from 119 when stage 13’s three unfounded blocks came off, to 133 when the day end finished stage 13, to 134 when stage 3 got its service account, to 135 when the rate calendar gave stage 15's three grids their screens, to 136 with the room move, to 137 with amend stay, to 138 with the group panel, to 140 when extra-person pricing and multi-room booking finished 1.2, and to 142 with VIP and work orders.
+**153 of 180 — 85%.** Add the filled blocks above and divide by 180 — fifteen stages of twelve. That sum is the number; it is not typed separately, because it was for three audits running and drifted to "about 90%" while the bars said 70. It moved from 119 when stage 13’s three unfounded blocks came off, to 133 when the day end finished stage 13, to 134 when stage 3 got its service account, to 135 when the rate calendar gave stage 15's three grids their screens, to 136 with the room move, to 137 with amend stay, to 138 with the group panel, to 140 when extra-person pricing and multi-room booking finished 1.2, to 142 with VIP and work orders, and to 153 when the banquet hall finished stage 14 — eleven blocks, the largest single move this file has recorded, because stage 14 had one filled block since it was written and the module it named did not exist.
 
 **Cashiering is built, and the placeholder list in `App.tsx` is now empty.** It was the last route in the application rendering nothing, and its own note said why: *"unspecified — placeholder until the live flow is observed."* It has been observed — a front-desk shift close — and 059 builds it in the POS day end's shape rather than as a second idea about cash.
 
@@ -975,6 +975,63 @@ appear on the folio like any other — but somebody settling a dispute currently
 needs SQL. Worth a screen once the POS exists to argue with.
 
 Then Stage 4 closes and Stage 5 begins: the night audit *run*.
+
+---
+
+## The banquet hall
+
+`041_hotel_modules.sql` carried a flag called `banquet` from the day it
+was written, defaulting OFF, with a comment saying why: *"banquet is not
+built."* It is built.
+
+**A TIME RANGE, NOT A DATE**, because that is what the group described:
+*"it needs to be specified till when the hall is booked till."* A room is
+sold by the night; a hall is taken from six until midnight and a
+different party can have it at eight the next morning. Booked by date,
+one wedding would eat a day that holds three functions. `tstzrange`,
+half-open, and a three-day wedding is the same shape — one range that
+happens to be long.
+
+**AN ENQUIRY DOES NOT HOLD THE HALL. Only a confirmed booking does.**
+Two families asking about the same Saturday is normal business and
+refusing the second loses one of them; two families both told yes is the
+fault worth a constraint. So the exclusion constraint is
+`where (status = 'confirmed')`, and registering over a confirmed booking
+succeeds with a warning that names it.
+
+**THE REFUSAL NAMES WHAT IS IN THE HALL.** `app.confirm_banquet_event`
+looks the clash up and raises *"the hall is taken: Sharma sangeet
+(BQ-2608-1001), 14 Nov 18:00 to 14 Nov 23:00"*. Breaking the guard on
+purpose proved the layering: the exclusion constraint still catches it,
+and answers *"conflicting key value violates exclusion constraint"* —
+true, and useless to a GM holding a telephone.
+
+**SOMEBODY REGISTERED IT.** `registered_by` is not nullable and not
+defaulted. A hall booked with nobody's name against it is the state this
+module exists to end.
+
+**NO PRICE IS SHIPPED, AND AN UNPRICED LINE POISONS THE TOTAL.** A venue
+may carry a `default_rate` — the group asked for the option — and it is
+NULL until somebody types one, is only ever OFFERED on the booking form,
+and is snapshotted onto the event when agreed. `app.banquet_event_total`
+returns NULL if the hall or any course is unpriced, plus a sentence
+naming which: *"No price yet for the hall or Dinner buffet."* Quoting
+₹60,000 while two hundred plates are unpriced looks finished and is
+short by the food.
+
+**FOOD IS OPTIONAL, BOTH WAYS.** Zero catering rows is a complete
+booking — a hall let for a meeting feeds nobody. A package carries an
+optional per-head rate; `pos_orders.event_id` lets the till charge a
+function directly, same kitchen docket, same day end.
+
+**`folios_belongs_to_one` had to be widened from two to three.** It said
+a folio bills exactly one of a stay or a group master. An event is a
+third thing that gets billed, and before 060 every attempt to open one
+was refused by a CHECK that named neither events nor the reason.
+
+060 and 061, 21 database assertions, 14 API tests, three screens opened
+before this was written — diary, function, and halls and packages — at
+desktop and at 375px.
 
 ---
 

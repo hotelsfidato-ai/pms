@@ -50,6 +50,9 @@ import GridsPage from "@/pages/Grids";
 import GroupPanelPage from "@/pages/GroupPanel";
 import NewBookingPage from "@/pages/NewBooking";
 import WorkOrdersPage from "@/pages/WorkOrders";
+import BanquetPage from "@/pages/Banquet";
+import BanquetEventPage from "@/pages/BanquetEvent";
+import BanquetSetupPage from "@/pages/BanquetSetup";
 import CashieringPage from "@/pages/Cashiering";
 import BillPage from "@/pages/Bill";
 import MenuPage from "@/pages/Menu";
@@ -385,6 +388,23 @@ export default function App() {
             <Route
               path="/h/:code/work-orders"
               element={<><PropertyScope /><WorkOrdersPage /></>}
+            />
+            {/* The banquet diary. The hall is the row, because the
+                question asked of this screen is "is it free on the
+                fourteenth" and not "list the bookings". */}
+            <Route
+              path="/h/:code/banquet"
+              element={<><PropertyScope /><BanquetPage /></>}
+            />
+            {/* Before /banquet/:id — a literal segment outranks a
+                parameter either way, but the order says so. */}
+            <Route
+              path="/h/:code/banquet/setup"
+              element={<><PropertyScope /><BanquetSetupPage /></>}
+            />
+            <Route
+              path="/h/:code/banquet/:id"
+              element={<><PropertyScope /><BanquetEventPage /></>}
             />
             {/* One group: its rooms, and who pays for which. */}
             <Route

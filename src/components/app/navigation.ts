@@ -2,7 +2,7 @@ import {
   LayoutDashboard, CalendarCheck, Users, Building2, Hotel, Receipt,
   BarChart3, Bell, Settings, ShieldCheck, CalendarRange,
   FileText, Wallet, Plug, ScrollText,
-  UserCog, Palette, Terminal, MonitorSmartphone, BookOpen, Home, ClipboardList, type LucideIcon, ShieldAlert, UtensilsCrossed, Flame, LayoutGrid, Banknote, Table2, BookPlus, Wrench,
+  UserCog, Palette, Terminal, MonitorSmartphone, BookOpen, Home, ClipboardList, type LucideIcon, ShieldAlert, UtensilsCrossed, Flame, LayoutGrid, Banknote, Table2, BookPlus, Wrench, PartyPopper,
 } from "lucide-react";
 import { can, canAccess, type Resource, type Role } from "@/lib/permissions";
 
@@ -218,6 +218,23 @@ const SECTIONS: NavSection[] = [
       /* What an OUTSIDE till sent and what was refused. Read-only, and
          named so nobody mistakes it for the till above. */
       { label: "Bridge", to: "/h/:code/pos", icon: Plug, resource: "invoice" },
+    ],
+  },
+  {
+    label: "Banquet",
+    /* Absent, not greyed, at a property with no hall — the same rule the
+       point of sale follows. A clerk cannot act on "your hotel has no
+       banquet hall", so showing it disabled is noise.
+
+       And this is the tidy half only. The API refuses these routes on
+       its own, because a hidden nav entry is still a URL anybody can
+       type. 041 wrote that rule before either module existed. */
+    module: "banquet",
+    items: [
+      /* The diary first, because the question is almost always "is the
+         hall free" and only then "what is booked". */
+      { label: "Diary", to: "/h/:code/banquet", icon: PartyPopper, resource: "reservation" },
+      { label: "Halls and packages", to: "/h/:code/banquet/setup", icon: Building2, resource: "room_config" },
     ],
   },
   {

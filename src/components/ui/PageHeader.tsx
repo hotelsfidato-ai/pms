@@ -77,7 +77,17 @@ export function PageHeader({
           )}
         </div>
 
-        {actions && <div className="flex items-center gap-2 shrink-0">{actions}</div>}
+        {/* `max-w-full` and `flex-wrap` together, because `shrink-0` alone
+            let a two-button action group run off a 375px screen: the box
+            refused to shrink, so nothing ever applied pressure to wrap and
+            the second button was simply cut in half. Desktop is unchanged —
+            there is room, so nothing wraps. Found by opening the banquet
+            diary on a phone, not by a gate. */}
+        {actions && (
+          <div className="flex items-center gap-2 shrink-0 max-w-full flex-wrap justify-end">
+            {actions}
+          </div>
+        )}
       </div>
 
       {children && <div className="mt-5">{children}</div>}

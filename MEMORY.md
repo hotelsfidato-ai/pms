@@ -6,14 +6,14 @@ Every entry here cost something. Read it before you repeat it.
 
 ## Ten faults that repeat
 
-119 entries below is a reference, not a reading list. These are the patterns
+122 entries below is a reference, not a reading list. These are the patterns
 that have recurred, with the count and the check that would have caught each.
 **If you read nothing else here, read this.**
 
 | # | The fault | Seen | The check |
 |---|-----------|------|-----------|
 | 1 | **Answered from memory instead of the file.** Quoted a function, a screen, a limit or a schema I had not opened. | 32 · 64 · 78 · 85 · 87 · 90 · 91 · 108 | Open the file in the same turn you describe it. |
-| 2 | **Claimed it worked without opening the screen.** Typecheck, tests and build all clean; the page was blank, inert or wrong. | 17 defects | Open the screen. Every time. |
+| 2 | **Claimed it worked without opening the screen.** Typecheck, tests and build all clean; the page was blank, inert, clipped or wrong. | 18 defects | Open the screen. Every time, and at 375px too. |
 | 3 | **Test debris left in the shared demo database.** Phantom guests and bookings nobody can tell from real ones. | 27 · 41 · 54 · 79 · 100 · 112 · 114 · 115 · 116 | Count rows before and after a run — do not grep for teardowns. |
 | 4 | **A test that could not fail.** Vacuous assertion, swallowed error, filtered exit status, wrong verb. | 8 · 18 · 22 · 25 · 34 · 37 · 47 · 84 · 97 · 111 | Break it on purpose and watch it go red. |
 | 5 | **Invented a number.** A price, a total, an occupancy, a zero standing in for "nobody knows". | 5 · 35 · 43 · 58 · 63 · 65 · 68 · 106 | A dash is honest; a zero is a claim. Derive it or show a dash. |
@@ -2406,6 +2406,66 @@ did not need to.
 **And a half-applied migration is a state no migration produces.** It is not
 "the old schema" or "the new schema" — it is one neither the tests nor the
 application has ever seen.
+
+### 120 · A teardown that cleared the table instead of cleaning up after itself
+
+`banquet.test.ts` removed its fixtures with `delete from banquet_events
+where hotel_id = $1`. It ran while somebody was using the app, and it
+deleted the booking they had just entered — a real function, in a real
+hall, gone with no trace and no error.
+
+Three separate faults, all the same shape:
+
+```
+delete ... where hotel_id = $1              every row, not this file's
+delete from hotel_modules ... 'banquet'     "restore" meant OFF, not "as it was"
+expect(venues).toHaveLength(0)              passed only on an untouched property
+venues[0]                                   whichever hall sorted first
+name: "Emerald Hall"                        a name a REAL hall would have
+```
+
+The irony is exact: defects 114-116 were four files LEAKING into the
+shared demo, and the fix for that produced a file that over-cleaned.
+**Cleaning up after yourself and clearing the table are not the same
+act, and the difference only shows when somebody else is using the
+database.**
+
+It now records every venue, event, package id and the module's setting
+in `beforeAll`, deletes only what is not in those lists, and restores
+the module to whatever it was rather than to off. Fixtures carry
+`fixture-${process.pid}` in their names so they cannot collide with a
+real hall, and lookups search every venue by name rather than indexing
+the first.
+
+Proved by measurement, not by reading it: 2 venues and `banquet=true`
+before a run, 2 venues and `banquet=true` after.
+
+### 121 · A shared action bar that could not wrap
+
+`PageHeader` laid its actions out as `flex items-center gap-2 shrink-0`.
+With two buttons on a 375px screen the box refused to shrink, so nothing
+ever applied pressure to wrap, and the second button was cut in half at
+the edge of the viewport.
+
+Every screen with two header actions had this. It survived `tsc`, 122
+frontend tests and a clean build, and was found by opening the banquet
+diary at mobile width — the eighteenth defect caught that way.
+
+`max-w-full flex-wrap justify-end` added. Desktop is untouched: there is
+room, so nothing wraps.
+
+### 122 · Three heredocs, three failures, one lesson taken too late
+
+Writing SQL and TypeScript through `cat << 'EOF'` failed three times in
+one session with `unexpected EOF while looking for matching quote` —
+the same fault as defect 74, which is titled *"Three escaping failures
+writing one test"*.
+
+The content was never the problem and neither was the quoting style.
+**A file with prose, apostrophes and dollar-quoted SQL in it should be
+written with the file tool, or through a script written with the file
+tool.** After the first failure that was already the right answer; I
+paid for it twice more.
 
 ## Verification traps
 
