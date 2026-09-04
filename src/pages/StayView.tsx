@@ -739,8 +739,18 @@ function StayDetail({ bar }: { bar: ChartBar }) {
         </DetailRow>
         <DetailRow label="Balance">
           <span className={cn("tabular font-medium", bar.balance < 0 ? "text-info" : bar.balance > 0 ? "text-brand-red" : "text-success")}>
-            {money(bar.balance)}
-            {bar.balance < 0 && <span className="ml-1.5 text-2xs font-normal text-grey-500">overpaid</span>}
+            {money(Math.abs(bar.balance))}
+            {/* A CREDIT IS NOT AN OVERPAYMENT UNTIL THEY HAVE LEFT.
+                Most guests here pay a token amount when they book and
+                settle the rest at check-out, so a negative balance
+                before departure is an ADVANCE — the normal case. This
+                said "overpaid" for all of it, which reads as a mistake
+                somebody has to correct rather than money in hand. */}
+            {bar.balance < 0 && (
+              <span className="ml-1.5 text-2xs font-normal text-grey-500">
+                {s.status === "checked-out" ? "overpaid" : "in advance"}
+              </span>
+            )}
           </span>
         </DetailRow>
       </DetailList>
@@ -764,9 +774,21 @@ function StayDetail({ bar }: { bar: ChartBar }) {
         </div>
       )}
 
-      <p className="text-xs text-grey-500 leading-relaxed">
-        Check-in, folio and settlement arrive at Checkpoint 5.
-      </p>
+      {/* WAS "Check-in, folio and settlement arrive at Checkpoint 5."
+          All three shipped, and the line stayed — under a greyed Check
+          in button, which together read as a feature that does not
+          exist yet. It was the first thing the owner saw on this panel
+          and the first thing he reported.
+
+          A note about what is not built has to be deleted when it is
+          built, and nothing in a typecheck or a test will ever say so. */}
+      {bar.balance !== 0 && (
+        <p className="text-sm text-grey-500 leading-relaxed">
+          {bar.balance < 0
+            ? `${money(Math.abs(bar.balance))} taken in advance. The rest settles at check-out — take it on the Folio tab.`
+            : `${money(bar.balance)} outstanding. Settle it on the Folio tab.`}
+        </p>
+      )}
     </div>
   );
 }

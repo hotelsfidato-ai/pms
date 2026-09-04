@@ -68,11 +68,26 @@ export function CheckInFlow({
   const allowed = permitted.data?.allowed ?? false;
   const reason = permitted.data?.reason;
 
+  /* THE REASON, not just a dead button. `canCheckIn` produces a real
+     sentence — "Arrival is 30 Aug 2026. Check-in opens on the arrival
+     date." — and the trigger used to throw it away, leaving a clerk
+     with a greyed control and nothing to act on.
+
+     Rule 6, which this project states as: a blocked action is shown
+     WITH ITS REASON. A disabled button on its own is the half of that
+     rule that helps nobody. */
   const trigger = (
-    <Button disabled={!allowed} data-checkin>
-      <LogIn className="size-4" />
-      Check in
-    </Button>
+    <div className="space-y-1.5">
+      <Button disabled={!allowed} data-checkin>
+        <LogIn className="size-4" />
+        Check in
+      </Button>
+      {!allowed && reason && (
+        <p className="text-sm text-grey-500 leading-snug" data-checkin-reason>
+          {reason}
+        </p>
+      )}
+    </div>
   );
 
   return (

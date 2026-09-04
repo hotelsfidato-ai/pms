@@ -1,4 +1,5 @@
 import type { Permitted } from "@/data/repositories/types";
+import { dateShort } from "@/lib/format";
 
 /* ══════════════════════════════════════════════════════════════════
    BUSINESS RULES — Rule 3
@@ -69,7 +70,10 @@ export function canCheckIn(stay: {
   if (stay.status === "in-house") return no("This guest is already checked in.");
   if (stay.status === "checked-out") return no("This stay has already ended.");
   if (stay.arrival > businessDate)
-    return no(`Arrival is ${stay.arrival}. Check-in opens on the arrival date.`);
+    /* Formatted, because a clerk reads this sentence. Every date on
+       every other screen says "30 Aug 2026"; a refusal is not the place
+       to start showing raw ISO. */
+    return no(`Arrives ${dateShort(stay.arrival)}. Check-in opens that morning.`);
   return ok;
 }
 

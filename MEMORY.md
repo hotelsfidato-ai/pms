@@ -6,7 +6,7 @@ Every entry here cost something. Read it before you repeat it.
 
 ## Ten faults that repeat
 
-136 entries below is a reference, not a reading list. These are the patterns
+138 entries below is a reference, not a reading list. These are the patterns
 that have recurred, with the count and the check that would have caught each.
 **If you read nothing else here, read this.**
 
@@ -2849,6 +2849,37 @@ artefact.
 
 **When something escapes `overflow: hidden`, look at what its
 containing block is before looking at anything else.**
+
+### 137 · A note about what is not built, left after it was built
+
+The stay panel carried one line under a greyed Check in button:
+
+> *Check-in, folio and settlement arrive at Checkpoint 5.*
+
+All three shipped months ago. Together the disabled button and that
+sentence read as a feature that does not exist, and it was the first
+thing the owner saw on the panel and the first thing he reported.
+
+The button was correctly disabled — the booking arrives in five days —
+but the panel threw away the REASON. `canCheckIn` returns a real
+sentence and the trigger rendered only the greyed control, which is
+Rule 6 with the useful half removed: a blocked action is shown WITH its
+reason.
+
+**A note saying something is not built has to be deleted the day it is
+built, and no typecheck, test or build will ever mention it.** Grep for
+"Checkpoint", "coming soon", "not yet" and "Stage" in anything a
+user reads, whenever a stage closes.
+
+### 138 · A deposit is not an overpayment
+
+The balance row labelled every credit "overpaid". Most guests here pay
+a token amount at booking and settle the rest at check-out, so a
+negative balance before departure is an ADVANCE and completely normal —
+and calling it overpaid reads as a mistake somebody has to correct
+rather than money already in hand.
+
+It says "in advance" until they have left, and "overpaid" only after.
 
 ## Verification traps
 
