@@ -12,7 +12,7 @@ Last updated: **31 August 2026** · **Phase 1 complete · Phase 2 complete · th
 ```
 FRONTEND   tsc -b            0 errors
            vitest run        136 passed · 10 files
-           build             clean · service worker, 17 precached
+           build             clean · production, preview AND artifact
 
 API        tsc --noEmit      0 errors
            npm test          200 passed · 12 files  (live Postgres, as pms_app)
@@ -735,6 +735,7 @@ retried. Ledger nets to zero, room revenue still ₹4,19,578.76.
 13 POS upgrade — Petpooja-informed   ████████████  12 of 12 — the day end closes
 14 Modules + banquet                  ████████████  12 of 12 — the hall cannot be sold twice
 15 PMS upgrade — eZee-informed        ████████████  12 of 12 — the backlog is clear
+16 Front desk, second pass            ███████████░  11 of 12 — the group list remains
 ```
 
 **Stage 13 reads 4, and those four are finished** — database, API and screen.
@@ -835,7 +836,7 @@ moved: twenty screenshots of Petpooja set a higher bar, and two module
 requirements arrived with it. Lowering stage 7 would misreport what happened, so
 the new work is its own row. Detail in `POS-PROGRESS.md`.
 
-**159 of 180 — 88%.** Add the filled blocks above and divide by 180 — fifteen stages of twelve. That sum is the number; it is not typed separately, because it was for three audits running and drifted to "about 90%" while the bars said 70. It moved from 119 when stage 13’s three unfounded blocks came off, to 133 when the day end finished stage 13, to 134 when stage 3 got its service account, to 135 when the rate calendar gave stage 15's three grids their screens, to 136 with the room move, to 137 with amend stay, to 138 with the group panel, to 140 when extra-person pricing and multi-room booking finished 1.2, to 142 with VIP and work orders, to 153 when the banquet hall finished stage 14 — eleven blocks, the largest single move this file has recorded, because stage 14 had one filled block since it was written and the module it named did not exist — and to 156 when stages 5, 8 and 10 were given the unit lists they had never had, which moved 8 from 9 to 11 and 10 from 11 to 12, to 158 when offline finished stage 6, and to 159 when the code reached GitHub.
+**170 of 192 — 89%.** Add the filled blocks above and divide by 180 — fifteen stages of twelve. That sum is the number; it is not typed separately, because it was for three audits running and drifted to "about 90%" while the bars said 70. It moved from 119 when stage 13’s three unfounded blocks came off, to 133 when the day end finished stage 13, to 134 when stage 3 got its service account, to 135 when the rate calendar gave stage 15's three grids their screens, to 136 with the room move, to 137 with amend stay, to 138 with the group panel, to 140 when extra-person pricing and multi-room booking finished 1.2, to 142 with VIP and work orders, to 153 when the banquet hall finished stage 14 — eleven blocks, the largest single move this file has recorded, because stage 14 had one filled block since it was written and the module it named did not exist — and to 156 when stages 5, 8 and 10 were given the unit lists they had never had, which moved 8 from 9 to 11 and 10 from 11 to 12, to 158 when offline finished stage 6, to 159 when the code reached GitHub, and to 170 of 192 when stage 16 was added — a sixteenth row for the eZee-informed front-desk work that arrived after stage 15's backlog was cleared. The denominator moves with it: sixteen stages of twelve.
 
 **Cashiering is built, and the placeholder list in `App.tsx` is now empty.** It was the last route in the application rendering nothing, and its own note said why: *"unspecified — placeholder until the live flow is observed."* It has been observed — a front-desk shift close — and 059 builds it in the POS day end's shape rather than as a second idea about cash.
 
@@ -1130,6 +1131,50 @@ the reason `banquet_events.registered_by` is NOT NULL.
 
 **Still online-only, deliberately:** anything that takes money, issues a
 statutory number, or claims a scarce resource other than a room.
+
+---
+
+## Stage 16, and why it is a new row rather than a bigger 15
+
+Stage 15 is 12 of 12 and its twelve units are the ranked backlog in
+`PMS-PROGRESS.md`. Everything since — early and late check-in, the
+actions menu, exchange, inclusions, expected arrival, capacity at the
+walk-in — arrived after that backlog was cleared, from screenshots of a
+live eZee and from using this system against real bookings.
+
+Stages 13, 14 and 15 were each created the same way when the target
+moved. Widening 15 instead would misreport what happened: it met the
+bar it was given, and the bar moved afterwards.
+
+**Its twelve units, so the row has an arithmetic.**
+
+```
+ 1 early check-in needs a reason and a name      ✓
+ 2 and the charge reaches the folio              ✓
+ 3 late check-out needs a reason and a name      ✓
+ 4 and its charge too                            ✓
+ 5 the hours and both charges are configurable   ✓
+ 6 one actions menu, shared by both stay panels  ✓
+ 7 exchange two occupied rooms                   ✓
+ 8 what a booking includes                       ✓
+ 9 the hour a guest said they would arrive       ✓
+10 pax against capacity at the walk-in           ✓
+11 a booking opens its folio when it is made     ✓
+12 the group list — one booking, its rooms under it  ✗
+```
+
+**11, and the twelfth is named.** eZee shows a group as one reservation
+with its rooms beneath it; `GroupPanel.tsx` exists and is close, but
+the stay panel does not say "this guest has two rooms in this group".
+
+**Six of these eleven were defects wearing the shape of features.** The
+folio was never created for a booking made through the interface, so
+the till could not charge a room. The arrival-date guard compared a
+value with itself and had never fired. The walk-in could be pressed
+twice and take two rooms. The check-in picker hid the room a guest was
+already in. None was a missing feature; each was a built one that did
+not work, and every one of them was found by using the system rather
+than by a gate.
 
 ---
 
