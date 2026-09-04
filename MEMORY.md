@@ -6,7 +6,7 @@ Every entry here cost something. Read it before you repeat it.
 
 ## Ten faults that repeat
 
-130 entries below is a reference, not a reading list. These are the patterns
+133 entries below is a reference, not a reading list. These are the patterns
 that have recurred, with the count and the check that would have caught each.
 **If you read nothing else here, read this.**
 
@@ -2729,6 +2729,51 @@ The failure names the missing export, so it is quick to fix. The point
 is the shape: **a `vi.mock` factory is an interface that has to be
 maintained in lockstep with the real module, and nothing enforces it.**
 Adding an export to a mocked module means opening the mock.
+
+### 131 · A button is shrink-to-fit, and it took the card with it
+
+The till menu drew every dish card at the width of its longest word,
+inside a grid cell that was already the right size. Half the panel was
+empty, and the note button — positioned against the CELL rather than
+the card — floated alone in that empty space.
+
+One missing class. `<button>` is shrink-to-fit, so `flex` sized it to
+its content; `w-full` is what makes a flex button fill its cell.
+
+**Two symptoms that looked unrelated had one cause**, and the stranded
+icon was the more visible of them — which is how a layout bug gets
+diagnosed as a positioning bug and fixed in the wrong place.
+
+### 132 · The window is not the thing the cards live in
+
+The same grid used `sm:grid-cols-2`, a VIEWPORT rule, for a panel whose
+width is the viewport minus a 380px bill. On a 768px tablet the panel
+was 388px wide while the breakpoint saw 768, so it drew two columns of
+185px and "Paneer Butter Masala" wrapped onto three lines.
+
+Container queries are for exactly this: `@container` on the panel and
+`@sm:` / `@2xl:` / `@4xl:` on the grid, which now counts columns by the
+space it actually has. A 1366px till went from three cards holding two
+words to four comfortable ones.
+
+**A viewport breakpoint is only correct for something as wide as the
+viewport.** Any panel beside a fixed-width sibling needs a container
+query, and nothing about the wrong version fails a test.
+
+### 133 · A screenshot is not a measurement
+
+The bill sheet looked cut off on a phone — buttons clipped at the right
+edge, the close control invisible. It was not. `getBoundingClientRect`
+put the sheet at 23..375 in a 375px viewport and the button at 40..359,
+both entirely inside, with `documentElement.scrollWidth` exactly 375.
+
+The preview pane was rendering narrower than the viewport it was
+emulating, and the image was the artefact. I nearly "fixed" a correct
+layout — defect 72's shape, contaminating a reproduction and then
+reporting it.
+
+**When a screenshot says something is clipped, measure before
+believing it.**
 
 ## Verification traps
 

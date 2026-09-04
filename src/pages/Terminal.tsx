@@ -78,6 +78,12 @@ export default function TerminalPage() {
      scrolling for "Jeera Rice" while a table waits is how a waiter ends
      up writing on paper instead. */
   const [find, setFind] = useState("");
+  /* THE BILL, ON A PHONE. Side by side needs about 1024px: below that a
+     300px panel left roughly 75px for the menu, dish names cut off
+     mid-word and no price visible at all. Two views, one at a time —
+     the pattern every till on a phone uses, because there is no third
+     option that is not a compromise on both. */
+  const [billOpen, setBillOpen] = useState(false);
   const [choices, setChoices] = useState<
     { folioId: string; guest: string }[] | null
   >(null);
@@ -302,7 +308,15 @@ export default function TerminalPage() {
 
       <div className="flex-1 min-h-0 flex">
         {/* ── The menu ─────────────────────────────────────────── */}
-        <div className="flex-1 min-w-0 overflow-y-auto p-4">
+        {/* A CONTAINER, because the grid inside must size itself to
+            THIS PANEL and not to the window. `sm:grid-cols-2` is a
+            viewport rule, and on a 768px tablet the panel is 388px wide
+            while the viewport says 768 — so it drew two columns of
+            185px and "Paneer Butter Masala" wrapped onto three lines,
+            leaving a row half again as tall as its neighbours.
+
+            The window is not the thing the cards live in. */}
+        <div className="@container flex-1 min-w-0 overflow-y-auto p-4">
           {!orderId ? (
             <div className="max-w-md mx-auto pt-10">
               <p className="text-2xs uppercase tracking-wide text-grey-500 mb-2">
@@ -375,7 +389,13 @@ export default function TerminalPage() {
                   <h2 className="text-md font-semibold text-ink-900 mb-2.5">
                     {cat.name}
                   </h2>
-                  <div className="grid gap-2.5 sm:grid-cols-2 xl:grid-cols-3">
+                  {/* Columns by the PANEL's width, not the window's.
+                      Roughly: one column under 384px, two to 672px,
+                      three to 896px, four beyond — so a phone gets a
+                      single readable column, a portrait tablet two, and
+                      a 1366px till four instead of three cards nearly
+                      200px wide holding two words and a price. */}
+                  <div className="grid gap-2.5 @sm:grid-cols-2 @2xl:grid-cols-3 @4xl:grid-cols-4">
                     {cat.items
                       .filter((i) => i.name.toLowerCase()
                         .includes(find.trim().toLowerCase()))
@@ -386,23 +406,40 @@ export default function TerminalPage() {
                         onClick={() => void add(item)}
                         disabled={!item.isActive || order?.status !== "open"}
                         className={cn(
-                          /* 64px, not 44. A terminal is jabbed at across
-                             a counter by somebody holding plates. */
-                          "flex flex-col justify-between text-left rounded-lg border p-4 min-h-20",
+                          /* `w-full`, and it is the whole bug this card had.
+                             A <button> is shrink-to-fit, so `flex` sized it
+                             to its content and every card collapsed to the
+                             width of its longest word inside a grid cell
+                             that was already the right width. The note
+                             button below is positioned against the CELL, so
+                             it detached and floated in the empty space —
+                             two symptoms, one missing class.
+
+                             64px tall, not 44. A terminal is jabbed at
+                             across a counter by somebody holding plates. */
+                          "w-full flex flex-col justify-between text-left",
+                          "rounded-lg border p-4 min-h-20",
                           "transition-colors duration-150",
                           item.isActive
                             ? "border-grey-200 bg-white hover:border-brand-orange hover:bg-brand-orange-50 active:bg-brand-orange-100"
                             : "border-grey-200 bg-grey-50 text-grey-400 cursor-not-allowed",
                         )}
                       >
-                        <span className="text-base text-ink-900 leading-snug">
+                        {/* `pr-10` keeps the name clear of the note button,
+                            which sits over this corner. Without it a long
+                            dish name runs under the icon and the last word
+                            is unreadable. */}
+                        <span className="text-base text-ink-900 leading-snug pr-10">
                           {item.name}
                         </span>
-                        <span className="flex items-baseline justify-between mt-2">
-                          <span className="text-2xs text-grey-500 tabular">
+                        <span className="flex items-end justify-between gap-2 mt-3">
+                          {/* The tax rate is for the person reconciling the
+                              bill, not the waiter taking the order. Quiet,
+                              and out of the way of the number that matters. */}
+                          <span className="text-2xs text-grey-400 tabular leading-none pb-0.5">
                             {item.taxRate}%
                           </span>
-                          <span className="text-lg tabular text-ink-900">
+                          <span className="text-lg tabular text-ink-900 leading-none">
                             {moneyPrecise(item.price)}
                           </span>
                         </span>
@@ -410,14 +447,24 @@ export default function TerminalPage() {
                       {/* Modifiers, as their own control. A long press is
                           invisible to somebody who has not been told about
                           it, and this is a screen new staff are put in
-                          front of on their first shift. */}
+                          front of on their first shift.
+
+                          44px, because a tablet is the common case here and
+                          36 is under every touch guideline there is. */}
                       <button
                         type="button"
                         onClick={() => void note(item)}
                         disabled={!item.isActive || order?.status !== "open"}
                         aria-label={`Add ${item.name} with a note`}
                         title="Add with a note"
-                        className="absolute top-1.5 right-1.5 size-9 grid place-items-center rounded-md text-grey-300 hover:text-brand-orange hover:bg-brand-orange-50 disabled:opacity-0"
+                        className={cn(
+                          "absolute top-1 right-1 size-11 grid place-items-center",
+                          "rounded-md text-grey-300 transition-colors duration-150",
+                          "hover:text-brand-orange hover:bg-brand-orange-50",
+                          "focus-visible:outline-2 focus-visible:outline-offset-2",
+                          "focus-visible:outline-brand-orange-500",
+                          "disabled:opacity-0 disabled:pointer-events-none",
+                        )}
                       >
                         <MessageSquare className="size-4" />
                       </button>
@@ -441,8 +488,42 @@ export default function TerminalPage() {
           )}
         </div>
 
-        {/* ── The bill, always visible ─────────────────────────── */}
-        <aside className="w-[380px] shrink-0 border-l border-grey-200 bg-white flex flex-col">
+        {/* ── The bill ─────────────────────────────────────────────
+            BESIDE the menu from lg up, OVER it below — 380px is right on
+            a desk, narrows on a portrait tablet so the menu keeps two
+            comfortable columns, and on a phone becomes a sheet the
+            running-total bar opens. */}
+        {billOpen && (
+          <button
+            type="button"
+            aria-label="Close the bill"
+            onClick={() => setBillOpen(false)}
+            className="lg:hidden fixed inset-0 z-40 bg-ink-900/30"
+          />
+        )}
+        <aside className={cn(
+          "bg-white flex flex-col border-grey-200",
+          "lg:relative lg:w-[320px] xl:w-[380px] lg:shrink-0 lg:border-l lg:translate-x-0",
+          /* Below lg it is a sheet: off-screen until asked for. Kept
+             MOUNTED rather than unmounted so the order, its scroll
+             position and any half-typed room number survive being
+             closed — a waiter who taps away mid-charge and comes back
+             should not start again. */
+          "fixed inset-y-0 right-0 z-50 w-[min(22rem,100vw)] border-l shadow-xl",
+          "transition-transform duration-200 ease-out",
+          billOpen ? "translate-x-0" : "translate-x-full lg:translate-x-0",
+        )}>
+          <div className="lg:hidden flex items-center justify-between border-b border-grey-200 px-4 h-14 shrink-0">
+            <span className="text-base font-medium text-ink-900">The bill</span>
+            <button
+              type="button"
+              onClick={() => setBillOpen(false)}
+              className="size-11 grid place-items-center rounded-md text-grey-500 hover:bg-grey-100"
+              aria-label="Back to the menu"
+            >
+              <X className="size-5" />
+            </button>
+          </div>
           {!order ? (
             <div className="flex-1 grid place-items-center p-6 text-center">
               <div>
@@ -687,6 +768,35 @@ export default function TerminalPage() {
           )}
         </aside>
       </div>
+
+      {/* ── The running total, on a phone ─────────────────────────
+          The one thing a waiter needs while tapping dishes and the one
+          thing the sheet hides. It is a bar rather than a badge so the
+          tap target is the whole width — this is used one-handed while
+          carrying something. */}
+      <button
+        type="button"
+        onClick={() => setBillOpen(true)}
+        className={cn(
+          "lg:hidden shrink-0 flex items-center justify-between gap-3",
+          "border-t border-grey-200 bg-white px-4 h-16 text-left",
+          "active:bg-grey-50 transition-colors duration-150",
+        )}
+      >
+        <span className="min-w-0">
+          <span className="block text-base font-medium text-ink-900">
+            {order
+              ? `${order.lines.filter((l) => !l.voided).length} on the bill`
+              : "No order open"}
+          </span>
+          <span className="block text-2xs text-grey-500 truncate">
+            {order ? `Tap to see it${order.table ? ` · ${order.table}` : ""}` : "Open one to start"}
+          </span>
+        </span>
+        <span className="text-xl font-semibold tabular text-ink-900 shrink-0">
+          {moneyPrecise(order?.gross ?? 0)}
+        </span>
+      </button>
 
       <footer className="h-9 shrink-0 border-t border-grey-200 bg-grey-50 flex items-center gap-2 px-4">
         <Lock className="size-3 text-grey-400" />
