@@ -210,11 +210,86 @@ export default function NightAuditPage() {
                     ? ` · ${result.noShows} no-show${result.noShows === 1 ? "" : "s"}`
                     : ""}
                 </p>
+
+                {/* ── The restaurant's day ───────────────────────
+                    READ, not posted. Every rupee here is already on the
+                    ledger from when the till settled the order; the
+                    audit states the day rather than adding to it. A
+                    second copy would double the takings. */}
+                {result.restaurant && result.restaurant.orders > 0 && (
+                  <div className="pt-2 mt-2 border-t border-green-200">
+                    <p className="text-2xs text-green-800">
+                      Restaurant · {result.restaurant.orders} order
+                      {result.restaurant.orders === 1 ? "" : "s"}
+                      {result.restaurant.covers > 0
+                        ? `, ${result.restaurant.covers} covers` : ""}
+                      {" · "}{money(result.restaurant.gross)}
+                      <span className="text-green-700">
+                        {" "}({money(result.restaurant.net)} + {money(result.restaurant.tax)} tax)
+                      </span>
+                    </p>
+                    {result.restaurant.byTender.length > 0 && (
+                      <p className="text-2xs text-green-700 mt-0.5">
+                        {result.restaurant.byTender
+                          .map((t) => `${t.method} ${money(t.amount)}`)
+                          .join(" · ")}
+                      </p>
+                    )}
+                  </div>
+                )}
+
+                {/* ── Two drawers, side by side ───────────────────
+                    Never one figure. The desk and the till are counted
+                    by different people at different times, and adding
+                    them would hide which one is short. */}
+                {result.drawers && (
+                  <div className="pt-2 mt-2 border-t border-green-200
+                                  grid gap-2 @sm:grid-cols-2">
+                    <Drawer label="Front desk"
+                            unit="shift" d={result.drawers.frontDesk}
+                            count={result.drawers.frontDesk.shifts} />
+                    <Drawer label="Till"
+                            unit="outlet" d={result.drawers.till}
+                            count={result.drawers.till.outlets} />
+                  </div>
+                )}
               </CardBody>
             </Card>
           )}
         </>
       )}
     </Page>
+  );
+}
+
+/* One counted drawer. A variance is shown as a COUNT of shifts that had
+   to explain themselves, not as a rupee difference — the reason a
+   drawer is short lives on the shift that closed it, and a number here
+   would invite somebody to net two of them off against each other. */
+function Drawer({ label, unit, d, count }: {
+  label: string;
+  unit: string;
+  d: { opening: number; counted: number; variances: number };
+  count: number;
+}) {
+  return (
+    <div>
+      <p className="text-2xs font-medium text-green-900">
+        {label}
+        <span className="font-normal text-green-700">
+          {" · "}{count} {unit}{count === 1 ? "" : "s"} closed
+        </span>
+      </p>
+      {count === 0 ? (
+        <p className="text-2xs text-green-700">Not used today.</p>
+      ) : (
+        <p className="text-2xs text-green-800 tabular">
+          Opened {money(d.opening)} · counted {money(d.counted)}
+          {d.variances > 0
+            ? ` · ${d.variances} explained variance${d.variances === 1 ? "" : "s"}`
+            : ""}
+        </p>
+      )}
+    </div>
   );
 }

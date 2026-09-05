@@ -541,3 +541,142 @@ describe("no-shows", () => {
     }
   });
 });
+
+/* ══════════════════════════════════════════════════════════════════
+   TWO DRAWERS, AND THE DAY THAT CANNOT CLOSE OVER EITHER
+
+   A hotel keeps cash in two places. The front desk takes deposits and
+   settles folios; the till takes money for food. They are counted by
+   different people at different times, and a day whose cash has not
+   been counted is not closed — it is abandoned.
+
+   Both halves are asserted here because a guard that only ever passes
+   and a guard that only ever fires look identical from one test, and
+   the whole suite went green when these blockers were added, which is
+   what prompted writing them.
+   ══════════════════════════════════════════════════════════════════ */
+
+describe("a day cannot close over an uncounted drawer", () => {
+  let shiftId: string | null = null;
+
+  afterAll(async () => {
+    if (!shiftId) return;
+    const db = await admin();
+    try {
+      await db.query("delete from cashier_shifts where id = $1", [shiftId]);
+    } finally {
+      await db.end();
+    }
+  });
+
+  it("refuses while a front-desk shift is open, and says which", async () => {
+    const bd = await businessDate();
+
+    /* Before: whatever else is outstanding, the drawer is not. */
+    const before = (await (await asOwner("/PUN/night-audit/can-run")).json()) as
+      { blockers: Array<{ id: string }> };
+    expect(before.blockers.some((b) => b.id === "front-desk-drawer")).toBe(false);
+
+    const db = await admin();
+    try {
+      const { rows } = await db.query<{ id: string }>(
+        `insert into cashier_shifts
+           (hotel_id, staff_id, business_date, opening_cash, opened_by)
+         values ($1, $2, $3::date, 2000, $2)
+         returning id::text`,
+        [puneId, ownerId, bd],
+      );
+      shiftId = rows[0]!.id;
+    } finally {
+      await db.end();
+    }
+
+    const after = (await (await asOwner("/PUN/night-audit/can-run")).json()) as
+      { allowed: boolean; blockers: Array<{ id: string; reason: string; rooms: string[] }> };
+
+    const drawer = after.blockers.find((b) => b.id === "front-desk-drawer");
+    expect(drawer, JSON.stringify(after.blockers)).toBeTruthy();
+    expect(after.allowed).toBe(false);
+
+    /* Rule 6: the refusal has to send somebody to the RIGHT drawer.
+       "The cash is not counted" sends them to the wrong one half the
+       time, so the reason names the desk and lists who left it open. */
+    expect(drawer!.reason).toMatch(/front-desk drawer/i);
+    expect(drawer!.rooms.length).toBe(1);
+    expect(drawer!.rooms[0]).toMatch(/opened \d{2}:\d{2}/);
+
+    /* And the run itself refuses, not just the question about it — the
+       server has to hold the line independently of the screen. */
+    const run = await asOwner("/PUN/night-audit/run", "POST");
+    expect(run.status).toBe(409);
+  });
+
+  it("lets the day close again once the drawer is counted", async () => {
+    const db = await admin();
+    try {
+      await db.query(
+        `update cashier_shifts
+            set closed_at = now(), closed_by = $2, counted_cash = 2000
+          where id = $1`,
+        [shiftId, ownerId],
+      );
+    } finally {
+      await db.end();
+    }
+
+    const after = (await (await asOwner("/PUN/night-audit/can-run")).json()) as
+      { blockers: Array<{ id: string }> };
+    expect(after.blockers.some((b) => b.id === "front-desk-drawer")).toBe(false);
+  });
+});
+
+describe("the audit states the day rather than adding to it", () => {
+  it("reports both drawers side by side, never as one figure", async () => {
+    /* What a person at the desk does first. Each test in this file
+       advances Pune's date, so a stay created three tests ago becomes
+       due out under this one — and the audit refuses over it, which is
+       the audit working and this test's own fault. */
+    await clearDueOuts();
+    const bd = await businessDate();
+    const body = (await (await asOwner("/PUN/night-audit/run", "POST")).json()) as {
+      ok: boolean;
+      drawers?: {
+        frontDesk: { shifts: number; opening: number; counted: number };
+        till: { outlets: number; opening: number; counted: number };
+      };
+      restaurant?: { orders: number; gross: number };
+    };
+    expect(body.ok, JSON.stringify(body)).toBe(true);
+
+    /* The shape matters as much as the numbers: two objects, never a
+       total. Adding a front-desk variance to a till variance hides
+       which drawer is short, and they are different conversations with
+       different people. */
+    expect(body.drawers).toBeTruthy();
+    expect(body.drawers!.frontDesk).toBeTruthy();
+    expect(body.drawers!.till).toBeTruthy();
+    expect(Object.keys(body.drawers!).sort()).toEqual(["frontDesk", "till"]);
+
+    /* Pune sells no food, so the restaurant is honestly empty rather
+       than absent — a zero the audit computed, not a field it omitted. */
+    expect(body.restaurant).toBeTruthy();
+    expect(body.restaurant!.orders).toBe(0);
+    expect(body.restaurant!.gross).toBe(0);
+
+    /* READ, NOT POSTED. The audit must not write the restaurant's
+       takings onto the folio ledger — the till already did when it
+       settled the order, and a second copy would double the day. */
+    const db = await admin();
+    try {
+      const { rows } = await db.query<{ n: string }>(
+        `select count(*)::text as n from folio_postings
+          where hotel_id = $1 and business_date = $2::date
+            and category = 'food' and source_type = 'night_audit'`,
+        [puneId, bd],
+      );
+      expect(Number(rows[0]!.n), "the audit posted food revenue of its own").toBe(0);
+    } finally {
+      await db.end();
+    }
+  });
+});

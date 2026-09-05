@@ -211,8 +211,31 @@ export interface NightAuditResult {
   revenuePosted?: number;
   complimentary?: number;
   noShows?: number;
+  retentionCharged?: number;
+  noShowsWithoutTerms?: number;
   duplicate?: boolean;
   blockers?: Array<{ id: string; reason: string; rooms: string[] }>;
+
+  /** The restaurant's day, READ from settled orders — the audit does
+      not post a single line of it. The money is already on the ledger;
+      a second copy would double the day. */
+  restaurant?: {
+    orders: number;
+    covers: number;
+    net: number;
+    tax: number;
+    gross: number;
+    byTender: Array<{ method: string; amount: number }>;
+  };
+
+  /** TWO drawers, and they are never added together. The front desk
+      takes deposits and settles folios; the till takes money for food.
+      Different people count them, and a variance in one says nothing
+      about the other. */
+  drawers?: {
+    frontDesk: { shifts: number; opening: number; counted: number; variances: number };
+    till: { outlets: number; opening: number; counted: number; variances: number };
+  };
 }
 
 /**

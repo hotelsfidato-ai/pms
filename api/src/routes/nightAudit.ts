@@ -141,6 +141,76 @@ export async function blockersFor(
     });
   }
 
+  /* ── Two drawers, and both have to be counted ────────────────
+     A hotel has cash in two places and they are not the same drawer.
+     The front desk takes deposits and settles folios; the till takes
+     money for food. They are counted by different people, at different
+     times, and a variance in one says nothing about the other — which
+     is exactly why they must not be added together anywhere.
+
+     The audit closes the DAY, and a day whose cash has not been counted
+     is not closed, it is abandoned. Both are blockers for the same
+     reason a due-out guest is: only a person knows the answer, and the
+     two possible truths lead to opposite postings.
+
+     Named separately, because "the cash is not counted" sends somebody
+     to the wrong drawer half the time. */
+  const { rows: openShifts } = await client.query<{
+    who: string; opened: string;
+  }>(
+    `select coalesce(s.full_name, 'somebody') as who,
+            to_char(cs.opened_at, 'HH24:MI') as opened
+       from cashier_shifts cs
+       left join staff s on s.id = cs.staff_id
+      where cs.hotel_id = $1
+        and cs.business_date <= $2::date
+        and cs.closed_at is null
+      order by cs.opened_at`,
+    [hotelId, businessDate],
+  );
+
+  if (openShifts.length > 0) {
+    blockers.push({
+      id: "front-desk-drawer",
+      reason:
+        `${openShifts.length === 1 ? "A front-desk drawer is" : `${openShifts.length} front-desk drawers are`}`
+        + " still open. Count the cash and close the shift — the audit"
+        + " cannot say what was taken at the desk until somebody has.",
+      rooms: openShifts.map((x) => `${x.who} · opened ${x.opened}`),
+    });
+  }
+
+  /* The till's day, per outlet. An outlet with no orders at all today
+     never opened, and closing a day nobody worked is a formality worth
+     skipping — so only outlets that actually sold something count. */
+  const { rows: openTills } = await client.query<{
+    outlet: string; orders: string;
+  }>(
+    `select o.name as outlet, count(po.id)::text as orders
+       from pos_outlets o
+       join pos_orders po on po.outlet_id = o.id
+                         and po.business_date = $2::date
+       where o.hotel_id = $1 and o.is_active
+         and not exists (
+           select 1 from pos_day_ends d
+            where d.outlet_id = o.id and d.business_date = $2::date
+              and d.closed_at is not null)
+       group by o.name
+       order by o.name`,
+    [hotelId, businessDate],
+  );
+
+  if (openTills.length > 0) {
+    blockers.push({
+      id: "till-drawer",
+      reason:
+        "The till has not been closed for today. Run the day end on it"
+        + " first — the restaurant's takings belong in this audit, and"
+        + " they are not final until the drawer is counted.",
+      rooms: openTills.map((x) => `${x.outlet} · ${x.orders} orders today`),
+    });
+  }
+
   return blockers;
 }
 
@@ -430,12 +500,120 @@ nightAudit.post("/:code/night-audit/run", async (c) => {
       [runId, roomsPosted, revenuePosted, noShows],
     );
 
+    /* ── What the day actually took, from both drawers ──────────
+       The audit used to report rooms and no-shows and stop there, which
+       described a hotel with no restaurant in it. The owner asked for
+       the day's sales to be IN the audit, and they are the reason the
+       two drawers above have to be counted before it runs.
+
+       READ, NEVER RE-POSTED. Every figure below is summed from rows the
+       till and the desk already wrote. The audit does not create a
+       single one of them — a second copy of the restaurant's takings on
+       the folio ledger would double the day, and the money is already
+       there. This is a statement of the day, not an entry in it.
+
+       Reported side by side and never added together: a variance at the
+       desk and a variance at the till are different people's counts and
+       different conversations. */
+    const { rows: pos } = await client.query<{
+      orders: string; net: string; tax: string; gross: string;
+      covers: string;
+    }>(
+      `select count(*)::text                                as orders,
+              coalesce(sum(t.net), 0)::text                 as net,
+              coalesce(sum(t.tax), 0)::text                 as tax,
+              coalesce(sum(t.net + t.tax), 0)::text         as gross,
+              coalesce(sum(o.covers), 0)::text              as covers
+         from pos_orders o
+         cross join lateral (
+           select coalesce(sum(round(l.qty * l.unit_price, 2)), 0) as net,
+                  coalesce(sum(round(l.qty * l.unit_price
+                                     * l.tax_rate / 100.0, 2)), 0) as tax
+             from pos_order_lines l
+            where l.order_id = o.id and not l.voided
+         ) t
+        where o.hotel_id = $1
+          and o.business_date = $2::date
+          and o.status = 'settled'`,
+      [hotelId, businessDate],
+    );
+
+    /* By tender, because "what did we take" and "what is in the drawer"
+       are different questions and only the cash line answers the second. */
+    const { rows: tenders } = await client.query<{
+      method: string; amount: string;
+    }>(
+      `select t.method, sum(t.amount)::text as amount
+         from pos_order_tenders t
+         join pos_orders o on o.id = t.order_id
+        where t.hotel_id = $1 and o.business_date = $2::date
+        group by t.method
+        order by t.method`,
+      [hotelId, businessDate],
+    );
+
+    const { rows: deskDrawer } = await client.query<{
+      shifts: string; opening: string; counted: string; variances: string;
+    }>(
+      `select count(*)::text                                   as shifts,
+              coalesce(sum(opening_cash), 0)::text             as opening,
+              coalesce(sum(counted_cash), 0)::text             as counted,
+              count(*) filter (where variance_reason is not null)::text
+                                                               as variances
+         from cashier_shifts
+        where hotel_id = $1 and business_date = $2::date
+          and closed_at is not null`,
+      [hotelId, businessDate],
+    );
+
+    const { rows: tillDrawer } = await client.query<{
+      outlets: string; opening: string; counted: string; variances: string;
+    }>(
+      `select count(*)::text                                   as outlets,
+              coalesce(sum(opening_cash), 0)::text             as opening,
+              coalesce(sum(counted_cash), 0)::text             as counted,
+              count(*) filter (where variance_reason is not null)::text
+                                                               as variances
+         from pos_day_ends
+        where hotel_id = $1 and business_date = $2::date
+          and closed_at is not null`,
+      [hotelId, businessDate],
+    );
+
+    const num = (x: string | undefined) => Math.round(Number(x ?? 0) * 100) / 100;
+
     const next = await businessDateFor(client, hotelId);
 
     return {
       ok: true,
       businessDate,
       nextBusinessDate: next,
+      /* The restaurant's day, read from settled orders. */
+      restaurant: {
+        orders: Number(pos[0]?.orders ?? 0),
+        covers: Number(pos[0]?.covers ?? 0),
+        net: num(pos[0]?.net),
+        tax: num(pos[0]?.tax),
+        gross: num(pos[0]?.gross),
+        byTender: tenders.map((t) => ({
+          method: t.method, amount: num(t.amount),
+        })),
+      },
+      /* Two drawers, side by side, never summed. */
+      drawers: {
+        frontDesk: {
+          shifts: Number(deskDrawer[0]?.shifts ?? 0),
+          opening: num(deskDrawer[0]?.opening),
+          counted: num(deskDrawer[0]?.counted),
+          variances: Number(deskDrawer[0]?.variances ?? 0),
+        },
+        till: {
+          outlets: Number(tillDrawer[0]?.outlets ?? 0),
+          opening: num(tillDrawer[0]?.opening),
+          counted: num(tillDrawer[0]?.counted),
+          variances: Number(tillDrawer[0]?.variances ?? 0),
+        },
+      },
       roomsPosted,
       revenuePosted: Math.round(revenuePosted * 100) / 100,
       complimentary,
