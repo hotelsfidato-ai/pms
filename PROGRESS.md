@@ -15,14 +15,15 @@ that produced it is gone and this file is what survived.
 
 ### Where the work stands
 
-**170 of 192 · 89%.** Sixteen stages of twelve. The bars further down
+**182 of 204 · 89%.** Seventeen stages of twelve. The bars further down
 sum to that; the total is read off them and never typed beside them.
 
 ```
-db/tests/run.sh      413 assertions       REBUILDS THE DATABASE FROM ZERO
-db/tests/rerun.sh    65 migrations, all re-runnable, on a scratch copy
-cd api && npm test   200, on its OWN database, built and dropped per run
-npx vitest run       136
+db/migrate.sh        the LIVE database. Additive. Never drops.
+db/tests/run.sh      434 assertions, on a scratch database it drops
+db/tests/rerun.sh    68 migrations, all re-runnable, on a scratch copy
+cd api && npm test   218, on its OWN database, built and dropped per run
+npx vitest run       157
 npm run build:all    production, preview AND artifact — all three
 db/verify-backup.sh  dumped, restored, checked
 ```
@@ -95,7 +96,8 @@ things in — the owner asked for the demo gone and the system used for real.
 
 ### What to do next, in order
 
-1. **Migration upgrade path is DONE** — all 65 re-run cleanly.
+1. **Migration upgrade path is DONE** — all 68 re-run cleanly, and
+   `db/migrate.sh` is the one that touches the live database.
 2. **The group reservation list** — stage 16's twelfth and only gap.
    `GroupPanel.tsx` exists and is close; what is missing is the stay
    panel saying "this guest has two rooms in this group".
@@ -112,16 +114,16 @@ things in — the owner asked for the demo gone and the system used for real.
 
 ```
 FRONTEND   tsc -b            0 errors
-           vitest run        136 passed · 10 files
+           vitest run        157 passed · 11 files
            build             clean · production, preview AND artifact
 
 API        tsc --noEmit      0 errors
-           npm test          200 passed · 12 files
+           npm test          218 passed · 12 files
                              on its OWN database, built and dropped per run
 
-DATABASE   db/tests/run.sh   65 migrations · 413 assertions
+DATABASE   db/tests/run.sh   68 migrations · 434 assertions
                              9 isolation checks · exit 0
-           db/tests/rerun.sh 65 of 65 re-runnable, on a scratch copy
+           db/tests/rerun.sh 68 of 68 re-runnable, on a scratch copy
 BACKUP     verify-backup.sh  dumped, RESTORED, 13 checks · exit 0
 ```
 
@@ -842,6 +844,7 @@ retried. Ledger nets to zero, room revenue still ₹4,19,578.76.
 14 Modules + banquet                  ████████████  12 of 12 — the hall cannot be sold twice
 15 PMS upgrade — eZee-informed        ████████████  12 of 12 — the backlog is clear
 16 Front desk, second pass            ███████████░  11 of 12 — the group list remains
+17 Commissioning a real property      ████████████  12 of 12 — the owner can set it up
 ```
 
 **Stage 13 reads 4, and those four are finished** — database, API and screen.
@@ -942,7 +945,7 @@ moved: twenty screenshots of Petpooja set a higher bar, and two module
 requirements arrived with it. Lowering stage 7 would misreport what happened, so
 the new work is its own row. Detail in `POS-PROGRESS.md`.
 
-**170 of 192 — 89%.** Add the filled blocks above and divide by 180 — fifteen stages of twelve. That sum is the number; it is not typed separately, because it was for three audits running and drifted to "about 90%" while the bars said 70. It moved from 119 when stage 13’s three unfounded blocks came off, to 133 when the day end finished stage 13, to 134 when stage 3 got its service account, to 135 when the rate calendar gave stage 15's three grids their screens, to 136 with the room move, to 137 with amend stay, to 138 with the group panel, to 140 when extra-person pricing and multi-room booking finished 1.2, to 142 with VIP and work orders, to 153 when the banquet hall finished stage 14 — eleven blocks, the largest single move this file has recorded, because stage 14 had one filled block since it was written and the module it named did not exist — and to 156 when stages 5, 8 and 10 were given the unit lists they had never had, which moved 8 from 9 to 11 and 10 from 11 to 12, to 158 when offline finished stage 6, to 159 when the code reached GitHub, and to 170 of 192 when stage 16 was added — a sixteenth row for the eZee-informed front-desk work that arrived after stage 15's backlog was cleared. The denominator moves with it: sixteen stages of twelve.
+**182 of 204 — 89%.** Add the filled blocks above and divide by 180 — fifteen stages of twelve. That sum is the number; it is not typed separately, because it was for three audits running and drifted to "about 90%" while the bars said 70. It moved from 119 when stage 13’s three unfounded blocks came off, to 133 when the day end finished stage 13, to 134 when stage 3 got its service account, to 135 when the rate calendar gave stage 15's three grids their screens, to 136 with the room move, to 137 with amend stay, to 138 with the group panel, to 140 when extra-person pricing and multi-room booking finished 1.2, to 142 with VIP and work orders, to 153 when the banquet hall finished stage 14 — eleven blocks, the largest single move this file has recorded, because stage 14 had one filled block since it was written and the module it named did not exist — and to 156 when stages 5, 8 and 10 were given the unit lists they had never had, which moved 8 from 9 to 11 and 10 from 11 to 12, to 158 when offline finished stage 6, to 159 when the code reached GitHub, to 170 of 192 when stage 16 was added, and to 182 of 204 when stage 17 carried the work of turning a demonstrable system into one a hotel can be commissioned on. The denominator moves with it: seventeen stages of twelve.
 
 **Cashiering is built, and the placeholder list in `App.tsx` is now empty.** It was the last route in the application rendering nothing, and its own note said why: *"unspecified — placeholder until the live flow is observed."* It has been observed — a front-desk shift close — and 059 builds it in the POS day end's shape rather than as a second idea about cash.
 
@@ -1281,6 +1284,47 @@ twice and take two rooms. The check-in picker hid the room a guest was
 already in. None was a missing feature; each was a built one that did
 not work, and every one of them was found by using the system rather
 than by a gate.
+
+---
+
+## Stage 17 · Commissioning a real property
+
+Stage 16 was the front desk working. This is the property being SET UP —
+the gap between a system that demonstrates and one an owner can put a
+hotel into. It exists as its own row for the same reason 13 to 16 do:
+the work arrived after the previous backlog was cleared, from the owner
+using the thing rather than from a plan.
+
+```
+ 1 the gates can no longer reach the hotel's database   ✓
+ 2 a delete guard that tells scaffolding from history   ✓
+ 3 GST is a rule, not a constant                        ✓
+ 4 one screen sets it, for the front desk AND the till  ✓
+ 5 the RLS foundation stops recursing                   ✓
+ 6 both cash drawers block the night audit              ✓
+ 7 the audit contains the restaurant's day              ✓
+ 8 the owner can add their own staff                    ✓
+ 9 a menu arrives as a file, previewed before it lands  ✓
+10 templates that cannot drift from their parser        ✓
+11 room types and rooms arrive the same way             ✓
+12 a property says what it still needs, derived         ✓
+```
+
+**SIX OF THE TWELVE WERE DEFECTS, not features.** Sign-in was dead on the
+live database and no gate could see it. The test suite had been dropping
+the hotel's database for months. A fixture picked its staff by random
+uuid and passed about half the time. Four tests only passed after 2pm.
+The backup verifier called a sound backup a lost hotel. A group
+administrator nobody owned sat active in `staff`. Every one was found by
+using the system or by reading what was actually in it — none by a gate.
+
+**The GST work is the largest single piece.** Three sources of truth
+became one: `hotels.cgst_rate + sgst_rate` read in six places, and
+`pos_menu_items.tax_rate default 5.00`. `app.gst_rate()` RAISES when a
+kind has no rule rather than returning zero, which is this project's
+oldest rule — a dash is an admission, a zero is a claim — applied to tax.
+The bar is unset and therefore unbillable until the owner sets it, and
+the till says so in a sentence a waiter can act on.
 
 ---
 
