@@ -55,6 +55,7 @@ import WorkOrdersPage from "@/pages/WorkOrders";
 import BanquetPage from "@/pages/Banquet";
 import RoomSetupPage from "@/pages/RoomSetup";
 import PeoplePage from "@/pages/People";
+import ChannelManagerPage from "@/pages/ChannelManager";
 import BanquetEventPage from "@/pages/BanquetEvent";
 import BanquetSetupPage from "@/pages/BanquetSetup";
 import CashieringPage from "@/pages/Cashiering";
@@ -378,6 +379,14 @@ export default function App() {
             <Route
               path="/h/:code/room-types"
               element={<><PropertyScope /><RoomSetupPage /></>}
+            />
+            {/* Named rather than omitted. The largest gap in the product,
+                and a navigation that says nothing about it leaves somebody
+                hunting for a screen that does not exist. Rule 6 applies to
+                features as well as buttons. */}
+            <Route
+              path="/h/:code/channels"
+              element={<><PropertyScope /><ChannelManagerPage /></>}
             />
             <Route
               path="/h/:code/rate-plans"

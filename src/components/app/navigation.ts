@@ -2,7 +2,7 @@ import {
   LayoutDashboard, CalendarCheck, Users, Building2, Hotel, Receipt,
   BarChart3, Bell, Settings, ShieldCheck, CalendarRange,
   FileText, Wallet, Plug, ScrollText,
-  UserCog, Palette, Terminal, MonitorSmartphone, BookOpen, Home, ClipboardList, type LucideIcon, ShieldAlert, UtensilsCrossed, Flame, LayoutGrid, Banknote, Table2, BookPlus, Wrench, PartyPopper,
+  UserCog, Palette, Terminal, MonitorSmartphone, BookOpen, Home, ClipboardList, type LucideIcon, ShieldAlert, Globe, UtensilsCrossed, Flame, LayoutGrid, Banknote, Table2, BookPlus, Wrench, PartyPopper,
 } from "lucide-react";
 import { can, canAccess, type Resource, type Role } from "@/lib/permissions";
 
@@ -164,6 +164,11 @@ const SECTIONS: NavSection[] = [
       { label: "Rate calendar", to: "/h/:code/grids", icon: Table2, resource: "rate" },
       { label: "Rate performance", to: "/h/:code/rates", icon: BarChart3, resource: "rate" },
       { label: "Cancellation terms", to: "/h/:code/cancellation-terms", icon: ShieldAlert, resource: "rate" },
+      /* Shown, and honest about not being built. A menu with no entry
+         for the OTA connection reads as "this system cannot do that",
+         which is a worse answer than "not yet, and here is what it
+         will do". */
+      { label: "Channel manager", to: "/h/:code/channels", icon: Globe, resource: "rate" },
     ],
   },
   {
