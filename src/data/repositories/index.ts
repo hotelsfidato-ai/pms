@@ -35,6 +35,7 @@ export * from "./rates";
 export * from "./till";
 export * from "./banquet";
 export * from "./roomSetup";
+export * from "./stores";
 export * from "./stayExtras";
 
 

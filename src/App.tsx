@@ -57,6 +57,7 @@ import BanquetPage from "@/pages/Banquet";
 import RoomSetupPage from "@/pages/RoomSetup";
 import PeoplePage from "@/pages/People";
 import ChannelManagerPage from "@/pages/ChannelManager";
+import StoresPage from "@/pages/Stores";
 import BanquetEventPage from "@/pages/BanquetEvent";
 import BanquetSetupPage from "@/pages/BanquetSetup";
 import CashieringPage from "@/pages/Cashiering";
@@ -385,6 +386,11 @@ export default function App() {
                 and a navigation that says nothing about it leaves somebody
                 hunting for a screen that does not exist. Rule 6 applies to
                 features as well as buttons. */}
+            {/* What the property keeps, and where it went. */}
+            <Route
+              path="/h/:code/stores"
+              element={<><PropertyScope /><StoresPage /></>}
+            />
             <Route
               path="/h/:code/channels"
               element={<><PropertyScope /><ChannelManagerPage /></>}

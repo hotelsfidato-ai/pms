@@ -6,7 +6,7 @@ Every entry here cost something. Read it before you repeat it.
 
 ## Ten faults that repeat
 
-160 entries below is a reference, not a reading list. These are the patterns
+162 entries below is a reference, not a reading list. These are the patterns
 that have recurred, with the count and the check that would have caught each.
 **If you read nothing else here, read this.**
 
@@ -3239,6 +3239,33 @@ Identical toasts stacked, so one wall looked like five and buried
 whatever else the screen was saying. An identical message still on
 screen now REFRESHES its timer instead of adding a card — pressing again
 feels like the same answer rather than a new one.
+
+### 161 · A single-column foreign key is not tenancy integrity
+
+`stock_movements.item_id` referenced `stock_items(id)`. A movement could
+therefore be recorded against PUN for an item belonging to AGR: RLS
+accepts the write, because the row carries the writer's own `hotel_id`,
+and the quantity then counts toward **another property's stock** —
+silently, in a figure nobody has any way to check.
+
+Caught by the assertion written for it, which failed on its first run.
+
+012 solved exactly this for rooms, reservations and folios two years
+ago: a `unique (hotel_id, id)` on the parent and a COMPOSITE foreign key
+on the child, so **the database refuses rather than accepting the row
+and letting RLS hide it.** Rule D1. A new hotel-scoped table has to
+carry that from the start; nothing about the module is special.
+
+### 162 · A constraint that is dropped and re-added is not re-runnable
+
+The composite key above depends on the `unique (hotel_id, id)` it
+references. So `drop constraint if exists ... ; add constraint ...` —
+the idempotent-looking shape — fails on the SECOND run with *"cannot
+drop constraint ... because other objects depend on it"*, and the whole
+deploy stops there.
+
+`rerun.sh` caught it. The shape that actually works is "add only if
+absent", never drop-then-add, whenever anything else may reference it.
 
 ## Verification traps
 

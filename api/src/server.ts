@@ -21,6 +21,7 @@ import { rates } from "./routes/rates.ts";
 import { groups } from "./routes/groups.ts";
 import { banquet } from "./routes/banquet.ts";
 import { inventorySetup } from "./routes/inventorySetup.ts";
+import { stores } from "./routes/stores.ts";
 import { stayExtras } from "./routes/stayExtras.ts";
 import { housekeeping } from "./routes/housekeeping.ts";
 import { nightAudit } from "./routes/nightAudit.ts";
@@ -194,6 +195,7 @@ app.route("/api", admin);
 app.route("/api/hotels", rates);
 app.route("/api/hotels", banquet);
 app.route("/api/hotels", inventorySetup);
+app.route("/api/hotels", stores);
 app.route("/api/hotels", stayExtras);
 app.route("/api/hotels", housekeeping);
 

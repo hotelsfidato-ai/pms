@@ -4339,3 +4339,130 @@ begin
   perform test.ok('tax','the fixture does not outlive the test',
     not exists (select 1 from hotels where code = 'TAX'));
 end $$;
+
+-- ═══════════════════════════════════════════════════════════════════════════
+-- THE STORE (069)
+-- ═══════════════════════════════════════════════════════════════════════════
+-- A ledger, built like the folio because it is the same shape. What is
+-- asserted here is what makes it one: the stock is DERIVED, the rows cannot
+-- be edited, and the sign follows the kind so no screen can book a receipt
+-- that removes stock.
+do $$
+declare
+  h      uuid;
+  staff  uuid;
+  rice   uuid;
+  gas    uuid;
+  m1     bigint;
+  m2     bigint;
+  n      int;
+begin
+  select id into h from hotels where code = 'AGR';
+  select id into staff from staff where email = 'owner@fidato.in';
+
+  insert into stock_items (hotel_id, name, unit, category, reorder_level)
+  values (h, 'Test rice', 'kg', 'Kitchen', 20) returning id into rice;
+  insert into stock_items (hotel_id, name, unit)
+  values (h, 'Test gas', 'cylinder') returning id into gas;
+
+  -- ---------- an item on its own has nothing ------------------------------
+  perform test.ok('store','a new item holds nothing',
+    app.stock_on_hand(rice) = 0);
+  -- NULL, not zero. Nothing has been paid for it, and zero would be a claim
+  -- that it is worthless — the rule this whole system is built on.
+  perform test.ok('store','and is worth nothing knowable, not zero',
+    app.stock_unit_cost(rice) is null);
+
+  -- ---------- the sign follows the kind -----------------------------------
+  -- Held by the database so no screen can book a receipt that removes stock.
+  perform test.raises('store','a receipt cannot be negative',
+    format($q$insert into stock_movements
+               (hotel_id,item_id,business_date,kind,quantity,moved_by)
+             values (%L,%L,current_date,'receipt',-5,%L)$q$, h, rice, staff),
+    '23514');
+  perform test.raises('store','an issue cannot be positive',
+    format($q$insert into stock_movements
+               (hotel_id,item_id,business_date,kind,quantity,moved_by)
+             values (%L,%L,current_date,'issue',5,%L)$q$, h, rice, staff),
+    '23514');
+  perform test.raises('store','a movement of nothing is refused',
+    format($q$insert into stock_movements
+               (hotel_id,item_id,business_date,kind,quantity,moved_by)
+             values (%L,%L,current_date,'adjustment',0,%L)$q$, h, rice, staff),
+    '23514');
+
+  -- Only a delivery carries a cost. A cost on an issue would be a second
+  -- opinion about what something was worth, and the receipt already said.
+  perform test.raises('store','only a receipt may carry a cost',
+    format($q$insert into stock_movements
+               (hotel_id,item_id,business_date,kind,quantity,unit_cost,moved_by)
+             values (%L,%L,current_date,'issue',-1,50,%L)$q$, h, rice, staff),
+    '23514');
+
+  -- ---------- what is on hand is the sum of the movements -----------------
+  insert into stock_movements
+    (hotel_id,item_id,business_date,kind,quantity,unit_cost,supplier,moved_by)
+  values (h, rice, current_date, 'receipt', 40, 62, 'Kirana Bros', staff)
+  returning id into m1;
+
+  insert into stock_movements
+    (hotel_id,item_id,business_date,kind,quantity,unit_cost,moved_by)
+  values (h, rice, current_date, 'receipt', 10, 70, staff)
+  returning id into m2;
+
+  insert into stock_movements
+    (hotel_id,item_id,business_date,kind,quantity,moved_by)
+  values (h, rice, current_date, 'issue', -12, staff);
+
+  perform test.ok('store','on hand is the sum of the movements',
+    app.stock_on_hand(rice) = 38);
+
+  -- WEIGHTED AVERAGE, not the last price. A hotel that bought rice at 62 and
+  -- then ten kilos at 70 does not own rice worth 70 a kilo.
+  perform test.ok('store','value is the weighted average of what was paid',
+    app.stock_unit_cost(rice) = 63.60);
+
+  -- ---------- nothing is edited -------------------------------------------
+  perform test.raises('store','a movement cannot be edited',
+    format($q$update stock_movements set quantity = 999 where id = %s$q$, m1));
+  perform test.raises('store','a movement cannot be deleted',
+    format($q$delete from stock_movements where id = %s$q$, m1));
+
+  -- ---------- undoing one --------------------------------------------------
+  perform app.reverse_stock_movement(m2, staff, 'Wrong item on the note');
+
+  perform test.ok('store','a reversal takes the stock back out',
+    app.stock_on_hand(rice) = 28);
+  -- And the VALUE goes back to what the remaining receipts say. A reversal
+  -- that moved the quantity but left the average would price the shelf on a
+  -- delivery that never happened.
+  perform test.ok('store','and takes its price out of the average too',
+    app.stock_unit_cost(rice) = 62);
+
+  perform test.raises('store','the same movement cannot be undone twice',
+    format($q$select app.reverse_stock_movement(%s, %L)$q$, m2, staff));
+
+  select count(*) into n from stock_movements where item_id = rice;
+  perform test.ok('store','both rows stay on the history', n = 4);
+
+  -- ---------- isolation ----------------------------------------------------
+  perform test.raises('store','an item cannot take another property''s movement',
+    format($q$insert into stock_movements
+               (hotel_id,item_id,business_date,kind,quantity,moved_by)
+             values ((select id from hotels where code='PUN'),%L,
+                     current_date,'receipt',1,%L)$q$, rice, staff),
+    /* 23503, a foreign key violation — the DATABASE refuses, rather than
+       accepting the row and letting RLS hide it. Rule D1, and this
+       assertion is why the composite key exists: the first run passed
+       the insert. */
+    '23503');
+
+  -- ---------- teardown -----------------------------------------------------
+  alter table stock_movements disable trigger stock_movements_append_only;
+  delete from stock_movements where item_id in (rice, gas);
+  alter table stock_movements enable trigger stock_movements_append_only;
+  delete from stock_items where id in (rice, gas);
+
+  select count(*) into n from stock_items where hotel_id = h;
+  perform test.ok('store','the fixture does not outlive the test', n = 0);
+end $$;

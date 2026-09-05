@@ -2,7 +2,7 @@ import {
   LayoutDashboard, CalendarCheck, Users, Building2, Hotel, Receipt,
   BarChart3, Bell, Settings, ShieldCheck, CalendarRange,
   FileText, Wallet, Plug, ScrollText,
-  UserCog, Palette, Terminal, MonitorSmartphone, BookOpen, Home, ClipboardList, type LucideIcon, ShieldAlert, Globe, UtensilsCrossed, Flame, LayoutGrid, Banknote, Table2, BookPlus, Wrench, PartyPopper,
+  UserCog, Palette, Terminal, MonitorSmartphone, BookOpen, Home, ClipboardList, type LucideIcon, ShieldAlert, Globe, Package, UtensilsCrossed, Flame, LayoutGrid, Banknote, Table2, BookPlus, Wrench, PartyPopper,
 } from "lucide-react";
 import { can, canAccess, type Resource, type Role } from "@/lib/permissions";
 
@@ -173,6 +173,10 @@ const SECTIONS: NavSection[] = [
          which is a worse answer than "not yet, and here is what it
          will do". */
       { label: "Channel manager", to: "/h/:code/channels", icon: Globe, resource: "rate" },
+      /* Rice, gas, linen and soap. Under Inventory beside the rooms,
+         because both answer "what does this property have" — one in
+         beds and one on shelves. */
+      { label: "Store", to: "/h/:code/stores", icon: Package, resource: "inventory", matchPrefix: true },
     ],
   },
   {
