@@ -3,7 +3,102 @@
 Updated after every finished section. **Nothing here is a claim until the gates
 below are green and the screen has been opened.**
 
-Last updated: **31 August 2026** · **Phase 1 complete · Phase 2 complete · the buildable backlog closed — out-of-order rooms, housekeeping assignment, cancellation terms, report CSV**
+Last updated: **5 September 2026** · **170 of 192 · sixteen stages of twelve. Properties run empty and on today, demo data out, nothing pushed since the owner asked. Start at *Picking this up cold* below.**
+
+---
+
+## Picking this up cold
+
+**Read this first if you have no memory of the session that wrote it.**
+Everything below is verified fact, not recollection — the conversation
+that produced it is gone and this file is what survived.
+
+### Where the work stands
+
+**170 of 192 · 89%.** Sixteen stages of twelve. The bars further down
+sum to that; the total is read off them and never typed beside them.
+
+```
+db/tests/run.sh      413 assertions       REBUILDS THE DATABASE FROM ZERO
+db/tests/rerun.sh    65 migrations, all re-runnable, on a scratch copy
+cd api && npm test   200, on its OWN database, built and dropped per run
+npx vitest run       136
+npm run build:all    production, preview AND artifact — all three
+db/verify-backup.sh  dumped, restored, checked
+```
+
+### Start it
+
+Postgres is a portable install and does NOT come back on its own after
+a reboot. Every "permission denied for schema app" and "database does
+not exist" in this project's history began here:
+
+```
+PG=C:/Users/rozar/AppData/Local/Temp/claude/D--PMS-FIDATO/6f5bb0bf-ad16-442f-bd1d-566b371924fa/scratchpad/pg
+"$PG/pgsql/bin/pg_ctl.exe" -D "$PG/data" -l "$PG/pg.log" -o "-p 55432" start
+```
+
+Then the API and the web app through the Browser pane's `preview_start`
+(`api`, then `web` — never `npm run dev` in Bash; the servers belong to
+the pane).
+
+### The trap that has cost the most time, four times over
+
+`db/tests/run.sh` **drops and rebuilds `fidato`.** After it, the demo is
+gone and every screen honestly reports an empty database — which reads
+as a permission fault, a broken API, or a bug in whatever you last
+touched. It is none of those.
+
+**After run.sh, reload. Before believing any screen, count the hotels.**
+
+```
+cd api && npm run demo     load-demo, then demo-history, in that order
+cd api && npm run reset -- 5EL --yes    clears a property, moves it to today
+```
+
+`npm run demo` restores the calibrated August 2026 demo. `npm run reset`
+is the opposite: it empties a property of transactions, keeps every
+setting, and sets the business date to today. **The owner asked for the
+demo data gone and the system used for real, so reset is the state to
+leave things in.**
+
+### What the owner has decided
+
+- **Do not push and do not deploy** until told otherwise. As of this
+  writing there are unpushed commits on `cp6`; that is intentional.
+- The demo data is OUT. Properties run empty, on today's date.
+- 5EL: check-in **13:00**, check-out **11:00**, ₹1,000 for an early
+  arrival and ₹1,000 for a late departure.
+- Admin console stays development-only.
+- E-invoicing is NOT required — the group is under ₹5 crore.
+- The night audit needs a person. It is not scheduled and should not be.
+- **No default prices, anywhere.** An unpriced thing shows a dash. Seven
+  assertions guard this and it has been violated twice.
+
+### The rules that have actually caught things
+
+- **Open the screen before saying it works.** Nineteen defects passed a
+  typecheck, the tests and a clean build with the page broken.
+- **Measure; do not infer.** Row counts before and after, not a grep.
+- **Read the schema, do not remember it.** `\d table` and
+  `information_schema` — guessed column names have cost three separate
+  runs.
+- **A dash is honest; a zero is a claim.**
+- Read `MEMORY.md`'s opening table — ten patterns that recur, with the
+  defect numbers behind each. 146 entries; the table is the part to read.
+
+### What to do next, in order
+
+1. **Migration upgrade path is DONE** — all 65 re-run cleanly.
+2. **The group reservation list** — stage 16's twelfth and only gap.
+   `GroupPanel.tsx` exists and is close; what is missing is the stay
+   panel saying "this guest has two rooms in this group".
+3. **The channel manager** (stage 9, 5 blocks) — the largest gap in the
+   product, and what stops somebody re-typing every OTA booking by hand.
+4. **The CRS bridge** (stage 11, 12 blocks) — the owner sequenced this
+   last, deliberately.
+5. **Deploy** (stage 12, 2 blocks) — blocked on the owner's domain,
+   nothing else.
 
 ---
 
