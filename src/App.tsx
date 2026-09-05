@@ -54,6 +54,7 @@ import NewBookingPage from "@/pages/NewBooking";
 import WorkOrdersPage from "@/pages/WorkOrders";
 import BanquetPage from "@/pages/Banquet";
 import RoomSetupPage from "@/pages/RoomSetup";
+import PeoplePage from "@/pages/People";
 import BanquetEventPage from "@/pages/BanquetEvent";
 import BanquetSetupPage from "@/pages/BanquetSetup";
 import CashieringPage from "@/pages/Cashiering";
@@ -260,6 +261,11 @@ export default function App() {
 
             <Route path="/properties" element={<PropertiesPage />} />
             <Route path="/guests" element={<GuestsPage />} />
+            {/* NOT development-gated. The endpoints behind it have
+                existed since the admin work and were reachable only from
+                a dev-only console, so the owner -- the one person who
+                actually has staff to add -- could not reach them. */}
+            <Route path="/people" element={<PeoplePage />} />
             <Route path="/companies" element={<CompaniesPage />} />
             <Route path="/notifications" element={<NotificationsPage />} />
 

@@ -148,6 +148,12 @@ const SECTIONS: NavSection[] = [
     label: "Inventory",
     items: [
       { label: "Properties", to: "/properties", icon: Hotel, resource: "hotel", matchPrefix: true },
+      /* Beside Properties, because commissioning a hotel and staffing
+         it are the same afternoon's work. Deliberately NOT under the
+         development-only admin console, where these endpoints have sat
+         unreachable since they were written — the owner is the person
+         who has staff to add. */
+      { label: "People", to: "/people", icon: UserCog, resource: "user", matchPrefix: true },
       { label: "Room types", to: "/h/:code/room-types", icon: LayoutDashboard, resource: "room_config" },
       { label: "Rate plans", to: "/h/:code/rate-plans", icon: Wallet, resource: "rate" },
       /* The daily working grid: what is left, and what it costs. Named

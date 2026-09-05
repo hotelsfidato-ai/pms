@@ -6,7 +6,7 @@ Every entry here cost something. Read it before you repeat it.
 
 ## Ten faults that repeat
 
-152 entries below is a reference, not a reading list. These are the patterns
+153 entries below is a reference, not a reading list. These are the patterns
 that have recurred, with the count and the check that would have caught each.
 **If you read nothing else here, read this.**
 
@@ -3117,6 +3117,27 @@ columns, a SELECT has nothing to take them from.
 Surfaced as `500 · Something went wrong` on the walk-in, three layers
 from the cast that was missing. Every converted statement now spells out
 `$1::uuid`, `$3::date`, `$5::numeric`.
+
+### 153 · A group administrator nobody owned
+
+`008_seed.sql` seeds a bootstrap person, `REPLACE@fidato.in`, so the
+first real user has something to sign in as. It sat in `staff` as an
+ACTIVE GROUP ADMIN — the widest role the system has — and nothing
+objected. `preflight` checked for REPLACE **properties** and had never
+looked at people.
+
+It could not sign in, because no Firebase account carried that address.
+It becomes a real key the moment somebody creates one, and it is exactly
+the address a person makes by accident while testing.
+
+Found by reading the staff table after deleting the test properties —
+not by a gate. There is a preflight check now, and it fails until the
+account is claimed or deactivated.
+
+**The endpoints to fix it had existed for months** behind a
+development-only console, so the owner could not reach them. A feature
+is not built until the people it is for can reach it — the same hole
+room types had, and the front desk's hours.
 
 ## Verification traps
 
