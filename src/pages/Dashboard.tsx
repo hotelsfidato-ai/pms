@@ -1,4 +1,5 @@
 import { useQuery } from "@tanstack/react-query";
+import { dateShort } from "@/lib/format";
 import { Link } from "react-router";
 import { ArrowRight } from "lucide-react";
 import {
@@ -115,6 +116,13 @@ const columns: Column<Row>[] = [
 const cnDirty = (n: number) =>
   n > 0 ? "tabular font-medium text-brand-yellow" : "tabular text-grey-400";
 
+/** The first of the month the business date falls in — the same window
+    the Manager Report's period-to-date uses, so the caption and the
+    figures under it cannot disagree. */
+function monthStart(date: string): string {
+  return `${date.slice(0, 7)}-01`;
+}
+
 export default function DashboardPage() {
   const { data, isLoading } = useQuery({
     queryKey: ["dashboard", BUSINESS_DATE],
@@ -133,7 +141,20 @@ export default function DashboardPage() {
     <Page>
       <PageHeader
         title="Fidato Hotels"
-        description="Period to date, 1–25 August 2026. Figures reconcile to each property's Manager Report."
+        /* DERIVED, because this was the string "1–25 August 2026" —
+           typed once and then wrong on every day that was not the 25th
+           of August. The screen an owner opens first was captioning
+           today's figures with last month's dates, and the API had the
+           right window all along: monthStart(businessDate) to the
+           business date.
+
+           A date on a screen is a number like any other. This file's
+           own rule is that a number is derived or it is a dash. */
+        description={
+          `Period to date, ${dateShort(monthStart(BUSINESS_DATE))} to `
+          + `${dateShort(BUSINESS_DATE)}. Figures reconcile to each `
+          + "property's Manager Report."
+        }
       />
 
       {/* The single hero accent on the page */}

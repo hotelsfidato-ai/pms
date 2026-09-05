@@ -6,7 +6,7 @@ Every entry here cost something. Read it before you repeat it.
 
 ## Ten faults that repeat
 
-146 entries below is a reference, not a reading list. These are the patterns
+147 entries below is a reference, not a reading list. These are the patterns
 that have recurred, with the count and the check that would have caught each.
 **If you read nothing else here, read this.**
 
@@ -3011,6 +3011,25 @@ The assigned room is always offered now, whatever its type, and is not
 refused for being occupied by the very stay being checked in.
 
 **A decision somebody already made is not one a screen gets to hide.**
+
+### 147 · A date typed once, on the screen an owner opens first
+
+The group dashboard captioned itself
+
+> *Period to date, 1–25 August 2026.*
+
+as a literal string. The API had the right window all along —
+`monthStart(business_date)` to the business date — and the figures under
+the caption were correct. Only the sentence describing them was frozen
+on the day somebody typed it.
+
+Found the moment the properties moved to a real date: the heading said
+August while every number under it was September.
+
+**A date on a screen is a number like any other**, and this project''s
+rule is that a number is derived or it is a dash. A hardcoded date does
+not even fail loudly — it is right once, and wrong quietly forever
+after.
 
 ## Verification traps
 
