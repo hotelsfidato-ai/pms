@@ -1,6 +1,8 @@
 import { describe, it, expect, beforeEach } from "vitest";
 import { readFileSync } from "node:fs";
-import { render, screen, within, fireEvent } from "@testing-library/react";
+import {
+  render, screen, within, fireEvent, waitFor,
+} from "@testing-library/react";
 import App from "./App";
 import { useUi } from "@/lib/ui";
 import { useSession } from "@/lib/session";
@@ -110,6 +112,55 @@ describe("the tape chart at /h/:code/stay", () => {
     expect(within(panel).getByText("Kalyani Rege")).toBeDefined();
     /* The clerk must not lose their place. */
     expect(container.querySelectorAll("[data-room-row]").length).toBe(17);
+  });
+
+  it("shows the house as tiles, and no tile contradicts itself", async () => {
+    go(`/h/${HOTEL}/stay`);
+    render(<App />);
+    await screen.findAllByText("Superior");
+
+    /* `role="tab"` — Segmented is a tablist, not a row of buttons. */
+    fireEvent.click(screen.getByRole("tab", { name: "Rooms" }));
+
+    /* ⚠ THE BUG THIS HOLDS SHUT. The tile's guest was read from the
+       chart's BARS and its label from `room.state`, and the two answer
+       different questions: a checked-out stay still covers today — its
+       arrival is behind us and its departure is this morning — so tiles
+       read "FREE" with a guest's name printed underneath. A screen
+       contradicting itself in the space of two lines.
+
+       Asserted as an invariant rather than against a fixture room,
+       because the next way to break it will not be the same way. */
+    /* `data-room-tile`, not "a button whose first span is a number" —
+       that also matched every filter pill above the grid. */
+    await waitFor(() => {
+      expect(document.querySelectorAll("[data-room-tile]").length)
+        .toBeGreaterThan(0);
+    });
+
+    /* AND WAIT FOR THE NAMES. Who is in each room is a second query,
+       enabled only in this view, so the tiles render before it lands.
+       The first version asserted immediately, found no guest on any
+       tile, and therefore passed with the bug reintroduced — which is
+       the exact failure it exists to prevent.
+
+       Verified the other way round: with the old `arrival <= today <=
+       departure` rule put back, this fails. */
+    await waitFor(() => {
+      expect(document.querySelectorAll("[data-tile-guest]").length)
+        .toBeGreaterThan(0);
+    });
+
+    const tiles = [...document.querySelectorAll("[data-room-tile]")];
+    const free = tiles.filter((t) => (t.textContent ?? "").includes("Free"));
+    expect(free.length, "no free rooms in the fixture to check").toBeGreaterThan(0);
+
+    for (const tile of free) {
+      expect(
+        tile.querySelector("[data-tile-guest]"),
+        `a tile said Free and named a guest: ${tile.textContent}`,
+      ).toBeNull();
+    }
   });
 
   it("names the group a stay belongs to, rather than saying 'Group'", async () => {

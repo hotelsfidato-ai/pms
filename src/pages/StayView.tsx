@@ -7,6 +7,7 @@ import {
 } from "lucide-react";
 import { cn } from "@/lib/cn";
 import { StayMarks } from "@/components/flows/StayMarks";
+import { HouseFloor } from "@/components/flows/HouseFloor";
 import { money, dateShort } from "@/lib/format";
 import { useUi } from "@/lib/ui";
 import { AssignRoomFlow } from "@/components/flows/AssignRoomFlow";
@@ -21,8 +22,8 @@ import { StayActions } from "@/components/flows/StayActions";
 import { FolioPanel } from "@/components/flows/FolioPanel";
 import { WalkInFlow } from "@/components/flows/WalkInFlow";
 import {
-  getStayView, getStay, queryKeys, BUSINESS_DATE, addDays, isWeekend,
-  setGuestVip,
+  getStayView, getStay, listStays, queryKeys, BUSINESS_DATE, addDays,
+  isWeekend, setGuestVip,
   type ChartBar, type ChartRoom, type BarTone, type Stay,
 } from "@/data/repositories";
 
@@ -63,6 +64,10 @@ const PILLS = ["All", "Vacant", "Occupied", "Arrivals", "Reserved", "Blocked", "
 type Pill = (typeof PILLS)[number];
 
 /** How the chart's rows are grouped. */
+/* One key for the whole app. Somebody who works from the floor
+   view works from it every time they open this screen. */
+const VIEW_KEY = "fidato-house-view";
+
 type GroupBy = "type" | "floor";
 
 const SOURCE_ICON: Record<string, typeof Globe> = {
@@ -118,12 +123,68 @@ export default function StayViewPage() {
   const [start, setStart] = useState(BUSINESS_DATE);
   const [pill, setPill] = useState<Pill>("All");
   const [groupBy, setGroupBy] = useState<GroupBy>("type");
+
+  /* CALENDAR OR FLOOR. The chart is right at a desk — a fortnight of
+     inventory and somebody planning next week. It is wrong on a phone,
+     and wrong when the question is "what is happening now": eighteen
+     rooms times fourteen days is two hundred and fifty cells to answer
+     something about one room.
+
+     Remembered per viewer, because somebody who works from a phone
+     works from a phone, and re-choosing on every visit is the kind of
+     friction that makes a view go unused. localStorage rather than the
+     server: this is a preference about a screen and it is ALLOWED to
+     differ between the desk terminal and the manager's pocket, which is
+     the whole reason both exist.
+
+     Wrapped, because a private window and a browser set to block site
+     data both throw here, and a chart that will not render because it
+     could not remember a layout is a poor trade. */
+  const [view, setView] = useState<"calendar" | "floor">(() => {
+    try {
+      return localStorage.getItem(VIEW_KEY) === "floor" ? "floor" : "calendar";
+    } catch {
+      return "calendar";
+    }
+  });
+
+  const chooseView = (next: "calendar" | "floor") => {
+    setView(next);
+    try { localStorage.setItem(VIEW_KEY, next); } catch { /* not fatal */ }
+  };
   const [collapsed, setCollapsed] = useState<Record<string, boolean>>({});
 
   const { data, isLoading } = useQuery({
     queryKey: queryKeys.stayView(hotelId, start, BUSINESS_DATE),
     queryFn: () => getStayView(hotelId, start, BUSINESS_DATE),
   });
+
+  /* WHO IS IN EACH ROOM TODAY. The chart's bars belong to its WINDOW;
+     this belongs to the business date. A guest who arrived on the 4th
+     and leaves on the 5th has no bar in a window starting on the 5th —
+     they occupied the night of the 4th — and the floor view was showing
+     "DUE OUT" over an empty tile while they were still in the room.
+
+     Only fetched in the floor view, because the chart does not need it
+     and a query nobody reads is a query that goes wrong unnoticed. */
+  const { data: todaysStayList } = useQuery({
+    queryKey: queryKeys.stays(hotelId),
+    queryFn: () => listStays(hotelId),
+    enabled: view === "floor",
+  });
+
+  const todaysStays = useMemo(() => {
+    const map = new Map<string, Stay>();
+    for (const s of todaysStayList ?? []) {
+      if (!s.roomNumber) continue;
+      /* The same three statuses `room.state` is built from, so the tile's
+         label and the name under it cannot answer different questions. */
+      const live = s.status === "in-house" || s.status === "due-out"
+        || (s.status === "due-in" && s.arrival === BUSINESS_DATE);
+      if (live) map.set(s.roomNumber, s);
+    }
+    return map;
+  }, [todaysStayList]);
 
   /* An empty cell opens a walk-in for that room and date. */
   const walkIn = useMemo(() => {
@@ -268,11 +329,28 @@ export default function StayViewPage() {
             )}
           </div>
 
-          <div className="ml-auto flex items-center gap-2">
+          {/* WRAPS ON A PHONE, and only takes the right-hand side once
+              there is one. `ml-auto` with no wrap pushed this group to
+              461px inside a 343px parent, so "Assign room" sat at x=477
+              in a 375px viewport — present, styled, and unreachable.
+
+              It was already tight with one toggle; the second made it
+              certain. A control that cannot be touched is not a control. */}
+          <div className="flex items-center gap-2 flex-wrap sm:ml-auto">
             {/* This was `value="Room type"` with `onChange={() => undefined}`
                 — a toggle offering a view it could not produce. Every room
                 already carries its floor, so grouping by it costs nothing
                 but was never wired. */}
+            {/* Which SHAPE, before which grouping — a person picks the
+                view they are working in and then how it is sorted. */}
+            <Segmented<"calendar" | "floor">
+              value={view}
+              onChange={chooseView}
+              options={[
+                { value: "calendar", label: "Calendar" },
+                { value: "floor", label: "Rooms" },
+              ]}
+            />
             <Segmented<GroupBy>
               value={groupBy}
               onChange={setGroupBy}
@@ -316,7 +394,33 @@ export default function StayViewPage() {
         </div>
       </div>
 
-      {/* ── The chart ────────────────────────────────────────────── */}
+      {/* ── The house, as a floor ───────────────────────────────────
+          Today's rooms as tiles, in the POS floor's language because it
+          is the same job: somebody standing up with a phone asking which
+          of these is free and which needs something done to it. It
+          renders the data the chart already loaded — a second query
+          would be a second answer, and the two would differ on the day
+          it mattered.
+
+          The SAME filter honours it, so a pill cannot say six here and
+          nine on the chart. */}
+      {view === "floor" ? (
+        <div className="flex-1 min-h-0 overflow-y-auto scrollbar-quiet p-1">
+          <HouseFloor
+            groups={groups.map((g) => ({
+              ...g,
+              rooms: g.rooms.filter(roomVisible),
+            })).filter((g) => g.rooms.length > 0)}
+            businessDate={BUSINESS_DATE}
+            todaysStays={todaysStays}
+            onOpenStay={openStay}
+            onWalkIn={(roomNumber, date) => {
+              searchParams.set("res", `new:${roomNumber}:${date}`);
+              setSearchParams(searchParams);
+            }}
+          />
+        </div>
+      ) : (
       <div className="flex-1 min-h-0 overflow-auto scrollbar-quiet">
         <div className={CHART_MIN_W}>
           {/* Date header */}
@@ -524,6 +628,7 @@ export default function StayViewPage() {
           </div>
         </div>
       </div>
+      )}
 
       {/* ── Detail panel — the chart stays visible behind it ──────── */}
       <Drawer open={!!selected} onOpenChange={(open) => !open && closeStay()}>

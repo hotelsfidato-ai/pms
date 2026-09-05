@@ -6,7 +6,7 @@ Every entry here cost something. Read it before you repeat it.
 
 ## Ten faults that repeat
 
-164 entries below is a reference, not a reading list. These are the patterns
+167 entries below is a reference, not a reading list. These are the patterns
 that have recurred, with the count and the check that would have caught each.
 **If you read nothing else here, read this.**
 
@@ -3307,6 +3307,55 @@ would look.
 Merged into one component. The status pill deliberately stayed split:
 the chart shows a DERIVED tone and the list shows the status, and they
 differ because they mean different things.
+
+### 165 · A tile that said FREE and named the guest in it
+
+The room tiles read their LABEL from `room.state` and their GUEST from
+the chart's bars. Those answer different questions, and the screen said
+both at once: **"201 · FREE · influvateseo@gmail.com"**.
+
+`room.state` reads STATUS — a room is occupied when somebody has
+actually checked in. A bar covers a date range, and a CHECKED-OUT stay
+still covers today: its arrival is behind us and its departure is this
+morning. Two sources, one tile, and a contradiction two lines tall.
+
+Then the deeper half. Bars belong to the CHART'S WINDOW, not to today.
+A guest who arrived on the 4th and leaves on the 5th occupies the night
+of the 4th, so with the window opening on the 5th their bar is behind it
+entirely — room 202 read "DUE OUT" over an empty tile while somebody was
+still in it. Page the chart forward and it would have been today's state
+beside next week's names.
+
+**A view about TODAY cannot source anything from a window the user can
+move.**
+
+### 166 · A test that passed with the bug put back — twice
+
+The guard for 165 was written, and then verified by reintroducing the
+bug. It passed. Twice, for two different reasons:
+
+1. **Text matching.** `textContent` concatenates without spaces, so
+   "Kalyani Rege" + "to 25 Aug" is `Regeto 25 Aug`, and the word
+   boundary the regex relied on was not there. Replaced with a
+   structural assertion on `[data-tile-guest]`.
+2. **Timing.** Who is in each room is a second query, enabled only in
+   that view, so the tiles render before it lands. The test asserted
+   immediately, found no guest on ANY tile, and had nothing to catch.
+
+Both times the suite was green and the bug was live in front of me.
+**Reintroduce the defect and watch the test fail** — a guard is not a
+guard until it has refused something.
+
+### 167 · A control at x=477 in a 375px viewport
+
+The tape chart's header group had `ml-auto` and no wrap. On a phone
+"Assign room" sat 102 pixels past the right edge: present, styled,
+focusable and impossible to touch.
+
+It was already marginal with one toggle; adding a second made it
+certain. **Any header that grows a control needs measuring at 375px** —
+`getBoundingClientRect().right` against `clientWidth` says it in one
+line, and looking at a screenshot does not.
 
 ## Verification traps
 
