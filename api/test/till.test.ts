@@ -1804,3 +1804,149 @@ describe("day end", () => {
       .toMatch(/against today/i);
   });
 });
+
+/* ══════════════════════════════════════════════════════════════════
+   IMPORTING A MENU
+
+   The whole value of this feature is what it REFUSES. A dish with no
+   price that lands at zero looks priced; a tax heading nobody
+   recognised that lands at five percent looks decided. Both are the
+   shipped-price failure this system exists to avoid, arriving two
+   hundred at a time instead of one.
+
+   So the rejections are asserted first, and the dry run is asserted to
+   change nothing — which is the property that lets somebody look at a
+   file before it replaces their card.
+   ══════════════════════════════════════════════════════════════════ */
+
+describe("importing a menu", () => {
+  const section = `IMP-${process.pid}`;
+
+  const post = (rows: Record<string, string>[], dryRun: boolean) =>
+    app.request("/api/hotels/PUN/till/menu/import", {
+      method: "POST",
+      headers: {
+        "content-type": "application/json",
+        "x-dev-staff-id": ownerStaffId,
+      },
+      body: JSON.stringify({ rows, dryRun }),
+    });
+
+  afterAll(async () => {
+    const db = await admin();
+    try {
+      await db.query(
+        `delete from pos_menu_items
+          where category_id in (select id from pos_menu_categories
+                                 where name = $1)`, [section]);
+      await db.query("delete from pos_menu_categories where name = $1", [section]);
+    } finally {
+      await db.end();
+    }
+  });
+
+  const count = async (): Promise<number> => {
+    const db = await admin();
+    try {
+      const { rows } = await db.query<{ n: string }>(
+        `select count(*)::text as n from pos_menu_items i
+           join pos_menu_categories c on c.id = i.category_id
+          where c.name = $1`, [section]);
+      return Number(rows[0]!.n);
+    } finally {
+      await db.end();
+    }
+  };
+
+  it("rejects a blank price rather than importing it as zero", async () => {
+    const res = await post([
+      { category: section, name: "Priced", price: "240" },
+      { category: section, name: "Unpriced", price: "" },
+    ], true);
+    const body = (await res.json()) as {
+      verdicts: { name: string; action: string; detail: string }[];
+      creates: number; rejected: number;
+    };
+
+    expect(body.creates).toBe(1);
+    expect(body.rejected).toBe(1);
+    const bad = body.verdicts.find((v) => v.name === "Unpriced")!;
+    expect(bad.action).toBe("rejected");
+    expect(bad.detail).toMatch(/not zero/i);
+  });
+
+  it("rejects a tax heading it does not know, rather than assuming one", async () => {
+    const res = await post([
+      { category: section, name: "Mystery", price: "100", taxKind: "drinks" },
+    ], true);
+    const body = (await res.json()) as { rejected: number; verdicts: { detail: string }[] };
+    expect(body.rejected).toBe(1);
+    expect(body.verdicts[0]!.detail).toMatch(/not a tax heading/i);
+  });
+
+  it("names a dish that appears twice in the same file", async () => {
+    const res = await post([
+      { category: section, name: "Twice", price: "100" },
+      { category: section, name: "Twice", price: "200" },
+    ], true);
+    const body = (await res.json()) as { rejected: number; verdicts: { detail: string }[] };
+    /* One creates, one is refused — silently taking the second would
+       mean nobody knows which price won. */
+    expect(body.rejected).toBe(1);
+    expect(body.verdicts[1]!.detail).toMatch(/appears twice/i);
+  });
+
+  it("writes nothing on a dry run", async () => {
+    const before = await count();
+    await post([{ category: section, name: "Ghost", price: "500" }], true);
+    expect(await count(), "the dry run wrote to the menu").toBe(before);
+  });
+
+  it("creates on the first pass and updates on the second", async () => {
+    const rows = [
+      { category: section, name: "Paneer", price: "300", taxKind: "restaurant", veg: "yes" },
+      { category: section, name: "Peg", price: "250", taxKind: "bar" },
+    ];
+
+    const first = (await (await post(rows, false)).json()) as
+      { creates: number; updates: number };
+    expect(first.creates).toBe(2);
+    expect(first.updates).toBe(0);
+
+    /* The same file again is a CORRECTION, not a second card. This is
+       what somebody actually does with a spreadsheet: fix a column,
+       send it again. */
+    rows[0]!.price = "320";
+    const second = (await (await post(rows, false)).json()) as
+      { creates: number; updates: number };
+    expect(second.creates).toBe(0);
+    expect(second.updates).toBe(2);
+    expect(await count(), "the second import duplicated the menu").toBe(2);
+
+    const db = await admin();
+    try {
+      const { rows: check } = await db.query<{
+        name: string; price: string; tax_rate: string | null; kind: string | null;
+      }>(
+        `select i.name, i.price::text, i.tax_rate::text, c.tax_kind as kind
+           from pos_menu_items i
+           join pos_menu_categories c on c.id = i.category_id
+          where c.name = $1 order by i.name`, [section]);
+
+      expect(check.find((r) => r.name === "Paneer")!.price).toBe("320.00");
+
+      /* NO RATE ON THE ITEM. The heading decides it, which is the whole
+         point of 067 — a bar section carries the bar's rate without
+         anybody typing a number onto every peg. */
+      expect(check.every((r) => r.tax_rate === null),
+        "an imported item carried its own tax rate").toBe(true);
+
+      /* The last row in the file wins the section's heading, and both
+         rows here name the same section — so this asserts the heading
+         was set at all, not which. */
+      expect(check[0]!.kind).toBeTruthy();
+    } finally {
+      await db.end();
+    }
+  });
+});

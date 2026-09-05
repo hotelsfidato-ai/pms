@@ -843,3 +843,51 @@ async function till(
     throw error;
   }
 }
+
+/* ══════════════════════════════════════════════════════════════════
+   IMPORTING A MENU
+
+   Two passes on purpose. The first changes nothing and reports what
+   WOULD happen; the screen shows that and only then sends the same
+   payload to apply. A bulk write that happens the instant a file is
+   chosen is how somebody replaces a card they meant to look at first.
+   ══════════════════════════════════════════════════════════════════ */
+
+export interface ImportVerdict {
+  line: number;
+  name: string;
+  action: "create" | "update" | "rejected";
+  detail: string;
+}
+
+export interface ImportReport {
+  ok: boolean;
+  reason?: string;
+  dryRun: boolean;
+  verdicts: ImportVerdict[];
+  creates: number;
+  updates: number;
+  rejected: number;
+}
+
+export async function importMenu(
+  hotelId: string,
+  rows: Record<string, string>[],
+  dryRun: boolean,
+): Promise<ImportReport> {
+  try {
+    return await api<ImportReport>(
+      `/api/hotels/${hotelId}/till/menu/import`,
+      { method: "POST", body: JSON.stringify({ rows, dryRun }) },
+    );
+  } catch (error) {
+    if (error instanceof ApiError) {
+      const p = error.body as { reason?: string } | undefined;
+      return {
+        ok: false, reason: p?.reason ?? error.message, dryRun,
+        verdicts: [], creates: 0, updates: 0, rejected: 0,
+      };
+    }
+    throw error;
+  }
+}

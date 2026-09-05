@@ -259,8 +259,21 @@ till.post("/:code/till/menu/items", async (c) => {
     return c.json(refuse("A price must be zero or more."), 409);
   }
 
-  const taxRate = Number(input.taxRate ?? 5);
-  if (!Number.isFinite(taxRate) || taxRate < 0 || taxRate > 100) {
+  /* ⚠ THIS WAS `Number(input.taxRate ?? 5)`.
+     A shipped tax rate, in a project whose first rule is that nothing
+     ships a price. Every item added through the interface got 5%
+     whether or not anybody had decided that, and a bar built on it
+     would have billed its whisky at the restaurant's rate in silence.
+     067 removed the same default from the column; this was the other
+     half of it, in the code path people actually use.
+
+     Undefined now means FOLLOW THE CATEGORY'S RULE, which is what
+     almost every item wants. An explicit number stays available for
+     the real exception — bottled water on a food bill. */
+  const taxRate = input.taxRate === undefined || input.taxRate === null
+    ? null : Number(input.taxRate);
+  if (taxRate !== null
+      && (!Number.isFinite(taxRate) || taxRate < 0 || taxRate > 100)) {
     return c.json(refuse("A tax rate must be between 0 and 100."), 409);
   }
 
@@ -283,6 +296,221 @@ till.post("/:code/till/menu/items", async (c) => {
 
   if (!result) return c.json({ error: "No such property." }, 404);
   return c.json(result);
+});
+
+
+/* ══════════════════════════════════════════════════════════════════
+   IMPORTING A MENU
+
+   A real card is two hundred dishes across a dozen sections, and typing
+   it into a dialog one at a time is not a thing anybody will do. So it
+   arrives as a file.
+
+   TWO PASSES, ALWAYS. `dryRun` validates every row and reports what
+   WOULD happen, changing nothing. The screen shows that, and only then
+   is the same payload sent again to apply. A bulk write that happens the
+   instant a file is chosen is how somebody replaces a menu they meant
+   to look at first.
+
+   THE ROW IS REJECTED, NEVER REPAIRED. No price means the row does not
+   land — it does not land at zero. An unknown tax heading means the row
+   does not land — it does not land at five percent. The whole reason
+   this system shows a dash instead of a zero is that a filled-in blank
+   is indistinguishable from a decision once it is in the database, and
+   an import is where a thousand of them would arrive at once.
+
+   RE-IMPORTING IS AN UPDATE. The unique key is (hotel, category, name),
+   so sending the same file twice corrects prices rather than doubling
+   the card — which is what somebody actually does with a spreadsheet:
+   fix a column, send it again.
+   ══════════════════════════════════════════════════════════════════ */
+
+interface ImportRow {
+  category?: string;
+  name?: string;
+  price?: string | number;
+  taxKind?: string;
+  taxRate?: string | number;
+  veg?: string | boolean;
+  shortCode?: string;
+}
+
+interface Verdict {
+  line: number;
+  name: string;
+  action: "create" | "update" | "rejected";
+  detail: string;
+}
+
+const MENU_TAX_KINDS = ["restaurant", "bar", "banquet", "other"];
+
+till.post("/:code/till/menu/import", async (c) => {
+  const input = await c.req.json<{ rows?: ImportRow[]; dryRun?: boolean }>()
+    .catch(() => ({}) as { rows?: ImportRow[]; dryRun?: boolean });
+
+  const rows = input.rows ?? [];
+  const dryRun = input.dryRun !== false;
+
+  if (rows.length === 0) {
+    return c.json(refuse("There are no rows in that file."), 409);
+  }
+  if (rows.length > 2000) {
+    return c.json(refuse(
+      `That file has ${rows.length} rows. Two thousand is the limit — a menu `
+      + "longer than that is almost always a column mismatch."), 409);
+  }
+
+  const result = await withSession(c.get("subject"), async (client) => {
+    const hotelId = await hotelFor(client, c.req.param("code"));
+    if (!hotelId) return null;
+
+    /* Everything that already exists, read once. Asking per row turns a
+       two-hundred-line import into four hundred queries. */
+    const { rows: existing } = await client.query<{
+      category: string; name: string;
+    }>(
+      `select c.name as category, i.name
+         from pos_menu_items i
+         join pos_menu_categories c on c.id = i.category_id
+        where i.hotel_id = $1`,
+      [hotelId],
+    );
+    const key = (cat: string, name: string) =>
+      `${cat.toLowerCase()}|${name.toLowerCase()}`;
+    const already = new Set(existing.map((r) => key(r.category, r.name)));
+
+    const verdicts: Verdict[] = [];
+    const seen = new Set<string>();
+    const good: {
+      category: string; name: string; price: number;
+      taxKind: string | null; taxRate: number | null;
+      veg: boolean | null; shortCode: string | null;
+    }[] = [];
+
+    rows.forEach((raw, i) => {
+      const line = i + 2;                    // +1 zero-based, +1 for the header
+      const name = String(raw.name ?? "").trim();
+      const category = String(raw.category ?? "").trim();
+      const reject = (detail: string) => {
+        verdicts.push({
+          line, name: name || "(no name)", action: "rejected", detail,
+        });
+      };
+
+      if (!name && !category) return;        // a blank line in the file
+      if (!name) return reject("No dish name.");
+      if (!category) return reject("No section — which part of the menu?");
+
+      /* A PRICE IS REQUIRED AND IS NEVER DEFAULTED.
+         A blank price is the commonest thing in a hand-made spreadsheet
+         and the most dangerous: a dish that lands at zero looks priced. */
+      const rawPrice = String(raw.price ?? "").trim();
+      if (rawPrice === "") return reject("No price. A blank is not zero.");
+      const price = Number(rawPrice.replace(/[,\s₹]/g, ""));
+      if (!Number.isFinite(price) || price < 0) {
+        return reject(`"${rawPrice}" is not a price.`);
+      }
+
+      const kindRaw = String(raw.taxKind ?? "").trim().toLowerCase();
+      if (kindRaw && !MENU_TAX_KINDS.includes(kindRaw)) {
+        return reject(
+          `"${raw.taxKind}" is not a tax heading. Use `
+          + `${MENU_TAX_KINDS.join(", ")}.`);
+      }
+
+      /* An explicit rate is the exception, not the rule. Blank means
+         follow the section's heading, which is right for nearly every
+         dish and is why the column is optional. */
+      const rateRaw = String(raw.taxRate ?? "").trim().replace("%", "");
+      let taxRate: number | null = null;
+      if (rateRaw !== "") {
+        taxRate = Number(rateRaw);
+        if (!Number.isFinite(taxRate) || taxRate < 0 || taxRate > 100) {
+          return reject(`"${raw.taxRate}" is not a GST percentage.`);
+        }
+      }
+
+      const vegRaw = String(raw.veg ?? "").trim().toLowerCase();
+      let veg: boolean | null = null;
+      if (vegRaw !== "") {
+        if (["yes", "y", "veg", "true", "1"].includes(vegRaw)) veg = true;
+        else if (["no", "n", "non-veg", "nonveg", "false", "0"].includes(vegRaw)) veg = false;
+        else return reject(`"${raw.veg}" is not yes or no.`);
+      }
+
+      /* The same dish twice in one file is worth naming: the second
+         would overwrite the first and nobody would know which price
+         won. */
+      const k = key(category, name);
+      if (seen.has(k)) {
+        return reject(`"${name}" appears twice under ${category} in this file.`);
+      }
+      seen.add(k);
+
+      verdicts.push({
+        line,
+        name,
+        action: already.has(k) ? "update" : "create",
+        detail: already.has(k)
+          ? `${category} · price becomes ${price}`
+          : `${category} · ${price}`,
+      });
+      good.push({
+        category, name, price,
+        taxKind: kindRaw || null, taxRate, veg,
+        shortCode: String(raw.shortCode ?? "").trim() || null,
+      });
+    });
+
+    const tally = {
+      creates: verdicts.filter((v) => v.action === "create").length,
+      updates: verdicts.filter((v) => v.action === "update").length,
+      rejected: verdicts.filter((v) => v.action === "rejected").length,
+    };
+
+    if (dryRun) {
+      return { ok: true as const, dryRun: true, verdicts, ...tally };
+    }
+
+    /* ── Apply ─────────────────────────────────────────────────────
+       Rejected rows are simply absent. Refusing a whole file because one
+       line has a typo makes somebody edit two hundred rows to fix one;
+       silently repairing the typo is worse. The good rows land, the bad
+       ones are listed, and the file can be corrected and sent again —
+       which updates rather than duplicates. */
+    for (const row of good) {
+      const { rows: cat } = await client.query<{ id: string }>(
+        `insert into pos_menu_categories (hotel_id, name, tax_kind)
+         values ($1, $2, $3)
+         on conflict (hotel_id, name) do update
+           set tax_kind  = coalesce(excluded.tax_kind,
+                                    pos_menu_categories.tax_kind),
+               is_active = true
+         returning id::text`,
+        [hotelId, row.category, row.taxKind],
+      );
+
+      await client.query(
+        `insert into pos_menu_items
+           (hotel_id, category_id, name, price, tax_rate, is_veg, short_code)
+         values ($1,$2,$3,$4,$5,$6,$7)
+         on conflict (hotel_id, category_id, name) do update
+           set price      = excluded.price,
+               tax_rate   = excluded.tax_rate,
+               is_veg     = coalesce(excluded.is_veg, pos_menu_items.is_veg),
+               short_code = coalesce(excluded.short_code,
+                                     pos_menu_items.short_code),
+               is_active  = true`,
+        [hotelId, cat[0]!.id, row.name, row.price, row.taxRate,
+         row.veg, row.shortCode],
+      );
+    }
+
+    return { ok: true as const, dryRun: false, verdicts, ...tally };
+  });
+
+  if (!result) return c.json({ error: "No such property." }, 404);
+  return c.json(result, "ok" in result && result.ok ? 200 : 409);
 });
 
 till.post("/:code/till/menu/items/:id/toggle", async (c) => {

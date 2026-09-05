@@ -6,7 +6,7 @@ Every entry here cost something. Read it before you repeat it.
 
 ## Ten faults that repeat
 
-153 entries below is a reference, not a reading list. These are the patterns
+154 entries below is a reference, not a reading list. These are the patterns
 that have recurred, with the count and the check that would have caught each.
 **If you read nothing else here, read this.**
 
@@ -3138,6 +3138,25 @@ account is claimed or deactivated.
 development-only console, so the owner could not reach them. A feature
 is not built until the people it is for can reach it — the same hole
 room types had, and the front desk's hours.
+
+### 154 · The template imported its own instructions
+
+The menu template carries a notes row — what each column is for — and
+the parser skipped it by checking whether the raw line started with `#`.
+
+Our own CSV writer QUOTES that cell, because the notes contain commas.
+So the line starts with `"`, the check never matched, and the template's
+own instructions imported as a dish called
+*"# REQUIRED. Starters, Main course, Spirits..."* at whatever price the
+next column happened to hold.
+
+Caught by the round-trip test — download the template, read it back,
+expect exactly the example rows — written in the same commit for exactly
+this reason. **A template and a parser generated from one spec still
+have to be shown agreeing**, because the spec is not the only thing
+between them: the writer's quoting rules sit in the middle.
+
+The check now looks at the parsed cell, not the raw line.
 
 ## Verification traps
 

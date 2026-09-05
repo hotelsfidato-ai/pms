@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useParams } from "react-router";
-import { UtensilsCrossed, Plus } from "lucide-react";
+import { UtensilsCrossed, Plus, Upload } from "lucide-react";
 import { cn } from "@/lib/cn";
 import { moneyPrecise } from "@/lib/format";
 import { useUi } from "@/lib/ui";
@@ -14,6 +14,8 @@ import {
   type OffFor,
   type MenuCategory, type MenuItem,
 } from "@/data/repositories";
+import { ImportDialog } from "@/components/flows/ImportDialog";
+import { MENU_SPEC } from "@/lib/importSpec";
 
 /* ══════════════════════════════════════════════════════════════════
    THE MENU
@@ -44,6 +46,7 @@ export default function MenuPage() {
 
   const [category, setCategory] = useState("");
   const [busy, setBusy] = useState(false);
+  const [importing, setImporting] = useState(false);
 
   const menu = useQuery({
     queryKey: ["till-menu", hotelId],
@@ -79,6 +82,16 @@ export default function MenuPage() {
               {items.length} item{items.length === 1 ? "" : "s"}
             </StatusPill>
           ) : undefined
+        }
+        actions={
+          /* A real card is two hundred dishes across a dozen sections.
+             Typing that into a dialog one at a time is not something
+             anybody will do, so the file route sits beside the manual
+             one rather than hidden behind it. */
+          <Button variant="secondary" className="h-11"
+                  onClick={() => setImporting(true)}>
+            <Upload className="size-4" /> Import from a file
+          </Button>
         }
       />
 
@@ -145,6 +158,15 @@ export default function MenuPage() {
             />
           ))}
         </div>
+      )}
+      {importing && (
+        <ImportDialog
+          hotelId={hotelId}
+          spec={MENU_SPEC}
+          open
+          onOpenChange={(o) => { if (!o) setImporting(false); }}
+          onImported={refresh}
+        />
       )}
     </Page>
   );
