@@ -110,14 +110,19 @@ FRONTEND   tsc -b            0 errors
            build             clean · production, preview AND artifact
 
 API        tsc --noEmit      0 errors
-           npm test          200 passed · 12 files  (live Postgres, as pms_app)
-                             loads the demo fixture first — see below
+           npm test          200 passed · 12 files
+                             on its OWN database, built and dropped per run
 
-DATABASE   db/tests/run.sh   61 migrations · 386 assertions
+DATABASE   db/tests/run.sh   65 migrations · 413 assertions
                              9 isolation checks · exit 0
+           db/tests/rerun.sh 65 of 65 re-runnable, on a scratch copy
 BACKUP     verify-backup.sh  dumped, RESTORED, 13 checks · exit 0
-           load-demo         431 available · 132 sold · 30.63% ✓
 ```
+
+These are the figures as last measured. The block used to carry a
+`load-demo` line asserting 431 available and 30.63% occupancy; the demo
+is out and the properties run empty, so that assertion no longer
+describes the system and has been removed rather than left to rot.
 
 ⚠ **The database gate was lying until this checkpoint.** `run.sh` filtered psql
 errors with a pattern that could not match psql's output format, and never read
@@ -948,7 +953,7 @@ But stage 8's twelve units have never been written down, so adding a block for t
 
 **The module switch needed nothing.** The plan said its screen was missing; the screen exists, is in the navigation, is not development-gated, and works — Point of sale on, Banquet hall off and disabled with *"Not built yet"*. That plan item was wrong and no duplicate was built.
 
-**Stage 15 is 10 of 12, and the two that remain are named.** Indicators are still half — VIP is read by the guest panel and set by nothing — and work orders have not started. Everything else on the ranked backlog in `PMS-PROGRESS.md` is whole: room move, void, sources, the group panel, the three grids, multi-room booking, amend stay, and extra adult and child.
+**Stage 15 was 10 of 12 at this checkpoint, and the two that remained were named.** (Both landed; the row reads 12 of 12 on the board above.) Indicators are still half — VIP is read by the guest panel and set by nothing — and work orders have not started. Everything else on the ranked backlog in `PMS-PROGRESS.md` is whole: room move, void, sources, the group panel, the three grids, multi-room booking, amend stay, and extra adult and child.
 
 **Extra persons follow the same rule as every other price here.** Nothing ships, and an unpriced third adult makes the whole tariff NULL rather than adding zero — `app.tariff_for` names what is missing so a booking screen can say *"no price for the extra adult"* instead of quietly quoting for two. The prices live beside the season's, because an extra bed costs more in Diwali week than in June.
 
