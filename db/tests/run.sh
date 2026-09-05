@@ -6,8 +6,28 @@
 # A guard that passed before and fails after is a regression, and this exits
 # non-zero so it cannot be waved through.
 #
-#   ./db/tests/run.sh              full rebuild + all suites
-#   ./db/tests/run.sh --keep       reuse the existing database
+#   ./db/tests/run.sh              build a scratch database, test it, drop it
+#   ./db/tests/run.sh --keep       leave the scratch database for inspection
+#
+# ⚠ THIS USED TO DEFAULT TO `fidato` — THE DATABASE THE APP USES — AND IT
+#   DROPS WHAT IT IS POINTED AT.
+#
+#   It was correct about its own job and catastrophic as a side effect. Four
+#   separate times it destroyed live data: the loaded demo three times, and
+#   then the owner's own front-desk configuration — check-in at 13:00, the
+#   ₹1,000 early-arrival charge — minutes after they had been entered by hand.
+#   Every one of those was followed by an afternoon of "the app shows nothing,
+#   something must be broken with permissions", because an emptied database
+#   fails exactly the way a broken one does.
+#
+#   The two jobs are now two files:
+#
+#     db/migrate.sh        the live database. Additive. Never drops.
+#     db/tests/run.sh      this. A scratch database, from zero, dropped after.
+#
+#   The test properties AGR and PUN are created by suite.sql and are needed
+#   by rls.sql, which proves one hotel cannot read another's rows. They now
+#   live and die inside this scratch database and never appear in the real one.
 #
 # Requires PGBIN, PGPORT, PGPASS in the environment or the defaults below.
 # =============================================================================
@@ -19,7 +39,11 @@ PGHOST="${PGHOST:-127.0.0.1}"
 SUPER="${SUPER:-postgres}"
 SUPERPASS="${SUPERPASS:-pw}"
 APPPASS="${APPPASS:-CHANGE_ME_app}"
-DB="${DB:-fidato}"
+
+# Per-run and per-process, the same shape rerun.sh and with-test-db.sh use.
+# There is no way to spell `fidato` here by accident, and two runs at once
+# cannot collide.
+DB="fidato_gate_$$"
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
 
 PSQL="$PGBIN/psql.exe"
@@ -27,9 +51,28 @@ S="-h $PGHOST -p $PGPORT -U $SUPER"
 
 red()   { printf "\033[31m%s\033[0m\n" "$1"; }
 green() { printf "\033[32m%s\033[0m\n" "$1"; }
+dim()   { printf "\033[2m%s\033[0m\n" "$1"; }
 
-if [ "${1:-}" != "--keep" ]; then
-  echo "-- rebuilding $DB ------------------------------------------"
+# Dropped whether the run passes, fails, or is interrupted — a scratch
+# database left behind after a failed run is how you end up with a dozen of
+# them and no idea which is which.
+KEEP="${1:-}"
+cleanup() {
+  if [ "$KEEP" = "--keep" ]; then
+    dim ""
+    dim "  scratch database kept: $DB"
+    return
+  fi
+  PGPASSWORD=$SUPERPASS "$PSQL" $S -d postgres -q -c \
+    "select pg_terminate_backend(pid) from pg_stat_activity
+      where datname = '$DB' and pid <> pg_backend_pid()" >/dev/null 2>&1
+  PGPASSWORD=$SUPERPASS "$PSQL" $S -d postgres -q \
+    -c "drop database if exists $DB;" >/dev/null 2>&1
+}
+trap cleanup EXIT INT TERM
+
+if true; then
+  echo "-- building scratch database $DB ---------------------------"
 
   # A connection still open on $DB makes the DROP fail. This used to print the
   # error and carry on, so the migrations then ran against the OLD database and
@@ -189,20 +232,14 @@ TOTAL=$(PGPASSWORD=$SUPERPASS "$PSQL" $S -d "$DB" -tAc "select count(*) from tes
 green "  all $TOTAL assertions passed"
 
 # -----------------------------------------------------------------------------
-# The demo is gone, and saying so is the whole point.
+# What this run did NOT touch, said out loud.
 # -----------------------------------------------------------------------------
-# $DB defaults to `fidato` -- the same database the API and the app use -- and
-# this script drops it from zero. That is correct: proving the migrations apply
-# to an empty database is exactly what it is for.
+# The note that used to live here read "fidato was rebuilt, so the demo is
+# gone" — a warning printed AFTER the damage, four times, to somebody who had
+# already closed the terminal. A warning that arrives too late to act on is a
+# receipt, not a guard.
 #
-# What is NOT obvious is that it leaves the app EMPTY. Run the gates in the
-# wrong order (api tests, which load the demo, and then this) and you are left
-# with a PMS showing two test properties and four reservations, with nothing
-# anywhere saying why. Open a screen at that point and you are verifying an
-# empty database -- a check that passes because there is nothing to fail.
-#
-# One line prevents an afternoon of it.
-if [ "${1:-}" != "--keep" ]; then
-  printf '\n  \033[33mnote\033[0m  %s was rebuilt, so the demo is gone.\n' "$DB"
-  printf '        Bring it back with:  cd api && npm run load-demo\n'
-fi
+# The guard is the scratch database above. This is just the receipt.
+dim ""
+dim "  $DB was built from zero and dropped. The app's database was not"
+dim "  opened, and the test properties AGR and PUN never left this run."

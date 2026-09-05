@@ -222,6 +222,31 @@ async function main() {
         pass("no REPLACE placeholders");
       }
 
+      /* The same migration seeds a bootstrap PERSON, and that check above
+         only ever looked at properties. `REPLACE@fidato.in` sat in `staff`
+         as an ACTIVE GROUP ADMIN — the widest role the system has — and
+         nothing anywhere objected. It cannot sign in today, because no
+         Firebase account carries that address; it becomes a real key the
+         moment somebody creates one, and it is the sort of address a person
+         creates by accident while testing.
+
+         Found by reading the staff table after deleting the test
+         properties, not by a gate. */
+      const { rows: bootstrap } = await client.query<{ who: string }>(
+        `select coalesce(string_agg(email, ', '), '') as who
+           from staff
+          where is_active and email like 'REPLACE%'`,
+      );
+      if (bootstrap[0]!.who) {
+        fail("no bootstrap accounts",
+          `${bootstrap[0]!.who} is still active. Migration 008 seeds it so `
+          + "the first real person has something to sign in as. Give it your "
+          + "own address or deactivate it — a group admin nobody owns is an "
+          + "unlocked door.");
+      } else {
+        pass("no bootstrap accounts");
+      }
+
       /* Rooms. A property with none sells nothing and divides by zero
          in every occupancy figure. */
       const { rows: empty } = await client.query<{ who: string }>(

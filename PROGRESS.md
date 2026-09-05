@@ -42,25 +42,31 @@ Then the API and the web app through the Browser pane's `preview_start`
 (`api`, then `web` — never `npm run dev` in Bash; the servers belong to
 the pane).
 
-### The trap that has cost the most time, four times over
+### The trap that cost the most time, four times over — now closed
 
-`db/tests/run.sh` **drops and rebuilds `fidato`.** After it, the demo is
-gone and every screen honestly reports an empty database — which reads
-as a permission fault, a broken API, or a bug in whatever you last
-touched. It is none of those.
+`db/tests/run.sh` used to default to `fidato` — the database the app uses —
+and it **drops what it is pointed at**. It destroyed live data four times:
+the loaded demo three times, then the owner's own front-desk settings
+minutes after they were typed in by hand. Each time it read as a permission
+fault or a broken API, because an emptied database fails exactly the way a
+broken one does.
 
-**After run.sh, reload. Before believing any screen, count the hotels.**
+**The two jobs are now two files.**
 
 ```
-cd api && npm run demo     load-demo, then demo-history, in that order
-cd api && npm run reset -- 5EL --yes    clears a property, moves it to today
+db/migrate.sh        the live database. Additive. Creates if absent, never drops.
+db/tests/run.sh      a scratch database `fidato_gate_$$`, dropped on exit
+db/tests/rerun.sh    a scratch database, migrated twice
+cd api && npm test   its own database, built and dropped per run
 ```
 
-`npm run demo` restores the calibrated August 2026 demo. `npm run reset`
-is the opposite: it empties a property of transactions, keeps every
-setting, and sets the business date to today. **The owner asked for the
-demo data gone and the system used for real, so reset is the state to
-leave things in.**
+Nothing that runs as a gate can reach `fidato` any more. Proved by counting
+hotels before and after a full run: 1 before, 1 after, no scratch database
+left behind.
+
+`npm run reset -- 5EL --yes` still empties one property of transactions,
+keeps its settings, and moves it to today. That is the state to leave
+things in — the owner asked for the demo gone and the system used for real.
 
 ### What the owner has decided
 

@@ -4178,3 +4178,58 @@ begin
   select count(*) into n from hotels where code = 'XCH';
   perform test.ok('exchange','the fixture does not outlive the test', n = 0);
 end $$;
+
+-- ═══════════════════════════════════════════════════════════════════════════
+-- DELETING A PROPERTY (066)
+-- ═══════════════════════════════════════════════════════════════════════════
+-- Both halves, because a guard that only ever refuses and a guard that only
+-- ever allows are indistinguishable from a single test. The old one refused
+-- unconditionally and looked correct for two years.
+do $$
+declare
+  n      int;
+  detail text;
+begin
+  -- ---------- one that never traded ----------------------------------------
+  perform app.provision_property_unchecked(
+    'TD1','Never Traded','Nowhere','MH','27AAAAA0000A1Z5');
+
+  perform test.ok('delete property','removal reports what went with it',
+    (select room_types from app.delete_property('TD1')) = 4);
+
+  select count(*) into n from hotels where code = 'TD1';
+  perform test.ok('delete property','and the property is gone', n = 0);
+
+  perform test.raises('delete property','a code that does not exist is refused',
+    $q$select app.delete_property('NOPE')$q$);
+
+  -- ---------- one that did -------------------------------------------------
+  -- A single work order is enough. The guard asks whether a person did
+  -- anything here, not whether money changed hands: a maintenance job raised
+  -- against a room is history somebody may need to look up.
+  perform app.provision_property_unchecked(
+    'TD2','Has History','Nowhere','MH','27AAAAA0000A1Z5');
+  insert into work_orders (hotel_id, title)
+  select id, 'Tap in 101 drips' from hotels where code = 'TD2';
+
+  perform test.raises('delete property','one with history is refused',
+    $q$select app.delete_property('TD2')$q$);
+
+  -- Rule 6: the refusal has to NAME what it found. Without this, you delete
+  -- in a loop, discovering one blocker per attempt.
+  begin
+    perform app.delete_property('TD2');
+    perform test.ok('delete property','the refusal names the evidence', false);
+  exception when others then
+    get stacked diagnostics detail = pg_exception_detail;
+    perform test.ok('delete property','the refusal names the evidence',
+      position('work orders' in coalesce(detail, '')) > 0
+      and position('TD2' in coalesce(detail, '')) > 0);
+  end;
+
+  -- ---------- and once the history goes, so can the property ---------------
+  delete from work_orders where hotel_id in (select id from hotels where code='TD2');
+  perform app.delete_property('TD2');
+  select count(*) into n from hotels where code = 'TD2';
+  perform test.ok('delete property','the fixture does not outlive the test', n = 0);
+end $$;
