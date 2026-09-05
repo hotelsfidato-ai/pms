@@ -15,15 +15,15 @@ that produced it is gone and this file is what survived.
 
 ### Where the work stands
 
-**183 of 204 · 90%.** Seventeen stages of twelve. The bars further down
+**195 of 216 · 90%.** Eighteen stages of twelve. The bars further down
 sum to that; the total is read off them and never typed beside them.
 
 ```
 db/migrate.sh        the LIVE database. Additive. Never drops.
-db/tests/run.sh      434 assertions, on a scratch database it drops
-db/tests/rerun.sh    68 migrations, all re-runnable, on a scratch copy
-cd api && npm test   218, on its OWN database, built and dropped per run
-npx vitest run       158
+db/tests/run.sh      450 assertions, on a scratch database it drops
+db/tests/rerun.sh    69 migrations, all re-runnable, on a scratch copy
+cd api && npm test   222, on its OWN database, built and dropped per run
+npx vitest run       162
 npm run build:all    production, preview AND artifact — all three
 db/verify-backup.sh  dumped, restored, checked
 ```
@@ -114,16 +114,16 @@ things in — the owner asked for the demo gone and the system used for real.
 
 ```
 FRONTEND   tsc -b            0 errors
-           vitest run        158 passed · 11 files
+           vitest run        162 passed · 12 files
            build             clean · production, preview AND artifact
 
 API        tsc --noEmit      0 errors
-           npm test          218 passed · 12 files
+           npm test          222 passed · 12 files
                              on its OWN database, built and dropped per run
 
-DATABASE   db/tests/run.sh   68 migrations · 434 assertions
+DATABASE   db/tests/run.sh   69 migrations · 450 assertions
                              9 isolation checks · exit 0
-           db/tests/rerun.sh 68 of 68 re-runnable, on a scratch copy
+           db/tests/rerun.sh 69 of 69 re-runnable, on a scratch copy
 BACKUP     verify-backup.sh  dumped, RESTORED, 13 checks · exit 0
 ```
 
@@ -845,6 +845,7 @@ retried. Ledger nets to zero, room revenue still ₹4,19,578.76.
 15 PMS upgrade — eZee-informed        ████████████  12 of 12 — the backlog is clear
 16 Front desk, second pass            ████████████  12 of 12 — the group list landed
 17 Commissioning a real property      ████████████  12 of 12 — the owner can set it up
+18 The store, and a way through          ████████████  12 of 12 — stock, and refusals that end
 ```
 
 **Stage 13 reads 4, and those four are finished** — database, API and screen.
@@ -945,7 +946,7 @@ moved: twenty screenshots of Petpooja set a higher bar, and two module
 requirements arrived with it. Lowering stage 7 would misreport what happened, so
 the new work is its own row. Detail in `POS-PROGRESS.md`.
 
-**183 of 204 — 90%.** Add the filled blocks above and divide by 180 — fifteen stages of twelve. That sum is the number; it is not typed separately, because it was for three audits running and drifted to "about 90%" while the bars said 70. It moved from 119 when stage 13’s three unfounded blocks came off, to 133 when the day end finished stage 13, to 134 when stage 3 got its service account, to 135 when the rate calendar gave stage 15's three grids their screens, to 136 with the room move, to 137 with amend stay, to 138 with the group panel, to 140 when extra-person pricing and multi-room booking finished 1.2, to 142 with VIP and work orders, to 153 when the banquet hall finished stage 14 — eleven blocks, the largest single move this file has recorded, because stage 14 had one filled block since it was written and the module it named did not exist — and to 156 when stages 5, 8 and 10 were given the unit lists they had never had, which moved 8 from 9 to 11 and 10 from 11 to 12, to 158 when offline finished stage 6, to 159 when the code reached GitHub, to 170 of 192 when stage 16 was added, and to 182 of 204 when stage 17 carried the work of turning a demonstrable system into one a hotel can be commissioned on. The denominator moves with it: seventeen stages of twelve.
+**195 of 216 — 90%.** Add the filled blocks above and divide by 180 — fifteen stages of twelve. That sum is the number; it is not typed separately, because it was for three audits running and drifted to "about 90%" while the bars said 70. It moved from 119 when stage 13’s three unfounded blocks came off, to 133 when the day end finished stage 13, to 134 when stage 3 got its service account, to 135 when the rate calendar gave stage 15's three grids their screens, to 136 with the room move, to 137 with amend stay, to 138 with the group panel, to 140 when extra-person pricing and multi-room booking finished 1.2, to 142 with VIP and work orders, to 153 when the banquet hall finished stage 14 — eleven blocks, the largest single move this file has recorded, because stage 14 had one filled block since it was written and the module it named did not exist — and to 156 when stages 5, 8 and 10 were given the unit lists they had never had, which moved 8 from 9 to 11 and 10 from 11 to 12, to 158 when offline finished stage 6, to 159 when the code reached GitHub, to 170 of 192 when stage 16 was added, to 182 of 204 when stage 17 carried the work of turning a demonstrable system into one a hotel can be commissioned on, and to 195 of 216 with stage 18. The denominator moves with it: eighteen stages of twelve.
 
 **Cashiering is built, and the placeholder list in `App.tsx` is now empty.** It was the last route in the application rendering nothing, and its own note said why: *"unspecified — placeholder until the live flow is observed."* It has been observed — a front-desk shift close — and 059 builds it in the POS day end's shape rather than as a second idea about cash.
 
@@ -1325,6 +1326,57 @@ kind has no rule rather than returning zero, which is this project's
 oldest rule — a dash is an admission, a zero is a claim — applied to tax.
 The bar is unset and therefore unbillable until the owner sets it, and
 the till says so in a sentence a waiter can act on.
+
+---
+
+## Stage 18 · The store, and a refusal that ends somewhere
+
+Two things the owner asked for on the same day, and they turned out to
+share a lesson.
+
+```
+ 1 a late check-out can actually happen         ✓
+ 2 the refusal carries a MARKER, not prose      ✓
+ 3 a manager may override — approve on reservation ✓
+ 4 the waive is guarded on the SERVER           ✓
+ 5 waiveEarly had no guard at all               ✓
+ 6 the late charge posted to the wrong date     ✓
+ 7 money in refusals reads like money           ✓
+ 8 identical toasts stop stacking               ✓
+ 9 the store: items, movements, derived stock   ✓
+10 receive, issue, waste, history, undo         ✓
+11 tenancy integrity on the new tables          ✓
+12 a store list arrives from a file             ✓
+```
+
+**A GUARD THAT CANNOT BE SATISFIED IS A WALL.** The server refused a
+late check-out without a reason — correctly, and with the reason on
+screen — and the interface had no way to give it one. `checkOut()` sent
+`{ user }` and nothing else. The owner sent a screenshot of five
+identical toasts, which is what pressing a dead end looks like from the
+outside.
+
+Rule 6 says a blocked action is shown WITH its reason. It does not say
+the reason is the end of the conversation. Every refusal that has an
+answer needs the answer reachable from where it is raised, and the
+refusal now carries `needs: "late-reason"` — a marker rather than prose,
+because a screen that recognises a refusal by reading its sentence
+breaks the day somebody rewords it.
+
+Looking for that guard's twin found `waiveEarly` on check-in with **no
+permission check whatsoever**. When a feature has two ends, fixing one
+is the moment to go and look at the other.
+
+**THE STORE IS A LEDGER**, built like the folio because the same things
+go wrong with it. On hand is `sum(quantity)` and is never stored. Value
+is the weighted average of what was actually paid, and is NULL until
+something has been received — an item nobody has bought has no value,
+and zero would claim it is worthless. Nothing is edited; a delivery
+entered against the wrong item is undone by a row that points at it.
+
+The gates earned themselves twice on it: the single-column foreign key
+let a movement at one property count toward another's item, and the fix
+for that was not re-runnable.
 
 ---
 
