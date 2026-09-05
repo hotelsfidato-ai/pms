@@ -310,6 +310,7 @@ describe("a walk-in records where it came from", () => {
             and not exists (
               select 1 from room_assignments a
                where a.room_id = rm.id and a.released_at is null)
+            and rm.housekeeping_status = 'clean'
           limit 1`);
       expect(rows[0], "the demo has no free room").toBeTruthy();
       room = rows[0]!.number;

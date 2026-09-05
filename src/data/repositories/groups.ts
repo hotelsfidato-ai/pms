@@ -37,6 +37,11 @@ export interface GroupRoom {
   /** What is on this stay's OWN folio — its extras, and its room
       charge too when it is not routed. */
   balance: number;
+  /** How many people. The first thing anybody asks about a group: nine
+      rooms is meaningless until you know whether it is nine couples or
+      nine families, and it is what housekeeping sets the beds from. */
+  adults: number;
+  children: number;
 }
 
 export interface GroupMasterLine {

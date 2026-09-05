@@ -4466,3 +4466,111 @@ begin
   select count(*) into n from stock_items where hotel_id = h;
   perform test.ok('store','the fixture does not outlive the test', n = 0);
 end $$;
+
+-- ═══════════════════════════════════════════════════════════════════════════
+-- A ROOM SOMEBODY SLEPT IN IS DIRTY (070)
+-- ═══════════════════════════════════════════════════════════════════════════
+-- Check-out set the room dirty in the API, at the one call site that did it.
+-- A move, an exchange and an unassign left the room marked `occupied` and
+-- `clean` — so the next guest walked into a slept-in bed and the board that
+-- exists to prevent that had no idea.
+--
+-- The rule now lives on the RELEASE, which is what every one of those paths
+-- already does. These assert it from the fact rather than from any caller.
+do $$
+declare
+  h uuid; g uuid; t uuid; r1 uuid; r2 uuid; res uuid; a1 uuid;
+  hk text; occ text;
+begin
+  select id into h from hotels where code = 'AGR';
+  select id into g from guests where phone = '9000000001';
+  select id into t from room_types where hotel_id = h and code = 'STD';
+  /* ITS OWN ROOMS. The first draft borrowed 105 and 106, which the rest
+     of the suite books into — so when this released its assignment the
+     guard below correctly saw somebody else still in the room and left
+     it occupied. The assertions failed and the trigger was innocent.
+
+     A test that reaches into shared state has to put it back exactly,
+     and the reliable way to do that is not to reach. */
+  insert into rooms (hotel_id, room_type_id, number, floor)
+  values (h, t, '901', 9) returning id into r1;
+  insert into rooms (hotel_id, room_type_id, number, floor)
+  values (h, t, '902', 9) returning id into r2;
+
+  insert into reservations
+    (hotel_id, guest_id, room_type_id, reference, check_in, check_out,
+     agreed_rate, status)
+  /* Wide enough to hold every assignment below. 012 refuses an
+     assignment that falls outside its booking — correctly, and this
+     fixture was asking for one. */
+  values (h, g, t, 'HK-DIRTY-1', date '2026-10-01', date '2026-11-05',
+          2000, 'checked_in')
+  returning id into res;
+
+  -- ---------- taking a room occupies it ------------------------------------
+  insert into room_assignments (hotel_id, reservation_id, room_id,
+                                from_date, to_date, reason)
+  values (h, res, r1, date '2026-10-01', date '2026-10-03', 'arrival')
+  returning id into a1;
+
+  select occupancy_status into occ from rooms where id = r1;
+  perform test.ok('housekeeping','an assignment occupies the room', occ = 'occupied');
+
+  -- ---------- releasing it makes it dirty ----------------------------------
+  update room_assignments set released_at = now() where id = a1;
+
+  select housekeeping_status, occupancy_status into hk, occ
+    from rooms where id = r1;
+  perform test.ok('housekeeping','a released room is dirty', hk = 'dirty');
+  perform test.ok('housekeeping','and vacant', occ = 'vacant');
+
+  -- And it can say HOW LONG. A room dirtied at eleven and one dirtied three
+  -- days ago look identical without this, and the second is the one that
+  -- means somebody forgot.
+  perform test.ok('housekeeping','and knows since when',
+    app.room_dirty_since(r1) is not null);
+
+  -- ---------- out of service is NOT dirtied --------------------------------
+  -- A room held out for a leaking tap is not clean and not dirty. 022 gave
+  -- that its own state so a check-out could not quietly put it back into the
+  -- cleaning queue and from there into inventory.
+  update rooms set housekeeping_status = 'out_of_service' where id = r2;
+  insert into room_assignments (hotel_id, reservation_id, room_id,
+                                from_date, to_date, reason)
+  values (h, res, r2, date '2026-10-04', date '2026-10-05', 'move')
+  returning id into a1;
+  update room_assignments set released_at = now() where id = a1;
+
+  select housekeeping_status into hk from rooms where id = r2;
+  perform test.ok('housekeeping','an out-of-service room is left alone',
+    hk = 'out_of_service');
+
+  -- ---------- a room somebody else is in stays occupied --------------------
+  -- An exchange writes the new occupant before releasing the old one, and
+  -- marking the room vacant underneath a guest standing in it would be worse
+  -- than the problem this fixes.
+  update rooms set housekeeping_status = 'clean', occupancy_status = 'vacant'
+   where id = r1;
+  insert into room_assignments (hotel_id, reservation_id, room_id,
+                                from_date, to_date, reason)
+  values (h, res, r1, date '2026-11-01', date '2026-11-02', 'arrival')
+  returning id into a1;
+  insert into room_assignments (hotel_id, reservation_id, room_id,
+                                from_date, to_date, reason)
+  values (h, res, r1, date '2026-11-03', date '2026-11-04', 'arrival');
+  update room_assignments set released_at = now() where id = a1;
+
+  select occupancy_status into occ from rooms where id = r1;
+  perform test.ok('housekeeping','a room somebody else holds stays occupied',
+    occ = 'occupied');
+
+  -- ---------- teardown -----------------------------------------------------
+  delete from room_assignments where reservation_id = res;
+  delete from reservations where id = res;
+  delete from room_status_log where room_id in (r1, r2);
+  delete from rooms where id in (r1, r2);
+
+  select count(*) into occ from rooms where hotel_id = h and number in ('901','902');
+  perform test.ok('housekeeping','the fixture does not outlive the test',
+    occ::int = 0);
+end $$;

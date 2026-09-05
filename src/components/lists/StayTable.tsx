@@ -1,6 +1,6 @@
 import { useState, useMemo } from "react";
 import { useSearchParams } from "react-router";
-import { Search, X } from "lucide-react";
+import { Search, X, Rows3, LayoutGrid } from "lucide-react";
 import { cn } from "@/lib/cn";
 import { money, dateShort } from "@/lib/format";
 import {
@@ -10,6 +10,7 @@ import {
 import { CheckInFlow } from "@/components/flows/CheckInFlow";
 import { StayActions } from "@/components/flows/StayActions";
 import { FolioPanel } from "@/components/flows/FolioPanel";
+import { StayMarks } from "@/components/flows/StayMarks";
 import type { Stay } from "@/data/repositories";
 
 /* ══════════════════════════════════════════════════════════════════
@@ -42,6 +43,10 @@ const LABEL: Record<string, string> = {
   "no-show": "No show",
   cancelled: "Cancelled",
 };
+
+/* One key for every list. Somebody who works from cards works from
+   cards on the arrivals screen and the in-house screen alike. */
+const VIEW_KEY = "fidato-stay-view";
 
 export type StayColumn =
   | "room" | "guest" | "type" | "plan" | "source"
@@ -132,6 +137,85 @@ export interface StayRow extends Stay {
   balance?: number;
 }
 
+
+/* ══════════════════════════════════════════════════════════════════
+   THE SAME LIST, AS CARDS
+
+   A table is right at a desk with a wide screen and forty rows. It is
+   wrong on a phone, and it is wrong when somebody is comparing four
+   bookings rather than scanning forty — which is most of what a
+   manager does with these screens.
+
+   THE CARDS RENDER THE COLUMNS THE PAGE ASKED FOR. Not a second
+   opinion about what matters: `columns` decides both views, so a page
+   that does not show a balance does not grow one here, and adding a
+   column to a page adds it to both. Two views that disagree about what
+   a page is about are worse than one view.
+
+   The guest and the room lead, because they are what somebody is
+   looking for; everything else is a labelled pair underneath. */
+function StayCards({ rows, columns, onOpen }: {
+  rows: StayRow[];
+  columns: StayColumn[];
+  onOpen: (id: string) => void;
+}) {
+  /* Guest and room carry the card's head. The rest become pairs — and
+     `status` is pulled out because it is a mark, not a measurement. */
+  const rest = columns.filter(
+    (c) => c !== "guest" && c !== "room" && c !== "status");
+  const showsStatus = columns.includes("status");
+
+  return (
+    <ul className="grid gap-2 @2xl:grid-cols-2 @5xl:grid-cols-3">
+      {rows.map((s, i) => (
+        <li key={s.id}>
+          <button
+            type="button"
+            onClick={() => onOpen(s.id)}
+            className="w-full text-left rounded-md border border-grey-200
+                       bg-white p-3 cursor-pointer transition-colors
+                       hover:border-brand-orange"
+          >
+            <div className="flex items-start justify-between gap-2">
+              <div className="min-w-0">
+                <p className="text-base font-medium text-ink-900 truncate">
+                  {s.guest}
+                </p>
+                <p className="text-sm tabular text-grey-500">{s.reference}</p>
+              </div>
+              {columns.includes("room") && (
+                <span className="text-lg tabular font-semibold text-ink-900
+                                 shrink-0">
+                  {s.roomNumber || <span className="text-grey-400">—</span>}
+                </span>
+              )}
+            </div>
+
+            {showsStatus && (
+              <div className="mt-2">{ALL_COLUMNS["status"].cell(s, i)}</div>
+            )}
+
+            {rest.length > 0 && (
+              <dl className="grid grid-cols-2 gap-x-4 gap-y-1.5 mt-2.5">
+                {rest.map((c) => (
+                  <div key={c} className="min-w-0">
+                    <dt className="text-sm text-grey-500">
+                      {ALL_COLUMNS[c].header}
+                    </dt>
+                    <dd className="text-base text-ink-900 truncate">
+                      {ALL_COLUMNS[c].cell(s, i)}
+                    </dd>
+                  </div>
+                ))}
+              </dl>
+            )}
+          </button>
+        </li>
+      ))}
+    </ul>
+  );
+}
+
 export function StayTable({
   hotelId,
   businessDate,
@@ -162,6 +246,31 @@ export function StayTable({
   const [searchParams, setSearchParams] = useSearchParams();
   const [query, setQuery] = useState("");
   const selectedId = searchParams.get("res");
+
+  /* REMEMBERED, per viewer, per device. Somebody who works from cards
+     works from cards on every one of these screens, and re-choosing on
+     each is the kind of small friction that makes a feature go unused.
+
+     localStorage and not the server: this is a preference about a
+     screen, not a fact about the hotel, and it is allowed to differ
+     between the desk terminal and the manager's phone — which is the
+     whole reason the two views exist.
+
+     Wrapped, because a private window and a browser set to block site
+     data both throw here, and a list that will not render because it
+     could not remember a layout is a poor trade. */
+  const [view, setView] = useState<"table" | "cards">(() => {
+    try {
+      return localStorage.getItem(VIEW_KEY) === "cards" ? "cards" : "table";
+    } catch {
+      return "table";
+    }
+  });
+
+  const chooseView = (next: "table" | "cards") => {
+    setView(next);
+    try { localStorage.setItem(VIEW_KEY, next); } catch { /* not fatal */ }
+  };
 
   const filtered = useMemo(() => {
     const list = rows ?? [];
@@ -211,8 +320,50 @@ export function StayTable({
         <span className="ml-auto text-sm text-grey-500 tabular">
           {filtered.length} of {(rows ?? []).length}
         </span>
+
+        {/* A table is right at a desk with forty rows. Cards are right
+            on a phone, and right when somebody is comparing four
+            bookings rather than scanning forty. */}
+        <div className="flex rounded-md border border-grey-200 overflow-hidden">
+          <button
+            type="button"
+            onClick={() => chooseView("table")}
+            aria-pressed={view === "table"}
+            aria-label="Show as a table"
+            className={cn(
+              "size-9 grid place-items-center cursor-pointer transition-colors",
+              view === "table"
+                ? "bg-brand-orange-50 text-brand-orange"
+                : "text-grey-500 hover:bg-grey-50",
+            )}
+          >
+            <Rows3 className="size-4" />
+          </button>
+          <button
+            type="button"
+            onClick={() => chooseView("cards")}
+            aria-pressed={view === "cards"}
+            aria-label="Show as cards"
+            className={cn(
+              "size-9 grid place-items-center cursor-pointer transition-colors",
+              "border-l border-grey-200",
+              view === "cards"
+                ? "bg-brand-orange-50 text-brand-orange"
+                : "text-grey-500 hover:bg-grey-50",
+            )}
+          >
+            <LayoutGrid className="size-4" />
+          </button>
+        </div>
       </div>
 
+      {/* Cards only once there is something to show. Loading, an error
+          and an empty list are all states DataTable already renders
+          properly, and a second set of them would be a second set to
+          get wrong. */}
+      {view === "cards" && !isLoading && !error && filtered.length > 0 ? (
+        <StayCards rows={filtered} columns={columns} onOpen={open} />
+      ) : (
       <DataTable<StayRow>
         rows={filtered}
         columns={columns.map((c) => ALL_COLUMNS[c])}
@@ -230,6 +381,7 @@ export function StayTable({
           </div>
         }
       />
+      )}
 
       {/* The same panel the tape chart opens, so nothing is relearned. */}
       <Drawer open={!!selected} onOpenChange={(o) => !o && close()}>
@@ -247,7 +399,7 @@ export function StayTable({
 
               <TabsContent value="stay">
                 <div className="space-y-5 pt-1">
-                  <StaySummary stay={selected} />
+                  <StaySummary stay={selected} hotelId={hotelId} />
                   {offerCheckIn && selected.status === "due-in" && (
                     <CheckInFlow
                       hotelId={hotelId}
@@ -287,16 +439,21 @@ export function StayTable({
   );
 }
 
-function StaySummary({ stay }: { stay: StayRow }) {
+function StaySummary({ stay, hotelId }: {
+  stay: StayRow; hotelId: string;
+}) {
   return (
     <div className="space-y-4">
       <div className="flex items-center gap-2 flex-wrap">
         <StatusPill tone={TONE[stay.status] ?? "neutral"} dot>
           {LABEL[stay.status] ?? stay.status}
         </StatusPill>
-        {stay.isComplimentary && <StatusPill tone="accent">Complimentary</StatusPill>}
-        {stay.isDayUse && <StatusPill tone="neutral">Day use</StatusPill>}
-        {stay.groupId && <StatusPill tone="accent">Group</StatusPill>}
+        {/* ONE definition. This row was a second copy of the tape
+            chart's and had already drifted: its group pill said
+            "Group" while the chart's named the group, and VIP and the
+            single-lady mark were missing here entirely — on the very
+            lists a clerk checks before a guest arrives. */}
+        <StayMarks stay={stay} hotelId={hotelId} />
       </div>
 
       <dl className="divide-y divide-grey-100">

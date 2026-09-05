@@ -182,6 +182,43 @@ vi.mock("@/lib/api", () => ({
       return groups.map((g) => ({ ...g, hotelId: PROPERTY_CODE }));
     }
 
+    /* One group and its rooms. Built from the SAME fixture stays the
+       tape chart draws, so the panel cannot show a group whose rooms
+       disagree with the chart behind it. */
+    const oneGroup = path.match(
+      new RegExp(`^/api/hotels/${PROPERTY_CODE}/groups/([^/]+)$`),
+    );
+    if (oneGroup) {
+      const found = groups.find((g) => g.id === oneGroup[1]);
+      if (!found) throw new StubApiError(404, "No such group.");
+      const members = stays.filter((s) => s.groupId === found.id);
+      return {
+        id: found.id,
+        name: found.name,
+        blockCode: found.reference,
+        company: null,
+        notes: null,
+        rooms: members.map((s) => ({
+          reservationId: s.id,
+          reference: s.reference,
+          guest: s.guest,
+          room: s.roomNumber ?? null,
+          roomType: s.roomType,
+          checkIn: s.arrival,
+          checkOut: s.departure,
+          nights: s.nights,
+          status: s.status,
+          agreedRate: s.offeredTariff,
+          routed: false,
+          balance: 0,
+          adults: s.adults,
+          children: s.children,
+        })),
+        master: null,
+        guestBalance: 0,
+      };
+    }
+
 
     /* Statistics. The real route derives these in SQL — sellable rooms
        from `room_blocks`, sold nights from reservations, revenue from

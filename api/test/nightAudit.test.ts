@@ -171,6 +171,7 @@ async function checkInAtPune(
           and not exists (
             select 1 from room_assignments ra
              where ra.room_id = rm.id and ra.released_at is null)
+            and rm.housekeeping_status = 'clean'
         order by rm.number limit 1`,
       [puneId],
     );
@@ -740,6 +741,7 @@ describe("leaving after check-out time", () => {
           where r.hotel_id = $1
             and not exists (select 1 from room_assignments a
                              where a.room_id = r.id and a.released_at is null)
+            and r.housekeeping_status = 'clean'
           limit 1`, [puneId]);
       /* Its OWN reference, not app.next_reference. That derives from the
          date and a counter, and calling it four times inside one test

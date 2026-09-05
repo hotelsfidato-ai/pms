@@ -1,11 +1,12 @@
 import { useState, useMemo, useEffect } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { Link, useParams, useSearchParams } from "react-router";
+import { useParams, useSearchParams } from "react-router";
 import {
   ChevronDown, ChevronRight, ChevronLeft, Globe, User, Building2,
-  Sparkle, Wrench, Users,
+  Sparkle, Wrench,
 } from "lucide-react";
 import { cn } from "@/lib/cn";
+import { StayMarks } from "@/components/flows/StayMarks";
 import { money, dateShort } from "@/lib/format";
 import { useUi } from "@/lib/ui";
 import { AssignRoomFlow } from "@/components/flows/AssignRoomFlow";
@@ -688,40 +689,10 @@ function StayDetail({ bar }: { bar: ChartBar }) {
         >
           {BAR_LABEL[bar.tone]}
         </StatusPill>
-        {s.isComplimentary && <StatusPill tone="accent">Complimentary</StatusPill>}
-        {s.isDayUse && <StatusPill tone="neutral">Day use</StatusPill>}
-        {/* NAMED, and it goes somewhere.
-            This said "Group" and nothing else — true, useless, and a
-            dead end. A clerk holding a phone wants to know WHICH group
-            and how many rooms are in it, and then to look at the rest
-            of them. The relationship was available on the query all
-            along and thrown away at the last step. */}
-        {s.group ? (
-          <Link to={`/h/${code}/groups`}
-                className="rounded-md focus-visible:outline-2
-                           focus-visible:outline-brand-orange">
-            <StatusPill tone="accent">
-              <Users className="size-3" />
-              {s.group.rooms === 1
-                ? s.group.name
-                : `${s.group.name} · one of ${s.group.rooms} rooms`}
-            </StatusPill>
-          </Link>
-        ) : s.groupId ? (
-          <StatusPill tone="accent">Group</StatusPill>
-        ) : null}
-        {/* The two marks a clerk acts on before the guest reaches the
-            desk: the room is checked ahead of a VIP, and a woman
-            travelling alone is placed away from stairwells and service
-            corridors. Neither is read out at the counter. */}
-        {s.isVip && <StatusPill tone="accent">VIP</StatusPill>}
-        {s.isSingleLady && (
-          <StatusPill tone="info">Single lady — placement</StatusPill>
-        )}
-        {/* Readable since 043 and writable by nothing until now, which is
-            half a feature with the visible half being the wrong half: a
-            clerk could see the mark and never make one. It sets the flag
-            on the GUEST, so it holds for their next visit too. */}
+        <StayMarks stay={s} hotelId={code} />
+        {/* The toggle, not a mark — it CHANGES the guest rather than
+            reporting them, so it stays here beside the marks rather
+            than moving into StayMarks with them. */}
         {s.guestId && <VipToggle stay={s} />}
       </div>
 

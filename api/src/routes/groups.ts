@@ -64,10 +64,11 @@ groups.get("/:code/groups/:id", async (c) => {
       room: string | null; room_type: string;
       check_in: string; check_out: string; nights: number;
       status: string; agreed_rate: string; routed: boolean; balance: string;
+      adults: number; children: number;
     }>(
       `select reservation_id::text, reference, guest, room, room_type,
               check_in::text, check_out::text, nights, status,
-              agreed_rate::text, routed, balance::text
+              agreed_rate::text, routed, balance::text, adults, children
          from app.group_rooms($1, $2)`,
       [hotelId, groupId],
     );
@@ -116,6 +117,11 @@ groups.get("/:code/groups/:id", async (c) => {
         checkIn: r.check_in, checkOut: r.check_out, nights: r.nights,
         status: r.status, agreedRate: Number(r.agreed_rate),
         routed: r.routed, balance: Number(r.balance),
+        /* How many people. For a group this is the first thing
+           anybody asks: nine rooms is meaningless until you know
+           whether it is nine couples or nine families, and it is
+           what housekeeping sets the beds from. */
+        adults: r.adults, children: r.children,
       })),
       /* TWO figures, deliberately. The host's account and what the guests
          owe on their own folios are different debts settled by different

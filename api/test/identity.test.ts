@@ -131,6 +131,7 @@ async function arrivalAndRoom(): Promise<{ stay: string; room: string; guest: st
           and rm.housekeeping_status = 'clean'
           and not exists (select 1 from room_assignments ra
                            where ra.room_id = rm.id and ra.released_at is null)
+            and rm.housekeeping_status = 'clean'
         order by rm.number
         limit 1`,
       [puneId],

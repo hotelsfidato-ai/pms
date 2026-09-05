@@ -1,6 +1,6 @@
 import { describe, it, expect, beforeEach } from "vitest";
 import { readFileSync } from "node:fs";
-import { render, screen, within } from "@testing-library/react";
+import { render, screen, within, fireEvent } from "@testing-library/react";
 import App from "./App";
 import { useUi } from "@/lib/ui";
 import { useSession } from "@/lib/session";
@@ -121,14 +121,21 @@ describe("the tape chart at /h/:code/stay", () => {
     render(<App />);
     const panel = await screen.findByRole("dialog");
 
-    /* The LINK, not any text — the stay's own note happens to mention
+    /* The BUTTON, not any text — the stay's own note happens to mention
        the same function, and matching on text alone would pass on the
        note while the pill was missing. */
-    const pill = within(panel).getByRole("link", {
+    const pill = within(panel).getByRole("button", {
       name: /Pancham Hall function/,
     });
     expect(pill.textContent).toMatch(/one of 3 rooms/);
-    expect(pill.getAttribute("href")).toBe(`/h/${HOTEL}/groups`);
+
+    /* And it OPENS the group's rooms beside the stay rather than
+       navigating away. "Who else is in this booking" is asked while
+       looking at one, and answering it by leaving makes somebody find
+       their way back. */
+    fireEvent.click(pill);
+    const rooms = await screen.findByText(/Group reservation list/i);
+    expect(rooms).toBeDefined();
   });
 });
 

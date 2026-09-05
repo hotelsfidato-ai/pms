@@ -970,17 +970,24 @@ operations.post("/:code/stays/:id/check-out", async (c) => {
     );
 
     if (room[0]) {
-      /* The room releases, becomes vacant, and becomes DIRTY — which is
-         how it reaches housekeeping's board the moment the guest walks
-         out, rather than the next time somebody remembers. */
+      /* Releasing the assignment IS the room being vacated, and 070 puts
+         the consequence there: vacant, and dirty, so it reaches
+         housekeeping's board the moment the guest walks out rather than
+         the next time somebody remembers.
+
+         ⚠ THIS USED TO SET THE ROOM ITSELF, right here, and it was the
+         only place that did — so a room vacated by a MOVE or an
+         EXCHANGE stayed marked occupied and clean, and the next guest
+         walked into a bed somebody had slept in.
+
+         It was also less careful than the trigger that replaced it: it
+         dirtied unconditionally, including a room held out of service
+         for a leaking tap — which 022 gave its own state precisely so a
+         check-out could not put it back into the cleaning queue and
+         from there into inventory. */
       await client.query(
         "update room_assignments set released_at = now() where reservation_id = $1 and released_at is null",
         [stayId],
-      );
-      await client.query(
-        `update rooms set occupancy_status = 'vacant', housekeeping_status = 'dirty'
-          where id = $1`,
-        [room[0].id],
       );
     }
 

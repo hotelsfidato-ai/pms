@@ -6,7 +6,7 @@ Every entry here cost something. Read it before you repeat it.
 
 ## Ten faults that repeat
 
-162 entries below is a reference, not a reading list. These are the patterns
+164 entries below is a reference, not a reading list. These are the patterns
 that have recurred, with the count and the check that would have caught each.
 **If you read nothing else here, read this.**
 
@@ -3266,6 +3266,47 @@ deploy stops there.
 
 `rerun.sh` caught it. The shape that actually works is "add only if
 absent", never drop-then-add, whenever anything else may reference it.
+
+### 163 · Only a check-out dirtied a room
+
+Check-out set the room vacant and dirty — in the API, at the one call
+site that did it. Nothing else did.
+
+**A room is vacated by more than a check-out.** A move sends the guest
+to 205 and leaves 201 behind; an exchange swaps two rooms both of which
+were slept in; an unassign takes the room back. None of those touched
+`rooms`. So 201 sat marked `occupied` and `clean` — occupied because
+nothing set it back, clean because nobody had ever said otherwise — and
+the next guest walked into a slept-in bed while the board that exists to
+prevent exactly that had no idea.
+
+**The rule belongs where the fact is.** Releasing an assignment IS a
+guest leaving a room, and every path already does it because that is
+what the words mean. The trigger goes there, and anything written later
+gets it without knowing.
+
+The API's own copy was also *less* careful than the trigger replacing
+it: it dirtied unconditionally, including a room held out of service for
+a leaking tap — which 022 gave its own state precisely so a check-out
+could not put it back into the cleaning queue and from there into
+inventory.
+
+### 164 · The badge row existed twice, and had already drifted
+
+Defect 143 was "the same panel" turning out to be a second copy. This is
+it recurring one level down: `StayDetail` on the tape chart and
+`StaySummary` in the list drawer each drew their own row of marks.
+
+They had diverged before anybody looked. The group pill said *"Group"*
+in one and named the group in the other, because only one was updated.
+And VIP and the single-lady mark appeared on the chart's panel and **not
+on the list's** — the two marks a clerk acts on before a guest reaches
+the desk, missing from the arrivals list, which is exactly where they
+would look.
+
+Merged into one component. The status pill deliberately stayed split:
+the chart shows a DERIVED tone and the list shows the status, and they
+differ because they mean different things.
 
 ## Verification traps
 

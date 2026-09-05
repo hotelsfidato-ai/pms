@@ -199,6 +199,16 @@ comment on function app.folio_for_room_charge(uuid) is
 -- -----------------------------------------------------------------------------
 -- What a group looks like
 -- -----------------------------------------------------------------------------
+-- DROPPED FIRST. 071 widened this function to carry party size, and a return
+-- type cannot be changed by CREATE OR REPLACE — so on a second pass this
+-- aborted with "cannot change return type of existing function" and every
+-- deploy after the first stopped here.
+--
+-- The order is what makes it safe: 056 puts the original shape back and 071
+-- immediately widens it again, so the end state is the same either way. Caught
+-- by rerun.sh, which is the only gate that asks this question.
+drop function if exists app.group_rooms(uuid, uuid);
+
 create or replace function app.group_rooms(p_hotel uuid, p_group uuid)
 returns table (
   reservation_id uuid,
