@@ -97,6 +97,15 @@ function countsAsSold(s: Stay): boolean {
    ══════════════════════════════════════════════════════════════════ */
 
 const GROUP_ID = "grp-pancham-aug08";
+/* ONE DEFINITION, used by the three stays below and by `groups`. A
+   fixture that names the group in two places is a fixture that will
+   eventually disagree with itself, and the test reading it would be
+   asserting the disagreement. */
+const GROUP = {
+  id: GROUP_ID,
+  name: "Pancham Hall function",
+  rooms: 3,
+};
 
 /* The fields no fixture here is about.
 
@@ -182,7 +191,8 @@ const notableStays: Stay[] = [
     arrival: AUG(8), departure: AUG(11), nights: 3,
     adults: 2, children: 0, status: "checked-out",
     isDayUse: false, isComplimentary: false,
-    rackTariff: 3699, offeredTariff: 3100, groupId: GROUP_ID,
+    rackTariff: 3699, offeredTariff: 3100,
+    groupId: GROUP_ID, group: GROUP,
     notes: "Pancham Hall function block — the weekend that filled the house.",
   },
   {
@@ -193,7 +203,8 @@ const notableStays: Stay[] = [
     arrival: AUG(8), departure: AUG(11), nights: 3,
     adults: 2, children: 2, status: "checked-out",
     isDayUse: false, isComplimentary: false,
-    rackTariff: 3699, offeredTariff: 3100, groupId: GROUP_ID,
+    rackTariff: 3699, offeredTariff: 3100,
+    groupId: GROUP_ID, group: GROUP,
   },
   {
     ...UNREMARKABLE,
@@ -203,7 +214,8 @@ const notableStays: Stay[] = [
     arrival: AUG(8), departure: AUG(11), nights: 3,
     adults: 1, children: 0, status: "checked-out",
     isDayUse: false, isComplimentary: false,
-    rackTariff: 3699, offeredTariff: 3100, groupId: GROUP_ID,
+    rackTariff: 3699, offeredTariff: 3100,
+    groupId: GROUP_ID, group: GROUP,
   },
   {
     /* Crosses the month boundary — departs 2 September */
@@ -495,11 +507,11 @@ export const folios: Folio[] = [
 
 export const groups = [
   {
-    id: GROUP_ID,
+    id: GROUP.id,
     hotelId: PROPERTY_ID,
-    name: "Pancham Hall function",
+    name: GROUP.name,
     reference: "FH-2608-5010",
-    rooms: 3,
+    rooms: GROUP.rooms,
     arrival: AUG(8),
     departure: AUG(11),
   },

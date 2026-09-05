@@ -111,6 +111,25 @@ describe("the tape chart at /h/:code/stay", () => {
     /* The clerk must not lose their place. */
     expect(container.querySelectorAll("[data-room-row]").length).toBe(17);
   });
+
+  it("names the group a stay belongs to, rather than saying 'Group'", async () => {
+    /* This pill read "Group" and nothing else — true, useless, and a
+       dead end. A clerk holding a phone wants to know WHICH group and
+       how many rooms are in it. The relationship was on the query all
+       along and thrown away at the last step. */
+    go(`/h/${HOTEL}/stay?res=stay-grp-1`);
+    render(<App />);
+    const panel = await screen.findByRole("dialog");
+
+    /* The LINK, not any text — the stay's own note happens to mention
+       the same function, and matching on text alone would pass on the
+       note while the pill was missing. */
+    const pill = within(panel).getByRole("link", {
+      name: /Pancham Hall function/,
+    });
+    expect(pill.textContent).toMatch(/one of 3 rooms/);
+    expect(pill.getAttribute("href")).toBe(`/h/${HOTEL}/groups`);
+  });
 });
 
 describe("navigation is driven by the permission matrix", () => {

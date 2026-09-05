@@ -15,7 +15,7 @@ that produced it is gone and this file is what survived.
 
 ### Where the work stands
 
-**182 of 204 · 89%.** Seventeen stages of twelve. The bars further down
+**183 of 204 · 90%.** Seventeen stages of twelve. The bars further down
 sum to that; the total is read off them and never typed beside them.
 
 ```
@@ -23,7 +23,7 @@ db/migrate.sh        the LIVE database. Additive. Never drops.
 db/tests/run.sh      434 assertions, on a scratch database it drops
 db/tests/rerun.sh    68 migrations, all re-runnable, on a scratch copy
 cd api && npm test   218, on its OWN database, built and dropped per run
-npx vitest run       157
+npx vitest run       158
 npm run build:all    production, preview AND artifact — all three
 db/verify-backup.sh  dumped, restored, checked
 ```
@@ -114,7 +114,7 @@ things in — the owner asked for the demo gone and the system used for real.
 
 ```
 FRONTEND   tsc -b            0 errors
-           vitest run        157 passed · 11 files
+           vitest run        158 passed · 11 files
            build             clean · production, preview AND artifact
 
 API        tsc --noEmit      0 errors
@@ -843,7 +843,7 @@ retried. Ledger nets to zero, room revenue still ₹4,19,578.76.
 13 POS upgrade — Petpooja-informed   ████████████  12 of 12 — the day end closes
 14 Modules + banquet                  ████████████  12 of 12 — the hall cannot be sold twice
 15 PMS upgrade — eZee-informed        ████████████  12 of 12 — the backlog is clear
-16 Front desk, second pass            ███████████░  11 of 12 — the group list remains
+16 Front desk, second pass            ████████████  12 of 12 — the group list landed
 17 Commissioning a real property      ████████████  12 of 12 — the owner can set it up
 ```
 
@@ -945,7 +945,7 @@ moved: twenty screenshots of Petpooja set a higher bar, and two module
 requirements arrived with it. Lowering stage 7 would misreport what happened, so
 the new work is its own row. Detail in `POS-PROGRESS.md`.
 
-**182 of 204 — 89%.** Add the filled blocks above and divide by 180 — fifteen stages of twelve. That sum is the number; it is not typed separately, because it was for three audits running and drifted to "about 90%" while the bars said 70. It moved from 119 when stage 13’s three unfounded blocks came off, to 133 when the day end finished stage 13, to 134 when stage 3 got its service account, to 135 when the rate calendar gave stage 15's three grids their screens, to 136 with the room move, to 137 with amend stay, to 138 with the group panel, to 140 when extra-person pricing and multi-room booking finished 1.2, to 142 with VIP and work orders, to 153 when the banquet hall finished stage 14 — eleven blocks, the largest single move this file has recorded, because stage 14 had one filled block since it was written and the module it named did not exist — and to 156 when stages 5, 8 and 10 were given the unit lists they had never had, which moved 8 from 9 to 11 and 10 from 11 to 12, to 158 when offline finished stage 6, to 159 when the code reached GitHub, to 170 of 192 when stage 16 was added, and to 182 of 204 when stage 17 carried the work of turning a demonstrable system into one a hotel can be commissioned on. The denominator moves with it: seventeen stages of twelve.
+**183 of 204 — 90%.** Add the filled blocks above and divide by 180 — fifteen stages of twelve. That sum is the number; it is not typed separately, because it was for three audits running and drifted to "about 90%" while the bars said 70. It moved from 119 when stage 13’s three unfounded blocks came off, to 133 when the day end finished stage 13, to 134 when stage 3 got its service account, to 135 when the rate calendar gave stage 15's three grids their screens, to 136 with the room move, to 137 with amend stay, to 138 with the group panel, to 140 when extra-person pricing and multi-room booking finished 1.2, to 142 with VIP and work orders, to 153 when the banquet hall finished stage 14 — eleven blocks, the largest single move this file has recorded, because stage 14 had one filled block since it was written and the module it named did not exist — and to 156 when stages 5, 8 and 10 were given the unit lists they had never had, which moved 8 from 9 to 11 and 10 from 11 to 12, to 158 when offline finished stage 6, to 159 when the code reached GitHub, to 170 of 192 when stage 16 was added, and to 182 of 204 when stage 17 carried the work of turning a demonstrable system into one a hotel can be commissioned on. The denominator moves with it: seventeen stages of twelve.
 
 **Cashiering is built, and the placeholder list in `App.tsx` is now empty.** It was the last route in the application rendering nothing, and its own note said why: *"unspecified — placeholder until the live flow is observed."* It has been observed — a front-desk shift close — and 059 builds it in the POS day end's shape rather than as a second idea about cash.
 
@@ -1269,10 +1269,10 @@ bar it was given, and the bar moved afterwards.
  9 the hour a guest said they would arrive       ✓
 10 pax against capacity at the walk-in           ✓
 11 a booking opens its folio when it is made     ✓
-12 the group list — one booking, its rooms under it  ✗
+12 the group list — one booking, its rooms under it  ✓
 ```
 
-**11, and the twelfth is named.** eZee shows a group as one reservation
+**12 of 12.** eZee shows a group as one reservation
 with its rooms beneath it; `GroupPanel.tsx` exists and is close, but
 the stay panel does not say "this guest has two rooms in this group".
 

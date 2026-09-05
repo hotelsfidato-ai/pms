@@ -54,6 +54,8 @@ interface StayRow {
   is_complimentary: boolean;
   notes: string | null;
   group_id: string | null;
+  group_name: string | null;
+  group_rooms: string | null;
   is_vip: boolean;
   guest_id: string;
   is_single_lady: boolean;
@@ -79,6 +81,17 @@ const SELECT = `
          r.adults, r.children, r.status, r.is_day_use,
          r.agreed_rate, rt.base_rate, r.is_complimentary,
          r.notes, r.group_id,
+         /* THE GROUP'S NAME AND SIZE, so a stay panel can say "one of
+            nine rooms in the Kulkarni wedding" instead of showing a
+            booking that looks like every other booking. The join for
+            this has been here since 056 and selected nothing from it —
+            the relationship was available and thrown away at the last
+            step. */
+         g.name as group_name,
+         (select count(*) from reservations sib
+           where sib.group_id = r.group_id
+             and sib.status not in ('void', 'cancelled'))::text
+           as group_rooms,
          /* The marks that change what a clerk DOES. VIP travels with the
             GUEST — somebody who is one this visit was one last visit —
             and the single-lady flag sits on the RESERVATION, because the
@@ -161,7 +174,19 @@ function toStay(row: StayRow, hotelCode: string, businessDate: string) {
     isComplimentary: row.is_complimentary,
     rackTariff: Number(row.base_rate),
     offeredTariff: Number(row.agreed_rate),
-    ...(row.group_id ? { groupId: row.group_id } : {}),
+    ...(row.group_id
+      ? {
+          groupId: row.group_id,
+          group: {
+            id: row.group_id,
+            name: row.group_name ?? "Group",
+            /* Every room in the group, this one included. A panel that
+               said "2 others" would be doing arithmetic the reader then
+               has to undo to get the number on the group list. */
+            rooms: Number(row.group_rooms ?? 1),
+          },
+        }
+      : {}),
     ...(row.notes ? { notes: row.notes } : {}),
 
     /* Marks a clerk acts on. Always present rather than spread in only
@@ -239,37 +264,89 @@ stays.get("/:code/groups", async (c) => {
     const hotelId = await hotelIdFor(client, code);
     if (!hotelId) return null;
 
+    /* `scope` is what a desk is looking at on a Tuesday morning. The
+       default is the groups that are here or coming; a wedding from
+       March is history and sits behind a deliberate choice, because a
+       list that grows forever stops being read. */
+    const scope = c.req.query("scope") === "all" ? "all" : "current";
+
     const { rows } = await client.query<{
       id: string;
       name: string;
       block_code: string | null;
+      company: string | null;
       rooms: string;
+      nights: string;
       arrival: string;
       departure: string;
+      in_house: string;
+      due_in: string;
+      departed: string;
+      cancelled: string;
+      routed: string;
+      master_id: string | null;
       master_balance: string | null;
+      guest_balance: string;
     }>(
-      `select g.id, g.name, g.block_code,
+      `select g.id, g.name, g.block_code, co.name as company,
               count(r.id)::text            as rooms,
+              coalesce(sum(r.check_out - r.check_in), 0)::text as nights,
               min(r.check_in)::text        as arrival,
               max(r.check_out)::text       as departure,
-              /* What the HOST owes, separately from what the guests do.
-                 Null when the group has no master folio, which is most of
-                 them — a block where everybody settles their own room
-                 needs no host account. */
+
+              /* WHERE THE GROUP IS TODAY, which is the question somebody
+                 opening this list is actually asking. Counted from the
+                 rooms rather than stored, so a group whose bookings have
+                 been amended cannot keep reporting the shape it had when
+                 it was made. */
+              count(*) filter (where r.status = 'checked_in')::text as in_house,
+              count(*) filter (where r.status = 'confirmed')::text  as due_in,
+              count(*) filter (where r.status = 'checked_out')::text as departed,
+              count(*) filter (where r.status = 'cancelled')::text  as cancelled,
+
+              /* How many rooms bill to the host. PER ROOM, not per
+                 group — the couple's own room is usually settled by them
+                 while the rest go to the host, and a list that said
+                 "billed to the host" over a mixed group would be wrong
+                 for whoever asked. */
+              count(*) filter (where r.route_room_to_group)::text   as routed,
+
+              m.id::text as master_id,
               (select sum(fp.amount + fp.tax_amount)::text
                  from folios f
                  join folio_postings fp on fp.folio_id = f.id
-                where f.group_id = g.id) as master_balance
+                where f.group_id = g.id) as master_balance,
+
+              /* The rooms' OWN folios, kept apart from the host's for the
+                 same reason the group panel keeps them apart: adding them
+                 produces a number nobody is being asked to pay. */
+              coalesce((
+                select sum(fp2.amount + fp2.tax_amount)
+                  from folios f2
+                  join folio_postings fp2 on fp2.folio_id = f2.id
+                 where f2.reservation_id in (
+                   select r2.id from reservations r2
+                    where r2.group_id = g.id and r2.status <> 'void')
+              ), 0)::text as guest_balance
+
          from reservation_groups g
          join reservations r on r.group_id = g.id
+         left join companies co on co.id = g.company_id
+         left join folios m on m.group_id = g.id and m.reservation_id is null
         where r.hotel_id = $1
           /* A void booking never happened, so it is not one of the group's
              rooms and must not be counted as one. Same rule 042 wrote for
              every other count. */
           and r.status <> 'void'
-        group by g.id, g.name, g.block_code
-        order by min(r.check_in)`,
-      [hotelId],
+          and ($2 = 'all' or exists (
+                select 1 from reservations x
+                 where x.group_id = g.id
+                   and x.status not in ('void', 'cancelled')
+                   and x.check_out >= (select business_date from hotels
+                                        where id = $1)))
+        group by g.id, g.name, g.block_code, co.name, m.id
+        order by min(r.check_in), g.name`,
+      [hotelId, scope],
     );
 
     return rows.map((g) => ({
@@ -277,10 +354,21 @@ stays.get("/:code/groups", async (c) => {
       hotelId: code.toUpperCase(),
       name: g.name,
       reference: g.block_code ?? "",
+      company: g.company,
       rooms: Number(g.rooms),
+      nights: Number(g.nights),
       arrival: g.arrival,
       departure: g.departure,
-      masterBalance: g.master_balance === null ? null : Number(g.master_balance),
+      inHouse: Number(g.in_house),
+      dueIn: Number(g.due_in),
+      departed: Number(g.departed),
+      cancelled: Number(g.cancelled),
+      routedRooms: Number(g.routed),
+      /* NULL, not zero. Zero says the host owes nothing; null says there
+         is no host account, which is the case for most groups. */
+      masterBalance: g.master_id === null || g.master_balance === null
+        ? null : Number(g.master_balance),
+      guestBalance: Number(g.guest_balance),
     }));
   });
 

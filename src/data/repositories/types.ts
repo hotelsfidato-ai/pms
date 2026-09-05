@@ -46,6 +46,11 @@ export interface Stay {
   rackTariff: number;       // per night, before discount
   offeredTariff: number;    // per night, after discount
   groupId?: string;
+  /** The booking this room belongs to, when it is one of several sold
+      together. Absent for an ordinary single-room stay — a wedding is
+      one conversation and nine rooms, and a panel that does not say so
+      makes the clerk hold the relationship in their head. */
+  group?: { id: string; name: string; rooms: number };
   notes?: string;
   /* ── Marks a clerk acts on ───────────────────────────────────────
      VIP travels with the GUEST — somebody who is one this visit was

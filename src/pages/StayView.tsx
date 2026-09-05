@@ -1,9 +1,9 @@
 import { useState, useMemo, useEffect } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { useParams, useSearchParams } from "react-router";
+import { Link, useParams, useSearchParams } from "react-router";
 import {
   ChevronDown, ChevronRight, ChevronLeft, Globe, User, Building2,
-  Sparkle, Wrench,
+  Sparkle, Wrench, Users,
 } from "lucide-react";
 import { cn } from "@/lib/cn";
 import { money, dateShort } from "@/lib/format";
@@ -671,6 +671,7 @@ function VipToggle({ stay }: { stay: Stay }) {
 
 function StayDetail({ bar }: { bar: ChartBar }) {
   const s: Stay = bar.stay;
+  const { code = "" } = useParams<{ code: string }>();
   return (
     <div className="space-y-5">
       <div className="flex items-center gap-2 flex-wrap">
@@ -689,7 +690,26 @@ function StayDetail({ bar }: { bar: ChartBar }) {
         </StatusPill>
         {s.isComplimentary && <StatusPill tone="accent">Complimentary</StatusPill>}
         {s.isDayUse && <StatusPill tone="neutral">Day use</StatusPill>}
-        {s.groupId && <StatusPill tone="accent">Group</StatusPill>}
+        {/* NAMED, and it goes somewhere.
+            This said "Group" and nothing else — true, useless, and a
+            dead end. A clerk holding a phone wants to know WHICH group
+            and how many rooms are in it, and then to look at the rest
+            of them. The relationship was available on the query all
+            along and thrown away at the last step. */}
+        {s.group ? (
+          <Link to={`/h/${code}/groups`}
+                className="rounded-md focus-visible:outline-2
+                           focus-visible:outline-brand-orange">
+            <StatusPill tone="accent">
+              <Users className="size-3" />
+              {s.group.rooms === 1
+                ? s.group.name
+                : `${s.group.name} · one of ${s.group.rooms} rooms`}
+            </StatusPill>
+          </Link>
+        ) : s.groupId ? (
+          <StatusPill tone="accent">Group</StatusPill>
+        ) : null}
         {/* The two marks a clerk acts on before the guest reaches the
             desk: the room is checked ahead of a VIP, and a woman
             travelling alone is placed away from stairwells and service

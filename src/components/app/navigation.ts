@@ -134,6 +134,10 @@ const SECTIONS: NavSection[] = [
         ],
       },
       { label: "Guests", to: "/guests", icon: Users, resource: "customer", matchPrefix: true },
+      /* A wedding is one conversation and nine rooms. Every other list
+         here shows those nine as nine unrelated bookings, so the person
+         taking the call had to hold the relationship in their head. */
+      { label: "Groups", to: "/h/:code/groups", icon: Users, resource: "reservation", matchPrefix: true },
       /* Not "Companies". A company is a corporate account; this is where
          the business came FROM — Agoda, go-MMT, the walk-in. Somebody
          looking for their OTA performance read "Companies" and went

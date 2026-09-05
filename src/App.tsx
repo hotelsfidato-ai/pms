@@ -50,6 +50,7 @@ import DocketPage from "@/pages/Docket";
 import DayEndPage from "@/pages/DayEnd";
 import GridsPage from "@/pages/Grids";
 import GroupPanelPage from "@/pages/GroupPanel";
+import GroupsPage from "@/pages/Groups";
 import NewBookingPage from "@/pages/NewBooking";
 import WorkOrdersPage from "@/pages/WorkOrders";
 import BanquetPage from "@/pages/Banquet";
@@ -466,6 +467,15 @@ export default function App() {
             <Route
               path="/h/:code/banquet/:id"
               element={<><PropertyScope /><BanquetEventPage /></>}
+            />
+            {/* The LIST. The panel below has existed since 056 and could
+                be reached only by somebody who already knew a group's
+                id — no list, no navigation entry, no way in. Before the
+                parameterised route, so a literal segment cannot be
+                swallowed by an :id. */}
+            <Route
+              path="/h/:code/groups"
+              element={<><PropertyScope /><GroupsPage /></>}
             />
             {/* One group: its rooms, and who pays for which. */}
             <Route

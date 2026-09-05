@@ -103,7 +103,13 @@ describe("the seam — statistics reconcile to the Manager Report", () => {
 describe("the seam — group bookings", () => {
   it("returns three rooms on one reference", async () => {
     const id = await defaultPropertyId();
-    const [group] = await listGroups(id);
+    /* "all", not the default. `listGroups` now answers "here and
+       coming" unless asked otherwise — a wedding from March is history
+       and a list that grows forever stops being read — and the fixture's
+       group has departed. This test is about the seam carrying three
+       rooms on one reference, not about which groups a desk sees on a
+       Tuesday, so it says which it means. */
+    const [group] = await listGroups(id, "all");
     if (!group) throw new Error("no group in fixture");
     const members = await listGroupMembers(id, group.id);
     expect(members).toHaveLength(3);

@@ -70,7 +70,18 @@ vi.mock("@/lib/api", () => ({
     hotels: [{ id: "uuid-5el", code: PROPERTY_CODE, name: property.name }],
   }),
 
-  api: async (path: string) => {
+  api: async (url: string) => {
+    /* A QUERY STRING IS NOT PART OF A ROUTE.
+       Every branch below matches with `===`, against the full string it
+       was handed. So the day `listGroups` started sending `?scope=current`
+       — a change with nothing to do with this file — the groups branch
+       stopped matching and the seam test failed with "no group in
+       fixture", which reads as missing data rather than a stale mock.
+
+       Split once, here, so the next repository function that learns a
+       parameter does not break a test three directories away. */
+    const path = url.split("?")[0]!;
+
     if (path === "/api/hotels") {
       return {
         scope: { isGroupAdmin: true, hotels: [] },
