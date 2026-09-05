@@ -253,6 +253,30 @@ async function main() {
     const hotelId = hotel!.id;
     say(`${property.name} (${HOTEL_CODE})`);
 
+    /* ── GST, which a property cannot trade without ────────────────
+       067 moved the rate out of `hotels.cgst_rate + sgst_rate` and into
+       `tax_rules`, because one flat pair cannot express a rate that
+       turns on what a room costs. `app.gst_rate()` RAISES when a kind
+       has no rule — it does not fall back to zero — so a demo property
+       loaded without these cannot take a walk-in or close a night, and
+       the failure surfaces three screens away as "something went
+       wrong".
+
+       The fixture's `tax.cgst + tax.sgst` is the rate it was built
+       with, so the demo's existing arithmetic still reconciles. The
+       higher band is the statutory one above the tariff threshold; no
+       demo room reaches it, which is exactly why it is worth having
+       here — the boundary gets exercised by the assertions, not by the
+       fixture. */
+    const demoRate = property.tax.cgst + property.tax.sgst;
+    await client.query(
+      `insert into tax_rules (hotel_id, kind, over_amount, rate, note)
+       values ($1,'room',       0,    $2, 'At or under the threshold'),
+              ($1,'room',       7500, 18, 'Above the threshold'),
+              ($1,'restaurant', 0,    $2, 'Food and soft drink')`,
+      [hotelId, demoRate],
+    );
+
     /* ── Room types and rooms ─────────────────────────────────────
        All 18 physical rooms, including 308 held out of service. The
        17/18 split is what makes the occupancy arithmetic close, so it

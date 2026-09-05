@@ -105,7 +105,8 @@ check() {                       # check <label> <sql> <expected>
     return
   fi
 
-  got=$(printf "%s" "$raw" | tr -d " ")
+  got=$(printf "%s" "$raw" | tr -d " 
+")
   if [ "$got" = "$want" ]; then
     printf "  \033[32m✓\033[0m %-34s %s\n" "$label" "$got"
   else
@@ -116,70 +117,84 @@ check() {                       # check <label> <sql> <expected>
 
 H="(select id from hotels where code='5EL')"
 
-# ── Is the calibrated demo in this dump? ─────────────────────────────────────
+# ── Did the restore give back what was there? ──────────────────────────
 #
-# The data checks below name figures from the demo property, which reconciles
-# to a real eZee export. A production backup has no demo in it, and neither
-# does one taken straight after db/tests/run.sh — which rebuilds with the test
-# fixtures only.
+# ⚠ THIS USED TO ASSERT THE DEMO'S FIGURES: three properties, 83 reservations,
+#   ₹4,19,578.76 of room revenue, ₹3,97,041.93 of receipts. It decided whether
+#   to apply them by asking whether a hotel with code 5EL existed.
 #
-# The first version asserted them unconditionally and reported EIGHT failures
-# against a backup that was completely sound, which is the worst thing a
-# verifier can do: it teaches people to disregard it.
+#   5EL is now the REAL property. The owner had the demo removed and the
+#   system put into service, and the same code that had meant "this is the
+#   calibrated fixture" started meaning "this is Akkalkot". So the verifier
+#   compared a working hotel against a demo's numbers and reported five
+#   failures under the heading
 #
-# So the STRUCTURAL checks always run — they are what a restore has to give
-# back anywhere — and the data checks run only when there is data to check.
-DEMO=$(PGPASSWORD=$SUPERPASS "$PSQL" $S -d "$SCRATCH" -tAc   "select count(*) from hotels where code='5EL'" 2>/dev/null | tr -d ' ')
+#       RESTORING THIS FILE WOULD NOT GIVE YOU YOUR HOTEL BACK.
+#
+#   on a backup that was perfectly sound. That is the worst thing a verifier
+#   can do — it is how people learn to ignore one.
+#
+#   The deeper fault is that it asserted CONSTANTS. A backup is not sound
+#   because it contains particular numbers; it is sound because restoring it
+#   returns what you had. That question has an answer on the demo, on an empty
+#   database, and on a hotel with six real bookings in it, and it never needs
+#   editing when the data changes — which is the same reason the RLS checks
+#   below count invariants rather than tables.
+compare() {                     # compare <label> <sql>
+  local label="$1" sql="$2" src dst
+  src=$(PGPASSWORD=$SUPERPASS "$PSQL" $S -d "$DB"      -tAc "$sql" 2>&1 | tr -d " ")
+  dst=$(PGPASSWORD=$SUPERPASS "$PSQL" $S -d "$SCRATCH" -tAc "$sql" 2>&1 | tr -d " ")
 
-if [ "$DEMO" = "1" ]; then
-  echo "  (the calibrated demo property is present — checking its figures too)"
-else
-  echo "  (no demo property in this dump — checking structure only)"
-fi
-echo
+  if printf "%s" "$dst" | grep -qiE "^(ERROR|FATAL)"; then
+    printf "  [31mx[0m %-34s %s
+" "$label"       "$(printf "%s" "$dst" | head -1 | cut -c1-40)"
+    FAILED=$((FAILED + 1))
+    return
+  fi
 
-data_check() {                  # skipped when the demo is absent
-  if [ "$DEMO" = "1" ]; then
-    check "$1" "$2" "$3"
+  if [ "$src" = "$dst" ]; then
+    printf "  [32m✓[0m %-34s %s
+" "$label" "${dst:--}"
   else
-    printf "  [2m-[0m %-34s %s
-" "$1" "not in this dump"
+    printf "  [31mx[0m %-34s %s   (source has %s)
+"       "$label" "${dst:--}" "${src:--}"
+    FAILED=$((FAILED + 1))
   fi
 }
 
-data_check "properties" \
-  "select count(*) from hotels" "3"
+echo "  (comparing the restore against the source, table by table)"
+echo
 
-data_check "rooms at 5EL" \
-  "select count(*) from rooms where hotel_id=$H" "18"
+compare "properties"       "select count(*) from hotels"
+compare "rooms"            "select count(*) from rooms"
+compare "room types"       "select count(*) from room_types"
+compare "guests"           "select count(*) from guests"
+compare "reservations"     "select count(*) from reservations"
+compare "room assignments" "select count(*) from room_assignments"
+compare "folios"           "select count(*) from folios"
+compare "ledger rows"      "select count(*) from folio_postings"
+compare "invoices"         "select count(*) from invoices"
+compare "staff"            "select count(*) from staff"
+compare "tax rules"        "select count(*) from tax_rules"
 
-data_check "reservations at 5EL" \
-  "select count(*) from reservations where hotel_id=$H" "83"
-
-data_check "room revenue 1-25 Aug" \
-  "select to_char(sum(amount),'FM9999999.99') from folio_postings
-    where category='room' and hotel_id=$H
-      and business_date between '2026-08-01' and '2026-08-25'" \
-  "419578.76"
-
-# Money RECEIVED, read the way the Manager Report reads it: a receipt whose
-# posting has been reversed is not money the hotel has. A naive
-# `sum(amount) from payments` came back 100.00 too high, because the API
-# suite posts a payment and then reverses it - the ledger entry cancels and
-# the receipt row stays. Correct behaviour; wrong question. Same mistake as
-# MEMORY.md defect 25, in a second place.
-data_check "receipts" \
-  "select to_char(sum(p.amount),'FM9999999.99')
+# The money, to the paisa. A row count can match while a numeric column comes
+# back rounded or null, and the ledger is the one place that must not.
+compare "ledger value"   "select coalesce(to_char(sum(amount + tax_amount),'FM99999999.99'),'0')
+     from folio_postings"
+compare "receipts"   "select coalesce(to_char(sum(p.amount),'FM99999999.99'),'0')
      from payments p
      join folio_postings fp on fp.id = p.posting_id
-    where p.hotel_id=$H
-      and not exists (select 1 from folio_postings rev
-                       where rev.reverses_id = fp.id)" \
-  "397041.93"
+    where not exists (select 1 from folio_postings rev
+                       where rev.reverses_id = fp.id)"
 
-data_check "ledger rows" \
-  "select case when count(*) > 100 then 'many' else 'suspiciously few' end
-     from folio_postings where hotel_id=$H" "many"
+# An empty source proves nothing about a backup, so say so rather than
+# printing eleven green ticks that all mean "0 = 0".
+SRC_ROWS=$(PGPASSWORD=$SUPERPASS "$PSQL" $S -d "$DB" -tAc   "select count(*) from folio_postings" 2>/dev/null | tr -d " ")
+if [ "${SRC_ROWS:-0}" = "0" ]; then
+  printf "  [2m-[0m %-34s %s
+" "ledger content"     "the source ledger is empty — nothing to lose yet"
+fi
+echo
 
 # Structure, not just data. A dump can carry every row and lose the thing that
 # keeps them correct — and RLS is the whole tenancy model here.

@@ -320,28 +320,38 @@ operations.post("/:code/stays/:id/check-in", async (c) => {
            the clerk deciding not to — a decision worth being able to
            make, and worth being visible by its absence on the bill. */
         if (!body.waiveEarly && isEarly) {
-          /* CGST + SGST, which is how this schema stores it — there is
-             no single `gst_rate` column and assuming one is how a
-             charge lands with no tax on it. */
-          const { rows: h } = await client.query<{ charge: string | null; tax: string }>(
-            `select early_checkin_charge::text as charge,
-                    (coalesce(cgst_rate,0) + coalesce(sgst_rate,0))::text as tax
-               from hotels where id = $1`, [hotelId]);
+          /* The charge is the property's; the RATE is the room's.
+             Letting somebody in at eleven is ancillary to selling them
+             the room, so it carries the room's slab — and the room's
+             slab is decided by the room's nightly rate, not by the
+             ₹1,000 being charged for the early hours. On a ₹9,000 suite
+             that is 18%; asking the rule about ₹1,000 would answer 5%
+             and put the wrong figure in the GST return. */
+          const { rows: h } = await client.query<{
+            charge: string | null; nightly: string | null;
+          }>(
+            `select h.early_checkin_charge::text as charge,
+                    r.agreed_rate::text as nightly
+               from hotels h
+               left join reservations r on r.id = $2
+              where h.id = $1`, [hotelId, stayId]);
           const amount = h[0]?.charge === null || h[0]?.charge === undefined
             ? null : Number(h[0].charge);
           if (amount !== null && amount > 0) {
-            const rate = Number(h[0]!.tax);
-            const tax = Math.round(amount * rate) / 100;
             await client.query(
               `insert into folio_postings
                  (hotel_id, folio_id, business_date, category, description,
                   amount, tax_rate, tax_amount, source_type, posted_by)
-               select $1, f.id, $2::date, 'misc', 'Early check-in',
-                      $3, $4, $5, 'front_desk', $6
+               select $1::uuid, f.id, $2::date, 'misc', 'Early check-in',
+                      $3::numeric, t.rate,
+                      round($3::numeric * t.rate / 100.0, 2),
+                      'front_desk', $4::uuid
                  from folios f
-                where f.reservation_id = $7 and f.status = 'open'
+                cross join (select app.gst_rate($1,'room',$6::numeric) as rate) t
+                where f.reservation_id = $5 and f.status = 'open'
                 limit 1`,
-              [hotelId, businessDate, amount, rate, tax, session.staffId, stayId]);
+              [hotelId, businessDate, amount, session.staffId, stayId,
+               Number(h[0]?.nightly ?? amount)]);
           }
         }
       }
@@ -516,25 +526,34 @@ operations.post("/:code/stays/:id/charges", async (c) => {
     const folioId = await folioFor(client, hotelId, c.req.param("id"));
     if (!folioId) return refuse("Could not open a folio for this stay.");
 
-    /* The property's own rate, not a constant. GST is a state subject
-       and a property that crosses the tariff threshold moves to 9+9. */
-    const { rows: rate } = await client.query<{ total: string }>(
-      "select (cgst_rate + sgst_rate)::text as total from hotels where id = $1",
-      [hotelId],
-    );
-    const taxRate = body.taxable ? Number(rate[0]?.total ?? 5) : 0;
+    /* THE RATE COMES FROM THE RULE, AND ZERO IS STILL A DECISION.
+       This read `(cgst_rate + sgst_rate) ?? 5` — a property rate with a
+       hardcoded 5% behind it, which is a shipped price in a project
+       whose first rule is that nothing ships a price. A property that
+       had never set a rate billed at five percent and looked correct.
+
+       `taxable: false` stays: a clerk saying a charge bears no GST is
+       making a determination, and it is recorded as one. What is gone
+       is the silent fallback for the case where nobody said anything.
+
+       Everything the front desk posts follows the ROOM rule — laundry,
+       transport, a damage charge are ancillary to the accommodation and
+       carry its rate. The till's own outlets follow theirs. */
     const amount = Math.round(body.amount * 100) / 100;
-    const taxAmount = Math.round(amount * taxRate) / 100;
 
     const { rows: made } = await client.query<{ id: string }>(
       `insert into folio_postings
          (hotel_id, folio_id, business_date, category, description,
           amount, tax_rate, tax_amount)
-       values ($1,$2,$3,$4,$5,$6,$7,$8)
+       select $1::uuid, $2::uuid, $3::date, $4::text, $5::text, $6::numeric,
+              t.rate, round($6::numeric * t.rate / 100.0, 2)
+         from (select case when $7::boolean
+                           then app.gst_rate($1, 'room', $6::numeric)
+                           else 0::numeric end as rate) t
        returning id::text`,
       [hotelId, folioId, await resolveDate(client, hotelId, body.businessDate),
        CATEGORY[body.category ?? "Miscellaneous"] ?? "misc",
-       description, amount, taxRate, taxAmount],
+       description, amount, body.taxable ?? true],
     );
 
     return { ok: true, data: { id: made[0]?.id } };
@@ -762,28 +781,34 @@ operations.post("/:code/stays/:id/check-out", async (c) => {
         [hotelId, stayId, body.lateReason!.trim(), session.staffId]);
 
       if (!body.waiveLate) {
+        /* Same rule as the early charge above: the room decides the
+           slab, because a late departure is ancillary to the room. */
         const { rows: h } = await client.query<{
-          charge: string | null; tax: string; bd: string;
+          charge: string | null; bd: string; nightly: string | null;
         }>(
-          `select late_checkout_charge::text as charge,
-                  (coalesce(cgst_rate,0) + coalesce(sgst_rate,0))::text as tax,
-                  business_date::text as bd
-             from hotels where id = $1`, [hotelId]);
+          `select h.late_checkout_charge::text as charge,
+                  h.business_date::text as bd,
+                  r.agreed_rate::text as nightly
+             from hotels h
+             left join reservations r on r.id = $2
+            where h.id = $1`, [hotelId, stayId]);
         const amount = h[0]?.charge === null || h[0]?.charge === undefined
           ? null : Number(h[0].charge);
         if (amount !== null && amount > 0) {
-          const rate = Number(h[0]!.tax);
-          const tax = Math.round(amount * rate) / 100;
           await client.query(
             `insert into folio_postings
                (hotel_id, folio_id, business_date, category, description,
                 amount, tax_rate, tax_amount, source_type, posted_by)
-             select $1, f.id, $2::date, 'misc', 'Late check-out',
-                    $3, $4, $5, 'front_desk', $6
+             select $1::uuid, f.id, $2::date, 'misc', 'Late check-out',
+                    $3::numeric, t.rate,
+                    round($3::numeric * t.rate / 100.0, 2),
+                    'front_desk', $4::uuid
                from folios f
-              where f.reservation_id = $7 and f.status = 'open'
+              cross join (select app.gst_rate($1,'room',$6::numeric) as rate) t
+              where f.reservation_id = $5 and f.status = 'open'
               limit 1`,
-            [hotelId, h[0]!.bd, amount, rate, tax, session.staffId, stayId]);
+            [hotelId, h[0]!.bd, amount, session.staffId, stayId,
+             Number(h[0]?.nightly ?? amount)]);
         }
       }
     }
@@ -1042,21 +1067,25 @@ operations.post("/:code/walk-ins", async (c) => {
       [hotelId, stayId],
     );
 
-    const { rows: rate } = await client.query<{ total: string }>(
-      "select (cgst_rate + sgst_rate)::text as total from hotels where id = $1",
-      [hotelId],
-    );
     const amount = Math.round(offered * nights * 100) / 100;
-    const taxRate = Number(rate[0]?.total ?? 5);
 
+    /* THE SLAB IS DECIDED PER NIGHT, NOT ON THE TOTAL.
+       A ₹4,000 room for three nights is ₹12,000 on this line and is
+       still a ₹4,000 room. Passing the total to the rule would push a
+       perfectly ordinary walk-in over the ₹7,500 threshold on its third
+       night and bill it at 18% — the boundary being on the wrong side
+       of a multiplication, which is the kind of error that only shows
+       up in somebody's tax return. `offered` is the nightly rate. */
     await client.query(
       `insert into folio_postings
          (hotel_id, folio_id, business_date, category, description,
           amount, tax_rate, tax_amount)
-       values ($1,$2,$3,'room',$4,$5,$6,$7)`,
+       select $1::uuid, $2::uuid, $3::date, 'room', $4::text, $5::numeric,
+              t.rate, round($5::numeric * t.rate / 100.0, 2)
+         from (select app.gst_rate($1, 'room', $6::numeric) as rate) t`,
       [hotelId, folio[0]?.id, businessDate,
        `Room ${roomNumber} · ${nights} night${nights === 1 ? "" : "s"}`,
-       amount, taxRate, Math.round(amount * taxRate) / 100],
+       amount, offered],
     );
 
     return { ok: true, data: { id: stayId, reference: refRows[0]?.reference } };

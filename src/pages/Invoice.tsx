@@ -78,6 +78,47 @@ function Party({
   );
 }
 
+
+/* ── The rate-wise summary ────────────────────────────────────────────
+   A bill that carries one rate states it in the header and needs
+   nothing more. A bill that carries several has to break the tax down
+   BY RATE — that is what makes it a compliant document rather than a
+   total with a plausible-looking percentage beside it.
+
+   This became possible, and therefore necessary, when 067 made GST a
+   slab: a family in a ₹4,000 room and a party in a ₹9,000 suite settling
+   on one master folio produce exactly this bill.
+
+   Derived from the lines, which each carry the rate they were charged
+   at. Nothing here is stored, and nothing recalculates the tax — the
+   amounts are summed from what was posted. */
+interface RateBand {
+  rate: number;
+  taxable: number;
+  half: number;
+  tax: number;
+}
+
+function rateWise(lines: { taxRate: number; amount: number; taxAmount: number }[]): RateBand[] {
+  const bands = new Map<number, RateBand>();
+  for (const l of lines) {
+    const band = bands.get(l.taxRate)
+      ?? { rate: l.taxRate, taxable: 0, half: 0, tax: 0 };
+    band.taxable += l.amount;
+    band.tax += l.taxAmount;
+    bands.set(l.taxRate, band);
+  }
+  for (const b of bands.values()) {
+    b.taxable = Math.round(b.taxable * 100) / 100;
+    b.tax = Math.round(b.tax * 100) / 100;
+    /* Half of the tax, not half of the rate applied again — the halves
+       have to sum to what was posted, or the summary disagrees with the
+       total three rows below it. */
+    b.half = Math.round((b.tax / 2) * 100) / 100;
+  }
+  return [...bands.values()].sort((a, b) => a.rate - b.rate);
+}
+
 export default function InvoicePage() {
   const hotelId = useHotel();
   const params = useParams();
@@ -114,6 +155,9 @@ export default function InvoicePage() {
   }
 
   const isCreditNote = data.creditsInvoiceId !== null;
+  /* Derived on every render from the lines themselves — nothing to
+     keep in step, and nothing to be stale. */
+  const bands = rateWise(data.lines);
 
   return (
     <div className="bg-grey-100 print:bg-white min-h-screen py-6 print:py-0">
@@ -302,6 +346,43 @@ export default function InvoicePage() {
           </table>
         </section>
 
+        {/* ── Rate-wise, when the bill carries more than one ──── */}
+        {bands.length > 1 && (
+          <section className="mt-5">
+            <p className="text-2xs uppercase tracking-wide text-grey-500 mb-1.5">
+              Tax, rate by rate
+            </p>
+            <div className="overflow-x-auto">
+              <table className="text-sm w-full">
+                <thead>
+                  <tr className="border-b border-grey-300">
+                    <th className="text-left font-semibold py-1.5">GST rate</th>
+                    <th className="text-right font-semibold py-1.5">Taxable value</th>
+                    <th className="text-right font-semibold py-1.5">CGST</th>
+                    <th className="text-right font-semibold py-1.5">SGST</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {bands.map((b) => (
+                    <tr key={b.rate} className="border-b border-grey-200">
+                      <td className="py-1.5 tabular">{b.rate}%</td>
+                      <td className="py-1.5 text-right tabular">
+                        {moneyPrecise(isCreditNote ? -b.taxable : b.taxable)}
+                      </td>
+                      <td className="py-1.5 text-right tabular">
+                        {moneyPrecise(isCreditNote ? -b.half : b.half)}
+                      </td>
+                      <td className="py-1.5 text-right tabular">
+                        {moneyPrecise(isCreditNote ? -(b.tax - b.half) : b.tax - b.half)}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </section>
+        )}
+
         {/* ── Totals ───────────────────────────────────────────── */}
         <section className="flex justify-end mt-5">
           <table className="text-sm min-w-[300px]">
@@ -313,10 +394,18 @@ export default function InvoicePage() {
                 </td>
               </tr>
               {/* CGST and SGST as separate lines, with their rates. A
-                  combined "tax" figure is not a compliant invoice. */}
+                  combined "tax" figure is not a compliant invoice.
+
+                  THE RATE IS OMITTED WHEN THE LINES DISAGREE. Since 067
+                  one bill can carry a room at 5% and a suite at 18%, and
+                  `rate` is null in that case. Printing "CGST @ %" — or
+                  worse, an average — would state a rate nobody was
+                  charged. The rate-wise summary below carries it
+                  instead, which is what a mixed-rate GST invoice needs
+                  anyway. */}
               <tr>
                 <td className="py-1 pr-8 text-grey-700">
-                  CGST @ {data.cgst.rate}%
+                  CGST{data.cgst.rate === null ? "" : ` @ ${data.cgst.rate}%`}
                 </td>
                 <td className="py-1 text-right tabular">
                   {moneyPrecise(data.cgst.amount)}
@@ -324,7 +413,7 @@ export default function InvoicePage() {
               </tr>
               <tr className="border-b border-grey-300">
                 <td className="py-1 pb-2 pr-8 text-grey-700">
-                  SGST @ {data.sgst.rate}%
+                  SGST{data.sgst.rate === null ? "" : ` @ ${data.sgst.rate}%`}
                 </td>
                 <td className="py-1 pb-2 text-right tabular">
                   {moneyPrecise(data.sgst.amount)}

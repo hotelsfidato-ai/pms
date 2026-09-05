@@ -12,12 +12,16 @@ import type { Client } from "../db.ts";
 
    WHAT IS AND IS NOT DECIDED HERE
 
-   Nothing about tax is computed in this file. The CGST and SGST rates
-   come from the property, and the tax AMOUNT comes from the postings
-   that were made when the charges were raised. An invoice states what
-   was charged; it does not get a second opinion. If the invoice
+   Nothing about tax is computed in this file. Every rate and every
+   amount comes from the postings that were made when the charges were
+   raised, each carrying the rate it was charged at. An invoice states
+   what was charged; it does not get a second opinion. If the invoice
    recalculated tax and disagreed with the ledger, the ledger would be
    right and the guest would have the wrong document.
+
+   Since 067 one bill can hold more than one rate — a room under the
+   tariff threshold at 5% beside a suite above it at 18% — so the
+   header names a single rate only when the lines agree on one.
 
    PLACE OF SUPPLY IS THE HOTEL, ALWAYS
 
@@ -177,11 +181,13 @@ invoices.post("/:code/stays/:id/invoice", async (c) => {
 
     const businessDate = await businessDateFor(client, hotelId);
 
-    const { rows: hotel } = await client.query<{
-      state: string | null; cgst: string; sgst: string;
-    }>(
-      `select state, cgst_rate::text as cgst, sgst_rate::text as sgst
-         from hotels where id = $1`,
+    /* Only the state, now. This also selected `cgst_rate` and
+       `sgst_rate` and did nothing with them — the split below is
+       computed from the tax the postings actually carry, and has been
+       since it was written. Two dead columns that looked like the
+       source of the numbers under them. */
+    const { rows: hotel } = await client.query<{ state: string | null }>(
+      "select state from hotels where id = $1",
       [hotelId],
     );
 
@@ -245,6 +251,17 @@ invoices.post("/:code/stays/:id/invoice", async (c) => {
 
 /* ── Read one, with the lines it was made from ────────────────────── */
 
+
+/** Half of the invoice's tax rate, for the CGST and SGST columns of the
+    header — or null when the lines do not share one rate, because then
+    there is no single rate the header can honestly name. */
+function halfRate(lines: { tax_rate: string }[]): number | null {
+  const rates = new Set(lines.map((l) => Number(l.tax_rate)));
+  if (rates.size !== 1) return null;
+  const [only] = [...rates];
+  return Math.round((only! / 2) * 100) / 100;
+}
+
 invoices.get("/:code/invoices/:number{.+}", async (c) => {
   const body = await withSession(c.get("subject"), async (client) => {
     const hotelId = await hotelIdFor(client, c.req.param("code"));
@@ -267,7 +284,6 @@ invoices.get("/:code/invoices/:number{.+}", async (c) => {
               i.folio_id::text,
               h.name as hotel_name, h.address_line as hotel_address,
               h.city as hotel_city, h.state as hotel_state,
-              (h.cgst_rate)::text as cgst_rate, (h.sgst_rate)::text as sgst_rate,
               s.full_name as issued_by
          from invoices i
          join hotels h on h.id = i.hotel_id
@@ -336,8 +352,22 @@ invoices.get("/:code/invoices/:number{.+}", async (c) => {
           date: l.business_date,
         })),
       taxableValue: Number(i["taxable_value"]),
-      cgst: { rate: Number(i["cgst_rate"]), amount: Number(i["cgst_total"]) },
-      sgst: { rate: Number(i["sgst_rate"]), amount: Number(i["sgst_total"]) },
+      /* THE HEADER RATE COMES FROM THE LINES, OR IT IS NOT SHOWN.
+         This used to print `hotels.cgst_rate` and `hotels.sgst_rate` —
+         the property's single configured pair — beside totals summed
+         from postings that each carry their own rate. That was already
+         a second source of truth; since 067 it is also wrong in a way a
+         guest can see, because a bill can now hold a ₹4,000 room at 5%
+         and a ₹9,000 suite at 18%.
+
+         One rate across every line is the ordinary case and is shown.
+         Where they differ there is no single rate to name, and a GST
+         invoice states the rate-wise breakdown instead — which the
+         lines above already carry, each with its own. Null here, and
+         the document shows the split rather than inventing an average
+         nobody was charged. */
+      cgst: { rate: halfRate(lines), amount: Number(i["cgst_total"]) },
+      sgst: { rate: halfRate(lines), amount: Number(i["sgst_total"]) },
       taxTotal: Number(i["tax_total"]),
       total: Number(i["total"]),
       /* A credit note has these; a tax invoice does not. */

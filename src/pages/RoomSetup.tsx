@@ -15,6 +15,7 @@ import {
   amendFrontDesk,
   type RoomTypeSetup, type RoomSetup as Room, type FrontDeskSettings,
 } from "@/data/repositories";
+import { TaxRulesCard } from "@/components/flows/TaxRulesCard";
 
 /* ══════════════════════════════════════════════════════════════════
    THE HOUSE
@@ -157,6 +158,13 @@ export default function RoomSetupPage() {
           </Button>
         </CardBody>
       </Card>
+
+      {/* ── GST ────────────────────────────────────
+          Beside the hours and the charges, because it is the same
+          question: what does this property sell, and on what terms.
+          The till reads these rules too — there is not a second screen
+          for the restaurant, which is how the two used to disagree. */}
+      <TaxRulesCard hotelId={hotelId} />
 
       {/* ── Types ────────────────────────────────────────────────── */}
       <section className="@container">

@@ -6,7 +6,7 @@ Every entry here cost something. Read it before you repeat it.
 
 ## Ten faults that repeat
 
-147 entries below is a reference, not a reading list. These are the patterns
+152 entries below is a reference, not a reading list. These are the patterns
 that have recurred, with the count and the check that would have caught each.
 **If you read nothing else here, read this.**
 
@@ -3030,6 +3030,93 @@ August while every number under it was September.
 rule is that a number is derived or it is a dash. A hardcoded date does
 not even fail loudly — it is right once, and wrong quietly forever
 after.
+
+### 148 · A SECURITY DEFINER that could not escape its own policy
+
+Sign-in broke on the live database. Every read of `staff` died with
+`stack depth limit exceeded`, hundreds of frames of `is_group_admin`.
+
+`staff_admin_read` is a policy ON staff whose predicate is
+`app.is_group_admin()`, and that function reads staff. 027 knew about
+the cycle and answered it with SECURITY DEFINER, writing "running as
+owner bypasses the policy and ends the loop."
+
+**That sentence was true when written and stopped being true later.** A
+table owner bypasses its own policies only until somebody says
+`force row level security` — which this project says on every
+hotel-scoped table. The owner, `pms_migrate`, is not a superuser, so the
+definer had no escape.
+
+**Why no gate saw it:** `db/tests/run.sh` applies migrations as
+`postgres`, so in the scratch database every function is owned by a
+SUPERUSER, and a superuser bypasses RLS whatever FORCE says. 419
+assertions green, nine of them about isolation, while sign-in was dead.
+
+A test environment that differs from production in a privilege still
+reports on privileges with total confidence.
+
+### 149 · A test that was a coin flip, and the wrong thing I blamed
+
+`db/tests/suite.sql` picked its fixture staff with
+
+```sql
+select id into v_staff from staff order by id limit 1;
+```
+
+Ids are `gen_random_uuid()`. Two of the four fixture staff are clerks
+with access to one property each, so "the lowest id" refused about half
+the time with *"Staff X has no access to hotel Y"* — which reads as a
+broken RLS policy, and whose pass reads as proof there is none.
+
+**I nearly committed the wrong cause.** Two runs differed, the visible
+difference between the harnesses was `PGCLIENTENCODING`, and one sample
+each said encoding was it. I had written the explanation into a comment
+before testing it again. Two samples of a coin flip will correlate with
+whatever you changed between them.
+
+**A difference that appears once is not a finding.** It took eight runs
+of the same commit to be sure, and the fix is `where email = ...`.
+
+### 150 · Four tests that only passed after 2pm
+
+The identity tests check a guest in and assert things about passports.
+Migration 063 gave the front desk an opinion about the arrival hour, and
+the fixture property opens at 14:00 — so run before then, every check-in
+is early, and four tests about documents fail complaining about arrival
+times.
+
+One of them kept PASSING: it asserts the refusal mentions a *"reason"*,
+and *"an early arrival needs a reason"* says exactly that. Green for the
+wrong cause is the failure mode that hides.
+
+### 151 · A verifier that called a sound backup a lost hotel
+
+`verify-backup.sh` asserted the demo's figures — three properties, 83
+reservations, ₹4,19,578.76 — and decided whether to apply them by asking
+whether a hotel coded 5EL existed. **5EL is now the real property.** So
+it compared a working hotel against a demo's numbers and printed
+
+> RESTORING THIS FILE WOULD NOT GIVE YOU YOUR HOTEL BACK.
+
+over a backup that was perfectly sound. That is the worst thing a
+verifier can do: it teaches people to disregard it.
+
+The deeper fault was asserting CONSTANTS. It now compares the restore
+against the SOURCE, table by table and to the paisa — a question with an
+answer on the demo, on an empty database, and on a hotel with six real
+bookings, that never needs editing when the data changes.
+
+### 152 · A VALUES list infers parameter types; a SELECT does not
+
+Converting `insert ... values ($1,$2,$3,...)` to
+`insert ... select $1,$2,$3,... from (select app.gst_rate(...)) t`
+so the rate could be derived in the same statement dropped every
+parameter's type inference — a VALUES list takes them from the target
+columns, a SELECT has nothing to take them from.
+
+Surfaced as `500 · Something went wrong` on the walk-in, three layers
+from the cast that was missing. Every converted statement now spells out
+`$1::uuid`, `$3::date`, `$5::numeric`.
 
 ## Verification traps
 

@@ -706,15 +706,41 @@ till.post("/:code/till/orders/:id/lines", async (c) => {
     }
 
     const { rows: item } = await client.query<{
-      name: string; price: string; tax_rate: string; is_active: boolean;
+      name: string; price: string; tax_rate: string | null; is_active: boolean;
       off_until: string | null; off_reason: string | null;
-      variation_count: string;
+      tax_kind: string; variation_count: string;
     }>(
-      `select i.name, i.price::text, i.tax_rate::text, i.is_active,
+      /* THE ITEM'S OWN RATE, OR THE OUTLET'S RULE.
+         `pos_menu_items.tax_rate` was `not null default 5.00` — a
+         shipped tax rate, in a project whose first rule is that nothing
+         ships a price. Every item created through the interface got 5%
+         whether or not anybody had thought about it, and a bar built on
+         this schema would have billed its whisky at the restaurant's
+         rate without a word.
+
+         Null now means "follow the outlet", which is what almost every
+         item wants; an explicit rate remains for the real exception,
+         bottled water on a food bill being the standard one. Resolved
+         HERE, in the one place a line is written, so the two cannot
+         disagree — and it is COPIED onto the line, so changing the rule
+         next month does not re-tax a bill printed today.
+
+         An outlet whose kind has no rule raises, and the refusal below
+         turns that into a sentence a waiter can act on. That is how the
+         bar stays honest until the owner sets its rate. */
+      `select i.name, i.price::text, i.is_active,
               i.off_until::text, i.off_reason,
+              coalesce(c.tax_kind, 'other') as tax_kind,
+              coalesce(
+                i.tax_rate,
+                app.gst_rate_or_null(i.hotel_id, coalesce(c.tax_kind, 'other'),
+                                     i.price)
+              )::text as tax_rate,
               (select count(*)::text from pos_item_variations v
                 where v.item_id = i.id and v.is_active) as variation_count
-         from pos_menu_items i where i.id = $1 and i.hotel_id = $2`,
+         from pos_menu_items i
+         join pos_menu_categories c on c.id = i.category_id
+        where i.id = $1 and i.hotel_id = $2`,
       [input.itemId, hotelId],
     );
     if (!item[0]) return refuse("No such item on the menu.");
@@ -729,6 +755,22 @@ till.post("/:code/till/orders/:id/lines", async (c) => {
       return refuse(
         `${item[0].name} is off${item[0].off_reason ? ` — ${item[0].off_reason}` : ""}. ` +
         `Back after ${back}.`);
+    }
+
+    /* No rate, and no rule that covers it. Refused in a sentence rather
+       than left to the database's exception, because the person holding
+       the tablet needs to know which heading to go and set — not that
+       something threw. This is the bar, on the day it opens and before
+       anybody has told the system what a peg is taxed at. */
+    if (item[0].tax_rate === null) {
+      const KIND: Record<string, string> = {
+        bar: "the bar", restaurant: "the restaurant",
+        banquet: "banqueting", other: "this category",
+      };
+      return refuse(
+        `${item[0].name} has no GST rate. Nothing is set for `
+        + `${KIND[item[0].tax_kind] ?? "this category"}, and a missing rate `
+        + `is not zero — a manager can set it in Settings → Tax.`);
     }
 
     /* THE PRICE COMES FROM THE VARIATION, NOT THE ITEM.

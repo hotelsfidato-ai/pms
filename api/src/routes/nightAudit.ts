@@ -114,6 +114,33 @@ export async function blockersFor(
     });
   }
 
+  /* ── Is there a rate to charge tax at? ─────────────────────────────
+     The audit posts a room charge for every occupied room, and every
+     one of those needs a GST rate. Until 067 that rate came from
+     `hotels.cgst_rate + sgst_rate` read once, with `?? 0` behind it —
+     so a property with no tax configured did not fail, it posted a
+     whole night's revenue at nought percent and reported success.
+
+     Asked HERE rather than discovered halfway through the run: an
+     audit that stops after charging nine rooms of eighteen leaves a
+     day that is neither open nor closed, and Rule 6 says a blocked
+     action is shown with its reason before it is attempted. */
+  const { rows: taxed } = await client.query<{ n: string }>(
+    `select count(*)::text as n from tax_rules
+      where hotel_id = $1 and kind = 'room'`,
+    [hotelId],
+  );
+  if (taxed[0]!.n === "0") {
+    blockers.push({
+      id: "no-tax-rule",
+      reason:
+        "This property has no GST rule for rooms, so a room charge has no " +
+        "rate to carry. Set it in Settings → Tax. A missing rate is not " +
+        "zero — the audit will not invent one.",
+      rooms: [],
+    });
+  }
+
   return blockers;
 }
 
@@ -214,12 +241,18 @@ nightAudit.post("/:code/night-audit/run", async (c) => {
     );
     const runId = run[0]!.id;
 
-    /* ── Tax, from the property ───────────────────────────────────── */
-    const { rows: tax } = await client.query<{ total: string }>(
-      "select (cgst_rate + sgst_rate)::text as total from hotels where id = $1",
-      [hotelId],
-    );
-    const taxRate = Number(tax[0]?.total ?? 0);
+    /* ── Tax is no longer a number this function holds ──────────────
+       It used to be: one rate for the whole run, read from the
+       property, with `?? 0` as its fallback. Two things were wrong
+       with that. A property with no rate configured posted the night
+       at zero percent rather than refusing — the blocker above now
+       catches that. And a single rate cannot express a slab: rooms at
+       or under ₹7,500 are 5% and above it 18%, so a house with a suite
+       and a standard room needs two different answers on the same
+       night.
+
+       `app.gst_rate()` is asked per posting, inside the statement that
+       writes it, so the amount and the rate cannot drift apart. */
 
     /* ── One night's room charge, per in-house stay ────────────────── */
     const { rows: stays } = await client.query<{
@@ -283,19 +316,24 @@ nightAudit.post("/:code/night-audit/run", async (c) => {
       }
 
       const amount = Number(stay.rate);
-      const taxAmount = Math.round(amount * taxRate) / 100;
 
       await client.query(
+        /* The rate and the tax it produces are BOTH derived here, from
+           this room's own charge. Computing the rate in TypeScript and
+           the amount in SQL is how the two stop agreeing. */
         `insert into folio_postings
            (hotel_id, folio_id, reservation_id, business_date, category,
             description, amount, tax_rate, tax_amount, source_type, posted_by)
-         values ($1,$2,$3,$4::date,'room',$5,$6,$7,$8,'night_audit',
-                 app.current_user_id())`,
+         select $1::uuid, $2::uuid, $3::uuid, $4::date, 'room',
+                $5::text, $6::numeric,
+                t.rate, round($6::numeric * t.rate / 100.0, 2),
+                'night_audit', app.current_user_id()
+           from (select app.gst_rate($1, 'room', $6::numeric) as rate) t`,
         [hotelId, stay.folio_id, stay.reservation_id, businessDate,
          /* The room number is on every line, and it has to be: a master
             folio holding twelve of these is unreadable otherwise. */
          `Room ${stay.room} · 1 night`,
-         amount, taxRate, taxAmount],
+         amount],
       );
 
       roomsPosted += 1;
@@ -317,6 +355,7 @@ nightAudit.post("/:code/night-audit/run", async (c) => {
        they are counted separately below so the run can say which. */
     const { rows: missed } = await client.query<{
       id: string; folio_id: string | null; retention: string | null;
+      agreed_rate: string | null;
     }>(
       `update reservations r
           set status = 'no_show'
@@ -327,7 +366,12 @@ nightAudit.post("/:code/night-audit/run", async (c) => {
                 (select f.id::text from folios f
                   where f.reservation_id = r.id
                   order by f.opened_at limit 1) as folio_id,
-                app.retention_for(r.id, 'no_show')::text as retention`,
+                app.retention_for(r.id, 'no_show')::text as retention,
+                /* The room's OWN nightly rate, not the retention. See
+                   the posting below: the slab is decided by what the
+                   accommodation was worth, not by what is being kept
+                   of it. */
+                r.agreed_rate::text as agreed_rate`,
       [hotelId, businessDate],
     );
     const noShows = missed.length;
@@ -356,15 +400,23 @@ nightAudit.post("/:code/night-audit/run", async (c) => {
          No idempotency key: the update above matches `status =
          'confirmed'` and has already moved these rows to `no_show`,
          so a second run of the audit selects none of them. */
-      const retTax = Math.round(amount * taxRate) / 100;
+      /* THE SLAB IS DECIDED BY THE ROOM, NOT BY THE RETENTION.
+         A ₹9,000 suite held on a 25% term retains ₹2,250. Asking the
+         rule about ₹2,250 answers 5%; asking it about the ₹9,000 the
+         charge is ancillary TO answers 18%, which is the rate the
+         accommodation would have carried and therefore the rate this
+         carries. Circular 178/10/2022 again: ancillary to the
+         principal supply, at the principal supply's rate. */
       await client.query(
         `insert into folio_postings
            (hotel_id, folio_id, business_date, category, description,
             amount, tax_rate, tax_amount, source_type, posted_by)
-         values ($1,$2,$3::date,'misc',$4,$5,$6,$7,'night_audit',
-                 app.current_user_id())`,
+         select $1::uuid, $2::uuid, $3::date, 'misc', $4::text, $5::numeric,
+                t.rate, round($5::numeric * t.rate / 100.0, 2),
+                'night_audit', app.current_user_id()
+           from (select app.gst_rate($1, 'room', $6::numeric) as rate) t`,
         [hotelId, m.folio_id, businessDate,
-         "Retention — no-show", amount, taxRate, retTax],
+         "Retention — no-show", amount, Number(m.agreed_rate ?? 0)],
       );
       retained += amount;
     }

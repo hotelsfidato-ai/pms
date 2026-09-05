@@ -85,13 +85,22 @@ dim "   $(ls "$ROOT"/db/migrations/*.sql | wc -l | tr -d ' ') migrations applied
 # rows in, which reads like a loader bug and is a missing fixture.
 #
 # `run.sh` applies these in the same order for the same reason.
-for f in "$ROOT/db/tests/harness.sql" "$ROOT/db/tests/suite.sql"; do
-  if ! out=$("$PSQL" $S -d "$DB" -q -v ON_ERROR_STOP=1 -f "$f" 2>&1); then
-    red "  x $(basename "$f") failed"
-    echo "$out" | grep -m1 -iE "(ERROR|FATAL):" | sed 's/^/      /'
-    exit 1
-  fi
-done
+# Both files in ONE psql invocation, the same way run.sh has always done it.
+# Two harnesses that run the same files differently will eventually disagree
+# about whether the code works, and the one that is wrong is whichever you ran
+# second. There is no need for them to differ, so they no longer do.
+#
+# (This split was briefly blamed for a failure that was really a coin flip in
+# suite.sql -- `select id into v_staff from staff order by id limit 1` over
+# random uuids. Two samples of a coin flip correlate with whatever you changed
+# between them; the real fix is at that line, and it took eight runs to be
+# sure. Keeping the single invocation anyway, on the consistency argument
+# above.)
+if ! out=$("$PSQL" $S -d "$DB" -q -v ON_ERROR_STOP=1              -f "$ROOT/db/tests/harness.sql"              -f "$ROOT/db/tests/suite.sql" 2>&1); then
+  red "  x the fixtures failed to load"
+  echo "$out" | grep -m1 -iE "(ERROR|FATAL):" | sed 's/^/      /'
+  exit 1
+fi
 dim "   fixtures seeded"
 
 # Local sign-in identities. NOT a migration — db/dev/dev-identities.sql says

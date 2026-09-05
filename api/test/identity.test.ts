@@ -170,11 +170,30 @@ async function arrivalAndRoom(): Promise<{ stay: string; room: string; guest: st
 
 /* ── Capture is derived, not asserted ─────────────────────────────── */
 
+/* WHY EVERY CHECK-IN HERE CARRIES AN ARRIVAL REASON
+
+   These tests are about identity documents. The arrival hour is
+   incidental to them — but 063 gave the front desk an opinion about it,
+   and the fixture property opens at 14:00. Run the suite at 13:31 and
+   every check-in below is an EARLY one, refused for want of a reason,
+   and four tests about passports fail complaining about arrival times.
+
+   Worse, one of them kept passing: it asserts the refusal mentions a
+   "reason", and "an early arrival needs a reason" says exactly that. It
+   was green for the wrong cause, which is the failure mode that hides.
+
+   A test whose result depends on the wall clock is a test that will
+   disagree with itself. The reason is stated here so the arrival hour
+   stops being a variable — the property still refuses an unexplained
+   early arrival, and `test/frontDesk.test.ts` is where that is proved. */
+const EARLY = "Identity fixture — arrival hour is not what these test";
+
 describe("check-in will not accept a claim in place of a document", () => {
   it("refuses a document type with no number", async () => {
     const { stay, room } = await arrivalAndRoom();
     const res = await call(`/PUN/stays/${stay}/check-in`, "POST", {
       roomNumber: room,
+      earlyReason: EARLY,
       identity: { idType: "passport" },
     });
 
@@ -190,6 +209,7 @@ describe("check-in will not accept a claim in place of a document", () => {
     const { stay, room } = await arrivalAndRoom();
     const res = await call(`/PUN/stays/${stay}/check-in`, "POST", {
       roomNumber: room,
+      earlyReason: EARLY,
     });
     expect(res.status).toBe(409);
     expect((await res.json() as { reason: string }).reason).toMatch(/reason/i);
@@ -201,6 +221,7 @@ describe("check-in will not accept a claim in place of a document", () => {
     const { stay, room, guest } = await arrivalAndRoom();
     const res = await call(`/PUN/stays/${stay}/check-in`, "POST", {
       roomNumber: room,
+      earlyReason: EARLY,
       idSkipReason: `${tag} scanner offline`,
     });
     expect(res.status).toBeLessThan(400);
@@ -229,6 +250,7 @@ describe("a captured document reaches the database", () => {
 
     const res = await call(`/PUN/stays/${stay}/check-in`, "POST", {
       roomNumber: room,
+      earlyReason: EARLY,
       identity: {
         idType: "passport",
         idNumber: `P${process.pid}`,
@@ -307,6 +329,7 @@ describe("a document can be corrected", () => {
 
     await call(`/PUN/stays/${stay}/check-in`, "POST", {
       roomNumber: room,
+      earlyReason: EARLY,
       identity: {
         idType: "passport", idNumber: `R${process.pid}`,
         nationality: "US", visaNumber: "OLD-VISA",

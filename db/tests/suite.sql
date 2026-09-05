@@ -30,6 +30,21 @@ select s.id, h.id, 'front_desk' from staff s, hotels h
 select app.bulk_create_rooms((select id from hotels where code='AGR'),'STD',1::smallint,101,110);
 select app.bulk_create_rooms((select id from hotels where code='PUN'),'STD',1::smallint,201,210);
 
+-- A property with no GST rule cannot post a room charge — app.gst_rate()
+-- raises rather than billing at nought, and the night audit refuses to open a
+-- run at all. That is the point of 067, and it means a fixture property needs
+-- the same thing a real one does. Without this the audit tests fail with
+-- "This property has no GST rule for rooms", which is the system working.
+insert into tax_rules (hotel_id, kind, over_amount, rate, note)
+select h.id, v.kind, v.over_amount, v.rate, v.note
+  from hotels h,
+       (values ('room',       0::numeric,    5::numeric, 'At or under the threshold'),
+               ('room',       7500::numeric,18::numeric, 'Above the threshold'),
+               ('restaurant', 0::numeric,    5::numeric, 'Food and soft drink')
+       ) as v(kind, over_amount, rate, note)
+ where h.code in ('AGR','PUN')
+on conflict (hotel_id, kind, over_amount) do nothing;
+
 insert into guests (full_name, phone) values ('Fixture Guest','9000000001')
 on conflict do nothing;
 
@@ -3589,8 +3604,22 @@ declare
   v_res uuid; v_folio uuid; v_shift uuid; v_second uuid; v_post bigint;
   n int; e numeric; d date := date '2026-08-12';
 begin
-  select id into v_staff from staff order by id limit 1;
-  select id into v_other from staff order by id desc limit 1;
+  -- ⚠ THIS USED TO BE `select id into v_staff from staff order by id limit 1`.
+  --   Staff ids are gen_random_uuid(), so "the lowest id" is a COIN FLIP. Two
+  --   of the four fixture staff are clerks with access to one property each,
+  --   and picking one of those made app.assert_staff_has_hotel refuse:
+  --
+  --     Staff <uuid> has no access to hotel <uuid>
+  --         -- cannot be recorded on room_assignments
+  --
+  --   The suite passed about half the time. A failure looked like a broken
+  --   RLS policy, and a pass looked like proof there was none. Two runs of
+  --   the same commit disagreeing is the tell, and it cost most of an
+  --   afternoon: the first thing it was blamed on was PGCLIENTENCODING,
+  --   because two samples of a coin flip will happily correlate with
+  --   whatever you changed between them.
+  select id into v_staff from staff where email = 'owner@fidato.in';
+  select id into v_other from staff where email = 'agra@fidato.in';
 
   insert into hotels (code, name, city, timezone)
   values ('CSH', 'Cashier fixture', 'Akkalkot', 'Asia/Kolkata')
@@ -3759,7 +3788,7 @@ declare
   v_other_hall uuid; v_ev uuid; v_second uuid; v_folio uuid; v_pkg uuid;
   n int; t numeric; u text; d date := date '2026-11-14';
 begin
-  select id into v_gm from staff order by id limit 1;
+  select id into v_gm from staff where email = 'owner@fidato.in';
 
   insert into hotels (code, name, city, timezone)
   values ('BQT', 'Banquet fixture', 'Akkalkot', 'Asia/Kolkata')
@@ -3945,7 +3974,7 @@ declare
   v_hotel uuid; v_staff uuid; v_type uuid; v_guest uuid; v_res uuid;
   n int; b boolean;
 begin
-  select id into v_staff from staff order by id limit 1;
+  select id into v_staff from staff where email = 'owner@fidato.in';
 
   insert into hotels (code, name, city, timezone, check_in_time, check_out_time)
   values ('ELT', 'Early late fixture', 'Akkalkot', 'Asia/Kolkata',
@@ -4049,7 +4078,7 @@ declare
   v_r1 uuid; v_r2 uuid;
   n int; t text; d date := date '2026-08-10';
 begin
-  select id into v_staff from staff order by id limit 1;
+  select id into v_staff from staff where email = 'owner@fidato.in';
 
   insert into hotels (code, name, city, timezone)
   values ('XCH', 'Exchange fixture', 'Akkalkot', 'Asia/Kolkata')
@@ -4232,4 +4261,81 @@ begin
   perform app.delete_property('TD2');
   select count(*) into n from hotels where code = 'TD2';
   perform test.ok('delete property','the fixture does not outlive the test', n = 0);
+end $$;
+
+-- ═══════════════════════════════════════════════════════════════════════════
+-- GST AS A RULE, NOT A CONSTANT (067)
+-- ═══════════════════════════════════════════════════════════════════════════
+-- The boundary is the whole point. "Above 7,500" means 7,500 itself is the
+-- lower rate, and a rupee more is not — get that wrong and every suite in the
+-- house is taxed at the wrong rate in a way nobody notices until a return is
+-- filed.
+do $$
+declare
+  h uuid;
+begin
+  -- Its OWN property. An earlier draft borrowed AGR and deleted its rules at
+  -- the end, which left the shared fixture unable to post a room charge — and
+  -- the failure landed in the night-audit tests, three files away, reading as
+  -- a bug in the audit. A test that reaches into shared state has to put it
+  -- back exactly, and the reliable way to do that is not to reach.
+  perform app.provision_property_unchecked(
+    'TAX','Tax fixture','Nowhere','MH','27AAAAA0000A1Z5');
+  select id into h from hotels where code = 'TAX';
+
+  perform test.raises('tax','an unset kind refuses rather than returning zero',
+    format($q$select app.gst_rate(%L,'room',4000)$q$, h));
+
+  insert into tax_rules (hotel_id, kind, over_amount, rate) values
+    (h, 'room', 0,    5),
+    (h, 'room', 7500, 18),
+    (h, 'restaurant', 0, 5);
+
+  perform test.ok('tax','a zero-value line still resolves to the base rate',
+    app.gst_rate(h, 'room', 0) = 5);
+  perform test.ok('tax','an ordinary room is the lower band',
+    app.gst_rate(h, 'room', 4099) = 5);
+  perform test.ok('tax','exactly the threshold is still the lower band',
+    app.gst_rate(h, 'room', 7500) = 5);
+  perform test.ok('tax','a rupee above it is the higher band',
+    app.gst_rate(h, 'room', 7500.01) = 18);
+  perform test.ok('tax','and so is everything further up',
+    app.gst_rate(h, 'room', 25000) = 18);
+  perform test.ok('tax','a different kind has its own answer',
+    app.gst_rate(h, 'restaurant', 25000) = 5);
+
+  -- The two faces of one lookup have to agree, or the screen and the posting
+  -- would disagree about the same supply.
+  perform test.ok('tax','the nullable face agrees with the raising one',
+    app.gst_rate_or_null(h, 'room', 9000) = app.gst_rate(h, 'room', 9000));
+  perform test.ok('tax','and returns null where the other raises',
+    app.gst_rate_or_null(h, 'bar', 450) is null);
+
+  -- One boundary, one rate. Two rows claiming different rates above the same
+  -- amount would make the answer depend on which row Postgres reached first.
+  perform test.raises('tax','two rates at one boundary are refused',
+    format($q$insert into tax_rules (hotel_id, kind, over_amount, rate)
+              values (%L,'room',7500,12)$q$, h), '23505');
+
+  perform test.raises('tax','a rate above 100 is refused',
+    format($q$insert into tax_rules (hotel_id, kind, over_amount, rate)
+              values (%L,'other',0,120)$q$, h), '23514');
+
+  perform test.raises('tax','a kind nobody sells is refused',
+    format($q$insert into tax_rules (hotel_id, kind, over_amount, rate)
+              values (%L,'parking',0,18)$q$, h), '23514');
+
+  -- ---------- the menu no longer ships a rate ------------------------------
+  -- `pos_menu_items.tax_rate` was `not null default 5.00`, which is a shipped
+  -- price in a project whose first rule is that nothing ships one.
+  perform test.ok('tax','a menu item may carry no rate of its own',
+    (select is_nullable from information_schema.columns
+      where table_name = 'pos_menu_items' and column_name = 'tax_rate') = 'YES');
+  perform test.ok('tax','and no longer defaults to five percent',
+    (select column_default from information_schema.columns
+      where table_name = 'pos_menu_items' and column_name = 'tax_rate') is null);
+
+  perform app.delete_property('TAX');
+  perform test.ok('tax','the fixture does not outlive the test',
+    not exists (select 1 from hotels where code = 'TAX'));
 end $$;

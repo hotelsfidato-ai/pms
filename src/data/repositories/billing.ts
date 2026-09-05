@@ -282,8 +282,12 @@ export interface InvoiceDetail {
   sacCode: string;
   lines: InvoiceLine[];
   taxableValue: number;
-  cgst: { rate: number; amount: number };
-  sgst: { rate: number; amount: number };
+  /** `rate` is null when the bill's lines do not share one rate — since
+      067 a single folio can hold a room at 5% beside a suite at 18%,
+      and there is then no single rate the header can honestly name.
+      The document shows a rate-wise summary instead. */
+  cgst: { rate: number | null; amount: number };
+  sgst: { rate: number | null; amount: number };
   taxTotal: number;
   total: number;
   creditsInvoiceId: string | null;
