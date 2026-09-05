@@ -10,7 +10,7 @@ import {
 import {
   downloadTemplate, parseCsv, fileProblem, type ImportSpec,
 } from "@/lib/importSpec";
-import { importMenu, type ImportReport } from "@/data/repositories";
+import { type ImportReport } from "@/data/repositories";
 
 /* ══════════════════════════════════════════════════════════════════
    A FILE, LOOKED AT BEFORE IT LANDS
@@ -35,10 +35,14 @@ import { importMenu, type ImportReport } from "@/data/repositories";
    ══════════════════════════════════════════════════════════════════ */
 
 export function ImportDialog({
-  hotelId, spec, open, onOpenChange, onImported,
+  spec, load, open, onOpenChange, onImported,
 }: {
-  hotelId: string;
   spec: ImportSpec;
+  /* The importer is passed IN. Three things are imported here -- a
+     menu, room types, rooms -- and they differ only in which endpoint
+     they post to. A dialog that knew one of them would have become
+     three dialogs, and the second one would have drifted. */
+  load: (rows: Record<string, string>[], dryRun: boolean) => Promise<ImportReport>;
   open: boolean;
   onOpenChange: (o: boolean) => void;
   onImported: () => void;
@@ -97,7 +101,7 @@ export function ImportDialog({
     }
 
     setBusy(true);
-    const dry = await importMenu(hotelId, parsed.rows, true);
+    const dry = await load(parsed.rows, true);
     setBusy(false);
     if (!dry.ok) { setProblem(dry.reason ?? "That file could not be read."); return; }
     setReport(dry);
@@ -106,7 +110,7 @@ export function ImportDialog({
   const apply = async () => {
     if (!rows || busy) return;
     setBusy(true);
-    const done = await importMenu(hotelId, rows, false);
+    const done = await load(rows, false);
     setBusy(false);
     if (!done.ok) return toast.error("Not imported", done.reason);
 

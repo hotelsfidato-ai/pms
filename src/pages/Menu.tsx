@@ -11,6 +11,7 @@ import {
 } from "@/components/ui";
 import {
   getMenu, addCategory, addItem, toggleItem, takeItemOff, putItemBack,
+  importMenu,
   type OffFor,
   type MenuCategory, type MenuItem,
 } from "@/data/repositories";
@@ -161,8 +162,8 @@ export default function MenuPage() {
       )}
       {importing && (
         <ImportDialog
-          hotelId={hotelId}
           spec={MENU_SPEC}
+          load={(rows, dry) => importMenu(hotelId, rows, dry)}
           open
           onOpenChange={(o) => { if (!o) setImporting(false); }}
           onImported={refresh}

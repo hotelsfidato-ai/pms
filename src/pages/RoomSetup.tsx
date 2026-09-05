@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useParams } from "react-router";
-import { Plus, Layers, BedDouble, Cigarette } from "lucide-react";
+import { Plus, Layers, BedDouble, Cigarette, Upload } from "lucide-react";
 import { cn } from "@/lib/cn";
 import { money } from "@/lib/format";
 import { useUi } from "@/lib/ui";
@@ -13,10 +13,13 @@ import {
 import {
   getRoomSetup, addRoomType, amendRoomType, addRoom, amendRoom,
   amendFrontDesk,
+  importSetup,
   type RoomTypeSetup, type RoomSetup as Room, type FrontDeskSettings,
 } from "@/data/repositories";
 import { TaxRulesCard } from "@/components/flows/TaxRulesCard";
 import { CommissioningCard } from "@/components/flows/CommissioningCard";
+import { ImportDialog } from "@/components/flows/ImportDialog";
+import { ROOM_TYPE_SPEC, ROOM_SPEC } from "@/lib/importSpec";
 
 /* ══════════════════════════════════════════════════════════════════
    THE HOUSE
@@ -50,6 +53,8 @@ export default function RoomSetupPage() {
   const [addingType, setAddingType] = useState(false);
   const [editingType, setEditingType] = useState<RoomTypeSetup | null>(null);
   const [addingRoom, setAddingRoom] = useState(false);
+  const [importing, setImporting] =
+    useState<"room-types" | "rooms" | null>(null);
   const [editingRoom, setEditingRoom] = useState<Room | null>(null);
   const [editingDesk, setEditingDesk] = useState(false);
 
@@ -101,6 +106,13 @@ export default function RoomSetupPage() {
         }
         actions={
           <div className="flex flex-wrap gap-2">
+            {/* A new property needs eighteen rooms before it can sell
+                one, and eighteen visits to a dialog is how somebody
+                gives up halfway and leaves a house half-entered. */}
+            <Button variant="secondary" className="h-11"
+                    onClick={() => setImporting("room-types")}>
+              <Upload className="size-4" /> Import
+            </Button>
             <Button variant="secondary" className="h-11"
                     onClick={() => setAddingType(true)}>
               <Layers className="size-4" /> Add a room type
@@ -286,6 +298,24 @@ export default function RoomSetupPage() {
         <RoomDialog hotelId={hotelId} room={editingRoom} types={types}
           onClose={() => setEditingRoom(null)}
           onDone={() => { setEditingRoom(null); refresh(); }} />
+      )}
+      {importing && (
+        <ImportDialog
+          spec={importing === "room-types" ? ROOM_TYPE_SPEC : ROOM_SPEC}
+          load={(rows, dry) => importSetup(hotelId, importing, rows, dry)}
+          open
+          onOpenChange={(o) => { if (!o) setImporting(null); }}
+          onImported={() => {
+            refresh();
+            /* Room types first, then the rooms that are of them --
+               that is the order the data has to arrive in, and it is
+               the commonest thing to get wrong. Offering the second
+               file straight after the first is cheaper than a note
+               saying to come back. */
+            if (importing === "room-types") setImporting("rooms");
+            else setImporting(null);
+          }}
+        />
       )}
     </Page>
   );

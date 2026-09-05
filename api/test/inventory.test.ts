@@ -543,3 +543,125 @@ describe("what a property still needs", () => {
     expect(tariffs.detail).toMatch(/not a free one/i);
   });
 });
+
+/* ══════════════════════════════════════════════════════════════════
+   ROOM TYPES AND ROOMS, FROM A FILE
+
+   A new property needs eighteen rooms before it can sell one, and
+   eighteen visits to a dialog is how somebody gives up halfway and
+   leaves a house half-entered.
+
+   Two rules are worth holding still. A TARIFF MAY BE BLANK — unpriced
+   is a real state and the screens already show it as a dash, so
+   somebody who knows their room list before they have agreed a rate can
+   still import it. Everything else rejects rather than being repaired.
+   And A ROOM'S TYPE MUST ALREADY EXIST: creating one implicitly from a
+   code in a spreadsheet is how a typo becomes a room type called "SUPP"
+   holding one room nobody can find.
+   ══════════════════════════════════════════════════════════════════ */
+
+describe("importing rooms from a file", () => {
+  const tag = `IMP${process.pid}`.slice(0, 6).toUpperCase();
+
+  const send = (what: string, rows: Record<string, string>[], dryRun: boolean) =>
+    app.request(`/api/hotels/PUN/${what}/import`, {
+      method: "POST",
+      headers: {
+        "content-type": "application/json",
+        "x-dev-staff-id": ownerStaffId,
+      },
+      body: JSON.stringify({ rows, dryRun }),
+    });
+
+  type Report = {
+    verdicts: { name: string; action: string; detail: string }[];
+    creates: number; updates: number; rejected: number;
+  };
+
+  afterAll(async () => {
+    const db = await admin();
+    try {
+      await db.query(
+        `delete from rooms where hotel_id = (select id from hotels where code='PUN')
+           and number like $1`, [`${tag}%`]);
+      await db.query(
+        `delete from room_types where hotel_id = (select id from hotels where code='PUN')
+           and code = $1`, [tag]);
+    } finally {
+      await db.end();
+    }
+  });
+
+  it("imports an unpriced room type, and says what that means", async () => {
+    const body = (await (await send("room-types", [
+      { code: tag, name: "Import fixture", baseOccupancy: "2",
+        maxOccupancy: "3", rate: "" },
+    ], false)).json()) as Report;
+
+    expect(body.creates).toBe(1);
+    /* A blank tariff is the ONE field that may be blank, and the
+       verdict has to say what the consequence is rather than reporting
+       a silent success. */
+    expect(body.verdicts[0]!.detail).toMatch(/unpriced/i);
+
+    const db = await admin();
+    try {
+      const { rows } = await db.query<{ base_rate: string | null }>(
+        "select base_rate::text from room_types where code = $1", [tag]);
+      expect(rows[0]!.base_rate, "a blank tariff was stored as zero").toBeNull();
+    } finally {
+      await db.end();
+    }
+  });
+
+  it("refuses a maximum smaller than the base occupancy", async () => {
+    const body = (await (await send("room-types", [
+      { code: "XBAD", name: "Impossible", baseOccupancy: "4",
+        maxOccupancy: "2", rate: "100" },
+    ], true)).json()) as Report;
+    expect(body.rejected).toBe(1);
+    expect(body.verdicts[0]!.detail).toMatch(/fewer than/i);
+  });
+
+  it("refuses a room whose type does not exist, and names the ones that do", async () => {
+    const body = (await (await send("rooms", [
+      { number: `${tag}1`, typeCode: "NOPE" },
+    ], true)).json()) as Report;
+
+    expect(body.rejected).toBe(1);
+    /* Rule 6, and the practical half of it: "no such type" sends
+       somebody hunting. The codes that DO exist are the answer. */
+    expect(body.verdicts[0]!.detail).toMatch(/no room type "NOPE"/i);
+    expect(body.verdicts[0]!.detail).toMatch(/STD/);
+  });
+
+  it("creates rooms against a type that exists, and updates on a second pass", async () => {
+    const rows = [
+      { number: `${tag}1`, typeCode: tag, floor: "4" },
+      { number: `${tag}2`, typeCode: tag, floor: "4" },
+    ];
+
+    const first = (await (await send("rooms", rows, false)).json()) as Report;
+    expect(first.creates).toBe(2);
+
+    const second = (await (await send("rooms", rows, false)).json()) as Report;
+    expect(second.creates).toBe(0);
+    expect(second.updates, "the second import duplicated the rooms").toBe(2);
+  });
+
+  it("writes nothing on a dry run", async () => {
+    const db = await admin();
+    const before = await db.query<{ n: string }>(
+      "select count(*)::text as n from rooms where number like $1", [`${tag}%`]);
+    await db.end();
+
+    await send("rooms", [{ number: `${tag}9`, typeCode: tag }], true);
+
+    const db2 = await admin();
+    const after = await db2.query<{ n: string }>(
+      "select count(*)::text as n from rooms where number like $1", [`${tag}%`]);
+    await db2.end();
+
+    expect(after.rows[0]!.n).toBe(before.rows[0]!.n);
+  });
+});

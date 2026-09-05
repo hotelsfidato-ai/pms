@@ -1,4 +1,5 @@
 import { api, ApiError } from "@/lib/api";
+import type { ImportReport } from "./till";
 
 /* ══════════════════════════════════════════════════════════════════
    SETTING UP WHAT THE PROPERTY SELLS
@@ -262,5 +263,35 @@ export async function getCommissioning(
     return await api<Commissioning>(`/api/hotels/${hotelId}/commissioning`);
   } catch {
     return null;
+  }
+}
+
+
+/** Import room types, or rooms, from a file.
+
+    Same two-pass shape as the menu: a dry run that changes nothing and
+    reports what would happen, then the identical payload to apply. The
+    endpoint differs; the contract does not, which is why one dialog
+    serves all three. */
+export async function importSetup(
+  hotelId: string,
+  what: "room-types" | "rooms",
+  rows: Record<string, string>[],
+  dryRun: boolean,
+): Promise<ImportReport> {
+  try {
+    return await api<ImportReport>(
+      `/api/hotels/${hotelId}/${what}/import`,
+      { method: "POST", body: JSON.stringify({ rows, dryRun }) },
+    );
+  } catch (error) {
+    if (error instanceof ApiError) {
+      const p = error.body as { reason?: string } | undefined;
+      return {
+        ok: false, reason: p?.reason ?? error.message, dryRun,
+        verdicts: [], creates: 0, updates: 0, rejected: 0,
+      };
+    }
+    throw error;
   }
 }

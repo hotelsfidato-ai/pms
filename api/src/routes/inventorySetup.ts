@@ -314,6 +314,269 @@ inventorySetup.patch("/:code/front-desk", async (c) => {
 });
 
 
+
+/* ══════════════════════════════════════════════════════════════════
+   ROOM TYPES AND ROOMS, FROM A FILE
+
+   A new property needs eighteen rooms before it can sell one, and
+   eighteen visits to a dialog is how somebody gives up halfway and
+   leaves a house half-entered. Same shape as the menu import: a dry run
+   that changes nothing, then the same payload to apply.
+
+   THE TARIFF IS THE ONE FIELD THAT MAY BE BLANK. A room type with no
+   price is UNPRICED — it shows a dash and cannot be sold — and that is
+   a legitimate state to import, because somebody may know their room
+   list before they have agreed a rate. Every other required field
+   rejects the row rather than being filled in.
+
+   A ROOM'S TYPE MUST ALREADY EXIST. Creating one implicitly from a
+   three-letter code in a spreadsheet is how a typo becomes a room type
+   called "SUPP" holding one room that nobody can find.
+   ══════════════════════════════════════════════════════════════════ */
+
+interface SetupVerdict {
+  line: number;
+  name: string;
+  action: "create" | "update" | "rejected";
+  detail: string;
+}
+
+const num = (v: unknown): number | null => {
+  const t = String(v ?? "").trim().replace(/[,\s₹]/g, "");
+  if (t === "") return null;
+  const n = Number(t);
+  return Number.isFinite(n) ? n : NaN;
+};
+
+inventorySetup.post("/:code/room-types/import", async (c) => {
+  type Row = {
+    code?: string; name?: string; baseOccupancy?: string;
+    maxOccupancy?: string; rate?: string;
+    extraAdult?: string; extraChild?: string;
+  };
+  const input = await c.req.json<{ rows?: Row[]; dryRun?: boolean }>()
+    .catch(() => ({}) as { rows?: Row[]; dryRun?: boolean });
+
+  const rows = input.rows ?? [];
+  const dryRun = input.dryRun !== false;
+  if (rows.length === 0) {
+    return c.json(refuse("There are no rows in that file."), 409);
+  }
+  if (rows.length > 200) {
+    return c.json(refuse(
+      `That file has ${rows.length} rows. A property with two hundred room `
+      + "types is almost certainly a rooms file in the wrong place."), 409);
+  }
+
+  const result = await withSession(c.get("subject"), async (client) => {
+    const hotelId = await hotelFor(client, c.req.param("code"));
+    if (!hotelId) return null;
+
+    const { rows: have } = await client.query<{ code: string }>(
+      "select code from room_types where hotel_id = $1", [hotelId]);
+    const already = new Set(have.map((r) => r.code.toUpperCase()));
+
+    const verdicts: SetupVerdict[] = [];
+    const seen = new Set<string>();
+    const good: {
+      code: string; name: string; base: number; max: number;
+      rate: number | null; extraAdult: number | null; extraChild: number | null;
+    }[] = [];
+
+    rows.forEach((raw, i) => {
+      const line = i + 2;
+      const code = String(raw.code ?? "").trim().toUpperCase();
+      const name = String(raw.name ?? "").trim();
+      const reject = (detail: string) => {
+        verdicts.push({ line, name: code || name || "(blank)", action: "rejected", detail });
+      };
+
+      if (!code && !name) return;
+      if (!code) return reject("No code.");
+      if (!/^[A-Z0-9]{2,6}$/.test(code)) {
+        return reject(`"${code}" is not a short code — two to six letters or digits.`);
+      }
+      if (!name) return reject("No name.");
+
+      const base = num(raw.baseOccupancy);
+      const max = num(raw.maxOccupancy);
+      if (base === null) return reject("No Sleeps — how many does the tariff cover?");
+      if (max === null) return reject("No Maximum — the most the room may hold.");
+      if (Number.isNaN(base) || Number.isNaN(max) || base < 1 || max < 1) {
+        return reject("Sleeps and Maximum are whole numbers of people.");
+      }
+      if (max < base) return reject(`Maximum ${max} is fewer than Sleeps ${base}.`);
+
+      /* THE ONE FIELD THAT MAY BE BLANK. Unpriced is a real state and
+         the screens already show it as a dash. */
+      const rate = num(raw.rate);
+      if (rate !== null && (Number.isNaN(rate) || rate < 0)) {
+        return reject(`"${raw.rate}" is not a tariff.`);
+      }
+      const extraAdult = num(raw.extraAdult);
+      const extraChild = num(raw.extraChild);
+      if ((extraAdult !== null && Number.isNaN(extraAdult))
+          || (extraChild !== null && Number.isNaN(extraChild))) {
+        return reject("An extra-person rate must be a number, or blank.");
+      }
+
+      if (seen.has(code)) return reject(`"${code}" appears twice in this file.`);
+      seen.add(code);
+
+      verdicts.push({
+        line, name: `${code} · ${name}`,
+        action: already.has(code) ? "update" : "create",
+        detail: rate === null
+          ? "unpriced — shows a dash and cannot be sold"
+          : `sleeps ${base}, up to ${max}, ${rate}`,
+      });
+      good.push({ code, name, base, max, rate, extraAdult, extraChild });
+    });
+
+    const tally = {
+      creates: verdicts.filter((v) => v.action === "create").length,
+      updates: verdicts.filter((v) => v.action === "update").length,
+      rejected: verdicts.filter((v) => v.action === "rejected").length,
+    };
+    if (dryRun) return { ok: true as const, dryRun: true, verdicts, ...tally };
+
+    for (const t of good) {
+      await client.query(
+        `insert into room_types
+           (hotel_id, code, name, base_occupancy, max_occupancy,
+            base_rate, extra_adult_rate, extra_child_rate)
+         values ($1,$2,$3,$4,$5,$6,$7,$8)
+         on conflict (hotel_id, code) do update
+           set name             = excluded.name,
+               base_occupancy   = excluded.base_occupancy,
+               max_occupancy    = excluded.max_occupancy,
+               base_rate        = excluded.base_rate,
+               extra_adult_rate = excluded.extra_adult_rate,
+               extra_child_rate = excluded.extra_child_rate,
+               is_active        = true`,
+        [hotelId, t.code, t.name, t.base, t.max, t.rate,
+         t.extraAdult, t.extraChild],
+      );
+    }
+
+    return { ok: true as const, dryRun: false, verdicts, ...tally };
+  });
+
+  if (!result) return c.json({ error: "No such property." }, 404);
+  return c.json(result, "ok" in result && result.ok ? 200 : 409);
+});
+
+inventorySetup.post("/:code/rooms/import", async (c) => {
+  type Row = {
+    number?: string; typeCode?: string; floor?: string; smoking?: string;
+  };
+  const input = await c.req.json<{ rows?: Row[]; dryRun?: boolean }>()
+    .catch(() => ({}) as { rows?: Row[]; dryRun?: boolean });
+
+  const rows = input.rows ?? [];
+  const dryRun = input.dryRun !== false;
+  if (rows.length === 0) {
+    return c.json(refuse("There are no rows in that file."), 409);
+  }
+  if (rows.length > 1000) {
+    return c.json(refuse(
+      `That file has ${rows.length} rows. A thousand is the limit.`), 409);
+  }
+
+  const result = await withSession(c.get("subject"), async (client) => {
+    const hotelId = await hotelFor(client, c.req.param("code"));
+    if (!hotelId) return null;
+
+    const { rows: types } = await client.query<{ id: string; code: string }>(
+      "select id::text, code from room_types where hotel_id = $1", [hotelId]);
+    const typeByCode = new Map(types.map((t) => [t.code.toUpperCase(), t.id]));
+
+    const { rows: have } = await client.query<{ number: string }>(
+      "select number from rooms where hotel_id = $1", [hotelId]);
+    const already = new Set(have.map((r) => r.number));
+
+    const verdicts: SetupVerdict[] = [];
+    const seen = new Set<string>();
+    const good: {
+      number: string; typeId: string; floor: number | null; smoking: boolean;
+    }[] = [];
+
+    rows.forEach((raw, i) => {
+      const line = i + 2;
+      const number = String(raw.number ?? "").trim();
+      const typeCode = String(raw.typeCode ?? "").trim().toUpperCase();
+      const reject = (detail: string) => {
+        verdicts.push({ line, name: number || "(blank)", action: "rejected", detail });
+      };
+
+      if (!number && !typeCode) return;
+      if (!number) return reject("No room number.");
+      if (!typeCode) return reject("No type code.");
+
+      /* THE TYPE MUST ALREADY EXIST. Creating one implicitly from a
+         three-letter code is how a typo becomes a room type called
+         "SUPP" holding one room nobody can find. */
+      const typeId = typeByCode.get(typeCode);
+      if (!typeId) {
+        return reject(
+          `There is no room type "${typeCode}" at this property. `
+          + (types.length > 0
+              ? `It has ${types.map((t) => t.code).join(", ")}.`
+              : "Add the room types first."));
+      }
+
+      const floor = num(raw.floor);
+      if (floor !== null && Number.isNaN(floor)) {
+        return reject(`"${raw.floor}" is not a floor.`);
+      }
+
+      const smokingRaw = String(raw.smoking ?? "").trim().toLowerCase();
+      let smoking = false;
+      if (smokingRaw !== "") {
+        if (["yes", "y", "true", "1"].includes(smokingRaw)) smoking = true;
+        else if (!["no", "n", "false", "0"].includes(smokingRaw)) {
+          return reject(`"${raw.smoking}" is not yes or no.`);
+        }
+      }
+
+      if (seen.has(number)) return reject(`Room ${number} appears twice in this file.`);
+      seen.add(number);
+
+      verdicts.push({
+        line, name: number,
+        action: already.has(number) ? "update" : "create",
+        detail: `${typeCode}${floor === null ? "" : ` · floor ${floor}`}`,
+      });
+      good.push({ number, typeId, floor, smoking });
+    });
+
+    const tally = {
+      creates: verdicts.filter((v) => v.action === "create").length,
+      updates: verdicts.filter((v) => v.action === "update").length,
+      rejected: verdicts.filter((v) => v.action === "rejected").length,
+    };
+    if (dryRun) return { ok: true as const, dryRun: true, verdicts, ...tally };
+
+    for (const r of good) {
+      await client.query(
+        `insert into rooms (hotel_id, room_type_id, number, floor, smoking)
+         values ($1,$2,$3,$4,$5)
+         on conflict (hotel_id, number) do update
+           set room_type_id = excluded.room_type_id,
+               floor        = excluded.floor,
+               smoking      = excluded.smoking,
+               is_active    = true`,
+        [hotelId, r.typeId, r.number, r.floor, r.smoking],
+      );
+    }
+
+    return { ok: true as const, dryRun: false, verdicts, ...tally };
+  });
+
+  if (!result) return c.json({ error: "No such property." }, 404);
+  return c.json(result, "ok" in result && result.ok ? 200 : 409);
+});
+
 /* ══════════════════════════════════════════════════════════════════
    GST, IN ONE PLACE, FOR THE WHOLE PROPERTY
 
