@@ -6,7 +6,7 @@ Every entry here cost something. Read it before you repeat it.
 
 ## Ten faults that repeat
 
-154 entries below is a reference, not a reading list. These are the patterns
+155 entries below is a reference, not a reading list. These are the patterns
 that have recurred, with the count and the check that would have caught each.
 **If you read nothing else here, read this.**
 
@@ -3157,6 +3157,30 @@ have to be shown agreeing**, because the spec is not the only thing
 between them: the writer's quoting rules sit in the middle.
 
 The check now looks at the parsed cell, not the raw line.
+
+### 155 · The dev server was serving code that no longer existed
+
+A new card was wired into a screen, the typecheck passed, the endpoint
+returned the right JSON when called directly — and the card did not
+appear. No network request for it was made at all.
+
+The conclusion sitting there to be drawn was "the component is broken".
+It was not. **Vite was serving a stale copy of the file**: the edits
+were written by a script rather than an editor, and the watcher never
+saw them. Fetching the module the browser actually had settled it in one
+line:
+
+```js
+const t = await (await fetch('/src/pages/RoomSetup.tsx?t=' + Date.now())).text();
+t.includes('CommissioningCard')   // false
+```
+
+Restarting the dev server fixed it, with no change to the code.
+
+**Before debugging a component that will not render, check the browser
+has the code you wrote.** The sibling of defect 133 — a screenshot is
+not a measurement — and of the whole run.sh family: the thing you are
+looking at may not be the thing you changed.
 
 ## Verification traps
 

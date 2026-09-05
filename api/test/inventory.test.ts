@@ -450,3 +450,96 @@ describe("the tariff", () => {
     expect((body as { reason: string }).reason).toMatch(/will not fit|sleeps/i);
   });
 });
+
+/* ══════════════════════════════════════════════════════════════════
+   WHAT A PROPERTY STILL NEEDS
+
+   The checklist is DERIVED — no stored flag, nothing ticked by hand —
+   so the thing worth asserting is that each line answers the same
+   question the feature it guards answers. A property that says it can
+   take a booking must be able to take one.
+
+   The placeholder GSTIN is the check that matters most and the one
+   easiest to get wrong. `AAAAA0000A` is the standard dummy PAN, it
+   arrives through the seed template, and it PRINTS on the tax invoice
+   and the restaurant bill. Detected on the PAN block rather than the
+   whole string, so a different state code does not sneak one past.
+   ══════════════════════════════════════════════════════════════════ */
+
+describe("what a property still needs", () => {
+  const get = (code: string) =>
+    app.request(`/api/hotels/${code}/commissioning`, {
+      headers: { "x-dev-staff-id": ownerStaffId },
+    });
+
+  type Report = {
+    checks: { id: string; done: boolean; detail: string | null; blocking: boolean }[];
+    canTakeABooking: boolean;
+    blockedBy: string[];
+  };
+
+  const check = (r: Report, id: string) => r.checks.find((c) => c.id === id)!;
+
+  it("calls the seed's dummy GSTIN what it is", async () => {
+    /* AGR carries 09AAAAA0000A1Z5 from the fixture — a real-looking
+       number with the standard dummy PAN inside it. */
+    const body = (await (await get("AGR")).json()) as Report;
+    const gstin = check(body, "gstin");
+
+    expect(gstin.done, "the dummy GSTIN was accepted as real").toBe(false);
+    expect(gstin.blocking).toBe(true);
+    expect(gstin.detail).toMatch(/dummy/i);
+    /* It has to say WHERE it ends up, or somebody reads "GSTIN" and
+       assumes it is a form field nobody sees. */
+    expect(gstin.detail).toMatch(/invoice/i);
+  });
+
+  it("refuses to say a property can take a booking while it is blocking", async () => {
+    const body = (await (await get("AGR")).json()) as Report;
+    expect(body.canTakeABooking).toBe(false);
+    expect(body.blockedBy.length).toBeGreaterThan(0);
+  });
+
+  it("sees the GST rule the fixture actually has", async () => {
+    const body = (await (await get("AGR")).json()) as Report;
+    expect(check(body, "tax-rules").done).toBe(true);
+  });
+
+  it("notices when a rule is removed, without anything being re-ticked", async () => {
+    /* The point of deriving it. Take the rule away and the line goes
+       back on its own — a stored flag would still say it was settled. */
+    const db = await admin();
+    try {
+      await db.query(
+        `delete from tax_rules
+          where hotel_id = (select id from hotels where code = 'AGR')
+            and kind = 'room'`);
+
+      const gone = (await (await get("AGR")).json()) as Report;
+      expect(check(gone, "tax-rules").done).toBe(false);
+      expect(check(gone, "tax-rules").detail).toMatch(/night audit/i);
+
+      await db.query(
+        `insert into tax_rules (hotel_id, kind, over_amount, rate)
+         select id, 'room', 0, 5 from hotels where code = 'AGR'`);
+      await db.query(
+        `insert into tax_rules (hotel_id, kind, over_amount, rate)
+         select id, 'room', 7500, 18 from hotels where code = 'AGR'`);
+
+      const back = (await (await get("AGR")).json()) as Report;
+      expect(check(back, "tax-rules").done).toBe(true);
+    } finally {
+      await db.end();
+    }
+  });
+
+  it("counts an unpriced room type as unsellable rather than free", async () => {
+    const body = (await (await get("AGR")).json()) as Report;
+    const tariffs = check(body, "tariffs");
+    /* The fixture's four types have no base_rate, which is the correct
+       state for a property nobody has priced — and the checklist has to
+       say so rather than treating a dash as a decision. */
+    expect(tariffs.done).toBe(false);
+    expect(tariffs.detail).toMatch(/not a free one/i);
+  });
+});

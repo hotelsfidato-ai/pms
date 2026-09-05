@@ -16,6 +16,7 @@ import {
   type RoomTypeSetup, type RoomSetup as Room, type FrontDeskSettings,
 } from "@/data/repositories";
 import { TaxRulesCard } from "@/components/flows/TaxRulesCard";
+import { CommissioningCard } from "@/components/flows/CommissioningCard";
 
 /* ══════════════════════════════════════════════════════════════════
    THE HOUSE
@@ -111,6 +112,13 @@ export default function RoomSetupPage() {
           </div>
         }
       />
+
+      {/* ── What is still missing ──────────────────────────
+          First on the screen, because a property that cannot take a
+          booking should say so before it shows you its room list. It
+          removes itself once everything is settled, and comes back on
+          its own the moment a check stops being true. */}
+      <CommissioningCard hotelId={hotelId} />
 
       {/* ── The front desk's hours ───────────────────────────────
           063 gave the system an opinion about the hour a guest
