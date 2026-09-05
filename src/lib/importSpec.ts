@@ -128,6 +128,37 @@ export const ROOM_SPEC: ImportSpec = {
   ],
 };
 
+
+/* ── The store ────────────────────────────────────────────────────── */
+
+export const STOCK_SPEC: ImportSpec = {
+  what: "stock items",
+  filename: "stock-items-template",
+  columns: [
+    { header: "Item", field: "name", required: true,
+      note: "Basmati rice, Toilet soap, LPG cylinder." },
+    { header: "Counted in", field: "unit", required: true,
+      note: "kg, litre, piece, cylinder. Without a unit a quantity means "
+          + "nothing." },
+    { header: "Where it belongs", field: "category", required: false,
+      note: "Kitchen, Bar, Housekeeping, Maintenance. Groups the list; "
+          + "nothing depends on it." },
+    { header: "Warn below", field: "reorderLevel", required: false,
+      note: "Blank means no warning. Blank is NOT zero — zero would mean "
+          + "warn me once it has run out, which is much too late." },
+  ],
+  /* No price column, and that is the point. An item does not have a
+     price; a DELIVERY has a price. Importing a hundred items gives you a
+     hundred things with no quantity and no value, which is the correct
+     state until somebody receives something. */
+  examples: [
+    ["Basmati rice", "kg", "Kitchen", "20"],
+    ["Refined oil", "litre", "Kitchen", "10"],
+    ["Toilet soap", "piece", "Housekeeping", "50"],
+    ["LPG cylinder", "cylinder", "Kitchen", "2"],
+  ],
+};
+
 /* ── The template ─────────────────────────────────────────────────── */
 
 /**

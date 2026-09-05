@@ -3,6 +3,7 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useParams } from "react-router";
 import {
   Package, Plus, TrendingDown, TrendingUp, Trash2, Undo2, AlertTriangle,
+  Upload,
 } from "lucide-react";
 import { cn } from "@/lib/cn";
 import { money, dateShort } from "@/lib/format";
@@ -14,8 +15,11 @@ import {
 import {
   getStore, getStockHistory, addStockItem, recordStockMovement,
   reverseStockMovement,
+  importStockItems,
   type StockItem, type StockKind,
 } from "@/data/repositories";
+import { ImportDialog } from "@/components/flows/ImportDialog";
+import { STOCK_SPEC } from "@/lib/importSpec";
 
 /* ══════════════════════════════════════════════════════════════════
    THE STORE
@@ -54,6 +58,7 @@ export default function StoresPage() {
   const [adding, setAdding] = useState(false);
   const [moving, setMoving] = useState<{ item: StockItem; kind: StockKind } | null>(null);
   const [history, setHistory] = useState<StockItem | null>(null);
+  const [importing, setImporting] = useState(false);
 
   const q = useQuery({
     queryKey: ["stores", code],
@@ -93,9 +98,17 @@ export default function StoresPage() {
                   : " · nothing received yet, so nothing has a value")
         }
         actions={
-          <Button className="h-11" onClick={() => setAdding(true)}>
-            <Plus className="size-4" /> Add an item
-          </Button>
+          <div className="flex flex-wrap gap-2">
+            {/* A store is a hundred lines long. The same argument the
+                menu import is built on. */}
+            <Button variant="secondary" className="h-11"
+                    onClick={() => setImporting(true)}>
+              <Upload className="size-4" /> Import
+            </Button>
+            <Button className="h-11" onClick={() => setAdding(true)}>
+              <Plus className="size-4" /> Add an item
+            </Button>
+          </div>
         }
       />
 
@@ -148,6 +161,15 @@ export default function StoresPage() {
         ))
       )}
 
+      {importing && (
+        <ImportDialog
+          spec={STOCK_SPEC}
+          load={(rows, dry) => importStockItems(code, rows, dry)}
+          open
+          onOpenChange={(o) => { if (!o) setImporting(false); }}
+          onImported={refresh}
+        />
+      )}
       {adding && (
         <AddItemDialog code={code} open
                        onOpenChange={(o) => { if (!o) setAdding(false); }}

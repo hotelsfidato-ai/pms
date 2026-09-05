@@ -1,4 +1,5 @@
 import { api, ApiError } from "@/lib/api";
+import type { ImportReport } from "./till";
 
 /* ══════════════════════════════════════════════════════════════════
    THE STORE
@@ -138,6 +139,34 @@ async function call<T>(
     if (error instanceof ApiError) {
       const p = error.body as { reason?: string } | undefined;
       return { ok: false, reason: p?.reason ?? error.message };
+    }
+    throw error;
+  }
+}
+
+/** Bring a store list in from a file. Same two passes as the menu: a dry
+    run that changes nothing, then the identical payload to apply.
+
+    NOTHING GETS A QUANTITY FROM THIS. An import creates the things the
+    property keeps; receiving a delivery is what puts something on the
+    shelf, with a note behind it. */
+export async function importStockItems(
+  hotelId: string,
+  rows: Record<string, string>[],
+  dryRun: boolean,
+): Promise<ImportReport> {
+  try {
+    return await api<ImportReport>(
+      `/api/hotels/${hotelId}/stores/import`,
+      { method: "POST", body: JSON.stringify({ rows, dryRun }) },
+    );
+  } catch (error) {
+    if (error instanceof ApiError) {
+      const p = error.body as { reason?: string } | undefined;
+      return {
+        ok: false, reason: p?.reason ?? error.message, dryRun,
+        verdicts: [], creates: 0, updates: 0, rejected: 0,
+      };
     }
     throw error;
   }

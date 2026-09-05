@@ -352,3 +352,123 @@ stores.post("/:code/stores/movements/:id/reverse", async (c) => {
   if (!result) return c.json({ error: "No such property." }, 404);
   return c.json(result, "ok" in result && result.ok ? 200 : 409);
 });
+
+/* ── A hundred items, from a file ─────────────────────────────────── */
+
+/* A store is a hundred lines long and typing it into a dialog one at a
+   time is not something anybody will do — the same argument the menu
+   import is built on, and leaving it out here would be inconsistent.
+
+   Same two passes: a dry run that changes nothing and reports what would
+   happen, then the identical payload to apply. And the same refusal
+   rule — a row with no unit does not land with a blank unit, because a
+   quantity with no unit means nothing at all. */
+stores.post("/:code/stores/import", async (c) => {
+  interface Row {
+    name?: string; unit?: string; category?: string; reorderLevel?: string;
+  }
+  const input = await c.req.json<{ rows?: Row[]; dryRun?: boolean }>()
+    .catch(() => ({}) as { rows?: Row[]; dryRun?: boolean });
+
+  const rows = input.rows ?? [];
+  const dryRun = input.dryRun !== false;
+
+  if (rows.length === 0) {
+    return c.json(refuse("There are no rows in that file."), 409);
+  }
+  if (rows.length > 2000) {
+    return c.json(refuse(
+      `That file has ${rows.length} rows. Two thousand is the limit.`), 409);
+  }
+
+  const result = await withSession(c.get("subject"), async (client) => {
+    const hotelId = await hotelFor(client, c.req.param("code"));
+    if (!hotelId) return null;
+
+    const { rows: existing } = await client.query<{ name: string }>(
+      "select name from stock_items where hotel_id = $1", [hotelId]);
+    const already = new Set(existing.map((r) => r.name.toLowerCase()));
+
+    const verdicts: {
+      line: number; name: string;
+      action: "create" | "update" | "rejected"; detail: string;
+    }[] = [];
+    const seen = new Set<string>();
+    const good: {
+      name: string; unit: string; category: string | null;
+      reorder: number | null;
+    }[] = [];
+
+    rows.forEach((raw, i) => {
+      const line = i + 2;
+      const name = String(raw.name ?? "").trim();
+      const unit = String(raw.unit ?? "").trim();
+      const reject = (detail: string) => {
+        verdicts.push({
+          line, name: name || "(blank)", action: "rejected", detail,
+        });
+      };
+
+      if (!name && !unit) return;
+      if (!name) return reject("No item name.");
+      /* A QUANTITY WITH NO UNIT MEANS NOTHING. Forty of what? */
+      if (!unit) return reject("No unit — forty of what?");
+
+      const rawLevel = String(raw.reorderLevel ?? "").trim();
+      let reorder: number | null = null;
+      if (rawLevel !== "") {
+        reorder = Number(rawLevel);
+        if (!Number.isFinite(reorder) || reorder < 0) {
+          return reject(`"${raw.reorderLevel}" is not a quantity.`);
+        }
+      }
+
+      const key = name.toLowerCase();
+      if (seen.has(key)) {
+        return reject(`"${name}" appears twice in this file.`);
+      }
+      seen.add(key);
+
+      verdicts.push({
+        line, name,
+        action: already.has(key) ? "update" : "create",
+        detail: `counted in ${unit}`
+          + (reorder === null ? "" : `, warn below ${reorder}`),
+      });
+      good.push({
+        name, unit,
+        category: String(raw.category ?? "").trim() || null,
+        reorder,
+      });
+    });
+
+    const tally = {
+      creates: verdicts.filter((v) => v.action === "create").length,
+      updates: verdicts.filter((v) => v.action === "update").length,
+      rejected: verdicts.filter((v) => v.action === "rejected").length,
+    };
+    if (dryRun) return { ok: true as const, dryRun: true, verdicts, ...tally };
+
+    for (const item of good) {
+      await client.query(
+        `insert into stock_items (hotel_id, name, unit, category, reorder_level)
+         values ($1,$2,$3,$4,$5)
+         on conflict (hotel_id, name) do update
+           set unit          = excluded.unit,
+               category      = coalesce(excluded.category, stock_items.category),
+               reorder_level = excluded.reorder_level,
+               is_active     = true`,
+        [hotelId, item.name, item.unit, item.category, item.reorder]);
+    }
+
+    /* NOTHING GETS A QUANTITY OR A VALUE FROM THIS. An import creates
+       things the property keeps; receiving a delivery is what puts
+       something on the shelf. A file that could set an opening balance
+       would be a hundred stock movements with no delivery note behind
+       any of them. */
+    return { ok: true as const, dryRun: false, verdicts, ...tally };
+  });
+
+  if (!result) return c.json({ error: "No such property." }, 404);
+  return c.json(result, "ok" in result && result.ok ? 200 : 409);
+});

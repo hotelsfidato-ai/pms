@@ -1,7 +1,7 @@
 import { describe, it, expect } from "vitest";
 import { toCsv } from "@/lib/csv";
 import {
-  MENU_SPEC, ROOM_TYPE_SPEC, ROOM_SPEC, parseCsv, fileProblem,
+  MENU_SPEC, ROOM_TYPE_SPEC, ROOM_SPEC, STOCK_SPEC, parseCsv, fileProblem,
   type ImportSpec,
 } from "@/lib/importSpec";
 
@@ -30,6 +30,7 @@ const SPECS: [string, ImportSpec][] = [
   ["menu", MENU_SPEC],
   ["room types", ROOM_TYPE_SPEC],
   ["rooms", ROOM_SPEC],
+  ["stock", STOCK_SPEC],
 ];
 
 describe.each(SPECS)("the %s template", (_name, spec) => {
