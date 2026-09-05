@@ -206,7 +206,7 @@ export default function GroupPanelPage() {
                   <tr key={r.reservationId} className="border-b border-grey-200">
                     <td className="px-4 py-3">
                       <Link
-                        to={`/h/${hotelId}/stay?stay=${r.reservationId}`}
+                        to={`/h/${hotelId}/stay?res=${r.reservationId}`}
                         className="font-medium hover:underline"
                       >
                         {r.guest}

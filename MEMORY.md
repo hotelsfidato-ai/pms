@@ -6,7 +6,7 @@ Every entry here cost something. Read it before you repeat it.
 
 ## Ten faults that repeat
 
-155 entries below is a reference, not a reading list. These are the patterns
+160 entries below is a reference, not a reading list. These are the patterns
 that have recurred, with the count and the check that would have caught each.
 **If you read nothing else here, read this.**
 
@@ -3181,6 +3181,64 @@ Restarting the dev server fixed it, with no change to the code.
 has the code you wrote.** The sibling of defect 133 — a screenshot is
 not a measurement — and of the whole run.sh family: the thing you are
 looking at may not be the thing you changed.
+
+### 156 · A guard with no way through is a wall
+
+The server refused a late check-out without a reason — correctly, and
+with the reason on screen. The interface had no way to give it one:
+`checkOut()` sent `{ user }` and nothing else.
+
+So the refusal was a **dead end**. Press the button, read why it will not
+work, press it again. The owner sent a screenshot of five identical
+toasts stacked up, which is exactly what that loop looks like from the
+outside.
+
+**Rule 6 says a blocked action is shown WITH its reason. It does not say
+the reason is the end of the conversation.** Every refusal that has an
+answer needs the answer reachable from where it is raised.
+
+The refusal now carries `needs: "late-reason"` — a marker, not prose,
+because a screen that recognises a refusal by reading its sentence
+breaks silently the day somebody rewords it.
+
+### 157 · The other end of the same feature had no guard at all
+
+Finding 156 meant looking at its twin, and `waiveEarly` on check-in had
+**no permission check whatsoever**. It arrived in the POST body and was
+obeyed, so anybody who could check a guest in could make the
+early-arrival charge disappear — including by sending the field by hand.
+
+The late end had just grown a guard. The early end had never had one.
+**When a feature has two ends, fixing one is the moment to go and look
+at the other.**
+
+### 158 · A charge posted to the configured date, not the real one
+
+The late-checkout charge read `hotels.business_date`. That column is the
+property's CONFIGURED date; the real one is `app.business_date()` — the
+last completed night audit plus a day. They differ the moment a property
+has ever closed a night.
+
+So the posting hit 012's "that date is closed" guard and the entire
+check-out came back as a 500 with no explanation. **The early check-in
+charge twenty lines above had always used the resolved date.** Same
+feature, two ends, one of them right.
+
+### 159 · Links that had never opened anything
+
+The group panel linked to `/stay?stay=<id>`. `StayView` reads `?res=`.
+Every one of those links had opened the tape chart with no panel since
+the day it was written, and I copied the same mistake into the new
+groups list before noticing.
+
+Found by deep-linking to a stay to test something else entirely.
+
+### 160 · The same message five times is not five pieces of news
+
+Identical toasts stacked, so one wall looked like five and buried
+whatever else the screen was saying. An identical message still on
+screen now REFRESHES its timer instead of adding a card — pressing again
+feels like the same answer rather than a new one.
 
 ## Verification traps
 

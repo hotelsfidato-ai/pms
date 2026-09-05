@@ -220,7 +220,7 @@ function GroupRow({ group, code, open, onToggle }: {
                              with the stay panel already open. There is no
                              standalone stay route, and inventing one here
                              would make two ways to look at a booking. */
-                          to={`/h/${code}/stay?stay=${r.reservationId}`}
+                          to={`/h/${code}/stay?res=${r.reservationId}`}
                           className="flex items-center gap-2.5 rounded-md border
                                      border-grey-200 bg-white px-3 py-2
                                      hover:border-brand-orange transition-colors"

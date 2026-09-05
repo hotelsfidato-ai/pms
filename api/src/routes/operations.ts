@@ -39,9 +39,64 @@ async function hotelIdFor(client: Client, code: string) {
 /** Rule 6's shape, all the way down. Refused is a result, not an error. */
 type Outcome<T = unknown> =
   | { ok: true; data?: T }
-  | { ok: false; reason: string };
+  /* `needs` names WHAT WOULD SATISFY the refusal, for the refusals that
+     have an answer. A screen can then open the right dialog instead of
+     matching on the prose — which is a string somebody will reword one
+     day, at which point the way through silently disappears. Most
+     refusals have no `needs`: "the room is occupied" is not a form to
+     fill in. */
+  | { ok: false; reason: string; needs?: "late-reason" | "early-reason" };
 
-const refuse = (reason: string): Outcome => ({ ok: false, reason });
+
+/** Rupees, grouped, in a sentence somebody reads. The Indian grouping
+    is what a guest expects to see on a bill, and `toFixed(2)` printed
+    "1000.00" into a refusal the front desk had to read aloud. */
+function money(n: number): string {
+  /* Paise are shown when there are any, and shown as TWO digits.
+     `minimumFractionDigits: 0` printed "₹787.5" for seven hundred and
+     eighty-seven fifty — which is not how anybody writes an amount they
+     are asking a guest to hand over. A round figure still reads
+     "₹1,000" rather than "₹1,000.00". */
+  const paise = Math.round(n * 100) % 100 !== 0;
+  return `₹${n.toLocaleString("en-IN", {
+    minimumFractionDigits: paise ? 2 : 0,
+    maximumFractionDigits: 2,
+  })}`;
+}
+
+
+/** May this person set a charge aside?
+
+    Recording an early arrival or a late departure is an OBSERVATION —
+    the guest was at the desk at nine, or still in the room at four, and
+    that is true whoever noticed. WAIVING the charge is a decision about
+    money and somebody has to own it.
+
+    Asked on the server for both ends, because the dialogs hide the
+    option as a courtesy and `waiveEarly` / `waiveLate` are fields in a
+    POST body anybody can send. */
+async function mayWaive(
+  client: Client, hotelId: string, staffId: string,
+): Promise<boolean> {
+  const { rows } = await client.query<{ may: boolean }>(
+    `select (s.is_group_admin
+             or exists (select 1 from staff_hotels sh
+                         where sh.staff_id = s.id
+                           and sh.hotel_id = $1
+                           and sh.role in ('owner', 'gm'))) as may
+       from staff s where s.id = $2`,
+    [hotelId, staffId],
+  );
+  return rows[0]?.may === true;
+}
+
+const WAIVE_REFUSED =
+  "Setting that charge aside is a manager's decision. Record it and let "
+  + "it charge, or ask a manager to waive it.";
+
+const refuse = (
+  reason: string, needs?: "late-reason" | "early-reason",
+): Outcome => (needs ? { ok: false, reason, needs } : { ok: false, reason });
 
 interface CheckInBody {
   roomNumber?: string;
@@ -319,6 +374,17 @@ operations.post("/:code/stays/:id/check-in", async (c) => {
         /* And onto the folio, if the property charges. `waiveEarly` is
            the clerk deciding not to — a decision worth being able to
            make, and worth being visible by its absence on the bill. */
+        /* ⚠ THERE WAS NO CHECK HERE AT ALL.
+           `waiveEarly` arrived in the body and was obeyed, so anybody
+           who could check a guest in could make the early-arrival
+           charge disappear — including by sending the field by hand.
+           The late end grew a guard first and this end was found by
+           going to look for its twin. */
+        if (body.waiveEarly
+            && !(await mayWaive(client, hotelId, session.staffId))) {
+          return refuse(WAIVE_REFUSED);
+        }
+
         if (!body.waiveEarly && isEarly) {
           /* The charge is the property's; the RATE is the room's.
              Letting somebody in at eleven is ancillary to selling them
@@ -764,9 +830,29 @@ operations.post("/:code/stays/:id/check-out", async (c) => {
         `Check-out was ${t[0]?.t ?? "earlier"}. A late departure needs a `
         + "reason and somebody to allow it"
         + (charge
-            ? `, and carries a ${Number(charge).toFixed(2)} charge.`
-            : ". The property does not charge for one.")
+            /* ₹, and grouped. This printed "1000.00" — a bare number in
+               a sentence a guest's bill will carry the consequence of. */
+            ? `, and carries a ${money(Number(charge))} charge.`
+            : ". The property does not charge for one."),
+        "late-reason",
       );
+    }
+
+    /* ── WHO MAY WAIVE ──────────────────────────────────────────────
+       Recording a late departure is an observation: the guest was
+       still in the room at four, and that is true whoever noticed.
+       WAIVING the charge is a decision about money, and somebody has
+       to own it.
+
+       Checked HERE, not only on the screen. The dialog hides the
+       option from a clerk as a courtesy to the clerk; this is the
+       thing that actually decides, because a screen is not a
+       permission system and `waiveLate` is a field in a POST body
+       anybody can send. Rule 6's second half: the server refuses
+       independently. */
+    if (isLate && body.waiveLate
+        && !(await mayWaive(client, hotelId, session.staffId))) {
+      return refuse(WAIVE_REFUSED);
     }
 
     /* Recorded and charged BEFORE the balance is tested, so the guest
@@ -783,11 +869,24 @@ operations.post("/:code/stays/:id/check-out", async (c) => {
       if (!body.waiveLate) {
         /* Same rule as the early charge above: the room decides the
            slab, because a late departure is ancillary to the room. */
+        /* ⚠ THIS READ `hotels.business_date` AND POSTED TO IT.
+           That column is the property's CONFIGURED date. The real one
+           is `app.business_date()` — the last completed night audit
+           plus a day — and the two differ the moment a property has
+           ever closed a night. Posting to the configured date then hit
+           012's guard, "that date is closed", and the whole check-out
+           came back as a 500 with no explanation.
+
+           The EARLY check-in charge twenty lines up has always used the
+           resolved date. Same feature, two ends, and only one of them
+           was right — which is the shape of most of what has been found
+           in this file. */
+        const businessDate = await businessDateFor(client, hotelId);
+
         const { rows: h } = await client.query<{
-          charge: string | null; bd: string; nightly: string | null;
+          charge: string | null; nightly: string | null;
         }>(
           `select h.late_checkout_charge::text as charge,
-                  h.business_date::text as bd,
                   r.agreed_rate::text as nightly
              from hotels h
              left join reservations r on r.id = $2
@@ -807,7 +906,7 @@ operations.post("/:code/stays/:id/check-out", async (c) => {
               cross join (select app.gst_rate($1,'room',$6::numeric) as rate) t
               where f.reservation_id = $5 and f.status = 'open'
               limit 1`,
-            [hotelId, h[0]!.bd, amount, session.staffId, stayId,
+            [hotelId, businessDate, amount, session.staffId, stayId,
              Number(h[0]?.nightly ?? amount)]);
         }
       }
@@ -829,13 +928,25 @@ operations.post("/:code/stays/:id/check-out", async (c) => {
 
     if (balance > 0.5) {
       return refuse(
-        `₹${balance.toLocaleString("en-IN")} is still outstanding. Settle the folio, ` +
-          `or transfer it to the city ledger, before checking out.`,
+        /* `money()` rather than a bare toLocaleString: this printed
+           "₹787.5" for seven hundred and eighty-seven fifty, which is
+           not how anybody writes an amount they are asking a guest to
+           pay. */
+        `${money(balance)} is still outstanding. Settle the folio, ` +
+          `or transfer it to the city ledger, before checking out.`
+          /* SAY WHAT JUST HAPPENED. The late charge was posted moments
+             ago by this very call, so the balance the clerk was looking
+             at a second before does not match the one in this sentence.
+             Without this line it reads as the system changing its mind. */
+          + (isLate && !body.waiveLate
+              ? " The late departure has been recorded and charged, which is"
+                + " part of that figure."
+              : ""),
       );
     }
     if (balance < -0.5) {
       return refuse(
-        `The guest has overpaid by ₹${Math.abs(balance).toLocaleString("en-IN")}. ` +
+        `The guest has overpaid by ${money(Math.abs(balance))}. ` +
           `Refund it before checking out.`,
       );
     }

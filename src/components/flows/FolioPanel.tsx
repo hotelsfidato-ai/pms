@@ -20,8 +20,10 @@ import {
   getFolioPostings, getFolioBalance, postCharge, reverseCharge,
   settle, checkOut, checkOutAllowed, reverseChargeAllowed,
   listStayFolios, openFolio, transferPosting, listBillingCompanies,
+  earlyArrival,
   type Posting, type Stay, type StayFolio,
 } from "@/data/repositories";
+import { LateCheckOutFlow } from "@/components/flows/LateCheckOutFlow";
 
 /* ══════════════════════════════════════════════════════════════════
    FLOWS B AND C — charge, settle, check out
@@ -46,6 +48,7 @@ export function FolioPanel({
   businessDate: string;
 }) {
   const qc = useQueryClient();
+  const [lateOut, setLateOut] = useState(false);
   const refresh = () => qc.invalidateQueries();
 
   const postings = useQuery({
@@ -56,6 +59,16 @@ export function FolioPanel({
     queryKey: ["folio-balance", hotelId, stay.id],
     queryFn: () => getFolioBalance(hotelId, stay.id),
   });
+  /* The property's own clock and its late charge. Read here rather
+     than passed down, because the dialog must show the real figure —
+     a screen that says "₹1,000" while the property charges nothing is
+     worse than one that says nothing. */
+  const clock = useQuery({
+    queryKey: ["early-arrival", hotelId],
+    queryFn: () => earlyArrival(hotelId),
+    enabled: !!hotelId,
+  });
+
   const checkoutPermitted = useQuery({
     queryKey: ["checkout-allowed", hotelId, stay.id, balance.data],
     queryFn: () => checkOutAllowed(hotelId, stay.id),
@@ -106,19 +119,42 @@ export function FolioPanel({
         <SplitBillButton hotelId={hotelId} stayId={stay.id} onDone={refresh} />
       </div>
 
+      {lateOut && (
+        <LateCheckOutFlow
+          hotelId={hotelId}
+          stay={stay}
+          checkOutTime={clock.data?.checkOutTime ?? "check-out time"}
+          charge={clock.data?.lateCharge ?? null}
+          open
+          onOpenChange={(o) => { if (!o) setLateOut(false); }}
+          onDone={refresh}
+        />
+      )}
+
       {/* Rule 6 — blocked, visible, and it says why */}
       <div className="pt-4 border-t border-grey-200">
         <CheckOutButton
           allowed={checkoutPermitted.data?.allowed ?? false}
           reason={checkoutPermitted.data?.reason}
           onCheckOut={async () => {
-            const res = await checkOut(hotelId, stay.id, USER);
+            const res = await checkOut(hotelId, stay.id);
             if (res.ok) {
               toast.success(`${stay.guest} checked out`, `Room ${stay.roomNumber} is now dirty and on housekeeping's board.`);
               refresh();
-            } else {
-              toast.error("Could not check out", res.reason);
+              return;
             }
+            /* THE WAY THROUGH, not another toast.
+               This refusal used to be a dead end: press, read why it
+               will not work, press again. Five identical toasts stacked
+               up in the owner's screenshot, which is what that loop
+               looks like. Rule 6 says a blocked action is shown with
+               its reason; it does not say the reason is the end of the
+               conversation. */
+            if (res.needs === "late-reason") {
+              setLateOut(true);
+              return;
+            }
+            toast.error("Could not check out", res.reason);
           }}
         />
       </div>

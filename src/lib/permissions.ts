@@ -139,7 +139,7 @@ const MATRIX: Record<Role, ResourceGrants> = {
 
   admin: {
     dashboard: READ,
-    reservation: ["view", "create", "edit", "cancel", "export"],
+    reservation: ["view", "create", "edit", "cancel", "approve", "export"],
     customer: ["view", "create", "edit", "export"],
     company: ["view", "create", "edit", "export"],
     hotel: ["view", "create", "edit", "export"],
@@ -160,7 +160,14 @@ const MATRIX: Record<Role, ResourceGrants> = {
 
   manager: {
     dashboard: READ,
-    reservation: ["view", "create", "edit", "cancel", "export"],
+    /* `approve` is the OVERRIDE, and it is what a manager is for.
+       A guest still in the room at four has kept it out of tonight's
+       inventory, and a front-desk clerk may record that and charge for
+       it — but WAIVING the charge is a decision about money that
+       somebody has to own. The role's own description has said
+       "Approves overrides" since it was written; it did not hold the
+       grant. */
+    reservation: ["view", "create", "edit", "cancel", "approve", "export"],
     customer: ["view", "create", "edit", "export"],
     company: ["view", "create", "edit", "export"],
     hotel: READ_EXPORT,

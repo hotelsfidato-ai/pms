@@ -680,3 +680,240 @@ describe("the audit states the day rather than adding to it", () => {
     }
   });
 });
+
+/* ══════════════════════════════════════════════════════════════════
+   A GUEST WHO LEFT LATE, AND WHO MAY SET THE CHARGE ASIDE
+
+   The refusal was correct and the interface had no way to satisfy it.
+   `checkOut()` sent `{ user }` and nothing else, so pressing the button
+   read the reason and pressed it again — five identical toasts in the
+   owner's screenshot. A guard that cannot be satisfied is not a guard,
+   it is a wall.
+
+   TIME OF DAY IS PINNED. `app.departure_is_late` compares the clock in
+   the property's timezone against its check-out time, so a test that
+   relied on "now" would pass in the afternoon and fail in the morning —
+   the mistake four identity tests were making before they were found.
+   This sets the property's check-out time to 00:00 for the duration,
+   which makes every moment of the day late, and puts it back after.
+   ══════════════════════════════════════════════════════════════════ */
+
+describe("leaving after check-out time", () => {
+  let lateStayId: string;
+  let clerkId: string;
+  let wasCheckOut: string;
+  let wasLateCharge: string | null;
+  let lateSeq = 0;
+
+  const call = (path: string, body: unknown, who: string) =>
+    app.request(`/api/hotels/PUN${path}`, {
+      method: "POST",
+      headers: { "content-type": "application/json", "x-dev-staff-id": who },
+      body: JSON.stringify(body),
+    });
+
+  const lateCharges = async (id: string): Promise<number> => {
+    const db = await admin();
+    try {
+      const { rows } = await db.query<{ n: string }>(
+        `select count(*)::text as n from folio_postings
+          where reservation_id = $1 and description ilike '%late check-out%'`,
+        [id]);
+      return Number(rows[0]!.n);
+    } finally {
+      await db.end();
+    }
+  };
+
+  const freshStay = async (): Promise<string> => {
+    await clearDueOuts();
+    const bd = await businessDate();
+    const db = await admin();
+    try {
+      const { rows: g } = await db.query<{ id: string }>(
+        "insert into guests (full_name) values ($1) returning id::text",
+        [`${tag} late guest`]);
+      const { rows: rt } = await db.query<{ id: string }>(
+        "select id::text from room_types where hotel_id = $1 limit 1", [puneId]);
+      const { rows: rm } = await db.query<{ id: string }>(
+        `select r.id::text from rooms r
+          where r.hotel_id = $1
+            and not exists (select 1 from room_assignments a
+                             where a.room_id = r.id and a.released_at is null)
+          limit 1`, [puneId]);
+      /* Its OWN reference, not app.next_reference. That derives from the
+         date and a counter, and calling it four times inside one test
+         run collided on the unique key — which is the function working
+         and this fixture asking it the wrong question. */
+      lateSeq += 1;
+      const { rows: res } = await db.query<{ id: string }>(
+        `insert into reservations
+           (hotel_id, reference, guest_id, room_type_id, check_in, check_out,
+            agreed_rate, status, adults)
+         values ($1, $5, $2, $3, $4::date, $4::date + 1,
+                 2000, 'checked_in', 1)
+         returning id::text`,
+        [puneId, g[0]!.id, rt[0]!.id, bd, `${tag}-L${lateSeq}`]);
+      await db.query(
+        `insert into room_assignments
+           (hotel_id, reservation_id, room_id, from_date, to_date, reason)
+         values ($1,$2,$3,$4::date,$4::date + 1,'arrival')`,
+        [puneId, res[0]!.id, rm[0]!.id, bd]);
+      await db.query(
+        "insert into folios (hotel_id, reservation_id, status) values ($1,$2,'open')",
+        [puneId, res[0]!.id]);
+      return res[0]!.id;
+    } finally {
+      await db.end();
+    }
+  };
+
+  beforeAll(async () => {
+    const db = await admin();
+    try {
+      const { rows: was } = await db.query<{ t: string }>(
+        "select to_char(check_out_time,'HH24:MI') as t from hotels where id = $1",
+        [puneId]);
+      wasCheckOut = was[0]!.t;
+
+      /* PUN charges NOTHING for a late departure, which is a legitimate
+         state and makes this test prove nothing — "no posting" would be
+         true whether the guard worked or not. A charge is set for the
+         duration and put back after, so "charged" and "waived" are
+         actually distinguishable. */
+      const { rows: wasCharge } = await db.query<{ c: string | null }>(
+        "select late_checkout_charge::text as c from hotels where id = $1",
+        [puneId]);
+      wasLateCharge = wasCharge[0]!.c;
+
+      await db.query(
+        `update hotels set check_out_time = '00:00', late_checkout_charge = 750
+          where id = $1`, [puneId]);
+
+      /* A clerk with no authority to waive, at this property. */
+      const { rows: s } = await db.query<{ id: string }>(
+        `insert into staff (email, full_name, is_group_admin)
+         values ($1, 'Late Test Clerk', false)
+         on conflict (email) do update set is_active = true
+         returning id::text`, [`late-${process.pid}@fidato.in`]);
+      clerkId = s[0]!.id;
+      await db.query(
+        `insert into staff_hotels (staff_id, hotel_id, role)
+         values ($1, $2, 'front_desk') on conflict do nothing`,
+        [clerkId, puneId]);
+    } finally {
+      await db.end();
+    }
+  });
+
+  afterAll(async () => {
+    const db = await admin();
+    try {
+      await db.query(
+        `update hotels set check_out_time = $2, late_checkout_charge = $3
+          where id = $1`,
+        [puneId, wasCheckOut, wasLateCharge]);
+      await db.query("delete from staff_hotels where staff_id = $1", [clerkId]);
+      await db.query("update staff set is_active = false where id = $1", [clerkId]);
+    } finally {
+      await db.end();
+    }
+  });
+
+  it("refuses without a reason, and NAMES what would satisfy it", async () => {
+    lateStayId = await freshStay();
+    const res = await call(`/stays/${lateStayId}/check-out`, {}, ownerId);
+    const body = (await res.json()) as {
+      ok: boolean; reason: string; needs?: string;
+    };
+
+    expect(body.ok).toBe(false);
+    /* The marker is the point. Without it a screen has to recognise a
+       late departure by reading the sentence, and the sentence is not
+       an interface — somebody rewords it and the way through silently
+       disappears. */
+    expect(body.needs).toBe("late-reason");
+    /* And the charge is money, not a bare number. It printed "1000.00"
+       into a line the front desk reads out to a guest. */
+    expect(body.reason).not.toMatch(/\d\.00 charge/);
+  });
+
+  it("records the reason, charges, and THEN asks for the money", async () => {
+    const before = await lateCharges(lateStayId);
+    const res = await call(`/stays/${lateStayId}/check-out`,
+      { lateReason: "Late flight, agreed at reception" }, ownerId);
+
+    /* NOT a success, and that is right. The charge is posted before the
+       balance is tested — deliberately, so the guest settles the whole
+       bill including it — which means the very act of recording a late
+       departure creates something to pay. The check-out then refuses
+       for the balance, and the refusal SAYS the charge was just added,
+       or it reads as the system changing its mind between one press and
+       the next. */
+    const body = (await res.json()) as { ok: boolean; reason: string };
+    expect(body.ok).toBe(false);
+    expect(body.reason).toMatch(/still outstanding/);
+    expect(body.reason).toMatch(/recorded and charged/);
+    /* Rupees, written the way somebody asks for money. It printed
+       "₹787.5" for seven hundred and eighty-seven fifty. */
+    expect(body.reason).not.toMatch(/₹[\d,]+\.\d(?!\d)/);
+
+    const db = await admin();
+    try {
+      const { rows } = await db.query<{ reason: string; by: string | null }>(
+        `select late_checkout_reason as reason, late_checkout_by::text as by
+           from reservations where id = $1`, [lateStayId]);
+      expect(rows[0]!.reason).toMatch(/Late flight/);
+      /* Recorded against SOMEBODY. "A reason and somebody to allow it"
+         is the whole phrase in the refusal, and a reason with no name
+         behind it is half an answer. */
+      expect(rows[0]!.by).toBeTruthy();
+    } finally {
+      await db.end();
+    }
+    expect(await lateCharges(lateStayId)).toBeGreaterThan(before);
+  });
+
+  it("refuses a waive from somebody who may not give one", async () => {
+    const id = await freshStay();
+    const res = await call(`/stays/${id}/check-out`,
+      { lateReason: "Asked nicely", waiveLate: true }, clerkId);
+    const body = (await res.json()) as { ok: boolean; reason: string };
+
+    /* The dialog hides the option from a clerk as a courtesy. THIS is
+       what decides — `waiveLate` is a field in a POST body anybody can
+       send, and a screen is not a permission system. */
+    expect(body.ok).toBe(false);
+    expect(body.reason).toMatch(/manager/i);
+
+    /* And it did not half-happen. */
+    const db = await admin();
+    try {
+      const { rows } = await db.query<{ status: string }>(
+        "select status from reservations where id = $1", [id]);
+      expect(rows[0]!.status).toBe("checked_in");
+    } finally {
+      await db.end();
+    }
+  });
+
+  it("lets a manager waive it, and still records the departure", async () => {
+    const id = await freshStay();
+    const before = await lateCharges(id);
+    const res = await call(`/stays/${id}/check-out`,
+      { lateReason: "Manager's say-so", waiveLate: true }, ownerId);
+    expect(res.status, await res.clone().text()).toBeLessThan(400);
+
+    const db = await admin();
+    try {
+      const { rows } = await db.query<{ reason: string }>(
+        "select late_checkout_reason as reason from reservations where id = $1",
+        [id]);
+      /* WAIVING THE MONEY DOES NOT UNWRITE THE FACT. */
+      expect(rows[0]!.reason).toMatch(/say-so/);
+    } finally {
+      await db.end();
+    }
+    expect(await lateCharges(id), "a waived charge still posted").toBe(before);
+  });
+});

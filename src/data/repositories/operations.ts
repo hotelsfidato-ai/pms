@@ -30,6 +30,11 @@ export type { Posting };
 export interface OperationResult<T = void> {
   ok: boolean;
   reason?: string;
+  /** What would SATISFY this refusal, when it has an answer. A screen
+      opens the right dialog from this rather than matching on the
+      prose — which somebody will reword one day, at which point the
+      way through silently disappears. */
+  needs?: "late-reason" | "early-reason";
   data?: T;
 }
 
@@ -331,7 +336,16 @@ export async function checkOutAllowed(hotelId: string, stayId: string): Promise<
 }
 
 export async function checkOut(
-  hotelId: string, stayId: string, user: string,
+  hotelId: string, stayId: string,
+  /* ⚠ THIS TOOK ONLY `user` AND SENT ONLY `user`.
+     The server refuses a late departure without a reason — correctly,
+     and with the reason on screen — and there was no way to give it
+     one. So the refusal was a DEAD END: press the button, read why it
+     will not work, press it again. Five identical toasts stacked up in
+     the owner's screenshot, which is exactly what that loop looks like.
+
+     A guard that cannot be satisfied is not a guard, it is a wall. */
+  late?: { lateReason?: string; waiveLate?: boolean },
 ): Promise<OperationResult<Stay>> {
   /* The BALANCE decides, server-side. A guest cannot walk out owing
      money without somebody deciding to let them, and that decision is
@@ -344,10 +358,19 @@ export async function checkOut(
   try {
     await api(`/api/hotels/${hotelId}/stays/${stayId}/check-out`, {
       method: "POST",
-      body: JSON.stringify({ user }),
+      body: JSON.stringify({ ...late }),
     });
   } catch (error) {
-    if (error instanceof ApiError) return refuse(error.message);
+    if (error instanceof ApiError) {
+      /* The marker rides through with the reason. Without it the panel
+         would have to recognise a late departure by reading the
+         sentence, and the sentence is not an interface. */
+      const body = error.body as
+        { reason?: string; needs?: "late-reason" | "early-reason" } | undefined;
+      return body?.needs
+        ? { ok: false, reason: body.reason ?? error.message, needs: body.needs }
+        : refuse(body?.reason ?? error.message);
+    }
     throw error;
   }
 
