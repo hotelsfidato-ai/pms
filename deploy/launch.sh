@@ -72,8 +72,41 @@ if command -v dnf >/dev/null; then
   # database is up is what actually enforces this.
   dnf -y module reset postgresql 2>/dev/null || true
   dnf -y module enable postgresql:16 2>/dev/null || true
-  dnf -y install nginx postgresql-server postgresql-contrib certbot \
-                 python3-certbot-nginx git
+  # ⚠ INSTALLING THE EPEL *RELEASE* PACKAGE IS NOT ENOUGH. It writes the
+  # repository definition and Oracle Linux ships that definition DISABLED, so
+  # the next line fails with "Unable to find a match: certbot" while the repo
+  # sits there configured and switched off. The message names the package,
+  # which sends you looking at the package.
+  #
+  # Enabled by name, and every name Oracle has used, because the repo id has
+  # moved between OL8 and OL9 point releases. `|| true` throughout: a name
+  # that does not exist on this image is not an error, it is one of the other
+  # names being the right one.
+  for repo in ol9_developer_EPEL ol8_developer_EPEL epel; do
+    dnf config-manager --set-enabled "$repo" 2>/dev/null || true
+  done
+
+  # The web server and the database are NOT optional -- a failure here must
+  # stop the run.
+  dnf -y install nginx postgresql-server postgresql-contrib git
+
+  # certbot IS optional while SKIP_TLS is set. Splitting it out so that a
+  # machine which cannot reach EPEL can still finish the install and load its
+  # data, rather than dying at a package it is not about to use.
+  if ! dnf -y install certbot python3-certbot-nginx; then
+    if [ "${SKIP_TLS:-}" = "1" ]; then
+      echo "  ⚠ certbot is not available from this machine's repositories."
+      echo "    Continuing, because SKIP_TLS=1 means no certificate is being"
+      echo "    requested today. You will need it before the screens work:"
+      echo "      sudo dnf config-manager --set-enabled ol9_developer_EPEL"
+      echo "      sudo dnf -y install certbot python3-certbot-nginx"
+    else
+      die "certbot could not be installed, and a certificate is required.
+  Enable EPEL and try again:
+      sudo dnf config-manager --set-enabled ol9_developer_EPEL
+  Or run with SKIP_TLS=1 to finish the install and add the certificate later."
+    fi
+  fi
   [ -d /var/lib/pgsql/data/base ] || postgresql-setup --initdb
 elif command -v apt-get >/dev/null; then
   PKG=apt
