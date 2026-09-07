@@ -3576,6 +3576,28 @@ proves the exclusion constraint actually let go — and that is the thing
 a hotel cares about. With the trigger narrowed back to void, the suite
 fails on exactly the error above.
 
+### 177 · The fix moved the fault instead of removing it
+
+073 made a no-show give its room back. Release is what 070's trigger
+fires on, so the room went straight into the cleaning queue — and out
+of tonight's availability. **8 Deluxe, one occupied, six sellable.** The
+room was lost to housekeeping instead of to the exclusion constraint,
+and a housekeeper would have been sent down a corridor to clean a room
+nobody opened.
+
+070's premise is written in its own comment — *"a released assignment
+means a guest has left a room"* — and it is true of the three ways a
+PERSON vacates a room. 073 added a fourth releaser where nobody was
+ever in the room, and the premise stopped holding without anything
+saying so.
+
+**Caught on the screen, one number, immediately after the fix.** The
+availability row is the reason to look at a chart after changing
+anything that touches assignments.
+
+**When a rule is stated at a fact, adding a new way to produce that
+fact re-opens the rule.** Vacant, yes — it is. Dirty, no.
+
 ## Verification traps
 
 ### Never test a Tailwind utility by injecting the class at runtime

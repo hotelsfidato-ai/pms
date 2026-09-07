@@ -4586,7 +4586,7 @@ end $$;
 -- already does. These assert it from the fact rather than from any caller.
 do $$
 declare
-  h uuid; g uuid; t uuid; r1 uuid; r2 uuid; res uuid; a1 uuid;
+  h uuid; g uuid; t uuid; r1 uuid; r2 uuid; res uuid; res2 uuid; a1 uuid;
   hk text; occ text;
 begin
   select id into h from hotels where code = 'AGR';
@@ -4652,6 +4652,40 @@ begin
   perform test.ok('housekeeping','an out-of-service room is left alone',
     hk = 'out_of_service');
 
+  -- ---------- a room NOBODY ENTERED is not dirty ---------------------------
+  -- ⚠ INTRODUCED BY THE FIX FOR ANOTHER FAULT, AND CAUGHT ON THE SCREEN.
+  -- 073 made a no-show give its room back, which is right — a guest who
+  -- never came must not hold inventory. But release is what this trigger
+  -- fires on, so the room went straight into the cleaning queue and out of
+  -- tonight's availability: 8 Deluxe, one occupied, six sellable. The room
+  -- was lost to housekeeping instead of to the exclusion constraint, which
+  -- is moving a fault rather than removing it.
+  --
+  -- Vacant, yes. Dirty, no. Nothing in a room nobody opened is dirty, and
+  -- sending a housekeeper to it is a real person walking a real corridor.
+  update rooms set housekeeping_status = 'clean', occupancy_status = 'vacant'
+   where id = r2;
+
+  insert into reservations
+    (hotel_id, guest_id, room_type_id, reference, check_in, check_out,
+     agreed_rate, status)
+  values (h, g, t, 'HK-NOSHOW-1', date '2026-10-10', date '2026-10-12',
+          2000, 'confirmed')
+  returning id into res2;
+
+  insert into room_assignments (hotel_id, reservation_id, room_id,
+                                from_date, to_date, reason)
+  values (h, res2, r2, date '2026-10-10', date '2026-10-12', 'arrival');
+
+  update reservations set status = 'no_show' where id = res2;
+
+  select housekeeping_status, occupancy_status into hk, occ
+    from rooms where id = r2;
+  perform test.ok('housekeeping','a no-show does not dirty the room',
+    hk = 'clean', 'got ' || hk);
+  perform test.ok('housekeeping','but it does give it back', occ = 'vacant',
+    'got ' || occ);
+
   -- ---------- a room somebody else is in stays occupied --------------------
   -- An exchange writes the new occupant before releasing the old one, and
   -- marking the room vacant underneath a guest standing in it would be worse
@@ -4672,8 +4706,8 @@ begin
     occ = 'occupied');
 
   -- ---------- teardown -----------------------------------------------------
-  delete from room_assignments where reservation_id = res;
-  delete from reservations where id = res;
+  delete from room_assignments where reservation_id in (res, res2);
+  delete from reservations where id in (res, res2);
   delete from room_status_log where room_id in (r1, r2);
   delete from rooms where id in (r1, r2);
 
