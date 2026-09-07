@@ -3860,6 +3860,26 @@ Two things this teaches:
 
 Fixed with `git update-index --chmod=+x` on all eight scripts.
 
+### 188 · restore.sh could not run on the machine it exists for
+
+`PSQL="$PGBIN/psql.exe"`, `pg_dump.exe`, `pg_restore.exe` — hardcoded.
+So the script whose entire purpose is putting a database onto the
+**server** could only ever run on Windows.
+
+Found the one time it was needed: moving a real property onto a real
+Oracle Linux box, mid-deploy. Exactly how `migrate.sh` was found, one
+commit apart.
+
+**The pattern, stated plainly:** every shell script in this repository
+was written and exercised on Windows only, so anything Windows-shaped
+in one is invisible until the first Linux use. Three have now been
+caught this way — `migrate.sh` (hardcoded .exe), all eight scripts (no
+executable bit), and this one. **`backup.sh` had already been fixed for
+precisely this and nobody looked at its sibling.**
+
+Fixing one file in a pair is not fixing the pair. Same lesson as 186,
+where reconciling two role lists left a third.
+
 ## Verification traps
 
 ### Never test a Tailwind utility by injecting the class at runtime

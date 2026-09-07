@@ -29,7 +29,34 @@ SUPERPASS="${SUPERPASS:-pw}"
 DB="${DB:-fidato}"
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 
-PSQL="$PGBIN/psql.exe"
+# ⚠ THIS HARDCODED `psql.exe` AND `pg_restore.exe`, so it could only ever run
+# on Windows -- and the machine it exists FOR is a Linux server. The one time
+# it was needed, moving a real property onto a real box, it could not run.
+#
+# Same fault migrate.sh had, found the same way: by trying to use it.
+pick() {
+  if   [ -x "$PGBIN/$1.exe" ]; then echo "$PGBIN/$1.exe"
+  elif [ -x "$PGBIN/$1" ];     then echo "$PGBIN/$1"
+  elif command -v "$1" >/dev/null 2>&1; then command -v "$1"
+  else echo ""
+  fi
+}
+
+PSQL="$(pick psql)"
+PGDUMP="$(pick pg_dump)"
+PGRESTORE="$(pick pg_restore)"
+
+for prog in "$PSQL" "$PGDUMP" "$PGRESTORE"; do
+  if [ -z "$prog" ]; then
+    printf "[31m  x psql, pg_dump and pg_restore must all be available.
+"
+    printf "    Set PGBIN to the directory holding them, or install the
+"
+    printf "    postgresql client package.[0m
+"
+    exit 1
+  fi
+done
 S="-h $PGHOST -p $PGPORT -U $SUPER"
 
 red()   { printf "\033[31m%s\033[0m\n" "$1"; }
@@ -123,7 +150,7 @@ if [ "$EXISTS" = "1" ]; then
   echo "-- copying the current $TARGET first -----------------------"
   SAFETY="$ROOT/db/backups/${TARGET}-replaced-$(date +%Y%m%d-%H%M%S).dump"
   mkdir -p "$(dirname "$SAFETY")"
-  PGPASSWORD=$SUPERPASS "$PGBIN/pg_dump.exe" $S -Fc --no-owner --no-acl \
+  PGPASSWORD=$SUPERPASS "$PGDUMP" $S -Fc --no-owner --no-acl \
     -f "$SAFETY" "$TARGET" 2>&1 | sed 's/^/    /'
   if [ -s "$SAFETY" ]; then
     green "  ✓ $(basename "$SAFETY")"
@@ -145,7 +172,7 @@ PGPASSWORD=$SUPERPASS "$PSQL" $S -d postgres -q \
   -c "create database $TARGET" >/dev/null 2>&1 \
   || { red "  x could not create $TARGET"; exit 1; }
 
-OUT=$(PGPASSWORD=$SUPERPASS "$PGBIN/pg_restore.exe" $S \
+OUT=$(PGPASSWORD=$SUPERPASS "$PGRESTORE" $S \
         -d "$TARGET" --no-owner --no-acl "$FILE" 2>&1)
 RC=$?
 
