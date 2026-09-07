@@ -144,6 +144,237 @@ admin.post("/admin/hotels", async (c) => {
 
 /* ── Staff ────────────────────────────────────────────────────────── */
 
+/* ⚠ WRITTEN AFTER THE ENDPOINTS BELOW WERE FOUND UNGUARDED.
+   `provision_property` and the access grant raise from inside the
+   DATABASE if the caller is not a group admin, which is why those held.
+   The four routes added for §2 wrote through plain UPDATEs instead —
+   and a plain UPDATE under row level security that matches nothing
+   returns rowCount 0 and no error at all.
+
+   So a receptionist calling PATCH /admin/hotels/5EL got **200 ok**, the
+   property was not renamed, and the screen would have shown a saved
+   change that never happened. Silently doing nothing and reporting
+   success is worse than a refusal: nobody goes looking.
+
+   Two things fix it, and both are needed. This says WHY, in a sentence,
+   where a person will read it. `changedOrRefuse` makes it impossible
+   for a write that touched nothing to report success — because the day
+   a policy changes, the check that matters is the one on the result.  */
+async function requireGroupAdmin(
+  client: Client,
+): Promise<{ ok: false; reason: string } | null> {
+  const { rows } = await client.query<{ is_group_admin: boolean }>(
+    "select is_group_admin from staff where id = app.current_user_id()",
+  );
+  if (rows[0]?.is_group_admin) return null;
+  return refuse(
+    "Only a group administrator can change properties and people. " +
+    "Ask whoever holds that access.",
+  );
+}
+
+/** A write that matched no row did not happen, whatever it returned. */
+function changedOrRefuse(
+  rowCount: number | null, what: string,
+): { ok: false; reason: string } | null {
+  if (rowCount && rowCount > 0) return null;
+  return refuse(
+    `Nothing was changed — ${what}. This is not a saved change; it is a ` +
+    `write that matched nothing.`,
+  );
+}
+
+/* ── Editing a property ────────────────────────────────────────────
+   §2 asks for it and there was nothing. Note what is NOT editable: the
+   code. It appears in every URL, every invoice number and every folio
+   reference, so changing it would orphan documents a hotel has already
+   given to guests and to an assessor. Creating a property refuses a bad
+   code loudly for exactly this reason.
+   ═══════════════════════════════════════════════════════════════════ */
+admin.patch("/admin/hotels/:code", async (c) => {
+  type Body = {
+    name?: string; city?: string; state?: string; gstin?: string;
+    phone?: string; email?: string; addressLine?: string;
+  };
+  const input = await c.req.json<Body>().catch(() => ({}) as Body);
+
+  const result = await withSession(c.get("subject"), async (client) => {
+    const denied = await requireGroupAdmin(client);
+    if (denied) return denied;
+
+    const hotelId = await hotelFor(client, c.req.param("code"));
+    if (!hotelId) return null;
+
+    const name = input.name?.trim();
+    const city = input.city?.trim();
+    if (name !== undefined && !name) {
+      return refuse("A property needs a name.");
+    }
+    if (city !== undefined && !city) {
+      return refuse("Which city is it in?");
+    }
+
+    /* ⚠ THE GSTIN PRINTS ON EVERY INVOICE THIS PROPERTY ISSUES. A typo
+       here is a typo on documents already in a guest's hands, so the
+       shape is checked rather than trusted — fifteen characters, the
+       state code first. Not a checksum: that would refuse a valid
+       number if the algorithm here were subtly wrong, and refusing a
+       real GSTIN is worse than accepting a malformed one somebody can
+       correct. */
+    const gstin = input.gstin?.trim().toUpperCase();
+    if (gstin && !/^[0-9]{2}[A-Z]{5}[0-9]{4}[A-Z][0-9A-Z]Z[0-9A-Z]$/.test(gstin)) {
+      return refuse(
+        "That does not look like a GSTIN — fifteen characters, starting " +
+        "with the two-digit state code. It prints on every invoice this " +
+        "property issues, so it is worth checking now.",
+      );
+    }
+
+    const updated = await client.query(
+      `update hotels set
+         name         = coalesce($2, name),
+         city         = coalesce($3, city),
+         state        = coalesce($4, state),
+         gstin        = coalesce($5, gstin),
+         phone        = coalesce($6, phone),
+         email        = coalesce($7, email),
+         address_line = coalesce($8, address_line)
+       where id = $1`,
+      [hotelId, name ?? null, city ?? null,
+       input.state?.trim() || null, gstin || null,
+       input.phone?.trim() || null, input.email?.trim() || null,
+       input.addressLine?.trim() || null],
+    );
+    const nothing = changedOrRefuse(
+      updated.rowCount, "that property is not one you can write to");
+    if (nothing) return nothing;
+
+    return { ok: true as const };
+  });
+
+  if (!result) return c.json({ error: "No such property." }, 404);
+  return c.json(result, "ok" in result && result.ok ? 200 : 409);
+});
+
+/* ── Closing and reopening a property ──────────────────────────────
+   NOT the same as deleting one, which 066 already handles and which
+   refuses the moment a property has traded. A hotel that has taken a
+   booking must never disappear — its folios, invoices and Form C
+   filings are records somebody may have to produce years later. A hotel
+   that is closed for the season simply stops appearing in pickers.
+   ═══════════════════════════════════════════════════════════════════ */
+admin.post("/admin/hotels/:code/:state", async (c) => {
+  const state = c.req.param("state");
+  if (state !== "close" && state !== "reopen") {
+    return c.json(refuse("A property is closed or reopened."), 409);
+  }
+
+  const result = await withSession(c.get("subject"), async (client) => {
+    const denied = await requireGroupAdmin(client);
+    if (denied) return denied;
+
+    const hotelId = await hotelFor(client, c.req.param("code"));
+    if (!hotelId) return null;
+
+    if (state === "close") {
+      /* ⚠ A CLOSED PROPERTY WITH SOMEBODY STILL IN IT is a guest nobody
+         can check out — the property vanishes from the picker and the
+         folio with it. Named rather than silently allowed. */
+      const { rows } = await client.query<{ n: string }>(
+        `select count(*)::text as n from reservations
+          where hotel_id = $1 and status = 'checked_in'`,
+        [hotelId],
+      );
+      if (Number(rows[0]!.n) > 0) {
+        return refuse(
+          `${rows[0]!.n} guest(s) are still checked in. Check them out ` +
+          `first — a closed property leaves a folio nobody can reach.`,
+        );
+      }
+    }
+
+    const { rowCount } = await client.query(
+      "update hotels set is_active = $2 where id = $1",
+      [hotelId, state === "reopen"],
+    );
+    const nothing = changedOrRefuse(
+      rowCount, "that property is not one you can write to");
+    if (nothing) return nothing;
+
+    return { ok: true as const, isActive: state === "reopen" };
+  });
+
+  if (!result) return c.json({ error: "No such property." }, 404);
+  return c.json(result, "ok" in result && result.ok ? 200 : 409);
+});
+
+/* ── Editing a person ──────────────────────────────────────────────
+   Their name, their phone. NOT their email: that is what a Firebase
+   account is keyed on, and changing it here without changing it there
+   leaves somebody who can sign in and reaches nothing — the silent
+   empty-database failure the deploy README warns about at length.
+   ═══════════════════════════════════════════════════════════════════ */
+admin.patch("/admin/staff/:id", async (c) => {
+  type Body = { fullName?: string; phone?: string };
+  const input = await c.req.json<Body>().catch(() => ({}) as Body);
+
+  const fullName = input.fullName?.trim();
+  if (fullName !== undefined && !fullName) {
+    return c.json(refuse("A person needs a name."), 409);
+  }
+
+  const result = await withSession(c.get("subject"), async (client) => {
+    const denied = await requireGroupAdmin(client);
+    if (denied) return denied;
+
+    const { rowCount } = await client.query(
+      `update staff set
+         full_name = coalesce($2, full_name),
+         phone     = coalesce($3, phone)
+       where id = $1`,
+      [c.req.param("id"), fullName ?? null, input.phone?.trim() || null],
+    );
+    if (!rowCount) return refuse("No such person.");
+    return { ok: true as const };
+  });
+
+  return c.json(result!, "ok" in result! && result!.ok ? 200 : 409);
+});
+
+/* ── Bringing somebody back ────────────────────────────────────────
+   Deactivating existed; reactivating did not, so a person switched off
+   by mistake needed somebody with database access to undo it.
+   ═══════════════════════════════════════════════════════════════════ */
+admin.post("/admin/staff/:id/reactivate", async (c) => {
+  const result = await withSession(c.get("subject"), async (client) => {
+    const denied = await requireGroupAdmin(client);
+    if (denied) return denied;
+
+    const { rows } = await client.query<{ uid: string | null }>(
+      `update staff set is_active = true where id = $1
+       returning firebase_uid as uid`,
+      [c.req.param("id")],
+    );
+    if (!rows[0]) return refuse("No such person.");
+
+    /* ⚠ ACTIVE WITH NO FIREBASE ACCOUNT SIGNS IN NOWHERE. Said at the
+       moment it becomes true rather than discovered by the person on
+       their first morning back. */
+    if (!rows[0].uid) {
+      return {
+        ok: true as const,
+        warning:
+          "They are active again, but they have no sign-in account linked. " +
+          "Add them in Firebase and run `npm run link-staff`, or they will " +
+          "reach a sign-in page that accepts nothing.",
+      };
+    }
+    return { ok: true as const };
+  });
+
+  return c.json(result!, "ok" in result! && result!.ok ? 200 : 409);
+});
+
 admin.get("/admin/staff", async (c) => {
   const body = await withSession(c.get("subject"), async (client) => {
     const { rows } = await client.query<{
@@ -247,6 +478,28 @@ admin.post("/admin/staff/:id/access", async (c) => {
   const role = input.role?.trim();
   if (!code) return c.json(refuse("Which property?"), 409);
   if (!role) return c.json(refuse("Which role at that property?"), 409);
+
+  /* ⚠ THIS PASSED ANYTHING STRAIGHT THROUGH TO THE CHECK CONSTRAINT, and
+     three of the roles the screen offered were not in it. Assigning
+     Admin, Manager or Viewer returned
+
+         500  "Something went wrong. Nothing was changed."
+
+     which tells a person nothing and reads as the system being broken.
+     078 gave the database and the interface one list; this asks it, so
+     an unknown role is a sentence naming what IS allowed. */
+  const known = await withSession(c.get("subject"), async (client) => {
+    const { rows } = await client.query<{ roles: string[] }>(
+      "select app.assignable_roles() as roles",
+    );
+    return rows[0]!.roles;
+  });
+  if (!known.includes(role)) {
+    return c.json(
+      refuse(`There is no "${role}" role. Choose one of: ${known.join(", ")}.`),
+      409,
+    );
+  }
 
   try {
     const result = await withSession(c.get("subject"), async (client) => {

@@ -10,7 +10,7 @@ import {
   type ApiHotel, type ApiScope,
 } from "./api";
 import { DEMO } from "./demo";
-import type { Role } from "./permissions";
+import { ROLES, type Role } from "./permissions";
 import { useUi } from "./ui";
 import { registerBusinessDates, selectProperty }
   from "@/data/repositories/businessDate";
@@ -42,19 +42,25 @@ import { registerBusinessDates, selectProperty }
  * The mapping is explicit and total, so a new database role is a
  * compile error here rather than a silent fall-through to `viewer`.
  */
-export const ROLE_FROM_DB: Record<string, Role> = {
-  owner: "owner",
-  gm: "manager",
-  front_desk: "front_desk",
-  housekeeping: "housekeeping",
-  finance: "finance",
-  read_only: "viewer",
-  /* No PMS screen is scoped to a stores keeper or a POS operator yet.
-     Both read; neither posts. When Stage 7 brings the POS bridge this
-     stops being a viewer and becomes its own row in the matrix. */
-  pos: "viewer",
-  stores: "viewer",
-};
+/* ⚠ THIS WAS A TRANSLATION TABLE, AND IT EXISTED BECAUSE THE TWO
+   VOCABULARIES DIFFERED. The database said `gm`, the matrix said
+   `manager`; the database said `stores`, the matrix had no such role
+   and this mapped it to `viewer`.
+
+   That last one was not a naming detail. A store keeper signed in and
+   read as a VIEWER — no create, no edit, nothing — while their row in
+   `staff_hotels` said `stores`. The comment above it said "when Stage 7
+   brings the POS bridge this stops being a viewer"; Stage 7 shipped and
+   this did not change.
+
+   078 gives the database and the matrix the SAME twelve roles, so there
+   is nothing to translate. The mapping is gone rather than corrected:
+   a translation between two lists that are now identical is a place for
+   them to diverge again.
+
+   `api/test/roles.test.ts` asserts the two lists are equal, so a role
+   added to one and not the other fails a gate. */
+const KNOWN = new Set<string>(ROLES);
 
 export function roleFor(scope: ApiScope, hotelId: string | null): Role {
   /* A group admin holds no `staff_hotels` rows and still reaches
@@ -67,7 +73,23 @@ export function roleFor(scope: ApiScope, hotelId: string | null): Role {
     ? scope.hotels.find((h) => h.hotelId === hotelId)
     : scope.hotels[0];
 
-  return grant ? (ROLE_FROM_DB[grant.role] ?? "viewer") : "viewer";
+  if (!grant) return "read_only";
+
+  /* An unknown role is READ_ONLY and it is also a fault worth saying
+     out loud. Silently granting the least is right — the alternative is
+     granting something nobody chose — but a role the database allows
+     and this build has never heard of means the two lists have drifted
+     again, and the person it happens to would otherwise just find the
+     product mysteriously empty. */
+  if (!KNOWN.has(grant.role)) {
+    console.error(
+      `[session] unknown role "${grant.role}" — this build does not know it. ` +
+      `Treating as read-only. The role lists have drifted; see 078.`,
+    );
+    return "read_only";
+  }
+
+  return grant.role as Role;
 }
 
 type Status = "starting" | "signed-out" | "signed-in";
@@ -351,7 +373,7 @@ async function load(set: (partial: Partial<SessionState>) => void) {
 export const useRole = (): Role => {
   const scope = useSession((s) => s.scope);
   const hotelId = useSession((s) => s.hotelId);
-  return scope ? roleFor(scope, hotelId) : "viewer";
+  return scope ? roleFor(scope, hotelId) : "read_only";
 };
 
 export const useCurrentHotel = (): ApiHotel | null => {

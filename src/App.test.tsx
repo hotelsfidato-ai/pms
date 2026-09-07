@@ -209,7 +209,7 @@ describe("navigation is driven by the permission matrix", () => {
   });
 
   it("leads every role to the tape chart", () => {
-    for (const role of ["owner", "manager", "front_desk", "housekeeping", "finance"] as const) {
+    for (const role of ["owner", "gm", "front_desk", "housekeeping", "finance"] as const) {
       const paths = navigationFor(role, HOTEL).flatMap((s) => s.items.map((i) => i.to));
       expect(paths, `${role} cannot reach the tape chart`).toContain(`/h/${HOTEL}/stay`);
     }
@@ -238,7 +238,11 @@ describe("the session guard", () => {
        one and offers none — a preview control beside a real session is
        how a clerk previews themselves as an owner. */
     const account = await screen.findByRole("button", { name: /agra clerk/i });
-    expect(account.getAttribute("aria-label")).toContain("Front Desk");
+    /* "Reception", not "front_desk" and not "Front Desk". 078 made the
+       stored value an identifier and the LABEL the word an Indian hotel
+       actually uses — this asserts a clerk reads their own job title
+       rather than a column value. */
+    expect(account.getAttribute("aria-label")).toContain("Reception");
     expect(screen.queryByRole("button", { name: /viewing as/i })).toBeNull();
   });
 });
@@ -318,7 +322,7 @@ describe("administration routes", () => {
 
 describe("the till in the navigation", () => {
   it("is reachable by the people who take money", () => {
-    for (const role of ["owner", "manager", "front_desk", "finance"] as const) {
+    for (const role of ["owner", "gm", "front_desk", "finance"] as const) {
       const paths = flatNavigationFor(role, HOTEL).map((i) => i.to);
       expect(paths, `${role} cannot reach the till`)
         .toContain(`/h/${HOTEL}/till`);
@@ -387,7 +391,7 @@ describe("the admin console", () => {
   });
 
   it("is not offered to anyone who may not", () => {
-    for (const role of ["front_desk", "housekeeping", "finance", "manager"] as const) {
+    for (const role of ["front_desk", "housekeeping", "finance", "gm"] as const) {
       const paths = flatNavigationFor(role, HOTEL).map((i) => i.to);
       expect(paths, `${role} is offered the admin console`)
         .not.toContain("/admin/console");

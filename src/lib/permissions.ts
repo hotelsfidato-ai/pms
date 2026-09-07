@@ -5,14 +5,35 @@
    the product because everything reads from here.
    ══════════════════════════════════════════════════════════════════ */
 
+/* ⚠ THIS LIST AND THE DATABASE'S MUST BE IDENTICAL, and for a long time
+   they were not. The screen offered "admin", "manager" and "viewer";
+   `staff_hotels_role_valid` allowed none of them, so assigning any of
+   the three returned a 500 and the clerk was told only "Something went
+   wrong". Nobody noticed because Akkalkot has one staff row with a role
+   and it happens to be front_desk.
+
+   `app.assignable_roles()` (078) is the authority now, and
+   `api/test/roles.test.ts` asserts this array equals it — so a role
+   added to one and not the other fails a gate rather than a person.
+
+   THE STORED VALUE IS AN IDENTIFIER; ROLE_LABELS IS WHAT ANYBODY READS.
+   `gm`, `pos` and `front_desk` are written into about twenty places
+   including pos-outlet.ts and the test suite. Renaming them to match
+   the words the owner asked for would be churn and risk for something
+   no member of staff will ever see. The words go in the labels. */
 export const ROLES = [
   "owner",
   "admin",
-  "manager",
+  "gm",
+  "hotel_manager",
   "front_desk",
   "housekeeping",
+  "kitchen_manager",
+  "chef",
+  "pos",
+  "stores",
   "finance",
-  "viewer",
+  "read_only",
   "automation",
 ] as const;
 
@@ -26,25 +47,39 @@ export const ASSIGNABLE_ROLES: Role[] = ROLES.filter(
   (r) => !SYSTEM_ROLES.includes(r),
 );
 
+/* The words an Indian hotel actually uses. "Reception" is what the desk
+   is called; "Front Desk" is software language. "Accountant" is a
+   person; "Finance" is a department. Somebody recognises their own job
+   title and nobody recognises a category. */
 export const ROLE_LABELS: Record<Role, string> = {
   owner: "Owner",
   admin: "Admin",
-  manager: "Manager",
-  front_desk: "Front Desk",
+  gm: "General Manager",
+  hotel_manager: "Hotel Manager",
+  front_desk: "Reception",
   housekeeping: "Housekeeping",
-  finance: "Finance",
-  viewer: "Viewer",
+  kitchen_manager: "Kitchen Manager",
+  chef: "Chef",
+  pos: "Till Operator",
+  stores: "Store Manager",
+  finance: "Accountant",
+  read_only: "Viewer",
   automation: "Automation",
 };
 
 export const ROLE_DESCRIPTIONS: Record<Role, string> = {
-  owner: "Unrestricted. Sole authority over roles, commission and settings.",
+  owner: "Unrestricted. Sole authority over roles, approvals and settings.",
   admin: "Runs the platform day to day, including user accounts.",
-  manager: "Sees the whole book. Approves overrides and rate changes.",
+  gm: "Sees the whole book. Approves overrides, rate changes and purchases.",
+  hotel_manager: "One property, run day to day. Below the GM on approvals.",
   front_desk: "Arrivals, check-in, charges, settle, check-out. One property.",
   housekeeping: "Room status, task queue, offline sync. One property.",
+  kitchen_manager: "The pass and the menu. Sees what the kitchen owes and when.",
+  chef: "The pass. Moves dishes along; changes nothing about money.",
+  pos: "A till, not a person. Opens orders and settles them.",
+  stores: "Stock, receiving and issues. Raises purchases; approves none.",
   finance: "Folios, invoices, payments, city ledger, reports.",
-  viewer: "Read-only across the platform. No write access anywhere.",
+  read_only: "Read-only across the platform. No write access anywhere.",
   automation: "Service account for background jobs. Not a person.",
 };
 
@@ -158,7 +193,7 @@ const MATRIX: Record<Role, ResourceGrants> = {
     ai: READ,
   },
 
-  manager: {
+  gm: {
     dashboard: READ,
     /* `approve` is the OVERRIDE, and it is what a manager is for.
        A guest still in the room at four has kept it out of tonight's
@@ -184,6 +219,44 @@ const MATRIX: Record<Role, ResourceGrants> = {
     ai: READ,
   },
 
+  /* One property, run day to day. Everything the GM has for the floor,
+     without the money decisions that belong above them — a hotel
+     manager may not waive a charge or move a rate. */
+  hotel_manager: {
+    dashboard: READ,
+    reservation: ["view", "create", "edit", "cancel", "export"],
+    customer: ["view", "create", "edit", "export"],
+    company: READ,
+    hotel: READ,
+    inventory: ["view", "edit"],
+    room_config: READ,
+    rate: READ,
+    invoice: ["view", "create", "edit", "export"],
+    payment: ["view", "create", "export"],
+    report: READ_EXPORT,
+    notification: READ,
+    user: READ,
+  },
+
+  /* The pass and the menu. Reads the book because a kitchen plans
+     against arrivals, and touches no money at all — a kitchen manager
+     who can edit an invoice is a kitchen manager who will be asked to. */
+  kitchen_manager: {
+    dashboard: READ,
+    reservation: READ,
+    inventory: ["view", "edit"],
+    report: READ,
+    notification: READ,
+  },
+
+  /* Narrower again. A chef moves dishes along and sees what is waiting;
+     nothing else on the estate is any of their business. */
+  chef: {
+    dashboard: READ,
+    inventory: READ,
+    notification: READ,
+  },
+
   front_desk: {
     dashboard: READ,
     reservation: ["view", "create", "edit", "cancel"],
@@ -197,6 +270,24 @@ const MATRIX: Record<Role, ResourceGrants> = {
     payment: ["view", "create"],
     report: READ,
     notification: READ,
+  },
+
+  /* Stock, receiving and issues. RAISES a purchase and approves none —
+     the whole point of the approval engine is that the person who asks
+     is not the person who decides. */
+  stores: {
+    dashboard: READ,
+    inventory: ["view", "create", "edit", "export"],
+    report: READ,
+    notification: READ,
+  },
+
+  /* A till, not a person. It opens orders and settles them, and it can
+     read the rooms it may charge to. Nothing else. */
+  pos: {
+    dashboard: READ,
+    reservation: READ,
+    inventory: READ,
   },
 
   housekeeping: {
@@ -220,7 +311,7 @@ const MATRIX: Record<Role, ResourceGrants> = {
     notification: READ,
   },
 
-  viewer: {
+  read_only: {
     dashboard: READ,
     reservation: READ,
     customer: READ,

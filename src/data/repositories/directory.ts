@@ -1,8 +1,6 @@
 import { api, ApiError } from "@/lib/api";
-import { ROLE_LABELS, ROLE_DESCRIPTIONS, type Role } from "@/lib/permissions";
+import { ROLES, ROLE_LABELS, ROLE_DESCRIPTIONS, type Role } from "@/lib/permissions";
 import { BUSINESS_DATE } from "./businessDate";
-import { ROLE_FROM_DB } from "@/lib/session";
-
 /* ══════════════════════════════════════════════════════════════════
    DIRECTORY — over HTTP, as of CP9e
 
@@ -138,7 +136,14 @@ export async function listStaff(hotelId: string): Promise<StaffRecord[]> {
     `/api/hotels/${hotelId}/staff`, []);
 
   return rows.map((r) => {
-    const role: Role = ROLE_FROM_DB[r.role ?? ""] ?? "viewer";
+    /* The database's role IS the matrix's role since 078 — there is
+       nothing to translate, and a translation between two identical
+       lists is a place for them to diverge again. An unknown one is
+       read-only, which grants the least rather than guessing. */
+    const raw = r.role ?? "";
+    const role: Role = (ROLES as readonly string[]).includes(raw)
+      ? (raw as Role)
+      : "read_only";
     return {
       id: r.id,
       name: r.name,

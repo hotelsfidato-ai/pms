@@ -3748,6 +3748,66 @@ file is a lie to whoever has to produce that bill for an assessor.
 exactly the assertion that passes while a store hands out the wrong
 bill.
 
+### 184 · Three roles the screen offered and the database refused
+
+The admin screen listed seven roles. `staff_hotels_role_valid` allowed
+a **different** seven. Assigning Admin, Manager or Viewer returned
+
+```
+500  "Something went wrong. Nothing was changed."
+```
+
+Measured by driving all seven through the API: `owner`, `front_desk`,
+`housekeeping` and `finance` worked; `admin`, `manager` and `viewer`
+were refused by the check constraint.
+
+Nobody had found it because Akkalkot has exactly one staff row carrying
+a role and it happens to be `front_desk`. **The first person hired into
+any other job would have found it.**
+
+And `session.ts` held a `ROLE_FROM_DB` translation table that existed
+*because* the vocabularies differed — mapping `stores` and `pos` to
+`viewer`. That was not cosmetic: **a store keeper signed in and read as
+a viewer**, no create, no edit, while their row said `stores`. The
+comment above it said "when Stage 7 brings the POS bridge this stops
+being a viewer". Stage 7 shipped; this did not change.
+
+**The fix is not "make the lists match".** They matched once. 078 makes
+`app.assignable_roles()` the single authority, the API validates
+against it, and `api/test/roles.test.ts` asserts the interface's copy
+is identical AND drives every role through the real endpoint — because
+the lists could agree while the endpoint still rejected.
+
+**The stored value stays an identifier; the label is what a person
+reads.** My first answer was to rename `gm` and `front_desk` to the
+owner's words. Wrong: about twenty places reference them. Labels are
+free; renames are churn with risk.
+
+### 185 · My own: guarded endpoints, and a write that matched nothing
+
+The four §2 endpoints I added — edit a property, close it, edit a
+person, reactivate — shipped **unguarded**. The existing admin routes
+hold because `provision_property` raises from inside the database; mine
+wrote through plain UPDATEs.
+
+Caught by driving them as a receptionist rather than as the owner.
+
+Worse than the missing check: **a plain UPDATE under RLS that matches
+nothing returns rowCount 0 and no error.** So the clerk got `200 ok`,
+the property was not renamed, and a screen would have shown a saved
+change that never happened. **Silently doing nothing and reporting
+success is worse than refusing — nobody goes looking.**
+
+Two fixes, both needed. `requireGroupAdmin` says why, in a sentence,
+where a person reads it. `changedOrRefuse` makes it impossible for a
+write that touched nothing to report success — because the day a policy
+changes, the check that matters is the one on the *result*.
+
+**And the test asserts the property still has its old name**, not just
+the status code. A 409 can come from anything; the original fault
+returned 200 and changed nothing, so a status-only assertion proves
+neither half.
+
 ## Verification traps
 
 ### Never test a Tailwind utility by injecting the class at runtime
