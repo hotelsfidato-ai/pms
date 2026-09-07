@@ -3833,6 +3833,33 @@ the status code. A 409 can come from anything; the original fault
 returned 200 and changed nothing, so a status-only assertion proves
 neither half.
 
+### 187 · The documented deploy command could not run on a fresh clone
+
+```
+sudo: deploy/launch.sh: command not found
+```
+
+Every shell script in the repository was stored as **100644**, not
+100755 — not executable. On Windows this never showed, because every
+script was always invoked as `bash something.sh`. `deploy/README.md`
+says to run `deploy/launch.sh` directly, and that has never been
+possible from a clean clone.
+
+**Found by the first person to actually clone it onto Linux**, which
+was the owner, mid-deploy, with the machine already provisioned.
+
+Two things this teaches:
+
+- **A file mode is part of the source.** It is invisible in every diff,
+  every review and every test, and the platform it was authored on
+  cannot see the difference. `git ls-files -s` is the only place it
+  shows.
+- **The gates all passed** — because every one of them calls the
+  scripts as `bash db/tests/run.sh`. The one caller that would have
+  caught it is the README, and prose does not run.
+
+Fixed with `git update-index --chmod=+x` on all eight scripts.
+
 ## Verification traps
 
 ### Never test a Tailwind utility by injecting the class at runtime
