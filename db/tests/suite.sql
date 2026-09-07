@@ -4715,3 +4715,151 @@ begin
   perform test.ok('housekeeping','the fixture does not outlive the test',
     occ::int = 0);
 end $$;
+
+
+-- =============================================================================
+-- APPROVALS (076) — one mechanism, and the two refusals that make it real
+-- =============================================================================
+-- The requirements describe an approval three times: a purchase, a cash
+-- expense, and the GM's reconciliation. This is the one table all three use.
+--
+-- The assertions that matter are not "a row was written". They are the two
+-- refusals, because an approval workflow that cannot refuse anything is a
+-- signature box:
+--
+--   · nobody approves their own request
+--   · a decision cannot be quietly re-made
+--
+-- Both are enforced in the DATABASE and not only in the API, because
+-- accountability another endpoint can bypass is not accountability.
+-- =============================================================================
+do $$
+declare
+  h uuid; gm uuid; owner uuid; a1 uuid; a2 uuid; n int; msg text;
+begin
+  select id into h  from hotels where code = 'AGR';
+  select id into gm from staff  where email = 'agra@fidato.in';
+  select id into owner from staff where email = 'owner@fidato.in';
+
+  -- ---------- no rule means nothing to approve ----------
+  -- A property that has not set approvals up must still be able to buy nails.
+  -- Returning null here rather than raising is what makes that true.
+  perform test.ok('approvals','no rule means no approval is needed',
+    app.request_approval(h, 'purchase', 'purchase_invoices',
+      gen_random_uuid(), 'A packet of nails', 200, gm) is null);
+
+  -- ---------- the owner's own rule ----------
+  insert into approval_rules (hotel_id, kind, approver_role, over_amount, set_by)
+  values (h, 'purchase', 'owner', null, owner)
+  on conflict (hotel_id, kind, approver_role) do update
+     set over_amount = null, is_active = true;
+
+  a1 := app.request_approval(h, 'purchase', 'purchase_invoices',
+          gen_random_uuid(), 'Vegetables for the week', 4200, gm);
+  perform test.ok('approvals','a rule raises a request', a1 is not null);
+
+  perform test.ok('approvals','the deciding ROLE is frozen onto the request',
+    (select approver_role from approvals where id = a1) = 'owner',
+    'a rule changed tomorrow must not re-route what is already waiting');
+
+  -- ---------- a reason is not optional ----------
+  -- §16 says the reason is mandatory. A request with no reason is a row an
+  -- approver cannot act on: they approve blind or go and ask.
+  begin
+    perform app.request_approval(h, 'purchase', 'purchase_invoices',
+      gen_random_uuid(), '   ', 100, gm);
+    perform test.ok('approvals','a request with no reason is refused',
+      false, 'it was accepted');
+  exception when check_violation then
+    perform test.ok('approvals','a request with no reason is refused', true);
+  end;
+
+  -- ---------- NOBODY APPROVES THEIR OWN REQUEST ----------
+  -- The whole point of the workflow. A GM who can approve their own cash
+  -- purchase has a process that records a signature rather than obtaining one.
+  begin
+    perform app.decide_approval(a1, 'approved', gm, null);
+    perform test.ok('approvals','the requester cannot approve their own',
+      false, 'the GM approved their own request');
+  exception when check_violation then
+    perform test.ok('approvals','the requester cannot approve their own', true);
+  end;
+
+  -- ---------- somebody else can ----------
+  perform app.decide_approval(a1, 'approved', owner, null);
+  perform test.ok('approvals','somebody else can',
+    (select status from approvals where id = a1) = 'approved');
+  perform test.ok('approvals','and the decision records who and when',
+    (select decided_by = owner and decided_at is not null
+       from approvals where id = a1));
+
+  -- ---------- A DECISION CANNOT BE QUIETLY RE-MADE ----------
+  -- Without this a rejection can be approved afterwards and the row shows
+  -- only the second answer. The trail would say approved and never that
+  -- anybody had refused it.
+  begin
+    perform app.decide_approval(a1, 'rejected', owner, 'changed my mind');
+    perform test.ok('approvals','a decided request cannot be decided again',
+      false, 'it was overwritten');
+  exception when check_violation then
+    perform test.ok('approvals','a decided request cannot be decided again', true);
+  end;
+
+  -- ---------- a refusal says why ----------
+  a2 := app.request_approval(h, 'purchase', 'purchase_invoices',
+          gen_random_uuid(), 'Six crates of soft drinks', 8800, gm);
+  begin
+    perform app.decide_approval(a2, 'rejected', owner, '   ');
+    perform test.ok('approvals','a rejection with no reason is refused',
+      false, 'it was accepted');
+  exception when check_violation then
+    perform test.ok('approvals','a rejection with no reason is refused', true);
+  end;
+
+  perform app.decide_approval(a2, 'rejected', owner, 'Buy from the usual supplier.');
+  perform test.ok('approvals','a rejection keeps the words',
+    (select decision_note from approvals where id = a2)
+      = 'Buy from the usual supplier.');
+
+  -- ---------- one live request per subject ----------
+  -- Two pending approvals for the same purchase is two people deciding the
+  -- same thing, and whichever is read first wins silently.
+  declare v_subject uuid := gen_random_uuid();
+  begin
+    perform app.request_approval(h, 'purchase', 'purchase_invoices',
+      v_subject, 'first', 1000, gm);
+    begin
+      perform app.request_approval(h, 'purchase', 'purchase_invoices',
+        v_subject, 'second', 1000, gm);
+      perform test.ok('approvals','one pending request per subject',
+        false, 'a second was accepted');
+    exception when unique_violation then
+      perform test.ok('approvals','one pending request per subject', true);
+    end;
+  end;
+
+  -- ---------- the threshold ----------
+  -- A property wanting the owner above 5,000 and nobody below it.
+  delete from approval_rules where hotel_id = h and kind = 'cash_expense';
+  insert into approval_rules (hotel_id, kind, approver_role, over_amount, set_by)
+  values (h, 'cash_expense', 'owner', 5000, owner);
+
+  perform test.ok('approvals','under the threshold needs nobody',
+    app.request_approval(h, 'cash_expense', 'expenses',
+      gen_random_uuid(), 'Auto fare', 300, gm) is null);
+  perform test.ok('approvals','over it needs the owner',
+    app.request_approval(h, 'cash_expense', 'expenses',
+      gen_random_uuid(), 'Emergency plumber', 7500, gm) is not null);
+
+  -- ---------- and it is audited ----------
+  -- §20 asks for "purchase approved" in the trail. The mechanism has existed
+  -- since CP2 and this table was simply not on the list.
+  select count(*) into n from audit_log
+   where table_name = 'approvals' and row_id = a1::text;
+  perform test.ok('approvals','the decision reaches the audit trail', n > 0,
+    n || ' audit rows for that approval');
+
+  -- ---------- teardown ----------
+  delete from approvals where hotel_id = h;
+  delete from approval_rules where hotel_id = h;
+end $$;
