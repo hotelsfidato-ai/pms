@@ -4,6 +4,7 @@ import { useParams, Link } from "react-router";
 import { Flame, ArrowLeft, Check, Ban } from "lucide-react";
 import { cn } from "@/lib/cn";
 import { useUi } from "@/lib/ui";
+import { useLiveOrders } from "@/lib/useLiveOrders";
 import { toast } from "@/components/ui";
 import {
   getKitchen, moveKitchenLine, type KitchenLine,
@@ -64,32 +65,30 @@ export default function KitchenPage() {
   const qc = useQueryClient();
   const [busy, setBusy] = useState<string | null>(null);
 
+  /* THE TILL PUSHES. A waiter adds a dish and it lands here, rather
+     than up to ten seconds later — and a pass screen lives in a
+     background tab, where the browser throttled the old poll to about
+     once a minute. */
+  const { live } = useLiveOrders(hotelId);
+
   const board = useQuery({
     queryKey: ["kitchen", hotelId],
     queryFn: () => getKitchen(hotelId),
-    /* THE POLL BELOW IS NOT ENOUGH ON ITS OWN. A pass screen usually
-       sits in a background tab while the waiter is on the till, and a
-       browser throttles a background setInterval to about once a
-       minute — so the board somebody turned to look at was up to a
-       minute behind, which is exactly long enough to stop trusting it.
+    /* ⚠ THE POLL STAYS, AND IT IS NOW A FLOOR RATHER THAN THE
+       MECHANISM. A live channel that fails quietly is worse than no
+       live channel: nobody goes looking, they just stop believing the
+       screen. So if the stream drops, this still refreshes — slower,
+       and the header says so out loud.
 
-       These two together mean it is fresh when it is LOOKED AT: the
-       poll while it is in front of somebody, the focus refetch the
-       instant it comes back into view. Both are needed; neither is. */
-    refetchInterval: 10_000,
+       Sixty seconds while the stream is up, six while it is not. The
+       old code polled every ten AND ran a second interval doing the
+       same invalidation — two mechanisms for one job, which is how
+       they drift. There is one now. */
+    refetchInterval: live ? 60_000 : 6_000,
     refetchIntervalInBackground: true,
     refetchOnWindowFocus: true,
     staleTime: 0,
   });
-
-  /* A pass screen is never touched. Without a poll it shows the order
-     from twenty minutes ago and the kitchen stops trusting it. */
-  useEffect(() => {
-    const t = setInterval(() => {
-      void qc.invalidateQueries({ queryKey: ["kitchen"] });
-    }, 10_000);
-    return () => clearInterval(t);
-  }, [qc]);
 
   /* The wait has to tick between polls, or a ticket sits reading "4m 00s"
      for ten seconds and the number stops meaning anything. */
@@ -119,8 +118,26 @@ export default function KitchenPage() {
           <p className="text-lg font-semibold text-ink-900 leading-tight">
             The pass
           </p>
-          <p className="text-2xs text-grey-500 tabular">
+          <p className="text-2xs text-grey-500 tabular flex items-center gap-2">
             {lines.filter((l) => !l.cancelled).length} dishes working
+            {/* NAMED, because the failure it describes is invisible.
+                A dropped stream leaves a screen that looks exactly
+                like a working one until somebody shouts about a dish
+                that never appeared. Green means the till reaches this
+                screen; amber means it is back on a timer. */}
+            <span
+              data-live={live ? "yes" : "no"}
+              className={cn(
+                "inline-flex items-center gap-1 uppercase tracking-wide",
+                live ? "text-success" : "text-brand-tangerine",
+              )}
+            >
+              <i className={cn(
+                "size-1.5 rounded-full",
+                live ? "bg-success" : "bg-brand-tangerine",
+              )} />
+              {live ? "live" : "reconnecting"}
+            </span>
           </p>
         </div>
         <Link

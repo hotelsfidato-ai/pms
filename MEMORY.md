@@ -3652,6 +3652,46 @@ the one-name deployment became two. **A rename that splits one concept
 into two has to be chased into the docs**; the code had `:?` guarding
 it and the prose did not.
 
+### 181 · The kitchen's live channel — and where it would have gone wrong
+
+Built after the owner said the POS and the kitchen must interact
+because they are one system. Three decisions are worth keeping.
+
+**The notification is raised by a TRIGGER, not by the endpoints.**
+`till.ts` has more than a dozen routes that change an order — add a
+line, change a quantity, void, send a KOT, settle, abandon, discount,
+move a status, clear a table. Publishing from each means the day
+somebody writes the fourteenth, the kitchen silently stops updating for
+that one action and nobody finds out until a service. The fact is *a
+row changed*, so the trigger is on the row.
+
+**`fetch`, not `EventSource`.** The browser's SSE client cannot send
+headers and this API is authenticated by one. EventSource would mean
+the Firebase token in the query string — in nginx's access log, in
+history, in any referrer. A token in a URL is a token you have
+published.
+
+**The channel carries a hotel id and nothing else.** The screen
+re-reads through the ordinary endpoint, so RLS still decides what it
+sees. A mistake in the fan-out costs a needless refetch, not a leak.
+
+**The poll stayed, demoted to a floor** — 60s while live, 6s when not,
+and the header says which. A live channel that fails quietly is worse
+than none: nobody goes looking, they just stop believing the screen.
+
+Two mistakes made while building it, both caught:
+
+- **`["till"]` does not invalidate `["till-orders"]`.** React Query
+  matches prefixes element by element. Guessing the key names would
+  have left the till stale while the kitchen updated — half a feature,
+  silently.
+- **The test asked the fixture for an order to touch.** A fresh test
+  database has no POS orders, so the update matched nothing and the
+  test failed for a reason unrelated to the channel. It makes its own
+  order now. **A test must not depend on data it did not create.**
+
+Proved both ways: with the notify removed, "carries a change" fails.
+
 ## Verification traps
 
 ### Never test a Tailwind utility by injecting the class at runtime

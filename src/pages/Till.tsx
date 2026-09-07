@@ -10,6 +10,7 @@ import { OrderHeaderPanel } from "@/components/flows/OrderHeaderPanel";
 import { cn } from "@/lib/cn";
 import { money } from "@/lib/format";
 import { useUi } from "@/lib/ui";
+import { useLiveOrders } from "@/lib/useLiveOrders";
 import {
   Page, PageHeader, Card, CardBody, StatusPill, Button, toast,
   Dialog, DialogContent, Field, fieldProps, Input, NativeSelect,
@@ -54,6 +55,11 @@ const METHODS = [
 
 export default function TillPage() {
   const hotelId = useHotel();
+  /* The same live channel the pass uses. A kitchen moving a dish to
+     ready, or another till taking a table, lands here rather than on
+     the next poll -- both screens are the same service. */
+  useLiveOrders(hotelId);
+
   const qc = useQueryClient();
 
   /* The floor sends the order it just opened. Tapping a free table means

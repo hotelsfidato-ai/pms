@@ -5,6 +5,7 @@ import { Printer, Eye, LayoutGrid } from "lucide-react";
 import { cn } from "@/lib/cn";
 import { money } from "@/lib/format";
 import { useUi } from "@/lib/ui";
+import { useLiveOrders } from "@/lib/useLiveOrders";
 import {
   Page, PageHeader, Card, CardBody, Button, Skeleton, toast,
 } from "@/components/ui";
@@ -57,6 +58,11 @@ const TILE: Record<TableState, string> = {
 
 export default function FloorPage() {
   const hotelId = useHotel();
+  /* The same live channel the pass uses. A kitchen moving a dish to
+     ready, or another till taking a table, lands here rather than on
+     the next poll -- both screens are the same service. */
+  useLiveOrders(hotelId);
+
   const navigate = useNavigate();
   const qc = useQueryClient();
   const [busy, setBusy] = useState<string | null>(null);

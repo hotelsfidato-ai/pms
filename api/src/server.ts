@@ -16,6 +16,10 @@ import { directory } from "./routes/directory.ts";
 import { billing } from "./routes/billing.ts";
 import { pos, posAdmin, outletFor, type Outlet } from "./routes/pos.ts";
 import { till } from "./routes/till.ts";
+import { live } from "./routes/live.ts";
+import {
+  startListening, stopListening, watcherCount, isListening,
+} from "./realtime.ts";
 import { admin } from "./routes/admin.ts";
 import { rates } from "./routes/rates.ts";
 import { groups } from "./routes/groups.ts";
@@ -124,6 +128,12 @@ app.get("/health", async (c) => {
         database: "reachable",
         role: row?.role ?? null,
         startedAt: STARTED_AT,
+        /* THE FIRST THING WORTH KNOWING when somebody says the kitchen
+           has stopped updating. `live` false means the listener has no
+           database connection, so every screen has silently fallen back
+           to its slow poll — which looks identical to working until a
+           waiter shouts. `screens` is how many are attached right now. */
+        realtime: { live: isListening(), ...watcherCount() },
         ...(ok ? {} : { error: "Connected as the wrong role. Expected pms_app." }),
       },
       ok ? 200 : 503,
@@ -189,6 +199,9 @@ app.route("/api/hotels", posAdmin);
 /* The till is person-facing and sits behind the same bearer gate as
    every other /api/hotels route. `pos` below is the machine door. */
 app.route("/api/hotels", till);
+/* The live stream. Under /api/hotels like everything else, so it
+   inherits the same subject middleware and the same CORS list. */
+app.route("/api/hotels", live);
 /* Administration. Mounted at /api, not /api/hotels — creating a
    property is not scoped to a property. */
 app.route("/api", admin);
@@ -223,6 +236,11 @@ export { app };
 /* Started only when run directly, so the tests can import `app`
    without binding a port. */
 if (process.argv[1]?.endsWith("server.ts")) {
+  /* One connection LISTENing for order changes, fanned out in memory
+     to every kitchen and till screen. Started before the port opens so
+     the first screen to connect finds it already live. */
+  startListening();
+
   const server = serve({ fetch: app.fetch, port: env.port }, (info) => {
     console.log(
       `  Fidato PMS API  ·  http://localhost:${info.port}  ·  ${env.nodeEnv}` +
@@ -249,6 +267,7 @@ if (process.argv[1]?.endsWith("server.ts")) {
 
   const shutdown = async () => {
     server.close();
+    await stopListening();
     await closePool();
     process.exit(0);
   };
