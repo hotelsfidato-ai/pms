@@ -13,10 +13,19 @@
 # this box is a data server, and the app is a client of it exactly as the
 # till and the CRS are. Several origins may be listed, comma-separated.
 #
-# Idempotent. Running it again upgrades in place: it re-pulls, re-migrates,
-# rebuilds the frontend and restarts the service. It does NOT re-issue a
-# certificate that is still valid, and it never touches the database beyond
-# applying migrations that have not run.
+# Idempotent. Running it again upgrades in place: re-migrates, reinstalls API
+# dependencies, restarts the service. It does NOT re-issue a certificate that
+# is still valid, and it never touches the database beyond the migrations.
+#
+# TWO THINGS IT DOES NOT DO, both of which this comment used to claim:
+#
+#   · it does not `git pull`. You do that first, deliberately, so that what
+#     is about to run as root is what you looked at.
+#   · it does not build the frontend. That is built on YOUR machine with
+#     `API_URL=https://<this domain> npm run build:app` and deployed to
+#     Firebase Hosting. Building it here would drag a full toolchain onto a
+#     2-OCPU box to produce assets Firebase serves anyway -- and the API
+#     address it needs is a RUNTIME file, not a build flag.
 #
 # IT REFUSES TO FINISH IF THE PREFLIGHT FAILS. That is the point: every check
 # in api/scripts/preflight.ts is a way to have a system that starts, looks
@@ -146,7 +155,18 @@ say "The service account (unix)"
 # The API runs as `fidato`, not root and not your login. A system account with
 # no shell and no home: if the process is ever compromised, what it can reach
 # is the app directory and the Postgres socket.
-id -u fidato >/dev/null 2>&1 \n  || useradd --system --no-create-home --shell /usr/sbin/nologin fidato
+# ⚠ THIS LINE HAD A LITERAL BACKSLASH-n IN IT INSTEAD OF A LINE
+# CONTINUATION, so the shell ran `id -u fidato n` -- two operands, which `id`
+# always rejects. The guard therefore NEVER held: useradd ran on every pass,
+# and on the second one it exits 9 with "user 'fidato' already exists". With
+# `set -e` that aborted the whole script.
+#
+# So this worked exactly once per box, and the README says in its second
+# sentence: "Run it again any time to upgrade." Every upgrade died here --
+# before migrations, before the build, before the service restart.
+if ! id -u fidato >/dev/null 2>&1; then
+  useradd --system --no-create-home --shell /usr/sbin/nologin fidato
+fi
 chown -R fidato:fidato "$APP_DIR"
 
 # -----------------------------------------------------------------------------
@@ -233,11 +253,26 @@ else
 fi
 
 say "Migrations"
-for f in "$APP_DIR"/db/migrations/*.sql; do
-  sudo -u postgres psql -q -v ON_ERROR_STOP=1 -d "$DB_NAME" -f "$f" \
-    || die "Migration failed: $(basename "$f")"
-done
-echo "  $(ls "$APP_DIR"/db/migrations/*.sql | wc -l) applied"
+# ⚠ THIS WAS ITS OWN LOOP, ONE psql PER FILE, AND THAT BROKE THE LIVE APP ON
+# EVERY UPGRADE.
+#
+# The migrations are re-runnable, so an upgrade replays all of them from 001.
+# One transaction per file means every intermediate state is visible to
+# whoever is using the system -- and 001 installs an app.current_user_id()
+# that 017 replaces. The API sets app.user_id to the FIREBASE UID, so for the
+# sixteen migrations in between, every signed-in request 500s. Measured on the
+# identical loop in db/migrate.sh: 53 failures in 400 requests.
+#
+# db/migrate.sh was fixed for exactly this and THIS COPY STILL CARRIED IT.
+# One runner. A rule written in two places is wrong in one of them.
+#
+# Over the unix socket as `postgres`: peer authentication, no password
+# anywhere, and the role that owns the schema.
+sudo -u postgres env \
+  PGHOST=/var/run/postgresql PGPORT=5432 SUPER=postgres DB="$DB_NAME" \
+  bash "$APP_DIR/db/migrate.sh" \
+  || die "Migrations failed. The database is exactly as it was: the whole
+  run is one transaction and it rolled back."
 
 # -----------------------------------------------------------------------------
 say "Configuration"

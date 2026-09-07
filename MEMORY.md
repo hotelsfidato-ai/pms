@@ -3598,6 +3598,60 @@ anything that touches assignments.
 **When a rule is stated at a fact, adding a new way to produce that
 fact re-opens the rule.** Vacant, yes — it is. Dirty, no.
 
+### 178 · The deploy script aborted on every run after the first
+
+```sh
+id -u fidato >/dev/null 2>&1 
+  || useradd --system ... fidato
+```
+
+That `
+` is a **literal backslash-n**, not a line continuation, so the
+shell ran `id -u fidato n` — two operands, which `id` always rejects.
+The guard therefore never held. First run: useradd succeeds. Second
+run: *"user 'fidato' already exists"*, exit 9, and with `set -e` the
+**whole script aborts** — before migrations, before the build, before
+the service restart.
+
+`deploy/README.md`'s second sentence is "Run it again any time to
+upgrade."
+
+**A guard whose condition can never be true is not a guard.** Same
+family as 166 and 173: it passed because it always took one branch.
+
+### 179 · The fixed migration runner, and the copy that still had the bug
+
+`deploy/launch.sh` kept **its own loop** over `db/migrations/*.sql`,
+one psql per file — the exact fault fixed in `db/migrate.sh` one day
+earlier (see 175). So the 13%-of-requests-500 window survived in the
+only place it would ever actually hit a hotel: the production upgrade.
+
+The reason the copy existed at all: `db/migrate.sh` hardcoded
+`"$PGBIN/psql.exe"`, which resolves to nothing on Linux. **A shared
+script that only runs on one platform will grow a second copy on the
+other, and the copy will not receive the fixes.**
+
+### 180 · The first command in the deploy README refused to start
+
+```
+sudo DOMAIN=pms.fidatohotels.com EMAIL=you@… deploy/launch.sh
+```
+
+Two faults in one line, at the top of the file somebody reads before
+touching a production box:
+
+- **`APP_ORIGIN` is missing**, and `launch.sh` declares it `${...:?}`.
+  The command exits immediately.
+- **`pms.` is the APP's host, not the API's.** `DOMAIN` is where the
+  API answers and what the certificate is issued for. Had it started,
+  the box would have taken a certificate for a name it does not serve,
+  with CORS pointing at itself.
+
+Both were introduced when the frontend moved to Firebase Hosting and
+the one-name deployment became two. **A rename that splits one concept
+into two has to be chased into the docs**; the code had `:?` guarding
+it and the prose did not.
+
 ## Verification traps
 
 ### Never test a Tailwind utility by injecting the class at runtime

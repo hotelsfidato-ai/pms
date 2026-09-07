@@ -4,11 +4,23 @@ One command puts this on a server. Everything before it is a fact only you
 have, and none of it can be scripted.
 
 ```bash
-sudo DOMAIN=pms.fidatohotels.com EMAIL=you@fidatohotels.com deploy/launch.sh
+sudo DOMAIN=api.fidatohotels.com APP_ORIGIN=https://pms.fidatohotels.com EMAIL=you@fidatohotels.com deploy/launch.sh
 ```
 
-Run it again any time to upgrade: it re-migrates, rebuilds, restarts, and
-leaves the certificate and the database alone.
+**Two names, and they are not interchangeable.** `DOMAIN` is where the **API**
+answers and is the name the certificate is issued for. `APP_ORIGIN` is where
+the **app** is served — Firebase Hosting — and is the origin the browser sends,
+so it is what CORS must allow. Get them the wrong way round and the box gets a
+certificate for a name it does not serve, while every screen goes silently
+empty.
+
+⚠ This command was wrong in this file until now: it named `pms.` as `DOMAIN`
+and omitted `APP_ORIGIN` entirely, which `launch.sh` requires. It refused to
+start.
+
+Run it again any time to upgrade: it re-migrates, reinstalls, restarts, and
+leaves the certificate and the database alone. It does **not** `git pull` and
+does **not** build the frontend — see step 7.
 
 The script **refuses to finish** if the preflight fails. That is deliberate.
 Every check it runs is a way to have a system that starts, looks correct, and
@@ -280,7 +292,8 @@ systemctl status fidato-api
 journalctl -u fidato-api -f          # live log
 systemctl restart fidato-api
 
-cd /opt/fidato && git pull && sudo DOMAIN=… EMAIL=… deploy/launch.sh
+cd /opt/fidato && git pull
+sudo DOMAIN=api.… APP_ORIGIN=https://pms.… EMAIL=… deploy/launch.sh
 ```
 
 The night audit is **not scheduled and should not be** — somebody presses the

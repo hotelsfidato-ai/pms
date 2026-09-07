@@ -37,8 +37,32 @@ SUPERPASS="${SUPERPASS:-pw}"
 DB="${DB:-fidato}"
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 
-PSQL="$PGBIN/psql.exe"
+# WHICH psql. This file now runs in two real places and they are not alike:
+# a portable Postgres on Windows during development, and a package on the
+# Oracle Linux box in production, where `deploy/launch.sh` calls it rather
+# than keeping a second copy of the loop.
+#
+# `$PGBIN/psql.exe` was hardcoded, so on the server it resolved to nothing and
+# every call failed with "No such file or directory" — which is why launch.sh
+# had its own loop in the first place, and why the fault that loop carries had
+# to be fixed twice.
+if [ -n "${PSQL:-}" ]; then
+  :                                       # told explicitly; use it
+elif [ -x "$PGBIN/psql.exe" ]; then
+  PSQL="$PGBIN/psql.exe"
+elif [ -x "$PGBIN/psql" ]; then
+  PSQL="$PGBIN/psql"
+elif command -v psql >/dev/null 2>&1; then
+  PSQL="$(command -v psql)"
+else
+  printf "[31m  x no psql found. Set PGBIN to the directory holding it, or PSQL to the binary.[0m
+"
+  exit 1
+fi
+
 S="-h $PGHOST -p $PGPORT -U $SUPER"
+# Harmless where it is not needed: the server connects over the unix socket
+# under peer authentication as `postgres`, and libpq ignores this then.
 export PGPASSWORD="$SUPERPASS"
 export PGCLIENTENCODING=UTF8
 
