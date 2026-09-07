@@ -3536,6 +3536,46 @@ backwards through its own history* on every upgrade. Any object
 redefined by a later migration is briefly its older self on a live
 database. That is safe only if the whole replay is atomic.
 
+### 176 · Every no-show took a room out of sale, silently
+
+042 wrote this rule for VOID and wrote down exactly why:
+
+> The assignment is what makes a room unavailable. Leaving it behind on
+> a voided booking holds a room out of inventory for a stay that never
+> existed — and it is the kind of thing found weeks later, by a clerk
+> who cannot sell a room that looks empty.
+
+**Every word of that is true of a no-show, and a no-show is far
+commoner than a void.** The trigger covered one status; the reasoning
+covered three.
+
+Found by closing two real nights. The audit marked an arrival no-show,
+correctly, and left it holding 305 from the 5th to the 8th. The tape
+chart drew a bar over an empty room, and the constraint refused the
+sale:
+
+```
+ERROR:  conflicting key value violates exclusion constraint
+        "ra_no_double_booking"
+DETAIL: (305, [2026-09-07,2026-09-08)) conflicts with
+        (305, [2026-09-05,2026-09-08))
+```
+
+A room the property could have sold that night, lost to a guest who
+never came, with nothing anywhere saying so.
+
+**When a rule is written with its reasoning, check the reasoning's
+scope against the code's.** This one named a class — "a stay that is
+not happening" — and was implemented for one member of it. 073 lists
+all three in one condition, so a fourth terminal status has one place
+to be added.
+
+**Counting released rows is the weaker half of the guard.** It proves
+the trigger fired. Only inserting the same nights for somebody else
+proves the exclusion constraint actually let go — and that is the thing
+a hotel cares about. With the trigger narrowed back to void, the suite
+fails on exactly the error above.
+
 ## Verification traps
 
 ### Never test a Tailwind utility by injecting the class at runtime

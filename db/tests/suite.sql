@@ -1665,6 +1665,7 @@ do $$
 declare
   v_hotel uuid; v_other uuid; v_staff uuid; v_guest uuid;
   v_type uuid; v_room1 uuid; v_room2 uuid; v_far uuid; v_res uuid;
+  v_res2 uuid; v_res3 uuid;
   n int;
 begin
   insert into hotels (code, name, city, timezone)
@@ -1795,6 +1796,61 @@ begin
   perform test.ok('void','void and cancelled are different statuses',
     (select status from reservations where id = v_res) = 'void',
     'one never happened, the other happened and was undone');
+
+  -- ---------- and NEITHER DOES A NO-SHOW, nor a cancellation ----------
+  -- ⚠ THE TRIGGER COVERED ONE STATUS AND THE REASONING COVERED THREE.
+  -- 042 wrote the rule for void and wrote down exactly why: an assignment
+  -- left behind holds a room out of sale for a stay that is not happening.
+  -- Every word of that is true of a no-show, and a no-show is far commoner.
+  --
+  -- Found by closing two real nights. The audit marked an arrival no-show,
+  -- correctly, and left it holding room 305 from the 5th to the 8th: the
+  -- chart drew a bar over an empty room and ra_no_double_booking refused to
+  -- sell it. Silent, and it happens on every no-show.
+  --
+  -- Its own booking, because v_res is void now and a void cannot be walked
+  -- back through 'confirmed' to test another terminal status.
+  insert into reservations
+    (hotel_id, guest_id, room_type_id, reference, check_in, check_out,
+     adults, status, source, created_by, agreed_rate)
+  values (v_hotel, v_guest, v_type, 'TRB-2',
+          current_date + 5, current_date + 7, 1, 'confirmed', 'direct',
+          v_staff, 1234.00)
+  returning id into v_res2;
+
+  insert into room_assignments
+    (hotel_id, reservation_id, room_id, from_date, to_date, created_by)
+  values (v_hotel, v_res2, v_room1, current_date + 5, current_date + 7, v_staff);
+
+  update reservations set status = 'no_show' where id = v_res2;
+  select count(*) into n from room_assignments
+   where reservation_id = v_res2 and released_at is null;
+  perform test.ok('void','a no-show gives its room back', n = 0,
+    n || ' assignment(s) still live');
+
+  -- And the room is genuinely sellable again, which is the thing that
+  -- actually matters. Counting released rows proves the trigger fired;
+  -- only an insert proves the exclusion constraint has let go.
+  insert into reservations
+    (hotel_id, guest_id, room_type_id, reference, check_in, check_out,
+     adults, status, source, created_by, agreed_rate)
+  values (v_hotel, v_guest, v_type, 'TRB-3',
+          current_date + 5, current_date + 7, 1, 'confirmed', 'direct',
+          v_staff, 1234.00)
+  returning id into v_res3;
+
+  insert into room_assignments
+    (hotel_id, reservation_id, room_id, from_date, to_date, created_by)
+  values (v_hotel, v_res3, v_room1, current_date + 5, current_date + 7, v_staff);
+  perform test.ok('void','and the room can be sold to somebody else',
+    true, 'ra_no_double_booking accepted the very same nights');
+
+  -- A cancellation is the third case, and the same sentence again.
+  update reservations set status = 'cancelled' where id = v_res3;
+  select count(*) into n from room_assignments
+   where reservation_id = v_res3 and released_at is null;
+  perform test.ok('void','a cancellation gives its room back too', n = 0,
+    n || ' assignment(s) still live');
 
   -- ---------- teardown ----------
   delete from room_assignments where hotel_id = v_hotel;
