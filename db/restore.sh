@@ -27,6 +27,23 @@ PGHOST="${PGHOST:-127.0.0.1}"
 SUPER="${SUPER:-postgres}"
 SUPERPASS="${SUPERPASS:-pw}"
 DB="${DB:-fidato}"
+
+# WHERE THE SAFETY COPY GOES, and where --latest looks.
+#
+# ⚠ THIS WAS HARDCODED TO THE REPOSITORY'S OWN db/backups, and on a server
+# that is wrong twice over. The checkout is owned by the service account, so
+# the restore -- which runs as `postgres` -- cannot write there and STOPS,
+# refusing to replace a database it could not first copy. Correct behaviour,
+# baffling cause.
+#
+# And even with the permissions fixed, a backup inside the git checkout is a
+# backup a redeploy can delete. The uploads directory was moved out of the
+# checkout for the same reason.
+#
+# launch.sh already creates /var/backups/fidato owned by postgres for the
+# nightly dump. That is the right home on a server; the repo's own folder
+# stays the default so nothing changes on a development machine.
+BACKUP_DIR="${BACKUP_DIR:-$ROOT/db/backups}"
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 
 # ⚠ THIS HARDCODED `psql.exe` AND `pg_restore.exe`, so it could only ever run
@@ -70,7 +87,7 @@ ASSUME_YES=0
 while [ $# -gt 0 ]; do
   case "$1" in
     --latest)
-      FILE=$(ls -1t "$ROOT"/db/backups/${DB}-*.dump 2>/dev/null | head -1)
+      FILE=$(ls -1t "$BACKUP_DIR"/${DB}-*.dump 2>/dev/null | head -1)
       shift ;;
     --into)  TARGET="$2"; shift 2 ;;
     # Only for a scratch target. Refused below for anything else, because an
@@ -84,8 +101,8 @@ if [ -z "$FILE" ] || [ ! -s "$FILE" ]; then
   red "  x no backup file. Pass a path, or --latest."
   echo
   echo "  available:"
-  ls -1t "$ROOT"/db/backups/*.dump 2>/dev/null | head -5 | sed 's/^/    /' \
-    || echo "    none in db/backups/"
+  ls -1t "$BACKUP_DIR"/*.dump 2>/dev/null | head -5 | sed 's/^/    /' \
+    || echo "    none in $BACKUP_DIR"
   exit 1
 fi
 
@@ -148,7 +165,7 @@ fi
 if [ "$EXISTS" = "1" ]; then
   echo
   echo "-- copying the current $TARGET first -----------------------"
-  SAFETY="$ROOT/db/backups/${TARGET}-replaced-$(date +%Y%m%d-%H%M%S).dump"
+  SAFETY="$BACKUP_DIR/${TARGET}-replaced-$(date +%Y%m%d-%H%M%S).dump"
   mkdir -p "$(dirname "$SAFETY")"
   PGPASSWORD=$SUPERPASS "$PGDUMP" $S -Fc --no-owner --no-acl \
     -f "$SAFETY" "$TARGET" 2>&1 | sed 's/^/    /'

@@ -3880,6 +3880,36 @@ precisely this and nobody looked at its sibling.**
 Fixing one file in a pair is not fixing the pair. Same lesson as 186,
 where reconciling two role lists left a third.
 
+### 189 · The safety copy could not be written, so the restore refused
+
+`restore.sh` takes a copy of the database it is about to replace. The
+destination was hardcoded to the repository's own `db/backups`, and on
+a server that is wrong twice:
+
+- the checkout is owned by the service account, and the restore runs as
+  `postgres`, so it cannot write there — it stopped, correctly, rather
+  than replacing a database it had failed to copy first
+- even with permissions fixed, **a backup inside the git checkout is a
+  backup a redeploy deletes.** The uploads directory was moved out of
+  the checkout for exactly this reason and this was not.
+
+**The refusal was the system working.** *"Restoring now would destroy
+it with nothing to return to"* is the correct call — but the cause
+reads as a permissions bug rather than as a design one, and somebody in
+a hurry would `chmod 777` the folder and move on with backups still
+inside the checkout.
+
+`BACKUP_DIR` now, defaulting to the repo folder so nothing changes on a
+development machine. `launch.sh` already creates
+`/var/backups/fidato` owned by postgres for the nightly dump; that is
+the right home on a server.
+
+**Fourth Windows-or-single-machine assumption found by one real
+deploy** — after `migrate.sh`, the executable bits, and `restore.sh`'s
+`.exe` paths. Every one of them was invisible to 483 database
+assertions and 250 API tests, because the tests run where the code was
+written.
+
 ## Verification traps
 
 ### Never test a Tailwind utility by injecting the class at runtime
