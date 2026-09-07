@@ -3692,6 +3692,62 @@ Two mistakes made while building it, both caught:
 
 Proved both ways: with the notify removed, "carries a change" fails.
 
+### 182 · Stage A — the three foundations, and what each one refuses
+
+**Approvals.** Three requirements describe an approval; this is one
+table. The two guards that make it more than a signature box live in
+`app.decide_approval`, not in the route:
+
+- **nobody approves their own request** — a GM who can approve their own
+  cash purchase has a process that records a signature rather than
+  obtaining one
+- **a decision cannot be quietly re-made** — a rejection that can be
+  approved afterwards leaves a trail saying *approved* and never saying
+  anybody refused
+
+In the database, because accountability another endpoint can bypass is
+not accountability. Both proved by removing them and watching the suite
+fail on exactly those two lines.
+
+**The approver ROLE is frozen onto the request**, like cancellation
+terms onto a booking: a rule changed tomorrow must not re-route what is
+already waiting, nor retrospectively change who was supposed to act.
+
+**No rule returns null, not an error.** A property that has not set
+approvals up can still buy a packet of nails. An engine that refuses
+until it is configured is an engine nobody switches on.
+
+### 183 · The first file this system ever kept
+
+Nothing in this database had ever stored bytes — `guest_documents`
+holds a passport number, never an image.
+
+**The key is generated; the filename never becomes a path.** A name off
+a phone can be `../../etc/passwd`, can collide with another property's,
+and can hold characters a filesystem will not take. The person's name
+is kept for display only, and `safePath` is the one place a key becomes
+a path so there is one place to get it wrong. It re-checks even keys
+this code generated, because they come back **from the database**, and
+a stored value is data.
+
+**The bytes are written before the insert, so the insert's failure must
+clean them up.** A duplicate upload wrote a file, hit the unique index
+and returned — leaving a file nothing pointed at. A store that
+accumulates orphans cannot be audited against the database. Tested by
+uploading the same bytes twice and asserting one row and no orphan.
+
+**Not-found and not-yours are the same answer.** Distinguishing them
+tells somebody at one property that an id exists at another, which is
+the only thing an id is useful for guessing.
+
+**The mirror is recorded, never assumed.** `mirror_url` stays null
+until something says otherwise. A Drive link shown before Drive has the
+file is a lie to whoever has to produce that bill for an assessor.
+
+**Compare files by hash, not by length.** "70 bytes came back" is
+exactly the assertion that passes while a store hands out the wrong
+bill.
+
 ## Verification traps
 
 ### Never test a Tailwind utility by injecting the class at runtime

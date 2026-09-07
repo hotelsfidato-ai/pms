@@ -304,6 +304,25 @@ fi
 # src/lib/api.ts. That is what lets the backend move to another provider
 # without rebuilding every client that talks to it.
 
+# -----------------------------------------------------------------------------
+# Where uploaded bills live
+# -----------------------------------------------------------------------------
+# ⚠ OUTSIDE THE CHECKOUT, DELIBERATELY. A deploy that re-clones or resets
+# /opt/fidato would take the hotel's purchase invoices with it -- and a GST
+# invoice is a document the property has to be able to produce years later.
+#
+# On the same disk as the database for now, which means the same warning the
+# backup carries: a copy that dies in the same fire is not a copy. The Drive
+# mirror (n8n) and Object Storage are both answers to that, and the
+# `attachments` row records WHICH store holds each file so either can arrive
+# without a migration.
+UPLOAD_DIR="${UPLOAD_DIR:-/var/lib/fidato/uploads}"
+install -d -o fidato -g fidato -m 700 "$UPLOAD_DIR"
+if ! grep -q '^UPLOAD_DIR=' "$ENV_FILE"; then
+  echo "UPLOAD_DIR=$UPLOAD_DIR" >> "$ENV_FILE"
+fi
+echo "  $UPLOAD_DIR"
+
 chown fidato:fidato "$ENV_FILE" "$DB_PASS_FILE" 2>/dev/null || true
 
 # -----------------------------------------------------------------------------
