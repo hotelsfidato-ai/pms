@@ -57,11 +57,40 @@ fi
 DB="${DB:-fidato}"
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 
+# ── --portable ───────────────────────────────────────────────────────────────
+# A DUMP ONLY RESTORES FORWARDS. pg_dump 17 writes a file header that
+# pg_restore 16 refuses outright:
+#
+#     pg_restore: error: unsupported version (1.16) in file header
+#
+# Found moving a real property from a laptop running 17.6 onto a server
+# running 16 -- which is the one journey this script exists to make. The
+# default custom format is smaller and restores faster, and is right between
+# machines on the same major version. It is useless between different ones,
+# and the error says nothing about a version being the problem.
+#
+# --portable writes plain SQL and strips the single line an older server
+# rejects: SET transaction_timeout, a parameter added in PostgreSQL 17.
+# Everything else this schema emits -- tables, functions, row level security,
+# triggers, partial indexes -- has been valid since 13.
+#
+# Restore it with psql, NOT pg_restore:
+#     psql -d fidato -f the-file.sql
+PORTABLE=""
+if [ "${1:-}" = "--portable" ]; then
+  PORTABLE=1
+  shift
+fi
+
 OUTDIR="${1:-$ROOT/db/backups}"
 mkdir -p "$OUTDIR"
 
 STAMP=$(date +%Y%m%d-%H%M%S)
-FILE="$OUTDIR/${DB}-${STAMP}.dump"
+if [ -n "$PORTABLE" ]; then
+  FILE="$OUTDIR/${DB}-${STAMP}.sql"
+else
+  FILE="$OUTDIR/${DB}-${STAMP}.dump"
+fi
 
 red()   { printf "\033[31m%s\033[0m\n" "$1"; }
 green() { printf "\033[32m%s\033[0m\n" "$1"; }
@@ -77,10 +106,17 @@ echo "-- backing up $DB ------------------------------------------"
 # exist yet. Ownership and grants come from db/migrations/010_roles.sql, which
 # is the one place that should ever define them — a dump that carried its own
 # would silently diverge from the migrations after the first schema change.
+if [ -n "$PORTABLE" ]; then
+  PGPASSWORD="$SUPERPASS" "$PGDUMP" \
+    -h "$PGHOST" -p "$PGPORT" -U "$SUPER" \
+    -Fp --no-owner --no-acl "$DB" \
+    | grep -v "^SET transaction_timeout = " > "$FILE"
+else
 PGPASSWORD="$SUPERPASS" "$PGDUMP" \
   -h "$PGHOST" -p "$PGPORT" -U "$SUPER" \
   -Fc --no-owner --no-acl \
   -f "$FILE" "$DB" 2>&1 | sed 's/^/    /'
+fi
 
 if [ ! -s "$FILE" ]; then
   red "  x pg_dump produced nothing. NOT a backup."

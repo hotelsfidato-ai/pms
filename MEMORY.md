@@ -3910,6 +3910,34 @@ deploy** — after `migrate.sh`, the executable bits, and `restore.sh`'s
 assertions and 250 API tests, because the tests run where the code was
 written.
 
+### 190 · A dump only restores forwards
+
+```
+pg_restore: error: unsupported version (1.16) in file header
+```
+
+The laptop runs PostgreSQL 17.6; the server runs 16. A dump written by
+17 cannot be read by 16 — and **moving a database from a laptop to a
+server is the one journey `backup.sh` exists to make.**
+
+The error names a version number in a file header and says nothing
+about the two servers being different, which is where the time goes.
+
+`backup.sh --portable` writes plain SQL instead of the custom format
+and strips the single line an older server rejects: `SET
+transaction_timeout`, added in 17. Everything else this schema emits —
+tables, functions, RLS, triggers, partial indexes — has been valid
+since 13. Proved by restoring into a scratch database: zero errors, 18
+rooms, 17 menu items.
+
+**The wider point, unresolved.** `launch.sh` installs 16 and its own
+comment says "there is no reason to run a live hotel on a version this
+suite has never seen" — and the suite runs on 17.6. The box is now
+running a version nothing has been tested against. The migrations all
+applied, which is real evidence, but it is not the same as having run
+the suite there. **Worth aligning before real bookings**, and it was
+not worth doing mid-deploy with the owner waiting.
+
 ## Verification traps
 
 ### Never test a Tailwind utility by injecting the class at runtime
