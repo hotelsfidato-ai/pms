@@ -108,7 +108,41 @@ npm run link-staff -- --email owner@fidato.in --uid <uid-from-firebase>
 
 The uid is in Authentication → Users, under **User UID**.
 
-### 7 · Enter the real properties
+### 7 · Build the app, and tell it where the API is
+
+⚠ **This step did not exist and nothing failed without it.** The app
+resolves the API address at RUNTIME from `/config.json` beside
+`index.html` — deliberate, so the backend can move without rebuilding
+every client. Nothing wrote that file. `fetch("/config.json")` 404s,
+`src/lib/api.ts` falls back to `http://localhost:8787`, and a deployed
+app asks **the tester's own laptop** for the hotel's data. Every screen
+renders. Every screen is empty. Nothing says why.
+
+The preflight cannot catch it: it runs on the server, and this is a
+static file on a CDN.
+
+```bash
+API_URL=https://api.yourdomain.com npm run build:app
+```
+
+It **refuses** without an address, and refuses an `http://` one — an
+https page cannot call http, and the browser blocks it with nothing in
+the interface to say so. That is why the API needs a name and a
+certificate rather than the instance's IP.
+
+Then point the `app` hosting target at your site once, and deploy:
+
+```bash
+firebase target:apply hosting app <your-site-id>   # once
+firebase deploy --only hosting:app
+```
+
+`.firebaserc` maps only the `demo` target today. `hosting:app` fails
+with *"target app not configured"* until you run the line above —
+`<your-site-id>` is the site in Firebase console → Hosting, not the
+project id.
+
+### 8 · Enter the real properties
 
 Only 5 Elements Akkalkot is configured. Add the other six through
 Admin → Properties, then their **rooms** — there are no default rooms and no
@@ -146,6 +180,81 @@ against a database holding two. `ADMIN_DATABASE_URL` is set by `launch.sh` to
 the local `postgres` socket for exactly this reason.
 
 ---
+
+## Running a beta before you go live
+
+A beta is not a smaller launch. It is a launch where **the data is
+thrown away afterwards and the numbers are not**, and the difference is
+where every one of these traps sits.
+
+### Give people access
+
+Nothing is public. A tester needs three things and the third is the one
+that gets missed:
+
+1. a Firebase account — Authentication → Users → Add user
+2. a staff row at the property — People → Add
+3. **the two joined** — `npm run link-staff -- --email x --uid <uid>`
+
+Miss the third and sign-in **succeeds** into an application with no
+properties, no bookings and no error, because every row-level policy
+resolves to nobody. It reads exactly like an empty database, and it is
+the single most likely thing to make a tester report that the system is
+broken. `npm run link-staff -- --list` says who is linked before anyone
+arrives.
+
+### What a beta must be told, or it looks broken
+
+**Somebody has to press the night audit, every day.** It is manual by
+instruction and should stay manual. A property nobody closes stays on
+yesterday — and then a booking made today reads as a *future* booking
+and **cannot be checked in**. The refusal is correct and the date is the
+problem. This is the number one way a beta looks broken while working.
+
+**Tell them what is not built**, so it comes back as feedback rather
+than as bug reports: no channel manager, no booking engine, no payment
+capture, nothing sent to a guest, no Tally export. Each of those is a
+named screen or a named note in the app; none of them is a defect.
+
+### The one thing a reset does NOT undo
+
+```bash
+cd api && npm run reset -- 5EL --yes
+```
+
+removes every booking, folio, posting, payment, invoice, order and
+audit run, keeps every setting — rooms, rates, staff, menu, tables,
+hours — and sets the business date to today. That is the right way to
+end a beta.
+
+**It does not move `invoice_series` back.** Deliberately: a GST number,
+once issued to a guest, is spent, and a series that goes backwards is a
+question from an assessor. So decide BEFORE the beta:
+
+- **tell testers not to press Issue** — simplest, and what we recommend;
+  everything else on the Invoices screen can be exercised without it, or
+- accept the gap and be able to explain it, or
+- if you are certain no beta invoice ever left the building, put the
+  counter back by hand after the reset:
+  `update invoice_series set next_number = 1 where hotel_id = ...`
+
+Check where it stands before you go live:
+
+```sql
+select prefix, fin_year, next_number from invoice_series;
+```
+
+`5EL / 2026-27 / next 1` means nothing has been issued and you are clean.
+
+### End of beta, in order
+
+```
+1  npm run reset -- 5EL --yes          transactions gone, settings kept
+2  check invoice_series                back at 1, or explained
+3  npm run preflight                   zero blocking
+4  db/backup.sh, then verify-backup.sh a backup you have restored
+5  enter the remaining six properties  and their rooms, and their rates
+```
 
 ## Backups
 

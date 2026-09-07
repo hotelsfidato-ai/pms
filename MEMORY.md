@@ -3466,6 +3466,36 @@ code it checks.** It now counts DISTINCT reservations — which is the
 rule in words: a stay a waiter can charge appears once, whatever it has
 done with rooms.
 
+### 174 · The deployed app would have asked the tester's laptop for the data
+
+`src/lib/api.ts` resolves the API address at RUNTIME from
+`/config.json` beside `index.html`, so the backend can move without
+rebuilding every client. Deliberate, documented in three files, and
+right.
+
+**Nothing ever wrote that file.** Not the repo, not the build, not
+`deploy/launch.sh` — whose comment says it deliberately no longer
+writes `VITE_*` *because config.json exists*, and which does not write
+config.json either. `firebase.json` even sets `no-store` headers for a
+file that has never been produced.
+
+So `fetch("/config.json")` 404s, the fallback is
+`VITE_API_URL ?? "http://localhost:8787"`, and a deployed app asks the
+visitor's own machine for the hotel's data. Every screen renders, every
+screen is empty, nothing says why.
+
+**The preflight cannot see it.** It runs on the server; this is a
+static file on a CDN. The CORS check that exists to prevent exactly
+this failure is on the other side of the same door.
+
+`npm run build:app` writes it and REFUSES without an address — and
+refuses an `http://` one, because an https page cannot call http and
+the browser blocks it silently.
+
+**A runtime indirection needs something that produces the file.** An
+address that four files describe and none writes is not configuration;
+it is a default nobody chose.
+
 ## Verification traps
 
 ### Never test a Tailwind utility by injecting the class at runtime
