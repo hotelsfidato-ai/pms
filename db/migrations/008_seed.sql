@@ -11,8 +11,14 @@
 -- (the property with 3 room types and one accessible room on the ground floor
 -- is where your assumptions break, and you want that on day one).
 -- =============================================================================
+--
+-- ⚠ NO begin;/commit; HERE ANY MORE. `db/migrate.sh` now applies every
+-- migration in ONE transaction, and an inner `commit;` would end it — the
+-- rest of the run would then execute unwrapped, which is the exact thing the
+-- single transaction exists to prevent. The runner owns the transaction; a
+-- migration does not.
+-- =============================================================================
 
-begin;
 
 -- -----------------------------------------------------------------------------
 -- The seven properties.  <<< REPLACE ALL OF THIS >>>
@@ -65,8 +71,6 @@ select rt.hotel_id, rt.id, (100 + n)::text, 1
  cross join generate_series(1, 10) as n
  where h.code = 'FH01' and rt.code = 'STD'
 on conflict (hotel_id, number) do nothing;
-
-commit;
 
 
 -- =============================================================================

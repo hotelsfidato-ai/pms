@@ -3496,6 +3496,46 @@ the browser blocks it silently.
 address that four files describe and none writes is not configuration;
 it is a default nobody chose.
 
+### 175 · Every upgrade broke the live app for 13% of its requests
+
+Found by reading the API's own log after a restart, not by any gate.
+
+The migrations are re-runnable, and that is the documented upgrade
+path — `deploy/launch.sh` replays all of them from 001 on every deploy.
+`db/migrate.sh` ran **one psql per file**, so one TRANSACTION per file,
+so every intermediate state was visible to whoever was using the
+system. Two of those states are hostile:
+
+- **001** defines `app.current_user_id()` as a bare `::uuid` cast;
+  **017** replaces it with the version that resolves a Firebase uid.
+  The API sets `app.user_id` to the *firebase uid*, so for the sixteen
+  migrations in between, **every signed-in request 500s**.
+- **008** inserts FH01..FH07 named `REPLACE — property N`; **017**
+  deletes them. In between the group dashboard lists seven properties
+  that do not exist.
+
+Measured, not reasoned. 400 requests to `/api/hotels` during one run:
+
+```
+before   347 × 200   53 × 500      one psql per file
+after    400 × 200    0 × 500      psql -1, one transaction
+```
+
+`psql -1` with every file. Postgres DDL is transactional, so no
+intermediate state is ever visible — and a failure now rolls the whole
+run back rather than leaving a half-migrated schema, which the old
+message described as though it were acceptable.
+
+**008 had its own `begin;`/`commit;` and had to lose it.** An inner
+commit ends the outer transaction and silently unwraps everything
+after it. **A migration does not own the transaction; the runner
+does.**
+
+**The general shape:** re-runnable migrations mean the schema *travels
+backwards through its own history* on every upgrade. Any object
+redefined by a later migration is briefly its older self on a live
+database. That is safe only if the whole replay is atomic.
+
 ## Verification traps
 
 ### Never test a Tailwind utility by injecting the class at runtime

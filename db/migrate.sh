@@ -83,18 +83,47 @@ BEFORE=$("$PSQL" $S -d "$DB" -tAc \
   2>/dev/null || echo 0)
 
 echo "── migrations ─────────────────────────────────────────────"
-N=0
-for f in "$ROOT"/db/migrations/*.sql; do
-  out=$("$PSQL" $S -d "$DB" -v ON_ERROR_STOP=1 -q -f "$f" 2>&1)
-  if [ $? -ne 0 ]; then
-    red "  x $(basename "$f")"
-    echo "$out" | grep -iE "ERROR|HINT" | head -4 | sed 's/^/      /'
-    red "    Stopped here. The migrations before this one are applied;"
-    red "    this one and everything after it are not."
-    exit 1
-  fi
-  N=$((N + 1))
-done
+
+# -- ALL OF THEM, IN ONE TRANSACTION -----------------------------------------
+# ⚠ THIS USED TO BE A LOOP OF SEPARATE psql RUNS AND IT BROKE THE LIVE APP ON
+# EVERY UPGRADE.
+#
+# The migrations are re-runnable, so an upgrade replays all of them from 001.
+# One psql per file means one TRANSACTION per file, so every intermediate state
+# is visible to whoever is using the system. Two of those states are hostile:
+#
+#   · 001 defines app.current_user_id() as a bare `::uuid` cast. 017 replaces
+#     it with the version that resolves a Firebase uid. The API sets
+#     app.user_id to the FIREBASE UID, so for the sixteen migrations in
+#     between, every signed-in request 500s.
+#
+#   · 008 inserts FH01..FH07 named "REPLACE — property N". 017 deletes them.
+#     In between, the group dashboard lists seven properties that do not exist.
+#
+# Measured, not reasoned: 400 requests to /api/hotels during one run of the old
+# loop returned 53 fives. Thirteen per cent of a rolling upgrade, as 500s
+# rather than a maintenance page, and impossible to diagnose afterwards because
+# the schema is correct again by the time anybody looks.
+#
+# `-1` wraps the whole run. Postgres DDL is transactional, so nobody sees any
+# state between 001 and the end — and a failure now rolls the WHOLE run back
+# instead of leaving a half-migrated schema, which the old message below
+# described as though it were acceptable.
+#
+# Nothing here may open its own transaction. 008 used to and no longer does:
+# an inner `commit;` ends this one and silently unwraps everything after it.
+FILES=()
+for f in "$ROOT"/db/migrations/*.sql; do FILES+=(-f "$f"); done
+N=$(( ${#FILES[@]} / 2 ))
+
+out=$("$PSQL" $S -d "$DB" -1 -v ON_ERROR_STOP=1 -q "${FILES[@]}" 2>&1)
+if [ $? -ne 0 ]; then
+  red "  x the migration run failed and was ROLLED BACK"
+  echo "$out" | grep -iE "ERROR|HINT|^psql:" | head -6 | sed 's/^/      /'
+  red "    $DB is exactly as it was before this ran. Fix the file named"
+  red "    above and run this again."
+  exit 1
+fi
 
 AFTER=$("$PSQL" $S -d "$DB" -tAc \
   "select count(*) from information_schema.tables where table_schema='public'")
