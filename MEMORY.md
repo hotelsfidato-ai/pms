@@ -3938,6 +3938,38 @@ applied, which is real evidence, but it is not the same as having run
 the suite there. **Worth aligning before real bookings**, and it was
 not worth doing mid-deploy with the owner waiting.
 
+### 191 · The preflight could not run on a production machine
+
+```
+sh: line 1: tsx: command not found
+```
+
+`launch.sh` installs with `npm ci --omit=dev` — correctly, a server has
+no business carrying a test runner. `tsx` is a devDependency. And every
+script a SERVER is told to run was written as `tsx scripts/x.ts`:
+
+```
+preflight    the check launch.sh refuses to finish without
+link-staff   the step that decides whether anybody can sign in
+reset        the end-of-beta command
+pos:outlet   provisioning a till
+```
+
+**All four were unrunnable on the machine they exist for.**
+
+`start` was already `node --experimental-strip-types src/server.ts` —
+so the API itself runs fine without tsx, and the fix was to do the same
+thing four more times. The knowledge was already in the file, one line
+above.
+
+**The shape:** dev tooling and production tooling were never separated,
+and nothing distinguished a script that runs on a laptop from one that
+runs on a server. `deploy/README.md` names exactly four `npm run`
+commands for the box, and every one of them was broken.
+
+Sixth thing found by one real deploy. The gates could not have caught
+any of them: they all run on a machine with devDependencies installed.
+
 ## Verification traps
 
 ### Never test a Tailwind utility by injecting the class at runtime

@@ -13,11 +13,11 @@
     "load-demo": "tsx scripts/load-demo.ts",
     "demo-history": "tsx scripts/demo-history.ts",
     "demo": "tsx scripts/load-demo.ts && tsx scripts/demo-history.ts",
-    "reset": "tsx scripts/reset-property.ts",
+    "reset": "node --experimental-strip-types scripts/reset-property.ts",
     "serve": "node scripts/free-port.mjs && tsx src/server.ts",
-    "pos:outlet": "tsx scripts/pos-outlet.ts",
-    "preflight": "tsx scripts/preflight.ts",
-    "link-staff": "tsx scripts/link-staff.ts",
+    "pos:outlet": "node --experimental-strip-types scripts/pos-outlet.ts",
+    "preflight": "node --experimental-strip-types scripts/preflight.ts",
+    "link-staff": "node --experimental-strip-types scripts/link-staff.ts",
     "test:only": "vitest run"
   },
   "dependencies": {
