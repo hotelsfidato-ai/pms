@@ -3407,6 +3407,65 @@ a rejection with no handler is a coin-flip gate (see 166), and
 `outboxAvailable()` had been written for exactly this and was never
 imported by anything (see "a check that cannot fail").
 
+### 171 · A moved guest was charged for the night TWICE
+
+Found by closing two real nights at Akkalkot, not by any gate.
+
+A room move does not release anything. Migration 054 models it as two
+LIVE assignments over adjoining half-open ranges — 302 for
+[5 Sep, 6 Sep), then 303 for [6 Sep, 10 Sep) — because both are true,
+on different nights. So `released_at is null` is true of both, and
+
+```sql
+left join room_assignments ra on ra.reservation_id = r.id
+                             and ra.released_at is null
+```
+
+with **no date** returns one row per segment. The night audit's
+not-exists guard was evaluated once per row before either insert, so
+the loop posted the tariff for each. **One guest, one night, charged
+twice — every night for the rest of the stay.**
+
+It survived seventeen stages because the only moved stay anybody had
+was complimentary: the loop skips before posting, so the whole fault
+surfaced as `complimentary: 2` at a property with one complimentary
+room. **A number one too high was the only symptom of a double charge.**
+
+The same dateless join was in `app.pos_chargeable_rooms` — the
+waiter's charge-to-room list AND the API's own refusal, whose comment
+says the two must agree. It listed the same guest under 302 and 303.
+
+`app.room_on(res, date)` is now the one definition, with
+`app.room_for(res, date)` for the show question. Guard in
+`api/test/nightAudit.test.ts`, **proved in both directions**: with the
+old join restored it returns two ₹2,200 postings for one night.
+
+### 172 · The fix broke a departure, and the suite caught it
+
+The first version filtered the waiter's list on
+`room_on(business_date) is not null`. An assignment runs
+`[check_in, check_out)` because that is the set of NIGHTS sold, so on
+the morning a guest leaves, `room_on` is correctly null — and the guest
+vanished from the charge-to-room list while sitting at breakfast in the
+room. **Trading a duplicate row for a missing one is not a fix.**
+
+Hence two functions, not one: `room_on` is *which night does this date
+charge for*, `room_for` is *which room do I show*, and the difference is
+a departure morning.
+
+### 173 · The assertion that reproduced the bug it was checking for
+
+`pos · chargeable rooms are all checked in with open folios` compared
+the function's count against a hand-written join **using the same
+dateless `released_at is null`**. A moved stay counted twice on both
+sides, the two agreed, and the check passed for seventeen stages over a
+double charge.
+
+**A reference query must state the rule in different words from the
+code it checks.** It now counts DISTINCT reservations — which is the
+rule in words: a stay a waiter can charge appears once, whatever it has
+done with rooms.
+
 ## Verification traps
 
 ### Never test a Tailwind utility by injecting the class at runtime

@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useParams, Link } from "react-router";
-import { FileText, Receipt, FileCheck2 } from "lucide-react";
+import { FileText, Receipt, FileCheck2, Clock } from "lucide-react";
 import { cn } from "@/lib/cn";
 import { money } from "@/lib/format";
 import { useUi } from "@/lib/ui";
@@ -222,6 +222,42 @@ export default function InvoicesPage() {
           ) : undefined
         }
       />
+
+      {/* ── E-INVOICING · named, not silent ────────────────────────
+          The group turns over under ₹5 crore, so registering each B2B
+          invoice with the IRP for an IRN and a signed QR is NOT
+          required of it. That was asked and answered.
+
+          But an absence is not an answer to the person looking for it.
+          An accountant who knows the rule, or an assessor, or the owner
+          on the day the group crosses the threshold, all come to this
+          screen and find nothing about IRNs at all — and nothing reads
+          as "this system cannot", not as "this hotel need not".
+
+          Rule 6 for features: a thing that is not done is SHOWN with
+          its reason, and with the condition that would change the
+          answer. That condition is a number the owner will know before
+          anybody else does. */}
+      <div className="flex items-start gap-3 rounded-md border border-grey-200
+                      bg-grey-50 p-3.5 mb-3">
+        <Clock className="size-4 text-grey-400 shrink-0 mt-0.5" />
+        <div className="min-w-0">
+          <p className="text-base font-medium text-ink-900">
+            E-invoicing (IRN and signed QR) — coming soon
+          </p>
+          <p className="text-sm text-grey-600 mt-0.5 leading-relaxed">
+            Not required of this group: registering each B2B invoice with
+            the government portal begins above ₹5 crore of annual
+            turnover, and Fidato is under it. Invoices issued here are
+            complete and valid GST invoices without an IRN.
+            <strong className="font-medium text-ink-900">
+              {" "}Tell us the year this group crosses ₹5 crore
+            </strong>{" "}
+            — from the April after that, every B2B invoice needs an IRN
+            before it reaches the guest, and this is where it will appear.
+          </p>
+        </div>
+      </div>
 
       <div className="flex items-start gap-3 rounded-md border border-grey-200 bg-grey-50 p-3.5 mb-5">
         <FileText className="size-4 text-grey-400 shrink-0 mt-0.5" />

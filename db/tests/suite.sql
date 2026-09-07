@@ -537,14 +537,22 @@ begin
   perform test.ok('pos','pms_app has no DELETE on pos_tickets',
     not has_table_privilege('pms_app','pos_tickets','delete'));
 
-  -- ---------- chargeable rooms: checked in, folio open ----------
+  -- ---------- chargeable rooms: checked in, folio open, ONE row each -------
+  -- ⚠ THIS ASSERTION USED TO ENCODE THE BUG. It compared the function's count
+  -- against a join on `released_at is null` with no date -- the same join the
+  -- function used -- so a moved stay counted twice on both sides and the two
+  -- agreed. A check that reproduces the fault it is checking for cannot fail.
+  --
+  -- COUNT DISTINCT RESERVATIONS. That is the rule in words: a stay a waiter
+  -- can charge appears once, whatever it has done with rooms.
   select count(*) into n from app.pos_chargeable_rooms(a);
   perform test.ok('pos','chargeable rooms are all checked in with open folios',
-    n = (select count(*) from reservations r
+    n = (select count(distinct r.id) from reservations r
            join folios f on f.reservation_id = r.id
-           join room_assignments ra on ra.reservation_id = r.id
-                                   and ra.released_at is null
-          where r.hotel_id = a and r.status='checked_in' and f.status='open'),
+          where r.hotel_id = a and r.status='checked_in' and f.status='open'
+            and exists (select 1 from room_assignments ra
+                         where ra.reservation_id = r.id
+                           and ra.released_at is null)),
     n || ' rooms');
 
   delete from pos_tickets where outlet_id = v_outlet;
@@ -2879,6 +2887,49 @@ begin
   select count(*) into n from room_assignments
    where reservation_id = v_res and released_at is null;
   perform test.ok('room move','the stay has two live assignments', n = 2);
+
+  -- ---------- and "which room, tonight" has ONE answer ----------
+  -- Two live assignments is CORRECT: they cover different nights. What was
+  -- wrong for seventeen stages is every reader that took `released_at is
+  -- null` to mean "tonight" and got a row per segment. The night audit posted
+  -- the tariff once per row -- one guest, one night, charged twice, every
+  -- night for the rest of the stay -- and the waiter's charge-to-room list
+  -- showed the same guest under two different door numbers.
+  --
+  -- It survived because the only moved stay anybody had was complimentary,
+  -- so the audit skipped before posting and the whole fault surfaced as a
+  -- count being one too high.
+  --
+  -- app.room_on (072) is the one definition. Asserted across the move so an
+  -- off-by-one in either direction fails here rather than on a bill.
+  perform test.ok('room move','room_on: the 1st is the old room',
+    app.room_on(v_res, date '2026-08-01') = '203',
+    'got ' || coalesce(app.room_on(v_res, date '2026-08-01'), 'null'));
+  perform test.ok('room move','room_on: the 2nd is still the old room',
+    app.room_on(v_res, date '2026-08-02') = '203',
+    'got ' || coalesce(app.room_on(v_res, date '2026-08-02'), 'null'));
+  perform test.ok('room move','room_on: the move date is the NEW room',
+    app.room_on(v_res, date '2026-08-03') = '305',
+    'half-open [from, to) -- got '
+      || coalesce(app.room_on(v_res, date '2026-08-03'), 'null'));
+  perform test.ok('room move','room_on: the last night is the new room',
+    app.room_on(v_res, date '2026-08-05') = '305',
+    'got ' || coalesce(app.room_on(v_res, date '2026-08-05'), 'null'));
+  perform test.ok('room move','room_on: the departure date is nobody''s',
+    app.room_on(v_res, date '2026-08-06') is null,
+    'got ' || coalesce(app.room_on(v_res, date '2026-08-06'), 'null'));
+
+  -- room_for is the SHOW question, and the difference is a departure morning.
+  -- The first version of 072 used room_on for the waiter's charge-to-room
+  -- list, and a guest at breakfast on the day they leave vanished from it:
+  -- the range is [in, out) so room_on(check_out) is correctly null, and
+  -- correctly null is still a guest nobody can charge a coffee to.
+  perform test.ok('room move','room_for: still names the room on the way out',
+    app.room_for(v_res, date '2026-08-06') = '305',
+    'got ' || coalesce(app.room_for(v_res, date '2026-08-06'), 'null'));
+  perform test.ok('room move','room_for: agrees with room_on mid-stay',
+    app.room_for(v_res, date '2026-08-02') = '203',
+    'got ' || coalesce(app.room_for(v_res, date '2026-08-02'), 'null'));
 
   select to_date into d from room_assignments
    where reservation_id = v_res and room_id = v_203 and released_at is null;

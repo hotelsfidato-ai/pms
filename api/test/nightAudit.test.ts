@@ -323,6 +323,103 @@ describe("closing a day", () => {
     }
   });
 
+  it("charges a MOVED stay once, not once per room it has slept in", async () => {
+    /* ⚠ THIS IS A REGRESSION GUARD FOR A DOUBLE CHARGE, and it was
+       found by closing two real nights at Akkalkot rather than by any
+       gate in this file.
+
+       A room move does not release anything. Migration 054 models it
+       as two live assignments over adjoining half-open ranges — the
+       old room up to the move, the new room from it — because both are
+       true, on different nights. The audit joined
+       `room_assignments ... and released_at is null` with NO DATE, so
+       a moved stay came back as two rows, the not-exists guard was
+       evaluated once per row before either insert, and the loop posted
+       the night's tariff twice.
+
+       Every night, for the rest of the stay, on a guest's real bill.
+
+       It survived seventeen stages because the only moved stay anybody
+       had was complimentary, so the loop skipped before posting and
+       the whole fault surfaced as `complimentary: 2` at a property
+       with one complimentary room.
+
+       Written to FAIL on the old join: two rows there, one here. */
+    await clearDueOuts();
+    const stay = await checkInAtPune(3, 2200);
+    const bd = await businessDate();
+
+    const db = await admin();
+    try {
+      /* Move them tomorrow. Today's assignment is capped at tomorrow;
+         a second live assignment carries the rest of the stay in
+         another room. Exactly what POST /stays/:id/move writes. */
+      const next = new Date(`${bd}T00:00:00Z`);
+      next.setUTCDate(next.getUTCDate() + 1);
+      const tomorrow = next.toISOString().slice(0, 10);
+
+      const { rows: cur } = await db.query<{ to_date: string; room_id: string }>(
+        `update room_assignments set to_date = $2::date
+          where reservation_id = $1 and released_at is null
+        returning to_date::text, room_id::text`,
+        [stay.reservationId, tomorrow],
+      );
+      expect(cur).toHaveLength(1);
+
+      const { rows: other } = await db.query<{ id: string }>(
+        `select rm.id::text from rooms rm
+          where rm.hotel_id = $1 and rm.id <> $2::uuid
+            and not exists (
+              select 1 from room_assignments ra
+               where ra.room_id = rm.id and ra.released_at is null)
+          order by rm.number limit 1`,
+        [puneId, cur[0]!.room_id],
+      );
+      expect(other, "Pune needs a second free room for this").toHaveLength(1);
+
+      const { rows: res } = await db.query<{ check_out: string }>(
+        `select check_out::text from reservations where id = $1`,
+        [stay.reservationId],
+      );
+      await db.query(
+        `insert into room_assignments
+           (hotel_id, reservation_id, room_id, from_date, to_date, reason)
+         values ($1,$2,$3::uuid,$4::date,$5::date,'move')`,
+        [puneId, stay.reservationId, other[0]!.id, tomorrow,
+         res[0]!.check_out],
+      );
+
+      /* Both are live, and that is CORRECT — they cover different
+         nights. The bug was reading "live" as "tonight". */
+      const { rows: live } = await db.query<{ n: string }>(
+        `select count(*)::text as n from room_assignments
+          where reservation_id = $1 and released_at is null`,
+        [stay.reservationId],
+      );
+      expect(live[0]!.n).toBe("2");
+
+      const run = await asOwner("/PUN/night-audit/run", "POST");
+      const body = (await run.json()) as { ok: boolean };
+      expect(body.ok, JSON.stringify(body)).toBe(true);
+
+      const { rows } = await db.query<{ description: string; amount: string }>(
+        `select description, amount::text from folio_postings
+          where folio_id = $1 and category = 'room'
+            and business_date = $2::date`,
+        [stay.folioId, bd],
+      );
+
+      /* ONE row. Two is the defect, and two is what the old join gave. */
+      expect(rows, JSON.stringify(rows)).toHaveLength(1);
+      expect(Number(rows[0]!.amount)).toBe(2200);
+      /* And it names the room they are in TONIGHT, not whichever the
+         join happened to reach first. */
+      expect(rows[0]!.description).toBe(`Room ${stay.room} · 1 night`);
+    } finally {
+      await db.end();
+    }
+  });
+
   it("does not charge twice when a half-finished run is restarted", async () => {
     await clearDueOuts();
     const stay = await checkInAtPune(3, 1800);

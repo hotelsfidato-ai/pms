@@ -334,15 +334,48 @@ nightAudit.post("/:code/night-audit/run", async (c) => {
                  its group posts to the master folio; everything else posts
                  to its own. */
               app.folio_for_room_charge(r.id)::text as folio_id,
-              coalesce(rm.number, '—') as room,
+              coalesce(a.number, '—') as room,
               r.agreed_rate::text as rate,
               r.is_complimentary as comp,
               (r.route_room_to_group and r.group_id is not null) as routed
          from reservations r
          join folios f on f.reservation_id = r.id and f.status = 'open'
-         left join room_assignments ra on ra.reservation_id = r.id
-                                      and ra.released_at is null
-         left join rooms rm on rm.id = ra.room_id
+         /* THE ROOM THIS STAY IS IN **TONIGHT**, and exactly one of them.
+
+            ⚠ THIS WAS A PLAIN LEFT JOIN ON "released_at is null", WITH NO
+            DATE, AND IT POSTED THE NIGHT TWICE.
+
+            A room move does not release anything. It is modelled as two
+            live assignments over adjoining half-open ranges — 302 for
+            [5 Sep, 6 Sep), then 303 for [6 Sep, 10 Sep) — because both
+            are true, on different nights. "released_at is null" is true
+            of both, so one stay came back as TWO rows, the "not exists"
+            guard below was evaluated once per row before either insert,
+            and the loop inserted a room charge for each.
+
+            One guest, one night, charged twice, every night for the rest
+            of the stay. It was invisible here only because the one moved
+            stay at Akkalkot happens to be complimentary, so the loop
+            skips before posting and the miscount surfaced as
+            "complimentary: 2" for a property with one complimentary
+            room. Make that guest a paying one and it is money.
+
+            The predicate is the half-open range this schema uses
+            everywhere: "from <= D < to". LATERAL with "limit 1" on top,
+            because a query that posts money must not depend on the data
+            never producing an overlap — belt and braces are cheap here
+            and a double charge on a guest's bill is not. */
+         left join lateral (
+           select rm.number
+             from room_assignments ra
+             join rooms rm on rm.id = ra.room_id
+            where ra.reservation_id = r.id
+              and ra.released_at is null
+              and ra.from_date <= $2::date
+              and (ra.to_date is null or ra.to_date > $2::date)
+            order by ra.from_date desc
+            limit 1
+         ) a on true
         where r.hotel_id = $1
           and r.status = 'checked_in'
           -- A day-use room is sold and vacated inside one day. It has
@@ -365,7 +398,7 @@ nightAudit.post("/:code/night-audit/run", async (c) => {
                and fp.category = 'room'
                and fp.business_date = $2::date
           )
-        order by rm.number`,
+        order by a.number`,
       [hotelId, businessDate],
     );
 

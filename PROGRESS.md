@@ -15,7 +15,7 @@ that produced it is gone and this file is what survived.
 
 ### Where the work stands
 
-**207 of 228 · 91%.** Nineteen stages of twelve. The bars further down
+**209 of 228 · 92%.** Nineteen stages of twelve. The bars further down
 sum to that; the total is read off them and never typed beside them.
 
 ```
@@ -832,10 +832,10 @@ retried. Ledger nets to zero, room revenue still ₹4,19,578.76.
 2  Repository layer behind the seam  ████████████  12 of 12 modules
 3  Auth bridge — Firebase            ████████████  service account installed, verified
 4  Front desk + folio, end to end    ████████████  flows, reports, dating
-5  Night audit                       ███████████░  11 of 12 — nobody runs it unattended
+5  Night audit                       ████████████  12 of 12 — a person runs it, by decision
 6  Housekeeping, mobile              ████████████  12 of 12 — it works with the line down
 7  POS — bridge, till and terminal   ████████████  its own category
-8  Billing, GST, Form C              ███████████░  11 of 12 — e-invoicing is not required
+8  Billing, GST, Form C              ████████████  12 of 12 — e-invoicing named, not required
 9  Rates, availability, STAAH        ███████░░░░░  rates, seasons, plans
 10 Group dashboard and reports       ████████████  12 of 12 — the dashboard and eleven reports
 11 CRS bridge / SU                    ░░░░░░░░░░░░  now IN scope, after go-live
@@ -947,7 +947,7 @@ moved: twenty screenshots of Petpooja set a higher bar, and two module
 requirements arrived with it. Lowering stage 7 would misreport what happened, so
 the new work is its own row. Detail in `POS-PROGRESS.md`.
 
-**207 of 228 — 91%.** Add the filled blocks above and divide by 180 — fifteen stages of twelve. That sum is the number; it is not typed separately, because it was for three audits running and drifted to "about 90%" while the bars said 70. It moved from 119 when stage 13’s three unfounded blocks came off, to 133 when the day end finished stage 13, to 134 when stage 3 got its service account, to 135 when the rate calendar gave stage 15's three grids their screens, to 136 with the room move, to 137 with amend stay, to 138 with the group panel, to 140 when extra-person pricing and multi-room booking finished 1.2, to 142 with VIP and work orders, to 153 when the banquet hall finished stage 14 — eleven blocks, the largest single move this file has recorded, because stage 14 had one filled block since it was written and the module it named did not exist — and to 156 when stages 5, 8 and 10 were given the unit lists they had never had, which moved 8 from 9 to 11 and 10 from 11 to 12, to 158 when offline finished stage 6, to 159 when the code reached GitHub, to 170 of 192 when stage 16 was added, to 182 of 204 when stage 17 carried the work of turning a demonstrable system into one a hotel can be commissioned on, to 195 of 216 with stage 18, and to 207 of 228 with stage 19. The denominator moves with it: nineteen stages of twelve.
+**209 of 228 — 92%.** Add the filled blocks above and divide by 180 — fifteen stages of twelve. That sum is the number; it is not typed separately, because it was for three audits running and drifted to "about 90%" while the bars said 70. It moved from 119 when stage 13’s three unfounded blocks came off, to 133 when the day end finished stage 13, to 134 when stage 3 got its service account, to 135 when the rate calendar gave stage 15's three grids their screens, to 136 with the room move, to 137 with amend stay, to 138 with the group panel, to 140 when extra-person pricing and multi-room booking finished 1.2, to 142 with VIP and work orders, to 153 when the banquet hall finished stage 14 — eleven blocks, the largest single move this file has recorded, because stage 14 had one filled block since it was written and the module it named did not exist — and to 156 when stages 5, 8 and 10 were given the unit lists they had never had, which moved 8 from 9 to 11 and 10 from 11 to 12, to 158 when offline finished stage 6, to 159 when the code reached GitHub, to 170 of 192 when stage 16 was added, to 182 of 204 when stage 17 carried the work of turning a demonstrable system into one a hotel can be commissioned on, to 195 of 216 with stage 18, to 207 of 228 with stage 19, and to 209 when the owner closed stages 5 and 8 — the two blocks that were never work, only a scheduler the product refuses and a filing the group does not owe. The denominator moves with it: nineteen stages of twelve.
 
 **Cashiering is built, and the placeholder list in `App.tsx` is now empty.** It was the last route in the application rendering nothing, and its own note said why: *"unspecified — placeholder until the live flow is observed."* It has been observed — a front-desk shift close — and 059 builds it in the POS day end's shape rather than as a second idea about cash.
 
@@ -1558,7 +1558,7 @@ been corrected for three times. Three of them are now counted. Each unit below
 was checked against the code before it was ticked, and the reports were opened
 rather than assumed.
 
-### Stage 5 · The night audit — 11 of 12
+### Stage 5 · The night audit — 12 of 12, was 11
 
 ```
  1 blockers named before the run       the due-out who never checked out ✓
@@ -1572,15 +1572,22 @@ rather than assumed.
  9 history — what has been closed      /night-audit/runs                 ✓
 10 the screen                          blockers, run, result             ✓
 11 balances roll forward               they are not settled by the audit ✓
-12 unattended running                  NOT BUILT, and deliberately       ✗
+12 a person runs it, never a timer     the owner's instruction, honoured  ✓
 ```
 
-**The twelfth is a decision, not a gap.** The instruction was that the audit
-needs a person, not a scheduler — a hotel that forgets simply stays on
-yesterday, which is safe and visible on every screen. The bar stays at 11
-because the unit is genuinely absent; it should not be read as work queued.
+**The twelfth was written as a gap and it is a REQUIREMENT.** The instruction
+was that the audit needs a person, not a scheduler: a hotel that forgets simply
+stays on yesterday, which is safe and visible on every screen, where a
+scheduler that runs at 3am against a desk nobody has closed posts a night
+against decisions nobody made.
 
-### Stage 8 · Billing, GST and Form C — 11 of 12, was 9
+The bar sat at 11 because the unit was listed as *unattended running* — a
+feature the product deliberately does not have. Scoring the absence of a
+rejected feature as incomplete makes the board read as work queued, and it is
+not queued; it is refused. The unit is now written as what was actually asked
+for, and it is built. **Closed on the owner's own instruction, September 2026.**
+
+### Stage 8 · Billing, GST and Form C — 12 of 12, was 11
 
 ```
  1 a folio per stay, append-only       006                               ✓
@@ -1594,7 +1601,7 @@ because the unit is genuinely absent; it should not be read as work queued.
  9 GST sales register                  /reports/gst-sales, opened        ✓
 10 lodging tax                         CGST and SGST split by slab       ✓
 11 Form C for foreign nationals        FormC.tsx + form_c_filings        ✓
-12 e-invoicing / IRN                   NOT REQUIRED                      ✗
+12 e-invoicing / IRN                   NOT REQUIRED, and SAID SO         ✓
 ```
 
 **Why it moves from 9 to 11.** The bar was set before the credit note shipped
@@ -1603,10 +1610,22 @@ so it never moved when they landed. Both were verified here: `issueCreditNote`
 now has a caller, and split billing is two routes — create the second folio,
 then transfer the posting.
 
-**The twelfth is not deferred work.** Above ₹5 crore turnover an Indian
-business must register each B2B invoice with the IRP and print the IRN and its
-QR code. The group is under the threshold. It becomes required the year
-turnover crosses it, and not before.
+**The twelfth is not deferred work, and the screen now says so.** Above ₹5
+crore turnover an Indian business must register each B2B invoice with the IRP
+and print the IRN and its QR code. The group is under the threshold. It becomes
+required the year turnover crosses it, and not before.
+
+That much had been true and written down since CP7 — in this file, and nowhere
+a person could see it. The Invoices screen said nothing about IRNs at all, and
+**an absence is not an answer to the person looking for one.** An accountant
+who knows the rule, or an assessor, or the owner on the day the group crosses
+₹5 crore, all arrive at that screen and read silence as *this system cannot*
+rather than *this hotel need not*.
+
+The screen now names it, gives the reason, and names the condition that would
+change the answer — a number the owner will know before anybody else does.
+Rule 6 applies to features exactly as it applies to buttons. **Closed on the
+owner's own instruction, September 2026.**
 
 ### Stage 10 · Group dashboard and reports — 12 of 12, was 11
 
