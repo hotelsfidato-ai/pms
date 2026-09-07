@@ -3,6 +3,9 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { UserPlus, X, ShieldCheck, Building2, Info } from "lucide-react";
 import { cn } from "@/lib/cn";
 import {
+  ASSIGNABLE_ROLES, ROLE_LABELS, type Role,
+} from "@/lib/permissions";
+import {
   Page, PageHeader, Card, CardBody, Button, Skeleton, EmptyState,
   Dialog, DialogContent, Field, fieldProps, Input, NativeSelect,
   StatusPill, toast,
@@ -40,16 +43,46 @@ import {
    the sign-in and keeps the history readable.
    ══════════════════════════════════════════════════════════════════ */
 
-const ROLES: { value: string; label: string; what: string }[] = [
-  { value: "front_desk",   label: "Front desk",   what: "Bookings, check-in, folios, the cash drawer" },
-  { value: "housekeeping", label: "Housekeeping", what: "Room status and work orders" },
-  { value: "pos",          label: "Restaurant",   what: "The till, orders and the day end" },
-  { value: "gm",           label: "Manager",      what: "Everything at this property, and the night audit" },
-  { value: "owner",        label: "Owner",        what: "As the manager, plus the property's own settings" },
-  { value: "finance",      label: "Accounts",     what: "Invoices, the city ledger and the reports" },
-  { value: "stores",       label: "Stores",       what: "Inventory and purchasing" },
-  { value: "read_only",    label: "Read only",    what: "Can look, cannot change anything" },
-];
+/* ⚠ THIS WAS A THIRD LIST OF ROLES, WITH ITS OWN LABELS.
+   `permissions.ts` had one, `staff_hotels_role_valid` had another, and
+   this picker had a third — eight roles, its own words ("Restaurant",
+   "Accounts", "Read only"), and no `admin`, `hotel_manager`,
+   `kitchen_manager` or `chef` at all. So four of the twelve roles the
+   database accepts could not be chosen from the screen that exists to
+   choose them.
+
+   Same fault, one level down, and found the same way: by opening the
+   picker and reading what was in it.
+
+   ONE LIST NOW. `ASSIGNABLE_ROLES` and `ROLE_LABELS` come from
+   permissions.ts, which `api/test/roles.test.ts` holds equal to
+   `app.assignable_roles()`. A role added anywhere appears here without
+   anybody remembering to add it.
+
+   The sentence under each one stays here, because it describes the job
+   to somebody choosing it rather than defining the role — and a role
+   with no sentence yet says so plainly instead of showing a blank. */
+const ROLE_WHAT: Partial<Record<Role, string>> = {
+  owner:           "Every property, and the settings that govern them",
+  admin:           "Runs the system day to day, including accounts",
+  gm:              "Everything at this property, and the night audit",
+  hotel_manager:   "The property day to day, without the money decisions",
+  front_desk:      "Bookings, check-in, folios, the cash drawer",
+  housekeeping:    "Room status and work orders",
+  kitchen_manager: "The pass and the menu",
+  chef:            "The pass — moves dishes along, touches no money",
+  pos:             "The till, orders and the day end",
+  stores:          "Stock, receiving and issues. Raises purchases",
+  finance:         "Invoices, the city ledger and the reports",
+  read_only:       "Can look, cannot change anything",
+};
+
+const ROLES: { value: Role; label: string; what: string }[] =
+  ASSIGNABLE_ROLES.map((value) => ({
+    value,
+    label: ROLE_LABELS[value],
+    what: ROLE_WHAT[value] ?? "No description written for this role yet.",
+  }));
 
 const roleLabel = (r: string) =>
   ROLES.find((x) => x.value === r)?.label ?? r;

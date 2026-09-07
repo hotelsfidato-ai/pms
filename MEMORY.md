@@ -3783,6 +3783,31 @@ reads.** My first answer was to rename `gm` and `front_desk` to the
 owner's words. Wrong: about twenty places reference them. Labels are
 free; renames are churn with risk.
 
+### 186 · A THIRD list of roles, in the picker that exists to choose them
+
+Found by opening the People page and reading the dropdown after
+believing 184 was fixed.
+
+`permissions.ts` had one list. `staff_hotels_role_valid` had another.
+And `src/pages/People.tsx` had a **third** — eight roles, its own words
+("Restaurant", "Accounts", "Read only"), and no `admin`,
+`hotel_manager`, `kitchen_manager` or `chef` at all.
+
+So after 078 made the database and the matrix agree on twelve roles,
+**four of them still could not be chosen from the screen whose entire
+job is choosing one.**
+
+**Fixing two copies of a list is not fixing the list.** The question to
+ask after reconciling any duplicated rule is not "do these two agree"
+but "how many copies are there" — and the way to find out is to use the
+feature, not to grep. The grep for role names found this file; it was
+reading the rendered dropdown that made it obvious it mattered.
+
+The picker derives from `ASSIGNABLE_ROLES` now, so it cannot hold its
+own opinion. The per-role sentence stays local — it describes a job to
+somebody choosing it — and a role without one says so rather than
+rendering blank.
+
 ### 185 · My own: guarded endpoints, and a write that matched nothing
 
 The four §2 endpoints I added — edit a property, close it, edit a
