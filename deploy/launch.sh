@@ -344,7 +344,34 @@ nginx -t || die "nginx rejected the configuration."
 systemctl reload nginx
 
 # Certbot edits the file in place and installs its own renewal timer.
-if [ ! -d "/etc/letsencrypt/live/$DOMAIN" ]; then
+# ── When the certificate cannot be issued YET ───────────────────────────────
+# SKIP_TLS=1 installs everything and leaves the API on plain http.
+#
+# A real situation, not a convenience: DNS is often somebody else's to change.
+# A stray AAAA record is the common one -- Let's Encrypt prefers IPv6 when a
+# name has both, and falls back to IPv4 only if the IPv6 address is completely
+# dead. Point it at a parking page and validation fails against a server that
+# answered perfectly well, with the wrong content.
+#
+# Without this flag the run DIES here, so the service, the backups and the
+# preflight never happen -- and whoever ran it is left with a half-built box
+# and no obvious reason why. Worse, Let's Encrypt allows five failures per
+# hostname per hour, so the natural response (retry) locks them out for the
+# afternoon.
+#
+# ⚠ THE APP CANNOT TALK TO A PLAIN-HTTP API. A page served over https may not
+# call http, and the browser blocks it without showing anybody an error. This
+# is a state for finishing the install and loading data -- NOT a state to give
+# anybody a link to.
+if [ "${SKIP_TLS:-}" = "1" ]; then
+  say "TLS — SKIPPED"
+  echo "  No certificate was requested. The API answers on http only."
+  echo "  When DNS is ready, finish it with one command:"
+  echo ""
+  echo "    sudo certbot --nginx -d $DOMAIN --non-interactive --agree-tos -m $EMAIL --redirect"
+  echo ""
+  echo "  The screens will not work until that is done."
+elif [ ! -d "/etc/letsencrypt/live/$DOMAIN" ]; then
   certbot --nginx -d "$DOMAIN" --non-interactive --agree-tos -m "$EMAIL" \
     --redirect || die "Certificate failed. Almost always DNS: $DOMAIN must
   already resolve to this box's public IP, and Oracle's VCN security list must
@@ -393,7 +420,15 @@ say "Preflight"
 # -----------------------------------------------------------------------------
 cd "$APP_DIR/api"
 if npm run --silent preflight; then
+  if [ "${SKIP_TLS:-}" = "1" ]; then
+    printf "\n\033[33m  Installed. The API answers on http://%s\n" "$DOMAIN"
+    printf "  NO CERTIFICATE YET -- and the app CANNOT reach an http API.\n"
+    printf "  A page served over https may not call http, and the browser\n"
+    printf "  blocks it without showing anybody an error. Finish with:\n\n"
+    printf "    sudo certbot --nginx -d %s --non-interactive --agree-tos -m %s --redirect\033[0m\n\n" "$DOMAIN" "$EMAIL"
+  else
   printf "\n\033[32m  %s is live.\033[0m\n\n" "https://$DOMAIN"
+  fi
 else
   printf "\n\033[33m  Deployed, and NOT READY TO SERVE. Fix what preflight
   listed above, then re-run:  cd %s/api && npm run preflight\033[0m\n\n" "$APP_DIR"
