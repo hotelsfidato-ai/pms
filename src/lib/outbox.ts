@@ -63,8 +63,34 @@ export interface OutboxEntry {
 
 let dbPromise: Promise<IDBDatabase> | null = null;
 
+/** The one sentence for "this browser will not hold anything". Kept
+    here so the bar and the queue say the same thing. */
+export const NO_STORE =
+  "This browser will not keep a queue — a private window, or site data "
+  + "turned off. Work done here cannot be held until the line is back.";
+
 function open(): Promise<IDBDatabase> {
   if (dbPromise) return dbPromise;
+  /* ⚠ `indexedDB` IS NOT ALWAYS THERE. A private window refuses it, a
+     browser set to block site data refuses it, and jsdom does not
+     define the global at all — so the bare lookup below threw a
+     ReferenceError rather than failing as a storage error.
+
+     That reached `OfflineBar`, which read the queue on mount without a
+     catch, as an unhandled rejection on EVERY mount. In a browser it
+     was invisible; in the suite it landed inside whichever test was
+     running when it fired, and `src/App.test.tsx` failed about one run
+     in three — passing alone, failing in the full run. A gate that
+     answers differently on the same code is not a gate.
+
+     Named, so the refusal carries a sentence a person can act on. */
+  if (typeof indexedDB === "undefined") {
+    dbPromise = Promise.reject(new Error(NO_STORE));
+    /* Nobody has attached a handler yet, and an unhandled rejection is
+       precisely the thing being fixed. */
+    dbPromise.catch(() => {});
+    return dbPromise;
+  }
   dbPromise = new Promise((resolve, reject) => {
     const req = indexedDB.open(DB_NAME, DB_VERSION);
     req.onupgradeneeded = () => {

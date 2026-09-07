@@ -95,6 +95,29 @@ export async function listArrivals(hotelId: string, date = BUSINESS_DATE) {
   return clone(rows).sort((a, b) => a.roomNumber.localeCompare(b.roomNumber));
 }
 
+/** The arrivals STILL TO COME — the ones a desk has work left on.
+ *
+ *  ⚠ NOT the same question as `listArrivals`, and the group dashboard
+ *  used that one to answer this one. On 5 September the property had
+ *  five reservations arriving: two checked in and out again, one was
+ *  in house, and two had not turned up. The dashboard's tile read
+ *  "5 · arrivals due today" while the night audit, three clicks away,
+ *  read "Arrivals still outstanding — 2". Both were counting; only one
+ *  was counting what its label said.
+ *
+ *  The arrivals LIST is right to show all five — that is the day's
+ *  register, and a clerk wants to see who has already come. A number
+ *  labelled *due* is a different question and now has its own name.
+ *
+ *  `due-in` is the same set the night audit blocks on
+ *  (`status = 'confirmed' and check_in = business date`, billing.ts),
+ *  so the tile and the audit cannot drift apart again. */
+export async function listArrivalsOutstanding(
+  hotelId: string, date = BUSINESS_DATE,
+) {
+  return (await listArrivals(hotelId, date)).filter((s) => s.status === "due-in");
+}
+
 export async function listInHouse(hotelId: string, date = BUSINESS_DATE) {
   const rows = (await fetchStays(hotelId)).filter(
     (s) =>

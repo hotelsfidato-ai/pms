@@ -1,4 +1,4 @@
-import { enqueue, list, remove, update, subscribe, type OutboxEntry } from "./outbox";
+import { enqueue, list, remove, update, subscribe, NO_STORE, type OutboxEntry } from "./outbox";
 
 /* ══════════════════════════════════════════════════════════════════
    WHAT MAY HAPPEN WITH NO NETWORK
@@ -339,5 +339,5 @@ export async function drain(
   return result;
 }
 
-export { enqueue, list, remove, update, subscribe };
+export { enqueue, list, remove, update, subscribe, NO_STORE };
 export type { OutboxEntry };

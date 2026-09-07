@@ -3357,6 +3357,56 @@ certain. **Any header that grows a control needs measuring at 375px** —
 `getBoundingClientRect().right` against `clientWidth` says it in one
 line, and looking at a screenshot does not.
 
+### 168 · Two sign-in shortcuts that could not succeed
+
+Deleting the Agra and Pune demo properties took their clerks with them.
+The sign-in screen kept both buttons. Pressing either returned
+**"No active staff record for this account."**
+
+A control that can never succeed is worse than no control: it reads as
+a broken login, not as a removed fixture. **A shortcut list has to be
+derived from what exists and is active, or it becomes a list of 401s.**
+
+### 169 · The dashboard said 5 arrivals due; the night audit said 2
+
+Both were right about their own query and only one matched its label.
+`listArrivals` returns everyone whose arrival date is today and is not
+cancelled — correct for the arrivals LIST, which is the day's register
+and should show who has already come. The group dashboard used it to
+fill a tile reading **"arrivals due today"** and a column headed
+**"Arrivals due"**.
+
+On 5 September: five reservations arriving, two checked in and out
+again, one in house, two still to come. The tile read 5. The night
+audit, three clicks away, read *"Arrivals still outstanding — 2"*.
+
+**A count and its label are one thing.** *Due* is a different question
+from *dated today*, and it now has its own name —
+`listArrivalsOutstanding`, filtering to `due-in`, which is the same set
+`billing.ts` blocks the audit on.
+
+### 170 · An unhandled rejection that failed a different test each run
+
+`src/App.test.tsx` failed about one run in three and passed when run
+alone. Nothing in it was wrong. `OfflineBar` reads the outbox on mount
+with `void list().then(setEntries)` — no catch — and `indexedDB` is not
+defined in jsdom, so the bare global lookup threw a **ReferenceError**
+inside a Promise executor on every mount. The rejection landed on
+whichever test was running when it fired.
+
+Same hole in a browser, invisibly: a private window and a browser with
+site data turned off both refuse IndexedDB, and the clerk who queues a
+check-in on a dead line would have watched it disappear.
+
+**Caught AND said** — the bar now names it, but only when the line is
+down, because warning about a queue that is not needed teaches people
+to dismiss the bar that matters.
+
+Two rules, both already in this file and both broken here:
+a rejection with no handler is a coin-flip gate (see 166), and
+`outboxAvailable()` had been written for exactly this and was never
+imported by anything (see "a check that cannot fail").
+
 ## Verification traps
 
 ### Never test a Tailwind utility by injecting the class at runtime

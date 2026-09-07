@@ -7,7 +7,7 @@ import {
 } from "@/components/ui";
 import { money } from "@/lib/format";
 import {
-  listProperties, getPeriodStatistics, listArrivals, getStayViewCounts,
+  listProperties, getPeriodStatistics, listArrivalsOutstanding, getStayViewCounts,
   BUSINESS_DATE, type Property,
 } from "@/data/repositories";
 
@@ -35,7 +35,12 @@ async function buildRows(): Promise<Row[]> {
   return Promise.all(
     properties.map(async (property) => {
       const stats = await getPeriodStatistics(property.id);
-      const arrivals = await listArrivals(property.id, BUSINESS_DATE);
+      /* STILL TO COME, not everyone whose date is today. The column
+         says "Arrivals due" and the tile says "arrivals due today";
+         a guest who has already checked in is not due. This read
+         5 while the night audit read 2 — same property, same
+         minute. */
+      const arrivals = await listArrivalsOutstanding(property.id, BUSINESS_DATE);
       const counts = await getStayViewCounts(property.id, BUSINESS_DATE);
       /* NULL WHEN THE FIGURES DID NOT COME BACK, not zero. A property
          whose statistics failed to load is not one that sold nothing —

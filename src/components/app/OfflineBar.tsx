@@ -4,7 +4,7 @@ import { CloudOff, RefreshCw, AlertTriangle, X } from "lucide-react";
 import { cn } from "@/lib/cn";
 import { apiBase, authHeaders, currentSubject } from "@/lib/api";
 import {
-  drain, list, remove, subscribe, watchConnection, isOnline,
+  drain, list, remove, subscribe, watchConnection, isOnline, NO_STORE,
   type OutboxEntry,
 } from "@/lib/offline";
 
@@ -36,9 +36,26 @@ export function OfflineBar() {
   const [online, setOnline] = useState(() => isOnline());
   const [sending, setSending] = useState(false);
   const [dismissed, setDismissed] = useState(false);
+  /* Whether this browser will hold anything at all. Not the same as
+     "the queue is empty" — one is nothing waiting, the other is
+     nothing CAN wait, and a clerk needs to know which before they
+     start working on a dropped line. */
+  const [noStore, setNoStore] = useState(false);
 
   const refresh = useCallback(() => {
-    void list().then(setEntries);
+    /* ⚠ THIS HAD NO CATCH. Reading the queue rejects when the browser
+       will not open IndexedDB — a private window, site data blocked,
+       and jsdom, where the global is not defined at all. The rejection
+       went unhandled on every mount: silent in a browser, and in the
+       suite it surfaced inside whichever test happened to be running,
+       so `src/App.test.tsx` failed on some runs and passed on others.
+
+       Swallowing it would be worse than the crash, though: the person
+       who queues a check-in on a dead line would watch it vanish. So
+       it is caught AND said. */
+    void list()
+      .then((rows) => { setEntries(rows); setNoStore(false); })
+      .catch(() => { setEntries([]); setNoStore(true); });
   }, []);
 
   useEffect(() => {
@@ -109,12 +126,29 @@ export function OfflineBar() {
   const waiting = mine;
   const refused = entries.filter((e) => e.status === "rejected");
 
+  /* SAID ONLY WHEN IT MATTERS. A browser that will not hold a queue is
+     harmless while the line is up — every action goes straight to the
+     server. It becomes the most important thing on the screen the
+     moment the line drops, which is exactly when the queue would have
+     caught the work. Warning about it on a good connection would train
+     people to dismiss the bar that matters. */
+  const cannotHold = noStore && !online;
+
   if (online && waiting.length === 0 && refused.length === 0
       && theirs.length === 0) return null;
   if (dismissed && online && refused.length === 0 && theirs.length === 0) return null;
 
   return (
     <div className="sticky top-0 z-30 flex flex-col gap-px">
+      {cannotHold && (
+        <div className="flex flex-wrap items-start gap-3 border-b border-brand-red-100
+                        bg-brand-red-50 px-5 py-2.5 sm:px-7">
+          <AlertTriangle className="mt-0.5 size-4 shrink-0 text-brand-red" />
+          <p className="min-w-0 flex-1 text-sm font-medium text-brand-red">
+            {NO_STORE}
+          </p>
+        </div>
+      )}
       {/* ── Refused: a person has to look ────────────────────────── */}
       {refused.length > 0 && (
         <div className="flex flex-wrap items-start gap-3 border-b border-brand-red-100
