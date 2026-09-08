@@ -894,28 +894,49 @@ till.get("/:code/till/orders/:id", async (c) => {
   return body ? c.json(body) : c.json({ error: "No such order." }, 404);
 });
 
-till.post("/:code/till/orders/:id/lines", async (c) => {
-  type LineBody = {
-    itemId?: string; qty?: number; note?: string;
-    /* Chosen in the dish dialog, both optional. A dish with variations
-       REQUIRES one and the database refuses without it; a dish with
-       none must not be sent one. */
-    variationId?: string;
-    addonIds?: string[];
-  };
-  const input = await c.req.json<LineBody>().catch(() => ({}) as LineBody);
+/* ══════════════════════════════════════════════════════════════════
+   PUTTING ONE DISH ON A BILL
 
+   ⚠ EXTRACTED FROM THE ROUTE BELOW SO THAT MORE THAN ONE CALLER CAN
+   USE IT. There are 200 lines here — the item and its tax rate, whether
+   it is sold by variation, which add-ons are allowed, and whether this
+   dish merges into a line already on the bill. A second endpoint that
+   needed the same thing had two options, and copying it was not one:
+   the copy agrees on the day it is written and prices a dish
+   differently six months later.
+
+   Returns a refusal, or nothing at all when the line went on. The
+   caller decides what to send back — a single add returns the order, a
+   batch returns it once at the end rather than after every dish.
+   ══════════════════════════════════════════════════════════════════ */
+export interface LineInput {
+  itemId?: string;
+  qty?: number;
+  note?: string;
+  /* Chosen in the dish dialog, both optional. A dish with variations
+     REQUIRES one and the database refuses without it; a dish with none
+     must not be sent one. */
+  variationId?: string;
+  addonIds?: string[];
+}
+
+async function addOneLine(
+  client: Client,
+  session: { staffId: string },
+  hotelId: string,
+  orderId: string,
+  input: LineInput,
+): Promise<{ ok: false; reason: string } | null> {
+  /* Validated HERE rather than by each caller. A quantity check that
+     lives in the route is a check the batch endpoint would have to
+     remember to repeat, and forgetting it puts a zero-quantity line on
+     a real bill. */
   const qty = Number(input.qty ?? 1);
   if (!Number.isFinite(qty) || qty <= 0) {
-    return c.json(refuse("A quantity must be more than nothing."), 409);
+    return { ok: false, reason: "A quantity must be more than nothing." };
   }
-  if (!input.itemId) return c.json(refuse("Which item?"), 409);
+  if (!input.itemId) return { ok: false, reason: "Which item?" };
 
-  const result = await withSession(c.get("subject"), async (client, session) => {
-    const hotelId = await hotelFor(client, c.req.param("code"));
-    if (!hotelId) return null;
-
-    const orderId = c.req.param("id");
 
     /* Refuse in the API as well as the database. The trigger is the
        guarantee — it holds against every role — but a waiter who taps
@@ -1120,6 +1141,22 @@ till.post("/:code/till/orders/:id/lines", async (c) => {
         );
       }
     }
+
+  return null;
+}
+
+till.post("/:code/till/orders/:id/lines", async (c) => {
+  const input = await c.req.json<LineInput>().catch(() => ({}) as LineInput);
+
+  const result = await withSession(c.get("subject"), async (client, session) => {
+    const hotelId = await hotelFor(client, c.req.param("code"));
+    if (!hotelId) return null;
+
+    const orderId = c.req.param("id");
+
+    const refused = await addOneLine(
+      client, session, hotelId, orderId, input);
+    if (refused) return refused;
 
     return { ok: true as const, ...(await readOrder(client, orderId))! };
   });
@@ -2504,6 +2541,187 @@ till.post("/:code/till/orders/:id/lines/:lineId/qty", async (c) => {
    Only PENDING lines are sent. Firing the whole order again would put
    the starters back on the pass while they are being eaten.
    ═══════════════════════════════════════════════════════════════════ */
+/* ══════════════════════════════════════════════════════════════════
+   SENDING A DOCKET TO THE KITCHEN
+
+   Shared by the kot route below and by the batch endpoint, because a
+   waiter building an order on the floor sends it once — the order and
+   its dishes and the docket in a single request, not three.
+
+   THE DOCKET NUMBER GOES WITH THE BATCH, not the order. Starters, then
+   mains, then the dessert somebody changed their mind about: three
+   dockets, three numbers, one bill. A kitchen holding three pieces of
+   paper that all say KOT-5 cannot tell the chef which is which.
+
+   Taken inside the same statement that sends the lines, so two waiters
+   sending at once cannot both read the same number and print it twice.
+   ══════════════════════════════════════════════════════════════════ */
+async function fireKot(
+  client: Client, outletId: string, businessDate: string, orderId: string,
+): Promise<{ sent: number; kotNo: number }> {
+  const { rows: next } = await client.query<{ no: number }>(
+    `select app.pos_next_kot_no($1, $2::date) as no`,
+    [outletId, businessDate],
+  );
+  const kotNo = next[0]!.no;
+
+  const { rowCount } = await client.query(
+    `update pos_order_lines
+        set kot_status = 'sent', kot_sent_at = now(), kot_no = $2
+      where order_id = $1 and not voided and kot_status = 'pending'`,
+    [orderId, kotNo],
+  );
+
+  return { sent: rowCount ?? 0, kotNo };
+}
+
+/* ══════════════════════════════════════════════════════════════════
+   A WHOLE ORDER, IN ONE REQUEST
+
+   A waiter standing at a table builds the order on the pad in their
+   hand: six taps, no network, nothing to wait for. Then one Send.
+
+   ⚠ ALL OF IT OR NONE OF IT. `withUser` runs this inside one
+   transaction, so a dish the kitchen refuses — off the menu, an outlet
+   closed, a variation not chosen — must ROLL THE WHOLE THING BACK.
+   Half an order on a bill is worse than no order: the waiter believes
+   they sent six dishes and the kitchen cooks four, and nobody finds out
+   until the table complains.
+
+   That is why a refusal here THROWS rather than returning. Returning
+   would let the transaction commit whatever had already been written.
+
+   THE PRICES ARE THE SERVER'S. The pad shows what the menu said when it
+   was loaded, which is the right thing to show a waiter — but every
+   price, tax rate and total on the bill is computed here, from the
+   database, at the moment of sending. The reply carries the whole
+   order back so the pad can replace its own arithmetic with the real
+   figures.
+   ══════════════════════════════════════════════════════════════════ */
+class LineRefused extends Error {
+  constructor(public readonly reason: string, public readonly at: number) {
+    super(reason);
+  }
+}
+
+till.post("/:code/till/orders/batch", async (c) => {
+  type BatchBody = {
+    outlet?: string;
+    /* An order already open at this table — a second round. Absent
+       means open a new one. */
+    orderId?: string;
+    table?: string;
+    tableId?: string;
+    orderType?: string;
+    lines?: LineInput[];
+    /* Send to the kitchen in the same breath. A waiter who has finished
+       taking an order has finished; making them press twice is a tap
+       they pay for at every table. */
+    send?: boolean;
+  };
+  const input = await c.req.json<BatchBody>().catch(() => ({}) as BatchBody);
+
+  const lines = input.lines ?? [];
+  if (lines.length === 0) return c.json(refuse("There is nothing to send."), 409);
+  if (lines.length > 100) {
+    /* Not a real order. A guard against a loop somewhere, not against a
+       large table. */
+    return c.json(refuse("That is more than a hundred lines."), 409);
+  }
+  if (!input.outlet && !input.orderId) {
+    return c.json(refuse("Which outlet is this order for?"), 409);
+  }
+
+  const result = await withSession(c.get("subject"), async (client, session) => {
+    const hotelId = await hotelFor(client, c.req.param("code"));
+    if (!hotelId) return null;
+
+    let orderId = input.orderId ?? null;
+    let outletId: string;
+    let businessDate: string;
+    let opened = false;
+
+    if (orderId) {
+      const { rows } = await client.query<{
+        status: string; outlet_id: string; business_date: string;
+      }>(
+        `select status, outlet_id::text,
+                to_char(business_date,'YYYY-MM-DD') as business_date
+           from pos_orders where id = $1 and hotel_id = $2`,
+        [orderId, hotelId],
+      );
+      if (!rows[0]) return refuse("No such order.");
+      if (rows[0].status !== "open") {
+        return refuse(
+          `That order is ${rows[0].status}. Start a new one for this table.`,
+        );
+      }
+      outletId = rows[0].outlet_id;
+      businessDate = rows[0].business_date;
+    } else {
+      const { rows: outlet } = await client.query<{ id: string }>(
+        `select id::text from pos_outlets
+          where hotel_id = $1 and code = $2 and is_active`,
+        [hotelId, input.outlet!.toUpperCase()],
+      );
+      if (!outlet[0]) return refuse("No such outlet.");
+      outletId = outlet[0].id;
+
+      const bd = await businessDateFor(client, hotelId);
+      businessDate = bd;
+
+      const { rows: made } = await client.query<{ id: string }>(
+        `insert into pos_orders
+           (hotel_id, outlet_id, order_no, business_date, opened_by,
+            table_ref, table_id, order_type)
+         values ($1, $2, app.pos_next_order_no($1, $3::date), $3::date, $4,
+                 $5, $6::uuid, coalesce($7, 'dine_in'))
+         returning id::text`,
+        [hotelId, outletId, businessDate, session.staffId,
+         input.table?.trim() || null, input.tableId || null,
+         input.orderType || null],
+      );
+      orderId = made[0]!.id;
+      opened = true;
+    }
+
+    /* Every dish through the SAME function the single-tap route uses.
+       A second copy of the pricing would agree today and price a
+       variation differently in six months. */
+    for (let i = 0; i < lines.length; i++) {
+      const refused = await addOneLine(
+        client, session, hotelId, orderId, lines[i]!);
+      if (refused) throw new LineRefused(refused.reason, i);
+    }
+
+    let kot: { sent: number; kotNo: number } | null = null;
+    if (input.send) {
+      kot = await fireKot(client, outletId, businessDate, orderId);
+    }
+
+    return {
+      ok: true as const,
+      opened,
+      ...(kot ? { sent: kot.sent, kotNo: kot.kotNo } : {}),
+      ...(await readOrder(client, orderId))!,
+    };
+  }).catch((error: unknown) => {
+    /* The throw rolled the transaction back, so nothing was written.
+       Said with the dish's position, because "a variation is required"
+       is not actionable when six dishes went up at once. */
+    if (error instanceof LineRefused) {
+      return refuse(
+        `Nothing was sent. Dish ${error.at + 1} could not be added: ` +
+        `${error.reason}`,
+      );
+    }
+    throw error;
+  });
+
+  if (!result) return c.json({ error: "No such property." }, 404);
+  return c.json(result, "ok" in result && result.ok ? 200 : 409);
+});
+
 till.post("/:code/till/orders/:id/kot", async (c) => {
   const result = await withSession(c.get("subject"), async (client) => {
     const hotelId = await hotelFor(client, c.req.param("code"));
