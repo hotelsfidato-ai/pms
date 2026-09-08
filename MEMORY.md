@@ -4813,3 +4813,73 @@ exactly where the server fails without executing anything.
 **The rule, now earned three times in one day:** a new guard is not a
 guard until the bug has been put back and watched to fail. `--check` and
 "load this module" sound like the same question and are not.
+
+---
+
+### 211 · Every upgrade destroyed TLS, and the script then refused to restore it
+
+`launch.sh` promises *"run it again any time to upgrade"*. Running it again
+took the production API offline.
+
+```sh
+sed ... > /etc/nginx/conf.d/fidato.conf        # overwrites the whole file
+...
+elif [ ! -d "/etc/letsencrypt/live/$DOMAIN" ]; then
+  certbot --nginx ...                          # only when the cert is ABSENT
+```
+
+**Certbot's 443 server block lives in the file the script overwrites.** So a
+re-run erased TLS, and the condition then skipped certbot *precisely because
+the certificate existed*. nginx came back listening on port 80 only.
+
+Every step reported success. The service was active, the API was listening on
+8787, the preflight ran. From outside:
+
+```
+curl: (7) Failed to connect to api.fidatohotels.com port 443
+```
+
+An https app calling an API that had silently stopped speaking https — and
+nothing in several hundred lines of deploy output mentioned it.
+
+⚠ **"Leaves the certificate alone" was TRUE and not enough.** The certificate
+files were untouched. The configuration that uses them was destroyed. Those
+are different objects and the README conflated them.
+
+Fixed with a third branch: certificate present → `certbot install --cert-name
+... --nginx`, which re-applies it to the rewritten config without contacting
+Let's Encrypt, so it cannot fail on DNS or burn the rate limit.
+
+**The shape to remember: a script that rewrites a config file owned jointly
+with another tool must put that tool's contribution back.**
+
+---
+
+### 212 · The preflight ran as the one user that could never pass
+
+```
+✗ database reachable
+    Peer authentication failed for user "fidato"
+```
+
+`ADMIN_DATABASE_URL` reaches Postgres over the unix socket, which is PEER
+authenticated: the OS user must have the same name as the database role.
+`launch.sh` runs under sudo, so the OS user is **root**, and root can never be
+`fidato`.
+
+Defect 192 named this exact mechanism and fixed the missing role. It did not
+fix **who runs the check**, so the check has failed on every run since, and
+reported a completely healthy box as `NOT READY TO SERVE`.
+
+Proved by running it as the right user — 12 of 12 passed with nothing else
+changed:
+
+```
+cd /opt/fidato/api && sudo -u fidato env HOME=/tmp npm run --silent preflight
+```
+
+`HOME` is needed because the account deliberately has no home directory.
+
+**A check that cannot pass is worse than no check.** It trains whoever deploys
+to read a red line and shrug, which is exactly the habit that makes the next
+real failure invisible.

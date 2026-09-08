@@ -461,7 +461,35 @@ if [ "${SKIP_TLS:-}" = "1" ]; then
   echo "    sudo certbot --nginx -d $DOMAIN --non-interactive --agree-tos -m $EMAIL --redirect"
   echo ""
   echo "  The screens will not work until that is done."
-elif [ ! -d "/etc/letsencrypt/live/$DOMAIN" ]; then
+elif [ -d "/etc/letsencrypt/live/$DOMAIN" ]; then
+  # ⚠ THE CERTIFICATE SURVIVED A RE-RUN. ITS NGINX CONFIG DID NOT.
+  #
+  # Twenty lines above, this script OVERWRITES /etc/nginx/conf.d/fidato.conf
+  # from the template. Certbot's 443 server block lives in that file, so every
+  # re-run erased it — and the old condition here (`if the cert does NOT
+  # exist`) then skipped certbot precisely because the certificate DID exist.
+  #
+  # The result, on 8 September: an upgrade that reported success at every
+  # step, with nginx listening on port 80 only, the API unreachable, and the
+  # app calling https into a server that had stopped speaking it. Nothing in
+  # the run said so. `curl` from outside said `Failed to connect ... port 443`.
+  #
+  # README promised "run it again any time to upgrade" and "leaves the
+  # certificate alone". The certificate was indeed left alone. The
+  # configuration that USES it was not, and that is the distinction that cost
+  # an outage.
+  #
+  # `certbot install` re-applies an existing certificate to the freshly
+  # written config. It does not talk to Let's Encrypt, so it cannot fail on
+  # DNS and cannot burn the five-failures-per-hour allowance.
+  say "TLS — reinstalling into the rewritten config"
+  certbot install --cert-name "$DOMAIN" --nginx \
+    || die "The certificate exists but could not be re-applied to nginx.
+  The API is reachable on port 80 only, which the app cannot use. Try:
+    sudo certbot install --cert-name $DOMAIN --nginx"
+  nginx -t || die "nginx rejected the configuration certbot just wrote."
+  systemctl reload nginx
+else
   certbot --nginx -d "$DOMAIN" --non-interactive --agree-tos -m "$EMAIL" \
     --redirect || die "Certificate failed. Almost always DNS: $DOMAIN must
   already resolve to this box's public IP, and Oracle's VCN security list must
@@ -532,7 +560,25 @@ echo "  the same fire is not a backup. Getting it off-box is one more step."
 say "Preflight"
 # -----------------------------------------------------------------------------
 cd "$APP_DIR/api"
-if npm run --silent preflight; then
+# ⚠ RUN AS THE DATABASE USER'S NAMESAKE, NOT AS ROOT.
+#
+# ADMIN_DATABASE_URL reaches Postgres over the unix socket, which is PEER
+# authenticated: the operating system user must have the same name as the
+# database role. This script runs under sudo, so the OS user is `root`, and
+# root can never be `fidato`. The check therefore failed on every single run
+# with
+#
+#     ✗ database reachable
+#         Peer authentication failed for user "fidato"
+#
+# and reported a healthy box as NOT READY TO SERVE. Defect 192 named this and
+# fixed the missing role; it did not fix who runs the check.
+#
+# The service account and the admin role share a name ON PURPOSE — that is
+# what makes peer authentication work without a password anywhere. HOME is
+# set because the account deliberately has no home directory and npm needs
+# somewhere to write.
+if sudo -u "$DB_USER_ADMIN" env HOME=/tmp npm run --silent preflight; then
   if [ "${SKIP_TLS:-}" = "1" ]; then
     printf "\n\033[33m  Installed. The API answers on http://%s\n" "$DOMAIN"
     printf "  NO CERTIFICATE YET -- and the app CANNOT reach an http API.\n"

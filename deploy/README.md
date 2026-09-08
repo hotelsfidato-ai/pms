@@ -22,6 +22,33 @@ Run it again any time to upgrade: it re-migrates, reinstalls, restarts, and
 leaves the certificate and the database alone. It does **not** `git pull` and
 does **not** build the frontend — see step 7.
 
+⚠ **Two things this sentence used to hide, both fixed on 8 September.**
+
+*"Leaves the certificate alone"* was true and not enough: the run overwrites
+`/etc/nginx/conf.d/fidato.conf`, and **certbot's 443 block lives in that
+file**. The certificate survived; the configuration using it did not, and
+certbot was then skipped *because the certificate existed*. Every upgrade left
+nginx on port 80 only — the API unreachable, the app calling an https address
+that had stopped answering, and nothing in the output saying so. It now
+re-applies an existing certificate to the rewritten config.
+
+The preflight also ran as **root** against a peer-authenticated socket as
+`fidato`, which cannot match, so it failed on every run and reported a healthy
+box as not ready. It now runs as the account whose name the database role
+shares.
+
+**The pull is not part of this.** `/opt/fidato` is owned by `fidato`, a
+nologin account with no home and therefore no deploy key, while the key lives
+with the login user. So the pull needs both — root's write access and the
+login user's key:
+
+```bash
+sudo GIT_SSH_COMMAND="ssh -i /home/opc/.ssh/fidato_deploy -o IdentitiesOnly=yes"   git -C /opt/fidato pull
+```
+
+`launch.sh` re-runs `chown -R fidato:fidato` afterwards, so the root-owned
+files that pull creates are cleaned up by the upgrade itself.
+
 The script **refuses to finish** if the preflight fails. That is deliberate.
 Every check it runs is a way to have a system that starts, looks correct, and
 is wrong.
