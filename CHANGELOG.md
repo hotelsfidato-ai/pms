@@ -46,6 +46,67 @@ Write it **as you go**, not at the end from memory. Copy this shape:
 
 ---
 
+## 2026-09-08 (night) · Course sequence and the pass by table — Stage C5
+
+**Asked for:** course sequence, and a kitchen view by table. The last of
+Stage C.
+
+**Shipped**
+- **`081_courses.sql`** — `course` on the category and on the dish, with
+  the same fallback shape as 079 so there is one idea and not two.
+  `app.course_of` is the only place it is written.
+- **NOT `sort_order`, and the menu itself proves why.** Akkalkot sorts
+  Starters·0, Main course·1, **Beverages·2**, Desserts·3 — a drink sits
+  between the mains and the puddings, because that is a sensible order to
+  read a card in. A pass built on that would fire every drink after the
+  mains, every service. Two questions, two columns.
+- `app.pos_order_courses` — what a table is still waiting for, lowest
+  course first and unsequenced last, with per-stage counts. Served and
+  voided lines excluded: a course that reached the table is not something
+  the kitchen is holding.
+- **The pass has a second view.** *By stage* is what a chef on a section
+  works from; *by table* is what the person calling the pass works from —
+  "is table 7 ready to go" cannot be answered from three columns that
+  scatter one table's food across the screen. Kept in the URL, so a pass
+  screen that reloads comes back where it was.
+- Tables sort oldest-first, by their **oldest** dish; courses group in
+  order with **Any time** last.
+
+**Found** — 207, 208
+- **207** the `nulls last` clause turned out to be **intent, not
+  mechanism**: Postgres already defaults `ASC` to that, so removing it
+  broke nothing and the assertion could not tell the two apart. The
+  suite now guards the plausible wrong fix instead —
+  `coalesce(course, 0)`, tidying the null away, which fires the drinks
+  first. Two assertions catch it.
+  **Fourth "can this guard fail?" check today and the first where the
+  answer came before the guard was trusted.**
+- **208** the general shape of that: a column that happens to sort
+  correctly today is not the same as a column that means what you need.
+
+**Proved**
+```
+db/tests/run.sh    515 assertions (11 new)   api npm test  272 · 23 files
+db/tests/rerun.sh  81 of 81 re-runnable      vitest        170
+tsc -b  0    api tsc --noEmit  0             build:all     3 clean
+```
+Opened in a browser, with three tables on the pass: courses grouped
+**Course 1 → Course 2 → Any time**, the unsequenced drink sorting after
+the sequence rather than ahead of it, tables oldest-first, estimates
+shown. The course field was supplied at the network boundary because the
+running API predates it — see below.
+
+**Left open**
+- **The local API server still needs restarting.** Third session running.
+  It does not reload, so it serves neither the prep times, the timings,
+  nor the courses. Everything is verified against the harness, which
+  builds fresh from the migrations.
+- **Stage C is now complete.** C1 through C5.
+
+**Commits:** `cfa3bae …`
+
+---
+
 ## 2026-09-08 (night) · Timing capture — Stage C3
 
 **Asked for:** timing capture. Ordered, started, passed, served.

@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { useParams, Link } from "react-router";
+import { useParams, Link, useSearchParams } from "react-router";
 import { Flame, ArrowLeft, Check, Ban } from "lucide-react";
 import { cn } from "@/lib/cn";
 import { useUi } from "@/lib/ui";
@@ -64,6 +64,24 @@ export default function KitchenPage() {
   const hotelId = useHotel();
   const qc = useQueryClient();
   const [busy, setBusy] = useState<string | null>(null);
+
+  /* ⚠ TWO VIEWS OF ONE BOARD, and a kitchen needs both at different
+     moments. BY STAGE is what a chef on a section works from: everything
+     that needs starting, everything on the fire. BY TABLE is what the
+     person calling the pass works from — "table 7 has been waiting
+     eleven minutes and its mains are still on the fire" is a question
+     the three columns cannot answer at all, because table 7's dishes are
+     scattered across all of them.
+
+     Kept in the URL rather than in state, so a pass screen that reloads
+     — and they do, all night — comes back to the view somebody chose. */
+  const [params, setParams] = useSearchParams();
+  const byTable = params.get("by") === "table";
+  const setBy = (v: "stage" | "table") => {
+    const next = new URLSearchParams(params);
+    if (v === "stage") next.delete("by"); else next.set("by", "table");
+    setParams(next, { replace: true });
+  };
 
   /* THE TILL PUSHES. A waiter adds a dish and it lands here, rather
      than up to ten seconds later — and a pass screen lives in a
@@ -140,6 +158,26 @@ export default function KitchenPage() {
             </span>
           </p>
         </div>
+        <div className="flex items-center gap-1 p-1 rounded-md bg-grey-100 shrink-0">
+          {([["stage", "By stage"], ["table", "By table"]] as const).map(
+            ([v, label]) => (
+              <button
+                key={v}
+                type="button"
+                onClick={() => setBy(v)}
+                aria-pressed={byTable === (v === "table")}
+                className={cn(
+                  "h-10 px-3.5 rounded text-base cursor-pointer",
+                  "transition-colors duration-200",
+                  byTable === (v === "table")
+                    ? "bg-white text-ink-900 font-medium shadow-sm"
+                    : "text-grey-600 hover:text-ink-900",
+                )}
+              >
+                {label}
+              </button>
+            ))}
+        </div>
         <Link
           to={`/h/${hotelId}/till`}
           className="inline-flex items-center gap-2 h-12 px-4 rounded-md border border-grey-300 text-base text-grey-700"
@@ -149,6 +187,9 @@ export default function KitchenPage() {
         </Link>
       </header>
 
+      {byTable ? (
+        <ByTable lines={lines} busy={busy} onMove={move} />
+      ) : (
       <div className="flex-1 min-h-0 grid grid-cols-3 gap-px bg-grey-300">
         {COLUMNS.map((col) => {
           const mine = lines.filter((l) => l.status === col.key);
@@ -178,6 +219,128 @@ export default function KitchenPage() {
                     Nothing here.
                   </p>
                 )}
+              </div>
+            </section>
+          );
+        })}
+      </div>
+      )}
+    </div>
+  );
+}
+
+/* ══════════════════════════════════════════════════════════════════
+   THE PASS, BY TABLE
+
+   One card per table, its dishes grouped by course, oldest table first.
+   This is the view the person calling the pass works from: the three
+   stage columns scatter one table's food across the whole screen, so
+   "is table 7 ready to go" is a question nobody can answer by looking.
+
+   ⚠ COURSES IN ORDER, AND UNSEQUENCED LAST. A drink is not course zero
+   and must not sort ahead of the starters — it is simply not part of the
+   sequence, and it goes when it is poured.
+
+   ⚠ A TABLE IS AS OLD AS ITS OLDEST DISH. Sorting on the newest would
+   put a table that has been waiting twenty minutes below one that just
+   ordered, which is exactly backwards from what this screen is for.
+   ══════════════════════════════════════════════════════════════════ */
+function ByTable({ lines, busy, onMove }: {
+  lines: KitchenLine[];
+  busy: string | null;
+  onMove: (line: KitchenLine, to: "preparing" | "ready" | "served") => void;
+}) {
+  const tables = new Map<string, KitchenLine[]>();
+  for (const l of lines) {
+    /* A takeaway has no table and each order is its own card — grouping
+       every takeaway together would read as one enormous table. */
+    const key = l.table ?? `${l.orderType}·${l.orderNo}`;
+    const at = tables.get(key);
+    if (at) at.push(l); else tables.set(key, [l]);
+  }
+
+  const oldest = (ls: KitchenLine[]) =>
+    Math.max(...ls.map((l) => l.waitedSeconds));
+
+  const groups = [...tables.entries()]
+    .sort((a, b) => oldest(b[1]) - oldest(a[1]));
+
+  if (groups.length === 0) {
+    return (
+      <div className="flex-1 grid place-items-center bg-grey-50">
+        <p className="text-lg text-grey-400">Nothing with the kitchen.</p>
+      </div>
+    );
+  }
+
+  return (
+    <div className="flex-1 min-h-0 overflow-y-auto bg-grey-50 p-3">
+      <div className="grid gap-3 [grid-template-columns:repeat(auto-fill,minmax(20rem,1fr))]">
+        {groups.map(([key, ls]) => {
+          const wait = oldest(ls);
+          const late = wait >= 600;
+          const warm = wait >= 300;
+
+          /* Courses lowest first, unsequenced last. `null` sorts after
+             every number rather than being treated as zero. */
+          const courses = [...new Set(ls.map((l) => l.course ?? null))]
+            .sort((a, b) => {
+              if (a === null) return 1;
+              if (b === null) return -1;
+              return a - b;
+            });
+
+          return (
+            <section
+              key={key}
+              className={cn(
+                "rounded-lg border-2 bg-white overflow-hidden",
+                late ? "border-brand-red"
+                  : warm ? "border-brand-yellow" : "border-grey-200",
+              )}
+            >
+              <header className="flex items-baseline gap-2 px-3.5 py-2.5 border-b border-grey-200">
+                <h2 className="text-lg font-semibold text-ink-900 flex-1 min-w-0 truncate">
+                  {ls[0]!.table ?? ls[0]!.orderType.replace(/_/g, " ")}
+                </h2>
+                <span className="text-2xs text-grey-500">
+                  {ls[0]!.orderNo}
+                </span>
+                <span className={cn(
+                  "tabular text-base font-semibold",
+                  late ? "text-brand-red"
+                    : warm ? "text-brand-yellow" : "text-grey-500",
+                )}>
+                  {waited(wait)}
+                </span>
+              </header>
+
+              <div className="p-2.5 space-y-3">
+                {courses.map((course) => {
+                  const mine = ls.filter((l) => (l.course ?? null) === course);
+                  return (
+                    <div key={course ?? "none"}>
+                      <p className="text-2xs uppercase tracking-wide text-grey-400 mb-1.5 px-1">
+                        {course === null ? "Any time" : `Course ${course}`}
+                      </p>
+                      <div className="space-y-2">
+                        {mine.map((l) => {
+                          const col = COLUMNS.find((c) => c.key === l.status);
+                          return (
+                            <Ticket
+                              key={l.id}
+                              line={l}
+                              action={col?.action ?? "Done"}
+                              busy={busy === l.id}
+                              onMove={() =>
+                                onMove(l, col?.next ?? "served")}
+                            />
+                          );
+                        })}
+                      </div>
+                    </div>
+                  );
+                })}
               </div>
             </section>
           );

@@ -4682,3 +4682,67 @@ Deleting the line itself stays guarded by `pos_order_lines_frozen`.
 
 **When a new constraint breaks five existing places, the constraint is
 usually too wide** — not the five places wrong.
+
+---
+
+### 207 · A guard that could not fail, caught before it was trusted
+
+`app.pos_order_courses` orders `asc nulls last`, so an unsequenced dish
+sorts after the sequence rather than ahead of it as a course zero would.
+To check the assertion could fail, the clause was removed.
+
+**Nothing broke.** Postgres already defaults `ASC` to `NULLS LAST`, so
+the explicit clause changes nothing and the assertion could not tell the
+two apart.
+
+The clause stays — it states intent a reader cannot infer from the
+query, and flipping this to `DESC` one day WOULD silently change it —
+but it is now labelled as intent rather than mechanism.
+
+**What the suite actually guards is the plausible wrong fix:**
+
+```sql
+order by coalesce(app.course_of(l.item_id), 0) asc   -- "tidy the null away"
+```
+
+That fires the drinks before the starters on every table, every service.
+Two assertions catch it:
+
+```
+the starters come first, not the drink | null (the drink sorted first)
+the unsequenced dish sorts last        | an unsequenced dish did not sort last
+```
+
+**This is the fourth "can this guard fail?" check today and the first
+where the answer arrived BEFORE the guard was trusted** — 195, 204 and
+the padTotal skip were all found after the fact. The improvement is not
+that fewer weak guards were written; it is that the question got asked
+while it was still cheap.
+
+**And the general lesson:** when a mutation does not break a test, the
+test may be fine and the MUTATION may be a no-op. Check which.
+
+---
+
+### 208 · `sort_order` and a course are two questions, and the menu proves it
+
+The obvious way to sequence courses is to reuse the category's
+`sort_order` — it is already there, and Starters really does sort before
+Main course. Akkalkot's own menu is the counter-example:
+
+```
+0  Starters      1  Main course      2  Beverages      3  Desserts
+```
+
+**Beverages sits between the mains and the desserts.** That is a sensible
+order to read a card in and a nonsensical order to cook in. A pass built
+on `sort_order` would fire every drink after the mains and before the
+puddings, on every table, forever.
+
+`sort_order` answers *where does this print on the card*. `course`
+answers *when does it reach the table*. Two questions, two columns — and
+the second one is nullable, because a drink is not a course at all.
+
+Worth remembering the shape rather than the instance: **a column that
+happens to sort correctly today is not the same as a column that means
+what you need.**

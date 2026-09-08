@@ -991,6 +991,126 @@ begin
   perform test.ok('kitchen timings','the test fixture does not outlive the test',
     n = 0, n || ' left behind');
 end $do$;
+
+
+-- =============================================================================
+-- COURSES (081) — and the drink that is not course zero
+-- =============================================================================
+-- The assertion worth the most is the ordering one. An unsequenced dish must
+-- sort AFTER the sequence, not ahead of it: treating NULL as zero would fire
+-- every lime soda before the starters, on every table, every service.
+-- =============================================================================
+do $do$
+declare
+  a uuid; v_staff uuid; v_outlet uuid;
+  v_cat_food uuid; v_cat_drink uuid;
+  v_start uuid; v_main uuid; v_drink uuid;
+  v_order uuid; bd date; n int; first_course int;
+begin
+  select id into a from hotels where code = 'AGR';
+  select id into v_staff from staff where is_group_admin limit 1;
+  perform set_config('app.user_id', v_staff::text, true);
+  bd := app.business_date(a);
+
+  insert into pos_outlets (hotel_id, code, name, category, staff_id)
+  values (a, 'CRSE', 'Course Test Outlet', 'food', v_staff)
+  returning id into v_outlet;
+
+  -- A food category on course 1, and a drinks category on NO course.
+  insert into pos_menu_categories (hotel_id, name, course)
+  values (a, 'Course Test Food', 1) returning id into v_cat_food;
+  insert into pos_menu_categories (hotel_id, name)
+  values (a, 'Course Test Drinks') returning id into v_cat_drink;
+
+  insert into pos_menu_items (hotel_id, category_id, name, price, tax_rate)
+  values (a, v_cat_food, 'Course Starter', 100.00, 5.00) returning id into v_start;
+  -- Same category, its OWN course. This is the override.
+  insert into pos_menu_items (hotel_id, category_id, name, price, tax_rate, course)
+  values (a, v_cat_food, 'Course Main', 100.00, 5.00, 2) returning id into v_main;
+  insert into pos_menu_items (hotel_id, category_id, name, price, tax_rate)
+  values (a, v_cat_drink, 'Course Drink', 100.00, 5.00) returning id into v_drink;
+
+  -- ---------- the fallback, same shape as 079 ----------
+  perform test.ok('courses','a dish takes its category''s course',
+    app.course_of(v_start) = 1,
+    coalesce(app.course_of(v_start)::text, 'null'));
+
+  perform test.ok('courses','a dish overrides its category',
+    app.course_of(v_main) = 2,
+    coalesce(app.course_of(v_main)::text, 'null'));
+
+  perform test.ok('courses','an unsequenced dish is NULL, not zero',
+    app.course_of(v_drink) is null,
+    coalesce(app.course_of(v_drink)::text, 'null'));
+
+  -- ---------- the range ----------
+  perform test.raises('courses','course zero is refused',
+    format($q$update pos_menu_items set course = 0 where id = %L$q$, v_main),
+    '23514');
+
+  perform test.raises('courses','a year typed into the course box is refused',
+    format($q$update pos_menu_items set course = 2026 where id = %L$q$, v_main),
+    '23514');
+
+  -- ---------- what a table is waiting for ----------
+  insert into pos_orders (hotel_id, outlet_id, order_no, business_date, opened_by)
+  values (a, v_outlet, app.pos_next_order_no(a, bd), bd, v_staff)
+  returning id into v_order;
+
+  -- Rung up drink first, on purpose: the ORDER they were typed in must not
+  -- decide the order they are cooked in.
+  insert into pos_order_lines
+    (order_id, hotel_id, item_id, name, qty, unit_price, tax_rate, added_by,
+     kot_status, kot_sent_at, kot_no)
+  values (v_order, a, v_drink, 'Course Drink',   1, 100.00, 5.00, v_staff,
+          'sent', now(), 1),
+         (v_order, a, v_main,  'Course Main',    1, 100.00, 5.00, v_staff,
+          'sent', now(), 1),
+         (v_order, a, v_start, 'Course Starter', 2, 100.00, 5.00, v_staff,
+          'preparing', now(), 1);
+
+  select count(*) into n from app.pos_order_courses(v_order);
+  perform test.ok('courses','three courses on the table, counting the unsequenced one',
+    n = 3, n || ' groups');
+
+  -- ⚠ THE ONE THAT MATTERS. Lowest course first; NULL last, never first.
+  select course into first_course from app.pos_order_courses(v_order) limit 1;
+  perform test.ok('courses','the starters come first, not the drink',
+    first_course = 1, coalesce(first_course::text, 'null (the drink sorted first)'));
+
+  perform test.ok('courses','the unsequenced dish sorts last',
+    (select course from app.pos_order_courses(v_order)
+      offset 2 limit 1) is null,
+    'an unsequenced dish did not sort last');
+
+  -- ---------- the counts are per stage, not just a total ----------
+  perform test.ok('courses','course 1 is on the fire, not waiting',
+    (select cooking from app.pos_order_courses(v_order) where course = 1) = 1
+    and (select waiting from app.pos_order_courses(v_order) where course = 1) = 0,
+    'the stage counts do not match the lines');
+
+  -- ---------- served food is not something the kitchen is holding ----------
+  update pos_order_lines set kot_status = 'served'
+   where order_id = v_order and item_id = v_start;
+
+  select count(*) into n from app.pos_order_courses(v_order);
+  perform test.ok('courses','a served course leaves the board',
+    n = 2, n || ' groups after the starters went out');
+
+  -- ---------- teardown ----------
+  alter table pos_order_lines disable trigger pos_order_lines_frozen;
+  delete from pos_order_lines where order_id = v_order;
+  alter table pos_order_lines enable trigger pos_order_lines_frozen;
+  delete from pos_orders where id = v_order;
+  delete from pos_menu_items where category_id in (v_cat_food, v_cat_drink);
+  delete from pos_menu_categories where id in (v_cat_food, v_cat_drink);
+  delete from pos_outlets where id = v_outlet;
+
+  select count(*) into n from pos_outlets where code = 'CRSE';
+  perform test.ok('courses','the test fixture does not outlive the test',
+    n = 0, n || ' left behind');
+end $do$;
+
 -- =============================================================================
 -- THE PROVISIONING KEY (029) — no structural change without it
 -- =============================================================================

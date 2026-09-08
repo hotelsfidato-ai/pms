@@ -125,6 +125,10 @@ export interface KitchenLine {
   /** What it should take, from the dish or its category. NULL means
       nobody has timed it — a dash, never a zero. */
   prepMinutes: number | null;
+  /** Which course this dish belongs to. NULL is an unsequenced dish —
+      a drink — which is not course zero and must not sort ahead of the
+      starters. */
+  course: number | null;
   /** ⚠ HOW LONG IT HAS SAT UNDER THE LAMP. Null until the dish is
       ready, because a dish still cooking is not waiting on anybody.
       This is the number that ruins food, and nothing showed it before

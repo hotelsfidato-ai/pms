@@ -3013,6 +3013,7 @@ till.get("/:code/kitchen", async (c) => {
       note: string | null; kot_status: string; waited: string;
       voided: boolean; was_sent_when_voided: boolean;
       prep_minutes: number | null; at_pass: string | null;
+      course: number | null;
     }>(
       `select l.id::text, o.order_no, o.table_ref, o.order_type,
               ou.code as outlet, l.name, l.qty::text, l.note,
@@ -3030,7 +3031,11 @@ till.get("/:code/kitchen", async (c) => {
                 extract(epoch from (
                   now() - (select ready_at from app.pos_line_timings(l.id))
                 ))::int::text
-              end as at_pass
+              end as at_pass,
+              /* Which course, from the one place that fallback lives.
+                 NULL is an unsequenced dish — a drink — and sorts last
+                 rather than ahead of the starters. */
+              app.course_of(l.item_id) as course
          from pos_order_lines l
          join pos_orders o  on o.id = l.order_id
          join pos_outlets ou on ou.id = o.outlet_id
@@ -3062,6 +3067,7 @@ till.get("/:code/kitchen", async (c) => {
            a waiter. */
         prepMinutes: r.prep_minutes,
         atPassSeconds: r.at_pass === null ? null : Number(r.at_pass),
+        course: r.course,
         /* A struck line the kitchen already had. Shown so the pass can
            stop cooking it, rather than having the ticket vanish. */
         cancelled: r.voided && r.was_sent_when_voided,
