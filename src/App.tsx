@@ -140,10 +140,19 @@ const PERSISTED = new Set([
      since been taken off, the waiter taps it, and THE SERVER REFUSES IT
      WITH A REASON. That is Rule 6 working, not a person being misled.
 
-     `till-rooms` is deliberately NOT here. It carries guest names, and
-     a waiter's own phone is not the front-desk machine the rest of this
-     list was reasoned about for. */
+     `till-rooms` IS here, and that was a decision rather than an
+     oversight. It carries guest names and room numbers onto a waiter's
+     own phone, which the rest of this list was not reasoned about for.
+     The owner weighed that on 8 September and chose it: a waiter must be
+     able to charge a dinner to a room with the line down, and they
+     cannot pick a room from a list they cannot see.
+
+     What makes it survivable is that the list is SMALL, changes daily,
+     and is already visible to anybody standing at the till. What it is
+     not is a guest database — no documents, no folios, no history. Those
+     stay off the device, and the reason above still holds for them. */
   "till-menu",
+  "till-rooms",
 ]);
 
 /**

@@ -46,6 +46,67 @@ Write it **as you go**, not at the end from memory. Copy this shape:
 
 ---
 
+## 2026-09-08 (evening) · A room charge with the line down
+
+**Asked for:** room charging must work even when the net goes — stored,
+and **synced before anything closes.**
+
+**Shipped**
+- **`till-rooms` is now kept on the device.** The owner's decision,
+  reversing the one I left open this morning. A waiter cannot pick a
+  room from a list they cannot see. The note in `src/App.tsx` records
+  what was weighed: it is a small daily list already visible at the
+  till, not a guest database — documents, folios and history stay off.
+- **`ruleFor` now takes the request body**, and has exactly one branch
+  that reads it. `/settle` is four different acts at one address: room
+  is **held**, cash/card/UPI stay **refused** because a drawer is
+  counted at close. A split bill qualifies only if EVERY part is a room
+  charge.
+- `api/test/roomChargeOffline.test.ts` — the whole chain, and it imports
+  the frontend's own `ruleFor` rather than restating it.
+
+**Found**
+- **199** *the sync-before-close guard already existed.*
+  `app.pos_day_end_blockers` has refused to close a day over an open
+  bill since migration 050 — and a held charge means the bill is still
+  open, so the day cannot close. **It holds across devices**, which no
+  client-side check could. I nearly rebuilt it.
+- **200** the settle endpoint is the only write whose tier depends on
+  its body, and the reasoning for why is now written where it is read.
+- My own, twice: the test skipped its whole file on a wrong column name
+  (`room` for `room_number`) — the defect-195 shape again, caught
+  because 4 skipped is not 4 passed; and it asserted `sum(amount)`
+  against the bill's `payable`, coming out 16 short on 336 — exactly the
+  5% — because a folio keeps net and tax in separate columns. The test
+  was wrong, not the code.
+- The teardown hit `pos_order_lines_frozen`: a settled bill's lines
+  cannot be deleted, which is correct. Now follows `till.test.ts`'s
+  established pattern — reverse the postings, lift the trigger for the
+  delete, put it back — rather than inventing a third spelling.
+
+**Proved**
+```
+db/tests/run.sh    483 assertions        api npm test    261 · 20 files
+npx vitest run     168                   npm run build:all   3 clean
+```
+Guard proved in the dangerous direction: `isRoomCharge` made to return
+true for everything → *"cash must not queue: expected 'queue-warn' to be
+'refuse'"*.
+
+**Left open**
+- **Not walked in a browser.** No guest is checked in on the development
+  database, so the waiter's own screen for this could not be opened. The
+  server chain is covered by tests; the two UI mechanisms are the ones
+  verified this morning with `till-menu` and the pad's held state. It
+  should be walked once a property has somebody in house.
+- **The accepted risk:** a guest can check out while a charge is held.
+  The server refuses it on drain and the outbox keeps and shows the
+  refusal — loud, not silent, but somebody must chase it. See 200.
+
+**Commits:** `e6cc053 …`
+
+---
+
 ## 2026-09-08 (later) · The order pad — Stage C4
 
 **Asked for:** a waiter on the floor should not walk back to the till.

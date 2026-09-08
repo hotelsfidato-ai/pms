@@ -233,7 +233,14 @@ export async function api<T>(path: string, init: RequestInit = {}): Promise<T> {
       );
     }
 
-    const rule = ruleFor(path, method);
+    /* THE BODY, because one address carries four different acts: a bill
+       settled to a room may be held, and the same endpoint settling cash
+       may not. `ruleFor` explains at length why this is the only write
+       whose tier is not decided by its path alone. */
+    const rule = ruleFor(
+      path, method,
+      typeof init.body === "string" ? init.body : undefined,
+    );
 
     if (rule.tier === "refuse") {
       /* REFUSED, not silently dropped and not optimistically queued.

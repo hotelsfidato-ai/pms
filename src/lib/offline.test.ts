@@ -114,3 +114,69 @@ describe("the default", () => {
     expect(ruleFor(`${P}/night-audit/can-run`, "GET").tier).toBe("queue");
   });
 });
+
+/* ══════════════════════════════════════════════════════════════════
+   THE ONE WRITE WHOSE TIER DEPENDS ON ITS BODY
+
+   `/till/orders/:id/settle` is one address carrying four different
+   acts. Cash reconciles against a drawer counted at close, and money
+   applied after the count moves it — refused. A room charge moves no
+   drawer; the owner decided on 8 September that a waiter on a hill
+   station must be able to take one with the line down.
+
+   These assertions are the whole of that distinction. If they stop
+   holding, either a cash settlement starts queueing — which breaks the
+   drawer — or a room charge stops, which puts a waiter back to walking
+   downhill for signal.
+   ══════════════════════════════════════════════════════════════════ */
+
+const settle = `${P}/till/orders/abc/settle`;
+const body = (v: unknown) => JSON.stringify(v);
+
+describe("settling a bill offline", () => {
+  it("holds a charge to a room, and warns", () => {
+    const r = ruleFor(settle, "POST", body({ method: "room", room: "201" }));
+    expect(r.tier).toBe("queue-warn");
+    /* Named for the pending list. "Bill settlement" would read as though
+       the money had been taken. */
+    expect(r.label).toBe("Room charge");
+  });
+
+  it("still refuses cash, card and UPI", () => {
+    for (const method of ["cash", "card", "upi"]) {
+      const r = ruleFor(settle, "POST", body({ method }));
+      expect(r.tier, `${method} must not queue`).toBe("refuse");
+      expect(r.reason).toMatch(/drawer|cash on paper/i);
+    }
+  });
+
+  it("holds a split bill only when EVERY part is a room charge", () => {
+    expect(ruleFor(settle, "POST", body({
+      tenders: [{ method: "room" }, { method: "room" }],
+    })).tier).toBe("queue-warn");
+
+    /* Half held and half refused would settle nothing and reconcile to
+       nothing — the bill would be neither paid nor open. */
+    expect(ruleFor(settle, "POST", body({
+      tenders: [{ method: "room" }, { method: "cash" }],
+    })).tier).toBe("refuse");
+
+    expect(ruleFor(settle, "POST", body({ tenders: [] })).tier).toBe("refuse");
+  });
+
+  it("refuses when the body is missing or unreadable", () => {
+    /* Fail towards refusing. Holding something that should not have been
+       held is the direction that loses money. */
+    expect(ruleFor(settle, "POST").tier).toBe("refuse");
+    expect(ruleFor(settle, "POST", "not json").tier).toBe("refuse");
+    expect(ruleFor(settle, "POST", body({})).tier).toBe("refuse");
+  });
+
+  it("does not let the room branch swallow the day end", () => {
+    /* `/till/day-end` shares the rule that settling uses. A body naming
+       a room must not reach past it — closing the day is not a payment
+       and there is no version of it that may be held. */
+    expect(ruleFor(`${P}/till/day-end`, "POST", body({ method: "room" })).tier)
+      .toBe("refuse");
+  });
+});

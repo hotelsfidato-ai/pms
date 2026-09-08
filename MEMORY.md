@@ -4405,3 +4405,77 @@ Not urgent — the API tests are a development gate and the server is not
 where they run today. It is recorded because it is the third file found
 carrying this same line, and the next person to fix it should fix it the
 way `migrate.sh` already does rather than inventing a fourth spelling.
+
+---
+
+### 199 · The guard the owner asked for was already in the database
+
+The owner decided on 8 September that a waiter must be able to charge a
+dinner to a room with the line down, and that it **must be synced before
+anything closes.**
+
+The second half looked like new work and was not.
+
+A held charge lives in the browser's outbox; the server never saw it. So
+the bill is **still open** on the server — and `app.pos_day_end_blockers`
+has refused to close a day over an open bill since migration 050:
+
+```sql
+select 'open_orders',
+       'There are ' || n || ' bills still open. Settle them, or close
+        them unpaid with a reason — the day end will not decide which.'
+  from pos_orders where status = 'open' ...
+```
+
+**That guard holds across every device**, which no client-side check
+could: a charge held on a waiter's phone blocks the day end running on
+the till, because the evidence is the open bill on the server rather
+than anything in the phone's storage.
+
+Pinned by `api/test/roomChargeOffline.test.ts`, which asserts the
+blocker names the order while it is open **and** releases it once
+settled. A function that always returned a blocker would fail the second
+half; one that never did would fail the first.
+
+**The lesson is the one from 196 pointing the other way.** There I
+invented a problem that did not exist. Here I nearly built a guard that
+already existed. Both come from reasoning about the system instead of
+reading it. **Read the migration before writing the feature.**
+
+---
+
+### 200 · A settle is four different acts at one address
+
+`/till/orders/:id/settle` carries room, cash, card and UPI. Every other
+offline tier in this codebase is decided from the PATH, deliberately —
+a tier chosen per screen is a rule written forty times, and defect 96 is
+what that costs.
+
+This is the one write where that is not enough:
+
+```
+cash · card · upi   reconcile against a drawer counted at close.
+                    Money applied after the count moves it.  REFUSE.
+room                moves no drawer. It is a posting to a folio.  HELD.
+```
+
+`ruleFor` now takes the request body and has exactly one branch that
+reads it, at the top, above the rule table. **A split bill is a room
+charge only if EVERY part is one** — half held and half refused would
+settle nothing and reconcile to nothing.
+
+An unreadable or absent body falls through to the path rules, which
+refuse. **Fail towards refusing**: holding something that should not
+have been held is the direction that loses money.
+
+Proved in the dangerous direction by making `isRoomCharge` return true
+for everything — *"cash must not queue: expected 'queue-warn' to be
+'refuse'"*.
+
+⚠ **THE RISK THE OWNER ACCEPTED, written down so nobody rediscovers it
+as a bug:** a guest can check out and close their folio while a charge
+is still held. The server refuses it on drain — *"nobody is checked in
+there, or the folio is closed"* — and the outbox KEEPS a refusal and
+shows it to a person rather than dropping it. The money is not lost
+silently; it is lost loudly, and somebody must chase it. That is the
+trade for a till that works on a bad line.

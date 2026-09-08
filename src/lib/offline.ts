@@ -89,12 +89,16 @@ const RULES: Rule[] = [
       + "connection is back.",
   },
   {
+    /* ⚠ CASH, CARD AND UPI ONLY. A room charge reaches this file through
+       the branch at the top of `ruleFor` and never gets here — see the
+       long note there for why the owner decided those may be held. */
     test: /\/till\/orders\/[^/]+\/settle$|\/till\/day-end/,
     tier: "refuse",
     label: "Bill settlement",
     reason:
-      "A bill cannot be settled offline. The order is saved and the "
-      + "kitchen has it; settle when the connection is back.",
+      "A bill cannot be settled offline unless it is charged to a room. "
+      + "The order is saved and the kitchen has it; take cash on paper "
+      + "and enter it when the connection is back.",
   },
   {
     test: /\/banquet\/events\/[^/]+\/confirm$/,
@@ -163,11 +167,67 @@ const UNLISTED: Rule = {
     + "hold and send later, and guessing is how a guest gets charged twice.",
 };
 
-export function ruleFor(path: string, method: string): Rule {
+/* ── The one write whose tier depends on its BODY ─────────────────
+   Every other decision in this file is made from the path, deliberately:
+   a tier chosen per screen is a rule written forty times, and defect 96
+   is what that costs. This is the single exception, and it earns it.
+
+   `/till/orders/:id/settle` is one address carrying four different acts.
+   Cash, card and UPI reconcile against a drawer that is counted at close,
+   and money applied after the count moves it — so those stay refused.
+
+   A ROOM CHARGE MOVES NO DRAWER. It is a posting to a folio, and the
+   owner decided on 8 September that a waiter in a hill station must be
+   able to take one with the line down. What makes that safe is not this
+   file — it is `app.pos_day_end_blockers`, which refuses to close the
+   day while any bill is still open. A held charge means the settle never
+   reached the server, so the bill IS still open, so the day cannot close
+   until it syncs. That guard lives in the database and holds across
+   every device, which no client-side check could.
+
+   ⚠ THE RISK THE OWNER ACCEPTED, written down so nobody rediscovers it:
+   a guest can check out and close their folio while a charge is still
+   held. The server refuses it on drain — "nobody is checked in there, or
+   the folio is closed" — and the outbox KEEPS a refusal and shows it to
+   a person rather than dropping it. So the money is not lost silently;
+   it is lost loudly, and somebody must chase it. That is the trade for a
+   till that works on a bad line. */
+function isRoomCharge(body: string | undefined): boolean {
+  if (!body) return false;
+  try {
+    const parsed = JSON.parse(body) as {
+      method?: string; tenders?: { method?: string }[];
+    };
+    /* A split bill is a room charge only if EVERY part is one. Half a
+       payment held and half refused would settle nothing and reconcile
+       to nothing. */
+    if (Array.isArray(parsed.tenders)) {
+      return parsed.tenders.length > 0
+        && parsed.tenders.every((t) => t.method === "room");
+    }
+    return parsed.method === "room";
+  } catch {
+    /* Unreadable body: fall through to the path rules, which refuse.
+       Refusing something that might have been safe is the direction to
+       fail in. */
+    return false;
+  }
+}
+
+export function ruleFor(path: string, method: string, body?: string): Rule {
   const m = method.toUpperCase();
   if (m === "GET" || m === "HEAD") {
     return { test: /.*/, tier: "queue", label: "Read" };
   }
+
+  if (/\/till\/orders\/[^/]+\/settle$/.test(path) && isRoomCharge(body)) {
+    return {
+      test: /.*/,
+      tier: "queue-warn",
+      label: "Room charge",
+    };
+  }
+
   for (const r of RULES) {
     if (!r.test.test(path)) continue;
     if (r.methods && !r.methods.includes(m)) continue;
