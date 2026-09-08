@@ -1,6 +1,7 @@
 import { useState, useMemo } from "react";
 import { cn } from "@/lib/cn";
 import { money } from "@/lib/format";
+import { unitPriceOf } from "@/lib/pricing";
 import {
   Button, Dialog, DialogContent, Input,
 } from "@/components/ui";
@@ -57,17 +58,14 @@ export function DishDialog({
     setSearch("");
   }
 
-  const unitPrice = useMemo(() => {
-    if (!item) return 0;
-    const base = variationId
-      ? item.variations.find((v) => v.id === variationId)?.price ?? 0
-      : item.price;
-    const sides = item.addonGroups
-      .flatMap((g) => g.addons)
-      .filter((a) => chosen.has(a.id))
-      .reduce((sum, a) => sum + a.price, 0);
-    return base + sides;
-  }, [item, variationId, chosen]);
+  /* The formula lives in `pricing.ts` because the ORDER PAD needs the
+     same number, and this dialog having its own copy is how the two
+     start disagreeing. Same reason the server's copy is pinned by a
+     test. */
+  const unitPrice = useMemo(
+    () => (item ? unitPriceOf(item, variationId, chosen) : 0),
+    [item, variationId, chosen],
+  );
 
   if (!item) return null;
 

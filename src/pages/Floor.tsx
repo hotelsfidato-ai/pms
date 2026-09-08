@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useParams, useNavigate } from "react-router";
 import { Printer, Eye, LayoutGrid } from "lucide-react";
@@ -9,8 +9,10 @@ import { useLiveOrders } from "@/lib/useLiveOrders";
 import {
   Page, PageHeader, Card, CardBody, Button, Skeleton, toast,
 } from "@/components/ui";
+import { OrderPad } from "@/components/flows/OrderPad";
+import { draftedTables } from "@/lib/draft";
 import {
-  getFloor, openOrderOnTable, markPrinted, clearTable,
+  getFloor, markPrinted, clearTable,
   type FloorTable, type TableState,
 } from "@/data/repositories";
 
@@ -67,6 +69,23 @@ export default function FloorPage() {
   const qc = useQueryClient();
   const [busy, setBusy] = useState<string | null>(null);
 
+  /* Which table the pad is open on, and whether it is joining a bill
+     that already exists. Null means the pad is closed — the floor is
+     still the screen underneath either way. */
+  const [pad, setPad] = useState<
+    { table: FloorTable; orderId?: string } | null
+  >(null);
+
+  /* ⚠ A ROUND LEFT ON A PAD IS INVISIBLE OTHERWISE. The kitchen has
+     nothing, the bill has nothing, and only the phone in one waiter's
+     pocket knows it exists. The floor is where a manager would look, so
+     the floor says so. */
+  const [drafted, setDrafted] = useState<Set<string>>(new Set());
+  const rescanDrafts = () => {
+    void draftedTables(hotelId).then(setDrafted);
+  };
+  useEffect(rescanDrafts, [hotelId, pad]);
+
   const floor = useQuery({
     queryKey: ["floor", hotelId],
     queryFn: () => getFloor(hotelId),
@@ -78,15 +97,25 @@ export default function FloorPage() {
 
   const refresh = () => void qc.invalidateQueries({ queryKey: ["floor", hotelId] });
 
-  const open = async (table: FloorTable) => {
-    setBusy(table.id);
-    const res = await openOrderOnTable(hotelId, "REST", table.id);
-    setBusy(null);
-    if (!res.ok) return toast.error("Not opened", res.reason);
-    /* Straight to THAT bill, named in the URL. Landing on the list is
-       how a waiter opens a second order on the same table, because the
-       first one looked like it had not worked. */
-    navigate(`/h/${hotelId}/till?order=${res.order.id}`);
+  /* ⚠ NO NETWORK CALL AND NO NAVIGATION.
+     This used to open an order on the server and then leave for the
+     till — so a waiter standing at the table walked back to a terminal
+     to do the thing they were already standing in front of, and paid a
+     round trip to Mumbai before the first dish was even chosen.
+
+     The pad opens over this screen from the cached menu. The order is
+     created by the batch request when Send is pressed, once, with every
+     dish on it. */
+  const open = (table: FloorTable) => {
+    setPad({ table });
+  };
+
+  /* Another round on a bill that is already open. Same pad, carrying
+     the order id, so the dishes join that bill rather than starting a
+     second one on the same table. */
+  const addRound = (table: FloorTable) => {
+    if (!table.orderId) return;
+    setPad({ table, orderId: table.orderId });
   };
 
   const print = async (table: FloorTable) => {
@@ -119,7 +148,7 @@ export default function FloorPage() {
     <Page>
       <PageHeader
         title="Floor"
-        description="The room as it stands. Tap a free table to open an order on it."
+        description="The room as it stands. Tap any table to take an order on it — the pad opens here, and nothing reaches the kitchen until you send it."
       />
 
       {closed && (
@@ -174,16 +203,29 @@ export default function FloorPage() {
                 <div
                   key={t.id}
                   className={cn(
-                    "rounded-lg border p-3 min-h-24 flex flex-col",
+                    "relative rounded-lg border p-3 min-h-24 flex flex-col",
                     "transition-colors duration-200",
                     TILE[t.state],
+                    /* An unsent round outranks the tile's own colour.
+                       A free-looking table with six dishes on somebody's
+                       pad is the one thing this screen would otherwise
+                       be wrong about. */
+                    drafted.has(t.id) && "border-brand-orange border-dashed",
                   )}
                 >
+                  {drafted.has(t.id) && (
+                    <span
+                      className="absolute top-2 right-2 text-2xs font-medium text-brand-orange"
+                      title="A round is on a pad and has not been sent"
+                    >
+                      not sent
+                    </span>
+                  )}
                   {t.state === "blank" ? (
                     <button
                       type="button"
                       disabled={busy === t.id || Boolean(closed)}
-                      onClick={() => void open(t)}
+                      onClick={() => open(t)}
                       className={cn(
                         "flex-1 flex flex-col items-start justify-center text-left",
                         closed ? "cursor-not-allowed" : "cursor-pointer",
@@ -200,17 +242,37 @@ export default function FloorPage() {
                     </button>
                   ) : (
                     <>
-                      {/* Three things, in the order a person reads them
-                          across a room: how long, which table, how much. */}
-                      <span className="tabular text-sm text-grey-600">
-                        {t.minutes} min
-                      </span>
-                      <span className="text-base font-medium text-ink-900">
-                        {t.label}
-                      </span>
-                      <span className="tabular text-base font-semibold text-ink-900 mt-auto">
-                        {t.payable === null ? "—" : money(t.payable)}
-                      </span>
+                      {/* TAPPING A RUNNING TABLE ADDS A ROUND, exactly as
+                          tapping a free one opens the first. One gesture
+                          means one thing across the whole floor, and the
+                          pad opens over this screen either way.
+
+                          A settled bill is the exception: it takes no more
+                          dishes, and Clear is what that table needs. */}
+                      <button
+                        type="button"
+                        disabled={t.state === "paid" || Boolean(closed)}
+                        onClick={() => addRound(t)}
+                        aria-label={`Add a round to ${t.label}`}
+                        className={cn(
+                          "flex-1 flex flex-col items-start text-left w-full",
+                          t.state === "paid" || closed
+                            ? "cursor-not-allowed"
+                            : "cursor-pointer",
+                        )}
+                      >
+                        {/* Three things, in the order a person reads them
+                            across a room: how long, which table, how much. */}
+                        <span className="tabular text-sm text-grey-600">
+                          {t.minutes} min
+                        </span>
+                        <span className="text-base font-medium text-ink-900">
+                          {t.label}
+                        </span>
+                        <span className="tabular text-base font-semibold text-ink-900 mt-auto">
+                          {t.payable === null ? "—" : money(t.payable)}
+                        </span>
+                      </button>
 
                       <div className="flex gap-1.5 mt-2">
                         {t.state === "paid" ? (
@@ -253,6 +315,21 @@ export default function FloorPage() {
             </div>
           </section>
         ))
+      )}
+
+      {/* Over the floor, never instead of it. The pad closes and the
+          waiter is looking at the same room they were looking at. */}
+      {pad && (
+        <OrderPad
+          hotelId={hotelId}
+          outlet="REST"
+          tableId={pad.table.id}
+          tableLabel={pad.table.label}
+          {...(pad.orderId ? { orderId: pad.orderId } : {})}
+          open
+          onOpenChange={(o) => { if (!o) setPad(null); }}
+          onSent={() => { setPad(null); refresh(); }}
+        />
       )}
     </Page>
   );

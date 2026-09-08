@@ -132,6 +132,18 @@ const PERSISTED = new Set([
   "arrivals", "in-house", "departures",
   "tape-chart", "floor", "housekeeping",
   "work-orders", "banquet-diary", "banquet-setup",
+  /* THE MENU, so the order pad opens on a floor with no signal — which
+     is the hill-station case this whole feature exists for. 1.2 KB
+     gzipped, and it changes a few times a season.
+
+     It passes the test above: a menu an hour old shows a dish that has
+     since been taken off, the waiter taps it, and THE SERVER REFUSES IT
+     WITH A REASON. That is Rule 6 working, not a person being misled.
+
+     `till-rooms` is deliberately NOT here. It carries guest names, and
+     a waiter's own phone is not the front-desk machine the rest of this
+     list was reasoned about for. */
+  "till-menu",
 ]);
 
 /**

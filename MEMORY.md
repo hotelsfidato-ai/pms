@@ -3938,7 +3938,12 @@ applied, which is real evidence, but it is not the same as having run
 the suite there. **Worth aligning before real bookings**, and it was
 not worth doing mid-deploy with the owner waiting.
 
-### 191 · The preflight could not run on a production machine
+### 197 · Every script the server runs needed a tool the server does not have
+
+*Numbered out of sequence. It was written as a second 191 — two
+different defects under one number, which a ledger cannot carry. Found
+during the deployment, between 190 and 191, and left here so the story
+reads in the order it happened.*
 
 ```
 sh: line 1: tsx: command not found
@@ -4268,3 +4273,135 @@ render a negative as blank, never parenthesise it away.
 **Zero rows and empty reports still print.** The real No Show report for
 25 August has no rows at all — just property, title and date. That is correct
 behaviour, not an `EmptyState` with a "create one" button.
+
+---
+
+### 195 · A guard that skipped itself, and passed with the bug in
+
+The order pad shows the waiter a running total, which puts the pricing
+rule on both sides of the wire. `api/test/padTotal.test.ts` exists to
+pin the two together, and its third case — a dish with sides, the case
+most likely to drift — began:
+
+```ts
+const withSides = items.find(
+  (i) => i.variations.length === 0 && i.addonGroups.some(...));
+if (!outlet || !withSides) return;      // ← quietly
+```
+
+**No dish on the menu has sides and no variations.** The one dish that
+has sides has variations too. So `withSides` was undefined, the test
+returned, and vitest reported it PASSED.
+
+Proved by breaking `unitPriceOf` to drop the sides entirely. Three
+tests, three green ticks, the bug sitting in the file.
+
+**A test that returns when its data is missing is not a test, it is a
+tick.** Rewritten to `expect(withSides).toBeTruthy()` with a sentence
+saying what it could not check, and to use the variation when the dish
+has one. It then failed correctly: *"the sides were not added to the
+dish's price: expected 300 to be 350"*.
+
+This is the eleventh guard in this project found passing with its own
+bug reintroduced. The rule is not "write a test" — it is **break the
+code and watch the test fail before you trust it.**
+
+---
+
+### 196 · I reported a broken gate. The gate was fine; I ran the wrong command
+
+**Everything in the original version of this entry was wrong.** It is kept
+as a correction rather than deleted, because the mistake is the useful part.
+
+I ran `npx vitest run` in `api/` and got:
+
+```
+40 failed · 153 passed · 64 skipped   (257)
+```
+
+From that I concluded — and wrote up, and published to the owner — that
+104 API tests were "testing nothing", that the suite had "never been
+green from a clean clone", and that the repository contained a design
+contradiction in which `preflight.ts` forbade the very properties the
+tests required.
+
+The actual command is in `package.json`, in `AGENTS.md`, and in the
+gate order I had already been given:
+
+```
+cd api && npm test        →  bash scripts/with-test-db.sh
+```
+
+Run properly: **257 passed, 19 files, 0 failed.**
+
+`with-test-db.sh` creates `fidato_test_$$`, applies all 78 migrations,
+loads `harness.sql` and `suite.sql` — *which is what creates AGR and
+PUN* — seeds the demo, exports `DATABASE_URL` at the scratch database,
+runs vitest, and drops it. It was written after eleven defects caused
+by tests sharing the live database, and its header says so.
+
+**`npx vitest run` bypasses all of it** and runs against whatever
+`api/.env` points at, which is the development database. Every symptom
+I "found" was that: no AGR, no PUN, no 18% item, nobody checked in.
+
+⚠ **THE PREFLIGHT CONTRADICTION I REPORTED DOES NOT EXIST.**
+`preflight.ts` refuses AGR and PUN in the *production* database, and
+`with-test-db.sh` creates them in a *scratch* one that is dropped
+minutes later. Two databases. There was never a conflict. I invented it
+to explain symptoms that had a much duller cause.
+
+**What actually went wrong, and it was not the tools:**
+
+1. **I got an unexpected result and explained it instead of checking
+   it.** A suite going from green to 40% dead with no relevant change is
+   evidence that the *observer* moved, not the code.
+2. **I stashed my work to "prove" the failures pre-existed.** They did —
+   because the wrong command fails the same way regardless of the
+   working tree. A control that cannot distinguish the two hypotheses
+   confirms whichever one you already hold.
+3. **The louder the finding, the harder it should be to publish.** I
+   made this the headline of an audit. Nothing in my process scaled the
+   burden of proof to the size of the claim.
+
+⚠ **AND THE WRONG COMMAND IS NOT MERELY WRONG, IT IS DESTRUCTIVE.**
+`npx vitest run` points every test file at the development database, and
+those files create and delete rows in their `beforeAll` and `afterAll`.
+The order-pad orders I had just created on AC1 and AC2 were gone
+afterwards, and two orders sit abandoned at the exact minutes I ran it.
+
+That is precisely the eleven-defect problem `with-test-db.sh` was
+written to end — the teardown that deleted a real banquet booking
+(defect 120) came from the same shape. **By reaching past the harness I
+re-opened the fault it exists to close**, on a database that now holds a
+copy of a live property's records.
+
+**The rule this earns:** *before reporting that a gate is broken, run it
+the way the repository says to run it, and say which command you ran.*
+A gate result without its command is not a result. Every number in a
+handover should be reproducible from the words next to it.
+
+Related: 195, found the same afternoon, was a real guard that skipped
+itself. The two are opposites — one test lying green, one operator
+reading red — and both come from trusting a test result without
+checking what actually ran.
+
+---
+
+### 198 · The API gate cannot run on the server it tests
+
+Found while confirming 196. `api/scripts/with-test-db.sh` hardcodes:
+
+```sh
+PSQL="$PGBIN/psql.exe"
+```
+
+`.exe`, with no fallback. That is defect 188 exactly — `restore.sh` had
+the same line and could not run on the Linux box it existed for.
+`db/migrate.sh` was given a detection block for both platforms when 188
+was fixed; `with-test-db.sh` was not, so **the API suite is
+Windows-only.**
+
+Not urgent — the API tests are a development gate and the server is not
+where they run today. It is recorded because it is the third file found
+carrying this same line, and the next person to fix it should fix it the
+way `migrate.sh` already does rather than inventing a fourth spelling.

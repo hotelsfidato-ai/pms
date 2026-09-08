@@ -42,7 +42,25 @@ APPPASS="${APPPASS:-CHANGE_ME_app}"
 DB="fidato_test_$$"
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
 
-PSQL="$PGBIN/psql.exe"
+# WHICH psql. `$PGBIN/psql.exe` was hardcoded here, which is defect 188
+# again — `restore.sh` carried the same line and could not run on the Linux
+# box it existed for. `db/migrate.sh` was given this block when 188 was
+# fixed; this file was missed, so the API gate was Windows-only. Same
+# spelling as migrate.sh on purpose: a fourth variant of "find psql" is how
+# the third one got missed.
+if [ -n "${PSQL:-}" ]; then
+  :                                       # told explicitly; use it
+elif [ -x "$PGBIN/psql.exe" ]; then
+  PSQL="$PGBIN/psql.exe"
+elif [ -x "$PGBIN/psql" ]; then
+  PSQL="$PGBIN/psql"
+elif command -v psql >/dev/null 2>&1; then
+  PSQL="$(command -v psql)"
+else
+  printf "[31m  x no psql found. Set PGBIN or PSQL.[0m
+" >&2
+  exit 1
+fi
 S="-h $PGHOST -p $PGPORT -U $SUPER"
 export PGPASSWORD="$SUPERPASS"
 export PGCLIENTENCODING=UTF8

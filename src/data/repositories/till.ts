@@ -1,4 +1,4 @@
-import { api, ApiError } from "@/lib/api";
+import { api, ApiError, HeldError } from "@/lib/api";
 
 /* ══════════════════════════════════════════════════════════════════
    THE TILL — the POS built into the PMS
@@ -626,6 +626,87 @@ export function openOrderOnTable(
   hotelId: string, outlet: string, tableId: string,
 ): Promise<TillResult> {
   return write(`/api/hotels/${hotelId}/till/orders`, { outlet, tableId });
+}
+
+/* ══════════════════════════════════════════════════════════════════
+   A WHOLE ROUND, IN ONE REQUEST
+
+   What the order pad sends. Six dishes cost ONE journey to the server
+   instead of six, which on a hill-station link is the difference
+   between an order taking a moment and an order taking a minute.
+
+   All-or-nothing at the far end: if the fourth dish is refused, the
+   first three are rolled back. Half an order on a bill is worse than
+   none — the waiter believes six went, the kitchen cooks three, and
+   nobody finds out until the table complains.
+   ══════════════════════════════════════════════════════════════════ */
+
+export interface SendLine {
+  itemId: string;
+  qty: number;
+  note?: string;
+  /* A dish WITH variations requires one and the server refuses without
+     it; a dish with none must not be sent one. */
+  variationId?: string;
+  addonIds?: string[];
+}
+
+/**
+ * ⚠ THREE OUTCOMES, NOT TWO, and the third is the one that matters.
+ *
+ * `held` is an order that never reached the server because there was no
+ * connection. It is in the outbox and will go when the line is back —
+ * but THE KITCHEN DOES NOT HAVE IT, and there is no docket number,
+ * because no server has seen it. A pad that reports this as "sent"
+ * tells a waiter the food is being cooked when nothing is.
+ */
+export type SendResult =
+  | { ok: true; held: false; order: Order; opened: boolean; kotNo: number | null }
+  | { ok: true; held: true; message: string }
+  | { ok: false; reason: string };
+
+export async function sendOrder(
+  hotelId: string,
+  input: {
+    /** Absent when joining an order already open on the table. */
+    outlet?: string;
+    /** A second round on an existing bill. */
+    orderId?: string;
+    tableId?: string;
+    table?: string;
+    orderType?: string;
+    lines: SendLine[];
+    /** Straight to the kitchen in the same breath. A waiter who has
+        finished taking an order has finished. */
+    send?: boolean;
+  },
+): Promise<SendResult> {
+  try {
+    const result = await api<
+      Order & { ok: true; opened: boolean; sent?: number; kotNo?: number }
+    >(`/api/hotels/${hotelId}/till/orders/batch`, {
+      method: "POST",
+      body: JSON.stringify(input),
+    });
+    return {
+      ok: true,
+      held: false,
+      order: result,
+      opened: result.opened,
+      /* Null rather than zero when nothing was sent to the kitchen. A
+         zero here would print as a docket number. */
+      kotNo: typeof result.kotNo === "number" ? result.kotNo : null,
+    };
+  } catch (error) {
+    if (error instanceof HeldError) {
+      return { ok: true, held: true, message: error.message };
+    }
+    if (error instanceof ApiError) {
+      const payload = error.body as { reason?: string } | undefined;
+      return { ok: false, reason: payload?.reason ?? error.message };
+    }
+    throw error;
+  }
 }
 
 export function markPrinted(

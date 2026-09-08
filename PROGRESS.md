@@ -1067,11 +1067,21 @@ business date         5EL 2026-08-25 · AGR 2027-04-02 · PUN 2026-08-28
 ## What is left in this stage
 
 ```
-1 · offline          Stage 6 asked for it. Zero service-worker files.
-2 · channel manager  Stage 9. STAAH is quoted and unbuilt.
-3 · retire src/data/store.ts and the in-memory fixtures it seeds.
-4 · issue a credit note. Nothing in the interface can.
+1 · offline          DONE. VitePWA is configured and registerServiceWorker()
+                     runs at src/main.tsx:13. Verified 8 Sep.
+2 · channel manager  OPEN. Stage 9. STAAH is quoted and unbuilt. The only
+                     one of these four still standing.
+3 · retire store.ts  DONE. src/data/store.ts no longer exists.
+4 · credit note      DONE. src/components/flows/CreditNoteFlow.tsx calls
+                     issueCreditNote, and Invoice.tsx:179 renders it — so
+                     there is a path to the act, which was the whole fault.
 ```
+
+⚠ **Three of these four were already finished and this list still said they
+were open** — checked against the code on 8 September, not remembered. A
+backlog that lists finished work is worse than no backlog: it sends the next
+agent to build something twice. The prose immediately below about the credit
+note is kept for its reasoning and is **no longer true of the code**.
 
 **A credit note can be READ and cannot be WRITTEN.** Found by this audit, not
 by a gate. Everything exists except the act: the endpoint

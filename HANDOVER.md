@@ -39,8 +39,24 @@ The two suites are separate on purpose: the API's tests need a live Postgres
 and a node environment, not jsdom, so the root `vitest.config.ts` excludes
 `api/**` and the API runs its own.
 
-**Note:** commits and deploys are paused at the owner's instruction. Work in the
-tree, do not push.
+> ⚠ **THIS FILE IS STALE BELOW THIS LINE.** It was last written on 28 August,
+> before the system was deployed. The gate numbers, the "deploys are paused"
+> instruction and the CP6 status below are all out of date.
+>
+> **Read `CHANGELOG.md` first — that is the current record.** In short:
+>
+> - The system is **live**: `pms.fidatohotels.com` (Firebase) and
+>   `api.fidatohotels.com` (Oracle Linux, Mumbai), serving 5 Elements Akkalkot.
+> - **Commits and deploys are no longer paused.** That instruction was lifted
+>   by the owner on 8 September. Push normally.
+> - There are **two databases and they differ**: portable Postgres 17 here,
+>   PostgreSQL 16 on the server. A dump only restores forwards — use
+>   `db/backup.sh --portable`. Read defect 190 before touching a backup.
+> - **Current gates:** 483 database assertions · 78/78 migrations re-runnable ·
+>   254 API tests · 163 interface tests · 3 clean builds.
+> - **In flight:** Stage C4, the waiter's order pad. The server half
+>   (`POST /till/orders/batch`) is built and tested; the pad itself is not.
+>   The running-total decision is made — see `CHANGELOG.md`.
 
 ---
 

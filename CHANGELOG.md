@@ -46,6 +46,94 @@ Write it **as you go**, not at the end from memory. Copy this shape:
 
 ---
 
+## 2026-09-08 (later) · The order pad — Stage C4
+
+**Asked for:** a waiter on the floor should not walk back to the till.
+Tapping a table opens a pad over the floor plan; dishes go on with no
+network; one Send puts the round in the kitchen. Then: build it.
+
+**Shipped**
+- **`src/components/flows/OrderPad.tsx`** — the pad. Opens over the
+  floor, never navigates. Reuses `DishDialog` unchanged, because that
+  component never touched the network and its `onAdd` already carried
+  the batch endpoint's shape.
+- **`src/lib/draft.ts`** — an unfinished order, written to IndexedDB as
+  it grows. One draft per table. A **separate store from the outbox on
+  purpose**: everything in the outbox is destined for the server and
+  drains on reconnect; a draft may never be sent, and mixing them means
+  a half-taken order leaves for the kitchen because the wifi came back.
+- **`src/lib/pricing.ts`** — `unitPriceOf`, the one place a dish is
+  priced on this side. `DishDialog` had its own copy; the pad would have
+  been a third.
+- **`sendOrder()`** in the seam — one `POST /till/orders/batch`, with
+  **three** outcomes, not two: sent · refused · **held**.
+- `src/App.tsx` — `till-menu` added to the persisted set, so the pad
+  opens with no signal. `till-rooms` deliberately not added: it carries
+  guest names and a waiter's own phone is not the front-desk machine.
+- `src/pages/Floor.tsx` — the tap no longer calls the server or leaves
+  the screen. A running table is tappable too (another round on the same
+  bill). **A table with an unsent round is marked "not sent"** — it is
+  invisible otherwise: the kitchen has nothing, the bill has nothing,
+  and only one waiter's phone knows.
+
+**Found**
+- **195** `padTotal.test.ts` skipped its own most important case and
+  reported PASS with the bug deliberately in. It looked for a dish with
+  sides *and no variations*; the only dish with sides has variations, so
+  it returned quietly. Eleventh guard in this project caught doing this.
+- **196** ~~the API suite cannot run~~ — **RETRACTED, and it was my
+  error.** I ran `npx vitest run` instead of `npm test`. The documented
+  command is wired to `scripts/with-test-db.sh`, which already builds a
+  scratch database, applies all 78 migrations, loads the fixtures that
+  create AGR and PUN, seeds the demo and drops it afterwards. Run
+  properly: **257 passed, 19 files, 0 failed.** I published a false
+  finding about a design contradiction that does not exist. Worse: the
+  wrong command writes to the *development* database and deleted the
+  order-pad orders I had just made — the exact fault that harness was
+  built to end.
+- **198** `with-test-db.sh` hardcoded `psql.exe` with no fallback, so
+  the API gate was Windows-only. Third file found carrying that line
+  (188 was the first). Fixed with the detection block `migrate.sh`
+  already uses; suite re-run green afterwards.
+- My own: the refusal toast read *"Nothing was sent — Nothing was sent.
+  Dish 2…"*. Seen in a browser, not in a test. The title now names the
+  table, which is what a waiter with three tables needs.
+
+**Proved** — opened in a browser, not typechecked
+```
+db/tests/run.sh    483 assertions        vitest (root)   163 passed
+npm run build:all  3 clean builds        tsc -b          0 errors
+api npm test       257 passed · 19 files · 0 failed
+```
+Walked end to end in a browser against the live local API:
+- pad opens over the floor · **zero API requests from three dish taps**,
+  and **no `/till/menu` fetch at all** — it came from IndexedDB
+- running total ₹480 for 40+260+180; the bill came back ₹504, which is
+  the 5% tax the pad says it excludes
+- draft survived a full page reload; floor showed "not sent"
+- **one POST** for the round · "Kitchen docket 6"
+- refused → **pad stayed open with both dishes**, table named
+- offline → *"AC1 is held. The kitchen does not have it yet."* No docket
+  number claimed. Outbox banner appeared, drained on reconnect, ₹504 →
+  ₹546.
+
+Guard proved in both directions: `unitPriceOf` broken to drop sides →
+*"the sides were not added to the dish's price: expected 300 to be 350"*.
+
+**Left open**
+- **Stage C2 next.** C2, C3 and C5 all wait on the same missing
+  preparation-time column.
+- `till-rooms` is not cached, so **room-charging from the pad is not
+  possible offline**. Owner's decision, deliberately not taken here.
+- Two waiters opening the *first* order on one table while both offline
+  still makes two bills. Rare, visible on the floor in seconds, and
+  merging is an existing till action.
+- Test orders sit on AC1 and AC2 in the **local** dev database.
+
+**Commits:** not yet committed — in the working tree.
+
+---
+
 ## 2026-09-08 · Deploy to production, then Stage C
 
 **Asked for:** get the system live on Oracle and Firebase for beta testing;
@@ -103,9 +191,16 @@ no-show room release, the moved-guest double charge, the live channel.
 **Left open**
 - **The order pad itself is not built.** The server half is done; the floor
   panel, local dish-building and Send are not. See "Where Stage C stands".
-- **One decision needed from the owner:** whether the pad shows a running
-  total before the order is sent. It would be the pad's own arithmetic, not
-  the server's — which this system does not otherwise do.
+- ~~**One decision needed from the owner:** whether the pad shows a running
+  total before the order is sent.~~ **DECIDED 8 Sep:** the pad shows it, and
+  it is the pad's own arithmetic — menu prices summed in the browser. The
+  owner's reasoning: the waiter needs to answer "how much is that?" at the
+  table, and the sum is simple. It is labelled as the dishes' cost, not the
+  bill; tax and rounding still come only from the server.
+  **This puts a pricing rule in two places, which is this codebase's most
+  common defect shape.** The plan carries a guard for it — a test asserting
+  the pad's sum equals the server's line total for the same input, proved by
+  breaking the pad's arithmetic on purpose. Do not build the pad without it.
 - **The `api` domain still has a stray AAAA record** pointing at a web host
   that is not the server. The certificate was issued anyway (Let's Encrypt
   fell back to IPv4), but renewal in December runs the same check.
