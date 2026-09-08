@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { useParams, Link } from "react-router";
+import { useParams } from "react-router";
 import { Check, Minus, Plug, ShieldCheck, Info } from "lucide-react";
 import { cn } from "@/lib/cn";
 import { money, dateTime, dateShort } from "@/lib/format";
@@ -19,7 +19,9 @@ import {
   listAdminStaff,
   type StaffRecord, type AuditEntry, type Integration,
 } from "@/data/repositories";
-import { NewPerson, People } from "@/components/flows/StaffAdmin";
+import {
+  NewPerson, People, NewProperty,
+} from "@/components/flows/StaffAdmin";
 import { useSession } from "@/lib/session";
 
 /* ══════════════════════════════════════════════════════════════════
@@ -554,7 +556,9 @@ export function SettingsPage() {
 /* ── Add a property ──────────────────────────────────────────────── */
 
 export function AdminPropertiesPage() {
-  const { data } = useQuery({ queryKey: ["properties"], queryFn: listProperties });
+  const { data, refetch } = useQuery({
+    queryKey: ["properties"], queryFn: listProperties,
+  });
 
   return (
     <Page>
@@ -578,29 +582,30 @@ export function AdminPropertiesPage() {
         </CardBody>
       </Card>
 
-      <Card>
-        <CardBody>
-          <p className="text-md font-semibold text-ink-900">Adding a property</p>
-          <p className="text-sm text-grey-600 mt-2 leading-relaxed">
-            The database provisions a property with one call —{" "}
-            <code className="text-grey-700">app.provision_property()</code> creates its
-            room types and rooms from templates. The form that drives it belongs with
-            the auth bridge, because creating a property is an act that has to be
-            attributable to a person.
-          </p>
-          <p className="text-sm text-grey-600 mt-3 leading-relaxed">
-            Six properties are still unnamed here for a deliberate reason: their names
-            and room counts are unconfirmed, and a placeholder that reads as real is
-            worse than a visible gap.
-          </p>
-          <Link
-            to="/properties"
-            className="inline-block text-sm text-brand-orange hover:underline mt-3"
-          >
-            See the property list →
-          </Link>
-        </CardBody>
-      </Card>
+      {/* ⚠ THIS WAS A PARAGRAPH EXPLAINING THAT THE FORM LIVED
+          SOMEWHERE ELSE. It said the form "belongs with the auth
+          bridge", and the screen it belonged to is `{IS_DEV && …}` and
+          tree-shaken out of a real build — so `deploy/README.md` step 8
+          told people to add their properties here, and here offered a
+          paragraph. Six properties could not be entered without SQL.
+
+          The gate the console carries was about the ACT, not the
+          screen, and the act is still gated: `createProperty` sends the
+          provisioning key and `app.require_provisioning_key()` refuses
+          without it, in the database, regardless of what any interface
+          shows. */}
+      <NewProperty onDone={() => void refetch()} />
+
+      <p className="flex items-start gap-2 text-xs text-grey-500 mt-4 leading-relaxed">
+        <Info className="size-3.5 shrink-0 mt-0.5" />
+        <span>
+          Six properties are still unnamed for a deliberate reason: their names
+          and room counts are unconfirmed, and a placeholder that reads as real
+          is worse than a visible gap. Creating one mints its rooms, its invoice
+          series and its folio namespace — <strong>the code appears in every URL
+          and every invoice number and cannot be changed afterwards.</strong>
+        </span>
+      </p>
     </Page>
   );
 }

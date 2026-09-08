@@ -1,16 +1,17 @@
-import { useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import {
-  Building2, KeyRound, ScrollText, Activity, ShieldAlert,
+  ScrollText, Activity, ShieldAlert,
 } from "lucide-react";
 import { cn } from "@/lib/cn";
 import {
-  Page, PageHeader, Card, CardBody, Button, StatusPill, toast,
+  Page, PageHeader, Card, CardBody, StatusPill,
 } from "@/components/ui";
-import { NewPerson, People } from "@/components/flows/StaffAdmin";
+import {
+  NewPerson, People, NewProperty,
+} from "@/components/flows/StaffAdmin";
 import { useSession } from "@/lib/session";
 import {
-  getAdminOverview, listAdminStaff, createProperty,
+  getAdminOverview, listAdminStaff,
   type AdminOverview,
 } from "@/data/repositories";
 
@@ -125,128 +126,6 @@ function Stat({ label, value, hint, tone }: {
    hint under it explaining a consequence that cannot be undone later — a
    property code appears in every invoice number, an email is how somebody
    signs in. */
-function Field({ label, value, onChange, placeholder, hint, mono }: {
-  label: string;
-  value: string;
-  onChange: (v: string) => void;
-  placeholder?: string;
-  hint?: string;
-  mono?: boolean;
-}) {
-  return (
-    <label className="block">
-      <span className="block text-2xs uppercase tracking-wide text-grey-500 mb-1">
-        {label}
-      </span>
-      <input
-        value={value}
-        onChange={(e) => onChange(e.target.value)}
-        placeholder={placeholder}
-        className={cn(
-          "w-full h-11 px-3 rounded-md border border-grey-300 text-base",
-          mono && "tabular",
-        )}
-      />
-      {hint && (
-        <span className="block text-2xs text-grey-500 mt-1 leading-relaxed">
-          {hint}
-        </span>
-      )}
-    </label>
-  );
-}
-
-/* ── Creating a property ──────────────────────────────────────────── */
-
-function NewProperty({ onDone }: { onDone: () => void }) {
-  const [code, setCode] = useState("");
-  const [name, setName] = useState("");
-  const [city, setCity] = useState("");
-  const [state, setState] = useState("");
-  const [gstin, setGstin] = useState("");
-  const [key, setKey] = useState("");
-  const [busy, setBusy] = useState(false);
-
-  const submit = async () => {
-    setBusy(true);
-    const res = await createProperty(
-      { code, name, city, state: state || undefined, gstin: gstin || undefined },
-      key,
-    );
-    setBusy(false);
-
-    if (!res.ok) return toast.error("Not created", res.reason);
-
-    toast.success(
-      `${res.code} created`,
-      `${res.roomTypes} room types from the template. ${res.next}`,
-    );
-    setCode(""); setName(""); setCity(""); setState(""); setGstin("");
-    /* The key is cleared too. It is not a form field somebody should
-       leave sitting in a browser between properties. */
-    setKey("");
-    onDone();
-  };
-
-  const ready = code.trim() && name.trim() && city.trim() && key.trim();
-
-  return (
-    <Card>
-      <div className="px-4 pt-3.5 pb-1 flex items-center gap-2">
-        <Building2 className="size-3.5 text-grey-400" />
-        <p className="text-2xs uppercase tracking-wide text-grey-500">
-          Add a property
-        </p>
-      </div>
-      <CardBody>
-        <div className="space-y-2.5">
-          <Field label="Code" value={code} onChange={setCode}
-            placeholder="NSK" mono
-            hint="2–8 letters or digits. It appears in every URL and every invoice number, and it cannot be changed later." />
-          <Field label="Name" value={name} onChange={setName}
-            placeholder="Fidato Nashik" />
-          <Field label="City" value={city} onChange={setCity}
-            placeholder="Nashik" />
-          <div className="grid grid-cols-2 gap-2.5">
-            <Field label="State" value={state} onChange={setState}
-              placeholder="MH" />
-            <Field label="GSTIN" value={gstin} onChange={setGstin}
-              placeholder="27AAAAA0000A1Z5" mono />
-          </div>
-
-          <div className="rounded-md border border-brand-yellow-100 bg-brand-yellow-50 p-3">
-            <div className="flex items-start gap-2.5">
-              <KeyRound className="size-4 text-brand-yellow shrink-0 mt-0.5" />
-              <div className="min-w-0 flex-1">
-                <p className="text-sm font-medium text-ink-900">
-                  Provisioning key
-                </p>
-                <p className="text-2xs text-grey-600 mt-0.5 leading-relaxed mb-2">
-                  Creating a property manufactures a whole tenant — rooms, an
-                  invoice series, a folio namespace. Being signed in as an
-                  administrator is not enough on its own.
-                </p>
-                <input
-                  type="password"
-                  value={key}
-                  onChange={(e) => setKey(e.target.value)}
-                  placeholder="the key for this deployment"
-                  className="w-full h-11 px-3 rounded-md border border-grey-300 text-base"
-                />
-              </div>
-            </div>
-          </div>
-
-          <Button size="lg" className="w-full" loading={busy}
-            disabled={!ready} onClick={() => void submit()}>
-            <Building2 className="size-4" />
-            Create the property
-          </Button>
-        </div>
-      </CardBody>
-    </Card>
-  );
-}
 
 function Activity14({ overview }: { overview: AdminOverview | null | undefined }) {
   if (!overview) return null;

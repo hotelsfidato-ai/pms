@@ -1,10 +1,10 @@
 import { useState } from "react";
-import { UserPlus } from "lucide-react";
+import { UserPlus, Building2, KeyRound } from "lucide-react";
 import { cn } from "@/lib/cn";
 import { Card, CardBody, Button, StatusPill, toast } from "@/components/ui";
 import { ASSIGNABLE_ROLES, ROLE_LABELS } from "@/lib/permissions";
 import {
-  createStaff, grantAccess, revokeAccess, deactivateStaff,
+  createStaff, grantAccess, revokeAccess, deactivateStaff, createProperty,
   type AdminStaff,
 } from "@/data/repositories";
 
@@ -303,5 +303,119 @@ function Person({ person, codes, onDone }: {
         </div>
       )}
     </li>
+  );
+}
+
+/* ══════════════════════════════════════════════════════════════════
+   CREATING A PROPERTY
+
+   ⚠ THE PROVISIONING KEY STAYS, and that is the whole difference
+   between this and the person form above.
+
+   The 31 August gate said *"this screen manufactures tenants"* and it
+   was right: creating a property mints rooms, an invoice series and a
+   folio namespace, and the code appears in every URL and every invoice
+   number a guest ever sees. It cannot be changed afterwards.
+
+   So this ships, but the refusal does not move to the browser. The
+   server calls `app.require_provisioning_key()` and refuses the act
+   itself; the field below only carries the key to it. A deployment with
+   no key configured provisions nothing, for anybody, which is asserted
+   in `db/tests/suite.sql`.
+
+   It ships because `deploy/README.md` step 8 has been telling people to
+   add their properties through Admin → Properties since the day the
+   console stopped shipping — an instruction that could not be followed.
+   ══════════════════════════════════════════════════════════════════ */
+
+/* ── Creating a property ──────────────────────────────────────────── */
+
+export function NewProperty({ onDone }: { onDone: () => void }) {
+  const [code, setCode] = useState("");
+  const [name, setName] = useState("");
+  const [city, setCity] = useState("");
+  const [state, setState] = useState("");
+  const [gstin, setGstin] = useState("");
+  const [key, setKey] = useState("");
+  const [busy, setBusy] = useState(false);
+
+  const submit = async () => {
+    setBusy(true);
+    const res = await createProperty(
+      { code, name, city, state: state || undefined, gstin: gstin || undefined },
+      key,
+    );
+    setBusy(false);
+
+    if (!res.ok) return toast.error("Not created", res.reason);
+
+    toast.success(
+      `${res.code} created`,
+      `${res.roomTypes} room types from the template. ${res.next}`,
+    );
+    setCode(""); setName(""); setCity(""); setState(""); setGstin("");
+    /* The key is cleared too. It is not a form field somebody should
+       leave sitting in a browser between properties. */
+    setKey("");
+    onDone();
+  };
+
+  const ready = code.trim() && name.trim() && city.trim() && key.trim();
+
+  return (
+    <Card>
+      <div className="px-4 pt-3.5 pb-1 flex items-center gap-2">
+        <Building2 className="size-3.5 text-grey-400" />
+        <p className="text-2xs uppercase tracking-wide text-grey-500">
+          Add a property
+        </p>
+      </div>
+      <CardBody>
+        <div className="space-y-2.5">
+          <Field label="Code" value={code} onChange={setCode}
+            placeholder="NSK" mono
+            hint="2–8 letters or digits. It appears in every URL and every invoice number, and it cannot be changed later." />
+          <Field label="Name" value={name} onChange={setName}
+            placeholder="Fidato Nashik" />
+          <Field label="City" value={city} onChange={setCity}
+            placeholder="Nashik" />
+          <div className="grid grid-cols-2 gap-2.5">
+            <Field label="State" value={state} onChange={setState}
+              placeholder="MH" />
+            <Field label="GSTIN" value={gstin} onChange={setGstin}
+              placeholder="27AAAAA0000A1Z5" mono />
+          </div>
+
+          <div className="rounded-md border border-brand-yellow-100 bg-brand-yellow-50 p-3">
+            <div className="flex items-start gap-2.5">
+              <KeyRound className="size-4 text-brand-yellow shrink-0 mt-0.5" />
+              <div className="min-w-0 flex-1">
+                <p className="text-sm font-medium text-ink-900">
+                  Provisioning key
+                </p>
+                <p className="text-2xs text-grey-600 mt-0.5 leading-relaxed mb-2">
+                  Creating a property manufactures a whole tenant — rooms, an
+                  invoice series, a folio namespace. Being signed in as an
+                  administrator is not enough on its own.
+                </p>
+                <input
+                  type="password"
+                  value={key}
+                  onChange={(e) => setKey(e.target.value)}
+                  placeholder="the key for this deployment"
+                  className="w-full h-11 px-3 rounded-md border border-grey-300 text-base"
+                />
+              </div>
+            </div>
+          </div>
+
+          <Button size="lg" className="w-full" loading={busy}
+            disabled={!ready} onClick={() => void submit()}>
+            <Building2 className="size-4" />
+            Create the property
+          </Button>
+        </div>
+      </CardBody>
+    </Card>
   );
 }

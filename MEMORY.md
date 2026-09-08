@@ -4998,3 +4998,44 @@ four seconds and this is exactly the step people miss.
 
 **The shape: a screen that half-creates a thing is worse than no screen,
 if the other half is invisible.**
+
+---
+
+### 216 · A screen that explained why it could not do the thing
+
+`/admin/properties` carried a card headed **"Adding a property"** whose
+text read:
+
+> *The form that drives it belongs with the auth bridge, because
+> creating a property is an act that has to be attributable to a
+> person.*
+
+The screen it referred to is `/admin/console` — `{IS_DEV && …}`, tree-shaken
+out of a real build. So `deploy/README.md` step 8 told the owner to add
+their six remaining properties through Admin → Properties, and Admin →
+Properties offered **a paragraph explaining that the form was
+somewhere else.**
+
+Same root as 215 and found in the same sweep: the 31 August gate was
+about the ACT, and it was applied to the SCREEN.
+
+Fixed by moving `NewProperty` into
+`components/flows/StaffAdmin.tsx` beside the person panels, and
+rendering it. **The provisioning key stays**, and that is the whole
+difference from the person form — verified by asking the server:
+
+```
+wrong key   403  "A provisioning key is required for this operation..."
+no key      403  "...Creating a property manufactures a whole tenant —
+                  rooms, an invoice series, a folio namespace — so a
+                  signed-in session is not enough on its own."
+```
+
+Both refuse with a sentence somebody can act on, from the database,
+regardless of what any screen shows. That is Rule 6 working, and it is
+why shipping the form is safe.
+
+**The shape worth remembering: prose describing a capability is not the
+capability, and a screen that documents its own absence reads as an
+answer.** Two of these were found in one day — this and the banquet
+switch that said "not built yet" about something that was built.

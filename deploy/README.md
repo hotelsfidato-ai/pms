@@ -184,9 +184,30 @@ project id.
 ### 8 · Enter the real properties
 
 Only 5 Elements Akkalkot is configured. Add the other six through
-Admin → Properties, then their **rooms** — there are no default rooms and no
-default prices, by instruction. A property with no rooms reports nothing,
+**Admin → Properties**, then their **rooms** — there are no default rooms and
+no default prices, by instruction. A property with no rooms reports nothing,
 because occupancy divides by available room-nights.
+
+⚠ **This instruction was impossible until 8 September.** The form lived on
+`/admin/console`, which is `{IS_DEV && …}` and tree-shaken out of a real
+build, so the screen this paragraph names offered a paragraph explaining that
+the form was elsewhere. Six properties could not be entered without SQL.
+
+**You need the provisioning key.** Creating a property mints its rooms, its
+invoice series and its folio namespace, and the code appears in every URL and
+every invoice number it will ever issue — it cannot be changed afterwards.
+Being signed in as an administrator is deliberately not enough:
+`app.require_provisioning_key()` refuses in the database, so the guard holds
+whatever any screen shows.
+
+Adding **people** is on **Admin → Users**, and note the step that is easy to
+miss: a row in `staff` is not an account. A Firebase user must exist and
+`staff.firebase_uid` must name it, or they sign in to an empty application
+with no error — and the preflight refuses while anybody active is unlinked:
+
+```bash
+cd /opt/fidato/api && sudo -u fidato env HOME=/tmp   npm run link-staff -- --email them@fidatohotels.com --uid <firebase-uid>
+```
 
 ---
 
