@@ -832,6 +832,165 @@ begin
     n = 0, n || ' left behind');
 end $$;
 
+
+-- =============================================================================
+-- KITCHEN TIMINGS (080) — including the dish that went backwards
+-- =============================================================================
+-- The assertion worth the most here is the bounce. A dish marked ready, sent
+-- back, and marked ready again was READY the second time — and four columns
+-- could not have held that at all, which is why this is a ledger.
+-- =============================================================================
+do $do$
+declare
+  a uuid; v_staff uuid; v_outlet uuid; v_cat uuid; v_item uuid;
+  v_order uuid; v_line bigint; v_line2 bigint;
+  bd date; n int; t0 timestamptz;
+begin
+  select id into a from hotels where code = 'AGR';
+  select id into v_staff from staff where is_group_admin limit 1;
+  perform set_config('app.user_id', v_staff::text, true);
+  bd := app.business_date(a);
+  t0 := now();
+
+  insert into pos_outlets (hotel_id, code, name, category, staff_id)
+  values (a, 'TIME', 'Timing Test Outlet', 'food', v_staff)
+  returning id into v_outlet;
+
+  insert into pos_menu_categories (hotel_id, name, prep_minutes)
+  values (a, 'Timing Test Category', 10) returning id into v_cat;
+
+  insert into pos_menu_items (hotel_id, category_id, name, price, tax_rate)
+  values (a, v_cat, 'Timing Dish', 100.00, 5.00) returning id into v_item;
+
+  insert into pos_orders (hotel_id, outlet_id, order_no, business_date, opened_by)
+  values (a, v_outlet, app.pos_next_order_no(a, bd), bd, v_staff)
+  returning id into v_order;
+
+  insert into pos_order_lines
+    (order_id, hotel_id, item_id, name, qty, unit_price, tax_rate, added_by)
+  values (v_order, a, v_item, 'Timing Dish', 1, 100.00, 5.00, v_staff)
+  returning id into v_line;
+
+  -- ---------- nothing has happened, and nothing is claimed ----------
+  perform test.ok('kitchen timings','a dish not yet sent has no timings',
+    (select sent_at from app.pos_line_timings(v_line)) is null,
+    'sent_at was set before the dish was sent');
+
+  -- ---------- every move records itself, without a route helping ----------
+  update pos_order_lines set kot_status = 'sent', kot_sent_at = now(), kot_no = 1
+   where id = v_line;
+  update pos_order_lines set kot_status = 'preparing' where id = v_line;
+  update pos_order_lines set kot_status = 'ready'     where id = v_line;
+
+  select count(*) into n from pos_line_events where line_id = v_line;
+  perform test.ok('kitchen timings','the trigger records a move nobody asked it to',
+    n = 3, n || ' events');
+
+  -- ---------- and it records WHO ----------
+  perform test.ok('kitchen timings','a move carries the person who made it',
+    (select bool_and(by_staff = v_staff) from pos_line_events
+      where line_id = v_line),
+    'a move was recorded with no staff against it');
+
+  -- ---------- THE BOUNCE ----------
+  -- Sent back to the kitchen, then ready again. Four columns would have
+  -- overwritten the first time or refused the move; both facts survive here.
+  update pos_order_lines set kot_status = 'preparing' where id = v_line;
+  update pos_order_lines set kot_status = 'ready'     where id = v_line;
+
+  select count(*) into n from pos_line_events
+   where line_id = v_line and status = 'ready';
+  perform test.ok('kitchen timings','a dish sent back keeps both ready marks',
+    n = 2, n || ' ready events');
+
+  -- ⚠ THE "LAST NOT FIRST" ASSERTION CANNOT LIVE HERE, and finding out why
+  -- cost a false green. Every move above happened in ONE transaction, and
+  -- `now()` is the transaction time — so all six events share a timestamp and
+  -- min(at) equals max(at). The assertion passed with `pos_line_timings`
+  -- rewritten to use min(), which is the exact bug it exists to catch.
+  -- It is asserted below instead, on rows carrying times this block chose.
+
+  -- ---------- a timing cannot be edited ----------
+  perform test.raises('kitchen timings','a timing cannot be rewritten',
+    format($q$update pos_line_events set at = now() where line_id = %s$q$,
+           v_line), '23001');
+
+  -- ---------- the arithmetic, on times this block controls ----------
+  -- ⚠ A SECOND DISH, and the first attempt here is worth recording: it
+  -- cleared the trigger-written rows off the line above with a plain
+  -- `delete from pos_line_events`, and the suite stopped with
+  --
+  --     A kitchen timing cannot be delete — it is a record of what happened.
+  --
+  -- The guard was right and the test was wrong. A test that has to dismantle
+  -- the rule it is checking is testing something else.
+  --
+  -- These rows carry explicit times because `now()` is the TRANSACTION time:
+  -- every move above shares one timestamp, so nothing there could measure a
+  -- duration. That is right for the live system — a round marked ready
+  -- together is one act — and useless for arithmetic.
+  insert into pos_order_lines
+    (order_id, hotel_id, item_id, name, qty, unit_price, tax_rate, added_by)
+  values (v_order, a, v_item, 'Timing Dish 2', 1, 100.00, 5.00, v_staff)
+  returning id into v_line2;
+
+  insert into pos_line_events (hotel_id, line_id, order_id, status, at, by_staff)
+  values (a, v_line2, v_order, 'sent',      t0,                         v_staff),
+         (a, v_line2, v_order, 'preparing', t0 + interval '2 minutes',  v_staff),
+         -- A PREMATURE READY at +5, then back to the kitchen, then ready for
+         -- real at +9. This is what makes min and max differ, and every
+         -- assertion below discriminates between them.
+         (a, v_line2, v_order, 'ready',     t0 + interval '5 minutes',  v_staff),
+         (a, v_line2, v_order, 'preparing', t0 + interval '6 minutes',  v_staff),
+         (a, v_line2, v_order, 'ready',     t0 + interval '9 minutes',  v_staff),
+         (a, v_line2, v_order, 'served',    t0 + interval '23 minutes', v_staff);
+
+  perform test.ok('kitchen timings','ready means the LAST time it was ready',
+    (select ready_at from app.pos_line_timings(v_line2))
+      = t0 + interval '9 minutes',
+    'the timing used the premature ready at +5, not the real one at +9');
+
+  -- Started again at +6 and ready at +9. Measured from the LAST start,
+  -- because that is the attempt that produced the food on the plate.
+  perform test.ok('kitchen timings','the kitchen took 3 minutes on its second go',
+    (select to_cook_min from app.pos_line_timings(v_line2)) = 3.0,
+    coalesce((select to_cook_min from app.pos_line_timings(v_line2))::text,'null'));
+
+  -- THE ONE THAT RUINS FOOD: ready at +9, served at +23.
+  perform test.ok('kitchen timings','it sat at the pass for 14 minutes',
+    (select at_pass_min from app.pos_line_timings(v_line2)) = 14.0,
+    coalesce((select at_pass_min from app.pos_line_timings(v_line2))::text,'null'));
+
+  -- ---------- late against the estimate from 079 ----------
+  -- The category says 10 minutes. It cooked in 7.
+  perform test.ok('kitchen timings','seven minutes early against its estimate',
+    app.pos_line_lateness(v_line2) = -7.0,
+    coalesce(app.pos_line_lateness(v_line2)::text, 'null'));
+
+  -- ---------- an untimed dish has no lateness, not a zero ----------
+  update pos_menu_categories set prep_minutes = null where id = v_cat;
+  perform test.ok('kitchen timings','an untimed dish is not "on time"',
+    app.pos_line_lateness(v_line2) is null,
+    coalesce(app.pos_line_lateness(v_line2)::text, 'null'));
+
+  -- ---------- teardown: the timings go with the dish, and only then ----------
+  alter table pos_order_lines disable trigger pos_order_lines_frozen;
+  delete from pos_order_lines where order_id = v_order;
+  alter table pos_order_lines enable trigger pos_order_lines_frozen;
+
+  select count(*) into n from pos_line_events where line_id = v_line;
+  perform test.ok('kitchen timings','a timing goes when its dish goes',
+    n = 0, n || ' left behind');
+
+  delete from pos_orders where id = v_order;
+  delete from pos_menu_items where id = v_item;
+  delete from pos_menu_categories where id = v_cat;
+  delete from pos_outlets where id = v_outlet;
+
+  select count(*) into n from pos_outlets where code = 'TIME';
+  perform test.ok('kitchen timings','the test fixture does not outlive the test',
+    n = 0, n || ' left behind');
+end $do$;
 -- =============================================================================
 -- THE PROVISIONING KEY (029) — no structural change without it
 -- =============================================================================

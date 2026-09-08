@@ -122,6 +122,14 @@ export interface KitchenLine {
   status: string;
   /** Since it reached the kitchen. The pass sorts and colours by this. */
   waitedSeconds: number;
+  /** What it should take, from the dish or its category. NULL means
+      nobody has timed it — a dash, never a zero. */
+  prepMinutes: number | null;
+  /** ⚠ HOW LONG IT HAS SAT UNDER THE LAMP. Null until the dish is
+      ready, because a dish still cooking is not waiting on anybody.
+      This is the number that ruins food, and nothing showed it before
+      migration 080. */
+  atPassSeconds: number | null;
   /** Struck after the kitchen already had it — stop cooking. */
   cancelled: boolean;
 }

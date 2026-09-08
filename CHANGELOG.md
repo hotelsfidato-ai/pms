@@ -46,6 +46,78 @@ Write it **as you go**, not at the end from memory. Copy this shape:
 
 ---
 
+## 2026-09-08 (night) · Timing capture — Stage C3
+
+**Asked for:** timing capture. Ordered, started, passed, served.
+
+**Shipped**
+- **`080_kitchen_timings.sql`** — `pos_line_events`, append-only. Every
+  move a dish makes through the kitchen is its own row, with who made it.
+- **A ledger, not four columns, because dishes go backwards.** The
+  kitchen endpoint allows any move between preparing, ready and served —
+  deliberately, because a chef marks a dish ready, the waiter does not
+  come, and it goes back. Columns would overwrite the first time or
+  refuse the move. Rows keep both: ready at 19:20, back at 19:24, ready
+  again at 19:31.
+- **Written by a trigger, not by the routes.** Four paths change
+  `kot_status` today and the fifth will be written by somebody who has
+  not read the migration. Same reasoning as 075.
+- `app.pos_line_timings` — the four durations, from the **LAST** entry
+  into each state, because a dish sent back was ready when it was ready
+  the second time. Null everywhere something has not happened yet.
+- **`at_pass_min` is the one that ruins food** and nothing showed it
+  before. `app.pos_line_lateness` compares actual cook time against the
+  079 estimate; null when either half is missing, never zero, which
+  would read as "exactly on time".
+- The pass now shows the estimate and, for a ready dish, **how long it
+  has been under the lamp** — judged on a much shorter clock, because
+  two minutes there is worse than eight in a pan.
+
+**Found** — 204, 205, 206, all mine
+- **204** the assertion that mattered most **passed with its own bug in.**
+  `now()` is the transaction time, so every event in the test block
+  shared a timestamp and `min(at) = max(at)`. The guard was comparing two
+  spellings of the same number. Third false green today. Now asserted on
+  explicit, distinct times, and the bug fails two assertions.
+- **205** I spelled row-level security by hand instead of using
+  `app.auth_hotel_ids()`. **Nine API tests returned 500.** Isolation is
+  written once; a second spelling is a second thing to get wrong.
+- **206** the append-only guard blocked **every teardown in the repo** —
+  deleting an order cascades to its lines and on to the timings. Narrowed
+  to the rule that is actually true: a timing may go with the dish it
+  describes, and only then. When a new constraint breaks five existing
+  places, the constraint is usually too wide.
+- Applied 201's lesson the same day: the pass renders `!= null`, so a
+  cached feed from before these fields exists shows a dash rather than
+  "undefined min est". Verified against a server that genuinely omits
+  them.
+
+**Proved**
+```
+db/tests/run.sh    504 assertions (12 new)   api npm test  270 · 22 files
+db/tests/rerun.sh  80 of 80 re-runnable      vitest        170
+tsc -b  0    api tsc --noEmit  0             build:all     3 clean
+```
+Both directions. `pos_line_timings` rewritten to `min(at)`: *"the timing
+used the premature ready at +5"* and *"it sat at the pass for 14 minutes
+| 18.0"*. The recorder detached from `pos_order_lines`: three tests fail,
+*"expected [] to deeply equal [ 'sent' ]"* — which is the whole argument
+for the trigger.
+
+Opened in a browser: the pass shows **— est** against a stale server, not
+"undefined min est".
+
+**Left open**
+- **The local API server still needs restarting** to see the real
+  estimates and pass clock. Unmanaged process on 8787, not this
+  session's, does not reload.
+- C5 — course sequence and a kitchen view by table — is the last of
+  Stage C, and now unblocked.
+
+**Commits:** `ab10b38 …`
+
+---
+
 ## 2026-09-08 (late) · Preparation times — Stage C2
 
 **Asked for:** preparation times. The column three stages have been

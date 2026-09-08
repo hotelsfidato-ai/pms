@@ -3012,12 +3012,25 @@ till.get("/:code/kitchen", async (c) => {
       order_type: string; outlet: string; name: string; qty: string;
       note: string | null; kot_status: string; waited: string;
       voided: boolean; was_sent_when_voided: boolean;
+      prep_minutes: number | null; at_pass: string | null;
     }>(
       `select l.id::text, o.order_no, o.table_ref, o.order_type,
               ou.code as outlet, l.name, l.qty::text, l.note,
               l.kot_status,
               extract(epoch from (now() - l.kot_sent_at))::int::text as waited,
-              l.voided, l.was_sent_when_voided
+              l.voided, l.was_sent_when_voided,
+              /* What this dish SHOULD take, from 079. Null when nobody
+                 has timed it — the pass shows a dash, not a zero. */
+              app.prep_minutes(l.item_id) as prep_minutes,
+              /* HOW LONG IT HAS BEEN SITTING UNDER THE LAMP. Null until
+                 it is ready, because a dish still cooking is not late
+                 in this sense — it is being made. This is the number
+                 that ruins food and the one nothing showed before. */
+              case when l.kot_status = 'ready' then
+                extract(epoch from (
+                  now() - (select ready_at from app.pos_line_timings(l.id))
+                ))::int::text
+              end as at_pass
          from pos_order_lines l
          join pos_orders o  on o.id = l.order_id
          join pos_outlets ou on ou.id = o.outlet_id
@@ -3043,6 +3056,12 @@ till.get("/:code/kitchen", async (c) => {
            colours by this — a dish waiting eleven minutes is the only
            thing on that screen that matters. */
         waitedSeconds: Number(r.waited),
+        /* The estimate, and how long it has been at the pass. Both null
+           rather than zero when unknown — an untimed dish is not an
+           instant one, and a dish still cooking has not been waiting on
+           a waiter. */
+        prepMinutes: r.prep_minutes,
+        atPassSeconds: r.at_pass === null ? null : Number(r.at_pass),
         /* A struck line the kitchen already had. Shown so the pass can
            stop cooking it, rather than having the ticket vanish. */
         cancelled: r.voided && r.was_sent_when_voided,

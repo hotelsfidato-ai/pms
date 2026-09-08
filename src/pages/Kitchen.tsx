@@ -191,9 +191,23 @@ function Ticket({ line, action, busy, onMove }: {
   line: KitchenLine; action: string; busy: boolean; onMove: () => void;
 }) {
   /* Colour carries the wait, so a chef glancing across the kitchen gets
-     it without reading. Ten minutes is the threshold most passes use. */
-  const late = line.waitedSeconds >= 600;
-  const warm = line.waitedSeconds >= 300;
+     it without reading. Ten minutes is the threshold most passes use.
+
+     ⚠ A DISH AT THE PASS IS ON A MUCH SHORTER CLOCK. Food under a lamp
+     is dying, not cooking, and two minutes there is worse than eight in
+     a pan. So a ready dish is judged on how long it has been WAITING FOR
+     A WAITER rather than on its total age — otherwise a fast dish
+     plated in three minutes reads as calm while it goes cold. */
+  /* `?? null` and `!= null` throughout — defect 201's lesson, applied
+     the same afternoon it was learned. The read cache holds a response
+     for a week, so a browser can be showing a kitchen feed from before
+     these two fields existed; `=== null` is false for undefined and
+     would print the literal string "undefined min est" on a pass
+     screen. A field that is missing and a field that is unset mean the
+     same thing to a chef: nobody has said. */
+  const atPass = line.atPassSeconds ?? null;
+  const late = atPass != null ? atPass >= 300 : line.waitedSeconds >= 600;
+  const warm = atPass != null ? atPass >= 120 : line.waitedSeconds >= 300;
 
   if (line.cancelled) {
     return (
@@ -234,11 +248,23 @@ function Ticket({ line, action, busy, onMove }: {
             </p>
           )}
         </div>
-        <span className={cn(
-          "tabular text-lg font-semibold shrink-0",
-          late ? "text-brand-red" : warm ? "text-brand-yellow" : "text-grey-500",
-        )}>
-          {waited(line.waitedSeconds)}
+        <span className="shrink-0 text-right">
+          <span className={cn(
+            "block tabular text-lg font-semibold",
+            late ? "text-brand-red" : warm ? "text-brand-yellow" : "text-grey-500",
+          )}>
+            {waited(atPass ?? line.waitedSeconds)}
+          </span>
+          {/* What it SHOULD take, so a chef can tell a slow dish from a
+              dish that is simply slow to make. A dash when nobody has
+              timed it — never a zero, which would read as instant. */}
+          <span className="block text-2xs text-grey-500 tabular">
+            {atPass != null
+              ? "at the pass"
+              : line.prepMinutes == null
+                ? "— est"
+                : `${line.prepMinutes} min est`}
+          </span>
         </span>
       </div>
 

@@ -4579,3 +4579,106 @@ they are for.
 
 **The lesson is 196's again.** The gate order is written down for a
 reason, and "the gate I happened to run" is not the gate.
+
+---
+
+### 204 · The assertion that mattered most passed with its own bug in
+
+Third false green in one day, and the sharpest.
+
+`app.pos_line_timings` uses the **LAST** entry into each state, because a
+dish marked ready, sent back, and marked ready again was ready the
+second time. The assertion:
+
+```sql
+perform test.ok('kitchen timings','ready means the LAST time it was ready',
+  (select ready_at from app.pos_line_timings(v_line))
+    = (select max(at) from pos_line_events ... status = 'ready'), ...);
+```
+
+Rewriting the function to `min(at)` — the exact bug — left it **green.**
+
+**`now()` IS THE TRANSACTION TIME.** Every move in that test block ran in
+one transaction, so all six events carried an identical timestamp and
+`min(at) = max(at)`. The test compared two spellings of the same number.
+
+That is right for the live system: a round marked ready together IS one
+act, and should share a moment. It is useless for measuring a duration,
+and nothing about the assertion looked wrong.
+
+Fixed by asserting it on rows the test writes with **explicit, distinct
+times** — a premature ready at +5, back to the kitchen at +6, ready for
+real at +9. The bug now fails two assertions:
+
+```
+ready means the LAST time it was ready | used the premature ready at +5
+it sat at the pass for 14 minutes      | 18.0
+```
+
+**The rule this earns, on top of 195's:** when a guard passes with the
+bug in, do not just fix the guard — ask what made it *incapable* of
+failing. Here it was a property of `now()` that had nothing to do with
+the code under test.
+
+---
+
+### 205 · I spelled row-level security by hand and broke nine tests
+
+The new `pos_line_events` policy was written as:
+
+```sql
+using (hotel_id in (select hotel_id from staff_hotels
+                     where staff_id = app.current_user_id()))
+```
+
+Every other POS table uses:
+
+```sql
+using (hotel_id in (select app.auth_hotel_ids()))
+```
+
+They are not equivalent, and nine API tests returned **500** on the KOT
+fire because of it — `auth_hotel_ids` answers for a group admin in a way
+the hand-rolled subquery does not.
+
+**Isolation is written once, in that function.** Every table asks it the
+same question, under the same policy name `hotel_isolation`. A second
+spelling of a security predicate is a second thing to get wrong, and
+this one failed in the direction of refusing work rather than leaking —
+which is lucky, not by design.
+
+---
+
+### 206 · An append-only guard that blocked every teardown in the repo
+
+`pos_line_events` refuses UPDATE and DELETE, for the reason
+`folio_postings` does: a timing somebody can edit is a timing nobody can
+use in an argument.
+
+The first version refused **all** deletes. `delete from pos_orders`
+cascades to its lines and on to the timings, so the database suite and
+several API teardowns all stopped with
+
+```
+A kitchen timing cannot be delete — it is a record of what happened.
+```
+
+The obvious repair — lift the trigger in each teardown, as
+`pos_order_lines_frozen` requires — is five places to remember and five
+places to forget.
+
+**The narrower rule is the one that is actually true:** a timing may go
+with the dish it describes, and only then. By the time a cascade reaches
+the trigger the parent line is already gone, which is how it tells that
+apart from somebody erasing evidence of a slow pass:
+
+```sql
+if tg_op = 'DELETE'
+   and not exists (select 1 from pos_order_lines where id = old.line_id)
+then return old; end if;
+```
+
+Deleting the line itself stays guarded by `pos_order_lines_frozen`.
+
+**When a new constraint breaks five existing places, the constraint is
+usually too wide** — not the five places wrong.
