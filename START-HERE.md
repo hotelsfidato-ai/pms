@@ -5,7 +5,26 @@ hotel group with seven owned properties.** This file assumes you know nothing
 about it and are not the agent that wrote it. Read this one first; it tells you
 where everything else is.
 
-Last updated **28 August 2026**, after CP10.
+Last updated **8 September 2026**. The system is **deployed and serving a real
+property.** That is new since this file was last written, and it changes what
+"done" means for everything below.
+
+```
+LIVE   https://pms.fidatohotels.com     the screens          (Firebase Hosting)
+LIVE   https://api.fidatohotels.com     the data             (Oracle Linux, Mumbai)
+       5 Elements Akkalkot · 18 rooms · preflight: all twelve checks pass
+```
+
+⚠ **THERE ARE NOW TWO DATABASES AND THEY ARE NOT THE SAME.** A portable
+Postgres 17 on the development machine, and PostgreSQL 16 on the server. A
+dump only restores *forwards*, so moving data from here to there needs
+`db/backup.sh --portable`. Read defect 190 before you touch a backup.
+
+**Everything below that describes only a laptop is now half the picture.**
+Eight faults were found in one afternoon of deploying, none of which any test
+in this repository could catch, because every gate runs on the machine the
+code was written on. They are recorded as defects 187–193 and they are the
+most useful thing in `MEMORY.md` for anybody about to touch `deploy/`.
 
 ---
 
@@ -93,6 +112,24 @@ it as read-only history.
 
 **React 19 · Vite 6 · TypeScript strict · Tailwind v4 · TanStack Query · Zustand
 · Hono · node-postgres · Postgres 17.**
+
+---
+
+## 2b · Before you write anything, and before you finish
+
+**Read, in this order:** `CONTEXT.md`, `MEMORY.md`, `AGENTS.md`, then this.
+They are short and every line in them cost somebody something.
+
+**`MEMORY.md` is 194 numbered defects.** It is not history — it is the list of
+mistakes this codebase has already made, and about a third of them were made
+twice before being written down. Skimming it is the single highest-value
+twenty minutes available to a new agent.
+
+**`CHANGELOG.md` is what you must write.** Every agent records what they
+changed, why, and what they proved — one entry per working session, newest
+first. It exists because a commit message explains a commit and nobody reads
+178 of them. Do not skip it, and do not write it at the end from memory:
+write the entry as you go.
 
 ---
 

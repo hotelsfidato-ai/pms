@@ -9,6 +9,47 @@ line in them cost something.**
 
 ---
 
+## Before your first write — five minutes that save a day
+
+**Read in this order.** All four are short except one, and that one is the
+useful one.
+
+| | |
+|---|---|
+| `CONTEXT.md` | what this system is, and who it is for |
+| `MEMORY.md` | **194 numbered defects.** Not history — the mistakes this codebase has already made. About a third were made *twice* before being written down. |
+| `CHANGELOG.md` | what the last agent did, and what they left in flight |
+| `START-HERE.md` | how to run it, and where everything lives |
+
+**Then write your own `CHANGELOG.md` entry as you work**, not at the end from
+memory. The next agent's first question is always *what was in flight?* and
+only you can answer it.
+
+### The four habits that catch the most here
+
+1. **Open the screen before saying it works.** Most defects in `MEMORY.md`
+   were found by using the system, not by a gate. The gates are necessary and
+   they are not sufficient.
+2. **A guard is not a guard until it has refused something.** Add the test,
+   then break the code and watch it fail. Eleven guards in this project passed
+   with the bug reintroduced.
+3. **Ask how many copies there are, not whether two agree.** The commonest
+   fault here is one rule written in two places. Twice this month, fixing two
+   copies left a third.
+4. **Run the numbers you quote.** "254 tests pass" is a claim until you have
+   run them in the session you are claiming it.
+
+### What the gates cannot see
+
+Every gate in this repository runs on the machine the code was written on.
+**Eight faults were found in one afternoon of deploying** — missing executable
+bits, Windows-only paths, a disabled package repository, SELinux, a dump an
+older PostgreSQL could not read — and 483 database assertions, 254 API tests
+and three clean builds passed throughout. If you touch `deploy/`, `db/*.sh` or
+anything a server runs, read defects 187–193 first.
+
+---
+
 ## The rule that matters most
 
 **One agent owns one folder at a time. Never two.**
