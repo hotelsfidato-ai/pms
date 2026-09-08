@@ -4958,3 +4958,43 @@ a third module and the test fails until its switch is real.
 was trivially true of none. Caught by asserting the COUNT before the
 condition — the habit that came out of defects 195, 204, 207 and 210.
 Proved by putting the original line back: two assertions fail.
+
+---
+
+### 215 · Adding a user shipped nowhere, and the fix nearly shipped a trap
+
+`/admin/console` carries the only form that creates a person. It is
+wrapped in `{IS_DEV && …}` and tree-shaken out of a real build, so **for
+eight days a live deployment could not add a user at all.** Every tester
+account needed SQL on the server. Found by the owner trying to set up a
+beta.
+
+The 31 August gate was right about its target — *"this screen
+manufactures tenants"* — and too wide: creating a PERSON sat on the same
+screen and went with it.
+
+Fixed by moving the panels into `components/flows/StaffAdmin.tsx`, which
+both screens import. Property creation stays on the console, because
+that is the act the gate was protecting.
+
+⚠ **AND THE FIX ALMOST SHIPPED A WORSE PROBLEM.** A row in `staff` is
+not an account. Until a Firebase user exists and `firebase_uid` names
+it, a correct password produces a correct token that resolves to nobody
+— every screen renders empty with no error. Worse, the preflight refuses
+on
+
+```sql
+select ... from staff where firebase_uid is null and is_active
+```
+
+so an owner adding three testers through the new screen and stopping
+there would have **failed their next deploy**, with no connection in
+anybody's mind between the two acts.
+
+Caught by asking "what does the preflight think of what I just built"
+before committing. The screen now says the remaining step twice: in the
+toast, and as standing text under the button, because a toast is gone in
+four seconds and this is exactly the step people miss.
+
+**The shape: a screen that half-creates a thing is worse than no screen,
+if the other half is invisible.**

@@ -16,8 +16,11 @@ import {
 import {
   listStaff, listAuditLog, listIntegrations, getSettings, getMatrix,
   listProperties, roleDescription, getModules, setModule,
+  listAdminStaff,
   type StaffRecord, type AuditEntry, type Integration,
 } from "@/data/repositories";
+import { NewPerson, People } from "@/components/flows/StaffAdmin";
+import { useSession } from "@/lib/session";
 
 /* ══════════════════════════════════════════════════════════════════
    ADMINISTRATION
@@ -85,10 +88,35 @@ const STAFF_COLUMNS: Column<StaffRecord>[] = [
 
 export function UsersPage() {
   const hotelId = useHotel();
+  const queryClient = useQueryClient();
   const { data, isLoading, error, refetch } = useQuery({
     queryKey: ["staff", hotelId],
     queryFn: () => listStaff(hotelId),
   });
+
+  /* ⚠ THE PANELS BELOW SHIPPED NOWHERE UNTIL NOW.
+     They lived on `/admin/console`, which is `{IS_DEV && …}` and
+     tree-shaken out of a real build — so for eight days a live
+     deployment could not add a user at all, and every tester account
+     needed SQL on the server. See `components/flows/StaffAdmin.tsx`.
+
+     Creating a PROPERTY stays on the console, because that is what the
+     31 August gate was actually protecting. */
+  const { data: everyone, refetch: refetchEveryone } = useQuery({
+    queryKey: ["admin-staff"],
+    queryFn: () => listAdminStaff(),
+  });
+
+  /* The properties this person can reach, from the session rather than
+     a fetch — the same source the console used. A grant they could not
+     make should not be offered. */
+  const hotels = useSession((st) => st.hotels);
+
+  const refreshAll = () => {
+    void refetch();
+    void refetchEveryone();
+    void queryClient.invalidateQueries({ queryKey: ["staff", hotelId] });
+  };
 
   return (
     <Page>
@@ -96,6 +124,16 @@ export function UsersPage() {
         title="Users"
         description="Who can reach what. Access follows the role, and the role follows the permission matrix."
       />
+
+      <div className="grid gap-5 lg:grid-cols-[360px_1fr] mb-5">
+        <NewPerson onDone={refreshAll} />
+        <People
+          staff={everyone ?? []}
+          codes={hotels.map((h) => h.code)}
+          onDone={refreshAll}
+        />
+      </div>
+
       <Card>
         <DataTable<StaffRecord>
           rows={data ?? []}
