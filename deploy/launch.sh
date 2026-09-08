@@ -159,6 +159,36 @@ echo "    setting up once the system is live and you can afford to experiment."
 
 # -----------------------------------------------------------------------------
 say "The firewall"
+
+# -----------------------------------------------------------------------------
+say "SELinux"
+# -----------------------------------------------------------------------------
+# ⚠ WITHOUT THIS, nginx RETURNS 502 WHILE EVERYTHING IS HEALTHY.
+#
+# Oracle Linux ships SELinux enforcing, and its policy for the web server does
+# not include "open a network connection" -- not even to 127.0.0.1. So nginx
+# starts, the API starts, the API answers perfectly on localhost, and every
+# request through the front door gets:
+#
+#     502 Bad Gateway
+#
+# Nothing in either program's log explains it, because neither program did
+# anything wrong. A third thing refused to let them speak.
+#
+# Found on the first real Oracle Linux deploy, from outside, by curling the
+# health endpoint over the internet -- which is the only place the fault is
+# visible. `systemctl is-active` said active, and a local curl returned 200.
+#
+# -P writes it to policy. Without -P it is forgotten at the next reboot, and
+# the system breaks weeks later with nobody remembering this step existed.
+if command -v setsebool >/dev/null && [ "$(getenforce 2>/dev/null)" = "Enforcing" ]; then
+  setsebool -P httpd_can_network_connect on
+  echo "  httpd_can_network_connect on — nginx may reach the API"
+else
+  echo "  not enforcing, or not an SELinux system — nothing to do"
+fi
+
+
 # -----------------------------------------------------------------------------
 # Oracle's free tier ships with almost everything shut, in TWO places: the
 # instance's own firewall AND the VCN security list in the Oracle console.
@@ -245,6 +275,33 @@ sudo -u postgres psql -tAc \
 sudo -u postgres psql -qc \
   "alter role $DB_USER password '$DB_PASS'"
 
+# ── The identity the PREFLIGHT reads with ───────────────────────────────────
+# ⚠ THIS USED TO BE `postgres` OVER A PEER-AUTHENTICATED SOCKET, AND NOTHING
+# COULD USE IT. Peer authentication means the operating-system user must have
+# the same name as the database user -- so only the `postgres` account can be
+# `postgres`. The preflight runs as `fidato`, and launch.sh runs it as root.
+# Neither is `postgres`, so the check failed with
+#
+#     Peer authentication failed for user "postgres"
+#
+# on a database that was perfectly healthy. The check that exists to say
+# whether the system is ready could not run, which is the worst possible
+# thing for it to do quietly.
+#
+# So: a database role named for the OS account that actually runs the check.
+# Peer authentication then works with no password anywhere.
+#
+# READ EVERYTHING, WRITE NOTHING. `pg_read_all_data` plus `bypassrls` is
+# exactly what a checking tool needs: the preflight MUST see past row level
+# security, because a check that reads an empty result reports all clear.
+# It has no business changing anything, and cannot.
+DB_USER_ADMIN="${DB_USER_ADMIN:-fidato}"
+
+sudo -u postgres psql -tAc   "select 1 from pg_roles where rolname='$DB_USER_ADMIN'" | grep -q 1 ||   sudo -u postgres psql -qc "create role $DB_USER_ADMIN login bypassrls"
+sudo -u postgres psql -qc "alter role $DB_USER_ADMIN bypassrls"
+sudo -u postgres psql -qc "grant pg_read_all_data to $DB_USER_ADMIN"
+
+
 sudo -u postgres psql -tAc \
   "select 1 from pg_database where datname='$DB_NAME'" | grep -q 1 || \
   sudo -u postgres createdb -O postgres "$DB_NAME"
@@ -314,7 +371,7 @@ ENV_FILE="$APP_DIR/api/.env"
 if [ ! -f "$ENV_FILE" ]; then
   cat > "$ENV_FILE" <<ENVEOF
 DATABASE_URL=postgres://$DB_USER:$DB_PASS@127.0.0.1:5432/$DB_NAME
-ADMIN_DATABASE_URL=postgres://postgres@/$DB_NAME?host=/var/run/postgresql
+ADMIN_DATABASE_URL=postgres://$DB_USER_ADMIN@/$DB_NAME?host=/var/run/postgresql
 PORT=8787
 NODE_ENV=production
 CORS_ORIGIN=$APP_ORIGIN

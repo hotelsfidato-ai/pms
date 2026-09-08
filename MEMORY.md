@@ -3970,6 +3970,56 @@ commands for the box, and every one of them was broken.
 Sixth thing found by one real deploy. The gates could not have caught
 any of them: they all run on a machine with devDependencies installed.
 
+### 191 · 502 while every part is healthy — SELinux
+
+`systemctl is-active` said **active**. A local
+`curl http://127.0.0.1:8787/health` returned **200**. nginx was running
+and reachable from the internet. And every request through the front
+door returned **502 Bad Gateway**.
+
+Oracle Linux ships SELinux enforcing, and its policy for the web server
+does not include *"open a network connection"* — not even to localhost.
+`httpd_can_network_connect` is **off** by default.
+
+Nothing in either program's log explains it, because neither program
+did anything wrong. **A third thing refused to let them speak.**
+
+**Only visible from outside.** Every check available on the machine
+said the system was fine. It was found by curling the health endpoint
+over the internet from another continent — which is the only vantage
+point where the fault exists.
+
+`setsebool -P`. Without `-P` it reverts at the next reboot and the
+system breaks weeks later with nobody remembering the step.
+
+### 192 · The readiness check could not run, on a healthy database
+
+```
+✗ database reachable
+    Peer authentication failed for user "postgres"
+```
+
+`ADMIN_DATABASE_URL` pointed at the `postgres` role over a
+peer-authenticated socket. Peer authentication means the OS user must
+have the same name as the database user — so **only the `postgres`
+account can be `postgres`.** The preflight runs as `fidato`, and
+`launch.sh` runs it as root. Neither qualifies.
+
+So the check that exists to say whether the system is ready **had
+never once run on a server**, and failed in a way that reads as a
+broken database.
+
+Fixed with a role named for the OS account that runs the check, granted
+`pg_read_all_data` and `bypassrls`: read everything, write nothing, no
+password anywhere. `bypassrls` is not optional — a readiness check that
+reads an empty result reports all clear.
+
+**Both of these, and the four before them, share one shape.** Every
+gate in this project runs on the machine the code was written on. Six
+faults in a single afternoon were invisible to 483 database assertions,
+250 API tests and three clean builds, because none of them had ever
+been to a server.
+
 ## Verification traps
 
 ### Never test a Tailwind utility by injecting the class at runtime
