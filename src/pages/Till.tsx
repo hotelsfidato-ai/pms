@@ -96,6 +96,34 @@ export default function TillPage() {
     void qc.invalidateQueries({ queryKey: ["folio"] });
   };
 
+  /* ⚠ ADDING A DISH USED TO COST THREE ROUND TRIPS AND A WAITER COULD
+     NOT TAP TWICE IN A SECOND.
+
+     The old path was: POST the line, then invalidate, then refetch the
+     order, then refetch the list -- three journeys to Mumbai before
+     anything appeared on screen. On a laptop with the database beside
+     it that is invisible. On a real server it is about a second per
+     dish, every dish, all service.
+
+     THE SERVER ALREADY SENT THE ANSWER. Every till mutation returns the
+     whole updated order (`readOrder` in till.ts), which is exactly the
+     shape this screen's query holds. So the refetch was asking for
+     something the browser had just been handed.
+
+     One journey now. And this is not an optimistic guess -- it is the
+     SERVER'S order, with its own totals, tax and line ids. Nothing is
+     shown that the database has not already agreed to, which is the
+     rule this whole system is built on.
+
+     The list and the folio are still invalidated, because those are
+     different questions this reply does not answer. They refetch in the
+     background and block nothing. */
+  const applyOrder = (order: Order) => {
+    qc.setQueryData(["till-order", hotelId, order.id], order);
+    void qc.invalidateQueries({ queryKey: ["till-orders"] });
+    void qc.invalidateQueries({ queryKey: ["folio"] });
+  };
+
   const start = async () => {
     setBusy(true);
     const res = await openOrder(hotelId, "REST", table.trim() || undefined);
@@ -117,7 +145,7 @@ export default function TillPage() {
     }
     const res = await addLine(hotelId, openId, item.id, 1);
     if (!res.ok) return toast.error("Not added", res.reason);
-    refresh();
+    applyOrder(res.order);
   };
 
   const addChosen = async (
@@ -131,14 +159,14 @@ export default function TillPage() {
     setBusy(false);
     if (!res.ok) return toast.error("Not added", res.reason);
     setAsking(null);
-    refresh();
+    applyOrder(res.order);
   };
 
   const strike = async (lineId: string) => {
     if (!openId) return;
     const res = await voidLine(hotelId, openId, lineId);
     if (!res.ok) return toast.error("Could not strike that line", res.reason);
-    refresh();
+    applyOrder(res.order);
   };
 
   const order = current.data ?? null;

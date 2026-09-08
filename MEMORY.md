@@ -4049,6 +4049,43 @@ flag.
 file is in production unless something actively removes it. The
 build's success says nothing about what it contains.
 
+### 194 · The till cost three round trips per dish
+
+Reported as *"I click once and it takes a second, I cannot keep
+clicking."* On a POS that is not a performance nit — a till a waiter
+can out-tap is a till they stop using.
+
+The path was: POST the line → invalidate three query keys → refetch the
+order → refetch the order list. **Three journeys to the server before
+anything appeared**, plus a fourth from the live channel's own
+notification. On a laptop with the database beside it, invisible. On a
+server in Mumbai, about a second, every dish, all service.
+
+**The server had already sent the answer.** Every till mutation returns
+the whole updated order — the exact shape the screen's query holds. The
+refetch was asking for something the browser had just been handed.
+
+`setQueryData` from the reply. Measured: **78ms from tap to the screen
+changing**, one call on the critical path, the rest background.
+
+**And this is not an optimistic guess** — it is the server's order, with
+its own totals, tax and line ids. Nothing appears that the database has
+not agreed to, which is the rule this system is built on. Optimistic
+rendering would have been faster still and would have shown numbers
+nobody had confirmed.
+
+**The live channel made it worse the faster you worked.** Every row
+change fired an invalidation of four keys, so six dishes meant six
+bursts of refetches queueing behind one another. Debounced to 350ms,
+trailing — the last event in a burst is the one worth fetching.
+Reconnects still invalidate immediately, because there the screen may
+be genuinely stale.
+
+**The general shape:** a mutation that returns the new state and is
+followed by a refetch of that same state is a round trip spent asking a
+question already answered. Worth checking every mutation in a codebase
+against its own response type.
+
 ## Verification traps
 
 ### Never test a Tailwind utility by injecting the class at runtime

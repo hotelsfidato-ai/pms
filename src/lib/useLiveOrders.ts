@@ -57,6 +57,8 @@ export function useLiveOrders(hotelId: string | null | undefined): {
      rebuild the stream every time it changed — which is every
      reconnect, which is a loop. */
   const stopped = useRef(false);
+  /* The debounce timer, held across renders so teardown cancels it. */
+  const pendingRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   useEffect(() => {
     if (!hotelId) return;
@@ -66,7 +68,32 @@ export function useLiveOrders(hotelId: string | null | undefined): {
     let retry: ReturnType<typeof setTimeout> | null = null;
     let backoff = 1_000;
 
+    /* ⚠ DEBOUNCED, BECAUSE A WAITER TAPPING FAST IS A BURST.
+       The notification fires on every row change, so six dishes added
+       to a table send six events within a second -- and each one was
+       invalidating four query keys on a screen the mutation's own reply
+       had already updated.
+
+       Not just wasted traffic: refetches queue behind one another, so
+       the till got SLOWER the faster somebody worked, which is exactly
+       backwards.
+
+       350ms collapses a burst into one refetch -- far below the ten
+       seconds this replaced, far above the gap between two taps.
+
+       TRAILING, deliberately: the last event in a burst is the one
+       whose state is worth fetching. */
     const invalidate = () => {
+      if (pendingRef.current) clearTimeout(pendingRef.current);
+      pendingRef.current = setTimeout(() => {
+        pendingRef.current = null;
+        for (const key of AFFECTED) void qc.invalidateQueries({ queryKey: key });
+      }, 350);
+    };
+
+    /* On connect there is nothing to collapse, and the screen may be
+       showing whatever it had when the line dropped. Straight through. */
+    const invalidateNow = () => {
       for (const key of AFFECTED) void qc.invalidateQueries({ queryKey: key });
     };
 
@@ -89,7 +116,7 @@ export function useLiveOrders(hotelId: string | null | undefined): {
            this leaves the screen showing whatever it had when the line
            went — correct-looking and wrong, which is the failure this
            file exists to remove. */
-        invalidate();
+        invalidateNow();
 
         const reader = res.body.getReader();
         const decoder = new TextDecoder();
@@ -130,6 +157,7 @@ export function useLiveOrders(hotelId: string | null | undefined): {
       stopped.current = true;
       setLive(false);
       if (retry) clearTimeout(retry);
+      if (pendingRef.current) clearTimeout(pendingRef.current);
       controller?.abort();
     };
   }, [hotelId, qc]);
