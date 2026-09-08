@@ -46,6 +46,11 @@ export interface MenuItem {
       this dish" from "12 minutes, inherited from Main course". */
   ownPrepMinutes: number | null;
 
+  /** Which course, resolved. NULL is an unsequenced dish — a drink —
+      which is not course zero and sorts after the sequence. */
+  course: number | null;
+  ownCourse: number | null;
+
   /** Oil ₹300, Butter ₹400. Empty for most of a menu. */
   variations: MenuVariation[];
   addonGroups: AddonGroup[];
@@ -79,6 +84,9 @@ export interface MenuCategory {
   /** The preparation time every dish in here inherits unless it sets
       its own. Null means nobody has said. */
   prepMinutes: number | null;
+  /** The course everything in here belongs to, unless a dish says
+      otherwise. Null takes the whole category out of the sequence. */
+  course: number | null;
   items: MenuItem[];
 }
 
@@ -553,6 +561,28 @@ export function setCategoryPrepMinutes(
   return write(
     `/api/hotels/${hotelId}/till/menu/categories/${categoryId}/prep`,
     { minutes },
+  );
+}
+
+/* ── Which course a dish belongs to ───────────────────────────────
+   `null` clears and falls back, exactly as the preparation times do —
+   and on a CATEGORY, null means "not part of the sequence", which is
+   what a drinks list wants. */
+
+export function setItemCourse(
+  hotelId: string, itemId: string, course: number | null,
+): Promise<TillResult> {
+  return write(
+    `/api/hotels/${hotelId}/till/menu/items/${itemId}/course`, { course },
+  );
+}
+
+export function setCategoryCourse(
+  hotelId: string, categoryId: string, course: number | null,
+): Promise<TillResult> {
+  return write(
+    `/api/hotels/${hotelId}/till/menu/categories/${categoryId}/course`,
+    { course },
   );
 }
 

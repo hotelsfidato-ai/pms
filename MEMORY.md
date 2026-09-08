@@ -4883,3 +4883,41 @@ cd /opt/fidato/api && sudo -u fidato env HOME=/tmp npm run --silent preflight
 **A check that cannot pass is worse than no check.** It trains whoever deploys
 to read a red line and shrug, which is exactly the habit that makes the next
 real failure invisible.
+
+---
+
+### 213 · I shipped the audit's own finding, in the audit's own hour
+
+An hour after publishing an independent audit whose headline finding was
+**"built, and unreachable"** — four capabilities with a database, an API
+and no path a person could take — the same defect turned up in the
+feature I had shipped that evening.
+
+Migration 081 gave dishes and categories a `course`. The kitchen feed
+read it. The by-table pass grouped by it, ordered by it, and sorted
+unsequenced dishes last. **Nothing anywhere could set one.**
+
+No endpoint. No seam function. No control. Every dish would have read
+*"Any time"* forever unless somebody ran SQL — which is exactly what I
+did to take the screenshot that "proved" the feature worked.
+
+⚠ **THE BROWSER CHECK IS WHAT HID IT.** I set the courses with `update
+pos_menu_categories set course = ...`, reloaded, saw them group
+correctly, and called Stage C complete. The screenshot was true and the
+feature was unusable. **Opening the screen is not enough if you reached
+the state by a route the user does not have.**
+
+Found by starting the local stack for an unrelated reason and noticing
+`course` missing from the menu payload.
+
+Fixed: two endpoints mirroring the preparation-time pair, two seam
+functions, a `CourseControl` beside `PrepControl`, and a regression test
+named for what it exists to catch — *"can actually be SET, which it
+could not be for an hour"*.
+
+**The rule this earns, and it is sharper than "open the screen":**
+*set it up the way a user would, or the demonstration proves nothing.*
+Six occurrences of this shape are now recorded — 81, the credit note,
+approvals, attachments, `setOutletClosed`, and this one. It is the
+defect this project produces when a feature is built from the database
+upward and nobody walks back down.

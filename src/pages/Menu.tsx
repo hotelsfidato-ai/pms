@@ -12,6 +12,7 @@ import {
 import {
   getMenu, addCategory, addItem, toggleItem, takeItemOff, putItemBack,
   importMenu, setItemPrepMinutes, setCategoryPrepMinutes,
+  setItemCourse, setCategoryCourse,
   type OffFor,
   type MenuCategory, type MenuItem,
 } from "@/data/repositories";
@@ -334,6 +335,19 @@ function CategoryCard({ category, hotelId, onChanged }: {
         {/* The default every dish in here inherits. Set once for two
             hundred dishes rather than timed one at a time — which is
             the whole reason the fallback exists. */}
+        <CourseControl
+          course={category.course}
+          own={category.course}
+          label={`Course for everything in ${category.name}`}
+          onSet={async (v) => {
+            const res = await setCategoryCourse(hotelId, category.id, v);
+            if (!res.ok) {
+              toast.error("Not changed", res.reason ?? "Refused.");
+              return;
+            }
+            onChanged();
+          }}
+        />
         <PrepControl
           minutes={category.prepMinutes}
           own={category.prepMinutes}
@@ -369,6 +383,19 @@ function CategoryCard({ category, hotelId, onChanged }: {
             <span className="tabular text-base text-ink-900 shrink-0 w-20 text-right">
               {moneyPrecise(item.price)}
             </span>
+            <CourseControl
+              course={item.course}
+              own={item.ownCourse}
+              label={`Course for ${item.name}`}
+              onSet={async (v) => {
+                const res = await setItemCourse(hotelId, item.id, v);
+                if (!res.ok) {
+                  toast.error("Not changed", res.reason ?? "Refused.");
+                  return;
+                }
+                onChanged();
+              }}
+            />
             <PrepControl
               minutes={item.prepMinutes}
               own={item.ownPrepMinutes}
@@ -552,6 +579,99 @@ function PrepControl({ minutes, own, label, onSet }: {
     >
       {/* The dash IS the answer, not a placeholder. */}
       {unset ? "—" : `${minutes}${inherited ? "*" : ""} min`}
+    </button>
+  );
+}
+
+
+/* ══════════════════════════════════════════════════════════════════
+   WHICH COURSE
+
+   ⚠ AN UNSEQUENCED DISH IS NOT COURSE ZERO. It reads "Any" and sorts
+   after the sequence on the pass, because a lime soda fired before the
+   starters is wrong on every table, every service. Empty clears back to
+   the category, and clearing a CATEGORY takes the whole drinks list out
+   of the sequence, which is what a drinks list wants.
+
+   Same shape as `PrepControl` deliberately — two controls that behave
+   differently for the same gesture is how somebody clears the wrong
+   one. Both use `== null` for the reason defect 201 records: a cached
+   response from before these fields existed renders as unset, not as
+   the string "undefined".
+   ══════════════════════════════════════════════════════════════════ */
+function CourseControl({ course, own, label, onSet }: {
+  course: number | null;
+  own: number | null;
+  label: string;
+  onSet: (course: number | null) => Promise<void>;
+}) {
+  const [editing, setEditing] = useState(false);
+  const [draft, setDraft] = useState("");
+  const [busy, setBusy] = useState(false);
+
+  const unset = course == null;
+  const inherited = own == null && !unset;
+
+  const commit = async () => {
+    const text = draft.trim();
+    const next = text === "" ? null : Number(text);
+    if (next !== null && (!Number.isInteger(next) || next < 1 || next > 9)) {
+      toast.error(
+        "That is not a course",
+        "A whole number from 1 to 9. Leave it empty for a dish that is "
+        + "not part of the sequence — a drink goes when it is poured.",
+      );
+      return;
+    }
+    setBusy(true);
+    await onSet(next);
+    setBusy(false);
+    setEditing(false);
+  };
+
+  if (editing) {
+    return (
+      <input
+        autoFocus
+        value={draft}
+        disabled={busy}
+        inputMode="numeric"
+        aria-label={label}
+        onChange={(e) => setDraft(e.target.value)}
+        onBlur={() => void commit()}
+        onKeyDown={(e) => {
+          if (e.key === "Enter") void commit();
+          if (e.key === "Escape") setEditing(false);
+        }}
+        placeholder="crs"
+        className="w-14 h-11 px-2 rounded-md border border-brand-orange text-base tabular shrink-0"
+      />
+    );
+  }
+
+  return (
+    <button
+      type="button"
+      aria-label={label}
+      onClick={() => {
+        setDraft(own == null ? "" : String(own));
+        setEditing(true);
+      }}
+      className={cn(
+        "w-14 h-11 rounded-md border text-base tabular shrink-0",
+        "cursor-pointer transition-colors duration-200",
+        "border-grey-300 hover:border-brand-orange hover:bg-brand-orange-50",
+        unset ? "text-grey-400" : "text-ink-900",
+      )}
+      title={
+        unset
+          ? "Not part of the sequence — goes when it is ready"
+          : inherited
+            ? `Course ${course}, from the category`
+            : `Course ${course}, set here`
+      }
+    >
+      {unset ? "Any" : `${course}${inherited ? "*" : ""}`}
     </button>
   );
 }

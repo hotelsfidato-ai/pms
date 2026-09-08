@@ -49,6 +49,23 @@ async function pass(): Promise<KitchenLine[]> {
   return body.lines;
 }
 
+interface MenuItem {
+  id: string; name: string;
+  course: number | null; ownCourse: number | null;
+}
+interface MenuCategory {
+  id: string; name: string; course: number | null; items: MenuItem[];
+}
+
+/** The category this file owns, read back through the menu endpoint —
+    which is what the screen reads, and therefore the thing that has to
+    be right. */
+async function mine(): Promise<MenuCategory> {
+  const res = await call("/5EL/till/menu");
+  const body = (await res.json()) as { categories: MenuCategory[] };
+  return body.categories.find((c) => c.id === catId)!;
+}
+
 beforeAll(async () => {
   const db = await admin();
   try {
@@ -163,6 +180,56 @@ describe("the pass knows which course a dish belongs to", () => {
       expect(d!.course).toBeNull();
       expect(Object.hasOwn(d!, "course")).toBe(true);
     });
+
+  it("can actually be SET, which it could not be for an hour", async () => {
+    /* ⚠ THE REGRESSION GUARD FOR THE GAP THIS FILE MISSED FIRST TIME.
+       Migration 081 put courses in the database, the pass grouped by
+       them, and NOTHING could write one — every dish would have read
+       "Any time" forever unless somebody ran SQL. The original version
+       of this file set courses with direct inserts and so proved the
+       reading half only. */
+    if (!starter || !catId) return;
+
+    const res = await call(`/5EL/till/menu/items/${starter}/course`,
+      { course: 4 });
+    expect(res.status).toBe(200);
+    const body = (await res.json()) as {
+      course: number | null; ownCourse: number | null;
+    };
+    expect(body.course).toBe(4);
+    expect(body.ownCourse).toBe(4);
+
+    /* And it comes back on the menu, which is what the screen reads. */
+    let cat = await mine();
+    expect(cat.items.find((i) => i.id === starter)!.course).toBe(4);
+    expect(cat.items.find((i) => i.id === starter)!.ownCourse).toBe(4);
+
+    /* NULL CLEARS, back to the category's 1. */
+    expect((await call(`/5EL/till/menu/items/${starter}/course`,
+      { course: null })).status).toBe(200);
+    cat = await mine();
+    expect(cat.items.find((i) => i.id === starter)!.course).toBe(1);
+    expect(cat.items.find((i) => i.id === starter)!.ownCourse).toBeNull();
+
+    /* A CATEGORY cleared to null takes its dishes out of the sequence —
+       which is exactly what a drinks list wants. */
+    expect((await call(`/5EL/till/menu/categories/${catId}/course`,
+      { course: null })).status).toBe(200);
+    cat = await mine();
+    expect(cat.course).toBeNull();
+    expect(cat.items.find((i) => i.id === starter)!.course).toBeNull();
+
+    /* Put it back for the assertions below. */
+    await call(`/5EL/till/menu/categories/${catId}/course`, { course: 1 });
+
+    /* Refusals. A missing field is not a clear. */
+    expect((await call(`/5EL/till/menu/items/${starter}/course`, {})).status)
+      .toBe(409);
+    for (const course of [0, 10, -1]) {
+      expect((await call(`/5EL/till/menu/items/${starter}/course`, { course }))
+        .status, `${course} was accepted`).not.toBe(200);
+    }
+  });
 
   it("groups into the courses a table is waiting for, unsequenced last",
     async () => {

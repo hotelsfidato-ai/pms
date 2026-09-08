@@ -96,6 +96,9 @@ till.get("/:code/till/menu", async (c) => {
       prep_minutes: number | null;
       own_prep_minutes: number | null;
       category_prep_minutes: number | null;
+      course: number | null;
+      own_course: number | null;
+      category_course: number | null;
     }>(
       /* Left join, so a category with nothing in it still appears.
          A kitchen that has created "Desserts" and not filled it needs
@@ -112,7 +115,10 @@ till.get("/:code/till/menu", async (c) => {
                  time looks like it did nothing. */
               app.prep_minutes(i.id) as prep_minutes,
               i.prep_minutes         as own_prep_minutes,
-              c.prep_minutes         as category_prep_minutes
+              c.prep_minutes         as category_prep_minutes,
+              app.course_of(i.id)    as course,
+              i.course               as own_course,
+              c.course               as category_course
          from pos_menu_categories c
          left join pos_menu_items i on i.category_id = c.id
         where c.hotel_id = $1 and c.is_active
@@ -124,6 +130,9 @@ till.get("/:code/till/menu", async (c) => {
       id: string; name: string;
       /** The default for everything in it. Null means nobody has said. */
       prepMinutes: number | null;
+      /** Which course everything in here belongs to. Null is not part of
+          a sequence — a drink — and is not course zero. */
+      course: number | null;
       items: {
         id: string; name: string; price: number; taxRate: number;
         isActive: boolean; shortCode: string | null;
@@ -136,6 +145,8 @@ till.get("/:code/till/menu", async (c) => {
         /** Set on the dish itself, so a screen can tell "3 minutes,
             chosen here" from "3 minutes, inherited". */
         ownPrepMinutes: number | null;
+        course: number | null;
+        ownCourse: number | null;
         variations: { id: string; label: string; price: number }[];
         addonGroups: {
           id: string; label: string; minSelect: number; maxSelect: number | null;
@@ -149,7 +160,8 @@ till.get("/:code/till/menu", async (c) => {
       if (!cat) {
         cat = {
           id: r.category_id, name: r.category,
-          prepMinutes: r.category_prep_minutes, items: [],
+          prepMinutes: r.category_prep_minutes,
+          course: r.category_course, items: [],
         };
         byCategory.set(r.category_id, cat);
       }
@@ -169,6 +181,8 @@ till.get("/:code/till/menu", async (c) => {
           offReason: r.off_reason,
           prepMinutes: r.prep_minutes,
           ownPrepMinutes: r.own_prep_minutes,
+          course: r.course,
+          ownCourse: r.own_course,
           variations: [],
           addonGroups: [],
         });
@@ -564,6 +578,113 @@ function minutesOrNull(raw: unknown): number | null | "bad" {
   if (typeof raw === "number" && Number.isInteger(raw)) return raw;
   return "bad";
 }
+
+/* ══════════════════════════════════════════════════════════════════
+   WHICH COURSE A DISH BELONGS TO
+
+   ⚠ THIS EXISTED IN THE DATABASE AND ON THE PASS FOR AN HOUR WITH NO
+   WAY TO SET IT. Migration 081 added the columns, the kitchen feed read
+   them, and the by-table view grouped by them — and nothing anywhere
+   could write one, so every dish would have read "Any time" forever
+   unless somebody ran SQL by hand. That is defect 81's shape, found in
+   my own work by an audit looking for it in everybody else's.
+
+   Same two addresses and the same rules as the preparation times: null
+   clears and falls back, a missing field is refused, and the range is
+   checked by the database rather than restated here.
+   ══════════════════════════════════════════════════════════════════ */
+
+/** A course from a request body: a number, or null to clear. */
+function courseOrNull(raw: unknown): number | null | "bad" {
+  if (raw === null) return null;
+  if (typeof raw === "number" && Number.isInteger(raw)) return raw;
+  return "bad";
+}
+
+till.post("/:code/till/menu/items/:id/course", async (c) => {
+  const input = await c.req.json<{ course?: unknown }>()
+    .catch(() => ({} as { course?: unknown }));
+  const course = courseOrNull(input.course);
+  if (course === "bad") {
+    return c.json(refuse(
+      "Which course? A whole number from 1, or null to clear it and use "
+      + "the category's.",
+    ), 409);
+  }
+
+  const result = await withSession(c.get("subject"), async (client) => {
+    const hotelId = await hotelFor(client, c.req.param("code"));
+    if (!hotelId) return null;
+
+    const { rows } = await client.query<{ name: string }>(
+      `update pos_menu_items set course = $3, updated_at = now()
+        where id = $1 and hotel_id = $2
+        returning name`,
+      [c.req.param("id"), hotelId, course],
+    );
+    if (!rows[0]) return { ok: false as const, reason: "No such dish." };
+
+    /* A second statement, for the reason defect 202 records: a function
+       called inside RETURNING re-queries the table and still sees the
+       pre-update row. */
+    const { rows: now } = await client.query<{ course: number | null }>(
+      "select app.course_of($1) as course", [c.req.param("id")],
+    );
+
+    return {
+      ok: true as const,
+      name: rows[0].name,
+      course: now[0]?.course ?? null,
+      ownCourse: course,
+    };
+  });
+
+  if (!result) return c.json({ error: "No such property." }, 404);
+  return c.json(result, result.ok ? 200 : 409);
+});
+
+till.post("/:code/till/menu/categories/:id/course", async (c) => {
+  const input = await c.req.json<{ course?: unknown }>()
+    .catch(() => ({} as { course?: unknown }));
+  const course = courseOrNull(input.course);
+  if (course === "bad") {
+    return c.json(refuse(
+      "Which course? A whole number from 1, or null to take this category "
+      + "out of the sequence — which is what a drink wants.",
+    ), 409);
+  }
+
+  const result = await withSession(c.get("subject"), async (client) => {
+    const hotelId = await hotelFor(client, c.req.param("code"));
+    if (!hotelId) return null;
+
+    const { rows } = await client.query<{ name: string }>(
+      `update pos_menu_categories set course = $3, updated_at = now()
+        where id = $1 and hotel_id = $2
+        returning name`,
+      [c.req.param("id"), hotelId, course],
+    );
+    if (!rows[0]) return { ok: false as const, reason: "No such category." };
+
+    /* How many dishes this actually moved — the ones that had no course
+       of their own. A default that changes nothing is worth saying. */
+    const { rows: moved } = await client.query<{ n: string }>(
+      `select count(*)::text as n from pos_menu_items
+        where category_id = $1 and hotel_id = $2 and course is null`,
+      [c.req.param("id"), hotelId],
+    );
+
+    return {
+      ok: true as const,
+      name: rows[0].name,
+      course,
+      dishesAffected: Number(moved[0]!.n),
+    };
+  });
+
+  if (!result) return c.json({ error: "No such property." }, 404);
+  return c.json(result, result.ok ? 200 : 409);
+});
 
 till.post("/:code/till/menu/items/:id/prep", async (c) => {
   const input = await c.req.json<{ minutes?: unknown }>()
