@@ -4020,6 +4020,35 @@ faults in a single afternoon were invisible to 483 database assertions,
 250 API tests and three clean builds, because none of them had ever
 been to a server.
 
+### 193 · The development sign-in shortcut shipped to the live site
+
+The deployed login page at the hotel's real domain carried:
+
+> **DEVELOPMENT ONLY** — Owner · every property · group admin
+
+`.env` sets `VITE_ALLOW_DEV_AUTH=1` for local work, Vite loads `.env`
+for **every** build including production, and nothing removed it.
+
+**Not a way in.** The API refuses to start with dev auth in production
+and the preflight checks it, so pressing that button earns a 401. But a
+button labelled *group admin* on a hotel's live sign-in screen is
+alarming to anybody who sees it — and the day somebody sets that
+variable on the server to debug something, it stops being cosmetic.
+
+**Found by looking at the deployed page.** `npm run build` succeeded,
+all three bundles were clean, every gate passed, and nothing anywhere
+said the development shortcut was inside them.
+
+`.env.production` now exists to take things AWAY — Vite layers it over
+`.env` for `vite build`. Proved in both directions: with it, the bundle
+contains no `dev-owner`, no `x-dev-staff-id` and no dev panel; without
+it, all three are present. Removed by tree-shaking, not hidden by a
+flag.
+
+**The general shape:** a development convenience in a shared config
+file is in production unless something actively removes it. The
+build's success says nothing about what it contains.
+
 ## Verification traps
 
 ### Never test a Tailwind utility by injecting the class at runtime

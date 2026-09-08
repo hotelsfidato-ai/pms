@@ -5,7 +5,7 @@
   "targets": {
     "poms-fad05": {
       "hosting": {
-        "demo": [
+        "app": [
           "poms-fad05"
         ]
       }
