@@ -4921,3 +4921,40 @@ Six occurrences of this shape are now recorded — 81, the credit note,
 approvals, attachments, `setOutletClosed`, and this one. It is the
 defect this project produces when a feature is built from the database
 upward and nobody walks back down.
+
+---
+
+### 214 · A switch that said "not built yet" about something that was built
+
+Reported by the owner: *"the banquet thing is not working — when I try
+to turn it on it's not working."* Correct, and the cause was one line:
+
+```tsx
+disabled={busy === module || module === "banquet"}
+```
+
+beside a note reading *"Not built yet. Off everywhere, and listed so it
+is clear that the switch is missing rather than the hall."*
+
+**Both were true when written.** Stage 14 then built banquet — three
+screens, four tables, an API, and a board line reading *12 of 12, the
+hall cannot be sold twice* — and **nobody came back for the switch.**
+The copy and the code disagreed for eight days.
+
+The API was fine the whole time. Tested directly:
+`{"ok":true,"module":"banquet","enabled":true}`.
+
+⚠ **A DISABLED CONTROL WITH STALE COPY IS WORSE THAN A MISSING ONE.**
+A missing control makes somebody ask. This one answered the question,
+wrongly, and the owner believed it for over a week.
+
+**The guard is not "banquet works"**, which would rot the same way. It
+is *every module the API accepts has a switch somebody can press* — add
+a third module and the test fails until its switch is real.
+
+⚠ **AND THE GUARD WAS VACUOUS AT FIRST.** `src/test/setup.ts` had no
+`/modules` branch, `getModules` catches its own failure and returns
+`{}`, so the screen rendered **zero switches** and "none is disabled"
+was trivially true of none. Caught by asserting the COUNT before the
+condition — the habit that came out of defects 195, 204, 207 and 210.
+Proved by putting the original line back: two assertions fail.

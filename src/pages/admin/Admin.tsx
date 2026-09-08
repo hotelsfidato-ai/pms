@@ -391,8 +391,9 @@ const MODULE_COPY: Record<string, { label: string; note: string }> = {
   },
   banquet: {
     label: "Banquet hall",
-    note: "Not built yet. Off everywhere, and listed so it is clear that " +
-      "the switch is missing rather than the hall.",
+    note: "The diary, the halls and their packages. A hall cannot be sold " +
+      "twice for the same session. Off means those screens go and the API " +
+      "refuses them.",
   },
 };
 
@@ -430,7 +431,19 @@ function ModulesCard({ hotelId }: { hotelId: string }) {
           <Switch
             key={module}
             checked={enabled}
-            disabled={busy === module || module === "banquet"}
+            /* ⚠ NOT `|| module === "banquet"` ANY MORE.
+               That was hardcoded when banquet did not exist, alongside a
+               note reading "Not built yet". Stage 14 built it — three
+               screens, four tables and an API — and NOBODY CAME BACK FOR
+               THE SWITCH. The copy and the code disagreed for eight days
+               and the owner found it by trying to turn banquet on and
+               watching nothing happen.
+
+               A disabled control with stale copy is worse than a missing
+               one: it looks like an answer. `moduleSwitchesAreLive` in
+               `Admin.test.tsx` now fails if any module the API accepts
+               comes back disabled. */
+            disabled={busy === module}
             onCheckedChange={(next) => void toggle(module, next)}
             label={MODULE_COPY[module]?.label ?? module}
             description={MODULE_COPY[module]?.note}

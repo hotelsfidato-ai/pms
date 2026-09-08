@@ -532,3 +532,72 @@ describe("the type scale", () => {
     }
   });
 });
+
+/* ══════════════════════════════════════════════════════════════════
+   THE MODULE SWITCHES
+
+   ⚠ THIS GUARD EXISTS BECAUSE A SWITCH LIED FOR EIGHT DAYS.
+
+   `Admin.tsx` carried `disabled={busy === module || module ===
+   "banquet"}` alongside a note reading "Not built yet". Stage 14 then
+   built banquet — three screens, four tables and an API — and nobody
+   came back for the switch. The owner found it by trying to turn
+   banquet on and watching nothing happen.
+
+   A disabled control with stale copy is worse than a missing one: it
+   looks like an answer. So the assertion is not "banquet works", which
+   would rot the same way. It is: EVERY MODULE THE API ACCEPTS HAS A
+   SWITCH SOMEBODY CAN PRESS. Add a third module and this fails until
+   its switch is real.
+
+   `setup.ts` must stub /modules or this passes vacuously — no switches
+   render, and "none is disabled" is trivially true of none. That trap
+   is why the count is asserted first.
+   ══════════════════════════════════════════════════════════════════ */
+describe("the module switches", () => {
+  /* The API's own whitelist, in `property.ts`. If a module is added
+     there it must appear here, and then on the screen. */
+  const MODULES_THE_API_ACCEPTS = ["pos", "banquet"];
+
+  beforeEach(() => {
+    signedIn({
+      scope: {
+        staffId: "22222222-2222-2222-2222-222222222222",
+        email: "owner@fidato.in",
+        fullName: "Group Owner",
+        isGroupAdmin: true,
+        hotels: [{ hotelId: AGRA_HOTEL, role: "owner" }],
+      },
+    });
+    go("/admin/settings");
+  });
+
+  it("gives every module a switch a person can actually press", async () => {
+    render(<App />);
+    const switches = await screen.findAllByRole("switch");
+
+    /* THE COUNT FIRST, deliberately. Zero switches would satisfy every
+       assertion below and prove nothing at all. */
+    expect(
+      switches.length,
+      "no module switches rendered — the guard below would be vacuous",
+    ).toBeGreaterThanOrEqual(MODULES_THE_API_ACCEPTS.length);
+
+    for (const control of switches) {
+      expect(
+        control.hasAttribute("disabled"),
+        `a module switch is disabled: ${control.getAttribute("aria-label")
+          ?? control.textContent ?? "unnamed"}`,
+      ).toBe(false);
+    }
+  });
+
+  it("names banquet as built, not as missing", async () => {
+    render(<App />);
+    await screen.findAllByRole("switch");
+    /* The copy that went stale. Asserted because the switch and the
+       sentence beside it drifted apart, and only one of them was
+       visible in a diff. */
+    expect(screen.queryByText(/not built yet/i)).toBeNull();
+  });
+});

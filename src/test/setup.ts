@@ -89,6 +89,23 @@ vi.mock("@/lib/api", () => ({
       };
     }
 
+    /* ⚠ WITHOUT THIS BRANCH THE MODULES TEST PASSES VACUOUSLY.
+       `getModules` catches its own failure and returns {}, so the
+       settings screen renders ZERO switches — and "no switch is
+       disabled" is trivially true of no switches. The guard for the
+       banquet defect would have proved nothing.
+
+       Both modules ON, because that is the state a real property is in
+       and the assertion is about the CONTROL, not the value. */
+    if (path === `/api/hotels/${PROPERTY_CODE}/modules`) {
+      return {
+        modules: [
+          { module: "pos", enabled: true },
+          { module: "banquet", enabled: true },
+        ],
+      };
+    }
+
     if (path === `/api/hotels/${PROPERTY_CODE}`) {
       return {
         id: PROPERTY_CODE,
