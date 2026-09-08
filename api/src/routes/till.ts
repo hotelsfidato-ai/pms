@@ -2748,8 +2748,29 @@ async function fireKot(
    figures.
    ══════════════════════════════════════════════════════════════════ */
 class LineRefused extends Error {
-  constructor(public readonly reason: string, public readonly at: number) {
+  /* ⚠ WRITTEN OUT LONGHAND, NOT AS PARAMETER PROPERTIES.
+     `constructor(public readonly reason: string, ...)` is valid
+     TypeScript, passes `tsc`, and runs fine under vitest and tsx — and
+     it KILLED THE PRODUCTION API on deploy:
+
+       SyntaxError [ERR_UNSUPPORTED_TYPESCRIPT_SYNTAX]
+       TypeScript parameter property is not supported in strip-only mode
+
+     The server runs `node --experimental-strip-types`, which ERASES
+     types and emits nothing. A parameter property needs an emitted
+     `this.reason = reason`, so it is the one piece of TypeScript that
+     cannot survive there. Nothing in the local gates runs the API that
+     way, which is why three clean builds and 272 tests said nothing.
+
+     `npm run strip-check` now parses every file the way the server
+     does. Run it before you deploy. */
+  readonly reason: string;
+  readonly at: number;
+
+  constructor(reason: string, at: number) {
     super(reason);
+    this.reason = reason;
+    this.at = at;
   }
 }
 

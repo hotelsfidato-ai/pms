@@ -50,8 +50,13 @@ Everything about tenant isolation comes down to one function in `src/db.ts`.
 
 ```ts
 await client.query("select set_config('app.user_id', $1, true)", [staffId]);
-//                                                       ↑
-//                                                   is_local
+// 
+
+thisnaithan
+↑
+//            
+
+is_local
 ```
 
 `true` scopes the setting to **this transaction**. When the client returns to the
@@ -153,3 +158,6 @@ scope.hotels  the ones they may WORK IN, with their role in each
 ```
 
 Confirm the read grant is intended rather than discovering it later.
+
+
+ok this ahitskal o kjt asjime diwmeap[ntnas ADioaiodj P]

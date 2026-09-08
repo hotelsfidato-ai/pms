@@ -4746,3 +4746,70 @@ the second one is nullable, because a drink is not a course at all.
 Worth remembering the shape rather than the instance: **a column that
 happens to sort correctly today is not the same as a column that means
 what you need.**
+
+---
+
+### 209 · A parameter property took the production API down
+
+The deploy pulled cleanly, migrated, passed nginx — and then:
+
+```
+file:///opt/fidato/api/src/routes/till.ts:2751
+class LineRefused extends Error {
+  constructor(public readonly reason: string, public readonly at: number) {
+SyntaxError [ERR_UNSUPPORTED_TYPESCRIPT_SYNTAX]
+TypeScript parameter property is not supported in strip-only mode
+```
+
+systemd restart-looped. **The live API was down.**
+
+The server runs `node --experimental-strip-types`, which ERASES types and
+emits nothing. A parameter property needs an emitted `this.reason =
+reason`, so it is the one piece of TypeScript that cannot survive there.
+So can an `enum` and a `namespace`.
+
+⚠ **EVERY LOCAL GATE PASSED, AND STRUCTURALLY HAD TO.** `tsc --noEmit`
+accepts it — it is valid TypeScript. Vitest and tsx transpile properly
+and accept it. **Nothing in this repository ran the API the way the
+server runs it.** Three clean builds and 272 passing tests said nothing.
+
+Ninth deploy-only fault of this shape: *the machine the code was written
+on is not the machine it runs on.*
+
+**Fixed** by writing the fields longhand, and by two gates:
+
+```
+npm run strip-check      api/scripts/strip-check.mjs — parses every file
+                         with the loader's own transform
+deploy/launch.sh         runs it BEFORE the restart, and refuses
+```
+
+The second matters more than the first. A laptop gate is one somebody
+forgets; the deploy gate is on the one machine whose answer counts, and
+it now stops *before* touching the running service rather than after.
+
+---
+
+### 210 · The gate for 209 passed the bug it was written for
+
+First version of `strip-check` shelled out to:
+
+```sh
+node --experimental-strip-types --check <file>
+```
+
+That **passed the parameter property**. `--check` parses; it does not run
+the type-stripping transform, which happens later in the ESM loader. The
+gate proved nothing at all.
+
+Caught by putting the bug back before trusting it — the fifth such check
+today, and the second where the guard turned out to be incapable of
+failing (see 204, 207).
+
+The working version calls **`stripTypeScriptTypes` from `node:module`**,
+which is the same function the loader calls at import time, so it fails
+exactly where the server fails without executing anything.
+
+**The rule, now earned three times in one day:** a new guard is not a
+guard until the bug has been put back and watched to fail. `--check` and
+"load this module" sound like the same question and are not.

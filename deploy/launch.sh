@@ -469,6 +469,29 @@ elif [ ! -d "/etc/letsencrypt/live/$DOMAIN" ]; then
 fi
 
 # -----------------------------------------------------------------------------
+say "Can the server actually load this code"
+# -----------------------------------------------------------------------------
+# ⚠ BEFORE THE RESTART, NOT AFTER. The service runs
+# `node --experimental-strip-types`, which erases types and emits nothing — so
+# a parameter property, an enum or a namespace is valid TypeScript that this
+# box cannot load. `tsc` accepts all three; every local gate passed; and on
+# 8 September one parameter property in till.ts left the API crash-looping
+# after a deploy that reported success right up to the restart.
+#
+# Checked here rather than only on a laptop because this is the one machine
+# whose answer counts, and because "it built fine locally" is exactly what was
+# true that day.
+if [ -f "$APP_DIR/api/scripts/strip-check.mjs" ]; then
+  ( cd "$APP_DIR/api" && node scripts/strip-check.mjs ) \
+    || die "The server cannot load this code. NOTHING HAS BEEN RESTARTED - the
+    API is still running whatever it was running before. Fix the file named
+    above, push, pull, and run this again."
+else
+  printf "  (no strip-check in this checkout - skipping)\n"
+fi
+
+
+# -----------------------------------------------------------------------------
 say "The service"
 # -----------------------------------------------------------------------------
 sed "s#__APP_DIR__#$APP_DIR#g" "$APP_DIR/deploy/fidato-api.service" \

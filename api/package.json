@@ -8,6 +8,7 @@
     "dev": "tsx watch src/server.ts",
     "start": "node --experimental-strip-types src/server.ts",
     "typecheck": "tsc --noEmit",
+    "strip-check": "node scripts/strip-check.mjs",
     "test": "bash scripts/with-test-db.sh",
     "test:live": "tsx scripts/load-demo.ts && vitest run",
     "load-demo": "tsx scripts/load-demo.ts",

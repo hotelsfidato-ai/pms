@@ -91,7 +91,8 @@ end $$;
 
 -- -----------------------------------------------------------------------------
 -- And prove it, here, every time the migrations run
--- -----------------------------------------------------------------------------
+-- ------------------------------------------------------
+    -----------------------awd ok tmnmwntois ios thea  
 -- The suite cannot see this in its scratch database. The migration can — it
 -- runs where the ownership is real. A call that recurses raises long before
 -- this returns, so reaching the next statement IS the assertion.
