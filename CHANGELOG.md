@@ -46,6 +46,66 @@ Write it **as you go**, not at the end from memory. Copy this shape:
 
 ---
 
+## 2026-09-08 (deploy) · Live, and four faults on the way there
+
+**Asked for:** push today's work to Firebase and the Oracle box.
+
+**Deployed**
+```
+API   api.fidatohotels.com   81 migrations · preflight 12 of 12
+app   pms.fidatohotels.com   verified in the live bundle, not assumed
+```
+The published bundle was checked for today's work rather than trusted:
+the order pad, the held state, preparation times, courses and the
+by-table pass are all present, and the development sign-in shortcut
+appears **zero** times.
+
+**Found** — 209 to 212, all in the deploy path
+- **209** **a parameter property took the live API down.**
+  `constructor(public readonly reason: string, ...)` is valid TypeScript
+  that `node --experimental-strip-types` cannot load — it erases types
+  and emits nothing. `tsc` accepted it, vitest transpiled it, three
+  clean builds said nothing. **Nothing in this repository ran the API
+  the way the server runs it.** Ninth deploy-only fault of that shape.
+- **210** the gate written for 209 **passed the bug it was written
+  for** — `node --check` parses without running the stripping
+  transform. Caught by putting the bug back. The working version calls
+  `stripTypeScriptTypes`, the loader's own function.
+- **211** **every upgrade destroyed TLS.** `launch.sh` overwrites the
+  nginx config, where certbot's 443 block lives, then skipped certbot
+  *because the certificate existed*. nginx came back on port 80 only,
+  the app calling an https API that had stopped speaking https, and
+  every step reported success. *"Leaves the certificate alone"* was true
+  and not enough: the files survived, the configuration using them did
+  not.
+- **212** **the preflight ran as the one user that could never pass** —
+  root, against a peer-authenticated socket as `fidato`. It has called a
+  healthy box `NOT READY TO SERVE` since defect 192. 12 of 12 pass when
+  run as the right account.
+
+**Shipped**
+- `api/scripts/strip-check.mjs`, wired as `npm run strip-check` **and
+  into `launch.sh` before the service restart** — so a deploy stops
+  before touching a running service rather than after it is already
+  crash-looping. The second placement matters more than the first.
+- `launch.sh` re-applies an existing certificate to the rewritten
+  config, and runs the preflight as `$DB_USER_ADMIN`.
+- `deploy/README.md` documents the pull, which needs root's write access
+  **and** the login user's deploy key, because `/opt/fidato` belongs to a
+  nologin account with neither a home nor a key.
+
+**Left open**
+- **The server has not pulled these fixes yet.** The box is correct — it
+  was repaired by hand — but its `launch.sh` is still the one that
+  breaks TLS. Pull before the next upgrade.
+- Nothing verifies the deploy from OUTSIDE the box. Every fault above
+  was found by `curl` from a laptop, and three of the four looked
+  healthy from inside.
+
+**Commits:** `6170aa6 … f2bb955`
+
+---
+
 ## 2026-09-08 (night) · Course sequence and the pass by table — Stage C5
 
 **Asked for:** course sequence, and a kitchen view by table. The last of
