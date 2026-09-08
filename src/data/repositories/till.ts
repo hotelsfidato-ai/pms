@@ -35,6 +35,17 @@ export interface MenuItem {
   offUntil: string | null;
   offReason: string | null;
 
+  /** HOW LONG IT TAKES, resolved: this dish's own time, else its
+      category's, else null.
+
+      ⚠ NULL MEANS UNTIMED, NEVER INSTANT. It renders as a dash, the
+      same rule the prices follow — "0 minutes" would sort a dish to the
+      front of a kitchen display and get it started last. */
+  prepMinutes: number | null;
+  /** Set on the dish itself. Lets a screen tell "12 minutes, chosen for
+      this dish" from "12 minutes, inherited from Main course". */
+  ownPrepMinutes: number | null;
+
   /** Oil ₹300, Butter ₹400. Empty for most of a menu. */
   variations: MenuVariation[];
   addonGroups: AddonGroup[];
@@ -65,6 +76,9 @@ export interface Addon {
 export interface MenuCategory {
   id: string;
   name: string;
+  /** The preparation time every dish in here inherits unless it sets
+      its own. Null means nobody has said. */
+  prepMinutes: number | null;
   items: MenuItem[];
 }
 
@@ -502,6 +516,32 @@ export async function addItem(
     }
     throw error;
   }
+}
+
+/* ── How long a dish takes ────────────────────────────────────────
+   `null` CLEARS, and that is a real act rather than a no-op: the dish
+   falls back to its category again. Both functions take
+   `number | null` for exactly that reason — there is no way to spell
+   "leave it alone" here, because leaving it alone is not calling
+   this. */
+
+export function setItemPrepMinutes(
+  hotelId: string, itemId: string, minutes: number | null,
+): Promise<TillResult> {
+  return write(
+    `/api/hotels/${hotelId}/till/menu/items/${itemId}/prep`, { minutes },
+  );
+}
+
+/** Returns how many dishes actually moved — a default that changes
+    nothing because every dish overrides it is worth saying out loud. */
+export function setCategoryPrepMinutes(
+  hotelId: string, categoryId: string, minutes: number | null,
+): Promise<TillResult> {
+  return write(
+    `/api/hotels/${hotelId}/till/menu/categories/${categoryId}/prep`,
+    { minutes },
+  );
 }
 
 export async function toggleItem(

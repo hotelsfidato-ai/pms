@@ -26,7 +26,26 @@ export default defineConfig(({ mode }) => {
   const single = mode === 'artifact'
   const demo = mode === 'preview' || mode === 'artifact'
 
+  /* ⚠ WHAT THROWS AWAY THE PERSISTED READ CACHE ON A NEW BUILD.
+     `src/lib/persist.ts` keeps query results in IndexedDB for a week
+     with `staleTime: Infinity`, so a browser can hold a RESPONSE SHAPE
+     from before a deploy. That is not hypothetical: adding
+     `prepMinutes` to the menu rendered the literal string
+     "undefined min" on a screen, because the cached menu predated the
+     field.
+     A week is the right life for the DATA and the wrong life for the
+     SHAPE. This changes per build, so a deploy discards the cache and
+     the first load refetches — which a deploy requires anyway.
+     Fixed in dev, or every restart would throw away the offline cache
+     while somebody is testing offline. */
+  const cacheBuster = mode === 'development'
+    ? 'dev'
+    : `build-${Date.now()}`
+
   return {
+  define: {
+    __CACHE_BUSTER__: JSON.stringify(cacheBuster),
+  },
   plugins: [
     react(),
     tailwindcss(),

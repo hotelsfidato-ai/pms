@@ -19,5 +19,29 @@
     "skipLibCheck": true,
     "noEmit": true
   },
-  "include": ["src", "test"]
+  "include": ["src", "test"],
+
+  /* ⚠ TWO TEST FILES IMPORT FROM THE FRONTEND, and are excluded here.
+     `padTotal.test.ts` prices lines with `unitPriceOf` and
+     `roomChargeOffline.test.ts` tiers writes with `ruleFor` — the very
+     functions the browser calls. A test that reimplements the rule it
+     checks proves only that the copy agrees with itself, so the import
+     is the point of those files.
+
+     They cannot be typechecked from here: pointing `paths` at `../src`
+     makes tsc follow the imports and typecheck the WHOLE frontend under
+     this file's settings, which has neither vite's `import.meta.env`
+     types nor the frontend's own options. Two errors in unrelated files
+     came straight back.
+
+     `vitest.config.ts` carries the alias so they RUN, and running them
+     is what they are for. The cost, stated rather than hidden: a type
+     error inside those two files is caught by neither typecheck gate.
+
+     Nothing in `api/src` may import from the frontend — the server is
+     deployed without it. */
+  "exclude": [
+    "test/padTotal.test.ts",
+    "test/roomChargeOffline.test.ts"
+  ]
 }

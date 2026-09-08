@@ -93,6 +93,9 @@ till.get("/:code/till/menu", async (c) => {
       short_code: string | null; is_veg: boolean | null;
       is_favourite: boolean | null; off_until: string | null;
       off_reason: string | null;
+      prep_minutes: number | null;
+      own_prep_minutes: number | null;
+      category_prep_minutes: number | null;
     }>(
       /* Left join, so a category with nothing in it still appears.
          A kitchen that has created "Desserts" and not filled it needs
@@ -101,7 +104,15 @@ till.get("/:code/till/menu", async (c) => {
               i.id::text, i.name, i.price::text, i.tax_rate::text,
               i.is_active, coalesce(i.sort_order, 0) as sort_order,
               i.short_code, i.is_veg, i.is_favourite,
-              i.off_until::text, i.off_reason
+              i.off_until::text, i.off_reason,
+              /* THE RESOLVED TIME, from the one place the fallback is
+                 written. Its parts come too, because the screen that
+                 sets these has to show whether a number is this dish's
+                 own or its category's — otherwise clearing a dish's
+                 time looks like it did nothing. */
+              app.prep_minutes(i.id) as prep_minutes,
+              i.prep_minutes         as own_prep_minutes,
+              c.prep_minutes         as category_prep_minutes
          from pos_menu_categories c
          left join pos_menu_items i on i.category_id = c.id
         where c.hotel_id = $1 and c.is_active
@@ -111,11 +122,20 @@ till.get("/:code/till/menu", async (c) => {
 
     const byCategory = new Map<string, {
       id: string; name: string;
+      /** The default for everything in it. Null means nobody has said. */
+      prepMinutes: number | null;
       items: {
         id: string; name: string; price: number; taxRate: number;
         isActive: boolean; shortCode: string | null;
         isVeg: boolean | null; isFavourite: boolean;
         offUntil: string | null; offReason: string | null;
+        /** Resolved: this dish's own time, else its category's, else
+            NULL — which means untimed, and must show as a dash. Zero
+            would tell a kitchen the dish is instant. */
+        prepMinutes: number | null;
+        /** Set on the dish itself, so a screen can tell "3 minutes,
+            chosen here" from "3 minutes, inherited". */
+        ownPrepMinutes: number | null;
         variations: { id: string; label: string; price: number }[];
         addonGroups: {
           id: string; label: string; minSelect: number; maxSelect: number | null;
@@ -127,7 +147,10 @@ till.get("/:code/till/menu", async (c) => {
     for (const r of rows) {
       let cat = byCategory.get(r.category_id);
       if (!cat) {
-        cat = { id: r.category_id, name: r.category, items: [] };
+        cat = {
+          id: r.category_id, name: r.category,
+          prepMinutes: r.category_prep_minutes, items: [],
+        };
         byCategory.set(r.category_id, cat);
       }
       if (r.id && r.name) {
@@ -144,6 +167,8 @@ till.get("/:code/till/menu", async (c) => {
           isFavourite: r.is_favourite ?? false,
           offUntil: r.off_until,
           offReason: r.off_reason,
+          prepMinutes: r.prep_minutes,
+          ownPrepMinutes: r.own_prep_minutes,
           variations: [],
           addonGroups: [],
         });
@@ -511,6 +536,130 @@ till.post("/:code/till/menu/import", async (c) => {
 
   if (!result) return c.json({ error: "No such property." }, 404);
   return c.json(result, "ok" in result && result.ok ? 200 : 409);
+});
+
+/* ══════════════════════════════════════════════════════════════════
+   HOW LONG A DISH TAKES
+
+   Two addresses, because the fallback has two ends: a category default
+   for the two hundred dishes nobody will time one at a time, and a dish
+   that differs from its category.
+
+   ⚠ NULL CLEARS, AND THAT IS A REAL ACT. Sending `null` means "nobody
+   has said", which is not the same as zero and not the same as leaving
+   the field alone. A dish cleared back to null falls through to its
+   category again — which is why the menu returns the resolved time AND
+   the dish's own, so a screen can show which is which.
+
+   The range is checked by the database (1..480). It is not re-checked
+   here: a second copy of that rule is a second place for it to be
+   wrong, and the constraint's refusal is already a sentence.
+   ══════════════════════════════════════════════════════════════════ */
+
+/** Minutes from a request body: a number, or null to clear. `undefined`
+    is refused rather than treated as a clear — a screen that forgot to
+    send the field would otherwise silently wipe a time somebody set. */
+function minutesOrNull(raw: unknown): number | null | "bad" {
+  if (raw === null) return null;
+  if (typeof raw === "number" && Number.isInteger(raw)) return raw;
+  return "bad";
+}
+
+till.post("/:code/till/menu/items/:id/prep", async (c) => {
+  const input = await c.req.json<{ minutes?: unknown }>()
+    .catch(() => ({} as { minutes?: unknown }));
+  const minutes = minutesOrNull(input.minutes);
+  if (minutes === "bad") {
+    return c.json(refuse(
+      "How many minutes? Send a whole number, or null to clear it and "
+      + "fall back to the category.",
+    ), 409);
+  }
+
+  const result = await withSession(c.get("subject"), async (client) => {
+    const hotelId = await hotelFor(client, c.req.param("code"));
+    if (!hotelId) return null;
+
+    const { rows } = await client.query<{ name: string }>(
+      `update pos_menu_items set prep_minutes = $3, updated_at = now()
+        where id = $1 and hotel_id = $2
+        returning name`,
+      [c.req.param("id"), hotelId, minutes],
+    );
+    if (!rows[0]) return { ok: false as const, reason: "No such dish." };
+
+    /* ⚠ A SECOND STATEMENT, AND IT HAS TO BE.
+       `returning app.prep_minutes(id)` looks tidier and is wrong: the
+       function runs its own SELECT against the table, which inside the
+       same UPDATE still sees the PRE-UPDATE row. Clearing a dish's time
+       reported the old number straight back, so the screen showed
+       "3 min" the instant after somebody cleared it.
+
+       Not solved by rebuilding the fallback in a CTE either — that
+       would be a second copy of the rule, which is the thing
+       `app.prep_minutes` exists to prevent. Same transaction, so this
+       reads exactly what was just written. */
+    const { rows: now } = await client.query<{ effective: number | null }>(
+      "select app.prep_minutes($1) as effective", [c.req.param("id")],
+    );
+
+    return {
+      ok: true as const,
+      name: rows[0].name,
+      /* What the kitchen will now see, which after a clear may be the
+         category's number rather than nothing. */
+      prepMinutes: now[0]?.effective ?? null,
+      ownPrepMinutes: minutes,
+    };
+  });
+
+  if (!result) return c.json({ error: "No such property." }, 404);
+  return c.json(result, result.ok ? 200 : 409);
+});
+
+till.post("/:code/till/menu/categories/:id/prep", async (c) => {
+  const input = await c.req.json<{ minutes?: unknown }>()
+    .catch(() => ({} as { minutes?: unknown }));
+  const minutes = minutesOrNull(input.minutes);
+  if (minutes === "bad") {
+    return c.json(refuse(
+      "How many minutes? Send a whole number, or null to clear the "
+      + "default for this category.",
+    ), 409);
+  }
+
+  const result = await withSession(c.get("subject"), async (client) => {
+    const hotelId = await hotelFor(client, c.req.param("code"));
+    if (!hotelId) return null;
+
+    const { rows } = await client.query<{ name: string }>(
+      `update pos_menu_categories set prep_minutes = $3, updated_at = now()
+        where id = $1 and hotel_id = $2
+        returning name`,
+      [c.req.param("id"), hotelId, minutes],
+    );
+    if (!rows[0]) return { ok: false as const, reason: "No such category." };
+
+    /* HOW MANY DISHES THIS ACTUALLY MOVED. A default that changes
+       nothing because every dish overrides it is worth saying out
+       loud — otherwise somebody sets it, sees no effect anywhere, and
+       concludes the feature is broken. */
+    const { rows: moved } = await client.query<{ n: string }>(
+      `select count(*)::text as n from pos_menu_items
+        where category_id = $1 and hotel_id = $2 and prep_minutes is null`,
+      [c.req.param("id"), hotelId],
+    );
+
+    return {
+      ok: true as const,
+      name: rows[0].name,
+      prepMinutes: minutes,
+      dishesAffected: Number(moved[0]!.n),
+    };
+  });
+
+  if (!result) return c.json({ error: "No such property." }, 404);
+  return c.json(result, result.ok ? 200 : 409);
 });
 
 till.post("/:code/till/menu/items/:id/toggle", async (c) => {

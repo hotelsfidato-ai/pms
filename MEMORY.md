@@ -4479,3 +4479,103 @@ there, or the folio is closed"* — and the outbox KEEPS a refusal and
 shows it to a person rather than dropping it. The money is not lost
 silently; it is lost loudly, and somebody must chase it. That is the
 trade for a till that works on a bad line.
+
+---
+
+### 201 · A persisted cache outlived the shape of the thing it cached
+
+The menu screen rendered, on the very first open:
+
+```
+undefined min
+```
+
+`prepMinutes` was added to the menu payload this afternoon. The browser
+was holding a menu response from BEFORE it existed — because `till-menu`
+was added to the persisted set this morning, and that cache is kept for
+**seven days** with `staleTime: Infinity`.
+
+**A week is the right life for the DATA and the wrong life for its
+SHAPE.** Nothing in the persister knew the code had moved on.
+
+Two fixes, both needed:
+
+1. `__CACHE_BUSTER__`, injected per build by `vite.config.ts` and passed
+   to `PersistQueryClientProvider` as `buster`. A new build discards the
+   persisted cache; the first load refetches, which a deploy requires
+   anyway. Fixed to `'dev'` in development, or every restart would throw
+   away the offline cache while somebody is testing offline.
+2. **The screen renders defensively anyway.** `minutes == null` rather
+   than `=== null`, because a missing field and an unset value mean the
+   same thing to a reader: nobody has timed it. The strict check let
+   `undefined` fall through to the number branch, which is how the
+   literal string got printed.
+
+⚠ **`vitest.config.ts` DOES NOT INHERIT FROM `vite.config.ts`.** Adding
+the define to one killed eighteen tests with *"__CACHE_BUSTER__ is not
+defined"*. Every global injected there must be repeated in the test
+config, with a fixed value — a test run must not depend on when it ran.
+
+**This applies to every persisted key, not just the menu.** Anybody
+adding a field to `arrivals`, `floor`, `tape-chart` or the rest was one
+deploy away from the same bug, and the buster is what closes it.
+
+---
+
+### 202 · A function in RETURNING reads the row as it was, not as it is
+
+The endpoint that sets a dish's preparation time reported the OLD number
+back the instant somebody cleared it:
+
+```sql
+update pos_menu_items set prep_minutes = $3
+ where id = $1
+ returning name, app.prep_minutes(id) as effective   -- ⚠ stale
+```
+
+`app.prep_minutes` runs its own SELECT against `pos_menu_items`, and
+inside the same UPDATE that SELECT still sees the **pre-update** row. So
+clearing a dish from 3 minutes back to its category's 15 replied "3",
+and the screen would have shown 3 until something refetched.
+
+Caught by `api/test/prepTimes.test.ts` — *"expected 3 to be 15"*.
+
+**The tidy-looking fix is the wrong one.** Rebuilding the fallback in a
+CTE (`coalesce(upd.prep_minutes, c.prep_minutes)`) returns the right
+number and puts a second copy of the rule in the codebase, which is the
+exact thing `app.prep_minutes` exists to prevent. The answer is a second
+statement in the same transaction: update, then ask.
+
+**The general rule:** `RETURNING` may reference the new column values,
+but a FUNCTION called there that re-queries the same table does not see
+them.
+
+---
+
+### 203 · The API typecheck gate was red and I did not notice
+
+`cd api && npx tsc --noEmit` reported two errors for most of an
+afternoon:
+
+```
+test/padTotal.test.ts(4,29):        Cannot find module '@/lib/pricing'
+test/roomChargeOffline.test.ts(4,25): Cannot find module '@/lib/offline'
+```
+
+Both are mine. I gave `vitest.config.ts` an alias so those tests could
+import the frontend's real functions, and never gave `tsconfig.json` the
+same knowledge — because I was running `npx tsc -b` at the ROOT, which
+does not typecheck `api/`.
+
+**The obvious repair made it worse.** Adding `paths: {"@/*": ["../src/*"]}`
+made tsc follow the imports and typecheck the ENTIRE frontend under the
+API's settings, which has neither vite's `import.meta.env` types nor the
+frontend's options — two fresh errors in unrelated files.
+
+Those two files are now `exclude`d from the API's typecheck, with the
+cost written where it is read: **a type error inside them is caught by
+neither typecheck gate.** They are still run, and running them is what
+they are for.
+
+**The lesson is 196's again.** The gate order is written down for a
+reason, and "the gate I happened to run" is not the gate.

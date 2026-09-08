@@ -15,3 +15,10 @@ interface ImportMetaEnv {
 interface ImportMeta {
   readonly env: ImportMetaEnv;
 }
+
+/** Changes with every production build, so `PersistQueryClientProvider`
+    discards a persisted cache whose response SHAPE predates the code
+    now reading it. Injected by `vite.config.ts`; "dev" in development,
+    where a per-restart value would throw away the offline cache while
+    somebody is testing offline. */
+declare const __CACHE_BUSTER__: string;

@@ -11,7 +11,7 @@ import {
 } from "@/components/ui";
 import {
   getMenu, addCategory, addItem, toggleItem, takeItemOff, putItemBack,
-  importMenu,
+  importMenu, setItemPrepMinutes, setCategoryPrepMinutes,
   type OffFor,
   type MenuCategory, type MenuItem,
 } from "@/data/repositories";
@@ -327,10 +327,26 @@ function CategoryCard({ category, hotelId, onChanged }: {
 
   return (
     <Card>
-      <div className="px-4 pt-3.5 pb-1">
-        <p className="text-2xs uppercase tracking-wide text-grey-500">
+      <div className="flex items-center gap-3 px-4 pt-3.5 pb-1">
+        <p className="text-2xs uppercase tracking-wide text-grey-500 flex-1">
           {category.name}
         </p>
+        {/* The default every dish in here inherits. Set once for two
+            hundred dishes rather than timed one at a time — which is
+            the whole reason the fallback exists. */}
+        <PrepControl
+          minutes={category.prepMinutes}
+          own={category.prepMinutes}
+          label={`Default preparation time for ${category.name}`}
+          onSet={async (m) => {
+            const res = await setCategoryPrepMinutes(hotelId, category.id, m);
+            if (!res.ok) {
+              toast.error("Not changed", res.reason ?? "Refused.");
+              return;
+            }
+            onChanged();
+          }}
+        />
       </div>
 
       <ul className="divide-y divide-grey-100">
@@ -353,6 +369,19 @@ function CategoryCard({ category, hotelId, onChanged }: {
             <span className="tabular text-base text-ink-900 shrink-0 w-20 text-right">
               {moneyPrecise(item.price)}
             </span>
+            <PrepControl
+              minutes={item.prepMinutes}
+              own={item.ownPrepMinutes}
+              label={`Preparation time for ${item.name}`}
+              onSet={async (m) => {
+                const res = await setItemPrepMinutes(hotelId, item.id, m);
+                if (!res.ok) {
+                  toast.error("Not changed", res.reason ?? "Refused.");
+                  return;
+                }
+                onChanged();
+              }}
+            />
             {/* TWO DIFFERENT ACTS, and the words are different because
                 the decisions are.
 
@@ -419,5 +448,110 @@ function CategoryCard({ category, hotelId, onChanged }: {
         </div>
       </CardBody>
     </Card>
+  );
+}
+
+
+/* ══════════════════════════════════════════════════════════════════
+   HOW LONG IT TAKES
+
+   ⚠ AN UNTIMED DISH SHOWS A DASH, NEVER A ZERO. Same rule the prices
+   follow, and for a sharper reason: "0 min" tells a kitchen display the
+   dish is instant, so it sorts to the front of the pass and a chef
+   starts it last. A dash says nobody has timed it, which is true.
+
+   INHERITED TIMES ARE SHOWN DIFFERENTLY from chosen ones. A dish
+   reading "12" because its category says so, and one reading "12"
+   because somebody typed it there, behave differently the next time the
+   category changes — so they must not look identical. Clearing a dish
+   back to inherited is the point of the empty field, and without the
+   distinction it looks like the clear did nothing.
+   ══════════════════════════════════════════════════════════════════ */
+function PrepControl({ minutes, own, label, onSet }: {
+  /** The resolved time — the dish's own, else its category's. */
+  minutes: number | null;
+  /** Set on this row itself. Equal to `minutes` when chosen here. */
+  own: number | null;
+  label: string;
+  onSet: (minutes: number | null) => Promise<void>;
+}) {
+  const [editing, setEditing] = useState(false);
+  const [draft, setDraft] = useState("");
+  const [busy, setBusy] = useState(false);
+
+  /* ⚠ `== null` CATCHES UNDEFINED TOO, and that is not pedantry. The
+     menu is persisted for a week, so a browser can hold a response from
+     BEFORE this field existed — and `minutes === null` is false for
+     undefined, which rendered the literal string "undefined min" on the
+     first open of this screen. A missing field and an unset value mean
+     the same thing to a reader: nobody has timed it. */
+  const unset = minutes == null;
+  const inherited = own == null && !unset;
+
+  const commit = async () => {
+    const text = draft.trim();
+    /* An empty field CLEARS, which is a real act: the row falls back to
+       its category. It is not "leave it alone" — leaving it alone is
+       pressing Escape. */
+    const next = text === "" ? null : Number(text);
+    if (next !== null && (!Number.isInteger(next) || next < 1 || next > 480)) {
+      toast.error(
+        "That is not a preparation time",
+        "A whole number of minutes, from 1 to 480. Leave it empty to "
+        + "clear it and use the category default.",
+      );
+      return;
+    }
+    setBusy(true);
+    await onSet(next);
+    setBusy(false);
+    setEditing(false);
+  };
+
+  if (editing) {
+    return (
+      <input
+        autoFocus
+        value={draft}
+        disabled={busy}
+        inputMode="numeric"
+        aria-label={label}
+        onChange={(e) => setDraft(e.target.value)}
+        onBlur={() => void commit()}
+        onKeyDown={(e) => {
+          if (e.key === "Enter") void commit();
+          if (e.key === "Escape") setEditing(false);
+        }}
+        placeholder="min"
+        className="w-16 h-11 px-2 rounded-md border border-brand-orange text-base tabular shrink-0"
+      />
+    );
+  }
+
+  return (
+    <button
+      type="button"
+      aria-label={label}
+      onClick={() => {
+        setDraft(own == null ? "" : String(own));
+        setEditing(true);
+      }}
+      className={cn(
+        "w-16 h-11 rounded-md border text-base tabular shrink-0",
+        "cursor-pointer transition-colors duration-200",
+        "border-grey-300 hover:border-brand-orange hover:bg-brand-orange-50",
+        unset ? "text-grey-400" : "text-ink-900",
+      )}
+      title={
+        unset
+          ? "Nobody has timed this"
+          : inherited
+            ? `${minutes} min, from the category`
+            : `${minutes} min, set here`
+      }
+    >
+      {/* The dash IS the answer, not a placeholder. */}
+      {unset ? "—" : `${minutes}${inherited ? "*" : ""} min`}
+    </button>
   );
 }

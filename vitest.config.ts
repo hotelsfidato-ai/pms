@@ -9,6 +9,16 @@ export default defineConfig({
       '@': path.resolve(__dirname, './src'),
     },
   },
+  /* ⚠ THIS FILE DOES NOT INHERIT FROM `vite.config.ts`, so every global
+     that config injects has to be repeated here. `__CACHE_BUSTER__`
+     was added there and eighteen tests died with "__CACHE_BUSTER__ is
+     not defined" — App.tsx reads it to decide whether a persisted cache
+     outlived the code that wrote it.
+
+     A fixed value: a test run must not depend on when it ran. */
+  define: {
+    __CACHE_BUSTER__: JSON.stringify('test'),
+  },
   test: {
     /* docs/restore holds staged copies of working files, not tests.
        api/ is a separate package with its own runner — its tests need

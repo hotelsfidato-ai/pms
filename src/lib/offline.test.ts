@@ -180,3 +180,27 @@ describe("settling a bill offline", () => {
       .toBe("refuse");
   });
 });
+
+describe("preparation times", () => {
+  /* Queued rather than refused, and that was a decision: no scarce
+     resource, no money, and two managers disagreeing is last-writer-wins
+     — which is genuinely right here. The assertion exists so that
+     decision cannot be undone by somebody reordering the table. */
+  it("queues a dish's time and a category default", () => {
+    for (const path of [
+      `${P}/till/menu/items/abc/prep`,
+      `${P}/till/menu/categories/abc/prep`,
+    ]) {
+      const r = ruleFor(path, "POST");
+      expect(r.tier, path).toBe("queue");
+      expect(r.label).toBe("Preparation time");
+    }
+  });
+
+  it("does not let that rule reach the menu import", () => {
+    /* `/till/menu/import` replaces a whole menu and must not queue —
+       two imports held offline would fight, and the loser's prices
+       would be silently gone. */
+    expect(ruleFor(`${P}/till/menu/import`, "POST").tier).toBe("refuse");
+  });
+});

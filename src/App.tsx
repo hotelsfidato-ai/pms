@@ -242,6 +242,13 @@ export default function App() {
       persistOptions={{
         persister: queryPersister,
         maxAge: 7 * 24 * 60 * 60 * 1000,
+        /* ⚠ THROWN AWAY WHEN THE BUILD CHANGES. A week is the right
+           life for the DATA and the wrong life for its SHAPE: a browser
+           holding a menu from before `prepMinutes` existed rendered
+           "undefined min" on the menu screen, because a persisted
+           response outlived the code that produced it.
+           Set per build in `vite.config.ts`, fixed in development. */
+        buster: __CACHE_BUSTER__,
         /* WHAT IS WRITTEN TO DISK, and this list is a privacy decision
            as much as a technical one. A shared front-desk machine keeps
            this cache after the clerk walks away, so only what a screen

@@ -46,6 +46,78 @@ Write it **as you go**, not at the end from memory. Copy this shape:
 
 ---
 
+## 2026-09-08 (late) · Preparation times — Stage C2
+
+**Asked for:** preparation times. The column three stages have been
+waiting on.
+
+**Shipped**
+- **`079_prep_times.sql`** — `prep_minutes` on the dish and on its
+  category, nullable with no default, checked 1..480. `app.prep_minutes`
+  resolves dish → category → null, and is the only place that fallback
+  is written. `app.pos_order_prep_minutes` gives the longest dish on a
+  round — what the table actually waits — and **returns null if ANY live
+  dish is untimed**, because "the longest of the ones we happen to know"
+  reads as a promise and is not one.
+- **Null is not zero, and that is the whole feature.** "0 min" sorts a
+  dish to the front of a kitchen display and gets it started last.
+  Untimed shows a dash, the same rule the prices follow.
+- `POST /till/menu/items/:id/prep` and `/categories/:id/prep`. Null
+  clears and falls back; a MISSING field is refused, because a screen
+  that forgot to send it would otherwise wipe a time somebody set. The
+  category reply says **how many dishes it actually moved**.
+- The menu payload carries the resolved time and the dish's own, so a
+  screen can tell "12, chosen here" from "12, inherited" — without it,
+  clearing a dish looks like it did nothing.
+- `PrepControl` on the menu screen: tap to set, empty to clear, `*` for
+  inherited.
+- Queued offline, deliberately — no scarce resource, no money, and two
+  managers disagreeing is last-writer-wins.
+
+**Found** — 201, 202, 203, all mine
+- **201** the menu screen printed **"undefined min"** on its first open.
+  The browser held a menu response from before the field existed, because
+  `till-menu` was persisted for seven days this morning. **A week is the
+  right life for the data and the wrong life for its shape.** Fixed with
+  a per-build `__CACHE_BUSTER__`, and the control now renders `== null`
+  so a missing field reads as untimed. Adding the define to
+  `vite.config.ts` alone killed 18 tests — **`vitest.config.ts` does not
+  inherit from it.**
+- **202** `returning app.prep_minutes(id)` reads the row as it was, not
+  as it is. Clearing a dish reported the old number back. Caught by
+  *"expected 3 to be 15"*. Fixed with a second statement rather than a
+  CTE, which would have been a second copy of the fallback.
+- **203** **the API typecheck gate had been red all afternoon** — my two
+  cross-boundary test files. I had been running `tsc -b` at the root,
+  which does not check `api/`. 196's lesson again.
+
+**Proved**
+```
+db/tests/run.sh    492 assertions (9 new)   api npm test  266 · 21 files
+db/tests/rerun.sh  79 of 79 re-runnable     vitest        170
+tsc -b  0    api tsc --noEmit  0            build:all     3 clean
+```
+Guard proved in the dangerous direction: `pos_order_prep_minutes`
+rewritten as a naive `max()` — which silently ignores nulls — gives
+*"one untimed dish makes the whole round NULL | 25"*. It would have
+promised a table 25 minutes on a round it could not estimate.
+
+Opened in a browser: the menu screen shows **&mdash;** on every untimed
+dish and on the category, against a server that omits the field
+entirely.
+
+**Left open**
+- **The local API server needs restarting to see this.** It is an
+  unmanaged process on 8787 that this session did not start and does not
+  reload; it still serves the menu without `prepMinutes`. Restart it and
+  the times appear.
+- C3 (timing capture) and C5 (course sequence, kitchen by table) are now
+  unblocked.
+
+**Commits:** `88c02cc …`
+
+---
+
 ## 2026-09-08 (evening) · A room charge with the line down
 
 **Asked for:** room charging must work even when the net goes — stored,

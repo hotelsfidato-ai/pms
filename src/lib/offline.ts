@@ -150,6 +150,12 @@ const RULES: Rule[] = [
   { test: /\/guests\/[^/]+\/vip$/, tier: "queue", label: "VIP" },
   { test: /\/till\/orders(\/|$)/, tier: "queue", label: "Order" },
   { test: /\/till\/menu\/items\/[^/]+\/(on|off|toggle)$/, tier: "queue", label: "Menu availability" },
+  /* HOW LONG A DISH TAKES. No scarce resource and no money: two managers
+     setting different times is last-writer-wins, which is genuinely the
+     right answer. Named here rather than left to fall through to the
+     refusal, because "nobody has thought about it" and "we thought about
+     it and it queues" must not look the same in this table. */
+  { test: /\/till\/menu\/(items|categories)\/[^/]+\/prep$/, tier: "queue", label: "Preparation time" },
   { test: /\/kitchen(\/|$)/, tier: "queue", label: "Kitchen" },
   { test: /\/banquet\/events$/, methods: ["POST"], tier: "queue", label: "Function enquiry" },
 ];

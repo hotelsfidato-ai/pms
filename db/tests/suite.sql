@@ -720,6 +720,119 @@ end $$;
 
 
 -- =============================================================================
+-- PREPARATION TIMES (079) — and the difference between none and zero
+-- =============================================================================
+-- Timing capture, course sequencing and a kitchen view by table all wait on
+-- this one fact. The assertions that matter are the NULL ones: a dish nobody
+-- has timed must read as untimed, never as instant, because "0 minutes" sorts
+-- to the front of a pass and a chef starts it last.
+-- =============================================================================
+do $$
+declare
+  a uuid; v_staff uuid; v_outlet uuid; v_cat uuid;
+  v_quick uuid; v_slow uuid; v_untimed uuid;
+  v_order uuid; bd date; n int;
+begin
+  select id into a from hotels where code = 'AGR';
+  select id into v_staff from staff where is_group_admin limit 1;
+  bd := app.business_date(a);
+
+  insert into pos_outlets (hotel_id, code, name, category, staff_id)
+  values (a, 'PREP', 'Prep Test Outlet', 'food', v_staff)
+  returning id into v_outlet;
+
+  insert into pos_menu_categories (hotel_id, name)
+  values (a, 'Prep Test Category') returning id into v_cat;
+
+  insert into pos_menu_items (hotel_id, category_id, name, price, tax_rate)
+  values (a, v_cat, 'Prep Quick',   100.00, 5.00) returning id into v_quick;
+  insert into pos_menu_items (hotel_id, category_id, name, price, tax_rate)
+  values (a, v_cat, 'Prep Slow',    100.00, 5.00) returning id into v_slow;
+  insert into pos_menu_items (hotel_id, category_id, name, price, tax_rate)
+  values (a, v_cat, 'Prep Untimed', 100.00, 5.00) returning id into v_untimed;
+
+  -- ---------- nobody has said, so nothing is claimed ----------
+  perform test.ok('prep times','an untimed dish resolves to NULL, not zero',
+    app.prep_minutes(v_quick) is null,
+    coalesce(app.prep_minutes(v_quick)::text, 'null'));
+
+  -- ---------- the category default reaches its dishes ----------
+  update pos_menu_categories set prep_minutes = 12 where id = v_cat;
+
+  perform test.ok('prep times','a category default reaches a dish that has none',
+    app.prep_minutes(v_quick) = 12,
+    coalesce(app.prep_minutes(v_quick)::text, 'null'));
+
+  -- ---------- and the dish overrides it ----------
+  update pos_menu_items set prep_minutes = 3  where id = v_quick;
+  update pos_menu_items set prep_minutes = 25 where id = v_slow;
+
+  perform test.ok('prep times','a dish overrides its category',
+    app.prep_minutes(v_quick) = 3,
+    coalesce(app.prep_minutes(v_quick)::text, 'null'));
+
+  -- ---------- zero is a claim, and is refused ----------
+  perform test.raises('prep times','zero minutes is refused, not stored',
+    format($q$update pos_menu_items set prep_minutes = 0 where id = %L$q$,
+           v_quick), '23514');
+
+  perform test.raises('prep times','a typo past eight hours is refused',
+    format($q$update pos_menu_items set prep_minutes = 481 where id = %L$q$,
+           v_quick), '23514');
+
+  -- ---------- a round waits for its SLOWEST dish, not the sum ----------
+  insert into pos_orders (hotel_id, outlet_id, order_no, business_date, opened_by)
+  values (a, v_outlet, app.pos_next_order_no(a, bd), bd, v_staff)
+  returning id into v_order;
+
+  insert into pos_order_lines
+    (order_id, hotel_id, item_id, name, qty, unit_price, tax_rate, added_by)
+  values (v_order, a, v_quick, 'Prep Quick', 1, 100.00, 5.00, v_staff),
+         (v_order, a, v_slow,  'Prep Slow',  1, 100.00, 5.00, v_staff);
+
+  -- 3 and 25 together is 25 of waiting, not 28. A kitchen with more than one
+  -- chef starts a round together.
+  perform test.ok('prep times','a round waits for its slowest dish',
+    app.pos_order_prep_minutes(v_order) = 25,
+    coalesce(app.pos_order_prep_minutes(v_order)::text, 'null'));
+
+  -- ---------- one untimed dish makes the whole round unpromisable ----------
+  -- THE ASSERTION THAT MATTERS. "The longest of the ones we happen to know"
+  -- reads as an estimate and is not one; a waiter would repeat it to a table.
+  insert into pos_order_lines
+    (order_id, hotel_id, item_id, name, qty, unit_price, tax_rate, added_by)
+  values (v_order, a, v_untimed, 'Prep Untimed', 1, 100.00, 5.00, v_staff);
+  update pos_menu_categories set prep_minutes = null where id = v_cat;
+
+  perform test.ok('prep times','one untimed dish makes the whole round NULL',
+    app.pos_order_prep_minutes(v_order) is null,
+    coalesce(app.pos_order_prep_minutes(v_order)::text, 'null'));
+
+  -- ---------- and a struck dish stops counting ----------
+  update pos_order_lines set voided = true, voided_by = v_staff,
+         voided_at = now()
+   where order_id = v_order and item_id = v_untimed;
+
+  perform test.ok('prep times','a struck dish no longer holds the round back',
+    app.pos_order_prep_minutes(v_order) = 25,
+    coalesce(app.pos_order_prep_minutes(v_order)::text, 'null'));
+
+  -- ---------- teardown, and it is asserted ----------
+  alter table pos_order_lines disable trigger pos_order_lines_frozen;
+  delete from pos_order_lines where order_id = v_order;
+  delete from pos_orders where id = v_order;
+  alter table pos_order_lines enable trigger pos_order_lines_frozen;
+
+  delete from pos_menu_items where category_id = v_cat;
+  delete from pos_menu_categories where id = v_cat;
+  delete from pos_outlets where id = v_outlet;
+
+  select count(*) into n from pos_outlets where code = 'PREP';
+  perform test.ok('prep times','the test fixture does not outlive the test',
+    n = 0, n || ' left behind');
+end $$;
+
+-- =============================================================================
 -- THE PROVISIONING KEY (029) — no structural change without it
 -- =============================================================================
 -- Two guards, and they answer different questions. require_group_admin() asks
