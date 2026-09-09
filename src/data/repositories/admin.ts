@@ -83,6 +83,12 @@ export interface AdminStaff {
   name: string;
   /** Null when nobody recorded one. A dash, not an empty string. */
   phone: string | null;
+  /** ⚠ FALSE MEANS THEY CANNOT GET IN AT ALL. A staff row with no
+      Firebase account appears on every list with a role and a property
+      and reaches a sign-in page that will never accept them. Until the
+      API created accounts that was every person added through the
+      screen, and the only way to find out was to walk to a terminal. */
+  canSignIn: boolean;
   isGroupAdmin: boolean;
   isActive: boolean;
   access: { code: string; role: string }[];
@@ -157,12 +163,40 @@ export function createProperty(
 }
 
 export function createStaff(
-  input: { email: string; name: string; isGroupAdmin?: boolean },
+  input: {
+    email: string; name: string; isGroupAdmin?: boolean;
+    /** ⚠ REQUIRED BY THE SERVER, and it refuses without one. Optional
+        in this type only because the caller may be an older screen;
+        the refusal is the same sentence either way. */
+    password?: string;
+    /** A general manager adds somebody AT their property: the person is
+        created and rostered in one act, and the server refuses a hotel
+        they do not run. A group administrator may leave both out and
+        grant access separately. */
+    hotelCode?: string; role?: string;
+  },
   key?: string,
-): Promise<AdminResult<{ id: string; existed: boolean }>> {
+): Promise<AdminResult<{
+  id: string; existed: boolean; accountExisted?: boolean;
+}>> {
   /* The key is only needed to mint a GROUP ADMIN — somebody who can
      reach every property. An ordinary clerk does not take one. */
   return write("/api/admin/staff", input, key);
+}
+
+/** The shortest the server will take. Kept beside the call rather than
+    guessed at in a form: a screen that allowed six and a server that
+    demanded eight would refuse after the manager had typed it. */
+export const MIN_PASSWORD = 8;
+
+/** Sets or resets somebody's password. Yourself always; a group
+    administrator anybody; a property manager anybody rostered at a
+    hotel they run — never a group administrator, because that is how a
+    manager would become one. The server decides, and says so. */
+export function setStaffPassword(
+  staffId: string, password: string,
+): Promise<AdminResult<{ linked: boolean }>> {
+  return write(`/api/admin/staff/${staffId}/password`, { password });
 }
 
 export function grantAccess(
@@ -249,6 +283,48 @@ export async function listAdminProperties(): Promise<AdminProperty[]> {
     /* Not an error worth a screen: a clerk who cannot see this list
        sees the ordinary property cards instead. */
     return [];
+  }
+}
+
+export interface PropertyTeamMember {
+  id: string;
+  name: string;
+  email: string;
+  /** Their role AT THIS PROPERTY. Somebody who also works elsewhere
+      appears here once, with the role they hold here. */
+  role: string;
+  isActive: boolean;
+  canSignIn: boolean;
+  isGroupAdmin: boolean;
+}
+
+export interface PropertyDetail {
+  property: AdminProperty;
+  staff: PropertyTeamMember[];
+  /** What THIS caller may hand out HERE. An owner sees every role; a
+      general manager sees everything but `owner`. Sent by the server so
+      the picker offers exactly what it will accept, rather than
+      offering everything and refusing afterwards. */
+  grantableRoles: string[];
+}
+
+/** One property, for whoever runs it.
+
+    ⚠ NOT `listAdminProperties()` FILTERED. That endpoint is group-admin
+    only, because it carries the GSTIN and contact details of every
+    property in the group — which migration 031 exists to stop leaking
+    to a clerk at one hotel. A general manager needs the same detail for
+    THEIR hotel and must not get it for anybody else's, so the scope is
+    the hotel rather than the caller's rank. */
+export async function getPropertyDetail(
+  code: string,
+): Promise<PropertyDetail | null> {
+  try {
+    return await api<PropertyDetail>(`/api/admin/hotels/${code}`);
+  } catch {
+    /* Not an error worth a screen: somebody who does not run this
+       property simply does not get its detail. */
+    return null;
   }
 }
 

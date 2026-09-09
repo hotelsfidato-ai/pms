@@ -5464,3 +5464,150 @@ rows are and the same words the booking form's Business source field uses.
 reachability gate asks whether code can be reached, not whether a person
 can tell two doors apart. Found by sorting the labels and looking for
 duplicates — three lines of shell, and worth keeping as a habit.
+
+---
+
+### 229 · Adding somebody wrote a row and stopped. There was no password anywhere.
+
+The owner found it the ordinary way: added a demo user, walked to the
+sign-in page, and there was nothing to type.
+
+```
+POST /admin/staff   ->  insert into staff (email, full_name, is_group_admin)
+                        …and nothing else.
+```
+
+No Firebase account. `staff.firebase_uid` stayed NULL. The person then
+appeared on the People screen with a role and a property, and the dialog
+that created them said, in its own description:
+
+> *"They can sign in as soon as this is saved."*
+
+Which was false, and is the sentence the owner walked into.
+
+Filling the gap meant creating the account by hand in the Firebase
+console and then running `npm run link-staff` in a terminal on the Oracle
+box. That is not a workflow a hotel can run, and it is why the
+`link-staff` script's own comment opens "this is the join nobody thinks
+about until the first real sign-in fails".
+
+**The credentials were never the problem.** The service account in
+`api/.env` was already the right one for `poms-fad05` — same key id the
+owner sent. `firebase-admin` was already a dependency. Everything needed
+to create an account had been sitting in the process the whole time; no
+code ever called it.
+
+**The password is REQUIRED on create, and that is the fix rather than a
+policy.** An optional one recreates the identical hole for whoever leaves
+the box empty, and they find out standing at a terminal in front of a
+guest.
+
+⚠ **The account is created BEFORE the row, deliberately.** Firebase is
+not in the transaction and nothing can roll it back, so the order is
+chosen so the survivable failure is the one that happens:
+
+```
+account, then row   a failed insert leaves an account with no staff row.
+                    It signs in, resolves to nobody, and the next attempt
+                    at the same address ADOPTS it. The state heals.
+
+row, then account   a failed account leaves exactly this defect, freshly
+                    made: somebody on the People screen who cannot get in.
+```
+
+---
+
+### 230 · `app.is_manager()` was sitting right there and is not the gate
+
+Making a general manager able to roster their own staff, the obvious
+predicate is the one that already exists:
+
+```sql
+create or replace function app.is_manager() ...
+    and sh.role in ('owner','gm')          -- ⚠ no hotel_id. Anywhere.
+```
+
+It answers **"are you a manager anywhere"**. Used as the gate on "give
+this person access to that hotel", the manager of Akkalkot would pass
+while standing in Pune, and every manager in the group could roster staff
+at every other manager's hotel.
+
+`app.manages_hotel(uuid)` is the same query with one more line in it, and
+that line is the entire feature.
+
+**Three doors, each with a test that fails if it opens:**
+
+```
+a manager rostering at a hotel they do not run
+a gm appointing an `owner` — which grants every action there, so they
+  could appoint themselves one
+a gm resetting a GROUP ADMINISTRATOR's password — which is how a
+  property manager becomes an owner of seven hotels
+```
+
+The third is the one that matters and the easiest to miss, because it
+does not look like a permission change at all. It is a password field.
+
+⚠ **And the predicate was not the permission.** The functions were
+written first and the API tests failed with
+
+```
+new row violates row-level security policy for table "staff_hotels"
+```
+
+`staff_hotels` has carried INSERT/UPDATE/DELETE policies of
+`app.is_group_admin()` since migration 020, so the GM passed every check
+the API made and was refused by the only authority that counts. **That
+failure is the argument for the whole design**: the route's guard is the
+sentence a person reads, the policy is the rule, and when they disagree
+the policy wins and nothing is corrupted.
+
+---
+
+### 231 · A refusal returned as HTTP 200, in three routes
+
+Found while chasing 230. `POST /admin/staff`, `POST /admin/hotels` and
+the new property-detail route all ended:
+
+```ts
+return c.json(result);        // no status
+```
+
+so a refusal raised inside the session — "No property with code PUN",
+"You may give: …" — went back as **200 OK** carrying `ok: false`.
+
+Nobody noticed because the browser's `write()` helper reads `ok` from the
+body and coped. Anything trusting the status code — a retry policy, a
+log, an integration, a person reading a network tab — saw a success.
+Every other route in the same file answers 409.
+
+**Caught by a test that asserted `403` and got `200`**, not by reading.
+The lesson is narrow and worth keeping: `c.json(result)` with no second
+argument is a bug whenever `result` can be a refusal.
+
+---
+
+### 232 · I deleted three unrelated things with a range replacement. Again.
+
+Defect 226 was a line-range replacement whose end anchor was "the next
+function I recognise", and it ate three screens. **Six hours later I did
+it again**, this time removing `staffPasswordLink` from
+`src/data/repositories/admin.ts` by slicing from its doc comment to
+`PropertyTeamMember` — which swallowed `grantAccess`, `revokeAccess`,
+`deactivateStaff`, the `patch` helper, `AdminProperty` and
+`listAdminProperties`.
+
+`tsc` caught it in eight errors. The fix was `git checkout --`, re-apply,
+and remove **the exact function text** with an assertion afterwards that
+the neighbours survived:
+
+```python
+assert block in s, "the exact function"
+s = s.replace(block, '', 1)
+assert 'export function grantAccess' in s, "grantAccess survived"
+```
+
+**Knowing the rule did not stop it.** I had written 226 down that
+morning. What stops it is asserting what must REMAIN, not just what
+should go — the same shape as every other guard in this project: state
+the property, not the procedure.

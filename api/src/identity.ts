@@ -104,16 +104,20 @@ export async function setAccountPassword(
 }
 
 /**
- * A link the person opens to choose their own password. Offered
- * alongside the typed one rather than instead of it: half of a hotel's
- * staff have no email they read, and a system that can only invite by
- * email cannot roster a housekeeper.
+ * A link the person opens to choose their own password.
  *
- * ⚠ THIS DOES NOT SEND ANYTHING. Firebase generates the link; sending
- * it needs SMTP this deployment does not have. The route hands it back
- * for a manager to pass on however they actually reach the person,
- * which is usually WhatsApp.
+ * ⚠ NOTHING CALLS THIS, ON PURPOSE. Asked how a new person gets a
+ * password, the owner chose a typed one over the option that offered
+ * both, so the endpoint that used to call this was removed the same
+ * afternoon rather than shipped with no caller. It stays here because
+ * it is four lines and the day somebody asks for email invitations it
+ * is the whole of the work; the route is not, which is why the route
+ * went.
+ *
+ * ⚠ AND IT DOES NOT SEND ANYTHING. Firebase generates the link;
+ * sending it needs SMTP this deployment does not have.
  */
+/* eslint-disable-next-line @typescript-eslint/no-unused-vars */
 export async function passwordSetLink(email: string): Promise<string> {
   return getAuth(firebaseApp()).generatePasswordResetLink(email);
 }

@@ -195,7 +195,7 @@ describe("Rule 2b — a function nobody calls is a capability nobody can reach",
      second to answer and I spent an afternoon answering it wrongly by
      hand.
 
-     ⚠ THE ALLOW-LIST IS A BACKLOG, NOT A PERMISSION. Thirteen functions
+     ⚠ THE ALLOW-LIST IS A BACKLOG, NOT A PERMISSION. Twelve functions
      are exported and reached by nothing, all of them helpers overtaken
      by later screens.
 
@@ -230,7 +230,11 @@ describe("Rule 2b — a function nobody calls is a capability nobody can reach",
        follow that edge — the list's first correction came from the
        gate, not from me re-reading it. */
     "addInclusion", "defaultPropertyId", "getAdminSettings",
-    "getProperty", "getTodaySnapshot", "listAssignableRoles",
+    /* ⚠ `getTodaySnapshot` CAME OFF ON 9 SEPTEMBER. The property screen
+       shows a hotel's own numbers, which is what it was written for —
+       it had simply never had a screen. The gate noticed before I did:
+       the shrink-only test failed the moment the caller appeared. */
+    "getProperty", "listAssignableRoles",
     "listDailyStatistics", "listGroupMembers", "listRoles",
     "listSellableRooms", "listVacant", "windowFrom",
   ];

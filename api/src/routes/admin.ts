@@ -2,7 +2,7 @@ import { Hono } from "hono";
 import { createHash } from "node:crypto";
 import { withSession } from "../auth.ts";
 import {
-  ensureAccount, setAccountPassword, passwordSetLink, passwordProblem,
+  ensureAccount, setAccountPassword, passwordProblem,
 } from "../identity.ts";
 import type { PoolClient as Client } from "pg";
 
@@ -784,25 +784,14 @@ admin.post("/admin/staff/:id/password", async (c) => {
   return c.json(result!, "ok" in result! && result!.ok ? 200 : 409);
 });
 
-/* A link the person opens to choose their own, for anybody who does
-   read their email. Generated, NOT SENT — this deployment has no SMTP,
-   and a route that claimed to send would be a route that silently
-   does nothing. The manager passes it on however they actually reach
-   the person. */
-admin.post("/admin/staff/:id/password-link", async (c) => {
-  const result = await withSession(c.get("subject"), async (client) => {
-    const { rows } = await client.query<{ email: string; allowed: boolean }>(
-      `select s.email::text, app.may_set_password(s.id) as allowed
-         from staff s where s.id = $1`, [c.req.param("id")]);
-    if (!rows[0]) return refuse("No such person.");
-    if (!rows[0].allowed) {
-      return refuse("That is not somebody whose password you can change.");
-    }
-    return { ok: true as const, link: await passwordSetLink(rows[0].email) };
-  });
-  return c.json(result!, "ok" in result! && result!.ok ? 200 : 409);
-});
-
+/* ⚠ NO "EMAIL THEM A LINK" ENDPOINT, AND THAT IS A DECISION. One was
+   written and removed the same afternoon: asked how a new person gets
+   a password, the owner chose a typed one — "you type one, and can
+   reset it later" — over the option that offered both. Half of a
+   hotel's staff have no address they read, and this deployment has no
+   mail server, so a link would have been an endpoint nobody called.
+   `identity.ts` keeps `passwordSetLink` for the day it is asked for.
+   ═══════════════════════════════════════════════════════════════════ */
 
 /* ── Who may see which property ───────────────────────────────────── */
 

@@ -12,7 +12,7 @@ import {
 } from "@/components/ui";
 import {
   listAdminStaff, createStaff, grantAccess, revokeAccess, deactivateStaff,
-  amendStaff, reactivateStaff,
+  amendStaff, reactivateStaff, setStaffPassword, MIN_PASSWORD,
   listProperties, type AdminStaff,
 } from "@/data/repositories";
 
@@ -195,6 +195,7 @@ function PersonCard({ person, onGrant, onChanged }: {
 }) {
   const [busy, setBusy] = useState(false);
   const [editing, setEditing] = useState(false);
+  const [password, setPassword] = useState(false);
 
   const bringBack = async () => {
     if (busy) return;
@@ -246,7 +247,17 @@ function PersonCard({ person, onGrant, onChanged }: {
                   </StatusPill>
                 )}
                 {!person.isActive && (
-                  <StatusPill tone="neutral">Cannot sign in</StatusPill>
+                  <StatusPill tone="neutral">Switched off</StatusPill>
+                )}
+                {/* ⚠ TWO DIFFERENT THINGS WORE ONE LABEL. "Cannot sign
+                    in" meant `is_active = false` — somebody deliberately
+                    switched off. It said nothing about the person who is
+                    active, rostered, and has no Firebase account at all,
+                    which until today was EVERY person added through this
+                    screen. They are the ones who walk to a terminal and
+                    find out. */}
+                {person.isActive && !person.canSignIn && (
+                  <StatusPill tone="danger">No password yet</StatusPill>
                 )}
               </div>
               <p className="text-sm text-grey-500 truncate">{person.email}</p>
@@ -256,6 +267,10 @@ function PersonCard({ person, onGrant, onChanged }: {
               <div className="flex gap-2 flex-wrap">
                 <Button variant="secondary" className="h-11" onClick={onGrant}>
                   <Building2 className="size-4" /> Give a property
+                </Button>
+                <Button variant="ghost" className="h-11"
+                        onClick={() => setPassword(true)}>
+                  {person.canSignIn ? "Password" : "Set a password"}
                 </Button>
                 <Button variant="ghost" className="h-11"
                         onClick={() => setEditing(true)}>
@@ -284,6 +299,13 @@ function PersonCard({ person, onGrant, onChanged }: {
             <p className="text-sm text-grey-600 leading-relaxed">
               A group administrator reaches every property, including ones
               added later. Property grants do not apply to them.
+            </p>
+          ) : person.isActive && !person.canSignIn ? (
+            /* Said here rather than left to be discovered. The pill
+               above is the flag; this is what to do about it. */
+            <p className="text-sm text-brand-red leading-relaxed">
+              No sign-in account yet — they cannot get in at all. Set a
+              password and they can.
             </p>
           ) : person.access.length === 0 ? (
             /* A DASH, in the sense this project means it: no access is a
@@ -322,7 +344,96 @@ function PersonCard({ person, onGrant, onChanged }: {
         <EditPersonDialog person={person} onClose={() => setEditing(false)}
                           onSaved={onChanged} />
       )}
+      {password && (
+        <PasswordDialog person={person} onClose={() => setPassword(false)}
+                        onSaved={onChanged} />
+      )}
     </li>
+  );
+}
+
+/* ── Giving somebody a password ────────────────────────────────────
+   ⚠ THIS IS THE HALF THE SYSTEM NEVER HAD. Adding somebody wrote a
+   Postgres row and stopped, so they appeared on this screen with a role
+   and a property and no Firebase account — no password existed anywhere
+   that would let them in. The owner found it by adding a demo user and
+   walking to the sign-in page.
+
+   It is typed rather than emailed because half of a hotel's staff have
+   no address they read. A system that can only invite by email cannot
+   roster a housekeeper.
+   ═══════════════════════════════════════════════════════════════════ */
+function PasswordDialog({ person, onClose, onSaved }: {
+  person: AdminStaff; onClose: () => void; onSaved: () => void;
+}) {
+  const [value, setValue] = useState("");
+  const [busy, setBusy] = useState(false);
+
+  const short = value.length > 0 && value.length < MIN_PASSWORD;
+
+  const submit = async () => {
+    setBusy(true);
+    const res = await setStaffPassword(person.id, value);
+    setBusy(false);
+    /* The server's sentence. It is the one that knows whether this
+       caller may touch this person — a manager may not aim at a group
+       administrator, and the reason says so. */
+    if (!res.ok) return toast.error("Not set", res.reason);
+    toast.success(
+      `${person.name} can sign in`,
+      `Tell them the password and the address ${person.email}.`);
+    onSaved();
+    onClose();
+  };
+
+  return (
+    <Dialog open onOpenChange={(o) => !o && onClose()}>
+      <DialogContent
+        title={person.canSignIn
+          ? `New password for ${person.name}`
+          : `Give ${person.name} a password`}
+        description={person.canSignIn
+          ? "Their old one stops working immediately."
+          : "They have no way to sign in until this is set."}
+        size="sm"
+        footer={
+          <>
+            <Button variant="secondary" size="lg" onClick={onClose}>
+              Cancel
+            </Button>
+            <Button size="lg" loading={busy}
+                    disabled={value.length < MIN_PASSWORD}
+                    onClick={() => void submit()}>
+              Set it
+            </Button>
+          </>
+        }
+      >
+        <div className="space-y-4">
+          <Field
+            label="Password"
+            required
+            hint={`At least ${MIN_PASSWORD} characters. They type it at a terminal in front of guests, so something they can remember.`}
+            error={short ? `At least ${MIN_PASSWORD} characters.` : undefined}
+          >
+            {(f) => (
+              /* ⚠ NOT type="password". The manager is setting it FOR
+                 somebody else and has to read it back to them — a
+                 masked box means it gets typed twice, or written on a
+                 sticky note beside the terminal. */
+              <Input {...fieldProps(f)} value={value} autoFocus
+                     placeholder="something they will remember"
+                     onChange={(e) => setValue(e.target.value)} />
+            )}
+          </Field>
+          <p className="text-sm text-grey-600">
+            They sign in with{" "}
+            <span className="text-ink-900">{person.email}</span> and this
+            password. Nothing is emailed — tell them yourself.
+          </p>
+        </div>
+      </DialogContent>
+    </Dialog>
   );
 }
 
@@ -401,30 +512,38 @@ function AddPersonDialog({ open, onOpenChange, onAdded }: {
 }) {
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
   const [busy, setBusy] = useState(false);
 
   const submit = async () => {
     if (busy) return;
     setBusy(true);
     const res = await createStaff({
-      email: email.trim().toLowerCase(), name: name.trim(),
+      email: email.trim().toLowerCase(), name: name.trim(), password,
     });
     setBusy(false);
     if (!res.ok) return toast.error("Not added", res.reason);
     toast.success(
       res.existed ? `${name.trim()} was already here` : `${name.trim()} added`,
-      "Give them a property next — until then they sign in to an empty app.");
-    setName(""); setEmail("");
+      "They can sign in now. Give them a property next — until then the "
+      + "app opens empty for them.");
+    setName(""); setEmail(""); setPassword("");
     onAdded();
   };
 
-  const ready = name.trim() && email.trim().includes("@");
+  const ready = name.trim() && email.trim().includes("@")
+    && password.length >= MIN_PASSWORD;
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent
         title="Add somebody"
-        description="They can sign in as soon as this is saved. What they can see comes next."
+        /* ⚠ THIS SENTENCE USED TO BE A LIE, and it is the lie the owner
+           walked into. "They can sign in as soon as this is saved" —
+           and saving wrote a Postgres row and nothing else, so there
+           was no account and no password anywhere in the world. It is
+           true now because the password below is required. */
+        description="Set them a password and they can sign in straight away. What they can SEE comes next."
         footer={
           <>
             <Button variant="secondary" className="h-11"
@@ -445,12 +564,27 @@ function AddPersonDialog({ open, onOpenChange, onAdded }: {
           </Field>
           <Field
             label="The email they will sign in with" required
-            hint="This is the link between the person and the account. A typo here means they cannot sign in at all — there is no password to fall back on."
+            hint="This is the link between the person and the account. A typo here means they cannot sign in at all."
           >
             {(f) => (
               <Input {...fieldProps(f)} type="email" value={email}
                      placeholder="sunita@fidatohotels.com"
                      onChange={(e) => setEmail(e.target.value)} />
+            )}
+          </Field>
+          <Field
+            label="A password for them" required
+            hint={`At least ${MIN_PASSWORD} characters. Tell it to them — nothing is emailed.`}
+            error={password.length > 0 && password.length < MIN_PASSWORD
+              ? `At least ${MIN_PASSWORD} characters.` : undefined}
+          >
+            {/* ⚠ NOT type="password". You are setting it FOR somebody
+                else and have to read it back to them. A masked box gets
+                typed twice, or written on a note beside the terminal. */}
+            {(f) => (
+              <Input {...fieldProps(f)} value={password}
+                     placeholder="something they will remember"
+                     onChange={(e) => setPassword(e.target.value)} />
             )}
           </Field>
           <p className="text-sm text-grey-600 rounded-md border border-grey-200

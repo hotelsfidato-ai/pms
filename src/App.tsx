@@ -56,6 +56,7 @@ import WorkOrdersPage from "@/pages/WorkOrders";
 import BanquetPage from "@/pages/Banquet";
 import RoomSetupPage from "@/pages/RoomSetup";
 import BookingSourcesPage from "@/pages/BookingSources";
+import PropertyPage from "@/pages/Property";
 import PeoplePage from "@/pages/People";
 import ChannelManagerPage from "@/pages/ChannelManager";
 import StoresPage from "@/pages/Stores";
@@ -292,6 +293,11 @@ export default function App() {
             <Route path="/reports" element={<ReportsIndexPage />} />
 
             <Route path="/properties" element={<PropertiesPage />} />
+            {/* One property: its own numbers, and the people who work
+                there. Scoped by hotel rather than by rank — a general
+                manager gets this for theirs and a 404 for anybody
+                else's, because it carries the GSTIN. */}
+            <Route path="/properties/:code" element={<PropertyPage />} />
             <Route path="/guests" element={<GuestsPage />} />
             {/* NOT development-gated. The endpoints behind it have
                 existed since the admin work and were reachable only from

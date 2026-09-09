@@ -504,13 +504,24 @@ function AdminPropertyCard({ hotel, onEdit, onToggle }: {
         )}
 
         <div className="flex items-center gap-2 mt-3.5 flex-wrap">
+          {/* ⚠ THE CARD HAD NOWHERE TO GO EXCEPT THE TAPE CHART. The
+              property's own numbers and its team now live one click
+              away, which is what the owner asked for on 9 September —
+              "the property view will show data and statistics about the
+              property and will be used to add property staff". */}
+          <Link
+            to={`/properties/${hotel.code}`}
+            className="inline-flex items-center gap-1.5 text-sm text-brand-orange hover:underline"
+          >
+            Open
+            <ArrowRight className="size-3.5" />
+          </Link>
           {hotel.isActive && (
             <Link
               to={`/h/${hotel.code}/stay`}
-              className="inline-flex items-center gap-1.5 text-sm text-brand-orange hover:underline"
+              className="inline-flex items-center gap-1.5 text-sm text-grey-600 hover:underline"
             >
-              Open stay view
-              <ArrowRight className="size-3.5" />
+              Stay view
             </Link>
           )}
           <div className="flex-1" />
