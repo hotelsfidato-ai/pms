@@ -28,7 +28,18 @@ cleanly against it:
                           app.booking_source_label()
 083_promotions.sql        pos_promotions, pos_orders.promotion_id,
                           app.pos_freehand_discount_cap()
+084_property_admin.sql    app.manages_hotel, app.grantable_roles,
+                          app.may_manage_person, and the staff /
+                          staff_hotels policies that let a general
+                          manager roster their own hotel
 ```
+
+⚠ **084 changes who may do what.** It is the only migration in this
+group that widens a permission, and the widening is per-hotel: a general
+manager gains their own property and nothing else. The three doors it
+must not open — rostering at another hotel, appointing an `owner`,
+resetting a group administrator's password — each have an assertion in
+`db/tests/suite.sql` and an API test that fails if they open.
 
 `deploy/launch.sh` applies migrations, runs the preflight and restarts
 the service. Its two upgrade-path defects (211 TLS, 212 peer auth) were
@@ -162,6 +173,16 @@ example.
   the Akkalkot card reads "Akkalkot, Solapur District, Maharashtra
   413216, Akkalkot, MH". Data, not code, and now editable on
   `/properties`.
+- **`api/.env` now matters more than it did.** Adding somebody creates a
+  real Firebase account, so a deployment without `FIREBASE_SERVICE_ACCOUNT`
+  will refuse to add staff rather than silently creating people who cannot
+  sign in. The Oracle box already has the key; a new environment needs it
+  before People or the property screen will work.
+- **Nothing is emailed, anywhere.** There is no SMTP in this deployment,
+  so a password is typed by a manager and told to the person.
+  `identity.ts` keeps `passwordSetLink` for the day email invitations are
+  asked for; the route that called it was removed rather than shipped
+  with no caller.
 - **`companies` contains channels.** "Walk-in", "Fidato Hotels" and
   "Walk-In" are rows in the corporate-accounts table, left over from
   when the booking form put the companies list in the channel box. They
