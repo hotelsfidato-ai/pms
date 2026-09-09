@@ -5039,3 +5039,49 @@ why shipping the form is safe.
 capability, and a screen that documents its own absence reads as an
 answer.** Two of these were found in one day — this and the banquet
 switch that said "not built yet" about something that was built.
+
+---
+
+### 217 · I audited `/admin/*` and concluded a capability was missing. It was on `/people`.
+
+I reported to the owner that **nobody could add a user to the live
+system**, called it a P0, and built a screen for it. All three were
+wrong.
+
+`src/pages/People.tsx` has done the whole job since **7 September** —
+add somebody, give a property, revoke, deactivate — routed at
+`/people`, in the sidebar under **People**, and badging **"Cannot sign
+in"** on an account with no Firebase link, which is the very step I
+thought I was contributing.
+
+The route even carries the reason, written by whoever fixed it:
+
+> *NOT development-gated. The endpoints behind it have existed since the
+> admin work and were reachable only from a dev-only console, so the
+> owner — the one person who actually has staff to add — could not reach
+> them.*
+
+**The problem I "found" had been found and fixed the day before.**
+
+⚠ **HOW THE AUDIT MISSED IT.** I enumerated routes with
+`grep 'path="/admin'`, counted the write actions on each, and concluded
+admin was read-only. That was true of `/admin/*` and irrelevant: the
+capability lives at a TOP-LEVEL route. **I searched by URL prefix and
+reported a conclusion about capability.**
+
+The correct question was the one I asked later and should have asked
+first: *does `createStaff` have a caller anywhere in `src/`?* It had
+two.
+
+Step 2 is reverted. `/admin/users` is a list again, because two screens
+doing one job is worse than one — and `/people` is the better of the
+two.
+
+**Step 3 stands**: `createProperty` genuinely had no caller outside the
+dev console, checked the correct way this time.
+
+**The rule: audit by capability, never by location.** A search shaped
+like "what is under this prefix" answers a question about the prefix,
+and I presented it as an answer about the system. This is the second
+time in two days that a confident finding of mine was an artefact of
+how I searched — 196 was the first.

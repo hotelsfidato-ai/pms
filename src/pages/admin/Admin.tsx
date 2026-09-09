@@ -16,13 +16,9 @@ import {
 import {
   listStaff, listAuditLog, listIntegrations, getSettings, getMatrix,
   listProperties, roleDescription, getModules, setModule,
-  listAdminStaff,
   type StaffRecord, type AuditEntry, type Integration,
 } from "@/data/repositories";
-import {
-  NewPerson, People, NewProperty,
-} from "@/components/flows/StaffAdmin";
-import { useSession } from "@/lib/session";
+import { NewProperty } from "@/components/flows/StaffAdmin";
 
 /* ══════════════════════════════════════════════════════════════════
    ADMINISTRATION
@@ -90,35 +86,22 @@ const STAFF_COLUMNS: Column<StaffRecord>[] = [
 
 export function UsersPage() {
   const hotelId = useHotel();
-  const queryClient = useQueryClient();
   const { data, isLoading, error, refetch } = useQuery({
     queryKey: ["staff", hotelId],
     queryFn: () => listStaff(hotelId),
   });
 
-  /* ⚠ THE PANELS BELOW SHIPPED NOWHERE UNTIL NOW.
-     They lived on `/admin/console`, which is `{IS_DEV && …}` and
-     tree-shaken out of a real build — so for eight days a live
-     deployment could not add a user at all, and every tester account
-     needed SQL on the server. See `components/flows/StaffAdmin.tsx`.
+  /* ⚠ NO ADD-A-PERSON FORM HERE, AND THAT IS DELIBERATE.
+     One briefly appeared on 8 September because an audit of `/admin/*`
+     concluded nobody could add a user in production. That audit was
+     WRONG: `/pages/People.tsx` at `/people` has done the whole job
+     since 7 September — add, grant, revoke, deactivate — and it is in
+     the sidebar under People. The audit enumerated routes beginning
+     `/admin/` and `/people` is top-level.
 
-     Creating a PROPERTY stays on the console, because that is what the
-     31 August gate was actually protecting. */
-  const { data: everyone, refetch: refetchEveryone } = useQuery({
-    queryKey: ["admin-staff"],
-    queryFn: () => listAdminStaff(),
-  });
-
-  /* The properties this person can reach, from the session rather than
-     a fetch — the same source the console used. A grant they could not
-     make should not be offered. */
-  const hotels = useSession((st) => st.hotels);
-
-  const refreshAll = () => {
-    void refetch();
-    void refetchEveryone();
-    void queryClient.invalidateQueries({ queryKey: ["staff", hotelId] });
-  };
+     Two screens doing one job is worse than one, and `/people` is the
+     better of the two: it badges an account that cannot sign in,
+     which is the step people miss. This one stays a list. */
 
   return (
     <Page>
@@ -126,15 +109,6 @@ export function UsersPage() {
         title="Users"
         description="Who can reach what. Access follows the role, and the role follows the permission matrix."
       />
-
-      <div className="grid gap-5 lg:grid-cols-[360px_1fr] mb-5">
-        <NewPerson onDone={refreshAll} />
-        <People
-          staff={everyone ?? []}
-          codes={hotels.map((h) => h.code)}
-          onDone={refreshAll}
-        />
-      </div>
 
       <Card>
         <DataTable<StaffRecord>
