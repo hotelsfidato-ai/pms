@@ -1,4 +1,16 @@
 import pg from "pg";
+/* ⚠ IMPORTED FOR ITS SIDE EFFECT, AND THAT IS THE WHOLE POINT.
+   `src/env.ts` calls `process.loadEnvFile("../.env")` at module load.
+   Without this line `ADMIN_DATABASE_URL` is simply not in the
+   environment on the server — it lives in `api/.env`, written there by
+   `deploy/launch.sh`, and nothing else in this file would read it.
+
+   The variable was chosen correctly and the file was never loaded, so
+   the connection fell through to the DEVELOPMENT default and failed to
+   connect to a Postgres that does not exist on that box. Half a fix
+   looks exactly like a whole one until somebody runs it. */
+import "../src/env.ts";
+
 import { fileURLToPath } from "node:url";
 import { readFileSync } from "node:fs";
 

@@ -5675,3 +5675,53 @@ script and watching it fail.
 **The general shape, which is the fourth time this project has met it:**
 a guard's SCOPE is as much a part of it as its logic, and nothing about
 a passing guard tells you what it declined to examine.
+
+---
+
+### 235 · Reading the right variable, from a file nothing loaded
+
+Defect 233 changed `reset-property.ts` to prefer `ADMIN_DATABASE_URL` —
+the variable `deploy/launch.sh` writes into `api/.env`, and the one
+`preflight.ts` and `link-staff.ts` already use.
+
+**Nothing in that script loads `api/.env`.** `src/env.ts` is what calls
+`process.loadEnvFile`, and `link-staff.ts` gets it by importing `env`.
+`reset-property.ts` imports `pg` and `node:url` and nothing else — so
+on the server `ADMIN_DATABASE_URL` is simply not in the environment,
+the connection falls through to the **development localhost default**,
+and it fails to reach a Postgres that does not exist on that box.
+
+⚠ **Half a fix looks exactly like a whole one until somebody runs it.**
+233 was found by reading and fixed by reading; this half was found only
+by tracing what would actually happen on the box.
+
+Both scripts now carry `import "../src/env.ts";` for its side effect,
+with a comment saying so — an import with no named binding is the kind
+of line somebody deletes as dead.
+
+---
+
+### 236 · The guard I wrote to prevent a bad connection refused the best one
+
+The check added in 233 asked one question:
+
+```sql
+select count(*) from pg_tables
+ where schemaname = 'public' and tableowner = current_user
+```
+
+True for the schema owner — `fidato` on the server, which is the case
+it was written for. **False for a superuser.** In the development
+database `postgres` owns nothing at all; `pms_migrate` owns all 66
+tables. So the guard refused `postgres`, which can do absolutely
+anything, while the whole point was to stop the *under*-privileged
+`pms_app`.
+
+It asks both now: `usesuper OR owns tables`.
+
+**Found by running it, one minute after writing it.** The pattern is
+worth naming because it is the third time this week: a guard written
+against the ONE case in mind, which then has an opinion about cases it
+never considered. The banquet guard was vacuous; the strip-check gate
+scanned one directory of two; this one confused *authority* with
+*ownership*. In each, the logic was right about the case it knew.

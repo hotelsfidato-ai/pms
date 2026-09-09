@@ -1,4 +1,16 @@
 import pg from "pg";
+/* ⚠ IMPORTED FOR ITS SIDE EFFECT, AND THAT IS THE WHOLE POINT.
+   `src/env.ts` calls `process.loadEnvFile("../.env")` at module load.
+   Without this line `ADMIN_DATABASE_URL` is simply not in the
+   environment on the server — it lives in `api/.env`, written there by
+   `deploy/launch.sh`, and nothing else in this file would read it.
+
+   The variable was chosen correctly and the file was never loaded, so
+   the connection fell through to the DEVELOPMENT default and failed to
+   connect to a Postgres that does not exist on that box. Half a fix
+   looks exactly like a whole one until somebody runs it. */
+import "../src/env.ts";
+
 import { fileURLToPath } from "node:url";
 
 /* ══════════════════════════════════════════════════════════════════
@@ -148,15 +160,27 @@ async function main() {
        fine and then reads an empty world. This is the check
        `link-staff.ts` grew after printing an empty list against six
        real staff members. */
-    const { rows: who } = await client.query<{ me: string; tables: string }>(
+    const { rows: who } = await client.query<{
+      me: string; superuser: boolean; owns: string;
+    }>(
+      /* ⚠ TWO WAYS TO BE ABLE TO ACT, and the first version knew one.
+         It asked only "do you own tables", which is true of the schema
+         owner on the server (`fidato`) and FALSE of a superuser —
+         `postgres` owns nothing here, the migration role owns all 66,
+         and a superuser can do anything regardless. So the guard
+         refused the most capable connection there is. Caught by running
+         it. */
       `select current_user as me,
+              coalesce((select usesuper from pg_user
+                         where usename = current_user), false) as superuser,
               (select count(*)::text from pg_tables
                 where schemaname = 'public' and tableowner = current_user)
-                as tables`);
-    if (who[0]!.tables === "0") {
+                as owns`);
+    if (!who[0]!.superuser && who[0]!.owns === "0") {
       console.error(
-        `\n  Connected as "${who[0]!.me}", which owns no table here.\n`
-        + "  That role cannot lift the append-only guards this has to lift,\n"
+        `\n  Connected as "${who[0]!.me}" — not a superuser, and owning no\n`
+        + "  table here. That role cannot lift the append-only guards it\n"
+        + "  has to lift,\n"
         + "  and row level security would hide most of what it is meant to\n"
         + "  remove — so it would report a quiet, wrong success.\n\n"
         + "  On the server, as the schema owner:\n"
