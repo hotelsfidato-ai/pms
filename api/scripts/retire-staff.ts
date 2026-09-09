@@ -64,6 +64,7 @@ type Person = {
   full_name: string;
   uid: string | null;
   is_group_admin: boolean;
+  is_active: boolean;
   grants: number;
 };
 
@@ -85,7 +86,7 @@ async function main() {
   try {
     const { rows: people } = await client.query<Person>(
       `select s.id::text, s.email::text, s.full_name,
-              s.firebase_uid as uid, s.is_group_admin,
+              s.firebase_uid as uid, s.is_group_admin, s.is_active,
               (select count(*) from staff_hotels sh
                 where sh.staff_id = s.id)::int as grants
          from staff s
@@ -105,7 +106,17 @@ async function main() {
        a bad afternoon. */
     const { rows: admins } = await client.query<{ n: string }>(
       "select count(*)::text as n from staff where is_group_admin and is_active");
-    const losing = people.filter((p) => p.is_group_admin).length;
+    /* ⚠ ACTIVE ADMINS BEING LOST, NOT ALL ADMINS ON THE LIST. The first
+       version counted `is_group_admin` alone and subtracted it from a
+       count of ACTIVE ones — so retiring an administrator who was
+       already switched off, and therefore contributing nothing, looked
+       like losing a live one.
+
+       Found on the real data: Akkalkot has one active administrator
+       and a seed placeholder called "REPLACE — your name" that is a
+       group admin and inactive. Retiring the placeholder computed
+       1 - 1 = 0 and refused, protecting nothing from nothing. */
+    const losing = people.filter((p) => p.is_group_admin && p.is_active).length;
     if (Number(admins[0]!.n) - losing < 1) {
       console.error(
         `\n  That would leave the group with no administrator.\n`
