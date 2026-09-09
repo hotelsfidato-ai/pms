@@ -15,10 +15,9 @@ import {
 } from "@/components/ui";
 import {
   listStaff, listAuditLog, listIntegrations, getSettings, getMatrix,
-  listProperties, roleDescription, getModules, setModule,
+  roleDescription, getModules, setModule,
   type StaffRecord, type AuditEntry, type Integration,
 } from "@/data/repositories";
-import { NewProperty } from "@/components/flows/StaffAdmin";
 
 /* ══════════════════════════════════════════════════════════════════
    ADMINISTRATION
@@ -529,59 +528,14 @@ export function SettingsPage() {
 
 /* ── Add a property ──────────────────────────────────────────────── */
 
-export function AdminPropertiesPage() {
-  const { data, refetch } = useQuery({
-    queryKey: ["properties"], queryFn: listProperties,
-  });
+/* ⚠ `AdminPropertiesPage` WAS HERE AND IS GONE. There were two
+   Properties screens: this one had the create form and a four-line
+   list, and `/properties` — the one in the navigation — had richer
+   cards and could do nothing. Two screens for one noun is how they
+   drift, and the one people actually clicked was the one that could
+   do least.
 
-  return (
-    <Page>
-      <PageHeader
-        title="Properties"
-        description="One configured. Six more are planned and unconfirmed."
-      />
-
-      <Card className="mb-4">
-        <CardBody>
-          <dl className="divide-y divide-grey-100">
-            {(data ?? []).map((p) => (
-              <div key={p.id} className="grid grid-cols-[minmax(130px,200px)_1fr] gap-4 py-2.5">
-                <dt className="text-sm text-grey-500">{p.name}</dt>
-                <dd className="text-base text-ink-900 tabular">
-                  {p.rooms} rooms · {p.roomTypes.join(", ")}
-                </dd>
-              </div>
-            ))}
-          </dl>
-        </CardBody>
-      </Card>
-
-      {/* ⚠ THIS WAS A PARAGRAPH EXPLAINING THAT THE FORM LIVED
-          SOMEWHERE ELSE. It said the form "belongs with the auth
-          bridge", and the screen it belonged to is `{IS_DEV && …}` and
-          tree-shaken out of a real build — so `deploy/README.md` step 8
-          told people to add their properties here, and here offered a
-          paragraph. Six properties could not be entered without SQL.
-
-          The gate the console carries was about the ACT, not the
-          screen, and the act is still gated: `createProperty` sends the
-          provisioning key and `app.require_provisioning_key()` refuses
-          without it, in the database, regardless of what any interface
-          shows. */}
-      <NewProperty onDone={() => void refetch()} />
-
-      <p className="flex items-start gap-2 text-xs text-grey-500 mt-4 leading-relaxed">
-        <Info className="size-3.5 shrink-0 mt-0.5" />
-        <span>
-          Six properties are still unnamed for a deliberate reason: their names
-          and room counts are unconfirmed, and a placeholder that reads as real
-          is worse than a visible gap. Creating one mints its rooms, its invoice
-          series and its folio namespace — <strong>the code appears in every URL
-          and every invoice number and cannot be changed afterwards.</strong>
-        </span>
-      </p>
-    </Page>
-  );
-}
+   `/admin/properties` now renders `PropertiesPage` from Directory.tsx,
+   which adds, edits, closes and reopens. */
 
 export { money, cn };

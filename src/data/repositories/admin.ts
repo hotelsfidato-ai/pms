@@ -81,6 +81,8 @@ export interface AdminStaff {
   id: string;
   email: string;
   name: string;
+  /** Null when nobody recorded one. A dash, not an empty string. */
+  phone: string | null;
   isGroupAdmin: boolean;
   isActive: boolean;
   access: { code: string; role: string }[];
@@ -173,6 +175,121 @@ export function deactivateStaff(
   staffId: string,
 ): Promise<AdminResult> {
   return write(`/api/admin/staff/${staffId}/deactivate`, {});
+}
+
+/* ══════════════════════════════════════════════════════════════════
+   FOUR ENDPOINTS NOTHING COULD REACH
+
+   Found by walking `api/src/routes/admin.ts` against this file on
+   9 September. Eleven endpoints exist; seven were called from here.
+   The four below were written, tested, and had no path to them:
+
+     PATCH  /admin/hotels/:code          a property's own details
+     POST   /admin/hotels/:code/:state   close it, or reopen it
+     PATCH  /admin/staff/:id             a person's name or phone
+     POST   /admin/staff/:id/reactivate  bring somebody back
+
+   The last one carries this comment in the route file:
+
+       "Deactivating existed; reactivating did not, so a person
+        switched off by mistake needed somebody with database access
+        to undo it."
+
+   — and the fix for that was itself unreachable. Somebody switched off
+   by mistake still needed a database session, for exactly as long as
+   the endpoint sat here with no caller.
+
+   This is the sixth instance of the same defect in this project, and
+   the reason the reachability gate in `repositories.test.ts` exists.
+   That gate watches the FRONTEND seam. It cannot see an API route with
+   no caller, which is the gap that let these four sit.
+   ══════════════════════════════════════════════════════════════════ */
+
+async function patch<T>(path: string, body: unknown): Promise<AdminResult<T>> {
+  try {
+    return await api<T & { ok: true }>(path, {
+      method: "PATCH", body: JSON.stringify(body),
+    });
+  } catch (error) {
+    if (error instanceof ApiError) {
+      const payload = error.body as { reason?: string } | undefined;
+      return { ok: false, reason: payload?.reason ?? error.message };
+    }
+    throw error;
+  }
+}
+
+export interface AdminProperty {
+  id: string;
+  /** In every URL and every invoice number. It cannot be changed. */
+  code: string;
+  name: string;
+  city: string | null;
+  state: string | null;
+  gstin: string | null;
+  phone: string | null;
+  email: string | null;
+  addressLine: string | null;
+  isActive: boolean;
+  rooms: number;
+  roomTypes: string[];
+  /** Why Close would refuse, said before the button is pressed. */
+  checkedIn: number;
+}
+
+/** ⚠ EVERY PROPERTY, CLOSED ONES INCLUDED. `listProperties()` reads
+    `/api/hotels`, which ends `where is_active` — so a closed property
+    is invisible to it and Reopen would have nothing to act on. Group
+    admins only: it carries the GSTIN of every property in the group. */
+export async function listAdminProperties(): Promise<AdminProperty[]> {
+  try {
+    const body = await api<{ hotels: AdminProperty[] }>("/api/admin/hotels");
+    return body.hotels;
+  } catch {
+    /* Not an error worth a screen: a clerk who cannot see this list
+       sees the ordinary property cards instead. */
+    return [];
+  }
+}
+
+/** A property's own details. NOT its code — that appears in every URL
+    and every invoice number this property has ever issued, and the
+    route refuses to change it for the same reason. */
+export function amendProperty(
+  code: string,
+  input: {
+    name?: string; city?: string; state?: string; gstin?: string;
+    phone?: string; email?: string; addressLine?: string;
+  },
+): Promise<AdminResult> {
+  return patch(`/api/admin/hotels/${code}`, input);
+}
+
+/** Closing refuses while anybody is still checked in — a closed
+    property leaves a folio nobody can reach. The refusal names how
+    many, and the server is what decides. */
+export function setPropertyOpen(
+  code: string, open: boolean,
+): Promise<AdminResult> {
+  return write(`/api/admin/hotels/${code}/${open ? "reopen" : "close"}`, {});
+}
+
+/** A person's name or phone. Not their email: it is how they sign in,
+    and the route does not accept a change to it. */
+export function amendStaff(
+  staffId: string, input: { fullName?: string; phone?: string },
+): Promise<AdminResult> {
+  return patch(`/api/admin/staff/${staffId}`, input);
+}
+
+/** Switched off by mistake, or back from leave. May answer with a
+    WARNING rather than a refusal: active with no sign-in account
+    linked reaches a page that accepts nothing, and that is worth
+    saying at the moment it becomes true. */
+export function reactivateStaff(
+  staffId: string,
+): Promise<AdminResult<{ warning?: string }>> {
+  return write(`/api/admin/staff/${staffId}/reactivate`, {});
 }
 
 export async function revokeAccess(

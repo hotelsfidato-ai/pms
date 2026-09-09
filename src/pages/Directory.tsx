@@ -1,18 +1,23 @@
-import { useQuery } from "@tanstack/react-query";
+import { useState } from "react";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useParams, Link } from "react-router";
-import { AlertTriangle, ArrowRight, Bell } from "lucide-react";
+import { AlertTriangle, ArrowRight, Bell, Info } from "lucide-react";
 import { cn } from "@/lib/cn";
 import { money, dateShort, relative } from "@/lib/format";
 import { useUi } from "@/lib/ui";
 import {
   Page, PageHeader, Card, CardBody, DataTable, StatusPill, Skeleton,
-  Avatar, ErrorState, type Column, type Tone,
+  Avatar, ErrorState, Button, Dialog, DialogContent, Field, fieldProps,
+  Input, toast, type Column, type Tone,
 } from "@/components/ui";
 import {
   listGuests, listCompanies, listProperties, notificationsRepo,
   listRoomTypes, listRatePlans,
+  listAdminProperties, amendProperty, setPropertyOpen,
   type GuestRecord, type CompanyRecord, type RoomTypeRecord, type RatePlanRecord,
+  type AdminProperty,
 } from "@/data/repositories";
+import { NewProperty } from "@/components/flows/StaffAdmin";
 
 /* ══════════════════════════════════════════════════════════════════
    GUESTS · COMPANIES · PROPERTIES · NOTIFICATIONS
@@ -309,29 +314,110 @@ export function CompaniesPage() {
 
 /* ── Properties ──────────────────────────────────────────────────── */
 
+/* ══════════════════════════════════════════════════════════════════
+   PROPERTIES — one screen, and it can now change something
+
+   ⚠ THERE WERE TWO OF THESE. `/properties` listed them and offered
+   nothing; `/admin/properties` had the create form and a shorter list.
+   Two screens for one noun is how they drift, and the one in the
+   navigation was the one that could do least.
+
+   ⚠ AND SIX OF THE CARDS WERE FICTION. This screen drew six dashed
+   "Property 2 — awaiting confirmation" placeholders, hardcoded. That
+   was honest when nothing could create a property. Since the create
+   form landed it has been a screen telling you six properties are
+   pending while standing next to the button that would add them.
+   `listProperties()` is the truth; a constant six is not.
+
+   WHAT A GROUP ADMIN SEES IS DIFFERENT, AND FROM A DIFFERENT SOURCE.
+   `/api/hotels` ends `where is_active`, so a closed property is
+   invisible to it — including to the Reopen button. The admin list
+   returns every property with its editable details; everyone else
+   gets the ordinary cards. One card component, two sources, and the
+   sets they cover cannot overlap.
+   ══════════════════════════════════════════════════════════════════ */
 export function PropertiesPage() {
-  const { data, isLoading, error, refetch } = useQuery({ queryKey: ["properties"], queryFn: listProperties });
+  const qc = useQueryClient();
+  const [editing, setEditing] = useState<AdminProperty | null>(null);
+
+  const plain = useQuery({
+    queryKey: ["properties"], queryFn: listProperties,
+  });
+  /* Empty for anybody who is not a group admin — the repository
+     swallows the refusal rather than turning it into an error state.
+     A clerk is not being blocked; they are seeing the ordinary
+     screen. */
+  const admin = useQuery({
+    queryKey: ["admin-properties"], queryFn: listAdminProperties,
+  });
+
+  const refresh = () => {
+    void qc.invalidateQueries({ queryKey: ["properties"] });
+    void qc.invalidateQueries({ queryKey: ["admin-properties"] });
+  };
+
+  const isAdmin = (admin.data ?? []).length > 0;
+  const rows = admin.data ?? [];
+  const open = rows.filter((h) => h.isActive);
+  const closed = rows.filter((h) => !h.isActive);
+
+  const toggle = async (h: AdminProperty) => {
+    const res = await setPropertyOpen(h.code, !h.isActive);
+    if (!res.ok) return toast.error("Not changed", res.reason);
+    toast.success(h.isActive ? `${h.name} is closed` : `${h.name} is open`);
+    refresh();
+  };
 
   return (
     <Page>
       <PageHeader
         title="Properties"
-        description="Seven owned. One configured — the rest arrive as their details are confirmed."
+        description={
+          isAdmin
+            ? `${open.length} open${closed.length ? ` · ${closed.length} closed` : ""}`
+            : "The properties you can reach."
+        }
       />
-      {error ? (
+
+      {plain.error && !isAdmin ? (
         <Card>
           <ErrorState
             title="The property list did not load"
             description="Nothing was changed. Try again."
-            error={error}
-            onRetry={() => refetch()}
+            error={plain.error}
+            onRetry={() => plain.refetch()}
           />
         </Card>
-      ) : isLoading ? (
+      ) : plain.isLoading && admin.isLoading ? (
         <Skeleton className="h-40 w-full" />
+      ) : isAdmin ? (
+        <>
+          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+            {open.map((h) => (
+              <AdminPropertyCard key={h.id} hotel={h}
+                                 onEdit={() => setEditing(h)}
+                                 onToggle={() => void toggle(h)} />
+            ))}
+          </div>
+
+          {closed.length > 0 && (
+            <section className="mt-6">
+              <h2 className="text-2xs font-semibold uppercase tracking-wide text-grey-400 mb-2.5">
+                Closed
+              </h2>
+              <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+                {closed.map((h) => (
+                  <AdminPropertyCard key={h.id} hotel={h}
+                                     onEdit={() => setEditing(h)}
+                                     onToggle={() => void toggle(h)} />
+                ))}
+              </div>
+            </section>
+          )}
+        </>
       ) : (
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-          {(data ?? []).map((p) => (
+          {(plain.data ?? []).map((p) => (
             <Card key={p.id}>
               <CardBody>
                 <p className="text-md font-semibold text-ink-900">{p.name}</p>
@@ -352,25 +438,203 @@ export function PropertiesPage() {
               </CardBody>
             </Card>
           ))}
-
-          {/* Six unnamed, deliberately. */}
-          {Array.from({ length: 6 }).map((_, i) => (
-            <Card key={`pending-${i}`} className="border-dashed">
-              <CardBody>
-                <p className="text-md font-semibold text-grey-400">
-                  Property {i + 2}
-                </p>
-                <p className="text-sm text-grey-500 mt-1">Awaiting confirmation</p>
-                <p className="text-xs text-grey-400 mt-3 leading-relaxed">
-                  Name and room count unconfirmed. A placeholder that reads as real
-                  would put a wrong number in front of someone.
-                </p>
-              </CardBody>
-            </Card>
-          ))}
         </div>
       )}
+
+      {isAdmin && (
+        <>
+          <div className="mt-6">
+            <NewProperty onDone={refresh} />
+          </div>
+
+          <p className="flex items-start gap-2 text-xs text-grey-500 mt-4 leading-relaxed">
+            <Info className="size-3.5 shrink-0 mt-0.5" />
+            <span>
+              Creating a property mints its rooms, its invoice series and its
+              folio namespace — <strong>the code appears in every URL and
+              every invoice number and cannot be changed afterwards.</strong>
+            </span>
+          </p>
+        </>
+      )}
+
+      {editing && (
+        <EditPropertyDialog hotel={editing} onClose={() => setEditing(null)}
+                            onSaved={refresh} />
+      )}
     </Page>
+  );
+}
+
+function AdminPropertyCard({ hotel, onEdit, onToggle }: {
+  hotel: AdminProperty; onEdit: () => void; onToggle: () => void;
+}) {
+  return (
+    <Card className={cn(!hotel.isActive && "opacity-60")}>
+      <CardBody>
+        <div className="flex items-baseline gap-2 flex-wrap">
+          <p className="text-md font-semibold text-ink-900">{hotel.name}</p>
+          <span className="tabular text-sm text-grey-500">{hotel.code}</span>
+          {!hotel.isActive && (
+            <StatusPill tone="neutral">Closed</StatusPill>
+          )}
+        </div>
+        <p className="text-sm text-grey-500 mt-1">
+          {[hotel.addressLine, hotel.city, hotel.state]
+            .filter(Boolean).join(", ") || "—"}
+        </p>
+
+        <dl className="mt-3 space-y-1">
+          <Line label="Rooms" value={hotel.rooms === 0 ? "—" : String(hotel.rooms)} />
+          <Line label="Types"
+                value={hotel.roomTypes.length ? hotel.roomTypes.join(" · ") : "—"} />
+          {/* The GSTIN prints on every invoice this property issues, so
+              it belongs where somebody will notice it is wrong. */}
+          <Line label="GSTIN" value={hotel.gstin ?? "—"} />
+        </dl>
+
+        {hotel.isActive && hotel.checkedIn > 0 && (
+          /* ⚠ SAID BEFORE THE BUTTON IS PRESSED. The server refuses to
+             close a property with guests in it, and a refusal a person
+             reads only after trying is a refusal they did not need. */
+          <p className="text-sm text-grey-500 mt-2.5">
+            {hotel.checkedIn} guest{hotel.checkedIn === 1 ? "" : "s"} in house
+            — it cannot be closed until they check out.
+          </p>
+        )}
+
+        <div className="flex items-center gap-2 mt-3.5 flex-wrap">
+          {hotel.isActive && (
+            <Link
+              to={`/h/${hotel.code}/stay`}
+              className="inline-flex items-center gap-1.5 text-sm text-brand-orange hover:underline"
+            >
+              Open stay view
+              <ArrowRight className="size-3.5" />
+            </Link>
+          )}
+          <div className="flex-1" />
+          <Button variant="ghost" className="h-11" onClick={onEdit}>Edit</Button>
+          <Button variant="secondary" className="h-11"
+                  disabled={hotel.isActive && hotel.checkedIn > 0}
+                  onClick={onToggle}>
+            {hotel.isActive ? "Close" : "Reopen"}
+          </Button>
+        </div>
+      </CardBody>
+    </Card>
+  );
+}
+
+/* ── A property's own details ──────────────────────────────────────
+   ⚠ THE CODE IS NOT HERE. It is in every URL this property has ever
+   appeared in and every invoice number it has ever issued, and the
+   endpoint refuses to change it for that reason. Showing a greyed-out
+   box says so better than leaving it out.
+   ═══════════════════════════════════════════════════════════════════ */
+function EditPropertyDialog({ hotel, onClose, onSaved }: {
+  hotel: AdminProperty; onClose: () => void; onSaved: () => void;
+}) {
+  const [name, setName] = useState(hotel.name);
+  const [city, setCity] = useState(hotel.city ?? "");
+  const [state, setState] = useState(hotel.state ?? "");
+  const [gstin, setGstin] = useState(hotel.gstin ?? "");
+  const [phone, setPhone] = useState(hotel.phone ?? "");
+  const [email, setEmail] = useState(hotel.email ?? "");
+  const [line, setLine] = useState(hotel.addressLine ?? "");
+  const [busy, setBusy] = useState(false);
+
+  const submit = async () => {
+    setBusy(true);
+    const res = await amendProperty(hotel.code, {
+      name: name.trim(), city: city.trim(), state: state.trim(),
+      gstin: gstin.trim(), phone: phone.trim(), email: email.trim(),
+      addressLine: line.trim(),
+    });
+    setBusy(false);
+    /* The server's sentence. It is the one that knows what a GSTIN has
+       to look like, and it explains why it cares. */
+    if (!res.ok) return toast.error("Not saved", res.reason);
+    toast.success(`${name.trim()} saved`);
+    onSaved();
+    onClose();
+  };
+
+  return (
+    <Dialog open onOpenChange={(o) => !o && onClose()}>
+      <DialogContent
+        title={`Edit ${hotel.name}`}
+        description="These print on this property's invoices."
+        footer={
+          <>
+            <Button variant="secondary" size="lg" onClick={onClose}>
+              Cancel
+            </Button>
+            <Button size="lg" loading={busy} disabled={!name.trim()}
+                    onClick={() => void submit()}>
+              Save
+            </Button>
+          </>
+        }
+      >
+        <div className="space-y-3">
+          <Field label="Code"
+                 hint="In every URL and every invoice number. It cannot be changed.">
+            {(f) => (
+              <Input {...fieldProps(f)} value={hotel.code} disabled
+                     className="tabular" />
+            )}
+          </Field>
+          <Field label="Name" required>
+            {(f) => (
+              <Input {...fieldProps(f)} value={name} autoFocus
+                     onChange={(e) => setName(e.target.value)} />
+            )}
+          </Field>
+          <div className="grid gap-3 sm:grid-cols-2">
+            <Field label="City">
+              {(f) => (
+                <Input {...fieldProps(f)} value={city}
+                       onChange={(e) => setCity(e.target.value)} />
+              )}
+            </Field>
+            <Field label="State">
+              {(f) => (
+                <Input {...fieldProps(f)} value={state}
+                       onChange={(e) => setState(e.target.value)} />
+              )}
+            </Field>
+          </div>
+          <Field label="Address">
+            {(f) => (
+              <Input {...fieldProps(f)} value={line}
+                     onChange={(e) => setLine(e.target.value)} />
+            )}
+          </Field>
+          <Field label="GSTIN"
+                 hint="Fifteen characters, the two-digit state code first. It prints on every invoice.">
+            {(f) => (
+              <Input {...fieldProps(f)} value={gstin} className="tabular"
+                     onChange={(e) => setGstin(e.target.value.toUpperCase())} />
+            )}
+          </Field>
+          <div className="grid gap-3 sm:grid-cols-2">
+            <Field label="Phone">
+              {(f) => (
+                <Input {...fieldProps(f)} value={phone} type="tel"
+                       onChange={(e) => setPhone(e.target.value)} />
+              )}
+            </Field>
+            <Field label="Email">
+              {(f) => (
+                <Input {...fieldProps(f)} value={email} type="email"
+                       onChange={(e) => setEmail(e.target.value)} />
+              )}
+            </Field>
+          </div>
+        </div>
+      </DialogContent>
+    </Dialog>
   );
 }
 

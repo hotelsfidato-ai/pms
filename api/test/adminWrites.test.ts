@@ -73,6 +73,99 @@ afterAll(async () => {
   await closePool();
 });
 
+/* ══════════════════════════════════════════════════════════════════
+   THE LIST THAT MAKES "REOPEN" POSSIBLE
+
+   ⚠ WITHOUT IT, CLOSE IS A ONE-WAY DOOR. `GET /api/hotels` ends
+   `where is_active`, so a closed property disappears from every list
+   the interface has — including the one that would carry the button to
+   reopen it. Close/reopen shipped against that endpoint would be a
+   button that removes a property from the screen and an endpoint
+   nothing can reach.
+
+   It also carries the GSTIN and contact details of every property in
+   the group, which is what migration 031 was written to stop leaking
+   to a clerk at one hotel. Both halves are asserted.
+   ══════════════════════════════════════════════════════════════════ */
+describe("the admin property list", () => {
+  type Row = {
+    code: string; name: string; gstin: string | null;
+    isActive: boolean; rooms: number; checkedIn: number;
+  };
+
+  it("REFUSES a clerk — it carries every property's GSTIN", async () => {
+    const res = await as(clerkUid, "/admin/hotels");
+    expect(res.status).toBe(403);
+    expect(((await res.json()) as { reason: string }).reason)
+      .toMatch(/group administrator/i);
+  });
+
+  it("shows the owner every property, with what Close would refuse over", async () => {
+    const res = await as(ownerUid, "/admin/hotels");
+    expect(res.status, await res.clone().text()).toBe(200);
+    const { hotels } = (await res.json()) as { hotels: Row[] };
+
+    const agr = hotels.find((h) => h.code === "AGR");
+    expect(agr, "AGR is not in the admin list").toBeTruthy();
+    expect(agr!.isActive).toBe(true);
+    /* Said BEFORE the button is pressed. A refusal a person reads only
+       after trying is a refusal they did not need. */
+    expect(typeof agr!.checkedIn).toBe("number");
+  });
+
+  it("⚠ INCLUDES A CLOSED PROPERTY, which /api/hotels does not", async () => {
+    const db = await admin();
+    try {
+      await db.query("update hotels set is_active = false where code = 'PUN'");
+
+      /* The ordinary list cannot see it — that is the whole reason this
+         endpoint exists, asserted rather than assumed. */
+      const plain = await as(ownerUid, "/hotels");
+      const scope = (await plain.json()) as { hotels: { code: string }[] };
+      expect(scope.hotels.some((h) => h.code === "PUN"),
+        "a closed property was still in the ordinary scope list").toBe(false);
+
+      const res = await as(ownerUid, "/admin/hotels");
+      const { hotels } = (await res.json()) as { hotels: Row[] };
+      const pun = hotels.find((h) => h.code === "PUN");
+      expect(pun, "a closed property vanished from the admin list too — "
+        + "there would be no way to reopen it").toBeTruthy();
+      expect(pun!.isActive).toBe(false);
+
+      /* And it can be brought back through the endpoint the screen uses. */
+      const back = await as(ownerUid, "/admin/hotels/PUN/reopen", "POST", {});
+      expect(back.status, await back.clone().text()).toBe(200);
+    } finally {
+      await db.query("update hotels set is_active = true where code = 'PUN'")
+        .catch(() => undefined);
+      await db.end();
+    }
+  });
+
+  it("carries the phone, so an edit form does not save a blank over it", async () => {
+    /* ⚠ THE ENDPOINT ACCEPTED A PHONE AND THE LIST NEVER RETURNED ONE.
+       An edit dialog built on that list would open with the box empty
+       and write that emptiness back. Half a round trip is worse than
+       none. */
+    const db = await admin();
+    try {
+      await db.query(
+        "update staff set phone = '9822000000' where email = 'agra@fidato.in'");
+      const res = await as(ownerUid, "/admin/staff");
+      const body = (await res.json()) as {
+        staff: { email: string; phone: string | null }[];
+      };
+      const clerk = body.staff.find((x) => x.email === "agra@fidato.in");
+      expect(clerk!.phone).toBe("9822000000");
+    } finally {
+      await db.query(
+        "update staff set phone = null where email = 'agra@fidato.in'")
+        .catch(() => undefined);
+      await db.end();
+    }
+  });
+});
+
 describe("changing a property", () => {
   it("REFUSES a clerk, in a sentence, and changes nothing", async () => {
     const res = await as(clerkUid, "/admin/hotels/AGR", "PATCH", {

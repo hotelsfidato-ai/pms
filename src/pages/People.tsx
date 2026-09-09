@@ -12,6 +12,7 @@ import {
 } from "@/components/ui";
 import {
   listAdminStaff, createStaff, grantAccess, revokeAccess, deactivateStaff,
+  amendStaff, reactivateStaff,
   listProperties, type AdminStaff,
 } from "@/data/repositories";
 
@@ -193,6 +194,22 @@ function PersonCard({ person, onGrant, onChanged }: {
   person: AdminStaff; onGrant: () => void; onChanged: () => void;
 }) {
   const [busy, setBusy] = useState(false);
+  const [editing, setEditing] = useState(false);
+
+  const bringBack = async () => {
+    if (busy) return;
+    setBusy(true);
+    const res = await reactivateStaff(person.id);
+    setBusy(false);
+    if (!res.ok) return toast.error("Not reactivated", res.reason);
+    /* ⚠ THE WARNING IS SHOWN, NOT SWALLOWED. Active with no sign-in
+       account linked reaches a page that accepts nothing, and the
+       server says so at the moment it becomes true. A toast that only
+       said "done" would send somebody to a broken morning. */
+    if (res.warning) toast.error(`${person.name} is active again`, res.warning);
+    else toast.success(`${person.name} can sign in again`);
+    onChanged();
+  };
 
   const revoke = async (code: string) => {
     const res = await revokeAccess(person.id, code);
@@ -235,16 +252,31 @@ function PersonCard({ person, onGrant, onChanged }: {
               <p className="text-sm text-grey-500 truncate">{person.email}</p>
             </div>
 
-            {person.isActive && (
-              <div className="flex gap-2">
+            {person.isActive ? (
+              <div className="flex gap-2 flex-wrap">
                 <Button variant="secondary" className="h-11" onClick={onGrant}>
                   <Building2 className="size-4" /> Give a property
+                </Button>
+                <Button variant="ghost" className="h-11"
+                        onClick={() => setEditing(true)}>
+                  Edit
                 </Button>
                 <Button variant="secondary" className="h-11" disabled={busy}
                         onClick={() => void deactivate()}>
                   {busy ? "…" : "Deactivate"}
                 </Button>
               </div>
+            ) : (
+              /* ⚠ THE ENDPOINT FOR THIS HAS EXISTED SINCE THE ADMIN
+                 WORK AND HAD NO BUTTON. Its own comment in the route
+                 file says reactivating was added because "a person
+                 switched off by mistake needed somebody with database
+                 access to undo it" — and then the fix was itself
+                 unreachable, so they still did. */
+              <Button variant="secondary" className="h-11" disabled={busy}
+                      onClick={() => void bringBack()}>
+                {busy ? "…" : "Bring them back"}
+              </Button>
             )}
           </div>
 
@@ -285,7 +317,80 @@ function PersonCard({ person, onGrant, onChanged }: {
           )}
         </CardBody>
       </Card>
+
+      {editing && (
+        <EditPersonDialog person={person} onClose={() => setEditing(false)}
+                          onSaved={onChanged} />
+      )}
     </li>
+  );
+}
+
+/* ── Correcting a name ────────────────────────────────────────────
+   ⚠ THE EMAIL IS NOT HERE, and that is the route's decision as much as
+   this screen's: it is how they sign in, and `PATCH /admin/staff/:id`
+   accepts only the name and the phone. Offering a box that silently
+   did nothing would be worse than not offering one.
+
+   A misspelled name is not cosmetic. It is on every folio they opened,
+   every discount they applied and every line of the audit trail, and
+   until this dialog existed it needed a database session to fix.
+   ═══════════════════════════════════════════════════════════════════ */
+function EditPersonDialog({ person, onClose, onSaved }: {
+  person: AdminStaff; onClose: () => void; onSaved: () => void;
+}) {
+  const [name, setName] = useState(person.name);
+  const [phone, setPhone] = useState(person.phone ?? "");
+  const [busy, setBusy] = useState(false);
+
+  const submit = async () => {
+    setBusy(true);
+    const res = await amendStaff(person.id,
+      { fullName: name.trim(), phone: phone.trim() });
+    setBusy(false);
+    if (!res.ok) return toast.error("Not saved", res.reason);
+    toast.success(`${name.trim()} saved`);
+    onSaved();
+    onClose();
+  };
+
+  return (
+    <Dialog open onOpenChange={(o) => !o && onClose()}>
+      <DialogContent
+        title={`Edit ${person.name}`}
+        description="Their name is on everything they have done. The email is how they sign in and cannot be changed here."
+        size="sm"
+        footer={
+          <>
+            <Button variant="secondary" size="lg" onClick={onClose}>
+              Cancel
+            </Button>
+            <Button size="lg" loading={busy} disabled={!name.trim()}
+                    onClick={() => void submit()}>
+              Save
+            </Button>
+          </>
+        }
+      >
+        <div className="space-y-4">
+          <Field label="Name" required>
+            {(f) => (
+              <Input {...fieldProps(f)} value={name} autoFocus
+                     onChange={(e) => setName(e.target.value)} />
+            )}
+          </Field>
+          <Field label="Phone">
+            {(f) => (
+              <Input {...fieldProps(f)} value={phone} type="tel"
+                     onChange={(e) => setPhone(e.target.value)} />
+            )}
+          </Field>
+          <p className="text-sm text-grey-500">
+            Signs in as <span className="text-ink-900">{person.email}</span>.
+          </p>
+        </div>
+      </DialogContent>
+    </Dialog>
   );
 }
 

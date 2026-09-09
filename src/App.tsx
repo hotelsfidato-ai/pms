@@ -41,7 +41,7 @@ import {
 } from "@/pages/Directory";
 import {
   UsersPage, RolesPage, AuditLogPage, IntegrationsPage,
-  SettingsPage, AdminPropertiesPage,
+  SettingsPage,
 } from "@/pages/admin/Admin";
 import ReservationsPage from "@/pages/Reservations";
 import TillPage from "@/pages/Till";
@@ -305,7 +305,7 @@ export default function App() {
               path="/admin/properties"
               element={
                 <RequireAccess path="/admin/properties" resource="hotel">
-                  <AdminPropertiesPage />
+                  <PropertiesPage />
                 </RequireAccess>
               }
             />

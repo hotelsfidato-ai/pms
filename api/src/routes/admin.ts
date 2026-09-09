@@ -191,6 +191,65 @@ function changedOrRefuse(
    given to guests and to an assessor. Creating a property refuses a bad
    code loudly for exactly this reason.
    ═══════════════════════════════════════════════════════════════════ */
+/* ── Every property, closed ones included ──────────────────────────
+   ⚠ WITHOUT THIS, "CLOSE" IS A ONE-WAY DOOR. `GET /api/hotels` ends
+   `where is_active`, so a closed property disappears from every list
+   the interface has — including the one carrying the Reopen button.
+   Building close/reopen against that endpoint would have shipped a
+   button that deletes a property from the screen and a reopen endpoint
+   nothing could reach, which is the exact defect this session has been
+   closing all day.
+
+   Group admins only, because it also carries the GSTIN and the contact
+   details of every property in the group — the thing migration 031 was
+   written to stop leaking to a clerk at one hotel.
+   ═══════════════════════════════════════════════════════════════════ */
+admin.get("/admin/hotels", async (c) => {
+  const body = await withSession(c.get("subject"), async (client) => {
+    const denied = await requireGroupAdmin(client);
+    if (denied) return denied;
+
+    const { rows } = await client.query<{
+      id: string; code: string; name: string;
+      city: string | null; state: string | null; gstin: string | null;
+      phone: string | null; email: string | null; address_line: string | null;
+      is_active: boolean; rooms: string; room_types: string | null;
+      checked_in: string;
+    }>(
+      `select h.id::text, h.code, h.name, h.city, h.state, h.gstin,
+              h.phone, h.email::text, h.address_line, h.is_active,
+              (select count(*) from rooms r
+                where r.hotel_id = h.id and r.is_active)::text as rooms,
+              (select string_agg(rt.name, ', ' order by rt.sort_order)
+                 from room_types rt
+                where rt.hotel_id = h.id and rt.is_active) as room_types,
+              /* What Close would refuse over, shown BEFORE the button is
+                 pressed rather than as a refusal afterwards. */
+              (select count(*) from reservations res
+                where res.hotel_id = h.id
+                  and res.status = 'checked_in')::text as checked_in
+         from hotels h
+        order by h.is_active desc, h.code`);
+
+    return {
+      hotels: rows.map((r) => ({
+        id: r.id, code: r.code, name: r.name,
+        city: r.city, state: r.state, gstin: r.gstin,
+        phone: r.phone, email: r.email, addressLine: r.address_line,
+        isActive: r.is_active,
+        rooms: Number(r.rooms),
+        /* Empty rather than null: a property with no room types is a
+           property nobody has set up yet, and the screen says so. */
+        roomTypes: (r.room_types ?? "").split(", ").filter(Boolean),
+        checkedIn: Number(r.checked_in),
+      })),
+    };
+  });
+
+  if (body && "ok" in body && body.ok === false) return c.json(body, 403);
+  return c.json(body);
+});
+
 admin.patch("/admin/hotels/:code", async (c) => {
   type Body = {
     name?: string; city?: string; state?: string; gstin?: string;
@@ -378,13 +437,17 @@ admin.post("/admin/staff/:id/reactivate", async (c) => {
 admin.get("/admin/staff", async (c) => {
   const body = await withSession(c.get("subject"), async (client) => {
     const { rows } = await client.query<{
-      id: string; email: string; full_name: string;
+      id: string; email: string; full_name: string; phone: string | null;
       is_group_admin: boolean; is_active: boolean; hotels: string | null;
     }>(
       /* RLS decides what comes back. A group admin sees everyone; a
          clerk sees themselves and the colleagues they share a property
          with. This query does not filter — migration 027 does. */
-      `select s.id::text, s.email::text, s.full_name,
+      /* ⚠ AND THE PHONE. `PATCH /admin/staff/:id` has always accepted
+         one and this query never returned it, so an edit form would
+         open with the box empty and save that emptiness over whatever
+         was there. Half a round trip is worse than none. */
+      `select s.id::text, s.email::text, s.full_name, s.phone,
               s.is_group_admin, s.is_active,
               (select string_agg(h.code || ':' || sh.role, ',' order by h.code)
                  from staff_hotels sh join hotels h on h.id = sh.hotel_id
@@ -398,6 +461,7 @@ admin.get("/admin/staff", async (c) => {
         id: r.id,
         email: r.email,
         name: r.full_name,
+        phone: r.phone,
         isGroupAdmin: r.is_group_admin,
         isActive: r.is_active,
         access: (r.hotels ?? "").split(",").filter(Boolean).map((pair) => {

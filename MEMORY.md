@@ -5303,3 +5303,93 @@ Worth noting because the failure LOOKED like the new code was broken.
 Two red tests naming tax and folios is a convincing accusation, and the
 first instinct was to check the cap arithmetic rather than to read what
 the tests were actually asserting.
+
+---
+
+### 224 · Four admin endpoints, written and tested, with no way in
+
+Walking `api/src/routes/admin.ts` against `src/data/repositories/admin.ts`
+on 9 September: **eleven endpoints, seven callers.**
+
+```
+PATCH  /admin/hotels/:code          a property's own details      no caller
+POST   /admin/hotels/:code/:state   close it, or reopen it        no caller
+PATCH  /admin/staff/:id             a person's name or phone      no caller
+POST   /admin/staff/:id/reactivate  bring somebody back           no caller
+```
+
+The last one carries this comment in the route file:
+
+> *"Deactivating existed; reactivating did not, so a person switched off
+> by mistake needed somebody with database access to undo it."*
+
+**And the fix was itself unreachable.** Somebody switched off by mistake
+still needed a database session, for exactly as long as that endpoint sat
+there with no caller — which was every day since it was written.
+
+⚠ **The reachability gate could not have caught this.** It watches the
+FRONTEND seam: it fails when a function in `src/data/repositories` has no
+importer. These four had no function on the seam at all, so there was
+nothing for it to find. **The moment I added the four seam functions the
+gate went red immediately** — which is the gate working, and also the
+measure of its limit: it catches an endpoint that has been half-wired,
+not one that was never wired.
+
+**What is missing is the same gate one layer down**: an API route with no
+caller in the seam. Recorded as a gap, not built — the route table is not
+a static list the way `export function` is, so it needs real work rather
+than a regex.
+
+---
+
+### 225 · There were two Properties screens and the one in the menu could do less
+
+```
+/properties         in the navigation. Rich cards. Could do NOTHING.
+/admin/properties   the create form, and a four-line list.
+```
+
+Two screens for one noun, and the one people actually clicked was the one
+that could do least. Worse: `/properties` drew **six hardcoded dashed
+cards** reading *"Property 2 — awaiting confirmation"*.
+
+That was honest when nothing could create a property. Since the create
+form landed in phase 1 it has been a screen telling you six properties
+are pending while standing next to the button that would add them.
+`listProperties()` is the truth; a constant six is a story about the
+truth that stopped being updated.
+
+One screen now, and `/admin/properties` renders it.
+
+**And a trap avoided by asking one question before building.** `GET
+/api/hotels` ends `where is_active`. A Close button on a screen fed by it
+would remove the property from the list AND from any way of reopening
+it — shipping the exact defect above, freshly made. Hence `GET
+/admin/hotels`, which returns closed properties too, asserted in
+`adminWrites.test.ts` by closing PUN and checking both lists.
+
+---
+
+### 226 · A line-range replacement ate three screens I never looked at
+
+Rewriting `PropertiesPage`, I replaced everything from
+`export function PropertiesPage() {` to `function Line(` — the next thing
+I could see. **`NotificationsPage`, `RoomTypesPage` and `RatePlansPage`
+lived in between**, and all three vanished.
+
+`tsc` caught it in seconds:
+
+```
+src/App.tsx(39,46): Module '"@/pages/Directory"' has no exported member
+                    'NotificationsPage'.
+```
+
+Restored from `git show HEAD:` in one step, so the cost was a minute.
+Worth recording anyway, because the cost was low **by luck of the
+typechecker**, not by anything I did. The same edit inside a file whose
+middle was not exported and imported elsewhere would have deleted working
+code silently.
+
+**The rule:** an anchor for the END of a replacement has to be checked as
+carefully as the start. "The next function I recognise" is not an anchor —
+it is a guess about what is in between.
