@@ -5085,3 +5085,50 @@ like "what is under this prefix" answers a question about the prefix,
 and I presented it as an answer about the system. This is the second
 time in two days that a confident finding of mine was an artefact of
 how I searched — 196 was the first.
+
+---
+
+### 218 · Housekeeping never refreshes itself — DEFERRED by the owner
+
+Reported as *"the housekeeping thing in the backend is very slow"*, on
+the **deployed** system.
+
+**Measured locally and it is not a load problem.** A cold load of
+`/h/:code/housekeeping` fires **five requests, no duplicates**, all
+under 15ms:
+
+```
+housekeepers · housekeeping/assignments · rooms · stays · hotels
+```
+
+⚠ **What it has is NO REFRESH OF ANY KIND.**
+
+```
+refetchInterval   none
+live channel      none
+```
+
+A housekeeper marks 204 clean on a stairwell landing and **the
+supervisor's board does not change until somebody reloads the page.**
+On a Mumbai connection that reads as "slow" because the screen is
+telling you about a morning that has already moved on.
+
+**THE TRANSPORT, for the record, because it was asked:**
+
+```
+everything          HTTP. fetch, through React Query. request/response.
+one exception       SERVER-SENT EVENTS, and only for the restaurant.
+                    api/src/routes/live.ts + a Postgres LISTEN/NOTIFY
+                    trigger (075). fetch-based, NOT EventSource --
+                    EventSource cannot send an auth header.
+websockets          none, anywhere.
+```
+
+The live channel reaches exactly three screens — Floor, Kitchen, Till —
+and invalidates four query keys. **Housekeeping is not on it**, and
+neither is anything at the front desk.
+
+**Deferred on 8 September at the owner's instruction**: recorded, not
+fixed. The fix is small and known — extend the notify trigger to
+housekeeping changes and add `useLiveOrders`-style invalidation to that
+screen — but it was not the priority this session.
