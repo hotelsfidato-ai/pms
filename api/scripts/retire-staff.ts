@@ -1,15 +1,29 @@
 import pg from "pg";
-/* ⚠ IMPORTED FOR ITS SIDE EFFECT, AND THAT IS THE WHOLE POINT.
-   `src/env.ts` calls `process.loadEnvFile("../.env")` at module load.
-   Without this line `ADMIN_DATABASE_URL` is simply not in the
-   environment on the server — it lives in `api/.env`, written there by
-   `deploy/launch.sh`, and nothing else in this file would read it.
+/* ⚠ `api/.env` IS READ HERE, AND NOT BY IMPORTING `src/env.ts`.
 
-   The variable was chosen correctly and the file was never loaded, so
-   the connection fell through to the DEVELOPMENT default and failed to
-   connect to a Postgres that does not exist on that box. Half a fix
-   looks exactly like a whole one until somebody runs it. */
-import "../src/env.ts";
+   The obvious line is `import "../src/env.ts"` for its side effect,
+   and it was written that way first. It cannot work:
+
+     · `api/.env` is mode 600, owned by `fidato`
+     · this script has to run as `postgres`, the only superuser, because
+       `fidato` owns no table and cannot lift the append-only triggers
+     · `env.ts` VALIDATES — it throws when DATABASE_URL is absent, which
+       it is when the file cannot be read
+
+   So importing it made the script unrunnable by the one account able
+   to do the job, and the failure was a config error about a variable
+   nobody had asked for. Loading the file directly and shrugging when
+   it is not there is what a maintenance script actually needs: the
+   connection string is passed on the command line in that case.
+
+   Not a second copy of a rule — `env.ts` decides what the SERVER
+   requires, and a script run by hand by a different user has different
+   requirements. One line, and it says why. */
+try {
+  process.loadEnvFile(new URL("../.env", import.meta.url).pathname);
+} catch {
+  /* Unreadable or absent. Fine: the caller passes the connection. */
+}
 
 import { fileURLToPath } from "node:url";
 import { readFileSync } from "node:fs";

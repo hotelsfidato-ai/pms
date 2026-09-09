@@ -5725,3 +5725,65 @@ against the ONE case in mind, which then has an opinion about cases it
 never considered. The banquet guard was vacuous; the strip-check gate
 scanned one directory of two; this one confused *authority* with
 *ownership*. In each, the logic was right about the case it knew.
+
+---
+
+### 237 · `ADMIN_DATABASE_URL` is not the schema owner, and I assumed it was
+
+Defect 233 said the reset should use `ADMIN_DATABASE_URL` "the schema
+owner, over the unix socket". Run on the real box:
+
+```
+Connected as "fidato" — not a superuser, and owning no table here.
+```
+
+**`fidato` owns nothing.** On production:
+
+```
+pms_migrate   owns 63 tables
+postgres      owns 3          (booking_sources, booking_source_rates,
+                               pos_promotions — the 082/083 tables)
+fidato        owns 0, not a superuser
+```
+
+`fidato` is the SERVICE account: it reads, which is all the preflight
+and the API need. The reset has to disable append-only triggers, which
+needs ownership or superuser, and `retire-staff` failed with **permission
+denied for table staff_hotels** for the same reason.
+
+**Both failed safely** — the guard caught one, a grant caught the other,
+and the transaction never committed. Nothing was changed. But the
+diagnosis in 233 was confidently wrong about which role does what, and
+the comment I wrote asserting it is now in the file.
+
+⚠ **And 082/083 left three tables owned by `postgres` when every other
+table is owned by `pms_migrate`.** Harmless today because migrations run
+as a superuser; a latent trap the day anything tries to `alter` them as
+`pms_migrate`. Recorded in PENDING.md.
+
+---
+
+### 238 · The env fix made the script unrunnable by the only account that could run it
+
+235 added `import "../src/env.ts"` for its `loadEnvFile` side effect.
+Correct about the side effect and wrong about everything else:
+
+- `api/.env` is **mode 600, owned by `fidato`**
+- the script has to run as **`postgres`**, the only superuser
+- `env.ts` **validates** and throws when `DATABASE_URL` is absent — which
+  it is, because `postgres` cannot read the file
+
+So the fix for "the variable is never loaded" produced a config error
+about a variable nobody asked for, in the exact context the script is
+meant to run in.
+
+It loads `../.env` directly in a try/catch now and shrugs when it is
+unreadable — the connection string comes from the command line then.
+**Not a second copy of a rule**: `env.ts` decides what the SERVER
+requires; a maintenance script run by hand as a different user has
+different requirements.
+
+**Three consecutive fixes to one line, each correct about the thing it
+was looking at.** 233 fixed the variable name, 235 fixed the loading,
+238 fixed who can load it. Each was verified by reading, and each was
+wrong in a way only running it on the real box would show.
