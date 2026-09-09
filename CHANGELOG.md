@@ -46,6 +46,69 @@ Write it **as you go**, not at the end from memory. Copy this shape:
 
 ---
 
+## 2026-09-08 (phase 1) · Three gates aimed at an act, applied to a screen
+
+**Asked for:** the owner reported banquet would not turn on and that
+admin was "not fully built", then asked for questions before any
+building. Four decisions taken, then phase 1 of the resulting plan.
+
+**Decided by the owner**
+- Banquet: enable it for Akkalkot
+- Approvals: **discounts above a threshold** only — not voids, rate
+  overrides or comps
+- Attachments: **parked**, all four uses in scope eventually, needs
+  architecture first
+- Channel manager and payment gateway: **excluded for now**
+
+**Shipped**
+- **Banquet turns on.** The switch carried
+  `disabled={busy === module || module === "banquet"}` beside a note
+  reading *"Not built yet"*. Stage 14 built it — three screens, four
+  tables, an API — and nobody came back for the switch. Guard added:
+  *every module the API accepts has a switch somebody can press.*
+- **A property can be created in production.** `/admin/properties`
+  carried a card explaining that the form *"belongs with the auth
+  bridge"* — a dev-only screen — while `README.md` step 8 told the owner
+  to add six properties there. The form now ships and **keeps the
+  provisioning key**; a wrong key and a missing key both return 403 with
+  a sentence somebody can act on, from the database.
+- `components/flows/StaffAdmin.tsx` — the panels, shared by the console
+  and the properties screen.
+- `README.md` step 8 is true, and now names the Firebase link people
+  miss.
+
+**Found**
+- **214** a switch that said "not built yet" about something built.
+- **216** a screen that explained why it could not do its own job.
+- **217** ⚠ **RETRACTED: adding a user was never missing.** I reported
+  it as a P0, built a screen, and was wrong three ways.
+  `src/pages/People.tsx` has done the whole job since **7 September**,
+  at `/people`, in the sidebar — and it badges *"Cannot sign in"* on an
+  unlinked account, which is the step I thought I was adding. **The
+  problem I found had been found and fixed the day before.** Reverted.
+
+**Proved**
+```
+db/tests/run.sh    515 assertions      api npm test  273 · 23 files
+db/tests/rerun.sh  81 of 81            vitest        172
+tsc -b  0   api tsc  0   strip-check 32   build:all  3 clean
+```
+Both new guards proved by putting their bugs back: the banquet switch
+disabled again fails two assertions, and the module test was found
+**vacuous first** — no `/modules` branch in the test stub meant zero
+switches rendered and "none is disabled" was trivially true of none.
+
+**Left open**
+- **The server is six commits behind** and still holds the `launch.sh`
+  that destroys TLS on every upgrade.
+- Phase 2 begins with the **reachability gate**, deliberately before the
+  two remaining features. 217 is the argument for it: a capability
+  audited by URL prefix answers a question about the prefix.
+
+**Commits:** `236125f … 5d9c459`
+
+---
+
 ## 2026-09-08 (deploy) · Live, and four faults on the way there
 
 **Asked for:** push today's work to Firebase and the Oracle box.
