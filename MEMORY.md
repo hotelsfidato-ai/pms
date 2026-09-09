@@ -5611,3 +5611,67 @@ assert 'export function grantAccess' in s, "grantAccess survived"
 morning. What stops it is asserting what must REMAIN, not just what
 should go — the same shape as every other guard in this project: state
 the property, not the procedure.
+
+---
+
+### 233 · The end-of-beta reset could not have run on the server
+
+`deploy/README.md` documents ending a beta as:
+
+```bash
+cd api && npm run reset -- 5EL --yes
+```
+
+`reset-property.ts` resolved its connection as
+`SUPER_DATABASE_URL ?? DATABASE_URL ?? <the DEV localhost default>`.
+
+On the Oracle box **`SUPER_DATABASE_URL` is not set**. `DATABASE_URL` is
+`pms_app` — the role every RLS policy is written against, which owns no
+tables. So the documented command would have:
+
+- printed **"0 bookings · 0 guests · 0 postings · 0 orders"** about a
+  full hotel, because RLS hides what it cannot see, and
+- then failed on `alter table … disable trigger` with a permission
+  error, halfway in.
+
+`launch.sh` writes **`ADMIN_DATABASE_URL`** into `api/.env` for exactly
+this purpose, and **`preflight.ts` and `link-staff.ts` both already
+prefer it** — each after being caught by the identical trap. The
+preflight reported a healthy box as broken (defect 192); link-staff
+printed an empty roster against six real people. This is the third
+occurrence of one mistake in one codebase.
+
+Both `reset-property.ts` and the new `retire-staff.ts` now read
+`ADMIN_DATABASE_URL` first, and the reset **proves it can see before it
+deletes** — connecting is not the same as being able to act.
+
+---
+
+### 234 · The gate for defect 209 never looked at `api/scripts/`
+
+`strip-check` exists because a parameter property in `till.ts` took the
+production API down. It scanned `src/` only.
+
+Everything in `scripts/` runs under the **same loader**:
+
+```
+"reset":        node --experimental-strip-types scripts/reset-property.ts
+"preflight":    node --experimental-strip-types scripts/preflight.ts
+"retire-staff": node --experimental-strip-types scripts/retire-staff.ts
+```
+
+and two of those three are run against a **live database at the end of a
+beta** — the moment a syntax error costs most.
+
+Found by accident: a bad edit left `reset-property.ts` unparseable, the
+script died with `ERR_INVALID_TYPESCRIPT_SYNTAX`, and `npm run strip-check`
+printed **`✓ 34 files`** in the same minute.
+
+⚠ **A gate that reports success about a directory it never opened is
+worse than no gate — it is a reason not to look.** It scans both roots
+now, 42 files, and was re-proved by putting a parameter property into a
+script and watching it fail.
+
+**The general shape, which is the fourth time this project has met it:**
+a guard's SCOPE is as much a part of it as its logic, and nothing about
+a passing guard tells you what it declined to examine.

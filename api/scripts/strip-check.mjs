@@ -39,9 +39,27 @@ import { stripTypeScriptTypes } from "node:module";
 process.removeAllListeners("warning");
 
 const ROOT = fileURLToPath(new URL("..", import.meta.url));
-const SRC = join(ROOT, "src");
 
-/** Every .ts under src/, because the server imports transitively and a
+/* ⚠ `scripts/` TOO, AND IT WAS NOT WATCHED. This gate exists because
+   defect 209 — a parameter property in `till.ts` — took the production
+   API down, and it scanned `src/` only.
+
+   Everything in `scripts/` runs under the SAME loader:
+
+     "reset":        node --experimental-strip-types scripts/reset-property.ts
+     "preflight":    node --experimental-strip-types scripts/preflight.ts
+     "retire-staff": node --experimental-strip-types scripts/retire-staff.ts
+
+   and two of those three are things you run on a live database at the
+   end of a beta, at the exact moment a syntax error is most expensive.
+
+   Found on 9 September by breaking `reset-property.ts` with a bad edit
+   and watching this gate print a green tick. The file would not parse.
+   A gate that reports success about a directory it never opened is
+   worse than no gate: it is a reason not to look. */
+const ROOTS = [join(ROOT, "src"), join(ROOT, "scripts")];
+
+/** Every .ts under those, because the server imports transitively and a
     file nobody imports today is imported tomorrow. */
 async function walk(dir) {
   const out = [];
@@ -53,7 +71,9 @@ async function walk(dir) {
   return out;
 }
 
-const files = (await walk(SRC)).sort();
+const files = (await Promise.all(ROOTS.map(walk)))
+  .flat()
+  .sort();
 const bad = [];
 
 /* ⚠ `stripTypeScriptTypes`, NOT `node --check`.

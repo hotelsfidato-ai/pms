@@ -15,6 +15,7 @@
     "demo-history": "tsx scripts/demo-history.ts",
     "demo": "tsx scripts/load-demo.ts && tsx scripts/demo-history.ts",
     "reset": "node --experimental-strip-types scripts/reset-property.ts",
+    "retire-staff": "node --experimental-strip-types scripts/retire-staff.ts",
     "serve": "node scripts/free-port.mjs && tsx src/server.ts",
     "pos:outlet": "node --experimental-strip-types scripts/pos-outlet.ts",
     "preflight": "node --experimental-strip-types scripts/preflight.ts",

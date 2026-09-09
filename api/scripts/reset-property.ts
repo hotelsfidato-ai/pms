@@ -36,9 +36,28 @@ import { fileURLToPath } from "node:url";
      npm run reset -- 5EL --yes
    ══════════════════════════════════════════════════════════════════ */
 
+/* ⚠ WHICH CONNECTION, AND WHY IT IS NOT DATABASE_URL.
+
+   `DATABASE_URL` is `pms_app`, the role every RLS policy is written
+   against. With no session set it sees almost nothing, and it owns no
+   tables — so this script would print "0 bookings · 0 guests" about a
+   busy hotel and then fail on `alter table ... disable trigger` with a
+   permission error, halfway through, having reported nothing to remove.
+
+   `deploy/launch.sh` writes ADMIN_DATABASE_URL into `api/.env` for
+   exactly this: the schema owner, over the unix socket, peer
+   authenticated. `preflight.ts` and `link-staff.ts` both prefer it and
+   both were changed to after being caught by the same trap — the
+   preflight reported a healthy box as broken and link-staff listed an
+   empty roster against six real people.
+
+   The localhost default is DEVELOPMENT's Postgres. It is last on
+   purpose: a production box has no such server, so a missing
+   ADMIN_DATABASE_URL fails to connect rather than quietly doing
+   something to the wrong database. */
 const CONNECTION =
+  process.env["ADMIN_DATABASE_URL"] ??
   process.env["SUPER_DATABASE_URL"] ??
-  process.env["DATABASE_URL"] ??
   "postgres://postgres:pw@127.0.0.1:55432/fidato";
 
 /* Order is the whole of this. Children before parents, every time —
@@ -124,10 +143,33 @@ async function main() {
   const say = (s: string) => console.log(`  ${s}`);
 
   try {
+    /* ⚠ AND PROVE IT CAN SEE BEFORE IT DELETES. Connecting is not the
+       same as being able to act: an under-privileged role connects
+       fine and then reads an empty world. This is the check
+       `link-staff.ts` grew after printing an empty list against six
+       real staff members. */
+    const { rows: who } = await client.query<{ me: string; tables: string }>(
+      `select current_user as me,
+              (select count(*)::text from pg_tables
+                where schemaname = 'public' and tableowner = current_user)
+                as tables`);
+    if (who[0]!.tables === "0") {
+      console.error(
+        `\n  Connected as "${who[0]!.me}", which owns no table here.\n`
+        + "  That role cannot lift the append-only guards this has to lift,\n"
+        + "  and row level security would hide most of what it is meant to\n"
+        + "  remove — so it would report a quiet, wrong success.\n\n"
+        + "  On the server, as the schema owner:\n"
+        + "    cd /opt/fidato/api && sudo -u fidato env HOME=/tmp \\\n"
+        + "      npm run reset -- <CODE> --yes\n\n"
+        + "  Nothing was changed.\n");
+      process.exit(1);
+    }
+
     const { rows: hotel } = await client.query<{
       id: string; name: string; bd: string; tz: string;
     }>(
-      `select id, name, business_date::text as bd, timezone as tz
+    `select id, name, business_date::text as bd, timezone as tz
          from hotels where code = $1`, [code]);
     if (!hotel[0]) {
       console.error(`\n  No property with code ${code}.\n`);
