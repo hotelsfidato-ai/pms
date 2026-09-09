@@ -1,5 +1,6 @@
 import { describe, it, expect, beforeEach } from "vitest";
 import { readFileSync } from "node:fs";
+import { join } from "node:path";
 import {
   render, screen, within, fireEvent, waitFor,
 } from "@testing-library/react";
@@ -300,11 +301,62 @@ describe("the session guard", () => {
    NAVIGATION HIDING IS NOT ACCESS CONTROL.
    ══════════════════════════════════════════════════════════════════ */
 
+/* ══════════════════════════════════════════════════════════════════
+   ⚠ THE GUARD FAILS OPEN, SO SOMETHING HAS TO WATCH IT
+
+   `RequireAccess` asks the NAVIGATION whether a role may reach a path.
+   That is deliberate and right — a hidden menu entry and a refused page
+   cannot then disagree — but `mayReach` ends:
+
+       return true;
+
+   for a path the navigation does not contain. So a route wrapped in
+   `RequireAccess` whose menu entry is deleted, renamed or never written
+   is open to every signed-in role, and it LOOKS guarded.
+
+   That happened on 9 September. Two menu entries both read "Properties"
+   after the screens were merged; removing one to fix the duplicate
+   silently opened `/admin/properties` to a front-desk clerk. The
+   existing test caught it, and only because that particular path was
+   already in a list somebody had written by hand.
+
+   This asserts the property itself rather than one path: every guarded
+   route is a route the navigation knows about.
+   ══════════════════════════════════════════════════════════════════ */
+describe("every guarded route is one the navigation knows", () => {
+  it("has no RequireAccess path that mayReach would wave through", () => {
+    const app = readFileSync(join(process.cwd(), "src", "App.tsx"), "utf8");
+    const nav = readFileSync(
+      join(process.cwd(), "src", "components", "app", "navigation.ts"), "utf8");
+
+    const guarded = [...app.matchAll(/<RequireAccess\s+path="([^"]+)"/g)]
+      .map((m) => m[1]!);
+    const known = new Set(
+      [...nav.matchAll(/to:\s*"([^"]+)"/g)].map((m) => m[1]!));
+
+    expect(guarded.length, "no guarded routes found — the regex has rotted")
+      .toBeGreaterThan(0);
+
+    const wideOpen = guarded.filter((path) => !known.has(path));
+    expect(
+      wideOpen,
+      "these are wrapped in RequireAccess and the navigation has never "
+      + "heard of them, so mayReach returns true and every role gets in: "
+      + wideOpen.join(", "),
+    ).toEqual([]);
+  });
+});
+
 describe("administration routes", () => {
+  /* ⚠ `/admin/properties` IS NOT HERE ANY MORE, and its absence is the
+     point rather than an omission. The two Properties screens were
+     merged, so that path is now a redirect to `/properties` — a screen
+     every role may read, which answers for its own access by showing a
+     clerk the ordinary cards and an administrator the editable ones.
+     Asserted below rather than dropped. */
   const ADMIN_ROUTES = [
     "/admin/users",
     "/admin/roles",
-    "/admin/properties",
     "/admin/audit-log",
     "/admin/integrations",
     "/admin/settings",
@@ -324,6 +376,19 @@ describe("administration routes", () => {
       ).toBeDefined();
     });
   }
+
+  it("sends /admin/properties to the one Properties screen", async () => {
+    go("/admin/properties");
+    signedIn();
+    render(<App />);
+    /* The refusal must NOT appear — a clerk is allowed to read the
+       property list — and the screen must actually arrive. "No refusal"
+       alone would also be true of a blank page. */
+    expect(
+      await screen.findByRole("heading", { name: /^Properties$/ }),
+      "the redirect did not land on the Properties screen",
+    ).toBeDefined();
+  });
 
   it("lets a group administrator through", async () => {
     go("/admin/users");

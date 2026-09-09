@@ -302,12 +302,20 @@ export default function App() {
             <Route path="/notifications" element={<NotificationsPage />} />
 
             <Route
+              /* ⚠ A REDIRECT, NOT A SECOND COPY OF THE SCREEN. There
+                 were two Properties screens and they were merged on
+                 9 September; pointing this route at `PropertiesPage`
+                 left an /admin path whose only authorisation lived in
+                 a navigation entry — and removing that entry to fix a
+                 duplicate label silently opened it, because
+                 `mayReach` returns TRUE for a path the navigation does
+                 not contain. The guard fails OPEN.
+
+                 A redirect has nothing to fail. The old link still
+                 works, and it lands on the screen that answers for its
+                 own access. */
               path="/admin/properties"
-              element={
-                <RequireAccess path="/admin/properties" resource="hotel">
-                  <PropertiesPage />
-                </RequireAccess>
-              }
+              element={<Navigate to="/properties" replace />}
             />
             <Route
               path="/admin/users"

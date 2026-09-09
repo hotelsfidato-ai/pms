@@ -5393,3 +5393,74 @@ code silently.
 **The rule:** an anchor for the END of a replacement has to be checked as
 carefully as the start. "The next function I recognise" is not an anchor —
 it is a guess about what is in between.
+
+---
+
+### 227 · Deleting a menu entry opened an admin route — the guard fails open
+
+Found by auditing the navigation against itself: **two entries read
+"Properties"** after the two screens were merged. I removed one. A test
+went red:
+
+```
+administration routes > refuses /admin/properties to a front-desk clerk
+```
+
+`RequireAccess` asks the NAVIGATION whether a role may reach a path,
+which is deliberate and right — a hidden menu entry and a refused page
+cannot then disagree. Its own comment says so. But `mayReach` ends:
+
+```ts
+export function mayReach(role: Role, path: string): boolean {
+  for (const section of SECTIONS) { … if (entry.to === path) return visible(role, entry); }
+  return true;                       // ⚠ a path it does not know
+}
+```
+
+**The authorisation for `/admin/properties` was living in a menu label.**
+The entry carried `canSee: (role) => can(role, "create", "hotel")`, and
+deleting it to fix a duplicate label handed the route to every signed-in
+role while leaving it wrapped in something called `RequireAccess`.
+
+Measured across the app: **7 routes wrapped in `RequireAccess`, 6 known
+to the navigation, 1 not** — the one I had just made. No pre-existing
+hole. But the design fails open, so the next one would be silent too.
+
+Two things done:
+
+- `/admin/properties` is now a **redirect** to `/properties`. One screen,
+  one route, one menu entry, and no guard left to lose.
+- A test in `App.test.tsx` asserts the property itself: **every
+  `RequireAccess` path is one the navigation knows.** Proved by pointing
+  a guard at `/admin/nowhere` and watching it fail.
+
+`mayReach` still returns true for an unknown path. Changing it to fail
+closed would break any route whose menu entry is conditional, and that is
+a change to make deliberately rather than in the middle of an audit.
+Recorded in `PENDING.md`.
+
+---
+
+### 228 · Two menu entries called "Booking sources", and I made the second
+
+The sidebar carried:
+
+```
+Reservations   > Booking sources   -> /companies
+Configuration  > Booking sources   -> /h/:code/booking-sources
+```
+
+The first was renamed from "Companies" for a good reason at the time — its
+comment says *"somebody looking for their OTA performance read 'Companies'
+and went past it"* — because **no screen answered that question**. Item D
+built one on 8 September and I did not look at the menu I was adding to.
+
+The rename's reasoning expired the moment the real screen existed, and two
+identical labels meaning two different things is worse than the problem it
+solved. `/companies` is now **"Companies and agents"**, which is what the
+rows are and the same words the booking form's Business source field uses.
+
+**Both collisions were invisible to every gate in the project.** The
+reachability gate asks whether code can be reached, not whether a person
+can tell two doors apart. Found by sorting the labels and looking for
+duplicates — three lines of shell, and worth keeping as a habit.

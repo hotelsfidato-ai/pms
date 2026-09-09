@@ -129,6 +129,19 @@ Not built because the route table is not a static list the way
 `export function` is — Hono registers them at runtime, so this needs
 real work rather than a regex.
 
+### `mayReach` fails open, and only a test stops it now
+
+`RequireAccess` asks the navigation whether a role may reach a path.
+`mayReach` returns **true** for a path the navigation does not contain,
+so a guarded route whose menu entry is deleted or never written is open
+to every signed-in role while still looking guarded. Defect 227.
+
+A test in `App.test.tsx` now asserts that every `RequireAccess` path is
+one the navigation knows, and it was proved to fail. **The function
+itself still fails open.** Making it fail closed would break any route
+whose menu entry is conditional, which is a change to make deliberately
+rather than during an audit.
+
 ### No gate for `app.*` SQL functions with no caller
 
 Same shape, one layer further down. `app.request_approval` is the live

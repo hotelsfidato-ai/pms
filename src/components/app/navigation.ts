@@ -138,11 +138,18 @@ const SECTIONS: NavSection[] = [
          here shows those nine as nine unrelated bookings, so the person
          taking the call had to hold the relationship in their head. */
       { label: "Groups", to: "/h/:code/groups", icon: Users, resource: "reservation", matchPrefix: true },
-      /* Not "Companies". A company is a corporate account; this is where
-         the business came FROM — Agoda, go-MMT, the walk-in. Somebody
-         looking for their OTA performance read "Companies" and went
-         past it. */
-      { label: "Booking sources", to: "/companies", icon: Building2, resource: "company", matchPrefix: true },
+      /* ⚠ THIS SAID "BOOKING SOURCES" AND THERE ARE NOW TWO OF THOSE.
+         It was renamed from "Companies" for a good reason at the time —
+         somebody looking for their OTA performance read "Companies" and
+         went past it, because no screen answered that question. One does
+         now, under Configuration, and two identical labels meaning two
+         different things is worse than the problem the rename solved.
+
+         "Companies and agents" is what the rows actually are, and it is
+         the same vocabulary as the booking form's Business source field.
+         Found by auditing the navigation against itself on 9 September;
+         I introduced the collision the day before and did not look. */
+      { label: "Companies and agents", to: "/companies", icon: Building2, resource: "company", matchPrefix: true },
       /* One guest, one set of nights, several rooms — and a group made
          for them automatically when there is more than one. */
       { label: "New booking", to: "/h/:code/book", icon: BookPlus, resource: "reservation" },
@@ -328,14 +335,16 @@ const SECTIONS: NavSection[] = [
         label: "Administration", to: "/admin/users", icon: Settings,
         resource: "user", matchPrefix: true,
         children: [
-          /* Every role can READ the property list — that entry lives
-             under Inventory. This one is about adding one, so it is
-             gated on the create grant. Without that override the front
-             desk inherits an /admin path through its read access. */
-          {
-            label: "Properties", to: "/admin/properties", icon: Hotel, resource: "hotel",
-            canSee: (role) => can(role, "create", "hotel"),
-          },
+          /* ⚠ "PROPERTIES" WAS HERE TOO, POINTING AT /admin/properties.
+             The two screens were merged on 9 September — /properties now
+             adds, edits, closes and reopens, and /admin/properties
+             renders it — so this was a second door onto one room, and
+             the sidebar said "Properties" twice.
+
+             The reasoning it carried is still true and now lives in the
+             screen: everyone may READ the property list, and creating
+             one is gated by `app.require_provisioning_key()` in the
+             database, which no menu entry can grant or withhold. */
           { label: "Users", to: "/admin/users", icon: UserCog, resource: "user" },
           { label: "Roles & permissions", to: "/admin/roles", icon: ShieldCheck, resource: "role" },
           { label: "Integrations", to: "/admin/integrations", icon: Plug, resource: "integration" },
