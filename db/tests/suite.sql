@@ -5255,3 +5255,128 @@ begin
   delete from approvals where hotel_id = h;
   delete from approval_rules where hotel_id = h;
 end $$;
+
+
+-- =============================================================================
+-- 082 · Booking sources — the list, the per-property rate, and the one label
+-- =============================================================================
+-- What is being proved, in order:
+--
+--   the list is the group's and the rate is the property's
+--   an unagreed rate is NULL and stays NULL — never zero
+--   the label has ONE definition and the company still wins
+--
+-- The third is the one that matters. Five copies of that rule existed before
+-- this migration and they already disagreed with each other; a test that only
+-- checks the new function would pass while the copies stayed wrong, so the
+-- API-side removal is proved separately in api/src/routes.
+-- =============================================================================
+do $$
+declare
+  h_agr uuid; h_pun uuid; agoda uuid; walkin uuid; n int; v text;
+begin
+  select id into h_agr from hotels where code = 'AGR';
+  select id into h_pun from hotels where code = 'PUN';
+  select id into agoda  from booking_sources where name = 'Agoda';
+  select id into walkin from booking_sources where name = 'Walk-in';
+
+  -- ---------- the list ----------
+  perform test.ok('booking sources','the seeded sources are there',
+    agoda is not null and walkin is not null);
+
+  perform test.ok('booking sources','a walk-in has no channel code',
+    (select channel_code from booking_sources where id = walkin) is null,
+    'a code invented for a walk-in is a fact nobody stated');
+
+  perform test.ok('booking sources','an OTA carries the code a channel manager sends',
+    (select channel_code from booking_sources where id = agoda) = 'AGODA');
+
+  -- One Agoda, whatever the day's capitalisation.
+  begin
+    insert into booking_sources (name, kind) values ('  agoda ', 'ota');
+    perform test.ok('booking sources','one Agoda', false, 'a second was accepted');
+  exception when unique_violation then
+    perform test.ok('booking sources','one Agoda', true);
+  end;
+
+  -- Two sources on one channel code cannot be resolved by a channel manager.
+  begin
+    insert into booking_sources (name, kind, channel_code)
+    values ('Agoda Partner', 'ota', 'agoda');
+    perform test.ok('booking sources','one source per channel code',
+      false, 'a duplicate code was accepted');
+  exception when unique_violation then
+    perform test.ok('booking sources','one source per channel code', true);
+  end;
+
+  perform test.raises('booking sources','a made-up kind is refused',
+    $q$insert into booking_sources (name, kind) values ('Nonsense', 'pigeon')$q$);
+
+  -- ---------- the rate is the property's ----------
+  insert into booking_source_rates (hotel_id, booking_source_id, commission_pct)
+  values (h_agr, agoda, 18.00), (h_pun, agoda, 15.00)
+  on conflict (hotel_id, booking_source_id) do update
+     set commission_pct = excluded.commission_pct;
+
+  perform test.ok('booking sources','two properties, one source, two rates',
+    (select commission_pct from booking_source_rates
+      where hotel_id = h_agr and booking_source_id = agoda) = 18.00
+    and
+    (select commission_pct from booking_source_rates
+      where hotel_id = h_pun and booking_source_id = agoda) = 15.00,
+    'a contract negotiated at one hotel must not speak for another');
+
+  -- ---------- an unagreed rate is not a free one ----------
+  insert into booking_source_rates (hotel_id, booking_source_id, commission_pct)
+  values (h_agr, walkin, null)
+  on conflict (hotel_id, booking_source_id) do update set commission_pct = null;
+
+  perform test.ok('booking sources','no rate agreed stays NULL',
+    (select commission_pct from booking_source_rates
+      where hotel_id = h_agr and booking_source_id = walkin) is null,
+    'zero would claim this booking cost nothing in commission');
+
+  perform test.raises('booking sources','a commission over 100% is refused',
+    format($q$insert into booking_source_rates
+              (hotel_id, booking_source_id, commission_pct)
+            values (%L, %L, 140)$q$, h_pun, walkin));
+
+  -- ---------- the label, once ----------
+  perform test.ok('booking sources','the company wins over the channel',
+    app.booking_source_label('Agoda', 'Tata Motors', 'ota') = 'Tata Motors',
+    'a corporate booking that came in through a channel is still that company''s');
+
+  perform test.ok('booking sources','the channel fills the gap the company never did',
+    app.booking_source_label('Agoda', null, 'ota') = 'Agoda');
+
+  perform test.ok('booking sources','the free text 042 left behind still reads',
+    app.booking_source_label(null, null, 'walk_in') = 'Walk-in'
+    and app.booking_source_label(null, null, 'direct') = 'Fidato Hotels'
+    and app.booking_source_label(null, null, 'agoda')  = 'Agoda');
+
+  -- ⚠ THE DISAGREEMENT THIS FUNCTION EXISTS TO END. The four SQL copies fell
+  -- back to initcap(source); the TypeScript copy in stays.ts fell back to the
+  -- literal 'Walk-in', so an unrecognised source read as a walk-in on the stay
+  -- list and as itself on every report. NULL is the honest answer: nothing
+  -- here knows what it was, and the screen shows a dash.
+  perform test.ok('booking sources','nothing known means NULL, not "Walk-in"',
+    app.booking_source_label(null, null, null) is null
+    and app.booking_source_label(null, null, '') is null,
+    'a booking of unknown origin must not be reported as a walk-in');
+
+  -- ---------- row level security is on both ----------
+  select count(*) into n from app.tables_without_rls()
+   where table_name in ('booking_sources', 'booking_source_rates');
+  perform test.ok('booking sources','both tables have row level security', n = 0,
+    n || ' of the two are unprotected');
+
+  select policyname into v from pg_policies
+   where tablename = 'booking_source_rates' limit 1;
+  perform test.ok('booking sources','the per-property table uses the shared policy name',
+    v = 'hotel_isolation',
+    'found ' || coalesce(v, 'none') || ' — a hand-rolled predicate cost nine API tests in 080');
+
+  -- ---------- teardown ----------
+  delete from booking_source_rates
+   where booking_source_id in (agoda, walkin);
+end $$;
