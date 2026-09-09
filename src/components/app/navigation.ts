@@ -148,34 +148,53 @@ const SECTIONS: NavSection[] = [
       { label: "New booking", to: "/h/:code/book", icon: BookPlus, resource: "reservation" },
     ],
   },
+  /* ══════════════════════════════════════════════════════════════
+     WHAT BELONGS TO THE GROUP, AND WHAT BELONGS TO ONE HOTEL
+
+     ⚠ THESE WERE ONE SECTION CALLED "INVENTORY" AND IT MIXED THE TWO.
+     Properties and People sit above every hotel; room types and rate
+     plans belong to the one you are looking at. Filed together, nothing
+     told you which the property switcher would change — and People is
+     not inventory by any reading.
+
+     Raised by the owner on 8 September, having used it: "the people
+     thing is only in the inventory section, and it is also about adding
+     properties".
+
+     Three sections now, and the split is the point:
+
+       GROUP          above every hotel. The switcher does not touch it.
+       CONFIGURATION  how THIS hotel is set up. Changes with the switcher.
+       INVENTORY      what THIS hotel is selling today.
+
+     The `/h/:code/` prefix already encodes this and nobody reads URLs
+     to find out what a screen is scoped to. ══════════════════════ */
+  {
+    /* ⚠ NOT "Group". The first nav item is already called Group — it is
+       the group dashboard — and two things under that name in one
+       sidebar is exactly the confusion this split exists to remove.
+       "Across properties" says the scope out loud, which is the whole
+       point: the property switcher does not touch anything in here. */
+    label: "Across properties",
+    items: [
+      { label: "Properties", to: "/properties", icon: Hotel, resource: "hotel", matchPrefix: true },
+      { label: "People", to: "/people", icon: UserCog, resource: "user", matchPrefix: true },
+    ],
+  },
+  {
+    label: "Configuration",
+    items: [
+      { label: "Room types", to: "/h/:code/room-types", icon: LayoutDashboard, resource: "room_config" },
+      { label: "Rate plans", to: "/h/:code/rate-plans", icon: Wallet, resource: "rate" },
+      { label: "Cancellation terms", to: "/h/:code/cancellation-terms", icon: ShieldAlert, resource: "rate" },
+    ],
+  },
   {
     label: "Inventory",
     items: [
-      { label: "Properties", to: "/properties", icon: Hotel, resource: "hotel", matchPrefix: true },
-      /* Beside Properties, because commissioning a hotel and staffing
-         it are the same afternoon's work. Deliberately NOT under the
-         development-only admin console, where these endpoints have sat
-         unreachable since they were written — the owner is the person
-         who has staff to add. */
-      { label: "People", to: "/people", icon: UserCog, resource: "user", matchPrefix: true },
-      { label: "Room types", to: "/h/:code/room-types", icon: LayoutDashboard, resource: "room_config" },
-      { label: "Rate plans", to: "/h/:code/rate-plans", icon: Wallet, resource: "rate" },
-      /* The daily working grid: what is left, and what it costs. Named
-         "calendar" rather than "rates" because the entry below already
-         carries that word and means something else — that one looks
-         BACKWARDS at what rooms achieved, this one forwards at what
-         they will be sold for. */
       { label: "Rate calendar", to: "/h/:code/grids", icon: Table2, resource: "rate" },
       { label: "Rate performance", to: "/h/:code/rates", icon: BarChart3, resource: "rate" },
-      { label: "Cancellation terms", to: "/h/:code/cancellation-terms", icon: ShieldAlert, resource: "rate" },
-      /* Shown, and honest about not being built. A menu with no entry
-         for the OTA connection reads as "this system cannot do that",
-         which is a worse answer than "not yet, and here is what it
-         will do". */
       { label: "Channel manager", to: "/h/:code/channels", icon: Globe, resource: "rate" },
-      /* Rice, gas, linen and soap. Under Inventory beside the rooms,
-         because both answer "what does this property have" — one in
-         beds and one on shelves. */
       { label: "Store", to: "/h/:code/stores", icon: Package, resource: "inventory", matchPrefix: true },
     ],
   },
