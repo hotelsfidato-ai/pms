@@ -72,23 +72,54 @@ describe("group dashboard at /", () => {
 });
 
 describe("the tape chart at /h/:code/stay", () => {
-  beforeEach(() => go(`/h/${HOTEL}/stay`));
+  beforeEach(() => {
+    go(`/h/${HOTEL}/stay`);
+    /* ⚠ AND CLEAR THE REMEMBERED VIEW. The screen keeps the last choice
+       in localStorage, which jsdom shares between tests in a file — one
+       test clicking Rooms would otherwise decide what the next four
+       see. */
+    try { localStorage.clear(); } catch { /* not fatal */ }
+  });
+
+  /* ⚠ THE CHART IS NO LONGER THE DEFAULT VIEW. Rooms is, since the owner
+     asked for it on 8 September: a manager signing in wants the house as
+     it stands, not a fortnight of planning.
+
+     So a test about the chart has to ASK for the chart. Four of these
+     used to pass by accident of the default, which meant they were also
+     silently asserting what the screen opens on — a thing none of them
+     was named after. That assertion now lives in one place, below. */
+  const showCalendar = async () => {
+    fireEvent.click(await screen.findByRole("tab", { name: "Calendar" }));
+    await screen.findAllByText(/Superior|Deluxe/i);
+  };
+
+  it("opens on Rooms, not the chart", async () => {
+    const { container } = render(<App />);
+    await screen.findAllByText(/Superior|Deluxe/i);
+    /* No date columns means no chart, which is the whole assertion. */
+    expect(container.querySelectorAll("[data-date-col]")).toHaveLength(0);
+    expect(
+      (await screen.findByRole("tab", { name: "Rooms" }))
+        .getAttribute("aria-selected"),
+    ).toBe("true");
+  });
 
   it("renders fourteen date columns", async () => {
     const { container } = render(<App />);
-    await screen.findAllByText(/Superior|Deluxe/i);
+    await showCalendar();
     expect(container.querySelectorAll("[data-date-col]")).toHaveLength(14);
   });
 
   it("renders the seventeen sellable rooms, not the eighteen physical ones", async () => {
     const { container } = render(<App />);
-    await screen.findAllByText(/Superior|Deluxe/i);
+    await showCalendar();
     expect(container.querySelectorAll("[data-room-row]")).toHaveLength(17);
   });
 
   it("draws booking bars from the demo data", async () => {
     const { container } = render(<App />);
-    await screen.findAllByText(/Superior|Deluxe/i);
+    await showCalendar();
     expect(container.querySelectorAll("[data-booking-bar]").length).toBeGreaterThan(0);
   });
 
@@ -110,8 +141,15 @@ describe("the tape chart at /h/:code/stay", () => {
     const { container } = render(<App />);
     const panel = await screen.findByRole("dialog");
     expect(within(panel).getByText("Kalyani Rege")).toBeDefined();
-    /* The clerk must not lose their place. */
-    expect(container.querySelectorAll("[data-room-row]").length).toBe(17);
+    /* The clerk must not lose their place — the screen is still THERE,
+       behind the panel.
+
+       Asserted on the ROOMS view, because that is what a deep link now
+       opens behind. The chart cannot be reached from here at all: an
+       open dialog marks the rest of the document `aria-hidden`, so
+       clicking its tab finds nothing. `data-room-tile` is the floor's
+       row marker; `data-room-row` belongs to the chart. */
+    expect(container.querySelectorAll("[data-room-tile]").length).toBe(17);
   });
 
   it("shows the house as tiles, and no tile contradicts itself", async () => {

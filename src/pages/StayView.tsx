@@ -140,11 +140,21 @@ export default function StayViewPage() {
      Wrapped, because a private window and a browser set to block site
      data both throw here, and a chart that will not render because it
      could not remember a layout is a poor trade. */
+  /* ⚠ ROOMS IS THE DEFAULT, not the calendar, and that was the owner's
+     call on 8 September: a manager signing in wants to know what the
+     house looks like RIGHT NOW, and the fourteen-day chart answers a
+     planning question they did not ask yet.
+
+     Read the comparison the other way round on purpose. `=== "calendar"`
+     rather than `=== "floor"` means an explicit choice still wins —
+     somebody who prefers the chart keeps it — while never having chosen
+     lands on rooms. Written as `!== "calendar"` it would have been the
+     same logic and much easier to flip back by accident. */
   const [view, setView] = useState<"calendar" | "floor">(() => {
     try {
-      return localStorage.getItem(VIEW_KEY) === "floor" ? "floor" : "calendar";
+      return localStorage.getItem(VIEW_KEY) === "calendar" ? "calendar" : "floor";
     } catch {
-      return "calendar";
+      return "floor";
     }
   });
 
