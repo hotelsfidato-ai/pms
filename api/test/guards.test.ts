@@ -792,6 +792,7 @@ describe("booking several rooms", () => {
   let typeId: string;
   let smallType: string;
   let smallMax: number;
+  let sourceId: string;
   const made: string[] = [];
 
   beforeAll(async () => {
@@ -810,6 +811,13 @@ describe("booking several rooms", () => {
           where h.code = '5EL' order by rt.max_occupancy limit 1`);
       smallType = small[0]!.id;
       smallMax = small[0]!.max;
+
+      /* Seeded by 082 from the sources this group already books
+         through. Not created here: a test that invents its own row
+         proves the endpoint works against data no hotel has. */
+      const { rows: src } = await db.query<{ id: string }>(
+        "select id::text from booking_sources where name = 'Agoda'");
+      sourceId = src[0]!.id;
     } finally { await db.end(); }
   });
 
@@ -835,7 +843,11 @@ describe("booking several rooms", () => {
     } finally { await db.end(); }
   });
 
-  const book = (body: unknown) => post("/5EL/bookings", body);
+  /* ⚠ EVERY BOOKING CARRIES A SOURCE NOW, so the default is supplied
+     here rather than in fourteen bodies. A test that wants to prove the
+     refusal passes `bookingSourceId: undefined` and overrides it. */
+  const book = (body: Record<string, unknown>) =>
+    post("/5EL/bookings", { bookingSourceId: sourceId, ...body });
 
   it("creates one group and several rooms", async () => {
     const res = await book({
@@ -925,5 +937,123 @@ describe("booking several rooms", () => {
     expect(res.status).toBe(409);
     expect(((await res.json()) as { reason: string }).reason)
       .toMatch(/extra adult/i);
+  });
+
+  /* ── Where the booking came from ─────────────────────────────────
+     The owner asked for this on 8 September and chose "required": an
+     unrecorded channel is a lead nobody can trace back. It is refused
+     by the SERVER and not only greyed out in the form, because a
+     browser that has not reloaded still posts here. */
+  it("refuses a booking that does not say where it came from", async () => {
+    const res = await book({
+      guestName: "Booking Test",
+      checkIn: "2027-10-01", checkOut: "2027-10-02",
+      bookingSourceId: undefined,
+      lines: [{ roomTypeId: typeId, adults: 1, rooms: 1 }],
+    });
+    expect(res.status).toBe(409);
+    expect(((await res.json()) as { reason: string }).reason)
+      .toMatch(/where did this booking come from/i);
+  });
+
+  it("refuses a source that is not on the list", async () => {
+    const res = await book({
+      guestName: "Booking Test",
+      checkIn: "2027-10-01", checkOut: "2027-10-02",
+      bookingSourceId: "00000000-0000-0000-0000-000000000000",
+      lines: [{ roomTypeId: typeId, adults: 1, rooms: 1 }],
+    });
+    expect(res.status).toBe(409);
+    expect(((await res.json()) as { reason: string }).reason)
+      .toMatch(/not on the list/i);
+  });
+
+  it("stamps the commission in force, and NULL when none is agreed", async () => {
+    const db = await admin();
+    let hotelId: string;
+    try {
+      const { rows } = await db.query<{ id: string }>(
+        "select id::text from hotels where code = '5EL'");
+      hotelId = rows[0]!.id;
+      await db.query(
+        `insert into booking_source_rates
+           (hotel_id, booking_source_id, commission_pct)
+         values ($1, $2, 18.00)
+         on conflict (hotel_id, booking_source_id)
+         do update set commission_pct = 18.00`, [hotelId, sourceId]);
+    } finally { await db.end(); }
+
+    const res = await book({
+      guestName: "Booking Test",
+      checkIn: "2027-11-01", checkOut: "2027-11-02",
+      lines: [{ roomTypeId: typeId, adults: 1, rooms: 1 }],
+    });
+    expect(res.status, await res.clone().text()).toBe(200);
+    const body = (await res.json()) as { bookings: { reference: string }[] };
+    for (const b of body.bookings) made.push(b.reference);
+
+    const after = await admin();
+    try {
+      const { rows } = await after.query<{ pct: string | null }>(
+        "select commission_pct::text as pct from reservations where reference = $1",
+        [body.bookings[0]!.reference]);
+      expect(rows[0]!.pct).toBe("18.00");
+
+      /* ⚠ AND NOW TAKE THE RATE AWAY. What is stamped must NOT follow
+         a later negotiation — that is the whole reason it is stamped.
+         Reading the rate at report time would make this booking say
+         "no commission" for a month it cost 18%. */
+      await after.query(
+        `update booking_source_rates set commission_pct = null
+          where hotel_id = $1 and booking_source_id = $2`, [hotelId, sourceId]);
+      const { rows: again } = await after.query<{ pct: string | null }>(
+        "select commission_pct::text as pct from reservations where reference = $1",
+        [body.bookings[0]!.reference]);
+      expect(again[0]!.pct).toBe("18.00");
+    } finally { await after.end(); }
+
+    /* With no rate agreed the next booking stamps NULL — not zero,
+       which would claim it cost nothing in commission. */
+    const none = await book({
+      guestName: "Booking Test",
+      checkIn: "2027-11-05", checkOut: "2027-11-06",
+      lines: [{ roomTypeId: typeId, adults: 1, rooms: 1 }],
+    });
+    expect(none.status, await none.clone().text()).toBe(200);
+    const nb = (await none.json()) as { bookings: { reference: string }[] };
+    for (const b of nb.bookings) made.push(b.reference);
+
+    const db3 = await admin();
+    try {
+      const { rows } = await db3.query<{ pct: string | null }>(
+        "select commission_pct::text as pct from reservations where reference = $1",
+        [nb.bookings[0]!.reference]);
+      expect(rows[0]!.pct).toBeNull();
+      await db3.query(
+        "delete from booking_source_rates where hotel_id = $1", [hotelId]);
+    } finally { await db3.end(); }
+  });
+
+  it("labels the stay with the source that was picked", async () => {
+    const res = await book({
+      guestName: "Booking Test",
+      checkIn: "2027-12-01", checkOut: "2027-12-02",
+      lines: [{ roomTypeId: typeId, adults: 1, rooms: 1 }],
+    });
+    expect(res.status, await res.clone().text()).toBe(200);
+    const body = (await res.json()) as { bookings: { reference: string }[] };
+    for (const b of body.bookings) made.push(b.reference);
+
+    /* ⚠ THE DEFECT THIS REPLACES. The stay list used to map its own
+       vocabulary in TypeScript — ota to "Agoda", anything unrecognised
+       to "Walk-in" — so a booking taken through this endpoint appeared
+       on the arrivals list as a walk-in. One definition now, in
+       app.booking_source_label. Defect 219. */
+    const list = await as("/5EL/stays?window=all");
+    const stays = (await list.json()) as { reference: string;
+                                           source: string | null }[];
+    const mine = stays.find((x) => x.reference === body.bookings[0]!.reference);
+    expect(mine, "the booking just made is not on the stay list").toBeTruthy();
+    expect(mine!.source).toBe("Agoda");
   });
 });

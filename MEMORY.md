@@ -5132,3 +5132,110 @@ neither is anything at the front desk.
 fixed. The fix is small and known — extend the notify trigger to
 housekeeping changes and add `useLiveOrders`-style invalidation to that
 screen — but it was not the priority this session.
+
+---
+
+### 219 · Five copies of one label, and the fifth said "Walk-in" about Agoda
+
+"What do we call where this booking came from" existed in **five
+places**, and they had already drifted apart:
+
+```
+api/src/routes/billing.ts:131     coalesce(co.name, case r.source … initcap)
+api/src/routes/reports.ts:72      the same, re-typed
+api/src/routes/reports.ts:123     the same, re-typed again
+api/src/routes/directory.ts:33    the same, as a SQL string constant
+api/src/routes/stays.ts:29        ⚠ a TypeScript object, and WRONG
+```
+
+The four SQL copies fell back to `initcap(source)`. The fifth did this:
+
+```ts
+const SOURCE_LABEL: Record<string, string> = {
+  walk_in: "Walk-in", direct: "Fidato Hotels",
+  ota: "Agoda", corporate: "Fidato Hotels",
+};
+…
+source: row.company_name ?? SOURCE_LABEL[row.source] ?? "Walk-in",
+```
+
+Two separate wrongs in four lines. **Every OTA booking read "Agoda"**
+whichever OTA it was. And anything the map did not recognise read
+**"Walk-in"** — while `groups.ts` writes the chosen source's NAME into
+that column and sets no `company_id`, so a booking taken through the
+booking screen for a travel agent appeared on the arrivals list as a
+walk-in. A clerk looking at the morning's arrivals could not tell an
+agent's booking from someone who walked in off the street.
+
+**Nobody found it because nobody compared the five.** There is no way
+to compare five copies except to go and read all five, and the reason
+to go and read all five only appears after somebody has been misled.
+
+The rule is now `app.booking_source_label(source_name, company_name,
+legacy)` in migration 082, called by all five call sites. Its fallback
+when nothing is known is **NULL**, not a guess — the screen shows a
+dash. Proved by making the coalesce order wrong and watching exactly
+one assertion fail.
+
+**The shape, again:** a rule written in N places is wrong in one of
+them, and nobody finds out which.
+
+---
+
+### 220 · A data-modifying CTE read back by its own statement — 202, twice, in one afternoon
+
+`POST /booking-sources` answered **500 on every create**:
+
+```sql
+with made as (
+  insert into booking_sources (name, kind, channel_code)
+  values ($2,$3,$4) returning id
+)
+select bs.* from booking_sources bs join made on made.id = bs.id
+```
+
+The outer SELECT runs against the snapshot the statement started with,
+so the row the CTE had just inserted **was not there**. `rows[0]` came
+back `undefined`, `shape(undefined)` threw, and the route returned
+"Something went wrong."
+
+Then the same fault again in `PATCH`, wearing a different hat: the
+UPDATE was in the CTE and the SELECT returned the row **as it was**, so
+a rename replied with the old name.
+
+This is defect 202 with a different mechanism — 202 was a FUNCTION in
+`RETURNING` re-querying its own table. Same underlying rule:
+
+⚠ **Anything that reads a table in the same statement that writes it
+sees the table as it was.** The fix both times is two statements in one
+transaction — write, then ask.
+
+**What is worth noticing is that I wrote 202's fix this same week and
+still wrote 220 twice.** Knowing the rule did not stop it; the tests
+did. Both were caught by an endpoint test that asserted on the returned
+body rather than on the status code.
+
+---
+
+### 221 · I ran `npx vitest run` in `api/` again
+
+Defect 196 was published as a false finding because I ran `npx vitest
+run` instead of `npm test`, which is wired to
+`api/scripts/with-test-db.sh`. I did it again today, on the first run of
+`api/test/bookingSources.test.ts`.
+
+```
+✗  npx vitest run test/bookingSources.test.ts   -> the DEV database
+✓  npm test -- test/bookingSources.test.ts      -> a scratch database
+```
+
+The wrong command reported `relation "booking_source_rates" does not
+exist` — because the dev database had not had migration 082 applied.
+That failure was **luck**: the test file happened to touch a table that
+did not exist yet. A test file that only touched existing tables would
+have run happily against the dev database and written to it, which is
+how 196 deleted the order-pad orders.
+
+**The rule, written where I will read it:** in `api/`, the test command
+is `npm test`. `npx vitest run` is never right, not even to run one
+file — `npm test -- <path>` passes the path through.

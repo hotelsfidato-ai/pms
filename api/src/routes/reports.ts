@@ -69,16 +69,13 @@ reports.get("/:code/reports/no-show", async (c) => {
               rt.name                            as room_type,
               r.check_in::text                   as arrival,
               r.check_out::text                  as departure,
-              coalesce(co.name, case r.source
-                                 when 'walk_in' then 'Walk-in'
-                                 when 'direct'  then 'Fidato Hotels'
-                                 else initcap(r.source)
-                               end) as source,
+              app.booking_source_label(bs.name, co.name, r.source) as source,
               r.agreed_rate                      as rate
          from reservations r
          join guests g      on g.id  = r.guest_id
          join room_types rt on rt.id = r.room_type_id
          left join companies co on co.id = r.company_id
+         left join booking_sources bs on bs.id = r.booking_source_id
         where r.hotel_id = $1
           and r.status = 'no_show'
           and r.check_in between $2::date and $3::date
@@ -120,11 +117,7 @@ reports.get("/:code/reports/city-ledger", async (c) => {
     }>(
       `with live as (${LIVE_POSTINGS}),
        by_account as (
-         select coalesce(co.name, case r.source
-                                 when 'walk_in' then 'Walk-in'
-                                 when 'direct'  then 'Fidato Hotels'
-                                 else initcap(r.source)
-                               end) as account,
+         select app.booking_source_label(bs.name, co.name, r.source) as account,
                 l.category,
                 l.amount,
                 l.tax_amount,
@@ -133,6 +126,7 @@ reports.get("/:code/reports/city-ledger", async (c) => {
            join folios f      on f.id = l.folio_id
            join reservations r on r.id = f.reservation_id
            left join companies co on co.id = r.company_id
+         left join booking_sources bs on bs.id = r.booking_source_id
        )
        select account,
               coalesce(sum(amount + tax_amount) filter (

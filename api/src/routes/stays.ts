@@ -25,13 +25,22 @@ import { businessDateFor } from "../businessDate.ts";
 
 export const stays = new Hono<{ Variables: { subject: string } }>();
 
-/** The database's vocabulary, and the interface's, are not the same. */
-const SOURCE_LABEL: Record<string, string> = {
-  walk_in: "Walk-in",
-  direct: "Fidato Hotels",
-  ota: "Agoda",
-  corporate: "Fidato Hotels",
-};
+/* ⚠ THE FIFTH COPY OF THE SOURCE LABEL WAS HERE, AND IT WAS THE WRONG
+   ONE. It read:
+
+       walk_in: "Walk-in", direct: "Fidato Hotels",
+       ota: "Agoda", corporate: "Fidato Hotels",
+
+   with `?? "Walk-in"` behind it — so EVERY OTA booking read "Agoda"
+   whichever OTA it was, and anything the map did not recognise read
+   "Walk-in". `groups.ts` writes the chosen source's name into that
+   column and sets no company, so a booking taken through the booking
+   screen for Tata Motors appeared on the stay list as a walk-in. The
+   four SQL copies elsewhere fell back to `initcap(source)` and got it
+   right; this one did not, and nothing compared them.
+
+   The rule now lives in `app.booking_source_label` (082) and the query
+   below asks for it. Defect 219. */
 
 interface StayRow {
   id: string;
@@ -40,8 +49,7 @@ interface StayRow {
   guest: string;
   room_number: string | null;
   room_type: string;
-  source: string;
-  company_name: string | null;
+  source: string | null;
   meal_plan: string | null;
   check_in: string;
   check_out: string;
@@ -74,8 +82,7 @@ const SELECT = `
          gu.full_name                              as guest,
          rm.number                                 as room_number,
          rt.name                                   as room_type,
-         r.source,
-         co.name                                   as company_name,
+         app.booking_source_label(bs.name, co.name, r.source) as source,
          r.meal_plan,
          r.check_in::text, r.check_out::text,
          r.adults, r.children, r.status, r.is_day_use,
@@ -103,6 +110,7 @@ const SELECT = `
     join guests gu     on gu.id = r.guest_id
     join room_types rt on rt.id = r.room_type_id
     left join companies co          on co.id = r.company_id
+    left join booking_sources bs    on bs.id = r.booking_source_id
     left join reservation_groups g  on g.id  = r.group_id
     /* Which room this stay is IN, or was in.
 
@@ -156,7 +164,9 @@ function toStay(row: StayRow, hotelCode: string, businessDate: string) {
        room TYPE and a stay is in a specific ROOM. */
     roomNumber: row.room_number ?? "",
     roomType: row.room_type,
-    source: row.company_name ?? SOURCE_LABEL[row.source] ?? "Walk-in",
+    /* NULL when nothing on the booking says where it came from. The
+       screen shows a dash; it does not guess a walk-in. */
+    source: row.source,
     ratePlan: row.meal_plan === "RO" ? "Room Only" : row.meal_plan ?? "EP",
     arrival: row.check_in,
     departure: row.check_out,

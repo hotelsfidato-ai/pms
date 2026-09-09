@@ -128,10 +128,7 @@ billing.get("/:code/billable", async (c) => {
                 order by ra.released_at nulls first, ra.from_date desc
                 limit 1) as room,
               rt.name as room_type,
-              coalesce(co.name, case r.source
-                when 'walk_in' then 'Walk-in'
-                when 'direct'  then 'Fidato Hotels'
-                else initcap(r.source) end) as source,
+              app.booking_source_label(bs.name, co.name, r.source) as source,
               r.check_in::text as arrival, r.check_out::text as departure,
               greatest(r.check_out - r.check_in, 0) as nights,
               coalesce((select sum(amount) from live
@@ -156,7 +153,8 @@ billing.get("/:code/billable", async (c) => {
          from reservations r
          join guests g      on g.id  = r.guest_id
          join room_types rt on rt.id = r.room_type_id
-         left join companies co on co.id = r.company_id
+         left join booking_sources bs on bs.id = r.booking_source_id
+              left join companies co on co.id = r.company_id
         where r.hotel_id = $1 and r.status = 'checked_out'
         order by r.check_out desc`,
       [hotelId],

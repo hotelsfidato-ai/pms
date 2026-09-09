@@ -30,11 +30,13 @@ async function hotelIdFor(client: Client, code: string) {
   return rows[0]?.id ?? null;
 }
 
-const SOURCE_LABEL = `case r.source
-    when 'walk_in' then 'Walk-in'
-    when 'direct'  then 'Fidato Hotels'
-    else initcap(r.source)
-  end`;
+/* ⚠ THIS WAS THE THIRD OF FIVE COPIES of "what do we call where the
+   booking came from". They disagreed — see the note in stays.ts. The
+   rule is now `app.booking_source_label`, written once in 082, and
+   what is left here is only the JOIN it needs. */
+const SOURCE_LABEL = "app.booking_source_label(bs.name, co.name, r.source)";
+const SOURCE_JOIN =
+  "left join booking_sources bs on bs.id = r.booking_source_id";
 
 const LIVE = `
   fp.reverses_id is null
@@ -60,10 +62,11 @@ directory.get("/:code/guests", async (c) => {
     }>(
       `with mine as (
          select r.*, g.full_name, lower(trim(g.full_name)) as key,
-                coalesce(co.name, ${SOURCE_LABEL}) as source_label
+                ${SOURCE_LABEL} as source_label
            from reservations r
            join guests g on g.id = r.guest_id
            left join companies co on co.id = r.company_id
+           ${SOURCE_JOIN}
           where r.hotel_id = $1
        ),
        spend as (
@@ -192,9 +195,10 @@ directory.get("/:code/companies", async (c) => {
       revenue: string; open_balance: string;
     }>(
       `with mine as (
-         select r.*, coalesce(co.name, ${SOURCE_LABEL}) as account
+         select r.*, ${SOURCE_LABEL} as account
            from reservations r
            left join companies co on co.id = r.company_id
+           ${SOURCE_JOIN}
           where r.hotel_id = $1
        ),
        money as (

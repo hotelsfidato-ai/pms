@@ -255,6 +255,13 @@ groups.post("/:code/bookings", async (c) => {
     guestName?: string; phone?: string; email?: string;
     checkIn?: string; checkOut?: string;
     groupName?: string; blockCode?: string;
+    /* ⚠ `bookingSourceId` IS REQUIRED AND `source` IS NOT. The free
+       text 042 left behind is still accepted so nothing that posts to
+       this endpoint breaks, but the channel is now a row in
+       booking_sources and a booking without one cannot be saved. The
+       owner asked for that on 8 September: an unrecorded channel is a
+       lead nobody can trace back. */
+    bookingSourceId?: string;
     source?: string; businessSource?: string; marketSegment?: string;
     /* The hour they said they would arrive. Optional, and NULL when
        they did not say — which is most bookings. Nothing should hold a
@@ -277,6 +284,19 @@ groups.post("/:code/bookings", async (c) => {
 
   const lines = (input.lines ?? []).filter((l) => l.roomTypeId);
   if (lines.length === 0) return c.json(refuse("Which rooms?"), 409);
+
+  /* ⚠ REFUSED HERE AS WELL AS DISABLED IN THE FORM. Rule 6: a browser
+     that has not reloaded, a queued offline booking made before this
+     shipped, or anything posting straight to the endpoint all reach
+     this line, and the server has to answer for itself. There is no
+     CHECK constraint behind it — see 082 for why one would break
+     check-in on every booking taken before the column existed. */
+  if (!input.bookingSourceId) {
+    return c.json(refuse(
+      "Where did this booking come from? Pick the channel — it is what "
+      + "the source-mix report counts, and it cannot be filled in later."),
+      409);
+  }
 
   const total = lines.reduce((n, l) => n + Math.max(1, l.rooms ?? 1), 0);
   if (total > 40) {
@@ -310,6 +330,29 @@ groups.post("/:code/bookings", async (c) => {
          input.blockCode?.trim() ?? "", hotelId]);
       groupId = g[0]!.id;
     }
+
+    /* ⚠ THE COMMISSION IS READ ONCE AND COPIED ONTO EVERY ROOM. Read
+       per room it would be the same number four times; read at report
+       time it would be whatever was agreed later. 082 explains the
+       choice — a report about March must not change because of
+       something negotiated in April.
+
+       NULL when no rate has been agreed with this source at this
+       property, and NULL is what gets stored. Not zero: zero would
+       claim the booking cost nothing in commission. */
+    const { rows: src } = await client.query<{
+      name: string; commission_pct: string | null;
+    }>(
+      `select bs.name, r.commission_pct::text as commission_pct
+         from booking_sources bs
+         left join booking_source_rates r
+                on r.booking_source_id = bs.id and r.hotel_id = $2
+        where bs.id = $1 and bs.is_active`,
+      [input.bookingSourceId, hotelId]);
+    if (!src[0]) {
+      return refuse("That booking source is not on the list any more.");
+    }
+    const commission = src[0].commission_pct;
 
     const made: { reference: string; roomType: string; rate: number }[] = [];
 
@@ -362,13 +405,18 @@ groups.post("/:code/bookings", async (c) => {
              (hotel_id, reference, guest_id, room_type_id, check_in, check_out,
               adults, children, occupancy, agreed_rate, status, source,
               meal_plan, group_id, business_source, market_segment,
-              expected_arrival)
+              expected_arrival, booking_source_id, commission_pct)
            values ($1,$2,$3,$4,$5::date,$6::date,$7,$8,$9,$10,'confirmed',$11,
-                   $12,$13,$14,$15,$16::time)
+                   $12,$13,$14,$15,$16::time,$17,$18::numeric)
            returning id::text`,
           [hotelId, ref[0]!.reference, guestId, line.roomTypeId,
            input.checkIn, input.checkOut, adults, children, adults + children,
-           rate, input.source ?? "direct", line.mealPlan ?? "EP", groupId,
+           /* The legacy column keeps the source's NAME rather than a
+              second free-text answer. Two fields describing one fact is
+              how they drift; this one is now derived from the other and
+              stays only because reports written before 082 read it. */
+           rate, input.source?.trim() || src[0].name,
+           line.mealPlan ?? "EP", groupId,
            /* Blank stays NULL, never "" — an empty segment would sort as its
               own category in the source-mix report and read as an answer. */
            input.businessSource?.trim() || null,
@@ -376,7 +424,8 @@ groups.post("/:code/bookings", async (c) => {
            /* NULL when they did not say, which is most bookings. Never
               midnight — nothing should hold a room against a time
               nobody gave. */
-           input.expectedArrival?.trim() || null],
+           input.expectedArrival?.trim() || null,
+           input.bookingSourceId, commission],
         );
 
         /* A BOOKING NEEDS SOMEWHERE TO PUT MONEY, from the moment it
