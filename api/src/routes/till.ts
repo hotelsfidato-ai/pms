@@ -845,6 +845,7 @@ async function readOrder(client: Client, orderId: string) {
     payment_method: string | null; opened_by_name: string;
     discount_type: string | null; discount_value: string | null;
     discount_reason: string | null;
+    promotion_id: string | null; promotion_name: string | null;
     covers: number | null; waiter_name: string | null; order_type: string;
     customer_name: string | null; customer_phone: string | null;
     customer_address: string | null; customer_locality: string | null;
@@ -862,6 +863,7 @@ async function readOrder(client: Client, orderId: string) {
             to_char(o.business_date,'YYYY-MM-DD') as business_date,
             o.payment_method,
             o.discount_type, o.discount_value::text, o.discount_reason,
+            o.promotion_id::text, pr.name as promotion_name,
             o.covers, s3.full_name as waiter_name, o.order_type,
             o.customer_name, o.customer_phone, o.customer_address,
             o.customer_locality, o.held_at::text,
@@ -872,6 +874,7 @@ async function readOrder(client: Client, orderId: string) {
        from pos_orders o
        join pos_outlets ou on ou.id = o.outlet_id
        join hotels h on h.id = o.hotel_id
+       left join pos_promotions pr on pr.id = o.promotion_id
        join staff s1 on s1.id = o.opened_by
        left join staff s2 on s2.id = o.settled_by
        left join staff s3 on s3.id = o.waiter_id
@@ -983,6 +986,11 @@ async function readOrder(client: Client, orderId: string) {
     discountType: h.discount_type,
     discountValue: h.discount_value === null ? null : Number(h.discount_value),
     discountReason: h.discount_reason,
+    /* WHICH promotion, not only that one was used. NULL means a biller
+       applied a free-hand discount within the cap — a different act, and
+       one the month-end report has to be able to tell apart. */
+    promotionId: h.promotion_id,
+    promotionName: h.promotion_name,
     taxable: Number(total[0]!.taxable),
     tax: Number(total[0]!.tax),
     gross: Number(total[0]!.gross),
@@ -1531,13 +1539,123 @@ till.post("/:code/till/orders/:id/discount", async (c) => {
           [orderId, value])).rows[0]!.amount
       : value;
 
+    /* ⚠ THE CAP, AND IT IS THE DATABASE'S NUMBER. Read rather than
+       written here, because the till shows the same figure in the
+       discount dialog and a second copy is a second thing to be wrong.
+
+       Checked on the MONEY, not on the percentage, so a fixed amount
+       cannot walk around it: ₹5,000 off a ₹6,000 bill is 83% however
+       it was typed. */
+    const { rows: capRow } = await client.query<{ cap: string }>(
+      "select app.pos_freehand_discount_cap()::text as cap");
+    const cap = Number(capRow[0]!.cap);
+    const ceiling = Number(t[0]!.net) * cap / 100;
+
+    if (Number(amount) > ceiling + 0.005) {
+      return refuse(
+        `A biller may take off up to ${cap}% — ₹${ceiling.toLocaleString(
+          "en-IN", { maximumFractionDigits: 2 })} on this `
+        + "bill. Anything larger goes on as a named promotion, so it is the "
+        + "same concession every time and the month-end report can count it.");
+    }
+
     await client.query(
       `update pos_orders
           set discount_type = $1, discount_value = $2,
-              discount_amount = $3, discount_reason = $4, updated_at = now()
+              discount_amount = $3, discount_reason = $4,
+              /* ⚠ AND THE PROMOTION IS CLEARED. Overwriting a promotion
+                 with a free-hand discount and leaving promotion_id behind
+                 would report the concession as still given. */
+              promotion_id = null, updated_at = now()
         where id = $5`,
       [type, value, amount, reason, orderId],
     );
+
+    return { ok: true as const, ...(await readOrder(client, orderId))! };
+  });
+
+  if (!result) return c.json({ error: "No such property." }, 404);
+  return c.json(result, "ok" in result && result.ok ? 200 : 409);
+});
+
+
+/* ── A named promotion ─────────────────────────────────────────────
+   The owner's answer to "what happens above the cap": not an approval
+   queue somebody answers again every night, but a policy decided once
+   and applied by code.
+
+   "The owner's guests eat at 50%" is not a decision, it is a rule. A
+   rule typed in fresh by a biller at 11pm is a rule that drifts, and a
+   free-hand discount with "owner's friends" in the reason box makes
+   "what did that cost us in September" a search through text nobody
+   spelled the same way twice.
+   ═══════════════════════════════════════════════════════════════════ */
+till.post("/:code/till/orders/:id/promotion", async (c) => {
+  type Body = { code?: string };
+  const input = await c.req.json<Body>().catch(() => ({}) as Body);
+  const promoCode = input.code?.trim();
+  if (!promoCode) return c.json(refuse("Which promotion?"), 409);
+
+  const result = await withSession(c.get("subject"), async (client) => {
+    const hotelId = await hotelFor(client, c.req.param("code"));
+    if (!hotelId) return null;
+    const orderId = c.req.param("id");
+
+    const { rows: order } = await client.query<{ status: string }>(
+      "select status from pos_orders where id = $1 and hotel_id = $2",
+      [orderId, hotelId]);
+    if (!order[0]) return refuse("No such order.");
+    if (order[0].status !== "open") {
+      return refuse(`This order is ${order[0].status} and cannot be changed.`);
+    }
+
+    const { rows: promo } = await client.query<{
+      id: string; name: string; kind: string; value: string;
+      is_active: boolean;
+    }>(
+      `select id::text, name, kind, value::text, is_active
+         from pos_promotions
+        where hotel_id = $1 and lower(trim(code)) = lower(trim($2))`,
+      [hotelId, promoCode]);
+    if (!promo[0]) {
+      return refuse(`There is no promotion with the code ${promoCode}.`);
+    }
+    if (!promo[0].is_active) {
+      return refuse(`${promo[0].name} is not running any more.`);
+    }
+
+    const { rows: t } = await client.query<{ net: string }>(
+      "select net::text from app.pos_order_total($1)", [orderId]);
+    if (Number(t[0]!.net) <= 0) {
+      return refuse("There is nothing on this order to discount.");
+    }
+
+    /* Resolved to money ONCE, here, exactly as a free-hand percentage
+       is. A bill printed at 50% off must not change because somebody
+       added a line to the order afterwards. */
+    const amount = promo[0].kind === "percent"
+      ? (await client.query<{ amount: string }>(
+          "select app.pos_discount_for($1, $2)::text as amount",
+          [orderId, promo[0].value])).rows[0]!.amount
+      : promo[0].value;
+
+    if (Number(amount) > Number(t[0]!.net)) {
+      /* A ₹500 promotion on a ₹300 bill. The promotion is not wrong —
+         this bill is simply smaller than it — and a negative payable
+         is not a thing a till may produce. */
+      return refuse(
+        `${promo[0].name} takes off more than this bill comes to.`);
+    }
+
+    await client.query(
+      `update pos_orders
+          set discount_type = $1, discount_value = $2, discount_amount = $3,
+              /* The promotion's NAME is the reason, so the bill and the
+                 record say the same words without anybody typing them. */
+              discount_reason = $4, promotion_id = $5, updated_at = now()
+        where id = $6`,
+      [promo[0].kind, promo[0].value, amount, promo[0].name, promo[0].id,
+       orderId]);
 
     return { ok: true as const, ...(await readOrder(client, orderId))! };
   });
@@ -1555,7 +1673,11 @@ till.post("/:code/till/orders/:id/discount/clear", async (c) => {
     const { rowCount } = await client.query(
       `update pos_orders
           set discount_type = null, discount_value = null,
-              discount_amount = 0, discount_reason = null, updated_at = now()
+              discount_amount = 0, discount_reason = null,
+              /* The promotion goes with it. A cleared discount that
+                 still points at "Owner's guests" would report a
+                 concession that is no longer on the bill. */
+              promotion_id = null, updated_at = now()
         where id = $1 and hotel_id = $2 and status = 'open'`,
       [orderId, hotelId],
     );
@@ -1567,6 +1689,136 @@ till.post("/:code/till/orders/:id/discount/clear", async (c) => {
   if (!result) return c.json({ error: "No such property." }, 404);
   return c.json(result, "ok" in result && result.ok ? 200 : 409);
 });
+
+/* ── The promotions themselves ─────────────────────────────────────
+   Managed on the menu screen, beside the dishes and the taxes, because
+   it is the same question: what does this restaurant sell and on what
+   terms.
+
+   ⚠ THE CAP TRAVELS WITH THE LIST. The discount dialog has to show
+   "up to 10% — ₹247 on this bill" before a biller types a number, and
+   the alternative to sending it here is a second copy of 10 in the
+   browser. There is one number, in 083, and everything reads it.
+   ═══════════════════════════════════════════════════════════════════ */
+till.get("/:code/till/promotions", async (c) => {
+  const body = await withSession(c.get("subject"), async (client) => {
+    const hotelId = await hotelFor(client, c.req.param("code"));
+    if (!hotelId) return null;
+
+    const { rows } = await client.query<{
+      id: string; code: string; name: string; kind: string;
+      value: string; is_active: boolean; used: string;
+    }>(
+      `select p.id::text, p.code, p.name, p.kind, p.value::text, p.is_active,
+              (select count(*) from pos_orders o
+                where o.promotion_id = p.id)::text as used
+         from pos_promotions p
+        where p.hotel_id = $1
+        order by p.is_active desc, lower(p.code)`,
+      [hotelId]);
+
+    const { rows: capRow } = await client.query<{ cap: string }>(
+      "select app.pos_freehand_discount_cap()::text as cap");
+
+    return {
+      freehandCapPercent: Number(capRow[0]!.cap),
+      promotions: rows.map((r) => ({
+        id: r.id, code: r.code, name: r.name,
+        kind: r.kind as "percent" | "fixed",
+        value: Number(r.value),
+        isActive: r.is_active,
+        used: Number(r.used),
+      })),
+    };
+  });
+  return body === null ? c.json({ error: "No such property." }, 404)
+                       : c.json(body);
+});
+
+till.post("/:code/till/promotions", async (c) => {
+  type Body = { code?: string; name?: string; kind?: string; value?: number };
+  const input = await c.req.json<Body>().catch(() => ({}) as Body);
+
+  const promoCode = input.code?.trim().toUpperCase();
+  const name = input.name?.trim();
+  if (!promoCode) return c.json(refuse("What code does the biller type?"), 409);
+  if (!/^[A-Z0-9]{2,12}$/.test(promoCode)) {
+    return c.json(refuse(
+      "Two to twelve letters or digits — it is typed at a terminal with a "
+      + "queue behind it."), 409);
+  }
+  if (!name) {
+    return c.json(refuse("What is it called? It prints on the bill."), 409);
+  }
+  if (input.kind !== "percent" && input.kind !== "fixed") {
+    return c.json(refuse("A percentage off, or an amount off."), 409);
+  }
+  const value = Number(input.value);
+  if (!Number.isFinite(value) || value <= 0) {
+    return c.json(refuse(
+      "How much does it take off? A promotion worth nothing prints "
+      + "−₹0.00 on a bill."), 409);
+  }
+  if (input.kind === "percent" && value > 100) {
+    return c.json(refuse("More than 100% is a refund, not a discount."), 409);
+  }
+
+  const result = await withSession(c.get("subject"), async (client) => {
+    const hotelId = await hotelFor(client, c.req.param("code"));
+    if (!hotelId) return null;
+    try {
+      const { rows } = await client.query<{ id: string }>(
+        `insert into pos_promotions (hotel_id, code, name, kind, value)
+         values ($1,$2,$3,$4,$5) returning id::text`,
+        [hotelId, promoCode, name, input.kind, value.toFixed(2)]);
+      return { ok: true as const, id: rows[0]!.id };
+    } catch (e) {
+      if ((e as { code?: string }).code === "23505") {
+        return refuse(`${promoCode} is already in use here.`);
+      }
+      throw e;
+    }
+  });
+  if (result === null) return c.json({ error: "No such property." }, 404);
+  return c.json(result, result.ok ? 200 : 409);
+});
+
+till.patch("/:code/till/promotions/:id", async (c) => {
+  type Body = { name?: string; value?: number; isActive?: boolean };
+  const input = await c.req.json<Body>().catch(() => ({}) as Body);
+
+  if (input.name !== undefined && !input.name.trim()) {
+    return c.json(refuse("A promotion with no name prints nothing."), 409);
+  }
+  if (input.value !== undefined
+      && (!Number.isFinite(input.value) || input.value <= 0)) {
+    return c.json(refuse("How much does it take off?"), 409);
+  }
+
+  const result = await withSession(c.get("subject"), async (client) => {
+    const hotelId = await hotelFor(client, c.req.param("code"));
+    if (!hotelId) return null;
+
+    /* ⚠ THE CODE IS NOT CHANGEABLE, and that is deliberate. Bills
+       already printed say "OWNG"; a code reused for something else
+       makes last month's bills describe this month's policy. Switch
+       the old one off and make a new one. */
+    const { rowCount } = await client.query(
+      `update pos_promotions
+          set name      = coalesce($1, name),
+              value     = coalesce($2, value),
+              is_active = coalesce($3, is_active)
+        where id = $4 and hotel_id = $5`,
+      [input.name?.trim() ?? null,
+       input.value === undefined ? null : input.value.toFixed(2),
+       input.isActive ?? null, c.req.param("id"), hotelId]);
+    if (!rowCount) return refuse("No such promotion here.");
+    return { ok: true as const };
+  });
+  if (result === null) return c.json({ error: "No such property." }, 404);
+  return c.json(result, result.ok ? 200 : 409);
+});
+
 
 /* ── Round off ────────────────────────────────────────────────────
    To the nearest rupee, so the biller takes a note rather than

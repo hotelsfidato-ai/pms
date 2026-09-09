@@ -5380,3 +5380,88 @@ begin
   delete from booking_source_rates
    where booking_source_id in (agoda, walkin);
 end $$;
+
+
+-- =============================================================================
+-- 083 · The free-hand cap, and promotions beyond it
+-- =============================================================================
+-- The cap is one number in one place. These assertions read it rather than
+-- writing 10 again — a test with the constant baked in agrees with itself and
+-- with nothing else, and would go on passing after the owner changed the cap.
+-- =============================================================================
+do $$
+declare
+  h uuid; cap numeric; p uuid; n int;
+begin
+  select id into h from hotels where code = 'AGR';
+  cap := app.pos_freehand_discount_cap();
+
+  perform test.ok('promotions','the cap is a real percentage',
+    cap > 0 and cap <= 100, 'cap reads ' || coalesce(cap::text, 'null'));
+
+  -- ---------- a promotion ----------
+  insert into pos_promotions (hotel_id, code, name, kind, value)
+  values (h, 'TESTOWN', 'Test owner''s guests', 'percent', 50)
+  returning id into p;
+
+  perform test.ok('promotions','a promotion carries a code and a name',
+    (select code || '/' || name from pos_promotions where id = p)
+      = 'TESTOWN/Test owner''s guests',
+    'the biller types one and the guest reads the other');
+
+  -- One TESTOWN at this property, whatever the day's capitalisation.
+  begin
+    insert into pos_promotions (hotel_id, code, name, kind, value)
+    values (h, ' testown ', 'A second', 'fixed', 100);
+    perform test.ok('promotions','one code per property', false,
+      'a duplicate code was accepted');
+  exception when unique_violation then
+    perform test.ok('promotions','one code per property', true);
+  end;
+
+  -- ⚠ AND THE SAME CODE AT ANOTHER PROPERTY IS FINE. The uniqueness is per
+  -- hotel: two restaurants may both call their staff rate STAFF, and a
+  -- group-wide index would refuse the second one for no reason a manager
+  -- could act on.
+  insert into pos_promotions (hotel_id, code, name, kind, value)
+  select id, 'TESTOWN', 'Test owner''s guests', 'percent', 50
+    from hotels where code = 'PUN';
+  perform test.ok('promotions','the same code may exist at another property',
+    (select count(*) from pos_promotions where code = 'TESTOWN') = 2);
+
+  -- Zero would print "Owner's guests -0.00" on a bill, which says something
+  -- happened and shows nothing happening.
+  perform test.raises('promotions','a promotion worth nothing is refused',
+    format($q$insert into pos_promotions (hotel_id, code, name, kind, value)
+             values (%L, 'TESTZERO', 'Nothing off', 'percent', 0)$q$, h),
+    '23514');
+
+  perform test.raises('promotions','more than 100%% off is refused',
+    format($q$insert into pos_promotions (hotel_id, code, name, kind, value)
+             values (%L, 'TESTREFUND', 'Too much', 'percent', 140)$q$, h));
+
+  perform test.raises('promotions','a made-up kind is refused',
+    format($q$insert into pos_promotions (hotel_id, code, name, kind, value)
+             values (%L, 'TESTKIND', 'Nonsense', 'barter', 10)$q$, h));
+
+  -- ---------- row level security ----------
+  select count(*) into n from app.tables_without_rls()
+   where table_name = 'pos_promotions';
+  perform test.ok('promotions','pos_promotions has row level security', n = 0);
+
+  perform test.ok('promotions','and under the shared policy name',
+    (select policyname from pg_policies
+      where tablename = 'pos_promotions' limit 1) = 'hotel_isolation',
+    'a hand-rolled predicate cost nine API tests in 080');
+
+  -- ---------- nothing is shipped priced ----------
+  -- ⚠ THE ASSERTION THAT KEEPS 063 SHUT. A migration that seeded "STAFF 50%"
+  -- would be this system deciding what a hotel gives away.
+  select count(*) into n from pos_promotions
+   where code not like 'TEST%';
+  perform test.ok('promotions','no promotion is shipped', n = 0,
+    n || ' promotions arrived with the software');
+
+  -- ---------- teardown ----------
+  delete from pos_promotions where code like 'TEST%';
+end $$;

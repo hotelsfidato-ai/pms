@@ -5239,3 +5239,67 @@ how 196 deleted the order-pad orders.
 **The rule, written where I will read it:** in `api/`, the test command
 is `npm test`. `npx vitest run` is never right, not even to run one
 file — `npm test -- <path>` passes the path through.
+
+---
+
+### 222 · The approvals engine has never had a caller, and still does not
+
+Asked to wire "approvals for discounts above a threshold", I went looking
+for where a discount would raise one and found that **nothing anywhere
+raises one at all**:
+
+```
+db/migrations/076_approvals.sql   approvals, approval_rules,
+                                  app.request_approval(), app.decide_approval()
+api/src/routes/approvals.ts       the queue, the decide endpoint, the rules
+──────────────────────────────────────────────────────────────────────────
+callers of app.request_approval   NONE, anywhere in api/src or db/migrations
+screens showing the queue         NONE
+allowed kinds                     purchase, cash_expense, stock_adjustment
+                                  — `discount` was never one of them
+```
+
+`approvals.ts` opens with a comment saying it exists *because* the engine
+would otherwise be unreachable — "a database function with no route is
+the same fault one level down". The routes were added and the callers
+never were, so the fault simply moved up a level: an endpoint nobody
+calls instead of a function nobody calls.
+
+The db suite proves `app.request_approval` **works**. It cannot prove
+anybody can reach it, and that is the difference the reachability gate in
+`repositories.test.ts` was built to catch. That gate covers the FRONTEND
+seam only. **There is no equivalent gate for `app.*` SQL functions or for
+API routes**, and this is what that gap costs.
+
+⚠ **It is still unreachable after this session.** The owner replaced the
+approval design with promotions (below), so nothing here was wired up. It
+is recorded as unreachable rather than quietly counted as delivered — the
+sixth instance of this project's signature defect, and the only one so
+far that is an entire subsystem rather than one function.
+
+---
+
+### 223 · Two tests broke on a cap they were never about
+
+Adding the 10% free-hand discount cap turned two green tests red:
+
+```
+takes the discount off the NET, so tax falls with it
+posts the DISCOUNTED amount to the folio, not the full one
+```
+
+Both took **a flat ₹100 off** a demo bill, and neither was about the size
+of the discount. They passed for a year because ₹100 happened to be under
+10% of whatever the demo order came to, and they failed the moment that
+stopped being true.
+
+**A constant chosen against fixture data is a constant that expires.**
+The fix is to derive it — `Math.floor(before.net * 0.09)` — so the test
+says what it means: *some* discount, small enough to be allowed, because
+this test is about tax following the discount and has no opinion about
+how big it is.
+
+Worth noting because the failure LOOKED like the new code was broken.
+Two red tests naming tax and folios is a convincing accusation, and the
+first instinct was to check the cap arithmetic rather than to read what
+the tests were actually asserting.

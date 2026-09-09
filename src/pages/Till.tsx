@@ -19,6 +19,7 @@ import {
   getMenu, listOrders, getOrder, listChargeableRooms,
   openOrder, addLine, voidLine, settleOrder, abandonOrder,
   applyDiscount, clearDiscount, setRoundOff, settleSplit,
+  listPromotions, applyPromotion,
   BUSINESS_DATE,
   type Order, type MenuItem, type OrderSummary, type TenderInput,
 } from "@/data/repositories";
@@ -391,6 +392,19 @@ function OrderRow({ order, active, onOpen }: {
    Percentage and fixed both, because the BILL prints what was chosen.
    "10% off" and "₹115.70 off" are the same money and a different
    statement to a guest querying it next month.
+
+   ⚠ TWO ROUTES, AND THE PROMOTIONS COME FIRST. The owner's rule, given
+   on 9 September: a biller has a free hand up to 10% and anything
+   larger is a named promotion applied by code.
+
+   The promotions sit at the top because they are the answer to the
+   question that brings most people to this dialog — a large
+   concession. Put the free-hand box first and a biller types 50,
+   reads a refusal, and only then goes looking.
+
+   THE CAP IS THE SERVER'S NUMBER. It arrives with the promotions and
+   is shown in rupees against THIS bill, because "up to 10%" is a
+   percentage a biller has to do arithmetic on while a guest waits.
    ══════════════════════════════════════════════════════════════════ */
 function DiscountDialog({
   order, hotelId, open, onOpenChange, onDone,
@@ -408,6 +422,16 @@ function DiscountDialog({
   const [reason, setReason] = useState(order.discountReason ?? "");
   const [busy, setBusy] = useState(false);
 
+  /* Only while the dialog is open. A till left on a counter all evening
+     should not be polling for a list that changes about once a month. */
+  const promos = useQuery({
+    queryKey: ["promotions", hotelId],
+    queryFn: () => listPromotions(hotelId),
+    enabled: open,
+  });
+  const cap = promos.data?.freehandCapPercent ?? null;
+  const live = (promos.data?.promotions ?? []).filter((p) => p.isActive);
+
   const amount = Number(value);
   const preview = !Number.isFinite(amount) || amount <= 0
     ? null
@@ -417,6 +441,22 @@ function DiscountDialog({
 
   const tooMuch = preview !== null
     && (type === "percent" ? amount > 100 : preview > order.net);
+
+  /* ⚠ THE CEILING IS IN MONEY, and so is the check on the server. A
+     percentage check would leave the whole cap open to the fixed
+     button — ₹5,000 off a ₹6,000 bill is 83% however it was typed. */
+  const ceiling = cap === null ? null : (order.net * cap) / 100;
+  const overCap = preview !== null && ceiling !== null
+    && preview > ceiling + 0.005;
+
+  const usePromotion = async (code: string) => {
+    setBusy(true);
+    const res = await applyPromotion(hotelId, order.id, code);
+    setBusy(false);
+    if (!res.ok) return toast.error("Not applied", res.reason);
+    onOpenChange(false);
+    onDone();
+  };
 
   const apply = async () => {
     setBusy(true);
@@ -459,7 +499,12 @@ function DiscountDialog({
             <Button
               size="lg"
               loading={busy}
-              disabled={!reason.trim() || preview === null || tooMuch}
+              /* Greyed out over the cap as well, and the reason is
+                 shown beside the field. The server refuses it too —
+                 Rule 6 needs both ends, because a till that has not
+                 reloaded still posts. */
+              disabled={!reason.trim() || preview === null || tooMuch
+                        || overCap}
               onClick={() => void apply()}
             >
               Apply
@@ -468,6 +513,43 @@ function DiscountDialog({
         }
       >
         <div className="space-y-4">
+          {live.length > 0 && (
+            <div className="space-y-2">
+              <p className="text-2xs font-semibold uppercase tracking-wide text-grey-400">
+                Promotions
+              </p>
+              <div className="grid grid-cols-2 gap-2">
+                {live.map((p) => (
+                  <Button key={p.id} variant="secondary" size="lg"
+                          loading={busy} className="justify-start"
+                          onClick={() => void usePromotion(p.code)}>
+                    <span className="truncate">
+                      {p.name}
+                      <span className="ml-1.5 text-grey-500 tabular">
+                        {p.kind === "percent"
+                          ? `${p.value}%` : money(p.value)}
+                      </span>
+                    </span>
+                  </Button>
+                ))}
+              </div>
+              <p className="text-sm text-grey-500">
+                Applied by name, so the bill and the month-end report say
+                the same thing.
+              </p>
+            </div>
+          )}
+
+          {live.length > 0 && (
+            <div className="flex items-center gap-3">
+              <span className="h-px flex-1 bg-grey-200" />
+              <span className="text-2xs uppercase tracking-wide text-grey-400">
+                or by hand
+              </span>
+              <span className="h-px flex-1 bg-grey-200" />
+            </div>
+          )}
+
           <div className="flex gap-2">
             {(["percent", "fixed"] as const).map((t) => (
               <button
@@ -514,6 +596,23 @@ function DiscountDialog({
           {tooMuch && (
             <p className="text-sm text-brand-red">
               That is more than the bill. A discount cannot make it negative.
+            </p>
+          )}
+          {/* ⚠ THE CAP IN RUPEES, NOT ONLY AS A PERCENTAGE. "Up to 10%"
+              is arithmetic a biller has to do while a guest waits, and
+              this bill's ceiling is the number they actually need. */}
+          {overCap && !tooMuch && (
+            <p className="text-sm text-brand-red">
+              A biller may take off up to {cap}% — {money(ceiling!)} on this
+              bill. {live.length > 0
+                ? "Anything larger goes on as one of the promotions above."
+                : "Anything larger needs a named promotion, set up on the "
+                  + "menu screen."}
+            </p>
+          )}
+          {!overCap && !tooMuch && preview === null && ceiling !== null && (
+            <p className="text-sm text-grey-500">
+              Up to {cap}% by hand — {money(ceiling)} on this bill.
             </p>
           )}
 

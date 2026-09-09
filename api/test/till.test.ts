@@ -621,15 +621,226 @@ describe("a discount has to say why", () => {
     const before = (await (await as(
       `/api/hotels/5EL/till/orders/${order.id}`)).json()) as Order;
 
+    /* ⚠ WITHIN THE CAP, DERIVED FROM THE BILL. This was a flat 100 and
+       started failing the day 083 capped a biller at 10% — not because
+       anything here was wrong, but because a constant chosen when the
+       demo bill happened to be large enough is a constant that expires.
+       This test is about tax following the discount; it has no opinion
+       about the size. */
+    const off = Math.floor(before.net * 0.09);
+    expect(off, "the demo bill is too small to discount").toBeGreaterThan(0);
+
     const after = (await (await post(
       `/api/hotels/5EL/till/orders/${order.id}/discount`,
-      { type: "fixed", value: 100, reason: "complaint" })).json()) as Order;
+      { type: "fixed", value: off, reason: "complaint" })).json()) as Order;
 
-    expect(after.taxable).toBeCloseTo(after.net - 100, 2);
+    expect(after.taxable).toBeCloseTo(after.net - off, 2);
     /* Off the gross instead, tax would not move at all. That is the bug
        this assertion exists to catch. */
     expect(after.tax).toBeLessThan(before.tax);
     expect(after.gross).toBeCloseTo(after.taxable + after.tax, 2);
+  });
+});
+
+/* ══════════════════════════════════════════════════════════════════
+   THE CAP, AND THE PROMOTIONS BEYOND IT
+
+   The owner's design, given on 9 September when asked what threshold
+   should send a discount for approval: a biller has a free hand up to
+   10% and everything larger is a NAMED promotion applied by code.
+
+   An approval queue asks somebody to decide the same question again
+   every night. "The owner's guests eat at 50%" is not a decision, it
+   is a policy — decided once, named, and counted at month end.
+   ══════════════════════════════════════════════════════════════════ */
+describe("the free-hand cap", () => {
+  it("refuses a percentage above the cap, and names the money", async () => {
+    const order = await orderWithTwoRates("cap-percent");
+    const res = await post(`/api/hotels/5EL/till/orders/${order.id}/discount`,
+      { type: "percent", value: 50, reason: "a large one" });
+    expect(res.status).toBe(409);
+    const reason = ((await res.json()) as { reason: string }).reason;
+    expect(reason).toMatch(/up to 10%/);
+    /* The rupees, not only the percentage. A biller reads the amount. */
+    expect(reason).toMatch(/₹/);
+    expect(reason).toMatch(/promotion/i);
+  });
+
+  it("refuses a FIXED amount that walks around the cap", async () => {
+    /* ⚠ THE ASSERTION THAT MATTERS. Checking the percentage would leave
+       the whole cap open: 5,000 off a 6,000 bill is 83% however it was
+       typed, and a biller who found that out once would never use the
+       percent button again. The check is on the money. */
+    const order = await orderWithTwoRates("cap-fixed");
+    const before = (await (await as(
+      `/api/hotels/5EL/till/orders/${order.id}`)).json()) as Order;
+
+    const res = await post(`/api/hotels/5EL/till/orders/${order.id}/discount`,
+      { type: "fixed", value: Math.ceil(before.net * 0.9),
+        reason: "a large one" });
+    expect(res.status).toBe(409);
+    expect(((await res.json()) as { reason: string }).reason)
+      .toMatch(/up to 10%/);
+  });
+
+  it("allows a discount at the cap exactly", async () => {
+    const order = await orderWithTwoRates("cap-exact");
+    const res = await post(`/api/hotels/5EL/till/orders/${order.id}/discount`,
+      { type: "percent", value: 10, reason: "complaint" });
+    expect(res.status, await res.clone().text()).toBe(200);
+  });
+});
+
+describe("promotions", () => {
+  let promoId: string;
+
+  const patch = (id: string, body: unknown) =>
+    app.request(`/api/hotels/5EL/till/promotions/${id}`, {
+      method: "PATCH",
+      headers: {
+        "x-dev-staff-id": ownerStaffId,
+        "content-type": "application/json",
+      },
+      body: JSON.stringify(body),
+    });
+
+  beforeAll(async () => {
+    const res = await post("/api/hotels/5EL/till/promotions",
+      { code: "TILLOWN", name: "TILLTEST house guests",
+        kind: "percent", value: 50 });
+    expect(res.status, await res.clone().text()).toBe(200);
+    promoId = ((await res.json()) as { id: string }).id;
+  });
+
+  afterAll(async () => {
+    const db = await admin();
+    try {
+      await db.query(
+        `update pos_orders set promotion_id = null
+          where promotion_id in (select id from pos_promotions
+                                  where code like 'TILL%')`);
+      await db.query("delete from pos_promotions where code like 'TILL%'");
+    } finally { await db.end(); }
+  });
+
+  it("sends the cap alongside the list", async () => {
+    /* The discount dialog has to say "up to 10% — 247 on this bill"
+       before a biller types anything. The alternative to sending the
+       cap here is a second copy of 10 in the browser. */
+    const res = await as("/api/hotels/5EL/till/promotions");
+    expect(res.status).toBe(200);
+    const body = (await res.json()) as {
+      freehandCapPercent: number;
+      promotions: { code: string; name: string; value: number }[];
+    };
+    expect(body.freehandCapPercent).toBe(10);
+    expect(body.promotions.some((x) => x.code === "TILLOWN")).toBe(true);
+  });
+
+  it("goes past the cap, because it was decided in advance", async () => {
+    const order = await orderWithTwoRates("promo-applies");
+    const res = await post(`/api/hotels/5EL/till/orders/${order.id}/promotion`,
+      { code: "TILLOWN" });
+    expect(res.status, await res.clone().text()).toBe(200);
+    const body = (await res.json()) as Order & {
+      promotionId: string | null; promotionName: string | null;
+    };
+
+    expect(body.discountValue).toBe(50);
+    expect(body.discount).toBeCloseTo(Math.round(body.net * 50) / 100, 2);
+    /* WHICH promotion, so month end is a group-by rather than a search
+       through text nobody spelled the same way twice. */
+    expect(body.promotionId).toBe(promoId);
+    expect(body.promotionName).toBe("TILLTEST house guests");
+    /* And the bill carries the promotion's own words, not the biller's. */
+    expect(body.discountReason).toBe("TILLTEST house guests");
+  });
+
+  it("is found however the biller capitalised it", async () => {
+    const order = await orderWithTwoRates("promo-case");
+    const res = await post(`/api/hotels/5EL/till/orders/${order.id}/promotion`,
+      { code: " tillown " });
+    expect(res.status, await res.clone().text()).toBe(200);
+  });
+
+  it("refuses a code nobody set up", async () => {
+    const order = await orderWithTwoRates("promo-missing");
+    const res = await post(`/api/hotels/5EL/till/orders/${order.id}/promotion`,
+      { code: "NOSUCH" });
+    expect(res.status).toBe(409);
+    expect(((await res.json()) as { reason: string }).reason)
+      .toMatch(/no promotion with the code NOSUCH/i);
+  });
+
+  it("refuses one that has been switched off, by name", async () => {
+    const off = await patch(promoId, { isActive: false });
+    expect(off.status, await off.clone().text()).toBe(200);
+
+    const order = await orderWithTwoRates("promo-off");
+    const res = await post(`/api/hotels/5EL/till/orders/${order.id}/promotion`,
+      { code: "TILLOWN" });
+    expect(res.status).toBe(409);
+    /* The NAME, not the code. A biller told "TILLOWN is not running"
+       has to go and look up what TILLOWN was. */
+    expect(((await res.json()) as { reason: string }).reason)
+      .toMatch(/house guests is not running/i);
+
+    expect((await patch(promoId, { isActive: true })).status).toBe(200);
+  });
+
+  it("a free-hand discount afterwards clears the promotion", async () => {
+    /* ⚠ OTHERWISE THE REPORT KEEPS COUNTING IT. A bill that was 50% for
+       house guests and is now 5% off for a complaint is not a house
+       guest concession any more. */
+    const order = await orderWithTwoRates("promo-then-freehand");
+    await post(`/api/hotels/5EL/till/orders/${order.id}/promotion`,
+      { code: "TILLOWN" });
+    const res = await post(`/api/hotels/5EL/till/orders/${order.id}/discount`,
+      { type: "percent", value: 5, reason: "complaint" });
+    expect(res.status, await res.clone().text()).toBe(200);
+    expect(((await res.json()) as { promotionId: string | null }).promotionId)
+      .toBeNull();
+  });
+
+  it("clearing the discount clears the promotion too", async () => {
+    const order = await orderWithTwoRates("promo-cleared");
+    await post(`/api/hotels/5EL/till/orders/${order.id}/promotion`,
+      { code: "TILLOWN" });
+    const res = await post(
+      `/api/hotels/5EL/till/orders/${order.id}/discount/clear`);
+    expect(res.status, await res.clone().text()).toBe(200);
+    const body = (await res.json()) as Order & { promotionId: string | null };
+    expect(body.promotionId).toBeNull();
+    expect(body.discount).toBe(0);
+  });
+
+  it("refuses a promotion bigger than the bill", async () => {
+    const big = await post("/api/hotels/5EL/till/promotions",
+      { code: "TILLBIG", name: "TILLTEST enormous",
+        kind: "fixed", value: 999999 });
+    expect(big.status, await big.clone().text()).toBe(200);
+
+    const order = await orderWithTwoRates("promo-too-big");
+    const res = await post(`/api/hotels/5EL/till/orders/${order.id}/promotion`,
+      { code: "TILLBIG" });
+    expect(res.status).toBe(409);
+    expect(((await res.json()) as { reason: string }).reason)
+      .toMatch(/more than this bill/i);
+  });
+
+  it("refuses a second promotion on one code", async () => {
+    const res = await post("/api/hotels/5EL/till/promotions",
+      { code: "tillown", name: "TILLTEST another", kind: "fixed", value: 10 });
+    expect(res.status).toBe(409);
+    expect(((await res.json()) as { reason: string }).reason)
+      .toMatch(/already in use/i);
+  });
+
+  it("refuses a promotion worth nothing", async () => {
+    const res = await post("/api/hotels/5EL/till/promotions",
+      { code: "TILLZERO", name: "TILLTEST nothing",
+        kind: "percent", value: 0 });
+    expect(res.status).toBe(409);
   });
 });
 
@@ -733,8 +944,11 @@ describe("split tender", () => {
 describe("a discounted bill charged to a room", () => {
   it("posts the DISCOUNTED amount to the folio, not the full one", async () => {
     const order = await orderWithTwoRates("room-discount");
+    /* A percentage rather than a flat 100, which is over the 10% cap
+       083 introduced. What is being proved is that the folio gets the
+       discounted figure, not what the discount was. */
     await post(`/api/hotels/5EL/till/orders/${order.id}/discount`,
-      { type: "fixed", value: 100, reason: "manager comp" });
+      { type: "percent", value: 10, reason: "manager comp" });
 
     const now = (await (await as(
       `/api/hotels/5EL/till/orders/${order.id}`)).json()) as Order;

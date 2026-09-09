@@ -176,6 +176,12 @@ export interface Order {
   discountType: "percent" | "fixed" | null;
   discountValue: number | null;
   discountReason: string | null;
+  /* ⚠ WHICH PROMOTION, not only that a discount happened. NULL is a
+     free-hand discount inside the cap — a different act from a policy
+     decided in advance, and month end has to be able to tell them
+     apart. A report that cannot is reporting on neither. */
+  promotionId: string | null;
+  promotionName: string | null;
   taxable: number;
   tax: number;
   gross: number;
@@ -415,6 +421,84 @@ export function applyDiscount(
 ): Promise<TillResult> {
   return write(`/api/hotels/${hotelId}/till/orders/${orderId}/discount`,
     { type, value, reason });
+}
+
+/* ══════════════════════════════════════════════════════════════════
+   PROMOTIONS — the answer to "what happens above the cap"
+
+   A biller has a free hand up to `freehandCapPercent`. Beyond it there
+   is no bigger box and no approval queue: there is a NAMED promotion,
+   decided once and applied by code.
+
+   The owner put it plainly on 9 September — "anything else needs to be
+   a predefined discount category like a promotion, the staff just add
+   the code and it cuts automatically". A queue would ask somebody to
+   decide the same question again every night; a policy is decided once
+   and counted at month end.
+   ══════════════════════════════════════════════════════════════════ */
+
+export interface Promotion {
+  id: string;
+  /** What the biller types. Short — a terminal has a queue behind it. */
+  code: string;
+  /** What prints on the bill and groups the report. */
+  name: string;
+  kind: "percent" | "fixed";
+  value: number;
+  isActive: boolean;
+  /** Bills that used it at this property. */
+  used: number;
+}
+
+export interface PromotionList {
+  /** ⚠ THE CAP COMES FROM THE SERVER. It is one number, defined in 083,
+      and a copy of it in the browser would be a second thing to be
+      wrong — which is the most expensive shape in this codebase. */
+  freehandCapPercent: number;
+  promotions: Promotion[];
+}
+
+export async function listPromotions(
+  hotelId: string,
+): Promise<PromotionList> {
+  return api<PromotionList>(`/api/hotels/${hotelId}/till/promotions`);
+}
+
+/** Applies a named promotion by its code. Goes past the free-hand cap,
+    because somebody decided it in advance. */
+export function applyPromotion(
+  hotelId: string, orderId: string, code: string,
+): Promise<TillResult> {
+  return write(`/api/hotels/${hotelId}/till/orders/${orderId}/promotion`,
+    { code });
+}
+
+export async function addPromotion(
+  hotelId: string,
+  input: { code: string; name: string; kind: "percent" | "fixed"; value: number },
+): Promise<{ ok: boolean; reason?: string }> {
+  return simplePost(`/api/hotels/${hotelId}/till/promotions`, input);
+}
+
+/** The CODE cannot be changed, deliberately: bills already printed name
+    it, and a code reused for something else makes last month's bills
+    describe this month's policy. Switch it off and make a new one. */
+export async function amendPromotion(
+  hotelId: string, id: string,
+  input: { name?: string; value?: number; isActive?: boolean },
+): Promise<{ ok: boolean; reason?: string }> {
+  try {
+    await api(`/api/hotels/${hotelId}/till/promotions/${id}`, {
+      method: "PATCH", body: JSON.stringify(input),
+    });
+    return { ok: true };
+  } catch (error) {
+    if (error instanceof ApiError) {
+      const p = error.body as { reason?: string } | undefined;
+      return { ok: false, reason: p?.reason ?? error.message };
+    }
+    throw error;
+  }
 }
 
 export function clearDiscount(

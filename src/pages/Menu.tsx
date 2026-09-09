@@ -1,9 +1,9 @@
 import { useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useParams } from "react-router";
-import { UtensilsCrossed, Plus, Upload } from "lucide-react";
+import { UtensilsCrossed, Plus, Upload, TicketPercent } from "lucide-react";
 import { cn } from "@/lib/cn";
-import { moneyPrecise } from "@/lib/format";
+import { money, moneyPrecise } from "@/lib/format";
 import { useUi } from "@/lib/ui";
 import {
   Page, PageHeader, Card, CardBody, Button, StatusPill, toast,
@@ -13,7 +13,8 @@ import {
   getMenu, addCategory, addItem, toggleItem, takeItemOff, putItemBack,
   importMenu, setItemPrepMinutes, setCategoryPrepMinutes,
   setItemCourse, setCategoryCourse,
-  type OffFor,
+  listPromotions, addPromotion, amendPromotion,
+  type OffFor, type Promotion,
   type MenuCategory, type MenuItem,
 } from "@/data/repositories";
 import { ImportDialog } from "@/components/flows/ImportDialog";
@@ -161,6 +162,13 @@ export default function MenuPage() {
           ))}
         </div>
       )}
+      {/* ── Promotions ────────────────────────────────────────────
+          Beside the dishes and the taxes, because it is the same
+          question: what does this restaurant sell and on what terms.
+          Last on the page — a card is edited every week and a
+          concession is decided about once a season. */}
+      <Promotions hotelId={hotelId} />
+
       {importing && (
         <ImportDialog
           spec={MENU_SPEC}
@@ -171,6 +179,262 @@ export default function MenuPage() {
         />
       )}
     </Page>
+  );
+}
+
+/* ══════════════════════════════════════════════════════════════════
+   PROMOTIONS — the named discounts, and the line a biller may not cross
+
+   ⚠ WHAT THIS REPLACED. The plan was an approval queue: a discount over
+   some threshold would wait for the GM to decide. Asked what the
+   threshold should be, the owner answered with a better design — a free
+   hand up to 10%, and anything larger applied by code from a list
+   decided in advance.
+
+   A queue asks somebody to answer the same question again every night.
+   "House guests eat at 50%" is not a decision, it is a policy, and a
+   policy typed in fresh by a biller at 11pm is a policy that drifts.
+
+   It also answers a question the queue could not: what did each
+   concession COST last month. A promotion is a column on the bill; a
+   free-hand discount with the words typed into the reason box is a
+   search through text nobody spelled the same way twice.
+
+   NOTHING IS SEEDED. Every rate here is a decision about money that
+   somebody at the hotel has to make, and a shipped "STAFF — 50%" would
+   be defect 63 wearing an apron.
+   ══════════════════════════════════════════════════════════════════ */
+function Promotions({ hotelId }: { hotelId: string }) {
+  const qc = useQueryClient();
+  const [adding, setAdding] = useState(false);
+  const [editing, setEditing] = useState<Promotion | null>(null);
+
+  const q = useQuery({
+    queryKey: ["promotions", hotelId],
+    queryFn: () => listPromotions(hotelId),
+  });
+
+  const refresh = () => {
+    void qc.invalidateQueries({ queryKey: ["promotions"] });
+  };
+
+  const cap = q.data?.freehandCapPercent ?? null;
+  const list = q.data?.promotions ?? [];
+
+  return (
+    <section className="mt-5">
+      <div className="flex items-center justify-between mb-2.5">
+        <h2 className="text-md font-semibold text-ink-900">Promotions</h2>
+        <Button variant="secondary" className="h-11"
+                onClick={() => setAdding(true)}>
+          <Plus className="size-4" /> Add a promotion
+        </Button>
+      </div>
+
+      <Card>
+        <CardBody className="space-y-4">
+          <div className="flex items-start gap-3">
+            <TicketPercent className="size-4 text-grey-400 shrink-0 mt-0.5" />
+            <p className="text-sm text-grey-600 leading-relaxed">
+              {/* The cap is the server's number and is shown, not
+                  restated. A copy of "10" in this file would be a
+                  second thing to be wrong. */}
+              A biller may take {cap === null ? "a limited amount" : `up to ${cap}%`}
+              {" "}off a bill by hand. Anything larger is one of these, applied
+              by code — so it is the same concession every time, and the
+              month-end report can count what it cost.
+            </p>
+          </div>
+
+          {list.length === 0 ? (
+            <p className="text-sm text-grey-500">
+              None set up. Until there is one, a discount above the cap is
+              refused at the till.
+            </p>
+          ) : (
+            <ul className="divide-y divide-grey-100">
+              {list.map((p) => (
+                <li key={p.id}
+                    className="flex items-center gap-3 py-2.5 first:pt-0">
+                  <span className={cn(
+                    "shrink-0 rounded px-1.5 py-0.5 text-2xs font-semibold",
+                    "tabular tracking-wide",
+                    p.isActive
+                      ? "bg-orange-50 text-brand-orange"
+                      : "bg-grey-100 text-grey-500")}>
+                    {p.code}
+                  </span>
+                  <span className={cn("min-w-0 flex-1 truncate text-base",
+                                      p.isActive
+                                        ? "text-ink-900" : "text-grey-400")}>
+                    {p.name}
+                    {!p.isActive && (
+                      <span className="ml-2 text-sm text-grey-500">
+                        not running
+                      </span>
+                    )}
+                  </span>
+                  <span className="tabular text-base font-medium text-ink-900">
+                    {p.kind === "percent" ? `${p.value}%` : money(p.value)}
+                  </span>
+                  <span className={cn("tabular text-sm w-20 text-right",
+                                      p.used === 0
+                                        ? "text-grey-400" : "text-grey-600")}>
+                    {p.used} bill{p.used === 1 ? "" : "s"}
+                  </span>
+                  <Button variant="ghost" className="h-11"
+                          onClick={() => setEditing(p)}>
+                    Edit
+                  </Button>
+                </li>
+              ))}
+            </ul>
+          )}
+        </CardBody>
+      </Card>
+
+      {adding && (
+        <PromotionDialog hotelId={hotelId} onClose={() => setAdding(false)}
+                         onSaved={refresh} />
+      )}
+      {editing && (
+        <PromotionDialog hotelId={hotelId} promotion={editing}
+                         onClose={() => setEditing(null)} onSaved={refresh} />
+      )}
+    </section>
+  );
+}
+
+function PromotionDialog({
+  hotelId, promotion, onClose, onSaved,
+}: {
+  hotelId: string; promotion?: Promotion;
+  onClose: () => void; onSaved: () => void;
+}) {
+  const [code, setCode] = useState(promotion?.code ?? "");
+  const [name, setName] = useState(promotion?.name ?? "");
+  const [kind, setKind] =
+    useState<"percent" | "fixed">(promotion?.kind ?? "percent");
+  const [value, setValue] =
+    useState(promotion ? String(promotion.value) : "");
+  const [active, setActive] = useState(promotion?.isActive ?? true);
+  const [busy, setBusy] = useState(false);
+
+  const amount = Number(value);
+  const bad = !Number.isFinite(amount) || amount <= 0
+    || (kind === "percent" && amount > 100);
+  const ready = name.trim().length > 0 && (promotion || code.trim().length > 0)
+    && !bad;
+
+  const submit = async () => {
+    setBusy(true);
+    const res = promotion
+      ? await amendPromotion(hotelId, promotion.id,
+          { name: name.trim(), value: amount, isActive: active })
+      : await addPromotion(hotelId,
+          { code: code.trim().toUpperCase(), name: name.trim(),
+            kind, value: amount });
+    setBusy(false);
+    if (!res.ok) return toast.error("Not saved", res.reason);
+    toast.success(promotion ? `${name.trim()} saved` : `${name.trim()} added`);
+    onSaved();
+    onClose();
+  };
+
+  return (
+    <Dialog open onOpenChange={(o) => !o && onClose()}>
+      <DialogContent
+        title={promotion ? `Edit ${promotion.name}` : "Add a promotion"}
+        description={
+          promotion
+            ? "The code cannot change — bills already printed name it."
+            : "A named discount a biller applies by typing its code."
+        }
+        size="sm"
+        footer={
+          <>
+            <Button variant="secondary" size="lg" onClick={onClose}>
+              Cancel
+            </Button>
+            <Button size="lg" loading={busy} disabled={!ready}
+                    onClick={() => void submit()}>
+              Save
+            </Button>
+          </>
+        }
+      >
+        <div className="space-y-4">
+          {!promotion && (
+            <Field label="Code" required
+                   hint="What the biller types. Short — a terminal has a queue behind it.">
+              {(f) => (
+                <Input {...fieldProps(f)} value={code} placeholder="HOUSE"
+                       autoFocus
+                       onChange={(e) => setCode(e.target.value.toUpperCase())} />
+              )}
+            </Field>
+          )}
+
+          <Field label="Name" required
+                 hint="Prints on the bill and groups the report. The guest reads this.">
+            {(f) => (
+              <Input {...fieldProps(f)} value={name} placeholder="House guests"
+                     onChange={(e) => setName(e.target.value)} />
+            )}
+          </Field>
+
+          {!promotion && (
+            <div className="flex gap-2">
+              {(["percent", "fixed"] as const).map((t) => (
+                <button key={t} type="button" onClick={() => setKind(t)}
+                  className={cn(
+                    "flex-1 h-11 rounded-md border text-base font-medium",
+                    "cursor-pointer transition-colors duration-200",
+                    kind === t
+                      ? "border-brand-orange bg-orange-50 text-brand-orange"
+                      : "border-grey-300 text-grey-600 hover:bg-grey-50")}>
+                  {t === "percent" ? "Percentage" : "Fixed amount"}
+                </button>
+              ))}
+            </div>
+          )}
+
+          <Field
+            label={kind === "percent" ? "Percent off" : "Amount off"}
+            required
+            error={value.trim() !== "" && bad
+              ? (kind === "percent"
+                  ? "Between 0 and 100."
+                  : "More than nothing.")
+              : undefined}
+          >
+            {(f) => (
+              <Input {...fieldProps(f)} value={value} type="number"
+                     inputMode="decimal"
+                     placeholder={kind === "percent" ? "50" : "200.00"}
+                     onChange={(e) => setValue(e.target.value)} />
+            )}
+          </Field>
+
+          {promotion && (
+            <label className="flex items-start gap-3 cursor-pointer">
+              <input type="checkbox" checked={active} className="mt-1 size-4"
+                     onChange={(e) => setActive(e.target.checked)} />
+              <span>
+                <span className="text-base text-ink-900">
+                  Offer this at the till
+                </span>
+                <span className="block text-sm text-grey-600">
+                  Switching it off hides it from the discount dialog. Bills
+                  that already used it keep it — a promotion is never
+                  deleted.
+                </span>
+              </span>
+            </label>
+          )}
+        </div>
+      </DialogContent>
+    </Dialog>
   );
 }
 
