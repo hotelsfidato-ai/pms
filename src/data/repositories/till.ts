@@ -688,7 +688,14 @@ export interface FloorSection {
 }
 
 export interface Floor {
-  outlet: { code: string; name: string; closedUntil: string | null } | null;
+  outlet: {
+    code: string; name: string;
+    /** When it reopens. Null when it is open. */
+    closedUntil: string | null;
+    /** Why, if anybody said. Null is ordinary and shows nothing —
+        it is not "no reason", it is "nobody wrote one". */
+    closedReason: string | null;
+  } | null;
   sections: FloorSection[];
 }
 

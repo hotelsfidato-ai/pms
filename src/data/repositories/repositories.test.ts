@@ -195,13 +195,15 @@ describe("Rule 2b — a function nobody calls is a capability nobody can reach",
      second to answer and I spent an afternoon answering it wrongly by
      hand.
 
-     ⚠ THE ALLOW-LIST IS A BACKLOG, NOT A PERMISSION. Fourteen functions
-     are exported and reached by nothing. Some are helpers superseded by
-     later work; at least one — `setOutletClosed` — is a real capability
-     whose screen renders the state it produces and offers no way to
-     produce it. They are listed so the gate can be turned on today
-     rather than after a cleanup, and the count is asserted so the list
-     can only shrink.
+     ⚠ THE ALLOW-LIST IS A BACKLOG, NOT A PERMISSION. Thirteen functions
+     are exported and reached by nothing, all of them helpers overtaken
+     by later screens.
+
+     `setOutletClosed` was the fourteenth and the one that mattered: a
+     real capability whose screen rendered the state it produced and
+     offered no way to produce it. The floor can close its outlet now,
+     so it came off. That is what this list is for — it shrinks, and
+     the second test below fails if an entry gains a caller and stays.
      ══════════════════════════════════════════════════════════════════ */
   const SRC = join(process.cwd(), "src");
   const SEAM = join("src", "data", "repositories");
@@ -218,9 +220,6 @@ describe("Rule 2b — a function nobody calls is a capability nobody can reach",
   /* Known unreachable on 8 September 2026. Every line here is work
      somebody paid for that nobody can use. */
   const KNOWN_UNREACHABLE = [
-    /* A real capability. The floor renders "… is closed" and nothing
-       can close it. Scheduled as phase 2 item E. */
-    "setOutletClosed",
     /* Superseded TODAY by the order pad, which opens the order in its
        batch send instead. Safe to delete. */
     "openOrderOnTable",

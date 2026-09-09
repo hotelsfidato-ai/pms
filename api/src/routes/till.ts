@@ -1805,9 +1805,16 @@ till.get("/:code/till/floor", async (c) => {
 
     const code = (c.req.query("outlet") ?? "REST").toUpperCase();
     const { rows: outlet } = await client.query<{
-      id: string; name: string; closed_until: string | null;
+      id: string; name: string;
+      closed_until: string | null; closed_reason: string | null;
     }>(
-      `select id::text, name, closed_until::text from pos_outlets
+      /* ⚠ AND THE REASON. The refusal a waiter gets when they try to
+         ring an order has always carried it — "Kitchen closed — power
+         cut". The banner on the floor, which is what a manager reads,
+         said only that it was closed, so the two disagreed about how
+         much they knew. */
+      `select id::text, name, closed_until::text, closed_reason
+         from pos_outlets
         where hotel_id = $1 and code = $2 and is_active`,
       [hotelId, code],
     );
@@ -1858,7 +1865,11 @@ till.get("/:code/till/floor", async (c) => {
     }
 
     return {
-      outlet: { code, name: outlet[0].name, closedUntil: outlet[0].closed_until },
+      outlet: {
+        code, name: outlet[0].name,
+        closedUntil: outlet[0].closed_until,
+        closedReason: outlet[0].closed_reason,
+      },
       sections,
     };
   });

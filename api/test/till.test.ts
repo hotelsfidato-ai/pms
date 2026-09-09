@@ -1135,6 +1135,22 @@ describe("closing the store", () => {
     expect(reason).toMatch(/open again/i);
   });
 
+  it("tells the floor WHY, not only that it is shut", async () => {
+    /* ⚠ THE BANNER AND THE REFUSAL KNEW DIFFERENT AMOUNTS. A waiter
+       ringing an order was told "closed — kitchen stopped early"; the
+       manager reading the floor was told only "closed", because the
+       floor query never selected the reason. Two views of one fact,
+       and the one with less in it belonged to the person who could
+       act on it. */
+    const res = await as("/api/hotels/5EL/till/floor?outlet=REST");
+    expect(res.status).toBe(200);
+    const body = (await res.json()) as {
+      outlet: { closedUntil: string | null; closedReason: string | null } | null;
+    };
+    expect(body.outlet?.closedUntil).toBeTruthy();
+    expect(body.outlet?.closedReason).toBe("kitchen stopped early");
+  });
+
   it("is not the same as the module being off", async () => {
     /* A shut store still has its screens: a biller can settle the bills
        already open, print them and count the drawer. Turning the MODULE

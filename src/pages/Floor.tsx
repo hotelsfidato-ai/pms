@@ -1,19 +1,20 @@
 import { useEffect, useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useParams, useNavigate } from "react-router";
-import { Printer, Eye, LayoutGrid } from "lucide-react";
+import { Printer, Eye, LayoutGrid, DoorClosed } from "lucide-react";
 import { cn } from "@/lib/cn";
 import { money } from "@/lib/format";
 import { useUi } from "@/lib/ui";
 import { useLiveOrders } from "@/lib/useLiveOrders";
 import {
   Page, PageHeader, Card, CardBody, Button, Skeleton, toast,
+  Dialog, DialogContent, Field, fieldProps, Input,
 } from "@/components/ui";
 import { OrderPad } from "@/components/flows/OrderPad";
 import { draftedTables } from "@/lib/draft";
 import {
-  getFloor, markPrinted, clearTable,
-  type FloorTable, type TableState,
+  getFloor, markPrinted, clearTable, setOutletClosed,
+  type FloorTable, type TableState, type OffFor,
 } from "@/data/repositories";
 
 /* ══════════════════════════════════════════════════════════════════
@@ -41,6 +42,18 @@ function useHotel(): string {
   const fallback = useUi((s) => s.hotelId);
   return params["code"] ?? fallback;
 }
+
+/* ⚠ THE SAME DURATIONS THE MENU USES, and for the same reason: a
+   closure with no end is an outlet that stays shut for a week because
+   whoever closed it went home. The time answers the question a waiter
+   is about to be asked at a table. */
+const CLOSE_FOR: { key: OffFor; label: string }[] = [
+  { key: "2h", label: "2 hours" },
+  { key: "4h", label: "4 hours" },
+  { key: "8h", label: "8 hours" },
+  { key: "24h", label: "24 hours" },
+  { key: "next_business_day", label: "Rest of today" },
+];
 
 const LEGEND: { state: TableState; label: string; swatch: string }[] = [
   { state: "blank",   label: "Free",    swatch: "bg-white border-grey-300" },
@@ -141,21 +154,38 @@ export default function FloorPage() {
   };
 
   const sections = floor.data?.sections ?? [];
-  const closed = floor.data?.outlet?.closedUntil
-    && Date.parse(floor.data.outlet.closedUntil) > Date.now();
+  const outlet = floor.data?.outlet ?? null;
+  const closed = outlet?.closedUntil
+    && Date.parse(outlet.closedUntil) > Date.now();
+  /* WHEN, not just whether. A manager who closed it at four wants to
+     see the hour it comes back, and so does the waiter standing next
+     to them. */
+  const reopens = closed && outlet?.closedUntil
+    ? new Date(outlet.closedUntil).toLocaleTimeString("en-IN",
+        { hour: "2-digit", minute: "2-digit" })
+    : null;
 
   return (
     <Page>
       <PageHeader
         title="Floor"
         description="The room as it stands. Tap any table to take an order on it — the pad opens here, and nothing reaches the kitchen until you send it."
+        actions={outlet && (
+          <CloseOutlet outlet={outlet} closed={!!closed} hotelId={hotelId}
+                       onDone={refresh} />
+        )}
       />
 
       {closed && (
         <Card className="mb-4">
           <CardBody>
             <p className="text-sm text-ink-900 font-medium">
-              {floor.data?.outlet?.name} is closed.
+              {outlet?.name} is closed{reopens ? ` until ${reopens}` : ""}
+              {/* Why, when somebody said. The refusal a waiter gets has
+                  always carried the reason; the banner a manager reads
+                  did not, and the two disagreed about how much they
+                  knew. */}
+              {outlet?.closedReason ? ` — ${outlet.closedReason}` : ""}.
             </p>
             <p className="text-sm text-grey-600 mt-0.5">
               Bills already open can still be settled and printed. New orders
@@ -332,5 +362,113 @@ export default function FloorPage() {
         />
       )}
     </Page>
+  );
+}
+
+/* ══════════════════════════════════════════════════════════════════
+   CLOSING THE OUTLET EARLY
+
+   ⚠ EVERYTHING FOR THIS EXISTED EXCEPT THE WAY IN. The endpoint has
+   been in `till.ts` since the POS was built; `setOutletClosed` has
+   been on the seam beside it; the banner above renders the state it
+   produces, and the order endpoint refuses with the reason it stores.
+   Nothing anywhere could set it. A manager whose kitchen lost power
+   had to ask for a database session, or watch waiters take orders
+   nothing could cook.
+
+   That is this project's most common defect and it is the reason the
+   reachability gate in `repositories.test.ts` exists — `setOutletClosed`
+   was the first name on its backlog. This screen takes it off.
+
+   IT DOES NOT STOP THE MONEY. A closed outlet refuses NEW orders and
+   nothing else: bills already open are settled and printed as usual.
+   Closing a restaurant with eleven tables mid-meal and no way to bill
+   them would be a worse fault than the one being fixed.
+   ══════════════════════════════════════════════════════════════════ */
+function CloseOutlet({
+  outlet, closed, hotelId, onDone,
+}: {
+  outlet: { code: string; name: string };
+  closed: boolean; hotelId: string; onDone: () => void;
+}) {
+  const [open, setOpen] = useState(false);
+  const [reason, setReason] = useState("");
+  const [busy, setBusy] = useState(false);
+
+  const close = async (until: OffFor) => {
+    setBusy(true);
+    const res = await setOutletClosed(
+      hotelId, outlet.code, true, until, reason.trim());
+    setBusy(false);
+    if (!res.ok) return toast.error("Not closed", res.reason);
+    setOpen(false);
+    setReason("");
+    toast.success(`${outlet.name} is closed`, `Back in ${
+      CLOSE_FOR.find((o) => o.key === until)?.label.toLowerCase()}.`);
+    onDone();
+  };
+
+  const reopen = async () => {
+    setBusy(true);
+    const res = await setOutletClosed(hotelId, outlet.code, false);
+    setBusy(false);
+    if (!res.ok) return toast.error("Not reopened", res.reason);
+    toast.success(`${outlet.name} is open`);
+    onDone();
+  };
+
+  if (closed) {
+    return (
+      <Button variant="secondary" className="h-11" loading={busy}
+              onClick={() => void reopen()}>
+        Reopen {outlet.name}
+      </Button>
+    );
+  }
+
+  return (
+    <>
+      <Button variant="secondary" className="h-11"
+              onClick={() => setOpen(true)}>
+        <DoorClosed className="size-4" /> Close early
+      </Button>
+
+      <Dialog open={open} onOpenChange={setOpen}>
+        <DialogContent
+          title={`Close ${outlet.name}`}
+          description="New orders are refused. Bills already open are settled and printed as usual."
+          size="sm"
+          footer={
+            <Button variant="secondary" size="lg"
+                    onClick={() => setOpen(false)}>
+              Cancel
+            </Button>
+          }
+        >
+          <div className="space-y-4">
+            <Field label="Why"
+                   hint="Shown to the waiter who tries to ring an order.">
+              {(f) => (
+                <Input {...fieldProps(f)} value={reason} autoFocus
+                       placeholder="Power cut"
+                       onChange={(e) => setReason(e.target.value)} />
+              )}
+            </Field>
+            {/* ⚠ FOR HOW LONG, and there is no "until I say". A closure
+                with no end is one nobody remembers to undo, and the
+                first person to find out is a guest being turned away
+                from an open restaurant. */}
+            <div className="grid grid-cols-2 gap-2">
+              {CLOSE_FOR.map((o) => (
+                <Button key={o.key} variant="secondary" size="lg"
+                        loading={busy} onClick={() => void close(o.key)}>
+                  {o.label}
+                </Button>
+              ))}
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
+    </>
   );
 }
