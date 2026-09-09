@@ -89,7 +89,7 @@ const CONNECTION =
 /* Order is the whole of this. Children before parents, every time —
    a teardown is a migration run backwards and has the same rules
    (defect 115). */
-const CLEAR: [table: string, how: string][] = [
+export const CLEAR: [table: string, how: string][] = [
   /* EVERY NAME HERE WAS READ OUT OF THE SCHEMA, not remembered. The
      first version invented `invoice_lines` and `notifications`; neither
      exists, and the run aborted a third of the way through with the
@@ -97,8 +97,21 @@ const CLEAR: [table: string, how: string][] = [
      now checked against information_schema. */
   ["pos_order_tenders", "order_id in (select id from pos_orders where hotel_id = $1)"],
   ["pos_order_lines",   "hotel_id = $1"],
-  ["pos_tickets",       "hotel_id = $1"],
+  /* ⚠ ORDERS BEFORE TICKETS. `pos_orders.ticket_id` references
+     `pos_tickets`, so the order is the CHILD — and this list had them
+     the other way round, which is the one thing its own comment says
+     never to do.
+
+     It survived every local run because the development database has
+     no tickets: the delete matched nothing and no key was violated. It
+     failed on the first production run, a third of the way through,
+     with 17 orders on the file. A teardown is only exercised by data
+     that exists.
+
+     Tickets still come before `folio_postings` and `folios`, which
+     they reference in turn. */
   ["pos_orders",        "hotel_id = $1"],
+  ["pos_tickets",       "hotel_id = $1"],
   ["pos_cash_movements", "hotel_id = $1"],
   ["pos_denominations", "day_end_id in (select id from pos_day_ends where hotel_id = $1)"],
   ["pos_day_ends",      "hotel_id = $1"],

@@ -5787,3 +5787,51 @@ different requirements.
 was looking at.** 233 fixed the variable name, 235 fixed the loading,
 238 fixed who can load it. Each was verified by reading, and each was
 wrong in a way only running it on the real box would show.
+
+---
+
+### 239 · The teardown deleted a parent before its child, and dev could not tell me
+
+`reset-property.ts` opens with:
+
+> *"Order is the whole of this. Children before parents, every time — a
+> teardown is a migration run backwards and has the same rules."*
+
+And its list had:
+
+```
+["pos_tickets",  "hotel_id = $1"],     ← the PARENT
+["pos_orders",   "hotel_id = $1"],     ← the child; pos_orders.ticket_id
+                                         references pos_tickets
+```
+
+Production, first run, a third of the way in:
+
+```
+reset failed: update or delete on table "pos_tickets" violates foreign
+key constraint "pos_orders_ticket_id_fkey" on table "pos_orders"
+```
+
+⚠ **It survived every local run because the development database has no
+tickets.** The delete matched zero rows, so the constraint was never
+tested. A teardown is only exercised by data that exists — and the data
+that exists locally is whatever the demo loader happens to make.
+
+The transaction rolled back and nothing was lost, which is the one thing
+that went right.
+
+**The fix is not the swap.** A list of twenty table names cannot be
+checked by reading it, and I read it twice. `api/test/resetOrder.test.ts`
+now asks the DATABASE for its foreign-key graph and asserts the list
+agrees with it — every table named exists, and no parent is deleted
+before a child. Proved by putting the order back the way production
+found it and watching it fail.
+
+It asks the schema rather than carrying a map of it, because a
+hard-coded "what references what" is a second schema to keep in step,
+and the day a column is added it would still be checking last year's
+shape — passing, and wrong.
+
+**Fourth run at one procedure**: 233 the variable, 235 the loading, 238
+who can load it, 239 the order. Every one found by running it on the
+real box, none by reading.
