@@ -140,6 +140,12 @@ export async function createBooking(
     guestName: string; phone?: string; email?: string;
     checkIn: string; checkOut: string;
     groupName?: string; blockCode?: string;
+    /* ⚠ REQUIRED. The channel the booking arrived through, as a row in
+       booking_sources. `source` is the free text 042 left behind and is
+       still accepted so nothing older breaks — but a booking with no
+       channel is refused by the server, and cannot be corrected later
+       because nobody remembers where a booking came from a week on. */
+    bookingSourceId: string;
     source?: string; businessSource?: string; marketSegment?: string;
     /** The hour they said they would arrive, 24-hour. Absent when they
         did not say — which is most bookings, and is not midnight. */

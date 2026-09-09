@@ -23,8 +23,17 @@
 export type StayStatus =
   | "due-in" | "in-house" | "due-out" | "checked-out" | "no-show" | "cancelled";
 
-export type Source =
-  | "Walk-in" | "Fidato Hotels" | "Agoda" | "Booking.com" | "Expedia" | "go-MMT";
+/* ⚠ WAS A CLOSED UNION OF SIX NAMES, and stopped being one the moment
+   a manager could add a source. It listed Walk-in, Fidato Hotels,
+   Agoda, Booking.com, Expedia and go-MMT — the six the demo happened
+   to contain — so the first travel agent anybody added would not have
+   typechecked as a source.
+
+   Null is a real answer: a booking taken before 082, or one whose
+   origin nothing on the record knows. The screen shows a dash. It does
+   NOT show "Walk-in", which is what stays.ts guessed for four months —
+   defect 219. */
+export type Source = string;
 
 export interface Stay {
   id: string;
@@ -33,7 +42,7 @@ export interface Stay {
   guest: string;
   roomNumber: string;
   roomType: string;
-  source: Source;
+  source: Source | null;
   ratePlan: string;
   arrival: string;          // ISO date
   departure: string;        // ISO date — equal to arrival for day-use

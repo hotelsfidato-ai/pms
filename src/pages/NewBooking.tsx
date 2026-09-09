@@ -10,7 +10,8 @@ import {
   Input, NativeSelect, Skeleton, toast,
 } from "@/components/ui";
 import {
-  getInventory, getTariff, createBooking, listCompanies, type Tariff,
+  getInventory, getTariff, createBooking, listCompanies,
+  listBookingSources, type Tariff,
 } from "@/data/repositories";
 
 /* ══════════════════════════════════════════════════════════════════
@@ -75,15 +76,23 @@ export default function NewBookingPage() {
   const [guestName, setGuestName] = useState("");
   const [phone, setPhone] = useState("");
   const [email, setEmail] = useState("");
-  /* WHERE THE BOOKING CAME FROM. The endpoint has accepted `source`
-     since it was written and this form never sent one, so every
-     booking made here landed with no channel against it — and the
-     Booking sources screen, which exists to answer "which agent sent
-     what", could only report what the demo loader had put in.
+  /* ⚠ TWO QUESTIONS, TWO FIELDS, because the database has always asked
+     two and this form asked one.
 
-     Built, accepted, and wired to nothing: the same shape as the
-     credit note in defect 81. */
-  const [source, setSource] = useState("");
+       the CHANNEL   how it reached us — Agoda, walk-in, our own site.
+                     `reservations.booking_source_id`, required.
+       the ACCOUNT   who sent it — a company, an agent, a planner.
+                     `reservations.business_source`, optional.
+
+     Until today this form put the COMPANY list into the CHANNEL box,
+     so booking through Agoda meant adding Agoda as a corporate account
+     with a credit limit. The two are now what they say they are.
+
+     The channel is REQUIRED — the owner's decision on 8 September. An
+     unrecorded channel is a lead nobody can trace back, and it cannot
+     be filled in afterwards. */
+  const [bookingSourceId, setBookingSourceId] = useState("");
+  const [businessSource, setBusinessSource] = useState("");
   /* The hour they said they would arrive. Blank is the ordinary case
      and stays blank — a form that demanded an hour would get a made-up
      one, and somebody would then hold a room against it. */
@@ -95,10 +104,20 @@ export default function NewBookingPage() {
   const [saving, setSaving] = useState(false);
   const [nextKey, setNextKey] = useState(1);
 
-  /* Every account the property books through. Walk-in and the
-     property's own site are in here too — a direct booking has a
-     source, it is just not an agent. */
-  const sources = useQuery({
+  /* Every channel this group books through. Walk-in and the property's
+     own site are on it too — a direct booking has a channel, it is
+     just not an agency. Switched-off sources are filtered out here
+     rather than in the query: they stay readable on old bookings and
+     stop being offered on new ones. */
+  const channels = useQuery({
+    queryKey: ["booking-sources", hotelId],
+    queryFn: () => listBookingSources(hotelId),
+  });
+
+  /* The corporate accounts and agents the property invoices. A
+     different question from the channel, and the one the source-mix
+     report has always shown in preference to it. */
+  const accounts = useQuery({
     queryKey: ["companies", hotelId],
     queryFn: () => listCompanies(hotelId),
   });
@@ -160,7 +179,8 @@ export default function NewBookingPage() {
       guestName: guestName.trim(),
       phone: phone.trim(),
       ...(email.trim() ? { email: email.trim() } : {}),
-      ...(source ? { source } : {}),
+      bookingSourceId,
+      ...(businessSource ? { businessSource } : {}),
       ...(expected ? { expectedArrival: expected } : {}),
       checkIn: from, checkOut: to,
       ...(groupName.trim() ? { groupName: groupName.trim() } : {}),
@@ -233,20 +253,45 @@ export default function NewBookingPage() {
                       className="h-12 text-base" />
                   )}
                 </Field>
-                <Field label="Booking source"
-                       hint="What the Booking sources report counts.">
+                <Field label="Booking source" required
+                       hint="How it reached us. It cannot be filled in later.">
                   {(f) => (
-                    <NativeSelect {...fieldProps(f)} value={source}
-                      onChange={(e) => setSource(e.target.value)}
+                    <NativeSelect {...fieldProps(f)} value={bookingSourceId}
+                      onChange={(e) => setBookingSourceId(e.target.value)}
                       className="h-12 text-base">
-                      {/* Blank stays first and is a real answer. A clerk
-                          who does not know must not be made to guess,
-                          and a guessed channel is worse than none —
-                          it makes the commission report confidently
-                          wrong instead of visibly incomplete. */}
-                      <option value="">Not recorded</option>
-                      {(sources.data ?? []).map((c) => (
-                        <option key={c.id} value={c.name}>{c.name}</option>
+                      {/* ⚠ THE BLANK STAYS, AND IT IS NOT AN ANSWER. It
+                          is here so nothing is pre-selected — a list
+                          that opens on "Agoda" gets Agoda on bookings
+                          that came from anywhere. Confirm is disabled
+                          until something is chosen, and the server
+                          refuses it too. */}
+                      <option value="">Choose one…</option>
+                      {(channels.data ?? [])
+                        .filter((s) => s.isActive)
+                        .map((s) => (
+                          <option key={s.id} value={s.id}>{s.name}</option>
+                        ))}
+                    </NativeSelect>
+                  )}
+                </Field>
+              </div>
+
+              <div className="grid gap-3 sm:grid-cols-2">
+                {/* ⚠ THE SECOND QUESTION, and it IS optional. Most
+                    bookings have no account behind them. A field that
+                    demanded one would get whatever is first in the
+                    list, and the source-mix report would then be
+                    confidently wrong rather than visibly incomplete —
+                    which is the reverse of what it is for. */}
+                <Field label="Business source"
+                       hint="The account or agent behind it, if there is one.">
+                  {(f) => (
+                    <NativeSelect {...fieldProps(f)} value={businessSource}
+                      onChange={(e) => setBusinessSource(e.target.value)}
+                      className="h-12 text-base">
+                      <option value="">None</option>
+                      {(accounts.data ?? []).map((cmp) => (
+                        <option key={cmp.id} value={cmp.name}>{cmp.name}</option>
                       ))}
                     </NativeSelect>
                   )}
@@ -338,7 +383,11 @@ export default function NewBookingPage() {
         <Summary
           hotelId={hotelId} from={from} to={to} nights={nights}
           lines={lines} types={types}
-          disabled={saving || !guestName.trim() || lines.length === 0}
+          /* ⚠ AND THE CHANNEL. Greyed out here so a clerk is not sent to
+             the server to be told; refused there too, because a browser
+             that has not reloaded still posts. Rule 6 both ends. */
+          disabled={saving || !guestName.trim() || lines.length === 0
+                    || !bookingSourceId}
           onSubmit={() => void submit()}
         />
       </div>

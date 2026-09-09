@@ -55,6 +55,7 @@ import NewBookingPage from "@/pages/NewBooking";
 import WorkOrdersPage from "@/pages/WorkOrders";
 import BanquetPage from "@/pages/Banquet";
 import RoomSetupPage from "@/pages/RoomSetup";
+import BookingSourcesPage from "@/pages/BookingSources";
 import PeoplePage from "@/pages/People";
 import ChannelManagerPage from "@/pages/ChannelManager";
 import StoresPage from "@/pages/Stores";
@@ -430,6 +431,12 @@ export default function App() {
             <Route
               path="/h/:code/cancellation-terms"
               element={<><PropertyScope /><CancellationTermsPage /></>}
+            />
+            {/* Where a booking came from. The list is the group's, the
+                commission is this property's — the screen says so. */}
+            <Route
+              path="/h/:code/booking-sources"
+              element={<><PropertyScope /><BookingSourcesPage /></>}
             />
             <Route
               path="/h/:code/rates"

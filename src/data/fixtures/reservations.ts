@@ -562,7 +562,8 @@ export interface Reservation {
   reference: string;
   guestId: string;
   guestName: string;
-  source: string;
+  /* Null when nothing on the booking says. The screens show a dash. */
+  source: string | null;
   roomType: string;
   roomNumber?: string;
   rateType: string;

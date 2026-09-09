@@ -76,7 +76,8 @@ const ALL_COLUMNS: Record<StayColumn, Column<StayRow>> = {
   },
   source: {
     key: "source", header: "Source", hideBelow: "lg",
-    cell: (s) => <span className="text-grey-600">{s.source}</span>,
+    /* A dash, never a guess — see defect 219. */
+    cell: (s) => <span className="text-grey-600">{s.source ?? "—"}</span>,
   },
   arrival: {
     key: "arrival", header: "Arrival", hideBelow: "sm",
@@ -464,7 +465,7 @@ function StaySummary({ stay, hotelId }: {
           label="Party"
           value={`${stay.adults} adult${stay.adults === 1 ? "" : "s"}${stay.children ? `, ${stay.children} child` : ""}`}
         />
-        <Row label="Source" value={stay.source} />
+        <Row label="Source" value={stay.source ?? "—"} />
         <Row label="Rate plan" value={stay.ratePlan} />
         <Row label="Rack rate" value={money(stay.rackTariff)} tabular />
         <Row

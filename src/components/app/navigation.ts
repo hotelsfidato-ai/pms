@@ -187,6 +187,11 @@ const SECTIONS: NavSection[] = [
       { label: "Room types", to: "/h/:code/room-types", icon: LayoutDashboard, resource: "room_config" },
       { label: "Rate plans", to: "/h/:code/rate-plans", icon: Wallet, resource: "rate" },
       { label: "Cancellation terms", to: "/h/:code/cancellation-terms", icon: ShieldAlert, resource: "rate" },
+      /* `commission` rather than `rate`: the list is where a booking
+         came from and the screen is where its commission is agreed.
+         A clerk does not see it — they pick from the list on the
+         booking form, which is not gated here. */
+      { label: "Booking sources", to: "/h/:code/booking-sources", icon: Plug, resource: "commission" },
     ],
   },
   {

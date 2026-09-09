@@ -709,7 +709,11 @@ export default function StayViewPage() {
 }
 
 function BookingBar({ bar, onOpen }: { bar: ChartBar; onOpen: () => void }) {
-  const Icon = SOURCE_ICON[bar.stay.source] ?? Globe;
+  /* A globe for anything not recognised, INCLUDING null. There is no
+     icon meaning "we do not know where this came from", and a walk-in
+     figure would be a guess — see defect 219, where exactly that guess
+     was wired in. */
+  const Icon = SOURCE_ICON[bar.stay.source ?? ""] ?? Globe;
   const nights = bar.stay.isDayUse ? "day use" : `${bar.stay.nights} night${bar.stay.nights === 1 ? "" : "s"}`;
 
   return (
@@ -818,7 +822,7 @@ function StayDetail({ bar }: { bar: ChartBar }) {
         <DetailRow label="Departure"><span className="tabular">{dateShort(s.departure)}</span></DetailRow>
         <DetailRow label="Nights"><span className="tabular">{s.isDayUse ? "Day use" : s.nights}</span></DetailRow>
         <DetailRow label="Party"><span className="tabular">{s.adults} adult{s.adults === 1 ? "" : "s"}{s.children ? `, ${s.children} child` : ""}</span></DetailRow>
-        <DetailRow label="Source">{s.source}</DetailRow>
+        <DetailRow label="Source">{s.source ?? "—"}</DetailRow>
         {/* A dash, never a guess. An invented segment becomes a line in
             a source-mix report an owner sets policy from. */}
         <DetailRow label="Segment">{s.marketSegment ?? "—"}</DetailRow>
