@@ -6,6 +6,7 @@ import { ASSIGNABLE_ROLES, ROLE_LABELS } from "@/lib/permissions";
 import {
   createStaff, grantAccess, revokeAccess, deactivateStaff, createProperty,
   type AdminStaff,
+  MIN_PASSWORD,
 } from "@/data/repositories";
 
 /* ══════════════════════════════════════════════════════════════════
@@ -74,41 +75,50 @@ function Field({ label, value, onChange, placeholder, hint, mono }: {
 export function NewPerson({ onDone }: { onDone: () => void }) {
   const [email, setEmail] = useState("");
   const [name, setName] = useState("");
+  const [password, setPassword] = useState("");
   const [isAdmin, setIsAdmin] = useState(false);
   const [key, setKey] = useState("");
   const [busy, setBusy] = useState(false);
 
   const submit = async () => {
     setBusy(true);
+    /* ⚠ THIS FORM SENT NO PASSWORD AND WOULD HAVE BEEN REFUSED. The
+       server started requiring one on 9 September, and this is the
+       third screen that creates a person — found by the audit rather
+       than by remembering it existed. A form that posts a body the
+       server rejects is worse than a missing form: it looks like the
+       feature is broken rather than absent. */
     const res = await createStaff(
-      { email, name, isGroupAdmin: isAdmin },
+      { email, name, password, isGroupAdmin: isAdmin },
       isAdmin ? key : undefined,
     );
     setBusy(false);
 
     if (!res.ok) return toast.error("Not created", res.reason);
 
-    /* ⚠ TWO THINGS REMAIN AFTER THIS, and neither is obvious.
-       A row in `staff` is not an account. Until a Firebase user exists
-       and `staff.firebase_uid` names it, a correct password reaches a
-       correct token that resolves to NOBODY — and every screen renders
-       empty with no error, which reads as "the database is broken".
-       `link-staff.ts` opens with that exact warning.
-       It also fails the deploy: the preflight refuses on
-       `firebase_uid is null and is_active`. Somebody adding testers
-       here and stopping would find that out at the next upgrade. */
+    /* ⚠ THIS USED TO WARN THAT TWO THINGS REMAINED, and one of them has
+       gone. A row in `staff` was not an account: until a Firebase user
+       existed and `staff.firebase_uid` named it, a correct password
+       reached a correct token that resolved to NOBODY. Creating the
+       account is part of the same call now.
+
+       What is still true is the OTHER half — somebody with no property
+       signs in to an empty application, which reads as a fault rather
+       than a setting. That is the sentence that stays. */
     toast.success(
       res.existed ? `${name} updated` : `${name} added`,
       isAdmin
-        ? "They can reach every property — once their sign-in is linked."
-        : "Two things left: give them a property below, and link their "
-          + "Firebase account. Until then they sign in to an empty app.",
+        ? "They can sign in now, and they reach every property."
+        : "They can sign in now. Give them a property below — until then "
+          + "the app opens empty for them.",
     );
     setEmail(""); setName(""); setIsAdmin(false); setKey("");
     onDone();
   };
 
-  const ready = email.trim() && name.trim() && (!isAdmin || key.trim());
+  const ready = email.trim() && name.trim()
+    && password.length >= MIN_PASSWORD
+    && (!isAdmin || key.trim());
 
   return (
     <Card>
@@ -125,6 +135,11 @@ export function NewPerson({ onDone }: { onDone: () => void }) {
             hint="How they sign in. It cannot be changed here afterwards." />
           <Field label="Name" value={name} onChange={setName}
             placeholder="Nashik Clerk" />
+          {/* Not masked: you are setting it FOR somebody else and have
+              to read it back to them. */}
+          <Field label="Password" value={password} onChange={setPassword}
+            placeholder="something they will remember"
+            hint={`At least ${MIN_PASSWORD} characters. Tell it to them — nothing is emailed.`} />
 
           <label className="flex items-start gap-2.5 py-1 cursor-pointer">
             <input
@@ -160,14 +175,20 @@ export function NewPerson({ onDone }: { onDone: () => void }) {
             Add them
           </Button>
 
-          {/* A toast is gone in four seconds and this is the step people
-              miss. Standing text, where somebody looks when they wonder
-              why the person they just added cannot sign in. */}
+          {/* ⚠ THE THIRD COPY OF A CLAIM THAT STOPPED BEING TRUE. The
+              add dialog on /people said it, the People screen's footnote
+              said it, and this said it — "adding somebody here does not
+              create their sign-in". All three were correct until
+              9 September and all three had to be found separately,
+              because I corrected the sentence I was editing rather than
+              searching for what else asserted the same fact.
+
+              A toast is gone in four seconds, so the standing text stays
+              — but it now says the thing that is still true. */}
           <p className="text-2xs text-grey-600 leading-relaxed pt-1">
-            Adding somebody here does not create their sign-in. A Firebase
-            account has to exist and be linked, or they sign in to an empty
-            application with no error — and the deploy preflight refuses
-            while anybody is unlinked.
+            This creates their sign-in account too. Give them a property
+            below, or they sign in to an empty application with no error —
+            which reads as a fault rather than as a setting.
           </p>
         </div>
       </CardBody>

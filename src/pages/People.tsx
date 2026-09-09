@@ -168,10 +168,17 @@ export default function PeoplePage() {
       <p className="flex items-start gap-2 text-sm text-grey-500 mt-4 leading-relaxed">
         <Info className="size-3.5 shrink-0 mt-0.5" />
         <span>
-          Adding somebody here does not set a password. It records that this
-          address belongs to a member of staff; the account is linked the first
-          time they sign in with it. So the address has to be the one they
-          actually use.
+          {/* ⚠ THIS SAID "ADDING SOMEBODY HERE DOES NOT SET A PASSWORD"
+              and was true until 9 September. The dialog carried the same
+              claim in different words and I corrected that one; this
+              copy survived, because I fixed the sentence I was editing
+              rather than searching for what else asserted it. Found by
+              opening the screen. Two places said one thing, which is
+              this project's most expensive shape. */}
+          Adding somebody creates their sign-in account and sets the password
+          you give. Tell it to them — nothing is emailed. The address has to be
+          the one they actually use: it is what they sign in with, and a typo
+          means a person who cannot get in.
         </span>
       </p>
 
