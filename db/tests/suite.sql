@@ -5465,3 +5465,95 @@ begin
   -- ---------- teardown ----------
   delete from pos_promotions where code like 'TEST%';
 end $$;
+
+-- =============================================================================
+-- 084 · A general manager runs their own hotel, and only their own
+-- =============================================================================
+-- ⚠ THE ASSERTIONS THAT MATTER HERE ARE THE ONES THAT REFUSE. A test suite
+-- that only proves a GM can roster their own staff would pass just as happily
+-- against a predicate that let them roster everybody's.
+-- =============================================================================
+do $$
+declare
+  h_agr uuid; h_pun uuid;
+  gm_agr uuid; owner_id uuid; clerk uuid;
+  roles text[];
+begin
+  select id into h_agr from hotels where code = 'AGR';
+  select id into h_pun from hotels where code = 'PUN';
+  select id into owner_id from staff where email = 'owner@fidato.in';
+
+  -- A manager at AGR and nowhere else, and an ordinary clerk at AGR.
+  insert into staff (email, full_name) values ('t84-gm@fidato.in', 'Test GM')
+    on conflict (email) do update set is_active = true
+    returning id into gm_agr;
+  insert into staff (email, full_name) values ('t84-clerk@fidato.in', 'Test Clerk')
+    on conflict (email) do update set is_active = true
+    returning id into clerk;
+
+  insert into staff_hotels (staff_id, hotel_id, role)
+  values (gm_agr, h_agr, 'gm'), (clerk, h_agr, 'front_desk')
+  on conflict (staff_id, hotel_id) do update set role = excluded.role;
+
+  -- ---------- as that manager ----------
+  perform set_config('app.user_id', gm_agr::text, true);
+
+  perform test.ok('property admin','a manager runs the hotel they are at',
+    app.manages_hotel(h_agr));
+
+  -- ⚠ THE ONE THAT SEPARATES THIS FROM app.is_manager(). That function
+  -- returns true for a manager ANYWHERE, so it would pass this line and
+  -- let the manager of one hotel roster staff at another.
+  perform test.ok('property admin','and NOT one they are not at',
+    not app.manages_hotel(h_pun),
+    'app.is_manager() would have said yes — it has no hotel_id');
+
+  perform test.raises('property admin','rostering at another hotel is refused',
+    format($q$select app.require_hotel_admin(%L)$q$, h_pun),
+    '42501');
+
+  -- ---------- what they may hand out ----------
+  roles := app.grantable_roles(h_agr);
+  perform test.ok('property admin','a manager may appoint another manager',
+    'gm' = any (roles));
+  perform test.ok('property admin','a manager may NOT appoint an owner',
+    not ('owner' = any (roles)),
+    'owner grants every action at the property, so a gm could self-promote');
+  perform test.ok('property admin','and may hand out nothing at another hotel',
+    cardinality(app.grantable_roles(h_pun)) = 0);
+
+  -- ---------- passwords ----------
+  perform test.ok('property admin','a manager may reset their own staff',
+    app.may_set_password(clerk));
+  perform test.ok('property admin','and their own',
+    app.may_set_password(gm_agr));
+
+  -- ⚠ THE DOOR THIS FILE MUST NOT OPEN. Resetting the owner's password is
+  -- how a property manager becomes a group administrator.
+  perform test.ok('property admin','a manager may NOT reset a group admin',
+    not app.may_set_password(owner_id),
+    'that is not a lateral move — it reaches all seven properties');
+
+  -- ---------- as an ordinary clerk ----------
+  perform set_config('app.user_id', clerk::text, true);
+  perform test.ok('property admin','a clerk runs nothing',
+    not app.manages_hotel(h_agr));
+  perform test.ok('property admin','and may hand out nothing',
+    cardinality(app.grantable_roles(h_agr)) = 0);
+  perform test.ok('property admin','and may reset nobody but themselves',
+    app.may_set_password(clerk) and not app.may_set_password(gm_agr));
+
+  -- ---------- as the owner ----------
+  perform set_config('app.user_id', owner_id::text, true);
+  perform test.ok('property admin','a group administrator runs every hotel',
+    app.manages_hotel(h_agr) and app.manages_hotel(h_pun));
+  perform test.ok('property admin','and may appoint an owner',
+    'owner' = any (app.grantable_roles(h_agr)));
+  perform test.ok('property admin','and may reset anybody',
+    app.may_set_password(clerk) and app.may_set_password(gm_agr));
+
+  -- ---------- teardown ----------
+  perform set_config('app.user_id', '', true);
+  delete from staff_hotels where staff_id in (gm_agr, clerk);
+  update staff set is_active = false where id in (gm_agr, clerk);
+end $$;

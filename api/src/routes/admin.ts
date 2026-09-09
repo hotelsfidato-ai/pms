@@ -1,6 +1,9 @@
 import { Hono } from "hono";
 import { createHash } from "node:crypto";
 import { withSession } from "../auth.ts";
+import {
+  ensureAccount, setAccountPassword, passwordSetLink, passwordProblem,
+} from "../identity.ts";
 import type { PoolClient as Client } from "pg";
 
 /* ══════════════════════════════════════════════════════════════════
@@ -134,7 +137,7 @@ admin.post("/admin/hotels", async (c) => {
         next: "Add its rooms — the property has its type catalogue but no rooms yet.",
       };
     });
-    return c.json(result);
+    return c.json(result, "ok" in result && result.ok ? 200 : 409);
   } catch (error) {
     const reason = reasonFor(error);
     if (reason) return c.json(refuse(reason), 403);
@@ -248,6 +251,99 @@ admin.get("/admin/hotels", async (c) => {
 
   if (body && "ok" in body && body.ok === false) return c.json(body, 403);
   return c.json(body);
+});
+
+/* ── One property, for whoever runs it ─────────────────────────────
+   `GET /admin/hotels` is group-admin only, because it carries the
+   GSTIN and contact details of every property in the group — which is
+   what migration 031 was written to stop leaking to a clerk at one
+   hotel. A general manager needs the same detail for THEIR hotel and
+   must not get it for anybody else's, so the scope is the hotel rather
+   than the caller's rank.
+
+   The numbers are NOT here. `/statistics/snapshot` and
+   `/statistics/period` already answer them, and a second implementation
+   on this route would be a second answer to drift from the first — the
+   shape that cost five copies of the booking-source label.
+   ═══════════════════════════════════════════════════════════════════ */
+admin.get("/admin/hotels/:code", async (c) => {
+  try {
+  const result = await withSession(c.get("subject"), async (client) => {
+    const hotelId = await hotelFor(client, c.req.param("code"));
+    if (!hotelId) return null;
+    await client.query("select app.require_hotel_admin($1)", [hotelId]);
+
+    const { rows } = await client.query<{
+      id: string; code: string; name: string;
+      city: string | null; state: string | null; gstin: string | null;
+      phone: string | null; email: string | null; address_line: string | null;
+      is_active: boolean; rooms: string; room_types: string | null;
+      checked_in: string;
+    }>(
+      `select h.id::text, h.code, h.name, h.city, h.state, h.gstin,
+              h.phone, h.email::text, h.address_line, h.is_active,
+              (select count(*) from rooms r
+                where r.hotel_id = h.id and r.is_active)::text as rooms,
+              (select string_agg(rt.name, ', ' order by rt.sort_order)
+                 from room_types rt
+                where rt.hotel_id = h.id and rt.is_active) as room_types,
+              (select count(*) from reservations res
+                where res.hotel_id = h.id
+                  and res.status = 'checked_in')::text as checked_in
+         from hotels h where h.id = $1`, [hotelId]);
+
+    /* Everyone rostered HERE, whatever else they can reach. The
+       property screen is about this hotel's team, so somebody who also
+       works at Pune appears once, with the role they hold at this one. */
+    const { rows: staff } = await client.query<{
+      id: string; name: string; email: string; role: string;
+      is_active: boolean; can_sign_in: boolean; is_group_admin: boolean;
+    }>(
+      `select s.id::text, s.full_name as name, s.email::text, sh.role,
+              s.is_active, (s.firebase_uid is not null) as can_sign_in,
+              s.is_group_admin
+         from staff_hotels sh join staff s on s.id = sh.staff_id
+        where sh.hotel_id = $1
+        order by s.is_active desc, s.full_name`, [hotelId]);
+
+    /* What THIS caller may hand out here — an owner sees every role, a
+       gm sees everything but `owner`. Sent so the picker offers exactly
+       what the server will accept, rather than offering everything and
+       refusing afterwards. */
+    const { rows: roles } = await client.query<{ roles: string[] }>(
+      "select app.grantable_roles($1) as roles", [hotelId]);
+
+    const h = rows[0]!;
+    return {
+      ok: true as const,
+      property: {
+        id: h.id, code: h.code, name: h.name,
+        city: h.city, state: h.state, gstin: h.gstin,
+        phone: h.phone, email: h.email, addressLine: h.address_line,
+        isActive: h.is_active,
+        rooms: Number(h.rooms),
+        roomTypes: (h.room_types ?? "").split(", ").filter(Boolean),
+        checkedIn: Number(h.checked_in),
+      },
+      staff: staff.map((r) => ({
+        id: r.id, name: r.name, email: r.email, role: r.role,
+        isActive: r.is_active, canSignIn: r.can_sign_in,
+        isGroupAdmin: r.is_group_admin,
+      })),
+      grantableRoles: roles[0]!.roles,
+    };
+  });
+
+  if (result === null) return c.json({ error: "No such property." }, 404);
+  return c.json(result);
+  } catch (error) {
+    /* `app.require_hotel_admin` RAISES. Without this the refusal a
+       manager reads is "Something went wrong", which is the exact
+       failure 078 was written about. */
+    const reason = reasonFor(error);
+    if (reason) return c.json(refuse(reason), 403);
+    throw error;
+  }
 });
 
 admin.patch("/admin/hotels/:code", async (c) => {
@@ -439,6 +535,7 @@ admin.get("/admin/staff", async (c) => {
     const { rows } = await client.query<{
       id: string; email: string; full_name: string; phone: string | null;
       is_group_admin: boolean; is_active: boolean; hotels: string | null;
+      can_sign_in: boolean;
     }>(
       /* RLS decides what comes back. A group admin sees everyone; a
          clerk sees themselves and the colleagues they share a property
@@ -449,6 +546,13 @@ admin.get("/admin/staff", async (c) => {
          was there. Half a round trip is worse than none. */
       `select s.id::text, s.email::text, s.full_name, s.phone,
               s.is_group_admin, s.is_active,
+              /* ⚠ THE THING NOBODY COULD SEE. A staff row with no
+                 firebase_uid is a person who appears on this list,
+                 with a role and a property, and cannot sign in at all.
+                 Until the API created accounts that was EVERY person
+                 added through the screen, and the only way to find out
+                 was to walk to a terminal and try. */
+              (s.firebase_uid is not null) as can_sign_in,
               (select string_agg(h.code || ':' || sh.role, ',' order by h.code)
                  from staff_hotels sh join hotels h on h.id = sh.hotel_id
                 where sh.staff_id = s.id) as hotels
@@ -462,6 +566,7 @@ admin.get("/admin/staff", async (c) => {
         email: r.email,
         name: r.full_name,
         phone: r.phone,
+        canSignIn: r.can_sign_in,
         isGroupAdmin: r.is_group_admin,
         isActive: r.is_active,
         access: (r.hotels ?? "").split(",").filter(Boolean).map((pair) => {
@@ -474,8 +579,29 @@ admin.get("/admin/staff", async (c) => {
   return c.json(body);
 });
 
+/* ── Adding somebody who can actually sign in ──────────────────────
+   ⚠ THIS ENDPOINT USED TO WRITE A ROW AND STOP. The person appeared on
+   the People screen with a role and a property, walked to a terminal,
+   and found a sign-in page that would never accept them — because no
+   Firebase account existed and no password had ever been set. Filling
+   the gap meant `npm run link-staff` in a terminal on the server after
+   creating the account by hand in the console.
+
+   The password is REQUIRED for somebody new, and that is the fix
+   rather than a policy: an optional one would recreate the same hole
+   for anybody who left the box empty, and they would find out at a
+   terminal in front of a guest.
+
+   A GM MAY USE THIS, for their own property. They pass `hotelCode` and
+   `role`, the person is created and rostered in one act, and
+   `app.require_hotel_admin` refuses a hotel they do not run. A group
+   administrator may leave the hotel out and grant access separately.
+   ═══════════════════════════════════════════════════════════════════ */
 admin.post("/admin/staff", async (c) => {
-  type Body = { email?: string; name?: string; isGroupAdmin?: boolean };
+  type Body = {
+    email?: string; name?: string; isGroupAdmin?: boolean;
+    password?: string; hotelCode?: string; role?: string;
+  };
   const input = await c.req.json<Body>().catch(() => ({}) as Body);
 
   const email = input.email?.trim().toLowerCase();
@@ -485,6 +611,21 @@ admin.post("/admin/staff", async (c) => {
       "they sign in."), 409);
   }
   if (!name) return c.json(refuse("What is their name?"), 409);
+
+  const password = input.password ?? "";
+  if (!password) {
+    return c.json(refuse(
+      "Set them a password. Without one there is no way for them to sign "
+      + "in, and they will find that out standing at a terminal."), 409);
+  }
+  const bad = passwordProblem(password);
+  if (bad) return c.json(refuse(bad), 409);
+
+  const hotelCode = input.hotelCode?.trim().toUpperCase();
+  const role = input.role?.trim();
+  if (hotelCode && !role) {
+    return c.json(refuse("Which role at that property?"), 409);
+  }
 
   /* A group admin can reach every property's data. Minting one is a
      structural act, so it takes the key; an ordinary clerk does not. */
@@ -499,38 +640,169 @@ admin.post("/admin/staff", async (c) => {
 
   try {
     const result = await withSession(c.get("subject"), async (client) => {
-      await client.query("select app.require_group_admin()");
+      let hotelId: string | null = null;
+      if (hotelCode) {
+        hotelId = await hotelFor(client, hotelCode);
+        if (!hotelId) return refuse(`No property with code ${hotelCode}.`);
+        /* A GM's route in. Raises for a hotel they do not run, and a
+           group administrator passes it everywhere. */
+        await client.query("select app.require_hotel_admin($1)", [hotelId]);
+
+        const { rows: allowed } = await client.query<{ roles: string[] }>(
+          "select app.grantable_roles($1) as roles", [hotelId]);
+        if (!allowed[0]!.roles.includes(role!)) {
+          return refuse(
+            allowed[0]!.roles.length === 0
+              ? "You cannot give anybody a role at this property."
+              : `You may give: ${allowed[0]!.roles.join(", ")}.`);
+        }
+      } else {
+        /* No hotel named, so this is the group-level act it always was. */
+        await client.query("select app.require_group_admin()");
+      }
+
       if (wantsAdmin) {
         await client.query("select app.require_provisioning_key($1)", [digest]);
       }
+
+      /* ⚠ THE ACCOUNT FIRST, THE ROW SECOND. Firebase is not in the
+         transaction — nothing can roll it back — so the order is chosen
+         so the survivable failure is the one that happens.
+
+         Account then row: a failed insert leaves a Firebase account
+         with no staff row. It signs in, resolves to nobody, and the
+         next attempt at the same address ADOPTS it, so the state heals
+         itself.
+
+         Row then account: a failed account leaves exactly the defect
+         this endpoint exists to fix — a person on the People screen
+         who cannot sign in. */
+      const account = await ensureAccount(email, name, password);
 
       const { rows } = await client.query<{ id: string; existed: boolean }>(
         /* on conflict, because a person re-invited is the common case and
            an error there teaches an admin to avoid the screen. Their
            property access is untouched — that is a separate act. */
-        `insert into staff (email, full_name, is_group_admin)
-         values ($1, $2, $3)
+        `insert into staff (email, full_name, is_group_admin, firebase_uid)
+         values ($1, $2, $3, $4)
          on conflict (email) do update
            set full_name = excluded.full_name,
-               is_active = true
+               is_active = true,
+               firebase_uid = excluded.firebase_uid
          returning id::text, (xmax <> 0) as existed`,
-        [email, name, wantsAdmin],
+        [email, name, wantsAdmin, account.uid],
       );
+
+      if (hotelId) {
+        await client.query(
+          `insert into staff_hotels (staff_id, hotel_id, role)
+           values ($1, $2, $3)
+           on conflict (staff_id, hotel_id) do update set role = excluded.role`,
+          [rows[0]!.id, hotelId, role]);
+      }
 
       return {
         ok: true as const,
         id: rows[0]!.id,
         email, name,
         existed: rows[0]!.existed,
+        /* Said plainly, because it changes what the manager tells them.
+           An adopted account keeps whatever password it already had
+           unless this call set one — and this call always sets one. */
+        accountExisted: account.existed,
+        ...(hotelCode ? { hotelCode, role } : {}),
       };
     });
-    return c.json(result);
+    /* ⚠ THE STATUS FOLLOWS THE ANSWER. This was a bare `c.json(result)`,
+       so a refusal from inside the session — "No property with code
+       PUN", "You may give: …" — went back as 200 OK carrying
+       `ok: false`. The browser's helper reads the body and coped, which
+       is why nobody noticed; anything reading the status code saw a
+       success. Every other route in this file answers 409. */
+    return c.json(result, "ok" in result && result.ok ? 200 : 409);
   } catch (error) {
     const reason = reasonFor(error);
     if (reason) return c.json(refuse(reason), 403);
     throw error;
   }
 });
+
+/* ── Setting somebody's password ───────────────────────────────────
+   The owner's answer on 9 September: a manager resets anybody rostered
+   at their own hotel, so a password forgotten on a Sunday does not
+   stop somebody working.
+
+   ⚠ WHO MAY DO IT IS THE DATABASE'S ANSWER. `app.may_set_password`
+   holds for any caller — this route, a script, a later endpoint — and
+   it refuses a property manager who aims at a group administrator,
+   because resetting that password is how a gm becomes an owner of
+   seven hotels. A check written here would protect this endpoint and
+   nothing else.
+   ═══════════════════════════════════════════════════════════════════ */
+admin.post("/admin/staff/:id/password", async (c) => {
+  type Body = { password?: string };
+  const input = await c.req.json<Body>().catch(() => ({}) as Body);
+
+  const password = input.password ?? "";
+  if (!password) return c.json(refuse("What should it be?"), 409);
+  const bad = passwordProblem(password);
+  if (bad) return c.json(refuse(bad), 409);
+
+  const result = await withSession(c.get("subject"), async (client) => {
+    const { rows } = await client.query<{
+      email: string; full_name: string; uid: string | null; allowed: boolean;
+    }>(
+      `select s.email::text, s.full_name, s.firebase_uid as uid,
+              app.may_set_password(s.id) as allowed
+         from staff s where s.id = $1`,
+      [c.req.param("id")]);
+    if (!rows[0]) return refuse("No such person.");
+    if (!rows[0].allowed) {
+      return refuse(
+        "You can set a password for people at a property you manage, and "
+        + "for yourself. Not for a group administrator.");
+    }
+
+    /* ⚠ NO ACCOUNT YET IS THE ORDINARY CASE HERE, not an error. Anybody
+       added before this endpoint existed has a staff row and no
+       Firebase account at all, and this is exactly the screen somebody
+       would use to fix that. `ensureAccount` creates or adopts, and the
+       uid is written back — without that last step the account exists
+       and resolves to nobody. */
+    if (!rows[0].uid) {
+      const account = await ensureAccount(
+        rows[0].email, rows[0].full_name, password);
+      await client.query("update staff set firebase_uid = $2 where id = $1",
+        [c.req.param("id"), account.uid]);
+      return { ok: true as const, linked: true };
+    }
+
+    await setAccountPassword(rows[0].uid, password);
+    return { ok: true as const, linked: false };
+  });
+
+  return c.json(result!, "ok" in result! && result!.ok ? 200 : 409);
+});
+
+/* A link the person opens to choose their own, for anybody who does
+   read their email. Generated, NOT SENT — this deployment has no SMTP,
+   and a route that claimed to send would be a route that silently
+   does nothing. The manager passes it on however they actually reach
+   the person. */
+admin.post("/admin/staff/:id/password-link", async (c) => {
+  const result = await withSession(c.get("subject"), async (client) => {
+    const { rows } = await client.query<{ email: string; allowed: boolean }>(
+      `select s.email::text, app.may_set_password(s.id) as allowed
+         from staff s where s.id = $1`, [c.req.param("id")]);
+    if (!rows[0]) return refuse("No such person.");
+    if (!rows[0].allowed) {
+      return refuse("That is not somebody whose password you can change.");
+    }
+    return { ok: true as const, link: await passwordSetLink(rows[0].email) };
+  });
+  return c.json(result!, "ok" in result! && result!.ok ? 200 : 409);
+});
+
 
 /* ── Who may see which property ───────────────────────────────────── */
 
@@ -552,25 +824,50 @@ admin.post("/admin/staff/:id/access", async (c) => {
      which tells a person nothing and reads as the system being broken.
      078 gave the database and the interface one list; this asks it, so
      an unknown role is a sentence naming what IS allowed. */
-  const known = await withSession(c.get("subject"), async (client) => {
-    const { rows } = await client.query<{ roles: string[] }>(
-      "select app.assignable_roles() as roles",
-    );
-    return rows[0]!.roles;
-  });
-  if (!known.includes(role)) {
-    return c.json(
-      refuse(`There is no "${role}" role. Choose one of: ${known.join(", ")}.`),
-      409,
-    );
-  }
-
+  /* ⚠ THE LIST IS NOW PER HOTEL AND PER CALLER. `app.assignable_roles()`
+     answers "what roles exist"; `app.grantable_roles(hotel)` answers
+     "which of them may YOU hand out HERE", which is a different
+     question the moment a general manager can roster their own staff.
+     A gm gets everything except `owner` — see 084 for why. */
   try {
     const result = await withSession(c.get("subject"), async (client) => {
-      await client.query("select app.require_group_admin()");
-
       const hotelId = await hotelFor(client, code);
       if (!hotelId) return refuse(`No property with code ${code}.`);
+
+      /* Raises for a hotel this caller does not run. A group
+         administrator passes everywhere; the manager of Akkalkot does
+         not pass in Pune, which `app.is_manager()` would have allowed
+         because it has no hotel_id in it at all. */
+      await client.query("select app.require_hotel_admin($1)", [hotelId]);
+
+      /* ⚠ TWO DIFFERENT REFUSALS, and collapsing them into one sentence
+         loses the half that helps. "wizard" is a typo; "owner" is a
+         real role this caller may not hand out. Both used to answer
+         "You may give: …", which reads to somebody who typed a typo as
+         though the system had an opinion about their authority.
+
+         078 exists because three roles the screen offered were not in
+         the constraint, and assigning one answered "Something went
+         wrong". The lesson was to name what IS allowed — and naming
+         what was ASKED FOR is the other half of it. */
+      const { rows: lists } = await client.query<{
+        exists: string[]; allowed: string[];
+      }>(
+        `select app.assignable_roles() as exists,
+                app.grantable_roles($1) as allowed`, [hotelId]);
+      const { exists, allowed } = lists[0]!;
+
+      if (!exists.includes(role)) {
+        return refuse(
+          `There is no "${role}" role. You may give: ${allowed.join(", ")}.`);
+      }
+      if (!allowed.includes(role)) {
+        return refuse(
+          allowed.length === 0
+            ? "You cannot give anybody a role at this property."
+            : `"${role}" is not yours to give here. You may give: `
+              + `${allowed.join(", ")}.`);
+      }
 
       /* THIS ROW IS THE ISOLATION.
 
@@ -598,10 +895,12 @@ admin.post("/admin/staff/:id/access", async (c) => {
 admin.delete("/admin/staff/:id/access/:code", async (c) => {
   try {
     const result = await withSession(c.get("subject"), async (client) => {
-      await client.query("select app.require_group_admin()");
-
       const hotelId = await hotelFor(client, c.req.param("code"));
       if (!hotelId) return refuse("No such property.");
+
+      /* Taking access away is scoped exactly as giving it is. A gate on
+         one and not the other is a gate. */
+      await client.query("select app.require_hotel_admin($1)", [hotelId]);
 
       const { rowCount } = await client.query(
         "delete from staff_hotels where staff_id = $1 and hotel_id = $2",

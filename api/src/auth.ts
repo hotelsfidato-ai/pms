@@ -16,17 +16,22 @@ import { withUser, type Client } from "./db.ts";
    is no lookup here that could run outside a policy.
    ══════════════════════════════════════════════════════════════════ */
 
-let firebaseApp: App | null = null;
+let cached: App | null = null;
 
-function firebase(): App {
-  if (firebaseApp) return firebaseApp;
+/* ⚠ EXPORTED, so `identity.ts` uses the SAME app rather than calling
+   `initializeApp` a second time. Two initialisations against one
+   project is the kind of thing that works in development and throws
+   "The default Firebase app already exists" the first time both code
+   paths run in one process. */
+export function firebaseApp(): App {
+  if (cached) return cached;
   if (!env.firebaseServiceAccount) {
     throw new Error("[auth] No service account configured.");
   }
-  firebaseApp =
+  cached =
     getApps()[0] ??
     initializeApp({ credential: cert(JSON.parse(env.firebaseServiceAccount)) });
-  return firebaseApp;
+  return cached;
 }
 
 export interface Session {
@@ -74,7 +79,7 @@ export async function subjectFor(headers: Headers): Promise<string> {
      answered as a 500, because it is our failure and not theirs. */
   let app: App;
   try {
-    app = firebase();
+    app = firebaseApp();
   } catch (error) {
     console.error("[auth] cannot verify tokens:",
       error instanceof Error ? error.message : error);
