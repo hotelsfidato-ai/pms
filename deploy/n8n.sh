@@ -13,6 +13,21 @@
 #       removes that restriction so webhooks from the outside world work.
 #       Rewrites the nginx site and touches nothing else.
 #
+#   sudo deploy/n8n.sh local
+#       n8n with NO domain yet. Installs and runs it on 127.0.0.1:5678 and
+#       stops there -- no DNS, no nginx, no certificate. You reach it through
+#       an SSH tunnel from your own machine:
+#
+#         ssh -i <key> -L 5678:127.0.0.1:5678 opc@api.fidatohotels.com
+#         then open  http://localhost:5678
+#
+#       Asked for on 10 September: "the domain can wait, I just need to
+#       start with n8n first". Nothing new faces the internet, so the
+#       claimed-by-whoever-arrives-first setup page is reachable by you
+#       alone. Webhooks from outside cannot arrive until the domain exists
+#       -- that is the one thing local mode cannot do. Run the ordinary
+#       install later; workflows, credentials and the owner all carry over.
+#
 # ⚠ `${SSH_CLIENT%% *}` MUST STAY ON THE COMMAND LINE. sudo strips SSH_CLIENT
 # from the environment, and `who am i` prints nothing without a terminal --
 # both checked on the box on 10 September. Written before `deploy/n8n.sh`,
@@ -86,15 +101,47 @@ die() { printf "\n\033[31m  x %s\033[0m\n\n" "$1" >&2; exit 1; }
 [ "$(id -u)" = 0 ] || die "Run with sudo."
 
 case "$MODE" in
-  install) ;;
+  install|local) ;;
   open)
     # The first version re-ran everything on `open`, which restarted n8n
     # under the person who had just created its owner and was still in it.
     [ -f "$ENV_FILE" ] || die "n8n is not installed yet. Run the install first."
     touch "$OPEN_MARK"
     ;;
-  *) die "Unknown mode '$MODE'. Use no argument, or 'open'." ;;
+  *) die "Unknown mode '$MODE'. Use no argument, 'local' or 'open'." ;;
 esac
+
+# =============================================================================
+# Where n8n thinks it lives. Local mode is reached through an SSH tunnel at
+# http://localhost:5678; the ordinary install is https on the domain.
+# =============================================================================
+address_settings() {
+  if [ "$MODE" = "local" ]; then
+    cat <<EOF
+N8N_HOST=localhost
+N8N_PROTOCOL=http
+N8N_PORT=5678
+WEBHOOK_URL=http://localhost:5678/
+N8N_EDITOR_BASE_URL=http://localhost:5678/
+# ⚠ SECURE COOKIES OFF, AND ONLY HERE. They are refused over plain http,
+# and n8n would sign you in and immediately forget you. It is safe in THIS
+# mode only because the one way in is your SSH tunnel -- encrypted and
+# authenticated by your key -- and the port is bound to loopback. The
+# ordinary install writes this file again, with https and the default on.
+N8N_SECURE_COOKIE=false
+EOF
+  else
+    cat <<EOF
+N8N_HOST=$N8N_DOMAIN
+N8N_PROTOCOL=https
+N8N_PORT=5678
+WEBHOOK_URL=https://$N8N_DOMAIN/
+N8N_EDITOR_BASE_URL=https://$N8N_DOMAIN/
+# Behind nginx: trust one proxy for the client address.
+N8N_PROXY_HOPS=1
+EOF
+  fi
+}
 
 # =============================================================================
 # Everything that is not nginx. Skipped by `open`.
@@ -130,13 +177,7 @@ install_runtime() {
 
   ( umask 077; cat > "$ENV_FILE" <<EOF
 # Written by deploy/n8n.sh. Rewritten on every run -- edit the script, not this.
-N8N_HOST=$N8N_DOMAIN
-N8N_PROTOCOL=https
-N8N_PORT=5678
-WEBHOOK_URL=https://$N8N_DOMAIN/
-N8N_EDITOR_BASE_URL=https://$N8N_DOMAIN/
-# Behind nginx: trust one proxy for the client address.
-N8N_PROXY_HOPS=1
+$(address_settings)
 # The hotel's clock. A "run at 7am" schedule means 7am in Akkalkot.
 GENERIC_TIMEZONE=Asia/Kolkata
 TZ=Asia/Kolkata
@@ -233,6 +274,7 @@ EOF
   ok "nightly at 03:30 into $BACKUP_DIR -- ON THE SAME DISK, like the PMS's"
 }
 
+if [ "$MODE" != "local" ]; then
 # =============================================================================
 say "Is the name pointing here"
 # =============================================================================
@@ -248,8 +290,19 @@ if [ -n "$HERE" ] && [ "$THERE" != "$HERE" ]; then
   Fix the A record, wait for it to spread, and run this again."
 fi
 ok "$N8N_DOMAIN -> $THERE"
+fi
 
-if [ "$MODE" = "install" ]; then install_runtime; fi
+if [ "$MODE" != "open" ]; then install_runtime; fi
+
+if [ "$MODE" = "local" ]; then
+  install_backups
+  printf "\n\033[32m  n8n is running on this server at 127.0.0.1:5678 -- nowhere else.\033[0m\n"
+  printf "\n  On YOUR machine, in a new PowerShell window, open the tunnel and leave it open:\n"
+  printf "    ssh -i <your key> -L 5678:127.0.0.1:5678 %s@%s\n" "${SUDO_USER:-opc}" "api.fidatohotels.com"
+  printf "\n  Then in your browser:  http://localhost:5678\n"
+  printf "  Create the owner account. Only you can reach it.\n\n"
+  exit 0
+fi
 
 # =============================================================================
 say "nginx and TLS"
