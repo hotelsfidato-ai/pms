@@ -19,8 +19,16 @@
 # YOUR shell expands it before sudo ever runs.
 #
 # Idempotent. Running it again upgrades in place: pulls the pinned image,
-# rewrites the configuration, restarts. It NEVER regenerates the encryption
-# key, and it never touches the hotel's database.
+# BACKS UP THE CURRENT DATA, rewrites the configuration, restarts. It NEVER
+# regenerates the encryption key, and it never touches the hotel's database.
+#
+# TO UPDATE n8n, name the version on the command line:
+#
+#   sudo N8N_VERSION=2.39.0 deploy/n8n.sh
+#
+# The version is PINNED, so n8n never updates itself behind your back -- a
+# workflow that ran on Friday is not broken on Monday by a release nobody
+# chose. Versions: https://github.com/n8n-io/n8n/releases
 #
 # WHY A CONTAINER, AND NOT `npm install -g n8n` BESIDE THE API
 #
@@ -173,6 +181,22 @@ TimeoutStartSec=300
 WantedBy=multi-user.target
 EOF
   systemctl daemon-reload
+
+  # ⚠ BACK UP BEFORE THE NEW VERSION STARTS, NOT AFTER. The backup step
+  # further down runs once n8n is already up -- and on an upgrade that is
+  # AFTER the new version has migrated its database. n8n does not migrate
+  # backwards, so a broken release would leave last night's copy as the
+  # only way back. Asked on 10 September: "if I need to update n8n, which
+  # route do I go" -- and the honest answer was "back up by hand first",
+  # which is a step people skip. Now the script does it.
+  #
+  # Only when there is something to protect: a first install has no volume
+  # yet and no backup tool, and there is nothing to lose.
+  if podman volume exists n8n_data && [ -x /usr/local/bin/n8n-backup ]; then
+    /usr/local/bin/n8n-backup >/dev/null
+    ok "backed up the current data before switching to $N8N_VERSION"
+  fi
+
   systemctl restart n8n.service
 
   local i
