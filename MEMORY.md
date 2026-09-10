@@ -5866,3 +5866,31 @@ survived a season.
 `launch.sh` now enables the timer after the TLS block, and `deploy/n8n.sh`
 enables it before issuing its own. **The live box still has it disabled until
 one of them runs** — recorded in the deploy steps given on 10 September.
+
+---
+
+### 241 · I nearly "fixed" line endings that were already correct
+
+After committing `deploy/n8n.sh` I measured carriage returns in the committed
+file with `git show HEAD:deploy/n8n.sh | grep -c $'\r'` and got **346**, and
+614 for `launch.sh` — which would mean both scripts die on Linux with
+`$'\r': command not found`. The previous commit read 595, even though
+`launch.sh` had run cleanly on the server that same morning.
+
+That contradiction was the tell. Measured properly:
+
+```
+git cat-file -p HEAD:deploy/n8n.sh    | tr -cd '\r' | wc -c    ->  0
+git cat-file -p HEAD:deploy/launch.sh | tr -cd '\r' | wc -c    ->  0
+on the server: tr -cd '\r' < /opt/fidato/deploy/launch.sh     ->  0
+```
+
+`.gitattributes` has `*.sh text eol=lf`, and it works. **`grep -c $'\r'` on
+Git Bash for Windows counts every line**, not lines containing a carriage
+return.
+
+⚠ **The rule: when a measurement contradicts something already observed to
+work, distrust the measurement first.** `launch.sh` running on Linux that
+morning was stronger evidence than a count I had just produced. Use
+`tr -cd '\r' | wc -c` — it counts characters, and it cannot be fooled by how
+a tool on Windows chooses to read lines.
