@@ -496,6 +496,25 @@ else
   allow 80 and 443. See deploy/README.md."
 fi
 
+# ⚠ ISSUING IS HALF OF TLS, AND THIS SCRIPT ONLY EVER DID THAT HALF.
+#
+# Oracle Linux installs certbot-renew.timer DISABLED ("preset: disabled").
+# Every branch above issues or re-applies a certificate and none of them
+# turned renewal on, so a Let's Encrypt certificate -- 90 days -- simply ran
+# out. Found on 10 September while preparing deploy/n8n.sh:
+#
+#     certbot-renew.timer   loaded; disabled; inactive (dead)
+#     api.fidatohotels.com  notAfter=Dec  7 03:45:33 2026 GMT
+#
+# On 7 December every screen would have stopped reaching the API, with a
+# browser certificate error that says nothing about a timer. Enabling it is
+# idempotent and costs nothing on a box where it is already on.
+if [ "${SKIP_TLS:-}" != "1" ]; then
+  systemctl enable --now certbot-renew.timer >/dev/null 2>&1 \
+    || echo "  ⚠ could not enable certbot-renew.timer -- renew by hand before expiry"
+  echo "  certificates renew themselves (certbot-renew.timer)"
+fi
+
 # -----------------------------------------------------------------------------
 say "Can the server actually load this code"
 # -----------------------------------------------------------------------------

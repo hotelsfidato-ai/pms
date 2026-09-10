@@ -5835,3 +5835,34 @@ shape — passing, and wrong.
 **Fourth run at one procedure**: 233 the variable, 235 the loading, 238
 who can load it, 239 the order. Every one found by running it on the
 real box, none by reading.
+
+---
+
+### 240 · The API's certificate would have expired on 7 December, and nothing would have renewed it
+
+Found while preparing n8n, not while looking for it:
+
+```
+certbot-renew.timer   Loaded: loaded; disabled; preset: disabled
+                      Active: inactive (dead)
+cron                  no certbot entry
+api.fidatohotels.com  notAfter=Dec  7 03:45:33 2026 GMT
+```
+
+**Oracle Linux installs `certbot-renew.timer` disabled.** `launch.sh` issues
+the certificate with `certbot --nginx`, and on re-runs re-applies it with
+`certbot install` (the fix for defect 211) — and no branch ever enabled
+renewal. A Let's Encrypt certificate lasts 90 days.
+
+On 7 December every screen of the PMS would have stopped reaching the API,
+with a browser certificate error that says nothing about a timer. The
+preflight checks eleven things about the deployment and none of them is "will
+this still work in three months".
+
+**Issuing is half of TLS, and this project only ever did that half.** Defect
+211 was about the certificate surviving a re-run. Nobody asked whether it
+survived a season.
+
+`launch.sh` now enables the timer after the TLS block, and `deploy/n8n.sh`
+enables it before issuing its own. **The live box still has it disabled until
+one of them runs** — recorded in the deploy steps given on 10 September.
