@@ -53,7 +53,19 @@ export function apiBase(): Promise<string> {
  * in production, so a build that reaches a deployed box cannot use it
  * even if this flag were left on by accident.
  */
-export const devAuth = import.meta.env.VITE_ALLOW_DEV_AUTH === "1";
+/* ⚠ AND ONLY ON THE DEV SERVER. `import.meta.env.DEV` is false in EVERY
+   `vite build`, whatever the .env files say, and Vite writes it in as a
+   literal — so in a production bundle this is `false`, every branch
+   behind it is dead, and the minifier drops the test sign-ins, the
+   "view as" switcher and the x-dev-staff-id header outright.
+
+   Asked for on 14 September: "for production remove it, so there are no
+   issues". Before this the buttons were hidden in production by
+   .env.production blanking the flag — correct, but one edited .env away
+   from shipping. `scripts/check-no-dev-login.mjs` now fails the build if
+   any trace of it reaches `dist`. */
+export const devAuth =
+  import.meta.env.DEV && import.meta.env.VITE_ALLOW_DEV_AUTH === "1";
 
 /* Set by the session store when signing in through the dev path.
    Kept in sessionStorage so a reload does not sign you out: a real
@@ -79,6 +91,9 @@ let devSubject: string | null = readStored();
 export const getDevSubject = () => devSubject;
 
 export const setDevSubject = (subject: string | null) => {
+  /* A no-op without devAuth, so a production bundle does not even carry
+     the storage key's name — sign-out calls this unconditionally. */
+  if (!devAuth) return;
   devSubject = subject;
   try {
     if (subject) sessionStorage.setItem(DEV_KEY, subject);
