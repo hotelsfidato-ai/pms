@@ -298,10 +298,13 @@ admin.get("/admin/hotels/:code", async (c) => {
     const { rows: staff } = await client.query<{
       id: string; name: string; email: string; role: string;
       is_active: boolean; can_sign_in: boolean; is_group_admin: boolean;
+      home_screen: string;
     }>(
       `select s.id::text, s.full_name as name, s.email::text, sh.role,
               s.is_active, (s.firebase_uid is not null) as can_sign_in,
-              s.is_group_admin
+              s.is_group_admin,
+              /* NULL is the Dashboard — what everybody had before 087. */
+              coalesce(s.home_screen, 'dashboard') as home_screen
          from staff_hotels sh join staff s on s.id = sh.staff_id
         where sh.hotel_id = $1
         order by s.is_active desc, s.full_name`, [hotelId]);
@@ -328,7 +331,7 @@ admin.get("/admin/hotels/:code", async (c) => {
       staff: staff.map((r) => ({
         id: r.id, name: r.name, email: r.email, role: r.role,
         isActive: r.is_active, canSignIn: r.can_sign_in,
-        isGroupAdmin: r.is_group_admin,
+        isGroupAdmin: r.is_group_admin, homeScreen: r.home_screen,
       })),
       grantableRoles: roles[0]!.roles,
     };
@@ -496,6 +499,63 @@ admin.patch("/admin/staff/:id", async (c) => {
   return c.json(result!, "ok" in result! && result!.ok ? 200 : 409);
 });
 
+/* ── The first screen after sign-in ─────────────────────────────────
+   Owner's decision, 14 September: the GM sets it for each person, and
+   the person can change their own. Both go through one function each
+   (087) that can touch only these columns — the GM's through
+   app.may_manage_person, so a GM reaches their own staff and never a
+   group administrator. */
+const HOME_SCREENS = ["dashboard", "rooms", "calendar"] as const;
+const ROOM_GROUPINGS = ["type", "floor"] as const;
+
+const screenProblem = (v: unknown): string | null =>
+  v === undefined || (HOME_SCREENS as readonly unknown[]).includes(v)
+    ? null
+    : "The first screen is Dashboard, Rooms or Calendar.";
+
+admin.put("/admin/staff/:id/home-screen", async (c) => {
+  const input = await c.req.json<{ homeScreen?: string }>()
+    .catch(() => ({}) as { homeScreen?: string });
+  const problem = input.homeScreen === undefined
+    ? "Which screen should they start on?"
+    : screenProblem(input.homeScreen);
+  if (problem) return c.json(refuse(problem), 409);
+
+  try {
+    await withSession(c.get("subject"), (client) =>
+      client.query("select app.set_home_screen($1, $2)",
+                   [c.req.param("id"), input.homeScreen]));
+  } catch (error) {
+    const e = error as { code?: string; message?: string };
+    if (e.code === "P0002") return c.json(refuse("No such person."), 404);
+    const reason = reasonFor(error);
+    if (reason) return c.json(refuse(reason), 403);
+    throw error;
+  }
+  return c.json({ ok: true as const, homeScreen: input.homeScreen });
+});
+
+/* A person's own — the first screen and how they like the house grouped.
+   Either may be sent alone; what is not sent is left as it was. */
+admin.put("/me/preferences", async (c) => {
+  type Body = { homeScreen?: string; roomGrouping?: string };
+  const input = await c.req.json<Body>().catch(() => ({}) as Body);
+
+  const problem = screenProblem(input.homeScreen)
+    ?? (input.roomGrouping === undefined
+        || (ROOM_GROUPINGS as readonly unknown[]).includes(input.roomGrouping)
+        ? null : "Rooms group by room type or by floor.");
+  if (problem) return c.json(refuse(problem), 409);
+  if (input.homeScreen === undefined && input.roomGrouping === undefined) {
+    return c.json(refuse("Nothing to change."), 409);
+  }
+
+  await withSession(c.get("subject"), (client) =>
+    client.query("select app.set_my_preferences($1, $2)",
+                 [input.homeScreen ?? null, input.roomGrouping ?? null]));
+  return c.json({ ok: true as const });
+});
+
 /* ── Bringing somebody back ────────────────────────────────────────
    Deactivating existed; reactivating did not, so a person switched off
    by mistake needed somebody with database access to undo it.
@@ -535,7 +595,7 @@ admin.get("/admin/staff", async (c) => {
     const { rows } = await client.query<{
       id: string; email: string; full_name: string; phone: string | null;
       is_group_admin: boolean; is_active: boolean; hotels: string | null;
-      can_sign_in: boolean;
+      can_sign_in: boolean; home_screen: string;
     }>(
       /* RLS decides what comes back. A group admin sees everyone; a
          clerk sees themselves and the colleagues they share a property
@@ -553,6 +613,7 @@ admin.get("/admin/staff", async (c) => {
                  added through the screen, and the only way to find out
                  was to walk to a terminal and try. */
               (s.firebase_uid is not null) as can_sign_in,
+              coalesce(s.home_screen, 'dashboard') as home_screen,
               (select string_agg(h.code || ':' || sh.role, ',' order by h.code)
                  from staff_hotels sh join hotels h on h.id = sh.hotel_id
                 where sh.staff_id = s.id) as hotels
@@ -569,6 +630,7 @@ admin.get("/admin/staff", async (c) => {
         canSignIn: r.can_sign_in,
         isGroupAdmin: r.is_group_admin,
         isActive: r.is_active,
+        homeScreen: r.home_screen,
         access: (r.hotels ?? "").split(",").filter(Boolean).map((pair) => {
           const [code, role] = pair.split(":");
           return { code: code!, role: role! };

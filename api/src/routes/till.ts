@@ -55,6 +55,43 @@ till.use("/:code/till/*", moduleGate);
 till.use("/:code/kitchen", moduleGate);
 till.use("/:code/kitchen/*", moduleGate);
 
+/* ── Reception on the POS ─────────────────────────────────────────
+   The owner's decision of 14 September: a per-hotel switch, set by the
+   GM, decides whether Reception may use the till. Until then the till
+   never asked anybody's role, so a receptionist always could.
+
+   Enforced HERE as well as in the navigation, for the reason the module
+   gate above gives: a hidden menu entry is still a URL. Every role but
+   Reception — and a group administrator — is answered as before;
+   app.may_use_pos (087) is the one definition. */
+till.use("/:code/till/*", receptionGate);
+till.use("/:code/kitchen", receptionGate);
+till.use("/:code/kitchen/*", receptionGate);
+
+async function receptionGate(
+  c: Context<{ Variables: { subject: string } }>,
+  next: Next,
+) {
+  const code = c.req.param("code");
+  if (!code) return c.json({ error: "No such property." }, 404);
+
+  const allowed = await withSession(c.get("subject"), async (client) => {
+    const hotelId = await hotelFor(client, code);
+    if (!hotelId) return null;
+    const { rows } = await client.query<{ ok: boolean }>(
+      "select app.may_use_pos($1) as ok", [hotelId]);
+    return rows[0]!.ok;
+  });
+
+  if (allowed === null) return c.json({ error: "No such property." }, 404);
+  if (!allowed) {
+    return c.json(refuse(
+      "Reception is not set up to use the point of sale at this property. " +
+      "The general manager can turn it on in the property's settings."), 403);
+  }
+  await next();
+}
+
 async function moduleGate(
   c: Context<{ Variables: { subject: string } }>,
   next: Next,
@@ -78,6 +115,14 @@ async function moduleGate(
   }
   await next();
 }
+
+/* ── May I use the POS here? ──────────────────────────────────────
+   Answers ok only by getting past BOTH gates above — the module and
+   the reception switch. The screens ask this before drawing, because
+   their data calls turn every failure into an empty list, and a
+   refused receptionist was told "There is no menu yet" instead of why
+   they were refused (14 September). */
+till.get("/:code/till/access", (c) => c.json({ ok: true as const }));
 
 /* ── The menu ─────────────────────────────────────────────────────── */
 

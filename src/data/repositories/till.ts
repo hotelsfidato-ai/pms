@@ -250,6 +250,31 @@ export type TillResult =
 
 /* ── Reads ────────────────────────────────────────────────────────── */
 
+/** Whether this person may use the POS at this property — both the
+    module and the reception switch (087).
+
+    ⚠ ONLY AN EXPLICIT REFUSAL BLOCKS. The till works offline through the
+    outbox, so a request that never arrived answers "go ahead" and lets
+    the screen's own offline handling take over. A 403 is the server
+    saying no, with the sentence the screen then shows — the reads below
+    turn every failure into an empty list, which is how a refused
+    receptionist was told "There is no menu yet" (14 September). */
+export async function getPosAccess(
+  hotelId: string,
+): Promise<{ ok: true } | { ok: false; reason: string }> {
+  if (!hotelId) return { ok: true };
+  try {
+    await api<{ ok: true }>(`/api/hotels/${hotelId}/till/access`);
+    return { ok: true };
+  } catch (error) {
+    if (error instanceof ApiError && error.status === 403) {
+      const p = error.body as { reason?: string } | undefined;
+      return { ok: false, reason: p?.reason ?? error.message };
+    }
+    return { ok: true };
+  }
+}
+
 export async function getMenu(hotelId: string): Promise<MenuCategory[]> {
   if (!hotelId) return [];
   try {

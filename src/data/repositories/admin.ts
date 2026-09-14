@@ -1,5 +1,7 @@
-import { api, ApiError } from "@/lib/api";
+import { api, ApiError, type HomeScreen, type RoomGrouping } from "@/lib/api";
 import { BUSINESS_DATE } from "./businessDate";
+
+export type { HomeScreen, RoomGrouping };
 import {
   ROLES, ROLE_LABELS, ROLE_DESCRIPTIONS, ASSIGNABLE_ROLES,
   permissionMatrix, type Role,
@@ -91,6 +93,8 @@ export interface AdminStaff {
   canSignIn: boolean;
   isGroupAdmin: boolean;
   isActive: boolean;
+  /** Where they start after signing in (087). */
+  homeScreen: HomeScreen;
   access: { code: string; role: string }[];
 }
 
@@ -296,6 +300,8 @@ export interface PropertyTeamMember {
   isActive: boolean;
   canSignIn: boolean;
   isGroupAdmin: boolean;
+  /** Where they start after signing in (087). */
+  homeScreen: HomeScreen;
 }
 
 export interface PropertyDetail {
@@ -561,4 +567,41 @@ export async function setDefaultCancellationPolicy(
     }
     throw error;
   }
+}
+
+/* ══════════════════════════════════════════════════════════════════
+   THE FIRST SCREEN AFTER SIGN-IN (087)
+
+   The owner's decision of 14 September: the GM sets it for each of
+   their staff, and each person can change their own. Dashboard, Rooms
+   or Calendar. The Room type / Floor grouping travels with it, per
+   person, so it is the same answer on the desk terminal and a phone.
+   ══════════════════════════════════════════════════════════════════ */
+
+async function put<T>(path: string, body: unknown): Promise<AdminResult<T>> {
+  try {
+    return await api<T & { ok: true }>(path, {
+      method: "PUT", body: JSON.stringify(body),
+    });
+  } catch (error) {
+    if (error instanceof ApiError) {
+      const payload = error.body as { reason?: string } | undefined;
+      return { ok: false, reason: payload?.reason ?? error.message };
+    }
+    throw error;
+  }
+}
+
+/** The GM (or an admin) setting where somebody starts. */
+export function setHomeScreen(
+  staffId: string, homeScreen: HomeScreen,
+): Promise<AdminResult<{ homeScreen: HomeScreen }>> {
+  return put(`/api/admin/staff/${staffId}/home-screen`, { homeScreen });
+}
+
+/** A person's own preferences. Either may be sent alone. */
+export function setMyPreferences(
+  prefs: { homeScreen?: HomeScreen; roomGrouping?: RoomGrouping },
+): Promise<AdminResult> {
+  return put(`/api/me/preferences`, prefs);
 }

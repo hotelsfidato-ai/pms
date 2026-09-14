@@ -4,9 +4,11 @@ import { cn } from "@/lib/cn";
 import {
   useSession, useRole, useCurrentHotel, useWorkableHotels,
 } from "@/lib/session";
-import { devAuth, getDevSubject } from "@/lib/api";
+import { devAuth, getDevSubject, type HomeScreen } from "@/lib/api";
 import { DEV_IDENTITIES } from "@/lib/devIdentities";
+import { HOME_SCREENS } from "@/lib/homeScreen";
 import { queryPersister } from "@/lib/persist";
+import { setMyPreferences } from "@/data/repositories";
 import { ROLE_LABELS } from "@/lib/permissions";
 import {
   DropdownMenu, DropdownMenuTrigger, DropdownMenuContent,
@@ -71,6 +73,17 @@ export function AccountMenu() {
       return;
     }
     toast.success(`Viewing as ${label}`, "Local test sign-in. Every permission is that account's own.");
+  };
+
+  /* WHERE THEY START (087). The GM sets it; this is the person changing
+     their own, which the owner asked for on 14 September. */
+  const home: HomeScreen = scope.homeScreen ?? "dashboard";
+  const startOn = async (next: HomeScreen, label: string) => {
+    if (next === home) return;
+    const result = await setMyPreferences({ homeScreen: next });
+    if (!result.ok) return toast.error("Not changed", result.reason);
+    useSession.setState({ scope: { ...scope, homeScreen: next } });
+    toast.success(`You will start on ${label}`, "From your next sign-in, on any device.");
   };
 
   return (
@@ -152,6 +165,28 @@ export function AccountMenu() {
             )}
           </div>
         )}
+
+        <DropdownMenuSeparator />
+        <DropdownMenuLabel>Start on</DropdownMenuLabel>
+        {HOME_SCREENS.map((s) => (
+          <DropdownPrimitive.Item
+            key={s.value}
+            onSelect={() => void startOn(s.value, s.label)}
+            data-home-screen={s.value}
+            className={cn(
+              "flex items-center gap-2.5 px-2.5 py-2 rounded-sm cursor-pointer select-none outline-none",
+              "transition-colors duration-150 data-[highlighted]:bg-grey-100",
+            )}
+          >
+            <Check
+              className={cn(
+                "size-4 shrink-0 text-brand-orange",
+                s.value === home ? "opacity-100" : "opacity-0",
+              )}
+            />
+            <span className="text-base text-ink-900">{s.label}</span>
+          </DropdownPrimitive.Item>
+        ))}
 
         {devAuth && (
           <>

@@ -408,6 +408,16 @@ const MODULE_COPY: Record<string, { label: string; note: string }> = {
       "twice for the same session. Off means those screens go and the API " +
       "refuses them.",
   },
+  /* The owner's per-hotel switch of 14 September (087). On at every hotel
+     that existed then; off for a hotel added after, until its GM turns it
+     on. Only a GM or an admin can flip any of these — before 087 any
+     clerk at the property could. */
+  reception_pos: {
+    label: "Reception can use the POS",
+    note: "Reception staff take, bill and settle orders at the till. Off " +
+      "hides the point of sale from Reception and the API refuses them; " +
+      "every other role is unaffected.",
+  },
 };
 
 function ModulesCard({ hotelId }: { hotelId: string }) {

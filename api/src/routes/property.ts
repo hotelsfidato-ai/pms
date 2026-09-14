@@ -379,7 +379,7 @@ property.get("/:code/modules", async (c) => {
        API that is still serving the till. */
     const { rows } = await client.query<{ module: string; enabled: boolean }>(
       `select m.module, app.module_enabled($1, m.module) as enabled
-         from (values ('pos'), ('banquet')) as m(module)`,
+         from (values ('pos'), ('banquet'), ('reception_pos')) as m(module)`,
       [hotelId],
     );
     return { modules: rows.map((r) => ({ module: r.module, enabled: r.enabled })) };
@@ -394,7 +394,7 @@ property.post("/:code/modules/:module", async (c) => {
   const input = await c.req.json<Body>().catch(() => ({}) as Body);
   const module = c.req.param("module");
 
-  if (!["pos", "banquet"].includes(module)) {
+  if (!["pos", "banquet", "reception_pos"].includes(module)) {
     return c.json({ reason: `There is no "${module}" module.` }, 409);
   }
   if (typeof input.enabled !== "boolean") {
@@ -405,6 +405,21 @@ property.post("/:code/modules/:module", async (c) => {
     const hotel = await resolve(client, c.req.param("code"));
     if (!hotel) return null;
     const hotelId = hotel.id;
+
+    /* ⚠ THE GM'S SWITCH, NOT ANYBODY'S. This had no check at all: the
+       table's policy is hotel isolation, so any clerk rostered here could
+       close the till for the whole property — and, once `reception_pos`
+       existed, a receptionist could turn their own POS access back on.
+       Found on 14 September adding that module. app.manages_hotel (084)
+       is a GM here or a group administrator. */
+    const { rows: may } = await client.query<{ ok: boolean }>(
+      "select app.manages_hotel($1) as ok", [hotelId]);
+    if (!may[0]?.ok) {
+      return {
+        ok: false as const,
+        reason: "Only this property's general manager can switch its modules on or off.",
+      };
+    }
 
     /* Who and when. A module that quietly stopped working is a support
        call; one somebody switched off on a date is an answer. */
@@ -422,5 +437,6 @@ property.post("/:code/modules/:module", async (c) => {
   });
 
   if (!result) return c.json({ error: "No such property." }, 404);
-  return c.json(result);
+  /* A refusal is not a 200 — defect 231. */
+  return c.json(result, result.ok ? 200 : 403);
 });

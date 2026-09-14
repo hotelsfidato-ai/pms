@@ -82,17 +82,29 @@ export function mayReach(role: Role, path: string): boolean {
 export interface NavSection {
   /** When set, the section is hidden at properties without this module. */
   module?: string;
+  /** Hidden from RECEPTION at a property where this module is off (087):
+      the owner's per-hotel "Reception can use the POS" switch. Every
+      other role is unaffected. The server refuses as well — this only
+      stops offering a door that would be refused. */
+  receptionNeeds?: string;
   label?: string;
   items: NavItem[];
 }
 
-/* PMS tree — Stay View is home. The front desk lives there all day.
-   The dashboard is for people who are not working a shift.           */
+/* PMS tree. Where each person STARTS is theirs now (087): the GM sets it
+   and they can change it — Dashboard, Rooms or Calendar.
+
+   ⚠ 14 SEPTEMBER, THE OWNER'S CALL: "Group" is called Dashboard, and
+   Rooms and Calendar are two entries, not one "Stay View" with a toggle.
+   The Reservations section also carried a "Calendar" child pointing at
+   that same Stay View — which opened on Rooms, so the menu's Calendar
+   did not show a calendar. It is gone; Calendar is here, once. */
 const SECTIONS: NavSection[] = [
   {
     items: [
-      { label: "Group", to: "/", icon: LayoutDashboard, resource: "dashboard" },
-      { label: "Stay View", to: "/h/:code/stay", icon: Home, resource: "dashboard" },
+      { label: "Dashboard", to: "/", icon: LayoutDashboard, resource: "dashboard" },
+      { label: "Rooms", to: "/h/:code/stay", icon: Home, resource: "dashboard" },
+      { label: "Calendar", to: "/h/:code/calendar", icon: CalendarRange, resource: "reservation" },
     ],
   },
   {
@@ -128,10 +140,6 @@ const SECTIONS: NavSection[] = [
       {
         label: "All reservations", to: "/h/:code/reservations", icon: CalendarCheck,
         resource: "reservation", matchPrefix: true,
-        children: [
-          { label: "List", to: "/h/:code/reservations", icon: CalendarCheck, resource: "reservation" },
-          { label: "Calendar", to: "/h/:code/stay", icon: CalendarRange, resource: "reservation" },
-        ],
       },
       { label: "Guests", to: "/guests", icon: Users, resource: "customer", matchPrefix: true },
       /* A wedding is one conversation and nine rooms. Every other list
@@ -249,6 +257,7 @@ const SECTIONS: NavSection[] = [
        of the feature and not the enforcement. A hidden nav entry is still
        a URL anybody can type. */
     module: "pos",
+    receptionNeeds: "reception_pos",
     items: [
       /* The FLOOR first, because that is where a shift starts: a waiter
          walks to a table before there is a bill to stand at. */
@@ -417,6 +426,11 @@ export function navigationFor(
        briefly offering a link the API will refuse with a reason. */
     .filter((section) =>
       !section.module || modules === undefined || modules[section.module] !== false)
+    /* Reception, at a hotel whose GM has not let reception use the POS.
+       `=== false` for the same reason as above: unknown keeps it. */
+    .filter((section) =>
+      !section.receptionNeeds || role !== "front_desk"
+      || modules?.[section.receptionNeeds] !== false)
     .map((section) => ({
     ...section,
     items: section.items

@@ -1,6 +1,6 @@
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 import {
-  BrowserRouter, HashRouter, Routes, Route, Navigate, useParams,
+  BrowserRouter, HashRouter, Routes, Route, Navigate, useParams, useLocation,
 } from "react-router";
 
 /* Hash routing belongs to the SINGLE-FILE build, not to demo data.
@@ -19,8 +19,10 @@ import { QueryClient } from "@tanstack/react-query";
 import { PersistQueryClientProvider } from "@tanstack/react-query-persist-client";
 import { queryPersister } from "@/lib/persist";
 import { AppShell } from "@/components/app/AppShell";
+import { PosGate } from "@/components/app/PosGate";
 import { useUi } from "@/lib/ui";
 import { useSession } from "@/lib/session";
+import { homePath } from "@/lib/homeScreen";
 import DashboardPage from "@/pages/Dashboard";
 import StayViewPage from "@/pages/StayView";
 import HousekeepingPage from "@/pages/Housekeeping";
@@ -178,13 +180,43 @@ function SignInRoute() {
 function RequireSession() {
   const status = useSession((s) => s.status);
   const restore = useSession((s) => s.restore);
+  const scope = useSession((s) => s.scope);
+  const hotels = useSession((s) => s.hotels);
+  const sessionHotelId = useSession((s) => s.hotelId);
+  const uiHotel = useUi((s) => s.hotelId);
+  const location = useLocation();
   const started = useRef(false);
+  /* ONCE PER ARRIVAL. The first screen is where somebody lands when they
+     sign in or open the app — not where "/" goes every time. Clicking
+     Dashboard in the menu must still reach the Dashboard.
+
+     ⚠ STATE, SET AFTER THE FACT — NOT A REF MUTATED WHILE RENDERING. The
+     first version set `landed.current = true` inside render. React's
+     development double render then ran it twice: the first pass
+     returned the redirect and marked itself landed, the second saw
+     "landed" and returned the Dashboard — and the second is the one
+     React keeps. Signing in as somebody set to start on Rooms opened the
+     Dashboard. Render now only decides; the effect records it. */
+  const [landed, setLanded] = useState(false);
 
   useEffect(() => {
     if (started.current) return;
     started.current = true;
     restore();
   }, [restore]);
+
+  useEffect(() => {
+    if (status === "signed-in") setLanded(true);
+  }, [status]);
+
+  if (status === "signed-in" && !landed && location.pathname === "/") {
+    /* The property in view, or the first this person may work in. */
+    const code = uiHotel
+      ?? hotels.find((h) => h.id === sessionHotelId)?.code
+      ?? null;
+    const to = homePath(scope?.homeScreen, code);
+    if (to !== "/") return <Navigate to={to} replace />;
+  }
 
   if (status === "starting") {
     return (
@@ -385,9 +417,17 @@ export default function App() {
               path="/h/:code"
               element={<><PropertyScope /><PropertyIndex /></>}
             />
+            {/* ROOMS AND CALENDAR ARE TWO SCREENS (14 September). They
+                were one address with a toggle, and the menu's "Calendar"
+                link opened it on Rooms. `/stay` stays Rooms, because every
+                deep link to a booking (?res=) already points there. */}
             <Route
               path="/h/:code/stay"
-              element={<><PropertyScope /><StayViewPage /></>}
+              element={<><PropertyScope /><StayViewPage view="floor" /></>}
+            />
+            <Route
+              path="/h/:code/calendar"
+              element={<><PropertyScope /><StayViewPage view="calendar" /></>}
             />
             <Route
               path="/h/:code/housekeeping"
@@ -471,17 +511,17 @@ export default function App() {
             {/* The till writes; /pos reads what an outside one sent. */}
             <Route
               path="/h/:code/till"
-              element={<><PropertyScope /><TillPage /></>}
+              element={<><PropertyScope /><PosGate><TillPage /></PosGate></>}
             />
             {/* The room, before the bill. A waiter opens an order by
                 tapping a table, not by typing its name. */}
             <Route
               path="/h/:code/floor"
-              element={<><PropertyScope /><FloorPage /></>}
+              element={<><PropertyScope /><PosGate><FloorPage /></PosGate></>}
             />
             <Route
               path="/h/:code/menu"
-              element={<><PropertyScope /><MenuPage /></>}
+              element={<><PropertyScope /><PosGate><MenuPage /></PosGate></>}
             />
             {/* The revenue manager's day: how many rooms are left, and
                 what they cost. One window, two tabs, because the two
@@ -542,18 +582,18 @@ export default function App() {
                 that way to a person too. */}
             <Route
               path="/h/:code/till/day-end"
-              element={<><PropertyScope /><DayEndPage /></>}
+              element={<><PropertyScope /><PosGate><DayEndPage /></PosGate></>}
             />
             {/* Before /till/bill/:id, and both before /till itself —
                 react-router picks the most specific, but keeping them in
                 this order makes the intent readable. */}
             <Route
               path="/h/:code/kitchen"
-              element={<><PropertyScope /><KitchenPage /></>}
+              element={<><PropertyScope /><PosGate><KitchenPage /></PosGate></>}
             />
             <Route
               path="/h/:code/till/terminal"
-              element={<><PropertyScope /><TerminalPage /></>}
+              element={<><PropertyScope /><PosGate><TerminalPage /></PosGate></>}
             />
             {/* The docket, before the bill route so :id does not
                 swallow it. No prices on this one, ever. */}

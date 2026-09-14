@@ -6116,3 +6116,79 @@ too would have been a second bug made in the name of consistency.
 **The rule: when a fix lands in one query, grep for its siblings before
 calling it fixed.** The comment in `stays.ts` described the bug perfectly and
 nobody searched for the same `where` clause elsewhere — me included, twice.
+
+---
+
+### 250 · Any clerk could switch a hotel's modules on or off
+
+`POST /:code/modules/:module` had no role check, and `hotel_modules`' policy
+is hotel isolation — so any member of staff rostered at a property could
+close its till, or open the banquet module. Found on 14 September adding
+`reception_pos`, where it would have been worse: a receptionist could have
+turned their own POS access back on and made the owner's new switch
+decorative. Now `app.manages_hotel` (084) — the GM there or a group
+administrator — and a refusal answers 403, not 200 (defect 231).
+
+---
+
+### 251 · A refused receptionist was told "There is no menu yet"
+
+The till's reads (`getMenu`, `listOrders`, `getFloor`…) end in
+`catch { return [] }`, so EVERY failure is an empty list — including the
+server's 403 with a sentence in it. With the reception switch off, the till
+opened and said the hotel had no menu. A wrong reason is worse than none;
+Rule 6 is a blocked thing shown blocked, WITH WHY.
+
+The POS-module switch had always had the same hole; nobody typed the URL.
+`PosGate` now asks `GET /:code/till/access` — which answers only past both
+gates — before any POS screen draws, and shows the server's sentence. Only an
+explicit 403 shuts it: offline, the till's outbox still works as before.
+
+⚠ **The deeper fault is still there**: those reads flatten errors into empty
+data. The gate covers the refusal case; a 500 still reads as "empty".
+
+---
+
+### 252 · The menu's "Calendar" link opened Rooms
+
+Reservations → All reservations → **Calendar** pointed at `/h/:code/stay` —
+the Stay View, whose default became Rooms on 8 September. So the menu's
+Calendar did not show a calendar, for six days, and the owner's request to
+"make the calendar and room separate options" was partly a report of it.
+Rooms and Calendar are two addresses now (`/stay`, `/calendar`), each in the
+menu once.
+
+---
+
+### 253 · The Manager Report's period started on 1 August, whatever the month
+
+`getManagerReport(hotelId, asOn, ptdFrom = "2026-08-01")` — a literal. Right on
+every day of August 2026 and wrong on every other: the PTD column would have
+run from 1 August for a September report. Now the first of the report's own
+month, the window the API uses when none is sent. Found building the
+Dashboard, which reads the same figures.
+
+---
+
+### 254 · My landing redirect lived in a ref I set while rendering
+
+The first screen after sign-in (087) was decided in `RequireSession` with
+`landed.current = true` inside render. React's development double render ran
+it twice: the first pass returned `<Navigate>` and marked itself landed; the
+second saw "landed" and returned the Dashboard — and React keeps the second.
+Signing in as somebody set to start on Rooms opened the Dashboard, and every
+typecheck and test passed. Found only by signing in as them.
+
+**The rule: render decides, effects record.** A ref mutated in render is a
+side effect, and development mode exists to expose exactly that.
+
+---
+
+### Open · two "in house" numbers for the same moment
+
+The property page (`getTodaySnapshot`) said **In house now 11, Vacant 9** while
+the Dashboard and the Rooms screen (stay-view counts) said **10** and **7**,
+same hotel, same minute, 14 September. Two definitions — stays against rooms,
+sold tonight against occupied now — and neither labelled which. Not fixed in
+Phase 1; recorded in PENDING.md. The rule it breaks is the oldest one here:
+one definition, or two screens disagree and nobody can say which is right.

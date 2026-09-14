@@ -59,26 +59,39 @@ beforeEach(() => {
   signedIn();
 });
 
-describe("group dashboard at /", () => {
-  it("lists properties, not a clerk's working day", async () => {
+/* "Group" became the Dashboard on 14 September, the owner's call: the
+   numbers a hotel lives by, and quick reports. The table of every hotel
+   is still there — below the tiles, for somebody who reads more than
+   one; this fixture has one, so the tiles are what these assert. */
+describe("the dashboard at /", () => {
+  it("is called Dashboard and leads with the hotel's own numbers", async () => {
     render(<App />);
-    expect(await screen.findByRole("heading", { name: /fidato hotels/i })).toBeDefined();
+    expect(await screen.findByRole("heading", { name: "Dashboard" })).toBeDefined();
+    expect(await screen.findByText("Occupancy")).toBeDefined();
+    expect(await screen.findByText("Room revenue")).toBeDefined();
   });
 
-  it("links each property into its own tape chart", async () => {
+  it("opens the list behind each count in the house", async () => {
+    /* A count a clerk cannot follow is a number to read and nothing to
+       do — each tile in "The house now" is the door to its list. */
     render(<App />);
-    const link = await screen.findByRole("link", { name: /5 Elements/i });
-    expect(link.getAttribute("href")).toBe(`/h/${HOTEL}/stay`);
+    /* Inside the page, not the sidebar — the menu has an Arrivals link
+       of its own. And for THE PROPERTY IN VIEW: the first version of
+       the page settled on the first hotel in the list, and this found
+       a tile pointing at AGR under a sidebar on 5EL. */
+    const main = await screen.findByRole("main");
+    const arrivals = await within(main).findByRole("link", { name: /Arrivals/ });
+    expect(arrivals.getAttribute("href")).toBe(`/h/${HOTEL}/arrivals`);
   });
 });
 
 describe("the tape chart at /h/:code/stay", () => {
   beforeEach(() => {
     go(`/h/${HOTEL}/stay`);
-    /* ⚠ AND CLEAR THE REMEMBERED VIEW. The screen keeps the last choice
-       in localStorage, which jsdom shares between tests in a file — one
-       test clicking Rooms would otherwise decide what the next four
-       see. */
+    /* The view is the ADDRESS since 14 September — /stay is Rooms,
+       /calendar is the chart — and no longer a choice kept in
+       localStorage. Cleared anyway: jsdom shares it between tests in a
+       file, and nothing here should depend on what the last one left. */
     try { localStorage.clear(); } catch { /* not fatal */ }
   });
 

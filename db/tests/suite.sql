@@ -5708,3 +5708,68 @@ begin
   select count(*) into n from hotels where code = 'SRM';
   perform test.ok('stay room','the fixture does not outlive the test', n = 0);
 end $$;
+
+
+-- =============================================================================
+-- 087 · Each person's first screen, and reception on the POS per hotel
+-- =============================================================================
+-- Asked as the Agra clerk (front desk at AGR), because Reception is the one
+-- role the switch is about and the one role that must be refused when it is
+-- off. Every other role, and a group administrator, is answered as before.
+-- =============================================================================
+do $$
+declare
+  h_agr uuid; clerk uuid; owner_id uuid;
+begin
+  select id into h_agr from hotels where code = 'AGR';
+  select id into clerk from staff where email = 'agra@fidato.in';
+  select id into owner_id from staff where email = 'owner@fidato.in';
+  perform set_config('app.user_id', clerk::text, true);
+
+  -- ---------- reception on the POS ----------
+  delete from hotel_modules where hotel_id = h_agr and module = 'reception_pos';
+  perform test.ok('reception pos','a hotel added after 087 keeps reception off',
+    not app.may_use_pos(h_agr),
+    'no row must read as OFF — the owner''s call for new hotels');
+
+  insert into hotel_modules (hotel_id, module, is_enabled)
+  values (h_agr, 'reception_pos', true);
+  perform test.ok('reception pos','switched on, reception may use the till',
+    app.may_use_pos(h_agr));
+
+  update hotel_modules set is_enabled = false
+   where hotel_id = h_agr and module = 'reception_pos';
+  perform test.ok('reception pos','switched off again, reception is refused',
+    not app.may_use_pos(h_agr));
+
+  perform set_config('app.user_id', owner_id::text, true);
+  perform test.ok('reception pos','a group administrator is answered as before',
+    app.may_use_pos(h_agr));
+  perform set_config('app.user_id', clerk::text, true);
+
+  -- ---------- the first screen ----------
+  perform test.ok('first screen','nobody set it: the Dashboard, grouped by type',
+    (select home_screen from app.my_preferences()) = 'dashboard'
+    and (select room_grouping from app.my_preferences()) = 'type');
+
+  perform app.set_my_preferences('calendar', 'floor');
+  perform test.ok('first screen','a person sets their own',
+    (select home_screen from app.my_preferences()) = 'calendar'
+    and (select room_grouping from app.my_preferences()) = 'floor');
+
+  perform app.set_my_preferences(null, 'type');
+  perform test.ok('first screen','sending one leaves the other alone',
+    (select home_screen from app.my_preferences()) = 'calendar'
+    and (select room_grouping from app.my_preferences()) = 'type');
+
+  perform test.raises('first screen','a screen that does not exist is refused',
+    $q$select app.set_my_preferences('kitchen', null)$q$);
+
+  perform test.raises('first screen','a clerk cannot set somebody else''s',
+    format($q$select app.set_home_screen(%L, 'rooms')$q$, owner_id), '42501');
+
+  -- ---------- teardown ----------
+  update staff set home_screen = null, room_grouping = 'type' where id = clerk;
+  delete from hotel_modules where hotel_id = h_agr and module = 'reception_pos';
+  perform set_config('app.user_id', '', true);
+end $$;

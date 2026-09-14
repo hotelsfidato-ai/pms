@@ -207,6 +207,15 @@ example.
 
 ## 6 · Known rough edges, small
 
+- **Two "in house" numbers.** The property page says In house now 11 /
+  Vacant 9 where the Dashboard and Rooms say 10 / 7, same moment (14
+  September). Two definitions, neither labelled. Needs one, named.
+- **The till's reads turn every error into an empty list.** `PosGate`
+  (Phase 1) catches the refusal case; a server fault still reads as
+  "nothing here" (MEMORY 251).
+- **The Manager Report's City Ledger section is all dashes** — it exists,
+  but fills only when OTA balances are kept here. The plan's "9 of 14"
+  counted it as present; it is present and empty.
 - **"Which room was this stay in" is still written out by hand in seven
   queries** — billing (2), directory, reports (2), stays, pos. All seven
   have the RIGHT rule today; 086 made it `app.stay_room()` and moved the

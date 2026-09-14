@@ -53,7 +53,12 @@ export interface ManagerReport {
 export async function getManagerReport(
   hotelId: string,
   asOn = BUSINESS_DATE,
-  ptdFrom = "2026-08-01",
+  /* ⚠ WAS THE LITERAL "2026-08-01". Correct on every day of August 2026
+     and wrong on every other: the period-to-date column would have run
+     from the first of August whatever month the report was for. The
+     first of THE REPORT'S OWN MONTH — the window the API itself uses
+     when none is sent. Found 14 September building the Dashboard. */
+  ptdFrom = `${asOn.slice(0, 7)}-01`,
 ): Promise<ManagerReport | null> {
   if (!hotelId) return null;
   try {

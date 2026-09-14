@@ -333,6 +333,11 @@ export interface ApiHotel {
   businessDate: string;
 }
 
+/** The first screen after sign-in (087). Set by the GM, changeable by
+    the person; NULL on the server reads as the Dashboard. */
+export type HomeScreen = "dashboard" | "rooms" | "calendar";
+export type RoomGrouping = "type" | "floor";
+
 export interface ApiScope {
   staffId: string;
   email: string;
@@ -340,6 +345,9 @@ export interface ApiScope {
   isGroupAdmin: boolean;
   /** Where this person may WORK. Empty for a group admin — see below. */
   hotels: Array<{ hotelId: string; role: string }>;
+  /** Optional only because an API older than 087 does not send them. */
+  homeScreen?: HomeScreen;
+  roomGrouping?: RoomGrouping;
 }
 
 export interface HotelsResponse {

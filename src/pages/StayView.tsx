@@ -1,6 +1,7 @@
 import { useState, useMemo, useEffect } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { useParams, useSearchParams } from "react-router";
+import { useNavigate, useParams, useSearchParams } from "react-router";
+import { useSession } from "@/lib/session";
 import {
   ChevronDown, ChevronRight, ChevronLeft, Globe, User, Building2,
   Sparkle, Wrench,
@@ -11,13 +12,13 @@ import { money, dateShort } from "@/lib/format";
 import { useUi } from "@/lib/ui";
 import { AssignRoomFlow } from "@/components/flows/AssignRoomFlow";
 import {
-  Page, Button, Segmented, Tooltip, Skeleton, type Tone,
+  Page, Button, Segmented, Tooltip, Skeleton, toast, type Tone,
 } from "@/components/ui";
 import { StayDrawer } from "@/components/flows/StayDrawer";
 import { WalkInFlow } from "@/components/flows/WalkInFlow";
 import {
   getStayView, getStay, listStays, queryKeys, BUSINESS_DATE, addDays,
-  isWeekend,
+  isWeekend, setMyPreferences,
   type ChartBar, type ChartRoom, type BarTone, type Stay,
 } from "@/data/repositories";
 
@@ -69,10 +70,6 @@ const PILLS = ["All", "Vacant", "Occupied", "Arrivals", "Reserved", "Blocked", "
 type Pill = (typeof PILLS)[number];
 
 /** How the chart's rows are grouped. */
-/* One key for the whole app. Somebody who works from the floor
-   view works from it every time they open this screen. */
-const VIEW_KEY = "fidato-house-view";
-
 type GroupBy = "type" | "floor";
 
 const SOURCE_ICON: Record<string, typeof Globe> = {
@@ -116,10 +113,16 @@ const ROOM_COL = "sticky left-0";
        20  room column                    (pinned left)
        10  reservation bars               (scroll with the chart) */
 
-export default function StayViewPage() {
+export default function StayViewPage({ view }: {
+  /** Which of the two screens this is. `floor` is Rooms, at /stay;
+      `calendar` is the fourteen-day chart, at /calendar. */
+  view: "calendar" | "floor";
+}) {
   const params = useParams();
   const fallbackHotel = useUi((s) => s.hotelId);
   const hotelId = params.code ?? fallbackHotel;
+  const navigate = useNavigate();
+  const scope = useSession((s) => s.scope);
 
   const [searchParams, setSearchParams] = useSearchParams();
   const selectedId = searchParams.get("res");
@@ -127,45 +130,32 @@ export default function StayViewPage() {
   /* Open on the business date so the chart shows today first. */
   const [start, setStart] = useState(BUSINESS_DATE);
   const [pill, setPill] = useState<Pill>("All");
-  const [groupBy, setGroupBy] = useState<GroupBy>("type");
 
-  /* CALENDAR OR FLOOR. The chart is right at a desk — a fortnight of
-     inventory and somebody planning next week. It is wrong on a phone,
-     and wrong when the question is "what is happening now": eighteen
-     rooms times fourteen days is two hundred and fifty cells to answer
-     something about one room.
+  /* ROOM TYPE OR FLOOR, PER PERSON, ON THE SERVER (087). The owner kept
+     this switch on 14 September and asked for it to be remembered per
+     person — so it is the same on the desk terminal and on a phone. */
+  const [groupBy, setGroupByState] = useState<GroupBy>(scope?.roomGrouping ?? "type");
+  const setGroupBy = (next: GroupBy) => {
+    setGroupByState(next);
+    if (scope) useSession.setState({ scope: { ...scope, roomGrouping: next } });
+    void setMyPreferences({ roomGrouping: next }).then((r) => {
+      if (!r.ok) toast.error("Not remembered", r.reason);
+    });
+  };
 
-     Remembered per viewer, because somebody who works from a phone
-     works from a phone, and re-choosing on every visit is the kind of
-     friction that makes a view go unused. localStorage rather than the
-     server: this is a preference about a screen and it is ALLOWED to
-     differ between the desk terminal and the manager's pocket, which is
-     the whole reason both exist.
+  /* ⚠ ROOMS AND CALENDAR ARE TWO SCREENS NOW, with their own addresses.
+     They were one page with a toggle remembered in localStorage — per
+     device — and the menu's "Calendar" link went to that one address,
+     which opened on Rooms. Clicking "Calendar" did not show the calendar.
 
-     Wrapped, because a private window and a browser set to block site
-     data both throw here, and a chart that will not render because it
-     could not remember a layout is a poor trade. */
-  /* ⚠ ROOMS IS THE DEFAULT, not the calendar, and that was the owner's
-     call on 8 September: a manager signing in wants to know what the
-     house looks like RIGHT NOW, and the fourteen-day chart answers a
-     planning question they did not ask yet.
-
-     Read the comparison the other way round on purpose. `=== "calendar"`
-     rather than `=== "floor"` means an explicit choice still wins —
-     somebody who prefers the chart keeps it — while never having chosen
-     lands on rooms. Written as `!== "calendar"` it would have been the
-     same logic and much easier to flip back by accident. */
-  const [view, setView] = useState<"calendar" | "floor">(() => {
-    try {
-      return localStorage.getItem(VIEW_KEY) === "calendar" ? "calendar" : "floor";
-    } catch {
-      return "floor";
-    }
-  });
-
+     The switch stays, as a shortcut between the two, and it moves the
+     ADDRESS — carrying an open booking (?res=) with it. Where somebody
+     starts is no longer this page's decision: the GM sets each person's
+     first screen, and they can change their own (087). */
   const chooseView = (next: "calendar" | "floor") => {
-    setView(next);
-    try { localStorage.setItem(VIEW_KEY, next); } catch { /* not fatal */ }
+    if (next === view) return;
+    navigate(`/h/${hotelId}/${next === "calendar" ? "calendar" : "stay"}${
+      searchParams.toString() ? `?${searchParams.toString()}` : ""}`);
   };
   const [collapsed, setCollapsed] = useState<Record<string, boolean>>({});
 

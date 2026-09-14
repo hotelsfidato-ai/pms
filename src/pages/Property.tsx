@@ -11,9 +11,22 @@ import {
 } from "@/components/ui";
 import {
   getPropertyDetail, getTodaySnapshot, getPeriodStatistics,
-  createStaff, revokeAccess, setStaffPassword, MIN_PASSWORD,
-  type PropertyTeamMember,
+  createStaff, revokeAccess, setStaffPassword, setHomeScreen, MIN_PASSWORD,
+  type PropertyTeamMember, type HomeScreen,
 } from "@/data/repositories";
+import { HOME_SCREENS, homeScreenLabel } from "@/lib/homeScreen";
+
+/* The GM setting where somebody starts after sign-in (087). */
+async function startOn(
+  person: PropertyTeamMember, next: HomeScreen, refresh: () => void,
+) {
+  if (next === person.homeScreen) return;
+  const result = await setHomeScreen(person.id, next);
+  if (!result.ok) return toast.error("Not changed", result.reason);
+  toast.success(`${person.name} starts on ${homeScreenLabel(next)}`,
+    "From their next sign-in. They can change it themselves.");
+  refresh();
+}
 
 /* ══════════════════════════════════════════════════════════════════
    ONE PROPERTY
@@ -207,6 +220,28 @@ export default function PropertyPage() {
                     <span className="text-sm text-grey-600 shrink-0">
                       {label(p.role)}
                     </span>
+
+                    {/* WHERE THEY START (087). The owner's decision of 14
+                        September: the GM sets it per person, and the
+                        person can change their own from their account
+                        menu. Offered only where the server would accept
+                        it — a manager here, never on a group admin. */}
+                    {grantableRoles.length > 0 && !p.isGroupAdmin && (
+                      <label className="flex items-center gap-1.5 shrink-0 text-sm text-grey-600">
+                        <span className="hidden sm:inline">Starts on</span>
+                        <NativeSelect
+                          aria-label={`${p.name} starts on`}
+                          value={p.homeScreen}
+                          onChange={(e) => void startOn(
+                            p, e.currentTarget.value as HomeScreen, refresh)}
+                          className="w-auto"
+                        >
+                          {HOME_SCREENS.map((s) => (
+                            <option key={s.value} value={s.value}>{s.label}</option>
+                          ))}
+                        </NativeSelect>
+                      </label>
+                    )}
 
                     {grantableRoles.length > 0 && !p.isGroupAdmin && (
                       <div className="flex gap-1.5 shrink-0">

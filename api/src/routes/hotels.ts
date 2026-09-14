@@ -96,6 +96,13 @@ async function scopeFor(
     [session.staffId],
   );
 
+  /* Where this person lands after signing in, and how they like the
+     house grouped (087). On the server so a GM can set it for them and
+     so it is the same answer on the desk terminal and on a phone. */
+  const { rows: prefs } = await client.query<{
+    home_screen: string; room_grouping: string;
+  }>(`select home_screen, room_grouping from app.my_preferences()`);
+
   return {
     staffId: session.staffId,
     email: session.email,
@@ -106,5 +113,7 @@ async function scopeFor(
        empty list alongside the flag keeps the interface from reading
        "no properties" when the truth is "all of them". */
     hotels: rows.map((r) => ({ hotelId: r.hotel_id, role: r.role })),
+    homeScreen: prefs[0]?.home_screen ?? "dashboard",
+    roomGrouping: prefs[0]?.room_grouping ?? "type",
   };
 }

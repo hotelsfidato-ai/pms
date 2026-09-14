@@ -12,9 +12,10 @@ import {
 } from "@/components/ui";
 import {
   listAdminStaff, createStaff, grantAccess, revokeAccess, deactivateStaff,
-  amendStaff, reactivateStaff, setStaffPassword, MIN_PASSWORD,
-  listProperties, type AdminStaff,
+  amendStaff, reactivateStaff, setStaffPassword, setHomeScreen, MIN_PASSWORD,
+  listProperties, type AdminStaff, type HomeScreen,
 } from "@/data/repositories";
+import { HOME_SCREENS } from "@/lib/homeScreen";
 
 /* ══════════════════════════════════════════════════════════════════
    THE PEOPLE WHO WORK HERE
@@ -459,14 +460,22 @@ function EditPersonDialog({ person, onClose, onSaved }: {
 }) {
   const [name, setName] = useState(person.name);
   const [phone, setPhone] = useState(person.phone ?? "");
+  /* Where they start after sign-in (087). A group administrator's own is
+     theirs to set from their account menu; the server refuses anyone
+     else setting it, so the field is not offered for one. */
+  const [home, setHome] = useState<HomeScreen>(person.homeScreen);
   const [busy, setBusy] = useState(false);
 
   const submit = async () => {
     setBusy(true);
     const res = await amendStaff(person.id,
       { fullName: name.trim(), phone: phone.trim() });
+    if (!res.ok) { setBusy(false); return toast.error("Not saved", res.reason); }
+    if (!person.isGroupAdmin && home !== person.homeScreen) {
+      const screen = await setHomeScreen(person.id, home);
+      if (!screen.ok) { setBusy(false); return toast.error("Not saved", screen.reason); }
+    }
     setBusy(false);
-    if (!res.ok) return toast.error("Not saved", res.reason);
     toast.success(`${name.trim()} saved`);
     onSaved();
     onClose();
@@ -503,6 +512,18 @@ function EditPersonDialog({ person, onClose, onSaved }: {
                      onChange={(e) => setPhone(e.target.value)} />
             )}
           </Field>
+          {!person.isGroupAdmin && (
+            <Field label="Starts on" hint="The first screen after they sign in. They can change it themselves.">
+              {(f) => (
+                <NativeSelect {...fieldProps(f)} value={home}
+                              onChange={(e) => setHome(e.currentTarget.value as HomeScreen)}>
+                  {HOME_SCREENS.map((s) => (
+                    <option key={s.value} value={s.value}>{s.label}</option>
+                  ))}
+                </NativeSelect>
+              )}
+            </Field>
+          )}
           <p className="text-sm text-grey-500">
             Signs in as <span className="text-ink-900">{person.email}</span>.
           </p>
