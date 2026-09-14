@@ -3,7 +3,7 @@
 Updated after every finished section. **Nothing here is a claim until the gates
 below are green and the screen has been opened.**
 
-Last updated: **5 September 2026** · **170 of 192 · sixteen stages of twelve. Properties run empty and on today, demo data out, nothing pushed since the owner asked. Start at *Picking this up cold* below.**
+Last updated: **14 September 2026** · **211 of 228 · nineteen stages of twelve. Live in production; everything in scope is built. Start at *Picking this up cold* below.**
 
 ---
 
@@ -15,18 +15,26 @@ that produced it is gone and this file is what survived.
 
 ### Where the work stands
 
-**209 of 228 · 92%.** Nineteen stages of twelve. The bars further down
+**211 of 228 · 93%.** Nineteen stages of twelve. The bars further down
 sum to that; the total is read off them and never typed beside them.
+
+Stage 12 moved on 14 September: its two open units were the deploy itself,
+"blocked on the owner's domain, nothing else", and the system is live on
+api.fidatohotels.com and pms.fidatohotels.com. The other seventeen are the
+channel manager (stage 9, five — excluded by the owner for now) and the CRS
+bridge (stage 11, twelve — after go-live, waiting on the API docs).
 
 ```
 db/migrate.sh        the LIVE database. Additive. Never drops.
-db/tests/run.sh      457 assertions, on a scratch database it drops
-db/tests/rerun.sh    71 migrations, all re-runnable, on a scratch copy
-cd api && npm test   222, on its OWN database, built and dropped per run
-npx vitest run       163
+db/tests/run.sh      560 assertions, on a scratch database it drops
+db/tests/rerun.sh    85 migrations, all re-runnable, on a scratch copy
+cd api && npm test   337 in 27 files, on its OWN database, built and dropped
+npx vitest run       176 in 11 files
 npm run build:all    production, preview AND artifact — all three
 db/verify-backup.sh  dumped, restored, checked
 ```
+
+Counts measured 14 September on the rebuilt local cluster at `D:\fidato-pg`.
 
 ### Start it
 
@@ -35,9 +43,11 @@ a reboot. Every "permission denied for schema app" and "database does
 not exist" in this project's history began here:
 
 ```
-PG=C:/Users/rozar/AppData/Local/Temp/claude/D--PMS-FIDATO/6f5bb0bf-ad16-442f-bd1d-566b371924fa/scratchpad/pg
-"$PG/pgsql/bin/pg_ctl.exe" -D "$PG/data" -l "$PG/pg.log" -o "-p 55432" start
+D:\fidato-pg\pgsql\bin\pg_ctl.exe -D D:\fidato-pg\data -l D:\fidato-pg\pg.log start
 ```
+
+It lived under `%TEMP%` until 14 September 2026, where Windows Storage Sense
+deleted it piece by piece. See START-HERE.md. Never put it back there.
 
 Then the API and the web app through the Browser pane's `preview_start`
 (`api`, then `web` — never `npm run dev` in Bash; the servers belong to
@@ -96,17 +106,17 @@ things in — the owner asked for the demo gone and the system used for real.
 
 ### What to do next, in order
 
-1. **Migration upgrade path is DONE** — all 68 re-run cleanly, and
-   `db/migrate.sh` is the one that touches the live database.
-2. **The group reservation list** — stage 16's twelfth and only gap.
-   `GroupPanel.tsx` exists and is close; what is missing is the stay
-   panel saying "this guest has two rooms in this group".
-3. **The channel manager** (stage 9, 5 blocks) — the largest gap in the
-   product, and what stops somebody re-typing every OTA booking by hand.
-4. **The CRS bridge** (stage 11, 12 blocks) — the owner sequenced this
-   last, deliberately.
-5. **Deploy** (stage 12, 2 blocks) — blocked on the owner's domain,
-   nothing else.
+Rewritten 14 September. The live list is `PENDING.md`; this is the order.
+
+1. **Deploy defect 242's fix** — migration 085 and the walk-in route. It
+   back-fills the one production walk-in with no channel on its own.
+2. **Backups off the box** — every copy is on the boot disk. P0.
+3. **n8n on its domain** — the DNS record, then `deploy/n8n.sh` with the
+   screen locked to the owner and webhooks open.
+4. **The owner's own configuration** — rates, menu and companies are still
+   the demo's on production.
+5. **The CRS bridge** (stage 11, 12 blocks) — after go-live, on the API docs.
+6. **The channel manager** (stage 9, 5 blocks) — excluded until asked.
 
 ---
 
@@ -839,7 +849,7 @@ retried. Ledger nets to zero, room revenue still ₹4,19,578.76.
 9  Rates, availability, STAAH        ███████░░░░░  rates, seasons, plans
 10 Group dashboard and reports       ████████████  12 of 12 — the dashboard and eleven reports
 11 CRS bridge / SU                    ░░░░░░░░░░░░  now IN scope, after go-live
-12 Hardening and go-live             ██████████░░  + launch.sh, preflight, nginx, pushed
+12 Hardening and go-live             ████████████  12 of 12 — live; backups still on one disk
 13 POS upgrade — Petpooja-informed   ████████████  12 of 12 — the day end closes
 14 Modules + banquet                  ████████████  12 of 12 — the hall cannot be sold twice
 15 PMS upgrade — eZee-informed        ████████████  12 of 12 — the backlog is clear

@@ -32,13 +32,18 @@ Transactions were reset on 9 September. Since then: 4 bookings, 4 guests,
 
 ## 2 · Found in the 14 September audit
 
-### The walk-in desk does not record a channel — defect 242
+### The walk-in desk did not record a channel — defect 242, FIXED, NOT DEPLOYED
 
-`groups.ts` requires a booking channel; `operations.ts` (walk-in) never
-sets one. One of the four live bookings has none. The screen still says
-"Walk-in" through the label fallback, so it looks right and counts wrong.
-Fix is small — stamp the Walk-in channel on the desk flow. **The one
-production row needs a back-fill, which needs the owner's yes.**
+Fixed on the owner's yes, 14 September: migration 085 and the walk-in
+route. The deploy back-fills FH-2609-5001 by itself — proved on the local
+database, 18 demo walk-ins without a channel to 0, no commission invented,
+nothing else touched. A walk-in taken on screen afterwards saved "Walk-in".
+
+### A refusal after a write keeps the write — defect 243, one route fixed
+
+`withSession` commits a refusal like any other return. Fixed in the walk-in
+route, where a refused walk-in left a guest that can never be deleted.
+**The other routes have not been checked for the same shape.**
 
 ### Every backup is on the same disk as the thing it backs up — P0
 
@@ -70,7 +75,14 @@ for a password that has been shared.
 - Put the n8n encryption key in a password manager, off the box.
 - `owner@fidato.in` is inactive but still linked to a development login.
 - n8n reaches the PMS through the API as its own account — that account
-  (`n8n@fidatohotels.com`) does not exist yet.
+  (`n8n@fidatohotels.com`, Viewer) does not exist yet. The path is proved:
+  from inside the n8n container the API answers, refuses without a token,
+  and Firebase accepts the web key.
+- n8n.fidatohotels.com needs its DNS record. `deploy/n8n.sh` now publishes
+  it with the screen locked to the owner's address and the webhook paths
+  open (owner's choice, 14 September), and `allow` swaps the address when
+  the broadband changes it. Proved in a throwaway nginx on the box; the
+  domain path itself has never run there.
 
 ---
 
@@ -178,6 +190,13 @@ one the navigation knows, and it was proved to fail. **The function
 itself still fails open.** Making it fail closed would break any route
 whose menu entry is conditional, which is a change to make deliberately
 rather than during an audit.
+
+### No gate for a refusal written after a write — defect 243
+
+The walk-in route refused below an insert, and the insert committed. A
+static check would have to know which statements write and which `return`
+is a refusal inside a `withSession` callback — real work, not a regex, the
+same reason the route gate above is not built.
 
 ### No gate for `app.*` SQL functions with no caller
 

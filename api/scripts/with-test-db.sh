@@ -33,7 +33,7 @@
 # =============================================================================
 set -uo pipefail
 
-PGBIN="${PGBIN:-C:/Users/rozar/AppData/Local/Temp/claude/D--PMS-FIDATO/6f5bb0bf-ad16-442f-bd1d-566b371924fa/scratchpad/pg/pgsql/bin}"
+PGBIN="${PGBIN:-D:/fidato-pg/pgsql/bin}"
 PGPORT="${PGPORT:-55432}"
 PGHOST="${PGHOST:-127.0.0.1}"
 SUPER="${SUPER:-postgres}"

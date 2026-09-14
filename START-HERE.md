@@ -34,22 +34,26 @@ Three processes. All three must be up, in this order.
 
 ### Postgres
 
-A portable Postgres 17 lives at:
+A portable Postgres 17 lives at `D:\fidato-pg` — `pgsql\` is the program,
+`data\` the cluster, and the port (55432) is written in the cluster's own
+`postgresql.conf`, so a plain start comes up where every script expects it.
 
-```
-C:\Users\rozar\AppData\Local\Temp\claude\D--PMS-FIDATO\
-  6f5bb0bf-ad16-442f-bd1d-566b371924fa\scratchpad\pg
+That file also says `synchronous_commit = off`. D: is a spinning disk, and
+waiting for it on every commit made the database suite crawl — one table
+every ten seconds. Off, a crash can lose the last moment of work and cannot
+corrupt anything. **A setting for this test machine only; never on the server.**
+
+```powershell
+D:\fidato-pg\pgsql\bin\pg_ctl.exe -D D:\fidato-pg\data -l D:\fidato-pg\pg.log start
 ```
 
-```bash
-PG=".../scratchpad/pg"
-"$PG/pgsql/bin/pg_ctl.exe" -D "$PG/data" -o "-p 55432" -w start
-```
-
-⚠ **It is in a temp directory and will not survive a machine wipe.** Everything
-needed to rebuild it is in `db/` — 21 migrations and a test suite.
-If it is gone, install Postgres 17 anywhere, set `PGBIN`, and run the script
-below; nothing is lost but time.
+⚠ **NEVER PUT IT BACK UNDER `%TEMP%`.** It lived in a Claude scratchpad under
+`AppData\Local\Temp` until 14 September 2026, and Windows Storage Sense
+("delete temporary files that my apps aren't using") was deleting it file by
+file — oldest first, so `template0`, `template1`, `pg_dumpall.exe` and
+`postgres.bki` went before anything anybody used daily. Defect 119's missing
+`global/2964` was this too, blamed at the time on a bad migration run.
+Everything needed to rebuild it is in `db/`: migrations and a test suite.
 
 ### Schema, tests and demo data
 

@@ -5931,6 +5931,102 @@ that makes an X** — `insert into reservations`, two hits — and the rule goes
 each, or into one place both pass through. 082 said the API enforced it
 without saying where, and "the API" was two doors.
 
-Status on 14 September: found and recorded, **not fixed yet** — the fix stamps
-the Walk-in channel on the desk flow, and the one production row needs a
-back-fill, which is the owner's to approve.
+Status on 14 September: found and recorded, then **fixed the same day on the
+owner's yes** — "yes fix the walk-in bug and the booking":
+
+- `085_walk_in_channel.sql` — `app.walk_in_source()`, the ONE answer to "which
+  row is the walk-in channel" (by kind, oldest active, NULL if none), and a
+  re-runnable back-fill of every `source = 'walk_in'` stay with no channel.
+  Commission left NULL: the rate on the day was never stamped, and today's
+  would restate history.
+- `operations.ts` stamps it, with this property's commission, and refuses —
+  like the booking form — when no walk-in channel is switched on.
+- `api/test/reservationInserts.test.ts` finds every `insert into reservations`
+  under `api/src` and fails if one does not write `booking_source_id`. A third
+  door fails there, not on production.
+
+---
+
+### 243 · A refusal written below an insert keeps the insert
+
+`withSession` commits whatever its callback returns — **a refusal included**.
+`{ ok: false, reason }` is an ordinary return value, not a throw, so nothing
+rolls back.
+
+The walk-in route refused an unpriced room *after* `insert into guests`:
+
+```
+insert into guests (full_name) ...          ← committed
+select ... reference ...
+if (offered === null) return refuse(...)    ← "refused", guest kept
+```
+
+And 015's `guests_no_delete` means that guest can never be removed. Every
+walk-in refused for a missing rate left a permanent phantom guest.
+
+Found while moving 242's channel check in beside it. Every refusal in that
+route now sits above the first write, and a test sends a tariff that is not
+a number and asserts no guest by that name exists afterwards.
+
+⚠ **The rule: inside `withSession`, a refusal is a COMMIT.** Either every
+refusal comes before the first write, or it throws. **Not yet audited in the
+other routes** — this is one route, found by accident.
+
+---
+
+### 244 · The local database lived in `%TEMP%`, and Windows was deleting it
+
+`db/tests/run.sh` failed on 14 September with `could not open file
+"base/1/4171"`. Measured, not guessed:
+
+```
+Storage Sense           on; "delete temporary files my apps aren't using" on
+template0  (base/4)     0 files
+template1  (base/1)     partial — 4171 missing
+postgres   (base/5)     44 files
+five old scratch DBs    0 files each
+global/2964             missing   (pg_db_role_setting — pg_dump dies on it)
+pgsql/bin               7 programs left; pg_dumpall.exe, createdb.exe gone
+share/postgres.bki      gone      (so initdb cannot run either)
+fidato     (in use)     494 files, modified today — survived
+```
+
+Oldest-untouched first: the files nobody modifies went first, which is why
+the database used every day was the last thing standing and nothing looked
+wrong.
+
+⚠ **Defect 119 was probably this, misdiagnosed.** It blamed a missing
+`global/2964` — the same file — on a destructive measurement, and rebuilt the
+cluster with `initdb`. The `data.corrupt.184129` folder beside it is likely a
+third occurrence.
+
+Every script's default `PGBIN` now points at `D:/fidato-pg/pgsql/bin`, and
+START-HERE.md and PROGRESS.md say why. The old folder is left untouched.
+
+**The rule: nothing that has to survive lives under `%TEMP%` — a Claude
+scratchpad included.** Scratchpads are for scratch.
+
+---
+
+### 245 · n8n.sh: an upgrade that forgot the address, and a bad site left for nginx to find
+
+Both found reading the script to add the owner's "screen locked, webhooks
+open" mode on 14 September. Neither by running it — the domain path has still
+never run on the box.
+
+1. **The documented upgrade could not finish.** `sudo N8N_VERSION=...
+   deploy/n8n.sh` carries no `ALLOW_FROM`, and the nginx step read the address
+   from `ALLOW_FROM` every time — so an upgrade restarted n8n on the new
+   version, then died asking for an address. The address is now saved in
+   `/etc/n8n/allow-from`, and `allow` is the one mode that insists on a new one.
+2. **A rejected site stayed in `conf.d`.** On `nginx -t` failure the script
+   stopped without reloading, as intended, and left the bad file in place. The
+   API certificate's renewal hook reloads nginx, so that reload would have
+   failed next; a reboot would have brought nginx up with neither site. The
+   API shares this nginx. The last good file now comes back.
+
+The new site was proved on the box before it was committed: rendered from the
+script's own lines, loaded into a throwaway nginx on loopback ports, and
+probed — webhooks reach n8n, the screen and `/rest/` refuse with the "your
+address changed" page, `/webhookX/` does not slip through, `lock` closes all
+of it, `open` opens all of it. The live nginx was not touched.
