@@ -1,29 +1,23 @@
 import { useState, useMemo, useEffect } from "react";
-import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { useQuery } from "@tanstack/react-query";
 import { useParams, useSearchParams } from "react-router";
 import {
   ChevronDown, ChevronRight, ChevronLeft, Globe, User, Building2,
   Sparkle, Wrench,
 } from "lucide-react";
 import { cn } from "@/lib/cn";
-import { StayMarks } from "@/components/flows/StayMarks";
 import { HouseFloor } from "@/components/flows/HouseFloor";
 import { money, dateShort } from "@/lib/format";
 import { useUi } from "@/lib/ui";
 import { AssignRoomFlow } from "@/components/flows/AssignRoomFlow";
 import {
-  Page, Button, Segmented, Tooltip, StatusPill,
-  Drawer, DrawerContent, Skeleton, DetailList, DetailRow, Tabs, TabsList,
-  TabsTrigger, TabsContent, toast,
-
+  Page, Button, Segmented, Tooltip, Skeleton, type Tone,
 } from "@/components/ui";
-import { CheckInFlow } from "@/components/flows/CheckInFlow";
-import { StayActions } from "@/components/flows/StayActions";
-import { FolioPanel } from "@/components/flows/FolioPanel";
+import { StayDrawer } from "@/components/flows/StayDrawer";
 import { WalkInFlow } from "@/components/flows/WalkInFlow";
 import {
   getStayView, getStay, listStays, queryKeys, BUSINESS_DATE, addDays,
-  isWeekend, setGuestVip,
+  isWeekend,
   type ChartBar, type ChartRoom, type BarTone, type Stay,
 } from "@/data/repositories";
 
@@ -45,7 +39,7 @@ import {
 const BAR: Record<BarTone, string> = {
   "in-house": "bg-success text-white",
   confirmed: "bg-info text-white",
-  tentative: "bg-brand-yellow text-ink-900",
+  departed: "bg-brand-yellow text-ink-900",
   "due-out": "bg-brand-tangerine text-white",
   "no-show": "bg-brand-rose text-white",
   void: "bg-brand-red/25 text-brand-red line-through",
@@ -54,10 +48,21 @@ const BAR: Record<BarTone, string> = {
 const BAR_LABEL: Record<BarTone, string> = {
   "in-house": "In house",
   confirmed: "Confirmed",
-  tentative: "Tentative",
+  departed: "Checked out",
   "due-out": "Due out",
   "no-show": "No show",
   void: "Void",
+};
+
+/* The stay panel's pill, from the bar's DERIVED tone — due-out is a
+   status plus a date, which is why the chart passes its own. */
+const BAR_TONE: Record<BarTone, Tone> = {
+  "in-house": "success",
+  confirmed: "info",
+  departed: "neutral",
+  "due-out": "warning",
+  "no-show": "danger",
+  void: "danger",
 };
 
 const PILLS = ["All", "Vacant", "Occupied", "Arrivals", "Reserved", "Blocked", "Due Out", "Dirty"] as const;
@@ -641,58 +646,13 @@ export default function StayViewPage() {
       )}
 
       {/* ── Detail panel — the chart stays visible behind it ──────── */}
-      <Drawer open={!!selected} onOpenChange={(open) => !open && closeStay()}>
-        {selected && (
-          <DrawerContent
-            title={selected.stay.guest}
-            description={`Room ${selected.stay.roomNumber} · ${selected.stay.reference}`}
-            width="lg"
-          >
-            <Tabs defaultValue="stay">
-              <TabsList>
-                <TabsTrigger value="stay">Stay</TabsTrigger>
-                <TabsTrigger value="folio">Folio</TabsTrigger>
-              </TabsList>
-              <TabsContent value="stay">
-                <div className="space-y-5 pt-1">
-                  <StayDetail bar={selected} />
-
-                  {/* ── The one act, and then everything else ──────────
-                      Check in is the reason this panel is open on an
-                      arrival, so it stays a button. The rest — amend,
-                      move, void — are rare, and a column of rare
-                      buttons pushes the guest's details off a phone.
-
-                      A menu that swallowed check-in would be tidying at
-                      the guest's expense. */}
-                  {selected.stay.status === "due-in" && (
-                    <CheckInFlow
-                      hotelId={hotelId}
-                      stay={selected.stay}
-                      businessDate={BUSINESS_DATE}
-                    />
-                  )}
-
-                  <StayActions
-                    hotelId={hotelId}
-                    stay={selected.stay}
-                    businessDate={BUSINESS_DATE}
-                  />
-                </div>
-              </TabsContent>
-              <TabsContent value="folio">
-                <div className="pt-1">
-                  <FolioPanel
-                    hotelId={hotelId}
-                    stay={selected.stay}
-                    businessDate={BUSINESS_DATE}
-                  />
-                </div>
-              </TabsContent>
-            </Tabs>
-          </DrawerContent>
-        )}
-      </Drawer>
+      <StayDrawer
+        hotelId={hotelId}
+        stay={selected?.stay ?? null}
+        businessDate={BUSINESS_DATE}
+        status={selected ? { tone: BAR_TONE[selected.tone], label: BAR_LABEL[selected.tone] } : null}
+        onClose={closeStay}
+      />
 
       {/* ── Walk-in, from an empty cell ───────────────────────────── */}
       {walkIn && (
@@ -749,144 +709,5 @@ function BookingBar({ bar, onOpen }: { bar: ChartBar; onOpen: () => void }) {
         <span className="truncate">{bar.stay.guest}</span>
       </button>
     </Tooltip>
-  );
-}
-
-/* ── Marking a VIP ────────────────────────────────────────────────
-   Not a switch in a settings panel. The moment somebody knows is the
-   moment they are looking at the booking, and a mark that needs a
-   different screen is a mark nobody makes. */
-function VipToggle({ stay }: { stay: Stay }) {
-  const params = useParams();
-  const fallbackHotel = useUi((st) => st.hotelId);
-  const hotelId = params.code ?? fallbackHotel;
-  const queryClient = useQueryClient();
-  const [busy, setBusy] = useState(false);
-
-  const toggle = async () => {
-    if (!stay.guestId) return;
-    setBusy(true);
-    const result = await setGuestVip(hotelId, stay.guestId, !stay.isVip);
-    setBusy(false);
-    if (!result.ok) return toast.error("Not changed", result.reason);
-    toast.success(
-      stay.isVip ? "No longer marked VIP" : "Marked VIP",
-      `${result.guest} — this holds for their next visit too.`);
-    void queryClient.invalidateQueries();
-  };
-
-  return (
-    <button
-      type="button"
-      onClick={() => void toggle()}
-      disabled={busy}
-      aria-pressed={stay.isVip}
-      className="text-xs text-grey-500 hover:text-ink-900 underline
-                 cursor-pointer disabled:opacity-50"
-    >
-      {stay.isVip ? "Remove VIP" : "Mark VIP"}
-    </button>
-  );
-}
-
-function StayDetail({ bar }: { bar: ChartBar }) {
-  const s: Stay = bar.stay;
-  const { code = "" } = useParams<{ code: string }>();
-  return (
-    <div className="space-y-5">
-      <div className="flex items-center gap-2 flex-wrap">
-        <StatusPill
-          tone={
-            bar.tone === "in-house" ? "success"
-            : bar.tone === "confirmed" ? "info"
-            : bar.tone === "due-out" ? "warning"
-            : bar.tone === "no-show" ? "danger"
-            : bar.tone === "void" ? "danger"
-            : "warning"
-          }
-          dot
-        >
-          {BAR_LABEL[bar.tone]}
-        </StatusPill>
-        <StayMarks stay={s} hotelId={code} />
-        {/* The toggle, not a mark — it CHANGES the guest rather than
-            reporting them, so it stays here beside the marks rather
-            than moving into StayMarks with them. */}
-        {s.guestId && <VipToggle stay={s} />}
-      </div>
-
-      <DetailList>
-        <DetailRow label="Reference"><span className="tabular">{s.reference}</span></DetailRow>
-        <DetailRow label="Room">{s.roomNumber} · {s.roomType}</DetailRow>
-        <DetailRow label="Arrival"><span className="tabular">{dateShort(s.arrival)}</span></DetailRow>
-        <DetailRow label="Departure"><span className="tabular">{dateShort(s.departure)}</span></DetailRow>
-        <DetailRow label="Nights"><span className="tabular">{s.isDayUse ? "Day use" : s.nights}</span></DetailRow>
-        <DetailRow label="Party"><span className="tabular">{s.adults} adult{s.adults === 1 ? "" : "s"}{s.children ? `, ${s.children} child` : ""}</span></DetailRow>
-        <DetailRow label="Source">{s.source ?? "—"}</DetailRow>
-        {/* A dash, never a guess. An invented segment becomes a line in
-            a source-mix report an owner sets policy from. */}
-        <DetailRow label="Segment">{s.marketSegment ?? "—"}</DetailRow>
-        <DetailRow label="Business source">{s.businessSource ?? "—"}</DetailRow>
-        {s.salesPerson && (
-          <DetailRow label="Sold by">{s.salesPerson}</DetailRow>
-        )}
-        <DetailRow label="Rate plan">{s.ratePlan}</DetailRow>
-        <DetailRow label="Rack rate"><span className="tabular">{money(s.rackTariff)}</span></DetailRow>
-        <DetailRow label="Offered">
-          <span className="tabular">{s.isComplimentary ? "Complimentary" : money(s.offeredTariff)}</span>
-        </DetailRow>
-        <DetailRow label="Balance">
-          <span className={cn("tabular font-medium", bar.balance < 0 ? "text-info" : bar.balance > 0 ? "text-brand-red" : "text-success")}>
-            {money(Math.abs(bar.balance))}
-            {/* A CREDIT IS NOT AN OVERPAYMENT UNTIL THEY HAVE LEFT.
-                Most guests here pay a token amount when they book and
-                settle the rest at check-out, so a negative balance
-                before departure is an ADVANCE — the normal case. This
-                said "overpaid" for all of it, which reads as a mistake
-                somebody has to correct rather than money in hand. */}
-            {bar.balance < 0 && (
-              <span className="ml-1.5 text-2xs font-normal text-grey-500">
-                {s.status === "checked-out" ? "overpaid" : "in advance"}
-              </span>
-            )}
-          </span>
-        </DetailRow>
-      </DetailList>
-
-      {s.voidReason && (
-        <div className="rounded-md bg-red-50 border border-red-200 p-3">
-          <p className="text-2xs font-semibold uppercase tracking-wide text-brand-red mb-1">
-            Voided
-          </p>
-          <p className="text-sm text-grey-700 leading-relaxed">
-            {s.voidReason} — this booking is on the record as never having
-            happened, and is left out of revenue and cancellation figures alike.
-          </p>
-        </div>
-      )}
-
-      {s.notes && (
-        <div className="rounded-md bg-grey-50 border border-grey-200 p-3">
-          <p className="text-2xs font-semibold uppercase tracking-wide text-grey-400 mb-1">Note</p>
-          <p className="text-sm text-grey-700 leading-relaxed">{s.notes}</p>
-        </div>
-      )}
-
-      {/* WAS "Check-in, folio and settlement arrive at Checkpoint 5."
-          All three shipped, and the line stayed — under a greyed Check
-          in button, which together read as a feature that does not
-          exist yet. It was the first thing the owner saw on this panel
-          and the first thing he reported.
-
-          A note about what is not built has to be deleted when it is
-          built, and nothing in a typecheck or a test will ever say so. */}
-      {bar.balance !== 0 && (
-        <p className="text-sm text-grey-500 leading-relaxed">
-          {bar.balance < 0
-            ? `${money(Math.abs(bar.balance))} taken in advance. The rest settles at check-out — take it on the Folio tab.`
-            : `${money(bar.balance)} outstanding. Settle it on the Folio tab.`}
-        </p>
-      )}
-    </div>
   );
 }

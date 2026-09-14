@@ -65,6 +65,7 @@ export function NotificationBell() {
       </DrawerTrigger>
 
       <DrawerContent
+        padded={false}
         title="Notifications"
         description={unread > 0 ? `${unread} unread` : "You are all caught up"}
         footer={

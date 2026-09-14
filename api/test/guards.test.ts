@@ -1159,3 +1159,90 @@ describe("booking several rooms", () => {
     expect(mine!.source).toBe("Agoda");
   });
 });
+
+/* ══════════════════════════════════════════════════════════════════
+   A STAY SAYS WHAT THE DATABASE HOLDS — AND NOTHING IT DOES NOT
+
+   The stay panel's header and its rate section read straight off this
+   payload, so the payload is where "never show a figure the database
+   has not agreed to" is kept.
+   ══════════════════════════════════════════════════════════════════ */
+describe("a stay, as the panel reads it", () => {
+  const pickStay = async () => {
+    const db = await admin();
+    try {
+      const { rows } = await db.query<{
+        id: string; room_type_id: string; base_rate: string | null;
+        guest_id: string; phone: string | null; email: string | null;
+        nationality: string | null;
+      }>(
+        `select r.id::text, r.room_type_id::text, rt.base_rate::text,
+                g.id::text as guest_id, g.phone, g.email::text as email,
+                g.nationality
+           from reservations r
+           join hotels h      on h.id = r.hotel_id and h.code = '5EL'
+           join room_types rt on rt.id = r.room_type_id
+           join guests g      on g.id = r.guest_id
+          order by r.reference limit 1`);
+      expect(rows[0], "the demo has no stay").toBeTruthy();
+      return rows[0]!;
+    } finally {
+      await db.end();
+    }
+  };
+
+  it("⚠ AN UNPRICED ROOM TYPE IS A NULL RACK RATE, NOT ₹0 — defect 246", async () => {
+    /* `Number(row.base_rate)` turned NULL into 0, and every panel printed
+       "Rack rate ₹0" for a room type nobody had priced. */
+    const s = await pickStay();
+    const db = await admin();
+    try {
+      await db.query("update room_types set base_rate = null where id = $1",
+                     [s.room_type_id]);
+      const res = await as(`/5EL/stays/${s.id}`);
+      expect(res.status).toBe(200);
+      const stay = (await res.json()) as { rackTariff: number | null };
+      expect(stay.rackTariff, "a rate nobody set came back as a number").toBeNull();
+    } finally {
+      await db.query("update room_types set base_rate = $2 where id = $1",
+                     [s.room_type_id, s.base_rate]);
+      await db.end();
+    }
+  });
+
+  it("carries how to reach the guest, and null when they gave nothing", async () => {
+    /* Nationality is NOT NULL with a default of 'IN' — measured, after
+       the first version of this test tried to null it and the column
+       refused. Phone and email are the two a guest can leave blank. */
+    const s = await pickStay();
+    const db = await admin();
+    try {
+      await db.query(
+        `update guests set phone = null, email = null where id = $1`,
+        [s.guest_id]);
+      const blank = (await (await as(`/5EL/stays/${s.id}`)).json()) as {
+        phone: string | null; email: string | null;
+      };
+      /* Null, not "" and not a placeholder — a made-up number in a
+         header gets dialled. */
+      expect([blank.phone, blank.email]).toEqual([null, null]);
+
+      await db.query(
+        `update guests set phone = '+91 98220 11111',
+                           email = 'guest.contact@example.com',
+                           nationality = 'FR'
+          where id = $1`, [s.guest_id]);
+      const given = (await (await as(`/5EL/stays/${s.id}`)).json()) as {
+        phone: string | null; email: string | null; nationality: string;
+      };
+      expect(given.phone).toBe("+91 98220 11111");
+      expect(given.email).toBe("guest.contact@example.com");
+      expect(given.nationality).toBe("FR");
+    } finally {
+      await db.query(
+        `update guests set phone = $2, email = $3, nationality = $4
+          where id = $1`, [s.guest_id, s.phone, s.email, s.nationality]);
+      await db.end();
+    }
+  });
+});

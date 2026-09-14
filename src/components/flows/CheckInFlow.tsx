@@ -111,7 +111,10 @@ export function CheckInFlow({
      rule that helps nobody. */
   const trigger = (
     <div className="space-y-1.5">
-      <Button disabled={!allowed} data-checkin>
+      {/* PRIMARY. On an arrival this is the reason the panel is open —
+          the one orange button, at the top beside "More options", where
+          the owner's reference layout puts the main act. */}
+      <Button variant="primary" disabled={!allowed} data-checkin>
         <LogIn className="size-4" />
         Check in
       </Button>
@@ -394,7 +397,13 @@ export function CheckInFlow({
               )}
 
               <div className="rounded-md bg-grey-50 border border-grey-200 p-3 space-y-1.5">
-                <Line label="Rack rate" value={money(stay.rackTariff)} muted />
+                {/* A dash when the room type has no rate — never ₹0
+                    (defect 246). */}
+                <Line
+                  label="Rack rate"
+                  value={stay.rackTariff === null ? "—" : money(stay.rackTariff)}
+                  muted
+                />
                 <Line
                   label="Offered"
                   value={stay.isComplimentary ? "Complimentary" : money(stay.offeredTariff)}

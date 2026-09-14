@@ -6030,3 +6030,58 @@ script's own lines, loaded into a throwaway nginx on loopback ports, and
 probed — webhooks reach n8n, the screen and `/rest/` refuse with the "your
 address changed" page, `/webhookX/` does not slip through, `lock` closes all
 of it, `open` opens all of it. The live nginx was not touched.
+
+---
+
+### 246 · "Rack rate ₹0" for a room type nobody had priced
+
+`stays.ts` built every stay with `rackTariff: Number(row.base_rate)`. 032 made
+`base_rate` nullable — the system ships no price — and `Number(null)` is `0`,
+so every stay panel and the check-in dialog printed **"Rack rate ₹0"** for an
+unpriced room type. The standing rule, broken on the screen a clerk quotes
+from: *an unpriced thing shows a dash, never a zero.*
+
+The column's CHECK allows 0 as well, so once the API had flattened NULL into 0
+the screen could not tell "free" from "not set". Fixed at the source:
+`rackTariff: number | null` end to end, and a dash wherever it is shown.
+
+Same shape as the walk-in's `Number(null)` in the nightly charge (the comment
+in `operations.ts` about halving ADR) — **`Number()` on a nullable column is a
+default price in disguise.** Grep for it before trusting a money field.
+
+---
+
+### 247 · Every departed guest's panel said "Tentative"
+
+The tape chart's `barTone` returned `"tentative"` for a **checked-out** stay,
+and the stay panel printed the tone's label. At a front desk "tentative" means
+a booking nobody has confirmed — the opposite end of a stay. It had been like
+that as long as the panel had read the bar's tone; found on 14 September only
+because the rebuilt panel was opened on a departed group booking.
+
+Renamed to `departed` in the type, so the code cannot say one thing while the
+screen says another, and labelled "Checked out".
+
+---
+
+### 248 · The stay panel existed twice, and the drawer had no padding
+
+The owner's screenshot of 14 September: *"looks terrible and is not very
+readable."* Measured, not guessed — two causes:
+
+1. **`DrawerContent`'s body had no padding at all.** The pill, every row and
+   the Check in button sat flush against the left edge. The design-system
+   demo drawer had the same fault; only notifications (rows edge to edge on
+   purpose) was right. Padding is now the default, `padded={false}` the
+   exception.
+2. **Two panels.** `StayDetail` on the chart and `StaySummary` on the lists —
+   the list's comment called it "the same panel the tape chart opens" while
+   drawing a second one with fewer rows. Defect 143's shape, third time. Now
+   `StayDrawer`, one component, rebuilt to the owner's reference layout:
+   contact in the header, the act at the top, labels above values, what is
+   owed pinned, the group's rooms in a column beside the booking.
+
+The two App tests that guard this panel (the guest named once; the group pill
+reaching "Group reservation list") were read BEFORE the redesign and shaped
+it: the group list is inline and the pill scrolls to it, so the heading exists
+once rather than twice.

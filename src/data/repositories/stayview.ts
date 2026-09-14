@@ -20,8 +20,12 @@ import type { Stay } from "./types";
    The rate now comes from the room type, through the rooms endpoint,
    and is null when the hotel has not set one. */
 
+/* ⚠ "departed" WAS CALLED "tentative", and it only ever meant checked
+   out — see barTone below. The stay panel printed the name, so every
+   departed guest read "Tentative", which at a front desk means a booking
+   nobody has confirmed. Found 14 September, on the rebuilt panel. */
 export type BarTone =
-  | "in-house" | "confirmed" | "tentative" | "due-out" | "no-show" | "void";
+  | "in-house" | "confirmed" | "departed" | "due-out" | "no-show" | "void";
 
 export interface ChartBar {
   stay: Stay;
@@ -109,7 +113,7 @@ function toneFor(stay: Stay, businessDate: string): BarTone {
     return stay.departure === businessDate ? "due-out" : "in-house";
   }
   if (stay.status === "due-out") return "due-out";
-  if (stay.status === "checked-out") return "tentative";
+  if (stay.status === "checked-out") return "departed";
   /* due-in: expected, possibly today, but nobody has arrived yet. */
   return "confirmed";
 }

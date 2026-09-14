@@ -58,9 +58,14 @@ interface StayRow {
   status: string;
   is_day_use: boolean;
   agreed_rate: string;
-  base_rate: string;
+  /** NULL when the room type has no rate yet (032). */
+  base_rate: string | null;
   is_complimentary: boolean;
   notes: string | null;
+  phone: string | null;
+  email: string | null;
+  /** NOT NULL, default 'IN' — present on every guest. */
+  nationality: string;
   group_id: string | null;
   group_name: string | null;
   group_rooms: string | null;
@@ -105,7 +110,11 @@ const SELECT = `
             same person travelling with family is a different allocation. */
          gu.is_vip, gu.id::text as guest_id, r.is_single_lady,
          r.business_source, r.market_segment, r.sales_person,
-         r.void_reason
+         r.void_reason,
+         /* How to reach the guest, for the stay panel's header. The
+            booking form has captured these since it was written and no
+            screen that shows a stay ever asked for them. */
+         gu.phone, gu.email::text as email, gu.nationality
     from reservations r
     join guests gu     on gu.id = r.guest_id
     join room_types rt on rt.id = r.room_type_id
@@ -182,7 +191,13 @@ function toStay(row: StayRow, hotelCode: string, businessDate: string) {
        is a decision; a zero rate is a price. They coincided in the
        demo data and will not always. */
     isComplimentary: row.is_complimentary,
-    rackTariff: Number(row.base_rate),
+    /* ⚠ NULL IS "NO RATE SET", AND IT STAYS NULL. `Number(row.base_rate)`
+       turned an unpriced room type into 0, and every stay panel printed
+       "Rack rate ₹0" -- a price nobody set, on the screen a clerk quotes
+       from. 032 made base_rate nullable so the hotel enters its own; the
+       column's CHECK allows 0 too, so the screen cannot tell the two
+       apart once this line has flattened them. Defect 246. */
+    rackTariff: row.base_rate === null ? null : Number(row.base_rate),
     offeredTariff: Number(row.agreed_rate),
     ...(row.group_id
       ? {
@@ -215,6 +230,12 @@ function toStay(row: StayRow, hotelCode: string, businessDate: string) {
     marketSegment: row.market_segment,
     salesPerson: row.sales_person,
     ...(row.void_reason ? { voidReason: row.void_reason } : {}),
+
+    /* Null when the guest gave nothing, which is most walk-ins. Never a
+       placeholder -- a made-up number in a header gets dialled. */
+    phone: row.phone,
+    email: row.email,
+    nationality: row.nationality,
   };
 }
 

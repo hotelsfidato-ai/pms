@@ -52,7 +52,9 @@ export interface Stay {
   status: StayStatus;
   isDayUse: boolean;
   isComplimentary: boolean;
-  rackTariff: number;       // per night, before discount
+  /** Per night, before discount. NULL when the room type has no rate
+      set — shown as a dash, never ₹0 (defect 246). */
+  rackTariff: number | null;
   offeredTariff: number;    // per night, after discount
   groupId?: string;
   /** The booking this room belongs to, when it is one of several sold
@@ -83,6 +85,15 @@ export interface Stay {
 
   /** Present only on a voided booking. */
   voidReason?: string;
+
+  /** How to reach the guest. NULL when they gave nothing — most walk-ins —
+      and never a placeholder somebody might dial. Optional because a stay
+      read by something older than the header that shows them has none. */
+  phone?: string | null;
+  email?: string | null;
+  /** NOT NULL in the database with a default of 'IN', so it is on every
+      guest — the panel shows it only when it is not 'IN'. */
+  nationality?: string;
 }
 
 export interface Folio {

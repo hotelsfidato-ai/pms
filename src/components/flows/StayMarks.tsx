@@ -1,8 +1,20 @@
-import { useState } from "react";
 import { Users } from "lucide-react";
 import { StatusPill } from "@/components/ui";
-import { GroupRoomsPanel } from "@/components/flows/GroupRoomsPanel";
+import { GROUP_ROOMS_ID } from "@/components/flows/GroupRoomsPanel";
 import type { Stay } from "@/data/repositories";
+
+/* The group's rooms are a column of the stay panel now, not a dialog
+   over it — so the pill brings them into view, and moves focus there so
+   a screen reader follows the eye. `scrollIntoView` is optional-called:
+   jsdom does not implement it, and a pill that threw in a test would
+   throw nowhere else. */
+function showGroupRooms() {
+  const el = document.getElementById(GROUP_ROOMS_ID);
+  if (!el) return;
+  const reduce = window.matchMedia?.("(prefers-reduced-motion: reduce)").matches;
+  el.scrollIntoView?.({ behavior: reduce ? "auto" : "smooth", block: "start" });
+  el.focus({ preventScroll: true });
+}
 
 /* ══════════════════════════════════════════════════════════════════
    THE MARKS ON A STAY, IN ONE PLACE
@@ -28,13 +40,7 @@ import type { Stay } from "@/data/repositories";
    for the sake of one.
    ══════════════════════════════════════════════════════════════════ */
 
-export function StayMarks({ stay, hotelId }: {
-  stay: Stay;
-  /** The property code, for opening the group's rooms beside this. */
-  hotelId: string;
-}) {
-  const [groupRooms, setGroupRooms] = useState<string | null>(null);
-
+export function StayMarks({ stay }: { stay: Stay }) {
   return (
     <>
       {stay.isComplimentary && (
@@ -42,14 +48,14 @@ export function StayMarks({ stay, hotelId }: {
       )}
       {stay.isDayUse && <StatusPill tone="neutral">Day use</StatusPill>}
 
-      {/* NAMED, and it opens the group's rooms beside this one rather
+      {/* NAMED, and it shows the group's rooms beside this one rather
           than navigating away. A clerk holding a phone wants to know
           WHICH group and how many rooms are in it, and then to look at
           the rest of them without losing this one. */}
       {stay.group ? (
         <button
           type="button"
-          onClick={() => setGroupRooms(stay.group!.id)}
+          onClick={showGroupRooms}
           className="rounded-md cursor-pointer focus-visible:outline-2
                      focus-visible:outline-brand-orange"
         >
@@ -74,16 +80,6 @@ export function StayMarks({ stay, hotelId }: {
       {stay.isVip && <StatusPill tone="accent">VIP</StatusPill>}
       {stay.isSingleLady && (
         <StatusPill tone="info">Single lady — placement</StatusPill>
-      )}
-
-      {groupRooms && (
-        <GroupRoomsPanel
-          hotelId={hotelId}
-          groupId={groupRooms}
-          currentStayId={stay.id}
-          open
-          onOpenChange={(o) => { if (!o) setGroupRooms(null); }}
-        />
       )}
     </>
   );

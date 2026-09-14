@@ -567,7 +567,8 @@ export interface Reservation {
   roomType: string;
   roomNumber?: string;
   rateType: string;
-  baseRate: number;
+  /** NULL when the room type has no rate set — as on a Stay (defect 246). */
+  baseRate: number | null;
   offeredRate: number;
   checkIn: string;
   checkOut: string;

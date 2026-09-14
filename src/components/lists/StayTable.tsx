@@ -4,13 +4,9 @@ import { Search, X, Rows3, LayoutGrid } from "lucide-react";
 import { cn } from "@/lib/cn";
 import { money, dateShort } from "@/lib/format";
 import {
-  DataTable, StatusPill, Input, Drawer, DrawerContent,
-  Tabs, TabsList, TabsTrigger, TabsContent, type Column, type Tone,
+  DataTable, StatusPill, Input, type Column, type Tone,
 } from "@/components/ui";
-import { CheckInFlow } from "@/components/flows/CheckInFlow";
-import { StayActions } from "@/components/flows/StayActions";
-import { FolioPanel } from "@/components/flows/FolioPanel";
-import { StayMarks } from "@/components/flows/StayMarks";
+import { StayDrawer } from "@/components/flows/StayDrawer";
 import type { Stay } from "@/data/repositories";
 
 /* ══════════════════════════════════════════════════════════════════
@@ -384,118 +380,20 @@ export function StayTable({
       />
       )}
 
-      {/* The same panel the tape chart opens, so nothing is relearned. */}
-      <Drawer open={!!selected} onOpenChange={(o) => !o && close()}>
-        {selected && (
-          <DrawerContent
-            title={selected.guest}
-            description={`Room ${selected.roomNumber} · ${selected.reference}`}
-            width="lg"
-          >
-            <Tabs defaultValue={defaultTab}>
-              <TabsList>
-                <TabsTrigger value="stay">Stay</TabsTrigger>
-                <TabsTrigger value="folio">Folio</TabsTrigger>
-              </TabsList>
-
-              <TabsContent value="stay">
-                <div className="space-y-5 pt-1">
-                  <StaySummary stay={selected} hotelId={hotelId} />
-                  {offerCheckIn && selected.status === "due-in" && (
-                    <CheckInFlow
-                      hotelId={hotelId}
-                      stay={selected}
-                      businessDate={businessDate}
-                    />
-                  )}
-
-                  {/* THE SAME ACTIONS THE TAPE CHART OFFERS. This file
-                      carried a comment saying it was "the same panel the
-                      tape chart opens"; it was a second copy of it, and
-                      a menu added to the chart's panel appeared on no
-                      list screen at all. Shared for real now, so the two
-                      cannot drift again. */}
-                  <StayActions
-                    hotelId={hotelId}
-                    stay={selected}
-                    businessDate={businessDate}
-                  />
-                </div>
-              </TabsContent>
-
-              <TabsContent value="folio">
-                <div className="pt-1">
-                  <FolioPanel
-                    hotelId={hotelId}
-                    stay={selected}
-                    businessDate={businessDate}
-                  />
-                </div>
-              </TabsContent>
-            </Tabs>
-          </DrawerContent>
-        )}
-      </Drawer>
+      {/* THE panel the tape chart opens — one component, not a copy of
+          it. This file said "the same panel" for months while drawing a
+          second one with fewer rows. */}
+      <StayDrawer
+        hotelId={hotelId}
+        stay={selected}
+        businessDate={businessDate}
+        status={selected
+          ? { tone: TONE[selected.status] ?? "neutral", label: LABEL[selected.status] ?? selected.status }
+          : null}
+        onClose={close}
+        defaultTab={defaultTab}
+        offerCheckIn={offerCheckIn ?? false}
+      />
     </>
-  );
-}
-
-function StaySummary({ stay, hotelId }: {
-  stay: StayRow; hotelId: string;
-}) {
-  return (
-    <div className="space-y-4">
-      <div className="flex items-center gap-2 flex-wrap">
-        <StatusPill tone={TONE[stay.status] ?? "neutral"} dot>
-          {LABEL[stay.status] ?? stay.status}
-        </StatusPill>
-        {/* ONE definition. This row was a second copy of the tape
-            chart's and had already drifted: its group pill said
-            "Group" while the chart's named the group, and VIP and the
-            single-lady mark were missing here entirely — on the very
-            lists a clerk checks before a guest arrives. */}
-        <StayMarks stay={stay} hotelId={hotelId} />
-      </div>
-
-      <dl className="divide-y divide-grey-100">
-        <Row label="Arrival" value={dateShort(stay.arrival)} tabular />
-        <Row label="Departure" value={dateShort(stay.departure)} tabular />
-        <Row label="Nights" value={stay.isDayUse ? "Day use" : String(stay.nights)} tabular />
-        <Row
-          label="Party"
-          value={`${stay.adults} adult${stay.adults === 1 ? "" : "s"}${stay.children ? `, ${stay.children} child` : ""}`}
-        />
-        <Row label="Source" value={stay.source ?? "—"} />
-        <Row label="Rate plan" value={stay.ratePlan} />
-        <Row label="Rack rate" value={money(stay.rackTariff)} tabular />
-        <Row
-          label="Offered"
-          value={stay.isComplimentary ? "Complimentary" : money(stay.offeredTariff)}
-          tabular
-        />
-      </dl>
-
-      {stay.notes && (
-        <div className="rounded-md bg-grey-50 border border-grey-200 p-3">
-          <p className="text-2xs font-semibold uppercase tracking-wide text-grey-400 mb-1">
-            Note
-          </p>
-          <p className="text-sm text-grey-700 leading-relaxed">{stay.notes}</p>
-        </div>
-      )}
-    </div>
-  );
-}
-
-function Row({
-  label, value, tabular,
-}: { label: string; value: string; tabular?: boolean }) {
-  return (
-    <div className="grid grid-cols-[minmax(110px,160px)_1fr] gap-4 py-2.5">
-      <dt className="text-sm text-grey-500">{label}</dt>
-      <dd className={cn("text-base text-ink-900 min-w-0", tabular && "tabular")}>
-        {value}
-      </dd>
-    </div>
   );
 }
