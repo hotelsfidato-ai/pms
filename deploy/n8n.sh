@@ -6,12 +6,27 @@
 #
 #   sudo N8N_DOMAIN=n8n.fidatohotels.com EMAIL=you@example.com \
 #        ALLOW_FROM=${SSH_CLIENT%% *} deploy/n8n.sh
-#       installs n8n and publishes it -- reachable ONLY from ALLOW_FROM, the
-#       address you are connected from, until you have created its owner
+#       installs n8n and publishes it. The n8n SCREEN answers only
+#       ALLOW_FROM, the address you are connected from. Webhooks --
+#       /webhook/, /webhook-test/, /webhook-waiting/ -- answer anybody,
+#       because an outside service calling a workflow is the point of them.
+#       The address is saved, so later runs do not need it again.
 #
-#   sudo deploy/n8n.sh open
-#       removes that restriction so webhooks from the outside world work.
-#       Rewrites the nginx site and touches nothing else.
+#   sudo ALLOW_FROM=${SSH_CLIENT%% *} deploy/n8n.sh allow
+#       YOUR INTERNET ADDRESS CHANGED. Most broadband here gets a new one
+#       when the router restarts, and the n8n screen then says so and shows
+#       the new address. SSH always works; this swaps the saved address and
+#       reloads nginx. n8n itself is not restarted.
+#
+#   sudo deploy/n8n.sh lock       everything, webhooks too, answers only you
+#   sudo deploy/n8n.sh webhooks   back to the default: screen locked, webhooks open
+#   sudo deploy/n8n.sh open       everything answers everybody -- the screen is
+#                                 then protected by its login alone
+#       All three rewrite the nginx site and touch nothing else.
+#
+#   Chosen by the owner on 14 September: "screen locked, webhooks open",
+#   on an address that changes. That is why it is the default and why
+#   `allow` exists.
 #
 #   sudo deploy/n8n.sh local
 #       n8n with NO domain yet. Installs and runs it on 127.0.0.1:5678 and
@@ -73,8 +88,9 @@
 #   A new certificate is published to Certificate Transparency logs within
 #   minutes, and there are scanners that read those logs looking for exactly
 #   this -- fresh n8n and WordPress installs with an unclaimed setup page. So
-#   the site goes up reachable only from YOUR address, and opens to the world
-#   when you say so, after the owner exists.
+#   the screen goes up reachable only from YOUR address and stays that way.
+#   Opening the webhook paths from the first minute is safe: they run only
+#   workflows that exist and are switched on, and a fresh install has none.
 # =============================================================================
 set -euo pipefail
 
@@ -86,7 +102,13 @@ MODE="${1:-install}"
 ENV_DIR=/etc/n8n
 ENV_FILE=$ENV_DIR/n8n.env
 KEY_FILE=$ENV_DIR/encryption-key
-OPEN_MARK=$ENV_DIR/open-to-the-world
+# Who the site answers. Two small files rather than flags on the command
+# line, because the ordinary UPGRADE -- `sudo N8N_VERSION=... deploy/n8n.sh`
+# -- carries neither. The first version read the address from ALLOW_FROM on
+# every run, so an upgrade restarted n8n and then died at the nginx step
+# asking for an address nobody had passed. Found on 14 September, reading.
+ACCESS_FILE=$ENV_DIR/access          # webhooks | lock | open
+ALLOW_FILE=$ENV_DIR/allow-from       # the one address the screen answers
 QUADLET=/etc/containers/systemd/n8n.container
 SITE=/etc/nginx/conf.d/n8n.conf
 WEBROOT=/var/www/letsencrypt
@@ -102,13 +124,15 @@ die() { printf "\n\033[31m  x %s\033[0m\n\n" "$1" >&2; exit 1; }
 
 case "$MODE" in
   install|local) ;;
-  open)
-    # The first version re-ran everything on `open`, which restarted n8n
-    # under the person who had just created its owner and was still in it.
-    [ -f "$ENV_FILE" ] || die "n8n is not installed yet. Run the install first."
-    touch "$OPEN_MARK"
+  webhooks|lock|open|allow)
+    # nginx only. The first version re-ran everything on `open`, which
+    # restarted n8n under the person who had just created its owner and
+    # was still in it.
+    [ -f "$CERT_DIR/fullchain.pem" ] \
+      || die "n8n is not on $N8N_DOMAIN yet. Run the install first."
     ;;
-  *) die "Unknown mode '$MODE'. Use no argument, 'local' or 'open'." ;;
+  *) die "Unknown mode '$MODE'. Use no argument, or one of:
+  local, allow, webhooks, lock, open" ;;
 esac
 
 # =============================================================================
@@ -144,7 +168,7 @@ EOF
 }
 
 # =============================================================================
-# Everything that is not nginx. Skipped by `open`.
+# Everything that is not nginx. Skipped by allow, webhooks, lock and open.
 # =============================================================================
 install_runtime() {
   say "Certificates renew themselves"
@@ -292,7 +316,7 @@ fi
 ok "$N8N_DOMAIN -> $THERE"
 fi
 
-if [ "$MODE" != "open" ]; then install_runtime; fi
+case "$MODE" in install|local) install_runtime ;; esac
 
 if [ "$MODE" = "local" ]; then
   install_backups
@@ -337,25 +361,74 @@ else
   ok "certificate present -- $(openssl x509 -enddate -noout -in "$CERT_DIR/cert.pem" | cut -d= -f2)"
 fi
 
-# Who may reach it until it is opened.
-ALLOW_LINES=""
-if [ ! -f "$OPEN_MARK" ]; then
-  ADMIN_IP="${ALLOW_FROM:-}"
-  if [ -z "$ADMIN_IP" ]; then
-    ADMIN_IP="$(who am i 2>/dev/null | sed -nE 's/.*\(([0-9.]+)\).*/\1/p')"
-  fi
-  [ -n "$ADMIN_IP" ] || die "Could not tell which address you are connecting from.
-  Put this in front of the command, so YOUR shell expands it before sudo:
+# =============================================================================
+# Who it answers
+# =============================================================================
+# The access level: named on the command line, else what was chosen last
+# time, else the owner's choice of 14 September.
+case "$MODE" in
+  webhooks|lock|open) ACCESS="$MODE" ;;
+  *) ACCESS="$(cat "$ACCESS_FILE" 2>/dev/null || true)"; ACCESS="${ACCESS:-webhooks}" ;;
+esac
+case "$ACCESS" in webhooks|lock|open) ;; *) die "$ACCESS_FILE says '$ACCESS'." ;; esac
+
+# The address: given now, else saved last time. `allow` exists to change it,
+# so it insists on being given one.
+ADMIN_IP="${ALLOW_FROM:-}"
+if [ -z "$ADMIN_IP" ] && [ "$MODE" != "allow" ]; then
+  ADMIN_IP="$(cat "$ALLOW_FILE" 2>/dev/null || true)"
+fi
+if [ -z "$ADMIN_IP" ] && [ "$ACCESS" != "open" ]; then
+  die "Which address should the n8n screen answer? Put this in front of the
+  command, so YOUR shell expands it before sudo does:
     ALLOW_FROM=\${SSH_CLIENT%% *}"
+fi
+if [ -n "$ADMIN_IP" ]; then
   # A stray word here would become an nginx directive. Dotted numbers only.
   [[ "$ADMIN_IP" =~ ^[0-9]{1,3}(\.[0-9]{1,3}){3}$ ]] \
     || die "ALLOW_FROM='$ADMIN_IP' is not an IPv4 address."
-  ALLOW_LINES="        allow $ADMIN_IP;
-        deny all;"
 fi
+
+# Every route into n8n proxies the same way, so it is written once.
+PROXY="        proxy_pass http://127.0.0.1:5678;
+        proxy_http_version 1.1;
+        proxy_set_header Upgrade \$http_upgrade;
+        proxy_set_header Connection \$n8n_connection_upgrade;
+        proxy_set_header Host \$host;
+        proxy_set_header X-Real-IP \$remote_addr;
+        proxy_set_header X-Forwarded-For \$proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto \$scheme;
+        # A long-running workflow or a held webhook is not a dead one.
+        proxy_read_timeout 300s;
+        proxy_buffering off;"
+
+LOCKED="        allow $ADMIN_IP;
+        deny all;"
+
+# ⚠ ONLY THE THREE WEBHOOK PATHS. n8n's own screen, its REST API under
+# /rest/ and its sign-in all live under / -- opening "everything except the
+# editor" by listing what to close would miss the next path n8n adds. This
+# lists what to OPEN, so a path nobody named stays shut.
+#
+# Forms (/form/) are NOT here. A form page loads the editor's scripts and
+# styles, which are locked, so it would render broken -- and nobody has
+# asked for a public form yet.
+case "$ACCESS" in
+  webhooks) SCREEN_RULE="$LOCKED"; HOOK_RULE="" ;;
+  lock)     SCREEN_RULE="$LOCKED"; HOOK_RULE="$LOCKED" ;;
+  open)     SCREEN_RULE="";        HOOK_RULE="" ;;
+esac
+
+# ⚠ A REJECTED SITE MUST NOT BE LEFT IN conf.d. `nginx -t` below refuses to
+# reload, and the first version stopped there -- with the bad file still in
+# place, where the API certificate's renewal hook would trip over it at its
+# next `systemctl reload nginx`, and a reboot would bring nginx up with
+# neither site. The API shares this nginx. The last good file comes back.
+if [ -f "$SITE" ]; then cp -a "$SITE" "$SITE.last-good"; fi
 
 cat > "$SITE" <<EOF
 # Written by deploy/n8n.sh -- rewritten on every run. Edit the script.
+# Access: $ACCESS${ADMIN_IP:+, screen answers $ADMIN_IP}
 
 # The editor keeps a websocket open to the server. Named for n8n so it
 # cannot collide with a map anybody later adds for the API.
@@ -363,6 +436,11 @@ map \$http_upgrade \$n8n_connection_upgrade {
     default upgrade;
     ''      close;
 }
+
+# Webhooks answer the whole internet, so they are rate-limited per address:
+# a flood aimed at one cannot fill n8n's execution log or its one CPU.
+# Generous -- a real service sends a handful a second at most.
+limit_req_zone \$binary_remote_addr zone=n8n_hooks:10m rate=10r/s;
 
 server {
     listen 80;
@@ -385,39 +463,62 @@ server {
     # Workflows move files. The default of 1 MB refuses a single photo.
     client_max_body_size 50m;
 
+    # ⚠ WHEN THE ADDRESS CHANGES, SAY SO. A bare 403 after a router restart
+    # reads as "n8n is broken". This names the visitor's new address and the
+    # one command that lets it in. Only nginx's own refusals come here --
+    # n8n's answers pass through untouched, because nothing intercepts them.
+    error_page 403 = @n8n_locked;
+    location @n8n_locked {
+        default_type text/plain;
+        return 403 "This n8n answers only the internet address saved on the server, and you are coming from \$remote_addr.\n\nIf that is you, connect to the server with SSH and run:\n\n    sudo ALLOW_FROM=\$remote_addr /opt/fidato/deploy/n8n.sh allow\n";
+    }
+
+    location ~ ^/(webhook|webhook-test|webhook-waiting)/ {
+$HOOK_RULE
+        limit_req zone=n8n_hooks burst=40 nodelay;
+        limit_req_status 429;
+$PROXY
+    }
+
     location / {
-$ALLOW_LINES
-        proxy_pass http://127.0.0.1:5678;
-        proxy_http_version 1.1;
-        proxy_set_header Upgrade \$http_upgrade;
-        proxy_set_header Connection \$n8n_connection_upgrade;
-        proxy_set_header Host \$host;
-        proxy_set_header X-Real-IP \$remote_addr;
-        proxy_set_header X-Forwarded-For \$proxy_add_x_forwarded_for;
-        proxy_set_header X-Forwarded-Proto \$scheme;
-        # A long-running workflow or a held webhook is not a dead one.
-        proxy_read_timeout 300s;
-        proxy_buffering off;
+$SCREEN_RULE
+$PROXY
     }
 }
 EOF
-nginx -t -q || die "nginx rejected the site. Nothing was reloaded; the API is unaffected."
-systemctl reload nginx
-if [ -n "$ALLOW_LINES" ]; then
-  ok "https://$N8N_DOMAIN -- reachable ONLY from $ADMIN_IP"
-else
-  ok "https://$N8N_DOMAIN -- open to the world"
+if ! nginx -t -q; then
+  if [ -f "$SITE.last-good" ]; then mv -f "$SITE.last-good" "$SITE"; else rm -f "$SITE"; fi
+  die "nginx rejected the new n8n site. The previous one is back and nothing was
+  reloaded -- the API is unaffected."
 fi
+rm -f "$SITE.last-good"
+systemctl reload nginx
+
+# Saved only once nginx has accepted them, so a rejected run leaves the
+# last working choice on file.
+echo "$ACCESS" > "$ACCESS_FILE"
+if [ -n "$ADMIN_IP" ]; then echo "$ADMIN_IP" > "$ALLOW_FILE"; fi
+
+case "$ACCESS" in
+  webhooks) ok "screen: only $ADMIN_IP -- webhooks: everybody" ;;
+  lock)     ok "screen and webhooks: only $ADMIN_IP" ;;
+  open)     ok "screen and webhooks: everybody -- the n8n login is the only lock" ;;
+esac
 
 if [ "$MODE" = "install" ]; then install_backups; fi
 
 # =============================================================================
-if [ "$MODE" = "open" ]; then
-  printf "\n\033[32m  n8n is open to the world at https://%s\033[0m\n\n" "$N8N_DOMAIN"
-elif [ ! -f "$OPEN_MARK" ]; then
-  printf "\n\033[32m  n8n is running at https://%s\033[0m\n" "$N8N_DOMAIN"
-  printf "\n  1. Open it now and create the owner account. Only you can reach it.\n"
-  printf "  2. Then:  sudo deploy/n8n.sh open\n\n"
-else
-  printf "\n\033[32m  n8n is running at https://%s\033[0m\n\n" "$N8N_DOMAIN"
-fi
+printf "\n\033[32m  n8n is running at https://%s\033[0m\n" "$N8N_DOMAIN"
+case "$ACCESS" in
+  webhooks)
+    printf "\n  The screen answers only %s. Webhook addresses answer anybody:\n" "$ADMIN_IP"
+    printf "    https://%s/webhook/...\n" "$N8N_DOMAIN"
+    printf "\n  When your internet address changes, the screen tells you the new one.\n"
+    printf "  Connect with SSH and run:  sudo ALLOW_FROM=\${SSH_CLIENT%%%% *} deploy/n8n.sh allow\n\n" ;;
+  lock)
+    printf "\n  Everything, webhooks too, answers only %s.\n" "$ADMIN_IP"
+    printf "  To let outside services in again:  sudo deploy/n8n.sh webhooks\n\n" ;;
+  open)
+    printf "\n  Everything answers everybody. Turn on two-step sign-in for every\n"
+    printf "  n8n user: Settings -> Personal -> Enable 2FA.\n\n" ;;
+esac
