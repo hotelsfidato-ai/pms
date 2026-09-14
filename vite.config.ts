@@ -46,6 +46,16 @@ export default defineConfig(({ mode }) => {
   define: {
     __CACHE_BUSTER__: JSON.stringify(cacheBuster),
   },
+  /* THE DEV SERVER TAKES THE PORT IT IS GIVEN. The preview pane assigns
+     one through PORT, because on this machine 5173 is often already held
+     by the CRS project's own dev server — a fixed 5173 meant the PMS
+     could not start beside it. Strict when given, so the pane and Vite
+     never disagree about where the app is; unset, it is Vite's usual
+     5173. A real environment variable, unlike the .env files above. */
+  server: {
+    port: Number(process.env.PORT) || 5173,
+    strictPort: Boolean(process.env.PORT),
+  },
   plugins: [
     react(),
     tailwindcss(),
