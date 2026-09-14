@@ -6184,6 +6184,18 @@ side effect, and development mode exists to expose exactly that.
 
 ---
 
+### 255 · A commit message piped into `git commit -F -` from PowerShell 5.1
+
+`git commit -F - @'…'@` in Windows PowerShell does not pipe the here-string
+to stdin — it passes it as another argument, and git read the whole message
+as a file path: `error: pathspec 'Staff-first, phase 1…' did not match`.
+Nothing was committed and the files stayed staged, so it cost one retry, not
+a wrong commit. `git commit -m @'…'@` works; so does writing the message to a
+file in the scratchpad and `git commit -F <that file>`, which is what landed
+2eff775.
+
+---
+
 ### Open · two "in house" numbers for the same moment
 
 The property page (`getTodaySnapshot`) said **In house now 11, Vacant 9** while
