@@ -1,12 +1,17 @@
+import { useQueryClient } from "@tanstack/react-query";
 import { Check, ChevronDown, LogOut, ShieldCheck } from "lucide-react";
 import { cn } from "@/lib/cn";
 import {
   useSession, useRole, useCurrentHotel, useWorkableHotels,
 } from "@/lib/session";
+import { devAuth, getDevSubject } from "@/lib/api";
+import { DEV_IDENTITIES } from "@/lib/devIdentities";
+import { queryPersister } from "@/lib/persist";
 import { ROLE_LABELS } from "@/lib/permissions";
 import {
   DropdownMenu, DropdownMenuTrigger, DropdownMenuContent,
   DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuItem, Avatar,
+  toast,
 } from "@/components/ui";
 import * as DropdownPrimitive from "@radix-ui/react-dropdown-menu";
 
@@ -21,18 +26,52 @@ import * as DropdownPrimitive from "@radix-ui/react-dropdown-menu";
    Nothing here is choosable except the property, and only among the
    ones this person may actually work in. The role is read from
    Postgres and displayed; it cannot be set.
+
+   ⚠ THE "VIEW AS" SECTION IS NOT THAT SWITCHER COMING BACK. Asked for
+   on 14 September, for local testing: "a switcher between the property
+   and the GM of the hotel, so I can see both views". It differs from
+   the CP1 control in the two ways that matter:
+
+     · it SIGNS IN AS another staff account that exists in the local
+       database — the GM's permissions are the GM's staff_hotels row,
+       the same as a real GM's; no role is overridden anywhere
+     · it exists only where `devAuth` is on: the local .env sets it,
+       .env.production blanks it, and the API refuses the dev header
+       under NODE_ENV=production even if a build carried it
    ══════════════════════════════════════════════════════════════════ */
 
 export function AccountMenu() {
   const scope = useSession((s) => s.scope);
   const signOut = useSession((s) => s.signOut);
+  const signInAsDev = useSession((s) => s.signInAsDev);
   const setHotelId = useSession((s) => s.setHotelId);
   const hotelId = useSession((s) => s.hotelId);
   const role = useRole();
   const current = useCurrentHotel();
   const workable = useWorkableHotels();
+  const queryClient = useQueryClient();
 
   if (!scope) return null;
+
+  const devSubject = devAuth ? getDevSubject() : null;
+
+  /* Another person's screens must not show through: the in-memory cache
+     AND the offline copy of it are dropped before the new identity
+     loads. A GM looking at a list the owner's session had fetched would
+     be testing the owner's view with the GM's name on it. */
+  const viewAs = async (uid: string, label: string) => {
+    if (uid === devSubject) return;
+    await queryPersister.removeClient();
+    queryClient.clear();
+    await signInAsDev(uid);
+    const failed = useSession.getState().status !== "signed-in";
+    if (failed) {
+      toast.error(`Could not switch to ${label}`,
+        useSession.getState().error ?? "That test account is not in this database.");
+      return;
+    }
+    toast.success(`Viewing as ${label}`, "Local test sign-in. Every permission is that account's own.");
+  };
 
   return (
     <DropdownMenu>
@@ -112,6 +151,37 @@ export function AccountMenu() {
               </p>
             )}
           </div>
+        )}
+
+        {devAuth && (
+          <>
+            <DropdownMenuSeparator />
+            <DropdownMenuLabel>
+              <span className="text-brand-yellow">Development only</span> · view as
+            </DropdownMenuLabel>
+            {DEV_IDENTITIES.map((d) => (
+              <DropdownPrimitive.Item
+                key={d.uid}
+                onSelect={() => void viewAs(d.uid, d.label)}
+                data-dev-identity={d.uid}
+                className={cn(
+                  "flex items-center gap-2.5 px-2.5 py-2 rounded-sm cursor-pointer select-none outline-none",
+                  "transition-colors duration-150 data-[highlighted]:bg-grey-100",
+                )}
+              >
+                <Check
+                  className={cn(
+                    "size-4 shrink-0 text-brand-orange",
+                    d.uid === devSubject ? "opacity-100" : "opacity-0",
+                  )}
+                />
+                <span className="min-w-0">
+                  <span className="block text-base text-ink-900">{d.label}</span>
+                  <span className="block text-2xs text-grey-500">{d.detail}</span>
+                </span>
+              </DropdownPrimitive.Item>
+            ))}
+          </>
         )}
 
         <DropdownMenuSeparator />

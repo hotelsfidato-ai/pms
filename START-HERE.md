@@ -89,6 +89,22 @@ cd "D:\fidato pms"     && npm run dev     # http://localhost:5173 (or next free)
 
 Open the interface, click **Owner** under "Development only", and you are in.
 
+**The GM and the desk, for testing their views** — two more test sign-ins at
+5EL, seeded separately because `dev-identities.sql` also seeds every API test
+database and must not change what those tests count:
+
+```bash
+cd "D:\fidato pms"
+D:/fidato-pg/pgsql/bin/psql.exe -h 127.0.0.1 -p 55432 -U postgres -d fidato -f db/dev/dev-testers.sql
+```
+
+Then **General Manager** and **Reception** appear under "Development only",
+and the account menu's **View as** switches between all three without signing
+out. Each is a real staff row: the GM's permissions are the GM's own
+`staff_hotels` row, nothing is overridden. None of it exists in production —
+`.env.production` blanks `VITE_ALLOW_DEV_AUTH`, and the API refuses the dev
+header under `NODE_ENV=production`.
+
 ---
 
 ## 2 · What this is

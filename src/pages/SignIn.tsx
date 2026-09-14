@@ -3,6 +3,7 @@ import { LogIn, TriangleAlert } from "lucide-react";
 import { cn } from "@/lib/cn";
 import { useSession } from "@/lib/session";
 import { devAuth } from "@/lib/api";
+import { DEV_IDENTITIES } from "@/lib/devIdentities";
 import { isConfigured } from "@/lib/firebase";
 import { Button, Card, CardBody, Field, Input } from "@/components/ui";
 
@@ -11,22 +12,10 @@ import { Button, Card, CardBody, Field, Input } from "@/components/ui";
 
    Firebase takes the password; this screen never sees it after the
    call. Postgres decides everything that happens next.
+
+   The "Development only" buttons come from src/lib/devIdentities.ts —
+   the same list the account menu's switcher uses.
    ══════════════════════════════════════════════════════════════════ */
-
-/* Seeded by db/dev/dev-identities.sql. Local development only.
-
-   ⚠ AGRA AND PUNE WERE HERE AND BOTH BUTTONS WERE DEAD. They were the
-   demo properties, and deleting the demo took their clerks with it —
-   the buttons stayed, and pressing either one got
-   "No active staff record for this account." A control that cannot
-   ever succeed is worse than no control: it reads as a broken login
-   rather than as a removed fixture.
-
-   Only accounts that exist and are ACTIVE belong here. A shortcut for
-   a property that has not been created yet is a shortcut to a 401. */
-const DEV_IDENTITIES = [
-  { uid: "dev-owner", label: "Owner", detail: "every property · group admin" },
-];
 
 export default function SignInPage() {
   const signIn = useSession((s) => s.signIn);
