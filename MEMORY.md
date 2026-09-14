@@ -5894,3 +5894,43 @@ work, distrust the measurement first.** `launch.sh` running on Linux that
 morning was stronger evidence than a count I had just produced. Use
 `tr -cd '\r' | wc -c` — it counts characters, and it cannot be fooled by how
 a tool on Windows chooses to read lines.
+
+---
+
+### 242 · "Required" went on one of the two doors a booking comes through
+
+Phase 2 made the channel compulsory. `groups.ts` refuses a booking with no
+`bookingSourceId` — *"Where did this booking come from?"* — and 082 wrote on
+`reservations.booking_source_id`:
+
+> *"Required on anything taken from today — enforced by the API"*
+
+**The API has two statements that create a reservation**, and the rule went
+into one:
+
+```
+api/src/routes/groups.ts      POST /:code/bookings    requires the channel
+api/src/routes/operations.ts  POST /:code/walk-ins    source = 'walk_in',
+                                                      booking_source_id never set
+```
+
+Found on production during the 14 September audit, 4 bookings since the reset:
+
+```
+FH-2609-5001 | walk_in | has channel: f | screen shows "Walk-in"
+the other 3  | Walk-in | has channel: t | screen shows "Walk-in"
+```
+
+⚠ **Nothing looked wrong, and that is why it lasted.** `app.booking_source_label`
+falls back to the legacy `source` column, so the stay list still reads
+"Walk-in". Everything that counts BY CHANNEL — the Booking sources screen, the
+commission stamped at booking — does not see that stay at all.
+
+**The rule, again: "required on every X" starts with finding every statement
+that makes an X** — `insert into reservations`, two hits — and the rule goes on
+each, or into one place both pass through. 082 said the API enforced it
+without saying where, and "the API" was two doors.
+
+Status on 14 September: found and recorded, **not fixed yet** — the fix stamps
+the Walk-in channel on the desk flow, and the one production row needs a
+back-fill, which is the owner's to approve.

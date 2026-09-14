@@ -1,6 +1,7 @@
 # What is left
 
-Written 9 September 2026, at the end of phase 2. This file is the answer
+Written 9 September 2026, at the end of phase 2; brought up to date by
+the audit of 14 September. This file is the answer
 to "what is pending" — it replaces asking, and it is meant to be edited
 rather than appended to.
 
@@ -9,46 +10,71 @@ recorded a decision about is a gap somebody rediscovers and re-argues.
 
 ---
 
-## 1 · Not deployed yet
+## 1 · What is live — measured on the box, 14 September 2026
 
-Phase 2 is on `cp6` and on GitHub. It is **not on either running
-environment.**
-
-```
-pms.fidatohotels.com     Firebase          behind by phase 2
-api.fidatohotels.com     Oracle, Mumbai    behind by phase 2
-```
-
-Two migrations have to reach the server before the API will start
-cleanly against it:
+Phase 2 is deployed. The server runs `1f77239`; the frontend is current.
 
 ```
-082_booking_sources.sql   booking_sources, booking_source_rates,
-                          reservations.booking_source_id + commission_pct,
-                          app.booking_source_label()
-083_promotions.sql        pos_promotions, pos_orders.promotion_id,
-                          app.pos_freehand_discount_cap()
-084_property_admin.sql    app.manages_hotel, app.grantable_roles,
-                          app.may_manage_person, and the staff /
-                          staff_hotels policies that let a general
-                          manager roster their own hotel
+fidato-api, nginx, postgresql       active
+n8n                                 active, 127.0.0.1:5678 only (local mode)
+certbot-renew.timer                 active — dry run passed 14 Sep;
+                                    api cert expires 7 Dec 2026
+PMS backups                         nightly, 10–14 Sep present
+n8n backups                         nightly 03:30, data + key
+disk / memory                       17 GB free / 8.7 GB available
+n8n.fidatohotels.com                does not resolve yet
 ```
 
-⚠ **084 changes who may do what.** It is the only migration in this
-group that widens a permission, and the widening is per-hotel: a general
-manager gains their own property and nothing else. The three doors it
-must not open — rostering at another hotel, appointing an `owner`,
-resetting a group administrator's password — each have an assertion in
-`db/tests/suite.sql` and an API test that fails if they open.
-
-`deploy/launch.sh` applies migrations, runs the preflight and restarts
-the service. Its two upgrade-path defects (211 TLS, 212 peer auth) were
-fixed and pushed, so this is the first upgrade that should survive
-itself — **it has not been exercised on the real box yet.**
+Transactions were reset on 9 September. Since then: 4 bookings, 4 guests,
+5 till orders.
 
 ---
 
-## 2 · Deferred by the owner, on the record
+## 2 · Found in the 14 September audit
+
+### The walk-in desk does not record a channel — defect 242
+
+`groups.ts` requires a booking channel; `operations.ts` (walk-in) never
+sets one. One of the four live bookings has none. The screen still says
+"Walk-in" through the label fallback, so it looks right and counts wrong.
+Fix is small — stamp the Walk-in channel on the desk flow. **The one
+production row needs a back-fill, which needs the owner's yes.**
+
+### Every backup is on the same disk as the thing it backs up — P0
+
+PMS dumps, n8n data and the n8n encryption key all sit on the boot volume.
+One failed disk loses the hotel, the automations and every copy of both.
+Off-box storage (OCI Object Storage, or copies pulled to the office) is a
+decision for the owner.
+
+### The configuration is still the demo's
+
+```
+room rates     Deluxe 3,699 · Superior 4,099     from load-demo.ts, not the hotel
+menu           17 items, 20 tables               demo
+companies      Agoda, Booking.com, Expedia, ...  channels filed as companies
+```
+
+Real bookings are already being taken against those rates. Either they
+are the hotel's rates too, or they need replacing — only the owner knows.
+
+### `demo@fidatohotels.com` holds the owner role at 5EL
+
+Re-added after the reset, active, can sign in. The owner role does
+everything at that property. Fine for a demo in the owner's hands; not
+for a password that has been shared.
+
+### Owner-side, not code
+
+- Rotate the Firebase Admin key — it passed through a chat.
+- Put the n8n encryption key in a password manager, off the box.
+- `owner@fidato.in` is inactive but still linked to a development login.
+- n8n reaches the PMS through the API as its own account — that account
+  (`n8n@fidatohotels.com`) does not exist yet.
+
+---
+
+## 3 · Deferred by the owner, on the record
 
 ### Housekeeping never refreshes itself — defect 218
 
@@ -87,7 +113,7 @@ Said plainly by the owner on 8 September.
 
 ---
 
-## 3 · Built and still unreachable
+## 4 · Built and still unreachable
 
 The project's signature defect. Each of these is real work nobody can
 use. **They are listed rather than quietly counted as done.**
@@ -117,7 +143,7 @@ unreachable, and its remaining kinds (`purchase`, `cash_expense`,
 purchase and expense approvals at all? If not, the engine should be
 deleted rather than left looking finished.
 
-### Thirteen seam functions with no caller
+### Twelve seam functions with no caller
 
 Listed in `KNOWN_UNREACHABLE` in
 `src/data/repositories/repositories.test.ts`. All are helpers overtaken
@@ -127,7 +153,7 @@ and stays.
 
 ---
 
-## 4 · Gates that do not exist yet
+## 5 · Gates that do not exist yet
 
 ### No reachability gate for API routes — the gap defect 224 names
 
@@ -160,7 +186,13 @@ example.
 
 ---
 
-## 5 · Known rough edges, small
+## 6 · Known rough edges, small
+
+- **Three tables are owned by `postgres`, the other 63 by `pms_migrate`.**
+  `booking_sources`, `booking_source_rates` and `pos_promotions` were
+  created by the phase 2 deploy, which ran as the superuser. Harmless while
+  migrations run as `postgres`; a migration run as `pms_migrate` that
+  alters them will fail with "must be owner".
 
 - **`pos_promotions` has no validity dates.** A promotion runs until
   somebody switches it off. Deliberate — dates were not asked for and
