@@ -5557,3 +5557,49 @@ begin
   delete from staff_hotels where staff_id in (gm_agr, clerk);
   update staff set is_active = false where id in (gm_agr, clerk);
 end $$;
+
+
+-- =============================================================================
+-- 085 · A walk-in's channel, answered once
+-- =============================================================================
+-- The desk and the back-fill both ask app.walk_in_source(). Proved here: it
+-- finds the seeded row, it survives a rename because it asks by kind and not
+-- by name, it skips a switched-off row, and it is NULL — not some other
+-- channel — when no walk-in source is on. NULL is what makes the desk refuse.
+-- =============================================================================
+do $$
+declare
+  walkin uuid; spare uuid;
+begin
+  select id into walkin from booking_sources where name = 'Walk-in';
+
+  perform test.ok('walk-in channel','it is the seeded Walk-in',
+    app.walk_in_source() = walkin);
+
+  -- A rename is an ordinary edit on the Booking sources screen.
+  update booking_sources set name = 'Walk-in guest' where id = walkin;
+  perform test.ok('walk-in channel','a rename does not lose it',
+    app.walk_in_source() = walkin,
+    'it asked by name — renaming the row would stop the desk');
+  update booking_sources set name = 'Walk-in' where id = walkin;
+
+  -- Two walk-in sources: the oldest active one, every time.
+  insert into booking_sources (name, kind)
+  values ('Walk-in (late desk)', 'walk_in')
+  returning id into spare;
+  perform test.ok('walk-in channel','with two, the oldest active one',
+    app.walk_in_source() = walkin);
+
+  update booking_sources set is_active = false where id = walkin;
+  perform test.ok('walk-in channel','a switched-off row is skipped',
+    app.walk_in_source() = spare);
+
+  update booking_sources set is_active = false where id = spare;
+  perform test.ok('walk-in channel','none switched on is NULL, not another channel',
+    app.walk_in_source() is null,
+    'a walk-in filed under some other channel would be worse than a refusal');
+
+  -- ---------- teardown ----------
+  update booking_sources set is_active = true where id = walkin;
+  delete from booking_sources where id = spare;
+end $$;

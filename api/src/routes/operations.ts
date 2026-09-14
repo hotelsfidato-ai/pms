@@ -1100,21 +1100,12 @@ operations.post("/:code/walk-ins", async (c) => {
       return refuse(`Room ${roomNumber} is held by ${clash[0].reference} for part of that stay.`);
     }
 
-    const { rows: guestRows } = await client.query<{ id: string }>(
-      "insert into guests (full_name) values ($1) returning id",
-      [guestName],
-    );
-
-    /* The per-hotel reference sequence. `nextReference()` in the store
-       generated one client-side, which cannot stay unique once two
-       clerks are taking walk-ins at the same desk. */
-    const { rows: refRows } = await client.query<{ reference: string }>(
-      `select 'FH-' || to_char(now(), 'YYMM') || '-' ||
-              lpad((coalesce(max(substring(reference from '[0-9]+$')::int), 5000) + 1)::text, 4, '0')
-              as reference
-         from reservations where hotel_id = $1`,
-      [hotelId],
-    );
+    /* ⚠ EVERY REFUSAL GOES ABOVE THE FIRST WRITE. `withSession` commits
+       whatever the callback returns, a refusal included, so a refusal
+       below an insert keeps the insert. The rate check used to sit under
+       the guest insert: a walk-in refused for an unpriced room left a
+       guest behind, and 015's guests_no_delete means nobody can remove
+       one. Defect 243 — found moving the channel check in beside it. */
 
     /* A NULL RACK RATE MUST REFUSE, NOT DEFAULT TO NOTHING.
 
@@ -1138,14 +1129,58 @@ operations.post("/:code/walk-ins", async (c) => {
       ? `Rate override — ${body.overrideReason.trim()}`
       : null;
 
+    /* ⚠ THE CHANNEL. The booking form has required one since 082 and
+       this route never set it, so a walk-in read "Walk-in" on the stay
+       list — the label falls back to the legacy column — and was
+       invisible to everything that counts by channel. Defect 242.
+
+       Not a question for the clerk: a walk-in's channel is the Walk-in
+       source, and 085's app.walk_in_source() is the one place that says
+       which row that is. The commission is stamped the way groups.ts
+       stamps it — this property's rate today, NULL when none is agreed. */
+    const { rows: channel } = await client.query<{
+      id: string; commission_pct: string | null;
+    }>(
+      `select bs.id::text as id, r.commission_pct::text as commission_pct
+         from booking_sources bs
+         left join booking_source_rates r
+                on r.booking_source_id = bs.id and r.hotel_id = $1
+        where bs.id = app.walk_in_source()`,
+      [hotelId],
+    );
+    if (!channel[0]) {
+      return refuse(
+        "There is no Walk-in booking source switched on, so this stay "
+        + "cannot record where it came from. A manager can switch it back "
+        + "on under Configuration → Booking sources.",
+      );
+    }
+
+    const { rows: guestRows } = await client.query<{ id: string }>(
+      "insert into guests (full_name) values ($1) returning id",
+      [guestName],
+    );
+
+    /* The per-hotel reference sequence. `nextReference()` in the store
+       generated one client-side, which cannot stay unique once two
+       clerks are taking walk-ins at the same desk. */
+    const { rows: refRows } = await client.query<{ reference: string }>(
+      `select 'FH-' || to_char(now(), 'YYMM') || '-' ||
+              lpad((coalesce(max(substring(reference from '[0-9]+$')::int), 5000) + 1)::text, 4, '0')
+              as reference
+         from reservations where hotel_id = $1`,
+      [hotelId],
+    );
+
     const { rows: made } = await client.query<{ id: string }>(
       `insert into reservations
          (hotel_id, reference, guest_id, room_type_id, check_in, check_out,
           adults, children, occupancy, agreed_rate, status, source,
           meal_plan, notes,
-          business_source, market_segment, sales_person, is_single_lady)
+          business_source, market_segment, sales_person, is_single_lady,
+          booking_source_id, commission_pct)
        values ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,'checked_in','walk_in',$11,$12,
-               $13,$14,$15,$16)
+               $13,$14,$15,$16,$17,$18::numeric)
        returning id`,
       [hotelId, refRows[0]?.reference, guestRows[0]?.id, room.room_type_id,
        businessDate, checkOut, body.adults ?? 1, body.children ?? 0,
@@ -1157,7 +1192,8 @@ operations.post("/:code/walk-ins", async (c) => {
        body.businessSource?.trim() || null,
        body.marketSegment?.trim() || null,
        body.salesPerson?.trim() || null,
-       body.isSingleLady === true],
+       body.isSingleLady === true,
+       channel[0].id, channel[0].commission_pct],
     );
     const stayId = made[0]!.id;
 

@@ -349,6 +349,31 @@ describe("a walk-in records where it came from", () => {
     }
   });
 
+  it("⚠ RECORDS THE WALK-IN CHANNEL — defect 242", async () => {
+    /* The booking form refused a booking with no channel; this route
+       saved one on every walk-in, and the stay list hid it by reading
+       "Walk-in" off the legacy column. The channel is the row, not the
+       label. */
+    const db = await admin();
+    try {
+      const { rows } = await db.query<{
+        channel: string | null; walk_in: string | null; kind: string | null;
+      }>(
+        `select r.booking_source_id::text as channel,
+                app.walk_in_source()::text as walk_in,
+                bs.kind
+           from reservations r
+           left join booking_sources bs on bs.id = r.booking_source_id
+          where r.id = $1`, [made]);
+
+      expect(rows[0]!.channel, "the walk-in was saved with no channel").not.toBeNull();
+      expect(rows[0]!.channel).toBe(rows[0]!.walk_in);
+      expect(rows[0]!.kind).toBe("walk_in");
+    } finally {
+      await db.end();
+    }
+  });
+
   it("leaves an unanswered field NULL, not an empty string", async () => {
     const res = await as(`/5EL/stays/${made}`);
     expect(res.status).toBe(200);
@@ -366,6 +391,83 @@ describe("a walk-in records where it came from", () => {
     } finally {
       await db.end();
     }
+  });
+
+  /* A room nobody is in, for the two refusals below. */
+  const freeRoom = async () => {
+    const db = await admin();
+    try {
+      const { rows } = await db.query<{ number: string }>(
+        `select rm.number from rooms rm
+           join hotels h on h.id = rm.hotel_id
+          where h.code = '5EL'
+            and not exists (
+              select 1 from room_assignments a
+               where a.room_id = rm.id and a.released_at is null)
+            and rm.housekeeping_status = 'clean'
+          limit 1`);
+      expect(rows[0], "the demo has no free room").toBeTruthy();
+      return rows[0]!.number;
+    } finally {
+      await db.end();
+    }
+  };
+
+  const guestsNamed = async (name: string) => {
+    const db = await admin();
+    try {
+      const { rows } = await db.query<{ n: string }>(
+        "select count(*)::text as n from guests where full_name = $1", [name]);
+      return rows[0]!.n;
+    } finally {
+      await db.end();
+    }
+  };
+
+  it("refuses when no Walk-in channel is switched on, and writes nothing", async () => {
+    /* Saving the stay with no channel is the defect; refusing is what
+       the booking form does too. The clerk is told who can fix it. */
+    const room = await freeRoom();
+    const db = await admin();
+    const { rows: off } = await db.query<{ id: string }>(
+      `update booking_sources set is_active = false
+        where kind = 'walk_in' and is_active returning id::text`);
+    try {
+      const res = await post("/5EL/walk-ins", {
+        guestName: "No Channel Guest",
+        roomNumber: room, nights: 1, adults: 1, children: 0,
+        ratePlan: "CP", rackTariff: 4000, offeredTariff: 4000,
+        overrideReason: "", businessDate: "2026-08-25", user: "test",
+      });
+      expect(res.status).toBe(409);
+      expect(((await res.json()) as { reason: string }).reason)
+        .toMatch(/no Walk-in booking source switched on/);
+    } finally {
+      await db.query(
+        "update booking_sources set is_active = true where id = any($1::uuid[])",
+        [off.map((r) => r.id)]);
+      await db.end();
+    }
+    expect(await guestsNamed("No Channel Guest")).toBe("0");
+  });
+
+  it("⚠ A REFUSED WALK-IN LEAVES NO GUEST BEHIND — defect 243", async () => {
+    /* `withSession` commits a refusal like any other return. The rate
+       check sat under the guest insert, so a walk-in refused for having
+       no rate kept its guest — and guests_no_delete means that row could
+       never be removed. Every refusal now sits above the first write. */
+    const room = await freeRoom();
+    const res = await post("/5EL/walk-ins", {
+      guestName: "Refused Rate Guest",
+      roomNumber: room, nights: 1, adults: 1, children: 0,
+      ratePlan: "CP", rackTariff: 4000, offeredTariff: "not a number",
+      overrideReason: "", businessDate: "2026-08-25", user: "test",
+    });
+    expect(res.status).toBe(409);
+    expect(((await res.json()) as { reason: string }).reason)
+      .toMatch(/no rate set/);
+    expect(await guestsNamed("Refused Rate Guest"),
+      "the refusal kept the guest it had already written").toBe("0");
   });
 });
 
