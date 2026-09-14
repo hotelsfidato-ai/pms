@@ -5603,3 +5603,108 @@ begin
   update booking_sources set is_active = true where id = walkin;
   delete from booking_sources where id = spare;
 end $$;
+
+
+-- =============================================================================
+-- 086 · Which room a stay was in, answered once
+-- =============================================================================
+-- A departed group room read "Room —": 071 asked for the HELD assignment, and
+-- a check-out releases it. Proved here: a departed stay still names the room
+-- it left from, a moved guest names the room they are in NOW, a stay never
+-- given a room is NULL rather than a guess — and the group list agrees.
+-- =============================================================================
+do $$
+declare
+  v_hotel uuid; v_staff uuid; v_type uuid; v_guest uuid; v_group uuid;
+  v_101 uuid; v_102 uuid; v_103 uuid;
+  v_left uuid; v_moved uuid; v_unroomed uuid;
+  v text; n int;
+begin
+  select id into v_staff from staff limit 1;
+
+  insert into hotels (code, name, city, timezone)
+  values ('SRM', 'Stay room fixture', 'Akkalkot', 'Asia/Kolkata')
+  returning id into v_hotel;
+  insert into staff_hotels (staff_id, hotel_id, role)
+  values (v_staff, v_hotel, 'gm') on conflict do nothing;
+
+  insert into room_types (hotel_id, code, name, base_occupancy, max_occupancy,
+                          base_rate, sort_order)
+  values (v_hotel, 'STD', 'Standard', 2, 3, null, 1) returning id into v_type;
+  insert into rooms (hotel_id, room_type_id, number, floor, is_active)
+  values (v_hotel, v_type, '101', 1, true) returning id into v_101;
+  insert into rooms (hotel_id, room_type_id, number, floor, is_active)
+  values (v_hotel, v_type, '102', 1, true) returning id into v_102;
+  insert into rooms (hotel_id, room_type_id, number, floor, is_active)
+  values (v_hotel, v_type, '103', 1, true) returning id into v_103;
+
+  insert into guests (full_name) values ('Stay room fixture')
+  returning id into v_guest;
+  insert into reservation_groups (name, lead_hotel_id)
+  values ('Stay room group', v_hotel) returning id into v_group;
+
+  -- Departed, after a move: 101 for two nights, then 102, both released.
+  insert into reservations (hotel_id, guest_id, room_type_id, reference,
+                            check_in, check_out, agreed_rate, status, group_id)
+  values (v_hotel, v_guest, v_type, 'SRM-1',
+          date '2026-08-01', date '2026-08-05', 3000, 'checked_out', v_group)
+  returning id into v_left;
+  insert into room_assignments (hotel_id, reservation_id, room_id,
+                                from_date, to_date, reason, released_at)
+  values (v_hotel, v_left, v_101, date '2026-08-01', date '2026-08-03', 'arrival', now()),
+         (v_hotel, v_left, v_102, date '2026-08-03', date '2026-08-05', 'move', now());
+
+  -- In the house after a move: the old room released, the new one held.
+  insert into reservations (hotel_id, guest_id, room_type_id, reference,
+                            check_in, check_out, agreed_rate, status)
+  values (v_hotel, v_guest, v_type, 'SRM-2',
+          date '2026-08-10', date '2026-08-14', 3000, 'checked_in')
+  returning id into v_moved;
+  insert into room_assignments (hotel_id, reservation_id, room_id,
+                                from_date, to_date, reason, released_at)
+  values (v_hotel, v_moved, v_101, date '2026-08-10', date '2026-08-12', 'arrival', now());
+  insert into room_assignments (hotel_id, reservation_id, room_id,
+                                from_date, to_date, reason)
+  values (v_hotel, v_moved, v_103, date '2026-08-12', date '2026-08-14', 'move');
+
+  -- Booked for a room TYPE, never given a room.
+  insert into reservations (hotel_id, guest_id, room_type_id, reference,
+                            check_in, check_out, agreed_rate, status)
+  values (v_hotel, v_guest, v_type, 'SRM-3',
+          date '2026-09-01', date '2026-09-02', 3000, 'confirmed')
+  returning id into v_unroomed;
+
+  perform test.ok('stay room','a departed stay names the room it left from',
+    app.stay_room(v_left) = '102',
+    'got ' || coalesce(app.stay_room(v_left), 'NULL')
+      || ' — a check-out releases the room, and 071 then found none');
+
+  perform test.ok('stay room','a moved guest names the room they are in now',
+    app.stay_room(v_moved) = '103',
+    'got ' || coalesce(app.stay_room(v_moved), 'NULL'));
+
+  perform test.ok('stay room','a stay never given a room is NULL, not a guess',
+    app.stay_room(v_unroomed) is null);
+
+  select gr.room into v from app.group_rooms(v_hotel, v_group) gr
+   where gr.reservation_id = v_left;
+  perform test.ok('stay room','the group list says where a departed room stayed',
+    v = '102', 'the group list said ' || coalesce(v, 'NULL — "Room —"'));
+
+  -- ---------- teardown ----------
+  delete from room_assignments where hotel_id = v_hotel;
+  delete from reservations where hotel_id = v_hotel;
+  delete from reservation_groups where id = v_group;
+  alter table guests disable trigger guests_no_delete;
+  delete from guests where id = v_guest;
+  alter table guests enable trigger guests_no_delete;
+  delete from rooms where hotel_id = v_hotel;
+  delete from room_types where hotel_id = v_hotel;
+  delete from staff_hotels where hotel_id = v_hotel;
+  alter table hotels disable trigger hotels_no_delete;
+  delete from hotels where id = v_hotel;
+  alter table hotels enable trigger hotels_no_delete;
+
+  select count(*) into n from hotels where code = 'SRM';
+  perform test.ok('stay room','the fixture does not outlive the test', n = 0);
+end $$;

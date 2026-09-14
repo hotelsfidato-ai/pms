@@ -207,12 +207,11 @@ example.
 
 ## 6 · Known rough edges, small
 
-- **A departed group room shows "Room —" in the group list.**
-  `app.group_rooms()` picks the room with `released_at is null`, and a
-  check-out releases it. `stays.ts` had the same fault and was fixed by
-  preferring the held assignment, then the latest; the SQL function was
-  not. Needs a migration. Visible on the stay panel's group column since
-  14 September.
+- **"Which room was this stay in" is still written out by hand in seven
+  queries** — billing (2), directory, reports (2), stays, pos. All seven
+  have the RIGHT rule today; 086 made it `app.stay_room()` and moved the
+  three that had the wrong one. Moving the seven onto the function is
+  tidying, not a fix — but it is how the next wrong copy is prevented.
 - **Three tables are owned by `postgres`, the other 63 by `pms_migrate`.**
   `booking_sources`, `booking_source_rates` and `pos_promotions` were
   created by the phase 2 deploy, which ran as the superuser. Harmless while

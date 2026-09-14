@@ -90,13 +90,13 @@ groups.get("/:code/groups/:id", async (c) => {
           date: string; description: string; category: string;
           amount: string; room: string | null;
         }>(
+          /* The room is app.stay_room (086). This asked for the HELD
+             assignment, and a check-out releases it — so every line
+             a departed room had routed to the master bill printed
+             without its room. */
           `select fp.business_date::text as date, fp.description, fp.category,
                   (fp.amount + fp.tax_amount)::text as amount,
-                  (select rm.number from room_assignments ra
-                     join rooms rm on rm.id = ra.room_id
-                    where ra.reservation_id = fp.reservation_id
-                      and ra.released_at is null
-                    order by ra.from_date limit 1) as room
+                  app.stay_room(fp.reservation_id) as room
              from folio_postings fp
             where fp.folio_id = $1
             order by fp.business_date, fp.id`,

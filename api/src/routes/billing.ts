@@ -455,10 +455,10 @@ billing.get("/:code/notifications", async (c) => {
        ),
        balances as (
          select r.id, r.reference, r.status, r.check_out, g.full_name as guest,
-                (select rm.number from room_assignments ra
-                   join rooms rm on rm.id = ra.room_id
-                  where ra.reservation_id = r.id and ra.released_at is null
-                  limit 1) as room,
+                /* app.stay_room (086), not the HELD assignment: a refund
+                   is owed to somebody who has LEFT, and their room was
+                   released at check-out — this printed "—" for them. */
+                app.stay_room(r.id) as room,
                 coalesce((select sum(amount + tax_amount) from live
                            where reservation_id = r.id), 0) as balance
            from reservations r

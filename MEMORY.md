@@ -6085,3 +6085,34 @@ The two App tests that guard this panel (the guest named once; the group pill
 reaching "Group reservation list") were read BEFORE the redesign and shaped
 it: the group list is inline and the pill scrolls to it, so the heading exists
 once rather than twice.
+
+---
+
+### 249 · A fix made in one of ten places: departed group rooms read "Room —"
+
+`stays.ts` has carried this comment for weeks:
+
+> *"Filtering to released_at is null was wrong: a check-out releases the
+> room, so 60 of the 83 stays came back with no room number at all"*
+
+It was fixed THERE — prefer the held assignment, then the most recent — and
+the rule was then retyped into six more queries. Three others kept the old
+one, including `app.group_rooms()` (071). Measured on 14 September, the demo's
+Pancham Hall function: three departed rooms, all `(none)`, while their own
+references end in -302, -303, -305. The rebuilt stay panel put the group list
+on screen, which is the only reason anybody saw it.
+
+086 makes the rule `app.stay_room()` and moves the three wrong copies onto it:
+the group list, the group's master bill lines, and the billing screen's
+refunds-due list — a refund is owed to somebody who has LEFT, so that one
+printed "—" for exactly the people it listed.
+
+⚠ **Two questions look alike and are not.** "Which room was this stay in" is
+display, and wants held-else-latest. "Who is in this room right now" —
+check-out, room status, pre-arrival assignment — wants the held assignment
+alone, and those three correctly keep `released_at is null`. Converting them
+too would have been a second bug made in the name of consistency.
+
+**The rule: when a fix lands in one query, grep for its siblings before
+calling it fixed.** The comment in `stays.ts` described the bug perfectly and
+nobody searched for the same `where` clause elsewhere — me included, twice.
