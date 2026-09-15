@@ -1,6 +1,6 @@
 import { Route } from "react-router";
 import { PropertyScope } from "@/components/app/PropertyScope";
-import ChannelManagerPage from "@/pages/ChannelManager";
+import ChannelManagerPage from "@/modules/channel-manager/pages/ChannelManager";
 
 /* The channel manager's status page — parked by the owner. Mounted by
    App.tsx inside the signed-in shell. */
