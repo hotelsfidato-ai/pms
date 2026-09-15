@@ -5773,3 +5773,48 @@ begin
   delete from hotel_modules where hotel_id = h_agr and module = 'reception_pos';
   perform set_config('app.user_id', '', true);
 end $$;
+
+-- =============================================================================
+-- 088 · Adding somebody may not take over somebody who already exists
+-- =============================================================================
+-- Asked as a general manager at AGR, the position the takeover came from:
+-- they could "add" the owner and set the owner's password. A new address and
+-- their own staff still work; the owner and another hotel's people do not.
+-- =============================================================================
+do $$
+declare
+  h_agr uuid; gm uuid; owner_id uuid;
+begin
+  select id into h_agr from hotels where code = 'AGR';
+  select id into owner_id from staff where email = 'owner@fidato.in';
+  insert into staff (email, full_name, firebase_uid)
+  values ('t088-gm@fidato.in', 'T088 Manager', 't088-gm')
+  on conflict (email) do update set is_active = true
+  returning id into gm;
+  insert into staff_hotels (staff_id, hotel_id, role) values (gm, h_agr, 'gm')
+  on conflict (staff_id, hotel_id) do update set role = 'gm';
+  perform set_config('app.user_id', gm::text, true);
+
+  perform test.ok('claim address','a new address may be added',
+    app.may_claim_address('t088-nobody-yet@fidato.in'));
+  perform test.ok('claim address','their own clerk may be re-added',
+    app.may_claim_address('agra@fidato.in'));
+  perform test.ok('claim address','the owner may not be — that was the takeover',
+    not app.may_claim_address('owner@fidato.in'));
+  perform test.ok('claim address','nor in capitals — the address is citext',
+    not app.may_claim_address('OWNER@FIDATO.IN'));
+  perform test.ok('claim address','nor somebody at a hotel they do not run',
+    not app.may_claim_address('pune@fidato.in'));
+  perform test.raises('claim address','the refusal is raised for any caller',
+    $q$select app.require_claimable_address('owner@fidato.in')$q$, '42501');
+
+  perform set_config('app.user_id', owner_id::text, true);
+  perform test.ok('claim address','a group administrator may claim any address',
+    app.may_claim_address('pune@fidato.in'));
+
+  -- ---------- teardown ----------
+  perform set_config('app.user_id', '', true);
+  delete from staff_hotels where staff_id = gm;
+  update staff set is_active = false where id = gm;
+end $$;
+

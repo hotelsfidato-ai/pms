@@ -46,6 +46,60 @@ Write it **as you go**, not at the end from memory. Copy this shape:
 
 ---
 
+## 2026-09-15 (review) · An audit, a security review, and an account takeover closed
+
+**Asked for:** before step 4, "do an audit of the code and tell me how much
+is complete, and also review the code for bugs and security vulnerability".
+
+**Shipped**
+- 088 · `app.may_claim_address` / `app.require_claimable_address`, and
+  `POST /admin/staff` asks it before any Firebase account is touched.
+
+**Found**
+- 263 · SECURITY, live 9–15 September: any hotel manager could take over the
+  owner's login — or anybody's — by "adding" their email with a password of
+  their own. `ensureAccount` sets the password of an account that already
+  exists, and it ran before any check of whose address it was; Firebase is
+  not in the transaction, so the database's later refusal changed nothing.
+  Fixed; NOT deployed.
+- 264 · MINE: proving the fix, I took it out and ran its tests — and the
+  API suite carried the PRODUCTION Firebase key from `api/.env`, so the
+  unfixed code created `owner@fidato.in` and `pune@fidato.in` on the live
+  sign-in service. Read-only checks after: neither existed before, neither
+  is linked to staff, they are the only test-looking accounts of the five.
+  The wrapper now blanks the key and `guards.test.ts` fails if it returns.
+  Removing the two accounts is the owner's call.
+- Minor: Bill, Docket and Kitchen set no browser-tab title, so the tab keeps
+  the previous page's name.
+- Checked and clean: token verification (revocation on; the dev header cannot
+  run in production — env.ts throws and the service sets NODE_ENV); SQL
+  (parameterised everywhere; the one dynamic SET list is hard-coded columns;
+  the database's dynamic SQL is migration-only, over catalog names); CORS
+  (allowlist in production); the POS bridge (hashed keys, service account
+  under RLS); the live stream (header auth, signal only); uploads (generated
+  paths, type allowlist, filename scrubbed); no raw-HTML sinks in the web app;
+  the audit trail records `app.current_user_id()`, never the browser's
+  "front desk"; staff edits take only name and phone.
+
+**Proved**
+- Database: all 581 assertions passed (7 new for 088, among them the owner's
+  address refused in capitals); all 88 migrations re-runnable.
+- API: 353 passed in 28 files. Under the Firebase-free wrapper the two new
+  refusals FAIL with the fix taken out (a 500 — the request reached
+  `ensureAccount`) and pass with it; the new guard fails if the suite ever
+  carries a service account again.
+
+**Left open**
+- The deploy. Interim, on the owner's yes: deactivate or re-password
+  `demo@fidatohotels.com` (owner role at 5EL, shared password).
+- Whether the hole was used is unchecked — a read-only look at each account's
+  `tokensValidAfterTime` on the server would show it, on the owner's yes.
+- The review was single-context; the skill's sub-agent pass was not run.
+
+**Commits:** the review commit.
+
+---
+
 ## 2026-09-15 (step 3) · A menu for each person, and the search it depends on
 
 **Asked for:** "continue with step 3, the menu by person". The owner chose

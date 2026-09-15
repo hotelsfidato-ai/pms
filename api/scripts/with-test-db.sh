@@ -135,6 +135,17 @@ fi
 export DATABASE_URL="postgres://pms_app:${APPPASS}@${PGHOST}:${PGPORT}/${DB}"
 export SUPER_DATABASE_URL="postgres://${SUPER}:${SUPERPASS}@${PGHOST}:${PGPORT}/${DB}"
 
+# ⚠ NO FIREBASE, EVER, FROM A TEST. `api/.env` on this machine carries the
+# PRODUCTION Firebase admin key (poms-fad05) — installed for Stage 3 — and
+# this script redirected the database but not that. So any test that got as
+# far as `ensureAccount` created real accounts on the live sign-in service.
+# On 15 September one did: a proof run against the takeover fix created
+# owner@fidato.in and pune@fidato.in there (MEMORY 264). Empty, not unset:
+# `process.loadEnvFile` fills only variables that are UNSET, so an empty one
+# survives it, and env.ts reads "" as "no service account" — the tests sign
+# in through the dev header, and anything reaching Firebase fails loudly.
+export FIREBASE_SERVICE_ACCOUNT=""
+
 npx tsx scripts/load-demo.ts >/dev/null 2>&1 \
   || { red "  x the demo would not load into $DB"; npx tsx scripts/load-demo.ts; exit 1; }
 dim "   demo loaded"

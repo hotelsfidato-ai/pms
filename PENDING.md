@@ -30,6 +30,38 @@ Transactions were reset on 9 September. Since then: 4 bookings, 4 guests,
 
 ---
 
+## 1a · SECURITY — found 15 September, fixed, NOT DEPLOYED — do this first
+
+**Any hotel manager could take over the owner's login** (MEMORY 263).
+"Add somebody" set the password of an account that already existed before
+checking whose it was. Live in production since 9 September. Fixed in 088
+(`app.require_claimable_address`, asked before Firebase is touched); proved
+by API and database tests. **It is live until the owner deploys.**
+
+Interim, needs the owner's yes: `demo@fidatohotels.com` holds the owner
+role at 5EL and its password has been shared — any holder of that password
+could use the hole. Deactivate it, or change its password, until the deploy.
+
+**Whether it was used has not been checked.** Firebase records when each
+account's tokens were last invalidated (`tokensValidAfterTime`), which a
+password change does. A read-only script on the server can list that for
+every staff account and show whether the owner's — or anybody's — changed
+unexpectedly between 9 and 15 September. It needs the owner's yes, because
+it runs on the production box with the service account.
+
+---
+
+### Two stray accounts on the live sign-in service — mine, 15 September
+
+`owner@fidato.in` and `pune@fidato.in`, display name "Anybody", created
+10:38 GMT by a test run of mine that reached production Firebase (MEMORY
+264). Never signed in, linked to no staff row, so they reach nothing — but
+they carry a known password. **Remove them in the Firebase console**
+(Authentication → Users), or say so and they are disabled from here. The
+test suite can no longer reach Firebase at all.
+
+---
+
 ## 2 · Found in the 14 September audit
 
 ### The walk-in desk did not record a channel — defect 242, FIXED, NOT DEPLOYED

@@ -727,6 +727,16 @@ admin.post("/admin/staff", async (c) => {
         await client.query("select app.require_provisioning_key($1)", [digest]);
       }
 
+      /* ⚠ WHOSE ADDRESS IS THIS — ASKED BEFORE FIREBASE IS TOUCHED (088).
+         `ensureAccount` adopts an account that already exists and SETS
+         ITS PASSWORD. Without this, a general manager "adding" the owner's
+         own email took over the owner's login: every check above passed,
+         Firebase changed the password, and the refusal at the staff row
+         below came too late to undo it. Live 9–15 September; found by the
+         security review. The database answers, because under the caller's
+         own row policies a manager cannot even see the owner's row. */
+      await client.query("select app.require_claimable_address($1)", [email]);
+
       /* ⚠ THE ACCOUNT FIRST, THE ROW SECOND. Firebase is not in the
          transaction — nothing can roll it back — so the order is chosen
          so the survivable failure is the one that happens.

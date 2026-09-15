@@ -1246,3 +1246,15 @@ describe("a stay, as the panel reads it", () => {
     }
   });
 });
+
+describe("the test suite and the live sign-in service", () => {
+  it("carries no Firebase service account, so no test can reach production", async () => {
+    /* ⚠ MEMORY 264. api/.env holds the PRODUCTION Firebase key, and the
+       suite used to inherit it: a test that reached ensureAccount created
+       real accounts on the live service. with-test-db.sh blanks it; this
+       fails if anything puts it back. */
+    const { env } = await import("../src/env.ts");
+    expect(env.firebaseServiceAccount || null).toBeNull();
+  });
+});
+

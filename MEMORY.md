@@ -6323,6 +6323,69 @@ one hides.**
 
 ---
 
+### 263 · Any hotel manager could take over the owner's login — SECURITY, live 9–15 September
+
+`POST /admin/staff` ("add somebody") checked two things — the caller manages
+the hotel named, and the role is one they may give — then called
+`ensureAccount(email, name, password)`. For an address Firebase already
+knows, `ensureAccount` ADOPTS the account and SETS ITS PASSWORD
+(`identity.ts:94`). Then it wrote the staff row.
+
+So a general manager could "add" the owner: the owner's email, front desk at
+their own hotel, a password of their choosing. Every check passed, Firebase
+replaced the owner's password, and the database's refusal to touch a group
+administrator's row came after — too late, because Firebase is not in the
+transaction. The manager then signed in as a group administrator, with every
+property. The same worked on any staff member at any other hotel.
+
+`app.may_set_password` existed to refuse exactly this; its own comment says
+"resetting a group administrator's password is how a property manager
+becomes one". Only the password endpoint asked it. Two doors to one act, and
+the guard on one.
+
+Found by the security review of 15 September, from reading which calls touch
+Firebase and in what order. Fixed in 088: `app.require_claimable_address`,
+SECURITY DEFINER because under the caller's own row policies a manager
+cannot even SEE the owner's row — a lookup there reads empty and waves the
+takeover through. Asked before `ensureAccount`.
+
+**The rules:** a side effect that cannot be rolled back goes after EVERY
+check, never between them. And a guard belongs to the act, not the
+endpoint — find every path that performs it.
+
+---
+
+### 264 · My proof run created two accounts on the LIVE sign-in service
+
+To prove the takeover fix (263) I took it out and ran its tests, expecting
+the request to die at Firebase "which this suite does not carry" — the test
+file's own header says so. It does carry it. `api/.env` on this machine holds
+the PRODUCTION Firebase admin key (poms-fad05), and `with-test-db.sh`
+redirected the database but not that. So the unfixed code ran for real: it
+CREATED `owner@fidato.in` and `pune@fidato.in` on the live service, display
+name "Anybody", password `the-gm-chose-this` (15 Sep, 10:38 GMT).
+
+Checked read-only afterwards: neither existed before, so nobody's password
+changed; neither is linked to a staff row, so they reach nothing in the PMS;
+they are the only test-looking accounts among the project's five. They are
+still junk on a live service with a known password — removing them is the
+owner's call.
+
+Found only because the failure arrived LATER than predicted — the row-level
+refusal instead of "no service account". A red test is evidence of exactly
+what it says, and this one said "Firebase answered".
+
+Fixed: the wrapper exports `FIREBASE_SERVICE_ACCOUNT=""` (an empty variable
+survives `process.loadEnvFile`, which fills only unset ones), and
+`guards.test.ts` fails if the suite ever carries a service account again.
+
+**The rules:** a proof that disables a guard runs where the unguarded path
+can do no harm — check what the environment can reach BEFORE pulling the
+guard out. And a test comment that says "X is not exercised here" is a claim
+to verify, not a fact to rely on.
+
+---
+
 ### Open · two "in house" numbers for the same moment
 
 The property page (`getTodaySnapshot`) said **In house now 11, Vacant 9** while

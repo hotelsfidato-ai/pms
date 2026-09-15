@@ -55,7 +55,14 @@ clarity plan        steps 1, 2 and 3 of 4 built
 
 **Waiting to be deployed** — one deploy carries all of it:
 
+> ⚠ **DEPLOY FIRST: a security fix is in this list.** Until 088 is live, any
+> hotel manager can take over the owner's login through "add somebody"
+> (MEMORY 263). Interim, on the owner's yes: deactivate or re-password
+> `demo@fidatohotels.com`, which holds the owner role at 5EL with a
+> password that has been shared.
+
 ```
+088   SECURITY: adding somebody can no longer take over an existing account
 085   a walk-in records the Walk-in channel; back-fills FH-2609-5001 on deploy
       the rebuilt stay panel (owner's eZee-style reference)
 086   a departed group room says which room it was in
@@ -71,9 +78,10 @@ clarity plan        steps 1, 2 and 3 of 4 built
 **Gates, measured 15 September on this machine:**
 
 ```
-db/tests/run.sh         574 assertions passed        scratch database, dropped after
-db/tests/rerun.sh       87 migrations re-runnable    scratch database, migrated twice
-cd api && npm test      350 passed, 28 files         never `npx vitest run` inside api/
+db/tests/run.sh         581 assertions passed        scratch database, dropped after
+db/tests/rerun.sh       88 migrations re-runnable    scratch database, migrated twice
+cd api && npm test      353 passed, 28 files         never `npx vitest run` inside api/;
+                                                     it cannot reach Firebase (MEMORY 264)
 npx tsc -b              clean
 npx vitest run          190 passed, 13 files
 ```

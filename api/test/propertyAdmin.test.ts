@@ -263,6 +263,34 @@ describe("adding somebody", () => {
     } finally { await db.end(); }
   });
 
+  it("REFUSES a manager 'adding' the owner — that was a takeover", async () => {
+    /* ⚠ THE HOLE 088 CLOSES. Adding somebody adopts an account that
+       already exists and SETS ITS PASSWORD. A gm who typed the owner's
+       email, a role they may give and a password of their own chose the
+       owner's password — and Firebase cannot be rolled back, so the
+       refusal at the staff row came too late.
+
+       Firebase is not configured in this suite, so a request that got as
+       far as ensureAccount comes back a 500. A 403 carrying the reason is
+       the proof that the refusal now comes FIRST. Capitals, because the
+       address is citext and a check that missed them would miss them. */
+    const res = await as(gmId, "/admin/staff", "POST", {
+      email: "OWNER@fidato.in", name: "Anybody", password: "the-gm-chose-this",
+      hotelCode: "AGR", role: "front_desk",
+    });
+    expect(res.status, await res.clone().text()).toBe(403);
+    expect(((await res.json()) as { reason: string }).reason)
+      .toMatch(/already belongs to somebody you cannot manage/i);
+  });
+
+  it("refuses the same for somebody at a hotel the manager does not run", async () => {
+    const res = await as(gmId, "/admin/staff", "POST", {
+      email: "pune@fidato.in", name: "Anybody", password: "the-gm-chose-this",
+      hotelCode: "AGR", role: "front_desk",
+    });
+    expect(res.status, await res.clone().text()).toBe(403);
+  });
+
   it("refuses a hotel with no role named", async () => {
     const res = await as(gmId, "/admin/staff", "POST", {
       email: "pa-norole@fidato.in", name: "PATEST No Role",
