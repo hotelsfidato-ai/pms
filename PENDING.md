@@ -42,12 +42,12 @@ Interim, needs the owner's yes: `demo@fidatohotels.com` holds the owner
 role at 5EL and its password has been shared — any holder of that password
 could use the hole. Deactivate it, or change its password, until the deploy.
 
-**Whether it was used has not been checked.** Firebase records when each
-account's tokens were last invalidated (`tokensValidAfterTime`), which a
-password change does. A read-only script on the server can list that for
-every staff account and show whether the owner's — or anybody's — changed
-unexpectedly between 9 and 15 September. It needs the owner's yes, because
-it runs on the production box with the service account.
+**Checked 15 September, read-only: it was not used.** The takeover needs a
+password change, and a password change resets an account's tokens. Of the
+project's real accounts, the owner's last reset on 8 September — before the
+hole existed — and `demo@fidatohotels.com` and `rozariojaison7@gmail.com`
+only at their creation on 9 September. Nothing else was touched but the
+two strays below.
 
 ---
 

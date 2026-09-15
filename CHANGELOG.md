@@ -92,8 +92,9 @@ is complete, and also review the code for bugs and security vulnerability".
 **Left open**
 - The deploy. Interim, on the owner's yes: deactivate or re-password
   `demo@fidatohotels.com` (owner role at 5EL, shared password).
-- Whether the hole was used is unchecked — a read-only look at each account's
-  `tokensValidAfterTime` on the server would show it, on the owner's yes.
+- Whether the hole was used: CHECKED, read-only — it was not. No real
+  account's tokens were reset after it went live (the owner's last on 8 Sep;
+  the other two only at creation on 9 Sep).
 - The review was single-context; the skill's sub-agent pass was not run.
 
 **Commits:** the review commit.
