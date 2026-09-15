@@ -24,7 +24,10 @@ export default defineConfig({
        api/ is a separate package with its own runner — its tests need
        a live Postgres and a node environment, not jsdom. Run them with
        `npm test` inside api/. */
-    exclude: ["**/node_modules/**", "**/dist/**", "docs/**", "api/**"],
+    /* .claude/ holds agents' git worktrees — whole copies of this repo,
+       tests included. Several agents run at once since the service-folder
+       move; without this a run here also runs every copy's tests. */
+    exclude: ["**/node_modules/**", "**/dist/**", "docs/**", "api/**", ".claude/**"],
     globals: true,
     environment: 'jsdom',
     /* Stubs @/lib/api for every frontend test — CP9 moved the
