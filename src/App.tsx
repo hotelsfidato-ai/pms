@@ -24,7 +24,7 @@ import { useSession, useRole } from "@/lib/session";
 import { homePath } from "@/lib/homeScreen";
 import { workingHomeFor } from "@/components/app/navigation";
 import { PropertyScope, PropertyIndex } from "@/components/app/PropertyScope";
-import { NotificationsPage } from "@/pages/Directory";
+import { NotificationsPage } from "@/pages/Notifications";
 import SignInPage from "@/pages/SignIn";
 import DesignSystemPage from "@/pages/DesignSystem";
 import PlaceholderPage from "@/pages/Placeholder";

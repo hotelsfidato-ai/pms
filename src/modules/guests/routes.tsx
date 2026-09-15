@@ -1,6 +1,6 @@
 import { Route } from "react-router";
 import { PropertyScope } from "@/components/app/PropertyScope";
-import { GuestsPage, CompaniesPage } from "@/pages/Directory";
+import { GuestsPage, CompaniesPage } from "@/pages/Guests";
 import BookingSourcesPage from "@/pages/BookingSources";
 import FormCPage from "@/pages/FormC";
 

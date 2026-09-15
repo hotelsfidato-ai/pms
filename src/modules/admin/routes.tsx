@@ -4,7 +4,7 @@ import { IS_DEV } from "@/components/app/navigation";
 import PropertyPage from "@/pages/Property";
 import PeoplePage from "@/pages/People";
 import AdminConsolePage from "@/pages/admin/Console";
-import { PropertiesPage } from "@/pages/Directory";
+import { PropertiesPage } from "@/pages/Properties";
 import {
   UsersPage, RolesPage, AuditLogPage, IntegrationsPage,
   SettingsPage,
