@@ -1,5 +1,5 @@
 import type { Role } from "@/lib/permissions";
-import { fetchOr } from "./http";
+import { fetchOr } from "@/data/repositories/http";
 import { ROLES, ROLE_LABELS, ROLE_DESCRIPTIONS } from "@/lib/permissions";
 /* Staff, the audit log, integrations and settings.
 

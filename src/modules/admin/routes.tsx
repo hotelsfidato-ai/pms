@@ -1,14 +1,14 @@
 import { Navigate, Route } from "react-router";
 import { RequireAccess } from "@/components/app/RequireAccess";
 import { IS_DEV } from "@/components/app/navigation";
-import PropertyPage from "@/pages/Property";
-import PeoplePage from "@/pages/People";
-import AdminConsolePage from "@/pages/admin/Console";
-import { PropertiesPage } from "@/pages/Properties";
+import PropertyPage from "@/modules/admin/pages/Property";
+import PeoplePage from "@/modules/admin/pages/People";
+import AdminConsolePage from "@/modules/admin/pages/Console";
+import { PropertiesPage } from "@/modules/admin/pages/Properties";
 import {
   UsersPage, RolesPage, AuditLogPage, IntegrationsPage,
   SettingsPage,
-} from "@/pages/admin/Admin";
+} from "@/modules/admin/pages/Admin";
 
 /* Administration's screen addresses. Mounted by App.tsx inside the
    signed-in shell. */

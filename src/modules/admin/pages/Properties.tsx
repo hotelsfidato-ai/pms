@@ -4,8 +4,9 @@ import { Link } from "react-router";
 import { ArrowRight, Info } from "lucide-react";
 import { cn } from "@/lib/cn";
 import { Page, PageHeader, Card, CardBody, StatusPill, Skeleton, ErrorState, Button, Dialog, DialogContent, Field, fieldProps, Input, toast } from "@/components/ui";
-import { listProperties, listAdminProperties, amendProperty, setPropertyOpen, type AdminProperty } from "@/data/repositories";
-import { NewProperty } from "@/components/flows/StaffAdmin";
+import { listProperties } from "@/data/repositories";
+import { listAdminProperties, amendProperty, setPropertyOpen, type AdminProperty } from "@/modules/admin/data/admin";
+import { NewProperty } from "@/modules/admin/flows/StaffAdmin";
 
 /* Split out of Directory.tsx on 15 September in the service-folder move
    (docs/SERVICE-FOLDERS-PLAN.md). Service: admin. Unchanged. */

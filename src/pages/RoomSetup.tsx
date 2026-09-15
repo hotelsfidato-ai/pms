@@ -17,7 +17,7 @@ import {
   type RoomTypeSetup, type RoomSetup as Room, type FrontDeskSettings,
 } from "@/data/repositories";
 import { TaxRulesCard } from "@/components/flows/TaxRulesCard";
-import { CommissioningCard } from "@/components/flows/CommissioningCard";
+import { CommissioningCard } from "@/modules/admin";
 import { ImportDialog } from "@/components/flows/ImportDialog";
 import { ROOM_TYPE_SPEC, ROOM_SPEC } from "@/lib/importSpec";
 

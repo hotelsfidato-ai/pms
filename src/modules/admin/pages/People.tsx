@@ -10,11 +10,8 @@ import {
   Dialog, DialogContent, Field, fieldProps, Input, NativeSelect,
   StatusPill, toast,
 } from "@/components/ui";
-import {
-  listAdminStaff, createStaff, grantAccess, revokeAccess, deactivateStaff,
-  amendStaff, reactivateStaff, setStaffPassword, setHomeScreen, MIN_PASSWORD,
-  listProperties, type AdminStaff, type HomeScreen,
-} from "@/data/repositories";
+import { listAdminStaff, createStaff, grantAccess, revokeAccess, deactivateStaff, amendStaff, reactivateStaff, setStaffPassword, setHomeScreen, MIN_PASSWORD, type AdminStaff, type HomeScreen } from "@/modules/admin/data/admin";
+import { listProperties } from "@/data/repositories";
 import { HOME_SCREENS } from "@/lib/homeScreen";
 
 /* ══════════════════════════════════════════════════════════════════

@@ -3,11 +3,7 @@ import { UserPlus, Building2, KeyRound } from "lucide-react";
 import { cn } from "@/lib/cn";
 import { Card, CardBody, Button, StatusPill, toast } from "@/components/ui";
 import { ASSIGNABLE_ROLES, ROLE_LABELS } from "@/lib/permissions";
-import {
-  createStaff, grantAccess, revokeAccess, deactivateStaff, createProperty,
-  type AdminStaff,
-  MIN_PASSWORD,
-} from "@/data/repositories";
+import { createStaff, grantAccess, revokeAccess, deactivateStaff, createProperty, type AdminStaff, MIN_PASSWORD } from "@/modules/admin/data/admin";
 
 /* ══════════════════════════════════════════════════════════════════
    ADDING A PERSON, AND SAYING WHAT THEY CAN REACH

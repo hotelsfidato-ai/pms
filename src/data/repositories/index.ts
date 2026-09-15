@@ -28,7 +28,6 @@ export * from "./stays";
 export * from "./stayview";
 export * from "./operations";
 export * from "./notifications";
-export * from "./admin";
 export * from "./directory";
 export * from "./billing";
 export * from "./groups";
@@ -51,10 +50,8 @@ export * from "./formC";
 export * from "./posBridge";
 export * from "./rateSetup";
 export * from "./me";
-export * from "./adminLists";
 export * from "./unroutedLists";
 export * from "./tax";
-export * from "./commissioning";
 export * from "./importReport";
 
 

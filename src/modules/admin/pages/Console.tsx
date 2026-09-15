@@ -8,12 +8,9 @@ import {
 } from "@/components/ui";
 import {
   NewPerson, People, NewProperty,
-} from "@/components/flows/StaffAdmin";
+} from "@/modules/admin/flows/StaffAdmin";
 import { useSession } from "@/lib/session";
-import {
-  getAdminOverview, listAdminStaff,
-  type AdminOverview,
-} from "@/data/repositories";
+import { getAdminOverview, listAdminStaff, type AdminOverview } from "@/modules/admin/data/admin";
 
 /* ══════════════════════════════════════════════════════════════════
    THE ADMIN CONSOLE

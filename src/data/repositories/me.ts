@@ -1,4 +1,4 @@
-import type { HomeScreen, RoomGrouping } from "./admin";
+import type { HomeScreen, RoomGrouping } from "@/modules/admin";
 import type { AdminResult } from "./result";
 import { put } from "./http";
 /* A person's own preferences.

@@ -3,7 +3,7 @@ import { Link } from "react-router";
 import { Check, AlertCircle, Circle, ArrowRight } from "lucide-react";
 import { cn } from "@/lib/cn";
 import { Card, CardBody, StatusPill } from "@/components/ui";
-import { getCommissioning, type CommissioningCheck } from "@/data/repositories";
+import { getCommissioning, type CommissioningCheck } from "@/modules/admin/data/commissioning";
 
 /* ══════════════════════════════════════════════════════════════════
    WHAT THIS PROPERTY STILL NEEDS

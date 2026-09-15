@@ -13,11 +13,9 @@ import {
   Skeleton, Avatar, Tooltip, ErrorState, Switch, toast, EmptyState,
   type Column, type Tone,
 } from "@/components/ui";
-import {
-  listStaff, listAuditLog, listIntegrations, getSettings, getMatrix,
-  roleDescription, getModules, setModule,
-  type StaffRecord, type AuditEntry, type Integration,
-} from "@/data/repositories";
+import { listStaff, listAuditLog, listIntegrations, getSettings, roleDescription, type StaffRecord, type AuditEntry, type Integration } from "@/modules/admin/data/adminLists";
+import { getMatrix } from "@/modules/admin/data/admin";
+import { getModules, setModule } from "@/data/repositories";
 
 /* ══════════════════════════════════════════════════════════════════
    ADMINISTRATION
