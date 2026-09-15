@@ -1,7 +1,8 @@
 # One folder per service — the plan (15 September 2026)
 
-**Status: PLANNED. Nothing has moved. Four decisions are waiting on the owner
-(end of this file). Do not start before they are answered.**
+**Status: IN PROGRESS on branch `service-folders` (from tag
+`pre-service-folders`). The owner took all four recommendations on 15
+September — see the end of this file.**
 
 The owner's request, 15 September: split the code so each segment of the hotel
 system — front desk, reservations, housekeeping, inventory, CRS, reports, POS
@@ -163,14 +164,30 @@ Every step leaves every gate green and the app working; safe to stop after any.
 
 ---
 
-## Waiting on the owner
+## The owner's decisions, 15 September
 
-1. **How deep:** screens and server per service, database history shared
-   *(recommended)* — or one top-level folder per service holding everything.
-2. **Which folders:** all, with the six not built as brief-only folders
-   *(recommended)* — or only the built ones.
-3. **When:** now, before a second agent starts, all others paused
-   *(recommended)*.
-4. **Notes and mistakes:** each service keeps its own CHANGELOG and MEMORY; the
-   root keeps an index and project-wide lessons *(recommended)* — or keep the
-   single files.
+1. **Depth:** screens and server per service; the database history shared.
+2. **Folders:** all of them; the six not built get a brief and no code.
+3. **When:** now, by one agent, every other agent paused.
+4. **Notes and mistakes:** each service keeps its own CHANGELOG and MEMORY;
+   the root files keep an index and the lessons that apply everywhere.
+
+## Two refinements made while building, for safety
+
+- **Server tests live in `api/test/modules/<service>/`,** not inside
+  `api/src/`. The test runner and the server's type check already cover
+  `api/test/**`, so nothing about the server's install or deploy changes.
+- **`db/tests/suite.sql` is frozen, not re-sorted.** Its blocks were written in
+  order and lean on each other (the test properties AGR and PUN, for one).
+  New checks go in `db/tests/modules/<service>.sql`, which `run.sh` runs after
+  the suite in the same session.
+
+## Baseline, measured on the branch before anything moved
+
+```
+web type check      clean            web tests        197
+api type check      clean            api tests        359
+database            588 assertions   server load      42 files
+API route table     224 entries, no address registered twice
+screen addresses    73               menus            every role, 4 module states
+```

@@ -98,15 +98,17 @@ anything the item marks "ask first" — and before any other doubt.** That is
 their standing instruction: *"before you have a doubt you need to ask me and
 clear it up, then proceed."*
 
-### 3.0 · One folder per service — PLANNED, waiting on four decisions
+### 3.0 · One folder per service — IN PROGRESS (owner's go-ahead, 15 September)
 
 The owner asked (15 September) for the code to be split so each service —
 front desk, reservations, housekeeping, inventory, CRS, reports, POS and the
 rest — has its own folder, so agents can be given one service each and run in
-parallel. **The plan is `docs/SERVICE-FOLDERS-PLAN.md`.** Nothing has moved.
-**Do not start until the owner has answered its four questions**, and no
-second agent should start before the move is done: it runs with every other
-agent paused.
+parallel. **The plan is `docs/SERVICE-FOLDERS-PLAN.md`.** The owner took
+every recommendation: screens and server per service with the database
+history shared; all folders, the six not-built ones brief-only; now, with
+every other agent paused; notes per service with a root index. It runs on
+branch `service-folders`; `cp6` stays what production runs until the move is
+verified.
 
 ### 3.1 · Clarity step 2 — one primary action per screen — DONE 15 September
 
@@ -502,7 +504,9 @@ rule and list they hold is written into this file, `PENDING.md` and
 ## Folder claims
 
 ```
-FREE    everything — nothing is claimed
+CLAIMED  EVERYTHING — the service-folder move (docs/SERVICE-FOLDERS-PLAN.md)
+         branch service-folders, from tag pre-service-folders (= cp6 4d10248)
+         started 15 September. No other agent writes anywhere until released.
 ```
 
 ---
