@@ -46,6 +46,44 @@ Write it **as you go**, not at the end from memory. Copy this shape:
 
 ---
 
+## 2026-09-15 (deploy) · Everything since 10 September is live
+
+**Asked for:** the owner ran the deploy a day early and asked what preflight's
+errors meant, then "deploy complete, check the live site".
+
+**Shipped** (by the owner, from `HANDOVER.md` § 9)
+- Server: `1c2e5d0`, migrations 085–089, API restarted 15 Sep 13:09 GMT.
+- Website: the owner's build `index-DkwUzh40.js`, published to Firebase.
+
+**Found**
+- 271 · the deploy re-created the placeholder administrator `REPLACE@fidato.in`
+  (deleted 9 September; migration 008 re-inserts it whenever the row is
+  missing). Preflight refused to call the server ready. The owner switched it
+  off from People at 13:14 GMT; preflight then passed. Not an open door —
+  sign-in needs a Firebase uid that only a group administrator can attach.
+- The folder name needs quotes in PowerShell (`cd "D:\fidato pms"`); § 9 now
+  carries them.
+
+**Proved** — read-only, after the deploy
+- API: healthy, as `pms_app`, started 13:09 GMT; 088's guard and the new staff
+  columns present; both walk-ins have their channel; "Reception can use the
+  POS" on; the owner's sign-in link untouched (only `updated_at` moved).
+- Preflight: every check green, "Ready." (the owner's run).
+- Website: the live main bundle is the owner's build, byte-named the same as
+  `dist`; it carries the new screens; `config.json` points at
+  `https://api.fidatohotels.com`; no test sign-in in any built file; the API
+  answers the test header with 401 and allows the live site's origin (CORS).
+- NOT checked by me: the signed-in screens — I do not enter the owner's
+  password, and the in-app browser could not open the live site. The owner's
+  checklist is in this session's reply.
+
+**Left open**
+- The owner's answer on fixing 008 (PENDING 1a).
+
+**Commits:** the post-deploy documentation commit.
+
+---
+
 ## 2026-09-15 (deploy prep) · The steps for the 16 September deploy
 
 **Asked for:** "give me the deploy steps for tomorrow".

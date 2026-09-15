@@ -6468,6 +6468,27 @@ wrong — the break or the test — before calling it either way.**
 
 ---
 
+### 271 · Every deploy re-creates the placeholder administrator once it has been deleted
+
+`008_seed.sql` seeds `REPLACE@fidato.in` as an active group administrator,
+guarded by `on conflict (email) do nothing` — and every deploy replays every
+migration from 001. On 9 September the row was DELETED (13:50 UTC, with the
+other test rows). The 15 September deploy's replay found no such address and
+inserted it again (13:08 UTC): an active group administrator nobody owns, which
+preflight then failed on. My pre-deploy check counted two active staff; I did
+not ask what the replay would insert.
+
+Not an open door: sign-in resolves by Firebase uid only, and only a group
+administrator can attach a sign-in to a group administrator's row (088 closed
+the "add somebody" path as well). Deactivating is what sticks — the row
+stays, so the seed's insert does nothing on every later deploy.
+
+**The rules: where migrations replay, a seeded row cannot be deleted, only
+switched off. And a pre-deploy check asks what the replay will INSERT, not
+only what it will change.**
+
+---
+
 ### Open · two "in house" numbers for the same moment
 
 The property page (`getTodaySnapshot`) said **In house now 11, Vacant 9** while

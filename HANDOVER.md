@@ -45,22 +45,20 @@ seam); a test enforces it.
 ## 2 · Where it stands on 15 September
 
 ```
-production runs     1f77239  (10 Sep)     NOTHING since 14 Sep is deployed
-deploy              planned 16 Sep, the owner running it; pre-checked 15 Sep (§ 9)
-local cp6           ahead of it by every commit listed below
+production runs     1c2e5d0  (15 Sep)     EVERYTHING below is live — API 13:09 GMT, website after
+deploy              done 15 Sep by the owner, a day early; checked afterwards (CHANGELOG)
+local cp6           the same code; later commits are documentation only
 go-live scope       211 / 228  (93%)      the 17 open are the channel manager (excluded)
                                           and the CRS bridge (waiting on its API documents)
 staff-first plan    phase 1 of 4 built
 clarity plan        all 4 steps built (step 4, 15 Sep: Start here, terms, empty states)
 ```
 
-**Waiting to be deployed** — one deploy carries all of it:
+**Deployed 15 September** — all of it:
 
-> ⚠ **DEPLOY FIRST: a security fix is in this list.** Until 088 is live, any
-> hotel manager can take over the owner's login through "add somebody"
-> (MEMORY 263). Interim, on the owner's yes: deactivate or re-password
-> `demo@fidatohotels.com`, which holds the owner role at 5EL with a
-> password that has been shared.
+> **088 has been live since 15 September, 13:09 GMT: the account-takeover hole
+> is closed** (MEMORY 263). `demo@fidatohotels.com` still holds the owner role
+> at 5EL with a shared password — the owner left it on for testing.
 
 ```
 088   SECURITY: adding somebody can no longer take over an existing account
@@ -389,9 +387,10 @@ today). Locally: the strip-check loads all 42 API files and
 `npm run build:app` passes both of its guards.
 
 ```powershell
-# 1 · the owner's PC, PowerShell, in D:\fidato pms — confirm this copy is the pushed one
-git status --short; git log -1 --oneline
+# 1 · the owner's PC, PowerShell — confirm this copy is the pushed one
+cd "D:\fidato pms"; git status --short; git log -1 --oneline
 ```
+The quotes matter: without them PowerShell reads `pms` as a second argument.
 Expect no files listed, then the latest commit on `cp6`.
 
 ```powershell
@@ -423,6 +422,18 @@ and when the code cannot load, nothing is restarted — the old API keeps
 running. **Do not roll the server code back by hand: that reopens the
 security hole 088 closes.**
 
+**If preflight says "no bootstrap accounts" ✗** — the placeholder
+administrator `REPLACE — your name` is switched on (migration 008 re-creates
+it whenever the row is missing; MEMORY 271). The API is already running. On
+the site: People → REPLACE — your name → **Deactivate** (never delete it — a
+deleted row comes back on the next deploy). Then, on the server:
+
+```bash
+# 5a · on the server, same session — preflight again
+cd /opt/fidato/api && sudo -u fidato env HOME=/tmp npm run --silent preflight
+```
+Expect `Ready.`
+
 ```powershell
 # 6 · the owner's PC, PowerShell — the server restarted today
 curl.exe -s https://api.fidatohotels.com/health
@@ -430,8 +441,8 @@ curl.exe -s https://api.fidatohotels.com/health
 Expect `"ok":true` and a `startedAt` with today's date.
 
 ```powershell
-# 7 · the owner's PC, PowerShell, in D:\fidato pms — build the website
-$env:API_URL="https://api.fidatohotels.com"; npm run build:app
+# 7 · the owner's PC, PowerShell — build the website
+cd "D:\fidato pms"; $env:API_URL="https://api.fidatohotels.com"; npm run build:app
 ```
 Expect `✓ no test sign-in in dist` and `✓ dist\config.json → https://api.fidatohotels.com`.
 

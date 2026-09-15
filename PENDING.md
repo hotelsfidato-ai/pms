@@ -30,18 +30,23 @@ Transactions were reset on 9 September. Since then: 4 bookings, 4 guests,
 
 ---
 
-## 1a · SECURITY — found 15 September, fixed, NOT DEPLOYED — do this first
+## 1a · SECURITY — found 15 September, fixed, DEPLOYED 15 September
 
 **Any hotel manager could take over the owner's login** (MEMORY 263).
 "Add somebody" set the password of an account that already existed before
 checking whose it was. Live in production since 9 September. Fixed in 088
 (`app.require_claimable_address`, asked before Firebase is touched); proved
-by API and database tests. **It is live until the owner deploys.**
+by API and database tests. **Live since 15 September, 13:09 GMT: closed.**
 
-Interim: `demo@fidatohotels.com` holds the owner role at 5EL and its
-password has been shared — any holder of that password could use the hole.
-**The owner's decision, 15 September: leave it active — testing is going on
-— and deploy on 16 September.** Do not deactivate it unasked.
+`demo@fidatohotels.com` holds the owner role at 5EL and its password has been
+shared. With 088 live it no longer opens the takeover, but it is still an
+owner-role account at 5EL. **The owner's decision, 15 September: leave it
+active while testing goes on.** Do not deactivate it unasked.
+
+**Asked, not yet answered (15 September):** change `008_seed.sql` so a deploy
+never re-creates the placeholder administrator where a group administrator
+already exists (MEMORY 271). Recommended; a small change with a database test.
+Until then, preflight catches it and § 9 of `HANDOVER.md` says what to do.
 
 **Checked 15 September, read-only: it was not used.** The takeover needs a
 password change, and a password change resets an account's tokens. Of the
