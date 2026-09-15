@@ -6507,6 +6507,22 @@ on the new layout.**
 
 ---
 
+### 273 · The agents' copies of the repo sat inside the repo
+
+The Agent tool puts each agent's git worktree in `.claude/worktrees/` —
+inside this folder. Three things saw them: vitest's default include (a run
+here would have run six other copies' tests, server tests included, against
+this copy's settings), git (six untracked directories, one `git add -A` from
+being committed), and the Vite dev server here (it reloaded the page mid-check
+as agents saved files). Caught by a check that returned nonsense headings,
+before any test run was trusted. Fixed: vitest excludes `.claude/**`, git
+ignores `.claude/worktrees/`. The dev server's reloads are harmless and left.
+
+**The rule: before running agents in parallel, ask what each tool in this
+copy will see of theirs.**
+
+---
+
 ### Open · two "in house" numbers for the same moment
 
 The property page (`getTodaySnapshot`) said **In house now 11, Vacant 9** while
