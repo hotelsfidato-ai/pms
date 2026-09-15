@@ -1,0 +1,208 @@
+import { Hono } from "hono";
+import { withSession } from "../../auth.ts";
+import type { Client } from "../../db.ts";
+
+/* ══════════════════════════════════════════════════════════════════
+   STAFF, THE AUDIT LOG AND SETTINGS
+
+   Split out of api/src/routes/directory.ts on 15 September in the
+   service-folder move (docs/SERVICE-FOLDERS-PLAN.md). Service: admin.
+   Every endpoint is unchanged, byte for byte, and the router keeps the
+   name it had there. `hotelIdFor` is a copy of the one beside it in
+   modules/guests/directory.ts — each route file keeps its own.
+   ══════════════════════════════════════════════════════════════════ */
+
+const directory = new Hono<{ Variables: { subject: string } }>();
+export { directory as adminLists };
+
+async function hotelIdFor(client: Client, code: string) {
+  const { rows } = await client.query<{ id: string }>(
+    "select id from hotels where code = upper($1) and is_active",
+    [code],
+  );
+  return rows[0]?.id ?? null;
+}
+
+/* ── Staff and access ────────────────────────────────────────────── */
+
+
+/**
+ * The real staff list.
+ *
+ * The frontend generated this from the permission matrix — one fake
+ * person per role, all at one property named from a fixture — with a
+ * comment carrying its own removal condition: "`staff_hotels` IS
+ * readable to a group admin now, so this becomes a real list the moment
+ * there are real accounts."
+ *
+ * There are. Password sign-in is still stubbed; the staff rows and
+ * their property grants are not.
+ *
+ * RLS does the filtering. `staff_self` and the `staff_hotels` policies
+ * decide what a caller may see, so a front-desk clerk running this gets
+ * themselves and a group admin gets everybody — from the same SQL.
+ */
+directory.get("/:code/staff", async (c) => {
+  const body = await withSession(c.get("subject"), async (client) => {
+    const hotelId = await hotelIdFor(client, c.req.param("code"));
+    if (!hotelId) return null;
+
+    const { rows } = await client.query<{
+      id: string; full_name: string; email: string;
+      is_group_admin: boolean; is_active: boolean;
+      roles: string | null; properties: string | null;
+    }>(
+      `select s.id::text, s.full_name, s.email::text,
+              s.is_group_admin, s.is_active,
+              (select string_agg(distinct sh.role, ',' order by sh.role)
+                 from staff_hotels sh where sh.staff_id = s.id) as roles,
+              (select string_agg(distinct h.name, ', ' order by h.name)
+                 from staff_hotels sh
+                 join hotels h on h.id = sh.hotel_id
+                where sh.staff_id = s.id) as properties
+         from staff s
+        order by s.is_group_admin desc, s.full_name`,
+    );
+
+    return rows.map((r) => ({
+      id: r.id,
+      name: r.full_name,
+      email: r.email,
+      /* A group admin holds NO staff_hotels rows and reaches everything
+         — app.auth_hotel_ids() accounts for that. Reporting an empty
+         role list beside the flag would read as "no access" when the
+         truth is the opposite. */
+      role: r.is_group_admin ? "owner" : (r.roles?.split(",")[0] ?? null),
+      roles: r.roles ? r.roles.split(",") : [],
+      isGroupAdmin: r.is_group_admin,
+      properties: r.is_group_admin
+        ? "every property"
+        : (r.properties ?? null),
+      status: r.is_active ? "active" : "inactive",
+    }));
+  });
+
+  return body ? c.json(body) : c.json({ error: "No such property." }, 404);
+});
+
+/* ── Audit log ───────────────────────────────────────────────────── */
+
+directory.get("/:code/audit-log", async (c) => {
+  const body = await withSession(c.get("subject"), async (client) => {
+    const hotelId = await hotelIdFor(client, c.req.param("code"));
+    if (!hotelId) return null;
+
+    /* The ledger IS the audit trail for money. It is append-only, so
+       every posting and every reversal is already a permanent record —
+       nothing is stored twice to produce this. */
+    const { rows } = await client.query<{
+      id: string; at: string; business_date: string; category: string;
+      description: string; guest: string; room: string | null;
+      reverses_id: string | null;
+    }>(
+      `select fp.id::text, fp.created_at::text as at,
+              fp.business_date::text, fp.category, fp.description,
+              g.full_name as guest,
+              (select rm.number from room_assignments ra
+                 join rooms rm on rm.id = ra.room_id
+                where ra.reservation_id = r.id
+                order by ra.released_at nulls first, ra.from_date desc
+                limit 1) as room,
+              fp.reverses_id::text
+         from folio_postings fp
+         join folios f       on f.id = fp.folio_id
+         join reservations r on r.id = f.reservation_id
+         join guests g       on g.id = r.guest_id
+        where fp.hotel_id = $1
+        order by fp.created_at desc, fp.id desc
+        limit 500`,
+      [hotelId],
+    );
+
+    return rows.map((r) => ({
+      id: r.id,
+      at: r.at,
+      businessDate: r.business_date,
+      actor: "admin",
+      action: r.reverses_id
+        ? "Reversed a posting"
+        : r.category === "payment"
+          ? "Took a payment"
+          : "Posted a charge",
+      subject: `${r.guest}${r.room ? ` · room ${r.room}` : ""}`,
+      detail: r.description,
+      kind: r.reverses_id ? "reversal" : r.category === "payment" ? "payment" : "charge",
+    }));
+  });
+
+  return body ? c.json(body) : c.json({ error: "No such property." }, 404);
+});
+
+/* ── Settings ────────────────────────────────────────────────────── */
+
+directory.get("/:code/settings", async (c) => {
+  const body = await withSession(c.get("subject"), async (client) => {
+    const hotelId = await hotelIdFor(client, c.req.param("code"));
+    if (!hotelId) return null;
+
+    const { rows } = await client.query<{
+      name: string; address_line: string | null; city: string;
+      gstin: string | null; currency: string; timezone: string;
+      check_in: string; check_out: string;
+      cgst_rate: string; sgst_rate: string;
+      sellable: string; room_types: string[]; plans: string[];
+    }>(
+      `select h.name, h.address_line, h.city, h.gstin, h.currency, h.timezone,
+              to_char(h.check_in_time,  'HH24:MI') as check_in,
+              to_char(h.check_out_time, 'HH24:MI') as check_out,
+              h.cgst_rate, h.sgst_rate,
+              (select count(*) from rooms r
+                where r.hotel_id = h.id and r.is_active
+                  and r.housekeeping_status <> 'out_of_service')::text as sellable,
+              (select array_agg(rt.name order by rt.sort_order)
+                 from room_types rt where rt.hotel_id = h.id and rt.is_active) as room_types,
+              (select array_agg(mp.code order by mp.code) from meal_plans mp)  as plans
+         from hotels h where h.id = $1`,
+      [hotelId],
+    );
+
+    const h = rows[0];
+    if (!h) return null;
+
+    return [
+      {
+        title: "Property",
+        rows: [
+          { label: "Name", value: h.name },
+          { label: "Address", value: h.address_line ?? h.city },
+          { label: "GSTIN", value: `${h.gstin ?? "—"} — demo, not a real GSTIN` },
+          { label: "Currency", value: h.currency },
+          { label: "Time zone", value: h.timezone },
+        ],
+      },
+      {
+        title: "Operations",
+        rows: [
+          { label: "Check-in", value: h.check_in },
+          { label: "Check-out", value: h.check_out },
+          { label: "Sellable rooms", value: h.sellable },
+          { label: "Room types", value: (h.room_types ?? []).join(" · ") },
+          { label: "Rate plans", value: (h.plans ?? []).join(" · ") },
+        ],
+      },
+      {
+        title: "Tax and billing",
+        note:
+          "Rates are fixed by statute. Changing them is an administrative act, " +
+          "not a preference — they become editable at Stage 8.",
+        rows: [
+          { label: "CGST", value: `${Number(h.cgst_rate)}%`, editableAt: "Stage 8" },
+          { label: "SGST", value: `${Number(h.sgst_rate)}%`, editableAt: "Stage 8" },
+          { label: "Financial year starts", value: "1 April" },
+        ],
+      },
+    ];
+  });
+
+  return body ? c.json(body) : c.json({ error: "No such property." }, 404);
+});

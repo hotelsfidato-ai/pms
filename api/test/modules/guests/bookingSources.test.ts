@@ -1,6 +1,6 @@
 import { describe, it, expect, beforeAll, afterAll } from "vitest";
-import { app } from "../src/server.ts";
-import { closePool } from "../src/db.ts";
+import { app } from "../../../src/server.ts";
+import { closePool } from "../../../src/db.ts";
 
 /* ══════════════════════════════════════════════════════════════════
    BOOKING SOURCES — a group list with a per-property rate
