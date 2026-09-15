@@ -9,11 +9,7 @@ import {
   Dialog, DialogContent, DialogClose, Field, fieldProps, Input,
   NativeSelect, StatusPill, DataTable, type Column,
 } from "@/components/ui";
-import {
-  listBookingSources, addBookingSource, amendBookingSource,
-  setBookingSourceCommission, SOURCE_KINDS, kindLabel,
-  type BookingSource, type BookingSourceKind,
-} from "@/data/repositories";
+import { listBookingSources, addBookingSource, amendBookingSource, setBookingSourceCommission, SOURCE_KINDS, kindLabel, type BookingSource, type BookingSourceKind } from "@/modules/guests/data/bookingSources";
 
 /* ══════════════════════════════════════════════════════════════════
    WHERE THE BOOKINGS COME FROM

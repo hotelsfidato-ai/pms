@@ -7,9 +7,8 @@ import {
   Button, Drawer, DrawerContent, StatusPill, Skeleton, toast,
   Tabs, TabsList, TabsTrigger, TabsContent, type Tone,
 } from "@/components/ui";
-import {
-  getFolio, setGuestVip, queryKeys, type Stay,
-} from "@/data/repositories";
+import { getFolio, queryKeys, type Stay } from "@/data/repositories";
+import { setGuestVip } from "@/modules/guests";
 import { CheckInFlow } from "@/components/flows/CheckInFlow";
 import { StayActions } from "@/components/flows/StayActions";
 import { FolioPanel } from "@/components/flows/FolioPanel";

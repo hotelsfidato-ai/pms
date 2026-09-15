@@ -28,13 +28,11 @@ export * from "./stays";
 export * from "./stayview";
 export * from "./operations";
 export * from "./notifications";
-export * from "./directory";
 export * from "./billing";
 export * from "./groups";
 export * from "./rates";
 export * from "./till";
 export * from "./roomSetup";
-export * from "./bookingSources";
 export * from "./stayExtras";
 /* Split out of the mixed files on 15 September, one file per service
    (docs/SERVICE-FOLDERS-PLAN.md). Re-exported here while the services'
@@ -46,7 +44,6 @@ export * from "./cashier";
 export * from "./housekeeping";
 export * from "./rateGrid";
 export * from "./nightAudit";
-export * from "./formC";
 export * from "./posBridge";
 export * from "./rateSetup";
 export * from "./me";

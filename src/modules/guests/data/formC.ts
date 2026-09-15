@@ -1,4 +1,4 @@
-import { fetchOr } from "./http";
+import { fetchOr } from "@/data/repositories/http";
 import { api } from "@/lib/api";
 /* Form C, the foreign-guest register.
 

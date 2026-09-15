@@ -5,7 +5,7 @@ import { cn } from "@/lib/cn";
 import { money, dateShort } from "@/lib/format";
 import { useUi } from "@/lib/ui";
 import { Page, PageHeader, Card, CardBody, DataTable, StatusPill, Avatar, EmptyState, type Column, type Tone } from "@/components/ui";
-import { listGuests, listCompanies, type GuestRecord, type CompanyRecord } from "@/data/repositories";
+import { listGuests, listCompanies, type GuestRecord, type CompanyRecord } from "@/modules/guests/data/directory";
 
 /* Split out of Directory.tsx on 15 September in the service-folder move
    (docs/SERVICE-FOLDERS-PLAN.md). Service: guests. Unchanged. */

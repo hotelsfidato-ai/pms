@@ -1,8 +1,8 @@
 import { Route } from "react-router";
 import { PropertyScope } from "@/components/app/PropertyScope";
-import { GuestsPage, CompaniesPage } from "@/pages/Guests";
-import BookingSourcesPage from "@/pages/BookingSources";
-import FormCPage from "@/pages/FormC";
+import { GuestsPage, CompaniesPage } from "@/modules/guests/pages/Guests";
+import BookingSourcesPage from "@/modules/guests/pages/BookingSources";
+import FormCPage from "@/modules/guests/pages/FormC";
 
 /* Guests and companies' screen addresses. Mounted by App.tsx inside the
    signed-in shell. */

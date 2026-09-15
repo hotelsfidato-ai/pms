@@ -10,7 +10,7 @@ import {
   Button, Input, type Column,
 } from "@/components/ui";
 import { describeError } from "@/components/ui/States";
-import { getFormC, recordFormC, type FormCRow } from "@/data/repositories";
+import { getFormC, recordFormC, type FormCRow } from "@/modules/guests/data/formC";
 
 /* ══════════════════════════════════════════════════════════════════
    FORM C

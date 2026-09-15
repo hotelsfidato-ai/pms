@@ -9,10 +9,8 @@ import {
   Page, PageHeader, Card, CardBody, CardHeader, Button, Field, fieldProps,
   Input, NativeSelect, Skeleton, toast,
 } from "@/components/ui";
-import {
-  getInventory, getTariff, createBooking, listCompanies,
-  listBookingSources, type Tariff,
-} from "@/data/repositories";
+import { getInventory, getTariff, createBooking, type Tariff } from "@/data/repositories";
+import { listCompanies, listBookingSources } from "@/modules/guests";
 
 /* ══════════════════════════════════════════════════════════════════
    BOOKING SEVERAL ROOMS

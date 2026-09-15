@@ -4,7 +4,7 @@ import { useParams } from "react-router";
 import {
   Page, PageHeader, Card, CardBody, StatusPill,
 } from "@/components/ui";
-import { listCompanies } from "@/data/repositories";
+import { listCompanies } from "@/modules/guests";
 
 /* ══════════════════════════════════════════════════════════════════
    THE CHANNEL MANAGER — named, not hidden

@@ -1,4 +1,5 @@
 /* The front door of the Guests and companies service — the only file another service
    may import (src/test/boundaries.test.ts). It grows as the service's files
    move in; see MODULE.md. */
-export {};
+export { listBookingSources } from "./data/bookingSources";
+export { listCompanies, setGuestVip } from "./data/directory";
