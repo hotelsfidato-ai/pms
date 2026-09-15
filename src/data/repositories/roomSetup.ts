@@ -1,5 +1,6 @@
 import { api, ApiError } from "@/lib/api";
-import type { ImportReport } from "./till";
+import { call } from "./http";
+import type { ImportReport } from "./importReport";
 
 /* ══════════════════════════════════════════════════════════════════
    SETTING UP WHAT THE PROPERTY SELLS
@@ -119,23 +120,6 @@ export async function amendRoom(
     "PATCH", input);
 }
 
-async function call<T>(
-  path: string, method: string, body?: unknown,
-): Promise<Result<T>> {
-  try {
-    const out = await api<T & { ok?: boolean }>(path, {
-      method,
-      ...(body === undefined ? {} : { body: JSON.stringify(body) }),
-    });
-    return { ...(out as T), ok: true };
-  } catch (error) {
-    if (error instanceof ApiError) {
-      const p = error.body as { reason?: string } | undefined;
-      return { ok: false, reason: p?.reason ?? error.message };
-    }
-    throw error;
-  }
-}
 
 /** The hours the property sells the night between, and what an
     exception costs. Sending null for a charge clears it. */
@@ -149,123 +133,6 @@ export async function amendFrontDesk(
 ): Promise<Result> {
   return call(`/api/hotels/${hotelId}/front-desk`, "PATCH", input);
 }
-
-/* ══════════════════════════════════════════════════════════════════
-   GST, ONCE, FOR BOTH SIDES OF THE HOUSE
-
-   A KIND is what is being sold. A SLAB is a rate that applies above an
-   amount, because the rate on a room turns on what the room costs:
-   5% at or under ₹7,500, 18% above it.
-
-   Everything the front desk posts — the night, an early arrival, a
-   late departure, laundry — follows 'room'. Every menu category names
-   the kind it sells under, which is how a bar section on the same card
-   carries a different rate from the food.
-
-   A kind with no slabs is UNSET, and unset refuses to bill. It does
-   not bill at zero. That is the same rule as every price in this
-   system: a dash is an admission, a zero is a claim.
-   ══════════════════════════════════════════════════════════════════ */
-
-export type TaxKind = "room" | "restaurant" | "bar" | "banquet" | "other";
-
-export interface TaxSlab {
-  id: string;
-  /** The rate applies above this amount. 0 is the base slab, and a
-      kind without one has a hole under its lowest rate. */
-  overAmount: number;
-  rate: number;
-  note: string | null;
-  setBy: string | null;
-}
-
-export interface TaxKindRules {
-  kind: TaxKind;
-  slabs: TaxSlab[];
-}
-
-export interface MenuCategoryTax {
-  name: string;
-  /** Null cannot be sold — the till refuses and names the category. */
-  kind: TaxKind | null;
-  items: number;
-}
-
-export interface TaxSetup {
-  kinds: TaxKindRules[];
-  categories: MenuCategoryTax[];
-}
-
-export async function getTaxSetup(hotelId: string): Promise<TaxSetup> {
-  if (!hotelId) return { kinds: [], categories: [] };
-  return api<TaxSetup>(`/api/hotels/${hotelId}/tax`);
-}
-
-/** Replaces every slab for one kind. Whole-kind rather than row-by-row
-    because the slabs only mean anything together — saving them one at a
-    time passes through states where an ordinary room has no rate. An
-    empty list puts the kind back to unset. */
-export async function setTaxRules(
-  hotelId: string,
-  kind: TaxKind,
-  slabs: { overAmount: number; rate: number; note?: string | null }[],
-): Promise<Result<{ slabs: number }>> {
-  return call(`/api/hotels/${hotelId}/tax/${kind}`, "PUT", { slabs });
-}
-
-export async function setCategoryTaxKind(
-  hotelId: string, category: string, kind: TaxKind | null,
-): Promise<Result> {
-  return call(
-    `/api/hotels/${hotelId}/menu-categories/${encodeURIComponent(category)}/tax-kind`,
-    "PATCH", { kind });
-}
-
-/* ══════════════════════════════════════════════════════════════════
-   WHAT A PROPERTY STILL NEEDS
-
-   Every line is DERIVED. Nothing is ticked off by hand and there is no
-   "setup complete" flag to go stale — each check asks the database the
-   same question the feature it guards asks, so a property that says it
-   can take a booking can take one.
-
-   `canTakeABooking` is a boolean, not a percentage. "80% ready" invites
-   somebody to open on the strength of a number that says nothing about
-   which fifth is missing, and here the missing fifth is usually the tax
-   number that prints on every bill.
-   ══════════════════════════════════════════════════════════════════ */
-
-export interface CommissioningCheck {
-  id: string;
-  label: string;
-  done: boolean;
-  /** What is missing, in words somebody can act on. Null when done. */
-  detail: string | null;
-  blocking: boolean;
-  /** Where to fix it, relative to the property. */
-  to: string | null;
-}
-
-export interface Commissioning {
-  property: string;
-  checks: CommissioningCheck[];
-  done: number;
-  total: number;
-  canTakeABooking: boolean;
-  blockedBy: string[];
-}
-
-export async function getCommissioning(
-  hotelId: string,
-): Promise<Commissioning | null> {
-  if (!hotelId) return null;
-  try {
-    return await api<Commissioning>(`/api/hotels/${hotelId}/commissioning`);
-  } catch {
-    return null;
-  }
-}
-
 
 /** Import room types, or rooms, from a file.
 

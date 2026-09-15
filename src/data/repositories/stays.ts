@@ -1,6 +1,6 @@
 import { api, ApiError } from "@/lib/api";
 import { BUSINESS_DATE } from "./businessDate";
-import type { Stay, Folio } from "./types";
+import type { Stay } from "./types";
 
 /* ══════════════════════════════════════════════════════════════════
    STAYS AND FOLIOS — over HTTP, as of CP9
@@ -28,7 +28,7 @@ export { BUSINESS_DATE } from "./businessDate";
 const clone = <T,>(rows: T[]): T[] => rows.map((r) => ({ ...r }));
 
 /** A property the caller cannot see is empty, not an error. */
-async function fetchStays(hotelId: string): Promise<Stay[]> {
+export async function fetchStays(hotelId: string): Promise<Stay[]> {
   if (!hotelId) return [];
   try {
     return await api<Stay[]>(`/api/hotels/${hotelId}/stays`);
@@ -141,95 +141,4 @@ export async function listVacant(hotelId: string, date = BUSINESS_DATE) {
   const taken = new Set((await listInHouse(hotelId, date)).map((s) => s.roomNumber));
   const arriving = new Set((await listArrivals(hotelId, date)).map((s) => s.roomNumber));
   return { taken, arriving };
-}
-
-/* ── Folios ───────────────────────────────────────────────────────── */
-
-export async function getFolio(hotelId: string, stayId: string): Promise<Folio | null> {
-  if (!hotelId || !stayId) return null;
-  try {
-    return await api<Folio>(`/api/hotels/${hotelId}/stays/${stayId}/folio`);
-  } catch (error) {
-    /* An unknown stay is null, not a folio of zeros — a zeroed folio
-       reads as "settled", which is the wrong answer to "does this
-       guest owe anything". */
-    if (error instanceof ApiError && error.status === 404) return null;
-    throw error;
-  }
-}
-
-/** Folios still carrying a balance — includes overpayments, which are negative. */
-export async function listOpenFolios(
-  hotelId: string,
-): Promise<Array<Folio & { stay: Stay }>> {
-  if (!hotelId) return [];
-
-  const [folios, stays] = await Promise.all([
-    api<Folio[]>(`/api/hotels/${hotelId}/folios`).catch((error) => {
-      if (error instanceof ApiError && error.status === 404) return [];
-      throw error;
-    }),
-    fetchStays(hotelId),
-  ]);
-
-  const byId = new Map(stays.map((s) => [s.id, s]));
-
-  return folios
-    .filter((f) => byId.has(f.stayId))
-    .map((f) => ({ ...f, stay: byId.get(f.stayId)! }))
-    .sort((a, b) => a.balance - b.balance);
-}
-
-/* ── Groups ───────────────────────────────────────────────────────── */
-
-export interface StayGroup {
-  id: string;
-  hotelId: string;
-  name: string;
-  reference: string;
-  company: string | null;
-  rooms: number;
-  /** Room-nights across the group, summed from the bookings. */
-  nights: number;
-  arrival: string;
-  departure: string;
-
-  /* WHERE THE GROUP IS TODAY. Counted from the rooms, never stored — a
-     group whose bookings have been amended must not keep reporting the
-     shape it had when it was made. */
-  inHouse: number;
-  dueIn: number;
-  departed: number;
-  cancelled: number;
-
-  /** How many rooms bill to the host. Per room, not per group. */
-  routedRooms: number;
-
-  /** What the HOST owes. Null when there is no host account, which is
-      most groups — and null is not zero, which would say the host owes
-      nothing when there is no host. */
-  masterBalance: number | null;
-  /** The sum of the rooms' own folios. Kept apart from the master's:
-      adding them produces a number nobody is being asked to pay. */
-  guestBalance: number;
-}
-
-export async function listGroups(
-  hotelId: string, scope: "current" | "all" = "current",
-): Promise<StayGroup[]> {
-  if (!hotelId) return [];
-  try {
-    return await api<StayGroup[]>(
-      `/api/hotels/${hotelId}/groups?scope=${scope}`);
-  } catch (error) {
-    if (error instanceof ApiError && error.status === 404) return [];
-    throw error;
-  }
-}
-
-export async function listGroupMembers(
-  hotelId: string,
-  groupId: string,
-): Promise<Stay[]> {
-  return clone((await fetchStays(hotelId)).filter((s) => s.groupId === groupId));
 }

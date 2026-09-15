@@ -1,4 +1,6 @@
 import { api, ApiError } from "@/lib/api";
+import type { Stay } from "./types";
+import { fetchStays } from "./stays";
 
 /* ══════════════════════════════════════════════════════════════════
    A GROUP, AND WHO PAYS FOR IT
@@ -169,4 +171,60 @@ export async function createBooking(
     }
     throw error;
   }
+}
+
+const clone = <T,>(rows: T[]): T[] => rows.map((r) => ({ ...r }));
+
+/* ── Groups ───────────────────────────────────────────────────────── */
+
+export interface StayGroup {
+  id: string;
+  hotelId: string;
+  name: string;
+  reference: string;
+  company: string | null;
+  rooms: number;
+  /** Room-nights across the group, summed from the bookings. */
+  nights: number;
+  arrival: string;
+  departure: string;
+
+  /* WHERE THE GROUP IS TODAY. Counted from the rooms, never stored — a
+     group whose bookings have been amended must not keep reporting the
+     shape it had when it was made. */
+  inHouse: number;
+  dueIn: number;
+  departed: number;
+  cancelled: number;
+
+  /** How many rooms bill to the host. Per room, not per group. */
+  routedRooms: number;
+
+  /** What the HOST owes. Null when there is no host account, which is
+      most groups — and null is not zero, which would say the host owes
+      nothing when there is no host. */
+  masterBalance: number | null;
+  /** The sum of the rooms' own folios. Kept apart from the master's:
+      adding them produces a number nobody is being asked to pay. */
+  guestBalance: number;
+}
+
+export async function listGroups(
+  hotelId: string, scope: "current" | "all" = "current",
+): Promise<StayGroup[]> {
+  if (!hotelId) return [];
+  try {
+    return await api<StayGroup[]>(
+      `/api/hotels/${hotelId}/groups?scope=${scope}`);
+  } catch (error) {
+    if (error instanceof ApiError && error.status === 404) return [];
+    throw error;
+  }
+}
+
+export async function listGroupMembers(
+  hotelId: string,
+  groupId: string,
+): Promise<Stay[]> {
+  return clone((await fetchStays(hotelId)).filter((s) => s.groupId === groupId));
 }

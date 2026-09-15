@@ -1,4 +1,5 @@
 import { api, ApiError, HeldError } from "@/lib/api";
+import type { ImportReport } from "./importReport";
 
 /* ══════════════════════════════════════════════════════════════════
    THE TILL — the POS built into the PMS
@@ -1131,23 +1132,6 @@ async function till(
    payload to apply. A bulk write that happens the instant a file is
    chosen is how somebody replaces a card they meant to look at first.
    ══════════════════════════════════════════════════════════════════ */
-
-export interface ImportVerdict {
-  line: number;
-  name: string;
-  action: "create" | "update" | "rejected";
-  detail: string;
-}
-
-export interface ImportReport {
-  ok: boolean;
-  reason?: string;
-  dryRun: boolean;
-  verdicts: ImportVerdict[];
-  creates: number;
-  updates: number;
-  rejected: number;
-}
 
 export async function importMenu(
   hotelId: string,

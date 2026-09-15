@@ -1,4 +1,6 @@
-import { api } from "@/lib/api";
+import { api, ApiError } from "@/lib/api";
+import type { Folio, Stay } from "./types";
+import { fetchStays } from "./stays";
 
 /* ══════════════════════════════════════════════════════════════════
    SPLIT BILLING
@@ -79,4 +81,41 @@ export async function listBillingCompanies(
   return await api<BillingCompany[]>(
     `/api/hotels/${hotelId}/billing-companies`,
   );
+}
+
+/* ── Folios ───────────────────────────────────────────────────────── */
+
+export async function getFolio(hotelId: string, stayId: string): Promise<Folio | null> {
+  if (!hotelId || !stayId) return null;
+  try {
+    return await api<Folio>(`/api/hotels/${hotelId}/stays/${stayId}/folio`);
+  } catch (error) {
+    /* An unknown stay is null, not a folio of zeros — a zeroed folio
+       reads as "settled", which is the wrong answer to "does this
+       guest owe anything". */
+    if (error instanceof ApiError && error.status === 404) return null;
+    throw error;
+  }
+}
+
+/** Folios still carrying a balance — includes overpayments, which are negative. */
+export async function listOpenFolios(
+  hotelId: string,
+): Promise<Array<Folio & { stay: Stay }>> {
+  if (!hotelId) return [];
+
+  const [folios, stays] = await Promise.all([
+    api<Folio[]>(`/api/hotels/${hotelId}/folios`).catch((error) => {
+      if (error instanceof ApiError && error.status === 404) return [];
+      throw error;
+    }),
+    fetchStays(hotelId),
+  ]);
+
+  const byId = new Map(stays.map((s) => [s.id, s]));
+
+  return folios
+    .filter((f) => byId.has(f.stayId))
+    .map((f) => ({ ...f, stay: byId.get(f.stayId)! }))
+    .sort((a, b) => a.balance - b.balance);
 }

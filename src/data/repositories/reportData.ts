@@ -1,5 +1,5 @@
-import { api, ApiError } from "@/lib/api";
 import { BUSINESS_DATE } from "./businessDate";
+import { fetchOr } from "./http";
 
 /* ══════════════════════════════════════════════════════════════════
    REPORT DATA — over HTTP, as of CP9e
@@ -18,14 +18,6 @@ import { BUSINESS_DATE } from "./businessDate";
 const range = (from: string, to: string) =>
   `from=${encodeURIComponent(from)}&to=${encodeURIComponent(to)}`;
 
-async function fetchOr<T>(path: string, empty: T): Promise<T> {
-  try {
-    return await api<T>(path);
-  } catch (error) {
-    if (error instanceof ApiError && error.status === 404) return empty;
-    throw error;
-  }
-}
 
 /* ── No show ─────────────────────────────────────────────────────── */
 

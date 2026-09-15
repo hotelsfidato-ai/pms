@@ -38,6 +38,25 @@ export * from "./roomSetup";
 export * from "./bookingSources";
 export * from "./stores";
 export * from "./stayExtras";
+/* Split out of the mixed files on 15 September, one file per service
+   (docs/SERVICE-FOLDERS-PLAN.md). Re-exported here while the services'
+   files move into src/modules; importers are pointed at each service's
+   front door as they go. */
+export type { OperationResult, AdminResult } from "./result";
+export * from "./postings";
+export * from "./cashier";
+export * from "./housekeeping";
+export * from "./rateGrid";
+export * from "./nightAudit";
+export * from "./formC";
+export * from "./posBridge";
+export * from "./rateSetup";
+export * from "./me";
+export * from "./adminLists";
+export * from "./unroutedLists";
+export * from "./tax";
+export * from "./commissioning";
+export * from "./importReport";
 
 
 /* ── Query keys ────────────────────────────────────────────────────

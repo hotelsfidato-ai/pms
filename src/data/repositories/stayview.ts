@@ -1,6 +1,7 @@
 import { listAllRooms } from "./rooms";
-import { listStays, listOpenFolios } from "./stays";
+import { listStays } from "./stays";
 import type { Stay } from "./types";
+import { listOpenFolios } from "./folios";
 
 /* ══════════════════════════════════════════════════════════════════
    STAY VIEW — the tape chart's data
