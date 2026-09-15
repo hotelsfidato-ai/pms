@@ -16,7 +16,7 @@ import type { MenuItem } from "@/modules/pos/data/till";
       copy, so the number a waiter saw while choosing sides and the
       number on the pad could already have disagreed.
 
-   2. `api/test/padTotal.test.ts` PRICES THE SAME LINES BOTH WAYS and
+   2. `api/test/modules/pos/padTotal.test.ts` PRICES THE SAME LINES BOTH WAYS and
       asserts they match. If you change how a dish is priced anywhere —
       here, in `addOneLine`, or in the database — that test is what
       catches you. Do not delete it to make a build pass.

@@ -158,7 +158,7 @@ export async function draftedTables(hotelId: string): Promise<Set<string>> {
    waiter must be able to answer "how much is that?" at the table
    without a round trip.
 
-   The guard is `api/test/padTotal.test.ts`: the same lines are priced
+   The guard is `api/test/modules/pos/padTotal.test.ts`: the same lines are priced
    here and by the server, and the two must agree. If you change how a
    dish is priced ANYWHERE, that test is the one that catches you.
 

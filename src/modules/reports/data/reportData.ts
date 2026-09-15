@@ -6,7 +6,7 @@ import { fetchOr } from "@/data/repositories/http";
 
    The aggregations behind the statutory reports. All of them are now
    SQL, and all of them share the definitions in
-   `api/src/routes/statistics.ts` — so the Manager Report's PTD column
+   `api/src/modules/reports/statistics.ts` — so the Manager Report's PTD column
    and the Monthly Statistics grid compute the same thing rather than
    agreeing by construction.
 

@@ -198,7 +198,7 @@ export function deactivateStaff(
 /* ══════════════════════════════════════════════════════════════════
    FOUR ENDPOINTS NOTHING COULD REACH
 
-   Found by walking `api/src/routes/admin.ts` against this file on
+   Found by walking `api/src/routes/admin.ts` (now api/src/modules/admin/admin.ts) against this file on
    9 September. Eleven endpoints exist; seven were called from here.
    The four below were written, tested, and had no path to them:
 

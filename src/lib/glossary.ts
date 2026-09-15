@@ -8,13 +8,13 @@
    against a textbook, because a definition that disagrees with the number
    beside it is worse than none:
 
-     occupancy, ADR, RevPAR   api/src/routes/manager.ts — rate(), revpar(),
+     occupancy, ADR, RevPAR   api/src/modules/reports/manager.ts — rate(), revpar(),
                               occ(); sold excludes complimentary nights,
                               available is app.sellable_rooms (044)
      PTD                      businessDate.ts — the 1st of the business
                               date's month
      YTD                      FY_START, 1 April, in both the API and here
-     no-show, night audit     api/src/routes/nightAudit.ts; 073 releases
+     no-show, night audit     api/src/modules/night-audit/nightAudit.ts; 073 releases
                               the room
      day use                  015 — check_out = check_in
      city ledger              manager.ts — every row null until the

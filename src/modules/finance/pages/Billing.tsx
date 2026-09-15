@@ -140,12 +140,12 @@ export function PaymentsPage() {
   );
 }
 
-/* Invoices moved to src/pages/Invoices.tsx when issuing landed. Three
+/* Invoices moved to Invoices.tsx, beside this file, when issuing landed. Three
    screens in one file was already a stretch; a fourth carrying a
    mutation was not. BILL_TONE, BILL_LABEL and the billable columns went
    with it — they described that page and nothing else here. */
 
-/* InvoicesPage moved to src/pages/Invoices.tsx when issuing landed —
+/* InvoicesPage moved to Invoices.tsx, beside this file, when issuing landed —
    see the note on the import in App.tsx. */
 
 /* ── City ledger, at the property ────────────────────────────────── */
