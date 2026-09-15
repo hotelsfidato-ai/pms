@@ -5,8 +5,10 @@ hotel group with seven owned properties.** This file assumes you know nothing
 about it and are not the agent that wrote it. Read this one first; it tells you
 where everything else is.
 
-Last updated **8 September 2026**. The system is **deployed and serving a real
-property.** That is new since this file was last written, and it changes what
+Last updated **15 September 2026** (the header; sections below carry their own
+dates). **For what is happening now and what to do next, read the top section
+of `HANDOVER.md` — this file is how to run it.** The system is **deployed and
+serving a real property.** That is new since this file was last written, and it changes what
 "done" means for everything below.
 
 ```
@@ -58,19 +60,16 @@ Everything needed to rebuild it is in `db/`: migrations and a test suite.
 ### Schema, tests and demo data
 
 ```bash
-cd "D:\fidato pms"
-export PGBIN="<...>/pgsql/bin"
-bash db/tests/run.sh          # drops, migrates, tests, seeds. Must exit 0.
+# Git Bash on this PC, in D:idato pms
+./db/migrate.sh --with-dev-identities   # brings `fidato` up to date. Never drops.
+./db/tests/run.sh                       # proves the migrations on a SCRATCH database
 ```
 
-You should see:
-
-```
-✓ 21 migrations applied
-✓ rls.sql — isolation proven as pms_app, not as a superuser
-✓ dev identities: dev-owner, dev-agra, dev-pune
-all 51 assertions passed
-```
+`run.sh` no longer touches `fidato` — it builds a scratch database and drops
+it (it used to wipe the app's data; see its header). On 15 September it
+reported **all 574 assertions passed**, and `db/tests/rerun.sh` **all 87
+migrations are re-runnable**. Compare against those, not against the older
+numbers further down this file.
 
 Then load the demo property:
 

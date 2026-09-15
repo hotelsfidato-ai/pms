@@ -1,5 +1,394 @@
 # Handover — current state
 
+**Last updated: 15 September 2026**, branch `cp6`. **This top section is
+current.** Everything under "Archive" at the bottom is the 28 August state,
+kept for the record and superseded.
+
+If you are an agent picking this up: read this section to the end before your
+first write. It is the whole brief — the owner should not have to explain any
+of it again.
+
+---
+
+## 0 · Read in this order
+
+```
+1  HANDOVER.md   this section                        what is going on, what is next
+2  MEMORY.md     skim; read 240 onwards properly     258 numbered defects — mistakes already made here
+3  CHANGELOG.md  the top three entries               what the last sessions did
+4  START-HERE.md sections 1 and 2                    how to run it on this machine
+5  PENDING.md    all of it                           what is left, and what was decided against
+```
+
+`AGENTS.md` has the working agreement (one agent per folder, open the screen,
+a guard is not a guard until it has refused something). It still applies.
+
+---
+
+## 1 · What this is
+
+A property management system for **Fidato Hotels**, an Indian group of seven
+properties. **One property is live**: 5 Elements Akkalkot, 18 rooms.
+
+```
+LIVE   https://pms.fidatohotels.com     the screens   Firebase Hosting, project poms-fad05
+LIVE   https://api.fidatohotels.com     the API       Oracle Linux, 130.210.49.220, /opt/fidato
+REPO   github.com/hotelsfidato-ai/pms   branch cp6    push normally — the owner's instruction
+```
+
+React 19 + Tailwind v4 in `src/`, a Hono API in `api/`, Postgres with row-level
+security in `db/`. Screens reach data only through `@/data/repositories` (the
+seam); a test enforces it.
+
+---
+
+## 2 · Where it stands on 15 September
+
+```
+production runs     1f77239  (10 Sep)     NOTHING since 14 Sep is deployed
+local cp6           ahead of it by every commit listed below
+go-live scope       211 / 228  (93%)      the 17 open are the channel manager (excluded)
+                                          and the CRS bridge (waiting on its API documents)
+staff-first plan    phase 1 of 4 built
+clarity plan        step 1 of 4 built
+```
+
+**Waiting to be deployed** — one deploy carries all of it:
+
+```
+085   a walk-in records the Walk-in channel; back-fills FH-2609-5001 on deploy
+      the rebuilt stay panel (owner's eZee-style reference)
+086   a departed group room says which room it was in
+      the dev test sign-ins can never reach a built app (build fails if they do)
+087   staff-first phase 1: Dashboard, first screen per person, Room type/Floor
+      remembered per person, "Reception can use the POS" switch per hotel
+      front-end pass: sign-in screen, Dashboard icons, report header facts, Manager report CSV
+      one vocabulary: room states, menu, headings, browser tab titles
+```
+
+**Gates, measured 15 September on this machine:**
+
+```
+db/tests/run.sh         574 assertions passed        scratch database, dropped after
+db/tests/rerun.sh       87 migrations re-runnable    scratch database, migrated twice
+cd api && npm test      350 passed, 28 files         never `npx vitest run` inside api/
+npx tsc -b              clean
+npx vitest run          179 passed, 12 files
+```
+
+---
+
+## 3 · What to do next, in order
+
+Each item is scoped, with its "done when". **Ask the owner before building
+anything the item marks "ask first" — and before any other doubt.** That is
+their standing instruction: *"before you have a doubt you need to ask me and
+clear it up, then proceed."*
+
+### 3.1 · Clarity step 2 — one primary action per screen
+
+Of 282 `<Button>`s in the product, three declare `variant="primary"`
+(`CheckInFlow`, `StayDrawer`, `SignIn`). `Button` defaults to `secondary`, so
+on every other screen "Confirm booking" is drawn exactly like "Cancel".
+
+```
+New booking     Confirm booking          Walk-in       Check in guest
+Bill            Take payment             Till          Send to kitchen / Settle
+Night audit     Close the day            People        Add a person
+```
+
+Destructive actions keep `variant="danger"` and are never the primary. Add a
+test that fails when one of these screens has no primary button (a
+`data-variant` on `Button` is the simplest hook), and prove it fails.
+**Done when** each screen above has exactly one solid orange button and it is
+the right one — opened in the browser as Reception and as GM.
+
+### 3.2 · Clarity step 3 — the menu by person
+
+Reception is shown **48** menu entries today, including the developers'
+"Design system" page and "Channel manager" (excluded, not connected). The
+owner's decision: **off the menu but still reachable by search** for anything
+the role may open. The proposed working menus (proposals — confirm the lists
+with the owner before building):
+
+```
+Reception      Today (Dashboard) · Rooms · Calendar · Arriving today · In house ·
+               New booking · Walk-in · Guests · Bills and payments ·
+               Restaurant (only when "Reception can use the POS" is on)
+Housekeeping   Rooms to clean · Work orders · Store
+Restaurant     Tables · Till · Kitchen · Menu · Close restaurant day
+GM             Front desk (all of reception's) · Money · Reports · Setup · Night audit
+Owner          Dashboard (every property) · Reports · Properties and people · the rest by search
+nobody         Design system (developers only) · Channel manager (not connected)
+```
+
+The command palette already reads `flatNavigationFor` — keep search reaching
+everything permitted; permissions still decide what may open. **Done when**
+Test Reception signs in to about ten entries and can still find any permitted
+screen by typing its name.
+
+### 3.3 · Clarity step 4 — help where the question is
+
+There is no help anywhere. A "Start here" card on a person's first three
+sign-ins (the five tasks: take a booking, check in, take a payment, check
+out, mark a room clean); a one-line explanation on hard terms (RevPAR, ADR,
+city ledger, Form C) on hover or tap; an empty state on every list that says
+what belongs there and offers the button that creates the first one.
+**Done when** someone who has never seen the system books, checks in, takes a
+payment and checks out without being told anything.
+
+### 3.4 · Staff-first phase 2 — reports in the owner's layout — ASK FIRST
+
+The owner's eight eZee exports are in `D:\reports fidato\` (outside the repo;
+never commit them). `docs/REPORTS-SPEC.md` was derived from them. Scope:
+one shared report layout (hotel name top left in navy, title top right in
+maroon, the "As on / PTD / YTD / Currency" line, dotted rules, footer
+`date · time · user · Page x of y`), PDF on A4 and Excel on every report, the
+Manager report's five missing sections, and the full four-page Night Audit
+report (13 sections — the audit *runs* today, the printed report does not
+exist). **Done when** each report run for 25 Aug 2026 on the demo data matches
+its PDF line by line — e.g. Manager report Room Charges today `12,142.88`,
+PTD `419,578.77`.
+
+Ask before building:
+
+- **Excel means a real `.xlsx`, or is the CSV that Excel opens enough?**
+  `src/lib/csv.ts` deliberately avoided a spreadsheet library. Do not add one
+  unasked.
+- **PDF generated in the browser or on the server?**
+
+### 3.5 · Staff-first phase 3 — documents on the voucher template — ASK FIRST
+
+The CRS voucher `FH-2026-00002` is the template. **It is not in the repo or
+in `D:\reports fidato\`** — it was sent in a chat. Ask the owner to save it
+into `D:\reports fidato\` first. Needs from the owner (all recorded in
+`PROGRESS.md` → "Still needing a person"): Fidato's exact registered name as it
+prints, the GSTIN for bills (the voucher shows `27AAGCF5655F1ZI`), bank details
+per hotel, policies and times, and **how WhatsApp and email should send**
+(through the n8n on the box, or a direct service). Decided already: a
+**billing entity** setting chooses the legal name + GSTIN, Fidato's by
+default; **bank account is per hotel**; documents get **WhatsApp and email**
+send options; hotel names print as "5 Elements By Fidato Hotels".
+
+### 3.6 · Staff-first phase 4 — every reservation task in three screens or fewer
+
+Measure first: a table of every reservation task with its screen count today,
+then cut each one over 3. Step 3.2 above is this phase's "menu hubs", done
+early.
+
+---
+
+## 4 · Decisions the owner has made — do not re-ask
+
+```
+14 Sep   "Group" is called Dashboard: tiles for the chosen hotel, a table of all hotels below
+14 Sep   Rooms and Calendar are two menu entries with their own addresses
+14 Sep   first screen after sign-in: the GM sets it per person; the person can change their own
+14 Sep   the Room type / Floor switch stays, remembered per person on the server
+14 Sep   "Reception can use the POS": a per-hotel switch — ON at 5 Elements, OFF for new hotels
+14 Sep   n8n: screen locked to the owner's address, webhook paths open to everybody
+14 Sep   legal name on a bill is Fidato's, chosen in settings; bank details per hotel
+15 Sep   impeccable skill: WRITTEN GUIDANCE ONLY — never run its downloaded binary
+15 Sep   Bill at the desk, Folio in Finance
+15 Sep   a shorter menu keeps everything reachable by search
+15 Sep   report names keep their words, in sentence case
+earlier  channel manager and payment gateway excluded; attachments parked;
+         housekeeping live refresh deferred; the night audit is run by a person
+```
+
+---
+
+## 5 · The owner's standing rules
+
+These come from the owner, in their words where quoted, and override any
+habit of yours.
+
+- **Ask before any doubt.** Give a recommendation with the question.
+- **The Firebase Admin private key lives in `api/.env`**, which is gitignored
+  and must never be committed, printed, or echoed.
+- **No default prices, anywhere.** An unpriced thing shows a dash, never a
+  zero. Never invent a number.
+- **Never show a figure the database hasn't agreed to.**
+- **Open the screen before claiming it works.**
+- **Record every mistake in `MEMORY.md`**, numbered, with the rule it teaches.
+- **Every code block you give the owner is labelled with WHERE it runs**
+  (their PC in PowerShell, the server over ssh, …). No placeholders in
+  commands. Go step by step.
+- **Production is the owner's to touch.** Deploys, and any write on the box,
+  need their explicit yes in that conversation. Read-only checks are fine.
+- **The test sign-ins never reach production.** `npm run build:app` fails if
+  they are in the bundle; the API refuses the dev header under
+  `NODE_ENV=production`.
+- **The n8n encryption key is a master password.** Never paste it anywhere.
+
+---
+
+## 6 · Consistency — the rules every screen and label follows
+
+**Naming (the clarity plan, 15 Sep).** One thing, one name everywhere. Say it
+the way the desk says it out loud; keep the industry word only where the
+industry reads it (Finance, reports, filings). Sentence case always — only
+acronyms and form names keep capitals (`navigation.test.ts` enforces it for
+the menu and fails on two entries sharing a name). A button says what happens,
+verb first. The menu label, the page's heading and the browser tab say the same
+words (`PageHeader` sets the tab through `useDocumentTitle`). A term that
+cannot be plain explains itself on first use.
+
+**Room states — one set of words** (keys unchanged; only labels changed):
+
+```
+key (data, tests)   what a person reads   meaning
+Vacant              Empty                 no guest in it = Free + Needs cleaning + Arriving
+—                   Free                  the tile's word: clean, empty, nobody expected
+Occupied            In house              a guest is staying (includes due out)
+Arrivals            Arriving              somebody checks in today
+Reserved            Reserved              held for a LATER booking — not an arrival
+Blocked             Out of service        cannot be sold
+Due Out             Due out               leaves today
+Dirty               Needs cleaning        needs cleaning
+```
+
+⚠ Rename a number by **what it counts**, never by what the word sounds like —
+MEMORY 258.
+
+**The desk's glossary:**
+
+```
+say            not                          where
+Bill           Folio                        desk screens (Folio stays in Finance)
+Booking        Reservation                  desk screens (the report name stays)
+Guests         Pax                          everywhere
+Month so far   MTD / PTD                    Dashboard (the Manager report keeps PTD, as printed)
+Property       Hotel                        settings, pickers
+Order 12       KOT 12                       on screen (the printed kitchen slip keeps KOT)
+```
+
+**Design system** — `src/styles/theme.css` and `docs/design-system.md`. Use the
+tokens; do not invent colours. Surfaces are flat with hairline borders; shadows
+are for overlays only. One icon family: `lucide-react` (in 85 files), one size
+and stroke, and a different glyph for each destination. `variant="primary"`
+means solid brand orange — one per screen. Money and counts use tabular
+numerals. A null is a dash, never a zero (`Amount` in `ReportShell` does it).
+
+**Facts on documents** come from the session, never from a literal:
+`useDocumentIdentity()` gives the property in view and the signed-in person's
+name. `ReportShell` uses it. **`FolioPanel.tsx` and `CheckInFlow.tsx` still
+hold `const USER = "front desk"`** (MEMORY 256) — named, not yet fixed.
+
+---
+
+## 7 · Working on this machine — the traps
+
+```
+Postgres        D:\fidato-pg, port 55432, password pw. Does NOT restart after a
+                reboot. Start (PowerShell on this PC):
+                D:\fidato-pg\pgsql\bin\pg_ctl.exe -D D:\fidato-pg\data -l D:\fidato-pg\pg.log start
+                From Git Bash pg_ctl never returns — the server IS up; check with psql.
+servers         In the Claude desktop app, start them with the Browser pane's
+                preview_start: "api" (8787) then "web" (5173, or the next free
+                port). Never `npm run dev` in a shell there.
+test logins     three buttons on the sign-in page: Owner, General Manager,
+                Reception. The account menu's "View as" switches between them.
+                If GM/Reception are missing: psql … -d fidato -f db/dev/dev-testers.sql
+rebuild db      db/migrate.sh brings `fidato` up to date and never drops.
+                db/tests/run.sh and rerun.sh use scratch databases only.
+commit          PowerShell 5.1 passes `git commit -F - @'…'@` as a PATH.
+                Write the message to a file and `git commit -F <file>` (MEMORY 255).
+server reads    PowerShell → ssh mangles quoted SQL. Pipe a script to
+                `ssh … "bash -s"`, start it with an empty line (a BOM kills
+                line 1) and end each line with " #" (the \r lands in a comment).
+                Key: ssh-key-2026-09-01.key in the owner's Downloads. User opc.
+browser pane    An emulated viewport breaks screenshots and click coordinates.
+                Measure with JS instead, and reset to "desktop" before clicking.
+console         The pane keeps old errors across reloads. Log a MARK, reload,
+                and read only what comes after it before calling anything broken.
+skills          impeccable and the taste skills are installed locally and
+                gitignored. Written guidance only — never run impeccable's binary.
+```
+
+---
+
+## 8 · What only the owner can give
+
+Current list, ordered by what blocks most: `PROGRESS.md` → "Still needing a
+person". The top of it: backups are on the same disk as everything they back
+up (P0); the deploy above; rotate the Firebase Admin key (it passed through a
+chat); the demo's rates and menu are what the hotel is selling; the
+`demo@fidatohotels.com` owner account.
+
+---
+
+## 9 · Deploying — only when the owner says so
+
+Server first, then the website.
+
+```powershell
+# 1 · the owner's PC, PowerShell — connect to the server
+ssh -i "$HOME\Downloads\ssh-key-2026-09-01.key" opc@130.210.49.220
+```
+
+```bash
+# 2 · on the server, inside that ssh session — get the code
+sudo GIT_SSH_COMMAND="ssh -i /home/opc/.ssh/fidato_deploy -o IdentitiesOnly=yes" git -C /opt/fidato pull
+```
+
+```bash
+# 3 · on the server, same session — install it (migrations run here)
+cd /opt/fidato && sudo DOMAIN=api.fidatohotels.com APP_ORIGIN=https://pms.fidatohotels.com EMAIL=influvateseo@gmail.com deploy/launch.sh
+```
+
+```powershell
+# 4 · the owner's PC, PowerShell, in D:\fidato pms — build the website
+$env:API_URL="https://api.fidatohotels.com"; npm run build:app
+```
+
+```powershell
+# 5 · the owner's PC, PowerShell, same folder — publish it
+firebase deploy --only hosting:app
+```
+
+---
+
+## 10 · Pages published for the owner
+
+```
+clarity plan (critique, naming rules)   https://claude.ai/artifact/2ZiqpnMVjFsS1B1YuCHr5s
+front-end pass (before / after)         https://claude.ai/artifact/6Gxpi2Ys5YsDFzSMZfB3ZC
+audit of 15 September                   https://claude.ai/artifact/NHsssNJwPvww2Un5nn6Shy
+staff-first plan                        https://claude.ai/code/artifact/8a98bddb-ff0f-4642-b36e-b9c9b5df5c2f
+```
+
+They are private to the owner's claude.ai account and another agent may not be
+able to open them. **Nothing in them is needed to continue** — every decision,
+rule and list they hold is written into this file, `PENDING.md` and
+`PROGRESS.md`.
+
+---
+
+## 11 · When you stop
+
+1. A `CHANGELOG.md` entry for your session, newest first, in its template.
+2. Every defect you found or made, numbered in `MEMORY.md`.
+3. This section brought up to date: section 2 (state, gates you actually ran)
+   and section 3 (what is next). Move finished items out; do not append.
+4. Folder claims below released.
+
+## Folder claims
+
+```
+FREE    everything — nothing is claimed
+```
+
+---
+
+# Archive — the handover of 28 August 2026
+
+> **Superseded.** Everything below is the state at the end of CP6, before
+> the system was deployed. It is kept because the reasoning in it is still
+> the reasoning behind the code. Its gate numbers, its instructions and its
+> folder claims are all out of date — the current ones are at the top of
+> this file.
+
 **Last updated:** 28 August 2026, end of CP6.
 Keep this file current. It is the first thing any agent reads after
 `CONTEXT.md`, `MEMORY.md` and `AGENTS.md`.

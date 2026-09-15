@@ -46,6 +46,142 @@ Write it **as you go**, not at the end from memory. Copy this shape:
 
 ---
 
+## 2026-09-15 · An audit, a front-end pass, a usability critique, one vocabulary, and this handover
+
+**Asked for:** start it locally and say what is pending from the owner's side,
+with an audit of how much is done; then use the installed impeccable and taste
+skills to fix the sign-in screen, the Dashboard (icons — "it looks plain") and
+the reports, and show the changes on a canvas; then critique the whole site,
+audit it, and plan how to make every view and name clear enough that "a simple
+person" can start using it; then a handover so another agent can continue
+without the owner re-explaining.
+
+**Shipped**
+- The owner-side list in `PROGRESS.md` rewritten to what is actually
+  outstanding — it still asked for the Oracle box and the Firebase key, both
+  live for weeks.
+- Sign-in: a split with the group's real mark (in `src/assets/brand/` all
+  along, never used outside the design-system page), the primary button it had
+  never had, a password reveal through `Input`'s own `trailingSlot`, and a
+  recovery line naming the GM — `src/pages/SignIn.tsx`.
+- Dashboard: a lucide icon on every tile, the four headline figures set larger,
+  the six house counts in one row, warning colour only above zero, one icon per
+  quick report — `src/pages/Dashboard.tsx`.
+- Reports: the property and the person on every report come from the session
+  (`src/lib/documentIdentity.ts`), and the Manager report has CSV.
+- Step 1 of the clarity plan — one vocabulary: room states on the pills, the
+  Dashboard and housekeeping; sentence case across the menu and headings; the
+  menu label, page heading and browser tab say the same words
+  (`src/lib/documentTitle.ts`); a heading on Rooms; the owner's glossary (Bill at
+  the desk, Folio in Finance; Guests not Pax; Order not KOT on screen).
+- `navigation.test.ts`: fails on a Title Case menu label or two entries with one
+  name.
+- `.gitignore`: the installed agent skills (`.agents/`, `.claude/skills/`,
+  `skills-lock.json`) — third-party, not the hotel's code.
+- `HANDOVER.md` rewritten at the top as the current brief; the 28 August state
+  kept below it as an archive. `CLAUDE.md` added so a Claude session reads it
+  first.
+
+**Found**
+- 256 · every report printed "5 Elements By Fidato Hotels" and "front desk" —
+  literals no caller ever overrode. Fixed in `ReportShell`; the same two
+  literals remain in `FolioPanel.tsx` and `CheckInFlow.tsx`.
+- 257 · the sign-in button was a secondary button. Fixed. The same default
+  leaves 279 of 282 buttons secondary — clarity step 2.
+- 258 · the Rooms screen named every state twice, and my own plan mapped two of
+  them wrong (Vacant is Empty, not Free; Reserved is not Arriving). Fixed.
+- Critique 22/40: the menu shows reception 48 entries, including the
+  developers' design-system page; no help or glossary anywhere; every tab titled
+  "Fidato PMS"; four pages with no heading.
+
+**Proved**
+- 574 database assertions, 87 migrations re-runnable, 350 API tests in 28
+  files — run this morning. `npx tsc -b` clean; `npx vitest run` 179 passed in
+  12 files after the last change.
+- The sentence-case guard failed on a planted "Night Audit" and passed when it
+  was put back.
+- Opened as Owner and as Reception: sign-in (phone and desktop measured), the
+  Dashboard, Rooms, Housekeeping, the reports list, the Manager report and
+  Lodging tax — tab titles, headings and words checked on each.
+
+**Left open**
+- Clarity steps 2–4 and staff-first phases 2–4: `HANDOVER.md` § 3, in order.
+- Nothing since 14 September is deployed. The owner runs the deploy.
+- The critique was a declared single-context run and impeccable's detector was
+  not run — the owner chose written guidance only.
+
+**Commits:** `bdf2932 … e9b4bac`, and the handover commit.
+
+---
+
+## 2026-09-14 · The walk-in bug, n8n webhooks, the stay panel, test sign-ins, and staff-first phase 1
+
+**Asked for:** fix the walk-in bug and the booking it damaged; give n8n webhook
+access; get local testing running; redesign the stay panel to an eZee-style
+reference; fix a departed group room showing "Room —"; hard-coded local test
+sign-ins for the GM and the desk, never in production; plan a "staff-first"
+programme from the owner's report exports and CRS voucher; then start its
+phase 1.
+
+**Shipped**
+- 085: a walk-in records the Walk-in channel, and a refused walk-in leaves no
+  guest behind (the refusal now comes before the first write). The deploy
+  back-fills FH-2609-5001.
+- `deploy/n8n.sh`: the screen answers only the owner's address, webhook paths
+  answer everybody; `allow` swaps the address.
+- The local Postgres moved to `D:\fidato-pg` — Windows Storage Sense was
+  deleting it from `%TEMP%`.
+- One stay panel, rebuilt to the owner's reference — `StayDrawer.tsx`.
+- 086: `app.stay_room()` — a departed group room says where it stayed.
+- Test sign-ins for GM and Reception (`db/dev/dev-testers.sql`) with a "View
+  as" switcher; `scripts/check-no-dev-login.mjs` fails a build that contains
+  them.
+- Staff-first phase 1 (087): Dashboard; Rooms and Calendar as two entries; the
+  first screen after sign-in set per person; Room type / Floor remembered per
+  person; "Reception can use the POS" per hotel, refused by the server too.
+
+**Found**
+- 242–254 in `MEMORY.md` — among them: any clerk could switch a hotel's
+  modules; a refused receptionist was told the menu was empty; the Calendar link
+  opened Rooms; the Manager report's period always began on 1 August; the
+  landing redirect was lost to StrictMode's double render.
+
+**Proved**
+- 574 database assertions, 87 migrations re-runnable, 350 API tests, 176
+  interface tests at the end of the day. Every screen opened in all three roles.
+
+**Left open**
+- The deploy. "Two in-house numbers" (property page 11, Dashboard 10) — needs
+  one definition, owner to choose.
+
+**Commits:** `d703c30 … 6238e5b`
+
+---
+
+## 2026-09-09 → 2026-09-10 · Phase 2, and n8n on the box
+
+*Reconstructed on 15 September from `git log` — no entry was written at the
+time. The commit messages carry the detail; `PENDING.md` was written the same
+day as the end-of-phase record.*
+
+**Shipped**
+- Booking sources as the group's list with a per-property rate, on screen and
+  through the API (`2471fed`, `9b708e3`, `c047f8d`).
+- Discounts: a free hand up to 10%, named promotions beyond it (`1890b67`).
+- The floor can close its own outlet (`63ef8a5`).
+- Admin end to end — four endpoints that had no way in (`bc99567`).
+- The property screen, run by its general manager (`d3788f2`); adding somebody
+  makes them able to sign in, with a password (`fc98b6a`, `a09e24e`); retiring
+  people (`23f18f3`).
+- A gate that fails when a seam function has no caller (`9eed9c1`).
+- n8n installed beside the PMS, its certificate renewing, backups taken before
+  an upgrade migrates (`c126656`, `8c6c0e9`, `1f77239`).
+- **Deployed:** production has run `1f77239` since 10 September.
+
+**Commits:** `5d9c459 … 1f77239`
+
+---
+
 ## 2026-09-08 (phase 1) · Three gates aimed at an act, applied to a screen
 
 **Asked for:** the owner reported banquet would not turn on and that

@@ -4,8 +4,9 @@ Two agents wrote `src/data/` simultaneously for two hours on 27 August. It
 destroyed a day's work and was unrecoverable. This file exists so it does not
 happen twice.
 
-**Read `CONTEXT.md` and `MEMORY.md` before starting. They are short and every
-line in them cost something.**
+**Start with the top section of `HANDOVER.md`** — it is the current brief:
+where things stand, what to do next, the owner's decisions and rules. Then
+`MEMORY.md`. Every line in it cost something.
 
 ---
 
@@ -16,8 +17,9 @@ useful one.
 
 | | |
 |---|---|
+| `HANDOVER.md` | **the top section only** — the current state, what is next, and the rules. Kept current; everything under "Archive" is history |
 | `CONTEXT.md` | what this system is, and who it is for |
-| `MEMORY.md` | **194 numbered defects.** Not history — the mistakes this codebase has already made. About a third were made *twice* before being written down. |
+| `MEMORY.md` | **258 numbered defects.** Not history — the mistakes this codebase has already made. About a third were made *twice* before being written down. |
 | `CHANGELOG.md` | what the last agent did, and what they left in flight |
 | `START-HERE.md` | how to run it, and where everything lives |
 
@@ -136,12 +138,11 @@ placeholder naming what a screen will carry is a correct answer.
 
 ## Where the next work is
 
-CP6 is complete; there is no screen backlog left to divide. The open items are
-in `HANDOVER.md` and none of them is a lane:
-
-- Stage 8 owns the night audit posting run, invoice issuing, and editable tax.
-- Stage 9 owns the channel bridge, which unblocks editable rates and commission.
-- Four keyboard checks and six property names need a human, not an agent.
+**`HANDOVER.md` § 3, in order.** As of 15 September: the clarity plan's steps
+2–4 (one primary button per screen, a menu per role, help in place), then the
+staff-first programme's phases 2–4 (reports in the owner's layout with PDF and
+Excel, documents on the voucher template, three screens per reservation task).
+Items marked "ask first" there need the owner's answer before any code.
 
 If a new lane is needed, claim a folder in `HANDOVER.md` first. The rule at the
 top of this file has not relaxed.
