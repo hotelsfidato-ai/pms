@@ -14,13 +14,9 @@ import {
   Page, PageHeader, StatusPill, toast, Button, Card, EmptyState, ErrorState, Skeleton,
 } from "@/components/ui";
 import { StartHere } from "@/components/app/StartHere";
-import {
-  listHousekeeping, markRoom, BUSINESS_DATE, type HousekeepingRoom,
-  listHousekeepers, listRoomAssignments, assignHousekeeper,
-  unassignHousekeeper, type Housekeeper, type RoomAssignment,
-  listAllRooms, type RoomBlock,
-} from "@/data/repositories";
-import { OutOfOrderFlow } from "@/components/flows/OutOfOrderFlow";
+import { listHousekeeping, markRoom, type HousekeepingRoom, listHousekeepers, listRoomAssignments, assignHousekeeper, unassignHousekeeper, type Housekeeper, type RoomAssignment } from "@/modules/housekeeping/data/housekeeping";
+import { BUSINESS_DATE, listAllRooms, type RoomBlock } from "@/data/repositories";
+import { OutOfOrderFlow } from "@/modules/housekeeping/flows/OutOfOrderFlow";
 
 /* ══════════════════════════════════════════════════════════════════
    FLOW E — housekeeping, on a phone

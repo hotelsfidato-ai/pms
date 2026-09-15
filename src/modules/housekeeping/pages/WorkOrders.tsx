@@ -9,9 +9,7 @@ import {
   Dialog, DialogContent, DialogClose, Field, fieldProps, Input, Textarea,
   NativeSelect, StatusPill,
 } from "@/components/ui";
-import {
-  listWorkOrders, raiseWorkOrder, updateWorkOrder, type WorkOrder,
-} from "@/data/repositories";
+import { listWorkOrders, raiseWorkOrder, updateWorkOrder, type WorkOrder } from "@/modules/housekeeping/data/housekeeping";
 
 /* ══════════════════════════════════════════════════════════════════
    WORK ORDERS

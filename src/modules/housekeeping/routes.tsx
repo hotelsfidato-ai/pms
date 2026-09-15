@@ -1,7 +1,7 @@
 import { Route } from "react-router";
 import { PropertyScope } from "@/components/app/PropertyScope";
-import HousekeepingPage from "@/pages/Housekeeping";
-import WorkOrdersPage from "@/pages/WorkOrders";
+import HousekeepingPage from "@/modules/housekeeping/pages/Housekeeping";
+import WorkOrdersPage from "@/modules/housekeeping/pages/WorkOrders";
 
 /* Housekeeping's screen addresses. Mounted by App.tsx inside the signed-in
    shell. */

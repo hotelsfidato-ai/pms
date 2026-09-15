@@ -1,7 +1,7 @@
-import { listStays } from "./stays";
-import { listAllRooms, setHousekeeping } from "./rooms";
-import type { OperationResult } from "./result";
-import { refuse } from "./result";
+import { listStays } from "@/data/repositories/stays";
+import { listAllRooms, setHousekeeping } from "@/data/repositories/rooms";
+import type { OperationResult } from "@/data/repositories/result";
+import { refuse } from "@/data/repositories/result";
 import { api, ApiError } from "@/lib/api";
 /* The housekeeping board, whose rooms are whose, and work orders.
 

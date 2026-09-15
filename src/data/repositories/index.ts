@@ -39,7 +39,6 @@ export * from "./stayExtras";
 export type { OperationResult, AdminResult } from "./result";
 export * from "./postings";
 export * from "./cashier";
-export * from "./housekeeping";
 export * from "./nightAudit";
 export * from "./posBridge";
 export * from "./me";
