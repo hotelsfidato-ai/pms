@@ -12,11 +12,8 @@ import {
   Dialog, DialogContent, DialogClose, Field, fieldProps, Input, Textarea,
   NativeSelect, StatusPill,
 } from "@/components/ui";
-import {
-  getBanquetEvent, getBanquetSetup, confirmBanquetEvent, cancelBanquetEvent,
-  amendBanquetEvent, addBanquetCourse, removeBanquetCourse,
-  queryKeys, type BanquetEvent,
-} from "@/data/repositories";
+import { getBanquetEvent, getBanquetSetup, confirmBanquetEvent, cancelBanquetEvent, amendBanquetEvent, addBanquetCourse, removeBanquetCourse, type BanquetEvent } from "@/modules/banquet/data/banquet";
+import { queryKeys } from "@/data/repositories";
 
 /* ══════════════════════════════════════════════════════════════════
    ONE FUNCTION

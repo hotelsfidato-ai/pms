@@ -10,10 +10,8 @@ import {
   Dialog, DialogContent, DialogClose, Field, fieldProps, Input, Textarea,
   NativeSelect, StatusPill,
 } from "@/components/ui";
-import {
-  getBanquetDiary, getBanquetSetup, registerBanquetEvent,
-  queryKeys, type BanquetEventSummary,
-} from "@/data/repositories";
+import { getBanquetDiary, getBanquetSetup, registerBanquetEvent, type BanquetEventSummary } from "@/modules/banquet/data/banquet";
+import { queryKeys } from "@/data/repositories";
 
 /* ══════════════════════════════════════════════════════════════════
    THE BANQUET DIARY

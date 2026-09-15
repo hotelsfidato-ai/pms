@@ -1,8 +1,8 @@
 import { Route } from "react-router";
 import { PropertyScope } from "@/components/app/PropertyScope";
-import BanquetPage from "@/pages/Banquet";
-import BanquetSetupPage from "@/pages/BanquetSetup";
-import BanquetEventPage from "@/pages/BanquetEvent";
+import BanquetPage from "@/modules/banquet/pages/Banquet";
+import BanquetSetupPage from "@/modules/banquet/pages/BanquetSetup";
+import BanquetEventPage from "@/modules/banquet/pages/BanquetEvent";
 
 /* Banquet's screen addresses. Mounted by App.tsx inside the signed-in
    shell. */

@@ -9,10 +9,8 @@ import {
   Dialog, DialogContent, DialogClose, Field, fieldProps, Input, Textarea,
   StatusPill,
 } from "@/components/ui";
-import {
-  getBanquetSetup, addBanquetVenue, amendBanquetVenue, addBanquetPackage,
-  queryKeys, type BanquetVenue,
-} from "@/data/repositories";
+import { getBanquetSetup, addBanquetVenue, amendBanquetVenue, addBanquetPackage, type BanquetVenue } from "@/modules/banquet/data/banquet";
+import { queryKeys } from "@/data/repositories";
 
 /* ══════════════════════════════════════════════════════════════════
    HALLS AND PACKAGES
