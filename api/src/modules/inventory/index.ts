@@ -1,4 +1,5 @@
 import type { Mount } from "../../mount.ts";
+import { rateGrid } from "./rateGrid.ts";
 import { rates } from "../../routes/rates.ts";
 import { inventorySetup } from "../../routes/inventorySetup.ts";
 
@@ -6,6 +7,7 @@ import { inventorySetup } from "../../routes/inventorySetup.ts";
    the core or another service may import (src/test/boundaries.test.ts).
    Its routers, and where each is mounted (see ../../mount.ts). */
 export const mounts: readonly Mount[] = [
+  ["/api/hotels", rateGrid],
   ["/api/hotels", rates],
   ["/api/hotels", inventorySetup],
 ];

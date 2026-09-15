@@ -2,7 +2,7 @@ import type { Mount } from "../../mount.ts";
 import { folios } from "./folios.ts";
 import { postings } from "./postings.ts";
 import { cashier } from "./cashier.ts";
-import { billing } from "../../routes/billing.ts";
+import { billing } from "./billing.ts";
 import { invoices } from "../../routes/invoices.ts";
 
 /* The front door of the finance service on the server — the only file

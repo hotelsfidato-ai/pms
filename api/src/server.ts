@@ -26,6 +26,7 @@ import {
 } from "./realtime.ts";
 import { approvals } from "./routes/approvals.ts";
 import { attachments } from "./routes/attachments.ts";
+import { notifications } from "./routes/notifications.ts";
 
 /* ══════════════════════════════════════════════════════════════════
    THE APP API — MASTER.md §5
@@ -182,6 +183,9 @@ app.use("/api/*", async (c, next) => {
    approvals and attachments belong to no one service. */
 app.route("/api/hotels", hotels);
 app.route("/api/hotels", property);
+/* The bell, derived from what several services record and owned by none
+   (split out of billing.ts in the service-folder move). */
+app.route("/api/hotels", notifications);
 /* The live stream. Under /api/hotels like everything else, so it
    inherits the same subject middleware and the same CORS list. */
 app.route("/api/hotels", live);
