@@ -11,12 +11,9 @@ import {
   Dialog, DialogContent, Field, fieldProps, Input,
 } from "@/components/ui";
 import { StartHere } from "@/components/app/StartHere";
-import { OrderPad } from "@/components/flows/OrderPad";
+import { OrderPad } from "@/modules/pos/flows/OrderPad";
 import { draftedTables } from "@/lib/draft";
-import {
-  getFloor, markPrinted, clearTable, setOutletClosed,
-  type FloorTable, type TableState, type OffFor,
-} from "@/data/repositories";
+import { getFloor, markPrinted, clearTable, setOutletClosed, type FloorTable, type TableState, type OffFor } from "@/modules/pos/data/till";
 
 /* ══════════════════════════════════════════════════════════════════
    THE FLOOR

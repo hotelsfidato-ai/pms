@@ -3,7 +3,7 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { Plus, Minus, Trash2, WifiOff, Search } from "lucide-react";
 import { cn } from "@/lib/cn";
 import { money } from "@/lib/format";
-import { unitPriceOf, chosenLabels } from "@/lib/pricing";
+import { unitPriceOf, chosenLabels } from "@/modules/pos/lib/pricing";
 import {
   draftKey, loadDraft, saveDraft, clearDraft, draftsUsable,
   draftTotal, draftCount, type Draft, type DraftLine,
@@ -11,8 +11,8 @@ import {
 import {
   Button, Dialog, DialogContent, Input, StatusPill, toast,
 } from "@/components/ui";
-import { DishDialog } from "@/components/flows/DishDialog";
-import { getMenu, sendOrder, type MenuItem } from "@/data/repositories";
+import { DishDialog } from "@/modules/pos/flows/DishDialog";
+import { getMenu, sendOrder, type MenuItem } from "@/modules/pos/data/till";
 
 /* ══════════════════════════════════════════════════════════════════
    THE ORDER PAD

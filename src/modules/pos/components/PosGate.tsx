@@ -3,7 +3,7 @@ import { useQuery } from "@tanstack/react-query";
 import { useParams } from "react-router";
 import { Store } from "lucide-react";
 import { Page, EmptyState, Skeleton } from "@/components/ui";
-import { getPosAccess } from "@/data/repositories";
+import { getPosAccess } from "@/modules/pos/data/till";
 
 /* ══════════════════════════════════════════════════════════════════
    THE POINT OF SALE, OR THE REASON IT IS SHUT

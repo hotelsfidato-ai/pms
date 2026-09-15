@@ -5,7 +5,7 @@ import { cn } from "@/lib/cn";
 import {
   Button, Dialog, DialogContent, Field, fieldProps, Input, NativeSelect, toast,
 } from "@/components/ui";
-import { setOrderHeader, listWaiters, type Order } from "@/data/repositories";
+import { setOrderHeader, listWaiters, type Order } from "@/modules/pos/data/till";
 
 /* ══════════════════════════════════════════════════════════════════
    THE ORDER HEADER

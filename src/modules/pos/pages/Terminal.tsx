@@ -9,13 +9,9 @@ import { cn } from "@/lib/cn";
 import { moneyPrecise } from "@/lib/format";
 import { useUi } from "@/lib/ui";
 import { toast } from "@/components/ui";
-import {
-  getMenu, listOrders, getOrder, listChargeableRooms,
-  openOrder, addLine, voidLine, setLineQty, sendToKitchen,
-  settleOrder, abandonOrder,
-  listPosOutlets, BUSINESS_DATE,
-  type MenuItem,
-} from "@/data/repositories";
+import { getMenu, listOrders, getOrder, listChargeableRooms, openOrder, addLine, voidLine, setLineQty, sendToKitchen, settleOrder, abandonOrder, type MenuItem } from "@/modules/pos/data/till";
+import { listPosOutlets } from "@/modules/pos/data/posBridge";
+import { BUSINESS_DATE } from "@/data/repositories";
 
 /* ══════════════════════════════════════════════════════════════════
    THE TERMINAL

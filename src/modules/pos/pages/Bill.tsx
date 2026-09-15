@@ -1,7 +1,7 @@
 import { useQuery } from "@tanstack/react-query";
 import { useParams } from "react-router";
 import { moneyPrecise, dateLong } from "@/lib/format";
-import { getOrder } from "@/data/repositories";
+import { getOrder } from "@/modules/pos/data/till";
 
 /* ══════════════════════════════════════════════════════════════════
    THE BILL — what the guest is handed

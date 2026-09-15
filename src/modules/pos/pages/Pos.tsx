@@ -8,10 +8,8 @@ import {
   Page, PageHeader, Card, CardBody, DataTable, StatusPill, Tooltip,
   type Column,
 } from "@/components/ui";
-import {
-  listPosOutlets, listPosTickets, BUSINESS_DATE,
-  type PosOutlet, type PosTicket,
-} from "@/data/repositories";
+import { listPosOutlets, listPosTickets, type PosOutlet, type PosTicket } from "@/modules/pos/data/posBridge";
+import { BUSINESS_DATE } from "@/data/repositories";
 
 /* ══════════════════════════════════════════════════════════════════
    POINT OF SALE

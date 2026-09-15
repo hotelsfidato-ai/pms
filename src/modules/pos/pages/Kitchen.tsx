@@ -7,9 +7,7 @@ import { useUi } from "@/lib/ui";
 import { useLiveOrders } from "@/lib/useLiveOrders";
 import { toast } from "@/components/ui";
 import { StartHere } from "@/components/app/StartHere";
-import {
-  getKitchen, moveKitchenLine, type KitchenLine,
-} from "@/data/repositories";
+import { getKitchen, moveKitchenLine, type KitchenLine } from "@/modules/pos/data/till";
 
 /* ══════════════════════════════════════════════════════════════════
    THE PASS

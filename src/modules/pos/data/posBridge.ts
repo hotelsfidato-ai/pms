@@ -1,4 +1,4 @@
-import { fetchOr } from "./http";
+import { fetchOr } from "@/data/repositories/http";
 /* What an outside till sent.
 
    Service: pos. Moved out of billing.ts on 15 September in the

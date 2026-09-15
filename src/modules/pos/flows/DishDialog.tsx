@@ -1,11 +1,11 @@
 import { useState, useMemo } from "react";
 import { cn } from "@/lib/cn";
 import { money } from "@/lib/format";
-import { unitPriceOf } from "@/lib/pricing";
+import { unitPriceOf } from "@/modules/pos/lib/pricing";
 import {
   Button, Dialog, DialogContent, Input,
 } from "@/components/ui";
-import type { MenuItem } from "@/data/repositories";
+import type { MenuItem } from "@/modules/pos/data/till";
 
 /* ══════════════════════════════════════════════════════════════════
    THE DISH DIALOG

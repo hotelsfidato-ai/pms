@@ -1,15 +1,15 @@
 import { Route } from "react-router";
 import { PropertyScope } from "@/components/app/PropertyScope";
-import { PosGate } from "@/components/app/PosGate";
-import TillPage from "@/pages/Till";
-import FloorPage from "@/pages/Floor";
-import MenuPage from "@/pages/Menu";
-import DayEndPage from "@/pages/DayEnd";
-import KitchenPage from "@/pages/Kitchen";
-import TerminalPage from "@/pages/Terminal";
-import DocketPage from "@/pages/Docket";
-import BillPage from "@/pages/Bill";
-import PosPage from "@/pages/Pos";
+import { PosGate } from "@/modules/pos/components/PosGate";
+import TillPage from "@/modules/pos/pages/Till";
+import FloorPage from "@/modules/pos/pages/Floor";
+import MenuPage from "@/modules/pos/pages/Menu";
+import DayEndPage from "@/modules/pos/pages/DayEnd";
+import KitchenPage from "@/modules/pos/pages/Kitchen";
+import TerminalPage from "@/modules/pos/pages/Terminal";
+import DocketPage from "@/modules/pos/pages/Docket";
+import BillPage from "@/modules/pos/pages/Bill";
+import PosPage from "@/modules/pos/pages/Pos";
 
 /* The restaurant's screen addresses. Mounted by App.tsx inside the
    signed-in shell. */

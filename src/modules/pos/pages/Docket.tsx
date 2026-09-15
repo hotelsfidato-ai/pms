@@ -1,6 +1,6 @@
 import { useQuery } from "@tanstack/react-query";
 import { useParams } from "react-router";
-import { getDocket } from "@/data/repositories";
+import { getDocket } from "@/modules/pos/data/till";
 
 /* ══════════════════════════════════════════════════════════════════
    THE KITCHEN DOCKET — what the chef is handed

@@ -5,8 +5,8 @@ import {
   UtensilsCrossed, Plus, X, Receipt, BedDouble, Banknote,
   CreditCard, Smartphone, Printer, Percent, Split,
 } from "lucide-react";
-import { DishDialog } from "@/components/flows/DishDialog";
-import { OrderHeaderPanel } from "@/components/flows/OrderHeaderPanel";
+import { DishDialog } from "@/modules/pos/flows/DishDialog";
+import { OrderHeaderPanel } from "@/modules/pos/flows/OrderHeaderPanel";
 import { cn } from "@/lib/cn";
 import { money } from "@/lib/format";
 import { useUi } from "@/lib/ui";
@@ -16,14 +16,8 @@ import {
   Dialog, DialogContent, Field, fieldProps, Input, NativeSelect,
 } from "@/components/ui";
 import { StartHere } from "@/components/app/StartHere";
-import {
-  getMenu, listOrders, getOrder, listChargeableRooms,
-  openOrder, addLine, voidLine, settleOrder, abandonOrder,
-  applyDiscount, clearDiscount, setRoundOff, settleSplit,
-  listPromotions, applyPromotion,
-  BUSINESS_DATE,
-  type Order, type MenuItem, type OrderSummary, type TenderInput,
-} from "@/data/repositories";
+import { getMenu, listOrders, getOrder, listChargeableRooms, openOrder, addLine, voidLine, settleOrder, abandonOrder, applyDiscount, clearDiscount, setRoundOff, settleSplit, listPromotions, applyPromotion, type Order, type MenuItem, type OrderSummary, type TenderInput } from "@/modules/pos/data/till";
+import { BUSINESS_DATE } from "@/data/repositories";
 
 /* ══════════════════════════════════════════════════════════════════
    THE TILL

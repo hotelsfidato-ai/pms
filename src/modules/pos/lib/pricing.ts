@@ -1,4 +1,4 @@
-import type { MenuItem } from "@/data/repositories";
+import type { MenuItem } from "@/modules/pos/data/till";
 
 /* ══════════════════════════════════════════════════════════════════
    WHAT ONE DISH COSTS

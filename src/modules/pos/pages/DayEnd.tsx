@@ -13,10 +13,7 @@ import {
   NativeSelect, Textarea, Skeleton, EmptyState, toast,
   Dialog, DialogContent, DialogClose,
 } from "@/components/ui";
-import {
-  getDayEnd, recordMovement, countDrawer, closeDay,
-  type DayEnd, type MovementKind,
-} from "@/data/repositories";
+import { getDayEnd, recordMovement, countDrawer, closeDay, type DayEnd, type MovementKind } from "@/modules/pos/data/till";
 
 /* ══════════════════════════════════════════════════════════════════
    THE DAY END

@@ -1,5 +1,5 @@
 import { api, ApiError, HeldError } from "@/lib/api";
-import type { ImportReport } from "./importReport";
+import type { ImportReport } from "@/data/repositories/importReport";
 
 /* ══════════════════════════════════════════════════════════════════
    THE TILL — the POS built into the PMS

@@ -9,14 +9,7 @@ import {
   Page, PageHeader, Card, CardBody, Button, StatusPill, toast,
   Dialog, DialogContent, Field, fieldProps, Input,
 } from "@/components/ui";
-import {
-  getMenu, addCategory, addItem, toggleItem, takeItemOff, putItemBack,
-  importMenu, setItemPrepMinutes, setCategoryPrepMinutes,
-  setItemCourse, setCategoryCourse,
-  listPromotions, addPromotion, amendPromotion,
-  type OffFor, type Promotion,
-  type MenuCategory, type MenuItem,
-} from "@/data/repositories";
+import { getMenu, addCategory, addItem, toggleItem, takeItemOff, putItemBack, importMenu, setItemPrepMinutes, setCategoryPrepMinutes, setItemCourse, setCategoryCourse, listPromotions, addPromotion, amendPromotion, type OffFor, type Promotion, type MenuCategory, type MenuItem } from "@/modules/pos/data/till";
 import { ImportDialog } from "@/components/flows/ImportDialog";
 import { MENU_SPEC } from "@/lib/importSpec";
 
