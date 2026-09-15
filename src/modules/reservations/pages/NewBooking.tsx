@@ -10,7 +10,7 @@ import {
   Input, NativeSelect, Skeleton, toast,
 } from "@/components/ui";
 import { getInventory, getTariff, type Tariff } from "@/modules/inventory";
-import { createBooking } from "@/data/repositories";
+import { createBooking } from "@/modules/reservations/data/groups";
 import { listCompanies, listBookingSources } from "@/modules/guests";
 
 /* ══════════════════════════════════════════════════════════════════

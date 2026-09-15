@@ -1,9 +1,9 @@
 import { Route } from "react-router";
 import { PropertyScope } from "@/components/app/PropertyScope";
-import ReservationsPage from "@/pages/Reservations";
-import NewBookingPage from "@/pages/NewBooking";
-import GroupsPage from "@/pages/Groups";
-import GroupPanelPage from "@/pages/GroupPanel";
+import ReservationsPage from "@/modules/reservations/pages/Reservations";
+import NewBookingPage from "@/modules/reservations/pages/NewBooking";
+import GroupsPage from "@/modules/reservations/pages/Groups";
+import GroupPanelPage from "@/modules/reservations/pages/GroupPanel";
 
 /* Reservations' screen addresses. Mounted by App.tsx inside the signed-in
    shell. */

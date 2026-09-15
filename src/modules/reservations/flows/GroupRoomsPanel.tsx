@@ -4,7 +4,7 @@ import { Link } from "react-router";
 import { ChevronDown, ChevronRight, User, Baby, Crown } from "lucide-react";
 import { cn } from "@/lib/cn";
 import { StatusPill, Skeleton } from "@/components/ui";
-import { getGroup, type GroupRoom } from "@/data/repositories";
+import { getGroup, type GroupRoom } from "@/modules/reservations/data/groups";
 
 /* ══════════════════════════════════════════════════════════════════
    THE GROUP'S ROOMS, AS CARDS

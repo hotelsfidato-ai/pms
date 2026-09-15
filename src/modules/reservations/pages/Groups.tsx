@@ -7,7 +7,7 @@ import { money, dateShort } from "@/lib/format";
 import {
   Page, PageHeader, Card, CardBody, Button, Skeleton, EmptyState, StatusPill, Segmented,
 } from "@/components/ui";
-import { listGroups, getGroup, type StayGroup } from "@/data/repositories";
+import { listGroups, getGroup, type StayGroup } from "@/modules/reservations/data/groups";
 
 /* ══════════════════════════════════════════════════════════════════
    ONE BOOKING, ITS ROOMS BENEATH IT

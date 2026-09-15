@@ -1,6 +1,6 @@
 import { Users } from "lucide-react";
 import { StatusPill } from "@/components/ui";
-import { GROUP_ROOMS_ID } from "@/components/flows/GroupRoomsPanel";
+import { GROUP_ROOMS_ID } from "@/modules/reservations";
 import type { Stay } from "@/data/repositories";
 
 /* The group's rooms are a column of the stay panel now, not a dialog

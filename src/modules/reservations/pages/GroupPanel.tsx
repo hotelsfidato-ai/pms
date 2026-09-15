@@ -9,9 +9,7 @@ import {
   Page, PageHeader, Card, CardBody, CardHeader, Button, Skeleton,
   EmptyState, StatusPill, toast,
 } from "@/components/ui";
-import {
-  getGroup, openMasterFolio, routeRoomToGroup, type GroupRoom,
-} from "@/data/repositories";
+import { getGroup, openMasterFolio, routeRoomToGroup, type GroupRoom } from "@/modules/reservations/data/groups";
 
 /* ══════════════════════════════════════════════════════════════════
    THE GROUP PANEL

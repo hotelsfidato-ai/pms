@@ -13,7 +13,7 @@ import { CheckInFlow } from "@/components/flows/CheckInFlow";
 import { StayActions } from "@/components/flows/StayActions";
 import { FolioPanel } from "@/components/flows/FolioPanel";
 import { StayMarks } from "@/components/flows/StayMarks";
-import { GroupRoomsList } from "@/components/flows/GroupRoomsPanel";
+import { GroupRoomsList } from "@/modules/reservations";
 
 /* ══════════════════════════════════════════════════════════════════
    THE STAY PANEL — one of it

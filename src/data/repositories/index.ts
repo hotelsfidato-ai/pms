@@ -29,7 +29,6 @@ export * from "./stayview";
 export * from "./operations";
 export * from "./notifications";
 export * from "./billing";
-export * from "./groups";
 export * from "./till";
 export * from "./stayExtras";
 /* Split out of the mixed files on 15 September, one file per service

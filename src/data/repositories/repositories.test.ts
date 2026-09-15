@@ -1,7 +1,8 @@
 import { describe, it, expect } from "vitest";
 import { readFileSync, readdirSync, statSync } from "node:fs";
 import { join } from "node:path";
-import { getProperty, listRooms, listAllRooms, defaultPropertyId, listStays, getStay, listArrivals, listInHouse, listDepartures, getFolio, listOpenFolios, listGroups, listGroupMembers, queryKeys, BUSINESS_DATE } from "./index";
+import { getProperty, listRooms, listAllRooms, defaultPropertyId, listStays, getStay, listArrivals, listInHouse, listDepartures, getFolio, listOpenFolios, queryKeys, BUSINESS_DATE } from "./index";
+import { listGroups, listGroupMembers } from "@/modules/reservations";
 import { listDailyStatistics, getPeriodStatistics, getTodaySnapshot } from "@/modules/reports";
 
 const OTHER_HOTEL = "some-other-property";

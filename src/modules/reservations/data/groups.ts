@@ -1,6 +1,6 @@
 import { api, ApiError } from "@/lib/api";
-import type { Stay } from "./types";
-import { fetchStays } from "./stays";
+import type { Stay } from "@/data/repositories/types";
+import { fetchStays } from "@/data/repositories/stays";
 
 /* ══════════════════════════════════════════════════════════════════
    A GROUP, AND WHO PAYS FOR IT
