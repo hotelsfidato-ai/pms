@@ -1,7 +1,7 @@
 import { describe, it, expect, beforeAll, afterAll } from "vitest";
 import { app } from "../src/server.ts";
 import { closePool } from "../src/db.ts";
-import { unitPriceOf } from "@/modules/pos";
+import { unitPriceOf } from "@/modules/pos/lib/pricing";
 
 /* ══════════════════════════════════════════════════════════════════
    THE PAD'S ARITHMETIC AND THE SERVER'S MUST AGREE
