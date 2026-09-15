@@ -51,9 +51,8 @@ test, no `canSee`). Everybody else reaches them by Find a screen, if allowed.
 
 ## Server endpoints — 12
 
-Until the server move lands, the code is in `api/src/routes/banquet.ts`
-(712 lines); it moves into `api/src/modules/banquet/`, whose door
-`index.ts` mounts it at `/api/hotels`. Every route passes the module gate
+The code is in `api/src/modules/banquet/banquet.ts` (712 lines; moved 15
+September); the door `index.ts` mounts it at `/api/hotels`. Every route passes the module gate
 first (`app.module_enabled(hotel, 'banquet')`) and is refused with a sentence
 when the hall is switched off.
 

@@ -68,12 +68,12 @@ properties and people.
 
 ---
 
-## Server endpoints — 23
+## Server endpoints — 22
 
-Until the server move lands, the code is in four files under
-`api/src/routes/`; it moves into `api/src/modules/admin/`, whose door
-`index.ts` mounts it. The mixed files follow the plan
-(`docs/SERVICE-FOLDERS-PLAN.md`, "The six mixed server files").
+The code is in `api/src/modules/admin/` (moved 15 September): `admin.ts`,
+and the parts split out of three mixed files — `adminLists.ts` (from
+directory.ts), `moduleSwitches.ts` (from property.ts) and `commissioning.ts`
+(from inventorySetup.ts). The door `index.ts` mounts them.
 
 From `admin.ts` (1,133 lines) — all 16, mounted at **`/api`** (creating a
 property is not scoped to one):
@@ -99,7 +99,7 @@ PUT    /api/me/preferences                   a person's own first screen, room g
 GET    /api/admin/overview                   the Console's figures
 ```
 
-From `directory.ts` — 3 of 8, at `/api/hotels`:
+`adminLists.ts` (split out of directory.ts) — 3, at `/api/hotels`:
 
 ```
 GET    /:code/staff        Users
@@ -107,21 +107,22 @@ GET    /:code/audit-log    Audit log
 GET    /:code/settings     Settings
 ```
 
-From `property.ts` — 2 of 7, at `/api/hotels` (today mounted by the core in
-`api/src/server.ts`):
+`moduleSwitches.ts` (split out of property.ts) — 2, at `/api/hotels`:
 
 ```
 GET    /:code/modules             read by Settings, the sidebar and Find a screen
 POST   /:code/modules/:module     pos · banquet · reception_pos — the GM or a group admin only
 ```
 
-From `inventorySetup.ts` — 2 of 12, at `/api/hotels`:
+`commissioning.ts` (split out of inventorySetup.ts) — 1, at `/api/hotels`:
 
 ```
 GET    /:code/commissioning       CommissioningCard
-PATCH  /:code/front-desk          check-in and check-out times, early and late charges —
-                                  the form is on inventory's Room types page
 ```
+
+`PATCH /:code/front-desk` (the front desk's hours), which the plan gave to
+this service, went to inventory in the server split, beside the Room types
+page that holds its form — see inventory's brief.
 
 Every endpoint above has a caller in the web app (checked 15 September).
 

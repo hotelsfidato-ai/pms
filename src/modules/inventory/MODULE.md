@@ -55,18 +55,18 @@ actually sold for, fourteen days out.
   `CommissioningCard` (admin — what the property still needs),
   `TaxRulesCard` (finance — GST rules), and "The front desk's hours"
   (check-in and check-out times and early/late charges — the form is here,
-  the server endpoint is admin's).
+  and so is its server endpoint).
 
 ---
 
-## Server endpoints — 23
+## Server endpoints — 24
 
-Until the server move lands, the code is in four files under
-`api/src/routes/`; it moves into `api/src/modules/inventory/`, whose door
-`index.ts` mounts it at `/api/hotels`. The mixed files follow the plan
-(`docs/SERVICE-FOLDERS-PLAN.md`, "The six mixed server files").
+The code is in `api/src/modules/inventory/` (moved 15 September):
+`rates.ts`, `inventorySetup.ts`, and the parts split out of two mixed files —
+`rateGrid.ts` (from billing.ts) and `roomTypesAndPlans.ts` (from
+directory.ts). The door `index.ts` mounts them at `/api/hotels`.
 
-From `rates.ts` (813 lines) — all 13 are this service's:
+`rates.ts` (813 lines) — 13:
 
 ```
 GET    /:code/rate-plans                          the rates board
@@ -84,7 +84,7 @@ GET    /:code/tariff                              a stay's price, extra persons 
 POST   /:code/restrictions
 ```
 
-From `inventorySetup.ts` (1,037 lines) — this service's 7 of 12:
+`inventorySetup.ts` — 8 of the original file's 12:
 
 ```
 POST   /:code/room-types
@@ -94,19 +94,22 @@ PATCH  /:code/rooms/:number
 POST   /:code/room-types/import
 POST   /:code/rooms/import
 GET    /:code/room-setup
+PATCH  /:code/front-desk          check-in and check-out times, early and late charges
 ```
 
-(The other five go to finance — `GET /:code/tax`, `PUT /:code/tax/:kind`,
-`PATCH /:code/menu-categories/:name/tax-kind` — and to admin —
-`GET /:code/commissioning`, `PATCH /:code/front-desk`.)
+(The other four went to finance — `GET /:code/tax`, `PUT /:code/tax/:kind`,
+`PATCH /:code/menu-categories/:name/tax-kind`, in `finance/tax.ts` — and to
+admin — `GET /:code/commissioning`, in `admin/commissioning.ts`. The plan had
+given the front desk's hours to admin; the split kept them here, with the
+form.)
 
-From `billing.ts` — 1 of 5:
+`rateGrid.ts` (split out of billing.ts) — 1:
 
 ```
 GET    /:code/rates                               Rate performance: rack against achieved, by date
 ```
 
-From `directory.ts` — 2 of 8, both read only by the two routed-nowhere screens:
+`roomTypesAndPlans.ts` (split out of directory.ts) — 2, both read only by the two routed-nowhere screens:
 
 ```
 GET    /:code/room-types                          the old room-type list
@@ -114,8 +117,8 @@ GET    /rate-plans                                the old meal-plan list — can
 ```
 
 `/rates` and `/rate-plans` are two questions on two paths on purpose: the
-older `/rates` route in `billing.ts` wins any collision because it is
-mounted first (MEMORY 70). Grep the route table before adding a route.
+older `/rates` route (`rateGrid.ts`, out of billing.ts) wins any collision
+because it is mounted first (MEMORY 70) — an order the server split kept. Grep the route table before adding a route.
 
 ---
 
@@ -188,7 +191,7 @@ The server's door, `api/src/modules/inventory/index.ts`, exports only
   and the front desk's hours form posts to admin's `PATCH /:code/front-desk`.
 
 Others lean on this one: reservations — the door, for New booking, and
-`app.tariff_for` when a booking is priced (`api/src/routes/groups.ts`); and
+`app.tariff_for` when a booking is priced (`api/src/modules/reservations/groups.ts`); and
 reports — every occupancy figure divides by `app.sellable_rooms`
 (`statistics.ts`, `manager.ts`).
 

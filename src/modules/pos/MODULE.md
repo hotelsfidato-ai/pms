@@ -73,11 +73,9 @@ off (`navigation.ts`, section `point-of-sale`, `receptionNeeds: "reception_pos"`
 
 ## Server endpoints — 51
 
-Until the server move lands, the code is in `api/src/routes/till.ts` (the
-till, **3,555 lines**) and `api/src/routes/pos.ts` (the bridge). Both move into
-`api/src/modules/pos/`; the plan names the parts `till/` (the till, **in
-parts — splitting it is not done yet**) and `bridge.ts`. The door
-`api/src/modules/pos/index.ts` mounts them.
+The code is in `api/src/modules/pos/` (moved 15 September): `till.ts` (the
+till, **3,555 lines** — splitting it into parts is not done yet) and `pos.ts`
+(the bridge to an outside till). The door `index.ts` mounts them.
 
 **The till** — `/api/hotels`, a person's bearer token. Every `/:code/till/*`
 and `/:code/kitchen*` route passes two gates first: the `pos` module must be
@@ -236,9 +234,8 @@ the restaurant's screens (commit `3cd6f51`).
 
 The server's door, `api/src/modules/pos/index.ts`, exports `mounts` and
 `outletFor`, `hashKey`, `issueKey`, `Outlet`. `api/src/server.ts` imports
-`outletFor` through it. `api/scripts/pos-outlet.ts` and `api/test/pos.test.ts`
-still import `hashKey` and `issueKey` from `api/src/routes/pos.ts` directly —
-they need repointing when that file moves.
+`outletFor` through it. `api/scripts/pos-outlet.ts` and `api/test/modules/pos/pos.test.ts`
+import `hashKey` and `issueKey` through it as well.
 
 ---
 
@@ -339,7 +336,7 @@ From `PENDING.md` and `PROGRESS.md`, as of 15 September:
   `pms_migrate`; a migration run as `pms_migrate` that alters it will fail
   (PENDING § 6).
 - **"Which room was this stay in" is written by hand** in
-  `api/src/routes/pos.ts` (the tickets list) — one of seven copies that could
+  `api/src/modules/pos/pos.ts` (the tickets list) — one of seven copies that could
   move onto `app.stay_room()` (PENDING § 6).
 - **`openOrderOnTable`** has no caller (PENDING § 4).
 - Found while writing this brief (15 September), not yet elsewhere:

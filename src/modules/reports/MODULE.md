@@ -65,9 +65,9 @@ most export CSV.
 
 ## Server endpoints — 13
 
-Until the server move lands, the code is in three files under
-`api/src/routes/`; they move into `api/src/modules/reports/`, whose door
-`index.ts` mounts them at `/api/hotels`. Every one is a GET.
+The code is in three files in `api/src/modules/reports/` (moved 15
+September); the door `index.ts` mounts them at `/api/hotels`. Every one is a
+GET.
 
 From `reports.ts` (570 lines):
 

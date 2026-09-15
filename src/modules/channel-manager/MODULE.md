@@ -62,7 +62,7 @@ an invented list of logos.
 
 None of its own. The page reads the companies list through the guests
 service (`listCompanies` → `GET /api/hotels/:code/companies`,
-`api/src/routes/directory.ts`) and keeps the ones of kind "OTA".
+`api/src/modules/guests/directory.ts`) and keeps the ones of kind "OTA".
 
 ---
 

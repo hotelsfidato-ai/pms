@@ -10,9 +10,8 @@ Newest at the bottom of the numbered list.
 
 Project-wide lessons — anything that would bite another service too — stay in
 the root `MEMORY.md` with plain numbers. When this file was written
-(15 September 2026) the next free root number was 273; 272 is already cited
-in `src/data/repositories/repositories.test.ts`. Check the root file before
-taking one.
+(15 September 2026) the root file's numbers ran to 274. Check the root file
+before taking one.
 
 ---
 

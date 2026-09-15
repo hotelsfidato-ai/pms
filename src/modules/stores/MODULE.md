@@ -52,9 +52,8 @@ and both stay. A list can be imported from a file.
 
 ## Server endpoints — 6
 
-Until the server move lands, the code is in `api/src/routes/stores.ts`
-(474 lines); it moves into `api/src/modules/stores/`, whose door `index.ts`
-mounts it at `/api/hotels`. There is no module switch for the store.
+The code is in `api/src/modules/stores/stores.ts` (474 lines; moved 15
+September); the door `index.ts` mounts it at `/api/hotels`. There is no module switch for the store.
 
 ```
 GET    /:code/stores                          items, on hand, value
