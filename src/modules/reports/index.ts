@@ -3,4 +3,4 @@
    move in; see MODULE.md. */
 export { getCityLedger } from "./data/reportData";
 export type { CityLedgerRow } from "./data/reportData";
-export { PTD_FROM, getPeriodStatistics, getTodaySnapshot, listDailyStatistics } from "./data/statistics";
+export { getPeriodStatistics, getTodaySnapshot, listDailyStatistics } from "./data/statistics";

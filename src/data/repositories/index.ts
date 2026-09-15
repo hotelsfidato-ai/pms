@@ -17,6 +17,10 @@
    ══════════════════════════════════════════════════════════════════ */
 
 export * from "./types";
+/* The property's operating day — core. Exported here by name, so that a
+   service's data file which passes it along (stays.ts, statistics.ts) is
+   never taken for its home: an explicit export wins over `export *`. */
+export { BUSINESS_DATE, PTD_FROM, PTD_TO } from "./businessDate";
 export * from "./properties";
 export * from "./rooms";
 export * from "./folios";

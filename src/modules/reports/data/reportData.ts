@@ -1,5 +1,5 @@
-import { BUSINESS_DATE } from "../../../data/repositories/businessDate";
-import { fetchOr } from "../../../data/repositories/http";
+import { BUSINESS_DATE } from "@/data/repositories/businessDate";
+import { fetchOr } from "@/data/repositories/http";
 
 /* ══════════════════════════════════════════════════════════════════
    REPORT DATA — over HTTP, as of CP9e
