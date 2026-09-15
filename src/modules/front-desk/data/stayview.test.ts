@@ -1,5 +1,6 @@
 import { describe, it, expect } from "vitest";
-import { getStayView, addDays, isWeekend, defaultPropertyId, BUSINESS_DATE } from "./index";
+import { getStayView, addDays, isWeekend } from "@/modules/front-desk/data/stayview";
+import { defaultPropertyId, BUSINESS_DATE } from "@/data/repositories";
 
 /* CP9: the id a screen puts in a URL is the hotel CODE, because that is
    what Postgres calls it — `hotels.code`, commented "appears in URLs" in

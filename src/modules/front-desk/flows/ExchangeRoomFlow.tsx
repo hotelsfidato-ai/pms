@@ -6,9 +6,8 @@ import { dateShort } from "@/lib/format";
 import {
   Button, Dialog, DialogContent, Field, fieldProps, Input, EmptyState, toast,
 } from "@/components/ui";
-import {
-  exchangeableWith, exchangeRooms, type Stay,
-} from "@/data/repositories";
+import { exchangeableWith, exchangeRooms } from "@/modules/front-desk/data/stayExtras";
+import { type Stay } from "@/data/repositories";
 
 /* ══════════════════════════════════════════════════════════════════
    TWO GUESTS TRADE ROOMS

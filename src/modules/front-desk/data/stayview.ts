@@ -1,6 +1,6 @@
-import { listAllRooms } from "./rooms";
+import { listAllRooms } from "@/data/repositories/rooms";
 import { listStays } from "./stays";
-import type { Stay } from "./types";
+import type { Stay } from "@/data/repositories/types";
 import { listOpenFolios } from "@/modules/finance";
 
 /* ══════════════════════════════════════════════════════════════════

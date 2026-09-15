@@ -1,9 +1,9 @@
-import type { Posting } from "@/data/repositories/operations";
+import type { Posting } from "@/modules/front-desk";
 import { api, ApiError } from "@/lib/api";
 import { getFolio } from "./folios";
 import type { ChargeCategory, PaymentMethod } from "@/lib/rules";
 import type { OperationResult } from "@/data/repositories/result";
-import { getStay } from "@/data/repositories/stays";
+import { getStay } from "@/modules/front-desk";
 import { refuse } from "@/data/repositories/result";
 import { canPostCharge, canReverse } from "@/lib/rules";
 import type { Permitted } from "@/data/repositories/types";

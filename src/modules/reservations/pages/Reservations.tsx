@@ -5,11 +5,9 @@ import { cn } from "@/lib/cn";
 import { dateLong } from "@/lib/format";
 import { useUi } from "@/lib/ui";
 import { Page, PageHeader, Card, StatusPill, SearchInput } from "@/components/ui";
-import { StayTable, type StayColumn } from "@/components/lists/StayTable";
-import {
-  listStays, queryKeys, BUSINESS_DATE,
-  type Stay, type StayStatus,
-} from "@/data/repositories";
+import { StayTable, type StayColumn } from "@/modules/front-desk";
+import { listStays } from "@/modules/front-desk";
+import { queryKeys, BUSINESS_DATE, type Stay, type StayStatus } from "@/data/repositories";
 
 /* ══════════════════════════════════════════════════════════════════
    RESERVATIONS — the whole book

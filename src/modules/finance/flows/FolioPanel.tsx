@@ -17,9 +17,10 @@ import {
   DropdownMenuItem, DropdownMenuLabel,
 } from "@/components/ui";
 import { getFolioPostings, getFolioBalance, postCharge, reverseCharge, settle, reverseChargeAllowed } from "@/modules/finance/data/postings";
-import { checkOut, checkOutAllowed, earlyArrival, type Posting, type Stay } from "@/data/repositories";
+import { checkOut, checkOutAllowed, earlyArrival } from "@/modules/front-desk";
+import { type Posting, type Stay } from "@/data/repositories";
 import { listStayFolios, openFolio, transferPosting, listBillingCompanies, type StayFolio } from "@/modules/finance/data/folios";
-import { LateCheckOutFlow } from "@/components/flows/LateCheckOutFlow";
+import { LateCheckOutFlow } from "@/modules/front-desk";
 
 /* ══════════════════════════════════════════════════════════════════
    FLOWS B AND C — charge, settle, check out

@@ -7,10 +7,9 @@ import {
   Button, Dialog, DialogTrigger, DialogContent,
   StatusPill, toast,
 } from "@/components/ui";
-import {
-  listStays, listAllRooms, assignRoom, BUSINESS_DATE,
-  type Stay, type Room,
-} from "@/data/repositories";
+import { listStays } from "@/modules/front-desk/data/stays";
+import { listAllRooms, BUSINESS_DATE, type Stay, type Room } from "@/data/repositories";
+import { assignRoom } from "@/modules/front-desk/data/operations";
 
 /* ══════════════════════════════════════════════════════════════════
    ASSIGN A ROOM

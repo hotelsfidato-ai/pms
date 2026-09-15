@@ -8,21 +8,19 @@ import {
 } from "lucide-react";
 import { cn } from "@/lib/cn";
 import { useDocumentTitle } from "@/lib/documentTitle";
-import { HouseFloor } from "@/components/flows/HouseFloor";
+import { HouseFloor } from "@/modules/front-desk/flows/HouseFloor";
 import { money, dateShort } from "@/lib/format";
 import { useUi } from "@/lib/ui";
-import { AssignRoomFlow } from "@/components/flows/AssignRoomFlow";
+import { AssignRoomFlow } from "@/modules/front-desk/flows/AssignRoomFlow";
 import {
   Page, Button, Segmented, Tooltip, Skeleton, toast, type Tone,
 } from "@/components/ui";
 import { StartHere } from "@/components/app/StartHere";
-import { StayDrawer } from "@/components/flows/StayDrawer";
-import { WalkInFlow } from "@/components/flows/WalkInFlow";
-import {
-  getStayView, getStay, listStays, queryKeys, BUSINESS_DATE, addDays,
-  isWeekend, setMyPreferences,
-  type ChartBar, type ChartRoom, type BarTone, type Stay,
-} from "@/data/repositories";
+import { StayDrawer } from "@/modules/front-desk/flows/StayDrawer";
+import { WalkInFlow } from "@/modules/front-desk/flows/WalkInFlow";
+import { getStayView, addDays, isWeekend, type ChartBar, type ChartRoom, type BarTone } from "@/modules/front-desk/data/stayview";
+import { getStay, listStays } from "@/modules/front-desk/data/stays";
+import { queryKeys, BUSINESS_DATE, setMyPreferences, type Stay } from "@/data/repositories";
 
 /* ══════════════════════════════════════════════════════════════════
    STAY VIEW — the tape chart

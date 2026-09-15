@@ -1,6 +1,7 @@
 import { cn } from "@/lib/cn";
 import { dateShort } from "@/lib/format";
-import type { ChartRoom, ChartRoomType, Stay } from "@/data/repositories";
+import type { ChartRoom, ChartRoomType } from "@/modules/front-desk/data/stayview";
+import type { Stay } from "@/data/repositories";
 
 /* ══════════════════════════════════════════════════════════════════
    THE HOUSE, AS A FLOOR

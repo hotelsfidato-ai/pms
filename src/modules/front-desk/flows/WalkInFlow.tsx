@@ -8,7 +8,9 @@ import {
   Button, Field, Input, NativeSelect, StatusPill, Switch, toast,
   Dialog, DialogContent,
 } from "@/components/ui";
-import { createWalkIn, listStays, getRoom } from "@/data/repositories";
+import { createWalkIn } from "@/modules/front-desk/data/operations";
+import { listStays } from "@/modules/front-desk/data/stays";
+import { getRoom } from "@/data/repositories";
 
 /* ══════════════════════════════════════════════════════════════════
    FLOW D — the walk-in at 23:40

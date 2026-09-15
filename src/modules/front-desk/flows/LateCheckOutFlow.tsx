@@ -6,7 +6,8 @@ import { can } from "@/lib/permissions";
 import {
   Button, Dialog, DialogContent, Field, fieldProps, Input, toast,
 } from "@/components/ui";
-import { checkOut, type Stay } from "@/data/repositories";
+import { checkOut } from "@/modules/front-desk/data/operations";
+import { type Stay } from "@/data/repositories";
 
 /* ══════════════════════════════════════════════════════════════════
    A GUEST WHO STAYED PAST ELEVEN

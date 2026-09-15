@@ -23,11 +23,7 @@ export * from "./types";
 export { BUSINESS_DATE, PTD_FROM, PTD_TO } from "./businessDate";
 export * from "./properties";
 export * from "./rooms";
-export * from "./stays";
-export * from "./stayview";
-export * from "./operations";
 export * from "./notifications";
-export * from "./stayExtras";
 /* Split out of the mixed files on 15 September, one file per service
    (docs/SERVICE-FOLDERS-PLAN.md). Re-exported here while the services'
    files move into src/modules; importers are pointed at each service's

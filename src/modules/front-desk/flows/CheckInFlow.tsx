@@ -9,9 +9,8 @@ import {
   Button, Field, Input, NativeSelect, StatusPill, Tooltip, toast,
   Dialog, DialogContent, DialogTrigger, Term,
 } from "@/components/ui";
-import {
-  checkIn, assignableRooms, checkInAllowed, earlyArrival, type Stay,
-} from "@/data/repositories";
+import { checkIn, assignableRooms, checkInAllowed, earlyArrival } from "@/modules/front-desk/data/operations";
+import { type Stay } from "@/data/repositories";
 
 /* ══════════════════════════════════════════════════════════════════
    FLOW A — arrival to in house

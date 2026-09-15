@@ -4,7 +4,7 @@ import { Ban } from "lucide-react";
 import {
   Button, Dialog, DialogContent, Field, fieldProps, Input, toast,
 } from "@/components/ui";
-import { voidStay } from "@/data/repositories";
+import { voidStay } from "@/modules/front-desk/data/operations";
 import type { Stay } from "@/data/repositories";
 
 /* ══════════════════════════════════════════════════════════════════

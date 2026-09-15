@@ -1,7 +1,8 @@
 import { describe, it, expect } from "vitest";
-import { readFileSync, readdirSync, statSync } from "node:fs";
+import { existsSync, readFileSync, readdirSync, statSync } from "node:fs";
 import { join } from "node:path";
-import { getProperty, listRooms, listAllRooms, defaultPropertyId, listStays, getStay, listArrivals, listInHouse, listDepartures, queryKeys, BUSINESS_DATE } from "./index";
+import { getProperty, listRooms, listAllRooms, defaultPropertyId, queryKeys, BUSINESS_DATE } from "./index";
+import { listStays, getStay, listArrivals, listInHouse, listDepartures } from "@/modules/front-desk";
 import { getFolio, listOpenFolios } from "@/modules/finance";
 import { listGroups, listGroupMembers } from "@/modules/reservations";
 import { listDailyStatistics, getPeriodStatistics, getTodaySnapshot } from "@/modules/reports";
@@ -203,7 +204,23 @@ describe("Rule 2b — a function nobody calls is a capability nobody can reach",
      the second test below fails if an entry gains a caller and stays.
      ══════════════════════════════════════════════════════════════════ */
   const SRC = join(process.cwd(), "src");
-  const SEAM = join("src", "data", "repositories");
+
+  /* ⚠ THE SEAM IS EVERY DATA FOLDER SINCE THE SERVICE-FOLDER MOVE (15 Sep).
+     This read only src/data/repositories and counted only imports whose
+     path said "data/repositories" — so when the services' data files moved
+     to src/modules/<service>/data and the screens began importing them
+     through each service's front door, the gate kept passing while checking
+     almost nothing (MEMORY 272). The seam is the core's data folder plus
+     every service's `data/`; a caller's import counts whether it names the
+     index, a service's door or a service's data file. */
+  const SEAM_DIRS = [
+    join(SRC, "data", "repositories"),
+    ...readdirSync(join(SRC, "modules"))
+      .map((service) => join(SRC, "modules", service, "data"))
+      .filter((dir) => existsSync(dir)),
+  ];
+  const inSeam = (file: string) => SEAM_DIRS.some((dir) => file.startsWith(dir));
+  const seamFiles = () => SEAM_DIRS.flatMap((dir) => walk(dir));
 
   function walk(dir: string, out: string[] = []): string[] {
     for (const entry of readdirSync(dir)) {
@@ -238,7 +255,7 @@ describe("Rule 2b — a function nobody calls is a capability nobody can reach",
 
   const exported = () => {
     const names = new Set<string>();
-    for (const file of walk(join(SRC, "data", "repositories"))) {
+    for (const file of seamFiles()) {
       if (/\.test\.tsx?$/.test(file)) continue;
       for (const m of readFileSync(file, "utf8")
         .matchAll(/^export (?:async )?function ([A-Za-z0-9_]+)/gm)) {
@@ -264,7 +281,7 @@ describe("Rule 2b — a function nobody calls is a capability nobody can reach",
      worse, not better — `queryFn: listArrivals` passes a live function
      by reference and never writes a bracket after it. */
   const IMPORT_FROM_SEAM = String.raw`import\s*(?:type\s*)?\{([^}]*)\}` +
-    String.raw`\s*from\s*["'][^"']*(?:data/repositories|\.\/|\.\.\/)`;
+    String.raw`\s*from\s*["'][^"']*(?:data/repositories|modules/|\.\/|\.\.\/)`;
 
   const namesIn = (text: string, tail: string) => {
     const out: string[] = [];
@@ -291,17 +308,16 @@ describe("Rule 2b — a function nobody calls is a capability nobody can reach",
      needs a call graph; say so rather than imply the gate is tighter
      than it is. */
   const reachableNames = () => {
-    const seamFiles = walk(join(SRC, "data", "repositories"))
-      .filter((f) => !/\.test\.tsx?$/.test(f));
+    const within_ = seamFiles().filter((f) => !/\.test\.tsx?$/.test(f));
 
     const reachable = new Set<string>();
-    for (const file of walk(SRC).filter((f) => !f.includes(SEAM))) {
+    for (const file of walk(SRC).filter((f) => !inSeam(f))) {
       for (const n of namesIn(readFileSync(file, "utf8"), String.raw`[^"']*["']`)) {
         reachable.add(n);
       }
     }
 
-    const within = seamFiles.map((file) => {
+    const within = within_.map((file) => {
       const text = readFileSync(file, "utf8");
       return {
         exports: [...text.matchAll(/^export (?:async )?function ([A-Za-z0-9_]+)/gm)]

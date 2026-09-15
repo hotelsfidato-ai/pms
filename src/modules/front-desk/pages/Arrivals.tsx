@@ -4,10 +4,10 @@ import { cn } from "@/lib/cn";
 import { dateLong } from "@/lib/format";
 import { useUi } from "@/lib/ui";
 import { Page, PageHeader, Card, StatusPill } from "@/components/ui";
-import { StayTable, type StayColumn } from "@/components/lists/StayTable";
-import {
-  listArrivals, listStays, queryKeys, BUSINESS_DATE, addDays,
-} from "@/data/repositories";
+import { StayTable, type StayColumn } from "@/modules/front-desk/components/StayTable";
+import { listArrivals, listStays } from "@/modules/front-desk/data/stays";
+import { queryKeys, BUSINESS_DATE } from "@/data/repositories";
+import { addDays } from "@/modules/front-desk/data/stayview";
 
 /* ══════════════════════════════════════════════════════════════════
    ARRIVALS

@@ -1,6 +1,6 @@
 import { api, ApiError } from "@/lib/api";
 import type { Folio, Stay } from "@/data/repositories/types";
-import { fetchStays } from "@/data/repositories/stays";
+import { fetchStays } from "@/modules/front-desk";
 
 /* ══════════════════════════════════════════════════════════════════
    SPLIT BILLING

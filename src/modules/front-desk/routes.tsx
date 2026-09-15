@@ -1,9 +1,9 @@
 import { Route } from "react-router";
 import { PropertyScope } from "@/components/app/PropertyScope";
-import StayViewPage from "@/pages/StayView";
-import ArrivalsPage from "@/pages/Arrivals";
-import InHousePage from "@/pages/InHouse";
-import WalkInsPage from "@/pages/WalkIns";
+import StayViewPage from "@/modules/front-desk/pages/StayView";
+import ArrivalsPage from "@/modules/front-desk/pages/Arrivals";
+import InHousePage from "@/modules/front-desk/pages/InHouse";
+import WalkInsPage from "@/modules/front-desk/pages/WalkIns";
 
 /* Front desk's screen addresses. Mounted by App.tsx inside the signed-in
    shell. */

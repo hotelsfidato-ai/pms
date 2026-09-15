@@ -5,7 +5,7 @@ import {
   Button, Dialog, DialogContent, Field, fieldProps, Input, toast,
 } from "@/components/ui";
 import { money } from "@/lib/format";
-import { amendStay } from "@/data/repositories";
+import { amendStay } from "@/modules/front-desk/data/operations";
 import type { Stay } from "@/data/repositories";
 
 /* ══════════════════════════════════════════════════════════════════

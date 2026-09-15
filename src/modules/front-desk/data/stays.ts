@@ -1,6 +1,6 @@
 import { api, ApiError } from "@/lib/api";
-import { BUSINESS_DATE } from "./businessDate";
-import type { Stay } from "./types";
+import { BUSINESS_DATE } from "@/data/repositories/businessDate";
+import type { Stay } from "@/data/repositories/types";
 
 /* ══════════════════════════════════════════════════════════════════
    STAYS AND FOLIOS — over HTTP, as of CP9
@@ -23,7 +23,7 @@ import type { Stay } from "./types";
    ══════════════════════════════════════════════════════════════════ */
 
 /** The business date the demo is pinned to — the Night Audit's "As On Date". */
-export { BUSINESS_DATE } from "./businessDate";
+export { BUSINESS_DATE } from "@/data/repositories/businessDate";
 
 const clone = <T,>(rows: T[]): T[] => rows.map((r) => ({ ...r }));
 

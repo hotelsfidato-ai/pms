@@ -6,7 +6,7 @@ import { money, dateShort } from "@/lib/format";
 import {
   DataTable, StatusPill, Input, type Column, type Tone,
 } from "@/components/ui";
-import { StayDrawer } from "@/components/flows/StayDrawer";
+import { StayDrawer } from "@/modules/front-desk/flows/StayDrawer";
 import type { Stay } from "@/data/repositories";
 
 /* ══════════════════════════════════════════════════════════════════

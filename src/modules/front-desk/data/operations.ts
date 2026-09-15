@@ -2,15 +2,15 @@
    read and not to write. Every one of the five flows goes to Postgres,
    and `Posting` is the only thing left that this module takes from
    there: a type, not data. */
-import type { Posting } from "./types";
-import { listAllRooms } from "./rooms";
+import type { Posting } from "@/data/repositories/types";
+import { listAllRooms } from "@/data/repositories/rooms";
 import { getStay, listStays } from "./stays";
 import { api, ApiError } from "@/lib/api";
 import { canCheckIn, canCheckOut, canConfirmWalkIn } from "@/lib/rules";
 import { money } from "@/lib/format";
-import type { Stay, Permitted } from "./types";
-import type { OperationResult } from "./result";
-import { refuse } from "./result";
+import type { Stay, Permitted } from "@/data/repositories/types";
+import type { OperationResult } from "@/data/repositories/result";
+import { refuse } from "@/data/repositories/result";
 import { getFolioBalance } from "@/modules/finance";
 
 

@@ -1,11 +1,11 @@
 import { useState } from "react";
 import { CalendarRange, ArrowLeftRight, Ban, Repeat, Gift } from "lucide-react";
 import { Menu, MenuItem, MenuLabel, MenuSeparator } from "@/components/ui";
-import { AmendStayFlow } from "@/components/flows/AmendStayFlow";
-import { MoveRoomFlow } from "@/components/flows/MoveRoomFlow";
-import { VoidFlow } from "@/components/flows/VoidFlow";
-import { ExchangeRoomFlow } from "@/components/flows/ExchangeRoomFlow";
-import { InclusionsFlow } from "@/components/flows/InclusionsFlow";
+import { AmendStayFlow } from "@/modules/front-desk/flows/AmendStayFlow";
+import { MoveRoomFlow } from "@/modules/front-desk/flows/MoveRoomFlow";
+import { VoidFlow } from "@/modules/front-desk/flows/VoidFlow";
+import { ExchangeRoomFlow } from "@/modules/front-desk/flows/ExchangeRoomFlow";
+import { InclusionsFlow } from "@/modules/front-desk/flows/InclusionsFlow";
 import type { Stay } from "@/data/repositories";
 
 /* ══════════════════════════════════════════════════════════════════

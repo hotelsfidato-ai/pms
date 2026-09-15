@@ -1,4 +1,4 @@
-import { listStays } from "@/data/repositories/stays";
+import { listStays } from "@/modules/front-desk";
 import { listAllRooms, setHousekeeping } from "@/data/repositories/rooms";
 import type { OperationResult } from "@/data/repositories/result";
 import { refuse } from "@/data/repositories/result";

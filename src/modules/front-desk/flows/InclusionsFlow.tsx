@@ -6,10 +6,8 @@ import {
   Button, Dialog, DialogContent, Field, fieldProps, Input, NativeSelect,
   StatusPill, toast,
 } from "@/components/ui";
-import {
-  stayInclusions, addStayInclusion, removeStayInclusion, listInclusions,
-  type Stay,
-} from "@/data/repositories";
+import { stayInclusions, addStayInclusion, removeStayInclusion, listInclusions } from "@/modules/front-desk/data/stayExtras";
+import { type Stay } from "@/data/repositories";
 
 /* ══════════════════════════════════════════════════════════════════
    WHAT THIS BOOKING WAS PROMISED

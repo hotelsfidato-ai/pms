@@ -4,8 +4,9 @@ import { ArrowRight } from "lucide-react";
 import { dateLong } from "@/lib/format";
 import { useUi } from "@/lib/ui";
 import { Page, PageHeader, Card, StatusPill } from "@/components/ui";
-import { StayTable, type StayColumn } from "@/components/lists/StayTable";
-import { listStays, queryKeys, BUSINESS_DATE } from "@/data/repositories";
+import { StayTable, type StayColumn } from "@/modules/front-desk/components/StayTable";
+import { listStays } from "@/modules/front-desk/data/stays";
+import { queryKeys, BUSINESS_DATE } from "@/data/repositories";
 
 /* ══════════════════════════════════════════════════════════════════
    WALK-INS

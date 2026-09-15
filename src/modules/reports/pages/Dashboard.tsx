@@ -17,7 +17,8 @@ import {
 } from "@/components/ui";
 import { StartHere } from "@/components/app/StartHere";
 import type { TermKey } from "@/lib/glossary";
-import { listProperties, listArrivalsOutstanding, getStayViewCounts, BUSINESS_DATE, type Property } from "@/data/repositories";
+import { listProperties, BUSINESS_DATE, type Property } from "@/data/repositories";
+import { listArrivalsOutstanding, getStayViewCounts } from "@/modules/front-desk";
 import { getPeriodStatistics } from "@/modules/reports/data/statistics";
 import { getManagerReport, type ThreeColumn } from "@/modules/reports/data/managerReport";
 

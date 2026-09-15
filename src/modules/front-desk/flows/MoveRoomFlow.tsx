@@ -6,7 +6,7 @@ import {
   toast,
 } from "@/components/ui";
 import { money } from "@/lib/format";
-import { moveRoom, unassignRoom } from "@/data/repositories";
+import { moveRoom, unassignRoom } from "@/modules/front-desk/data/operations";
 import type { Stay } from "@/data/repositories";
 
 /* ══════════════════════════════════════════════════════════════════
