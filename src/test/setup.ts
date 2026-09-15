@@ -89,6 +89,11 @@ vi.mock("@/lib/api", () => ({
       };
     }
 
+    /* A person's own preferences — the first screen (087) and the Start
+       here card (089). The live route answers { ok: true }; api/test/
+       firstScreen.test.ts proves that against Postgres. */
+    if (path === "/api/me/preferences") return { ok: true };
+
     /* ⚠ WITHOUT THIS BRANCH THE MODULES TEST PASSES VACUOUSLY.
        `getModules` catches its own failure and returns {}, so the
        settings screen renders ZERO switches — and "no switch is

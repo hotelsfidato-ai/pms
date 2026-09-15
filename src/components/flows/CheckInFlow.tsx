@@ -7,7 +7,7 @@ import { useRole } from "@/lib/session";
 import { can } from "@/lib/permissions";
 import {
   Button, Field, Input, NativeSelect, StatusPill, Tooltip, toast,
-  Dialog, DialogContent, DialogTrigger,
+  Dialog, DialogContent, DialogTrigger, Term,
 } from "@/components/ui";
 import {
   checkIn, assignableRooms, checkInAllowed, earlyArrival, type Stay,
@@ -228,10 +228,13 @@ export function CheckInFlow({
             <div className="space-y-4">
               <p className="text-sm text-grey-600">
                 Indian properties must record a guest's identity document.
-                It can be skipped, but the reason is kept on the folio.
+                It can be skipped, but the reason is kept in the stay's note.
               </p>
 
-              <Field label="Nationality" hint="Anything other than IN puts this stay on the Form C register.">
+              <Field
+                label="Nationality"
+                hint={<>Anything other than IN puts this stay on the <Term name="formC">Form C</Term> register.</>}
+              >
                 {({ id }) => (
                   <Input
                     id={id}

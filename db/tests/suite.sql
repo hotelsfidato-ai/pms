@@ -5818,3 +5818,50 @@ begin
   update staff set is_active = false where id = gm;
 end $$;
 
+-- =============================================================================
+-- 089 · "Start here" — the person's own flag, and nobody else's
+-- =============================================================================
+-- The card of first jobs stays until the person taps "Got it", and comes back
+-- from the account menu. Remembered per person; set only by themselves.
+-- =============================================================================
+do $$
+declare
+  h_agr uuid; clerk uuid; other uuid;
+begin
+  select id into h_agr from hotels where code = 'AGR';
+  insert into staff (email, full_name, firebase_uid)
+  values ('t089-clerk@fidato.in', 'T089 Clerk', 't089-clerk')
+  on conflict (email) do update set is_active = true, start_here_dismissed = false
+  returning id into clerk;
+  insert into staff (email, full_name, firebase_uid)
+  values ('t089-other@fidato.in', 'T089 Other', 't089-other')
+  on conflict (email) do update set is_active = true, start_here_dismissed = false
+  returning id into other;
+  insert into staff_hotels (staff_id, hotel_id, role) values (clerk, h_agr, 'front_desk')
+  on conflict (staff_id, hotel_id) do update set role = 'front_desk';
+
+  perform set_config('app.user_id', '', true);
+  perform test.ok('start here','nobody signed in reads as not put away',
+    app.my_start_here_dismissed() = false);
+  perform test.raises('start here','nobody signed in cannot put it away',
+    $q$select app.set_start_here(true)$q$, '42501');
+
+  perform set_config('app.user_id', clerk::text, true);
+  perform test.ok('start here','a new person has the card',
+    app.my_start_here_dismissed() = false);
+  perform app.set_start_here(true);
+  perform test.ok('start here','"Got it" puts it away',
+    app.my_start_here_dismissed() = true);
+  perform test.ok('start here','and only for them',
+    (select start_here_dismissed from staff where id = other) = false);
+  perform test.raises('start here','neither away nor back is refused',
+    $q$select app.set_start_here(null)$q$, '22023');
+  perform app.set_start_here(false);
+  perform test.ok('start here','the account menu brings it back',
+    app.my_start_here_dismissed() = false);
+
+  -- ---------- teardown ----------
+  perform set_config('app.user_id', '', true);
+  delete from staff_hotels where staff_id = clerk;
+  update staff set is_active = false, start_here_dismissed = false where id in (clerk, other);
+end $$;

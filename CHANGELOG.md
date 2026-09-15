@@ -46,6 +46,78 @@ Write it **as you go**, not at the end from memory. Copy this shape:
 
 ---
 
+## 2026-09-15 (step 4) · Help where the question is
+
+**Asked for:** "yes, continue with step 4" — the clarity plan's last step.
+The owner chose, before any code: a card per role, and it goes when they tap
+"Got it".
+
+**Shipped**
+- **Start here** — a card of each person's first jobs, each a link to the
+  screen it happens on, with the real button named: reception five (take a
+  booking, check a guest in, take a payment, check a guest out, open the cash
+  drawer), housekeeping three, the waiter three, the chef one; none for the GM
+  or the owner. Only on the person's landing screens (reception: Dashboard,
+  Rooms, Calendar; housekeeping: its board; waiter: Tables and Till; chef: the
+  kitchen board). A job done on the screen you are on is not a link.
+  `src/components/app/StartHere.tsx`, content in `startHereCards.ts`.
+- "Got it" is remembered per person on the server — 089,
+  `staff.start_here_dismissed`, `app.set_start_here` (the caller's own row
+  only) — so it follows them to any terminal. The account menu shows
+  **Show Start here again** once it has been put away.
+- **Tap-to-explain terms** — `Term` (dotted underline; tap, not hover, because
+  the desk and the POS are touch screens) over one glossary,
+  `src/lib/glossary.ts`, every line checked against the code that produces the
+  figure. On the Dashboard (Occupancy, ADR, RevPAR, Owed by guests, City
+  ledger), the Manager report (PTD, YTD, the two ledgers, occupancy, ADR,
+  RevPAR, no-shows, day use, complimentary), the Form C hint at check-in, and
+  the Folios and Night audit descriptions.
+- **Empty states** — six tables that said "Nothing here yet" now say what
+  belongs there and where it comes from (Payments, Company accounts, Guests,
+  Companies and agents, Users, Audit log); the kitchen's empty columns speak
+  in their own words; Housekeeping got loading, error and empty states.
+- The desk's last three "folio"s are "bill" (and the check-in line now says
+  where the ID-skip reason really goes: the stay's note).
+
+**Found** (numbered in `MEMORY.md`)
+- 265 · three desk sentences still said "folio" after step 1; one was untrue.
+- 266 · the City ledger printed an invented contact for every account
+  ("Mr. Agoda") on screen and in its CSV, since 28 August. Fixed in its own
+  commit: the company's real contact on its own row, a dash everywhere else.
+- 267 · `startHere.ts` beside `StartHere.tsx` collided on Windows. Renamed.
+- 268 · MINE: my first placement of the card left the Rooms screen 41px of
+  rooms on a phone. Measured, moved inside the rooms' scroll.
+- 269 · Housekeeping drew nothing while loading, on failure, or when empty.
+- 270 · a deliberate break that missed the behaviour — caught, redone.
+- Noted, not changed: on a phone the Rooms screen's controls take 376px of 812
+  before any room shows (PENDING).
+
+**Proved**
+- Database: all 588 assertions passed (7 new for 089); all 89 migrations
+  re-runnable. The new block fails without 089.
+- API: 359 passed in 28 files — 4 new for the card's flag, 2 for the ledger's
+  contact; each group seen to FAIL with its change stashed.
+- Front end: `tsc -b` clean; 197 passed in 13 files — 7 new. Each of the six
+  behaviours seen to fail under a deliberate break (the GM one needed a second
+  try, MEMORY 270).
+- On screen, local, against the real API: reception lands on Rooms with the
+  card; "Got it" → `PUT /api/me/preferences` 200 → `desk@fidato.in` flag true
+  in Postgres → still gone after a reload → back from the account menu, flag
+  false. The GM sees no card. RevPAR and PTD open their meanings. The City
+  ledger shows no "Mr." anywhere. Measured at 1280×800 and 375×812.
+
+**Left open**
+- The plan's own "done when" — somebody who has never seen the system books,
+  checks in, takes a payment and checks out without being told — needs a real
+  new person. Not something I can run.
+- The waiter's and chef's cards are proved by tests only: the local dev
+  sign-ins have no waiter or chef.
+- The deploy: 089 joins 088 and the rest.
+
+**Commits:** the step 4 commit, and the city-ledger commit.
+
+---
+
 ## 2026-09-15 (review) · An audit, a security review, and an account takeover closed
 
 **Asked for:** before step 4, "do an audit of the code and tell me how much

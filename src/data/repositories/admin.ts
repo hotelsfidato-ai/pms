@@ -599,9 +599,9 @@ export function setHomeScreen(
   return put(`/api/admin/staff/${staffId}/home-screen`, { homeScreen });
 }
 
-/** A person's own preferences. Either may be sent alone. */
+/** A person's own preferences. Any one may be sent alone. */
 export function setMyPreferences(
-  prefs: { homeScreen?: HomeScreen; roomGrouping?: RoomGrouping },
+  prefs: { homeScreen?: HomeScreen; roomGrouping?: RoomGrouping; startHereDismissed?: boolean },
 ): Promise<AdminResult> {
   return put(`/api/me/preferences`, prefs);
 }

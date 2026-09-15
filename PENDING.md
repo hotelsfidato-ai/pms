@@ -38,9 +38,10 @@ checking whose it was. Live in production since 9 September. Fixed in 088
 (`app.require_claimable_address`, asked before Firebase is touched); proved
 by API and database tests. **It is live until the owner deploys.**
 
-Interim, needs the owner's yes: `demo@fidatohotels.com` holds the owner
-role at 5EL and its password has been shared — any holder of that password
-could use the hole. Deactivate it, or change its password, until the deploy.
+Interim: `demo@fidatohotels.com` holds the owner role at 5EL and its
+password has been shared — any holder of that password could use the hole.
+**The owner's decision, 15 September: leave it active — testing is going on
+— and deploy on 16 September.** Do not deactivate it unasked.
 
 **Checked 15 September, read-only: it was not used.** The takeover needs a
 password change, and a password change resets an account's tokens. Of the
@@ -56,9 +57,9 @@ two strays below.
 `owner@fidato.in` and `pune@fidato.in`, display name "Anybody", created
 10:38 GMT by a test run of mine that reached production Firebase (MEMORY
 264). Never signed in, linked to no staff row, so they reach nothing — but
-they carry a known password. **Remove them in the Firebase console**
-(Authentication → Users), or say so and they are disabled from here. The
-test suite can no longer reach Firebase at all.
+they carry a known password. **The owner's decision, 15 September: leave
+them for now.** When they go: Firebase console → Authentication → Users, the
+two created 15 Sep 10:38 GMT. The test suite can no longer reach Firebase.
 
 ---
 
@@ -240,7 +241,8 @@ example.
 ## 5a · The clarity plan — steps 2 to 4 (critique of 15 September)
 
 Scored 22/40 against "a new receptionist manages their first shift without
-asking". Steps 1 (one vocabulary), 2 (one primary action) and 3 (a menu per person) are done. The owner chose, 15 September:
+asking". All four steps are built: 1 (one vocabulary), 2 (one primary
+action), 3 (a menu per person) and 4 (help where the question is). The owner chose, 15 September:
 Bill at the desk and Folio in Finance; a shorter menu still reaches
 everything by search; report names stay, in sentence case.
 
@@ -254,10 +256,18 @@ everything by search; report names stay, in sentence case.
   guests and bookings from the palette — it finds screens only, and says so.
   **Worth asking the owner:** the kitchen manager's list has no Store and the
   housekeeping list no Rooms — both approved as listed, both one search away.
-- **Step 4 · help where the question is.** No first-run guidance and no
-  glossary anywhere. A "Start here" card for a person's first sign-ins,
-  one-line explanations on RevPAR, ADR, city ledger, Form C, and an empty
-  state on every list.
+- **Step 4 · help where the question is — done 15 September.** Start here
+  per role (gone on "Got it", 089, back from the account menu), tap-to-explain
+  terms from one glossary, an empty state on every table, Housekeeping's
+  loading/error/empty states. **Not run: the plan's own test** — somebody new
+  books, checks in, takes a payment and checks out untold. Needs a real new
+  person; the owner's to arrange. The waiter's and chef's cards are proved by
+  tests only (no local waiter or chef sign-in).
+- **Rooms on a phone:** the controls take 376px of an 812px screen before the
+  first room (measured 15 September). Start here now scrolls away inside the
+  rooms; the controls themselves want a compact phone layout.
+- **Dead code:** `RoomTypesPage` and `RatePlansPage` in `src/pages/Directory.tsx`
+  are routed nowhere (App uses `RoomSetupPage` and `RatePlansEditor`).
 - **Still named, not fixed:** the same chart icon on six menu entries;
   `FolioPanel.tsx` and `CheckInFlow.tsx` still hold `const USER = "front
   desk"` (MEMORY 256).

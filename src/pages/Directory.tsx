@@ -1,14 +1,14 @@
 import { useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useParams, Link } from "react-router";
-import { AlertTriangle, ArrowRight, Bell, Info } from "lucide-react";
+import { AlertTriangle, ArrowRight, Bell, Building2, Info, Users } from "lucide-react";
 import { cn } from "@/lib/cn";
 import { money, dateShort, relative } from "@/lib/format";
 import { useUi } from "@/lib/ui";
 import {
   Page, PageHeader, Card, CardBody, DataTable, StatusPill, Skeleton,
   Avatar, ErrorState, Button, Dialog, DialogContent, Field, fieldProps,
-  Input, toast, type Column, type Tone,
+  Input, toast, EmptyState, type Column, type Tone,
 } from "@/components/ui";
 import {
   listGuests, listCompanies, listProperties, notificationsRepo,
@@ -126,6 +126,10 @@ export function GuestsPage() {
           loading={isLoading}
           error={error}
           onRetry={() => refetch()}
+          empty={
+            <EmptyState compact icon={<Users />} title="No guests yet"
+              description="A guest is added here the first time they are booked." />
+          }
         />
       </Card>
     </Page>
@@ -272,6 +276,10 @@ export function CompaniesPage() {
             loading={isLoading}
             error={error}
             onRetry={() => refetch()}
+            empty={
+              <EmptyState compact icon={<Building2 />} title="No bookings yet"
+                description="Each company, agent and booking site shows here once a booking comes through it." />
+            }
           />
         </Card>
       ) : (

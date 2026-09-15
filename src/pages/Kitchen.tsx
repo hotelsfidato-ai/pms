@@ -6,6 +6,7 @@ import { cn } from "@/lib/cn";
 import { useUi } from "@/lib/ui";
 import { useLiveOrders } from "@/lib/useLiveOrders";
 import { toast } from "@/components/ui";
+import { StartHere } from "@/components/app/StartHere";
 import {
   getKitchen, moveKitchenLine, type KitchenLine,
 } from "@/data/repositories";
@@ -52,6 +53,14 @@ const COLUMNS = [
   { key: "preparing", label: "On the fire", next: "ready" as const, action: "Ready" },
   { key: "ready", label: "At the pass", next: "served" as const, action: "Picked up" },
 ];
+
+/* What an empty column says — in the column's own words, not "Nothing
+   here", which reads the same as a board that failed to load. */
+const EMPTY_COLUMN: Record<(typeof COLUMNS)[number]["key"], string> = {
+  sent: "Nothing ordered yet.",
+  preparing: "Nothing on the fire.",
+  ready: "Nothing at the pass.",
+};
 
 /** Minutes and seconds, because a kitchen counts in both. */
 function waited(seconds: number): string {
@@ -187,6 +196,10 @@ export default function KitchenPage() {
         </Link>
       </header>
 
+      {/* Inside the board, which covers the whole display — a card in the
+          shell would sit underneath it. */}
+      <StartHere className="shrink-0 px-5 pt-4 pb-1" />
+
       {byTable ? (
         <ByTable lines={lines} busy={busy} onMove={move} />
       ) : (
@@ -215,8 +228,8 @@ export default function KitchenPage() {
                   />
                 ))}
                 {mine.length === 0 && (
-                  <p className="text-base text-grey-400 text-center pt-10">
-                    Nothing here.
+                  <p className="text-base text-grey-500 text-center pt-10">
+                    {EMPTY_COLUMN[col.key]}
                   </p>
                 )}
               </div>

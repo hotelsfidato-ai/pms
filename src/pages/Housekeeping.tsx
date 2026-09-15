@@ -2,7 +2,7 @@ import { useState, useEffect, useCallback } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useParams } from "react-router";
 import {
-  Check, CloudOff, RefreshCw, Sparkle, Wrench, BedDouble, UserRound,
+  Check, CloudOff, RefreshCw, Sparkle, Wrench, BedDouble, UserRound, SprayCan,
 } from "lucide-react";
 import { cn } from "@/lib/cn";
 import { HeldError } from "@/lib/api";
@@ -10,7 +10,10 @@ import {
   isOnline, watchConnection, list as outboxList, subscribe as outboxSubscribe,
 } from "@/lib/offline";
 import { useUi } from "@/lib/ui";
-import { Page, PageHeader, StatusPill, toast } from "@/components/ui";
+import {
+  Page, PageHeader, StatusPill, toast, Button, Card, EmptyState, ErrorState, Skeleton,
+} from "@/components/ui";
+import { StartHere } from "@/components/app/StartHere";
 import {
   listHousekeeping, markRoom, BUSINESS_DATE, type HousekeepingRoom,
   listHousekeepers, listRoomAssignments, assignHousekeeper,
@@ -204,6 +207,8 @@ export default function HousekeepingPage() {
           ? !assignedTo.has(r.number)
           : assignedTo.get(r.number)?.staffId === only);
 
+  const sheetOwner = (staff.data ?? []).find((p) => p.id === only)?.name;
+
   const bucket = (key: string) =>
     key === "occupied"
       ? all.filter((r) => r.occupied && r.housekeeping !== "out-of-service")
@@ -225,6 +230,8 @@ export default function HousekeepingPage() {
         title="Housekeeping"
         description="Tap a room to move it on. Clean, then inspected."
       />
+
+      <StartHere className="mb-5" />
 
       {/* Connectivity, read from the browser rather than asserted. */}
       <div
@@ -285,6 +292,45 @@ export default function HousekeepingPage() {
         </div>
       )}
 
+      {/* The board had no loading, error or empty state: while the rooms
+          loaded, or when they failed, a housekeeper saw a heading and an
+          "Online" line and nothing else — the same screen as a hotel with
+          nothing to clean. Each case now says which it is. */}
+      {rooms.isLoading ? (
+        <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4" aria-busy="true">
+          {Array.from({ length: 8 }).map((_, i) => <Skeleton key={i} className="h-28" />)}
+        </div>
+      ) : rooms.error ? (
+        <Card>
+          <ErrorState
+            title="The rooms did not load"
+            error={rooms.error}
+            onRetry={() => void rooms.refetch()}
+          />
+        </Card>
+      ) : all.length === 0 ? (
+        <Card>
+          <EmptyState
+            compact
+            icon={<SprayCan />}
+            title={
+              only === null ? "No rooms set up yet"
+                : only === UNASSIGNED ? "Every room is on somebody's sheet"
+                : sheetOwner ? `No rooms on ${sheetOwner}'s sheet yet` : "No rooms on this sheet yet"
+            }
+            description={
+              only === null
+                ? "Once the property's rooms are added, each one shows here with what it needs."
+                : only === UNASSIGNED
+                  ? "Nothing is left unassigned."
+                  : "Give them rooms from each room's card, or look at every room."
+            }
+            action={only !== null ? (
+              <Button variant="secondary" onClick={() => setOnly(null)}>Show all rooms</Button>
+            ) : undefined}
+          />
+        </Card>
+      ) : (
       <div className="space-y-6">
         {GROUPS.map((group) => {
           const list = bucket(group.key);
@@ -325,6 +371,7 @@ export default function HousekeepingPage() {
           );
         })}
       </div>
+      )}
     </Page>
   );
 }

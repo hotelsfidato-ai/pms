@@ -60,7 +60,7 @@ export default function InHousePage() {
         title={dueOut ? "Due out" : "In house"}
         description={
           dueOut
-            ? `Departing ${dateLong(BUSINESS_DATE)}. Check-out unlocks when the folio reaches zero.`
+            ? `Departing ${dateLong(BUSINESS_DATE)}. Check-out unlocks when the bill reaches zero.`
             : `Staying the night of ${dateLong(BUSINESS_DATE)}.`
         }
         badge={
@@ -89,7 +89,7 @@ export default function InHousePage() {
               <span className="tabular">{money(owed)}</span>
             </p>
             <p className="text-sm text-grey-600 mt-0.5">
-              Settle from the folio tab. Check-out stays disabled with its reason until each
+              Settle from the Bill tab. Check-out stays disabled with its reason until each
               balance clears.
             </p>
           </div>

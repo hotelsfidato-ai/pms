@@ -1,10 +1,11 @@
 import { useQuery } from "@tanstack/react-query";
 import { useParams } from "react-router";
+import { Building2, Wallet } from "lucide-react";
 import { cn } from "@/lib/cn";
 import { money, dateTime, dateLong } from "@/lib/format";
 import { useUi } from "@/lib/ui";
 import {
-  Page, PageHeader, Card, CardBody, DataTable, StatusPill, Skeleton,
+  Page, PageHeader, Card, CardBody, DataTable, StatusPill, Skeleton, EmptyState,
   type Column,
 } from "@/components/ui";
 import {
@@ -122,6 +123,10 @@ export function PaymentsPage() {
           loading={rows.isLoading}
           error={rows.error}
           onRetry={() => rows.refetch()}
+          empty={
+            <EmptyState compact icon={<Wallet />} title="No payments yet"
+              description="Each payment taken on a guest's folio is listed here as it is taken." />
+          }
         />
       </Card>
 
@@ -193,6 +198,10 @@ export function PropertyCityLedgerPage() {
           rowKey={(r) => r.account}
           loading={isLoading}
           error={error}
+          empty={
+            <EmptyState compact icon={<Building2 />} title="Nothing posted yet"
+              description="Each company, agent and booking site shows here once a stay booked through it has a charge or a payment." />
+          }
           onRetry={() => refetch()}
         />
       </Card>

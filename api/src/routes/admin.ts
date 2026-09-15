@@ -538,21 +538,31 @@ admin.put("/admin/staff/:id/home-screen", async (c) => {
 /* A person's own — the first screen and how they like the house grouped.
    Either may be sent alone; what is not sent is left as it was. */
 admin.put("/me/preferences", async (c) => {
-  type Body = { homeScreen?: string; roomGrouping?: string };
+  type Body = { homeScreen?: string; roomGrouping?: string; startHereDismissed?: boolean };
   const input = await c.req.json<Body>().catch(() => ({}) as Body);
 
   const problem = screenProblem(input.homeScreen)
     ?? (input.roomGrouping === undefined
         || (ROOM_GROUPINGS as readonly unknown[]).includes(input.roomGrouping)
-        ? null : "Rooms group by room type or by floor.");
+        ? null : "Rooms group by room type or by floor.")
+    ?? (input.startHereDismissed === undefined || typeof input.startHereDismissed === "boolean"
+        ? null : "Put the card away, or bring it back.");
   if (problem) return c.json(refuse(problem), 409);
-  if (input.homeScreen === undefined && input.roomGrouping === undefined) {
+  if (input.homeScreen === undefined && input.roomGrouping === undefined
+      && input.startHereDismissed === undefined) {
     return c.json(refuse("Nothing to change."), 409);
   }
 
-  await withSession(c.get("subject"), (client) =>
-    client.query("select app.set_my_preferences($1, $2)",
-                 [input.homeScreen ?? null, input.roomGrouping ?? null]));
+  await withSession(c.get("subject"), async (client) => {
+    if (input.homeScreen !== undefined || input.roomGrouping !== undefined) {
+      await client.query("select app.set_my_preferences($1, $2)",
+                         [input.homeScreen ?? null, input.roomGrouping ?? null]);
+    }
+    /* The Start here card (089) — the person's own, set only by them. */
+    if (input.startHereDismissed !== undefined) {
+      await client.query("select app.set_start_here($1)", [input.startHereDismissed]);
+    }
+  });
   return c.json({ ok: true as const });
 });
 

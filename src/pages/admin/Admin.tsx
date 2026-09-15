@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useParams } from "react-router";
-import { Check, Minus, Plug, ShieldCheck, Info } from "lucide-react";
+import { Check, Minus, Plug, ShieldCheck, Info, UserCog, ScrollText } from "lucide-react";
 import { cn } from "@/lib/cn";
 import { money, dateTime, dateShort } from "@/lib/format";
 import { useUi } from "@/lib/ui";
@@ -10,7 +10,7 @@ import {
 } from "@/lib/permissions";
 import {
   Page, PageHeader, Card, CardBody, CardHeader, DataTable, StatusPill,
-  Skeleton, Avatar, Tooltip, ErrorState, Switch, toast,
+  Skeleton, Avatar, Tooltip, ErrorState, Switch, toast, EmptyState,
   type Column, type Tone,
 } from "@/components/ui";
 import {
@@ -116,6 +116,10 @@ export function UsersPage() {
           rowKey={(u) => u.id}
           loading={isLoading}
           error={error}
+          empty={
+            <EmptyState compact icon={<UserCog />} title="Nobody here yet"
+              description="People are added from People, with Add somebody. Their access follows their role." />
+          }
           onRetry={() => refetch()}
         />
       </Card>
@@ -300,6 +304,10 @@ export function AuditLogPage() {
           loading={isLoading}
           error={error}
           onRetry={() => refetch()}
+          empty={
+            <EmptyState compact icon={<ScrollText />} title="Nothing recorded yet"
+              description="Changes are recorded here as they are made, with who made them and when." />
+          }
         />
       </Card>
       <p className="text-xs text-grey-500 mt-4 leading-relaxed">

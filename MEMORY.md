@@ -6386,6 +6386,88 @@ to verify, not a fact to rely on.
 
 ---
 
+### 265 · The desk still said "folio" in three places after step 1 — one of them untrue as well
+
+Step 1 settled "Bill at the desk, Folio in Finance". Three desk sentences
+survived it: the check-in dialog ("the reason is kept on the folio"), the Due
+out description ("Check-out unlocks when the folio reaches zero") and its
+banner ("Settle from the folio tab" — the tab is called Bill). The first was
+also false: the ID-skip reason goes to the stay's NOTE (`operations.ts`,
+"ID not captured — …"), not the bill. Found while adding the Form C
+explanation to the same dialog in step 4. Step 1's sweep read menus,
+headings and pills, not the sentences inside flows.
+
+**The rule: a vocabulary sweep reads every sentence the role sees — dialogs
+and banners, not only labels. And a sentence that says where something is
+kept is a claim: trace it to the write.**
+
+---
+
+### 266 · The City ledger invented a contact person for every account — since 28 August
+
+`/reports/city-ledger` returned ``contact: `Mr. ${account}` `` — "Mr. Agoda",
+"Mr. Walk-in" — printed under Contact Person and written to the CSV. It came
+with the statutory reports (57a59f7, 28 August), one line above a phone
+field commented "Not held in this system. A dash, not a blank." Found reading
+the same query for step 4's empty states. `companies` does hold
+`contact_name` and `phone`: the report now shows those on a company's own
+row and a dash everywhere else (in the demo data no account has one). The
+demo snapshot carried seven; cleared.
+
+**The rule: "never invent" covers words as well as numbers. A placeholder
+that looks like data is data to whoever reads it.**
+
+---
+
+### 267 · Two files whose names differed only in case
+
+`startHere.ts` (what the card says) beside `StartHere.tsx` (the card). On
+Windows `import "./StartHere"` resolved to the `.ts` file: TS1261 and "no
+exported member" in six pages. Renamed `startHereCards.ts`. Linux, where the
+server builds, would have resolved it the other way.
+
+**The rule: never two names in one folder that differ only in case.**
+
+---
+
+### 268 · My first placement of the card left the Rooms screen 41 pixels of rooms on a phone
+
+I put Start here above both views of the Rooms screen, outside their scroll.
+At 375×812 the controls take 376px and five jobs 665px: no rooms at all until
+"Got it", and still 41px once capped at 45%. Found by measuring at phone size,
+not by looking at the desktop, where it was fine. It now sits inside the
+rooms' own scroll on the Rooms view (it scrolls away above them) and capped
+above the calendar. The controls' 376px is its own problem, in PENDING.
+
+**The rule: anything added above a full-height screen is measured at phone
+size before it is called done.**
+
+---
+
+### 269 · Housekeeping had no loading, error or empty state
+
+While the rooms loaded, a housekeeper saw a heading and "Online" and nothing
+else — the same if the load failed, the same on a sheet with nothing on it.
+Three situations, one blank board. Found by step 4's empty-state audit. Each
+now says which it is; an empty sheet names whose, with "Show all rooms".
+
+**The rule: every list has four states — loading, failed, empty, full. A
+screen that draws only the last looks broken in the other three.**
+
+---
+
+### 270 · A deliberate break that did not bite
+
+Proving "the general manager gets no card", my first break — hand the GM
+reception's card — left the test green. The break missed: a second guard (no
+landing screens listed for the GM) hid the card anyway. Removing both made
+the test fail as it should.
+
+**The rule: when a deliberate break leaves a test green, find out which is
+wrong — the break or the test — before calling it either way.**
+
+---
+
 ### Open · two "in house" numbers for the same moment
 
 The property page (`getTodaySnapshot`) said **In house now 11, Vacant 9** while

@@ -14,3 +14,4 @@ export * from "./DatePicker";
 export * from "./PageHeader";
 export * from "./FilterBar";
 export * from "./Menu";
+export * from "./Term";

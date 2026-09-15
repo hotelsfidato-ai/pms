@@ -348,6 +348,8 @@ export interface ApiScope {
   /** Optional only because an API older than 087 does not send them. */
   homeScreen?: HomeScreen;
   roomGrouping?: RoomGrouping;
+  /** True once they tapped "Got it" on their Start here card (089). */
+  startHereDismissed?: boolean;
 }
 
 export interface HotelsResponse {

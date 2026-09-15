@@ -15,6 +15,7 @@ import {
   Page, PageHeader, Card, CardBody, StatusPill, Button, toast,
   Dialog, DialogContent, Field, fieldProps, Input, NativeSelect,
 } from "@/components/ui";
+import { StartHere } from "@/components/app/StartHere";
 import {
   getMenu, listOrders, getOrder, listChargeableRooms,
   openOrder, addLine, voidLine, settleOrder, abandonOrder,
@@ -189,6 +190,8 @@ export default function TillPage() {
           ) : undefined
         }
       />
+
+      <StartHere className="mb-5" />
 
       {menu.data?.length === 0 && (
         <Card className="mb-5">

@@ -103,6 +103,10 @@ async function scopeFor(
     home_screen: string; room_grouping: string;
   }>(`select home_screen, room_grouping from app.my_preferences()`);
 
+  /* Whether this person has put their Start here card away (089). */
+  const { rows: startHere } = await client.query<{ dismissed: boolean }>(
+    `select app.my_start_here_dismissed() as dismissed`);
+
   return {
     staffId: session.staffId,
     email: session.email,
@@ -115,5 +119,6 @@ async function scopeFor(
     hotels: rows.map((r) => ({ hotelId: r.hotel_id, role: r.role })),
     homeScreen: prefs[0]?.home_screen ?? "dashboard",
     roomGrouping: prefs[0]?.room_grouping ?? "type",
+    startHereDismissed: startHere[0]?.dismissed ?? false,
   };
 }

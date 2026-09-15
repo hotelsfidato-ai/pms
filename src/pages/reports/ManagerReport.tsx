@@ -3,7 +3,8 @@ import { useParams } from "react-router";
 import { cn } from "@/lib/cn";
 import { money, dateShort } from "@/lib/format";
 import { useUi } from "@/lib/ui";
-import { Skeleton } from "@/components/ui";
+import { Skeleton, Term } from "@/components/ui";
+import { termFor } from "@/lib/glossary";
 import {
   ReportShell, ReportTable, ReportHead, ReportBand, Amount,
 } from "@/components/reports/ReportShell";
@@ -25,19 +26,27 @@ import {
    a visible gap.
    ══════════════════════════════════════════════════════════════════ */
 
+/* PTD and YTD are the two abbreviations on the report a new manager is
+   least likely to know, so they are the ones that explain themselves. */
 const COLUMNS = [
   { label: "Particulars" },
   { label: "Today (₹)", numeric: true, width: "w-[150px]" },
-  { label: "PTD (₹)", numeric: true, width: "w-[150px]" },
-  { label: "YTD (₹)", numeric: true, width: "w-[150px]" },
+  { label: "PTD (₹)", numeric: true, width: "w-[150px]", term: "ptd" as const },
+  { label: "YTD (₹)", numeric: true, width: "w-[150px]", term: "ytd" as const },
 ];
 
 const COUNT_COLUMNS = [
   { label: "Particulars" },
   { label: "Today", numeric: true, width: "w-[150px]" },
-  { label: "PTD", numeric: true, width: "w-[150px]" },
-  { label: "YTD", numeric: true, width: "w-[150px]" },
+  { label: "PTD", numeric: true, width: "w-[150px]", term: "ptd" as const },
+  { label: "YTD", numeric: true, width: "w-[150px]", term: "ytd" as const },
 ];
+
+/** The label as printed, tappable where the glossary has it. */
+function Labelled({ label }: { label: string }) {
+  const term = termFor(label);
+  return term ? <Term name={term}>{label}</Term> : <>{label}</>;
+}
 
 export default function ManagerReportPage() {
   const params = useParams();
@@ -150,7 +159,7 @@ function ReportSection({
 }) {
   return (
     <>
-      <ReportBand label={title} span={4} />
+      <ReportBand label={<Labelled label={title} />} span={4} />
       {rows.map((row) => (
         <tr
           key={`${title}-${row.label}`}
@@ -166,7 +175,7 @@ function ReportSection({
               row.total ? "font-semibold text-ink-900" : "text-ink-900",
             )}
           >
-            {row.label}
+            <Labelled label={row.label} />
           </td>
           <td className="px-4 py-2 text-right align-middle">
             <Amount value={row.today} bold={row.total} format={format} />

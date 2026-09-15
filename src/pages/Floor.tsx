@@ -10,6 +10,7 @@ import {
   Page, PageHeader, Card, CardBody, Button, Skeleton, toast,
   Dialog, DialogContent, Field, fieldProps, Input,
 } from "@/components/ui";
+import { StartHere } from "@/components/app/StartHere";
 import { OrderPad } from "@/components/flows/OrderPad";
 import { draftedTables } from "@/lib/draft";
 import {
@@ -177,6 +178,8 @@ export default function FloorPage() {
                        onDone={refresh} />
         )}
       />
+
+      <StartHere className="mb-4" />
 
       {closed && (
         <Card className="mb-4">

@@ -791,3 +791,91 @@ describe("find a screen", () => {
     await waitFor(() => expect(window.location.pathname).toBe(`/h/${HOTEL}/folios`));
   });
 });
+
+/* The clarity plan, step 4 (15 September). The owner's decisions: a card
+   of first jobs per role — reception, housekeeping, the waiter, the chef,
+   none for the GM or the owner — on the person's own landing screens,
+   until they tap "Got it"; the account menu brings it back. */
+describe("start here", () => {
+  const as = (role: string) =>
+    signedIn({
+      scope: {
+        staffId: "22222222-2222-2222-2222-222222222222",
+        email: "agra@fidato.in",
+        fullName: "Agra Clerk",
+        isGroupAdmin: false,
+        hotels: [{ hotelId: AGRA_HOTEL, role }],
+      },
+    });
+
+  it("gives a receptionist five first jobs on their first screen, each opening where it happens", async () => {
+    render(<App />);
+    const card = await screen.findByRole("region", { name: "Start here" });
+    const links = within(card).getAllByRole("link");
+    expect(links.map((a) => a.getAttribute("href"))).toEqual([
+      `/h/${HOTEL}/book`,
+      `/h/${HOTEL}/arrivals`,
+      `/h/${HOTEL}/in-house`,
+      `/h/${HOTEL}/in-house/due-out`,
+      `/h/${HOTEL}/cashiering`,
+    ]);
+    expect(within(card).getByRole("link", { name: /Take a booking/ })).toBeDefined();
+  });
+
+  it("stays on their landing screens — not on every page they visit", async () => {
+    go(`/h/${HOTEL}/housekeeping`);
+    render(<App />);
+    await screen.findByRole("heading", { level: 1, name: "Housekeeping" });
+    expect(screen.queryByRole("region", { name: "Start here" })).toBeNull();
+  });
+
+  it("gives the general manager none", async () => {
+    as("gm");
+    render(<App />);
+    await screen.findByRole("heading", { level: 1, name: "Dashboard" });
+    expect(screen.queryByRole("region", { name: "Start here" })).toBeNull();
+  });
+
+  it("puts it away on \"Got it\", and brings it back from the account menu", async () => {
+    render(<App />);
+    const card = await screen.findByRole("region", { name: "Start here" });
+    fireEvent.click(within(card).getByRole("button", { name: "Got it" }));
+    await waitFor(() =>
+      expect(screen.queryByRole("region", { name: "Start here" })).toBeNull());
+    expect(useSession.getState().scope?.startHereDismissed).toBe(true);
+
+    fireEvent.keyDown(screen.getByRole("button", { name: /Agra Clerk/ }), { key: "Enter" });
+    fireEvent.click(await screen.findByRole("menuitem", { name: "Show Start here again" }));
+    expect(await screen.findByRole("region", { name: "Start here" })).toBeDefined();
+    expect(useSession.getState().scope?.startHereDismissed).toBe(false);
+  });
+
+  it("does not offer to bring back a card that is still there", async () => {
+    render(<App />);
+    await screen.findByRole("region", { name: "Start here" });
+    fireEvent.keyDown(screen.getByRole("button", { name: /Agra Clerk/ }), { key: "Enter" });
+    await screen.findByRole("menuitem", { name: "Sign out" });
+    expect(screen.queryByRole("menuitem", { name: "Show Start here again" })).toBeNull();
+  });
+
+  it("shows a housekeeper theirs on the board, where a job done right there is not a link", async () => {
+    as("housekeeping");
+    go(`/h/${HOTEL}/housekeeping`);
+    render(<App />);
+    const card = await screen.findByRole("region", { name: "Start here" });
+    /* A link that reloads the page you are on reads as a dead button. */
+    expect(within(card).queryByRole("link", { name: /See what needs cleaning/ })).toBeNull();
+    expect(within(card).getByText("See what needs cleaning")).toBeDefined();
+    expect(within(card).getByRole("link", { name: /Report something broken/ })
+      .getAttribute("href")).toBe(`/h/${HOTEL}/work-orders`);
+  });
+});
+
+describe("trade words explain themselves", () => {
+  it("RevPAR on the Dashboard opens what it means, from the glossary", async () => {
+    render(<App />);
+    const main = await screen.findByRole("main");
+    fireEvent.click(await within(main).findByRole("button", { name: "RevPAR" }));
+    expect(await screen.findByText(/divided by every room that could be sold/)).toBeDefined();
+  });
+});

@@ -38,7 +38,7 @@ const as = (id: string, path: string, method = "GET", body?: unknown) =>
 
 const scopeOf = async (id: string) =>
   ((await (await as(id, "/hotels")).json()) as {
-    scope: { homeScreen: string; roomGrouping: string };
+    scope: { homeScreen: string; roomGrouping: string; startHereDismissed: boolean };
   }).scope;
 
 const receptionPos = async (enabled: boolean | null) => {
@@ -71,7 +71,8 @@ beforeAll(async () => {
          values ($1, $2, $3)
          on conflict (email) do update
            set is_active = true, full_name = excluded.full_name,
-               home_screen = null, room_grouping = 'type'
+               home_screen = null, room_grouping = 'type',
+               start_here_dismissed = false
          returning id::text`,
         [email, name, `test-uid-${email.replace(/\W/g, "")}`]);
       await db.query(
@@ -92,7 +93,8 @@ afterAll(async () => {
   try {
     await db.query("delete from staff_hotels where staff_id = any($1)", [[gmId, clerkId]]);
     await db.query(
-      `update staff set is_active = false, home_screen = null, room_grouping = 'type'
+      `update staff set is_active = false, home_screen = null, room_grouping = 'type',
+                        start_here_dismissed = false
         where id = any($1)`, [[gmId, clerkId]]);
     await db.query("update staff set home_screen = null where id = $1", [ownerId]);
   } finally { await db.end(); }
@@ -143,6 +145,38 @@ describe("the first screen after sign-in", () => {
       { homeScreen: "rooms" });
     expect(res.status).toBe(403);
     expect((await scopeOf(ownerId)).homeScreen).toBe("dashboard");
+  });
+});
+
+/* 089 — the clarity plan's step 4. The card of first jobs goes when the
+   person taps "Got it" and comes back from the account menu; the owner
+   chose "remembered per person", so it is the server's to keep. */
+describe("the Start here card", () => {
+  it("a new person has it", async () => {
+    expect((await scopeOf(clerkId)).startHereDismissed).toBe(false);
+  });
+
+  it("\"Got it\" puts it away, for them only, and leaves their first screen alone", async () => {
+    const before = (await scopeOf(clerkId)).homeScreen;
+    const res = await as(clerkId, "/me/preferences", "PUT", { startHereDismissed: true });
+    expect(res.status, await res.clone().text()).toBe(200);
+
+    const scope = await scopeOf(clerkId);
+    expect(scope.startHereDismissed).toBe(true);
+    expect(scope.homeScreen).toBe(before);
+    expect((await scopeOf(gmId)).startHereDismissed).toBe(false);
+  });
+
+  it("refuses anything but yes or no, and changes nothing", async () => {
+    const res = await as(clerkId, "/me/preferences", "PUT", { startHereDismissed: "yes" });
+    expect(res.status).toBe(409);
+    expect((await scopeOf(clerkId)).startHereDismissed).toBe(true);
+  });
+
+  it("the account menu brings it back", async () => {
+    const res = await as(clerkId, "/me/preferences", "PUT", { startHereDismissed: false });
+    expect(res.status, await res.clone().text()).toBe(200);
+    expect((await scopeOf(clerkId)).startHereDismissed).toBe(false);
   });
 });
 

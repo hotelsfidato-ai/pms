@@ -50,7 +50,7 @@ local cp6           ahead of it by every commit listed below
 go-live scope       211 / 228  (93%)      the 17 open are the channel manager (excluded)
                                           and the CRS bridge (waiting on its API documents)
 staff-first plan    phase 1 of 4 built
-clarity plan        steps 1, 2 and 3 of 4 built
+clarity plan        all 4 steps built (step 4, 15 Sep: Start here, terms, empty states)
 ```
 
 **Waiting to be deployed** — one deploy carries all of it:
@@ -63,6 +63,8 @@ clarity plan        steps 1, 2 and 3 of 4 built
 
 ```
 088   SECURITY: adding somebody can no longer take over an existing account
+089   Start here: the per-person "Got it" flag (clarity step 4)
+      the City ledger no longer invents a contact ("Mr. Agoda") for every account
 085   a walk-in records the Walk-in channel; back-fills FH-2609-5001 on deploy
       the rebuilt stay panel (owner's eZee-style reference)
 086   a departed group room says which room it was in
@@ -73,17 +75,19 @@ clarity plan        steps 1, 2 and 3 of 4 built
       one vocabulary: room states, menu, headings, browser tab titles
       one main action per screen: 67 confirms and main actions declared, two guards
       a menu per person, and "Find a screen" (Ctrl K) to reach everything else
+      help where the question is: Start here per role, tap-to-explain terms,
+      an empty state on every list, Housekeeping's loading/error/empty states
 ```
 
 **Gates, measured 15 September on this machine:**
 
 ```
-db/tests/run.sh         581 assertions passed        scratch database, dropped after
-db/tests/rerun.sh       88 migrations re-runnable    scratch database, migrated twice
-cd api && npm test      353 passed, 28 files         never `npx vitest run` inside api/;
+db/tests/run.sh         588 assertions passed        scratch database, dropped after
+db/tests/rerun.sh       89 migrations re-runnable    scratch database, migrated twice
+cd api && npm test      359 passed, 28 files         never `npx vitest run` inside api/;
                                                      it cannot reach Firebase (MEMORY 264)
 npx tsc -b              clean
-npx vitest run          190 passed, 13 files
+npx vitest run          197 passed, 13 files
 ```
 
 ---
@@ -144,15 +148,35 @@ and App.test "find a screen" — all seen to fail.
 
 **Start at 3.3.**
 
-### 3.3 · Clarity step 4 — help where the question is
+### 3.3 · Clarity step 4 — help where the question is — DONE 15 September
 
-There is no help anywhere. A "Start here" card on a person's first three
-sign-ins (the five tasks: take a booking, check in, take a payment, check
-out, mark a room clean); a one-line explanation on hard terms (RevPAR, ADR,
-city ledger, Form C) on hover or tap; an empty state on every list that says
-what belongs there and offers the button that creates the first one.
-**Done when** someone who has never seen the system books, checks in, takes a
-payment and checks out without being told anything.
+The owner chose a card per role, gone when they tap "Got it" (not after a
+count of sign-ins, which could hide it before anybody read it).
+
+- **Start here** (`StartHere.tsx`, words in `startHereCards.ts`): reception
+  five jobs, housekeeping three, the waiter three, the chef one; none for the
+  GM or the owner. Each job links to its screen and names the real button.
+  Shown only on the person's landing screens (`START_HERE_ON`) — each screen
+  places it, because the kitchen board covers the display and the Rooms grid
+  is full height. "Got it" is secondary (one orange button per screen) and is
+  remembered on the server (089, the person's own row only); the account menu
+  brings it back.
+- **Terms** (`Term` in `components/ui`, words in `src/lib/glossary.ts`): tap,
+  not hover. Every line is checked against the code that makes the figure.
+  Never inside a link — a linked Dashboard tile takes none.
+- **Empty states**: every table says what belongs there; Housekeeping has
+  loading, error and empty states for the first time (MEMORY 269).
+
+**If a button's label changes, `startHereCards.ts` is the other place to
+change it** — the card names buttons. **If a calculation changes, its line in
+`glossary.ts` changes with it.** Guarded by App.test "start here" and "trade
+words", 089's database block and `firstScreen.test.ts` — all seen to fail.
+
+**Done when** someone who has never seen the system books, checks in, takes
+a payment and checks out without being told anything. **That needs a real new
+person — the owner's to arrange.** It has not been run.
+
+**Start at 3.4 — and ask first.**
 
 ### 3.4 · Staff-first phase 2 — reports in the owner's layout — ASK FIRST
 
@@ -286,6 +310,12 @@ are for overlays only. One icon family: `lucide-react` (in 85 files), one size
 and stroke, and a different glyph for each destination. `variant="primary"`
 means solid brand orange — one per screen. Money and counts use tabular
 numerals. A null is a dash, never a zero (`Amount` in `ReportShell` does it).
+
+**Help lives where the question is.** A trade word a new person will not
+know is a `Term` from `src/lib/glossary.ts` — one definition, checked against
+the code, never a second copy in a tooltip. Every list draws four states:
+loading, failed, empty (what belongs here, and where it comes from), full.
+A job card (`startHereCards.ts`) names real buttons; rename one, change both.
 
 **Menus are per person.** `WORKING_MENUS` in `navigation.ts` lists what each
 restricted role sees; `listed: false` keeps an entry out of every sidebar

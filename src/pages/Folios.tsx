@@ -3,7 +3,7 @@ import { useParams } from "react-router";
 import { ArrowDown, ArrowUp } from "lucide-react";
 import { money } from "@/lib/format";
 import { useUi } from "@/lib/ui";
-import { Page, PageHeader, Card, CardBody, Stat, StatusPill } from "@/components/ui";
+import { Page, PageHeader, Card, CardBody, Stat, StatusPill, Term } from "@/components/ui";
 import { StayTable, type StayColumn, type StayRow } from "@/components/lists/StayTable";
 import { listOpenFolios, queryKeys, BUSINESS_DATE } from "@/data/repositories";
 
@@ -46,7 +46,7 @@ export default function FoliosPage() {
     <Page>
       <PageHeader
         title="Folios"
-        description="Open accounts. A charge is never edited — a wrong posting is reversed, and the reversal is its own line."
+        description={<>Open <Term name="folio">folios</Term>. A charge is never edited — a wrong posting is reversed, and the reversal is its own line.</>}
         badge={
           folios.data ? (
             <StatusPill tone={rows.length ? "warning" : "success"}>

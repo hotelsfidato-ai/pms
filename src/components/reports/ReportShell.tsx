@@ -2,7 +2,8 @@ import type { ReactNode } from "react";
 import { Printer, FileSpreadsheet, FileText } from "lucide-react";
 import { cn } from "@/lib/cn";
 import { dateShort } from "@/lib/format";
-import { Button, Card } from "@/components/ui";
+import { Button, Card, Term } from "@/components/ui";
+import type { TermKey } from "@/lib/glossary";
 import { toCsv, downloadCsv, reportFilename } from "@/lib/csv";
 import { useDocumentIdentity } from "@/lib/documentIdentity";
 import { useDocumentTitle } from "@/lib/documentTitle";
@@ -140,7 +141,9 @@ export function ReportTable({ children }: { children: ReactNode }) {
   return <table className="w-full border-collapse text-base">{children}</table>;
 }
 
-export function ReportHead({ columns }: { columns: Array<{ label: string; numeric?: boolean; width?: string }> }) {
+export function ReportHead({ columns }: {
+  columns: Array<{ label: string; numeric?: boolean; width?: string; term?: TermKey }>;
+}) {
   return (
     <thead className="bg-grey-50 border-b border-grey-200">
       <tr>
@@ -155,7 +158,7 @@ export function ReportHead({ columns }: { columns: Array<{ label: string; numeri
               c.width,
             )}
           >
-            {c.label}
+            {c.term ? <Term name={c.term}>{c.label}</Term> : c.label}
           </th>
         ))}
       </tr>
@@ -164,7 +167,7 @@ export function ReportHead({ columns }: { columns: Array<{ label: string; numeri
 }
 
 /** A section band across the full width, as the real exports use. */
-export function ReportBand({ label, span }: { label: string; span: number }) {
+export function ReportBand({ label, span }: { label: ReactNode; span: number }) {
   return (
     <tr>
       <td

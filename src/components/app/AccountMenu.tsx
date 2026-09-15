@@ -1,5 +1,5 @@
 import { useQueryClient } from "@tanstack/react-query";
-import { Check, ChevronDown, LogOut, ShieldCheck } from "lucide-react";
+import { Check, ChevronDown, Compass, LogOut, ShieldCheck } from "lucide-react";
 import { cn } from "@/lib/cn";
 import {
   useSession, useRole, useCurrentHotel, useWorkableHotels,
@@ -10,6 +10,7 @@ import { HOME_SCREENS } from "@/lib/homeScreen";
 import { queryPersister } from "@/lib/persist";
 import { setMyPreferences } from "@/data/repositories";
 import { ROLE_LABELS } from "@/lib/permissions";
+import { START_HERE } from "./startHereCards";
 import {
   DropdownMenu, DropdownMenuTrigger, DropdownMenuContent,
   DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuItem, Avatar,
@@ -84,6 +85,16 @@ export function AccountMenu() {
     if (!result.ok) return toast.error("Not changed", result.reason);
     useSession.setState({ scope: { ...scope, homeScreen: next } });
     toast.success(`You will start on ${label}`, "From your next sign-in, on any device.");
+  };
+
+  /* START HERE BACK (089). Only for a role that has a card, and only once
+     it has been put away — an item that does nothing is a broken item. */
+  const canBringBack = Boolean(START_HERE[role]) && scope.startHereDismissed === true;
+  const bringBack = async () => {
+    const result = await setMyPreferences({ startHereDismissed: false });
+    if (!result.ok) return toast.error("Not brought back", result.reason);
+    useSession.setState({ scope: { ...scope, startHereDismissed: false } });
+    toast.success("Start here is back", "It is on your first screen.");
   };
 
   return (
@@ -220,6 +231,15 @@ export function AccountMenu() {
         )}
 
         <DropdownMenuSeparator />
+
+        {canBringBack && (
+          <DropdownMenuItem onSelect={() => void bringBack()} data-start-here-back>
+            <span className="flex items-center gap-2 text-ink-900">
+              <Compass className="size-4 text-grey-400" />
+              Show Start here again
+            </span>
+          </DropdownMenuItem>
+        )}
 
         <DropdownMenuItem onSelect={() => void signOut()}>
           <span className="flex items-center gap-2 text-ink-900">

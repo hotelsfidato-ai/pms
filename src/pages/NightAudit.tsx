@@ -8,7 +8,7 @@ import { useUi } from "@/lib/ui";
 import { useSession } from "@/lib/session";
 import {
   Page, PageHeader, Card, CardBody, Button, StatusPill, Skeleton, Tooltip,
-  ErrorState,
+  ErrorState, Term,
 } from "@/components/ui";
 import { describeError } from "@/components/ui/States";
 import { getNightAudit, runNightAudit, type NightAuditResult }
@@ -72,8 +72,8 @@ export default function NightAuditPage() {
         title="Night audit"
         description={
           data
-            ? `Closing ${dateLong(data.businessDate)} and opening ${dateLong(data.nextBusinessDate)}.`
-            : "Closing the business date."
+            ? <>The <Term name="nightAudit">night audit</Term> is closing {dateLong(data.businessDate)} and opening {dateLong(data.nextBusinessDate)}.</>
+            : <>The <Term name="nightAudit">night audit</Term> closes the business date.</>
         }
         badge={
           data ? (

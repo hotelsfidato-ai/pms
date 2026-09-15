@@ -15,6 +15,7 @@ import { AssignRoomFlow } from "@/components/flows/AssignRoomFlow";
 import {
   Page, Button, Segmented, Tooltip, Skeleton, toast, type Tone,
 } from "@/components/ui";
+import { StartHere } from "@/components/app/StartHere";
 import { StayDrawer } from "@/components/flows/StayDrawer";
 import { WalkInFlow } from "@/components/flows/WalkInFlow";
 import {
@@ -444,8 +445,17 @@ export default function StayViewPage({ view }: {
 
           The SAME filter honours it, so a pill cannot say six here and
           nine on the chart. */}
+      {/* A new clerk's first jobs (Start here). Placed per view, because
+          above both views it hid the thing it explains: on a phone the
+          controls and five jobs are taller than the screen, and the rooms
+          got 41px until "Got it".
+
+          Rooms: INSIDE the scroll, so it scrolls away above the rooms.
+          Calendar: the chart scrolls both ways and a card inside would
+          scroll off sideways, so it sits above, capped at 45%. */}
       {view === "floor" ? (
         <div className="flex-1 min-h-0 overflow-y-auto scrollbar-quiet p-1">
+          <StartHere className="px-3 sm:px-4 pt-2 pb-3" />
           <HouseFloor
             groups={groups.map((g) => ({
               ...g,
@@ -461,6 +471,8 @@ export default function StayViewPage({ view }: {
           />
         </div>
       ) : (
+      <>
+      <StartHere className="shrink-0 max-h-[45%] overflow-y-auto scrollbar-quiet px-4 sm:px-5 pt-3 pb-1" />
       <div className="flex-1 min-h-0 overflow-auto scrollbar-quiet">
         <div className={CHART_MIN_W}>
           {/* Date header */}
@@ -668,6 +680,7 @@ export default function StayViewPage({ view }: {
           </div>
         </div>
       </div>
+      </>
       )}
 
       {/* ── Detail panel — the chart stays visible behind it ──────── */}

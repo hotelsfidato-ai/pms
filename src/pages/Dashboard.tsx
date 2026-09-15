@@ -12,9 +12,11 @@ import { money, dateShort } from "@/lib/format";
 import { useUi } from "@/lib/ui";
 import { useSession } from "@/lib/session";
 import {
-  Page, PageHeader, Card, CardBody, DataTable, Skeleton, NativeSelect,
+  Page, PageHeader, Card, CardBody, DataTable, Skeleton, NativeSelect, Term,
   type Column,
 } from "@/components/ui";
+import { StartHere } from "@/components/app/StartHere";
+import type { TermKey } from "@/lib/glossary";
 import {
   listProperties, getPeriodStatistics, listArrivalsOutstanding,
   getStayViewCounts, getManagerReport, BUSINESS_DATE,
@@ -130,14 +132,16 @@ export default function DashboardPage() {
         ) : undefined}
       />
 
+      <StartHere className="mb-6" />
+
       <div className="space-y-6">
         {/* ── The numbers a hotel lives by ─────────────────────────── */}
         <TileGroup title="Today" note="Today, then the month so far and the year so far. The year runs from 1 April.">
-          <Tile icon={BedDouble} lead label="Occupancy" value={pct(occ?.today)} loading={loading}
+          <Tile icon={BedDouble} lead label="Occupancy" term="occupancy" value={pct(occ?.today)} loading={loading}
                 sub={[`Month so far ${pct(occ?.ptd)}`, `Year so far ${pct(occ?.ytd)}`]} />
-          <Tile icon={IndianRupee} lead label="Average rate (ADR)" value={cash(adr?.today)} loading={loading}
+          <Tile icon={IndianRupee} lead label="Average rate (ADR)" term="adr" value={cash(adr?.today)} loading={loading}
                 sub={[`Month so far ${cash(adr?.ptd)}`, `Year so far ${cash(adr?.ytd)}`]} />
-          <Tile icon={TrendingUp} lead label="RevPAR" value={cash(revpar?.today)} loading={loading}
+          <Tile icon={TrendingUp} lead label="RevPAR" term="revpar" value={cash(revpar?.today)} loading={loading}
                 sub={[`Month so far ${cash(revpar?.ptd)}`, `Year so far ${cash(revpar?.ytd)}`]} />
           <Tile icon={Banknote} lead label="Room revenue" value={cash(roomRev?.today)} loading={loading}
                 sub={[`Month so far ${cash(roomRev?.ptd)}`, `Year so far ${cash(roomRev?.ytd)}`]} />
@@ -169,9 +173,9 @@ export default function DashboardPage() {
                 sub={methods.length
                   ? methods.map((m) => `${m.label} ${money(m.today ?? 0)}`).join(" · ")
                   : "Nothing taken yet today"} />
-          <Tile icon={ReceiptText} label="Owed by guests" value={cash(pick(guestLedger, "Closing Balance")?.today)}
+          <Tile icon={ReceiptText} label="Owed by guests" term="guestLedger" value={cash(pick(guestLedger, "Closing Balance")?.today)}
                 loading={loading} sub="Every guest bill still open" />
-          <Tile icon={Building2} label="City ledger" value={cash(pick(cityLedger, "Closing Balance")?.today)}
+          <Tile icon={Building2} label="City ledger" term="cityLedger" value={cash(pick(cityLedger, "Closing Balance")?.today)}
                 loading={loading} sub="Settled outside the PMS today" />
           <Tile icon={UserX} label="No-shows" value={count(noShow?.today)} loading={loading}
                 tone={(noShow?.today ?? 0) > 0 ? "warning" : undefined}
@@ -257,9 +261,13 @@ function TileGroup({ title, note, children, wide }: {
    so the eye starts at the top left and reads all of them. The four
    figures a hotel is actually judged by are set larger, and the rest sit
    below them. */
-function Tile({ icon: Icon, label, value, sub, to, tone, loading, lead }: {
+function Tile({ icon: Icon, label, value, sub, to, tone, loading, lead, term }: {
   icon: LucideIcon;
   label: string; value: string;
+  /** Makes the label tappable for its meaning. Ignored on a linked tile:
+      a button inside the link would be invalid, and the tap would follow
+      the link instead of explaining anything. */
+  term?: TermKey;
   /** One line, or several — a lead tile sets its month and year on
       their own lines rather than packing them behind a middle dot. */
   sub?: string | string[]; to?: string;
@@ -278,7 +286,9 @@ function Tile({ icon: Icon, label, value, sub, to, tone, loading, lead }: {
         >
           <Icon className="size-4" aria-hidden />
         </span>
-        <p className="text-sm text-grey-600 min-w-0">{label}</p>
+        <p className="text-sm text-grey-600 min-w-0">
+          {term && !to ? <Term name={term}>{label}</Term> : label}
+        </p>
         {to && (
           <ChevronRight
             className="size-4 shrink-0 ml-auto text-grey-300 transition-all duration-150

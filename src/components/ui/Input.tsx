@@ -18,7 +18,7 @@ const INVALID = "border-brand-red focus:border-brand-red focus:ring-brand-red/20
 
 export interface FieldProps {
   label?: string;
-  hint?: string;
+  hint?: ReactNode;
   error?: string;
   required?: boolean;
   children: (props: { id: string; describedBy?: string; invalid: boolean }) => ReactNode;
