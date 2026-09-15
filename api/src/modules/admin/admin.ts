@@ -1,9 +1,9 @@
 import { Hono } from "hono";
 import { createHash } from "node:crypto";
-import { withSession } from "../auth.ts";
+import { withSession } from "../../auth.ts";
 import {
   ensureAccount, setAccountPassword, passwordProblem,
-} from "../identity.ts";
+} from "../../identity.ts";
 import type { PoolClient as Client } from "pg";
 
 /* ══════════════════════════════════════════════════════════════════

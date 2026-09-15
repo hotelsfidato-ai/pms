@@ -1,5 +1,5 @@
 import { Hono } from "hono";
-import { withSession } from "../auth.ts";
+import { withSession } from "../../auth.ts";
 import type { PoolClient as Client } from "pg";
 
 /* ══════════════════════════════════════════════════════════════════
