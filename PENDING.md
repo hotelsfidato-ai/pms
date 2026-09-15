@@ -70,18 +70,21 @@ two created 15 Sep 10:38 GMT. The test suite can no longer reach Firebase.
 
 ## 2 · Found in the 14 September audit
 
-### The walk-in desk did not record a channel — defect 242, FIXED, NOT DEPLOYED
+### The walk-in desk did not record a channel — defect 242, FIXED, DEPLOYED 15 September
 
 Fixed on the owner's yes, 14 September: migration 085 and the walk-in
 route. The deploy back-fills FH-2609-5001 by itself — proved on the local
 database, 18 demo walk-ins without a channel to 0, no commission invented,
 nothing else touched. A walk-in taken on screen afterwards saved "Walk-in".
+Live since the 15 September deploy: both production walk-ins got their channel
+(checked read-only after it).
 
 ### A refusal after a write keeps the write — defect 243, one route fixed
 
 `withSession` commits a refusal like any other return. Fixed in the walk-in
 route, where a refused walk-in left a guest that can never be deleted.
-**The other routes have not been checked for the same shape.**
+**The other routes have not been checked for the same shape** — and one has
+now been found by reading: RES-1 below, the booking form.
 
 ### Every backup is on the same disk as the thing it backs up — P0
 
@@ -123,6 +126,66 @@ for a password that has been shared.
   domain path itself has never run there.
 
 ---
+
+## 2a · Found while writing the service briefs, 15 September — NOT FIXED
+
+The agents who wrote each service's `MODULE.md` read its code end to end and
+found these. Each is recorded in that service's `MEMORY.md`; none is fixed,
+because each changes what somebody sees and is the owner's to decide. Most
+urgent first.
+
+- **RES-1 · a refused booking can leave records behind** (reservations).
+  `POST /:code/bookings` saves the guest — and the group, for several rooms —
+  before four of its refusals, and the transaction commits a refusal like any
+  other result; in a booking of several room types, rooms saved before a
+  later one is refused stay booked. The shape of defect 243. Found by
+  reading; not reproduced.
+- **REP-2 · the Manager report's year starts on 1 April 2026, typed in**
+  (`manager.ts`). Correct until 31 March 2027; wrong from April 2027.
+- **REP-1 · Monthly occupancy and Monthly statistics always show August 2026;
+  Yearly statistics always 2026** (reports).
+- **ADM-2 · Settings and the Properties cards show a flat 2.5% + 2.5% GST**
+  that the tax rules (067) replaced, and Settings adds "— demo, not a real
+  GSTIN" to every property's GSTIN (admin). A figure the database no longer
+  agrees with.
+- **ADM-1 · the Audit log names "admin" as the person behind every entry**
+  (admin).
+- **BQ-1 · a restaurant bill cannot be charged to a banquet function** —
+  nothing in the till sets `pos_orders.event_id`; `PROGRESS.md` says it can
+  (banquet).
+- **INV-1 · `GET /api/hotels/rate-plans` can never run:** the core's
+  `GET /:code` answers it first. Harmless today — its only caller is a screen
+  no address reaches (inventory).
+- **Headings that do not match their menu entries** — Diary opens "Banquet"
+  (BQ-2), Room types opens "The house" (INV-2), Rate calendar opens
+  "Inventory and rates" and All reports opens "Reports" (REP-3), Companies and
+  agents opens "Booking sources", the same name as the real Booking sources
+  screen (GUE-1).
+- **FIN-1 · a stale comment:** `api/src/modules/finance/billing.ts`'s header
+  still says no invoice number is issued and the night audit does not run.
+
+Marked unverified by the briefs, worth a look: `getFolioBalance` returns 0
+for a stay with no bill, and check-out and In house read it; `WalkInFlow.tsx`
+holds a third `const USER = "front desk"` (MEMORY 256 names two);
+`GET /:code/night-audit/can-run` and `/runs` have no screen calling them;
+`GET /:code/groups` stayed in front desk's `stays.ts` though groups are
+reservations' (the owner's call); `pages/Pos.tsx` has two headings.
+
+## 2b · What the service-folder move leaves
+
+- **Merge and deploy — the owner's.** The move is built and verified on
+  branch `service-folders`; `cp6` is still what production runs. The plan says
+  deploy it on its own, so anything off can only be the move.
+- **The till is 3,555 lines in one file** (`api/src/modules/pos/till.ts`).
+  Splitting it into parts matters only if two agents ever work on the
+  restaurant at once.
+- **The web tests need this machine's root `.env`.** In a fresh copy without
+  it, 31 of them fail on the sign-in screen. AGENTS.md says to copy it (the
+  website's settings — never `api/.env`); a suite that sets its own would be
+  better.
+- **The six agents' copies are still in `.claude/worktrees/`** (merged, and
+  ignored by git). Each holds a `node_modules` junction into this folder —
+  remove the junction before deleting a copy, or the delete can follow it.
 
 ## 3 · Deferred by the owner, on the record
 

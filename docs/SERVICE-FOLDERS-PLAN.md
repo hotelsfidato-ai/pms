@@ -1,8 +1,8 @@
 # One folder per service — the plan (15 September 2026)
 
-**Status: IN PROGRESS on branch `service-folders` (from tag
-`pre-service-folders`). The owner took all four recommendations on 15
-September — see the end of this file.**
+**Status: BUILT and verified on branch `service-folders`, 15 September (from
+tag `pre-service-folders`). Not merged into `cp6`; not deployed — both the
+owner's. The owner took all four recommendations — see the end of this file.**
 
 The owner's request, 15 September: split the code so each segment of the hotel
 system — front desk, reservations, housekeeping, inventory, CRS, reports, POS
@@ -182,8 +182,40 @@ Every step leaves every gate green and the app working; safe to stop after any.
                                               and api index.ts. Proved identical: 1,023
                                               menu facts, 73 addresses, 214 API routes with
                                               0 first-match differences, 10 middleware in order
-4  move the small services              next
+4  move the small services              done  the data and Directory.tsx split in place
+                                              first (23cd2e4, 8a1e9a4), then one commit per
+                                              service: stores, banquet, reports, admin,
+                                              guests, inventory, housekeeping, channel manager
+5  split the mixed server files          done  by three agents in parallel worktrees, merged
+                                              one at a time (ef82ee4, 7cc020e, 6afb9dc)
+6  move the most connected, last         done  reservations, night audit, finance, pos,
+                                              front desk (web); their server parts in step 5
+7  split the big test files              done  App.test.tsx by an agent (c0aebfa); API tests
+                                              into api/test/modules/<service>/ by the server
+                                              agents; suite.sql frozen, new checks per service
+8  every service's brief                 done  two agents: 13 full briefs, 5 not-built
+                                              folders, each with CHANGELOG.md and MEMORY.md
+9  door guard on, check everything       done  the guard was on from step 2 and never
+                                              needed a known-crossings list; all gates green
+                                              (CHANGELOG, 15 September, "the move")
+10 deploy — the owner's, on its own      waiting
 ```
+
+## What differs from the plan, and why
+
+- **The till is not split into parts** (`api/src/modules/pos/till.ts`, 3,555
+  lines). Only worth it if two agents ever work on the restaurant at once.
+- **The front desk's hours** (`PATCH /:code/front-desk`) went to inventory, not
+  admin: the form that uses them is on inventory's Room types page, and the
+  website side already kept its data call there.
+- **`GET /:code/groups` stayed in front desk's `stays.ts`** — whole-file move;
+  whether it belongs to reservations is the owner's call (PENDING § 2a).
+- **Shared server helpers** were copied into each part of a split file (every
+  route file already carries its own hotel lookup), except `folioFor`, which
+  both check-in and postings call and which moved unchanged to a core
+  `api/src/folio.ts`. The core also gained `api/src/routes/notifications.ts`.
+- **Web tests:** three service test files (reports, front desk, pos) plus the
+  core's; most screens' tests were already in the core's cross-cutting blocks.
 
 ## Two refinements made while building, for safety
 

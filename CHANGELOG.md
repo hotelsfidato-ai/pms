@@ -6,6 +6,10 @@ This exists because a commit message explains a commit, and nobody reads 165
 of them to find out what happened last week. `MEMORY.md` records *mistakes*;
 this records *work*.
 
+**Since 15 September each service keeps its own log too:**
+`src/modules/<service>/CHANGELOG.md`, same entry shape. Work inside one service
+goes there; work across services, in the core, or on the process goes here.
+
 ---
 
 ## How to write an entry
@@ -43,6 +47,78 @@ Write it **as you go**, not at the end from memory. Copy this shape:
    this project passed with the bug reintroduced before anyone checked.
 3. **"Left open" is not a confession, it is the handover.** The next agent's
    first question is always *what was in flight?*
+
+---
+
+## 2026-09-15 (the move) · One folder per service — built and verified
+
+**Asked for:** split the code so each segment has its own folder and several
+agents can work at once; the owner took all four recommendations and said
+"now"; then "run multiple agents to complete this".
+
+**Shipped** — on branch `service-folders`, from tag `pre-service-folders`
+- **Eighteen service folders** in `src/modules/`: thirteen built, five with a
+  brief and no code (crs, payments, booking-engine, guest-messaging,
+  accounting). Every screen, dialog and data file of a service lives in its
+  folder; its server routes in `api/src/modules/<service>/`; its server tests
+  in `api/test/modules/<service>/`; new database checks in
+  `db/tests/modules/<service>.sql` (suite.sql frozen as history).
+- **The shared files became lists:** the menu, the screen addresses and the
+  server's mounts are assembled from each service's `nav.ts`, `routes.tsx` and
+  `api/src/modules/<service>/index.ts`. A service adding a screen edits no
+  shared file.
+- **The mixed files were split along whole sections:** six web data files and
+  `Directory.tsx` in place first, then six server files endpoint by endpoint.
+  Shared helpers moved to core `result.ts`, `http.ts` and `api/src/folio.ts`.
+- **Guards:** a service is reached only through its front door (web and
+  server); every service folder has its door and brief; migration numbers are
+  unique and contiguous; every menu entry lands in a real section and no two
+  claim one place. All seen to fail when broken.
+- **Each service's brief**, `CHANGELOG.md` and `MEMORY.md`; AGENTS.md rewritten
+  for working by service (own worktree, database and ports; claims; requests;
+  notes with prefixed defect numbers).
+- **How it was done:** the web moves, guards and lists by me, one commit per
+  service; then six agents in parallel git worktrees — three for the server,
+  one for the web tests, two for the briefs — merged one at a time, every gate
+  after each.
+
+**Found**
+- 272 · the move silently narrowed a guard (Rule 2b); widened, seen to fail.
+- 273 · the agents' worktrees sat inside the repo — test runner and git saw
+  them; excluded and ignored.
+- 274 · MINE: since the Start here commit every web test run exited 1 (two
+  uncaught rejections) while I reported green by reading pass counts. The
+  housekeeping board now catches a missing offline store, as OfflineBar does.
+- The business date was about to be homed in a service; it is the core's.
+- From the briefs, not fixed, the owner's call (PENDING § 2a): RES-1 a refused
+  booking can leave records behind; REP-2 the Manager report's year is typed
+  as 2026; REP-1 the monthly and yearly statistics show fixed months; ADM-2
+  the flat 2.5% + 2.5% GST on Settings and Properties; ADM-1 the audit log's
+  "admin"; BQ-1 no bill can be charged to a banquet function; INV-1 a
+  shadowed route; headings unlike their menu entries; FIN-1 a stale comment.
+
+**Proved** — final run on 7f60029, every gate judged by its exit code
+- Web: types clean; 204 tests in 18 files, exit 0.
+- API: types clean; 359 tests in 28 files, exit 0; 68 files load.
+- Database: 588 assertions; 89 migrations re-runnable.
+- Build: clean, no test sign-in, config at the live API.
+- Unchanged from the start: every role's menu under four module states (1,023
+  facts), all 73 screen addresses with the same screens, the API's 214 routes
+  with the same pattern answering first for every request, 10 middleware in
+  order.
+- On screen, local: 41 screens across every service as the General Manager;
+  as Reception, the working menu of 15, Start here on Rooms, the till.
+
+**Left open**
+- Merging `service-folders` into `cp6`, and deploying it on its own — the
+  owner's.
+- PENDING § 2a (the briefs' defects) and § 2b (the till is one 3,555-line
+  file; the web tests need this machine's root `.env`; the agents' worktrees
+  are still in `.claude/worktrees/`).
+- The owner's stray note in a comment in `navigation.ts` (there since 5
+  September) — theirs to keep or remove.
+
+**Commits:** `pre-service-folders..service-folders`.
 
 ---
 

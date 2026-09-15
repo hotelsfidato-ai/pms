@@ -9,6 +9,9 @@ re-explain it, and they should not have to.
 2. Then `MEMORY.md` from defect 240 onwards, and the top three entries of
    `CHANGELOG.md`.
 3. `AGENTS.md` is the working agreement. `START-HERE.md` is how to run it.
+4. **Working on one service?** Since 15 September the code is one folder per
+   service. Read `src/modules/<service>/MODULE.md` — its brief — and its own
+   `CHANGELOG.md` and `MEMORY.md`, and claim it in `HANDOVER.md` first.
 
 The rules that are never negotiable, in short — the full list is
 `HANDOVER.md` § 5:

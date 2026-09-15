@@ -14,14 +14,17 @@ of it again.
 
 ```
 1  HANDOVER.md   this section                        what is going on, what is next
-2  MEMORY.md     skim; read 240 onwards properly     258 numbered defects — mistakes already made here
+2  MEMORY.md     skim; read 240 onwards properly     274 numbered defects — mistakes already made here
+   and, if you are working on ONE service, its src/modules/<service>/MODULE.md, CHANGELOG.md, MEMORY.md
 3  CHANGELOG.md  the top three entries               what the last sessions did
 4  START-HERE.md sections 1 and 2                    how to run it on this machine
 5  PENDING.md    all of it                           what is left, and what was decided against
 ```
 
-`AGENTS.md` has the working agreement (one agent per folder, open the screen,
-a guard is not a guard until it has refused something). It still applies.
+`AGENTS.md` has the working agreement (one agent per service, its own copy,
+database and ports; open the screen; a guard is not a guard until it has
+refused something). Since 15 September the code is sorted by service — see
+§ 3.0.
 
 ---
 
@@ -52,6 +55,7 @@ go-live scope       211 / 228  (93%)      the 17 open are the channel manager (e
                                           and the CRS bridge (waiting on its API documents)
 staff-first plan    phase 1 of 4 built
 clarity plan        all 4 steps built (step 4, 15 Sep: Start here, terms, empty states)
+service folders     BUILT and verified 15 Sep on branch service-folders — not in cp6, not deployed
 ```
 
 **Deployed 15 September** — all of it:
@@ -98,7 +102,7 @@ anything the item marks "ask first" — and before any other doubt.** That is
 their standing instruction: *"before you have a doubt you need to ask me and
 clear it up, then proceed."*
 
-### 3.0 · One folder per service — IN PROGRESS (owner's go-ahead, 15 September)
+### 3.0 · One folder per service — BUILT 15 September, on branch `service-folders`
 
 The owner asked (15 September) for the code to be split so each service —
 front desk, reservations, housekeeping, inventory, CRS, reports, POS and the
@@ -106,9 +110,28 @@ rest — has its own folder, so agents can be given one service each and run in
 parallel. **The plan is `docs/SERVICE-FOLDERS-PLAN.md`.** The owner took
 every recommendation: screens and server per service with the database
 history shared; all folders, the six not-built ones brief-only; now, with
-every other agent paused; notes per service with a root index. It runs on
-branch `service-folders`; `cp6` stays what production runs until the move is
-verified.
+every other agent paused; notes per service with a root index.
+
+**Built and verified.** Eighteen service folders under `src/modules/` —
+thirteen built (front-desk, reservations, housekeeping, inventory, guests,
+finance, night-audit, pos, banquet, stores, reports, admin, channel-manager)
+and five with a brief and no code (crs, payments, booking-engine,
+guest-messaging, accounting). Each built service has its screens, menu
+entries (`nav.ts`), addresses (`routes.tsx`), data and tests in
+`src/modules/<service>/`, its server routes in `api/src/modules/<service>/`,
+and its `MODULE.md`, `CHANGELOG.md` and `MEMORY.md`. The core stays where it
+was. Nothing a person sees changed: every role's menu (1,023 facts), all 73
+screen addresses and the API's 214 routes are proven identical to the start,
+and every gate is green (CHANGELOG, 15 September, "the move").
+
+**How to work now: `AGENTS.md`.** One agent per service, claimed below, in
+its own git worktree with its own database and ports; another service only
+through its front door (`index.ts`, enforced by `src/test/boundaries.test.ts`);
+a migration number claimed first (`src/test/migrationNumbers.test.ts`).
+
+**Waiting on the owner:** merging `service-folders` into `cp6`, and deploying
+it on its own. And the defects the briefs found (PENDING § 2a) — each a
+change somebody would see, so each is the owner's call.
 
 ### 3.1 · Clarity step 2 — one primary action per screen — DONE 15 September
 
@@ -128,7 +151,8 @@ new dialog must pass the first.** Details: `CHANGELOG.md`, 15 September (step 2)
 ### 3.2 · Clarity step 3 — the menu by person — DONE 15 September
 
 Each role's sidebar is now the menu it works from — `WORKING_MENUS` in
-`src/components/app/navigation.ts`. The owner's lists:
+`src/components/app/navigation.ts`, assembled since the service-folder move from
+the `workingMenus` each service's `nav.ts` declares. The owner's lists:
 
 ```
 reception        Dashboard · Rooms · Calendar · Arrivals · In house · Walk-ins ·
@@ -328,10 +352,20 @@ the code, never a second copy in a tooltip. Every list draws four states:
 loading, failed, empty (what belongs here, and where it comes from), full.
 A job card (`startHereCards.ts`) names real buttons; rename one, change both.
 
-**Menus are per person.** `WORKING_MENUS` in `navigation.ts` lists what each
-restricted role sees; `listed: false` keeps an entry out of every sidebar
-but in search; `keywords` are the other words people type. A new screen
-goes into the right working menus or it is search-only for those roles.
+**Where things live (since 15 September).** A service's screens, menu
+entries, addresses, data and tests are in `src/modules/<service>/`; its server
+routes in `api/src/modules/<service>/`; new database checks in
+`db/tests/modules/<service>.sql`. Read its `MODULE.md` first. Another service
+is reached only through its `index.ts`. The core — design system, shell,
+session, data index, server wiring, migrations — is shared and frozen
+(AGENTS.md).
+
+**Menus are per person.** Each service declares its menu entries in its own
+`nav.ts`: the section, the place in it, and `workingMenus` — the restricted
+roles whose menu the entry is in; `navigation.ts` assembles them into the one
+menu and each role's working menu. `listed: false` keeps an entry out of
+every sidebar but in search; `keywords` are the other words people type. A
+new screen names its working menus, or it is search-only for those roles.
 
 **Facts on documents** come from the session, never from a literal:
 `useDocumentIdentity()` gives the property in view and the signed-in person's
@@ -504,9 +538,9 @@ rule and list they hold is written into this file, `PENDING.md` and
 ## Folder claims
 
 ```
-CLAIMED  EVERYTHING — the service-folder move (docs/SERVICE-FOLDERS-PLAN.md)
-         branch service-folders, from tag pre-service-folders (= cp6 4d10248)
-         started 15 September. No other agent writes anywhere until released.
+FREE     every service — the service-folder move is finished (15 September).
+         Claim ONE service before your first write (AGENTS.md):
+         CLAIMED  <service>   branch <service>/<task>   <date>   <who>
 ```
 
 ---

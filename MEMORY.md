@@ -2,6 +2,18 @@
 
 Every entry here cost something. Read it before you repeat it.
 
+**Since 15 September each service keeps its own memory too:**
+`src/modules/<service>/MEMORY.md`, its defects numbered with its prefix. This
+file keeps the lessons that apply to the whole project; the last number is 274.
+Each service's file also indexes the entries here that concern it.
+
+```
+front-desk FD · reservations RES · housekeeping HK · inventory INV · guests GUE
+finance FIN · night-audit NA · pos POS · banquet BQ · stores STO · reports REP
+admin ADM · channel-manager CM · crs CRS · payments PAY · booking-engine BE
+guest-messaging MSG · accounting ACC
+```
+
 ---
 
 ## Ten faults that repeat

@@ -131,8 +131,17 @@ New-Item -ItemType Junction -Path "D:\fidato-pos\api\node_modules" -Target "D:\f
   database in `DATABASE_URL`; give the web app `VITE_API_URL` for that port and
   `VITE_ALLOW_DEV_AUTH=1` in your copy's `.env.local` (git ignores it). Vite
   finds a free port by itself.
-- **Your copy's `api/.env`** holds only development settings. **Never copy the
-  main checkout's `api/.env`** — it carries the production Firebase key.
+- **Your copy's `api/.env`** holds only development settings — `NODE_ENV=development`
+  and `ALLOW_DEV_AUTH=1`. **Never copy the main checkout's `api/.env`** — it
+  carries the production Firebase key.
+- **The website's tests need the root `.env`** (the website's own settings:
+  its public Firebase web config and the local sign-in switch). Copy the main
+  checkout's root `.env` into your copy — without it 31 web tests fail on the
+  sign-in screen. It is gitignored; never commit it.
+- **Type checks: use `npx tsc -b --force`.** The linked `node_modules` shares
+  the type checker's cache between copies, so a plain `tsc -b` can report
+  another copy's "clean".
+- **Judge every gate by its exit code**, not its summary line (MEMORY 274).
 - The API tests need no setup beyond that: `cd api && npm test` builds and drops
   its own scratch database every run.
 
