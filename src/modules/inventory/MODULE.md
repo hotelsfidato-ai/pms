@@ -1,32 +1,287 @@
 # Inventory and rates
 
+What this hotel has to sell — its room types and rooms — and what each costs,
+on which dates, under which terms.
+
 **Folder name:** `inventory` — the same word in all three places:
 
 ```
 src/modules/inventory/          the screens, their data calls, their tests
 api/src/modules/inventory/      the server's routes for this service
-db/tests/modules/inventory.sql  its database checks (new ones only — suite.sql is history)
+db/tests/modules/inventory.sql  NEW database checks only — db/tests/suite.sql is frozen history
 ```
+
+Before your first edit: claim the service in `HANDOVER.md` → "Folder claims"
+(service, branch, date), read this file, then this folder's `MEMORY.md` and
+`CHANGELOG.md`. Written 15 September 2026 from the code at `880a5b6`.
+
+"Inventory" means rooms and prices. The shelves are the Store — the `stores`
+service (`docs/SERVICE-FOLDERS-PLAN.md`).
+
+---
 
 ## What it is
 
-Room types and rooms, rate plans, the rate calendar, rate performance, restrictions, promotions, cancellation terms. What can be sold, and for how much. (The shelves are `stores`.)
+The person setting up a hotel enters its room types (who they sleep, what
+they cost on the rack) and its rooms, by hand or from a file. The revenue
+manager then sets prices: rate plans per room type and meal plan, seasons
+over date ranges, a price for a run of dates typed straight onto the rate
+calendar, extra adults and children, and restrictions — stop sell, closed to
+arrival or departure, minimum and maximum nights. The hotel writes down its
+cancellation terms and may mark one as the default; the terms freeze onto
+each booking. "Rate performance" compares the rack rate with what rooms
+actually sold for, fourteen days out.
+
+---
+
+## Screens
+
+| Menu name | Address (`routes.tsx`) | Page file | Working menus (`nav.ts`) |
+|---|---|---|---|
+| Room types | `/h/:code/room-types` | `pages/RoomSetup.tsx` | none |
+| Rate plans | `/h/:code/rate-plans` | `pages/RatePlans.tsx` | none |
+| Cancellation terms | `/h/:code/cancellation-terms` | `pages/CancellationTerms.tsx` | none |
+| Rate calendar | `/h/:code/grids` | `pages/Grids.tsx` | none |
+| Rate performance | `/h/:code/rates` | `pages/Rates.tsx` | none |
+| — routed nowhere | — | `pages/UnroutedLists.tsx` (`RoomTypesPage`, `RatePlansPage`) | kept, pending the owner |
+
+- The first three sit in the menu's **Configuration** section, the last two in
+  **Inventory**. Room types needs the `room_config` grant; the others the
+  `rate` grant (the default test, no `canSee`).
+- No working menu lists any of them. Owner, admin, GM, hotel manager, finance
+  and read-only see them where their permissions allow; others reach them by
+  Find a screen, if allowed.
+- The Room types page also carries three pieces that belong elsewhere:
+  `CommissioningCard` (admin — what the property still needs),
+  `TaxRulesCard` (finance — GST rules), and "The front desk's hours"
+  (check-in and check-out times and early/late charges — the form is here,
+  the server endpoint is admin's).
+
+---
+
+## Server endpoints — 23
+
+Until the server move lands, the code is in four files under
+`api/src/routes/`; it moves into `api/src/modules/inventory/`, whose door
+`index.ts` mounts it at `/api/hotels`. The mixed files follow the plan
+(`docs/SERVICE-FOLDERS-PLAN.md`, "The six mixed server files").
+
+From `rates.ts` (813 lines) — all 13 are this service's:
+
+```
+GET    /:code/rate-plans                          the rates board
+PUT    /:code/room-types/:id/rate                 a room type's rack rate
+POST   /:code/rate-plans                          a season on a plan
+DELETE /:code/rate-plans/:id
+GET    /:code/cancellation-policies
+POST   /:code/cancellation-policies
+DELETE /:code/cancellation-policies/:id           retire one
+PUT    /:code/cancellation-policies/:id/default   the property's own default
+GET    /:code/inventory                           rooms left, by type and date
+GET    /:code/rate-grid                           price per type, plan and date
+PUT    /:code/rate-grid                           set a price on a run of dates (app.set_rate)
+GET    /:code/tariff                              a stay's price, extra persons included — used by New booking
+POST   /:code/restrictions
+```
+
+From `inventorySetup.ts` (1,037 lines) — this service's 7 of 12:
+
+```
+POST   /:code/room-types
+PATCH  /:code/room-types/:id
+POST   /:code/rooms
+PATCH  /:code/rooms/:number
+POST   /:code/room-types/import
+POST   /:code/rooms/import
+GET    /:code/room-setup
+```
+
+(The other five go to finance — `GET /:code/tax`, `PUT /:code/tax/:kind`,
+`PATCH /:code/menu-categories/:name/tax-kind` — and to admin —
+`GET /:code/commissioning`, `PATCH /:code/front-desk`.)
+
+From `billing.ts` — 1 of 5:
+
+```
+GET    /:code/rates                               Rate performance: rack against achieved, by date
+```
+
+From `directory.ts` — 2 of 8, both read only by the two routed-nowhere screens:
+
+```
+GET    /:code/room-types                          the old room-type list
+GET    /rate-plans                                the old meal-plan list — can never run (INV-1)
+```
+
+`/rates` and `/rate-plans` are two questions on two paths on purpose: the
+older `/rates` route in `billing.ts` wins any collision because it is
+mounted first (MEMORY 70). Grep the route table before adding a route.
+
+---
+
+## Data
+
+```
+data/rates.ts          getInventory, getPriceGrid, setRate, setRestriction, getTariff.
+                       getInventory and getTariff are the front door's exports.
+data/rateSetup.ts      getRates, setRackRate, addRate, removeRate; cancellation
+                       policies — list, add, retire, set the default. Split out of
+                       the old admin.ts on 15 September.
+data/rateGrid.ts       getRateGrid — Rate performance. Split out of the old billing.ts.
+data/roomSetup.ts      getRoomSetup, addRoomType, amendRoomType, addRoom, amendRoom,
+                       amendFrontDesk, importSetup.
+data/unroutedLists.ts  listRoomTypes, listRatePlans — for the two screens no address
+                       reaches. Split out of the old directory.ts.
+```
+
+No `lib/`, `components/` or `flows/` in this folder.
+
+---
+
+## Database
+
+```
+room_types, rooms                  003_rooms.sql
+  rate can't be negative           016_audit_coverage.sql
+  smoking, connecting rooms        043_indicators.sql
+  base_rate NULL until set         032_no_default_prices.sql (the templates lost their prices)
+  extra adult / child rack rates   057_extra_persons.sql
+rates                              033_rates.sql  (rates_no_overlap; app.rate_for)
+  extra adult / child per season   057_extra_persons.sql  (app.tariff_for; app.set_rate)
+  the grid from one definition     052_rate_grid.sql  (app.rate_grid)
+  writing a price onto the grid    053_set_rate.sql  (app.set_rate, rearranges seasons)
+cancellation_policies              036_cancellation_terms.sql  (app.retention_for)
+  terms freeze onto the booking    037_terms_on_booking.sql  (trigger reservations_freeze_terms;
+                                   a property-chosen default)
+rate_restrictions                  044_restrictions.sql  (app.sellable_rooms — the denominator
+                                   of every occupancy figure)
+meal_plans                         011_model_additions.sql — read, not written
+```
+
+Other services point at these tables: `rooms` is referenced by
+`room_assignments` (front desk), `room_blocks` and `housekeeping_assignments`
+(housekeeping), `work_orders` and `room_status_log`; `room_types` by
+`reservations`; `cancellation_policies` by `reservations.cancellation_policy_id`.
+Housekeeping writes `rooms.housekeeping_status`.
+
+**A new migration needs a number claimed in `HANDOVER.md` first.**
+`src/test/migrationNumbers.test.ts` fails on two files with one number or a
+gap. The highest today is 089.
+
+---
+
+## Front door
+
+`src/modules/inventory/index.ts` exports `getInventory`, `getTariff` and the
+type `Tariff` (from `data/rates.ts`). The only importer is
+`src/modules/reservations/pages/NewBooking.tsx`.
+
+The server's door, `api/src/modules/inventory/index.ts`, exports only
+`mounts` (today `rates` and `inventorySetup`), read by `api/src/server.ts`.
+
+---
 
 ## Leans on
 
-nothing — others lean on it
+- **finance** — `TaxRulesCard` through `@/modules/finance`, on Room types.
+- **admin** — `CommissioningCard` through `@/modules/admin`, on Room types;
+  and the front desk's hours form posts to admin's `PATCH /:code/front-desk`.
 
-Through each service's front door (`index.ts`) only — the guard in
-`src/test/boundaries.test.ts` refuses anything else.
+Others lean on this one: reservations — the door, for New booking, and
+`app.tariff_for` when a booking is priced (`api/src/routes/groups.ts`); and
+reports — every occupancy figure divides by `app.sellable_rooms`
+(`statistics.ts`, `manager.ts`).
 
-## Status
+---
 
-Being moved into this folder (docs/SERVICE-FOLDERS-PLAN.md, 15 September).
-Its menu entries (`nav.ts`) and screen addresses (`routes.tsx`) are already
-here. The rest of this brief — its screens, endpoints and tables, the owner's
-decisions, open items and requests — is written when the move is finished.
+## Rules that bind it
+
+- **No default prices, anywhere** (`HANDOVER.md` § 5). The group's
+  instruction: prices are not fixed, the team updates them, and nothing is
+  standard across properties (`033_rates.sql` and `rates.ts` headers; 032).
+  A room type's rate is NULL until somebody sets it, and every screen shows a
+  dash — never a zero, which would be a claim the room is free
+  (MEMORY 63, 65, 246). `Number()` on a nullable price is a default price in
+  disguise (MEMORY 246).
+- **A property-chosen default is not a shipped default.** A hotel may mark
+  its own written terms as the default; the system ships none (037;
+  MEMORY 81). Terms freeze onto the booking by trigger, however it is made.
+- **One definition per rule.** The rate grid reads `app.rate_for`, and
+  `app.set_rate` owns every write of a price — because the channel manager
+  would price dates too (MEMORY 96). Every `create function` drops every
+  signature it will ever have, and every `COMMENT ON FUNCTION` carries its
+  argument list (MEMORY 117).
+- **Grep the route table before adding a route** — Hono answers with the
+  first registration on a path (MEMORY 70, 118; INV-1).
+- **The menu label, the page heading and the browser tab say the same words**
+  (`HANDOVER.md` § 6) — two screens here do not yet (INV-2).
+- **Every list draws four states**; **a new dialog declares its main action**
+  — `src/components/ui/primaryAction.test.ts`, proved by naming
+  `RoomSetup.tsx:385` (CHANGELOG 2026-09-15 step 2).
+- **Offline, a rate or room write is refused** — none is listed in
+  `src/lib/offline.ts`.
+- **Inside `withSession`, a refusal is a commit** (MEMORY 243). These routes
+  have not been checked for it (PENDING § 2).
+- **The channel manager is parked** (owner, 8 September — CHANGELOG). The
+  rate calendar is what one would push; nothing here sends prices anywhere.
+
+No Start here card and no glossary line names anything in this service.
+
+---
+
+## Open items
+
+From `PENDING.md` and `PROGRESS.md`, as of 15 September:
+
+- **The demo's rates are what the hotel is selling** — Deluxe 3,699,
+  Superior 4,099, from `load-demo.ts`, not the hotel. The owner's to confirm or
+  replace (PENDING § 2; PROGRESS "Still needing a person" 4).
+- **Names, rooms and rates for six of the seven properties** — only 5 Elements
+  Akkalkot is configured (PROGRESS "Still needing a person" 10).
+- **Cancellation terms per property, if any** — the screen is built and ships
+  empty (PROGRESS "Still needing a person" 11).
+- **`RoomTypesPage` and `RatePlansPage` are routed nowhere** — kept, not
+  deleted, pending the owner (PENDING § 5a).
+- **The same chart icon on six menu entries** — Rate performance is one of
+  them (PENDING § 5a).
+- The plan's table lists "promotions" under this service. The only promotions
+  in the code are the restaurant's (`pos_promotions`, 083) — none for rooms
+  (checked 15 September).
+- Found while writing this brief (15 September): **INV-1** — `GET
+  /api/hotels/rate-plans` can never run; **INV-2** — Room types is headed "The
+  house" and Rate calendar "Inventory and rates". Both in this folder's
+  `MEMORY.md`.
+
+---
+
+## Gates
+
+```
+web       npx tsc -b                     clean
+          npx vitest run                 all pass (includes src/test/boundaries.test.ts)
+server    cd api && npx tsc --noEmit     clean
+          cd api && npm test             a scratch database; never `npx vitest run`
+                                         inside api/ (MEMORY 196, 221, 264)
+          cd api && npm run strip-check  the server's loader can parse every file (MEMORY 209)
+database  db/tests/run.sh                a scratch database, dropped after
+```
+
+The guard this folder must respect: `src/test/boundaries.test.ts` — another
+service reaches this one only through `index.ts`, and this one reaches others
+only through theirs.
+
+Where the checks are today: `api/test/inventory.test.ts` (the inventory
+grid, restrictions, the rate grid, the tariff, what a property still needs,
+importing rooms) — moving to `api/test/modules/inventory/`. Database:
+`db/tests/suite.sql` groups `rates`, `set rate`, `rate grid`, `restrictions`,
+`extra persons`, `cancellation terms`, `inventory`, `no shipped prices`
+(frozen — new checks go in `db/tests/modules/inventory.sql`, which does not
+exist yet). Web: `src/App.test.tsx` "find a screen" reaches Rate plans.
+
+---
 
 ## Requests from other services
 
-None yet. Another service that needs a change here writes it in this list;
-it is not made from outside.
+None yet. To ask for a change here, add a line below — date, your service,
+what you need and why — and leave the change to whoever holds this
+service's claim.
