@@ -27,6 +27,18 @@ export interface NavItem {
   canSee?: (role: Role) => boolean;
   /** Hidden outside a development build, whatever the role. */
   devOnly?: boolean;
+  /**
+   * `false` keeps the entry OUT OF THE SIDEBAR while it stays reachable —
+   * by "Find a screen" and by its address — for anybody allowed to open
+   * it. The owner's rule, 15 September: a shorter menu, nothing lost.
+   */
+  listed?: false;
+  /**
+   * Other words people type for this screen — the old name, the trade
+   * word, what a guest would say. "Find a screen" matches them, so the
+   * glossary's retired words still land somewhere (the clarity plan).
+   */
+  keywords?: string[];
 }
 
 /** True in `vite dev` and in the test runner, false in a production build. */
@@ -103,8 +115,10 @@ const SECTIONS: NavSection[] = [
   {
     items: [
       { label: "Dashboard", to: "/", icon: LayoutDashboard, resource: "dashboard" },
-      { label: "Rooms", to: "/h/:code/stay", icon: Home, resource: "dashboard" },
-      { label: "Calendar", to: "/h/:code/calendar", icon: CalendarRange, resource: "reservation" },
+      { label: "Rooms", to: "/h/:code/stay", icon: Home, resource: "dashboard",
+        keywords: ["house", "board", "tape chart", "vacant", "empty", "free"] },
+      { label: "Calendar", to: "/h/:code/calendar", icon: CalendarRange, resource: "reservation",
+        keywords: ["tape chart", "stay view", "fortnight"] },
     ],
   },
   {
@@ -112,7 +126,8 @@ const SECTIONS: NavSection[] = [
     items: [
       {
         label: "Arrivals", to: "/h/:code/arrivals", icon: CalendarCheck,
-        resource: "reservation", matchPrefix: true,
+        resource: "reservation",
+        keywords: ["arriving", "check in", "coming"], matchPrefix: true,
         children: [
           { label: "Today", to: "/h/:code/arrivals", icon: CalendarCheck, resource: "reservation" },
           { label: "Upcoming", to: "/h/:code/arrivals/upcoming", icon: CalendarRange, resource: "reservation" },
@@ -120,18 +135,26 @@ const SECTIONS: NavSection[] = [
       },
       {
         label: "In house", to: "/h/:code/in-house", icon: Users,
-        resource: "reservation", matchPrefix: true,
+        resource: "reservation",
+        keywords: ["occupied", "staying", "current stays"], matchPrefix: true,
         children: [
           { label: "In house now", to: "/h/:code/in-house", icon: Users, resource: "reservation" },
           { label: "Due out", to: "/h/:code/in-house/due-out", icon: CalendarRange, resource: "reservation" },
         ],
       },
-      { label: "Walk-ins", to: "/h/:code/walk-ins", icon: BookOpen, resource: "reservation" },
-      { label: "Housekeeping", to: "/h/:code/housekeeping", icon: ClipboardList, resource: "inventory" },
+      { label: "Walk-ins", to: "/h/:code/walk-ins", icon: BookOpen, resource: "reservation",
+        keywords: ["walk in", "walkin"] },
+      { label: "Housekeeping", to: "/h/:code/housekeeping", icon: ClipboardList, resource: "inventory",
+        keywords: ["clean", "dirty", "needs cleaning", "rooms to clean"] },
       /* Beside housekeeping, because that is who finds most of it — and
          separate from a room block, because most work orders take no room
          out of service. */
-      { label: "Work orders", to: "/h/:code/work-orders", icon: Wrench, resource: "room_config" },
+      { label: "Work orders", to: "/h/:code/work-orders", icon: Wrench, resource: "room_config",
+        keywords: ["repair", "maintenance", "broken", "out of order"],
+        /* Housekeeping held no room_config grant, so the people this entry
+           is placed beside could not see it. The API has no role gate on
+           work orders — only the hotel's own row-level isolation. */
+        canSee: (role) => canAccess(role, "room_config") || role === "housekeeping" },
     ],
   },
   {
@@ -139,7 +162,8 @@ const SECTIONS: NavSection[] = [
     items: [
       {
         label: "All bookings", to: "/h/:code/reservations", icon: CalendarCheck,
-        resource: "reservation", matchPrefix: true,
+        resource: "reservation",
+        keywords: ["reservations", "booking", "find a booking"], matchPrefix: true,
       },
       { label: "Guests", to: "/guests", icon: Users, resource: "customer", matchPrefix: true },
       /* A wedding is one conversation and nine rooms. Every other list
@@ -157,10 +181,12 @@ const SECTIONS: NavSection[] = [
          the same vocabulary as the booking form's Business source field.
          Found by auditing the navigation against itself on 9 September;
          I introduced the collision the day before and did not look. */
-      { label: "Companies and agents", to: "/companies", icon: Building2, resource: "company", matchPrefix: true },
+      { label: "Companies and agents", to: "/companies", icon: Building2, resource: "company",
+        keywords: ["travel agent", "corporate", "ota"], matchPrefix: true },
       /* One guest, one set of nights, several rooms — and a group made
          for them automatically when there is more than one. */
-      { label: "New booking", to: "/h/:code/book", icon: BookPlus, resource: "reservation" },
+      { label: "New booking", to: "/h/:code/book", icon: BookPlus, resource: "reservation",
+        keywords: ["reservation", "book a room"] },
     ],
   },
   /* ══════════════════════════════════════════════════════════════
@@ -193,47 +219,61 @@ const SECTIONS: NavSection[] = [
     label: "Across properties",
     items: [
       { label: "Properties", to: "/properties", icon: Hotel, resource: "hotel", matchPrefix: true },
-      { label: "People", to: "/people", icon: UserCog, resource: "user", matchPrefix: true },
+      { label: "People", to: "/people", icon: UserCog, resource: "user",
+        keywords: ["staff", "users", "password", "team"], matchPrefix: true },
     ],
   },
   {
     label: "Configuration",
     items: [
       { label: "Room types", to: "/h/:code/room-types", icon: LayoutDashboard, resource: "room_config" },
-      { label: "Rate plans", to: "/h/:code/rate-plans", icon: Wallet, resource: "rate" },
+      { label: "Rate plans", to: "/h/:code/rate-plans", icon: Wallet, resource: "rate",
+        keywords: ["price", "tariff", "rates"] },
       { label: "Cancellation terms", to: "/h/:code/cancellation-terms", icon: ShieldAlert, resource: "rate" },
       /* `commission` rather than `rate`: the list is where a booking
          came from and the screen is where its commission is agreed.
          A clerk does not see it — they pick from the list on the
          booking form, which is not gated here. */
-      { label: "Booking sources", to: "/h/:code/booking-sources", icon: Plug, resource: "commission" },
+      { label: "Booking sources", to: "/h/:code/booking-sources", icon: Plug, resource: "commission",
+        keywords: ["channel", "ota", "commission", "source"] },
     ],
   },
   {
     label: "Inventory",
     items: [
-      { label: "Rate calendar", to: "/h/:code/grids", icon: Table2, resource: "rate" },
+      { label: "Rate calendar", to: "/h/:code/grids", icon: Table2, resource: "rate",
+        keywords: ["prices by day", "grid"] },
       { label: "Rate performance", to: "/h/:code/rates", icon: BarChart3, resource: "rate" },
-      { label: "Channel manager", to: "/h/:code/channels", icon: Globe, resource: "rate" },
-      { label: "Store", to: "/h/:code/stores", icon: Package, resource: "inventory", matchPrefix: true },
+      /* Excluded by the owner and not connected. Its screen says so to
+         anybody who searches for it; the menu does not advertise it. */
+      { label: "Channel manager", to: "/h/:code/channels", icon: Globe, resource: "rate",
+        keywords: ["staah", "ota", "channels"], listed: false },
+      { label: "Store", to: "/h/:code/stores", icon: Package, resource: "inventory",
+        keywords: ["stock", "inventory", "stores"], matchPrefix: true },
     ],
   },
   {
     label: "Finance",
     items: [
-      { label: "Folios", to: "/h/:code/folios", icon: Receipt, resource: "invoice", matchPrefix: true },
-      { label: "Invoices", to: "/h/:code/invoices", icon: FileText, resource: "invoice", matchPrefix: true },
-      { label: "Payments", to: "/h/:code/payments", icon: Wallet, resource: "payment" },
+      { label: "Folios", to: "/h/:code/folios", icon: Receipt, resource: "invoice",
+        keywords: ["bill", "bills", "folio"], matchPrefix: true },
+      { label: "Invoices", to: "/h/:code/invoices", icon: FileText, resource: "invoice",
+        keywords: ["tax invoice", "gst invoice"], matchPrefix: true },
+      { label: "Payments", to: "/h/:code/payments", icon: Wallet, resource: "payment",
+        keywords: ["receipts", "money in"] },
       /* The drawer somebody is holding right now. Beside the folios and
          payments it reconciles against, not under reports — a report is
          read afterwards, this is used during the shift. */
-      { label: "Cashiering", to: "/h/:code/cashiering", icon: Wallet, resource: "payment" },
-      { label: "Company accounts", to: "/h/:code/city-ledger", icon: Building2, resource: "commission" },
+      { label: "Cashiering", to: "/h/:code/cashiering", icon: Wallet, resource: "payment",
+        keywords: ["cash drawer", "drawer", "shift", "hand over"] },
+      { label: "Company accounts", to: "/h/:code/city-ledger", icon: Building2, resource: "commission",
+        keywords: ["city ledger", "receivables"] },
       /* Form C is a COMPLIANCE obligation about guests, not a finance
          document — but it is filed by the same person who bills, at the
          same desk, and burying it under Reports is how a 24-hour
          deadline gets missed. It sits where somebody will see it. */
-      { label: "Form C", to: "/h/:code/form-c", icon: ShieldAlert, resource: "customer" },
+      { label: "Form C", to: "/h/:code/form-c", icon: ShieldAlert, resource: "customer",
+        keywords: ["foreign", "frro", "passport"] },
     ],
   },
   {
@@ -261,23 +301,39 @@ const SECTIONS: NavSection[] = [
     items: [
       /* The FLOOR first, because that is where a shift starts: a waiter
          walks to a table before there is a bill to stand at. */
-      { label: "Floor", to: "/h/:code/floor", icon: LayoutGrid, resource: "payment" },
+      { label: "Tables", to: "/h/:code/floor", icon: LayoutGrid, resource: "payment",
+        keywords: ["floor", "restaurant"],
+        canSee: (role) => canAccess(role, "payment") || role === "pos" },
       /* The till, the one somebody stands at. */
-      { label: "Till", to: "/h/:code/till", icon: Receipt, resource: "payment" },
+      { label: "Till", to: "/h/:code/till", icon: Receipt, resource: "payment",
+        keywords: ["pos", "order", "restaurant bill"],
+        canSee: (role) => canAccess(role, "payment") || role === "pos" },
       /* A dedicated screen for a fixed terminal: no sidebar, no chrome,
          one outlet, targets sized for a thumb rather than a mouse. */
       {
         label: "Terminal", to: "/h/:code/till/terminal",
         icon: MonitorSmartphone, resource: "payment",
+        keywords: ["pos terminal"],
+        canSee: (role) => canAccess(role, "payment") || role === "pos",
       },
       /* The pass. A wall screen in the kitchen, behind the same
          permission as the till — the people who cook and the people who
          ring up are the same restaurant. */
-      { label: "Kitchen", to: "/h/:code/kitchen", icon: Flame, resource: "payment" },
+      /* ⚠ "The people who cook" never HAD that permission: chef and
+         kitchen_manager hold no `payment` grant, so the pass was missing
+         from the menu of the only two roles it exists for — they had to
+         know the address. The server has always let them in (till.ts
+         refuses only reception). Fixed 15 September, owner's yes. */
+      { label: "Kitchen", to: "/h/:code/kitchen", icon: Flame, resource: "payment",
+        keywords: ["kot", "pass", "orders"],
+        canSee: (role) =>
+          canAccess(role, "payment") || role === "chef" || role === "kitchen_manager" },
       /* The prices, which are the hotel's. Behind the same permission as
          rates, because setting what a dish costs is the same kind of act
          as setting what a room costs. */
-      { label: "Menu", to: "/h/:code/menu", icon: UtensilsCrossed, resource: "rate" },
+      { label: "Menu", to: "/h/:code/menu", icon: UtensilsCrossed, resource: "rate",
+        keywords: ["dishes", "items"],
+        canSee: (role) => canAccess(role, "rate") || role === "kitchen_manager" },
       /* Where the shift ends. Last, because it is — and beside the
          till rather than under Finance, for the same reason the till
          is here: a cashier counting a drawer at midnight is doing
@@ -285,10 +341,14 @@ const SECTIONS: NavSection[] = [
       {
         label: "Close restaurant day", to: "/h/:code/till/day-end",
         icon: Banknote, resource: "payment",
+        keywords: ["day end", "restaurant close"],
+        canSee: (role) =>
+          canAccess(role, "payment") || role === "pos" || role === "kitchen_manager",
       },
       /* What an OUTSIDE till sent and what was refused. Read-only, and
          named so nobody mistakes it for the till above. */
-      { label: "Charges to rooms", to: "/h/:code/pos", icon: Plug, resource: "invoice" },
+      { label: "Charges to rooms", to: "/h/:code/pos", icon: Plug, resource: "invoice",
+        keywords: ["bridge", "pos charges"] },
     ],
   },
   {
@@ -304,24 +364,29 @@ const SECTIONS: NavSection[] = [
     items: [
       /* The diary first, because the question is almost always "is the
          hall free" and only then "what is booked". */
-      { label: "Diary", to: "/h/:code/banquet", icon: PartyPopper, resource: "reservation" },
+      { label: "Diary", to: "/h/:code/banquet", icon: PartyPopper, resource: "reservation",
+        keywords: ["banquet", "function", "wedding", "event"] },
       { label: "Halls and packages", to: "/h/:code/banquet/setup", icon: Building2, resource: "room_config" },
     ],
   },
   {
     label: "Reports",
     items: [
-      { label: "Night audit", to: "/h/:code/night-audit", icon: BarChart3, resource: "report" },
+      { label: "Night audit", to: "/h/:code/night-audit", icon: BarChart3, resource: "report",
+        keywords: ["close the day", "end of day", "audit"] },
       /* The index first — it is the taxonomy, and the seven below are
          the shortcuts a manager pins for themselves. */
       { label: "All reports", to: "/reports", icon: FileText, resource: "report" },
-      { label: "Manager report", to: "/reports/manager", icon: BarChart3, resource: "report" },
-      { label: "City ledger", to: "/reports/city-ledger", icon: Building2, resource: "report" },
-      { label: "No show", to: "/reports/no-show", icon: CalendarCheck, resource: "report" },
-      { label: "Monthly occupancy", to: "/reports/monthly-occupancy", icon: BarChart3, resource: "report" },
-      { label: "Monthly statistics", to: "/reports/monthly-stats", icon: BarChart3, resource: "report" },
-      { label: "Yearly statistics", to: "/reports/yearly-stats", icon: BarChart3, resource: "report" },
-      { label: "Lodging tax", to: "/reports/lodging-tax", icon: FileText, resource: "report" },
+      { label: "Manager report", to: "/reports/manager", icon: BarChart3, resource: "report",
+        keywords: ["flash", "daily report"] },
+      { label: "City ledger", to: "/reports/city-ledger", icon: Building2, resource: "report",
+        keywords: ["company accounts", "receivables"], listed: false },
+      { label: "No show", to: "/reports/no-show", icon: CalendarCheck, resource: "report", listed: false },
+      { label: "Monthly occupancy", to: "/reports/monthly-occupancy", icon: BarChart3, resource: "report", listed: false },
+      { label: "Monthly statistics", to: "/reports/monthly-stats", icon: BarChart3, resource: "report", listed: false },
+      { label: "Yearly statistics", to: "/reports/yearly-stats", icon: BarChart3, resource: "report", listed: false },
+      { label: "Lodging tax", to: "/reports/lodging-tax", icon: FileText, resource: "report",
+        keywords: ["gst", "tax return"], listed: false },
       /* FOUR THAT WERE BUILT AND NOT LISTED. The index says "11 of 11
          built" and this menu offered seven — so the GST Sales Register,
          the one an accountant needs every month to file GSTR-1, was
@@ -330,10 +395,12 @@ const SECTIONS: NavSection[] = [
 
          A screen that exists and cannot be found from the navigation is
          a screen that does not exist to the person looking for it. */
-      { label: "GST sales register", to: "/reports/gst-sales", icon: ScrollText, resource: "report" },
-      { label: "Form F / C-Form", to: "/reports/c-form", icon: ShieldCheck, resource: "report" },
-      { label: "Guest ledger", to: "/reports/guest-ledger", icon: BookOpen, resource: "report" },
-      { label: "Cashier shift", to: "/reports/cashier-shift", icon: Banknote, resource: "report" },
+      { label: "GST sales register", to: "/reports/gst-sales", icon: ScrollText, resource: "report", listed: false },
+      { label: "Form F / C-Form", to: "/reports/c-form", icon: ShieldCheck, resource: "report",
+        keywords: ["foreign", "frro"], listed: false },
+      { label: "Guest ledger", to: "/reports/guest-ledger", icon: BookOpen, resource: "report", listed: false },
+      { label: "Cashier shift", to: "/reports/cashier-shift", icon: Banknote, resource: "report",
+        keywords: ["drawer", "takings"], listed: false },
     ],
   },
   {
@@ -445,10 +512,16 @@ export function navigationFor(
   })).filter((section) => section.items.length > 0);
 }
 
-/** Flat list of every reachable route — feeds the command palette. */
-export function flatNavigationFor(role: Role, code = ""): NavItem[] {
+/** Flat list of every reachable route — feeds "Find a screen".
+ *
+ *  EVERYTHING the role may open, listed in the sidebar or not. This is the
+ *  half of the owner's rule that keeps a shorter menu from losing anything:
+ *  a screen off somebody's menu is still one search away. */
+export function flatNavigationFor(
+  role: Role, code = "", modules?: Record<string, boolean>,
+): NavItem[] {
   const out: NavItem[] = [];
-  for (const section of navigationFor(role, code)) {
+  for (const section of navigationFor(role, code, modules)) {
     for (const item of section.items) {
       if (visible(role, item)) out.push(item);
       for (const child of item.children ?? []) {
@@ -457,4 +530,86 @@ export function flatNavigationFor(role: Role, code = ""): NavItem[] {
     }
   }
   return out;
+}
+
+/* ══════════════════════════════════════════════════════════════════
+   THE MENU EACH PERSON WORKS FROM — the clarity plan, step 3
+
+   The sidebar used to hide only what a role was FORBIDDEN, so everybody
+   saw nearly everything they were allowed: reception 47 entries in the
+   live build, housekeeping 28. A new receptionist faced a wall and asked.
+
+   The owner's decisions, 15 September:
+     · reception      — the core eight, plus All bookings and the cashier
+                        drawer, plus the restaurant's screens when
+                        "Reception can use the POS" is on
+     · waiter (pos)   — Tables, Till, Terminal, Close restaurant day
+     · chef           — Kitchen
+     · kitchen mgr    — Kitchen, Menu, Close restaurant day
+     · housekeeping   — Housekeeping, Work orders, Store
+     · stores         — Store
+     · no Dashboard for housekeeping, kitchen and stores: it carries
+       revenue, and their day starts at their own work
+     · everything else a role may open stays reachable by "Find a screen"
+       (flatNavigationFor). Nothing here changes a permission.
+
+   Roles NOT listed — owner, admin, gm, hotel_manager, finance, read_only
+   — keep every section they may open, minus what is unlisted for
+   everybody (`listed: false`).
+
+   Notifications rides along wherever the role may read it: it is where
+   the system talks to a person, not a place they work.
+   ══════════════════════════════════════════════════════════════════ */
+
+const RESTAURANT = [
+  "/h/:code/floor", "/h/:code/till", "/h/:code/till/terminal", "/h/:code/till/day-end",
+];
+
+const WORKING_MENUS: Partial<Record<Role, readonly string[]>> = {
+  front_desk: [
+    "/", "/h/:code/stay", "/h/:code/calendar",
+    "/h/:code/arrivals", "/h/:code/arrivals/upcoming",
+    "/h/:code/in-house", "/h/:code/in-house/due-out",
+    "/h/:code/walk-ins", "/h/:code/book", "/guests",
+    "/h/:code/reservations", "/h/:code/cashiering",
+    /* Only when the GM has switched reception onto the POS — the section
+       itself is still dropped by `receptionNeeds` when it is off. */
+    ...RESTAURANT,
+    "/notifications",
+  ],
+  pos: [...RESTAURANT, "/notifications"],
+  chef: ["/h/:code/kitchen", "/notifications"],
+  kitchen_manager: ["/h/:code/kitchen", "/h/:code/menu", "/h/:code/till/day-end", "/notifications"],
+  housekeeping: ["/h/:code/housekeeping", "/h/:code/work-orders", "/h/:code/stores", "/notifications"],
+  stores: ["/h/:code/stores", "/notifications"],
+};
+
+/** The sidebar: what this person WORKS from, in the navigation's order. */
+export function sidebarFor(
+  role: Role, code = "", modules?: Record<string, boolean>,
+): NavSection[] {
+  const working = WORKING_MENUS[role];
+  const keep = (item: NavItem) =>
+    item.listed !== false
+    && (!working || working.some((path) => resolve(path, code) === item.to));
+
+  return navigationFor(role, code, modules)
+    .map((section) => ({
+      ...section,
+      items: section.items
+        .map((item) => ({ ...item, children: item.children?.filter(keep) }))
+        .filter((item) => keep(item) || (item.children?.length ?? 0) > 0),
+    }))
+    .filter((section) => section.items.length > 0);
+}
+
+/**
+ * Where a person with a working menu lands when their first screen would
+ * be the Dashboard they no longer have: the top of their own list.
+ * Null for a role without one — they keep the ordinary first screen.
+ */
+export function workingHomeFor(role: Role, code: string): string | null {
+  const working = WORKING_MENUS[role];
+  if (!working || working.includes("/")) return null;
+  return resolve(working[0]!, code);
 }

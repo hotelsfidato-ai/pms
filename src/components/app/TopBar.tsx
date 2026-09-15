@@ -11,6 +11,11 @@ import { AccountMenu } from "./AccountMenu";
    they sit beside the other actions for that screen.
    ══════════════════════════════════════════════════════════════════ */
 
+/* The desk runs Windows; the badge said ⌘K, a key those keyboards do not
+   have. Ctrl K works on both, and the palette listens for either. */
+const SHORTCUT =
+  typeof navigator !== "undefined" && /Mac|iPhone|iPad/.test(navigator.platform) ? "⌘K" : "Ctrl K";
+
 export function TopBar() {
   const setCommandOpen = useUi((s) => s.setCommandOpen);
   const setMobileNavOpen = useUi((s) => s.setMobileNavOpen);
@@ -31,12 +36,14 @@ export function TopBar() {
         <Menu className="size-5" />
       </button>
 
-      {/* Search opens the palette rather than being a second search box. */}
+      {/* Opens "Find a screen". It said "Search or jump to a record" and
+          opened nothing at all until 15 September; it finds screens, not
+          records, so it says screens. */}
       <button
         type="button"
         onClick={() => setCommandOpen(true)}
         /* Collapses to an icon below `sm`, so it needs its own name. */
-        aria-label="Search or jump to a record"
+        aria-label="Find a screen"
         className={cn(
           /* 44 where a finger uses it, 36 on the desktop console where a
              mouse does and the header should stay compact. */
@@ -47,9 +54,9 @@ export function TopBar() {
         )}
       >
         <Search className="size-4 shrink-0" />
-        <span className="hidden sm:block text-base truncate">Search or jump to…</span>
+        <span className="hidden sm:block text-base truncate">Find a screen…</span>
         <kbd className="hidden lg:inline-flex items-center h-5 px-1.5 ml-auto rounded-xs bg-white border border-grey-200 text-2xs font-medium text-grey-500">
-          ⌘K
+          {SHORTCUT}
         </kbd>
       </button>
 

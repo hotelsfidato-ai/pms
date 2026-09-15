@@ -21,8 +21,9 @@ import { queryPersister } from "@/lib/persist";
 import { AppShell } from "@/components/app/AppShell";
 import { PosGate } from "@/components/app/PosGate";
 import { useUi } from "@/lib/ui";
-import { useSession } from "@/lib/session";
+import { useSession, useRole } from "@/lib/session";
 import { homePath } from "@/lib/homeScreen";
+import { workingHomeFor } from "@/components/app/navigation";
 import DashboardPage from "@/pages/Dashboard";
 import StayViewPage from "@/pages/StayView";
 import HousekeepingPage from "@/pages/Housekeeping";
@@ -181,6 +182,7 @@ function RequireSession() {
   const status = useSession((s) => s.status);
   const restore = useSession((s) => s.restore);
   const scope = useSession((s) => s.scope);
+  const role = useRole();
   const hotels = useSession((s) => s.hotels);
   const sessionHotelId = useSession((s) => s.hotelId);
   const uiHotel = useUi((s) => s.hotelId);
@@ -216,6 +218,12 @@ function RequireSession() {
       ?? null;
     const to = homePath(scope?.homeScreen, code);
     if (to !== "/") return <Navigate to={to} replace />;
+    /* Housekeeping, the kitchen, the restaurant floor and the stores have no
+       Dashboard in their menu (owner, 15 September) — it carries revenue,
+       and their day starts at their own work. So their first screen is the
+       top of their own list, unless they chose one themselves. */
+    const work = code ? workingHomeFor(role, code) : null;
+    if (work) return <Navigate to={work} replace />;
   }
 
   if (status === "starting") {

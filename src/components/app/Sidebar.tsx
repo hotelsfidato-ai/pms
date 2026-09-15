@@ -1,10 +1,10 @@
 import { useQuery } from "@tanstack/react-query";
 import { NavLink, useLocation } from "react-router";
-import { PanelLeftClose, PanelLeftOpen } from "lucide-react";
+import { PanelLeftClose, PanelLeftOpen, Search } from "lucide-react";
 import { cn } from "@/lib/cn";
 import { useUi } from "@/lib/ui";
 import { useRole } from "@/lib/session";
-import { navigationFor, type NavItem } from "./navigation";
+import { navigationFor, sidebarFor, type NavItem } from "./navigation";
 import { Tooltip } from "@/components/ui";
 import { getModules } from "@/data/repositories";
 
@@ -30,7 +30,16 @@ export function Sidebar({ onNavigate }: { onNavigate?: () => void }) {
     staleTime: 5 * 60_000,
   });
 
-  const sections = navigationFor(role, hotelId, modules.data);
+  /* WHAT THIS PERSON WORKS FROM (the clarity plan, step 3) — not
+     everything they are allowed. The rest is one search away, and the
+     button at the foot of the menu says so. */
+  const sections = sidebarFor(role, hotelId, modules.data);
+  const hidden =
+    navigationFor(role, hotelId, modules.data).reduce(
+      (n, s) => n + s.items.reduce((m, i) => m + 1 + (i.children?.length ?? 0), 0), 0)
+    - sections.reduce(
+      (n, s) => n + s.items.reduce((m, i) => m + 1 + (i.children?.length ?? 0), 0), 0);
+  const setCommandOpen = useUi((s) => s.setCommandOpen);
 
   return (
     <aside
@@ -115,6 +124,28 @@ export function Sidebar({ onNavigate }: { onNavigate?: () => void }) {
           </div>
         ))}
       </nav>
+
+      {/* The way to everything not listed above. Shown whenever the menu
+          leaves something out, so a shorter menu never reads as "that
+          screen does not exist". */}
+      {hidden > 0 && (
+        <div className="shrink-0 border-t border-white/8 px-2.5 pt-2.5">
+          <button
+            type="button"
+            onClick={() => { onNavigate?.(); setCommandOpen(true); }}
+            className={cn(
+              "flex items-center gap-2.5 w-full h-9 rounded-md",
+              "text-sm text-white/70 hover:text-white hover:bg-white/8",
+              "transition-colors duration-150",
+              collapsed ? "justify-center px-0" : "px-2.5",
+            )}
+            aria-label="Find a screen that is not in your menu"
+          >
+            <Search className="size-4" />
+            {!collapsed && <span>Find a screen</span>}
+          </button>
+        </div>
+      )}
 
       {/* Collapse toggle */}
       <div className="shrink-0 border-t border-white/8 p-2.5">

@@ -7,6 +7,7 @@ import { useUi } from "@/lib/ui";
 import { Sidebar } from "./Sidebar";
 import { TopBar } from "./TopBar";
 import { OfflineBar } from "./OfflineBar";
+import { CommandPalette } from "./CommandPalette";
 import { Toaster, TooltipProvider } from "@/components/ui";
 
 /* ══════════════════════════════════════════════════════════════════
@@ -55,6 +56,9 @@ export function AppShell() {
             </DialogPrimitive.Content>
           </DialogPrimitive.Portal>
         </DialogPrimitive.Root>
+
+        {/* "Find a screen". Opened by the top bar and by Ctrl K. */}
+        <CommandPalette />
 
         {/* Main column */}
         <div className="flex flex-col flex-1 min-w-0">

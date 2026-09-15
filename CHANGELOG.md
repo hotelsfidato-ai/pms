@@ -46,6 +46,52 @@ Write it **as you go**, not at the end from memory. Copy this shape:
 
 ---
 
+## 2026-09-15 (step 3) · A menu for each person, and the search it depends on
+
+**Asked for:** "continue with step 3, the menu by person". The owner chose
+the lists before any code (`HANDOVER.md` § 3.2): reception's core eight plus
+All bookings and the cashier drawer; the restaurant and kitchen roles get
+their own screens; three reports listed for everybody; no revenue Dashboard
+for housekeeping, kitchen and stores.
+
+**Shipped**
+- `WORKING_MENUS`, `sidebarFor`, `workingHomeFor` in `navigation.ts`; the
+  sidebar shows what a person works from. `listed: false` for ten reports and
+  the unconnected channel manager. Floor is "Tables" (menu and heading).
+- "Find a screen" — `CommandPalette.tsx`, opened by the top bar, Ctrl K and a
+  button at the foot of a shortened menu. Every screen the role may open, with
+  "Not in your menu" on the ones that left it; `keywords` on 36 entries so the
+  retired words still land. The top bar says "Find a screen", and shows Ctrl K
+  on Windows instead of a ⌘ key the desk does not have.
+- Housekeeping, kitchen and stores land on their own work after sign-in.
+
+**Found**
+- 260 · waiter, chef and kitchen manager could not see the restaurant; house-
+  keeping could not see Work orders. Fixed with `canSee`; no permission changed.
+- 261 · the search button opened nothing since CP0. Built.
+- 262 · my critique counted the development build ("Design system" is dev-only):
+  reception's live menu was 47, not 48. Corrected everywhere it was written.
+- Counting error in my own question to the owner: listing three reports
+  removes ten, not nine.
+
+**Proved**
+- `navigation.test.ts` pins each role's list and that search still reaches
+  what left a menu; failed when Night audit was planted on reception's list,
+  and three tests failed when search was limited to the listed menu.
+- App.test "find a screen": Ctrl K + "rate plans" reaches Rate plans, and
+  "folio" reaches Folios; both failed with the palette unmounted.
+- `npx tsc -b` clean; `npx vitest run` 190 passed in 13 files.
+- On screen: Reception's sidebar 15 entries with "Find a screen" at its foot,
+  and "folio" found Folios marked "Not in your menu"; GM's Reports lists three
+  and no Channel manager.
+
+**Left open**
+- Record search (guests, bookings) in the palette. Clarity step 4.
+
+**Commits:** the step 3 commit.
+
+---
+
 ## 2026-09-15 (step 2) · One main action per screen
 
 **Asked for:** "continue with step 2, the primary buttons" — the clarity
@@ -135,8 +181,9 @@ without the owner re-explaining.
   leaves 279 of 282 buttons secondary — clarity step 2.
 - 258 · the Rooms screen named every state twice, and my own plan mapped two of
   them wrong (Vacant is Empty, not Free; Reserved is not Arriving). Fixed.
-- Critique 22/40: the menu shows reception 48 entries, including the
-  developers' design-system page; no help or glossary anywhere; every tab titled
+- Critique 22/40: the menu shows reception 47 entries in the live build
+  (48 in the dev build I counted — MEMORY 262; the design-system page is
+  dev-only); no help or glossary anywhere; every tab titled
   "Fidato PMS"; four pages with no heading.
 
 **Proved**

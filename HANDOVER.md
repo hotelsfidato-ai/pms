@@ -50,7 +50,7 @@ local cp6           ahead of it by every commit listed below
 go-live scope       211 / 228  (93%)      the 17 open are the channel manager (excluded)
                                           and the CRS bridge (waiting on its API documents)
 staff-first plan    phase 1 of 4 built
-clarity plan        steps 1 and 2 of 4 built
+clarity plan        steps 1, 2 and 3 of 4 built
 ```
 
 **Waiting to be deployed** — one deploy carries all of it:
@@ -65,6 +65,7 @@ clarity plan        steps 1 and 2 of 4 built
       front-end pass: sign-in screen, Dashboard icons, report header facts, Manager report CSV
       one vocabulary: room states, menu, headings, browser tab titles
       one main action per screen: 67 confirms and main actions declared, two guards
+      a menu per person, and "Find a screen" (Ctrl K) to reach everything else
 ```
 
 **Gates, measured 15 September on this machine:**
@@ -74,7 +75,7 @@ db/tests/run.sh         574 assertions passed        scratch database, dropped a
 db/tests/rerun.sh       87 migrations re-runnable    scratch database, migrated twice
 cd api && npm test      350 passed, 28 files         never `npx vitest run` inside api/
 npx tsc -b              clean
-npx vitest run          181 passed, 13 files
+npx vitest run          190 passed, 13 files
 ```
 
 ---
@@ -101,29 +102,39 @@ new dialog must pass the first.** Details: `CHANGELOG.md`, 15 September (step 2)
 
 **Start at 3.2.**
 
-### 3.2 · Clarity step 3 — the menu by person
+### 3.2 · Clarity step 3 — the menu by person — DONE 15 September
 
-Reception is shown **48** menu entries today, including the developers'
-"Design system" page and "Channel manager" (excluded, not connected). The
-owner's decision: **off the menu but still reachable by search** for anything
-the role may open. The proposed working menus (proposals — confirm the lists
-with the owner before building):
+Each role's sidebar is now the menu it works from — `WORKING_MENUS` in
+`src/components/app/navigation.ts`. The owner's lists:
 
 ```
-Reception      Today (Dashboard) · Rooms · Calendar · Arriving today · In house ·
-               New booking · Walk-in · Guests · Bills and payments ·
-               Restaurant (only when "Reception can use the POS" is on)
-Housekeeping   Rooms to clean · Work orders · Store
-Restaurant     Tables · Till · Kitchen · Menu · Close restaurant day
-GM             Front desk (all of reception's) · Money · Reports · Setup · Night audit
-Owner          Dashboard (every property) · Reports · Properties and people · the rest by search
-nobody         Design system (developers only) · Channel manager (not connected)
+reception        Dashboard · Rooms · Calendar · Arrivals · In house · Walk-ins ·
+                 All bookings · Guests · New booking · Cashiering
+                 + Tables · Till · Terminal · Close restaurant day when "Reception can use the POS" is on
+waiter (pos)     Tables · Till · Terminal · Close restaurant day
+chef             Kitchen
+kitchen manager  Kitchen · Menu · Close restaurant day
+housekeeping     Housekeeping · Work orders · Store
+stores           Store
+everybody        Reports lists only Night audit · All reports · Manager report
+nobody           Channel manager (not connected)
+owner, admin, gm, hotel_manager, finance, read_only — every section they may open
 ```
 
-The command palette already reads `flatNavigationFor` — keep search reaching
-everything permitted; permissions still decide what may open. **Done when**
-Test Reception signs in to about ten entries and can still find any permitted
-screen by typing its name.
+Reception went from 47 entries (live build) to 15. Housekeeping, kitchen and
+stores have no Dashboard in their menu and land on their own work
+(`workingHomeFor`). **Nothing changed a permission** — everything a role may
+open is reachable by **Find a screen** (top bar, Ctrl K, or the button at the
+foot of the menu), which also understands retired words ("folio", "day end",
+"floor"). The palette did not exist before (MEMORY 261). The restaurant roles
+and housekeeping could not see their own screens until now (MEMORY 260).
+
+**A new screen must be added to the right working menus, or it is search-only
+for those roles.** Give it `keywords` for the other words people use. Guarded by
+`navigation.test.ts` (each list pinned; search still reaches what left a menu)
+and App.test "find a screen" — all seen to fail.
+
+**Start at 3.3.**
 
 ### 3.3 · Clarity step 4 — help where the question is
 
@@ -267,6 +278,11 @@ are for overlays only. One icon family: `lucide-react` (in 85 files), one size
 and stroke, and a different glyph for each destination. `variant="primary"`
 means solid brand orange — one per screen. Money and counts use tabular
 numerals. A null is a dash, never a zero (`Amount` in `ReportShell` does it).
+
+**Menus are per person.** `WORKING_MENUS` in `navigation.ts` lists what each
+restricted role sees; `listed: false` keeps an entry out of every sidebar
+but in search; `keywords` are the other words people type. A new screen
+goes into the right working menus or it is search-only for those roles.
 
 **Facts on documents** come from the session, never from a literal:
 `useDocumentIdentity()` gives the property in view and the signed-in person's

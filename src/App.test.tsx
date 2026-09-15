@@ -755,3 +755,39 @@ describe("the module switches", () => {
     expect(screen.queryByText(/not built yet/i)).toBeNull();
   });
 });
+
+describe("find a screen", () => {
+  /* The top bar said "Search or jump to…" and opened nothing until 15
+     September. It matters now: the owner took screens OFF people's menus
+     on the condition that nothing is lost — a search away. This is that
+     condition, end to end, for a receptionist. */
+  it("reaches a screen that is not in the menu, by its name", async () => {
+    render(<App />);
+    await screen.findByRole("heading", { level: 1, name: "Dashboard" });
+    /* Rate plans: a screen a receptionist may read, linked from nowhere on
+       this page — the Dashboard's quick reports already link Lodging tax,
+       which is how the first version of this test found a link that was
+       never the sidebar's. */
+    expect(screen.queryByRole("link", { name: "Rate plans" })).toBeNull();
+
+    fireEvent.keyDown(window, { key: "k", ctrlKey: true });
+    const box = await screen.findByRole("combobox", { name: "Find a screen" });
+    fireEvent.change(box, { target: { value: "rate plans" } });
+    fireEvent.keyDown(box, { key: "Enter" });
+
+    await waitFor(() => expect(window.location.pathname).toBe(`/h/${HOTEL}/rate-plans`));
+  });
+
+  it("understands the words the glossary retired", async () => {
+    /* "Folio" left the desk's screens; a clerk who still says it must
+       still get somewhere. */
+    render(<App />);
+    await screen.findByRole("heading", { level: 1, name: "Dashboard" });
+    fireEvent.click(screen.getByRole("button", { name: "Find a screen" }));
+    const box = await screen.findByRole("combobox", { name: "Find a screen" });
+    fireEvent.change(box, { target: { value: "folio" } });
+    fireEvent.keyDown(box, { key: "Enter" });
+
+    await waitFor(() => expect(window.location.pathname).toBe(`/h/${HOTEL}/folios`));
+  });
+});

@@ -168,7 +168,9 @@ export default function FloorPage() {
   return (
     <Page>
       <PageHeader
-        title="Floor"
+        /* "Tables", as the menu says (15 September). "Floor" also names the
+           Rooms screen's building-floor grouping — one word, two things. */
+        title="Tables"
         description="The room as it stands. Tap any table to take an order on it — the pad opens here, and nothing reaches the kitchen until you send it."
         actions={outlet && (
           <CloseOutlet outlet={outlet} closed={!!closed} hotelId={hotelId}

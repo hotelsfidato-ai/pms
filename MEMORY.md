@@ -6274,6 +6274,55 @@ proves something only when its failure message is the rule's own message.
 
 ---
 
+### 260 · The restaurant's own roles could not see the restaurant
+
+`pos` (the waiter), `chef` and `kitchen_manager` hold no `payment` grant, and
+every restaurant entry — Floor, Till, Terminal, Kitchen, Close restaurant day —
+was gated on `payment`. So the menu of the three roles the restaurant exists
+for listed none of it; they could reach it only by typing the address. The
+server has always let them in (`till.ts` refuses only reception). The Kitchen
+entry's own comment said it sat "behind the same permission as the till — the
+people who cook and the people who ring up are the same restaurant". The people
+who cook never had it.
+
+Housekeeping had the same shape: Work orders sat "beside housekeeping, because
+that is who finds most of it", gated on `room_config`, which housekeeping does
+not hold.
+
+Found by printing every role's menu (15 September), not by reading the matrix.
+Fixed with `canSee`, on the owner's yes — no permission changed.
+
+**The rule: a comment that says who a screen is for is a claim — test it
+against that role's actual menu.**
+
+---
+
+### 261 · "Search or jump to…" opened nothing, from the first checkpoint on
+
+The top-bar button set `commandOpen` and no component read it. A
+`CommandPalette` was planned in CP0 ("⌘K is central") and never built; the
+button kept its label and its ⌘K badge for three weeks. Harmless while the menu
+listed everything — load-bearing the moment the owner made shorter menus
+conditional on search. Built 15 September as "Find a screen" (screens only, and
+labelled so).
+
+**The rule: a control that sets state nobody reads is a dead control — grep for
+the reader, not the setter.**
+
+---
+
+### 262 · I reported a development-build count as the live system
+
+The critique said Reception is shown 48 entries "including the developers'
+Design system page". Design system is `devOnly`: the LIVE build hides it. I
+counted in `npm run dev`, where `IS_DEV` is true and developer entries show.
+The live figure was 47. Corrected in the plan page, `HANDOVER.md` and here.
+
+**The rule: say which build a number came from. A dev build shows what the live
+one hides.**
+
+---
+
 ### Open · two "in house" numbers for the same moment
 
 The property page (`getTodaySnapshot`) said **In house now 11, Vacant 9** while
