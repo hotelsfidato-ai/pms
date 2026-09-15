@@ -1,16 +1,16 @@
 import { Route } from "react-router";
-import DashboardPage from "@/pages/Dashboard";
-import ManagerReportPage from "@/pages/reports/ManagerReport";
+import DashboardPage from "@/modules/reports/pages/Dashboard";
+import ManagerReportPage from "@/modules/reports/pages/ManagerReport";
 import {
   MonthlyOccupancyPage, MonthlyStatisticsPage, YearlyStatisticsPage,
-} from "@/pages/reports/Statistics";
+} from "@/modules/reports/pages/Statistics";
 import {
   CityLedgerPage, NoShowPage, LodgingTaxPage,
-} from "@/pages/reports/Ledgers";
-import ReportsIndexPage from "@/pages/reports/Index";
+} from "@/modules/reports/pages/Ledgers";
+import ReportsIndexPage from "@/modules/reports/pages/Index";
 import {
   GuestLedgerPage, CashierShiftPage, GstSalesPage, CFormPage,
-} from "@/pages/reports/Compliance";
+} from "@/modules/reports/pages/Compliance";
 
 /* Reports' screen addresses. Mounted by App.tsx inside the signed-in
    shell. */

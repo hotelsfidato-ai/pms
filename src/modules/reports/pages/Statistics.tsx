@@ -10,11 +10,10 @@ import { useUi } from "@/lib/ui";
 import { Skeleton } from "@/components/ui";
 import {
   ReportShell, ReportTable, ReportHead, Amount,
-} from "@/components/reports/ReportShell";
-import {
-  getMonthlyStatistics, getYearlyStatistics, PTD_FROM, BUSINESS_DATE,
-  type MonthlyStatRow, type YearlyStatRow,
-} from "@/data/repositories";
+} from "@/modules/reports/components/ReportShell";
+import { getMonthlyStatistics, getYearlyStatistics, type MonthlyStatRow, type YearlyStatRow } from "@/modules/reports/data/reportData";
+import { PTD_FROM } from "@/modules/reports/data/statistics";
+import { BUSINESS_DATE } from "@/data/repositories";
 
 /* ══════════════════════════════════════════════════════════════════
    MONTHLY OCCUPANCY · MONTHLY STATISTICS · YEARLY STATISTICS

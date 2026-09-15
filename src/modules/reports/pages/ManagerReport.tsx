@@ -7,11 +7,10 @@ import { Skeleton, Term } from "@/components/ui";
 import { termFor } from "@/lib/glossary";
 import {
   ReportShell, ReportTable, ReportHead, ReportBand, Amount,
-} from "@/components/reports/ReportShell";
-import {
-  getManagerReport, PTD_FROM, BUSINESS_DATE,
-  type ThreeColumn, type ManagerReport,
-} from "@/data/repositories";
+} from "@/modules/reports/components/ReportShell";
+import { getManagerReport, type ThreeColumn, type ManagerReport } from "@/modules/reports/data/managerReport";
+import { PTD_FROM } from "@/modules/reports/data/statistics";
+import { BUSINESS_DATE } from "@/data/repositories";
 
 /* ══════════════════════════════════════════════════════════════════
    MANAGER REPORT

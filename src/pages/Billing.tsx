@@ -8,11 +8,8 @@ import {
   Page, PageHeader, Card, CardBody, DataTable, StatusPill, Skeleton, EmptyState,
   type Column,
 } from "@/components/ui";
-import {
-  listPayments, paymentsByMethod,
-  getCityLedger, PTD_FROM, BUSINESS_DATE,
-  type PaymentRow, type CityLedgerRow,
-} from "@/data/repositories";
+import { listPayments, paymentsByMethod, BUSINESS_DATE, type PaymentRow } from "@/data/repositories";
+import { getCityLedger, PTD_FROM, type CityLedgerRow } from "@/modules/reports";
 
 /* ══════════════════════════════════════════════════════════════════
    PAYMENTS · INVOICES · CITY LEDGER

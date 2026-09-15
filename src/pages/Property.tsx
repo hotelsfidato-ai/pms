@@ -9,11 +9,8 @@ import {
   Page, PageHeader, Card, CardBody, Button, Skeleton, EmptyState, toast,
   Dialog, DialogContent, Field, fieldProps, Input, NativeSelect, StatusPill,
 } from "@/components/ui";
-import {
-  getPropertyDetail, getTodaySnapshot, getPeriodStatistics,
-  createStaff, revokeAccess, setStaffPassword, setHomeScreen, MIN_PASSWORD,
-  type PropertyTeamMember, type HomeScreen,
-} from "@/data/repositories";
+import { getPropertyDetail, createStaff, revokeAccess, setStaffPassword, setHomeScreen, MIN_PASSWORD, type PropertyTeamMember, type HomeScreen } from "@/data/repositories";
+import { getTodaySnapshot, getPeriodStatistics } from "@/modules/reports";
 import { HOME_SCREENS, homeScreenLabel } from "@/lib/homeScreen";
 
 /* The GM setting where somebody starts after sign-in (087). */

@@ -5,11 +5,10 @@ import { useUi } from "@/lib/ui";
 import { Skeleton } from "@/components/ui";
 import {
   ReportShell, ReportTable, ReportHead, Amount,
-} from "@/components/reports/ReportShell";
-import {
-  getGuestLedger, getCashierShift, getGstSales, getCForm,
-  PTD_FROM, BUSINESS_DATE,
-} from "@/data/repositories";
+} from "@/modules/reports/components/ReportShell";
+import { getGuestLedger, getCashierShift, getGstSales, getCForm } from "@/modules/reports/data/reportData";
+import { PTD_FROM } from "@/modules/reports/data/statistics";
+import { BUSINESS_DATE } from "@/data/repositories";
 
 /* ══════════════════════════════════════════════════════════════════
    THE FOUR REPORTS THAT WERE LISTED AND NEVER BUILT

@@ -17,11 +17,9 @@ import {
 } from "@/components/ui";
 import { StartHere } from "@/components/app/StartHere";
 import type { TermKey } from "@/lib/glossary";
-import {
-  listProperties, getPeriodStatistics, listArrivalsOutstanding,
-  getStayViewCounts, getManagerReport, BUSINESS_DATE,
-  type Property, type ThreeColumn,
-} from "@/data/repositories";
+import { listProperties, listArrivalsOutstanding, getStayViewCounts, BUSINESS_DATE, type Property } from "@/data/repositories";
+import { getPeriodStatistics } from "@/modules/reports/data/statistics";
+import { getManagerReport, type ThreeColumn } from "@/modules/reports/data/managerReport";
 
 /* ══════════════════════════════════════════════════════════════════
    DASHBOARD — `/`
