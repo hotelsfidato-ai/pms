@@ -1,5 +1,5 @@
 import type { Mount } from "../../mount.ts";
-import { banquet } from "../../routes/banquet.ts";
+import { banquet } from "./banquet.ts";
 
 /* The front door of the banquet service on the server — the only file
    the core or another service may import (src/test/boundaries.test.ts).

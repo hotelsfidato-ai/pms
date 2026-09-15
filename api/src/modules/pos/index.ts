@@ -1,6 +1,6 @@
 import type { Mount } from "../../mount.ts";
-import { pos, posAdmin } from "../../routes/pos.ts";
-import { till } from "../../routes/till.ts";
+import { pos, posAdmin } from "./pos.ts";
+import { till } from "./till.ts";
 
 /* The front door of the restaurant (POS) service on the server — the only file
    the core or another service may import (src/test/boundaries.test.ts).
@@ -13,4 +13,4 @@ export const mounts: readonly Mount[] = [
 
 /* The auth gate in server.ts resolves an outside till's key to its outlet,
    and scripts/pos-outlet.ts issues keys. Both come through this door. */
-export { outletFor, hashKey, issueKey, type Outlet } from "../../routes/pos.ts";
+export { outletFor, hashKey, issueKey, type Outlet } from "./pos.ts";

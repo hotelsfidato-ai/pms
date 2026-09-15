@@ -1,7 +1,7 @@
 import { Hono } from "hono";
 import type { Context, Next } from "hono";
-import { withSession } from "../auth.ts";
-import { businessDateFor } from "../businessDate.ts";
+import { withSession } from "../../auth.ts";
+import { businessDateFor } from "../../businessDate.ts";
 import type { PoolClient as Client } from "pg";
 
 /* ══════════════════════════════════════════════════════════════════

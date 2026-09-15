@@ -1,5 +1,5 @@
 import { closePool } from "../src/db.ts";
-import { hashKey, issueKey } from "../src/routes/pos.ts";
+import { hashKey, issueKey } from "../src/modules/pos/index.ts";
 
 /* ══════════════════════════════════════════════════════════════════
    POS OUTLET PROVISIONING
