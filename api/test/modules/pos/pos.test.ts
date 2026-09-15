@@ -1,7 +1,7 @@
 import { describe, it, expect, beforeAll, afterAll } from "vitest";
-import { app } from "../src/server.ts";
-import { closePool } from "../src/db.ts";
-import { hashKey, issueKey } from "../src/routes/pos.ts";
+import { app } from "../../../src/server.ts";
+import { closePool } from "../../../src/db.ts";
+import { hashKey, issueKey } from "../../../src/modules/pos/index.ts";
 
 /* ══════════════════════════════════════════════════════════════════
    POS BRIDGE — what the PMS promises a point of sale

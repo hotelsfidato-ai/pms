@@ -1,7 +1,7 @@
 import { Hono } from "hono";
-import { withSession } from "../auth.ts";
-import type { Client } from "../db.ts";
-import { businessDateFor, monthStart } from "../businessDate.ts";
+import { withSession } from "../../auth.ts";
+import type { Client } from "../../db.ts";
+import { businessDateFor, monthStart } from "../../businessDate.ts";
 
 /* Paise, not floating dust. Defined here as it is in billing.ts and
    manager.ts — three copies of one line, which is fine until one of
