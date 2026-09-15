@@ -5,11 +5,16 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
-    "build": "tsc -b && vite build",
+    "build": "tsc -b && vite build && node scripts/check-no-dev-login.mjs dist",
     "preview": "vite preview",
     "lint": "oxlint",
     "test": "vitest run",
-    "test:watch": "vitest"
+    "test:watch": "vitest",
+    "build:preview": "vite build --mode preview && node scripts/check-no-dev-login.mjs dist-preview",
+    "build:artifact": "vite build --mode artifact && node scripts/check-no-dev-login.mjs dist-artifact",
+    "build:all": "npm run build && npm run build:preview && npm run build:artifact",
+    "config": "node scripts/write-config.mjs",
+    "build:app": "npm run build && node scripts/write-config.mjs"
   },
   "dependencies": {
     "@fontsource-variable/inter": "^5.1.0",
@@ -21,17 +26,18 @@
     "@radix-ui/react-switch": "^1.3.7",
     "@radix-ui/react-tabs": "^1.1.1",
     "@radix-ui/react-tooltip": "^1.1.3",
+    "@tanstack/query-sync-storage-persister": "^5.102.8",
     "@tanstack/react-query": "^5.59.16",
+    "@tanstack/react-query-persist-client": "^5.102.8",
     "date-fns": "^4.4.0",
     "firebase": "^12.18.0",
+    "idb-keyval": "^6.3.0",
     "lucide-react": "^1.34.0",
     "react": "^19.0.0",
     "react-dom": "^19.0.0",
-    "react-hook-form": "^7.86.0",
     "react-router": "^7.0.1",
     "recharts": "^3.10.1",
     "tailwind-merge": "^3.6.0",
-    "zod": "^4.4.3",
     "zustand": "^5.0.0"
   },
   "devDependencies": {
@@ -47,6 +53,8 @@
     "tailwindcss": "^4.0.0-beta.6",
     "typescript": "^5.6.3",
     "vite": "^6.0.1",
+    "vite-plugin-pwa": "^1.3.0",
+    "vite-plugin-singlefile": "^2.3.3",
     "vitest": "^2.1.2"
   }
 }

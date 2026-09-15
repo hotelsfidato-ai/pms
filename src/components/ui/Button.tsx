@@ -29,11 +29,23 @@ const VARIANTS: Record<ButtonVariant, string> = {
   link: "text-brand-orange hover:text-brand-orange-600 hover:underline underline-offset-4 p-0 h-auto",
 };
 
+/* `pointer-coarse:` and not `sm:`, because the thing that makes a
+   control hard to press is the FINGER, not the window width. A 32px
+   button is fine in a narrow desktop window and miss-prone on a phone,
+   and the browser already knows which one it is.
+
+   Found by measuring rather than by looking: every button on the
+   invoices screen came out at 32px on a 375px viewport — sixty of
+   them, all the primary action of the page. `min-height` beats
+   `height` in the cascade, so the row keeps its desktop density and
+   grows to 44px under a thumb. */
+const TOUCH = "pointer-coarse:min-h-11";
+
 const SIZES: Record<ButtonSize, string> = {
-  sm: "h-8 px-3 text-xs gap-1.5 rounded-sm",
-  md: "h-9 px-3.5 text-base gap-2 rounded-md",
+  sm: `h-8 px-3 text-xs gap-1.5 rounded-sm ${TOUCH}`,
+  md: `h-9 px-3.5 text-base gap-2 rounded-md ${TOUCH}`,
   lg: "h-11 px-5 text-md gap-2 rounded-md",
-  icon: "h-9 w-9 rounded-md",
+  icon: `h-9 w-9 rounded-md ${TOUCH} pointer-coarse:min-w-11`,
 };
 
 export interface ButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {
@@ -86,14 +98,23 @@ export const Button = forwardRef<HTMLButtonElement, ButtonProps>(function Button
       : child;
 
     return (
-      <Slot ref={ref} className={styles} {...props}>
+      <Slot ref={ref} className={styles} data-variant={variant} {...props}>
         {merged}
       </Slot>
     );
   }
 
   return (
-    <button ref={ref} disabled={disabled || loading} className={styles} {...props}>
+    <button
+      ref={ref}
+      disabled={disabled || loading}
+      className={styles}
+      /* What the button MEANS, readable by a test. "One primary action per
+         screen" (the clarity plan, step 2) was a rule nothing could check:
+         3 of 282 buttons had asked to be primary and nobody knew. */
+      data-variant={variant}
+      {...props}
+    >
       {leading}
       {children}
       {!loading && trailingIcon}

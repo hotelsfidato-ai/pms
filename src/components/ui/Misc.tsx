@@ -199,7 +199,10 @@ export function Segmented<T extends string>({
           type="button"
           onClick={() => onChange(opt.value)}
           className={cn(
-            "px-3 h-7 rounded-sm text-sm font-medium whitespace-nowrap",
+            /* 28px is a mouse target. Under a thumb it grows — see
+               Button's SIZES for why this keys off the pointer and
+               not the viewport width. */
+            "px-3 h-7 pointer-coarse:min-h-11 rounded-sm text-sm font-medium whitespace-nowrap",
             "transition-colors duration-150 ease-out",
             value === opt.value
               ? "bg-white text-ink-900 shadow-raise"

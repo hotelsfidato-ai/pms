@@ -1,0 +1,15 @@
+{
+  "projects": {
+    "default": "poms-fad05"
+  },
+  "targets": {
+    "poms-fad05": {
+      "hosting": {
+        "app": [
+          "poms-fad05"
+        ]
+      }
+    }
+  },
+  "etags": {}
+}

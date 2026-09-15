@@ -1,5 +1,5 @@
-import { readStays, readRooms, balanceOf } from "../store";
-import { EXTRA_ROOM_DATES, PROPERTY_ID } from "../fixtures/property";
+import { listAllRooms } from "./rooms";
+import { listStays, listOpenFolios } from "./stays";
 import type { Stay } from "./types";
 
 /* ══════════════════════════════════════════════════════════════════
@@ -10,10 +10,22 @@ import type { Stay } from "./types";
    asks for a window and gets back exactly what it draws.
    ══════════════════════════════════════════════════════════════════ */
 
-export const RACK: Record<string, number> = { Superior: 4099, Deluxe: 3699 };
+/* RACK used to live here — { Superior: 4099, Deluxe: 3699 } — and the
+   chart read `RACK[type] ?? 0` for its per-date rate. Two consequences,
+   both wrong: a property whose types are not called Superior or Deluxe
+   showed ₹0 across the whole chart, and any hotel that changed its
+   prices had a frontend constant quietly disagreeing with its own
+   database.
 
+   The rate now comes from the room type, through the rooms endpoint,
+   and is null when the hotel has not set one. */
+
+/* ⚠ "departed" WAS CALLED "tentative", and it only ever meant checked
+   out — see barTone below. The stay panel printed the name, so every
+   departed guest read "Tentative", which at a front desk means a booking
+   nobody has confirmed. Found 14 September, on the rebuilt panel. */
 export type BarTone =
-  | "in-house" | "confirmed" | "tentative" | "due-out" | "no-show" | "void";
+  | "in-house" | "confirmed" | "departed" | "due-out" | "no-show" | "void";
 
 export interface ChartBar {
   stay: Stay;
@@ -49,7 +61,7 @@ export interface ChartRoom {
 export interface ChartRoomType {
   type: string;
   rooms: ChartRoom[];
-  perDate: Array<{ date: string; available: number; rate: number }>;
+  perDate: Array<{ date: string; available: number; rate: number | null }>;
 }
 
 export interface ChartFooter {
@@ -101,7 +113,7 @@ function toneFor(stay: Stay, businessDate: string): BarTone {
     return stay.departure === businessDate ? "due-out" : "in-house";
   }
   if (stay.status === "due-out") return "due-out";
-  if (stay.status === "checked-out") return "tentative";
+  if (stay.status === "checked-out") return "departed";
   /* due-in: expected, possibly today, but nobody has arrived yet. */
   return "confirmed";
 }
@@ -121,21 +133,57 @@ export async function getStayView(
   businessDate: string,
   length = 14,
 ): Promise<StayViewData | null> {
-  if (hotelId !== PROPERTY_ID) return null;
+  if (!hotelId) return null;
 
   const dates = windowFrom(start, length);
   const first = dates[0]!;
   const last = dates[dates.length - 1]!;
 
-  const sellableOn = (roomNumber: string, date: string) => {
-    const room = readRooms().find((r) => r.number === roomNumber);
-    if (!room) return false;
-    return room.housekeeping !== "out-of-service" || EXTRA_ROOM_DATES.includes(date);
-  };
+  /* Fetched ONCE, then everything below is pure computation. Reaching
+     for the transport inside the per-room loop would have made this
+     eighteen requests, and eighteen chances for the chart to disagree
+     with itself halfway down. */
+  const [allRooms, allStays, openFolios] = await Promise.all([
+    listAllRooms(hotelId),
+    listStays(hotelId),
+    listOpenFolios(hotelId),
+  ]);
 
-  const rooms: ChartRoom[] = readRooms().map((room) => {
-    const bars: ChartBar[] = readStays()
-      .filter((s) => s.hotelId === hotelId && s.roomNumber === room.number)
+  if (allRooms.length === 0) return null;
+
+  /* A folio only appears in `openFolios` when it carries a balance,
+     so absent IS zero. Looking each one up separately would have been
+     eighty-three more requests to learn the same thing. */
+  const balances = new Map(openFolios.map((f) => [f.stayId, f.balance]));
+  const balanceOf = (stayId: string) => balances.get(stayId) ?? 0;
+
+    /* Whether a room could be SOLD on a date.
+
+       This asked `room.status !== "out-of-service" ||
+       EXTRA_ROOM_DATES.includes(date)` — a hardcoded list of six
+       August dates in a fixture file, because nothing in the schema
+       recorded why a room came back into inventory for a week.
+       Migration 022 records it, and every room now arrives carrying
+       its block ranges.
+
+       INCLUSIVE on both ends, matching app.sellable_rooms exactly:
+       `p_date >= b.from_date and (b.to_date is null or p_date <= b.to_date)`.
+       The first version of this predicate wrote `date < b.to` from
+       habit — half-open, like the daterange the booking constraints
+       use — and would have shifted the boundary by one day, making the
+       tape chart disagree with the occupancy denominator on two dates
+       out of every block. A block with no `to` is open-ended. */
+    const sellableOn = (roomNumber: string, date: string) => {
+      const room = allRooms.find((r) => r.number === roomNumber);
+      if (!room) return false;
+      return !room.blocks.some(
+        (b) => date >= b.from && (b.to === null || date <= b.to),
+      );
+    };
+
+  const rooms: ChartRoom[] = allRooms.map((room) => {
+    const bars: ChartBar[] = allStays
+      .filter((s) => s.roomNumber === room.number)
       .map((s) => {
         const { from, to } = occupiedDates(s);
         if (to < first || from > last) return null;
@@ -156,16 +204,16 @@ export async function getStayView(
       .filter((b): b is ChartBar => b !== null)
       .sort((a, b) => a.startIndex - b.startIndex);
 
-    const live = readStays().filter(
-      (s) => s.hotelId === hotelId && s.roomNumber === room.number && s.status !== "cancelled",
+    const live = allStays.filter(
+      (s) => s.roomNumber === room.number && s.status !== "cancelled",
     );
 
     return {
       number: room.number,
       type: room.type,
       floor: room.floor,
-      housekeeping: room.housekeeping,
-      outOfService: room.housekeeping === "out-of-service",
+      housekeeping: room.status,
+      outOfService: room.status === "out-of-service",
       bars,
       /* All four read STATUS where status is what changes. A room is
          occupied when someone has actually checked in, not merely
@@ -176,13 +224,18 @@ export async function getStayView(
         arriving: live.some((s) => s.status === "due-in" && s.arrival === businessDate),
         reserved: live.some((s) => s.status === "due-in" && s.arrival > businessDate),
         dueOut: live.some((s) => s.status === "due-out" || (s.status === "in-house" && s.departure === businessDate)),
-        dirty: room.housekeeping === "dirty",
+        dirty: room.status === "dirty",
       },
     };
   });
 
   /* Group by room type, in the order the property declares them. */
-  const types = [...new Set(readRooms().map((r) => r.type))];
+  const types = [...new Set(allRooms.map((r) => r.type))];
+
+  /* One rate per type, taken from the rooms themselves. Every room of a
+     type carries the same one, so the first is the answer. */
+  const rackFor = (type: string): number | null =>
+    allRooms.find((r) => r.type === type)?.rackRate ?? null;
   const roomTypes: ChartRoomType[] = types.map((type) => {
     const ofType = rooms.filter((r) => r.type === type);
     return {
@@ -198,9 +251,13 @@ export async function getStayView(
         return {
           date,
           available: sellable.length - taken.length,
-          /* Rack rate. A published rate calendar is Stage 9 — inventing
-             one here would be inventing pricing the property has not set. */
-          rate: RACK[type] ?? 0,
+          /* The type's own rack rate, or null. A published rate CALENDAR
+             — different rates on different dates — is still Stage 9;
+             this is the one rate the property has set, repeated across
+             the window, which is the truth until a calendar exists.
+
+             Null and not 0: the chart prints a dash. */
+          rate: rackFor(type),
         };
       }),
     };
@@ -247,12 +304,3 @@ export async function getStayViewCounts(
   const view = await getStayView(hotelId, date, date);
   return view?.counts ?? {};
 }
-
-/** Object surface, so either import convention resolves. */
-export const stayViewRepo = {
-  get: getStayView,
-  counts: getStayViewCounts,
-  addDays,
-  isWeekend,
-  windowFrom,
-};

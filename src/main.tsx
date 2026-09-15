@@ -6,6 +6,11 @@ import '@/lib/firebase'
 import { StrictMode } from 'react'
 import { createRoot } from 'react-dom/client'
 import App from './App'
+import { registerServiceWorker } from '@/lib/sw'
+
+/* After render, not before. Registration is a network call and the
+   first paint should not wait on it. */
+void registerServiceWorker()
 
 createRoot(document.getElementById('root')!).render(
   <StrictMode>

@@ -1,6 +1,6 @@
 import { create } from "zustand";
 import { persist } from "zustand/middleware";
-import type { Role } from "./permissions";
+import { selectProperty } from "@/data/repositories/businessDate";
 
 /* ══════════════════════════════════════════════════════════════════
    UI STATE
@@ -16,19 +16,27 @@ interface UiState {
   commandOpen: boolean;
   setCommandOpen: (open: boolean) => void;
   /**
-   * Which role the interface is being PREVIEWED as.
+   * The property in view, as a hotel CODE.
    *
-   * Stage 1 has no authentication (Rule 1), so this is not identity —
-   * it is a demo control that lets a reviewer see how the product
-   * changes for a front-desk clerk versus an owner. When real auth
-   * arrives it is replaced by the signed-in user's role, and every
-   * `useUi(s => s.role)` becomes `useSession(s => s.role)`.
+   * ⚠ Still not the same value as `useSession(s => s.hotelId)`, which
+   *   is the Postgres uuid. This one is what goes in a URL. They
+   *   converge when the session starts carrying the code as well —
+   *   the remaining half of CP9.
+   *
+   *   The demo `role` that used to live here is GONE. It was a preview
+   *   control, and a preview control beside a real session is how a
+   *   clerk previews themselves as an owner. Role now comes from
+   *   Postgres — `useRole()` in src/lib/session.ts.
    */
-  role: Role;
-  setRole: (role: Role) => void;
-  /** The property in view. One today; the switcher exists regardless. */
   hotelId: string;
   setHotelId: (id: string) => void;
+  /**
+   * Reports a person has starred. A preference, not data — it says
+   * nothing about the hotel, so it belongs here rather than behind
+   * the repository seam.
+   */
+  favouriteReports: string[];
+  toggleFavouriteReport: (path: string) => void;
 }
 
 export const useUi = create<UiState>()(
@@ -40,18 +48,32 @@ export const useUi = create<UiState>()(
       setMobileNavOpen: (open) => set({ mobileNavOpen: open }),
       commandOpen: false,
       setCommandOpen: (open) => set({ commandOpen: open }),
-      role: "front_desk",
-      setRole: (role) => set({ role }),
-      hotelId: "5-elements-akkalkot",
-      setHotelId: (hotelId) => set({ hotelId }),
+      /* The hotel CODE, as Postgres names it. Was the fixture's slug
+         until CP9 moved the properties repository onto HTTP. */
+      hotelId: "5EL",
+      setHotelId: (hotelId) => {
+        /* The business date follows the property. This is the path a
+           deep link takes — App.tsx calls it from a route effect — and
+           leaving it out is how /h/AGR/arrivals came to show Agra's
+           rooms under 5 Elements' date. */
+        selectProperty(hotelId);
+        set({ hotelId });
+      },
+      favouriteReports: [],
+      toggleFavouriteReport: (path) =>
+        set((s) => ({
+          favouriteReports: s.favouriteReports.includes(path)
+            ? s.favouriteReports.filter((p) => p !== path)
+            : [...s.favouriteReports, path],
+        })),
     }),
     {
       name: "fidato.ui",
       partialize: (state) =>
         ({
           sidebarCollapsed: state.sidebarCollapsed,
-          role: state.role,
           hotelId: state.hotelId,
+          favouriteReports: state.favouriteReports,
         }) as UiState,
     },
   ),

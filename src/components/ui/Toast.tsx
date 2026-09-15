@@ -17,21 +17,51 @@ export interface Toast {
   title: string;
   description?: string;
   duration: number;
+  /** When it was last raised. A repeat of the same message moves this
+      forward instead of adding a second card. */
+  shownAt: number;
 }
 
 interface ToastStore {
   toasts: Toast[];
-  push: (toast: Omit<Toast, "id" | "duration"> & { duration?: number }) => string;
+  push: (
+    toast: Omit<Toast, "id" | "duration" | "shownAt"> & { duration?: number },
+  ) => string;
   dismiss: (id: string) => void;
 }
 
 let counter = 0;
 
-export const useToastStore = create<ToastStore>((set) => ({
+export const useToastStore = create<ToastStore>((set, get) => ({
   toasts: [],
   push: ({ duration = 4500, ...toast }) => {
+    /* THE SAME MESSAGE TWICE IS NOT TWO PIECES OF NEWS.
+       A refusal that cannot be satisfied gets pressed again, and again,
+       and the screen fills with identical cards — the owner sent a
+       screenshot of five stacked "Could not check out". Stacking makes
+       a wall look like five walls, and it buries whatever else the
+       screen was trying to say underneath them.
+
+       An identical message still on screen is REFRESHED rather than
+       repeated: it moves back to the top of its timer, so pressing
+       again feels like the same answer rather than a new one. The id
+       is returned as if it were new, because to the caller it is. */
+    const key = `${toast.tone}|${toast.title}|${toast.description ?? ""}`;
+    const existing = get().toasts.find(
+      (t) => `${t.tone}|${t.title}|${t.description ?? ""}` === key);
+
+    if (existing) {
+      set((state) => ({
+        toasts: state.toasts.map((t) =>
+          t.id === existing.id ? { ...t, shownAt: Date.now() } : t),
+      }));
+      return existing.id;
+    }
+
     const id = `toast-${++counter}`;
-    set((state) => ({ toasts: [...state.toasts, { ...toast, id, duration }] }));
+    set((state) => ({
+      toasts: [...state.toasts, { ...toast, id, duration, shownAt: Date.now() }],
+    }));
     return id;
   },
   dismiss: (id) => set((state) => ({ toasts: state.toasts.filter((t) => t.id !== id) })),
@@ -76,10 +106,14 @@ function ToastItem({ toast: t }: { toast: Toast }) {
   const dismiss = useToastStore((s) => s.dismiss);
   const { icon: Icon, className } = TONE_STYLES[t.tone];
 
+  /* `shownAt` is in the dependencies deliberately. A repeated message
+     refreshes it rather than adding a second card, and this is what
+     makes the timer restart — without it the toast would vanish on the
+     first press's clock while the reader was still reading it. */
   useEffect(() => {
     const timer = setTimeout(() => dismiss(t.id), t.duration);
     return () => clearTimeout(timer);
-  }, [t.id, t.duration, dismiss]);
+  }, [t.id, t.duration, t.shownAt, dismiss]);
 
   return (
     <div

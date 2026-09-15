@@ -19,17 +19,25 @@
 export * from "./types";
 export * from "./properties";
 export * from "./rooms";
-export * from "./reservations";
 export * from "./folios";
-export * from "./housekeeping";
-export * from "./reports";
-export * from "./settings";
 export * from "./stays";
 export * from "./statistics";
+export * from "./managerReport";
+export * from "./reportData";
 export * from "./stayview";
 export * from "./operations";
 export * from "./notifications";
 export * from "./admin";
+export * from "./directory";
+export * from "./billing";
+export * from "./groups";
+export * from "./rates";
+export * from "./till";
+export * from "./banquet";
+export * from "./roomSetup";
+export * from "./bookingSources";
+export * from "./stores";
+export * from "./stayExtras";
 
 
 /* ── Query keys ────────────────────────────────────────────────────
@@ -58,6 +66,12 @@ export const queryKeys = {
   folioBalance: (hotelId: string, stayId: string) =>
     ["folio-balance", hotelId, stayId] as const,
   openFolios: (hotelId: string) => ["open-folios", hotelId] as const,
+
+  banquetDiary: (hotelId: string, from: string, to: string) =>
+    ["banquet-diary", hotelId, from, to] as const,
+  banquetEvent: (hotelId: string, id: string) =>
+    ["banquet-event", hotelId, id] as const,
+  banquetSetup: (hotelId: string) => ["banquet-setup", hotelId] as const,
 
   groups: (hotelId: string) => ["groups", hotelId] as const,
   groupMembers: (hotelId: string, groupId: string) =>

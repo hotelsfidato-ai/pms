@@ -1,8 +1,13 @@
 import { describe, it, expect, beforeEach } from "vitest";
-import { render, screen, within } from "@testing-library/react";
+import { readFileSync } from "node:fs";
+import { join } from "node:path";
+import {
+  render, screen, within, fireEvent, waitFor,
+} from "@testing-library/react";
 import App from "./App";
 import { useUi } from "@/lib/ui";
-import { navigationFor, flatNavigationFor } from "@/components/app/navigation";
+import { useSession } from "@/lib/session";
+import { navigationFor, flatNavigationFor, navItemFor } from "@/components/app/navigation";
 
 /* ══════════════════════════════════════════════════════════════════
    Routing per PHASE-1-FRONTEND §1.2:
@@ -11,45 +16,124 @@ import { navigationFor, flatNavigationFor } from "@/components/app/navigation";
    The property is in the URL, not only in a store.
    ══════════════════════════════════════════════════════════════════ */
 
-const HOTEL = "5-elements-akkalkot";
+/* CP9: the id a screen puts in a URL is the hotel CODE, because that is
+   what Postgres calls it — `hotels.code`, commented "appears in URLs" in
+   migration 002. It used to be the fixture's slug. Screens did not change;
+   they take whatever the repository hands them. */
+const HOTEL = "5EL";
 const go = (path: string) => window.history.pushState({}, "", path);
+
+/* CP8 put a session in front of the shell. These tests are about
+   routing, not sign-in, so they seed a signed-in clerk directly. The
+   guard itself is asserted in its own block below. */
+const AGRA_HOTEL = "11111111-1111-1111-1111-111111111111";
+
+const signedIn = (overrides: Partial<ReturnType<typeof useSession.getState>> = {}) =>
+  useSession.setState({
+    status: "signed-in",
+    scope: {
+      staffId: "22222222-2222-2222-2222-222222222222",
+      email: "agra@fidato.in",
+      fullName: "Agra Clerk",
+      isGroupAdmin: false,
+      hotels: [{ hotelId: AGRA_HOTEL, role: "front_desk" }],
+    },
+    hotels: [
+      {
+        id: AGRA_HOTEL, code: "AGR", name: "Fidato Agra", city: "Agra",
+        state: "UP", gstin: null, timezone: "Asia/Kolkata", currency: "INR",
+        checkInTime: "14:00", checkOutTime: "11:00",
+        /* A DIFFERENT date from the demo property's 25 August, on
+           purpose: this is Agra, and two properties do not share an
+           operating day. */
+        businessDate: "2026-08-24",
+      },
+    ],
+    hotelId: AGRA_HOTEL,
+    ...overrides,
+  });
 
 beforeEach(() => {
   go("/");
-  useUi.setState({ role: "front_desk", hotelId: HOTEL, sidebarCollapsed: false });
+  useUi.setState({ hotelId: HOTEL, sidebarCollapsed: false });
+  signedIn();
 });
 
-describe("group dashboard at /", () => {
-  it("lists properties, not a clerk's working day", async () => {
+/* "Group" became the Dashboard on 14 September, the owner's call: the
+   numbers a hotel lives by, and quick reports. The table of every hotel
+   is still there — below the tiles, for somebody who reads more than
+   one; this fixture has one, so the tiles are what these assert. */
+describe("the dashboard at /", () => {
+  it("is called Dashboard and leads with the hotel's own numbers", async () => {
     render(<App />);
-    expect(await screen.findByRole("heading", { name: /fidato hotels/i })).toBeDefined();
+    expect(await screen.findByRole("heading", { name: "Dashboard" })).toBeDefined();
+    expect(await screen.findByText("Occupancy")).toBeDefined();
+    expect(await screen.findByText("Room revenue")).toBeDefined();
   });
 
-  it("links each property into its own tape chart", async () => {
+  it("opens the list behind each count in the house", async () => {
+    /* A count a clerk cannot follow is a number to read and nothing to
+       do — each tile in "The house now" is the door to its list. */
     render(<App />);
-    const link = await screen.findByRole("link", { name: /5 Elements/i });
-    expect(link.getAttribute("href")).toBe(`/h/${HOTEL}/stay`);
+    /* Inside the page, not the sidebar — the menu has an Arrivals link
+       of its own. And for THE PROPERTY IN VIEW: the first version of
+       the page settled on the first hotel in the list, and this found
+       a tile pointing at AGR under a sidebar on 5EL. */
+    const main = await screen.findByRole("main");
+    const arrivals = await within(main).findByRole("link", { name: /Arrivals/ });
+    expect(arrivals.getAttribute("href")).toBe(`/h/${HOTEL}/arrivals`);
   });
 });
 
 describe("the tape chart at /h/:code/stay", () => {
-  beforeEach(() => go(`/h/${HOTEL}/stay`));
+  beforeEach(() => {
+    go(`/h/${HOTEL}/stay`);
+    /* The view is the ADDRESS since 14 September — /stay is Rooms,
+       /calendar is the chart — and no longer a choice kept in
+       localStorage. Cleared anyway: jsdom shares it between tests in a
+       file, and nothing here should depend on what the last one left. */
+    try { localStorage.clear(); } catch { /* not fatal */ }
+  });
+
+  /* ⚠ THE CHART IS NO LONGER THE DEFAULT VIEW. Rooms is, since the owner
+     asked for it on 8 September: a manager signing in wants the house as
+     it stands, not a fortnight of planning.
+
+     So a test about the chart has to ASK for the chart. Four of these
+     used to pass by accident of the default, which meant they were also
+     silently asserting what the screen opens on — a thing none of them
+     was named after. That assertion now lives in one place, below. */
+  const showCalendar = async () => {
+    fireEvent.click(await screen.findByRole("tab", { name: "Calendar" }));
+    await screen.findAllByText(/Superior|Deluxe/i);
+  };
+
+  it("opens on Rooms, not the chart", async () => {
+    const { container } = render(<App />);
+    await screen.findAllByText(/Superior|Deluxe/i);
+    /* No date columns means no chart, which is the whole assertion. */
+    expect(container.querySelectorAll("[data-date-col]")).toHaveLength(0);
+    expect(
+      (await screen.findByRole("tab", { name: "Rooms" }))
+        .getAttribute("aria-selected"),
+    ).toBe("true");
+  });
 
   it("renders fourteen date columns", async () => {
     const { container } = render(<App />);
-    await screen.findAllByText(/Superior|Deluxe/i);
+    await showCalendar();
     expect(container.querySelectorAll("[data-date-col]")).toHaveLength(14);
   });
 
   it("renders the seventeen sellable rooms, not the eighteen physical ones", async () => {
     const { container } = render(<App />);
-    await screen.findAllByText(/Superior|Deluxe/i);
+    await showCalendar();
     expect(container.querySelectorAll("[data-room-row]")).toHaveLength(17);
   });
 
   it("draws booking bars from the demo data", async () => {
     const { container } = render(<App />);
-    await screen.findAllByText(/Superior|Deluxe/i);
+    await showCalendar();
     expect(container.querySelectorAll("[data-booking-bar]").length).toBeGreaterThan(0);
   });
 
@@ -66,13 +150,130 @@ describe("the tape chart at /h/:code/stay", () => {
     ]);
   });
 
+  it("names the pills in the legend's own words", async () => {
+    /* The pills said Vacant / Occupied / Dirty / Blocked above a legend
+       saying Free / In house / Needs cleaning / Out of service — the same
+       rooms in two languages (clarity plan, 15 September). The keys above
+       stay; this is what a person reads. "Empty", not "Free": it counts
+       every room without a guest, including the ones still to clean. */
+    const { container } = render(<App />);
+    await screen.findAllByText(/Superior|Deluxe/i);
+    const words = [...container.querySelectorAll("[data-filter-pill]")].map((p) =>
+      p.firstChild?.textContent,
+    );
+    expect(words).toEqual([
+      "All", "Empty", "In house", "Arriving", "Reserved", "Out of service", "Due out", "Needs cleaning",
+    ]);
+  });
+
+  it("shows one main action on each tab of the stay panel", async () => {
+    /* One orange button, and it is the next step (clarity plan, step 2).
+       stay-turn-out is due out with ₹5,715.15 owed: on Stay the act is
+       "Settle and check out"; on Bill it is Settle, while Check out waits,
+       blocked and NOT orange — two primaries would say neither. */
+    go(`/h/${HOTEL}/stay?res=stay-turn-out`);
+    render(<App />);
+    const panel = await screen.findByRole("dialog");
+    const primaries = () => [...panel.querySelectorAll('[data-variant="primary"]')];
+
+    await within(panel).findByText("Settle and check out");
+    expect(primaries().map((b) => b.textContent?.trim())).toEqual(["Settle and check out"]);
+
+    fireEvent.mouseDown(within(panel).getByRole("tab", { name: "Bill" }), { button: 0 });
+    await waitFor(() =>
+      expect(primaries().map((b) => b.textContent?.trim())).toEqual(["Settle"]),
+    );
+  });
+
   it("opens the detail panel from a deep link, with the chart still behind it", async () => {
     go(`/h/${HOTEL}/stay?res=stay-overpaid`);
     const { container } = render(<App />);
     const panel = await screen.findByRole("dialog");
     expect(within(panel).getByText("Kalyani Rege")).toBeDefined();
-    /* The clerk must not lose their place. */
-    expect(container.querySelectorAll("[data-room-row]").length).toBe(17);
+    /* The clerk must not lose their place — the screen is still THERE,
+       behind the panel.
+
+       Asserted on the ROOMS view, because that is what a deep link now
+       opens behind. The chart cannot be reached from here at all: an
+       open dialog marks the rest of the document `aria-hidden`, so
+       clicking its tab finds nothing. `data-room-tile` is the floor's
+       row marker; `data-room-row` belongs to the chart. */
+    expect(container.querySelectorAll("[data-room-tile]").length).toBe(17);
+  });
+
+  it("shows the house as tiles, and no tile contradicts itself", async () => {
+    go(`/h/${HOTEL}/stay`);
+    render(<App />);
+    await screen.findAllByText("Superior");
+
+    /* `role="tab"` — Segmented is a tablist, not a row of buttons. */
+    fireEvent.click(screen.getByRole("tab", { name: "Rooms" }));
+
+    /* ⚠ THE BUG THIS HOLDS SHUT. The tile's guest was read from the
+       chart's BARS and its label from `room.state`, and the two answer
+       different questions: a checked-out stay still covers today — its
+       arrival is behind us and its departure is this morning — so tiles
+       read "FREE" with a guest's name printed underneath. A screen
+       contradicting itself in the space of two lines.
+
+       Asserted as an invariant rather than against a fixture room,
+       because the next way to break it will not be the same way. */
+    /* `data-room-tile`, not "a button whose first span is a number" —
+       that also matched every filter pill above the grid. */
+    await waitFor(() => {
+      expect(document.querySelectorAll("[data-room-tile]").length)
+        .toBeGreaterThan(0);
+    });
+
+    /* AND WAIT FOR THE NAMES. Who is in each room is a second query,
+       enabled only in this view, so the tiles render before it lands.
+       The first version asserted immediately, found no guest on any
+       tile, and therefore passed with the bug reintroduced — which is
+       the exact failure it exists to prevent.
+
+       Verified the other way round: with the old `arrival <= today <=
+       departure` rule put back, this fails. */
+    await waitFor(() => {
+      expect(document.querySelectorAll("[data-tile-guest]").length)
+        .toBeGreaterThan(0);
+    });
+
+    const tiles = [...document.querySelectorAll("[data-room-tile]")];
+    const free = tiles.filter((t) => (t.textContent ?? "").includes("Free"));
+    expect(free.length, "no free rooms in the fixture to check").toBeGreaterThan(0);
+
+    for (const tile of free) {
+      expect(
+        tile.querySelector("[data-tile-guest]"),
+        `a tile said Free and named a guest: ${tile.textContent}`,
+      ).toBeNull();
+    }
+  });
+
+  it("names the group a stay belongs to, rather than saying 'Group'", async () => {
+    /* This pill read "Group" and nothing else — true, useless, and a
+       dead end. A clerk holding a phone wants to know WHICH group and
+       how many rooms are in it. The relationship was on the query all
+       along and thrown away at the last step. */
+    go(`/h/${HOTEL}/stay?res=stay-grp-1`);
+    render(<App />);
+    const panel = await screen.findByRole("dialog");
+
+    /* The BUTTON, not any text — the stay's own note happens to mention
+       the same function, and matching on text alone would pass on the
+       note while the pill was missing. */
+    const pill = within(panel).getByRole("button", {
+      name: /Pancham Hall function/,
+    });
+    expect(pill.textContent).toMatch(/one of 3 rooms/);
+
+    /* And it OPENS the group's rooms beside the stay rather than
+       navigating away. "Who else is in this booking" is asked while
+       looking at one, and answering it by leaving makes somebody find
+       their way back. */
+    fireEvent.click(pill);
+    const rooms = await screen.findByText(/Group reservation list/i);
+    expect(rooms).toBeDefined();
   });
 });
 
@@ -95,9 +296,586 @@ describe("navigation is driven by the permission matrix", () => {
   });
 
   it("leads every role to the tape chart", () => {
-    for (const role of ["owner", "manager", "front_desk", "housekeeping", "finance"] as const) {
+    for (const role of ["owner", "gm", "front_desk", "housekeeping", "finance"] as const) {
       const paths = navigationFor(role, HOTEL).flatMap((s) => s.items.map((i) => i.to));
       expect(paths, `${role} cannot reach the tape chart`).toContain(`/h/${HOTEL}/stay`);
     }
+  });
+});
+
+
+describe("the session guard", () => {
+  it("sends a signed-out visitor to sign in, without flashing the shell", async () => {
+    useSession.setState({ status: "signed-out", scope: null, hotels: [], hotelId: null });
+    go("/h/" + HOTEL + "/stay");
+
+    render(<App />);
+
+    /* The sign-in screen, and no trace of the application shell. Found by
+       its own heading, "Sign in" — since 15 September the page's one h1.
+       "Property management" is the brand panel's tagline now, and that
+       panel is not shown on a phone at all. */
+    expect(
+      await screen.findByRole("heading", { level: 1, name: /^sign in$/i }),
+    ).toBeDefined();
+    expect(screen.queryByRole("navigation")).toBeNull();
+  });
+
+  it("shows the signed-in person and their role, not a role picker", async () => {
+    render(<App />);
+
+    /* The CP1 role switcher offered every role. Its replacement states
+       one and offers none — a preview control beside a real session is
+       how a clerk previews themselves as an owner. */
+    const account = await screen.findByRole("button", { name: /agra clerk/i });
+    /* "Reception", not "front_desk" and not "Front Desk". 078 made the
+       stored value an identifier and the LABEL the word an Indian hotel
+       actually uses — this asserts a clerk reads their own job title
+       rather than a column value. */
+    expect(account.getAttribute("aria-label")).toContain("Reception");
+    expect(screen.queryByRole("button", { name: /viewing as/i })).toBeNull();
+  });
+});
+
+/* ══════════════════════════════════════════════════════════════════
+   ROUTES A ROLE MAY NOT REACH
+
+   There was no route guard. The sidebar filtered what it SHOWED —
+   `canSee(role)` on every nav item — and nothing stopped a front-desk
+   clerk typing /admin/users into the address bar. They got the page.
+
+   Row Level Security saved the data: the clerk saw one staff row,
+   their own. So the leak was the page SHELL rather than the roster,
+   which is defence in depth working — and is not a reason to hand a
+   clerk the door.
+
+   NAVIGATION HIDING IS NOT ACCESS CONTROL.
+   ══════════════════════════════════════════════════════════════════ */
+
+/* ══════════════════════════════════════════════════════════════════
+   ⚠ THE GUARD FAILS OPEN, SO SOMETHING HAS TO WATCH IT
+
+   `RequireAccess` asks the NAVIGATION whether a role may reach a path.
+   That is deliberate and right — a hidden menu entry and a refused page
+   cannot then disagree — but `mayReach` ends:
+
+       return true;
+
+   for a path the navigation does not contain. So a route wrapped in
+   `RequireAccess` whose menu entry is deleted, renamed or never written
+   is open to every signed-in role, and it LOOKS guarded.
+
+   That happened on 9 September. Two menu entries both read "Properties"
+   after the screens were merged; removing one to fix the duplicate
+   silently opened `/admin/properties` to a front-desk clerk. The
+   existing test caught it, and only because that particular path was
+   already in a list somebody had written by hand.
+
+   This asserts the property itself rather than one path: every guarded
+   route is a route the navigation knows about.
+   ══════════════════════════════════════════════════════════════════ */
+describe("every guarded route is one the navigation knows", () => {
+  it("has no RequireAccess path that mayReach would wave through", () => {
+    const app = readFileSync(join(process.cwd(), "src", "App.tsx"), "utf8");
+    const nav = readFileSync(
+      join(process.cwd(), "src", "components", "app", "navigation.ts"), "utf8");
+
+    const guarded = [...app.matchAll(/<RequireAccess\s+path="([^"]+)"/g)]
+      .map((m) => m[1]!);
+    const known = new Set(
+      [...nav.matchAll(/to:\s*"([^"]+)"/g)].map((m) => m[1]!));
+
+    expect(guarded.length, "no guarded routes found — the regex has rotted")
+      .toBeGreaterThan(0);
+
+    const wideOpen = guarded.filter((path) => !known.has(path));
+    expect(
+      wideOpen,
+      "these are wrapped in RequireAccess and the navigation has never "
+      + "heard of them, so mayReach returns true and every role gets in: "
+      + wideOpen.join(", "),
+    ).toEqual([]);
+  });
+});
+
+describe("administration routes", () => {
+  /* ⚠ `/admin/properties` IS NOT HERE ANY MORE, and its absence is the
+     point rather than an omission. The two Properties screens were
+     merged, so that path is now a redirect to `/properties` — a screen
+     every role may read, which answers for its own access by showing a
+     clerk the ordinary cards and an administrator the editable ones.
+     Asserted below rather than dropped. */
+  const ADMIN_ROUTES = [
+    "/admin/users",
+    "/admin/roles",
+    "/admin/audit-log",
+    "/admin/integrations",
+    "/admin/settings",
+  ];
+
+  for (const path of ADMIN_ROUTES) {
+    it(`refuses ${path} to a front-desk clerk`, async () => {
+      go(path);
+      signedIn();                       // the default identity is a clerk
+      render(<App />);
+
+      expect(
+        await screen.findByRole("heading", {
+          name: /not part of your role/i,
+        }),
+        `${path} rendered for a front-desk clerk`,
+      ).toBeDefined();
+    });
+  }
+
+  it("sends /admin/properties to the one Properties screen", async () => {
+    go("/admin/properties");
+    signedIn();
+    render(<App />);
+    /* The refusal must NOT appear — a clerk is allowed to read the
+       property list — and the screen must actually arrive. "No refusal"
+       alone would also be true of a blank page. */
+    expect(
+      await screen.findByRole("heading", { name: /^Properties$/ }),
+      "the redirect did not land on the Properties screen",
+    ).toBeDefined();
+  });
+
+  it("lets a group administrator through", async () => {
+    go("/admin/users");
+    signedIn({
+      scope: {
+        staffId: "11111111-1111-1111-1111-111111111111",
+        email: "owner@fidato.in",
+        fullName: "Group Owner",
+        isGroupAdmin: true,
+        hotels: [],
+      },
+    });
+    render(<App />);
+
+    /* The refusal must NOT appear. Asserting the page's own heading as
+       well, because "the refusal is absent" would also be true of a
+       blank screen. */
+    expect(await screen.findByRole("heading", { name: /users/i })).toBeDefined();
+    expect(screen.queryByRole("heading", { name: /not part of your role/i }))
+      .toBeNull();
+  });
+});
+
+
+/* ══════════════════════════════════════════════════════════════════
+   THE TILL, IN THE NAVIGATION
+
+   Phase 2 added three routes and no frontend test — the whole till was
+   covered by 12 API tests and one pass through a browser by hand. The
+   API tests prove the money; these prove that the right people can
+   reach the screen and the wrong ones cannot, which is the half a
+   route guard exists for.
+   ══════════════════════════════════════════════════════════════════ */
+
+describe("the till in the navigation", () => {
+  it("is reachable by the people who take money", () => {
+    for (const role of ["owner", "gm", "front_desk", "finance"] as const) {
+      const paths = flatNavigationFor(role, HOTEL).map((i) => i.to);
+      expect(paths, `${role} cannot reach the till`)
+        .toContain(`/h/${HOTEL}/till`);
+    }
+  });
+
+  it("is not offered to housekeeping", () => {
+    /* A housekeeper has no business opening a restaurant bill, and
+       `payment` is the permission that says so. If this ever passes by
+       accident it means the till was hung off a resource housekeeping
+       holds. */
+    const paths = flatNavigationFor("housekeeping", HOTEL).map((i) => i.to);
+    expect(paths).not.toContain(`/h/${HOTEL}/till`);
+    expect(paths).not.toContain(`/h/${HOTEL}/menu`);
+  });
+
+  it("keeps the menu behind the same permission as rates", () => {
+    /* Setting what a dish costs is the same kind of act as setting what
+       a room costs, so it sits behind `rate`. Front desk can read rates
+       and must not be able to reprice the menu — this asserts the two
+       screens agree about who may. */
+    const desk = flatNavigationFor("front_desk", HOTEL).map((i) => i.to);
+    const owner = flatNavigationFor("owner", HOTEL).map((i) => i.to);
+
+    expect(owner).toContain(`/h/${HOTEL}/menu`);
+    expect(
+      desk.includes(`/h/${HOTEL}/menu`),
+      "the menu and the rate screen disagree about who may set a price",
+    ).toBe(desk.includes(`/h/${HOTEL}/rates`));
+  });
+
+  it("does not resolve :code in either till path", () => {
+    const paths = flatNavigationFor("owner", HOTEL)
+      .map((i) => i.to)
+      .filter((p) => p.includes("/till") || p.includes("/menu"));
+    expect(paths.length).toBeGreaterThan(0);
+    expect(paths.every((p) => !p.includes(":code"))).toBe(true);
+  });
+});
+
+
+/* ══════════════════════════════════════════════════════════════════
+   THE ADMIN CONSOLE IS DEVELOPMENT ONLY
+
+   It is the one screen that manufactures a tenant — a property, its
+   invoice series, its folio namespace — and creates the people who can
+   reach it. Until the group says otherwise it stays out of production
+   builds entirely.
+
+   Gated in three places, and the third is the one that actually holds:
+
+     the navigation   devOnly, filtered by import.meta.env.DEV
+     the route        wrapped in `IS_DEV && (...)` in App.tsx
+     the bundle       the component is tree-shaken out of a prod build
+
+   The first two are checked here. The third was checked by building and
+   grepping: "Provisioning key" appears nowhere in dist/assets.
+   ══════════════════════════════════════════════════════════════════ */
+
+describe("the admin console", () => {
+  it("is offered to somebody who may create a property", () => {
+    /* Vitest runs with import.meta.env.DEV true, which is the same
+       condition the dev build uses — so this asserts the visible case. */
+    const paths = flatNavigationFor("owner", HOTEL).map((i) => i.to);
+    expect(paths).toContain("/admin/console");
+  });
+
+  it("is not offered to anyone who may not", () => {
+    for (const role of ["front_desk", "housekeeping", "finance", "gm"] as const) {
+      const paths = flatNavigationFor(role, HOTEL).map((i) => i.to);
+      expect(paths, `${role} is offered the admin console`)
+        .not.toContain("/admin/console");
+    }
+  });
+
+  it("carries devOnly, which is what keeps it out of production", () => {
+    /* Asserted on the DECLARATION rather than on the filtered output,
+       because the filter's other input — import.meta.env.DEV — cannot be
+       false inside this runner. If somebody drops the flag, the nav test
+       above still passes and only this one notices. */
+    const item = navItemFor("/admin/console");
+
+    expect(item, "the admin console is not in the navigation at all")
+      .toBeTruthy();
+    expect(
+      item!.devOnly,
+      "the admin console lost devOnly — it would ship to production, " +
+        "where it can create properties and administrators",
+    ).toBe(true);
+  });
+});
+
+
+/* ══════════════════════════════════════════════════════════════════
+   POINT OF SALE IS ITS OWN CATEGORY
+
+   Till, Terminal, Menu and Bridge lived under Finance, on the reasoning
+   that a POS argument is about money on a folio. That held while the
+   only POS screen was a read-only view of what an outside till sent.
+
+   It stopped holding when the till itself was built: taking an order
+   and pricing a menu are a restaurant's work, and a waiter was being
+   made to scroll past folios and the city ledger to reach the till.
+   ══════════════════════════════════════════════════════════════════ */
+
+describe("point of sale as a category", () => {
+  it("is a section of its own, not a corner of Finance", () => {
+    const sections = navigationFor("owner", HOTEL);
+    const pos = sections.find((s) => s.label === "Point of sale");
+    expect(pos, "there is no Point of sale section").toBeTruthy();
+
+    const finance = sections.find((s) => s.label === "Finance");
+    const financePaths = (finance?.items ?? []).map((i) => i.to);
+    expect(
+      financePaths.some((p) => p.includes("/till")),
+      "the till is still buried under Finance",
+    ).toBe(false);
+  });
+
+  it("carries the till, the terminal, the menu and the bridge", () => {
+    const paths = flatNavigationFor("owner", HOTEL).map((i) => i.to);
+    for (const p of ["till", "till/terminal", "menu", "pos"]) {
+      expect(paths, `the POS section is missing ${p}`)
+        .toContain(`/h/${HOTEL}/${p}`);
+    }
+  });
+
+  it("keeps the terminal behind the same permission as the till", () => {
+    /* A terminal that a role could reach but not use would be a screen
+       that refuses everything it offers. */
+    const till = navItemFor("/h/:code/till");
+    const terminal = navItemFor("/h/:code/till/terminal");
+    expect(till, "no till entry").toBeTruthy();
+    expect(terminal, "no terminal entry").toBeTruthy();
+    expect(terminal!.resource).toBe(till!.resource);
+  });
+
+  it("does not offer the terminal to housekeeping", () => {
+    const paths = flatNavigationFor("housekeeping", HOTEL).map((i) => i.to);
+    expect(paths).not.toContain(`/h/${HOTEL}/till/terminal`);
+  });
+});
+
+
+/* ══════════════════════════════════════════════════════════════════
+   THE TYPE SCALE HAS A FLOOR
+
+   A sweep of eight screens counted text rendering below 12px: 74 nodes
+   on the tape chart, 78 on invoices, 84 on the admin console. All of it
+   `--text-2xs` at 0.6875rem — eleven pixels — used 189 times for the
+   metadata a clerk reads all day.
+
+   The scale was also not a scale at the bottom: 11, 12, 13, 14, 15 are
+   five names for what an eye reads as one size.
+
+   This asserts the FLOOR rather than the rendering, because jsdom has
+   no layout and cannot measure a pixel. The rendered result was checked
+   in a browser: zero sub-12px nodes across eight screens, at both
+   desktop and 375px, with the tape chart still at 44px columns.
+   ══════════════════════════════════════════════════════════════════ */
+
+describe("the type scale", () => {
+  /* From the project root, not `import.meta.url` — under vitest that is
+     not a file: URL and readFileSync refuses it. */
+  const theme = readFileSync("src/styles/theme.css", "utf8");
+
+  const size = (name: string): number => {
+    /* No regex and no split on a newline literal. Both need a backslash
+       escape, and a backslash does not survive being written through a
+       shell heredoc — the first attempt produced a pattern matching
+       nothing and the second a broken string literal. indexOf needs
+       neither. */
+    const key = `--text-${name}:`;
+    const at = theme.indexOf(key);
+    if (at === -1) throw new Error(`${key} is not in theme.css`);
+    const rest = theme.slice(at + key.length);
+    const rem = Number(rest.slice(0, rest.indexOf("rem")).trim());
+    return rem * 16;
+  };
+
+  it("has no size below 12px", () => {
+    for (const name of ["2xs", "xs", "sm", "base", "md", "lg"]) {
+      expect(
+        size(name),
+        `--text-${name} is ${size(name)}px — below the 12px floor`,
+      ).toBeGreaterThanOrEqual(12);
+    }
+  });
+
+  it("sets body text at 15px or more", () => {
+    /* `text-base` is used 163 times and is what a folio, a rate and a
+       guest name are set in. 14px was under the guideline for anything
+       read on a phone in a corridor. */
+    expect(size("base")).toBeGreaterThanOrEqual(15);
+  });
+
+  it("keeps every step distinguishable", () => {
+    /* Steps a single pixel apart are not a scale — they are a gradient
+       nobody can use deliberately. */
+    const names = ["2xs", "xs", "sm", "base", "md", "lg"];
+    for (let i = 1; i < names.length; i++) {
+      const step = size(names[i]!) - size(names[i - 1]!);
+      expect(
+        step,
+        `${names[i - 1]} → ${names[i]} is ${step}px apart`,
+      ).toBeGreaterThan(0);
+    }
+  });
+});
+
+/* ══════════════════════════════════════════════════════════════════
+   THE MODULE SWITCHES
+
+   ⚠ THIS GUARD EXISTS BECAUSE A SWITCH LIED FOR EIGHT DAYS.
+
+   `Admin.tsx` carried `disabled={busy === module || module ===
+   "banquet"}` alongside a note reading "Not built yet". Stage 14 then
+   built banquet — three screens, four tables and an API — and nobody
+   came back for the switch. The owner found it by trying to turn
+   banquet on and watching nothing happen.
+
+   A disabled control with stale copy is worse than a missing one: it
+   looks like an answer. So the assertion is not "banquet works", which
+   would rot the same way. It is: EVERY MODULE THE API ACCEPTS HAS A
+   SWITCH SOMEBODY CAN PRESS. Add a third module and this fails until
+   its switch is real.
+
+   `setup.ts` must stub /modules or this passes vacuously — no switches
+   render, and "none is disabled" is trivially true of none. That trap
+   is why the count is asserted first.
+   ══════════════════════════════════════════════════════════════════ */
+describe("the module switches", () => {
+  /* The API's own whitelist, in `property.ts`. If a module is added
+     there it must appear here, and then on the screen. */
+  const MODULES_THE_API_ACCEPTS = ["pos", "banquet"];
+
+  beforeEach(() => {
+    signedIn({
+      scope: {
+        staffId: "22222222-2222-2222-2222-222222222222",
+        email: "owner@fidato.in",
+        fullName: "Group Owner",
+        isGroupAdmin: true,
+        hotels: [{ hotelId: AGRA_HOTEL, role: "owner" }],
+      },
+    });
+    go("/admin/settings");
+  });
+
+  it("gives every module a switch a person can actually press", async () => {
+    render(<App />);
+    const switches = await screen.findAllByRole("switch");
+
+    /* THE COUNT FIRST, deliberately. Zero switches would satisfy every
+       assertion below and prove nothing at all. */
+    expect(
+      switches.length,
+      "no module switches rendered — the guard below would be vacuous",
+    ).toBeGreaterThanOrEqual(MODULES_THE_API_ACCEPTS.length);
+
+    for (const control of switches) {
+      expect(
+        control.hasAttribute("disabled"),
+        `a module switch is disabled: ${control.getAttribute("aria-label")
+          ?? control.textContent ?? "unnamed"}`,
+      ).toBe(false);
+    }
+  });
+
+  it("names banquet as built, not as missing", async () => {
+    render(<App />);
+    await screen.findAllByRole("switch");
+    /* The copy that went stale. Asserted because the switch and the
+       sentence beside it drifted apart, and only one of them was
+       visible in a diff. */
+    expect(screen.queryByText(/not built yet/i)).toBeNull();
+  });
+});
+
+describe("find a screen", () => {
+  /* The top bar said "Search or jump to…" and opened nothing until 15
+     September. It matters now: the owner took screens OFF people's menus
+     on the condition that nothing is lost — a search away. This is that
+     condition, end to end, for a receptionist. */
+  it("reaches a screen that is not in the menu, by its name", async () => {
+    render(<App />);
+    await screen.findByRole("heading", { level: 1, name: "Dashboard" });
+    /* Rate plans: a screen a receptionist may read, linked from nowhere on
+       this page — the Dashboard's quick reports already link Lodging tax,
+       which is how the first version of this test found a link that was
+       never the sidebar's. */
+    expect(screen.queryByRole("link", { name: "Rate plans" })).toBeNull();
+
+    fireEvent.keyDown(window, { key: "k", ctrlKey: true });
+    const box = await screen.findByRole("combobox", { name: "Find a screen" });
+    fireEvent.change(box, { target: { value: "rate plans" } });
+    fireEvent.keyDown(box, { key: "Enter" });
+
+    await waitFor(() => expect(window.location.pathname).toBe(`/h/${HOTEL}/rate-plans`));
+  });
+
+  it("understands the words the glossary retired", async () => {
+    /* "Folio" left the desk's screens; a clerk who still says it must
+       still get somewhere. */
+    render(<App />);
+    await screen.findByRole("heading", { level: 1, name: "Dashboard" });
+    fireEvent.click(screen.getByRole("button", { name: "Find a screen" }));
+    const box = await screen.findByRole("combobox", { name: "Find a screen" });
+    fireEvent.change(box, { target: { value: "folio" } });
+    fireEvent.keyDown(box, { key: "Enter" });
+
+    await waitFor(() => expect(window.location.pathname).toBe(`/h/${HOTEL}/folios`));
+  });
+});
+
+/* The clarity plan, step 4 (15 September). The owner's decisions: a card
+   of first jobs per role — reception, housekeeping, the waiter, the chef,
+   none for the GM or the owner — on the person's own landing screens,
+   until they tap "Got it"; the account menu brings it back. */
+describe("start here", () => {
+  const as = (role: string) =>
+    signedIn({
+      scope: {
+        staffId: "22222222-2222-2222-2222-222222222222",
+        email: "agra@fidato.in",
+        fullName: "Agra Clerk",
+        isGroupAdmin: false,
+        hotels: [{ hotelId: AGRA_HOTEL, role }],
+      },
+    });
+
+  it("gives a receptionist five first jobs on their first screen, each opening where it happens", async () => {
+    render(<App />);
+    const card = await screen.findByRole("region", { name: "Start here" });
+    const links = within(card).getAllByRole("link");
+    expect(links.map((a) => a.getAttribute("href"))).toEqual([
+      `/h/${HOTEL}/book`,
+      `/h/${HOTEL}/arrivals`,
+      `/h/${HOTEL}/in-house`,
+      `/h/${HOTEL}/in-house/due-out`,
+      `/h/${HOTEL}/cashiering`,
+    ]);
+    expect(within(card).getByRole("link", { name: /Take a booking/ })).toBeDefined();
+  });
+
+  it("stays on their landing screens — not on every page they visit", async () => {
+    go(`/h/${HOTEL}/housekeeping`);
+    render(<App />);
+    await screen.findByRole("heading", { level: 1, name: "Housekeeping" });
+    expect(screen.queryByRole("region", { name: "Start here" })).toBeNull();
+  });
+
+  it("gives the general manager none", async () => {
+    as("gm");
+    render(<App />);
+    await screen.findByRole("heading", { level: 1, name: "Dashboard" });
+    expect(screen.queryByRole("region", { name: "Start here" })).toBeNull();
+  });
+
+  it("puts it away on \"Got it\", and brings it back from the account menu", async () => {
+    render(<App />);
+    const card = await screen.findByRole("region", { name: "Start here" });
+    fireEvent.click(within(card).getByRole("button", { name: "Got it" }));
+    await waitFor(() =>
+      expect(screen.queryByRole("region", { name: "Start here" })).toBeNull());
+    expect(useSession.getState().scope?.startHereDismissed).toBe(true);
+
+    fireEvent.keyDown(screen.getByRole("button", { name: /Agra Clerk/ }), { key: "Enter" });
+    fireEvent.click(await screen.findByRole("menuitem", { name: "Show Start here again" }));
+    expect(await screen.findByRole("region", { name: "Start here" })).toBeDefined();
+    expect(useSession.getState().scope?.startHereDismissed).toBe(false);
+  });
+
+  it("does not offer to bring back a card that is still there", async () => {
+    render(<App />);
+    await screen.findByRole("region", { name: "Start here" });
+    fireEvent.keyDown(screen.getByRole("button", { name: /Agra Clerk/ }), { key: "Enter" });
+    await screen.findByRole("menuitem", { name: "Sign out" });
+    expect(screen.queryByRole("menuitem", { name: "Show Start here again" })).toBeNull();
+  });
+
+  it("shows a housekeeper theirs on the board, where a job done right there is not a link", async () => {
+    as("housekeeping");
+    go(`/h/${HOTEL}/housekeeping`);
+    render(<App />);
+    const card = await screen.findByRole("region", { name: "Start here" });
+    /* A link that reloads the page you are on reads as a dead button. */
+    expect(within(card).queryByRole("link", { name: /See what needs cleaning/ })).toBeNull();
+    expect(within(card).getByText("See what needs cleaning")).toBeDefined();
+    expect(within(card).getByRole("link", { name: /Report something broken/ })
+      .getAttribute("href")).toBe(`/h/${HOTEL}/work-orders`);
+  });
+});
+
+describe("trade words explain themselves", () => {
+  it("RevPAR on the Dashboard opens what it means, from the glossary", async () => {
+    render(<App />);
+    const main = await screen.findByRole("main");
+    fireEvent.click(await within(main).findByRole("button", { name: "RevPAR" }));
+    expect(await screen.findByText(/divided by every room that could be sold/)).toBeDefined();
   });
 });

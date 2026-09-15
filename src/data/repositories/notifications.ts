@@ -1,8 +1,20 @@
+import { api, ApiError } from "@/lib/api";
+import { BUSINESS_DATE } from "./businessDate";
 
-/* ═════════════════════════════════════════════════════════════════
-   NOTIFICATIONS REPOSITORY
-   Rule 2: Screens import from here, never from fixtures directly.
-   Every function takes hotelId first. Returns promises.             ═════ */
+/* ══════════════════════════════════════════════════════════════════
+   NOTIFICATIONS — over HTTP, as of CP9e
+
+   Derived, never stored.
+
+   These began as a hand-written list, and the figures in it — a
+   ₹45,000 settlement, a ₹1,24,500 night audit — existed nowhere in the
+   ledger. Anyone comparing the bell against the Manager Report would
+   have found two different hotels.
+
+   Every notification is now a CONDITION computed from the same rows
+   every other screen reads. Check a guest in and the arrival notice
+   disappears, because nothing keeps it alive.
+   ══════════════════════════════════════════════════════════════════ */
 
 export type NotificationCategory =
   | "approval"
@@ -24,107 +36,51 @@ export interface Notification {
   actionRequired: boolean;
 }
 
-/* Demo notifications */
-const demoNotifications: Notification[] = [
-  {
-    id: "notif-001",
-    hotelId: "5-elements-akkalkot",
-    category: "reservation",
-    title: "New arrival: Rajesh Sharma (TechCorp group)",
-    body: "Room 301 assigned. Guest arriving at 14:00.",
-    isRead: false,
-    at: new Date(Date.now() - 1000 * 60 * 15).toISOString(),
-    link: "/h/5-elements-akkalkot/arrivals",
-    actionRequired: false,
-  },
-  {
-    id: "notif-002",
-    hotelId: "5-elements-akkalkot",
-    category: "approval",
-    title: "Rate override requested for room 206",
-    body: "Front desk requested ₹3,800 (rack ₹4,500) for Agoda booking. Requires manager approval.",
-    isRead: false,
-    at: new Date(Date.now() - 1000 * 60 * 45).toISOString(),
-    link: "/h/5-elements-akkalkot/reservations/res-007",
-    actionRequired: true,
-  },
-  {
-    id: "notif-003",
-    hotelId: "5-elements-akkalkot",
-    category: "payment",
-    title: "Payment failed: GoMMT settlement",
-    body: "₹45,000 settlement for July bookings declined. Retry initiated.",
-    isRead: true,
-    at: new Date(Date.now() - 1000 * 60 * 60 * 2).toISOString(),
-    actionRequired: false,
-  },
-  {
-    id: "notif-004",
-    hotelId: "5-elements-akkalkot",
-    category: "system",
-    title: "Night audit completed successfully",
-    body: "Business date rolled to 26/08/2026. 17 rooms posted, ₹1,24,500 revenue.",
-    isRead: true,
-    at: new Date(Date.now() - 1000 * 60 * 60 * 4).toISOString(),
-    actionRequired: false,
-  },
-  {
-    id: "notif-005",
-    hotelId: "5-elements-akkalkot",
-    category: "customer",
-    title: "Guest complaint: Room 304 AC noise",
-    body: "Guest reports loud AC unit. Engineering dispatched. Complimentary minibar offered.",
-    isRead: false,
-    at: new Date(Date.now() - 1000 * 60 * 60 * 6).toISOString(),
-    link: "/h/5-elements-akkalkot/folios/res-008",
-    actionRequired: true,
-  },
-];
+/**
+ * Dismissals — the one piece of genuine state here.
+ *
+ * Deliberately NOT in the database. A dismissal says "I have seen
+ * this", which is a fact about a person, not about the hotel. Storing
+ * it per-property would mean one clerk dismissing a notice for
+ * everybody; storing it per-person needs a table nothing else wants
+ * yet. It lives here until somebody asks for it to survive a reload.
+ */
+const dismissed = new Set<string>();
+
+async function fetchLive(hotelId: string): Promise<Notification[]> {
+  if (!hotelId) return [];
+  try {
+    const rows = await api<Notification[]>(
+      `/api/hotels/${hotelId}/notifications?asOn=${BUSINESS_DATE}`,
+    );
+    return rows.map((n) => ({ ...n, isRead: dismissed.has(n.id) }));
+  } catch (error) {
+    if (error instanceof ApiError && error.status === 404) return [];
+    throw error;
+  }
+}
 
 export const notificationsRepo = {
-  /** List notifications for a property */
-  list: async (hotelId: string): Promise<Notification[]> => {
-    return demoNotifications
-      .filter((n) => n.hotelId === hotelId)
-      .sort((a, b) => new Date(b.at).getTime() - new Date(a.at).getTime());
-  },
+  /** Conditions worth someone's attention, recomputed on every read. */
+  list: async (hotelId: string): Promise<Notification[]> => fetchLive(hotelId),
 
-  /** Mark a single notification as read */
   markRead: async (hotelId: string, id: string): Promise<Notification | null> => {
-    const notif = demoNotifications.find((n) => n.hotelId === hotelId && n.id === id);
-    if (notif) {
-      notif.isRead = true;
-      return notif;
-    }
-    return null;
+    dismissed.add(id);
+    return (await fetchLive(hotelId)).find((n) => n.id === id) ?? null;
   },
 
-  /** Mark all notifications as read */
   markAllRead: async (hotelId: string): Promise<number> => {
-    let count = 0;
-    for (const n of demoNotifications) {
-      if (n.hotelId === hotelId && !n.isRead) {
-        n.isRead = true;
-        count++;
-      }
-    }
-    return count;
+    const unread = (await fetchLive(hotelId)).filter((n) => !n.isRead);
+    for (const n of unread) dismissed.add(n.id);
+    return unread.length;
   },
 
-  /** Create a notification (for testing/demo) */
-  create: async (hotelId: string, notification: Omit<Notification, "id" | "hotelId" | "at">): Promise<Notification> => {
-    const newNotif: Notification = {
-      ...notification,
-      id: `notif-${Date.now()}`,
-      hotelId,
-      at: new Date().toISOString(),
-    };
-    demoNotifications.unshift(newNotif);
-    return newNotif;
-  },
+  /**
+   * Nothing to create. A notification here is a query, so the way to
+   * raise one is to create the condition it describes.
+   */
+  create: async (): Promise<null> => null,
 };
-
-/* TanStack Query helpers */
 
 export const useNotifications = (hotelId: string) => ({
   queryKey: ["notifications", hotelId],

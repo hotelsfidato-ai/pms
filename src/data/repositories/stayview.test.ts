@@ -1,7 +1,11 @@
 import { describe, it, expect } from "vitest";
 import { getStayView, addDays, isWeekend, defaultPropertyId, BUSINESS_DATE } from "./index";
 
-const HOTEL = "5-elements-akkalkot";
+/* CP9: the id a screen puts in a URL is the hotel CODE, because that is
+   what Postgres calls it — `hotels.code`, commented "appears in URLs" in
+   migration 002. It used to be the fixture's slug. Screens did not change;
+   they take whatever the repository hands them. */
+const HOTEL = "5EL";
 const OTHER = "some-other-property";
 
 async function chart(start = BUSINESS_DATE) {
@@ -160,9 +164,24 @@ describe("tape chart — room type groups", () => {
       expect(type.perDate).toHaveLength(14);
       for (const cell of type.perDate) {
         expect(cell.available).toBeGreaterThanOrEqual(0);
-        expect(cell.rate).toBeGreaterThan(0);
+        /* This asserted `> 0`, which held only while the rate was
+           invented in the frontend: `RACK[type] ?? 0` gave every
+           property the same two prices and zero for anything else.
+
+           The rate now comes from the hotel's own room type and may be
+           NULL — a type nobody has priced. What must never happen is a
+           zero, which reads as "this room is free" on a chart. */
+        expect(cell.rate === null || cell.rate > 0).toBe(true);
       }
     }
+  });
+
+  it("never shows a zero rate — a dash is the honest answer", async () => {
+    const data = await chart();
+    const zeros = data.roomTypes
+      .flatMap((t) => t.perDate)
+      .filter((c) => c.rate === 0);
+    expect(zeros.length, "a zero rate says the room is free").toBe(0);
   });
 
   it("groups into the types the property declares", async () => {

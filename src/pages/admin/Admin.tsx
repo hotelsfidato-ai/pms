@@ -1,0 +1,559 @@
+import { useState } from "react";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { useParams } from "react-router";
+import { Check, Minus, Plug, ShieldCheck, Info, UserCog, ScrollText } from "lucide-react";
+import { cn } from "@/lib/cn";
+import { money, dateTime, dateShort } from "@/lib/format";
+import { useUi } from "@/lib/ui";
+import {
+  ROLE_LABELS, RESOURCE_LABELS, ACTION_LABELS, ACTIONS, type Role,
+} from "@/lib/permissions";
+import {
+  Page, PageHeader, Card, CardBody, CardHeader, DataTable, StatusPill,
+  Skeleton, Avatar, Tooltip, ErrorState, Switch, toast, EmptyState,
+  type Column, type Tone,
+} from "@/components/ui";
+import {
+  listStaff, listAuditLog, listIntegrations, getSettings, getMatrix,
+  roleDescription, getModules, setModule,
+  type StaffRecord, type AuditEntry, type Integration,
+} from "@/data/repositories";
+
+/* ══════════════════════════════════════════════════════════════════
+   ADMINISTRATION
+
+   Five screens over one source. The permission matrix here is the
+   same `src/lib/permissions.ts` the navigation filters on and every
+   disabled button reads from — rendered, not restated, so it cannot
+   drift from what the product actually enforces.
+   ══════════════════════════════════════════════════════════════════ */
+
+function useHotel() {
+  const params = useParams();
+  const fallback = useUi((s) => s.hotelId);
+  return params.code ?? fallback;
+}
+
+/* ── Users ───────────────────────────────────────────────────────── */
+
+const STATUS_TONE: Record<StaffRecord["status"], Tone> = {
+  active: "success",
+  invited: "warning",
+  inactive: "neutral",
+};
+
+const STAFF_COLUMNS: Column<StaffRecord>[] = [
+  {
+    key: "name", header: "Name",
+    cell: (u) => (
+      <div className="flex items-center gap-2.5 min-w-0">
+        <Avatar name={u.name} size="sm" />
+        <div className="min-w-0">
+          <p className="truncate">{u.name}</p>
+          <p className="text-2xs text-grey-500 truncate">{u.email}</p>
+        </div>
+      </div>
+    ),
+  },
+  {
+    key: "role", header: "Role",
+    cell: (u) => (
+      <Tooltip content={roleDescription(u.role)}>
+        <span className="underline decoration-dotted decoration-grey-300 underline-offset-2">
+          {u.roleLabel}
+        </span>
+      </Tooltip>
+    ),
+  },
+  {
+    key: "props", header: "Properties", hideBelow: "md",
+    cell: (u) => <span className="text-grey-600">{u.properties.join(", ")}</span>,
+  },
+  {
+    key: "status", header: "Status",
+    cell: (u) => (
+      <StatusPill tone={STATUS_TONE[u.status]}>
+        {u.status === "active" ? "Active" : u.status === "invited" ? "Invited" : "Inactive"}
+      </StatusPill>
+    ),
+  },
+  {
+    key: "seen", header: "Last seen", hideBelow: "lg", numeric: true,
+    cell: () => <span className="text-grey-400">—</span>,
+  },
+];
+
+export function UsersPage() {
+  const hotelId = useHotel();
+  const { data, isLoading, error, refetch } = useQuery({
+    queryKey: ["staff", hotelId],
+    queryFn: () => listStaff(hotelId),
+  });
+
+  /* ⚠ NO ADD-A-PERSON FORM HERE, AND THAT IS DELIBERATE.
+     One briefly appeared on 8 September because an audit of `/admin/*`
+     concluded nobody could add a user in production. That audit was
+     WRONG: `/pages/People.tsx` at `/people` has done the whole job
+     since 7 September — add, grant, revoke, deactivate — and it is in
+     the sidebar under People. The audit enumerated routes beginning
+     `/admin/` and `/people` is top-level.
+
+     Two screens doing one job is worse than one, and `/people` is the
+     better of the two: it badges an account that cannot sign in,
+     which is the step people miss. This one stays a list. */
+
+  return (
+    <Page>
+      <PageHeader
+        title="Users"
+        description="Who can reach what. Access follows the role, and the role follows the permission matrix."
+      />
+
+      <Card>
+        <DataTable<StaffRecord>
+          rows={data ?? []}
+          columns={STAFF_COLUMNS}
+          rowKey={(u) => u.id}
+          loading={isLoading}
+          error={error}
+          empty={
+            <EmptyState compact icon={<UserCog />} title="Nobody here yet"
+              description="People are added from People, with Add somebody. Their access follows their role." />
+          }
+          onRetry={() => refetch()}
+        />
+      </Card>
+      <p className="flex items-start gap-2 text-xs text-grey-500 mt-4 leading-relaxed">
+        <Info className="size-3.5 shrink-0 mt-0.5" />
+        <span>
+          These are real accounts, read from the database. What you can see of
+          them follows your role: a group administrator sees everybody, and
+          anyone else sees themselves and the people rostered at their own
+          properties. Password sign-in still needs a Firebase service account;
+          the accounts and their property grants do not.
+        </span>
+      </p>
+    </Page>
+  );
+}
+
+/* ── Roles and permissions ───────────────────────────────────────── */
+
+export function RolesPage() {
+  const { data, isLoading, error, refetch } = useQuery({
+    queryKey: ["permission-matrix"],
+    queryFn: getMatrix,
+  });
+
+  if (error) {
+    return (
+      <Page>
+        <PageHeader title="Roles and permissions" />
+        <Card>
+          <ErrorState
+            title="The permission matrix did not load"
+            description="Nothing in the product is granted while this is unreadable — every gate reads the same source."
+            error={error}
+            onRetry={() => refetch()}
+          />
+        </Card>
+      </Page>
+    );
+  }
+
+  if (isLoading || !data) {
+    return (
+      <Page>
+        <PageHeader title="Roles and permissions" />
+        <Skeleton className="h-96 w-full" />
+      </Page>
+    );
+  }
+
+  const resources = data[0]?.resources.map((r) => r.resource) ?? [];
+
+  return (
+    <Page>
+      <PageHeader
+        title="Roles and permissions"
+        description="The live matrix, read from src/lib/permissions.ts. This is the same source the navigation filters on and every disabled button reads from — it cannot drift from what the product enforces."
+        badge={<StatusPill tone="info">{data.length} roles</StatusPill>}
+      />
+
+      <Card className="overflow-hidden">
+        <div className="overflow-x-auto scrollbar-quiet">
+          <table className="w-full border-collapse text-base">
+            <thead className="bg-grey-50 border-b border-grey-200">
+              <tr>
+                <th className="text-left text-2xs font-semibold uppercase tracking-wide text-grey-500 px-4 h-10 sticky left-0 bg-grey-50 z-10 border-r border-grey-200">
+                  Resource
+                </th>
+                {data.map((r) => (
+                  <th
+                    key={r.role}
+                    className="text-2xs font-semibold uppercase tracking-wide text-grey-500 px-3 h-10 whitespace-nowrap text-center"
+                  >
+                    {ROLE_LABELS[r.role as Role]}
+                  </th>
+                ))}
+              </tr>
+            </thead>
+            <tbody>
+              {resources.map((resource) => (
+                <tr key={resource} className="border-b border-grey-100">
+                  <td className="px-4 py-2 text-ink-900 whitespace-nowrap sticky left-0 bg-white z-10 border-r border-grey-200">
+                    {RESOURCE_LABELS[resource as keyof typeof RESOURCE_LABELS] ?? resource}
+                  </td>
+                  {data.map((r) => {
+                    const grants =
+                      r.resources.find((x) => x.resource === resource)?.actions ?? [];
+                    return (
+                      <td key={r.role} className="px-3 py-2 text-center">
+                        {grants.length === 0 ? (
+                          <Minus className="size-3.5 text-grey-300 mx-auto" />
+                        ) : grants.length === ACTIONS.length ? (
+                          <Tooltip content="Everything">
+                            <Check className="size-4 text-success mx-auto" />
+                          </Tooltip>
+                        ) : (
+                          <Tooltip
+                            content={grants.map((a) => ACTION_LABELS[a]).join(" · ")}
+                          >
+                            <span className="text-2xs tabular text-grey-600">
+                              {grants.length}
+                            </span>
+                          </Tooltip>
+                        )}
+                      </td>
+                    );
+                  })}
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      </Card>
+
+      <p className="flex items-start gap-2 text-xs text-grey-500 mt-4 leading-relaxed">
+        <ShieldCheck className="size-3.5 shrink-0 mt-0.5" />
+        <span>
+          A tick is every action; a number is a partial grant — hover it to see
+          which. A blocked action is never hidden in the product: it is shown
+          disabled, with the reason this matrix produces.
+        </span>
+      </p>
+    </Page>
+  );
+}
+
+/* ── Audit log ───────────────────────────────────────────────────── */
+
+const AUDIT_TONE: Record<string, Tone> = {
+  charge: "info",
+  payment: "success",
+  reversal: "danger",
+};
+
+const AUDIT_COLUMNS: Column<AuditEntry>[] = [
+  {
+    key: "at", header: "When", width: "w-[170px]",
+    cell: (e) => <span className="tabular text-grey-600">{dateTime(e.at)}</span>,
+  },
+  {
+    key: "date", header: "Business date", hideBelow: "lg", width: "w-[130px]",
+    cell: (e) => <span className="tabular">{dateShort(e.businessDate)}</span>,
+  },
+  {
+    key: "action", header: "Action",
+    cell: (e) => (
+      <StatusPill tone={AUDIT_TONE[e.kind] ?? "neutral"} dot>
+        {e.action}
+      </StatusPill>
+    ),
+  },
+  { key: "subject", header: "Subject", cell: (e) => e.subject },
+  {
+    key: "detail", header: "Detail", hideBelow: "md",
+    cell: (e) => <span className="text-grey-600">{e.detail}</span>,
+  },
+  {
+    key: "actor", header: "By", hideBelow: "sm",
+    cell: (e) => <span className="text-grey-600">{e.actor}</span>,
+  },
+];
+
+export function AuditLogPage() {
+  const hotelId = useHotel();
+  const { data, isLoading, error, refetch } = useQuery({
+    queryKey: ["audit-log", hotelId],
+    queryFn: () => listAuditLog(hotelId),
+  });
+
+  return (
+    <Page>
+      <PageHeader
+        title="Audit log"
+        description="Append-only. Nothing here is edited or deleted — a wrong posting is reversed, and the reversal is its own entry."
+        badge={data ? <StatusPill tone="neutral">{data.length} entries</StatusPill> : undefined}
+      />
+      <Card>
+        <DataTable<AuditEntry>
+          rows={data ?? []}
+          columns={AUDIT_COLUMNS}
+          rowKey={(e) => e.id}
+          loading={isLoading}
+          error={error}
+          onRetry={() => refetch()}
+          empty={
+            <EmptyState compact icon={<ScrollText />} title="Nothing recorded yet"
+              description="Changes are recorded here as they are made, with who made them and when." />
+          }
+        />
+      </Card>
+      <p className="text-xs text-grey-500 mt-4 leading-relaxed">
+        The folio ledger <em>is</em> the audit trail for money. It is append-only by
+        construction, so nothing is recorded twice and nothing can be quietly
+        rewritten.
+      </p>
+    </Page>
+  );
+}
+
+/* ── Integrations ────────────────────────────────────────────────── */
+
+const INT_TONE: Record<Integration["status"], Tone> = {
+  connected: "success",
+  "not-connected": "warning",
+  planned: "neutral",
+};
+
+const INT_LABEL: Record<Integration["status"], string> = {
+  connected: "Connected",
+  "not-connected": "Not connected",
+  planned: "Planned",
+};
+
+export function IntegrationsPage() {
+  const { data, isLoading, error, refetch } = useQuery({
+    queryKey: ["integrations"],
+    queryFn: listIntegrations,
+  });
+
+  return (
+    <Page>
+      <PageHeader
+        title="Integrations"
+        description="What this system talks to, and what it does not yet."
+      />
+      {error ? (
+        <Card>
+          <ErrorState
+            title="Connection status is unavailable"
+            description="Treat nothing as connected until this loads. Try again."
+            error={error}
+            onRetry={() => refetch()}
+          />
+        </Card>
+      ) : isLoading ? (
+        <Skeleton className="h-64 w-full" />
+      ) : (
+        <div className="grid gap-4 sm:grid-cols-2">
+          {(data ?? []).map((i) => (
+            <Card key={i.id}>
+              <CardBody>
+                <div className="flex items-start justify-between gap-3">
+                  <div className="min-w-0">
+                    <div className="flex items-center gap-2">
+                      <Plug className="size-4 text-grey-400 shrink-0" />
+                      <p className="text-md font-semibold text-ink-900 truncate">{i.name}</p>
+                    </div>
+                    <p className="text-2xs uppercase tracking-wide text-grey-400 mt-1">
+                      {i.kind}
+                    </p>
+                  </div>
+                  <StatusPill tone={INT_TONE[i.status]} dot>
+                    {INT_LABEL[i.status]}
+                  </StatusPill>
+                </div>
+                <p className="text-sm text-grey-600 mt-3 leading-relaxed">{i.detail}</p>
+                {i.stage && (
+                  <p className="text-2xs text-grey-400 mt-2.5">Arrives at {i.stage}</p>
+                )}
+              </CardBody>
+            </Card>
+          ))}
+        </div>
+      )}
+    </Page>
+  );
+}
+
+/* ── Settings ────────────────────────────────────────────────────── */
+
+/* ══════════════════════════════════════════════════════════════════
+   MODULES
+
+   Not every property in the group runs a restaurant, and one with no
+   kitchen should not be showing its staff a menu screen that will
+   never have anything in it.
+
+   TURNING THIS OFF DOES TWO THINGS, and the second is the one that
+   matters: the navigation section disappears, AND the API refuses the
+   till and kitchen routes — including the door an outside till comes
+   through. A hidden nav entry is still a URL anybody can type, so
+   hiding alone would not be disabling.
+   ══════════════════════════════════════════════════════════════════ */
+
+const MODULE_COPY: Record<string, { label: string; note: string }> = {
+  pos: {
+    label: "Point of sale",
+    note: "The till, the kitchen pass and the menu. Turning it off also " +
+      "stops an outside till posting bills to this property.",
+  },
+  banquet: {
+    label: "Banquet hall",
+    note: "The diary, the halls and their packages. A hall cannot be sold " +
+      "twice for the same session. Off means those screens go and the API " +
+      "refuses them.",
+  },
+  /* The owner's per-hotel switch of 14 September (087). On at every hotel
+     that existed then; off for a hotel added after, until its GM turns it
+     on. Only a GM or an admin can flip any of these — before 087 any
+     clerk at the property could. */
+  reception_pos: {
+    label: "Reception can use the POS",
+    note: "Reception staff take, bill and settle orders at the till. Off " +
+      "hides the point of sale from Reception and the API refuses them; " +
+      "every other role is unaffected.",
+  },
+};
+
+function ModulesCard({ hotelId }: { hotelId: string }) {
+  const queryClient = useQueryClient();
+  const [busy, setBusy] = useState<string | null>(null);
+
+  const modules = useQuery({
+    queryKey: ["modules", hotelId],
+    queryFn: () => getModules(hotelId),
+    enabled: Boolean(hotelId),
+  });
+
+  const toggle = async (module: string, enabled: boolean) => {
+    setBusy(module);
+    const result = await setModule(hotelId, module, enabled);
+    setBusy(null);
+    if (!result.ok) return toast.error("Not changed", result.reason);
+    toast.success(
+      enabled ? "Turned on" : "Turned off",
+      `${MODULE_COPY[module]?.label ?? module} at this property.`,
+    );
+    /* The sidebar reads the same query key, so it rebuilds with this. */
+    void queryClient.invalidateQueries({ queryKey: ["modules", hotelId] });
+  };
+
+  return (
+    <Card>
+      <CardHeader
+        title="Modules"
+        description="What this property runs. Off means the screens go and the API refuses them."
+      />
+      <CardBody className="pt-0 space-y-4">
+        {Object.entries(modules.data ?? {}).map(([module, enabled]) => (
+          <Switch
+            key={module}
+            checked={enabled}
+            /* ⚠ NOT `|| module === "banquet"` ANY MORE.
+               That was hardcoded when banquet did not exist, alongside a
+               note reading "Not built yet". Stage 14 built it — three
+               screens, four tables and an API — and NOBODY CAME BACK FOR
+               THE SWITCH. The copy and the code disagreed for eight days
+               and the owner found it by trying to turn banquet on and
+               watching nothing happen.
+
+               A disabled control with stale copy is worse than a missing
+               one: it looks like an answer. `moduleSwitchesAreLive` in
+               `Admin.test.tsx` now fails if any module the API accepts
+               comes back disabled. */
+            disabled={busy === module}
+            onCheckedChange={(next) => void toggle(module, next)}
+            label={MODULE_COPY[module]?.label ?? module}
+            description={MODULE_COPY[module]?.note}
+          />
+        ))}
+        {modules.isLoading && <Skeleton className="h-16 w-full" />}
+      </CardBody>
+    </Card>
+  );
+}
+
+export function SettingsPage() {
+  const hotelId = useHotel();
+  const { data, isLoading, error, refetch } = useQuery({
+    queryKey: ["settings", hotelId],
+    queryFn: () => getSettings(hotelId),
+  });
+
+  return (
+    <Page>
+      <PageHeader
+        title="Settings"
+        description="What this property is configured as. Editing arrives with the stage that owns each value."
+      />
+      {error ? (
+        <Card>
+          <ErrorState
+            title="Settings did not load"
+            description="Nothing was changed. Try again."
+            error={error}
+            onRetry={() => refetch()}
+          />
+        </Card>
+      ) : isLoading ? (
+        <Skeleton className="h-96 w-full" />
+      ) : (
+        <div className="space-y-4">
+          <ModulesCard hotelId={hotelId} />
+          {(data ?? []).map((group) => (
+            <Card key={group.title}>
+              <CardHeader title={group.title} description={group.note} />
+              <CardBody className="pt-0">
+                <dl className="divide-y divide-grey-100">
+                  {group.rows.map((row) => (
+                    <div
+                      key={row.label}
+                      className="grid grid-cols-[minmax(130px,200px)_1fr] gap-4 py-2.5"
+                    >
+                      <dt className="text-sm text-grey-500">{row.label}</dt>
+                      <dd className="text-base text-ink-900 min-w-0 flex items-center gap-2 flex-wrap">
+                        <span className="min-w-0">{row.value}</span>
+                        {row.editableAt && (
+                          <StatusPill tone="neutral">
+                            editable at {row.editableAt}
+                          </StatusPill>
+                        )}
+                      </dd>
+                    </div>
+                  ))}
+                </dl>
+              </CardBody>
+            </Card>
+          ))}
+        </div>
+      )}
+    </Page>
+  );
+}
+
+/* ── Add a property ──────────────────────────────────────────────── */
+
+/* ⚠ `AdminPropertiesPage` WAS HERE AND IS GONE. There were two
+   Properties screens: this one had the create form and a four-line
+   list, and `/properties` — the one in the navigation — had richer
+   cards and could do nothing. Two screens for one noun is how they
+   drift, and the one people actually clicked was the one that could
+   do least.
+
+   `/admin/properties` now renders `PropertiesPage` from Directory.tsx,
+   which adds, edits, closes and reopens. */
+
+export { money, cn };

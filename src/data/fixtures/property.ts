@@ -114,6 +114,30 @@ for (const date of Object.keys(dailyAvailableRooms)) {
 // Also export the raw data for repositories that need it
 export { dailyAvailableRooms, nightsSoldPerDay };
 
+/**
+ * The date the demo is pinned to — the Night Audit's "As On Date".
+ * It lives here because the fixtures are calibrated against it and
+ * the store seeds from it; the repositories re-export it.
+ */
+/**
+ * The hotel CODE this property has in Postgres. `hotels.code` is what
+ * appears in a URL — migration 002 says so — and it is what a person
+ * can read back over the phone.
+ */
+export const PROPERTY_CODE = "5EL";
+
+/**
+ * The day the demo dataset is pinned to.
+ *
+ * NOT the business date — that comes from `app.business_date()`
+ * per property and lives in `repositories/businessDate.ts`. This is
+ * the anchor the generated fixtures are built around, and it must
+ * stay fixed: 431 available room-nights, 132 sold and ADR ₹3,178.63
+ * all reconcile to the real eZee export for 1–25 August 2026. Move
+ * this and the calibration stops meaning anything.
+ */
+export const FIXTURE_BUSINESS_DATE = "2026-08-25";
+
 export const property = {
   id: PROPERTY_ID,
   name: "5 Elements Akkalkot",
@@ -131,7 +155,7 @@ export const property = {
   tax: { cgst: 2.5, sgst: 2.5 },
   financialYearStart: "04-01", // 1 April
   // Two series observed in production: 5EFH-prefixed and plain zero-padded numeric
-  invoiceSeries: [{ prefix: "5EFH", next: 154 }, { prefix: "", next: 39, pad: 6 }],
+  invoiceSeries: [{ prefix: "5EFH", next: 154 }, { prefix: "", next: 39, pad: 6 }] as Array<{ prefix: string; next: number; pad?: number }>,
   posOutlets: [{ id: "sattva", name: "Sattva", categories: ["Food", "Beverages"] }],
   paymentMethods: ["Cash", "UPI", "Credit Card", "Debit Card", "GoMMT", "Google Pay", "Room Posting"],
   // Calibration metadata — verified by the assertions above

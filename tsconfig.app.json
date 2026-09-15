@@ -15,7 +15,11 @@
     "noEmit": true,
     "jsx": "react-jsx",
 
-    /* Linting - strict mode as required */
+    /* Linting - strict mode as required 
+
+        this is the confgg file and this need to done and this is the the confg file and this need to don
+
+    */
     "strict": true,
     "noUnusedLocals": true,
     "noUnusedParameters": true,

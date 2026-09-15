@@ -90,9 +90,25 @@ export const Drawer = DialogPrimitive.Root;
 export const DrawerTrigger = DialogPrimitive.Trigger;
 export const DrawerClose = DialogPrimitive.Close;
 
+const DRAWER_WIDTHS = {
+  md: "max-w-[420px]",
+  lg: "max-w-[620px]",
+  /* A stay with a group beside it: the booking and the group's rooms
+     side by side, the way a front desk reads a wedding block. */
+  xl: "max-w-[980px]",
+};
+
 export function DrawerContent({
-  title, description, children, footer, width = "md", className,
-}: Omit<DialogContentProps, "size"> & { width?: "md" | "lg" }) {
+  title, description, children, footer, width = "md", padded = true, className,
+}: Omit<DialogContentProps, "size"> & {
+  width?: "md" | "lg" | "xl";
+  /** ⚠ ON BY DEFAULT. The body had no padding at all, so the stay panel's
+      pill, every row and the Check in button sat flush against the left
+      edge — the owner's screenshot of 14 September, "looks terrible and is
+      not very readable". Only a list whose rows run edge to edge on
+      purpose (notifications) turns it off. */
+  padded?: boolean;
+}) {
   return (
     <DialogPrimitive.Portal>
       <DialogPrimitive.Overlay className={OVERLAY} />
@@ -100,11 +116,11 @@ export function DrawerContent({
         className={cn(
           "fixed right-0 top-0 z-50 h-full w-full bg-white border-l border-grey-200 shadow-overlay",
           "flex flex-col motion-drawer",
-          width === "md" ? "max-w-[420px]" : "max-w-[620px]",
+          DRAWER_WIDTHS[width],
           className,
         )}
       >
-        <div className="flex items-start justify-between gap-4 px-5 py-4 border-b border-grey-200 shrink-0">
+        <div className="flex items-start justify-between gap-4 px-4 sm:px-6 py-4 border-b border-grey-200 shrink-0">
           <div className="min-w-0">
             <DialogPrimitive.Title className="text-md font-semibold text-ink-900">
               {title}
@@ -123,10 +139,17 @@ export function DrawerContent({
           </DialogPrimitive.Close>
         </div>
 
-        <div className="flex-1 overflow-y-auto scrollbar-quiet">{children}</div>
+        <div
+          className={cn(
+            "flex-1 overflow-y-auto scrollbar-quiet",
+            padded && "px-4 py-5 sm:px-6",
+          )}
+        >
+          {children}
+        </div>
 
         {footer && (
-          <div className="flex items-center justify-end gap-2 px-5 py-3.5 border-t border-grey-200 bg-grey-50 shrink-0">
+          <div className="flex items-center justify-end gap-2 px-4 sm:px-6 py-3.5 border-t border-grey-200 bg-grey-50 shrink-0">
             {footer}
           </div>
         )}
@@ -278,7 +301,11 @@ export function TabsList({ children, className }: { children: ReactNode; classNa
   return (
     <TabsPrimitive.List
       className={cn(
-        "flex items-center gap-1 border-b border-grey-200 -mb-px overflow-x-auto scrollbar-quiet",
+        /* overflow-y-hidden: `overflow-x-auto` makes the other axis auto
+           as well, and the triggers' -mb-px overlap is one pixel of
+           vertical overflow — so Windows drew a small scrollbar beside
+           every tab strip. Sideways scrolling on a phone is kept. */
+        "flex items-center gap-1 border-b border-grey-200 -mb-px overflow-x-auto overflow-y-hidden scrollbar-quiet",
         className,
       )}
     >

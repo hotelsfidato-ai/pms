@@ -1,0 +1,65 @@
+# =============================================================================
+# fidato-api — the App API, under systemd
+# =============================================================================
+# Installed by deploy/launch.sh, which substitutes __APP_DIR__.
+#
+#   systemctl status fidato-api
+#   journalctl -u fidato-api -f
+#   systemctl restart fidato-api
+# =============================================================================
+
+[Unit]
+Description=Fidato PMS — App API
+# Ordered after Postgres, not merely "wanted": the API reads the database at
+# startup and a race here shows as a service that failed once at boot and
+# stayed down, on a morning when nobody is looking at systemd.
+After=network-online.target postgresql.service
+Wants=network-online.target
+Requires=postgresql.service
+
+[Service]
+Type=simple
+User=fidato
+Group=fidato
+WorkingDirectory=__APP_DIR__/api
+
+# `npm start`, not `npm run serve`. serve calls free-port.mjs, which KILLS
+# whatever holds 8787 — correct on a laptop where the last dev server is
+# still running, and a way for a restart loop to fight itself on a server.
+ExecStart=/usr/bin/npm start
+
+# The service reads api/.env itself (env.ts calls process.loadEnvFile), so
+# the secret stays in one root-readable file rather than being copied into
+# the unit, where `systemctl show` would print it to anyone.
+Environment=NODE_ENV=production
+
+Restart=on-failure
+RestartSec=5
+# Stop trying after five failures in a minute. A crash loop against a
+# database that is down should be visible as a stopped service, not hidden
+# as one that is perpetually restarting.
+StartLimitBurst=5
+StartLimitIntervalSec=60
+
+# The night audit posts a night of charges in one transaction. Give it time
+# to finish rather than tearing it down half-posted.
+TimeoutStopSec=120
+KillSignal=SIGTERM
+
+# Containment. The process needs its own directory, the Postgres socket and
+# the network; nothing else.
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=strict
+ProtectHome=true
+ReadWritePaths=__APP_DIR__/api
+ProtectKernelTunables=true
+ProtectControlGroups=true
+RestrictSUIDSGID=true
+
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=fidato-api
+
+[Install]
+WantedBy=multi-user.target

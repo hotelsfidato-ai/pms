@@ -1,4 +1,5 @@
 import type { Permitted } from "@/data/repositories/types";
+import { dateShort } from "@/lib/format";
 
 /* ══════════════════════════════════════════════════════════════════
    BUSINESS RULES — Rule 3
@@ -69,7 +70,10 @@ export function canCheckIn(stay: {
   if (stay.status === "in-house") return no("This guest is already checked in.");
   if (stay.status === "checked-out") return no("This stay has already ended.");
   if (stay.arrival > businessDate)
-    return no(`Arrival is ${stay.arrival}. Check-in opens on the arrival date.`);
+    /* Formatted, because a clerk reads this sentence. Every date on
+       every other screen says "30 Aug 2026"; a refusal is not the place
+       to start showing raw ISO. */
+    return no(`Arrives ${dateShort(stay.arrival)}. Check-in opens that morning.`);
   return ok;
 }
 
@@ -101,9 +105,13 @@ export function canReverse(posting: { reversed: boolean; isReversal: boolean }):
 
 /* ── Settlement and check-out ─────────────────────────────────────── */
 
+/* These reasons are read at the DESK, so they say "bill" (the owner's
+   choice, 15 September: Bill at the desk, Folio in Finance). Wording
+   only — every rule below is unchanged. */
+
 export function canSettle(balance: number): Permitted {
-  if (balance === 0) return no("Nothing outstanding on this folio.");
-  if (balance < 0) return no("This folio is overpaid — it needs a refund, not a payment.");
+  if (balance === 0) return no("Nothing is owed on this bill.");
+  if (balance < 0) return no("This bill is overpaid — it needs a refund, not a payment.");
   return ok;
 }
 
@@ -119,8 +127,8 @@ export function canCheckOut(
   if (stay.status === "checked-out") return no("Already checked out.");
   if (stay.status !== "in-house" && stay.status !== "due-out")
     return no("This guest is not in house.");
-  if (balance > 0) return no(`${formatMoney(balance)} is still outstanding on this folio.`);
-  if (balance < 0) return no("This folio is overpaid. Refund the difference first.");
+  if (balance > 0) return no(`${formatMoney(balance)} is still owed on this bill.`);
+  if (balance < 0) return no("This bill is overpaid. Refund the difference first.");
   return ok;
 }
 

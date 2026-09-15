@@ -2,6 +2,7 @@ import type { ReactNode } from "react";
 import { Link } from "react-router";
 import { ChevronRight } from "lucide-react";
 import { cn } from "@/lib/cn";
+import { useDocumentTitle } from "@/lib/documentTitle";
 
 /* ══════════════════════════════════════════════════════════════════
    PAGE HEADER
@@ -58,6 +59,10 @@ export interface PageHeaderProps {
 export function PageHeader({
   title, description, breadcrumbs, actions, badge, children, className,
 }: PageHeaderProps) {
+  /* The tab says the page's own heading, so the menu, the heading and
+     the tab agree. A heading that is not plain text names no tab. */
+  useDocumentTitle(typeof title === "string" ? title : null);
+
   return (
     <header className={cn("mb-6", className)}>
       {breadcrumbs && breadcrumbs.length > 0 && (
@@ -77,7 +82,17 @@ export function PageHeader({
           )}
         </div>
 
-        {actions && <div className="flex items-center gap-2 shrink-0">{actions}</div>}
+        {/* `max-w-full` and `flex-wrap` together, because `shrink-0` alone
+            let a two-button action group run off a 375px screen: the box
+            refused to shrink, so nothing ever applied pressure to wrap and
+            the second button was simply cut in half. Desktop is unchanged —
+            there is room, so nothing wraps. Found by opening the banquet
+            diary on a phone, not by a gate. */}
+        {actions && (
+          <div className="flex items-center gap-2 shrink-0 max-w-full flex-wrap justify-end">
+            {actions}
+          </div>
+        )}
       </div>
 
       {children && <div className="mt-5">{children}</div>}

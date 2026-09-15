@@ -1,9 +1,13 @@
+import { Eye } from "lucide-react";
+import { DEMO } from "@/lib/demo";
 import { useEffect } from "react";
 import { Outlet, useLocation } from "react-router";
 import * as DialogPrimitive from "@radix-ui/react-dialog";
 import { useUi } from "@/lib/ui";
 import { Sidebar } from "./Sidebar";
 import { TopBar } from "./TopBar";
+import { OfflineBar } from "./OfflineBar";
+import { CommandPalette } from "./CommandPalette";
 import { Toaster, TooltipProvider } from "@/components/ui";
 
 /* ══════════════════════════════════════════════════════════════════
@@ -31,9 +35,11 @@ export function AppShell() {
 
   return (
     <TooltipProvider delayDuration={400}>
-      <div className="flex h-screen overflow-hidden bg-grey-50">
-        {/* Desktop rail */}
-        <div className="hidden lg:block">
+      <div className="flex h-screen overflow-hidden bg-grey-50 print:block print:h-auto print:overflow-visible">
+        {/* Desktop rail. `no-print` because a printed tax invoice with a
+            navigation sidebar down its left edge is not a tax invoice —
+            and the invoice page cannot hide the shell from inside it. */}
+        <div className="hidden lg:block no-print">
           <Sidebar />
         </div>
 
@@ -51,10 +57,53 @@ export function AppShell() {
           </DialogPrimitive.Portal>
         </DialogPrimitive.Root>
 
+        {/* "Find a screen". Opened by the top bar and by Ctrl K. */}
+        <CommandPalette />
+
         {/* Main column */}
         <div className="flex flex-col flex-1 min-w-0">
-          <TopBar />
-          <main className="flex-1 overflow-y-auto scrollbar-quiet">
+          <div className="no-print contents">
+            <TopBar />
+          </div>
+          {/* `overflow-y-auto` clips to the viewport, which on paper means
+             ONE page and the rest silently gone. Released for print. */}
+          {/* Said plainly, once, at the top. A reviewer who does not
+              know this is a snapshot will read an unchanging occupancy
+              figure as a bug, and a refused save as a broken button. */}
+          {DEMO && (
+            <div className="no-print shrink-0 flex items-center gap-2 px-4 py-2 bg-brand-yellow-50 border-b border-brand-yellow-100">
+              <Eye className="size-4 text-[#8a6300] shrink-0" />
+              <p className="text-sm text-[#8a6300]">
+                <span className="font-semibold">Preview.</span>{" "}
+                Real screens and real figures from the calibrated demo
+                property — nothing saves, because there is no server behind
+                this build yet.
+              </p>
+            </div>
+          )}
+
+          {/* `relative`, and it is not cosmetic. An absolutely positioned
+              element is clipped only by an ancestor that is its CONTAINING
+              BLOCK, and a static ancestor's `overflow` does not apply to it.
+              `main` was static, so every `sr-only` label on the page — they
+              are `position: absolute` by definition — anchored to the page
+              itself and escaped the shell's `overflow-hidden`.
+
+              On Housekeeping, with one per room card down a long grid, the
+              furthest sat at 1662px in a 900px window. The DOCUMENT then
+              scrolled, which drags the sidebar off the top of the screen:
+              the menu slides away and the whole thing looks unmoored. Every
+              other page was fine, which is what made it look like a
+              Housekeeping bug rather than a shell one.
+
+              Anchoring them here fixes the class of fault, not the instance. */}
+          <main className="relative flex-1 overflow-y-auto scrollbar-quiet print:overflow-visible">
+            {/* INSIDE the scroll region and sticky, so it rides the top
+                of whatever screen is open rather than pushing the whole
+                shell down. Held work belongs to the person, not to the
+                page they happen to be on. Hidden when printing: an
+                invoice does not carry the desk's sync state. */}
+            <div className="print:hidden"><OfflineBar /></div>
             <Outlet />
           </main>
         </div>

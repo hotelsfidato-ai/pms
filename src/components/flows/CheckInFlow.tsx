@@ -1,13 +1,17 @@
 import { useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { Check, LogIn, IdCard, BedDouble, Users, Sparkle } from "lucide-react";
+import { Check, LogIn, BedDouble, Users, Sparkle } from "lucide-react";
 import { cn } from "@/lib/cn";
-import { money } from "@/lib/format";
+import { money, dateShort } from "@/lib/format";
+import { useRole } from "@/lib/session";
+import { can } from "@/lib/permissions";
 import {
   Button, Field, Input, NativeSelect, StatusPill, Tooltip, toast,
-  Dialog, DialogContent, DialogTrigger,
+  Dialog, DialogContent, DialogTrigger, Term,
 } from "@/components/ui";
-import { checkIn, assignableRooms, checkInAllowed, type Stay } from "@/data/repositories";
+import {
+  checkIn, assignableRooms, checkInAllowed, earlyArrival, type Stay,
+} from "@/data/repositories";
 
 /* ══════════════════════════════════════════════════════════════════
    FLOW A — arrival to in house
@@ -38,28 +42,88 @@ export function CheckInFlow({
   const [adults, setAdults] = useState(stay.adults);
   const [children, setChildren] = useState(stay.children);
   const [roomNumber, setRoomNumber] = useState(stay.roomNumber);
-  const [idCaptured, setIdCaptured] = useState(false);
+  /* The document itself. This was `idCaptured: boolean` — a toggle that
+     said a passport had been looked at and stored nothing. */
+  const [idType, setIdType] = useState("");
+  const [idNumber, setIdNumber] = useState("");
+  const [nationality, setNationality] = useState("IN");
+  const [passportExpiry, setPassportExpiry] = useState("");
+  const [visaNumber, setVisaNumber] = useState("");
+  const [visaExpiry, setVisaExpiry] = useState("");
+  const [addressLine, setAddressLine] = useState("");
   const [idSkipReason, setIdSkipReason] = useState("");
+  const [earlyReason, setEarlyReason] = useState("");
+  const [waiveEarly, setWaiveEarly] = useState(false);
+  const mayWaive = can(useRole(), "approve", "reservation");
+
+  /* Captured means a TYPE and a NUMBER. Derived, never asserted — the
+     server derives it the same way and cannot be told otherwise. */
+  const idCaptured = Boolean(idType && idNumber.trim());
+  const isForeign = nationality.trim().toUpperCase() !== "IN";
   const [ratePlan, setRatePlan] = useState(stay.ratePlan);
 
   const permitted = useQuery({
     queryKey: ["checkin-allowed", hotelId, stay.id, stay.status],
     queryFn: () => checkInAllowed(hotelId, stay.id, businessDate),
   });
-  const rooms = useQuery({
-    queryKey: ["assignable", hotelId, stay.roomType, businessDate],
-    queryFn: () => assignableRooms(hotelId, stay.roomType, businessDate),
+  /* Is it early, and what does the property charge? Asked of the
+     server so the answer is the property's clock, not the device's. */
+  const early = useQuery({
+    queryKey: ["early-checkin", hotelId],
+    queryFn: () => earlyArrival(hotelId),
     enabled: open,
   });
 
-  const allowed = permitted.data?.allowed ?? false;
+  const rooms = useQuery({
+    queryKey: ["assignable", hotelId, stay.roomType, businessDate,
+               stay.roomNumber],
+    queryFn: () => assignableRooms(hotelId, stay.roomType, businessDate,
+                                   stay.roomNumber),
+    enabled: open,
+  });
+
+  /* TWO KINDS OF EARLY, and they are not the same thing.
+
+       by the CLOCK   the booking is for today, but it is before the
+                      hour the property lets rooms go
+       by the DATE    the booking is for a later day and the guest is
+                      standing here now
+
+     The second used to be a flat refusal. It is a normal Tuesday: the
+     room is free, the desk puts them in it, and the booking moves to
+     today so the night audit charges for the night they actually
+     slept. Both need a reason; the server refuses without one either
+     way. */
+  const earlyByDate = stay.arrival > businessDate;
+  const earlyByClock = early.data?.isEarly ?? false;
+  const isEarly = earlyByClock || earlyByDate;
+
+  const allowed = (permitted.data?.allowed ?? false) || earlyByDate;
   const reason = permitted.data?.reason;
 
+  /* THE REASON, not just a dead button. `canCheckIn` produces a real
+     sentence — "Arrival is 30 Aug 2026. Check-in opens on the arrival
+     date." — and the trigger used to throw it away, leaving a clerk
+     with a greyed control and nothing to act on.
+
+     Rule 6, which this project states as: a blocked action is shown
+     WITH ITS REASON. A disabled button on its own is the half of that
+     rule that helps nobody. */
   const trigger = (
-    <Button disabled={!allowed} data-checkin>
-      <LogIn className="size-4" />
-      Check in
-    </Button>
+    <div className="space-y-1.5">
+      {/* PRIMARY. On an arrival this is the reason the panel is open —
+          the one orange button, at the top beside "More options", where
+          the owner's reference layout puts the main act. */}
+      <Button variant="primary" disabled={!allowed} data-checkin>
+        <LogIn className="size-4" />
+        Check in
+      </Button>
+      {!allowed && reason && (
+        <p className="text-sm text-grey-500 leading-snug" data-checkin-reason>
+          {reason}
+        </p>
+      )}
+    </div>
   );
 
   return (
@@ -68,7 +132,12 @@ export function CheckInFlow({
       onOpenChange={(o) => { setOpen(o); if (!o) setStep(0); }}
     >
       <DialogTrigger asChild>
-        {reason ? <Tooltip content={reason}>{trigger}</Tooltip> : trigger}
+        {/* NO TOOLTIP. It carried the same sentence the paragraph
+            below the button now shows, so the reason appeared twice —
+            once on hover and once in the panel. And a tooltip needs a
+            pointer: on the tablet at the front desk it can never be
+            opened at all, which makes it the wrong half to keep. */}
+        {trigger}
       </DialogTrigger>
 
       <DialogContent
@@ -159,28 +228,100 @@ export function CheckInFlow({
             <div className="space-y-4">
               <p className="text-sm text-grey-600">
                 Indian properties must record a guest's identity document.
-                It can be skipped, but the reason is kept on the folio.
+                It can be skipped, but the reason is kept in the stay's note.
               </p>
-              <button
-                type="button"
-                onClick={() => setIdCaptured(!idCaptured)}
-                className={cn(
-                  "w-full flex items-center gap-3 px-4 h-14 rounded-md border transition-colors duration-150",
-                  idCaptured
-                    ? "border-success bg-success-50"
-                    : "border-grey-300 border-dashed bg-white hover:border-grey-400",
-                )}
-              >
-                <IdCard className={cn("size-5", idCaptured ? "text-success" : "text-grey-400")} />
-                <span className="text-base text-ink-900">
-                  {idCaptured ? "ID captured" : "Capture ID document"}
-                </span>
-                {idCaptured && <Check className="size-4 text-success ml-auto" />}
-              </button>
 
-              {!idCaptured && (
-                <Field label="Reason for skipping" required>
+              <Field
+                label="Nationality"
+                hint={<>Anything other than IN puts this stay on the <Term name="formC">Form C</Term> register.</>}
+              >
+                {({ id }) => (
+                  <Input
+                    id={id}
+                    value={nationality}
+                    onChange={(e) => setNationality(e.target.value.toUpperCase())}
+                    placeholder="IN"
+                    maxLength={2}
+                    className="w-24"
+                  />
+                )}
+              </Field>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <Field label="Document">
                   {({ id }) => (
+                    <NativeSelect
+                      id={id}
+                      value={idType}
+                      onChange={(e) => setIdType(e.target.value)}
+                    >
+                      <option value="">Not recorded</option>
+                      {/* Exactly the types gd_id_type_valid permits. A
+                          fifth option here would be refused by the
+                          database as a constraint name. */}
+                      <option value="passport">Passport</option>
+                      <option value="aadhaar">Aadhaar</option>
+                      <option value="driving_licence">Driving licence</option>
+                      <option value="voter">Voter ID</option>
+                      <option value="other">Other</option>
+                    </NativeSelect>
+                  )}
+                </Field>
+
+                <Field label="Number" required={Boolean(idType)}>
+                  {({ id }) => (
+                    <Input
+                      id={id}
+                      value={idNumber}
+                      onChange={(e) => setIdNumber(e.target.value)}
+                      placeholder={idType === "passport" ? "P1234567" : "Document number"}
+                      disabled={!idType}
+                    />
+                  )}
+                </Field>
+              </div>
+
+              {/* Only for a foreign national. Asking an Indian guest for a
+                  visa number is how a form teaches people to leave fields
+                  blank. */}
+              {isForeign && (
+                <div className="space-y-3 border-l-2 border-brand-yellow pl-3.5">
+                  <p className="text-2xs text-grey-600">
+                    A foreign national must be reported to the FRRO within 24
+                    hours of arrival. These fields go on that filing.
+                  </p>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                    <Field label="Passport expiry">
+                      {({ id }) => (
+                        <Input id={id} type="date" value={passportExpiry}
+                          onChange={(e) => setPassportExpiry(e.target.value)} />
+                      )}
+                    </Field>
+                    <Field label="Visa number">
+                      {({ id }) => (
+                        <Input id={id} value={visaNumber}
+                          onChange={(e) => setVisaNumber(e.target.value)} />
+                      )}
+                    </Field>
+                    <Field label="Visa expiry">
+                      {({ id }) => (
+                        <Input id={id} type="date" value={visaExpiry}
+                          onChange={(e) => setVisaExpiry(e.target.value)} />
+                      )}
+                    </Field>
+                    <Field label="Address abroad">
+                      {({ id }) => (
+                        <Input id={id} value={addressLine}
+                          onChange={(e) => setAddressLine(e.target.value)} />
+                      )}
+                    </Field>
+                  </div>
+                </div>
+              )}
+
+                {!idCaptured && (
+                  <Field label="Reason for skipping" required>
+                    {({ id }) => (
                     <Input
                       id={id}
                       value={idSkipReason}
@@ -206,8 +347,66 @@ export function CheckInFlow({
                   </NativeSelect>
                 )}
               </Field>
+              {/* ── ARRIVING EARLY ─────────────────────────────────
+                  Shown only when the property says so. `isEarly` comes
+                  from the SERVER, against the property's clock — a
+                  tablet with the wrong time set must not be able to
+                  make an early arrival look like an ordinary one, and
+                  the server refuses independently either way. */}
+              {isEarly && (
+                <div className="rounded-md border border-brand-yellow-200 bg-brand-yellow-50 p-3 space-y-2.5">
+                  <p className="text-sm text-[#8a6300]">
+                    {earlyByDate
+                      ? `This booking is for ${dateShort(stay.arrival)}. Checking `
+                        + "in now moves it to today, so tonight is charged."
+                      : `Rooms are ready from ${early.data?.checkInTime ?? ""}.`}
+                    {earlyByClock && (early.data?.charge == null
+                      ? " This property does not charge for an early arrival."
+                      : ` An early arrival is ${money(early.data.charge)}.`)}
+                  </p>
+                  <Field label="Why the room is being given early" required>
+                    {({ id }) => (
+                      <Input
+                        id={id}
+                        value={earlyReason}
+                        onChange={(e) => setEarlyReason(e.target.value)}
+                        placeholder="Overnight train, room vacant and clean"
+                      />
+                    )}
+                  </Field>
+                  {/* THE WAIVE IS A MANAGER'S. Shown only to somebody
+                      who holds it — and refused again on the server,
+                      because a hidden checkbox is a courtesy and not a
+                      permission. */}
+                  {earlyByClock && early.data?.charge != null && mayWaive && (
+                    <label className="flex items-start gap-2.5 cursor-pointer">
+                      <input
+                        type="checkbox"
+                        checked={waiveEarly}
+                        onChange={(e) => setWaiveEarly(e.target.checked)}
+                        className="mt-0.5 size-4 accent-brand-orange cursor-pointer"
+                      />
+                      <span className="text-sm text-[#8a6300]">
+                        Waive the charge.
+                        {" "}
+                        <span className="text-grey-600">
+                          The reason is still recorded, and its absence
+                          from the bill is visible.
+                        </span>
+                      </span>
+                    </label>
+                  )}
+                </div>
+              )}
+
               <div className="rounded-md bg-grey-50 border border-grey-200 p-3 space-y-1.5">
-                <Line label="Rack rate" value={money(stay.rackTariff)} muted />
+                {/* A dash when the room type has no rate — never ₹0
+                    (defect 246). */}
+                <Line
+                  label="Rack rate"
+                  value={stay.rackTariff === null ? "—" : money(stay.rackTariff)}
+                  muted
+                />
                 <Line
                   label="Offered"
                   value={stay.isComplimentary ? "Complimentary" : money(stay.offeredTariff)}
@@ -234,8 +433,22 @@ export function CheckInFlow({
                   <Users className="inline size-3.5 -mt-0.5 mr-1" />
                   {adults} adult{adults === 1 ? "" : "s"}{children ? `, ${children} child` : ""} · {ratePlan}
                 </p>
-                {!idCaptured && (
-                  <p className="text-brand-yellow">ID not captured — {idSkipReason}</p>
+                {idCaptured ? (
+                  /* What was actually recorded. This showed NOTHING when a
+                     document HAD been captured, so a clerk confirming a
+                     check-in could not see the passport number they had
+                     just typed — the one screen where checking it is free. */
+                  <p className="tabular">
+                    {idType === "driving_licence"
+                      ? "Driving licence"
+                      : idType.charAt(0).toUpperCase() + idType.slice(1)}
+                    {" "}{idNumber}
+                    {isForeign ? " · " + nationality : ""}
+                  </p>
+                ) : (
+                  <p className="text-brand-yellow">
+                    ID not captured — {idSkipReason}
+                  </p>
                 )}
               </div>
             </div>
@@ -253,7 +466,13 @@ export function CheckInFlow({
 
           {step < 4 ? (
             <Button
-              disabled={step === 2 && !idCaptured && !idSkipReason.trim()}
+              disabled={
+                (step === 2 && !idCaptured && !idSkipReason.trim())
+                /* The server refuses without it anyway. Disabling here
+                   too means the clerk finds out on the step that asks,
+                   not on the one that finishes. */
+                || (step === 3 && isEarly && !earlyReason.trim())
+              }
               onClick={() => setStep((s) => s + 1)}
             >
               Continue
@@ -263,7 +482,21 @@ export function CheckInFlow({
               onClick={async () => {
                 const res = await checkIn(hotelId, stay.id, {
                   roomNumber, adults, children, ratePlan,
-                  idCaptured, idSkipReason, businessDate, user: USER,
+                  /* Sent only when there is something to send. An empty
+                     object would look like a capture to anything counting
+                     keys rather than reading them. */
+                  ...(idCaptured
+                    ? {
+                        identity: {
+                          idType, idNumber: idNumber.trim(), nationality,
+                          ...(passportExpiry ? { passportExpiry } : {}),
+                          ...(visaNumber ? { visaNumber } : {}),
+                          ...(visaExpiry ? { visaExpiry } : {}),
+                          ...(addressLine ? { addressLine } : {}),
+                        },
+                      }
+                    : {}),
+                  idSkipReason, businessDate, user: USER,
                 });
                 if (res.ok) {
                   toast.success(

@@ -1,5 +1,6 @@
 import {
   PROPERTY_ID,
+  FIXTURE_BUSINESS_DATE as BUSINESS_DATE,
   roomInventory,
   nightsSoldPerDay,
   dailyAvailableRooms,
@@ -30,46 +31,14 @@ import {
      e.g. 3,476.20 + 173.80 = 3,650.00
    ══════════════════════════════════════════════════════════════════ */
 
-export type StayStatus =
-  | "due-in" | "in-house" | "due-out" | "checked-out" | "no-show" | "cancelled";
-
-export type Source =
-  | "Walk-in" | "Fidato Hotels" | "Agoda" | "Booking.com" | "Expedia" | "go-MMT";
-
-export interface Stay {
-  id: string;
-  hotelId: string;
-  reference: string;
-  guest: string;
-  roomNumber: string;
-  roomType: string;
-  source: Source;
-  ratePlan: string;
-  arrival: string;          // ISO date
-  departure: string;        // ISO date — equal to arrival for day-use
-  nights: number;           // 0 for day-use
-  adults: number;
-  children: number;
-  status: StayStatus;
-  isDayUse: boolean;
-  isComplimentary: boolean;
-  rackTariff: number;       // per night, before discount
-  offeredTariff: number;    // per night, after discount
-  groupId?: string;
-  notes?: string;
-}
-
-export interface Folio {
-  stayId: string;
-  roomCharges: number;
-  extraCharges: number;
-  tax: number;
-  discount: number;
-  payments: number;
-  /** charges + tax − discount − payments. Negative means the guest overpaid. */
-  balance: number;
-  status: "open" | "settled" | "disputed" | "written-off";
-}
+/* The types live in `@/data/repositories/types` now. They were
+   defined here, and one `export type` re-export in types.ts kept
+   this entire fixture — guest names, bookings and all — inside the
+   production bundle. Imported back so the fixture is checked
+   against the same shape production uses. */
+import type { Stay, Folio, StayStatus, Source }
+  from "@/data/repositories/types";
+export type { Stay, Folio, StayStatus, Source };
 
 /* ── Constants from the real exports ──────────────────────────────── */
 
@@ -128,10 +97,34 @@ function countsAsSold(s: Stay): boolean {
    ══════════════════════════════════════════════════════════════════ */
 
 const GROUP_ID = "grp-pancham-aug08";
+/* ONE DEFINITION, used by the three stays below and by `groups`. A
+   fixture that names the group in two places is a fixture that will
+   eventually disagree with itself, and the test reading it would be
+   asserting the disagreement. */
+const GROUP = {
+  id: GROUP_ID,
+  name: "Pancham Hall function",
+  rooms: 3,
+};
+
+/* The fields no fixture here is about.
+
+   Spread rather than repeated on eight literals: these exist so the
+   objects satisfy `Stay`, and a fixture that spells out `isVip: false`
+   eight times reads as though the value mattered to the test. Any
+   fixture that IS about one of them overrides it after the spread. */
+const UNREMARKABLE = {
+  isVip: false,
+  isSingleLady: false,
+  businessSource: null,
+  marketSegment: null,
+  salesPerson: null,
+} as const;
 
 const notableStays: Stay[] = [
   {
     /* Overpaid folio — the real Night Audit shows balance −784.00 */
+    ...UNREMARKABLE,
     id: "stay-overpaid", hotelId: PROPERTY_ID, reference: "FH-2608-5001",
     guest: "Kalyani Rege", roomNumber: "301", roomType: "Deluxe",
     source: "Fidato Hotels", ratePlan: "Room Only",
@@ -144,6 +137,7 @@ const notableStays: Stay[] = [
   {
     /* Complimentary at ₹0, Var % = −100. The report counts comps
        separately from sold rooms, and so do we. */
+    ...UNREMARKABLE,
     id: "stay-comp", hotelId: PROPERTY_ID, reference: "FH-2608-5002",
     guest: "Kapil Ganjoo", roomNumber: "206", roomType: "Superior",
     source: "Fidato Hotels", ratePlan: "CP",
@@ -155,6 +149,7 @@ const notableStays: Stay[] = [
   },
   {
     /* Day-use: arrival and departure on the same date, zero nights */
+    ...UNREMARKABLE,
     id: "stay-dayuse", hotelId: PROPERTY_ID, reference: "FH-2608-5003",
     guest: "Sameer Gokhale", roomNumber: "202", roomType: "Superior",
     source: "Walk-in", ratePlan: "Room Only",
@@ -166,6 +161,7 @@ const notableStays: Stay[] = [
   },
   /* Back-to-back turnover on room 204 — two guests, one date boundary */
   {
+    ...UNREMARKABLE,
     id: "stay-turn-out", hotelId: PROPERTY_ID, reference: "FH-2608-5004",
     guest: "Ganesh Patil", roomNumber: "204", roomType: "Superior",
     source: "go-MMT", ratePlan: "CP",
@@ -175,6 +171,7 @@ const notableStays: Stay[] = [
     rackTariff: 4099, offeredTariff: 2381,
   },
   {
+    ...UNREMARKABLE,
     id: "stay-turn-in", hotelId: PROPERTY_ID, reference: "FH-2608-5005",
     guest: "Lata Bhosale", roomNumber: "204", roomType: "Superior",
     source: "Agoda", ratePlan: "CP",
@@ -187,35 +184,42 @@ const notableStays: Stay[] = [
   /* Group — Pancham Hall function, three rooms on one reference.
      Placed on the weekend the real month actually filled. */
   {
+    ...UNREMARKABLE,
     id: "stay-grp-1", hotelId: PROPERTY_ID, reference: "FH-2608-5010",
     guest: "Aditya Rane", roomNumber: "302", roomType: "Deluxe",
     source: "Fidato Hotels", ratePlan: "MAP",
     arrival: AUG(8), departure: AUG(11), nights: 3,
     adults: 2, children: 0, status: "checked-out",
     isDayUse: false, isComplimentary: false,
-    rackTariff: 3699, offeredTariff: 3100, groupId: GROUP_ID,
+    rackTariff: 3699, offeredTariff: 3100,
+    groupId: GROUP_ID, group: GROUP,
     notes: "Pancham Hall function block — the weekend that filled the house.",
   },
   {
+    ...UNREMARKABLE,
     id: "stay-grp-2", hotelId: PROPERTY_ID, reference: "FH-2608-5010",
     guest: "Kavita Salunkhe", roomNumber: "303", roomType: "Deluxe",
     source: "Fidato Hotels", ratePlan: "MAP",
     arrival: AUG(8), departure: AUG(11), nights: 3,
     adults: 2, children: 2, status: "checked-out",
     isDayUse: false, isComplimentary: false,
-    rackTariff: 3699, offeredTariff: 3100, groupId: GROUP_ID,
+    rackTariff: 3699, offeredTariff: 3100,
+    groupId: GROUP_ID, group: GROUP,
   },
   {
+    ...UNREMARKABLE,
     id: "stay-grp-3", hotelId: PROPERTY_ID, reference: "FH-2608-5010",
     guest: "Pramod Jadhav", roomNumber: "305", roomType: "Deluxe",
     source: "Fidato Hotels", ratePlan: "MAP",
     arrival: AUG(8), departure: AUG(11), nights: 3,
     adults: 1, children: 0, status: "checked-out",
     isDayUse: false, isComplimentary: false,
-    rackTariff: 3699, offeredTariff: 3100, groupId: GROUP_ID,
+    rackTariff: 3699, offeredTariff: 3100,
+    groupId: GROUP_ID, group: GROUP,
   },
   {
     /* Crosses the month boundary — departs 2 September */
+    ...UNREMARKABLE,
     id: "stay-crossmonth", hotelId: PROPERTY_ID, reference: "FH-2608-5020",
     guest: "Farida Contractor", roomNumber: "307", roomType: "Deluxe",
     source: "Booking.com", ratePlan: "CP",
@@ -227,6 +231,7 @@ const notableStays: Stay[] = [
   },
   {
     /* Cancelled, so the room was released and can be resold */
+    ...UNREMARKABLE,
     id: "stay-cancelled", hotelId: PROPERTY_ID, reference: "FH-2608-5030",
     guest: "Ritu Chavan", roomNumber: "210", roomType: "Superior",
     source: "Expedia", ratePlan: "Room Only",
@@ -317,6 +322,7 @@ function generate(preplaced: Stay[]): Stay[] {
 
       seq++;
       stays.push({
+        ...UNREMARKABLE,
         id: `stay-${seq}`,
         hotelId: PROPERTY_ID,
         reference: `FH-2608-${String(4800 + seq).padStart(4, "0")}`,
@@ -374,6 +380,10 @@ function folioFor(s: Stay): Folio {
 
 const generatedStays = generate(notableStays);
 
+/* The awkward folios, written by hand. These are the cases the screens
+   exist to show — an overpayment, a comp, a disputed group bill — and
+   their figures are deliberate, so the calibration above leaves them
+   alone. */
 const notableFolios: Folio[] = [
   { stayId: "stay-overpaid", roomCharges: 4000, extraCharges: 0, tax: 200, discount: 0, payments: 4984, balance: -784, status: "open" },
   { stayId: "stay-comp", roomCharges: 0, extraCharges: 0, tax: 0, discount: 0, payments: 0, balance: 0, status: "settled" },
@@ -388,6 +398,107 @@ const notableFolios: Folio[] = [
   { stayId: "stay-cancelled", roomCharges: 0, extraCharges: 0, tax: 0, discount: 0, payments: 0, balance: 0, status: "written-off" },
 ];
 
+
+/* ══════════════════════════════════════════════════════════════════
+   CALIBRATE THE MONEY, NOT ONLY THE NIGHTS
+
+   The fixture has always asserted its NIGHT counts — 132 sold of 431
+   available, which is what makes occupancy 30.63%. It never asserted
+   its REVENUE, and the generated tariffs summed to ₹3,76,745.54 while
+   the real export says ₹4,19,578.77.
+
+   Nobody noticed for a simple reason: `getPeriodStatistics` read ADR
+   from `property._calibration` instead of from the folios. So the
+   dashboard and the Manager Report printed ₹3,178.63 while this
+   fixture's own ledger said ₹2,854.13 — two numbers, one of them
+   shown, and no test comparing them.
+
+   TWO THINGS HAD TO BE RIGHT, and each was wrong on one attempt:
+
+   · THE POPULATION. A charge posts when a guest ARRIVES, so the
+     revenue in the 1–25 August window belongs to stays arriving in it,
+     not to every stay on the file. Scaling across all of them pushed
+     the total DOWN to ₹3,25,688.
+
+   · WHAT EACH STAY IS WORTH. A notable stay's folio is hand-written —
+     `stay-crossmonth` carries ₹8,700 regardless of its tariff — and the
+     ledger posts THAT, not tariff × nights. Measuring the notable ones
+     the generated way left the total ₹9,300 short.
+
+   So this runs after `notableFolios`, and asks each stay what the
+   LEDGER will actually hold. The notable rates are left untouched:
+   a ₹1,800 day-use, a ₹2,857 override, a comp at zero are the cases
+   the screens exist to show.
+   ══════════════════════════════════════════════════════════════════ */
+
+const TARGET_ROOM_REVENUE = 419578.77;
+const REVENUE_FROM = "2026-08-01";
+const REVENUE_TO = BUSINESS_DATE;
+
+const inWindow = (s: Stay) =>
+  !s.isComplimentary && s.arrival >= REVENUE_FROM && s.arrival <= REVENUE_TO;
+
+/** What this stay will actually put on the ledger. */
+const ledgerRoomCharge = (s: Stay): number => {
+  const written = notableFolios.find((f) => f.stayId === s.id);
+  if (written) return written.roomCharges;
+  return s.offeredTariff * Math.max(s.nights, 1);
+};
+
+const revenueOf = (list: Stay[]) =>
+  list.filter(inWindow).reduce((t, s) => t + ledgerRoomCharge(s), 0);
+
+{
+  const fixed = revenueOf(notableStays);
+  const scalable = generatedStays.filter(inWindow);
+  const current = revenueOf(scalable);
+
+  if (current <= 0) {
+    throw new Error("Fixture drift: no generated revenue in the window to calibrate.");
+  }
+
+  const factor = (TARGET_ROOM_REVENUE - fixed) / current;
+  if (factor <= 0) {
+    throw new Error(
+      `Fixture drift: the notable stays alone are worth ₹${fixed.toFixed(2)}, ` +
+        `which already exceeds the ₹${TARGET_ROOM_REVENUE} target.`,
+    );
+  }
+
+  for (const stay of scalable) {
+    stay.offeredTariff = Math.round(stay.offeredTariff * factor * 100) / 100;
+  }
+
+  /* Rounding leaves a few paise. They go on the largest generated stay,
+     where a rupee either way is invisible, rather than letting the
+     total miss its own assertion. */
+  const residue =
+    Math.round((TARGET_ROOM_REVENUE - revenueOf([...notableStays, ...generatedStays])) * 100) / 100;
+
+  if (Math.abs(residue) >= 0.01) {
+    const biggest = [...scalable].sort(
+      (a, b) => ledgerRoomCharge(b) - ledgerRoomCharge(a),
+    )[0];
+    if (biggest) {
+      biggest.offeredTariff =
+        Math.round((biggest.offeredTariff + residue / Math.max(biggest.nights, 1)) * 100) / 100;
+    }
+  }
+}
+
+/* The assertion that would have caught this from the beginning. */
+{
+  const actual = Math.round(revenueOf([...notableStays, ...generatedStays]) * 100) / 100;
+  if (Math.abs(actual - TARGET_ROOM_REVENUE) > 1) {
+    throw new Error(
+      `Fixture drift: room revenue in ${REVENUE_FROM}..${REVENUE_TO} is ` +
+        `₹${actual.toFixed(2)}, the real Night Audit export says ` +
+        `₹${TARGET_ROOM_REVENUE}. ADR would read ₹${(actual / 132).toFixed(2)} ` +
+        `instead of ₹3,178.63.`,
+    );
+  }
+}
+
 export const stays: Stay[] = [...notableStays, ...generatedStays];
 export const folios: Folio[] = [
   ...notableFolios,
@@ -396,11 +507,11 @@ export const folios: Folio[] = [
 
 export const groups = [
   {
-    id: GROUP_ID,
+    id: GROUP.id,
     hotelId: PROPERTY_ID,
-    name: "Pancham Hall function",
+    name: GROUP.name,
     reference: "FH-2608-5010",
-    rooms: 3,
+    rooms: GROUP.rooms,
     arrival: AUG(8),
     departure: AUG(11),
   },
@@ -451,11 +562,13 @@ export interface Reservation {
   reference: string;
   guestId: string;
   guestName: string;
-  source: string;
+  /* Null when nothing on the booking says. The screens show a dash. */
+  source: string | null;
   roomType: string;
   roomNumber?: string;
   rateType: string;
-  baseRate: number;
+  /** NULL when the room type has no rate set — as on a Stay (defect 246). */
+  baseRate: number | null;
   offeredRate: number;
   checkIn: string;
   checkOut: string;

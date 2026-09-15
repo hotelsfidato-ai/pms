@@ -1,12 +1,14 @@
+/* `operations` no longer touches the in-memory store at all — not to
+   read and not to write. Every one of the five flows goes to Postgres,
+   and `Posting` is the only thing left that this module takes from
+   there: a type, not data. */
+import type { Posting } from "./types";
+import { listAllRooms, setHousekeeping } from "./rooms";
+import { getStay, listStays, getFolio } from "./stays";
+import { api, ApiError } from "@/lib/api";
 import {
-  readStays, readRooms, mutateStay, addStay, addPosting, reversePosting,
-  setRoomHousekeeping, balanceOf, postingsFor, nextReference, newStayId,
-  type Posting,
-} from "../store";
-import { PROPERTY_ID } from "../fixtures/property";
-import {
-  taxOn, canCheckIn, canAssignRoom, canPostCharge, canReverse,
-  canCheckOut, canMarkClean, canMarkInspected, canConfirmWalkIn,
+  canCheckIn, canPostCharge, canReverse,
+  canCheckOut, canConfirmWalkIn,
   type ChargeCategory, type PaymentMethod,
 } from "@/lib/rules";
 import { money } from "@/lib/format";
@@ -24,13 +26,15 @@ import type { Stay, Permitted } from "./types";
 
 export type { Posting };
 
-const guard = (hotelId: string) => hotelId === PROPERTY_ID;
-const stayById = (hotelId: string, id: string) =>
-  readStays().find((s) => s.id === id && s.hotelId === hotelId) ?? null;
 
 export interface OperationResult<T = void> {
   ok: boolean;
   reason?: string;
+  /** What would SATISFY this refusal, when it has an answer. A screen
+      opens the right dialog from this rather than matching on the
+      prose — which somebody will reword one day, at which point the
+      way through silently disappears. */
+  needs?: "late-reason" | "early-reason";
   data?: T;
 }
 
@@ -39,13 +43,18 @@ const refuse = (reason: string): OperationResult<never> => ({ ok: false, reason 
 /* ── Folio reads ──────────────────────────────────────────────────── */
 
 export async function getFolioPostings(hotelId: string, stayId: string): Promise<Posting[]> {
-  if (!guard(hotelId) || !stayById(hotelId, stayId)) return [];
-  return postingsFor(stayId).map((p) => ({ ...p }));
+  if (!hotelId || !stayId) return [];
+  try {
+    return await api<Posting[]>(`/api/hotels/${hotelId}/stays/${stayId}/postings`);
+  } catch (error) {
+    if (error instanceof ApiError && error.status === 404) return [];
+    throw error;
+  }
 }
 
 export async function getFolioBalance(hotelId: string, stayId: string): Promise<number> {
-  if (!guard(hotelId) || !stayById(hotelId, stayId)) return 0;
-  return balanceOf(stayId);
+  const folio = await getFolio(hotelId, stayId);
+  return folio?.balance ?? 0;
 }
 
 /* ── A · Arrival → in house ───────────────────────────────────────── */
@@ -53,32 +62,110 @@ export async function getFolioBalance(hotelId: string, stayId: string): Promise<
 export async function checkInAllowed(
   hotelId: string, stayId: string, businessDate: string,
 ): Promise<Permitted> {
-  const stay = stayById(hotelId, stayId);
+  /* Reads the SAME source the write does.
+
+     This read the in-memory store while `checkIn` had moved onto HTTP,
+     so it looked up a Postgres uuid in a store that has never seen
+     one, found nothing, and disabled the button — permanently, with
+     "Reservation not found." A clerk would have seen a check-in they
+     could never perform and no way to find out why.
+
+     A gate that consults a different source from the action it guards
+     is not a gate. */
+  const stay = await getStay(hotelId, stayId);
   if (!stay) return { allowed: false, reason: "Reservation not found." };
   return canCheckIn(stay, businessDate);
 }
 
 /** Rooms a guest of this type may actually be put in. */
-export async function assignableRooms(hotelId: string, roomType: string, businessDate: string) {
-  if (!guard(hotelId)) return [];
-  const occupied = new Set(
-    readStays()
-      .filter(
-        (s) =>
-          s.status !== "cancelled" && !s.isDayUse &&
-          s.arrival <= businessDate && s.departure > businessDate,
-      )
-      .map((s) => s.roomNumber),
-  );
-  return readRooms()
-    .filter((r) => r.type === roomType)
+export async function assignableRooms(
+  hotelId: string, roomType: string, businessDate: string,
+  /** The room this booking is ALREADY on, if any. Always offered,
+      whatever its type — see below. */
+  currentRoom?: string | null,
+) {
+  /* Which rooms a guest of this type can be put in tonight, and why
+     not, for the ones they cannot. Both lists come from the API now —
+     the room inventory and who is in it — because a picker built from
+     the store would have offered rooms the server then refused. */
+  const [rooms, stays] = await Promise.all([
+    listAllRooms(hotelId),
+    listStays(hotelId),
+  ]);
+
+  /* Occupied means somebody has CHECKED IN and not left. Not "a
+     booking covers tonight" — that would have counted the arrival
+     being checked in as the reason it could not be checked in, and it
+     did: the guest's own pre-assigned room came back disabled.
+
+     Status, not dates. Third time this has bitten (MEMORY.md 3). */
+  const takenBy = new Map<string, string>();
+  for (const s of stays) {
+    if (s.status === "in-house" || s.status === "due-out") {
+      takenBy.set(s.roomNumber, s.guest);
+    }
+  }
+  void businessDate;
+
+  return rooms
+    /* THE ROOM THEY ARE ALREADY ON IS ALWAYS OFFERED. Filtering to the
+       booked type alone hid it whenever the two disagreed — a Deluxe
+       booking pre-assigned to a Superior, which the desk does when it
+       upgrades somebody or works around a fault.
+
+       The flow seeds its selection from `stay.roomNumber`, so the room
+       was SELECTED AND ABSENT: the picker showed eight rooms, none of
+       them highlighted, and the one the desk had already chosen was
+       nowhere. Nothing said why.
+
+       A decision somebody already made is not a decision this screen
+       gets to hide. */
+    .filter((r) => r.type === roomType
+      || (currentRoom != null && r.number === currentRoom))
     .map((r) => {
-      const permitted = canAssignRoom({
-        housekeeping: r.housekeeping,
-        occupied: occupied.has(r.number),
-      });
-      return { ...r, ...permitted };
+      /* The seam keeps the name the screens already read. The API calls
+         it `status`; the store called it `housekeeping`, and CheckInFlow
+         was written against the store. Renaming it here would have been
+         the first time this swap forced a SCREEN to change — which is
+         the one thing the checkpoint is measuring. Mapping belongs in
+         the repository; that is what a seam is for. */
+      const base = { ...r, housekeeping: r.status };
+
+      if (r.status === "out-of-service") {
+        return { ...base, allowed: false, reason: "Held out of service." };
+      }
+      if (r.status === "dirty") {
+        return { ...base, allowed: false, reason: "Not cleaned yet." };
+      }
+      const occupant = takenBy.get(r.number);
+      if (occupant && r.number !== currentRoom) {
+        return { ...base, allowed: false, reason: `${occupant} is in this room.` };
+      }
+      return { ...base, allowed: true, reason: undefined as string | undefined };
     });
+}
+
+export interface EarlyArrival {
+  isEarly: boolean;
+  checkInTime: string;
+  checkOutTime: string;
+  /** Null when the property does not charge. Not zero — a dash on
+      screen, because "we do not charge" and "we charge nothing" are
+      different sentences and only one of them is a decision. */
+  charge: number | null;
+  lateCharge: number | null;
+}
+
+/** The property's clock and its charges, from the server. */
+export async function earlyArrival(
+  hotelId: string,
+): Promise<EarlyArrival | null> {
+  if (!hotelId) return null;
+  try {
+    return await api<EarlyArrival>(`/api/hotels/${hotelId}/early-arrival`);
+  } catch {
+    return null;
+  }
 }
 
 export async function checkIn(
@@ -89,40 +176,59 @@ export async function checkIn(
     adults: number;
     children: number;
     ratePlan: string;
-    idCaptured: boolean;
+    /**
+     * The DOCUMENT, not a claim that one was seen.
+     *
+     * This was `idCaptured: boolean` — the flow flipped it, the API
+     * filed it into a note, and `guest_documents` was never written
+     * to. Capture is now derived from whether a type and a number
+     * actually arrive, which is not a thing a client can assert.
+     */
+    identity?: {
+      idType?: string;
+      idNumber?: string;
+      nationality?: string;
+      passportExpiry?: string;
+      visaNumber?: string;
+      visaExpiry?: string;
+      addressLine?: string;
+      city?: string;
+      country?: string;
+    };
     idSkipReason?: string;
+    /* Why the room was given before the property's check-in time, and
+       whether the charge for it was waived. The server decides WHETHER
+       this is early — the clock is the property's, not the tablet's,
+       and a device with the wrong time must not be able to make an
+       early arrival look ordinary. */
+    earlyReason?: string;
+    waiveEarly?: boolean;
     businessDate: string;
     user: string;
   },
 ): Promise<OperationResult<Stay>> {
-  const stay = stayById(hotelId, stayId);
-  if (!stay) return refuse("Reservation not found.");
+  /* Writes to Postgres, in ONE transaction, and the DATABASE refuses.
+     `src/lib/rules.ts` still disables the button — that is what a clerk
+     should see — but a rule enforced only in the browser is a
+     suggestion, and a suggestion is not what stops a room being sold
+     twice. The refusal comes back as a sentence, not a constraint
+     name, because a clerk has to act on it. */
+  try {
+    await api<{ ok: true }>(
+      `/api/hotels/${hotelId}/stays/${stayId}/check-in`,
+      { method: "POST", body: JSON.stringify(input) },
+    );
+  } catch (error) {
+    if (error instanceof ApiError) return refuse(error.message);
+    throw error;
+  }
 
-  const permitted = canCheckIn(stay, input.businessDate);
-  if (!permitted.allowed) return refuse(permitted.reason!);
-
-  const rooms = await assignableRooms(hotelId, stay.roomType, input.businessDate);
-  const room = rooms.find((r) => r.number === input.roomNumber);
-  if (!room) return refuse("That room is not part of this property.");
-  if (!room.allowed && room.number !== stay.roomNumber) return refuse(room.reason!);
-
-  if (!input.idCaptured && !input.idSkipReason?.trim())
-    return refuse("Capture the guest's ID, or give a reason for skipping it.");
-
-  const updated = mutateStay(stayId, {
-    status: "in-house",
-    roomNumber: input.roomNumber,
-    adults: input.adults,
-    children: input.children,
-    ratePlan: input.ratePlan,
-    notes: input.idCaptured
-      ? stay.notes
-      : [stay.notes, `ID not captured — ${input.idSkipReason}`].filter(Boolean).join(" · "),
-  });
-  if (!updated) return refuse("Could not update the reservation.");
-
-  /* An occupied room is not clean. */
-  setRoomHousekeeping(input.roomNumber, "occupied");
+  /* Read back rather than assume. The server decides the final state —
+     it may have released a pre-assignment or corrected occupancy — and
+     returning a locally-guessed object is how a screen shows something
+     the database does not agree with. */
+  const updated = await getStay(hotelId, stayId);
+  if (!updated) return refuse("Checked in, but the reservation could not be re-read.");
   return { ok: true, data: updated };
 }
 
@@ -140,32 +246,43 @@ export async function postCharge(
     user: string;
   },
 ): Promise<OperationResult<Posting>> {
-  const stay = stayById(hotelId, stayId);
+  /* The tax rate comes from the PROPERTY, server-side — `taxOn()` in
+     src/lib/rules.ts still shows the clerk what will be charged, but
+     the figure that lands in the ledger is computed where the rate
+     lives. GST is a state subject; a constant in the browser is the
+     wrong place for it. */
+  /* The browser's copy of the rule answers instantly and without a
+     round trip. It is not the enforcement — the server refuses too —
+     but a clerk should not wait on the network to be told a closed
+     folio cannot take a charge. */
+  const stay = await getStay(hotelId, stayId);
   if (!stay) return refuse("Reservation not found.");
-
   const permitted = canPostCharge(stay);
   if (!permitted.allowed) return refuse(permitted.reason!);
   if (!input.description.trim()) return refuse("A charge needs a description.");
   if (input.amount === 0) return refuse("A charge of zero is not a charge.");
 
-  const posting = addPosting({
-    folioId: stayId,
-    businessDate: input.businessDate,
-    category: input.category,
-    description: input.description.trim(),
-    amount: input.amount,
-    tax: input.taxable ? taxOn(input.amount) : 0,
-    kind: "charge",
-    user: input.user,
-  });
-  return { ok: true, data: posting };
+  try {
+    await api(`/api/hotels/${hotelId}/stays/${stayId}/charges`, {
+      method: "POST",
+      body: JSON.stringify(input),
+    });
+  } catch (error) {
+    if (error instanceof ApiError) return refuse(error.message);
+    throw error;
+  }
+
+  const posting = (await getFolioPostings(hotelId, stayId)).at(-1);
+  return posting ? { ok: true, data: posting } : { ok: true };
 }
 
 export async function reverseChargeAllowed(
   hotelId: string, stayId: string, postingId: string,
 ): Promise<Permitted> {
-  if (!guard(hotelId)) return { allowed: false, reason: "Unknown property." };
-  const posting = postingsFor(stayId).find((p) => p.id === postingId);
+  /* Reads the same postings the reversal will act on. A gate that
+     consults a different source from the action it guards is not a
+     gate — see MEMORY.md 14. */
+  const posting = (await getFolioPostings(hotelId, stayId)).find((p) => p.id === postingId);
   if (!posting) return { allowed: false, reason: "Posting not found." };
   return canReverse({ reversed: posting.reversed, isReversal: posting.kind === "reversal" });
 }
@@ -173,11 +290,22 @@ export async function reverseChargeAllowed(
 export async function reverseCharge(
   hotelId: string, stayId: string, postingId: string, user: string,
 ): Promise<OperationResult<Posting>> {
-  const permitted = await reverseChargeAllowed(hotelId, stayId, postingId);
-  if (!permitted.allowed) return refuse(permitted.reason!);
-  const reversal = reversePosting(postingId, user);
-  if (!reversal) return refuse("Could not reverse that posting.");
-  return { ok: true, data: reversal };
+  /* The reversal is a NEW row. Nothing is edited and nothing is
+     deleted, so the posting count goes UP when something is undone —
+     which is the opposite of what most people expect and exactly what
+     makes the ledger auditable. */
+  try {
+    await api(
+      `/api/hotels/${hotelId}/stays/${stayId}/charges/${postingId}/reverse`,
+      { method: "POST", body: JSON.stringify({ user }) },
+    );
+  } catch (error) {
+    if (error instanceof ApiError) return refuse(error.message);
+    throw error;
+  }
+
+  const reversal = (await getFolioPostings(hotelId, stayId)).at(-1);
+  return reversal ? { ok: true, data: reversal } : { ok: true };
 }
 
 /* ── C · Departure → settle → check out ───────────────────────────── */
@@ -187,56 +315,72 @@ export async function settle(
   stayId: string,
   input: { method: PaymentMethod; amount: number; businessDate: string; user: string },
 ): Promise<OperationResult<Posting>> {
-  const stay = stayById(hotelId, stayId);
-  if (!stay) return refuse("Reservation not found.");
-  if (input.amount <= 0) return refuse("A payment must be greater than zero.");
+  try {
+    await api(`/api/hotels/${hotelId}/stays/${stayId}/payments`, {
+      method: "POST",
+      body: JSON.stringify(input),
+    });
+  } catch (error) {
+    if (error instanceof ApiError) return refuse(error.message);
+    throw error;
+  }
 
-  const posting = addPosting({
-    folioId: stayId,
-    businessDate: input.businessDate,
-    category: "Payment",
-    description: input.method === "Bill to company"
-      ? "Transferred to city ledger"
-      : `Received — ${input.method}`,
-    amount: -input.amount,
-    tax: 0,
-    kind: "payment",
-    method: input.method,
-    user: input.user,
-  });
-  return { ok: true, data: posting };
+  const posting = (await getFolioPostings(hotelId, stayId)).at(-1);
+  return posting ? { ok: true, data: posting } : { ok: true };
 }
 
 export async function checkOutAllowed(hotelId: string, stayId: string): Promise<Permitted> {
-  const stay = stayById(hotelId, stayId);
+  const stay = await getStay(hotelId, stayId);
   if (!stay) return { allowed: false, reason: "Reservation not found." };
-  return canCheckOut(stay, balanceOf(stayId), money);
+  return canCheckOut(stay, await getFolioBalance(hotelId, stayId), money);
 }
 
 export async function checkOut(
-  hotelId: string, stayId: string, user: string,
+  hotelId: string, stayId: string,
+  /* ⚠ THIS TOOK ONLY `user` AND SENT ONLY `user`.
+     The server refuses a late departure without a reason — correctly,
+     and with the reason on screen — and there was no way to give it
+     one. So the refusal was a DEAD END: press the button, read why it
+     will not work, press it again. Five identical toasts stacked up in
+     the owner's screenshot, which is exactly what that loop looks like.
+
+     A guard that cannot be satisfied is not a guard, it is a wall. */
+  late?: { lateReason?: string; waiveLate?: boolean },
 ): Promise<OperationResult<Stay>> {
-  const permitted = await checkOutAllowed(hotelId, stayId);
-  if (!permitted.allowed) return refuse(permitted.reason!);
+  /* The BALANCE decides, server-side. A guest cannot walk out owing
+     money without somebody deciding to let them, and that decision is
+     a transfer to the city ledger — which is itself a posting, not a
+     silent exception.
 
-  const stay = stayById(hotelId, stayId)!;
-  const updated = mutateStay(stayId, { status: "checked-out" });
-  if (!updated) return refuse("Could not close the stay.");
+     Check-out also releases the room, marks it vacant and marks it
+     DIRTY, so it reaches housekeeping the moment the guest walks out
+     rather than the next time somebody remembers. */
+  try {
+    await api(`/api/hotels/${hotelId}/stays/${stayId}/check-out`, {
+      method: "POST",
+      body: JSON.stringify({ ...late }),
+    });
+  } catch (error) {
+    if (error instanceof ApiError) {
+      /* The marker rides through with the reason. Without it the panel
+         would have to recognise a late departure by reading the
+         sentence, and the sentence is not an interface. */
+      const body = error.body as
+        { reason?: string; needs?: "late-reason" | "early-reason" } | undefined;
+      return body?.needs
+        ? { ok: false, reason: body.reason ?? error.message, needs: body.needs }
+        : refuse(body?.reason ?? error.message);
+    }
+    throw error;
+  }
 
-  /* The room the guest just left is dirty, and appears on housekeeping's
-     board the moment they walk out. */
-  setRoomHousekeeping(stay.roomNumber, "dirty");
-  void user;
+  const updated = await getStay(hotelId, stayId);
+  if (!updated) return refuse("Checked out, but the reservation could not be re-read.");
   return { ok: true, data: updated };
 }
 
 /* ── D · Walk-in ──────────────────────────────────────────────────── */
 
-function addDaysIso(iso: string, n: number): string {
-  const d = new Date(`${iso}T00:00:00Z`);
-  d.setUTCDate(d.getUTCDate() + n);
-  return d.toISOString().slice(0, 10);
-}
 
 export async function createWalkIn(
   hotelId: string,
@@ -252,63 +396,42 @@ export async function createWalkIn(
     overrideReason: string;
     businessDate: string;
     user: string;
+    /* Captured AT THE DESK, because it cannot be back-filled. A month
+       later nobody remembers which agent sent a walk-in, and the
+       source-mix report is built from exactly this. Optional: a clerk
+       with a queue must not be blocked on a field they do not know. */
+    businessSource?: string;
+    marketSegment?: string;
+    salesPerson?: string;
+    isSingleLady?: boolean;
   },
 ): Promise<OperationResult<Stay>> {
-  if (!guard(hotelId)) return refuse("Unknown property.");
+  /* This wrote the new stay into the in-memory store while every
+     screen had moved onto HTTP. The walk-in would have reported
+     success and then not existed — no error, no row, and a clerk
+     looking at an empty chart with a guest standing in front of them.
 
+     The reference is now generated by the DATABASE. `nextReference()`
+     produced one client-side, which cannot stay unique the moment two
+     clerks take a walk-in at the same desk. */
   const permitted = canConfirmWalkIn(input);
   if (!permitted.allowed) return refuse(permitted.reason!);
 
-  const room = readRooms().find((r) => r.number === input.roomNumber);
-  if (!room) return refuse("That room is not part of this property.");
+  let created: { id: string } | undefined;
+  try {
+    const out = await api<{ ok: true; data?: { id: string } }>(
+      `/api/hotels/${hotelId}/walk-ins`,
+      { method: "POST", body: JSON.stringify(input) },
+    );
+    created = out.data;
+  } catch (error) {
+    if (error instanceof ApiError) return refuse(error.message);
+    throw error;
+  }
 
-  const occupied = readStays().some(
-    (s) =>
-      s.roomNumber === input.roomNumber && s.status !== "cancelled" && !s.isDayUse &&
-      s.arrival <= input.businessDate && s.departure > input.businessDate,
-  );
-  const assignable = canAssignRoom({ housekeeping: room.housekeeping, occupied });
-  if (!assignable.allowed) return refuse(assignable.reason!);
-
-  const stay: Stay = {
-    id: newStayId(),
-    hotelId,
-    reference: nextReference(),
-    guest: input.guestName.trim(),
-    roomNumber: input.roomNumber,
-    roomType: room.type,
-    source: "Walk-in",
-    ratePlan: input.ratePlan,
-    arrival: input.businessDate,
-    departure: addDaysIso(input.businessDate, input.nights),
-    nights: input.nights,
-    adults: input.adults,
-    children: input.children,
-    /* A walk-in is one act, not a booking followed by a check-in. */
-    status: "in-house",
-    isDayUse: false,
-    isComplimentary: false,
-    rackTariff: input.rackTariff,
-    offeredTariff: input.offeredTariff,
-    notes: input.overrideReason.trim()
-      ? `Rate override — ${input.overrideReason.trim()}`
-      : undefined,
-  };
-
-  addStay(stay);
-  addPosting({
-    folioId: stay.id,
-    businessDate: input.businessDate,
-    category: "Room posting",
-    description: `Room ${stay.roomNumber} · ${input.nights} night${input.nights === 1 ? "" : "s"}`,
-    amount: input.offeredTariff * input.nights,
-    tax: taxOn(input.offeredTariff * input.nights),
-    kind: "charge",
-    user: input.user,
-  });
-  setRoomHousekeeping(input.roomNumber, "occupied");
-
-  return { ok: true, data: stay };
+  if (!created?.id) return refuse("Walk-in taken, but it could not be re-read.");
+  const stay = await getStay(hotelId, created.id);
+  return stay ? { ok: true, data: stay } : refuse("Walk-in taken, but it could not be re-read.");
 }
 
 /* ── E · Housekeeping ─────────────────────────────────────────────── */
@@ -324,24 +447,51 @@ export interface HousekeepingRoom {
 }
 
 export async function listHousekeeping(
-  hotelId: string, businessDate: string,
+  hotelId: string,
+  /* Kept in the signature: every seam function is asked "as at when",
+     and a board that silently ignored the date would be the odd one
+     out. Occupancy now comes from stay STATUS rather than from
+     comparing dates — see below — so nothing here reads it yet. It
+     will when the business date stops being a constant (CP11). */
+  _businessDate: string,
 ): Promise<HousekeepingRoom[]> {
-  if (!guard(hotelId)) return [];
-  const live = readStays().filter((s) => s.hotelId === hotelId && s.status !== "cancelled");
+  if (!hotelId) return [];
+  const live = (await listStays(hotelId)).filter((s) => s.status !== "cancelled");
 
-  return readRooms().map((room) => {
+  /* Rooms from the API, stays from the store — a hybrid, because CP9
+     is half-done. It is the ROOM that has moved, and reading it from
+     the store here would have left this board writing to Postgres and
+     reading its own change back from somewhere else. */
+  const rooms = await listAllRooms(hotelId);
+
+  return rooms.map((room) => {
+    /* Status, not dates. `departure > businessDate` read a DUE-OUT
+       guest as gone, so room 202 appeared under "Vacant clean" with
+       the guest's name beside it — a housekeeper would have walked
+       into an occupied room. A guest is in the room until they check
+       out; that is what due-out means.
+
+       Day-use is not excluded either, for the same reason. A day-use
+       guest is in the room until they leave it; that the stay books no
+       night is an accounting fact, not a housekeeping one. Room 202
+       was the case: a day-use guest sitting in a room the board called
+       "Vacant clean".
+
+       This is MEMORY.md defect 3 again, in a second place: derive from
+       status, because a date cannot tell you whether the person has
+       actually left. */
     const inRoom = live.find(
-      (s) => s.roomNumber === room.number && !s.isDayUse &&
-        s.arrival <= businessDate && s.departure > businessDate,
+      (s) => s.roomNumber === room.number &&
+        (s.status === "in-house" || s.status === "due-out"),
     );
     const leaving = live.find(
-      (s) => s.roomNumber === room.number && s.departure === businessDate,
+      (s) => s.roomNumber === room.number && s.status === "due-out",
     );
     return {
       number: room.number,
       type: room.type,
       floor: room.floor,
-      housekeeping: room.housekeeping,
+      housekeeping: room.status,
       occupied: !!inRoom,
       guest: inRoom?.guest ?? leaving?.guest,
       dueOut: !!leaving,
@@ -352,23 +502,444 @@ export async function listHousekeeping(
 export async function markRoom(
   hotelId: string, roomNumber: string, state: "clean" | "inspected",
 ): Promise<OperationResult<HousekeepingRoom>> {
-  if (!guard(hotelId)) return refuse("Unknown property.");
-  const room = readRooms().find((r) => r.number === roomNumber);
-  if (!room) return refuse("Room not found.");
-
-  const permitted = state === "clean" ? canMarkClean(room) : canMarkInspected(room);
-  if (!permitted.allowed) return refuse(permitted.reason!);
-
-  setRoomHousekeeping(roomNumber, state);
-  return { ok: true };
+  /* Delegates rather than writing its own copy.
+   
+     This wrote to the in-memory store while `listHousekeeping` had
+     moved its rooms onto HTTP — so a clerk marked a room clean, the
+     store changed, Postgres did not, and the next read showed the old
+     state with nothing to explain it. Two write paths to one fact is
+     one too many.
+   
+     The refusal is now the DATABASE'S: `src/lib/rules.ts` still
+     disables the button, but a rule enforced only in the browser is a
+     suggestion. */
+  const permitted = await setHousekeeping(hotelId, roomNumber, state);
+  return permitted.allowed ? { ok: true } : refuse(permitted.reason ?? "Refused.");
 }
 
-/** Object surface, so either import convention resolves. */
-export const operationsRepo = {
-  getFolioPostings, getFolioBalance,
-  checkInAllowed, assignableRooms, checkIn,
-  postCharge, reverseChargeAllowed, reverseCharge,
-  settle, checkOutAllowed, checkOut,
-  createWalkIn,
-  listHousekeeping, markRoom,
-};
+/**
+ * Give a booking a room ahead of arrival.
+ *
+ * Check-in assigns a room AT arrival; this is the night before. The
+ * tape chart's "Assign room" button had no handler at all, so the only
+ * way a reservation ever got a room was by checking the guest in.
+ *
+ * Every refusal comes back with its reason: the room is taken for part
+ * of the stay, it is out of service, the guest already has one. Rule 6.
+ */
+export async function assignRoom(
+  hotelId: string, stayId: string, roomNumber: string,
+): Promise<
+  | { ok: true; room: string; guest: string; typeChanged: boolean; typeName: string }
+  | { ok: false; reason: string }
+> {
+  try {
+    return await api(`/api/hotels/${hotelId}/stays/${stayId}/assign`, {
+      method: "POST",
+      body: JSON.stringify({ roomNumber }),
+    });
+  } catch (error) {
+    if (error instanceof ApiError) {
+      const payload = error.body as { reason?: string } | undefined;
+      return { ok: false, reason: payload?.reason ?? error.message };
+    }
+    throw error;
+  }
+}
+
+/**
+ * Moves a guest from one room to another partway through a stay.
+ *
+ * `from` is the first night in the NEW room. Everything before it
+ * stays with the old room, because the guest slept there.
+ *
+ * THE MONEY IS NOT TOUCHED unless `agreedRate` is given. The night
+ * audit posts the reservation's agreed rate, snapshotted at booking
+ * and never looked up again, so a move reprices nothing by itself —
+ * and nights already posted are history in any case. Passing a rate
+ * changes what the audit charges from tonight forward.
+ */
+export async function moveRoom(
+  hotelId: string, stayId: string,
+  input: {
+    roomNumber: string; from: string;
+    reason?: "move" | "upgrade" | "downgrade" | "fault" | "group_consolidation";
+    agreedRate?: number;
+  },
+): Promise<
+  | { ok: true; guest: string; from: string; to: string;
+      nightsBefore: number; nightsAfter: number;
+      typeChanged: boolean; typeName: string; rateChanged: boolean }
+  | { ok: false; reason: string }
+> {
+  try {
+    return await api(`/api/hotels/${hotelId}/stays/${stayId}/move`, {
+      method: "POST", body: JSON.stringify(input),
+    });
+  } catch (error) {
+    if (error instanceof ApiError) {
+      const payload = error.body as { reason?: string } | undefined;
+      return { ok: false, reason: payload?.reason ?? error.message };
+    }
+    throw error;
+  }
+}
+
+/**
+ * Changes a booking's dates or party size.
+ *
+ * Every field is optional and absent means UNCHANGED — the server
+ * reads the current row and fills the gaps, so a form that does not
+ * send a field cannot shorten a stay to nothing.
+ *
+ * The room hold moves with the booking. If the room is taken for the
+ * nights being added, nothing changes at all: the whole call rolls
+ * back, and the refusal says to move them first.
+ *
+ * The rate is deliberately not amendable here. `agreed_rate` is
+ * snapshotted at booking, so extra nights are charged at the rate the
+ * guest agreed to.
+ */
+export async function amendStay(
+  hotelId: string, stayId: string,
+  input: { checkIn?: string; checkOut?: string;
+           adults?: number; children?: number },
+): Promise<
+  | { ok: true; guest: string; checkIn: string; checkOut: string;
+      adults: number; children: number;
+      nightsBefore: number; nightsAfter: number; roomHeld: string | null }
+  | { ok: false; reason: string }
+> {
+  try {
+    return await api(`/api/hotels/${hotelId}/stays/${stayId}`, {
+      method: "PATCH", body: JSON.stringify(input),
+    });
+  } catch (error) {
+    if (error instanceof ApiError) {
+      const payload = error.body as { reason?: string } | undefined;
+      return { ok: false, reason: payload?.reason ?? error.message };
+    }
+    throw error;
+  }
+}
+
+/**
+ * Takes a booking out of its room without putting it in another.
+ * The assignment row stays — releasing is not deleting, and "who was
+ * in 203 last Tuesday" has to keep an answer.
+ */
+export async function unassignRoom(
+  hotelId: string, stayId: string,
+): Promise<{ ok: true; room: string } | { ok: false; reason: string }> {
+  try {
+    return await api(`/api/hotels/${hotelId}/stays/${stayId}/unassign`, {
+      method: "POST", body: JSON.stringify({}),
+    });
+  } catch (error) {
+    if (error instanceof ApiError) {
+      const payload = error.body as { reason?: string } | undefined;
+      return { ok: false, reason: payload?.reason ?? error.message };
+    }
+    throw error;
+  }
+}
+
+/* ══════════════════════════════════════════════════════════════════
+   WHOSE ROOMS ARE THESE
+
+   The board listed every room in the property to whoever opened it.
+   That is a status display; a housekeeper needs a work list. These
+   read and write the named assignment behind it.
+   ══════════════════════════════════════════════════════════════════ */
+
+export interface Housekeeper {
+  id: string;
+  name: string;
+  role: string;
+}
+
+export interface RoomAssignment {
+  room: string;
+  staffId: string;
+  staffName: string;
+  role: string | null;
+  note: string | null;
+}
+
+export async function listHousekeepers(hotelId: string): Promise<Housekeeper[]> {
+  if (!hotelId) return [];
+  try {
+    return await api<Housekeeper[]>(`/api/hotels/${hotelId}/housekeepers`);
+  } catch {
+    return [];
+  }
+}
+
+export async function listRoomAssignments(
+  hotelId: string, date?: string,
+): Promise<{ date: string; assignments: RoomAssignment[] }> {
+  if (!hotelId) return { date: "", assignments: [] };
+  const q = date ? `?date=${encodeURIComponent(date)}` : "";
+  return await api<{ date: string; assignments: RoomAssignment[] }>(
+    `/api/hotels/${hotelId}/housekeeping/assignments${q}`,
+  );
+}
+
+export async function assignHousekeeper(
+  hotelId: string, roomNumber: string, staffId: string,
+  opts: { date?: string; note?: string } = {},
+): Promise<{ ok: true; staffName: string; date: string } | { ok: false; reason: string }> {
+  try {
+    return await api(
+      `/api/hotels/${hotelId}/housekeeping/assignments/${encodeURIComponent(roomNumber)}`,
+      { method: "PUT", body: JSON.stringify({ staffId, ...opts }) },
+    );
+  } catch (e) {
+    return { ok: false as const,
+             reason: e instanceof Error ? e.message : "Not assigned." };
+  }
+}
+
+export async function unassignHousekeeper(
+  hotelId: string, roomNumber: string, date?: string,
+): Promise<{ ok: true } | { ok: false; reason: string }> {
+  const q = date ? `?date=${encodeURIComponent(date)}` : "";
+  try {
+    return await api(
+      `/api/hotels/${hotelId}/housekeeping/assignments/${encodeURIComponent(roomNumber)}${q}`,
+      { method: "DELETE" },
+    );
+  } catch (e) {
+    return { ok: false as const,
+             reason: e instanceof Error ? e.message : "Not unassigned." };
+  }
+}
+
+/* ── Void — which is not cancel ────────────────────────────────────
+   Cancelled HAPPENED and was undone: it may carry a cancellation
+   charge, and it belongs in cancellation statistics because a guest
+   did something a hotel wants to measure.
+
+   Void NEVER HAPPENED. A duplicate, a test, a booking typed against
+   the wrong property. It must stay out of those statistics too, or it
+   inflates a number somebody makes decisions from.
+
+   Neither is deleted. A booking that vanishes is one nobody can
+   account for. */
+
+export async function voidStay(
+  hotelId: string, stayId: string, reason: string,
+): Promise<OperationResult<{ reference: string }>> {
+  try {
+    const body = await api<{ ok: true; data: { reference: string } }>(
+      `/api/hotels/${hotelId}/stays/${stayId}/void`,
+      { method: "POST", body: JSON.stringify({ reason }) },
+    );
+    return { ok: true, data: body.data };
+  } catch (error) {
+    if (error instanceof ApiError) {
+      /* The server's refusal, verbatim. It knows things this side does
+         not — whether the folio has been posted to, whether the guest
+         already arrived — and its wording tells the clerk what to do
+         instead. Replacing it with "could not void" throws that away. */
+      const p = error.body as { reason?: string } | undefined;
+      return refuse(p?.reason ?? error.message);
+    }
+    throw error;
+  }
+}
+
+/* ══════════════════════════════════════════════════════════════════
+   WORK ORDERS
+
+   A dripping tap in 204. A work order is NOT a room block: most take
+   no room out of service, and a system that can only say "out of
+   order" costs a night's revenue for a tap.
+   ══════════════════════════════════════════════════════════════════ */
+
+export interface WorkOrder {
+  id: string;
+  /** Null for anything that is not a room — a lift, the lobby door. */
+  room: string | null;
+  title: string;
+  detail: string | null;
+  category: string;
+  priority: string;
+  status: string;
+  raisedBy: string | null;
+  raisedAt: string;
+  /** Null while nobody has picked it up, which is a real state. */
+  assignedTo: string | null;
+  daysOpen: number;
+  /** True when the fault also took the room out of service. */
+  blocksRoom: boolean;
+}
+
+export async function listWorkOrders(
+  hotelId: string,
+): Promise<{ orders: WorkOrder[]; closed: number }> {
+  if (!hotelId) return { orders: [], closed: 0 };
+  try {
+    return await api<{ orders: WorkOrder[]; closed: number }>(
+      `/api/hotels/${hotelId}/work-orders`);
+  } catch {
+    return { orders: [], closed: 0 };
+  }
+}
+
+export async function raiseWorkOrder(
+  hotelId: string,
+  input: { roomNumber?: string; title: string; detail?: string;
+           category?: string; priority?: string },
+): Promise<{ ok: true; id: string } | { ok: false; reason: string }> {
+  return workOrderCall(`/api/hotels/${hotelId}/work-orders`, "POST", input);
+}
+
+/** Assign it, start it, or close it. Closing requires saying what was done. */
+export async function updateWorkOrder(
+  hotelId: string, id: string,
+  input: { status?: string; assignedTo?: string | null; resolution?: string },
+): Promise<{ ok: true; title: string } | { ok: false; reason: string }> {
+  return workOrderCall(
+    `/api/hotels/${hotelId}/work-orders/${id}`, "PATCH", input);
+}
+
+async function workOrderCall(
+  path: string, method: string, body: unknown,
+): Promise<never | { ok: true; id: string; title: string }
+  | { ok: false; reason: string }> {
+  try {
+    return await api(path, { method, body: JSON.stringify(body) });
+  } catch (error) {
+    if (error instanceof ApiError) {
+      const p = error.body as { reason?: string } | undefined;
+      return { ok: false, reason: p?.reason ?? error.message };
+    }
+    throw error;
+  }
+}
+
+
+/* ══════════════════════════════════════════════════════════════════
+   THE FRONT DESK SHIFT
+
+   Named "drawer" rather than "shift" because `reportData.ts` already
+   has a `CashierShift` and they are different questions. That one is
+   a REPORT — what each cashier took, looked at afterwards. This is
+   the drawer somebody is holding right now.
+
+   Open with a float, take receipts, count the drawer, hand over to
+   whoever is on next. The POS day end's shape deliberately — a front
+   office that reasons about its cash differently from its restaurant
+   is one where the two get compared and nobody can.
+   ══════════════════════════════════════════════════════════════════ */
+
+export interface CashierReceipt {
+  method: string;
+  count: number;
+  amount: number;
+}
+
+export interface CashierMovement {
+  id: string;
+  kind: string;
+  amount: number;
+  reason: string;
+  recordedBy: string;
+  at: string;
+}
+
+export interface CashierDrawer {
+  id: string;
+  openedAt: string;
+  opening: number;
+  receipts: CashierReceipt[];
+  movements: CashierMovement[];
+  /** Opening float plus CASH receipts taken by this cashier during this
+      shift, plus money in, less money out. A card receipt never touched
+      the drawer. */
+  expected: number;
+  /** Null until somebody counts. Not zero — nobody counted zero. */
+  counted: number | null;
+  variance: number | null;
+  varianceReason: string | null;
+  denominations: { value: number; count: number }[];
+}
+
+export interface CashierDrawerView {
+  businessDate: string;
+  /** Null when no drawer is open. That is a real state, not an error:
+      the shift has not started. */
+  shift: CashierDrawer | null;
+  /** Who the drawer can be handed to. Nobody is a real answer — the
+      last close of the night hands over to no one. */
+  colleagues: { id: string; name: string }[];
+  previous: { closedAt: string; counted: number; handedTo: string | null } | null;
+}
+
+export async function getCashierDrawer(
+  hotelId: string,
+): Promise<CashierDrawerView | null> {
+  if (!hotelId) return null;
+  try {
+    return await api<CashierDrawerView>(
+      `/api/hotels/${hotelId}/cashier-shift`);
+  } catch {
+    return null;
+  }
+}
+
+type ShiftResult = { ok: true } | { ok: false; reason: string };
+
+export async function openCashierShift(
+  hotelId: string, opening: number,
+): Promise<ShiftResult> {
+  return shiftCall(hotelId, "open", { opening });
+}
+
+export async function recordCashierMovement(
+  hotelId: string,
+  input: { kind: "expense" | "top_up" | "withdrawal"; amount: number; reason: string },
+): Promise<ShiftResult> {
+  return shiftCall(hotelId, "movements", input);
+}
+
+/** The count replaces whatever was there. Somebody empties the drawer
+    and counts it; merging a new count into an old one leaves
+    denominations nobody typed this time. */
+export async function countCashierDrawer(
+  hotelId: string, denominations: { value: number; count: number }[],
+): Promise<ShiftResult> {
+  return shiftCall(hotelId, "count", { denominations });
+}
+
+/**
+ * Closes the shift and hands the drawer over.
+ *
+ * A difference does not stop the close — the money is already whatever
+ * it is, and a desk that cannot hand over is worse than a difference
+ * written down. It does have to say why.
+ */
+export async function closeCashierShift(
+  hotelId: string,
+  input: { varianceReason?: string; handOverTo?: string | null },
+): Promise<ShiftResult> {
+  return shiftCall(hotelId, "close", input);
+}
+
+async function shiftCall(
+  hotelId: string, path: string, body: unknown,
+): Promise<ShiftResult> {
+  try {
+    await api(`/api/hotels/${hotelId}/cashier-shift/${path}`, {
+      method: "POST", body: JSON.stringify(body),
+    });
+    return { ok: true };
+  } catch (error) {
+    if (error instanceof ApiError) {
+      const p = error.body as { reason?: string } | undefined;
+      return { ok: false, reason: p?.reason ?? error.message };
+    }
+    throw error;
+  }
+}
