@@ -1,5 +1,6 @@
 import type { Mount } from "../../mount.ts";
 import { roomTypesAndPlans } from "./roomTypesAndPlans.ts";
+import { rateGrid } from "./rateGrid.ts";
 import { rates } from "./rates.ts";
 import { inventorySetup } from "./inventorySetup.ts";
 
@@ -8,6 +9,7 @@ import { inventorySetup } from "./inventorySetup.ts";
    Its routers, and where each is mounted (see ../../mount.ts). */
 export const mounts: readonly Mount[] = [
   ["/api/hotels", roomTypesAndPlans],
+  ["/api/hotels", rateGrid],
   ["/api/hotels", rates],
   ["/api/hotels", inventorySetup],
 ];

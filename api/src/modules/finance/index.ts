@@ -1,7 +1,9 @@
 import type { Mount } from "../../mount.ts";
-import { folios } from "../../routes/folios.ts";
-import { billing } from "../../routes/billing.ts";
-import { invoices } from "../../routes/invoices.ts";
+import { folios } from "./folios.ts";
+import { postings } from "./postings.ts";
+import { cashier } from "./cashier.ts";
+import { billing } from "./billing.ts";
+import { invoices } from "./invoices.ts";
 import { tax } from "./tax.ts";
 
 /* The front door of the finance service on the server — the only file
@@ -9,6 +11,8 @@ import { tax } from "./tax.ts";
    Its routers, and where each is mounted (see ../../mount.ts). */
 export const mounts: readonly Mount[] = [
   ["/api/hotels", folios],
+  ["/api/hotels", postings],
+  ["/api/hotels", cashier],
   ["/api/hotels", billing],
   ["/api/hotels", invoices],
   ["/api/hotels", tax],

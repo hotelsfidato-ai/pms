@@ -24,7 +24,7 @@ import { fileURLToPath } from "node:url";
    a guest's booking reaches the hotel.
    ══════════════════════════════════════════════════════════════════ */
 
-const SRC = fileURLToPath(new URL("../src", import.meta.url));
+const SRC = fileURLToPath(new URL("../../../src", import.meta.url));
 
 const walk = (dir: string): string[] =>
   readdirSync(dir).flatMap((name) => {
