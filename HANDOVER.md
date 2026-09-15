@@ -474,22 +474,29 @@ Server first, then the website: the new screens need the new server (a
 the API restarts for a few seconds; the offline queue holds anything
 tapped meanwhile. Never during the night audit.
 
-**Checked read-only on 15 September for the 16 September deploy:** the
-server is on `cp6` at `1f77239`, working tree clean (one untracked
-`api/.db-password`, which no incoming commit touches), so the pull is a
-fast-forward; root's git trusts `/opt/fidato` and the deploy key reaches
-GitHub; disk 46%; last nightly backup 15 Sep 03:00; migrations 085–089 not
-yet applied (085 will fill the channel on 2 walk-ins; 087 switches
-"Reception can use the POS" ON for the one hotel, keeping what reception has
-today). Locally: the strip-check loads all 42 API files and
-`npm run build:app` passes both of its guards.
+**Checked read-only on 16 September for this deploy — two stages, back to
+back.** The owner's decision: the service-folder move deploys on its own,
+then the Coming soon pages. The server is on `cp6` at `1c2e5d0` (what is
+live), working tree clean (one untracked `api/.db-password`, which no
+incoming commit touches); disk 46%; last backups 15 Sep; the API healthy.
+Locally `cp6` (`4d10248`) → `service-folders` (`fc2efb0`) → `coming-soon`
+are fast-forwards. **Neither stage has a migration.** `coming-soon` changes
+no server file, so stage B is the website alone.
+
+### Stage A — the service-folder move (server, then website)
 
 ```powershell
-# 1 · the owner's PC, PowerShell — confirm this copy is the pushed one
-cd "D:\fidato pms"; git status --short; git log -1 --oneline
+# 1 · the owner's PC, PowerShell — put the move on cp6 and push it
+cd "D:\fidato pms"; git checkout cp6; git merge --ff-only service-folders; git push origin cp6
 ```
 The quotes matter: without them PowerShell reads `pms` as a second argument.
-Expect no files listed, then the latest commit on `cp6`.
+Expect "Fast-forward", then the push. Then confirm:
+
+```powershell
+# 1b · the owner's PC, PowerShell, same folder — this copy is the pushed one
+git status --short; git log -1 --oneline
+```
+Expect no files listed, then `fc2efb0 One hotel system: the plan …`.
 
 ```powershell
 # 2 · the owner's PC, PowerShell — connect to the server
@@ -507,7 +514,7 @@ AFTER it has migrated, so this is the copy from before.
 # 4 · on the server, same session — get the code
 sudo GIT_SSH_COMMAND="ssh -i /home/opc/.ssh/fidato_deploy -o IdentitiesOnly=yes" git -C /opt/fidato pull
 ```
-Expect "Fast-forward" and the same latest commit as step 1.
+Expect "Fast-forward" from `1c2e5d0` to `fc2efb0` — the same commit as step 1b.
 
 ```bash
 # 5 · on the server, same session — install it (migrations run here)
@@ -551,14 +558,41 @@ firebase deploy --only hosting:app
 Expect `Deploy complete!`
 
 **9 · Look at it.** Open https://pms.fidatohotels.com, press Ctrl+Shift+R,
-sign in. The top bar says "Find a screen… Ctrl K"; RevPAR on the Dashboard
-has a dotted underline and explains itself on a tap. Start here does not
-show for the owner or a GM — it is for reception, housekeeping, waiters and
-chefs. Screens already open elsewhere say "A new version is ready": reload
-between guests.
+sign in. **Nothing should look different — that is the point of the move.**
+Open Rooms, a guest's bill, the Till and All reports; each opens as it did.
+Screens already open elsewhere say "A new version is ready": reload between
+guests.
 
 **If the website is wrong:** Firebase console → Hosting → Release history →
-the previous release → Roll back. Instant, and the server keeps its fix.
+the previous release → Roll back. Instant. **If the server is wrong after
+step 5**, stop and send the output — `1c2e5d0` is the commit to return to,
+and it already carries 088's fix, so returning to it is safe.
+
+### Stage B — the Coming soon pages (website only, straight after)
+
+```powershell
+# B1 · the owner's PC, PowerShell — put the Coming soon pages on cp6 and push
+cd "D:\fidato pms"; git merge --ff-only coming-soon; git push origin cp6
+```
+Expect "Fast-forward", then the push. Nothing on the server: this stage
+changes no server file, and the next server deploy pulls it.
+
+```powershell
+# B2 · the owner's PC, PowerShell, same folder — build the website
+$env:API_URL="https://api.fidatohotels.com"; npm run build:app
+```
+Expect `✓ no test sign-in in dist` and `✓ dist\config.json → https://api.fidatohotels.com`.
+
+```powershell
+# B3 · the owner's PC, PowerShell, same folder — publish it
+firebase deploy --only hosting:app
+```
+Expect `Deploy complete!`
+
+**B4 · Look at it.** Ctrl+Shift+R and sign in as the owner or a GM: the menu
+ends with **Coming soon** — 18 entries, Accounting export to Spa. Open Spa:
+"Coming soon", what it will do, what it needs. Reception's menu is
+unchanged. Rolling back is the same Firebase button as above.
 
 ---
 
