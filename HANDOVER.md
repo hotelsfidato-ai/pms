@@ -56,6 +56,7 @@ go-live scope       211 / 228  (93%)      the 17 open are the channel manager (e
 staff-first plan    phase 1 of 4 built
 clarity plan        all 4 steps built (step 4, 15 Sep: Start here, terms, empty states)
 service folders     BUILT and verified 15 Sep on branch service-folders — not in cp6, not deployed
+one hotel system    PLANNED 15 Sep — docs/HMS-INTEGRATION-PLAN.md; waiting on decisions D1–D14
 ```
 
 **Deployed 15 September** — all of it:
@@ -132,6 +133,25 @@ a migration number claimed first (`src/test/migrationNumbers.test.ts`).
 **Waiting on the owner:** merging `service-folders` into `cp6`, and deploying
 it on its own. And the defects the briefs found (PENDING § 2a) — each a
 change somebody would see, so each is the owner's call.
+
+### 3.0b · One hotel system — the CRS, the live inventory, the leads, a channel manager — PLANNED 15 September, ASK FIRST
+
+The owner's goal of 15 September: the CRS (`D:\fidato crs`), the live
+inventory and WhatsApp leads app (`D:\fidato tools\new live invetory`) and a
+channel manager (definition arrives 16 September) become modules of one
+system, with a central CRM, later sold as a product. The plan is
+`docs/HMS-INTEGRATION-PLAN.md`; the three audits behind it are in
+`docs/audits/`. **Nothing is built. Fourteen decisions (§ 5 of the plan) wait
+on the owner; nothing starts before D1, D2 and D4, and D3 (which rooms 5
+Elements actually has — the three systems disagree) blocks anything to do
+with availability.**
+
+First steps once answered: the "Connections — Coming soon" menu section
+(plan step 0.2, folders `crs`, `channel-manager`, `guest-messaging`), then
+RES-1 and migration 008 (0.6), then the three doors of Phase 1 in six
+folders at once. Two owner actions are urgent and not code: the Meta
+WhatsApp token expires about 27 September; the CRS repository is public and
+carries a commission figure per hotel (marked simulated — D8).
 
 ### 3.1 · Clarity step 2 — one primary action per screen — DONE 15 September
 

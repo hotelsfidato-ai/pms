@@ -164,6 +164,31 @@ urgent first.
 - **FIN-1 · a stale comment:** `api/src/modules/finance/billing.ts`'s header
   still says no invoice number is issued and the night audit does not run.
 
+Found by the read-only readiness audit of 15 September
+(`docs/audits/2026-09-15-pms-readiness.md`), for the integration plan
+(`docs/HMS-INTEGRATION-PLAN.md`); none fixed, each the owner's call:
+
+- **API-1 · the server enforces no role on writes.** `src/lib/permissions.ts`
+  is read by the screens only; the API's authorisation is row-level security,
+  which scopes by hotel, not by role. A `read_only` account can
+  `POST /:code/bookings` and `PUT /:code/rate-grid`. The role matrix shown in
+  Administration → Roles is not what the API enforces. Its own project, after
+  the integration wires (plan decision D12).
+- **INV-3 · two responses turn an unpriced room into ₹0:** `GET /:code/rates`
+  (`rateGrid.ts:97`) and `GET /:code/room-types` (`roomTypesAndPlans.ts:66`)
+  do `Number(null)`. The owner's rule broken on the wire; a channel manager
+  reading either would push ₹0. Two one-line fixes (plan step 1.5).
+- **RES-2 · the booking reference is generated without a lock, in two copies
+  (`groups.ts:397-401`, `operations.ts:939-942`), with a hard-coded `FH-`
+  prefix and the server's calendar date;** `app.next_reference` (005,
+  advisory-locked) has no caller. Two bookings in the same second lose one to
+  a 500. One locked generator, prefix from `hotels.code` (plan step 1.3).
+- **RES-3 · `POST /:code/bookings` has no idempotency** (062 covers work
+  orders and banquet events only); a retried request books twice (plan step
+  1.3). And RES-1 is worse than written above: in a booking of several room
+  types, the first type's rooms are confirmed with open folios before the
+  second type is refused.
+
 Marked unverified by the briefs, worth a look: `getFolioBalance` returns 0
 for a stay with no bill, and check-out and In house read it; `WalkInFlow.tsx`
 holds a third `const USER = "front desk"` (MEMORY 256 names two);

@@ -50,6 +50,48 @@ Write it **as you go**, not at the end from memory. Copy this shape:
 
 ---
 
+## 2026-09-15 (one system) · The plan to connect the CRS, the live inventory, the leads and a channel manager
+
+**Asked:** "integrate the 3 to 4 different services into this … the CRS system
+into this itself, and the channel manager (being defined, finalised tomorrow) —
+prep sections saying coming soon … build a full HMS … the live inventory and the
+leads captured from Meta ads over WhatsApp as a CRM … a central CRM with all the
+data … the ability to replicate this and sell it as a product … use agents to
+find the compatibility issues … create the plan of execution."
+
+**Done — a plan, nothing built, nothing changed in any system:**
+`docs/HMS-INTEGRATION-PLAN.md`, with its page at
+https://claude.ai/artifact/WzopVpwms2vPUrgawHUapy. Read from the code of
+all three applications (`D:\fidato crs`, `D:\fidato tools\new live invetory`)
+and a read-only look at production (one hotel, 5EL, 18 rooms; six booking
+sources; modules banquet and reception_pos; n8n running on the box in local
+mode). Three read-only audit agents — the PMS's own readiness, CRS ↔ PMS, live
+inventory + leads ↔ PMS — 66 findings, their reports in `docs/audits/`.
+
+**What the plan says, in short.** Only the PMS has a server, so it is the hub:
+its API is the contract and the n8n on its box is the only place the other
+systems' credentials may live (MASTER-ARCHITECTURE already says so). For a
+hotel on the PMS, the PMS is the record; the other apps hold display copies.
+Three doors to open in the PMS (an identity for machines, a home for other
+systems' ids, an idempotent booking route), then three wires (availability
+out, bookings in from the CRS and the leads, the channel manager on the same
+paths). Phases 0–7; six agents in six folders after Phase 0.
+
+**Found on the way, each the owner's call (PENDING § 2a):** the server
+enforces no role on writes (API-1); two API responses turn an unpriced room
+into ₹0 (INV-3); the booking reference is generated unlocked in two copies
+(RES-2); `POST /bookings` has no idempotency, and RES-1 is worse than written
+(RES-3). And the same hotel is 18 rooms in the PMS, 17 in the CRS's reference
+file and 17 differently-numbered rooms in the live inventory.
+
+**Mistake, MEMORY 275:** I quoted a commission figure off the wrong line of a
+file I had only skimmed; an audit agent caught it before it reached the owner.
+
+**Decided by the owner:** nothing yet — fourteen decisions (D1–D14) wait in
+the plan's § 5, each with a recommendation.
+
+---
+
 ## 2026-09-15 (the move) · One folder per service — built and verified
 
 **Asked for:** split the code so each segment has its own folder and several

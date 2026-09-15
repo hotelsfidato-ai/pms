@@ -6535,6 +6535,23 @@ copy will see of theirs.**
 
 ---
 
+### 275 · MINE: a figure quoted off the wrong line of a file I only skimmed
+
+Writing the integration plan (15 September) I grepped the CRS's
+`scripts/hotels.reference.ts` for the Akkalkot entry, printed a dozen lines
+around it, and read "commissionPercent: 10" as that hotel's figure. It was
+the previous hotel's closing line; Akkalkot's is 15, two lines below the
+window I printed — and the file's header, which I never read, says every
+commission figure in it is simulated. The draft called it a real commission
+leaked in a public repository. An audit agent read the whole file and caught
+it before the plan reached the owner.
+
+**The rule: a number quoted from a file is read with its whole record — the
+lines that bound it, and the file's header — never from a grep window. If
+the claim is "this is a real figure", find where the file says so.**
+
+---
+
 ### 274 · MINE: I reported the web tests green while the run ended red
 
 From the Start here commit (657d039, 15 September) every `npx vitest run`
