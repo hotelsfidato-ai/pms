@@ -3,7 +3,7 @@
 Updated after every finished section. **Nothing here is a claim until the gates
 below are green and the screen has been opened.**
 
-Last updated: **14 September 2026** · **211 of 228 · nineteen stages of twelve. Live in production; everything in scope is built. Start at *Picking this up cold* below.**
+Last updated: **15 September 2026** · **211 of 228 · nineteen stages of twelve. Live in production; everything in scope is built. The staff-first programme is new scope beside it: phase 1 of 4 built on 14 September (`2eff775`) and NOT deployed — production runs `1f77239`, eleven commits behind. Start at *Picking this up cold* below.**
 
 ---
 
@@ -1722,33 +1722,50 @@ to recover.
 ## Still needing a person
 
 Ordered by what blocks the most. Nothing in this list is code — every one of
-them is a fact only the group has.
+them is a fact, a decision or an action only the group has. **Rewritten 15
+September 2026**; the first two entries of the old list (the Oracle box, the
+Firebase service account) were answered and are now live, and the list below
+replaces it rather than growing beside it.
 
-1. **The Oracle instance: its public IP, and a domain name.** *Answered:*
-   Oracle Cloud free tier is the choice. Still needed is the box itself —
-   until there is an address, nothing can be deployed, TLS cannot be issued,
-   and Firebase cannot be told which origin to trust. **This blocks all of
-   Stage 12.** The free tier gives no managed backups, so `db/backup.sh` and
-   a cron entry become the whole backup story rather than a second copy.
-2. **A Firebase service account key** (JSON, from the Firebase console →
-   Project settings → Service accounts). Until one exists nobody signs in with
-   a password — the real `firebase_uid` path is written and only the token
-   check is stubbed, and the API refuses to start stubbed with
-   `NODE_ENV=production`. **This blocks real sign-in.**
-3. **Names and room counts for six of the seven properties.** Only 5 Elements
-   Akkalkot is configured. Each property needs its rooms entered — there are
-   no default rooms and no default prices, by instruction.
-4. **Cancellation terms per property, if any.** The screen is built and ships
-   empty. A property that never bills a no-show needs nothing here; one that
-   does needs somebody to write the numbers down, because the system will not
-   invent them.
-5. **Whether the admin console comes off its development-only gate.** It is
-   `devOnly` today, for testing, as asked.
-6. **Per-hotel custom roles: yes or no.** Recommendation on file, twice: no.
-   The eight roles in `staff_hotels` cover the group, and per-property roles
-   multiply the permission surface by seven for a case nobody has hit.
-7. **The commercial question** — under ~₹4 lakh a year for the group, buying
-   eZee wins and this stops.
+1. **Where a second copy of the backups goes.** Dumps, n8n data and the n8n
+   encryption key are all on the server's only disk. **P0** — one disk failure
+   loses the hotel and every copy at once. Object storage on the same Oracle
+   account, or a nightly pull to the office; both are buildable, neither is
+   mine to choose.
+2. **The deploy.** Eleven commits are finished, pushed and not live: the
+   walk-in channel fix, the stay panel, the departed-room fix, the test-login
+   removal and the whole of Phase 1. Production runs `1f77239`.
+3. **Rotate the Firebase Admin key.** It passed through a chat, so treat it as
+   known. New key from the console, then installed in `api/.env` on the box.
+4. **The demo's rates and menu are what the hotel is selling.** Deluxe 3,699,
+   Superior 4,099, 17 menu items, 20 tables — and real bookings have been
+   taken against them. Either they are the real numbers or somebody enters
+   the real ones; nothing is invented here.
+5. **`demo@fidatohotels.com` holds the owner role at 5EL** and its password
+   has been shared. Deactivate, or change it.
+6. **The registered legal name and the GSTIN that prints on a bill** — Phase 3
+   puts both in settings. The voucher shows `27AAGCF5655F1ZI`; the exact name,
+   including any "Private Limited", is the group's to state.
+7. **Bank details, policies, check-in and check-out times, QR link, per
+   hotel** — Phase 3. A voucher leaves the block out rather than printing
+   another hotel's account.
+8. **How WhatsApp and email send** — through the n8n on the box, or a direct
+   service; which number, which address. Nothing is emailed today, anywhere.
+9. **`n8n.fidatohotels.com` needs its DNS record**, and n8n needs its own PMS
+   account (`n8n@fidatohotels.com`, Viewer). The n8n encryption key belongs in
+   a password manager, off the box.
+10. **Names, rooms and rates for six of the seven properties.** Only 5 Elements
+    Akkalkot is configured. No default rooms, no default prices, by instruction.
+11. **Cancellation terms per property, if any.** The screen is built and ships
+    empty. A property that never bills a no-show needs nothing here.
+12. **Purchase and expense approvals: wanted or not.** The engine is built and
+    unreachable (defect 222). If they are not wanted it should be deleted
+    rather than left looking finished.
+13. **Whether the admin console comes off its development-only gate.** It is
+    `devOnly` today, for testing, as asked.
+14. **Per-hotel custom roles: yes or no.** Recommendation on file, twice: no.
+15. **The commercial question** — under ~₹4 lakh a year for the group, buying
+    eZee wins and this stops.
 
 ---
 
