@@ -46,6 +46,40 @@ Write it **as you go**, not at the end from memory. Copy this shape:
 
 ---
 
+## 2026-09-15 (deploy prep) · The steps for the 16 September deploy
+
+**Asked for:** "give me the deploy steps for tomorrow".
+
+**Shipped**
+- `HANDOVER.md` § 9 rewritten from the checks below: a backup BEFORE the
+  pull (`launch.sh` backs up only after it has migrated), what each step
+  prints when it worked, a health check that the server really restarted,
+  what to look at on the site, and what to do if it goes wrong.
+
+**Found**
+- `launch.sh` migrates before it backs up. Not changed — the step is added
+  to the procedure instead.
+- `api/.db-password` (written by `launch.sh`) is not in `.gitignore`: it shows
+  as untracked on the server. Harmless while nobody commits there; a one-line
+  ignore is worth adding.
+
+**Proved** — read-only, nothing on the server changed
+- Server: on `cp6` at `1f77239`, clean but for that file, so the pull
+  fast-forwards; root's git trusts `/opt/fidato`; the deploy key reads
+  GitHub's `cp6`; API healthy since 9 Sep; disk 46%; last backup 15 Sep 03:00.
+- Database: 088 and the 087/089 columns absent, as expected; 085 will fill
+  the channel on 2 walk-ins; 087 will switch "Reception can use the POS" on
+  for the one hotel.
+- Locally: strip-check loads all 42 API files; `npm run build:app` passes
+  (no test sign-in in `dist`, config points at the live API). Not published.
+
+**Left open**
+- The deploy itself — the owner's, on 16 September.
+
+**Commits:** the deploy-prep commit.
+
+---
+
 ## 2026-09-15 (step 4) · Help where the question is
 
 **Asked for:** "yes, continue with step 4" — the clarity plan's last step.

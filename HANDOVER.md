@@ -46,6 +46,7 @@ seam); a test enforces it.
 
 ```
 production runs     1f77239  (10 Sep)     NOTHING since 14 Sep is deployed
+deploy              planned 16 Sep, the owner running it; pre-checked 15 Sep (§ 9)
 local cp6           ahead of it by every commit listed below
 go-live scope       211 / 228  (93%)      the 17 open are the channel manager (excluded)
                                           and the CRS bridge (waiting on its API documents)
@@ -372,32 +373,83 @@ chat); the demo's rates and menu are what the hotel is selling; the
 
 ## 9 · Deploying — only when the owner says so
 
-Server first, then the website.
+Server first, then the website: the new screens need the new server (a
+"Got it" sent to the old one is refused). At a quiet moment at the desk —
+the API restarts for a few seconds; the offline queue holds anything
+tapped meanwhile. Never during the night audit.
+
+**Checked read-only on 15 September for the 16 September deploy:** the
+server is on `cp6` at `1f77239`, working tree clean (one untracked
+`api/.db-password`, which no incoming commit touches), so the pull is a
+fast-forward; root's git trusts `/opt/fidato` and the deploy key reaches
+GitHub; disk 46%; last nightly backup 15 Sep 03:00; migrations 085–089 not
+yet applied (085 will fill the channel on 2 walk-ins; 087 switches
+"Reception can use the POS" ON for the one hotel, keeping what reception has
+today). Locally: the strip-check loads all 42 API files and
+`npm run build:app` passes both of its guards.
 
 ```powershell
-# 1 · the owner's PC, PowerShell — connect to the server
+# 1 · the owner's PC, PowerShell, in D:\fidato pms — confirm this copy is the pushed one
+git status --short; git log -1 --oneline
+```
+Expect no files listed, then the latest commit on `cp6`.
+
+```powershell
+# 2 · the owner's PC, PowerShell — connect to the server
 ssh -i "$HOME\Downloads\ssh-key-2026-09-01.key" opc@130.210.49.220
 ```
 
 ```bash
-# 2 · on the server, inside that ssh session — get the code
-sudo GIT_SSH_COMMAND="ssh -i /home/opc/.ssh/fidato_deploy -o IdentitiesOnly=yes" git -C /opt/fidato pull
+# 3 · on the server, inside that ssh session — a backup BEFORE anything changes
+sudo -u postgres /usr/local/bin/fidato-backup /var/backups/fidato
 ```
+Expect a green ✓ and a file name with today's date. `launch.sh` backs up only
+AFTER it has migrated, so this is the copy from before.
 
 ```bash
-# 3 · on the server, same session — install it (migrations run here)
+# 4 · on the server, same session — get the code
+sudo GIT_SSH_COMMAND="ssh -i /home/opc/.ssh/fidato_deploy -o IdentitiesOnly=yes" git -C /opt/fidato pull
+```
+Expect "Fast-forward" and the same latest commit as step 1.
+
+```bash
+# 5 · on the server, same session — install it (migrations run here)
 cd /opt/fidato && sudo DOMAIN=api.fidatohotels.com APP_ORIGIN=https://pms.fidatohotels.com EMAIL=influvateseo@gmail.com deploy/launch.sh
 ```
+Expect it to end in green: `https://api.fidatohotels.com is live.` If it
+stops with a red ✗ or "NOT READY TO SERVE", stop there and send the output.
+Migrations are one transaction (a failure leaves the database as it was),
+and when the code cannot load, nothing is restarted — the old API keeps
+running. **Do not roll the server code back by hand: that reopens the
+security hole 088 closes.**
 
 ```powershell
-# 4 · the owner's PC, PowerShell, in D:\fidato pms — build the website
+# 6 · the owner's PC, PowerShell — the server restarted today
+curl.exe -s https://api.fidatohotels.com/health
+```
+Expect `"ok":true` and a `startedAt` with today's date.
+
+```powershell
+# 7 · the owner's PC, PowerShell, in D:\fidato pms — build the website
 $env:API_URL="https://api.fidatohotels.com"; npm run build:app
 ```
+Expect `✓ no test sign-in in dist` and `✓ dist\config.json → https://api.fidatohotels.com`.
 
 ```powershell
-# 5 · the owner's PC, PowerShell, same folder — publish it
+# 8 · the owner's PC, PowerShell, same folder — publish it
 firebase deploy --only hosting:app
 ```
+Expect `Deploy complete!`
+
+**9 · Look at it.** Open https://pms.fidatohotels.com, press Ctrl+Shift+R,
+sign in. The top bar says "Find a screen… Ctrl K"; RevPAR on the Dashboard
+has a dotted underline and explains itself on a tap. Start here does not
+show for the owner or a GM — it is for reception, housekeeping, waiters and
+chefs. Screens already open elsewhere say "A new version is ready": reload
+between guests.
+
+**If the website is wrong:** Firebase console → Hosting → Release history →
+the previous release → Roll back. Instant, and the server keeps its fix.
 
 ---
 
