@@ -44,3 +44,8 @@ dist-artifact/
 # Firebase CLI's local deploy cache — a hash of what was last uploaded.
 # Machine-local, changes on every deploy, means nothing to anyone else.
 .firebase/
+
+# Agent skills installed with `npx skills add` — third-party, not ours
+.agents/
+.claude/skills/
+skills-lock.json

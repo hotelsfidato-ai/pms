@@ -6196,6 +6196,40 @@ file in the scratchpad and `git commit -F <that file>`, which is what landed
 
 ---
 
+### 256 · Every report printed one hotel's name, and the wrong person's
+
+`ReportShell` defaulted `property` to the literal `"5 Elements By Fidato
+Hotels"` and its footer printed the literal `"front desk"`. **No caller has
+ever passed the property** — thirty report screens, all taking the default.
+So a report for any second property would print 5 Elements' name over figures
+that were not 5 Elements', above a stamp naming somebody who did not run it.
+
+Both facts were already in the session: the property from the one in view,
+the person from `scope.fullName`. `useDocumentIdentity()` reads them, and a
+missing one prints a dash rather than a plausible wrong name.
+
+**The rule: a document states facts, and a literal in the code is not one.**
+The same two literals still sit in `FolioPanel.tsx` and `CheckInFlow.tsx`
+(`const USER = "front desk"`) — named here, not yet fixed.
+
+**And the hotel's name now comes from the database**, so it reads
+"5 Elements Akkalkot" until the property is renamed on the Properties screen.
+That is the point: one place holds it.
+
+---
+
+### 257 · The one action on the sign-in screen was a secondary button
+
+`Button` defaults to `variant="secondary"` — white with a grey border — and
+the sign-in form never asked for anything else. The single action on the one
+screen every person in the group starts at was drawn as the quiet one, for as
+long as the screen has existed. Nothing catches this: it typechecks, it
+tests, and it looks deliberate until you see it beside a real primary.
+
+**The rule: the primary action is declared, never inherited.**
+
+---
+
 ### Open · two "in house" numbers for the same moment
 
 The property page (`getTodaySnapshot`) said **In house now 11, Vacant 9** while

@@ -8,7 +8,8 @@ import {
   ReportShell, ReportTable, ReportHead, ReportBand, Amount,
 } from "@/components/reports/ReportShell";
 import {
-  getManagerReport, PTD_FROM, BUSINESS_DATE, type ThreeColumn,
+  getManagerReport, PTD_FROM, BUSINESS_DATE,
+  type ThreeColumn, type ManagerReport,
 } from "@/data/repositories";
 
 /* ══════════════════════════════════════════════════════════════════
@@ -63,6 +64,7 @@ export default function ManagerReportPage() {
       title="Manager Report"
       period={`As on ${dateShort(data.asOn)} · PTD from ${dateShort(data.ptdFrom)} · YTD from ${dateShort(data.ytdFrom)}`}
       meta={`As on Date ${dateShort(data.asOn)}   PTD ${dateShort(data.ptdFrom)}   YTD ${dateShort(data.ytdFrom)}   Currency ${data.currency}`}
+      csv={() => exportRows(data)}
     >
       <ReportTable>
         <ReportHead columns={COLUMNS} />
@@ -107,6 +109,35 @@ export default function ManagerReportPage() {
       </div>
     </ReportShell>
   );
+}
+
+/* ── The export ──────────────────────────────────────────────────────
+   The report an owner opens first was the one report with no way out of
+   it: seven of the eleven had a CSV button and this did not. Same rows
+   in the same order as the screen, section by section, so a column can
+   be read straight down.
+
+   A null stays EMPTY. `toCsv` writes nothing for it, which is the
+   spreadsheet's own way of saying "no figure" — an invented 0 in a
+   column an accountant sums is the whole reason the screen prints a
+   dash. */
+function exportRows(data: ManagerReport) {
+  const rows: unknown[][] = [];
+
+  const push = (section: string, list: ThreeColumn[]) => {
+    for (const row of list) {
+      rows.push([section, row.label, row.today, row.ptd, row.ytd]);
+    }
+  };
+
+  for (const section of data.sections) push(section.title, section.rows);
+  push("Room Summary", data.roomSummary);
+  push("Statistics", data.statistics);
+
+  return {
+    headers: ["Section", "Particulars", "Today", "PTD", "YTD"],
+    rows,
+  };
 }
 
 function ReportSection({

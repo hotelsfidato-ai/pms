@@ -1,7 +1,12 @@
 import { useState, type ReactNode } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { Link } from "react-router";
-import { ArrowRight, FileText } from "lucide-react";
+import {
+  ArrowRight, ChevronRight, BedDouble, IndianRupee, TrendingUp, Banknote,
+  LogIn, LogOut, Users, DoorOpen, SprayCan, Wrench, Wallet, ReceiptText,
+  Building2, UserX, ClipboardList, ChartColumn, Landmark,
+  type LucideIcon,
+} from "lucide-react";
 import { cn } from "@/lib/cn";
 import { money, dateShort } from "@/lib/format";
 import { useUi } from "@/lib/ui";
@@ -128,44 +133,48 @@ export default function DashboardPage() {
       <div className="space-y-6">
         {/* ── The numbers a hotel lives by ─────────────────────────── */}
         <TileGroup title="Today" note="Today, then month to date and year to date (from 1 April).">
-          <Tile label="Occupancy" value={pct(occ?.today)} loading={loading}
+          <Tile icon={BedDouble} lead label="Occupancy" value={pct(occ?.today)} loading={loading}
                 sub={`MTD ${pct(occ?.ptd)} · YTD ${pct(occ?.ytd)}`} />
-          <Tile label="Average rate (ADR)" value={cash(adr?.today)} loading={loading}
+          <Tile icon={IndianRupee} lead label="Average rate (ADR)" value={cash(adr?.today)} loading={loading}
                 sub={`MTD ${cash(adr?.ptd)} · YTD ${cash(adr?.ytd)}`} />
-          <Tile label="RevPAR" value={cash(revpar?.today)} loading={loading}
+          <Tile icon={TrendingUp} lead label="RevPAR" value={cash(revpar?.today)} loading={loading}
                 sub={`MTD ${cash(revpar?.ptd)} · YTD ${cash(revpar?.ytd)}`} />
-          <Tile label="Room revenue" value={cash(roomRev?.today)} loading={loading}
+          <Tile icon={Banknote} lead label="Room revenue" value={cash(roomRev?.today)} loading={loading}
                 sub={`MTD ${cash(roomRev?.ptd)} · YTD ${cash(roomRev?.ytd)}`} />
         </TileGroup>
 
         {/* ── The house, now ───────────────────────────────────────── */}
-        <TileGroup title="The house now" note="Counts for the business date. Each opens the list behind it.">
-          <Tile label="Arrivals" value={count(c?.["Arrivals"])} loading={loading}
+        <TileGroup wide title="The house now" note="Counts for the business date. Each opens the list behind it.">
+          <Tile icon={LogIn} label="Arrivals" value={count(c?.["Arrivals"])} loading={loading}
                 to={`/h/${code}/arrivals`} />
-          <Tile label="In house" value={count(c?.["Occupied"])} loading={loading}
+          <Tile icon={Users} label="In house" value={count(c?.["Occupied"])} loading={loading}
                 to={`/h/${code}/in-house`} />
-          <Tile label="Due out" value={count(c?.["Due Out"])} loading={loading}
+          <Tile icon={LogOut} label="Due out" value={count(c?.["Due Out"])} loading={loading}
                 to={`/h/${code}/in-house/due-out`} />
-          <Tile label="Vacant" value={count(c?.["Vacant"])} loading={loading}
+          <Tile icon={DoorOpen} label="Vacant" value={count(c?.["Vacant"])} loading={loading}
                 to={`/h/${code}/stay`} />
-          <Tile label="Dirty" value={count(c?.["Dirty"])} loading={loading}
+          {/* Warm only when there is something to do about it. A zero
+              dirty count in orange is a false alarm every morning. */}
+          <Tile icon={SprayCan} label="Dirty" value={count(c?.["Dirty"])} loading={loading}
                 tone={(c?.["Dirty"] ?? 0) > 0 ? "warning" : undefined}
                 to={`/h/${code}/housekeeping`} />
-          <Tile label="Out of service" value={count(c?.["Blocked"])} loading={loading}
+          <Tile icon={Wrench} label="Out of service" value={count(c?.["Blocked"])} loading={loading}
+                tone={(c?.["Blocked"] ?? 0) > 0 ? "warning" : undefined}
                 to={`/h/${code}/stay`} />
         </TileGroup>
 
         {/* ── Money ────────────────────────────────────────────────── */}
         <TileGroup title="Money" note="From the same figures as the Manager Report. A dash is a figure this system does not hold yet, never a zero.">
-          <Tile label="Collected today" value={cash(payToday?.today)} loading={loading}
+          <Tile icon={Wallet} label="Collected today" value={cash(payToday?.today)} loading={loading}
                 sub={methods.length
                   ? methods.map((m) => `${m.label} ${money(m.today ?? 0)}`).join(" · ")
                   : "Nothing taken yet today"} />
-          <Tile label="Owed by guests" value={cash(pick(guestLedger, "Closing Balance")?.today)}
+          <Tile icon={ReceiptText} label="Owed by guests" value={cash(pick(guestLedger, "Closing Balance")?.today)}
                 loading={loading} sub="Every open folio balance" />
-          <Tile label="City ledger" value={cash(pick(cityLedger, "Closing Balance")?.today)}
+          <Tile icon={Building2} label="City ledger" value={cash(pick(cityLedger, "Closing Balance")?.today)}
                 loading={loading} sub="Settled outside the PMS today" />
-          <Tile label="No-shows" value={count(noShow?.today)} loading={loading}
+          <Tile icon={UserX} label="No-shows" value={count(noShow?.today)} loading={loading}
+                tone={(noShow?.today ?? 0) > 0 ? "warning" : undefined}
                 sub={`MTD ${count(noShow?.ptd)}`} to="/reports/no-show" />
         </TileGroup>
 
@@ -177,12 +186,15 @@ export default function DashboardPage() {
               <Link
                 key={q.to}
                 to={q.to}
-                className="inline-flex items-center gap-2 min-h-11 px-3.5 rounded-md
+                className="group inline-flex items-center gap-2 min-h-11 px-3.5 rounded-md
                            border border-grey-300 bg-white text-base text-ink-900
                            hover:border-grey-400 hover:bg-grey-50 transition-colors duration-150
                            focus-visible:outline-2 focus-visible:outline-brand-orange"
               >
-                <FileText className="size-4 text-grey-500" aria-hidden />
+                <q.icon
+                  className="size-4 text-grey-500 group-hover:text-brand-orange transition-colors duration-150"
+                  aria-hidden
+                />
                 {q.label}
               </Link>
             ))}
@@ -196,20 +208,27 @@ export default function DashboardPage() {
   );
 }
 
-const QUICK_REPORTS = [
-  { label: "Manager Report", to: "/reports/manager" },
-  { label: "Monthly Statistics", to: "/reports/monthly-stats" },
-  { label: "Lodging Tax", to: "/reports/lodging-tax" },
-  { label: "City Ledger", to: "/reports/city-ledger" },
-  { label: "No Show", to: "/reports/no-show" },
+/* One icon each, not five copies of the same page glyph. Five identical
+   document icons carry no information — they only take the space that
+   tells the eye which link is which. */
+const QUICK_REPORTS: Array<{ label: string; to: string; icon: LucideIcon }> = [
+  { label: "Manager Report", to: "/reports/manager", icon: ClipboardList },
+  { label: "Monthly Statistics", to: "/reports/monthly-stats", icon: ChartColumn },
+  { label: "Lodging Tax", to: "/reports/lodging-tax", icon: Landmark },
+  { label: "City Ledger", to: "/reports/city-ledger", icon: Building2 },
+  { label: "No Show", to: "/reports/no-show", icon: UserX },
 ];
 
 /** A count is a real zero when nothing is there — unlike money, where an
     unknown is a dash. Unknown here (still loading, or it failed) is a dash. */
 const count = (n: number | null | undefined) => (n == null ? DASH : String(n));
 
-function TileGroup({ title, note, children }: {
+function TileGroup({ title, note, children, wide }: {
   title: string; note: string; children: ReactNode;
+  /** Six short counts read as one row, not a row of four and an orphan
+      pair. The groups are different shapes because they hold different
+      things — which is also what stops the page reading as one wall. */
+  wide?: boolean;
 }) {
   return (
     <section>
@@ -217,25 +236,61 @@ function TileGroup({ title, note, children }: {
         <h2 className="text-md font-semibold text-ink-900">{title}</h2>
         <p className="text-sm text-grey-600">{note}</p>
       </div>
-      <div className="grid gap-3 grid-cols-2 md:grid-cols-3 xl:grid-cols-4">
+      <div className={cn(
+        "grid gap-3 grid-cols-2 md:grid-cols-3",
+        wide ? "xl:grid-cols-6" : "xl:grid-cols-4",
+      )}>
         {children}
       </div>
     </section>
   );
 }
 
-function Tile({ label, value, sub, to, tone, loading }: {
+/* A tile carries its own icon, and the icon is the fastest thing on the
+   screen to find: a clerk looking for "how many are dirty" recognises
+   the spray can a beat before they have read the word. One family
+   (lucide), one size, one stroke — a second icon set on this page would
+   cost more than it adds.
+
+   `lead` is the only size difference, and it is deliberate. Fourteen
+   identically-weighted tiles are a wall: nothing on it is the headline,
+   so the eye starts at the top left and reads all of them. The four
+   figures a hotel is actually judged by are set larger, and the rest sit
+   below them. */
+function Tile({ icon: Icon, label, value, sub, to, tone, loading, lead }: {
+  icon: LucideIcon;
   label: string; value: string; sub?: string; to?: string;
-  tone?: "warning"; loading?: boolean;
+  tone?: "warning"; loading?: boolean; lead?: boolean;
 }) {
   const body = (
     <CardBody className="p-4">
-      <p className="text-sm text-grey-600">{label}</p>
+      <div className="flex items-center gap-2.5">
+        <span
+          className={cn(
+            "grid place-items-center size-8 rounded-md shrink-0",
+            tone === "warning"
+              ? "bg-brand-orange-50 text-brand-orange-700"
+              : "bg-grey-100 text-grey-500",
+          )}
+        >
+          <Icon className="size-4" aria-hidden />
+        </span>
+        <p className="text-sm text-grey-600 min-w-0">{label}</p>
+        {to && (
+          <ChevronRight
+            className="size-4 shrink-0 ml-auto text-grey-300 transition-all duration-150
+                       group-hover:text-grey-500 group-hover:translate-x-0.5"
+            aria-hidden
+          />
+        )}
+      </div>
+
       {loading ? (
-        <Skeleton className="h-8 w-24 mt-1.5" />
+        <Skeleton className={cn("w-24 mt-2.5", lead ? "h-9" : "h-8")} />
       ) : (
         <p className={cn(
-          "text-2xl font-semibold tabular mt-0.5",
+          "font-semibold tabular mt-2.5",
+          lead ? "text-3xl" : "text-2xl",
           tone === "warning" ? "text-brand-orange-700" : "text-ink-900",
         )}>
           {value}
@@ -245,7 +300,7 @@ function Tile({ label, value, sub, to, tone, loading }: {
     </CardBody>
   );
 
-  if (!to) return <Card>{body}</Card>;
+  if (!to) return <Card className="h-full">{body}</Card>;
   return (
     <Link
       to={to}

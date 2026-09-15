@@ -4,6 +4,7 @@ import { cn } from "@/lib/cn";
 import { dateShort } from "@/lib/format";
 import { Button, Card } from "@/components/ui";
 import { toCsv, downloadCsv, reportFilename } from "@/lib/csv";
+import { useDocumentIdentity } from "@/lib/documentIdentity";
 
 /* ══════════════════════════════════════════════════════════════════
    REPORT SHELL
@@ -18,9 +19,18 @@ import { toCsv, downloadCsv, reportFilename } from "@/lib/csv";
    reaches paper is the report and nothing else.
    ══════════════════════════════════════════════════════════════════ */
 
+const DASH = "—";
+
 export function ReportShell({
   title,
-  property = "5 Elements By Fidato Hotels",
+  /** The property this report is for.
+   *
+   *  ⚠ THIS DEFAULTED TO THE LITERAL "5 Elements By Fidato Hotels" and
+   *  not one of the thirty report screens passed it, so every report of
+   *  every property printed that one name. It now comes from the
+   *  property in view; an override is still accepted for a report that
+   *  genuinely knows better. */
+  property,
   period,
   children,
   onExportPdf,
@@ -46,6 +56,13 @@ export function ReportShell({
   csv?: () => { headers: string[]; rows: unknown[][] };
   meta?: ReactNode;
 }) {
+  const identity = useDocumentIdentity();
+  const propertyName = property ?? identity.property ?? DASH;
+  /* WHO RAN IT. The footer said "front desk" whoever was signed in. An
+     accountant reading a stamp needs the person, and the session has
+     had their name all along. */
+  const ranBy = identity.user ?? DASH;
+
   const stamp = new Date().toLocaleString("en-IN", {
     day: "2-digit", month: "2-digit", year: "numeric",
     hour: "2-digit", minute: "2-digit", second: "2-digit",
@@ -77,7 +94,7 @@ export function ReportShell({
               onClick={() => {
                 const { headers, rows } = csv();
                 downloadCsv(
-                  reportFilename(property, title, period),
+                  reportFilename(propertyName, title, period),
                   toCsv(headers, rows),
                 );
               }}
@@ -96,7 +113,7 @@ export function ReportShell({
         {/* The report's own header, as the exports carry it */}
         <div className="px-5 py-4 border-b border-grey-200">
           <div className="flex items-baseline justify-between gap-4 flex-wrap">
-            <p className="text-md font-semibold text-ink-900">{property}</p>
+            <p className="text-md font-semibold text-ink-900">{propertyName}</p>
             <p className="text-md font-semibold text-ink-900">{title}</p>
           </div>
           {meta && (
@@ -108,7 +125,7 @@ export function ReportShell({
 
         <div className="px-5 py-3 border-t border-grey-200 flex items-center justify-between gap-4 flex-wrap">
           <p className="text-2xs text-grey-500 tabular">{stamp}</p>
-          <p className="text-2xs text-grey-500">front desk</p>
+          <p className="text-2xs text-grey-500">{ranBy}</p>
         </div>
       </Card>
     </div>

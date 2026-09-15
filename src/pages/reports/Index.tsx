@@ -1,6 +1,10 @@
 import { useState } from "react";
 import { Link } from "react-router";
-import { Star, Search, ArrowRight } from "lucide-react";
+import {
+  Star, Search, ArrowRight, ClipboardList, CalendarDays, ChartColumn,
+  ChartNoAxesColumn, Building2, UserX, ReceiptText, Wallet, Landmark,
+  FileSpreadsheet, Plane, type LucideIcon,
+} from "lucide-react";
 import { cn } from "@/lib/cn";
 import { useUi } from "@/lib/ui";
 import { Page, PageHeader, Card, CardBody, StatusPill, SearchInput } from "@/components/ui";
@@ -22,6 +26,9 @@ interface ReportLink {
   title: string;
   path?: string;
   description: string;
+  /** Its own glyph, so the eye finds the row before it reads it. One
+      family, one size — eleven copies of a page icon would say nothing. */
+  icon: LucideIcon;
   /** Where it will land, when it is not built. */
   stage?: string;
 }
@@ -39,21 +46,25 @@ const GROUPS: Group[] = [
     reports: [
       {
         title: "Manager Report",
+        icon: ClipboardList,
         path: "/reports/manager",
         description: "Today, period to date and year to date in three columns. The one an owner opens first.",
       },
       {
         title: "Monthly Occupancy",
+        icon: CalendarDays,
         path: "/reports/monthly-occupancy",
         description: "Occupancy for every day of the month, as a chart. Full houses and empty ones both stand out.",
       },
       {
         title: "Monthly Statistics",
+        icon: ChartColumn,
         path: "/reports/monthly-stats",
         description: "The daily grid — rooms sold, ADR, RevPAR, pax, charges, tax and receipts.",
       },
       {
         title: "Yearly Statistics",
+        icon: ChartNoAxesColumn,
         path: "/reports/yearly-stats",
         description: "The same columns at month grain, with a grand total that recomputes rates rather than averaging averages.",
       },
@@ -65,21 +76,25 @@ const GROUPS: Group[] = [
     reports: [
       {
         title: "City Ledger",
+        icon: Building2,
         path: "/reports/city-ledger",
         description: "What each booking source owes, and what has been received against it.",
       },
       {
         title: "No Show",
+        icon: UserX,
         path: "/reports/no-show",
         description: "Bookings that never arrived, with the retention charged against each.",
       },
       {
         title: "Guest Ledger",
+        icon: ReceiptText,
         path: "/reports/guest-ledger",
         description: "Every folio that moved, with its opening and closing balance.",
       },
       {
         title: "Cashier Shift",
+        icon: Wallet,
         path: "/reports/cashier-shift",
         description: "What each cashier took today, by method. Reversed receipts excluded.",
       },
@@ -91,16 +106,19 @@ const GROUPS: Group[] = [
     reports: [
       {
         title: "Lodging Tax",
+        icon: Landmark,
         path: "/reports/lodging-tax",
         description: "CGST and SGST at 2.5% each, split by tax slab, as the return expects it.",
       },
       {
         title: "GST Sales Register",
+        icon: FileSpreadsheet,
         path: "/reports/gst-sales",
         description: "Invoice-level GSTR-1 extract, credit notes as their own rows.",
       },
       {
         title: "Form F / C-Form",
+        icon: Plane,
         path: "/reports/c-form",
         description: "Foreign national arrivals, their documents, and what was filed with the FRRO.",
       },
@@ -210,9 +228,19 @@ function ReportCard({
   const body = (
     <>
       <div className="flex items-start justify-between gap-2">
-        <p className={cn("text-base font-semibold", report.path ? "text-ink-900" : "text-grey-500")}>
-          {report.title}
-        </p>
+        <div className="flex items-center gap-2.5 min-w-0">
+          <span
+            className={cn(
+              "grid place-items-center size-8 rounded-md shrink-0",
+              report.path ? "bg-grey-100 text-grey-500" : "bg-grey-50 text-grey-300",
+            )}
+          >
+            <report.icon className="size-4" aria-hidden />
+          </span>
+          <p className={cn("text-base font-semibold", report.path ? "text-ink-900" : "text-grey-500")}>
+            {report.title}
+          </p>
+        </div>
         {report.path ? (
           <button
             type="button"
