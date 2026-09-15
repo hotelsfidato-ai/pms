@@ -3,7 +3,7 @@ import { folios } from "./folios.ts";
 import { postings } from "./postings.ts";
 import { cashier } from "./cashier.ts";
 import { billing } from "./billing.ts";
-import { invoices } from "../../routes/invoices.ts";
+import { invoices } from "./invoices.ts";
 
 /* The front door of the finance service on the server — the only file
    the core or another service may import (src/test/boundaries.test.ts).
