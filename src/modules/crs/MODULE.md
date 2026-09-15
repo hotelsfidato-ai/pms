@@ -2,16 +2,18 @@
 
 Bookings arriving in this system from the Fidato CRS.
 
-**NOT BUILT. Nothing is written here until the owner asks.** This folder
-holds this brief, an empty front door (`index.ts`), and its own
-`CHANGELOG.md` and `MEMORY.md` — no screens, no menu entries, no routes, no
-server code.
+**NOT BUILT. A Coming soon page only.** The owner chose on
+16 September to give every service the system does not have a Coming soon
+page, in one section at the foot of the menu for the owner, admins and
+general managers. This folder holds this brief, an empty front door
+(`index.ts`), its own `CHANGELOG.md` and `MEMORY.md`, and the page with
+its menu entry and address — no working feature, no server code.
 
 **Folder name:** `crs` — the word the other two places will use if it is
 ever built:
 
 ```
-src/modules/crs/          this brief; screens, if the owner asks for any
+src/modules/crs/          this brief, and the Coming soon page (menu entry, address)
 api/src/modules/crs/      does not exist
 db/tests/modules/crs.sql  does not exist
 ```
@@ -42,6 +44,27 @@ status "planned" (`src/modules/admin/data/adminLists.ts`, a fixed list).
 - Not to be confused with the **CRS voucher** `FH-2026-00002`, which is the
   template for this system's printed documents (`HANDOVER.md` § 3.5,
   staff-first phase 3). That is a document layout, not this connection.
+
+---
+
+## Screens
+
+| Menu name | Address (`routes.tsx`) | Page file | Who sees it (`nav.ts`) |
+|---|---|---|---|
+| Fidato CRS | `/coming-soon/crs` | `pages/Crs.tsx` | owner, admin, GM — the Coming soon section (`seesComingSoon`) |
+
+The page is the shared Coming soon page (`src/pages/ComingSoon.tsx`) with
+this service's words: what it will do, what it needs, where it stands.
+Find a screen answers to "crs", "central reservations", "partner hotels", "sales team". Anybody else who types the address is
+refused ("This page is not part of your role").
+
+**What the page says it needs before it can be built** — the owner's
+questions, not the code's:
+
+1. Which rooms 5 Elements actually has. This system has 18; the CRS's list has 17, in different room types.
+2. A safe way for another system to send a booking here: its own key, and a booking door that ignores a repeat of the same booking.
+3. The automation server given a public address, so the CRS can reach it.
+4. Your decision on who prices a CRS booking for a hotel on this system, so the voucher and the bill agree.
 
 ---
 

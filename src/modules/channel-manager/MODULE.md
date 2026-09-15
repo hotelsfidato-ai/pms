@@ -3,8 +3,10 @@
 The wire between this system and the booking sites (Agoda, Booking.com,
 go-MMT and the rest): rooms and prices out, bookings in.
 
-**PARKED BY THE OWNER. Only a "not connected" status page exists. Nothing is
-built here until the owner asks.**
+**NOT CONNECTED. Only a "not connected" status page exists, in the Coming
+soon section since 16 September.** Excluded by the owner on 8 September; on 15
+September the owner said the channel manager is being defined, to be
+finalised on 16 September. Nothing is built here until the owner asks.
 
 **Folder name:** `channel-manager` — the same word in all three places:
 
@@ -38,9 +40,14 @@ not"). What exists is a page that says so.
 - **Out of scope until the owner asks** (`PENDING.md` § 3, "Channel manager —
   excluded for now"). Stage 9's five open units are this (`PROGRESS.md`);
   with the CRS bridge they are the 17 of 228 still open (`HANDOVER.md` § 2).
-- **In nobody's menu** — the owner's menus of 15 September list "nobody:
-  Channel manager (not connected)" (`HANDOVER.md` § 3.2); `listed: false`
-  (CHANGELOG 2026-09-15 step 3).
+- **In the Coming soon section — the owner's decision, 16 September**: every
+  service the system does not have yet, in one section at the foot of the
+  menu, for the owner, admins and general managers (`seesComingSoon`). From
+  15 September until then it was in nobody's menu (`listed: false`) and a
+  search away for anybody holding the `rate` grant.
+- **Being defined** — the owner, 15 September: "channel manager things also
+  is being defined and also finalised tomorrow" (root `CHANGELOG.md`,
+  2026-09-15, "one system"; `docs/HMS-INTEGRATION-PLAN.md` Phase 4).
 
 ---
 
@@ -48,10 +55,11 @@ not"). What exists is a page that says so.
 
 | Menu name | Address (`routes.tsx`) | Page file | Working menus (`nav.ts`) |
 |---|---|---|---|
-| Channel manager | `/h/:code/channels` | `pages/ChannelManager.tsx` | nobody — search only (`listed: false`) |
+| Channel manager | `/h/:code/channels` | `pages/ChannelManager.tsx` | owner, admin, GM — the Coming soon section (`seesComingSoon`) |
 
-The entry sits in the menu's Inventory section, needs the `rate` grant, and
-answers to "staah", "ota" and "channels" in Find a screen. The page says
+The entry sits in the Coming soon section, is seen by the owner, admins and
+general managers only — the route refuses anybody else — and answers to
+"staah", "ota" and "channels" in Find a screen. The page says
 "Coming soon", what the connection will do, what it needs first, and lists
 the booking sites already recorded as sources — real rows or a dash, never
 an invented list of logos.

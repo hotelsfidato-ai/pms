@@ -2,16 +2,18 @@
 
 Taking money from guests by card and UPI through a payment gateway.
 
-**NOT BUILT, AND PARKED BY THE OWNER. Nothing is written here until the owner
-asks.** This folder holds this brief, an empty front door (`index.ts`), and
-its own `CHANGELOG.md` and `MEMORY.md` — no screens, no menu entries, no
-routes, no server code.
+**NOT BUILT. A Coming soon page only.** **Parked by the owner on 8 September** — its page says so. The owner chose on
+16 September to give every service the system does not have a Coming soon
+page, in one section at the foot of the menu for the owner, admins and
+general managers. This folder holds this brief, an empty front door
+(`index.ts`), its own `CHANGELOG.md` and `MEMORY.md`, and the page with
+its menu entry and address — no working feature, no server code.
 
 **Folder name:** `payments` — the word the other two places will use if it
 is ever built:
 
 ```
-src/modules/payments/          this brief; screens, if the owner asks for any
+src/modules/payments/          this brief, and the Coming soon page (menu entry, address)
 api/src/modules/payments/      does not exist
 db/tests/modules/payments.sql  does not exist
 ```
@@ -39,6 +41,26 @@ domain knowledge, not a decision).
   "channel manager and payment gateway excluded".
 - `docs/SERVICE-FOLDERS-PLAN.md`: "Online payments | `payments` | parked by
   the owner".
+
+---
+
+## Screens
+
+| Menu name | Address (`routes.tsx`) | Page file | Who sees it (`nav.ts`) |
+|---|---|---|---|
+| Online payments | `/coming-soon/payments` | `pages/Payments.tsx` | owner, admin, GM — the Coming soon section (`seesComingSoon`) |
+
+The page is the shared Coming soon page (`src/pages/ComingSoon.tsx`) with
+this service's words: what it will do, what it needs, where it stands.
+Find a screen answers to "payment gateway", "razorpay", "upi link", "deposit", "refund". Anybody else who types the address is
+refused ("This page is not part of your role").
+
+**What the page says it needs before it can be built** — the owner's
+questions, not the code's:
+
+1. The owner's go-ahead. Online payments were parked by the owner on 8 September.
+2. The payment gateway (Razorpay, PayU and CCAvenue are the usual choices in India) and its merchant account.
+3. The account keys, kept in the server's settings, never on a screen or in a message.
 
 ---
 

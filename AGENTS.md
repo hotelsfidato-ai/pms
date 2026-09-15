@@ -60,9 +60,12 @@ never two agents in one folder on disk.**
 Since 15 September the code is sorted by service (`docs/SERVICE-FOLDERS-PLAN.md`):
 front desk, reservations, housekeeping, inventory and rates, guests and
 companies, finance, night audit, the restaurant (`pos`), banquet, store,
-reports, administration, the channel manager — plus five not built yet (`crs`,
-`payments`, `booking-engine`, `guest-messaging`, `accounting`). A service is one
-word, and it lives in three places:
+reports, administration — plus eighteen not built yet, each with a Coming
+soon page since 16 September: the channel manager, `crs`, `payments`,
+`booking-engine`, `guest-messaging`, `accounting`, and `leads`, `marketing`,
+`crm`, `spa`, `online-checkin`, `laundry`, `contracts`, `revenue-management`,
+`reputation`, `loyalty`, `guest-services`, `equipment`. A service is one word,
+and it lives in three places:
 
 ```
 src/modules/<service>/          its screens, menu entries, addresses, data, tests
@@ -73,6 +76,13 @@ db/tests/modules/<service>.sql  its database checks (suite.sql is frozen history
 **Read `src/modules/<service>/MODULE.md` before your first edit.** It is the
 service's brief: its screens, endpoints and tables, the owner's decisions that
 bind it, its open items, and requests from other services.
+
+**Building a service that is still Coming soon?** Only after the owner has
+said which. Its `MODULE.md` has a "When it is built" list: replace
+`pages/<Name>.tsx` with the real screens at their real addresses, move the
+menu entry out of the Coming soon section into its working section (and
+update the Coming soon list pinned in `navigation.test.ts`), and add a
+module switch if not every hotel has it.
 
 Claim the service in writing in `HANDOVER.md`'s folder claims before your first
 write, and release it when you stop:

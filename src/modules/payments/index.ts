@@ -1,7 +1,6 @@
-/* Online payments — NOT BUILT, parked by the owner.
-
-   Taking money by card and UPI through a payment gateway. Nothing may be
-   written in this folder until the owner asks for it: no screens, no menu
-   entries, no routes, no server code. What the service would be, and why it
-   waits, is in MODULE.md beside this file. */
+/* Online payments — NOT BUILT. A Coming soon page only (the owner's decision,
+   16 September): `pages/Payments.tsx`, its menu entry (`nav.ts`) and its address
+   (`routes.tsx`). No other service uses anything from here yet, so this
+   front door exports nothing. What the service will be, and what it needs,
+   is in MODULE.md beside this file. */
 export {};

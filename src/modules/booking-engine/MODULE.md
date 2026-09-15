@@ -3,16 +3,18 @@
 Direct bookings from the hotel's own website: a guest picks dates, sees the
 price and books, with no booking site in between.
 
-**NOT BUILT. It may belong in the Fidato CRS instead of here — ask the owner
-first. Nothing is written here until the owner asks.** This folder holds this
-brief, an empty front door (`index.ts`), and its own `CHANGELOG.md` and
-`MEMORY.md` — no screens, no menu entries, no routes, no server code.
+**NOT BUILT. A Coming soon page only.** **It may belong in the Fidato CRS instead of here — ask the owner first.** The owner chose on
+16 September to give every service the system does not have a Coming soon
+page, in one section at the foot of the menu for the owner, admins and
+general managers. This folder holds this brief, an empty front door
+(`index.ts`), its own `CHANGELOG.md` and `MEMORY.md`, and the page with
+its menu entry and address — no working feature, no server code.
 
 **Folder name:** `booking-engine` — the word the other two places will use
 if it is ever built here:
 
 ```
-src/modules/booking-engine/          this brief
+src/modules/booking-engine/          this brief, and the Coming soon page (menu entry, address)
 api/src/modules/booking-engine/      does not exist
 db/tests/modules/booking-engine.sql  does not exist
 ```
@@ -35,6 +37,26 @@ engine is how direct bookings — which pay no commission — would grow.
   first". The Fidato CRS is a separate application (see `crs/MODULE.md`).
 - `PROGRESS.md` lists it among what competitors bundle — a comparison, not
   a decision by the owner.
+
+---
+
+## Screens
+
+| Menu name | Address (`routes.tsx`) | Page file | Who sees it (`nav.ts`) |
+|---|---|---|---|
+| Booking engine | `/coming-soon/booking-engine` | `pages/BookingEngine.tsx` | owner, admin, GM — the Coming soon section (`seesComingSoon`) |
+
+The page is the shared Coming soon page (`src/pages/ComingSoon.tsx`) with
+this service's words: what it will do, what it needs, where it stands.
+Find a screen answers to "direct booking", "website booking", "book now", "web booking". Anybody else who types the address is
+refused ("This page is not part of your role").
+
+**What the page says it needs before it can be built** — the owner's
+questions, not the code's:
+
+1. Whether it lives here or in the Fidato CRS.
+2. Each hotel's website, and who looks after it.
+3. Online payments, if a deposit should hold the room, and guest messages for the confirmation.
 
 ---
 

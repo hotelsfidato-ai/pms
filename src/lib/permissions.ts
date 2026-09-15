@@ -47,6 +47,17 @@ export const ASSIGNABLE_ROLES: Role[] = ROLES.filter(
   (r) => !SYSTEM_ROLES.includes(r),
 );
 
+/**
+ * Who sees the "Coming soon" section — the pages for services the system
+ * does not have yet. The owner's decision, 16 September: the owner, admins
+ * and general managers, the people deciding what gets built. Reception's
+ * menu does not change. Asked by the menu and by each page's route guard
+ * alike, so a hidden link and a refused page cannot disagree.
+ */
+export const COMING_SOON_ROLES: readonly Role[] = ["owner", "admin", "gm"];
+
+export const seesComingSoon = (role: Role): boolean => COMING_SOON_ROLES.includes(role);
+
 /* The words an Indian hotel actually uses. "Reception" is what the desk
    is called; "Front Desk" is software language. "Accountant" is a
    person; "Finance" is a department. Somebody recognises their own job

@@ -3,16 +3,18 @@
 The day's money, exported for the hotel's accountant — or straight into
 Tally.
 
-**NOT BUILT. Nothing is written here until the owner asks.** This folder
-holds this brief, an empty front door (`index.ts`), and its own
-`CHANGELOG.md` and `MEMORY.md` — no screens, no menu entries, no routes, no
-server code.
+**NOT BUILT. A Coming soon page only.** The owner chose on
+16 September to give every service the system does not have a Coming soon
+page, in one section at the foot of the menu for the owner, admins and
+general managers. This folder holds this brief, an empty front door
+(`index.ts`), its own `CHANGELOG.md` and `MEMORY.md`, and the page with
+its menu entry and address — no working feature, no server code.
 
 **Folder name:** `accounting` — the word the other two places will use if it
 is ever built:
 
 ```
-src/modules/accounting/          this brief; screens, if the owner asks for any
+src/modules/accounting/          this brief, and the Coming soon page (menu entry, address)
 api/src/modules/accounting/      does not exist
 db/tests/modules/accounting.sql  does not exist
 ```
@@ -40,6 +42,26 @@ accountant or Tally can take.
   Excel opens — `src/lib/csv.ts` avoids a spreadsheet library on purpose; do
   not add one unasked (`HANDOVER.md` § 3.4, reports in the owner's layout,
   ASK FIRST).
+
+---
+
+## Screens
+
+| Menu name | Address (`routes.tsx`) | Page file | Who sees it (`nav.ts`) |
+|---|---|---|---|
+| Accounting export | `/coming-soon/accounting` | `pages/Accounting.tsx` | owner, admin, GM — the Coming soon section (`seesComingSoon`) |
+
+The page is the shared Coming soon page (`src/pages/ComingSoon.tsx`) with
+this service's words: what it will do, what it needs, where it stands.
+Find a screen answers to "tally", "accounts", "ledger", "export", "accountant". Anybody else who types the address is
+refused ("This page is not part of your role").
+
+**What the page says it needs before it can be built** — the owner's
+questions, not the code's:
+
+1. What your accountant uses: Tally, and which version.
+2. The ledger names in your books.
+3. Whether a CSV file is enough, or it must be an Excel workbook.
 
 ---
 

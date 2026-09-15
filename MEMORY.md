@@ -11,7 +11,9 @@ Each service's file also indexes the entries here that concern it.
 front-desk FD · reservations RES · housekeeping HK · inventory INV · guests GUE
 finance FIN · night-audit NA · pos POS · banquet BQ · stores STO · reports REP
 admin ADM · channel-manager CM · crs CRS · payments PAY · booking-engine BE
-guest-messaging MSG · accounting ACC
+guest-messaging MSG · accounting ACC · leads LEAD · marketing MKT · crm CRM
+spa SPA · online-checkin OCI · laundry LDY · contracts CON · revenue-management RM
+reputation REV · loyalty LOY · guest-services GS · equipment EQ
 ```
 
 ---
@@ -6532,6 +6534,23 @@ ignores `.claude/worktrees/`. The dev server's reloads are harmless and left.
 
 **The rule: before running agents in parallel, ask what each tool in this
 copy will see of theirs.**
+
+---
+
+### 276 · MINE: a menu name too long for the sidebar
+
+Building the Coming soon section (16 September) I named one page
+"Contracts and allotments". Every gate passed; the sidebar, 248px wide,
+showed it as "Contracts and allotm…". Found by opening the screen as a GM,
+not by a test — the menu tests checked the names' case and uniqueness, never
+their length. Renamed "Contracts" (menu and heading alike — a heading that
+differs from its menu entry is its own recorded defect) before anything was
+committed, and `navigation.test.ts` now refuses a label over 21 characters,
+the longest that fits today. Proved by putting the long name back: the test
+failed on it.
+
+**The rule: a menu label is checked where it is shown. The screen, not the
+source, says whether it fits.**
 
 ---
 

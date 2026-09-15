@@ -1,9 +1,9 @@
 import { describe, expect, it } from "vitest";
 import {
   navigationFor, sidebarFor, flatNavigationFor, workingHomeFor, type NavItem,
-  declaredEntries, sectionKeys,
+  declaredEntries, sectionKeys, mayReach,
 } from "./navigation";
-import type { Role } from "@/lib/permissions";
+import { ROLES, COMING_SOON_ROLES, type Role } from "@/lib/permissions";
 
 /* ══════════════════════════════════════════════════════════════════
    THE MENU'S NAMING RULES, ENFORCED
@@ -34,7 +34,7 @@ function everyLabel(): string[] {
 /* Words that keep their capitals wherever they fall: acronyms, and the
    names of statutory forms. Anything else capitalised after the first
    word is Title Case creeping back. */
-const PROPER = new Set(["GST", "Form", "F", "C", "C-Form", "Fidato", "POS"]);
+const PROPER = new Set(["GST", "Form", "F", "C", "C-Form", "Fidato", "POS", "CRS", "CRM", "WhatsApp"]);
 
 describe("the menu speaks one way", () => {
   it("writes every label in sentence case", () => {
@@ -45,6 +45,14 @@ describe("the menu speaks one way", () => {
         .some((word) => /^[A-Z]/.test(word) && !PROPER.has(word)),
     );
     expect(offenders).toEqual([]);
+  });
+
+  it("keeps every label short enough for the sidebar", () => {
+    /* The sidebar is 248px and cuts a long label with an ellipsis. On
+       16 September "Contracts and allotments" (24 characters) showed as
+       "Contracts and allotm…" — found by opening the screen, not by a
+       test. The longest label that fits is 21 characters today. */
+    expect(everyLabel().filter((label) => label.length > 21)).toEqual([]);
   });
 
   it("never gives two places the same name", () => {
@@ -138,11 +146,34 @@ describe("each person's menu", () => {
     expect(searchable("owner")).toContain("Lodging tax");
   });
 
-  it("lists the channel manager for nobody — it is not connected", () => {
-    for (const role of ["owner", "gm", "front_desk"] as Role[]) {
-      expect(menu(role)).not.toContain("Channel manager");
+  it("lists every service not built yet under Coming soon — for the owner, admins and GMs only", () => {
+    /* The owner's decision, 16 September: one section at the foot of the
+       menu, every service the system does not have yet, alphabetical. */
+    const SOON = [
+      "Accounting export", "Booking engine", "Central CRM", "Channel manager",
+      "Contracts", "Fidato CRS", "Guest messages", "Guest services",
+      "Hotel equipment", "Laundry", "Leads and WhatsApp", "Loyalty",
+      "Marketing", "Online check-in", "Online payments", "Revenue management",
+      "Reviews", "Spa",
+    ];
+    for (const role of COMING_SOON_ROLES) {
+      const sections = sidebarFor(role, "5EL", ALL_ON);
+      const last = sections[sections.length - 1];
+      expect(last?.label, `${role}: the section sits at the foot`).toBe("Coming soon");
+      expect(last?.items.map((i) => i.label)).toEqual(SOON);
     }
-    expect(searchable("owner")).toContain("Channel manager");
+    for (const role of ROLES.filter((r) => !COMING_SOON_ROLES.includes(r))) {
+      expect(navigationFor(role, "5EL", ALL_ON).some((s) => s.label === "Coming soon"), role).toBe(false);
+      for (const label of SOON) expect(searchable(role), `${role} finds ${label}`).not.toContain(label);
+    }
+  });
+
+  it("refuses a Coming soon page to exactly the people the menu hides it from", () => {
+    expect(mayReach("gm", "/coming-soon/spa")).toBe(true);
+    expect(mayReach("front_desk", "/coming-soon/spa")).toBe(false);
+    expect(mayReach("hotel_manager", "/coming-soon/leads")).toBe(false);
+    expect(mayReach("owner", "/h/:code/channels")).toBe(true);
+    expect(mayReach("front_desk", "/h/:code/channels")).toBe(false);
   });
 });
 

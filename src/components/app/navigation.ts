@@ -14,6 +14,24 @@ import { nav as stores } from "@/modules/stores/nav";
 import { nav as reports } from "@/modules/reports/nav";
 import { nav as admin } from "@/modules/admin/nav";
 import { nav as channelManager } from "@/modules/channel-manager/nav";
+/* The services not built yet — each a Coming soon page (16 September). */
+import { nav as accounting } from "@/modules/accounting/nav";
+import { nav as bookingEngine } from "@/modules/booking-engine/nav";
+import { nav as crm } from "@/modules/crm/nav";
+import { nav as contracts } from "@/modules/contracts/nav";
+import { nav as crs } from "@/modules/crs/nav";
+import { nav as guestMessaging } from "@/modules/guest-messaging/nav";
+import { nav as guestServices } from "@/modules/guest-services/nav";
+import { nav as equipment } from "@/modules/equipment/nav";
+import { nav as laundry } from "@/modules/laundry/nav";
+import { nav as leads } from "@/modules/leads/nav";
+import { nav as loyalty } from "@/modules/loyalty/nav";
+import { nav as marketing } from "@/modules/marketing/nav";
+import { nav as onlineCheckin } from "@/modules/online-checkin/nav";
+import { nav as payments } from "@/modules/payments/nav";
+import { nav as revenueManagement } from "@/modules/revenue-management/nav";
+import { nav as reputation } from "@/modules/reputation/nav";
+import { nav as spa } from "@/modules/spa/nav";
 
 /* ══════════════════════════════════════════════════════════════════
    PMS NAVIGATION
@@ -141,7 +159,8 @@ export interface NavSection {
 
 export type SectionKey =
   | "home" | "front-desk" | "bookings" | "across-properties" | "configuration"
-  | "inventory" | "finance" | "point-of-sale" | "banquet" | "reports" | "system";
+  | "inventory" | "finance" | "point-of-sale" | "banquet" | "reports" | "system"
+  | "coming-soon";
 
 /** A menu entry as a service declares it. */
 export interface ServiceNavEntry extends NavItem {
@@ -214,6 +233,18 @@ const SECTION_LAYOUT: Array<Omit<NavSection, "items"> & { key: SectionKey }> = [
   { key: "banquet", label: "Banquet", module: "banquet" },
   { key: "reports", label: "Reports" },
   { key: "system", label: "System" },
+  /* ══════════════════════════════════════════════════════════════
+     COMING SOON — the owner's decision, 16 September
+
+     Every service the hotel system will have and does not yet: the CRS,
+     the channel manager and sixteen more, each with a page saying what
+     it will do and what it needs (`src/pages/ComingSoon.tsx`). One
+     section at the foot of the menu, alphabetical, seen by the owner,
+     admins and general managers only (`seesComingSoon`), so nothing that
+     does not work sits among the screens that do, and reception's menu
+     is unchanged. A service leaves this section the day it is built.
+     ══════════════════════════════════════════════════════════════ */
+  { key: "coming-soon", label: "Coming soon" },
 ];
 
 /* The two entries that belong to no service: where the system talks to a
@@ -234,6 +265,7 @@ const CORE_ENTRIES: ServiceNavEntry[] = [
 const ENTRIES: readonly ServiceNavEntry[] = [
   ...CORE_ENTRIES, ...frontDesk, ...reservations, ...housekeeping, ...inventory, ...guests,
   ...finance, ...nightAudit, ...pos, ...banquet, ...stores, ...reports, ...admin, ...channelManager,
+  ...accounting, ...bookingEngine, ...crm, ...contracts, ...crs, ...guestMessaging, ...guestServices, ...equipment, ...laundry, ...leads, ...loyalty, ...marketing, ...onlineCheckin, ...payments, ...revenueManagement, ...reputation, ...spa,
 ];
 
 /** Every entry in a section, in its declared order. */

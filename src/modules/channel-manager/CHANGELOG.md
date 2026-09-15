@@ -7,8 +7,24 @@ its three rules: numbers you ran, not numbers you remember; a guard is not
 proved until it has refused something; "Left open" is the handover.
 
 Work that touches the core or several services still goes in the root
-`CHANGELOG.md`. **This service is parked by the owner — nothing is built here
-until they ask.**
+`CHANGELOG.md`. **This service is not connected — only its status page exists, in the
+Coming soon section; nothing is built here until the owner asks.**
+
+---
+
+## 2026-09-16 · into the Coming soon section
+
+**Asked for:** the owner, 16 September — every service the system does not have
+yet in one Coming soon section, for the owner, admins and general managers.
+
+**Shipped:** `nav.ts` — the entry moves from Inventory (`listed: false`) to
+the Coming soon section, seen by the owner, admins and GMs
+(`seesComingSoon`); `routes.tsx` — the page is now guarded
+(`RequireAccess`), so it is refused to anybody the menu does not show it to.
+Before, anybody holding the `rate` grant could find it by search and open it.
+The page itself is unchanged.
+
+**Proved:** in the root `CHANGELOG.md`, 2026-09-16.
 
 ---
 

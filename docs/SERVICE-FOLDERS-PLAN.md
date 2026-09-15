@@ -164,6 +164,17 @@ Every step leaves every gate green and the app working; safe to stop after any.
 
 ---
 
+## Twelve more folders, 16 September
+
+The owner asked for "a HMS with all the requested services which are
+currently missing" and chose a folder and a Coming soon page for every one:
+leads, marketing, crm, spa, online-checkin, laundry, contracts, revenue-management, reputation, loyalty, guest-services, equipment — thirty folders in all, twelve
+working services and eighteen not built. Each not-built folder holds its
+brief, log, memory, an empty front door, one menu entry in the Coming soon
+section (owner, admin and GM only), one address (`/coming-soon/<service>`,
+the channel manager keeps `/h/:code/channels`) and a page on the shared
+`src/pages/ComingSoon.tsx`. Root `CHANGELOG.md`, 2026-09-16.
+
 ## The owner's decisions, 15 September
 
 1. **Depth:** screens and server per service; the database history shared.

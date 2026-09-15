@@ -57,6 +57,7 @@ staff-first plan    phase 1 of 4 built
 clarity plan        all 4 steps built (step 4, 15 Sep: Start here, terms, empty states)
 service folders     BUILT and verified 15 Sep on branch service-folders — not in cp6, not deployed
 one hotel system    PLANNED 15 Sep — docs/HMS-INTEGRATION-PLAN.md; waiting on decisions D1–D14
+coming soon         BUILT 16 Sep on branch coming-soon (on top of service-folders) — not deployed
 ```
 
 **Deployed 15 September** — all of it:
@@ -134,6 +135,32 @@ a migration number claimed first (`src/test/migrationNumbers.test.ts`).
 it on its own. And the defects the briefs found (PENDING § 2a) — each a
 change somebody would see, so each is the owner's call.
 
+### 3.0a · Every missing service — a folder and a Coming soon page — BUILT 16 September, on branch `coming-soon`
+
+The owner, 16 September: "a HMS with all the requested services which are
+currently missing in the current system". Asked how, they took every
+recommendation: a folder and a Coming soon page for every missing service
+(all twelve), one "Coming soon" section at the foot of the menu for the
+owner, admins and general managers, built on a branch after the
+service-folder move and deployed after it.
+
+**Built.** Twelve new folders — leads, marketing, crm, spa, online-checkin, laundry, contracts, revenue-management, reputation, loyalty, guest-services, equipment — each
+with its brief, log, memory, empty front door, menu entry, address and page;
+the five brief-only folders (crs, payments, booking-engine, guest-messaging,
+accounting) got a page, an entry and an address; the channel manager's entry
+moved into the section and its page is now guarded. **Thirty folders: twelve
+working services, eighteen not built.** One shared page
+(`src/pages/ComingSoon.tsx`): what it will do, what it needs, where it stands —
+nothing invented. Who sees it: `seesComingSoon` in `src/lib/permissions.ts`,
+asked by the menu and by each route's guard alike. Reception's menu is
+unchanged; the only other change is that Reception, Hotel Manager and Viewer
+can no longer find or open the channel manager's page (they could by search
+before).
+
+**The build order is the owner's to approve, one service at a time** — root
+`CHANGELOG.md`, 2026-09-16. Nothing in any Coming soon folder is built until
+the owner says which.
+
 ### 3.0b · One hotel system — the CRS, the live inventory, the leads, a channel manager — PLANNED 15 September, ASK FIRST
 
 The owner's goal of 15 September: the CRS (`D:\fidato crs`), the live
@@ -184,7 +211,7 @@ kitchen manager  Kitchen · Menu · Close restaurant day
 housekeeping     Housekeeping · Work orders · Store
 stores           Store
 everybody        Reports lists only Night audit · All reports · Manager report
-nobody           Channel manager (not connected)
+owner, admin, gm  + Coming soon: the 18 services not built yet, alphabetical (16 Sep)
 owner, admin, gm, hotel_manager, finance, read_only — every section they may open
 ```
 
@@ -277,6 +304,9 @@ early.
 ## 4 · Decisions the owner has made — do not re-ask
 
 ```
+16 Sep   every missing service gets a folder and a Coming soon page — all twelve, not only the four asked for
+16 Sep   one Coming soon section at the foot of the menu, owner, admin and GM only; reception unchanged
+16 Sep   the Coming soon work goes on a branch after the service-folder move and deploys after it
 14 Sep   "Group" is called Dashboard: tiles for the chosen hotel, a table of all hotels below
 14 Sep   Rooms and Calendar are two menu entries with their own addresses
 14 Sep   first screen after sign-in: the GM sets it per person; the person can change their own
@@ -378,7 +408,9 @@ routes in `api/src/modules/<service>/`; new database checks in
 `db/tests/modules/<service>.sql`. Read its `MODULE.md` first. Another service
 is reached only through its `index.ts`. The core — design system, shell,
 session, data index, server wiring, migrations — is shared and frozen
-(AGENTS.md).
+(AGENTS.md). **A service not built yet has a Coming soon page** in its own
+folder (`pages/`), listed in the Coming soon section; the day it is built,
+its real screens replace the page and its entry moves to a working section.
 
 **Menus are per person.** Each service declares its menu entries in its own
 `nav.ts`: the section, the place in it, and `workingMenus` — the restricted

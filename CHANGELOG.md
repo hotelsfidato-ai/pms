@@ -50,6 +50,98 @@ Write it **as you go**, not at the end from memory. Copy this shape:
 
 ---
 
+## 2026-09-16 · Every missing service: a folder and a Coming soon page
+
+**Asked for:** "ok now for a hms with all the requested services which are
+currently missing in the current system". Asked how (four questions, each
+with a recommendation), the owner took every recommendation: a folder and a
+Coming soon page for every missing service — all twelve, not only the four
+they had named; one "Coming soon" section at the foot of the menu for the
+owner, admins and general managers; on a branch after the service-folder
+move, deployed after it; then a build order to approve, one service at a
+time.
+
+**Shipped — branch `coming-soon`, on top of `service-folders`, not deployed:**
+- **Twelve new service folders:** `leads` (Leads and WhatsApp), `marketing`,
+  `crm` (Central CRM), `spa` — the four the owner asked for on 15 September —
+  and `online-checkin`, `laundry`, `contracts`, `revenue-management`,
+  `reputation` (Reviews), `loyalty`, `guest-services`, `equipment` (Hotel
+  equipment, "When a hotel asks") — the standard list in `PROGRESS.md`. Each
+  has `MODULE.md`, `CHANGELOG.md`, `MEMORY.md` (its own defect prefix, added
+  to the root `MEMORY.md` header), an empty `index.ts`, `nav.ts`,
+  `routes.tsx` and `pages/<Name>.tsx`.
+- **The five brief-only folders** (`crs`, `payments` — marked "Parked" —
+  `booking-engine`, `guest-messaging`, `accounting`) got the same page, entry
+  and address; their briefs and front doors say so.
+- **The channel manager** moved from Inventory (unlisted) into the section;
+  its route is now guarded.
+- **Core:** `src/pages/ComingSoon.tsx` — one page for all of them: what it
+  will do, what it needs before it can be built, where it stands today;
+  nothing invented. `seesComingSoon` in `src/lib/permissions.ts` — owner,
+  admin, GM — asked by the menu and by every route guard alike.
+  `navigation.ts` has the `coming-soon` section; `App.tsx` mounts the routes.
+- **Thirty service folders:** twelve working services, eighteen not built.
+
+**Found**
+- Checked before writing: the desk's Post a charge list
+  (`src/lib/rules.ts`, `CHARGE_CATEGORIES`) offers Laundry but no Spa,
+  minibar or telephone line, though the folio has those categories. The
+  pages say exactly that.
+- **MEMORY 276, mine:** "Contracts and allotments" was cut off in the
+  sidebar ("Contracts and allotm…"). Found by opening the screen as a GM,
+  after every gate had passed. Renamed "Contracts" before committing; a new
+  test refuses a menu label over 21 characters — proved by putting the long
+  name back.
+
+**Proved** (on the final code, exit codes read)
+```
+web types        clean (tsc -b --force)
+web tests        206 passed, exit 0 (two new: the Coming soon list for
+                 owner/admin/GM and nobody else; the pages refused to exactly
+                 the people the menu hides them from; plus the label length)
+build            clean; no test sign-in in dist
+api types        clean (untouched)
+menus            every role's menu and search compared fact by fact with
+                 before: owner, admin and GM gain the 18-entry section at the
+                 foot; Reception, Hotel Manager and Viewer lose only the
+                 channel manager's page from search (and cannot open it);
+                 nothing else in any menu moved, appeared or went
+screens          as Reception: no section, /coming-soon/spa refused; as GM:
+                 the section at the foot, all 18 pages opened from the menu,
+                 each with its heading and pill (Online payments "Parked",
+                 Hotel equipment "When a hotel asks"); phone and desktop widths
+```
+
+**The build order — proposed, the owner approves one service at a time**
+```
+before any   deploy the service-folder move, then this; RES-1 and 008; which rooms 5 Elements has
+ 1  Channel manager      the definition arrives 16 Sep; the largest gap; needs the three doors
+ 2  Leads and WhatsApp   the Meta token expires about 27 Sep; the app exists — connect it
+ 3  Fidato CRS           bookings in, rooms and prices out
+ 4  Guest messages       the leads app's WhatsApp pipeline, reused; four later services need it
+ 5  Accounting export    independent and small — can run alongside 1–3
+ 6  Online payments      only if the owner un-parks it; before the booking engine
+ 7  Booking engine       after 4 (and 6, for deposits)
+ 8  Online check-in      after 4
+ 9  Central CRM          after 2 and 3
+10  Marketing            after 2 and 9
+11  Contracts            independent — alongside
+12  Laundry              independent, small — alongside
+13  Guest services       independent, small — alongside
+14  Spa                  once the owner says which hotels have one
+15  Reviews              after 4
+16  Loyalty              after 9
+17  Revenue management   needs a year of bookings in this system
+18  Hotel equipment      when a hotel asks
+```
+
+**Decided by the owner:** the four answers above (HANDOVER § 4).
+
+**Left open:** the build order's approval; merging `service-folders` and
+then `coming-soon` into `cp6`, and deploying each on its own.
+
+---
+
 ## 2026-09-15 (one system) · The plan to connect the CRS, the live inventory, the leads and a channel manager
 
 **Asked:** "integrate the 3 to 4 different services into this … the CRS system

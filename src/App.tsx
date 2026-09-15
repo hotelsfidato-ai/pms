@@ -43,6 +43,24 @@ import { routes as storesRoutes } from "@/modules/stores/routes";
 import { routes as reportsRoutes } from "@/modules/reports/routes";
 import { routes as adminRoutes } from "@/modules/admin/routes";
 import { routes as channelManagerRoutes } from "@/modules/channel-manager/routes";
+/* The services not built yet — each a Coming soon page (16 September). */
+import { routes as accountingRoutes } from "@/modules/accounting/routes";
+import { routes as bookingEngineRoutes } from "@/modules/booking-engine/routes";
+import { routes as crmRoutes } from "@/modules/crm/routes";
+import { routes as contractsRoutes } from "@/modules/contracts/routes";
+import { routes as crsRoutes } from "@/modules/crs/routes";
+import { routes as guestMessagingRoutes } from "@/modules/guest-messaging/routes";
+import { routes as guestServicesRoutes } from "@/modules/guest-services/routes";
+import { routes as equipmentRoutes } from "@/modules/equipment/routes";
+import { routes as laundryRoutes } from "@/modules/laundry/routes";
+import { routes as leadsRoutes } from "@/modules/leads/routes";
+import { routes as loyaltyRoutes } from "@/modules/loyalty/routes";
+import { routes as marketingRoutes } from "@/modules/marketing/routes";
+import { routes as onlineCheckinRoutes } from "@/modules/online-checkin/routes";
+import { routes as paymentsRoutes } from "@/modules/payments/routes";
+import { routes as revenueManagementRoutes } from "@/modules/revenue-management/routes";
+import { routes as reputationRoutes } from "@/modules/reputation/routes";
+import { routes as spaRoutes } from "@/modules/spa/routes";
 
 /* ══════════════════════════════════════════════════════════════════
    ROUTES — per PHASE-1-FRONTEND §1.2
@@ -261,6 +279,24 @@ export default function App() {
             {storesRoutes}
             {nightAuditRoutes}
             {channelManagerRoutes}
+            {/* Coming soon: one page each for the services not built yet. */}
+            {accountingRoutes}
+            {bookingEngineRoutes}
+            {crmRoutes}
+            {contractsRoutes}
+            {crsRoutes}
+            {guestMessagingRoutes}
+            {guestServicesRoutes}
+            {equipmentRoutes}
+            {laundryRoutes}
+            {leadsRoutes}
+            {loyaltyRoutes}
+            {marketingRoutes}
+            {onlineCheckinRoutes}
+            {paymentsRoutes}
+            {revenueManagementRoutes}
+            {reputationRoutes}
+            {spaRoutes}
 
             {/* What belongs to no service. */}
             {/* Hiding it in the nav is not removing it: the route would
