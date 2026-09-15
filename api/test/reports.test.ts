@@ -203,3 +203,47 @@ describe("the C-Form report", () => {
     for (const r of body.rows) expect(r.nationality).not.toBe("IN");
   });
 });
+
+/* ── City ledger ──────────────────────────────────────────────────── */
+
+describe("the city ledger", () => {
+  /* It printed "Mr. Agoda", "Mr. Walk-in" — a contact person made up for
+     every account, on screen and in the CSV (found 15 September). */
+  type LedgerRow = { account: string; contact: string | null; phone: string | null };
+  const ledger = async () =>
+    (await (await call("/5EL/reports/city-ledger")).json()) as LedgerRow[];
+
+  it("names no contact it does not hold", async () => {
+    const rows = await ledger();
+    expect(rows.length).toBeGreaterThan(0);
+    for (const r of rows) expect(r.contact ?? "").not.toMatch(/^Mr\. /);
+  });
+
+  it("shows a company's own contact, from its record, on its row only", async () => {
+    const rows = await ledger();
+    const db = await admin();
+    try {
+      const { rows: companies } = await db.query<{ name: string }>(
+        "select name from companies where name = any($1) order by name limit 1",
+        [rows.map((r) => r.account)]);
+      const company = companies[0]?.name;
+      expect(company, "no company among the ledger's accounts").toBeDefined();
+
+      await db.query(
+        "update companies set contact_name = 'Test Contact', phone = 'test-phone' where name = $1",
+        [company]);
+      try {
+        const after = await ledger();
+        const own = after.find((r) => r.account === company)!;
+        expect(own.contact).toBe("Test Contact");
+        expect(own.phone).toBe("test-phone");
+        for (const r of after.filter((x) => x.account !== company)) {
+          expect(r.contact).not.toBe("Test Contact");
+        }
+      } finally {
+        await db.query(
+          "update companies set contact_name = null, phone = null where name = $1", [company]);
+      }
+    } finally { await db.end(); }
+  });
+});

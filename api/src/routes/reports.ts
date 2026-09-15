@@ -113,11 +113,15 @@ reports.get("/:code/reports/city-ledger", async (c) => {
     const to = toParam ?? bd;
 
     const { rows } = await client.query<{
-      account: string; debit: string; credit: string; closing: string;
+      account: string; contact: string | null; phone: string | null;
+      debit: string; credit: string; closing: string;
     }>(
       `with live as (${LIVE_POSTINGS}),
        by_account as (
          select app.booking_source_label(bs.name, co.name, r.source) as account,
+                co.name         as company,
+                co.contact_name as contact_name,
+                co.phone        as company_phone,
                 l.category,
                 l.amount,
                 l.tax_amount,
@@ -129,6 +133,12 @@ reports.get("/:code/reports/city-ledger", async (c) => {
          left join booking_sources bs on bs.id = r.booking_source_id
        )
        select account,
+              /* The company's own contact, from its record — and only on
+                 the company's own row. The label puts the company first
+                 (082), so account = company is exactly "this row IS the
+                 company". A channel or a walk-in has no contact on file. */
+              max(contact_name)  filter (where company = account) as contact,
+              max(company_phone) filter (where company = account) as phone,
               coalesce(sum(amount + tax_amount) filter (
                 where category <> 'payment'
                   and business_date between $2::date and $3::date), 0)::text as debit,
@@ -144,9 +154,13 @@ reports.get("/:code/reports/city-ledger", async (c) => {
 
     return rows.map((r) => ({
       account: r.account,
-      contact: `Mr. ${r.account}`,
-      /* Not held in this system. A dash, not a blank. */
-      phone: null,
+      /* WAS `Mr. ${r.account}` — "Mr. Agoda", "Mr. Walk-in": a person
+         invented for every account and printed as its contact, on a report
+         an accountant reads, and in its CSV. The company's contact when
+         its record holds one; otherwise null, which the report prints as
+         a dash, like the phone beside it. */
+      contact: r.contact,
+      phone: r.phone,
       /* Nothing predates the demo window, so an opening balance would
          be invented rather than derived. */
       opening: null,

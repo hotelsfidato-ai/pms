@@ -55,7 +55,8 @@ export async function getNoShowReport(
 
 export interface CityLedgerRow {
   account: string;
-  contact: string;
+  /** The company's contact on file; null for a channel or a walk-in. */
+  contact: string | null;
   phone: string | null;
   opening: number | null;
   debit: number;

@@ -59,7 +59,7 @@ export function CityLedgerPage() {
            somebody has to strip currency symbols out of before summing
            is an export that wasted their afternoon. */
         rows: rows.map((r) => [
-          r.account, r.contact, r.phone ?? "",
+          r.account, r.contact ?? "", r.phone ?? "",
           r.opening, r.debit, r.credit, r.closing ?? 0,
         ]),
       })}
@@ -76,7 +76,7 @@ export function CityLedgerPage() {
               {rows.map((r) => (
                 <tr key={r.account} className="border-b border-grey-100">
                   <td className="px-4 py-2 text-ink-900">{r.account}</td>
-                  <td className="px-4 py-2 text-grey-600">{r.contact}</td>
+                  <td className={r.contact ? "px-4 py-2 text-grey-600" : "px-4 py-2 text-grey-400"}>{r.contact ?? "—"}</td>
                   <td className="px-4 py-2 text-grey-400">{r.phone ?? "—"}</td>
                   <td className="px-4 py-2 text-right"><Amount value={r.opening} format={money} /></td>
                   <td className="px-4 py-2 text-right"><Amount value={r.debit} format={money} /></td>
