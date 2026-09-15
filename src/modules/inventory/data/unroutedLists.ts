@@ -1,5 +1,5 @@
-import { fetchOr } from "./http";
-import { BUSINESS_DATE } from "./businessDate";
+import { fetchOr } from "@/data/repositories/http";
+import { BUSINESS_DATE } from "@/data/repositories/businessDate";
 /* Room types and rate plans as the old directory listed them. Their two screens (RoomTypesPage, RatePlansPage) are routed nowhere — kept, not deleted, pending the owner (PENDING.md).
 
    Service: inventory. Moved out of directory.ts on 15 September in the

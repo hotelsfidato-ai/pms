@@ -5,7 +5,8 @@ import { cn } from "@/lib/cn";
 import { money, dateShort } from "@/lib/format";
 import { useUi } from "@/lib/ui";
 import { Page, PageHeader, Card, Skeleton, Tooltip, ErrorState } from "@/components/ui";
-import { getRateGrid, BUSINESS_DATE } from "@/data/repositories";
+import { getRateGrid } from "@/modules/inventory/data/rateGrid";
+import { BUSINESS_DATE } from "@/data/repositories";
 
 /* ══════════════════════════════════════════════════════════════════
    RATES

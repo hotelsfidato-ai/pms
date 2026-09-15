@@ -8,10 +8,7 @@ import { useUi } from "@/lib/ui";
 import {
   Page, PageHeader, Card, CardBody, Button, StatusPill, toast,
 } from "@/components/ui";
-import {
-  getRates, setRackRate, addRate, removeRate,
-  type RateRoomType, type RateRule,
-} from "@/data/repositories";
+import { getRates, setRackRate, addRate, removeRate, type RateRoomType, type RateRule } from "@/modules/inventory/data/rateSetup";
 
 /* ══════════════════════════════════════════════════════════════════
    RATES — what a room costs

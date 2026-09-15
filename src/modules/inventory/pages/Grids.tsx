@@ -10,10 +10,7 @@ import {
   Dialog, DialogContent, DialogClose, Field, fieldProps, Input,
   Tabs, TabsList, TabsTrigger, TabsContent,
 } from "@/components/ui";
-import {
-  getInventory, getPriceGrid, setRate, setRestriction,
-  type InventoryCell, type PriceCell, type Restriction,
-} from "@/data/repositories";
+import { getInventory, getPriceGrid, setRate, setRestriction, type InventoryCell, type PriceCell, type Restriction } from "@/modules/inventory/data/rates";
 
 /* ══════════════════════════════════════════════════════════════════
    THE TWO GRIDS

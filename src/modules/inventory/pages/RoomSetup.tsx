@@ -10,12 +10,7 @@ import {
   Dialog, DialogContent, DialogClose, Field, fieldProps, Input,
   NativeSelect, StatusPill,
 } from "@/components/ui";
-import {
-  getRoomSetup, addRoomType, amendRoomType, addRoom, amendRoom,
-  amendFrontDesk,
-  importSetup,
-  type RoomTypeSetup, type RoomSetup as Room, type FrontDeskSettings,
-} from "@/data/repositories";
+import { getRoomSetup, addRoomType, amendRoomType, addRoom, amendRoom, amendFrontDesk, importSetup, type RoomTypeSetup, type RoomSetup as Room, type FrontDeskSettings } from "@/modules/inventory/data/roomSetup";
 import { TaxRulesCard } from "@/components/flows/TaxRulesCard";
 import { CommissioningCard } from "@/modules/admin";
 import { ImportDialog } from "@/components/flows/ImportDialog";

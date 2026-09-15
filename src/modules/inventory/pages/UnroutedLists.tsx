@@ -1,7 +1,7 @@
 import { useQuery } from "@tanstack/react-query";
 import { cn } from "@/lib/cn";
 import { Page, PageHeader, Card, DataTable, type Column } from "@/components/ui";
-import { listRoomTypes, listRatePlans, type RoomTypeRecord, type RatePlanRecord } from "@/data/repositories";
+import { listRoomTypes, listRatePlans, type RoomTypeRecord, type RatePlanRecord } from "@/modules/inventory/data/unroutedLists";
 import { useParams } from "react-router";
 import { useUi } from "@/lib/ui";
 import { money } from "@/lib/format";

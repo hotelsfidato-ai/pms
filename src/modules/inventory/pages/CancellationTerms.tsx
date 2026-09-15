@@ -8,11 +8,7 @@ import {
   Page, PageHeader, Button, Card, Field, Input, NativeSelect,
   StatusPill, EmptyState, toast,
 } from "@/components/ui";
-import {
-  listCancellationPolicies, addCancellationPolicy,
-  retireCancellationPolicy, setDefaultCancellationPolicy, RETENTION_BASES,
-  type CancellationPolicy,
-} from "@/data/repositories";
+import { listCancellationPolicies, addCancellationPolicy, retireCancellationPolicy, setDefaultCancellationPolicy, RETENTION_BASES, type CancellationPolicy } from "@/modules/inventory/data/rateSetup";
 
 /* ══════════════════════════════════════════════════════════════════
    WHAT A CANCELLATION COSTS

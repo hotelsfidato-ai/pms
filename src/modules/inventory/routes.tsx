@@ -1,10 +1,10 @@
 import { Route } from "react-router";
 import { PropertyScope } from "@/components/app/PropertyScope";
-import RoomSetupPage from "@/pages/RoomSetup";
-import RatePlansEditor from "@/pages/RatePlans";
-import CancellationTermsPage from "@/pages/CancellationTerms";
-import RatesPage from "@/pages/Rates";
-import GridsPage from "@/pages/Grids";
+import RoomSetupPage from "@/modules/inventory/pages/RoomSetup";
+import RatePlansEditor from "@/modules/inventory/pages/RatePlans";
+import CancellationTermsPage from "@/modules/inventory/pages/CancellationTerms";
+import RatesPage from "@/modules/inventory/pages/Rates";
+import GridsPage from "@/modules/inventory/pages/Grids";
 
 /* Inventory and rates' screen addresses. Mounted by App.tsx inside the
    signed-in shell. */

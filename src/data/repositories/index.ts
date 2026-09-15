@@ -30,9 +30,7 @@ export * from "./operations";
 export * from "./notifications";
 export * from "./billing";
 export * from "./groups";
-export * from "./rates";
 export * from "./till";
-export * from "./roomSetup";
 export * from "./stayExtras";
 /* Split out of the mixed files on 15 September, one file per service
    (docs/SERVICE-FOLDERS-PLAN.md). Re-exported here while the services'
@@ -42,12 +40,9 @@ export type { OperationResult, AdminResult } from "./result";
 export * from "./postings";
 export * from "./cashier";
 export * from "./housekeeping";
-export * from "./rateGrid";
 export * from "./nightAudit";
 export * from "./posBridge";
-export * from "./rateSetup";
 export * from "./me";
-export * from "./unroutedLists";
 export * from "./tax";
 export * from "./importReport";
 

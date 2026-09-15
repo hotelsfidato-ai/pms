@@ -1,6 +1,6 @@
 import { api, ApiError } from "@/lib/api";
-import { call } from "./http";
-import type { ImportReport } from "./importReport";
+import { call } from "@/data/repositories/http";
+import type { ImportReport } from "@/data/repositories/importReport";
 
 /* ══════════════════════════════════════════════════════════════════
    SETTING UP WHAT THE PROPERTY SELLS

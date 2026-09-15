@@ -1,6 +1,6 @@
 import { api, ApiError } from "@/lib/api";
-import type { AdminResult } from "./result";
-import { write } from "./http";
+import type { AdminResult } from "@/data/repositories/result";
+import { write } from "@/data/repositories/http";
 /* Rate plans and cancellation terms.
 
    Service: inventory. Moved out of admin.ts on 15 September in the
