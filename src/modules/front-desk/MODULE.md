@@ -1,32 +1,339 @@
 # Front desk
 
+Checking guests in and out, and everything the desk does to a stay in between.
+
 **Folder name:** `front-desk` — the same word in all three places:
 
 ```
 src/modules/front-desk/          the screens, their data calls, their tests
 api/src/modules/front-desk/      the server's routes for this service
-db/tests/modules/front-desk.sql  its database checks (new ones only — suite.sql is history)
+db/tests/modules/front-desk.sql  NEW database checks only — db/tests/suite.sql is frozen history
 ```
+
+Every screen, address, endpoint, table and number below was checked in the
+code on branch `service-folders` at `c804aa2` (15 September 2026), after the
+server split and the test split were merged. Where the code could not settle
+something, it says so.
 
 ## What it is
 
-Rooms and Calendar, Arrivals, In house and Due out, Walk-ins. Checking a guest in and out, room moves and exchanges, the stay panel.
+The receptionist's working day. They see every room at a glance (Rooms) or
+across two weeks (Calendar), check in today's arrivals, take a walk-in into
+an empty room, move a guest or swap two guests, change a stay's dates or
+number of guests, void a booking entered by mistake, and check a guest out
+once the bill is settled. Everything done to one stay happens in the **stay
+panel**, which opens over whichever screen the clerk came from. The bill
+inside that panel (the Bill tab) is finance's.
+
+## Screens
+
+Who works from each is `workingMenus` in `nav.ts` (the owner's menu of
+15 September). Roles without a working menu — owner, admin, GM, hotel
+manager, accountant, viewer — see these in the full menu where their
+permission allows; anyone whose permission allows can reach them with Find
+a screen (Ctrl K).
+
+| Menu entry (section) | Address | Page file | Working menu |
+|---|---|---|---|
+| Rooms (top) | `/h/:code/stay` | `pages/StayView.tsx` (`view="floor"`) | Reception |
+| Calendar (top) | `/h/:code/calendar` | `pages/StayView.tsx` (`view="calendar"`) | Reception |
+| Arrivals → Today (Front desk) | `/h/:code/arrivals` | `pages/Arrivals.tsx` | Reception |
+| Arrivals → Upcoming | `/h/:code/arrivals/upcoming` | `pages/Arrivals.tsx` | Reception |
+| In house → In house now | `/h/:code/in-house` | `pages/InHouse.tsx` | Reception |
+| In house → Due out | `/h/:code/in-house/due-out` | `pages/InHouse.tsx` | Reception |
+| Walk-ins | `/h/:code/walk-ins` | `pages/WalkIns.tsx` | Reception |
+
+Seven addresses, four page files. The menu gate is `dashboard` for Rooms and
+`reservation` for the rest (`nav.ts`).
+
+- **The stay panel** — `flows/StayDrawer.tsx`. It opens over Rooms and
+  Calendar from a deep link (`/h/:code/stay?res=<booking id>`; every link to
+  a booking points there, which is why `/stay` stayed Rooms — `routes.tsx`)
+  and from every stay list through `components/StayTable.tsx`. It holds check
+  in (`CheckInFlow`), the actions menu (`StayActions`: amend, move or
+  unassign, exchange, inclusions, void), the marks (`StayMarks`), the
+  group's rooms (reservations' `GroupRoomsList`) and the Bill (finance's
+  `FolioPanel`, which calls back into this service for check-out and
+  `LateCheckOutFlow`).
+- **On Rooms** the room tiles (`flows/HouseFloor.tsx`); **on both Rooms and
+  Calendar** the Assign room button (`flows/AssignRoomFlow.tsx`) and a
+  walk-in taken from an empty room (`flows/WalkInFlow.tsx`, opened as
+  `?res=new:<room>:<date>`). The Walk-ins screen is the record of walk-ins,
+  not a form (`WalkIns.tsx` header).
+- `StayTable` is also used by reservations' All bookings and finance's
+  Folios.
+
+## Server endpoints
+
+All hang from `/api/hotels`, in three files in `api/src/modules/front-desk/`,
+mounted by its `index.ts` in this order: `stays`, `operations`, `stayExtras`.
+They moved there in the server split of 15 September (`3424882`, `b772047`).
+
+**`api/src/modules/front-desk/stays.ts`** (was `api/src/routes/stays.ts`)
+
+| Method | Path | What it does |
+|---|---|---|
+| GET | `/:code/stays` | every stay with the room it is in; "due out" is worked out here, stored nowhere |
+| GET | `/:code/stays/:id` | one stay |
+| GET | `/:code/groups` | the groups list that reservations' Groups screen reads — see the warning below |
+
+⚠ `GET /:code/groups` lives in `stays.ts`, not in reservations' `groups.ts`.
+`stays.ts` is mounted first and the server answers with the first match, so
+a second copy in `groups.ts` would never run (MEMORY 118). The plan gives
+`stays.ts` to this service whole and calls "groups" reservations'; the split
+kept this endpoint here. Whether it should move is not settled — ask before
+moving it.
+
+**`api/src/modules/front-desk/operations.ts`** (the front-desk half of the
+old `api/src/routes/operations.ts`; the money half is finance's `postings.ts`
+and `cashier.ts`)
+
+| Method | Path | What it does |
+|---|---|---|
+| POST | `/:code/stays/:id/check-in` | check in; records the ID document; posts an early-arrival charge |
+| GET | `/:code/early-arrival` | is arriving now early, with the hotel's times and charges (063) — null, never 0 |
+| POST | `/:code/stays/:id/check-out` | check out; posts a late check-out charge; closes the folio |
+| POST | `/:code/walk-ins` | a walk-in: guest, booking on the Walk-in channel (085), room, folio, first night |
+| POST | `/:code/stays/:id/assign` | give a booking a room |
+| POST | `/:code/stays/:id/move` | move a guest to another room (`app.move_room`, 054) |
+| PATCH | `/:code/stays/:id` | amend the dates and number of guests (`app.amend_stay`, 055) |
+| POST | `/:code/stays/:id/unassign` | take the room back (`app.unassign_room`, 054) |
+| POST | `/:code/stays/:id/void` | void a booking entered by mistake (042) |
+
+**`api/src/modules/front-desk/stayExtras.ts`** (was `api/src/routes/stayExtras.ts`)
+
+| Method | Path | What it does |
+|---|---|---|
+| GET | `/:code/stays/:id/exchangeable` | who this guest could swap rooms with |
+| POST | `/:code/stays/:id/exchange` | swap two guests' rooms (`app.exchange_rooms`, 065) |
+| GET | `/:code/inclusions` | the hotel's list of inclusions |
+| POST | `/:code/inclusions` | add one — **no screen calls it** (`addInclusion` is on `KNOWN_UNREACHABLE`) |
+| GET | `/:code/stays/:id/inclusions` | what this stay includes |
+| POST | `/:code/stays/:id/inclusions` | add an inclusion to a stay |
+| DELETE | `/:code/stays/:id/inclusions/:lineId` | take it off |
+
+19 endpoints. Server tests that exercise them still sit in `api/test/` (for
+example `identity.test.ts` — check-in and documents — and
+`concurrency.test.ts` "ra_no_double_booking"); there is no
+`api/test/modules/front-desk/` yet, and new ones go there (the plan's
+refinement).
+
+## Data
+
+`src/modules/front-desk/data/`:
+
+| File | What it does |
+|---|---|
+| `stays.ts` | reads stays over HTTP and slices one list three ways — arrivals, in house, departures — plus `listArrivalsOutstanding` (still to come, for the Dashboard) and `fetchStays` (the raw read other services reuse) |
+| `operations.ts` | the writes behind the desk's flows: check in and out, walk-in, assign, move, unassign, amend, void, and the early-arrival read; check-in, check-out and walk-in ask `src/lib/rules.ts` first |
+| `stayExtras.ts` | exchanging two rooms, and inclusions |
+| `stayview.ts` | the Calendar's data — a fourteen-day window, bars and their tones, room rates from the room type (null when unpriced) — and the counts the Dashboard shows |
+| `stayview.test.ts` | the Calendar's data: the window, rooms and bars, counts that agree with their filters, the footer, and rates (a dash, never a zero) |
+
+The screen tests sit at the folder's root: `front-desk.test.tsx` — the tape
+chart and the stay panel, split out of `src/App.test.tsx` on 15 September
+(`f02c781`).
+
+`listVacant` (`stays.ts`), `windowFrom` (`stayview.ts`) and `addInclusion`
+(`stayExtras.ts`) have no caller and are listed in `KNOWN_UNREACHABLE` in
+`src/data/repositories/repositories.test.ts` — a list that may only shrink.
+
+## Database
+
+Tables this service writes (from the SQL in its route files), and the
+migrations that made or changed them:
+
+| Table | What front desk does to it | Migrations |
+|---|---|---|
+| `reservations` | checks in, checks out, voids; records early and late times and reasons; inserts the walk-in's booking | created `005_reservations.sql`; `011_model_additions.sql` (the room moved out to `room_assignments`), `015_edge_cases.sql` (day use, dates in order), `042_void_and_sources.sql` (void and its reason), `043_indicators.sql` (single-lady mark), `055_amend_stay.sql`, `063_early_late.sql`, `064_expected_arrival.sql`, `085_walk_in_channel.sql` |
+| `room_assignments` | which room a stay holds, night by night: assign, move, exchange, unassign, release | created `011_model_additions.sql` (`ra_no_double_booking`); `015_edge_cases.sql` (an assignment stays inside its booking), `054_room_move.sql`, `065_exchange_and_inclusions.sql`, `070_vacating_dirties.sql`, `072_room_tonight.sql` (`app.room_on`, `app.room_for`), `073_no_show_releases_rooms.sql`, `074_nobody_slept_there.sql`, `086_stay_room.sql` (`app.stay_room`) |
+| `rooms` (`occupancy_status`) | set to occupied at check-in and walk-in | `003_rooms.sql`; `043_indicators.sql` (smoking, connected rooms); `070_vacating_dirties.sql` (a trigger keeps it true) |
+| `inclusions`, `reservation_inclusions` | what a rate includes, its price snapshotted onto the stay | `065_exchange_and_inclusions.sql` |
+
+It also writes into other services' tables, directly in SQL: `guests` (the
+walk-in's guest; nationality at check-in) and `guest_documents` (the ID
+recorded at check-in, `026_identity_capture.sql`) — guests' tables; and
+`folios` and `folio_postings` (a folio opened at check-in and walk-in; the
+early-arrival, late check-out and walk-in charges; the folio closed at
+check-out) — finance's tables, append-only (`006_folio.sql`). It reads the
+hotel's check-in and check-out times and early and late charges (`hotels`,
+`063_early_late.sql`), which are set in administration.
+
+A new migration needs a number claimed in `HANDOVER.md` first; the guard is
+`src/test/migrationNumbers.test.ts` (numbered from 001 up, once each, no gaps).
+
+## Front door
+
+What `index.ts` exports, and who uses each (grep of `@/modules/front-desk`,
+15 September):
+
+| Export | Used by |
+|---|---|
+| `StayTable`, types `StayColumn`, `StayRow` | finance (`pages/Folios.tsx`), reservations (`pages/Reservations.tsx`) |
+| `checkOut`, `checkOutAllowed`, `earlyArrival` | finance (`flows/FolioPanel.tsx`) |
+| type `Posting` | finance (`data/postings.ts`) |
+| `fetchStays` | finance (`data/folios.ts`), reservations (`data/groups.ts`) |
+| `getStay` | finance (`data/postings.ts`); the core test `repositories.test.ts` |
+| `listStays` | housekeeping (`data/housekeeping.ts`), reservations (`pages/Reservations.tsx`); the core test |
+| `listArrivals`, `listInHouse`, `listDepartures` | the core test `repositories.test.ts` only |
+| `listArrivalsOutstanding`, `getStayViewCounts` | reports (`pages/Dashboard.tsx`) |
+| `LateCheckOutFlow` | finance (`flows/FolioPanel.tsx`) |
 
 ## Leans on
 
-finance (the Bill tab in the stay panel), housekeeping (room status), guests (VIP flag)
+Other services, through their doors only:
 
-Through each service's front door (`index.ts`) only — the guard in
-`src/test/boundaries.test.ts` refuses anything else.
+- **finance** — `getFolio` and `FolioPanel` (the stay panel's Bill tab),
+  `getFolioBalance` (`data/operations.ts`, `pages/InHouse.tsx`),
+  `listOpenFolios` (`data/stayview.ts`).
+- **guests** — `setGuestVip` (the VIP mark in the stay panel).
+- **reservations** — `GroupRoomsList`, `GROUP_ROOMS_ID` (a group stay's rooms).
 
-## Status
+And the core: `src/data/repositories/rooms.ts` (`listAllRooms`, `getRoom`),
+the shared types and `queryKeys`, `setMyPreferences` (the Room type / Floor
+switch), and `src/lib/rules.ts` (`canCheckIn`, `canCheckOut`,
+`canConfirmWalkIn`, `rateOverrideNeedsReason`). Whether a room needs cleaning is not
+imported from housekeeping — the database sets it when a room is vacated
+(070, 074).
 
-Being moved into this folder (docs/SERVICE-FOLDERS-PLAN.md, 15 September).
-Its menu entries (`nav.ts`) and screen addresses (`routes.tsx`) are already
-here. The rest of this brief — its screens, endpoints and tables, the owner's
-decisions, open items and requests — is written when the move is finished.
+## Rules that bind it
+
+- **No default prices; a missing figure is a dash, never a zero** (the
+  owner's standing rule, `HANDOVER.md` § 5). Broken here before: the Calendar
+  and the walk-in pre-filled invented rack rates (MEMORY 65), and "Rack rate
+  ₹0" showed for an unpriced room type (MEMORY 246).
+- **Rooms and Calendar are two menu entries with their own addresses**
+  (owner, 14 September, `HANDOVER.md` § 4; MEMORY 252).
+- **The first screen after sign-in is set per person by the GM** — Dashboard,
+  Rooms or Calendar — and the person may change their own (owner,
+  14 September; `087_first_screen_and_reception_pos.sql`).
+- **The Room type / Floor switch on Rooms stays, remembered per person on the
+  server** (owner, 14 September; `staff.room_grouping`, 087).
+- **Bill at the desk, Folio in Finance** (owner, 15 September). Desk screens
+  say "bill"; the last three desk "folio"s were fixed on 15 September
+  (MEMORY 265). The desk's glossary also says Booking, not Reservation, and
+  Guests, not Pax (`HANDOVER.md` § 6).
+- **Room states, one set of words** — Empty, Free, In house, Arriving,
+  Reserved, Out of service, Due out, Needs cleaning — and a number is renamed
+  by what it counts (`HANDOVER.md` § 6; MEMORY 258).
+- **A shorter menu keeps everything reachable by search** (owner,
+  15 September). Reception's working menu carries Rooms, Calendar, Arrivals
+  (and Upcoming), In house (and Due out) and Walk-ins from here. A new screen
+  goes into the right working menus or it is search-only for those roles;
+  give it `keywords` (`HANDOVER.md` § 3.2).
+- **Start here, reception's card** (`src/components/app/startHereCards.ts`):
+  "Check a guest in — Pick the guest from today's arrivals, then **Check
+  in**" (`/h/:code/arrivals`); "Take a payment" (`/h/:code/in-house`) and
+  "Check a guest out" (`/h/:code/in-house/due-out`) go through the stay
+  panel's **Bill** tab. The card shows on Rooms and Calendar
+  (`START_HERE_ON`). Rename a button and the card changes too
+  (`HANDOVER.md` § 3.3).
+- **Glossary:** the Form C hint at check-in uses the `formC` line of
+  `src/lib/glossary.ts`; if the rule changes, the line changes.
+- **One main action per screen** (clarity step 2, 15 September): the stay
+  panel is pinned by "shows one main action on each tab of the stay panel"
+  (`front-desk.test.tsx`); Void is a danger button; any new dialog must pass
+  `src/components/ui/primaryAction.test.ts` (`HANDOVER.md` § 3.1).
+- **Business rules live in `src/lib/rules.ts`, and a blocked action is shown
+  disabled with its reason** (`MASTER.md` § 2, Rules 3 and 6). When an action
+  moves, its gate moves in the same commit (MEMORY 14).
+- **The hotel's business date, never the clock** — for a move date and for an
+  early or late charge (MEMORY 19, 98, 158).
+- **Every booking records its channel, walk-ins included** (MEMORY 242,
+  085). Guarded by `api/test/modules/reservations/reservationInserts.test.ts`,
+  which reads every `insert into reservations` under `api/src`.
+- **A refusal goes above the first write** — `withSession` commits a refusal
+  like any other return (MEMORY 243).
+- **With the line down** (`src/lib/offline.ts`, core; guarded by
+  `src/lib/offline.test.ts`): check in, assign, unassign and a walk-in may be
+  held and sent later, with a warning; check-out, void and move are refused;
+  any write not named there — amend, exchange, inclusions — is refused too. A
+  new write that must work offline is a request to the core owner.
+- **Never deploy during the night audit** (`HANDOVER.md` § 9); production
+  deploys are the owner's (`HANDOVER.md` § 5).
+
+## Open items
+
+From `PENDING.md`, and one found while writing this brief:
+
+- **Defect 243's shape in the other routes** — the walk-in route puts its
+  refusals before its first write; "the other routes have not been checked"
+  (PENDING § 2 and § 5).
+- **Rooms on a phone** — the controls take 376px of an 812px screen before
+  the first room (PENDING § 5a; MEMORY 268).
+- **`const USER = "front desk"`** — named in MEMORY 256 and `HANDOVER.md` § 6
+  for `flows/CheckInFlow.tsx` (and finance's `FolioPanel.tsx`); not fixed.
+  Found while writing this brief: `flows/WalkInFlow.tsx:27` holds the same
+  literal and is named in neither place.
+- **Two "in house" numbers** — the property page said 11 in house / 9 vacant
+  while the Dashboard and Rooms (the stay-view counts) said 10 / 7, same
+  minute, 14 September. Needs one definition, the owner's to choose
+  (PENDING § 6; MEMORY "Open"; CHANGELOG 14 September).
+- **"Which room was this stay in" written by hand** —
+  `api/src/modules/front-desk/stays.ts` holds one of the seven copies; `app.stay_room()` (086) is the one rule; moving onto it
+  is tidying, not a fix (PENDING § 6).
+- **Unreachable helpers** — `addInclusion` (so `POST /:code/inclusions` has
+  no screen), `listVacant`, `windowFrom` (PENDING § 4).
+- **Find a screen does not search bookings or guests** — screens only
+  (PENDING § 5a).
+- **The plan's own test has not been run** — somebody new books, checks in,
+  takes a payment and checks out without being told; the owner's to arrange
+  (PENDING § 5a; `HANDOVER.md` § 3.3).
+- **Defect 242** (the walk-in channel) is still marked "FIXED, NOT DEPLOYED"
+  in PENDING § 2, while `HANDOVER.md` § 2 records 085 live since
+  15 September. PENDING is out of date on this point.
+- **Where `GET /:code/groups` belongs** — the server split left it in this
+  service's `stays.ts`; see Server endpoints.
+
+## Gates
+
+Before the first edit: claim this service in `HANDOVER.md` → Folder claims
+(service, branch, date), and work in your own worktree with your own
+database and ports — how, in `AGENTS.md` ("Before your first write"); the
+rules for parallel agents, in `docs/SERVICE-FOLDERS-PLAN.md`.
+
+```
+# the PC, in your worktree's folder (PowerShell or Git Bash)
+npx tsc -b                      # web types — no output at all
+npx vitest run                  # web tests
+cd api && npx tsc --noEmit      # server types
+cd api && npm test              # server tests — never `npx vitest run` inside api/ (MEMORY 196, 221, 264)
+
+# the PC, Git Bash, in your worktree's folder — needs the local Postgres (HANDOVER.md § 7)
+db/tests/run.sh                 # every database check, on a scratch database
+db/tests/rerun.sh               # only if you added a migration: it must run twice
+```
+
+⚠ A fresh worktree has no copy of the main folder's untracked `.env`;
+`AGENTS.md` ("Before your first write") gives your copy a `.env.local` with
+`VITE_API_URL` and `VITE_ALLOW_DEV_AUTH=1`. Measured at `c804aa2` in the
+worktree this brief was written in: with no env file, `npx vitest run` failed
+31 of 204 (19 in `src/App.test.tsx`, 10 in `front-desk.test.tsx`, 2 in
+reports'); with only `VITE_ALLOW_DEV_AUTH=1` it still exited 1; with that and
+`VITE_DEMO_MODE=1`, 4 of 204 failed, all in `src/App.test.tsx` (not
+investigated). A gate's answer is its exit code (MEMORY 274). Never print an
+env file.
+
+The guards this service must respect:
+
+- `src/test/boundaries.test.ts` — another service is reached only through its
+  `index.ts`; every service folder keeps its `index.ts` and `MODULE.md`.
+- `src/test/migrationNumbers.test.ts` — one number, one migration.
+- `src/components/app/navigation.test.ts` — pins Reception's working menu.
+- `src/components/ui/primaryAction.test.ts` — every dialog declares its main
+  action.
+- `src/data/repositories/repositories.test.ts` — no exported data function
+  without a caller, across every service's `data/`.
+- `src/modules/front-desk/front-desk.test.tsx` — "the tape chart at
+  /h/:code/stay", the stay panel's one main action per tab.
+- `src/App.test.tsx` — "start here" (reception's card).
+- `src/lib/offline.test.ts` — which writes may be held offline.
+- `api/test/modules/reservations/reservationInserts.test.ts` — every
+  reservation records its channel.
 
 ## Requests from other services
 
-None yet. Another service that needs a change here writes it in this list;
-it is not made from outside.
+None yet.
+
+Another service's agent that needs a change here writes it in this list —
+what, why, who asked, the date — and the front desk's agent does it.
