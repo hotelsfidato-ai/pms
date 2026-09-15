@@ -11,8 +11,7 @@ import {
   ErrorState, Term,
 } from "@/components/ui";
 import { describeError } from "@/components/ui/States";
-import { getNightAudit, runNightAudit, type NightAuditResult }
-  from "@/data/repositories";
+import { getNightAudit, runNightAudit, type NightAuditResult } from "@/modules/night-audit/data/nightAudit";
 
 /* ══════════════════════════════════════════════════════════════════
    NIGHT AUDIT
