@@ -19,7 +19,7 @@ useful one.
 |---|---|
 | `HANDOVER.md` | **the top section only** — the current state, what is next, and the rules. Kept current; everything under "Archive" is history |
 | `CONTEXT.md` | what this system is, and who it is for |
-| `MEMORY.md` | **258 numbered defects.** Not history — the mistakes this codebase has already made. About a third were made *twice* before being written down. |
+| `MEMORY.md` | **272 numbered defects** (and each service's own, since 15 September). Not history — the mistakes this codebase has already made. About a third were made *twice* before being written down. |
 | `CHANGELOG.md` | what the last agent did, and what they left in flight |
 | `START-HERE.md` | how to run it, and where everything lives |
 
@@ -54,117 +54,135 @@ anything a server runs, read defects 187–193 first.
 
 ## The rule that matters most
 
-**One agent owns one folder at a time. Never two.**
+**One agent owns one service at a time. Never two agents in one service, and
+never two agents in one folder on disk.**
 
-Not "coordinate carefully" — *own*. Claim it in writing before your first
-write, release it when your checkpoint closes.
+Since 15 September the code is sorted by service (`docs/SERVICE-FOLDERS-PLAN.md`):
+front desk, reservations, housekeeping, inventory and rates, guests and
+companies, finance, night audit, the restaurant (`pos`), banquet, store,
+reports, administration, the channel manager — plus five not built yet (`crs`,
+`payments`, `booking-engine`, `guest-messaging`, `accounting`). A service is one
+word, and it lives in three places:
 
 ```
-CLAIMED   src/pages/reports/, docs/REPORTS-SPEC.md      agent-reports
-CLAIMED   src/pages/admin/                              agent-admin
-FREE      src/data/, src/components/ui/
+src/modules/<service>/          its screens, menu entries, addresses, data, tests
+api/src/modules/<service>/      its server routes, and its front door index.ts
+db/tests/modules/<service>.sql  its database checks (suite.sql is frozen history)
 ```
 
-Keep that block current in `HANDOVER.md`. If a folder you need is claimed,
-**stop and say so** rather than writing into it. Waiting costs minutes;
-colliding cost a day.
+**Read `src/modules/<service>/MODULE.md` before your first edit.** It is the
+service's brief: its screens, endpoints and tables, the owner's decisions that
+bind it, its open items, and requests from other services.
+
+Claim the service in writing in `HANDOVER.md`'s folder claims before your first
+write, and release it when you stop:
+
+```
+CLAIMED   pos            branch pos/<task>           15 Sep   <who>
+CLAIMED   front-desk     branch front-desk/<task>    15 Sep   <who>
+FREE      everything else
+```
+
+If a service you need is claimed, **stop and say so** rather than writing into
+it. Waiting costs minutes; colliding cost a day.
+
+### What "owning a service" lets you touch
+
+- Everything inside your service's three places.
+- A new migration — only after claiming its number in HANDOVER. The guard
+  `src/test/migrationNumbers.test.ts` fails on a duplicate or a gap.
+- **Nothing in another service.** You use another service only through its
+  front door, `index.ts`; the guard `src/test/boundaries.test.ts` fails on any
+  reach into its insides. If you need a change there, write it on that service's
+  "Requests" list in its `MODULE.md` and tell the owner — its owner makes it.
+- **Nothing in the shared core** (below) without saying so first.
+
+### Your notes
+
+Each service keeps its own `CHANGELOG.md` and `MEMORY.md`. A defect in your
+service is numbered with its prefix (FD-1, POS-1, FIN-1 …, listed in its
+`MEMORY.md`). A lesson that applies to the whole project goes in the root
+`MEMORY.md` with the next plain number. Work that is project-wide goes in the
+root `CHANGELOG.md`.
 
 ---
 
-## Before your first write
+## Before your first write — your own copy, database and ports
 
-```bash
-cd "D:\fidato pms"
-git status                 # must be clean
-git checkout -b <your-lane>
+Several agents run at once, so each gets its own working copy. **Never work in
+`D:\fidato pms` itself while another agent is running.**
+
+```powershell
+# the owner's PC, PowerShell, in D:\fidato pms — a copy on its own branch
+git worktree add "..\fidato-pos" -b pos/<task>
 ```
 
-Work on a branch. `main` holds the last verified state. Commit at every
-checkpoint, not at the end.
+```powershell
+# the owner's PC, PowerShell — share the installed packages instead of installing
+New-Item -ItemType Junction -Path "D:\fidato-pos\node_modules" -Target "D:\fidato pms\node_modules"
+New-Item -ItemType Junction -Path "D:\fidato-pos\api\node_modules" -Target "D:\fidato pms\api\node_modules"
+```
+
+- **Your own database.** `DB=fidato_pos ./db/migrate.sh --with-dev-identities`
+  (Git Bash, in your copy) creates and migrates `fidato_pos`; it starts with no
+  demo data (`api/scripts/load-demo.ts` loads it — read its header). Never
+  point two agents at one database.
+- **Your own ports.** Run the API with `PORT` set to a free port and your
+  database in `DATABASE_URL`; give the web app `VITE_API_URL` for that port and
+  `VITE_ALLOW_DEV_AUTH=1` in your copy's `.env.local` (git ignores it). Vite
+  finds a free port by itself.
+- **Your copy's `api/.env`** holds only development settings. **Never copy the
+  main checkout's `api/.env`** — it carries the production Firebase key.
+- The API tests need no setup beyond that: `cd api && npm test` builds and drops
+  its own scratch database every run.
+
+Commit on your branch at every checkpoint. **You do not merge.** When you are
+done, the agent that owns the core merges services into the main line one at a
+time and runs every gate after each. Deploys stay the owner's.
+
+**Start with three agents at once, not seven.** Every agent asks the owner
+before any doubt, and three is what one person can keep up with.
 
 ---
 
-## Lanes — all four are now built
+## The lanes of CP6 — closed, for history
 
-The four lanes below ran and closed during CP6. **They are recorded here so
-nobody rebuilds them under a different filename.** The files that exist are not
-always the ones the lane predicted: several screens were grouped into one file
-because they share their data and their chrome.
-
-### Lane A — reports · closed
-
-```
-src/pages/reports/ManagerReport.tsx    the daily flash
-src/pages/reports/Statistics.tsx       MonthlyOccupancy · Monthly · Yearly
-src/pages/reports/Ledgers.tsx          CityLedger · NoShow · LodgingTax
-src/pages/reports/Index.tsx            the taxonomy, starrable
-src/components/reports/ReportShell.tsx chrome · print · Amount (null vs zero)
-```
-
-Lodging Tax is a bespoke table — `DataTable` cannot span columns, and widening
-a ported CRS file to make it would have been drift.
-
-### Lane B — admin · closed
-
-```
-src/pages/admin/Admin.tsx    Users · Roles · AuditLog · Integrations
-                             Settings · AdminProperties     (six exports)
-src/data/repositories/directory.ts   staff · audit · integrations · settings
-```
-
-### Lane C — guests, companies, inventory · closed
-
-```
-src/pages/Directory.tsx      Guests · Companies · Properties · Notifications
-                             RoomTypes · RatePlans           (six exports)
-src/data/repositories/directory.ts   shared with Lane B
-```
-
-### Lane D — the remaining property screens · closed
-
-```
-src/pages/Reservations.tsx           the whole book, five filters
-src/pages/Billing.tsx                Payments · Invoices · PropertyCityLedger
-src/pages/Rates.tsx                  rack against achieved
-src/pages/NightAudit.tsx             the pre-flight checklist
-src/pages/WalkIns.tsx                the record; the flow is in Stay view
-src/data/repositories/billing.ts     payments · billable · rates · audit
-```
-
-`cashiering` and `pos` remain placeholders — unspecified, and an honest
-placeholder naming what a screen will carry is a correct answer.
+The four lanes that built the first screens (reports, admin, guests/companies,
+the remaining property screens) closed during CP6. Their files have since moved
+into the service folders; each service's `MODULE.md` says where everything is
+now.
 
 ---
 
 ## Where the next work is
 
-**`HANDOVER.md` § 3, in order.** As of 15 September: the clarity plan's steps
-2–4 (one primary button per screen, a menu per role, help in place), then the
-staff-first programme's phases 2–4 (reports in the owner's layout with PDF and
-Excel, documents on the voucher template, three screens per reservation task).
-Items marked "ask first" there need the owner's answer before any code.
-
-If a new lane is needed, claim a folder in `HANDOVER.md` first. The rule at the
-top of this file has not relaxed.
+**`HANDOVER.md` § 3, in order.** Items marked "ask first" there need the
+owner's answer before any code.
 
 ---
 
-## Shared, and therefore frozen
+## Shared, and therefore frozen — the core
 
-**Nobody edits these without saying so first.**
+**Nobody edits these without saying so first**, because every service stands on
+them. One agent owns the core at a time.
 
 ```
-src/components/ui/          ported from the CRS · 13/15 byte-identical
-src/data/repositories/      the seam · additive only, never restructure
-src/data/store.ts           the mutable store
-src/data/fixtures/          calibrated demo data with import-time assertions
-src/lib/rules.ts            every business rule (Rule 3)
-src/App.tsx                 routes — append yours, touch nothing else
-src/components/app/         AppShell, Sidebar, TopBar, navigation
+src/components/ui/          the design system · ported from the CRS
+src/components/app/         the shell: sidebar, top bar, Find a screen, Start here,
+                            and navigation.ts — the SECTION LAYOUT only; each
+                            service declares its own entries in its nav.ts
+src/App.tsx                 routes that belong to no service; services' come
+                            from their own routes.tsx
+src/data/repositories/      the core data: types, the business date, rooms,
+                            properties, notifications, http.ts and result.ts helpers
+src/data/store.ts, src/data/fixtures/, src/lib/
+api/src/server.ts, mount.ts, auth.ts, db.ts, env.ts, identity.ts, realtime.ts,
+storage.ts, businessDate.ts, and the core routers in api/src/routes/
+db/migrations/              ONE ordered history for everybody — claim a number
 ```
 
-**`src/App.tsx` is the one file every lane needs.** Add your route, add your
-import, change nothing else. Keep the diff to the lines you added.
+A service adding a screen, a menu entry or a route **edits none of these**: its
+`nav.ts`, `routes.tsx` and `api/src/modules/<service>/index.ts` are its own.
 
 ---
 

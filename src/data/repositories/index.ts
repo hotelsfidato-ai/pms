@@ -1,5 +1,12 @@
 /* ══════════════════════════════════════════════════════════════════
-   THE SEAM
+   THE SEAM — the core's half of it
+
+   Since the service-folder move (15 September) each service keeps its own
+   data calls in `src/modules/<service>/data/`, and other services reach
+   them through its front door. This index carries only what belongs to no
+   one service: the model's types, the business date, properties, rooms,
+   notifications, your own preferences, the import report, and the query
+   keys. The rule below still holds for all of it.
 
    Screens import from here and from nowhere else in `src/data`.
    Importing `@/data/fixtures/*` from a screen is a defect, not a
@@ -24,14 +31,10 @@ export { BUSINESS_DATE, PTD_FROM, PTD_TO } from "./businessDate";
 export * from "./properties";
 export * from "./rooms";
 export * from "./notifications";
-/* Split out of the mixed files on 15 September, one file per service
-   (docs/SERVICE-FOLDERS-PLAN.md). Re-exported here while the services'
-   files move into src/modules; importers are pointed at each service's
-   front door as they go. */
+/* The two shapes a write answers with, shared by every service's data. */
 export type { OperationResult, AdminResult } from "./result";
 export * from "./me";
 export * from "./importReport";
-
 
 /* ── Query keys ────────────────────────────────────────────────────
    Rule 5: `hotelId` in every TanStack Query key. Miss it and

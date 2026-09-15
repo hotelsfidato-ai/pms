@@ -6489,6 +6489,24 @@ only what it will change.**
 
 ---
 
+### 272 · The move silently narrowed a guard, and it kept passing
+
+Rule 2b in `repositories.test.ts` — no exported data function without a
+caller — defined "the seam" as `src/data/repositories` and counted a caller
+only when its import path named that folder. The service-folder move put
+most data files in `src/modules/<service>/data/` and pointed the screens at
+each service's front door. The gate went on passing: it now scanned the
+eleven core files and nothing else. Found only because one moved test file
+tripped its OTHER half (a known-unused function "gained a caller"). Widened
+to every data folder and to door imports; seen to fail with an unused
+function planted in front desk's data.
+
+**The rule: when files move, every guard that names a path is suspect. A
+guard that passes after a move has proved nothing until it has failed once
+on the new layout.**
+
+---
+
 ### Open · two "in house" numbers for the same moment
 
 The property page (`getTodaySnapshot`) said **In house now 11, Vacant 9** while
