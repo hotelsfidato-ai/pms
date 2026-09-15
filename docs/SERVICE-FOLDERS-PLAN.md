@@ -172,6 +172,19 @@ Every step leaves every gate green and the app working; safe to stop after any.
 4. **Notes and mistakes:** each service keeps its own CHANGELOG and MEMORY;
    the root files keep an index and the lessons that apply everywhere.
 
+## Progress
+
+```
+1  pause, tag, baseline                 done  tag pre-service-folders
+2  guards first                         done  411fd7b
+3  shared files become lists            done  menu, screen addresses and server mounts
+                                              read from each service's nav.ts, routes.tsx
+                                              and api index.ts. Proved identical: 1,023
+                                              menu facts, 73 addresses, 214 API routes with
+                                              0 first-match differences, 10 middleware in order
+4  move the small services              next
+```
+
 ## Two refinements made while building, for safety
 
 - **Server tests live in `api/test/modules/<service>/`,** not inside

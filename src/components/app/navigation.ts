@@ -1,10 +1,19 @@
-import {
-  LayoutDashboard, CalendarCheck, Users, Building2, Hotel, Receipt,
-  BarChart3, Bell, Settings, ShieldCheck, CalendarRange,
-  FileText, Wallet, Plug, ScrollText,
-  UserCog, Palette, Terminal, MonitorSmartphone, BookOpen, Home, ClipboardList, type LucideIcon, ShieldAlert, Globe, Package, UtensilsCrossed, Flame, LayoutGrid, Banknote, Table2, BookPlus, Wrench, PartyPopper,
-} from "lucide-react";
-import { can, canAccess, type Resource, type Role } from "@/lib/permissions";
+import { Bell, Palette, type LucideIcon } from "lucide-react";
+import { canAccess, type Resource, type Role } from "@/lib/permissions";
+/* Each service's own menu entries (docs/SERVICE-FOLDERS-PLAN.md). */
+import { nav as frontDesk } from "@/modules/front-desk/nav";
+import { nav as reservations } from "@/modules/reservations/nav";
+import { nav as housekeeping } from "@/modules/housekeeping/nav";
+import { nav as inventory } from "@/modules/inventory/nav";
+import { nav as guests } from "@/modules/guests/nav";
+import { nav as finance } from "@/modules/finance/nav";
+import { nav as nightAudit } from "@/modules/night-audit/nav";
+import { nav as pos } from "@/modules/pos/nav";
+import { nav as banquet } from "@/modules/banquet/nav";
+import { nav as stores } from "@/modules/stores/nav";
+import { nav as reports } from "@/modules/reports/nav";
+import { nav as admin } from "@/modules/admin/nav";
+import { nav as channelManager } from "@/modules/channel-manager/nav";
 
 /* ══════════════════════════════════════════════════════════════════
    PMS NAVIGATION
@@ -39,6 +48,13 @@ export interface NavItem {
    * glossary's retired words still land somewhere (the clarity plan).
    */
   keywords?: string[];
+  /**
+   * The roles whose WORKING MENU this entry is in (the clarity plan, step 3).
+   * Declared beside the entry by the service that owns it; `sidebarFor`
+   * reads the lists assembled below. Absent means nobody's working menu —
+   * the roles without one still see it in the full menu.
+   */
+  workingMenus?: readonly Role[];
 }
 
 /** True in `vite dev` and in the test runner, false in a production build. */
@@ -103,92 +119,41 @@ export interface NavSection {
   items: NavItem[];
 }
 
-/* PMS tree. Where each person STARTS is theirs now (087): the GM sets it
+/* ══════════════════════════════════════════════════════════════════
+   ASSEMBLED FROM THE SERVICES (docs/SERVICE-FOLDERS-PLAN.md, 15 September)
+
+   Each service declares its own entries in `src/modules/<service>/nav.ts`:
+   the section an entry sits in, its place there, and which roles work
+   from it. This file lays out the sections and fills them — so a service
+   adding a screen never edits a file another agent is editing. The menu
+   is the one the owner chose, entry for entry; `navigation.test.ts` pins
+   every role's list.
+
+   PMS tree. Where each person STARTS is theirs now (087): the GM sets it
    and they can change it — Dashboard, Rooms or Calendar.
 
    ⚠ 14 SEPTEMBER, THE OWNER'S CALL: "Group" is called Dashboard, and
    Rooms and Calendar are two entries, not one "Stay View" with a toggle.
    The Reservations section also carried a "Calendar" child pointing at
    that same Stay View — which opened on Rooms, so the menu's Calendar
-   did not show a calendar. It is gone; Calendar is here, once. */
-const SECTIONS: NavSection[] = [
-  {
-    items: [
-      { label: "Dashboard", to: "/", icon: LayoutDashboard, resource: "dashboard" },
-      { label: "Rooms", to: "/h/:code/stay", icon: Home, resource: "dashboard",
-        keywords: ["house", "board", "tape chart", "vacant", "empty", "free"] },
-      { label: "Calendar", to: "/h/:code/calendar", icon: CalendarRange, resource: "reservation",
-        keywords: ["tape chart", "stay view", "fortnight"] },
-    ],
-  },
-  {
-    label: "Front desk",
-    items: [
-      {
-        label: "Arrivals", to: "/h/:code/arrivals", icon: CalendarCheck,
-        resource: "reservation",
-        keywords: ["arriving", "check in", "coming"], matchPrefix: true,
-        children: [
-          { label: "Today", to: "/h/:code/arrivals", icon: CalendarCheck, resource: "reservation" },
-          { label: "Upcoming", to: "/h/:code/arrivals/upcoming", icon: CalendarRange, resource: "reservation" },
-        ],
-      },
-      {
-        label: "In house", to: "/h/:code/in-house", icon: Users,
-        resource: "reservation",
-        keywords: ["occupied", "staying", "current stays"], matchPrefix: true,
-        children: [
-          { label: "In house now", to: "/h/:code/in-house", icon: Users, resource: "reservation" },
-          { label: "Due out", to: "/h/:code/in-house/due-out", icon: CalendarRange, resource: "reservation" },
-        ],
-      },
-      { label: "Walk-ins", to: "/h/:code/walk-ins", icon: BookOpen, resource: "reservation",
-        keywords: ["walk in", "walkin"] },
-      { label: "Housekeeping", to: "/h/:code/housekeeping", icon: ClipboardList, resource: "inventory",
-        keywords: ["clean", "dirty", "needs cleaning", "rooms to clean"] },
-      /* Beside housekeeping, because that is who finds most of it — and
-         separate from a room block, because most work orders take no room
-         out of service. */
-      { label: "Work orders", to: "/h/:code/work-orders", icon: Wrench, resource: "room_config",
-        keywords: ["repair", "maintenance", "broken", "out of order"],
-        /* Housekeeping held no room_config grant, so the people this entry
-           is placed beside could not see it. The API has no role gate on
-           work orders — only the hotel's own row-level isolation. */
-        canSee: (role) => canAccess(role, "room_config") || role === "housekeeping" },
-    ],
-  },
-  {
-    label: "Bookings",
-    items: [
-      {
-        label: "All bookings", to: "/h/:code/reservations", icon: CalendarCheck,
-        resource: "reservation",
-        keywords: ["reservations", "booking", "find a booking"], matchPrefix: true,
-      },
-      { label: "Guests", to: "/guests", icon: Users, resource: "customer", matchPrefix: true },
-      /* A wedding is one conversation and nine rooms. Every other list
-         here shows those nine as nine unrelated bookings, so the person
-         taking the call had to hold the relationship in their head. */
-      { label: "Groups", to: "/h/:code/groups", icon: Users, resource: "reservation", matchPrefix: true },
-      /* ⚠ THIS SAID "BOOKING SOURCES" AND THERE ARE NOW TWO OF THOSE.
-         It was renamed from "Companies" for a good reason at the time —
-         somebody looking for their OTA performance read "Companies" and
-         went past it, because no screen answered that question. One does
-         now, under Configuration, and two identical labels meaning two
-         different things is worse than the problem the rename solved.
+   did not show a calendar. It is gone; Calendar is here, once.
+   ══════════════════════════════════════════════════════════════════ */
 
-         "Companies and agents" is what the rows actually are, and it is
-         the same vocabulary as the booking form's Business source field.
-         Found by auditing the navigation against itself on 9 September;
-         I introduced the collision the day before and did not look. */
-      { label: "Companies and agents", to: "/companies", icon: Building2, resource: "company",
-        keywords: ["travel agent", "corporate", "ota"], matchPrefix: true },
-      /* One guest, one set of nights, several rooms — and a group made
-         for them automatically when there is more than one. */
-      { label: "New booking", to: "/h/:code/book", icon: BookPlus, resource: "reservation",
-        keywords: ["reservation", "book a room"] },
-    ],
-  },
+export type SectionKey =
+  | "home" | "front-desk" | "bookings" | "across-properties" | "configuration"
+  | "inventory" | "finance" | "point-of-sale" | "banquet" | "reports" | "system";
+
+/** A menu entry as a service declares it. */
+export interface ServiceNavEntry extends NavItem {
+  section: SectionKey;
+  /** Its place in the section. Tens, so a new entry fits between two. */
+  order: number;
+}
+
+const SECTION_LAYOUT: Array<Omit<NavSection, "items"> & { key: SectionKey }> = [
+  { key: "home" },
+  { key: "front-desk", label: "Front desk" },
+  { key: "bookings", label: "Bookings" },
   /* ══════════════════════════════════════════════════════════════
      WHAT BELONGS TO THE GROUP, AND WHAT BELONGS TO ONE HOTEL
 
@@ -210,241 +175,92 @@ const SECTIONS: NavSection[] = [
 
      The `/h/:code/` prefix already encodes this and nobody reads URLs
      to find out what a screen is scoped to. ══════════════════════ */
-  {
-    /* ⚠ NOT "Group". The first nav item is already called Group — it is
-       the group dashboard — and two things under that name in one
-       sidebar is exactly the confusion this split exists to remove.
-       "Across properties" says the scope out loud, which is the whole
-       point: the property switcher does not touch anything in here. */
-    label: "Across properties",
-    items: [
-      { label: "Properties", to: "/properties", icon: Hotel, resource: "hotel", matchPrefix: true },
-      { label: "People", to: "/people", icon: UserCog, resource: "user",
-        keywords: ["staff", "users", "password", "team"], matchPrefix: true },
-    ],
-  },
-  {
-    label: "Configuration",
-    items: [
-      { label: "Room types", to: "/h/:code/room-types", icon: LayoutDashboard, resource: "room_config" },
-      { label: "Rate plans", to: "/h/:code/rate-plans", icon: Wallet, resource: "rate",
-        keywords: ["price", "tariff", "rates"] },
-      { label: "Cancellation terms", to: "/h/:code/cancellation-terms", icon: ShieldAlert, resource: "rate" },
-      /* `commission` rather than `rate`: the list is where a booking
-         came from and the screen is where its commission is agreed.
-         A clerk does not see it — they pick from the list on the
-         booking form, which is not gated here. */
-      { label: "Booking sources", to: "/h/:code/booking-sources", icon: Plug, resource: "commission",
-        keywords: ["channel", "ota", "commission", "source"] },
-    ],
-  },
-  {
-    label: "Inventory",
-    items: [
-      { label: "Rate calendar", to: "/h/:code/grids", icon: Table2, resource: "rate",
-        keywords: ["prices by day", "grid"] },
-      { label: "Rate performance", to: "/h/:code/rates", icon: BarChart3, resource: "rate" },
-      /* Excluded by the owner and not connected. Its screen says so to
-         anybody who searches for it; the menu does not advertise it. */
-      { label: "Channel manager", to: "/h/:code/channels", icon: Globe, resource: "rate",
-        keywords: ["staah", "ota", "channels"], listed: false },
-      { label: "Store", to: "/h/:code/stores", icon: Package, resource: "inventory",
-        keywords: ["stock", "inventory", "stores"], matchPrefix: true },
-    ],
-  },
-  {
-    label: "Finance",
-    items: [
-      { label: "Folios", to: "/h/:code/folios", icon: Receipt, resource: "invoice",
-        keywords: ["bill", "bills", "folio"], matchPrefix: true },
-      { label: "Invoices", to: "/h/:code/invoices", icon: FileText, resource: "invoice",
-        keywords: ["tax invoice", "gst invoice"], matchPrefix: true },
-      { label: "Payments", to: "/h/:code/payments", icon: Wallet, resource: "payment",
-        keywords: ["receipts", "money in"] },
-      /* The drawer somebody is holding right now. Beside the folios and
-         payments it reconciles against, not under reports — a report is
-         read afterwards, this is used during the shift. */
-      { label: "Cashiering", to: "/h/:code/cashiering", icon: Wallet, resource: "payment",
-        keywords: ["cash drawer", "drawer", "shift", "hand over"] },
-      { label: "Company accounts", to: "/h/:code/city-ledger", icon: Building2, resource: "commission",
-        keywords: ["city ledger", "receivables"] },
-      /* Form C is a COMPLIANCE obligation about guests, not a finance
-         document — but it is filed by the same person who bills, at the
-         same desk, and burying it under Reports is how a 24-hour
-         deadline gets missed. It sits where somebody will see it. */
-      { label: "Form C", to: "/h/:code/form-c", icon: ShieldAlert, resource: "customer",
-        keywords: ["foreign", "frro", "passport"] },
-    ],
-  },
-  {
-    /* POINT OF SALE IS ITS OWN CATEGORY.
+  /* ⚠ NOT "Group". The first nav item is already called Group — it is
+     the group dashboard — and two things under that name in one
+     sidebar is exactly the confusion this split exists to remove.
+     "Across properties" says the scope out loud, which is the whole
+     point: the property switcher does not touch anything in here. */
+  { key: "across-properties", label: "Across properties" },
+  { key: "configuration", label: "Configuration" },
+  { key: "inventory", label: "Inventory" },
+  { key: "finance", label: "Finance" },
+  /* POINT OF SALE IS ITS OWN CATEGORY.
 
-       These three lived under Finance, on the reasoning that a POS
-       argument is about money on a folio. That was true when the only
-       POS screen was a read-only view of what an outside till had sent.
+     These three lived under Finance, on the reasoning that a POS
+     argument is about money on a folio. That was true when the only
+     POS screen was a read-only view of what an outside till had sent.
 
-       It stopped being true when the till itself was built. Taking an
-       order, pricing a menu and settling a bill are a restaurant's work,
-       done by restaurant staff on a restaurant's terminal — not the
-       front office's. Burying them under Finance made a waiter scroll
-       past folios and the city ledger to reach the till. */
-    label: "Point of sale",
-    /* Not every property has a restaurant. A section a hotel does not have
-       is not greyed out with a reason — a clerk cannot act on "your hotel
-       has no kitchen", so showing it is noise. It is simply absent.
+     It stopped being true when the till itself was built. Taking an
+     order, pricing a menu and settling a bill are a restaurant's work,
+     done by restaurant staff on a restaurant's terminal — not the
+     front office's. Burying them under Finance made a waiter scroll
+     past folios and the city ledger to reach the till.
 
-       The API refuses these routes independently, so this is the tidy half
-       of the feature and not the enforcement. A hidden nav entry is still
-       a URL anybody can type. */
-    module: "pos",
-    receptionNeeds: "reception_pos",
-    items: [
-      /* The FLOOR first, because that is where a shift starts: a waiter
-         walks to a table before there is a bill to stand at. */
-      { label: "Tables", to: "/h/:code/floor", icon: LayoutGrid, resource: "payment",
-        keywords: ["floor", "restaurant"],
-        canSee: (role) => canAccess(role, "payment") || role === "pos" },
-      /* The till, the one somebody stands at. */
-      { label: "Till", to: "/h/:code/till", icon: Receipt, resource: "payment",
-        keywords: ["pos", "order", "restaurant bill"],
-        canSee: (role) => canAccess(role, "payment") || role === "pos" },
-      /* A dedicated screen for a fixed terminal: no sidebar, no chrome,
-         one outlet, targets sized for a thumb rather than a mouse. */
-      {
-        label: "Terminal", to: "/h/:code/till/terminal",
-        icon: MonitorSmartphone, resource: "payment",
-        keywords: ["pos terminal"],
-        canSee: (role) => canAccess(role, "payment") || role === "pos",
-      },
-      /* The pass. A wall screen in the kitchen, behind the same
-         permission as the till — the people who cook and the people who
-         ring up are the same restaurant. */
-      /* ⚠ "The people who cook" never HAD that permission: chef and
-         kitchen_manager hold no `payment` grant, so the pass was missing
-         from the menu of the only two roles it exists for — they had to
-         know the address. The server has always let them in (till.ts
-         refuses only reception). Fixed 15 September, owner's yes. */
-      { label: "Kitchen", to: "/h/:code/kitchen", icon: Flame, resource: "payment",
-        keywords: ["kot", "pass", "orders"],
-        canSee: (role) =>
-          canAccess(role, "payment") || role === "chef" || role === "kitchen_manager" },
-      /* The prices, which are the hotel's. Behind the same permission as
-         rates, because setting what a dish costs is the same kind of act
-         as setting what a room costs. */
-      { label: "Menu", to: "/h/:code/menu", icon: UtensilsCrossed, resource: "rate",
-        keywords: ["dishes", "items"],
-        canSee: (role) => canAccess(role, "rate") || role === "kitchen_manager" },
-      /* Where the shift ends. Last, because it is — and beside the
-         till rather than under Finance, for the same reason the till
-         is here: a cashier counting a drawer at midnight is doing
-         restaurant work, not the front office's. */
-      {
-        label: "Close restaurant day", to: "/h/:code/till/day-end",
-        icon: Banknote, resource: "payment",
-        keywords: ["day end", "restaurant close"],
-        canSee: (role) =>
-          canAccess(role, "payment") || role === "pos" || role === "kitchen_manager",
-      },
-      /* What an OUTSIDE till sent and what was refused. Read-only, and
-         named so nobody mistakes it for the till above. */
-      { label: "Charges to rooms", to: "/h/:code/pos", icon: Plug, resource: "invoice",
-        keywords: ["bridge", "pos charges"] },
-    ],
-  },
-  {
-    label: "Banquet",
-    /* Absent, not greyed, at a property with no hall — the same rule the
-       point of sale follows. A clerk cannot act on "your hotel has no
-       banquet hall", so showing it disabled is noise.
+     Not every property has a restaurant. A section a hotel does not have
+     is not greyed out with a reason — a clerk cannot act on "your hotel
+     has no kitchen", so showing it is noise. It is simply absent.
 
-       And this is the tidy half only. The API refuses these routes on
-       its own, because a hidden nav entry is still a URL anybody can
-       type. 041 wrote that rule before either module existed. */
-    module: "banquet",
-    items: [
-      /* The diary first, because the question is almost always "is the
-         hall free" and only then "what is booked". */
-      { label: "Diary", to: "/h/:code/banquet", icon: PartyPopper, resource: "reservation",
-        keywords: ["banquet", "function", "wedding", "event"] },
-      { label: "Halls and packages", to: "/h/:code/banquet/setup", icon: Building2, resource: "room_config" },
-    ],
-  },
-  {
-    label: "Reports",
-    items: [
-      { label: "Night audit", to: "/h/:code/night-audit", icon: BarChart3, resource: "report",
-        keywords: ["close the day", "end of day", "audit"] },
-      /* The index first — it is the taxonomy, and the seven below are
-         the shortcuts a manager pins for themselves. */
-      { label: "All reports", to: "/reports", icon: FileText, resource: "report" },
-      { label: "Manager report", to: "/reports/manager", icon: BarChart3, resource: "report",
-        keywords: ["flash", "daily report"] },
-      { label: "City ledger", to: "/reports/city-ledger", icon: Building2, resource: "report",
-        keywords: ["company accounts", "receivables"], listed: false },
-      { label: "No show", to: "/reports/no-show", icon: CalendarCheck, resource: "report", listed: false },
-      { label: "Monthly occupancy", to: "/reports/monthly-occupancy", icon: BarChart3, resource: "report", listed: false },
-      { label: "Monthly statistics", to: "/reports/monthly-stats", icon: BarChart3, resource: "report", listed: false },
-      { label: "Yearly statistics", to: "/reports/yearly-stats", icon: BarChart3, resource: "report", listed: false },
-      { label: "Lodging tax", to: "/reports/lodging-tax", icon: FileText, resource: "report",
-        keywords: ["gst", "tax return"], listed: false },
-      /* FOUR THAT WERE BUILT AND NOT LISTED. The index says "11 of 11
-         built" and this menu offered seven — so the GST Sales Register,
-         the one an accountant needs every month to file GSTR-1, was
-         reachable only by somebody who thought to open All reports
-         first and read down it.
+     The API refuses these routes independently, so this is the tidy half
+     of the feature and not the enforcement. A hidden nav entry is still
+     a URL anybody can type. */
+  { key: "point-of-sale", label: "Point of sale", module: "pos", receptionNeeds: "reception_pos" },
+  /* Absent, not greyed, at a property with no hall — the same rule the
+     point of sale follows. A clerk cannot act on "your hotel has no
+     banquet hall", so showing it disabled is noise.
 
-         A screen that exists and cannot be found from the navigation is
-         a screen that does not exist to the person looking for it. */
-      { label: "GST sales register", to: "/reports/gst-sales", icon: ScrollText, resource: "report", listed: false },
-      { label: "Form F / C-Form", to: "/reports/c-form", icon: ShieldCheck, resource: "report",
-        keywords: ["foreign", "frro"], listed: false },
-      { label: "Guest ledger", to: "/reports/guest-ledger", icon: BookOpen, resource: "report", listed: false },
-      { label: "Cashier shift", to: "/reports/cashier-shift", icon: Banknote, resource: "report",
-        keywords: ["drawer", "takings"], listed: false },
-    ],
-  },
-  {
-    label: "System",
-    items: [
-      { label: "Notifications", to: "/notifications", icon: Bell, resource: "notification", matchPrefix: true },
-      {
-        label: "Administration", to: "/admin/users", icon: Settings,
-        resource: "user", matchPrefix: true,
-        children: [
-          /* ⚠ "PROPERTIES" WAS HERE TOO, POINTING AT /admin/properties.
-             The two screens were merged on 9 September — /properties now
-             adds, edits, closes and reopens, and /admin/properties
-             renders it — so this was a second door onto one room, and
-             the sidebar said "Properties" twice.
-
-             The reasoning it carried is still true and now lives in the
-             screen: everyone may READ the property list, and creating
-             one is gated by `app.require_provisioning_key()` in the
-             database, which no menu entry can grant or withhold. */
-          { label: "Users", to: "/admin/users", icon: UserCog, resource: "user" },
-          { label: "Roles and permissions", to: "/admin/roles", icon: ShieldCheck, resource: "role" },
-          { label: "Integrations", to: "/admin/integrations", icon: Plug, resource: "integration" },
-          { label: "Audit log", to: "/admin/audit-log", icon: ScrollText, resource: "audit_log" },
-          { label: "Settings", to: "/admin/settings", icon: Settings, resource: "setting" },
-          /* The console CREATES things — properties, people, access. It is
-             the only screen in the system that manufactures a tenant, so it
-             stays out of production builds until the group says otherwise. */
-          {
-            label: "Console", to: "/admin/console", icon: Terminal,
-            resource: "hotel", devOnly: true,
-            canSee: (role) => can(role, "create", "hotel"),
-          },
-        ],
-      },
-      /* devOnly, like the admin console. It is a component showcase —
-         developer documentation, not a screen anybody at a hotel has a
-         reason to open, and it carries its own sample guest names into
-         the bundle. */
-      { label: "Design system", to: "/design-system", icon: Palette,
-        resource: "dashboard", devOnly: true },
-    ],
-  },
+     And this is the tidy half only. The API refuses these routes on
+     its own, because a hidden nav entry is still a URL anybody can
+     type. 041 wrote that rule before either module existed. */
+  { key: "banquet", label: "Banquet", module: "banquet" },
+  { key: "reports", label: "Reports" },
+  { key: "system", label: "System" },
 ];
+
+/* The two entries that belong to no service: where the system talks to a
+   person, and the developers' component showcase. */
+const CORE_ENTRIES: ServiceNavEntry[] = [
+  { section: "system", order: 10,
+    workingMenus: ["front_desk", "pos", "chef", "kitchen_manager", "housekeeping", "stores"],
+    label: "Notifications", to: "/notifications", icon: Bell, resource: "notification", matchPrefix: true },
+  /* devOnly, like the admin console. It is a component showcase —
+     developer documentation, not a screen anybody at a hotel has a
+     reason to open, and it carries its own sample guest names into
+     the bundle. */
+  { section: "system", order: 30,
+    label: "Design system", to: "/design-system", icon: Palette,
+    resource: "dashboard", devOnly: true },
+];
+
+const ENTRIES: readonly ServiceNavEntry[] = [
+  ...CORE_ENTRIES, ...frontDesk, ...reservations, ...housekeeping, ...inventory, ...guests,
+  ...finance, ...nightAudit, ...pos, ...banquet, ...stores, ...reports, ...admin, ...channelManager,
+];
+
+/** Every entry in a section, in its declared order. */
+const entriesIn = (key: SectionKey): ServiceNavEntry[] =>
+  ENTRIES.filter((entry) => entry.section === key).sort((a, b) => a.order - b.order);
+
+/** The entry as the menu shows it: the service's bookkeeping taken off. */
+function asItem(entry: NavItem): NavItem {
+  const item: NavItem & Partial<Pick<ServiceNavEntry, "section" | "order">> = { ...entry };
+  delete item.section;
+  delete item.order;
+  delete item.workingMenus;
+  if (item.children) item.children = item.children.map(asItem);
+  return item;
+}
+
+const SECTIONS: NavSection[] = SECTION_LAYOUT.map(({ key, ...section }) => ({
+  ...section,
+  items: entriesIn(key).map(asItem),
+}));
+
+/** Every declared entry and where it asked to sit — for the tests that
+    refuse an entry the menu would silently drop. */
+export const declaredEntries = (): ReadonlyArray<{ section: string; order: number; to: string }> =>
+  ENTRIES.map(({ section, order, to }) => ({ section, order, to }));
+
+export const sectionKeys = (): readonly string[] => SECTION_LAYOUT.map((s) => s.key);
 
 /**
  * The navigation's own declaration for a path, unfiltered.
@@ -561,28 +377,23 @@ export function flatNavigationFor(
    the system talks to a person, not a place they work.
    ══════════════════════════════════════════════════════════════════ */
 
-const RESTAURANT = [
-  "/h/:code/floor", "/h/:code/till", "/h/:code/till/terminal", "/h/:code/till/day-end",
-];
-
-const WORKING_MENUS: Partial<Record<Role, readonly string[]>> = {
-  front_desk: [
-    "/", "/h/:code/stay", "/h/:code/calendar",
-    "/h/:code/arrivals", "/h/:code/arrivals/upcoming",
-    "/h/:code/in-house", "/h/:code/in-house/due-out",
-    "/h/:code/walk-ins", "/h/:code/book", "/guests",
-    "/h/:code/reservations", "/h/:code/cashiering",
-    /* Only when the GM has switched reception onto the POS — the section
-       itself is still dropped by `receptionNeeds` when it is off. */
-    ...RESTAURANT,
-    "/notifications",
-  ],
-  pos: [...RESTAURANT, "/notifications"],
-  chef: ["/h/:code/kitchen", "/notifications"],
-  kitchen_manager: ["/h/:code/kitchen", "/h/:code/menu", "/h/:code/till/day-end", "/notifications"],
-  housekeeping: ["/h/:code/housekeeping", "/h/:code/work-orders", "/h/:code/stores", "/notifications"],
-  stores: ["/h/:code/stores", "/notifications"],
-};
+/* Assembled from the entries' own `workingMenus`, in menu order — so the
+   first entry is where a role without the Dashboard lands
+   (`workingHomeFor`). The lists the owner chose are pinned in
+   `navigation.test.ts`. */
+const WORKING_MENUS: Partial<Record<Role, readonly string[]>> = (() => {
+  const out: Partial<Record<Role, string[]>> = {};
+  const add = (item: NavItem) => {
+    for (const role of item.workingMenus ?? []) (out[role] ??= []).push(item.to);
+  };
+  for (const { key } of SECTION_LAYOUT) {
+    for (const entry of entriesIn(key)) {
+      add(entry);
+      for (const child of entry.children ?? []) add(child);
+    }
+  }
+  return out;
+})();
 
 /** The sidebar: what this person WORKS from, in the navigation's order. */
 export function sidebarFor(

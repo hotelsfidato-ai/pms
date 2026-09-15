@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import {
-  BrowserRouter, HashRouter, Routes, Route, Navigate, useParams, useLocation,
+  BrowserRouter, HashRouter, Routes, Route, Navigate, useLocation,
 } from "react-router";
 
 /* Hash routing belongs to the SINGLE-FILE build, not to demo data.
@@ -19,81 +19,30 @@ import { QueryClient } from "@tanstack/react-query";
 import { PersistQueryClientProvider } from "@tanstack/react-query-persist-client";
 import { queryPersister } from "@/lib/persist";
 import { AppShell } from "@/components/app/AppShell";
-import { PosGate } from "@/components/app/PosGate";
 import { useUi } from "@/lib/ui";
 import { useSession, useRole } from "@/lib/session";
 import { homePath } from "@/lib/homeScreen";
 import { workingHomeFor } from "@/components/app/navigation";
-import DashboardPage from "@/pages/Dashboard";
-import StayViewPage from "@/pages/StayView";
-import HousekeepingPage from "@/pages/Housekeeping";
-import ArrivalsPage from "@/pages/Arrivals";
-import InHousePage from "@/pages/InHouse";
-import FoliosPage from "@/pages/Folios";
-import ManagerReportPage from "@/pages/reports/ManagerReport";
-import {
-  MonthlyOccupancyPage, MonthlyStatisticsPage, YearlyStatisticsPage,
-} from "@/pages/reports/Statistics";
-import {
-  CityLedgerPage, NoShowPage, LodgingTaxPage,
-} from "@/pages/reports/Ledgers";
-import ReportsIndexPage from "@/pages/reports/Index";
-import {
-  GuestsPage, CompaniesPage, PropertiesPage, NotificationsPage,
-
-} from "@/pages/Directory";
-import {
-  UsersPage, RolesPage, AuditLogPage, IntegrationsPage,
-  SettingsPage,
-} from "@/pages/admin/Admin";
-import ReservationsPage from "@/pages/Reservations";
-import TillPage from "@/pages/Till";
-import FloorPage from "@/pages/Floor";
-import DocketPage from "@/pages/Docket";
-import DayEndPage from "@/pages/DayEnd";
-import GridsPage from "@/pages/Grids";
-import GroupPanelPage from "@/pages/GroupPanel";
-import GroupsPage from "@/pages/Groups";
-import NewBookingPage from "@/pages/NewBooking";
-import WorkOrdersPage from "@/pages/WorkOrders";
-import BanquetPage from "@/pages/Banquet";
-import RoomSetupPage from "@/pages/RoomSetup";
-import BookingSourcesPage from "@/pages/BookingSources";
-import PropertyPage from "@/pages/Property";
-import PeoplePage from "@/pages/People";
-import ChannelManagerPage from "@/pages/ChannelManager";
-import StoresPage from "@/pages/Stores";
-import BanquetEventPage from "@/pages/BanquetEvent";
-import BanquetSetupPage from "@/pages/BanquetSetup";
-import CashieringPage from "@/pages/Cashiering";
-import BillPage from "@/pages/Bill";
-import MenuPage from "@/pages/Menu";
-import RatePlansEditor from "@/pages/RatePlans";
-import CancellationTermsPage from "@/pages/CancellationTerms";
-import TerminalPage from "@/pages/Terminal";
-import KitchenPage from "@/pages/Kitchen";
-import AdminConsolePage from "@/pages/admin/Console";
-import { IS_DEV } from "@/components/app/navigation";
-import {
-  PaymentsPage, PropertyCityLedgerPage,
-} from "@/pages/Billing";
-/* Invoices moved out of Billing.tsx when issuing landed. Three screens
-   in one file was already a stretch; a fourth with a mutation in it
-   was not. */
-import InvoicesPage from "@/pages/Invoices";
-import FormCPage from "@/pages/FormC";
-import InvoicePage from "@/pages/Invoice";
-import PosPage from "@/pages/Pos";
-import { RequireAccess } from "@/components/app/RequireAccess";
-import {
-  GuestLedgerPage, CashierShiftPage, GstSalesPage, CFormPage,
-} from "@/pages/reports/Compliance";
-import RatesPage from "@/pages/Rates";
-import NightAuditPage from "@/pages/NightAudit";
-import WalkInsPage from "@/pages/WalkIns";
+import { PropertyScope, PropertyIndex } from "@/components/app/PropertyScope";
+import { NotificationsPage } from "@/pages/Directory";
 import SignInPage from "@/pages/SignIn";
 import DesignSystemPage from "@/pages/DesignSystem";
 import PlaceholderPage from "@/pages/Placeholder";
+/* Every service's screen addresses, from its own routes file
+   (docs/SERVICE-FOLDERS-PLAN.md). */
+import { routes as frontDeskRoutes } from "@/modules/front-desk/routes";
+import { routes as reservationsRoutes } from "@/modules/reservations/routes";
+import { routes as housekeepingRoutes } from "@/modules/housekeeping/routes";
+import { routes as inventoryRoutes } from "@/modules/inventory/routes";
+import { routes as guestsRoutes } from "@/modules/guests/routes";
+import { routes as financeRoutes } from "@/modules/finance/routes";
+import { routes as nightAuditRoutes } from "@/modules/night-audit/routes";
+import { routes as posRoutes } from "@/modules/pos/routes";
+import { routes as banquetRoutes } from "@/modules/banquet/routes";
+import { routes as storesRoutes } from "@/modules/stores/routes";
+import { routes as reportsRoutes } from "@/modules/reports/routes";
+import { routes as adminRoutes } from "@/modules/admin/routes";
+import { routes as channelManagerRoutes } from "@/modules/channel-manager/routes";
 
 /* ══════════════════════════════════════════════════════════════════
    ROUTES — per PHASE-1-FRONTEND §1.2
@@ -243,22 +192,6 @@ function RequireSession() {
   return <AppShell />;
 }
 
-/** Keeps the store in step with the property named in the URL. */
-function PropertyScope() {
-  const { code } = useParams();
-  const setHotelId = useUi((s) => s.setHotelId);
-  useEffect(() => {
-    if (code) setHotelId(code);
-  }, [code, setHotelId]);
-  return null;
-}
-
-/** Sends a bare `/h/:code` to that property's stay view. */
-function PropertyIndex() {
-  const { code } = useParams();
-  return <Navigate to={`/h/${code}/stay`} replace />;
-}
-
 /* What is left unbuilt, and honestly labelled.
 
    Cashiering and POS are not placeholders for want of time. Neither
@@ -311,326 +244,37 @@ export default function App() {
           <Route path="/signin" element={<SignInRoute />} />
 
           <Route element={<RequireSession />}>
-            {/* Group level */}
-            <Route path="/" element={<DashboardPage />} />
+            {/* Each service's screens come from its own routes file
+                (docs/SERVICE-FOLDERS-PLAN.md), so a service adding a
+                screen never edits this one. Order does not matter:
+                react-router ranks routes by how specific they are. */}
+            {reportsRoutes}
+            {adminRoutes}
+            {guestsRoutes}
+            {frontDeskRoutes}
+            {housekeepingRoutes}
+            {reservationsRoutes}
+            {inventoryRoutes}
+            {financeRoutes}
+            {posRoutes}
+            {banquetRoutes}
+            {storesRoutes}
+            {nightAuditRoutes}
+            {channelManagerRoutes}
+
+            {/* What belongs to no service. */}
             {/* Hiding it in the nav is not removing it: the route would
                 still resolve for anyone who typed the path, and the page
                 would still be in the bundle. */}
             {import.meta.env.DEV && (
               <Route path="/design-system" element={<DesignSystemPage />} />
             )}
-            <Route path="/reports/manager" element={<ManagerReportPage />} />
-            <Route path="/reports/city-ledger" element={<CityLedgerPage />} />
-            <Route path="/reports/no-show" element={<NoShowPage />} />
-            <Route path="/reports/monthly-occupancy" element={<MonthlyOccupancyPage />} />
-            <Route path="/reports/monthly-stats" element={<MonthlyStatisticsPage />} />
-            <Route path="/reports/yearly-stats" element={<YearlyStatisticsPage />} />
-            <Route path="/reports/lodging-tax" element={<LodgingTaxPage />} />
-            <Route path="/reports/guest-ledger" element={<GuestLedgerPage />} />
-            <Route path="/reports/cashier-shift" element={<CashierShiftPage />} />
-            <Route path="/reports/gst-sales" element={<GstSalesPage />} />
-            <Route path="/reports/c-form" element={<CFormPage />} />
-            <Route path="/reports" element={<ReportsIndexPage />} />
-
-            <Route path="/properties" element={<PropertiesPage />} />
-            {/* One property: its own numbers, and the people who work
-                there. Scoped by hotel rather than by rank — a general
-                manager gets this for theirs and a 404 for anybody
-                else's, because it carries the GSTIN. */}
-            <Route path="/properties/:code" element={<PropertyPage />} />
-            <Route path="/guests" element={<GuestsPage />} />
-            {/* NOT development-gated. The endpoints behind it have
-                existed since the admin work and were reachable only from
-                a dev-only console, so the owner -- the one person who
-                actually has staff to add -- could not reach them. */}
-            <Route path="/people" element={<PeoplePage />} />
-            <Route path="/companies" element={<CompaniesPage />} />
             <Route path="/notifications" element={<NotificationsPage />} />
-
-            <Route
-              /* ⚠ A REDIRECT, NOT A SECOND COPY OF THE SCREEN. There
-                 were two Properties screens and they were merged on
-                 9 September; pointing this route at `PropertiesPage`
-                 left an /admin path whose only authorisation lived in
-                 a navigation entry — and removing that entry to fix a
-                 duplicate label silently opened it, because
-                 `mayReach` returns TRUE for a path the navigation does
-                 not contain. The guard fails OPEN.
-
-                 A redirect has nothing to fail. The old link still
-                 works, and it lands on the screen that answers for its
-                 own access. */
-              path="/admin/properties"
-              element={<Navigate to="/properties" replace />}
-            />
-            <Route
-              path="/admin/users"
-              element={
-                <RequireAccess path="/admin/users" resource="user">
-                  <UsersPage />
-                </RequireAccess>
-              }
-            />
-            <Route
-              path="/admin/roles"
-              element={
-                <RequireAccess path="/admin/roles" resource="role">
-                  <RolesPage />
-                </RequireAccess>
-              }
-            />
-            <Route
-              path="/admin/audit-log"
-              element={
-                <RequireAccess path="/admin/audit-log" resource="audit_log">
-                  <AuditLogPage />
-                </RequireAccess>
-              }
-            />
-            <Route
-              path="/admin/integrations"
-              element={
-                <RequireAccess path="/admin/integrations" resource="integration">
-                  <IntegrationsPage />
-                </RequireAccess>
-              }
-            />
-            {/* The console is gated on the ROUTE, not only in the
-                navigation. Hiding a link has never been access control —
-                that lesson cost a defect earlier in this build, when a
-                clerk could type /admin/users and get the page. In a
-                production build this route does not exist at all, so
-                there is nothing to type. */}
-            {IS_DEV && (
-              <Route
-                path="/admin/console"
-                element={
-                  <RequireAccess path="/admin/console" resource="hotel">
-                    <AdminConsolePage />
-                  </RequireAccess>
-                }
-              />
-            )}
-            <Route
-              path="/admin/settings"
-              element={
-                <RequireAccess path="/admin/settings" resource="setting">
-                  <SettingsPage />
-                </RequireAccess>
-              }
-            />
 
             {/* Property level */}
             <Route
               path="/h/:code"
               element={<><PropertyScope /><PropertyIndex /></>}
-            />
-            {/* ROOMS AND CALENDAR ARE TWO SCREENS (14 September). They
-                were one address with a toggle, and the menu's "Calendar"
-                link opened it on Rooms. `/stay` stays Rooms, because every
-                deep link to a booking (?res=) already points there. */}
-            <Route
-              path="/h/:code/stay"
-              element={<><PropertyScope /><StayViewPage view="floor" /></>}
-            />
-            <Route
-              path="/h/:code/calendar"
-              element={<><PropertyScope /><StayViewPage view="calendar" /></>}
-            />
-            <Route
-              path="/h/:code/housekeeping"
-              element={<><PropertyScope /><HousekeepingPage /></>}
-            />
-            <Route
-              path="/h/:code/arrivals"
-              element={<><PropertyScope /><ArrivalsPage /></>}
-            />
-            <Route
-              path="/h/:code/arrivals/upcoming"
-              element={<><PropertyScope /><ArrivalsPage /></>}
-            />
-            <Route
-              path="/h/:code/in-house"
-              element={<><PropertyScope /><InHousePage /></>}
-            />
-            <Route
-              path="/h/:code/in-house/due-out"
-              element={<><PropertyScope /><InHousePage /></>}
-            />
-            <Route
-              path="/h/:code/folios"
-              element={<><PropertyScope /><FoliosPage /></>}
-            />
-            <Route
-              path="/h/:code/reservations"
-              element={<><PropertyScope /><ReservationsPage /></>}
-            />
-            <Route
-              path="/h/:code/walk-ins"
-              element={<><PropertyScope /><WalkInsPage /></>}
-            />
-            <Route
-              path="/h/:code/room-types"
-              element={<><PropertyScope /><RoomSetupPage /></>}
-            />
-            {/* Named rather than omitted. The largest gap in the product,
-                and a navigation that says nothing about it leaves somebody
-                hunting for a screen that does not exist. Rule 6 applies to
-                features as well as buttons. */}
-            {/* What the property keeps, and where it went. */}
-            <Route
-              path="/h/:code/stores"
-              element={<><PropertyScope /><StoresPage /></>}
-            />
-            <Route
-              path="/h/:code/channels"
-              element={<><PropertyScope /><ChannelManagerPage /></>}
-            />
-            <Route
-              path="/h/:code/rate-plans"
-              element={<><PropertyScope /><RatePlansEditor /></>}
-            />
-            <Route
-              path="/h/:code/cancellation-terms"
-              element={<><PropertyScope /><CancellationTermsPage /></>}
-            />
-            {/* Where a booking came from. The list is the group's, the
-                commission is this property's — the screen says so. */}
-            <Route
-              path="/h/:code/booking-sources"
-              element={<><PropertyScope /><BookingSourcesPage /></>}
-            />
-            <Route
-              path="/h/:code/rates"
-              element={<><PropertyScope /><RatesPage /></>}
-            />
-            <Route
-              path="/h/:code/payments"
-              element={<><PropertyScope /><PaymentsPage /></>}
-            />
-            <Route
-              path="/h/:code/invoices"
-              element={<><PropertyScope /><InvoicesPage /></>}
-            />
-            <Route
-              path="/h/:code/form-c"
-              element={<><PropertyScope /><FormCPage /></>}
-            />
-            {/* The till writes; /pos reads what an outside one sent. */}
-            <Route
-              path="/h/:code/till"
-              element={<><PropertyScope /><PosGate><TillPage /></PosGate></>}
-            />
-            {/* The room, before the bill. A waiter opens an order by
-                tapping a table, not by typing its name. */}
-            <Route
-              path="/h/:code/floor"
-              element={<><PropertyScope /><PosGate><FloorPage /></PosGate></>}
-            />
-            <Route
-              path="/h/:code/menu"
-              element={<><PropertyScope /><PosGate><MenuPage /></PosGate></>}
-            />
-            {/* The revenue manager's day: how many rooms are left, and
-                what they cost. One window, two tabs, because the two
-                questions are asked together. */}
-            <Route
-              path="/h/:code/grids"
-              element={<><PropertyScope /><GridsPage /></>}
-            />
-            {/* One guest, one set of nights, as many rooms as they need. */}
-            <Route
-              path="/h/:code/book"
-              element={<><PropertyScope /><NewBookingPage /></>}
-            />
-            {/* The front desk drawer: open with a float, take receipts,
-                count, hand over. */}
-            <Route
-              path="/h/:code/cashiering"
-              element={<><PropertyScope /><CashieringPage /></>}
-            />
-            {/* What needs fixing. Not the same as a room being out. */}
-            <Route
-              path="/h/:code/work-orders"
-              element={<><PropertyScope /><WorkOrdersPage /></>}
-            />
-            {/* The banquet diary. The hall is the row, because the
-                question asked of this screen is "is it free on the
-                fourteenth" and not "list the bookings". */}
-            <Route
-              path="/h/:code/banquet"
-              element={<><PropertyScope /><BanquetPage /></>}
-            />
-            {/* Before /banquet/:id — a literal segment outranks a
-                parameter either way, but the order says so. */}
-            <Route
-              path="/h/:code/banquet/setup"
-              element={<><PropertyScope /><BanquetSetupPage /></>}
-            />
-            <Route
-              path="/h/:code/banquet/:id"
-              element={<><PropertyScope /><BanquetEventPage /></>}
-            />
-            {/* The LIST. The panel below has existed since 056 and could
-                be reached only by somebody who already knew a group's
-                id — no list, no navigation entry, no way in. Before the
-                parameterised route, so a literal segment cannot be
-                swallowed by an :id. */}
-            <Route
-              path="/h/:code/groups"
-              element={<><PropertyScope /><GroupsPage /></>}
-            />
-            {/* One group: its rooms, and who pays for which. */}
-            <Route
-              path="/h/:code/groups/:id"
-              element={<><PropertyScope /><GroupPanelPage /></>}
-            />
-            {/* Before /till/bill/:id and /till/orders/:id — a literal
-                segment beats a parameter, but the order makes it read
-                that way to a person too. */}
-            <Route
-              path="/h/:code/till/day-end"
-              element={<><PropertyScope /><PosGate><DayEndPage /></PosGate></>}
-            />
-            {/* Before /till/bill/:id, and both before /till itself —
-                react-router picks the most specific, but keeping them in
-                this order makes the intent readable. */}
-            <Route
-              path="/h/:code/kitchen"
-              element={<><PropertyScope /><PosGate><KitchenPage /></PosGate></>}
-            />
-            <Route
-              path="/h/:code/till/terminal"
-              element={<><PropertyScope /><PosGate><TerminalPage /></PosGate></>}
-            />
-            {/* The docket, before the bill route so :id does not
-                swallow it. No prices on this one, ever. */}
-            <Route
-              path="/h/:code/till/orders/:id/kot/:no"
-              element={<><PropertyScope /><DocketPage /></>}
-            />
-            <Route
-              path="/h/:code/till/bill/:id"
-              element={<><PropertyScope /><BillPage /></>}
-            />
-            <Route
-              path="/h/:code/pos"
-              element={<><PropertyScope /><PosPage /></>}
-            />
-            {/* An invoice number contains slashes — 5EL/2026-27/00001 — so
-                the segment has to swallow them. `*` after the param is how
-                react-router spells "the rest of the path". */}
-            <Route
-              path="/h/:code/invoices/doc/*"
-              element={<><PropertyScope /><InvoicePage /></>}
-            />
-            <Route
-              path="/h/:code/city-ledger"
-              element={<><PropertyScope /><PropertyCityLedgerPage /></>}
-            />
-            <Route
-              path="/h/:code/night-audit"
-              element={<><PropertyScope /><NightAuditPage /></>}
             />
             {PROPERTY.map(([segment, title, carries, cp]) => (
               <Route

@@ -1,0 +1,34 @@
+import { Route } from "react-router";
+import DashboardPage from "@/pages/Dashboard";
+import ManagerReportPage from "@/pages/reports/ManagerReport";
+import {
+  MonthlyOccupancyPage, MonthlyStatisticsPage, YearlyStatisticsPage,
+} from "@/pages/reports/Statistics";
+import {
+  CityLedgerPage, NoShowPage, LodgingTaxPage,
+} from "@/pages/reports/Ledgers";
+import ReportsIndexPage from "@/pages/reports/Index";
+import {
+  GuestLedgerPage, CashierShiftPage, GstSalesPage, CFormPage,
+} from "@/pages/reports/Compliance";
+
+/* Reports' screen addresses. Mounted by App.tsx inside the signed-in
+   shell. */
+export const routes = (
+  <>
+    {/* Group level */}
+    <Route path="/" element={<DashboardPage />} />
+    <Route path="/reports/manager" element={<ManagerReportPage />} />
+    <Route path="/reports/city-ledger" element={<CityLedgerPage />} />
+    <Route path="/reports/no-show" element={<NoShowPage />} />
+    <Route path="/reports/monthly-occupancy" element={<MonthlyOccupancyPage />} />
+    <Route path="/reports/monthly-stats" element={<MonthlyStatisticsPage />} />
+    <Route path="/reports/yearly-stats" element={<YearlyStatisticsPage />} />
+    <Route path="/reports/lodging-tax" element={<LodgingTaxPage />} />
+    <Route path="/reports/guest-ledger" element={<GuestLedgerPage />} />
+    <Route path="/reports/cashier-shift" element={<CashierShiftPage />} />
+    <Route path="/reports/gst-sales" element={<GstSalesPage />} />
+    <Route path="/reports/c-form" element={<CFormPage />} />
+    <Route path="/reports" element={<ReportsIndexPage />} />
+  </>
+);

@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
   navigationFor, sidebarFor, flatNavigationFor, workingHomeFor, type NavItem,
+  declaredEntries, sectionKeys,
 } from "./navigation";
 import type { Role } from "@/lib/permissions";
 
@@ -142,5 +143,28 @@ describe("each person's menu", () => {
       expect(menu(role)).not.toContain("Channel manager");
     }
     expect(searchable("owner")).toContain("Channel manager");
+  });
+});
+
+/* The menu is assembled from each service's own entries (the service-folder
+   move, 15 September). Two ways that can go wrong without an error: an entry
+   naming a section that does not exist simply never appears, and two entries
+   claiming one place sort by accident. */
+describe("the menu assembled from the services", () => {
+  it("puts every entry in a section that exists", () => {
+    const known = new Set(sectionKeys());
+    expect(declaredEntries().filter((e) => !known.has(e.section)).map((e) => e.to)).toEqual([]);
+  });
+
+  it("gives no two entries the same place in a section", () => {
+    const seen = new Map<string, string>();
+    const clashes: string[] = [];
+    for (const e of declaredEntries()) {
+      const place = `${e.section} #${e.order}`;
+      const other = seen.get(place);
+      if (other) clashes.push(`${place}: ${other} and ${e.to}`);
+      seen.set(place, e.to);
+    }
+    expect(clashes).toEqual([]);
   });
 });

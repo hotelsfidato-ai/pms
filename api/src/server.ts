@@ -6,33 +6,26 @@ import { healthCheck, closePool } from "./db.ts";
 import { subjectFor, Unauthenticated } from "./auth.ts";
 import { hotels } from "./routes/hotels.ts";
 import { property } from "./routes/property.ts";
-import { stays } from "./routes/stays.ts";
-import { folios } from "./routes/folios.ts";
-import { operations } from "./routes/operations.ts";
-import { statistics } from "./routes/statistics.ts";
-import { reports } from "./routes/reports.ts";
-import { manager } from "./routes/manager.ts";
-import { directory } from "./routes/directory.ts";
-import { billing } from "./routes/billing.ts";
-import { pos, posAdmin, outletFor, type Outlet } from "./routes/pos.ts";
-import { till } from "./routes/till.ts";
+/* Every service, through its front door (docs/SERVICE-FOLDERS-PLAN.md). */
+import { outletFor, type Outlet } from "./modules/pos/index.ts";
+import * as frontDesk from "./modules/front-desk/index.ts";
+import * as reservations from "./modules/reservations/index.ts";
+import * as finance from "./modules/finance/index.ts";
+import * as reportsService from "./modules/reports/index.ts";
+import * as guests from "./modules/guests/index.ts";
+import * as nightAudit from "./modules/night-audit/index.ts";
+import * as pos from "./modules/pos/index.ts";
+import * as admin from "./modules/admin/index.ts";
+import * as inventory from "./modules/inventory/index.ts";
+import * as banquet from "./modules/banquet/index.ts";
+import * as stores from "./modules/stores/index.ts";
+import * as housekeeping from "./modules/housekeeping/index.ts";
 import { live } from "./routes/live.ts";
 import {
   startListening, stopListening, watcherCount, isListening,
 } from "./realtime.ts";
-import { admin } from "./routes/admin.ts";
-import { rates } from "./routes/rates.ts";
-import { groups } from "./routes/groups.ts";
-import { banquet } from "./routes/banquet.ts";
-import { inventorySetup } from "./routes/inventorySetup.ts";
-import { bookingSources } from "./routes/bookingSources.ts";
-import { stores } from "./routes/stores.ts";
 import { approvals } from "./routes/approvals.ts";
 import { attachments } from "./routes/attachments.ts";
-import { stayExtras } from "./routes/stayExtras.ts";
-import { housekeeping } from "./routes/housekeeping.ts";
-import { nightAudit } from "./routes/nightAudit.ts";
-import { invoices } from "./routes/invoices.ts";
 
 /* ══════════════════════════════════════════════════════════════════
    THE APP API — MASTER.md §5
@@ -185,44 +178,35 @@ app.use("/api/*", async (c, next) => {
   await next();
 });
 
+/* The core's own routes: the session, the property, the live stream,
+   approvals and attachments belong to no one service. */
 app.route("/api/hotels", hotels);
 app.route("/api/hotels", property);
-app.route("/api/hotels", stays);
-app.route("/api/hotels", groups);
-app.route("/api/hotels", folios);
-app.route("/api/hotels", operations);
-app.route("/api/hotels", statistics);
-app.route("/api/hotels", reports);
-app.route("/api/hotels", manager);
-app.route("/api/hotels", directory);
-app.route("/api/hotels", billing);
-app.route("/api/hotels", nightAudit);
-app.route("/api/hotels", invoices);
-app.route("/api/hotels", posAdmin);
-/* The till is person-facing and sits behind the same bearer gate as
-   every other /api/hotels route. `pos` below is the machine door. */
-app.route("/api/hotels", till);
 /* The live stream. Under /api/hotels like everything else, so it
    inherits the same subject middleware and the same CORS list. */
 app.route("/api/hotels", live);
-/* Administration. Mounted at /api, not /api/hotels — creating a
-   property is not scoped to a property. */
-app.route("/api", admin);
-app.route("/api/hotels", rates);
-app.route("/api/hotels", banquet);
-app.route("/api/hotels", inventorySetup);
-app.route("/api/hotels", bookingSources);
-app.route("/api/hotels", stores);
 app.route("/api/hotels", approvals);
 app.route("/api/hotels", attachments);
-app.route("/api/hotels", stayExtras);
-app.route("/api/hotels", housekeeping);
 
-/* A POS mounts at its OWN prefix, not under /api/hotels. It does not
+/* Every service's routers, from its own front door. Where each hangs is
+   the service's to say (see mount.ts): /api/hotels for a person's routes,
+   /api for administration — creating a property is not scoped to a
+   property — and /api/pos for an outside till.
+
+   A POS mounts at its OWN prefix, not under /api/hotels. It does not
    know a hotel code and must not need one: its key resolves to exactly
    one outlet at exactly one property, so a misconfigured terminal
-   cannot address a hotel it was never issued for. */
-app.route("/api/pos", pos);
+   cannot address a hotel it was never issued for.
+
+   The till is person-facing and sits behind the same bearer gate as
+   every other /api/hotels route. `/api/pos` is the machine door. */
+const SERVICES = [
+  frontDesk, reservations, finance, reportsService, guests, nightAudit,
+  pos, admin, inventory, banquet, stores, housekeeping,
+];
+for (const service of SERVICES) {
+  for (const [prefix, router] of service.mounts) app.route(prefix, router);
+}
 
 app.onError((error, c) => {
   if (error instanceof Unauthenticated) {

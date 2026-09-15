@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach } from "vitest";
-import { readFileSync } from "node:fs";
+import { existsSync, readdirSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 import {
   render, screen, within, fireEvent, waitFor,
@@ -376,14 +376,22 @@ describe("the session guard", () => {
    ══════════════════════════════════════════════════════════════════ */
 describe("every guarded route is one the navigation knows", () => {
   it("has no RequireAccess path that mayReach would wave through", () => {
-    const app = readFileSync(join(process.cwd(), "src", "App.tsx"), "utf8");
-    const nav = readFileSync(
-      join(process.cwd(), "src", "components", "app", "navigation.ts"), "utf8");
+    /* Screen addresses live in App.tsx and in each service's own routes
+       file since the service-folder move — every one of them is read. And
+       "known" is asked of the navigation itself rather than read from its
+       source, which is now spread across the services' nav files. */
+    const modules = join(process.cwd(), "src", "modules");
+    const routeFiles = [
+      join(process.cwd(), "src", "App.tsx"),
+      ...readdirSync(modules)
+        .map((service) => join(modules, service, "routes.tsx"))
+        .filter((file) => existsSync(file)),
+    ];
 
-    const guarded = [...app.matchAll(/<RequireAccess\s+path="([^"]+)"/g)]
-      .map((m) => m[1]!);
-    const known = new Set(
-      [...nav.matchAll(/to:\s*"([^"]+)"/g)].map((m) => m[1]!));
+    const guarded = routeFiles.flatMap((file) =>
+      [...readFileSync(file, "utf8").matchAll(/<RequireAccess\s+path="([^"]+)"/g)]
+        .map((m) => m[1]!));
+    const known = new Set(guarded.filter((path) => navItemFor(path) !== undefined));
 
     expect(guarded.length, "no guarded routes found — the regex has rotted")
       .toBeGreaterThan(0);
