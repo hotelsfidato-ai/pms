@@ -6523,6 +6523,28 @@ copy will see of theirs.**
 
 ---
 
+### 274 · MINE: I reported the web tests green while the run ended red
+
+From the Start here commit (657d039, 15 September) every `npx vitest run`
+exited with code 1: two of the tests I added open the housekeeping board in
+the test browser, which has no IndexedDB, and the board's read of the
+offline queue rejected with nobody catching it. Every test passed; vitest
+printed "2 unhandled errors" and failed the run. I read the pass count, and
+my move script grepped for failed tests, and neither ever looked at the exit
+code — so about fifteen reports today said green on a red run. Found by the
+test-splitting agent. Nothing reached production (no build or deploy runs
+the tests), and the board works in a real browser.
+
+Fixed where it belongs: the board now catches the failure and treats it as
+"nothing held on this device", exactly as `OfflineBar` has since it met the
+same fault; the offline bar is what tells the person. The move script
+checks the exit code.
+
+**The rule: a gate's answer is its exit code. Read it, every time — a
+summary line is not the result.**
+
+---
+
 ### Open · two "in house" numbers for the same moment
 
 The property page (`getTodaySnapshot`) said **In house now 11, Vacant 9** while

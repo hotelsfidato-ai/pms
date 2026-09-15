@@ -119,6 +119,14 @@ export default function HousekeepingPage() {
           })
           .filter((x): x is QueuedChange => x !== null),
       );
+    }).catch(() => {
+      /* No store on this device — a private window, a browser without
+         IndexedDB, the test browser. Nothing can have been held here, so
+         nothing is waiting. The offline bar, on every screen, is what TELLS
+         the person their work cannot be held; this only stops the board
+         leaving an uncaught error behind (it ended every test run red,
+         MEMORY 274). The same catch OfflineBar has had since it met this. */
+      setHeld([]);
     });
   }, []);
 
