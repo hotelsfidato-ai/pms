@@ -2,6 +2,7 @@ import type { ReactNode } from "react";
 import { Link } from "react-router";
 import { ChevronRight } from "lucide-react";
 import { cn } from "@/lib/cn";
+import { useDocumentTitle } from "@/lib/documentTitle";
 
 /* ══════════════════════════════════════════════════════════════════
    PAGE HEADER
@@ -58,6 +59,10 @@ export interface PageHeaderProps {
 export function PageHeader({
   title, description, breadcrumbs, actions, badge, children, className,
 }: PageHeaderProps) {
+  /* The tab says the page's own heading, so the menu, the heading and
+     the tab agree. A heading that is not plain text names no tab. */
+  useDocumentTitle(typeof title === "string" ? title : null);
+
   return (
     <header className={cn("mb-6", className)}>
       {breadcrumbs && breadcrumbs.length > 0 && (

@@ -92,7 +92,7 @@ export function OutOfOrderFlow({
           variant="ghost"
           size="sm"
           onClick={() => setOpen(true)}
-          aria-label={`Take room ${roomNumber} out of order`}
+          aria-label={`Take room ${roomNumber} out of service`}
         >
           <Wrench className="size-4" />
         </Button>
@@ -101,7 +101,7 @@ export function OutOfOrderFlow({
       <Dialog open={open} onOpenChange={setOpen}>
         <DialogContent
           title={`Room ${roomNumber}`}
-          description="Out of inventory, and for how long."
+          description="Out of service, and for how long."
         >
           <div className="space-y-4">
             {/* What is already on this room. Without it a supervisor
@@ -212,7 +212,7 @@ export function OutOfOrderFlow({
                     disabled={busy || !from || (!!to && to < from)}
                   >
                     <Wrench className="size-4" />
-                    Take out of order
+                    Take out of service
                   </Button>
                 </div>
               </>

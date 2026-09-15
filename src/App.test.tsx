@@ -150,6 +150,22 @@ describe("the tape chart at /h/:code/stay", () => {
     ]);
   });
 
+  it("names the pills in the legend's own words", async () => {
+    /* The pills said Vacant / Occupied / Dirty / Blocked above a legend
+       saying Free / In house / Needs cleaning / Out of service — the same
+       rooms in two languages (clarity plan, 15 September). The keys above
+       stay; this is what a person reads. "Empty", not "Free": it counts
+       every room without a guest, including the ones still to clean. */
+    const { container } = render(<App />);
+    await screen.findAllByText(/Superior|Deluxe/i);
+    const words = [...container.querySelectorAll("[data-filter-pill]")].map((p) =>
+      p.firstChild?.textContent,
+    );
+    expect(words).toEqual([
+      "All", "Empty", "In house", "Arriving", "Reserved", "Out of service", "Due out", "Needs cleaning",
+    ]);
+  });
+
   it("opens the detail panel from a deep link, with the chart still behind it", async () => {
     go(`/h/${HOTEL}/stay?res=stay-overpaid`);
     const { container } = render(<App />);
@@ -276,9 +292,12 @@ describe("the session guard", () => {
 
     render(<App />);
 
-    /* The sign-in screen, and no trace of the application shell. */
+    /* The sign-in screen, and no trace of the application shell. Found by
+       its own heading, "Sign in" — since 15 September the page's one h1.
+       "Property management" is the brand panel's tagline now, and that
+       panel is not shown on a phone at all. */
     expect(
-      await screen.findByRole("heading", { name: /property management/i }),
+      await screen.findByRole("heading", { level: 1, name: /^sign in$/i }),
     ).toBeDefined();
     expect(screen.queryByRole("navigation")).toBeNull();
   });

@@ -7,6 +7,7 @@ import {
   Sparkle, Wrench,
 } from "lucide-react";
 import { cn } from "@/lib/cn";
+import { useDocumentTitle } from "@/lib/documentTitle";
 import { HouseFloor } from "@/components/flows/HouseFloor";
 import { money, dateShort } from "@/lib/format";
 import { useUi } from "@/lib/ui";
@@ -67,6 +68,31 @@ const BAR_TONE: Record<BarTone, Tone> = {
 };
 
 const PILLS = ["All", "Vacant", "Occupied", "Arrivals", "Reserved", "Blocked", "Due Out", "Dirty"] as const;
+
+/* ONE VOCABULARY (the clarity plan, 15 September). The pills said
+   Vacant / Occupied / Dirty / Blocked while the legend directly beneath
+   them said Free / In house / Needs cleaning / Out of service — the same
+   rooms in two languages, on the first screen a new clerk sees.
+
+   The KEYS above do not change: the counts, the Dashboard and the tests
+   read them. Only the words a person reads do.
+
+   ⚠ "Vacant" IS "EMPTY", NOT "FREE". It counts every room with no guest
+   in it — the free ones, the ones still to be cleaned, and the ones
+   somebody is arriving into. A tile says "Free" only when none of that
+   is true. Calling the pill "Free" would have put "Free 10" above eight
+   tiles marked Free: a new contradiction in place of the old one. Empty
+   = Free + Needs cleaning + Arriving, and that adds up on screen. */
+const PILL_LABEL: Record<(typeof PILLS)[number], string> = {
+  All: "All",
+  Vacant: "Empty",
+  Occupied: "In house",
+  Arrivals: "Arriving",
+  Reserved: "Reserved",
+  Blocked: "Out of service",
+  "Due Out": "Due out",
+  Dirty: "Needs cleaning",
+};
 type Pill = (typeof PILLS)[number];
 
 /** How the chart's rows are grouped. */
@@ -152,6 +178,8 @@ export default function StayViewPage({ view }: {
      ADDRESS — carrying an open booking (?res=) with it. Where somebody
      starts is no longer this page's decision: the GM sets each person's
      first screen, and they can change their own (087). */
+  useDocumentTitle(view === "calendar" ? "Calendar" : "Rooms");
+
   const chooseView = (next: "calendar" | "floor") => {
     if (next === view) return;
     navigate(`/h/${hotelId}/${next === "calendar" ? "calendar" : "stay"}${
@@ -309,6 +337,13 @@ export default function StayViewPage({ view }: {
       {/* ── Controls ─────────────────────────────────────────────── */}
       <div className="shrink-0 bg-white border-b border-grey-200 px-4 sm:px-5 py-3 space-y-3">
         <div className="flex items-center gap-3 flex-wrap">
+          {/* THE PAGE'S NAME. This was one of four screens with no heading
+              at all — and the only one staff spend the day on. A screen
+              reader announced nothing, and a new clerk had only the
+              toggle further along to say where they were. */}
+          <h1 className="text-lg font-semibold text-ink-900">
+            {view === "calendar" ? "Calendar" : "Rooms"}
+          </h1>
           <div className="flex items-center gap-1">
             <Button
               variant="secondary" size="sm"
@@ -390,7 +425,7 @@ export default function StayViewPage({ view }: {
                   : "bg-white text-grey-600 border-grey-200 hover:border-grey-300 hover:text-ink-900",
               )}
             >
-              {p}
+              {PILL_LABEL[p]}
               <span className={cn("tabular", pill === p ? "text-white/70" : "text-grey-400")}>
                 {counts[p] ?? 0}
               </span>

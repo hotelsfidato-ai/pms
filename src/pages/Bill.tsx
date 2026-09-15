@@ -151,7 +151,7 @@ export default function BillPage() {
           {o.status === "settled" ? (
             <p>
               Paid by {o.paymentMethod}
-              {o.paymentMethod === "room" && " — charged to the guest folio"}
+              {o.paymentMethod === "room" && " — charged to the guest's bill"}
             </p>
           ) : (
             <p className="font-medium">NOT PAID</p>

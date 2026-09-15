@@ -111,13 +111,13 @@ export default function DashboardPage() {
       <PageHeader
         title="Dashboard"
         description={code
-          ? `${hotel?.name ?? code} · business date ${dateShort(date)} · month to date from ${dateShort(monthStart(date))}`
+          ? `${hotel?.name ?? code} · business date ${dateShort(date)} · month so far from ${dateShort(monthStart(date))}`
           : "No property to show yet."}
         actions={hotels.length > 1 ? (
           <label className="flex items-center gap-2 text-sm text-grey-600">
-            <span className="hidden sm:inline">Hotel</span>
+            <span className="hidden sm:inline">Property</span>
             <NativeSelect
-              aria-label="Which hotel the figures are for"
+              aria-label="Which property the figures are for"
               value={code}
               onChange={(e) => setPicked(e.currentTarget.value)}
               className="w-auto"
@@ -132,15 +132,15 @@ export default function DashboardPage() {
 
       <div className="space-y-6">
         {/* ── The numbers a hotel lives by ─────────────────────────── */}
-        <TileGroup title="Today" note="Today, then month to date and year to date (from 1 April).">
+        <TileGroup title="Today" note="Today, then the month so far and the year so far. The year runs from 1 April.">
           <Tile icon={BedDouble} lead label="Occupancy" value={pct(occ?.today)} loading={loading}
-                sub={`MTD ${pct(occ?.ptd)} · YTD ${pct(occ?.ytd)}`} />
+                sub={[`Month so far ${pct(occ?.ptd)}`, `Year so far ${pct(occ?.ytd)}`]} />
           <Tile icon={IndianRupee} lead label="Average rate (ADR)" value={cash(adr?.today)} loading={loading}
-                sub={`MTD ${cash(adr?.ptd)} · YTD ${cash(adr?.ytd)}`} />
+                sub={[`Month so far ${cash(adr?.ptd)}`, `Year so far ${cash(adr?.ytd)}`]} />
           <Tile icon={TrendingUp} lead label="RevPAR" value={cash(revpar?.today)} loading={loading}
-                sub={`MTD ${cash(revpar?.ptd)} · YTD ${cash(revpar?.ytd)}`} />
+                sub={[`Month so far ${cash(revpar?.ptd)}`, `Year so far ${cash(revpar?.ytd)}`]} />
           <Tile icon={Banknote} lead label="Room revenue" value={cash(roomRev?.today)} loading={loading}
-                sub={`MTD ${cash(roomRev?.ptd)} · YTD ${cash(roomRev?.ytd)}`} />
+                sub={[`Month so far ${cash(roomRev?.ptd)}`, `Year so far ${cash(roomRev?.ytd)}`]} />
         </TileGroup>
 
         {/* ── The house, now ───────────────────────────────────────── */}
@@ -151,11 +151,11 @@ export default function DashboardPage() {
                 to={`/h/${code}/in-house`} />
           <Tile icon={LogOut} label="Due out" value={count(c?.["Due Out"])} loading={loading}
                 to={`/h/${code}/in-house/due-out`} />
-          <Tile icon={DoorOpen} label="Vacant" value={count(c?.["Vacant"])} loading={loading}
+          <Tile icon={DoorOpen} label="Empty" value={count(c?.["Vacant"])} loading={loading}
                 to={`/h/${code}/stay`} />
           {/* Warm only when there is something to do about it. A zero
               dirty count in orange is a false alarm every morning. */}
-          <Tile icon={SprayCan} label="Dirty" value={count(c?.["Dirty"])} loading={loading}
+          <Tile icon={SprayCan} label="Needs cleaning" value={count(c?.["Dirty"])} loading={loading}
                 tone={(c?.["Dirty"] ?? 0) > 0 ? "warning" : undefined}
                 to={`/h/${code}/housekeeping`} />
           <Tile icon={Wrench} label="Out of service" value={count(c?.["Blocked"])} loading={loading}
@@ -170,12 +170,12 @@ export default function DashboardPage() {
                   ? methods.map((m) => `${m.label} ${money(m.today ?? 0)}`).join(" · ")
                   : "Nothing taken yet today"} />
           <Tile icon={ReceiptText} label="Owed by guests" value={cash(pick(guestLedger, "Closing Balance")?.today)}
-                loading={loading} sub="Every open folio balance" />
+                loading={loading} sub="Every guest bill still open" />
           <Tile icon={Building2} label="City ledger" value={cash(pick(cityLedger, "Closing Balance")?.today)}
                 loading={loading} sub="Settled outside the PMS today" />
           <Tile icon={UserX} label="No-shows" value={count(noShow?.today)} loading={loading}
                 tone={(noShow?.today ?? 0) > 0 ? "warning" : undefined}
-                sub={`MTD ${count(noShow?.ptd)}`} to="/reports/no-show" />
+                sub={`Month so far ${count(noShow?.ptd)}`} to="/reports/no-show" />
         </TileGroup>
 
         {/* ── Quick reports ────────────────────────────────────────── */}
@@ -212,11 +212,11 @@ export default function DashboardPage() {
    document icons carry no information — they only take the space that
    tells the eye which link is which. */
 const QUICK_REPORTS: Array<{ label: string; to: string; icon: LucideIcon }> = [
-  { label: "Manager Report", to: "/reports/manager", icon: ClipboardList },
-  { label: "Monthly Statistics", to: "/reports/monthly-stats", icon: ChartColumn },
-  { label: "Lodging Tax", to: "/reports/lodging-tax", icon: Landmark },
-  { label: "City Ledger", to: "/reports/city-ledger", icon: Building2 },
-  { label: "No Show", to: "/reports/no-show", icon: UserX },
+  { label: "Manager report", to: "/reports/manager", icon: ClipboardList },
+  { label: "Monthly statistics", to: "/reports/monthly-stats", icon: ChartColumn },
+  { label: "Lodging tax", to: "/reports/lodging-tax", icon: Landmark },
+  { label: "City ledger", to: "/reports/city-ledger", icon: Building2 },
+  { label: "No show", to: "/reports/no-show", icon: UserX },
 ];
 
 /** A count is a real zero when nothing is there — unlike money, where an
@@ -259,7 +259,10 @@ function TileGroup({ title, note, children, wide }: {
    below them. */
 function Tile({ icon: Icon, label, value, sub, to, tone, loading, lead }: {
   icon: LucideIcon;
-  label: string; value: string; sub?: string; to?: string;
+  label: string; value: string;
+  /** One line, or several — a lead tile sets its month and year on
+      their own lines rather than packing them behind a middle dot. */
+  sub?: string | string[]; to?: string;
   tone?: "warning"; loading?: boolean; lead?: boolean;
 }) {
   const body = (
@@ -296,7 +299,15 @@ function Tile({ icon: Icon, label, value, sub, to, tone, loading, lead }: {
           {value}
         </p>
       )}
-      {sub && <p className="text-sm text-grey-600 tabular mt-1 leading-snug">{sub}</p>}
+      {sub && (Array.isArray(sub) ? (
+        <div className="mt-1 space-y-0.5">
+          {sub.map((line) => (
+            <p key={line} className="text-sm text-grey-600 tabular leading-snug">{line}</p>
+          ))}
+        </div>
+      ) : (
+        <p className="text-sm text-grey-600 tabular mt-1 leading-snug">{sub}</p>
+      ))}
     </CardBody>
   );
 
@@ -388,7 +399,7 @@ const columns: Column<Row>[] = [
     cell: (r) => <span className="tabular">{r.arrivals}</span>,
   },
   {
-    key: "dirty", header: "Rooms dirty", numeric: true,
+    key: "dirty", header: "Needs cleaning", numeric: true,
     cell: (r) => (
       <span className={r.dirty > 0 ? "tabular font-medium text-brand-orange-700" : "tabular text-grey-600"}>
         {r.dirty}
@@ -406,8 +417,8 @@ function EveryHotel() {
   return (
     <section>
       <div className="flex items-baseline justify-between gap-3 flex-wrap mb-2.5">
-        <h2 className="text-md font-semibold text-ink-900">Every hotel</h2>
-        <p className="text-sm text-grey-600">Month to date. Each reconciles to that property's Manager Report.</p>
+        <h2 className="text-md font-semibold text-ink-900">Every property</h2>
+        <p className="text-sm text-grey-600">The month so far. Each reconciles to that property's Manager report.</p>
       </div>
       <Card>
         {isLoading ? (

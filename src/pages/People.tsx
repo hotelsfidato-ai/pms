@@ -69,7 +69,7 @@ const ROLE_WHAT: Partial<Record<Role, string>> = {
   admin:           "Runs the system day to day, including accounts",
   gm:              "Everything at this property, and the night audit",
   hotel_manager:   "The property day to day, without the money decisions",
-  front_desk:      "Bookings, check-in, folios, the cash drawer",
+  front_desk:      "Bookings, check-in, bills, the cash drawer",
   housekeeping:    "Room status and work orders",
   kitchen_manager: "The pass and the menu",
   chef:            "The pass — moves dishes along, touches no money",

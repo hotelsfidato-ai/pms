@@ -205,6 +205,31 @@ example.
 
 ---
 
+## 5a · The clarity plan — steps 2 to 4 (critique of 15 September)
+
+Scored 22/40 against "a new receptionist manages their first shift without
+asking". Step 1, one vocabulary, is done. The owner chose, 15 September:
+Bill at the desk and Folio in Finance; a shorter menu still reaches
+everything by search; report names stay, in sentence case.
+
+- **Step 2 · one primary action per screen.** 3 of 282 buttons declare
+  `variant="primary"` (check-in, the stay panel, sign-in). `Button`
+  defaults to secondary, so every other screen draws "Confirm booking" the
+  same as "Cancel". Plus a test that fails when a form screen has none.
+- **Step 3 · the menu by person.** Reception is shown 48 entries, among
+  them the developers' "Design system" page and "Channel manager" (excluded,
+  not connected). Target: about 10 for reception, 3 for housekeeping, 5 for
+  the restaurant; search reaches anything the role may open.
+- **Step 4 · help where the question is.** No first-run guidance and no
+  glossary anywhere. A "Start here" card for a person's first sign-ins,
+  one-line explanations on RevPAR, ADR, city ledger, Form C, and an empty
+  state on every list.
+- **Still named, not fixed:** the same chart icon on six menu entries;
+  `FolioPanel.tsx` and `CheckInFlow.tsx` still hold `const USER = "front
+  desk"` (MEMORY 256).
+
+---
+
 ## 6 · Known rough edges, small
 
 - **Two "in house" numbers.** The property page says In house now 11 /

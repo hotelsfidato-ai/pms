@@ -64,7 +64,7 @@ export default function RatePlansPage() {
   return (
     <Page>
       <PageHeader
-        title="Rates"
+        title="Rate plans"
         description="What each room type costs, and what it costs in a season. Every price here is the hotel's own."
         badge={
           data ? (

@@ -478,7 +478,7 @@ function SettleDialog({
         </Button>
       </DialogTrigger>
       <DialogContent
-        title="Settle folio"
+        title="Settle bill"
         description={`${money(outstanding)} outstanding · ${stay.guest}`}
       >
         <div className="space-y-4">
@@ -783,7 +783,7 @@ function SplitBillButton({ hotelId, stayId, onDone }: {
       <Dialog open={open} onOpenChange={setOpen}>
         <DialogContent
           title="Split the bill"
-          description="A second folio on this stay, settled by a company."
+          description="A second bill on this stay, settled by a company."
         >
           {list.length === 0 ? (
             /* No invented company, and no free-text one either: a

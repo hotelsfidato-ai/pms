@@ -112,7 +112,7 @@ export default function GroupPanelPage() {
       <PageHeader
         title={g.name}
         breadcrumbs={[
-          { label: "Reservations", to: `/h/${hotelId}/reservations` },
+          { label: "All bookings", to: `/h/${hotelId}/reservations` },
           { label: g.name },
         ]}
         description={[
@@ -168,7 +168,7 @@ export default function GroupPanelPage() {
               {money(g.guestBalance)}
             </p>
             <p className="mt-0.5 text-sm text-grey-500">
-              Across {g.rooms.length} {g.rooms.length === 1 ? "folio" : "folios"}
+              Across {g.rooms.length} {g.rooms.length === 1 ? "bill" : "bills"}
             </p>
           </CardBody>
         </Card>
@@ -197,7 +197,7 @@ export default function GroupPanelPage() {
                   <th className="px-4 py-2 text-left font-medium">Room</th>
                   <th className="px-4 py-2 text-left font-medium">Dates</th>
                   <th className="px-4 py-2 text-right font-medium">Rate</th>
-                  <th className="px-4 py-2 text-right font-medium">Own folio</th>
+                  <th className="px-4 py-2 text-right font-medium">Own bill</th>
                   <th className="px-4 py-2 text-center font-medium">Host pays</th>
                 </tr>
               </thead>

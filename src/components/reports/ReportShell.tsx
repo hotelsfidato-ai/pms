@@ -5,6 +5,7 @@ import { dateShort } from "@/lib/format";
 import { Button, Card } from "@/components/ui";
 import { toCsv, downloadCsv, reportFilename } from "@/lib/csv";
 import { useDocumentIdentity } from "@/lib/documentIdentity";
+import { useDocumentTitle } from "@/lib/documentTitle";
 
 /* ══════════════════════════════════════════════════════════════════
    REPORT SHELL
@@ -57,6 +58,7 @@ export function ReportShell({
   meta?: ReactNode;
 }) {
   const identity = useDocumentIdentity();
+  useDocumentTitle(title);
   const propertyName = property ?? identity.property ?? DASH;
   /* WHO RAN IT. The footer said "front desk" whoever was signed in. An
      accountant reading a stamp needs the person, and the session has

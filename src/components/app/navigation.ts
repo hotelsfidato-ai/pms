@@ -108,7 +108,7 @@ const SECTIONS: NavSection[] = [
     ],
   },
   {
-    label: "Front Desk",
+    label: "Front desk",
     items: [
       {
         label: "Arrivals", to: "/h/:code/arrivals", icon: CalendarCheck,
@@ -119,10 +119,10 @@ const SECTIONS: NavSection[] = [
         ],
       },
       {
-        label: "In-House", to: "/h/:code/in-house", icon: Users,
+        label: "In house", to: "/h/:code/in-house", icon: Users,
         resource: "reservation", matchPrefix: true,
         children: [
-          { label: "Current stays", to: "/h/:code/in-house", icon: Users, resource: "reservation" },
+          { label: "In house now", to: "/h/:code/in-house", icon: Users, resource: "reservation" },
           { label: "Due out", to: "/h/:code/in-house/due-out", icon: CalendarRange, resource: "reservation" },
         ],
       },
@@ -135,10 +135,10 @@ const SECTIONS: NavSection[] = [
     ],
   },
   {
-    label: "Reservations",
+    label: "Bookings",
     items: [
       {
-        label: "All reservations", to: "/h/:code/reservations", icon: CalendarCheck,
+        label: "All bookings", to: "/h/:code/reservations", icon: CalendarCheck,
         resource: "reservation", matchPrefix: true,
       },
       { label: "Guests", to: "/guests", icon: Users, resource: "customer", matchPrefix: true },
@@ -228,7 +228,7 @@ const SECTIONS: NavSection[] = [
          payments it reconciles against, not under reports — a report is
          read afterwards, this is used during the shift. */
       { label: "Cashiering", to: "/h/:code/cashiering", icon: Wallet, resource: "payment" },
-      { label: "City ledger", to: "/h/:code/city-ledger", icon: Building2, resource: "commission" },
+      { label: "Company accounts", to: "/h/:code/city-ledger", icon: Building2, resource: "commission" },
       /* Form C is a COMPLIANCE obligation about guests, not a finance
          document — but it is filed by the same person who bills, at the
          same desk, and burying it under Reports is how a 24-hour
@@ -283,12 +283,12 @@ const SECTIONS: NavSection[] = [
          is here: a cashier counting a drawer at midnight is doing
          restaurant work, not the front office's. */
       {
-        label: "Day end", to: "/h/:code/till/day-end",
+        label: "Close restaurant day", to: "/h/:code/till/day-end",
         icon: Banknote, resource: "payment",
       },
       /* What an OUTSIDE till sent and what was refused. Read-only, and
          named so nobody mistakes it for the till above. */
-      { label: "Bridge", to: "/h/:code/pos", icon: Plug, resource: "invoice" },
+      { label: "Charges to rooms", to: "/h/:code/pos", icon: Plug, resource: "invoice" },
     ],
   },
   {
@@ -311,17 +311,17 @@ const SECTIONS: NavSection[] = [
   {
     label: "Reports",
     items: [
-      { label: "Night Audit", to: "/h/:code/night-audit", icon: BarChart3, resource: "report" },
+      { label: "Night audit", to: "/h/:code/night-audit", icon: BarChart3, resource: "report" },
       /* The index first — it is the taxonomy, and the seven below are
          the shortcuts a manager pins for themselves. */
       { label: "All reports", to: "/reports", icon: FileText, resource: "report" },
-      { label: "Manager Report", to: "/reports/manager", icon: BarChart3, resource: "report" },
-      { label: "City Ledger", to: "/reports/city-ledger", icon: Building2, resource: "report" },
-      { label: "No Show", to: "/reports/no-show", icon: CalendarCheck, resource: "report" },
-      { label: "Monthly Occupancy", to: "/reports/monthly-occupancy", icon: BarChart3, resource: "report" },
-      { label: "Monthly Statistics", to: "/reports/monthly-stats", icon: BarChart3, resource: "report" },
-      { label: "Yearly Statistics", to: "/reports/yearly-stats", icon: BarChart3, resource: "report" },
-      { label: "Lodging Tax", to: "/reports/lodging-tax", icon: FileText, resource: "report" },
+      { label: "Manager report", to: "/reports/manager", icon: BarChart3, resource: "report" },
+      { label: "City ledger", to: "/reports/city-ledger", icon: Building2, resource: "report" },
+      { label: "No show", to: "/reports/no-show", icon: CalendarCheck, resource: "report" },
+      { label: "Monthly occupancy", to: "/reports/monthly-occupancy", icon: BarChart3, resource: "report" },
+      { label: "Monthly statistics", to: "/reports/monthly-stats", icon: BarChart3, resource: "report" },
+      { label: "Yearly statistics", to: "/reports/yearly-stats", icon: BarChart3, resource: "report" },
+      { label: "Lodging tax", to: "/reports/lodging-tax", icon: FileText, resource: "report" },
       /* FOUR THAT WERE BUILT AND NOT LISTED. The index says "11 of 11
          built" and this menu offered seven — so the GST Sales Register,
          the one an accountant needs every month to file GSTR-1, was
@@ -330,10 +330,10 @@ const SECTIONS: NavSection[] = [
 
          A screen that exists and cannot be found from the navigation is
          a screen that does not exist to the person looking for it. */
-      { label: "GST Sales Register", to: "/reports/gst-sales", icon: ScrollText, resource: "report" },
+      { label: "GST sales register", to: "/reports/gst-sales", icon: ScrollText, resource: "report" },
       { label: "Form F / C-Form", to: "/reports/c-form", icon: ShieldCheck, resource: "report" },
-      { label: "Guest Ledger", to: "/reports/guest-ledger", icon: BookOpen, resource: "report" },
-      { label: "Cashier Shift", to: "/reports/cashier-shift", icon: Banknote, resource: "report" },
+      { label: "Guest ledger", to: "/reports/guest-ledger", icon: BookOpen, resource: "report" },
+      { label: "Cashier shift", to: "/reports/cashier-shift", icon: Banknote, resource: "report" },
     ],
   },
   {
@@ -355,7 +355,7 @@ const SECTIONS: NavSection[] = [
              one is gated by `app.require_provisioning_key()` in the
              database, which no menu entry can grant or withhold. */
           { label: "Users", to: "/admin/users", icon: UserCog, resource: "user" },
-          { label: "Roles & permissions", to: "/admin/roles", icon: ShieldCheck, resource: "role" },
+          { label: "Roles and permissions", to: "/admin/roles", icon: ShieldCheck, resource: "role" },
           { label: "Integrations", to: "/admin/integrations", icon: Plug, resource: "integration" },
           { label: "Audit log", to: "/admin/audit-log", icon: ScrollText, resource: "audit_log" },
           { label: "Settings", to: "/admin/settings", icon: Settings, resource: "setting" },

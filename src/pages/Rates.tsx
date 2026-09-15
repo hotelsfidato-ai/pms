@@ -38,7 +38,7 @@ export default function RatesPage() {
   return (
     <Page>
       <PageHeader
-        title="Rates"
+        title="Rate performance"
         description="Rack rate against what each room type actually achieved, fourteen days from the business date."
       />
 

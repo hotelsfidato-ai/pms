@@ -50,7 +50,7 @@ export function MonthlyOccupancyPage() {
 
   return (
     <ReportShell
-      title="Monthly Occupancy"
+      title="Monthly occupancy"
       period="August 2026"
       meta="Monthly Occupancy — August 2026"
     >
@@ -155,7 +155,7 @@ export function MonthlyStatisticsPage() {
 
   return (
     <ReportShell
-      title="Monthly Statistics"
+      title="Monthly statistics"
       period="August 2026"
       meta="Month August, 2026   Show Unposted Inclusions Charges   No"
       csv={() => ({
@@ -234,7 +234,7 @@ export function YearlyStatisticsPage() {
   const total = totals(rows);
 
   return (
-    <ReportShell title="Yearly Statistics" period="2026" meta="Year 2026">
+    <ReportShell title="Yearly statistics" period="2026" meta="Year 2026">
       {isLoading ? (
         <div className="p-5 space-y-2">
           {Array.from({ length: 12 }).map((_, i) => <Skeleton key={i} className="h-7 w-full" />)}

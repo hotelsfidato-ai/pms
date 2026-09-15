@@ -82,7 +82,7 @@ export function GuestLedgerPage() {
 
   return (
     <ReportShell
-      title="Guest Ledger"
+      title="Guest ledger"
       period={`${dateShort(PTD_FROM)} to ${dateShort(BUSINESS_DATE)}`}
       meta={`Date From ${dateShort(PTD_FROM)} To ${dateShort(BUSINESS_DATE)}   Folios that moved in the window`}
       csv={() => ({
@@ -186,7 +186,7 @@ export function CashierShiftPage() {
 
   return (
     <ReportShell
-      title="Cashier Shift"
+      title="Cashier shift"
       period={dateShort(BUSINESS_DATE)}
       meta={`Business date ${dateShort(BUSINESS_DATE)}   Receipts by cashier and method`}
       csv={() => ({
@@ -282,7 +282,7 @@ export function GstSalesPage() {
 
   return (
     <ReportShell
-      title="GST Sales Register"
+      title="GST sales register"
       period={`${dateShort(PTD_FROM)} to ${dateShort(BUSINESS_DATE)}`}
       meta={`GSTR-1 extract   Every document issued in the period, credit notes included`}
       csv={() => ({
@@ -387,7 +387,7 @@ export function CFormPage() {
 
   return (
     <ReportShell
-      title="Form C — Foreign Nationals"
+      title="Form F / C-Form"
       period={`${dateShort(PTD_FROM)} to ${dateShort(BUSINESS_DATE)}`}
       meta={`Arrivals in the period   ${unfiled} awaiting an FRRO reference`}
       csv={() => ({

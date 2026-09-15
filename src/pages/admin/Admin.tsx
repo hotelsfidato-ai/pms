@@ -144,7 +144,7 @@ export function RolesPage() {
   if (error) {
     return (
       <Page>
-        <PageHeader title="Roles & permissions" />
+        <PageHeader title="Roles and permissions" />
         <Card>
           <ErrorState
             title="The permission matrix did not load"
@@ -160,7 +160,7 @@ export function RolesPage() {
   if (isLoading || !data) {
     return (
       <Page>
-        <PageHeader title="Roles & permissions" />
+        <PageHeader title="Roles and permissions" />
         <Skeleton className="h-96 w-full" />
       </Page>
     );
@@ -171,7 +171,7 @@ export function RolesPage() {
   return (
     <Page>
       <PageHeader
-        title="Roles & permissions"
+        title="Roles and permissions"
         description="The live matrix, read from src/lib/permissions.ts. This is the same source the navigation filters on and every disabled button reads from — it cannot drift from what the product enforces."
         badge={<StatusPill tone="info">{data.length} roles</StatusPill>}
       />

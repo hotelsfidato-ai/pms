@@ -61,7 +61,7 @@ export default function ManagerReportPage() {
 
   return (
     <ReportShell
-      title="Manager Report"
+      title="Manager report"
       period={`As on ${dateShort(data.asOn)} · PTD from ${dateShort(data.ptdFrom)} · YTD from ${dateShort(data.ytdFrom)}`}
       meta={`As on Date ${dateShort(data.asOn)}   PTD ${dateShort(data.ptdFrom)}   YTD ${dateShort(data.ytdFrom)}   Currency ${data.currency}`}
       csv={() => exportRows(data)}

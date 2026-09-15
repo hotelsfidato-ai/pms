@@ -45,25 +45,25 @@ const GROUPS: Group[] = [
     note: "What happened, and what is about to.",
     reports: [
       {
-        title: "Manager Report",
+        title: "Manager report",
         icon: ClipboardList,
         path: "/reports/manager",
         description: "Today, period to date and year to date in three columns. The one an owner opens first.",
       },
       {
-        title: "Monthly Occupancy",
+        title: "Monthly occupancy",
         icon: CalendarDays,
         path: "/reports/monthly-occupancy",
         description: "Occupancy for every day of the month, as a chart. Full houses and empty ones both stand out.",
       },
       {
-        title: "Monthly Statistics",
+        title: "Monthly statistics",
         icon: ChartColumn,
         path: "/reports/monthly-stats",
         description: "The daily grid — rooms sold, ADR, RevPAR, pax, charges, tax and receipts.",
       },
       {
-        title: "Yearly Statistics",
+        title: "Yearly statistics",
         icon: ChartNoAxesColumn,
         path: "/reports/yearly-stats",
         description: "The same columns at month grain, with a grand total that recomputes rates rather than averaging averages.",
@@ -75,25 +75,25 @@ const GROUPS: Group[] = [
     note: "Balances that have left the building without being settled.",
     reports: [
       {
-        title: "City Ledger",
+        title: "City ledger",
         icon: Building2,
         path: "/reports/city-ledger",
         description: "What each booking source owes, and what has been received against it.",
       },
       {
-        title: "No Show",
+        title: "No show",
         icon: UserX,
         path: "/reports/no-show",
         description: "Bookings that never arrived, with the retention charged against each.",
       },
       {
-        title: "Guest Ledger",
+        title: "Guest ledger",
         icon: ReceiptText,
         path: "/reports/guest-ledger",
         description: "Every folio that moved, with its opening and closing balance.",
       },
       {
-        title: "Cashier Shift",
+        title: "Cashier shift",
         icon: Wallet,
         path: "/reports/cashier-shift",
         description: "What each cashier took today, by method. Reversed receipts excluded.",
@@ -105,13 +105,13 @@ const GROUPS: Group[] = [
     note: "Filed, not read. These have to reconcile to the rupee.",
     reports: [
       {
-        title: "Lodging Tax",
+        title: "Lodging tax",
         icon: Landmark,
         path: "/reports/lodging-tax",
         description: "CGST and SGST at 2.5% each, split by tax slab, as the return expects it.",
       },
       {
-        title: "GST Sales Register",
+        title: "GST sales register",
         icon: FileSpreadsheet,
         path: "/reports/gst-sales",
         description: "Invoice-level GSTR-1 extract, credit notes as their own rows.",

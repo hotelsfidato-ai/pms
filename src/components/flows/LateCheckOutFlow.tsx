@@ -84,7 +84,7 @@ export function LateCheckOutFlow({
       if (/still outstanding/i.test(res.reason ?? "")) {
         onOpenChange(false);
         onDone();
-        toast.warning("Recorded — now settle the folio", res.reason);
+        toast.warning("Recorded — now settle the bill", res.reason);
         return;
       }
       return toast.error("Could not check out", res.reason);

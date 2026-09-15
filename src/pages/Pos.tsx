@@ -127,9 +127,9 @@ const TICKET_COLUMNS: Column<PosTicket>[] = [
     key: "state", header: "",
     cell: (t) =>
       t.status === "posted" ? (
-        <StatusPill tone="success">on the folio</StatusPill>
+        <StatusPill tone="success">on the bill</StatusPill>
       ) : t.status === "voided" ? (
-        <Tooltip content="A reversing entry cancels it. Both rows stay on the folio.">
+        <Tooltip content="A reversing entry cancels it. Both rows stay on the bill.">
           <span><StatusPill tone="warning">voided</StatusPill></span>
         </Tooltip>
       ) : (
@@ -160,14 +160,14 @@ export default function PosPage() {
   return (
     <Page>
       <PageHeader
-        title="Point of sale"
-        description="What each outlet sent, what reached a folio, and what was refused."
+        title="Charges to rooms"
+        description="What each restaurant sent to a room, what reached the guest's bill, and what was refused."
         badge={
           tickets.data ? (
             <StatusPill tone={refused.length ? "danger" : "success"}>
               {refused.length
                 ? `${refused.length} refused`
-                : `${onFolio.length} on folios`}
+                : `${onFolio.length} on guest bills`}
             </StatusPill>
           ) : undefined
         }

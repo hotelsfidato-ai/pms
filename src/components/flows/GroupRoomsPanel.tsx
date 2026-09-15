@@ -213,7 +213,7 @@ function RoomCard({ room, hotelId, current }: {
           </div>
 
           <div>
-            <p className="text-xs font-medium text-grey-500">Pax</p>
+            <p className="text-xs font-medium text-grey-500">Guests</p>
             <p className="flex items-center gap-2.5 text-base text-ink-900">
               <span className="flex items-center gap-1" aria-label={`${room.adults} adults`}>
                 <User className="size-3.5 text-grey-500" aria-hidden />

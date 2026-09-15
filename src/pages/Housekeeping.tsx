@@ -30,12 +30,16 @@ import { OutOfOrderFlow } from "@/components/flows/OutOfOrderFlow";
    action that silently does nothing is worse than one that refuses.
    ══════════════════════════════════════════════════════════════════ */
 
+/* The same words as the Rooms board (the clarity plan's one vocabulary).
+   These were a THIRD set — "Vacant dirty", "Occupied", "Out of order" —
+   beside the board's own two, so a housekeeper and the desk talking about
+   one room used different names for it. The keys are unchanged. */
 const GROUPS = [
-  { key: "dirty", label: "Vacant dirty", tone: "warning" as const },
-  { key: "clean", label: "Vacant clean", tone: "info" as const },
+  { key: "dirty", label: "Needs cleaning", tone: "warning" as const },
+  { key: "clean", label: "Clean", tone: "info" as const },
   { key: "inspected", label: "Inspected", tone: "success" as const },
-  { key: "occupied", label: "Occupied", tone: "neutral" as const },
-  { key: "out-of-service", label: "Out of order", tone: "danger" as const },
+  { key: "occupied", label: "In house", tone: "neutral" as const },
+  { key: "out-of-service", label: "Out of service", tone: "danger" as const },
 ];
 
 /* A room nobody has been given. Its own filter, because it is the one
@@ -368,7 +372,7 @@ function RoomCard({
           )}
         </div>
         <p className="text-sm text-grey-500 truncate mt-1">
-          {room.occupied ? room.guest ?? "Occupied" : `Floor ${room.floor}`}
+          {room.occupied ? room.guest ?? "In house" : `Floor ${room.floor}`}
         </p>
         {pending && (
           <p className="text-2xs text-[#8a6300] mt-1" data-hk-pending>
@@ -437,7 +441,9 @@ function RoomCard({
                 )}
               >
                 <Wrench className="size-4" />
-                Out of order
+                {/* An action, so a verb: it takes the room out for a
+                    period. "Out of order" read as a state it was already in. */}
+                Take out of service
               </button>
             )}
           />

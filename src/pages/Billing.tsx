@@ -182,7 +182,7 @@ export function PropertyCityLedgerPage() {
   return (
     <Page>
       <PageHeader
-        title="City ledger"
+        title="Company accounts"
         description={`Balances by booking source, ${dateLong(PTD_FROM)} to ${dateLong(BUSINESS_DATE)}.`}
         badge={data ? <StatusPill tone={owed ? "warning" : "success"}>{money(owed)} outstanding</StatusPill> : undefined}
       />

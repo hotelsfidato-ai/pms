@@ -92,7 +92,7 @@ export default function DayEndPage() {
   if (day.isLoading) {
     return (
       <Page>
-        <PageHeader title="Day end" description="Loading…" />
+        <PageHeader title="Close restaurant day" description="Loading…" />
         <Skeleton className="h-64" />
       </Page>
     );
@@ -100,7 +100,7 @@ export default function DayEndPage() {
   if (!day.data) {
     return (
       <Page>
-        <PageHeader title="Day end" />
+        <PageHeader title="Close restaurant day" />
         <EmptyState
           title="No outlet"
           description="This property has no restaurant configured."
@@ -114,7 +114,7 @@ export default function DayEndPage() {
   return (
     <Page>
       <PageHeader
-        title="Day end"
+        title="Close restaurant day"
         description={`${d.outlet.name} · ${d.businessDate}`}
         badge={d.closedAt ? (
           <span className="inline-flex items-center gap-1.5 rounded-full bg-green-50 border border-success px-3 py-1 text-sm text-success-dark">

@@ -180,7 +180,7 @@ export default function TillPage() {
     <Page>
       <PageHeader
         title="Till"
-        description="Open an order, add to it, settle it. Charges reach a guest folio the same way an outside point of sale would."
+        description="Open an order, add to it, settle it. Charges reach a guest's bill the same way an outside point of sale would."
         badge={
           orders.data ? (
             <StatusPill tone={openOrders.length ? "warning" : "neutral"}>

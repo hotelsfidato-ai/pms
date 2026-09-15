@@ -192,7 +192,7 @@ export default function TerminalPage() {
     setBusy(false);
     if (!res.ok) return toast.error("Not sent", res.reason);
     toast.success(
-      `KOT ${res.kotNo} is with the kitchen`,
+      `Order ${res.kotNo} is with the kitchen`,
       "They can start on it now.");
     /* The paper, for kitchens that run on it. The pass screen already
        has the same lines and is better — oldest first, colour by wait —

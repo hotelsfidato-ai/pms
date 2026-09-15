@@ -181,7 +181,7 @@ function StayBody({
         <Tabs value={tab} onValueChange={(v) => setTab(v === "folio" ? "folio" : "stay")}>
           <TabsList>
             <TabsTrigger value="stay">Stay</TabsTrigger>
-            <TabsTrigger value="folio">Folio</TabsTrigger>
+            <TabsTrigger value="folio">Bill</TabsTrigger>
           </TabsList>
           <TabsContent value="stay">
             <StayFacts stay={stay} />

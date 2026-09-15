@@ -7,6 +7,7 @@ import { DEV_IDENTITIES } from "@/lib/devIdentities";
 import { isConfigured } from "@/lib/firebase";
 import { Button, Field, Input } from "@/components/ui";
 import markUrl from "@/assets/brand/logo-mark.svg";
+import { useDocumentTitle } from "@/lib/documentTitle";
 
 /* ══════════════════════════════════════════════════════════════════
    SIGN IN
@@ -41,6 +42,7 @@ export default function SignInPage() {
      and a mistyped password is the most common reason somebody cannot
      get in. Showing it is the clerk's own choice, so it starts off. */
   const [showPassword, setShowPassword] = useState(false);
+  useDocumentTitle("Sign in");
 
   const submit = (e: FormEvent) => {
     e.preventDefault();
@@ -75,9 +77,12 @@ export default function SignInPage() {
         </div>
 
         <div className="relative max-w-md hidden lg:block">
-          <h1 className="text-4xl font-semibold tracking-tight text-white">
+          {/* A tagline, not the page's heading: the heading is "Sign in",
+              which is what this page is for and the only heading a phone
+              sees — this panel is hidden there. */}
+          <p className="text-4xl font-semibold tracking-tight text-white">
             Property management
-          </h1>
+          </p>
           <p className="text-md text-white/70 mt-3 leading-relaxed">
             The front desk, housekeeping, the restaurant and the day's
             figures — one system, every property.
@@ -93,7 +98,7 @@ export default function SignInPage() {
       {/* ── The form ───────────────────────────────────────────────── */}
       <div className="flex items-center justify-center px-5 py-10 sm:px-8 bg-white">
         <div className="w-full max-w-sm">
-          <h2 className="text-2xl font-semibold text-ink-900">Sign in</h2>
+          <h1 className="text-2xl font-semibold text-ink-900">Sign in</h1>
           <p className="text-base text-grey-600 mt-1.5">
             Use the account your property gave you.
           </p>

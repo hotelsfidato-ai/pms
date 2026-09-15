@@ -50,7 +50,7 @@ export function CityLedgerPage() {
 
   return (
     <ReportShell
-      title="City Ledger — Summary"
+      title="City ledger"
       period={`${dateShort(PTD_FROM)} to ${dateShort(BUSINESS_DATE)}`}
       meta={`Date From ${dateShort(PTD_FROM)} To ${dateShort(BUSINESS_DATE)}   Ignore zero balance account`}
       csv={() => ({
@@ -130,7 +130,7 @@ export function NoShowPage() {
 
   return (
     <ReportShell
-      title="No Show Report"
+      title="No show"
       period={dateShort(BUSINESS_DATE)}
       meta={`As On Date ${dateShort(BUSINESS_DATE)}`}
     >
@@ -197,7 +197,7 @@ export function LodgingTaxPage() {
 
   return (
     <ReportShell
-      title="Lodging Tax Report"
+      title="Lodging tax"
       period={`${dateShort(PTD_FROM)} to ${dateShort(BUSINESS_DATE)}`}
       meta="Filed with authorities — the format is fixed, not ours to redesign"
       csv={() => ({

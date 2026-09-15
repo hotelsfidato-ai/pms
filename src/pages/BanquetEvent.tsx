@@ -117,7 +117,7 @@ export default function BanquetEventPage() {
          the only actionable half. */
       return toast.error("The hall is not free", res.reason);
     }
-    toast.success("Confirmed", "The hall is held, and a folio is open.");
+    toast.success("Confirmed", "The hall is held, and a bill is open.");
     refresh();
   };
 

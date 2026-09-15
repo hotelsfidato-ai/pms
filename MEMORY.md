@@ -6230,6 +6230,33 @@ tests, and it looks deliberate until you see it beside a real primary.
 
 ---
 
+### 258 · The Rooms screen named every room state twice — and my plan to fix it was wrong twice
+
+The filter pills said Vacant / Occupied / Dirty / Blocked; the legend under
+them said Free / In house / Needs cleaning / Out of service; housekeeping had
+a third set (Vacant dirty / Occupied / Out of order). Found in the 15 September
+critique.
+
+The plan I published mapped **Vacant → Free** and **Reserved → Arriving**.
+Both were wrong, and only reading the code that computes each number showed it:
+
+- **Vacant counts `!occupied`** — free rooms, rooms still to clean, and rooms
+  somebody is arriving into. A tile says Free only when none of that is true
+  (`HouseFloor.stateOf`). "Free 10" above eight Free tiles would have been a
+  new contradiction. It is **Empty** now: Empty = Free + Needs cleaning +
+  Arriving, which adds up on screen.
+- **Reserved is `state.reserved`** — a room held for a LATER booking. Not
+  arriving. It keeps its name.
+
+**The rule: rename a number by what it counts, never by what the word
+sounds like.** Two words that sound alike on a screen are read as the same
+thing, so they had better be the same thing — or visibly different ones.
+
+The keys (`Vacant`, `Occupied`, …) stay; the Dashboard, the counts and the
+tests read them. Only what a person reads changed, through `PILL_LABEL`.
+
+---
+
 ### Open · two "in house" numbers for the same moment
 
 The property page (`getTodaySnapshot`) said **In house now 11, Vacant 9** while

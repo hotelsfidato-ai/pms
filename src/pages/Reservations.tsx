@@ -69,7 +69,7 @@ export default function ReservationsPage() {
   return (
     <Page>
       <PageHeader
-        title="Reservations"
+        title="All bookings"
         description={`Every booking on the file, in any state. Business date ${dateLong(BUSINESS_DATE)}.`}
         badge={data ? <StatusPill tone="neutral">{data.length} on file</StatusPill> : undefined}
       />
@@ -107,7 +107,7 @@ export default function ReservationsPage() {
             value={search}
             onChange={(e) => setSearch(e.currentTarget.value)}
             placeholder="Guest, reference or room"
-            aria-label="Search reservations"
+            aria-label="Search bookings"
           />
         </div>
       </div>
@@ -122,7 +122,7 @@ export default function ReservationsPage() {
           onRetry={() => refetch()}
           columns={COLUMNS}
           offerCheckIn
-          emptyTitle={q ? "Nothing matches that" : "No reservations in this state"}
+          emptyTitle={q ? "Nothing matches that" : "No bookings in this state"}
           emptyBody={
             q
               ? "Try a shorter search — a surname, or the last few digits of a reference."
