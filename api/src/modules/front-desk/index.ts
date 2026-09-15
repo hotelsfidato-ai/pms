@@ -1,6 +1,6 @@
 import type { Mount } from "../../mount.ts";
 import { stays } from "./stays.ts";
-import { operations } from "../../routes/operations.ts";
+import { operations } from "./operations.ts";
 import { stayExtras } from "./stayExtras.ts";
 
 /* The front door of the front desk service on the server — the only file
