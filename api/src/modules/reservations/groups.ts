@@ -1,6 +1,6 @@
 import { Hono } from "hono";
-import { withSession } from "../auth.ts";
-import type { Client } from "../db.ts";
+import { withSession } from "../../auth.ts";
+import type { Client } from "../../db.ts";
 
 /* ══════════════════════════════════════════════════════════════════
    GROUPS — twelve rooms and one host

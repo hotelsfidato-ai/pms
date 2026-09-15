@@ -1,5 +1,5 @@
 import type { Mount } from "../../mount.ts";
-import { folios } from "../../routes/folios.ts";
+import { folios } from "./folios.ts";
 import { billing } from "../../routes/billing.ts";
 import { invoices } from "../../routes/invoices.ts";
 
