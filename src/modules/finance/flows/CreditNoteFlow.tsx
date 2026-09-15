@@ -4,7 +4,7 @@ import { FileMinus } from "lucide-react";
 import {
   Button, Dialog, DialogContent, Field, fieldProps, Textarea, toast,
 } from "@/components/ui";
-import { issueCreditNote } from "@/data/repositories";
+import { issueCreditNote } from "@/modules/finance/data/billing";
 
 /* ══════════════════════════════════════════════════════════════════
    CANCELLING AN INVOICE

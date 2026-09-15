@@ -5,7 +5,7 @@ import { api } from "@/lib/api";
    service-folder move (docs/SERVICE-FOLDERS-PLAN.md); the code is
    unchanged. */
 
-import { call } from "./http";
+import { call } from "@/data/repositories/http";
 
 type Result<T = unknown> = ({ ok: true } & T) | { ok: false; reason: string };
 

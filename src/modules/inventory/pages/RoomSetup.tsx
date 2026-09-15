@@ -11,7 +11,7 @@ import {
   NativeSelect, StatusPill,
 } from "@/components/ui";
 import { getRoomSetup, addRoomType, amendRoomType, addRoom, amendRoom, amendFrontDesk, importSetup, type RoomTypeSetup, type RoomSetup as Room, type FrontDeskSettings } from "@/modules/inventory/data/roomSetup";
-import { TaxRulesCard } from "@/components/flows/TaxRulesCard";
+import { TaxRulesCard } from "@/modules/finance";
 import { CommissioningCard } from "@/modules/admin";
 import { ImportDialog } from "@/components/flows/ImportDialog";
 import { ROOM_TYPE_SPEC, ROOM_SPEC } from "@/lib/importSpec";

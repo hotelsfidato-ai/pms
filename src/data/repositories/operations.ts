@@ -11,7 +11,7 @@ import { money } from "@/lib/format";
 import type { Stay, Permitted } from "./types";
 import type { OperationResult } from "./result";
 import { refuse } from "./result";
-import { getFolioBalance } from "./postings";
+import { getFolioBalance } from "@/modules/finance";
 
 
 /* ══════════════════════════════════════════════════════════════════

@@ -5,8 +5,8 @@ import { cn } from "@/lib/cn";
 import { moneyPrecise, amountInWords, dateLong } from "@/lib/format";
 import { useUi } from "@/lib/ui";
 import { Button, Skeleton, ErrorState } from "@/components/ui";
-import { CreditNoteFlow } from "@/components/flows/CreditNoteFlow";
-import { getInvoice } from "@/data/repositories";
+import { CreditNoteFlow } from "@/modules/finance/flows/CreditNoteFlow";
+import { getInvoice } from "@/modules/finance/data/billing";
 
 /* ══════════════════════════════════════════════════════════════════
    THE PRINTED TAX INVOICE

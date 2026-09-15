@@ -5,7 +5,8 @@ import { money } from "@/lib/format";
 import { useUi } from "@/lib/ui";
 import { Page, PageHeader, Card, CardBody, Stat, StatusPill, Term } from "@/components/ui";
 import { StayTable, type StayColumn, type StayRow } from "@/components/lists/StayTable";
-import { listOpenFolios, queryKeys, BUSINESS_DATE } from "@/data/repositories";
+import { listOpenFolios } from "@/modules/finance/data/folios";
+import { queryKeys, BUSINESS_DATE } from "@/data/repositories";
 
 /* ══════════════════════════════════════════════════════════════════
    FOLIOS

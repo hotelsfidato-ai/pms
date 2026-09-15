@@ -1,15 +1,15 @@
 import { Route } from "react-router";
 import { PropertyScope } from "@/components/app/PropertyScope";
-import FoliosPage from "@/pages/Folios";
-import CashieringPage from "@/pages/Cashiering";
+import FoliosPage from "@/modules/finance/pages/Folios";
+import CashieringPage from "@/modules/finance/pages/Cashiering";
 import {
   PaymentsPage, PropertyCityLedgerPage,
-} from "@/pages/Billing";
+} from "@/modules/finance/pages/Billing";
 /* Invoices moved out of Billing.tsx when issuing landed. Three screens
    in one file was already a stretch; a fourth with a mutation in it
    was not. */
-import InvoicesPage from "@/pages/Invoices";
-import InvoicePage from "@/pages/Invoice";
+import InvoicesPage from "@/modules/finance/pages/Invoices";
+import InvoicePage from "@/modules/finance/pages/Invoice";
 
 /* Finance's screen addresses. Mounted by App.tsx inside the signed-in
    shell. */

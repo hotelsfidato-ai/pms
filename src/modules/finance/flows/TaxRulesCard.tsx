@@ -7,10 +7,7 @@ import {
   Card, CardBody, Button, Dialog, DialogContent, Field, fieldProps,
   Input, NativeSelect, StatusPill, toast,
 } from "@/components/ui";
-import {
-  getTaxSetup, setTaxRules, setCategoryTaxKind,
-  type TaxKind, type TaxKindRules, type TaxSlab,
-} from "@/data/repositories";
+import { getTaxSetup, setTaxRules, setCategoryTaxKind, type TaxKind, type TaxKindRules, type TaxSlab } from "@/modules/finance/data/tax";
 
 /* ══════════════════════════════════════════════════════════════════
    GST, IN ONE PLACE, FOR THE DESK AND THE TILL

@@ -10,10 +10,7 @@ import {
   Button, Tooltip, type Column,
 } from "@/components/ui";
 import { describeError } from "@/components/ui/States";
-import {
-  listBillable, getInvoiceSeries, listInvoices, issueInvoice,
-  type BillableRow, type IssuedInvoice,
-} from "@/data/repositories";
+import { listBillable, getInvoiceSeries, listInvoices, issueInvoice, type BillableRow, type IssuedInvoice } from "@/modules/finance/data/billing";
 
 /* ══════════════════════════════════════════════════════════════════
    INVOICES

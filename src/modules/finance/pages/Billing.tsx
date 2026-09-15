@@ -8,7 +8,8 @@ import {
   Page, PageHeader, Card, CardBody, DataTable, StatusPill, Skeleton, EmptyState,
   type Column,
 } from "@/components/ui";
-import { listPayments, paymentsByMethod, BUSINESS_DATE, PTD_FROM, type PaymentRow } from "@/data/repositories";
+import { listPayments, paymentsByMethod, type PaymentRow } from "@/modules/finance/data/billing";
+import { BUSINESS_DATE, PTD_FROM } from "@/data/repositories";
 import { getCityLedger, type CityLedgerRow } from "@/modules/reports";
 
 /* ══════════════════════════════════════════════════════════════════

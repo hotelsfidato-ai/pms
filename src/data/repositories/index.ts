@@ -23,12 +23,10 @@ export * from "./types";
 export { BUSINESS_DATE, PTD_FROM, PTD_TO } from "./businessDate";
 export * from "./properties";
 export * from "./rooms";
-export * from "./folios";
 export * from "./stays";
 export * from "./stayview";
 export * from "./operations";
 export * from "./notifications";
-export * from "./billing";
 export * from "./till";
 export * from "./stayExtras";
 /* Split out of the mixed files on 15 September, one file per service
@@ -36,11 +34,8 @@ export * from "./stayExtras";
    files move into src/modules; importers are pointed at each service's
    front door as they go. */
 export type { OperationResult, AdminResult } from "./result";
-export * from "./postings";
-export * from "./cashier";
 export * from "./posBridge";
 export * from "./me";
-export * from "./tax";
 export * from "./importReport";
 
 

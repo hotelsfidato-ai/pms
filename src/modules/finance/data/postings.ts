@@ -1,12 +1,12 @@
-import type { Posting } from "./operations";
+import type { Posting } from "@/data/repositories/operations";
 import { api, ApiError } from "@/lib/api";
 import { getFolio } from "./folios";
 import type { ChargeCategory, PaymentMethod } from "@/lib/rules";
-import type { OperationResult } from "./result";
-import { getStay } from "./stays";
-import { refuse } from "./result";
+import type { OperationResult } from "@/data/repositories/result";
+import { getStay } from "@/data/repositories/stays";
+import { refuse } from "@/data/repositories/result";
 import { canPostCharge, canReverse } from "@/lib/rules";
-import type { Permitted } from "./types";
+import type { Permitted } from "@/data/repositories/types";
 /* Folio reads, charges, reversals and settling a bill.
 
    Service: finance. Moved out of operations.ts on 15 September in the

@@ -1,5 +1,5 @@
 import { api, ApiError } from "@/lib/api";
-import { fetchOr } from "./http";
+import { fetchOr } from "@/data/repositories/http";
 
 /* ══════════════════════════════════════════════════════════════════
    BILLING — over HTTP, as of CP9e

@@ -10,10 +10,7 @@ import {
   Dialog, DialogContent, DialogClose, Field, fieldProps, Input, Textarea,
   NativeSelect,
 } from "@/components/ui";
-import {
-  getCashierDrawer, openCashierShift, recordCashierMovement,
-  countCashierDrawer, closeCashierShift, type CashierDrawer,
-} from "@/data/repositories";
+import { getCashierDrawer, openCashierShift, recordCashierMovement, countCashierDrawer, closeCashierShift, type CashierDrawer } from "@/modules/finance/data/cashier";
 
 /* ══════════════════════════════════════════════════════════════════
    CASHIERING — the front desk shift
