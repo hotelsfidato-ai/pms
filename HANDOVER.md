@@ -98,6 +98,16 @@ anything the item marks "ask first" — and before any other doubt.** That is
 their standing instruction: *"before you have a doubt you need to ask me and
 clear it up, then proceed."*
 
+### 3.0 · One folder per service — PLANNED, waiting on four decisions
+
+The owner asked (15 September) for the code to be split so each service —
+front desk, reservations, housekeeping, inventory, CRS, reports, POS and the
+rest — has its own folder, so agents can be given one service each and run in
+parallel. **The plan is `docs/SERVICE-FOLDERS-PLAN.md`.** Nothing has moved.
+**Do not start until the owner has answered its four questions**, and no
+second agent should start before the move is done: it runs with every other
+agent paused.
+
 ### 3.1 · Clarity step 2 — one primary action per screen — DONE 15 September
 
 Every dialog's confirm and each screen's main action now declares itself:
@@ -471,6 +481,7 @@ clarity plan (critique, naming rules)   https://claude.ai/artifact/2ZiqpnMVjFsS1
 front-end pass (before / after)         https://claude.ai/artifact/6Gxpi2Ys5YsDFzSMZfB3ZC
 audit of 15 September                   https://claude.ai/artifact/NHsssNJwPvww2Un5nn6Shy
 staff-first plan                        https://claude.ai/code/artifact/8a98bddb-ff0f-4642-b36e-b9c9b5df5c2f
+one folder per service (plan)           https://claude.ai/artifact/2hxwNWXdAC9DpfitP935xR
 ```
 
 They are private to the owner's claude.ai account and another agent may not be

@@ -46,6 +46,35 @@ Write it **as you go**, not at the end from memory. Copy this shape:
 
 ---
 
+## 2026-09-15 (plan) · One folder per service
+
+**Asked for:** split the code so each segment — inventory, CRS, reports, POS
+and the rest — has its own folder, and a folder for every service a hotel
+system offers, so several agents can each work on one; "plan this task".
+
+**Shipped**
+- `docs/SERVICE-FOLDERS-PLAN.md` and the owner's page: 12 built services plus
+  the core, 6 not-built ones as brief-only folders, the six server files that
+  serve several services and where each endpoint goes, the shared files that
+  become lists, the rules for parallel agents, and a ten-step order of work.
+- `HANDOVER.md` § 3.0 points at it: planned, nothing moved.
+
+**Found**
+- `RoomTypesPage` and `RatePlansPage` in `src/pages/Directory.tsx` are routed
+  nowhere (already in PENDING).
+
+**Proved**
+- Counts measured, not estimated: 51 screens, 24 flows, 22 data files (barrel
+  used by 79 files), 26 server files and 27 mounts, 89 migrations, `suite.sql`
+  5,867 lines; each mixed file's endpoints grouped by path.
+
+**Left open**
+- The owner's four decisions (depth, which folders, when, where notes go).
+
+**Commits:** the plan commit.
+
+---
+
 ## 2026-09-15 (deploy) · Everything since 10 September is live
 
 **Asked for:** the owner ran the deploy a day early and asked what preflight's
