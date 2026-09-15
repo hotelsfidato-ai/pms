@@ -5,7 +5,7 @@ import { Users, ChevronRight, ChevronDown, BedDouble } from "lucide-react";
 import { cn } from "@/lib/cn";
 import { money, dateShort } from "@/lib/format";
 import {
-  Page, PageHeader, Card, CardBody, Button, Skeleton, EmptyState, StatusPill,
+  Page, PageHeader, Card, CardBody, Button, Skeleton, EmptyState, StatusPill, Segmented,
 } from "@/components/ui";
 import { listGroups, getGroup, type StayGroup } from "@/data/repositories";
 
@@ -61,22 +61,17 @@ export default function GroupsPage() {
               + `${groups.reduce((n, g) => n + g.rooms, 0)} rooms`
         }
         actions={
-          <div className="flex gap-2">
-            <Button
-              variant={scope === "current" ? "primary" : "secondary"}
-              className="h-11"
-              onClick={() => setScope("current")}
-            >
-              Here and coming
-            </Button>
-            <Button
-              variant={scope === "all" ? "primary" : "secondary"}
-              className="h-11"
-              onClick={() => setScope("all")}
-            >
-              All
-            </Button>
-          </div>
+          /* A choice of view, so the view control. It was two buttons with
+             the selected one drawn PRIMARY — the colour that means "this is
+             the action to take", used to mean "this is selected". */
+          <Segmented<"current" | "all">
+            value={scope}
+            onChange={setScope}
+            options={[
+              { value: "current", label: "Here and coming" },
+              { value: "all", label: "All" },
+            ]}
+          />
         }
       />
 

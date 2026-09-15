@@ -98,7 +98,7 @@ export default function CancellationTermsPage() {
         title="Cancellation terms"
         description="What a cancellation or a no-show costs at this property."
         actions={
-          <Button onClick={() => setOpen((v) => !v)}>
+          <Button variant="primary" onClick={() => setOpen((v) => !v)}>
             <Plus className="size-4" />
             New policy
           </Button>
@@ -299,7 +299,7 @@ function PolicyForm({ hotelId, onDone, onCancel }: {
 
         <div className="flex items-center justify-end gap-3 pt-1">
           <Button variant="secondary" onClick={onCancel}>Cancel</Button>
-          <Button onClick={() => void save()} disabled={busy || !name.trim()}>
+          <Button variant="primary" onClick={() => void save()} disabled={busy || !name.trim()}>
             Save policy
           </Button>
         </div>

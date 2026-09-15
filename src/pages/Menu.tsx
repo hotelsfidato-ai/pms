@@ -356,7 +356,7 @@ function PromotionDialog({
             <Button variant="secondary" size="lg" onClick={onClose}>
               Cancel
             </Button>
-            <Button size="lg" loading={busy} disabled={!ready}
+            <Button variant="primary" size="lg" loading={busy} disabled={!ready}
                     onClick={() => void submit()}>
               Save
             </Button>

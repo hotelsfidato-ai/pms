@@ -343,7 +343,7 @@ export function WalkInFlow({
           )}
 
           {/* ONE action. Not "book" then "check in". */}
-          <Button
+          <Button variant="primary"
             className="w-full"
             /* Over capacity blocks it here too. The server refuses
                independently, but a clerk should find out while the

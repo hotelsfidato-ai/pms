@@ -618,7 +618,7 @@ function PriceDialog({ hotelId, target, onClose, onDone }: {
                 Clear
               </Button>
             )}
-            <Button
+            <Button variant="primary"
               className="h-12 flex-1"
               disabled={saving || price.trim() === ""}
               onClick={() => void save(false)}
@@ -747,7 +747,7 @@ function RestrictionDialog({ hotelId, target, existing, onClose, onDone }: {
             <DialogClose asChild>
               <Button variant="secondary" className="h-12 flex-1">Cancel</Button>
             </DialogClose>
-            <Button className="h-12 flex-1" disabled={saving}
+            <Button variant="primary" className="h-12 flex-1" disabled={saving}
                     onClick={() => void save()}>
               {saving ? "Applying…" : "Apply"}
             </Button>

@@ -132,7 +132,7 @@ export default function PropertyPage() {
         }
         actions={
           grantableRoles.length > 0 && (
-            <Button className="h-11" onClick={() => setAdding(true)}>
+            <Button variant="primary" className="h-11" onClick={() => setAdding(true)}>
               <UserPlus className="size-4" /> Add somebody here
             </Button>
           )
@@ -352,7 +352,7 @@ function AddHereDialog({ code, roles, onClose, onSaved }: {
             <Button variant="secondary" size="lg" onClick={onClose}>
               Cancel
             </Button>
-            <Button size="lg" loading={busy} disabled={!ready}
+            <Button variant="primary" size="lg" loading={busy} disabled={!ready}
                     onClick={() => void submit()}>
               Add
             </Button>
@@ -437,7 +437,7 @@ function SetPasswordDialog({ person, onClose, onSaved }: {
             <Button variant="secondary" size="lg" onClick={onClose}>
               Cancel
             </Button>
-            <Button size="lg" loading={busy}
+            <Button variant="primary" size="lg" loading={busy}
                     disabled={value.length < MIN_PASSWORD}
                     onClick={() => void submit()}>
               Set it

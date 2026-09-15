@@ -270,7 +270,7 @@ export function OrderPad({
                 onClick={() => onOpenChange(false)}>
                 Close
               </Button>
-              <Button
+              <Button variant="primary"
                 size="lg"
                 loading={sending}
                 disabled={lines.length === 0}

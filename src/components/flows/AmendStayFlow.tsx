@@ -122,7 +122,7 @@ export function AmendStayFlow({
               <Button variant="secondary" size="lg" onClick={() => setOpen(false)}>
                 Cancel
               </Button>
-              <Button
+              <Button variant="primary"
                 size="lg" loading={busy}
                 disabled={!changed || nights < 1}
                 onClick={() => void submit()}

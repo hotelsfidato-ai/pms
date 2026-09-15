@@ -143,7 +143,7 @@ function OpenDrawer({ hotelId, previous, onDone }: {
               />
             )}
           </Field>
-          <Button className="h-12 w-full text-base" disabled={busy}
+          <Button variant="primary" className="h-12 w-full text-base" disabled={busy}
                   onClick={() => void open()}>
             <Wallet className="size-4" />
             {busy ? "Opening…" : "Open the drawer"}
@@ -268,7 +268,7 @@ function Shift({ hotelId, shift, colleagues, onDone }: {
                 );
               })}
             </div>
-            <Button onClick={() => void save()} disabled={saving}
+            <Button variant="primary" onClick={() => void save()} disabled={saving}
                     className="h-12 w-full text-base">
               {saving ? "Saving…" : `Save the count — ${money(counted)}`}
             </Button>
@@ -473,7 +473,7 @@ function MovementDialog({ hotelId, onClose, onDone }: {
             <DialogClose asChild>
               <Button variant="secondary" className="h-12 flex-1">Cancel</Button>
             </DialogClose>
-            <Button className="h-12 flex-1"
+            <Button variant="primary" className="h-12 flex-1"
                     disabled={busy || !amount || !reason.trim()}
                     onClick={() => void submit()}>
               Record
@@ -549,7 +549,7 @@ function CloseDialog({ hotelId, shift, colleagues, onClose, onDone }: {
             <DialogClose asChild>
               <Button variant="secondary" className="h-12 flex-1">Not yet</Button>
             </DialogClose>
-            <Button className="h-12 flex-1"
+            <Button variant="primary" className="h-12 flex-1"
                     disabled={busy || (needsReason && !why.trim())}
                     onClick={() => void submit()}>
               <Lock className="size-4" />

@@ -566,7 +566,7 @@ function Movements({ hotelId, day, onDone }: {
               <DialogClose asChild>
                 <Button variant="secondary" className="h-12 flex-1">Cancel</Button>
               </DialogClose>
-              <Button
+              <Button variant="primary"
                 onClick={submit}
                 disabled={saving || !amount || !reason.trim()}
                 className="h-12 flex-1"

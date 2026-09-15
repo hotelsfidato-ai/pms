@@ -133,7 +133,7 @@ export default function BanquetEventPage() {
               <ArrowLeft className="size-4" /> Diary
             </Button>
             {e.status === "enquiry" && (
-              <Button className="h-11" onClick={() => void confirm()}>
+              <Button variant="primary" className="h-11" onClick={() => void confirm()}>
                 <Check className="size-4" /> Confirm and hold the hall
               </Button>
             )}
@@ -385,7 +385,7 @@ function PriceDialog({
             <DialogClose asChild>
               <Button variant="secondary" className="h-11">Cancel</Button>
             </DialogClose>
-            <Button className="h-11" disabled={busy} onClick={() => void save()}>
+            <Button variant="primary" className="h-11" disabled={busy} onClick={() => void save()}>
               {busy ? "Saving…" : "Save"}
             </Button>
           </>
@@ -477,7 +477,7 @@ function CourseDialog({
             <DialogClose asChild>
               <Button variant="secondary" className="h-11">Cancel</Button>
             </DialogClose>
-            <Button className="h-11" disabled={!ready || busy}
+            <Button variant="primary" className="h-11" disabled={!ready || busy}
                     onClick={() => void submit()}>
               {busy ? "Adding…" : "Add"}
             </Button>
@@ -569,7 +569,7 @@ function CancelDialog({
             <DialogClose asChild>
               <Button variant="secondary" className="h-11">Keep it</Button>
             </DialogClose>
-            <Button className="h-11" disabled={!reason.trim() || busy}
+            <Button variant="danger" className="h-11" disabled={!reason.trim() || busy}
                     onClick={() => void submit()}>
               {busy ? "Cancelling…" : "Cancel the function"}
             </Button>

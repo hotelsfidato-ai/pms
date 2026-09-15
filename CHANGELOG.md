@@ -46,6 +46,51 @@ Write it **as you go**, not at the end from memory. Copy this shape:
 
 ---
 
+## 2026-09-15 (step 2) · One main action per screen
+
+**Asked for:** "continue with step 2, the primary buttons" — the clarity
+plan's second step, as scoped in `HANDOVER.md` § 3.1.
+
+**Shipped**
+- Every dialog's confirm and each screen's main action declares itself: 67
+  buttons, each edit checked against its label before it was applied.
+  Destructive confirms — Void, Cancel the function — are `danger`, not orange.
+- The bill follows its state (`FolioPanel.tsx`): Settle is primary while money
+  is owed, Check out once it may happen; never both. Not before arrival, when
+  checking in is the act.
+- The Groups page drew its selected view in primary orange — two buttons
+  faking a toggle. It is the system's `Segmented` control now.
+- `Button` carries `data-variant`, so a test can see what a button means.
+- The desk's bill no longer says "folio": its balance label, and the
+  settle / check-out reasons in `src/lib/rules.ts` (wording only; every rule
+  unchanged — `rules.ts` is shared and frozen, and this is the saying-so).
+
+**Found**
+- 259 · the new guard's first red was a wrong root path, not a finding.
+- Survey regexes missed six unmarked confirms; the guard found them (dish
+  dialog Add, Form C Save, till discount Apply, bill Post charge, and two
+  that needed an explicit secondary: the Assign room trigger and the import
+  dialog's Close).
+
+**Proved**
+- `primaryAction.test.ts` failed naming exactly `RoomSetup.tsx:385` when that
+  confirm's variant was removed; restored, it passes.
+- The stay-panel test failed with `['Settle', 'Check out']` when Check out was
+  made always-primary; restored, it passes.
+- `npx tsc -b` clean; `npx vitest run` 181 passed in 13 files.
+- Opened as Reception on local data: New booking has one primary ("Confirm the
+  booking", grey until the form can be sent); Tanvi Bhide's stay panel shows
+  "Settle and check out", and on Bill exactly one orange "Settle" with Check
+  out blocked beneath it and its reason.
+
+**Left open**
+- `Terminal.tsx` draws its own touch buttons, not `<Button>`; its send action
+  is not marked. Clarity steps 3 and 4: `HANDOVER.md` § 3.2 onwards.
+
+**Commits:** the step 2 commit.
+
+---
+
 ## 2026-09-15 · An audit, a front-end pass, a usability critique, one vocabulary, and this handover
 
 **Asked for:** start it locally and say what is pending from the owner's side,

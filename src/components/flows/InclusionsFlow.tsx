@@ -181,7 +181,7 @@ export function InclusionsFlow({
                 )}
               </Field>
               <div className="flex gap-2">
-                <Button className="h-11" disabled={!ready || busy}
+                <Button variant="primary" className="h-11" disabled={!ready || busy}
                         onClick={() => void add()}>
                   {busy ? "Adding…" : "Add"}
                 </Button>

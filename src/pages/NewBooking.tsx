@@ -615,7 +615,7 @@ function Summary({ hotelId, from, to, nights, lines, types, disabled, onSubmit }
           )}
         </div>
 
-        <Button className="h-12 w-full text-base"
+        <Button variant="primary" className="h-12 w-full text-base"
                 disabled={disabled} onClick={onSubmit}>
           Confirm the booking
         </Button>

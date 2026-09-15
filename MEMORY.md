@@ -6257,6 +6257,23 @@ tests read them. Only what a person reads changed, through `PILL_LABEL`.
 
 ---
 
+### 259 · My new guard went red for a reason that had nothing to do with its rule
+
+The dialog-confirm guard (`primaryAction.test.ts`) failed on its first run,
+and "red" is exactly what a guard that has found offenders looks like. The
+reason was `ENOENT … scandir 'D:\fidato pms\src\src'` — the root path was one
+directory short. Read as a finding, it would have sent me hunting for
+unmarked buttons that were not there, or worse, "fixing" whatever the next
+glance suggested.
+
+Once the path was right it DID find four real ones the survey regex had
+missed, and a tighter label parser found two more. So the rule cuts both ways:
+
+**Read why a test is red before you read what it says.** A failing guard
+proves something only when its failure message is the rule's own message.
+
+---
+
 ### Open · two "in house" numbers for the same moment
 
 The property page (`getTodaySnapshot`) said **In house now 11, Vacant 9** while

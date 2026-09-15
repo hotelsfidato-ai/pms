@@ -224,7 +224,7 @@ export default function TillPage() {
                     placeholder="Table 4"
                     className="flex-1 min-w-40 h-11 px-3 rounded-md border border-grey-300 text-base"
                   />
-                  <Button onClick={start} loading={busy} size="lg">
+                  <Button variant="primary" onClick={start} loading={busy} size="lg">
                     <Plus className="size-4" />
                     Open
                   </Button>
@@ -496,7 +496,7 @@ function DiscountDialog({
               onClick={() => onOpenChange(false)}>
               Cancel
             </Button>
-            <Button
+            <Button variant="primary"
               size="lg"
               loading={busy}
               /* Greyed out over the cap as well, and the reason is
@@ -764,7 +764,7 @@ function SplitPanel({
         )}
       </div>
 
-      <Button
+      <Button variant="primary"
         size="lg"
         className="w-full"
         loading={busy}

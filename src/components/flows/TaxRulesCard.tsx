@@ -245,7 +245,7 @@ function SlabsDialog({ hotelId, rules, open, onOpenChange, onSaved }: {
                     onClick={() => onOpenChange(false)}>
               Cancel
             </Button>
-            <Button className="h-11" disabled={busy} onClick={() => void save()}>
+            <Button variant="primary" className="h-11" disabled={busy} onClick={() => void save()}>
               {busy ? "Saving…" : "Save"}
             </Button>
           </>

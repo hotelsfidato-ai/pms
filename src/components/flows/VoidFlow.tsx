@@ -93,7 +93,7 @@ export function VoidFlow({
                 onClick={() => setOpen(false)}>
                 Keep it
               </Button>
-              <Button
+              <Button variant="danger"
                 size="lg"
                 loading={busy}
                 disabled={!reason.trim()}

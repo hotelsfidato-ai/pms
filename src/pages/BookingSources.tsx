@@ -191,7 +191,7 @@ export default function BookingSourcesPage() {
             : `${live} in use · ${priced} with a commission agreed here`
         }
         actions={
-          <Button className="h-11" onClick={() => setAdding(true)}>
+          <Button variant="primary" className="h-11" onClick={() => setAdding(true)}>
             <Plus className="size-4" /> Add a source
           </Button>
         }
@@ -319,7 +319,7 @@ function SourceDialog({
             <DialogClose asChild>
               <Button variant="secondary" className="h-11">Cancel</Button>
             </DialogClose>
-            <Button className="h-11" disabled={!ready || busy}
+            <Button variant="primary" className="h-11" disabled={!ready || busy}
                     onClick={() => void submit()}>
               {busy ? "Saving…" : "Save"}
             </Button>
@@ -425,7 +425,7 @@ function CommissionDialog({
             <DialogClose asChild>
               <Button variant="secondary" className="h-11">Cancel</Button>
             </DialogClose>
-            <Button className="h-11" disabled={invalid || busy}
+            <Button variant="primary" className="h-11" disabled={invalid || busy}
                     onClick={() => void submit()}>
               {busy ? "Saving…" : "Save"}
             </Button>

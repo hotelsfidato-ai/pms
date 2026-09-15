@@ -581,7 +581,7 @@ function EditPropertyDialog({ hotel, onClose, onSaved }: {
             <Button variant="secondary" size="lg" onClick={onClose}>
               Cancel
             </Button>
-            <Button size="lg" loading={busy} disabled={!name.trim()}
+            <Button variant="primary" size="lg" loading={busy} disabled={!name.trim()}
                     onClick={() => void submit()}>
               Save
             </Button>

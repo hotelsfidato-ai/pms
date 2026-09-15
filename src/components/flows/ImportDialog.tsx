@@ -141,12 +141,12 @@ export function ImportDialog({
         }
         footer={
           applied ? (
-            <Button className="h-11" onClick={() => onOpenChange(false)}>Close</Button>
+            <Button variant="secondary" className="h-11" onClick={() => onOpenChange(false)}>Close</Button>
           ) : (
             <>
               <Button variant="secondary" className="h-11"
                       onClick={() => onOpenChange(false)}>Cancel</Button>
-              <Button className="h-11"
+              <Button variant="primary" className="h-11"
                       disabled={!report || busy || accepted.length === 0}
                       onClick={() => void apply()}>
                 {busy ? "Working…"

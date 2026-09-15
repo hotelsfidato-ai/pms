@@ -90,7 +90,7 @@ export default function WorkOrdersPage() {
         title="Work orders"
         description="What needs fixing. Most of it does not take a room out of service."
         actions={
-          <Button className="h-11" onClick={() => setRaising(true)}>
+          <Button variant="primary" className="h-11" onClick={() => setRaising(true)}>
             <Plus className="size-4" /> Raise one
           </Button>
         }
@@ -263,7 +263,7 @@ function RaiseDialog({ hotelId, onClose, onDone }: {
             <DialogClose asChild>
               <Button variant="secondary" className="h-12 flex-1">Cancel</Button>
             </DialogClose>
-            <Button className="h-12 flex-1" disabled={busy || !title.trim()}
+            <Button variant="primary" className="h-12 flex-1" disabled={busy || !title.trim()}
                     onClick={() => void submit()}>
               Raise it
             </Button>
@@ -325,7 +325,7 @@ function CloseDialog({ hotelId, order, onClose, onDone }: {
                     onClick={() => void finish("cancelled")}>
               Not needed
             </Button>
-            <Button className="h-12 flex-1"
+            <Button variant="primary" className="h-12 flex-1"
                     disabled={busy || !resolution.trim()}
                     onClick={() => void finish("done")}>
               Fixed

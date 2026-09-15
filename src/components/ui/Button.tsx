@@ -98,14 +98,23 @@ export const Button = forwardRef<HTMLButtonElement, ButtonProps>(function Button
       : child;
 
     return (
-      <Slot ref={ref} className={styles} {...props}>
+      <Slot ref={ref} className={styles} data-variant={variant} {...props}>
         {merged}
       </Slot>
     );
   }
 
   return (
-    <button ref={ref} disabled={disabled || loading} className={styles} {...props}>
+    <button
+      ref={ref}
+      disabled={disabled || loading}
+      className={styles}
+      /* What the button MEANS, readable by a test. "One primary action per
+         screen" (the clarity plan, step 2) was a rule nothing could check:
+         3 of 282 buttons had asked to be primary and nobody knew. */
+      data-variant={variant}
+      {...props}
+    >
       {leading}
       {children}
       {!loading && trailingIcon}

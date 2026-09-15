@@ -147,7 +147,7 @@ export function OrderHeaderPanel({
                 onClick={() => setOpen(false)}>
                 Cancel
               </Button>
-              <Button size="lg" loading={busy} onClick={() => void save()}>
+              <Button variant="primary" size="lg" loading={busy} onClick={() => void save()}>
                 Save
               </Button>
             </div>

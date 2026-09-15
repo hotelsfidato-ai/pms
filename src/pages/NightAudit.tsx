@@ -166,7 +166,7 @@ export default function NightAuditPage() {
               <Tooltip content={data.canRun.reason ?? ""}>
                 {/* Rule 6: refused, visible, and explained — not removed. */}
                 <span className="shrink-0">
-                  <Button
+                  <Button variant="primary"
                     disabled={!data.canRun.allowed || run.isPending}
                     onClick={() => run.mutate()}
                   >

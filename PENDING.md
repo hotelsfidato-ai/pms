@@ -208,14 +208,15 @@ example.
 ## 5a · The clarity plan — steps 2 to 4 (critique of 15 September)
 
 Scored 22/40 against "a new receptionist manages their first shift without
-asking". Step 1, one vocabulary, is done. The owner chose, 15 September:
+asking". Steps 1 (one vocabulary) and 2 (one primary action) are done. The owner chose, 15 September:
 Bill at the desk and Folio in Finance; a shorter menu still reaches
 everything by search; report names stay, in sentence case.
 
-- **Step 2 · one primary action per screen.** 3 of 282 buttons declare
-  `variant="primary"` (check-in, the stay panel, sign-in). `Button`
-  defaults to secondary, so every other screen draws "Confirm booking" the
-  same as "Cancel". Plus a test that fails when a form screen has none.
+- **Step 2 · one primary action per screen — done 15 September.** Guarded by
+  `primaryAction.test.ts` (a button beside a Cancel must declare a variant)
+  and the stay-panel test in `App.test.tsx`. Not covered: the full-screen POS
+  terminal (`Terminal.tsx`), which draws its own touch buttons rather than
+  `<Button>` — its send action is not yet marked.
 - **Step 3 · the menu by person.** Reception is shown 48 entries, among
   them the developers' "Design system" page and "Channel manager" (excluded,
   not connected). Target: about 10 for reception, 3 for housekeeping, 5 for

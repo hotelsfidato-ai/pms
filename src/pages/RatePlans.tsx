@@ -322,7 +322,7 @@ function NewSeason({ hotelId, types, plans, onDone }: {
           </Labelled>
         </div>
 
-        <Button size="lg" className="mt-3.5 w-full sm:w-auto"
+        <Button variant="primary" size="lg" className="mt-3.5 w-full sm:w-auto"
           disabled={!ready} loading={busy} onClick={() => void submit()}>
           <Plus className="size-4" />
           Add this price

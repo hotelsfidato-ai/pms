@@ -382,7 +382,7 @@ function TypeDialog({
             <DialogClose asChild>
               <Button variant="secondary" className="h-11">Cancel</Button>
             </DialogClose>
-            <Button className="h-11" disabled={!ready || busy}
+            <Button variant="primary" className="h-11" disabled={!ready || busy}
                     onClick={() => void submit()}>
               {busy ? "Saving…" : "Save"}
             </Button>
@@ -488,7 +488,7 @@ function RoomDialog({
             <DialogClose asChild>
               <Button variant="secondary" className="h-11">Cancel</Button>
             </DialogClose>
-            <Button className="h-11" disabled={!ready || busy}
+            <Button variant="primary" className="h-11" disabled={!ready || busy}
                     onClick={() => void submit()}>
               {busy ? "Saving…" : "Save"}
             </Button>
@@ -593,7 +593,7 @@ function FrontDeskDialog({
             <DialogClose asChild>
               <Button variant="secondary" className="h-11">Cancel</Button>
             </DialogClose>
-            <Button className="h-11" disabled={busy}
+            <Button variant="primary" className="h-11" disabled={busy}
                     onClick={() => void submit()}>
               {busy ? "Saving…" : "Save"}
             </Button>

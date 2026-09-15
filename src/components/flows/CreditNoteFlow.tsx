@@ -75,7 +75,7 @@ export function CreditNoteFlow({ hotelId, number, total }: {
               <Button variant="secondary" size="lg" onClick={() => setOpen(false)}>
                 Keep it
               </Button>
-              <Button
+              <Button variant="primary"
                 size="lg" loading={busy} disabled={!reason.trim()}
                 onClick={() => void submit()}
               >

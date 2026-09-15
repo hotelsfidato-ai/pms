@@ -131,7 +131,7 @@ export default function BanquetPage() {
                     onClick={() => navigate(`/h/${hotelId}/banquet/setup`)}>
               <Settings2 className="size-4" /> Halls and packages
             </Button>
-            <Button className="h-11" onClick={() => setRegistering(true)}>
+            <Button variant="primary" className="h-11" onClick={() => setRegistering(true)}>
               <Plus className="size-4" /> Register a function
             </Button>
           </div>
@@ -324,7 +324,7 @@ function RegisterDialog({
             <DialogClose asChild>
               <Button variant="secondary" className="h-11">Cancel</Button>
             </DialogClose>
-            <Button className="h-11" disabled={!ready || busy}
+            <Button variant="primary" className="h-11" disabled={!ready || busy}
                     onClick={() => void submit()}>
               {busy ? "Registering…" : "Register"}
             </Button>

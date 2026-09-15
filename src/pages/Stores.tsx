@@ -302,7 +302,7 @@ function AddItemDialog({ code, open, onOpenChange, onAdded }: {
           <>
             <Button variant="secondary" className="h-11"
                     onClick={() => onOpenChange(false)}>Cancel</Button>
-            <Button className="h-11"
+            <Button variant="primary" className="h-11"
                     disabled={!name.trim() || !unit.trim() || busy}
                     onClick={() => void submit()}>
               {busy ? "Adding…" : "Add"}
@@ -405,7 +405,7 @@ function MoveDialog({ code, item, kind, open, onOpenChange, onDone }: {
           <>
             <Button variant="secondary" className="h-11"
                     onClick={() => onOpenChange(false)}>Cancel</Button>
-            <Button className="h-11" disabled={!qty.trim() || busy}
+            <Button variant="primary" className="h-11" disabled={!qty.trim() || busy}
                     onClick={() => void submit()}>
               {busy ? "Recording…" : KIND_LABEL[kind]}
             </Button>

@@ -169,7 +169,7 @@ function BalanceHeader({ stay, balance }: { stay: Stay; balance: number }) {
     <div className="flex items-baseline justify-between gap-4 flex-wrap">
       <div>
         <p className="text-2xs font-semibold uppercase tracking-wide text-grey-400">
-          Folio balance
+          Balance
         </p>
         <p
           className={cn(
@@ -425,7 +425,7 @@ function AddChargeDialog({
 
           <div className="flex justify-end gap-2 pt-1">
             <Button variant="ghost" onClick={() => setOpen(false)}>Cancel</Button>
-            <Button
+            <Button variant="primary"
               disabled={!description.trim() || value === 0}
               onClick={async () => {
                 const res = await postCharge(hotelId, stay.id, {
@@ -472,7 +472,15 @@ function SettleDialog({
       onOpenChange={(o) => { setOpen(o); if (o) setAmount(String(outstanding)); }}
     >
       <DialogTrigger asChild>
-        <Button variant="secondary" size="sm" disabled={balance <= 0}>
+        {/* THE BILL'S ONE MAIN ACTION is the next step: settle while money
+            is owed, then check out (below) once it is not — never both
+            orange at once. Not before arrival: then checking in, in the
+            panel's header, is the act. */}
+        <Button
+          variant={balance > 0 && stay.status !== "due-in" ? "primary" : "secondary"}
+          size="sm"
+          disabled={balance <= 0}
+        >
           <Receipt className="size-4" />
           Settle
         </Button>
@@ -523,7 +531,7 @@ function SettleDialog({
 
           <div className="flex justify-end gap-2 pt-1">
             <Button variant="ghost" onClick={() => setOpen(false)}>Cancel</Button>
-            <Button
+            <Button variant="primary"
               disabled={value <= 0}
               onClick={async () => {
                 const res = await settle(hotelId, stay.id, {
@@ -622,6 +630,9 @@ function CheckOutButton({
 }) {
   const button = (
     <Button
+      /* Primary only once it may happen — while it is blocked, Settle
+         above is the step, and two orange buttons would say neither. */
+      variant={allowed ? "primary" : "secondary"}
       className="w-full"
       disabled={!allowed}
       onClick={onCheckOut}
@@ -811,7 +822,7 @@ function SplitBillButton({ hotelId, stayId, onDone }: {
               </Field>
 
               <div className="flex justify-end">
-                <Button
+                <Button variant="primary"
                   onClick={() => void save()}
                   disabled={busy || !companyId}
                 >

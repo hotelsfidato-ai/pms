@@ -166,6 +166,25 @@ describe("the tape chart at /h/:code/stay", () => {
     ]);
   });
 
+  it("shows one main action on each tab of the stay panel", async () => {
+    /* One orange button, and it is the next step (clarity plan, step 2).
+       stay-turn-out is due out with ₹5,715.15 owed: on Stay the act is
+       "Settle and check out"; on Bill it is Settle, while Check out waits,
+       blocked and NOT orange — two primaries would say neither. */
+    go(`/h/${HOTEL}/stay?res=stay-turn-out`);
+    render(<App />);
+    const panel = await screen.findByRole("dialog");
+    const primaries = () => [...panel.querySelectorAll('[data-variant="primary"]')];
+
+    await within(panel).findByText("Settle and check out");
+    expect(primaries().map((b) => b.textContent?.trim())).toEqual(["Settle and check out"]);
+
+    fireEvent.mouseDown(within(panel).getByRole("tab", { name: "Bill" }), { button: 0 });
+    await waitFor(() =>
+      expect(primaries().map((b) => b.textContent?.trim())).toEqual(["Settle"]),
+    );
+  });
+
   it("opens the detail panel from a deep link, with the chart still behind it", async () => {
     go(`/h/${HOTEL}/stay?res=stay-overpaid`);
     const { container } = render(<App />);

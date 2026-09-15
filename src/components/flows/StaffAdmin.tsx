@@ -169,7 +169,7 @@ export function NewPerson({ onDone }: { onDone: () => void }) {
             />
           )}
 
-          <Button size="lg" className="w-full" loading={busy}
+          <Button variant="primary" size="lg" className="w-full" loading={busy}
             disabled={!ready} onClick={() => void submit()}>
             <UserPlus className="size-4" />
             Add them
@@ -430,7 +430,7 @@ export function NewProperty({ onDone }: { onDone: () => void }) {
             </div>
           </div>
 
-          <Button size="lg" className="w-full" loading={busy}
+          <Button variant="primary" size="lg" className="w-full" loading={busy}
             disabled={!ready} onClick={() => void submit()}>
             <Building2 className="size-4" />
             Create the property

@@ -115,7 +115,7 @@ export function LateCheckOutFlow({
                     onClick={() => onOpenChange(false)}>
               Cancel
             </Button>
-            <Button className="h-11" disabled={!reason.trim() || busy}
+            <Button variant="primary" className="h-11" disabled={!reason.trim() || busy}
                     onClick={() => void submit()}>
               {busy ? "Checking out…" : "Check out"}
             </Button>

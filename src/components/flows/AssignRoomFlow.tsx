@@ -105,7 +105,7 @@ export function AssignRoomFlow({ hotelId }: { hotelId: string }) {
       onOpenChange={(o) => { setOpen(o); if (!o) reset(); }}
     >
       <DialogTrigger asChild>
-        <Button size="sm">
+        <Button variant="secondary" size="sm">
           <Plus className="size-4" />
           Assign room
         </Button>
@@ -119,7 +119,7 @@ export function AssignRoomFlow({ hotelId }: { hotelId: string }) {
             <Button variant="ghost" onClick={() => setOpen(false)}>
               Cancel
             </Button>
-            <Button
+            <Button variant="primary"
               loading={busy}
               disabled={!chosen || !room}
               onClick={() => void submit()}

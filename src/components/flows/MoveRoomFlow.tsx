@@ -155,7 +155,7 @@ export function MoveRoomFlow({
               <Button variant="secondary" size="lg" onClick={() => setOpen(false)}>
                 Cancel
               </Button>
-              <Button
+              <Button variant="primary"
                 size="lg" loading={busy} disabled={!room.trim()}
                 onClick={() => void submit()}
               >

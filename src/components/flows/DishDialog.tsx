@@ -106,7 +106,7 @@ export function DishDialog({
               onClick={() => onOpenChange(false)}>
               Cancel
             </Button>
-            <Button
+            <Button variant="primary"
               size="lg"
               loading={busy}
               disabled={!ready}

@@ -121,7 +121,7 @@ export default function PeoplePage() {
               + `${active.filter((s) => s.isGroupAdmin).length} can reach every property`
         }
         actions={
-          <Button className="h-11" onClick={() => setAdding(true)}>
+          <Button variant="primary" className="h-11" onClick={() => setAdding(true)}>
             <UserPlus className="size-4" /> Add somebody
           </Button>
         }
@@ -409,7 +409,7 @@ function PasswordDialog({ person, onClose, onSaved }: {
             <Button variant="secondary" size="lg" onClick={onClose}>
               Cancel
             </Button>
-            <Button size="lg" loading={busy}
+            <Button variant="primary" size="lg" loading={busy}
                     disabled={value.length < MIN_PASSWORD}
                     onClick={() => void submit()}>
               Set it
@@ -492,7 +492,7 @@ function EditPersonDialog({ person, onClose, onSaved }: {
             <Button variant="secondary" size="lg" onClick={onClose}>
               Cancel
             </Button>
-            <Button size="lg" loading={busy} disabled={!name.trim()}
+            <Button variant="primary" size="lg" loading={busy} disabled={!name.trim()}
                     onClick={() => void submit()}>
               Save
             </Button>
@@ -576,7 +576,7 @@ function AddPersonDialog({ open, onOpenChange, onAdded }: {
           <>
             <Button variant="secondary" className="h-11"
                     onClick={() => onOpenChange(false)}>Cancel</Button>
-            <Button className="h-11" disabled={!ready || busy}
+            <Button variant="primary" className="h-11" disabled={!ready || busy}
                     onClick={() => void submit()}>
               {busy ? "Adding…" : "Add"}
             </Button>
@@ -676,7 +676,7 @@ function GrantDialog({ person, open, onOpenChange, onGranted }: {
           <>
             <Button variant="secondary" className="h-11"
                     onClick={() => onOpenChange(false)}>Cancel</Button>
-            <Button className="h-11" disabled={!code || busy}
+            <Button variant="primary" className="h-11" disabled={!code || busy}
                     onClick={() => void submit()}>
               {busy ? "Saving…" : "Give access"}
             </Button>

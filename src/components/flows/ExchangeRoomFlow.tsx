@@ -88,7 +88,7 @@ export function ExchangeRoomFlow({
                     onClick={() => onOpenChange(false)}>
               Cancel
             </Button>
-            <Button className="h-11" disabled={!ready || busy}
+            <Button variant="primary" className="h-11" disabled={!ready || busy}
                     onClick={() => void submit()}>
               <ArrowLeftRight className="size-4" />
               {busy ? "Exchanging…" : "Exchange"}

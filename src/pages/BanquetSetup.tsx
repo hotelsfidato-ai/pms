@@ -246,7 +246,7 @@ function VenueDialog({
             <DialogClose asChild>
               <Button variant="secondary" className="h-11">Cancel</Button>
             </DialogClose>
-            <Button className="h-11" disabled={!name.trim() || busy}
+            <Button variant="primary" className="h-11" disabled={!name.trim() || busy}
                     onClick={() => void submit()}>
               {busy ? "Saving…" : "Save"}
             </Button>
@@ -343,7 +343,7 @@ function PackageDialog({
             <DialogClose asChild>
               <Button variant="secondary" className="h-11">Cancel</Button>
             </DialogClose>
-            <Button className="h-11" disabled={!name.trim() || busy}
+            <Button variant="primary" className="h-11" disabled={!name.trim() || busy}
                     onClick={() => void submit()}>
               {busy ? "Adding…" : "Add"}
             </Button>

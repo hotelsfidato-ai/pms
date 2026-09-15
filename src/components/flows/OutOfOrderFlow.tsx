@@ -207,7 +207,7 @@ export function OutOfOrderFlow({
                   <StatusPill tone="neutral">
                     {to ? `${dateLong(from)} – ${dateLong(to)}` : "No end date"}
                   </StatusPill>
-                  <Button
+                  <Button variant="primary"
                     onClick={() => void take()}
                     disabled={busy || !from || (!!to && to < from)}
                   >

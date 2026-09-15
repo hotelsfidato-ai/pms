@@ -118,7 +118,7 @@ export default function FormCPage() {
               className="w-40"
               aria-label="FRRO acknowledgement reference"
             />
-            <Button
+            <Button variant="primary"
               size="sm"
               disabled={!reference.trim() || record.isPending}
               onClick={() =>

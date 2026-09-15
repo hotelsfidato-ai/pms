@@ -50,7 +50,7 @@ local cp6           ahead of it by every commit listed below
 go-live scope       211 / 228  (93%)      the 17 open are the channel manager (excluded)
                                           and the CRS bridge (waiting on its API documents)
 staff-first plan    phase 1 of 4 built
-clarity plan        step 1 of 4 built
+clarity plan        steps 1 and 2 of 4 built
 ```
 
 **Waiting to be deployed** — one deploy carries all of it:
@@ -64,6 +64,7 @@ clarity plan        step 1 of 4 built
       remembered per person, "Reception can use the POS" switch per hotel
       front-end pass: sign-in screen, Dashboard icons, report header facts, Manager report CSV
       one vocabulary: room states, menu, headings, browser tab titles
+      one main action per screen: 67 confirms and main actions declared, two guards
 ```
 
 **Gates, measured 15 September on this machine:**
@@ -73,7 +74,7 @@ db/tests/run.sh         574 assertions passed        scratch database, dropped a
 db/tests/rerun.sh       87 migrations re-runnable    scratch database, migrated twice
 cd api && npm test      350 passed, 28 files         never `npx vitest run` inside api/
 npx tsc -b              clean
-npx vitest run          179 passed, 12 files
+npx vitest run          181 passed, 13 files
 ```
 
 ---
@@ -85,23 +86,20 @@ anything the item marks "ask first" — and before any other doubt.** That is
 their standing instruction: *"before you have a doubt you need to ask me and
 clear it up, then proceed."*
 
-### 3.1 · Clarity step 2 — one primary action per screen
+### 3.1 · Clarity step 2 — one primary action per screen — DONE 15 September
 
-Of 282 `<Button>`s in the product, three declare `variant="primary"`
-(`CheckInFlow`, `StayDrawer`, `SignIn`). `Button` defaults to `secondary`, so
-on every other screen "Confirm booking" is drawn exactly like "Cancel".
+Every dialog's confirm and each screen's main action now declares itself:
+primary for the act, danger for a destructive one (Void, Cancel the function).
+The bill's main action follows its state — Settle while money is owed, Check
+out once it may happen, never both. The Groups page's fake toggle is the
+`Segmented` control. `Button` carries `data-variant` for tests.
 
-```
-New booking     Confirm booking          Walk-in       Check in guest
-Bill            Take payment             Till          Send to kitchen / Settle
-Night audit     Close the day            People        Add a person
-```
+Two guards, both seen to fail: `src/components/ui/primaryAction.test.ts`
+refuses any button beside a Cancel that does not declare a variant, and
+`App.test.tsx` "shows one main action on each tab of the stay panel". **Any
+new dialog must pass the first.** Details: `CHANGELOG.md`, 15 September (step 2).
 
-Destructive actions keep `variant="danger"` and are never the primary. Add a
-test that fails when one of these screens has no primary button (a
-`data-variant` on `Button` is the simplest hook), and prove it fails.
-**Done when** each screen above has exactly one solid orange button and it is
-the right one — opened in the browser as Reception and as GM.
+**Start at 3.2.**
 
 ### 3.2 · Clarity step 3 — the menu by person
 
