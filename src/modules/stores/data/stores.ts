@@ -1,5 +1,5 @@
 import { api, ApiError } from "@/lib/api";
-import type { ImportReport } from "./importReport";
+import type { ImportReport } from "../../../data/repositories/importReport";
 
 /* ══════════════════════════════════════════════════════════════════
    THE STORE

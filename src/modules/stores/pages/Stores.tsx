@@ -12,12 +12,7 @@ import {
   Dialog, DialogContent, Field, fieldProps, Input, NativeSelect,
   StatusPill, toast,
 } from "@/components/ui";
-import {
-  getStore, getStockHistory, addStockItem, recordStockMovement,
-  reverseStockMovement,
-  importStockItems,
-  type StockItem, type StockKind,
-} from "@/data/repositories";
+import { getStore, getStockHistory, addStockItem, recordStockMovement, reverseStockMovement, importStockItems, type StockItem, type StockKind } from "@/modules/stores/data/stores";
 import { ImportDialog } from "@/components/flows/ImportDialog";
 import { STOCK_SPEC } from "@/lib/importSpec";
 

@@ -36,7 +36,6 @@ export * from "./till";
 export * from "./banquet";
 export * from "./roomSetup";
 export * from "./bookingSources";
-export * from "./stores";
 export * from "./stayExtras";
 /* Split out of the mixed files on 15 September, one file per service
    (docs/SERVICE-FOLDERS-PLAN.md). Re-exported here while the services'

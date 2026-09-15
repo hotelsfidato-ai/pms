@@ -1,6 +1,6 @@
 import { Route } from "react-router";
 import { PropertyScope } from "@/components/app/PropertyScope";
-import StoresPage from "@/pages/Stores";
+import StoresPage from "@/modules/stores/pages/Stores";
 
 /* The store's screen address. Mounted by App.tsx inside the signed-in
    shell. */
