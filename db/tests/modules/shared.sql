@@ -77,3 +77,75 @@ begin
   perform test.ok('suppliers and locations','the fixtures do not outlive the test', n = 0,
     n || ' left behind');
 end $$;
+
+
+-- =============================================================================
+-- EQUIPMENT LEAVING THE STORE (095) — the owner's S12 to S15, 16 September
+-- =============================================================================
+-- Who may decide is checked by the API (api/test/equipmentApproval.test.ts),
+-- as it is for every approval. What is proved here is the data it decides on:
+-- the rule exists at every property, new ones included, and the request
+-- freezes the first approver AND the backups.
+do $$
+declare
+  h uuid; asker uuid; other uuid; a uuid; p uuid; n int;
+begin
+  select id into asker from staff where email = 'agra@fidato.in';
+  select id into other from staff where email = 'owner@fidato.in';
+
+  h := app.provision_property_unchecked('EQA','Equipment Approval Test','Nowhere');
+
+  -- ---------- the rule, everywhere ----------
+  select count(*) into n from approval_rules
+   where hotel_id = h and kind = 'equipment_issue' and approver_role = 'stores'
+     and over_amount is null and is_active
+     and also_decided_by = array['owner', 'admin', 'gm'];
+  perform test.ok('equipment approvals',
+    'a property created today gets the rule: the Inventory Manager, the owner, admin and GM behind them',
+    n = 1, n || ' matching rules');
+
+  select count(*) into n from hotels x
+   where x.code not in ('AGR')   -- the API approvals test clears Agra's rules for itself
+     and not exists (select 1 from approval_rules r
+                      where r.hotel_id = x.id and r.kind = 'equipment_issue'
+                        and r.approver_role = 'stores');
+  perform test.ok('equipment approvals','every property has the rule', n = 0, n || ' without it');
+
+  -- ---------- a request freezes who decides, and who may instead ----------
+  a := app.request_approval(h, 'equipment_issue', 'equipment_moves',
+         gen_random_uuid(), 'A kettle for room 104', null, asker);
+  perform test.ok('equipment approvals','taking equipment out of the store raises a request', a is not null);
+  perform test.ok('equipment approvals','the request is for the Inventory Manager',
+    (select approver_role from approvals where id = a) = 'stores');
+  perform test.ok('equipment approvals','and names the owner, admin and GM as the backups',
+    (select also_decided_by from approvals where id = a) = array['owner', 'admin', 'gm']);
+
+  update approval_rules set also_decided_by = '{}'
+   where hotel_id = h and kind = 'equipment_issue';
+  perform test.ok('equipment approvals','changing the rule does not re-route a request already waiting',
+    (select also_decided_by from approvals where id = a) = array['owner', 'admin', 'gm']);
+
+  -- ---------- a purchase keeps one decider ----------
+  insert into approval_rules (hotel_id, kind, approver_role, over_amount, set_by)
+  values (h, 'purchase', 'owner', null, other);
+  p := app.request_approval(h, 'purchase', 'purchase_invoices',
+         gen_random_uuid(), 'Vegetables for the week', 4200, asker);
+  perform test.ok('equipment approvals','a purchase names no backups — the GM still cannot take the owner''s decision',
+    (select also_decided_by from approvals where id = p) = '{}'::text[]);
+
+  perform test.raises('equipment approvals','a kind nobody decided on is still refused',
+    format($q$insert into approval_rules (hotel_id, kind, approver_role)
+              values (%L, 'equipment_theft', 'gm')$q$, h), '23514');
+
+  -- ---------- nobody approves their own, backups included ----------
+  perform test.raises('equipment approvals','the person who asked cannot approve it',
+    format($q$select app.decide_approval(%L, 'approved', %L, null)$q$, a, asker), '23514');
+
+  -- ---------- and the fixtures go ----------
+  delete from approvals where hotel_id = h;
+  alter table hotels disable trigger hotels_no_delete;
+  delete from hotels where id = h;
+  alter table hotels enable trigger hotels_no_delete;
+  select count(*) into n from hotels where code = 'EQA';
+  perform test.ok('equipment approvals','the fixture does not outlive the test', n = 0, n || ' left behind');
+end $$;

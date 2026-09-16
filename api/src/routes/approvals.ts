@@ -61,6 +61,20 @@ async function meAt(
   };
 }
 
+/** May this person decide a request frozen with these roles? The first
+    approver, any backup the rule named (095, S14 — the owner, an
+    administrator or the GM when the Inventory Manager is away), or the
+    group owner. Nobody-approves-their-own is checked separately, and in
+    the database. */
+function decides(
+  me: { role: string | null; isOwner: boolean },
+  approverRole: string, alsoDecidedBy: readonly string[],
+): boolean {
+  if (me.isOwner) return true;
+  if (me.role === null) return false;
+  return me.role === approverRole || alsoDecidedBy.includes(me.role);
+}
+
 /* ── The queue ─────────────────────────────────────────────────────
    Everything waiting, and what has been decided lately. BOTH, because
    the owner's answer was that the GM and the Owner stay in the loop —
@@ -78,18 +92,28 @@ approvals.get("/:code/approvals", async (c) => {
     const { rows } = await client.query<{
       id: string; kind: string; subject_table: string; subject_id: string;
       reason: string; amount: string | null; status: string;
-      approver_role: string; requested_at: string;
-      requested_by_name: string; decided_by_name: string | null;
+      approver_role: string; also_decided_by: string[]; requested_at: string;
+      requested_by: string; requested_by_name: string | null;
+      decided_by_name: string | null;
       decided_at: string | null; decision_note: string | null;
     }>(
       `select a.id::text, a.kind, a.subject_table, a.subject_id::text,
               a.reason, a.amount::text, a.status, a.approver_role,
-              a.requested_at::text,
+              a.also_decided_by, a.requested_at::text,
+              a.requested_by::text,
               rq.full_name as requested_by_name,
               dc.full_name as decided_by_name,
               a.decided_at::text, a.decision_note
          from approvals a
-         join staff rq on rq.id = a.requested_by
+         /* ⚠ LEFT, NOT INNER (16 September). The staff table is row-secured: most
+            roles read only their own row (027). An inner join therefore
+            HID every request somebody else raised — the Inventory Manager,
+            the one person the equipment queue is for, saw it empty, and
+            so did an administrator. A waiting request is never hidden;
+            where the name is not visible it is null, and the screen shows
+            a dash. Whether an approver may see who asked is the owner's
+            question (asked with STO-4, the Store's same fault). */
+         left join staff rq on rq.id = a.requested_by
          left join staff dc on dc.id = a.decided_by
         where a.hotel_id = $1
           and ($2 = 'all' or a.status = $2)
@@ -113,6 +137,7 @@ approvals.get("/:code/approvals", async (c) => {
         amount: r.amount,
         status: r.status,
         approverRole: r.approver_role,
+        alsoDecidedBy: r.also_decided_by,
         requestedBy: r.requested_by_name,
         requestedAt: r.requested_at,
         decidedBy: r.decided_by_name,
@@ -125,15 +150,20 @@ approvals.get("/:code/approvals", async (c) => {
 
            Both exist deliberately. This one is a courtesy; the one in
            the database is the guarantee. */
+        /* The requester test was missing until 16 September: the
+           person who asked was offered Approve, and the server then
+           refused it — exactly the disagreement this rule forbids. */
         mayDecide:
           r.status === "pending" &&
-          r.requested_by_name !== undefined &&
           me.staffId !== "" &&
-          (me.role === r.approver_role || me.isOwner),
+          r.requested_by !== me.staffId &&
+          decides(me, r.approver_role, r.also_decided_by),
         blockedBecause:
           r.status !== "pending"
             ? `Already ${r.status}.`
-            : me.role !== r.approver_role && !me.isOwner
+            : r.requested_by === me.staffId
+              ? "You asked for this one, so you cannot be the person who approves it."
+              : !decides(me, r.approver_role, r.also_decided_by)
               ? `This one is for the ${r.approver_role} to decide.`
               : undefined,
       })),
@@ -175,9 +205,10 @@ approvals.post("/:code/approvals/:id/:decision", async (c) => {
     const me = await meAt(client, hotelId);
 
     const { rows } = await client.query<{
-      status: string; approver_role: string; requested_by: string;
+      status: string; approver_role: string; also_decided_by: string[];
+      requested_by: string;
     }>(
-      `select status, approver_role, requested_by::text
+      `select status, approver_role, also_decided_by, requested_by::text
          from approvals where id = $1 and hotel_id = $2`,
       [c.req.param("id"), hotelId],
     );
@@ -195,7 +226,7 @@ approvals.post("/:code/approvals/:id/:decision", async (c) => {
         "You asked for this one, so you cannot be the person who approves it.",
       );
     }
-    if (me.role !== row.approver_role && !me.isOwner) {
+    if (!decides(me, row.approver_role, row.also_decided_by)) {
       return refuse(`This one is for the ${row.approver_role} to decide.`);
     }
 
@@ -221,9 +252,9 @@ approvals.get("/:code/approval-rules", async (c) => {
 
     const { rows } = await client.query<{
       kind: string; approver_role: string; over_amount: string | null;
-      is_active: boolean;
+      is_active: boolean; also_decided_by: string[];
     }>(
-      `select kind, approver_role, over_amount::text, is_active
+      `select kind, approver_role, over_amount::text, is_active, also_decided_by
          from approval_rules where hotel_id = $1
         order by kind, over_amount nulls first`,
       [hotelId],
@@ -233,6 +264,7 @@ approvals.get("/:code/approval-rules", async (c) => {
       rules: rows.map((r) => ({
         kind: r.kind,
         approverRole: r.approver_role,
+        alsoDecidedBy: r.also_decided_by,
         /* Null is "always, whatever the amount" — NOT zero. Zero would
            read as "anything above nothing", which is the same rule said
            confusingly, and the screen shows a dash for it. */

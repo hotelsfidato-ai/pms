@@ -358,6 +358,18 @@ and Room systems folders. **Next: 1A Store and 1B Equipment, in parallel.**
 **Migration numbers changed rule (plan § 7):** a chat takes the next number after
 cp6's highest; the master renumbers at merge. The 094 once given to admin is void.
 
+**S12–S15 APPROVED the same evening — one system, one Inventory Manager.**
+Equipment leaving the store waits for the **Inventory Manager** (the `stores`
+role renamed; key unchanged); the owner, admin or GM may decide instead; anybody
+who sees equipment may ask; stock needs no approval. **Built by the master:**
+migration **095** (approval kind `equipment_issue`, `also_decided_by` backups,
+the rule at every property and every new one), `api/src/routes/approvals.ts`
+(backups decide; the queue no longer hides requests others raised; the asker is
+no longer offered Approve), the role's name and equipment grants. Next free
+migration: **096**. **OPEN, asked of the owner:** may the Inventory Manager see
+WHO asked or took something — staff names are hidden from most roles (the
+approvals queue shows a dash; the Store's STO-4 is the same question).
+
 ### 3.0g · Round 1 of the service chats — who holds what, 16 September
 
 The owner talks to the master chat; the master hands out the work. Checked for

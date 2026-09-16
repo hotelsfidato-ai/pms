@@ -6539,6 +6539,33 @@ copy will see of theirs.**
 
 ---
 
+### 283 · A join to `staff` silently hides rows for most roles
+
+16 September, found by the master's new test for equipment approvals. The
+approvals queue (`api/src/routes/approvals.ts`) read the requester's name with
+`join staff`. `staff` is row-secured (027): most roles read only their own row.
+So the inner join dropped every request somebody ELSE had raised — the
+Inventory Manager's queue, the one the owner had just decided they approve
+from, came back empty, and so did an administrator's. Only the GM and the owner
+saw requests. No error anywhere; the list was simply short.
+
+The Store's STO-4 is the same fault one step milder (a left join, so the rows
+stay and the name is blank). Two services, one cause.
+
+**Fixed in the queue:** `left join`, so a waiting request is never hidden and
+the name is null (a dash) where the viewer may not see it. Whether an approver
+may see who asked is a question for the owner, not a join.
+
+Found beside it: the queue offered Approve to the person who asked, and the
+server then refused — the button and the server disagreeing, which that file's
+own comment forbids. `mayDecide` now checks the requester.
+
+**The rule: never INNER JOIN a row-secured table for a label. A missing label
+is a dash; a missing row is a lie. And test a list as the role it is FOR, not
+as the GM — the GM sees everything and proves nothing.**
+
+---
+
 ### 282 · MINE: I gave a migration number to a chat, then used it myself
 
 16 September. HANDOVER said **094 is assigned to admin** for ADM-1. The same

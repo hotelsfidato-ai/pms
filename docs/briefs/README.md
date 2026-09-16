@@ -39,7 +39,8 @@ desk → inventory → pos**, because those three hold the most open work.
 business date, so its brief starts read-only; **admin** decides who may sign in
 and what they may do, so every change to a role waits on the owner. **Store** and
 **Equipment** are phases 1A and 1B of `docs/STOCK-AND-EQUIPMENT-PLAN.md`, run
-together; the Store's first task is STO-1, still open.
+together; the Store's first task is STO-1, still open. The role that runs both
+is the **Inventory Manager** (the `stores` key, renamed 16 September).
 
 ### Services that are still Coming soon
 
