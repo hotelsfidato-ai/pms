@@ -71,24 +71,18 @@ directory.get("/:code/room-types", async (c) => {
   return body ? c.json(body) : c.json({ error: "No such property." }, 404);
 });
 
-directory.get("/rate-plans", async (c) => {
-  const body = await withSession(c.get("subject"), async (client) => {
-    const { rows } = await client.query<{
-      code: string; name: string; includes: string;
-    }>("select code, name, includes from meal_plans order by code");
+/* ⚠ `GET /api/hotels/rate-plans` WAS HERE AND COULD NEVER RUN (INV-1).
+   It listed the meal plans, group-wide. But this router is mounted at
+   /api/hotels, where `GET /:code` is registered first, so Hono matched
+   "rate-plans" as a property code and the route answered
+   404 "No such property." — read on 15 September, and confirmed by
+   calling it on 16 September.
 
-    /* Where the live eZee system shows each plan. Presentation, not
-       schema — the export prints "Deluxe CP", room type and meal plan
-       together, and only two of these appear in it at all. */
-    const SEEN: Record<string, string> = { CP: "Deluxe CP", RO: "Room Only" };
+   Removed rather than reordered: nothing called it, and moving a route
+   above another to make it reachable is a change every later route has
+   to remember. The meal plans a screen needs come with the rates:
+   `GET /:code/rate-plans` (`rates.ts`) returns `mealPlans` alongside
+   the room types and the rate rows.
 
-    return rows.map((r) => ({
-      code: r.code === "RO" ? "Room Only" : r.code,
-      name: r.name,
-      includes: r.includes,
-      seenAs: SEEN[r.code] ?? null,
-    }));
-  });
-
-  return c.json(body ?? []);
-});
+   A route a broader route shadows is not a route; it is a 404 with a
+   comment. Removed 16 September 2026. */

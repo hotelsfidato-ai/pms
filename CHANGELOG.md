@@ -50,6 +50,35 @@ Write it **as you go**, not at the end from memory. Copy this shape:
 
 ---
 
+## 2026-09-16 (fixes) · The People guard and the shadowed rate-plans route
+
+**Asked for:** "now fix the people guard and the rate-plans route."
+
+**Shipped**
+- **PEO-1 fixed** — `/people` is wrapped in
+  `<RequireAccess path="/people" resource="user">`
+  (`src/modules/admin/routes.tsx`), with the reason above it. A reception
+  clerk who types the address now gets "This page is not part of your role"
+  instead of a screen with Add somebody, Password, Edit and Deactivate on it.
+- **INV-1 fixed** — `GET /api/hotels/rate-plans` removed from
+  `api/src/modules/inventory/roomTypesAndPlans.ts`; the reason stays in its
+  place. It could never run: `GET /api/hotels/:code` matched "rate-plans" as a
+  property code, so it answered 404. Nothing called it; the meal plans come
+  with `GET /:code/rate-plans`.
+- Both closed in their service's `DEFECTS.md` with what was done, and marked
+  fixed in `PENDING.md`.
+
+**Proved:** web types clean · 206 web tests, exit 0 · **359 API tests, exit 0**
+· strip-check 68 files · api types clean.
+
+**Found — MEMORY 277, mine:** I first ran the API suite as `npx vitest run`,
+which points it at the development database, and 43 tests failed on data
+drift. The suite is `npm test` (its own database, decision D1). Re-run
+properly: 359 passed. The development database was written into by that bad
+run; `npm run demo` reloads it.
+
+---
+
 ## 2026-09-16 (defects) · Every service carries its own defect log
 
 **Asked for:** "each folder needs to contain its own defects file, so that when

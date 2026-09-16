@@ -6539,6 +6539,24 @@ copy will see of theirs.**
 
 ---
 
+### 277 · MINE: I ran the API suite against the development database
+
+16 September, checking two small fixes. `npm test` in `api/` is
+`bash scripts/with-test-db.sh` — the harness that gives the tests their own
+database, written after eleven defects caused by sharing one (decision D1).
+I ran `npx vitest run` instead, which is `test:only`, and it pointed all 359
+tests at the database the dev server and my own route audit had been using.
+43 failed on data drift: a receipts total 18,544 out, constraint violations on
+menu items, whole files failing to set up. I read the failures before
+concluding anything and re-ran it properly — 359 passed, exit 0 — but the bad
+run also wrote into the development database, which is what the harness exists
+to prevent.
+
+**The rule: run a suite the way its own package.json runs it. `npx vitest run`
+is not the gate; `npm test` is.**
+
+---
+
 ### 276 · MINE: a menu name too long for the sidebar
 
 Building the Coming soon section (16 September) I named one page

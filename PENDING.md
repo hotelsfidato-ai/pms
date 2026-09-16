@@ -202,7 +202,9 @@ Every route called and every screen opened against the local copy;
 production read read-only. The audit is
 `docs/audits/2026-09-16-routes-and-pending.md`.
 
-- **PEO-1 · the People screen has no route guard.** `/people` opens for a
+- **PEO-1 · the People screen has no route guard — FIXED 16 September**
+  (the route is now wrapped in `RequireAccess`; see
+  `src/modules/admin/DEFECTS.md`). What it was: `/people` opens for a
   reception clerk and shows Add somebody, Give a property, Password, Edit and
   Deactivate. Its menu entry needs the `user` grant, which reception does not
   have, so the entry is hidden — but `src/modules/admin/routes.tsx` mounts the
@@ -224,9 +226,10 @@ production read read-only. The audit is
 - **POS-3 · the Kitchen screen has no heading.** Every other screen carries a
   `PageHeader`; the kitchen wallboard opens straight into its two columns.
   Deliberate or not, it is the only screen with no `h1`.
-- **INV-1 confirmed by running it:** `GET /api/hotels/rate-plans` answers
-  404 "No such property" because `GET /api/hotels/:code` is registered first.
-  Nothing calls it. Delete it rather than reorder the mounts.
+- **INV-1 · `GET /api/hotels/rate-plans` — FIXED 16 September.** It answered
+  404 "No such property" because `GET /api/hotels/:code` is registered first;
+  confirmed by calling it, then removed (nothing called it). See
+  `src/modules/inventory/DEFECTS.md`.
 
 **Also measured:** 214 routes (92 GET, 92 POST, 13 PATCH, 10 PUT, 7 DELETE);
 81 GET routes proven answering as the owner, 69 as a clerk; 13 routes with no

@@ -23,8 +23,24 @@ export const routes = (
     {/* NOT development-gated. The endpoints behind it have
         existed since the admin work and were reachable only from
         a dev-only console, so the owner -- the one person who
-        actually has staff to add -- could not reach them. */}
-    <Route path="/people" element={<PeoplePage />} />
+        actually has staff to add -- could not reach them.
+
+        ⚠ GUARDED SINCE 16 SEPTEMBER (PEO-1). It was mounted bare, so
+        a reception clerk who typed /people got the screen — with Add
+        somebody, Password, Edit and Deactivate on it. Nothing leaked
+        (the database showed them their own row and the server refused
+        every button), but the menu hid the entry while the route let
+        them in, which is the disagreement `mayReach` exists to remove.
+        The guard asks the navigation, so the hidden link and the
+        refused page now give one answer. */}
+    <Route
+      path="/people"
+      element={
+        <RequireAccess path="/people" resource="user">
+          <PeoplePage />
+        </RequireAccess>
+      }
+    />
 
     <Route
       /* ⚠ A REDIRECT, NOT A SECOND COPY OF THE SCREEN. There

@@ -14,15 +14,6 @@ entries stay here: they are the reason the fault does not come back.
 
 ## Open — not fixed
 
-### PEO-1 · The People screen has no route guard
-
-**Found** — 16 September, opening `/people` as a reception clerk in the local copy.
-
-`src/modules/admin/routes.tsx` mounts `/people` without `RequireAccess`, so any signed-in person can open it; the menu entry needs the `user` grant, which reception does not have, so the entry is hidden and the page is not. The clerk sees their own row only (row-level security) and every button is refused by the server — nothing leaks — but the screen and the guard disagree, which is the fault `mayReach` exists to remove.
-
-**The fix, when it is done** — Wrap the route: `<RequireAccess path="/people" resource="user">`. One line. `App.test.tsx`'s "every guarded route is one the navigation knows" then covers it.
-
-**The rule** — A hidden link is not a guard. The route says who may open it.
 
 ### ADM-1 · The Audit log names "admin" as the person behind every entry
 
@@ -63,6 +54,26 @@ Migration 008 inserts `REPLACE@fidato.in` with `on conflict (email) do nothing`,
 **The fix, when it is done** — It is deactivated in production now (checked 16 September: present, inactive) — **deactivate, never delete**. The guard still to write: make 008 skip the seed when the deployment already has a real administrator.
 
 **The rule** — Deactivate, do not delete: a deleted row comes back on the next deploy.
+
+---
+
+## Fixed — the solution is here; do not work it out again
+
+### PEO-1 · The People screen has no route guard
+
+**Found** — 16 September, opening `/people` as a reception clerk in the local copy.
+
+`src/modules/admin/routes.tsx` mounts `/people` without `RequireAccess`, so any signed-in person can open it; the menu entry needs the `user` grant, which reception does not have, so the entry is hidden and the page is not. The clerk sees their own row only (row-level security) and every button is refused by the server — nothing leaks — but the screen and the guard disagree, which is the fault `mayReach` exists to remove.
+
+**Fixed** — 16 September, the same day: the route is wrapped —
+`<RequireAccess path="/people" resource="user">` in
+`src/modules/admin/routes.tsx`, with the reason in a comment above it. A
+clerk now gets "This page is not part of your role"; the owner, admins and
+GMs are unaffected. `App.test.tsx`'s "every guarded route is one the
+navigation knows" covers the path, and the whole suite stayed green
+(206 web, 359 API with its own database).
+
+**The rule** — A hidden link is not a guard. The route says who may open it.
 
 ---
 

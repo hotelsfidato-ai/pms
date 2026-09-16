@@ -14,15 +14,6 @@ entries stay here: they are the reason the fault does not come back.
 
 ## Open — not fixed
 
-### INV-1 · `GET /api/hotels/rate-plans` can never run
-
-**Found** — 15 September by reading; **confirmed by running it** on 16 September — it answers 404 "No such property."
-
-`GET /api/hotels/:code` is registered first and takes the word "rate-plans" for a property code. Harmless today: nothing calls it.
-
-**The fix, when it is done** — Delete the route. Moving it above `/:code` would work too, but that is a change to the mount order for a route nobody uses.
-
-**The rule** — A route that a broader route shadows is not a route; it is a 404 with a comment.
 
 ### INV-3 · Two responses turn an unpriced room into ₹0
 
@@ -43,6 +34,26 @@ The menu says "Room types"; the page says "The house".
 **The fix, when it is done** — Make the heading the menu's words.
 
 **The rule** — A screen's heading is the menu entry that opened it.
+
+---
+
+## Fixed — the solution is here; do not work it out again
+
+### INV-1 · `GET /api/hotels/rate-plans` can never run
+
+**Found** — 15 September by reading; **confirmed by running it** on 16 September — it answers 404 "No such property."
+
+`GET /api/hotels/:code` is registered first and takes the word "rate-plans" for a property code. Harmless today: nothing calls it.
+
+**Fixed** — 16 September: the route is gone from
+`api/src/modules/inventory/roomTypesAndPlans.ts`, with the reason left in
+its place. Removed rather than reordered — nothing called it, and moving a
+route above another to make it reachable is a rule every later route has to
+remember. The meal plans a screen needs already come with
+`GET /:code/rate-plans` (`rates.ts`). 359 API tests and the strip-check (68
+files) stayed green.
+
+**The rule** — A route that a broader route shadows is not a route; it is a 404 with a comment.
 
 ---
 
