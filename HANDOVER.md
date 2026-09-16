@@ -287,12 +287,11 @@ the cheapest thing sold and **is the base**; everything else is joined to it by
 a difference, so changing the base moves the whole system. Their seven
 decisions are in § 4 and the plan is **`docs/PRICING-PLAN.md`**.
 
-**Do not start the build.** One question decides the shape of the table
-(P1 in the plan): when a price is derived from a base that covers **one**
-person, what does the **second** person cost — nothing, because the room is
-sold for two (`room_types.base_occupancy` is 2 and does not change), or a
-difference the owner types? That answers what a two-adult Deluxe costs, and
-the answer cannot be guessed.
+**P1 is answered (16 September): counting starts at the first person** — two
+adults are the base plus one extra adult. And room configuration is separate
+from price: a room type gains a **category**, so the Deluxe variants group
+together while each stays its own sellable type. The build has started;
+`docs/PRICING-PLAN.md` § 5 is the order.
 
 **Read § 4 before planning anything here**, especially: the base is not the
 default, not everything is derived, and the screen ships with every figure
@@ -435,6 +434,15 @@ early.
 16 Sep   the pricing screen ships with every figure UNSET (a dash) and the owner types them in
 16 Sep   Superior stops carrying its own price and becomes a difference; the dated rate row stays as a typed price
 16 Sep   the mobile pass comes first, then the pricing build
+16 Sep   PRICING COUNTS PEOPLE FROM ONE: the base is one person, so two adults = base + one
+         extra adult, three = base + two. The extra-adult and extra-child figures are set like
+         any other price. Nothing already priced moves — a price says what it covers
+         (rates.covers_persons), and today's rows keep the room type's own figure
+16 Sep   ROOM CONFIGURATION AND ROOM PRICE ARE TWO THINGS. A room type gains a CATEGORY, so
+         Deluxe, Deluxe valley view and Deluxe with an extra bed group under Deluxe while each
+         stays its own sellable type with its own capacity and its own difference from the base
+16 Sep   the Room setup field "The rate covers" will need a truer name once the base covers one
+         person — the owner sees that screen before the wording changes
 16 Sep   pricing differences are in RUPEES, never percentages
 16 Sep   breakfast and the other meal plans are priced PER PERSON
 16 Sep   a difference may be set for a period; where nothing is set for a date, the base applies

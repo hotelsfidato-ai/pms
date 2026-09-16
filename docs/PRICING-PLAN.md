@@ -1,8 +1,8 @@
 # Dynamic pricing — one base, everything else a difference (16 September 2026)
 
-**Status: a plan, nothing built.** One question (**P1**, § 6) decides the shape
-of the tables, and the owner's rule of 16 September is that nothing is decided
-without them. Until P1 is answered, no migration is written.
+**Status: P1 and the sub-type question are ANSWERED (16 September). Building.**
+Everything the owner has said is in § 1; § 6 holds what is still open, and
+none of it blocks the first migration.
 
 Asked for on 16 September: *"a Deluxe room which is single occupancy and with
 no breakfast — this is the cheapest room offered, and what I need you to do is
@@ -59,6 +59,9 @@ decision:
 | who types | the owner types the figures in the new screen |
 | Superior | stops carrying its own price and **becomes a difference**; the existing dated rate row **stays** as a typed price |
 | order | the mobile pass first (done, 16 Sep), then this |
+| **counting people** | **the base is ONE person, and counting starts there**: two adults = base + one extra adult, three = base + two. The extra-adult and extra-child figures are set the same way as every other price |
+| **room configuration** | configuration and price are two different things. A room type gains a **category**, so Deluxe, Deluxe with a valley view and Deluxe with an extra bed group under "Deluxe" while each stays its own sellable type with its own capacity and its own difference from the base |
+| what a type holds | stays on the room type. The pricing does not decide how many people a room sleeps |
 
 ---
 
@@ -130,6 +133,25 @@ state two prices are, and is refused at write time.
    meal-plan difference. Any part unset → the whole is unset.
 3. **A dash.** Not a zero, not a guess.
 
+### 3.3a Nothing already sold changes price — `rates.covers_persons`
+
+The base covers **one** person. Every price in the system today covers what the
+room type says it covers (`base_occupancy`, 2 at 5 Elements). If the counting
+simply changed, every existing two-adult booking would quietly gain an
+extra-adult charge — a price change nobody asked for, on a live system.
+
+So **the price says what it covers**: `rates.covers_persons`, NULL meaning "what
+the room type says", which is every row that exists today. The base row is
+written with `covers_persons = 1`. `app.tariff_for` counts extra people above
+**the covering price's own** figure, so:
+
+- an old typed price keeps its meaning exactly;
+- the base, and everything derived from it, counts from one person;
+- the change reaches a property only when the owner sets its basis — and no
+  property has one until they do.
+
+### 3.3b The meal plan needs a person count
+
 Because meal plans are priced **per person**, the plan part depends on how many
 people are in the room, and `app.rate_for` does not take a person count. So:
 
@@ -163,7 +185,7 @@ plans and the grid, and a new service folder would split one subject in two.
 
 | | | done when |
 |---|---|---|
-| **A** | migration **090**: `pricing_basis`, `rate_offsets`, `app.rate_for` extended, `app.tariff_for` extended | `db/tests/modules/inventory.sql` proves: unset base → NULL; typed beats derived; two overlapping differences refused; a derived total missing one part is NULL, never 0 |
+| **A** | **DONE 16 Sep** — migration **090**: `pricing_basis`, `rate_offsets`, `app.rate_for` extended, `app.tariff_for` extended | `db/tests/modules/inventory.sql` proves: unset base → NULL; typed beats derived; two overlapping differences refused; a derived total missing one part is NULL, never 0 |
 | **B** | API in `api/src/modules/inventory/`: read the basis, the differences and a resolved month; write a basis, write a difference | API suite green **via `npm test`** (its own database — MEMORY 277) |
 | **C** | the Pricing screen, its nav entry, its `MODULE.md` line | opened at 1280 and at 375 before it is called done |
 | **D** | the owner moves Superior from a typed price to a difference **on the screen** — not a data migration; nobody but the owner types that number | the owner says so |
@@ -175,17 +197,30 @@ Nothing in A–C changes `room_types.base_occupancy`, and nothing writes a price
 
 ## 6 · Questions for the owner
 
-**P1 · BLOCKING — the second person.** The base covers **one** person. A room
-is sold for two (`base_occupancy` = 2, unchanged). So what does the second
-person cost on a room-only booking?
+**P1 · ANSWERED 16 September — the second person is an extra adult.** Counting
+starts at the first person, because that is what the base is: two adults = base
++ the extra-adult figure, three = base + two. See § 3.3a for how that reaches
+nothing already priced.
 
-- **(a)** Nothing. The base figure is the room, for up to two people; only the
-  meal plan (per person) and the third person onwards (`extra_adult`, which
-  exists) add money. *Simplest, and it fits the schema as built.*
-- **(b)** A difference the owner types — "second person: ₹___" — so single
-  occupancy is genuinely cheaper than double on the same room.
+**One consequence, for the owner to see before it happens:** the Room setup
+screen's field reads **"The rate covers"** and holds `base_occupancy`. Once the
+base covers one person, that label is no longer true of a derived price. The
+field keeps its job — how many people the room is sold for — and needs a name
+that says so. **The owner sees that screen before the wording changes.**
 
-This decides what a two-adult Deluxe costs and cannot be guessed.
+**Two rules the gate found while building A** — both now in the migration and
+asserted:
+
+- **The base has no difference from itself.** A room-type difference on the
+  basis type cannot reach the base (its price is typed) and must not reach the
+  base type's other plans either, or breakfast on the base room would cost that
+  difference as well. **A season on the base is a typed base row for those
+  dates**, through `app.set_rate` — and every derived price follows it.
+- **A difference needs the same range-splitting a price does.** A standing
+  difference and a Diwali difference cannot both cover one day, so
+  `app.set_offset` trims the standing row, writes the season and **puts the
+  tail back** — the case 053 warns about, where a forgotten tail silently loses
+  a property its pricing. Asserted a year out.
 
 **P2 · Is a room-type difference the same on every plan?** Recommended: yes —
 a Superior is a Superior whatever the guest eats, so one difference per type,

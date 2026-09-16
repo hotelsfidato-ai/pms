@@ -129,6 +129,53 @@ Then, second question: **can this POS route a KOT and give a printout?**
 
 ---
 
+## 2026-09-16 (pricing A) · One base price, and everything else a difference
+
+**Asked for:** *"this room is the base price and other things are connected by
+a difference to this, so that when a change happens it reflects all through the
+system"*. The plan is `docs/PRICING-PLAN.md`; this is its first phase, the
+schema. **No screen yet, and nothing is priced.**
+
+**Migration 090**
+- `pricing_basis` — one row per property naming **which** room type and plan is
+  the base. A pointer, not a number: the figure stays in `rates`, so a season on
+  the base flows into every derived price for free.
+- `rate_offsets` — a difference in **rupees**, with dates, per room type (per
+  room) or per meal plan (per person). The same no-overlap constraint `rates`
+  has: two differences covering one day is the same unanswerable state two
+  prices are.
+- `rates.covers_persons` — **the line that stops this repricing anything already
+  sold.** The base covers one person; every row written before today covers
+  what its room type says, and NULL means exactly that. An old typed price
+  keeps its meaning to the rupee.
+- `room_types.category` — Deluxe, Deluxe valley view, Deluxe with an extra bed
+  group under one name while each stays its own sellable type with its own
+  capacity. Configuration, not price; the owner's distinction.
+- `app.price_for` answers a price **and what it covers** — typed → derived →
+  rack → NULL. `app.rate_for` keeps its name, signature and meaning.
+  `app.tariff_for` counts extra people above what the covering price covers, so
+  two adults on a derived price are the base plus one extra adult.
+- `app.set_offset` writes a difference over a range, splitting and trimming what
+  is already there and putting the tail back.
+
+**Nothing changes until the owner acts.** No property has a basis, so nothing
+derives; `covers_persons` is NULL everywhere, so nothing recounts.
+
+**Two rules the gate found, not me:**
+1. A difference on the **base** room type can never apply — the base's price is
+   typed. It must not reach the base type's other plans either, or breakfast on
+   the base room would cost it twice over. A season on the base is a typed base
+   row.
+2. A standing difference and a seasonal one cannot both cover a day — which is
+   why `app.set_offset` exists. Asserted that the standing difference is still
+   there a year after the season ends.
+
+**Proved:** `db/tests/modules/inventory.sql`, 23 new assertions — **620
+assertions, exit 0**, RLS proven as `pms_app`; **API 359 tests, exit 0** via
+`npm test`; migration numbering and web types clean.
+
+---
+
 ## 2026-09-16 (mobile, part two) · The stay screens use their own cards
 
 **Asked for:** the owner's answer to the question the first mobile pass raised —
