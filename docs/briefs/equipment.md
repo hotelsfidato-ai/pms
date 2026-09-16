@@ -111,11 +111,23 @@ From plan § 3, phase 1B, and decision S7:
   (or `rejected` with a note). It already refuses anybody who may not decide,
   and the person who asked. **Show the Inventory Manager what is waiting** on
   your screen, from `GET /api/hotels/:code/approvals` filtered to
-  `kind === "equipment_issue"`, with the buttons offered only where the row says
+  `kind` `equipment_issue` or `equipment_retire`, with the buttons offered only where the row says
   `mayDecide` — and `blockedBecause` as the sentence where it does not.
-- **Who asked may show as a dash** for the Inventory Manager today: staff names
-  are hidden from most roles. That is an open question to the owner (with the
-  Store's STO-4); do not work round it.
+- **Who asked shows by name** to whoever may decide (the owner's answer,
+  16 September; the queue does it, migration 096). You need do nothing.
+
+### Retiring — the owner's S16 (16 September, after your first commit)
+
+- **Your own approve/decline for a retirement moves onto the shared approvals
+  inbox** — one inbox for the Inventory Manager and the GM, not two. Kind
+  `equipment_retire` (096): every property has the rule, Inventory Manager first,
+  the owner, admin or GM as backup. Raise it with `app.request_approval(hotel,
+  'equipment_retire', 'equipment_items', <item>, <why>, null, <who>)` exactly
+  where your code makes a retirement wait today (a tagged item, retired by
+  somebody who may not approve). Deciding is the core endpoint, as above.
+- **The Inventory Manager may approve** — your `grants.ts` copy must include
+  `stores` in `create`, `edit` and `approve` (it is `permissions.ts` now), and the
+  refusal sentences say **"the Inventory Manager"**, never "the store manager".
 
 **NO INVENTED VALUES.** No item, category list, cost or date is seeded. A cost
 nobody typed is **a dash, never a zero**. A warranty nobody entered shows a
@@ -175,7 +187,9 @@ goes in your hand-back note; the master changes those pinned menus.
 ## Migrations
 
 **The number is the next after the highest on cp6 when you write the file** —
-096 now: the master took 095 for the approval. The Store chat may take the same number;
+097 now: the master took 095 and 096 for the approvals.
+**Your branch's `095_equipment_register.sql` becomes 097 when you merge cp6** — rename
+the file, nothing else. The Store chat may take the same number;
 **that is expected** — the master renumbers whichever merges second. So refer to
 your migration by what it does, never by its number, in test names and
 comments. Never edit 094; a change to `locations` or `suppliers` is a request to

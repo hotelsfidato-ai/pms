@@ -129,6 +129,38 @@ Then, second question: **can this POS route a KOT and give a printout?**
 
 ---
 
+## 2026-09-16 (audit, round 3) · NA-2 and STO-1 merged; names; retirement in the one inbox
+
+**Asked for:** an audit — what the chats finished, what I think, and every open
+defect. Then, with the owner's four answers: merge NA-2 and STO-1 and deploy;
+show names; the Inventory Manager approves retirements; one inbox.
+
+**Audit found:** three branches with commits, every one in its own lane.
+**Night audit** NA-2 fixed, screen never opened. **Store** STO-1 fixed, proved.
+**Equipment** the register built well, but before the owner's S12–S15: its
+migration numbered 095 like the master's, a role copy with the Inventory Manager
+able only to look, no leaving-the-store approval, and a second approvals inbox
+of its own for retirements. Seven chats have committed nothing; all wait on the
+owner. Production is 53 commits and six migrations behind cp6.
+
+**Merged:** night-audit (`7382603`) and stores STO-1 (`009430a`), all gates
+after each. **Opened:** the Night audit screen (no console errors in a fresh
+tab), a stale close tried on the local API (409, "26 August was already closed",
+the day unmoved); the Store as reception (the page refuses; the API 403 on read
+and on a real add, nothing written).
+
+**Built:** migration **096** — `app.colleague_name` (a name only, for someone
+rostered at a property the caller is at) and approval kind `equipment_retire`
+with its rule everywhere; the approvals queue shows the requester's name to
+whoever may decide and the decider's to the asker. Briefs tell the Equipment
+chat to move retirements to the shared inbox and fix its role copy, and the
+Store chat to show names for STO-4 and rename "the store manager".
+
+**Proved:** names given to everybody instead → the "neither asked nor decides"
+test fails. Gates after 096 in the entry's commit.
+
+---
+
 ## 2026-09-16 (inventory manager) · One system: equipment leaving the store waits for approval
 
 **Asked for:** *"this is one system… there is an inventory manager whose

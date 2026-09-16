@@ -149,3 +149,60 @@ begin
   select count(*) into n from hotels where code = 'EQA';
   perform test.ok('equipment approvals','the fixture does not outlive the test', n = 0, n || ' left behind');
 end $$;
+
+
+-- =============================================================================
+-- A COLLEAGUE'S NAME, AND RETIREMENT IN THE SAME INBOX (096) — the owner, 16 Sep
+-- =============================================================================
+do $$
+declare
+  h uuid; far uuid; me uuid; mate uuid; stranger uuid; n int; nm text;
+begin
+  h   := app.provision_property_unchecked('NMA','Names Test','Nowhere');
+  far := app.provision_property_unchecked('NMB','Names Elsewhere','Nowhere');
+
+  insert into staff (email, full_name, firebase_uid) values
+    ('names-me@fidato.in',       'Names Me',       'test-uid-names-me'),
+    ('names-mate@fidato.in',     'Names Mate',     'test-uid-names-mate'),
+    ('names-stranger@fidato.in', 'Names Stranger', 'test-uid-names-stranger');
+  select id into me       from staff where email = 'names-me@fidato.in';
+  select id into mate     from staff where email = 'names-mate@fidato.in';
+  select id into stranger from staff where email = 'names-stranger@fidato.in';
+  insert into staff_hotels (staff_id, hotel_id, role) values
+    (me, h, 'stores'), (mate, h, 'housekeeping'), (stranger, far, 'housekeeping');
+
+  perform set_config('app.user_id', me::text, true);
+
+  perform test.ok('names','a colleague at my property: their name',
+    app.colleague_name(mate, h) = 'Names Mate', coalesce(app.colleague_name(mate, h), 'null'));
+  perform test.ok('names','somebody rostered only at another property: nothing',
+    app.colleague_name(stranger, h) is null);
+  perform test.ok('names','a property I am not at: nothing, even for its own staff',
+    app.colleague_name(stranger, far) is null);
+
+  select count(*) into n from information_schema.routine_privileges
+   where routine_schema = 'app' and routine_name = 'colleague_name' and grantee = 'PUBLIC';
+  perform test.ok('names','nobody but the application may call it', n = 0, n || ' public grants');
+
+  perform set_config('app.user_id', '', true);
+
+  -- ---------- retirement: the same inbox ----------
+  select count(*) into n from approval_rules
+   where hotel_id = h and kind = 'equipment_retire' and approver_role = 'stores'
+     and also_decided_by = array['owner', 'admin', 'gm'];
+  perform test.ok('names','a new property gets the retirement rule too: Inventory Manager, owner, admin, GM',
+    n = 1, n || ' matching rules');
+
+  select count(*) into n from hotels x
+   where x.code not in ('AGR')
+     and not exists (select 1 from approval_rules r
+                      where r.hotel_id = x.id and r.kind = 'equipment_retire');
+  perform test.ok('names','every property has the retirement rule', n = 0, n || ' without it');
+
+  -- ---------- and the fixtures go ----------
+  delete from staff_hotels where staff_id in (me, mate, stranger);
+  update staff set is_active = false where id in (me, mate, stranger);
+  alter table hotels disable trigger hotels_no_delete;
+  delete from hotels where id in (h, far);
+  alter table hotels enable trigger hotels_no_delete;
+end $$;

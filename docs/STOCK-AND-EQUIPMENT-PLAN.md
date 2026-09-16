@@ -130,6 +130,8 @@ an inventory manager whose responsibility is to store all the inventory"*:
 | **S13** | Who approves | **The Inventory Manager** — the Store Manager role renamed (key `stores` unchanged). Looks after stock AND equipment: adds and edits equipment, approves it leaving the store |
 | **S14** | When the Inventory Manager is away | **The owner, an administrator or the GM** may decide instead |
 | **S15** | Who may ask | **Anybody who can see equipment** |
+| **S16** | Retiring a tagged item (a Hotel Manager's waits) | **The Inventory Manager approves it too**, with the same backups — and in the **same shared approvals inbox**, not a second one |
+| **Names** | May an approver see who asked? | **Yes.** At their own hotel, whoever decides sees who asked, the asker sees who decided, and the store keeper sees who moved stock |
 
 Built by the master (migration 095, `api/src/routes/approvals.ts`): the approval
 kind `equipment_issue`, a rule at every property (new ones too) naming the

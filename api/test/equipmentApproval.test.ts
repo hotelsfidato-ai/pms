@@ -43,17 +43,19 @@ const as = (uid: string, path: string, method = "GET", body?: unknown) =>
     ...(body === undefined ? {} : { body: JSON.stringify(body) }),
   });
 
-/** Somebody asks for a kettle to leave the store. */
-async function raise(askerRole: string): Promise<string> {
+/** Somebody asks for a kettle to leave the store — or, with kind
+    `equipment_retire`, for a tagged TV to be retired. */
+async function raise(askerRole: string, kind = "equipment_issue"): Promise<string> {
   const { rows } = await sql(
-    `select app.request_approval($1::uuid, 'equipment_issue', 'equipment_moves',
+    `select app.request_approval($1::uuid, $4, 'equipment_moves',
             gen_random_uuid(), $2, null, $3::uuid)::text as id`,
-    [hotelId, `${TAG} a kettle for room 104`, person.get(askerRole)!.id]);
+    [hotelId, `${TAG} a kettle for room 104`, person.get(askerRole)!.id, kind]);
   return rows[0].id as string;
 }
 
 type Row = { id: string; approverRole: string; alsoDecidedBy: string[];
-             mayDecide: boolean; blockedBecause?: string };
+             mayDecide: boolean; blockedBecause?: string;
+             requestedBy: string | null; decidedBy: string | null };
 
 async function seenBy(role: string, id: string): Promise<Row> {
   const res = await as(person.get(role)!.uid, "/5EL/approvals");
@@ -123,13 +125,42 @@ describe("equipment leaving the store (095)", () => {
     });
   }
 
-  it("shows the Inventory Manager a request somebody else raised, even where the name is hidden", async () => {
+  it("shows the Inventory Manager a request somebody else raised, WITH who asked", async () => {
     /* The queue used to INNER JOIN staff for the requester's name, and staff
-       is row-secured — so the Inventory Manager's queue was empty. */
+       is row-secured — so the Inventory Manager's queue was empty (MEMORY
+       283). Then it showed the row with a dash for the name; the owner's
+       answer on 16 September was to show the name to the people who decide. */
     const id = await raise("housekeeping");
     const row = await seenBy("stores", id);
     expect(row, "the request is in the Inventory Manager's queue").toBeDefined();
     expect(row.mayDecide).toBe(true);
+    expect(row.requestedBy).toBe(`${TAG} housekeeping`);
+  });
+
+  it("does not give the name to somebody who neither asked nor decides", async () => {
+    const id = await raise("housekeeping");
+    const row = await seenBy("chef", id);
+    expect(row.mayDecide).toBe(false);
+    expect(row.requestedBy).toBeNull();
+  });
+
+  it("tells the person who asked who decided, by name", async () => {
+    const id = await raise("housekeeping");
+    const res = await as(person.get("stores")!.uid, `/5EL/approvals/${id}/rejected`, "POST",
+      { note: "The one in the store is kept for room 110." });
+    expect(res.status).toBe(200);
+    const mine = await as(person.get("housekeeping")!.uid, "/5EL/approvals?status=all");
+    const row = ((await mine.json()) as { rows: Row[] }).rows.find((r) => r.id === id)!;
+    expect(row.decidedBy).toBe(`${TAG} stores`);
+  });
+
+  it("puts a retirement in the same inbox, for the same people (096)", async () => {
+    const id = await raise("hotel_manager", "equipment_retire");
+    expect((await seenBy("stores", id)).mayDecide).toBe(true);
+    expect((await seenBy("gm", id)).mayDecide).toBe(true);
+    expect((await seenBy("kitchen_manager", id)).mayDecide).toBe(false);
+    const res = await as(person.get("stores")!.uid, `/5EL/approvals/${id}/approved`, "POST", {});
+    expect(res.status).toBe(200);
   });
 
   it("does not let the Inventory Manager approve what they asked for — the GM does", async () => {

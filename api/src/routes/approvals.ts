@@ -95,6 +95,7 @@ approvals.get("/:code/approvals", async (c) => {
       approver_role: string; also_decided_by: string[]; requested_at: string;
       requested_by: string; requested_by_name: string | null;
       decided_by_name: string | null;
+      requested_by_colleague: string | null; decided_by_colleague: string | null;
       decided_at: string | null; decision_note: string | null;
     }>(
       `select a.id::text, a.kind, a.subject_table, a.subject_id::text,
@@ -103,6 +104,8 @@ approvals.get("/:code/approvals", async (c) => {
               a.requested_by::text,
               rq.full_name as requested_by_name,
               dc.full_name as decided_by_name,
+              app.colleague_name(a.requested_by, a.hotel_id) as requested_by_colleague,
+              app.colleague_name(a.decided_by, a.hotel_id) as decided_by_colleague,
               a.decided_at::text, a.decision_note
          from approvals a
          /* ⚠ LEFT, NOT INNER (16 September). The staff table is row-secured: most
@@ -111,8 +114,8 @@ approvals.get("/:code/approvals", async (c) => {
             the one person the equipment queue is for, saw it empty, and
             so did an administrator. A waiting request is never hidden;
             where the name is not visible it is null, and the screen shows
-            a dash. Whether an approver may see who asked is the owner's
-            question (asked with STO-4, the Store's same fault). */
+            a dash. The owner then answered (16 September, migration 096):
+            the people who may decide see who asked — see "names" below. */
          left join staff rq on rq.id = a.requested_by
          left join staff dc on dc.id = a.decided_by
         where a.hotel_id = $1
@@ -121,6 +124,20 @@ approvals.get("/:code/approvals", async (c) => {
         limit 200`,
       [hotelId, status],
     );
+
+    /* NAMES — the owner's answer, 16 September: the person who approves
+       sees who asked, and the person who asked sees who decided. Anybody
+       else sees what the staff table already lets them see (a GM sees
+       everyone; most roles, nobody but themselves). `colleague_name` only
+       ever answers for someone rostered at this property (096). */
+    const named = (r: (typeof rows)[number]) => {
+      const involved =
+        decides(me, r.approver_role, r.also_decided_by) || r.requested_by === me.staffId;
+      return {
+        requestedBy: r.requested_by_name ?? (involved ? r.requested_by_colleague : null),
+        decidedBy: r.decided_by_name ?? (involved ? r.decided_by_colleague : null),
+      };
+    };
 
     return {
       me: { staffId: me.staffId, role: me.role },
@@ -138,9 +155,9 @@ approvals.get("/:code/approvals", async (c) => {
         status: r.status,
         approverRole: r.approver_role,
         alsoDecidedBy: r.also_decided_by,
-        requestedBy: r.requested_by_name,
+        requestedBy: named(r).requestedBy,
         requestedAt: r.requested_at,
-        decidedBy: r.decided_by_name,
+        decidedBy: named(r).decidedBy,
         decidedAt: r.decided_at,
         decisionNote: r.decision_note,
         /* ⚠ RULE 6: THE BUTTON AND THE SERVER MUST AGREE. This is the
