@@ -63,7 +63,7 @@ of 15 September (`3424882`).
 | GET | `/:code/groups/:id` | one group: its rooms (`app.group_rooms`), the host's balance and the guests' balance |
 | POST | `/:code/groups/:id/master` | open the host's master bill for the group (056); a second press returns the one already open |
 | POST | `/:code/stays/:id/routing` | send a room's charges to the group's master bill, or back (`reservations.route_room_to_group`, 056) |
-| POST | `/:code/bookings` | New booking: the guest, a group when there is more than one room, one reservation per room with its channel and commission, the rate from `app.tariff_for` (057), and a folio for each booking |
+| POST | `/:code/bookings` | New booking: the guest, a group when there is more than one room, one reservation per room with its channel and commission, the rate from `app.tariff_for` (057), and a folio for each booking. A sender's `externalRef` makes it safe to send twice (091) |
 
 4 endpoints. The groups **list** the Groups screen reads, `GET /:code/groups`,
 is not here: it is in front desk's `api/src/modules/front-desk/stays.ts`,
@@ -78,6 +78,23 @@ unpriced and the booking is refused by name, unless the clerk enters an
 agreed rate; availability is reported, not enforced, because a booking is
 for a room type and deliberate overbooking stays possible (005); more than
 40 rooms in one booking is refused as a likely typo.
+
+**Sent twice (RES-3, 091, 16 September).** A caller that has its own
+reference for the booking — a channel manager, the CRS — sends it as
+`externalRef`. Every room is stamped with it (`ota_reference`), its place in
+the request (`ota_line`) and a hash of the request (`ota_fingerprint`), unique
+per hotel and booking source. The same reference again from the same channel:
+
+- **same details** → `200`, the first answer again, marked `duplicate: true`;
+  nothing is written;
+- **different details** → `409`, naming the references on file — a changed
+  booking is not taken through this door (integration plan step 1.3;
+  amendments stay at the desk, CRS-22);
+- **the same reference from another channel** is another booking.
+
+Asked before any write and before the channel is checked. Two copies arriving
+together are settled by the unique index, and the loser is answered as the
+repeat. The desk sends no `externalRef` and nothing changes for it.
 
 ## Data
 
@@ -98,7 +115,7 @@ that made or changed them:
 
 | Table | What reservations does to it | Migrations |
 |---|---|---|
-| `reservations` | inserts one row per room booked; sets `route_room_to_group` | created `005_reservations.sql`; `011_model_additions.sql` (meal plan, group, occupancy; the room moved out to `room_assignments`), `015_edge_cases.sql` (dates in order, day use), `016_audit_coverage.sql` (rate sane), `020_deferred_fixes.sql` (`is_complimentary`), `036_cancellation_terms.sql` (the terms columns), `037_terms_on_booking.sql` (a trigger freezes the hotel's terms onto each new booking), `042_void_and_sources.sql` (business source, market segment), `056_group_billing.sql` (`route_room_to_group`), `064_expected_arrival.sql`, `082_booking_sources.sql` (`booking_source_id`, `commission_pct`) |
+| `reservations` | inserts one row per room booked; sets `route_room_to_group` | created `005_reservations.sql`; `011_model_additions.sql` (meal plan, group, occupancy; the room moved out to `room_assignments`), `015_edge_cases.sql` (dates in order, day use), `016_audit_coverage.sql` (rate sane), `020_deferred_fixes.sql` (`is_complimentary`), `036_cancellation_terms.sql` (the terms columns), `037_terms_on_booking.sql` (a trigger freezes the hotel's terms onto each new booking), `042_void_and_sources.sql` (business source, market segment), `056_group_billing.sql` (`route_room_to_group`), `064_expected_arrival.sql`, `082_booking_sources.sql` (`booking_source_id`, `commission_pct`), `091_booking_external_ref.sql` (`ota_line`, `ota_fingerprint`, the unique index that makes a sender's repeat one booking) |
 | `reservation_groups` | one row when a booking has more than one room | created `011_model_additions.sql` |
 
 It also writes into other services' tables, directly in SQL: `guests` (one
@@ -167,8 +184,10 @@ And the core: `src/lib/api`, the shared `Stay` type, `queryKeys` and
   buttons (CHANGELOG 15 September, step 2). Any new dialog must pass
   `src/components/ui/primaryAction.test.ts`.
 - **A refusal goes above the first write** — `withSession` commits a refusal
-  like any other return (MEMORY 243). This route breaks it today: RES-1 in
-  this folder's `DEFECTS.md`.
+  like any other return (MEMORY 243). `POST /:code/bookings` broke it until
+  16 September (RES-1, fixed): it now checks the repeat, the channel and every
+  line first, and writes after the line marked *"Nothing below this line
+  refuses"*. A new refusal goes above that line.
 - **Before adding a route, grep the path across every router and check the
   mount order** (MEMORY 118).
 - **With the line down** (`src/lib/offline.ts`, core; guarded by
@@ -180,12 +199,12 @@ And the core: `src/lib/api`, the shared `Stay` type, `queryKeys` and
 
 ## Open items
 
-From `PENDING.md` and `HANDOVER.md`, and one found while writing this brief:
+From `PENDING.md` and `HANDOVER.md`:
 
-- **RES-1, found while writing this brief:** `POST /:code/bookings` writes
-  the guest (and the group) before four of its refusals, and a multi-room
-  booking writes its earlier rooms before a later room is refused — all
-  committed. Read in the code, not reproduced. See `DEFECTS.md` here.
+- **RES-2 — waiting on the master.** Both booking doors switch to the shared
+  locked generator (092) and the owner's `FH-<hotel code>-YYMM-<number>`
+  when the master says it is ready. Until then two bookings in the same
+  moment can still collide on a reference (a 500, nothing kept).
 - **Staff-first phase 4 — every reservation task in three screens or fewer**
   (`HANDOVER.md` § 3.6). Measure first: a table of every reservation task
   with its screen count today, then cut each one over three.
@@ -202,10 +221,11 @@ From `PENDING.md` and `HANDOVER.md`, and one found while writing this brief:
 
 ## Gates
 
-Before the first edit: claim this service in `HANDOVER.md` → Folder claims
-(service, branch, date), and work in your own worktree with your own
-database and ports — how, in `AGENTS.md` ("Before your first write"); the
-rules for parallel agents, in `docs/SERVICE-FOLDERS-PLAN.md`.
+Before the first edit: claim this service in `.claims/reservations.md` (since
+16 September — no longer in `HANDOVER.md`), and work in your own worktree with
+your own database and ports — how, in `docs/briefs/README.md` and `AGENTS.md`
+("Before your first write"); the rules for parallel agents, in
+`docs/SERVICE-FOLDERS-PLAN.md`.
 
 ```
 # the PC, in your worktree's folder (PowerShell or Git Bash)
@@ -242,6 +262,12 @@ The guards this service must respect:
 - `src/lib/offline.test.ts` — which writes may be held offline.
 - `api/test/modules/reservations/reservationInserts.test.ts` — every
   reservation records its channel.
+- `api/test/modules/reservations/bookings.test.ts` — a booking sent twice is
+  one booking (RES-3), counted in the database, including two copies held
+  and released together; and a refused booking leaves nothing behind (RES-1),
+  refused on its second line so an earlier line would show.
+- `db/tests/modules/reservations.sql` — 091's index and CHECK refuse a second
+  line 1 and a line number without its reference, channel or fingerprint.
 
 ## Requests from other services
 
