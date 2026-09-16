@@ -201,10 +201,12 @@ And the core: `src/lib/api`, the shared `Stay` type, `queryKeys` and
 
 From `PENDING.md` and `HANDOVER.md`:
 
-- **RES-2 — waiting on the master.** Both booking doors switch to the shared
-  locked generator (092) and the owner's `FH-<hotel code>-YYMM-<number>`
-  when the master says it is ready. Until then two bookings in the same
-  moment can still collide on a reference (a 500, nothing kept).
+- **RES-2 — this door done, the walk-in door not.** `POST /:code/bookings`
+  takes its references from `app.next_reference` (092), inside its own
+  transaction: `FH-<hotel code>-<YYMM>-<number>`. Front desk switches the
+  walk-in route in `operations.ts` after its current job; until then a
+  walk-in and a booking at the same moment can still build one reference
+  (a 500, nothing kept).
 - **Staff-first phase 4 — every reservation task in three screens or fewer**
   (`HANDOVER.md` § 3.6). Measure first: a table of every reservation task
   with its screen count today, then cut each one over three.

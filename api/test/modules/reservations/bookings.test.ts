@@ -19,6 +19,9 @@ import { closePool, pool } from "../../../src/db.ts";
    turned down. These tests were run against that code on 16 September
    and failed: each refusal left a guest, and three left two bookings.
 
+   RES-2 · ONE REFERENCE, FROM ONE PLACE. The door asks app.next_reference
+   (092) inside its own transaction: FH-<hotel code>-<YYMM>-<number>.
+
    Every test here counts what is IN THE DATABASE afterwards, not only
    what the route said. A door that answers "duplicate" while writing a
    second booking behind the answer is the defect with better manners.
@@ -69,7 +72,8 @@ afterAll(async () => {
     const { rows } = await db.query<{ id: string; group_id: string | null; guest_id: string }>(
       `select r.id::text, r.group_id::text, r.guest_id::text
          from reservations r join guests g on g.id = r.guest_id
-        where g.full_name like 'RES3 %' or g.full_name like 'RES1 %'`);
+        where g.full_name like 'RES3 %' or g.full_name like 'RES1 %'
+           or g.full_name like 'RES2 %'`);
     const ids = rows.map((r) => r.id);
     await db.query("delete from folios where reservation_id = any($1::uuid[])", [ids]);
     await db.query("delete from reservations where id = any($1::uuid[])", [ids]);
@@ -78,12 +82,14 @@ afterAll(async () => {
        default name starts with the guest's. */
     await db.query(
       `delete from reservation_groups
-        where id = any($1::uuid[]) or name like 'RES3 %' or name like 'RES1 %'`,
+        where id = any($1::uuid[]) or name like 'RES3 %' or name like 'RES1 %'
+           or name like 'RES2 %'`,
       [rows.map((r) => r.group_id).filter(Boolean)]);
     await db.query("alter table guests disable trigger guests_no_delete");
     try {
       await db.query(
-        "delete from guests where full_name like 'RES3 %' or full_name like 'RES1 %'");
+        "delete from guests where full_name like 'RES3 %' or full_name like 'RES1 %' "
+        + "or full_name like 'RES2 %'");
     } finally {
       await db.query("alter table guests enable trigger guests_no_delete");
     }
@@ -144,6 +150,58 @@ const onFile = async (guestName: string) => {
       groups: Number(r.groups), folios: Number(r.folios),
     };
   } finally { await db.end(); }
+};
+
+/* TWO REQUESTS THAT GENUINELY OVERLAP. Fired with a bare Promise.all they
+   did not: RES-3's race test passed with the race handling deleted — most
+   likely the second was still opening its connection while the first
+   booked. So `reservation_groups` is locked: both requests pass every
+   check, write their guest, stop at the group insert (each must book more
+   than one room to reach it), and are released together.
+
+   Two connections are opened in the API's own pool first; otherwise the
+   second request opens one while the first holds the other, which on a
+   busy machine outlasted the pool's five seconds. */
+const heldTogether = async (
+  send: () => [Promise<Response>, Promise<Response>],
+): Promise<[Response, Response]> => {
+  const warm = await Promise.all([pool.connect(), pool.connect()]);
+  for (const c of warm) c.release();
+
+  const gate = new (await import("pg")).default.Client({
+    connectionString: process.env["SUPER_DATABASE_URL"]
+      ?? "postgres://postgres:pw@127.0.0.1:55432/fidato",
+  });
+  await gate.connect();
+  let sent: [Promise<Response>, Promise<Response>] | null = null;
+  let waiting = 0;
+  try {
+    await gate.query("begin");
+    await gate.query("lock table reservation_groups in exclusive mode");
+    sent = send();
+
+    /* ⚠ THE SNAPSHOT IS CLEARED EVERY TIME. Inside a transaction,
+       pg_stat_activity answers from a copy taken at its first read, so
+       this loop once kept seeing the moment it started — 0, while both
+       requests sat at the lock in plain view from any other connection. */
+    const until = Date.now() + 30_000;
+    while (waiting < 2 && Date.now() < until) {
+      await gate.query("select pg_stat_clear_snapshot()");
+      const { rows } = await gate.query<{ n: string }>(
+        `select count(*)::text as n from pg_stat_activity
+          where datname = current_database() and wait_event_type = 'Lock'
+            and query ilike '%insert into reservation_groups%'`);
+      waiting = Number(rows[0]!.n);
+      if (waiting < 2) await new Promise((r) => setTimeout(r, 100));
+    }
+  } finally {
+    /* Released whatever happened above. A lock left held keeps both
+       requests waiting, and closePool waits for them — for ever. */
+    await gate.query("commit").catch(() => undefined);
+    await gate.end();
+  }
+  expect(waiting, "both requests should have been held at the group insert").toBe(2);
+  return Promise.all(sent!);
 };
 
 describe("RES-3 · a booking sent twice is one booking", () => {
@@ -224,64 +282,12 @@ describe("RES-3 · a booking sent twice is one booking", () => {
   it("makes one booking when two copies arrive at the same moment", async () => {
     /* Both can pass the "already received?" read before either commits.
        The unique index on line 1 decides; the loser is answered as the
-       repeat it is, not with a 500.
-
-       ⚠ HELD OPEN ON PURPOSE. Fired with a bare Promise.all, this test
-       passed with the race handling deleted: the two copies never actually
-       overlapped — most likely the second spent longer opening its
-       connection than the first spent booking. So the reservation
-       groups table is locked here: both copies read "not received", both
-       write their guest, both stop at the group insert, and are released
-       together. Proved 16 September: with the race handling deleted, this
-       test fails with the loser's 500.
-
-       Two connections are opened in the API's own pool first; otherwise
-       the second copy opens one while the first holds the other, which
-       on a busy machine outlasted the pool's five seconds. */
-    const warm = await Promise.all([pool.connect(), pool.connect()]);
-    for (const c of warm) c.release();
-
-    const gate = new (await import("pg")).default.Client({
-      connectionString: process.env["SUPER_DATABASE_URL"]
-        ?? "postgres://postgres:pw@127.0.0.1:55432/fidato",
-    });
-    await gate.connect();
-    let copies: [Promise<Response>, Promise<Response>] | null = null;
-    let waiting = 0;
-    try {
-      await gate.query("begin");
-      await gate.query("lock table reservation_groups in exclusive mode");
-
-      copies = [
-        post(request("RES3 Race", "AGODA-3001")),
-        post(request("RES3 Race", "AGODA-3001")),
-      ];
-
-      /* Both are waiting at the lock — past the check, before line 1.
-
-         ⚠ THE SNAPSHOT IS CLEARED EVERY TIME. Inside a transaction,
-         pg_stat_activity answers from a copy taken at its first read, so
-         this loop kept seeing the moment it started — 0, while both copies
-         sat at the lock in plain view from any other connection. */
-      const until = Date.now() + 30_000;
-      while (waiting < 2 && Date.now() < until) {
-        await gate.query("select pg_stat_clear_snapshot()");
-        const { rows } = await gate.query<{ n: string }>(
-          `select count(*)::text as n from pg_stat_activity
-            where datname = current_database() and wait_event_type = 'Lock'
-              and query ilike '%insert into reservation_groups%'`);
-        waiting = Number(rows[0]!.n);
-        if (waiting < 2) await new Promise((r) => setTimeout(r, 100));
-      }
-    } finally {
-      /* Released whatever happened above. A lock left held keeps both
-         copies waiting, and closePool waits for them — for ever. */
-      await gate.query("commit").catch(() => undefined);
-      await gate.end();
-    }
-    expect(waiting, "both copies should have been held at the group insert").toBe(2);
-
-    const [x, y] = await Promise.all(copies!);
+       repeat it is, not with a 500. Proved 16 September: with the race
+       handling deleted, this test fails with the loser's 500. */
+    const [x, y] = await heldTogether(() => [
+      post(request("RES3 Race", "AGODA-3001")),
+      post(request("RES3 Race", "AGODA-3001")),
+    ]);
     expect(x.status, await x.clone().text()).toBe(200);
     expect(y.status, await y.clone().text()).toBe(200);
     const bx = (await x.json()) as Made;
@@ -450,4 +456,64 @@ describe("RES-1 · a refused booking leaves nothing behind", () => {
     expect(await onFile("RES1 Put right")).toEqual(
       { guests: 1, reservations: 3, groups: 1, folios: 3 });
   });
+});
+
+describe("RES-2 · one booking reference, from app.next_reference", () => {
+  /* The owner's format, 16 September: FH-<hotel code>-<YYMM>-<number>,
+     the month on the hotel's own clock. This door made its own until
+     092: `'FH-' || to_char(now(),'DDMM')`, no lock, and lpad — so two
+     bookings in the same moment built one reference and the second was
+     a 500. 092's own file (api/test/bookingReference.test.ts) proves the
+     function; these prove THIS DOOR uses it, inside its own transaction. */
+
+  it("is FH, the hotel's code, the month on the hotel's clock, and a running number — every room", async () => {
+    const db = await admin();
+    let yymm: string;
+    try {
+      const { rows } = await db.query<{ yymm: string }>(
+        `select to_char(now() at time zone coalesce(timezone, 'Asia/Kolkata'), 'YYMM') as yymm
+           from hotels where code = '5EL'`);
+      yymm = rows[0]!.yymm;
+    } finally { await db.end(); }
+
+    const res = await post({
+      guestName: "RES2 Format", checkIn: "2028-05-01", checkOut: "2028-05-02",
+      bookingSourceId: agoda,
+      lines: [{ roomTypeId: typeId, mealPlan: "EP", adults: 2, rooms: 3 }],
+    });
+    expect(res.status, await res.clone().text()).toBe(200);
+    const made = (await res.json()) as Made;
+
+    const shape = new RegExp(String.raw`^FH-5EL-${yymm}-\d{4,}$`);
+    for (const b of made.bookings) expect(b.reference).toMatch(shape);
+
+    /* One transaction holds the hotel's lock from the first room to the
+       last, so nobody's number lands in between. */
+    const n = made.bookings.map((b) => Number(b.reference.match(/(\d+)$/)![1]));
+    expect(n).toEqual([n[0], n[0]! + 1, n[0]! + 2]);
+  });
+
+  it("gives two different bookings made at the same moment two different references", async () => {
+    /* Before 092 both read the same highest number and built the same
+       reference; the second waited at the unique index and was a 500. */
+    const booking = (guestName: string) => post({
+      guestName, checkIn: "2028-05-10", checkOut: "2028-05-11",
+      bookingSourceId: agoda,
+      lines: [{ roomTypeId: typeId, mealPlan: "EP", adults: 2, rooms: 2 }],
+    });
+    const [a, b] = await heldTogether(() => [
+      booking("RES2 Same moment A"), booking("RES2 Same moment B"),
+    ]);
+    expect(a.status, await a.clone().text()).toBe(200);
+    expect(b.status, await b.clone().text()).toBe(200);
+
+    const refs = [
+      ...((await a.json()) as Made).bookings,
+      ...((await b.json()) as Made).bookings,
+    ].map((x) => x.reference);
+    expect(new Set(refs).size, refs.join(", ")).toBe(4);
+
+    expect((await onFile("RES2 Same moment A")).reservations).toBe(2);
+    expect((await onFile("RES2 Same moment B")).reservations).toBe(2);
+  }, 90_000);
 });
