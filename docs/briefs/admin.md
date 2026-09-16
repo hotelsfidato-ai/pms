@@ -95,7 +95,7 @@ Migration 067 moved tax into rules. Two cards still print the old figure.
 ## Start here
 
 1. Make your copy and your database (`README.md` → "Before your first write").
-2. `.claims/admin.md`.
+2. Claim it, in your copy's folder: `npm run claim -- admin "one line: what you are doing"`.
 3. Read `MODULE.md` and `DEFECTS.md`, and root `MEMORY.md` 263 and 271 — the
    account-takeover hole that migration 088 closed, and the placeholder.
 4. **ADM-1** — make the audit log say who.

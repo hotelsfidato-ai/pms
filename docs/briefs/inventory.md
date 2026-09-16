@@ -109,7 +109,7 @@ owner both need to know before you touch them.
 ## Start here
 
 1. Make your copy and your database (`README.md` → "Before your first write").
-2. `.claims/inventory.md`.
+2. Claim it, in your copy's folder: `npm run claim -- inventory "one line: what you are doing"`.
 3. Read `MODULE.md`, `DEFECTS.md`, and **`docs/PRICING-PLAN.md`** — the owner's
    pricing decisions are all in it and none of them are yours to revisit.
 4. **INV-3 first** — an unpriced room must never read ₹0 on an API a channel

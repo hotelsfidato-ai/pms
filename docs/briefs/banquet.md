@@ -83,7 +83,7 @@ rate is not a free one.
 ## Start here
 
 1. Make your copy and your database (`README.md` → "Before your first write").
-2. `.claims/banquet.md`.
+2. Claim it, in your copy's folder: `npm run claim -- banquet "one line: what you are doing"`.
 3. Read `MODULE.md` and `DEFECTS.md`.
 4. **BQ-2** — the heading.
 5. Then **BQ-1** as a written proposal for the master and the owner, not code.

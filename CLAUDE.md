@@ -14,7 +14,7 @@ re-explain it, and they should not have to.
    with, and the files that will break other people's chats if you touch them.
    `docs/briefs/README.md` has the rules every lane shares. Then
    `src/modules/<service>/MODULE.md`, its `CHANGELOG.md` and its `DEFECTS.md`.
-   **Claim the service in `.claims/<service>.md`** — not in `HANDOVER.md` — and
+   **Claim the service with `npm run claim -- <service> "what"`** — not in a file — and
    run `npm run lane -- <service>` before you commit.
 
 The rules that are never negotiable, in short — the full list is

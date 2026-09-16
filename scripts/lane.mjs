@@ -31,8 +31,9 @@
    ══════════════════════════════════════════════════════════════════ */
 
 import { execSync } from "node:child_process";
-import { readdirSync, existsSync, readFileSync } from "node:fs";
+import { readdirSync } from "node:fs";
 import { join } from "node:path";
+import { readClaims } from "./claim.mjs";
 
 const ROOT = process.cwd();
 const service = process.argv[2];
@@ -145,15 +146,14 @@ for (const f of files) {
   buckets.set(who, [...(buckets.get(who) ?? []), f]);
 }
 
-/* Who else is holding a service right now, if the claims are being kept. */
-const claimsDir = join(ROOT, ".claims");
-const claims = existsSync(claimsDir)
-  ? readdirSync(claimsDir).filter((f) => f.endsWith(".md") && f !== "README.md")
-    .map((f) => ({
-      service: f.replace(/\.md$/, ""),
-      first: readFileSync(join(claimsDir, f), "utf8").split("\n").find((l) => l.trim()) ?? "",
-    }))
-  : [];
+/* Who else is holding a service right now. Read from the git directory every
+   worktree shares (scripts/claim.mjs) — `.claims/` inside the checkout could
+   only ever show a copy its own claim, which is how twelve chats worked on
+   16 September while the master saw none of them. */
+const claims = readClaims().map((c) => ({
+  service: c.service,
+  first: `${c.branch ?? "?"} · ${c.what ?? ""}`,
+}));
 
 const say = (label, list) => {
   if (!list?.length) return;

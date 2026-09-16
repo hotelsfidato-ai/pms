@@ -118,12 +118,19 @@ New-Item -ItemType Junction -Path "D:\fidato-pos\api\node_modules" -Target "D:\f
 ## Claim it, and say so
 
 ```powershell
-# in YOUR copy, before your first write
-Set-Content -Encoding utf8 ".claims\pos.md" "CLAIMED 16 Sep · branch pos/<task> · copy D:\fidato-pos`nWhat you are doing, in one line."
+# in YOUR copy's folder, before your first write
+npm run claim -- pos "Fixing the two raw dates and POS-4"
 ```
 
-**Read the other files in `.claims/` first.** If your service already has one,
-stop and tell the owner. Delete yours when you finish.
+**Claims live in the git folder every copy shares**, so every chat and the master
+see the same list — `npm run claims` prints it. If your service is already held
+by another branch, `claim` refuses and names who holds it: **stop and tell the
+owner.** Release it when you finish: `npm run release -- pos`.
+
+(Until 16 September this said to write `.claims\pos.md`. A file written inside
+your copy is visible only in your copy, so no other chat could ever see it. If
+your copy is older than that and has no `npm run claim`, run the same thing as
+`node "D:idato pms\scripts\claim.mjs" claim pos "what you are doing"`.)
 
 Before every commit:
 
@@ -132,8 +139,8 @@ npm run lane -- pos
 ```
 
 It sorts what you changed into **yours · nobody's · the shared core · somebody
-else's** and exits 2 if you have strayed. It blocks nothing — it gives you the
-sentence you owe the owner.
+else's**, exits 2 if you have strayed, and lists who else holds a claim. It
+blocks nothing — it gives you the sentence you owe the owner.
 
 ---
 
@@ -210,7 +217,7 @@ at the development database and writes into it (root `MEMORY.md` 277).
 2. Your service's `DEFECTS.md` — anything you found and did not fix, and
    anything you fixed, so nobody works it out twice.
 3. Your `MODULE.md` — if a screen, a route or a menu entry changed.
-4. Delete your `.claims/<service>.md`.
+4. `npm run release -- <service>`. **Never commit a claim** — two did on 16 September and had to be taken out of the merge.
 5. `npm run lane -- <service>` one last time, and tell the owner what it said.
 6. **You do not merge, and you do not deploy.** Commit on your branch and hand
    back. The master merges one service at a time and runs every gate after

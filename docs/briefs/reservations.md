@@ -95,7 +95,7 @@ here — reading it is fine, changing it is the master's.
 ## Start here
 
 1. Make your copy and your database (`README.md` → "Before your first write").
-2. `.claims/reservations.md`.
+2. Claim it, in your copy's folder: `npm run claim -- reservations "one line: what you are doing"`.
 3. Read `MODULE.md` and `DEFECTS.md` — RES-1, RES-2, RES-3.
 4. **The offline zeros.** It is self-contained, it is provable with the API
    stopped, and it is the one finding in your service that could mislead the

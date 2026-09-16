@@ -79,7 +79,7 @@ most:
 ## Start here
 
 1. Make your copy and your database (`README.md` → "Before your first write").
-2. `.claims/guests.md`.
+2. Claim it, in your copy's folder: `npm run claim -- guests "one line: what you are doing"`.
 3. Read `MODULE.md`, `DEFECTS.md`, and root `MEMORY.md` 278.
 4. **GUE-1** — the heading.
 5. Then read what the channel manager and CRS briefs say they will need from

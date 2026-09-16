@@ -100,7 +100,7 @@ so that fix is the master's: write it as a request in your `MODULE.md`.
 ## Start here
 
 1. Make your copy and your database (`README.md` → "Before your first write").
-2. `.claims/housekeeping.md`.
+2. Claim it, in your copy's folder: `npm run claim -- housekeeping "one line: what you are doing"`.
 3. Read `MODULE.md` and `DEFECTS.md`.
 4. **The three icons.** Labels, and a reason on the disabled ones. Do it at
    375px, in the browser, and show the before and after.

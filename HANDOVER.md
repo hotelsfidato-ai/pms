@@ -355,7 +355,12 @@ IN PROGRESS  uncommitted, not merged: front-desk (8 files) · admin · banquet �
              finance · guests · housekeeping · stores
 NEXT         RES-2 part 2 — reservations (groups.ts) + front-desk (operations.ts) switch
              to app.next_reference; both inline generators still truncate
-MASTER       ADM-3 · FD-1 and the numbers that disagree · the claims fix (if approved)
+MASTER       ADM-3 · FD-1 and the numbers that disagree
+DECIDED      16 Sep, the owner: NA-2 is fixed by REFUSING A STALE CLOSE (the screen
+             sends the day it is closing; the server refuses if that day is already
+             closed, changing nothing) · cp6 goes live AFTER the NA-2 fix, as ONE
+             release · the claims fix: DONE (MEMORY 281, npm run claim) · old copies
+             are removed once their chats are closed
 PAIRED LATER front-desk + finance   FIN-2 and the /in-house BALANCE — ONE job:
                                     getFolioBalance is finance's, and front desk
                                     reads it for check-out AND that column
@@ -917,7 +922,12 @@ rule and list they hold is written into this file, `PENDING.md` and
 
 ## Folder claims
 
-**Moved to `.claims/` on 16 September.** One file per service —
+**Now a command, since 16 September:** `npm run claims` lists who holds what;
+`npm run claim -- <service> "what"` and `npm run release -- <service>`. Kept in
+the git directory every worktree shares — the `.claims/` folder described below
+could only be seen by the copy that wrote a file there (MEMORY 281).
+
+**Previously moved to `.claims/` on 16 September.** One file per service —
 `.claims/pos.md` is the POS agent's and nobody else's — because three agents
 claiming three services all wrote to this one table at the same time, which
 made the register of who owns what the thing they collided over.

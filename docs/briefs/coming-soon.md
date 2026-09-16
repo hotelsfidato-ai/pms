@@ -69,7 +69,7 @@ those is worse than no service, because it looks finished.
 
 Then, and only then, in this order:
 
-1. **Claim it** — `.claims/<service>.md` — and take your own copy and database.
+1. **Claim it** — `npm run claim -- <service> "what you are doing"` — and take your own copy and database.
 2. Its **real screens** replace `pages/<Name>.tsx`, at their real addresses in
    your own `routes.tsx`.
 3. Its **menu entry moves** out of `"coming-soon"` in your `nav.ts` into its

@@ -89,7 +89,7 @@ from it. You move the date; you do not own how it is read.
 ## Start here
 
 1. Make your copy and your database (`README.md` → "Before your first write").
-2. `.claims/night-audit.md`.
+2. Claim it, in your copy's folder: `npm run claim -- night-audit "one line: what you are doing"`.
 3. Read `MODULE.md`, `DEFECTS.md`, and the six migrations above.
 4. **NA-1 — investigation only.** Dead code or a missing button? Report it.
 5. Write down which sources your screen reads for its figures.

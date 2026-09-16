@@ -107,15 +107,18 @@ menu entry out of the Coming soon section into its working section (and
 update the Coming soon list pinned in `navigation.test.ts`), and add a
 module switch if not every hotel has it.
 
-Claim the service in **`.claims/<service>.md`** before your first write, and
-delete that file when you stop. One file per service, so two agents claiming
-two services never write the same file — the register of who owns what used to
-live in a table inside `HANDOVER.md`, which made it the very thing they
-collided over. `.claims/README.md` has the two commands.
+Claim the service **before your first write**, in your copy's folder:
+`npm run claim -- <service> "what you are doing"`. Release it when you stop:
+`npm run release -- <service>`. `npm run claims` lists who holds what.
 
-**Read the other claim files first.** If the service you want already has one,
-**stop and say so** rather than writing into it. Waiting costs minutes;
-colliding costs a day.
+Claims live in the git folder every worktree shares (`scripts/claim.mjs`). The
+first design wrote `.claims/<service>.md` inside the checkout, and a file there
+is visible only in the copy that wrote it — on 16 September twelve chats were
+working and nobody could see any of their claims (root `MEMORY.md` 281).
+
+**If your service is already claimed, `claim` refuses and names who holds it.
+Stop and say so** rather than writing into it. Waiting costs minutes; colliding
+costs a day.
 
 Before you commit, in your own copy:
 

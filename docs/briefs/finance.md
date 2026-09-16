@@ -106,7 +106,7 @@ stop and say so — that is a master decision and probably an owner one.
 ## Start here
 
 1. Make your copy and your database (`README.md` → "Before your first write").
-2. `.claims/finance.md`.
+2. Claim it, in your copy's folder: `npm run claim -- finance "one line: what you are doing"`.
 3. Read `MODULE.md` and `DEFECTS.md`.
 4. **The `/in-house` balance question** — a query first. It is a P0, the answer
    lives in your data, and two other people are waiting on it.

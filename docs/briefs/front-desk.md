@@ -127,7 +127,7 @@ header before you touch it, and say in your handover what you changed.
 ## Start here
 
 1. Make your copy and your database (`README.md` → "Before your first write").
-2. `.claims/front-desk.md`.
+2. Claim it, in your copy's folder: `npm run claim -- front-desk "one line: what you are doing"`.
 3. Read `MODULE.md`, then `DEFECTS.md`.
 4. **The `/stay` error branch.** It is self-contained, it is a P0, and it is
    the screen a clerk opens first.

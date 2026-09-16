@@ -14,6 +14,9 @@
     "build:artifact": "vite build --mode artifact && node scripts/check-no-dev-login.mjs dist-artifact",
     "build:all": "npm run build && npm run build:preview && npm run build:artifact",
     "lane": "node scripts/lane.mjs",
+    "claims": "node scripts/claim.mjs list",
+    "claim": "node scripts/claim.mjs claim",
+    "release": "node scripts/claim.mjs release",
     "config": "node scripts/write-config.mjs",
     "build:app": "npm run build && node scripts/write-config.mjs"
   },

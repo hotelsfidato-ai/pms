@@ -97,7 +97,7 @@ null, never a zero. Protect that.
 ## Start here
 
 1. Make your copy and your database (`README.md` → "Before your first write").
-2. `.claims/reports.md`.
+2. Claim it, in your copy's folder: `npm run claim -- reports "one line: what you are doing"`.
 3. Read `MODULE.md` and `DEFECTS.md`.
 4. **REP-1 and REP-2** — the typed-in month and year. Prove each with a
    business date in a different month.

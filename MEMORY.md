@@ -6539,6 +6539,31 @@ copy will see of theirs.**
 
 ---
 
+### 281 · MINE: a claim system that no other copy could see
+
+16 September. I built `.claims/<service>.md` so parallel service chats would
+not collide, and wrote into every brief that each chat must claim there first.
+Each chat works in its own git worktree. A file written inside a worktree
+exists only in that worktree's checkout. So every claim was invisible to every
+other chat — and to the master. Found when starting the local system: twelve
+worktrees were active and `.claims/` in the main folder held only the README.
+
+It had a second fault the first one hid: two chats **committed** their claim
+files, and a normal merge would have written "inventory is claimed" and "pos is
+claimed" into cp6 permanently.
+
+**Fixed the same day:** claims live in the git directory every worktree shares
+(`git rev-parse --git-common-dir`/fidato-claims), through `npm run claim`,
+`release` and `claims`. Proved from two copies: a claim made in the main folder
+is listed from `D:idato-stores`, and claiming the same service from there is
+refused with the holder named.
+
+**The rule: shared coordination state must live where every copy reads it, and
+must never be a tracked file. Prove it from a SECOND copy, not the one that
+wrote it.**
+
+---
+
 ### 280 · Postgres `lpad` does not only pad — it cuts
 
 16 September, building migration 092. Both routes that made booking references

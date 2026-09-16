@@ -89,7 +89,7 @@ priced is a dash, not a zero.
 ## Start here
 
 1. Make your copy and your database (`README.md` → "Before your first write").
-2. `.claims/stores.md`.
+2. Claim it, in your copy's folder: `npm run claim -- stores "one line: what you are doing"`.
 3. Read `MODULE.md` and `DEFECTS.md`.
 4. **Measure the screen at 375px** as a housekeeping role, and write it down.
 5. Bring the owner what you found. **Fix nothing until they have chosen.**

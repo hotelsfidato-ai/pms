@@ -97,7 +97,7 @@ door and gets said out loud in your handover.
 ## Start here
 
 1. Make your copy and your database (`README.md` → "Before your first write").
-2. `.claims/pos.md`.
+2. Claim it, in your copy's folder: `npm run claim -- pos "one line: what you are doing"`.
 3. Read `MODULE.md` and `DEFECTS.md` — POS-2, POS-3 and POS-5 are waiting.
 4. **The two raw dates.** Ten minutes, provable, and it is one of the five date
    formats gone.
