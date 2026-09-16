@@ -190,7 +190,9 @@ export function AddEquipmentDialog({ code, open, onOpenChange, onAdded }: {
                   <NativeSelect aria-label="Place" value={locationId}
                                 onChange={(e) => setLocationId(e.target.value)}>
                     <option value="">Choose a place</option>
-                    {o?.places.map((p) => <option key={p.id} value={p.id}>{p.name}</option>)}
+                    {o?.places.map((p) => (
+                      <option key={p.id} value={p.id}>{p.name}{p.kind === "store" ? " (a store)" : ""}</option>
+                    ))}
                   </NativeSelect>
                 )}
               </div>

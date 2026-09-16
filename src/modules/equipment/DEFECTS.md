@@ -83,6 +83,42 @@ may only insert into, use `do nothing` and read back.
 
 ---
 
+### EQ-4 · MINE: the API's type check failed on my first commit, and I quoted it clean
+
+**Found** 16 September, merging cp6 for S12–S16: `cd api; npx tsc --noEmit`
+exited 2 — `register.test.ts` imported the website's `importSpec.ts`, which
+imports `@/lib/importSpec`, a path the API's type checker cannot follow.
+
+I had run that check **before** adding the test that imported it, and the
+changelog of the first commit said "`cd api; npx tsc --noEmit` — exit 0". True of
+the code it was run on; not of what was committed. The API suite itself passed
+(vitest has the `@` alias), so nothing else noticed.
+
+**Fixed:** the columns moved into `importColumns.ts`, a file with no imports;
+the website's spec and the API test both read it. API types exit 0 again.
+
+**The rule:** a gate quoted in a changelog is run on the tree that is
+committed — after the last edit, not before the last test was written.
+
+---
+
+### EQ-5 · MINE: the ask dialog said "Move" and "Optional" to somebody who could only ask
+
+**Found** 16 September, on the screen as Reception, taking a fridge out of the
+store: before a room was chosen the dialog read *Why — Optional* and its button
+*Move*. Every destination Reception may choose from a store is an ask, which
+needs a reason; the words changed only once a room was picked. The server
+refused nothing wrongly — the dialog described the wrong act.
+
+**Fixed** before commit: a person who may only look is asking from the moment the
+dialog opens (`MoveItemDialog`, `leaves`). Seen again: *Ask to take it out of the
+store*, *Why\**, *Ask*.
+
+**The rule:** a form's words describe what WILL happen for this person, before
+the first choice as well as after it.
+
+---
+
 ## Adding one
 
 Newest last, in the shape above: **Found** (when, and how — reading, a test, a

@@ -90,8 +90,9 @@ describe("the register's words", () => {
   });
 
   it("says who may, from the permissions table", () => {
-    expect(whoMay("create")).toBe("Owner, Admin, General Manager or Hotel Manager");
-    expect(whoMay("approve")).toBe("Owner, Admin or General Manager");
+    expect(whoMay("create")).toBe("Owner, Admin, General Manager, Hotel Manager or Inventory Manager");
+    expect(whoMay("approve")).toBe("Owner, Admin, General Manager or Inventory Manager");
+    expect(whoMay("edit")).not.toMatch(/store manager/i);
   });
 });
 

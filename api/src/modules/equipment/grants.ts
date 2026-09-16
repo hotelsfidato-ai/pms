@@ -4,10 +4,21 @@ import type { Client } from "../../db.ts";
    WHO MAY DO WHAT WITH THE EQUIPMENT REGISTER — on the server
 
    The owner's table of 16 September (docs/STOCK-AND-EQUIPMENT-PLAN.md
-   § 6): owner, admin and GM everything; Hotel Manager see, add, edit;
-   Store Manager, Kitchen Manager, Chef, Housekeeping and Reception see;
-   Accountant see and export; Viewer see; Revenue Manager and Till
+   § 6, with S13 the same evening): owner, admin and GM everything; Hotel
+   Manager see, add, edit; the INVENTORY MANAGER (the `stores` key) see,
+   add, edit, approve; Kitchen Manager, Chef, Housekeeping and Reception
+   see; Accountant see and export; Viewer see; Revenue Manager and Till
    Operator nothing.
+
+   WHAT EACH ACTION OPENS HERE
+     view     reading — and ASKING for a thing to leave the store (S15)
+     create   adding, importing
+     edit     changing, a move that needs no approval (the owner's answer,
+              16 September), a status, retiring
+     approve  retiring a tagged item without waiting, and seeing who did
+              what in the history (the owner's answer on names). Deciding
+              a request is the core's (`api/src/routes/approvals.ts`).
+     export   the register, out
 
    ⚠ THESE LISTS ARE A COPY of the `equipment` grants in
    `src/lib/permissions.ts`. The server does not import the website's
@@ -33,9 +44,9 @@ export const EQUIPMENT_GRANTS: Readonly<Record<EquipmentAction, readonly string[
     "owner", "admin", "gm", "hotel_manager", "kitchen_manager", "chef",
     "front_desk", "stores", "housekeeping", "finance", "read_only",
   ],
-  create: ["owner", "admin", "gm", "hotel_manager"],
-  edit: ["owner", "admin", "gm", "hotel_manager"],
-  approve: ["owner", "admin", "gm"],
+  create: ["owner", "admin", "gm", "hotel_manager", "stores"],
+  edit: ["owner", "admin", "gm", "hotel_manager", "stores"],
+  approve: ["owner", "admin", "gm", "stores"],
   export: ["owner", "admin", "gm", "finance"],
 };
 
@@ -50,7 +61,8 @@ const WHO: Readonly<Record<string, string>> = {
   kitchen_manager: "the kitchen manager",
   chef: "a chef",
   front_desk: "reception",
-  stores: "the store manager",
+  /* Never "the store manager": the owner renamed the role (S13). */
+  stores: "the Inventory Manager",
   housekeeping: "housekeeping",
   finance: "the accountant",
   read_only: "a viewer",
@@ -60,7 +72,7 @@ const DOING: Readonly<Record<EquipmentAction, string>> = {
   view: "Seeing the equipment register",
   create: "Adding equipment",
   edit: "Changing, moving or retiring equipment",
-  approve: "Approving a retirement",
+  approve: "Retiring a tagged item without waiting for approval",
   export: "Exporting the equipment register",
 };
 
@@ -71,9 +83,12 @@ const list = (roles: readonly string[]): string => {
     : `${names.slice(0, -1).join(", ")} or ${names[names.length - 1]}`;
 };
 
+/** Who may, in words: "the owner, an administrator … or the Inventory Manager". */
+export const whoMayText = (action: EquipmentAction): string => list(EQUIPMENT_GRANTS[action]);
+
 /** The sentence a refused person reads, naming who may. */
 export const refusedFor = (action: EquipmentAction): string =>
-  `${DOING[action]} is for ${list(EQUIPMENT_GRANTS[action])}. Ask one of them.`;
+  `${DOING[action]} is for ${whoMayText(action)}. Ask one of them.`;
 
 /** Exported for the test that proves every role in a list has a name. */
 export const ROLE_NAMES = WHO;

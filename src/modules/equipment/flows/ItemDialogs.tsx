@@ -174,10 +174,19 @@ export function EditItemDialog({ code, item, open, onOpenChange, onDone }: Props
 
 /* ── Moving it ────────────────────────────────────────────────────── */
 
-export function MoveItemDialog({ code, item, open, onOpenChange, onDone }: Props) {
+/* OUT OF A STORE to anywhere but a store is ASKED FOR (S12–S15): anybody
+   who can see equipment may ask, with a reason, and it moves when the
+   Inventory Manager approves it in the inbox. Between rooms, or into a
+   store, it moves at once — for those who may edit (the owner's answer,
+   16 September). So a person who may only look is offered only the
+   destinations that are an ask. The server decides the same way. */
+export function MoveItemDialog({ code, item, open, onOpenChange, onDone, mayEdit }: Props & {
+  mayEdit: boolean;
+}) {
   const options = useOptions(code, open);
   const o = options.data;
-  const [whereKind, setWhereKind] = useState<"room" | "place">(item.locationId ? "place" : "room");
+  const fromStore = item.placeKind === "store";
+  const [whereKind, setWhereKind] = useState<"room" | "place">("room");
   const [roomId, setRoomId] = useState("");
   const [locationId, setLocationId] = useState("");
   const [count, setCount] = useState("");
@@ -185,9 +194,18 @@ export function MoveItemDialog({ code, item, open, onOpenChange, onDone }: Props
   const [busy, setBusy] = useState(false);
 
   const where = whereKind === "room" ? roomId : locationId;
+  const toKind = whereKind === "room" ? "room" : (o?.places.find((p) => p.id === locationId)?.kind ?? null);
+  /* Leaving: from a store, to anywhere that is not a store. Before anything
+     is chosen, somebody who may only ask is asking whatever they choose —
+     so the dialog says so from the start (found on the screen as Reception:
+     it offered "Move" and an optional reason until a room was picked). */
+  const leaves = fromStore && (where === "" ? !mayEdit : toKind !== "store");
+  const places = (o?.places ?? []).filter((p) =>
+    p.id !== item.locationId && (mayEdit || (fromStore && p.kind !== "store")));
+  const ready = where !== "" && (!leaves || note.trim() !== "");
 
   const submit = async () => {
-    if (busy || !where) return;
+    if (busy || !ready) return;
     setBusy(true);
     const res = await moveEquipment(code, item.id, {
       ...(whereKind === "room" ? { roomId } : { locationId }),
@@ -195,22 +213,25 @@ export function MoveItemDialog({ code, item, open, onOpenChange, onDone }: Props
       ...(note.trim() ? { note: note.trim() } : {}),
     });
     setBusy(false);
-    if (!res.ok) return toast.error("Not moved", res.reason);
-    toast.success(res.split ? `${res.quantity} moved, as their own line` : "Moved");
+    if (!res.ok) return toast.error(leaves ? "Not asked" : "Not moved", res.reason);
+    toast.success(
+      res.requested
+        ? "Asked — it moves when the Inventory Manager approves it"
+        : res.split ? `${res.quantity} moved, as their own line` : "Moved");
     onDone(res.id);
   };
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent
-        title="Move it"
+        title={fromStore && !mayEdit ? "Ask to take it out of the store" : "Move it"}
         description={`${item.name} · now in ${item.place}`}
         footer={
           <>
             <Button variant="secondary" className="h-11" onClick={() => onOpenChange(false)}>Cancel</Button>
-            <Button variant="primary" className="h-11" disabled={busy || !where}
+            <Button variant="primary" className="h-11" disabled={busy || !ready}
                     onClick={() => void submit()}>
-              {busy ? "Moving…" : "Move"}
+              {busy ? "Sending…" : leaves ? "Ask" : "Move"}
             </Button>
           </>
         }
@@ -223,25 +244,37 @@ export function MoveItemDialog({ code, item, open, onOpenChange, onDone }: Props
               options={[{ value: "room", label: "To a room" }, { value: "place", label: "To another place" }]}
             />
             {whereKind === "room" ? (
-              <NativeSelect aria-label="Room" value={roomId} onChange={(e) => setRoomId(e.target.value)}>
+              <NativeSelect aria-label="Room" value={roomId} className="h-11"
+                            onChange={(e) => setRoomId(e.target.value)}>
                 <option value="">Choose a room</option>
                 {o?.rooms.filter((r) => r.id !== item.roomId)
                   .map((r) => <option key={r.id} value={r.id}>Room {r.number}</option>)}
               </NativeSelect>
-            ) : (o?.places.length ?? 0) === 0 ? (
+            ) : places.length === 0 ? (
               <p className="text-sm text-grey-600 leading-relaxed">
-                No places other than rooms are set up at this property yet.
+                {(o?.places.length ?? 0) === 0
+                  ? "No places other than rooms are set up at this property yet."
+                  : "There is no other place this can go from here."}
               </p>
             ) : (
-              <NativeSelect aria-label="Place" value={locationId}
+              <NativeSelect aria-label="Place" value={locationId} className="h-11"
                             onChange={(e) => setLocationId(e.target.value)}>
                 <option value="">Choose a place</option>
-                {o?.places.filter((p) => p.id !== item.locationId)
-                  .map((p) => <option key={p.id} value={p.id}>{p.name}</option>)}
+                {places.map((p) => (
+                  <option key={p.id} value={p.id}>{p.name}{p.kind === "store" ? " (a store)" : ""}</option>
+                ))}
               </NativeSelect>
             )}
-            <CountField item={item} value={count} onChange={setCount} what="moves" />
-            <Field label="Why" hint="Optional. It is kept with the move.">
+            <CountField item={item} value={count} onChange={setCount} what={leaves ? "asks for" : "moves"} />
+            {leaves && (
+              <p className="text-sm text-ink-900 rounded-md border border-amber-300 bg-amber-50 p-3 leading-relaxed">
+                This takes it out of the store, so it is <strong>asked for</strong>. It stays in the
+                store until the Inventory Manager approves it — or the owner, an administrator or the
+                general manager when they are away.
+              </p>
+            )}
+            <Field label="Why" required={leaves}
+                   hint={leaves ? "The person deciding reads this." : "Optional. It is kept with the move."}>
               {(f) => <Input {...fieldProps(f)} value={note} onChange={(e) => setNote(e.target.value)} />}
             </Field>
           </div>
@@ -250,7 +283,6 @@ export function MoveItemDialog({ code, item, open, onOpenChange, onDone }: Props
     </Dialog>
   );
 }
-
 /* ── Under repair, or back in use ─────────────────────────────────── */
 
 export function StatusDialog({ code, item, open, onOpenChange, onDone }: Props) {
@@ -317,7 +349,7 @@ export function RetireDialog({ code, item, open, onOpenChange, onDone, waitsForA
     });
     setBusy(false);
     if (!res.ok) return toast.error("Not retired", res.reason);
-    toast.success(res.requested ? "Sent to the general manager" : "Retired");
+    toast.success(res.requested ? "Sent to the approvals inbox" : "Retired");
     onDone(res.id);
   };
 
@@ -327,7 +359,7 @@ export function RetireDialog({ code, item, open, onOpenChange, onDone, waitsForA
         title={waitsForApproval ? "Ask to retire it" : "Retire it"}
         description={
           waitsForApproval
-            ? `${item.name} is tagged, so retiring it waits for the general manager, the owner or an administrator.`
+            ? `${item.name} is tagged, so retiring it waits in the approvals inbox for the Inventory Manager — or the owner, an administrator or the general manager when they are away.`
             : `${item.name}. It stays in the register as retired, with who, when and why — nothing is deleted.`
         }
         footer={

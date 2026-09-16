@@ -10,15 +10,15 @@ import type { ServiceNavEntry } from "@/components/app/navigation";
    housekeeping, reception, accountant, viewer. The revenue manager and
    the till operator hold none.
 
-   NO `workingMenus` YET. The owner answered on 16 September: Housekeeping's
-   working menu. The pinned menus in `navigation.test.ts` are the master's to
-   change, so that line is the master's to add; until then housekeeping finds
-   it with Find a screen.
+   WORKING MENUS. The Inventory Manager's (`stores`, S13) — the brief's one
+   permitted edit to the pinned menus in `navigation.test.ts`. The owner also
+   answered Housekeeping (16 September); that pinned menu is the master's to
+   change, so until then housekeeping finds it with Find a screen.
 
    Was a Coming soon page meaning door locks and room phones; those moved
    to Room systems. */
 export const nav: ServiceNavEntry[] = [
-  { section: "store-and-equipment", order: 20,
+  { section: "store-and-equipment", order: 20, workingMenus: ["stores"],
     label: "Equipment", to: "/h/:code/equipment", icon: Armchair, resource: "equipment",
     matchPrefix: true,
     keywords: ["asset", "register", "repair", "warranty", "amc", "furniture", "appliance",

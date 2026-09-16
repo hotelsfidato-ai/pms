@@ -1,21 +1,22 @@
 import { useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { Link, useNavigate, useParams } from "react-router";
-import { ArrowRightLeft, Pencil, Wrench, CheckCircle2, Archive } from "lucide-react";
+import { ArrowRightLeft, Pencil, Wrench, CheckCircle2, Archive, Clock } from "lucide-react";
 import {
   Page, PageHeader, Card, CardHeader, CardBody, DetailList, DetailRow, Button,
-  StatusPill, Skeleton, ErrorState, toast,
+  StatusPill, Skeleton, ErrorState,
 } from "@/components/ui";
 import { useRole, useCurrentHotel } from "@/lib/session";
 import { can } from "@/lib/permissions";
 import { dateShort, dateTime, money } from "@/lib/format";
 import {
-  getEquipmentItem, approveRetirement, declineRetirement,
+  getEquipmentItem, listEquipmentApprovals,
   type EquipmentItem, type HistoryEntry,
 } from "@/modules/equipment/data/equipment";
 import {
   EditItemDialog, MoveItemDialog, StatusDialog, RetireDialog,
 } from "@/modules/equipment/flows/ItemDialogs";
+import { DecideButtons } from "@/modules/equipment/flows/Decide";
 import {
   DASH, STATUS_LABEL, STATUS_TONE, heldText, costText, endsText, whoMay,
 } from "@/modules/equipment/words";
@@ -24,12 +25,17 @@ import {
    ONE THING IN THE REGISTER
 
    What it is, where it is, what it cost, and everything that has
-   happened to it — newest first, each with who and when. The history
-   is written by the database, so this page shows what was recorded,
-   not what a screen remembered to send.
+   happened to it — newest first, each with who and when. Names are shown
+   to whoever may approve; anybody else sees a dash (the owner's answer).
 
-   A RETIRED THING STAYS. It is shown with who retired it, when and why,
-   and nothing on it can change.
+   WAITING. A request to take it out of the store, or to retire it, waits
+   in the ONE approvals inbox (S12–S16). It is shown here beside the thing
+   it is about, with Approve and Refuse only for somebody the inbox says
+   may decide — the decision goes to the core endpoint. Refused, the reason
+   stays beside it.
+
+   A RETIRED THING STAYS, with who retired it, when and why, and nothing
+   on it can change.
    ══════════════════════════════════════════════════════════════════ */
 
 type Open = "edit" | "move" | "status" | "retire" | null;
@@ -45,21 +51,25 @@ export default function EquipmentItemPage() {
   const mayApprove = can(role, "approve", "equipment");
 
   const [dialog, setDialog] = useState<Open>(null);
-  const [deciding, setDeciding] = useState(false);
 
   const q = useQuery({
     queryKey: ["equipment-item", code, id],
     queryFn: () => getEquipmentItem(code, id),
     enabled: !!code && !!id,
   });
+  const inbox = useQuery({
+    queryKey: ["equipment-approvals", code],
+    queryFn: () => listEquipmentApprovals(code),
+    enabled: !!code,
+  });
 
   const done = (landedOn: string) => {
     setDialog(null);
-    void qc.invalidateQueries({ queryKey: ["equipment", code] });
-    void qc.invalidateQueries({ queryKey: ["equipment-options", code] });
-    void qc.invalidateQueries({ queryKey: ["equipment-item", code] });
-    /* Part of a count went elsewhere as its own line: that line is what
-       the person just acted on, so that is the page they land on. */
+    for (const key of ["equipment", "equipment-options", "equipment-item", "equipment-approvals"]) {
+      void qc.invalidateQueries({ queryKey: [key, code] });
+    }
+    /* Part of a count went elsewhere as its own line: that line is what the
+       person just acted on, so that is the page they land on. */
     if (landedOn !== id) navigate(`/h/${code}/equipment/${landedOn}`);
   };
 
@@ -87,22 +97,17 @@ export default function EquipmentItemPage() {
 
   const { item, history } = q.data;
   const retired = item.status === "retired";
-  const waiting = item.retireRequest !== null;
+  const waiting = item.leaving !== null || item.retireRequest !== null;
   const locked = retired || waiting;
   const lockedWhy = retired
     ? "A retired item is kept exactly as it was retired."
-    : waiting ? "A retirement is waiting for approval." : null;
-
-  const decide = async (approve: boolean) => {
-    setDeciding(true);
-    const res = approve
-      ? await approveRetirement(code, item.id)
-      : await declineRetirement(code, item.id);
-    setDeciding(false);
-    if (!res.ok) return toast.error(approve ? "Not approved" : "Not declined", res.reason);
-    toast.success(approve ? "Retired" : "Retirement declined");
-    done(item.id);
-  };
+    : waiting ? "A request for it is waiting in the approvals inbox. It is decided there first." : null;
+  const fromStore = item.placeKind === "store";
+  /* Anybody who can see it may ASK for it to leave the store (S15); moving it
+     otherwise is for those who may edit. */
+  const mayMove = mayEdit || fromStore;
+  const approvalFor = (approvalId: string | undefined) =>
+    inbox.data?.find((a) => a.id === approvalId);
 
   return (
     <Page className="max-w-4xl">
@@ -110,16 +115,16 @@ export default function EquipmentItemPage() {
         title={item.name}
         breadcrumbs={crumbs}
         badge={<StatusPill tone={STATUS_TONE[item.status]}>{STATUS_LABEL[item.status]}</StatusPill>}
-        description={`${heldText(item)} · ${item.place}${item.category ? ` · ${item.category}` : ""}`}
+        description={`${heldText(item)} · ${item.place}${fromStore ? " (a store)" : ""}${item.category ? ` · ${item.category}` : ""}`}
         actions={
           <div className="flex flex-wrap gap-2">
             <Button variant="secondary" className="h-11" disabled={!mayEdit || locked}
                     onClick={() => setDialog("edit")}>
               <Pencil className="size-4" /> Change details
             </Button>
-            <Button variant="secondary" className="h-11" disabled={!mayEdit || locked}
+            <Button variant="secondary" className="h-11" disabled={!mayMove || locked}
                     onClick={() => setDialog("move")}>
-              <ArrowRightLeft className="size-4" /> Move
+              <ArrowRightLeft className="size-4" /> {fromStore && !mayEdit ? "Ask to take out" : "Move"}
             </Button>
             <Button variant="secondary" className="h-11" disabled={!mayEdit || locked}
                     onClick={() => setDialog("status")}>
@@ -134,33 +139,82 @@ export default function EquipmentItemPage() {
           </div>
         }
       >
-        {(!mayEdit || lockedWhy) && (
+        {(lockedWhy || !mayEdit) && (
           <p className="text-sm text-grey-600 mt-3 leading-relaxed">
-            {lockedWhy ?? `Changing, moving and retiring equipment is for the ${whoMay("edit")}.`}
+            {lockedWhy ?? (
+              `Changing, moving and retiring equipment is for the ${whoMay("edit")}.`
+              + (fromStore ? " Anybody who can see it may ask for it to leave the store." : "")
+            )}
           </p>
         )}
       </PageHeader>
 
-      {waiting && (
+      {item.leaving && (
         <Card className="border-amber-300 bg-amber-50 mb-4">
           <CardBody>
-            <p className="text-base text-ink-900">
-              <span className="font-medium">{item.retireRequest!.by ?? "Somebody"}</span> asked to
-              retire it on {dateShort(item.retireRequest!.at)}
-              {item.retireRequest!.reason ? `: ${item.retireRequest!.reason}` : "."}
+            <p className="text-base text-ink-900 flex items-start gap-2">
+              <Clock className="size-4 text-amber-600 shrink-0 mt-1" />
+              <span>
+                <span className="font-medium">Waiting to leave the store</span> for{" "}
+                {item.leaving.to ?? DASH} — asked by {item.leaving.by ?? DASH} on{" "}
+                {dateShort(item.leaving.at)}
+                {item.leaving.reason ? `: ${item.leaving.reason}` : "."}
+              </span>
             </p>
-            {mayApprove ? (
-              <div className="flex flex-wrap gap-2 mt-3">
-                <Button variant="primary" className="h-11" disabled={deciding}
-                        onClick={() => void decide(true)}>Approve — retire it</Button>
-                <Button variant="secondary" className="h-11" disabled={deciding}
-                        onClick={() => void decide(false)}>Decline</Button>
-              </div>
-            ) : (
-              <p className="text-sm text-grey-600 mt-1.5">
-                It waits for the {whoMay("approve")}.
-              </p>
+            {!approvalFor(item.leaving.approvalId) && !inbox.isLoading && (
+              <p className="text-sm text-grey-600 mt-1.5">It waits for the {whoMay("approve")}.</p>
             )}
+            <DecideButtons code={code} approval={approvalFor(item.leaving.approvalId)}
+                           approveLabel="Approve — let it go" onDone={() => done(item.id)} />
+          </CardBody>
+        </Card>
+      )}
+
+      {item.leavingRefused && !item.leaving && (
+        <Card className="mb-4">
+          <CardBody>
+            <p className="text-base text-ink-900">
+              <span className="font-medium">
+                {item.leavingRefused.sentBack ? "Sent back" : "Refused"}
+              </span>{" "}
+              — taking it to {item.leavingRefused.to ?? DASH}
+              {item.leavingRefused.at ? ` (${dateShort(item.leavingRefused.at)})` : ""}
+              {item.leavingRefused.note ? `: ${item.leavingRefused.note}` : "."} It is still here.
+            </p>
+          </CardBody>
+        </Card>
+      )}
+
+      {item.retireRequest && (
+        <Card className="border-amber-300 bg-amber-50 mb-4">
+          <CardBody>
+            <p className="text-base text-ink-900 flex items-start gap-2">
+              <Clock className="size-4 text-amber-600 shrink-0 mt-1" />
+              <span>
+                <span className="font-medium">Retirement waiting</span> — asked by{" "}
+                {item.retireRequest.by ?? DASH} on {dateShort(item.retireRequest.at)}
+                {item.retireRequest.reason ? `: ${item.retireRequest.reason}` : "."}
+              </span>
+            </p>
+            {!approvalFor(item.retireRequest.approvalId) && !inbox.isLoading && (
+              <p className="text-sm text-grey-600 mt-1.5">It waits for the {whoMay("approve")}.</p>
+            )}
+            <DecideButtons code={code} approval={approvalFor(item.retireRequest.approvalId)}
+                           approveLabel="Approve — retire it" onDone={() => done(item.id)} />
+          </CardBody>
+        </Card>
+      )}
+
+      {item.retireRefused && !item.retireRequest && !retired && (
+        <Card className="mb-4">
+          <CardBody>
+            <p className="text-base text-ink-900">
+              <span className="font-medium">
+                Retirement {item.retireRefused.sentBack ? "sent back" : "refused"}
+              </span>
+              {item.retireRefused.at ? ` (${dateShort(item.retireRefused.at)})` : ""}
+              {item.retireRefused.note ? `: ${item.retireRefused.note}` : "."}
+            </p>
           </CardBody>
         </Card>
       )}
@@ -171,8 +225,7 @@ export default function EquipmentItemPage() {
             <p className="text-base text-ink-900">
               Retired on {dateShort(item.retired.at)} by{" "}
               <span className="font-medium">{item.retired.by ?? DASH}</span>
-              {item.retired.requestedBy && item.retired.requestedBy !== item.retired.by
-                ? `, asked for by ${item.retired.requestedBy}` : ""}
+              {item.retired.requestedBy ? `, asked for by ${item.retired.requestedBy}` : ""}
               {item.retired.reason ? ` — ${item.retired.reason}` : ""}
             </p>
           </CardBody>
@@ -187,13 +240,11 @@ export default function EquipmentItemPage() {
               <DetailRow label={item.heldAs === "tagged" ? "Tag" : "How many"}>
                 <span className="tabular">{heldText(item)}</span>
               </DetailRow>
-              <DetailRow label="Where">{item.place}</DetailRow>
+              <DetailRow label="Where">{item.place}{fromStore ? " (a store)" : ""}</DetailRow>
               <DetailRow label="Category">{item.category ?? DASH}</DetailRow>
               <DetailRow label="Supplier">{item.supplier ?? DASH}</DetailRow>
               <DetailRow label="Bought on">{item.purchaseDate ? dateShort(item.purchaseDate) : DASH}</DetailRow>
-              <DetailRow label="Cost">
-                <span className="tabular">{costText(item)}</span>
-              </DetailRow>
+              <DetailRow label="Cost"><span className="tabular">{costText(item)}</span></DetailRow>
               <DetailRow label="Warranty ends">{endsText(item.warrantyEnds, today)}</DetailRow>
               <DetailRow label="Service contract ends">{endsText(item.amcEnds, today)}</DetailRow>
               {item.splitFrom && (
@@ -219,15 +270,21 @@ export default function EquipmentItemPage() {
                     <p className="text-base text-ink-900">
                       <HistoryLine entry={h} item={item} code={code} />
                     </p>
-                    {h.note && h.kind !== "retired" && h.kind !== "retire_requested" && (
+                    {h.note && !["retired", "retire_asked"].includes(h.kind) && (
                       <p className="text-sm text-grey-600">{h.note}</p>
                     )}
                     <p className="text-sm text-grey-500">
-                      {dateTime(h.at)}{h.who ? ` · ${h.who}` : ""}
+                      {dateTime(h.at)} · {h.who ?? DASH}
                     </p>
+                    <DecisionLine entry={h} />
                   </li>
                 ))}
               </ol>
+            )}
+            {!mayApprove && (
+              <p className="text-sm text-grey-500 mt-4">
+                Who did what is shown to the {whoMay("approve")}.
+              </p>
             )}
           </CardBody>
         </Card>
@@ -237,7 +294,8 @@ export default function EquipmentItemPage() {
         <EditItemDialog code={code} item={item} open onOpenChange={(o) => { if (!o) setDialog(null); }} onDone={done} />
       )}
       {dialog === "move" && (
-        <MoveItemDialog code={code} item={item} open onOpenChange={(o) => { if (!o) setDialog(null); }} onDone={done} />
+        <MoveItemDialog code={code} item={item} mayEdit={mayEdit} open
+                        onOpenChange={(o) => { if (!o) setDialog(null); }} onDone={done} />
       )}
       {dialog === "status" && (
         <StatusDialog code={code} item={item} open onOpenChange={(o) => { if (!o) setDialog(null); }} onDone={done} />
@@ -269,28 +327,26 @@ function HistoryLine({ entry: h, item, code }: { entry: HistoryEntry; item: Equi
   const some = item.heldAs === "counted" ? ` ${h.quantity}` : "";
   switch (h.kind) {
     case "added":
-      return <>Added{some} in {h.to ?? DASH}, {STATUS_LABEL[h.toStatus ?? "in_use"].toLowerCase()}</>;
+      return <>Added{some} in {h.place ?? DASH}, {STATUS_LABEL[h.toStatus ?? "in_use"].toLowerCase()}</>;
     case "split": {
+      const cameFrom = h.related?.id === item.splitFrom;
       const other = h.related
         ? <Link to={`/h/${code}/equipment/${h.related.id}`} className="text-brand hover:underline">
-            {h.related.id === item.splitFrom ? "the line in " : "their own line, now in "}
-            {h.related.place ?? DASH}
+            {cameFrom ? "the line in " : "their own line, now in "}{h.related.place ?? DASH}
           </Link>
         : DASH;
-      return h.related?.id === item.splitFrom
-        ? <>{h.quantity} taken from {other}</>
-        : <>{h.quantity} taken off to {other}</>;
+      return cameFrom ? <>{h.quantity} taken from {other}</> : <>{h.quantity} taken off to {other}</>;
     }
     case "moved":
       return <>Moved{some} from {h.from ?? DASH} to {h.to ?? DASH}</>;
+    case "move_asked":
+      return <>Asked to take{some} out of {h.from ?? DASH} to {h.to ?? DASH}</>;
     case "status":
       return h.toStatus === "under_repair" ? <>Marked under repair</> : <>Back in use</>;
-    case "retire_requested":
-      return <>Asked to retire it{h.note ? `: ${h.note}` : ""}</>;
-    case "retire_declined":
-      return <>Retirement declined</>;
     case "retired":
       return <>Retired{some}{h.note ? `: ${h.note}` : ""}</>;
+    case "retire_asked":
+      return <>Asked to retire it{h.note ? `: ${h.note}` : ""}</>;
     case "edited": {
       const parts = Object.entries(h.changes ?? {}).map(([field, c]) =>
         `${FIELD[field] ?? field} from ${changeValue(field, c.from)} to ${changeValue(field, c.to)}`);
@@ -299,4 +355,19 @@ function HistoryLine({ entry: h, item, code }: { entry: HistoryEntry; item: Equi
     default:
       return <>{h.kind}</>;
   }
+}
+
+/** What became of a request: waiting, approved, refused or sent back. */
+function DecisionLine({ entry: h }: { entry: HistoryEntry }) {
+  const d = h.decision;
+  if (!d) return null;
+  if (d.status === "pending") {
+    return <p className="text-sm text-amber-700">Waiting in the approvals inbox</p>;
+  }
+  const word = d.status === "approved" ? "Approved" : d.status === "rejected" ? "Refused" : "Sent back";
+  return (
+    <p className="text-sm text-grey-600">
+      {word}{d.at ? ` ${dateTime(d.at)}` : ""} · {d.by ?? DASH}{d.note ? ` — ${d.note}` : ""}
+    </p>
+  );
 }

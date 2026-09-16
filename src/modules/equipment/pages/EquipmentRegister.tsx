@@ -11,9 +11,10 @@ import { useRole, useCurrentHotel } from "@/lib/session";
 import { can } from "@/lib/permissions";
 import { toCsv, downloadCsv, reportFilename } from "@/lib/csv";
 import {
-  listEquipment, importEquipment, exportEquipment,
+  listEquipment, importEquipment, exportEquipment, listEquipmentApprovals,
   type EquipmentItem, type EquipmentStatus,
 } from "@/modules/equipment/data/equipment";
+import { DecideButtons } from "@/modules/equipment/flows/Decide";
 import { EQUIPMENT_SPEC } from "@/modules/equipment/importSpec";
 import { AddEquipmentDialog } from "@/modules/equipment/flows/AddEquipmentDialog";
 import {
@@ -50,7 +51,6 @@ export default function EquipmentRegisterPage() {
   const today = useCurrentHotel()?.businessDate;
 
   const mayCreate = can(role, "create", "equipment");
-  const mayApprove = can(role, "approve", "equipment");
   const mayExport = can(role, "export", "equipment");
 
   const [place, setPlace] = useState("all");
@@ -64,9 +64,16 @@ export default function EquipmentRegisterPage() {
     queryFn: () => listEquipment(code),
     enabled: !!code,
   });
+  /* The one approvals inbox, read for its equipment requests (S12–S16). */
+  const inbox = useQuery({
+    queryKey: ["equipment-approvals", code],
+    queryFn: () => listEquipmentApprovals(code),
+    enabled: !!code,
+  });
   const refresh = () => {
-    void qc.invalidateQueries({ queryKey: ["equipment", code] });
-    void qc.invalidateQueries({ queryKey: ["equipment-options", code] });
+    for (const key of ["equipment", "equipment-options", "equipment-approvals"]) {
+      void qc.invalidateQueries({ queryKey: [key, code] });
+    }
   };
 
   const items = q.data ?? [];
@@ -84,7 +91,22 @@ export default function EquipmentRegisterPage() {
     (place === "all" || (i.roomId ?? i.locationId) === place)
     && (status === "all" || i.status === status));
 
-  const waiting = items.filter((i) => i.retireRequest);
+  /* Every waiting equipment request in the inbox, beside the thing it is
+     about. Shown to everybody who can see the register — the person who
+     asked sees it waiting — with Approve and Refuse only where the inbox
+     says `mayDecide`. */
+  const waiting = items.flatMap((i) => {
+    const out: { item: EquipmentItem; what: string; approvalId: string; by: string | null; reason: string | null }[] = [];
+    if (i.leaving) {
+      out.push({ item: i, what: `to leave the store for ${i.leaving.to ?? "—"}`,
+                 approvalId: i.leaving.approvalId, by: i.leaving.by, reason: i.leaving.reason });
+    }
+    if (i.retireRequest) {
+      out.push({ item: i, what: "to be retired", approvalId: i.retireRequest.approvalId,
+                 by: i.retireRequest.by, reason: i.retireRequest.reason });
+    }
+    return out;
+  });
   const underRepair = items.filter((i) => i.status === "under_repair").length;
   const inHotel = items.filter((i) => i.status !== "retired");
 
@@ -129,12 +151,14 @@ export default function EquipmentRegisterPage() {
       ),
     },
     { key: "held", header: "Tag or count", cell: (i) => <span className="tabular">{heldText(i)}</span> },
-    { key: "place", header: "Where", cell: (i) => i.place },
+    { key: "place", header: "Where", cell: (i) => `${i.place}${i.placeKind === "store" ? " (a store)" : ""}` },
     {
       key: "status", header: "Status",
       cell: (i) => (
         <div className="flex flex-wrap gap-1.5">
           <StatusPill tone={STATUS_TONE[i.status]}>{STATUS_LABEL[i.status]}</StatusPill>
+          {i.leaving && <StatusPill tone="warning">Waiting to leave the store</StatusPill>}
+          {i.leavingRefused && !i.leaving && <StatusPill tone="neutral">Taking it out refused</StatusPill>}
           {i.retireRequest && <StatusPill tone="warning">Retirement waiting</StatusPill>}
         </div>
       ),
@@ -189,30 +213,38 @@ export default function EquipmentRegisterPage() {
         )}
       </PageHeader>
 
-      {mayApprove && waiting.length > 0 && (
+      {waiting.length > 0 && (
         <Card className="border-amber-300 bg-amber-50 mb-4">
-          <CardBody className="flex items-start gap-2.5">
-            <AlertTriangle className="size-4 text-amber-600 shrink-0 mt-1" />
-            <div className="text-sm text-ink-900 leading-relaxed">
-              <p className="font-medium">
-                {waiting.length === 1 ? "A retirement waits" : `${waiting.length} retirements wait`} for
-                your approval
+          <CardBody>
+            <div className="flex items-start gap-2.5">
+              <AlertTriangle className="size-4 text-amber-600 shrink-0 mt-1" />
+              <p className="text-base font-medium text-ink-900">
+                {waiting.length === 1 ? "One request waits" : `${waiting.length} requests wait`} in the
+                approvals inbox
               </p>
-              <ul className="mt-1 space-y-0.5">
-                {waiting.map((i) => (
-                  <li key={i.id}>
-                    <Link to={`/h/${code}/equipment/${i.id}`} className="text-brand hover:underline">
-                      {i.name} ({heldText(i)})
-                    </Link>
-                    {i.retireRequest?.by ? ` — asked by ${i.retireRequest.by}` : ""}
-                  </li>
-                ))}
-              </ul>
             </div>
+            <ul className="mt-3 space-y-3">
+              {waiting.map((w) => (
+                <li key={w.approvalId} className="rounded-md border border-amber-200 bg-white p-3">
+                  <p className="text-base text-ink-900">
+                    <Link to={`/h/${code}/equipment/${w.item.id}`} className="font-medium text-brand hover:underline">
+                      {w.item.name}
+                    </Link>{" "}
+                    ({heldText(w.item)}, {w.item.place}) {w.what}
+                  </p>
+                  <p className="text-sm text-grey-600">
+                    Asked by {w.by ?? "—"}{w.reason ? ` — ${w.reason}` : ""}
+                  </p>
+                  {/* Quiet buttons here: the screen's one main action is Add an item. */}
+                  <DecideButtons code={code} quiet
+                                 approval={inbox.data?.find((a) => a.id === w.approvalId)}
+                                 approveLabel="Approve" onDone={refresh} />
+                </li>
+              ))}
+            </ul>
           </CardBody>
         </Card>
       )}
-
       {items.length > 0 && (
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-4 sm:max-w-xl">
           <label className="block">
