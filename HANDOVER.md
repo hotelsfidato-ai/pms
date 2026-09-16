@@ -369,8 +369,14 @@ BATCH LATER  GUE-1 · BQ-2 · FIN-1 · ADM-2  (a heading, a comment, two cards)
 `front-desk/components/StayTable.tsx` (reservations' All bookings screen),
 `front-desk/pages/InHouse.tsx` and every reader of `getFolioBalance` (the paired
 job), `api/src/modules/front-desk/operations.ts` (RES-2 part 2), and how rooms,
-in-house guests and ADR are COUNTED anywhere (the master's). Next free
-migration number: **094**, from the master.
+in-house guests and ADR are COUNTED anywhere (the master's). **094 is
+assigned to admin** for ADM-1 (the audit trigger), on 16 September, because an
+admin chat was already working on it. Next free: **095**.
+
+**Found starting the local system, 16 September:** twelve service copies exist
+(`git worktree list`) and `.claims/` shows none of them. A claim file written
+inside a worktree is only visible in that worktree — the claim design cannot
+work across copies as built. Not yet fixed; the owner has been told.
 
 ### 3.0f · The design critique — 16 September
 
