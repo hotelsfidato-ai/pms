@@ -1,0 +1,185 @@
+# Service briefs — one chat per service
+
+**The owner runs several chats at once, one per service. This folder is what
+each of them starts from.** Every brief is written so a chat that has never
+seen this project can read its own file, claim its service, and work without
+ever opening a file another chat is in.
+
+**This chat — the one in `D:\fidato pms` — is the MASTER.** It owns the shared
+core, the root papers, the database migrations, and anything that crosses two
+services. The lanes report to it; it merges.
+
+---
+
+## The codes — what to paste into each new chat
+
+One line each. The brief carries the rest.
+
+| Chat | Paste this |
+|---|---|
+| **Front desk** | `You are the front-desk agent for Fidato PMS. Read docs/briefs/front-desk.md and follow it exactly. Claim the service before your first write.` |
+| **Reservations** | `You are the reservations agent for Fidato PMS. Read docs/briefs/reservations.md and follow it exactly. Claim the service before your first write.` |
+| **Inventory** | `You are the inventory agent for Fidato PMS. Read docs/briefs/inventory.md and follow it exactly. Claim the service before your first write.` |
+| **POS** | `You are the pos agent for Fidato PMS. Read docs/briefs/pos.md and follow it exactly. Claim the service before your first write.` |
+| **Housekeeping** | `You are the housekeeping agent for Fidato PMS. Read docs/briefs/housekeeping.md and follow it exactly. Claim the service before your first write.` |
+| **Finance** | `You are the finance agent for Fidato PMS. Read docs/briefs/finance.md and follow it exactly. Claim the service before your first write.` |
+
+**Start three, not six.** Every agent asks the owner before any doubt, and three
+is what one person can answer for. The order that wastes least: **front desk →
+inventory → pos**, because those three hold the most open work.
+
+---
+
+## The five rules every lane obeys
+
+These are not this folder's rules. They are the project's, from `HANDOVER.md`
+§ 5, and a lane that breaks one has done damage no gate catches.
+
+1. **No decision without the owner's approval.** Their words, 16 September:
+   *"if u have any dought u need to ask me and you are not allowed to take
+   decisions unless they are approved"*. Ask with a recommendation, and wait.
+   Silence is not approval; a plan you wrote is not approval.
+   - **Ask the OWNER** when the answer changes what a person sees, what a
+     figure means, what staff may do, or what ships.
+   - **Ask the MASTER chat** when the answer is technical and shared — a change
+     to the design system, a migration number, a repository signature.
+2. **No default prices.** A figure nobody has set is a **dash**, never a zero.
+   Never invent a number, and never show one the database has not agreed to.
+3. **Open the screen before saying it works.** Run the gates you quote, and
+   judge them by their exit code.
+4. **Every mistake goes in writing** — in your service's `DEFECTS.md`, numbered
+   with its prefix. A lesson for the whole project goes to the master chat for
+   the root `MEMORY.md`.
+5. **Never commit, print or echo `api/.env`.** It carries the production
+   Firebase key. Never copy the main checkout's copy into a worktree.
+
+---
+
+## Before your first write — your own copy
+
+**Two chats editing `D:\fidato pms` at the same time will overwrite each
+other.** Every lane gets its own working copy.
+
+```powershell
+# the owner's PC, PowerShell, in D:\fidato pms — a copy on its own branch
+git worktree add "..\fidato-pos" -b pos/<task>
+```
+
+```powershell
+# the owner's PC, PowerShell — share the packages instead of installing again
+New-Item -ItemType Junction -Path "D:\fidato-pos\node_modules" -Target "D:\fidato pms\node_modules"
+New-Item -ItemType Junction -Path "D:\fidato-pos\api\node_modules" -Target "D:\fidato pms\api\node_modules"
+```
+
+- **Your own database:** `DB=fidato_pos ./db/migrate.sh --with-dev-identities`
+  (Git Bash, in your copy). Never point two chats at one database.
+- **Your own ports:** `PORT` for the API, `VITE_API_URL` and
+  `VITE_ALLOW_DEV_AUTH=1` in your copy's `.env.local`. Vite finds its own port.
+- **Copy the ROOT `.env`** from the main checkout (the website's public
+  settings) or 31 web tests fail on the sign-in screen. **Never the
+  `api/.env`.**
+- **Type checks:** `npx tsc -b --force` — the shared `node_modules` caches
+  another copy's "clean" otherwise.
+
+---
+
+## Claim it, and say so
+
+```powershell
+# in YOUR copy, before your first write
+Set-Content -Encoding utf8 ".claims\pos.md" "CLAIMED 16 Sep · branch pos/<task> · copy D:\fidato-pos`nWhat you are doing, in one line."
+```
+
+**Read the other files in `.claims/` first.** If your service already has one,
+stop and tell the owner. Delete yours when you finish.
+
+Before every commit:
+
+```powershell
+npm run lane -- pos
+```
+
+It sorts what you changed into **yours · nobody's · the shared core · somebody
+else's** and exits 2 if you have strayed. It blocks nothing — it gives you the
+sentence you owe the owner.
+
+---
+
+## What NOBODY but the master may change
+
+Every service stands on these. A lane that edits one breaks the other five, and
+the break usually shows up in somebody else's chat as a mystery.
+
+```
+src/components/ui/           the design system — Button, Input, Card, DataTable,
+                             StatusPill, States, Menu, Overlays, PageHeader…
+src/styles/theme.css         the colour tokens and the type scale
+src/components/app/          the shell: sidebar, top bar, Find a screen, and
+                             navigation.ts (the SECTION LAYOUT — your own menu
+                             entries go in YOUR nav.ts)
+src/App.tsx, src/main.tsx    routes that belong to no service
+src/lib/                     format.ts, permissions.ts, offline.ts, session.ts,
+                             ui.ts, rules.ts, api.ts
+src/data/repositories/       the core seam: types, the business date, rooms,
+                             properties, notifications, http.ts, result.ts
+src/test/                    the guards: boundaries, navigation, migrations
+api/src/server.ts · mount.ts · auth.ts · db.ts · env.ts · identity.ts ·
+  realtime.ts · storage.ts · businessDate.ts · routes/
+db/migrations/               ONE sequence for everybody, replayed from 001 on
+                             every deploy
+HANDOVER.md · CHANGELOG.md · MEMORY.md · PENDING.md · AGENTS.md · CLAUDE.md
+```
+
+**Three traps in particular**, because they look like they belong to one
+service and do not:
+
+- **`src/components/ui/StatusPill.tsx`** — the tones every service colours its
+  states with. Front desk and reservations already disagree through it
+  (`checked_in` blue, `in-house` green). Changing a tone changes five screens.
+- **`src/lib/format.ts`** — `money`, `dateShort`, `dateLong`, `percent`. Five
+  services print dates five ways *because* they went around this file. Use it;
+  do not add a sixth local formatter.
+- **`db/migrations/`** — `src/test/migrationNumbers.test.ts` refuses a
+  duplicate **and a gap**, so numbers cannot be reserved in blocks and two
+  lanes cannot both take "the next one". **Ask the master for a number.**
+
+**If you need a change in one of these:** write it as a request in your
+service's `MODULE.md` under "Requests", and tell the owner. The master makes
+it once, for everybody.
+
+**If you need something from another service:** use its front door —
+`src/modules/<service>/index.ts`. If what you need is not exported there, that
+is a request for its owner, not an edit you make.
+`src/test/boundaries.test.ts` fails on any reach past a front door.
+
+---
+
+## The gates, and what each one is
+
+Run these in your own copy before you say anything works.
+
+```powershell
+npx tsc -b --force              # types, the whole project
+npx vitest run                  # the web suite — 212 today
+cd api; npm test                # the API suite, its own scratch database
+bash db/tests/run.sh            # the database suite — 622 assertions today
+npm run build                   # and it must say "no test sign-in in dist"
+```
+
+**`npm test` in `api/`, never `npx vitest run` there** — that points 359 tests
+at the development database and writes into it (root `MEMORY.md` 277).
+
+---
+
+## When you finish
+
+1. Your service's `CHANGELOG.md` — what you did, what you measured, what you
+   found. **Not the root one; that is the master's.**
+2. Your service's `DEFECTS.md` — anything you found and did not fix, and
+   anything you fixed, so nobody works it out twice.
+3. Your `MODULE.md` — if a screen, a route or a menu entry changed.
+4. Delete your `.claims/<service>.md`.
+5. `npm run lane -- <service>` one last time, and tell the owner what it said.
+6. **You do not merge, and you do not deploy.** Commit on your branch and hand
+   back. The master merges one service at a time and runs every gate after
+   each.

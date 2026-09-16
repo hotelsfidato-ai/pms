@@ -52,6 +52,13 @@ anything a server runs, read defects 187–193 first.
 
 ---
 
+## Starting a chat for ONE service?
+
+`docs/briefs/<service>.md` is written for exactly that, and
+`docs/briefs/README.md` carries what every lane shares: the five rules, how to
+make your own working copy and database, the gates, and the list of files
+nobody but the master chat may change. Read your brief before this file.
+
 ## Before that: nothing is decided without the owner
 
 16 September, in their words: *"if u have any dought u need to ask me and you
