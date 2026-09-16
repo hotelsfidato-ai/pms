@@ -28,7 +28,7 @@ one agent can be given one service and several can work at once
   `api/src/modules/night-audit/`, and the pre-flight checklist came out of
   the old `billing.ts` into `checklist.ts`; `nightAudit.test.ts` had moved to
   `api/test/modules/night-audit/` in `3424882`.
-- This brief (`MODULE.md`), this log and `MEMORY.md`, written from the code
+- This brief (`MODULE.md`), this log and `DEFECTS.md`, written from the code
   at `c804aa2`.
 
 **Found**

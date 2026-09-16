@@ -34,11 +34,11 @@ one agent can be given one service and several can work at once
   moved to `api/src/modules/guests/`, and `bookingSources.test.ts` to
   `api/test/modules/guests/` (`3ca215d`); Form C came out of `invoices.ts`
   into `formC.ts` (`1dcf9b7`).
-- This brief (`MODULE.md`), this log and `MEMORY.md`, written from the code
+- This brief (`MODULE.md`), this log and `DEFECTS.md`, written from the code
   at `c804aa2`.
 
 **Found**
-- GUE-1 (this folder's `MEMORY.md`): the `/companies` screen, "Companies and
+- GUE-1 (this folder's `DEFECTS.md`): the `/companies` screen, "Companies and
   agents" in the menu, is headed — and tabbed — "Booking sources". Seen in
   the code while writing the brief; not yet on screen; not fixed.
 

@@ -168,7 +168,7 @@ And the core: `src/lib/api`, the shared `Stay` type, `queryKeys` and
   `src/components/ui/primaryAction.test.ts`.
 - **A refusal goes above the first write** — `withSession` commits a refusal
   like any other return (MEMORY 243). This route breaks it today: RES-1 in
-  this folder's `MEMORY.md`.
+  this folder's `DEFECTS.md`.
 - **Before adding a route, grep the path across every router and check the
   mount order** (MEMORY 118).
 - **With the line down** (`src/lib/offline.ts`, core; guarded by
@@ -185,7 +185,7 @@ From `PENDING.md` and `HANDOVER.md`, and one found while writing this brief:
 - **RES-1, found while writing this brief:** `POST /:code/bookings` writes
   the guest (and the group) before four of its refusals, and a multi-room
   booking writes its earlier rooms before a later room is refused — all
-  committed. Read in the code, not reproduced. See `MEMORY.md` here.
+  committed. Read in the code, not reproduced. See `DEFECTS.md` here.
 - **Staff-first phase 4 — every reservation task in three screens or fewer**
   (`HANDOVER.md` § 3.6). Measure first: a table of every reservation task
   with its screen count today, then cut each one over three.

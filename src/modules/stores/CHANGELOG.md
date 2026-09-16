@@ -25,7 +25,7 @@ can work at once (`docs/SERVICE-FOLDERS-PLAN.md`). For this folder: its brief.
   `data/stores.ts` (from `src/data/repositories/`). Nothing else used them.
 - `e754c49`: `data/stores.ts` takes the business date from the core.
 - This brief: `MODULE.md` rewritten from the code — one screen, 6 endpoints,
-  two tables, the rules; this file; `MEMORY.md` indexing four root entries.
+  two tables, the rules; this file; `DEFECTS.md` indexing four root entries.
 
 **Found** (while writing the brief; nothing numbered)
 - No file in `api/test/` touches the store's routes.
@@ -43,7 +43,7 @@ this file
   `src/App.test.tsx` fail here — this worktree has no `.env` (gitignored) —
   and the same 31 failed with the brief-only folders taken out. Every run also
   reports 2 unhandled rejections from `src/lib/outbox.ts` under jsdom.
-- Every line under "Before the move" below, and in `MEMORY.md`, was matched
+- Every line under "Before the move" below, and in `DEFECTS.md`, was matched
   against the root files' headings by a script: all exact.
 - Not run for this entry: the server's gates and `db/tests/run.sh` — nothing
   here touches the server or the database.

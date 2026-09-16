@@ -30,7 +30,7 @@ can work at once (`docs/SERVICE-FOLDERS-PLAN.md`). For this folder: its brief.
   statistics reads for admin's property page.
 - `e754c49`: the data files take the business date from the core.
 - This brief: `MODULE.md` rewritten from the code — thirteen screens, 13
-  endpoints, what it reads, the rules; this file; `MEMORY.md` with three new
+  endpoints, what it reads, the rules; this file; `DEFECTS.md` with three new
   entries and eleven root entries indexed.
 
 **Found** (while writing the brief, by reading the code)
@@ -50,7 +50,7 @@ this file
   `src/App.test.tsx` fail here — this worktree has no `.env` (gitignored) —
   and the same 31 failed with the brief-only folders taken out. Every run also
   reports 2 unhandled rejections from `src/lib/outbox.ts` under jsdom.
-- Every line under "Before the move" below, and in `MEMORY.md`, was matched
+- Every line under "Before the move" below, and in `DEFECTS.md`, was matched
   against the root files' headings by a script: all exact.
 - Not run for this entry: the server's gates and `db/tests/run.sh` — nothing
   here touches the server or the database.

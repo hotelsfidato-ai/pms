@@ -7,7 +7,7 @@ arrival, the bill, a thank-you — by WhatsApp, SMS or email.
 16 September to give every service the system does not have a Coming soon
 page, in one section at the foot of the menu for the owner, admins and
 general managers. This folder holds this brief, an empty front door
-(`index.ts`), its own `CHANGELOG.md` and `MEMORY.md`, and the page with
+(`index.ts`), its own `CHANGELOG.md` and `DEFECTS.md`, and the page with
 its menu entry and address — no working feature, no server code.
 
 **Folder name:** `guest-messaging` — the word the other two places will use

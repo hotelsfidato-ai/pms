@@ -52,7 +52,7 @@ the Finance section on purpose — it is filed by the person who bills, and
 
 ⚠ The `/companies` screen's heading — and so its browser tab — reads
 "Booking sources", not "Companies and agents": GUE-1 in this folder's
-`MEMORY.md`.
+`DEFECTS.md`.
 
 ## Server endpoints
 

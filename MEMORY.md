@@ -2,10 +2,12 @@
 
 Every entry here cost something. Read it before you repeat it.
 
-**Since 15 September each service keeps its own memory too:**
-`src/modules/<service>/MEMORY.md`, its defects numbered with its prefix. This
-file keeps the lessons that apply to the whole project; the last number is 274.
-Each service's file also indexes the entries here that concern it.
+**Since 16 September each service keeps its own defect log:**
+`src/modules/<service>/DEFECTS.md` — every defect found in that service, what
+was done about it, and the rule it leaves. Read it before editing that service;
+it is how a solved problem stays solved. This file keeps the lessons that apply
+to the whole project, numbered plainly; 276 is the last. Each service's file
+also indexes the entries here that concern it, with their rules quoted.
 
 ```
 front-desk FD · reservations RES · housekeeping HK · inventory INV · guests GUE

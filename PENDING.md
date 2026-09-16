@@ -130,7 +130,7 @@ for a password that has been shared.
 ## 2a · Found while writing the service briefs, 15 September — NOT FIXED
 
 The agents who wrote each service's `MODULE.md` read its code end to end and
-found these. Each is recorded in that service's `MEMORY.md`; none is fixed,
+found these. Each is recorded in that service's `DEFECTS.md`; none is fixed,
 because each changes what somebody sees and is the owner's to decide. Most
 urgent first.
 

@@ -123,10 +123,15 @@ describe("one folder per service", () => {
     expect(found.filter((f) => !KNOWN_API.includes(f))).toEqual([]);
   });
 
-  it("every service folder has its front door and its brief", () => {
+  it("every service folder has its front door, its brief and its defect log", () => {
+    /* DEFECTS.md joined the list on 16 September, at the owner's request: a
+       session working on one service must see that service's defects and what
+       was already done about them, without reading the whole of PENDING.md.
+       A folder without one silently loses its history the next time somebody
+       solves the same fault. */
     const missing: string[] = [];
     for (const name of services(WEB_MODULES)) {
-      for (const file of ["index.ts", "MODULE.md"]) {
+      for (const file of ["index.ts", "MODULE.md", "DEFECTS.md"]) {
         if (!existsSync(join(WEB_MODULES, name, file))) missing.push(`src/modules/${name}/${file}`);
       }
     }

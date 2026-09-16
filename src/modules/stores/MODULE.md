@@ -12,7 +12,7 @@ db/tests/modules/stores.sql  NEW database checks only — db/tests/suite.sql is 
 ```
 
 Before your first edit: claim the service in `HANDOVER.md` → "Folder claims"
-(service, branch, date), read this file, then this folder's `MEMORY.md` and
+(service, branch, date), read this file, then this folder's `DEFECTS.md` and
 `CHANGELOG.md`. Written 15 September 2026 from the code at `880a5b6`.
 
 "Inventory" in this system means rooms and prices — that is the `inventory`

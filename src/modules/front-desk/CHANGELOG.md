@@ -42,7 +42,7 @@ one agent can be given one service and several can work at once
   (`b772047`).
 - Step 7 (`f02c781`): the tape chart's tests moved out of `src/App.test.tsx`
   into `front-desk.test.tsx` in this folder.
-- This brief (`MODULE.md`), this log and `MEMORY.md`, written from the code
+- This brief (`MODULE.md`), this log and `DEFECTS.md`, written from the code
   at `c804aa2`.
 
 **Found**

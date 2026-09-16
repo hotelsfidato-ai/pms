@@ -34,7 +34,7 @@ can work at once (`docs/SERVICE-FOLDERS-PLAN.md`). For this folder: its brief.
   `src/pages/`). The door gained `getInventory`, `getTariff` and `Tariff` for
   New booking.
 - This brief: `MODULE.md` rewritten from the code — five screens, 23
-  endpoints, the tables and migrations, the rules; this file; `MEMORY.md` with
+  endpoints, the tables and migrations, the rules; this file; `DEFECTS.md` with
   two new entries and eleven root entries indexed.
 
 **Found** (while writing the brief)
@@ -55,7 +55,7 @@ this file
   reports 2 unhandled rejections from `src/lib/outbox.ts` under jsdom.
 - INV-1: two Hono routers mounted in the server's order (`/:code`, then
   `/rate-plans`) answered `/api/hotels/rate-plans` with the first one's 404.
-- Every line under "Before the move" below, and in `MEMORY.md`, was matched
+- Every line under "Before the move" below, and in `DEFECTS.md`, was matched
   against the root files' headings by a script: all exact.
 - Not run for this entry: the server's gates and `db/tests/run.sh` — nothing
   here touches the server or the database.

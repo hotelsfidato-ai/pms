@@ -62,6 +62,7 @@ service folders     DEPLOYED 16 Sep (merged to cp6, stage A: server + website)
 one hotel system    PLANNED 15 Sep — docs/HMS-INTEGRATION-PLAN.md; waiting on decisions D1–D14
 coming soon         DEPLOYED 16 Sep (stage B, website only) — live on pms.fidatohotels.com
 route + screen audit  16 Sep: 214 routes, 89 screens, PENDING checked — docs/audits/2026-09-16-…
+defect logs         16 Sep: src/modules/<service>/DEFECTS.md — 26 open defects, each in its service
 ```
 
 **Deployed 15 September** — all of it:
@@ -125,7 +126,7 @@ and five with a brief and no code (crs, payments, booking-engine,
 guest-messaging, accounting). Each built service has its screens, menu
 entries (`nav.ts`), addresses (`routes.tsx`), data and tests in
 `src/modules/<service>/`, its server routes in `api/src/modules/<service>/`,
-and its `MODULE.md`, `CHANGELOG.md` and `MEMORY.md`. The core stays where it
+and its `MODULE.md`, `CHANGELOG.md` and `DEFECTS.md`. The core stays where it
 was. Nothing a person sees changed: every role's menu (1,023 facts), all 73
 screen addresses and the API's 214 routes are proven identical to the start,
 and every gate is green (CHANGELOG, 15 September, "the move").

@@ -36,11 +36,11 @@ can work at once (`docs/SERVICE-FOLDERS-PLAN.md`). For this folder: its brief.
   restaurant's screens through its door.
 - This brief: `MODULE.md` rewritten from the code — nine screens, 51
   endpoints, the tables and migrations, the owner's rules, open items; this
-  file; `MEMORY.md` indexing 42 root entries.
+  file; `DEFECTS.md` indexing 42 root entries.
 
 **Found** (while writing the brief; nothing numbered here)
 - Nothing in the till sets `pos_orders.event_id`, so a bill cannot be charged
-  to a banquet function — recorded as banquet `MEMORY.md` BQ-1.
+  to a banquet function — recorded as banquet `DEFECTS.md` BQ-1.
 - Bill, Docket, Kitchen and Terminal set no browser-tab title; the two add-on
   on/off endpoints have no caller; `pages/Pos.tsx` draws two page headings
   (details in `MODULE.md`, Open items).
@@ -57,7 +57,7 @@ this file
   the session signs itself out — and the same 31 failed with the brief-only
   folders taken out. Every run also reports 2 unhandled rejections from
   `src/lib/outbox.ts` under jsdom, with or without these changes.
-- Every line under "Before the move" below, and in `MEMORY.md`, was matched
+- Every line under "Before the move" below, and in `DEFECTS.md`, was matched
   against the root files' headings by a script: all exact.
 - Not run for this entry: the server's gates and `db/tests/run.sh` — nothing
   here touches the server or the database. The move commits record their own

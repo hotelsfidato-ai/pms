@@ -30,7 +30,7 @@ one agent can be given one service and several can work at once
   of the core's `property.ts` into `roomStatus.ts`.
 - `11d77a3`: the board catches a device with no offline store instead of
   leaving an uncaught error (root MEMORY 274).
-- This brief (`MODULE.md`), this log and `MEMORY.md`, written from the code
+- This brief (`MODULE.md`), this log and `DEFECTS.md`, written from the code
   at `c804aa2`.
 
 **Found**

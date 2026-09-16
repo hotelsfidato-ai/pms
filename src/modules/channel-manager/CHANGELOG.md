@@ -42,7 +42,7 @@ folder per hotel service, including the services not built yet
   through `@/modules/guests`.
 - Step 4 (`a932fdf`): moved in — `pages/ChannelManager.tsx` (from `src/pages/`).
 - This brief: `MODULE.md` rewritten from the code — the status, the one
-  screen, what a connection would build on; this file; `MEMORY.md` indexing
+  screen, what a connection would build on; this file; `DEFECTS.md` indexing
   two root entries.
 
 **Found** — nothing.
@@ -58,7 +58,7 @@ this file
   `src/App.test.tsx` fail here — this worktree has no `.env` (gitignored) —
   and the same 31 failed with the brief-only folders taken out. Every run also
   reports 2 unhandled rejections from `src/lib/outbox.ts` under jsdom.
-- Every line under "Before the move" below, and in `MEMORY.md`, was matched
+- Every line under "Before the move" below, and in `DEFECTS.md`, was matched
   against the root files' headings by a script: all exact.
 
 **Left open**

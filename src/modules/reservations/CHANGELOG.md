@@ -30,11 +30,11 @@ one agent can be given one service and several can work at once
 - Step 5, the server (`3424882`): `groups.ts` moved to
   `api/src/modules/reservations/`, and `reservationInserts.test.ts` to
   `api/test/modules/reservations/`.
-- This brief (`MODULE.md`), this log and `MEMORY.md`, written from the code
+- This brief (`MODULE.md`), this log and `DEFECTS.md`, written from the code
   at `c804aa2`.
 
 **Found**
-- RES-1 (this folder's `MEMORY.md`): `POST /:code/bookings` writes the guest,
+- RES-1 (this folder's `DEFECTS.md`): `POST /:code/bookings` writes the guest,
   and for several rooms the group, before four of its refusals — defect
   243's shape in the booking door. Read in the code while writing the
   brief; not reproduced, not fixed.

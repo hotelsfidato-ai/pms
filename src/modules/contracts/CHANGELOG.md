@@ -20,7 +20,7 @@ folder and a Coming soon page for every missing service, one Coming soon
 section for the owner, admins and general managers, on a branch after the
 service-folder move.
 
-**Shipped** — this folder: `MODULE.md`, this file, `MEMORY.md`, `index.ts`
+**Shipped** — this folder: `MODULE.md`, this file, `DEFECTS.md`, `index.ts`
 (an empty front door), `nav.ts` (one entry in the Coming soon section),
 `routes.tsx` (`/coming-soon/contracts`, guarded), `pages/Contracts.tsx` (the shared
 Coming soon page with this service's words). No server code, no table.

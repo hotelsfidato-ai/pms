@@ -77,6 +77,13 @@ db/tests/modules/<service>.sql  its database checks (suite.sql is frozen history
 service's brief: its screens, endpoints and tables, the owner's decisions that
 bind it, its open items, and requests from other services.
 
+**Then read `src/modules/<service>/DEFECTS.md`** — every defect found in that
+service, what was done about the fixed ones, and the fix waiting for the open
+ones. It exists so a solved problem is not solved twice and a known trap is not
+walked into again; `src/test/boundaries.test.ts` fails if a service loses it.
+A new defect goes there, numbered with the service's prefix; a lesson that
+would bite another service goes in the root `MEMORY.md` with a plain number.
+
 **Building a service that is still Coming soon?** Only after the owner has
 said which. Its `MODULE.md` has a "When it is built" list: replace
 `pages/<Name>.tsx` with the real screens at their real addresses, move the
@@ -109,7 +116,7 @@ it. Waiting costs minutes; colliding cost a day.
 
 ### Your notes
 
-Each service keeps its own `CHANGELOG.md` and `MEMORY.md`. A defect in your
+Each service keeps its own `CHANGELOG.md` and `DEFECTS.md`. A defect in your
 service is numbered with its prefix (FD-1, POS-1, FIN-1 …, listed in its
 `MEMORY.md`). A lesson that applies to the whole project goes in the root
 `MEMORY.md` with the next plain number. Work that is project-wide goes in the

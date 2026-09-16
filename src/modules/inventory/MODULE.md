@@ -12,7 +12,7 @@ db/tests/modules/inventory.sql  NEW database checks only — db/tests/suite.sql 
 ```
 
 Before your first edit: claim the service in `HANDOVER.md` → "Folder claims"
-(service, branch, date), read this file, then this folder's `MEMORY.md` and
+(service, branch, date), read this file, then this folder's `DEFECTS.md` and
 `CHANGELOG.md`. Written 15 September 2026 from the code at `880a5b6`.
 
 "Inventory" means rooms and prices. The shelves are the Store — the `stores`
@@ -253,7 +253,7 @@ From `PENDING.md` and `PROGRESS.md`, as of 15 September:
 - Found while writing this brief (15 September): **INV-1** — `GET
   /api/hotels/rate-plans` can never run; **INV-2** — Room types is headed "The
   house" and Rate calendar "Inventory and rates". Both in this folder's
-  `MEMORY.md`.
+  `DEFECTS.md`.
 
 ---
 

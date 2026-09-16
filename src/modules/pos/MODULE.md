@@ -13,7 +13,7 @@ db/tests/modules/pos.sql  NEW database checks only — db/tests/suite.sql is fro
 ```
 
 Before your first edit: claim the service in `HANDOVER.md` → "Folder claims"
-(service, branch, date), read this file, then this folder's `MEMORY.md` and
+(service, branch, date), read this file, then this folder's `DEFECTS.md` and
 `CHANGELOG.md`. Written 15 September 2026 from the code at `880a5b6`.
 
 ---
@@ -347,7 +347,7 @@ From `PENDING.md` and `PROGRESS.md`, as of 15 September:
     checked on screen — unverified.
   - The two add-on on/off endpoints have no caller.
   - Nothing sets `pos_orders.event_id`, so a bill cannot be charged to a
-    banquet function from the till — banquet `MEMORY.md` BQ-1.
+    banquet function from the till — banquet `DEFECTS.md` BQ-1.
 
 ---
 

@@ -272,7 +272,7 @@ From `PENDING.md` and `HANDOVER.md`, and two found while writing this brief:
 - **FIN-1, found while writing this brief:** the header of
   `api/src/modules/finance/billing.ts` still says "NO INVOICE NUMBER IS
   ISSUED" and "THE NIGHT AUDIT DOES NOT RUN"; both have been built. A
-  comment, not a screen; not fixed. See `MEMORY.md` here.
+  comment, not a screen; not fixed. See `DEFECTS.md` here.
 - **Noticed, not investigated:** `getFolioBalance` returns `0` when a stay
   has no folio (`data/postings.ts`, `folio?.balance ?? 0`). Front desk's
   In house and check-out read it. Whether any screen then shows or acts on

@@ -38,11 +38,11 @@ one agent can be given one service and several can work at once
   file split four ways (`489271d`); `invoices.ts` moved and gave Form C to
   guests (`1dcf9b7`); `tax.ts` cut out of `inventorySetup.ts` (`3ca215d`).
   `api/test/invoices.test.ts` moved to `api/test/modules/finance/`.
-- This brief (`MODULE.md`), this log and `MEMORY.md`, written from the code
+- This brief (`MODULE.md`), this log and `DEFECTS.md`, written from the code
   at `c804aa2`.
 
 **Found**
-- FIN-1 (this folder's `MEMORY.md`): the header of
+- FIN-1 (this folder's `DEFECTS.md`): the header of
   `api/src/modules/finance/billing.ts` still says no invoice number is issued
   and the night audit does not run. A comment, not a screen; not fixed.
 - Noticed, not investigated: `getFolioBalance` answers `0` for a stay with

@@ -50,6 +50,42 @@ Write it **as you go**, not at the end from memory. Copy this shape:
 
 ---
 
+## 2026-09-16 (defects) · Every service carries its own defect log
+
+**Asked for:** "each folder needs to contain its own defects file, so that when
+I start a new session on a specific service it shows all the defects for that
+service and what the previous solution was — so you don't recompute the
+solution, and errors are prevented before they become big."
+
+**Shipped** — `src/modules/<service>/DEFECTS.md`, thirty of them, replacing the
+per-service `MEMORY.md` (same content, the name everybody uses, no second file
+to drift):
+- **Open defects, with the fix when it is done** — 26 across eleven services,
+  every one from `PENDING.md` § 2a and § 2c and the audits, now sitting in the
+  service a session will be working in: RES-1/2/3, REP-1/2/3, ADM-1/2/3 with
+  PEO-1 and API-2, INV-1/2/3, POS-2/3/4, GUE-1, FIN-1/2, BQ-1/2, HK-1, NA-1,
+  FD-1/2.
+- **Fixed ones, with what was actually done** — so the solution is read, not
+  worked out again. FD-3 (the walk-in refusal) is named as the worked example
+  for RES-1; HK-2 (the board's offline read) carries 274's fix.
+- **Each service's project-wide entries**, carried over from the old file and
+  now quoting each root entry's own rule line where it has one — 49 for the
+  front desk, 42 for the restaurant, 30 for administration.
+- Every pointer repointed in 45 files (`CLAUDE.md` step 4, `AGENTS.md`,
+  `HANDOVER.md`, the root `MEMORY.md` header, every `MODULE.md` and service
+  changelog). The root `MEMORY.md` keeps its name and its plain numbers; 276 is
+  the last.
+
+**Proved:** `src/test/boundaries.test.ts` now requires `DEFECTS.md` in every
+service folder beside `index.ts` and `MODULE.md` — **shown to refuse**: with
+`spa/DEFECTS.md` moved away the run failed naming that file, and passed when it
+was back. Web types clean; 206 tests, exit 0.
+
+**Left open:** the 26 open defects themselves. The file says, for each, what the
+fix is when somebody does it.
+
+---
+
 ## 2026-09-16 (audit) · Every route called, every screen opened, and PENDING checked
 
 **Asked for:** "do a full in-code audit on what was pending, and if all the
@@ -112,7 +148,7 @@ time.
   and `online-checkin`, `laundry`, `contracts`, `revenue-management`,
   `reputation` (Reviews), `loyalty`, `guest-services`, `equipment` (Hotel
   equipment, "When a hotel asks") — the standard list in `PROGRESS.md`. Each
-  has `MODULE.md`, `CHANGELOG.md`, `MEMORY.md` (its own defect prefix, added
+  has `MODULE.md`, `CHANGELOG.md`, `DEFECTS.md` (its own defect prefix, added
   to the root `MEMORY.md` header), an empty `index.ts`, `nav.ts`,
   `routes.tsx` and `pages/<Name>.tsx`.
 - **The five brief-only folders** (`crs`, `payments` — marked "Parked" —
@@ -253,7 +289,7 @@ agents can work at once; the owner took all four recommendations and said
   server); every service folder has its door and brief; migration numbers are
   unique and contiguous; every menu entry lands in a real section and no two
   claim one place. All seen to fail when broken.
-- **Each service's brief**, `CHANGELOG.md` and `MEMORY.md`; AGENTS.md rewritten
+- **Each service's brief**, `CHANGELOG.md` and `DEFECTS.md`; AGENTS.md rewritten
   for working by service (own worktree, database and ports; claims; requests;
   notes with prefixed defect numbers).
 - **How it was done:** the web moves, guards and lists by me, one commit per

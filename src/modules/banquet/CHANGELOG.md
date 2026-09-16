@@ -25,7 +25,7 @@ can work at once (`docs/SERVICE-FOLDERS-PLAN.md`). For this folder: its brief.
   `src/data/repositories/`) and pages Banquet, BanquetEvent, BanquetSetup
   (from `src/pages/`). The shared data index stopped re-exporting them.
 - This brief: `MODULE.md` rewritten from the code — three screens, 12
-  endpoints, four tables, the owner's rules; this file; `MEMORY.md` with two
+  endpoints, four tables, the owner's rules; this file; `DEFECTS.md` with two
   new entries and four root entries indexed.
 
 **Found** (while writing the brief, by reading the code)
@@ -43,7 +43,7 @@ this file
   `src/App.test.tsx` fail here — this worktree has no `.env` (gitignored) —
   and the same 31 failed with the brief-only folders taken out. Every run also
   reports 2 unhandled rejections from `src/lib/outbox.ts` under jsdom.
-- Every line under "Before the move" below, and in `MEMORY.md`, was matched
+- Every line under "Before the move" below, and in `DEFECTS.md`, was matched
   against the root files' headings by a script: all exact.
 - Not run for this entry: the server's gates and `db/tests/run.sh` — nothing
   here touches the server or the database.

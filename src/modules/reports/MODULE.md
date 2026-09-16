@@ -13,7 +13,7 @@ db/tests/modules/reports.sql  NEW database checks only — db/tests/suite.sql is
 ```
 
 Before your first edit: claim the service in `HANDOVER.md` → "Folder claims"
-(service, branch, date), read this file, then this folder's `MEMORY.md` and
+(service, branch, date), read this file, then this folder's `DEFECTS.md` and
 `CHANGELOG.md`. Written 15 September 2026 from the code at `880a5b6`.
 
 ---
@@ -203,11 +203,11 @@ The server's door, `api/src/modules/reports/index.ts`, exports only `mounts`
   a subtraction (MEMORY 43); the GST register is dated by business date, not
   the moment of issue (MEMORY 44); where a booking came from is
   `app.booking_source_label` (MEMORY 219).
-- **Numbers that are real** (`MEMORY.md` § "Numbers that are real, and one
+- **Numbers that are real** (`DEFECTS.md` § "Numbers that are real, and one
   that is not"): 431 available room-nights was a 25-day figure, not a month;
   **the 175-room group total is unverified and must not appear anywhere.**
   Negative money is normal; a report with no rows still prints
-  (`MEMORY.md` § "Money").
+  (`DEFECTS.md` § "Money").
 - **Every list draws four states** (`HANDOVER.md` § 6).
 - **Staff-first phase 2 — reports in the owner's layout — is ASK FIRST**
   (`HANDOVER.md` § 3.4). Open questions: a real `.xlsx` or the CSV Excel
@@ -241,7 +241,7 @@ From `PENDING.md` and `HANDOVER.md`, as of 15 September:
   (PENDING § 5a).
 - **`listDailyStatistics`** has no caller (PENDING § 4).
 - Found while writing this brief (15 September), in this folder's
-  `MEMORY.md`: **REP-1** — Monthly occupancy and Monthly statistics always
+  `DEFECTS.md`: **REP-1** — Monthly occupancy and Monthly statistics always
   show August 2026, Yearly statistics always 2026; **REP-2** — the year to
   date always starts on 1 April 2026; **REP-3** — All reports is headed
   "Reports".
