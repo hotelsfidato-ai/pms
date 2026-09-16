@@ -6,10 +6,11 @@ import { cn } from "@/lib/cn";
 import { money, moneyPrecise } from "@/lib/format";
 import { useUi } from "@/lib/ui";
 import {
-  Page, PageHeader, Card, CardBody, Button, StatusPill, toast,
+  Page, PageHeader, Card, CardBody, Button, StatusPill, Skeleton, toast,
   Dialog, DialogContent, Field, fieldProps, Input,
 } from "@/components/ui";
 import { getMenu, addCategory, addItem, toggleItem, takeItemOff, putItemBack, importMenu, setItemPrepMinutes, setCategoryPrepMinutes, setItemCourse, setCategoryCourse, listPromotions, addPromotion, amendPromotion, type OffFor, type Promotion, type MenuCategory, type MenuItem } from "@/modules/pos/data/till";
+import { ReadFailed, ReadStale } from "@/modules/pos/components/ReadProblem";
 import { ImportDialog } from "@/components/flows/ImportDialog";
 import { MENU_SPEC } from "@/lib/importSpec";
 
@@ -128,7 +129,32 @@ export default function MenuPage() {
         </CardBody>
       </Card>
 
-      {cats.length === 0 ? (
+      {/* POS-4: "The menu is empty" is a statement about the hotel's
+          card. It used to be drawn while the menu loaded and when it
+          failed to — telling a kitchen manager their dishes were gone. */}
+      {menu.error && menu.data !== undefined && (
+        <ReadStale
+          className="mb-5"
+          error={menu.error}
+          loadedAt={menu.dataUpdatedAt}
+          onRetry={() => void menu.refetch()}
+        />
+      )}
+
+      {menu.data === undefined ? (
+        menu.error ? (
+          <Card>
+            <ReadFailed
+              compact
+              error={menu.error}
+              what="the menu"
+              onRetry={() => void menu.refetch()}
+            />
+          </Card>
+        ) : (
+          <Skeleton className="h-40 w-full" />
+        )
+      ) : cats.length === 0 ? (
         <Card>
           <CardBody>
             <div className="text-center py-8">
@@ -239,7 +265,27 @@ function Promotions({ hotelId }: { hotelId: string }) {
             </p>
           </div>
 
-          {list.length === 0 ? (
+          {q.error && q.data !== undefined && (
+            <ReadStale
+              error={q.error}
+              loadedAt={q.dataUpdatedAt}
+              onRetry={() => void q.refetch()}
+            />
+          )}
+
+          {/* POS-4: "None set up" only when the list arrived and is empty. */}
+          {q.data === undefined ? (
+            q.error ? (
+              <ReadFailed
+                compact
+                error={q.error}
+                what="the promotions"
+                onRetry={() => void q.refetch()}
+              />
+            ) : (
+              <p className="text-sm text-grey-500">Loading the promotions…</p>
+            )
+          ) : list.length === 0 ? (
             <p className="text-sm text-grey-500">
               None set up. Until there is one, a discount above the cap is
               refused at the till.

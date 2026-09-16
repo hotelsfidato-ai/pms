@@ -6,12 +6,13 @@ import {
   ArrowLeft, Printer, Lock, Search, Minus, Plus, MessageSquare, Flame,
 } from "lucide-react";
 import { cn } from "@/lib/cn";
-import { moneyPrecise } from "@/lib/format";
+import { dateLong, moneyPrecise } from "@/lib/format";
 import { useUi } from "@/lib/ui";
 import { toast } from "@/components/ui";
 import { getMenu, listOrders, getOrder, listChargeableRooms, openOrder, addLine, voidLine, setLineQty, sendToKitchen, settleOrder, abandonOrder, type MenuItem } from "@/modules/pos/data/till";
 import { listPosOutlets } from "@/modules/pos/data/posBridge";
 import { BUSINESS_DATE } from "@/data/repositories";
+import { ReadFailed, ReadStale } from "@/modules/pos/components/ReadProblem";
 
 /* ══════════════════════════════════════════════════════════════════
    THE TERMINAL
@@ -232,6 +233,17 @@ export default function TerminalPage() {
   const open = (orders.data?.orders ?? []).filter((o) => o.status === "open");
   const active = (outlets.data ?? []).filter((o) => o.isActive);
 
+  /* POS-4. A terminal is left running and the shell's offline bar sits
+     underneath it, so it says for itself when what it shows is no longer
+     current. One line, whichever read failed first. */
+  const stale = [orders, menu, current].find(
+    (q) => q.error && q.data !== undefined);
+  const retryAll = () => {
+    void orders.refetch();
+    void menu.refetch();
+    if (orderId) void current.refetch();
+  };
+
   /* ── Choosing the outlet, once ──────────────────────────────── */
   if (!outlet) {
     return (
@@ -249,7 +261,24 @@ export default function TerminalPage() {
             than on the person signed into it.
           </p>
 
-          {active.length === 0 ? (
+          {/* "No outlet is configured" used to show while the list was
+              still loading, and for good when it failed. */}
+          {outlets.data === undefined ? (
+            <div className="rounded-md border border-grey-200 bg-white">
+              {outlets.error ? (
+                <ReadFailed
+                  compact
+                  error={outlets.error}
+                  what="the outlets"
+                  onRetry={() => void outlets.refetch()}
+                />
+              ) : (
+                <p className="p-6 text-center text-base text-grey-500">
+                  Loading the outlets…
+                </p>
+              )}
+            </div>
+          ) : active.length === 0 ? (
             <div className="rounded-md border border-grey-200 bg-white p-6 text-center">
               <UtensilsCrossed className="size-6 text-grey-300 mx-auto mb-3" />
               <p className="text-md font-semibold text-ink-900">
@@ -300,7 +329,7 @@ export default function TerminalPage() {
             {outletName}
           </p>
           <p className="text-2xs text-grey-500 tabular">
-            {open.length} open · {BUSINESS_DATE}
+            {open.length} open · {dateLong(BUSINESS_DATE)}
           </p>
         </div>
         <Link
@@ -311,6 +340,15 @@ export default function TerminalPage() {
           Console
         </Link>
       </header>
+
+      {stale && (
+        <ReadStale
+          className="mx-4 mt-3 shrink-0"
+          error={stale.error}
+          loadedAt={stale.dataUpdatedAt}
+          onRetry={retryAll}
+        />
+      )}
 
       <div className="flex-1 min-h-0 flex">
         {/* ── The menu ─────────────────────────────────────────── */}
@@ -342,6 +380,17 @@ export default function TerminalPage() {
               >
                 Open the order
               </button>
+
+              {orders.data === undefined && orders.error && (
+                <div className="mt-8 rounded-lg border border-grey-200 bg-white">
+                  <ReadFailed
+                    compact
+                    error={orders.error}
+                    what="the open orders"
+                    onRetry={() => void orders.refetch()}
+                  />
+                </div>
+              )}
 
               {open.length > 0 && (
                 <div className="mt-8">
@@ -479,6 +528,13 @@ export default function TerminalPage() {
                   </div>
                 </section>
               ))}
+              {menu.data === undefined && menu.error && (
+                <ReadFailed
+                  error={menu.error}
+                  what="the menu"
+                  onRetry={() => void menu.refetch()}
+                />
+              )}
               {menu.data?.length === 0 && (
                 <div className="text-center py-16">
                   <UtensilsCrossed className="size-8 text-grey-300 mx-auto mb-4" />
@@ -530,12 +586,23 @@ export default function TerminalPage() {
               <X className="size-5" />
             </button>
           </div>
-          {!order ? (
+          {!order && orderId && current.error ? (
+            /* An order that did not load is not "no order open" — the
+               waiter has one, and the bill for it is what failed. */
+            <div className="flex-1 grid place-items-center p-2">
+              <ReadFailed
+                compact
+                error={current.error}
+                what="this order"
+                onRetry={() => void current.refetch()}
+              />
+            </div>
+          ) : !order ? (
             <div className="flex-1 grid place-items-center p-6 text-center">
               <div>
                 <UtensilsCrossed className="size-7 text-grey-300 mx-auto mb-3" />
                 <p className="text-base text-grey-500">
-                  No order open.
+                  {orderId ? "Loading the order…" : "No order open."}
                 </p>
               </div>
             </div>

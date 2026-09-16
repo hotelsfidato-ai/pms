@@ -24,7 +24,9 @@ This is the website twin of POS-2, and the 16 September route audit did not catc
 
 **The fix, when it is done** — Ask the owner first: is the pass screen the intended path at 5 Elements today, with the docket kept for a reprint? If dockets are meant to print, the fire path opens the docket for each new KOT number, the way the bill is already opened. Both halves of a KOT — routing it and printing it — are planned in `docs/APPS-PLAN.md`; this is the smaller half and does not wait on it.
 
-**The rule** — A screen with no caller is the same defect as a route with no caller, and the audit that only checks the server finds half of them.
+**Corrected 16 September (POS lane, round 1) — half of this entry is wrong.** The **Terminal does open the docket**, on every send, and has since 2 September (`76c400f`, "P6: the kitchen docket"): `pages/Terminal.tsx`, `kot()`, `window.open(\`/h/${hotelId}/till/orders/${orderId}/kot/${res.kotNo}\`)`. The grep missed it because the path is assembled from pieces. What is true: **sending from Tables** — the order pad, `flows/OrderPad.tsx` — opens nothing, and says "Kitchen docket 5". So the owner's question is narrower than it reads above: should Tables do what the Terminal already does. Not started — the owner decides (round 1, `HANDOVER.md` § 3.0g).
+
+**The rule** — A screen with no caller is the same defect as a route with no caller, and the audit that only checks the server finds half of them. **And a grep for a built path proves nothing about a path built from template pieces** — search for the route's distinctive fragment (`/kot/`) before writing "nothing opens it".
 
 ### POS-2 · Two restaurant add-on routes are unreachable
 
@@ -36,25 +38,52 @@ This is the website twin of POS-2, and the 16 September route audit did not catc
 
 **The rule** — A route with no caller is either a missing screen or dead weight; it is never 'done'.
 
-### POS-3 · The Kitchen screen has no heading
+### POS-7 · Three more raw business dates on Close restaurant day
+
+**Found** — 16 September (POS lane, round 1), fixing the one named in the brief. `pages/DayEnd.tsx` prints `day.businessDate` raw in three more places: the "… is closed" line on the Finalize step, the toast "… is finalised.", and the button itself — **"Close 2026-08-25"**. The heading above them now reads "Tuesday, 25 August 2026", so the same screen shows the date two ways.
+
+**Not fixed** — round 1 named two dates; these three change what a person reads, so they wait on the owner. The fix is the same `dateLong` call. The night audit already says "Tuesday, 25 August 2026 is closed." for the same moment (`night-audit/pages/NightAudit.tsx`).
+
+**The rule** — A format fixed in one place on a screen is not fixed on the screen: read every place the same field is printed.
+
+---
+
+## Fixed
+
+### POS-3 · The Kitchen screen had no heading — FIXED 16 September
 
 **Found** — 16 September, opening all 89 screens: it is the only one without an `h1`.
 
-The kitchen wallboard opens straight into its two columns, "Ordered" and "On the fire". Every other screen carries a `PageHeader`.
+The kitchen wallboard opened straight into its columns under a title drawn as a paragraph ("The pass"), and its browser tab read "Fidato PMS".
 
-**The fix, when it is done** — Give it a `PageHeader` — or record that a wallboard is deliberately chromeless, so the next audit does not raise it again.
+**What was done** — The wall screen keeps its own slim header (a `PageHeader` would add chrome to a screen read from across a kitchen), but the title in it is now the page's `h1`, and it says **Kitchen** — the menu's word, as `HANDOVER.md` § 6 requires of a heading and a tab. `useDocumentTitle("Kitchen")` sets the tab. Guarded by `readStates.test.tsx` ("has a heading and a tab title"), seen to fail on the old code.
 
-**The rule** — The only screen unlike every other screen is either special on purpose or an oversight; say which.
+**The rule** — The only screen unlike every other screen is either special on purpose or an oversight; say which. This one is special on purpose in its chrome and was an oversight in its heading.
 
-### POS-4 · A server fault on the till's reads shows as an empty list
+### POS-4 · A server fault on the till's reads showed as an empty list — FIXED 16 September
 
-**Found** — 8 September (root MEMORY 251 fixed the refusal half); the rest is recorded in PENDING § 6.
+**Found** — 8 September (root MEMORY 251 fixed the refusal half); the rest was recorded in PENDING § 6.
 
-`PosGate` now catches the refusal case and shows the server's sentence. A server fault still reads as "nothing here" — a till with no menu looks like a till nobody has set up.
+Nine reads in `data/till.ts` ended in `catch { return [] }` (or `null`): the menu, today's orders, one order, the chargeable rooms, the kitchen board, the tables, the waiters, a docket and the day end. So Close restaurant day told a cashier "This property has no restaurant configured" when the line dropped; the kitchen board said "Nothing ordered yet." while nothing had loaded; the Terminal said "No outlet is configured" while its outlets were still loading, and for good when they failed; a bill that failed to load printed "No such order."
 
-**The fix, when it is done** — Separate the three states on the till's reads: refused, failed, empty. `OfflineBar` is the pattern.
+**What was done**
+- The nine reads **throw**. A missing hotel or order id still answers empty without a request.
+- `components/ReadProblem.tsx` names the failure: **refused** (a 4xx — the server's own sentence, as it wrote it), **unreachable** (nothing arrived), **failed** (a fault, with its status). `ReadFailed` stands in for a list that has nothing to show; `ReadStale` is one line above a list that IS shown when its last refresh failed, with the time it was loaded.
+- Every screen reading them draws the right one: Kitchen, Tables, Till, Terminal, Menu (and its promotions, whose read already threw and whose error nothing drew), Close restaurant day, Docket, Bill, the order pad, and the header panel's waiter list. **Empty keeps each screen's own words**, now shown only for a read that succeeded.
+- Kitchen and Menu also drew their empty words **while loading**; they show a loading state now.
+- Guarded by `src/modules/pos/readStates.test.tsx` — 12 tests, 11 of them seen to fail against the old code.
 
-**The rule** — An error that renders as emptiness is the most expensive kind: nobody reports it.
+**The rule** — An error that renders as emptiness is the most expensive kind: nobody reports it. **And catching an error in a data function is not handling it — it takes the decision away from the only place that knows what to say.**
+
+### POS-6 · The rooms list kept on the device for an offline room charge was wiped by the first offline refresh — FIXED 16 September
+
+**Found** — 16 September, fixing POS-4. `till-rooms` is in `PERSISTED` (`src/App.tsx`) by the owner's decision of 8 September, so a waiter can charge a dinner to a room with the line down. Both settle panels ask for it again every time they open (the Terminal with `staleTime: 0`), and `listChargeableRooms` answered a failed request with `[]` — a **successful** empty answer, which React Query stored over the kept list and persisted. So the first time the panel opened with no connection, the room list the owner chose to keep was replaced by an empty one.
+
+**How it was proved** — `readStates.test.tsx`, "keep the rooms list kept on the device…": a query cache holding a room, then a refresh that cannot reach the server. Against the old code: `expected [] to deeply equal [ { room: '203', … } ]`. Against the fix it keeps the room.
+
+**What was done** — `listChargeableRooms` throws (POS-4), and React Query keeps the last good list when a refresh fails. **Nothing that posts a charge changed**: the room box has always accepted a typed room number, the list is only its suggestions, and `settleOrder` and the server's settle route are untouched.
+
+**The rule** — A value kept for offline use must never be overwritten by a read that failed. A `catch` that returns a default turns a failure into a fact, and a cache believes facts.
 
 ---
 

@@ -18,6 +18,7 @@ import {
 import { StartHere } from "@/components/app/StartHere";
 import { getMenu, listOrders, getOrder, listChargeableRooms, openOrder, addLine, voidLine, settleOrder, abandonOrder, applyDiscount, clearDiscount, setRoundOff, settleSplit, listPromotions, applyPromotion, type Order, type MenuItem, type OrderSummary, type TenderInput } from "@/modules/pos/data/till";
 import { BUSINESS_DATE } from "@/data/repositories";
+import { ReadFailed, ReadStale } from "@/modules/pos/components/ReadProblem";
 
 /* ══════════════════════════════════════════════════════════════════
    THE TILL
@@ -171,6 +172,17 @@ export default function TillPage() {
   );
   const done = (orders.data?.orders ?? []).filter((o) => o.status !== "open");
 
+  /* POS-4. One line for the whole screen when a refresh failed but
+     something is still shown — three strips for one dropped line would
+     be the loudest thing on a till that still works. */
+  const stale = [orders, menu, current].find(
+    (q) => q.error && q.data !== undefined);
+  const retryAll = () => {
+    void orders.refetch();
+    void menu.refetch();
+    if (openId) void current.refetch();
+  };
+
   return (
     <Page>
       <PageHeader
@@ -186,6 +198,28 @@ export default function TillPage() {
       />
 
       <StartHere className="mb-5" />
+
+      {stale && (
+        <ReadStale
+          className="mb-5"
+          error={stale.error}
+          loadedAt={stale.dataUpdatedAt}
+          onRetry={retryAll}
+        />
+      )}
+
+      {/* A menu that did not load is not "no menu yet" — that sentence
+          tells a waiter the hotel has not entered its dishes. */}
+      {menu.data === undefined && menu.error && (
+        <Card className="mb-5">
+          <ReadFailed
+            compact
+            error={menu.error}
+            what="the menu"
+            onRetry={() => void menu.refetch()}
+          />
+        </Card>
+      )}
 
       {menu.data?.length === 0 && (
         <Card className="mb-5">
@@ -282,6 +316,28 @@ export default function TillPage() {
 
         {/* ── The bill ─────────────────────────────────────────── */}
         <div className="space-y-4">
+          {openId && current.data === undefined && current.error && (
+            <Card>
+              <ReadFailed
+                compact
+                error={current.error}
+                what="this order"
+                onRetry={() => void current.refetch()}
+              />
+            </Card>
+          )}
+
+          {orders.data === undefined && orders.error && (
+            <Card>
+              <ReadFailed
+                compact
+                error={orders.error}
+                what="today's orders"
+                onRetry={() => void orders.refetch()}
+              />
+            </Card>
+          )}
+
           {order && (
             <OrderPanel
               order={order}

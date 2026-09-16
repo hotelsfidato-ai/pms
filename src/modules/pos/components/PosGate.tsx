@@ -13,10 +13,12 @@ import { getPosAccess } from "@/modules/pos/data/till";
    Reception, the per-hotel switch (087) — and shows the server's own
    sentence when the answer is no.
 
-   ⚠ WHY IT EXISTS. The till's reads turn every failure into an empty
+   ⚠ WHY IT EXISTS. The till's reads turned every failure into an empty
    list, so a receptionist refused by the new switch opened the till and
    read "There is no menu yet" — a wrong reason, which is worse than
-   none. Rule 6: a blocked thing is shown blocked, with why.
+   none. Rule 6: a blocked thing is shown blocked, with why. The reads
+   throw now (POS-4) and each screen names its own failure too; this
+   still answers first, once, for the whole service.
 
    Only an explicit refusal shuts the door. Offline, the check answers
    "go ahead" and the till's own outbox takes over, as it did before.

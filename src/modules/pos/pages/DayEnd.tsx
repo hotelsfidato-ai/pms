@@ -6,7 +6,7 @@ import {
   Wallet, HandCoins, Plus,
 } from "lucide-react";
 import { cn } from "@/lib/cn";
-import { money, moneyPrecise } from "@/lib/format";
+import { dateLong, money, moneyPrecise } from "@/lib/format";
 import { useUi } from "@/lib/ui";
 import {
   Page, PageHeader, Card, CardBody, CardHeader, Button, Field, fieldProps, Input,
@@ -14,6 +14,7 @@ import {
   Dialog, DialogContent, DialogClose,
 } from "@/components/ui";
 import { getDayEnd, recordMovement, countDrawer, closeDay, type DayEnd, type MovementKind } from "@/modules/pos/data/till";
+import { ReadFailed, ReadStale } from "@/modules/pos/components/ReadProblem";
 
 /* ══════════════════════════════════════════════════════════════════
    THE DAY END
@@ -94,6 +95,24 @@ export default function DayEndPage() {
       </Page>
     );
   }
+  /* POS-4. This said "This property has no restaurant configured" for
+     every failure — a dropped line and a server fault included — to the
+     person about to count the drawer. The server's own refusal, a fault
+     and a missing outlet are three different answers now. */
+  if (day.data === undefined && day.error) {
+    return (
+      <Page>
+        <PageHeader title="Close restaurant day" />
+        <Card>
+          <ReadFailed
+            error={day.error}
+            what="the restaurant day"
+            onRetry={() => void day.refetch()}
+          />
+        </Card>
+      </Page>
+    );
+  }
   if (!day.data) {
     return (
       <Page>
@@ -112,7 +131,7 @@ export default function DayEndPage() {
     <Page>
       <PageHeader
         title="Close restaurant day"
-        description={`${d.outlet.name} · ${d.businessDate}`}
+        description={`${d.outlet.name} · ${dateLong(d.businessDate)}`}
         badge={d.closedAt ? (
           <span className="inline-flex items-center gap-1.5 rounded-full bg-green-50 border border-success px-3 py-1 text-sm text-success-dark">
             <Lock className="size-3.5" />
@@ -120,6 +139,17 @@ export default function DayEndPage() {
           </span>
         ) : undefined}
       />
+
+      {/* The drawer's figures stay on screen when a refresh fails — but a
+          cashier about to close must know they may be out of date. */}
+      {day.error && (
+        <ReadStale
+          className="mb-4"
+          error={day.error}
+          loadedAt={day.dataUpdatedAt}
+          onRetry={() => void day.refetch()}
+        />
+      )}
 
       <Steps current={step} onPick={setStep} blockers={d.blockers.length} />
 

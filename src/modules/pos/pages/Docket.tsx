@@ -1,6 +1,7 @@
 import { useQuery } from "@tanstack/react-query";
 import { useParams } from "react-router";
 import { getDocket } from "@/modules/pos/data/till";
+import { ReadFailed } from "@/modules/pos/components/ReadProblem";
 
 /* ══════════════════════════════════════════════════════════════════
    THE KITCHEN DOCKET — what the chef is handed
@@ -42,6 +43,17 @@ export default function DocketPage() {
 
   if (docket.isLoading) {
     return <p className="p-8 text-grey-500">Loading…</p>;
+  }
+  /* POS-4: a docket that failed to load said "No such docket." — the
+     server's own sentence when it truly has none, a fault otherwise. */
+  if (!docket.data && docket.error) {
+    return (
+      <ReadFailed
+        error={docket.error}
+        what="this docket"
+        onRetry={() => void docket.refetch()}
+      />
+    );
   }
   if (!docket.data) {
     return <p className="p-8 text-grey-500">No such docket.</p>;

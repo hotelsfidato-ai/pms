@@ -14,6 +14,7 @@ import { StartHere } from "@/components/app/StartHere";
 import { OrderPad } from "@/modules/pos/flows/OrderPad";
 import { draftedTables } from "@/lib/draft";
 import { getFloor, markPrinted, clearTable, setOutletClosed, type FloorTable, type TableState, type OffFor } from "@/modules/pos/data/till";
+import { ReadFailed, ReadStale } from "@/modules/pos/components/ReadProblem";
 
 /* ══════════════════════════════════════════════════════════════════
    THE FLOOR
@@ -206,8 +207,28 @@ export default function FloorPage() {
         ))}
       </div>
 
+      {/* POS-4: a failed refresh keeps the tables and says they are not
+          current; a failed first load says so instead of "No tables
+          have been laid out yet". */}
+      {floor.error && floor.data !== undefined && (
+        <ReadStale
+          className="mb-4"
+          error={floor.error}
+          loadedAt={floor.dataUpdatedAt}
+          onRetry={() => void floor.refetch()}
+        />
+      )}
+
       {floor.isLoading ? (
         <Skeleton className="h-64 w-full" />
+      ) : floor.data === undefined && floor.error ? (
+        <Card>
+          <ReadFailed
+            error={floor.error}
+            what="the tables"
+            onRetry={() => void floor.refetch()}
+          />
+        </Card>
       ) : sections.length === 0 ? (
         <Card>
           <CardBody>

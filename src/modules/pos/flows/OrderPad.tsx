@@ -13,6 +13,7 @@ import {
 } from "@/components/ui";
 import { DishDialog } from "@/modules/pos/flows/DishDialog";
 import { getMenu, sendOrder, type MenuItem } from "@/modules/pos/data/till";
+import { ReadFailed } from "@/modules/pos/components/ReadProblem";
 
 /* ══════════════════════════════════════════════════════════════════
    THE ORDER PAD
@@ -304,6 +305,17 @@ export function OrderPad({
 
               {menu.isPending && (
                 <p className="text-sm text-grey-500">Loading the menu…</p>
+              )}
+
+              {/* POS-4: a menu that failed to load drew nothing at all —
+                  no dishes, no "no menu", no reason. */}
+              {menu.data === undefined && menu.error && (
+                <ReadFailed
+                  compact
+                  error={menu.error}
+                  what="the menu"
+                  onRetry={() => void menu.refetch()}
+                />
               )}
 
               {!noMenu && filtered.length === 0 && search.trim() && (

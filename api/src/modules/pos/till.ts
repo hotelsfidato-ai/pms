@@ -119,9 +119,11 @@ async function moduleGate(
 /* ── May I use the POS here? ──────────────────────────────────────
    Answers ok only by getting past BOTH gates above — the module and
    the reception switch. The screens ask this before drawing, because
-   their data calls turn every failure into an empty list, and a
+   their data calls turned every failure into an empty list, and a
    refused receptionist was told "There is no menu yet" instead of why
-   they were refused (14 September). */
+   they were refused (14 September). Those calls throw now and each
+   screen names its own failure (POS-4, 16 September); this still
+   answers first, once, for the whole service. */
 till.get("/:code/till/access", (c) => c.json({ ok: true as const }));
 
 /* ── The menu ─────────────────────────────────────────────────────── */
