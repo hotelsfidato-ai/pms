@@ -26,6 +26,7 @@ import {
   startListening, stopListening, watcherCount, isListening,
 } from "./realtime.ts";
 import { approvals } from "./routes/approvals.ts";
+import { places } from "./routes/places.ts";
 import { attachments } from "./routes/attachments.ts";
 import { notifications } from "./routes/notifications.ts";
 
@@ -191,6 +192,8 @@ app.route("/api/hotels", notifications);
    inherits the same subject middleware and the same CORS list. */
 app.route("/api/hotels", live);
 app.route("/api/hotels", approvals);
+/* Places and suppliers: shared by the Store, equipment and purchasing. */
+app.route("/api/hotels", places);
 app.route("/api/hotels", attachments);
 
 /* Every service's routers, from its own front door. Where each hangs is

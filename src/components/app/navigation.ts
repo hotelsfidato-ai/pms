@@ -1,4 +1,4 @@
-import { Bell, Palette, type LucideIcon } from "lucide-react";
+import { Bell, MapPin, Palette, type LucideIcon } from "lucide-react";
 import { canAccess, type Resource, type Role } from "@/lib/permissions";
 /* Each service's own menu entries (docs/SERVICE-FOLDERS-PLAN.md). */
 import { nav as frontDesk } from "@/modules/front-desk/nav";
@@ -257,9 +257,19 @@ const SECTION_LAYOUT: Array<Omit<NavSection, "items"> & { key: SectionKey }> = [
   { key: "coming-soon", label: "Coming soon" },
 ];
 
-/* The two entries that belong to no service: where the system talks to a
-   person, and the developers' component showcase. */
+/* The entries that belong to no service: where the system talks to a
+   person, the places and suppliers three services share, and the
+   developers' component showcase. */
 const CORE_ENTRIES: ServiceNavEntry[] = [
+  /* Places and suppliers (16 September) — the Store, the equipment register
+     and purchasing all read them, none owns them. Shown to anybody who can
+     see stock or equipment; who may CHANGE them is the server's
+     (api/src/routes/places.ts). No working menu: found through the section
+     and Find a screen, so no role's pinned menu moved. */
+  { section: "store-and-equipment", order: 30,
+    label: "Places and suppliers", to: "/h/:code/places", icon: MapPin, resource: "stock",
+    canSee: (role) => canAccess(role, "stock") || canAccess(role, "equipment"),
+    keywords: ["location", "store", "kitchen store", "bar store", "supplier", "vendor", "gstin"] },
   { section: "system", order: 10,
     workingMenus: ["front_desk", "pos", "chef", "kitchen_manager", "housekeeping", "stores"],
     label: "Notifications", to: "/notifications", icon: Bell, resource: "notification", matchPrefix: true },

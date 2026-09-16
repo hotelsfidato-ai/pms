@@ -24,7 +24,9 @@ import { useSession, useRole } from "@/lib/session";
 import { homePath } from "@/lib/homeScreen";
 import { workingHomeFor } from "@/components/app/navigation";
 import { PropertyScope, PropertyIndex } from "@/components/app/PropertyScope";
+import { RequireAccess } from "@/components/app/RequireAccess";
 import { NotificationsPage } from "@/pages/Notifications";
+import PlacesAndSuppliersPage from "@/pages/PlacesAndSuppliers";
 import SignInPage from "@/pages/SignIn";
 import DesignSystemPage from "@/pages/DesignSystem";
 import PlaceholderPage from "@/pages/Placeholder";
@@ -310,6 +312,16 @@ export default function App() {
               <Route path="/design-system" element={<DesignSystemPage />} />
             )}
             <Route path="/notifications" element={<NotificationsPage />} />
+            {/* Places and suppliers: shared by the Store, equipment and
+                purchasing, so core. Guarded like the Store. */}
+            <Route
+              path="/h/:code/places"
+              element={
+                <RequireAccess path="/h/:code/places" resource="stock">
+                  <PropertyScope /><PlacesAndSuppliersPage />
+                </RequireAccess>
+              }
+            />
 
             {/* Property level */}
             <Route

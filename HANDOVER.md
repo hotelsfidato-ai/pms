@@ -385,6 +385,25 @@ the owner), Equipment and the Inventory Manager's and Housekeeping's working
 menus at the equipment merge, EQ-2. **Next free migration: 097.** Owner chose:
 **deploy one release** after these merges (steps given in chat, § 9 shape).
 
+**"Finish your pending tasks" — the master's list, done 16 September evening.**
+- **Equipment 1B merged** (`a093808`) — S12–S16 built by the chat; migration 097.
+- **MEMORY 284: 095 could not be replayed** — every deploy after the next would
+  have failed. Guarded 095/096; `db/tests/rerun.sh` now adds a property between
+  passes (it was green on an empty database). **The replay test is a gate.**
+- **RES-2 closed** — walk-ins use `app.next_reference`. **EQ-2** — migration 098,
+  a property with equipment or stock is refused deletion by name. **STO-9** — under
+  a finger, dialog Close 44px, inputs and selects 44px with 16px text; desk unchanged.
+  Equipment in Housekeeping's menu. Vite serves a chat copy's junctioned node_modules.
+- **Places and suppliers** (`/h/:code/places`, core: `api/src/routes/places.ts`,
+  `src/pages/PlacesAndSuppliers.tsx`) — the door 094 lacked. **Changed by the owner,
+  admin and GM only** (the roles already holding everything on stock and
+  equipment); **whether the Hotel Manager and Inventory Manager may too is ASKED of
+  the owner** — the owner declined the question once; widening is `PLACE_KEEPERS`.
+- **Not done, and why:** HK-1 (the owner deferred it), FD-1 (the owner must pick
+  which "in house" number is the definition), the stray typed notes inside comments
+  in `navigation.ts` and 068 (left: they may be the owner's), EQ-3 (dev only).
+- **Next free migration: 099.**
+
 ### 3.0g · Round 1 of the service chats — who holds what, 16 September
 
 The owner talks to the master chat; the master hands out the work. Checked for

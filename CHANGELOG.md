@@ -129,6 +129,48 @@ Then, second question: **can this POS route a KOT and give a printout?**
 
 ---
 
+## 2026-09-16 (pending tasks) · Equipment merged, a deploy-breaking migration caught, places and suppliers
+
+**Asked for:** "finish your pending tasks".
+
+**Merged:** equipment phase 1B with S12–S16 (`a093808`) — audited first: only its
+folders, migration 097, two permitted test lines, core approvals untouched.
+Opened: the register loads as the GM.
+
+**Caught before production — MEMORY 284.** After the merge the LOCAL database
+refused the migrations: 095, replayed, re-added a shorter list of approval kinds
+over the `equipment_retire` rows 096 had written. Every deploy after the next
+would have rolled back at 095. The replay test (`rerun.sh`) was green because
+its database has no properties. Fixed: 095 and 096 change the list only when it
+lacks their kind; `rerun.sh` adds a property between passes and failed on the old
+095. The replay test joins the gates.
+
+**Fixed from the master's list:**
+- **RES-2** — walk-ins use `app.next_reference`; the test failed on the old code
+  with `FH-2609-5031`.
+- **EQ-2** — migration 098: equipment items and stock movements count as
+  trading; both checks fail without it.
+- **STO-9** — the shared kit under a finger: dialog Close 44×44, inputs and
+  selects 44px with 16px text. Measured at 375px on a touch screen (44, 44, 16px,
+  no sideways scroll) and on the desk (unchanged: 36px, 15px, Close 24).
+- Equipment in Housekeeping's working menu (the owner's answer).
+- Vite allows a chat copy's junctioned `node_modules` (the Inter font 403).
+
+**Built: Places and suppliers** — `/h/:code/places`, in Store and equipment.
+Nothing could add a place or a supplier, so no property had a store for
+equipment to leave. Anyone who sees stock or equipment may read; the owner,
+admin and GM may add, change and switch off — never delete. Proved: every role
+tried (only those three may write; a refusal writes nothing; guard removed → 10
+failures); on screen as the GM (added a store, the equipment form offered it,
+removed afterwards from the local database) and as reception (read-only, the
+sentence, buttons off). **Asked of the owner:** the Hotel Manager and the
+Inventory Manager too?
+
+**Not done:** HK-1 (deferred by the owner), FD-1 (the owner picks the
+definition), the stray notes in two comments (possibly the owner's), EQ-3 (dev).
+
+---
+
 ## 2026-09-16 (audit, round 3) · NA-2 and STO-1 merged; names; retirement in the one inbox
 
 **Asked for:** an audit — what the chats finished, what I think, and every open
