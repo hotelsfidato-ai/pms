@@ -70,6 +70,13 @@ design critique     16 Sep — docs/audits/2026-09-16-design-critique.md. 20/40.
                     FIXED the same day, measured: six screens went to 0 failures. Three
                     P0s open — one booking with three statuses, /stay with no error
                     branch, /in-house printing charges under BALANCE
+n8n on the box      CHECKED 16 Sep, read-only — NOT USABLE YET. DNS n8n.fidatohotels.com
+                    → 130.210.49.220 exists, but the server was never set up for it: no
+                    nginx site, no certificate. The container (n8n 2.38.5) has been up 6
+                    days yet does NOT answer on 127.0.0.1:5678, and its log says it cannot
+                    resolve any internet name (getaddrinfo EAI_AGAIN api.n8n.io) — so a
+                    workflow calling WhatsApp, Meta or Firestore would fail too. Nightly
+                    backups DO run (/var/backups/n8n, 13–16 Sep), on the same server
 parallel agents     16 Sep — .claims/<service>.md (one file per service) and
                     `npm run lane -- <service>`, which sorts what a session changed into
                     yours / shared / somebody else's
