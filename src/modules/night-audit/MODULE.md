@@ -178,7 +178,7 @@ From `PENDING.md` and `HANDOVER.md`, and one found while writing this brief:
 - **Found while writing this brief:** the old `billing.ts` header saying
   "THE NIGHT AUDIT DOES NOT RUN" stayed behind in finance's
   `api/src/modules/finance/billing.ts` when the checklist moved here — it is
-  finance's to fix (FIN-1 in `src/modules/finance/MEMORY.md`).
+  finance's to fix (FIN-1 in `src/modules/finance/DEFECTS.md`).
 
 ## Gates
 
