@@ -58,7 +58,7 @@ All hang from `/api/hotels`, in two files mounted by
 | Method | Path | What it does |
 |---|---|---|
 | GET | `/:code/night-audit/can-run` | may this day be closed, and if not, why — for the **server's** date. **No screen calls it** (the API tests do). Read-only. NA-1, NA-2 |
-| POST | `/:code/night-audit/run` | close the day (the five steps in the file's header, one transaction). Takes no date: closes whatever day the server is on (NA-2) |
+| POST | `/:code/night-audit/run` | close the day (the five steps in the file's header, one transaction). Body `{ businessDate }` — the day the screen says it is closing: **409 "… was already closed. Reload to see today."** if that day is closed, changing nothing; 400 if it is not a date. With no body it closes whatever day the server is on (NA-2, fixed 16 September) |
 | GET | `/:code/night-audit/runs` | the last 60 runs — **no screen calls it** (`api/scripts/capture-demo.ts` reads it). Read-only. A history screen that was never built (NA-1) |
 
 **`api/src/modules/night-audit/checklist.ts`** (cut from the old `api/src/routes/billing.ts`)
@@ -95,7 +95,7 @@ fix made elsewhere does not reach them unless it changes these queries.
 | Room charges to post | `reservations`: `checked_in`, not day-use | **an "in house" count of its own.** The run also skips complimentary stays, stays with no open folio and stays already charged tonight, so "rooms posted" can be smaller |
 | Rooms still marked dirty | `rooms.housekeeping_status = 'dirty'` | |
 | Postings reversed today | `folio_postings` with a `reverses_id`, `business_date = X` | |
-| The Run button and its reason | `blockersFor(X)` in `nightAudit.ts` | the same function the run refuses with — asked for X, while the run asks for the server's date (NA-2) |
+| The Run button and its reason | `blockersFor(X)` in `nightAudit.ts` | the same function the run refuses with — asked for X, while the run asks for the server's date. Run sends X, and the server refuses it once X is closed (NA-2) |
 | Last run | latest completed `night_audit_runs.business_date`, printed by Postgres as `DD Mon YYYY` | a date formatted in SQL, not by `src/lib/format.ts` |
 | The result card | the `POST /run` answer: rooms posted, revenue, complimentary, no-shows; the restaurant from settled `pos_orders`, `pos_order_lines`, `pos_order_tenders`; the two drawers from closed `cashier_shifts` and `pos_day_ends` | the answer also carries `retentionCharged` and `noShowsWithoutTerms`; **the card shows neither** |
 
