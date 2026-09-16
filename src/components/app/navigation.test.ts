@@ -127,7 +127,7 @@ describe("each person's menu", () => {
 
   it("gives housekeeping and the stores their work — and no revenue Dashboard", () => {
     expect(menu("housekeeping")).toEqual(["Housekeeping", "Work orders", "Store", "Notifications"]);
-    expect(menu("stores")).toEqual(["Store", "Notifications"]);
+    expect(menu("stores")).toEqual(["Store", "Equipment", "Notifications"]);
     for (const role of ["housekeeping", "stores", "chef", "kitchen_manager", "pos"] as Role[]) {
       expect(menu(role)).not.toContain("Dashboard");
     }
@@ -154,7 +154,7 @@ describe("each person's menu", () => {
        systems", and "Purchasing" arrived. Each takes its alphabetical place. */
     const SOON = [
       "Accounting export", "Booking engine", "Central CRM", "Channel manager",
-      "Contracts", "Equipment", "Fidato CRS", "Guest messages", "Guest services",
+      "Contracts", "Fidato CRS", "Guest messages", "Guest services",
       "Laundry", "Leads and WhatsApp", "Loyalty", "Marketing", "Online check-in",
       "Online payments", "Purchasing", "Revenue management", "Reviews",
       "Room systems", "Spa",
