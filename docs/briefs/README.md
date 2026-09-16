@@ -28,6 +28,27 @@ One line each. The brief carries the rest.
 is what one person can answer for. The order that wastes least: **front desk →
 inventory → pos**, because those three hold the most open work.
 
+### Services that are still Coming soon
+
+**These chats do not build anything.** Each is blocked on a fact only the owner
+holds, and the most useful thing an agent can produce is the short list of
+decisions that would unblock it, each with a recommendation. The briefs say so
+in their first paragraph, and `coming-soon.md` explains why.
+
+| Chat | Paste this |
+|---|---|
+| **Channel manager** | `You are the channel-manager agent for Fidato PMS. Read docs/briefs/channel-manager.md and follow it exactly. This service is not built: do not build it.` |
+| **CRS connection** | `You are the crs agent for Fidato PMS. Read docs/briefs/crs.md and follow it exactly. This service is not built: do not build it.` |
+| **Leads and WhatsApp** | `You are the leads agent for Fidato PMS. Read docs/briefs/leads.md and follow it exactly. This service is not built: do not build it.` |
+| **Central CRM** | `You are the crm agent for Fidato PMS. Read docs/briefs/crm.md and follow it exactly. This service is not built: do not build it.` |
+| **Any of the other fourteen** | `You are the <service> agent for Fidato PMS. Read docs/briefs/coming-soon.md and src/modules/<service>/MODULE.md, and follow them exactly. This service is not built: do not build it. Produce the decisions the owner must make, each with a recommendation, and stop there.` |
+
+The fourteen: `payments` `booking-engine` `online-checkin` `revenue-management`
+`accounting` `contracts` `guest-messaging` `guest-services` `laundry` `spa`
+`equipment` `loyalty` `marketing` `reputation`. **`coming-soon.md` has a table
+of what blocks each one** — read it before choosing which to staff; three of
+them are not worth an agent until the owner says they are wanted at all.
+
 ---
 
 ## The five rules every lane obeys
