@@ -58,6 +58,7 @@ clarity plan        all 4 steps built (step 4, 15 Sep: Start here, terms, empty 
 service folders     BUILT and verified 15 Sep on branch service-folders — not in cp6, not deployed
 one hotel system    PLANNED 15 Sep — docs/HMS-INTEGRATION-PLAN.md; waiting on decisions D1–D14
 coming soon         BUILT 16 Sep on branch coming-soon (on top of service-folders) — not deployed
+route + screen audit  16 Sep: 214 routes, 89 screens, PENDING checked — docs/audits/2026-09-16-…
 ```
 
 **Deployed 15 September** — all of it:

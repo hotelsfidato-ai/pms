@@ -196,6 +196,45 @@ holds a third `const USER = "front desk"` (MEMORY 256 names two);
 `GET /:code/groups` stayed in front desk's `stays.ts` though groups are
 reservations' (the owner's call); `pages/Pos.tsx` has two headings.
 
+## 2c · Found in the route and screen audit, 16 September — NOT FIXED
+
+Every route called and every screen opened against the local copy;
+production read read-only. The audit is
+`docs/audits/2026-09-16-routes-and-pending.md`.
+
+- **PEO-1 · the People screen has no route guard.** `/people` opens for a
+  reception clerk and shows Add somebody, Give a property, Password, Edit and
+  Deactivate. Its menu entry needs the `user` grant, which reception does not
+  have, so the entry is hidden — but `src/modules/admin/routes.tsx` mounts the
+  page without `RequireAccess`. A clerk sees only their own row (the database
+  scopes it) and every button is refused by the server, so nothing leaks; it
+  is the rule that the screens and the guard must agree, broken. **One line:
+  wrap it, and `App.test.tsx` covers it.**
+- **POS-2 · two restaurant add-on routes are unreachable.**
+  `POST /:code/till/addons/:id/on` and `/off` (`api/src/modules/pos/till.ts`)
+  have no caller anywhere. Menu items can be switched from the Menu screen;
+  add-ons cannot. Either the Menu screen gains the switch, or the routes go.
+- **API-2 · a clerk can read the audit log and the property settings through
+  the API**, though both screens are refused to them (no `audit_log`, no
+  `setting` grant): `GET /:code/audit-log` answered 28 KB and
+  `GET /:code/settings` answered, as `dev-desk`. The roster and the password
+  routes are safe — row-level security hides other people's rows, and staff
+  creation is refused ("Only a group administrator may provision a
+  property"). The owner's call: should the API refuse what the screens do?
+- **POS-3 · the Kitchen screen has no heading.** Every other screen carries a
+  `PageHeader`; the kitchen wallboard opens straight into its two columns.
+  Deliberate or not, it is the only screen with no `h1`.
+- **INV-1 confirmed by running it:** `GET /api/hotels/rate-plans` answers
+  404 "No such property" because `GET /api/hotels/:code` is registered first.
+  Nothing calls it. Delete it rather than reorder the mounts.
+
+**Also measured:** 214 routes (92 GET, 92 POST, 13 PATCH, 10 PUT, 7 DELETE);
+81 GET routes proven answering as the owner, 69 as a clerk; 13 routes with no
+caller anywhere (5 attachments, 4 approvals, 2 night-audit, 2 add-ons) plus 5
+called by something other than the website on purpose (`/health` and the four
+POS-bridge routes); 86 of 89 screen addresses opened and rendered with no
+console errors.
+
 ## 2b · What the service-folder move leaves
 
 - **Merge and deploy — the owner's.** The move is built and verified on
@@ -303,6 +342,14 @@ approvals engine still does.
 Not built because the route table is not a static list the way
 `export function` is — Hono registers them at runtime, so this needs
 real work rather than a regex.
+
+**16 September: it has been done once, as a script** (the audit
+`docs/audits/2026-09-16-routes-and-pending.md`, § 3): import the app, read
+`app.routes` at run time, match each route against every `/api/...` path the
+website builds, and check the rest by hand. It found 13 routes with no caller
+— including two nobody had recorded. Making it a test is the remaining work:
+a `KNOWN_UNREACHABLE` list that may only shrink, exactly like the seam
+test's.
 
 ### `mayReach` fails open, and only a test stops it now
 

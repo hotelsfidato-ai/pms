@@ -50,6 +50,51 @@ Write it **as you go**, not at the end from memory. Copy this shape:
 
 ---
 
+## 2026-09-16 (audit) · Every route called, every screen opened, and PENDING checked
+
+**Asked for:** "do a full in-code audit on what was pending, and if all the
+routes are working well; start it in local for testing; an audit of all the
+routes which are present at the moment."
+
+**Done —** `docs/audits/2026-09-16-routes-and-pending.md`. Run locally
+(Postgres 55432, API 8787, website 5173) with the demo data; production read
+read-only for § 5. Two local writes, both undone: the banquet module switch,
+and probes that created nothing.
+
+**Measured**
+```
+routes                214  (92 GET · 92 POST · 13 PATCH · 10 PUT · 7 DELETE)
+GET proven answering   81 as the owner · 69 as a reception clerk
+answering wrongly       1  GET /api/hotels/rate-plans (INV-1, confirmed live)
+no caller anywhere     13  attachments 5 · approvals 4 · night-audit 2 · add-ons 2
+called by something
+  other than the web    5  /health and the four POS-bridge routes
+screens                89 addresses · 86 opened and rendered · 0 console errors
+```
+
+**Found (PENDING § 2c)**
+- **PEO-1**: `/people` has no route guard — a clerk can open it and sees
+  buttons the server refuses. One line to fix; the test already exists.
+- **POS-2**: two restaurant add-on routes have no caller anywhere.
+- **API-2**: a clerk can read the audit log and the property settings through
+  the API, though both screens are refused to them.
+- **POS-3**: the Kitchen screen has no heading.
+- The five heading mismatches and INV-1 confirmed on screen and by running.
+
+**Corrected mid-audit, before it reached the owner:** a probe made it look as
+though a clerk could create staff and set another person's password. The
+routes validate the body before they check authority, which is what I saw;
+the guards are there (`app.may_set_password`, `app.require_group_admin`), and
+row-level security hides the rows. Nothing was created or changed.
+
+**Proved:** the sweeps above; `PENDING.md` § 5's missing route-reachability
+gate was built as a script and is now a candidate test.
+
+**Left open:** the seven-step order in the audit's § 6, for the owner to
+approve, and everything already in `PENDING.md`.
+
+---
+
 ## 2026-09-16 · Every missing service: a folder and a Coming soon page
 
 **Asked for:** "ok now for a hms with all the requested services which are
