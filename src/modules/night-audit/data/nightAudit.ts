@@ -83,9 +83,15 @@ export interface NightAuditResult {
  * `api()` surfaces as an ApiError carrying the body — the same shape
  * every other guarded action uses, so the screen shows the reason
  * rather than a status code.
+ *
+ * `closing` is the day the screen SAYS it is closing, and the server
+ * refuses it if that day is already closed (NA-2). Without it the
+ * server closes whatever day it is on — which, for a screen that did
+ * not see the day close on another device, is tomorrow.
  */
-export async function runNightAudit(hotelId: string): Promise<NightAuditResult> {
+export async function runNightAudit(hotelId: string, closing: string): Promise<NightAuditResult> {
   return api<NightAuditResult>(`/api/hotels/${hotelId}/night-audit/run`, {
     method: "POST",
+    body: JSON.stringify({ businessDate: closing }),
   });
 }
