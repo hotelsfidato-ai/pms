@@ -517,8 +517,15 @@ early.
          house_use and no end date (migration 022), which availability subtracts (044)
 16 Sep   INV-5: owner, admin and GM may set prices. PLUS A NEW STAFF ROLE — a person, "like a
          revenue manager", who changes prices and pushes them to the OTAs when the owner, admin
-         and GM are not there. SU is only the system interface; it does not set prices. The
-         role's exact powers go to the owner before it is built (a new role is a migration)
+         and GM are not there. SU is only the system interface; it does not set prices.
+         APPROVED 16 Sep as REVENUE MANAGER (named so it is never confused with the channel
+         manager service). CAN: set prices (Pricing, Rate calendar, Rate plans); set
+         restrictions (stop sell, minimum nights, closed to arrival/departure); see
+         availability, all bookings, occupancy and ADR reports, OTA commission. CANNOT: bills,
+         payments, invoices; guest details and ID documents; staff and roles; property and room
+         setup; check-in and check-out; the POS
+16 Sep   MIGRATION NUMBERS ASSIGNED by the master: 091 reservations (RES-3), 092 master (the
+         reference generator), 093 master (the revenue manager role)
 16 Sep   RES-2: every NEW booking reference is FH-<hotel code>-YYMM-<number>, e.g.
          FH-5EL-2608-4858. Old bookings keep the references they were given
 16 Sep   "NC" = NOT FOR SALE, HOUSE USE. Already possible on the Housekeeping board (take the
