@@ -452,7 +452,9 @@ function RoomCard({
               onChange={(e) => onAssign(e.target.value)}
               data-hk-assignee={room.number}
               className={cn(
-                "min-h-9 -ml-1 pl-1 pr-1 rounded bg-transparent",
+                /* 44px, like the buttons below it: measured at 36px on
+                    16 September, on the one screen built for a phone. */
+                "min-h-11 -ml-1 pl-1 pr-1 rounded bg-transparent",
                 "text-sm border-0 cursor-pointer",
                 "focus:outline-none focus:ring-2 focus:ring-brand-orange",
                 assignment ? "text-ink-900" : "text-grey-400",

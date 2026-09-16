@@ -93,6 +93,9 @@ export function OutOfOrderFlow({
           size="sm"
           onClick={() => setOpen(true)}
           aria-label={`Take room ${roomNumber} out of service`}
+          /* Square 44, not 40 wide: an icon-only button on a board a
+             housekeeper taps one-handed. Measured 40×44 on 16 September. */
+          className="size-11 justify-center px-0"
         >
           <Wrench className="size-4" />
         </Button>

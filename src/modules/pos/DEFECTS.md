@@ -14,6 +14,18 @@ entries stay here: they are the reason the fault does not come back.
 
 ## Open — not fixed
 
+### POS-5 · The kitchen docket is built, and nothing ever opens it
+
+**Found** — 16 September, checking whether this system can route and print a KOT. `DocketPage` is real, thermal-roll width, prices deliberately absent, with a Print button at `pages/Docket.tsx:64`. Its address is `/h/:code/till/orders/:id/kot/:no` (`routes.tsx:53`). **No file in `src/` navigates to it.** Grepped for `till/docket`, `/docket/` and the built path: nothing. Compare the bill, which is opened with `window.open` from three places — `Floor.tsx:138`, `Terminal.tsx:657`, `Till.tsx:985`.
+
+So when a waiter presses Send, the toast says "Kitchen docket 5" (`flows/OrderPad.tsx:230`) and no paper appears. The chef's slip exists as a screen nobody is taken to.
+
+This is the website twin of POS-2, and the 16 September route audit did not catch it: that audit matched **API** routes against their callers, and this is a **website** route.
+
+**The fix, when it is done** — Ask the owner first: is the pass screen the intended path at 5 Elements today, with the docket kept for a reprint? If dockets are meant to print, the fire path opens the docket for each new KOT number, the way the bill is already opened. Both halves of a KOT — routing it and printing it — are planned in `docs/APPS-PLAN.md`; this is the smaller half and does not wait on it.
+
+**The rule** — A screen with no caller is the same defect as a route with no caller, and the audit that only checks the server finds half of them.
+
 ### POS-2 · Two restaurant add-on routes are unreachable
 
 **Found** — 16 September, the route audit — every route matched against every path the website builds, then checked by hand.

@@ -50,6 +50,125 @@ Write it **as you go**, not at the end from memory. Copy this shape:
 
 ---
 
+## 2026-09-16 (plan) · Desktop, kiosk tablet and phone — which architecture
+
+**Asked for:** the owner asked which architecture to build desktop, mobile and
+tablet applications on, naming Expo for Android and iOS and asking what is
+better for desktop given this system. Their answers on the two questions put
+back: the desktop must be a real installed application because silent printing
+matters; the tablet is Android and must be locked so "the tab is only of this
+software"; the phone is for staff and guests eventually; and the reason behind
+all of it is availability — "many places will have a server but not very
+reliable network".
+
+Then, second question: **can this POS route a KOT and give a printout?**
+
+**Shipped**
+- `docs/APPS-PLAN.md` — the plan. One shared core, three shells: Tauri wraps
+  today's `dist/` for desktop, Capacitor wraps the *same* `dist/` for the
+  Android kiosk tablet, and Expo is a new small staff phone app rather than a
+  port of the 89 screens. Eleven decisions (A1–A11) with a recommendation each.
+- `docs/APPS-PLAN.md` § 4.2a — the KOT answer, measured against the schema,
+  and Phase 0a ahead of the Tauri work.
+- `src/modules/pos/DEFECTS.md` — **POS-5**, below.
+- `HANDOVER.md` § 2 (the state block), § 3.0c (the new item) and § 4 (three
+  decisions the owner made today).
+
+**Found** (no code defects; four findings that shape the plan)
+- **React Native cannot reuse this UI.** Measured: 285 files and 48,435 lines
+  in `src/` excluding tests, 72 pages and 27 shared components, all of it
+  Tailwind v4, Radix, react-router and Recharts. Only `src/data/repositories`
+  and most of `src/lib` port. "Expo for all three surfaces" is a multi-month
+  rewrite of a live hotel for a desktop result worse than the deployed one.
+- **The guest app cannot be started.** `booking-engine`, `online-checkin` and
+  `guest-messaging` are Coming-soon stubs — two `.tsx` files each, no screens.
+  There is nothing to put in an app, and it also waits on the CRS bridge.
+- **The gapless GST counter is what constrains every offline design.**
+  `app.next_invoice_number()` (migration 011) locks a row in `invoice_series`
+  per hotel per financial year. Two writers cannot issue from one series, so a
+  local property node is only safe if it is the *sole* issuer for its own
+  hotel — which the `(hotel_id, fin_year)` key does allow.
+- **The API needs no change for any of this.** A native `fetch` sends no
+  `Origin`, so the allowlist at `api/src/server.ts:61` is not even reached;
+  the same Firebase ID token and the same RLS apply unchanged.
+- **POS-5 · the kitchen docket is built and nothing opens it.** `DocketPage`
+  is real, thermal width, no prices, with a Print button
+  (`pages/Docket.tsx:64`) at `/h/:code/till/orders/:id/kot/:no`. No file in
+  `src/` navigates to it; the bill, by contrast, is opened from three screens.
+  The waiter is told "Kitchen docket 5" and no paper appears. Logged in
+  `src/modules/pos/DEFECTS.md`. The 16 September route audit missed it because
+  it matched **API** routes to callers, and this is a **website** route.
+- **KOT routing does not exist.** There is no station in the schema:
+  `pos_menu_items` (028) has no station or printer column; `pos_menu_categories`
+  is the card and says so in its own comment; `pos_sections` (047) is where the
+  *table* is, not where the dish is cooked; `pos_outlets` (024) is a credential
+  with a revenue category. `Kitchen.tsx` is one board for every line. Today a
+  tandoor dish, a bar drink and a dessert share one slip.
+
+**Proved**
+- Nothing to prove: no code was written, no gate was run, and none is claimed.
+  Every figure above was counted on this machine on 16 September, branch
+  `cp6`, by reading the files named.
+
+**Left open**
+- All eleven decisions A1–A11 except A2, which the owner answered. Nothing
+  starts before **A1** (extracting `packages/core`), and Phases 0a, 1 and 2
+  cannot finish without **A6** — which thermal printer the desk and the POS
+  actually use — or **A11**, how many kitchens 5 Elements actually has.
+- **POS-5 is not fixed**, only recorded. Whether dockets are meant to print at
+  5 Elements today, or the pass screen is the intended path with the docket
+  kept for a reprint, is the owner's answer and nobody has asked them.
+- The `pos` folder was **not claimed**: no code in that service was touched,
+  only its defect log.
+- **A8** is a question only the owner can answer: does any property already
+  have a local server, and what is it? Phase 5 cannot be scoped without it.
+- Whether a property node is built at all is deliberately deferred to Phase 3,
+  which measures real outage minutes per property from the outbox for a month.
+
+**Commits:** documentation only; not yet committed.
+
+---
+
+## 2026-09-16 (mobile) · A list is a card list on a phone
+
+**Asked for:** improve the mobile experience; the owner chose the mobile pass
+before the pricing build.
+
+**Measured first**, at 375px as a reception clerk, twelve screens: no screen
+scrolled the page sideways, but **six screens a receptionist lives in put a
+table wider than the phone inside a sideways scroller** — Arrivals, In house,
+Walk-ins, All bookings, Guests, Folios. Housekeeping, the one screen built for
+a phone, had **36 controls under 44px**. The Till has no heading (like the
+Kitchen — POS-3).
+
+**Shipped**
+- `src/components/ui/DataTable.tsx` (the shared core, so this reaches every
+  screen that uses it): below `sm` each row renders as a **card** — the first
+  column its heading, every other column a labelled line — and the table
+  renders unchanged from `sm` up. **A column hidden on narrow screens
+  (`hideBelow`) is shown in the card**, because the card has the room the
+  table did not. Sorting keeps a control, which the card list would otherwise
+  lose with the header row. A long value wraps instead of being clipped.
+- Housekeeping: the assignee picker 36 → 44px; the out-of-service button
+  40×44 → 44×44.
+- `src/components/ui/DataTable.test.tsx` — four tests. The one that matters
+  fails if a column goes missing from the card, **proved by making the card
+  skip hidden columns**: "the card dropped Source".
+
+**Proved:** re-measured at 375px — six screens now render cards (10, 9, 21,
+86, 32, 7 of them), nothing outside the viewport, no page scroll; Housekeeping
+0 controls under 44px. Types clean · 210 web tests, exit 0 · build clean.
+
+**Found, and the owner's to decide:** `StayTable` already had a card view
+(`StayCards`) with a manual table/cards toggle, used by Arrivals, In house,
+Walk-ins, All bookings and Folios. I should have grepped before writing a
+generic one (`AGENTS.md`: "reusable pieces — check before you build"). Nothing
+is duplicated on screen — a person sees one or the other — but there are now
+two card designs, and on a phone the bespoke one only shows if that person has
+chosen "cards". The question is in the handover.
+
+---
+
 ## 2026-09-16 (fixes) · The People guard and the shadowed rate-plans route
 
 **Asked for:** "now fix the people guard and the rate-plans route."
