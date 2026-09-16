@@ -508,6 +508,18 @@ early.
 16 Sep   not everything will be derived from the base — the owner will set some prices directly
 16 Sep   the pricing screen ships with every figure UNSET (a dash) and the owner types them in
 16 Sep   Superior stops carrying its own price and becomes a difference; the dated rate row stays as a typed price
+16 Sep   D10: bookings from SU and every outside system ARE held to stop-sell and minimum
+         nights, and a price of 0 is REFUSED unless marked complimentary. The desk keeps its
+         own judgement — these bind machines only
+16 Sep   D3: 5 ELEMENTS AKKALKOT HAS 18 ROOMS. The PMS is right. One is lived in by the GM,
+         which is why the owner's audit counted 17 — that room is taken off sale, not deleted.
+         The owner calls this "NC"; the database already has it as a room block with reason
+         house_use and no end date (migration 022), which availability subtracts (044)
+16 Sep   INV-5: owner, admin and GM may set prices — and the owner wants "the channel manager
+         role" to as well. No such role exists; whether it means a person or the SU system is
+         being asked
+16 Sep   RES-2: the booking reference must carry the HOTEL CODE. Exact format waits on the
+         example the owner gives hotels
 16 Sep   the mobile pass comes first, then the pricing build
 16 Sep   PRICING COUNTS PEOPLE FROM ONE: the base is one person, so two adults = base + one
          extra adult, three = base + two. The extra-adult and extra-child figures are set like
