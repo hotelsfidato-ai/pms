@@ -129,6 +129,48 @@ Then, second question: **can this POS route a KOT and give a printout?**
 
 ---
 
+## 2026-09-16 (round 1 merged) · Six branches audited and merged into cp6
+
+**Asked for:** audit everything the service chats finished, clean it, merge it.
+
+**Audited before any merge** — each branch's commits, every file against its
+lane, what it left uncommitted, migration numbers, and a read of the riskiest
+change in each. All six stayed inside their lanes; the migration numbers were
+the ones assigned.
+
+**Merged one at a time, every gate after each** (web types, API types, web
+tests, API tests, the database suite — each judged by its exit code):
+
+```
+                                    web    API   database
+before                              212    376   622 · 90 migrations
+1  reservations   RES-3, RES-1      212    383   636 · 91
+2  master         092, 093          219    389   636 · 93
+3  inventory      INV-3, OOS, INV-5 222    419   636 · 93
+4  reports        REP-1/2/3         224    423   636 · 93
+5  pos            dates, POS-4/3    236    423   636 · 93
+6  night-audit    NA-1, NA-2 found  236    423   636 · 93   + build clean
+```
+
+**Done in the merges, not by the chats:**
+- **Two claim files were committed** (`inventory`, `pos`) and left out — merged,
+  cp6 would have said both services are claimed for good.
+- **The Revenue Manager joined inventory's server-side price check.** Inventory
+  kept a server copy of the rate-setter list with a test that fails when it
+  differs from the website's; merging 093 made it fail, naming the role, and the
+  role was added to the server list, its refusal sentence and both hand-named
+  role lists in the test. It now also proves a revenue manager CAN set a price.
+
+**Found by the night-audit chat, and serious — NA-2:** a Night audit screen left
+open after the day was closed elsewhere still offers to close the day it shows,
+and Run closes the NEXT day. Proven on a scratch database. Not fixed: the owner
+decides first (night audit posts real charges).
+
+**The local system** was migrated to 093 and checked: a new reference is
+`FH-5EL-2609-5034`, and `revenue_manager` is an accepted role. Nothing deployed.
+
+---
+
 ## 2026-09-16 (master) · One booking reference, and the Revenue Manager
 
 **On branch `master/references-and-revenue-role`, not yet on cp6.** It merges

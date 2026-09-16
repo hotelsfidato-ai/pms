@@ -347,13 +347,15 @@ overlap before handing out — not by service name, by the files each fix
 touches.
 
 ```
-RUNNING      reservations   RES-3 (migration 091), RES-1
-             inventory      INV-3, the out-of-service test, INV-5
-READY        front-desk     the /stay error branch, FD-2
-             reports        REP-1, REP-2, REP-3, STATISTICS formatting
-             pos            the two raw dates, POS-4, POS-3
-MASTER       092 + 093 on branch master/references-and-revenue-role (merge after 091)
-             ADM-3 · FD-1 and the numbers that disagree
+MERGED       16 Sep into cp6, every gate green (CHANGELOG "round 1 merged"):
+             reservations RES-3 + RES-1 (091) · master 092 + 093 · inventory INV-3,
+             OOS test, INV-5 · reports REP-1/2/3 · pos dates, POS-4, POS-3 ·
+             night-audit NA-1 read-only + NA-2 FOUND
+IN PROGRESS  uncommitted, not merged: front-desk (8 files) · admin · banquet ·
+             finance · guests · housekeeping · stores
+NEXT         RES-2 part 2 — reservations (groups.ts) + front-desk (operations.ts) switch
+             to app.next_reference; both inline generators still truncate
+MASTER       ADM-3 · FD-1 and the numbers that disagree · the claims fix (if approved)
 PAIRED LATER front-desk + finance   FIN-2 and the /in-house BALANCE — ONE job:
                                     getFolioBalance is finance's, and front desk
                                     reads it for check-out AND that column
