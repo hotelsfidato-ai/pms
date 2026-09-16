@@ -6539,6 +6539,33 @@ copy will see of theirs.**
 
 ---
 
+### 279 · Every PMS deploy silently disconnected n8n
+
+16 September. The owner believed n8n was live on `n8n.fidatohotels.com`. A
+read-only check found n8n **healthy inside its own container** — `/healthz`
+200, *"Editor is now accessible"* — and **unreachable from everywhere else**:
+the box could not reach it on 127.0.0.1:5678, and it could not reach the
+internet by name or by address.
+
+The container network rules were gone: **0 netavark rules** in nftables and in
+iptables. `deploy/launch.sh` runs `firewall-cmd --reload` on every deploy, and a
+firewalld reload discards the rules Podman made for containers already running.
+n8n started on 10 September; the PMS was deployed on 15 and 16 September.
+
+Podman ships the answer and it was switched off:
+`netavark-firewalld-reload.service`, installed, **disabled**.
+
+Separately, the domain was never set up on the server — a DNS record existed,
+but no nginx site and no certificate. Two faults, and the DNS record made it
+look like neither existed.
+
+**The rule: a service that "is connected" has been checked from outside the
+box, not inferred from a DNS record. And anything that reloads a firewall on a
+box running containers has to be followed by something that puts their rules
+back.**
+
+---
+
 ### 278 · MINE: a card heading that could not hold what a screen put in it
 
 16 September. The phone card list I added to `DataTable` rendered each row's
