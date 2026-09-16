@@ -11,6 +11,70 @@ Work that touches the core or several services still goes in the root
 
 ---
 
+## 2026-09-16 · the Store measured at 375px as housekeeping
+
+**Asked for:** the owner opened a Store chat: "Read docs/briefs/stores.md and
+follow it exactly", and asked which screens this lane may edit and what is
+under it. The brief's job: measure the screen at 375px as a housekeeping role,
+write what is found as STO-1 onwards, bring the owner the list, fix nothing.
+
+**Shipped**
+- `DEFECTS.md` — **STO-1 to STO-10**, each with its evidence. No code changed.
+- The claim: first `.claims/stores.md` in this copy (the old design), then
+  moved on the master's instruction to `scripts/claim.mjs` in the shared git
+  directory; the file was deleted and never committed.
+
+**Found** — the headline three; the rest are in `DEFECTS.md`
+- **STO-1**: no store route checks the caller's role. As the **Viewer**
+  (`read_only`, "No write access anywhere") the API accepted a new item, a
+  receipt at a cost, an undo of a real delivery and an import; reception and
+  housekeeping likewise. The screen offers the Viewer every button.
+- **STO-2**: with the API stopped, a store of 9 items read "Nothing in the
+  store yet — Add the first".
+- **STO-3**: at 375px the item name gets 69–86px; one card is 480px tall; 9
+  items are 3,122px of scrolling.
+- Passed, and recorded so nobody measures it again: no sideways scroll, nothing
+  outside the viewport, 0 list controls under 44px, 0 text under 4.5:1.
+
+**Found about the lane recipe** (not this service's; for the master, root
+`MEMORY.md`)
+- `docs/briefs/README.md`'s `DB=… ./db/migrate.sh --with-dev-identities` does
+  not give a database anybody can sign in to. `dev-identities.sql` raised
+  "expected 3 staff with dev uids, found 0" and `migrate.sh` then printed
+  **"✓ local sign-in accounts linked"** (MEMORY 274's shape). `load-demo.ts`
+  fails on a fresh database ("Cannot read properties of undefined (reading
+  'id')") because it needs `owner@` and `agra@fidato.in`, which only
+  `db/tests/suite.sql` creates. Worked around by inserting those three staff
+  rows as `suite.sql` does, into `fidato_stores` only.
+- The first `migrate.sh` run on the new database printed "the migration run
+  failed and was ROLLED BACK" with no error line in its tail; the second run
+  applied 90 migrations cleanly. Not reproduced.
+- `load-demo.ts` defaults to `postgres://…/fidato` when `SUPER_DATABASE_URL`
+  is unset — a lane that follows the brief and runs it lands in the shared
+  development database.
+
+**Proved** — in this copy, 16 September
+- Servers from this copy only: API on 8796 against `fidato_stores`
+  (`/health`: database reachable, role `pms_app`), web on 5196.
+- Every figure in `DEFECTS.md` was measured in the browser at 375×812 with a
+  DOM script (computed contrast against the actual background, bounding
+  boxes, accessible names), or taken from the API responses quoted there.
+- `.claude/launch.json` carried two local entries (`stores-api`,
+  `stores-web`) for the preview pane; restored before commit.
+- `npx vitest run src/test/boundaries.test.ts`: 4 passed, exit 0.
+  `npm run lane -- stores`: 2 files, both yours, exit 0.
+- Not run: `tsc`, the full web, API and database suites, the build — only
+  Markdown in this service's folder changed.
+
+**Left open**
+- All ten STO entries — the owner's choice, in the list brought to them.
+- STO-9 is the shared kit's (`src/components/ui/`) — the master's.
+- `fidato_stores` holds the probe rows from STO-1 (append-only, so they stay).
+
+**Commits:** this entry and `DEFECTS.md`, on `stores/measure-375`.
+
+---
+
 ## 2026-09-15 · moved into its own folder
 
 **Asked for:** the owner's request of 15 September — the code split into one
