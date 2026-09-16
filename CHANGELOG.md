@@ -129,6 +129,57 @@ Then, second question: **can this POS route a KOT and give a printout?**
 
 ---
 
+## 2026-09-16 (master) · One booking reference, and the Revenue Manager
+
+**On branch `master/references-and-revenue-role`, not yet on cp6.** It merges
+after the reservations chat's migration 091, because `migrationNumbers.test.ts`
+refuses a gap — that single test is the one failure on this branch, and it is
+expected.
+
+### Migration 092 — one reference, under a lock (RES-2, part 1)
+
+Two inline copies in two services made every reference: front-desk's walk-ins
+(`FH-YYMM-n`) and reservations' bookings (`FH-DDMM-n`) — so `FH-2608-4858` was
+August on one door and the 26th on the other. Neither locked, so two bookings
+in the same second took the same number and `unique (hotel_id, reference)`
+refused the second. **And a third fault, found writing this: both pad with
+`lpad(n, 4, '0')`, which in Postgres CUTS a longer string** — `lpad('12345',
+4, '0')` is `1234`. After about five thousand bookings at one hotel, every new
+reference would have been the same four digits and refused.
+
+`app.next_reference` (005) already had a per-hotel lock and nothing had ever
+called it. It now makes the owner's format, **`FH-<hotel code>-<YYMM>-<number>`**
+(e.g. `FH-5EL-2608-4858`): the month on the hotel's own clock, the number
+continuing the hotel's existing count so nothing repeats across the change, and
+never truncated. Old bookings keep their references. **The two routes are
+switched over by their own services** — this changes neither.
+
+`api/test/bookingReference.test.ts`, 6 tests: the format, continuation from both
+the new and the old shape, no truncation past four digits, and two open
+transactions raced — **once through the old inline SQL, which gives both the
+same number, and once through the function, where the second waits.** Proven by
+removing the lock: *"the second caller must wait for the first"*.
+
+### Migration 093 — the Revenue Manager
+
+Approved by the owner: a person who sets prices and pushes them to the booking
+sites when the owner, admin and GM are away. **Can** set prices and restrictions
+and see availability, bookings, occupancy, ADR and commission. **Cannot** touch
+bills, payments, invoices, guest details, staff, roles, room setup, check-in or
+the POS. Named so it is never confused with the channel manager service.
+
+**And an inconsistency of mine from the same morning, fixed:** the matrix gave
+the GM `rate: READ` while the hand-written `RATE_SETTER_ROLES` beside it let the
+GM set prices. The list is now **derived from the matrix** — whoever holds `edit`
+on `rate` — and `src/lib/permissions.test.ts` pins it to owner, admin, GM and
+revenue manager. Proven by giving reception the grant: two tests fail, naming it.
+
+**Gates:** types clean · web 218 passed, 1 expected (the 091 gap) · **API 376,
+exit 0** (the roles test holds database and interface equal) · **database 92
+migrations, 622 assertions, exit 0**.
+
+---
+
 ## 2026-09-16 (contrast) · The state of a room is no longer the faintest word on it
 
 **Asked for:** a critique of every screen, and then — the owner's answer to the
