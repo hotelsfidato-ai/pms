@@ -54,7 +54,7 @@
 #
 # TO UPDATE n8n, name the version on the command line:
 #
-#   sudo N8N_VERSION=2.39.0 deploy/n8n.sh
+#   sudo N8N_VERSION=2.40.0 deploy/n8n.sh      # and move the pin below to match
 #
 # The version is PINNED, so n8n never updates itself behind your back -- a
 # workflow that ran on Friday is not broken on Monday by a release nobody
@@ -94,7 +94,14 @@
 # =============================================================================
 set -euo pipefail
 
-N8N_VERSION="${N8N_VERSION:-2.38.5}"      # pinned; checked for arm64 on 10 Sep
+# PINNED, AND THE PIN IS WHAT RUNS. The version is not saved on the box, so
+# a plain `sudo deploy/n8n.sh` installs THIS number whatever is running. n8n
+# migrates its database forward on start and does not migrate it back: a
+# rerun with an older pin than the box has is a downgrade onto a newer
+# database. Upgrade the box and this line together, never one alone.
+#   16 Sep  2.38.5 -> 2.39.6 (stable), arm64 image checked on Docker Hub;
+#           the box was upgraded with N8N_VERSION=2.39.6 the same day.
+N8N_VERSION="${N8N_VERSION:-2.39.6}"
 N8N_DOMAIN="${N8N_DOMAIN:-n8n.fidatohotels.com}"
 EMAIL="${EMAIL:-}"
 MODE="${1:-install}"
