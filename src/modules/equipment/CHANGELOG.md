@@ -116,4 +116,5 @@ and a counted line's cost is per piece with part of a count able to move.
   from counted to tagged. Both are the owner's to decide if wanted.
 - **Migration number** — 095 on this branch; the Store may also hold 095.
 
-**Commits:** none yet.
+**Commits:** `b5a844c` (the register), and this line. Branch
+`equipment/phase-1b`, for the master to merge. Claim released.
