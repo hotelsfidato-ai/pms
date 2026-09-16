@@ -48,16 +48,19 @@ seam); a test enforces it.
 ## 2 · Where it stands on 15 September
 
 ```
-production runs     1c2e5d0  (15 Sep)     EVERYTHING below is live — API 13:09 GMT, website after
+production runs     59ce389  (16 Sep)     the owner deployed both stages, checked read-only:
+                                          API fc2efb0, restarted 15 Sep 19:13 GMT; website bundle
+                                          index-B4PT_AOP.js carries the Coming soon pages
+before that         1c2e5d0  (15 Sep)     EVERYTHING below is live — API 13:09 GMT, website after
 deploy              done 15 Sep by the owner, a day early; checked afterwards (CHANGELOG)
 local cp6           the same code; later commits are documentation only
 go-live scope       211 / 228  (93%)      the 17 open are the channel manager (excluded)
                                           and the CRS bridge (waiting on its API documents)
 staff-first plan    phase 1 of 4 built
 clarity plan        all 4 steps built (step 4, 15 Sep: Start here, terms, empty states)
-service folders     BUILT and verified 15 Sep on branch service-folders — not in cp6, not deployed
+service folders     DEPLOYED 16 Sep (merged to cp6, stage A: server + website)
 one hotel system    PLANNED 15 Sep — docs/HMS-INTEGRATION-PLAN.md; waiting on decisions D1–D14
-coming soon         BUILT 16 Sep on branch coming-soon (on top of service-folders) — not deployed
+coming soon         DEPLOYED 16 Sep (stage B, website only) — live on pms.fidatohotels.com
 route + screen audit  16 Sep: 214 routes, 89 screens, PENDING checked — docs/audits/2026-09-16-…
 ```
 
