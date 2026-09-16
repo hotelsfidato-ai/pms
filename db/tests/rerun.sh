@@ -68,6 +68,20 @@ if [ "$FIRST_FAIL" -ne 0 ]; then
 fi
 green "  all migrations applied to an empty database"
 
+# ---- between the passes: a property, as production has ---------------------
+# An EMPTY database hides every replay fault that depends on rows. Found
+# 16 September (MEMORY 284): 095 re-adds a check on approval kinds, 096 then
+# writes a kind 095's list does not have — but only for properties that exist.
+# Here there were none, so the second pass was green; the local database had
+# one, and failed. Production has five. So give the second pass a property.
+if ! out=$("$PSQL" $S -d "$DB" -q -v ON_ERROR_STOP=1 \
+     -c "insert into hotels (code, name, city) values ('RRN','Rerun Property','Nowhere')" 2>&1); then
+  red "  x could not create a property between the passes"
+  echo "$out" | grep -m1 "ERROR" | sed 's/^/      /'
+  exit 1
+fi
+dim "  a property created between the passes, as a real database has"
+
 # ---- second pass: the one every deploy after the first performs ------------
 echo "-- second pass — what a redeploy actually does ------------"
 TOTAL=0

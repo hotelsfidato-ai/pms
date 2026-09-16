@@ -6539,6 +6539,41 @@ copy will see of theirs.**
 
 ---
 
+### 285 · Equipment's EQ-4: a gate quoted from before the last edit
+
+16 September, reported by the equipment chat about itself: it quoted `api tsc`
+clean on its first commit, but had run it before its last test edit. Nothing
+broke; the number was simply older than the code it described.
+
+**The rule: run the gates on the tree you commit, after the last edit — a
+result belongs to a commit, not to a session.** (274 is the same family: read
+the exit code.)
+
+---
+
+### 284 · MINE: a migration that could not be replayed — every later deploy would have failed
+
+16 September. Every deploy replays every migration from 001. My 095 dropped and
+re-added the check on approval kinds with a fixed list; my 096 widened it and
+stored `equipment_retire` rules at every property. On a second run 095 re-added
+its SHORTER list over those rows, and the whole run rolled back. The first
+deploy would have passed; every deploy after it would have stopped at 095.
+
+**Why no gate saw it.** `db/tests/run.sh` builds from zero once. `rerun.sh` does
+replay — but on a database with no properties, so no rules existed to break the
+list; it was green. Found only because the LOCAL database, which has a property,
+refused the migration after the Equipment merge.
+
+**Fixed:** 095 and 096 change the list only when it does not already know their
+kind, and `rerun.sh` now creates a property between its passes — seen to fail
+on the old 095 before the fix, green after. The replay test is in my gate run.
+
+**The rule: a migration that rewrites a constraint must be guarded by what it
+adds, never re-run blindly. And a replay test on an empty database proves
+nothing about data — give it rows.**
+
+---
+
 ### 283 · A join to `staff` silently hides rows for most roles
 
 16 September, found by the master's new test for equipment approvals. The

@@ -59,15 +59,28 @@ comment on function app.colleague_name(uuid, uuid) is
 
 
 -- ---------- retiring equipment: a second kind, the same inbox ----------
-alter table approval_rules drop constraint if exists approval_rules_kind_known;
-alter table approval_rules add constraint approval_rules_kind_known check (
-  kind in ('purchase', 'cash_expense', 'stock_adjustment',
-           'equipment_issue', 'equipment_retire'));
+-- Guarded exactly as 095 is, and for the same reason (MEMORY 284): only when
+-- the list does not know this kind yet, so a replay never shrinks it.
+do $$
+begin
+  if not exists (select 1 from pg_constraint
+                  where conname = 'approval_rules_kind_known'
+                    and pg_get_constraintdef(oid) like '%equipment_retire%') then
+    alter table approval_rules drop constraint if exists approval_rules_kind_known;
+    alter table approval_rules add constraint approval_rules_kind_known check (
+      kind in ('purchase', 'cash_expense', 'stock_adjustment',
+               'equipment_issue', 'equipment_retire'));
+  end if;
 
-alter table approvals drop constraint if exists approvals_kind_known;
-alter table approvals add constraint approvals_kind_known check (
-  kind in ('purchase', 'cash_expense', 'stock_adjustment',
-           'equipment_issue', 'equipment_retire'));
+  if not exists (select 1 from pg_constraint
+                  where conname = 'approvals_kind_known'
+                    and pg_get_constraintdef(oid) like '%equipment_retire%') then
+    alter table approvals drop constraint if exists approvals_kind_known;
+    alter table approvals add constraint approvals_kind_known check (
+      kind in ('purchase', 'cash_expense', 'stock_adjustment',
+               'equipment_issue', 'equipment_retire'));
+  end if;
+end $$;
 
 insert into approval_rules (hotel_id, kind, approver_role, over_amount, also_decided_by)
 select h.id, 'equipment_retire', 'stores', null, array['owner', 'admin', 'gm']

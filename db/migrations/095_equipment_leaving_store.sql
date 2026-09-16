@@ -37,13 +37,30 @@
 
 
 -- ---------- the new kind ----------
-alter table approval_rules drop constraint if exists approval_rules_kind_known;
-alter table approval_rules add constraint approval_rules_kind_known check (
-  kind in ('purchase', 'cash_expense', 'stock_adjustment', 'equipment_issue'));
+-- ⚠ ONLY IF THE LIST DOES NOT ALREADY KNOW IT (MEMORY 284). Every deploy
+-- replays every migration. Written plainly, this drop-and-add ran again after
+-- 096 had stored `equipment_retire` rows, re-added a list without that kind,
+-- and failed — so every deploy after the first would have stopped here. A
+-- later migration that adds a kind uses the same guard, with its own kind,
+-- and never edits this one.
+do $$
+begin
+  if not exists (select 1 from pg_constraint
+                  where conname = 'approval_rules_kind_known'
+                    and pg_get_constraintdef(oid) like '%equipment_issue%') then
+    alter table approval_rules drop constraint if exists approval_rules_kind_known;
+    alter table approval_rules add constraint approval_rules_kind_known check (
+      kind in ('purchase', 'cash_expense', 'stock_adjustment', 'equipment_issue'));
+  end if;
 
-alter table approvals drop constraint if exists approvals_kind_known;
-alter table approvals add constraint approvals_kind_known check (
-  kind in ('purchase', 'cash_expense', 'stock_adjustment', 'equipment_issue'));
+  if not exists (select 1 from pg_constraint
+                  where conname = 'approvals_kind_known'
+                    and pg_get_constraintdef(oid) like '%equipment_issue%') then
+    alter table approvals drop constraint if exists approvals_kind_known;
+    alter table approvals add constraint approvals_kind_known check (
+      kind in ('purchase', 'cash_expense', 'stock_adjustment', 'equipment_issue'));
+  end if;
+end $$;
 
 
 -- ---------- who else may decide ----------
