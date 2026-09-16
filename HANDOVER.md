@@ -515,11 +515,14 @@ early.
          which is why the owner's audit counted 17 — that room is taken off sale, not deleted.
          The owner calls this "NC"; the database already has it as a room block with reason
          house_use and no end date (migration 022), which availability subtracts (044)
-16 Sep   INV-5: owner, admin and GM may set prices — and the owner wants "the channel manager
-         role" to as well. No such role exists; whether it means a person or the SU system is
-         being asked
-16 Sep   RES-2: the booking reference must carry the HOTEL CODE. Exact format waits on the
-         example the owner gives hotels
+16 Sep   INV-5: owner, admin and GM may set prices. PLUS A NEW STAFF ROLE — a person, "like a
+         revenue manager", who changes prices and pushes them to the OTAs when the owner, admin
+         and GM are not there. SU is only the system interface; it does not set prices. The
+         role's exact powers go to the owner before it is built (a new role is a migration)
+16 Sep   RES-2: every NEW booking reference is FH-<hotel code>-YYMM-<number>, e.g.
+         FH-5EL-2608-4858. Old bookings keep the references they were given
+16 Sep   "NC" = NOT FOR SALE, HOUSE USE. Already possible on the Housekeeping board (take the
+         room out of service, reason house use, no end date); the reason is now labelled NC
 16 Sep   the mobile pass comes first, then the pricing build
 16 Sep   PRICING COUNTS PEOPLE FROM ONE: the base is one person, so two adults = base + one
          extra adult, three = base + two. The extra-adult and extra-child figures are set like

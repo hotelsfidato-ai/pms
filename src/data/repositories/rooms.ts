@@ -86,7 +86,12 @@ export const BLOCK_REASONS = [
   { value: "out_of_order", label: "Out of order — something is broken" },
   { value: "out_of_service", label: "Out of service — held back deliberately" },
   { value: "refurbishment", label: "Refurbishment" },
-  { value: "house_use", label: "House use — staff, storage, an office" },
+  /* "NC" is the owner's word for it (16 September): the room the GM lives
+     in at 5 Elements is NC. Same block, same reason in the database — the
+     label says the word the hotel uses, and still says what it means for
+     anybody who does not know it. Not for sale: availability subtracts it
+     (044), so no booking site is ever offered the room. */
+  { value: "house_use", label: "NC — not for sale (house use: staff, storage, an office)" },
   { value: "owner_occupied", label: "Owner occupied" },
 ] as const;
 
