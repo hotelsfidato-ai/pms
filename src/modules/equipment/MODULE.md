@@ -1,8 +1,11 @@
-# Hotel equipment
+# Equipment
 
-Door locks, room phones, minibars and TVs connected to the rooms and the bill.
+The register of everything durable in the hotel, the restaurant and the rooms
+— **redefined 16 September (S2); being built as phase 1B.** Brief:
+`docs/briefs/equipment.md`. The notes below about door locks and phones are the
+old meaning (now `room-systems`), kept until 1B rewrites this file.
 
-**NOT BUILT. A Coming soon page only.** On the list of what every comparable system has; the owner chose on
+**NOT BUILT YET. A Coming soon page only.** On the list of what every comparable system has; the owner chose on
 16 September to give every missing service a folder and a Coming soon page. Its page is marked **When a hotel asks**.
 The page says what the service will do, what it needs before it can be built
 and what exists today. There is no working feature, no server code and no
@@ -13,7 +16,7 @@ built:
 
 ```
 src/modules/equipment/             the Coming soon page, its menu entry and its address
-api/src/modules/equipment/         does not exist
+api/src/modules/equipment/         index.ts only, empty, mounted by the master for 1B
 db/tests/modules/equipment.sql     does not exist
 ```
 

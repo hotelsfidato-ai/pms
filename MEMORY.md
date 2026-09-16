@@ -6539,6 +6539,24 @@ copy will see of theirs.**
 
 ---
 
+### 282 · MINE: I gave a migration number to a chat, then used it myself
+
+16 September. HANDOVER said **094 is assigned to admin** for ADM-1. The same
+day I built Phase 0 of the stock plan and named its migration 094, without
+reading that line. Nothing broke yet — the admin chat is waiting on the owner
+and has merged nothing — but if it had written 094 too, its branch and cp6
+would each hold a 094, and the guard refuses a duplicate.
+
+**Fixed:** the admin chat's migration takes the next free number when it
+merges; the master renumbers it. Reserving numbers ahead is the fault itself:
+the guard also refuses a gap, so a number nobody uses blocks every merge.
+
+**The rule: a migration number is taken from cp6 when the file is written, not
+promised in advance. Before naming one, list `db/migrations` AND search
+HANDOVER for the number.**
+
+---
+
 ### 281 · MINE: a claim system that no other copy could see
 
 16 September. I built `.claims/<service>.md` so parallel service chats would

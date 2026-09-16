@@ -129,6 +129,42 @@ Then, second question: **can this POS route a KOT and give a printout?**
 
 ---
 
+## 2026-09-16 (stock and equipment) · The plan approved, and Phase 0 built
+
+**Asked for:** two kinds of inventory, planned for several chats — equipment
+with repairs and buying, and consumables with the crockery and cutlery.
+**Plan:** `docs/STOCK-AND-EQUIPMENT-PLAN.md`. The owner approved all eleven
+decisions and the table of who may do what.
+
+**Phase 0, the master's:**
+- **Migration 094** — suppliers and locations, shared by the Store, Equipment
+  and Purchasing, seeding nothing. The shared test found the application holding
+  DELETE on both anyway (010's default privileges); revoked explicitly.
+- **Three permissions** — stock, equipment, purchasing — with the owner's table,
+  pinned, and seen to fail when the Viewer was given stock edit.
+- **Names** — "Inventory" reads **Rooms and rates**; a **Store and equipment**
+  section; **Equipment** is the register; door locks moved to **Room systems**;
+  **Purchasing** has its folder. Coming soon stays alphabetical.
+
+**Found by opening the screen, and said plainly:** reception can still open the
+Store. The grants exist; the Store's route and server do not read them yet.
+STO-1 is phase 1A's first task. I had told the owner Phase 0 fixed it — it
+does not.
+
+**Phase 1 made ready:** `docs/briefs/stores.md` rewritten for 1A (STO-1 first,
+page guard + server refusal + every-role proof); `docs/briefs/equipment.md` new,
+for 1B, with five questions for the owner. The server front door
+`api/src/modules/equipment/index.ts` exists empty and is mounted in `server.ts`,
+so the equipment chat never edits a shared server file. Its one permitted
+master-file edit: drop "Equipment" from the Coming soon list in
+`navigation.test.ts` when the real screen replaces the page. Migration numbers:
+a lane takes the next after cp6's highest and the master renumbers collisions
+(MEMORY 282 — I had used admin's promised 094).
+
+Web 255 · API 425 · database 648 with 94 migrations · build clean.
+
+---
+
 ## 2026-09-16 (round 1 merged) · Six branches audited and merged into cp6
 
 **Asked for:** audit everything the service chats finished, clean it, merge it.

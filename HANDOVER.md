@@ -340,7 +340,7 @@ price answers exactly as it did before.
 default, not everything is derived, and the screen ships with every figure
 unset.
 
-### 3.0h · Stock and equipment — PLANNED 16 September, ASK FIRST
+### 3.0h · Stock and equipment — APPROVED 16 September; Phase 0 DONE
 
 `docs/STOCK-AND-EQUIPMENT-PLAN.md`. The owner asked for two kinds of inventory
 planned as a multi-agent job: **equipment** (hotel, restaurant, rooms, with
@@ -350,6 +350,13 @@ crockery and cutlery). Measured first: consumables are two-thirds built in the
 purchase approvals (076) are half-pieces. **Nothing starts until the owner
 answers S1–S11 (plan § 5).** Phase 0 is the master's: suppliers and locations,
 built once, before any lane.
+
+**APPROVED, all eleven, and the permission table (plan § 6). Phase 0 DONE**
+(5a5d746): migration 094, three permissions pinned, the menu names, the Purchasing
+and Room systems folders. **Next: 1A Store and 1B Equipment, in parallel.**
+**STO-1 IS STILL OPEN** — reception can open the Store; 1A's first task.
+**Migration numbers changed rule (plan § 7):** a chat takes the next number after
+cp6's highest; the master renumbers at merge. The 094 once given to admin is void.
 
 ### 3.0g · Round 1 of the service chats — who holds what, 16 September
 
@@ -387,9 +394,10 @@ BATCH LATER  GUE-1 · BQ-2 · FIN-1 · ADM-2  (a heading, a comment, two cards)
 `front-desk/components/StayTable.tsx` (reservations' All bookings screen),
 `front-desk/pages/InHouse.tsx` and every reader of `getFolioBalance` (the paired
 job), `api/src/modules/front-desk/operations.ts` (RES-2 part 2), and how rooms,
-in-house guests and ADR are COUNTED anywhere (the master's). **094 is
-assigned to admin** for ADM-1 (the audit trigger), on 16 September, because an
-admin chat was already working on it. Next free: **095**.
+in-house guests and ADR are COUNTED anywhere (the master's). **094 was
+assigned to admin** for ADM-1 on 16 September — **and then taken by the master's
+Phase 0 (suppliers and locations), MEMORY 282.** Admin's migration takes the next
+free number when it merges; the master renumbers it. Next free on cp6: **095**.
 
 **Found starting the local system, 16 September:** twelve service copies exist
 (`git worktree list`) and `.claims/` shows none of them. A claim file written

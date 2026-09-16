@@ -101,7 +101,8 @@ Then, and only then, in this order:
 | **accounting** | Tally is what the group uses. No export format agreed | Find out what Tally needs and write it down |
 | **contracts** | Corporate rates and allotments; needs `bookingSources` and commission (migration 082) | Map what exists against what a contract needs |
 | **guest-messaging** | Overlaps the leads app's WhatsApp workflows — D2 | Say plainly which messages belong here and which belong in the leads app |
-| **guest-services** · **laundry** · **spa** · **equipment** | Each posts a charge to a folio. None is defined | One question: does the hotel actually sell it, and who takes the order? |
+| **guest-services** · **laundry** · **spa** · **room-systems** | Each posts a charge to a folio. None is defined | One question: does the hotel actually sell it, and who takes the order? |
+| **purchasing** | Phase 2C of `docs/STOCK-AND-EQUIPMENT-PLAN.md`: a delivery lands in the Store (1A) and the register (1B), so it waits for both to merge | Nothing until the master says 1A and 1B are merged. The owner sets the approval limit (S11) when it starts |
 | **loyalty** · **marketing** · **reputation** | Nothing decided, no data source | Leave them. Ask the owner whether they are wanted at all before spending anything |
 
 ---

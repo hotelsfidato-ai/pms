@@ -20,6 +20,7 @@ import * as inventory from "./modules/inventory/index.ts";
 import * as banquet from "./modules/banquet/index.ts";
 import * as stores from "./modules/stores/index.ts";
 import * as housekeeping from "./modules/housekeeping/index.ts";
+import * as equipment from "./modules/equipment/index.ts";
 import { live } from "./routes/live.ts";
 import {
   startListening, stopListening, watcherCount, isListening,
@@ -206,7 +207,7 @@ app.route("/api/hotels", attachments);
    every other /api/hotels route. `/api/pos` is the machine door. */
 const SERVICES = [
   frontDesk, reservations, finance, reportsService, guests, nightAudit,
-  pos, admin, inventory, banquet, stores, housekeeping,
+  pos, admin, inventory, banquet, stores, housekeeping, equipment,
 ];
 for (const service of SERVICES) {
   for (const [prefix, router] of service.mounts) app.route(prefix, router);

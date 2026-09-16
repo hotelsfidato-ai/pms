@@ -28,6 +28,7 @@ One line each. The brief carries the rest.
 | **Guests** | `You are the guests agent for Fidato PMS. Read docs/briefs/guests.md and follow it exactly. Claim the service before your first write.` |
 | **Banquet** | `You are the banquet agent for Fidato PMS. Read docs/briefs/banquet.md and follow it exactly. Claim the service before your first write.` |
 | **Store** | `You are the stores agent for Fidato PMS. Read docs/briefs/stores.md and follow it exactly. Claim the service before your first write.` |
+| **Equipment** | `You are the equipment agent for Fidato PMS. Read docs/briefs/equipment.md and follow it exactly. Claim the service before your first write.` |
 | **Administration** | `You are the admin agent for Fidato PMS. Read docs/briefs/admin.md and follow it exactly. Claim the service before your first write.` |
 
 **Start three, not twelve.** Every agent asks the owner before any doubt, and
@@ -36,8 +37,9 @@ desk → inventory → pos**, because those three hold the most open work.
 
 **Two to be careful with:** **night audit** posts real charges and moves the
 business date, so its brief starts read-only; **admin** decides who may sign in
-and what they may do, so every change to a role waits on the owner. **Store**
-has no open defects, and its brief says not to invent work.
+and what they may do, so every change to a role waits on the owner. **Store** and
+**Equipment** are phases 1A and 1B of `docs/STOCK-AND-EQUIPMENT-PLAN.md`, run
+together; the Store's first task is STO-1, still open.
 
 ### Services that are still Coming soon
 
@@ -52,11 +54,13 @@ in their first paragraph, and `coming-soon.md` explains why.
 | **CRS connection** | `You are the crs agent for Fidato PMS. Read docs/briefs/crs.md and follow it exactly. This service is not built: do not build it.` |
 | **Leads and WhatsApp** | `You are the leads agent for Fidato PMS. Read docs/briefs/leads.md and follow it exactly. This service is not built: do not build it.` |
 | **Central CRM** | `You are the crm agent for Fidato PMS. Read docs/briefs/crm.md and follow it exactly. This service is not built: do not build it.` |
-| **Any of the other fourteen** | `You are the <service> agent for Fidato PMS. Read docs/briefs/coming-soon.md and src/modules/<service>/MODULE.md, and follow them exactly. This service is not built: do not build it. Produce the decisions the owner must make, each with a recommendation, and stop there.` |
+| **Any of the other fifteen** | `You are the <service> agent for Fidato PMS. Read docs/briefs/coming-soon.md and src/modules/<service>/MODULE.md, and follow them exactly. This service is not built: do not build it. Produce the decisions the owner must make, each with a recommendation, and stop there.` |
 
-The fourteen: `payments` `booking-engine` `online-checkin` `revenue-management`
+The fifteen: `payments` `booking-engine` `online-checkin` `revenue-management`
 `accounting` `contracts` `guest-messaging` `guest-services` `laundry` `spa`
-`equipment` `loyalty` `marketing` `reputation`. **`coming-soon.md` has a table
+`purchasing` `room-systems` `loyalty` `marketing` `reputation`. (`equipment` left
+this list on 16 September: it is phase 1B, with its own brief. `purchasing` is
+phase 2C, and `room-systems` holds the door locks and phones.) **`coming-soon.md` has a table
 of what blocks each one** — read it before choosing which to staff; three of
 them are not worth an agent until the owner says they are wanted at all.
 
@@ -180,7 +184,10 @@ service and do not:
   do not add a sixth local formatter.
 - **`db/migrations/`** — `src/test/migrationNumbers.test.ts` refuses a
   duplicate **and a gap**, so numbers cannot be reserved in blocks and two
-  lanes cannot both take "the next one". **Ask the master for a number.**
+  lanes cannot both take "the next one" and merge cleanly. **Take the next
+  number after cp6's highest when you write the file, refer to it by what it
+  does rather than its number, and tell the master** — if two lanes took the
+  same one, the master renumbers the second at merge (16 September).
 
 **If you need a change in one of these:** write it as a request in your
 service's `MODULE.md` under "Requests", and tell the owner. The master makes

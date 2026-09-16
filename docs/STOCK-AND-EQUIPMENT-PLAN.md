@@ -1,7 +1,11 @@
 # Stock and equipment — the plan (16 September 2026)
 
-**Status: a plan, nothing built.** Waiting on the owner's decisions in § 5.
-Nothing starts before they are answered.
+**Status: APPROVED 16 September — all eleven decisions in § 5, and the permission
+table in § 6. Phase 0 DONE the same day (5a5d746).** Phases 1A and 1B are next.
+
+**Phase 0 did NOT close STO-1.** It gave stock its own grants; opened as reception
+afterwards, the Store still loaded, because its route has no guard and its server
+routes check no grant. Phase 1A closes it first.
 
 The owner asked for two kinds of inventory, planned as a multi-agent job:
 
@@ -68,7 +72,7 @@ chat — or every lane invents its own:
 
 | Phase | Lane (service folder) | Work | Runs alongside | Size |
 |---|---|---|---|---|
-| **0** | **master** | Suppliers and locations (one migration); permission resources for stock, equipment and purchasing in `permissions.ts`; the menu names (S1); migration numbers for every phase below | — | 2 days |
+| **0** | **master** | Suppliers and locations (one migration); permission resources for stock, equipment and purchasing in `permissions.ts`; the menu names (S1); migration numbers follow § 7 | — | 2 days |
 | **1A** | **stores** | Fix STO-1 to STO-10 first. Then: stock held per location with transfers (main store → kitchen); par levels per location; a stock-count sheet (count, compare, one adjustment per difference); gas by cylinder (S5) | 1B | 4 days |
 | **1B** | **equipment** (S2) | The register: item, category, location, tag number, cost, purchase date, supplier, warranty and AMC dates, status (in use · under repair · retired); import from a file | 1A | 3 days |
 | **2A** | **stores** | Crockery and cutlery (S6): a `breakage` movement with who and where; in use at an outlet vs in the store; par per outlet; the monthly count | 2B, 2C | 2 days |
@@ -116,3 +120,31 @@ lands in both.
 | **S9** | A dish sold uses its ingredients (recipes) | **Later.** It is a large piece, and stock has to be right first |
 | **S10** | Supplier bills and payments: in this system or in Tally? | **Tally, later** — decided with the accounting service |
 | **S11** | Who approves a purchase, and above what amount | **The GM approves; the owner above a limit the owner sets.** No amount is invented |
+
+---
+
+## 6 · Who may do what — approved 16 September, as built in Phase 0
+
+| Role | Store (stock) | Equipment | Purchasing |
+|---|---|---|---|
+| Owner · Admin · General Manager | everything | everything | request and approve (GM up to the owner's limit) |
+| Hotel Manager | see, receive, issue, count | see, add, edit | request |
+| Store Manager | see, receive, issue, count, breakage | see | request |
+| Kitchen Manager | see, issue to the kitchen, breakage | see, report a repair | request |
+| Chef · Housekeeping | see | see, report a repair | — |
+| Reception | — | see, report a repair | — |
+| Accountant | see, export | see, export | see, export |
+| Viewer | see | see | see |
+| Revenue Manager · Till Operator | — | — | — |
+
+In `src/lib/permissions.ts`, pinned by `src/lib/permissions.test.ts`. "Report a
+repair" is a work order, wired by housekeeping in phase 2B.
+
+## 7 · Migration numbers in this plan
+
+**A chat takes the next number after cp6's highest when it starts** (095 after
+Phase 0). If two chats take the same one, the master renumbers the later one when
+it merges. Do not write the number into a test name or a comment — refer to the
+file by what it does, so a renumbering touches one filename. Numbers cannot be
+handed out in advance: the guard refuses a gap, so a reserved number nobody uses
+blocks every merge after it.
