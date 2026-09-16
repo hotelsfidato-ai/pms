@@ -26,6 +26,7 @@ export const ROLES = [
   "admin",
   "gm",
   "hotel_manager",
+  "revenue_manager",
   "front_desk",
   "housekeeping",
   "kitchen_manager",
@@ -68,8 +69,8 @@ export const ASSIGNABLE_ROLES: Role[] = ROLES.filter(
    calendar, which can also write a price, does NOT yet — that is a defect
    recorded in `src/modules/inventory/DEFECTS.md`, not something to change
    under the owner without asking. */
-export const RATE_SETTER_ROLES: readonly Role[] = ["owner", "admin", "gm"];
-export const setsRates = (role: Role): boolean => RATE_SETTER_ROLES.includes(role);
+/* RATE_SETTER_ROLES and setsRates are defined below the MATRIX, derived
+   from it. See the note there. */
 
 export const COMING_SOON_ROLES: readonly Role[] = ["owner", "admin", "gm"];
 
@@ -84,6 +85,7 @@ export const ROLE_LABELS: Record<Role, string> = {
   admin: "Admin",
   gm: "General Manager",
   hotel_manager: "Hotel Manager",
+  revenue_manager: "Revenue Manager",
   front_desk: "Reception",
   housekeeping: "Housekeeping",
   kitchen_manager: "Kitchen Manager",
@@ -100,6 +102,7 @@ export const ROLE_DESCRIPTIONS: Record<Role, string> = {
   admin: "Runs the platform day to day, including user accounts.",
   gm: "Sees the whole book. Approves overrides, rate changes and purchases.",
   hotel_manager: "One property, run day to day. Below the GM on approvals.",
+  revenue_manager: "Prices, restrictions and what the booking sites sell. No bills, guests or staff.",
   front_desk: "Arrivals, check-in, charges, settle, check-out. One property.",
   housekeeping: "Room status, task queue, offline sync. One property.",
   kitchen_manager: "The pass and the menu. Sees what the kitchen owes and when.",
@@ -236,7 +239,10 @@ const MATRIX: Record<Role, ResourceGrants> = {
     hotel: READ_EXPORT,
     inventory: ["view", "edit"],
     room_config: READ,
-    rate: READ,
+    /* The owner, 16 September: the GM sets prices. This said READ while a
+       hand-written list beside it said the GM could set them — two answers
+       to one question, and the matrix was the one being ignored. */
+    rate: ["view", "create", "edit"],
     invoice: ["view", "create", "edit", "export"],
     payment: ["view", "create", "edit", "export"],
     commission: READ_EXPORT,
@@ -264,6 +270,32 @@ const MATRIX: Record<Role, ResourceGrants> = {
     report: READ_EXPORT,
     notification: READ,
     user: READ,
+  },
+
+  /* The person who sets prices and pushes them to the booking sites when the
+     owner, admin and GM are away. Approved by the owner, 16 September, as
+     exactly this: prices and restrictions, and enough to see what they are
+     selling — nothing about money taken, guests, staff or setup.
+
+     CAN     set prices (Pricing, Rate calendar, Rate plans); set restrictions
+             (stop sell, minimum nights, closed to arrival or departure); see
+             availability, every booking, occupancy and ADR, OTA commission.
+     CANNOT  bills, payments, invoices; guest details and identity documents;
+             staff and roles; property and room setup; check-in and check-out;
+             the POS.
+
+     Named Revenue Manager, not Channel Manager, so the person is never
+     confused with the channel manager SERVICE — the wire to SU. */
+  revenue_manager: {
+    dashboard: READ,
+    reservation: READ,
+    hotel: READ,
+    inventory: ["view", "edit"],
+    room_config: READ,
+    rate: ["view", "create", "edit"],
+    commission: READ,
+    report: READ_EXPORT,
+    notification: READ,
   },
 
   /* The pass and the menu. Reads the book because a kitchen plans
@@ -376,6 +408,24 @@ export function canAccess(role: Role, resource: Resource): boolean {
 export function grantsFor(role: Role, resource: Resource): readonly Action[] {
   return MATRIX[role]?.[resource] ?? [];
 }
+
+/* WHO MAY MOVE A PRICE, as opposed to read one — DERIVED, not listed.
+
+   This was a hand-written ["owner", "admin", "gm"] until 16 September, while
+   the matrix above still gave the GM `rate: READ`. Two answers to one question,
+   and the menu read one while a route check would have read the other. Now it
+   is whoever holds `edit` on `rate`, so a role is given the power in exactly
+   one place and every screen and route that asks gets the same answer.
+
+   `src/lib/permissions.test.ts` pins the result to the owner's decision —
+   owner, admin, GM, revenue manager — so widening it by accident fails a gate.
+
+   Defined here, below the MATRIX, because a `const` read before it is
+   initialised throws on import. */
+export const RATE_SETTER_ROLES: readonly Role[] =
+  ROLES.filter((role) => grantsFor(role, "rate").includes("edit"));
+
+export const setsRates = (role: Role): boolean => RATE_SETTER_ROLES.includes(role);
 
 /** Whole matrix, for the /admin/roles screen. */
 export function permissionMatrix() {
