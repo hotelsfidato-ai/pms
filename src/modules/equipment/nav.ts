@@ -1,17 +1,26 @@
 import { Armchair } from "lucide-react";
 import type { ServiceNavEntry } from "@/components/app/navigation";
-import { seesComingSoon } from "@/lib/permissions";
 
-/* Equipment — not built. The register of durable things in the hotel, the
-   restaurant and the rooms (decision S2, 16 September). Its Coming soon page
-   sits in the Coming soon section for the owner, admins and general managers;
-   when phase 1B builds it, the real screen moves to the Store and equipment
-   section with `resource: "equipment"`.
+/* Equipment — the register of durable things in the hotel, the restaurant
+   and the rooms (decision S2, 16 September; phase 1B). Assembled by
+   `navigation.ts`, in the Store and equipment section after the Store.
 
-   Was "Hotel equipment", meaning door locks and room phones. Those moved to
-   Room systems. */
+   RESOURCE `equipment`: everybody holding any grant on it sees the entry
+   — owner, admin, GM, hotel manager, store manager, kitchen manager, chef,
+   housekeeping, reception, accountant, viewer. The revenue manager and
+   the till operator hold none.
+
+   NO `workingMenus` YET. The owner answered on 16 September: Housekeeping's
+   working menu. The pinned menus in `navigation.test.ts` are the master's to
+   change, so that line is the master's to add; until then housekeeping finds
+   it with Find a screen.
+
+   Was a Coming soon page meaning door locks and room phones; those moved
+   to Room systems. */
 export const nav: ServiceNavEntry[] = [
-  { section: "coming-soon", order: 55,
-    label: "Equipment", to: "/coming-soon/equipment", icon: Armchair, resource: "integration",
-    canSee: seesComingSoon, keywords: ["asset", "register", "repair", "warranty", "amc", "furniture", "appliance", "ac", "tv"] },
+  { section: "store-and-equipment", order: 20,
+    label: "Equipment", to: "/h/:code/equipment", icon: Armchair, resource: "equipment",
+    matchPrefix: true,
+    keywords: ["asset", "register", "repair", "warranty", "amc", "furniture", "appliance",
+               "ac", "tv", "fridge", "kettle"] },
 ];

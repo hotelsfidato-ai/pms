@@ -1,60 +1,43 @@
 # Equipment
 
-The register of everything durable in the hotel, the restaurant and the rooms
-— **redefined 16 September (S2); being built as phase 1B.** Brief:
-`docs/briefs/equipment.md`. The notes below about door locks and phones are the
-old meaning (now `room-systems`), kept until 1B rewrites this file.
-
-**NOT BUILT YET. A Coming soon page only.** On the list of what every comparable system has; the owner chose on
-16 September to give every missing service a folder and a Coming soon page. Its page is marked **When a hotel asks**.
-The page says what the service will do, what it needs before it can be built
-and what exists today. There is no working feature, no server code and no
-database table.
-
-**Folder name:** `equipment` — the word the other two places will use when it is
-built:
-
-```
-src/modules/equipment/             the Coming soon page, its menu entry and its address
-api/src/modules/equipment/         index.ts only, empty, mounted by the master for 1B
-db/tests/modules/equipment.sql     does not exist
-```
-
-Before any edit: ask the owner. Then claim the service in `HANDOVER.md` →
-"Folder claims". Written 16 September 2026.
-
----
-
-## What it would be — REDEFINED 16 September
-
 **The register of everything durable in the hotel, the restaurant and the
-rooms**, with its repairs and the buying of new things. The owner gave this
-service that meaning (decision S2); it is built in **phase 1B** of
-**`docs/STOCK-AND-EQUIPMENT-PLAN.md`** — read that first.
+rooms** — an AC, a TV, a fridge, an oven, a kettle, a table. Built 16 September
+2026 as **phase 1B** of `docs/STOCK-AND-EQUIPMENT-PLAN.md` (decisions S2 and
+S7). Brief: `docs/briefs/equipment.md`.
 
-- Costly items one by one with a tag; cheap items by count per room (S7).
-- Where each thing is: a room (`rooms`) or a place (`locations`, 094).
-- Who it came from (`suppliers`, 094), its warranty and service-contract dates.
-- Status: in use, under repair, retired — never deleted.
-- Repairs: a work order (058) pointing at the item, built by housekeeping in 2B.
+Not stock — things used up are the Store's (`stores`). Not door locks, room
+phones, minibar or TV connections — those are `room-systems`, not built. Until
+16 September this folder meant those; that meaning moved there unchanged.
 
-**What this folder used to describe** — door locks, room phones, minibar and
-TV — moved to `src/modules/room-systems/`, unchanged. The notes below this
-section were written for that meaning and are kept as history until phase 1B
-rewrites this brief.
+```
+src/modules/equipment/              the register screen, the item page, their data and tests
+api/src/modules/equipment/          the routes (equipment.ts) and who may use them (grants.ts)
+api/test/modules/equipment/         grants.test.ts — every role at every door
+                                    register.test.ts — what the register does
+db/migrations/<n>_equipment_register.sql   the tables, the history triggers, the next tag
+db/tests/modules/equipment.sql      the database's own rules, 51 checks
+```
+
+**Refer to the migration by what it does ("the equipment register"), never by
+its number.** It was written as 095; the Store's phase 1A may take the same
+number, and the master renumbers whichever merges second (plan § 7).
 
 ---
 
-## Where it stands, and where that comes from
+## The owner's answers — 16 September, do not re-ask
 
-- **What comparable systems ship as standard** — `PROGRESS.md`, "What a
-  market-leading HMS has that this does not", item 20–23. Domain
-  knowledge about the category, not a decision by the owner.
-- **Its Coming soon page — the owner's decision, 16 September:** a folder and a
-  Coming soon page for every service the system does not have, in one
-  "Coming soon" section at the foot of the menu, for the owner, admins and
-  general managers (root `CHANGELOG.md`, 2026-09-16).
-- **Today:** Nothing is connected. The desk's Post a charge list has no telephone or minibar line.
+Asked with recommendations before anything was built; every recommendation was
+taken.
+
+| Question | Answer |
+|---|---|
+| Categories: fixed, or one the hotel adds to? | **The hotel adds to it.** Each property starts with none. Whoever adds an item picks one already used there or types a new one in the same form. Nothing is seeded; the same word in different capitals is one category. |
+| What makes a thing "costly" enough for a tag? | **The person adding chooses** — one by one with a tag, or a count in one place. No amount of money decides it. |
+| The tag's form | **The system offers, the person may type.** The form suggests the next free number (EQ-0001, EQ-0002…); a printed label already on the item may be typed instead. No tag repeats at a property. |
+| Does retiring need the GM's approval? | **A tagged item retired by a Hotel Manager waits** for the GM, owner or admin. Counted lines, and anything the GM retires, go straight through. Who, when and why are recorded either way. |
+| Whose working menu? | **Housekeeping.** Not yet wired: the pinned menus are the master's (see Requests). Everybody with `view` finds it through Find a screen meanwhile. |
+| Places and suppliers can be added nowhere yet | **The master builds one shared door** for places and suppliers, used by the Store and Equipment alike. Until it lands, an item stands in a room and its supplier is a dash. |
+| A counted line's cost, and part of a count | **Per piece; part may move.** Moving 2 of 12 kettles, or retiring 1, is recorded with how many, who and when. |
 
 ---
 
@@ -62,67 +45,166 @@ rewrites this brief.
 
 | Menu name | Address (`routes.tsx`) | Page file | Who sees it (`nav.ts`) |
 |---|---|---|---|
-| Hotel equipment | `/coming-soon/equipment` | `pages/Equipment.tsx` | owner, admin, GM — the Coming soon section (`seesComingSoon`) |
+| Equipment | `/h/:code/equipment` | `pages/EquipmentRegister.tsx` | anyone holding a grant on `equipment` — Store and equipment section, after the Store |
+| (an item) | `/h/:code/equipment/:id` | `pages/EquipmentItem.tsx` | the same; reached from the list |
 
-The page is the shared Coming soon page (`src/pages/ComingSoon.tsx`) with
-this service's words: what it will do, what it needs, where it stands.
-Find a screen answers to "door lock", "key card", "pabx", "telephone", "minibar", "iptv", "energy". Anybody else who types the address is
-refused ("This page is not part of your role").
+Both addresses are **guarded** (`RequireAccess`, asking the navigation), so the
+revenue manager and the till operator are refused the page, not only the menu
+entry. `src/modules/equipment/equipment.test.tsx` renders the refusal.
 
-**What the page says it needs before it can be built** — the owner's
-questions, not the code's:
+**The register** — the list, filtered by place and by status; a card per line
+on a phone (`DataTable`). Add an item, import a file, export the register.
+Approvers see the retirements waiting for them at the top.
 
-1. Which hotel wants which, and the brands installed. Onity, Salto and Hafele are common locks.
-2. The makers' connection documents.
-3. Possibly a small computer at the hotel, when a maker's system cannot be reached over the internet.
+**An item** — its details, and everything that has happened to it, newest
+first, each with who and when. Change details · Move · Under repair / Back in
+use · Retire; approve or decline a waiting retirement.
 
----
-
-## What it would lean on
-
-- **front-desk** — the room assigned at check-in, and check-out.
-- **finance** — calls and minibar posted to the folio.
+**Rule 6.** A button the person may not use is shown disabled, and the page
+says who may — built from `src/lib/permissions.ts` (`words.ts`, `whoMay`).
 
 ---
 
-## Rules that will bind it
+## What the register holds
 
-- **Ask the owner before building anything** (`HANDOVER.md` § 3 and § 5).
-- **Claim the folder** in `HANDOVER.md` → "Folder claims" before the first edit.
-- **Only when a hotel asks** (`PROGRESS.md`: "when asked"). Its page says so.
-- **Never invent a figure; a missing one is a dash, never a zero**
-  (`HANDOVER.md` § 5).
-- **Credentials live in the server's environment** (`api/.env`) or the n8n on
-  the server — never in the repo, a screen or a chat (`HANDOVER.md` § 5).
-- **A new migration needs a number claimed in `HANDOVER.md` first**
-  (`src/test/migrationNumbers.test.ts`); reach other services only through
-  their `index.ts` (`src/test/boundaries.test.ts`).
+- **An item:** name, category, tagged or counted, tag or count, a room or a
+  place (exactly one), supplier, purchase date, cost, warranty end, service
+  contract (AMC) end, status **in use · under repair · retired**.
+- **Tagged** — one thing, quantity 1, a tag unique at the property in any
+  capitals. **Counted** — a quantity, no tag. The cost is per piece; the line's
+  total is worked out.
+- **Never deleted.** `revoke delete` on all three tables. A thing leaves by
+  being retired, with who, when and why; a retired item never changes again.
+- **Part of a count** is split off as its own line (`split_from`) before it
+  moves, changes status or is retired. The lines always add up; the database
+  refuses a count typed over.
+- **Nothing invented.** No category, item, cost or date ships. A cost nobody
+  typed is null — a dash on screen, never ₹0. A warranty nobody entered is a
+  dash, never "expired".
+
+### Tables
+
+```
+equipment_categories   per property; unique by lower(name); select, insert only
+equipment_items        the register; RLS forced; the shared audit trigger (write_audit)
+equipment_history      append-only; the application may only READ it
+```
+
+**The history is written by triggers on `equipment_items`**
+(`app.equipment_items_record`, SECURITY DEFINER) for every add, split, move,
+status change, retirement request, decline, retirement and edit — so no route
+can change a place, a status or a count and forget to record it. A route says
+**why** through the transaction-local setting `app.equipment_note`; **who** is
+`app.current_user_id()`.
+
+`app.equipment_items_guard` (trigger `equipment_items_1_guard`, named to fire
+first) refuses: a place or supplier from another property (094's tables have no
+composite key to point at), adding an item already retired, any change to a
+retired item, moving between properties, changing tagged/counted, and a count
+typed over.
+
+`app.next_equipment_tag(hotel)` — the next EQ-number offered. Pads only what is
+shorter than four digits (root MEMORY 280): after EQ-9999 comes EQ-10000.
 
 ---
 
-## When it is built
+## Endpoints
 
-- Replace `pages/Equipment.tsx` with the real screens, at their real addresses.
-- Move the menu entry out of the Coming soon section into the section it
-  works in, with the working menus it belongs to (`navigation.test.ts` pins
-  every role's list, and the Coming soon list).
-- If not every hotel has it, a module switch per hotel: one migration on
-  `hotel_modules_known` (`041`, `087`) and the two lists in
-  `api/src/modules/admin/moduleSwitches.ts`.
+All under `/api/hotels`, all asking `grants.ts` first.
+
+| Route | Needs |
+|---|---|
+| `GET /:code/equipment` — the list | view |
+| `GET /:code/equipment/options` — rooms, places, suppliers, categories, next tag | view |
+| `GET /:code/equipment/items/:id` — one item and its history | view |
+| `POST /:code/equipment` — add | create |
+| `POST /:code/equipment/import` — dry run, then apply | create |
+| `PATCH /:code/equipment/items/:id` — details | edit |
+| `POST /:code/equipment/items/:id/move` — `count` for part of a line | edit |
+| `POST /:code/equipment/items/:id/status` — in use / under repair | edit |
+| `POST /:code/equipment/items/:id/retire` — waits when tagged and the caller may not approve | edit |
+| `POST /:code/equipment/items/:id/retire/approve` and `/decline` | approve |
+| `GET /:code/equipment/export` | export |
+
+**`grants.ts` is a copy of the `equipment` row of the owner's table** in
+`src/lib/permissions.ts`. `api/test/modules/equipment/grants.test.ts` fails the
+moment the two differ, and tries all thirteen assignable roles at every door —
+a refusal must leave no item, category, split or history behind. Seen to fail:
+58 tests with the role check taken out; 1 test (naming the action) with a role
+added to the copy.
+
+**Import.** Columns in `importSpec.ts` (`EQUIPMENT_SPEC`): Item, Category, Held
+as (tag/count), Tag, How many, Room, Place, Supplier, Bought on, Cost, Warranty
+ends, Service contract ends, Status. Dates day first (14/03/2025) or as the
+calendar writes them; a month-first date is refused, not guessed. A blank tag
+on a tag row is given the next free number, shown in the dry run. A row naming
+a room, place or supplier the property does not have is rejected with its line
+number. `register.test.ts` sends every column of the website's template and
+checks each one landed.
+
+---
+
+## What it leans on
+
+- **`rooms`** (003) — composite key `(hotel_id, room_id)`.
+- **`locations`, `suppliers`** (094, the master's) — read, never written.
+- **The shared audit trail** (`app.write_audit`, 011/016/076).
+- **The shared import dialog** (`src/components/flows/ImportDialog.tsx`) and
+  `src/lib/importSpec.ts` / `csv.ts` — used, not changed.
+
+---
+
+## Not this service's
+
+- **Repairs** — a work order pointing at an item, its cost, the item's repair
+  history: **phase 2B, housekeeping** (`work_orders`, 058). "Under repair" is set
+  by hand until then.
+- **Buying equipment** — phase 2C, `purchasing`.
+- **Door locks, room phones, minibar, TV connections** — `room-systems`.
+
+---
+
+## Rules that bind it
+
+- **No decision without the owner's approval** (`HANDOVER.md` § 5).
+- **A missing figure is a dash, never a zero**; a warranty nobody entered is
+  never "expired".
+- **Never deleted** — retire, with who, when and why.
+- **Reach other services only through their `index.ts`**
+  (`src/test/boundaries.test.ts`).
 
 ---
 
 ## Gates
 
-`npx tsc -b --force` and `npx vitest run`, judged by the exit code —
-`src/test/boundaries.test.ts` fails if this folder loses its `index.ts` or
-this `MODULE.md`; `src/components/app/navigation.test.ts` pins the Coming
-soon section.
+```powershell
+npx tsc -b --force                # types
+npx vitest run                    # web — equipment.test.tsx, navigation.test.ts
+cd api; npm test -- modules/equipment   # the API tests for this service; `npm test` for all
+bash db/tests/run.sh              # the database suite, equipment.sql included
+npm run build                     # "no test sign-in in dist"
+```
+
+**Never run two migrations against the local Postgres at once** — the API
+suite's scratch database and `db/migrate.sh` both alter cluster-wide roles, and
+the second fails with "tuple concurrently updated" (DEFECTS EQ-3).
 
 ---
 
-## Requests from other services
+## Requests
 
-None. To ask for something here, add a line below — date, your service, what
-you need and why — and raise it with the owner; nothing is built here
-unasked.
+- **16 Sep · equipment → master · the working menu.** The owner chose
+  Housekeeping's working menu. Add `workingMenus: ["housekeeping"]` to this
+  service's entry and the pinned housekeeping list in `navigation.test.ts`.
+- **16 Sep · equipment → master · one door for places and suppliers.** The
+  owner's answer: the master builds one screen and route to add places and
+  suppliers (094), used by the Store and Equipment. Until then nothing can add
+  either, and this register reads them only.
+- **16 Sep · equipment → master · deleting an untraded property.**
+  `app.forbid_hotel_delete()` (066) does not count equipment. A property with a
+  register but no bookings would pass that check, and the cascade would then
+  stop at `equipment_history`'s append-only trigger with a message about a
+  history row. Add "equipment items" to its evidence list (DEFECTS EQ-2).
+
+Requests from other services: none yet. Add a line — date, your service, what
+you need and why — and raise it with the owner.
