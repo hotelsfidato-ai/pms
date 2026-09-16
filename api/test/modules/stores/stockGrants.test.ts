@@ -255,7 +255,7 @@ describe("the Store, as every role a person can be given (STO-1)", () => {
           const body = await ok(res, "importing a change");
           const verdicts = body.verdicts as { action: string; detail: string }[];
           expect(verdicts.map((v) => v.action)).toEqual(["rejected"]);
-          expect(verdicts[0]!.detail).toMatch(/store manager/i);
+          expect(verdicts[0]!.detail).toMatch(/Inventory Manager/);
           expect((await itemNamed(name))!.unit, `${role} may not edit and the unit changed anyway`)
             .toBe(before);
         } else {

@@ -3,18 +3,23 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useParams } from "react-router";
 import {
   Package, Plus, TrendingDown, TrendingUp, Trash2, Undo2, AlertTriangle,
-  Upload,
+  Upload, CornerUpLeft, ClipboardCheck, History,
 } from "lucide-react";
 import { cn } from "@/lib/cn";
-import { money, dateShort } from "@/lib/format";
+import { money, dateShort, timeOnly } from "@/lib/format";
+import { ApiError } from "@/lib/api";
 import { can } from "@/lib/permissions";
 import { useRole } from "@/lib/session";
 import {
-  Page, PageHeader, Card, CardBody, Button, Skeleton, EmptyState,
+  Page, PageHeader, Card, CardBody, Button, Skeleton, EmptyState, ErrorState,
   Dialog, DialogContent, Field, fieldProps, Input, NativeSelect,
-  StatusPill, toast,
+  StatusPill, toast, Menu, MenuItem, MenuSeparator,
 } from "@/components/ui";
-import { getStore, getStockHistory, addStockItem, recordStockMovement, reverseStockMovement, importStockItems, type StockItem, type StockKind } from "@/modules/stores/data/stores";
+import {
+  getStore, getStockHistory, addStockItem, recordStockMovement,
+  reverseStockMovement, importStockItems,
+  type StockItem, type StockKind, type StockMovement,
+} from "@/modules/stores/data/stores";
 import { ImportDialog } from "@/components/flows/ImportDialog";
 import { STOCK_SPEC } from "@/lib/importSpec";
 
@@ -40,6 +45,7 @@ import { STOCK_SPEC } from "@/lib/importSpec";
    an answer that goes back to a delivery note.
    ══════════════════════════════════════════════════════════════════ */
 
+/* What a row in the history SAYS HAPPENED — past tense. */
 const KIND_LABEL: Record<StockKind, string> = {
   receipt: "Received",
   issue: "Issued",
@@ -48,24 +54,56 @@ const KIND_LABEL: Record<StockKind, string> = {
   return: "Returned",
 };
 
+/* What a button SAYS WILL HAPPEN — verb first (STO-8, the owner's words of
+   16 September). It read "Received" on the button that did the receiving. */
+const ACTION_LABEL: Record<StockKind, string> = {
+  receipt: "Receive",
+  issue: "Issue",
+  wastage: "Record waste",
+  adjustment: "Correct the count",
+  return: "Return",
+};
+
+/* What an undo undid, as a noun: "Undo this delivery of 60 piece?" and, in
+   the history, "Undo of a delivery" (STO-6). */
+const NOUN: Record<StockKind, string> = {
+  receipt: "delivery",
+  issue: "issue",
+  wastage: "waste",
+  adjustment: "count correction",
+  return: "return",
+};
+const withArticle = (noun: string) => `${/^[aeiou]/.test(noun) ? "an" : "a"} ${noun}`;
+
 /* LOOK, OR CHANGE (STO-1). The owner's table: `create` receives, issues,
-   wastes and adds; `edit` undoes. A person who may only look — housekeeping,
-   the chef, the accountant, a viewer — gets ONE sentence and no change
-   buttons, not four greyed buttons on every item: the owner's choice of 16
-   September, an exception to "greyed with its reason". The server refuses
-   the same people whatever the screen draws. */
+   wastes, returns and adds; `edit` corrects a count and undoes. A person who
+   may only look — housekeeping, the chef, the accountant, a viewer — gets ONE
+   sentence and no change buttons, not four greyed buttons on every item: the
+   owner's choice of 16 September, an exception to "greyed with its reason".
+   The server refuses the same people whatever the screen draws. The role is
+   the Inventory Manager (key `stores`) since 16 September. */
 const LOOK_ONLY =
   "You can see the store. Receiving, issuing and adding items is for the "
-  + "store manager, hotel manager or GM.";
+  + "Inventory Manager, hotel manager or GM.";
 const UNDO_NOT_YOURS =
-  "Undoing a movement is for the store manager, hotel manager or GM.";
+  "Undoing a movement is for the Inventory Manager, hotel manager or GM.";
+
+const NOTHING_ON_HAND = "Nothing on hand.";
+
+/* "Everything else" is a CHOICE, not the absence of one (STO-10): the list
+   starts with nothing picked, so linen is never filed under Kitchen because
+   nobody noticed the default. */
+const NO_CATEGORY = "__everything-else";
+
+const unreachable = (error: unknown) =>
+  error instanceof ApiError && error.status === 0;
 
 export default function StoresPage() {
   const { code = "" } = useParams<{ code: string }>();
   const qc = useQueryClient();
   const role = useRole();
   const mayChange = can(role, "create", "stock");
-  const mayUndo = can(role, "edit", "stock");
+  const mayCorrect = can(role, "edit", "stock");
 
   const [adding, setAdding] = useState(false);
   const [moving, setMoving] = useState<{ item: StockItem; kind: StockKind } | null>(null);
@@ -94,6 +132,75 @@ export default function StoresPage() {
     byCategory.set(key, [...(byCategory.get(key) ?? []), i]);
   }
 
+  /* ── Four states, not one (STO-2) ─────────────────────────────────
+     The read used to swallow its failure, so an unreadable store drew
+     "Nothing in the store yet — Add the first". Now, as on Rooms and the
+     till: offline with nothing saved says so and loads by itself; a failed
+     read with nothing to show says it did not load, with Try again; a
+     failed REFRESH keeps the last good list and says it is not current. */
+  const body = (() => {
+    if (q.data === undefined) {
+      if (q.isPaused) {
+        return (
+          <ErrorState
+            title="No connection"
+            description="This device is offline, so the store cannot load. It loads by itself as soon as the connection is back."
+          />
+        );
+      }
+      if (q.isError) {
+        return (
+          <ErrorState
+            title="The store did not load"
+            error={q.error}
+            description={unreachable(q.error)
+              ? "Could not reach the server, and there is no store from earlier to show in its place. Check the connection, then try again."
+              : undefined}
+            onRetry={() => void q.refetch()}
+          />
+        );
+      }
+      return <Skeleton className="h-64" />;
+    }
+
+    if (items.length === 0) {
+      return (
+        <EmptyState
+          icon={<Package />}
+          title="Nothing in the store yet"
+          description={
+            "Add what the property keeps and what it is counted in. Receiving "
+            + "a delivery is what gives it a quantity and a value — an item on "
+            + "its own has neither, and shows a dash rather than a zero."
+          }
+          action={mayChange
+            ? <Button variant="primary" onClick={() => setAdding(true)}>Add the first</Button>
+            : undefined}
+        />
+      );
+    }
+
+    return [...byCategory.entries()].map(([category, group]) => (
+      <section key={category}>
+        <h2 className="text-md font-semibold text-ink-900 mb-2.5">
+          {category}
+        </h2>
+        <ul className="space-y-2">
+          {group.map((i) => (
+            <ItemRow
+              key={i.id}
+              item={i}
+              mayChange={mayChange}
+              mayCorrect={mayCorrect}
+              onMove={(kind) => setMoving({ item: i, kind })}
+              onHistory={() => setHistory(i)}
+            />
+          ))}
+        </ul>
+      </section>
+    ));
+  })();
+
   return (
     <Page className="max-w-5xl">
       <PageHeader
@@ -117,7 +224,8 @@ export default function StoresPage() {
                     onClick={() => setImporting(true)}>
               <Upload className="size-4" /> Import
             </Button>
-            <Button className="h-11" onClick={() => setAdding(true)}>
+            {/* The Store's one main action (STO-8). */}
+            <Button variant="primary" className="h-11" onClick={() => setAdding(true)}>
               <Plus className="size-4" /> Add an item
             </Button>
           </div>
@@ -126,6 +234,23 @@ export default function StoresPage() {
 
       {!mayChange && (
         <p className="text-sm text-grey-600">{LOOK_ONLY}</p>
+      )}
+
+      {q.data !== undefined && q.isError && (
+        <div role="status"
+             className="flex flex-wrap items-center gap-x-3 gap-y-1 rounded-md border
+                        border-amber-300 bg-amber-50 px-3.5 py-2">
+          <AlertTriangle className="size-4 shrink-0 text-amber-600" />
+          <p className="text-sm text-ink-900 min-w-0">
+            Not up to date: {unreachable(q.error) ? "no connection" : "the store did not refresh"}.
+            {q.dataUpdatedAt > 0 && ` Showing what loaded at ${timeOnly(new Date(q.dataUpdatedAt))}.`}
+          </p>
+          <button type="button" onClick={() => void q.refetch()}
+                  className="text-sm font-medium text-ink-900 underline underline-offset-2
+                             hover:no-underline cursor-pointer">
+            Try again
+          </button>
+        </div>
       )}
 
       {low.length > 0 && (
@@ -144,41 +269,7 @@ export default function StoresPage() {
         </Card>
       )}
 
-      {q.isLoading ? (
-        <Skeleton className="h-64" />
-      ) : items.length === 0 ? (
-        <EmptyState
-          icon={<Package />}
-          title="Nothing in the store yet"
-          description={
-            "Add what the property keeps and what it is counted in. Receiving "
-            + "a delivery is what gives it a quantity and a value — an item on "
-            + "its own has neither, and shows a dash rather than a zero."
-          }
-          action={mayChange
-            ? <Button onClick={() => setAdding(true)}>Add the first</Button>
-            : undefined}
-        />
-      ) : (
-        [...byCategory.entries()].map(([category, group]) => (
-          <section key={category}>
-            <h2 className="text-md font-semibold text-ink-900 mb-2.5">
-              {category}
-            </h2>
-            <ul className="space-y-2">
-              {group.map((i) => (
-                <ItemRow
-                  key={i.id}
-                  item={i}
-                  mayChange={mayChange}
-                  onMove={(kind) => setMoving({ item: i, kind })}
-                  onHistory={() => setHistory(i)}
-                />
-              ))}
-            </ul>
-          </section>
-        ))
-      )}
+      {body}
 
       {importing && (
         <ImportDialog
@@ -200,7 +291,7 @@ export default function StoresPage() {
                     onDone={() => { setMoving(null); refresh(); }} />
       )}
       {history && (
-        <HistoryDialog code={code} item={history} open mayUndo={mayUndo}
+        <HistoryDialog code={code} item={history} open mayUndo={mayCorrect}
                        onOpenChange={(o) => { if (!o) setHistory(null); }}
                        onChanged={refresh} />
       )}
@@ -210,17 +301,24 @@ export default function StoresPage() {
 
 /* ── One thing on the shelf ───────────────────────────────────────── */
 
-function ItemRow({ item, mayChange, onMove, onHistory }: {
+function ItemRow({ item, mayChange, mayCorrect, onMove, onHistory }: {
   item: StockItem;
   mayChange: boolean;
+  mayCorrect: boolean;
   onMove: (kind: StockKind) => void;
   onHistory: () => void;
 }) {
+  const empty = item.onHand <= 0;
+  const neverMoved = item.movements === 0;
+
   return (
     <li>
       <Card className={cn(item.low && "border-amber-300")}>
+        {/* ON A PHONE THE NAME HAS ITS OWN LINE (STO-3). It shared a row with
+            On hand and Worth and got what was left — 69 to 86 pixels, so
+            "LPG cylinder 19 kg commercial" took four lines and its card 480. */}
         <CardBody className="flex flex-wrap items-center gap-x-6 gap-y-3">
-          <div className="min-w-0 flex-1">
+          <div className="min-w-0 basis-full sm:basis-0 sm:flex-1">
             <div className="flex items-baseline gap-2 flex-wrap">
               <p className="text-base font-medium text-ink-900">{item.name}</p>
               {item.low && <StatusPill tone="warning">Low</StatusPill>}
@@ -257,29 +355,62 @@ function ItemRow({ item, mayChange, onMove, onHistory }: {
             )}
           </div>
 
-          <div className="flex flex-wrap gap-2">
-            {mayChange && (<>
+          {/* RECEIVE · ISSUE · MORE (STO-5 and STO-7, the owner's layout).
+              The rare acts go in the menu, each with a word — the bin had
+              none — and a greyed one says why. A look-only person gets
+              History alone.
+
+              ONE ROW ON A PHONE. With their arrows the three need 305px and
+              the card gives 294 at 375 wide — less on a 360px phone — so More
+              wrapped under the other two. The
+              arrows show from `sm` up; the words are what is read. */}
+          <div className="flex flex-wrap gap-2 basis-full xl:basis-auto">
+            {mayChange ? (
+              <>
+                <Button variant="secondary" className="h-11"
+                        onClick={() => onMove("receipt")}>
+                  <TrendingUp className="size-4 hidden sm:block" /> Receive
+                </Button>
+                <Button variant="secondary" className="h-11"
+                        disabled={empty}
+                        onClick={() => onMove("issue")}>
+                  <TrendingDown className="size-4 hidden sm:block" /> Issue
+                </Button>
+                <Menu label="More">
+                  <MenuItem icon={Trash2} disabled={empty} reason={NOTHING_ON_HAND}
+                            onSelect={() => onMove("wastage")}>
+                    Waste
+                  </MenuItem>
+                  <MenuItem icon={CornerUpLeft} disabled={empty} reason={NOTHING_ON_HAND}
+                            onSelect={() => onMove("return")}>
+                    Return to supplier
+                  </MenuItem>
+                  {mayCorrect && (
+                    <MenuItem icon={ClipboardCheck} onSelect={() => onMove("adjustment")}>
+                      Correct the count
+                    </MenuItem>
+                  )}
+                  <MenuSeparator />
+                  <MenuItem icon={History} disabled={neverMoved}
+                            reason="Nothing has moved yet." onSelect={onHistory}>
+                    History
+                  </MenuItem>
+                </Menu>
+              </>
+            ) : (
               <Button variant="secondary" className="h-11"
-                      onClick={() => onMove("receipt")}>
-                <TrendingUp className="size-4" /> Receive
+                      disabled={neverMoved}
+                      onClick={onHistory}>
+                History
               </Button>
-              <Button variant="secondary" className="h-11"
-                      disabled={item.onHand <= 0}
-                      onClick={() => onMove("issue")}>
-                <TrendingDown className="size-4" /> Issue
-              </Button>
-              <Button variant="secondary" className="h-11"
-                      disabled={item.onHand <= 0}
-                      onClick={() => onMove("wastage")}>
-                <Trash2 className="size-4" />
-              </Button>
-            </>)}
-            <Button variant="secondary" className="h-11"
-                    disabled={item.movements === 0}
-                    onClick={onHistory}>
-              History
-            </Button>
+            )}
           </div>
+
+          {mayChange && empty && (
+            <p className="basis-full text-sm text-grey-600">
+              Nothing on hand to issue — receive a delivery first.
+            </p>
+          )}
         </CardBody>
       </Card>
     </li>
@@ -294,24 +425,26 @@ function AddItemDialog({ code, open, onOpenChange, onAdded }: {
 }) {
   const [name, setName] = useState("");
   const [unit, setUnit] = useState("");
-  const [category, setCategory] = useState("Kitchen");
+  const [category, setCategory] = useState("");
   const [reorder, setReorder] = useState("");
   const [busy, setBusy] = useState(false);
 
+  const ready = !!name.trim() && !!unit.trim() && category !== "";
+
   const submit = async () => {
-    if (busy || !name.trim() || !unit.trim()) return;
+    if (busy || !ready) return;
     setBusy(true);
     const res = await addStockItem(code, {
       name: name.trim(),
       unit: unit.trim(),
-      category: category.trim() || undefined,
+      category: category === NO_CATEGORY ? undefined : category,
       reorderLevel: reorder.trim() === "" ? null : Number(reorder),
     });
     setBusy(false);
     if (!res.ok) return toast.error("Not added", res.reason);
     toast.success(`${name.trim()} added`,
       "Receiving a delivery is what gives it a quantity and a value.");
-    setName(""); setUnit(""); setReorder("");
+    setName(""); setUnit(""); setCategory(""); setReorder("");
     onAdded();
   };
 
@@ -325,7 +458,7 @@ function AddItemDialog({ code, open, onOpenChange, onAdded }: {
             <Button variant="secondary" className="h-11"
                     onClick={() => onOpenChange(false)}>Cancel</Button>
             <Button variant="primary" className="h-11"
-                    disabled={!name.trim() || !unit.trim() || busy}
+                    disabled={!ready || busy}
                     onClick={() => void submit()}>
               {busy ? "Adding…" : "Add"}
             </Button>
@@ -346,15 +479,17 @@ function AddItemDialog({ code, open, onOpenChange, onAdded }: {
                      onChange={(e) => setUnit(e.target.value)} />
             )}
           </Field>
-          <Field label="Where it belongs">
+          <Field label="Where it belongs" required
+                 hint="Pick one before adding — Everything else is a choice too.">
             {(f) => (
               <NativeSelect {...fieldProps(f)} value={category}
                             onChange={(e) => setCategory(e.target.value)}>
+                <option value="" disabled>Choose where it belongs</option>
                 <option>Kitchen</option>
                 <option>Bar</option>
                 <option>Housekeeping</option>
                 <option>Maintenance</option>
-                <option value="">Everything else</option>
+                <option value={NO_CATEGORY}>Everything else</option>
               </NativeSelect>
             )}
           </Field>
@@ -379,7 +514,7 @@ function AddItemDialog({ code, open, onOpenChange, onAdded }: {
   );
 }
 
-/* ── Something came in, or went out ───────────────────────────────── */
+/* ── Something came in, went out, or the shelf disagreed ──────────── */
 
 function MoveDialog({ code, item, kind, open, onOpenChange, onDone }: {
   code: string; item: StockItem; kind: StockKind;
@@ -393,17 +528,31 @@ function MoveDialog({ code, item, kind, open, onOpenChange, onDone }: {
   const [busy, setBusy] = useState(false);
 
   const isReceipt = kind === "receipt";
+  const isReturn = kind === "return";
+  const isCount = kind === "adjustment";
+
+  /* CORRECT THE COUNT asks what the SHELF holds, not by how much the book is
+     wrong: a person counts what is in front of them. The difference is what
+     gets recorded — signed, the one kind that may go either way. */
+  const counted = qty.trim() === "" ? null : Number(qty);
+  const difference = counted === null || !Number.isFinite(counted)
+    ? null : Math.round((counted - item.onHand) * 1000) / 1000;
+  const matches = isCount && difference === 0;
+
+  const quantity = isCount ? difference : (qty.trim() === "" ? null : Number(qty));
+  const ready = quantity !== null && Number.isFinite(quantity) && quantity !== 0
+    && (isCount ? (counted ?? -1) >= 0 : quantity > 0);
 
   const submit = async () => {
-    if (busy || !qty.trim()) return;
+    if (busy || !ready || quantity === null) return;
     setBusy(true);
     const res = await recordStockMovement(code, {
       itemId: item.id,
       kind,
-      /* ALWAYS POSITIVE. The kind decides the direction and the server
-         applies the sign — a screen that has to remember to send -5 for
-         an issue will one day send 5 and quietly double the stock. */
-      quantity: Number(qty),
+      /* POSITIVE, except a correction. The kind decides the direction and
+         the server applies the sign — a screen that has to remember to send
+         -5 for an issue will one day send 5 and quietly double the stock. */
+      quantity,
       ...(isReceipt && cost.trim() !== "" ? { unitCost: Number(cost) } : {}),
       ...(supplier.trim() ? { supplier: supplier.trim() } : {}),
       ...(reference.trim() ? { reference: reference.trim() } : {}),
@@ -413,7 +562,9 @@ function MoveDialog({ code, item, kind, open, onOpenChange, onDone }: {
     if (!res.ok) return toast.error("Not recorded", res.reason);
 
     toast.success(
-      `${KIND_LABEL[kind]} ${qty} ${item.unit} of ${item.name}`,
+      isCount
+        ? `Count corrected — ${item.name}`
+        : `${KIND_LABEL[kind]} ${qty} ${item.unit} of ${item.name}`,
       `${res.onHand} ${res.unit} on hand.`);
     onDone();
   };
@@ -421,31 +572,43 @@ function MoveDialog({ code, item, kind, open, onOpenChange, onDone }: {
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent
-        title={`${KIND_LABEL[kind]} — ${item.name}`}
+        title={`${ACTION_LABEL[kind]} — ${item.name}`}
         description={`${item.onHand} ${item.unit} on hand`}
         footer={
           <>
             <Button variant="secondary" className="h-11"
                     onClick={() => onOpenChange(false)}>Cancel</Button>
-            <Button variant="primary" className="h-11" disabled={!qty.trim() || busy}
+            <Button variant="primary" className="h-11" disabled={!ready || busy}
                     onClick={() => void submit()}>
-              {busy ? "Recording…" : KIND_LABEL[kind]}
+              {busy ? "Recording…" : ACTION_LABEL[kind]}
             </Button>
           </>
         }
       >
         <div className="space-y-3">
-          <Field label={`How many ${item.unit}`} required>
+          <Field label={isCount ? `What the shelf holds now, in ${item.unit}` : `How many ${item.unit}`}
+                 required
+                 hint={isCount
+                   ? `The book says ${item.onHand} ${item.unit}. Count what is there; the difference is recorded.`
+                   : undefined}>
             {(f) => (
               <Input {...fieldProps(f)} value={qty} inputMode="decimal"
                      onChange={(e) => setQty(e.target.value)} />
             )}
           </Field>
 
-          {isReceipt ? (
+          {isCount && difference !== null && (
+            <p className="text-sm text-grey-600" role="status">
+              {matches
+                ? "The shelf already matches the book — there is nothing to record."
+                : `That is ${Math.abs(difference)} ${item.unit} ${difference > 0 ? "more" : "fewer"} than the book says.`}
+            </p>
+          )}
+
+          {isReceipt && (
             <>
               <Field label={`What it cost, per ${item.unit}`}
-                     hint="Leave blank if the bill has not arrived. It can be recorded later as an adjustment; what it must not be is a guess.">
+                     hint="Leave blank if the bill has not arrived. A cost can only be added later by undoing this delivery and receiving it again — what it must not be is a guess.">
                 {(f) => (
                   <Input {...fieldProps(f)} value={cost} inputMode="decimal"
                          onChange={(e) => setCost(e.target.value)} />
@@ -466,11 +629,27 @@ function MoveDialog({ code, item, kind, open, onOpenChange, onDone }: {
                 )}
               </Field>
             </>
-          ) : (
+          )}
+
+          {isReturn && (
+            <Field label="Who it goes back to">
+              {(f) => (
+                <Input {...fieldProps(f)} value={supplier}
+                       placeholder="Kirana Bros"
+                       onChange={(e) => setSupplier(e.target.value)} />
+              )}
+            </Field>
+          )}
+
+          {!isReceipt && (
             <Field label="Why" hint={
               kind === "wastage"
                 ? "Spoiled, broken, past its date. Somebody will ask at the end of the month."
-                : "Where it went, or why the shelf disagreed with the book."
+                : isReturn
+                  ? "Damaged, the wrong thing, more than was ordered."
+                  : isCount
+                    ? "What the count found, and who counted."
+                    : "Where it went."
             }>
               {(f) => (
                 <Input {...fieldProps(f)} value={note}
@@ -491,14 +670,19 @@ function HistoryDialog({ code, item, open, mayUndo, onOpenChange, onChanged }: {
   onOpenChange: (o: boolean) => void; onChanged: () => void;
 }) {
   const qc = useQueryClient();
+  const [confirming, setConfirming] = useState<StockMovement | null>(null);
+  const [busy, setBusy] = useState(false);
   const q = useQuery({
     queryKey: ["stock-history", code, item.id],
     queryFn: () => getStockHistory(code, item.id),
     enabled: open,
   });
 
-  const undo = async (id: string) => {
-    const res = await reverseStockMovement(code, id);
+  const undo = async (m: StockMovement) => {
+    setBusy(true);
+    const res = await reverseStockMovement(code, m.id);
+    setBusy(false);
+    setConfirming(null);
     if (!res.ok) return toast.error("Not undone", res.reason);
     toast.success("Undone",
       "Both rows stay on the history — the store's past is what somebody "
@@ -506,6 +690,8 @@ function HistoryDialog({ code, item, open, mayUndo, onOpenChange, onChanged }: {
     void qc.invalidateQueries({ queryKey: ["stock-history", code, item.id] });
     onChanged();
   };
+
+  const rows = q.data ?? [];
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -520,11 +706,25 @@ function HistoryDialog({ code, item, open, mayUndo, onOpenChange, onChanged }: {
         {!mayUndo && (
           <p className="text-sm text-grey-600 mb-2">{UNDO_NOT_YOURS}</p>
         )}
-        {q.isLoading ? (
+        {q.data === undefined && q.isError ? (
+          <ErrorState
+            className="py-8"
+            title="The history did not load"
+            error={q.error}
+            description={unreachable(q.error)
+              ? "Could not reach the server. Check the connection, then try again."
+              : undefined}
+            onRetry={() => void q.refetch()}
+          />
+        ) : q.data === undefined ? (
           <Skeleton className="h-40" />
+        ) : rows.length === 0 ? (
+          <EmptyState compact icon={<History />}
+                      title="Nothing has moved yet"
+                      description="A delivery, an issue or a count will show here." />
         ) : (
           <ul className="space-y-1.5">
-            {(q.data ?? []).map((m) => (
+            {rows.map((m) => (
               <li key={m.id}
                   className={cn(
                     "flex items-start gap-2.5 rounded-md border p-3",
@@ -541,7 +741,9 @@ function HistoryDialog({ code, item, open, mayUndo, onOpenChange, onChanged }: {
                 <div className="min-w-0 flex-1">
                   <div className="flex items-baseline gap-2 flex-wrap">
                     <span className="text-base text-ink-900">
-                      {KIND_LABEL[m.kind]}
+                      {m.isReversal && m.reversesKind
+                        ? `Undo of ${withArticle(NOUN[m.reversesKind])}`
+                        : KIND_LABEL[m.kind]}
                     </span>
                     <span className={cn("tabular font-medium",
                       m.quantity > 0 ? "text-success" : "text-ink-900")}>
@@ -553,7 +755,6 @@ function HistoryDialog({ code, item, open, mayUndo, onOpenChange, onChanged }: {
                       </span>
                     )}
                     {m.reversed && <StatusPill tone="neutral">Undone</StatusPill>}
-                    {m.isReversal && <StatusPill tone="neutral">An undo</StatusPill>}
                   </div>
                   <p className="text-sm text-grey-500 mt-0.5">
                     {dateShort(m.date)}
@@ -567,14 +768,15 @@ function HistoryDialog({ code, item, open, mayUndo, onOpenChange, onChanged }: {
                   )}
                 </div>
 
-                {/* Undoing is only offered on a row that is neither an
-                    undo nor already undone. The server refuses both
-                    anyway, in words. */}
+                {/* Undoing is only offered on a row that is neither an undo
+                    nor already undone, to somebody who may undo — and it
+                    ASKS FIRST (STO-6): one tap wrote a reversal that cannot
+                    itself be reversed. */}
                 {mayUndo && !m.reversed && !m.isReversal && (
                   <button
                     type="button"
-                    aria-label={`Undo this ${KIND_LABEL[m.kind].toLowerCase()}`}
-                    onClick={() => void undo(m.id)}
+                    aria-label={`Undo this ${NOUN[m.kind]}`}
+                    onClick={() => setConfirming(m)}
                     className="size-11 grid place-items-center rounded-md
                                text-grey-500 hover:text-brand-red
                                hover:bg-red-50 cursor-pointer shrink-0"
@@ -585,6 +787,28 @@ function HistoryDialog({ code, item, open, mayUndo, onOpenChange, onChanged }: {
               </li>
             ))}
           </ul>
+        )}
+
+        {confirming && (
+          <Dialog open onOpenChange={(o) => { if (!o) setConfirming(null); }}>
+            <DialogContent
+              title={`Undo this ${NOUN[confirming.kind]} of ${Math.abs(confirming.quantity)} ${item.unit}?`}
+              footer={
+                <>
+                  <Button variant="secondary" className="h-11"
+                          onClick={() => setConfirming(null)}>Cancel</Button>
+                  <Button variant="danger" className="h-11" disabled={busy}
+                          onClick={() => void undo(confirming)}>
+                    {busy ? "Undoing…" : `Undo ${NOUN[confirming.kind]}`}
+                  </Button>
+                </>
+              }
+            >
+              <p className="text-base text-grey-600 leading-relaxed">
+                It cannot be taken back — to put it right afterwards, record it again.
+              </p>
+            </DialogContent>
+          </Dialog>
         )}
       </DialogContent>
     </Dialog>

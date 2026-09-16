@@ -53,6 +53,9 @@ export interface StockMovement {
   who: string | null;
   /** This row UNDID another. */
   isReversal: boolean;
+  /** When it did: the kind of the row it undid, so the history can say
+      "Undo of a delivery" rather than "Adjusted" (STO-6). */
+  reversesKind: StockKind | null;
   /** This row WAS undone. Different fact, and the history is unreadable
       without both. */
   reversed: boolean;
@@ -60,28 +63,25 @@ export interface StockMovement {
 
 type Result<T = unknown> = ({ ok: true } & T) | { ok: false; reason: string };
 
+/* THE READS THROW (STO-2). They ended in `catch { return [] }`, so a store
+   that could not be read arrived at the screen as an empty one: with the
+   server unreachable, nine items read "Nothing in the store yet — Add the
+   first". The screen tells failed from empty now, the way the till (POS-4)
+   and Rooms do. */
 export async function getStore(hotelId: string): Promise<StockItem[]> {
   if (!hotelId) return [];
-  try {
-    const out = await api<{ items: StockItem[] }>(
-      `/api/hotels/${hotelId}/stores`);
-    return out.items;
-  } catch {
-    return [];
-  }
+  const out = await api<{ items: StockItem[] }>(
+    `/api/hotels/${hotelId}/stores`);
+  return out.items;
 }
 
 export async function getStockHistory(
   hotelId: string, itemId: string,
 ): Promise<StockMovement[]> {
   if (!hotelId || !itemId) return [];
-  try {
-    const out = await api<{ movements: StockMovement[] }>(
-      `/api/hotels/${hotelId}/stores/items/${itemId}/movements`);
-    return out.movements;
-  } catch {
-    return [];
-  }
+  const out = await api<{ movements: StockMovement[] }>(
+    `/api/hotels/${hotelId}/stores/items/${itemId}/movements`);
+  return out.movements;
 }
 
 export async function addStockItem(

@@ -46,21 +46,47 @@ export const STOCK_ROLES: Readonly<Record<StockAction, readonly string[]>> = {
 export const STOCK_REFUSED: Readonly<Record<StockAction, string>> = {
   view:
     "The Store is not open to your role. The owner, an administrator, the "
-    + "general manager, the hotel manager, the store manager, the kitchen, "
+    + "general manager, the hotel manager, the Inventory Manager, the kitchen, "
     + "housekeeping, the accountant and a viewer can see it.",
   create:
     "Receiving, issuing, recording waste or a return, and adding an item are "
     + "for the owner, an administrator, the general manager, the hotel "
-    + "manager, the store manager or the kitchen manager. Ask one of them.",
+    + "manager, the Inventory Manager or the kitchen manager. Ask one of them.",
   edit:
     "Undoing a movement, correcting a count and changing an item already in "
     + "the store are for the owner, an administrator, the general manager, "
-    + "the hotel manager or the store manager. Ask one of them.",
+    + "the hotel manager or the Inventory Manager. Ask one of them.",
 };
 
 /** A correction is `edit`; every other movement is `create`. */
 export const actionForKind = (kind: string): StockAction =>
   kind === "adjustment" ? "edit" : "create";
+
+/** Is the signed-in person this hotel's Inventory Manager (key `stores`)?
+
+    STO-4, the owner, 16 September: the Inventory Manager sees who moved
+    stock. The history reads a mover's name through `staff`, whose row
+    policies show most roles only themselves — so the store keeper, the person
+    the history exists for, saw no names but their own. Only this role is
+    given `app.colleague_name` (096); the GM and the owner already see names
+    through `staff`, and everybody else keeps today's view until the owner
+    says more. */
+export async function isInventoryManagerAt(
+  client: Client, hotelId: string,
+): Promise<boolean> {
+  const { rows } = await client.query<{ is: boolean }>(
+    `select exists (
+              select 1 from staff_hotels sh
+                join staff s on s.id = sh.staff_id
+               where sh.staff_id = app.current_user_id()
+                 and sh.hotel_id = $1
+                 and s.is_active
+                 and sh.role = 'stores'
+            ) as is`,
+    [hotelId],
+  );
+  return rows[0]?.is === true;
+}
 
 /** May the signed-in person do this to the store at this hotel? */
 export async function mayStock(
