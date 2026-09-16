@@ -24,19 +24,130 @@ Two definitions — stays against rooms, sold tonight against occupied now — a
 
 **The rule** — One definition, or two screens disagree and nobody can say which is right.
 
-### FD-2 · A third `const USER = "front desk"` in WalkInFlow
+### FD-5 · Rooms and Calendar show the skeleton forever for a hotel with no rooms
 
-**Found** — 15 September, writing the brief. **Unverified** — root MEMORY 256 names two of them.
+**Found** — 16 September, reading `StayView.tsx` while fixing FD-6. **Not yet
+seen on screen**: no property a test sign-in can open has zero rooms.
 
-A literal stands in for the person acting, so a document or a log can name the wrong one.
+`getStayView` answers `null` — successfully — when a hotel has no rooms
+(`data/stayview.ts`, `if (allRooms.length === 0) return null`). The screen's
+old `!data` test read that as "still loading". FD-6 deliberately left this
+case drawing the skeleton it always drew, because what an empty hotel should
+say instead is a sentence a person reads.
 
-**The fix, when it is done** — Take the person from the session, as 256's fix did for the other two.
+**The fix, when it is done** — an empty state (what belongs here, and where
+rooms are added), in the words the owner approves. Housekeeping's is "No rooms
+set up yet".
 
-**The rule** — Facts on a document come from the session and the database, never a literal.
+**The rule** — `null` is an answer, not a wait. A loading test written as
+`!data` cannot tell them apart.
+
+### FD-7 · On a phone, after paging a week, "Today" ends past the screen's edge
+
+**Found** — 16 September, measuring FD-6's strip at 375×812. Not caused by it.
+
+Once the window is moved off the business date the controls row gains a
+**Today** button, and at 375px that row ends at x=378 — three pixels outside
+the viewport. The page does not scroll sideways; the button's right edge is
+simply cut. Part of the critique's P3 (`/stay` spends its first 600px on
+controls), which is not in round 1.
+
+**The fix, when it is done** — with P3, when the controls are laid out again.
+
+**The rule** — MEMORY 167's, again: measure a control's right edge at phone
+width in every state it has, not only the first one.
 
 ---
 
 ## Fixed — the solution is here; do not work it out again
+
+### FD-6 · `/stay` loaded forever when the server did not answer
+
+**Found** — the design critique of 16 September (P0), verified in a browser
+with the network blocked. Re-verified 16 September with the local API stopped.
+
+The whole loading logic was `if (isLoading || !data) return <12 grey bars>`.
+Three roads led to it staying there for good:
+
+1. **The API unreachable.** The read fails, `isLoading` goes false, `data`
+   stays undefined — bars forever, under the offline bar's promise that
+   "Anything you can still do will be held".
+2. **The device offline.** React Query does not fail the read, it PAUSES it
+   (its default `networkMode`), so there was not even an error to branch on.
+3. **A hotel with no rooms** answers `null` — FD-5, still open.
+
+**Fixed** — 16 September, `pages/StayView.tsx`. Four states:
+
+- **Loading** — a skeleton in the house's own shape: tiles on Rooms, the
+  fortnight grid on Calendar, under the real heading.
+- **Nothing ever loaded, server unreachable or erroring** — `ErrorState`,
+  "The rooms did not load", with **Try again**. For an unreachable server the
+  sentence is our own: `api()`'s ends "Showing the last data received", and
+  there is nothing to show.
+- **Device offline, nothing loaded** — "No connection"; no retry button,
+  because the read resumes by itself when the device is back.
+- **A later read fails** — the last good house STAYS, with a strip above it:
+  "No connection — these rooms are as they were at 7:23 PM. The fortnight from
+  1 Sep 2026 has not loaded." and **Try again**. Yellow for no connection, red
+  with the server's own sentence for a server error, as the offline bar does.
+
+**⚠ Not `placeholderData`, although the critique named it.** React Query shows
+a placeholder only while a query is PENDING and drops it the moment the query
+fails (`query-core/src/queryObserver.ts`, "use placeholderData if needed").
+Paging to a week the server cannot give would have emptied the screen exactly
+when the house was needed. The page records the last window that loaded —
+this hotel's, on this business date only (Rule 5) — and reads it back from
+the query cache, which keeps it for a week.
+
+**Proved** — `stayViewStates.test.tsx`: loading in the house's shape → did
+not load → Try again → rooms; and a failed next fortnight keeping all the
+tiles under the strip. Each seen to fail with its half taken out: without the
+error branch, test 1 stops at "The rooms did not load"; without the kept
+window, test 2 finds no strip. In the browser, API stopped: all 17 tiles kept
+under the strip, guests' names readable (screenshot); a reload shows the error
+and Try again; with the API back, Try again returns 17 tiles and 7 names. At 375px the strip is 105px high, Try
+again is 44px, nothing scrolls sideways.
+
+**Still true after this** — a RELOAD with the server down cannot show the last
+house, because the stay view is not among the queries `App.tsx` keeps on the
+device (`PERSISTED` names `tape-chart`, which matches no query key). That is
+a request to the master in `MODULE.md`, and the owner's privacy call.
+
+**The rule** — a library feature named for what you want is a claim about
+what it does; read the condition it runs under. And a loading branch is only
+finished when failed, paused and empty each have somewhere else to go.
+
+### FD-2 · `const USER = "front desk"` in check-in and the walk-in
+
+**Found** — 15 September, writing the brief (`WalkInFlow.tsx:27`); root
+MEMORY 256 named the one in `CheckInFlow.tsx:26`.
+
+**What it actually was** — checked 16 September before fixing, and not what
+the entry assumed. Both flows sent the literal as `user` in the request body,
+and **neither route ever read it**: the check-in body declares `user?` and
+never uses it, the walk-in body does not declare it, and nothing under
+`api/src` reads a request's `user`. The server records the person from the
+signed-in session, `app.current_user_id()`. So no document or log ever named
+"front desk" — the literal was dead data, a second answer to "who did this"
+waiting for somebody to start trusting it.
+
+**Fixed** — 16 September. Both literals, both `user:` fields and the `user`
+member of `checkIn`'s and `createWalkIn`'s input types are gone, with a comment
+where it was saying why. NOT replaced with the session's name, which the entry
+proposed: a name the server ignores would be the same dead field with a
+plausible value in it. **This differs from the fix the entry wrote down — the
+owner was told, and may prefer the other.**
+
+The server's check-in body still declares an unused `user?` in
+`api/src/modules/front-desk/operations.ts`, which was off-limits this round
+(RES-2 part 2). Harmless; remove it when that file is next open.
+
+**Guard** — `actorFromSession.test.ts` fails on `const USER = "…"` or a
+`user:` field anywhere in this folder's sources, and first proves it read the
+folder. Seen to fail with the literal put back, naming all three lines.
+
+**The rule** — before fixing where a value comes from, find where it goes. A
+field nobody reads is removed, not corrected.
 
 ### FD-4 · A phone showed the table because of a setting nobody had touched
 
