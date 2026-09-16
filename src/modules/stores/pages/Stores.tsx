@@ -7,6 +7,8 @@ import {
 } from "lucide-react";
 import { cn } from "@/lib/cn";
 import { money, dateShort } from "@/lib/format";
+import { can } from "@/lib/permissions";
+import { useRole } from "@/lib/session";
 import {
   Page, PageHeader, Card, CardBody, Button, Skeleton, EmptyState,
   Dialog, DialogContent, Field, fieldProps, Input, NativeSelect,
@@ -46,9 +48,24 @@ const KIND_LABEL: Record<StockKind, string> = {
   return: "Returned",
 };
 
+/* LOOK, OR CHANGE (STO-1). The owner's table: `create` receives, issues,
+   wastes and adds; `edit` undoes. A person who may only look — housekeeping,
+   the chef, the accountant, a viewer — gets ONE sentence and no change
+   buttons, not four greyed buttons on every item: the owner's choice of 16
+   September, an exception to "greyed with its reason". The server refuses
+   the same people whatever the screen draws. */
+const LOOK_ONLY =
+  "You can see the store. Receiving, issuing and adding items is for the "
+  + "store manager, hotel manager or GM.";
+const UNDO_NOT_YOURS =
+  "Undoing a movement is for the store manager, hotel manager or GM.";
+
 export default function StoresPage() {
   const { code = "" } = useParams<{ code: string }>();
   const qc = useQueryClient();
+  const role = useRole();
+  const mayChange = can(role, "create", "stock");
+  const mayUndo = can(role, "edit", "stock");
 
   const [adding, setAdding] = useState(false);
   const [moving, setMoving] = useState<{ item: StockItem; kind: StockKind } | null>(null);
@@ -92,7 +109,7 @@ export default function StoresPage() {
                         : "")
                   : " · nothing received yet, so nothing has a value")
         }
-        actions={
+        actions={mayChange && (
           <div className="flex flex-wrap gap-2">
             {/* A store is a hundred lines long. The same argument the
                 menu import is built on. */}
@@ -104,8 +121,12 @@ export default function StoresPage() {
               <Plus className="size-4" /> Add an item
             </Button>
           </div>
-        }
+        )}
       />
+
+      {!mayChange && (
+        <p className="text-sm text-grey-600">{LOOK_ONLY}</p>
+      )}
 
       {low.length > 0 && (
         <Card className="border-amber-300 bg-amber-50">
@@ -134,7 +155,9 @@ export default function StoresPage() {
             + "a delivery is what gives it a quantity and a value — an item on "
             + "its own has neither, and shows a dash rather than a zero."
           }
-          action={<Button onClick={() => setAdding(true)}>Add the first</Button>}
+          action={mayChange
+            ? <Button onClick={() => setAdding(true)}>Add the first</Button>
+            : undefined}
         />
       ) : (
         [...byCategory.entries()].map(([category, group]) => (
@@ -147,6 +170,7 @@ export default function StoresPage() {
                 <ItemRow
                   key={i.id}
                   item={i}
+                  mayChange={mayChange}
                   onMove={(kind) => setMoving({ item: i, kind })}
                   onHistory={() => setHistory(i)}
                 />
@@ -176,7 +200,7 @@ export default function StoresPage() {
                     onDone={() => { setMoving(null); refresh(); }} />
       )}
       {history && (
-        <HistoryDialog code={code} item={history} open
+        <HistoryDialog code={code} item={history} open mayUndo={mayUndo}
                        onOpenChange={(o) => { if (!o) setHistory(null); }}
                        onChanged={refresh} />
       )}
@@ -186,8 +210,9 @@ export default function StoresPage() {
 
 /* ── One thing on the shelf ───────────────────────────────────────── */
 
-function ItemRow({ item, onMove, onHistory }: {
+function ItemRow({ item, mayChange, onMove, onHistory }: {
   item: StockItem;
+  mayChange: boolean;
   onMove: (kind: StockKind) => void;
   onHistory: () => void;
 }) {
@@ -233,20 +258,22 @@ function ItemRow({ item, onMove, onHistory }: {
           </div>
 
           <div className="flex flex-wrap gap-2">
-            <Button variant="secondary" className="h-11"
-                    onClick={() => onMove("receipt")}>
-              <TrendingUp className="size-4" /> Receive
-            </Button>
-            <Button variant="secondary" className="h-11"
-                    disabled={item.onHand <= 0}
-                    onClick={() => onMove("issue")}>
-              <TrendingDown className="size-4" /> Issue
-            </Button>
-            <Button variant="secondary" className="h-11"
-                    disabled={item.onHand <= 0}
-                    onClick={() => onMove("wastage")}>
-              <Trash2 className="size-4" />
-            </Button>
+            {mayChange && (<>
+              <Button variant="secondary" className="h-11"
+                      onClick={() => onMove("receipt")}>
+                <TrendingUp className="size-4" /> Receive
+              </Button>
+              <Button variant="secondary" className="h-11"
+                      disabled={item.onHand <= 0}
+                      onClick={() => onMove("issue")}>
+                <TrendingDown className="size-4" /> Issue
+              </Button>
+              <Button variant="secondary" className="h-11"
+                      disabled={item.onHand <= 0}
+                      onClick={() => onMove("wastage")}>
+                <Trash2 className="size-4" />
+              </Button>
+            </>)}
             <Button variant="secondary" className="h-11"
                     disabled={item.movements === 0}
                     onClick={onHistory}>
@@ -459,9 +486,9 @@ function MoveDialog({ code, item, kind, open, onOpenChange, onDone }: {
 
 /* ── Why the count is what it is ──────────────────────────────────── */
 
-function HistoryDialog({ code, item, open, onOpenChange, onChanged }: {
-  code: string; item: StockItem;
-  open: boolean; onOpenChange: (o: boolean) => void; onChanged: () => void;
+function HistoryDialog({ code, item, open, mayUndo, onOpenChange, onChanged }: {
+  code: string; item: StockItem; open: boolean; mayUndo: boolean;
+  onOpenChange: (o: boolean) => void; onChanged: () => void;
 }) {
   const qc = useQueryClient();
   const q = useQuery({
@@ -490,6 +517,9 @@ function HistoryDialog({ code, item, open, onOpenChange, onChanged }: {
                   onClick={() => onOpenChange(false)}>Close</Button>
         }
       >
+        {!mayUndo && (
+          <p className="text-sm text-grey-600 mb-2">{UNDO_NOT_YOURS}</p>
+        )}
         {q.isLoading ? (
           <Skeleton className="h-40" />
         ) : (
@@ -540,7 +570,7 @@ function HistoryDialog({ code, item, open, onOpenChange, onChanged }: {
                 {/* Undoing is only offered on a row that is neither an
                     undo nor already undone. The server refuses both
                     anyway, in words. */}
-                {!m.reversed && !m.isReversal && (
+                {mayUndo && !m.reversed && !m.isReversal && (
                   <button
                     type="button"
                     aria-label={`Undo this ${KIND_LABEL[m.kind].toLowerCase()}`}

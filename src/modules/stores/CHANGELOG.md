@@ -11,6 +11,69 @@ Work that touches the core or several services still goes in the root
 
 ---
 
+## 2026-09-16 (phase 1A, part 1) · STO-1 closed: the Store asks who you are
+
+**Asked for:** the owner: merge cp6, then follow `docs/briefs/stores.md` —
+phase 1A of `docs/STOCK-AND-EQUIPMENT-PLAN.md`, STO-1 first.
+
+**Decided by the owner on the way** (asked with a recommendation, both taken)
+- **Import is split by row:** a new item needs `create`; a row that changes an
+  existing item needs `edit`, and without it is rejected, not applied.
+- **Look-only people get one sentence and no change buttons**, not greyed
+  buttons on every item — an exception to "greyed with its reason".
+
+**Shipped** — branch `stores/phase-1a`, from cp6 `4bc68dd`
+- `api/src/modules/stores/stockGrants.ts` — the server's copy of
+  `grantsFor(role, "stock")`, and `mayStock()`. All six routes in `stores.ts`
+  ask it before their first write and answer 403 with who may.
+- "Add an item" with a name already in the store needs `edit` too: its insert
+  overwrites that item's unit, category and warning level — the same change
+  the owner put behind `edit` for an import.
+- `routes.tsx` — `RequireAccess` on `/h/:code/stores`, resource `stock`.
+- `pages/Stores.tsx` — the look-only sentence; change buttons only with
+  `create`; Undo only with `edit`, and otherwise a sentence in History saying
+  who may (the owner's answer applied to Undo — told to them).
+- `api/test/modules/stores/stockGrants.test.ts` — new, 148 tests.
+- `DEFECTS.md` — STO-1 to Fixed, with the proof. `MODULE.md` — grants per
+  endpoint, who sees what, the claim command, the migration rule, the
+  withSession check, and STO-9 as a request to the master.
+
+**Found**
+- The import route treated a name already in the store as an update without
+  asking anything — and so did "Add an item" (its `on conflict do update`).
+  Both are now `edit`.
+- In a worktree the dev server answers **403 for the Inter font files**
+  (`/@fs/D:/fidato pms/node_modules/@fontsource-variable/…`): the linked
+  `node_modules` resolves outside the copy's root, and Vite refuses to serve
+  it. Every lane copy will show two console errors for it. Harmless in the
+  build; for the master.
+
+**Proved** — in `D:\fidato-stores`, 16 September, every exit code read
+- `stockGrants.test.ts`: **148 passed**. Guard taken out (`mayStock` returns
+  true): **78 failed**, exactly the expected refusals. `front_desk` put into
+  the server's `create` list: **9 failed**, the copy check among them. Both
+  breaks removed; 148 passed.
+- In the browser, own database: reception refused the page; the Viewer sees
+  11 items, History only, the sentence, no Undo; the kitchen manager sees
+  Receive, Issue, the bin, Add and Import and no Undo. The running API as five
+  roles: `desk 403/403/403 · viewer 200/403/403 · hk 200/403/403 · kitchen
+  200/200/403 · store 200/200/200` (list / add / undo).
+- Gates: `npx tsc -b --force` exit 0 · `npx vitest run` **255 passed**, exit 0
+  · `cd api; npm test` **573 passed, 35 files**, exit 0 · `npm run
+  strip-check` 72 files, exit 0 · `bash db/tests/run.sh` **648 assertions**,
+  exit 0 · `npm run build` exit 0, "no test sign-in in dist".
+
+**Left open**
+- STO-2 to STO-10 — next; the owner chooses where an entry leaves more than
+  one way.
+- `fidato_stores` (development only): the store tester's probe undid movement
+  1 (the first rice delivery) while proving the running API; a kitchen manager
+  tester `dev-kitchen` was added.
+
+**Commits:** the STO-1 commit on `stores/phase-1a`.
+
+---
+
 ## 2026-09-16 · the Store measured at 375px as housekeeping
 
 **Asked for:** the owner opened a Store chat: "Read docs/briefs/stores.md and
