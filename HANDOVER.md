@@ -70,9 +70,15 @@ design critique     16 Sep — docs/audits/2026-09-16-design-critique.md. 20/40.
                     FIXED the same day, measured: six screens went to 0 failures. Three
                     P0s open — one booking with three statuses, /stay with no error
                     branch, /in-house printing charges under BALANCE
-n8n on the box      CAUSE FOUND 16 Sep (MEMORY 279): every PMS deploy's firewall reload wiped
-                    n8n's container network rules; netavark-firewalld-reload is installed and
-                    DISABLED. Fix = enable it + restart n8n; then the domain install. Owner runs.
+n8n on the box      LIVE 16 Sep at https://n8n.fidatohotels.com — the owner ran both steps.
+                    Screen locked to 106.213.87.54, webhooks open, certificate auto-renews.
+                    Checked from outside: editor 200, /healthz 200. netavark-firewalld-reload
+                    ENABLED, so a PMS deploy no longer cuts it off (MEMORY 279) — recheck after
+                    the next deploy. NOTHING connects it to the PMS yet: the machine key
+                    (integration plan step 1.1) is not built, and n8n must never hold a staff
+                    login while the server enforces no role on writes (PMS-2).
+                    Earlier the same day: CAUSE FOUND — every PMS deploy's firewall reload
+                    wiped n8n's container network rules.
                     Previously: CHECKED 16 Sep, read-only — NOT USABLE YET. DNS n8n.fidatohotels.com
                     → 130.210.49.220 exists, but the server was never set up for it: no
                     nginx site, no certificate. The container (n8n 2.38.5) has been up 6
