@@ -6539,6 +6539,24 @@ copy will see of theirs.**
 
 ---
 
+### 280 · Postgres `lpad` does not only pad — it cuts
+
+16 September, building migration 092. Both routes that made booking references
+padded the number with `lpad(n::text, 4, '0')`. In Postgres, a string LONGER
+than the length asked for is truncated to it: `lpad('12345', 4, '0')` is
+`1234`. Measured, not remembered.
+
+The numbers started at 5001. At about the five-thousandth booking at one hotel,
+the next number would have been cut to its first four digits — the same four
+digits every time — and `unique (hotel_id, reference)` would have refused every
+booking after that. Nothing would have looked wrong until the day it stopped.
+
+**The rule: `lpad` is a formatting call with a length limit, not a padding
+call. Pad only what is shorter — `case when length(x) < n then lpad(x, n, '0')
+else x end` — and test the value one digit past the pad.**
+
+---
+
 ### 279 · Every PMS deploy silently disconnected n8n
 
 16 September. The owner believed n8n was live on `n8n.fidatohotels.com`. A

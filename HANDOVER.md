@@ -526,6 +526,12 @@ early.
          setup; check-in and check-out; the POS
 16 Sep   MIGRATION NUMBERS ASSIGNED by the master: 091 reservations (RES-3), 092 master (the
          reference generator), 093 master (the revenue manager role)
+16 Sep   BUILT on branch master/references-and-revenue-role (55157bd), NOT on cp6: 092 and 093,
+         every gate green except migrationNumbers, which fails on the gap at 091 until the
+         reservations chat's RES-3 lands. MERGE ORDER: reservations (091) → this branch →
+         then RES-2 part 2, where reservations (groups.ts) and front-desk (operations.ts) each
+         switch their door to app.next_reference. Both inline generators also TRUNCATE past
+         four digits (MEMORY 280) — part 2 removes them
 16 Sep   RES-2: every NEW booking reference is FH-<hotel code>-YYMM-<number>, e.g.
          FH-5EL-2608-4858. Old bookings keep the references they were given
 16 Sep   "NC" = NOT FOR SALE, HOUSE USE. Already possible on the Housekeeping board (take the
