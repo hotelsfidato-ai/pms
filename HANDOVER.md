@@ -63,6 +63,9 @@ one hotel system    PLANNED 15 Sep — docs/HMS-INTEGRATION-PLAN.md; waiting on 
 coming soon         DEPLOYED 16 Sep (stage B, website only) — live on pms.fidatohotels.com
 route + screen audit  16 Sep: 214 routes, 89 screens, PENDING checked — docs/audits/2026-09-16-…
 defect logs         16 Sep: src/modules/<service>/DEFECTS.md — 26 open defects, each in its service
+apps (desktop,      PLANNED 16 Sep — docs/APPS-PLAN.md; waiting on decisions A1–A10.
+tablet, phone)      Tauri desktop and a Capacitor kiosk tablet wrap today's build; Expo
+                    is a small staff phone app, not a port of the 89 screens
 ```
 
 **Deployed 15 September** — all of it:
@@ -184,6 +187,40 @@ RES-1 and migration 008 (0.6), then the three doors of Phase 1 in six
 folders at once. Two owner actions are urgent and not code: the Meta
 WhatsApp token expires about 27 September; the CRS repository is public and
 carries a commission figure per hotel (marked simulated — D8).
+
+### 3.0c · Desktop, kiosk tablet and phone apps — PLANNED 16 September, ASK FIRST
+
+The owner asked on 16 September for applications on desktop, tablet and phone,
+named Expo for Android and iOS, and gave the reason: **"many places will have a
+server but not very reliable network, so needs to ensure availability"** — and,
+for the tablet, **"an app which will just make sure that the tab is only of
+this software"**, a locked kiosk. The plan is `docs/APPS-PLAN.md`.
+
+**Nothing is built.** The shape recommended is one shared core and three
+shells, because React Native renders no HTML: of the 48,435 lines measured in
+`src/`, the 72 pages and 27 shared components are Tailwind, Radix and
+react-router, and only the seam and `src/lib` port to a phone:
+
+```
+desktop   Tauri 2 wrapping today's dist/ — ANSWERED: yes, silent printing matters
+tablet    Capacitor wrapping the same dist/, assets inside the APK, pinned by
+          Android Lock Task Mode (Android Management API recommended, A4)
+phone     Expo — a NEW small staff app, housekeeping first, 8–12 screens.
+          The guest app cannot start: booking-engine, online-checkin and
+          guest-messaging are Coming-soon stubs with no screens
+```
+
+**On availability, the plan refuses to guess.** A property node (a local
+server that is the authority for its own hotel) is the right end state, and it
+is the only option that closes the offline double-booking hole. But
+`app.next_invoice_number()` is a gapless statutory GST counter, and a sync
+engine built on a guess issues one twice. So Phase 3 measures the real outage
+minutes per property from the outbox for a month, and the numbers decide.
+
+Ten decisions (§ 7 of the plan) wait on the owner. A2 is answered. Nothing
+starts before A1 (the `packages/core` extraction, which every later phase
+imports), and Phases 1 and 2 cannot finish without A6 — which thermal printer
+the desk and the POS actually use.
 
 ### 3.1 · Clarity step 2 — one primary action per screen — DONE 15 September
 
@@ -309,6 +346,16 @@ early.
 ## 4 · Decisions the owner has made — do not re-ask
 
 ```
+16 Sep   the desktop app is a real installed application, because silent thermal printing matters (APPS A2)
+16 Sep   the tablet is Android and must be locked to this software alone — a kiosk, not a browser
+16 Sep   the phone app is for staff AND guests eventually; the reason for all of it is availability
+         on a bad network, at properties that may have a local server
+16 Sep   PRICING: the base is Deluxe · one person · room only; everything else is a difference from it
+16 Sep   pricing differences are in RUPEES, never percentages
+16 Sep   breakfast and the other meal plans are priced PER PERSON
+16 Sep   a difference may be set for a period; where nothing is set for a date, the base applies
+16 Sep   a typed price applies to ONE date or to a date range — the screen offers both
+16 Sep   one Pricing screen, shaped like a calendar: the dates, the base and each difference on it
 16 Sep   every missing service gets a folder and a Coming soon page — all twelve, not only the four asked for
 16 Sep   one Coming soon section at the foot of the menu, owner, admin and GM only; reception unchanged
 16 Sep   the Coming soon work goes on a branch after the service-folder move and deploys after it
@@ -334,6 +381,13 @@ earlier  channel manager and payment gateway excluded; attachments parked;
 These come from the owner, in their words where quoted, and override any
 habit of yours.
 
+- **NO DECISION WITHOUT THE OWNER'S APPROVAL.** Their words, 16 September:
+  *"if u have any dought u need to ask me and you are not allowed to take
+  decisions unless they are approved"*. A choice that changes what is built,
+  what a person sees, what a figure means, or what ships is the owner's —
+  bring it as a question with a recommendation and **wait**. Carry on with the
+  parts that need no decision; do not guess the rest, and do not treat
+  silence, a plan, or your own earlier suggestion as approval.
 - **Ask before any doubt.** Give a recommendation with the question.
 - **The Firebase Admin private key lives in `api/.env`**, which is gitignored
   and must never be committed, printed, or echoed.

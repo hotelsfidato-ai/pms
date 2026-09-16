@@ -16,6 +16,8 @@ re-explain it, and they should not have to.
 The rules that are never negotiable, in short — the full list is
 `HANDOVER.md` § 5:
 
+- **No decision without the owner's approval** (16 September). Ask, with a
+  recommendation, and wait. Silence is not approval.
 - **Ask the owner before any doubt**, with a recommendation.
 - Never commit, print or echo `api/.env`.
 - No default prices; a missing figure is a dash, never a zero.

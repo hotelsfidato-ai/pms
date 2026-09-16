@@ -52,6 +52,15 @@ anything a server runs, read defects 187–193 first.
 
 ---
 
+## Before that: nothing is decided without the owner
+
+16 September, in their words: *"if u have any dought u need to ask me and you
+are not allowed to take decisions unless they are approved"*. If a choice
+changes what gets built, what a person sees, what a figure means or what
+ships, it is the owner's. Ask it as a question with your recommendation, and
+wait for the answer. Do the parts that need no decision meanwhile. A plan you
+wrote is not approval; neither is silence.
+
 ## The rule that matters most
 
 **One agent owns one service at a time. Never two agents in one service, and
