@@ -100,17 +100,27 @@ menu entry out of the Coming soon section into its working section (and
 update the Coming soon list pinned in `navigation.test.ts`), and add a
 module switch if not every hotel has it.
 
-Claim the service in writing in `HANDOVER.md`'s folder claims before your first
-write, and release it when you stop:
+Claim the service in **`.claims/<service>.md`** before your first write, and
+delete that file when you stop. One file per service, so two agents claiming
+two services never write the same file — the register of who owns what used to
+live in a table inside `HANDOVER.md`, which made it the very thing they
+collided over. `.claims/README.md` has the two commands.
 
-```
-CLAIMED   pos            branch pos/<task>           15 Sep   <who>
-CLAIMED   front-desk     branch front-desk/<task>    15 Sep   <who>
-FREE      everything else
+**Read the other claim files first.** If the service you want already has one,
+**stop and say so** rather than writing into it. Waiting costs minutes;
+colliding costs a day.
+
+Before you commit, in your own copy:
+
+```powershell
+# the owner's PC, PowerShell, in YOUR working copy
+npm run lane -- pos
 ```
 
-If a service you need is claimed, **stop and say so** rather than writing into
-it. Waiting costs minutes; colliding cost a day.
+It sorts everything this session has changed into **yours · nobody's · the
+shared core · another service's**, and exits 2 if anything is outside your
+lane. It refuses nothing and blocks nothing; what it gives you is the sentence
+you owe the owner before a commit that reaches past your service.
 
 ### What "owning a service" lets you touch
 
@@ -225,18 +235,36 @@ A service adding a screen, a menu entry or a route **edits none of these**: its
 
 Someone already built these. Rebuilding one is drift.
 
+Addresses re-checked 16 September: the service-folder move (15 September) took
+every one of these out of `src/components/`, and this list still pointed at the
+old places.
+
 ```
-src/components/lists/StayTable.tsx   configurable stay list — columns, filter,
-                                     search, row → panel. Six screens use it:
-                                     arrivals, upcoming, in-house, due-out,
-                                     reservations, walk-ins.
-src/components/flows/CheckInFlow     five-step check-in, gates on clean rooms
-src/components/flows/FolioPanel      ledger, charge, reverse, settle, check out
-src/components/flows/WalkInFlow      one-action walk-in with rate override
-src/components/ui/                   32 primitives — every one on /design-system
-src/components/reports/ReportShell   report chrome, print styling, and Amount —
+src/modules/front-desk/components/StayTable.tsx
+                                     configurable stay list — columns, filter,
+                                     search, row → panel. Five screens use it:
+                                     arrivals, in-house, reservations, walk-ins,
+                                     folios. It also has its OWN card view
+                                     (StayCards) — a phone gets that, not the
+                                     generic DataTable card. Read its header.
+src/modules/front-desk/flows/CheckInFlow.tsx
+                                     five-step check-in, gates on clean rooms
+src/modules/finance/flows/FolioPanel.tsx
+                                     ledger, charge, reverse, settle, check out
+src/modules/front-desk/flows/WalkInFlow.tsx
+                                     one-action walk-in with rate override
+src/components/ui/                   17 files of primitives, one import surface
+                                     (`@/components/ui`) — every one on
+                                     /design-system
+src/modules/reports/components/ReportShell.tsx
+                                     report chrome, print styling, and Amount —
                                      which prints a dash for null, never a zero
 ```
+
+**Reaching into another service to use one of these is what
+`src/test/boundaries.test.ts` refuses.** Import it through that service's front
+door, `src/modules/<service>/index.ts`; if what you need is not exported there,
+that is a request for its owner, not an edit you make.
 
 The seam already exposes ~68 functions. `listArrivals`, `listOpenFolios`,
 `getPeriodStatistics`, `getFolioPostings` and the rest are written and tested.

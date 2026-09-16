@@ -794,11 +794,18 @@ rule and list they hold is written into this file, `PENDING.md` and
 
 ## Folder claims
 
+**Moved to `.claims/` on 16 September.** One file per service —
+`.claims/pos.md` is the POS agent's and nobody else's — because three agents
+claiming three services all wrote to this one table at the same time, which
+made the register of who owns what the thing they collided over.
+
 ```
-FREE     every service — the service-folder move is finished (15 September).
-         Claim ONE service before your first write (AGENTS.md):
-         CLAIMED  <service>   branch <service>/<task>   <date>   <who>
+.claims/README.md      how to claim, and what a claim covers
+.claims/<service>.md   create before your first write · DELETE when you stop
+npm run lane -- <svc>  what this session changed, and whose it is
 ```
+
+Nothing here any more. Read `.claims/` for who is holding what right now.
 
 ---
 

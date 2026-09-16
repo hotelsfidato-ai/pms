@@ -13,6 +13,7 @@
     "build:preview": "vite build --mode preview && node scripts/check-no-dev-login.mjs dist-preview",
     "build:artifact": "vite build --mode artifact && node scripts/check-no-dev-login.mjs dist-artifact",
     "build:all": "npm run build && npm run build:preview && npm run build:artifact",
+    "lane": "node scripts/lane.mjs",
     "config": "node scripts/write-config.mjs",
     "build:app": "npm run build && node scripts/write-config.mjs"
   },
