@@ -69,6 +69,58 @@ switch to `FH-<hotel code>-YYMM-<number>` when the master says it is ready.
   switched-off test failed; the race handling removed → the held-race test
   failed with a 500 (and passes with it).
 
+**Shipped — RES-1**
+- `api/src/modules/reservations/groups.ts` — the walk-in route's shape (root
+  MEMORY 243): the transaction checks the repeat, the channel, and every
+  line's room type, fit and price into a plan, and only then writes the
+  guest, the group, the rooms and their folios. A marked line —
+  *"Nothing below this line refuses"* — divides the two.
+- `bookings.test.ts` — five RES-1 tests: each refusal on a booking's SECOND
+  line, then the database counted (guests, bookings, groups by name as well,
+  folios) — nothing; and the same booking put right goes through whole.
+- `DEFECTS.md` (RES-1 to Fixed), `MODULE.md` (the rule, the open items).
+
+**Found — RES-1, reproduced for the first time.** Against the unfixed route
+all four refusals answered `409` and kept the guest; the unpriced line, the
+room type not here and the party too large each also kept **the first line's
+two rooms, confirmed**. Until today RES-1 had only been read.
+
+**Proved — at the end, in this copy**
+- `npx tsc -b --force` — clean, exit 0. `cd api; npx tsc --noEmit` — clean.
+- `npx vitest run` — **212 passed**, 19 files, exit 0 (no web file changed).
+- `cd api; npm test` — **383 passed**, 30 files, exit 0 (370 before + 13).
+- `bash db/tests/run.sh` — 636 passed, exit 0 (run after 091; RES-1 changed
+  no SQL). `bash db/tests/rerun.sh` — 91 re-runnable, exit 0.
+- `npm run build` — built, "✓ no test sign-in in dist", exit 0.
+- RES-1's four refusal tests failed on the unfixed route (4 failed, 9 passed)
+  and pass with the fix (15 of 15 in `modules/reservations`).
+
+**Left open**
+- **RES-2** — not started, as instructed. Both doors switch to the master's
+  generator (092) and `FH-<hotel code>-YYMM-<number>` when the master says it
+  is ready. Until then two bookings in the same moment can still collide on a
+  reference: a 500, nothing kept (RES-1 made that clean).
+- **Not in RES-3, and in the same step of the integration plan (1.3):** no
+  `channelCode` (PMS-8), the D10 rules for machine callers (stop-sell,
+  minimum nights, a price of 0 refused unless complimentary — PMS-6, PMS-7),
+  and no ids in the answer (PMS-11). None was asked for here.
+- **Nobody can knock on this door as a machine yet**: there is no
+  integration key (plan step 1.1), and the server checks no role on writes
+  (PMS-2).
+- **The desk form sends no key.** A clerk's double-press still makes two
+  bookings, as before — though the form greys its button while sending
+  (`disabled={saving || …}`, read in `pages/NewBooking.tsx`, not tried).
+- The offline zeros and the two search boxes on All bookings (the brief's
+  first two items) — paused for this, not started.
+- **For the master** (project lessons, not this service's): the local
+  Postgres saturated by nine lanes; `db/migrate.sh --with-dev-identities` on
+  a fresh database printed a green ✓ under a psql ERROR ("expected 3 staff …
+  found 0") and exited 0 — the dev identities need the suite's staff, which a
+  lane database built by the brief's command does not have; and
+  `pg_stat_activity` is a snapshot inside a transaction.
+
+**Commits:** `2c3c879` (RES-3), and the RES-1 commit that carries this entry.
+
 ---
 
 ## 2026-09-15 · moved into its own folder

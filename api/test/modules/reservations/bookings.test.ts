@@ -13,6 +13,12 @@ import { closePool, pool } from "../../../src/db.ts";
    from the same channel is answered with the first booking; the same
    one with different details is a changed booking, and is refused.
 
+   RES-1 · A REFUSED BOOKING LEAVES NOTHING BEHIND. The route wrote the
+   guest and the group, then could refuse — and a booking of two room
+   types had the first type's rooms confirmed before the second was
+   turned down. These tests were run against that code on 16 September
+   and failed: each refusal left a guest, and three left two bookings.
+
    Every test here counts what is IN THE DATABASE afterwards, not only
    what the route said. A door that answers "duplicate" while writing a
    second booking behind the answer is the defect with better manners.
@@ -63,16 +69,21 @@ afterAll(async () => {
     const { rows } = await db.query<{ id: string; group_id: string | null; guest_id: string }>(
       `select r.id::text, r.group_id::text, r.guest_id::text
          from reservations r join guests g on g.id = r.guest_id
-        where g.full_name like 'RES3 %'`);
+        where g.full_name like 'RES3 %' or g.full_name like 'RES1 %'`);
     const ids = rows.map((r) => r.id);
     await db.query("delete from folios where reservation_id = any($1::uuid[])", [ids]);
     await db.query("delete from reservations where id = any($1::uuid[])", [ids]);
+    /* By id AND by name: a refusal the old code committed left a group
+       with no rooms in it, which no reservation leads back to. The
+       default name starts with the guest's. */
     await db.query(
-      "delete from reservation_groups where id = any($1::uuid[])",
+      `delete from reservation_groups
+        where id = any($1::uuid[]) or name like 'RES3 %' or name like 'RES1 %'`,
       [rows.map((r) => r.group_id).filter(Boolean)]);
     await db.query("alter table guests disable trigger guests_no_delete");
     try {
-      await db.query("delete from guests where full_name like 'RES3 %'");
+      await db.query(
+        "delete from guests where full_name like 'RES3 %' or full_name like 'RES1 %'");
     } finally {
       await db.query("alter table guests enable trigger guests_no_delete");
     }
@@ -109,9 +120,17 @@ const onFile = async (guestName: string) => {
     const { rows } = await db.query<{
       guests: string; reservations: string; groups: string; folios: string;
     }>(
+      /* Groups counted by name as well as through their rooms: the group a
+         refusal left behind has no rooms, so nothing else leads to it. No
+         test here names its group, so each carries the route's default,
+         "<guest> — <n> rooms". */
       `select (select count(*) from guests where full_name = $1)::text as guests,
               count(r.id)::text as reservations,
-              count(distinct r.group_id)::text as groups,
+              (select count(*) from reservation_groups rg
+                where rg.name like $1 || ' — %'
+                   or rg.id in (select r3.group_id from reservations r3
+                                  join guests g3 on g3.id = r3.guest_id
+                                 where g3.full_name = $1))::text as groups,
               (select count(*) from folios f
                  join reservations r2 on r2.id = f.reservation_id
                  join guests g2 on g2.id = r2.guest_id
@@ -321,5 +340,114 @@ describe("RES-3 · a booking sent twice is one booking", () => {
         [made.bookings.map((b) => b.reference)]);
       expect(rows[0]!.keyed).toBe("0");
     } finally { await db.end(); }
+  });
+});
+
+describe("RES-1 · a refused booking leaves nothing behind", () => {
+  /* ⚠ INSIDE `withSession` A REFUSAL IS A COMMIT (root MEMORY 243). The
+     route used to write the guest, then the group, then each line's rooms
+     and folios — and only then could it refuse: a channel switched off, a
+     room type that is not here, a party the room cannot sleep, a line with
+     no price. The caller saw `ok:false` and retried, and every retry left
+     another guest (which can never be deleted, 015), another group, and
+     the earlier lines' rooms confirmed and holding inventory.
+
+     Each booking here is refused on its SECOND line, so the old code would
+     already have written the first line's two rooms. Each test counts the
+     database afterwards: nothing, not merely "refused". The walk-in desk
+     had the same fault and was fixed the same way; its test is the shape. */
+
+  let base: number;
+  let max: number;
+  let savedExtraAdult: string | null;
+
+  beforeAll(async () => {
+    const db = await admin();
+    try {
+      const { rows } = await db.query<{
+        base: number; max: number; extra: string | null;
+      }>(
+        `select base_occupancy as base, max_occupancy as max,
+                extra_adult_rate::text as extra
+           from room_types where id = $1`, [typeId]);
+      base = rows[0]!.base;
+      max = rows[0]!.max;
+      savedExtraAdult = rows[0]!.extra;
+      /* One person more than the rate covers, with no extra-adult rate:
+         the tariff answers NULL and names what is missing. Put back
+         afterwards — this is the demo's own room type. */
+      await db.query(
+        "update room_types set extra_adult_rate = null where id = $1", [typeId]);
+    } finally { await db.end(); }
+  });
+
+  afterAll(async () => {
+    const db = await admin();
+    try {
+      await db.query(
+        "update room_types set extra_adult_rate = $2::numeric where id = $1",
+        [typeId, savedExtraAdult]);
+    } finally { await db.end(); }
+  });
+
+  const nothing = { guests: 0, reservations: 0, groups: 0, folios: 0 };
+
+  /* Two rooms that would be booked, then the line that is refused. */
+  const refusedOnLineTwo = (guestName: string, second: Record<string, unknown>,
+                            over: Record<string, unknown> = {}) => ({
+    guestName, checkIn: "2028-04-01", checkOut: "2028-04-03",
+    bookingSourceId: agoda,
+    lines: [{ roomTypeId: typeId, mealPlan: "EP", adults: base, rooms: 2 }, second],
+    ...over,
+  });
+
+  it("⚠ a line with no price writes nothing — not the lines before it", async () => {
+    const res = await post(refusedOnLineTwo("RES1 Unpriced",
+      { roomTypeId: typeId, mealPlan: "EP", adults: base + 1, rooms: 1 }));
+    expect(res.status, await res.clone().text()).toBe(409);
+    expect(((await res.json()) as { reason: string }).reason).toMatch(/no price/i);
+    expect(await onFile("RES1 Unpriced")).toEqual(nothing);
+  });
+
+  it("a room type that is not here writes nothing", async () => {
+    const res = await post(refusedOnLineTwo("RES1 Wrong type",
+      { roomTypeId: "00000000-0000-0000-0000-000000000000", adults: 1, rooms: 1 }));
+    expect(res.status, await res.clone().text()).toBe(409);
+    expect(((await res.json()) as { reason: string }).reason).toMatch(/not here/i);
+    expect(await onFile("RES1 Wrong type")).toEqual(nothing);
+  });
+
+  it("a party the room cannot sleep writes nothing", async () => {
+    const res = await post(refusedOnLineTwo("RES1 Too many",
+      { roomTypeId: typeId, adults: max + 1, rooms: 1 }));
+    expect(res.status, await res.clone().text()).toBe(409);
+    expect(((await res.json()) as { reason: string }).reason).toMatch(/will not fit/i);
+    expect(await onFile("RES1 Too many")).toEqual(nothing);
+  });
+
+  it("a channel switched off writes nothing — not even the guest", async () => {
+    const db = await admin();
+    try {
+      await db.query("update booking_sources set is_active = false where id = $1", [otherSource]);
+      const res = await post(refusedOnLineTwo("RES1 Channel off",
+        { roomTypeId: typeId, mealPlan: "EP", adults: base, rooms: 1 },
+        { bookingSourceId: otherSource }));
+      expect(res.status, await res.clone().text()).toBe(409);
+      expect(((await res.json()) as { reason: string }).reason).toMatch(/not on the list/i);
+    } finally {
+      await db.query("update booking_sources set is_active = true where id = $1", [otherSource]);
+      await db.end();
+    }
+    expect(await onFile("RES1 Channel off")).toEqual(nothing);
+  });
+
+  it("and once the reason is put right, the same booking goes through whole", async () => {
+    /* The refusal is a question, not an answer: nothing was kept, so the
+       retry is a clean first booking — three rooms, one guest, one group. */
+    const res = await post(refusedOnLineTwo("RES1 Put right",
+      { roomTypeId: typeId, mealPlan: "EP", adults: base, rooms: 1 }));
+    expect(res.status, await res.clone().text()).toBe(200);
+    expect(await onFile("RES1 Put right")).toEqual(
+      { guests: 1, reservations: 3, groups: 1, folios: 3 });
   });
 });

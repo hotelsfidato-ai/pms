@@ -14,16 +14,6 @@ entries stay here: they are the reason the fault does not come back.
 
 ## Open — not fixed
 
-### RES-1 · A refused booking keeps what it wrote before the refusal
-
-**Found** — 15 September, reading `POST /:code/bookings` against `withUser`; confirmed and widened by the readiness audit of 16 September (PMS-4). Not reproduced.
-
-The route inserts the guest, then the group, and only then can refuse — an inactive source, a room type that is not here, a party too large, an unpriced line. `withSession` commits a refusal like any other return, so the guest stays and guests are never deletable (015). Worse in a booking of several room types: the first type's rooms are confirmed **with open folios, holding inventory**, before a later line is refused, while the caller sees `ok:false` and retries.
-
-**The fix, when it is done** — Validate every line before the first write — or throw a refusal that `withSession` rolls back. The walk-in route already had this fault and was fixed; copy that shape (root MEMORY 243). Add the test that route has: after a refusal, no guest by that name exists.
-
-**The rule** — A refusal written below an insert keeps the insert. The transaction ends where the function returns, not where the reason is written.
-
 ### RES-2 · The booking reference is generated without a lock, in two copies
 
 **Found** — 16 September, the readiness audit, by reading.
@@ -37,6 +27,18 @@ The route inserts the guest, then the group, and only then can refuse — an ina
 ---
 
 ## Fixed
+
+### RES-1 · A refused booking kept what it wrote before the refusal — FIXED 16 September
+
+**Found** — 15 September, reading `POST /:code/bookings` against `withUser`; confirmed and widened by the readiness audit of 16 September (PMS-4). **Reproduced 16 September** by the tests below, against the unfixed route: every refusal was answered `409` and still left the guest; a refused channel left the guest (and, for several rooms, an empty group); an unpriced line, a room type not here and a party too large each left the guest **and the first line's two rooms confirmed with open folios**.
+
+The route inserted the guest, then the group, and only then could refuse. `withSession` commits a refusal like any other return, so what was written stayed — and guests can never be deleted (015). The caller saw `ok:false` and retried, adding more each time.
+
+**What was done** — branch `reservations/res-3-res-1`, the walk-in route's shape (root MEMORY 243), front desk's folder untouched. In `api/src/modules/reservations/groups.ts` the transaction now reads and checks everything first — the repeat (RES-3), the channel, then every line's room type, fit and price, collected into a plan — and only then writes the guest, the group, the rooms and their folios. A marked line, *"Nothing below this line refuses"*, sits between the two halves.
+
+**Proved** — `api/test/modules/reservations/bookings.test.ts`, "RES-1 · a refused booking leaves nothing behind": each of the four refusals on a booking's SECOND line, counting guests, bookings, groups (by name too, so an empty one is found) and folios afterwards — all zero; and the same booking with the reason put right goes through whole. Four of the five failed against the unfixed route and pass now.
+
+**The rule** — A refusal written below an insert keeps the insert. The transaction ends where the function returns, not where the reason is written. Check everything, then write — and put a line in the code where the checking stops.
 
 ### RES-3 · `POST /:code/bookings` had no idempotency — FIXED 16 September, migration 091
 

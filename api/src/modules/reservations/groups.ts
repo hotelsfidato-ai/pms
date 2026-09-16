@@ -351,25 +351,16 @@ groups.post("/:code/bookings", async (c) => {
       if (earlier.length > 0) return answerRepeat(earlier, externalRef, fingerprint);
     }
 
-    /* One guest for the whole booking. A block belongs to whoever made it;
-       individual names are filled in as the rooming list arrives, which is
-       usually days later and often never for a wedding. */
-    const { rows: guest } = await client.query<{ id: string }>(
-      `insert into guests (full_name, phone, email)
-       values ($1, nullif($2,''), nullif($3,''))
-       returning id::text`,
-      [guestName, input.phone?.trim() ?? "", input.email?.trim() ?? ""]);
-    const guestId = guest[0]!.id;
-
-    let groupId: string | null = null;
-    if (total > 1) {
-      const { rows: g } = await client.query<{ id: string }>(
-        `insert into reservation_groups (name, block_code, lead_hotel_id)
-         values ($1, nullif($2,''), $3) returning id::text`,
-        [input.groupName?.trim() || `${guestName} — ${total} rooms`,
-         input.blockCode?.trim() ?? "", hotelId]);
-      groupId = g[0]!.id;
-    }
+    /* ⚠ EVERY REFUSAL GOES ABOVE THE FIRST WRITE (RES-1). `withSession`
+       commits whatever the callback returns, a refusal included, so a
+       refusal below an insert keeps the insert. This route wrote the guest
+       and the group first and could then refuse four ways — a channel
+       switched off, a room type not here, a party too big, a line with no
+       price — and in a booking of several room types the earlier lines'
+       rooms were already confirmed, with open folios, holding inventory.
+       The caller saw ok:false and tried again, and every try added more.
+       The walk-in desk had the same fault (root MEMORY 243) and is fixed
+       the same way: read and check everything, then write. */
 
     /* ⚠ THE COMMISSION IS READ ONCE AND COPIED ONTO EVERY ROOM. Read
        per room it would be the same number four times; read at report
@@ -394,7 +385,12 @@ groups.post("/:code/bookings", async (c) => {
     }
     const commission = src[0].commission_pct;
 
-    const made: { reference: string; roomType: string; rate: number }[] = [];
+    /* EVERY LINE IS PRICED AND FITTED BEFORE ANY IS BOOKED. A refusal on
+       the second room type must find nothing of the first on file. */
+    const planned: {
+      line: Line; typeName: string; adults: number; children: number;
+      rate: number;
+    }[] = [];
 
     for (const line of lines) {
       const { rows: rt } = await client.query<{
@@ -433,6 +429,34 @@ groups.post("/:code/bookings", async (c) => {
         rate = Number(t[0].total);
       }
 
+      planned.push({ line, typeName: rt[0].name, adults, children, rate });
+    }
+
+    /* ── Nothing below this line refuses. ─────────────────────────────── */
+
+    /* One guest for the whole booking. A block belongs to whoever made it;
+       individual names are filled in as the rooming list arrives, which is
+       usually days later and often never for a wedding. */
+    const { rows: guest } = await client.query<{ id: string }>(
+      `insert into guests (full_name, phone, email)
+       values ($1, nullif($2,''), nullif($3,''))
+       returning id::text`,
+      [guestName, input.phone?.trim() ?? "", input.email?.trim() ?? ""]);
+    const guestId = guest[0]!.id;
+
+    let groupId: string | null = null;
+    if (total > 1) {
+      const { rows: g } = await client.query<{ id: string }>(
+        `insert into reservation_groups (name, block_code, lead_hotel_id)
+         values ($1, nullif($2,''), $3) returning id::text`,
+        [input.groupName?.trim() || `${guestName} — ${total} rooms`,
+         input.blockCode?.trim() ?? "", hotelId]);
+      groupId = g[0]!.id;
+    }
+
+    const made: { reference: string; roomType: string; rate: number }[] = [];
+
+    for (const { line, typeName, adults, children, rate } of planned) {
       for (let i = 0; i < Math.max(1, line.rooms ?? 1); i += 1) {
         const { rows: ref } = await client.query<{ reference: string }>(
           `select 'FH-' || to_char(now(),'DDMM') || '-' ||
@@ -489,7 +513,7 @@ groups.post("/:code/bookings", async (c) => {
           `insert into folios (hotel_id, reservation_id, status)
            values ($1, $2, 'open')`,
           [hotelId, booked[0]!.id]);
-        made.push({ reference: ref[0]!.reference, roomType: rt[0].name,
+        made.push({ reference: ref[0]!.reference, roomType: typeName,
                     rate: Number(rate) });
       }
     }

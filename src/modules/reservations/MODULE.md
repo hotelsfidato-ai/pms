@@ -184,8 +184,10 @@ And the core: `src/lib/api`, the shared `Stay` type, `queryKeys` and
   buttons (CHANGELOG 15 September, step 2). Any new dialog must pass
   `src/components/ui/primaryAction.test.ts`.
 - **A refusal goes above the first write** — `withSession` commits a refusal
-  like any other return (MEMORY 243). This route breaks it today: RES-1 in
-  this folder's `DEFECTS.md`.
+  like any other return (MEMORY 243). `POST /:code/bookings` broke it until
+  16 September (RES-1, fixed): it now checks the repeat, the channel and every
+  line first, and writes after the line marked *"Nothing below this line
+  refuses"*. A new refusal goes above that line.
 - **Before adding a route, grep the path across every router and check the
   mount order** (MEMORY 118).
 - **With the line down** (`src/lib/offline.ts`, core; guarded by
@@ -197,12 +199,12 @@ And the core: `src/lib/api`, the shared `Stay` type, `queryKeys` and
 
 ## Open items
 
-From `PENDING.md` and `HANDOVER.md`, and one found while writing this brief:
+From `PENDING.md` and `HANDOVER.md`:
 
-- **RES-1, found while writing this brief:** `POST /:code/bookings` writes
-  the guest (and the group) before four of its refusals, and a multi-room
-  booking writes its earlier rooms before a later room is refused — all
-  committed. Read in the code, not reproduced. See `DEFECTS.md` here.
+- **RES-2 — waiting on the master.** Both booking doors switch to the shared
+  locked generator (092) and the owner's `FH-<hotel code>-YYMM-<number>`
+  when the master says it is ready. Until then two bookings in the same
+  moment can still collide on a reference (a 500, nothing kept).
 - **Staff-first phase 4 — every reservation task in three screens or fewer**
   (`HANDOVER.md` § 3.6). Measure first: a table of every reservation task
   with its screen count today, then cut each one over three.
@@ -262,7 +264,8 @@ The guards this service must respect:
   reservation records its channel.
 - `api/test/modules/reservations/bookings.test.ts` — a booking sent twice is
   one booking (RES-3), counted in the database, including two copies held
-  and released together.
+  and released together; and a refused booking leaves nothing behind (RES-1),
+  refused on its second line so an earlier line would show.
 - `db/tests/modules/reservations.sql` — 091's index and CHECK refuse a second
   line 1 and a line number without its reference, channel or fingerprint.
 
