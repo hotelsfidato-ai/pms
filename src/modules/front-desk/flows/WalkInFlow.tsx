@@ -24,8 +24,6 @@ import { getRoom } from "@/data/repositories";
    not have to decide which mode they are in first.
    ══════════════════════════════════════════════════════════════════ */
 
-const USER = "front desk";
-
 export function WalkInFlow({
   hotelId, roomNumber, date, open, onOpenChange,
 }: {
@@ -359,7 +357,7 @@ export function WalkInFlow({
               const res = await createWalkIn(hotelId, {
                 guestName, roomNumber, nights, adults, children, ratePlan,
                 rackTariff: rack ?? offered, offeredTariff: offered,
-                overrideReason, businessDate: date, user: USER,
+                overrideReason, businessDate: date,
                 businessSource, marketSegment: segment, salesPerson,
                 isSingleLady: singleLady,
               });

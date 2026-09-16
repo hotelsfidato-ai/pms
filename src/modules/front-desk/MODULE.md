@@ -261,10 +261,13 @@ From `PENDING.md`, and one found while writing this brief:
   (PENDING § 2 and § 5).
 - **Rooms on a phone** — the controls take 376px of an 812px screen before
   the first room (PENDING § 5a; MEMORY 268).
-- **`const USER = "front desk"`** — named in MEMORY 256 and `HANDOVER.md` § 6
-  for `flows/CheckInFlow.tsx` (and finance's `FolioPanel.tsx`); not fixed.
-  Found while writing this brief: `flows/WalkInFlow.tsx:27` holds the same
-  literal and is named in neither place.
+- **`const USER = "front desk"`** — FIXED here 16 September (FD-2): gone from
+  `CheckInFlow.tsx` and `WalkInFlow.tsx`, and the server never read it.
+  Finance's `FolioPanel.tsx` still holds one — see Requests below.
+- **A hotel with no rooms** sees the Rooms skeleton forever (FD-5) — what it
+  should say instead is the owner's.
+- **"Today" three pixels past a phone's edge** after paging a week (FD-7) —
+  with the critique's P3.
 - **Two "in house" numbers** — the property page said 11 in house / 9 vacant
   while the Dashboard and Rooms (the stay-view counts) said 10 / 7, same
   minute, 14 September. Needs one definition, the owner's to choose
@@ -287,10 +290,13 @@ From `PENDING.md`, and one found while writing this brief:
 
 ## Gates
 
-Before the first edit: claim this service in `HANDOVER.md` → Folder claims
-(service, branch, date), and work in your own worktree with your own
-database and ports — how, in `AGENTS.md` ("Before your first write"); the
-rules for parallel agents, in `docs/SERVICE-FOLDERS-PLAN.md`.
+Before the first edit: claim this service from your copy's folder with
+`npm run claim -- front-desk "one line"` (since 16 September claims live in
+the git directory every copy shares — never a file in `.claims/`, never
+committed), and `npm run release -- front-desk` when you stop. Work in your
+own worktree with your own database and ports — how, in `AGENTS.md` ("Before
+your first write"); the rules for parallel agents, in
+`docs/SERVICE-FOLDERS-PLAN.md`.
 
 ```
 # the PC, in your worktree's folder (PowerShell or Git Bash)
@@ -326,10 +332,47 @@ The guards this service must respect:
   without a caller, across every service's `data/`.
 - `src/modules/front-desk/front-desk.test.tsx` — "the tape chart at
   /h/:code/stay", the stay panel's one main action per tab.
+- `src/modules/front-desk/stayViewStates.test.tsx` — Rooms when the server
+  does not answer: loading in the house's shape, "did not load" with Try
+  again, and the last good house kept under a strip (FD-6). The file's cache
+  lives as long as the file, so its first test must stay first.
+- `src/modules/front-desk/actorFromSession.test.ts` — no `const USER = "…"`
+  and no `user:` field in this folder's sources (FD-2).
 - `src/App.test.tsx` — "start here" (reception's card).
 - `src/lib/offline.test.ts` — which writes may be held offline.
 - `api/test/modules/reservations/reservationInserts.test.ts` — every
   reservation records its channel.
+
+## Requests from this service
+
+Changes this service needs in files it may not touch. Written 16 September by
+the front-desk chat; each also told to the owner.
+
+- **To the master — `src/App.tsx`, `PERSISTED`.** The list of queries kept on
+  the device names `tape-chart`, which matches no query key; the stay view's
+  keys are `stay-view` and `stays`. So a RELOAD with the server down shows
+  Rooms' "The rooms did not load" instead of the last house (FD-6 keeps it
+  only within a session). Adding them puts guest names in a shared desk
+  machine's browser store, as `arrivals` and `in-house` already do — **the
+  owner's privacy call**, which the list's own comment says it is.
+- **To the master — the lane setup.** (1) On a fresh lane database
+  `load-demo` fails with `undefined.id` unless `db/tests/harness.sql` and
+  `suite.sql` load first, as `api/scripts/with-test-db.sh:99` knows and
+  `docs/briefs/README.md` does not say. (2) `db/migrate.sh
+  --with-dev-identities` prints "✓ local sign-in accounts linked" straight
+  after that step's psql ERROR. (3) With `node_modules` linked to the main
+  checkout, Vite refuses the Inter font from `D:\fidato pms\node_modules`
+  (403, `server.fs.allow`), so every lane's screens render in a fallback font
+  — a visual check in a lane is not quite the real screen.
+- **To finance** — `api/src/modules/finance/billing.ts:98` returns
+  `user: "admin"`, `folios.ts:206` prints `posted_by ?? "admin"` on a bill
+  line, and `flows/FolioPanel.tsx:38` sends `const USER = "front desk"` that
+  its routes do not read (they use `app.current_user_id()`). MEMORY 256 and
+  266's shape: a name nobody gave.
+- **To the master, a lesson for the root `MEMORY.md`** — React Query's
+  `placeholderData` is shown only while a query is pending and dropped when it
+  fails, so it cannot keep old data on screen through an error (FD-6). Any
+  service reaching for it to survive an outage will meet the same wall.
 
 ## Requests from other services
 

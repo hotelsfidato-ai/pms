@@ -1,19 +1,20 @@
-import { useState, useMemo, useEffect } from "react";
-import { useQuery } from "@tanstack/react-query";
+import { useState, useMemo, useEffect, type ReactNode } from "react";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useNavigate, useParams, useSearchParams } from "react-router";
 import { useSession } from "@/lib/session";
 import {
   ChevronDown, ChevronRight, ChevronLeft, Globe, User, Building2,
-  Sparkle, Wrench,
+  Sparkle, Wrench, AlertTriangle, CloudOff, RotateCw,
 } from "lucide-react";
 import { cn } from "@/lib/cn";
 import { useDocumentTitle } from "@/lib/documentTitle";
 import { HouseFloor } from "@/modules/front-desk/flows/HouseFloor";
-import { money, dateShort } from "@/lib/format";
+import { money, dateShort, dateTime, timeOnly } from "@/lib/format";
+import { ApiError } from "@/lib/api";
 import { useUi } from "@/lib/ui";
 import { AssignRoomFlow } from "@/modules/front-desk/flows/AssignRoomFlow";
 import {
-  Page, Button, Segmented, Tooltip, Skeleton, toast, type Tone,
+  Button, Segmented, Tooltip, Skeleton, ErrorState, toast, type Tone,
 } from "@/components/ui";
 import { StartHere } from "@/components/app/StartHere";
 import { StayDrawer } from "@/modules/front-desk/flows/StayDrawer";
@@ -188,11 +189,46 @@ export default function StayViewPage({ view }: {
       searchParams.toString() ? `?${searchParams.toString()}` : ""}`);
   };
   const [collapsed, setCollapsed] = useState<Record<string, boolean>>({});
+  const queryClient = useQueryClient();
 
-  const { data, isLoading } = useQuery({
+  const chart = useQuery({
     queryKey: queryKeys.stayView(hotelId, start, BUSINESS_DATE),
     queryFn: () => getStayView(hotelId, start, BUSINESS_DATE),
   });
+
+  /* THE LAST GOOD HOUSE STAYS ON SCREEN. Paging to another week asks for
+     a new window; until it answers — or when it cannot — the window that
+     last loaded stays there rather than becoming a skeleton or an error.
+
+     ⚠ NOT `placeholderData`, which was the obvious tool and does not do
+     this: React Query shows a placeholder only while the query is
+     PENDING, and drops it the moment the query fails
+     (query-core/src/queryObserver.ts, "use placeholderData if needed").
+     The house would vanish at exactly the moment it was needed.
+
+     So the last window that answered is recorded, and read back from the
+     cache, which keeps it for a week (App.tsx). Only this hotel's, on this
+     business date: any other would show one property's rooms while
+     another loads (Rule 5), or yesterday's room states under today. */
+  const [lastLoaded, setLastLoaded] = useState<
+    { hotelId: string; businessDate: string; start: string } | null
+  >(null);
+  useEffect(() => {
+    if (chart.isSuccess) setLastLoaded({ hotelId, businessDate: BUSINESS_DATE, start });
+  }, [chart.isSuccess, chart.dataUpdatedAt, hotelId, start]);
+
+  const fallbackKey =
+    chart.data === undefined && lastLoaded && lastLoaded.start !== start
+      && lastLoaded.hotelId === hotelId && lastLoaded.businessDate === BUSINESS_DATE
+      ? queryKeys.stayView(hotelId, lastLoaded.start, BUSINESS_DATE)
+      : null;
+  const fallback = fallbackKey
+    ? queryClient.getQueryData<Awaited<ReturnType<typeof getStayView>>>(fallbackKey)
+    : undefined;
+  /* `!== undefined`, not `??`: null is an ANSWER (a hotel with no rooms),
+     and must not be papered over with an older window. */
+  const data = chart.data !== undefined ? chart.data : fallback;
+  const showingEarlierWindow = chart.data === undefined && fallback !== undefined;
 
   /* WHO IS IN EACH ROOM TODAY. The chart's bars belong to its WINDOW;
      this belongs to the business date. A guest who arrived on the 4th
@@ -202,11 +238,12 @@ export default function StayViewPage({ view }: {
 
      Only fetched in the floor view, because the chart does not need it
      and a query nobody reads is a query that goes wrong unnoticed. */
-  const { data: todaysStayList } = useQuery({
+  const stayList = useQuery({
     queryKey: queryKeys.stays(hotelId),
     queryFn: () => listStays(hotelId),
     enabled: view === "floor",
   });
+  const todaysStayList = stayList.data;
 
   const todaysStays = useMemo(() => {
     const map = new Map<string, Stay>();
@@ -262,19 +299,64 @@ export default function StayViewPage({ view }: {
     setSearchParams(searchParams, { replace: false });
   };
 
-  if (isLoading || !data) {
-    return (
-      <Page>
-        <div className="space-y-2">
-          {Array.from({ length: 12 }).map((_, i) => (
-            <Skeleton key={i} className="h-8 w-full" />
-          ))}
-        </div>
-      </Page>
-    );
+  /* ── Four states, not one ──────────────────────────────────────────
+     This was `if (isLoading || !data) return <twelve grey bars>`, and
+     nothing else. With the server unreachable the query FAILS, isLoading
+     goes false, data stays undefined — and the bars stayed forever, under
+     the offline banner's promise that anything still possible would be
+     held. With the device itself offline React Query PAUSES the request
+     instead of failing it, which reached the same bars by another road.
+
+     Floor view reads two queries: the house, and who is in each room
+     today. Either one failing means the tiles are not current. */
+  const title = view === "calendar" ? "Calendar" : "Rooms";
+  const reads = view === "floor" ? [chart, stayList] : [chart];
+  const failure = reads.find((q) => q.isError)?.error ?? null;
+  const paused = reads.some((q) => q.isPaused);
+  const refreshing = reads.some((q) => q.isFetching);
+  const retry = () => { for (const q of reads) void q.refetch(); };
+
+  if (!data) {
+    /* `null` is a successful answer — a hotel with no rooms at all — and
+       it still draws the skeleton it always drew. What that hotel should
+       see instead is FD-5, the owner's to decide. */
+    if (data === undefined && paused) {
+      return (
+        <StayViewFrame title={title}>
+          <ErrorState
+            title="No connection"
+            description="This device is offline, so the rooms cannot load. They load by themselves as soon as it is back."
+          />
+        </StayViewFrame>
+      );
+    }
+    if (data === undefined && failure && !refreshing) {
+      return (
+        <StayViewFrame title={title}>
+          <ErrorState
+            title="The rooms did not load"
+            error={failure}
+            /* The unreachable sentence from `api()` ends "Showing the last
+               data received", and here there is none to show. */
+            description={isUnreachable(failure)
+              ? "Could not reach the server, and there are no rooms from earlier to show in their place."
+              : undefined}
+            onRetry={retry}
+          />
+        </StayViewFrame>
+      );
+    }
+    return <StayViewSkeleton view={view} title={title} />;
   }
 
   const { dates, roomTypes, footer, counts } = data;
+
+  /* WHEN THE HOUSE ON SCREEN WAS LOADED — the earlier window's own age
+     when that is what is showing, not this query's. */
+  const shownAt = showingEarlierWindow && fallbackKey
+    ? queryClient.getQueryState(fallbackKey)?.dataUpdatedAt
+    : chart.dataUpdatedAt;
+  const stale = failure !== null || paused;
 
   /* Regroup by floor when asked.
 
@@ -435,6 +517,16 @@ export default function StayViewPage({ view }: {
           ))}
         </div>
       </div>
+
+      {stale && (
+        <StaleRooms
+          failure={failure}
+          shownAt={shownAt}
+          missingWindow={showingEarlierWindow ? start : null}
+          refreshing={refreshing}
+          onRetry={paused && !failure ? undefined : retry}
+        />
+      )}
 
       {/* ── The house, as a floor ───────────────────────────────────
           Today's rooms as tiles, in the POS floor's language because it
@@ -702,6 +794,170 @@ export default function StayViewPage({ view }: {
           open
           onOpenChange={(o) => !o && closeStay()}
         />
+      )}
+    </div>
+  );
+}
+
+/* ── When there is nothing to draw ──────────────────────────────────── */
+
+/** `api()` throws status 0 when the request never reached a server. */
+function isUnreachable(error: unknown): boolean {
+  return error instanceof ApiError && error.status === 0;
+}
+
+/** When something loaded: the time if it was today, the date too if not —
+    a desk left open overnight must not read yesterday's house as "4:10 pm". */
+function loadedAt(ms: number): string {
+  const d = new Date(ms);
+  return d.toDateString() === new Date().toDateString() ? timeOnly(d) : dateTime(d);
+}
+
+/** The screen's own heading above whatever stands in for the house, so a
+    clerk always knows which screen failed. */
+function StayViewFrame({ title, children }: { title: string; children: ReactNode }) {
+  return (
+    <div className="flex flex-col h-full min-h-0">
+      <div className="shrink-0 bg-white border-b border-grey-200 px-4 sm:px-5 py-3">
+        <h1 className="text-lg font-semibold text-ink-900">{title}</h1>
+      </div>
+      <div className="flex-1 min-h-0 overflow-y-auto scrollbar-quiet">{children}</div>
+    </div>
+  );
+}
+
+/* SHAPED LIKE WHAT IT STANDS IN FOR. Twelve full-width bars said "a list
+   is coming" over a screen that is tiles on Rooms and a fortnight grid on
+   Calendar, and the swap jumped. These keep the controls' height, the
+   tiles' size and the chart's columns, so the house lands where the grey
+   was. */
+function StayViewSkeleton({ view, title }: { view: "calendar" | "floor"; title: string }) {
+  return (
+    <div className="flex flex-col h-full min-h-0">
+      <div className="shrink-0 bg-white border-b border-grey-200 px-4 sm:px-5 py-3 space-y-3">
+        <div className="flex items-center gap-3 flex-wrap">
+          <h1 className="text-lg font-semibold text-ink-900">{title}</h1>
+          <Skeleton className="h-8 w-44" />
+          <Skeleton className="h-8 w-60 sm:ml-auto" />
+        </div>
+        <div className="flex items-center gap-1.5 flex-wrap">
+          {PILLS.map((p) => <Skeleton key={p} className="h-7 w-20 rounded-full" />)}
+        </div>
+      </div>
+
+      <div
+        role="status"
+        aria-label={`Loading ${title.toLowerCase()}`}
+        data-rooms-skeleton={view}
+        className="flex-1 min-h-0 overflow-hidden"
+      >
+        {view === "floor" ? (
+          <div className="p-1">
+            <div className="flex gap-x-4 gap-y-2 flex-wrap mb-4">
+              {Array.from({ length: 6 }).map((_, i) => <Skeleton key={i} className="h-4 w-20" />)}
+            </div>
+            {[9, 8].map((tiles, s) => (
+              <section key={s} className="mb-6">
+                <Skeleton className="h-3 w-24 mb-2.5" />
+                <div className="grid gap-2 [grid-template-columns:repeat(auto-fill,minmax(7rem,1fr))]">
+                  {Array.from({ length: tiles }).map((_, i) => (
+                    <Skeleton key={i} className="min-h-[5.5rem] rounded-lg" />
+                  ))}
+                </div>
+              </section>
+            ))}
+          </div>
+        ) : (
+          <div className={CHART_MIN_W}>
+            <div className={cn("grid bg-grey-50 border-b border-grey-200", GRID)}>
+              <div className="px-3 py-2 border-r border-grey-200">
+                <Skeleton className="h-3 w-10" />
+              </div>
+              {Array.from({ length: 14 }).map((_, i) => (
+                <div key={i} className="flex flex-col items-center gap-1 px-1 py-2 border-r border-grey-200 last:border-r-0">
+                  <Skeleton className="h-2.5 w-6" />
+                  <Skeleton className="h-3 w-4" />
+                </div>
+              ))}
+            </div>
+            {Array.from({ length: 10 }).map((_, r) => (
+              <div key={r} className={cn("grid border-b border-grey-100", GRID)}>
+                <div className="flex items-center px-2.5 h-9 border-r border-grey-200">
+                  <Skeleton className="h-3.5 w-10" />
+                </div>
+                <div
+                  className="self-center mx-0.5"
+                  style={{ gridColumn: `${2 + ((r * 5) % 9)} / span ${2 + (r % 4)}`, gridRow: 1 }}
+                >
+                  <Skeleton className="h-6 w-full" />
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
+/* THE HOUSE ON SCREEN IS NOT CURRENT, and says so. A tile that reads Free
+   from an hour ago is how a room gets sold twice, so the grid stays — the
+   clerk can still read the house — with its age above it.
+
+   Two tones, as the offline bar has: no connection is a normal condition
+   and is said calmly; a server that answered with an error is not. */
+function StaleRooms({ failure, shownAt, missingWindow, refreshing, onRetry }: {
+  failure: Error | null;
+  shownAt: number | undefined;
+  /** The window asked for, when an earlier one is standing in for it. */
+  missingWindow: string | null;
+  refreshing: boolean;
+  /** Absent while the device is offline — nothing to retry until it is back. */
+  onRetry?: () => void;
+}) {
+  const noConnection = failure === null || isUnreachable(failure);
+  const age = shownAt ? `as they were at ${loadedAt(shownAt)}` : "possibly out of date";
+
+  return (
+    <div
+      role="status"
+      data-stale-rooms
+      className={cn(
+        "shrink-0 flex flex-wrap items-center gap-x-3 gap-y-2 border-b px-4 sm:px-5 py-2.5",
+        noConnection
+          ? "border-brand-yellow-100 bg-brand-yellow-50"
+          : "border-brand-red-100 bg-brand-red-50",
+      )}
+    >
+      {noConnection
+        ? <CloudOff className="size-4 shrink-0 text-grey-600" />
+        : <AlertTriangle className="size-4 shrink-0 text-brand-red" />}
+      <div className="min-w-0 flex-1">
+        <p className="text-sm font-medium text-ink-900">
+          {noConnection
+            ? `No connection — these rooms are ${age}.`
+            : `The rooms did not refresh — these are ${age}.`}
+          {missingWindow && ` The fortnight from ${dateShort(missingWindow)} has not loaded.`}
+        </p>
+        {!noConnection && (
+          <p className="text-sm text-grey-600 mt-0.5">{failure.message}</p>
+        )}
+        {!onRetry && (
+          <p className="text-sm text-grey-600 mt-0.5">
+            They refresh by themselves when the connection is back.
+          </p>
+        )}
+      </div>
+      {onRetry && (
+        <Button
+          size="sm"
+          variant="secondary"
+          onClick={onRetry}
+          loading={refreshing}
+          leadingIcon={<RotateCw className="size-4" />}
+        >
+          Try again
+        </Button>
       )}
     </div>
   );

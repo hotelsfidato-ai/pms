@@ -175,7 +175,11 @@ export async function checkIn(
     earlyReason?: string;
     waiveEarly?: boolean;
     businessDate: string;
-    user: string;
+    /* ⚠ NO `user`. This sent the literal "front desk", and so did the
+       walk-in below (FD-2). Neither route ever read it: the server takes
+       the person from the signed-in session (`app.current_user_id()`),
+       which a browser cannot overstate. A name sent from here would be a
+       second answer to "who did this", and the one that could be wrong. */
   },
 ): Promise<OperationResult<Stay>> {
   /* Writes to Postgres, in ONE transaction, and the DATABASE refuses.
@@ -271,7 +275,7 @@ export async function createWalkIn(
     offeredTariff: number;
     overrideReason: string;
     businessDate: string;
-    user: string;
+    /* No `user` — see checkIn above (FD-2). */
     /* Captured AT THE DESK, because it cannot be back-filled. A month
        later nobody remembers which agent sent a walk-in, and the
        source-mix report is built from exactly this. Optional: a clerk

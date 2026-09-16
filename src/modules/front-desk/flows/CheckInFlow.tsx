@@ -23,7 +23,6 @@ import { type Stay } from "@/data/repositories";
    why they cannot use it.
    ══════════════════════════════════════════════════════════════════ */
 
-const USER = "front desk";
 const STEPS = ["Guest", "Room", "ID", "Rate", "Done"] as const;
 
 export function CheckInFlow({
@@ -495,7 +494,7 @@ export function CheckInFlow({
                         },
                       }
                     : {}),
-                  idSkipReason, businessDate, user: USER,
+                  idSkipReason, businessDate,
                 });
                 if (res.ok) {
                   toast.success(
