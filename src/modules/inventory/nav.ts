@@ -22,6 +22,12 @@ export const nav: ServiceNavEntry[] = [
     keywords: ["base price", "difference", "dynamic", "tariff", "calendar"] },
   { section: "inventory", order: 10,
     label: "Rate calendar", to: "/h/:code/grids", icon: Table2, resource: "rate",
+    /* It WRITES prices, so it asks the same question as Pricing — INV-5,
+       approved by the owner on 16 September. Reception, the hotel manager
+       and the viewer hold `rate: READ` and used to reach it. The route
+       guard asks this line, and PUT /:code/rate-grid refuses the same
+       people on the server. */
+    canSee: setsRates,
     keywords: ["prices by day", "grid"] },
   { section: "inventory", order: 20,
     label: "Rate performance", to: "/h/:code/rates", icon: BarChart3, resource: "rate" },

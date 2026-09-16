@@ -13,7 +13,8 @@ export interface RoomTypeRecord {
   rooms: number;
   sellable: number;
   maxOccupancy: number;
-  rackRate: number;
+  /** null when nobody has priced the room type — never 0 (INV-3). */
+  rackRate: number | null;
   numbers: string[];
 }
 

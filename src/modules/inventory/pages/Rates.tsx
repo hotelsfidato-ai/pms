@@ -98,11 +98,15 @@ export default function RatesPage() {
                     <th className="sticky left-0 z-10 bg-white px-4 py-3 text-left font-medium text-ink-900 whitespace-nowrap">
                       {row.roomType}
                       <span className="block text-2xs font-normal text-grey-500 tabular">
-                        rack {money(row.rackRate)}
+                        {/* A dash for a room type nobody has priced (INV-3). */}
+                        rack {row.rackRate === null ? "—" : money(row.rackRate)}
                       </span>
                     </th>
                     {row.cells.map((c) => {
-                      const below = c.soldAdr !== null && c.soldAdr < c.rackRate;
+                      /* Below rack only when there IS a rack. Against an
+                         unpriced type every sale would read as a discount. */
+                      const below = c.soldAdr !== null && c.rackRate !== null
+                        && c.soldAdr < c.rackRate;
                       return (
                         <td key={c.date} className="px-3 py-3 text-right align-middle whitespace-nowrap">
                           {c.soldAdr === null ? (
@@ -111,7 +115,8 @@ export default function RatesPage() {
                             </Tooltip>
                           ) : (
                             <Tooltip
-                              content={`${c.sold} of ${c.sellable} sold · rack ${money(c.rackRate)}`}
+                              content={`${c.sold} of ${c.sellable} sold · rack ${
+                                c.rackRate === null ? "—" : money(c.rackRate)}`}
                             >
                               <span
                                 className={cn(

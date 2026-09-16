@@ -11,9 +11,11 @@ api/src/modules/inventory/      the server's routes for this service
 db/tests/modules/inventory.sql  NEW database checks only — db/tests/suite.sql is frozen history
 ```
 
-Before your first edit: claim the service in `HANDOVER.md` → "Folder claims"
-(service, branch, date), read this file, then this folder's `DEFECTS.md` and
-`CHANGELOG.md`. Written 15 September 2026 from the code at `880a5b6`.
+Before your first edit: read `docs/briefs/inventory.md`, claim the service in
+`.claims/inventory.md` (one file per service, since 16 September — not
+`HANDOVER.md`), read this file, then this folder's `DEFECTS.md` and
+`CHANGELOG.md`. Written 15 September 2026 from the code at `880a5b6`; brought
+up to date 16 September (INV-3, INV-5, INV-6).
 
 "Inventory" means rooms and prices. The shelves are the Store — the `stores`
 service (`docs/SERVICE-FOLDERS-PLAN.md`).
@@ -48,11 +50,13 @@ actually sold for, fourteen days out.
 
 - The first three sit in the menu's **Configuration** section, the last three in
   **Inventory**. Room types needs the `room_config` grant; the others the
-  `rate` grant (the default test, no `canSee`) — **except Pricing**, which is
-  the one screen here with a `canSee` and a route guard: it sets the figure
-  every other price is built from, and `rate: READ` is reception's grant. See
-  `RATE_SETTER_ROLES` in `src/lib/permissions.ts`, and INV-5 below for the
-  screen beside it that has neither.
+  `rate` grant (the default test, no `canSee`) — **except Pricing and the Rate
+  calendar**, which carry `canSee: setsRates` and a `RequireAccess` route
+  guard: they set prices, and `rate: READ` is reception's grant. Who may:
+  `RATE_SETTER_ROLES` in `src/lib/permissions.ts` (the master's file — owner,
+  admin, GM today; the revenue manager is being added). The Rate calendar was
+  closed on 16 September on the owner's approval (INV-5). **Rate plans still
+  writes prices and is still open to `rate: READ`** — see INV-5 "Still open".
 
 **Pricing (16 September)** — one base figure, Deluxe · one person · room only,
 and every other price a difference from it in rupees, with dates. Migration
@@ -70,14 +74,20 @@ every decision behind it: `docs/PRICING-PLAN.md`. A price says what it covers
 
 ---
 
-## Server endpoints — 24
+## Server endpoints — 27
 
 The code is in `api/src/modules/inventory/` (moved 15 September):
-`rates.ts`, `inventorySetup.ts`, and the parts split out of two mixed files —
-`rateGrid.ts` (from billing.ts) and `roomTypesAndPlans.ts` (from
-directory.ts). The door `index.ts` mounts them at `/api/hotels`.
+`rates.ts`, `inventorySetup.ts`, `pricing.ts` (16 September), and the parts
+split out of two mixed files — `rateGrid.ts` (from billing.ts) and
+`roomTypesAndPlans.ts` (from directory.ts). The door `index.ts` mounts all
+five at `/api/hotels`. `rateSetters.ts` holds no route: it is `setsRates`, the
+server's answer to "may this person set a price here" (INV-5), and its list is
+a copy of the website's held together by a test.
 
-`rates.ts` (813 lines) — 13:
+**Only `PUT /:code/rate-grid` asks a role.** Every other write here is guarded
+by RLS alone, which asks which hotel, not who (PMS-2; INV-5 "Still open").
+
+`rates.ts` — 13:
 
 ```
 GET    /:code/rate-plans                          the rates board
@@ -90,7 +100,8 @@ DELETE /:code/cancellation-policies/:id           retire one
 PUT    /:code/cancellation-policies/:id/default   the property's own default
 GET    /:code/inventory                           rooms left, by type and date
 GET    /:code/rate-grid                           price per type, plan and date
-PUT    /:code/rate-grid                           set a price on a run of dates (app.set_rate)
+PUT    /:code/rate-grid                           set a price on a run of dates (app.set_rate) —
+                                                  RATE_SETTER_ROLES only, 403 otherwise (INV-5)
 GET    /:code/tariff                              a stay's price, extra persons included — used by New booking
 POST   /:code/restrictions
 ```
@@ -114,18 +125,30 @@ admin — `GET /:code/commissioning`, in `admin/commissioning.ts`. The plan had
 given the front desk's hours to admin; the split kept them here, with the
 form.)
 
+`pricing.ts` (16 September, migration 090) — 4:
+
+```
+GET    /:code/pricing                             the base, the differences, and a price per date
+PUT    /:code/pricing/basis                       which room type and meal plan is the base
+PUT    /:code/pricing/base                        the base price, for a date or a range
+PUT    /:code/pricing/offset                      a difference from the base, in rupees
+```
+
 `rateGrid.ts` (split out of billing.ts) — 1:
 
 ```
-GET    /:code/rates                               Rate performance: rack against achieved, by date
+GET    /:code/rates                               Rate performance: rack against achieved, by date.
+                                                  An unpriced type's rack is null, never 0 (INV-3)
 ```
 
-`roomTypesAndPlans.ts` (split out of directory.ts) — 2, both read only by the two routed-nowhere screens:
+`roomTypesAndPlans.ts` (split out of directory.ts) — 1, read only by the routed-nowhere room-type list:
 
 ```
-GET    /:code/room-types                          the old room-type list
-GET    /rate-plans                                the old meal-plan list — can never run (INV-1)
+GET    /:code/room-types                          the old room-type list. Rack null when unpriced (INV-3)
 ```
+
+(`GET /rate-plans`, the old meal-plan list, was removed on 16 September — it
+could never run, INV-1.)
 
 `/rates` and `/rate-plans` are two questions on two paths on purpose: the
 older `/rates` route (`rateGrid.ts`, out of billing.ts) wins any collision
@@ -169,8 +192,15 @@ cancellation_policies              036_cancellation_terms.sql  (app.retention_fo
                                    a property-chosen default)
 rate_restrictions                  044_restrictions.sql  (app.sellable_rooms — the denominator
                                    of every occupancy figure)
+pricing_basis, rate_offsets        090_pricing_basis.sql  (app.price_for; rates.covers_persons)
 meal_plans                         011_model_additions.sql — read, not written
 ```
+
+**What "sellable" means here: a room is out when a `room_blocks` row covers
+the date** (inclusive at both ends), or when the room is retired. The room's
+own `housekeeping_status` is NOT read — proved on 16 September for every way a
+room can be marked, and the reason the Rooms screen and the bell can disagree
+(INV-6).
 
 Other services point at these tables: `rooms` is referenced by
 `room_assignments` (front desk), `room_blocks` and `housekeeping_assignments`
@@ -178,9 +208,10 @@ Other services point at these tables: `rooms` is referenced by
 `reservations`; `cancellation_policies` by `reservations.cancellation_policy_id`.
 Housekeeping writes `rooms.housekeeping_status`.
 
-**A new migration needs a number claimed in `HANDOVER.md` first.**
-`src/test/migrationNumbers.test.ts` fails on two files with one number or a
-gap. The highest today is 089.
+**A new migration needs a number from the master chat first** — the sequence
+is shared and `src/test/migrationNumbers.test.ts` fails on two files with one
+number or a gap. 090 is this service's; do not edit it without telling the
+master. 091–093 were assigned on 16 September to reservations and the master.
 
 ---
 
@@ -191,7 +222,8 @@ type `Tariff` (from `data/rates.ts`). The only importer is
 `src/modules/reservations/pages/NewBooking.tsx`.
 
 The server's door, `api/src/modules/inventory/index.ts`, exports only
-`mounts` (today `rates` and `inventorySetup`), read by `api/src/server.ts`.
+`mounts` (`roomTypesAndPlans`, `rateGrid`, `rates`, `pricing`,
+`inventorySetup`), read by `api/src/server.ts`.
 
 ---
 
@@ -235,7 +267,11 @@ reports — every occupancy figure divides by `app.sellable_rooms`
 - **Offline, a rate or room write is refused** — none is listed in
   `src/lib/offline.ts`.
 - **Inside `withSession`, a refusal is a commit** (MEMORY 243). These routes
-  have not been checked for it (PENDING § 2).
+  have not been checked for it (PENDING § 2) — except `PUT /:code/rate-grid`,
+  whose role check is the first thing it asks.
+- **Who may set a price is `RATE_SETTER_ROLES`**, on the screen AND on the
+  server (INV-5). The server's copy is in `rateSetters.ts` and a test holds it
+  to the website's; a role added to one is added to both, in one commit.
 - **The channel manager is parked** (owner, 8 September — CHANGELOG). The
   rate calendar is what one would push; nothing here sends prices anywhere.
 
@@ -284,13 +320,23 @@ The guard this folder must respect: `src/test/boundaries.test.ts` — another
 service reaches this one only through `index.ts`, and this one reaches others
 only through theirs.
 
-Where the checks are today: `api/test/inventory.test.ts` (the inventory
-grid, restrictions, the rate grid, the tariff, what a property still needs,
-importing rooms) — moving to `api/test/modules/inventory/`. Database:
-`db/tests/suite.sql` groups `rates`, `set rate`, `rate grid`, `restrictions`,
-`extra persons`, `cancellation terms`, `inventory`, `no shipped prices`
-(frozen — new checks go in `db/tests/modules/inventory.sql`, which does not
-exist yet). Web: `src/App.test.tsx` "find a screen" reaches Rate plans.
+Where the checks are today, `api/test/modules/inventory/`:
+
+```
+inventory.test.ts     the inventory grid, restrictions, the rate grid, the tariff,
+                      what a property still needs, importing rooms
+pricing.test.ts       the base and the differences (090)
+unpriced.test.ts      an unpriced room type is null on /rates and /room-types (INV-3)
+outOfService.test.ts  what the inventory subtracts, every way a room is marked (INV-6)
+rateSetters.test.ts   who may set a price on the Rate calendar, every role (INV-5)
+```
+
+Database: `db/tests/suite.sql` groups `rates`, `set rate`, `rate grid`,
+`restrictions`, `extra persons`, `cancellation terms`, `inventory`, `no shipped
+prices` (frozen), and `db/tests/modules/inventory.sql` for everything new
+(090). Web: `src/modules/inventory/inventory.test.tsx` — who reaches Pricing
+and the Rate calendar, and the refusal on the page; `src/App.test.tsx` "find a
+screen" reaches Rate plans.
 
 ---
 
@@ -299,3 +345,17 @@ exist yet). Web: `src/App.test.tsx` "find a screen" reaches Rate plans.
 None yet. To ask for a change here, add a line below — date, your service,
 what you need and why — and leave the change to whoever holds this
 service's claim.
+
+## Requests from this service
+
+- **16 Sep · to the master** — when the revenue manager joins
+  `RATE_SETTER_ROLES` in `src/lib/permissions.ts`, add it to
+  `RATE_SETTER_ROLES` in `api/src/modules/inventory/rateSetters.ts` in the same
+  commit. `api/test/modules/inventory/rateSetters.test.ts` fails until the two
+  lists match, and its role loop names the roles by hand, so the new role goes
+  there too.
+- **16 Sep · to housekeeping, front desk and the master (INV-6)** — releasing
+  one of a room's blocks sets the room `dirty` while another block still covers
+  today (`api/src/modules/housekeeping/roomStatus.ts`), and the Rooms screen
+  reads `status` rather than `blocks` (`src/modules/front-desk/data/stayview.ts`).
+  Which record defines "out of service" is the owner's decision first.

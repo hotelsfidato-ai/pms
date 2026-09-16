@@ -1,0 +1,2 @@
+﻿CLAIMED 16 Sep 2026 · branch inventory/inv-3-unpriced-dash · copy D:\fidato-inventory
+(1) INV-3: an unpriced room reads 0 on GET /:code/rates and GET /:code/room-types. (2) A test: does GET /:code/inventory subtract a room out of service in every way (room 308). (3) INV-5, approved 16 Sep: the Rate calendar and PUT /:code/rate-grid refuse anyone outside RATE_SETTER_ROLES. No migration taken; src/lib/permissions.ts not touched (the master is adding the revenue manager role).
