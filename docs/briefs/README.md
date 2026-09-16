@@ -23,10 +23,21 @@ One line each. The brief carries the rest.
 | **POS** | `You are the pos agent for Fidato PMS. Read docs/briefs/pos.md and follow it exactly. Claim the service before your first write.` |
 | **Housekeeping** | `You are the housekeeping agent for Fidato PMS. Read docs/briefs/housekeeping.md and follow it exactly. Claim the service before your first write.` |
 | **Finance** | `You are the finance agent for Fidato PMS. Read docs/briefs/finance.md and follow it exactly. Claim the service before your first write.` |
+| **Reports** | `You are the reports agent for Fidato PMS. Read docs/briefs/reports.md and follow it exactly. Claim the service before your first write.` |
+| **Night audit** | `You are the night-audit agent for Fidato PMS. Read docs/briefs/night-audit.md and follow it exactly. Claim the service before your first write.` |
+| **Guests** | `You are the guests agent for Fidato PMS. Read docs/briefs/guests.md and follow it exactly. Claim the service before your first write.` |
+| **Banquet** | `You are the banquet agent for Fidato PMS. Read docs/briefs/banquet.md and follow it exactly. Claim the service before your first write.` |
+| **Store** | `You are the stores agent for Fidato PMS. Read docs/briefs/stores.md and follow it exactly. Claim the service before your first write.` |
+| **Administration** | `You are the admin agent for Fidato PMS. Read docs/briefs/admin.md and follow it exactly. Claim the service before your first write.` |
 
-**Start three, not six.** Every agent asks the owner before any doubt, and three
-is what one person can answer for. The order that wastes least: **front desk →
-inventory → pos**, because those three hold the most open work.
+**Start three, not twelve.** Every agent asks the owner before any doubt, and
+three is what one person can answer for. The order that wastes least: **front
+desk → inventory → pos**, because those three hold the most open work.
+
+**Two to be careful with:** **night audit** posts real charges and moves the
+business date, so its brief starts read-only; **admin** decides who may sign in
+and what they may do, so every change to a role waits on the owner. **Store**
+has no open defects, and its brief says not to invent work.
 
 ### Services that are still Coming soon
 
