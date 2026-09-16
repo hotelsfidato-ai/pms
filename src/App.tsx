@@ -52,6 +52,8 @@ import { routes as crsRoutes } from "@/modules/crs/routes";
 import { routes as guestMessagingRoutes } from "@/modules/guest-messaging/routes";
 import { routes as guestServicesRoutes } from "@/modules/guest-services/routes";
 import { routes as equipmentRoutes } from "@/modules/equipment/routes";
+import { routes as purchasingRoutes } from "@/modules/purchasing/routes";
+import { routes as roomSystemsRoutes } from "@/modules/room-systems/routes";
 import { routes as laundryRoutes } from "@/modules/laundry/routes";
 import { routes as leadsRoutes } from "@/modules/leads/routes";
 import { routes as loyaltyRoutes } from "@/modules/loyalty/routes";
@@ -288,6 +290,8 @@ export default function App() {
             {guestMessagingRoutes}
             {guestServicesRoutes}
             {equipmentRoutes}
+            {purchasingRoutes}
+            {roomSystemsRoutes}
             {laundryRoutes}
             {leadsRoutes}
             {loyaltyRoutes}

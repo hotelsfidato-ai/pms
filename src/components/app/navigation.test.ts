@@ -149,12 +149,15 @@ describe("each person's menu", () => {
   it("lists every service not built yet under Coming soon — for the owner, admins and GMs only", () => {
     /* The owner's decision, 16 September: one section at the foot of the
        menu, every service the system does not have yet, alphabetical. */
+    /* 16 September, the stock-and-equipment plan: "Hotel equipment" became
+       "Equipment" (the register), its door-lock content moved to "Room
+       systems", and "Purchasing" arrived. Each takes its alphabetical place. */
     const SOON = [
       "Accounting export", "Booking engine", "Central CRM", "Channel manager",
-      "Contracts", "Fidato CRS", "Guest messages", "Guest services",
-      "Hotel equipment", "Laundry", "Leads and WhatsApp", "Loyalty",
-      "Marketing", "Online check-in", "Online payments", "Revenue management",
-      "Reviews", "Spa",
+      "Contracts", "Equipment", "Fidato CRS", "Guest messages", "Guest services",
+      "Laundry", "Leads and WhatsApp", "Loyalty", "Marketing", "Online check-in",
+      "Online payments", "Purchasing", "Revenue management", "Reviews",
+      "Room systems", "Spa",
     ];
     for (const role of COMING_SOON_ROLES) {
       const sections = sidebarFor(role, "5EL", ALL_ON);

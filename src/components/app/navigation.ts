@@ -23,6 +23,8 @@ import { nav as crs } from "@/modules/crs/nav";
 import { nav as guestMessaging } from "@/modules/guest-messaging/nav";
 import { nav as guestServices } from "@/modules/guest-services/nav";
 import { nav as equipment } from "@/modules/equipment/nav";
+import { nav as purchasing } from "@/modules/purchasing/nav";
+import { nav as roomSystems } from "@/modules/room-systems/nav";
 import { nav as laundry } from "@/modules/laundry/nav";
 import { nav as leads } from "@/modules/leads/nav";
 import { nav as loyalty } from "@/modules/loyalty/nav";
@@ -159,7 +161,8 @@ export interface NavSection {
 
 export type SectionKey =
   | "home" | "front-desk" | "bookings" | "across-properties" | "configuration"
-  | "inventory" | "finance" | "point-of-sale" | "banquet" | "reports" | "system"
+  | "inventory" | "store-and-equipment" | "finance" | "point-of-sale" | "banquet"
+  | "reports" | "system"
   | "coming-soon";
 
 /** A menu entry as a service declares it. */
@@ -201,7 +204,14 @@ const SECTION_LAYOUT: Array<Omit<NavSection, "items"> & { key: SectionKey }> = [
      point: the property switcher does not touch anything in here. */
   { key: "across-properties", label: "Across properties" },
   { key: "configuration", label: "Configuration" },
-  { key: "inventory", label: "Inventory" },
+  /* "ROOMS AND RATES", NOT "INVENTORY" — the owner, 16 September (S1). Since
+     the Store and Equipment were planned, "inventory" meant two things: rooms
+     and prices here, and stock on shelves. The key stays `inventory` because
+     every service's nav.ts names it; only the words a person reads change. */
+  { key: "inventory", label: "Rooms and rates" },
+  /* Stock and durable things — the Store now, Equipment and Purchasing when
+     they are built (docs/STOCK-AND-EQUIPMENT-PLAN.md). */
+  { key: "store-and-equipment", label: "Store and equipment" },
   { key: "finance", label: "Finance" },
   /* POINT OF SALE IS ITS OWN CATEGORY.
 
@@ -265,7 +275,7 @@ const CORE_ENTRIES: ServiceNavEntry[] = [
 const ENTRIES: readonly ServiceNavEntry[] = [
   ...CORE_ENTRIES, ...frontDesk, ...reservations, ...housekeeping, ...inventory, ...guests,
   ...finance, ...nightAudit, ...pos, ...banquet, ...stores, ...reports, ...admin, ...channelManager,
-  ...accounting, ...bookingEngine, ...crm, ...contracts, ...crs, ...guestMessaging, ...guestServices, ...equipment, ...laundry, ...leads, ...loyalty, ...marketing, ...onlineCheckin, ...payments, ...revenueManagement, ...reputation, ...spa,
+  ...accounting, ...bookingEngine, ...crm, ...contracts, ...crs, ...guestMessaging, ...guestServices, ...equipment, ...purchasing, ...roomSystems, ...laundry, ...leads, ...loyalty, ...marketing, ...onlineCheckin, ...payments, ...revenueManagement, ...reputation, ...spa,
 ];
 
 /** Every entry in a section, in its declared order. */

@@ -2,9 +2,13 @@ import { Package } from "lucide-react";
 import type { ServiceNavEntry } from "@/components/app/navigation";
 
 /* The store — what the property keeps on its shelves. Assembled by
-   `navigation.ts`, in the Inventory section. */
+   `navigation.ts`, in the Store and equipment section.
+
+   RESOURCE `stock`, NOT `inventory` (16 September). It shared room
+   availability's grant, so everybody who could change availability —
+   reception included — could change stock, and so could the Viewer (STO-1). */
 export const nav: ServiceNavEntry[] = [
-  { section: "inventory", order: 40, workingMenus: ["housekeeping", "stores"],
-    label: "Store", to: "/h/:code/stores", icon: Package, resource: "inventory",
+  { section: "store-and-equipment", order: 10, workingMenus: ["housekeeping", "stores"],
+    label: "Store", to: "/h/:code/stores", icon: Package, resource: "stock",
     keywords: ["stock", "inventory", "stores"], matchPrefix: true },
 ];

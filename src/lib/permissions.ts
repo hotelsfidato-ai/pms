@@ -125,6 +125,9 @@ export const RESOURCES = [
   "inventory",
   "room_config",
   "rate",
+  "stock",
+  "equipment",
+  "purchasing",
   "invoice",
   "payment",
   "commission",
@@ -163,9 +166,14 @@ export const RESOURCE_LABELS: Record<Resource, string> = {
   customer: "Customers",
   company: "Companies",
   hotel: "Properties",
-  inventory: "Inventory",
+  /* Not "Inventory": since 16 September the Store holds stock, and a role
+     screen saying "Inventory" beside "Store" was two words for two things. */
+  inventory: "Room availability",
   room_config: "Room configuration",
   rate: "Rate plans",
+  stock: "Store",
+  equipment: "Equipment",
+  purchasing: "Purchasing",
   invoice: "Invoices",
   payment: "Payments",
   commission: "Commissions",
@@ -222,6 +230,14 @@ const MATRIX: Record<Role, ResourceGrants> = {
     audit_log: READ_EXPORT,
     setting: READ,
     ai: READ,
+    /* STORE, EQUIPMENT, PURCHASING — the owner's table, 16 September
+       (docs/STOCK-AND-EQUIPMENT-PLAN.md). For stock, `create` is a new
+       movement (receive, issue, breakage, wastage, return), `edit` is the
+       adjustment a count makes, `approve` is the stock-adjustment approval
+       of 076. Nothing is `delete`: stock is a ledger. */
+    stock: ["view", "create", "edit", "approve", "export"],
+    equipment: ["view", "create", "edit", "approve", "export"],
+    purchasing: ["view", "create", "edit", "cancel", "approve", "export"],
   },
 
   gm: {
@@ -251,6 +267,9 @@ const MATRIX: Record<Role, ResourceGrants> = {
     user: READ,
     audit_log: READ,
     ai: READ,
+    stock: ["view", "create", "edit", "approve", "export"],
+    equipment: ["view", "create", "edit", "approve", "export"],
+    purchasing: ["view", "create", "approve", "export"],
   },
 
   /* One property, run day to day. Everything the GM has for the floor,
@@ -270,6 +289,9 @@ const MATRIX: Record<Role, ResourceGrants> = {
     report: READ_EXPORT,
     notification: READ,
     user: READ,
+    stock: ["view", "create", "edit"],
+    equipment: ["view", "create", "edit"],
+    purchasing: ["view", "create"],
   },
 
   /* The person who sets prices and pushes them to the booking sites when the
@@ -307,6 +329,9 @@ const MATRIX: Record<Role, ResourceGrants> = {
     inventory: ["view", "edit"],
     report: READ,
     notification: READ,
+    stock: ["view", "create"],
+    equipment: READ,
+    purchasing: ["view", "create"],
   },
 
   /* Narrower again. A chef moves dishes along and sees what is waiting;
@@ -315,6 +340,8 @@ const MATRIX: Record<Role, ResourceGrants> = {
     dashboard: READ,
     inventory: READ,
     notification: READ,
+    stock: READ,
+    equipment: READ,
   },
 
   front_desk: {
@@ -330,6 +357,7 @@ const MATRIX: Record<Role, ResourceGrants> = {
     payment: ["view", "create"],
     report: READ,
     notification: READ,
+    equipment: READ,
   },
 
   /* Stock, receiving and issues. RAISES a purchase and approves none —
@@ -340,6 +368,9 @@ const MATRIX: Record<Role, ResourceGrants> = {
     inventory: ["view", "create", "edit", "export"],
     report: READ,
     notification: READ,
+    stock: ["view", "create", "edit", "export"],
+    equipment: READ,
+    purchasing: ["view", "create"],
   },
 
   /* A till, not a person. It opens orders and settles them, and it can
@@ -356,6 +387,8 @@ const MATRIX: Record<Role, ResourceGrants> = {
     inventory: ["view", "edit"],
     report: READ,
     notification: READ,
+    stock: READ,
+    equipment: READ,
   },
 
   finance: {
@@ -369,6 +402,9 @@ const MATRIX: Record<Role, ResourceGrants> = {
     commission: READ_EXPORT,
     report: READ_EXPORT,
     notification: READ,
+    stock: READ_EXPORT,
+    equipment: READ_EXPORT,
+    purchasing: READ_EXPORT,
   },
 
   read_only: {
@@ -385,6 +421,9 @@ const MATRIX: Record<Role, ResourceGrants> = {
     commission: READ,
     report: READ,
     notification: READ,
+    stock: READ,
+    equipment: READ,
+    purchasing: READ,
   },
 
   automation: {

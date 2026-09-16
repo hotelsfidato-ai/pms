@@ -61,3 +61,66 @@ describe("the revenue manager", () => {
     expect(grantsFor("revenue_manager", "room_config")).toEqual(["view"]);
   });
 });
+
+/* ══════════════════════════════════════════════════════════════════
+   STORE, EQUIPMENT, PURCHASING — the owner's table, 16 September
+
+   Approved row by row (docs/STOCK-AND-EQUIPMENT-PLAN.md). The Store used
+   to share room availability's `inventory` grant, so reception could
+   change stock, and so could the Viewer (STO-1). Each role below is the
+   decision; a change here is a conversation with the owner first.
+   ══════════════════════════════════════════════════════════════════ */
+
+describe("the Store, Equipment and Purchasing", () => {
+  const TABLE: Record<string, { stock: string[]; equipment: string[]; purchasing: string[] }> = {
+    admin:           { stock: ["view", "create", "edit", "approve", "export"],
+                       equipment: ["view", "create", "edit", "approve", "export"],
+                       purchasing: ["view", "create", "edit", "cancel", "approve", "export"] },
+    gm:              { stock: ["view", "create", "edit", "approve", "export"],
+                       equipment: ["view", "create", "edit", "approve", "export"],
+                       purchasing: ["view", "create", "approve", "export"] },
+    hotel_manager:   { stock: ["view", "create", "edit"], equipment: ["view", "create", "edit"],
+                       purchasing: ["view", "create"] },
+    stores:          { stock: ["view", "create", "edit", "export"], equipment: ["view"],
+                       purchasing: ["view", "create"] },
+    kitchen_manager: { stock: ["view", "create"], equipment: ["view"], purchasing: ["view", "create"] },
+    chef:            { stock: ["view"], equipment: ["view"], purchasing: [] },
+    housekeeping:    { stock: ["view"], equipment: ["view"], purchasing: [] },
+    front_desk:      { stock: [], equipment: ["view"], purchasing: [] },
+    finance:         { stock: ["view", "export"], equipment: ["view", "export"],
+                       purchasing: ["view", "export"] },
+    read_only:       { stock: ["view"], equipment: ["view"], purchasing: ["view"] },
+    revenue_manager: { stock: [], equipment: [], purchasing: [] },
+    pos:             { stock: [], equipment: [], purchasing: [] },
+  };
+
+  for (const [role, want] of Object.entries(TABLE)) {
+    it(`gives ${role} exactly what the owner approved`, () => {
+      for (const resource of ["stock", "equipment", "purchasing"] as const) {
+        expect([...grantsFor(role as never, resource)].sort(), `${role} · ${resource}`)
+          .toEqual([...want[resource]].sort());
+      }
+    });
+  }
+
+  it("covers every role a person can be given, so a new role cannot slip past", () => {
+    expect(Object.keys(TABLE).sort()).toEqual(
+      [...ASSIGNABLE_ROLES].filter((r) => r !== "owner").sort());
+  });
+
+  /* THE MATRIX ONLY. Opened on 16 September as reception, /h/5EL/stores still
+     loaded: the Store's route has no RequireAccess and its server routes check
+     no grant, so STO-1 is NOT closed by this table. The Store closes it in
+     phase 1A — the route guard and the server refusal read these grants. */
+  it("no longer GRANTS the Viewer or reception stock changes — the matrix, not yet the door", () => {
+    expect(grantsFor("read_only", "stock")).not.toContain("create");
+    expect(grantsFor("read_only", "stock")).not.toContain("edit");
+    expect(canAccess("front_desk", "stock")).toBe(false);
+  });
+
+  it("never lets anybody delete stock — it is a ledger", () => {
+    for (const role of ASSIGNABLE_ROLES.filter((r) => r !== "owner")) {
+      expect(grantsFor(role, "stock"), role).not.toContain("delete");
+    }
+  });
+});

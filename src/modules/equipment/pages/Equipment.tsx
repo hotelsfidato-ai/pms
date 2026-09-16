@@ -1,31 +1,35 @@
-import { KeyRound, Phone, Tv } from "lucide-react";
+import { ClipboardList, MapPin, Wrench } from "lucide-react";
 import { ComingSoonPage, type ComingSoonContent } from "@/pages/ComingSoon";
 
-/* Hotel equipment — COMING SOON (the owner's decision, 16 September).
+/* Equipment — COMING SOON.
 
-   What the service will do, what it needs before it can be built, and
-   what exists today — nothing invented (`src/pages/ComingSoon.tsx`).
-   Replaced by the real screens the day the service is built; the
-   service's brief is this folder's MODULE.md. */
+   The register of everything durable in the hotel, the restaurant and the
+   rooms, with its repairs and the buying of new things. The owner gave this
+   service that meaning on 16 September (decision S2,
+   docs/STOCK-AND-EQUIPMENT-PLAN.md); until then this page described
+   connections to room devices, which moved to Room systems unchanged.
+
+   Built in phase 1B. Until then: what it will do, what it needs, and what
+   exists today — nothing invented. */
 const CONTENT: ComingSoonContent = {
-  title: "Hotel equipment",
-  summary: "Door locks, room phones, minibars and TVs connected to the rooms and the bill.",
-  status: "When a hotel asks",
+  title: "Equipment",
+  summary: "A register of everything durable in the hotel, the restaurant and the rooms: where it is, what it cost, its warranty, and its repairs.",
+  status: "Planned",
   willDo: [
-    { icon: KeyRound, title: "Key cards at check-in",
-      body: "Cut for the room assigned, and cancelled at check-out." },
-    { icon: Phone, title: "Calls on the bill",
-      body: "Calls from a room charged to the stay without anyone typing them." },
-    { icon: Tv, title: "Minibar and TV",
-      body: "Minibar use charged to the room, and the TV greeting the guest by name." },
+    { icon: ClipboardList, title: "The register",
+      body: "Costly items one by one with a tag (an AC, a TV, an oven); cheap items by count per room." },
+    { icon: MapPin, title: "Where each thing is",
+      body: "In a room, the kitchen, the restaurant or a public area — and whether it is in use, under repair or retired." },
+    { icon: Wrench, title: "Its repairs",
+      body: "A repair reported against the item itself, with what it cost, so each item carries its own history." },
   ],
   needs: [
-    "Which hotel wants which, and the brands installed. Onity, Salto and Hafele are common locks.",
-    "The makers' connection documents.",
-    "Possibly a small computer at the hotel, when a maker's system cannot be reached over the internet.",
+    "The list of what each property has — counted, and entered or imported. Nothing is assumed.",
+    "Where things are: the kitchen, the restaurant, the lobby and the other places, entered once per property.",
+    "Warranty and service-contract dates, where you have them.",
   ],
-  today: "Nothing is connected. The desk's Post a charge list has no telephone or minibar line.",
-  leansOn: ["Rooms", "Folios"],
+  today: "Nothing is recorded. A repair can be logged as a work order, but only against a room, not against the thing that broke.",
+  leansOn: ["Rooms", "Work orders", "Suppliers", "Locations"],
 };
 
 export default function EquipmentPage() {

@@ -22,14 +22,23 @@ Before any edit: ask the owner. Then claim the service in `HANDOVER.md` →
 
 ---
 
-## What it would be
+## What it would be — REDEFINED 16 September
 
-Interfaces to the equipment in the rooms: door locks (Onity, Salto,
-Hafele), PABX call billing, minibar and IPTV, energy management
-(`PROGRESS.md`, items 20–23: "Worth doing when a property asks. None of it
-blocks anything"). The folio already has `minibar` and `telephone`
-categories (`006_folio.sql`); the desk's charge list (`src/lib/rules.ts`,
-`CHARGE_CATEGORIES`) offers neither.
+**The register of everything durable in the hotel, the restaurant and the
+rooms**, with its repairs and the buying of new things. The owner gave this
+service that meaning (decision S2); it is built in **phase 1B** of
+**`docs/STOCK-AND-EQUIPMENT-PLAN.md`** — read that first.
+
+- Costly items one by one with a tag; cheap items by count per room (S7).
+- Where each thing is: a room (`rooms`) or a place (`locations`, 094).
+- Who it came from (`suppliers`, 094), its warranty and service-contract dates.
+- Status: in use, under repair, retired — never deleted.
+- Repairs: a work order (058) pointing at the item, built by housekeeping in 2B.
+
+**What this folder used to describe** — door locks, room phones, minibar and
+TV — moved to `src/modules/room-systems/`, unchanged. The notes below this
+section were written for that meaning and are kept as history until phase 1B
+rewrites this brief.
 
 ---
 
