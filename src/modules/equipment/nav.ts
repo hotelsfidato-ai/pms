@@ -6,19 +6,18 @@ import type { ServiceNavEntry } from "@/components/app/navigation";
    `navigation.ts`, in the Store and equipment section after the Store.
 
    RESOURCE `equipment`: everybody holding any grant on it sees the entry
-   — owner, admin, GM, hotel manager, store manager, kitchen manager, chef,
+   — owner, admin, GM, hotel manager, Inventory Manager, kitchen manager, chef,
    housekeeping, reception, accountant, viewer. The revenue manager and
    the till operator hold none.
 
-   WORKING MENUS. The Inventory Manager's (`stores`, S13) — the brief's one
-   permitted edit to the pinned menus in `navigation.test.ts`. The owner also
-   answered Housekeeping (16 September); that pinned menu is the master's to
-   change, so until then housekeeping finds it with Find a screen.
+   WORKING MENUS. The Inventory Manager's (`stores`, S13) and Housekeeping's
+   (the owner's answer, 16 September; added by the master at the merge). Both
+   are pinned in `navigation.test.ts`.
 
    Was a Coming soon page meaning door locks and room phones; those moved
    to Room systems. */
 export const nav: ServiceNavEntry[] = [
-  { section: "store-and-equipment", order: 20, workingMenus: ["stores"],
+  { section: "store-and-equipment", order: 20, workingMenus: ["stores", "housekeeping"],
     label: "Equipment", to: "/h/:code/equipment", icon: Armchair, resource: "equipment",
     matchPrefix: true,
     keywords: ["asset", "register", "repair", "warranty", "amc", "furniture", "appliance",

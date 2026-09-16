@@ -206,3 +206,62 @@ begin
   delete from hotels where id in (h, far);
   alter table hotels enable trigger hotels_no_delete;
 end $$;
+
+
+-- =============================================================================
+-- A PROPERTY WITH EQUIPMENT OR STOCK IS NOT DELETED (098, EQ-2)
+-- =============================================================================
+-- The fixture cannot be deleted by design, so it is built inside a block that
+-- is rolled back on purpose; what the refusal said is kept in variables, which
+-- a rollback does not touch, and asserted afterwards.
+do $$
+declare
+  h uuid; loc uuid; cat uuid; item uuid; rice uuid; who uuid;
+  eq_state text; eq_detail text; st_detail text;
+begin
+  select id into who from staff where email = 'owner@fidato.in';
+
+  begin
+    h := app.provision_property_unchecked('EQD','Equipment Delete Test','Nowhere');
+    insert into locations (hotel_id, name, kind) values (h, 'Main store', 'store') returning id into loc;
+    insert into equipment_categories (hotel_id, name) values (h, 'Appliance') returning id into cat;
+    insert into equipment_items (hotel_id, name, category_id, held_as, tag, created_by)
+    values (h, 'Test TV', cat, 'tagged', 'EQ-0001', who) returning id into item;
+    insert into equipment_moves (hotel_id, item_id, kind, to_location_id, moved_by)
+    values (h, item, 'placed', loc, who);
+
+    begin
+      delete from hotels where id = h;
+    exception when others then
+      get stacked diagnostics eq_state = returned_sqlstate, eq_detail = pg_exception_detail;
+    end;
+    raise exception 'fixture rolled back on purpose';
+  exception when others then
+    if sqlerrm <> 'fixture rolled back on purpose' then raise; end if;
+  end;
+
+  begin
+    h := app.provision_property_unchecked('STD','Stock Delete Test','Nowhere');
+    insert into stock_items (hotel_id, name, unit) values (h, 'Test rice', 'kg') returning id into rice;
+    insert into stock_movements (hotel_id, item_id, business_date, kind, quantity, moved_by)
+    values (h, rice, current_date, 'receipt', 10, who);
+
+    begin
+      delete from hotels where id = h;
+    exception when others then
+      get stacked diagnostics st_detail = pg_exception_detail;
+    end;
+    raise exception 'fixture rolled back on purpose';
+  exception when others then
+    if sqlerrm <> 'fixture rolled back on purpose' then raise; end if;
+  end;
+
+  perform test.ok('property delete',
+    'a property with a register is refused, and the refusal says equipment',
+    eq_detail like '%equipment items%', coalesce(eq_state, '-') || ' · ' || coalesce(eq_detail, 'no detail'));
+  perform test.ok('property delete',
+    'a property with stock movements is refused, and the refusal says stock',
+    st_detail like '%stock movements%', coalesce(st_detail, 'no detail'));
+  perform test.ok('property delete','neither fixture outlived its block',
+    (select count(*) from hotels where code in ('EQD', 'STD')) = 0);
+end $$;

@@ -17,27 +17,6 @@ code; it had no defects. Those notes moved to `room-systems`.
 
 ## Open — not fixed
 
-### EQ-2 · Deleting an untraded property with a register fails with the wrong reason
-
-**Found** 16 September, reading `066_delete_untraded_property.sql` while writing
-the register's own test clean-up.
-
-`app.forbid_hotel_delete()` refuses to delete a property that has traded and
-names what it found — reservations, folios, postings, invoices, payments,
-orders, events, audits, shifts, work orders. **Equipment is not on the list**
-(nor is the Store's `stock_movements`). A property with a register and nothing
-else passes the check; the cascade then reaches `equipment_history`, whose
-append-only trigger refuses with *"equipment_history is append-only. Post a
-reversing entry…"* — refused, which is right, for a reason nobody at an
-administration screen can act on.
-
-**Not fixed: 066 is the master's.** Written as a request in `MODULE.md`. The fix
-is one line in the evidence list: equipment items (and, for the Store, stock
-movements).
-
-**The rule:** an append-only table that cascades from `hotels` is evidence of
-trading, and belongs in `forbid_hotel_delete`'s list the day it is created.
-
 ### EQ-3 · Two migrations at once on the local Postgres collide
 
 **Found** 16 September, by causing it. `cd api; npm test` was migrating its
@@ -60,6 +39,36 @@ database — roles are cluster-wide. One migration run at a time per Postgres.
 ---
 
 ## Fixed
+
+### EQ-2 · Deleting an untraded property with a register fails with the wrong reason — FIXED 16 September
+
+**Found** 16 September, reading `066_delete_untraded_property.sql` while writing
+the register's own test clean-up.
+
+`app.forbid_hotel_delete()` refuses to delete a property that has traded and
+names what it found — reservations, folios, postings, invoices, payments,
+orders, events, audits, shifts, work orders. **Equipment is not on the list**
+(nor is the Store's `stock_movements`). A property with a register and nothing
+else passes the check; the cascade then reaches `equipment_history`, whose
+append-only trigger refuses with *"equipment_history is append-only. Post a
+reversing entry…"* — refused, which is right, for a reason nobody at an
+administration screen can act on.
+
+**Not fixed: 066 is the master's.** Written as a request in `MODULE.md`. The fix
+is one line in the evidence list: equipment items (and, for the Store, stock
+movements).
+
+**The rule:** an append-only table that cascades from `hotels` is evidence of
+trading, and belongs in `forbid_hotel_delete`'s list the day it is created.
+
+**Fixed by the master, 16 September — migration 098.** `app.forbid_hotel_delete`
+counts **equipment items** and **stock movements** too, so a property holding
+either is refused with *"A property that has traded is deactivated, never
+deleted"* and a detail naming them. Proved in `db/tests/modules/shared.sql`
+("property delete"): both refusals name what they found; without 098 both
+checks fail.
+
+---
 
 ### EQ-1 · Every new category was refused with "permission denied"
 

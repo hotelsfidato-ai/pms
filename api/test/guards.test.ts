@@ -335,11 +335,15 @@ describe("a walk-in records where it came from", () => {
     try {
       const { rows } = await check.query<{
         business_source: string | null; market_segment: string | null;
-        sales_person: string | null; is_single_lady: boolean;
+        sales_person: string | null; is_single_lady: boolean; reference: string;
       }>(
-        `select business_source, market_segment, sales_person, is_single_lady
+        `select business_source, market_segment, sales_person, is_single_lady,
+                reference
            from reservations where id = $1`, [made]);
 
+      /* RES-2: a walk-in's reference comes from app.next_reference, in the
+         owner's format — FH-<hotel code>-<YYMM>-<number> — like every booking. */
+      expect(rows[0]!.reference).toMatch(/^FH-5EL-\d{4}-\d{4,}$/);
       expect(rows[0]!.business_source).toBe("Sharma Travels");
       expect(rows[0]!.market_segment).toBe("Corporate");
       expect(rows[0]!.sales_person).toBe("R Patil");

@@ -14,7 +14,13 @@ entries stay here: they are the reason the fault does not come back.
 
 ## Open — not fixed
 
-### RES-2 · The booking reference is generated without a lock, in two copies
+None, 16 September.
+
+---
+
+## Fixed
+
+### RES-2 · The booking reference is generated without a lock, in two copies — FIXED 16 September
 
 **Found** — 16 September, the readiness audit, by reading.
 
@@ -29,9 +35,14 @@ entries stay here: they are the reason the fault does not come back.
 
 **The rule** — Two copies of a number generator are two chances to hand out the same number.
 
----
+**Closed, 16 September — the walk-in door, by the master.** `front-desk/operations.ts`
+`POST /:code/walk-ins` now asks `select app.next_reference($1)` inside its
+transaction, before the insert, like the booking door. The inline copy is gone.
+Proved in `api/test/guards.test.ts` ("a walk-in records where it came from"):
+the walk-in's reference matches `FH-5EL-<YYMM>-<number>`; run against the old
+code it failed with `FH-2609-5031`. **No inline generator is left.**
 
-## Fixed
+---
 
 ### RES-1 · A refused booking kept what it wrote before the refusal — FIXED 16 September
 

@@ -933,16 +933,18 @@ operations.post("/:code/walk-ins", async (c) => {
       [guestName],
     );
 
-    /* The per-hotel reference sequence. `nextReference()` in the store
-       generated one client-side, which cannot stay unique once two
-       clerks are taking walk-ins at the same desk. */
+    /* ONE REFERENCE, FROM ONE PLACE (RES-2, migration 092) — the last door to
+       join, 16 September. This was the second inline copy of the generator:
+       no hotel code, the month on the server's clock, no lock (two walk-ins
+       in one second made the same reference and the second failed), and
+       lpad, which CUTS a number past four digits (MEMORY 280). The booking
+       door moved in round 1; this one was missed.
+
+       ⚠ IN THIS TRANSACTION, BEFORE THE INSERT — app.next_reference's lock
+       lasts until the transaction ends, so the next caller waits, then sees
+       this row. */
     const { rows: refRows } = await client.query<{ reference: string }>(
-      `select 'FH-' || to_char(now(), 'YYMM') || '-' ||
-              lpad((coalesce(max(substring(reference from '[0-9]+$')::int), 5000) + 1)::text, 4, '0')
-              as reference
-         from reservations where hotel_id = $1`,
-      [hotelId],
-    );
+      "select app.next_reference($1) as reference", [hotelId]);
 
     const { rows: made } = await client.query<{ id: string }>(
       `insert into reservations

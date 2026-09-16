@@ -65,7 +65,7 @@ export function DialogContent({
             )}
           </div>
           <DialogPrimitive.Close
-            className="text-grey-500 hover:text-ink-900 hover:bg-grey-100 rounded-sm p-1 -m-1 transition-colors duration-150"
+            className="text-grey-500 hover:text-ink-900 hover:bg-grey-100 rounded-sm p-1 -m-1 pointer-coarse:p-3.5 pointer-coarse:-m-3.5 transition-colors duration-150"
             aria-label="Close"
           >
             <X className="size-4" />
@@ -132,7 +132,7 @@ export function DrawerContent({
             )}
           </div>
           <DialogPrimitive.Close
-            className="text-grey-500 hover:text-ink-900 hover:bg-grey-100 rounded-sm p-1 -m-1 transition-colors duration-150"
+            className="text-grey-500 hover:text-ink-900 hover:bg-grey-100 rounded-sm p-1 -m-1 pointer-coarse:p-3.5 pointer-coarse:-m-3.5 transition-colors duration-150"
             aria-label="Close"
           >
             <X className="size-4" />
