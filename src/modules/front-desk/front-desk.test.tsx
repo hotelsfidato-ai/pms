@@ -203,3 +203,62 @@ describe("the tape chart at /h/:code/stay", () => {
     expect(rooms).toBeDefined();
   });
 });
+
+
+/* ══════════════════════════════════════════════════════════════════
+   A PHONE GETS THE CARDS, WHATEVER THE TOGGLE SAYS
+
+   16 September, the owner's decision. These five screens share
+   `StayTable`, which has had a purpose-built card view behind a
+   remembered table/cards toggle since the start — so a clerk whose
+   toggle said "table" met a table wider than their phone inside a
+   sideways scroller.
+
+   The breakpoint decides which of the two renders, and jsdom has no
+   breakpoints, so what is asserted here is the STRUCTURE the breakpoint
+   acts on: the cards exist, in a wrapper that hides them from `sm` up,
+   while the table sits in one that hides it below. If somebody removes
+   either wrapper, one of the two is shown at every width — two copies
+   of the same list on one screen — and this fails.
+   ══════════════════════════════════════════════════════════════════ */
+describe("the stay lists on a phone", () => {
+  beforeEach(() => {
+    /* The toggle is remembered in localStorage, and "table" is what a
+       clerk who has never touched it has. That is the case this is
+       about. */
+    try { localStorage.setItem("fidato-stay-view", "table"); } catch { /* not fatal */ }
+  });
+
+  it("renders the cards below sm and the table from sm up", async () => {
+    go(`/h/${HOTEL}/arrivals`);
+    const { container } = render(<App />);
+    await screen.findAllByText(/Superior|Deluxe/i);
+
+    /* `[class~=]` rather than an escaped `.sm\:hidden`: a class with a
+       colon in it must be escaped in a selector, and it is easy to write
+       one backslash where JavaScript needs two — which silently matches
+       nothing and makes the test pass for the wrong reason. An exact
+       match on the whole class token cannot be got wrong that way. */
+    const cards = container.querySelector('div[class~="sm:hidden"] > ul[data-stay-cards]');
+    expect(cards, "the stay cards are not rendered on a phone").not.toBeNull();
+    expect(cards!.querySelectorAll("li").length).toBeGreaterThan(0);
+
+    /* One list, not two: these cards belong to THIS screen, and if the
+       toggle ever renders them as well a phone shows the same stays
+       twice down the page. */
+    expect(container.querySelectorAll("[data-stay-cards]")).toHaveLength(1);
+
+    const table = container.querySelector('div[class~="sm:block"] table');
+    expect(table, "the table is not hidden below sm").not.toBeNull();
+  });
+
+  it("hides the table/cards toggle on a phone, where there is nothing to choose", async () => {
+    go(`/h/${HOTEL}/arrivals`);
+    render(<App />);
+    await screen.findAllByText(/Superior|Deluxe/i);
+
+    const toggle = screen.getByLabelText("Show as cards").parentElement!;
+    expect(toggle.className).toContain("hidden");
+    expect(toggle.className).toContain("sm:flex");
+  });
+});

@@ -38,6 +38,36 @@ A literal stands in for the person acting, so a document or a log can name the w
 
 ## Fixed — the solution is here; do not work it out again
 
+### FD-4 · A phone showed the table because of a setting nobody had touched
+
+**Found** — 16 September, measuring the five stay screens at 375px. `StayTable`
+has had a purpose-built card view since the start, behind a table/cards toggle
+remembered in `localStorage` under `fidato-stay-view`. The default is `table`,
+so a clerk who had never found the toggle met a table wider than their phone
+inside a sideways scroller — on Arrivals, In house, Walk-ins, All bookings and
+Folios.
+
+**Fixed** — 16 September, the owner's decision. Below `sm` the cards render
+whatever the toggle says, and the toggle itself hides — at a desk it is a real
+choice, on a phone there is nothing to choose. Measured after: 10 · 9 · 21 · 86
+· 5 cards on the five screens, nothing outside the viewport, no page scrolling
+sideways; at 1280 the table and the toggle are exactly as they were.
+
+**Two things to know before touching this file again:**
+
+1. **There are two card renderers now.** `DataTable` grew its own card mode the
+   same day, for every other list. On these five screens that mode still
+   renders inside the `hidden sm:block` wrapper, where nothing can see it — dead
+   markup, not a second list on screen. Do not "fix" it by deleting the
+   wrapper: that shows both.
+2. **The guard is `data-stay-cards`**, on the `ul`. Before it existed the test
+   matched any `ul` inside a `sm:hidden` div, which `DataTable`'s own cards also
+   satisfy — so the guard passed with the stay cards removed. Proven by
+   removing them.
+
+**The rule** — When a second component grows the same shape, a test that
+matches the shape stops testing the thing. Mark the one you mean.
+
 ### FD-3 · A refused walk-in left a guest that can never be deleted
 
 **Found** — Root MEMORY 243, by an audit rather than a test.

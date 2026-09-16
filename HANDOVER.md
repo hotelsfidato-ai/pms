@@ -262,14 +262,20 @@ card, and was seen to fail.
 **Re-measured**: six screens render cards (10, 9, 21, 86, 32 and 7 of them),
 nothing outside the viewport, no page scroll, Housekeeping 0 small targets.
 
-**One thing for the owner** — `src/components/lists/StayTable.tsx` already had a
-card view (`StayCards`) behind a manual table/cards toggle, used by Arrivals,
-In house, Walk-ins, All bookings and Folios. I did not grep before writing a
-generic one. Nothing is duplicated on screen — a person sees one or the other —
-but there are now two card designs, and on a phone the bespoke one only appears
-if that person has chosen "cards". **Asked, not decided:** should those five
-screens show their bespoke cards automatically on a phone? Until it is
-answered, nothing else is changed there.
+**The five stay screens use their own cards — the owner's decision, 16
+September.** `src/modules/front-desk/components/StayTable.tsx` already had a
+card view (`StayCards`) behind a table/cards toggle remembered per device, and
+its default was the table — so a clerk who never found the toggle met the
+sideways scroller anyway. Below `sm` those cards now render whatever the toggle
+says, and the toggle hides; at a desk nothing changed. Measured at 375px: 10 ·
+9 · 21 · 86 · 5 cards, nothing outside the viewport; at 1280: the table and the
+toggle as they were.
+
+I should have grepped before writing a generic card renderer, and there are now
+two of them. **`src/modules/front-desk/DEFECTS.md` FD-4 says what a future
+session needs**: on these five screens `DataTable`'s card mode still renders
+inside the wrapper that hides it, which is dead markup and not a bug to tidy
+away — removing that wrapper shows both.
 
 **Still to do when the owner wants it:** they also asked to "pull mobile design
 references" — a reference pass on the phone layouts, not started.

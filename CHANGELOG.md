@@ -129,6 +129,34 @@ Then, second question: **can this POS route a KOT and give a printout?**
 
 ---
 
+## 2026-09-16 (mobile, part two) · The stay screens use their own cards
+
+**Asked for:** the owner's answer to the question the first mobile pass raised —
+should the five screens that already have purpose-built cards show them on a
+phone? **Yes.**
+
+**Shipped** — `src/modules/front-desk/components/StayTable.tsx`:
+- Below `sm` the bespoke `StayCards` render **whatever the remembered toggle
+  says**. The toggle hides on a phone: at a desk, a table of forty rows against
+  cards is a real choice; on a phone it is not one.
+- The pairs inside a card go to one column below `sm` and wrap instead of
+  truncating — two 160px columns turned "Booking.com" into "Booking.c…".
+- `data-stay-cards` marks the list, because `DataTable` now has cards too and a
+  test that matched the shape alone passed with these cards deleted. **Proven
+  by deleting them**: "the stay cards are not rendered on a phone".
+
+**Measured at 375px**, signed in and reading each screen: Arrivals 10 cards, In
+house 9, Walk-ins 21, All bookings 86, Folios 5 — nothing outside the viewport,
+no page scrolling sideways, no toggle. At 1280: the table and the toggle
+unchanged, 0 cards. Types clean · **212 web tests**, exit 0 · build clean, "no
+test sign-in in dist".
+
+**Recorded** — `src/modules/front-desk/DEFECTS.md` FD-4, including the two
+things the next person needs: there are two card renderers, and the wrapper
+that hides one of them is not a bug to be tidied away.
+
+---
+
 ## 2026-09-16 (mobile) · A list is a card list on a phone
 
 **Asked for:** improve the mobile experience; the owner chose the mobile pass

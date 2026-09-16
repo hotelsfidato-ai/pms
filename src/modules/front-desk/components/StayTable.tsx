@@ -150,7 +150,13 @@ export interface StayRow extends Stay {
    a page is about are worse than one view.
 
    The guest and the room lead, because they are what somebody is
-   looking for; everything else is a labelled pair underneath. */
+   looking for; everything else is a labelled pair underneath.
+
+   ⚠ A PHONE ALWAYS GETS THESE, whatever the toggle says (16 September,
+   the owner's decision). The toggle is a choice worth making at a desk,
+   where a table of forty rows is genuinely better; below `sm` a table
+   is a sideways scroller and there is nothing to choose between. So the
+   toggle hides on a phone and these cards render instead. */
 function StayCards({ rows, columns, onOpen }: {
   rows: StayRow[];
   columns: StayColumn[];
@@ -163,7 +169,11 @@ function StayCards({ rows, columns, onOpen }: {
   const showsStatus = columns.includes("status");
 
   return (
-    <ul className="grid gap-2 @2xl:grid-cols-2 @5xl:grid-cols-3">
+    /* Named for the test: `DataTable` grew a card list of its own on 16
+       September, so "a ul inside a div that hides from sm up" no longer
+       identifies THESE cards. A guard that cannot tell the two apart
+       passes while the thing it guards is gone. */
+    <ul data-stay-cards className="grid gap-2 @2xl:grid-cols-2 @5xl:grid-cols-3">
       {rows.map((s, i) => (
         <li key={s.id}>
           <button
@@ -192,14 +202,19 @@ function StayCards({ rows, columns, onOpen }: {
               <div className="mt-2">{ALL_COLUMNS["status"].cell(s, i)}</div>
             )}
 
+            {/* One column on a phone: two 160px columns turn
+                "Booking.com" into "Booking.c…", and a list that hides
+                what it is showing is not a list. */}
             {rest.length > 0 && (
-              <dl className="grid grid-cols-2 gap-x-4 gap-y-1.5 mt-2.5">
+              <dl className="grid grid-cols-1 sm:grid-cols-2
+                             gap-x-4 gap-y-1.5 mt-2.5">
                 {rest.map((c) => (
                   <div key={c} className="min-w-0">
                     <dt className="text-sm text-grey-500">
                       {ALL_COLUMNS[c].header}
                     </dt>
-                    <dd className="text-base text-ink-900 truncate">
+                    <dd className="text-base text-ink-900 min-w-0
+                                   break-words sm:truncate">
                       {ALL_COLUMNS[c].cell(s, i)}
                     </dd>
                   </div>
@@ -281,6 +296,9 @@ export function StayTable({
     );
   }, [rows, query]);
 
+  /* Cards — either kind — only once there is something to show. */
+  const hasRows = !isLoading && !error && filtered.length > 0;
+
   const selected = (rows ?? []).find((s) => s.id === selectedId) ?? null;
 
   const open = (id: string) => {
@@ -320,8 +338,11 @@ export function StayTable({
 
         {/* A table is right at a desk with forty rows. Cards are right
             on a phone, and right when somebody is comparing four
-            bookings rather than scanning forty. */}
-        <div className="flex rounded-md border border-grey-200 overflow-hidden">
+            bookings rather than scanning forty.
+
+            HIDDEN ON A PHONE, because there the answer is not in doubt:
+            the cards render below `sm` whichever way this is set. */}
+        <div className="hidden sm:flex rounded-md border border-grey-200 overflow-hidden">
           <button
             type="button"
             onClick={() => chooseView("table")}
@@ -358,9 +379,21 @@ export function StayTable({
           and an empty list are all states DataTable already renders
           properly, and a second set of them would be a second set to
           get wrong. */}
-      {view === "cards" && !isLoading && !error && filtered.length > 0 ? (
+      {view === "cards" && hasRows ? (
         <StayCards rows={filtered} columns={columns} onOpen={open} />
       ) : (
+      <>
+      {/* The same cards on a phone, whatever the toggle remembers. Both
+          branches render when there are rows; the breakpoint decides
+          which one anybody sees, so nothing is shown twice. Loading, an
+          error and an empty list are not here at all — DataTable draws
+          those at every width. */}
+      {hasRows && (
+        <div className="sm:hidden">
+          <StayCards rows={filtered} columns={columns} onOpen={open} />
+        </div>
+      )}
+      <div className={hasRows ? "hidden sm:block" : undefined}>
       <DataTable<StayRow>
         rows={filtered}
         columns={columns.map((c) => ALL_COLUMNS[c])}
@@ -378,6 +411,8 @@ export function StayTable({
           </div>
         }
       />
+      </div>
+      </>
       )}
 
       {/* THE panel the tape chart opens — one component, not a copy of
