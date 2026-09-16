@@ -130,7 +130,7 @@ owner.** Release it when you finish: `npm run release -- pos`.
 (Until 16 September this said to write `.claims\pos.md`. A file written inside
 your copy is visible only in your copy, so no other chat could ever see it. If
 your copy is older than that and has no `npm run claim`, run the same thing as
-`node "D:idato pms\scripts\claim.mjs" claim pos "what you are doing"`.)
+`node "D:\fidato pms\scripts\claim.mjs" claim pos "what you are doing"`.)
 
 Before every commit:
 

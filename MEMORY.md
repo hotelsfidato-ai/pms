@@ -6555,7 +6555,7 @@ claimed" into cp6 permanently.
 **Fixed the same day:** claims live in the git directory every worktree shares
 (`git rev-parse --git-common-dir`/fidato-claims), through `npm run claim`,
 `release` and `claims`. Proved from two copies: a claim made in the main folder
-is listed from `D:idato-stores`, and claiming the same service from there is
+is listed from `D:\fidato-stores`, and claiming the same service from there is
 refused with the holder named.
 
 **The rule: shared coordination state must live where every copy reads it, and
