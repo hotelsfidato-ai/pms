@@ -150,7 +150,10 @@ export default function ReportsIndexPage() {
   return (
     <Page>
       <PageHeader
-        title="Reports"
+        /* The menu entry's words (REP-3). It said "Reports" under a menu
+           entry reading "All reports" — the kind of difference that makes
+           somebody wonder whether they opened the right screen. */
+        title="All reports"
         description="Taken from real exports out of the live system, so the columns and the totals match what is being read today."
         badge={<StatusPill tone="neutral">{BUILT} of {TOTAL} built</StatusPill>}
       />

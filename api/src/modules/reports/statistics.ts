@@ -271,11 +271,16 @@ statistics.get("/:code/statistics/monthly", async (c) => {
 /* ── Yearly Statistics — the same columns, one row per month ──── */
 
 statistics.get("/:code/statistics/yearly", async (c) => {
-  const year = Number(c.req.query("year") ?? 2026);
+  const yearParam = c.req.query("year");
 
   const body = await withSession(c.get("subject"), async (client) => {
     const hotelId = await hotelIdFor(client, c.req.param("code"));
     if (!hotelId) return null;
+    /* The calendar year the property is operating in. WAS `?? 2026`
+       (REP-1): asked for no year, this printed 2026 in 2027 and after. */
+    const year = yearParam
+      ? Number(yearParam)
+      : Number((await businessDateFor(client, hotelId)).slice(0, 4));
 
     const out = [];
     for (let m = 0; m < 12; m++) {

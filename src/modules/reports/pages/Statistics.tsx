@@ -12,7 +12,7 @@ import {
   ReportShell, ReportTable, ReportHead, Amount,
 } from "@/modules/reports/components/ReportShell";
 import { getMonthlyStatistics, getYearlyStatistics, type MonthlyStatRow, type YearlyStatRow } from "@/modules/reports/data/reportData";
-import { PTD_FROM } from "@/modules/reports/data/statistics";
+import { PTD_FROM, monthOf } from "@/modules/reports/data/statistics";
 import { BUSINESS_DATE } from "@/data/repositories";
 
 /* ══════════════════════════════════════════════════════════════════
@@ -35,9 +35,12 @@ export function MonthlyOccupancyPage() {
   const fallback = useUi((s) => s.hotelId);
   const hotelId = params.code ?? fallback;
 
+  /* The month the property is operating in (REP-1). */
+  const month = monthOf(BUSINESS_DATE);
+
   const { data, isLoading } = useQuery({
-    queryKey: ["monthly-occupancy", hotelId],
-    queryFn: () => getMonthlyStatistics(hotelId, "2026-08-01", "2026-08-31"),
+    queryKey: ["monthly-occupancy", hotelId, month.from],
+    queryFn: () => getMonthlyStatistics(hotelId, month.from, month.to),
   });
 
   const chart = (data ?? []).map((d) => ({
@@ -50,8 +53,8 @@ export function MonthlyOccupancyPage() {
   return (
     <ReportShell
       title="Monthly occupancy"
-      period="August 2026"
-      meta="Monthly Occupancy — August 2026"
+      period={`${month.name} ${month.year}`}
+      meta={`Monthly Occupancy — ${month.name} ${month.year}`}
     >
       {isLoading ? (
         <div className="p-5"><Skeleton className="h-72 w-full" /></div>
@@ -89,7 +92,7 @@ export function MonthlyOccupancyPage() {
                       "Occupancy",
                     ];
                   }}
-                  labelFormatter={(d) => `${d} August 2026`}
+                  labelFormatter={(d) => `${d} ${month.name} ${month.year}`}
                 />
                 {/* Recharts v3 needs a fill on the Bar itself — without one the
                     rectangles render empty and Cell has nothing to override. */}
@@ -144,9 +147,12 @@ export function MonthlyStatisticsPage() {
   const fallback = useUi((s) => s.hotelId);
   const hotelId = params.code ?? fallback;
 
+  /* The month the property is operating in (REP-1). */
+  const month = monthOf(BUSINESS_DATE);
+
   const { data, isLoading } = useQuery({
-    queryKey: ["monthly-stats", hotelId],
-    queryFn: () => getMonthlyStatistics(hotelId, "2026-08-01", "2026-08-31"),
+    queryKey: ["monthly-stats", hotelId, month.from],
+    queryFn: () => getMonthlyStatistics(hotelId, month.from, month.to),
   });
 
   const rows = data ?? [];
@@ -155,8 +161,8 @@ export function MonthlyStatisticsPage() {
   return (
     <ReportShell
       title="Monthly statistics"
-      period="August 2026"
-      meta="Month August, 2026   Show Unposted Inclusions Charges   No"
+      period={`${month.name} ${month.year}`}
+      meta={`Month ${month.name}, ${month.year}   Show Unposted Inclusions Charges   No`}
       csv={() => ({
         headers: [
           "Date", "Available", "Night sold", "Complimentary", "Occupancy %",
@@ -224,16 +230,20 @@ export function YearlyStatisticsPage() {
   const fallback = useUi((s) => s.hotelId);
   const hotelId = params.code ?? fallback;
 
+  /* The calendar year the property is operating in, January to
+     December as the eZee export prints it (REP-1). */
+  const { year } = monthOf(BUSINESS_DATE);
+
   const { data, isLoading } = useQuery({
-    queryKey: ["yearly-stats", hotelId, 2026],
-    queryFn: () => getYearlyStatistics(hotelId, 2026),
+    queryKey: ["yearly-stats", hotelId, year],
+    queryFn: () => getYearlyStatistics(hotelId, year),
   });
 
   const rows = data ?? [];
   const total = totals(rows);
 
   return (
-    <ReportShell title="Yearly statistics" period="2026" meta="Year 2026">
+    <ReportShell title="Yearly statistics" period={String(year)} meta={`Year ${year}`}>
       {isLoading ? (
         <div className="p-5 space-y-2">
           {Array.from({ length: 12 }).map((_, i) => <Skeleton key={i} className="h-7 w-full" />)}

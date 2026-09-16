@@ -1,3 +1,4 @@
+import { format } from "date-fns";
 import { api, ApiError } from "@/lib/api";
 import { BUSINESS_DATE, PTD_FROM, PTD_TO } from "@/data/repositories/businessDate";
 import type { DayStatistics, PeriodStatistics } from "@/data/repositories/types";
@@ -34,6 +35,46 @@ export { PTD_FROM, PTD_TO } from "@/data/repositories/businessDate";
 
 const range = (from: string, to: string) =>
   `from=${encodeURIComponent(from)}&to=${encodeURIComponent(to)}`;
+
+/** A calendar month: its first and last day, and the words it prints as. */
+export interface ReportMonth {
+  from: string;
+  to: string;
+  /** "August" */
+  name: string;
+  year: number;
+}
+
+/**
+ * The calendar month a `YYYY-MM-DD` date falls in — for the monthly and
+ * yearly reports, called with the business date.
+ *
+ * ⚠ REP-1. Monthly occupancy and Monthly statistics asked for
+ * "2026-08-01" to "2026-08-31" and printed "August 2026"; Yearly
+ * statistics asked for 2026. Correct on 25 August 2026 and on no other
+ * day of their lives, and wrong in a way nobody notices, because the
+ * numbers still look like numbers.
+ *
+ * The last day is day 0 of the NEXT month, in UTC — the server's
+ * monthEnd() does the same, so the grid's range and the API's own
+ * default can never disagree about February. The name is built from a
+ * local date so no time zone can move 1 August into July.
+ *
+ * ⚠ The month's NAME is formatted here because `@/lib/format` has no
+ * month-and-year formatter; asked of the master in MODULE.md, Requests.
+ */
+export function monthOf(date: string): ReportMonth {
+  const year = Number(date.slice(0, 4));
+  const month = Number(date.slice(5, 7));
+  const mm = String(month).padStart(2, "0");
+  const last = new Date(Date.UTC(year, month, 0)).getUTCDate();
+  return {
+    from: `${year}-${mm}-01`,
+    to: `${year}-${mm}-${String(last).padStart(2, "0")}`,
+    name: format(new Date(year, month - 1, 1), "MMMM"),
+    year,
+  };
+}
 
 /** A property the caller cannot see has no statistics, not an error. */
 async function fetchOr<T>(path: string, empty: T): Promise<T> {

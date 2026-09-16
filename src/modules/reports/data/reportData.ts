@@ -1,4 +1,4 @@
-import { BUSINESS_DATE } from "@/data/repositories/businessDate";
+import { BUSINESS_DATE, PTD_FROM } from "@/data/repositories/businessDate";
 import { fetchOr } from "@/data/repositories/http";
 
 /* ══════════════════════════════════════════════════════════════════
@@ -33,7 +33,7 @@ export interface NoShowRow {
 
 export async function getNoShowReport(
   hotelId: string,
-  from = "2026-08-01",
+  from = PTD_FROM,
   to = BUSINESS_DATE,
 ): Promise<NoShowRow[]> {
   if (!hotelId) return [];
@@ -63,7 +63,7 @@ export interface CityLedgerRow {
  */
 export async function getCityLedger(
   hotelId: string,
-  from = "2026-08-01",
+  from = PTD_FROM,
   to = BUSINESS_DATE,
 ): Promise<CityLedgerRow[]> {
   if (!hotelId) return [];
@@ -91,10 +91,13 @@ export interface MonthlyStatRow {
   expense: number;
 }
 
+/* No default range (REP-1). It defaulted to 1–31 August 2026, and both
+   monthly pages passed that same literal — so the grid said August in
+   every month of every year. The caller says which month: see monthOf. */
 export async function getMonthlyStatistics(
   hotelId: string,
-  from = "2026-08-01",
-  to = "2026-08-31",
+  from: string,
+  to: string,
 ): Promise<MonthlyStatRow[]> {
   if (!hotelId) return [];
   return fetchOr<MonthlyStatRow[]>(
@@ -110,7 +113,7 @@ export interface YearlyStatRow extends Omit<MonthlyStatRow, "date"> {
 
 export async function getYearlyStatistics(
   hotelId: string,
-  year = 2026,
+  year: number,
 ): Promise<YearlyStatRow[]> {
   if (!hotelId) return [];
   return fetchOr<YearlyStatRow[]>(
@@ -145,7 +148,7 @@ export interface LodgingTaxRow {
  */
 export async function getLodgingTax(
   hotelId: string,
-  from = "2026-08-01",
+  from = PTD_FROM,
   to = BUSINESS_DATE,
 ): Promise<LodgingTaxRow[]> {
   if (!hotelId) return [];
