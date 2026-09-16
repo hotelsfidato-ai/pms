@@ -340,6 +340,38 @@ price answers exactly as it did before.
 default, not everything is derived, and the screen ships with every figure
 unset.
 
+### 3.0g · Round 1 of the service chats — who holds what, 16 September
+
+The owner talks to the master chat; the master hands out the work. Checked for
+overlap before handing out — not by service name, by the files each fix
+touches.
+
+```
+RUNNING      reservations   RES-3 (migration 091), RES-1
+             inventory      INV-3, the out-of-service test, INV-5
+READY        front-desk     the /stay error branch, FD-2
+             reports        REP-1, REP-2, REP-3, STATISTICS formatting
+             pos            the two raw dates, POS-4, POS-3
+MASTER       092 + 093 on branch master/references-and-revenue-role (merge after 091)
+             ADM-3 · FD-1 and the numbers that disagree
+PAIRED LATER front-desk + finance   FIN-2 and the /in-house BALANCE — ONE job:
+                                    getFolioBalance is finance's, and front desk
+                                    reads it for check-out AND that column
+             master + housekeeping  HK-1 needs a migration and the shared live channel
+             master + admin         ADM-1 needs a migration on the shared audit trigger
+             pos + finance + banquet  BQ-1
+             reservations + front-desk RES-2 part 2, after the master merge
+OWNER DECIDES POS-2 · POS-5 · NA-1 · API-2 · invoices ₹0 vs dash
+BATCH LATER  GUE-1 · BQ-2 · FIN-1 · ADM-2  (a heading, a comment, two cards)
+```
+
+**Off-limits in round 1, because a running chat depends on them:**
+`front-desk/components/StayTable.tsx` (reservations' All bookings screen),
+`front-desk/pages/InHouse.tsx` and every reader of `getFolioBalance` (the paired
+job), `api/src/modules/front-desk/operations.ts` (RES-2 part 2), and how rooms,
+in-house guests and ADR are COUNTED anywhere (the master's). Next free
+migration number: **094**, from the master.
+
 ### 3.0f · The design critique — 16 September
 
 `docs/audits/2026-09-16-design-critique.md`. Two isolated agents: a design
