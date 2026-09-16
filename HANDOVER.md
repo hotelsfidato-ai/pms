@@ -63,9 +63,13 @@ one hotel system    PLANNED 15 Sep — docs/HMS-INTEGRATION-PLAN.md; waiting on 
 coming soon         DEPLOYED 16 Sep (stage B, website only) — live on pms.fidatohotels.com
 route + screen audit  16 Sep: 214 routes, 89 screens, PENDING checked — docs/audits/2026-09-16-…
 defect logs         16 Sep: src/modules/<service>/DEFECTS.md — 26 open defects, each in its service
-apps (desktop,      PLANNED 16 Sep — docs/APPS-PLAN.md; waiting on decisions A1–A10.
+apps (desktop,      PLANNED 16 Sep — docs/APPS-PLAN.md; waiting on decisions A1–A11.
 tablet, phone)      Tauri desktop and a Capacitor kiosk tablet wrap today's build; Expo
                     is a small staff phone app, not a port of the 89 screens
+mobile pass         BUILT 16 Sep on cp6 (731a3d4), NOT DEPLOYED — on a phone every list
+                    built on DataTable is a card list; measured before and after at 375px
+dynamic pricing     PLANNED 16 Sep — docs/PRICING-PLAN.md; ONE question open (P1) and the
+                    build does not start until the owner answers it
 ```
 
 **Deployed 15 September** — all of it:
@@ -217,10 +221,76 @@ is the only option that closes the offline double-booking hole. But
 engine built on a guess issues one twice. So Phase 3 measures the real outage
 minutes per property from the outbox for a month, and the numbers decide.
 
-Ten decisions (§ 7 of the plan) wait on the owner. A2 is answered. Nothing
+**The POS, asked the same day: can it route a KOT and print one?** Measured
+against the schema (plan § 4.2a). **Printing is built and half-wired** — the
+docket screen is real, thermal width, no prices, with a Print button, and
+migration 049 already numbers each docket rather than each order. But
+**nothing in `src/` opens it** (POS-5, new in the POS defect log), and
+`window.print()` is a dialog, not silent. **Routing does not exist at all**:
+there is no station in the schema, so a tandoor dish, a bar drink and a
+dessert share one slip and one pass board. Stations are Phase 0a, 1–2 weeks,
+inside the `pos` folders only — and they come **before** the Tauri printing
+work or the print target is written twice.
+
+Eleven decisions (§ 7 of the plan) wait on the owner. A2 is answered. Nothing
 starts before A1 (the `packages/core` extraction, which every later phase
-imports), and Phases 1 and 2 cannot finish without A6 — which thermal printer
-the desk and the POS actually use.
+imports), and Phases 0a, 1 and 2 cannot finish without A6 — which thermal
+printer the desk and the POS actually use — or A11, how many kitchens 5
+Elements actually has.
+
+### 3.0d · The phone — BUILT 16 September, on cp6, not deployed
+
+The owner asked for the mobile experience to be improved, and chose it ahead
+of the pricing build.
+
+**Measured first**, at 375px signed in as a reception clerk. No screen scrolled
+the page sideways — but six screens a receptionist lives in (Arrivals, In
+house, Walk-ins, All bookings, Guests, Folios) put a table wider than the phone
+inside a sideways scroller, so reading one guest's row meant swiping right and
+losing their name off the left edge. Housekeeping, the one screen built for a
+phone, had **36 controls under 44px**.
+
+**Done** — in `src/components/ui/DataTable.tsx`, the shared core, so it reaches
+every screen that uses it: below `sm` each row is a **card** (first column the
+heading, every other column a labelled line), the table is unchanged from `sm`
+up, sorting keeps its own control, and a column the table hides on a narrow
+screen (`hideBelow`) **is shown in the card** — the card has the room the table
+did not. Housekeeping's assignee picker and out-of-service button are 44px.
+`src/components/ui/DataTable.test.tsx` fails if a column goes missing from the
+card, and was seen to fail.
+
+**Re-measured**: six screens render cards (10, 9, 21, 86, 32 and 7 of them),
+nothing outside the viewport, no page scroll, Housekeeping 0 small targets.
+
+**One thing for the owner** — `src/components/lists/StayTable.tsx` already had a
+card view (`StayCards`) behind a manual table/cards toggle, used by Arrivals,
+In house, Walk-ins, All bookings and Folios. I did not grep before writing a
+generic one. Nothing is duplicated on screen — a person sees one or the other —
+but there are now two card designs, and on a phone the bespoke one only appears
+if that person has chosen "cards". **Asked, not decided:** should those five
+screens show their bespoke cards automatically on a phone? Until it is
+answered, nothing else is changed there.
+
+**Still to do when the owner wants it:** they also asked to "pull mobile design
+references" — a reference pass on the phone layouts, not started.
+
+### 3.0e · Dynamic pricing — one base, everything else a difference — PLANNED 16 September, ASK FIRST
+
+The owner's instruction, 16 September: a Deluxe, one person, no breakfast is
+the cheapest thing sold and **is the base**; everything else is joined to it by
+a difference, so changing the base moves the whole system. Their seven
+decisions are in § 4 and the plan is **`docs/PRICING-PLAN.md`**.
+
+**Do not start the build.** One question decides the shape of the table
+(P1 in the plan): when a price is derived from a base that covers **one**
+person, what does the **second** person cost — nothing, because the room is
+sold for two (`room_types.base_occupancy` is 2 and does not change), or a
+difference the owner types? That answers what a two-adult Deluxe costs, and
+the answer cannot be guessed.
+
+**Read § 4 before planning anything here**, especially: the base is not the
+default, not everything is derived, and the screen ships with every figure
+unset.
 
 ### 3.1 · Clarity step 2 — one primary action per screen — DONE 15 September
 
@@ -351,6 +421,14 @@ early.
 16 Sep   the phone app is for staff AND guests eventually; the reason for all of it is availability
          on a bad network, at properties that may have a local server
 16 Sep   PRICING: the base is Deluxe · one person · room only; everything else is a difference from it
+16 Sep   ⚠ THE BASE IS NOT THE DEFAULT. Single occupancy is the base a price is built from; what a
+         room is sold as by default (room_types.base_occupancy, 2 today) is a different setting and
+         is NOT changed by the pricing work — the owner's words: "single occ is not the default
+         option but it is the base, so base and default in setting rooms are different"
+16 Sep   not everything will be derived from the base — the owner will set some prices directly
+16 Sep   the pricing screen ships with every figure UNSET (a dash) and the owner types them in
+16 Sep   Superior stops carrying its own price and becomes a difference; the dated rate row stays as a typed price
+16 Sep   the mobile pass comes first, then the pricing build
 16 Sep   pricing differences are in RUPEES, never percentages
 16 Sep   breakfast and the other meal plans are priced PER PERSON
 16 Sep   a difference may be set for a period; where nothing is set for a date, the base applies
