@@ -127,7 +127,10 @@ export function ReportShell({
         <div className="overflow-x-auto scrollbar-quiet">{children}</div>
 
         <div className="px-5 py-3 border-t border-grey-200 flex items-center justify-between gap-4 flex-wrap">
-          <p className="text-2xs text-grey-500 tabular">{stamp}</p>
+          {/* Labelled: a bare date and time under a report headed "As on
+              25 Aug 2026" reads as a second report date. It is when this
+              copy was produced. */}
+          <p className="text-2xs text-grey-500 tabular">Printed {stamp}</p>
           <p className="text-2xs text-grey-500">{ranBy}</p>
         </div>
       </Card>

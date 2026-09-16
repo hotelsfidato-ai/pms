@@ -18,8 +18,11 @@ import { BUSINESS_DATE } from "@/data/repositories/businessDate";
    part of the period's.
    ══════════════════════════════════════════════════════════════════ */
 
-/** The Indian financial year. */
-export const FY_START = "2026-04-01";
+/* `FY_START = "2026-04-01"` lived here (REP-2) and nothing read it: the
+   report's year start has always come back from the server as `ytdFrom`.
+   Removed rather than corrected — a second copy of the financial year is
+   how two screens come to disagree about it. The one rule is
+   financialYearStart() in api/src/modules/reports/manager.ts. */
 
 export interface ThreeColumn {
   label: string;
@@ -29,6 +32,9 @@ export interface ThreeColumn {
   ytd: number | null;
   total?: boolean;
   indent?: boolean;
+  /** Set on the Statistics rows, which are neither counts nor sections of
+      money: a rate in rupees, or a percentage. */
+  unit?: "money" | "percent";
 }
 
 export interface ManagerReportSection {

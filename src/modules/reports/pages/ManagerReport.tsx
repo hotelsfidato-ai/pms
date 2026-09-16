@@ -1,7 +1,7 @@
 import { useQuery } from "@tanstack/react-query";
 import { useParams } from "react-router";
 import { cn } from "@/lib/cn";
-import { money, dateShort } from "@/lib/format";
+import { money, percent, number, dateShort } from "@/lib/format";
 import { useUi } from "@/lib/ui";
 import { Skeleton, Term } from "@/components/ui";
 import { termFor } from "@/lib/glossary";
@@ -40,6 +40,18 @@ const COUNT_COLUMNS = [
   { label: "PTD", numeric: true, width: "w-[150px]", term: "ptd" as const },
   { label: "YTD", numeric: true, width: "w-[150px]", term: "ytd" as const },
 ];
+
+/* THE STATISTICS BLOCK, AS THE DASHBOARD PRINTS IT. It printed `3952.80`
+   and `1860.14` — no ₹, no grouping, two decimals — beside the Dashboard's
+   `₹3,953` for the same ADR, because every row went through one local
+   count formatter. Each row now names its unit (the server sets it) and
+   goes through format.ts. Occupancy is printed to the two decimals the
+   server rounds it to. */
+function statistic(n: number, row: ThreeColumn): string {
+  if (row.unit === "money") return money(n);
+  if (row.unit === "percent") return percent(n, 2);
+  return number(n);
+}
 
 /** The label as printed, tappable where the glossary has it. */
 function Labelled({ label }: { label: string }) {
@@ -102,7 +114,7 @@ export default function ManagerReportPage() {
             <ReportSection
               title="Statistics"
               rows={data.statistics}
-              format={(n) => (n % 1 === 0 ? String(n) : n.toFixed(2))}
+              format={statistic}
             />
           </tbody>
         </ReportTable>
@@ -154,7 +166,7 @@ function ReportSection({
   title: string;
   rows: ThreeColumn[];
   note?: string;
-  format: (n: number) => string;
+  format: (n: number, row: ThreeColumn) => string;
 }) {
   return (
     <>
@@ -177,13 +189,13 @@ function ReportSection({
             <Labelled label={row.label} />
           </td>
           <td className="px-4 py-2 text-right align-middle">
-            <Amount value={row.today} bold={row.total} format={format} />
+            <Amount value={row.today} bold={row.total} format={(n) => format(n, row)} />
           </td>
           <td className="px-4 py-2 text-right align-middle">
-            <Amount value={row.ptd} bold={row.total} format={format} />
+            <Amount value={row.ptd} bold={row.total} format={(n) => format(n, row)} />
           </td>
           <td className="px-4 py-2 text-right align-middle">
-            <Amount value={row.ytd} bold={row.total} format={format} />
+            <Amount value={row.ytd} bold={row.total} format={(n) => format(n, row)} />
           </td>
         </tr>
       ))}

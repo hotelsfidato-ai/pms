@@ -23,8 +23,25 @@ import { businessDateFor, monthStart } from "../../businessDate.ts";
 
 export const manager = new Hono<{ Variables: { subject: string } }>();
 
-/** The Indian financial year. */
-const FY_START = "2026-04-01";
+/**
+ * The first day of the Indian financial year the date falls in: 1 April
+ * of its own year from April on, 1 April of the year before in January,
+ * February and March.
+ *
+ * ⚠ WAS THE LITERAL "2026-04-01" (REP-2). Right until 31 March 2027, and
+ * from 1 April 2027 every YTD figure on the report the owner reads most
+ * would have kept counting from 2026 — quietly, because a bigger number
+ * still looks like a number.
+ *
+ * The same April rule as app.current_fin_year() (017), which cannot
+ * answer this: it reads the wall clock, and a report as on another day
+ * needs THAT day's year.
+ */
+function financialYearStart(date: string): string {
+  const year = Number(date.slice(0, 4));
+  const month = Number(date.slice(5, 7));
+  return `${month >= 4 ? year : year - 1}-04-01`;
+}
 
 async function hotelIdFor(client: Client, code: string) {
   const { rows } = await client.query<{ id: string }>(
@@ -159,12 +176,18 @@ manager.get("/:code/reports/manager", async (c) => {
     if (!hotelId) return null;
     const bd = await businessDateFor(client, hotelId);
     const asOn = asOnParam ?? bd;
-    const ptdFrom = ptdFromParam ?? monthStart(bd);
+    /* Both windows belong to the REPORT'S date, not the business date:
+       a report as on 10 July with no period sent ran its PTD from the
+       business date's month — later than the day it ended — and came
+       back empty. The web always sends ptdFrom, so nobody saw it; the
+       REP-2 test did. Unchanged when asOn is not sent. */
+    const ptdFrom = ptdFromParam ?? monthStart(asOn);
+    const ytdFrom = financialYearStart(asOn);
 
     const [today, ptd, ytd] = await Promise.all([
       windowFor(client, hotelId, asOn, asOn),
       windowFor(client, hotelId, ptdFrom, asOn),
-      windowFor(client, hotelId, FY_START, asOn),
+      windowFor(client, hotelId, ytdFrom, asOn),
     ]);
 
     /* Blocked is derived below as physical minus sellable. An earlier
@@ -189,7 +212,7 @@ manager.get("/:code/reports/manager", async (c) => {
     const three = (
       label: string,
       pick: (w: Window) => number | null,
-      extra: Partial<{ total: boolean; indent: boolean }> = {},
+      extra: Partial<{ total: boolean; indent: boolean; unit: "money" | "percent" }> = {},
     ) => ({ label, today: pick(today), ptd: pick(ptd), ytd: pick(ytd), ...extra });
 
     /* DISCOUNT COMES OFF.
@@ -291,16 +314,20 @@ manager.get("/:code/reports/manager", async (c) => {
     const occ = (w: Window) =>
       w.available ? Math.round((w.sold / w.available) * 10000) / 100 : 0;
 
+    /* Each row says what it is. The block sat under the count columns and
+       printed `3952.80` beside the Dashboard's `₹3,953` for the same ADR;
+       a row that names its unit is printed as that unit, and a row added
+       later cannot inherit the wrong one from its neighbours. */
     const statistics = [
-      three("Occupancy Rate (%)", occ),
-      three("Average Daily Rate (ADR)", rate),
-      three("Revenue Per Available Room", revpar),
+      three("Occupancy Rate (%)", occ, { unit: "percent" }),
+      three("Average Daily Rate (ADR)", rate, { unit: "money" }),
+      three("Revenue Per Available Room", revpar, { unit: "money" }),
     ];
 
     return {
       asOn,
       ptdFrom,
-      ytdFrom: FY_START,
+      ytdFrom,
       currency: cur.currency,
       sections: [
         { title: "Revenue", rows: revenue },

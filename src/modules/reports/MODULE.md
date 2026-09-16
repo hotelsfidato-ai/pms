@@ -12,9 +12,10 @@ api/src/modules/reports/      the server's routes for this service
 db/tests/modules/reports.sql  NEW database checks only — db/tests/suite.sql is frozen history
 ```
 
-Before your first edit: claim the service in `HANDOVER.md` → "Folder claims"
-(service, branch, date), read this file, then this folder's `DEFECTS.md` and
-`CHANGELOG.md`. Written 15 September 2026 from the code at `880a5b6`.
+Before your first edit: claim the service in `.claims/reports.md` (branch,
+copy, what you are doing — `.claims/README.md`), read `docs/briefs/reports.md`,
+this file, then this folder's `DEFECTS.md` and `CHANGELOG.md`. Written 15
+September 2026 from the code at `880a5b6`; brought up to date 16 September.
 
 ---
 
@@ -97,6 +98,14 @@ From `manager.ts` (332 lines):
 GET  /:code/reports/manager       the Manager report and the Dashboard
 ```
 
+**Dates on the server, one rule each.** `asOn` defaults to the business
+date; PTD starts on the first of `asOn`'s month; YTD starts on
+`financialYearStart(asOn)` in `manager.ts` — 1 April on or before it, the
+same April rule as `app.current_fin_year()`, which reads the wall clock and
+so cannot answer for another day. The yearly grid defaults to the business
+date's calendar year, January to December as the eZee export prints it. No
+report date is a literal (REP-1, REP-2, REP-4).
+
 ---
 
 ## Data
@@ -107,10 +116,13 @@ data/reportData.ts     getNoShowReport, getCityLedger, getLodgingTax, getGuestLe
                        getYearlyStatistics.
 data/statistics.ts     listDailyStatistics (no caller — KNOWN_UNREACHABLE in
                        src/data/repositories/repositories.test.ts), getPeriodStatistics,
-                       getTodaySnapshot; re-exports PTD_FROM and PTD_TO from the core.
+                       getTodaySnapshot; re-exports PTD_FROM and PTD_TO from the core;
+                       monthOf(date) — the month (first day, last day, name, year) the
+                       monthly and yearly pages report, called with the business date (REP-1).
 data/managerReport.ts  getManagerReport — the month so far starts on the first of the
-                       report's own month (MEMORY 253). Also exports FY_START, which
-                       nothing in the web app imports.
+                       report's own month (MEMORY 253). The year to date comes back from
+                       the server as `ytdFrom`; there is no web copy of it (REP-2).
+                       A Statistics row carries `unit`: "money" or "percent" (REP-5).
 components/ReportShell.tsx   the report chrome: heading, the hotel and the person from the
                        session (useDocumentIdentity), print styling, CSV, and `Amount`,
                        which prints a dash for null, never a zero. Also ReportTable,
@@ -240,11 +252,19 @@ From `PENDING.md` and `HANDOVER.md`, as of 15 September:
   report, Monthly occupancy, Monthly statistics, Yearly statistics
   (PENDING § 5a).
 - **`listDailyStatistics`** has no caller (PENDING § 4).
-- Found while writing this brief (15 September), in this folder's
-  `DEFECTS.md`: **REP-1** — Monthly occupancy and Monthly statistics always
-  show August 2026, Yearly statistics always 2026; **REP-2** — the year to
-  date always starts on 1 April 2026; **REP-3** — All reports is headed
-  "Reports".
+- **REP-6** — the Dashboard's "Owed by guests" is a net figure under a gross
+  label. The wording is with the owner (16 September); not changed.
+- REP-1 to REP-5 are fixed (16 September, `DEFECTS.md`).
+- From the design critique, not yet done: "Stage 9" in the Manager report's
+  City ledger note (a development word shown to the owner); `Total Room 17`
+  waits on the owner's D3 and is the master's to change.
+- Seen 16 September, not in round 1 and not changed: Monthly and Yearly
+  statistics and the Dashboard print occupancy with a local `${n}%`, not
+  `percent()`; the Manager report's Room Summary prints counts ungrouped
+  (`5378`); a day with nothing sold prints ADR and RevPAR as `₹0` (how ADR is
+  counted is the master's); Monthly occupancy's note "This property swings
+  between both inside a fortnight" describes August 2026's data whatever
+  month is shown.
 
 ---
 
@@ -264,15 +284,34 @@ The guard this folder must respect: `src/test/boundaries.test.ts` — another
 service reaches this one only through `index.ts`, and this one reaches others
 only through theirs.
 
-Where the checks are today: `api/test/reports.test.ts` (the Manager report
-and the guest ledger agree, the GST sales register, the cashier shift, the
-C-Form report, the city ledger) — moving to `api/test/modules/reports/`.
-Web: `src/App.test.tsx` ("the dashboard at /", "start here", "trade words
-explain themselves"), `src/components/app/navigation.test.ts`. The database
+Where the checks are today: `api/test/modules/reports/reports.test.ts` (the
+Manager report and the guest ledger agree, the GST sales register, the
+cashier shift, the C-Form report, the city ledger, and — since 16 September —
+the reports' dates in another month and financial year, and the Statistics
+units). Web: `src/modules/reports/reports.test.tsx` ("the dashboard at /"),
+`src/modules/reports/data/statistics.test.ts` (`monthOf`), `src/App.test.tsx`
+("start here", "trade words explain themselves"),
+`src/components/app/navigation.test.ts`. The database
 suite has no group of its own for reports; new checks go in
 `db/tests/modules/reports.sql`, which does not exist yet.
 
 ---
+
+## Requests to the master
+
+- **16 Sep · a month-and-year formatter in `src/lib/format.ts`.** The monthly
+  reports print "August 2026"; `format.ts` has no formatter for it, so
+  `monthOf` in `data/statistics.ts` names the month with date-fns directly —
+  as `src/components/ui/DatePicker.tsx` and `inventory/pages/Pricing.tsx`
+  already do. One `monthYear()` would take all three.
+- **16 Sep · `src/lib/glossary.ts`, header comment, line 16** says YTD is
+  "FY_START, 1 April, in both the API and here". There is no web copy now and
+  no `FY_START`: it is `financialYearStart()` in
+  `api/src/modules/reports/manager.ts`. The glossary's own YTD line, which a
+  person reads, is still true.
+- **16 Sep · the `guestLedger` line in `src/lib/glossary.ts`**, once the owner
+  has chosen the Dashboard's wording for REP-6 — it says "the charges posted,
+  less what they have paid" and does not mention refunds due.
 
 ## Requests from other services
 

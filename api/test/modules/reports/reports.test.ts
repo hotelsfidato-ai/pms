@@ -204,6 +204,107 @@ describe("the C-Form report", () => {
   });
 });
 
+/* ── Dates: derived, never typed in (REP-1, REP-2) ────────────────────
+   The Manager report's year started on the literal 1 April 2026, and the
+   yearly grid asked for 2026 whatever the year. Both were right on the
+   demo's 25 August 2026 — so every check here uses a date in ANOTHER
+   month and ANOTHER financial year, where a literal cannot pass. */
+
+describe("the reports' dates come from the report's own day", () => {
+  interface ManagerDates {
+    asOn: string; ptdFrom: string; ytdFrom: string;
+    roomSummary: Array<{ label: string; ytd: number | null }>;
+    statistics: Array<{ label: string; unit?: string }>;
+  }
+  const managerAsOn = async (query = "") =>
+    (await (await call(`/5EL/reports/manager${query}`)).json()) as ManagerDates;
+
+  /** Sellable room-nights from `from` to `to`, asked of the database —
+      what the YTD column must have counted if its window starts there. */
+  const sellable = async (from: string, to: string) => {
+    const db = await admin();
+    try {
+      const { rows } = await db.query<{ n: string }>(
+        `select coalesce(sum(app.sellable_rooms(h.id, d::date)), 0)::text as n
+           from hotels h, generate_series($1::date, $2::date, interval '1 day') d
+          where h.code = '5EL'`, [from, to]);
+      return Number(rows[0]!.n);
+    } finally { await db.end(); }
+  };
+
+  it("starts the year to date on the 1 April on or before the report's date", async () => {
+    /* [as on, the year starts, the period starts] — either side of 1 April,
+       in the demo's year and the next two. */
+    const cases: Array<[string, string, string]> = [
+      ["2026-08-25", "2026-04-01", "2026-08-01"],
+      ["2027-02-10", "2026-04-01", "2027-02-01"],
+      ["2027-03-31", "2026-04-01", "2027-03-01"],
+      ["2027-04-01", "2027-04-01", "2027-04-01"],
+      ["2027-05-10", "2027-04-01", "2027-05-01"],
+      ["2028-01-15", "2027-04-01", "2028-01-01"],
+    ];
+    for (const [asOn, ytdFrom, ptdFrom] of cases) {
+      /* No ptdFrom sent: the period must follow the report's date too. */
+      const body = await managerAsOn(`?asOn=${asOn}`);
+      expect(body.ytdFrom, `year start for ${asOn}`).toBe(ytdFrom);
+      expect(body.ptdFrom, `period start for ${asOn}`).toBe(ptdFrom);
+    }
+  });
+
+  it("counts the year to date over that window, not over the label alone", async () => {
+    /* A label can be right while the query still uses the old start. The
+       YTD room-nights are compared with the database's own sum over the
+       window the label names. */
+    for (const [asOn, ytdFrom] of [["2027-05-10", "2027-04-01"], ["2027-02-10", "2026-04-01"]]) {
+      const body = await managerAsOn(`?asOn=${asOn}`);
+      const ytd = body.roomSummary.find((r) => r.label === "Total Available Room nights")?.ytd;
+      expect(ytd, `YTD room-nights as on ${asOn}`).toBe(await sellable(ytdFrom!, asOn!));
+    }
+  });
+
+  it("with nothing sent, follows the property into another month and financial year", async () => {
+    const db = await admin();
+    const { rows: [before] } = await db.query<{ set: string; derived: string }>(
+      `select to_char(business_date, 'YYYY-MM-DD') as set,
+              to_char(app.business_date(id), 'YYYY-MM-DD') as derived
+         from hotels where code = '5EL'`);
+    /* Moving hotels.business_date moves the property only while no night
+       audit has completed; say so here rather than fail obscurely below. */
+    expect(before!.derived, "5EL has a completed night audit; its date cannot be moved here")
+      .toBe(before!.set);
+
+    await db.query("update hotels set business_date = '2027-05-10' where code = '5EL'");
+    try {
+      const report = await managerAsOn();
+      expect(report.asOn).toBe("2027-05-10");
+      expect(report.ptdFrom).toBe("2027-05-01");
+      expect(report.ytdFrom).toBe("2027-04-01");
+
+      const yearly = (await (await call("/5EL/statistics/yearly")).json()) as
+        Array<{ month: string }>;
+      expect(yearly.map((m) => m.month)).toEqual(
+        Array.from({ length: 12 }, (_, i) => `2027-${String(i + 1).padStart(2, "0")}`));
+
+      const monthly = (await (await call("/5EL/statistics/monthly")).json()) as
+        Array<{ date: string }>;
+      expect(monthly[0]?.date).toBe("2027-05-01");
+      expect(monthly.at(-1)?.date).toBe("2027-05-31");
+    } finally {
+      await db.query("update hotels set business_date = $1 where code = '5EL'", [before!.set]);
+      await db.end();
+    }
+  });
+
+  it("says what each statistic is, so the screen prints it as that", async () => {
+    const { statistics } = await managerAsOn();
+    expect(Object.fromEntries(statistics.map((r) => [r.label, r.unit]))).toEqual({
+      "Occupancy Rate (%)": "percent",
+      "Average Daily Rate (ADR)": "money",
+      "Revenue Per Available Room": "money",
+    });
+  });
+});
+
 /* ── City ledger ──────────────────────────────────────────────────── */
 
 describe("the city ledger", () => {
