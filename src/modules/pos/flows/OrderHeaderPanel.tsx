@@ -191,7 +191,14 @@ export function OrderHeaderPanel({
                   />
                 )}
               </Field>
-              <Field label="Waiter">
+              {/* POS-4: a list that failed looked like a property with
+                  nobody to choose. The order keeps the waiter it has. */}
+              <Field
+                label="Waiter"
+                hint={waiters.data === undefined && waiters.error
+                  ? "The list of waiters did not load. The order keeps the waiter it has."
+                  : undefined}
+              >
                 {(f) => (
                   <NativeSelect
                     {...fieldProps(f)}

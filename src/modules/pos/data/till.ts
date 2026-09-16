@@ -249,7 +249,18 @@ export type TillResult =
   | { ok: true; order: Order; guest?: string; room?: string }
   | { ok: false; reason: string; choices?: { folioId: string; guest: string }[] };
 
-/* ── Reads ────────────────────────────────────────────────────────── */
+/* ── Reads ────────────────────────────────────────────────────────────
+
+   ⚠ A READ THAT FAILS, THROWS. Every read below used to end in
+   `catch { return [] }`, so a server fault reached the screen as an
+   empty list — "This property has no restaurant configured" on a day
+   end that had merely failed to load (POS-4). The error now reaches
+   React Query, which keeps the last good answer when a refresh fails,
+   and the screen says which it was: refused, failed, or truly empty
+   (`components/ReadProblem.tsx`).
+
+   A missing hotel or order id still answers empty without asking —
+   there is no request to fail. */
 
 /** Whether this person may use the POS at this property — both the
     module and the reception switch (087).
@@ -257,8 +268,8 @@ export type TillResult =
     ⚠ ONLY AN EXPLICIT REFUSAL BLOCKS. The till works offline through the
     outbox, so a request that never arrived answers "go ahead" and lets
     the screen's own offline handling take over. A 403 is the server
-    saying no, with the sentence the screen then shows — the reads below
-    turn every failure into an empty list, which is how a refused
+    saying no, with the sentence the screen then shows — the reads used
+    to turn every failure into an empty list, which is how a refused
     receptionist was told "There is no menu yet" (14 September). */
 export async function getPosAccess(
   hotelId: string,
@@ -278,52 +289,42 @@ export async function getPosAccess(
 
 export async function getMenu(hotelId: string): Promise<MenuCategory[]> {
   if (!hotelId) return [];
-  try {
-    const body = await api<{ categories: MenuCategory[] }>(
-      `/api/hotels/${hotelId}/till/menu`,
-    );
-    return body.categories;
-  } catch {
-    return [];
-  }
+  const body = await api<{ categories: MenuCategory[] }>(
+    `/api/hotels/${hotelId}/till/menu`,
+  );
+  return body.categories;
 }
 
 export async function listOrders(
   hotelId: string,
 ): Promise<{ businessDate: string; orders: OrderSummary[] } | null> {
   if (!hotelId) return null;
-  try {
-    return await api<{ businessDate: string; orders: OrderSummary[] }>(
-      `/api/hotels/${hotelId}/till/orders`,
-    );
-  } catch {
-    return null;
-  }
+  return api<{ businessDate: string; orders: OrderSummary[] }>(
+    `/api/hotels/${hotelId}/till/orders`,
+  );
 }
 
 export async function getOrder(
   hotelId: string, orderId: string,
 ): Promise<Order | null> {
   if (!hotelId || !orderId) return null;
-  try {
-    return await api<Order>(`/api/hotels/${hotelId}/till/orders/${orderId}`);
-  } catch {
-    return null;
-  }
+  return api<Order>(`/api/hotels/${hotelId}/till/orders/${orderId}`);
 }
 
+/** ⚠ KEPT ON THE DEVICE so a room can be charged with the line down
+    (`till-rooms` in App.tsx's PERSISTED, the owner's decision of
+    8 September). When this caught its own failure, the refetch that
+    runs each time the settle panel opens answered an empty list with
+    no connection — and that empty list replaced the one kept on the
+    device. Throwing leaves the kept list where it is. */
 export async function listChargeableRooms(
   hotelId: string,
 ): Promise<ChargeableRoom[]> {
   if (!hotelId) return [];
-  try {
-    const body = await api<{ rooms: ChargeableRoom[] }>(
-      `/api/hotels/${hotelId}/till/rooms`,
-    );
-    return body.rooms;
-  } catch {
-    return [];
-  }
+  const body = await api<{ rooms: ChargeableRoom[] }>(
+    `/api/hotels/${hotelId}/till/rooms`,
+  );
+  return body.rooms;
 }
 
 /* ── Writes ───────────────────────────────────────────────────────── */
@@ -543,14 +544,10 @@ export function setRoundOff(
 
 export async function getKitchen(hotelId: string): Promise<KitchenLine[]> {
   if (!hotelId) return [];
-  try {
-    const body = await api<{ lines: KitchenLine[] }>(
-      `/api/hotels/${hotelId}/kitchen`,
-    );
-    return body.lines;
-  } catch {
-    return [];
-  }
+  const body = await api<{ lines: KitchenLine[] }>(
+    `/api/hotels/${hotelId}/kitchen`,
+  );
+  return body.lines;
 }
 
 export async function moveKitchenLine(
@@ -813,12 +810,8 @@ export async function getFloor(
   hotelId: string, outlet = "REST",
 ): Promise<Floor> {
   if (!hotelId) return { outlet: null, sections: [] };
-  try {
-    return await api<Floor>(
-      `/api/hotels/${hotelId}/till/floor?outlet=${encodeURIComponent(outlet)}`);
-  } catch {
-    return { outlet: null, sections: [] };
-  }
+  return api<Floor>(
+    `/api/hotels/${hotelId}/till/floor?outlet=${encodeURIComponent(outlet)}`);
 }
 
 export function openOrderOnTable(
@@ -966,13 +959,9 @@ export async function listWaiters(
   hotelId: string,
 ): Promise<{ id: string; name: string }[]> {
   if (!hotelId) return [];
-  try {
-    const body = await api<{ waiters: { id: string; name: string }[] }>(
-      `/api/hotels/${hotelId}/till/waiters`);
-    return body.waiters;
-  } catch {
-    return [];
-  }
+  const body = await api<{ waiters: { id: string; name: string }[] }>(
+    `/api/hotels/${hotelId}/till/waiters`);
+  return body.waiters;
 }
 
 /* ── The kitchen docket ───────────────────────────────────────────
@@ -1006,12 +995,8 @@ export async function getDocket(
   hotelId: string, orderId: string, kotNo: number,
 ): Promise<Docket | null> {
   if (!hotelId || !orderId || !Number.isInteger(kotNo)) return null;
-  try {
-    return await api<Docket>(
-      `/api/hotels/${hotelId}/till/orders/${orderId}/kot/${kotNo}`);
-  } catch {
-    return null;
-  }
+  return api<Docket>(
+    `/api/hotels/${hotelId}/till/orders/${orderId}/kot/${kotNo}`);
 }
 
 /* ── The day end ──────────────────────────────────────────────────
@@ -1071,12 +1056,8 @@ export async function getDayEnd(
   hotelId: string, outlet = "REST",
 ): Promise<DayEnd | null> {
   if (!hotelId) return null;
-  try {
-    return await api<DayEnd>(
-      `/api/hotels/${hotelId}/till/day-end?outlet=${outlet}`);
-  } catch {
-    return null;
-  }
+  return api<DayEnd>(
+    `/api/hotels/${hotelId}/till/day-end?outlet=${outlet}`);
 }
 
 export async function recordMovement(

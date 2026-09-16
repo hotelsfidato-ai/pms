@@ -5,9 +5,11 @@ import { Flame, ArrowLeft, Check, Ban } from "lucide-react";
 import { cn } from "@/lib/cn";
 import { useUi } from "@/lib/ui";
 import { useLiveOrders } from "@/lib/useLiveOrders";
+import { useDocumentTitle } from "@/lib/documentTitle";
 import { toast } from "@/components/ui";
 import { StartHere } from "@/components/app/StartHere";
 import { getKitchen, moveKitchenLine, type KitchenLine } from "@/modules/pos/data/till";
+import { ReadFailed, ReadStale } from "@/modules/pos/components/ReadProblem";
 
 /* ══════════════════════════════════════════════════════════════════
    THE PASS
@@ -135,16 +137,25 @@ export default function KitchenPage() {
 
   const lines = board.data ?? [];
 
+  /* POS-3. The one screen of 89 with no heading and no tab of its own:
+     the board drew "The pass" in a paragraph, so a screen reader found no
+     heading and the browser tab read "Fidato PMS". It is a wall screen,
+     so it keeps its own slim header rather than a PageHeader — but the
+     title in it is the page's h1 and says what the menu says. */
+  useDocumentTitle("Kitchen");
+
   return (
     <div className="fixed inset-0 z-50 bg-grey-100 flex flex-col">
       <header className="flex items-center gap-4 px-5 h-16 border-b border-grey-300 bg-white shrink-0">
         <Flame className="size-5 text-brand-orange shrink-0" />
         <div className="min-w-0 flex-1">
-          <p className="text-lg font-semibold text-ink-900 leading-tight">
-            The pass
-          </p>
+          <h1 className="text-lg font-semibold text-ink-900 leading-tight">
+            Kitchen
+          </h1>
           <p className="text-2xs text-grey-500 tabular flex items-center gap-2">
-            {lines.filter((l) => !l.cancelled).length} dishes working
+            {/* A dash until the board has loaded — "0 dishes working" over
+                a board that never arrived is the empty-list lie again. */}
+            {board.data ? lines.filter((l) => !l.cancelled).length : "—"} dishes working
             {/* NAMED, because the failure it describes is invisible.
                 A dropped stream leaves a screen that looks exactly
                 like a working one until somebody shouts about a dish
@@ -194,11 +205,39 @@ export default function KitchenPage() {
         </Link>
       </header>
 
+      {/* A refresh that failed while the board was already up: the
+          tickets stay, and the kitchen is told they are not current. The
+          shell's offline bar sits underneath this screen, so it says so
+          itself. */}
+      {board.error && board.data !== undefined && (
+        <ReadStale
+          className="mx-5 mt-3 shrink-0"
+          error={board.error}
+          loadedAt={board.dataUpdatedAt}
+          onRetry={() => void board.refetch()}
+        />
+      )}
+
       {/* Inside the board, which covers the whole display — a card in the
           shell would sit underneath it. */}
       <StartHere className="shrink-0 px-5 pt-4 pb-1" />
 
-      {byTable ? (
+      {/* POS-4. Nothing loaded is not nothing ordered: until the first
+          answer arrives, or when it failed, the columns and their "Nothing
+          ordered yet" are not drawn at all. */}
+      {board.data === undefined ? (
+        <div className="flex-1 grid place-items-center bg-grey-50">
+          {board.error ? (
+            <ReadFailed
+              error={board.error}
+              what="the kitchen board"
+              onRetry={() => void board.refetch()}
+            />
+          ) : (
+            <p className="text-lg text-grey-500">Loading the kitchen board…</p>
+          )}
+        </div>
+      ) : byTable ? (
         <ByTable lines={lines} busy={busy} onMove={move} />
       ) : (
       <div className="flex-1 min-h-0 grid grid-cols-3 gap-px bg-grey-300">

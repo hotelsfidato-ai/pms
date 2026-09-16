@@ -12,9 +12,10 @@ api/src/modules/pos/      the server's routes for this service
 db/tests/modules/pos.sql  NEW database checks only — db/tests/suite.sql is frozen history
 ```
 
-Before your first edit: claim the service in `HANDOVER.md` → "Folder claims"
-(service, branch, date), read this file, then this folder's `DEFECTS.md` and
-`CHANGELOG.md`. Written 15 September 2026 from the code at `880a5b6`.
+Before your first edit: claim the service in `.claims/pos.md` (since 16
+September — not `HANDOVER.md`), read `docs/briefs/pos.md`, this file, then this
+folder's `DEFECTS.md` and `CHANGELOG.md`. Written 15 September 2026 from the
+code at `880a5b6`.
 
 ---
 
@@ -155,9 +156,11 @@ Outlet keys are issued by `cd api && npm run pos:outlet` (`api/scripts/pos-outle
 ## Data
 
 ```
-data/till.ts        1,156 lines. Every call the till, floor, pad, terminal, kitchen,
-                    menu and day-end screens make. Refusals come back as
-                    { ok: false, reason }, not exceptions.
+data/till.ts        Every call the till, floor, pad, terminal, kitchen,
+                    menu and day-end screens make. A WRITE's refusal comes back
+                    as { ok: false, reason }, not an exception. A READ that
+                    fails THROWS (POS-4, 16 Sep) — never catch it into an
+                    empty list; the screen decides what to say.
                     `openOrderOnTable` has no caller — on KNOWN_UNREACHABLE in
                     src/data/repositories/repositories.test.ts ("superseded by the
                     order pad; safe to delete").
@@ -168,6 +171,11 @@ lib/pricing.ts      unitPriceOf, chosenLabels — the price of ONE dish with its
                     The same rule is on the server (addOneLine in till.ts);
                     api/test/padTotal.test.ts prices the same lines both ways.
 components/PosGate.tsx   see Screens.
+components/ReadProblem.tsx   what a failed read says (POS-4): readProblem() sorts
+                    an error into refused (the server's sentence) · unreachable ·
+                    failed; ReadFailed stands in for a list with nothing to show,
+                    ReadStale is one line over a list whose refresh failed.
+                    Every screen with a read uses one of them.
 ```
 
 The screens also use core pieces: the live channel (`@/lib/useLiveOrders`,
@@ -323,8 +331,6 @@ From `PENDING.md` and `PROGRESS.md`, as of 15 September:
 - **The menu and tables are the demo's** — 17 items, 20 tables — and real
   bills are rung against them. The owner's to confirm or replace (PENDING § 2;
   PROGRESS "Still needing a person" 4).
-- **The till's reads turn every error into an empty list.** PosGate catches a
-  refusal; a server fault still reads as "nothing here" (PENDING § 6; MEMORY 251).
 - **Terminal's send action is not marked** — `Terminal.tsx` draws its own
   touch buttons, outside `primaryAction.test.ts` (PENDING § 5a).
 - **The kitchen manager's list has no Store** — approved as listed; worth
@@ -340,8 +346,8 @@ From `PENDING.md` and `PROGRESS.md`, as of 15 September:
   move onto `app.stay_room()` (PENDING § 6).
 - **`openOrderOnTable`** has no caller (PENDING § 4).
 - Found while writing this brief (15 September), not yet elsewhere:
-  - Bill, Docket, Kitchen and Terminal set no browser-tab title — none uses
-    `PageHeader` or `useDocumentTitle` (the 15 Sep review named the first three).
+  - Bill, Docket and Terminal set no browser-tab title — none uses
+    `PageHeader` or `useDocumentTitle`. Kitchen does since 16 September (POS-3).
   - `pages/Pos.tsx` renders two `PageHeader`s, "Charges to rooms" and lower
     down "Bills"; each sets the tab title. Which one the tab shows was not
     checked on screen — unverified.
@@ -372,7 +378,9 @@ Where the checks are today: server tests `api/test/till.test.ts`,
 `roomChargeOffline.test.ts`, `prepTimes.test.ts`, `kitchenTimings.test.ts`,
 `courses.test.ts`, and blocks in `guards.test.ts` ("the module gate") and
 `firstScreen.test.ts` ("reception on the POS, per hotel") — moving to
-`api/test/modules/pos/`. Web: `src/App.test.tsx` ("the till in the
+`api/test/modules/pos/`. Web: `src/modules/pos/readStates.test.tsx`
+(refused, failed and empty on the till's reads; the two dates; the Kitchen
+heading — 16 Sep), `src/App.test.tsx` ("the till in the
 navigation", "point of sale as a category", "start here"),
 `src/components/app/navigation.test.ts`, `src/lib/offline.test.ts`. Database:
 `db/tests/suite.sql` groups `pos`, `pos till`, `pos discount`, `kot`,

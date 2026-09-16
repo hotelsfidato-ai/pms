@@ -2,6 +2,7 @@ import { useQuery } from "@tanstack/react-query";
 import { useParams } from "react-router";
 import { moneyPrecise, dateLong } from "@/lib/format";
 import { getOrder } from "@/modules/pos/data/till";
+import { ReadFailed } from "@/modules/pos/components/ReadProblem";
 
 /* ══════════════════════════════════════════════════════════════════
    THE BILL — what the guest is handed
@@ -29,6 +30,17 @@ export default function BillPage() {
 
   if (order.isLoading) {
     return <p className="p-8 text-grey-500">Loading…</p>;
+  }
+  /* POS-4: every failure used to print "No such order." on the page a
+     guest is handed. The server says that itself when it is true. */
+  if (!order.data && order.error) {
+    return (
+      <ReadFailed
+        error={order.error}
+        what="this bill"
+        onRetry={() => void order.refetch()}
+      />
+    );
   }
   if (!order.data) {
     return <p className="p-8 text-grey-500">No such order.</p>;
