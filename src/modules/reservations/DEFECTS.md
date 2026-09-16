@@ -34,15 +34,26 @@ The route inserts the guest, then the group, and only then can refuse — an ina
 
 **The rule** — Two copies of a number generator are two chances to hand out the same number.
 
-### RES-3 · `POST /:code/bookings` has no idempotency
+---
+
+## Fixed
+
+### RES-3 · `POST /:code/bookings` had no idempotency — FIXED 16 September, migration 091
 
 **Found** — 16 September, the readiness audit; 062's `idempotency-key` is honoured by work orders and banquet events only.
 
-A timed-out request, retried by any machine caller, makes a second guest, a second group, a second set of confirmed bookings and folios. A booking cannot be deleted, only voided with a reason (042).
+A timed-out request, retried by any machine caller, made a second guest, a second group, a second set of confirmed bookings and folios. A booking cannot be deleted, only voided with a reason (042). The channel manager (SU) is waiting on this.
 
-**The fix, when it is done** — Take the sender's own reference (`externalRef`), store it — `reservations.ota_reference` (005) is the dormant column for it — with a unique index per booking source, and answer a repeat with the original references. The POS door already works this way: `unique (outlet_id, ticket_ref)` and the 'already seen' answer in `pos.ts`.
+**What was done** — branch `reservations/res-3-res-1`.
+- The door takes `externalRef`, the SENDER'S own reference. Optional: the desk sends none and nothing changes for it. Present but not text, blank, or over 100 characters is refused before anything is written.
+- **091** stamps every room of the request with `ota_reference` (005's dormant column), `ota_line` (its place in the request, 1 to n) and `ota_fingerprint` (a sha256 of what the sender said, after the route's defaults). `reservations_ota_line_idx` is unique on (hotel, booking source, reference, line), partial so the desk's NULLs never collide. A line number alone — without its reference, channel or fingerprint — is refused by a CHECK.
+- **Why a line number:** `ota_reference` could not be unique by itself, because one request for a wedding makes nine rows carrying the same reference. Line 1 is what two racing copies collide on.
+- **A repeat is asked about before any write** — and before the channel is checked, so a source switched off since the first request does not turn a retry into a refusal of a booking that exists. Same fingerprint: `200`, the first answer, marked `duplicate: true`. Different fingerprint: `409`, naming the references on file — a changed booking is not taken by this door (integration plan step 1.3; amendments stay at the desk, CRS-22).
+- **Two copies at once** both pass that check; the second waits at the index and fails. The route catches ANY unique violation, looks again in a fresh transaction, and answers as the repeat if the earlier request is there — otherwise the error stands. Any unique violation, not only 091's index: two identical copies also compute the same booking reference (RES-2's unlocked generator), and that older index is reported first.
 
-**The rule** — A door a machine can knock on twice must answer the second knock with the first answer.
+**Proved** — `api/test/modules/reservations/bookings.test.ts` (8 tests, counting rows in the database, not trusting the answer) and `db/tests/modules/reservations.sql` (14 assertions). Broken on purpose and seen to fail: rooms not stamped → 5 API tests red; the early check skipped → the switched-off test red; the race handling removed → the held-race test red with the loser's 500; the index made non-unique → 2 database assertions red.
+
+**The rule** — A door a machine can knock on twice must answer the second knock with the first answer. And a key that one request writes several rows under needs a position, or it cannot be unique.
 
 ---
 

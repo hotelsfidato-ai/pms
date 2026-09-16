@@ -8,6 +8,69 @@ project, still goes in the root `CHANGELOG.md`.
 
 ---
 
+## 2026-09-16 · RES-3 and RES-1 — the booking door a channel manager can use
+
+**Asked for:** the owner, 16 September — RES-3, then RES-1, because the
+channel manager (SU) is waiting on them. Migration 091 is this service's;
+092 and 093 are the master's. For RES-1, copy the walk-in route's fix (root
+MEMORY 243) without touching front desk's folder. RES-2 not started: the
+master is building the shared reference generator (092), and both doors
+switch to `FH-<hotel code>-YYMM-<number>` when the master says it is ready.
+
+**Shipped — RES-3** (branch `reservations/res-3-res-1`, copy
+`D:\fidato-reservations`)
+- `db/migrations/091_booking_external_ref.sql` — `reservations.ota_line` and
+  `ota_fingerprint` beside 005's dormant `ota_reference`; a partial unique
+  index on (hotel, booking source, reference, line); a CHECK that a line
+  number never stands without its reference, channel and fingerprint.
+- `api/src/modules/reservations/groups.ts` — `POST /:code/bookings` takes
+  `externalRef`. A repeat is looked up before any write: same details →
+  `200` with the first answer and `duplicate: true`; different details →
+  `409` naming the references on file. Two copies at once: the loser's unique
+  violation is answered as the repeat. The desk sends no `externalRef` and
+  nothing changes for it.
+- `api/test/modules/reservations/bookings.test.ts` (new) and
+  `db/tests/modules/reservations.sql` (new).
+- `MODULE.md`, `DEFECTS.md` — RES-3 moved to Fixed, with what was done.
+
+**Found**
+- **The first race test did not race.** With the race handling deleted it
+  still passed: fired with a bare `Promise.all`, the two copies never
+  overlapped (most likely the second was still opening its connection). The
+  test now locks `reservation_groups`, waits until both copies are held at
+  the group insert, and releases them together.
+- **And then its poll could not see them.** Inside a transaction,
+  `pg_stat_activity` answers from a snapshot taken at the first read, so the
+  gate's loop counted 0 waiting while both sat at the lock in plain view from
+  another connection. `pg_stat_clear_snapshot()` before each read. I had
+  first blamed the slow disk and written that into a comment; corrected
+  before any commit.
+- **A chained break-and-restore command hung**, and left the deliberate break
+  (the race catch removed) in `groups.ts` until I stopped it and restored the
+  file. Found by checking the file before anything else; nothing was
+  committed from it. Breaks now run one per command.
+- **The machine's Postgres is saturated by the parallel lanes.** Nine lanes'
+  databases on one server; a checkpoint's sync took 557 seconds
+  (4,119 files), and every `create database` / `drop database` — which every
+  API and database gate run does — queued behind it for minutes. Not a code
+  fault; it makes every lane's gates slow and can make a pool connection time
+  out. For the master.
+
+**Proved — RES-3**
+- `bash db/tests/run.sh` — **636 assertions passed**, exit 0 (622 + 14 new).
+  With the index made non-unique: 2 failed, exit 1.
+- `bash db/tests/rerun.sh` — **91 migrations re-runnable**, exit 0.
+- Before any change, in this copy: `cd api; npm test` — 370 passed, 29 files,
+  exit 0.
+- `cd api; npm test -- modules/reservations` — **10 passed** (8 new + the 2
+  channel-guard tests), exit 0; tsc clean.
+- Broken on purpose, `bookings.test.ts`: rooms not stamped with the reference
+  → 5 of 8 failed; the early "already received?" check skipped → the
+  switched-off test failed; the race handling removed → the held-race test
+  failed with a 500 (and passes with it).
+
+---
+
 ## 2026-09-15 · moved into its own folder
 
 **Asked for:** the owner, 15 September — one folder per hotel service, so
