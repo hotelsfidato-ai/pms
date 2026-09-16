@@ -66,6 +66,13 @@ defect logs         16 Sep: src/modules/<service>/DEFECTS.md — 26 open defects
 apps (desktop,      PLANNED 16 Sep — docs/APPS-PLAN.md; waiting on decisions A1–A11.
 tablet, phone)      Tauri desktop and a Capacitor kiosk tablet wrap today's build; Expo
                     is a small staff phone app, not a port of the 89 screens
+design critique     16 Sep — docs/audits/2026-09-16-design-critique.md. 20/40. CONTRAST
+                    FIXED the same day, measured: six screens went to 0 failures. Three
+                    P0s open — one booking with three statuses, /stay with no error
+                    branch, /in-house printing charges under BALANCE
+parallel agents     16 Sep — .claims/<service>.md (one file per service) and
+                    `npm run lane -- <service>`, which sorts what a session changed into
+                    yours / shared / somebody else's
 mobile pass         BUILT 16 Sep on cp6 (731a3d4), NOT DEPLOYED — on a phone every list
                     built on DataTable is a card list; measured before and after at 375px
 dynamic pricing     BUILT 16 Sep on cp6, NOT DEPLOYED — migration 090, the API and the
@@ -316,6 +323,38 @@ price answers exactly as it did before.
 **Read § 4 before planning anything here**, especially: the base is not the
 default, not everything is derived, and the screen ships with every figure
 unset.
+
+### 3.0f · The design critique — 16 September
+
+`docs/audits/2026-09-16-design-critique.md`. Two isolated agents: a design
+review and a mechanical detector with live browser measurement. **20 / 40**,
+and the verdict worth keeping is that the product IS authored — the dash rule,
+the offline refusals, tap-not-hover — but **the authoring stops at each
+service's edge**, which one agent per service will widen unless the shared kit
+becomes a contract. `FilterBar` and `moneyCompact` have zero consumers.
+
+**Fixed on the day** (the owner chose it first): contrast, system-wide.
+`grey-400` is no longer a text colour, four darker steps of the brand hues
+carry small text, the primary button fills with `orange-600`. Re-measured in
+the browser: `/stay` 39 contrast failures → 0, and five other screens → 0.
+`CHANGELOG.md`, 16 September (contrast).
+
+**Open, in the order the owner chose:**
+
+1. **The numbers that disagree** — one booking reads three statuses, "in house"
+   counts four ways, ADR prints two ways. The owner chose this next. It is not
+   a UI pass: one derived status and one balance per stay, computed once; one
+   date format and one money format everywhere.
+2. **`/stay` has no error branch** — twelve grey bars forever on the front
+   desk's home screen, under a banner promising the opposite.
+3. **`/in-house` prints charges under BALANCE** — one query first, to say which
+   of the two figures is wrong.
+4. Then the two fix lanes, approved: **distill + clarify**, front-desk +
+   housekeeping in one, pos + inventory + finance in the other, so no two
+   agents ever open one file.
+
+**Each service's own findings are in the audit**, written so a chat working on
+one service reads its section and nothing else.
 
 ### 3.1 · Clarity step 2 — one primary action per screen — DONE 15 September
 
