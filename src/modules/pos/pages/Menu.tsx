@@ -253,13 +253,13 @@ function Promotions({ hotelId }: { hotelId: string }) {
                     "shrink-0 rounded px-1.5 py-0.5 text-2xs font-semibold",
                     "tabular tracking-wide",
                     p.isActive
-                      ? "bg-orange-50 text-brand-orange"
+                      ? "bg-orange-50 text-brand-orange-700"
                       : "bg-grey-100 text-grey-500")}>
                     {p.code}
                   </span>
                   <span className={cn("min-w-0 flex-1 truncate text-base",
                                       p.isActive
-                                        ? "text-ink-900" : "text-grey-400")}>
+                                        ? "text-ink-900" : "text-grey-500")}>
                     {p.name}
                     {!p.isActive && (
                       <span className="ml-2 text-sm text-grey-500">
@@ -272,7 +272,7 @@ function Promotions({ hotelId }: { hotelId: string }) {
                   </span>
                   <span className={cn("tabular text-sm w-20 text-right",
                                       p.used === 0
-                                        ? "text-grey-400" : "text-grey-600")}>
+                                        ? "text-grey-500" : "text-grey-600")}>
                     {p.used} bill{p.used === 1 ? "" : "s"}
                   </span>
                   <Button variant="ghost" className="h-11"
@@ -384,7 +384,7 @@ function PromotionDialog({
                     "flex-1 h-11 rounded-md border text-base font-medium",
                     "cursor-pointer transition-colors duration-200",
                     kind === t
-                      ? "border-brand-orange bg-orange-50 text-brand-orange"
+                      ? "border-brand-orange bg-orange-50 text-brand-orange-700"
                       : "border-grey-300 text-grey-600 hover:bg-grey-50")}>
                   {t === "percent" ? "Percentage" : "Fixed amount"}
                 </button>
@@ -629,7 +629,7 @@ function CategoryCard({ category, hotelId, onChanged }: {
             <span
               className={cn(
                 "flex-1 min-w-0 text-base truncate",
-                item.isActive ? "text-ink-900" : "text-grey-400 line-through",
+                item.isActive ? "text-ink-900" : "text-grey-500 line-through",
               )}
             >
               {item.name}
@@ -824,7 +824,7 @@ function PrepControl({ minutes, own, label, onSet }: {
         "w-16 h-11 rounded-md border text-base tabular shrink-0",
         "cursor-pointer transition-colors duration-200",
         "border-grey-300 hover:border-brand-orange hover:bg-brand-orange-50",
-        unset ? "text-grey-400" : "text-ink-900",
+        unset ? "text-grey-500" : "text-ink-900",
       )}
       title={
         unset
@@ -918,7 +918,7 @@ function CourseControl({ course, own, label, onSet }: {
         "w-14 h-11 rounded-md border text-base tabular shrink-0",
         "cursor-pointer transition-colors duration-200",
         "border-grey-300 hover:border-brand-orange hover:bg-brand-orange-50",
-        unset ? "text-grey-400" : "text-ink-900",
+        unset ? "text-grey-500" : "text-ink-900",
       )}
       title={
         unset

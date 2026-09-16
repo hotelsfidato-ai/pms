@@ -165,7 +165,7 @@ function BalanceHeader({ stay, balance }: { stay: Stay; balance: number }) {
   return (
     <div className="flex items-baseline justify-between gap-4 flex-wrap">
       <div>
-        <p className="text-2xs font-semibold uppercase tracking-wide text-grey-400">
+        <p className="text-2xs font-semibold uppercase tracking-wide text-grey-500">
           Balance
         </p>
         <p
@@ -253,7 +253,7 @@ function LedgerList({
                   {p.amount < 0 ? "−" : ""}{money(Math.abs(p.amount + p.tax))}
                 </p>
                 {!p.reversed && (
-                  <p className="text-2xs text-grey-400 tabular">
+                  <p className="text-2xs text-grey-500 tabular">
                     bal {money(running)}
                   </p>
                 )}
@@ -310,7 +310,7 @@ function ReverseButton({
       className={cn(
         "shrink-0 p-1.5 rounded-sm transition-colors duration-150",
         allowed
-          ? "text-grey-400 hover:text-brand-rose hover:bg-brand-rose-50"
+          ? "text-grey-500 hover:text-brand-rose hover:bg-brand-rose-50"
           : "text-grey-300 cursor-not-allowed",
       )}
     >
@@ -876,7 +876,7 @@ function TransferButton({
           aria-label={`Move ${posting.description} to another bill`}
           className={cn(
             "shrink-0 flex items-center justify-center size-9 rounded-md",
-            "text-grey-400 hover:text-ink-900 hover:bg-grey-50",
+            "text-grey-500 hover:text-ink-900 hover:bg-grey-50",
             "cursor-pointer transition-colors duration-150",
           )}
         >

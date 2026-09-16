@@ -115,9 +115,9 @@ export function HouseFloor({
       {groups.map((group) => (
         <section key={group.type} className="mb-6">
           <h2 className="text-2xs font-semibold uppercase tracking-wide
-                         text-grey-400 mb-2.5">
+                         text-grey-500 mb-2.5">
             {group.type}
-            <span className="ml-1.5 tabular font-normal text-grey-400">
+            <span className="ml-1.5 tabular font-normal text-grey-500">
               {group.rooms.length}
             </span>
           </h2>
@@ -191,7 +191,10 @@ function RoomTile({ room, businessDate, stay, onOpenStay, onWalkIn }: {
         )}
       </div>
 
-      <p className="text-2xs uppercase tracking-wide text-grey-400">
+      {/* grey-600, not grey-500: every tile but "free" has a TINTED
+          background, where grey-500 measures 4.24-4.38:1 — and the state
+          is the most important word on the tile. */}
+      <p className="text-2xs uppercase tracking-wide text-grey-600">
         {LABEL[state]}
       </p>
 
@@ -207,14 +210,14 @@ function RoomTile({ room, businessDate, stay, onOpenStay, onWalkIn }: {
              className="text-sm text-ink-900 mt-1 leading-tight line-clamp-2">
             {stay.guest}
           </p>
-          <p className="text-2xs text-grey-500 tabular mt-auto pt-1">
+          <p className="text-2xs text-grey-600 tabular mt-auto pt-1">
             {state === "due-out"
               ? "out today"
               : `to ${dateShort(stay.departure)}`}
           </p>
         </>
       ) : (
-        <p className="text-2xs text-grey-400 mt-auto pt-1">
+        <p className="text-2xs text-grey-500 mt-auto pt-1">
           {state === "out-of-service" ? "—" : room.type}
         </p>
       )}

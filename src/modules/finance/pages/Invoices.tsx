@@ -123,7 +123,7 @@ function issuedColumns(hotelId: string): Column<IssuedInvoice>[] {
           <span><StatusPill tone="warning">credited</StatusPill></span>
         </Tooltip>
       ) : i.isCreditNote ? (
-        <span className="text-2xs text-grey-400">—</span>
+        <span className="text-2xs text-grey-500">—</span>
       ) : (
         <StatusPill tone="success">issued</StatusPill>
       ),

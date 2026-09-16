@@ -367,11 +367,13 @@ function Calendar({
                   : "border-grey-200 hover:bg-grey-50",
               )}
             >
-              <span className="block text-sm tabular text-grey-500">{i + 1}</span>
+              {/* grey-600: a selected cell is tinted, where grey-500 is
+                  4.38:1. The date is the label of the whole control. */}
+              <span className="block text-sm tabular text-grey-600">{i + 1}</span>
               <span
                 className={cn(
                   "block text-sm tabular truncate",
-                  set ? "text-ink-900 font-medium" : "text-grey-400",
+                  set ? "text-ink-900 font-medium" : "text-grey-600",
                 )}
               >
                 {/* A dash until somebody types one, and never a zero. */}
@@ -431,7 +433,7 @@ function TheBaseFigure({
             The base, one person, no meals
           </p>
           <p className="text-2xl font-semibold text-ink-900 tabular mt-0.5">
-            {base == null ? <span className="text-grey-400">—</span> : money(base)}
+            {base == null ? <span className="text-grey-500">—</span> : money(base)}
           </p>
           {base == null && rackInstead != null && (
             <p className="text-2xs text-grey-500 mt-1 max-w-56 leading-relaxed">
@@ -577,7 +579,7 @@ function OneDifference({
         <p className="text-base text-ink-900 truncate">{name}</p>
         <p className="text-2xs text-grey-500">{note}</p>
         <p className="text-md tabular mt-1">
-          {offset ? money(offset.amount) : <span className="text-grey-400">—</span>}
+          {offset ? money(offset.amount) : <span className="text-grey-500">—</span>}
         </p>
       </div>
       <Input
@@ -661,7 +663,7 @@ function WhatItComesTo({ data, date }: { data: Pricing; date: string }) {
                   );
                   return (
                     <td key={p.code} className="py-2 px-3 text-right">
-                      <span className={cn("tabular", cell?.price == null && "text-grey-400")}>
+                      <span className={cn("tabular", cell?.price == null && "text-grey-500")}>
                         {cell?.price == null ? "—" : money(cell.price)}
                       </span>
                       <span className="block text-2xs text-grey-500">

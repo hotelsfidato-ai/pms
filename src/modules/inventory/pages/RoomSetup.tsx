@@ -153,7 +153,7 @@ export default function RoomSetupPage() {
                 decision a property makes; zero is a price. */}
             <p className={cn("text-lg font-semibold tabular",
                              frontDesk.earlyCheckinCharge === null
-                               ? "text-grey-400" : "text-ink-900")}>
+                               ? "text-grey-500" : "text-ink-900")}>
               {frontDesk.earlyCheckinCharge === null
                 ? "—" : money(frontDesk.earlyCheckinCharge)}
             </p>
@@ -162,7 +162,7 @@ export default function RoomSetupPage() {
             <p className="text-sm text-grey-500">Late departure</p>
             <p className={cn("text-lg font-semibold tabular",
                              frontDesk.lateCheckoutCharge === null
-                               ? "text-grey-400" : "text-ink-900")}>
+                               ? "text-grey-500" : "text-ink-900")}>
               {frontDesk.lateCheckoutCharge === null
                 ? "—" : money(frontDesk.lateCheckoutCharge)}
             </p>
@@ -322,7 +322,7 @@ function Line({ label, value, muted }: {
   return (
     <>
       <dt className="text-grey-500">{label}</dt>
-      <dd className={cn("tabular text-right", muted ? "text-grey-400" : "text-ink-900")}>
+      <dd className={cn("tabular text-right", muted ? "text-grey-500" : "text-ink-900")}>
         {value}
       </dd>
     </>

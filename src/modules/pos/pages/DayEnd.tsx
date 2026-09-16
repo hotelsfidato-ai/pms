@@ -330,7 +330,7 @@ function CashStep({ hotelId, day, onDone }: {
                     <span className="w-14 text-base font-medium tabular shrink-0">
                       ₹{value}
                     </span>
-                    <span className="text-grey-400">×</span>
+                    <span className="text-grey-500">×</span>
                     <Input
                       type="number" inputMode="numeric" min={0}
                       value={counts[value] ?? ""} disabled={closed}

@@ -116,14 +116,14 @@ export default function RatesPage() {
                               <span
                                 className={cn(
                                   "tabular font-medium",
-                                  below ? "text-brand-tangerine" : "text-ink-900",
+                                  below ? "text-brand-tangerine-700" : "text-ink-900",
                                 )}
                               >
                                 {money(c.soldAdr)}
                               </span>
                             </Tooltip>
                           )}
-                          <span className="block text-2xs text-grey-400 tabular mt-0.5">
+                          <span className="block text-2xs text-grey-500 tabular mt-0.5">
                             {c.sold}/{c.sellable}
                           </span>
                         </td>

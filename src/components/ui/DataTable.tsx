@@ -358,7 +358,7 @@ export function Pagination({
 
         {window.map((entry, i) =>
           entry === "gap" ? (
-            <span key={`gap-${i}`} className="px-1.5 text-grey-400 text-sm">
+            <span key={`gap-${i}`} className="px-1.5 text-grey-500 text-sm">
               …
             </span>
           ) : (

@@ -99,7 +99,7 @@ const TICKET_COLUMNS: Column<PosTicket>[] = [
       ) : (
         /* Nothing, because a refused bill never reached a folio. Not a
            dash pretending to be a value. */
-        <span className="text-grey-400 text-2xs">nobody — refused</span>
+        <span className="text-grey-500 text-2xs">nobody — refused</span>
       ),
   },
   {
@@ -107,7 +107,7 @@ const TICKET_COLUMNS: Column<PosTicket>[] = [
     cell: (t) => (
       <div>
         <span className="tabular text-grey-600">{t.receivedAt}</span>
-        <p className="text-2xs text-grey-400 tabular">
+        <p className="text-2xs text-grey-500 tabular">
           {dateLong(t.businessDate)}
         </p>
       </div>
@@ -116,7 +116,7 @@ const TICKET_COLUMNS: Column<PosTicket>[] = [
   {
     key: "amount", header: "Amount", numeric: true,
     cell: (t) => (
-      <span className={cn("tabular", t.status === "rejected" && "text-grey-400")}>
+      <span className={cn("tabular", t.status === "rejected" && "text-grey-500")}>
         {money(t.amount + t.tax)}
       </span>
     ),

@@ -37,7 +37,7 @@ const PAYMENT_COLUMNS: Column<PaymentRow>[] = [
     key: "guest", header: "Guest",
     cell: (p) => (
       <div className="min-w-0">
-        <p className={cn("truncate", p.reversed && "line-through text-grey-400")}>{p.guest}</p>
+        <p className={cn("truncate", p.reversed && "line-through text-grey-500")}>{p.guest}</p>
         <p className="text-2xs text-grey-500 tabular">
           room {p.roomNumber} · {p.reference}
         </p>
@@ -59,7 +59,7 @@ const PAYMENT_COLUMNS: Column<PaymentRow>[] = [
   {
     key: "amount", header: "Amount", numeric: true,
     cell: (p) => (
-      <span className={cn("tabular font-medium", p.reversed ? "line-through text-grey-400" : "text-ink-900")}>
+      <span className={cn("tabular font-medium", p.reversed ? "line-through text-grey-500" : "text-ink-900")}>
         {money(p.amount)}
       </span>
     ),
@@ -97,7 +97,7 @@ export function PaymentsPage() {
               <CardBody>
                 <p className="text-sm text-grey-500">{m.method}</p>
                 <p className="text-lg font-semibold text-ink-900 tabular mt-1">{money(m.amount)}</p>
-                <p className="text-2xs text-grey-400 tabular mt-0.5">
+                <p className="text-2xs text-grey-500 tabular mt-0.5">
                   {m.count} receipt{m.count === 1 ? "" : "s"}
                 </p>
               </CardBody>
@@ -107,7 +107,7 @@ export function PaymentsPage() {
             <CardBody>
               <p className="text-sm text-grey-500">Total received</p>
               <p className="text-lg font-semibold text-ink-900 tabular mt-1">{money(total)}</p>
-              <p className="text-2xs text-grey-400 mt-0.5">Reversals excluded</p>
+              <p className="text-2xs text-grey-500 mt-0.5">Reversals excluded</p>
             </CardBody>
           </Card>
         </div>
@@ -156,7 +156,7 @@ const LEDGER_COLUMNS: Column<CityLedgerRow>[] = [
     key: "opening", header: "Opening", numeric: true, hideBelow: "md",
     cell: (r) =>
       r.opening === null
-        ? <span className="text-grey-400" title="Nothing predates this window">—</span>
+        ? <span className="text-grey-500" title="Nothing predates this window">—</span>
         : <span className="tabular">{money(r.opening)}</span>,
   },
   { key: "debit", header: "Charged", numeric: true, cell: (r) => <span className="tabular">{money(r.debit)}</span> },
@@ -164,8 +164,8 @@ const LEDGER_COLUMNS: Column<CityLedgerRow>[] = [
   {
     key: "closing", header: "Balance", numeric: true,
     cell: (r) =>
-      r.closing === null ? <span className="text-grey-400">—</span> : (
-        <span className={cn("tabular font-medium", r.closing > 0 ? "text-brand-red" : r.closing < 0 ? "text-info" : "text-grey-400")}>
+      r.closing === null ? <span className="text-grey-500">—</span> : (
+        <span className={cn("tabular font-medium", r.closing > 0 ? "text-brand-red" : r.closing < 0 ? "text-info" : "text-grey-500")}>
           {r.closing === 0 ? "—" : money(Math.abs(r.closing))}
         </span>
       ),

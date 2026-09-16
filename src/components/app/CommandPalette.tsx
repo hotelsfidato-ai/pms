@@ -220,7 +220,7 @@ export function CommandPalette() {
                       <span className="text-2xs text-grey-500 shrink-0">Not in your menu</span>
                     )}
                     {entry.section && (
-                      <span className="text-2xs text-grey-400 shrink-0 hidden sm:inline">
+                      <span className="text-2xs text-grey-500 shrink-0 hidden sm:inline">
                         {entry.section}
                       </span>
                     )}

@@ -237,7 +237,7 @@ export default function TerminalPage() {
     return (
       <Shell>
         <div className="max-w-2xl mx-auto pt-16 px-6">
-          <p className="text-2xs uppercase tracking-wide text-grey-400 mb-2">
+          <p className="text-2xs uppercase tracking-wide text-grey-500 mb-2">
             Terminal setup
           </p>
           <h1 className="text-2xl font-semibold text-ink-900 mb-2">
@@ -338,7 +338,7 @@ export default function TerminalPage() {
                 type="button"
                 onClick={() => void start()}
                 disabled={busy}
-                className="w-full h-16 rounded-lg bg-brand-orange text-white text-lg font-semibold disabled:opacity-50"
+                className="w-full h-16 rounded-lg bg-brand-orange-600 text-white text-lg font-semibold disabled:opacity-50"
               >
                 Open the order
               </button>
@@ -428,7 +428,7 @@ export default function TerminalPage() {
                           "transition-colors duration-150",
                           item.isActive
                             ? "border-grey-200 bg-white hover:border-brand-orange hover:bg-brand-orange-50 active:bg-brand-orange-100"
-                            : "border-grey-200 bg-grey-50 text-grey-400 cursor-not-allowed",
+                            : "border-grey-200 bg-grey-50 text-grey-500 cursor-not-allowed",
                         )}
                       >
                         {/* `pr-10` keeps the name clear of the note button,
@@ -442,7 +442,7 @@ export default function TerminalPage() {
                           {/* The tax rate is for the person reconciling the
                               bill, not the waiter taking the order. Quiet,
                               and out of the way of the number that matters. */}
-                          <span className="text-2xs text-grey-400 tabular leading-none pb-0.5">
+                          <span className="text-2xs text-grey-500 tabular leading-none pb-0.5">
                             {item.taxRate}%
                           </span>
                           <span className="text-lg tabular text-ink-900 leading-none">
@@ -466,7 +466,7 @@ export default function TerminalPage() {
                         className={cn(
                           "absolute top-1 right-1 size-11 grid place-items-center",
                           "rounded-md text-grey-300 transition-colors duration-150",
-                          "hover:text-brand-orange hover:bg-brand-orange-50",
+                          "hover:text-brand-orange-700 hover:bg-brand-orange-50",
                           "focus-visible:outline-2 focus-visible:outline-offset-2",
                           "focus-visible:outline-brand-orange-500",
                           "disabled:opacity-0 disabled:pointer-events-none",
@@ -571,7 +571,7 @@ export default function TerminalPage() {
                         the kitchen copy, so it has to be visible to the
                         person who typed it. */}
                     {l.note && (
-                      <p className="text-2xs text-brand-orange mt-0.5 pl-0.5">
+                      <p className="text-2xs text-brand-orange-700 mt-0.5 pl-0.5">
                         {l.note}
                       </p>
                     )}

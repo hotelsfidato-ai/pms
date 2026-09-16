@@ -289,7 +289,7 @@ function Figure({ label, value }: { label: string; value: string | null }) {
     <div>
       <p className="text-sm text-grey-500">{label}</p>
       <p className={cn("text-lg font-semibold tabular",
-                       value === null ? "text-grey-400" : "text-ink-900")}>
+                       value === null ? "text-grey-500" : "text-ink-900")}>
         {value ?? "—"}
       </p>
     </div>

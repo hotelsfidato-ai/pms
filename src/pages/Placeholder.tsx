@@ -42,7 +42,7 @@ export default function PlaceholderPage({
                 : "This route is reserved in the navigation and has no screen yet."
             }
           />
-          <p className="text-center text-2xs text-grey-400 tabular mt-2">{pathname}</p>
+          <p className="text-center text-2xs text-grey-500 tabular mt-2">{pathname}</p>
         </CardBody>
       </Card>
     </Page>

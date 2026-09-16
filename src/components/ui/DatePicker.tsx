@@ -62,7 +62,7 @@ function MonthGrid({
 
       <div className="grid grid-cols-7 gap-y-0.5">
         {WEEKDAYS.map((d) => (
-          <div key={d} className="h-7 flex items-center justify-center text-2xs font-medium text-grey-400">
+          <div key={d} className="h-7 flex items-center justify-center text-2xs font-medium text-grey-500">
             {d}
           </div>
         ))}
@@ -142,7 +142,7 @@ export function DatePicker({
             className,
           )}
         >
-          <span className={cn(!selected && "text-grey-400")}>
+          <span className={cn(!selected && "text-grey-500")}>
             {selected ? dateShort(selected) : placeholder}
           </span>
           <CalendarDays className="size-4 text-grey-400 shrink-0" />
@@ -224,7 +224,7 @@ export function DateRangePicker({
             className,
           )}
         >
-          <span className={cn(!start && "text-grey-400")}>{label}</span>
+          <span className={cn(!start && "text-grey-500")}>{label}</span>
           <CalendarDays className="size-4 text-grey-400 shrink-0" />
         </button>
       </PopoverTrigger>

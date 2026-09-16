@@ -107,7 +107,7 @@ export function OrderHeaderPanel({
             "flex items-center gap-2 text-sm rounded-md px-2 py-1 -ml-2",
             "transition-colors duration-200",
             settled
-              ? "text-grey-400 cursor-not-allowed"
+              ? "text-grey-500 cursor-not-allowed"
               : "text-grey-600 hover:bg-grey-50 cursor-pointer",
           )}
         >
@@ -116,7 +116,7 @@ export function OrderHeaderPanel({
         </button>
 
         {order.heldAt && (
-          <span className="text-2xs font-semibold uppercase tracking-wide text-brand-orange">
+          <span className="text-2xs font-semibold uppercase tracking-wide text-brand-orange-700">
             held
           </span>
         )}
@@ -155,7 +155,7 @@ export function OrderHeaderPanel({
         >
           <div className="space-y-4">
             <div>
-              <h4 className="text-2xs font-semibold uppercase tracking-wide text-grey-400 mb-2">
+              <h4 className="text-2xs font-semibold uppercase tracking-wide text-grey-500 mb-2">
                 Where it is going
               </h4>
               <div className="grid grid-cols-2 gap-2">
@@ -168,7 +168,7 @@ export function OrderHeaderPanel({
                       "min-h-12 rounded-md border text-base cursor-pointer",
                       "transition-colors duration-200",
                       channel === c.key
-                        ? "border-brand-orange bg-orange-50 text-brand-orange"
+                        ? "border-brand-orange bg-orange-50 text-brand-orange-700"
                         : "border-grey-300 text-grey-700 hover:bg-grey-50",
                     )}
                   >
@@ -210,7 +210,7 @@ export function OrderHeaderPanel({
             </div>
 
             <div>
-              <h4 className="text-2xs font-semibold uppercase tracking-wide text-grey-400 mb-2">
+              <h4 className="text-2xs font-semibold uppercase tracking-wide text-grey-500 mb-2">
                 Customer
               </h4>
               {channel === "delivery" && !phone.trim() && (

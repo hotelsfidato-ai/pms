@@ -109,7 +109,7 @@ function Chip({ label, onRemove }: { label: string; onRemove: () => void }) {
         type="button"
         onClick={onRemove}
         aria-label={`Remove ${label}`}
-        className="text-grey-400 hover:text-ink-900 transition-colors duration-150"
+        className="text-grey-500 hover:text-ink-900 transition-colors duration-150"
       >
         <X className="size-3" />
       </button>

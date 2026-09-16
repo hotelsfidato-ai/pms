@@ -153,7 +153,7 @@ function KindTile({ rules, onEdit }: {
       {unset ? (
         /* A DASH, not 0%. Nothing here has decided the rate is nought;
            nobody has said what it is. */
-        <p className="text-lg font-semibold text-grey-400 tabular mt-0.5">—</p>
+        <p className="text-lg font-semibold text-grey-500 tabular mt-0.5">—</p>
       ) : (
         <ul className="mt-1 space-y-0.5">
           {rules.slabs.map((s) => (
@@ -282,7 +282,7 @@ function SlabsDialog({ hotelId, rules, open, onOpenChange, onSaved }: {
                     aria-label="Remove this rate"
                     onClick={() => setRows((x) => x.filter((_, j) => j !== i))}
                     className="size-11 grid place-items-center rounded-md
-                               text-grey-400 hover:text-brand-red hover:bg-red-50
+                               text-grey-500 hover:text-brand-red hover:bg-red-50
                                cursor-pointer shrink-0"
                   >
                     <X className="size-4" />

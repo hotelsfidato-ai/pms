@@ -376,7 +376,7 @@ const columns: Column<Row>[] = [
     cell: (r) => (
       <Link
         to={`/h/${r.property.id}/stay`}
-        className="group inline-flex items-center gap-1.5 font-medium text-ink-900 hover:text-brand-orange transition-colors duration-150"
+        className="group inline-flex items-center gap-1.5 font-medium text-ink-900 hover:text-brand-orange-700 transition-colors duration-150"
       >
         {r.property.name}
         <ArrowRight className="size-3.5 opacity-0 group-hover:opacity-100 transition-opacity duration-150" />

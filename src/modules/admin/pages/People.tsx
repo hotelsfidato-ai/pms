@@ -315,7 +315,7 @@ function PersonCard({ person, onGrant, onChanged }: {
           ) : person.access.length === 0 ? (
             /* A DASH, in the sense this project means it: no access is a
                fact worth stating, not an empty list to skip past. */
-            <p className="text-sm text-grey-400">
+            <p className="text-sm text-grey-500">
               — no property yet, so this account opens empty
             </p>
           ) : (
@@ -333,7 +333,7 @@ function PersonCard({ person, onGrant, onChanged }: {
                     aria-label={`Remove ${a.code} from ${person.name}`}
                     onClick={() => void revoke(a.code)}
                     className="size-7 grid place-items-center rounded
-                               text-grey-400 hover:text-brand-red
+                               text-grey-500 hover:text-brand-red
                                hover:bg-red-50 cursor-pointer"
                   >
                     <X className="size-3.5" />

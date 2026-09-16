@@ -222,7 +222,7 @@ function ItemRow({ item, onMove, onHistory }: {
             {/* A DASH. Nothing has been received, so nothing has been
                 paid, and zero would say it is worthless. */}
             <p className={cn("text-lg font-semibold tabular",
-              item.value === null ? "text-grey-400" : "text-ink-900")}>
+              item.value === null ? "text-grey-500" : "text-ink-900")}>
               {item.value === null ? "—" : money(item.value)}
             </p>
             {item.unitCost !== null && (
@@ -546,7 +546,7 @@ function HistoryDialog({ code, item, open, onOpenChange, onChanged }: {
                     aria-label={`Undo this ${KIND_LABEL[m.kind].toLowerCase()}`}
                     onClick={() => void undo(m.id)}
                     className="size-11 grid place-items-center rounded-md
-                               text-grey-400 hover:text-brand-red
+                               text-grey-500 hover:text-brand-red
                                hover:bg-red-50 cursor-pointer shrink-0"
                   >
                     <Undo2 className="size-4" />

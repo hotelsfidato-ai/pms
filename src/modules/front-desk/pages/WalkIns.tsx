@@ -55,7 +55,7 @@ export default function WalkInsPage() {
         </div>
         <Link
           to={`/h/${hotelId}/stay`}
-          className="inline-flex items-center gap-1.5 text-sm text-brand-orange hover:underline shrink-0 mt-0.5
+          className="inline-flex items-center gap-1.5 text-sm text-brand-orange-700 hover:underline shrink-0 mt-0.5
             pointer-coarse:min-h-11"
         >
           Open Stay view

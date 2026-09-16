@@ -101,7 +101,7 @@ export function PropertiesPage() {
 
           {closed.length > 0 && (
             <section className="mt-6">
-              <h2 className="text-2xs font-semibold uppercase tracking-wide text-grey-400 mb-2.5">
+              <h2 className="text-2xs font-semibold uppercase tracking-wide text-grey-500 mb-2.5">
                 Closed
               </h2>
               <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
@@ -129,7 +129,7 @@ export function PropertiesPage() {
                 </dl>
                 <Link
                   to={`/h/${p.id}/stay`}
-                  className="inline-flex items-center gap-1.5 text-sm text-brand-orange hover:underline mt-3.5"
+                  className="inline-flex items-center gap-1.5 text-sm text-brand-orange-700 hover:underline mt-3.5"
                 >
                   Open stay view
                   <ArrowRight className="size-3.5" />
@@ -210,7 +210,7 @@ function AdminPropertyCard({ hotel, onEdit, onToggle }: {
               property and will be used to add property staff". */}
           <Link
             to={`/properties/${hotel.code}`}
-            className="inline-flex items-center gap-1.5 text-sm text-brand-orange hover:underline"
+            className="inline-flex items-center gap-1.5 text-sm text-brand-orange-700 hover:underline"
           >
             Open
             <ArrowRight className="size-3.5" />

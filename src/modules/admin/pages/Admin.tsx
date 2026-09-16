@@ -77,7 +77,7 @@ const STAFF_COLUMNS: Column<StaffRecord>[] = [
   },
   {
     key: "seen", header: "Last seen", hideBelow: "lg", numeric: true,
-    cell: () => <span className="text-grey-400">—</span>,
+    cell: () => <span className="text-grey-500">—</span>,
   },
 ];
 
@@ -365,7 +365,7 @@ export function IntegrationsPage() {
                       <Plug className="size-4 text-grey-400 shrink-0" />
                       <p className="text-md font-semibold text-ink-900 truncate">{i.name}</p>
                     </div>
-                    <p className="text-2xs uppercase tracking-wide text-grey-400 mt-1">
+                    <p className="text-2xs uppercase tracking-wide text-grey-500 mt-1">
                       {i.kind}
                     </p>
                   </div>
@@ -375,7 +375,7 @@ export function IntegrationsPage() {
                 </div>
                 <p className="text-sm text-grey-600 mt-3 leading-relaxed">{i.detail}</p>
                 {i.stage && (
-                  <p className="text-2xs text-grey-400 mt-2.5">Arrives at {i.stage}</p>
+                  <p className="text-2xs text-grey-500 mt-2.5">Arrives at {i.stage}</p>
                 )}
               </CardBody>
             </Card>

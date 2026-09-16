@@ -135,7 +135,7 @@ function ToastItem({ toast: t }: { toast: Toast }) {
         type="button"
         onClick={() => dismiss(t.id)}
         aria-label="Dismiss"
-        className="text-grey-400 hover:text-ink-900 transition-colors duration-150 shrink-0"
+        className="text-grey-500 hover:text-ink-900 transition-colors duration-150 shrink-0"
       >
         <X className="size-3.5" />
       </button>

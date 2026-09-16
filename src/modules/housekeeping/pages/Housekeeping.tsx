@@ -457,7 +457,7 @@ function RoomCard({
                 "min-h-11 -ml-1 pl-1 pr-1 rounded bg-transparent",
                 "text-sm border-0 cursor-pointer",
                 "focus:outline-none focus:ring-2 focus:ring-brand-orange",
-                assignment ? "text-ink-900" : "text-grey-400",
+                assignment ? "text-ink-900" : "text-grey-500",
               )}
             >
               <option value="">Unassigned</option>
@@ -570,7 +570,7 @@ function SheetChip({ label, count, active, onClick }: {
       <span
         className={cn(
           "tabular text-sm",
-          active ? "text-brand-orange" : "text-grey-400",
+          active ? "text-brand-orange-700" : "text-grey-500",
         )}
       >
         {count}

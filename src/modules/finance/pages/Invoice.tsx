@@ -71,7 +71,7 @@ function Party({
         ) : (
           /* Not blank, and not "N/A" dressed up as a value. An
              unregistered recipient is a fact the invoice states. */
-          <span className="text-grey-400">not registered</span>
+          <span className="text-grey-500">not registered</span>
         )}
       </p>
     </div>

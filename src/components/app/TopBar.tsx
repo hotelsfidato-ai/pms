@@ -48,7 +48,7 @@ export function TopBar() {
           /* 44 where a finger uses it, 36 on the desktop console where a
              mouse does and the header should stay compact. */
           "flex items-center gap-2.5 h-11 lg:h-9 px-3 rounded-md min-w-0",
-          "border border-grey-200 bg-grey-50 text-grey-400",
+          "border border-grey-200 bg-grey-50 text-grey-500",
           "hover:bg-white hover:border-grey-300 transition-colors duration-150",
           "w-11 sm:w-64 lg:w-80 justify-center sm:justify-start",
         )}

@@ -306,7 +306,7 @@ function Tally({ icon: Icon, n, what, tone }: {
     <span className={cn(
       "inline-flex items-center gap-1.5 rounded-md border px-2.5 py-1",
       n === 0
-        ? "border-grey-200 bg-grey-50 text-grey-400"
+        ? "border-grey-200 bg-grey-50 text-grey-500"
         : tone === "bad"
           ? "border-red-200 bg-red-50 text-ink-900"
           : "border-grey-200 bg-white text-ink-900",

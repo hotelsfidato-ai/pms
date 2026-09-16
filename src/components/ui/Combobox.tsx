@@ -92,7 +92,7 @@ export function Combobox<T extends string>({
             className,
           )}
         >
-          <span className={cn("truncate", !selected && "text-grey-400")}>
+          <span className={cn("truncate", !selected && "text-grey-500")}>
             {selected?.label ?? placeholder}
           </span>
           <ChevronsUpDown className="size-4 text-grey-400 shrink-0" />

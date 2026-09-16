@@ -41,9 +41,12 @@ const BAR: Record<BarTone, string> = {
   "in-house": "bg-success text-white",
   confirmed: "bg-info text-white",
   departed: "bg-brand-yellow text-ink-900",
-  "due-out": "bg-brand-tangerine text-white",
-  "no-show": "bg-brand-rose text-white",
-  void: "bg-brand-red/25 text-brand-red line-through",
+  /* The darker steps: white on tangerine was 2.54:1 and on rose 3.85:1,
+     and the void bar's red on its own 25% tint was 3.11:1 — the three
+     least readable marks on the busiest screen in the product. */
+  "due-out": "bg-brand-tangerine-700 text-white",
+  "no-show": "bg-brand-rose-700 text-white",
+  void: "bg-brand-red-50 text-brand-red-700 line-through",
 };
 
 const BAR_LABEL: Record<BarTone, string> = {
@@ -425,7 +428,7 @@ export default function StayViewPage({ view }: {
               )}
             >
               {PILL_LABEL[p]}
-              <span className={cn("tabular", pill === p ? "text-white/70" : "text-grey-400")}>
+              <span className={cn("tabular", pill === p ? "text-white/70" : "text-grey-500")}>
                 {counts[p] ?? 0}
               </span>
             </button>
@@ -496,7 +499,7 @@ export default function StayViewPage({ view }: {
               >
                 <div className={cn(
                   "text-2xs font-semibold uppercase",
-                  d === BUSINESS_DATE ? "text-white/70" : "text-grey-400",
+                  d === BUSINESS_DATE ? "text-white/70" : "text-grey-500",
                 )}>
                   {new Date(`${d}T00:00:00Z`).toLocaleDateString("en-IN", {
                     weekday: "short", timeZone: "UTC",
@@ -651,7 +654,7 @@ export default function StayViewPage({ view }: {
               <div className="text-2xs font-semibold uppercase tracking-wide text-grey-500 leading-tight">
                 Available
               </div>
-              <div className="text-2xs text-grey-400 leading-tight">Occupancy</div>
+              <div className="text-2xs text-grey-500 leading-tight">Occupancy</div>
             </div>
             {footer.map((f) => (
               <div

@@ -165,7 +165,7 @@ export function AccountMenu() {
           </>
         ) : (
           <div className="px-2.5 py-2">
-            <p className="text-2xs text-grey-400">Property</p>
+            <p className="text-2xs text-grey-500">Property</p>
             <p className="text-base text-ink-900 mt-0.5">
               {current?.name ?? "None assigned"}
             </p>

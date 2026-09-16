@@ -247,7 +247,7 @@ export default function TillPage() {
                           "rounded-md border p-3 min-h-14 transition-colors duration-150",
                           item.isActive
                             ? "border-grey-200 bg-white hover:border-brand-orange hover:bg-brand-orange-50"
-                            : "border-grey-200 bg-grey-50 text-grey-400 cursor-not-allowed",
+                            : "border-grey-200 bg-grey-50 text-grey-500 cursor-not-allowed",
                         )}
                       >
                         <span className="min-w-0">
@@ -512,7 +512,7 @@ function DiscountDialog({
         <div className="space-y-4">
           {live.length > 0 && (
             <div className="space-y-2">
-              <p className="text-2xs font-semibold uppercase tracking-wide text-grey-400">
+              <p className="text-2xs font-semibold uppercase tracking-wide text-grey-500">
                 Promotions
               </p>
               <div className="grid grid-cols-2 gap-2">
@@ -540,7 +540,7 @@ function DiscountDialog({
           {live.length > 0 && (
             <div className="flex items-center gap-3">
               <span className="h-px flex-1 bg-grey-200" />
-              <span className="text-2xs uppercase tracking-wide text-grey-400">
+              <span className="text-2xs uppercase tracking-wide text-grey-500">
                 or by hand
               </span>
               <span className="h-px flex-1 bg-grey-200" />
@@ -557,7 +557,7 @@ function DiscountDialog({
                   "flex-1 h-11 rounded-md border text-base font-medium cursor-pointer",
                   "transition-colors duration-200",
                   type === t
-                    ? "border-brand-orange bg-orange-50 text-brand-orange"
+                    ? "border-brand-orange bg-orange-50 text-brand-orange-700"
                     : "border-grey-300 text-grey-600 hover:bg-grey-50",
                 )}
               >
@@ -905,7 +905,7 @@ function OrderPanel({
               >
                 <span className={cn(
                   "tabular text-sm shrink-0",
-                  line.isAddon ? "w-6 text-grey-400" : "w-7 text-grey-500",
+                  line.isAddon ? "w-6 text-grey-500" : "w-7 text-grey-500",
                 )}>
                   {line.qty}×
                 </span>

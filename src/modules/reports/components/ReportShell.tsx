@@ -193,7 +193,7 @@ export function Amount({
   format: (n: number) => string;
 }) {
   if (value === null || value === undefined) {
-    return <span className="text-grey-400" title="Not derivable from this system yet">—</span>;
+    return <span className="text-grey-500" title="Not derivable from this system yet">—</span>;
   }
   return (
     <span

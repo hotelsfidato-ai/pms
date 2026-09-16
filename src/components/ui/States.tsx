@@ -109,7 +109,7 @@ export function ErrorState({
           href={detail.indexUrl}
           target="_blank"
           rel="noreferrer"
-          className="mt-3 text-sm text-brand-orange hover:underline font-medium"
+          className="mt-3 text-sm text-brand-orange-700 hover:underline font-medium"
         >
           Create the missing index in Firebase →
         </a>

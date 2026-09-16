@@ -133,7 +133,7 @@ export function InclusionsFlow({
                     onClick={() => void drop(l.id)}
                     aria-label={`Remove ${l.name}`}
                     className="size-11 -m-1 grid place-items-center rounded-md
-                               text-grey-400 hover:text-brand-red
+                               text-grey-500 hover:text-brand-red
                                hover:bg-red-50 cursor-pointer shrink-0"
                   >
                     <X className="size-4" />

@@ -119,7 +119,7 @@ export default function NightAuditPage() {
                       <span
                         className={cn(
                           "text-base tabular font-semibold",
-                          c.state === "ok" ? "text-grey-400" : "text-brand-yellow",
+                          c.state === "ok" ? "text-grey-500" : "text-brand-yellow",
                         )}
                       >
                         {c.count}
@@ -132,7 +132,7 @@ export default function NightAuditPage() {
                     <Link
                       to={c.link}
                       className={cn(
-                        "inline-flex items-center gap-1.5 text-sm text-brand-orange hover:underline shrink-0 mt-0.5",
+                        "inline-flex items-center gap-1.5 text-sm text-brand-orange-700 hover:underline shrink-0 mt-0.5",
                         /* The action on the card, not a word in a
                            sentence — 53x20px is a link, and this is
                            a button wearing a link's clothes. */
@@ -158,7 +158,7 @@ export default function NightAuditPage() {
                 <p className="text-sm text-grey-600 mt-0.5 leading-relaxed">
                   {data.canRun.reason}
                 </p>
-                <p className="text-2xs text-grey-400 mt-1.5">
+                <p className="text-2xs text-grey-500 mt-1.5">
                   Last run: {data.lastRun ?? "never — this property has not closed a date in this system"}
                 </p>
               </div>

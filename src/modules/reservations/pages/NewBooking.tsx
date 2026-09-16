@@ -485,8 +485,8 @@ function LinePrice({ line, tariff, loading }: {
       </span>
     );
   }
-  if (loading) return <span className="text-grey-400">Pricing…</span>;
-  if (!tariff) return <span className="text-grey-400">—</span>;
+  if (loading) return <span className="text-grey-500">Pricing…</span>;
+  if (!tariff) return <span className="text-grey-500">—</span>;
 
   if (tariff.total === null) {
     /* The whole point. A number here that quietly charged for two would

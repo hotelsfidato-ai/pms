@@ -93,7 +93,7 @@ export default function ReservationsPage() {
             <span
               className={cn(
                 "tabular text-2xs",
-                filter === f.key ? "text-white/60" : "text-grey-400",
+                filter === f.key ? "text-white/60" : "text-grey-500",
               )}
             >
               {countFor(f)}

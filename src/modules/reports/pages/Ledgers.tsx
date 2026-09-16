@@ -75,8 +75,8 @@ export function CityLedgerPage() {
               {rows.map((r) => (
                 <tr key={r.account} className="border-b border-grey-100">
                   <td className="px-4 py-2 text-ink-900">{r.account}</td>
-                  <td className={r.contact ? "px-4 py-2 text-grey-600" : "px-4 py-2 text-grey-400"}>{r.contact ?? "—"}</td>
-                  <td className="px-4 py-2 text-grey-400">{r.phone ?? "—"}</td>
+                  <td className={r.contact ? "px-4 py-2 text-grey-600" : "px-4 py-2 text-grey-500"}>{r.contact ?? "—"}</td>
+                  <td className="px-4 py-2 text-grey-500">{r.phone ?? "—"}</td>
                   <td className="px-4 py-2 text-right"><Amount value={r.opening} format={money} /></td>
                   <td className="px-4 py-2 text-right"><Amount value={r.debit} format={money} /></td>
                   <td className="px-4 py-2 text-right"><Amount value={r.credit} format={money} /></td>
@@ -143,7 +143,7 @@ export function NoShowPage() {
           <p className="text-base text-grey-500">
             No no-shows recorded for {dateShort(BUSINESS_DATE)}.
           </p>
-          <p className="text-2xs text-grey-400 mt-2">
+          <p className="text-2xs text-grey-500 mt-2">
             This report prints whether or not it has rows.
           </p>
         </div>

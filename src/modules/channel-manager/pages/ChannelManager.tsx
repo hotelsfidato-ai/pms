@@ -114,14 +114,14 @@ export default function ChannelManagerPage() {
           </h2>
           <ul className="space-y-1.5 text-base text-ink-900">
             <li className="flex gap-2">
-              <span className="text-grey-400 tabular">1</span>
+              <span className="text-grey-500 tabular">1</span>
               <span>
                 Which channel manager the group pays for. This was designed
                 against STAAH; a different one changes the work.
               </span>
             </li>
             <li className="flex gap-2">
-              <span className="text-grey-400 tabular">2</span>
+              <span className="text-grey-500 tabular">2</span>
               <span>
                 The account, and one property id per hotel on their side.
                 <span className="text-grey-500">
@@ -131,7 +131,7 @@ export default function ChannelManagerPage() {
               </span>
             </li>
             <li className="flex gap-2">
-              <span className="text-grey-400 tabular">3</span>
+              <span className="text-grey-500 tabular">3</span>
               <span>
                 A mapping of room names. What an OTA calls your Superior is
                 rarely what you call it, and a wrong mapping oversells the
@@ -139,7 +139,7 @@ export default function ChannelManagerPage() {
               </span>
             </li>
             <li className="flex gap-2">
-              <span className="text-grey-400 tabular">4</span>
+              <span className="text-grey-500 tabular">4</span>
               <span>
                 One rate everywhere, or a rate per channel — a decision, and
                 it shapes the rate calendar.
@@ -156,7 +156,7 @@ export default function ChannelManagerPage() {
           </h2>
           {otas.length === 0 ? (
             /* A dash, not an invented list. */
-            <p className="text-base text-grey-400">
+            <p className="text-base text-grey-500">
               — no booking sources have been recorded at {code ?? "this property"} yet
             </p>
           ) : (

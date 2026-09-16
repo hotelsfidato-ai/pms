@@ -102,7 +102,7 @@ export function GuestLedgerPage() {
                 <tr key={r.folioId} className="border-b border-grey-100">
                   <td className="px-4 py-2 text-ink-900">
                     {r.guest}
-                    <span className="text-grey-400 text-2xs tabular ml-1.5">
+                    <span className="text-grey-500 text-2xs tabular ml-1.5">
                       {r.reference}
                     </span>
                   </td>
@@ -320,7 +320,7 @@ export function GstSalesPage() {
                   <td className="px-4 py-2 tabular text-grey-600">
                     {/* A dash, not "URP". An unregistered recipient is a
                         fact; a code invented here would not be. */}
-                    {r.gstin ?? <span className="text-grey-400">—</span>}
+                    {r.gstin ?? <span className="text-grey-500">—</span>}
                   </td>
                   <td className="px-4 py-2 text-grey-600">{r.placeOfSupply ?? "—"}</td>
                   <td className="px-4 py-2 text-right"><Amount value={r.taxable} format={money} /></td>
@@ -436,7 +436,7 @@ export function CFormPage() {
                     )}
                   </td>
                   <td className="px-4 py-2 tabular text-grey-700">
-                    {r.visaNumber ?? <span className="text-grey-400">—</span>}
+                    {r.visaNumber ?? <span className="text-grey-500">—</span>}
                     {r.visaExpiry && (
                       <span className="block text-2xs text-grey-500">
                         expires {dateShort(r.visaExpiry)}

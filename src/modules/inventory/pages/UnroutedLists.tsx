@@ -87,7 +87,7 @@ const PLAN_COLUMNS: Column<RatePlanRecord>[] = [
   { key: "includes", header: "Includes", cell: (p) => <span className="text-grey-600">{p.includes}</span> },
   {
     key: "seen", header: "In the live system", hideBelow: "md",
-    cell: (p) => p.seenAs ? <span className="tabular text-grey-600">{p.seenAs}</span> : <span className="text-grey-400">—</span>,
+    cell: (p) => p.seenAs ? <span className="tabular text-grey-600">{p.seenAs}</span> : <span className="text-grey-500">—</span>,
   },
 ];
 

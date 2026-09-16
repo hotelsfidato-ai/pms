@@ -94,7 +94,7 @@ function Row({ check, hotelId }: {
   const body = (
     <>
       <Icon className={cn("size-4 shrink-0 mt-0.5",
-        check.blocking ? "text-amber-600" : "text-grey-400")} />
+        check.blocking ? "text-amber-600" : "text-grey-500")} />
       <div className="min-w-0 flex-1">
         <p className="text-base text-ink-900">
           {check.label}

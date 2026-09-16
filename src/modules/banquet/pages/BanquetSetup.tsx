@@ -119,7 +119,7 @@ export default function BanquetSetupPage() {
                       {" · "}
                       {/* A DASH. No hall ships with a price. */}
                       {v.defaultRate === null
-                        ? <span className="text-grey-400">no usual rate</span>
+                        ? <span className="text-grey-500">no usual rate</span>
                         : `usually ${money(v.defaultRate)}`}
                     </p>
                   </div>
@@ -163,7 +163,7 @@ export default function BanquetSetupPage() {
                   </p>
                   <p className="text-sm text-grey-500">
                     {p.ratePerHead === null
-                      ? <span className="text-grey-400">no rate — agreed per function</span>
+                      ? <span className="text-grey-500">no rate — agreed per function</span>
                       : `${money(p.ratePerHead)} a head`}
                     {p.description ? ` · ${p.description}` : ""}
                   </p>

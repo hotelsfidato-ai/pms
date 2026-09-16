@@ -315,7 +315,7 @@ export function OrderPad({
               <div className="space-y-4">
                 {filtered.map((cat) => (
                   <section key={cat.id}>
-                    <h3 className="text-2xs font-semibold uppercase tracking-wide text-grey-400 mb-2">
+                    <h3 className="text-2xs font-semibold uppercase tracking-wide text-grey-500 mb-2">
                       {cat.name}
                     </h3>
                     <div className="grid gap-2 sm:grid-cols-2">
@@ -332,7 +332,7 @@ export function OrderPad({
                               "rounded-md border p-3 min-h-14",
                               "transition-colors duration-200",
                               off
-                                ? "border-grey-200 bg-grey-50 text-grey-400 cursor-not-allowed"
+                                ? "border-grey-200 bg-grey-50 text-grey-500 cursor-not-allowed"
                                 : "border-grey-200 bg-white cursor-pointer hover:border-brand-orange hover:bg-brand-orange-50",
                             )}
                           >
@@ -365,7 +365,7 @@ export function OrderPad({
             {/* ── The round ──────────────────────────────────── */}
             <div className="min-w-0 order-1 lg:order-2">
               <div className="flex items-center justify-between gap-2 mb-2">
-                <h3 className="text-2xs font-semibold uppercase tracking-wide text-grey-400">
+                <h3 className="text-2xs font-semibold uppercase tracking-wide text-grey-500">
                   This round
                 </h3>
                 {!canKeep && (
@@ -401,7 +401,7 @@ export function OrderPad({
                             </span>
                           )}
                           {l.note && (
-                            <span className="block text-2xs text-brand-orange">
+                            <span className="block text-2xs text-brand-orange-700">
                               {l.note}
                             </span>
                           )}

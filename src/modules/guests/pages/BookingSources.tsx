@@ -58,7 +58,7 @@ const KIND_TONES: Record<string, "info" | "accent" | "neutral" | "success"> = {
 /** A percentage, or a dash. Never a zero standing in for silence. */
 function Commission({ pct }: { pct: number | null }) {
   if (pct === null) {
-    return <span className="text-grey-400" title="No rate agreed">—</span>;
+    return <span className="text-grey-500" title="No rate agreed">—</span>;
   }
   return (
     <span className="tabular font-medium text-ink-900">
@@ -94,7 +94,7 @@ export default function BookingSourcesPage() {
       cell: (s) => (
         <div className="min-w-0">
           <p className={cn("font-medium truncate",
-                           s.isActive ? "text-ink-900" : "text-grey-400")}>
+                           s.isActive ? "text-ink-900" : "text-grey-500")}>
             {s.name}
           </p>
           {!s.isActive && (
@@ -126,7 +126,7 @@ export default function BookingSourcesPage() {
           /* A walk-in has no code and never will. A dash says "none",
              which is the truth, rather than an empty cell that reads
              as "not filled in yet". */
-          : <span className="text-grey-400">—</span>
+          : <span className="text-grey-500">—</span>
       ),
     },
     {
@@ -144,7 +144,7 @@ export default function BookingSourcesPage() {
       width: "w-[140px]",
       cell: (s) => (
         <span className={cn("tabular",
-                            s.bookings === 0 ? "text-grey-400" : "text-grey-700")}>
+                            s.bookings === 0 ? "text-grey-500" : "text-grey-700")}>
           {s.bookings}
         </span>
       ),

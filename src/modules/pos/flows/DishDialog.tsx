@@ -124,7 +124,7 @@ export function DishDialog({
         <div className="space-y-5">
           {needsVariation && (
             <section>
-              <h4 className="text-2xs font-semibold uppercase tracking-wide text-grey-400 mb-2">
+              <h4 className="text-2xs font-semibold uppercase tracking-wide text-grey-500 mb-2">
                 Variation
               </h4>
               <div className="flex gap-2 flex-wrap">
@@ -143,7 +143,7 @@ export function DishDialog({
                   >
                     <span className={cn(
                       "block text-base font-medium",
-                      variationId === v.id ? "text-brand-orange" : "text-ink-900",
+                      variationId === v.id ? "text-brand-orange-700" : "text-ink-900",
                     )}>
                       {v.label}
                     </span>
@@ -178,7 +178,7 @@ export function DishDialog({
                 if (!shown.length) return null;
                 return (
                   <div key={g.id} className="mb-4 last:mb-0">
-                    <h4 className="text-2xs font-semibold uppercase tracking-wide text-grey-400 mb-2">
+                    <h4 className="text-2xs font-semibold uppercase tracking-wide text-grey-500 mb-2">
                       {g.label}
                       {g.minSelect > 0 && (
                         <span className="text-brand-red ml-1">required</span>
@@ -207,7 +207,7 @@ export function DishDialog({
                           >
                             <span className={cn(
                               "block text-base",
-                              off ? "text-grey-400 line-through" : "text-ink-900",
+                              off ? "text-grey-500 line-through" : "text-ink-900",
                             )}>
                               {a.label}
                             </span>
@@ -225,7 +225,7 @@ export function DishDialog({
           )}
 
           <section>
-            <h4 className="text-2xs font-semibold uppercase tracking-wide text-grey-400 mb-2">
+            <h4 className="text-2xs font-semibold uppercase tracking-wide text-grey-500 mb-2">
               Note for the kitchen
             </h4>
             {/* The list first, because it is what gets used, and because a
@@ -241,7 +241,7 @@ export function DishDialog({
                     "min-h-11 px-3 rounded-md border text-base cursor-pointer",
                     "transition-colors duration-200",
                     note === n
-                      ? "border-brand-orange bg-orange-50 text-brand-orange"
+                      ? "border-brand-orange bg-orange-50 text-brand-orange-700"
                       : "border-grey-300 text-grey-700 hover:bg-grey-50",
                   )}
                 >
@@ -257,7 +257,7 @@ export function DishDialog({
           </section>
 
           <section className="flex items-center gap-3">
-            <h4 className="text-2xs font-semibold uppercase tracking-wide text-grey-400">
+            <h4 className="text-2xs font-semibold uppercase tracking-wide text-grey-500">
               Quantity
             </h4>
             <div className="flex items-center gap-2 ml-auto">

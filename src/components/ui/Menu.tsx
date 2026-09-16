@@ -109,7 +109,7 @@ export function MenuItem({
         "text-base outline-none cursor-pointer select-none",
         "transition-colors duration-100",
         disabled
-          ? "text-grey-400 cursor-not-allowed"
+          ? "text-grey-500 cursor-not-allowed"
           : danger
             ? "text-brand-red data-[highlighted]:bg-red-50"
             : "text-ink-900 data-[highlighted]:bg-grey-100",
@@ -123,7 +123,7 @@ export function MenuItem({
       <span className="min-w-0">
         <span className="block leading-snug">{children}</span>
         {disabled && reason && (
-          <span className="block text-sm text-grey-400 leading-snug mt-0.5">
+          <span className="block text-sm text-grey-500 leading-snug mt-0.5">
             {reason}
           </span>
         )}
@@ -142,7 +142,7 @@ export function MenuLabel({ children }: { children: ReactNode }) {
   return (
     <DropdownPrimitive.Label
       className="px-2.5 pt-2 pb-1 text-2xs font-semibold uppercase
-                 tracking-wide text-grey-400"
+                 tracking-wide text-grey-500"
     >
       {children}
     </DropdownPrimitive.Label>

@@ -110,7 +110,7 @@ const ALL_COLUMNS: Record<StayColumn, Column<StayRow>> = {
     key: "balance", header: "Balance", numeric: true,
     cell: (s) =>
       s.balance === undefined ? (
-        <span className="text-grey-400">—</span>
+        <span className="text-grey-500">—</span>
       ) : (
         <span
           className={cn(
@@ -193,7 +193,7 @@ function StayCards({ rows, columns, onOpen }: {
               {columns.includes("room") && (
                 <span className="text-lg tabular font-semibold text-ink-900
                                  shrink-0">
-                  {s.roomNumber || <span className="text-grey-400">—</span>}
+                  {s.roomNumber || <span className="text-grey-500">—</span>}
                 </span>
               )}
             </div>
@@ -351,7 +351,7 @@ export function StayTable({
             className={cn(
               "size-9 grid place-items-center cursor-pointer transition-colors",
               view === "table"
-                ? "bg-brand-orange-50 text-brand-orange"
+                ? "bg-brand-orange-50 text-brand-orange-700"
                 : "text-grey-500 hover:bg-grey-50",
             )}
           >
@@ -366,7 +366,7 @@ export function StayTable({
               "size-9 grid place-items-center cursor-pointer transition-colors",
               "border-l border-grey-200",
               view === "cards"
-                ? "bg-brand-orange-50 text-brand-orange"
+                ? "bg-brand-orange-50 text-brand-orange-700"
                 : "text-grey-500 hover:bg-grey-50",
             )}
           >

@@ -220,7 +220,7 @@ export default function BanquetEventPage() {
               <div className="flex items-baseline justify-between gap-3">
                 <span className="font-medium">Total</span>
                 <span className={cn("text-lg font-medium tabular-nums",
-                                    e.money.total === null && "text-grey-400")}>
+                                    e.money.total === null && "text-grey-500")}>
                   {rupees(e.money.total)}
                 </span>
               </div>
@@ -281,7 +281,7 @@ export default function BanquetEventPage() {
                     </p>
                   </div>
                   <span className={cn("tabular-nums font-medium",
-                                      c.ratePerHead === null && "text-grey-400")}>
+                                      c.ratePerHead === null && "text-grey-500")}>
                     {c.ratePerHead === null ? "—" : money(c.pax * c.ratePerHead)}
                   </span>
                   <Button
@@ -342,7 +342,7 @@ function Line({ label, value }: { label: string; value: string }) {
   return (
     <div className="flex items-baseline justify-between gap-3">
       <dt className="text-grey-600">{label}</dt>
-      <dd className={cn("tabular-nums", value === "—" && "text-grey-400")}>
+      <dd className={cn("tabular-nums", value === "—" && "text-grey-500")}>
         {value}
       </dd>
     </div>

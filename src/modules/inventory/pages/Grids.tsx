@@ -442,7 +442,7 @@ function RateGrid({ hotelId, dates, plans, cells, onDone }: {
                              this date, and that is the thing a revenue
                              manager is scanning for. */
                           inherited
-                            ? "text-grey-400 font-normal italic"
+                            ? "text-grey-500 font-normal italic"
                             : "text-ink-900 font-semibold",
                         )}>
                           {money(cell.price)}
@@ -464,7 +464,7 @@ function RateGrid({ hotelId, dates, plans, cells, onDone }: {
 
       <div className="mt-3 flex flex-wrap gap-x-6 gap-y-2 text-sm text-grey-600">
         <span><b className="text-ink-900">4,099</b> priced for the date</span>
-        <span className="text-grey-400 italic">4,099 the room type&rsquo;s own rate, nobody set this date</span>
+        <span className="text-grey-500 italic">4,099 the room type&rsquo;s own rate, nobody set this date</span>
         <span className="text-grey-300">— nothing at all</span>
       </div>
 

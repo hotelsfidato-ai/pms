@@ -257,7 +257,7 @@ function Person({ person, codes, onDone }: {
       <div className="flex flex-wrap items-center gap-2 mb-1.5">
         <span className={cn(
           "text-base font-medium",
-          person.isActive ? "text-ink-900" : "text-grey-400 line-through",
+          person.isActive ? "text-ink-900" : "text-grey-500 line-through",
         )}>
           {person.name}
         </span>

@@ -206,7 +206,9 @@ export function Segmented<T extends string>({
             "transition-colors duration-150 ease-out",
             value === opt.value
               ? "bg-white text-ink-900 shadow-raise"
-              : "text-grey-500 hover:text-ink-900",
+              /* grey-600: the unselected tab sits on the grey-100 track,
+                 where grey-500 measures 4.24:1. */
+              : "text-grey-600 hover:text-ink-900",
           )}
         >
           {opt.label}
@@ -255,7 +257,7 @@ export function Stat({
 }) {
   return (
     <div className={className}>
-      <p className="text-2xs font-medium uppercase tracking-wide text-grey-400">{label}</p>
+      <p className="text-2xs font-medium uppercase tracking-wide text-grey-500">{label}</p>
       <p className="text-lg font-semibold text-ink-900 tabular mt-1">{value}</p>
       {hint && <p className="text-xs text-grey-500 mt-0.5">{hint}</p>}
     </div>

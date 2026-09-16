@@ -140,7 +140,7 @@ function Tab({
     >
       {children}
       {count !== undefined && (
-        <span className="ml-1.5 text-2xs text-grey-400 tabular">{count}</span>
+        <span className="ml-1.5 text-2xs text-grey-500 tabular">{count}</span>
       )}
     </Link>
   );

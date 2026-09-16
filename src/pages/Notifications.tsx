@@ -78,9 +78,9 @@ export function NotificationsPage() {
                   <p className="text-sm text-grey-600 mt-0.5">{n.body}</p>
                 </div>
                 <div className="shrink-0 text-right">
-                  <p className="text-2xs text-grey-400 tabular">{relative(n.at)}</p>
+                  <p className="text-2xs text-grey-500 tabular">{relative(n.at)}</p>
                   {n.link && (
-                    <Link to={n.link} className="text-sm text-brand-orange hover:underline">
+                    <Link to={n.link} className="text-sm text-brand-orange-700 hover:underline">
                       Open
                     </Link>
                   )}

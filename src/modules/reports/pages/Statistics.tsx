@@ -247,7 +247,7 @@ export function YearlyStatisticsPage() {
                 key={r.month}
                 className={cn(
                   "border-b border-grey-100",
-                  r.nightSold === 0 && "text-grey-400",
+                  r.nightSold === 0 && "text-grey-500",
                 )}
               >
                 <td className="px-4 py-2 whitespace-nowrap">{r.monthLabel}</td>

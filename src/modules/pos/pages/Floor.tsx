@@ -227,7 +227,7 @@ export default function FloorPage() {
       ) : (
         sections.map((section) => (
           <section key={section.id} className="mb-6">
-            <h2 className="text-2xs font-semibold uppercase tracking-wide text-grey-400 mb-2.5">
+            <h2 className="text-2xs font-semibold uppercase tracking-wide text-grey-500 mb-2.5">
               {section.name}
             </h2>
             <div className="grid gap-2.5 [grid-template-columns:repeat(auto-fill,minmax(9rem,1fr))]">
@@ -247,7 +247,7 @@ export default function FloorPage() {
                 >
                   {drafted.has(t.id) && (
                     <span
-                      className="absolute top-2 right-2 text-2xs font-medium text-brand-orange"
+                      className="absolute top-2 right-2 text-2xs font-medium text-brand-orange-700"
                       title="A round is on a pad and has not been sent"
                     >
                       not sent

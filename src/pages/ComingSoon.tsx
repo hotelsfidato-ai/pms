@@ -76,7 +76,7 @@ export function ComingSoonPage({ content }: { content: ComingSoonContent }) {
           <ol className="space-y-1.5 text-base text-ink-900">
             {needs.map((need, i) => (
               <li key={need} className="flex gap-2">
-                <span className="text-grey-400 tabular">{i + 1}</span>
+                <span className="text-grey-500 tabular">{i + 1}</span>
                 <span>{need}</span>
               </li>
             ))}

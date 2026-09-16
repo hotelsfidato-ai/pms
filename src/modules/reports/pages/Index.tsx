@@ -260,7 +260,7 @@ function ReportCard({
       </div>
       <p className="text-sm text-grey-600 mt-1.5 leading-relaxed">{report.description}</p>
       {report.path && (
-        <span className="inline-flex items-center gap-1.5 text-sm text-brand-orange mt-3">
+        <span className="inline-flex items-center gap-1.5 text-sm text-brand-orange-700 mt-3">
           Open
           <ArrowRight className="size-3.5" />
         </span>

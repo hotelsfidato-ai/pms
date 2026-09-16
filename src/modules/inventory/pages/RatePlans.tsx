@@ -382,7 +382,7 @@ function SeasonRow({ hotelId, rate, onDone }: {
         </div>
         <p className="text-2xs text-grey-500 tabular mt-0.5">
           {dateLong(rate.from)} → {rate.to ? dateLong(rate.to) : "no end"}
-          {rate.setBy && <span className="text-grey-400"> · set by {rate.setBy}</span>}
+          {rate.setBy && <span className="text-grey-500"> · set by {rate.setBy}</span>}
         </p>
       </div>
 

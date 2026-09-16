@@ -129,6 +129,63 @@ Then, second question: **can this POS route a KOT and give a printout?**
 
 ---
 
+## 2026-09-16 (contrast) · The state of a room is no longer the faintest word on it
+
+**Asked for:** a critique of every screen, and then — the owner's answer to the
+first question it raised — "I fix it once, before the lanes run."
+
+**What the critique measured.** A design review and a mechanical detector ran
+as two isolated agents. The detector's live scan found **39 contrast failures
+on `/stay` alone**; the review traced them to one token: `--color-grey-400`
+(#9aa2a9) is **2.59:1 on white and 2.27:1 on a tinted card**, and it was
+carrying `FREE`, `Superior` and the count in every filter chip — 209 uses. Two
+more the review did not catch and the DOM did: **white on `brand-orange` is
+3.57:1**, which is the primary button's own label, and it got *more* readable
+on hover; **white on `brand-tangerine` is 2.54:1**, which is the due-out room
+tile.
+
+**Shipped.** Every ratio below is computed WCAG 2.1 relative luminance, not
+judged by eye.
+
+- **Four darker steps of the existing brand hues** — `brand-orange-800`,
+  `brand-tangerine-700`, `brand-rose-700`, `brand-red-700`. The five warm
+  colours from the identity guide are untouched; these are for the one job
+  they cannot do, which is carry small text.
+- **`grey-400` is no longer a text colour.** 148 lines in 67 files moved to
+  `grey-500`; on a tinted surface text takes `grey-600` (4.24 → 6.13). Left
+  alone on purpose: 50 icons, 4 placeholders, 7 disabled states — none of
+  which AA measures. The token's comment now says so.
+- **The primary button fills with `orange-600`** (4.59:1), hovers to `-700`,
+  presses to `-800`. **The brand orange as TEXT** — 25 uses across 18 files —
+  moved to `orange-700` (5.63:1 on its own tint).
+- **Room tiles:** due-out → tangerine-700 (4.62), no-show → rose-700 (5.17),
+  void → red-700 on the red tint (4.94) instead of red on 25% red (3.11).
+- **Disabled labels stay readable** — grey-500 on grey-50 is 4.56:1, where
+  grey-400 was 2.43:1. A product that explains every disabled control in words
+  should not start that sentence with a label nobody can read.
+
+**Proved by measuring the same pages again**, in the browser, with the
+computed ratio of every text node against the background actually behind it:
+
+```
+                 before          after
+/stay            39 failures  →  0
+/pricing         7            →  0
+/housekeeping    1            →  0
+/till/terminal   2            →  0
+/cashiering      2            →  0
+/arrivals        —            →  0
+```
+
+Types clean · 212 web tests, exit 0 · build clean, "no test sign-in in dist".
+
+**The critique's other findings are not fixed** and are listed in
+`docs/audits/2026-09-16-design-critique.md`: three screens disagree about one
+booking's status, `/stay` has no error branch at all, and `/in-house` prints a
+paid guest's charges under a column headed BALANCE.
+
+---
+
 ## 2026-09-16 (pricing B and C) · The Pricing screen
 
 **Shipped** — the screen the owner asked for: one screen, shaped like a

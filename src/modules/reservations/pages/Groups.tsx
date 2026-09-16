@@ -189,7 +189,7 @@ function GroupRow({ group, code, open, onToggle }: {
               </p>
               <p className="text-sm text-grey-500 mt-1">Host owes</p>
               <p className={cn("text-base tabular font-medium",
-                group.masterBalance === null ? "text-grey-400" : "text-ink-900")}>
+                group.masterBalance === null ? "text-grey-500" : "text-ink-900")}>
                 {/* A dash, because most groups have no host account and
                     zero would say the host owes nothing. */}
                 {group.masterBalance === null ? "—" : money(group.masterBalance)}

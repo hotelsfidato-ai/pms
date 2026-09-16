@@ -249,7 +249,7 @@ function EventRow({ event, hotelId }: { event: BanquetEventSummary; hotelId: str
           {/* A DASH, never ₹0. Nobody has priced this yet, and a zero
               would read as a hall given away. */}
           <span className={cn("tabular-nums",
-                              event.agreedAmount === null && "text-grey-400")}>
+                              event.agreedAmount === null && "text-grey-500")}>
             {event.agreedAmount === null ? "—" : money(event.agreedAmount)}
           </span>
         </p>

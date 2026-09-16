@@ -154,7 +154,7 @@ export default function KitchenPage() {
               data-live={live ? "yes" : "no"}
               className={cn(
                 "inline-flex items-center gap-1 uppercase tracking-wide",
-                live ? "text-success" : "text-brand-tangerine",
+                live ? "text-success" : "text-brand-tangerine-700",
               )}
             >
               <i className={cn(
@@ -279,7 +279,7 @@ function ByTable({ lines, busy, onMove }: {
   if (groups.length === 0) {
     return (
       <div className="flex-1 grid place-items-center bg-grey-50">
-        <p className="text-lg text-grey-400">Nothing with the kitchen.</p>
+        <p className="text-lg text-grey-500">Nothing with the kitchen.</p>
       </div>
     );
   }
@@ -331,7 +331,7 @@ function ByTable({ lines, busy, onMove }: {
                   const mine = ls.filter((l) => (l.course ?? null) === course);
                   return (
                     <div key={course ?? "none"}>
-                      <p className="text-2xs uppercase tracking-wide text-grey-400 mb-1.5 px-1">
+                      <p className="text-2xs uppercase tracking-wide text-grey-500 mb-1.5 px-1">
                         {course === null ? "Any time" : `Course ${course}`}
                       </p>
                       <div className="space-y-2">
@@ -417,7 +417,7 @@ function Ticket({ line, action, busy, onMove }: {
           {line.note && (
             /* A modifier the kitchen must not miss. Same weight as the
                dish, because "no chilli" sent back is a whole plate. */
-            <p className="text-md font-semibold text-brand-orange mt-1">
+            <p className="text-md font-semibold text-brand-orange-700 mt-1">
               {line.note}
             </p>
           )}
