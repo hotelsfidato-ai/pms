@@ -36,7 +36,13 @@ const TYPE_COLUMNS: Column<RoomTypeRecord>[] = [
     ),
   },
   { key: "occ", header: "Max occupancy", numeric: true, hideBelow: "sm", cell: (t) => <span className="tabular">{t.maxOccupancy}</span> },
-  { key: "rack", header: "Rack rate", numeric: true, cell: (t) => <span className="tabular">{money(t.rackRate)}</span> },
+  {
+    key: "rack", header: "Rack rate", numeric: true,
+    /* A dash for a room type nobody has priced — a zero would say it is free. */
+    cell: (t) => t.rackRate === null
+      ? <span className="text-grey-500">—</span>
+      : <span className="tabular">{money(t.rackRate)}</span>,
+  },
   {
     key: "numbers", header: "Room numbers", hideBelow: "lg",
     cell: (t) => <span className="tabular text-grey-600 text-sm">{t.numbers.join(", ")}</span>,

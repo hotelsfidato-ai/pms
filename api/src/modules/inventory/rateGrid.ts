@@ -6,8 +6,9 @@ import { businessDateFor } from "../../businessDate.ts";
 /* Split out of api/src/routes/billing.ts on 15 September in the
    service-folder move (docs/SERVICE-FOLDERS-PLAN.md). Service: inventory.
    Rack rate against the rate achieved, per room type per day — the Rate
-   performance screen. The endpoint is unchanged; `hotelIdFor` and `round`
-   are copies of billing's. */
+   performance screen. `hotelIdFor` and `round` are copies of billing's.
+   One change since the move: an unpriced room type's rack rate travels as
+   null, not 0 (INV-3, 16 September). */
 
 export const rateGrid = new Hono<{ Variables: { subject: string } }>();
 
@@ -42,7 +43,7 @@ rateGrid.get("/:code/rates", async (c) => {
        sold for nothing; counting it would disagree with the rate beside
        it and with Sold Room on the Manager Report. */
     const { rows } = await client.query<{
-      room_type: string; base_rate: string; date: string;
+      room_type: string; base_rate: string | null; date: string;
       sold: string; sellable: string; sold_adr: string | null;
     }>(
       `with dates as (
@@ -89,12 +90,16 @@ rateGrid.get("/:code/rates", async (c) => {
     );
 
     const byType = new Map<string, {
-      roomType: string; rackRate: number;
-      cells: Array<{ date: string; rackRate: number; soldAdr: number | null; sold: number; sellable: number }>;
+      roomType: string; rackRate: number | null;
+      cells: Array<{ date: string; rackRate: number | null; soldAdr: number | null; sold: number; sellable: number }>;
     }>();
 
     for (const r of rows) {
-      const rack = Number(r.base_rate);
+      /* null, not 0 (INV-3). `base_rate` is NULL until somebody prices the
+         room type (032), and `Number(null)` is 0 — so this answered "rack
+         ₹0" for every unpriced room, which a channel manager fed from here
+         would push to the booking sites as a free room. */
+      const rack = r.base_rate === null ? null : Number(r.base_rate);
       if (!byType.has(r.room_type)) {
         byType.set(r.room_type, { roomType: r.room_type, rackRate: rack, cells: [] });
       }

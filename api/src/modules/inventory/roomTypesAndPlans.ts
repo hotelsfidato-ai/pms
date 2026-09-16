@@ -8,8 +8,9 @@ import { businessDateFor } from "../../businessDate.ts";
 
    Split out of api/src/routes/directory.ts on 15 September in the
    service-folder move (docs/SERVICE-FOLDERS-PLAN.md). Service:
-   inventory. Every endpoint is unchanged, byte for byte, and the router
-   keeps the name it had there. `hotelIdFor` is a copy of the one beside
+   inventory. The router keeps the name it had there. One change since:
+   an unpriced room type's rack rate travels as null, not 0 (INV-3,
+   16 September). `hotelIdFor` is a copy of the one beside
    it in modules/guests/directory.ts — each route file keeps its own.
    ══════════════════════════════════════════════════════════════════ */
 
@@ -37,7 +38,7 @@ directory.get("/:code/room-types", async (c) => {
 
     const { rows } = await client.query<{
       type: string; rooms: string; sellable: string;
-      max_occupancy: number; rack_rate: string; numbers: string[];
+      max_occupancy: number; rack_rate: string | null; numbers: string[];
     }>(
       `select rt.name                                   as type,
               count(rm.id)::text                        as rooms,
@@ -63,7 +64,9 @@ directory.get("/:code/room-types", async (c) => {
       rooms: Number(r.rooms),
       sellable: Number(r.sellable),
       maxOccupancy: r.max_occupancy,
-      rackRate: Number(r.rack_rate),
+      /* null, not 0 (INV-3): `Number(null)` turned a room type nobody has
+         priced into a free one. */
+      rackRate: r.rack_rate === null ? null : Number(r.rack_rate),
       numbers: r.numbers,
     }));
   });

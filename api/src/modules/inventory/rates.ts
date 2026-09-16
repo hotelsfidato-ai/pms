@@ -2,6 +2,7 @@ import { Hono } from "hono";
 import { withSession } from "../../auth.ts";
 import { businessDateFor } from "../../businessDate.ts";
 import type { Client } from "../../db.ts";
+import { setsRates, RATE_SETTER_REFUSED } from "./rateSetters.ts";
 
 /* ══════════════════════════════════════════════════════════════════
    RATES — what a room costs
@@ -621,6 +622,13 @@ rates.put("/:code/rate-grid", async (c) => {
       const hotelId = await hotelFor(client, c.req.param("code"));
       if (!hotelId) return null;
 
+      /* WHO, before anything else (INV-5, approved 16 September). Until
+         then this checked no role at all — only RLS, which asks which
+         hotel, not who — so a receptionist who typed the address could
+         price a run of dates. First, because inside withSession a refusal
+         after a write is a commit (MEMORY 243). */
+      if (!(await setsRates(client, hotelId))) return "not-a-rate-setter" as const;
+
       /* The room type has to belong to THIS property. Without this the id is
          a hotel_id the caller supplies, and RLS would not save us — the
          insert names p_hotel separately. */
@@ -645,6 +653,8 @@ rates.put("/:code/rate-grid", async (c) => {
     });
 
     if (!result) return c.json({ error: "No such property." }, 404);
+    /* 403, not 409: nothing about the request is wrong except who sent it. */
+    if (result === "not-a-rate-setter") return c.json(refuse(RATE_SETTER_REFUSED), 403);
     return c.json(result, "ok" in result && result.ok ? 200 : 409);
   } catch (error) {
     const reason = reasonFor(error, { plan: input.mealPlan });

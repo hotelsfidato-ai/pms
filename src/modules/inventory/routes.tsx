@@ -42,10 +42,15 @@ export const routes = (
     />
     {/* The revenue manager's day: how many rooms are left, and
         what they cost. One window, two tabs, because the two
-        questions are asked together. */}
+        questions are asked together. Guarded like Pricing, because it
+        sets a price on a run of dates (INV-5, approved 16 September). */}
     <Route
       path="/h/:code/grids"
-      element={<><PropertyScope /><GridsPage /></>}
+      element={
+        <RequireAccess path="/h/:code/grids" resource="rate">
+          <PropertyScope /><GridsPage />
+        </RequireAccess>
+      }
     />
   </>
 );

@@ -10,7 +10,8 @@ import { fetchOr } from "@/data/repositories/http";
 
 export interface RateCell {
   date: string;
-  rackRate: number;
+  /** null when nobody has priced the room type — never 0 (INV-3). */
+  rackRate: number | null;
   /** What rooms of this type actually sold for on the date. */
   soldAdr: number | null;
   sold: number;
@@ -19,7 +20,7 @@ export interface RateCell {
 
 export interface RateRow {
   roomType: string;
-  rackRate: number;
+  rackRate: number | null;
   cells: RateCell[];
 }
 
