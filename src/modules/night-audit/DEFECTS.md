@@ -98,14 +98,72 @@ defect, only the owner knows. The property has closed nothing since: its
 business date is **11 September**, and the 17 postings dated 11 September were
 made between 10 and 16 September.
 
-**Not fixed.** Any fix changes a condition of what the audit posts, marks or
-moves, which needs the owner's explicit yes. Recommended: the screen sends the
-date it is showing, and the server refuses a run for any other date — "11 Sep
-is already closed; this property is on 12 Sep. Reload before running again."
+**Fixed 16 September** (`91f7bb7`), on the owner's decision of the same day,
+relayed by the master: **refuse a stale close.** The Run button sends the day
+the heading names (`runNightAudit(hotelId, closing)`); `POST /run` asks, before
+anything is written, whether that day already has a completed run, and if so
+answers 409 — *"16 September was already closed. Reload to see today."* — and
+changes nothing. A date that is not a date is a 400. A caller that sends no
+date is answered as before (none does: the screen always sends one). What the
+audit posts, marks and moves is unchanged.
+
+Guarded by, each run against the code before the change and seen to fail:
+
+```
+api  "a stale screen › refuses to close a day that is already closed,
+     and changes nothing"          old code: 200, closed 2026-09-22, 1 no-show
+api  "… refuses a date that is not a date"          old code: not a 400
+web  src/modules/night-audit/nightAudit.test.tsx    old page: "Run sent no date"
+```
+
+The existing test "answers a re-run of a day already closed with what that run
+did" never sent a request — it read the run row — so the branch it named had
+never been exercised. Renamed to what it checks.
 
 **The rule** — An action that moves something forward must say which step it
 expects to move from. A comment promising idempotence is a claim: find the
-state in which its branch runs, or it is not there.
+state in which its branch runs, or it is not there. **And a test's name is a
+claim too: read what it sends.**
+
+---
+
+### NA-3 · Two presses at the same moment leave the day's record at zero
+
+**Found** — 16 September, by reading the run while fixing NA-2. **Proved** the
+same day with a throwaway API test on the harness's scratch database (deleted
+after one run, not committed): two `POST /run` for the same day, fired
+together.
+
+```
+press A           200 · ok · closed 2026-09-16 · roomsPosted 0 · revenue 0
+press B           200 · ok · closed 2026-09-16 · roomsPosted 1 · revenue 2500
+actually posted   1 room charge, ₹2,500 — the guest charged ONCE
+business date     2026-09-17 — moved ONE day
+night_audit_runs  completed · rooms_posted 0 · revenue_posted 0.00 · no_shows 0
+```
+
+**No money is wrong** — the charge is guarded per stay, the no-shows are
+already marked, and the date moves once. **The day's record is wrong**, and one
+of the two people is told "0 rooms posted". Why: neither transaction can see the
+other's uncommitted run row, so both pass every check; the second waits on the
+unique index, and when the first commits, `on conflict … do update set status =
+'running'` takes the COMPLETED row back to running, finds nothing left to post,
+and completes it again with its own zeros. `006_folio.sql` describes a
+`pg_advisory_xact_lock('night_audit:' || hotel_id)` for exactly this; the route
+never takes it.
+
+NA-2's fix does not reach it: both presses send the same, not-yet-closed day.
+The Run button is disabled while its own request runs, so it takes two devices
+(or two tabs) in the same second.
+
+**Not fixed** — the owner decides. Recommended: take that advisory lock first
+thing in the run's transaction, so the second press waits for the first and
+then meets NA-2's refusal — "16 September was already closed" — instead of
+rewriting the record.
+
+**The rule** — A uniqueness constraint stops a second row, not a second
+writer. `on conflict do update` on a row somebody else just finished is an
+overwrite, not a retry.
 
 ---
 

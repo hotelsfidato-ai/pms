@@ -8,6 +8,61 @@ project, still goes in the root `CHANGELOG.md`.
 
 ---
 
+## 2026-09-16 · NA-2 fixed: a stale close is refused — and NA-3 found
+
+**Asked for:** the master chat, relaying the owner's decision of 16 September:
+fix NA-2 by refusing a stale close. The Run button sends the business date the
+screen says it is closing; `POST /run` refuses when that day is already closed,
+says so ("25 August was already closed. Reload to see today.") and changes
+nothing. Do not change what the audit posts, marks or moves. Commit the
+stale-screen test. The next deploy waits on this fix.
+
+**Shipped** (`91f7bb7`)
+- `api/src/modules/night-audit/nightAudit.ts` — `POST /run` reads
+  `{ businessDate }`. A day with a completed run is refused (409) before the
+  first write; a date that is not a date is a 400; no date is answered as
+  before. The header and the unreachable "already closed" branch's comment say
+  what now catches a second press.
+- `src/modules/night-audit/data/nightAudit.ts`, `pages/NightAudit.tsx` — Run
+  sends the day the heading names.
+- Tests: `api/test/modules/night-audit/nightAudit.test.ts` "a stale screen"
+  (two) and `src/modules/night-audit/nightAudit.test.tsx` (new, the first web
+  test in this folder). A test that never sent a request is renamed to what it
+  checks.
+- `DEFECTS.md` — NA-2 fixed; NA-3 new. `MODULE.md` — the run's body and
+  answers.
+
+**Found**
+- **NA-3:** two presses of Run for the same day at the same moment charge
+  correctly and move the date once, but leave the day's record at 0 rooms and
+  ₹0 and tell one person "0 rooms posted". Proved on a scratch database. Not
+  fixed — the owner decides; the recommendation is in `DEFECTS.md`.
+- The claim I made in round 1 was a file in `.claims/`, which no other copy
+  could see (root `MEMORY.md` 281); it was never committed. Removed, and the
+  service claimed with `npm run claim`.
+
+**Proved**
+- Each new test run against the code before the change and seen to fail: the
+  API stale-screen test got 200 and the old code closed the next day
+  (`2026-09-22`, 1 no-show, 1 room posted); the bad-date test did not get a
+  400; the web test failed with "Run sent no date".
+- Gates, in `D:\fidato-night-audit` at `91f7bb7`: `npx tsc -b --force` exit 0 ·
+  `npx vitest run` 24 files, 237 passed, exit 0 · `cd api; npx tsc --noEmit`
+  exit 0 · `cd api; npm test` 34 files, 425 passed, exit 0 · `npm run build`
+  exit 0, "no test sign-in in dist" · `npm run lane -- night-audit` exit 0.
+  Not run: `db/tests/run.sh` — no migration or SQL function changed.
+
+**Left open**
+- **The screen, in the browser, not yet opened** at the time of this entry —
+  this session's preview reads the master's folder, and the check needs this
+  copy's own servers.
+- NA-3, the owner's. NA-1's history screen, the owner's.
+- A caller that sends no date still closes the server's day. None does today.
+
+**Commits:** `91f7bb7`, and the commit that adds this entry.
+
+---
+
 ## 2026-09-16 · NA-1 investigated, read-only — and NA-2 found
 
 **Asked for:** the owner started the night-audit chat with its brief
