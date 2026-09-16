@@ -8,6 +8,63 @@ project, still goes in the root `CHANGELOG.md`.
 
 ---
 
+## 2026-09-16 · NA-1 investigated, read-only — and NA-2 found
+
+**Asked for:** the owner started the night-audit chat with its brief
+(`docs/briefs/night-audit.md`): claim the service, then NA-1 as an
+investigation only — dead code or a missing button? — and write down which
+sources the screen reads. Change nothing the audit posts, marks or moves.
+
+**Shipped** — documentation only; no code, no migration.
+- `DEFECTS.md` — NA-1's answer, and **NA-2**, new.
+- `MODULE.md` — "What the screen reads, and from where"; the endpoint table
+  says which routes write and which date each one uses; the claim now points
+  at `.claims/`.
+- `.claims/night-audit.md` — made first, deleted when this session stops.
+
+**Found**
+- **NA-1:** neither uncalled route writes anything. All three routes were born
+  in `2a8076e` (29 August), and no screen has ever called either GET. `runs` is
+  a history screen that was scored built on its endpoint alone (`PROGRESS.md`,
+  Stage 5, unit 9). `can-run` duplicates the checklist's `canRun`, except that
+  it answers for the server's date. Recommendation to the owner: keep `runs`
+  and build the history; keep `can-run` until NA-2 is decided.
+- **NA-2:** a Night audit screen that did not see the day close keeps offering
+  to close it, and Run closes the NEXT day — the next night's room charges,
+  the next day's arrivals marked no-show and their rooms released — provided
+  nobody is due out that day. `POST /run` takes no date, and its "already
+  closed, here is what that run did" branch can never be reached.
+- **Production, read-only:** 5 Elements closed 9 and 10 September in the same
+  minute (10 Sep, 16:01 IST, 0 rooms posted), and nothing since. Its business
+  date is 11 September; the 17 postings dated 11 September were made between
+  10 and 16 September. Nobody in house, no confirmed arrival pending, no desk
+  drawer open.
+- **Not this service's:** `DB=… ./db/migrate.sh --with-dev-identities` on a new
+  lane database printed `ERROR: dev-identities: expected 3 staff with dev uids,
+  found 0` and then a green "✓ local sign-in accounts linked", and exited 0.
+  Reported to the owner for the master.
+- The result card never shows `retentionCharged` or `noShowsWithoutTerms`,
+  which the run returns (in `MODULE.md`; a change a person would see, so the
+  owner's).
+
+**Proved**
+- NA-2, with a throwaway test in `api/test/modules/night-audit/` run once
+  through `npm test` (the harness's scratch database, dropped afterwards), then
+  deleted: 1 passed, exit 0. The figures are in `DEFECTS.md`. Afterwards
+  `git status` showed only the claim, and no `fidato_test_*` database was left.
+- The production figures: two `psql` reads over ssh with
+  `default_transaction_read_only=on`. Nothing was written.
+- Gates, run in `D:\fidato-night-audit` at `07e7f30` plus these Markdown
+  changes: `npx vitest run` — 19 files, 212 passed, exit 0;
+  `cd api; npm test -- night-audit` — 15 passed, exit 0;
+  `npm run lane -- night-audit` — "All inside the night-audit lane", exit 0.
+  Not run, because nothing they check changed: `tsc`, the full API suite,
+  `db/tests/run.sh`, the build.
+
+**Left open** — NA-1 and NA-2 wait on the owner. Nothing is fixed.
+
+**Commits:** on `night-audit/na-1-investigation`, not merged.
+
 ## 2026-09-15 · moved into its own folder
 
 **Asked for:** the owner, 15 September — one folder per hotel service, so

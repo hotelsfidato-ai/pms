@@ -57,9 +57,9 @@ All hang from `/api/hotels`, in two files mounted by
 
 | Method | Path | What it does |
 |---|---|---|
-| GET | `/:code/night-audit/can-run` | may this day be closed, and if not, why — **no screen calls it** (the API tests do) |
-| POST | `/:code/night-audit/run` | close the day (the five steps in the file's header, one transaction) |
-| GET | `/:code/night-audit/runs` | the last 60 runs — **no screen calls it** (`api/scripts/capture-demo.ts` reads it) |
+| GET | `/:code/night-audit/can-run` | may this day be closed, and if not, why — for the **server's** date. **No screen calls it** (the API tests do). Read-only. NA-1, NA-2 |
+| POST | `/:code/night-audit/run` | close the day (the five steps in the file's header, one transaction). Takes no date: closes whatever day the server is on (NA-2) |
+| GET | `/:code/night-audit/runs` | the last 60 runs — **no screen calls it** (`api/scripts/capture-demo.ts` reads it). Read-only. A history screen that was never built (NA-1) |
 
 **`api/src/modules/night-audit/checklist.ts`** (cut from the old `api/src/routes/billing.ts`)
 
@@ -76,6 +76,28 @@ Server tests: `api/test/modules/night-audit/nightAudit.test.ts`;
 What stops the day closing (`blockersFor`, checked 15 September): a departure
 that was never checked out; no tax rule; a front-desk cash drawer still open;
 a restaurant till with orders today and no day end.
+
+## What the screen reads, and from where
+
+Written 16 September at `07e7f30`, from `checklist.ts`, `nightAudit.ts` and
+`NightAudit.tsx`, so that a fix to how the house is counted (the master's —
+"in house" reads four ways across four screens, a paid guest is listed under
+BALANCE) can be traced to this screen too. **Every count on the checklist is
+this service's own SQL; none comes through another service's front door.** A
+fix made elsewhere does not reach them unless it changes these queries.
+
+| On the screen | Source | Worth knowing |
+|---|---|---|
+| "closing X and opening Y" | X is `BUSINESS_DATE`, learned by the browser at sign-in (core, `src/data/repositories/businessDate.ts`) and sent as `?asOn=`; Y is X + 1, worked out in `checklist.ts` | **the browser's date, not the server's** — NA-2 |
+| Arrivals still outstanding | `reservations`: `confirmed`, `check_in = X` | the run marks `confirmed` with `check_in <= X`, so it can mark more than this counts |
+| Departures not yet checked out | `reservations`: `checked_in`, `check_out = X` | the same condition as the `departures` blocker |
+| In-house folios carrying a balance | `reservations` `checked_in` whose non-reversed `folio_postings` (charges plus tax; payments are negative lines) sum above ₹0.50, per booking across all its folios | **a third copy of "balance"** — not `app.folio_balance` (006), not finance's `getFolioBalance` |
+| Room charges to post | `reservations`: `checked_in`, not day-use | **an "in house" count of its own.** The run also skips complimentary stays, stays with no open folio and stays already charged tonight, so "rooms posted" can be smaller |
+| Rooms still marked dirty | `rooms.housekeeping_status = 'dirty'` | |
+| Postings reversed today | `folio_postings` with a `reverses_id`, `business_date = X` | |
+| The Run button and its reason | `blockersFor(X)` in `nightAudit.ts` | the same function the run refuses with — asked for X, while the run asks for the server's date (NA-2) |
+| Last run | latest completed `night_audit_runs.business_date`, printed by Postgres as `DD Mon YYYY` | a date formatted in SQL, not by `src/lib/format.ts` |
+| The result card | the `POST /run` answer: rooms posted, revenue, complimentary, no-shows; the restaurant from settled `pos_orders`, `pos_order_lines`, `pos_order_tenders`; the two drawers from closed `cashier_shifts` and `pos_day_ends` | the answer also carries `retentionCharged` and `noShowsWithoutTerms`; **the card shows neither** |
 
 ## Data
 
@@ -172,7 +194,11 @@ From `PENDING.md` and `HANDOVER.md`, and one found while writing this brief:
   **ask first** (`HANDOVER.md` § 3.4; `docs/REPORTS-SPEC.md`).
 - **Two endpoints with no screen** — `GET /:code/night-audit/can-run` and
   `GET /:code/night-audit/runs` (checked 15 September). There is no gate for
-  an API route nobody calls (PENDING § 5).
+  an API route nobody calls (PENDING § 5). Investigated 16 September: neither
+  writes; `runs` is a history screen never built, `can-run` is superseded
+  except that it knows the server's date. **The owner decides** (NA-1).
+- **A stale screen closes the next day** — proved 16 September on a scratch
+  database; not fixed, because the fix changes a condition of the run (NA-2).
 - **Defect 243's shape in these routes has not been checked** — a refusal
   written below a write keeps the write (PENDING § 2 and § 5).
 - **Found while writing this brief:** the old `billing.ts` header saying
@@ -182,9 +208,9 @@ From `PENDING.md` and `HANDOVER.md`, and one found while writing this brief:
 
 ## Gates
 
-Before the first edit: claim this service in `HANDOVER.md` → Folder claims
-(service, branch, date), and work in your own worktree with your own
-database and ports — how, in `AGENTS.md` ("Before your first write"); the
+Before the first edit: claim this service in `.claims/night-audit.md` (since
+16 September — no longer in `HANDOVER.md`), and work in your own worktree with
+your own database and ports — how, in `AGENTS.md` ("Before your first write"); the
 rules for parallel agents, in `docs/SERVICE-FOLDERS-PLAN.md`.
 
 ```
