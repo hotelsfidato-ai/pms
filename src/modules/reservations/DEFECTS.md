@@ -22,6 +22,11 @@ entries stay here: they are the reason the fault does not come back.
 
 **The fix, when it is done** — One generator, locked, prefix from `hotels.code`, called by both doors. `app.next_reference` already exists — give it the callers.
 
+**Where it stands, 16 September — half the doors.**
+- **Part 1, the master:** migration **092** made `app.next_reference` the one generator, in the owner's format `FH-<hotel code>-<YYMM>-<number>` (the month on the hotel's own clock), under a per-hotel lock held to the end of the transaction, and fixed a third fault found on the way: `lpad(n, 4, '0')` CUTS a number past four digits. Old bookings keep their references.
+- **Part 2, this door — done** (branch `reservations/res-2-reference`): `POST /:code/bookings` asks `select app.next_reference($1)` for every room, inside the same `withSession` transaction as the insert. Proved in `api/test/modules/reservations/bookings.test.ts`: every room's reference is `FH-5EL-<YYMM>-<n>` with consecutive numbers, and two different bookings held and released at the same moment both land with four different references.
+- **Still open: the walk-in door**, `front-desk/operations.ts` — front desk switches it after its current job. Until then the walk-in's inline copy takes no lock, so a walk-in and a booking at the same moment can still build one reference (a 500, nothing kept).
+
 **The rule** — Two copies of a number generator are two chances to hand out the same number.
 
 ---

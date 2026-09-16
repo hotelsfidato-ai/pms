@@ -458,11 +458,20 @@ groups.post("/:code/bookings", async (c) => {
 
     for (const { line, typeName, adults, children, rate } of planned) {
       for (let i = 0; i < Math.max(1, line.rooms ?? 1); i += 1) {
+        /* ONE REFERENCE, FROM ONE PLACE (RES-2, 092). FH-<hotel code>-<YYMM>-
+           <number>, the month on the hotel's own clock — the owner's format of
+           16 September. This was an inline copy of the generator: no lock,
+           so two bookings in the same second built the same reference and
+           the second was a 500; DDMM, so `FH-2608-…` meant the 26th here and
+           August at the desk; and lpad, which CUTS a number past four digits.
+
+           ⚠ IN THIS TRANSACTION, BEFORE THIS INSERT. app.next_reference takes
+           a per-hotel lock held until the transaction ends, and the next
+           caller waits there and then sees this row. Asked anywhere else —
+           a separate query, before withSession — the lock would be gone
+           before the row it protects exists. */
         const { rows: ref } = await client.query<{ reference: string }>(
-          `select 'FH-' || to_char(now(),'DDMM') || '-' ||
-                  lpad((coalesce(max(substring(reference from '[0-9]+$')::int),
-                        5000) + 1)::text, 4, '0') as reference
-             from reservations where hotel_id = $1`, [hotelId]);
+          "select app.next_reference($1) as reference", [hotelId]);
 
         const { rows: booked } = await client.query<{ id: string }>(
           `insert into reservations
@@ -534,11 +543,13 @@ groups.post("/:code/bookings", async (c) => {
        answer as the repeat it is — in a fresh transaction, where the
        winner's rows are visible.
 
-       ⚠ ANY unique index, not only reservations_ota_line_idx. Two identical
-       copies also compute the same booking reference (the unlocked
-       generator above, RES-2), and that index is older, so Postgres reports
-       IT first. Whether this was our copy's twin is settled by looking, not
-       by the constraint's name: if no earlier request with this reference
+       ⚠ ANY unique index, not only reservations_ota_line_idx. Since 092 two
+       copies no longer build the same booking reference — the second waits
+       at app.next_reference's lock, then collides at line 1 — but the
+       walk-in desk still makes its references inline until front desk
+       switches it, and a collision there reports the reference index
+       instead. Whether it was our copy's twin is settled by looking, not by
+       the constraint's name: if no earlier request with this reference
        exists, the collision was with somebody else's booking and the error
        stands. */
     if (!externalRef || !fingerprint || !isUniqueViolation(error)) throw error;

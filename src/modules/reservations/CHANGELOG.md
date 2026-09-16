@@ -8,6 +8,65 @@ project, still goes in the root `CHANGELOG.md`.
 
 ---
 
+## 2026-09-16 · RES-2 part 2 — the booking door takes its reference from app.next_reference
+
+**Asked for:** the master chat, after merging RES-3, RES-1 and migration 092
+into cp6 — replace the inline `'FH-' || to_char(now(),'DDMM')` reference SQL
+in `groups.ts` with `select app.next_reference($1)`, in the same transaction
+as the insert. Not front desk's `operations.ts`: front desk switches its own
+door after its current job.
+
+**Shipped** (branch `reservations/res-2-reference`, copy
+`D:\fidato-reservations`, after `git merge cp6`)
+- `api/src/modules/reservations/groups.ts` — every room's reference is
+  `select app.next_reference($1)`, asked inside the booking's `withSession`
+  transaction, just before that room's insert. `FH-<hotel code>-<YYMM>-<n>`,
+  the month on the hotel's own clock, under the hotel's lock until commit.
+  The RES-3 race comment updated: two copies no longer build one reference,
+  but the walk-in door's inline copy still can collide with a booking.
+- `api/test/modules/reservations/bookings.test.ts` — two RES-2 tests: every
+  room of a three-room booking is `FH-5EL-<YYMM>-<n>` with consecutive
+  numbers; two different bookings held and released at the same moment both
+  land, four different references. The hold-and-release machinery RES-3's
+  race test had inline is now one helper, `heldTogether`, used by both.
+- `DEFECTS.md` (RES-2: part 1 the master's, part 2 done, the walk-in door
+  open), `MODULE.md` (open items).
+
+**Found**
+- Nothing in `src/` parses a reference: the other `FH-` strings are demo
+  fixtures, a placeholder and the design-system page.
+- **Two slips of mine in the proof, neither committed.** (1) A shell step
+  turned `\\d` into `\d` inside a template literal, which JavaScript reads as
+  `d` — the format test failed on a correct reference. `String.raw` now. (2)
+  The break script put the old SQL back with `String.replace` and a STRING
+  replacement, in which `$'` means "the rest of the input" — and the old SQL
+  contains `'[0-9]+$'`. The run said "no tests": the file had been corrupted
+  and nothing ran. My output filter had hidden the load error. A function
+  replacement, a type check of the broken file first, and the proof re-run.
+
+**Proved**
+- `npm test -- modules/reservations` — **17 passed**, exit 0.
+- Broken on purpose (the pre-092 SQL put back, type-checked clean): the
+  format test failed on `FH-1609-5050` — the 16th of September — and the
+  same-moment test failed with a 500 on
+  `reservations_hotel_id_reference_key`. Restored, and the file compared
+  byte for byte with the good copy.
+- `npx tsc -b --force` — clean. `npx vitest run` — **236 passed**, 23 files,
+  exit 0.
+- `cd api; npm test` — **425 passed**, 34 files, exit 0.
+- Not run: `db/tests` — this change has no SQL; 092 is the master's and was
+  gated there.
+
+**Left open**
+- **The walk-in door** (`front-desk/operations.ts`) still makes references
+  inline, with no lock, in the old `FH-YYMM-n` shape — front desk's to switch.
+  Until then a walk-in and a booking at the same moment can still collide
+  (a 500, nothing kept).
+
+**Commits:** the commit that carries this entry.
+
+---
+
 ## 2026-09-16 · RES-3 and RES-1 — the booking door a channel manager can use
 
 **Asked for:** the owner, 16 September — RES-3, then RES-1, because the
