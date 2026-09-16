@@ -154,9 +154,14 @@ export function DataTable<T>({
             const body = (
               <>
                 {first && (
-                  <p className="text-base font-medium text-ink-900">
+                  /* A DIV, not a <p>. A first column is whatever the screen
+                     put there — Guests renders an avatar beside the name, in
+                     its own <div>, and a <div> inside a <p> is invalid HTML
+                     that React reports as a nesting error at runtime. Found
+                     in the browser console on /guests the same day. */
+                  <div data-card-heading className="text-base font-medium text-ink-900">
                     {first.cell(row, index)}
-                  </p>
+                  </div>
                 )}
                 <dl className="mt-1.5 grid grid-cols-[minmax(6.5rem,auto)_1fr] gap-x-3 gap-y-1">
                   {rest.map((col) => (

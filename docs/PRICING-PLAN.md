@@ -186,8 +186,8 @@ plans and the grid, and a new service folder would split one subject in two.
 | | | done when |
 |---|---|---|
 | **A** | **DONE 16 Sep** — migration **090**: `pricing_basis`, `rate_offsets`, `app.rate_for` extended, `app.tariff_for` extended | `db/tests/modules/inventory.sql` proves: unset base → NULL; typed beats derived; two overlapping differences refused; a derived total missing one part is NULL, never 0 |
-| **B** | API in `api/src/modules/inventory/`: read the basis, the differences and a resolved month; write a basis, write a difference | API suite green **via `npm test`** (its own database — MEMORY 277) |
-| **C** | the Pricing screen, its nav entry, its `MODULE.md` line | opened at 1280 and at 375 before it is called done |
+| **B** | **DONE 16 Sep** — API in `api/src/modules/inventory/`: read the basis, the differences and a resolved month; write a basis, write a difference | API suite green **via `npm test`** (its own database — MEMORY 277) |
+| **C** | **DONE 16 Sep** — the Pricing screen, its nav entry, its `MODULE.md` line | opened at 1280 and at 375 before it is called done |
 | **D** | the owner moves Superior from a typed price to a difference **on the screen** — not a data migration; nobody but the owner types that number | the owner says so |
 | **E** | guards + `DEFECTS.md` + `CHANGELOG.md` | the guard seen to fail before it passes |
 
@@ -221,6 +221,20 @@ asserted:
   `app.set_offset` trims the standing row, writes the season and **puts the
   tail back** — the case 053 warns about, where a forgotten tail silently loses
   a property its pricing. Asserted a year out.
+
+**P5 · NEW, and the one part of your decision not yet fully built — the meal
+plan "per person".** A meal-plan difference is added once, to the price of the
+person the base covers. For the SECOND person onward the money still comes
+from the extra-adult figure, as it does today. Two ways to finish it:
+
+- **(a)** The meal-plan difference applies to every person in the room, so two
+  adults on breakfast pay it twice. Truest to "per person" — but it would then
+  apply to a child at the adult figure, which is P4.
+- **(b)** It stays as it is: the extra-adult figure you set is what a second
+  person costs, meals included.
+
+Nothing is guessed in the meantime: an extra person with no figure set makes
+the total unknown and says so, rather than being quietly free.
 
 **P2 · Is a room-type difference the same on every plan?** Recommended: yes —
 a Superior is a Superior whatever the guest eats, so one difference per type,

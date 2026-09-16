@@ -129,6 +129,54 @@ Then, second question: **can this POS route a KOT and give a printout?**
 
 ---
 
+## 2026-09-16 (pricing B and C) · The Pricing screen
+
+**Shipped** — the screen the owner asked for: one screen, shaped like a
+calendar, holding the dates, the base and each difference.
+
+- `/h/:code/pricing` — a month of dates with the base on each; click one, or
+  choose **a period**, and type a figure. The differences sit under it: every
+  room type (per room) and every meal plan (per person), each a figure or a
+  dash. Under that, **what a room actually costs on that date** for every type
+  × plan, read back from the database rather than worked out on the screen,
+  each marked *Set here* · *From the base* · *Old rack rate* · *Not priced*.
+- `api/src/modules/inventory/pricing.ts` — one read for the whole screen, and
+  three writes: which room is the base, the base figure, a difference. The
+  arithmetic stays in the database, where the channel manager will meet the
+  same rules.
+- **Guarded.** The first rate screen with a `canSee` and a route guard:
+  `RATE_SETTER_ROLES` = owner, admin, GM. Reception's grant is `rate: READ`,
+  and the guard asks the navigation, which asks the grant — so without this a
+  clerk could set the figure every price is built from. Proved by opening it
+  as reception: "This page is not part of your role."
+
+**Proved, at 1280 and at 375:** chose the base, typed a figure for one date,
+and watched every other room and plan derive it; set a room-type difference
+and watched that room read the base plus it — *From the base · 1 person*. At
+375px: nothing outside the viewport, no sideways scroll, **0 controls under
+44px**. 212 web tests · 370 API tests (a new `pricing.test.ts`) · 622 database
+assertions · types and build clean. Every figure written while testing was
+removed from the development database afterwards.
+
+**Three found, all recorded:**
+- **INV-4, fixed before it shipped** — with no base typed, the screen showed
+  the room type's **rack rate** as "the base, one person": a two-person figure
+  presented as a one-person one, and the figure everything else would then be
+  built from. It now shows a dash and names the rack rate that still answers.
+  `app.price_for` returns a price AND its source; reading the number without
+  the source is how a fallback becomes a fact.
+- **INV-5, open and NOT fixed** — the **Rate calendar** writes prices and has
+  no guard at all, so a reception clerk who types the address can set one
+  today. Closing it takes something away from a role that has it, which is the
+  owner's call.
+- **MEMORY 278, mine** — this morning's card heading was a `<p>`, and Guests
+  puts a `<div>` in its first column. Invalid HTML, which React reported on
+  every render since it shipped; found by reading the browser console. Now a
+  `<div>` marked `data-card-heading`, with the test reading that rather than
+  the tag.
+
+---
+
 ## 2026-09-16 (pricing A) · One base price, and everything else a difference
 
 **Asked for:** *"this room is the base price and other things are connected by

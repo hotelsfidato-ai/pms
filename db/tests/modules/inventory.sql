@@ -211,6 +211,26 @@ begin
     t.extra_adults = 0 and t.total = 4000,
     t.extra_adults || ' extra / ' || coalesce(t.total::text, '<null>'));
 
+  -- ---------- 11a · THE BASE COVERS ONE PERSON WHOEVER WROTE IT ----------
+  -- Not the caller's discipline: the Inventory and rates screen writes the
+  -- basis pair like any other cell, and app.set_rate re-creates the tail of a
+  -- row it splits. Either could leave a base row covering two, and every
+  -- derived price in the property would be built from a two-person figure.
+  perform app.set_rate(h, dlx, 'EP', date '2027-03-01', date '2027-03-10',
+                       2500, 'Typed straight into the grid', admin, null, null);
+  select count(*) into n from rates
+   where hotel_id = h and room_type_id = dlx and meal_plan = 'EP'
+     and covers_persons is distinct from 1;
+  perform test.ok('pricing','every price on the base pair covers one person',
+    n = 0, n || ' cover something else');
+
+  -- And the other direction: prices first, basis second.
+  perform app.set_basis_price(h, date '2027-04-01', date '2027-04-10',
+                              2400, 'April', admin);
+  perform test.ok('pricing','the base figure can be set without naming the type',
+    app.rate_for(dlx, 'EP', date '2027-04-02') = 2400,
+    coalesce(app.rate_for(dlx, 'EP', date '2027-04-02')::text, '<null>'));
+
   -- ---------- 12 · a property with no basis is untouched ----------
   -- Every property in this database is in this state until somebody sets one.
   delete from pricing_basis where hotel_id = h;

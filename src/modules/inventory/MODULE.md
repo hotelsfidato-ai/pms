@@ -41,13 +41,24 @@ actually sold for, fourteen days out.
 | Room types | `/h/:code/room-types` | `pages/RoomSetup.tsx` | none |
 | Rate plans | `/h/:code/rate-plans` | `pages/RatePlans.tsx` | none |
 | Cancellation terms | `/h/:code/cancellation-terms` | `pages/CancellationTerms.tsx` | none |
+| Pricing | `/h/:code/pricing` | `pages/Pricing.tsx` | none |
 | Rate calendar | `/h/:code/grids` | `pages/Grids.tsx` | none |
 | Rate performance | `/h/:code/rates` | `pages/Rates.tsx` | none |
 | — routed nowhere | — | `pages/UnroutedLists.tsx` (`RoomTypesPage`, `RatePlansPage`) | kept, pending the owner |
 
-- The first three sit in the menu's **Configuration** section, the last two in
+- The first three sit in the menu's **Configuration** section, the last three in
   **Inventory**. Room types needs the `room_config` grant; the others the
-  `rate` grant (the default test, no `canSee`).
+  `rate` grant (the default test, no `canSee`) — **except Pricing**, which is
+  the one screen here with a `canSee` and a route guard: it sets the figure
+  every other price is built from, and `rate: READ` is reception's grant. See
+  `RATE_SETTER_ROLES` in `src/lib/permissions.ts`, and INV-5 below for the
+  screen beside it that has neither.
+
+**Pricing (16 September)** — one base figure, Deluxe · one person · room only,
+and every other price a difference from it in rupees, with dates. Migration
+090, `api/src/modules/inventory/pricing.ts`, `data/pricing.ts`. The plan and
+every decision behind it: `docs/PRICING-PLAN.md`. A price says what it covers
+(`rates.covers_persons`), which is how nothing already sold was repriced.
 - No working menu lists any of them. Owner, admin, GM, hotel manager, finance
   and read-only see them where their permissions allow; others reach them by
   Find a screen, if allowed.

@@ -585,3 +585,105 @@ revoke all on function app.set_offset(uuid, text, uuid, text, date, date, numeri
   from public;
 grant execute on function app.set_offset(uuid, text, uuid, text, date, date, numeric, text, uuid)
   to pms_app;
+
+
+-- -----------------------------------------------------------------------------
+-- The base covers one person — held by the schema, not by whoever writes
+-- -----------------------------------------------------------------------------
+-- `covers_persons` decides how many people a price includes, and on the basis
+-- pair the answer is always one. Leaving that to callers would mean:
+--
+--   * the Inventory and rates screen can write the basis pair like any other
+--     cell, and that row would cover two;
+--   * app.set_rate re-creates the TAIL of a row it splits, and the new row
+--     would not carry it;
+--
+-- and either way every derived price in the property would quietly be built
+-- from a two-person figure. Both paths go through these triggers instead.
+-- -----------------------------------------------------------------------------
+create or replace function app.rates_basis_covers_one()
+returns trigger language plpgsql as $$
+begin
+  if exists (
+    select 1 from pricing_basis b
+     where b.hotel_id     = new.hotel_id
+       and b.room_type_id = new.room_type_id
+       and b.meal_plan    = new.meal_plan
+  ) then
+    new.covers_persons := 1;
+  end if;
+  return new;
+end $$;
+
+drop trigger if exists rates_basis_covers_one on rates;
+create trigger rates_basis_covers_one
+  before insert or update on rates
+  for each row execute function app.rates_basis_covers_one();
+
+/* And the other direction: the pair becomes the basis after its prices were
+   written. Stamps what is already there, so a property that priced its Deluxe
+   first and chose it as the base second is in the same state as one that did
+   it the other way round. */
+create or replace function app.basis_stamps_its_prices()
+returns trigger language plpgsql as $$
+begin
+  update rates set covers_persons = 1
+   where hotel_id     = new.hotel_id
+     and room_type_id = new.room_type_id
+     and meal_plan    = new.meal_plan
+     and covers_persons is distinct from 1;
+  return new;
+end $$;
+
+drop trigger if exists basis_stamps_its_prices on pricing_basis;
+create trigger basis_stamps_its_prices
+  after insert or update on pricing_basis
+  for each row execute function app.basis_stamps_its_prices();
+
+comment on function app.rates_basis_covers_one() is
+  'A price on the property''s basis pair covers one person, whoever writes it '
+  'and however it was split.';
+
+
+-- -----------------------------------------------------------------------------
+-- Setting the base figure
+-- -----------------------------------------------------------------------------
+-- The one call the Pricing screen makes to move the base. It does not take a
+-- room type or a plan: the base is whatever `pricing_basis` says it is, and a
+-- screen that could name a different one could set the wrong property's
+-- cheapest room by a typo.
+-- -----------------------------------------------------------------------------
+create or replace function app.set_basis_price(
+  p_hotel uuid,
+  p_from  date,
+  p_to    date,        -- exclusive; NULL is open-ended
+  p_price numeric,     -- NULL clears the range
+  p_label text,
+  p_by    uuid
+)
+returns int
+language plpgsql
+as $$
+declare v_type uuid; v_plan text;
+begin
+  select room_type_id, meal_plan into v_type, v_plan
+    from pricing_basis where hotel_id = p_hotel;
+
+  if v_type is null then
+    raise exception 'this property has no base yet'
+      using hint = 'Choose the room type and meal plan the base is before '
+                   'setting its price.';
+  end if;
+
+  /* covers_persons is stamped by the trigger above, on every row this writes
+     and on every tail it puts back. */
+  return app.set_rate(p_hotel, v_type, v_plan, p_from, p_to,
+                      p_price, p_label, p_by, null, null);
+end $$;
+
+comment on function app.set_basis_price(uuid, date, date, numeric, text, uuid) is
+  'Sets the property''s base figure over a date range. The room type and plan '
+  'come from pricing_basis, never from the caller.';
+
+revoke all on function app.set_basis_price(uuid, date, date, numeric, text, uuid) from public;
+grant execute on function app.set_basis_price(uuid, date, date, numeric, text, uuid) to pms_app;

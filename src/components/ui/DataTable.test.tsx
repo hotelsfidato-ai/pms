@@ -55,8 +55,11 @@ describe("a row on a phone", () => {
     const card = container.querySelector("div.sm\\:hidden li")!;
     const labels = [...card.querySelectorAll("dt")].map((dt) => dt.textContent);
 
-    /* The first column is the card's heading, the rest are labelled lines. */
-    expect(card.querySelector("p")?.textContent).toBe("Ananya Bose");
+    /* The first column is the card's heading, the rest are labelled lines.
+       Read from the first child rather than by tag: the heading is a <div>
+       because a screen may put anything in its first column — Guests puts an
+       avatar and a <div> there, and a <div> inside a <p> is invalid HTML. */
+    expect(card.querySelector("[data-card-heading]")?.textContent).toBe("Ananya Bose");
     for (const col of COLUMNS.slice(1)) {
       expect(labels, `the card dropped ${String(col.header)}`).toContain(col.header);
     }

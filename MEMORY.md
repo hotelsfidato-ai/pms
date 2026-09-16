@@ -6539,6 +6539,24 @@ copy will see of theirs.**
 
 ---
 
+### 278 · MINE: a card heading that could not hold what a screen put in it
+
+16 September. The phone card list I added to `DataTable` rendered each row's
+first column inside a `<p>`. On `/guests` the first column is an avatar beside
+a name — a `<div>`, containing another `<p>`. Both are invalid inside a `<p>`,
+and React said so on every render: "In HTML, <div> cannot be a descendant of
+<p>. This will cause a hydration error."
+
+The tests passed, the screen looked right, and the browser console had been
+saying it since the moment it shipped. I found it four hours later while
+reading the console for something else.
+
+**The rule: a shared component does not know what a screen will put in it.
+Wrap what a caller supplies in a `<div>`, never a `<p>` — and read the browser
+console on a screen you changed, not only the one you were testing.**
+
+---
+
 ### 277 · MINE: I ran the API suite against the development database
 
 16 September, checking two small fixes. `npm test` in `api/` is

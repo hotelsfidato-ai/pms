@@ -14,6 +14,29 @@ entries stay here: they are the reason the fault does not come back.
 
 ## Open — not fixed
 
+### INV-5 · A reception clerk can type a price on the Rate calendar
+
+**Found** — 16 September, building the Pricing screen: its route guard let
+reception through, because the guard asks the navigation and the navigation
+asks the grant — and reception's grant is `rate: READ`.
+
+The Pricing screen was closed with `RATE_SETTER_ROLES` (owner, admin, GM),
+which is what this file has always said in words: the GM "approves overrides,
+rate changes and purchases", a hotel manager "may not waive a charge or move a
+rate". **The Rate calendar (`/h/:code/grids`) still has neither a route guard
+nor a `canSee`, and it writes prices** — `PUT /:code/rate-grid` checks no role
+either, only RLS. So a reception clerk who types the address can set a price
+today.
+
+**The fix, when it is done** — The same `canSee: setsRates` on the Rate
+calendar's nav entry, a `RequireAccess` around its route, and a role check on
+the write route. **Not done unasked**: it takes something away from a role
+that has it today, which is the owner's decision, not mine.
+
+**The rule** — A screen that WRITES may not be gated on a grant that only says
+`view`. The navigation is the guard, so the grant and the screen's power have
+to agree.
+
 
 ### INV-3 · Two responses turn an unpriced room into ₹0
 
@@ -38,6 +61,26 @@ The menu says "Room types"; the page says "The house".
 ---
 
 ## Fixed — the solution is here; do not work it out again
+
+### INV-4 · The Pricing screen showed a rack rate as if it were the base
+
+**Found** — 16 September, before it shipped: opening the new screen at 5
+Elements, which has no rate rows. Every date read ₹4,099 under the words "the
+base on each date", and the panel said "the base, one person, no meals —
+₹4,099".
+
+It was the room type's **rack rate**, which `app.price_for` falls back to and
+which covers the people the type is sold for — two. Presented as a
+one-person base it is a 100% error in the wrong direction, and it is the
+figure everything else would then be built from.
+
+**Fixed** — The screen treats only `source === "typed"` as the base. Anything
+else is a dash, with a line naming the rack rate that still answers until a
+base is set. The server was right all along; the screen was reading `price`
+without reading `source`.
+
+**The rule** — `price_for` answers a price AND where it came from. Reading the
+number without the source is how a fallback becomes a fact.
 
 ### INV-1 · `GET /api/hotels/rate-plans` can never run
 

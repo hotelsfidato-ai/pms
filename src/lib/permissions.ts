@@ -54,6 +54,23 @@ export const ASSIGNABLE_ROLES: Role[] = ROLES.filter(
  * menu does not change. Asked by the menu and by each page's route guard
  * alike, so a hidden link and a refused page cannot disagree.
  */
+/* WHO MAY MOVE A PRICE, as opposed to read one.
+
+   This file has said it since the start without anywhere enforcing it: the
+   GM "approves overrides, rate changes and purchases", and a hotel manager
+   "may not waive a charge or move a rate". But the grant is `rate: READ` for
+   reception, hotel_manager and finance alike — and `mayReach` reads a grant,
+   not an intention, so a screen carrying `resource: "rate"` opens for all of
+   them whether it only shows prices or sets them.
+
+   The Pricing screen sets the base every other price is built from, so it is
+   the first to ask the question out loud. Its menu entry uses this. The Rate
+   calendar, which can also write a price, does NOT yet — that is a defect
+   recorded in `src/modules/inventory/DEFECTS.md`, not something to change
+   under the owner without asking. */
+export const RATE_SETTER_ROLES: readonly Role[] = ["owner", "admin", "gm"];
+export const setsRates = (role: Role): boolean => RATE_SETTER_ROLES.includes(role);
+
 export const COMING_SOON_ROLES: readonly Role[] = ["owner", "admin", "gm"];
 
 export const seesComingSoon = (role: Role): boolean => COMING_SOON_ROLES.includes(role);

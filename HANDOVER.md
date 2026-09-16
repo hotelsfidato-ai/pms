@@ -68,8 +68,9 @@ tablet, phone)      Tauri desktop and a Capacitor kiosk tablet wrap today's buil
                     is a small staff phone app, not a port of the 89 screens
 mobile pass         BUILT 16 Sep on cp6 (731a3d4), NOT DEPLOYED — on a phone every list
                     built on DataTable is a card list; measured before and after at 375px
-dynamic pricing     PLANNED 16 Sep — docs/PRICING-PLAN.md; ONE question open (P1) and the
-                    build does not start until the owner answers it
+dynamic pricing     BUILT 16 Sep on cp6, NOT DEPLOYED — migration 090, the API and the
+                    Pricing screen. Nothing is priced, and no property has a base until
+                    somebody sets one. docs/PRICING-PLAN.md; P5 is open
 ```
 
 **Deployed 15 September** — all of it:
@@ -290,8 +291,27 @@ decisions are in § 4 and the plan is **`docs/PRICING-PLAN.md`**.
 **P1 is answered (16 September): counting starts at the first person** — two
 adults are the base plus one extra adult. And room configuration is separate
 from price: a room type gains a **category**, so the Deluxe variants group
-together while each stays its own sellable type. The build has started;
-`docs/PRICING-PLAN.md` § 5 is the order.
+together while each stays its own sellable type.
+
+**Phases A, B and C are built** — migration 090, the API, and the screen at
+`/h/:code/pricing` — and proved end to end at 1280 and 375. **Nothing is
+priced**: no property has a base until somebody sets one, and until then every
+price answers exactly as it did before.
+
+**What is left**
+- **P5, the owner's** — a meal-plan difference is charged once, for the person
+  the base covers. Whether it should also be charged for the second person
+  onward, or whether the extra-adult figure already covers their meals, is
+  `docs/PRICING-PLAN.md` § 6.
+- **Phase D** — Superior stops carrying its own price and becomes a
+  difference. The owner does that **on the screen**; nobody else types that
+  number.
+- **INV-5** — the Rate calendar writes prices with no guard at all. Closing it
+  takes something away from reception, so it waits on the owner.
+- The development database has a `pricing_basis` row for 5 Elements
+  (Superior · Room Only) that appeared while the screen was open on 16
+  September. Harmless — development only, and nothing derives without a base
+  figure — but do not assume it was meant.
 
 **Read § 4 before planning anything here**, especially: the base is not the
 default, not everything is derived, and the screen ships with every figure
