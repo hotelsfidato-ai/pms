@@ -11,13 +11,15 @@ api/src/modules/stores/      the server's routes for this service
 db/tests/modules/stores.sql  NEW database checks only — db/tests/suite.sql is frozen history
 ```
 
-Before your first edit: claim the service in `HANDOVER.md` → "Folder claims"
-(service, branch, date), read this file, then this folder's `DEFECTS.md` and
-`CHANGELOG.md`. Written 15 September 2026 from the code at `880a5b6`.
+Before your first edit: `npm run claim -- stores "what you are doing"` in your
+copy, then read `docs/briefs/stores.md`, this file, this folder's `DEFECTS.md`
+and `CHANGELOG.md`. Written 15 September 2026 from the code at `880a5b6`;
+permissions brought up to date 16 September (STO-1).
 
 "Inventory" in this system means rooms and prices — that is the `inventory`
-service. The shelves are the **Store** (`docs/SERVICE-FOLDERS-PLAN.md`). The
-Store's menu entry happens to sit in the menu's Inventory section.
+service. The shelves are the **Store**, and stock. Since 16 September the
+Store's menu entry sits in the section **Store and equipment**, and it has its
+own grant, `stock` (`docs/STOCK-AND-EQUIPMENT-PLAN.md`).
 
 ---
 
@@ -39,10 +41,17 @@ and both stay. A list can be imported from a file.
 |---|---|---|---|
 | Store | `/h/:code/stores` | `pages/Stores.tsx` | housekeeping, stores |
 
-- The entry needs the `inventory` grant (the default test, no `canSee`).
-  Owner, admin, GM, hotel manager, finance and read-only see it in their full
-  menu; other roles holding the grant — reception, the kitchen roles, the
-  waiter — reach it by Find a screen.
+- The entry needs the `stock` grant (`resource: "stock"`, no `canSee`), and
+  the route is guarded by `RequireAccess` with the same resource (STO-1).
+  Reception, the till and the revenue manager hold none: no entry, and the
+  address says "This page is not part of your role".
+- **Who sees what on the page** (`can(role, …, "stock")`):
+  `create` — Receive, Issue, the bin, Add an item, Import;
+  `edit` — Undo in History;
+  view only (housekeeping, chef, accountant, viewer) — one sentence, *"You can
+  see the store. Receiving, issuing and adding items is for the store manager,
+  hotel manager or GM."*, and no change buttons (the owner's choice, 16
+  September). Without `edit`, History says who may undo instead of offering it.
 - The `stores` role lands on the Store after sign-in: it is the first entry
   of their working menu, and they have no Dashboard (`workingHomeFor`,
   `navigation.ts`; pinned in `navigation.test.ts` — `["Store", "Notifications"]`).
@@ -56,15 +65,26 @@ The code is in `api/src/modules/stores/stores.ts` (474 lines; moved 15
 September); the door `index.ts` mounts it at `/api/hotels`. There is no module switch for the store.
 
 ```
-GET    /:code/stores                          items, on hand, value
-GET    /:code/stores/items/:id/movements      one item's history
-POST   /:code/stores/items                    add an item
-POST   /:code/stores/movements                receipt · issue · wastage · adjustment · return
-POST   /:code/stores/movements/:id/reverse    undo one movement with its own row
-POST   /:code/stores/import                   items from a file
+                                              grant needed (403 otherwise)
+GET    /:code/stores                          view     items, on hand, value
+GET    /:code/stores/items/:id/movements      view     one item's history
+POST   /:code/stores/items                    create   add an item
+                                              + edit   if the name is already there (it overwrites)
+POST   /:code/stores/movements                create   receipt · issue · wastage · return
+                                              edit     adjustment
+POST   /:code/stores/movements/:id/reverse    edit     undo one movement with its own row
+POST   /:code/stores/import                   create   items from a file; a row that changes
+                                                       an existing item needs edit, or is rejected
 ```
 
 Every endpoint has a caller in `data/stores.ts`.
+
+**Who may is `api/src/modules/stores/stockGrants.ts`** — a COPY of
+`grantsFor(role, "stock")` in `src/lib/permissions.ts` (the owner's table, the
+master's file). `api/test/modules/stores/stockGrants.test.ts` fails the moment
+the two differ, and tries every act as every assignable role. A change to who
+may do what is the owner's; the master makes it in `permissions.ts`, and this
+copy follows in the same commit. Each route asks before its first write.
 
 ---
 
@@ -96,9 +116,14 @@ stock_items, stock_movements          069_stores.sql
 Deliberately absent (069's header): no price on an item — a delivery has a
 price; no supplier table yet.
 
-**A new migration needs a number claimed in `HANDOVER.md` first.**
-`src/test/migrationNumbers.test.ts` fails on two files with one number or a
-gap. The highest today is 089.
+`suppliers` and `locations` (094, the master's Phase 0) are shared with
+Equipment and Purchasing: use them, never a copy, and never change those
+tables from here.
+
+**A new migration takes the next number after cp6's highest when the file is
+written** (`docs/briefs/README.md`), is referred to by what it does rather
+than its number, and the master renumbers at merge if two lanes took the same
+one. Never edit 046, 069 or 094.
 
 ---
 
@@ -145,8 +170,11 @@ No other service's door is imported by this folder (checked 15 September).
   list (MEMORY 184).
 - **Every list draws four states**; **a new dialog declares its main action**
   (`HANDOVER.md` § 6, § 3.1).
-- **Inside `withSession`, a refusal is a commit** (MEMORY 243). `stores.ts`
-  has not been checked for this (PENDING § 2).
+- **Inside `withSession`, a refusal is a commit** (MEMORY 243). Checked in
+  `stores.ts` on 16 September while adding STO-1's guards: every refusal in
+  the six routes — the grant, a missing item, a shelf that would go below zero,
+  an import's bad rows — comes before the route's first write, and
+  `stockGrants.test.ts` counts that a refused role left nothing.
 
 No Start here card and no glossary line names anything in this service.
 
@@ -164,8 +192,10 @@ From `PENDING.md` and `PROGRESS.md`, as of 15 September:
 - **The kitchen manager's menu has no Store** — approved as listed, one
   search away; worth asking the owner (PENDING § 5a).
 - Found while writing this brief (15 September):
-  - **No server test covers the store.** No file in `api/test/` touches
-    `/stores`; the only checks are the `store` group in `db/tests/suite.sql`.
+  - ~~No server test covers the store.~~ Since 16 September
+    `api/test/modules/stores/stockGrants.test.ts` covers who may do what
+    (STO-1). The ledger's own rules are still checked only in
+    `db/tests/suite.sql`'s `store` group.
   - **An issue cannot say which outlet it went to from the screen.** The
     column and the API take one (`outletId`); `pages/Stores.tsx` never sends
     it. Whether it is wanted is the owner's call.
@@ -200,3 +230,13 @@ go in `db/tests/modules/stores.sql`, which does not exist yet);
 None yet. To ask for a change here, add a line below — date, your service,
 what you need and why — and leave the change to whoever holds this
 service's claim.
+
+## Requests from this service to the master
+
+- **16 September · STO-9 · the shared dialog kit.** Measured at 375px in the
+  Store's three dialogs: `DialogContent`'s Close button is **24×24px**, and
+  `Input` and `NativeSelect` are **36px tall** with **15px** text (iPhones zoom
+  the page when a box under 16px is tapped). All three are in
+  `src/components/ui/`, so this is likely every dialog in the system. Asked
+  for: 44px targets and 16px text in the kit, once, for everybody. The Store
+  does not work around it locally.

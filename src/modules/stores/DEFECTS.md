@@ -20,47 +20,13 @@ opened at 375×812, signed in as a housekeeping role, measured the way the
 `pages/Stores.tsx`, `data/stores.ts` and `api/src/modules/stores/stores.ts`.
 Branch `stores/measure-375` at `07e7f30`, own database `fidato_stores` (demo
 5EL, test sign-ins `dev-hk` housekeeping, `dev-store` stores, `dev-viewer`
-read_only added to that database only). **None is fixed. Each changes what
-somebody sees or may do, so each waits on the owner.**
+read_only added to that database only). STO-1 is fixed (below, under
+"Fixed"); **the other nine are open**, approved for fixing as phase 1A, and
+where an entry leaves more than one way the owner chooses first.
 
 What passed, so it is not re-measured: no sideways page scroll (scrollWidth
 375), nothing outside the viewport, **0 controls under 44px on the list**,
 **0 text under 4.5:1**.
-
-### STO-1 · Anybody rostered at the hotel can change the store — the Viewer included
-
-**Found** reading `stores.ts`, then **proved on the API and on the screen.**
-No store route asks the caller's role. The tables' row policies are hotel
-isolation only (`069_stores.sql`: `stock_items_isolation`,
-`stock_movements_isolation`), and nothing in `index.ts` or `server.ts` gates
-the router. So every write is open to every role at the property:
-
-```
-role        add item   receive at a cost   undo a delivery   import (dry run)
-read_only   200        ok                  ok (movement 5)   200
-front_desk  200        ok
-housekeeping 200       ok
-```
-
-The Viewer's own description is *"Read-only across the platform. No write
-access anywhere."* (`ROLE_DESCRIPTIONS.read_only`). Signed in as the Viewer at
-375px the screen offers Import, Add an item, Receive ×9, Issue ×5, the bin ×5
-and History ×5, all enabled — `pages/Stores.tsx` asks no permission either.
-Undoing the 60-towel delivery as the Viewer took the shelf from 63 to 3 and
-its average cost from ₹310 to ₹1.
-
-**Also:** the web grant the menu reads is called `inventory`, and it is the
-rooms-and-prices grant too — `front_desk` holds `inventory: view, edit`. There
-is no store grant, so today nothing could say "reception may change rates but
-not the store" even if a route asked.
-
-**Waiting on:** the owner — who may add items, import, receive (with a cost),
-issue, waste and undo. Then the master, if a separate store grant is wanted
-(`src/lib/permissions.ts` is shared). Recommendation in the owner's list.
-
-**Rule:** a route with no role check is open to every role the hotel's row
-policy admits — "read-only" included. Ask the act's roles on the server; the
-screen hiding a button is not a permission.
 
 ### STO-2 · A store that cannot be read says it is empty
 
@@ -172,8 +138,8 @@ a Store fix.
 - "Where it belongs" defaults to **Kitchen**, so a housekeeper adding linen
   files it under Kitchen unless they change it.
 - Units are printed as typed: "3 piece", "0 roll", "How many piece".
-- `MODULE.md` is stale: it says to claim in `HANDOVER.md` (claims are now
-  `scripts/claim.mjs`) and that the highest migration is 089.
+- ~~`MODULE.md` is stale: it says to claim in `HANDOVER.md` and that the
+  highest migration is 089.~~ Brought up to date with STO-1, 16 September.
 
 **Waiting on:** the owner for the first two; the third is this lane's paperwork.
 
@@ -181,6 +147,87 @@ a Store fix.
 and their movements, and the probe rows from STO-1 — three items named
 "PROBE added by …", three ₹1 towel receipts, and the Viewer's undo of the
 towel delivery. Movements are append-only, so they stay.
+
+---
+
+## Fixed
+
+### STO-1 · Anybody rostered at the hotel could change the store — the Viewer included
+
+**Found** 16 September, reading `stores.ts`, then **proved on the API and on
+the screen.** No store route asked the caller's role. The tables' row policies
+are hotel isolation only (`069_stores.sql`: `stock_items_isolation`,
+`stock_movements_isolation`), and nothing gated the router, so every write was
+open to every role at the property:
+
+```
+role        add item   receive at a cost   undo a delivery   import (dry run)
+read_only   200        ok                  ok (movement 5)   200
+front_desk  200        ok
+housekeeping 200       ok
+```
+
+The Viewer's own description is *"Read-only across the platform. No write
+access anywhere."* At 375px the screen offered the Viewer Import, Add an item,
+Receive ×9, Issue ×5, the bin ×5 and History ×5, all enabled. Undoing the
+60-towel delivery as the Viewer took the shelf from 63 to 3 and its average
+cost from ₹310 to ₹1. The menu's grant was `inventory` — rooms and prices too —
+so nothing could have told stock apart even had a route asked.
+
+**Fixed** 16 September, branch `stores/phase-1a`, on the owner's table (plan
+§ 6; `stock` grants from the master's Phase 0, `5a5d746`) and two answers the
+owner gave that day:
+
+- **The server.** `api/src/modules/stores/stockGrants.ts` — a copy of
+  `grantsFor(role, "stock")`, read the way `useRole` reads a role (a group
+  administrator is the owner; anybody else has their role AT THIS HOTEL).
+  Every one of the six routes asks it first, before any write, and answers
+  **403 with a sentence naming who may**:
+  `view` the list and a history · `create` a new item, receive, issue,
+  wastage, return · `edit` an adjustment, an undo, and **changing an item that
+  already exists** — by "Add an item" with a name already in the store
+  (`stores.ts`'s insert overwrites unit, category and warning level), or by
+  import.
+- **Import, the owner's answer: split by row.** An import needs `create`. A
+  row that would change an existing item needs `edit`; without it that row is
+  **rejected** like any bad row — listed in the dry run with the reason, left
+  untouched by the apply — and the new items land.
+- **The page.** `routes.tsx` wraps the Store in `RequireAccess` (resource
+  `stock`), so reception, the till and the revenue manager are told "This page
+  is not part of your role".
+- **Look-only, the owner's answer: one line, no buttons.** Housekeeping, the
+  chef, the accountant and a viewer see *"You can see the store. Receiving,
+  issuing and adding items is for the store manager, hotel manager or GM."*
+  and no Receive, Issue, bin, Add or Import. History stays. **Applied the same
+  way to Undo:** a person without `edit` (the kitchen manager too) sees
+  *"Undoing a movement is for the store manager, hotel manager or GM."* in the
+  History dialog, and no Undo buttons — an extension of the owner's answer,
+  reported to them.
+
+**Proved**
+- `api/test/modules/stores/stockGrants.test.ts`: every store act — the list,
+  a history, a new item, a changed item, receipt, issue, wastage, return,
+  adjustment, undo, a new item by import, a changed item by import — as
+  **every role a person can be given** (13), plus a GM elsewhere who is
+  reception here; each refusal is a 403 **and nothing written**. 148 passed.
+- **The guard seen to fail:** with `mayStock` returning true, **78 failed** —
+  exactly the refusals the file expects (kitchen manager 4; chef, housekeeping,
+  accountant, viewer 10 each; reception, revenue manager, till 11 each; the GM
+  elsewhere 1). With `front_desk` added to the server's `create` list, **9
+  failed**: the copy check ("create: is the website's grant, exactly"), seven
+  of reception's refusals, and the GM elsewhere.
+- **On the screen**, in `fidato_stores`: as `dev-desk` (reception) the Store
+  reads "This page is not part of your role … does not include stock"; as
+  `dev-viewer`, 11 items, History ×11 and nothing else, the look-only line, no
+  Undo in History; as `dev-kitchen` (kitchen manager), Receive, Issue, the bin,
+  Add and Import, and no Undo. The running API, as five people:
+  `desk 403/403/403 · viewer 200/403/403 · hk 200/403/403 · kitchen 200/200/403
+  · store 200/200/200` (list / add / undo).
+
+**Rule:** a route with no role check is open to every role the hotel's row
+policy admits — "read-only" included. Ask the act's grant on the server,
+before the first write; the screen hiding a button is not a permission. And a
+proof of a guard tries every role and counts what the refused ones left behind.
 
 ---
 
