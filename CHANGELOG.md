@@ -129,6 +129,74 @@ Then, second question: **can this POS route a KOT and give a printout?**
 
 ---
 
+## 2026-09-16 (audit, round 3) · NA-2 and STO-1 merged; names; retirement in the one inbox
+
+**Asked for:** an audit — what the chats finished, what I think, and every open
+defect. Then, with the owner's four answers: merge NA-2 and STO-1 and deploy;
+show names; the Inventory Manager approves retirements; one inbox.
+
+**Audit found:** three branches with commits, every one in its own lane.
+**Night audit** NA-2 fixed, screen never opened. **Store** STO-1 fixed, proved.
+**Equipment** the register built well, but before the owner's S12–S15: its
+migration numbered 095 like the master's, a role copy with the Inventory Manager
+able only to look, no leaving-the-store approval, and a second approvals inbox
+of its own for retirements. Seven chats have committed nothing; all wait on the
+owner. Production is 53 commits and six migrations behind cp6.
+
+**Merged:** night-audit (`7382603`) and stores STO-1 (`009430a`), all gates
+after each. **Opened:** the Night audit screen (no console errors in a fresh
+tab), a stale close tried on the local API (409, "26 August was already closed",
+the day unmoved); the Store as reception (the page refuses; the API 403 on read
+and on a real add, nothing written).
+
+**Built:** migration **096** — `app.colleague_name` (a name only, for someone
+rostered at a property the caller is at) and approval kind `equipment_retire`
+with its rule everywhere; the approvals queue shows the requester's name to
+whoever may decide and the decider's to the asker. Briefs tell the Equipment
+chat to move retirements to the shared inbox and fix its role copy, and the
+Store chat to show names for STO-4 and rename "the store manager".
+
+**Proved:** names given to everybody instead → the "neither asked nor decides"
+test fails. Gates after 096 in the entry's commit.
+
+---
+
+## 2026-09-16 (inventory manager) · One system: equipment leaving the store waits for approval
+
+**Asked for:** *"this is one system… there is an inventory manager whose
+responsibility is to store all the inventory"* — stock can go out freely,
+equipment cannot. **Approved, four decisions (plan S12–S15):** equipment leaving
+the store waits for the **Inventory Manager**; that is the Store Manager role
+renamed; the owner, admin or GM may decide instead; anybody who sees equipment
+may ask.
+
+**Built (the master's — approvals are core):**
+- **Migration 095** — approval kind `equipment_issue`; `also_decided_by` on rules
+  and requests, frozen like the first approver, so backups can decide without a
+  purchase's single approver changing; the rule at every property, and a trigger
+  so a new property gets it too.
+- **`api/src/routes/approvals.ts`** — backups may decide. **Two faults found by the
+  new test:** the queue hid every request somebody else raised from most roles
+  (an inner join to the row-secured staff table — MEMORY 283), and offered Approve
+  to the person who asked. Both fixed.
+- **The role:** "Store Manager" reads **Inventory Manager**; equipment grants
+  view, create, edit, approve. Pinned.
+- **Briefs:** equipment raises the request with the core function and shows the
+  Inventory Manager what is waiting; the Store is told stock needs no approval.
+  Next free migration 096.
+
+**Proved:** every role tried against a waiting request — only the Inventory
+Manager, owner, admin and GM may decide; the asker never; a purchase still has
+one decider. With the backups removed from the code, the owner, admin and GM
+tests fail. **Not provable here:** the new-property trigger runs as a security
+definer; the gate's database is a superuser's, production's is `pms_migrate`
+with BYPASSRLS (068) — the same privilege gap 068 names.
+
+**Asked of the owner:** may the Inventory Manager see who asked (names are
+hidden from most roles; the Store's STO-4 is the same question).
+
+---
+
 ## 2026-09-16 (stock and equipment) · The plan approved, and Phase 0 built
 
 **Asked for:** two kinds of inventory, planned for several chats — equipment

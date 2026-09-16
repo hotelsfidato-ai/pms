@@ -81,7 +81,10 @@ describe("the Store, Equipment and Purchasing", () => {
                        purchasing: ["view", "create", "approve", "export"] },
     hotel_manager:   { stock: ["view", "create", "edit"], equipment: ["view", "create", "edit"],
                        purchasing: ["view", "create"] },
-    stores:          { stock: ["view", "create", "edit", "export"], equipment: ["view"],
+    /* The Inventory Manager: equipment added 16 September (S13) — adds,
+       edits, and approves it leaving the store. */
+    stores:          { stock: ["view", "create", "edit", "export"],
+                       equipment: ["view", "create", "edit", "approve"],
                        purchasing: ["view", "create"] },
     kitchen_manager: { stock: ["view", "create"], equipment: ["view"], purchasing: ["view", "create"] },
     chef:            { stock: ["view"], equipment: ["view"], purchasing: [] },

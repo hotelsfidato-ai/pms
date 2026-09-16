@@ -91,7 +91,7 @@ export const ROLE_LABELS: Record<Role, string> = {
   kitchen_manager: "Kitchen Manager",
   chef: "Chef",
   pos: "Till Operator",
-  stores: "Store Manager",
+  stores: "Inventory Manager",
   finance: "Accountant",
   read_only: "Viewer",
   automation: "Automation",
@@ -108,7 +108,7 @@ export const ROLE_DESCRIPTIONS: Record<Role, string> = {
   kitchen_manager: "The pass and the menu. Sees what the kitchen owes and when.",
   chef: "The pass. Moves dishes along; changes nothing about money.",
   pos: "A till, not a person. Opens orders and settles them.",
-  stores: "Stock, receiving and issues. Raises purchases; approves none.",
+  stores: "Stock and equipment. Approves equipment leaving the store; raises purchases.",
   finance: "Folios, invoices, payments, city ledger, reports.",
   read_only: "Read-only across the platform. No write access anywhere.",
   automation: "Service account for background jobs. Not a person.",
@@ -360,16 +360,19 @@ const MATRIX: Record<Role, ResourceGrants> = {
     equipment: READ,
   },
 
-  /* Stock, receiving and issues. RAISES a purchase and approves none —
-     the whole point of the approval engine is that the person who asks
-     is not the person who decides. */
+  /* The INVENTORY MANAGER (the owner's name for this role, 16 September —
+     it was "Store Manager"; the key stays `stores`). Stock, and the
+     equipment register. APPROVES equipment leaving the store (S12–S13,
+     migration 095); the owner, an administrator or the GM decide instead
+     when they are away (S14). Still RAISES a purchase and approves none —
+     and never approves their own request (076, in the database). */
   stores: {
     dashboard: READ,
     inventory: ["view", "create", "edit", "export"],
     report: READ,
     notification: READ,
     stock: ["view", "create", "edit", "export"],
-    equipment: READ,
+    equipment: ["view", "create", "edit", "approve"],
     purchasing: ["view", "create"],
   },
 

@@ -74,7 +74,7 @@ chat — or every lane invents its own:
 |---|---|---|---|---|
 | **0** | **master** | Suppliers and locations (one migration); permission resources for stock, equipment and purchasing in `permissions.ts`; the menu names (S1); migration numbers follow § 7 | — | 2 days |
 | **1A** | **stores** | Fix STO-1 to STO-10 first. Then: stock held per location with transfers (main store → kitchen); par levels per location; a stock-count sheet (count, compare, one adjustment per difference); gas by cylinder (S5) | 1B | 4 days |
-| **1B** | **equipment** (S2) | The register: item, category, location, tag number, cost, purchase date, supplier, warranty and AMC dates, status (in use · under repair · retired); import from a file | 1A | 3 days |
+| **1B** | **equipment** (S2) | The register: item, category, location, tag number, cost, purchase date, supplier, warranty and AMC dates, status (in use · under repair · retired); import from a file; **taking it out of the store asks the Inventory Manager (S12–S15)** | 1A | 3 days |
 | **2A** | **stores** | Crockery and cutlery (S6): a `breakage` movement with who and where; in use at an outlet vs in the store; par per outlet; the monthly count | 2B, 2C | 2 days |
 | **2B** | **housekeeping** | A work order can point at an equipment item; repair cost; the item's repair history; an item under repair shows it | 2A, 2C | 2 days |
 | **2C** | **purchasing** (new, S8) | Purchase request → approval (076) → purchase order to a supplier → delivery: stock arrives as a receipt in `stores`, equipment arrives as a register entry | 2A, 2B | 4 days |
@@ -121,15 +121,33 @@ lands in both.
 | **S10** | Supplier bills and payments: in this system or in Tally? | **Tally, later** — decided with the accounting service |
 | **S11** | Who approves a purchase, and above what amount | **The GM approves; the owner above a limit the owner sets.** No amount is invented |
 
+**Four more, approved the same evening** — the owner: *"this is one system… there is
+an inventory manager whose responsibility is to store all the inventory"*:
+
+| # | Decision | Approved |
+|---|---|---|
+| **S12** | What needs approval | **Equipment leaving the store** (to a room, the kitchen, the restaurant). Stock (oil, gas, drinks) goes out with none. A move between rooms, or back into the store, is recorded and needs nobody |
+| **S13** | Who approves | **The Inventory Manager** — the Store Manager role renamed (key `stores` unchanged). Looks after stock AND equipment: adds and edits equipment, approves it leaving the store |
+| **S14** | When the Inventory Manager is away | **The owner, an administrator or the GM** may decide instead |
+| **S15** | Who may ask | **Anybody who can see equipment** |
+| **S16** | Retiring a tagged item (a Hotel Manager's waits) | **The Inventory Manager approves it too**, with the same backups — and in the **same shared approvals inbox**, not a second one |
+| **Names** | May an approver see who asked? | **Yes.** At their own hotel, whoever decides sees who asked, the asker sees who decided, and the store keeper sees who moved stock |
+
+Built by the master (migration 095, `api/src/routes/approvals.ts`): the approval
+kind `equipment_issue`, a rule at every property (new ones too) naming the
+Inventory Manager with the three backups, and a queue that lets the backups
+decide. Nobody approves their own request (076): when the Inventory Manager takes
+something out, one of the backups approves it.
+
 ---
 
-## 6 · Who may do what — approved 16 September, as built in Phase 0
+## 6 · Who may do what — approved 16 September; S13 added the same evening
 
 | Role | Store (stock) | Equipment | Purchasing |
 |---|---|---|---|
 | Owner · Admin · General Manager | everything | everything | request and approve (GM up to the owner's limit) |
 | Hotel Manager | see, receive, issue, count | see, add, edit | request |
-| Store Manager | see, receive, issue, count, breakage | see | request |
+| **Inventory Manager** (was Store Manager) | see, receive, issue, count, breakage | see, add, edit, **approve it leaving the store** | request |
 | Kitchen Manager | see, issue to the kitchen, breakage | see, report a repair | request |
 | Chef · Housekeeping | see | see, report a repair | — |
 | Reception | — | see, report a repair | — |
@@ -142,8 +160,8 @@ repair" is a work order, wired by housekeeping in phase 2B.
 
 ## 7 · Migration numbers in this plan
 
-**A chat takes the next number after cp6's highest when it starts** (095 after
-Phase 0). If two chats take the same one, the master renumbers the later one when
+**A chat takes the next number after cp6's highest when it starts** (096 after
+the master's 095). If two chats take the same one, the master renumbers the later one when
 it merges. Do not write the number into a test name or a comment — refer to the
 file by what it does, so a renumbering touches one filename. Numbers cannot be
 handed out in advance: the guard refuses a gap, so a reserved number nobody uses

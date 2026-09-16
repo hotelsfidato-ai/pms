@@ -145,6 +145,8 @@ describe("the roles", () => {
     expect(ROLE_LABELS["front_desk"]).toBe("Reception");
     expect(ROLE_LABELS["finance"]).toBe("Accountant");
     expect(ROLE_LABELS["gm"]).toBe("General Manager");
-    expect(ROLE_LABELS["stores"]).toBe("Store Manager");
+    /* "Store Manager" until 16 September: the owner named the person who
+       looks after stock AND equipment the Inventory Manager (S13). */
+    expect(ROLE_LABELS["stores"]).toBe("Inventory Manager");
   });
 });

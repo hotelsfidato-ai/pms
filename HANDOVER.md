@@ -358,6 +358,33 @@ and Room systems folders. **Next: 1A Store and 1B Equipment, in parallel.**
 **Migration numbers changed rule (plan § 7):** a chat takes the next number after
 cp6's highest; the master renumbers at merge. The 094 once given to admin is void.
 
+**S12–S15 APPROVED the same evening — one system, one Inventory Manager.**
+Equipment leaving the store waits for the **Inventory Manager** (the `stores`
+role renamed; key unchanged); the owner, admin or GM may decide instead; anybody
+who sees equipment may ask; stock needs no approval. **Built by the master:**
+migration **095** (approval kind `equipment_issue`, `also_decided_by` backups,
+the rule at every property and every new one), `api/src/routes/approvals.ts`
+(backups decide; the queue no longer hides requests others raised; the asker is
+no longer offered Approve), the role's name and equipment grants. Next free
+migration after that was 096 — **now taken too, see below.**
+
+**Audit and round 3, later on 16 September.** Merged: **NA-2** (night audit
+refuses a stale close — screen opened, refusal tried on the local API) and
+**STO-1** (the Store refuses reception on page and server — seen). The owner
+answered: **names YES** (approvers see who asked, the asker who decided, the
+store keeper who moved stock), **S16** (the Inventory Manager approves a
+retirement too, one shared inbox). Built by the master: **migration 096**
+(`app.colleague_name`, approval kind `equipment_retire` with its rule),
+the approvals queue names the people involved. **Equipment 1B is committed but
+NOT merged** — written before S12–S16: its migration is numbered 095 (renumber
+to 097 at merge), its role copy predates the Inventory Manager, the
+leaving-the-store approval is not built, and its retirement approval must move
+to the shared inbox. **Master owes:** a screen to add places and suppliers
+(nothing can add one — so no store exists to leave; who may add them is ASKED of
+the owner), Equipment and the Inventory Manager's and Housekeeping's working
+menus at the equipment merge, EQ-2. **Next free migration: 097.** Owner chose:
+**deploy one release** after these merges (steps given in chat, § 9 shape).
+
 ### 3.0g · Round 1 of the service chats — who holds what, 16 September
 
 The owner talks to the master chat; the master hands out the work. Checked for

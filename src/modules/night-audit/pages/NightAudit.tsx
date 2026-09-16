@@ -46,7 +46,10 @@ export default function NightAuditPage() {
   const [result, setResult] = useState<NightAuditResult | null>(null);
 
   const run = useMutation({
-    mutationFn: () => runNightAudit(hotelId),
+    /* The day the heading names, not whatever day the server is on. A
+       screen that did not see the day close elsewhere would otherwise
+       close tomorrow (NA-2); sent, the server refuses it instead. */
+    mutationFn: (closing: string) => runNightAudit(hotelId, closing),
     onSuccess: async (r) => {
       setResult(r);
       /* The business date has MOVED. Two things are now stale, and
@@ -167,7 +170,7 @@ export default function NightAuditPage() {
                 <span className="shrink-0">
                   <Button variant="primary"
                     disabled={!data.canRun.allowed || run.isPending}
-                    onClick={() => run.mutate()}
+                    onClick={() => run.mutate(data.businessDate)}
                   >
                     {run.isPending ? "Closing the day…" : "Run night audit"}
                   </Button>

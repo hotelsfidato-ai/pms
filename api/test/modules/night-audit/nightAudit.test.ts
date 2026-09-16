@@ -225,9 +225,12 @@ async function checkInAtPune(
  * the previous one's guests: a three-night stay becomes due out as the
  * date advances, and every later audit is blocked by a room nobody in
  * that test ever created.
+ *
+ * `through` clears later days as well — a house where nobody is due out
+ * tomorrow either.
  */
-async function clearDueOuts(): Promise<void> {
-  const bd = await businessDate();
+async function clearDueOuts(through?: string): Promise<void> {
+  const bd = through ?? await businessDate();
   const db = await admin();
   try {
     await db.query(
@@ -476,7 +479,12 @@ describe("closing a day", () => {
     }
   });
 
-  it("answers a re-run of a day already closed with what that run did", async () => {
+  /* This was called "answers a re-run of a day already closed with what
+     that run did", and never sent a request: it reads the run row and
+     nothing else. The branch its old name described cannot be reached
+     (NA-2). What a re-run of a closed day DOES get is asserted under
+     "a stale screen". */
+  it("leaves the day before the business date recorded as completed", async () => {
     const db = await admin();
     try {
       /* Ask about a date that IS closed, by looking one behind. */
@@ -570,6 +578,147 @@ describe("a closed day", () => {
     } finally {
       await db.end();
     }
+  });
+});
+
+/* ══════════════════════════════════════════════════════════════════
+   A SCREEN THAT DID NOT SEE THE DAY CLOSE — NA-2
+
+   The browser learns the business date at sign-in. Close the day on
+   another device, in another tab, or with a first press whose answer
+   was lost on a bad line, and the screen left open still says
+   "closing D". Its Run button used to send nothing, and the server
+   closed whatever day IT was on: D+1 — tomorrow night's room charges,
+   tomorrow's arrivals marked no-show and their rooms released. Proved
+   on 16 September, then fixed on the owner's decision of the same
+   day: the button sends the day it says it is closing, and the server
+   refuses if that day is already closed, changing nothing.
+
+   Nobody is due out tomorrow here on purpose. That is the house in
+   which the old code went through; with a departure due, it refused
+   for the wrong reason and the test would prove nothing.
+   ══════════════════════════════════════════════════════════════════ */
+
+describe("a stale screen", () => {
+  it("refuses to close a day that is already closed, and changes nothing", async () => {
+    const day = await businessDate();
+    const next = new Date(`${day}T00:00:00Z`);
+    next.setUTCDate(next.getUTCDate() + 1);
+    const tomorrow = next.toISOString().slice(0, 10);
+    await clearDueOuts(tomorrow);
+
+    /* A guest booked to arrive tomorrow, with a room held for them. */
+    const db = await admin();
+    let arrival: string;
+    try {
+      const { rows: [room] } = await db.query<{ id: string; type_id: string }>(
+        `select rm.id, rm.room_type_id as type_id from rooms rm
+          where rm.hotel_id = $1
+            and not exists (select 1 from room_assignments ra
+                             where ra.room_id = rm.id and ra.released_at is null)
+          order by rm.number limit 1`,
+        [puneId],
+      );
+      const { rows: [guest] } = await db.query<{ id: string }>(
+        `insert into guests (full_name, phone)
+         values ($1, '+91 00000 00000') returning id`,
+        [`${tag} arriving tomorrow`],
+      );
+      const out = new Date(next);
+      out.setUTCDate(out.getUTCDate() + 2);
+      const { rows: [res] } = await db.query<{ id: string }>(
+        `insert into reservations
+           (hotel_id, guest_id, room_type_id, reference, check_in, check_out,
+            adults, status, source, agreed_rate)
+         values ($1,$2,$3,$4,$5::date,$6::date,1,'confirmed','direct',3000)
+         returning id`,
+        [puneId, guest!.id, room!.type_id, `${tag}-stale-${Date.now()}`,
+         tomorrow, out.toISOString().slice(0, 10)],
+      );
+      arrival = res!.id;
+      await db.query(
+        `insert into room_assignments
+           (hotel_id, reservation_id, room_id, from_date, to_date, reason)
+         values ($1,$2,$3,$4::date,$5::date,'arrival')`,
+        [puneId, arrival, room!.id, tomorrow, out.toISOString().slice(0, 10)],
+      );
+    } finally {
+      await db.end();
+    }
+
+    const run = (closing: string) => app.request("/api/hotels/PUN/night-audit/run", {
+      method: "POST",
+      headers: { "x-dev-staff-id": ownerId, "content-type": "application/json" },
+      body: JSON.stringify({ businessDate: closing }),
+    });
+
+    /* The screen loads, and offers to close `day`. */
+    const screen = (await (await asOwner(`/PUN/night-audit?asOn=${day}`)).json()) as {
+      businessDate: string; canRun: { allowed: boolean };
+    };
+    expect(screen.businessDate).toBe(day);
+    expect(screen.canRun.allowed).toBe(true);
+
+    /* Somebody else closes it — sending the day the server is on, which
+       is what an up-to-date screen sends, and which goes through. */
+    const first = await run(day);
+    const firstBody = (await first.json()) as { ok: boolean; businessDate: string };
+    expect(firstBody.ok, JSON.stringify(firstBody)).toBe(true);
+    expect(firstBody.businessDate).toBe(day);
+
+    const state = async () => {
+      const d = await admin();
+      try {
+        const { rows: [s] } = await d.query<{
+          status: string; released: boolean; postings: string; runs: string;
+        }>(
+          `select r.status,
+                  (select bool_or(ra.released_at is not null) from room_assignments ra
+                    where ra.reservation_id = r.id) as released,
+                  (select count(*) from folio_postings fp
+                    where fp.hotel_id = $2 and fp.business_date = $3::date)::text as postings,
+                  (select count(*) from night_audit_runs na
+                    where na.hotel_id = $2 and na.business_date = $3::date)::text as runs
+             from reservations r where r.id = $1`,
+          [arrival, puneId, tomorrow],
+        );
+        return { ...s!, businessDate: await businessDate() };
+      } finally {
+        await d.end();
+      }
+    };
+    const before = await state();
+    expect(before.businessDate).toBe(tomorrow);
+
+    /* The stale screen presses Run, still saying `day`. */
+    const second = await run(day);
+    const secondBody = (await second.json()) as {
+      ok: boolean; reason?: string; businessDate?: string;
+    };
+    expect(second.status, JSON.stringify(secondBody)).toBe(409);
+    expect(secondBody.ok).toBe(false);
+    const month = new Date(`${day}T00:00:00Z`)
+      .toLocaleString("en-GB", { month: "long", timeZone: "UTC" });
+    expect(secondBody.reason).toBe(
+      `${Number(day.slice(8))} ${month} was already closed. Reload to see today.`,
+    );
+
+    /* And nothing moved: not the date, not tomorrow's guest, not a charge. */
+    expect(await state(), "a refused close changed something").toEqual(before);
+    expect(before).toMatchObject({
+      status: "confirmed", released: false, postings: "0", runs: "0",
+    });
+  });
+
+  it("refuses a date that is not a date, before anything happens", async () => {
+    const before = await businessDate();
+    const res = await app.request("/api/hotels/PUN/night-audit/run", {
+      method: "POST",
+      headers: { "x-dev-staff-id": ownerId, "content-type": "application/json" },
+      body: JSON.stringify({ businessDate: "yesterday" }),
+    });
+    expect(res.status).toBe(400);
+    expect(await businessDate()).toBe(before);
   });
 });
 

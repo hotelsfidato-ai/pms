@@ -2,6 +2,9 @@ import { Hono } from "hono";
 import { withSession } from "../../auth.ts";
 import { businessDateFor } from "../../businessDate.ts";
 import type { Client } from "../../db.ts";
+import {
+  mayStock, actionForKind, STOCK_REFUSED, type StockAction,
+} from "./stockGrants.ts";
 
 /* ══════════════════════════════════════════════════════════════════
    THE STORE
@@ -29,6 +32,13 @@ export const stores = new Hono<{ Variables: { subject: string } }>();
 
 const refuse = (reason: string) => ({ ok: false as const, reason });
 
+/* WHO IS ASKING comes first in every route, before the first write — inside
+   `withSession` a refusal returned after an insert keeps the insert (MEMORY
+   243). The callback hands back this marker and the route answers 403: not
+   409, because nothing about the request is wrong except who sent it. */
+const forbid = (action: StockAction) => ({ forbidden: action });
+const forbidden = (action: StockAction) => refuse(STOCK_REFUSED[action]);
+
 async function hotelFor(client: Client, code: string): Promise<string | null> {
   const { rows } = await client.query<{ id: string }>(
     "select id from hotels where code = $1", [code.toUpperCase()],
@@ -55,6 +65,7 @@ stores.get("/:code/stores", async (c) => {
   const body = await withSession(c.get("subject"), async (client) => {
     const hotelId = await hotelFor(client, c.req.param("code"));
     if (!hotelId) return null;
+    if (!(await mayStock(client, hotelId, "view"))) return forbid("view");
 
     const { rows } = await client.query<{
       id: string; name: string; unit: string; category: string | null;
@@ -110,7 +121,9 @@ stores.get("/:code/stores", async (c) => {
     };
   });
 
-  return body ? c.json(body) : c.json({ error: "No such property." }, 404);
+  if (!body) return c.json({ error: "No such property." }, 404);
+  if ("forbidden" in body) return c.json(forbidden(body.forbidden), 403);
+  return c.json(body);
 });
 
 /* ── One item's history ───────────────────────────────────────────── */
@@ -119,6 +132,7 @@ stores.get("/:code/stores/items/:id/movements", async (c) => {
   const body = await withSession(c.get("subject"), async (client) => {
     const hotelId = await hotelFor(client, c.req.param("code"));
     if (!hotelId) return null;
+    if (!(await mayStock(client, hotelId, "view"))) return forbid("view");
 
     const { rows } = await client.query<{
       id: string; business_date: string; kind: string; quantity: string;
@@ -163,7 +177,9 @@ stores.get("/:code/stores/items/:id/movements", async (c) => {
     };
   });
 
-  return body ? c.json(body) : c.json({ error: "No such property." }, 404);
+  if (!body) return c.json({ error: "No such property." }, 404);
+  if ("forbidden" in body) return c.json(forbidden(body.forbidden), 403);
+  return c.json(body);
 });
 
 /* ── Adding something to keep ─────────────────────────────────────── */
@@ -191,6 +207,16 @@ stores.post("/:code/stores/items", async (c) => {
   const result = await withSession(c.get("subject"), async (client) => {
     const hotelId = await hotelFor(client, c.req.param("code"));
     if (!hotelId) return null;
+    if (!(await mayStock(client, hotelId, "create"))) return forbid("create");
+
+    /* THE SAME NAME IS A CHANGE, NOT AN ADDITION. The insert below
+       overwrites an existing item's unit, category and warning level —
+       and changing an existing item needs `edit` (the owner, 16 September). */
+    const { rows: existing } = await client.query(
+      "select 1 from stock_items where hotel_id = $1 and name = $2", [hotelId, name]);
+    if (existing.length > 0 && !(await mayStock(client, hotelId, "edit"))) {
+      return forbid("edit");
+    }
 
     const { rows } = await client.query<{ id: string }>(
       `insert into stock_items (hotel_id, name, unit, category, reorder_level)
@@ -208,6 +234,7 @@ stores.post("/:code/stores/items", async (c) => {
   });
 
   if (!result) return c.json({ error: "No such property." }, 404);
+  if ("forbidden" in result) return c.json(forbidden(result.forbidden), 403);
   return c.json(result, "ok" in result && result.ok ? 200 : 409);
 });
 
@@ -256,6 +283,8 @@ stores.post("/:code/stores/movements", async (c) => {
   const result = await withSession(c.get("subject"), async (client, session) => {
     const hotelId = await hotelFor(client, c.req.param("code"));
     if (!hotelId) return null;
+    const action = actionForKind(input.kind!);
+    if (!(await mayStock(client, hotelId, action))) return forbid(action);
 
     const { rows: item } = await client.query<{ name: string; unit: string }>(
       "select name, unit from stock_items where id = $1 and hotel_id = $2",
@@ -311,6 +340,7 @@ stores.post("/:code/stores/movements", async (c) => {
   });
 
   if (!result) return c.json({ error: "No such property." }, 404);
+  if ("forbidden" in result) return c.json(forbidden(result.forbidden), 403);
   return c.json(result, "ok" in result && result.ok ? 200 : 409);
 });
 
@@ -323,6 +353,7 @@ stores.post("/:code/stores/movements/:id/reverse", async (c) => {
   const result = await withSession(c.get("subject"), async (client, session) => {
     const hotelId = await hotelFor(client, c.req.param("code"));
     if (!hotelId) return null;
+    if (!(await mayStock(client, hotelId, "edit"))) return forbid("edit");
 
     /* Scoped before it is touched. The function takes an id and RLS
        covers the read, but a route that hands a bare id to a
@@ -350,6 +381,7 @@ stores.post("/:code/stores/movements/:id/reverse", async (c) => {
   });
 
   if (!result) return c.json({ error: "No such property." }, 404);
+  if ("forbidden" in result) return c.json(forbidden(result.forbidden), 403);
   return c.json(result, "ok" in result && result.ok ? 200 : 409);
 });
 
@@ -384,6 +416,12 @@ stores.post("/:code/stores/import", async (c) => {
   const result = await withSession(c.get("subject"), async (client) => {
     const hotelId = await hotelFor(client, c.req.param("code"));
     if (!hotelId) return null;
+    if (!(await mayStock(client, hotelId, "create"))) return forbid("create");
+    /* SPLIT BY ROW — the owner, 16 September. A new item needs `create`; a
+       row that changes an item already in the store needs `edit`. Without
+       it such a row is REJECTED like any other bad row: the dry run lists
+       it with the reason, and the apply leaves that item untouched. */
+    const mayEdit = await mayStock(client, hotelId, "edit");
 
     const { rows: existing } = await client.query<{ name: string }>(
       "select name from stock_items where hotel_id = $1", [hotelId]);
@@ -429,6 +467,13 @@ stores.post("/:code/stores/import", async (c) => {
       }
       seen.add(key);
 
+      if (already.has(key) && !mayEdit) {
+        return reject(
+          "Already in the store. Changing an item is for the owner, an "
+          + "administrator, the general manager, the hotel manager or the "
+          + "store manager.");
+      }
+
       verdicts.push({
         line, name,
         action: already.has(key) ? "update" : "create",
@@ -470,5 +515,6 @@ stores.post("/:code/stores/import", async (c) => {
   });
 
   if (!result) return c.json({ error: "No such property." }, 404);
+  if ("forbidden" in result) return c.json(forbidden(result.forbidden), 403);
   return c.json(result, "ok" in result && result.ok ? 200 : 409);
 });

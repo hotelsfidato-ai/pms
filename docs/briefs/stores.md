@@ -43,6 +43,19 @@ Merge it first (`git merge cp6` in your copy). Phase 0, built by the master:
 - **The menu:** "Inventory" reads **Rooms and rates**; the Store sits in **Store
   and equipment**. Your `nav.ts` already says `resource: "stock"`.
 
+- **Your users' role is now called Inventory Manager** (key `stores`
+  unchanged, 16 September, S13): the same person looks after stock and
+  equipment, and approves equipment leaving the store — that approval is the
+  equipment chat's and the master's, not yours. **Stock going out needs no
+  approval (S12); do not add one.**
+- **STO-4 — the owner answered YES (16 September):** the store keeper sees who
+  moved stock. Use `app.colleague_name(<staff id>, <hotel id>)` (migration 096):
+  it gives the name of someone rostered at that property, and nothing else.
+  Show it to the **Inventory Manager** (and whoever sees names already — the GM,
+  the owner); anybody else keeps today's view unless the owner says more.
+- **Your refusal sentences say "the store manager"** — the role is the
+  **Inventory Manager** now. Change the words, not the key.
+
 **One word, two meanings, still:** `inventory` is rooms and prices. You are the
 Store, and stock. Never call stock "inventory" on a screen, a route, a table or a
 commit.
@@ -118,7 +131,8 @@ requests (2C, `purchasing`), recipes (S9, later), supplier payments (S10, Tally)
 ## Migrations
 
 You will need at least one. **The number is the next after the highest on cp6
-when you write the file** — 095 while nothing else has merged. The equipment chat
+when you write the file** — 097 now: the master took 095 and 096 for
+approvals and names. The equipment chat
 may take the same number; **that is expected** — the master renumbers whichever
 merges second. So:
 

@@ -13,6 +13,8 @@ import type { Client } from "../../db.ts";
 
    WHAT IT DOES, IN ORDER, IN ONE TRANSACTION
 
+     0. refuses if the day the screen says it is closing is already
+        closed (NA-2) — before anything is written
      1. refuses if a human decision is outstanding
      2. opens a run row, status 'running'
      3. posts one night's room charge for every in-house stay
@@ -58,6 +60,13 @@ interface Blocker {
 const refuse = (reason: string, extra: Record<string, unknown> = {}) => ({
   ok: false as const, reason, ...extra,
 });
+
+/** A real calendar day written YYYY-MM-DD — "2026-02-31" is not one. */
+function isIsoDate(value: unknown): value is string {
+  if (typeof value !== "string" || !/^\d{4}-\d{2}-\d{2}$/.test(value)) return false;
+  const d = new Date(`${value}T00:00:00Z`);
+  return !Number.isNaN(d.getTime()) && d.toISOString().slice(0, 10) === value;
+}
 
 async function hotelIdFor(client: Client, code: string): Promise<string | null> {
   const { rows } = await client.query<{ id: string }>(
@@ -254,9 +263,45 @@ nightAudit.get("/:code/night-audit/can-run", async (c) => {
 /* ── Close the day ───────────────────────────────────────────────── */
 
 nightAudit.post("/:code/night-audit/run", async (c) => {
+  /* ── The day the screen says it is closing ─────────────────────────
+     NA-2. The browser learns the business date at sign-in, so a screen
+     left open while the day closed somewhere else — another device,
+     another tab, a first press whose answer was lost on a bad line —
+     still says "closing D". This route closes the day the SERVER is on,
+     so that screen's Run used to close D+1: tomorrow night's room
+     charges, tomorrow's arrivals marked no-show and their rooms
+     released. Proved on 16 September.
+
+     The owner's decision, the same day: the button sends the day it
+     shows, and a day that is already closed is refused, changing
+     nothing. Asked before the first write below — inside withSession a
+     refusal is a commit (MEMORY 243). A caller that sends no date is
+     answered as before. */
+  const body = (await c.req.json().catch(() => ({}))) as { businessDate?: unknown };
+  const closing = body.businessDate;
+  if (closing !== undefined && !isIsoDate(closing)) {
+    return c.json({ error: "businessDate must be a date, YYYY-MM-DD." }, 400);
+  }
+
   const result = await withSession(c.get("subject"), async (client) => {
     const hotelId = await hotelIdFor(client, c.req.param("code"));
     if (!hotelId) return null;
+
+    if (closing !== undefined) {
+      const { rows: closed } = await client.query<{ day: string }>(
+        `select to_char(business_date, 'FMDD FMMonth') as day
+           from night_audit_runs
+          where hotel_id = $1 and business_date = $2::date
+            and status = 'completed'`,
+        [hotelId, closing],
+      );
+      if (closed[0]) {
+        return refuse(
+          `${closed[0].day} was already closed. Reload to see today.`,
+          { businessDate: closing },
+        ) as unknown as Record<string, unknown>;
+      }
+    }
 
     const businessDate = await businessDateFor(client, hotelId);
 
@@ -264,7 +309,13 @@ nightAudit.post("/:code/night-audit/run", async (c) => {
        Answer with what that run did, rather than an error. A second
        press of the button, or a retried request, is not a mistake
        worth punishing — and the caller wants the same answer either
-       way. */
+       way.
+
+       ⚠ This cannot happen as written: `businessDate` is the day AFTER
+       the last completed run, so it never has one. A second press did
+       not land here — it closed the next day (NA-2). What catches that
+       is the check on the day the screen sends, above. Left in place:
+       removing it changes nothing, and was not asked for. */
     const { rows: prior } = await client.query<{
       status: string; rooms_posted: string | null;
       revenue_posted: string | null; no_shows: string | null;
