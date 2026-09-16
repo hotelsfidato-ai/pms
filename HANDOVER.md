@@ -340,6 +340,17 @@ price answers exactly as it did before.
 default, not everything is derived, and the screen ships with every figure
 unset.
 
+### 3.0h · Stock and equipment — PLANNED 16 September, ASK FIRST
+
+`docs/STOCK-AND-EQUIPMENT-PLAN.md`. The owner asked for two kinds of inventory
+planned as a multi-agent job: **equipment** (hotel, restaurant, rooms, with
+repairs and buying) and **consumables** (oil, gas, drinks, spares, and the
+crockery and cutlery). Measured first: consumables are two-thirds built in the
+`stores` service, crockery a third, equipment not started, repairs (058) and
+purchase approvals (076) are half-pieces. **Nothing starts until the owner
+answers S1–S11 (plan § 5).** Phase 0 is the master's: suppliers and locations,
+built once, before any lane.
+
 ### 3.0g · Round 1 of the service chats — who holds what, 16 September
 
 The owner talks to the master chat; the master hands out the work. Checked for
