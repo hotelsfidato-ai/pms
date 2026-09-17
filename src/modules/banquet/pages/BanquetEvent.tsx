@@ -5,14 +5,15 @@ import {
   ArrowLeft, Check, Plus, Trash2, Users, Clock, AlertTriangle, Receipt,
 } from "lucide-react";
 import { cn } from "@/lib/cn";
-import { money } from "@/lib/format";
+import { money, dateTime } from "@/lib/format";
 import { useUi } from "@/lib/ui";
 import {
-  Page, PageHeader, Card, CardBody, Button, Skeleton, EmptyState, toast,
+  Page, PageHeader, Card, CardBody, Button, Skeleton, toast,
   Dialog, DialogContent, DialogClose, Field, fieldProps, Input, Textarea,
   NativeSelect, StatusPill,
 } from "@/components/ui";
 import { getBanquetEvent, getBanquetSetup, confirmBanquetEvent, cancelBanquetEvent, amendBanquetEvent, addBanquetCourse, removeBanquetCourse, type BanquetEvent } from "@/modules/banquet/data/banquet";
+import { ReadFailed, ReadStale, readError } from "@/modules/banquet/components/ReadProblem";
 import { queryKeys } from "@/data/repositories";
 
 /* ══════════════════════════════════════════════════════════════════
@@ -47,11 +48,9 @@ const STATUS: Record<string, { label: string; tone: "neutral" | "info" | "succes
   cancelled: { label: "Cancelled", tone: "danger" },
 };
 
-const when = (iso: string) =>
-  new Date(iso).toLocaleString("en-IN", {
-    day: "numeric", month: "short", year: "numeric",
-    hour: "2-digit", minute: "2-digit", hour12: false,
-  });
+/* Dates and times through `format.ts`, as every screen prints them (BQ-5):
+   "14 Nov 2026, 6:00 PM". */
+const when = dateTime;
 
 /** A dash, never ₹0. Used everywhere a price might not exist yet. */
 const rupees = (v: number | null) => (v === null ? "—" : money(v));
@@ -86,19 +85,23 @@ export default function BanquetEventPage() {
     );
   }
 
+  /* The read did not succeed (BQ-3). A function that does not exist, or
+     banquet switched off, is the server's own sentence; a fault or a lost
+     connection says so, with Try again. The way back stays either way. */
   if (!q.data) {
     return (
       <Page>
-        <PageHeader title="Function" />
-        <EmptyState
-          title="No such function"
-          description="It may have been removed, or the banquet module is off here."
-          action={
-            <Button onClick={() => navigate(`/h/${hotelId}/banquet`)}>
-              Back to the diary
+        <PageHeader
+          title="Function"
+          actions={
+            <Button variant="secondary" className="h-11"
+                    onClick={() => navigate(`/h/${hotelId}/banquet`)}>
+              <ArrowLeft className="size-4" /> Diary
             </Button>
           }
         />
+        <ReadFailed error={readError(q)} what="this function"
+                    onRetry={() => void q.refetch()} />
       </Page>
     );
   }
@@ -143,6 +146,9 @@ export default function BanquetEventPage() {
           </div>
         }
       />
+
+      <ReadStale error={readError(q)} loadedAt={q.dataUpdatedAt}
+                 onRetry={() => void q.refetch()} />
 
       {e.status === "cancelled" && e.cancelReason && (
         <Card>
@@ -192,8 +198,8 @@ export default function BanquetEventPage() {
                 )}
               </Detail>
               <Detail label="Registered by">
-                {e.registeredBy}
-                <span className="block text-sm text-grey-500">{e.registeredAt}</span>
+                {e.registeredBy ?? "—"}
+                <span className="block text-sm text-grey-500">{when(e.registeredAt)}</span>
               </Detail>
             </dl>
 
@@ -211,7 +217,8 @@ export default function BanquetEventPage() {
             <dl className="space-y-2 text-sm">
               <Line label="Hall" value={rupees(e.money.venue)} />
               <Line label="Catering" value={rupees(e.money.food)} />
-              <Line label="From the till" value={rupees(e.money.pos)} />
+              {/* Settled restaurant orders only; each one is listed below. */}
+              <Line label="Restaurant orders" value={rupees(e.money.pos)} />
             </dl>
 
             <div className="border-t border-grey-200 pt-3">
@@ -239,7 +246,7 @@ export default function BanquetEventPage() {
             {e.folioId && (
               <p className="flex items-center gap-1.5 text-sm text-grey-600">
                 <Receipt className="size-3.5 shrink-0" />
-                A folio is open for this function.
+                A bill is open for this function.
               </p>
             )}
           </CardBody>
@@ -298,6 +305,56 @@ export default function BanquetEventPage() {
                 </li>
               ))}
             </ul>
+          )}
+        </CardBody>
+      </Card>
+
+      {/* ── Restaurant orders ─────────────────────────────────────
+          The orders the restaurant charged to this function (D17-21).
+          An open one is listed, because it is real food, and said to be
+          outside the total — the total counts a bill once it is settled,
+          so it does not move while somebody is still ordering. */}
+      <Card>
+        <CardBody className="space-y-3">
+          <p className="text-base font-medium">Restaurant orders</p>
+
+          {e.restaurantOrders.length === 0 ? (
+            <p className="rounded-lg border border-dashed border-grey-200
+                          px-3 py-6 text-center text-sm text-grey-500">
+              No restaurant orders are charged to this function.
+            </p>
+          ) : (
+            <>
+              <ul className="divide-y divide-grey-200">
+                {e.restaurantOrders.map((o) => (
+                  <li key={o.id} className="flex flex-wrap items-center gap-3 py-2.5">
+                    <div className="min-w-0 flex-1">
+                      <p className="flex flex-wrap items-center gap-2">
+                        <span className="font-medium">{o.orderNo}</span>
+                        <StatusPill tone={o.status === "settled" ? "success" : "neutral"}>
+                          {o.status === "settled" ? "Settled" : "Open"}
+                        </StatusPill>
+                      </p>
+                      <p className="text-sm text-grey-500">
+                        {o.outlet ?? "—"}
+                        {o.table ? ` · Table ${o.table}` : ""}
+                        {" · "}
+                        {when(o.openedAt)}
+                      </p>
+                    </div>
+                    <span className={cn("tabular-nums font-medium",
+                                        o.amount === null && "text-grey-500")}>
+                      {rupees(o.amount)}
+                    </span>
+                  </li>
+                ))}
+              </ul>
+              {e.restaurantOrders.some((o) => o.status !== "settled") && (
+                <p className="text-sm text-grey-600">
+                  An open order is not in the total until it is settled.
+                </p>
+              )}
+            </>
           )}
         </CardBody>
       </Card>

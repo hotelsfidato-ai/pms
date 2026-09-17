@@ -1,7 +1,7 @@
 # Banquet
 
 The hall: which function has it and when, what was agreed for it, and what
-the function is eating.
+the function is eating — from a package, or from the restaurant.
 
 **Folder name:** `banquet` — the same word in all three places:
 
@@ -11,9 +11,11 @@ api/src/modules/banquet/      the server's routes for this service
 db/tests/modules/banquet.sql  NEW database checks only — db/tests/suite.sql is frozen history
 ```
 
-Before your first edit: claim the service in `HANDOVER.md` → "Folder claims"
-(service, branch, date), read this file, then this folder's `DEFECTS.md` and
-`CHANGELOG.md`. Written 15 September 2026 from the code at `880a5b6`.
+Before your first edit: claim the service in your copy's folder with
+`npm run claim -- banquet "what you are doing"` (release it with
+`npm run release -- banquet`), read this file, then this folder's `DEFECTS.md`
+and `CHANGELOG.md`, and `docs/briefs/banquet.md`. Written 15 September 2026
+from the code at `880a5b6`; brought up to date 17 September.
 
 ---
 
@@ -22,12 +24,19 @@ Before your first edit: claim the service in `HANDOVER.md` → "Folder claims"
 The general manager takes a call — a wedding, a meeting, a birthday — and
 writes it in the diary as an **enquiry** for a hall, from a start time to an
 end time. Enquiries do not hold the hall; two families can ask about the same
-Saturday. **Confirming** takes the hall for that time and opens a bill (a
-folio) for the function; a second confirmation that overlaps is refused and
-names the function in the way. Food is optional: a package at a per-head
-rate, dishes from the restaurant, both, or nothing. A cancellation needs a
-reason. "Halls and packages" is where the property enters its halls and its
-catering packages — nothing is shipped.
+Saturday. **Confirming** takes the hall for that time and opens a bill for the
+function; a second confirmation that overlaps is refused and names the
+function in the way. Food is optional: a package at a per-head rate, orders
+from the restaurant, both, or nothing. A cancellation needs a reason. "Halls
+and packages" is where the property enters its halls and its catering
+packages — nothing is shipped.
+
+**Restaurant food on a function's bill (D17-21, 17 September).** The till
+attaches an order to a function (`pos_orders.event_id`); the function's screen
+lists every open and settled order attached to it, and the total counts the
+settled ones. Banquet built its half first — the list, and the rule for which
+functions the till may offer. **The till side is the POS chat's, and not built
+yet.**
 
 ---
 
@@ -36,31 +45,40 @@ catering packages — nothing is shipped.
 The menu section is **Banquet**. It is absent at a property whose `banquet`
 module is off (`navigation.ts`, section `banquet`, `module: "banquet"`).
 
-| Menu name | Address (`routes.tsx`) | Page file | Working menus (`nav.ts`) |
-|---|---|---|---|
-| Diary | `/h/:code/banquet` | `pages/Banquet.tsx` | none |
-| Halls and packages | `/h/:code/banquet/setup` | `pages/BanquetSetup.tsx` | none |
-| — (not in the menu) one function | `/h/:code/banquet/:id` | `pages/BanquetEvent.tsx` | opened from the diary |
+| Menu name | Heading | Address (`routes.tsx`) | Page file | Working menus (`nav.ts`) |
+|---|---|---|---|---|
+| Diary | Diary | `/h/:code/banquet` | `pages/Banquet.tsx` | none |
+| Halls and packages | Halls and packages | `/h/:code/banquet/setup` | `pages/BanquetSetup.tsx` | none |
+| — (not in the menu) one function | the function's title | `/h/:code/banquet/:id` | `pages/BanquetEvent.tsx` | opened from the diary |
 
 No working menu lists either entry. Owner, admin, GM, hotel manager, finance
 and read-only see them where their permissions allow: the Diary needs the
 `reservation` grant, Halls and packages the `room_config` grant (the default
 test, no `canSee`). Everybody else reaches them by Find a screen, if allowed.
 
+**Every screen draws four states** (BQ-3): loading; a failed read, told apart
+as refused (the server's own sentence — "This property has no banquet hall…"
+when the module is off), unreachable, or failed, with Try again; empty; full.
+A refresh that fails over something already shown keeps it, under a "Not up to
+date" line. The words are the restaurant's (POS-4), from
+`components/ReadProblem.tsx`.
+
 ---
 
-## Server endpoints — 12
+## Server endpoints — 13
 
-The code is in `api/src/modules/banquet/banquet.ts` (712 lines; moved 15
-September); the door `index.ts` mounts it at `/api/hotels`. Every route passes the module gate
-first (`app.module_enabled(hotel, 'banquet')`) and is refused with a sentence
-when the hall is switched off.
+The code is in `api/src/modules/banquet/banquet.ts` and `attach.ts`; the door
+`index.ts` mounts it at `/api/hotels`. Every route passes the module gate first
+(`app.module_enabled(hotel, 'banquet')`) and is refused with a sentence when
+the hall is switched off — **except `attachable`**, which answers
+`{ enabled: false, functions: [] }` there, because the till asks it at every
+property.
 
 ```
 diary      GET    /:code/banquet                              every hall over a window, with its functions
-function   GET    /:code/banquet/events/:id
+function   GET    /:code/banquet/events/:id                   includes restaurantOrders (D17-21)
            POST   /:code/banquet/events                       register an enquiry
-           POST   /:code/banquet/events/:id/confirm           takes the hall; opens the folio
+           POST   /:code/banquet/events/:id/confirm           takes the hall; opens the bill
            POST   /:code/banquet/events/:id/cancel            needs a reason
            PATCH  /:code/banquet/events/:id                   amend, including the agreed price
 catering   POST   /:code/banquet/events/:id/catering          a package or a named course, per head
@@ -69,23 +87,31 @@ setup      GET    /:code/banquet/setup                        halls and packages
            POST   /:code/banquet/venues
            PATCH  /:code/banquet/venues/:id
            POST   /:code/banquet/packages
+till       GET    /:code/banquet/attachable                   the functions an order may be attached to now
 ```
 
 Every endpoint has a caller in `data/banquet.ts`. There is no endpoint to
 amend or retire a package.
+
+**Names are labels, never joins** (BQ-7). "Registered by", "Confirmed by" and a
+course's "Added by" come from `app.colleague_name` (096), not from a join to
+the row-secured `staff` table — the join made a function the owner registered
+open as "No such function" for the GM.
 
 ---
 
 ## Data
 
 ```
-data/banquet.ts   308 lines. The diary, one function, the setup; register,
-                  confirm, cancel, amend; add and remove catering; add and
-                  amend a hall; add a package. Twelve functions, one per endpoint.
+data/banquet.ts   The diary, one function, the setup; register, confirm, cancel,
+                  amend; add and remove catering; add and amend a hall; add a
+                  package; the functions an order may be attached to.
+                  Thirteen functions, one per endpoint. The three reads THROW
+                  on failure (BQ-3) — never null.
+components/ReadProblem.tsx   refused / unreachable / failed, and the two
+                  components that draw them. A named copy of the till's; see
+                  Requests.
 ```
-
-No `lib/`, `components/` or `flows/` in this folder; the pages carry their own
-dialogs.
 
 ---
 
@@ -100,9 +126,10 @@ banquet_venues, banquet_events          060_banquet.sql
   folios.event_id, and folios_belongs_to_one widened to three kinds of bill
 banquet_packages, banquet_event_packages  061_banquet_food.sql
   rate_per_head NULL until typed, snapshotted onto the function;
-  app.banquet_event_total — an unpriced part makes the total NULL and names itself;
-  pos_orders.event_id — a restaurant bill charged to a function (see BQ-1)
+  app.banquet_event_total — an unpriced part makes the total NULL and names itself,
+  and settled restaurant orders are added; pos_orders.event_id
   idempotency key on banquet_events       062_idempotency.sql — an enquiry sent twice offline makes one
+app.colleague_name                      096 (the master's) — the names on the function
 ```
 
 Also relied on: `hotel_modules` (041 — the `banquet` switch, off until turned
@@ -110,32 +137,48 @@ on), a `banquet` tax kind in `tax_rules` (067, finance's), and
 `066_delete_untraded_property.sql`, which counts banquet events when deciding
 whether a property has ever traded.
 
-**A new migration needs a number claimed in `HANDOVER.md` first.**
+**A new migration** takes the next number after cp6's highest when the file is
+written, and the master renumbers at merge (`docs/briefs/README.md`).
 `src/test/migrationNumbers.test.ts` fails on two files with one number or a
-gap. The highest today is 089.
+gap. Banquet has none of its own since 061.
 
 ---
 
 ## Front door
 
-`src/modules/banquet/index.ts` exports nothing yet (`export {};`). No other
-service imports this one. The server's door, `api/src/modules/banquet/index.ts`,
-exports only `mounts`, read by `api/src/server.ts`.
+**Website — `src/modules/banquet/index.ts`**, for the till (D17-21):
+
+```
+getAttachableFunctions(hotelCode) → { enabled, businessDate, functions: AttachableFunction[] }
+type AttachableFunction  { id, reference, title, venueName, hostName, startsAt, endsAt }
+```
+
+**Server — `api/src/modules/banquet/index.ts`**: `mounts`, and
+
+```
+attachableFunctions(client, hotelId)            the same list, inside a session
+whyNotAttachable(client, hotelId, eventId)      null, or the sentence to refuse with
+```
+
+**The rule, the owner's (17 September):** a CONFIRMED function at this
+property, its bill OPEN, running on the business date from its first day to
+its last, in the property's own time zone (a function ending at midnight has
+ended). The till's screen shows the list as given — no second filter — and the
+till's server asks `whyNotAttachable` **before its first write** and refuses
+with the sentence.
 
 ---
 
 ## Leans on
 
-No other service's door is imported by this folder (checked 15 September).
-The plan's "leans on the POS menu (banquet food, 061)" is a database link, not
-code:
-
-- **finance**: confirming opens a folio for the function (`folios.event_id`,
+- **finance**: confirming opens a bill for the function (`folios.event_id`,
   060), and a `banquet` tax kind is finance's (067).
-- **pos**: `app.banquet_event_total` adds settled restaurant bills whose
-  `pos_orders.event_id` is this function (061) — but nothing sets that column
-  (BQ-1).
+- **pos**: the function's screen reads `pos_orders` (by `event_id`),
+  `pos_outlets` (the name, a left join) and `app.pos_order_total` — the same
+  database link 061's total already had. No POS code is imported. Setting
+  `event_id` is the till's, and not built yet.
 - **admin**: the `banquet` switch lives on Administration → Settings → Modules.
+- **the master**: `app.colleague_name` (096).
 
 ---
 
@@ -150,28 +193,24 @@ code:
   the option to set default price"; food is "situation to situation", both
   package and restaurant open.
 - **No default prices, no default halls, no default packages**
-  (`HANDOVER.md` § 5; 060, 061). A hall's `default_rate` is NULL until
-  somebody types it and is only offered on the booking form; an unpriced
-  function shows a dash and its total is NULL with a sentence saying what is
-  missing, never a short total.
+  (`HANDOVER.md` § 5; 060, 061). An unpriced function shows a dash and its
+  total is NULL with a sentence saying what is missing, never a short total.
 - **A hall cannot be sold twice** — `app.confirm_banquet_event` refuses and
-  names the function in the way; the exclusion constraint stands behind it
-  (060; `banquet.ts` header). An enquiry never holds the hall.
+  names the function in the way; the exclusion constraint stands behind it.
 - **Offline**: an enquiry is queued; confirming is refused, because two desks
   offline could both take the hall (`src/lib/offline.ts`).
 - **The switch belongs to the GM**: only the property's GM or a group
-  administrator may turn banquet on or off (084; MEMORY 250). The API refuses
-  banquet routes when it is off, independently of the menu (041).
-- **"Cancel the function" is a `danger` button** (CHANGELOG 2026-09-15 step 2).
-  A new dialog must declare its main action —
-  `src/components/ui/primaryAction.test.ts` (`HANDOVER.md` § 3.1).
-- **Every list draws four states** — loading, failed, empty, full
-  (`HANDOVER.md` § 6).
-- **The menu label, the page heading and the browser tab say the same words**
-  (`HANDOVER.md` § 6) — the Diary does not yet (BQ-2).
+  administrator may turn banquet on or off (084; MEMORY 250).
+- **"Cancel the function" is a `danger` button.** A new dialog must declare
+  its main action — `src/components/ui/primaryAction.test.ts`.
+- **The heading is the menu name** (D17-22). The Diary is headed "Diary".
+- **The function's account is a "bill"** on these screens (BQ-4, 17 September).
+- **Dates and times through `src/lib/format.ts`** (BQ-5): "14 Nov 2026,
+  6:00 PM". Sentences the SERVER writes (the clash warning, the confirm
+  refusal) still print their own times — see `DEFECTS.md`.
 - **Inside `withSession`, a refusal is a commit** — every refusal before the
-  first write, or throw (MEMORY 243). `banquet.ts` has not been checked for
-  this (PENDING § 2).
+  first write, or throw (MEMORY 243). The existing routes have not been
+  audited for it (PENDING § 2); `attach.ts` only reads.
 - **Tests clean up only what they made** — `banquet.test.ts` once deleted a
   real function somebody had just entered (MEMORY 120).
 
@@ -181,15 +220,11 @@ No Start here card and no glossary line names anything in this service.
 
 ## Open items
 
-`PENDING.md` lists nothing for banquet by name. Found while writing this brief
-(15 September):
-
-- **BQ-1** — the till cannot charge a function: nothing sets
-  `pos_orders.event_id`, so the function's "From the till" line can only be
-  zero. `PROGRESS.md` says the till can do it. The change would be in the
-  restaurant's till — a request to `pos`, after asking the owner whether it is
-  wanted.
-- **BQ-2** — the Diary's page heading and tab say "Banquet", not "Diary".
+- **BQ-1, the till's half** — the POS chat attaches an order to one of
+  `getAttachableFunctions`' functions, and asks `whyNotAttachable` on the
+  server. Until then no order can reach a function.
+- **BQ-6** — a new function's reference has no lock and cuts past four
+  digits (the MEMORY 280 fault). Recorded; the owner chose to fix it later.
 - The general rule in PENDING § 2: refusals after a write have not been
   audited in this service's routes.
 
@@ -198,29 +233,43 @@ No Start here card and no glossary line names anything in this service.
 ## Gates
 
 ```
-web       npx tsc -b                     clean
-          npx vitest run                 all pass (includes src/test/boundaries.test.ts)
-server    cd api && npx tsc --noEmit     clean
-          cd api && npm test             a scratch database; never `npx vitest run`
-                                         inside api/ (MEMORY 196, 221, 264)
-          cd api && npm run strip-check  the server's loader can parse every file (MEMORY 209)
-database  db/tests/run.sh                a scratch database, dropped after
+web       npx tsc -b --force                 clean
+          npx vitest run                     all pass (includes src/test/boundaries.test.ts)
+server    cd api && npx tsc --noEmit         clean
+          cd api && npm test                 a scratch database; never `npx vitest run`
+                                             inside api/ (MEMORY 196, 221, 264, 277)
+          cd api && npm run strip-check      the server's loader can parse every file (MEMORY 209)
+database  bash db/tests/run.sh               a scratch database, dropped after
 ```
 
-The guard this folder must respect: `src/test/boundaries.test.ts` — another
-service reaches this one only through `index.ts`, and this one reaches others
-only through theirs.
+Where the checks are:
 
-Where the checks are today: `api/test/banquet.test.ts` (the module gate, the
-halls, registering a function, the money, cancelling) — moving to
-`api/test/modules/banquet/`; `src/App.test.tsx` "the module switches";
-`db/tests/suite.sql` group `banquet` (frozen — new checks go in
-`db/tests/modules/banquet.sql`, which does not exist yet).
+```
+api/test/modules/banquet/banquet.test.ts   the module gate, halls, registering, the money, cancelling
+api/test/modules/banquet/attach.test.ts    which functions an order may attach to; the bill's orders
+api/test/modules/banquet/names.test.ts     a function opens for the GM and a clerk, with names (BQ-7)
+src/modules/banquet/banquet.test.tsx       the heading, dates, failed reads, the bill's orders, the door
+src/App.test.tsx                           "the module switches"
+db/tests/suite.sql                         group `banquet` (frozen)
+```
 
 ---
 
-## Requests from other services
+## Requests
 
-None yet. To ask for a change here, add a line below — date, your service,
-what you need and why — and leave the change to whoever holds this
-service's claim.
+**To the master (17 September, the banquet chat):**
+
+1. **`getAttachableFunctions` and Rule 2b.** `src/data/repositories/
+   repositories.test.ts` ("every function on the seam is called by
+   something") fails on this branch naming `getAttachableFunctions`, and it is
+   right: nothing reaches it until the POS chat's till imports it. Either add
+   it to `KNOWN_UNREACHABLE` at the merge, with D17-21 as the reason (the
+   shrink-only test then insists it comes off when POS imports it), or merge
+   banquet and the POS half together. Not worked around here.
+2. **One `ReadProblem` for everybody.** The owner wanted the banquet screens to
+   say a failed read the restaurant's way, so `components/ReadProblem.tsx` is a
+   named copy of `src/modules/pos/components/ReadProblem.tsx`. Moving one copy
+   into `src/components/ui/` would let both services — and any other — use it.
+
+**From other services:** none yet. To ask for a change here, add a line —
+date, your service, what you need and why.

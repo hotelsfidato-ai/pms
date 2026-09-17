@@ -5,11 +5,12 @@ import { ArrowLeft, Plus, Building2, UtensilsCrossed } from "lucide-react";
 import { money } from "@/lib/format";
 import { useUi } from "@/lib/ui";
 import {
-  Page, PageHeader, Card, CardBody, Button, Skeleton, EmptyState, toast,
+  Page, PageHeader, Card, CardBody, Button, Skeleton, toast,
   Dialog, DialogContent, DialogClose, Field, fieldProps, Input, Textarea,
   StatusPill,
 } from "@/components/ui";
 import { getBanquetSetup, addBanquetVenue, amendBanquetVenue, addBanquetPackage, type BanquetVenue } from "@/modules/banquet/data/banquet";
+import { ReadFailed, ReadStale, readError } from "@/modules/banquet/components/ReadProblem";
 import { queryKeys } from "@/data/repositories";
 
 /* ══════════════════════════════════════════════════════════════════
@@ -60,14 +61,14 @@ export default function BanquetSetupPage() {
     );
   }
 
+  /* The read did not succeed (BQ-3). Banquet switched off arrives here as
+     the server's own sentence; a fault or a lost connection says so. */
   if (!q.data) {
     return (
       <Page>
         <PageHeader title="Halls and packages" />
-        <EmptyState
-          title="This property has no banquet hall"
-          description="Turn the module on in the property's settings first."
-        />
+        <ReadFailed error={readError(q)} what="halls and packages"
+                    onRetry={() => void q.refetch()} />
       </Page>
     );
   }
@@ -86,6 +87,9 @@ export default function BanquetSetupPage() {
           </Button>
         }
       />
+
+      <ReadStale error={readError(q)} loadedAt={q.dataUpdatedAt}
+                 onRetry={() => void q.refetch()} />
 
       {/* ── Halls ───────────────────────────────────────────────── */}
       <Card>
