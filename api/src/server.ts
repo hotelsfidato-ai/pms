@@ -249,6 +249,12 @@ if (process.argv[1]?.endsWith("server.ts")) {
      the first screen to connect finds it already live. */
   startListening();
 
+  /* The channel manager's every-minute push to SU. Started here, after the
+     port, and only when this file is the program: under the tests nothing
+     must run on a timer. It does nothing at all until a hotel is switched on
+     for the channel manager and has an account to run as. */
+  channelManager.jobs.start();
+
   const server = serve({ fetch: app.fetch, port: env.port }, (info) => {
     console.log(
       `  Fidato PMS API  ·  http://localhost:${info.port}  ·  ${env.nodeEnv}` +
@@ -275,6 +281,8 @@ if (process.argv[1]?.endsWith("server.ts")) {
 
   const shutdown = async () => {
     server.close();
+    /* Before the pool closes: a push in flight has a client out. */
+    await channelManager.jobs.stop();
     await stopListening();
     await closePool();
     process.exit(0);

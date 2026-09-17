@@ -5,6 +5,9 @@ import {
   Page, PageHeader, Card, CardBody, StatusPill,
 } from "@/components/ui";
 import { listCompanies } from "@/modules/guests";
+import { useRole } from "@/lib/session";
+import { setsUpSu } from "../data/suRoles";
+import { SuSetup } from "../components/SuSetup";
 
 /* ══════════════════════════════════════════════════════════════════
    THE CHANNEL MANAGER — named, not hidden
@@ -52,6 +55,10 @@ const WHAT_IT_WILL_DO = [
 
 export default function ChannelManagerPage() {
   const { code } = useParams<{ code: string }>();
+  /* The owner and an administrator set SU up (D17-85), and the server refuses
+     everybody else the same way. A GM still sees what the connection is and
+     what it needs. */
+  const maySetUp = setsUpSu(useRole());
 
   /* The booking sources the property has actually recorded. Real rows
      or none — a mocked list of OTA logos would make this page look
@@ -78,6 +85,8 @@ export default function ChannelManagerPage() {
           + "is being built, and nothing is sent to any booking site yet."
         }
       />
+
+      {maySetUp && code && <SuSetup code={code} />}
 
       <Card>
         <CardBody className="space-y-4">

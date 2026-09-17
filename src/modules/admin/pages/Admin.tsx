@@ -433,6 +433,15 @@ const MODULE_COPY: Record<string, { label: string; note: string }> = {
       "hides the point of sale from Reception and the API refuses them; " +
       "every other role is unaffected.",
   },
+  /* D17-66: the connection to SU is being built (108). Off at every
+     property until somebody turns it on, and nothing reaches a booking
+     site while it is off. */
+  channel_manager: {
+    label: "Channel manager",
+    note: "Rooms, rates and bookings shared with Booking.com, Agoda and the " +
+      "other sites through SU. Off means this property sends them nothing " +
+      "and takes no booking from them.",
+  },
 };
 
 function ModulesCard({ hotelId }: { hotelId: string }) {
