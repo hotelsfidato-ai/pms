@@ -73,55 +73,6 @@ export async function getCityLedger(
   );
 }
 
-/* ── Monthly and yearly statistics ───────────────────────────────── */
-
-export interface MonthlyStatRow {
-  date: string;
-  availableRooms: number;
-  nightSold: number;
-  complimentary: number;
-  occupancyPct: number;
-  adr: number;
-  revPar: number;
-  pax: number;
-  roomCharges: number;
-  extraCharges: number;
-  tax: number;
-  receipt: number;
-  expense: number;
-}
-
-/* No default range (REP-1). It defaulted to 1–31 August 2026, and both
-   monthly pages passed that same literal — so the grid said August in
-   every month of every year. The caller says which month: see monthOf. */
-export async function getMonthlyStatistics(
-  hotelId: string,
-  from: string,
-  to: string,
-): Promise<MonthlyStatRow[]> {
-  if (!hotelId) return [];
-  return fetchOr<MonthlyStatRow[]>(
-    `/api/hotels/${hotelId}/statistics/monthly?${range(from, to)}`,
-    [],
-  );
-}
-
-export interface YearlyStatRow extends Omit<MonthlyStatRow, "date"> {
-  month: string;
-  monthLabel: string;
-}
-
-export async function getYearlyStatistics(
-  hotelId: string,
-  year: number,
-): Promise<YearlyStatRow[]> {
-  if (!hotelId) return [];
-  return fetchOr<YearlyStatRow[]>(
-    `/api/hotels/${hotelId}/statistics/yearly?year=${year}`,
-    [],
-  );
-}
-
 /* ── Lodging tax ─────────────────────────────────────────────────── */
 
 export interface LodgingTaxRow {
