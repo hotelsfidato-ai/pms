@@ -343,6 +343,10 @@ reports.get("/:code/reports/cashier-shift", async (c) => {
          left join staff s on s.id = fp.posted_by
         where fp.hotel_id = $1
           and fp.category = 'payment'
+          /* Money in the drawer. A bill transferred to the city ledger is
+             posted as a payment, and nobody handed over any money for it
+             (the owner, 17 September). */
+          and coalesce(p.method, '') <> 'city_ledger'
           and fp.business_date between $2::date and $3::date
           and fp.reverses_id is null
           and not exists (
