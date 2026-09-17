@@ -174,3 +174,22 @@ channel manager, then QA.** The order is `docs/NEXT-BUILD-PLAN.md`.
 | D17-76 | Folio No. on the Night audit report | **Prints the booking reference, headed "Booking"** |
 | D17-77 | Dates on reports | **25/08/2026 (DD/MM/YYYY)** on screen, PDF and Excel, as eZee; **timestamps "25/08/2026 04:12:43 PM"** in the property's time. Shared formatters: `dateReport` and `dateTimeReport` in `src/lib/format.ts`, with the server renderer's copy held to them by a test |
 | D17-78 | The printed Night audit report | **A report in All reports** ("Night audit report", under The day, found by search), not part of the night-audit service's screen |
+
+---
+
+# The fourth interview — 17 September, late night
+
+| # | Question | Answer |
+|---|---|---|
+| D17-79 | How SU bookings reach the PMS | **Push: SU sends each booking to the PMS** the moment it happens (the owner: "the push architecture, they send to me, not the pull one"). A public address on the API for SU alone |
+| D17-80 | An OTA booking with no room free (D17-43) | **Not created in the PMS.** Receipt confirmed to SU (else it resends for an hour); **0 rooms left sent at once** for that room type and dates; listed on a Channel bookings screen as **"Refused: no room free"** for the GM to cancel on the site and call the guest |
+| D17-81 | A date with no price in the PMS | **Sent to SU as closed** for that meal plan (SU cannot take a price back), without a person pressing anything |
+| D17-82 | A booking priced night by night | **Keep each night's price** as sent. A reservations change: today one agreed rate per stay |
+| D17-83 | Card number and CVC in an SU booking | **Never kept:** dropped on arrival, never stored, logged or shown |
+| D17-84 | Commission on an OTA booking | **SU's amount when it sends one, else the % recorded for that source, else "-"** |
+| D17-85 | Who opens the SU setup screen | **The owner and an administrator.** The GM sees the status page |
+| D17-86 | Company accounts (Finance) against the City ledger report | **Bills transferred, as the report counts them** (D17-74): one definition |
+| D17-87 | How the PMS hands a bill or voucher to n8n (D17-34) | **The PMS sends the data as JSON to n8n; n8n completes and sends the message** |
+| D17-88 | The email account | **Set up in n8n already.** The PMS sends only the guest's email address |
+| D17-89 | The WhatsApp number | **The number the leads app uses** (its Meta token expires about 27 September) |
+| D17-90 | Which database the demo, reset and retire-staff scripts use (CM-1, MEMORY 287) | **The copy's own database, from its own settings; with none, refuse to run** |

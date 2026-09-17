@@ -4,6 +4,7 @@ import {
   property, roomInventory, PROPERTY_ID, EXTRA_ROOM_DATES,
 } from "../../src/data/fixtures/property.ts";
 import { stays, folios, groups } from "../../src/data/fixtures/reservations.ts";
+import { databaseForScript } from "./scriptDatabase.ts";
 
 /* ══════════════════════════════════════════════════════════════════
    LOAD THE DEMO PROPERTY INTO POSTGRES
@@ -34,9 +35,7 @@ import { stays, folios, groups } from "../../src/data/fixtures/reservations.ts";
    Run:  cd api && npx tsx scripts/load-demo.ts
    ══════════════════════════════════════════════════════════════════ */
 
-const CONNECTION =
-  process.env["SUPER_DATABASE_URL"] ??
-  "postgres://postgres:pw@127.0.0.1:55432/fidato";
+const CONNECTION = databaseForScript("load-demo");
 
 const HOTEL_CODE = "5EL";
 

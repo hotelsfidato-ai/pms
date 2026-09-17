@@ -48,11 +48,16 @@ export class SuTokenHolder {
   private issuedAt: number[] = [];
   private lastFailure: { at: number; result: TokenResult } | null = null;
 
-  constructor(
-    private readonly settings: SuSettings,
-    private readonly transport: SuTransport,
-    private readonly now: () => number = Date.now,
-  ) {}
+  /* Longhand, not constructor parameter properties: see client.ts. */
+  private readonly settings: SuSettings;
+  private readonly transport: SuTransport;
+  private readonly now: () => number;
+
+  constructor(settings: SuSettings, transport: SuTransport, now: () => number = Date.now) {
+    this.settings = settings;
+    this.transport = transport;
+    this.now = now;
+  }
 
   /** The token to sign a call with, asking SU for a new one only when needed. */
   async get(): Promise<TokenResult> {

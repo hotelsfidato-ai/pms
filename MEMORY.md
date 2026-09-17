@@ -6539,6 +6539,21 @@ copy will see of theirs.**
 
 ---
 
+### 288 · MINE: a push ran after the commit it was meant to follow had failed
+
+17 September, late. I committed and pushed in one shell call: `git add … &&
+git commit …` with its message in a heredoc, then `git push` on the next line.
+The `git add` named a deletion that was already staged, failed, and so the
+commit never happened. The push was not chained to it, so it ran anyway. It
+pushed `d2b5a96`: two chats' merges and my first report engine commit, a tree
+never gated on its own. The gated tree was committed and pushed a minute later
+(`a061a26`). Nothing deploys from a push, so nothing reached the hotel.
+
+**The rule: a push is chained with `&&` to the commit it publishes, never on a
+line of its own. And after a push, `git log -1` must show the commit you meant.**
+
+---
+
 ### 287 · A demo script, run from a chat's copy, began tearing down the main database
 
 17 September. The Channel manager chat ran `scripts/load-demo.ts` in its own

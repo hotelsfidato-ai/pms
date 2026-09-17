@@ -27,6 +27,7 @@ try {
 
 import { fileURLToPath } from "node:url";
 import { readFileSync } from "node:fs";
+import { databaseForScript } from "./scriptDatabase.ts";
 
 /* ══════════════════════════════════════════════════════════════════
    RETIRE PEOPLE — take away the sign-in, keep the history
@@ -74,10 +75,7 @@ import { readFileSync } from "node:fs";
 /* ADMIN_DATABASE_URL first, for the reason set out at length in
    `reset-property.ts`: `DATABASE_URL` is the RLS-bound application role
    and would report an empty roster about a full one. */
-const CONNECTION =
-  process.env["ADMIN_DATABASE_URL"] ??
-  process.env["SUPER_DATABASE_URL"] ??
-  "postgres://postgres:pw@127.0.0.1:55432/fidato";
+const CONNECTION = databaseForScript("retire-staff");
 
 function arg(name: string): string | null {
   const i = process.argv.indexOf(`--${name}`);

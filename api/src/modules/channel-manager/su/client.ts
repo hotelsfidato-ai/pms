@@ -38,11 +38,19 @@ const AUTH_REQUIRED = /authorization required/i;
 const LIMIT_REACHED = /limit has been reached/i;
 
 export class SuClient {
-  constructor(
-    readonly settings: SuSettings,
-    private readonly transport: SuTransport,
-    private readonly tokens: SuTokenHolder,
-  ) {}
+  /* Written out longhand, not as constructor parameter properties: the
+     server runs node's type stripping, which emits nothing, so a parameter
+     property leaves the field unset and the process will not start
+     (api/scripts/strip-check.mjs, 17 September). */
+  readonly settings: SuSettings;
+  private readonly transport: SuTransport;
+  private readonly tokens: SuTokenHolder;
+
+  constructor(settings: SuSettings, transport: SuTransport, tokens: SuTokenHolder) {
+    this.settings = settings;
+    this.transport = transport;
+    this.tokens = tokens;
+  }
 
   post<T = unknown>(endpoint: string, payload: unknown): Promise<SuResult<T>> {
     return this.call<T>("POST", endpoint, payload, true);
