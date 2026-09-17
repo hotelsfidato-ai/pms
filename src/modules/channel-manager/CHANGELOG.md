@@ -12,6 +12,64 @@ nothing is sent to SU or any booking site until the owner has SU's test keys.**
 
 ---
 
+## 2026-09-18 · The rack rate goes to SU, and every night says which figure went
+
+**Asked for:** D17-92, the owner's answer to P3-b, which came back through the
+master: where a meal plan has no price of its own, **send the room type's rack
+rate** instead of closing the date - a closed date sells nothing at all, while
+the rack rate keeps the room selling until somebody prices that plan. With two
+conditions from the master, because this sells a room at a figure nobody typed:
+the screen says in words where it is happening, and the record says which figure
+went and why.
+
+**Shipped**
+- **The rule:** `THE_OWNERS_POLICY.sendRackRate` is now true, so a plan with no
+  price of its own goes at the room type's rack rate and stays open. D17-81 is
+  unchanged: a date with **no** price anywhere still goes closed, and a **typed
+  zero** still goes closed with no price - nothing falls back to a zero.
+- **110, which figure went and why:** `channel_ari_sent.price_source` (typed,
+  derived, rack, or nothing for a cell with no price) and
+  `channel_ari_pushes.rack_only` renamed `rack_dates`, which no longer means
+  "held back". Rows written before today keep a null source: what SU was sent is
+  known, where it came from is not, and a migration does not invent it.
+- **A night whose figure has not changed but whose source has** - somebody types,
+  for one night, the very figure the rack rate was already selling at - has its
+  source corrected in the record and **nothing is sent to SU**, which already
+  holds the right price. `sent_at` is left alone: nothing was sent.
+- **In words, three places:** the answer to a push ("1,460 nights are selling at
+  the rack rate, where the meal plan has no price of its own"), each line of the
+  push log, and a line on the card saying how many nights are selling that way
+  **right now** and from when - read from what SU is holding, not from a push
+  that may be a week old.
+
+**Found**
+- **The count had two meanings.** `rack_only` counted what was held back; the
+  same number now counts what goes. Renaming it was cheaper than leaving a column
+  whose name says the opposite of what it holds - and the rename is guarded, so
+  a redeploy replays it without touching an already-renamed column.
+- **The record could have answered wrongly.** A 'changes' push compares what SU
+  holds; if only the source changed, the figures match and nothing is sent - so
+  the row would have kept saying "rack" for a price somebody had typed. That is
+  the restamp above, and it is the guard whose red test reads
+  `expected 'rack' to be 'typed'`.
+
+**Proved** - in `D:idato-channel-manager`, on this commit's tree
+- `api: npm test`: 995 passed, 59 files (3 new). `npm run strip-check`: 114 files.
+- `bash db/tests/run.sh`: 818 assertions, su mapping 31 (4 new). `rerun.sh`: all
+  110 migrations re-runnable, with the master's switched-on-module property.
+- Website: `npx vitest run` 367 passed, 42 files (1 new).
+- **Broken on purpose, seen to fail, restored:** the rack rate not going
+  (`sendRackRate` false), the source not recorded (`priceSource` always null),
+  the source never corrected (the restamp skipped), the screen's words removed,
+  and the database's list of sources widened - five red tests, one per guard.
+
+**Left open**
+- The maximum-stay question for SU (unchanged), and the master's mount of
+  `/api/channel` with the nginx limit before any booking can arrive.
+- Nothing about the rack rate is open: P3-b is answered and built.
+
+---
+
 ## 2026-09-18 · SU connection, part 4: the bookings SU pushes
 
 **Asked for:** part 4 of D17-66, to the owner's D17-79 (SU pushes each booking

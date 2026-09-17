@@ -11,10 +11,12 @@ import { TOKEN_SANDBOX, ARI_SUCCESS, PRICE_REFUSED, ok200 } from "./suExamples.t
    1. SU is sent a year from the first date it will take, in its shape:
       rooms left once per room type with no rate; each meal plan's price
       and restrictions with its rate plan; runs of identical days as ranges.
-   2. No price nobody set, no price of zero, and no rack-rate fallback while
-      the owner has not said it may go (P3-b). A date with no price that may go
-      is sent CLOSED for that meal plan (D17-81), because SU cannot take a
-      price back and would otherwise keep selling the old one.
+   2. No price of zero, and no price for a guest count nobody priced. Where a
+      meal plan has no price of its own the ROOM TYPE'S RACK RATE goes (D17-92),
+      and what SU was last sent records that the figure was the rack rate. Where
+      there is no price at all the date is sent CLOSED for that meal plan
+      (D17-81), because SU cannot take a price back and would otherwise keep
+      selling the old one.
    3. A stop sell closes every meal plan of that room type on that date;
       minimum and maximum nights travel as SU's minimumstay/maximumstay.
    4. "changes" sends only the dates that differ from what SU accepted last;
@@ -177,7 +179,9 @@ describe("a year, in SU's shape", () => {
     await onSu();
     const calls = pretendSu();
     const res = await push(ownerId, "all");
-    const body = await res.json() as { ok: boolean; from: string; to: string; rackOnlyDates: number; unpricedDates: number };
+    const body = await res.json() as {
+      ok: boolean; from: string; to: string; rackDates: number; unpricedDates: number; reason: string;
+    };
     expect(res.status, JSON.stringify(body)).toBe(200);
     expect(body.from).toBe(first);
     expect(body.to).toBe(addDays(first, 364));
@@ -189,13 +193,15 @@ describe("a year, in SU's shape", () => {
       expect(roomsLeft).toHaveLength(365);
       expect(roomsLeft.every((e) => rateOf(e) === null && !("price" in e))).toBe(true);
     }
-    /* The demo types no dated price: every one is the rack fallback, held
-       back, so every meal plan date goes to SU closed and with no price. */
+    /* The demo types no dated price, so every meal plan date sells at its room
+       type's rack rate and stays open (D17-92) - and the answer says so in
+       words, because a room is selling at a figure nobody typed for that plan. */
     const rateCells = entries.filter((e) => rateOf(e) !== null);
     expect(rateCells).toHaveLength(2 * 2 * 365);
-    expect(rateCells.every((e) => e["closed"] === "1" && !("price" in e))).toBe(true);
-    expect(body.rackOnlyDates).toBe(2 * 2 * 365);
-    expect(body.unpricedDates).toBe(2 * 2 * 365);
+    expect(rateCells.every((e) => e["closed"] === "0" && "price" in e)).toBe(true);
+    expect(body.rackDates).toBe(2 * 2 * 365);
+    expect(body.unpricedDates).toBe(0);
+    expect(body.reason).toMatch(/selling at the rack rate/);
     /* Identical days travel as ranges, not 730 single days. */
     const raw = calls.flatMap((c) => c.room.flatMap((r) => r.date));
     expect(raw.length).toBeLessThan(20);
@@ -223,13 +229,15 @@ describe("a year, in SU's shape", () => {
       ]);
     }
     /* The rate ends before the 6th (the last day is not included), so the 6th
-       has no price and goes closed. Breakfast has no price of its own: closed.
-       A typed zero never reaches a booking site: closed, with no price. */
-    expect(deluxeEp(6)).toMatchObject({ closed: "1" });
-    expect(deluxeEp(6)!["price"]).toBeUndefined();
+       falls back to the room type's rack rate and keeps selling; so does
+       breakfast, which has no price of its own (D17-92). A TYPED ZERO is the
+       one figure that never reaches a booking site: it is not a fallback, so
+       nothing takes its place and the date goes closed with no price. */
+    expect(deluxeEp(6)).toMatchObject({ closed: "0" });
+    expect(deluxeEp(6)!["price"]).toBeTruthy();
     const cp3 = entries.find((e) => e.roomid === "DLX" && rateOf(e) === "CP" && e.date === addDays(first, 3))!;
-    expect(cp3).toMatchObject({ closed: "1" });
-    expect(cp3["price"]).toBeUndefined();
+    expect(cp3).toMatchObject({ closed: "0" });
+    expect(cp3["price"]).toBeTruthy();
     const sup3 = entries.find((e) => e.roomid === "SUP" && rateOf(e) === "EP" && e.date === addDays(first, 3))!;
     expect(sup3).toMatchObject({ closed: "1" });
     expect(sup3["price"]).toBeUndefined();
@@ -264,11 +272,12 @@ describe("a year, in SU's shape", () => {
     expect(on("DLX", 11, "EP")).toMatchObject({ closed: "0", closedonarrival: "1", minimumstay: "3", maximumstay: "7" });
     expect(on("DLX", 12, "EP")).toMatchObject({ closed: "0", closedonarrival: "0", minimumstay: "1" });
     expect(on("DLX", 12, "EP")!["maximumstay"]).toBeUndefined();
-    /* Superior has no price at all: every date of it goes closed, whether a
-       person stopped selling it or not, and never with a price. */
+    /* Superior has no dated price, so it sells at its rack rate (D17-92) - but
+       a stop sell closes it all the same, price or no price, and the price
+       still goes with it so SU holds the right figure when it reopens. */
     expect(on("SUP", 10, "EP")).toMatchObject({ closed: "1" });
-    expect(on("SUP", 11, "EP")).toMatchObject({ closed: "1" });
-    expect(on("SUP", 11, "EP")!["price"]).toBeUndefined();
+    expect(on("SUP", 11, "EP")).toMatchObject({ closed: "0" });
+    expect(on("SUP", 11, "EP")!["price"]).toBeTruthy();
   });
 });
 
@@ -357,7 +366,7 @@ describe("only what changed", () => {
     const calls = pretendSu();
     expect((await push(ownerId, "changes")).status).toBe(200);
     /* Everything the refused push carried: a year of rooms left for each room
-       type, and every meal plan date closed for want of a price. */
+       type, and every meal plan date at its room type's rack rate. */
     expect(perDate(calls).length).toBe(2 * 365 + 2 * 2 * 365);
 
     const db = await admin();
@@ -367,5 +376,83 @@ describe("only what changed", () => {
       expect(rows.map((r) => [r.kind, r.ok])).toEqual([["all", false], ["changes", true]]);
       expect(rows[0]!.result).toContain("price");
     } finally { await db.end(); }
+  });
+});
+
+/* ══════════════════════════════════════════════════════════════════
+   D17-92 — WHICH FIGURE WENT TO SU, AND WHY
+
+   The rack rate sells a room at a figure nobody typed for that meal plan, so
+   the night must be answerable afterwards: what SU was last sent records where
+   the price came from (`price_source`, migration 110).
+   ══════════════════════════════════════════════════════════════════ */
+describe("what SU was sent, and where the figure came from", () => {
+  const sourcesFor = async (roomTypeId: string, date: string) => {
+    const db = await admin();
+    try {
+      const { rows } = await db.query<{ meal_plan: string; price_source: string | null }>(
+        `select meal_plan, price_source from channel_ari_sent
+          where hotel_id = $1 and room_type_id = $2 and for_date = $3 order by meal_plan`,
+        [hotelId, roomTypeId, date]);
+      return new Map(rows.map((r) => [r.meal_plan, r.price_source]));
+    } finally { await db.end(); }
+  };
+
+  it("says 'rack' for a meal plan with no price of its own, and nothing for rooms left", async () => {
+    await onSu();
+    pretendSu();
+    expect((await push(ownerId, "all")).status).toBe(200);
+
+    const sources = await sourcesFor(deluxeId, addDays(first, 4));
+    expect(sources.get("EP")).toBe("rack");
+    expect(sources.get("CP")).toBe("rack");
+    /* Rooms left carries no price, so it has no source to record. */
+    expect(sources.get("-")).toBe(null);
+  });
+
+  it("says 'typed' once somebody prices the plan, and the screen's count follows", async () => {
+    await onSu();
+    pretendSu();
+    expect((await push(ownerId, "all")).status).toBe(200);
+
+    const db = await admin();
+    try {
+      await db.query("select app.set_rate($1, $2, 'EP', $3::date, $4::date, 5200, 'CMTEST3', $5)",
+        [hotelId, deluxeId, addDays(first, 4), addDays(first, 5), ownerId]);
+    } finally { await db.end(); }
+
+    pretendSu();
+    const res = await push(ownerId, "changes");
+    expect(res.status).toBe(200);
+    expect((await sourcesFor(deluxeId, addDays(first, 4))).get("EP")).toBe("typed");
+    /* Every other night of that plan is still the rack rate, and the screen
+       reads the standing count from what SU holds, not from a past push. */
+    const seen = await app.request("/api/hotels/5EL/channel-manager/availability",
+      { headers: { "x-dev-staff-id": ownerId } });
+    const state = await seen.json() as { atRackRate: { nights: number; firstDate: string | null } };
+    expect(state.atRackRate.nights).toBe(2 * 2 * 365 - 1);
+    expect(state.atRackRate.firstDate).toBe(first);
+  });
+
+  it("corrects the source without sending anything when only the source changed", async () => {
+    await onSu();
+    pretendSu();
+    expect((await push(ownerId, "all")).status).toBe(200);
+
+    /* Somebody types, for one night, exactly the figure the rack rate was
+       already selling at. SU holds the right price already; the record does
+       not, and it is the record that answers "why was this night that price?". */
+    const db = await admin();
+    try {
+      const { rows } = await db.query<{ rate: string }>(
+        "select base_rate::text as rate from room_types where id = $1", [deluxeId]);
+      await db.query("select app.set_rate($1, $2, 'EP', $3::date, $4::date, $5::numeric, 'CMTEST3', $6)",
+        [hotelId, deluxeId, addDays(first, 7), addDays(first, 8), rows[0]!.rate, ownerId]);
+    } finally { await db.end(); }
+
+    const quiet = pretendSu();
+    expect((await push(ownerId, "changes")).status).toBe(200);
+    expect(quiet).toHaveLength(0);
+    expect((await sourcesFor(deluxeId, addDays(first, 7))).get("EP")).toBe("typed");
   });
 });
