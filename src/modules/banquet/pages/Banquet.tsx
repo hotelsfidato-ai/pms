@@ -3,7 +3,7 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useNavigate, useParams } from "react-router";
 import { CalendarDays, Plus, Settings2, Users, Clock } from "lucide-react";
 import { cn } from "@/lib/cn";
-import { money } from "@/lib/format";
+import { money, dateShort, timeOnly } from "@/lib/format";
 import { useUi } from "@/lib/ui";
 import {
   Page, PageHeader, Card, CardBody, Button, Skeleton, EmptyState, toast,
@@ -11,6 +11,7 @@ import {
   NativeSelect, StatusPill,
 } from "@/components/ui";
 import { getBanquetDiary, getBanquetSetup, registerBanquetEvent, type BanquetEventSummary } from "@/modules/banquet/data/banquet";
+import { ReadFailed, ReadStale, readError } from "@/modules/banquet/components/ReadProblem";
 import { queryKeys } from "@/data/repositories";
 
 /* ══════════════════════════════════════════════════════════════════
@@ -47,19 +48,15 @@ const STATUS: Record<string, { label: string; tone: "neutral" | "info" | "succes
   cancelled: { label: "Cancelled", tone: "danger" },
 };
 
-/** "14 Nov, 18:00 → 23:00", or "14 Nov 18:00 → 16 Nov 23:00" when it
-    runs across days. A three-day wedding and a single evening are the
-    same kind of thing here, and the label is what tells them apart. */
+/** "14 Nov 2026, 6:00 PM → 11:00 PM", or "14 Nov 2026, 6:00 PM →
+    16 Nov 2026, 11:00 PM" when it runs across days. A three-day wedding
+    and a single evening are the same kind of thing here, and the label
+    is what tells them apart. Through `format.ts`, as every screen prints
+    dates (BQ-5). */
 function whenLabel(startsAt: string, endsAt: string): string {
-  const s = new Date(startsAt);
-  const e = new Date(endsAt);
-  const day = (d: Date) =>
-    d.toLocaleDateString("en-IN", { day: "numeric", month: "short" });
-  const time = (d: Date) =>
-    d.toLocaleTimeString("en-IN", { hour: "2-digit", minute: "2-digit", hour12: false });
-  return s.toDateString() === e.toDateString()
-    ? `${day(s)}, ${time(s)} → ${time(e)}`
-    : `${day(s)} ${time(s)} → ${day(e)} ${time(e)}`;
+  return dateShort(startsAt) === dateShort(endsAt)
+    ? `${dateShort(startsAt)}, ${timeOnly(startsAt)} → ${timeOnly(endsAt)}`
+    : `${dateShort(startsAt)}, ${timeOnly(startsAt)} → ${dateShort(endsAt)}, ${timeOnly(endsAt)}`;
 }
 
 function addDays(iso: string, days: number): string {
@@ -80,28 +77,27 @@ export default function BanquetPage() {
     queryFn: () => getBanquetDiary(hotelId, window?.from, window?.to),
   });
 
+  /* The heading is the menu's word (D17-22, BQ-2): the menu says Diary. */
   if (diary.isLoading) {
     return (
       <Page>
-        <PageHeader title="Banquet" description="Loading…" />
+        <PageHeader title="Diary" description="Loading…" />
         <Skeleton className="h-64" />
       </Page>
     );
   }
 
-  /* Null is the module being off at this property, which is the normal
-     state for most of them — not an error, and not a spinner forever. */
+  /* Nothing to show, because the read did not succeed (BQ-3). A property
+     with banquet switched off lands here too — as the server's own
+     refusal, "This property has no banquet hall. Turn it on in the
+     property's settings…", shown as it is. A fault or a lost connection
+     says so instead, with Try again. */
   if (!diary.data) {
     return (
       <Page>
-        <PageHeader title="Banquet" />
-        <EmptyState
-          title="This property has no banquet hall"
-          description={
-            "Nothing here applies until somebody turns the module on in the "
-            + "property's settings and enters a hall. No hall is created for you."
-          }
-        />
+        <PageHeader title="Diary" />
+        <ReadFailed error={readError(diary)} what="the diary"
+                    onRetry={() => void diary.refetch()} />
       </Page>
     );
   }
@@ -116,12 +112,12 @@ export default function BanquetPage() {
   return (
     <Page>
       <PageHeader
-        title="Banquet"
+        title="Diary"
         description={
           booked === 0
-            ? `Nothing confirmed between ${from} and ${to}.`
+            ? `Nothing confirmed between ${dateShort(from)} and ${dateShort(to)}.`
             : `${booked} ${booked === 1 ? "function" : "functions"} confirmed `
-              + `between ${from} and ${to}.`
+              + `between ${dateShort(from)} and ${dateShort(to)}.`
         }
         actions={
           <div className="flex flex-wrap gap-2">
@@ -135,6 +131,9 @@ export default function BanquetPage() {
           </div>
         }
       />
+
+      <ReadStale error={readError(diary)} loadedAt={diary.dataUpdatedAt}
+                 onRetry={() => void diary.refetch()} />
 
       <div className="flex flex-wrap items-center gap-2">
         <Button variant="secondary" className="h-11" onClick={() => shift(-30)}>

@@ -60,13 +60,29 @@ export interface BanquetCourse {
       on the day a wedding is pencilled in. */
   ratePerHead: number | null;
   notes: string | null;
-  addedBy: string;
+  /** Null where the viewer may not know who added it (BQ-7) — a dash. */
+  addedBy: string | null;
+}
+
+/** A restaurant order charged to this function (D17-21). */
+export interface BanquetRestaurantOrder {
+  id: string;
+  orderNo: string;
+  table: string | null;
+  /** Null only if the outlet cannot be read; shown as a dash. */
+  outlet: string | null;
+  /** `open` or `settled`. Abandoned orders charged nothing and are not sent. */
+  status: string;
+  openedAt: string;
+  settledAt: string | null;
+  /** What the order comes to now. Only a settled order is in the total. */
+  amount: number | null;
 }
 
 export interface BanquetMoney {
   venue: number | null;
   food: number | null;
-  /** Settled POS bills charged to this function. An open order is
+  /** Settled restaurant orders charged to this function. An open order is
       deliberately excluded — a bill still being added to is not yet an
       amount. */
   pos: number | null;
@@ -101,11 +117,15 @@ export interface BanquetEvent {
     floating: number | null;
     defaultRate: number | null;
   };
-  registeredBy: string;
+  /** Null where the viewer may not know who registered it (BQ-7) — a
+      dash. The function itself always shows. */
+  registeredBy: string | null;
+  /** `YYYY-MM-DDTHH:MM`, shown through `format.ts`. */
   registeredAt: string;
   confirmedBy: string | null;
   folioId: string | null;
   catering: BanquetCourse[];
+  restaurantOrders: BanquetRestaurantOrder[];
   money: BanquetMoney;
 }
 
@@ -133,51 +153,76 @@ export interface BanquetSetup {
   packages: BanquetPackage[];
 }
 
-/**
- * The diary.
- *
- * Returns null when the property has no banquet module, which is a
- * REAL answer and not an error — most properties do not have a hall.
- * The screen shows what to do about it rather than a spinner.
- */
+/* ⚠ THE THREE READS THROW (BQ-3, 17 September).
+
+   They used to end in `catch { return null }`, and each screen read null
+   as "the module is off". So a server fault, or no network, told a GM
+   at a property WITH a hall "This property has no banquet hall", and
+   told them a function that exists was "No such function".
+
+   A property with banquet switched off is still an answer: the server
+   refuses with a 403 and its own sentence, and `ReadFailed` shows that
+   sentence as it is. Nothing here guesses which failure it was. */
+
+/** The diary: every hall over a window, with whatever is booked in it. */
 export async function getBanquetDiary(
   hotelCode: string,
   from?: string,
   to?: string,
-): Promise<BanquetDiary | null> {
-  if (!hotelCode) return null;
+): Promise<BanquetDiary> {
   const q = new URLSearchParams();
   if (from) q.set("from", from);
   if (to) q.set("to", to);
-  try {
-    return await api<BanquetDiary>(
-      `/api/hotels/${hotelCode}/banquet${q.size ? `?${q}` : ""}`);
-  } catch {
-    return null;
-  }
+  return api<BanquetDiary>(
+    `/api/hotels/${hotelCode}/banquet${q.size ? `?${q}` : ""}`);
 }
 
 export async function getBanquetEvent(
   hotelCode: string, id: string,
-): Promise<BanquetEvent | null> {
-  if (!hotelCode || !id) return null;
-  try {
-    return await api<BanquetEvent>(
-      `/api/hotels/${hotelCode}/banquet/events/${id}`);
-  } catch {
-    return null;
-  }
+): Promise<BanquetEvent> {
+  return api<BanquetEvent>(`/api/hotels/${hotelCode}/banquet/events/${id}`);
 }
 
-export async function getBanquetSetup(
+export async function getBanquetSetup(hotelCode: string): Promise<BanquetSetup> {
+  return api<BanquetSetup>(`/api/hotels/${hotelCode}/banquet/setup`);
+}
+
+export interface AttachableFunction {
+  id: string;
+  reference: string;
+  title: string;
+  venueName: string;
+  hostName: string;
+  /** Local to the property, `YYYY-MM-DDTHH:MM`. */
+  startsAt: string;
+  endsAt: string;
+}
+
+export interface AttachableFunctions {
+  /** False at a property whose banquet module is off: offer no way to
+      attach an order there at all. */
+  enabled: boolean;
+  businessDate: string;
+  functions: AttachableFunction[];
+}
+
+/**
+ * The functions a restaurant order may be attached to right now — for
+ * the till, through this service's front door (D17-21).
+ *
+ * The owner's rule, 17 September: a CONFIRMED function at this property,
+ * whose bill is OPEN, running on the business date (from its first day
+ * to its last). The server holds the rule (`api/src/modules/banquet/
+ * attach.ts`) and refuses an attachment outside it, so the till must not
+ * filter this list again.
+ *
+ * Throws on failure, like the reads above. At a property with no hall it
+ * answers `{ enabled: false, functions: [] }` rather than refusing.
+ */
+export async function getAttachableFunctions(
   hotelCode: string,
-): Promise<BanquetSetup | null> {
-  if (!hotelCode) return null;
-  try {
-    return await api<BanquetSetup>(`/api/hotels/${hotelCode}/banquet/setup`);
-  } catch {
-    return null;
-  }
+): Promise<AttachableFunctions> {
+  return api<AttachableFunctions>(`/api/hotels/${hotelCode}/banquet/attachable`);
 }
 
 type Result<T = unknown> =
