@@ -173,11 +173,10 @@ lib/pricing.ts      unitPriceOf, chosenLabels — the price of ONE dish with its
                     The same rule is on the server (addOneLine in till.ts);
                     api/test/padTotal.test.ts prices the same lines both ways.
 components/PosGate.tsx   see Screens.
-components/ReadProblem.tsx   what a failed read says (POS-4): readProblem() sorts
-                    an error into refused (the server's sentence) · unreachable ·
-                    failed; ReadFailed stands in for a list with nothing to show,
-                    ReadStale is one line over a list whose refresh failed.
-                    Every screen with a read uses one of them.
+   (what a failed read says — POS-4 — left this folder on 17 September:
+    readProblem, ReadFailed and ReadStale are the shared kit's now, in
+    `@/components/ui`, one copy for every service. Import them from there;
+    every screen here with a read uses one of them.)
 components/FunctionPicker.tsx   "Banquet function" (D17-21): banquet's list of
                     functions an order may go on, through its front door; nothing
                     drawn where there is nothing to choose and nothing chosen.
@@ -227,9 +226,9 @@ pos_line_events — kitchen timings              080_kitchen_timings.sql
   course on dish and category                  081_courses.sql
 pos_promotions                                 083_promotions.sql
   reception_pos switch, app.may_use_pos        087_first_screen_and_reception_pos.sql
-  a bill settled to a banquet function         099_pos_settled_to_a_function.sql (D17-21; the master
-    (payment method 'function', and it names    may renumber it at merge — the night-audit chat
-    the function)                              also took 099)
+  a bill settled to a banquet function         099_pos_settled_to_a_function.sql (D17-21; merged
+    (payment method 'function', and it names    with this number — the night-audit chat's went
+    the function)                              to 100)
 ```
 
 Also relied on: `hotel_modules` (041 — the `pos` switch; flipped from
@@ -243,7 +242,10 @@ Other services point at these tables: `stock_movements.to_outlet` →
 
 **A new migration needs a number claimed in `HANDOVER.md` first.**
 `src/test/migrationNumbers.test.ts` fails on two files with one number or a
-gap. The highest on this branch is 099 (17 September).
+gap. Take the next after cp6's highest and tell the master, who renumbers at
+merge if two lanes took one (the plan's § 7). cp6's highest was 105 on the
+evening of 17 September, with the Store chat's 106 waiting to merge — so read
+`db/migrations` rather than trusting this line.
 
 ---
 
@@ -385,11 +387,11 @@ From `PENDING.md` and `PROGRESS.md`, as of 15 September:
     down "Bills"; each sets the tab title. Which one the tab shows was not
     checked on screen — unverified.
 - **D17-21 is built (17 September) — see "Rules that bind it".** Left from it:
-  a function chosen on Tables is not kept with the pad's saved draft (the
-  draft's shape is the core's, `@/lib/draft`), so closing the pad before Send
-  forgets the choice; and settling to a function with the line down gets the
-  shared offline sentence "…unless it is charged to a room" (`@/lib/offline.ts`,
-  the core's) — true, but it does not name the function.
+  settling to a function with the line down gets the shared offline sentence
+  "…unless it is charged to a room" (`@/lib/offline.ts`, the core's) — true,
+  but it does not name the function. (The other one, a function chosen on
+  Tables being forgotten when the pad closed, is fixed: the master put
+  `eventId` on the core draft and the pad restores it, 17 September.)
 
 ---
 
