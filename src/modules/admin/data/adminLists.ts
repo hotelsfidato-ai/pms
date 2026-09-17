@@ -94,7 +94,11 @@ export interface AuditEntry {
   id: string;
   at: string;
   businessDate: string;
-  actor: string;
+  /** The person who made the entry, by name (ADM-1). NULL — a dash on the
+      screen — when nobody was recorded: older charges, payments and
+      reversals taken at the desk never recorded who, and a bulk load has
+      nobody. Never a placeholder name. */
+  actor: string | null;
   action: string;
   subject: string;
   detail: string;
