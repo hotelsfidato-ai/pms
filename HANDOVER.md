@@ -404,6 +404,12 @@ menus at the equipment merge, EQ-2. **Next free migration: 097.** Owner chose:
   in `navigation.ts` and 068 (left: they may be the owner's), EQ-3 (dev only).
 - **Next free migration: 099.**
 
+**17 September — THE OWNER ANSWERED EVERY OPEN QUESTION (25 decisions, D17-1 to
+D17-25): `docs/briefs/decisions-2026-09-17.md`.** Every chat reads it before its
+next write. The master's share: places for Hotel/Inventory Manager, Main/Kitchen/Bar
+stores at every hotel, merge STO-2..11, deploy steps, FD-1 (In house = checked in
+now), INV-6 (the dated block), INV-2, REP-6, FD-5.
+
 **17 September morning — the audit, and the Reports page.**
 - **LIVE: the owner deployed at 22:00 on 16 September** — server `eaf6916`, website
   published 22:02 (Inventory Manager, Rooms and rates, Store and equipment are on it).
