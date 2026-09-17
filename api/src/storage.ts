@@ -63,7 +63,7 @@ const ROOT = resolve(
 export function checkAcceptable(contentType: string, byteSize: number): void {
   if (!ALLOWED.has(contentType)) {
     throw new StorageRefused(
-      `A bill is a photo or a PDF. ${contentType || "That file"} is not one — ` +
+      `A bill is a photo or a PDF. ${contentType || "That file"} is not one - ` +
       `JPEG, PNG, WebP, HEIC or PDF.`,
     );
   }
@@ -73,7 +73,7 @@ export function checkAcceptable(contentType: string, byteSize: number): void {
   if (byteSize > MAX_BYTES) {
     throw new StorageRefused(
       `That file is ${(byteSize / 1024 / 1024).toFixed(1)} MB. ` +
-      `The limit is ${MAX_BYTES / 1024 / 1024} MB — photograph the bill ` +
+      `The limit is ${MAX_BYTES / 1024 / 1024} MB - photograph the bill ` +
       `rather than scanning it at full resolution.`,
     );
   }

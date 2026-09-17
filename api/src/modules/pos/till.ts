@@ -161,7 +161,7 @@ till.get("/:code/till/menu", async (c) => {
               /* THE RESOLVED TIME, from the one place the fallback is
                  written. Its parts come too, because the screen that
                  sets these has to show whether a number is this dish's
-                 own or its category's — otherwise clearing a dish's
+                 own or its category's - otherwise clearing a dish's
                  time looks like it did nothing. */
               app.prep_minutes(i.id) as prep_minutes,
               i.prep_minutes         as own_prep_minutes,
@@ -445,7 +445,7 @@ till.post("/:code/till/menu/import", async (c) => {
   }
   if (rows.length > 2000) {
     return c.json(refuse(
-      `That file has ${rows.length} rows. Two thousand is the limit — a menu `
+      `That file has ${rows.length} rows. Two thousand is the limit - a menu `
       + "longer than that is almost always a column mismatch."), 409);
   }
 
@@ -488,7 +488,7 @@ till.post("/:code/till/menu/import", async (c) => {
 
       if (!name && !category) return;        // a blank line in the file
       if (!name) return reject("No dish name.");
-      if (!category) return reject("No section — which part of the menu?");
+      if (!category) return reject("No section - which part of the menu?");
 
       /* A PRICE IS REQUIRED AND IS NEVER DEFAULTED.
          A blank price is the commonest thing in a hand-made spreadsheet
@@ -700,7 +700,7 @@ till.post("/:code/till/menu/categories/:id/course", async (c) => {
   if (course === "bad") {
     return c.json(refuse(
       "Which course? A whole number from 1, or null to take this category "
-      + "out of the sequence — which is what a drink wants.",
+      + "out of the sequence - which is what a drink wants.",
     ), 409);
   }
 
@@ -1157,7 +1157,7 @@ till.post("/:code/till/orders", async (c) => {
         });
       return refuse(
         `${outlet[0].name} is closed` +
-        `${outlet[0].closed_reason ? ` — ${outlet[0].closed_reason}` : ""}. ` +
+        `${outlet[0].closed_reason ? ` - ${outlet[0].closed_reason}` : ""}. ` +
         `Open again ${back}.`);
     }
 
@@ -1286,7 +1286,7 @@ async function addOneLine(
     if (order[0].status !== "open") {
       return refuse(
         `This order is ${order[0].status}. A bill that has been paid cannot ` +
-          `take another item — correct it with a credit, not by editing it.`,
+          `take another item - correct it with a credit, not by editing it.`,
       );
     }
 
@@ -1338,7 +1338,7 @@ async function addOneLine(
       const back = new Date(item[0].off_until)
         .toLocaleTimeString("en-IN", { hour: "2-digit", minute: "2-digit" });
       return refuse(
-        `${item[0].name} is off${item[0].off_reason ? ` — ${item[0].off_reason}` : ""}. ` +
+        `${item[0].name} is off${item[0].off_reason ? ` - ${item[0].off_reason}` : ""}. ` +
         `Back after ${back}.`);
     }
 
@@ -1355,7 +1355,7 @@ async function addOneLine(
       return refuse(
         `${item[0].name} has no GST rate. Nothing is set for `
         + `${KIND[item[0].tax_kind] ?? "this category"}, and a missing rate `
-        + `is not zero — a manager can set it in Settings → Tax.`);
+        + `is not zero - a manager can set it in Settings → Tax.`);
     }
 
     /* THE PRICE COMES FROM THE VARIATION, NOT THE ITEM.
@@ -1611,7 +1611,7 @@ till.post("/:code/till/orders/:id/discount", async (c) => {
 
     if (Number(amount) > ceiling + 0.005) {
       return refuse(
-        `A biller may take off up to ${cap}% — ₹${ceiling.toLocaleString(
+        `A biller may take off up to ${cap}% - ₹${ceiling.toLocaleString(
           "en-IN", { maximumFractionDigits: 2 })} on this `
         + "bill. Anything larger goes on as a named promotion, so it is the "
         + "same concession every time and the month-end report can count it.");
@@ -1802,7 +1802,7 @@ till.post("/:code/till/promotions", async (c) => {
   if (!promoCode) return c.json(refuse("What code does the biller type?"), 409);
   if (!/^[A-Z0-9]{2,12}$/.test(promoCode)) {
     return c.json(refuse(
-      "Two to twelve letters or digits — it is typed at a terminal with a "
+      "Two to twelve letters or digits - it is typed at a terminal with a "
       + "queue behind it."), 409);
   }
   if (!name) {
@@ -1980,7 +1980,7 @@ till.post("/:code/till/menu/items/:id/off", async (c) => {
     const businessDate = await businessDateFor(client, hotelId);
     const until = offUntilFor(input.until, input.customUntil, businessDate);
     if (until === "bad") {
-      return refuse("For how long — two hours, four, eight, the rest of the day?");
+      return refuse("For how long - two hours, four, eight, the rest of the day?");
     }
 
     const { rowCount } = await client.query(
@@ -2775,7 +2775,7 @@ till.post("/:code/till/orders/:id/settle", async (c) => {
       }
       if (t.tendered !== undefined && t.method !== "cash") {
         return c.json(
-          refuse("Only cash is tendered — a card pays its own amount."), 409);
+          refuse("Only cash is tendered - a card pays its own amount."), 409);
       }
       if (t.tendered !== undefined && Number(t.tendered) < Number(t.amount)) {
         return c.json(
@@ -2807,7 +2807,7 @@ till.post("/:code/till/orders/:id/settle", async (c) => {
 
   if (!method
       || !(METHODS.includes(method) || method === "split" || method === "function")) {
-    return c.json(refuse("How was this paid — room, cash, card or upi?"), 409);
+    return c.json(refuse("How was this paid - room, cash, card or upi?"), 409);
   }
 
   const result = await withSession(c.get("subject"), async (client, session) => {
@@ -2868,7 +2868,7 @@ till.post("/:code/till/orders/:id/settle", async (c) => {
     if (order[0].order_type === "delivery" && !order[0].customer_phone) {
       return refuse(
         "This is a delivery with no phone number. It will be cooked and " +
-        "then it cannot leave the building — take a number first.");
+        "then it cannot leave the building - take a number first.");
     }
 
     const { rows: t } = await client.query<{
@@ -2963,7 +2963,7 @@ till.post("/:code/till/orders/:id/settle", async (c) => {
       return {
         ok: false as const,
         reason:
-          `Room ${room} has ${candidates.length} open folios — a changeover ` +
+          `Room ${room} has ${candidates.length} open folios - a changeover ` +
           `day. Choose the guest who ate.`,
         choices: candidates.map((r) => ({
           folioId: r.folio_id, guest: r.guest_name,
@@ -3030,8 +3030,8 @@ till.post("/:code/till/orders/:id/settle", async (c) => {
       /* A guest reading their folio should be able to tell why one
          restaurant bill became two lines. */
       const description = split
-        ? `${order[0].outlet_name} — ${order[0].order_no} (${rate}%)`
-        : `${order[0].outlet_name} — ${order[0].order_no}`;
+        ? `${order[0].outlet_name} - ${order[0].order_no} (${rate}%)`
+        : `${order[0].outlet_name} - ${order[0].order_no}`;
 
       const { rows: posted } = await client.query<{ id: string }>(
         `insert into folio_postings
@@ -3571,11 +3571,11 @@ till.get("/:code/kitchen", async (c) => {
               extract(epoch from (now() - l.kot_sent_at))::int::text as waited,
               l.voided, l.was_sent_when_voided,
               /* What this dish SHOULD take, from 079. Null when nobody
-                 has timed it — the pass shows a dash, not a zero. */
+                 has timed it - the pass shows a dash, not a zero. */
               app.prep_minutes(l.item_id) as prep_minutes,
               /* HOW LONG IT HAS BEEN SITTING UNDER THE LAMP. Null until
                  it is ready, because a dish still cooking is not late
-                 in this sense — it is being made. This is the number
+                 in this sense - it is being made. This is the number
                  that ruins food and the one nothing showed before. */
               case when l.kot_status = 'ready' then
                 extract(epoch from (
@@ -3583,7 +3583,7 @@ till.get("/:code/kitchen", async (c) => {
                 ))::int::text
               end as at_pass,
               /* Which course, from the one place that fallback lives.
-                 NULL is an unsequenced dish — a drink — and sorts last
+                 NULL is an unsequenced dish - a drink - and sorts last
                  rather than ahead of the starters. */
               app.course_of(l.item_id) as course
          from pos_order_lines l

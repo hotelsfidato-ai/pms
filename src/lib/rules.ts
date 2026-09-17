@@ -111,7 +111,7 @@ export function canReverse(posting: { reversed: boolean; isReversal: boolean }):
 
 export function canSettle(balance: number): Permitted {
   if (balance === 0) return no("Nothing is owed on this bill.");
-  if (balance < 0) return no("This bill is overpaid — it needs a refund, not a payment.");
+  if (balance < 0) return no("This bill is overpaid - it needs a refund, not a payment.");
   return ok;
 }
 

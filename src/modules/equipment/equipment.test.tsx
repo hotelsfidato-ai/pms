@@ -70,16 +70,16 @@ describe("the register's words", () => {
   const tagged = { heldAs: "tagged" as const, tag: "EQ-0007", quantity: 1 };
   const counted = { heldAs: "counted" as const, tag: null, quantity: 12 };
 
-  it("prints a dash for a cost nobody typed — never ₹0", () => {
-    expect(costText({ ...tagged, unitCost: null, totalCost: null })).toBe("—");
-    expect(costText({ ...counted, unitCost: null, totalCost: null })).toBe("—");
+  it("prints a dash for a cost nobody typed - never ₹0", () => {
+    expect(costText({ ...tagged, unitCost: null, totalCost: null })).toBe("-");
+    expect(costText({ ...counted, unitCost: null, totalCost: null })).toBe("-");
     expect(costText({ ...counted, unitCost: 1200, totalCost: 14400 })).toMatch(/14,400.*1,200 each/);
     /* A cost somebody DID type as nothing is a fact, not a gap. */
-    expect(costText({ ...tagged, unitCost: 0, totalCost: 0 })).not.toBe("—");
+    expect(costText({ ...tagged, unitCost: 0, totalCost: 0 })).not.toBe("-");
   });
 
-  it("prints a dash for a warranty nobody entered — never expired", () => {
-    expect(endsText(null, "2026-08-25")).toBe("—");
+  it("prints a dash for a warranty nobody entered - never expired", () => {
+    expect(endsText(null, "2026-08-25")).toBe("-");
     expect(endsText("2027-03-31", "2026-08-25")).not.toMatch(/ended/);
     expect(endsText("2026-03-31", "2026-08-25")).toMatch(/^ended /);
   });

@@ -286,7 +286,7 @@ describe("who may change the list", () => {
     try {
       const { rows } = await db.query(
         "select 1 from booking_sources where name = 'Test Clerk Attempt'");
-      expect(rows.length, "the refusal was cosmetic — the row was written")
+      expect(rows.length, "the refusal was cosmetic - the row was written")
         .toBe(0);
     } finally { await db.end(); }
   });

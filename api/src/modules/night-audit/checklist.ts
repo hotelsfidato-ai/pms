@@ -119,7 +119,7 @@ checklist.get("/:code/night-audit", async (c) => {
         {
           id: "balances",
           label: "In-house folios carrying a balance",
-          detail: "These roll forward. Nothing is wrong with that — it is worth seeing before it happens.",
+          detail: "These roll forward. Nothing is wrong with that - it is worth seeing before it happens.",
           state: n(r.owing) ? "attention" : "ok",
           count: n(r.owing),
           link: `/h/${c.req.param("code")}/folios`,
@@ -127,7 +127,7 @@ checklist.get("/:code/night-audit", async (c) => {
         {
           id: "room-charges",
           label: "Room charges to post",
-          detail: "One night's tariff and tax per occupied room. Day-use stays are excluded — they have already been charged.",
+          detail: "One night's tariff and tax per occupied room. Day-use stays are excluded - they have already been charged.",
           state: "ok",
           count: n(r.to_post),
         },

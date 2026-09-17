@@ -57,7 +57,7 @@ export default function ArrivalsPage() {
         description={
           upcoming
             ? `Expected between ${dateLong(addDays(BUSINESS_DATE, 1))} and ${dateLong(addDays(BUSINESS_DATE, 14))}.`
-            : `Expected on ${dateLong(BUSINESS_DATE)}. Check in from the row — the panel opens over this list.`
+            : `Expected on ${dateLong(BUSINESS_DATE)}. Check in from the row - the panel opens over this list.`
         }
         badge={
           active.data ? (

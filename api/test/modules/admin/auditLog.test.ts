@@ -103,7 +103,7 @@ afterAll(async () => {
   await closePool();
 });
 
-describe("recorded — the desk's postings say who made them", () => {
+describe("recorded - the desk's postings say who made them", () => {
   it("a charge, a payment and both reversals record the clerk", async () => {
     const { rows } = await sql(
       "select id::text, posted_by::text from folio_postings where id = any($1::bigint[])",
@@ -122,7 +122,7 @@ describe("recorded — the desk's postings say who made them", () => {
   });
 });
 
-describe("shown — the audit log names them", () => {
+describe("shown - the audit log names them", () => {
   it.each([
     ["the owner", () => ownerId],
     ["an administrator", () => adminId],
@@ -143,7 +143,7 @@ describe("shown — the audit log names them", () => {
     expect(log.some((e) => e.actor === "admin")).toBe(false);
   });
 
-  it("an entry nobody recorded says so — null, which the screen prints as a dash", async () => {
+  it("an entry nobody recorded says so - null, which the screen prints as a dash", async () => {
     /* The demo's postings were bulk-loaded with nobody signed in. */
     const log = await auditLogAs(ownerId);
     expect(log.some((e) => e.actor === null)).toBe(true);

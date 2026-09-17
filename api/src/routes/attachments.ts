@@ -135,7 +135,7 @@ attachments.post("/:code/attachments", async (c) => {
       if (code === "23505") {
         return refuse(
           "That exact file is already attached to this record. " +
-          "Nothing was added — the one already there is the same bill.",
+          "Nothing was added - the one already there is the same bill.",
         );
       }
       throw error;

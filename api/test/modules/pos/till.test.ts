@@ -61,7 +61,7 @@ afterAll(async () => {
            (hotel_id, folio_id, business_date, category, description,
             amount, tax_rate, tax_amount, source_type, posted_by)
          select hotel_id, folio_id, business_date, category,
-                'Reversal — till test', -amount, tax_rate, -tax_amount,
+                'Reversal - till test', -amount, tax_rate, -tax_amount,
                 'pos', posted_by
            from folio_postings where id = $1`,
         [row.posting_id],

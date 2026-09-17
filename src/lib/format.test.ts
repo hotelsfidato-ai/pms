@@ -105,7 +105,7 @@ describe("amountInWords", () => {
   });
 
   it("does not invent a number for a non-number", () => {
-    expect(amountInWords(Number.NaN)).toBe("—");
-    expect(amountInWords(Number.POSITIVE_INFINITY)).toBe("—");
+    expect(amountInWords(Number.NaN)).toBe("-");
+    expect(amountInWords(Number.POSITIVE_INFINITY)).toBe("-");
   });
 });

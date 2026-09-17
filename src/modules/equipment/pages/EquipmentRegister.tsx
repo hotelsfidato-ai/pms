@@ -98,7 +98,7 @@ export default function EquipmentRegisterPage() {
   const waiting = items.flatMap((i) => {
     const out: { item: EquipmentItem; what: string; approvalId: string; by: string | null; reason: string | null }[] = [];
     if (i.leaving) {
-      out.push({ item: i, what: `to leave the store for ${i.leaving.to ?? "—"}`,
+      out.push({ item: i, what: `to leave the store for ${i.leaving.to ?? "-"}`,
                  approvalId: i.leaving.approvalId, by: i.leaving.by, reason: i.leaving.reason });
     }
     if (i.retireRequest) {
@@ -233,7 +233,7 @@ export default function EquipmentRegisterPage() {
                     ({heldText(w.item)}, {w.item.place}) {w.what}
                   </p>
                   <p className="text-sm text-grey-600">
-                    Asked by {w.by ?? "—"}{w.reason ? ` — ${w.reason}` : ""}
+                    Asked by {w.by ?? "-"}{w.reason ? ` - ${w.reason}` : ""}
                   </p>
                   {/* Quiet buttons here: the screen's one main action is Add an item. */}
                   <DecideButtons code={code} quiet
@@ -283,7 +283,7 @@ export default function EquipmentRegisterPage() {
             title="Nothing in the register yet"
             description={
               "Each AC, TV and fridge one by one with its tag, and cheaper things as a "
-              + "count in one place — twelve kettles in room 104 is one line. Type them "
+              + "count in one place - twelve kettles in room 104 is one line. Type them "
               + "in, or import the list from a file. Nothing is filled in for you: a "
               + "cost or a warranty nobody enters shows a dash."
             }

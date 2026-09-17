@@ -210,7 +210,7 @@ describe("the server's table of who may do what with equipment", () => {
     expect([...granted].filter((a) => !ACTIONS.includes(a as EquipmentAction))).toEqual([]);
   });
 
-  it("names every role it lets in — the Inventory Manager by that name", () => {
+  it("names every role it lets in - the Inventory Manager by that name", () => {
     for (const action of ACTIONS) {
       for (const role of EQUIPMENT_GRANTS[action]) {
         expect(ROLE_NAMES[role], `${role} has no name in a refusal`).toBeTruthy();
@@ -222,7 +222,7 @@ describe("the server's table of who may do what with equipment", () => {
     for (const action of ACTIONS) expect(refusedFor(action)).not.toMatch(/store manager/i);
   });
 
-  it("offers no way to delete anything, even to the owner — a thing leaves by being retired", async () => {
+  it("offers no way to delete anything, even to the owner - a thing leaves by being retired", async () => {
     const { tagged } = fixtures.get("owner")!;
     const res = await call(ownerId, `/equipment/items/${tagged}`, "DELETE");
     expect(res.status).toBe(404);
@@ -381,7 +381,7 @@ describe("retiring part of a counted line (edit)", () => {
   }
 });
 
-describe("retiring a tagged item — at once, or in the inbox (S16)", () => {
+describe("retiring a tagged item - at once, or in the inbox (S16)", () => {
   for (const role of EVERY_ROLE) {
     const outcome = !may(role, "edit") ? "refuses" : may(role, "approve") ? "retires at once for" : "sends to the inbox for";
     it(`${outcome} ${role}`, async () => {
@@ -425,7 +425,7 @@ describe("whose role counts", () => {
     expect((await call(ownerId, "/equipment/export")).status).toBe(200);
   });
 
-  it("asks the role AT THIS HOTEL — a GM elsewhere is reception here", async () => {
+  it("asks the role AT THIS HOTEL - a GM elsewhere is reception here", async () => {
     const name = "EQTEST gm elsewhere";
     const res = await call(gmElsewhereId, "/equipment", "POST",
       { name, heldAs: "counted", quantity: 1, roomId: roomA });

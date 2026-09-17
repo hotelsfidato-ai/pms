@@ -129,7 +129,7 @@ export function AccountMenu() {
           {scope.isGroupAdmin && (
             <p className="flex items-center gap-1.5 text-2xs text-success mt-1.5">
               <ShieldCheck className="size-3" />
-              Group administrator — every property
+              Group administrator - every property
             </p>
           )}
         </div>

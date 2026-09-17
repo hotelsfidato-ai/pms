@@ -225,7 +225,7 @@ operations.post("/:code/stays/:id/check-in", async (c) => {
       if (earlyByDays && !body.earlyReason?.trim()) {
         return refuse(
           `This booking arrives on ${stay.check_in}, not today. It can be `
-          + "checked in early if a room is free — give a reason and it moves "
+          + "checked in early if a room is free - give a reason and it moves "
           + "to today.",
         );
       }
@@ -241,7 +241,7 @@ operations.post("/:code/stays/:id/check-in", async (c) => {
 
       if (!captured && !body.idSkipReason?.trim()) {
         return refuse(
-          "Record the guest's ID document — type and number — or give a " +
+          "Record the guest's ID document - type and number - or give a " +
             "reason for skipping it.",
         );
       }
@@ -330,7 +330,7 @@ operations.post("/:code/stays/:id/check-in", async (c) => {
 
       const notes = captured
         ? stay.notes
-        : [stay.notes, `ID not captured — ${body.idSkipReason}`]
+        : [stay.notes, `ID not captured - ${body.idSkipReason}`]
             .filter(Boolean)
             .join(" · ");
 
@@ -843,7 +843,7 @@ operations.post("/:code/walk-ins", async (c) => {
       + Math.max(0, Number(body.children ?? 0));
     if (party > room.max_occupancy) {
       return refuse(
-        `${party} people will not fit a ${room.type_name} — it sleeps `
+        `${party} people will not fit a ${room.type_name} - it sleeps `
         + `${room.max_occupancy}. Put them in a larger room, or split them `
         + "across two.",
       );
@@ -898,7 +898,7 @@ operations.post("/:code/walk-ins", async (c) => {
       );
     }
     const notes = body.overrideReason?.trim()
-      ? `Rate override — ${body.overrideReason.trim()}`
+      ? `Rate override - ${body.overrideReason.trim()}`
       : null;
 
     /* ⚠ THE CHANNEL. The booking form has required one since 082 and
@@ -1401,7 +1401,7 @@ operations.post("/:code/stays/:id/void", async (c) => {
     if (["checked_in", "checked_out"].includes(stay.status)) {
       return refuse(
         `${stay.reference} has been checked ${stay.status === "checked_in" ? "in" : "out"}. ` +
-        "A stay that happened cannot be made not to have happened — " +
+        "A stay that happened cannot be made not to have happened - " +
         "reverse the charges instead.");
     }
 
@@ -1418,7 +1418,7 @@ operations.post("/:code/stays/:id/void", async (c) => {
     if (Number(posted[0]!.n) > 0) {
       return refuse(
         `${stay.reference} already has charges on its folio. That is a ` +
-        "cancellation, not a void — cancel it so the terms and any charge " +
+        "cancellation, not a void - cancel it so the terms and any charge " +
         "are applied.");
     }
 

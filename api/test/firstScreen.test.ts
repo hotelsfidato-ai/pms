@@ -109,7 +109,7 @@ describe("the first screen after sign-in", () => {
     expect(scope.roomGrouping).toBe("type");
   });
 
-  it("a person sets their own, and it follows them — the server keeps it", async () => {
+  it("a person sets their own, and it follows them - the server keeps it", async () => {
     const res = await as(clerkId, "/me/preferences", "PUT",
       { homeScreen: "rooms", roomGrouping: "floor" });
     expect(res.status, await res.clone().text()).toBe(200);
@@ -187,7 +187,7 @@ describe("reception on the POS, per hotel", () => {
     expect(body.modules.map((m) => m.module)).toContain("reception_pos");
   });
 
-  it("⚠ ONLY THE OWNER OR AN ADMIN CAN FLIP A MODULE — a clerk cannot", async () => {
+  it("⚠ ONLY THE OWNER OR AN ADMIN CAN FLIP A MODULE - a clerk cannot", async () => {
     /* Before 14 September nothing checked: any clerk could close the
        till, and a receptionist could have switched their own POS access
        back on. */
@@ -201,11 +201,11 @@ describe("reception on the POS, per hotel", () => {
       const { rows } = await db.query<{ on: boolean }>(
         `select app.module_enabled(id, 'reception_pos') as on
            from hotels where code = '5EL'`);
-      expect(rows[0]!.on, "the refusal was cosmetic — the switch moved").toBe(false);
+      expect(rows[0]!.on, "the refusal was cosmetic - the switch moved").toBe(false);
     } finally { await db.end(); }
   });
 
-  it("the GM cannot flip it — D17-36, 17 September: owner and admin only", async () => {
+  it("the GM cannot flip it - D17-36, 17 September: owner and admin only", async () => {
     /* It said "the GM can flip it" until the owner's answer of 17
        September. Every role is tried in
        api/test/modules/admin/moduleSwitches.test.ts; this one stays
@@ -220,7 +220,7 @@ describe("reception on the POS, per hotel", () => {
       const { rows } = await db.query<{ on: boolean }>(
         `select app.module_enabled(id, 'reception_pos') as on
            from hotels where code = '5EL'`);
-      expect(rows[0]!.on, "the refusal was cosmetic — the switch moved").toBe(true);
+      expect(rows[0]!.on, "the refusal was cosmetic - the switch moved").toBe(true);
     } finally { await db.end(); }
   });
 

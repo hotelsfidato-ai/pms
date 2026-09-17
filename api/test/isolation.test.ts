@@ -30,7 +30,7 @@ beforeAll(async () => {
      pass for the wrong reason. */
   expect(
     staff.rows.length,
-    "staff rows readable with no session set — RLS is not in force. " +
+    "staff rows readable with no session set - RLS is not in force. " +
       "Check DATABASE_URL connects as pms_app, not postgres.",
   ).toBe(0);
 
@@ -93,7 +93,7 @@ describe("withUser", () => {
     );
     expect(
       leaked.rows[0]?.id,
-      "app.user_id survived the transaction — set_config was called with " +
+      "app.user_id survived the transaction - set_config was called with " +
         "is_local=false. The next request on this connection runs as the " +
         "previous clerk.",
     ).toBeNull();
@@ -137,7 +137,7 @@ describe("GET /api/hotels", () => {
        and every entry is a grant this person actually holds. */
     expect(
       body.scope.hotels.length,
-      "no staff_hotels rows — migration 018 has not been applied",
+      "no staff_hotels rows - migration 018 has not been applied",
     ).toBeGreaterThan(0);
 
     const granted = await withUser(agraStaffId, async (c) => {
@@ -210,7 +210,7 @@ describe("row-level security", () => {
       );
       return Number(rows[0]!.n);
     });
-    expect(sourceRows, "no visible source rows — the insert would be vacuous")
+    expect(sourceRows, "no visible source rows - the insert would be vacuous")
       .toBeGreaterThan(0);
 
     await expect(
@@ -251,7 +251,7 @@ describe("row-level security", () => {
     /* The count belongs to the fixture; the invariant belongs to the
        policy. Assert the invariant — and that there was something to
        filter, or the check passes on an empty table. */
-    expect(rows.length, "no rows at all — nothing was actually filtered")
+    expect(rows.length, "no rows at all - nothing was actually filtered")
       .toBeGreaterThan(0);
     expect(rows.every((r) => r.staff_id === agraStaffId)).toBe(true);
 

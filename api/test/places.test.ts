@@ -131,7 +131,7 @@ describe("adding and changing, in words a person can act on", () => {
     expect(row.gstin).toBe("27ABCDE1234F1Z5");
   });
 
-  it("switches a place off and on — and it is never deleted", async () => {
+  it("switches a place off and on - and it is never deleted", async () => {
     await clear();
     const made = await as(gm(), "/5EL/places", "POST", { name: `${TAG} Bar store`, kind: "store" });
     const { id } = (await made.json()) as { id: string };

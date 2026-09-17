@@ -242,7 +242,7 @@ function shape(r: ItemRow) {
     roomId: r.room_id,
     locationId: r.location_id,
     /* One wording for where it is, so the list, the item and the export agree. */
-    place: r.room_id ? `Room ${r.room_number}` : (r.location_name ?? "—"),
+    place: r.room_id ? `Room ${r.room_number}` : (r.location_name ?? "-"),
     /* "room", or the place's kind. A store is where leaving needs approval. */
     placeKind: r.room_id ? "room" : (r.location_kind ?? null),
     supplierId: r.supplier_id,
@@ -488,7 +488,7 @@ async function placeRefusal(
   const hasRoom = roomId !== null && roomId !== undefined && roomId !== "";
   const hasPlace = locationId !== null && locationId !== undefined && locationId !== "";
   if (hasRoom === hasPlace) {
-    return refuse("Where is it? Choose a room or a place — one of the two.");
+    return refuse("Where is it? Choose a room or a place - one of the two.");
   }
   if (hasRoom) {
     if (!isId(roomId)) return refuse("No such room at this property.");
@@ -562,7 +562,7 @@ equipment.post("/:code/equipment", async (c) => {
     /* ---- every refusal, before the first write ---- */
     const name = input.name?.trim() ?? "";
     if (!name) return refuse("What is it called?");
-    if (name.length > NAME_MAX) return refuse("That name is too long — keep it under 200 letters.");
+    if (name.length > NAME_MAX) return refuse("That name is too long - keep it under 200 letters.");
 
     if (input.heldAs !== "tagged" && input.heldAs !== "counted") {
       return refuse("Is it one thing with a tag, or a count of things in one place?");
@@ -573,14 +573,14 @@ equipment.post("/:code/equipment", async (c) => {
     let quantity = 1;
     if (tagged) {
       if (!tag) return refuse("A tagged item needs its tag. The form offers the next free number.");
-      if (tag.length > 40) return refuse("A tag is a short label — forty letters at most.");
+      if (tag.length > 40) return refuse("A tag is a short label - forty letters at most.");
       if (await tagTaken(client, o.hotelId, tag)) {
         const { rows } = await client.query<{ tag: string }>(
           "select app.next_equipment_tag($1) as tag", [o.hotelId]);
         return refuse(`${tag} is already on another item here. The next free number is ${rows[0]!.tag}.`);
       }
     } else {
-      if (tag) return refuse("A count of things carries no tag — a tag names one thing.");
+      if (tag) return refuse("A count of things carries no tag - a tag names one thing.");
       const q = Number(input.quantity);
       if (!Number.isInteger(q) || q < 1) return refuse("How many? A whole number, one or more.");
       if (q > 100_000) return refuse("That is more than a hundred thousand of one thing in one place.");
@@ -599,7 +599,7 @@ equipment.post("/:code/equipment", async (c) => {
 
     const cost = readCost(input.unitCost);
     if (cost === undefined) {
-      return refuse("A cost is rupees — a number, zero or more. Leave it blank if nobody knows it.");
+      return refuse("A cost is rupees - a number, zero or more. Leave it blank if nobody knows it.");
     }
 
     const bought = dateField(input.purchaseDate, "when it was bought");
@@ -697,17 +697,17 @@ equipment.patch("/:code/equipment/items/:id", async (c) => {
     if (input.name !== undefined) {
       const name = input.name?.trim() ?? "";
       if (!name) return refuse("What is it called?");
-      if (name.length > NAME_MAX) return refuse("That name is too long — keep it under 200 letters.");
+      if (name.length > NAME_MAX) return refuse("That name is too long - keep it under 200 letters.");
       set("name", name);
     }
 
     if (input.tag !== undefined) {
       const tag = input.tag?.trim() ?? "";
       if (item.held_as === "counted") {
-        if (tag) return refuse("A count of things carries no tag — a tag names one thing.");
+        if (tag) return refuse("A count of things carries no tag - a tag names one thing.");
       } else {
         if (!tag) return refuse("A tagged item keeps a tag.");
-        if (tag.length > 40) return refuse("A tag is a short label — forty letters at most.");
+        if (tag.length > 40) return refuse("A tag is a short label - forty letters at most.");
         if (await tagTaken(client, o.hotelId, tag, item.id)) {
           return refuse(`${tag} is already on another item here.`);
         }
@@ -728,7 +728,7 @@ equipment.patch("/:code/equipment/items/:id", async (c) => {
     if (input.unitCost !== undefined) {
       const cost = readCost(input.unitCost);
       if (cost === undefined) {
-        return refuse("A cost is rupees — a number, zero or more. Leave it blank if nobody knows it.");
+        return refuse("A cost is rupees - a number, zero or more. Leave it blank if nobody knows it.");
       }
       set("unit_cost", cost);
     }
@@ -1077,7 +1077,7 @@ equipment.post("/:code/equipment/import", async (c) => {
       let blankTag = false;
       if (heldAs === "tagged") {
         const q = text(raw.quantity);
-        if (q !== "" && q !== "1") return reject("A tagged item is one thing — leave How many blank or 1.");
+        if (q !== "" && q !== "1") return reject("A tagged item is one thing - leave How many blank or 1.");
         if (tag) {
           if (tag.length > 40) return reject("The tag is longer than forty letters.");
           const key = tag.toUpperCase();
@@ -1087,7 +1087,7 @@ equipment.post("/:code/equipment/import", async (c) => {
           blankTag = true;
         }
       } else {
-        if (tag) return reject("A count of things carries no tag — leave Tag blank.");
+        if (tag) return reject("A count of things carries no tag - leave Tag blank.");
         const q = Number(text(raw.quantity));
         if (!Number.isInteger(q) || q < 1) return reject("How many? A whole number, one or more.");
         if (q > 100_000) return reject("More than a hundred thousand in one place.");
@@ -1098,7 +1098,7 @@ equipment.post("/:code/equipment/import", async (c) => {
       const roomText = text(raw.room);
       const placeText = text(raw.place);
       if ((roomText === "") === (placeText === "")) {
-        return reject("Give a Room or a Place — exactly one of the two.");
+        return reject("Give a Room or a Place - exactly one of the two.");
       }
       let roomId: string | null = null;
       let locationId: string | null = null;
@@ -1151,7 +1151,7 @@ equipment.post("/:code/equipment/import", async (c) => {
       if (!status) {
         return reject(st === "retired"
           ? "A retired thing is left out of the opening register."
-          : `Status must be blank, in use, or under repair — not "${text(raw.status)}".`);
+          : `Status must be blank, in use, or under repair - not "${text(raw.status)}".`);
       }
 
       good.push({

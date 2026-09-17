@@ -163,7 +163,7 @@ describe("equipment leaving the store (095)", () => {
     expect(res.status).toBe(200);
   });
 
-  it("does not let the Inventory Manager approve what they asked for — the GM does", async () => {
+  it("does not let the Inventory Manager approve what they asked for - the GM does", async () => {
     const id = await raise("stores");
 
     const own = await seenBy("stores", id);

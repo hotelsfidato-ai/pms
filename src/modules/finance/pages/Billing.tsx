@@ -132,7 +132,7 @@ export function PaymentsPage() {
         <p className="text-xs text-grey-500 mt-4 leading-relaxed">
           {reversedCount} receipt{reversedCount === 1 ? " is" : "s are"} struck through.
           The ledger is append-only, so a reversal is its own line and the original
-          stays where it was — a receipt that disappeared is a receipt somebody would
+          stays where it was - a receipt that disappeared is a receipt somebody would
           go looking for.
         </p>
       )}
@@ -156,7 +156,7 @@ const LEDGER_COLUMNS: Column<CityLedgerRow>[] = [
     key: "opening", header: "Opening", numeric: true, hideBelow: "md",
     cell: (r) =>
       r.opening === null
-        ? <span className="text-grey-500" title="Nothing predates this window">—</span>
+        ? <span className="text-grey-500" title="Nothing predates this window">-</span>
         : <span className="tabular">{money(r.opening)}</span>,
   },
   { key: "debit", header: "Charged", numeric: true, cell: (r) => <span className="tabular">{money(r.debit)}</span> },
@@ -164,9 +164,9 @@ const LEDGER_COLUMNS: Column<CityLedgerRow>[] = [
   {
     key: "closing", header: "Balance", numeric: true,
     cell: (r) =>
-      r.closing === null ? <span className="text-grey-500">—</span> : (
+      r.closing === null ? <span className="text-grey-500">-</span> : (
         <span className={cn("tabular font-medium", r.closing > 0 ? "text-brand-red" : r.closing < 0 ? "text-info" : "text-grey-500")}>
-          {r.closing === 0 ? "—" : money(Math.abs(r.closing))}
+          {r.closing === 0 ? "-" : money(Math.abs(r.closing))}
         </span>
       ),
   },
@@ -204,7 +204,7 @@ export function PropertyCityLedgerPage() {
         />
       </Card>
       <p className="text-xs text-grey-500 mt-4 leading-relaxed">
-        A negative balance means the account is in credit — the source has paid ahead
+        A negative balance means the account is in credit - the source has paid ahead
         of what it has been charged. That is normal for an OTA and is shown as it is,
         not flattened to zero. The printable version lives under Reports.
       </p>

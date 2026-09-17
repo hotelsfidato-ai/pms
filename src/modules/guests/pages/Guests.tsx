@@ -70,7 +70,7 @@ const GUEST_COLUMNS: Column<GuestRecord>[] = [
     key: "balance", header: "Balance", numeric: true,
     cell: (g) => (
       <span className={cn("tabular font-medium", g.openBalance > 0 ? "text-brand-red" : g.openBalance < 0 ? "text-info" : "text-grey-500")}>
-        {g.openBalance === 0 ? "—" : money(Math.abs(g.openBalance))}
+        {g.openBalance === 0 ? "-" : money(Math.abs(g.openBalance))}
       </span>
     ),
   },
@@ -103,7 +103,7 @@ export function GuestsPage() {
             <p className="text-sm text-grey-600 mt-0.5">
               One person cannot be in two rooms on the same night, so either these are
               two people sharing a name or something was entered twice. Shown, not
-              merged — a wrong merge is far harder to undo than a visible duplicate.
+              merged - a wrong merge is far harder to undo than a visible duplicate.
             </p>
           </div>
         </div>
@@ -181,13 +181,13 @@ const SOURCE_COLUMNS: Column<CompanyRecord>[] = [
   { key: "revenue", header: "Revenue", numeric: true, cell: (c) => <span className="tabular">{money(c.revenue)}</span> },
   {
     key: "commission", header: "Commission", numeric: true, hideBelow: "lg",
-    cell: (c) => <span className="text-grey-500">{c.commissionPct === null ? "—" : `${c.commissionPct}%`}</span>,
+    cell: (c) => <span className="text-grey-500">{c.commissionPct === null ? "-" : `${c.commissionPct}%`}</span>,
   },
   {
     key: "balance", header: "Owed", numeric: true,
     cell: (c) => (
       <span className={cn("tabular font-medium", c.openBalance > 0 ? "text-brand-red" : c.openBalance < 0 ? "text-info" : "text-grey-500")}>
-        {c.openBalance === 0 ? "—" : money(Math.abs(c.openBalance))}
+        {c.openBalance === 0 ? "-" : money(Math.abs(c.openBalance))}
       </span>
     ),
   },

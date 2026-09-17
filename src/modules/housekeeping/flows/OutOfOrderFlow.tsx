@@ -90,7 +90,7 @@ export function OutOfOrderFlow({
   };
 
   const label = (value: string | null) =>
-    BLOCK_REASONS.find((r) => r.value === value)?.label.split(" — ")[0]
+    BLOCK_REASONS.find((r) => r.value === value)?.label.split(" - ")[0]
       ?? value ?? "Out";
 
   return (

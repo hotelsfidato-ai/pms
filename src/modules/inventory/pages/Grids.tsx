@@ -292,7 +292,7 @@ function InventoryGrid({ hotelId, dates, cells, restrictions, onDone }: {
                         "block text-lg font-semibold tabular",
                         closed ? "text-danger" : none ? "text-warning-dark" : "text-ink-900",
                       )}>
-                        {cell ? cell.available : "—"}
+                        {cell ? cell.available : "-"}
                       </span>
                       <span className="block text-xs text-grey-500 tabular">
                         {cell ? `${cell.sold}/${cell.sellable}` : ""}
@@ -433,7 +433,7 @@ function RateGrid({ hotelId, dates, plans, cells, onDone }: {
                           the room type has no rate of its own — that is not
                           the same as the room being free. */}
                       {cell?.price === null || cell?.price === undefined ? (
-                        <span className="block text-lg text-grey-300">—</span>
+                        <span className="block text-lg text-grey-300">-</span>
                       ) : (
                         <span className={cn(
                           "block text-base tabular",
@@ -465,7 +465,7 @@ function RateGrid({ hotelId, dates, plans, cells, onDone }: {
       <div className="mt-3 flex flex-wrap gap-x-6 gap-y-2 text-sm text-grey-600">
         <span><b className="text-ink-900">4,099</b> priced for the date</span>
         <span className="text-grey-500 italic">4,099 the room type&rsquo;s own rate, nobody set this date</span>
-        <span className="text-grey-300">— nothing at all</span>
+        <span className="text-grey-300">- nothing at all</span>
       </div>
 
       {editing && (
@@ -566,7 +566,7 @@ function PriceDialog({ hotelId, target, onClose, onDone }: {
                   type="number" inputMode="decimal" min={0}
                   value={extraAdult}
                   onChange={(e) => setExtraAdult(e.target.value)}
-                  placeholder="—"
+                  placeholder="-"
                   className="h-12 text-base tabular"
                 />
               )}
@@ -578,7 +578,7 @@ function PriceDialog({ hotelId, target, onClose, onDone }: {
                   type="number" inputMode="decimal" min={0}
                   value={extraChild}
                   onChange={(e) => setExtraChild(e.target.value)}
-                  placeholder="—"
+                  placeholder="-"
                   className="h-12 text-base tabular"
                 />
               )}
@@ -704,7 +704,7 @@ function RestrictionDialog({ hotelId, target, existing, onClose, onDone }: {
             label="Stop sell" hint="Nothing may be booked at all" />
           <Toggle on={coa} set={setCoa}
             label="Closed to arrival"
-            hint="A stay may not begin here — protects a long weekend" />
+            hint="A stay may not begin here - protects a long weekend" />
           <Toggle on={cod} set={setCod}
             label="Closed to departure" hint="A stay may not end here" />
 
@@ -713,14 +713,14 @@ function RestrictionDialog({ hotelId, target, existing, onClose, onDone }: {
               {(f) => (
                 <Input {...fieldProps(f)} type="number" inputMode="numeric" min={1}
                   value={min} onChange={(e) => setMin(e.target.value)}
-                  placeholder="—" className="h-12 text-base tabular" />
+                  placeholder="-" className="h-12 text-base tabular" />
               )}
             </Field>
             <Field label="Maximum nights">
               {(f) => (
                 <Input {...fieldProps(f)} type="number" inputMode="numeric" min={1}
                   value={max} onChange={(e) => setMax(e.target.value)}
-                  placeholder="—" className="h-12 text-base tabular" />
+                  placeholder="-" className="h-12 text-base tabular" />
               )}
             </Field>
           </div>

@@ -175,7 +175,7 @@ afterAll(async () => {
     expect(
       Number(ghost[0]!.n),
       "The POS test staff row is still ACTIVE and will show in every staff " +
-        "picker as a real person — it did, in the cashier handover.",
+        "picker as a real person - it did, in the cashier handover.",
     ).toBe(0);
   } finally {
     await db.end();
@@ -367,7 +367,7 @@ describe("charging a bill to a room", () => {
          says so rather than reporting a check that did not run. */
       throw new Error(
         "No room with two open folios in the demo data. This test cannot " +
-          "prove anything — restore the 25 August changeover in room 201, " +
+          "prove anything - restore the 25 August changeover in room 201, " +
           "or delete this test rather than let it report a green it did " +
           "not earn.",
       );
@@ -477,7 +477,7 @@ describe("voiding a bill", () => {
     }
   });
 
-  it("is idempotent — a retried void does not re-charge the guest", async () => {
+  it("is idempotent - a retried void does not re-charge the guest", async () => {
     const rooms = (await (await get("/rooms")).json()) as {
       rooms: Array<{ room: string; folioId: string }>;
     };

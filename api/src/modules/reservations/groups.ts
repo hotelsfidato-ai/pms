@@ -300,7 +300,7 @@ groups.post("/:code/bookings", async (c) => {
      check-in on every booking taken before the column existed. */
   if (!input.bookingSourceId) {
     return c.json(refuse(
-      "Where did this booking come from? Pick the channel — it is what "
+      "Where did this booking come from? Pick the channel - it is what "
       + "the source-mix report counts, and it cannot be filled in later."),
       409);
   }
@@ -403,7 +403,7 @@ groups.post("/:code/bookings", async (c) => {
       const children = line.children ?? 0;
       if (adults + children > rt[0].max) {
         return refuse(
-          `${adults + children} people will not fit a ${rt[0].name} — it `
+          `${adults + children} people will not fit a ${rt[0].name} - it `
           + `sleeps ${rt[0].max}.`);
       }
 
@@ -449,7 +449,7 @@ groups.post("/:code/bookings", async (c) => {
       const { rows: g } = await client.query<{ id: string }>(
         `insert into reservation_groups (name, block_code, lead_hotel_id)
          values ($1, nullif($2,''), $3) returning id::text`,
-        [input.groupName?.trim() || `${guestName} — ${total} rooms`,
+        [input.groupName?.trim() || `${guestName} - ${total} rooms`,
          input.blockCode?.trim() ?? "", hotelId]);
       groupId = g[0]!.id;
     }
@@ -648,7 +648,7 @@ function answerRepeat(earlier: Received[], externalRef: string, fingerprint: str
     return refuse(
       `Booking ${externalRef} was already received from this channel as `
       + `${references.join(", ")}, with different details. A change to a `
-      + "booking is not taken this way — it is made on the booking, at the desk.");
+      + "booking is not taken this way - it is made on the booking, at the desk.");
   }
   const bookings = earlier.map((r) => ({
     reference: r.reference, roomType: r.room_type, rate: Number(r.agreed_rate),

@@ -56,7 +56,7 @@ describe("the revenue manager", () => {
     }
   });
 
-  it("CANNOT change bookings or set up rooms — it only reads them", () => {
+  it("CANNOT change bookings or set up rooms - it only reads them", () => {
     expect(grantsFor("revenue_manager", "reservation")).toEqual(["view"]);
     expect(grantsFor("revenue_manager", "room_config")).toEqual(["view"]);
   });
@@ -115,13 +115,13 @@ describe("the Store, Equipment and Purchasing", () => {
      loaded: the Store's route has no RequireAccess and its server routes check
      no grant, so STO-1 is NOT closed by this table. The Store closes it in
      phase 1A — the route guard and the server refusal read these grants. */
-  it("no longer GRANTS the Viewer or reception stock changes — the matrix, not yet the door", () => {
+  it("no longer GRANTS the Viewer or reception stock changes - the matrix, not yet the door", () => {
     expect(grantsFor("read_only", "stock")).not.toContain("create");
     expect(grantsFor("read_only", "stock")).not.toContain("edit");
     expect(canAccess("front_desk", "stock")).toBe(false);
   });
 
-  it("never lets anybody delete stock — it is a ledger", () => {
+  it("never lets anybody delete stock - it is a ledger", () => {
     for (const role of ASSIGNABLE_ROLES.filter((r) => r !== "owner")) {
       expect(grantsFor(role, "stock"), role).not.toContain("delete");
     }

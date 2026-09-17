@@ -51,7 +51,7 @@ interface Row {
 }
 
 const placeOf = (r: Pick<Row, "room_number" | "location_name">) =>
-  r.room_number ? `Room ${r.room_number}` : (r.location_name ?? "—");
+  r.room_number ? `Room ${r.room_number}` : (r.location_name ?? "-");
 
 /** Every tagged thing at the property that is not retired, by place then name. */
 export async function itemsForRepair(client: Client, hotelId: string): Promise<RepairableItem[]> {

@@ -155,7 +155,7 @@ export default function RoomSetupPage() {
                              frontDesk.earlyCheckinCharge === null
                                ? "text-grey-500" : "text-ink-900")}>
               {frontDesk.earlyCheckinCharge === null
-                ? "—" : money(frontDesk.earlyCheckinCharge)}
+                ? "-" : money(frontDesk.earlyCheckinCharge)}
             </p>
           </div>
           <div>
@@ -164,7 +164,7 @@ export default function RoomSetupPage() {
                              frontDesk.lateCheckoutCharge === null
                                ? "text-grey-500" : "text-ink-900")}>
               {frontDesk.lateCheckoutCharge === null
-                ? "—" : money(frontDesk.lateCheckoutCharge)}
+                ? "-" : money(frontDesk.lateCheckoutCharge)}
             </p>
           </div>
           <Button variant="secondary" className="h-11 ml-auto"
@@ -188,7 +188,7 @@ export default function RoomSetupPage() {
           <EmptyState
             title="No room types yet"
             description={
-              "A room type is what the property sells — Standard, Deluxe, "
+              "A room type is what the property sells - Standard, Deluxe, "
               + "Suite. Rooms are of a type, and rates are set against one."
             }
             action={
@@ -217,7 +217,7 @@ export default function RoomSetupPage() {
                     {/* A DASH. The rack rate is set on the rate
                         calendar, and an unpriced type is not free. */}
                     <Line label="Rack rate" value={
-                      t.rackRate === null ? "—" : money(t.rackRate)} muted={t.rackRate === null} />
+                      t.rackRate === null ? "-" : money(t.rackRate)} muted={t.rackRate === null} />
                   </dl>
                   <Button variant="secondary" className="h-11 w-full"
                           onClick={() => setEditingType(t)}>
@@ -427,7 +427,7 @@ function TypeDialog({
                 <span className="block text-ink-900">Sold at this property</span>
                 <span className="block text-grey-500">
                   Switching it off refuses while rooms are still of this
-                  type. Nothing is deleted — a year of bookings points here.
+                  type. Nothing is deleted - a year of bookings points here.
                 </span>
               </span>
             </label>
@@ -513,7 +513,7 @@ function RoomDialog({
           <Field label="Floor" hint="Leave blank if the property has one floor.">
             {(f) => (
               <Input {...fieldProps(f)} value={floor} inputMode="numeric"
-                     placeholder="—"
+                     placeholder="-"
                      onChange={(e) => setFloor(e.target.value)} />
             )}
           </Field>
@@ -535,7 +535,7 @@ function RoomDialog({
                 <span className="block text-grey-500">
                   {room.occupied
                     ? "Somebody is in this room, so it cannot be retired. "
-                      + "Block it instead — a block carries dates and a reason."
+                      + "Block it instead - a block carries dates and a reason."
                     : "Switching it off takes it out of the sellable house. "
                       + "For a fault with an end date, use a block."}
                 </span>
@@ -615,14 +615,14 @@ function FrontDeskDialog({
                    hint="Blank if the property does not charge for one.">
               {(f) => (
                 <Input {...fieldProps(f)} value={early} inputMode="decimal"
-                       placeholder="—"
+                       placeholder="-"
                        onChange={(e) => setEarly(e.target.value)} />
               )}
             </Field>
             <Field label="Late departure charge" hint="Blank for none.">
               {(f) => (
                 <Input {...fieldProps(f)} value={late} inputMode="decimal"
-                       placeholder="—"
+                       placeholder="-"
                        onChange={(e) => setLate(e.target.value)} />
               )}
             </Field>

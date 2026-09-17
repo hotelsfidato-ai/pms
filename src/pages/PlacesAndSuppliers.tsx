@@ -29,7 +29,7 @@ import { api, ApiError } from "@/lib/api";
 type Kind = "store" | "kitchen" | "bar" | "restaurant" | "public_area" | "office" | "other";
 
 const KIND_LABEL: Record<Kind, string> = {
-  store: "Store — stock is kept here",
+  store: "Store - stock is kept here",
   kitchen: "Kitchen",
   bar: "Bar",
   restaurant: "Restaurant",
@@ -74,7 +74,7 @@ async function save(path: string, method: "POST" | "PUT", body: unknown):
   }
 }
 
-const dash = (v: string | null) => v ?? "—";
+const dash = (v: string | null) => v ?? "-";
 
 export default function PlacesAndSuppliersPage() {
   const { code = "" } = useParams<{ code: string }>();
@@ -157,7 +157,7 @@ export default function PlacesAndSuppliersPage() {
                 icon={<MapPin />}
                 title="No places yet"
                 description={
-                  "Add where stock is kept — a main store, a kitchen store, a bar store — "
+                  "Add where stock is kept - a main store, a kitchen store, a bar store - "
                   + "and the other places equipment stands, like the lobby or the office. "
                   + "Rooms are already known; they are not added here."
                 }

@@ -51,7 +51,7 @@ export function SlipNotice({ slip, onDone, className }: {
     >
       <Printer className="size-4 shrink-0 text-[#8a6300]" />
       <p className="text-sm text-[#8a6300] min-w-0 flex-1">
-        {slip.what} is with the kitchen, but its slip did not open — the
+        {slip.what} is with the kitchen, but its slip did not open - the
         browser blocked the new tab.
         {/* Refused on a fresh tap too: the browser is blocking this site
             outright, and pressing again will not change that. */}

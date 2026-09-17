@@ -138,7 +138,7 @@ describe("every guarded route is one the navigation knows", () => {
         .map((m) => m[1]!));
     const known = new Set(guarded.filter((path) => navItemFor(path) !== undefined));
 
-    expect(guarded.length, "no guarded routes found — the regex has rotted")
+    expect(guarded.length, "no guarded routes found - the regex has rotted")
       .toBeGreaterThan(0);
 
     const wideOpen = guarded.filter((path) => !known.has(path));
@@ -262,7 +262,7 @@ describe("the admin console", () => {
       .toBeTruthy();
     expect(
       item!.devOnly,
-      "the admin console lost devOnly — it would ship to production, " +
+      "the admin console lost devOnly - it would ship to production, " +
         "where it can create properties and administrators",
     ).toBe(true);
   });
@@ -309,7 +309,7 @@ describe("the type scale", () => {
     for (const name of ["2xs", "xs", "sm", "base", "md", "lg"]) {
       expect(
         size(name),
-        `--text-${name} is ${size(name)}px — below the 12px floor`,
+        `--text-${name} is ${size(name)}px - below the 12px floor`,
       ).toBeGreaterThanOrEqual(12);
     }
   });
@@ -382,7 +382,7 @@ describe("the module switches", () => {
        assertion below and prove nothing at all. */
     expect(
       switches.length,
-      "no module switches rendered — the guard below would be vacuous",
+      "no module switches rendered - the guard below would be vacuous",
     ).toBeGreaterThanOrEqual(MODULES_THE_API_ACCEPTS.length);
 
     for (const control of switches) {
@@ -470,7 +470,7 @@ describe("start here", () => {
     expect(within(card).getByRole("link", { name: /Take a booking/ })).toBeDefined();
   });
 
-  it("stays on their landing screens — not on every page they visit", async () => {
+  it("stays on their landing screens - not on every page they visit", async () => {
     go(`/h/${HOTEL}/housekeeping`);
     render(<App />);
     await screen.findByRole("heading", { level: 1, name: "Housekeeping" });

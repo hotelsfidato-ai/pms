@@ -49,7 +49,7 @@ export default function RatesPage() {
           <p className="text-base font-medium text-ink-900">Cells are read-only</p>
           <p className="text-sm text-grey-600 mt-0.5 leading-relaxed">
             No channel is connected yet, so a rate changed here would move on this
-            screen and nowhere else — not on Agoda, not on Booking.com, not in the
+            screen and nowhere else - not on Agoda, not on Booking.com, not in the
             confirmation a guest receives. Editing arrives with the channel bridge at
             Stage 9.
           </p>
@@ -99,7 +99,7 @@ export default function RatesPage() {
                       {row.roomType}
                       <span className="block text-2xs font-normal text-grey-500 tabular">
                         {/* A dash for a room type nobody has priced (INV-3). */}
-                        rack {row.rackRate === null ? "—" : money(row.rackRate)}
+                        rack {row.rackRate === null ? "-" : money(row.rackRate)}
                       </span>
                     </th>
                     {row.cells.map((c) => {
@@ -110,13 +110,13 @@ export default function RatesPage() {
                       return (
                         <td key={c.date} className="px-3 py-3 text-right align-middle whitespace-nowrap">
                           {c.soldAdr === null ? (
-                            <Tooltip content={`Nothing sold — ${c.sellable} ${row.roomType} rooms open`}>
-                              <span className="text-grey-300">—</span>
+                            <Tooltip content={`Nothing sold - ${c.sellable} ${row.roomType} rooms open`}>
+                              <span className="text-grey-300">-</span>
                             </Tooltip>
                           ) : (
                             <Tooltip
                               content={`${c.sold} of ${c.sellable} sold · rack ${
-                                c.rackRate === null ? "—" : money(c.rackRate)}`}
+                                c.rackRate === null ? "-" : money(c.rackRate)}`}
                             >
                               <span
                                 className={cn(
@@ -144,7 +144,7 @@ export default function RatesPage() {
 
       <p className="text-xs text-grey-500 mt-4 leading-relaxed">
         A tangerine figure sold below rack. The line beneath each rate is rooms sold
-        against rooms sellable — a rate held at rack against an empty house is worth
+        against rooms sellable - a rate held at rack against an empty house is worth
         as much attention as a discounted one.
       </p>
     </Page>

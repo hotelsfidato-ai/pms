@@ -93,7 +93,7 @@ admin.post("/admin/hotels", async (c) => {
      refusing a bad one now rather than living with it. */
   if (!/^[A-Z0-9]{2,8}$/.test(code)) {
     return c.json(refuse(
-      "A code is 2–8 letters or digits, no spaces — it appears in every " +
+      "A code is 2–8 letters or digits, no spaces - it appears in every " +
       "URL and every invoice number, and it cannot be changed later.",
     ), 409);
   }
@@ -102,8 +102,8 @@ admin.post("/admin/hotels", async (c) => {
   if (!digest) {
     return c.json(refuse(
       "This action needs the provisioning key. Creating a property " +
-      "manufactures a whole tenant — rooms, an invoice series, a folio " +
-      "namespace — so a signed-in session is not enough on its own.",
+      "manufactures a whole tenant - rooms, an invoice series, a folio " +
+      "namespace - so a signed-in session is not enough on its own.",
     ), 403);
   }
 
@@ -134,7 +134,7 @@ admin.post("/admin/hotels", async (c) => {
         code, name,
         roomTypes: Number(made[0]!.types),
         rooms: 0,
-        next: "Add its rooms — the property has its type catalogue but no rooms yet.",
+        next: "Add its rooms - the property has its type catalogue but no rooms yet.",
       };
     });
     return c.json(result, "ok" in result && result.ok ? 200 : 409);
@@ -182,7 +182,7 @@ function changedOrRefuse(
 ): { ok: false; reason: string } | null {
   if (rowCount && rowCount > 0) return null;
   return refuse(
-    `Nothing was changed — ${what}. This is not a saved change; it is a ` +
+    `Nothing was changed - ${what}. This is not a saved change; it is a ` +
     `write that matched nothing.`,
   );
 }
@@ -303,7 +303,7 @@ admin.get("/admin/hotels/:code", async (c) => {
       `select s.id::text, s.full_name as name, s.email::text, sh.role,
               s.is_active, (s.firebase_uid is not null) as can_sign_in,
               s.is_group_admin,
-              /* NULL is the Dashboard — what everybody had before 087. */
+              /* NULL is the Dashboard - what everybody had before 087. */
               coalesce(s.home_screen, 'dashboard') as home_screen
          from staff_hotels sh join staff s on s.id = sh.staff_id
         where sh.hotel_id = $1
@@ -382,7 +382,7 @@ admin.patch("/admin/hotels/:code", async (c) => {
     const gstin = input.gstin?.trim().toUpperCase();
     if (gstin && !/^[0-9]{2}[A-Z]{5}[0-9]{4}[A-Z][0-9A-Z]Z[0-9A-Z]$/.test(gstin)) {
       return refuse(
-        "That does not look like a GSTIN — fifteen characters, starting " +
+        "That does not look like a GSTIN - fifteen characters, starting " +
         "with the two-digit state code. It prints on every invoice this " +
         "property issues, so it is worth checking now.",
       );
@@ -446,7 +446,7 @@ admin.post("/admin/hotels/:code/:state", async (c) => {
       if (Number(rows[0]!.n) > 0) {
         return refuse(
           `${rows[0]!.n} guest(s) are still checked in. Check them out ` +
-          `first — a closed property leaves a folio nobody can reach.`,
+          `first - a closed property leaves a folio nobody can reach.`,
         );
       }
     }
@@ -679,7 +679,7 @@ admin.post("/admin/staff", async (c) => {
   const email = input.email?.trim().toLowerCase();
   const name = input.name?.trim();
   if (!email || !email.includes("@")) {
-    return c.json(refuse("A working email address is required — it is how " +
+    return c.json(refuse("A working email address is required - it is how " +
       "they sign in."), 409);
   }
   if (!name) return c.json(refuse("What is their name?"), 409);

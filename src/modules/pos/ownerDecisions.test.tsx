@@ -145,7 +145,7 @@ describe("Tables sending a round (D17-18)", () => {
     expect(opened).not.toHaveBeenCalled();
   });
 
-  it("opens nothing for a round held on the device — the kitchen does not have it", async () => {
+  it("opens nothing for a round held on the device - the kitchen does not have it", async () => {
     const { opened } = await sendARound(() => {
       throw new HeldError("Held until the connection is back.", "e-1", false);
     });

@@ -106,7 +106,7 @@ export default function PricingPage() {
     <Page>
       <PageHeader
         title="Pricing"
-        description="One base price — the cheapest room, one person, no breakfast. Every other price is that figure plus a difference, so changing the base moves them all."
+        description="One base price - the cheapest room, one person, no breakfast. Every other price is that figure plus a difference, so changing the base moves them all."
       />
 
       {data.basis
@@ -231,7 +231,7 @@ function ChooseTheBase({
       <p className="text-base text-grey-500 mt-1.5 max-w-2xl leading-relaxed">
         The cheapest thing this property sells, for one person, with no meals.
         Every other price is built from it, so nothing else can be priced until
-        this is set. It does not change how many people a room is sold for —
+        this is set. It does not change how many people a room is sold for - 
         that stays on the room type.
       </p>
 
@@ -377,7 +377,7 @@ function Calendar({
                 )}
               >
                 {/* A dash until somebody types one, and never a zero. */}
-                {set ? money(cell!.price!) : "—"}
+                {set ? money(cell!.price!) : "-"}
               </span>
             </button>
           );
@@ -433,13 +433,13 @@ function TheBaseFigure({
             The base, one person, no meals
           </p>
           <p className="text-2xl font-semibold text-ink-900 tabular mt-0.5">
-            {base == null ? <span className="text-grey-500">—</span> : money(base)}
+            {base == null ? <span className="text-grey-500">-</span> : money(base)}
           </p>
           {base == null && rackInstead != null && (
             <p className="text-2xs text-grey-500 mt-1 max-w-56 leading-relaxed">
               Not set. Until it is, this room still quotes its old rack rate of{" "}
               <span className="tabular">{money(rackInstead)}</span>, which covers
-              the people the room type is sold for — not one.
+              the people the room type is sold for - not one.
             </p>
           )}
         </div>
@@ -504,7 +504,7 @@ function Differences({
     <div className="border-t border-grey-100 pt-4 mt-4">
       <h3 className="text-md font-semibold text-ink-900">The differences</h3>
       <p className="text-base text-grey-500 mt-1 mb-3 max-w-2xl leading-relaxed">
-        In rupees, above the base. Where nothing is set, the base applies —
+        In rupees, above the base. Where nothing is set, the base applies - 
         which is a dash here, not a zero. A meal plan is priced per person; a
         room type, per room.
       </p>
@@ -579,7 +579,7 @@ function OneDifference({
         <p className="text-base text-ink-900 truncate">{name}</p>
         <p className="text-2xs text-grey-500">{note}</p>
         <p className="text-md tabular mt-1">
-          {offset ? money(offset.amount) : <span className="text-grey-500">—</span>}
+          {offset ? money(offset.amount) : <span className="text-grey-500">-</span>}
         </p>
       </div>
       <Input
@@ -632,7 +632,7 @@ function WhatItComesTo({ data, date }: { data: Pricing; date: string }) {
         What a room costs on {dateShort(date)}
       </h3>
       <p className="text-base text-grey-500 mt-1 mb-3 max-w-2xl leading-relaxed">
-        Read back from the database, not worked out on this screen — this is the
+        Read back from the database, not worked out on this screen - this is the
         figure a booking would be quoted. Each says where it came from, because
         a price somebody typed and a price built from the base look identical
         otherwise.
@@ -664,7 +664,7 @@ function WhatItComesTo({ data, date }: { data: Pricing; date: string }) {
                   return (
                     <td key={p.code} className="py-2 px-3 text-right">
                       <span className={cn("tabular", cell?.price == null && "text-grey-500")}>
-                        {cell?.price == null ? "—" : money(cell.price)}
+                        {cell?.price == null ? "-" : money(cell.price)}
                       </span>
                       <span className="block text-2xs text-grey-500">
                         {cell?.source

@@ -50,13 +50,13 @@ export function toCsv(headers: string[], rows: unknown[][]): string {
 }
 
 /* The published preview runs inside a viewer that will not let a page
-   download anything on its own — `<a download>` is inert there, blob
+   download anything on its own - `<a download>` is inert there, blob
    href included. A report's CSV button would appear to work and do
    nothing, which is the defect this project keeps finding.
 
    `claude.use("downloads")` is the mediated path: the viewer sees a
    confirmation and may decline. It exists only inside that viewer, so
-   this is a FEATURE TEST rather than a build flag — the same file
+   this is a FEATURE TEST rather than a build flag - the same file
    served from an ordinary web server takes the link path below. */
 async function offerThroughViewer(
   filename: string, body: string,
@@ -85,7 +85,7 @@ async function offerThroughViewer(
  * Hand the file to the browser.
  *
  * A BOM leads the file. Without it Excel reads UTF-8 as the system
- * codepage and every ₹ becomes â‚¹ — on a report whose whole subject is
+ * codepage and every ₹ becomes â‚¹ - on a report whose whole subject is
  * rupees.
  */
 export function downloadCsv(filename: string, csv: string): void {

@@ -80,7 +80,7 @@ const STAFF_COLUMNS: Column<StaffRecord>[] = [
   },
   {
     key: "seen", header: "Last seen", hideBelow: "lg", numeric: true,
-    cell: () => <span className="text-grey-500">—</span>,
+    cell: () => <span className="text-grey-500">-</span>,
   },
 ];
 
@@ -153,7 +153,7 @@ export function RolesPage() {
         <Card>
           <ErrorState
             title="The permission matrix did not load"
-            description="Nothing in the product is granted while this is unreadable — every gate reads the same source."
+            description="Nothing in the product is granted while this is unreadable - every gate reads the same source."
             error={error}
             onRetry={() => refetch()}
           />
@@ -177,7 +177,7 @@ export function RolesPage() {
     <Page>
       <PageHeader
         title="Roles and permissions"
-        description="The live matrix, read from src/lib/permissions.ts. This is the same source the navigation filters on and every disabled button reads from — it cannot drift from what the product enforces."
+        description="The live matrix, read from src/lib/permissions.ts. This is the same source the navigation filters on and every disabled button reads from - it cannot drift from what the product enforces."
         badge={<StatusPill tone="info">{data.length} roles</StatusPill>}
       />
 
@@ -238,7 +238,7 @@ export function RolesPage() {
       <p className="flex items-start gap-2 text-xs text-grey-500 mt-4 leading-relaxed">
         <ShieldCheck className="size-3.5 shrink-0 mt-0.5" />
         <span>
-          A tick is every action; a number is a partial grant — hover it to see
+          A tick is every action; a number is a partial grant - hover it to see
           which. A blocked action is never hidden in the product: it is shown
           disabled, with the reason this matrix produces.
         </span>
@@ -281,7 +281,7 @@ const AUDIT_COLUMNS: Column<AuditEntry>[] = [
     key: "actor", header: "By", hideBelow: "sm",
     /* A dash, never a stand-in: this column said "admin" on every row
        until ADM-1, which answered what happened and not who did it. */
-    cell: (e) => <span className="text-grey-600">{e.actor ?? "—"}</span>,
+    cell: (e) => <span className="text-grey-600">{e.actor ?? "-"}</span>,
   },
 ];
 
@@ -296,7 +296,7 @@ export function AuditLogPage() {
     <Page>
       <PageHeader
         title="Audit log"
-        description="Append-only. Nothing here is edited or deleted — a wrong posting is reversed, and the reversal is its own entry."
+        description="Append-only. Nothing here is edited or deleted - a wrong posting is reversed, and the reversal is its own entry."
         badge={data ? <StatusPill tone="neutral">{data.length} entries</StatusPill> : undefined}
       />
       <Card>
@@ -317,7 +317,7 @@ export function AuditLogPage() {
         The folio ledger <em>is</em> the audit trail for money. It is append-only by
         construction, so nothing is recorded twice and nothing can be quietly
         rewritten. <strong className="font-medium text-grey-600">By</strong> is the
-        person who made the entry. A dash means nobody was recorded — older
+        person who made the entry. A dash means nobody was recorded - older
         charges, payments and reversals made at the desk did not record who made
         them.
       </p>

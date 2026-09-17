@@ -101,7 +101,7 @@ export async function blockersFor(
      opposite postings, and nobody but a person at the desk knows
      which. */
   const { rows } = await client.query<{ number: string; guest: string }>(
-    `select coalesce(rm.number, '—') as number, g.full_name as guest
+    `select coalesce(rm.number, '-') as number, g.full_name as guest
        from reservations r
        join guests g on g.id = r.guest_id
        left join room_assignments ra on ra.reservation_id = r.id
@@ -119,7 +119,7 @@ export async function blockersFor(
       id: "departures",
       reason:
         `${rows.length} ${rows.length === 1 ? "room is" : "rooms are"} still ` +
-        `showing due out. Check them out, or extend the stay — the audit ` +
+        `showing due out. Check them out, or extend the stay - the audit ` +
         `will not decide which.`,
       rooms: rows.map((r) => `${r.number} · ${r.guest}`),
     });
@@ -147,7 +147,7 @@ export async function blockersFor(
       reason:
         "This property has no GST rule for rooms, so a room charge has no " +
         "rate to carry. Set it in Settings → Tax. A missing rate is not " +
-        "zero — the audit will not invent one.",
+        "zero - the audit will not invent one.",
       rooms: [],
     });
   }
@@ -185,7 +185,7 @@ export async function blockersFor(
       id: "front-desk-drawer",
       reason:
         `${openShifts.length === 1 ? "A front-desk drawer is" : `${openShifts.length} front-desk drawers are`}`
-        + " still open. Count the cash and close the shift — the audit"
+        + " still open. Count the cash and close the shift - the audit"
         + " cannot say what was taken at the desk until somebody has.",
       rooms: openShifts.map((x) => `${x.who} · opened ${x.opened}`),
     });
@@ -216,7 +216,7 @@ export async function blockersFor(
       id: "till-drawer",
       reason:
         "The till has not been closed for today. Run the day end on it"
-        + " first — the restaurant's takings belong in this audit, and"
+        + " first - the restaurant's takings belong in this audit, and"
         + " they are not final until the drawer is counted.",
       rooms: openTills.map((x) => `${x.outlet} · ${x.orders} orders today`),
     });
@@ -353,7 +353,7 @@ nightAudit.post("/:code/night-audit/run", async (c) => {
                  its group posts to the master folio; everything else posts
                  to its own. */
               app.folio_for_room_charge(r.id)::text as folio_id,
-              coalesce(a.number, '—') as room,
+              coalesce(a.number, '-') as room,
               r.agreed_rate::text as rate,
               r.is_complimentary as comp,
               (r.route_room_to_group and r.group_id is not null) as routed
@@ -365,8 +365,8 @@ nightAudit.post("/:code/night-audit/run", async (c) => {
             DATE, AND IT POSTED THE NIGHT TWICE.
 
             A room move does not release anything. It is modelled as two
-            live assignments over adjoining half-open ranges — 302 for
-            [5 Sep, 6 Sep), then 303 for [6 Sep, 10 Sep) — because both
+            live assignments over adjoining half-open ranges - 302 for
+            [5 Sep, 6 Sep), then 303 for [6 Sep, 10 Sep) - because both
             are true, on different nights. "released_at is null" is true
             of both, so one stay came back as TWO rows, the "not exists"
             guard below was evaluated once per row before either insert,
@@ -382,7 +382,7 @@ nightAudit.post("/:code/night-audit/run", async (c) => {
             The predicate is the half-open range this schema uses
             everywhere: "from <= D < to". LATERAL with "limit 1" on top,
             because a query that posts money must not depend on the data
-            never producing an overlap — belt and braces are cheap here
+            never producing an overlap - belt and braces are cheap here
             and a double charge on a guest's bill is not. */
          left join lateral (
            select rm.number
@@ -407,7 +407,7 @@ nightAudit.post("/:code/night-audit/run", async (c) => {
 
              PER STAY, NOT PER FOLIO. It used to ask whether the folio
              held a room charge for tonight, which is identical while
-             every stay has its own folio — and silently wrong the moment
+             every stay has its own folio - and silently wrong the moment
              a group routes twelve rooms to one master: charge the first,
              skip the other eleven, every night, and the run's summary
              reports what it posted so nothing looks amiss. */
@@ -538,7 +538,7 @@ nightAudit.post("/:code/night-audit/run", async (c) => {
                 'night_audit', app.current_user_id()
            from (select app.gst_rate($1, 'room', $6::numeric) as rate) t`,
         [hotelId, m.folio_id, businessDate,
-         "Retention — no-show", amount, Number(m.agreed_rate ?? 0)],
+         "Retention - no-show", amount, Number(m.agreed_rate ?? 0)],
       );
       retained += amount;
     }

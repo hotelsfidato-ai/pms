@@ -39,14 +39,14 @@ export function NotificationsPage() {
     <Page>
       <PageHeader
         title="Notifications"
-        description="Derived, never stored — so nothing here can go stale while the thing it describes changes."
+        description="Derived, never stored - so nothing here can go stale while the thing it describes changes."
         badge={data ? <StatusPill tone={data.length ? "warning" : "success"}>{data.length}</StatusPill> : undefined}
       />
       {error ? (
         <Card>
           <ErrorState
             title="Could not work out what needs attention"
-            description="These are derived from the day's stays and postings. Nothing is lost — try again."
+            description="These are derived from the day's stays and postings. Nothing is lost - try again."
             error={error}
             onRetry={() => refetch()}
           />

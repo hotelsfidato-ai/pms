@@ -101,13 +101,13 @@ export function RepairCosts({
                       {moneyPrecise(k.amount)}
                     </span>
                     <span className="text-sm text-grey-500">
-                      {dateLong(k.recordedAt)} · {k.recordedBy ?? "—"}
+                      {dateLong(k.recordedAt)} · {k.recordedBy ?? "-"}
                     </span>
                   </div>
                   {k.note && <p className="text-sm text-grey-600">{k.note}</p>}
                   {k.cancelled && (
                     <p className="text-sm text-grey-600">
-                      Cancelled {dateLong(k.cancelled.at)} by {k.cancelled.by ?? "—"}: {k.cancelled.reason}
+                      Cancelled {dateLong(k.cancelled.at)} by {k.cancelled.by ?? "-"}: {k.cancelled.reason}
                     </p>
                   )}
                   <div className="flex flex-wrap gap-2">
@@ -176,7 +176,7 @@ export function RepairCosts({
                   />
                 )}
               </Field>
-              <Field label="Note" hint="Optional — who was paid, for what.">
+              <Field label="Note" hint="Optional - who was paid, for what.">
                 {(f) => (
                   <Textarea {...fieldProps(f)} rows={2} value={note}
                     onChange={(e) => setNote(e.target.value)} />

@@ -183,7 +183,7 @@ export function AddEquipmentDialog({ code, open, onOpenChange, onAdded }: {
                   </NativeSelect>
                 ) : noPlaces ? (
                   <p className="text-sm text-grey-600 leading-relaxed">
-                    No places other than rooms are set up at this property yet — the lobby,
+                    No places other than rooms are set up at this property yet - the lobby,
                     the kitchen, the restaurant. Until they are, choose a room.
                   </p>
                 ) : (

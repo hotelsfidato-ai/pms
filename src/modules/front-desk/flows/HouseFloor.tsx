@@ -218,7 +218,7 @@ function RoomTile({ room, businessDate, stay, onOpenStay, onWalkIn }: {
         </>
       ) : (
         <p className="text-2xs text-grey-500 mt-auto pt-1">
-          {state === "out-of-service" ? "—" : room.type}
+          {state === "out-of-service" ? "-" : room.type}
         </p>
       )}
     </button>

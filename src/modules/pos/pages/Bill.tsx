@@ -167,7 +167,7 @@ export default function BillPage() {
               {o.paymentMethod === "function"
                 ? `Charged to ${o.eventTitle ?? "the function"}'s bill`
                 : <>Paid by {o.paymentMethod}
-                    {o.paymentMethod === "room" && " — charged to the guest's bill"}</>}
+                    {o.paymentMethod === "room" && " - charged to the guest's bill"}</>}
             </p>
           ) : (
             <p className="font-medium">NOT PAID</p>

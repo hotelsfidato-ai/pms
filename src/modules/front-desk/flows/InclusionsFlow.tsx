@@ -97,7 +97,7 @@ export function InclusionsFlow({
               <p className="text-base text-ink-900">Nothing recorded</p>
               <p className="text-sm text-grey-500 mt-1 leading-relaxed">
                 The rate plan is {stay.ratePlan}. Anything promised beyond it
-                — a pickup, a cake, a late checkout — belongs here so the
+                - a pickup, a cake, a late checkout - belongs here so the
                 next person on the desk can see it.
               </p>
             </div>
@@ -155,7 +155,7 @@ export function InclusionsFlow({
                       {(catalogue.data ?? []).map((i) => (
                         <option key={i.id} value={i.id}>
                           {i.name}
-                          {i.rate === null ? " — included" : ` — ${money(i.rate)}`}
+                          {i.rate === null ? " - included" : ` - ${money(i.rate)}`}
                         </option>
                       ))}
                     </NativeSelect>

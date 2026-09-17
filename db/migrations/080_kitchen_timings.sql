@@ -101,7 +101,7 @@ begin
     return old;
   end if;
 
-  raise exception 'A kitchen timing cannot be % — it is a record of what '
+  raise exception 'A kitchen timing cannot be % - it is a record of what '
                   'happened.', lower(tg_op)
     using hint = 'Move the dish again. The new move is a new row, and both '
                  'stay visible.',

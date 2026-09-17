@@ -173,7 +173,7 @@ describe("the Night audit screen", TEST_LIMIT, () => {
       .filter((tr) => tr.textContent?.includes("10 Sep 2026"));
     expect(rows.length, "no table row for 10 Sep").toBeGreaterThan(0);
     const cells = Array.from(rows[0]!.querySelectorAll("td")).map((td) => td.textContent?.trim());
-    expect(cells).toEqual(["10 Sep 2026", "—", expect.any(String), "—", "—", "—"]);
+    expect(cells).toEqual(["10 Sep 2026", "-", expect.any(String), "-", "-", "-"]);
   });
 
   it("says what belongs in the list when no day has been closed", async () => {

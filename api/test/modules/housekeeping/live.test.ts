@@ -156,7 +156,7 @@ describe("the housekeeping board hears a change (D17-39)", () => {
     expect(got).not.toContain(topic());
   });
 
-  it("never as a bare hotel id — a room marked clean does not wake the tills", async () => {
+  it("never as a bare hotel id - a room marked clean does not wake the tills", async () => {
     const got = await during(async () => {
       await call(`/rooms/${room.number}/housekeeping`, "PUT", { state: "dirty" });
       await call(`/rooms/${room.number}/housekeeping`, "PUT", { state: "clean" });

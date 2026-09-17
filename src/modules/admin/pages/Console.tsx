@@ -110,7 +110,7 @@ function Stat({ label, value, hint, tone }: {
         )}>
           {/* A dash, never a zero, while it is still loading. A zero is a
               claim about the database. */}
-          {value === undefined ? "—" : value}
+          {value === undefined ? "-" : value}
         </p>
         {hint && <p className="text-2xs text-grey-500 mt-0.5">{hint}</p>}
       </CardBody>
@@ -190,7 +190,7 @@ function Activity14({ overview }: { overview: AdminOverview | null | undefined }
                   {/* A dash, not "System". Null means a migration or the
                       loader acted, and naming a person who did not act is
                       worse than admitting nobody is recorded. */}
-                  {r.actor ?? "—"}
+                  {r.actor ?? "-"}
                   {r.hotel && ` · ${r.hotel}`}
                 </span>
               </span>

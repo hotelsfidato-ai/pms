@@ -169,7 +169,7 @@ export default function DesignSystemPage() {
               </div>
               <p className="text-sm text-grey-600 mt-2.5 leading-relaxed">
                 The brand palette has no success colour, which an operational system
-                cannot do without — confirmed, paid, reconciled and synced all need one.
+                cannot do without - confirmed, paid, reconciled and synced all need one.
                 This muted teal-green was tuned to sit with the warm palette rather than
                 fight it. Flagged for brand review.
               </p>
@@ -206,7 +206,7 @@ export default function DesignSystemPage() {
                   <p className="text-2xs text-grey-500 tabular">{entry.size}</p>
                 </div>
                 <p className={cn(entry.className, "text-ink-900 flex-1 min-w-0 truncate")}>
-                  Fidato Hotels — 7 properties
+                  Fidato Hotels - 7 properties
                 </p>
                 <p className="text-sm text-grey-500 hidden lg:block w-40 shrink-0">
                   {entry.use}
@@ -234,12 +234,12 @@ export default function DesignSystemPage() {
 
           <Card className="p-5">
             <p className="text-2xs font-semibold uppercase tracking-wide text-grey-500 mb-2">
-              Brand serif — print only
+              Brand serif - print only
             </p>
             <p className="print-serif text-xl text-ink-900">Tax Invoice</p>
             <p className="print-serif text-base text-grey-600 mt-1">Fidato Hotels</p>
             <p className="text-sm text-grey-500 mt-3 leading-relaxed">
-              Georgia is retained for invoice and report covers — a deliberate, documented
+              Georgia is retained for invoice and report covers - a deliberate, documented
               narrowing of the guide's Georgia + Arial pairing, which reads dated in a
               dense interface.
             </p>
@@ -509,7 +509,7 @@ export default function DesignSystemPage() {
               </DialogTrigger>
               <DialogContent
                 title="Cancel this reservation?"
-                description="The record is kept and marked cancelled — reservations are never deleted."
+                description="The record is kept and marked cancelled - reservations are never deleted."
                 footer={
                   <>
                     <DialogClose asChild>
@@ -567,12 +567,12 @@ export default function DesignSystemPage() {
       {/* ── Drawer — CRITICAL for PMS ── */}
       <Section
         title="Drawer"
-        description="The most important primitive in the PMS — every flow opens a side panel over Stay View"
+        description="The most important primitive in the PMS - every flow opens a side panel over Stay View"
       >
         <Card>
           <CardBody>
             <p className="text-sm text-grey-600 mb-4">
-              Arrival, charge, settle, check-out — every front desk flow opens as a drawer rather than navigating away.
+              Arrival, charge, settle, check-out - every front desk flow opens as a drawer rather than navigating away.
               The tape chart stays visible behind it so the clerk keeps their place in the day.
             </p>
             <Drawer>
@@ -580,7 +580,7 @@ export default function DesignSystemPage() {
                 <Button variant="primary">Open arrival flow</Button>
               </DrawerTrigger>
               <DrawerContent
-                title="Check in — Room 206"
+                title="Check in - Room 206"
                 description="Ananya Bose · 2 nights · CP"
                 footer={
                   <>
@@ -600,7 +600,7 @@ export default function DesignSystemPage() {
                   </Field>
                   <p className="text-sm text-grey-500">
                     The drawer slides from the right, traps focus inside, and returns focus to the trigger on close.
-                    Size, motion, and focus behavior must be correct — if this is wrong, every flow in CP5 is wrong.
+                    Size, motion, and focus behavior must be correct - if this is wrong, every flow in CP5 is wrong.
                   </p>
                 </div>
               </DrawerContent>
@@ -752,7 +752,7 @@ export default function DesignSystemPage() {
       {/* ── States ── */}
       <Section
         title="Empty, loading and error states"
-        description="Every list screen ships all three — empty vs no-results vs error have different words and different exits"
+        description="Every list screen ships all three - empty vs no-results vs error have different words and different exits"
       >
         <div className="grid gap-4 lg:grid-cols-3">
           <Card>
@@ -809,7 +809,7 @@ export default function DesignSystemPage() {
         <div className="grid gap-4 lg:grid-cols-2">
           <Card className="p-5">
             <p className="text-2xs font-semibold uppercase tracking-wide text-grey-500 mb-3">
-              Spacing — 8pt grid
+              Spacing - 8pt grid
             </p>
             <div className="space-y-2">
               {[4, 8, 12, 16, 24, 32].map((size) => (
@@ -828,7 +828,7 @@ export default function DesignSystemPage() {
             <p className="text-base text-grey-600 leading-relaxed">
               Every transition is 150–200ms with an ease-out curve. Nothing bounces,
               nothing springs, nothing slides further than it needs to. Hover an element
-              anywhere on this page — the change should register without ever asking you
+              anywhere on this page - the change should register without ever asking you
               to wait for it.
             </p>
             <div className="flex gap-2 mt-4">
@@ -847,7 +847,7 @@ export default function DesignSystemPage() {
         <CardBody>
           <p className="text-sm text-grey-600 leading-relaxed">
             Every component on this page is imported from{" "}
-            <code className="text-grey-700">src/components/ui</code> — the same modules the
+            <code className="text-grey-700">src/components/ui</code> - the same modules the
             product uses. Nothing here is a mock-up, so this page cannot drift from the
             application.
           </p>

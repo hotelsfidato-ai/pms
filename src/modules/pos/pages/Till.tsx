@@ -230,7 +230,7 @@ export default function TillPage() {
             </p>
             <p className="text-sm text-grey-600 mt-1 leading-relaxed">
               Nothing can be sold until the hotel enters what it sells. The
-              prices are yours — this system ships none.
+              prices are yours - this system ships none.
             </p>
           </CardBody>
         </Card>
@@ -657,7 +657,7 @@ function DiscountDialog({
               this bill's ceiling is the number they actually need. */}
           {overCap && !tooMuch && (
             <p className="text-sm text-brand-red">
-              A biller may take off up to {cap}% — {money(ceiling!)} on this
+              A biller may take off up to {cap}% - {money(ceiling!)} on this
               bill. {live.length > 0
                 ? "Anything larger goes on as one of the promotions above."
                 : "Anything larger needs a named promotion, set up on the "
@@ -666,7 +666,7 @@ function DiscountDialog({
           )}
           {!overCap && !tooMuch && preview === null && ceiling !== null && (
             <p className="text-sm text-grey-500">
-              Up to {cap}% by hand — {money(ceiling)} on this bill.
+              Up to {cap}% by hand - {money(ceiling)} on this bill.
             </p>
           )}
 
@@ -917,7 +917,7 @@ function OrderPanel({
   const abandon = async () => {
     const reason = window.prompt(
       "Why is this order being closed unpaid?\n\n" +
-        "It stays on the record with this reason — a walkout and a " +
+        "It stays on the record with this reason - a walkout and a " +
         "duplicate are different things at the end of a shift.",
     );
     if (!reason?.trim()) return;
@@ -1052,7 +1052,7 @@ function OrderPanel({
 
         {order.discountReason && (
           <p className="text-sm text-grey-600 mt-1.5">
-            Discounted — {order.discountReason}
+            Discounted - {order.discountReason}
           </p>
         )}
 
@@ -1063,7 +1063,7 @@ function OrderPanel({
                 ? order.paymentMethod === "function"
                   ? `On ${order.eventTitle ?? "the function"}'s bill${order.settledBy ? `, settled by ${order.settledBy}` : ""}.`
                   : `Paid by ${order.paymentMethod}${order.settledBy ? `, taken by ${order.settledBy}` : ""}.`
-                : `Closed unpaid — ${order.abandonedReason}`}
+                : `Closed unpaid - ${order.abandonedReason}`}
             </p>
             {order.status === "settled" && (
               <Button
@@ -1215,7 +1215,7 @@ function OrderPanel({
               onClick={() => setSplitting(true)}
             >
               <Split className="size-4" />
-              Part — pay two ways
+              Part - pay two ways
             </Button>
 
             <Button variant="ghost" size="lg" className="w-full"

@@ -1,0 +1,41 @@
+import { readSuSettings, type SuSettings } from "./config.ts";
+import { fetchTransport, type SuTransport } from "./http.ts";
+import { SuTokenHolder } from "./token.ts";
+import { SuClient } from "./client.ts";
+
+/* ══════════════════════════════════════════════════════════════════
+   ONE SU CONNECTION PER SERVER PROCESS
+
+   The token has to be shared: every push, every reservation pull and
+   every login check in this process draws from SU's 30 tokens an hour,
+   so they must all ask the same holder. It is made the first time
+   anything needs SU, and made again only if the settings change (a
+   restart after the owner edits the settings file does that anyway).
+
+   `useTransportForTests` is the one seam: the API tests stand SU's own
+   documented answers in for SU. Nothing in `src/` calls it.
+   ══════════════════════════════════════════════════════════════════ */
+
+let transport: SuTransport = fetchTransport;
+let cached: { key: string; client: SuClient; tokens: SuTokenHolder } | null = null;
+
+export type SuConnection =
+  | { ok: true; client: SuClient; tokens: SuTokenHolder; settings: SuSettings }
+  | { ok: false; missing: string[]; reason: string };
+
+export function suConnection(): SuConnection {
+  const read = readSuSettings();
+  if (!read.ok) return read;
+  const s = read.settings;
+  const key = JSON.stringify([s.environment, s.clientId, s.clientSecret]);
+  if (!cached || cached.key !== key) {
+    const tokens = new SuTokenHolder(s, transport);
+    cached = { key, tokens, client: new SuClient(s, transport, tokens) };
+  }
+  return { ok: true, client: cached.client, tokens: cached.tokens, settings: s };
+}
+
+export function useTransportForTests(next: SuTransport | null): void {
+  transport = next ?? fetchTransport;
+  cached = null;
+}

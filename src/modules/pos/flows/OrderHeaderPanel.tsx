@@ -187,7 +187,7 @@ export function OrderHeaderPanel({
                     inputMode="numeric"
                     value={covers}
                     onChange={(e) => setCovers(e.target.value)}
-                    placeholder="—"
+                    placeholder="-"
                   />
                 )}
               </Field>
@@ -206,7 +206,7 @@ export function OrderHeaderPanel({
                     onChange={(e) => setWaiterId(e.target.value)}
                   >
                     <option value="">
-                      {order.waiter ?? "—"}
+                      {order.waiter ?? "-"}
                     </option>
                     {(waiters.data ?? []).map((w) => (
                       <option key={w.id} value={w.id}>{w.name}</option>
@@ -240,7 +240,7 @@ export function OrderHeaderPanel({
                         {...fieldProps(f)}
                         value={phone}
                         onChange={(e) => setPhone(e.target.value)}
-                        placeholder="—"
+                        placeholder="-"
                       />
                     )}
                   </Field>
@@ -250,7 +250,7 @@ export function OrderHeaderPanel({
                         {...fieldProps(f)}
                         value={name}
                         onChange={(e) => setName(e.target.value)}
-                        placeholder="—"
+                        placeholder="-"
                       />
                     )}
                   </Field>
@@ -263,7 +263,7 @@ export function OrderHeaderPanel({
                           {...fieldProps(f)}
                           value={address}
                           onChange={(e) => setAddress(e.target.value)}
-                          placeholder="—"
+                          placeholder="-"
                         />
                       )}
                     </Field>
@@ -273,7 +273,7 @@ export function OrderHeaderPanel({
                           {...fieldProps(f)}
                           value={locality}
                           onChange={(e) => setLocality(e.target.value)}
-                          placeholder="—"
+                          placeholder="-"
                         />
                       )}
                     </Field>

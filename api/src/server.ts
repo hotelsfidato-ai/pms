@@ -28,6 +28,7 @@ import {
 } from "./realtime.ts";
 import { approvals } from "./routes/approvals.ts";
 import { places } from "./routes/places.ts";
+import { reportFiles } from "./routes/reportFiles.ts";
 import { attachments } from "./routes/attachments.ts";
 import { notifications } from "./routes/notifications.ts";
 
@@ -195,6 +196,8 @@ app.route("/api/hotels", live);
 app.route("/api/hotels", approvals);
 /* Places and suppliers: shared by the Store, equipment and purchasing. */
 app.route("/api/hotels", places);
+/* Reports as PDF, .xlsx and CSV, made on the server (D17-31, D17-32). */
+app.route("/api/hotels", reportFiles);
 app.route("/api/hotels", attachments);
 
 /* Every service's routers, from its own front door. Where each hangs is
@@ -253,7 +256,7 @@ if (process.argv[1]?.endsWith("server.ts")) {
   server.on("error", (error: NodeJS.ErrnoException) => {
     if (error.code === "EADDRINUSE") {
       console.error(
-        `\n  Port ${env.port} is already in use — an older API is still ` +
+        `\n  Port ${env.port} is already in use - an older API is still ` +
           `serving it.\n  Anything you test now runs against THAT code, ` +
           `not this.\n\n  Windows:  Get-NetTCPConnection -LocalPort ` +
           `${env.port} | Stop-Process -Id { $_.OwningProcess } -Force\n`,

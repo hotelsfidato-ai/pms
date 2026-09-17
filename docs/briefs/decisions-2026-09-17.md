@@ -158,3 +158,14 @@ channel manager, then QA.** The order is `docs/NEXT-BUILD-PLAN.md`.
 | D17-67 | Purchasing | **Starts after the Store's stock per place is merged** |
 | D17-68 | All Inclusive | **Covers everything charged to the room** |
 | D17-69 | Crockery and cutlery (phase 2A) | **The Store chat goes straight on to it** after stock per place |
+
+---
+
+# Answered in the Reports chat — 17 September, night (relayed to the master)
+
+| # | Question | Answer |
+|---|---|---|
+| D17-70 | Reports matching the eZee PDFs | **Follow the eZee LAYOUT, with the group's own BRANDING** (Fidato's colours and type, `src/styles/theme.css`, not eZee's navy and maroon). Figures come from the system's own data; the demo cannot match the exports line by line |
+| D17-71 | Room charges on reports | **Spread over the stay's nights, as eZee does:** Today is tonight's rent; monthly and yearly statistics show nights booked ahead at the booking's rate. Posting itself stays whole-stay on arrival (D17-33) |
+| D17-72 | Complimentary rooms | **Count as sold, as eZee does**, on every report and the Dashboard: occupancy and ADR include them. `src/lib/glossary.ts` says so |
+| D17-73 | Card payments | **Record Credit Card and Debit Card separately** — the Finance chat's (today one `card`). Reports print one "Card" row until it lands |

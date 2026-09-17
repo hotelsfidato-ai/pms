@@ -119,7 +119,7 @@ describe("rostering, scoped to one hotel", () => {
       const { rows } = await db.query(
         `select 1 from staff_hotels sh join hotels h on h.id = sh.hotel_id
           where sh.staff_id = $1 and h.code = 'PUN'`, [strangerId]);
-      expect(rows.length, "the refusal was cosmetic — the row was written")
+      expect(rows.length, "the refusal was cosmetic - the row was written")
         .toBe(0);
     } finally { await db.end(); }
   });
@@ -263,7 +263,7 @@ describe("adding somebody", () => {
     } finally { await db.end(); }
   });
 
-  it("REFUSES a manager 'adding' the owner — that was a takeover", async () => {
+  it("REFUSES a manager 'adding' the owner - that was a takeover", async () => {
     /* ⚠ THE HOLE 088 CLOSES. Adding somebody adopts an account that
        already exists and SETS ITS PASSWORD. A gm who typed the owner's
        email, a role they may give and a password of their own chose the
@@ -318,7 +318,7 @@ describe("one property, for whoever runs it", () => {
     expect(body.grantableRoles).toContain("front_desk");
   });
 
-  it("⚠ REFUSES them another hotel — it carries its GSTIN", async () => {
+  it("⚠ REFUSES them another hotel - it carries its GSTIN", async () => {
     /* 404 rather than 403, because `hotels_read` hides it before the
        guard is reached — and 404 leaks less than 403, which would
        confirm that a property with that code exists. */

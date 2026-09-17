@@ -163,7 +163,7 @@ export function FolioPanel({
 }
 
 /** The mark for a figure nobody has — the same one the stay table prints. */
-const DASH_MARK = "—";
+const DASH_MARK = "-";
 
 function BalanceHeader({ stay, balance }: { stay: Stay; balance: number | null }) {
   if (balance === null) {
@@ -234,7 +234,7 @@ function LedgerList({
     <div className="border border-grey-200 rounded-md overflow-hidden">
       <div className="bg-grey-50 border-b border-grey-200 px-3 py-2">
         <p className="text-2xs font-semibold uppercase tracking-wide text-grey-500">
-          Postings — append only
+          Postings - append only
         </p>
       </div>
       <ul className="divide-y divide-grey-100">
@@ -324,7 +324,7 @@ function ReverseButton({
       onClick={async () => {
         const res = await reverseCharge(hotelId, stayId, posting.id, USER);
         if (res.ok) {
-          toast.success("Posting reversed", "The reversal is its own line — nothing was edited.");
+          toast.success("Posting reversed", "The reversal is its own line - nothing was edited.");
           onDone();
         } else {
           toast.error("Could not reverse", res.reason);
@@ -425,7 +425,7 @@ function AddChargeDialog({
               className="size-4 rounded-xs accent-brand-orange"
             />
             <span className="text-base text-ink-900">
-              Taxable — CGST 2.5% + SGST 2.5%
+              Taxable - CGST 2.5% + SGST 2.5%
             </span>
           </label>
 
@@ -823,7 +823,7 @@ function SplitBillButton({ hotelId, stayId, onDone }: {
                statutory document, not a name somebody typed. */
             <p className="text-base text-grey-600">
               No companies are on file yet. Add one under Companies
-              first — a company bill carries their GSTIN and address.
+              first - a company bill carries their GSTIN and address.
             </p>
           ) : (
             <div className="space-y-4">
@@ -886,7 +886,7 @@ function TransferButton({
     if (!res.ok) return toast.error("Not moved", res.reason);
     toast.success(
       "Moved",
-      "Reversed on one bill and posted on the other — nothing was edited.",
+      "Reversed on one bill and posted on the other - nothing was edited.",
     );
     onDone();
   };

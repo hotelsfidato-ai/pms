@@ -61,7 +61,7 @@ afterEach(() => {
 });
 
 describe("Rooms when the server does not answer", () => {
-  it("loads in the house's shape, then says it failed and offers a retry — never grey bars forever", async () => {
+  it("loads in the house's shape, then says it failed and offers a retry - never grey bars forever", async () => {
     control.mode = "hold";
     render(<App />);
 
@@ -98,7 +98,7 @@ describe("Rooms when the server does not answer", () => {
       expect(el).not.toBeNull();
       return el!;
     });
-    expect(strip.textContent).toMatch(/No connection — these rooms are as they were at /);
+    expect(strip.textContent).toMatch(/No connection - these rooms are as they were at /);
     expect(strip.textContent).toMatch(/has not loaded/);
     /* The house did not go anywhere. */
     expect(tiles().length).toBe(shown);

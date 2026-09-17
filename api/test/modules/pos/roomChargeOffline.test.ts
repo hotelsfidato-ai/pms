@@ -139,7 +139,7 @@ afterAll(async () => {
            (hotel_id, folio_id, business_date, category, description,
             amount, tax_rate, tax_amount, source_type, posted_by)
          select fp.hotel_id, fp.folio_id, fp.business_date, fp.category,
-                'Reversal — room charge test', -fp.amount, fp.tax_rate,
+                'Reversal - room charge test', -fp.amount, fp.tax_rate,
                 -fp.tax_amount, 'pos', fp.posted_by
            from folio_postings fp
            join pos_tickets t on t.posting_id = fp.id
@@ -217,7 +217,7 @@ describe("the day cannot close on a charge that never arrived", () => {
     const blocked = await openBillBlockers();
     expect(
       blocked,
-      "the day end did not notice an open bill — a room charge held "
+      "the day end did not notice an open bill - a room charge held "
       + "offline would then be closed over and lost",
     ).toBeTruthy();
     expect(blocked).toContain(order.orderNo);

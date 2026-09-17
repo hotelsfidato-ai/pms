@@ -185,7 +185,7 @@ export default function NightAuditPage() {
                   {data.canRun.reason}
                 </p>
                 <p className="text-2xs text-grey-500 mt-1.5">
-                  Last run: {data.lastRun ?? "never — this property has not closed a date in this system"}
+                  Last run: {data.lastRun ?? "never - this property has not closed a date in this system"}
                 </p>
               </div>
               <Tooltip content={data.canRun.reason ?? ""}>
@@ -213,7 +213,7 @@ export default function NightAuditPage() {
                   Nothing was run again. The record that was made:
                 </p>
                 <p className="text-sm text-grey-600 tabular">
-                  Ran by {alreadyMade.ranBy ?? "—"}
+                  Ran by {alreadyMade.ranBy ?? "-"}
                   {" · "}closed {dateTime(alreadyMade.completedAt)}
                   {" · "}rooms posted {orDash(alreadyMade.roomsPosted)}
                   {" · "}room revenue {moneyOrDash(alreadyMade.revenuePosted)}
@@ -333,13 +333,13 @@ export default function NightAuditPage() {
 }
 
 /* A figure the record does not hold is a dash, never a zero. */
-const orDash = (n: number | null) => (n === null ? "—" : String(n));
-const moneyOrDash = (n: number | null) => (n === null ? "—" : money(n));
+const orDash = (n: number | null) => (n === null ? "-" : String(n));
+const moneyOrDash = (n: number | null) => (n === null ? "-" : money(n));
 
 const CLOSED_DAY_COLUMNS: Column<ClosedDay>[] = [
   { key: "day", header: "Day", cell: (d) => dateShort(d.businessDate) },
   /* Nobody was recorded before 17 September: a dash, not a guess. */
-  { key: "ranBy", header: "Ran by", cell: (d) => d.ranBy ?? "—" },
+  { key: "ranBy", header: "Ran by", cell: (d) => d.ranBy ?? "-" },
   { key: "closed", header: "Closed", cell: (d) => dateTime(d.completedAt), hideBelow: "md" },
   { key: "rooms", header: "Rooms posted", numeric: true, cell: (d) => orDash(d.roomsPosted) },
   /* The room charges the audit posted, before tax. */

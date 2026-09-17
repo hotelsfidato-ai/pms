@@ -53,7 +53,7 @@ export const MENU_SPEC: ImportSpec = {
     { header: "Dish", field: "name", required: true,
       note: "The name a guest reads on the bill." },
     { header: "Price", field: "price", required: true,
-      note: "Rupees. A blank is REJECTED — it is not zero." },
+      note: "Rupees. A blank is REJECTED - it is not zero." },
     { header: "Tax heading", field: "taxKind", required: false,
       note: "restaurant, bar, banquet or other. Sets it for the whole "
           + "section. Leave blank to keep what the section already has." },
@@ -94,7 +94,7 @@ export const ROOM_TYPE_SPEC: ImportSpec = {
     { header: "Maximum", field: "maxOccupancy", required: true,
       note: "The most that may be put in the room." },
     { header: "Tariff", field: "rate", required: false,
-      note: "Per night. Blank means UNPRICED — the type shows a dash and "
+      note: "Per night. Blank means UNPRICED - the type shows a dash and "
           + "cannot be sold until it has one. That is deliberate." },
     { header: "Extra adult", field: "extraAdult", required: false,
       note: "Blank means an extra adult makes the whole tariff a dash, "
@@ -144,7 +144,7 @@ export const STOCK_SPEC: ImportSpec = {
       note: "Kitchen, Bar, Housekeeping, Maintenance. Groups the list; "
           + "nothing depends on it." },
     { header: "Warn below", field: "reorderLevel", required: false,
-      note: "Blank means no warning. Blank is NOT zero — zero would mean "
+      note: "Blank means no warning. Blank is NOT zero - zero would mean "
           + "warn me once it has run out, which is much too late." },
   ],
   /* No price column, and that is the point. An item does not have a
@@ -281,11 +281,11 @@ export function fileProblem(file: File): string | null {
 
   if (name.endsWith(".xlsx") || name.endsWith(".xls")) {
     return "That is an Excel workbook. Open it, choose File → Save As, "
-         + "and pick CSV — then send that file. The template downloads in "
+         + "and pick CSV - then send that file. The template downloads in "
          + "the same format and opens in Excel.";
   }
   if (name.endsWith(".numbers") || name.endsWith(".ods")) {
-    return "Export that as CSV first — the template downloads in that "
+    return "Export that as CSV first - the template downloads in that "
          + "format and your spreadsheet will open it.";
   }
   if (!name.endsWith(".csv") && !name.endsWith(".txt")) {

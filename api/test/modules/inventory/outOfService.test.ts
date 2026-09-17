@@ -180,7 +180,7 @@ describe("a retired room", () => {
   });
 });
 
-describe("room 308's shape — a block covering today, a status saying clean", () => {
+describe("room 308's shape - a block covering today, a status saying clean", () => {
   it("is subtracted by the inventory and the bell, and sellable on the Rooms screen's data", async () => {
     const before = await sellableOn(businessDate);
 

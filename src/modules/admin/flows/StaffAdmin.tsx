@@ -105,7 +105,7 @@ export function NewPerson({ onDone }: { onDone: () => void }) {
       res.existed ? `${name} updated` : `${name} added`,
       isAdmin
         ? "They can sign in now, and they reach every property."
-        : "They can sign in now. Give them a property below — until then "
+        : "They can sign in now. Give them a property below - until then "
           + "the app opens empty for them.",
     );
     setEmail(""); setName(""); setIsAdmin(false); setKey("");
@@ -135,7 +135,7 @@ export function NewPerson({ onDone }: { onDone: () => void }) {
               to read it back to them. */}
           <Field label="Password" value={password} onChange={setPassword}
             placeholder="something they will remember"
-            hint={`At least ${MIN_PASSWORD} characters. Tell it to them — nothing is emailed.`} />
+            hint={`At least ${MIN_PASSWORD} characters. Tell it to them - nothing is emailed.`} />
 
           <label className="flex items-start gap-2.5 py-1 cursor-pointer">
             <input
@@ -183,7 +183,7 @@ export function NewPerson({ onDone }: { onDone: () => void }) {
               — but it now says the thing that is still true. */}
           <p className="text-2xs text-grey-600 leading-relaxed pt-1">
             This creates their sign-in account too. Give them a property
-            below, or they sign in to an empty application with no error —
+            below, or they sign in to an empty application with no error - 
             which reads as a fault rather than as a setting.
           </p>
         </div>
@@ -411,7 +411,7 @@ export function NewProperty({ onDone }: { onDone: () => void }) {
                   Provisioning key
                 </p>
                 <p className="text-2xs text-grey-600 mt-0.5 leading-relaxed mb-2">
-                  Creating a property manufactures a whole tenant — rooms, an
+                  Creating a property manufactures a whole tenant - rooms, an
                   invoice series, a folio namespace. Being signed in as an
                   administrator is not enough on its own.
                 </p>

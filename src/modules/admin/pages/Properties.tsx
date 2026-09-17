@@ -156,7 +156,7 @@ export function PropertiesPage() {
             <Info className="size-3.5 shrink-0 mt-0.5" />
             <span>
               Creating a property mints its rooms, its invoice series and its
-              folio namespace — <strong>the code appears in every URL and
+              folio namespace - <strong>the code appears in every URL and
               every invoice number and cannot be changed afterwards.</strong>
             </span>
           </p>
@@ -186,16 +186,16 @@ function AdminPropertyCard({ hotel, onEdit, onToggle }: {
         </div>
         <p className="text-sm text-grey-500 mt-1">
           {[hotel.addressLine, hotel.city, hotel.state]
-            .filter(Boolean).join(", ") || "—"}
+            .filter(Boolean).join(", ") || "-"}
         </p>
 
         <dl className="mt-3 space-y-1">
-          <Line label="Rooms" value={hotel.rooms === 0 ? "—" : String(hotel.rooms)} />
+          <Line label="Rooms" value={hotel.rooms === 0 ? "-" : String(hotel.rooms)} />
           <Line label="Types"
-                value={hotel.roomTypes.length ? hotel.roomTypes.join(" · ") : "—"} />
+                value={hotel.roomTypes.length ? hotel.roomTypes.join(" · ") : "-"} />
           {/* The GSTIN prints on every invoice this property issues, so
               it belongs where somebody will notice it is wrong. */}
-          <Line label="GSTIN" value={hotel.gstin ?? "—"} />
+          <Line label="GSTIN" value={hotel.gstin ?? "-"} />
           {/* ADM-2, D17-37: the owner's cards showed no tax at all. The
               same rows as every other card and as Settings, from one
               reader. */}
@@ -210,7 +210,7 @@ function AdminPropertyCard({ hotel, onEdit, onToggle }: {
              reads only after trying is a refusal they did not need. */
           <p className="text-sm text-grey-500 mt-2.5">
             {hotel.checkedIn} guest{hotel.checkedIn === 1 ? "" : "s"} in house
-            — it cannot be closed until they check out.
+            - it cannot be closed until they check out.
           </p>
         )}
 

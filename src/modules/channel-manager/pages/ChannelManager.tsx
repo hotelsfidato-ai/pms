@@ -30,7 +30,7 @@ const WHAT_IT_WILL_DO = [
   {
     icon: CalendarClock,
     title: "Availability, pushed out",
-    body: "Sell a room here and the OTAs stop offering it, within seconds. "
+    body: "Sell a room here and the OTAs stop offering it. "
         + "Today that is somebody remembering to log in and close it, and "
         + "the day they forget is the day a room is sold twice.",
   },
@@ -45,7 +45,7 @@ const WHAT_IT_WILL_DO = [
     icon: ArrowRightLeft,
     title: "Bookings, pulled in",
     body: "An OTA reservation arrives as a booking with its guest, its "
-        + "nights and its rate — not as an email somebody copies out by "
+        + "nights and its rate, not as an email somebody copies out by "
         + "hand at the desk.",
   },
 ];
@@ -74,8 +74,8 @@ export default function ChannelManagerPage() {
         title="Channel manager"
         badge={<StatusPill tone="neutral">Coming soon</StatusPill>}
         description={
-          "The connection between this system and the OTAs. Not built yet — "
-          + "what it will do, and what it needs from you, is below."
+          "The connection between this system and the OTAs, through SU. It "
+          + "is being built, and nothing is sent to any booking site yet."
         }
       />
 
@@ -110,39 +110,46 @@ export default function ChannelManagerPage() {
       <Card>
         <CardBody className="space-y-2.5">
           <h2 className="text-md font-semibold text-ink-900">
-            What it needs before it can be built
+            What it still needs before it goes live
           </h2>
           <ul className="space-y-1.5 text-base text-ink-900">
             <li className="flex gap-2">
               <span className="text-grey-500 tabular">1</span>
               <span>
-                Which channel manager the group pays for. This was designed
-                against STAAH; a different one changes the work.
+                SU's test account.
+                <span className="text-grey-500">
+                  {" "}Its keys belong in the server's settings, never in a
+                  screen or a chat.
+                </span>
               </span>
             </li>
             <li className="flex gap-2">
               <span className="text-grey-500 tabular">2</span>
               <span>
-                The account, and one property id per hotel on their side.
-                <span className="text-grey-500">
-                  {" "}Credentials belong in the server's environment, never
-                  in a screen or a chat.
-                </span>
+                SU's certification: SU's test cases, then a live session with
+                SU, before the live account is opened.
               </span>
             </li>
             <li className="flex gap-2">
               <span className="text-grey-500 tabular">3</span>
               <span>
-                A mapping of room names. What an OTA calls your Superior is
-                rarely what you call it, and a wrong mapping oversells the
-                wrong room type.
+                A mapping of room types and meal plans. What an OTA calls your
+                Superior is rarely what you call it, and a wrong mapping
+                oversells the wrong room type.
               </span>
             </li>
             <li className="flex gap-2">
               <span className="text-grey-500 tabular">4</span>
               <span>
-                One rate everywhere, or a rate per channel — a decision, and
-                it shapes the rate calendar.
+                Each hotel switched on by itself. None is connected until
+                somebody switches it on.
+              </span>
+            </li>
+            <li className="flex gap-2">
+              <span className="text-grey-500 tabular">5</span>
+              <span>
+                One rate everywhere, or a rate per channel. Still to be
+                decided, and it shapes the rate calendar.
               </span>
             </li>
           </ul>
@@ -155,9 +162,9 @@ export default function ChannelManagerPage() {
             What is already recorded
           </h2>
           {otas.length === 0 ? (
-            /* A dash, not an invented list. */
+            /* A plain sentence, not an invented list. */
             <p className="text-base text-grey-500">
-              — no booking sources have been recorded at {code ?? "this property"} yet
+              No booking sources have been recorded at {code ?? "this property"} yet.
             </p>
           ) : (
             <>

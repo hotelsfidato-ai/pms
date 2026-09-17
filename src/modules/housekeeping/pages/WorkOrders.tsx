@@ -120,7 +120,7 @@ export default function WorkOrdersPage() {
           title={view === "open" ? "Nothing outstanding" : "Nothing closed yet"}
           description={view === "open"
             ? (work.data?.closed
-                ? `${work.data.closed} closed and kept — "how many times have we `
+                ? `${work.data.closed} closed and kept - "how many times have we `
                   + `fixed this room" needs them.`
                 : "Raise one when something needs fixing.")
             : "A repair shows here once it is closed, with what was done."}
@@ -220,7 +220,7 @@ function OrderCard({ hotelId, order: o, onStart, onClose, onCosts }: {
           )}
           <p className="mt-1 text-sm text-grey-500">
             {/* A dash, not a blank. A lift is not a missing room. */}
-            {o.room ? `Room ${o.room}` : "—"} · {o.category} ·{" "}
+            {o.room ? `Room ${o.room}` : "-"} · {o.category} ·{" "}
             raised {dateShort(o.raisedAt)}
             {o.raisedBy ? ` by ${o.raisedBy}` : ""}
             {closed ? (
@@ -243,7 +243,7 @@ function OrderCard({ hotelId, order: o, onStart, onClose, onCosts }: {
               A repair nobody recorded a cost for is a dash, never ₹0. */}
           {o.costs !== undefined && (
             <p className="mt-1 text-sm text-ink-900 tabular" data-work-order-cost>
-              Cost {o.costTotal == null ? "—" : money(o.costTotal)}
+              Cost {o.costTotal == null ? "-" : money(o.costTotal)}
             </p>
           )}
         </div>
@@ -311,14 +311,14 @@ function CloseDialog({ hotelId, order, onClose, onDone }: {
           {order.equipment && (
             <p className="text-sm text-grey-600">
               Closing it puts {order.equipment.name} ({order.equipment.tag}) back in
-              use — unless another repair on it is still open.
+              use - unless another repair on it is still open.
             </p>
           )}
 
           {order.blocksRoom && (
             <p className="text-sm text-warning-dark">
               This one took the room out of service. Closing it does not put
-              the room back — do that on the room itself, so somebody decides
+              the room back - do that on the room itself, so somebody decides
               rather than assuming.
             </p>
           )}

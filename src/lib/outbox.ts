@@ -66,7 +66,7 @@ let dbPromise: Promise<IDBDatabase> | null = null;
 /** The one sentence for "this browser will not hold anything". Kept
     here so the bar and the queue say the same thing. */
 export const NO_STORE =
-  "This browser will not keep a queue — a private window, or site data "
+  "This browser will not keep a queue - a private window, or site data "
   + "turned off. Work done here cannot be held until the line is back.";
 
 function open(): Promise<IDBDatabase> {

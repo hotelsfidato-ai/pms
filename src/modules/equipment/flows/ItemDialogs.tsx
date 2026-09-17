@@ -216,7 +216,7 @@ export function MoveItemDialog({ code, item, open, onOpenChange, onDone, mayEdit
     if (!res.ok) return toast.error(leaves ? "Not asked" : "Not moved", res.reason);
     toast.success(
       res.requested
-        ? "Asked — it moves when the Inventory Manager approves it"
+        ? "Asked - it moves when the Inventory Manager approves it"
         : res.split ? `${res.quantity} moved, as their own line` : "Moved");
     onDone(res.id);
   };
@@ -269,7 +269,7 @@ export function MoveItemDialog({ code, item, open, onOpenChange, onDone, mayEdit
             {leaves && (
               <p className="text-sm text-ink-900 rounded-md border border-amber-300 bg-amber-50 p-3 leading-relaxed">
                 This takes it out of the store, so it is <strong>asked for</strong>. It stays in the
-                store until the Inventory Manager approves it — or the owner, an administrator or the
+                store until the Inventory Manager approves it - or the owner, an administrator or the
                 general manager when they are away.
               </p>
             )}
@@ -359,8 +359,8 @@ export function RetireDialog({ code, item, open, onOpenChange, onDone, waitsForA
         title={waitsForApproval ? "Ask to retire it" : "Retire it"}
         description={
           waitsForApproval
-            ? `${item.name} is tagged, so retiring it waits in the approvals inbox for the Inventory Manager — or the owner, an administrator or the general manager when they are away.`
-            : `${item.name}. It stays in the register as retired, with who, when and why — nothing is deleted.`
+            ? `${item.name} is tagged, so retiring it waits in the approvals inbox for the Inventory Manager - or the owner, an administrator or the general manager when they are away.`
+            : `${item.name}. It stays in the register as retired, with who, when and why - nothing is deleted.`
         }
         footer={
           <>

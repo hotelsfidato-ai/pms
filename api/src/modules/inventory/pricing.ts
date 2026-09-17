@@ -357,7 +357,7 @@ pricing.put("/:code/pricing/offset", async (c) => {
         if (basis[0]?.room_type_id === input.roomTypeId) {
           return refuse(
             `${owned[0].name} is the base room, so it has no difference from `
-            + `itself. To change what it costs, set the base price — every `
+            + `itself. To change what it costs, set the base price - every `
             + `other price follows it.`,
           );
         }

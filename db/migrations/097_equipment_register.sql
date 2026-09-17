@@ -458,7 +458,7 @@ begin
 
   if tg_op = 'INSERT' then
     if new.status = 'retired' then
-      raise exception 'An item is added in use or under repair, then retired — not added retired.'
+      raise exception 'An item is added in use or under repair, then retired - not added retired.'
         using errcode = 'check_violation';
     end if;
     return new;
@@ -625,7 +625,7 @@ begin
         using errcode = 'check_violation';
     end if;
     if new.quantity >= v_src.quantity then
-      raise exception 'There are % on that line. Taking % leaves none — move or retire the whole line instead.',
+      raise exception 'There are % on that line. Taking % leaves none - move or retire the whole line instead.',
         v_src.quantity, new.quantity using errcode = 'check_violation';
     end if;
     if new.status <> v_src.status then

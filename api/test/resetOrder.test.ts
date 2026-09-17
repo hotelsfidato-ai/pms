@@ -68,7 +68,7 @@ describe("the reset deletes children before parents", () => {
       .filter((t) => !known.has(t));
     expect(
       invented,
-      `these are deleted by name and no foreign key mentions them — `
+      `these are deleted by name and no foreign key mentions them - `
       + `check the spelling: ${invented.join(", ")}`,
     ).toEqual([]);
   });

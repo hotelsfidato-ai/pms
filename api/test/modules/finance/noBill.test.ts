@@ -27,7 +27,7 @@ const asOwner = (path: string) =>
 afterAll(async () => { await closePool(); });
 
 describe("a stay's bill", () => {
-  it("is 'no bill' — not ₹0 settled — when nothing has been posted", async () => {
+  it("is 'no bill' - not ₹0 settled - when nothing has been posted", async () => {
     const { rows } = await sql(
       `select r.id::text from reservations r join hotels h on h.id = r.hotel_id
         where h.code = '5EL'

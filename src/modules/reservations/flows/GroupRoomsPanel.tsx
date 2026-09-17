@@ -117,7 +117,7 @@ export function GroupRoomsList({
           <Skeleton className="h-48" />
         ) : rooms.length === 0 ? (
           <p className="text-sm text-grey-600">
-            This group has no rooms — which usually means they were all
+            This group has no rooms - which usually means they were all
             cancelled.
           </p>
         ) : (
@@ -208,7 +208,7 @@ function RoomCard({ room, hotelId, current }: {
             <p className="text-base tabular font-semibold text-ink-900">
               {/* A DASH. An unassigned booking has no room, and a blank
                   reads as a rendering fault. */}
-              {room.room ?? <span className="text-grey-500">—</span>}
+              {room.room ?? <span className="text-grey-500">-</span>}
             </p>
           </div>
 

@@ -41,7 +41,7 @@ const card = async (room: string) => {
 };
 
 describe("the room card (D17-8)", () => {
-  it("puts a word under each icon — Clean, Inspected, Repair", async () => {
+  it("puts a word under each icon - Clean, Inspected, Repair", async () => {
     go(`/h/${HOTEL}/housekeeping`);
     render(<App />);
     const room = within(await card("201"));
@@ -50,7 +50,7 @@ describe("the room card (D17-8)", () => {
     expect(room.getByRole("button", { name: "Report a repair in room 201" }).textContent).toBe("Repair");
   });
 
-  it("says why a grey button is grey when it is tapped — and marks nothing", async () => {
+  it("says why a grey button is grey when it is tapped - and marks nothing", async () => {
     go(`/h/${HOTEL}/housekeeping`);
     render(<App />);
     const el = await card("201");
@@ -87,7 +87,7 @@ describe("the room card (D17-8)", () => {
     expect(within(dialog).getByRole("button", { name: "Out of service without a repair" })).toBeDefined();
   });
 
-  it("says Put back on a room that is already out — the owner, 17 September", async () => {
+  it("says Put back on a room that is already out - the owner, 17 September", async () => {
     go(`/h/${HOTEL}/housekeeping`);
     render(<App />);
     const out = await screen.findByText("Put back");

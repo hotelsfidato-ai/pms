@@ -85,7 +85,7 @@ export function LateCheckOutFlow({
       if (/still outstanding/i.test(res.reason ?? "")) {
         onOpenChange(false);
         onDone();
-        toast.warning("Recorded — now settle the bill", res.reason);
+        toast.warning("Recorded - now settle the bill", res.reason);
         return;
       }
       return toast.error("Could not check out", res.reason);
@@ -94,7 +94,7 @@ export function LateCheckOutFlow({
     toast.success(
       `${stay.guest} checked out`,
       waive && mayWaive
-        ? "The late departure is recorded and the charge waived — both are on the stay."
+        ? "The late departure is recorded and the charge waived - both are on the stay."
         : charge === null
           ? "The late departure is recorded. The property does not charge for one."
           : `${money(charge)} added to the folio.`,
@@ -138,7 +138,7 @@ export function LateCheckOutFlow({
 
           <Field
             label="Why" required
-            hint="Somebody will ask — on the bill, or in the audit trail. A flight time, a manager's say-so, a room not ready on arrival."
+            hint="Somebody will ask - on the bill, or in the audit trail. A flight time, a manager's say-so, a room not ready on arrival."
           >
             {(f) => (
               <Input {...fieldProps(f)} value={reason}
@@ -170,7 +170,7 @@ export function LateCheckOutFlow({
                 </span>
                 <span className="text-sm text-grey-600 mt-0.5 block leading-relaxed">
                   Your decision, recorded against your name. The late departure
-                  is still written down — waiving the money does not unwrite
+                  is still written down - waiving the money does not unwrite
                   the fact.
                 </span>
               </span>
@@ -179,7 +179,7 @@ export function LateCheckOutFlow({
             <p className="text-sm text-grey-600 rounded-md border border-grey-200
                           bg-grey-50 p-3 leading-relaxed">
               {money(charge)} will be added to the folio. A manager can waive
-              it — that is a decision about money and it is theirs to make.
+              it - that is a decision about money and it is theirs to make.
             </p>
           )}
         </div>

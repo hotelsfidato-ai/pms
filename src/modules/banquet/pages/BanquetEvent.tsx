@@ -53,7 +53,7 @@ const STATUS: Record<string, { label: string; tone: "neutral" | "info" | "succes
 const when = dateTime;
 
 /** A dash, never ₹0. Used everywhere a price might not exist yet. */
-const rupees = (v: number | null) => (v === null ? "—" : money(v));
+const rupees = (v: number | null) => (v === null ? "-" : money(v));
 
 export default function BanquetEventPage() {
   const hotelId = useHotel();
@@ -183,14 +183,14 @@ export default function BanquetEventPage() {
               </Detail>
               <Detail label="Until">{when(e.endsAt)}</Detail>
               <Detail label="Host">{e.hostName}</Detail>
-              <Detail label="Telephone">{e.hostPhone ?? "—"}</Detail>
+              <Detail label="Telephone">{e.hostPhone ?? "-"}</Detail>
               <Detail label="Expected guests">
                 <span className="inline-flex items-center gap-1.5">
                   <Users className="size-3.5 shrink-0 text-grey-500" />
-                  {e.pax ?? "—"}
+                  {e.pax ?? "-"}
                 </span>
               </Detail>
-              <Detail label="Guaranteed">{e.paxGuaranteed ?? "—"}</Detail>
+              <Detail label="Guaranteed">{e.paxGuaranteed ?? "-"}</Detail>
               <Detail label="Hall">
                 {e.venue.name}
                 {e.venue.seated !== null && (
@@ -198,7 +198,7 @@ export default function BanquetEventPage() {
                 )}
               </Detail>
               <Detail label="Registered by">
-                {e.registeredBy ?? "—"}
+                {e.registeredBy ?? "-"}
                 <span className="block text-sm text-grey-500">{when(e.registeredAt)}</span>
               </Detail>
             </dl>
@@ -269,7 +269,7 @@ export default function BanquetEventPage() {
                that is a complete booking. */
             <p className="rounded-lg border border-dashed border-grey-200
                           px-3 py-6 text-center text-sm text-grey-500">
-              Nothing is being served. That is a complete booking — add a
+              Nothing is being served. That is a complete booking - add a
               course only if food is part of it.
             </p>
           ) : (
@@ -289,7 +289,7 @@ export default function BanquetEventPage() {
                   </div>
                   <span className={cn("tabular-nums font-medium",
                                       c.ratePerHead === null && "text-grey-500")}>
-                    {c.ratePerHead === null ? "—" : money(c.pax * c.ratePerHead)}
+                    {c.ratePerHead === null ? "-" : money(c.pax * c.ratePerHead)}
                   </span>
                   <Button
                     variant="secondary" className="h-11 shrink-0"
@@ -336,7 +336,7 @@ export default function BanquetEventPage() {
                         </StatusPill>
                       </p>
                       <p className="text-sm text-grey-500">
-                        {o.outlet ?? "—"}
+                        {o.outlet ?? "-"}
                         {o.table ? ` · Table ${o.table}` : ""}
                         {" · "}
                         {when(o.openedAt)}
@@ -399,7 +399,7 @@ function Line({ label, value }: { label: string; value: string }) {
   return (
     <div className="flex items-baseline justify-between gap-3">
       <dt className="text-grey-600">{label}</dt>
-      <dd className={cn("tabular-nums", value === "—" && "text-grey-500")}>
+      <dd className={cn("tabular-nums", value === "-" && "text-grey-500")}>
         {value}
       </dd>
     </div>
@@ -457,7 +457,7 @@ function PriceDialog({
             {(f) => (
               <div className="flex gap-2">
                 <Input {...fieldProps(f)} value={amount} inputMode="decimal"
-                       placeholder="—"
+                       placeholder="-"
                        onChange={(ev) => setAmount(ev.target.value)} />
                 {event.venue.defaultRate != null && (
                   <Button type="button" variant="secondary" className="h-11 shrink-0"
@@ -524,7 +524,7 @@ function CourseDialog({
     <Dialog open onOpenChange={(o) => !o && onClose()}>
       <DialogContent
         title="Add a course"
-        description={"From a package, or off-menu. A rate can wait — the "
+        description={"From a package, or off-menu. A rate can wait - the "
                      + "total says so until it arrives."}
         footer={
           <>
@@ -575,7 +575,7 @@ function CourseDialog({
                    hint="Leave blank if it is not agreed yet.">
               {(f) => (
                 <Input {...fieldProps(f)} value={rate} inputMode="decimal"
-                       placeholder="—"
+                       placeholder="-"
                        onChange={(e) => setRate(e.target.value)} />
               )}
             </Field>

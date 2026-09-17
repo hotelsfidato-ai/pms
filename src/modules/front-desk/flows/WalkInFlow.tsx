@@ -132,7 +132,7 @@ export function WalkInFlow({
           {/* Search and create in the same field */}
           <Field
             label="Guest"
-            hint="Type a name — existing guests appear as you type"
+            hint="Type a name - existing guests appear as you type"
             required
           >
             {({ id }) => (
@@ -248,7 +248,7 @@ export function WalkInFlow({
                       segment must never become "Other" — that is a guess
                       that turns into a line in a report an owner sets
                       policy from. */}
-                  <option value="">—</option>
+                  <option value="">-</option>
                   {["Corporate", "Leisure", "Group", "Crew", "Government"]
                     .map((m) => <option key={m}>{m}</option>)}
                 </NativeSelect>
@@ -260,7 +260,7 @@ export function WalkInFlow({
                   id={id}
                   value={businessSource}
                   onChange={(e) => setBusinessSource(e.target.value)}
-                  placeholder="—"
+                  placeholder="-"
                 />
               )}
             </Field>
@@ -272,7 +272,7 @@ export function WalkInFlow({
                 id={id}
                 value={salesPerson}
                 onChange={(e) => setSalesPerson(e.target.value)}
-                placeholder="—"
+                placeholder="-"
               />
             )}
           </Field>
@@ -312,7 +312,7 @@ export function WalkInFlow({
               <p className="flex items-start gap-2 text-sm text-[#8a6300]">
                 <AlertTriangle className="size-4 shrink-0 mt-0.5" />
                 <span>
-                  {money((rack ?? 0) - offered)} below rack —{" "}
+                  {money((rack ?? 0) - offered)} below rack - {" "}
                   {Math.round((((rack ?? 0) - offered) / (rack || 1)) * 100)}% off.
                   The reason is kept on the reservation.
                 </span>

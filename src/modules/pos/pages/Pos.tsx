@@ -99,7 +99,7 @@ const TICKET_COLUMNS: Column<PosTicket>[] = [
       ) : (
         /* Nothing, because a refused bill never reached a folio. Not a
            dash pretending to be a value. */
-        <span className="text-grey-500 text-2xs">nobody — refused</span>
+        <span className="text-grey-500 text-2xs">nobody - refused</span>
       ),
   },
   {
@@ -179,7 +179,7 @@ export default function PosPage() {
           </p>
           <p className="text-sm text-grey-600 mt-0.5 leading-relaxed">
             An outside point of sale presents a key and posts a finished bill
-            here — a retry after a timeout returns the original posting rather
+            here - a retry after a timeout returns the original posting rather
             than charging twice, and a void reverses rather than deleting. The
             PMS has its own till on the{" "}
             <Link to="../till" relative="path" className="text-brand hover:underline">
@@ -259,7 +259,7 @@ export default function PosPage() {
         title="Bills"
         description={
           tickets.data
-            ? `${dateLong(tickets.data.from)} to ${dateLong(tickets.data.to)}. Refused bills are kept — they are how a dispute is settled.`
+            ? `${dateLong(tickets.data.from)} to ${dateLong(tickets.data.to)}. Refused bills are kept - they are how a dispute is settled.`
             : "Every bill sent, whatever became of it."
         }
         badge={
