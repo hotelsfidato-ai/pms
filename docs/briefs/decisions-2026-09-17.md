@@ -75,3 +75,67 @@ renumbers at merge if two collide.
 |---|---|---|
 | D17-24 | The Store's STO-2 to STO-11 | **Merge now.** *(Master)* |
 | D17-25 | Deploy | **Today, after the Store merge** — the master gives the steps. |
+
+---
+
+# The second interview — 17 September, evening
+
+The owner's goal, in their words: **build everything up to and including the
+channel manager, then QA.** The order is `docs/NEXT-BUILD-PLAN.md`.
+
+## What to build, and in what order
+
+| # | Question | Answer |
+|---|---|---|
+| D17-26 | The first big build | **Reports and bills in the group's own layout** |
+| D17-27 | After that | **The channel manager** — then QA. Reviews and marketing come after the channel manager |
+| D17-28 | The master record | **The PMS** is the record for rooms, availability, prices and bookings; the CRS and the live inventory show copies (plan D1) |
+| D17-29 | Where logins and WhatsApp workflows live | **n8n on the PMS server** (plan D2) |
+| D17-30 | The channel manager | **A vendor such as STAAH**, not direct OTA connections |
+
+## Reports and bills
+
+| # | Question | Answer |
+|---|---|---|
+| D17-31 | Excel | **Both: a real .xlsx AND a CSV** on every report |
+| D17-32 | PDFs | **Made on the server** |
+| D17-33 | Room charges | **Keep the whole stay posted on arrival.** Do not change to nightly |
+| D17-34 | Sending bills, invoices, vouchers | **WhatsApp and email through the n8n on the PMS server** |
+
+## Settings, purchasing, housekeeping, small fixes
+
+| # | Question | Answer |
+|---|---|---|
+| D17-35 | Purchase approvals (S11) | **The GM approves every purchase.** No owner limit |
+| D17-36 | The GM and Settings | **The GM may open Settings; the module switches stay owner and admin only** |
+| D17-37 | ADM-2, the old tax on Settings and Properties | **Show the tax actually used**; a dash where nothing is set |
+| D17-38 | Closing a repair while its request waits | **Refused, as built** |
+| D17-39 | HK-1, the board refreshing itself | **Build it now** |
+| D17-40 | The assignee dropdown on each card | **Keep as is** |
+| D17-41 | FD-7, "Today" off a phone screen | **Fix now** |
+| D17-42 | The unused night-audit "can run" route | **Remove it** |
+
+## Channel manager, CRS, leads
+
+| # | Question | Answer |
+|---|---|---|
+| D17-43 | A booking for a room no longer free | **Refuse it and tell the channel.** Never overbook automatically |
+| D17-44 | Cancelling an OTA booking | **The OTA's policy for OTA bookings**; the hotel's terms for direct ones |
+| D17-45 | Which hotels go on the channel manager first | **Left open** — build it so each hotel is switched on separately |
+| D17-46 | A CRS booking at a PMS hotel | **The PMS prices it, bills it and sets the tax** (plan D5) |
+| D17-47 | The CRS repository being public | **The owner handles it. Do not touch** |
+| D17-48 | The long dash "—" | **Banned everywhere** in what a person reads |
+| D17-49 | A figure nobody has set | **A short hyphen "-"** (the no-zero rule stands) |
+| D17-50 | All-inclusive bookings | **Add the all-inclusive meal plan now** |
+| D17-51 | The live inventory's three frozen parts | **Each may change once**, those three only (plan D6) |
+
+## Apps, and the services still to come
+
+| # | Question | Answer |
+|---|---|---|
+| D17-52 | Apps | **Wait until the system is fully built.** Recorded for then: shared core first (A1), Android Management API for the kiosk (A4) |
+| D17-53 | Guest-facing | **Online check-in and guest messages** — a confirmed booking sends the online check-in link by email and WhatsApp. No booking engine or loyalty for now |
+| D17-54 | Hotel services | **Laundry and spa, each behind a per-hotel on/off switch** — it shows only where switched on. Not guest requests or room systems |
+| D17-55 | Business | **Tally export (designed later — which Tally is decided then), revenue management, reviews and marketing.** Not contracts |
+| D17-56 | Revenue management | **Suggestions only**; a person sets the price |
+| D17-57 | Online payments | **Still excluded** |

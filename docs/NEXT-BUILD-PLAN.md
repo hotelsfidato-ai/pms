@@ -1,80 +1,95 @@
-# What gets built next — 17 September 2026
+# What gets built next, in order — 17 September 2026
 
-**The owner's plan:** finish what is in flight, deploy, then the owner runs QA
-testing, then everything QA finds is fixed. This file is the order. Nothing in
-tiers 3–5 starts without the owner's go; anything marked **ASK** waits on an answer.
+**The owner's goal:** build everything up to and including the channel manager,
+then QA. Every answer this plan rests on is in
+`docs/briefs/decisions-2026-09-17.md` (D17-1 to D17-57). Anything not there is
+still a question for the owner.
 
-Sizes are rough: **S** an afternoon · **M** one or two days · **L** a week or more.
+**At most three service chats at a time**, plus the master. A step starts when
+the one before it is merged and checked.
 
 ---
 
-## Tier 1 — before QA (the master, then one deploy)
+## Step 1 — finish and align (now)
 
-Everything here is decided already (`docs/briefs/decisions-2026-09-17.md`) or is a
-request a chat handed the master. It makes the system agree with itself, so QA
-tests the real thing instead of finding what we already know.
+| Who | What | Decisions |
+|---|---|---|
+| **Master** | First: Main, Kitchen and Bar stores at every hotel (**the Store chat waits on this**). Then: Hotel/Inventory Manager may add places and suppliers · one "In house" everywhere · out of service follows the dated block · a stay with no bill shows the no-figure mark · Room types heading, "Owed by guests, less refunds", the no-rooms message · the GM may open Settings (grant) · FD-7 "Today" on a phone · remove the unused night-audit "can run" · the all-inclusive meal plan · the chats' requests (shared "could not load", offline sentence for function bills, Tables keeps the chosen function, audit-log links, the Channel manager page word) | D17-1, 3, 10, 11, 16, 17, 22, 23, 36, 41, 42, 50 |
+| **Store chat** | Phase 1A: stock per place (old stock in the Main store), minimum levels, the count sheet, gas cylinders with deposits | D17-2, D17-4 |
+| **Admin chat** | ADM-2: Settings and Properties show the tax actually used · the GM's Settings screen, with the module switches hidden from the GM | D17-36, D17-37 |
+| **Housekeeping chat** | HK-1: the board refreshes itself | D17-39 |
 
-| # | What | From | Size |
-|---|---|---|---|
-| M1 | **Main, Kitchen and Bar stores at every hotel**, and at every new one | D17-3 | S — **the Store chat waits on this** |
-| M2 | Hotel Manager and Inventory Manager may add places and suppliers | D17-1 | S |
-| M3 | **The numbers that disagree:** one "In house" (checked in now) on every screen; one status per booking; one balance per stay | D17-10, critique #1 | M |
-| M4 | Out of service follows the dated block on Rooms, the property count and the admin list | D17-11 (INV-6) | M |
-| M5 | A stay with no bill shows a dash, not ₹0; the In House balance column | D17-16 (FIN-2), FIN-3 | S |
-| M6 | Words: Room types heading, "Owed by guests, less refunds", the no-rooms message | INV-2, REP-6, FD-5 | S |
-| M7 | Chats' requests: one shared "could not load" message; the offline sentence for a function bill; Tables keeps the chosen function in its draft; broken audit-log links (ADM-4); one wrong word on the Channel manager page | banquet, POS, admin, guests | S–M |
-| — | **Deploy**, then a QA checklist per role for the owner | D17-25 | — |
+**Then:** merge, every gate, **deploy**.
 
-## Tier 2 — the Store, phase 1A (Store chat, after M1)
+## Step 2 — the dash pass (the master alone, every chat paused)
 
-| What | Size |
+The long dash "—" leaves every screen, and a figure nobody has set shows "-".
+It touches every service's files, so no chat works during it. One commit, gates,
+**deploy**. *(D17-48, D17-49)*
+
+## Step 3 — reports and bills in the group's own layout
+
+| Who | What |
 |---|---|
-| Stock held per place; the stock already recorded sits in the Main store (D17-2) | M |
-| Minimum levels per place, and the list of what is below | S |
-| The count sheet: count, compare, one correction per difference | M |
-| Gas by cylinder: refill price per full cylinder, deposits tracked, empties counted back (D17-4) | M |
+| **Master** | The shared parts: PDFs made on the server, a real .xlsx and a CSV for every report, the report layout (hotel name, title, "As on / PTD / YTD", footer with date, time, user, page), and one "send" door that hands a PDF to n8n for WhatsApp and email |
+| **Reports chat** | Every report in the eZee layout, the Manager report's five missing sections, the printed four-page Night Audit report |
+| **Finance chat** | Bills, invoices and vouchers on the voucher template, sent by WhatsApp and email through n8n |
+| **Store chat** | Phase 2A: crockery and cutlery — breakage with who and where, in use per outlet, the monthly count |
 
-## Tier 3 — stock and equipment, phase 2 and 3 (after tier 2 is merged)
+*(D17-26, 31, 32, 34.)* Room charges stay posted for the whole stay on arrival (D17-33).
 
-| What | Who | Size | Needs |
-|---|---|---|---|
-| **2A** Crockery and cutlery: breakage with who and where, in use per outlet, the monthly count | Store chat | M | — |
-| **2C** Purchasing: request → approval → order to a supplier → delivery lands in the Store or the equipment register | a new Purchasing chat | L | **ASK:** the amount above which the owner approves, not the GM (S11) |
-| **3A** Reports: stock value, use per outlet, wastage and breakage, equipment and repair cost | Reports chat | M | after 2A and 2C |
-| 3B Supplier bills and payments | — | — | later, with Tally (S10) |
-| 3C A dish sold uses its ingredients (recipes) | — | — | later (S9) |
+**Needed from the owner before this step:** the voucher file saved to
+`D:\reports fidato\`; the registered name and GSTIN exactly as they print; bank
+details per hotel; policies and times for the voucher; the WhatsApp Business and
+email accounts connected in the n8n on the server.
 
-## Tier 4 — reports and documents in the group's own layout (ASK first)
+**Then:** merge, gates, **deploy**.
 
-| What | Size | Needs from the owner |
-|---|---|---|
-| Reports laid out like the eZee exports, PDF and Excel on every report, the Manager report's five missing sections, the printed four-page Night Audit report (HANDOVER 3.4) | L | Real `.xlsx` or CSV? PDF made in the browser or on the server? |
-| Bills and vouchers on the voucher template, sent by WhatsApp and email (HANDOVER 3.5) | L | The voucher file saved to `D:\reports fidato\`; the registered name and GSTIN as printed; bank details per hotel; policies and times; send through n8n or a direct service |
-| Room charges posted one night at a time by the night audit, not the whole stay at arrival | M | **ASK:** it moves every in-house balance |
+## Step 4 — the channel manager, and purchasing
 
-## Tier 5 — the big programmes (the owner's go, one at a time)
+| Who | What |
+|---|---|
+| **Master** | The door the vendor uses: a key per channel, availability and prices out, bookings and cancellations in (the booking door is already idempotent), a per-hotel on/off switch |
+| **Channel manager chat** | The vendor connection (STAAH or the vendor chosen): push availability and prices, receive bookings and cancellations; a booking for a room no longer free is refused and the channel told; OTA bookings follow the OTA's cancellation policy, direct ones the hotel's terms; each hotel switched on separately |
+| **Purchasing chat** | Request → the GM approves (every purchase) → order to a supplier → delivery lands in the Store or the equipment register |
 
-| Programme | Plan | Blocked on |
-|---|---|---|
-| **One hotel system:** the CRS, the live inventory and WhatsApp leads, a channel manager, a central CRM | `docs/HMS-INTEGRATION-PLAN.md` | 14 decisions; D1, D2 and D4 first |
-| **Apps:** desktop (Tauri), a locked kiosk tablet, a phone staff app (Expo) | `docs/APPS-PLAN.md` | its decisions in § 7 |
-| The Coming soon services: booking engine, online check-in, revenue management, Tally export, contracts, guest messages, guest services, laundry, spa, room systems, loyalty, marketing, reviews (payments stays excluded) | `docs/briefs/coming-soon.md` | which the group actually wants |
+*(D17-30, 35, 43, 44, 45.)*
+
+**Needed from the owner before this step:** the vendor chosen and signed, its API
+documents, and a test (sandbox) login.
+
+**Then:** merge, gates, **deploy**.
+
+## Step 5 — QA
+
+The master writes a QA checklist per role. The owner tests on the live site with
+one test account per role (created on the People screen). Everything found is
+fixed, merged, deployed.
 
 ---
 
-## Open questions from the chats (no build until answered)
+## After QA, in the order the owner gave
 
-- **Admin:** may the GM open Settings and the module switches? ADM-2: Settings still shows an old tax — fix it?
-- **Housekeeping:** a repair cannot be closed while its request waits for approval — keep that? Should the room assignee dropdown on every card change?
-- **Night audit:** keep or remove the unused "can run" check?
-- **Front desk:** FD-7, the "Today" button runs off a phone screen — fix now or with the next layout pass?
-- **HK-1**, the board refreshing itself — deferred by the owner.
+1. Reviews and marketing (after the channel manager — D17-27, D17-55)
+2. Guest messages and online check-in: a confirmed booking sends the check-in link by email and WhatsApp (D17-53)
+3. Laundry and spa, each behind a per-hotel on/off switch (D17-54)
+4. Revenue management — suggestions only (D17-56)
+5. Tally export — designed then, including which Tally (D17-55)
+6. Stock and equipment reports (plan phase 3A)
+7. Connecting the CRS and the live inventory: the PMS is the record, the PMS prices CRS bookings, the live inventory's three parts may change once (D17-28, 46, 51). The CRS repository is the owner's to handle (D17-47)
+8. The apps — only once the system is fully built; shared core first, Android Management API for the kiosk (D17-52)
 
-## Owner actions — not code, and some are urgent
+**Not being built:** booking engine, loyalty, guest requests, room systems,
+corporate contracts, online payments (D17-53 to D17-57).
+
+---
+
+## Owner actions — not code
 
 1. **The Meta WhatsApp token expires about 27 September.** Renew it.
-2. **Backups sit on the same disk as the database** (P0). A copy must live somewhere else.
+2. **Backups sit on the same disk as the database.** A copy must live elsewhere.
 3. **Rotate the Firebase Admin key** — it once passed through a chat.
-4. **The CRS repository is public** and carries a commission figure per hotel.
-5. The n8n update to 2.39.6.
-6. For QA on the live site: one test account per role (reception, housekeeping, kitchen, Inventory Manager, GM…) created on the People screen.
+4. The n8n update to 2.39.6, and the deploy from 17 September if not run yet.
+5. Before step 3: the voucher, the registered name and GSTIN, bank details, policies, the WhatsApp and email accounts in n8n.
+6. Before step 4: the channel manager vendor, its API documents, a test login.
+7. Before step 5: one test account per role on the live site.
