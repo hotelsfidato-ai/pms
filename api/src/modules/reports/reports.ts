@@ -129,77 +129,7 @@ reports.get("/:code/reports/balances-by-source", async (c) => {
   return body ? c.json(body) : c.json({ error: "No such property." }, 404);
 });
 
-/* ── Lodging tax ─────────────────────────────────────────────────── */
-
-reports.get("/:code/reports/lodging-tax", async (c) => {
-  const fromParam = c.req.query("from");
-  const toParam = c.req.query("to");
-
-  const body = await withSession(c.get("subject"), async (client) => {
-    const hotelId = await hotelIdFor(client, c.req.param("code"));
-    if (!hotelId) return null;
-    const bd = await businessDateFor(client, hotelId);
-    const from = fromParam ?? monthStart(bd);
-    const to = toParam ?? bd;
-
-    /* CGST and SGST are half the total each, by statute — 2.5 + 2.5
-       below the ₹7,500 tariff threshold, where every property in this
-       group sits. Split from the ONE tax figure the ledger holds
-       rather than stored twice, because two columns that must always
-       be equal are two chances to disagree. */
-    const { rows } = await client.query<{
-      date: string; bills: string; total_bill: string; room_rent: string;
-      tax: string; extras: string; discount: string;
-    }>(
-      `with live as (${LIVE_POSTINGS})
-       select l.business_date::text                                       as date,
-              count(distinct l.folio_id)::text                            as bills,
-              coalesce(sum(l.amount + l.tax_amount) filter (
-                where l.category <> 'payment'), 0)::text                  as total_bill,
-              coalesce(sum(l.amount) filter (where l.category = 'room'), 0)::text
-                                                                          as room_rent,
-              coalesce(sum(l.tax_amount), 0)::text                        as tax,
-              coalesce(sum(l.amount) filter (where l.category not in
-                ('room','payment','discount','tax','refund')), 0)::text   as extras,
-              coalesce(-sum(l.amount) filter (
-                where l.category = 'discount'), 0)::text                  as discount
-         from live l
-        where l.business_date between $2::date and $3::date
-        group by l.business_date
-        order by l.business_date`,
-      [hotelId, from, to],
-    );
-
-    const round = (n: number) => Math.round(n * 100) / 100;
-
-    return rows.map((r) => {
-      const tax = round(Number(r.tax));
-      const roomRent = round(Number(r.room_rent));
-      return {
-        date: r.date,
-        /* The real export prints a bill-number range. Invoice numbers
-           are not issued yet — see the Invoices screen — so the count
-           stands in and the range is a dash rather than a made-up
-           pair of numbers that would land in a filed return. */
-        fromBill: "—",
-        toBill: "—",
-        totalBill: round(Number(r.total_bill)),
-        totalRoomRent: roomRent,
-        nonTaxable: 0,
-        cgstNet: roomRent,
-        cgstTax: round(tax / 2),
-        sgstNet: roomRent,
-        sgstTax: round(tax / 2),
-        serviceCharges: 0,
-        otherBills: round(Number(r.extras)),
-        lessDiscount: round(Number(r.discount)),
-        roundOff: 0,
-      };
-    });
-  });
-
-  return body ? c.json(body) : c.json({ error: "No such property." }, 404);
-});
+/* Lodging tax is a report in the owner's layout now: builders/lodgingTax.ts. */
 
 /* ══════════════════════════════════════════════════════════════════
    PHASE 1 · items 2 and 3 — the four reports listed and never built.
@@ -293,7 +223,7 @@ reports.get("/:code/reports/guest-ledger", async (c) => {
         folioId: r.folio_id,
         reference: r.reference,
         guest: r.guest,
-        room: r.room ?? "—",
+        room: r.room ?? "-",
         status: r.status,
         opening: round(Number(r.opening)),
         charges: round(Number(r.charges)),
@@ -517,7 +447,7 @@ reports.get("/:code/reports/c-form", async (c) => {
         visaNumber: r.visa_number,
         visaExpiry: r.visa_expiry,
         address: r.address,
-        room: r.room ?? "—",
+        room: r.room ?? "-",
         arrived: r.arrived,
         departed: r.departed,
         reference: r.reference,

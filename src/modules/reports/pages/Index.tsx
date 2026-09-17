@@ -66,7 +66,7 @@ const GROUPS: Group[] = [
         title: "Monthly statistics",
         icon: ChartColumn,
         path: "/reports/monthly-stats",
-        description: "The daily grid — rooms sold, ADR, RevPAR, pax, charges, tax and receipts.",
+        description: "The daily grid - rooms sold, ADR, RevPAR, pax, charges, tax and receipts.",
       },
       {
         title: "Yearly statistics",
@@ -84,13 +84,13 @@ const GROUPS: Group[] = [
         title: "City ledger",
         icon: Building2,
         path: "/reports/city-ledger",
-        description: "What each booking source owes, and what has been received against it.",
+        description: "Bills transferred to a company or booking site, account by account.",
       },
       {
         title: "No show",
         icon: UserX,
         path: "/reports/no-show",
-        description: "Bookings that never arrived, with the retention charged against each.",
+        description: "Bookings that never arrived on a day. It prints even when nobody did.",
       },
       {
         title: "Guest ledger",

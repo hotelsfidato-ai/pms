@@ -53,6 +53,39 @@ let ownerId: string;
 const posted: Array<{ stay: string; posting: string }> = [];
 let paymentsBefore = 0;
 
+/* TWO THINGS THESE TESTS CANNOT PUT BACK, so both are measured instead.
+
+   A settled restaurant bill cannot be unsettled, and an invoice is
+   immutable by trigger — the two are evidence, and a system that let a
+   test erase them would let anything erase them. So each is counted
+   before and after: the numbers below say exactly what the fixtures
+   added, and the next person reads that on purpose rather than finding
+   it by surprise in a figure they were calibrating. */
+let posBillsBefore = 0;
+let posBillsMade = 0;
+let invoicesBefore = 0;
+let invoicesMade = 0;
+
+const posBills = async () => {
+  const db = await admin();
+  try {
+    const { rows } = await db.query<{ n: string }>(
+      `select count(*)::text as n from pos_orders o join hotels h on h.id = o.hotel_id
+        where h.code = '5EL' and o.status = 'settled' and o.business_date = '2026-08-25'`);
+    return Number(rows[0]!.n);
+  } finally { await db.end(); }
+};
+
+const invoiceCount = async () => {
+  const db = await admin();
+  try {
+    const { rows } = await db.query<{ n: string }>(
+      `select count(*)::text as n from invoices i join hotels h on h.id = i.hotel_id
+        where h.code = '5EL'`);
+    return Number(rows[0]!.n);
+  } finally { await db.end(); }
+};
+
 const paymentTotal = async () => {
   const db = await admin();
   try {
@@ -90,6 +123,8 @@ beforeAll(async () => {
     await db.end();
   }
   paymentsBefore = await paymentTotal();
+  posBillsBefore = await posBills();
+  invoicesBefore = await invoiceCount();
 });
 
 afterAll(async () => {
@@ -105,6 +140,14 @@ afterAll(async () => {
   expect(await paymentTotal(),
     "these tests left money in the demo property; businessDate.test.ts reads that total")
     .toBeCloseTo(paymentsBefore, 2);
+  /* What cannot be undone is counted: a settled restaurant bill and an
+     invoice are evidence, not scratch. */
+  expect(await posBills(),
+    "the restaurant bills left in the demo on 25 August are not the ones these tests settled")
+    .toBe(posBillsBefore + posBillsMade);
+  expect(await invoiceCount(),
+    "the invoices left in the demo are not the ones these tests raised")
+    .toBe(invoicesBefore + invoicesMade);
   await closePool();
 });
 
@@ -249,6 +292,7 @@ describe("the Manager report adds up the way its own page says", () => {
     const order = (await made.json()) as { id: string };
     const settled = await send("POST", `/5EL/till/orders/${order.id}/settle`, { method: "cash" });
     expect(settled.status).toBe(200);
+    posBillsMade += 1;
     const after = await managerDoc("?asOn=2026-08-25");
 
     const db2 = await admin();
@@ -687,5 +731,62 @@ describe("the city ledger, as the owner decided", () => {
     const accounts = all.sections[0]!.rows.filter((r) => r.kind === "row");
     expect(accounts.length).toBeGreaterThan(0);
     for (const r of accounts) expect(r.cells["debit"]).toBe(0);
+  });
+});
+
+/* ── Lodging tax — the one that is filed ──────────────────────────── */
+
+describe("the lodging tax sheet", () => {
+  it("prints its heading and says so when no bill was issued", async () => {
+    const doc = (await (await call("/5EL/reports/lodging-tax?month=2026-08")).json()) as ReportDoc;
+    const band = doc.sections[0]!;
+    expect(doc.facts.map((f) => f.value)).toEqual(["2026-08-01", "2026-08-31"]);
+    expect(band.title).toBe("Check Out Bills");
+    /* The two-level heading the sheet is filed with. */
+    expect(band.columns.filter((c) => c.group?.startsWith("CGST")).map((c) => c.label))
+      .toEqual(["Net Amt.", "Tax Amt."]);
+    expect(band.columns.find((c) => c.group?.startsWith("CGST"))!.group).toBe("CGST @2.5%");
+    if (band.rows.length === 0) expect(band.empty).toMatch(/No bill was issued/);
+  });
+
+  it("reads the bills themselves: their first and last number, and what they carried", async () => {
+    /* An invoice cannot be deleted (a trigger says so, and that is the
+       point of an invoice), so this one is raised in MARCH, a month no
+       other check reads, and counted in the teardown. It is written
+       directly rather than through the series, so the gapless statutory
+       counter is not moved by a test. */
+    const db = await admin();
+    let number = "";
+    try {
+      const { rows } = await db.query<{ number: string }>(
+        `with f as (
+           select fo.id, fo.hotel_id from folios fo join hotels h on h.id = fo.hotel_id
+            where h.code = '5EL' and fo.reservation_id is not null order by fo.id limit 1)
+         insert into invoices (hotel_id, folio_id, fin_year, number, total, tax_total,
+                               taxable_value, cgst_total, sgst_total, business_date, sac_code)
+         select f.hotel_id, f.id, '2025-26', 'REPORTS-TEST-1', 10500, 500,
+                10000, 250, 250, '2026-03-12', '996311'
+           from f returning number`);
+      number = rows[0]!.number;
+      invoicesMade += 1;
+    } finally { await db.end(); }
+
+    const doc = (await (await call("/5EL/reports/lodging-tax?month=2026-03")).json()) as ReportDoc;
+    const rows = doc.sections[0]!.rows;
+    const day = rows.find((r) => r.cells["date"] === "2026-03-12");
+    expect(day, JSON.stringify(rows.map((r) => r.cells["date"]))).toBeDefined();
+    expect(day!.cells["fromBill"]).toBe(number);
+    expect(day!.cells["toBill"]).toBe(number);
+    expect(day!.cells["totalBill"]).toBe(10500);
+    /* Never recorded here, so never a zero. */
+    expect(day!.cells["serviceCharges"]).toBeNull();
+    /* CGST and SGST carry the same base and the same tax, by statute. */
+    expect(day!.cells["cgstNet"]).toBe(day!.cells["sgstNet"]);
+    expect(day!.cells["cgstTax"]).toBe(day!.cells["sgstTax"]);
+
+    const totalRow = rows.find((r) => r.kind === "total")!;
+    expect(totalRow.cells["totalBill"]).toBeCloseTo(
+      rows.filter((r) => r.kind === "row").reduce((t, r) => t + (r.cells["totalBill"] as number), 0), 2);
+    expect(totalRow.cells["fromBill"]).toBe(rows[0]!.cells["fromBill"]);
   });
 });

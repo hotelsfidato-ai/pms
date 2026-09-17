@@ -262,6 +262,9 @@ export interface Property {
   currency: string;
   timezone: string;
   businessDate: string;
+  /** The property's own GST halves, for the Lodging tax headings. */
+  cgstRate: number;
+  sgstRate: number;
 }
 
 /** By code (a route) or by id (the master's PDF route, which has the id). */
@@ -276,11 +279,12 @@ export async function propertyById(client: Client, id: string): Promise<Property
 async function propertyWhere(client: Client, where: string, value: string): Promise<Property | null> {
   const { rows } = await client.query<{
     id: string; code: string; name: string; address: string | null; gstin: string | null;
-    currency: string; timezone: string; bd: string;
+    currency: string; timezone: string; bd: string; cgst: string; sgst: string;
   }>(
     `select id, code, name,
             nullif(btrim(address_line), '') as address,
             gstin, currency, coalesce(timezone, 'Asia/Kolkata') as timezone,
+            coalesce(cgst_rate, 0)::text as cgst, coalesce(sgst_rate, 0)::text as sgst,
             to_char(app.business_date(id), 'YYYY-MM-DD') as bd
        from hotels where ${where} and is_active`,
     [value],
@@ -290,6 +294,7 @@ async function propertyWhere(client: Client, where: string, value: string): Prom
     ? {
         id: h.id, code: h.code, name: h.name, address: h.address, gstin: h.gstin,
         currency: h.currency.trim(), timezone: h.timezone, businessDate: h.bd,
+        cgstRate: Number(h.cgst), sgstRate: Number(h.sgst),
       }
     : null;
 }

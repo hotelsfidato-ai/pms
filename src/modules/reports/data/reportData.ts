@@ -51,42 +51,6 @@ export async function getCityLedger(
   );
 }
 
-/* ── Lodging tax ─────────────────────────────────────────────────── */
-
-export interface LodgingTaxRow {
-  date: string;
-  fromBill: string;
-  toBill: string;
-  totalBill: number;
-  totalRoomRent: number;
-  nonTaxable: number;
-  cgstNet: number;
-  cgstTax: number;
-  sgstNet: number;
-  sgstTax: number;
-  serviceCharges: number;
-  otherBills: number;
-  lessDiscount: number;
-  roundOff: number;
-}
-
-/**
- * CGST and SGST are half the total each, by statute. The ledger holds
- * ONE tax figure and the report splits it — two columns that must
- * always be equal are two chances to disagree.
- */
-export async function getLodgingTax(
-  hotelId: string,
-  from = PTD_FROM,
-  to = BUSINESS_DATE,
-): Promise<LodgingTaxRow[]> {
-  if (!hotelId) return [];
-  return fetchOr<LodgingTaxRow[]>(
-    `/api/hotels/${hotelId}/reports/lodging-tax?${range(from, to)}`,
-    [],
-  );
-}
-
 /** The name printed at the head of every report. */
 /* `REPORT_PROPERTY = property.name` lived here and had no callers.
    Every report reads the property from the API it already calls. */

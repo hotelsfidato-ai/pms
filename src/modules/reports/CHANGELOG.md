@@ -11,6 +11,96 @@ Work that touches the core or several services still goes in the root
 
 ---
 
+## 2026-09-17 · Every report in the owner's layout (D17-62)
+
+**Asked for:** all eight reports in `docs/REPORTS-SPEC.md` laid out like the
+owner's eZee exports in `D:\reports fidato\` - Night Audit, Manager report with
+its five missing sections, City Ledger, No Show, Monthly Occupancy, Monthly and
+Yearly Statistics, Lodging Tax - with the master building the shared PDF, .xlsx,
+CSV and the report layout, and the long dash out of this folder.
+
+**The owner's answers first.** Their PDFs cannot be matched figure by figure:
+the demo holds August's room-charge total (₹4,19,578.76 against the export's
+₹4,19,578.77) and nothing else of that day - different guests and rooms, no
+restaurant bills, every payment in cash, no advance deposits. Asked, the owner
+said: *"it's the demo - what I need you to follow is the LAYOUT, but use MY
+BRANDING"*. Then, in two rounds (recorded by the master as D17-70 to D17-78):
+room charges are reported on the night they pay for; a complimentary room counts
+as sold; the card split is a request to Finance; the City ledger counts bills
+transferred to a company and claims no balance it cannot know; Outstanding
+Commission is "-"; "Folio No." prints the booking reference; dates print
+25/08/2026; the printed Night audit lives in All reports.
+
+**Shipped** - branch `reports/ezee-layout`, copy `D:\fidato-reports`
+- **One document per report.** `api/src/modules/reports/document.ts` (the
+  contract agreed with the master), `build.ts`'s `buildReport()` at the front
+  door, a route per report in `documents.ts`, and `components/ReportView.tsx`
+  which draws any of them: bands, spanning headings, totals ruled off, negatives
+  in red, "-" for a figure this system does not hold, and the chart.
+- **One derivation.** `figures.ts` holds the nights as one piece of SQL:
+  a posting that says "· N nights" is split evenly over those nights (the paise
+  to the last), a night not posted yet from the business date on counts at the
+  booking's rate, a complimentary room is sold. `dailyFigures()` adds them up by
+  date; `stayNights()` reads them room by room. The Dashboard, the property page
+  and every report read these.
+- **The eight**: Monthly statistics, Monthly occupancy (the bar chart with its
+  value labels), Yearly statistics, No show, City ledger (with eZee's "Ignore
+  zero balance account" switch), the **Manager report** with all thirteen
+  sections including the five that were missing - Advance Deposit Ledger, POS
+  Summary, POS Payment Summary, Revenue Summary and the eZee Room Summary rows -
+  the **Night audit report**, four pages and thirteen sections, which this
+  system has never had, and **Lodging tax** from the invoices.
+- **The files.** PDF, Excel and CSV buttons on every report screen, fetched
+  through the master's `downloadFile`, disabled until the report has loaded, and
+  the server's own sentence shown when one is refused.
+- The long dash is gone from what a person reads in this folder.
+
+**Found**
+- **REP-8, mine:** the reports tests posted ₹2,734.50 into the demo property and
+  left it there, so the API suite went red on `businessDate.test.ts`, which
+  reads that calibrated total. Found by the master, not by me. Every posting is
+  now reversed in `afterAll` and the teardown measures the property's payments
+  back to where they were; what cannot be undone (a settled restaurant bill, an
+  invoice) is counted instead.
+- **A bill transferred to the city ledger counted as money received.** It is a
+  payment posting and nobody has paid it: out of Receipt, out of Total Payment,
+  out of the cashier shift; it is Charges Raised.
+- **A label in a date column printed as a dash** ("Total" through `dateShort`).
+  Found by ReportView's own new test.
+- **Not mine, told to the master:** `npm run strip-check` was red on cp6 -
+  `su/client.ts` and `su/token.ts` use constructor parameter properties, which
+  the server cannot load. The next deploy would not have started.
+
+**Proved** - run in `D:\fidato-reports`
+- API reports tests 34/34, with `businessDate` alongside them: 34 green together.
+- **Eleven deliberate breaks, each seen to fail its own test**, each restored:
+  the night split, booked-ahead nights, comps counted as sold, an unknown report
+  key, the no-show day, city-ledger transfers only, a transfer counted as a
+  receipt, the guest ledger's settlement, POS tax, the discount inside extras,
+  the deposit collected today, and the teardown's own measurement.
+- On screen at 25 Aug 2026, every report opened and read: Monthly statistics
+  (533 available room-nights), Monthly occupancy, Yearly statistics, No show
+  (empty, with its date), City ledger, Manager report (all thirteen sections),
+  Night audit report, Lodging tax. A PDF downloaded from the Monthly statistics
+  screen: `GET /reports/monthly-statistics.pdf` → 200.
+
+**Left open**
+- The owner's PDFs are matched in LAYOUT, not in figures: the demo is not that
+  day. Whether the demo should one day be rebuilt from the exports is the
+  owner's call.
+- Finance's "Company accounts" screen still shows balances by booking source
+  (`/reports/balances-by-source`); the owner has since decided it moves to the
+  transfers (D17-86) - the master has the Finance chat.
+- Credit and debit cards print as one "Card" row until Finance records them
+  apart (D17-73).
+- Service charges, tips, item discounts and Expense are not recorded anywhere in
+  this system, and print "-".
+
+**Commits:** `b418833` `2b95465` `2996129` `8fd1cc3` `3800355` and the Lodging
+tax, the downloads and the dash pass.
+
+---
+
 ## 2026-09-16 · Round 1: the typed-in dates, the heading, the STATISTICS block
 
 **Asked for:** round 1 for reports (`HANDOVER.md` § 3.0g), in order — REP-1

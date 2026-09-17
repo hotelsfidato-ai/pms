@@ -40,96 +40,120 @@ most export CSV.
 | Dashboard | `/` | `pages/Dashboard.tsx` | Reception |
 | All reports | `/reports` | `pages/Index.tsx` | none |
 | Manager report | `/reports/manager` | `pages/ManagerReport.tsx` | none |
+| Night audit report | `/reports/night-audit` | `pages/NightAudit.tsx` | search only |
 | City ledger | `/reports/city-ledger` | `pages/Ledgers.tsx` (`CityLedgerPage`) | search only |
 | No show | `/reports/no-show` | `pages/Ledgers.tsx` (`NoShowPage`) | search only |
 | Lodging tax | `/reports/lodging-tax` | `pages/Ledgers.tsx` (`LodgingTaxPage`) | search only |
-| Monthly occupancy | `/reports/monthly-occupancy` | `pages/Statistics.tsx` (`MonthlyOccupancyPage`) | search only |
-| Monthly statistics | `/reports/monthly-stats` | `pages/Statistics.tsx` (`MonthlyStatisticsPage`) | search only |
-| Yearly statistics | `/reports/yearly-stats` | `pages/Statistics.tsx` (`YearlyStatisticsPage`) | search only |
-| GST sales register | `/reports/gst-sales` | `pages/Compliance.tsx` (`GstSalesPage`) | search only |
-| Form F / C-Form | `/reports/c-form` | `pages/Compliance.tsx` (`CFormPage`) | search only |
-| Guest ledger | `/reports/guest-ledger` | `pages/Compliance.tsx` (`GuestLedgerPage`) | search only |
-| Cashier shift | `/reports/cashier-shift` | `pages/Compliance.tsx` (`CashierShiftPage`) | search only |
+| Monthly occupancy | `/reports/monthly-occupancy` | `pages/Statistics.tsx` | search only |
+| Monthly statistics | `/reports/monthly-stats` | `pages/Statistics.tsx` | search only |
+| Yearly statistics | `/reports/yearly-stats` | `pages/Statistics.tsx` | search only |
+| GST sales register | `/reports/gst-sales` | `pages/Compliance.tsx` | search only |
+| Form F / C-Form | `/reports/c-form` | `pages/Compliance.tsx` | search only |
+| Guest ledger | `/reports/guest-ledger` | `pages/Compliance.tsx` | search only |
+| Cashier shift | `/reports/cashier-shift` | `pages/Compliance.tsx` | search only |
 
+- **The eight in the owner's layout** (D17-62) are Night audit, Manager, City
+  ledger, No show, Monthly occupancy, Monthly statistics, Yearly statistics and
+  Lodging tax. Each is one `ReportDoc` from the server, drawn by
+  `components/ReportView.tsx` inside `components/DocumentReport.tsx`. The four
+  Compliance screens still draw their own tables.
+- **The printed Night audit is a report, not the audit.** The night-audit
+  service owns the screen that RUNS the audit; this one reads the day (the
+  owner, 17 September).
 - "Search only" is `listed: false` in `nav.ts`: in nobody's sidebar, always
   reachable by Find a screen (Ctrl K) for a role that may open it.
 - The Dashboard needs the `dashboard` grant; every report the `report` grant.
-  Owner, admin, GM, hotel manager, finance and read-only see the Dashboard,
-  All reports and Manager report in their menu. Housekeeping, the kitchen
-  roles, the waiter and the store have no Dashboard in theirs.
-- The Night audit entry sits in the menu's Reports section but belongs to the
-  `night-audit` service.
 - These routes carry no `/h/:code/` prefix and no `PropertyScope`; the pages
   read the hotel in view from the session (`useUi`).
 
----
+## Server endpoints
 
-## Server endpoints — 13
+`api/src/modules/reports/`; the door `index.ts` mounts them at `/api/hotels`.
+Every one is a GET.
 
-The code is in three files in `api/src/modules/reports/` (moved 15
-September); the door `index.ts` mounts them at `/api/hotels`. Every one is a
-GET.
-
-From `reports.ts` (570 lines):
-
-```
-GET  /:code/reports/no-show
-GET  /:code/reports/city-ledger
-GET  /:code/reports/lodging-tax
-GET  /:code/reports/guest-ledger
-GET  /:code/reports/cashier-shift
-GET  /:code/reports/gst-sales
-GET  /:code/reports/c-form
-```
-
-From `statistics.ts` (316 lines):
+**The eight reports, each one document** — `documents.ts`, one explicit route per
+key so the master's `<key>.pdf`, `.xlsx` and `.csv` routes are never answered
+here by mistake:
 
 ```
-GET  /:code/statistics/daily      reached by no screen — its only caller, listDailyStatistics, has none
-GET  /:code/statistics/period     the Dashboard; the property page (admin)
-GET  /:code/statistics/snapshot   the property page (admin)
-GET  /:code/statistics/monthly    Monthly occupancy, Monthly statistics
-GET  /:code/statistics/yearly     Yearly statistics
+GET /:code/reports/manager            ?asOn=
+GET /:code/reports/night-audit        ?asOn=
+GET /:code/reports/city-ledger        ?asOn= &from= &ignoreZero=
+GET /:code/reports/no-show            ?asOn=
+GET /:code/reports/monthly-statistics ?month=YYYY-MM
+GET /:code/reports/monthly-occupancy  ?month=YYYY-MM
+GET /:code/reports/yearly-statistics  ?year=YYYY
+GET /:code/reports/lodging-tax        ?month=YYYY-MM
 ```
 
-From `manager.ts` (332 lines):
+A malformed parameter is refused with a sentence (400), never guessed at. With
+nothing sent, every report is as on the property's own business date.
+
+**The rest**
 
 ```
-GET  /:code/reports/manager       the Manager report and the Dashboard
+GET /:code/statistics/daily      no screen (KNOWN_UNREACHABLE)
+GET /:code/statistics/period     the Dashboard; the property page (admin)
+GET /:code/statistics/snapshot   the property page (admin)
+GET /:code/reports/guest-ledger · /cashier-shift · /gst-sales · /c-form
+GET /:code/reports/balances-by-source   finance's "Company accounts" screen
 ```
 
-**Dates on the server, one rule each.** `asOn` defaults to the business
-date; PTD starts on the first of `asOn`'s month; YTD starts on
-`financialYearStart(asOn)` in `manager.ts` — 1 April on or before it, the
-same April rule as `app.current_fin_year()`, which reads the wall clock and
-so cannot answer for another day. The yearly grid defaults to the business
-date's calendar year, January to December as the eZee export prints it. No
-report date is a literal (REP-1, REP-2, REP-4).
+**`buildReport(client, hotelId, key, params)`** is the one door to a report's
+figures, exported from `index.ts` with the `ReportDoc` types. The screens reach
+it through the routes above; the master's PDF, .xlsx and CSV routes call it
+directly under the caller's own session (the contract of 17 September). It
+THROWS on a key it does not know — an empty document would print as a real
+report with nothing in it.
 
----
+**Dates on the server, one rule each.** `asOn` defaults to the business date;
+PTD starts on the first of `asOn`'s month; YTD starts on `financialYearStart(asOn)`
+in `builders/manager.ts` — 1 April on or before it, the same April rule as
+`app.current_fin_year()`, which reads the wall clock and so cannot answer for
+another day. No report date is a literal (REP-1, REP-2, REP-4).
 
 ## Data
 
+**On the server** (`api/src/modules/reports/`):
+
 ```
-data/reportData.ts     getNoShowReport, getCityLedger, getLodgingTax, getGuestLedger,
-                       getCashierShift, getGstSales, getCForm, getMonthlyStatistics,
-                       getYearlyStatistics.
-data/statistics.ts     listDailyStatistics (no caller — KNOWN_UNREACHABLE in
-                       src/data/repositories/repositories.test.ts), getPeriodStatistics,
-                       getTodaySnapshot; re-exports PTD_FROM and PTD_TO from the core;
-                       monthOf(date) — the month (first day, last day, name, year) the
-                       monthly and yearly pages report, called with the business date (REP-1).
-data/managerReport.ts  getManagerReport — the month so far starts on the first of the
-                       report's own month (MEMORY 253). The year to date comes back from
-                       the server as `ytdFrom`; there is no web copy of it (REP-2).
-                       A Statistics row carries `unit`: "money" or "percent" (REP-5).
-components/ReportShell.tsx   the report chrome: heading, the hotel and the person from the
-                       session (useDocumentIdentity), print styling, CSV, and `Amount`,
-                       which prints a dash for null, never a zero. Also ReportTable,
-                       ReportHead, ReportBand.
+document.ts   the contract: ReportDoc, sections, columns, rows, facts, chart.
+              Raw values - money in rupees, percent 0 to 100, dates YYYY-MM-DD,
+              null for a figure this system does not hold. The web keeps a copy
+              in data/document.ts; change both, or neither.
+figures.ts    ONE derivation for every report. NIGHTS is the shared SQL:
+              a posting saying "· N nights" split evenly over those nights (the
+              paise to the last), a night not posted yet from the business date
+              on at the booking's rate, a complimentary room counted as sold
+              (the owner, D17-71 and D17-72). dailyFigures() adds them up by
+              date; stayNights() reads them room by room; propertyFor() heads
+              every report from the database, never a literal.
+build.ts      buildReport(), BUILT_KEYS, and what each key is built from.
+builders/     manager.ts · nightAudit.ts · statistics.ts · cityLedger.ts ·
+              noShow.ts · lodgingTax.ts
+reports.ts    the four Compliance reports and balances-by-source.
+statistics.ts period, snapshot and daily, for the Dashboard and admin.
 ```
 
----
+**On the web** (`src/modules/reports/`):
+
+```
+data/document.ts        the types, and getReport(hotelId, key, query)
+data/reportData.ts      getGuestLedger, getCashierShift, getGstSales, getCForm,
+                        getCityLedger (balances by booking source, finance's)
+data/statistics.ts      listDailyStatistics, getPeriodStatistics,
+                        getTodaySnapshot; monthOf(date) - the month the monthly
+                        and yearly pages report, from the business date (REP-1)
+components/ReportView.tsx      draws any ReportDoc: bands, spanning headings,
+                        totals ruled off, negatives in red, "-" for a figure not
+                        held, and the bar chart. Dates print 25/08/2026 (D17-77).
+components/DocumentReport.tsx  one report screen: load, then draw. Four states,
+                        and the PDF / Excel / CSV buttons (the master's
+                        downloadFile), disabled until the report has loaded.
+components/ReportShell.tsx     the chrome: the property and the person from the
+                        session, print styling, the "Printed" stamp, and Amount,
+                        which prints "-" for null, never a zero.
+```
 
 ## Database
 
@@ -232,41 +256,25 @@ The server's door, `api/src/modules/reports/index.ts`, exports only `mounts`
 
 ## Open items
 
-From `PENDING.md` and `HANDOVER.md`, as of 15 September:
+As of 17 September 2026, after the eight reports landed:
 
-- **Staff-first phase 2** (`HANDOVER.md` § 3.4) — one report layout, PDF and
-  Excel on every report, the Manager report's five missing sections, and the
-  four-page Night Audit report. Done when each report for 25 Aug 2026 matches
-  its PDF line by line. Ask first.
-- **Two "in house" numbers for the same moment** — the property page
-  (`getTodaySnapshot`) said In house 11, Vacant 9 while the Dashboard and Rooms
-  said 10 and 7 (14 September). Needs one definition; the owner to choose
-  (PENDING § 6; CHANGELOG 2026-09-14; MEMORY "Open").
-- **The Manager report's City ledger section is all dashes** — it fills only
-  when OTA balances are kept here; `manager.ts` says "when the channel bridge
-  lands", and the channel manager is parked (PENDING § 6).
-- **"Which room was this stay in" is written by hand** in two report
-  queries — the guest ledger and the C-Form (`reports.ts`) — of the seven that
-  could move onto `app.stay_room()` (PENDING § 6).
-- **The same chart icon on six menu entries** — four are here: Manager
-  report, Monthly occupancy, Monthly statistics, Yearly statistics
-  (PENDING § 5a).
-- **`listDailyStatistics`** has no caller (PENDING § 4).
-- **REP-6** — the Dashboard's "Owed by guests" is a net figure under a gross
-  label. The wording is with the owner (16 September); not changed.
-- REP-1 to REP-5 are fixed (16 September, `DEFECTS.md`).
-- From the design critique, not yet done: "Stage 9" in the Manager report's
-  City ledger note (a development word shown to the owner); `Total Room 17`
-  waits on the owner's D3 and is the master's to change.
-- Seen 16 September, not in round 1 and not changed: Monthly and Yearly
-  statistics and the Dashboard print occupancy with a local `${n}%`, not
-  `percent()`; the Manager report's Room Summary prints counts ungrouped
-  (`5378`); a day with nothing sold prints ADR and RevPAR as `₹0` (how ADR is
-  counted is the master's); Monthly occupancy's note "This property swings
-  between both inside a fortnight" describes August 2026's data whatever
-  month is shown.
-
----
+- **The owner's exports are matched in LAYOUT, not in figures.** The demo is not
+  that day: it holds August's room-charge total (₹4,19,578.76 against the
+  export's ₹4,19,578.77) and nothing else of 25 August — different guests and
+  rooms, no restaurant bills, every payment in cash, no advance deposits. The
+  owner's words, asked: *"it's the demo - what I need you to follow is the
+  LAYOUT, but use MY BRANDING"*. Whether the demo is ever rebuilt from the
+  exports is the owner's call.
+- **Credit and debit cards print as one "Card" row** until Finance records them
+  apart (D17-73, a request the master carried to that chat).
+- **Finance's "Company accounts"** still reads balances by booking source; the
+  owner has since decided it moves to the transfers this service counts
+  (D17-86). Finance's screen, not this one.
+- **Not recorded anywhere in this system, so always "-"**: service charges,
+  tips, item discounts, Expense, a company's payment against its city ledger
+  account, and commission paid to an OTA.
+- **`listDailyStatistics`** still has no caller (PENDING § 4).
+- REP-1 to REP-10 are fixed (`DEFECTS.md`).
 
 ## Gates
 
@@ -299,19 +307,14 @@ suite has no group of its own for reports; new checks go in
 
 ## Requests to the master
 
-- **16 Sep · a month-and-year formatter in `src/lib/format.ts`.** The monthly
-  reports print "August 2026"; `format.ts` has no formatter for it, so
-  `monthOf` in `data/statistics.ts` names the month with date-fns directly —
-  as `src/components/ui/DatePicker.tsx` and `inventory/pages/Pricing.tsx`
-  already do. One `monthYear()` would take all three.
-- **16 Sep · `src/lib/glossary.ts`, header comment, line 16** says YTD is
-  "FY_START, 1 April, in both the API and here". There is no web copy now and
-  no `FY_START`: it is `financialYearStart()` in
-  `api/src/modules/reports/manager.ts`. The glossary's own YTD line, which a
-  person reads, is still true.
-- **16 Sep · the `guestLedger` line in `src/lib/glossary.ts`**, once the owner
-  has chosen the Dashboard's wording for REP-6 — it says "the charges posted,
-  less what they have paid" and does not mention refunds due.
+- **17 Sep · answered.** `dateReport` and `dateTimeReport` are in
+  `src/lib/format.ts` and this service uses them (D17-77); the month-and-year
+  formatter is still `monthOf` here. `src/lib/glossary.ts` now says a
+  complimentary room counts as sold, and "Owed by guests, less refunds".
+- **17 Sep · open.** `src/lib/glossary.ts` line 16 still says YTD is "FY_START,
+  1 April, in both the API and here". There is no web copy and no `FY_START`: it
+  is `financialYearStart()` in `api/src/modules/reports/builders/manager.ts`.
+  The glossary's own YTD line, which a person reads, is still true.
 
 ## Requests from other services
 
