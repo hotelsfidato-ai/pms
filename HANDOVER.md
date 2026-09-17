@@ -404,6 +404,28 @@ menus at the equipment merge, EQ-2. **Next free migration: 097.** Owner chose:
   in `navigation.ts` and 068 (left: they may be the owner's), EQ-3 (dev only).
 - **Next free migration: 099.**
 
+**18 September, small hours — STEP 3 DONE: EVERY REPORT ON PAPER, AND THE
+CHANNEL MANAGER IS THREE QUARTERS BUILT.** All eight reports in the owner's eZee
+layout with Fidato's branding, each downloadable as a PDF made on the server, a
+real .xlsx and a CSV (D17-31, D17-32, D17-62); dates print 25/08/2026 and
+moments 25/08/2026 04:12:43 PM in the property's time (D17-77). The channel
+manager has SU's token login, the mapping and content send, and the
+every-minute push (D17-66); part 4, SU pushing bookings in, is being built to
+the owner's D17-79 to D17-84. Twelve more decisions answered: D17-79 to D17-90.
+Gates on `24cc50a`: web 365 · strip-check 109 files · API 983 · database 808
+with 108 migrations · replay 108/108 · build clean. **Two faults found that
+would each have stopped a deploy:** strip-check red since the channel-manager
+merge (the server cannot load constructor parameter properties), and MEMORY
+293, my 108 widening a constraint that 087 rewrites on every replay — the first
+hotel switched on for the channel manager would have rolled the migration run
+back. Both fixed and both now gated; `strip-check` is in the gate script and
+`rerun.sh` switches a module on between its passes. **Live is still
+`eaf6916`** — the deploy (D17-61) waits on the Store chat's stock per place, and
+that chat is not running. **Next free migration: 109** (the channel-manager
+chat's, for its booking inbox). **Open for the owner:** seven questions on what
+the reports print, whether a rack price may go to SU, and whether the bill's
+PDF travels with the JSON to n8n (`docs/briefs/n8n-sending.md`).
+
 **17 September night — STEP 1 of `docs/NEXT-BUILD-PLAN.md` DONE except the Store
 chat's phase 1A (still working).** Merged: admin (tax in use, GM Settings without
 switches), housekeeping (board every 30 s, migration 103). Built by the master:
