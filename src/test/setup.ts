@@ -1,4 +1,21 @@
 import { vi } from "vitest";
+import { configure } from "@testing-library/dom";
+
+/* ══════════════════════════════════════════════════════════════════
+   HOW LONG A SCREEN IS GIVEN TO APPEAR
+
+   `findBy…` waits one second by default. That is plenty for one file and
+   not enough for forty running at once on a busy machine: on 18 September
+   three full runs of this suite each failed a DIFFERENT test - the admin
+   switches, then a stay's group pill - and every one of them passed when
+   its file was run alone. A gate that answers differently each time is not
+   a gate, and the first instinct on seeing it is to distrust the change
+   rather than the clock.
+
+   Five seconds is still short enough that a screen which never renders
+   fails the test rather than hanging it.
+   ══════════════════════════════════════════════════════════════════ */
+configure({ asyncUtilTimeout: 5000 });
 import {
   property, roomInventory, PROPERTY_CODE,
   dailyAvailableRooms, nightsSoldPerDay,

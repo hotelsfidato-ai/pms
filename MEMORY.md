@@ -6539,6 +6539,32 @@ copy will see of theirs.**
 
 ---
 
+### 295 · MINE: an exemption from the sign-in gate that matched a SIBLING path
+
+18 September. The channel manager's door is the one address a machine outside
+this system may call without a person, so the gate under `/api` learned a third
+scheme: `if (c.req.path.startsWith("/api/channel")) { await next(); return; }`.
+
+That string also matches **`/api/channel-manager/su`** - the owner's own SU
+settings, keys included - which then passed the gate with no person at all.
+Three of the channel manager's own tests caught it by answering 401 where they
+expected 200 and 403: nothing had set a subject, so the routes failed further
+in. Had those routes not needed a session, the settings would have been open to
+anyone who could reach the server.
+
+Fixed: `path === "/api/channel" || path.startsWith("/api/channel/")`.
+
+The first guard I wrote for it PASSED with the bug in place, because it only
+asserted 401 - and a request that slips the gate is refused further in with
+401 as well. It now asserts the gate's own sentence ("No bearer token."), and
+fails with the bug put back.
+
+**The rule: a prefix rule about paths ends at a path boundary - compare the
+segment, not the string. And a test for "who refused this" asserts WHICH
+refusal, never the status alone.**
+
+---
+
 ### 294 · MINE: `git stash push <file>` to test the old version, and the change never came back
 
 17 September, fixing 293. To prove the guard I wanted the file without it for

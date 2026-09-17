@@ -3,6 +3,7 @@ import { connection } from "./connection.ts";
 import { content } from "./content/routes.ts";
 import { availability } from "./ari/routes.ts";
 import { bookings } from "./inbound/routes.ts";
+import { inbound } from "./inbound/door.ts";
 export { jobs } from "./jobs.ts";
 
 /* Part 4 (D17-79): the door SU pushes bookings through. NOT in `mounts`: it
@@ -31,4 +32,7 @@ export const mounts: readonly Mount[] = [
   ["/api/hotels", content],
   ["/api/hotels", availability],
   ["/api/hotels", bookings],
+  /* Part 4 (D17-79): the door SU pushes bookings to, on its own prefix and
+     outside the staff gate. Wired by the master on 18 September. */
+  ["/api/channel", inbound],
 ];

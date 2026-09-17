@@ -35,5 +35,8 @@ export default defineConfig({
        for the split between what these tests prove and what api/test
        proves against real Postgres. */
     setupFiles: ['./src/test/setup.ts'],
+    /* A test may now wait five seconds for a screen (src/test/setup.ts), so
+       the test itself must be allowed more than vitest's default five. */
+    testTimeout: 20000,
   },
 })

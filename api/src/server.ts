@@ -164,6 +164,29 @@ app.use("/api/*", async (c, next) => {
      under /api would have been open.
      So the gate learns the second scheme instead. Neither path can be
      skipped, and both end at a staff id that RLS understands. */
+  /* THE THIRD SCHEME, and the only one that passes with NO person behind it.
+     SU is not staff and holds no sign-in: it presents the push key the owner
+     generated, which is checked inside the channel manager's own door
+     (modules/channel-manager/inbound/door.ts) because only that file knows
+     the answer shape SU expects and how to refuse without telling a stranger
+     what was wrong. The door then finds the hotel from the id SU was given
+     and opens its session as that hotel's service account, so row level
+     security scopes it exactly as it scopes a clerk.
+
+     ⚠ THE SLASH MATTERS. Written `startsWith("/api/channel")` this also
+     matched /api/channel-manager/su - the owner's own SU settings - and let
+     it past the gate with no person at all (18 September, caught by the API
+     suite: three of those tests answered 401 because nothing set a subject).
+     A prefix exemption must end at a path boundary.
+
+     This is deliberately a prefix and not a route: nothing else may be
+     mounted under /api/channel, and api/test/apiGate.test.ts fails if
+     anything is. */
+  if (c.req.path === "/api/channel" || c.req.path.startsWith("/api/channel/")) {
+    await next();
+    return;
+  }
+
   if (c.req.path.startsWith("/api/pos")) {
     const outlet = await outletFor(c.req.header("x-pos-key"));
     if (!outlet) {
@@ -222,9 +245,12 @@ const SERVICES = [
   frontDesk, reservations, finance, reportsService, guests, nightAudit,
   pos, admin, inventory, banquet, stores, housekeeping, equipment, channelManager,
 ];
-for (const service of SERVICES) {
-  for (const [prefix, router] of service.mounts) app.route(prefix, router);
-}
+/* Every router, with the prefix it hangs from. Exported so that
+   api/test/apiGate.test.ts can hold /api/channel - the one prefix that
+   passes the gate with no person behind it - to exactly one door. */
+export const SERVICE_MOUNTS = SERVICES.flatMap((service) => [...service.mounts]);
+
+for (const [prefix, router] of SERVICE_MOUNTS) app.route(prefix, router);
 
 app.onError((error, c) => {
   if (error instanceof Unauthenticated) {
