@@ -14,8 +14,27 @@ entries stay here: they are the reason the fault does not come back.
 
 ## Open — not fixed
 
-Nothing is open in this service today (17 September 2026). REP-6 was the last,
-and the owner answered it — it is below, with the others.
+### REP-11 · A booking nobody has arrived on appears in the Night audit's Room Charges
+
+**Found** — 17 September 2026, reading the finished report against the demo:
+Lata Bhosale, booked for 25–27 August and still `confirmed`, is listed with a
+room charge of ₹2,857 for the night of the 25th.
+
+It follows from the owner's decision of 17 September (D17-71): a night not posted
+yet, from the business date on, counts at the booking's rate — which is what
+makes tonight's rent readable before the audit posts it, and what puts the nights
+booked ahead on Monthly statistics. On a day the audit has CLOSED the question
+does not arise: the audit marks an arrival that never came as a no-show, and it
+leaves the section. So the row only appears on a day still open, and the report's
+own footnote says the rule.
+
+**Not changed.** Whether the printed night audit should leave out a booking
+nobody has arrived on — and so stop agreeing with the Manager report for that
+day — is the owner's call, not a fix. Recorded here so the next person does not
+"correct" it.
+
+**The rule** — A report of a day that is not over yet is a forecast in places.
+Say which places, on the report.
 
 ## Fixed
 

@@ -71,7 +71,19 @@ Commission is "-"; "Folio No." prints the booking reference; dates print
   `su/client.ts` and `su/token.ts` use constructor parameter properties, which
   the server cannot load. The next deploy would not have started.
 
-**Proved** - run in `D:\fidato-reports`
+**Proved** - every number below was run in `D:\fidato-reports` on the tree that
+was committed, and judged by its exit code (MEMORY 274, 285)
+- **The gates, on the finished branch:** web `npx tsc -b --force` clean ·
+  `npx vitest run` **362 passed, 41 files**, exit 0 · api `npx tsc --noEmit`
+  clean · `npm run strip-check` 86 files · `cd api && npm test` **958 passed, 1
+  failed** · `bash db/tests/run.sh` **787 assertions passed** · `npm run build`
+  clean, "no test sign-in in dist" · `npm run lane -- reports` all inside the
+  lane (the files it lists outside are cp6's own commits this branch carries
+  through the merge).
+- **The one failing API test was the master's**, not this service's:
+  `test/reportFiles.test.ts` asserted that a report "not built yet" cannot be
+  downloaded, and after this work there is no key in `REPORT_KEYS` that is not in
+  `BUILT_KEYS`. Told to the master with the fix; they had already made it.
 - API reports tests 34/34, with `businessDate` alongside them: 34 green together.
 - **Eleven deliberate breaks, each seen to fail its own test**, each restored:
   the night split, booked-ahead nights, comps counted as sold, an unknown report
@@ -96,8 +108,12 @@ Commission is "-"; "Folio No." prints the booking reference; dates print
 - Service charges, tips, item discounts and Expense are not recorded anywhere in
   this system, and print "-".
 
-**Commits:** `b418833` `2b95465` `2996129` `8fd1cc3` `3800355` and the Lodging
-tax, the downloads and the dash pass.
+**Commits:** `b418833` (the three statistics reports) · `2b95465` (No show, City
+ledger) · `2996129` (the Manager report) · `8fd1cc3` (dates as 25/08/2026) ·
+`3800355` (the Night audit report, and the money the tests left in 5EL put back)
+· `73626fb` (Lodging tax, the PDF/Excel/CSV buttons, the long dash) · `1d4ed60`
+(two report cards whose words the new figures had outdated) · `11f89ce` and
+`76102fe`, the two merges of cp6 this branch carries.
 
 ---
 
