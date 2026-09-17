@@ -27,9 +27,10 @@ The owner adds a property and its general manager. The GM adds the people
 who work at their hotel, gives each a role and a password, sets the screen
 each person starts on, and can take access away, switch somebody off or bring
 them back. A group administrator sees every property and every person; a GM
-sees their own hotel. The Settings screen shows how a property is set up and
-carries the module switches — Point of sale, Banquet hall, and "Reception can
-use the POS". The Audit log, Roles and permissions and Integrations are read
+sees their own hotel. The Settings screen shows how a property is set up,
+including the GST it actually charges, and — for the owner and an
+administrator only (D17-36) — the module switches: Point of sale, Banquet
+hall, and "Reception can use the POS". The Audit log, Roles and permissions and Integrations are read
 only. A developers' Console, in development builds only, can create
 properties and people.
 
@@ -104,7 +105,7 @@ GET    /api/admin/overview                   the Console's figures
 ```
 GET    /:code/staff        Users
 GET    /:code/audit-log    Audit log — owner, admin, GM only; 403 otherwise (D17-15)
-GET    /:code/settings     Settings  — owner, admin only; 403 otherwise (D17-15)
+GET    /:code/settings     Settings  — owner, admin, GM (D17-36); 403 otherwise (D17-15)
 ```
 
 **Who may read the audit log and Settings** is `grants.ts` (17 September,
@@ -117,7 +118,8 @@ copied into `grants.ts` in the same commit, or that test fails.
 
 ```
 GET    /:code/modules             read by Settings, the sidebar and Find a screen
-POST   /:code/modules/:module     pos · banquet · reception_pos — the GM or a group admin only
+POST   /:code/modules/:module     pos · banquet · reception_pos — owner or admin at this
+                                  hotel, or a group admin; 403 otherwise (D17-36, ADM-5)
 ```
 
 `commissioning.ts` (split out of inventorySetup.ts) — 1, at `/api/hotels`:
@@ -148,6 +150,12 @@ data/adminLists.ts     212 lines. listStaff, roleDescription, listAuditLog,
                        from anywhere — and getSettings, which adds the invoice series
                        and the POS outlets over HTTP. Split out of the old directory.ts.
 data/commissioning.ts  getCommissioning. Split out of the old roomSetup.ts.
+data/taxInUse.ts       getTaxInUse — finance's GST rules over HTTP, for Settings and the
+                       Properties cards (ADM-2, D17-37).
+components/TaxInUse.tsx   TaxInUseRows and taxLine: the GST in use, one row per kind,
+                       "-" where unset, "Could not load" on a failed read.
+moduleSwitchRoles.ts   MODULE_SWITCH_ROLES (owner, admin) — who sees the switches (D17-36);
+                       the server's copy is in api/src/modules/admin/grants.ts.
 flows/StaffAdmin.tsx   NewPerson, People, NewProperty.
 flows/CommissioningCard.tsx   CommissioningCard (the door's export) and ReadyPill,
                        which nothing imports (checked 15 September).
@@ -220,8 +228,10 @@ The server's door, `api/src/modules/admin/index.ts`, exports only `mounts`
   `@/modules/reports`, on one property's page.
 - **finance** and **pos**, over HTTP, not by import: Settings reads
   `GET /:code/invoice-series` (finance's `invoices.ts`) and
-  `GET /:code/pos/outlets` (the restaurant's bridge). If either changes shape,
-  Settings breaks.
+  `GET /:code/pos/outlets` (the restaurant's bridge); Settings and every
+  Properties card read `GET /:code/tax` (finance's `tax.ts`) for the GST in use.
+  If any of them changes shape, those screens break. The five kind names in
+  `components/TaxInUse.tsx` are a copy of `LABEL` in finance's `TaxRulesCard`.
 - The core: `getModules` and `setModule` (`src/data/repositories/properties.ts`),
   the permission matrix (`src/lib/permissions.ts`), the session, and
   `api/src/identity.ts` (the sign-in accounts).
@@ -238,9 +248,13 @@ The server's door, `api/src/modules/admin/index.ts`, exports only `mounts`
 - **The first screen after sign-in** — Dashboard, Rooms or Calendar — is set
   by the GM per person, and the person can change their own (owner,
   14 September; `HANDOVER.md` § 4; 087).
-- **The module switches belong to the GM** (or a group administrator) —
-  never any clerk (084; MEMORY 250). "Reception can use the POS" is on at 5
+- **The module switches belong to the owner and an administrator** — the
+  owner's decision of 17 September (D17-36), which replaced "the GM's"
+  (084; MEMORY 250). The GM opens Settings and does not see them; the server
+  refuses anybody else (ADM-5). "Reception can use the POS" is on at 5
   Elements and off for a hotel added later (owner, 14 September; 087).
+- **Tax on these screens is the tax actually charged** (D17-37): finance's
+  rules, "-" where a kind has none. Never `hotels.cgst_rate`/`sgst_rate`.
 - **Creating a property keeps the provisioning key** — without it the
   database refuses with a sentence (CHANGELOG 2026-09-08 "Three gates…";
   029; MEMORY 216). **The Console stays development-only** (PROGRESS "What the
@@ -312,8 +326,8 @@ From `PENDING.md`, `PROGRESS.md` and `HANDOVER.md`, as of 15 September:
 - Found while writing this brief (15 September):
   - ~~ADM-1~~ — fixed 17 September: the Audit log records and names the person
     (`DEFECTS.md`).
-  - **ADM-2** — Settings shows the flat CGST/SGST that 067 replaced, "editable
-    at Stage 8", and adds "— demo, not a real GSTIN" to every GSTIN.
+  - ~~ADM-2~~ — fixed 17 September: Settings and every Properties card show
+    the GST actually charged, and the GSTIN as stored (`DEFECTS.md`).
   - **Integrations is a fixed list in the code** (`listIntegrations`), with
     stage numbers and money figures typed into it. Nothing checks them against
     anything; worth the owner's look before a guest-facing demo.

@@ -11,6 +11,137 @@ Work that touches the core or several services still goes in the root
 
 ---
 
+## 2026-09-17 (evening) · The tax actually charged, and the GM's Settings without the switches
+
+**Asked for:** the owner's second interview of 17 September, handed over by
+the master — **D17-37** (ADM-2): Settings and the Properties cards show the
+tax actually used, "-" where nothing is set; and the screen half of
+**D17-36**: the GM may open Settings, with the module switches hidden from
+the GM (the master changes the grant). `docs/NEXT-BUILD-PLAN.md` step 1.
+
+**Asked the owner first, and answered the same evening** — all three as
+recommended:
+1. The switch **route** let the GM in and kept the administrator out, the
+   reverse of D17-36. *Screen and server* — both, in admin's files.
+2. The Settings route's server copy of the role list must move with the
+   master's grant. *I add the GM on this branch*; the master merges the
+   grant first.
+3. The owner's own Properties cards showed no tax. *Both cards* show it.
+
+**Shipped** — branch `admin/audit-log-who`
+- `data/taxInUse.ts`, `components/TaxInUse.tsx` — the GST a property charges,
+  read from finance's `GET /:code/tax` and worded once: one row per kind,
+  "5% up to ₹7,500 · 18% above ₹7,500", "5%", or "-"; "Could not load" on a
+  failed read, never "-".
+- `pages/Admin.tsx` (Settings) — the GST rows in "Tax and billing"; the
+  switches only for `MODULE_SWITCH_ROLES`; the "editable at Stage 8" pill gone.
+- `pages/Properties.tsx` — both cards draw the same rows; "CGST 2.5% + SGST
+  2.5%" is gone.
+- `moduleSwitchRoles.ts` — owner and admin, for the screen.
+- `api/src/modules/admin/grants.ts` — the GM joins the Settings read list;
+  `MODULE_SWITCH_ROLES` and `maySwitchModules` for the switch route.
+- `api/src/modules/admin/moduleSwitches.ts` — asks `maySwitchModules` instead
+  of `app.manages_hotel`, before the write; the unused cgst/sgst copy dropped.
+- `api/src/modules/admin/adminLists.ts` — Settings sends no CGST/SGST, says
+  where the tax goes (`taxInUse`) and where it is set, and prints the GSTIN as
+  stored or "-".
+- Tests: `src/modules/admin/admin.test.tsx` (new, 11),
+  `api/test/modules/admin/moduleSwitches.test.ts` (new, 17),
+  `settings.test.ts` (new, 7); `api/test/firstScreen.test.ts` — "the GM can
+  flip it" is now "the GM cannot flip it".
+- `DEFECTS.md` (ADM-2 fixed, ADM-5 found and fixed), `MODULE.md`.
+
+**Found**
+- **ADM-5** — the switch route's rule was the decision's two roles the wrong
+  way round (`app.manages_hotel`: group admin, or owner/GM at the hotel).
+- **The till still tells reception "The general manager can turn it on in the
+  property's settings"** (`api/src/modules/pos/till.ts:93`). After D17-36 the
+  GM cannot. POS's file — for the master.
+- `tax: { cgst, sgst }` in the core `GET /api/hotels/:code` now has no reader.
+  The core's — for the master.
+- **Mine, found by opening the card:** every test passed while a 355px
+  Properties card cut the rooms line to "5% up to ₹7,500 · 18% abo…" — the
+  card's `Line` truncates. Tax lines now wrap, and break only between rates;
+  `admin.test.tsx` checks both, and failed both card tests with the old line
+  put back.
+- **Mine, and serious — MEMORY 277 again, into the master's database.** I
+  started the web suite in the background as `cd /d/fidato-admin && npx
+  vitest run` in the same message as a type check that ran `cd api`. The
+  shell's working directory moved under it: the run's header read
+  `RUN v2.1.9 D:/fidato-admin/api`, so it was the API suite without its
+  scratch-database harness. The app side used this copy's `api/.env`
+  (`fidato_admin`, no Firebase key — nothing reached the live sign-in
+  service), but the tests' superuser fixtures default to `fidato`, **the
+  master's development database**. Six files ran for about 30 seconds
+  (18:42:38–18:43:07) before I saw POS test names in a "web" run and stopped
+  it. Measured read-only afterwards, from `audit_log` and every table's
+  `created_at`: every updated row in `fidato` — 90 reservations, 3 rooms, a
+  room type, a guest, a menu item — is back exactly as it was (first `before`
+  = last `after`); the rows the tests inserted and deleted are gone. **Left
+  behind:** an active add-on group "VARTEST Other" with an add-on "Pickle"
+  ₹10 at 5EL (`till.test.ts`), and 18 inactive fixture staff (`eqr-*`,
+  `hkr-*`) with no access. Not removed: that database is the master's. Rerun
+  as `npx --prefix /d/fidato-admin vitest run --root D:/fidato-admin`, header
+  checked before the result was read. **The rule: a command that depends on
+  its directory takes the directory as an argument, never from the shell —
+  and never beside another command that runs `cd`. Read a test run's `RUN`
+  line before its results.**
+
+**Proved** — run in `D:\fidato-admin` on 17 September, judged by exit code
+- `npx tsc -b --force` exit 0 · `cd api && npx tsc --noEmit` exit 0 ·
+  `npm run strip-check` exit 0 (80 files) · `npm run build` exit 0, "no test
+  sign-in in dist".
+- `cd api && npm test` — 897 tests in 49 files: **895 passed, 2 failed —
+  exactly the two that wait on the master's grant** ("'setting': exactly the
+  roles the matrix lets open the screen", "'gm' reading 'setting'"), exit 1.
+  With the grant applied temporarily (`gm: setting: READ`, then removed —
+  `permissions.ts` is byte-identical to cp6): the admin and first-screen
+  files, 112 tests in 7 files, exit 0.
+- `npx vitest run src/modules/admin/admin.test.tsx` — 11 passed, exit 0; no
+  React warnings in the run.
+- `npx --prefix /d/fidato-admin vitest run --root D:/fidato-admin` — header
+  `RUN v2.1.9 D:/fidato-admin`; 338 tests in 36 files, exit 0.
+- Not run: `db/tests/run.sh` and `rerun.sh` — no migration and no database
+  file on this branch since the last entry.
+- **Guards seen to fail**, then restored byte for byte: switches shown to
+  every role (the GM test); "0%" for an unset kind (4 web tests); dashes on a
+  failed read (its test); the card line truncating (2); the GM added to the
+  server's switch list (the list test and the GM's case); the "demo" GSTIN
+  suffix put back (2 API tests).
+- **Opened the screens** (API 8796 on `fidato_admin`, migrated to cp6; web
+  5181; the master's grant applied temporarily so the GM's page is the merged
+  one):
+  - Over HTTP: owner and GM read Settings — GSTIN as stored, the tax marker,
+    no CGST; reception 403 with the sentence. The GM and reception flipping
+    Banquet hall: 403, "Switching a module on or off is for the owner or an
+    administrator", the switch unmoved.
+  - `/admin/settings` as the owner: Modules with 3 switches; Tax and billing
+    reads GST on rooms "5% up to ₹7,500 · 18% above ₹7,500", restaurant "5%",
+    bar, banquet and everything else "-", then "Financial year starts 1 April";
+    nothing says CGST, SGST, Stage 8 or demo.
+  - The same page as the GM, after a full reload: no Modules card, 0 switches,
+    the same GST rows.
+  - `/properties` as the GM (the ordinary card) and as the owner (the owner's
+    card): the five GST rows, nothing cut once fixed.
+  - `/admin/settings` as reception: "This page is not part of your role".
+  - Console: one "403 (Forbidden)" — the Properties page asks the owner-only
+    property list for every role and shows the ordinary cards on a refusal,
+    by design; not from this change. The request had left the pane's buffer,
+    so which call it was is inferred from the code, not seen.
+
+**Left open**
+- **Merge order:** the master's grant (`gm: setting: READ` in
+  `src/lib/permissions.ts`) first, then this branch. On this branch alone
+  `api/test/modules/admin/grants.test.ts` fails exactly 2 tests — the Settings
+  list and the GM's Settings read — by design.
+- ADM-3 (the master's), ADM-4 (night audit's and the core's) — unchanged.
+- The long dash still stands elsewhere on these screens ("—" on the owner's
+  card, the audit log's By column): step 2, the master's dash pass.
+
+**Commits:** the commit on `admin/audit-log-who` that adds this entry.
+
+---
+
 ## 2026-09-17 · The audit log names the person, and the server refuses what the screen refuses
 
 **Asked for:** the owner's answers of 17 September (`docs/briefs/decisions-2026-09-17.md`),

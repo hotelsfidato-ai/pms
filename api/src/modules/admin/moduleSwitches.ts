@@ -1,6 +1,7 @@
 import { Hono } from "hono";
 import { withSession } from "../../auth.ts";
 import type { Client } from "../../db.ts";
+import { maySwitchModules, MODULE_SWITCH_REFUSED } from "./grants.ts";
 
 /* ══════════════════════════════════════════════════════════════════
    THE MODULE SWITCHES
@@ -30,16 +31,15 @@ interface HotelRow {
   currency: string;
   check_in_time: string;
   check_out_time: string;
-  cgst_rate: string;
-  sgst_rate: string;
 }
 
+/* The flat `cgst_rate`/`sgst_rate` pair left this copy on 17 September
+   (ADM-2): tax is `tax_rules` since 067, and nothing here read them. */
 async function resolve(client: Client, code: string) {
   const { rows } = await client.query<HotelRow>(
     `select id, code, name, address_line, city, phone, email, gstin, currency,
             to_char(check_in_time,  'HH24:MI') as check_in_time,
-            to_char(check_out_time, 'HH24:MI') as check_out_time,
-            cgst_rate, sgst_rate
+            to_char(check_out_time, 'HH24:MI') as check_out_time
        from hotels
       where code = upper($1) and is_active`,
     [code],
@@ -91,19 +91,20 @@ property.post("/:code/modules/:module", async (c) => {
     if (!hotel) return null;
     const hotelId = hotel.id;
 
-    /* ⚠ THE GM'S SWITCH, NOT ANYBODY'S. This had no check at all: the
-       table's policy is hotel isolation, so any clerk rostered here could
-       close the till for the whole property — and, once `reception_pos`
-       existed, a receptionist could turn their own POS access back on.
-       Found on 14 September adding that module. app.manages_hotel (084)
-       is a GM here or a group administrator. */
-    const { rows: may } = await client.query<{ ok: boolean }>(
-      "select app.manages_hotel($1) as ok", [hotelId]);
-    if (!may[0]?.ok) {
-      return {
-        ok: false as const,
-        reason: "Only this property's general manager can switch its modules on or off.",
-      };
+    /* ⚠ THE OWNER'S AND THE ADMINISTRATOR'S SWITCH, NOT ANYBODY'S.
+       This had no check at all until 14 September: the table's policy is
+       hotel isolation, so any clerk rostered here could close the till
+       for the whole property — and a receptionist could turn their own
+       POS access back on. It then asked app.manages_hotel (084): a GM
+       here or a group administrator.
+
+       D17-36, 17 September: "the module switches stay owner and admin
+       only". So the GM is refused now, and the administrator — whom
+       manages_hotel never counted — is let in. Asked BEFORE the write:
+       inside withSession a refusal below the insert keeps the insert
+       (MEMORY 243). */
+    if (!(await maySwitchModules(client, hotelId))) {
+      return { ok: false as const, reason: MODULE_SWITCH_REFUSED };
     }
 
     /* Who and when. A module that quietly stopped working is a support

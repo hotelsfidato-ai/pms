@@ -16,6 +16,9 @@ import {
 import { listStaff, listAuditLog, listIntegrations, getSettings, roleDescription, type StaffRecord, type AuditEntry, type Integration } from "@/modules/admin/data/adminLists";
 import { getMatrix } from "@/modules/admin/data/admin";
 import { getModules, setModule } from "@/data/repositories";
+import { useRole } from "@/lib/session";
+import { switchesModules } from "@/modules/admin/moduleSwitchRoles";
+import { TaxInUseRows } from "@/modules/admin/components/TaxInUse";
 
 /* ══════════════════════════════════════════════════════════════════
    ADMINISTRATION
@@ -420,9 +423,10 @@ const MODULE_COPY: Record<string, { label: string; note: string }> = {
       "refuses them.",
   },
   /* The owner's per-hotel switch of 14 September (087). On at every hotel
-     that existed then; off for a hotel added after, until its GM turns it
-     on. Only a GM or an admin can flip any of these — before 087 any
-     clerk at the property could. */
+     that existed then; off for a hotel added after, until somebody turns
+     it on. Only the owner or an administrator can flip any of these
+     (D17-36, 17 September) — before 087 any clerk at the property could,
+     and until D17-36 the GM could. */
   reception_pos: {
     label: "Reception can use the POS",
     note: "Reception staff take, bill and settle orders at the till. Off " +
@@ -489,8 +493,18 @@ function ModulesCard({ hotelId }: { hotelId: string }) {
   );
 }
 
+function SettingRow({ label, value }: { label: string; value: string }) {
+  return (
+    <div className="grid grid-cols-[minmax(130px,200px)_1fr] gap-4 py-2.5">
+      <dt className="text-sm text-grey-500">{label}</dt>
+      <dd className="text-base text-ink-900 min-w-0">{value}</dd>
+    </div>
+  );
+}
+
 export function SettingsPage() {
   const hotelId = useHotel();
+  const role = useRole();
   const { data, isLoading, error, refetch } = useQuery({
     queryKey: ["settings", hotelId],
     queryFn: () => getSettings(hotelId),
@@ -515,27 +529,24 @@ export function SettingsPage() {
         <Skeleton className="h-96 w-full" />
       ) : (
         <div className="space-y-4">
-          <ModulesCard hotelId={hotelId} />
+          {/* D17-36, 17 September: the GM may open Settings, and the
+              switches stay with the owner and an administrator. Hidden,
+              not disabled — they are not the GM's to ask about, and the
+              server refuses anybody else who sends one
+              (api/src/modules/admin/grants.ts). */}
+          {switchesModules(role) && <ModulesCard hotelId={hotelId} />}
           {(data ?? []).map((group) => (
             <Card key={group.title}>
               <CardHeader title={group.title} description={group.note} />
               <CardBody className="pt-0">
                 <dl className="divide-y divide-grey-100">
+                  {group.taxInUse && (
+                    <TaxInUseRows hotelCode={hotelId} row={(label, value, key) => (
+                      <SettingRow key={key} label={label} value={value} />
+                    )} />
+                  )}
                   {group.rows.map((row) => (
-                    <div
-                      key={row.label}
-                      className="grid grid-cols-[minmax(130px,200px)_1fr] gap-4 py-2.5"
-                    >
-                      <dt className="text-sm text-grey-500">{row.label}</dt>
-                      <dd className="text-base text-ink-900 min-w-0 flex items-center gap-2 flex-wrap">
-                        <span className="min-w-0">{row.value}</span>
-                        {row.editableAt && (
-                          <StatusPill tone="neutral">
-                            editable at {row.editableAt}
-                          </StatusPill>
-                        )}
-                      </dd>
-                    </div>
+                    <SettingRow key={row.label} label={row.label} value={row.value} />
                   ))}
                 </dl>
               </CardBody>

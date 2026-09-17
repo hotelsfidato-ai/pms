@@ -158,7 +158,11 @@ export async function listIntegrations(): Promise<Integration[]> {
 export interface SettingGroup {
   title: string;
   note?: string;
-  rows: Array<{ label: string; value: string; editableAt?: string }>;
+  /** Draw the property's GST in use here, above `rows` (ADM-2, D17-37).
+      The rules are finance's, read by `getTaxInUse`; the server only says
+      where they belong. */
+  taxInUse?: boolean;
+  rows: Array<{ label: string; value: string }>;
 }
 
 export async function getSettings(hotelId: string): Promise<SettingGroup[]> {
