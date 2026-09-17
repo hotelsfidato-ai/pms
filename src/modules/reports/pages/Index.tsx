@@ -66,7 +66,7 @@ const GROUPS: Group[] = [
         title: "Monthly statistics",
         icon: ChartColumn,
         path: "/reports/monthly-stats",
-        description: "The daily grid — rooms sold, ADR, RevPAR, pax, charges, tax and receipts.",
+        description: "The daily grid - rooms sold, ADR, RevPAR, pax, charges, tax and receipts.",
       },
       {
         title: "Yearly statistics",

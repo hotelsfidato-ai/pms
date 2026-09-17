@@ -14,19 +14,83 @@ entries stay here: they are the reason the fault does not come back.
 
 ## Open — not fixed
 
+Nothing is open in this service today (17 September 2026). REP-6 was the last,
+and the owner answered it — it is below, with the others.
+
+## Fixed
+
 ### REP-6 · "Owed by guests" on the Dashboard is a net figure under a gross label
 
 **Found** — 16 September 2026, design critique; measured on screen the same day in the reports lane's own database.
 
 The Dashboard's tile reads the Manager report's Guest ledger closing balance. Folios shows the same figure as **Net position**, "Owed to the property, less refunds": on the lane's demo data Outstanding ₹63,440 − Overpaid ₹784 = ₹62,656, and the tile says "Owed by guests ₹62,656 — Every guest bill still open". Guests owe ₹63,440; ₹784 is owed back to one of them. The label is a money claim.
 
-**Not changed — the wording is the owner's.** Brought to them 16 September with a recommendation (CHANGELOG, 16 September). Whichever wording they choose, the `guestLedger` line in `src/lib/glossary.ts` ("the charges posted, less what they have paid") has to say the same, and that file is the master's.
+**ANSWERED, and built.** The owner chose "Owed by guests, less refunds" (D17-17, 17 September); the master changed the tile and the `guestLedger` line in `src/lib/glossary.ts` together. Since 17 September that figure also leaves out deposits still waiting for a guest who has not arrived.
 
 **The rule** — A label on a figure is a claim about what the figure counts. Read the query before the word.
 
 ---
 
-## Fixed
+### REP-8 · MINE: the reports tests left ₹2,734.50 in the demo property
+
+**Found** — 17 September 2026, by the MASTER, running the whole API suite; my own
+file was green on its own. **Fixed** the same day.
+
+Three checks of the reports in the owner's layout need money the demo does not
+hold — a bill transferred to a company, a deposit taken before arrival — and
+they posted it and walked away. `api/test/businessDate.test.ts` then read
+₹3,99,776.43 where the demo is calibrated to ₹3,97,041.93, the figure reconciled
+to the owner's real eZee export to the paisa. The file passed; the suite failed.
+
+**What was done** — every payment these tests post is recorded and REVERSED in
+`afterAll` (the reverse route: `folio_postings` is append-only and the trigger
+fires for the superuser too), and the teardown then MEASURES that the property's
+payment postings are back where they were. What cannot be undone — a settled
+restaurant bill, an invoice, both evidence by design — is counted before and
+after instead, with a sentence saying why.
+
+**Proved** — `npm test -- test/modules/reports test/businessDate` 34/34 together;
+with the reversal loop removed the teardown fails with "these tests left money in
+the demo property".
+
+**The rule** — A test that writes into the demo property owns putting it back,
+and a cleanup nobody measures is a cleanup nobody has. Run the SUITE, not the
+file: a fixture's damage shows up in somebody else's test.
+
+### REP-9 · A bill transferred to the city ledger counted as money received
+
+**Found** — 17 September 2026, building the City ledger report, by posting one
+transfer in the lane's database and watching the day's Receipt column move.
+**Fixed** the same day.
+
+"Bill to company" is posted as a payment on the folio — the balance does move —
+but nobody has handed over any money. It was counted in Monthly statistics'
+Receipt, in the Manager report's Total Payment, and in the cashier shift, which
+is a drawer that will not balance.
+
+**What was done** — money received excludes payments whose method is
+`city_ledger`, in `figures.ts` (one place, every report) and in the cashier
+shift. The transfer is the City ledger's Debit, and the Manager report's Charges
+Raised, which is what the owner decided on 17 September (D17-74).
+
+**The rule** — A posting's category says what it moved, not what happened. Ask
+what the money did.
+
+### REP-10 · A "Total" label in a date column printed as a dash
+
+**Found** — 17 September 2026, by ReportView's own new test, on its first run.
+**Fixed** the same day.
+
+Every report's first column can hold words as well as dates: "Total", "Grand
+Total", "1 Sat". The renderer sent the whole column through the date formatter,
+which answers with the no-date mark for anything that is not a date — so the
+total row of the Lodging tax sheet was labelled "-".
+
+**What was done** — a date cell that is not a calendar date prints as the words
+it is.
+
+**The rule** — A column's kind describes most of its cells, not all of them. The
+total row is the exception in every report ever printed.
 
 ### REP-1 · Monthly occupancy and Monthly statistics always showed August 2026
 

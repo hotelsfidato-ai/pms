@@ -1,8 +1,9 @@
-import type { ReactNode } from "react";
-import { Printer, FileSpreadsheet, FileText } from "lucide-react";
+import { useState, type ReactNode } from "react";
+import { Printer, FileSpreadsheet, FileText, Table2 } from "lucide-react";
 import { cn } from "@/lib/cn";
 import { dateShort } from "@/lib/format";
-import { Button, Card, Term } from "@/components/ui";
+import { Button, Card, Term, toast } from "@/components/ui";
+import { downloadFile, ApiError } from "@/lib/api";
 import type { TermKey } from "@/lib/glossary";
 import { toCsv, downloadCsv, reportFilename } from "@/lib/csv";
 import { useDocumentIdentity } from "@/lib/documentIdentity";
@@ -21,7 +22,7 @@ import { useDocumentTitle } from "@/lib/documentTitle";
    reaches paper is the report and nothing else.
    ══════════════════════════════════════════════════════════════════ */
 
-const DASH = "—";
+const DASH = "-";
 
 export function ReportShell({
   title,
@@ -41,6 +42,8 @@ export function ReportShell({
   meta,
   /** The report's own settings (a switch, a date), above it and never printed. */
   controls,
+  /** The report and its query, for the files the server makes of it. */
+  download,
 }: {
   title: string;
   property?: string;
@@ -60,6 +63,7 @@ export function ReportShell({
   csv?: () => { headers: string[]; rows: unknown[][] };
   meta?: ReactNode;
   controls?: ReactNode;
+  download?: { path: (kind: "pdf" | "xlsx" | "csv") => string; ready: boolean };
 }) {
   const identity = useDocumentIdentity();
   useDocumentTitle(title);
@@ -93,7 +97,8 @@ export function ReportShell({
               PDF
             </Button>
           )}
-          {csv && (
+          {download && <Downloads download={download} />}
+          {csv && !download && (
             <Button
               variant="secondary"
               size="sm"
@@ -142,6 +147,58 @@ export function ReportShell({
         </div>
       </Card>
     </div>
+  );
+}
+
+/* ── The files the server makes of a report ────────────────────────
+   PDF, a real spreadsheet and a CSV (D17-31, D17-32), all made on the
+   server from the same document the screen is drawing, so what is
+   filed and what is read cannot differ. The button says what went
+   wrong in the server's own words, and it is disabled until the report
+   itself has loaded — a file of a report nobody has seen is a file of
+   nothing. */
+
+const FILES: Array<{ kind: "pdf" | "xlsx" | "csv"; label: string; icon: typeof FileText }> = [
+  { kind: "pdf", label: "PDF", icon: FileText },
+  { kind: "xlsx", label: "Excel", icon: FileSpreadsheet },
+  { kind: "csv", label: "CSV", icon: Table2 },
+];
+
+function Downloads({ download }: {
+  download: { path: (kind: "pdf" | "xlsx" | "csv") => string; ready: boolean };
+}) {
+  const [busy, setBusy] = useState<string | null>(null);
+
+  const get = async (kind: "pdf" | "xlsx" | "csv", label: string) => {
+    setBusy(kind);
+    try {
+      const name = await downloadFile(download.path(kind));
+      toast.success(`${label} saved`, name);
+    } catch (error) {
+      toast.error(
+        `The ${label} was not made`,
+        error instanceof ApiError ? error.message : String(error),
+      );
+    } finally {
+      setBusy(null);
+    }
+  };
+
+  return (
+    <>
+      {FILES.map((f) => (
+        <Button
+          key={f.kind}
+          variant="secondary"
+          size="sm"
+          disabled={!download.ready || busy !== null}
+          onClick={() => void get(f.kind, f.label)}
+        >
+          <f.icon className="size-4" />
+          {busy === f.kind ? "Saving…" : f.label}
+        </Button>
+      ))}
+    </>
   );
 }
 
@@ -203,7 +260,7 @@ export function Amount({
   format: (n: number) => string;
 }) {
   if (value === null || value === undefined) {
-    return <span className="text-grey-500" title="Not derivable from this system yet">—</span>;
+    return <span className="text-grey-500" title="Not held in this system yet">-</span>;
   }
   return (
     <span

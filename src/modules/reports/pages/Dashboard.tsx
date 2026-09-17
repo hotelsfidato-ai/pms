@@ -38,7 +38,7 @@ import { getReport, type ReportDoc } from "@/modules/reports/data/document";
    system cannot derive yet — the tile prints the same dash, never a 0.
    ══════════════════════════════════════════════════════════════════ */
 
-const DASH = "—";
+const DASH = "-";
 
 /** The first of the month the business date falls in — the Manager
     Report's period-to-date window, so the tiles and the report agree. */
@@ -180,7 +180,7 @@ export default function DashboardPage() {
           <Tile icon={ReceiptText} label="Owed by guests, less refunds" term="guestLedger" value={cash(owedByGuests?.today)}
                 loading={loading} sub="Every guest bill still open" />
           <Tile icon={Building2} label="City ledger" term="cityLedger" value={cash(cityLedger?.today)}
-                loading={loading} sub="Settled outside the PMS today" />
+                loading={loading} sub="Bills transferred to a company. A balance waits on their payments being recorded." />
           <Tile icon={UserX} label="No-shows" value={count(noShow?.today)} loading={loading}
                 tone={(noShow?.today ?? 0) > 0 ? "warning" : undefined}
                 sub={`Month so far ${count(noShow?.ptd)}`} to="/reports/no-show" />
