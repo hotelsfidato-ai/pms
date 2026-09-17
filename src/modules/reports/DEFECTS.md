@@ -14,6 +14,11 @@ entries stay here: they are the reason the fault does not come back.
 
 ## Open — not fixed
 
+Nothing is open in this service today (18 September 2026). REP-6 and REP-11 were
+the last two, and the owner answered both — they are below, with the others.
+
+## Fixed
+
 ### REP-11 · A booking nobody has arrived on appears in the Night audit's Room Charges
 
 **Found** — 17 September 2026, reading the finished report against the demo:
@@ -28,15 +33,13 @@ does not arise: the audit marks an arrival that never came as a no-show, and it
 leaves the section. So the row only appears on a day still open, and the report's
 own footnote says the rule.
 
-**Not changed.** Whether the printed night audit should leave out a booking
-nobody has arrived on — and so stop agreeing with the Manager report for that
-day — is the owner's call, not a fix. Recorded here so the next person does not
+**ANSWERED: leave it (D17-94, 18 September).** The owner's words through the
+master: it agrees with the Manager report, the footnote says the rule, and it
+goes when the audit marks the no-show. Recorded here so the next person does not
 "correct" it.
 
 **The rule** — A report of a day that is not over yet is a forecast in places.
 Say which places, on the report.
-
-## Fixed
 
 ### REP-6 · "Owed by guests" on the Dashboard is a net figure under a gross label
 

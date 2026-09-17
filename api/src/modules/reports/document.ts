@@ -141,6 +141,10 @@ export const total = (
 export const band = (key: string, label: string): ReportRow =>
   ({ kind: "band", cells: { [key]: label } });
 
+/** "2026-08-25" as a report prints it: 25/08/2026 (D17-77). For the
+    footnotes, which are sentences rather than cells. */
+export const reportDate = (iso: string) => iso.split("-").reverse().join("/");
+
 /** Paise, not floating dust. */
 export const round2 = (n: number) => Math.round(n * 100) / 100;
 

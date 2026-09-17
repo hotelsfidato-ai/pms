@@ -35,6 +35,18 @@ import { round2 } from "./document.ts";
        date. A day-use room occupies no night: it is counted apart, and
        its charge is room revenue on its day.
 
+     AVAILABLE STARTS ON THE PROPERTY'S FIRST TRADING DAY (the owner,
+       D17-93). Before a property traded it had nothing to sell, and
+       counting a full month of empty rooms against it is a lie about a
+       year: the eZee export shows nothing for those months and so do we.
+       The first trading day is the earliest date the property has a
+       record for - its earliest arrival, or the earliest day anything
+       was posted, whichever came first. A property that has never traded
+       is not held back by this: it has no first day, so every day of the
+       window counts, which is what a new property planning its year
+       needs to see. Every report that prints an available figure says
+       which day it counted from.
+
    Nothing in reservations or postings is changed by any of this.
    ══════════════════════════════════════════════════════════════════ */
 
@@ -133,9 +145,35 @@ export const NIGHTS = `
                              and p.night = s.night)
      )`;
 
+/**
+ * The first day this property has any trading record: its earliest
+ * arrival, or the earliest day anything was posted to a bill, whichever
+ * is earlier. Null when it has never traded (the owner, D17-93).
+ *
+ * ONE definition, here beside the others, because four reports print a
+ * figure that divides by it. A year's occupancy that changed definition
+ * silently is exactly the figure somebody compares next year.
+ */
+export async function firstTradingDay(
+  client: Client, hotelId: string,
+): Promise<string | null> {
+  const { rows } = await client.query<{ day: string | null }>(
+    `select to_char(least(
+              (select min(r.check_in) from reservations r
+                where r.hotel_id = $1
+                  and r.status in ('confirmed','checked_in','checked_out','no_show')),
+              (select min(fp.business_date) from folio_postings fp
+                where fp.hotel_id = $1)
+            ), 'YYYY-MM-DD') as day`,
+    [hotelId],
+  );
+  return rows[0]?.day ?? null;
+}
+
 export async function dailyFigures(
   client: Client, hotelId: string, from: string, to: string,
 ): Promise<DayFigures[]> {
+  const opened = await firstTradingDay(client, hotelId);
   const { rows } = await client.query<{
     date: string; available: number; paying: number; complimentary: number;
     day_use: number; adults: number; children: number;
@@ -191,7 +229,9 @@ export async function dailyFigures(
         group by fp.business_date
      )
      select days.date::text                          as date,
-            app.sellable_rooms($1, days.date)        as available,
+            /* Nothing was available before the property traded (D17-93). */
+            case when $4::date is not null and days.date < $4::date then 0
+                 else app.sellable_rooms($1, days.date) end as available,
             coalesce(o.paying, 0)                    as paying,
             coalesce(o.complimentary, 0)             as complimentary,
             coalesce(u.n, 0)                         as day_use,
@@ -209,7 +249,7 @@ export async function dailyFigures(
        left join day_use u   on u.date   = days.date
        left join other       on other.date = days.date
       order by days.date`,
-    [hotelId, from, to],
+    [hotelId, from, to, opened],
   );
 
   return rows.map((r) => ({

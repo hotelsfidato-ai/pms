@@ -408,13 +408,24 @@ describe("the reports' dates come from the report's own day", () => {
   };
 
   /** Sellable room-nights from `from` to `to`, asked of the database —
-      what the YTD column must have counted if its window starts there. */
+      what the YTD column must have counted if its window starts there.
+
+      From 18 September the house is counted from the day the property
+      first traded (D17-93), so this counts from the later of the two.
+      The assertion is still about the WINDOW: a year that started on the
+      wrong 1 April gives a different answer either way. */
   const sellable = async (from: string, to: string) => {
     const db = await admin();
     try {
       const { rows } = await db.query<{ n: string }>(
         `select coalesce(sum(app.sellable_rooms(h.id, d::date)), 0)::text as n
-           from hotels h, generate_series($1::date, $2::date, interval '1 day') d
+           from hotels h,
+                generate_series(greatest($1::date, coalesce(least(
+                  (select min(r.check_in) from reservations r
+                    where r.hotel_id = h.id
+                      and r.status in ('confirmed','checked_in','checked_out','no_show')),
+                  (select min(fp.business_date) from folio_postings fp where fp.hotel_id = h.id)
+                ), $1::date)), $2::date, interval '1 day') d
           where h.code = '5EL'`, [from, to]);
       return Number(rows[0]!.n);
     } finally { await db.end(); }
@@ -788,5 +799,79 @@ describe("the lodging tax sheet", () => {
     expect(totalRow.cells["totalBill"]).toBeCloseTo(
       rows.filter((r) => r.kind === "row").reduce((t, r) => t + (r.cells["totalBill"] as number), 0), 2);
     expect(totalRow.cells["fromBill"]).toBe(rows[0]!.cells["fromBill"]);
+  });
+});
+
+/* ── The owner's answers of 18 September (D17-93, D17-97, D17-99) ──── */
+
+describe("what the reports print once the owner had seen them", () => {
+  /** The first day this property has any trading record, asked of the
+      database rather than of the code being tested. */
+  const opened = async () => {
+    const db = await admin();
+    try {
+      const { rows } = await db.query<{ day: string }>(
+        `select to_char(least(
+                  (select min(r.check_in) from reservations r join hotels h on h.id = r.hotel_id
+                    where h.code = '5EL'
+                      and r.status in ('confirmed','checked_in','checked_out','no_show')),
+                  (select min(fp.business_date) from folio_postings fp join hotels h on h.id = fp.hotel_id
+                    where h.code = '5EL')
+                ), 'YYYY-MM-DD') as day`);
+      return rows[0]!.day;
+    } finally { await db.end(); }
+  };
+
+  it("counts available rooms from the day the property first traded, and says which day", async () => {
+    const day = await opened();
+    const year = Number(day.slice(0, 4));
+    const doc = (await (await call(`/5EL/reports/yearly-statistics?year=${year}`)).json()) as ReportDoc;
+    const months = doc.sections[0]!.rows.filter((r) => r.kind === "row");
+
+    const openedMonth = Number(day.slice(5, 7)) - 1;
+
+    /* Before it traded, the property had nothing to sell. */
+    for (const m of months.slice(0, openedMonth)) {
+      expect(m.cells["available"], String(m.cells["label"])).toBe(0);
+      expect(m.cells["occupancy"], String(m.cells["label"])).toBe(0);
+    }
+    /* In the month it opened, only the days from that day on. */
+    const first = months[openedMonth]!;
+    const db = await admin();
+    try {
+      const { rows } = await db.query<{ n: string }>(
+        `select coalesce(sum(app.sellable_rooms(h.id, d::date)), 0)::text as n
+           from hotels h, generate_series($1::date,
+                (date_trunc('month', $1::date) + interval '1 month - 1 day')::date,
+                interval '1 day') d
+          where h.code = '5EL'`, [day]);
+      expect(first.cells["available"]).toBe(Number(rows[0]!.n));
+    } finally { await db.end(); }
+
+    expect(doc.footnotes.some((f) => f.includes(day.split("-").reverse().join("/")))).toBe(true);
+
+    /* And the Manager report counts the same way, so the year agrees
+       with itself across two reports. */
+    const manager = await managerDoc(`?asOn=${day.slice(0, 4)}-12-31`);
+    expect(manager.footnotes.some((f) => f.includes("first traded"))).toBe(true);
+  });
+
+  it("prints Cancellation Sales as a dash: there is nothing to count", async () => {
+    const doc = (await (await call("/5EL/reports/night-audit?asOn=2026-08-25")).json()) as ReportDoc;
+    const sales = doc.sections.find((x) => x.key === "daily-sales")!;
+    const cancellation = sales.rows.find((r) => r.cells["salesType"] === "Cancellation Sales")!;
+    for (const c of sales.columns.filter((x) => x.key !== "salesType")) {
+      expect(cancellation.cells[c.key], c.key).toBeNull();
+    }
+    /* And the total row still adds up the rows that do count. */
+    const totalRow = sales.rows.find((r) => r.kind === "total")!;
+    const rows = sales.rows.filter((r) => r.kind === "row");
+    expect(totalRow.cells["totalSales"] as number).toBeCloseTo(
+      rows.reduce((t, r) => t + Number(r.cells["totalSales"] ?? 0), 0), 2);
+  });
+
+  it("says on the lodging tax sheet that the accountant confirms it before it is filed", async () => {
+    const doc = (await (await call("/5EL/reports/lodging-tax?month=2026-08")).json()) as ReportDoc;
+    expect(doc.footnotes.some((f) => /accountant confirms/i.test(f))).toBe(true);
   });
 });

@@ -1,9 +1,12 @@
 import type { Client } from "../../../db.ts";
 import {
-  col, row, total, pct, ratio, round2,
+  col, row, total, pct, ratio, round2, reportDate,
   type ReportDoc, type ReportColumn, type ReportRow,
 } from "../document.ts";
-import { dailyFigures, sumDays, heading, type Property, type DayFigures } from "../figures.ts";
+import {
+  dailyFigures, sumDays, heading, firstTradingDay,
+  type Property, type DayFigures,
+} from "../figures.ts";
 
 /* ══════════════════════════════════════════════════════════════════
    MONTHLY STATISTICS · MONTHLY OCCUPANCY · YEARLY STATISTICS
@@ -90,11 +93,19 @@ const FOOTNOTES = [
   "Expense is not recorded in this system and shows \"-\".",
 ];
 
+/** Which day the available rooms were counted from (D17-93). A figure
+    that divides by the house says where the house starts. */
+export const countedFrom = (opened: string | null) =>
+  opened
+    ? `Available rooms are counted from ${reportDate(opened)}, the day this property first traded. Earlier days show nothing.`
+    : "This property has not traded yet, so every day of the period counts as available.";
+
 export async function monthlyStatistics(
   client: Client, property: Property, month: string,
 ): Promise<ReportDoc> {
   const w = monthWindow(month);
   const days = await dailyFigures(client, property.id, w.from, w.to);
+  const opened = await firstTradingDay(client, property.id);
 
   const rows: ReportRow[] = days.map((d) => row(figuresRow(dayLabel(d.date), d)));
   rows.push(total(figuresRow("Total", sumDays(days))));
@@ -111,7 +122,7 @@ export async function monthlyStatistics(
       columns: GRID(col("label", "Date", "text")),
       rows,
     }],
-    footnotes: FOOTNOTES,
+    footnotes: [...FOOTNOTES, countedFrom(opened)],
   };
 }
 
@@ -120,6 +131,7 @@ export async function monthlyOccupancy(
 ): Promise<ReportDoc> {
   const w = monthWindow(month);
   const days = await dailyFigures(client, property.id, w.from, w.to);
+  const opened = await firstTradingDay(client, property.id);
 
   return {
     report: "monthly-occupancy",
@@ -138,7 +150,7 @@ export async function monthlyOccupancy(
         values: days.map((d) => pct(d.paying + d.complimentary, d.available)),
       }],
     },
-    footnotes: [FOOTNOTES[0]!],
+    footnotes: [FOOTNOTES[0]!, countedFrom(opened)],
   };
 }
 
@@ -148,6 +160,7 @@ export async function yearlyStatistics(
   /* One query for the year, grouped here — twelve round trips gave the
      same answer twelve times slower. */
   const days = await dailyFigures(client, property.id, `${year}-01-01`, `${year}-12-31`);
+  const opened = await firstTradingDay(client, property.id);
 
   const rows: ReportRow[] = MONTHS.map((name, i) => {
     const prefix = `${year}-${String(i + 1).padStart(2, "0")}`;
@@ -167,6 +180,6 @@ export async function yearlyStatistics(
       columns: GRID(col("label", "Month", "text")),
       rows,
     }],
-    footnotes: FOOTNOTES,
+    footnotes: [...FOOTNOTES, countedFrom(opened)],
   };
 }

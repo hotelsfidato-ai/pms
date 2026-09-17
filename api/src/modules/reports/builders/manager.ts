@@ -3,7 +3,11 @@ import {
   col, row, total, band, round2, pct, ratio,
   type ReportDoc, type ReportRow, type ReportSection, type Cell, type CellKind,
 } from "../document.ts";
-import { dailyFigures, sumDays, heading, LIVE, type Property, type DayFigures } from "../figures.ts";
+import {
+  dailyFigures, sumDays, heading, firstTradingDay, LIVE,
+  type Property, type DayFigures,
+} from "../figures.ts";
+import { countedFrom } from "./statistics.ts";
 
 /* ══════════════════════════════════════════════════════════════════
    MANAGER REPORT — the daily flash, in the owner's eZee layout
@@ -123,6 +127,7 @@ export async function managerReport(
 
   /* ── Rooms, nights, guests ─────────────────────────────────────────── */
   const days = await dailyFigures(client, hotelId, w.ytd, asOn);
+  const opened = await firstTradingDay(client, hotelId);
   const pick = (from: string) => sumDays(days.filter((d) => d.date >= from));
   const t = { today: pick(w.today), ptd: pick(w.ptd), ytd: pick(w.ytd) };
   const of = (f: (x: Omit<DayFigures, "date">) => number) =>
@@ -405,6 +410,7 @@ export async function managerReport(
       "Total Revenue = PMS Revenue + POS Revenue",
       "Sold Room, occupancy and the average rate count complimentary rooms, as the owner's eZee reports do. A night's room charge is shown on that night.",
       "City Ledger: Charges Raised is the bills transferred to a company or booking site. The other rows show \"-\": this system does not record a company's payment, or commission paid, yet.",
+      countedFrom(opened),
       "A \"-\" means the figure is not held in this system. It is not a zero.",
     ],
   };

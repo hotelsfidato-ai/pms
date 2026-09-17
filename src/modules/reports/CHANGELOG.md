@@ -11,6 +11,50 @@ Work that touches the core or several services still goes in the root
 
 ---
 
+## 2026-09-18 · The owner's answers on what the reports print (D17-93 to D17-99)
+
+**Asked for:** the seven questions this service left with the owner, answered
+through the master. Six needed nothing; one was a change.
+
+**Shipped**
+- **D17-93 · available room-nights start at the property's first trading day.**
+  `firstTradingDay()` in `figures.ts`, beside the other shared definitions: the
+  earliest arrival or the earliest day anything was posted, whichever came
+  first. `dailyFigures()` counts nothing available before it, so the Manager
+  report, Monthly and Yearly statistics and the occupancy chart all say the same
+  thing about a year. A property that has never traded is not held back by it.
+  Every report that prints an available figure now says which day it counted
+  from: *"Available rooms are counted from 02/08/2026, the day this property
+  first traded."*
+- **D17-97 · Cancellation Sales prints "-"** on the Night audit's Daily Sales.
+  Nothing in this system charges a cancellation fee, so there is nothing to
+  count — and the total still adds up the rows that do.
+- **D17-99 · the lodging tax sheet says the accountant confirms it** before
+  anything is filed from it. On the report, not only in a note here.
+- REP-11 closed as answered (D17-94, leave the not-yet-arrived booking); the
+  meal plan stays as Rate Type (D17-95), Extra Charges stay as the desk posts
+  them (D17-96), Block Room keeps this system's count (D17-98).
+
+**Proved** — in `D:\fidato-reports`
+- API reports tests 37/37, with `businessDate` alongside: 37 green together.
+- **Three deliberate breaks, each failing its own test** and then restored:
+  counting the house before the property traded (2 tests, including the YTD
+  window one), Cancellation Sales back to zeros, and the accountant's sentence
+  removed.
+- The year on screen: January to July show nothing, August counts from the 2nd
+  (516 room-nights, not 533), and the footnote names 02/08/2026.
+
+**Found**
+- The REP-2 window test compared the YTD room-nights against the database's raw
+  `sellable_rooms` sum, which is no longer the definition. It counts from the
+  later of the window and the first trading day now, so it still fails on a year
+  that starts on the wrong 1 April — which is what it is for.
+
+**Left open** — nothing on this service. The bills and vouchers (D17-63/64) wait
+on the owner saving CRS voucher FH-2026-00002 into the reports folder.
+
+---
+
 ## 2026-09-17 · Every report in the owner's layout (D17-62)
 
 **Asked for:** all eight reports in `docs/REPORTS-SPEC.md` laid out like the
