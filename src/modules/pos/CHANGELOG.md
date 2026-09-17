@@ -61,8 +61,9 @@ function's bill only**, recorded as a new payment **"To a function"**.
   it shows" (its one-second wait, the night-audit chat's to fix; alone: 1
   passed, exit 0); and **286 passed, exit 1** once, with `repositories.test.ts`
   failing as a file — its error not captured; alone it passed 17 of 17 (Rule 2b
-  included), and it passed in both other runs. **No full web run on this tree
-  exited 0.** `npm run build` clean, "no test sign-in in dist".
+  included), and it passed in both other runs. **A fourth run, on the
+  committed tree (`f671b19`) with this copy's dev servers stopped: 31 files,
+  303 tests, exit 0.** `npm run build` clean, "no test sign-in in dist".
 - API: `npx tsc --noEmit` exit 0 · strip-check 76 files · `npm test` **42
   files, 773 tests, exit 0**.
 - Database: `db/tests/run.sh` **744 assertions, exit 0** (pos function 8 of 8) ·
