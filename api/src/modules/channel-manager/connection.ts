@@ -2,7 +2,7 @@ import { Hono } from "hono";
 import { withSession } from "../../auth.ts";
 import { suConnection } from "./su/runtime.ts";
 import { TOKENS_PER_HOUR } from "./su/token.ts";
-import { ownsAnyHotel, SU_OWNER_ONLY } from "./access.ts";
+import { maySetUpSu, SU_REFUSED } from "./access.ts";
 
 /* ══════════════════════════════════════════════════════════════════
    IS SU SET UP, AND DOES ITS LOGIN WORK — part 1 of the SU connection
@@ -55,14 +55,14 @@ function describe() {
 }
 
 connection.get("/channel-manager/su", async (c) => {
-  const allowed = await withSession(c.get("subject"), (client) => ownsAnyHotel(client));
-  if (!allowed) return c.json({ ok: false, reason: SU_OWNER_ONLY }, 403);
+  const allowed = await withSession(c.get("subject"), (client) => maySetUpSu(client));
+  if (!allowed) return c.json({ ok: false, reason: SU_REFUSED }, 403);
   return c.json(describe());
 });
 
 connection.post("/channel-manager/su/login", async (c) => {
-  const allowed = await withSession(c.get("subject"), (client) => ownsAnyHotel(client));
-  if (!allowed) return c.json({ ok: false, reason: SU_OWNER_ONLY }, 403);
+  const allowed = await withSession(c.get("subject"), (client) => maySetUpSu(client));
+  if (!allowed) return c.json({ ok: false, reason: SU_REFUSED }, 403);
 
   const su = suConnection();
   if (!su.ok) {

@@ -130,7 +130,9 @@ const readyToSend = async () => {
   const db = await admin();
   try {
     await db.query(
-      "update hotels set phone = '+910000000000', address_line = 'Test Road', email = 'test@example.com' where id = $1",
+      /* Written the way a person writes a number: SU gets it without the
+         spaces and hyphen, and the hotel record keeps it as typed. */
+      "update hotels set phone = '+91 0000-000 000', address_line = 'Test Road', email = 'test@example.com' where id = $1",
       [hotelId]);
   } finally { await db.end(); }
   expect((await call(ownerId, "/hotel", "PUT", HOTEL_DETAILS)).status).toBe(200);
@@ -214,7 +216,7 @@ describe("sending", () => {
     const body = await res.json() as { problems: string[] };
     const all = body.problems.join(" ");
     for (const word of ["street address", "postcode", "country", "latitude", "longitude",
-                        "first name", "last name", "digits only"]) {
+                        "first name", "last name", "+ and the country code"]) {
       expect(all).toContain(word);
     }
     expect(calls).toHaveLength(0);
@@ -259,6 +261,14 @@ describe("sending", () => {
     expect(property.ContactInfos.ContactInfo[0].Addresses.Address).toEqual({
       AddressLine: "Test Road", CityName: "Akkalkot", PostalCode: "413216", CountryName: "IN",
     });
+    expect(property.ContactInfos.ContactInfo[1].Phones.Phone).toEqual([
+      { PhoneNumber: "+910000000000", PhoneTechType: "1" },
+    ]);
+    const stored = await admin();
+    try {
+      const { rows } = await stored.query<{ phone: string }>("select phone from hotels where id = $1", [hotelId]);
+      expect(rows[0]!.phone).toBe("+91 0000-000 000");
+    } finally { await stored.end(); }
 
     const rooms = calls.slice(1, 3).map((c) => (c.body as any).SellableProducts.SellableProduct[0]);
     const deluxe = rooms.find((r) => r.GuestRoom.Room.roomid === "DLX");

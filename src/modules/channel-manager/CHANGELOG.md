@@ -12,6 +12,82 @@ nothing is sent to SU or any booking site until the owner has SU's test keys.**
 
 ---
 
+## 2026-09-17 · SU connection, part 3: rooms left, prices and closures
+
+**Asked for:** part 3 of D17-66 - push availability, prices and restrictions
+whenever they change and on demand - and the owner's answers that came back
+through the master while it was being built (D17-79 to D17-85).
+
+**Shipped**
+- **108 what SU was last sent:** `channel_ari_sent` (one row per room type, or
+  room type and meal plan, per date, holding exactly what SU received, written
+  only after SU accepted it), `channel_ari_pushes` (every push and what SU said),
+  `channel_hotels.run_as` (the service account a hotel's minute job runs as) and
+  `app.channel_manager_due()`, the one security-definer function that answers
+  which hotels are due before anybody has a session.
+- **A push:** a year from the hotel's business date or today where the hotel is,
+  whichever is later; rooms left once per room type with no rate; price and
+  restrictions per room type and meal plan; runs of identical days as one range;
+  requests cut at 1,000 entries. Prices for one guest up to what the room sleeps.
+  `all` sends the year, `changes` only what differs from what SU accepted last.
+- **Two routes** (`GET/POST .../channel-manager/availability`) and a **job**
+  exported from the front door as `jobs` for `server.ts` to start after listen:
+  every minute, a `changes` push for each due hotel, as its service account,
+  never overlapping itself.
+- **The owner's answers, built in:** an unpriced date goes to SU **closed**
+  (D17-81, and nothing is "opened" by sending `closed: 0` for a date with no
+  price); the setup is the **owner's and an administrator's** (D17-85) - two
+  lists, server and screen, held together by a test; the phone is **formatted**
+  (spaces and hyphens out) when it is sent, never in the hotel record.
+- The screen's **Rooms left, prices and closures** card: *Send a year*, *Send
+  what changed*, and the last ten pushes with what SU said.
+
+**Found**
+- **CM-3, mine, serious:** part 1 shipped two classes using constructor parameter
+  properties. The server strips types and emits nothing, so it could not have
+  loaded them: the next deploy would have failed to start. `tsc` and the tests
+  were green; `cd api && npm run strip-check`, which I had never run, was red.
+  Fixed here (fields written out), and the gate is now in this service's list.
+  The master fixed the same two constructors on cp6 the same evening.
+- **A year of prices took 11 seconds** as `pms_app`: `app.tariff_for` per date
+  and per guest count asks for the price and the extra-person figures again each
+  time, each under row security. Reading the price and the extra figures once a
+  date and working the guest counts out in the same query: 2.8 seconds.
+  ⚠ That is a second copy of `tariff_for`'s arithmetic, held to the first by a
+  test that compares them date by date and guest by guest. A set-based tariff in
+  inventory would end the copy; asked of the master.
+- **Breakfast at the room-only price.** With no dated price for a meal plan, the
+  PMS falls back to the room type's rack rate, which is the same figure for room
+  only and for breakfast. Sending it would have sold breakfast free. Nothing with
+  source `rack` is sent, pending the owner's answer (P3-b).
+- A **typed price of zero** is not sent either: on a booking site it sells the
+  room for nothing.
+- **`maximumstay` has no documented "none"** in SU's papers, so a maximum the PMS
+  clears is not guessed at; recorded as a question for SU.
+
+**Proved** - in `D:\fidato-channel-manager`, on this commit's tree
+- `api: npm test`: 950 passed, 56 files, exit 0 (12 new: 8 for the push, 4 for
+  the job). **Broken on purpose, seen to fail, restored:** the unpriced rule, the
+  zero-price rule, recording a refused push as sent, sending the rack fallback,
+  the per-guest arithmetic, and the "switched on" condition in
+  `app.channel_manager_due()` - six red tests, one per guard.
+- `api: npm run strip-check`: 97 files load. `npx tsc -b --force`: clean.
+- `bash db/tests/run.sh`: 808 assertions, su mapping 21. `rerun.sh`: all 107
+  migrations re-runnable.
+- Opened as the owner at `/h/5EL/channels`: the new card, both buttons disabled
+  with the reason ("Send the hotel, its room types and its meal plans to SU
+  first"), no console error after a reload.
+
+**Left open**
+- Part 4: SU pushes bookings (D17-79). The door's design goes to the master
+  first. Nothing of part 4 is built.
+- P3-b (the rack price) with the owner; the reservations change for a price per
+  night (D17-82); `integration` widened to an administrator in the grant matrix.
+- The job does nothing until the master's switch exists and a hotel has a service
+  account in `run_as`.
+
+---
+
 ## 2026-09-17 · SU connection, part 2: the hotel, its room types and rate plans
 
 **Asked for:** part 2 of D17-66, in order after the login: the property, its room

@@ -47,6 +47,11 @@ export interface ContentRequest {
    Not more than 15 numbers." */
 const SU_PHONE = /^\+\d{1,15}$/;
 
+/** The phone as SU needs it: spaces and hyphens taken out when it is sent,
+    never in the hotel record (the master, 17 September). Anything else that
+    is not a digit after the + is left for SU_PHONE to name. */
+export const phoneForSu = (phone: string) => phone.trim().replace(/[\s-]/g, "");
+
 export function contentProblems(content: HotelContent): string[] {
   const problems: string[] = [];
   const { hotel, channel } = content;
@@ -71,10 +76,10 @@ export function contentProblems(content: HotelContent): string[] {
 
   if (!hotel.phone || !hotel.phone.trim()) {
     problems.push("SU needs the hotel's phone number. It is set on the Properties screen.");
-  } else if (!SU_PHONE.test(hotel.phone.trim())) {
+  } else if (!SU_PHONE.test(phoneForSu(hotel.phone))) {
     problems.push(
-      "SU needs the hotel's phone number written as + and the country code, then the "
-      + "number, in digits only with no spaces. Change it on the Properties screen.");
+      "SU needs the hotel's phone number as + and the country code, then the number, "
+      + "in digits (spaces and hyphens are fine). Change it on the Properties screen.");
   }
 
   for (const type of content.roomTypes) {
@@ -142,7 +147,7 @@ function propertyRequest(content: HotelContent): ContentRequest {
                 Names: { Name: { GivenName: c.contactFirstName!.trim(), Surname: c.contactLastName!.trim() } },
                 Addresses: { Address: address },
                 Emails: { Email: [hotel.email!.trim()] },
-                Phones: { Phone: [{ PhoneNumber: hotel.phone!.trim(), PhoneTechType: "1" }] },
+                Phones: { Phone: [{ PhoneNumber: phoneForSu(hotel.phone!), PhoneTechType: "1" }] },
               },
             ],
           },

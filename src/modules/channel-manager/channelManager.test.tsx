@@ -2,16 +2,16 @@ import { describe, it, expect, vi, beforeEach } from "vitest";
 import { render, screen } from "@testing-library/react";
 import App from "@/App";
 import { AGRA_HOTEL, go, signedIn, startSignedIn } from "@/test/app";
-import type { SuContent, SuStatus } from "./data/su";
+import type { AriState, SuContent, SuStatus } from "./data/su";
 
 /* ══════════════════════════════════════════════════════════════════
    THE CHANNEL MANAGER PAGE — who sees the SU setup (D17-66)
 
-   The setup (SU login, the hotel on SU, room types, meal plans, Send to SU)
-   is the `integration` grant's, which only the owner holds. A GM and an
-   administrator still open the page (it is in their Coming soon section)
-   and see what the connection is, but not the setup, and the screen never
-   asks the server for it: the server would refuse them anyway.
+   The setup (SU login, the hotel on SU, room types, meal plans, Send to SU,
+   rooms left and prices) is the owner's and an administrator's, D17-85. A GM
+   still opens the page - it is in their Coming soon section - and sees what the
+   connection is, but not the setup, and the screen never asks the server for
+   it: the server would refuse them anyway.
 
    The data is stood in for: nothing here reaches SU or the API.
    ══════════════════════════════════════════════════════════════════ */
@@ -35,11 +35,17 @@ const content: SuContent = {
   suMealPlans: [{ code: 15, name: "Room only" }],
 };
 
+const availability: AriState = { pushes: [], policy: { sendRackRate: false, closeUnpriced: true } };
 const getSuContent = vi.fn(async () => content);
 
 vi.mock("@/modules/channel-manager/data/su", async (importOriginal) => {
   const actual = await importOriginal<typeof import("@/modules/channel-manager/data/su")>();
-  return { ...actual, getSuStatus: async () => status, getSuContent: (...a: unknown[]) => getSuContent(...(a as [])) };
+  return {
+    ...actual,
+    getSuStatus: async () => status,
+    getSuAvailability: async () => availability,
+    getSuContent: (...a: unknown[]) => getSuContent(...(a as [])),
+  };
 });
 
 beforeEach(() => {
@@ -47,7 +53,7 @@ beforeEach(() => {
   getSuContent.mockClear();
 });
 
-const as = (role: "owner" | "gm") => {
+const as = (role: "owner" | "admin" | "gm") => {
   if (role === "owner") {
     signedIn({
       scope: {
@@ -58,9 +64,11 @@ const as = (role: "owner" | "gm") => {
   } else {
     signedIn({
       scope: {
-        staffId: "44444444-4444-4444-4444-444444444444", email: "gm@fidato.in",
-        fullName: "Test Manager", isGroupAdmin: false,
-        hotels: [{ hotelId: AGRA_HOTEL, role: "gm" }],
+        staffId: "44444444-4444-4444-4444-444444444444",
+        email: role === "admin" ? "admin@fidato.in" : "gm@fidato.in",
+        fullName: role === "admin" ? "Test Administrator" : "Test Manager",
+        isGroupAdmin: false,
+        hotels: [{ hotelId: AGRA_HOTEL, role }],
       },
     });
   }
@@ -79,6 +87,13 @@ describe("the channel manager page", () => {
     expect(screen.getByText(/rack rate -/)).toBeTruthy();
     const send = screen.getByRole("button", { name: /Send to SU/ }) as HTMLButtonElement;
     expect(send.disabled).toBe(true);
+  });
+
+  it("shows an administrator the setup too (D17-85)", async () => {
+    as("admin");
+    render(<App />);
+    expect(await screen.findByText("This hotel on SU")).toBeTruthy();
+    expect(screen.getByText("Rooms left, prices and closures")).toBeTruthy();
   });
 
   it("shows a GM what the connection is, without the setup, and never asks for it", async () => {

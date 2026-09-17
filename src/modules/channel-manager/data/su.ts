@@ -121,3 +121,32 @@ export const saveSuRatePlan = (code: string, mealPlan: string, input: {
 
 export const sendSuContent = (code: string) =>
   call<{ environment: string; results: SendResult[] }>(`${base(code)}/content/send`, "POST");
+
+/* ── Part 3: rooms left, prices and closures ───────────────────────── */
+
+export interface AriPush {
+  kind: "all" | "changes";
+  from: string; to: string;
+  requests: number; dates: number;
+  ok: boolean; result: string;
+  unpricedDates: number; rackOnlyDates: number;
+  at: string;
+}
+
+export interface AriState {
+  pushes: AriPush[];
+  policy: { sendRackRate: boolean; closeUnpriced: boolean };
+}
+
+export interface AriOutcome {
+  kind: "all" | "changes";
+  from: string; to: string;
+  requests: number; dates: number;
+  unpricedDates: number; rackOnlyDates: number;
+  reason: string;
+}
+
+export const getSuAvailability = (code: string) => api<AriState>(`${base(code)}/availability`);
+
+export const sendSuAvailability = (code: string, kind: "all" | "changes") =>
+  call<AriOutcome>(`${base(code)}/availability/send`, "POST", { kind });

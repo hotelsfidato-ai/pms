@@ -1,7 +1,7 @@
 import { Hono } from "hono";
 import { withSession } from "../../../auth.ts";
 import type { Client } from "../../../db.ts";
-import { ownsHotel, SU_OWNER_ONLY } from "../access.ts";
+import { maySetUpSuAt, SU_REFUSED } from "../access.ts";
 import { suConnection } from "../su/runtime.ts";
 import { SU_ID, SU_MEAL_PLANS, SU_ROOM_TYPES, isSuMealPlan, isSuRoomType } from "../su/codes.ts";
 import {
@@ -42,14 +42,14 @@ const refuse = (reason: string): Refusal => ({ ok: false, reason });
 async function hotelForOwner(client: Client, code: string): Promise<string | Refusal | null> {
   const hotelId = await hotelIdFor(client, code);
   if (!hotelId) return null;
-  if (!(await ownsHotel(client, hotelId))) return refuse(SU_OWNER_ONLY);
+  if (!(await maySetUpSuAt(client, hotelId))) return refuse(SU_REFUSED);
   return hotelId;
 }
 
 const answer = (c: { json: (b: unknown, s?: number) => Response }, result: unknown) => {
   if (result === null) return c.json({ error: "No such property." }, 404);
   const r = result as { ok?: boolean; reason?: string };
-  if (r.ok === false) return c.json(r, r.reason === SU_OWNER_ONLY ? 403 : 409);
+  if (r.ok === false) return c.json(r, r.reason === SU_REFUSED ? 403 : 409);
   return c.json(result);
 };
 

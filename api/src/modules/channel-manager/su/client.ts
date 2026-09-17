@@ -38,11 +38,17 @@ const AUTH_REQUIRED = /authorization required/i;
 const LIMIT_REACHED = /limit has been reached/i;
 
 export class SuClient {
-  constructor(
-    readonly settings: SuSettings,
-    private readonly transport: SuTransport,
-    private readonly tokens: SuTokenHolder,
-  ) {}
+  /* Written out, not parameter properties: the server strips types and emits
+     nothing, so a parameter property is never assigned (CM-3). */
+  readonly settings: SuSettings;
+  private readonly transport: SuTransport;
+  private readonly tokens: SuTokenHolder;
+
+  constructor(settings: SuSettings, transport: SuTransport, tokens: SuTokenHolder) {
+    this.settings = settings;
+    this.transport = transport;
+    this.tokens = tokens;
+  }
 
   post<T = unknown>(endpoint: string, payload: unknown): Promise<SuResult<T>> {
     return this.call<T>("POST", endpoint, payload, true);

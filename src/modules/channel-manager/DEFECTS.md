@@ -47,6 +47,29 @@ copy, and "it uses my settings file" is a guess until the line says so.
 
 ## Fixed — the solution is here; do not work it out again
 
+### CM-3 · Part 1 shipped code the production server cannot load — FIXED 17 September
+
+**Found** — 17 September, by the master, after part 1 was merged into cp6:
+`cd api && npm run strip-check` went red, and it had been red since that merge.
+
+`su/token.ts` and `su/client.ts` declared their fields as constructor parameter
+properties (`constructor(private readonly settings: SuSettings, …)`). The server
+runs Node with type stripping, which removes the types and emits nothing else, so
+a parameter property is never assigned: the process cannot load the file. The next
+deploy would have failed to start, and nothing I ran would have said so. `tsc`
+accepts them, the tests pass (vitest compiles properly), and the gates I quoted
+were `tsc`, vitest, the database suite and the build. `strip-check` is in
+`api/package.json` and I never ran it.
+
+**What was done** — both classes declare their fields and assign them in the
+constructor; no other change. `npm run strip-check`: 97 files load. It is now in
+this service's gate list (MODULE.md). The master fixed the same two constructors
+on cp6 the same evening, so when cp6 is merged here, theirs wins: the two are the
+same shape.
+
+**The rule** — Run every gate the service's own `package.json` defines, not the
+ones you remember. A gate you have never run is a gate you do not have.
+
 ### CM-2 · `su/runtime.ts` was committed with two NUL bytes in it — FIXED 17 September
 
 **Found** — 17 September, reading the stat of part 1's commit (`101e6c2`): git

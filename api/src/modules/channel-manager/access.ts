@@ -1,39 +1,46 @@
 import type { Client } from "../../db.ts";
 
 /* ══════════════════════════════════════════════════════════════════
-   WHO MAY WORK THE SU CONNECTION — the owner
+   WHO MAY WORK THE SU CONNECTION — the owner and an administrator
 
-   `src/lib/permissions.ts` gives the `integration` resource to the owner
-   and to no other role, and a group administrator counts as the owner
-   everywhere (the rule `api/src/modules/admin/grants.ts` copies from the
-   website's `roleFor`). The server refuses what that matrix refuses:
-   a hidden screen is still a URL (MEMORY 250, 263).
+   D17-85, the owner on 17 September: "the owner AND an administrator"
+   open the SU setup; a general manager sees the status page and no more.
+   A group administrator counts as the owner everywhere (the rule
+   `api/src/modules/admin/grants.ts` copies from the website's `roleFor`).
 
-   Two questions, because SU's keys are the group's and its content is
-   a hotel's:
-     ownsAnyHotel   the login check — one pair of keys serves every hotel
-     ownsHotel      a hotel's SU details, mapping and sends
+   Two questions, because SU's keys are the group's and its content is a
+   hotel's:
+     maySetUpSu     the login check - one pair of keys serves every hotel
+     maySetUpSuAt   a hotel's SU details, mapping, sends and pushes
 
-   Whether an administrator or a GM should also reach these is the
-   owner's decision, not this file's.
+   ⚠ A COPY of what the screen asks (`src/modules/channel-manager/data/
+   suRoles.ts`), because the server does not import the website's code.
+   `api/test/modules/channel-manager/suLogin.test.ts` and the screen's own
+   test fail if they drift. The `integration` grant in
+   `src/lib/permissions.ts` is still the owner's alone; widening it to an
+   administrator is the master's change, asked for in MODULE.md.
    ══════════════════════════════════════════════════════════════════ */
 
-export const SU_OWNER_ONLY = "The SU connection is for the owner. Ask the owner.";
+export const SU_ROLES = ["owner", "admin"] as const;
 
-export async function ownsAnyHotel(client: Client): Promise<boolean> {
+export const SU_REFUSED =
+  "The SU connection is for the owner and an administrator. Ask one of them.";
+
+export async function maySetUpSu(client: Client): Promise<boolean> {
   const { rows } = await client.query<{ may: boolean }>(
     `select exists (
        select 1 from staff s
         where s.id = app.current_user_id() and s.is_active
           and (s.is_group_admin or exists (
                  select 1 from staff_hotels sh
-                  where sh.staff_id = s.id and sh.role = 'owner'))
+                  where sh.staff_id = s.id and sh.role = any($1::text[])))
      ) as may`,
+    [SU_ROLES],
   );
   return rows[0]?.may === true;
 }
 
-export async function ownsHotel(client: Client, hotelId: string): Promise<boolean> {
+export async function maySetUpSuAt(client: Client, hotelId: string): Promise<boolean> {
   const { rows } = await client.query<{ may: boolean }>(
     `select exists (
        select 1 from staff s
@@ -41,9 +48,9 @@ export async function ownsHotel(client: Client, hotelId: string): Promise<boolea
           and (s.is_group_admin or exists (
                  select 1 from staff_hotels sh
                   where sh.staff_id = s.id and sh.hotel_id = $1
-                    and sh.role = 'owner'))
+                    and sh.role = any($2::text[])))
      ) as may`,
-    [hotelId],
+    [hotelId, SU_ROLES],
   );
   return rows[0]?.may === true;
 }

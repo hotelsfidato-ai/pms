@@ -8,7 +8,7 @@ import {
 import { money, dateTime } from "@/lib/format";
 import {
   getSuStatus, checkSuLogin, getSuContent, saveSuHotel, saveSuRoomType,
-  saveSuRatePlan, sendSuContent,
+  saveSuRatePlan, sendSuContent, getSuAvailability, sendSuAvailability,
   type SuContent, type ContentRoomType, type ContentMealPlan, type SendResult,
 } from "../data/su";
 
@@ -47,6 +47,7 @@ export function SuSetup({ code }: { code: string }) {
       <RoomTypesOnSu code={code} data={content.data} />
       <MealPlansOnSu code={code} data={content.data} />
       <SendToSu code={code} data={content.data} />
+      <RoomsAndPrices code={code} data={content.data} />
     </div>
   );
 }
@@ -346,6 +347,71 @@ function MealPlanRow({ code, plan, suMealPlans }: {
         <LastSend record={m} />
       </div>
     </li>
+  );
+}
+
+/* ── 5. Rooms left, prices and closures ───────────────────────────── */
+
+function RoomsAndPrices({ code, data }: { code: string; data: SuContent }) {
+  const qc = useQueryClient();
+  const state = useQuery({ queryKey: ["su-availability", code], queryFn: () => getSuAvailability(code) });
+  const [sending, setSending] = useState<"all" | "changes" | null>(null);
+
+  const anyRoomOnSu = data.roomTypes.some((t) => t.mapping?.onSu === "active");
+  const blocked = !data.su.configured || !data.channel?.onSu || !anyRoomOnSu
+    || (data.su.environment === "live" && !data.switchedOn);
+
+  const send = async (kind: "all" | "changes") => {
+    setSending(kind);
+    try {
+      const r = await sendSuAvailability(code, kind);
+      if (r.ok) toast.success(r.reason);
+      else toast.error("Not everything reached SU", r.reason);
+      await qc.invalidateQueries({ queryKey: ["su-availability", code] });
+    } finally { setSending(null); }
+  };
+
+  return (
+    <Card>
+      <CardBody className="space-y-3">
+        <div>
+          <h2 className="text-md font-semibold text-ink-900">Rooms left, prices and closures</h2>
+          <p className="text-sm text-grey-500">
+            A year at a time. Send a year when a hotel first goes on SU; after that only what
+            changed is sent, on its own every minute once the hotel is switched on. A date
+            nobody has priced goes to SU closed, so no booking site sells it at an old price.
+          </p>
+        </div>
+        {blocked && (
+          <p className="text-base text-grey-600">
+            Send the hotel, its room types and its meal plans to SU first.
+          </p>
+        )}
+        <div className="flex flex-wrap gap-2">
+          <Button variant="secondary" onClick={() => send("all")} disabled={blocked || sending !== null}>
+            {sending === "all" ? "Sending a year" : "Send a year"}
+          </Button>
+          <Button variant="secondary" onClick={() => send("changes")} disabled={blocked || sending !== null}>
+            {sending === "changes" ? "Sending changes" : "Send what changed"}
+          </Button>
+        </div>
+        {state.isError && (
+          <ReadFailed compact error={state.error} what="what was sent to SU"
+                      onRetry={() => void state.refetch()} />
+        )}
+        {state.data && state.data.pushes.length > 0 && (
+          <ul className="space-y-1">
+            {state.data.pushes.map((p) => (
+              <li key={p.at} className={p.ok ? "text-sm text-grey-600" : "text-sm text-brand-red"}>
+                {dateTime(p.at)} · {p.kind === "all" ? "a year" : "what changed"} · {p.dates} dates
+                {" "}in {p.requests} request{p.requests === 1 ? "" : "s"} · {p.result}
+                {p.unpricedDates > 0 && ` · ${p.unpricedDates} closed for want of a price`}
+              </li>
+            ))}
+          </ul>
+        )}
+      </CardBody>
+    </Card>
   );
 }
 
