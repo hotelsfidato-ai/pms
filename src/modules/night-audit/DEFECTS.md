@@ -14,6 +14,32 @@ entries stay here: they are the reason the fault does not come back.
 
 ## Open — not fixed
 
+### NA-4 · A web test cannot see a refusal's payload
+
+**Found** — 17 September, building D17-12's record card. **Not this service's
+to fix** — `src/test/setup.ts` is core; reported to the master.
+
+The shared test setup replaces `ApiError` with `StubApiError`, whose
+constructor takes `(status, message)` and drops the third argument. So in every
+web test, `new ApiError(409, sentence, { reason, … })` arrives with **no
+`body`**. The real class keeps it (`this.body=r` in the built bundle, checked).
+Screens that read `error.body?.reason ?? error.message` still pass, because the
+sentence is also the message — which is how nobody noticed. A screen that needs
+more than the sentence (this one's record) cannot be tested through the stub
+at all: its test goes green on the message and never
+reaches the payload branch.
+
+**Done here:** `nightAudit.test.tsx` attaches the body the way the real class
+stores it (`refusalWith`). **For the master:** give `StubApiError` the third
+parameter.
+
+**The rule** — A stub of a class the screens branch on must keep every field
+they read, or the branch it drops is untested everywhere at once.
+
+---
+
+## Fixed
+
 ### NA-1 · Two night-audit routes have no caller
 
 **Found** — 15 September by the brief; confirmed 16 September by the route audit.
@@ -45,10 +71,19 @@ Nothing ever writes `status = 'failed'` or `error_message` (grep, `api/src`): th
 run is one transaction, so a failure rolls its `running` row back with it. A
 history screen today would list completed days only.
 
-**The fix, when it is done** — the owner decides (`HANDOVER.md` § 3.0g lists
-NA-1 under OWNER DECIDES). Recommended: keep `runs` and give the Night audit
-screen a history of closed days; keep `can-run` until NA-2 is decided, because
-it is the one route that already knows the server's date.
+**Fixed 17 September — the owner's D17-13:** "a history of closed days on the
+Night audit screen: who ran it, rooms posted, revenue, no-shows". `runs` is now
+the screen's **Closed days** list, and lists completed days only. "Who ran it"
+needed no migration — `night_audit_runs.run_by` has existed since 006 and the
+run never wrote it; it does now, and the name is read through
+`app.colleague_name` (096), never a join to `staff` (MEMORY 283). **Every day
+closed before 17 September shows a dash under "Ran by"**: nobody was recorded,
+and nothing is inferred. `can-run` still has no caller; the owner did not
+decide it, and it writes nothing.
+
+Guarded by the API test "the closed days" and the web tests "lists the closed
+days, with a dash where the record holds nothing" and "says what belongs in the
+list when no day has been closed" — each seen to fail against the code before.
 
 **The rule** — A route with no caller is either a missing screen or dead weight.
 **A checklist unit ticked on an endpoint alone is a missing screen, not a built
@@ -156,14 +191,47 @@ NA-2's fix does not reach it: both presses send the same, not-yet-closed day.
 The Run button is disabled while its own request runs, so it takes two devices
 (or two tabs) in the same second.
 
-**Not fixed** — the owner decides. Recommended: take that advisory lock first
-thing in the run's transaction, so the second press waits for the first and
-then meets NA-2's refusal — "16 September was already closed" — instead of
-rewriting the record.
+**Fixed 17 September — the owner's D17-12:** "a day already closed is not run
+again: a second press — at the same moment or later — changes nothing and shows
+the record that was made. Any correction to a closed day's record needs the GM."
+
+- **The lock.** `POST /run` takes `pg_advisory_xact_lock('night_audit:' ||
+  hotel)` first, so a second press waits for the first to commit and then meets
+  the check that follows.
+- **The record.** A day already closed answers 409 with the sentence NA-2 gave
+  it *and* `alreadyClosed: true, record: { ranBy, completedAt, roomsPosted,
+  revenuePosted, noShows }`. The screen shows it in a plain card, not the red
+  one: "Nothing was run again. The record that was made: …".
+- **The day is required.** A press that names no day would be answered with
+  whatever day the server is on — tomorrow, a moment after somebody else closed
+  today — so it is a 400. A day the property is not on is refused too ("This
+  property is on 17 September, not 18 September. Reload to see today."). No
+  screen sends either: the Run button has sent its day since NA-2.
+- **The GM.** Migration **099** refuses any change to a COMPLETED run from
+  anyone who does not manage the property (`app.manages_hotel`: the property's
+  owner or GM, or a group administrator). The audit completing its own run, a
+  run still running, and filling a `run_by` nobody recorded are not
+  corrections. There is no screen for correcting a record; this is the rule
+  for whatever writes one.
+
+Guarded by, each run against the code before the change and seen to fail:
+
+```
+api  "closes a day ONCE when two presses arrive together, and the second sees
+     the record" — both presses held at a table lock until BOTH are seen
+     waiting, then let go. Old code: both answered 200.
+api  "refuses to close a day that is already closed…" — now also the record
+api  "refuses a run that does not say which day…" — old code: 200, closed a day
+api  "refuses to close a day the property is not on…" — old code: 200
+db   db/tests/modules/night-audit.sql, "closed day record" — 11 assertions;
+     without 099 a clerk's four corrections all went through
+web  "sends the day it shows, and shows the record of a day already closed"
+```
 
 **The rule** — A uniqueness constraint stops a second row, not a second
 writer. `on conflict do update` on a row somebody else just finished is an
-overwrite, not a retry.
+overwrite, not a retry. **And a race test that relies on two requests
+happening to overlap proves nothing: make them meet.**
 
 ---
 

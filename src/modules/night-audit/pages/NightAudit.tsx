@@ -3,15 +3,19 @@ import { useState } from "react";
 import { useParams, Link } from "react-router";
 import { Check, AlertTriangle, ArrowRight, MoonStar } from "lucide-react";
 import { cn } from "@/lib/cn";
-import { dateLong, money } from "@/lib/format";
+import { dateLong, dateShort, dateTime, money } from "@/lib/format";
+import { ApiError } from "@/lib/api";
 import { useUi } from "@/lib/ui";
 import { useSession } from "@/lib/session";
 import {
-  Page, PageHeader, Card, CardBody, Button, StatusPill, Skeleton, Tooltip,
-  ErrorState, Term,
+  Page, PageHeader, Card, CardHeader, CardBody, Button, StatusPill, Skeleton, Tooltip,
+  ErrorState, EmptyState, DataTable, Term, type Column,
 } from "@/components/ui";
 import { describeError } from "@/components/ui/States";
-import { getNightAudit, runNightAudit, type NightAuditResult } from "@/modules/night-audit/data/nightAudit";
+import {
+  getNightAudit, runNightAudit, listClosedDays,
+  type NightAuditResult, type ClosedDay,
+} from "@/modules/night-audit/data/nightAudit";
 
 /* ══════════════════════════════════════════════════════════════════
    NIGHT AUDIT
@@ -42,10 +46,24 @@ export default function NightAuditPage() {
     queryFn: () => getNightAudit(hotelId),
   });
 
+  /* The days this property has closed (D17-13). Invalidated with
+     everything else when a run succeeds. */
+  const closedDays = useQuery({
+    queryKey: ["night-audit-closed-days", hotelId],
+    queryFn: () => listClosedDays(hotelId),
+  });
+
   const queryClient = useQueryClient();
   const [result, setResult] = useState<NightAuditResult | null>(null);
 
   const run = useMutation({
+    /* A day already closed comes back refused WITH its record (D17-12).
+       Somebody else closed it, so the history here is out of date too. */
+    onError: (e) => {
+      if (e instanceof ApiError && (e.body as NightAuditResult | undefined)?.alreadyClosed) {
+        void queryClient.invalidateQueries({ queryKey: ["night-audit-closed-days", hotelId] });
+      }
+    },
     /* The day the heading names, not whatever day the server is on. A
        screen that did not see the day close elsewhere would otherwise
        close tomorrow (NA-2); sent, the server refuses it instead. */
@@ -67,6 +85,11 @@ export default function NightAuditPage() {
   });
 
   const attention = data?.checks.filter((c) => c.state === "attention") ?? [];
+
+  const refusal = run.error instanceof ApiError
+    ? (run.error.body as NightAuditResult | undefined)
+    : undefined;
+  const alreadyMade = refusal?.alreadyClosed ? refusal.record : undefined;
 
   return (
     <Page>
@@ -179,7 +202,26 @@ export default function NightAuditPage() {
             </CardBody>
           </Card>
 
-          {run.isError && (
+          {alreadyMade ? (
+            /* Not a failure: the day IS closed. Said, and shown. */
+            <Card className="mt-4">
+              <CardBody className="space-y-1.5">
+                <p className="text-sm font-medium text-ink-900">
+                  {describeError(run.error).message}
+                </p>
+                <p className="text-sm text-grey-600">
+                  Nothing was run again. The record that was made:
+                </p>
+                <p className="text-sm text-grey-600 tabular">
+                  Ran by {alreadyMade.ranBy ?? "—"}
+                  {" · "}closed {dateTime(alreadyMade.completedAt)}
+                  {" · "}rooms posted {orDash(alreadyMade.roomsPosted)}
+                  {" · "}room revenue {moneyOrDash(alreadyMade.revenuePosted)}
+                  {" · "}no-shows {orDash(alreadyMade.noShows)}
+                </p>
+              </CardBody>
+            </Card>
+          ) : run.isError && (
             <Card className="mt-4 border-red-200 bg-red-50/50">
               <CardBody>
                 <p className="text-sm text-red-900">
@@ -260,9 +302,50 @@ export default function NightAuditPage() {
           )}
         </>
       )}
+
+      {/* ── The closed days (D17-13) ───────────────────────────────
+          Outside the checklist's branches on purpose: a history that
+          loaded is worth reading even when the checklist did not. */}
+      <Card className="mt-6">
+        <CardHeader
+          title="Closed days"
+          description="Every night audit run at this property, newest first."
+        />
+        <DataTable<ClosedDay>
+          className="border-0 rounded-t-none"
+          columns={CLOSED_DAY_COLUMNS}
+          rows={closedDays.data ?? []}
+          rowKey={(d) => d.businessDate}
+          loading={closedDays.isLoading}
+          error={closedDays.error}
+          onRetry={() => closedDays.refetch()}
+          empty={
+            <EmptyState
+              compact
+              title="No day closed yet"
+              description="Each night audit adds its day here: who ran it, the rooms and revenue it posted, and the no-shows."
+            />
+          }
+        />
+      </Card>
     </Page>
   );
 }
+
+/* A figure the record does not hold is a dash, never a zero. */
+const orDash = (n: number | null) => (n === null ? "—" : String(n));
+const moneyOrDash = (n: number | null) => (n === null ? "—" : money(n));
+
+const CLOSED_DAY_COLUMNS: Column<ClosedDay>[] = [
+  { key: "day", header: "Day", cell: (d) => dateShort(d.businessDate) },
+  /* Nobody was recorded before 17 September: a dash, not a guess. */
+  { key: "ranBy", header: "Ran by", cell: (d) => d.ranBy ?? "—" },
+  { key: "closed", header: "Closed", cell: (d) => dateTime(d.completedAt), hideBelow: "md" },
+  { key: "rooms", header: "Rooms posted", numeric: true, cell: (d) => orDash(d.roomsPosted) },
+  /* The room charges the audit posted, before tax. */
+  { key: "revenue", header: "Room revenue", numeric: true, cell: (d) => moneyOrDash(d.revenuePosted) },
+  { key: "noShows", header: "No-shows", numeric: true, cell: (d) => orDash(d.noShows) },
+];
 
 /* One counted drawer. A variance is shown as a COUNT of shifts that had
    to explain themselves, not as a rupee difference — the reason a

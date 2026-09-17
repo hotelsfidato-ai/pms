@@ -59,6 +59,15 @@ const businessDate = async (): Promise<string> => {
   }
 };
 
+/** Run the audit the way the screen does: naming the day it is closing
+    (NA-2). With no day given, the day Pune is on. */
+const closeDay = async (day?: string) =>
+  app.request("/api/hotels/PUN/night-audit/run", {
+    method: "POST",
+    headers: { "x-dev-staff-id": ownerId, "content-type": "application/json" },
+    body: JSON.stringify({ businessDate: day ?? await businessDate() }),
+  });
+
 /* The night audit RUNS that existed before this file did. Recorded so the
    teardown can remove the ones this file caused and nothing else — deleting
    every run for Pune would take out whatever else put them there. */
@@ -267,7 +276,7 @@ describe("closing a day", () => {
     await clearDueOuts();
     const before = await businessDate();
 
-    const res = await asOwner("/PUN/night-audit/run", "POST");
+    const res = await closeDay();
     const body = (await res.json()) as {
       ok: boolean; businessDate: string; nextBusinessDate: string;
     };
@@ -288,7 +297,7 @@ describe("closing a day", () => {
     const stay = await checkInAtPune(3, 2500);
     const bd = await businessDate();
 
-    const res = await asOwner("/PUN/night-audit/run", "POST");
+    const res = await closeDay();
     const body = (await res.json()) as {
       ok: boolean; roomsPosted: number; revenuePosted: number;
     };
@@ -401,7 +410,7 @@ describe("closing a day", () => {
       );
       expect(live[0]!.n).toBe("2");
 
-      const run = await asOwner("/PUN/night-audit/run", "POST");
+      const run = await closeDay();
       const body = (await run.json()) as { ok: boolean };
       expect(body.ok, JSON.stringify(body)).toBe(true);
 
@@ -459,7 +468,7 @@ describe("closing a day", () => {
       await db.end();
     }
 
-    const body = (await (await asOwner("/PUN/night-audit/run", "POST"))
+    const body = (await (await closeDay())
       .json()) as { ok: boolean; roomsPosted: number };
     expect(body.ok, JSON.stringify(body)).toBe(true);
 
@@ -524,7 +533,7 @@ describe("a day cannot close over an unresolved departure", () => {
     expect(can.blockers[0]!.id).toBe("departures");
     expect(can.blockers[0]!.rooms.join(" ")).toContain(stay.room);
 
-    const run = await asOwner("/PUN/night-audit/run", "POST");
+    const run = await closeDay();
     expect(run.status).toBe(409);
     expect((await run.json() as { ok: boolean }).ok).toBe(false);
 
@@ -560,7 +569,7 @@ describe("a closed day", () => {
     const stay = await checkInAtPune(3, 1200);
     const closed = await businessDate();
 
-    await asOwner("/PUN/night-audit/run", "POST");
+    await closeDay();
 
     const db = await admin();
     try {
@@ -597,7 +606,33 @@ describe("a closed day", () => {
    Nobody is due out tomorrow here on purpose. That is the house in
    which the old code went through; with a departure due, it refused
    for the wrong reason and the test would prove nothing.
+
+   AND THE OWNER'S D17-12, 17 September: a day already closed is not
+   run again — a second press, at the same moment or later, changes
+   nothing and SHOWS THE RECORD THAT WAS MADE. Two presses together
+   used to both answer "closed", and the second rewrote the day's
+   record with its own zeros (NA-3).
    ══════════════════════════════════════════════════════════════════ */
+
+/** "16 September" — how a refusal names a day. */
+const dayMonth = (iso: string) =>
+  `${Number(iso.slice(8))} ${new Date(`${iso}T00:00:00Z`)
+    .toLocaleString("en-GB", { month: "long", timeZone: "UTC" })}`;
+
+const plusDays = (iso: string, n: number) => {
+  const d = new Date(`${iso}T00:00:00Z`);
+  d.setUTCDate(d.getUTCDate() + n);
+  return d.toISOString().slice(0, 10);
+};
+
+interface RunAnswer {
+  ok: boolean; reason?: string; businessDate?: string; alreadyClosed?: boolean;
+  roomsPosted?: number; revenuePosted?: number; noShows?: number;
+  record?: {
+    businessDate: string; ranBy: string | null; completedAt: string | null;
+    roomsPosted: number | null; revenuePosted: number | null; noShows: number | null;
+  };
+}
 
 describe("a stale screen", () => {
   it("refuses to close a day that is already closed, and changes nothing", async () => {
@@ -646,11 +681,7 @@ describe("a stale screen", () => {
       await db.end();
     }
 
-    const run = (closing: string) => app.request("/api/hotels/PUN/night-audit/run", {
-      method: "POST",
-      headers: { "x-dev-staff-id": ownerId, "content-type": "application/json" },
-      body: JSON.stringify({ businessDate: closing }),
-    });
+    const run = (closing: string) => closeDay(closing);
 
     /* The screen loads, and offers to close `day`. */
     const screen = (await (await asOwner(`/PUN/night-audit?asOn=${day}`)).json()) as {
@@ -662,7 +693,7 @@ describe("a stale screen", () => {
     /* Somebody else closes it — sending the day the server is on, which
        is what an up-to-date screen sends, and which goes through. */
     const first = await run(day);
-    const firstBody = (await first.json()) as { ok: boolean; businessDate: string };
+    const firstBody = (await first.json()) as RunAnswer;
     expect(firstBody.ok, JSON.stringify(firstBody)).toBe(true);
     expect(firstBody.businessDate).toBe(day);
 
@@ -692,16 +723,23 @@ describe("a stale screen", () => {
 
     /* The stale screen presses Run, still saying `day`. */
     const second = await run(day);
-    const secondBody = (await second.json()) as {
-      ok: boolean; reason?: string; businessDate?: string;
-    };
+    const secondBody = (await second.json()) as RunAnswer;
     expect(second.status, JSON.stringify(secondBody)).toBe(409);
     expect(secondBody.ok).toBe(false);
-    const month = new Date(`${day}T00:00:00Z`)
-      .toLocaleString("en-GB", { month: "long", timeZone: "UTC" });
     expect(secondBody.reason).toBe(
-      `${Number(day.slice(8))} ${month} was already closed. Reload to see today.`,
+      `${dayMonth(day)} was already closed. Reload to see today.`,
     );
+
+    /* D17-12 — and it shows the record that was made: who, and what. */
+    expect(secondBody.alreadyClosed).toBe(true);
+    expect(secondBody.record).toMatchObject({
+      businessDate: day,
+      ranBy: "Group Owner",
+      roomsPosted: firstBody.roomsPosted,
+      revenuePosted: firstBody.revenuePosted,
+      noShows: firstBody.noShows,
+    });
+    expect(secondBody.record!.completedAt).toBeTruthy();
 
     /* And nothing moved: not the date, not tomorrow's guest, not a charge. */
     expect(await state(), "a refused close changed something").toEqual(before);
@@ -712,13 +750,182 @@ describe("a stale screen", () => {
 
   it("refuses a date that is not a date, before anything happens", async () => {
     const before = await businessDate();
-    const res = await app.request("/api/hotels/PUN/night-audit/run", {
-      method: "POST",
-      headers: { "x-dev-staff-id": ownerId, "content-type": "application/json" },
-      body: JSON.stringify({ businessDate: "yesterday" }),
-    });
+    const res = await closeDay("yesterday");
     expect(res.status).toBe(400);
     expect(await businessDate()).toBe(before);
+  });
+
+  it("refuses a run that does not say which day it is closing", async () => {
+    /* A caller that names no day would be answered with whatever day the
+       server is on — which, a moment after somebody else closed it, is
+       tomorrow. D17-12 says a second press changes nothing, so the day
+       is required. */
+    await clearDueOuts();
+    const before = await businessDate();
+    const res = await app.request("/api/hotels/PUN/night-audit/run", {
+      method: "POST",
+      headers: { "x-dev-staff-id": ownerId },
+    });
+    expect(res.status, await res.clone().text()).toBe(400);
+    expect(await businessDate()).toBe(before);
+  });
+
+  it("refuses to close a day the property is not on, and changes nothing", async () => {
+    await clearDueOuts();
+    const day = await businessDate();
+    const later = plusDays(day, 1);
+    await clearDueOuts(later);
+
+    const res = await closeDay(later);
+    const body = (await res.json()) as RunAnswer;
+    expect(res.status, JSON.stringify(body)).toBe(409);
+    expect(body.reason).toBe(
+      `This property is on ${dayMonth(day)}, not ${dayMonth(later)}. Reload to see today.`,
+    );
+    expect(await businessDate()).toBe(day);
+
+    const db = await admin();
+    try {
+      const { rows } = await db.query<{ n: string }>(
+        `select count(*)::text as n from night_audit_runs
+          where hotel_id = $1 and business_date >= $2::date`, [puneId, day]);
+      expect(rows[0]!.n, "a refused close left a run row").toBe("0");
+    } finally {
+      await db.end();
+    }
+  });
+
+  it("closes a day ONCE when two presses arrive together, and the second sees the record", async () => {
+    /* NA-3. Neither transaction could see the other's uncommitted run row,
+       so both passed every check; the second waited on the unique index,
+       then took the COMPLETED row back to running, found nothing left to
+       post, and completed it again with zeros. Measured on 16 September:
+       one charge of ₹2,500, the date moved once, and the record said 0
+       rooms and ₹0. */
+    await clearDueOuts();
+    /* One night, so the next test's clearDueOuts takes the room back. */
+    const stay = await checkInAtPune(1, 2500);
+    const day = await businessDate();
+
+    /* TOGETHER, NOT NEARLY TOGETHER. Two requests fired side by side
+       usually do not overlap in a test process, and a race test that
+       depends on timing proves nothing either way. So the run table is
+       held, both presses are sent, and the lock is let go only once
+       BOTH are seen waiting — whatever they are waiting on. */
+    const holder = await admin();
+    const gate = await holder.connect();
+    let a!: Response;
+    let b!: Response;
+    try {
+      await gate.query("begin");
+      await gate.query("lock table night_audit_runs in share row exclusive mode");
+      const pressA = closeDay(day);
+      const pressB = closeDay(day);
+
+      const until = Date.now() + 15_000;
+      for (;;) {
+        const { rows } = await holder.query<{ n: number }>(
+          `select count(*)::int as n from pg_stat_activity
+            where datname = current_database() and wait_event_type = 'Lock'`);
+        if (rows[0]!.n >= 2) break;
+        if (Date.now() > until) throw new Error("the two presses never met at the lock");
+        await new Promise((r) => setTimeout(r, 25));
+      }
+      await gate.query("commit");
+      [a, b] = await Promise.all([pressA, pressB]);
+    } finally {
+      gate.release();
+      await holder.end();
+    }
+
+    const answers = [
+      { status: a.status, body: (await a.json()) as RunAnswer },
+      { status: b.status, body: (await b.json()) as RunAnswer },
+    ].sort((x, y) => x.status - y.status);
+
+    expect(answers.map((x) => x.status), JSON.stringify(answers)).toEqual([200, 409]);
+    const [won, lost] = answers as [typeof answers[0], typeof answers[0]];
+    expect(won.body.roomsPosted).toBeGreaterThanOrEqual(1);
+
+    /* The second press is shown what the first one did. */
+    expect(lost.body.alreadyClosed).toBe(true);
+    expect(lost.body.record).toMatchObject({
+      businessDate: day,
+      ranBy: "Group Owner",
+      roomsPosted: won.body.roomsPosted,
+      revenuePosted: won.body.revenuePosted,
+      noShows: won.body.noShows,
+    });
+
+    /* And the day's record is the one that was made. */
+    const db = await admin();
+    try {
+      const { rows: [run] } = await db.query<{
+        rooms_posted: number; revenue_posted: string; charges: string;
+      }>(
+        `select na.rooms_posted, na.revenue_posted::text,
+                (select count(*) from folio_postings fp
+                  where fp.reservation_id = $3 and fp.category = 'room'
+                    and fp.business_date = $2::date)::text as charges
+           from night_audit_runs na
+          where na.hotel_id = $1 and na.business_date = $2::date`,
+        [puneId, day, stay.reservationId],
+      );
+      expect(run!.rooms_posted).toBe(won.body.roomsPosted);
+      expect(Number(run!.revenue_posted)).toBe(won.body.revenuePosted);
+      expect(run!.charges, "the guest was charged for the night more than once").toBe("1");
+    } finally {
+      /* Leave Pune as this test found it. Pune has ten rooms, and a stay
+         checked out later leaves its room dirty; on 17 September this one
+         room left `identity.test.ts` with no clean, free room at all. So the
+         guest leaves now and the room is cleaned, as housekeeping would. */
+      await db.query(
+        `update room_assignments set released_at = now()
+          where reservation_id = $1 and released_at is null`, [stay.reservationId]);
+      await db.query(
+        "update folios set status = 'closed' where reservation_id = $1", [stay.reservationId]);
+      await db.query(
+        "update reservations set status = 'checked_out' where id = $1", [stay.reservationId]);
+      await db.query(
+        `update rooms set housekeeping_status = 'clean'
+          where id in (select room_id from room_assignments where reservation_id = $1)`,
+        [stay.reservationId]);
+      await db.end();
+    }
+    expect(await businessDate()).toBe(plusDays(day, 1));
+  });
+});
+
+/* ══════════════════════════════════════════════════════════════════
+   THE CLOSED DAYS — D17-13
+
+   The owner, 17 September: a history of closed days on the Night
+   audit screen, with who ran it, rooms posted, revenue and no-shows.
+   `run_by` has been a column since 006 and nothing ever wrote it.
+   ══════════════════════════════════════════════════════════════════ */
+
+describe("the closed days", () => {
+  it("lists each closed day with who ran it and what it posted", async () => {
+    /* Whoever is in house already; no room taken from the tests below. */
+    await clearDueOuts();
+    const day = await businessDate();
+    const closed = (await (await closeDay(day)).json()) as RunAnswer;
+    expect(closed.ok, JSON.stringify(closed)).toBe(true);
+
+    const runs = (await (await asOwner("/PUN/night-audit/runs")).json()) as Array<{
+      businessDate: string; ranBy: string | null; completedAt: string | null;
+      roomsPosted: number | null; revenuePosted: number | null; noShows: number | null;
+    }>;
+
+    /* Newest first, so the day just closed leads. */
+    expect(runs[0]).toMatchObject({
+      businessDate: day,
+      ranBy: "Group Owner",
+      roomsPosted: closed.roomsPosted,
+      revenuePosted: closed.revenuePosted,
+      noShows: closed.noShows,
+    });
+    expect(runs[0]!.completedAt).toBeTruthy();
   });
 });
 
@@ -760,7 +967,7 @@ describe("no-shows", () => {
       await db.end();
     }
 
-    const body = (await (await asOwner("/PUN/night-audit/run", "POST"))
+    const body = (await (await closeDay())
       .json()) as { ok: boolean; noShows: number };
     expect(body.ok, JSON.stringify(body)).toBe(true);
     expect(body.noShows).toBeGreaterThanOrEqual(1);
@@ -854,7 +1061,7 @@ describe("a day cannot close over an uncounted drawer", () => {
 
     /* And the run itself refuses, not just the question about it — the
        server has to hold the line independently of the screen. */
-    const run = await asOwner("/PUN/night-audit/run", "POST");
+    const run = await closeDay();
     expect(run.status).toBe(409);
   });
 
@@ -885,7 +1092,7 @@ describe("the audit states the day rather than adding to it", () => {
        the audit working and this test's own fault. */
     await clearDueOuts();
     const bd = await businessDate();
-    const body = (await (await asOwner("/PUN/night-audit/run", "POST")).json()) as {
+    const body = (await (await closeDay()).json()) as {
       ok: boolean;
       drawers?: {
         frontDesk: { shifts: number; opening: number; counted: number };
