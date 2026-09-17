@@ -17,6 +17,11 @@ export const nav: ServiceNavEntry[] = [
   { section: "reports", order: 30,
     label: "Manager report", to: "/reports/manager", icon: BarChart3, resource: "report",
     keywords: ["flash", "daily report"] },
+  /* The printed night audit, the owner's decision of 17 September: in
+     All reports, not on the screen that runs the audit. */
+  { section: "reports", order: 35,
+    label: "Night audit report", to: "/reports/night-audit", icon: ScrollText, resource: "report",
+    keywords: ["audit", "close of day", "day end"], listed: false },
   { section: "reports", order: 40,
     label: "City ledger", to: "/reports/city-ledger", icon: Building2, resource: "report",
     keywords: ["company accounts", "receivables"], listed: false },

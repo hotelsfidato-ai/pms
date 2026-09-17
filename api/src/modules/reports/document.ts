@@ -113,7 +113,8 @@ export interface ReportDoc {
   report: ReportKey;
   title: string;
   /** From the database, never a literal (MEMORY 256). */
-  property: { code: string; name: string; address: string | null; gstin: string | null };
+  /** timezone: where "datetime" cells are printed, e.g. "Asia/Kolkata"; India when absent. */
+  property: { code: string; name: string; address: string | null; gstin: string | null; timezone?: string };
   orientation: "portrait" | "landscape";
   facts: ReportFact[];
   sections: ReportSection[];

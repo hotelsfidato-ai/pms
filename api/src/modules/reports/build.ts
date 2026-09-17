@@ -5,6 +5,7 @@ import { monthlyStatistics, monthlyOccupancy, yearlyStatistics } from "./builder
 import { noShowReport } from "./builders/noShow.ts";
 import { cityLedgerReport } from "./builders/cityLedger.ts";
 import { managerReport } from "./builders/manager.ts";
+import { nightAuditReport } from "./builders/nightAudit.ts";
 
 /* ══════════════════════════════════════════════════════════════════
    buildReport — the one door to every report's figures
@@ -27,6 +28,7 @@ const BUILDERS: Partial<Record<ReportKey, Builder>> = {
   "yearly-statistics": (c, h, p) => yearlyStatistics(c, h, year(p)),
   "no-show": (c, h, p) => noShowReport(c, h, p.asOn),
   manager: (c, h, p) => managerReport(c, h, p.asOn),
+  "night-audit": (c, h, p) => nightAuditReport(c, h, p.asOn),
   /* eZee's own default: the one day, zero-balance accounts left out. */
   "city-ledger": (c, h, p) => cityLedgerReport(c, h, p.from ?? p.asOn, p.asOn, p.ignoreZero ?? true),
 };

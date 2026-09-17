@@ -68,19 +68,16 @@ export const LIVE = `
   fp.reverses_id is null
   and not exists (select 1 from folio_postings rev where rev.reverses_id = fp.id)`;
 
-export async function dailyFigures(
-  client: Client, hotelId: string, from: string, to: string,
-): Promise<DayFigures[]> {
-  const { rows } = await client.query<{
-    date: string; available: number; paying: number; complimentary: number;
-    day_use: number; adults: number; children: number;
-    room: string; room_tax: string; extra: string; extra_tax: string;
-    discount: string; receipt: string;
-  }>(
-    `with days as (
-       select d::date as date
-         from generate_series($2::date, $3::date, interval '1 day') d
-     ),
+/**
+ * THE NIGHTS, as common table expressions over $1 hotel, $2 first day,
+ * $3 last day: bd, room_posts, posted_nights (a posting's charge spread
+ * over the nights it pays for), stay_nights (every night of every stay)
+ * and booked_nights (a night not posted yet, on or after the business
+ * date, at the booking's rate). dailyFigures() adds them up by date;
+ * the Night Audit reads them room by room. One text, so the two cannot
+ * count a night two ways.
+ */
+export const NIGHTS = `
      bd as (select app.business_date($1) as d),
 
      /* Every live room posting that pays for a night inside the window. */
@@ -125,7 +122,7 @@ export async function dailyFigures(
      /* Tonight and the nights booked ahead, not posted yet, at the
         booking's rate and the tax the room's rule gives that rate. */
      booked_nights as (
-       select s.night, s.agreed_rate as rent,
+       select s.reservation_id, s.night, s.agreed_rate as rent,
               round(s.agreed_rate * app.gst_rate($1, 'room', s.agreed_rate) / 100.0, 2) as tax
          from stay_nights s, bd
         where not s.comp
@@ -134,7 +131,22 @@ export async function dailyFigures(
           and not exists (select 1 from posted_nights p
                            where p.reservation_id = s.reservation_id
                              and p.night = s.night)
+     )`;
+
+export async function dailyFigures(
+  client: Client, hotelId: string, from: string, to: string,
+): Promise<DayFigures[]> {
+  const { rows } = await client.query<{
+    date: string; available: number; paying: number; complimentary: number;
+    day_use: number; adults: number; children: number;
+    room: string; room_tax: string; extra: string; extra_tax: string;
+    discount: string; receipt: string;
+  }>(
+    `with days as (
+       select d::date as date
+         from generate_series($2::date, $3::date, interval '1 day') d
      ),
+     ${NIGHTS},
      rent as (
        select night, sum(rent) as room, sum(tax) as room_tax
          from (select night, rent, tax from posted_nights
@@ -284,11 +296,48 @@ async function propertyWhere(client: Client, where: string, value: string): Prom
 
 /** The property as a report heads it. */
 export const heading = (p: Property) =>
-  ({ code: p.code, name: p.name, address: p.address, gstin: p.gstin });
+  ({ code: p.code, name: p.name, address: p.address, gstin: p.gstin, timezone: p.timezone });
 
 /** A date sent in a query string, or null if it is not one. */
 export function isoDateParam(value: string | undefined): string | null {
   return value && /^\d{4}-\d{2}-\d{2}$/.test(value) && !Number.isNaN(Date.parse(value))
     ? value
     : null;
+}
+
+/* ── One night, stay by stay ───────────────────────────────────────── */
+
+export interface StayNight {
+  reservationId: string;
+  complimentary: boolean;
+  /** The night's room charge: posted and spread, or the booking's rate. */
+  rent: number;
+  tax: number;
+}
+
+/** Every stay occupying the night of `date`, with what that night earned. */
+export async function stayNights(client: Client, hotelId: string, date: string): Promise<StayNight[]> {
+  const { rows } = await client.query<{
+    reservation_id: string; comp: boolean; rent: string; tax: string;
+  }>(
+    `with ${NIGHTS}
+     select s.reservation_id::text,
+            s.comp,
+            (coalesce((select sum(p.rent) from posted_nights p
+                        where p.reservation_id = s.reservation_id and p.night = s.night), 0)
+             + coalesce((select sum(b.rent) from booked_nights b
+                          where b.reservation_id = s.reservation_id and b.night = s.night), 0))::text as rent,
+            (coalesce((select sum(p.tax) from posted_nights p
+                        where p.reservation_id = s.reservation_id and p.night = s.night), 0)
+             + coalesce((select sum(b.tax) from booked_nights b
+                          where b.reservation_id = s.reservation_id and b.night = s.night), 0))::text as tax
+       from stay_nights s`,
+    [hotelId, date, date],
+  );
+  return rows.map((r) => ({
+    reservationId: r.reservation_id,
+    complimentary: r.comp,
+    rent: round2(Number(r.rent)),
+    tax: round2(Number(r.tax)),
+  }));
 }

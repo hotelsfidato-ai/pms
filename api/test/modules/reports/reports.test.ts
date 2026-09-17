@@ -33,6 +33,50 @@ const admin = async () =>
 
 let ownerId: string;
 
+/* ── WHAT THESE TESTS POST, AND HOW IT GOES BACK ───────────────────
+   Three of the checks below need money that the demo does not hold: a
+   bill transferred to a company, and a deposit taken before arrival.
+   They are posted to the DEMO property, whose payment total is
+   calibrated to the owner's real eZee export to the paisa
+   (₹3,97,041.93 — api/test/businessDate.test.ts asserts it).
+
+   The first version left them behind. The file was green on its own and
+   the SUITE was red: businessDate.test.ts read 2,734.50 too much. A
+   fixture that moves that figure makes every later comparison with the
+   owner's export a lie.
+
+   So every posting these tests make is recorded here and REVERSED
+   afterwards — the only undo an append-only ledger has (the trigger
+   fires for the superuser too) — and the teardown then MEASURES that
+   the property's payments are back where they were. A cleanup nobody
+   measures is a cleanup nobody has. */
+const posted: Array<{ stay: string; posting: string }> = [];
+let paymentsBefore = 0;
+
+const paymentTotal = async () => {
+  const db = await admin();
+  try {
+    const { rows } = await db.query<{ total: string }>(
+      `select coalesce(sum(fp.amount), 0)::text as total
+         from folio_postings fp join hotels h on h.id = fp.hotel_id
+        where h.code = '5EL' and fp.category = 'payment'`);
+    return Number(rows[0]!.total);
+  } finally { await db.end(); }
+};
+
+/** Post a payment, and remember to put it back. */
+async function postPayment(stay: string, body: unknown) {
+  const res = await app.request(`/api/hotels/5EL/stays/${stay}/payments`, {
+    method: "POST",
+    headers: { "x-dev-staff-id": ownerId, "content-type": "application/json" },
+    body: JSON.stringify(body),
+  });
+  const made = (await res.json()) as { ok?: boolean; data?: { id: string } };
+  expect(res.status, JSON.stringify(made)).toBeLessThan(400);
+  posted.push({ stay, posting: made.data!.id });
+  return made.data!.id;
+}
+
 const call = (path: string) =>
   app.request(`/api/hotels${path}`, { headers: { "x-dev-staff-id": ownerId } });
 
@@ -45,9 +89,24 @@ beforeAll(async () => {
   } finally {
     await db.end();
   }
+  paymentsBefore = await paymentTotal();
 });
 
-afterAll(async () => { await closePool(); });
+afterAll(async () => {
+  for (const { stay, posting } of posted.reverse()) {
+    const undo = await app.request(
+      `/api/hotels/5EL/stays/${stay}/charges/${posting}/reverse`,
+      { method: "POST",
+        headers: { "x-dev-staff-id": ownerId, "content-type": "application/json" },
+        body: JSON.stringify({ reason: "reports test fixture" }) });
+    expect(undo.status, await undo.text()).toBeLessThan(400);
+  }
+  /* The measurement the first teardown lacked. */
+  expect(await paymentTotal(),
+    "these tests left money in the demo property; businessDate.test.ts reads that total")
+    .toBeCloseTo(paymentsBefore, 2);
+  await closePool();
+});
 
 /* ── The Manager report, in the owner's layout ────────────────────── */
 
@@ -143,12 +202,7 @@ describe("the Manager report adds up the way its own page says", () => {
     } finally { await db.end(); }
 
     const before = await managerDoc("?asOn=2026-08-25");
-    const paid = await app.request(`/api/hotels/5EL/stays/${stay}/payments`, {
-      method: "POST",
-      headers: { "x-dev-staff-id": ownerId, "content-type": "application/json" },
-      body: JSON.stringify({ method: "UPI", amount: 1500 }),
-    });
-    expect(paid.status).toBe(200);
+    await postPayment(stay, { method: "UPI", amount: 1500 });
     const after = await managerDoc("?asOn=2026-08-25");
     const delta = (s: string, l: string) => Math.round(
       ((figure(after, s, l).today as number) - (figure(before, s, l).today as number)) * 100) / 100;
@@ -603,12 +657,7 @@ describe("the city ledger, as the owner decided", () => {
     } finally { await db.end(); }
 
     const statsBefore = (await (await call("/5EL/reports/monthly-statistics?month=2026-08")).json()) as ReportDoc;
-    const moved = await app.request(`/api/hotels/5EL/stays/${stay}/payments`, {
-      method: "POST",
-      headers: { "x-dev-staff-id": ownerId, "content-type": "application/json" },
-      body: JSON.stringify({ method: "Bill to company", amount: 1234.5 }),
-    });
-    expect(moved.status).toBe(200);
+    await postPayment(stay, { method: "Bill to company", amount: 1234.5 });
 
     const doc = (await (await call("/5EL/reports/city-ledger?asOn=2026-08-25")).json()) as ReportDoc;
     const rows = doc.sections[0]!.rows;

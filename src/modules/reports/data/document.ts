@@ -64,7 +64,7 @@ export type ReportKey =
 export interface ReportDoc {
   report: ReportKey;
   title: string;
-  property: { code: string; name: string; address: string | null; gstin: string | null };
+  property: { code: string; name: string; address: string | null; gstin: string | null; timezone?: string };
   orientation: "portrait" | "landscape";
   facts: ReportFact[];
   sections: ReportSection[];
