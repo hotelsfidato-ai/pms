@@ -8,6 +8,7 @@ import {
 import { cn } from "@/lib/cn";
 import { dateLong, money, moneyPrecise } from "@/lib/format";
 import { useUi } from "@/lib/ui";
+import { useSession } from "@/lib/session";
 import {
   Page, PageHeader, Card, CardBody, CardHeader, Button, Field, fieldProps, Input,
   NativeSelect, Textarea, Skeleton, EmptyState, toast,
@@ -73,10 +74,33 @@ const MOVEMENTS: { kind: MovementKind; label: string; hint: string;
 const METHOD_LABEL: Record<string, string> = {
   cash: "Cash", card: "Card", upi: "UPI",
   room: "To a room", due: "Due", comp: "Complimentary",
+  /* D17-21: on a banquet function's bill. Business done, not in the tin. */
+  function: "To a function",
 };
+
+/** The property this page is closing, by name.
+
+    ⚠ THE PAGE'S OWN CODE, not the property "in view": the store follows
+    the address in an effect, so for a moment it can still name the last
+    hotel — and this name goes on the button that closes a day. The code
+    is the fallback, because it is still true; a plausible wrong name is
+    not. */
+function useHotelName(code: string): string {
+  const hotels = useSession((s) => s.hotels);
+  return hotels.find((h) => h.code === code)?.name ?? code;
+}
+
+/** "Tuesday, 25 August 2026 · 5 Elements Akkalkot" — the owner's D17-20
+    (17 September): the date in words and the hotel's name with it, so
+    one property's close is never mistaken for another's. The same
+    "what · where" order as every browser tab in the product. */
+function dayAt(businessDate: string, hotelName: string): string {
+  return `${dateLong(businessDate)} · ${hotelName}`;
+}
 
 export default function DayEndPage() {
   const hotelId = useHotel();
+  const hotelName = useHotelName(hotelId);
   const qc = useQueryClient();
   const [step, setStep] = useState<Step>("overview");
 
@@ -131,7 +155,7 @@ export default function DayEndPage() {
     <Page>
       <PageHeader
         title="Close restaurant day"
-        description={`${d.outlet.name} · ${dateLong(d.businessDate)}`}
+        description={`${hotelName} · ${d.outlet.name} · ${dateLong(d.businessDate)}`}
         badge={d.closedAt ? (
           <span className="inline-flex items-center gap-1.5 rounded-full bg-green-50 border border-success px-3 py-1 text-sm text-success-dark">
             <Lock className="size-3.5" />
@@ -158,7 +182,7 @@ export default function DayEndPage() {
         <CashStep hotelId={hotelId} day={d} onDone={refresh} />
       )}
       {step === "finalize" && (
-        <Finalize hotelId={hotelId} day={d} onDone={refresh}
+        <Finalize hotelId={hotelId} hotelName={hotelName} day={d} onDone={refresh}
                   onBack={() => setStep("cash")} />
       )}
     </Page>
@@ -258,6 +282,8 @@ function Overview({ day }: { day: DayEnd }) {
           <p className="mt-3 text-sm text-grey-500">
             Only cash reaches the drawer. A card settlement and a bill
             charged to a room are business done — they are not in the tin.
+            {s.byMethod["function"] !== undefined
+              && " Nor is an order settled to a banquet function: the host pays for it on the function's bill."}
           </p>
         </CardBody>
       </Card>
@@ -611,8 +637,9 @@ function Movements({ hotelId, day, onDone }: {
 /* ── Step three: close it ─────────────────────────────────────────
    The blockers first, each one named, because a refusal a person
    cannot act on is worse than no refusal. */
-function Finalize({ hotelId, day, onDone, onBack }: {
-  hotelId: string; day: DayEnd; onDone: () => void; onBack: () => void;
+function Finalize({ hotelId, hotelName, day, onDone, onBack }: {
+  hotelId: string; hotelName: string; day: DayEnd;
+  onDone: () => void; onBack: () => void;
 }) {
   const [why, setWhy] = useState(day.cash.varianceReason ?? "");
   const [closing, setClosing] = useState(false);
@@ -623,7 +650,7 @@ function Finalize({ hotelId, day, onDone, onBack }: {
         <CardBody className="py-10 text-center">
           <Lock className="mx-auto size-8 text-success" />
           <p className="mt-3 text-lg font-medium">
-            {day.businessDate} is closed
+            {dayAt(day.businessDate, hotelName)} is closed
           </p>
           <p className="mt-1 text-grey-600">
             {day.closedAt}{day.closedBy ? ` by ${day.closedBy}` : ""}
@@ -649,7 +676,8 @@ function Finalize({ hotelId, day, onDone, onBack }: {
     const res = await closeDay(hotelId, { varianceReason: why });
     setClosing(false);
     if (!res.ok) return toast.error("Not closed", res.reason);
-    toast.success("Day closed", `${day.businessDate} is finalised.`);
+    toast.success("Day closed",
+      `${dayAt(day.businessDate, hotelName)} is finalised.`);
     onDone();
   };
 
@@ -735,10 +763,21 @@ function Finalize({ hotelId, day, onDone, onBack }: {
               || day.cash.counted === null
               || (needsReason && !why.trim())
             }
-            className="mt-4 h-12 w-full text-base"
+            /* TWO LINES, the day and then the hotel. On one line the
+               label was 355px in a 317px button and ran out over both
+               edges (measured 17 September, the drawer column at a desk).
+               The spoken name keeps the whole sentence. */
+            aria-label={closing
+              ? undefined : `Close ${dayAt(day.businessDate, hotelName)}`}
+            className="mt-4 h-auto min-h-12 w-full py-2 text-base whitespace-normal"
           >
-            <Banknote className="size-4" />
-            {closing ? "Closing…" : `Close ${day.businessDate}`}
+            <Banknote className="size-4 shrink-0" />
+            {closing ? "Closing…" : (
+              <span className="text-left leading-snug">
+                <span className="block">Close {dateLong(day.businessDate)}</span>
+                <span className="block">{hotelName}</span>
+              </span>
+            )}
           </Button>
           <p className="mt-2 text-center text-sm text-grey-500">
             A closed day cannot be edited.

@@ -3,9 +3,10 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useParams, useSearchParams } from "react-router";
 import {
   UtensilsCrossed, Plus, X, Receipt, BedDouble, Banknote,
-  CreditCard, Smartphone, Printer, Percent, Split,
+  CreditCard, Smartphone, Printer, Percent, Split, CalendarHeart,
 } from "lucide-react";
 import { DishDialog } from "@/modules/pos/flows/DishDialog";
+import { FunctionPicker } from "@/modules/pos/components/FunctionPicker";
 import { OrderHeaderPanel } from "@/modules/pos/flows/OrderHeaderPanel";
 import { cn } from "@/lib/cn";
 import { money } from "@/lib/format";
@@ -16,7 +17,7 @@ import {
   Dialog, DialogContent, Field, fieldProps, Input, NativeSelect,
 } from "@/components/ui";
 import { StartHere } from "@/components/app/StartHere";
-import { getMenu, listOrders, getOrder, listChargeableRooms, openOrder, addLine, voidLine, settleOrder, abandonOrder, applyDiscount, clearDiscount, setRoundOff, settleSplit, listPromotions, applyPromotion, type Order, type MenuItem, type OrderSummary, type TenderInput } from "@/modules/pos/data/till";
+import { getMenu, listOrders, getOrder, listChargeableRooms, openOrder, addLine, voidLine, settleOrder, abandonOrder, applyDiscount, clearDiscount, setRoundOff, settleSplit, listPromotions, applyPromotion, setOrderHeader, type Order, type MenuItem, type OrderSummary, type TenderInput } from "@/modules/pos/data/till";
 import { BUSINESS_DATE } from "@/data/repositories";
 import { ReadFailed, ReadStale } from "@/modules/pos/components/ReadProblem";
 
@@ -860,7 +861,7 @@ function OrderPanel({
   });
 
   const settle = async (
-    method: "room" | "cash" | "card" | "upi", folioId?: string,
+    method: "room" | "cash" | "card" | "upi" | "function", folioId?: string,
   ) => {
     setBusy(true);
     const res = await settleOrder(hotelId, order.id, method,
@@ -880,10 +881,30 @@ function OrderPanel({
     setChoices(null);
     toast.success(
       "Settled",
-      res.guest ? `${money(order.gross)} to ${res.guest}` : money(order.gross),
+      res.guest ? `${money(order.gross)} to ${res.guest}`
+        : method === "function"
+          ? `${money(order.gross)} on ${order.eventTitle ?? "the function"}'s bill`
+          : money(order.gross),
     );
     onDone();
   };
+
+  /* D17-21: the banquet function this order is on, or off it. */
+  const attach = async (eventId: string | null) => {
+    setBusy(true);
+    const res = await setOrderHeader(hotelId, order.id, { eventId });
+    setBusy(false);
+    if (!res.ok) return toast.error("Not changed", res.reason);
+    toast.success(eventId
+      ? `On ${res.order.eventTitle ?? "the function"}'s bill`
+      : "Off the function");
+    onChanged();
+  };
+
+  /* ON A FUNCTION'S BILL, paid there and nowhere else (the owner,
+     17 September). The other ways stay in sight, switched off, and say
+     why (Rule 6). */
+  const onFunction = order.eventId !== null;
 
   const roundOff = async () => {
     setBusy(true);
@@ -937,6 +958,16 @@ function OrderPanel({
           hotelId={hotelId}
           onChanged={onChanged}
         />
+        {!settled && (
+          <FunctionPicker
+            className="px-4 pb-3"
+            hotelId={hotelId}
+            value={order.eventId}
+            currentTitle={order.eventTitle}
+            disabled={busy}
+            onChange={(id) => void attach(id)}
+          />
+        )}
 
         {live.length === 0 ? (
           <div className="text-center py-6">
@@ -1029,7 +1060,9 @@ function OrderPanel({
           <div className="mt-3.5 space-y-2">
             <p className="text-sm text-grey-600">
               {order.status === "settled"
-                ? `Paid by ${order.paymentMethod}${order.settledBy ? `, taken by ${order.settledBy}` : ""}.`
+                ? order.paymentMethod === "function"
+                  ? `On ${order.eventTitle ?? "the function"}'s bill${order.settledBy ? `, settled by ${order.settledBy}` : ""}.`
+                  : `Paid by ${order.paymentMethod}${order.settledBy ? `, taken by ${order.settledBy}` : ""}.`
                 : `Closed unpaid — ${order.abandonedReason}`}
             </p>
             {order.status === "settled" && (
@@ -1107,13 +1140,37 @@ function OrderPanel({
               </Button>
             </div>
 
+            {onFunction && (
+              <>
+                <Button
+                  variant="primary"
+                  size="lg"
+                  className="w-full"
+                  loading={busy}
+                  disabled={live.length === 0}
+                  onClick={() => void settle("function")}
+                >
+                  <CalendarHeart className="size-4 shrink-0" />
+                  <span className="truncate">
+                    Charge to {order.eventTitle ?? "the function"}
+                  </span>
+                </Button>
+                <p className="text-sm text-grey-600 leading-relaxed">
+                  This order is on {order.eventTitle ?? "a function"}'s bill, so
+                  the host pays for it there. To take a room, cash, a card or
+                  UPI, choose "Not for a function" above first.
+                </p>
+              </>
+            )}
+
             <div className="flex gap-2">
               <input
                 list="chargeable-rooms"
                 value={room}
+                disabled={onFunction}
                 onChange={(e) => setRoom(e.target.value)}
                 placeholder="Room"
-                className="w-24 h-11 px-3 rounded-md border border-grey-300 text-base tabular"
+                className="w-24 h-11 px-3 rounded-md border border-grey-300 text-base tabular disabled:bg-grey-50"
               />
               <datalist id="chargeable-rooms">
                 {(rooms.data ?? []).map((r) => (
@@ -1126,7 +1183,7 @@ function OrderPanel({
                 size="lg"
                 className="flex-1"
                 loading={busy}
-                disabled={!room.trim() || live.length === 0}
+                disabled={onFunction || !room.trim() || live.length === 0}
                 onClick={() => void settle("room")}
               >
                 <BedDouble className="size-4" />
@@ -1141,7 +1198,7 @@ function OrderPanel({
                   variant="secondary"
                   size="lg"
                   loading={busy}
-                  disabled={live.length === 0}
+                  disabled={onFunction || live.length === 0}
                   onClick={() => void settle(m.key)}
                 >
                   <m.icon className="size-4" />
@@ -1154,7 +1211,7 @@ function OrderPanel({
               variant="secondary"
               size="lg"
               className="w-full"
-              disabled={live.length === 0}
+              disabled={onFunction || live.length === 0}
               onClick={() => setSplitting(true)}
             >
               <Split className="size-4" />

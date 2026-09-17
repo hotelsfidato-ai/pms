@@ -162,8 +162,12 @@ export default function BillPage() {
         <div className="text-center mt-3 text-2xs text-grey-600 space-y-1">
           {o.status === "settled" ? (
             <p>
-              Paid by {o.paymentMethod}
-              {o.paymentMethod === "room" && " — charged to the guest's bill"}
+              {/* D17-21: nothing was paid at the till — it went on the
+                  function's bill, and the host pays for it there. */}
+              {o.paymentMethod === "function"
+                ? `Charged to ${o.eventTitle ?? "the function"}'s bill`
+                : <>Paid by {o.paymentMethod}
+                    {o.paymentMethod === "room" && " — charged to the guest's bill"}</>}
             </p>
           ) : (
             <p className="font-medium">NOT PAID</p>

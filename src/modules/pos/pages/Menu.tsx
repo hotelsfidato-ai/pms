@@ -9,7 +9,7 @@ import {
   Page, PageHeader, Card, CardBody, Button, StatusPill, Skeleton, toast,
   Dialog, DialogContent, Field, fieldProps, Input,
 } from "@/components/ui";
-import { getMenu, addCategory, addItem, toggleItem, takeItemOff, putItemBack, importMenu, setItemPrepMinutes, setCategoryPrepMinutes, setItemCourse, setCategoryCourse, listPromotions, addPromotion, amendPromotion, type OffFor, type Promotion, type MenuCategory, type MenuItem } from "@/modules/pos/data/till";
+import { getMenu, addCategory, addItem, toggleItem, takeItemOff, putItemBack, takeAddonOff, putAddonBack, importMenu, setItemPrepMinutes, setCategoryPrepMinutes, setItemCourse, setCategoryCourse, listPromotions, addPromotion, amendPromotion, type OffFor, type Promotion, type MenuCategory } from "@/modules/pos/data/till";
 import { ReadFailed, ReadStale } from "@/modules/pos/components/ReadProblem";
 import { ImportDialog } from "@/components/flows/ImportDialog";
 import { MENU_SPEC } from "@/lib/importSpec";
@@ -67,6 +67,17 @@ export default function MenuPage() {
 
   const cats = menu.data ?? [];
   const items = cats.flatMap((c) => c.items);
+
+  /* A group of sides is shared: "Sides" can hang off three dishes, and
+     switching its onions off switches them off on all three. Counted
+     once here so each add-on's dialog can say which. */
+  const dishesByGroup = new Map<string, string[]>();
+  for (const item of items) {
+    for (const group of item.addonGroups) {
+      dishesByGroup.set(group.id,
+        [...(dishesByGroup.get(group.id) ?? []), item.name]);
+    }
+  }
 
   return (
     <Page>
@@ -176,6 +187,7 @@ export default function MenuPage() {
               key={cat.id}
               category={cat}
               hotelId={hotelId}
+              dishesByGroup={dishesByGroup}
               onChanged={refresh}
             />
           ))}
@@ -496,46 +508,65 @@ const OFF_FOR: { key: OffFor; label: string }[] = [
   { key: "next_business_day", label: "Tomorrow" },
 ];
 
-function OffControl({ item, hotelId, onDone }: {
-  item: MenuItem; hotelId: string; onDone: () => void;
+/* ONE CONTROL FOR A DISH AND FOR AN ADD-ON (POS-2, the owner's D17-19:
+   "on/off switches for add-ons on the Menu screen, like dishes have").
+   The same words, the same durations and the same "put back", so a
+   kitchen manager who has switched off paneer already knows how to
+   switch off onions. Two differences, both the database's: an add-on
+   keeps no reason, and an add-on can be on more than one dish. */
+function OffControl({
+  name, offUntil, askWhy, alsoOn, takeOff, putBack, onDone,
+}: {
+  name: string;
+  offUntil: string | null;
+  /** A dish keeps a reason and shows it to the waiter. An add-on has
+      nowhere to keep one, so it is not asked for. */
+  askWhy: boolean;
+  /** Every dish this add-on is offered with. Named in the dialog when
+      there is more than one, because it goes off on all of them. */
+  alsoOn?: string[];
+  takeOff: (until: OffFor, reason: string) =>
+    Promise<{ ok: boolean; reason?: string }>;
+  putBack: () => Promise<{ ok: boolean; reason?: string }>;
+  onDone: () => void;
 }) {
   const [open, setOpen] = useState(false);
   const [reason, setReason] = useState("");
   const [busy, setBusy] = useState(false);
 
-  const off = item.offUntil !== null
-    && Date.parse(item.offUntil) > Date.now();
+  const off = offUntil !== null && Date.parse(offUntil) > Date.now();
 
   const back = off
-    ? new Date(item.offUntil!).toLocaleTimeString("en-IN",
+    ? new Date(offUntil!).toLocaleTimeString("en-IN",
         { hour: "2-digit", minute: "2-digit" })
     : null;
 
-  const takeOff = async (until: OffFor) => {
+  const choose = async (until: OffFor) => {
     setBusy(true);
-    const res = await takeItemOff(hotelId, item.id, until, reason.trim());
+    const res = await takeOff(until, reason.trim());
     setBusy(false);
     if (!res.ok) return toast.error("Not changed", res.reason);
     setOpen(false);
     setReason("");
-    toast.success(`${item.name} is off`, `Back in ${
+    toast.success(`${name} is off`, `Back in ${
       OFF_FOR.find((o) => o.key === until)?.label.toLowerCase()}.`);
     onDone();
   };
 
-  const putBack = async () => {
+  const restore = async () => {
     setBusy(true);
-    const res = await putItemBack(hotelId, item.id);
+    const res = await putBack();
     setBusy(false);
     if (!res.ok) return toast.error("Not changed", res.reason);
-    toast.success(`${item.name} is back on`);
+    toast.success(`${name} is back on`);
     onDone();
   };
 
   if (off) {
     return (
       <Button variant="secondary" size="sm" loading={busy}
-        onClick={() => void putBack()}>
+        aria-label={`Off till ${back} — put back ${name}`}
+        onClick={() => void restore()}>
         {/* When, not just whether. A waiter asked "is it back?" needs a
             time, and the row is where they look. */}
         Off till {back} — put back
@@ -543,16 +574,22 @@ function OffControl({ item, hotelId, onDone }: {
     );
   }
 
+  const shared = (alsoOn?.length ?? 0) > 1;
+
   return (
     <>
-      <Button variant="ghost" size="sm" onClick={() => setOpen(true)}>
+      <Button variant="ghost" size="sm" aria-label={`Out of stock: ${name}`}
+        onClick={() => setOpen(true)}>
         Out of stock
       </Button>
 
       <Dialog open={open} onOpenChange={setOpen}>
         <DialogContent
-          title={`${item.name} is off`}
-          description="For how long? It comes back on by itself."
+          title={`${name} is off`}
+          description={shared
+            ? `For how long? It comes back on by itself. It goes off on `
+              + `every dish that offers it: ${alsoOn!.join(", ")}.`
+            : "For how long? It comes back on by itself."}
           size="sm"
           footer={
             <Button variant="secondary" size="lg"
@@ -562,17 +599,19 @@ function OffControl({ item, hotelId, onDone }: {
           }
         >
           <div className="space-y-4">
-            <Field label="Why" hint="Shown to the waiter who tries to ring it">
-              {(f) => (
-                <Input
-                  {...fieldProps(f)}
-                  value={reason}
-                  onChange={(e) => setReason(e.target.value)}
-                  placeholder="Out of paneer"
-                  autoFocus
-                />
-              )}
-            </Field>
+            {askWhy && (
+              <Field label="Why" hint="Shown to the waiter who tries to ring it">
+                {(f) => (
+                  <Input
+                    {...fieldProps(f)}
+                    value={reason}
+                    onChange={(e) => setReason(e.target.value)}
+                    placeholder="Out of paneer"
+                    autoFocus
+                  />
+                )}
+              </Field>
+            )}
             <div className="grid grid-cols-2 gap-2">
               {OFF_FOR.map((o) => (
                 <Button
@@ -580,7 +619,7 @@ function OffControl({ item, hotelId, onDone }: {
                   variant="secondary"
                   size="lg"
                   loading={busy}
-                  onClick={() => void takeOff(o.key)}
+                  onClick={() => void choose(o.key)}
                 >
                   {o.label}
                 </Button>
@@ -593,8 +632,11 @@ function OffControl({ item, hotelId, onDone }: {
   );
 }
 
-function CategoryCard({ category, hotelId, onChanged }: {
-  category: MenuCategory; hotelId: string; onChanged: () => void;
+function CategoryCard({ category, hotelId, dishesByGroup, onChanged }: {
+  category: MenuCategory; hotelId: string;
+  /** Add-on group → every dish on the menu that offers it. */
+  dishesByGroup: Map<string, string[]>;
+  onChanged: () => void;
 }) {
   const [name, setName] = useState("");
   const [price, setPrice] = useState("");
@@ -668,72 +710,121 @@ function CategoryCard({ category, hotelId, onChanged }: {
 
       <ul className="divide-y divide-grey-100">
         {category.items.map((item) => (
-          <li
-            key={item.id}
-            className="flex items-center gap-3 px-4 py-2.5 min-h-14"
-          >
-            <span
-              className={cn(
-                "flex-1 min-w-0 text-base truncate",
-                item.isActive ? "text-ink-900" : "text-grey-500 line-through",
-              )}
-            >
-              {item.name}
-            </span>
-            <span className="text-2xs text-grey-500 tabular shrink-0">
-              {item.taxRate}%
-            </span>
-            <span className="tabular text-base text-ink-900 shrink-0 w-20 text-right">
-              {moneyPrecise(item.price)}
-            </span>
-            <CourseControl
-              course={item.course}
-              own={item.ownCourse}
-              label={`Course for ${item.name}`}
-              onSet={async (v) => {
-                const res = await setItemCourse(hotelId, item.id, v);
-                if (!res.ok) {
-                  toast.error("Not changed", res.reason ?? "Refused.");
-                  return;
-                }
-                onChanged();
-              }}
-            />
-            <PrepControl
-              minutes={item.prepMinutes}
-              own={item.ownPrepMinutes}
-              label={`Preparation time for ${item.name}`}
-              onSet={async (m) => {
-                const res = await setItemPrepMinutes(hotelId, item.id, m);
-                if (!res.ok) {
-                  toast.error("Not changed", res.reason ?? "Refused.");
-                  return;
-                }
-                onChanged();
-              }}
-            />
-            {/* TWO DIFFERENT ACTS, and the words are different because
-                the decisions are.
+          <li key={item.id} className="px-4 py-2.5">
+            <div className="flex flex-wrap items-center gap-x-3 gap-y-1 min-h-9">
+              <span
+                className={cn(
+                  "flex-1 min-w-32 text-base truncate",
+                  item.isActive ? "text-ink-900" : "text-grey-500 line-through",
+                )}
+              >
+                {item.name}
+              </span>
+              <span className="text-2xs text-grey-500 tabular shrink-0">
+                {item.taxRate}%
+              </span>
+              <span className="tabular text-base text-ink-900 shrink-0 w-20 text-right">
+                {moneyPrecise(item.price)}
+              </span>
+              {/* POS-9: THE CONTROLS GO UNDER THE NAME ON A PHONE. On one line
+                  at 375px the row needed 465px of 302 and the dish name was
+                  squeezed to nothing (17 September). A desk has the room, and
+                  there nothing moves. */}
+              <div className="flex flex-wrap items-center justify-end gap-x-3 gap-y-1 ml-auto">
+                <CourseControl
+                  course={item.course}
+                  own={item.ownCourse}
+                  label={`Course for ${item.name}`}
+                  onSet={async (v) => {
+                    const res = await setItemCourse(hotelId, item.id, v);
+                    if (!res.ok) {
+                      toast.error("Not changed", res.reason ?? "Refused.");
+                      return;
+                    }
+                    onChanged();
+                  }}
+                />
+                <PrepControl
+                  minutes={item.prepMinutes}
+                  own={item.ownPrepMinutes}
+                  label={`Preparation time for ${item.name}`}
+                  onSet={async (m) => {
+                    const res = await setItemPrepMinutes(hotelId, item.id, m);
+                    if (!res.ok) {
+                      toast.error("Not changed", res.reason ?? "Refused.");
+                      return;
+                    }
+                    onChanged();
+                  }}
+                />
+                {/* TWO DIFFERENT ACTS, and the words are different because
+                    the decisions are.
 
-                "Out of paneer" is a shift decision with an end on it.
-                "Take off the card" is a menu decision with none — and
-                a dish taken off the card is still off tomorrow, which
-                is exactly what nobody wants from the first one. */}
-            <OffControl
-              item={item}
-              hotelId={hotelId}
-              onDone={onChanged}
-            />
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={() => void toggle(item.id)}
-            >
-              {/* Off, not gone. The lines that sold it point at this row,
-                  and a dish that is unavailable today was on the card
-                  yesterday. */}
-              {item.isActive ? "Take off" : "Put back"}
-            </Button>
+                    "Out of paneer" is a shift decision with an end on it.
+                    "Take off the card" is a menu decision with none — and
+                    a dish taken off the card is still off tomorrow, which
+                    is exactly what nobody wants from the first one. */}
+                <OffControl
+                  name={item.name}
+                  offUntil={item.offUntil}
+                  askWhy
+                  takeOff={(until, reason) =>
+                    takeItemOff(hotelId, item.id, until, reason)}
+                  putBack={() => putItemBack(hotelId, item.id)}
+                  onDone={onChanged}
+                />
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => void toggle(item.id)}
+                >
+                  {/* Off, not gone. The lines that sold it point at this row,
+                      and a dish that is unavailable today was on the card
+                      yesterday. */}
+                  {item.isActive ? "Take off" : "Put back"}
+                </Button>
+              </div>
+            </div>
+
+            {/* ── Its add-ons ──────────────────────────────────────────
+                Under the dish, because that is where a kitchen manager
+                looks for "the onions with the Bhaaji Pau". Each switches
+                off the way the dish does (D17-19). */}
+            {item.addonGroups.map((group) => (
+              <div key={group.id} className="mt-2 ml-4 pl-3 border-l border-grey-200">
+                <p className="text-2xs uppercase tracking-wide text-grey-500 pt-1">
+                  {group.label}
+                </p>
+                <ul>
+                  {group.addons.map((addon) => (
+                    <li key={addon.id}
+                        className="flex flex-wrap items-center gap-x-3 min-h-9 py-0.5">
+                      {/* WRAPS rather than squeezes. On a phone "Off till
+                          04:46 pm — put back" took the whole row and the
+                          add-on's own name shrank to nothing (measured at
+                          375px, 17 September); the button goes under it. */}
+                      <span className="flex-1 min-w-28 text-base text-ink-900 truncate">
+                        {addon.label}
+                      </span>
+                      <span className="tabular text-base text-ink-900 shrink-0 w-20 text-right">
+                        {moneyPrecise(addon.price)}
+                      </span>
+                      <div className="ml-auto">
+                        <OffControl
+                          name={addon.label}
+                          offUntil={addon.offUntil}
+                          askWhy={false}
+                          alsoOn={dishesByGroup.get(group.id)}
+                          takeOff={(until) => takeAddonOff(hotelId, addon.id, until)}
+                          putBack={() => putAddonBack(hotelId, addon.id)}
+                          onDone={onChanged}
+                        />
+                      </div>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            ))}
           </li>
         ))}
         {category.items.length === 0 && (

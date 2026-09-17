@@ -12,8 +12,10 @@ api/src/modules/pos/      the server's routes for this service
 db/tests/modules/pos.sql  NEW database checks only — db/tests/suite.sql is frozen history
 ```
 
-Before your first edit: claim the service in `.claims/pos.md` (since 16
-September — not `HANDOVER.md`), read `docs/briefs/pos.md`, this file, then this
+Before your first edit: claim the service with `npm run claim -- pos "what"`
+(since 16 September's evening — the `.claims/pos.md` file this line used to
+name was visible only in the copy that wrote it, root MEMORY 281), read
+`docs/briefs/pos.md`, this file, then this
 folder's `DEFECTS.md` and `CHANGELOG.md`. Written 15 September 2026 from the
 code at `880a5b6`.
 
@@ -51,7 +53,7 @@ off (`navigation.ts`, section `point-of-sale`, `receptionNeeds: "reception_pos"`
 | Menu | `/h/:code/menu` | `pages/Menu.tsx` | kitchen manager |
 | Close restaurant day | `/h/:code/till/day-end` | `pages/DayEnd.tsx` | waiter, kitchen manager, Reception |
 | Charges to rooms | `/h/:code/pos` | `pages/Pos.tsx` | none |
-| — (not in the menu) kitchen docket | `/h/:code/till/orders/:id/kot/:no` | `pages/Docket.tsx` | opened from an order; never shows prices |
+| — (not in the menu) kitchen docket | `/h/:code/till/orders/:id/kot/:no` | `pages/Docket.tsx` | opened in a new tab on every send that reaches the kitchen — by the Terminal and, since 17 September, by Tables' order pad; never shows prices |
 | — (not in the menu) printed bill | `/h/:code/till/bill/:id` | `pages/Bill.tsx` | opened from an order |
 
 - Reception's four entries show only while the hotel's "Reception can use the
@@ -96,15 +98,15 @@ menu        GET    /:code/till/menu
             POST   /:code/till/menu/items/:id/toggle
             POST   /:code/till/menu/items/:id/off
             POST   /:code/till/menu/items/:id/on
-            POST   /:code/till/addons/:id/off              no caller in the web app (15 Sep)
-            POST   /:code/till/addons/:id/on               no caller in the web app (15 Sep)
+            POST   /:code/till/addons/:id/off              the Menu screen's add-on switch (17 Sep, POS-2)
+            POST   /:code/till/addons/:id/on               the Menu screen's add-on switch (17 Sep, POS-2)
 outlet      POST   /:code/till/outlet/:outlet/closed        "we are closed" for a while
 rooms       GET    /:code/till/rooms                        rooms a bill may be charged to
 orders      GET    /:code/till/orders
             POST   /:code/till/orders
-            POST   /:code/till/orders/batch                 the pad's whole round in one request
+            POST   /:code/till/orders/batch                 the pad's whole round in one request; eventId (D17-21)
             GET    /:code/till/orders/:id
-            PATCH  /:code/till/orders/:id                   covers, waiter, customer, type, held
+            PATCH  /:code/till/orders/:id                   covers, waiter, customer, type, held, eventId (D17-21)
             POST   /:code/till/orders/:id/lines
             POST   /:code/till/orders/:id/lines/:lineId/void
             POST   /:code/till/orders/:id/lines/:lineId/qty
@@ -112,7 +114,7 @@ orders      GET    /:code/till/orders
             GET    /:code/till/orders/:id/kot/:no           one docket
             POST   /:code/till/orders/:id/printed
             POST   /:code/till/orders/:id/clear
-            POST   /:code/till/orders/:id/settle            cash · card · UPI · split · room
+            POST   /:code/till/orders/:id/settle            cash · card · UPI · split · room · function (D17-21)
             POST   /:code/till/orders/:id/abandon
 money       POST   /:code/till/orders/:id/discount
             POST   /:code/till/orders/:id/discount/clear
@@ -176,6 +178,15 @@ components/ReadProblem.tsx   what a failed read says (POS-4): readProblem() sort
                     failed; ReadFailed stands in for a list with nothing to show,
                     ReadStale is one line over a list whose refresh failed.
                     Every screen with a read uses one of them.
+components/FunctionPicker.tsx   "Banquet function" (D17-21): banquet's list of
+                    functions an order may go on, through its front door; nothing
+                    drawn where there is nothing to choose and nothing chosen.
+components/SlipNotice.tsx   the kitchen slip the browser would not open (POS-10):
+                    openSlip() reads window.open's refusal; SlipNotice is the
+                    line on Tables and the Terminal with "Open the kitchen slip".
+                    Anything that must happen on a send happens BEFORE the slip
+                    opens — where the tab replaces the page, nothing after it
+                    runs (POS-11).
 ```
 
 The screens also use core pieces: the live channel (`@/lib/useLiveOrders`,
@@ -216,6 +227,9 @@ pos_line_events — kitchen timings              080_kitchen_timings.sql
   course on dish and category                  081_courses.sql
 pos_promotions                                 083_promotions.sql
   reception_pos switch, app.may_use_pos        087_first_screen_and_reception_pos.sql
+  a bill settled to a banquet function         099_pos_settled_to_a_function.sql (D17-21; the master
+    (payment method 'function', and it names    may renumber it at merge — the night-audit chat
+    the function)                              also took 099)
 ```
 
 Also relied on: `hotel_modules` (041 — the `pos` switch; flipped from
@@ -229,7 +243,7 @@ Other services point at these tables: `stock_movements.to_outlet` →
 
 **A new migration needs a number claimed in `HANDOVER.md` first.**
 `src/test/migrationNumbers.test.ts` fails on two files with one number or a
-gap. The highest today is 089.
+gap. The highest on this branch is 099 (17 September).
 
 ---
 
@@ -249,7 +263,15 @@ import `hashKey` and `issueKey` through it as well.
 
 ## Leans on
 
-No other service's door is imported by this folder (checked 15 September).
+One other service's door is imported by this folder (17 September):
+
+- **banquet** — D17-21. The website reads `getAttachableFunctions` from
+  `@/modules/banquet` (`components/FunctionPicker.tsx`); the server asks
+  `whyNotAttachable` from `api/src/modules/banquet/index.ts` (`till.ts`) before
+  it writes `pos_orders.event_id` and again before it settles to a function.
+  The rule (confirmed, bill open, running on the business date) is banquet's;
+  the till never keeps a copy. Banquet's function bill counts the till's
+  settled orders through `app.banquet_event_total` (061).
 
 - **finance**, at the database: a room charge becomes a folio posting (through
   `pos_tickets`), and a category's tax kind comes from finance's tax rules (067).
@@ -269,6 +291,17 @@ No other service's door is imported by this folder (checked 15 September).
   NULL and shows a dash, never "0 min" (079). A bar item cannot be sold until
   the owner sets a bar tax rule — `app.gst_rate` raises rather than return 0
   (067's header).
+- **An order on a banquet function is paid on the function's bill only** — the
+  owner's D17-21 and its answers, 17 September. Staff choose the function when
+  ordering, on Tables, the Terminal and the Till (`components/FunctionPicker.tsx`,
+  shown only where banquet offers a function or the order is already on one).
+  Such an order settles "to the function" (payment method `function`, 099) and
+  no other way: the server refuses cash, card, UPI, a room and a split for it
+  with a sentence, and the screens show those switched off with the reason. It
+  may be taken off the function while open. Nothing is posted to a folio — the
+  function's bill is banquet's sum, which counts the order once it is settled —
+  and the drawer does not expect it; Close restaurant day lists it as "To a
+  function".
 - **"Reception can use the POS"** — the owner's per-hotel switch, 14 September:
   on at 5 Elements, off for a hotel added later (`HANDOVER.md` § 4; 087).
   Enforced twice: the menu hides the section, and `till.ts` refuses with a
@@ -351,9 +384,12 @@ From `PENDING.md` and `PROGRESS.md`, as of 15 September:
   - `pages/Pos.tsx` renders two `PageHeader`s, "Charges to rooms" and lower
     down "Bills"; each sets the tab title. Which one the tab shows was not
     checked on screen — unverified.
-  - The two add-on on/off endpoints have no caller.
-  - Nothing sets `pos_orders.event_id`, so a bill cannot be charged to a
-    banquet function from the till — banquet `DEFECTS.md` BQ-1.
+- **D17-21 is built (17 September) — see "Rules that bind it".** Left from it:
+  a function chosen on Tables is not kept with the pad's saved draft (the
+  draft's shape is the core's, `@/lib/draft`), so closing the pad before Send
+  forgets the choice; and settling to a function with the line down gets the
+  shared offline sentence "…unless it is charged to a room" (`@/lib/offline.ts`,
+  the core's) — true, but it does not name the function.
 
 ---
 
@@ -378,15 +414,21 @@ Where the checks are today: server tests `api/test/till.test.ts`,
 `roomChargeOffline.test.ts`, `prepTimes.test.ts`, `kitchenTimings.test.ts`,
 `courses.test.ts`, and blocks in `guards.test.ts` ("the module gate") and
 `firstScreen.test.ts` ("reception on the POS, per hotel") — moving to
-`api/test/modules/pos/`. Web: `src/modules/pos/readStates.test.tsx`
+`api/test/modules/pos/` (there since the move: `functionOrders.test.ts`, the
+till's half of D17-21 against banquet's real rule — 17 Sep). Web:
+`src/modules/pos/readStates.test.tsx`
 (refused, failed and empty on the till's reads; the two dates; the Kitchen
-heading — 16 Sep), `src/App.test.tsx` ("the till in the
+heading — 16 Sep), `src/modules/pos/ownerDecisions.test.tsx` (the owner's
+D17-18, 19 and 20: Tables opens the kitchen slip; add-on switches on the Menu
+screen; Close restaurant day's date and hotel name; POS-10 and POS-11 —
+17 Sep), `src/modules/pos/functionOrders.test.tsx` (D17-21 on Tables, the
+Terminal, the Till and the day end — 17 Sep), `src/App.test.tsx` ("the till in the
 navigation", "point of sale as a category", "start here"),
 `src/components/app/navigation.test.ts`, `src/lib/offline.test.ts`. Database:
 `db/tests/suite.sql` groups `pos`, `pos till`, `pos discount`, `kot`,
 `variations`, `floor`, `covers`, `day end`, `kitchen timings`, `prep times`,
 `courses`, `promotions`, `reception pos` (frozen — new checks go in
-`db/tests/modules/pos.sql`, which does not exist yet).
+`db/tests/modules/pos.sql` — "pos function", 8 assertions, 17 Sep).
 
 ---
 
