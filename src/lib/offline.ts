@@ -96,7 +96,8 @@ const RULES: Rule[] = [
     tier: "refuse",
     label: "Bill settlement",
     reason:
-      "A bill cannot be settled offline unless it is charged to a room. "
+      "A bill cannot be settled offline unless it is charged to a room; "
+      + "a bill for a banquet function waits for the connection too. "
       + "The order is saved and the kitchen has it; take cash on paper "
       + "and enter it when the connection is back.",
   },

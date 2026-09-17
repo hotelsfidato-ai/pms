@@ -13,7 +13,7 @@ import {
   NativeSelect, StatusPill,
 } from "@/components/ui";
 import { getBanquetEvent, getBanquetSetup, confirmBanquetEvent, cancelBanquetEvent, amendBanquetEvent, addBanquetCourse, removeBanquetCourse, type BanquetEvent } from "@/modules/banquet/data/banquet";
-import { ReadFailed, ReadStale, readError } from "@/modules/banquet/components/ReadProblem";
+import { ReadFailed, ReadStale, readError } from "@/components/ui";
 import { queryKeys } from "@/data/repositories";
 
 /* ══════════════════════════════════════════════════════════════════

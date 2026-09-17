@@ -11,7 +11,7 @@ import {
   NativeSelect, StatusPill,
 } from "@/components/ui";
 import { getBanquetDiary, getBanquetSetup, registerBanquetEvent, type BanquetEventSummary } from "@/modules/banquet/data/banquet";
-import { ReadFailed, ReadStale, readError } from "@/modules/banquet/components/ReadProblem";
+import { ReadFailed, ReadStale, readError } from "@/components/ui";
 import { queryKeys } from "@/data/repositories";
 
 /* ══════════════════════════════════════════════════════════════════

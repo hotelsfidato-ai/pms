@@ -10,7 +10,7 @@ import {
   Dialog, DialogContent, Field, fieldProps, Input,
 } from "@/components/ui";
 import { getMenu, addCategory, addItem, toggleItem, takeItemOff, putItemBack, takeAddonOff, putAddonBack, importMenu, setItemPrepMinutes, setCategoryPrepMinutes, setItemCourse, setCategoryCourse, listPromotions, addPromotion, amendPromotion, type OffFor, type Promotion, type MenuCategory } from "@/modules/pos/data/till";
-import { ReadFailed, ReadStale } from "@/modules/pos/components/ReadProblem";
+import { ReadFailed, ReadStale } from "@/components/ui";
 import { ImportDialog } from "@/components/flows/ImportDialog";
 import { MENU_SPEC } from "@/lib/importSpec";
 

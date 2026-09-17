@@ -14,7 +14,7 @@ import {
 import { DishDialog } from "@/modules/pos/flows/DishDialog";
 import { getMenu, getOrder, sendOrder, type MenuItem } from "@/modules/pos/data/till";
 import { FunctionPicker } from "@/modules/pos/components/FunctionPicker";
-import { ReadFailed } from "@/modules/pos/components/ReadProblem";
+import { ReadFailed } from "@/components/ui";
 import { openSlip, type BlockedSlip } from "@/modules/pos/components/SlipNotice";
 
 /* ══════════════════════════════════════════════════════════════════
@@ -106,6 +106,8 @@ export function OrderPad({
       ]);
       if (!alive) return;
       setLines(existing?.lines ?? []);
+      /* The function chosen before the pad was closed (the master, 17 Sep). */
+      if (existing && existing.eventId !== undefined) setEventChoice(existing.eventId);
       setCanKeep(usable);
       setLoaded(true);
     })();
@@ -120,12 +122,13 @@ export function OrderPad({
     const draft: Draft = {
       key, hotelId, outlet, tableId, tableLabel,
       ...(orderId ? { orderId } : {}),
+      ...(eventChoice !== undefined ? { eventId: eventChoice } : {}),
       lines,
       updatedAt: new Date().toISOString(),
     };
     if (lines.length === 0) void clearDraft(key);
     else void saveDraft(draft);
-  }, [lines, loaded, open, key, hotelId, outlet, tableId, tableLabel, orderId]);
+  }, [lines, loaded, open, key, hotelId, outlet, tableId, tableLabel, orderId, eventChoice]);
 
   const categories = menu.data ?? [];
 

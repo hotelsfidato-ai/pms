@@ -10,7 +10,7 @@ import {
   StatusPill,
 } from "@/components/ui";
 import { getBanquetSetup, addBanquetVenue, amendBanquetVenue, addBanquetPackage, type BanquetVenue } from "@/modules/banquet/data/banquet";
-import { ReadFailed, ReadStale, readError } from "@/modules/banquet/components/ReadProblem";
+import { ReadFailed, ReadStale, readError } from "@/components/ui";
 import { queryKeys } from "@/data/repositories";
 
 /* ══════════════════════════════════════════════════════════════════

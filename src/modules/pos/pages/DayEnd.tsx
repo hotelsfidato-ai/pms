@@ -15,7 +15,7 @@ import {
   Dialog, DialogContent, DialogClose,
 } from "@/components/ui";
 import { getDayEnd, recordMovement, countDrawer, closeDay, type DayEnd, type MovementKind } from "@/modules/pos/data/till";
-import { ReadFailed, ReadStale } from "@/modules/pos/components/ReadProblem";
+import { ReadFailed, ReadStale } from "@/components/ui";
 
 /* ══════════════════════════════════════════════════════════════════
    THE DAY END

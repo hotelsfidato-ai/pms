@@ -9,7 +9,7 @@ import {
   getMenu, listOrders, getOrder, listChargeableRooms, getKitchen, getFloor,
   listWaiters, getDocket, getDayEnd, type DayEnd,
 } from "@/modules/pos/data/till";
-import { readProblem } from "@/modules/pos/components/ReadProblem";
+import { readProblem } from "@/components/ui";
 import KitchenPage from "@/modules/pos/pages/Kitchen";
 import DayEndPage from "@/modules/pos/pages/DayEnd";
 import TerminalPage from "@/modules/pos/pages/Terminal";

@@ -2,24 +2,17 @@ import { Lock, AlertTriangle } from "lucide-react";
 import { cn } from "@/lib/cn";
 import { ApiError } from "@/lib/api";
 import { timeOnly } from "@/lib/format";
-import { EmptyState, ErrorState } from "@/components/ui";
+import { EmptyState, ErrorState } from "./States";
 
 /* ══════════════════════════════════════════════════════════════════
-   REFUSED, UNREACHABLE, OR FAILED — BQ-3
+   A READ THAT WENT WRONG — refused, unreachable, or failed
 
-   The banquet reads used to answer null on any failure, and every
-   screen read null as "the module is off": a server fault told a GM
-   at a property with a hall "This property has no banquet hall".
-
-   The owner's answer, 17 September: say it the way the restaurant
-   screens already do (POS-4). So the logic and the words below are the
-   till's `src/modules/pos/components/ReadProblem.tsx`, on purpose.
-
-   ⚠ A SECOND COPY, AND NAMED AS ONE. It is here because a service may
-   not import another service's components (boundaries.test.ts). The
-   request to move one copy into the shared kit is in this service's
-   MODULE.md, "Requests" — until then, a change to the words in one file
-   is a change to make in both.
+   One copy for every service (17 September). The till wrote it (POS-4:
+   its reads ended in `catch { return [] }`, so a server fault read as
+   "no restaurant configured"), and the banquet kept a named copy (BQ-3:
+   a fault read as "no banquet hall") until the banquet chat asked for one
+   shared file. EMPTY is not in here: an empty list is a read that
+   SUCCEEDED, and each screen keeps its own words for it.
 
      refused       the server answered no, with a sentence — shown as it is
      unreachable   nothing arrived at the server
@@ -47,24 +40,23 @@ export function readProblem(error: unknown): ReadProblemKind | null {
   };
 }
 
-/** The query's failure — or, when React Query has PAUSED the read because
-    the device says it is offline, that same "could not reach the server".
-    A paused read has no error and no data, and a screen that only branched
-    on the error drew nothing at all (front desk found it on /stay). */
+const capital = (s: string) => s.charAt(0).toUpperCase() + s.slice(1);
+
+/** In place of a list or a board that has nothing to show because its
+    read did not succeed. `what` is how the screen names the thing:
+    "the menu", "today's orders", "this bill". */
+/** The error a query should be read as: its own, or — while it is paused
+    for want of a network — "could not reach the server". */
 export function readError(q: { error: unknown; isPaused: boolean }): unknown {
   if (q.error) return q.error;
   return q.isPaused ? new ApiError(0, "Could not reach the server.") : null;
 }
 
-const capital = (s: string) => s.charAt(0).toUpperCase() + s.slice(1);
-
-/** In place of a screen that has nothing to show because its read did
-    not succeed. `what` is how the screen names the thing: "the diary",
-    "this function". */
-export function ReadFailed({ error, what, onRetry, className }: {
+export function ReadFailed({ error, what, onRetry, compact, className }: {
   error: unknown;
   what: string;
   onRetry: () => void;
+  compact?: boolean;
   className?: string;
 }) {
   const problem = readProblem(error);
@@ -73,6 +65,7 @@ export function ReadFailed({ error, what, onRetry, className }: {
   if (problem.kind === "refused") {
     return (
       <EmptyState
+        compact={compact}
         className={className}
         icon={<Lock />}
         title={`${capital(what)} is not available`}
@@ -83,7 +76,7 @@ export function ReadFailed({ error, what, onRetry, className }: {
 
   return (
     <ErrorState
-      className={className}
+      className={cn(compact && "py-8", className)}
       title={`${capital(what)} did not load`}
       description={
         problem.kind === "unreachable"

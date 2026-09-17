@@ -68,6 +68,10 @@ export interface Draft {
   /** Set when the table already had an open order, so the round joins
       that bill instead of starting a second one on the same table. */
   orderId?: string;
+  /** The banquet function this bill will be settled to (D17-21), when one was
+      chosen. Kept with the dishes, so closing the pad before Send loses
+      neither. `null` means chosen as "no function". */
+  eventId?: string | null;
   lines: DraftLine[];
   /** So a draft from three days ago can be recognised as stale by
       whoever opens it. Not used to expire anything automatically —

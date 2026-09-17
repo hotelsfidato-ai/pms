@@ -19,7 +19,7 @@ import {
 import { StartHere } from "@/components/app/StartHere";
 import { getMenu, listOrders, getOrder, listChargeableRooms, openOrder, addLine, voidLine, settleOrder, abandonOrder, applyDiscount, clearDiscount, setRoundOff, settleSplit, listPromotions, applyPromotion, setOrderHeader, type Order, type MenuItem, type OrderSummary, type TenderInput } from "@/modules/pos/data/till";
 import { BUSINESS_DATE } from "@/data/repositories";
-import { ReadFailed, ReadStale } from "@/modules/pos/components/ReadProblem";
+import { ReadFailed, ReadStale } from "@/components/ui";
 
 /* ══════════════════════════════════════════════════════════════════
    THE TILL

@@ -148,7 +148,7 @@ notifications.get("/:code/notifications", async (c) => {
         id: "reversals-today", hotelId: code, category: "approval",
         title: `${reversals.length} posting${reversals.length === 1 ? "" : "s"} reversed today`,
         body: "The ledger is append-only, so each reversal is its own line. Worth a look before the night audit.",
-        isRead: false, at, link: `/h/${code}/admin/audit-log`, actionRequired: false,
+        isRead: false, at, link: "/admin/audit-log", actionRequired: false,   // ADM-4
       });
     }
 

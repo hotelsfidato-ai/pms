@@ -163,7 +163,7 @@ export default function ChannelManagerPage() {
             <>
               <p className="text-sm text-grey-500 mb-2">
                 Bookings can already be attributed to these by hand, and the
-                Booking sources screen reports on them. The channel manager
+                Companies and agents screen reports on them. The channel manager
                 is what stops the typing, not what makes the reporting
                 possible.
               </p>

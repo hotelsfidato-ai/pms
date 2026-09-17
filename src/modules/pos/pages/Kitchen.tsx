@@ -9,7 +9,7 @@ import { useDocumentTitle } from "@/lib/documentTitle";
 import { toast } from "@/components/ui";
 import { StartHere } from "@/components/app/StartHere";
 import { getKitchen, moveKitchenLine, type KitchenLine } from "@/modules/pos/data/till";
-import { ReadFailed, ReadStale } from "@/modules/pos/components/ReadProblem";
+import { ReadFailed, ReadStale } from "@/components/ui";
 
 /* ══════════════════════════════════════════════════════════════════
    THE PASS

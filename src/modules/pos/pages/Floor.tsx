@@ -14,7 +14,7 @@ import { StartHere } from "@/components/app/StartHere";
 import { OrderPad } from "@/modules/pos/flows/OrderPad";
 import { draftedTables } from "@/lib/draft";
 import { getFloor, markPrinted, clearTable, setOutletClosed, type FloorTable, type TableState, type OffFor } from "@/modules/pos/data/till";
-import { ReadFailed, ReadStale } from "@/modules/pos/components/ReadProblem";
+import { ReadFailed, ReadStale } from "@/components/ui";
 import { SlipNotice, type BlockedSlip } from "@/modules/pos/components/SlipNotice";
 
 /* ══════════════════════════════════════════════════════════════════

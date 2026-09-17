@@ -145,7 +145,7 @@ checklist.get("/:code/night-audit", async (c) => {
           detail: "Every reversal is somebody correcting something. Worth reading before the day closes.",
           state: n(r.reversals) ? "attention" : "ok",
           count: n(r.reversals),
-          link: `/h/${c.req.param("code")}/admin/audit-log`,
+          link: "/admin/audit-log",   // ADM-4: there is no /h/:code/admin/audit-log
         },
       ],
       /* Was hard-coded `allowed: false` with the reason "the business

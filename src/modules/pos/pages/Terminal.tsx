@@ -14,7 +14,7 @@ import { getMenu, listOrders, getOrder, listChargeableRooms, openOrder, addLine,
 import { FunctionPicker } from "@/modules/pos/components/FunctionPicker";
 import { listPosOutlets } from "@/modules/pos/data/posBridge";
 import { BUSINESS_DATE } from "@/data/repositories";
-import { ReadFailed, ReadStale } from "@/modules/pos/components/ReadProblem";
+import { ReadFailed, ReadStale } from "@/components/ui";
 import { SlipNotice, openSlip, type BlockedSlip } from "@/modules/pos/components/SlipNotice";
 
 /* ══════════════════════════════════════════════════════════════════

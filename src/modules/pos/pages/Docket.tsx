@@ -1,7 +1,7 @@
 import { useQuery } from "@tanstack/react-query";
 import { useParams } from "react-router";
 import { getDocket } from "@/modules/pos/data/till";
-import { ReadFailed } from "@/modules/pos/components/ReadProblem";
+import { ReadFailed } from "@/components/ui";
 
 /* ══════════════════════════════════════════════════════════════════
    THE KITCHEN DOCKET — what the chef is handed
