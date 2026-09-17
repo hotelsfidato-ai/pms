@@ -14,7 +14,29 @@ entries stay here: they are the reason the fault does not come back.
 
 ## Open — not fixed
 
-### POS-5 · The kitchen docket is built, and nothing ever opens it
+### POS-9 · On a phone, every dish row on the Menu screen shows no dish name
+
+**Found** — 17 September, measuring the add-on switches (D17-19) at 375px. Each dish row puts the name, the tax rate, the price, the course, the preparation time, "Out of stock" and "Take off" on one line that cannot wrap. At 375px the row needs 465px and has 302: **the dish name is squeezed to 0px** and the last two buttons sit 77px outside the card. Measured on "Paneer Tikka"; the markup is the same on every dish, and it was the same before 17 September.
+
+**Not fixed** — it changes how the Menu screen looks on a phone, which the owner has not been asked about, and it was not part of D17-19. The add-on rows added the same day wrap instead (the button drops under the name) and were measured doing so.
+
+**The fix, when it is done** — The same wrap on the dish row: the name keeps a minimum width, the controls go to a second line below `sm`. The desk is unchanged.
+
+**The rule** — A row of controls is measured at phone width before it is called done; a name squeezed to nothing looks like a missing name, not like a layout.
+
+### POS-10 · A slow send can open no kitchen slip, silently — Tables and the Terminal alike
+
+**Found** — 17 September, building D17-18. A browser lets a tap open a new tab only for a few seconds after the tap (Chrome and Firefox: about five). Both screens open the slip AFTER the send answers, so on a line slow enough that the answer takes longer, the browser blocks the tab and says nothing to the waiter. `window.open` returns `null` when that happens, and neither screen reads it.
+
+**Not fixed** — what the waiter should be told is a change to what they see; the owner decides. Recommended: when `window.open` returns `null`, say so in the toast with a button that opens the slip (a new tap, so the browser allows it). The Terminal has had the same gap since 2 September.
+
+**The rule** — A tab opened after a network call is a tab the browser may refuse; read the return value.
+
+---
+
+## Fixed
+
+### POS-5 · The kitchen docket is built, and nothing ever opens it — FIXED 17 September (Tables)
 
 **Found** — 16 September, checking whether this system can route and print a KOT. `DocketPage` is real, thermal-roll width, prices deliberately absent, with a Print button at `pages/Docket.tsx:64`. Its address is `/h/:code/till/orders/:id/kot/:no` (`routes.tsx:53`). **No file in `src/` navigates to it.** Grepped for `till/docket`, `/docket/` and the built path: nothing. Compare the bill, which is opened with `window.open` from three places — `Floor.tsx:138`, `Terminal.tsx:657`, `Till.tsx:985`.
 
@@ -26,29 +48,35 @@ This is the website twin of POS-2, and the 16 September route audit did not catc
 
 **Corrected 16 September (POS lane, round 1) — half of this entry is wrong.** The **Terminal does open the docket**, on every send, and has since 2 September (`76c400f`, "P6: the kitchen docket"): `pages/Terminal.tsx`, `kot()`, `window.open(\`/h/${hotelId}/till/orders/${orderId}/kot/${res.kotNo}\`)`. The grep missed it because the path is assembled from pieces. What is true: **sending from Tables** — the order pad, `flows/OrderPad.tsx` — opens nothing, and says "Kitchen docket 5". So the owner's question is narrower than it reads above: should Tables do what the Terminal already does. Not started — the owner decides (round 1, `HANDOVER.md` § 3.0g).
 
+**What was done** — The owner's D17-18 (17 September): *"Tables opens the kitchen slip on every send, like the Terminal."* `flows/OrderPad.tsx` opens `/h/:code/till/orders/:id/kot/:no` when the send comes back with a docket number, before anything else is awaited (a browser allows the tab only for a few seconds after the tap — POS-10). Nothing opens for a round that went on the bill alone, or for a round held on the device: the kitchen has neither. The toast's words did not change. Guarded by `ownerDecisions.test.tsx` ("Tables sending a round"), the first test seen to fail on the old code. **Opened on screen** (17 September, `fidato_pos`, as the owner): table AC1, Bhaaji Pau (Oil) with Curd, Send → the slip "KOT - 1 · Dine In · Bhaaji Pau (Oil) 1 · Sides: Curd - 1", no price on it, for order `20260825-1`.
+
 **The rule** — A screen with no caller is the same defect as a route with no caller, and the audit that only checks the server finds half of them. **And a grep for a built path proves nothing about a path built from template pieces** — search for the route's distinctive fragment (`/kot/`) before writing "nothing opens it".
 
-### POS-2 · Two restaurant add-on routes are unreachable
+### POS-2 · Two restaurant add-on routes are unreachable — FIXED 17 September
 
 **Found** — 16 September, the route audit — every route matched against every path the website builds, then checked by hand.
 
 `POST /:code/till/addons/:id/on` and `/off` (`till.ts:2011, 2035`) have no caller anywhere. Menu items can be switched from the Menu screen; the add-ons on a dish cannot be switched from any screen.
 
-**The fix, when it is done** — Either the Menu screen gains the switch beside the item switches it already has, or the two routes go. The owner decides which.
+**What was done** — The owner's D17-19 (17 September): *"On/off switches for add-ons on the Menu screen, like dishes have."* The Menu screen had never shown add-ons at all. Each dish now lists its add-on groups under it, and each add-on has the dish's own control — "Out of stock" → 2, 4, 8, 24 hours or Tomorrow → "Off till 04:46 pm — put back" (`pages/Menu.tsx`, one `OffControl` for both; `data/till.ts` `takeAddonOff`, `putAddonBack`). Two differences, both the database's: **no "Why"** (`pos_addons` keeps no reason and the route takes none), and **a group can be on several dishes**, so the dialog names every dish it goes off on. No permanent "take off the card" for an add-on: nothing on the server does that (`is_active` has no route, and the menu read hides inactive add-ons). On a phone the add-on row wraps rather than squeezing the name (measured, 375px). Guarded by `ownerDecisions.test.tsx` ("the Menu screen's add-ons"). **Opened on screen**: Onions off for 2 hours → 200, the dialog closed, "Onions is off · Back in 2 hours", the row "Off till 04:46 pm — put back", `off_until` 16:46 in the database; the waiter's dish dialog on Tables showed Onions struck, "off today"; put back → 200, "Onions is back on".
 
 **The rule** — A route with no caller is either a missing screen or dead weight; it is never 'done'.
 
-### POS-7 · Three more raw business dates on Close restaurant day
+### POS-7 · Three more raw business dates on Close restaurant day — FIXED 17 September
 
 **Found** — 16 September (POS lane, round 1), fixing the one named in the brief. `pages/DayEnd.tsx` prints `day.businessDate` raw in three more places: the "… is closed" line on the Finalize step, the toast "… is finalised.", and the button itself — **"Close 2026-08-25"**. The heading above them now reads "Tuesday, 25 August 2026", so the same screen shows the date two ways.
 
-**Not fixed** — round 1 named two dates; these three change what a person reads, so they wait on the owner. The fix is the same `dateLong` call. The night audit already says "Tuesday, 25 August 2026 is closed." for the same moment (`night-audit/pages/NightAudit.tsx`).
+**What was done** — The owner's D17-20 (17 September): *"Tuesday, 25 August 2026" — and the hotel's name with it, the button too.* All three, and the line under the heading: "5 Elements Akkalkot · Fidato Restaurant · Tuesday, 25 August 2026"; "Tuesday, 25 August 2026 · 5 Elements Akkalkot is closed"; the toast "… is finalised."; the button **"Close Tuesday, 25 August 2026" over "5 Elements Akkalkot"**. The name is the session's name for the page's OWN code, not the property "in view" (the store follows the address a moment late), and the code itself when no name is known — never another hotel's. Guarded by `ownerDecisions.test.tsx` ("Close restaurant day"). **Found on screen before commit:** on one line the button's label was 355px in a 317px button and ran out over both edges; it is two lines now, the full sentence kept as the button's spoken name. Re-measured: 317 = 317 at a desk, 294px with nothing over at 375px, no sideways scroll.
 
-**The rule** — A format fixed in one place on a screen is not fixed on the screen: read every place the same field is printed.
+**The rule** — A format fixed in one place on a screen is not fixed on the screen: read every place the same field is printed. **And a longer label is measured in the button that holds it.**
 
----
+### POS-8 · MINE: the add-on dialog's duration buttons bypassed their own handler — caught before commit
 
-## Fixed
+**Found** — 17 September, by `npx tsc -b --force`, after the tests had passed. Making the dish's off control serve add-ons too, I renamed its handler `choose` and left the dialog's buttons calling `takeOff(o.key)` — which was now the prop that posts to the server. The request went out; the dialog never closed, no toast, the menu was not read again. **The tests passed** because they asserted only that the request was sent.
+
+**What was done** — The buttons call `choose`. The test now also waits for the dialog to close and the menu to be read again; with the fault put back it fails ("expected dialog to be null").
+
+**The rule** — A test that checks the request a screen sent passes while the screen never finishes the act. Assert what the person sees afterwards too. And run the type check before trusting a green test run — here it was the only gate that saw it.
 
 ### POS-3 · The Kitchen screen had no heading — FIXED 16 September
 

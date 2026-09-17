@@ -207,7 +207,9 @@ describe("Close restaurant day", () => {
     server({ [DAY_END]: () => A_DAY });
     dayEndAt();
 
-    expect(await screen.findByText("Fidato Restaurant · Tuesday, 25 August 2026"))
+    /* The hotel's name leads since D17-20; this session knows 5EL by its
+       code only (`ownerDecisions.test.tsx` has the named case). */
+    expect(await screen.findByText(`${HOTEL} · Fidato Restaurant · Tuesday, 25 August 2026`))
       .toBeTruthy();
     expect(screen.queryByText(/Fidato Restaurant · 2026-08-25/)).toBeNull();
   });

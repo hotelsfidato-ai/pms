@@ -734,6 +734,31 @@ export async function putItemBack(
   return simplePost(`/api/hotels/${hotelId}/till/menu/items/${itemId}/on`);
 }
 
+/* The same act for an ADD-ON — out of onions until eight. POS-2: these two
+   routes were built with 045 and nothing called them, so a side could be
+   switched off only in the database. The owner's D17-19 (17 September):
+   switches on the Menu screen, like dishes have.
+
+   ⚠ NO REASON. `pos_addons` has nowhere to keep one (045) and the route
+   takes none, so nothing asks for one — a "Why" field whose answer is
+   thrown away would be a lie to whoever typed it.
+
+   ⚠ AN ADD-ON BELONGS TO A GROUP, AND A GROUP CAN BE ON SEVERAL DISHES.
+   Switching one off switches it off on every dish that offers it. */
+export async function takeAddonOff(
+  hotelId: string, addonId: string, until: OffFor, customUntil?: string,
+): Promise<{ ok: boolean; reason?: string }> {
+  return simplePost(
+    `/api/hotels/${hotelId}/till/addons/${addonId}/off`,
+    { until, customUntil });
+}
+
+export async function putAddonBack(
+  hotelId: string, addonId: string,
+): Promise<{ ok: boolean; reason?: string }> {
+  return simplePost(`/api/hotels/${hotelId}/till/addons/${addonId}/on`);
+}
+
 export async function setOutletClosed(
   hotelId: string, outlet: string,
   closed: boolean, until?: OffFor, reason?: string,

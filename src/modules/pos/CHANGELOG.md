@@ -11,6 +11,103 @@ Work that touches the core or several services still goes in the root
 
 ---
 
+## 2026-09-17 · The owner's D17-18, D17-19 and D17-20
+
+**Asked for:** the owner's answers of 17 September
+(`docs/briefs/decisions-2026-09-17.md`), the three that are the POS chat's —
+*"Tables opens the kitchen slip on every send, like the Terminal"* (D17-18,
+POS-5); *"on/off switches for add-ons on the Menu screen, like dishes have"*
+(D17-19, POS-2); *"Tuesday, 25 August 2026" and the hotel's name with it, the
+button included* (D17-20, POS-7). Then, once the banquet chat's front door is
+ready, this service's half of D17-21.
+
+**Shipped** — branch `pos/d17-slip-addons-dates`, copy `D:\fidato-pos`,
+database `fidato_pos`. No migration, no server change.
+- `flows/OrderPad.tsx` — a send the kitchen received opens its slip in a new
+  tab, the Terminal's address and the Terminal's way. Nothing for a round on
+  the bill alone or a round held on the device.
+- `pages/Menu.tsx`, `data/till.ts` — each dish lists its add-ons under it, and
+  each add-on has the dish's "Out of stock" control (one `OffControl` for
+  both): 2/4/8/24 hours or Tomorrow, then "Off till … — put back". No "Why"
+  (nowhere to keep one); a shared group names every dish it goes off on; the
+  row wraps on a phone. `takeAddonOff` and `putAddonBack` give the two routes
+  their first caller.
+- `pages/DayEnd.tsx` — the heading line, the closed line, the toast and the
+  button carry the day in words and the hotel's name, looked up by the page's
+  own code (the code itself if no name is known). The button is two lines:
+  "Close Tuesday, 25 August 2026" over "5 Elements Akkalkot".
+- `ownerDecisions.test.tsx` — 9 tests; `readStates.test.tsx` — its day-end
+  heading check now expects the hotel first.
+- `DEFECTS.md` — POS-2, POS-5 and POS-7 fixed; POS-8 (mine, below), POS-9 and
+  POS-10 new. `MODULE.md` — the add-on routes' caller, the docket's openers,
+  the tests, the claim command, D17-21's state.
+
+**Found**
+- **POS-8, mine, before commit:** the add-on dialog's duration buttons called
+  the posting prop directly, so the switch was sent and the dialog never
+  closed. The tests passed — they checked only the request. The type check
+  caught it; the test now waits for the dialog to close and the menu to reload,
+  and fails with the fault put back.
+- **On screen, before commit:** the new close button's label was 355px in a
+  317px button and ran over both edges; now two lines. And a switched-off
+  add-on's "Off till … — put back" squeezed the add-on's name to 0px on a
+  phone; the row wraps now.
+- **POS-9 (open):** on a phone every DISH row on the Menu screen shows no name
+  (0px) and its last buttons sit 77px outside the card — as before today.
+- **POS-10 (open):** a send slower than the browser's few seconds of allowed
+  pop-ups opens no slip and says nothing — Tables and the Terminal alike.
+- **For D17-21:** `app.banquet_event_total` (061) counts every settled order on
+  a function whatever the payment method, so an attached order paid in cash at
+  the till would be billed to the host too. How an attached order is paid is
+  the owner's question, asked in chat.
+- **A slip of mine, no harm:** reading a recorded API result I also started
+  `npm test` in `api/` with a 5-second limit; the shell was cut off and the
+  suite ran on in its own scratch database, which its harness drops on exit.
+
+**Proved** — this copy, 17 September, after the last code edit
+- `npx tsc -b --force`: exit 0 (the run before the POS-8 fix: exit 2, three
+  errors in `Menu.tsx`).
+- `npx vitest run src/modules/pos`: 29 passed, exit 0 (before the last two
+  layout edits). Against the old code (the four source files stashed):
+  `ownerDecisions.test.tsx` 8 failed — no slip opened, no add-on control, no
+  hotel name — and the updated `readStates` check failed; the two "opens
+  nothing" checks passed on both, as they must.
+- `npx vitest run` (all): 27 files passed, 2 failed — `front-desk.test.tsx` and
+  `stayViewStates.test.tsx`, each at ~8.5s while the API suite ran beside it.
+  Those two and `nightAudit.test.tsx` (which failed the same way on the first
+  run) rerun alone: 3 files, 15 tests, exit 0. **Second full run, final code:
+  29 files, 278 tests passed, exit 0.**
+- `cd api && npm test`: 39 files passed, exit 0.
+- `npm run build`: built, "no test sign-in in dist (6 files checked)", exit 0.
+- `db/tests/run.sh`: not run — nothing here touches the database.
+- **Opened**, as the owner, API 8795 on `fidato_pos`, website 5178:
+  Menu — Onions off for 2 hours (200; dialog closed; toast; "Off till 04:46 pm
+  — put back"; `off_until` 16:46 in the database), the waiter's dish dialog on
+  Tables showed Onions struck "off today", put back (200, "Onions is back on").
+  Tables — AC1, Bhaaji Pau (Oil) with Curd, Send → the slip "KOT - 1", no
+  price, order `20260825-1`. Close restaurant day — "5 Elements Akkalkot ·
+  Fidato Restaurant · Tuesday, 25 August 2026", Finalize, the two-line button;
+  no ISO date anywhere. Measured at a desk and at 375px: nothing over its
+  edge, no sideways scroll. No console error after the mark.
+
+**Left open**
+- **D17-21, this service's half** — waits on banquet's front door
+  (`getAttachableFunctions`, `whyNotAttachable`; being built on
+  `banquet/diary-heading`, uncommitted when looked at) and on the owner's
+  answer on how an attached order is paid.
+- POS-9 and POS-10 — the owner decides; recommendations in `DEFECTS.md`.
+- The toast on Tables still says "Kitchen docket 5." where the Terminal says
+  "Order 5 is with the kitchen" — not part of D17-18, left as it was.
+- For the master: root MEMORY lesson from POS-8 — *a test that checks only the
+  request a screen sent passes while the screen never finishes the act.*
+- The preview pane reads the master checkout's `launch.json`, so this copy's
+  servers were run from a shell; `.claude/launch.json` here holds two local
+  entries and is not committed.
+
+**Commits:** the commit that adds this entry.
+
+---
+
 ## 2026-09-15 · moved into its own folder
 
 **Asked for:** the owner's request of 15 September — the code split into one

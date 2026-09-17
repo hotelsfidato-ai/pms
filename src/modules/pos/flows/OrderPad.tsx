@@ -220,6 +220,20 @@ export function OrderPad({
       return;
     }
 
+    /* The paper, the same as the Terminal (POS-5; the owner's D17-18,
+       17 September: "Tables opens the kitchen slip on every send"). Only
+       when the kitchen has a docket number — a round that went on the
+       bill alone has no slip, and a held round is answered above.
+
+       Opened before anything else is awaited: a browser lets a tap open
+       a tab only for a few seconds after the tap, and the send has
+       already spent some of them. */
+    if (result.kotNo !== null) {
+      window.open(
+        `/h/${hotelId}/till/orders/${result.order.id}/kot/${result.kotNo}`,
+        "_blank");
+    }
+
     await clearDraft(key);
     setLines([]);
     qc.setQueryData(["till-order", hotelId, result.order.id], result.order);

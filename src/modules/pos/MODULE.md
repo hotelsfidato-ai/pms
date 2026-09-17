@@ -12,8 +12,10 @@ api/src/modules/pos/      the server's routes for this service
 db/tests/modules/pos.sql  NEW database checks only — db/tests/suite.sql is frozen history
 ```
 
-Before your first edit: claim the service in `.claims/pos.md` (since 16
-September — not `HANDOVER.md`), read `docs/briefs/pos.md`, this file, then this
+Before your first edit: claim the service with `npm run claim -- pos "what"`
+(since 16 September's evening — the `.claims/pos.md` file this line used to
+name was visible only in the copy that wrote it, root MEMORY 281), read
+`docs/briefs/pos.md`, this file, then this
 folder's `DEFECTS.md` and `CHANGELOG.md`. Written 15 September 2026 from the
 code at `880a5b6`.
 
@@ -51,7 +53,7 @@ off (`navigation.ts`, section `point-of-sale`, `receptionNeeds: "reception_pos"`
 | Menu | `/h/:code/menu` | `pages/Menu.tsx` | kitchen manager |
 | Close restaurant day | `/h/:code/till/day-end` | `pages/DayEnd.tsx` | waiter, kitchen manager, Reception |
 | Charges to rooms | `/h/:code/pos` | `pages/Pos.tsx` | none |
-| — (not in the menu) kitchen docket | `/h/:code/till/orders/:id/kot/:no` | `pages/Docket.tsx` | opened from an order; never shows prices |
+| — (not in the menu) kitchen docket | `/h/:code/till/orders/:id/kot/:no` | `pages/Docket.tsx` | opened in a new tab on every send that reaches the kitchen — by the Terminal and, since 17 September, by Tables' order pad; never shows prices |
 | — (not in the menu) printed bill | `/h/:code/till/bill/:id` | `pages/Bill.tsx` | opened from an order |
 
 - Reception's four entries show only while the hotel's "Reception can use the
@@ -96,8 +98,8 @@ menu        GET    /:code/till/menu
             POST   /:code/till/menu/items/:id/toggle
             POST   /:code/till/menu/items/:id/off
             POST   /:code/till/menu/items/:id/on
-            POST   /:code/till/addons/:id/off              no caller in the web app (15 Sep)
-            POST   /:code/till/addons/:id/on               no caller in the web app (15 Sep)
+            POST   /:code/till/addons/:id/off              the Menu screen's add-on switch (17 Sep, POS-2)
+            POST   /:code/till/addons/:id/on               the Menu screen's add-on switch (17 Sep, POS-2)
 outlet      POST   /:code/till/outlet/:outlet/closed        "we are closed" for a while
 rooms       GET    /:code/till/rooms                        rooms a bill may be charged to
 orders      GET    /:code/till/orders
@@ -351,9 +353,15 @@ From `PENDING.md` and `PROGRESS.md`, as of 15 September:
   - `pages/Pos.tsx` renders two `PageHeader`s, "Charges to rooms" and lower
     down "Bills"; each sets the tab title. Which one the tab shows was not
     checked on screen — unverified.
-  - The two add-on on/off endpoints have no caller.
   - Nothing sets `pos_orders.event_id`, so a bill cannot be charged to a
-    banquet function from the till — banquet `DEFECTS.md` BQ-1.
+    banquet function from the till — banquet `DEFECTS.md` BQ-1. **The owner
+    said build it (D17-21, 17 September), banquet first.** This half waits on
+    banquet's front door (`getAttachableFunctions` on the website,
+    `whyNotAttachable` on the server — in progress on `banquet/diary-heading`,
+    not committed when last looked) and on one answer: how an attached order is
+    paid. `app.banquet_event_total` (061) counts every SETTLED order on the
+    function whatever its method, so one paid in cash at the till would be
+    billed to the host as well.
 
 ---
 
@@ -380,7 +388,9 @@ Where the checks are today: server tests `api/test/till.test.ts`,
 `firstScreen.test.ts` ("reception on the POS, per hotel") — moving to
 `api/test/modules/pos/`. Web: `src/modules/pos/readStates.test.tsx`
 (refused, failed and empty on the till's reads; the two dates; the Kitchen
-heading — 16 Sep), `src/App.test.tsx` ("the till in the
+heading — 16 Sep), `src/modules/pos/ownerDecisions.test.tsx` (the owner's
+D17-18, 19 and 20: Tables opens the kitchen slip; add-on switches on the Menu
+screen; Close restaurant day's date and hotel name — 17 Sep), `src/App.test.tsx` ("the till in the
 navigation", "point of sale as a category", "start here"),
 `src/components/app/navigation.test.ts`, `src/lib/offline.test.ts`. Database:
 `db/tests/suite.sql` groups `pos`, `pos till`, `pos discount`, `kot`,
