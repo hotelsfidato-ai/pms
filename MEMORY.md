@@ -6539,6 +6539,40 @@ copy will see of theirs.**
 
 ---
 
+### 291 · A test that asserts the request a screen sent, not what the screen then did
+
+The POS chat's POS-8. A switch on the Menu screen posted its change and the
+dialog never closed, so the person pressed it again. The test asserted that
+the POST was sent, and passed, every run.
+
+**The rule: assert what the person is left looking at - the dialog closed, the
+row changed, the message shown - not that a request went out. A request is the
+middle of the act, not the end of it.**
+
+---
+
+### 290 · Anything that must happen on a send has to happen BEFORE window.open
+
+The POS chat's POS-11. Where the new tab replaces the page, nothing written
+after `window.open` runs. Work queued after it - clearing a pad, marking a
+round sent - silently never happens.
+
+**The rule: do the work, then open the window. `window.open` is the last line
+of the function.**
+
+---
+
+### 289 · A failing check that leaves rows its own clean-up cannot remove stops the suite
+
+The POS chat's POS-13. One assertion failed, its teardown could not undo what
+it had inserted (the ledger is append-only, and a delete is refused), and the
+rest of the file never ran. One red test read as a broken suite.
+
+**The rule: a fixture is undone the way the system undoes things - a reversal,
+a void - and the teardown runs whether the assertion passed or not.**
+
+---
+
 ### 288 · MINE: a push ran after the commit it was meant to follow had failed
 
 17 September, late. I committed and pushed in one shell call: `git add … &&
