@@ -14,7 +14,21 @@ entries stay here: they are the reason the fault does not come back.
 
 ## Open — not fixed
 
-### INV-6 · A room is out of service in two records, and nothing keeps them in step
+### INV-2 · Room types opens a screen headed "The house"
+
+**Found** — 15 September, writing the brief; confirmed on screen 16 September.
+
+The menu says "Room types"; the page says "The house".
+
+**The fix, when it is done** — Make the heading the menu's words.
+
+**The rule** — A screen's heading is the menu entry that opened it.
+
+---
+
+## Fixed — the solution is here; do not work it out again
+
+### INV-6 · A room is out of service in two records, and nothing keeps them in step — FIXED 17 September
 
 **Found** — 16 September, asked by the owner to prove whether
 `GET /:code/inventory` subtracts a room that is out of service "in every way a
@@ -77,20 +91,15 @@ than `status`. If the owner decides a status with no block must count, the two
 updates only one of them. Before trusting a disagreement between two screens,
 find which record each reads.
 
-
-### INV-2 · Room types opens a screen headed "The house"
-
-**Found** — 15 September, writing the brief; confirmed on screen 16 September.
-
-The menu says "Room types"; the page says "The house".
-
-**The fix, when it is done** — Make the heading the menu's words.
-
-**The rule** — A screen's heading is the menu entry that opened it.
+**Fixed by the master, 17 September (the owner's D17-11: the dated block).** The
+Rooms screen (`front-desk/data/stayview.ts`), the property's sellable count (core
+`routes/property.ts`) and the admin list (`admin/adminLists.ts`) now read the block
+through the same rule as availability. Proved: `api/test/outOfServiceCounts.test.ts`
+(a block with a clean status counts out; a status with no block does not) fails on
+the old code. Seen locally: room 308, "inspected" with a block, counted in Rooms'
+"Out of service 1"; the property says 17 rooms.
 
 ---
-
-## Fixed — the solution is here; do not work it out again
 
 ### INV-5 · A reception clerk could type a price on the Rate calendar
 
