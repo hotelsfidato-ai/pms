@@ -11,6 +11,96 @@ Work that touches the core or several services still goes in the root
 
 ---
 
+## 2026-09-16 (phase 1A, part 2) · STO-2 to STO-11: the Store's screen, fixed as the owner chose
+
+**Asked for:** the master, after merging STO-1: merge cp6, re-read the brief,
+continue with STO-2 to STO-10; the owner had answered STO-4 (the Inventory
+Manager sees who moved stock). The brief also renamed the role **Inventory
+Manager** (key `stores`) and gave `app.colleague_name` (096).
+
+**Decided by the owner on the way** — asked with a recommendation each; every
+recommendation taken
+- STO-3: the name on its own line on a phone.
+- STO-5 and 7: Receive · Issue · More (Waste, Return to supplier, Correct the
+  count, History).
+- STO-6: Undo asks first, and an undo row names what it undid.
+- STO-8: "Add an item" is the main action; buttons say what will happen.
+- STO-10: "Where it belongs" starts on nothing; units stay as typed.
+- **STO-11, new:** refuse an undo that would leave the shelf below zero, and
+  say why.
+- STO-2 needed no question: it follows the failed-read pattern the till
+  (POS-4) and Rooms already use, words included.
+
+**Shipped** — branch `stores/phase-1a`, merged with cp6 `eaf6916`; no migration
+- `api/src/modules/stores/stores.ts` — history names for the Inventory Manager
+  via `app.colleague_name`; `reversesKind` on an undo; the undo route refuses
+  below zero; refusal words say "Inventory Manager" and "correct the count".
+- `api/src/modules/stores/stockGrants.ts` — `isInventoryManagerAt`; the
+  refusal sentences' role name.
+- `src/modules/stores/data/stores.ts` — the reads throw; `reversesKind`.
+- `src/modules/stores/pages/Stores.tsx` — four states; the new card; More;
+  Correct the count (counts the shelf, records the difference); Return to
+  supplier; the undo confirmation and "Undo of a …"; the primary action and
+  verb buttons; the category must be chosen; the look-only and undo sentences
+  name the Inventory Manager; a truthful cost hint.
+- Tests: `api/test/modules/stores/historyNames.test.ts` (5),
+  `api/test/modules/stores/undoBelowZero.test.ts` (3),
+  `src/modules/stores/stores.test.tsx` (7), `src/modules/stores/data/stores.test.ts` (2).
+- `DEFECTS.md` — STO-2 to STO-8, STO-10 and STO-11 to Fixed; STO-9 stays open,
+  the master's. `MODULE.md` — the page, the endpoints, names, the tests.
+
+**Found**
+- **STO-11** — see above; found on screen, on my own STO-1 probe data.
+- **The fix for STO-3 was undone at a tablet's width** before anybody saw it:
+  at 1025px the buttons joined the name's row and squeezed it to 115–121px.
+  They now join only from `xl`. And at 375px More wrapped (305px needed, 294
+  given), so the arrows show from `sm` up.
+- **The receipt's cost hint was wrong even with an Adjust button:** an
+  adjustment carries no cost. It now says a cost can only be added by undoing
+  the delivery and receiving it again.
+- **A deliberate break that did not apply** (MEMORY 270's shape): my first
+  put-back of `catch { return [] }` matched nothing — the file has CRLF line
+  endings — and the test passed. Seen from the match count (0), redone, and
+  then it failed as it should.
+- **Once, the web suite went red on a file not in this lane:**
+  `night-audit/nightAudit.test.tsx` "sends the day it shows…" could not find
+  "Run night audit" while the API suite was running beside it. Alone it
+  passed; the whole suite re-run on a quiet machine passed. For the master:
+  it may time out under load.
+
+**Proved** — in `D:\fidato-stores`, every exit code read
+- Server: `npm test -- test/modules/stores` **156 passed**. Breaks: names given
+  to nobody → 1 failed (the Inventory Manager's); to everybody → 2 failed
+  (housekeeping's, the kitchen manager's); the below-zero check removed → 1
+  failed ("expected 200 to be 409"). All restored.
+- Web: `data/stores.test.ts` with the swallow put back → 1 failed;
+  `stores.test.tsx` with one-tap undo → 1 failed; with the Kitchen default → 6
+  failed, the first "expected 'Kitchen' to be ''" and five after it for that
+  test's reason. All restored; 9 passed.
+- On the screen, own database, as `dev-store`: at 375 and 360px every card's
+  buttons on one row, 0 controls under 44px, 0 unnamed buttons, 0 contrast
+  failures, no sideways scroll; names on one line at 375, 768, 1025 and 1280;
+  Correct the count took rice from −12 to 0; History names Test Viewer, Test
+  Housekeeping, Test Reception; "Undo of a delivery"; undoing LPG's delivery
+  asked, then showed "Not undone — Undoing this delivery would leave −2
+  cylinder…", the server answering 409.
+- Gates: `npx tsc -b --force` exit 0 · `npx vitest run` **265 passed**, exit 0
+  (the re-run above) · `cd api; npm test` **603 passed, 38 files**, exit 0 ·
+  `npm run strip-check` 72 files, exit 0 · `bash db/tests/run.sh` **664
+  assertions**, exit 0 · `npm run build` exit 0, "no test sign-in in dist".
+
+**Left open**
+- STO-9 — the shared kit's, requested of the master in `MODULE.md`.
+- Phase 1A's next items (brief § 3–6): stock per location, par levels, the
+  count sheet, gas by cylinder — with the owner's questions on where existing
+  stock goes and how a cylinder is priced. Migration number 097 when written.
+- For the master, root `MEMORY.md`: "a layout fixed at one width is measured
+  either side of every breakpoint it uses" (STO-3).
+
+**Commits:** the STO-2..11 commit on `stores/phase-1a`.
+
+---
+
 ## 2026-09-16 (phase 1A, part 1) · STO-1 closed: the Store asks who you are
 
 **Asked for:** the owner: merge cp6, then follow `docs/briefs/stores.md` —

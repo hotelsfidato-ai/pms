@@ -3,7 +3,7 @@ import { withSession } from "../../auth.ts";
 import { businessDateFor } from "../../businessDate.ts";
 import type { Client } from "../../db.ts";
 import {
-  mayStock, actionForKind, STOCK_REFUSED, type StockAction,
+  mayStock, actionForKind, isInventoryManagerAt, STOCK_REFUSED, type StockAction,
 } from "./stockGrants.ts";
 
 /* ══════════════════════════════════════════════════════════════════
@@ -57,6 +57,15 @@ const DIRECTION: Record<Kind, "in" | "out" | "either"> = {
   wastage: "out",
   return: "out",
   adjustment: "either",
+};
+
+/** How a refusal names the row somebody tried to undo. */
+const UNDONE_NOUN: Record<Kind, string> = {
+  receipt: "delivery",
+  issue: "issue",
+  wastage: "waste",
+  return: "return",
+  adjustment: "count correction",
 };
 
 /* ── What is in the store ─────────────────────────────────────────── */
@@ -133,27 +142,36 @@ stores.get("/:code/stores/items/:id/movements", async (c) => {
     const hotelId = await hotelFor(client, c.req.param("code"));
     if (!hotelId) return null;
     if (!(await mayStock(client, hotelId, "view"))) return forbid("view");
+    const namesEveryone = await isInventoryManagerAt(client, hotelId);
 
     const { rows } = await client.query<{
       id: string; business_date: string; kind: string; quantity: string;
       unit_cost: string | null; supplier: string | null;
       reference: string | null; note: string | null;
       outlet: string | null; who: string | null;
-      reverses_id: string | null; reversed: boolean;
+      reverses_id: string | null; reverses_kind: string | null; reversed: boolean;
     }>(
+      /* WHO: through `staff` as before, and for the Inventory Manager through
+         `app.colleague_name` too (STO-4) — a name, of somebody rostered here.
+         REVERSES_KIND: what an undo undid, so the screen can say "Undo of a
+         delivery" rather than "Adjusted" (STO-6). */
       `select m.id::text, m.business_date::text, m.kind, m.quantity::text,
               m.unit_cost::text, m.supplier, m.reference, m.note,
-              o.name as outlet, s.full_name as who,
-              m.reverses_id::text,
+              o.name as outlet,
+              coalesce(s.full_name,
+                       case when $3::boolean
+                            then app.colleague_name(m.moved_by, $1) end) as who,
+              m.reverses_id::text, undone.kind as reverses_kind,
               exists (select 1 from stock_movements r
                        where r.reverses_id = m.id) as reversed
          from stock_movements m
          left join pos_outlets o on o.id = m.to_outlet
          left join staff s on s.id = m.moved_by
+         left join stock_movements undone on undone.id = m.reverses_id
         where m.hotel_id = $1 and m.item_id = $2
         order by m.business_date desc, m.id desc
         limit 200`,
-      [hotelId, c.req.param("id")],
+      [hotelId, c.req.param("id"), namesEveryone],
     );
 
     return {
@@ -172,6 +190,7 @@ stores.get("/:code/stores/items/:id/movements", async (c) => {
            unreadable without both: one row UNDID something, another WAS
            undone, and neither should look like an ordinary movement. */
         isReversal: m.reverses_id !== null,
+        reversesKind: m.reverses_kind,
         reversed: m.reversed,
       })),
     };
@@ -307,7 +326,7 @@ stores.post("/:code/stores/movements", async (c) => {
         return refuse(
           `There ${onHand === 1 ? "is" : "are"} ${onHand} ${item[0].unit} of `
           + `${item[0].name} in the store, and this would take out ${qty}. `
-          + "If the shelf says otherwise, record an adjustment — that is "
+          + "If the shelf says otherwise, correct the count first — that is "
           + "what it is for.");
       }
     }
@@ -359,11 +378,32 @@ stores.post("/:code/stores/movements/:id/reverse", async (c) => {
        covers the read, but a route that hands a bare id to a
        SECURITY-less function is one policy change away from being
        wrong. */
-    const { rows: own } = await client.query<{ id: string }>(
-      "select id::text from stock_movements where id = $1 and hotel_id = $2",
+    const { rows: own } = await client.query<{
+      id: string; kind: Kind; quantity: string; on_hand: string;
+      name: string; unit: string;
+    }>(
+      `select m.id::text, m.kind, m.quantity::text,
+              app.stock_on_hand(m.item_id)::text as on_hand, i.name, i.unit
+         from stock_movements m
+         join stock_items i on i.id = m.item_id
+        where m.id = $1 and m.hotel_id = $2`,
       [c.req.param("id"), hotelId],
     );
     if (!own[0]) return refuse("No such movement in this store.");
+
+    /* WOULD THIS UNDO LEAVE LESS THAN NOTHING? (STO-11, the owner's answer
+       of 16 September: refuse, and say why.) Undoing a delivery after some
+       of it went out took Basmati rice to −12 kg — the same shelf the Issue
+       button refuses to overdraw. An undo takes back exactly what the row
+       put in, so what is left is on hand minus that. */
+    const after = Number(own[0].on_hand) - Number(own[0].quantity);
+    if (after < 0) {
+      const gone = Math.round(-after * 1000) / 1000;
+      return refuse(
+        `Undoing this ${UNDONE_NOUN[own[0].kind]} would leave −${gone} ${own[0].unit} `
+        + `of ${own[0].name} — ${gone} ${own[0].unit} of it has already gone `
+        + "out. Correct the count instead.");
+    }
 
     try {
       const { rows } = await client.query<{ id: string }>(
@@ -471,7 +511,7 @@ stores.post("/:code/stores/import", async (c) => {
         return reject(
           "Already in the store. Changing an item is for the owner, an "
           + "administrator, the general manager, the hotel manager or the "
-          + "store manager.");
+          + "Inventory Manager.");
       }
 
       verdicts.push({

@@ -14,115 +14,16 @@ entries stay here: they are the reason the fault does not come back.
 
 ## Open — not fixed
 
-**All ten found on 16 September 2026** by the brief's first job: the Store
-opened at 375×812, signed in as a housekeeping role, measured the way the
-16 September critique measured the other screens, plus a reading of
+STO-1 to STO-10 were found on 16 September 2026 by the brief's first job: the
+Store opened at 375×812 as a housekeeping role, measured the way the 16
+September critique measured the other screens, and a reading of
 `pages/Stores.tsx`, `data/stores.ts` and `api/src/modules/stores/stores.ts`.
-Branch `stores/measure-375` at `07e7f30`, own database `fidato_stores` (demo
-5EL, test sign-ins `dev-hk` housekeeping, `dev-store` stores, `dev-viewer`
-read_only added to that database only). STO-1 is fixed (below, under
-"Fixed"); **the other nine are open**, approved for fixing as phase 1A, and
-where an entry leaves more than one way the owner chooses first.
+STO-11 was found fixing them. **All are fixed except STO-9, which is the shared
+kit's** (below, under "Fixed").
 
-What passed, so it is not re-measured: no sideways page scroll (scrollWidth
-375), nothing outside the viewport, **0 controls under 44px on the list**,
-**0 text under 4.5:1**.
-
-### STO-2 · A store that cannot be read says it is empty
-
-**Found** reading `data/stores.ts` (`getStore` and `getStockHistory` end in
-`catch { return [] }`), **proved** by stopping this copy's API and reloading
-at 375px: a store holding 9 items read **"Nothing in the store yet"** with
-**"Add the first"**, under the banner "No connection. Working offline." The
-History dialog has the same catch and no failed or empty state at all. MEMORY
-251's shape and MEMORY 269's rule (four states, not one).
-
-**Waiting on:** the owner, only for the words of the failed state; the fix is
-this lane's.
-
-### STO-3 · On a phone the item's name is squeezed into a column 69–86px wide
-
-**Measured** at 375px: each card puts name, On hand and Worth side by side, and
-the name takes what is left.
-
-```
-item                                   name width   name lines   card height
-Floor cleaner (phenyl), 5 litre can    69px         5            348px
-Bath towel, white 70 x 140 cm          75px         4            354px
-LPG cylinder 19 kg commercial          84px         4            480px
-Basmati rice                           86px         2            279px
-```
-
-Under the LPG name, "Warn at 2 cylinder · last moved 25 Aug 2026" runs one
-word to a line. Nine items are 3,122px of scrolling — about four screens; the
-page's own comment says a store is "a hundred lines long". The four buttons
-do not fit one row, so History always wraps alone.
-
-**Waiting on:** the owner — how an item should read on a phone.
-
-### STO-4 · The history hides who moved stock, unless it was you
-
-**Found** on screen as housekeeping (rows without a name), **proved** on the
-API — the same item's history, asked by four people:
-
-```
-asked by    12 undo       11 receipt          10 receipt       9 receipt     5 receipt
-dev-hk      (none)        Test Housekeeping   (none)           (none)        (none)
-dev-store   (none)        (none)              (none)           (none)        Test Store
-dev-gm      Test Viewer   Test Housekeeping   Test Reception   Test Viewer   Test Store
-```
-
-The name is read through `staff`, whose row policy shows most roles only
-themselves. So the store keeper — the person the history exists for — cannot
-see who took the towels. `who` is null for them, and the screen prints nothing.
-
-**Waiting on:** the owner (should the store keeper see names), then likely the
-master (a lookup that is not subject to the staff policy would be a migration).
-
-### STO-5 · The screen tells people to "record an adjustment", and has no way to
-
-**Found** reading. The Receive dialog's cost hint: *"It can be recorded later
-as an adjustment"*. The server's refusal when an issue exceeds the shelf:
-*"record an adjustment — that is what it is for."* The API takes `adjustment`
-and `return`; `pages/Stores.tsx` offers Receive, Issue and the bin only. A
-counted correction, a late bill's cost and stock sent back cannot be entered
-from the screen. MEMORY 265's rule: a sentence that says where something is
-done is a claim — trace it.
-
-**Waiting on:** the owner — add Adjust and Return, or change the sentences.
-
-### STO-6 · Undo is one tap, with no confirmation, and cannot be undone
-
-**Found** reading (`HistoryDialog`: the icon's `onClick` calls
-`reverseStockMovement` directly) and seen in the dialog. A 44px icon beside
-each row in a scrolling dialog on a phone; one tap writes a permanent reversal,
-and the server refuses to reverse a reversal. Correcting a mis-tap means
-entering the delivery again. The undo row then reads **"Adjusted −60 piece ·
-An undo"**, carrying the original's supplier and bill number, and on this
-screen every "Adjusted" row is an undo, because nothing else can make one.
-
-**Waiting on:** the owner — a confirmation step, and what an undo row says.
-
-### STO-7 · The bin has no name, and greyed buttons do not say why
-
-**Measured** at 375px: **9 buttons with no accessible name** — the wastage bin
-on every row (`<Trash2 />`, no text, no `aria-label`) — and **12 disabled
-buttons with no reason** (Issue, the bin and History on the four items with
-nothing on hand or no history). A screen reader says "button"; a sighted
-person sees a bin and guesses. AGENTS.md rule 6: a blocked action is shown
-disabled **with its reason**.
-
-**Waiting on:** the owner, for the words.
-
-### STO-8 · No main action, and confirm buttons in the past tense
-
-**Measured:** "Add an item" is `data-variant="secondary"`, and so is "Add the
-first" on the empty store — neither declares a variant, and `Button` defaults
-to secondary (MEMORY 257). The screen has no primary action. The movement
-dialog's title and confirm read **"Received" / "Issued" / "Wasted"** — past
-tense, where § 6 says a button says what happens, verb first.
-
-**Waiting on:** the owner — which is the Store's main action, and the words.
+What passed at the first measurement, and again after the fixes: no sideways
+page scroll, nothing outside the viewport, **0 controls under 44px on the
+list**, **0 text under 4.5:1**.
 
 ### STO-9 · In every Store dialog, Close is 24px and each box 36px — the shared kit
 
@@ -130,23 +31,17 @@ tense, where § 6 says a button says what happens, verb first.
 **every input and select 36px tall**; inputs are 15px text, and iPhones zoom
 the page when a box under 16px is tapped. These come from `DialogContent`,
 `Input` and `NativeSelect` in `src/components/ui/` — **not this lane's to
-change**, and likely every dialog in the system. Reported to the master; not
-a Store fix.
+change**, and likely every dialog in the system.
 
-### STO-10 · Small ones, found on the way
+**Waiting on:** the master — written as a request in `MODULE.md` ("Requests
+from this service to the master"). The Store does not work around it locally.
 
-- "Where it belongs" defaults to **Kitchen**, so a housekeeper adding linen
-  files it under Kitchen unless they change it.
-- Units are printed as typed: "3 piece", "0 roll", "How many piece".
-- ~~`MODULE.md` is stale: it says to claim in `HANDOVER.md` and that the
-  highest migration is 089.~~ Brought up to date with STO-1, 16 September.
-
-**Waiting on:** the owner for the first two; the third is this lane's paperwork.
-
-**Left in `fidato_stores`** (development only, never production): six items
-and their movements, and the probe rows from STO-1 — three items named
-"PROBE added by …", three ₹1 towel receipts, and the Viewer's undo of the
-towel delivery. Movements are append-only, so they stay.
+**Left in `fidato_stores`** (development only, never production): the demo
+items and the probe rows from STO-1 and STO-11 — items named "PROBE …", ₹1
+towel receipts, the Viewer's undo of the towel delivery, the store tester's
+undo of the first rice delivery (which took rice to −12 kg: STO-11) and the
+count correction that brought it back to 0. Movements are append-only, so they
+stay.
 
 ---
 
@@ -197,12 +92,12 @@ owner gave that day:
   is not part of your role".
 - **Look-only, the owner's answer: one line, no buttons.** Housekeeping, the
   chef, the accountant and a viewer see *"You can see the store. Receiving,
-  issuing and adding items is for the store manager, hotel manager or GM."*
-  and no Receive, Issue, bin, Add or Import. History stays. **Applied the same
-  way to Undo:** a person without `edit` (the kitchen manager too) sees
-  *"Undoing a movement is for the store manager, hotel manager or GM."* in the
-  History dialog, and no Undo buttons — an extension of the owner's answer,
-  reported to them.
+  issuing and adding items is for the Inventory Manager, hotel manager or GM."*
+  and no change buttons. History stays. **Applied the same way to Undo:** a
+  person without `edit` (the kitchen manager too) sees *"Undoing a movement is
+  for the Inventory Manager, hotel manager or GM."* in History, and no Undo —
+  an extension of the owner's answer, reported to them. (The sentences said
+  "store manager" until the role was renamed Inventory Manager the same day.)
 
 **Proved**
 - `api/test/modules/stores/stockGrants.test.ts`: every store act — the list,
@@ -228,6 +123,164 @@ owner gave that day:
 policy admits — "read-only" included. Ask the act's grant on the server,
 before the first write; the screen hiding a button is not a permission. And a
 proof of a guard tries every role and counts what the refused ones left behind.
+
+### STO-2 · A store that could not be read said it was empty
+
+**Found** 16 September reading `data/stores.ts` — `getStore` and
+`getStockHistory` ended in `catch { return [] }` — and **proved** by stopping
+this copy's API and reloading at 375px: a store holding 9 items read **"Nothing
+in the store yet"** with **"Add the first"**, under the banner "No connection.
+Working offline." History had the same catch and no failed or empty state.
+MEMORY 251's shape; MEMORY 269's rule.
+
+**Fixed** 16 September, on the pattern the till (POS-4) and Rooms already use,
+so no new words were invented: the reads throw, and the page draws four states —
+offline with nothing saved: "No connection … loads by itself"; a failed read:
+**"The store did not load"** with Try again; a failed refresh keeps the last
+good list with "Not up to date … Showing what loaded at …"; and only a read
+that succeeded with nothing in it says "Nothing in the store yet". History:
+"The history did not load" with Try again, or "Nothing has moved yet".
+
+**Proved** — `data/stores.test.ts` fails with the old `catch { return [] }` put
+back (1 failed: "throw when the list could not be read"); `stores.test.tsx`
+walks failed → empty → an item added.
+
+**Rule:** a read that swallows its failure turns "could not tell" into "there
+is nothing". A screen test that replaces the data file cannot see the swallow
+come back — test the data file itself.
+
+### STO-3 · On a phone the item's name was squeezed into a column 69–86px wide
+
+**Measured** 16 September at 375px: name, On hand and Worth shared a row and
+the name took what was left — "Floor cleaner (phenyl), 5 litre can" 69px and 5
+lines, "LPG cylinder 19 kg commercial" 84px, 4 lines, a 480px card.
+
+**Fixed** — the owner's layout: the name has its own line, then On hand and
+Worth, then the buttons. **Two things found while measuring the fix:** at 375px
+Receive · Issue · More needed 305px and the card gave 294, so More wrapped —
+the arrows now show only from `sm` up; and at a tablet's width the buttons
+joined the name's row again and squeezed it to 115–121px, 3 lines — they now
+join that row only from `xl` (1280px).
+
+**Measured after**, every name on one line:
+
+```
+width   name lines   card height   buttons
+360     1            —             one row on every card
+375     1            201–257px     one row (LPG 480 → 245, towel 354 → 224)
+768     1            146–179px
+1025    1            145–178px
+1280    1            90–123px      in the same row as the name
+```
+
+**Rule:** a layout fixed at one width is measured at the widths either side
+of every breakpoint it uses — a tablet undid this fix before anybody had
+seen it.
+
+### STO-4 · The history hid who moved stock, unless it was you
+
+**Found** 16 September on screen as housekeeping, **proved** on the API: the
+mover's name is read through `staff`, whose row policies show most roles only
+themselves, so the store keeper saw only their own name.
+
+**Fixed** — the owner, 16 September: the Inventory Manager sees who moved
+stock; the GM and the owner already did; everybody else keeps today's view.
+The history reads `app.colleague_name` (the master's migration 096) for the
+Inventory Manager only (`isInventoryManagerAt`, `stockGrants.ts`).
+
+**Proved** — `api/test/modules/stores/historyNames.test.ts`, 5 tests: with
+the name given to nobody, the Inventory Manager's test fails; given to
+everybody, housekeeping's and the kitchen manager's fail. On screen as
+`dev-store`, the towel's history names Test Viewer, Test Housekeeping, Test
+Reception and Test Store.
+
+### STO-5 · The screen told people to "record an adjustment", and had no way to
+
+**Found** 16 September reading: the Receive dialog's cost hint and the
+server's over-issue refusal both named an adjustment; the screen offered
+Receive, Issue and the bin only.
+
+**Fixed** — the owner's layout: **More** holds Waste, **Return to supplier**
+and **Correct the count** (for those with `edit`). Correct the count asks what
+the shelf holds and records the difference. The two sentences now say what is
+true: the refusal says "correct the count first"; the cost hint says a cost
+can only be added later by undoing the delivery and receiving it again — an
+adjustment carries no cost, so the old sentence was wrong even with an Adjust
+button.
+
+**Proved** — on screen: rice at −12 kg, "What the shelf holds now" 0, "That is
+12 kg more than the book says", recorded, rice 0 kg. `stores.test.tsx` pins the
+menu's four entries and that the kitchen manager gets no Correct the count.
+
+### STO-6 · Undo was one tap, with no confirmation, and could not be undone
+
+**Found** 16 September reading `HistoryDialog`: the Undo icon wrote the
+reversal on one tap, and an undo row read "Adjusted · An undo".
+
+**Fixed** — the owner's answer: Undo asks *"Undo this delivery of 3 cylinder?
+It cannot be taken back — to put it right afterwards, record it again."* with
+Cancel and a red **Undo delivery**; the row reads **"Undo of a delivery"** (the
+history now carries `reversesKind`).
+
+**Proved** — `stores.test.tsx` fails when Undo acts on one tap; on screen the
+confirmation opened and nothing was written until it was answered.
+
+### STO-7 · The bin had no name, and greyed buttons did not say why
+
+**Measured** 16 September at 375px: 9 buttons with no accessible name, 12
+disabled with no reason.
+
+**Fixed** — Waste is a worded item in More; a greyed menu item carries its
+reason ("Nothing on hand.", "Nothing has moved yet."), and a card with nothing
+on hand says "Nothing on hand to issue — receive a delivery first."
+
+**Measured after**, 375px as the Inventory Manager: **0 unnamed buttons**;
+every disabled Issue sits on a card that says why.
+
+### STO-8 · No main action, and confirm buttons in the past tense
+
+**Found** 16 September: "Add an item" and "Add the first" were secondary
+(MEMORY 257); the dialogs read "Received / Issued / Wasted".
+
+**Fixed** — the owner's answer: "Add an item" and "Add the first" are the
+primary action; dialog titles and buttons say what will happen — Receive,
+Issue, Record waste, Return, Correct the count. The history still says what
+happened, in the past tense.
+
+**Proved** — `stores.test.tsx` checks both buttons' `data-variant`; on screen
+"Add an item" is orange.
+
+### STO-10 · Small ones, found on the way
+
+- **"Where it belongs" defaulted to Kitchen. Fixed** — the owner's answer: it
+  starts on "Choose where it belongs" and Add waits for a choice; "Everything
+  else" is a choice. `stores.test.tsx` fails with the Kitchen default put back
+  (first failure "expected 'Kitchen' to be ''"; the five after it fail because
+  that first test no longer loads the items the rest of the file reads).
+- **Units print as typed** ("3 piece"). **Decided, not changed** — the owner:
+  an automatic plural goes wrong for kg, litre and most units.
+- **`MODULE.md` was stale. Fixed** with STO-1.
+
+### STO-11 · Undoing a delivery after some of it went out took the shelf below zero
+
+**Found** 16 September on screen, after STO-1's proof: the store tester's probe
+undid the first rice delivery (50 kg) after 12 kg had been issued, and Basmati
+rice read **On hand −12 kg**. The Issue route refuses to overdraw the shelf;
+the undo route asked nothing.
+
+**Fixed** — the owner's answer: refuse, and say why. The undo route works out
+what would be left before any write, and refuses with *"Undoing this delivery
+would leave −2 cylinder of LPG cylinder 19 kg commercial — 2 cylinder of it
+has already gone out. Correct the count instead."* No database change.
+
+**Proved** — `api/test/modules/stores/undoBelowZero.test.ts`, 3 tests; with
+the check taken out, the refusal test fails ("expected 200 to be 409"). On
+screen as `dev-store`: undoing LPG's delivery of 3 with 1 left asked first,
+then showed **"Not undone"** with that sentence; the server answered 409 and
+the history was unchanged.
+
+**Rule:** every way stock leaves the shelf asks whether the shelf can bear it —
+an undo of something that came in is a way stock leaves.
 
 ---
 

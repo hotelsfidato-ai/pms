@@ -46,13 +46,26 @@ and both stay. A list can be imported from a file.
   Reception, the till and the revenue manager hold none: no entry, and the
   address says "This page is not part of your role".
 - **Who sees what on the page** (`can(role, …, "stock")`):
-  `create` — Receive, Issue, the bin, Add an item, Import;
-  `edit` — Undo in History;
+  `create` — **Receive · Issue · More** on each item (More: Waste, Return to
+  supplier, History), Import, and **Add an item**, the page's one primary
+  action;
+  `edit` — also **Correct the count** in More, and Undo in History;
   view only (housekeeping, chef, accountant, viewer) — one sentence, *"You can
-  see the store. Receiving, issuing and adding items is for the store manager,
-  hotel manager or GM."*, and no change buttons (the owner's choice, 16
-  September). Without `edit`, History says who may undo instead of offering it.
-- The `stores` role lands on the Store after sign-in: it is the first entry
+  see the store. Receiving, issuing and adding items is for the Inventory
+  Manager, hotel manager or GM."*, a History button, and no change buttons (the
+  owner's choice, 16 September). Without `edit`, History says who may undo
+  instead of offering it.
+- **The item card** (STO-3): the name on its own line, then On hand and Worth,
+  then the buttons; the buttons join the name's row only from `xl`. On a phone
+  Receive and Issue drop their arrows so the three fit one row at 360px.
+- **Undo asks first** (STO-6) — "Undo this delivery of 3 cylinder? It cannot be
+  taken back …" — and an undo row reads "Undo of a delivery".
+- **The list and History draw four states** (STO-2): offline, did not load (Try
+  again), empty, full — and a failed refresh keeps the last list, marked "Not up
+  to date".
+- **Add an item** starts "Where it belongs" on nothing chosen (STO-10).
+- The `stores` role — **the Inventory Manager** since 16 September, key
+  unchanged — lands on the Store after sign-in: it is the first entry
   of their working menu, and they have no Dashboard (`workingHomeFor`,
   `navigation.ts`; pinned in `navigation.test.ts` — `["Store", "Notifications"]`).
 - No `flows/`; the page carries its own dialogs.
@@ -67,15 +80,24 @@ September); the door `index.ts` mounts it at `/api/hotels`. There is no module s
 ```
                                               grant needed (403 otherwise)
 GET    /:code/stores                          view     items, on hand, value
-GET    /:code/stores/items/:id/movements      view     one item's history
+GET    /:code/stores/items/:id/movements      view     one item's history; `who` named for the
+                                                       Inventory Manager too (STO-4), and
+                                                       `reversesKind` on an undo (STO-6)
 POST   /:code/stores/items                    create   add an item
                                               + edit   if the name is already there (it overwrites)
 POST   /:code/stores/movements                create   receipt · issue · wastage · return
                                               edit     adjustment
-POST   /:code/stores/movements/:id/reverse    edit     undo one movement with its own row
+POST   /:code/stores/movements/:id/reverse    edit     undo one movement with its own row —
+                                                       refused (409) if it would leave the
+                                                       shelf below zero (STO-11)
 POST   /:code/stores/import                   create   items from a file; a row that changes
                                                        an existing item needs edit, or is rejected
 ```
+
+**Names in a history** come through `staff` as before, and for the Inventory
+Manager through `app.colleague_name` (096) as well — the owner's answer to
+STO-4. Anybody else keeps today's view (their own name; the GM and the owner
+see all through `staff`).
 
 Every endpoint has a caller in `data/stores.ts`.
 
@@ -163,9 +185,11 @@ No other service's door is imported by this folder (checked 15 September).
   "THE MENU EACH PERSON WORKS FROM").
 - **Offline, a store write is refused.** No store path is listed in
   `src/lib/offline.ts`, and anything unlisted is refused rather than queued.
-- **The role**: "Stock, receiving and issues. Raises purchases; approves none."
-  (`ROLE_DESCRIPTIONS.stores`, `src/lib/permissions.ts`). No purchase can be
-  raised today — see Open items. A store keeper once signed in as a viewer
+- **The role**, the Inventory Manager: "Stock and equipment. Approves
+  equipment leaving the store; raises purchases." (`ROLE_DESCRIPTIONS.stores`,
+  `src/lib/permissions.ts`). That approval is the equipment chat's and the
+  master's; **stock going out needs no approval (S12) — do not add one.** No
+  purchase can be raised today — see Open items. A store keeper once signed in as a viewer
   because two role lists disagreed; 078 made `app.assignable_roles()` the one
   list (MEMORY 184).
 - **Every list draws four states**; **a new dialog declares its main action**
@@ -222,6 +246,20 @@ Where the checks are today: `db/tests/suite.sql` group `store` — on hand,
 weighted value, reversal, and the cross-property refusal (frozen; new checks
 go in `db/tests/modules/stores.sql`, which does not exist yet);
 `src/components/app/navigation.test.ts` pins the store roles' menus.
+
+```
+api/test/modules/stores/stockGrants.test.ts   who may do what, every act × every role (STO-1)
+api/test/modules/stores/historyNames.test.ts  names in a history; what an undo undid (STO-4, 6)
+api/test/modules/stores/undoBelowZero.test.ts an undo may not leave less than nothing (STO-11)
+src/modules/stores/stores.test.tsx            the page: four states, More, look-only,
+                                              undo asks first, a category must be chosen
+src/modules/stores/data/stores.test.ts        a failed read throws, never answers empty (STO-2)
+```
+
+⚠ `stores.test.tsx` shares one query cache across the file (App.tsx's): its
+first test is the only one that meets a store never loaded, and it loads the
+items the rest read. A failure in that first test makes the others fail for
+its reason — read the first failure first.
 
 ---
 
