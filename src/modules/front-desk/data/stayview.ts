@@ -214,7 +214,10 @@ export async function getStayView(
       type: room.type,
       floor: room.floor,
       housekeeping: room.status,
-      outOfService: room.status === "out-of-service",
+      /* THE DATED BLOCK decides (INV-6, the owner's D17-11): the same
+         record availability, occupancy and the bell read. The room's
+         status alone said room 308 was clean while a block held it out. */
+      outOfService: !sellableOn(room.number, businessDate),
       bars,
       /* All four read STATUS where status is what changes. A room is
          occupied when someone has actually checked in, not merely

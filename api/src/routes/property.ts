@@ -80,11 +80,15 @@ property.get("/:code", async (c) => {
       ),
       /* The SELLABLE count, not the physical one. Occupancy divides by
          this, and a room held out of service is inventory that cannot
-         be sold — 17 of the 18 here. */
+         be sold — 17 of the 18 here.
+
+         OUT OF SERVICE IS THE DATED BLOCK (INV-6, the owner's D17-11).
+         This read `housekeeping_status`, while availability, occupancy and
+         the bell read `room_blocks` — two records, and nothing kept them in
+         step. It now asks the same function every occupancy figure divides
+         by, for the hotel's own business date. */
       client.query<{ n: string }>(
-        `select count(*)::text as n from rooms
-          where hotel_id = $1 and is_active
-            and housekeeping_status <> 'out_of_service'`,
+        "select app.sellable_rooms($1, app.business_date($1))::text as n",
         [hotel.id],
       ),
     ]);

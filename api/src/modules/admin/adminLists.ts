@@ -173,9 +173,8 @@ directory.get("/:code/settings", async (c) => {
       `select h.name, h.address_line, h.city, h.gstin, h.currency, h.timezone,
               to_char(h.check_in_time,  'HH24:MI') as check_in,
               to_char(h.check_out_time, 'HH24:MI') as check_out,
-              (select count(*) from rooms r
-                where r.hotel_id = h.id and r.is_active
-                  and r.housekeeping_status <> 'out_of_service')::text as sellable,
+              /* The dated block, as availability reads it (INV-6, D17-11). */
+              app.sellable_rooms(h.id, app.business_date(h.id))::text as sellable,
               (select array_agg(rt.name order by rt.sort_order)
                  from room_types rt where rt.hotel_id = h.id and rt.is_active) as room_types,
               (select array_agg(mp.code order by mp.code) from meal_plans mp)  as plans
