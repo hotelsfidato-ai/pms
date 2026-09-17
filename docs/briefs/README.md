@@ -67,6 +67,16 @@ them are not worth an agent until the owner says they are wanted at all.
 
 ---
 
+## The long dash — every chat, from 17 September (D17-48, D17-59, D17-60)
+
+**No long dash "—" in anything a person reads.** Inside a sentence use a spaced
+hyphen " - "; a figure nobody has set shows "-" (never a zero). **Clean your own
+folder as part of your next job** — screens, dialogs, toasts, error sentences, and
+the tests that assert them. Code comments may keep theirs; a date range's short
+"–" stays. The master does the shared core and every service no chat is working on.
+
+---
+
 ## The five rules every lane obeys
 
 These are not this folder's rules. They are the project's, from `HANDOVER.md`

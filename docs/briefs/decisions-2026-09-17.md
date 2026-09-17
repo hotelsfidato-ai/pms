@@ -139,3 +139,22 @@ channel manager, then QA.** The order is `docs/NEXT-BUILD-PLAN.md`.
 | D17-55 | Business | **Tally export (designed later — which Tally is decided then), revenue management, reviews and marketing.** Not contracts |
 | D17-56 | Revenue management | **Suggestions only**; a person sets the price |
 | D17-57 | Online payments | **Still excluded** |
+
+---
+
+# The third interview — 17 September, night
+
+| # | Question | Answer |
+|---|---|---|
+| D17-58 | How fresh money figures must be (FIN-3) | **Re-checked every time a screen is opened or brought back into view** *(Master)* |
+| D17-59 | Who removes the long dash | **Each working chat in its own folder, as part of its next job; the master does the shared core and every service with no chat working.** Nobody pauses |
+| D17-60 | What replaces it | **Inside a sentence: a spaced hyphen " - "** (e.g. "Room 308 - out of service"). **A figure nobody has set: "-"** (D17-49). Code comments are not screens and may keep theirs. A date range's short dash "–" is not the long dash |
+| D17-61 | Deploy | **Wait: one deploy after the Store's stock per place and the dash pass** |
+| D17-62 | Which reports | **Every report, in the format the owner gave** — the eight in `docs/REPORTS-SPEC.md`, from the eZee exports in `D:\reports fidato\` |
+| D17-63 | The bill and voucher template | **The owner saves CRS voucher FH-2026-00002 into `D:\reports fidato\`**; bills follow its look |
+| D17-64 | Paper | **A4** for hotel bills and tax invoices; the restaurant keeps its thermal slips |
+| D17-65 | WhatsApp and email in n8n | **Need setting up** — the master gives the owner the n8n steps; nothing sends until they are done |
+| D17-66 | The channel manager | **SU** (Su channel manager). API documents: https://suissu.gitbook.io/su-api-documentation/su-channel-manager . **Build the connection** in the channel-manager service |
+| D17-67 | Purchasing | **Starts after the Store's stock per place is merged** |
+| D17-68 | All Inclusive | **Covers everything charged to the room** |
+| D17-69 | Crockery and cutlery (phase 2A) | **The Store chat goes straight on to it** after stock per place |

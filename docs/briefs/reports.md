@@ -1,5 +1,26 @@
 # Reports — your brief
 
+## ⚠ 17 SEPTEMBER: EVERY REPORT IN THE OWNER'S FORMAT — D17-62. This comes first.
+
+Build **all eight reports in `docs/REPORTS-SPEC.md`** — Night Audit, Manager Report
+(with its five missing sections), City Ledger Summary, No Show, Monthly Occupancy,
+Monthly Statistics, Yearly Statistics, Lodging Tax — laid out like the owner's eZee
+exports in `D:\reports fidato\` (never commit those files). **Done when** each one
+run for 25 August 2026 on the demo data matches its PDF line by line (the spec's
+own example: Manager report Room Charges today `12,142.88`, PTD `419,578.77`).
+
+**The split with the master (step 3 of `docs/NEXT-BUILD-PLAN.md`):** you build each
+report's figures (server) and its screen. The master builds the shared parts: the
+report layout (hotel name, title, "As on / PTD / YTD", the footer with date, time,
+user and page), **PDFs made on the server** (D17-32) and **a real .xlsx AND a CSV**
+for every report (D17-31). Build your screens so each report's rows and sections
+are one data object the master's PDF and Excel can take as they are; when the
+shared parts land, wire them in. Room charges stay posted for the whole stay on
+arrival (D17-33) — report them as they are posted. Clean the long dash from your
+folder (README).
+
+---
+
 **Read `docs/briefs/README.md` first.** It holds the five rules, how to make
 your own working copy, the list of files nobody but the master may change, and
 the gates. This file is only what is yours.

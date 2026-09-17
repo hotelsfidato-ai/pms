@@ -1,4 +1,10 @@
-# Store — your brief (phase 1A)
+# Store — your brief (phase 1A, then 2A)
+
+> **17 September, the owner:** after stock per place, go **straight on to phase 2A,
+> crockery and cutlery** (D17-69): breakage with who and where, in use per outlet,
+> par per outlet, the monthly count. **Clean the long dash from your folder** as part
+> of your next job (D17-59, D17-60 — see the README). Purchasing starts only after
+> your stock per place is merged (D17-67).
 
 **Read `docs/briefs/README.md` first.** It holds the five rules, how to make
 your own working copy, the list of files nobody but the master may change, and

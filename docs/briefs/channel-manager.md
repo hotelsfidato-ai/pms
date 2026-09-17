@@ -1,8 +1,48 @@
 # Channel manager — your brief
 
+## ⚠ 17 SEPTEMBER: BUILD IT — the owner's D17-66. This overrides everything below.
+
+The owner chose **SU** (Su channel manager) and gave its API documents:
+**https://suissu.gitbook.io/su-api-documentation/su-channel-manager** (the full
+index is `llms.txt` beside it). Read `docs/briefs/decisions-2026-09-17.md`
+(D17-28 to D17-30, D17-43 to D17-46, D17-66) and step 4 of `docs/NEXT-BUILD-PLAN.md`.
+
+**What to build — SU's mandatory set, in this order:**
+1. **Token authentication.** The token lives in the server's environment
+   (`api/.env` on the server, set by the owner) — never in the repo, a screen, a
+   test file or a chat. Until the owner has SU's test credentials, build against
+   recorded example requests and responses from the documents.
+2. **Content:** the property, its room types and its rate plans, mapped from the
+   PMS (which is the record, D17-28). A mapping table per hotel.
+3. **Rates and availability:** push availability, prices and restrictions from the
+   PMS (read through inventory's front door) whenever they change, and on demand.
+4. **Reservations:** pull from SU, or receive SU's webhook — new, modified,
+   cancelled. A booking lands through reservations' front door (the booking door is
+   idempotent, RES-3), with its OTA source and commission.
+
+**The owner's rules:** a booking for a room no longer free is **refused and SU is
+told** (D17-43) — never an overbooking; an OTA booking follows **the OTA's
+cancellation policy**, a direct one the hotel's terms (D17-44); **each hotel is
+switched on separately** (D17-45), none by default.
+
+**Your folders:** `src/modules/channel-manager/`, `api/src/modules/channel-manager/`
+(its `index.ts` exists, empty and already mounted by the master), and
+`db/tests/modules/channel-manager.sql`. Your migration takes the next number after
+cp6's highest. Anything you need from inventory, reservations or guests is their
+front door; what is missing is a request to the master. Clean the long dash from
+your folder (README).
+
+**Stop and ask the owner** before: anything that would change a price or close a
+room without a person, anything about money SU collects, and the first live push.
+
+---
+
+*What follows was written on 16 September, when the channel manager was not yet
+defined. Keep it as history; the section above wins.*
+
 **Read `docs/briefs/README.md` and `docs/briefs/coming-soon.md` first.** This
-service is **not built**, and the rules for a not-built service are in that
-second file. This one is what is specific to the channel manager.
+service was **not built**, and the rules for a not-built service are in that
+second file.
 
 ---
 
