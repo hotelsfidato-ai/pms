@@ -22,7 +22,12 @@ A housekeeper marks 204 clean on a landing and the supervisor's screen does not 
 
 **The fix, when it is done** — Known and small: extend the Postgres `NOTIFY` trigger from 075 to housekeeping changes, and add `useLiveOrders`-style invalidation to the board. The live channel already reaches Floor, Kitchen and Till.
 
-**The rule** — A screen two people share needs to say when it last knew.
+**17 September — the owner said build it now (D17-39). Half done, on `housekeeping/live-board`:**
+- Every change the board shows now announces `<hotel id>:housekeeping` on the live channel, from triggers on the rows (migration "housekeeping changes are announced"; `api/test/modules/housekeeping/live.test.ts`, seen to fail).
+- The board polls every 30 seconds, as Tables does. Measured: a room changed from outside the browser moved on the open board 21.5 s later, no reload.
+- **Not done: told the moment it changes.** "Known and small" was right about the size and wrong about whose it is. Reading the live channel showed two of its three halves are the core's: `api/src/realtime.ts` looks a watcher up by the WHOLE payload (so a housekeeping change can only be a bare hotel id — which would wake every till and kitchen in the hotel for a room marked clean — or reach nobody), and `src/lib/useLiveOrders.ts` invalidates a fixed list of POS keys. A request for a topic on the channel is in `MODULE.md`.
+
+**The rule** — A screen two people share needs to say when it last knew. And a fix called small is sized by reading whose files it touches, not how many lines it is.
 
 ---
 
@@ -93,6 +98,14 @@ Two tests open the board in a browser with no IndexedDB; the board's read of the
 **Fixed** — the block is looked up and locked first; the refusal, then the two writes.
 
 **The rule** — MEMORY 243 again, in my own hand: write the refusals, then the writes, and re-read the order before running it.
+
+### HK-10 · A poll that fails would have thrown away the offline board — prevented
+
+**Found** — 17 September, before adding the poll. The board drew its error state whenever `rooms.error` was set. React Query 5 (read in its source, `query.js`) keeps a query's data when a refetch fails and sets `status: "error"` anyway — so once the board polled, the first failed refresh on a stairwell would have replaced eighteen cached rooms with "The rooms did not load". Before the poll, nothing refetched, so it never showed.
+
+**Prevented** — the error state is drawn only when there is nothing to show (`rooms.error && rooms.data === undefined`); the Offline line says the signal has gone. Measured: API stopped, a poll failed (`ERR_CONNECTION_REFUSED`), 18 rooms stayed. `housekeeping.test.tsx` "keeps them when that read fails" — seen to fail with the old condition.
+
+**The rule** — Adding a poll changes what "failed" means for every branch that reads the query's error. Read them all before the first interval fires.
 
 ---
 

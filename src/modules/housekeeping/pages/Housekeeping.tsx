@@ -136,14 +136,32 @@ export default function HousekeepingPage() {
     return outboxSubscribe(readHeld);
   }, [readHeld]);
 
+  /* THE BOARD REFRESHES ITSELF (HK-1, the owner's D17-39, 17 September).
+     A housekeeper marked 204 clean on a landing and the supervisor's board
+     did not change until somebody reloaded it.
+
+     THE FLOOR, the way Tables keeps one: every thirty seconds while the
+     board is on screen. The live half — the board told the moment a room
+     changes, as the Kitchen is — needs the shared live channel to carry a
+     topic; every change already announces itself from the database
+     ("housekeeping changes are announced"), and the request for the rest is
+     in MODULE.md. When it lands this floor stays, slower, because a live
+     channel that fails quietly is worse than none (useLiveOrders.ts).
+
+     Not in the background: a phone in a pocket is not a screen anybody is
+     reading, and its battery and data are the housekeeper's. */
+  const FLOOR_MS = 30_000;
+
   const rooms = useQuery({
     queryKey: ["housekeeping", hotelId, BUSINESS_DATE],
     queryFn: () => listHousekeeping(hotelId, BUSINESS_DATE),
+    refetchInterval: FLOOR_MS,
   });
 
   /* Who is on today, and which rooms are theirs. Two queries rather
      than one join: the roster changes when somebody is hired and the
-     sheet changes several times a morning, so they cache apart. */
+     sheet changes several times a morning, so they cache apart. The
+     roster is not polled; the sheet is. */
   const staff = useQuery({
     queryKey: ["housekeepers", hotelId],
     queryFn: () => listHousekeepers(hotelId),
@@ -151,6 +169,7 @@ export default function HousekeepingPage() {
   const sheet = useQuery({
     queryKey: ["hk-assignments", hotelId],
     queryFn: () => listRoomAssignments(hotelId),
+    refetchInterval: FLOOR_MS,
   });
 
   /* The board's own room list carries a housekeeping state and no
@@ -159,6 +178,7 @@ export default function HousekeepingPage() {
   const detail = useQuery({
     queryKey: ["rooms", hotelId],
     queryFn: () => listAllRooms(hotelId),
+    refetchInterval: FLOOR_MS,
   });
   const blocksFor = new Map<string, RoomBlock[]>(
     (detail.data ?? []).map((r) => [r.number, r.blocks]),
@@ -300,12 +320,19 @@ export default function HousekeepingPage() {
       {/* The board had no loading, error or empty state: while the rooms
           loaded, or when they failed, a housekeeper saw a heading and an
           "Online" line and nothing else — the same screen as a hotel with
-          nothing to clean. Each case now says which it is. */}
+          nothing to clean. Each case now says which it is.
+
+          FAILED MEANS NOTHING TO SHOW. Since the board polls (HK-1), a
+          refresh that fails on a stairwell sets `error` while the rooms it
+          already had are still in hand — and React Query keeps them there.
+          Swapping them for "did not load" would throw away the offline board
+          the critique named the reference; the offline line above is what
+          says the signal has gone. */}
       {rooms.isLoading ? (
         <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4" aria-busy="true">
           {Array.from({ length: 8 }).map((_, i) => <Skeleton key={i} className="h-28" />)}
         </div>
-      ) : rooms.error ? (
+      ) : rooms.error && rooms.data === undefined ? (
         <Card>
           <ErrorState
             title="The rooms did not load"

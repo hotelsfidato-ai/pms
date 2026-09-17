@@ -1,5 +1,5 @@
-import { describe, it, expect, beforeEach } from "vitest";
-import { render, screen, within, fireEvent } from "@testing-library/react";
+import { describe, it, expect, beforeEach, vi } from "vitest";
+import { render, screen, within, fireEvent, act, waitFor } from "@testing-library/react";
 import App from "@/App";
 import { HOTEL, go, startSignedIn } from "@/test/app";
 import {
@@ -19,6 +19,21 @@ import {
    ══════════════════════════════════════════════════════════════════ */
 
 beforeEach(startSignedIn);
+
+/* The board's room list, counted, and made to fail on demand — a refresh
+   on a stairwell with the signal gone. Everything else passes through. */
+const board = vi.hoisted(() => ({ calls: 0, failing: false }));
+vi.mock("@/modules/housekeeping/data/housekeeping", async (importOriginal) => {
+  const real = await importOriginal<typeof import("@/modules/housekeeping/data/housekeeping")>();
+  return {
+    ...real,
+    listHousekeeping: async (...args: Parameters<typeof real.listHousekeeping>) => {
+      board.calls += 1;
+      if (board.failing) throw new Error("Could not reach the server.");
+      return real.listHousekeeping(...args);
+    },
+  };
+});
 
 const card = async (room: string) => {
   const heading = await screen.findByText(room, { selector: "span" });
@@ -78,6 +93,51 @@ describe("the room card (D17-8)", () => {
     const out = await screen.findByText("Put back");
     expect(out.closest("button")?.getAttribute("data-hk-put-back")).toBe("308");
     expect(screen.queryByText("Take out of service")).toBeNull();
+  });
+});
+
+describe("the board refreshes itself (HK-1, D17-39)", () => {
+  it("reads the rooms again on its own, and keeps them when that read fails", async () => {
+    vi.useFakeTimers({ shouldAdvanceTime: true });
+    try {
+      board.failing = false;
+      go(`/h/${HOTEL}/housekeeping`);
+      render(<App />);
+      await card("201");
+      const before = board.calls;
+
+      /* Thirty seconds with nobody touching it: the board asks again. */
+      await act(async () => { vi.advanceTimersByTime(31_000); });
+      await waitFor(() => expect(board.calls).toBeGreaterThan(before));
+
+      /* And the next time the line is down. React Query keeps the rooms it
+         had and marks the query failed; the board must keep showing them —
+         the offline board the critique called the reference. */
+      board.failing = true;
+      const failedFrom = board.calls;
+      await act(async () => { vi.advanceTimersByTime(31_000); });
+      await waitFor(() => expect(board.calls).toBeGreaterThan(failedFrom));
+      await act(async () => { await Promise.resolve(); });
+
+      expect(screen.queryByText("The rooms did not load")).toBeNull();
+      expect(await card("201")).toBeDefined();
+    } finally {
+      board.failing = false;
+      vi.useRealTimers();
+    }
+  });
+
+  it("still says the rooms did not load when it never had any", async () => {
+    board.failing = true;
+    try {
+      /* Agra, whose board nothing in this file has loaded: the app keeps one
+         query cache per file, so 5 Elements' rooms are already in it. */
+      go(`/h/AGR/housekeeping`);
+      render(<App />);
+      expect(await screen.findByText("The rooms did not load")).toBeDefined();
+    } finally {
+      board.failing = false;
+    }
   });
 });
 

@@ -8,6 +8,62 @@ project, still goes in the root `CHANGELOG.md`.
 
 ---
 
+## 2026-09-17 (evening) · The board refreshes itself — HK-1, half live
+
+**Asked for:** the owner's second interview, 17 September (D17-39): HK-1, the
+housekeeping board refreshes itself when a room changes, the way Tables and the
+Kitchen already do; if that needs the shared live channel changed, a request to
+the master. D17-40: the assignee dropdown stays as it is. (D17-38 confirmed the
+refusal on closing a repair while its item waits, as built.)
+
+**Shipped** — branch `housekeeping/live-board`, from `cp6` at `766566b`:
+- **`db/migrations/103_housekeeping_changes_are_announced.sql`** — triggers on
+  `rooms` (cleaning state, occupancy), `room_blocks`, `housekeeping_assignments`
+  and `work_orders` raise `<hotel id>:housekeeping` on the live channel. Safe
+  alone: today's listener finds no watcher for that payload.
+- **The board polls every 30 seconds** (its rooms, the sheet, the blocks — not
+  the roster), as Tables does; not in the background.
+- **The board keeps its rooms when a poll fails** (HK-10): the error state is
+  drawn only when there is nothing to show.
+- **The request to the master** (`MODULE.md` → Requests from this service): a
+  topic on the shared channel — `realtime.ts`, `live.ts`, `useLiveOrders.ts`,
+  `api/test/live.test.ts` — and the board's wiring once it lands.
+- Nothing about the assignee dropdown changed (D17-40).
+
+**Found** — HK-1's "known and small" fix is small, but two of its three halves
+are the core's (`DEFECTS.md` HK-1). HK-10, prevented before it shipped: React
+Query keeps data on a failed refetch and still reports the error, so a polling
+board would have swapped eighteen cached rooms for "did not load".
+
+**Proved** — on this tree, 17 September:
+- In the browser, signed in as the owner: room 210 changed from outside the
+  browser appeared under Needs cleaning without a reload; room 208 changed the
+  same way moved **21.5 s** later (the pane was hidden, so React Query's focus
+  was set by hand for the measurement — a hidden page does not poll, by
+  design). API stopped: a poll failed with `ERR_CONNECTION_REFUSED`, the 18
+  rooms stayed, the line said Offline.
+- `api/test/modules/housekeeping/live.test.ts`: 5 passed; with the payload made a
+  bare hotel id, **5 failed**; restored.
+- `housekeeping.test.tsx`: 9 passed; with the old error condition, and
+  separately with no poll, the refresh test **failed** each time; restored.
+- `npx tsc -b --force` exit 0 · `cd api && npx tsc --noEmit` exit 0.
+- `npx vitest run`: **329 passed, 35 files, exit 0**.
+- `cd api && npm test`: **878 passed, 48 files, exit 0** (the exit code written
+  to the log this time, not read through a pipe).
+- `bash db/tests/run.sh`: **785 assertions passed**, exit 0 · `bash
+  db/tests/rerun.sh`: **103 migrations re-runnable**, exit 0.
+- `npm run build`: exit 0, "no test sign-in in dist".
+
+**Left open**
+- **Told the moment a room changes** — waits on the master's change to the live
+  channel; then the board's few lines of wiring (the request says which).
+- The requests from the earlier session (Start here words, `ROOM_TONES`,
+  `migrate.sh`) — still listed.
+
+**Commits:** on branch `housekeeping/live-board`.
+
+---
+
 ## 2026-09-17 · Words on the room card, and repairs on equipment (phase 2B)
 
 **Asked for:** the housekeeping brief's first task (the critique's P3: three
