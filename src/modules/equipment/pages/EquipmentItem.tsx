@@ -17,6 +17,7 @@ import {
   EditItemDialog, MoveItemDialog, StatusDialog, RetireDialog,
 } from "@/modules/equipment/flows/ItemDialogs";
 import { DecideButtons } from "@/modules/equipment/flows/Decide";
+import { ItemRepairs } from "@/modules/housekeeping";
 import {
   DASH, STATUS_LABEL, STATUS_TONE, heldText, costText, endsText, whoMay,
 } from "@/modules/equipment/words";
@@ -289,6 +290,18 @@ export default function EquipmentItemPage() {
           </CardBody>
         </Card>
       </div>
+
+      {/* REPAIRS — housekeeping's, through its front door (phase 2B, the
+          owner's answer of 17 September). Added by the housekeeping chat,
+          for the master to review at merge. */}
+      <ItemRepairs
+        hotelId={code}
+        item={{
+          id: item.id, name: item.name, tag: item.tag, heldAs: item.heldAs,
+          roomNumber: item.roomId ? item.place.replace(/^Room /, "") : null,
+          retired,
+        }}
+      />
 
       {dialog === "edit" && (
         <EditItemDialog code={code} item={item} open onOpenChange={(o) => { if (!o) setDialog(null); }} onDone={done} />

@@ -38,6 +38,62 @@ Two tests open the board in a browser with no IndexedDB; the board's read of the
 
 **The rule** — A gate's answer is its exit code. Read it, every time.
 
+### HK-3 · A room already out of service offered "Take out of service"
+
+**Found** — 16 September, reading the board for the critique's P3. The one button on an out-of-service room said "Take out of service" and opened what was out, with "Put back" on it.
+
+**Fixed** — 17 September, on the owner's answer: the button says **Put back**. Pinned in `housekeeping.test.tsx`.
+
+**The rule** — A button says what it does, not what the room once needed.
+
+### HK-4 · Work orders turned every failure into "Nothing outstanding"
+
+**Found** — 17 September, adding the Closed list: `listWorkOrders` ended in `catch { return { orders: [], closed: 0 } }`, so a server that did not answer read as a maintenance list with nothing on it. Root MEMORY 251's shape, in this service.
+
+**Fixed** — the call throws; the page draws loading, failed (with a retry), empty and full. `housekeeping.test.tsx` "says the list did not load" — seen to fail with the old catch put back.
+
+**The rule** — Every list has four states (MEMORY 269), and a data call that flattens a failure into data has deleted the second one.
+
+### HK-5 · Closing a closed repair again overwrote who closed it
+
+**Found** — 17 September, reading `PATCH /work-orders/:id` for D17-7: nothing refused a second close, so it set `closed_by`, `closed_at` and `resolution` again over the first.
+
+**Fixed** — refused, "This repair is already closed.", before anything is written. API test: the first closer and their words stay.
+
+**The rule** — A record of who did something is written once.
+
+### HK-6 · Putting a room back would have failed the moment a repair linked its block
+
+**Found** — 17 September, linking Report a repair's block to its work order. 058's `work_orders.block_id` references `room_blocks`, and Put back DELETES the block — but no code had ever set `block_id`, so the foreign key had never had anything to refuse.
+
+**Prevented, before it shipped** — Put back clears the link, then deletes; and its "That block is not here." refusal moved above both writes. API test: link, put back, link gone.
+
+**The rule** — A column nothing writes hides what its constraints will do. The day something starts writing it, read every statement that touches the row it points at.
+
+### HK-7 · Work orders printed raw dates beside pages that print them properly
+
+**Found** — 17 September, at 375px: "raised 2026-09-17" on Work orders; "17 Sep 2026" on the equipment page beside it.
+
+**Fixed** — `dateShort` from `src/lib/format.ts`, on Work orders and the item's Repairs.
+
+**The rule** — `format.ts`, never a date as the database spelled it (the brief's trap).
+
+### HK-8 · A proof photo would have been saved "on this phone" without the photo — avoided
+
+**Found** — 17 September, before writing the cost route. `src/lib/offline.ts` holds any write to a `/work-orders` address when the line is down, and `api()` keeps only a TEXT body when it holds one (and always sends `content-type: application/json`). A cost posted to `/work-orders/:id/costs` with no signal would have been held without its file, and refused on sync after the manager was told "saved".
+
+**What was done** — the cost doors are `/repair-costs` (not on the list, so refused offline at once, in a sentence), and the upload uses its own `fetch` from the core's `apiBase` and `authHeaders`. Lesson proposed to the master for the root `MEMORY.md`.
+
+**The rule** — Before giving an upload an address, ask what the offline rules do with that address — they decide by path, not by body.
+
+### HK-9 · MINE: a link cleared before the refusal that should have stopped it
+
+**Found** — 17 September, re-reading my own Put back change before running it: I put `update work_orders set block_id = null` above the "That block is not here." refusal. Inside `withSession` that refusal would have committed the update (root MEMORY 243) — a wrong room number in the address would have unlinked a real repair.
+
+**Fixed** — the block is looked up and locked first; the refusal, then the two writes.
+
+**The rule** — MEMORY 243 again, in my own hand: write the refusals, then the writes, and re-read the order before running it.
+
 ---
 
 ## Project-wide entries about this service

@@ -2,7 +2,8 @@ import { listStays } from "@/modules/front-desk";
 import { listAllRooms, setHousekeeping } from "@/data/repositories/rooms";
 import type { OperationResult } from "@/data/repositories/result";
 import { refuse } from "@/data/repositories/result";
-import { api, ApiError } from "@/lib/api";
+import { api, ApiError, apiBase, authHeaders } from "@/lib/api";
+import { noteReachable, noteUnreachable } from "@/lib/offline";
 /* The housekeeping board, whose rooms are whose, and work orders.
 
    Service: housekeeping. Moved out of operations.ts on 15 September in the
@@ -187,24 +188,65 @@ export interface WorkOrder {
   daysOpen: number;
   /** True when the fault also took the room out of service. */
   blocksRoom: boolean;
+  closedBy: string | null;
+  closedAt: string | null;
+  /** What was done — required to close. */
+  resolution: string | null;
+  /** The tagged piece of equipment this repair is for (phase 2B), or null. */
+  equipment: { id: string; name: string; tag: string } | null;
+  /** ABSENT for anybody who may not see money — not an empty list, which
+      would read as "it cost nothing" (the owner, 17 September). */
+  costs?: RepairCost[];
+  /** Null when no cost stands — a dash, never ₹0. Absent with `costs`. */
+  costTotal?: number | null;
 }
 
+export interface RepairCost {
+  id: string;
+  amount: number;
+  note: string | null;
+  recordedBy: string | null;
+  recordedAt: string;
+  proof: { id: string; filename: string; contentType: string };
+  /** Who cancelled it, when and why — it stays on the record, out of the total. */
+  cancelled: { by: string | null; at: string; reason: string } | null;
+}
+
+export interface WorkOrderList {
+  orders: WorkOrder[];
+  open: number;
+  closed: number;
+  /** How many the Closed list shows at most, newest first. */
+  closedShown: number;
+  mayRecordCosts: boolean;
+  maySeeCosts: boolean;
+}
+
+const NO_ORDERS: WorkOrderList = {
+  orders: [], open: 0, closed: 0, closedShown: 0, mayRecordCosts: false, maySeeCosts: false,
+};
+
+/** Outstanding work, or closed work newest first. A failure is thrown, so the
+    screen can say it failed rather than "nothing outstanding". */
 export async function listWorkOrders(
-  hotelId: string,
-): Promise<{ orders: WorkOrder[]; closed: number }> {
-  if (!hotelId) return { orders: [], closed: 0 };
-  try {
-    return await api<{ orders: WorkOrder[]; closed: number }>(
-      `/api/hotels/${hotelId}/work-orders`);
-  } catch {
-    return { orders: [], closed: 0 };
-  }
+  hotelId: string, view: "open" | "closed" = "open",
+): Promise<WorkOrderList> {
+  if (!hotelId) return NO_ORDERS;
+  return await api<WorkOrderList>(
+    `/api/hotels/${hotelId}/work-orders${view === "closed" ? "?view=closed" : ""}`);
+}
+
+/** Every repair on one piece of equipment, open and closed, newest first. */
+export async function listRepairsForItem(hotelId: string, itemId: string): Promise<WorkOrderList> {
+  if (!hotelId || !itemId) return NO_ORDERS;
+  return await api<WorkOrderList>(
+    `/api/hotels/${hotelId}/work-orders?item=${encodeURIComponent(itemId)}`);
 }
 
 export async function raiseWorkOrder(
   hotelId: string,
   input: { roomNumber?: string; title: string; detail?: string;
-           category?: string; priority?: string },
+           category?: string; priority?: string; equipmentItemId?: string | null },
 ): Promise<{ ok: true; id: string } | { ok: false; reason: string }> {
   return workOrderCall(`/api/hotels/${hotelId}/work-orders`, "POST", input);
 }
@@ -230,5 +272,112 @@ async function workOrderCall(
       return { ok: false, reason: p?.reason ?? error.message };
     }
     throw error;
+  }
+}
+
+/* ══════════════════════════════════════════════════════════════════
+   REPAIRS ON EQUIPMENT, AND WHAT THEY COST — phase 2B
+
+   The owner's answers of 17 September (docs/briefs/decisions-2026-09-17.md
+   D17-5 to D17-7): a repair may point at one tagged thing, which turns
+   "Under repair" while it is open; managers record what it cost, never
+   without proof; a wrong cost is cancelled with a reason.
+   ══════════════════════════════════════════════════════════════════ */
+
+export interface RepairableItem {
+  id: string;
+  name: string;
+  tag: string;
+  /** "Room 204", or the place's name. */
+  place: string;
+  roomNumber: string | null;
+  status: "in_use" | "under_repair";
+  /** A request for it waits in the approvals inbox — a repair on it is refused. */
+  waiting: boolean;
+}
+
+export async function listRepairableEquipment(
+  hotelId: string,
+): Promise<{ items: RepairableItem[]; mayReport: boolean }> {
+  if (!hotelId) return { items: [], mayReport: false };
+  return await api<{ items: RepairableItem[]; mayReport: boolean }>(
+    `/api/hotels/${hotelId}/repairable-equipment`);
+}
+
+/** Take the room out of service FOR a repair, so the repair says the room is out. */
+export async function blockRoomForRepair(
+  hotelId: string, roomNumber: string,
+  input: { reason: string; from: string; to: string | null; note?: string; workOrderId: string },
+): Promise<{ ok: true; id: string } | { ok: false; reason: string }> {
+  return workOrderCall(
+    `/api/hotels/${hotelId}/rooms/${encodeURIComponent(roomNumber)}/block`, "POST", input);
+}
+
+/**
+ * Record a cost with its proof.
+ *
+ * NOT THROUGH `api()`. That call always sends `content-type: application/json`,
+ * which a file upload cannot carry — and when the line is down it would ask the
+ * offline rules about a body it cannot keep. A photo cannot be held on the
+ * phone, so with no connection this says so at once, and nothing is pretended.
+ */
+export async function recordRepairCost(
+  hotelId: string,
+  input: { workOrderId: string; amount: string; note: string; file: File | null },
+): Promise<{ ok: true; id: string } | { ok: false; reason: string }> {
+  const form = new FormData();
+  form.set("workOrderId", input.workOrderId);
+  form.set("amount", input.amount);
+  form.set("note", input.note);
+  if (input.file) form.set("file", input.file);
+
+  const headers = new Headers(await authHeaders());
+  headers.delete("content-type");
+
+  let response: Response;
+  try {
+    response = await fetch(`${await apiBase()}/api/hotels/${hotelId}/repair-costs`, {
+      method: "POST", headers, body: form,
+    });
+  } catch {
+    noteUnreachable();
+    return { ok: false, reason:
+      "A cost needs the connection: its proof is a photo, and a photo cannot be kept on this "
+      + "phone to send later. Record it when you are back online." };
+  }
+  noteReachable();
+  const body = (await response.json().catch(() => null)) as
+    | { ok?: boolean; id?: string; reason?: string; error?: string } | null;
+  if (response.ok && body?.ok && body.id) return { ok: true, id: body.id };
+  return { ok: false, reason: body?.reason ?? body?.error ?? `Not recorded (${response.status}).` };
+}
+
+export async function cancelRepairCost(
+  hotelId: string, costId: string, reason: string,
+): Promise<{ ok: true } | { ok: false; reason: string }> {
+  return workOrderCall(
+    `/api/hotels/${hotelId}/repair-costs/${costId}/cancel`, "POST", { reason });
+}
+
+/**
+ * The proof, fetched with the person's own sign-in — the file is served by the
+ * API behind row security, never by a public link (attachments.ts) — and handed
+ * back as an address this browser alone can open.
+ */
+export async function proofAddress(
+  hotelId: string, attachmentId: string,
+): Promise<{ ok: true; url: string } | { ok: false; reason: string }> {
+  const headers = new Headers(await authHeaders());
+  headers.delete("content-type");
+  try {
+    const response = await fetch(
+      `${await apiBase()}/api/hotels/${hotelId}/attachments/${attachmentId}/file`, { headers });
+    if (!response.ok) {
+      const body = (await response.json().catch(() => null)) as { error?: string } | null;
+      return { ok: false, reason: body?.error ?? "The proof could not be opened." };
+    }
+    return { ok: true, url: URL.createObjectURL(await response.blob()) };
+  } catch {
+    return { ok: false, reason: "The proof needs the connection to open." };
   }
 }
