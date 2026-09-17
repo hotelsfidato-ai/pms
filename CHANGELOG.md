@@ -129,6 +129,40 @@ Then, second question: **can this POS route a KOT and give a printout?**
 
 ---
 
+## 2026-09-17 (night) · Step 1: finish and align — done but for the Store's phase 1A
+
+**Asked for:** step 1 of `docs/NEXT-BUILD-PLAN.md` ("ok so step 1 is completed" — the
+admin and housekeeping chats' halves; the master's half had not started).
+
+**Merged:** admin (the tax actually used; the GM's Settings without the switches) and
+housekeeping (the board refreshes every 30 seconds; migration 103).
+
+**Built by the master, each proved against the old code where a test could:**
+- **104** Main, Kitchen and Bar stores at every hotel and every new one; a replay adds
+  nothing to a hotel that renamed or switched one off.
+- Places and suppliers for the Hotel and Inventory Manager (D17-1); the GM reads
+  Settings (D17-36).
+- **FD-1 / D17-10 — found:** the In house page read dates and listed eight rows, five
+  not yet arrived and three void, while every other screen read status and said one.
+  In house and Due out now read status; the walk-in vacancy check keeps "sold tonight".
+- **INV-6 / D17-11:** Rooms, the property count and the admin list follow the dated
+  block; room 308 (inspected, blocked) is counted out.
+- **FIN-2 / D17-16:** a stay with nothing posted is "No bill yet", never ₹0 settled.
+- **HK-1 / D17-39:** the live channel names a topic; the board updates the moment a
+  room changes (seen: a room set dirty appeared without a reload).
+- **105** All Inclusive (D17-50), no price. Room types heading, "Owed by guests, less
+  refunds", the no-rooms message, Today on a phone, can-run removed (the checklist
+  carries its blockers), one shared ReadProblem, Tables keeps the chosen function,
+  ADM-4 links, the offline and Channel manager sentences.
+
+**Proved:** web 342 · API 908 · database 787 with 105 migrations · replay 105/105 ·
+build clean.
+
+**Found and left for the owner:** FIN-3 — a list keeps an old balance until reloaded,
+because queries never go stale; how fresh a money figure must be is the owner's call.
+
+---
+
 ## 2026-09-17 (evening) · The owner's D17 answers, built by seven chats and merged
 
 **Asked for:** the owner interviewed on every open question (25 answers,

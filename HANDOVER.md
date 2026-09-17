@@ -404,6 +404,24 @@ menus at the equipment merge, EQ-2. **Next free migration: 097.** Owner chose:
   in `navigation.ts` and 068 (left: they may be the owner's), EQ-3 (dev only).
 - **Next free migration: 099.**
 
+**17 September night — STEP 1 of `docs/NEXT-BUILD-PLAN.md` DONE except the Store
+chat's phase 1A (still working).** Merged: admin (tax in use, GM Settings without
+switches), housekeeping (board every 30 s, migration 103). Built by the master:
+**104** Main/Kitchen/Bar stores at every hotel (the Store chat's paste given) ·
+places for Hotel/Inventory Manager · GM reads Settings · Room types heading ·
+"Owed by guests, less refunds" · no-rooms message (FD-5) · Today on a phone (FD-7)
+· can-run removed (checklist carries the blockers) · **FIN-2** no bill is "No bill
+yet", never ₹0 · **INV-6** out of service is the dated block · **FD-1** In house is
+who has checked in (the In house page listed 8 by dates — due-in and void — while
+every other screen said 1) · **105** All Inclusive meal plan (no price) · the live
+channel carries a topic and the housekeeping board is live · one shared ReadProblem
+· Tables' draft keeps the function · ADM-4 links · two sentences. Gates on the
+step-1 head: web 342 · API 908 · database 787 (105) · replay 105/105 · build clean.
+**Live is still `eaf6916`** — the 17 September deploys were not run. **Open for the
+owner:** FIN-3, how fresh a money figure must be (a list keeps an old balance until
+reloaded — the cache never goes stale). **Next free migration: 106** (the Store chat
+was told 105; renumber at its merge).
+
 **17 September evening — round D17 MERGED.** Banquet, POS, night audit (migration
 renumbered 100), guests, finance, admin (101), housekeeping (102, its equipment
 edits reviewed), stores STO-2..11. Gates on `842487b`: web 327 · API 873 ·
