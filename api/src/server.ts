@@ -94,6 +94,12 @@ app.use(
          while the server is plainly up. */
       "idempotency-key",
     ],
+    /* The browser hides every response header but a handful from a page on
+       another origin. A downloaded report's name is in Content-Disposition
+       (routes/reportFiles.ts); unexposed, the website on
+       pms.fidatohotels.com could not read it and every file would save
+       under a made-up name. */
+    exposeHeaders: ["content-disposition"],
     credentials: true,
 
     /* Without this the browser sends its own default, which in Chrome

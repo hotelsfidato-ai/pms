@@ -58,6 +58,9 @@ vi.mock("@/lib/api", () => ({
   currentSubject: () => "stub-staff",
   apiBase: async () => "",
   authHeaders: async () => ({}),
+  /* A screen's Download button: the real one is proved in src/lib/download.test.ts. */
+  downloadFile: async () => "stub-file",
+  filenameFrom: () => null,
 
   getSession: async () => ({
     scope: {

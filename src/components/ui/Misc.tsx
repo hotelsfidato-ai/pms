@@ -1,4 +1,4 @@
-import { forwardRef, type ReactNode, type InputHTMLAttributes } from "react";
+import { forwardRef, useId, type ReactNode, type InputHTMLAttributes } from "react";
 import * as CheckboxPrimitive from "@radix-ui/react-checkbox";
 import * as SwitchPrimitive from "@radix-ui/react-switch";
 import { Check, Minus, Star } from "lucide-react";
@@ -37,10 +37,16 @@ export function Avatar({
   );
 }
 
-/* ── Checkbox ──────────────────────────────────────────────────── */
+/* ── Checkbox ──────────────────────────────────────────────────────
+   A box must say what it ticks to a screen reader, not only to the eye.
+   With `label`, the text is tied to the box. Without one, the screen names
+   it: an `id` for its own <label htmlFor>, or `aria-label`, or
+   `aria-labelledby`. The Channel manager chat found boxes read out as
+   "checkbox, not checked" and nothing else (17 September). */
 
 export function Checkbox({
   checked, onCheckedChange, label, disabled, indeterminate, className,
+  id, "aria-label": ariaLabel, "aria-labelledby": ariaLabelledBy,
 }: {
   checked?: boolean;
   onCheckedChange?: (checked: boolean) => void;
@@ -48,9 +54,16 @@ export function Checkbox({
   disabled?: boolean;
   indeterminate?: boolean;
   className?: string;
+  id?: string;
+  "aria-label"?: string;
+  "aria-labelledby"?: string;
 }) {
+  const labelId = useId();
   const control = (
     <CheckboxPrimitive.Root
+      id={id}
+      aria-label={ariaLabel}
+      aria-labelledby={label ? labelId : ariaLabelledBy}
       checked={indeterminate ? "indeterminate" : checked}
       onCheckedChange={(value) => onCheckedChange?.(value === true)}
       disabled={disabled}
@@ -75,7 +88,7 @@ export function Checkbox({
   return (
     <label className={cn("flex items-center gap-2.5 cursor-pointer select-none", disabled && "cursor-not-allowed opacity-60")}>
       {control}
-      <span className="text-base text-ink-900">{label}</span>
+      <span id={labelId} className="text-base text-ink-900">{label}</span>
     </label>
   );
 }

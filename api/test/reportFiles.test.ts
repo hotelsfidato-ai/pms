@@ -222,6 +222,13 @@ describe("who may download", () => {
     expect(res.headers.get("content-type")).toContain("application/json");
   });
 
+  it("lets the website read the file's name across origins", async () => {
+    const res = await app.request("/api/hotels/5EL/reports/monthly-statistics.csv?month=2026-08", {
+      headers: { "x-dev-staff-id": uid.gm, origin: "http://localhost:5173" },
+    });
+    expect(res.headers.get("access-control-expose-headers") ?? "").toContain("content-disposition");
+  });
+
   it("refuses an address that is not a report file", async () => {
     const res = await get(uid.gm, "/5EL/reports/manager.exe");
     expect(res.status).toBe(404);
