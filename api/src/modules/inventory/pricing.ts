@@ -101,7 +101,7 @@ pricing.get("/:code/pricing", async (c) => {
     const { rows: planRows } = await client.query<{ code: string; name: string }>(
       `select code, name from meal_plans
         order by case code when 'EP' then 1 when 'CP' then 2
-                           when 'MAP' then 3 when 'AP' then 4 else 5 end, code`,
+                           when 'MAP' then 3 when 'AP' then 4 when 'AI' then 5 else 6 end, code`,
     );
 
     const { rows: offsetRows } = await client.query<{

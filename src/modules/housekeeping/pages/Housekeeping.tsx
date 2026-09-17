@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback } from "react";
+import { useLive } from "@/lib/useLiveOrders";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useParams } from "react-router";
 import {
@@ -150,7 +151,13 @@ export default function HousekeepingPage() {
 
      Not in the background: a phone in a pocket is not a screen anybody is
      reading, and its battery and data are the housekeeper's. */
-  const FLOOR_MS = 30_000;
+  /* THE LIVE HALF (the master, 17 September): the board is told the moment
+     a room, a block, an assignment or a work order changes (103's topic
+     `housekeeping`). The floor stays — slower while the channel is live. */
+  const { live: boardLive } = useLive(hotelId, "housekeeping", [
+    ["housekeeping"], ["hk-assignments"], ["rooms"], ["work-orders"], ["item-repairs"],
+  ]);
+  const FLOOR_MS = boardLive ? 60_000 : 30_000;
 
   const rooms = useQuery({
     queryKey: ["housekeeping", hotelId, BUSINESS_DATE],

@@ -337,6 +337,13 @@ The guards this service must respect:
 
 For the master, 17 September — each is a file this service may not change:
 
+- **DONE by the master, 17 September — the live channel carries a topic.**
+  `realtime.ts` reads `<hotel id>:<topic>` (a bare id is `orders`), the stream
+  sends the topic, `useLive(hotelId, topic, keys)` in `src/lib/useLiveOrders.ts`
+  invalidates only its own keys, and the board is wired (floor 60 s while live,
+  30 s otherwise). Proved: `api/test/live.test.ts` names the topic, failing on the
+  old code; a room set dirty in the database appeared under "Needs cleaning" on an
+  open board without a reload. The request as written, kept below for the record.
 - **The live channel carries a topic — so the board is told the moment a room
   changes (HK-1, the owner's D17-39, 17 September evening).** Asked by the
   housekeeping chat. The housekeeping half is on branch

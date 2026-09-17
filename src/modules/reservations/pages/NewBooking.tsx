@@ -45,6 +45,8 @@ const PLANS = [
   { code: "CP", name: "With breakfast" },
   { code: "MAP", name: "Breakfast and one meal" },
   { code: "AP", name: "All meals" },
+  /* D17-50, 17 September (migration 105). */
+  { code: "AI", name: "All inclusive" },
 ];
 
 interface Line {

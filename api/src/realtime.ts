@@ -34,7 +34,20 @@ import { env } from "./env.ts";
 const CHANNEL = "pos_changed";
 
 /** Hotel id → the callbacks watching it. */
-const watchers = new Map<string, Set<() => void>>();
+/* Watchers by hotel. Each is told the TOPIC that moved (HK-1, 17 September):
+   `orders` for the POS (075's triggers, whose payload is a bare hotel id) and
+   `housekeeping` for the board (103's, `<hotel id>:housekeeping`). A screen
+   refreshes only what its topic touches, so a room marked clean does not
+   refetch every till and kitchen in the hotel. */
+const watchers = new Map<string, Set<(topic: string) => void>>();
+
+/** `<hotel id>` or `<hotel id>:<topic>`; a bare id is `orders`. */
+export function parsePayload(payload: string): { hotelId: string; topic: string } {
+  const at = payload.indexOf(":");
+  return at < 0
+    ? { hotelId: payload, topic: "orders" }
+    : { hotelId: payload.slice(0, at), topic: payload.slice(at + 1) || "orders" };
+}
 
 let client: pg.Client | null = null;
 let backoffMs = 1_000;
@@ -46,12 +59,13 @@ export function isListening(): boolean {
   return client !== null;
 }
 
-function fanOut(hotelId: string): void {
+function fanOut(payload: string): void {
+  const { hotelId, topic } = parsePayload(payload);
   const set = watchers.get(hotelId);
   if (!set) return;
   for (const fn of set) {
     try {
-      fn();
+      fn(topic);
     } catch (error) {
       /* One screen's handler throwing must not stop the others being
          told. A stale stream is exactly the failure this file exists
@@ -122,7 +136,7 @@ export async function stopListening(): Promise<void> {
  * when the screen goes away — a set that only ever grows is a leak that
  * looks like a slow memory climb over a week of service.
  */
-export function watch(hotelId: string, fn: () => void): () => void {
+export function watch(hotelId: string, fn: (topic: string) => void): () => void {
   let set = watchers.get(hotelId);
   if (!set) {
     set = new Set();

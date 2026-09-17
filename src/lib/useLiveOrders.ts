@@ -46,9 +46,31 @@ const AFFECTED = [
   ["floor"],
 ];
 
+/** The topic a `changed` frame names. Before topics the server sent "1",
+    which was always the POS — read as `orders`, so a newer screen still
+    works against an older server during a deploy. */
+function topicOf(frame: string): string {
+  const line = frame.split("\n").find((l) => l.startsWith("data:"));
+  const data = line ? line.slice(5).trim() : "";
+  return data === "" || data === "1" ? "orders" : data;
+}
+
 export function useLiveOrders(hotelId: string | null | undefined): {
   live: boolean;
 } {
+  return useLive(hotelId, "orders", AFFECTED);
+}
+
+/* ══ A SCREEN'S TOPIC (HK-1, the owner's D17-39, 17 September) ══════
+   The stream says WHICH part of the hotel moved: `orders` (the POS) or
+   `housekeeping` (the board). A screen invalidates its own keys only when
+   its own topic moves — one reader, one reconnect and one debounce for
+   every screen, never a second copy of them. */
+export function useLive(
+  hotelId: string | null | undefined,
+  topic: string,
+  keys: readonly (readonly unknown[])[],
+): { live: boolean } {
   const qc = useQueryClient();
   const [live, setLive] = useState(false);
 
@@ -59,6 +81,10 @@ export function useLiveOrders(hotelId: string | null | undefined): {
   const stopped = useRef(false);
   /* The debounce timer, held across renders so teardown cancels it. */
   const pendingRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  /* The keys by ref: a caller's array literal is a new array every render,
+     and in the effect's dependencies it would rebuild the stream each time. */
+  const keysRef = useRef(keys);
+  keysRef.current = keys;
 
   useEffect(() => {
     if (!hotelId) return;
@@ -87,14 +113,14 @@ export function useLiveOrders(hotelId: string | null | undefined): {
       if (pendingRef.current) clearTimeout(pendingRef.current);
       pendingRef.current = setTimeout(() => {
         pendingRef.current = null;
-        for (const key of AFFECTED) void qc.invalidateQueries({ queryKey: key });
+        for (const key of keysRef.current) void qc.invalidateQueries({ queryKey: key });
       }, 350);
     };
 
     /* On connect there is nothing to collapse, and the screen may be
        showing whatever it had when the line dropped. Straight through. */
     const invalidateNow = () => {
-      for (const key of AFFECTED) void qc.invalidateQueries({ queryKey: key });
+      for (const key of keysRef.current) void qc.invalidateQueries({ queryKey: key });
     };
 
     const connect = async () => {
@@ -135,7 +161,7 @@ export function useLiveOrders(hotelId: string | null | undefined): {
           buffer = frames.pop() ?? "";
 
           for (const frame of frames) {
-            if (frame.includes("event: changed")) invalidate();
+            if (frame.includes("event: changed") && topicOf(frame) === topic) invalidate();
           }
         }
         throw new Error("stream ended");
@@ -160,7 +186,7 @@ export function useLiveOrders(hotelId: string | null | undefined): {
       if (pendingRef.current) clearTimeout(pendingRef.current);
       controller?.abort();
     };
-  }, [hotelId, qc]);
+  }, [hotelId, qc, topic]);
 
   return { live };
 }
