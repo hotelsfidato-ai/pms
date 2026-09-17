@@ -135,7 +135,7 @@ describe("a booking reference", () => {
        assertion below is known to be testing something real. */
     const lpad = (await pool.query<{ cut: string }>(
       "select lpad('100000', 4, '0') as cut")).rows[0]!.cut;
-    expect(lpad, "Postgres lpad truncates — the old generators' bug").toBe("1000");
+    expect(lpad, "Postgres lpad truncates - the old generators' bug").toBe("1000");
 
     const c = await pool.connect();
     try {
@@ -153,7 +153,7 @@ describe("a booking reference", () => {
 });
 
 describe("two bookings in the same second", () => {
-  it("collide through the inline SQL both routes used — the fault is real", async () => {
+  it("collide through the inline SQL both routes used - the fault is real", async () => {
     const OLD = `select 'FH-' || to_char(now(), 'YYMM') || '-' ||
                         lpad((coalesce(max(substring(reference from '[0-9]+$')::int), 5000) + 1)::text, 4, '0')
                         as ref
@@ -176,7 +176,7 @@ describe("two bookings in the same second", () => {
     }
   });
 
-  it("do not collide through app.next_reference — the second waits for the first", async () => {
+  it("do not collide through app.next_reference - the second waits for the first", async () => {
     const a = await pool.connect();
     const b = await pool.connect();
     try {

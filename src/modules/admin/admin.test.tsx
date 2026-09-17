@@ -110,7 +110,7 @@ const valueOf = async (label: string) => {
   return term.parentElement!.lastElementChild!.textContent;
 };
 
-describe("D17-37 — the tax in words", () => {
+describe("D17-37 - the tax in words", () => {
   it("says '-' where nobody has set a rate, never 0%", () => {
     expect(taxLine([])).toBe("-");
   });
@@ -133,7 +133,7 @@ describe("D17-37 — the tax in words", () => {
   });
 });
 
-describe("D17-37 — Settings shows the tax actually used", () => {
+describe("D17-37 - Settings shows the tax actually used", () => {
   it("one row per kind, from finance's rules, '-' where nothing is set", async () => {
     as("group-admin");
     settingsServer();
@@ -147,7 +147,7 @@ describe("D17-37 — Settings shows the tax actually used", () => {
     expect(screen.queryByText(/CGST|SGST|editable at/i)).toBeNull();
   });
 
-  it("a failed read says so — it is not '-', which would claim nothing is set", async () => {
+  it("a failed read says so - it is not '-', which would claim nothing is set", async () => {
     as("group-admin");
     settingsServer(() => { throw new ApiError(500, "Request failed (500)."); });
     renderAt("/admin/settings", <SettingsPage />);
@@ -157,7 +157,7 @@ describe("D17-37 — Settings shows the tax actually used", () => {
   });
 });
 
-describe("D17-36 — the switches are the owner's and an administrator's", () => {
+describe("D17-36 - the switches are the owner's and an administrator's", () => {
   it.each([
     ["the group administrator", "group-admin"],
     ["an administrator", "admin"],
@@ -181,7 +181,7 @@ describe("D17-36 — the switches are the owner's and an administrator's", () =>
   });
 });
 
-describe("D17-37 — every Properties card shows the tax actually used", () => {
+describe("D17-37 - every Properties card shows the tax actually used", () => {
   const PROPERTY = {
     id: "5EL", name: "5 Elements Akkalkot", address: "Akkalkot", phone: "", email: "",
     gstin: "27AAGCF5655F1ZI", currency: "INR", checkInTime: "12:00", checkOutTime: "11:00",
@@ -189,7 +189,7 @@ describe("D17-37 — every Properties card shows the tax actually used", () => {
     tax: { cgst: 2.5, sgst: 2.5 }, paymentMethods: [],
   };
 
-  it("the card a GM or a clerk sees — and not the old flat pair", async () => {
+  it("the card a GM or a clerk sees - and not the old flat pair", async () => {
     as("gm");
     server({
       "GET /api/hotels": () => ({ scope: { isGroupAdmin: false, hotels: [] }, hotels: [{ id: AGRA_HOTEL, code: "5EL" }] }),

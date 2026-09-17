@@ -9,7 +9,7 @@ import { listDailyStatistics, getPeriodStatistics, getTodaySnapshot } from "@/mo
 
 const OTHER_HOTEL = "some-other-property";
 
-describe("the seam — scoping", () => {
+describe("the seam - scoping", () => {
   it("returns nothing for a hotel the user has no data for", async () => {
     expect(await getProperty(OTHER_HOTEL)).toBeNull();
     expect(await listRooms(OTHER_HOTEL)).toEqual([]);
@@ -42,7 +42,7 @@ describe("the seam — scoping", () => {
   });
 });
 
-describe("the seam — the front desk's lists", () => {
+describe("the seam - the front desk's lists", () => {
   it("pins the demo to the Night Audit's business date", () => {
     expect(BUSINESS_DATE).toBe("2026-08-25");
   });
@@ -91,7 +91,7 @@ describe("the seam — the front desk's lists", () => {
   });
 });
 
-describe("the seam — statistics reconcile to the Manager Report", () => {
+describe("the seam - statistics reconcile to the Manager Report", () => {
   it("reports 431 available, 132 sold, 30.63% for the PTD window", async () => {
     const id = await defaultPropertyId();
     const s = (await getPeriodStatistics(id))!;
@@ -108,7 +108,7 @@ describe("the seam — statistics reconcile to the Manager Report", () => {
   });
 });
 
-describe("the seam — group bookings", () => {
+describe("the seam - group bookings", () => {
   it("returns three rooms on one reference", async () => {
     const id = await defaultPropertyId();
     /* "all", not the default. `listGroups` now answers "here and
@@ -125,7 +125,7 @@ describe("the seam — group bookings", () => {
   });
 });
 
-describe("Rule 5 — hotelId in every query key", () => {
+describe("Rule 5 - hotelId in every query key", () => {
   it("carries the hotel id in every key that is hotel-scoped", () => {
     const hotelId = "hotel-under-test";
     const built: unknown[][] = [
@@ -154,7 +154,7 @@ describe("Rule 5 — hotelId in every query key", () => {
   });
 });
 
-describe("Rule 2 — nothing outside the seam reaches for a fixture", () => {
+describe("Rule 2 - nothing outside the seam reaches for a fixture", () => {
   /* This is the rule that makes the backend swappable. It is worth a
      test rather than a comment, because it fails silently otherwise. */
   const SRC = join(process.cwd(), "src");
@@ -183,7 +183,7 @@ describe("Rule 2 — nothing outside the seam reaches for a fixture", () => {
   });
 });
 
-describe("Rule 2b — a function nobody calls is a capability nobody can reach", () => {
+describe("Rule 2b - a function nobody calls is a capability nobody can reach", () => {
   /* ══════════════════════════════════════════════════════════════════
      THE GATE THIS PROJECT NEEDED SIX TIMES BEFORE IT EXISTED
 
@@ -358,7 +358,7 @@ describe("Rule 2b — a function nobody calls is a capability nobody can reach",
 
     expect(
       unreachable,
-      "these exist and nothing can reach them — build the path, or delete "
+      "these exist and nothing can reach them - build the path, or delete "
       + `them: ${unreachable.join(", ")}`,
     ).toEqual([]);
   });
@@ -371,7 +371,7 @@ describe("Rule 2b — a function nobody calls is a capability nobody can reach",
 
     expect(
       nowReachable,
-      "these are reachable now — take them off KNOWN_UNREACHABLE: "
+      "these are reachable now - take them off KNOWN_UNREACHABLE: "
       + nowReachable.join(", "),
     ).toEqual([]);
   });

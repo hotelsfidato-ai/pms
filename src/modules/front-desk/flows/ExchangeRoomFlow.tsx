@@ -101,7 +101,7 @@ export function ExchangeRoomFlow({
               title="Nobody to swap with"
               description={
                 "An exchange trades two occupied rooms. There is no other "
-                + "guest in the house right now — to move this guest into an "
+                + "guest in the house right now - to move this guest into an "
                 + "empty room, use a room move instead."
               }
             />
@@ -109,7 +109,7 @@ export function ExchangeRoomFlow({
             <>
               <div>
                 <p className="text-sm text-grey-600 mb-2">
-                  Swap with whom? Only guests currently in a room appear —
+                  Swap with whom? Only guests currently in a room appear - 
                   an empty room is a move, not an exchange.
                 </p>
                 <ul className="space-y-1.5 max-h-[220px] overflow-y-auto
@@ -154,7 +154,7 @@ export function ExchangeRoomFlow({
               </Field>
 
               <Field label="Why" required
-                     hint="Two guests changed rooms — somebody will ask.">
+                     hint="Two guests changed rooms - somebody will ask.">
                 {(f) => (
                   <Input {...fieldProps(f)} value={reason}
                          placeholder="Couple wanted the quiet side"

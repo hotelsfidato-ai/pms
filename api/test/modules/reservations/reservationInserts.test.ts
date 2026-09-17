@@ -65,7 +65,7 @@ describe("every way a reservation is created", () => {
 
     expect(
       missing,
-      "these create a reservation with no booking channel — the booking "
+      "these create a reservation with no booking channel - the booking "
       + "form refuses that, so every other door must too:\n  "
       + missing.join("\n  "),
     ).toEqual([]);

@@ -253,7 +253,7 @@ if (process.argv[1]?.endsWith("server.ts")) {
   server.on("error", (error: NodeJS.ErrnoException) => {
     if (error.code === "EADDRINUSE") {
       console.error(
-        `\n  Port ${env.port} is already in use — an older API is still ` +
+        `\n  Port ${env.port} is already in use - an older API is still ` +
           `serving it.\n  Anything you test now runs against THAT code, ` +
           `not this.\n\n  Windows:  Get-NetTCPConnection -LocalPort ` +
           `${env.port} | Stop-Process -Id { $_.OwningProcess } -Force\n`,

@@ -15,7 +15,7 @@ async function chart(start = BUSINESS_DATE) {
   return data;
 }
 
-describe("tape chart — the window", () => {
+describe("tape chart - the window", () => {
   it("returns exactly fourteen dates", async () => {
     expect((await chart()).dates).toHaveLength(14);
   });
@@ -40,7 +40,7 @@ describe("tape chart — the window", () => {
   });
 });
 
-describe("tape chart — rooms and bars", () => {
+describe("tape chart - rooms and bars", () => {
   it("carries every physical room, so 308 can be shown under Blocked", async () => {
     const rooms = (await chart()).roomTypes.flatMap((t) => t.rooms);
     expect(rooms).toHaveLength(18);
@@ -111,7 +111,7 @@ describe("tape chart — rooms and bars", () => {
   });
 });
 
-describe("tape chart — counts agree with what they filter to", () => {
+describe("tape chart - counts agree with what they filter to", () => {
   /* The defect this prevents: a pill reading "Occupied 6" that filters
      to nine rows. Both must come from `room.state`. */
   it("derives every count from room state on the business date", async () => {
@@ -133,7 +133,7 @@ describe("tape chart — counts agree with what they filter to", () => {
   });
 });
 
-describe("tape chart — the footer", () => {
+describe("tape chart - the footer", () => {
   it("gives one column per date", async () => {
     const data = await chart();
     expect(data.footer).toHaveLength(14);
@@ -158,7 +158,7 @@ describe("tape chart — the footer", () => {
   });
 });
 
-describe("tape chart — room type groups", () => {
+describe("tape chart - room type groups", () => {
   it("shows availability and a rate for every type on every date", async () => {
     const data = await chart();
     for (const type of data.roomTypes) {
@@ -177,7 +177,7 @@ describe("tape chart — room type groups", () => {
     }
   });
 
-  it("never shows a zero rate — a dash is the honest answer", async () => {
+  it("never shows a zero rate - a dash is the honest answer", async () => {
     const data = await chart();
     const zeros = data.roomTypes
       .flatMap((t) => t.perDate)

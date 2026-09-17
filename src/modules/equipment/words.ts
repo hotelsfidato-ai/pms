@@ -11,7 +11,7 @@ import type { EquipmentItem, EquipmentStatus } from "./data/equipment";
    server already worded, so the list, the item and the export agree.
    ══════════════════════════════════════════════════════════════════ */
 
-export const DASH = "—";
+export const DASH = "-";
 
 export const STATUS_LABEL: Record<EquipmentStatus, string> = {
   in_use: "In use",

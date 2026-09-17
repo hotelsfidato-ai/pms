@@ -69,7 +69,7 @@ const ROLE_WHAT: Partial<Record<Role, string>> = {
   front_desk:      "Bookings, check-in, bills, the cash drawer",
   housekeeping:    "Room status and work orders",
   kitchen_manager: "The pass and the menu",
-  chef:            "The pass — moves dishes along, touches no money",
+  chef:            "The pass - moves dishes along, touches no money",
   pos:             "The till, orders and the day end",
   stores:          "Stock, receiving and issues. Raises purchases",
   finance:         "Invoices, the city ledger and the reports",
@@ -131,7 +131,7 @@ export default function PeoplePage() {
               <span className="font-medium">
                 {stranded.length === 1 ? "One person can" : `${stranded.length} people can`} sign in and see nothing
               </span>
-              {" — "}
+              {" - "}
               {stranded.map((s) => s.name).join(", ")}
               {". "}
               Give them a property below. Until then the app opens empty
@@ -174,7 +174,7 @@ export default function PeoplePage() {
               opening the screen. Two places said one thing, which is
               this project's most expensive shape. */}
           Adding somebody creates their sign-in account and sets the password
-          you give. Tell it to them — nothing is emailed. The address has to be
+          you give. Tell it to them - nothing is emailed. The address has to be
           the one they actually use: it is what they sign in with, and a typo
           means a person who cannot get in.
         </span>
@@ -231,7 +231,7 @@ function PersonCard({ person, onGrant, onChanged }: {
     if (!res.ok) return toast.error("Not deactivated", res.reason);
     toast.success(
       `${person.name} can no longer sign in`,
-      "Their name stays on everything they did — the audit log would be "
+      "Their name stays on everything they did - the audit log would be "
       + "unreadable without it.");
     onChanged();
   };
@@ -309,14 +309,14 @@ function PersonCard({ person, onGrant, onChanged }: {
             /* Said here rather than left to be discovered. The pill
                above is the flag; this is what to do about it. */
             <p className="text-sm text-brand-red leading-relaxed">
-              No sign-in account yet — they cannot get in at all. Set a
+              No sign-in account yet - they cannot get in at all. Set a
               password and they can.
             </p>
           ) : person.access.length === 0 ? (
             /* A DASH, in the sense this project means it: no access is a
                fact worth stating, not an empty list to skip past. */
             <p className="text-sm text-grey-500">
-              — no property yet, so this account opens empty
+              - no property yet, so this account opens empty
             </p>
           ) : (
             <ul className="flex flex-wrap gap-1.5">
@@ -434,7 +434,7 @@ function PasswordDialog({ person, onClose, onSaved }: {
           <p className="text-sm text-grey-600">
             They sign in with{" "}
             <span className="text-ink-900">{person.email}</span> and this
-            password. Nothing is emailed — tell them yourself.
+            password. Nothing is emailed - tell them yourself.
           </p>
         </div>
       </DialogContent>
@@ -550,7 +550,7 @@ function AddPersonDialog({ open, onOpenChange, onAdded }: {
     if (!res.ok) return toast.error("Not added", res.reason);
     toast.success(
       res.existed ? `${name.trim()} was already here` : `${name.trim()} added`,
-      "They can sign in now. Give them a property next — until then the "
+      "They can sign in now. Give them a property next - until then the "
       + "app opens empty for them.");
     setName(""); setEmail(""); setPassword("");
     onAdded();
@@ -599,7 +599,7 @@ function AddPersonDialog({ open, onOpenChange, onAdded }: {
           </Field>
           <Field
             label="A password for them" required
-            hint={`At least ${MIN_PASSWORD} characters. Tell it to them — nothing is emailed.`}
+            hint={`At least ${MIN_PASSWORD} characters. Tell it to them - nothing is emailed.`}
             error={password.length > 0 && password.length < MIN_PASSWORD
               ? `At least ${MIN_PASSWORD} characters.` : undefined}
           >
@@ -616,7 +616,7 @@ function AddPersonDialog({ open, onOpenChange, onAdded }: {
                         bg-grey-50 p-3 leading-relaxed">
             This adds an ordinary member of staff. Somebody who should reach
             <em> every</em> property is a group administrator, and making one
-            takes the provisioning key — a deliberate step, because it is the
+            takes the provisioning key - a deliberate step, because it is the
             only role that steps outside per-property access.
           </p>
         </div>

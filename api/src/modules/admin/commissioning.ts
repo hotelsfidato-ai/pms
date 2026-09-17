@@ -96,7 +96,7 @@ inventorySetup.get("/:code/commissioning", async (c) => {
           ? "Not set. Every invoice this property issues carries it."
           : placeholderGstin
             ? `${hotel.gstin} is the standard dummy number. It PRINTS on the `
-              + "tax invoice and the restaurant bill — a guest handed one has "
+              + "tax invoice and the restaurant bill - a guest handed one has "
               + "a document with a made-up tax number on it."
             : null,
         blocking: true,
@@ -117,7 +117,7 @@ inventorySetup.get("/:code/commissioning", async (c) => {
         label: "Room types",
         done: types > 0,
         detail: types > 0 ? null
-          : "What the property sells — Standard, Deluxe, Suite. Rooms are of "
+          : "What the property sells - Standard, Deluxe, Suite. Rooms are of "
             + "a type and rates are set against one.",
         blocking: true,
         to: "/room-types",
@@ -129,7 +129,7 @@ inventorySetup.get("/:code/commissioning", async (c) => {
         detail: types === 0 ? "No room types yet."
           : unpriced === 0 ? null
             : `${unpriced} of ${types} have no price, so they show a dash and `
-              + "cannot be sold. That is deliberate — an unpriced room is not "
+              + "cannot be sold. That is deliberate - an unpriced room is not "
               + "a free one.",
         blocking: true,
         to: "/room-types",
@@ -178,7 +178,7 @@ inventorySetup.get("/:code/commissioning", async (c) => {
         label: "Cancellation terms",
         done: policies > 0,
         detail: policies > 0 ? null
-          : "Without terms a no-show is charged nothing — the night audit "
+          : "Without terms a no-show is charged nothing - the night audit "
             + "counts it and says it could not bill, which is honest and is "
             + "not what most properties want.",
         blocking: false,

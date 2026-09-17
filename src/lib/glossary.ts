@@ -42,11 +42,11 @@ export const GLOSSARY: Record<TermKey, { term: string; means: string }> = {
     means: "Revenue per available room: room revenue divided by every room that could be sold, sold or not. Unlike the average rate, it falls when rooms stay empty.",
   },
   ptd: {
-    term: "PTD — period to date",
+    term: "PTD - period to date",
     means: "The month so far: from the 1st of this month up to today's business date.",
   },
   ytd: {
-    term: "YTD — year to date",
+    term: "YTD - year to date",
     means: "The financial year so far: from 1 April up to today's business date.",
   },
   cityLedger: {

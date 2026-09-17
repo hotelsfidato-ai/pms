@@ -155,7 +155,7 @@ export function DishDialog({
               </div>
               {!ready && (
                 <p className="text-sm text-grey-600 mt-2">
-                  This dish is sold by variation — it has no price of its own.
+                  This dish is sold by variation - it has no price of its own.
                 </p>
               )}
             </section>

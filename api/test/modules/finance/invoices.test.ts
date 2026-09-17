@@ -133,7 +133,7 @@ async function invoiceableStay(): Promise<string> {
     if (!rows[0]) {
       throw new Error(
         "No un-invoiced folio with charges at the demo property. Reload the " +
-          "fixture — `npm test` does this, and running vitest directly does not.",
+          "fixture - `npm test` does this, and running vitest directly does not.",
       );
     }
     return rows[0].id;
@@ -205,7 +205,7 @@ describe("issuing a tax invoice", () => {
          worse than no test. */
       throw new Error(
         "No un-invoiced folio with a standalone 'tax' posting. This test " +
-          "cannot prove anything — reload the demo fixture.",
+          "cannot prove anything - reload the demo fixture.",
       );
     }
 
@@ -456,7 +456,7 @@ describe("Form C", () => {
     expect(mine!.reference).toBe(`FRRO/${tag}`);
   });
 
-  it("keeps the filing — evidence is not deletable", async () => {
+  it("keeps the filing - evidence is not deletable", async () => {
     const db = await admin();
     try {
       /* pms_app must not be able to remove a compliance record. Checked

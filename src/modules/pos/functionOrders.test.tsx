@@ -122,7 +122,7 @@ async function padWith(attachable: () => unknown) {
   return { calls, sent };
 }
 
-describe("Tables — a function chosen when ordering", () => {
+describe("Tables - a function chosen when ordering", () => {
   it("sends the chosen function with the round", async () => {
     const { calls, sent } = await padWith(functionsOn);
 
@@ -190,7 +190,7 @@ function terminalWith(order: Order) {
   return calls;
 }
 
-describe("the Terminal — an order on a function", () => {
+describe("the Terminal - an order on a function", () => {
   it("is settled to the function, and the other ways are switched off with the reason", async () => {
     const calls = terminalWith(anOrder({ eventId: "e-1", eventTitle: "Sharma wedding" }));
     fireEvent.click(await screen.findByRole("button", { name: /20260825-5/ }));
@@ -223,7 +223,7 @@ describe("the Terminal — an order on a function", () => {
 
 /* ── The Till ───────────────────────────────────────────────────── */
 
-describe("the Till — an order on a function", () => {
+describe("the Till - an order on a function", () => {
   it("offers Charge to the function, and switches off room, cash, card, UPI and Part", async () => {
     const order = anOrder({ eventId: "e-1", eventTitle: "Sharma wedding" });
     server({
@@ -238,7 +238,7 @@ describe("the Till — an order on a function", () => {
 
     const charge = await screen.findByRole("button", { name: "Charge to Sharma wedding" });
     expect(charge.getAttribute("data-variant")).toBe("primary");
-    for (const name of [/^Cash$/, /^Card$/, /^UPI$/, /^Charge to room$/, /Part — pay two ways/]) {
+    for (const name of [/^Cash$/, /^Card$/, /^UPI$/, /^Charge to room$/, /Part - pay two ways/]) {
       expect((screen.getByRole("button", { name }) as HTMLButtonElement).disabled,
         String(name)).toBe(true);
     }
@@ -248,7 +248,7 @@ describe("the Till — an order on a function", () => {
 
 /* ── Close restaurant day ───────────────────────────────────────── */
 
-describe("Close restaurant day — a bill on a function", () => {
+describe("Close restaurant day - a bill on a function", () => {
   it("is listed as To a function, not as money in the tin", async () => {
     const day: DayEnd = {
       outlet: { code: "REST", name: "Fidato Restaurant" },

@@ -66,7 +66,7 @@ export function CommissioningCard({ hotelId }: { hotelId: string }) {
             ? "Everything that stops a booking is settled. The rest is worth "
               + "doing and does not block anything."
             : `${blocking.length === 1 ? "One thing" : `${blocking.length} things`} `
-              + "must be settled first — until then a booking, a bill or the "
+              + "must be settled first - until then a booking, a bill or the "
               + "night audit will refuse and say so."}
         </p>
 

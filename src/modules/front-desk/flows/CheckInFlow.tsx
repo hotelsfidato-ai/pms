@@ -324,7 +324,7 @@ export function CheckInFlow({
                       id={id}
                       value={idSkipReason}
                       onChange={(e) => setIdSkipReason(e.target.value)}
-                      placeholder="Scanner offline — to be captured at breakfast"
+                      placeholder="Scanner offline - to be captured at breakfast"
                     />
                   )}
                 </Field>
@@ -402,7 +402,7 @@ export function CheckInFlow({
                     (defect 246). */}
                 <Line
                   label="Rack rate"
-                  value={stay.rackTariff === null ? "—" : money(stay.rackTariff)}
+                  value={stay.rackTariff === null ? "-" : money(stay.rackTariff)}
                   muted
                 />
                 <Line
@@ -445,7 +445,7 @@ export function CheckInFlow({
                   </p>
                 ) : (
                   <p className="text-brand-yellow">
-                    ID not captured — {idSkipReason}
+                    ID not captured - {idSkipReason}
                   </p>
                 )}
               </div>

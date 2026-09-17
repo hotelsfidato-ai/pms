@@ -133,7 +133,7 @@ const onFile = async (guestName: string) => {
       `select (select count(*) from guests where full_name = $1)::text as guests,
               count(r.id)::text as reservations,
               (select count(*) from reservation_groups rg
-                where rg.name like $1 || ' — %'
+                where rg.name like $1 || ' - %'
                    or rg.id in (select r3.group_id from reservations r3
                                   join guests g3 on g3.id = r3.guest_id
                                  where g3.full_name = $1))::text as groups,
@@ -407,7 +407,7 @@ describe("RES-1 · a refused booking leaves nothing behind", () => {
     ...over,
   });
 
-  it("⚠ a line with no price writes nothing — not the lines before it", async () => {
+  it("⚠ a line with no price writes nothing - not the lines before it", async () => {
     const res = await post(refusedOnLineTwo("RES1 Unpriced",
       { roomTypeId: typeId, mealPlan: "EP", adults: base + 1, rooms: 1 }));
     expect(res.status, await res.clone().text()).toBe(409);
@@ -431,7 +431,7 @@ describe("RES-1 · a refused booking leaves nothing behind", () => {
     expect(await onFile("RES1 Too many")).toEqual(nothing);
   });
 
-  it("a channel switched off writes nothing — not even the guest", async () => {
+  it("a channel switched off writes nothing - not even the guest", async () => {
     const db = await admin();
     try {
       await db.query("update booking_sources set is_active = false where id = $1", [otherSource]);
@@ -466,7 +466,7 @@ describe("RES-2 · one booking reference, from app.next_reference", () => {
      a 500. 092's own file (api/test/bookingReference.test.ts) proves the
      function; these prove THIS DOOR uses it, inside its own transaction. */
 
-  it("is FH, the hotel's code, the month on the hotel's clock, and a running number — every room", async () => {
+  it("is FH, the hotel's code, the month on the hotel's clock, and a running number - every room", async () => {
     const db = await admin();
     let yymm: string;
     try {

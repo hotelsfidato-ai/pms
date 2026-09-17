@@ -290,7 +290,7 @@ function Figure({ label, value }: { label: string; value: string | null }) {
       <p className="text-sm text-grey-500">{label}</p>
       <p className={cn("text-lg font-semibold tabular",
                        value === null ? "text-grey-500" : "text-ink-900")}>
-        {value ?? "—"}
+        {value ?? "-"}
       </p>
     </div>
   );
@@ -374,7 +374,7 @@ function AddHereDialog({ code, roles, onClose, onSaved }: {
           </Field>
           <Field
             label="A password for them" required
-            hint={`At least ${MIN_PASSWORD} characters. Tell it to them — nothing is emailed.`}
+            hint={`At least ${MIN_PASSWORD} characters. Tell it to them - nothing is emailed.`}
             error={password.length > 0 && password.length < MIN_PASSWORD
               ? `At least ${MIN_PASSWORD} characters.` : undefined}
           >

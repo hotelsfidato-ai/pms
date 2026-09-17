@@ -201,7 +201,7 @@ export function AssignRoomFlow({ hotelId }: { hotelId: string }) {
                     allowed and worth saying before it happens, not after. */}
                 <span className="block text-2xs text-grey-500 mt-1 leading-relaxed">
                   {chosen.guest} booked a {chosen.roomType}. Another type is
-                  allowed — it will be noted on the assignment.
+                  allowed - it will be noted on the assignment.
                 </span>
               </label>
             )}

@@ -245,7 +245,7 @@ export function describeError(error: unknown): ErrorDetail {
       title: "You do not have access to this",
       message:
         "The security rules refused this read. If you should be able to see it, your " +
-        "role needs changing — an administrator can do that from Admin → Users.",
+        "role needs changing - an administrator can do that from Admin → Users.",
     };
   }
 

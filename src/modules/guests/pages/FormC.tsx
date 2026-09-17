@@ -168,7 +168,7 @@ export default function FormCPage() {
           <p className="text-sm text-grey-600 mt-0.5 leading-relaxed">
             Filing happens on the government portal. This is a register: it
             names who owes a filing and records the acknowledgement you get
-            back. The reference is required — a register with no evidence
+            back. The reference is required - a register with no evidence
             reads as compliance and is not.
           </p>
         </div>

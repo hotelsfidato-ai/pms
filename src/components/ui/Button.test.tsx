@@ -36,7 +36,7 @@ describe("touch targets", () => {
     ).toBe(true);
   });
 
-  it("keeps desktop density — it does not just make every button tall", () => {
+  it("keeps desktop density - it does not just make every button tall", () => {
     render(<Button size="sm">Issue</Button>);
     const cls = screen.getByRole("button").className;
     /* The point of the pointer variant is that the desktop row stays

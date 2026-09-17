@@ -222,7 +222,7 @@ describe("a repair on a piece of equipment (D17-7)", () => {
     expect(await statusOf(ac)).toBe("in_use");
   });
 
-  it("refuses closing a repair twice — who closed it and what they said stay", async () => {
+  it("refuses closing a repair twice - who closed it and what they said stay", async () => {
     const tv = await add({ name: "HKTEST-R TV", heldAs: "tagged", tag: "HKTEST-R-TV1", roomId: vacantRoom.id });
     const { id } = await json<{ id: string }>(await raise(gm(), { title: "HKTEST-R TV no signal", equipmentItemId: tv }));
     await json(await call(gm(), `/work-orders/${id}`, "PATCH", { status: "done", resolution: "Cable reseated" }));
@@ -251,7 +251,7 @@ describe("a repair on a piece of equipment (D17-7)", () => {
     expect((await sql("select count(*)::int as n from work_orders where title = 'HKTEST-R Lamp flickers'")).rows[0].n).toBe(0);
   });
 
-  it("refuses a thing waiting in the approvals inbox — the owner's answer — and writes nothing", async () => {
+  it("refuses a thing waiting in the approvals inbox - the owner's answer - and writes nothing", async () => {
     const fridge = await add({ name: "HKTEST-R Fridge", heldAs: "tagged", tag: "HKTEST-R-FR1", locationId: store });
     await json(await call(staff.get("housekeeping")!, `/equipment/items/${fridge}/move`, "POST",
       { roomId: vacantRoom.id, note: "HKTEST-R the guest needs one" }));
@@ -406,7 +406,7 @@ describe("a repair cost, with its proof (D17-5, D17-6)", () => {
     expect(grant[0].may).toBe(false);
   });
 
-  it("shows the money to the five and the accountant, and to nobody else — not even as an empty list", async () => {
+  it("shows the money to the five and the accountant, and to nobody else - not even as an empty list", async () => {
     for (const role of ASSIGNABLE_ROLES) {
       const res = await call(staff.get(role)!, "/work-orders");
       if (res.status !== 200) continue;
@@ -421,7 +421,7 @@ describe("a repair cost, with its proof (D17-5, D17-6)", () => {
     }
   });
 
-  it("gives a repair with no standing cost a null total — a dash, never ₹0", async () => {
+  it("gives a repair with no standing cost a null total - a dash, never ₹0", async () => {
     const { id } = await json<{ id: string }>(await raise(gm(), { title: "HKTEST-R Door squeaks" }));
     const row = (await json<{ orders: { id: string; costTotal: number | null; costs: unknown[] }[] }>(
       await call(gm(), "/work-orders"))).orders.find((o) => o.id === id)!;

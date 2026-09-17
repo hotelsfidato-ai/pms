@@ -125,7 +125,7 @@ describe("the Diary", () => {
     expect(screen.queryByText(/2026-11-01/)).toBeNull();
   });
 
-  it("says the diary did not load when the server fails — not that there is no hall", async () => {
+  it("says the diary did not load when the server fails - not that there is no hall", async () => {
     server({});
     diaryPage();
 
@@ -155,7 +155,7 @@ describe("the Diary", () => {
 /* ── Halls and packages ─────────────────────────────────────────── */
 
 describe("Halls and packages", () => {
-  it("says it did not load when the server fails — not that there is no hall", async () => {
+  it("says it did not load when the server fails - not that there is no hall", async () => {
     server({});
     setupPage();
 
@@ -167,7 +167,7 @@ describe("Halls and packages", () => {
 /* ── One function ───────────────────────────────────────────────── */
 
 describe("one function", () => {
-  it("says it did not load when the server fails — not that it does not exist", async () => {
+  it("says it did not load when the server fails - not that it does not exist", async () => {
     server({});
     eventPage();
 

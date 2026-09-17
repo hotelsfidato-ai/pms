@@ -139,7 +139,7 @@ bookingSources.post("/:code/booking-sources", async (c) => {
          reason is not "500". */
       if (err.code === "42501") {
         return refuse(
-          "Adding a booking source is a manager's change — it applies to "
+          "Adding a booking source is a manager's change - it applies to "
           + "every property in the group.");
       }
       throw e;
@@ -205,7 +205,7 @@ bookingSources.patch("/:code/booking-sources/:id", async (c) => {
       }
       if (err.code === "42501") {
         return refuse(
-          "Changing a booking source is a manager's change — it applies to "
+          "Changing a booking source is a manager's change - it applies to "
           + "every property in the group.");
       }
       throw e;

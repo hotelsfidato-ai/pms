@@ -305,7 +305,7 @@ export function OrderPad({
                     DISHES come to — tax, discounts and rounding are the
                     server's and appear on the bill, not here. */}
                 <span className="block tabular text-lg font-semibold text-ink-900 leading-tight">
-                  {lines.length === 0 ? "—" : money(total)}
+                  {lines.length === 0 ? "-" : money(total)}
                 </span>
                 <span className="block text-2xs text-grey-500">
                   {lines.length === 0
@@ -345,7 +345,7 @@ export function OrderPad({
               {noMenu && (
                 <p className="text-sm text-grey-600 leading-relaxed">
                   There is no menu yet. Nothing can be sold until the hotel
-                  enters what it sells — the prices are yours, this system
+                  enters what it sells - the prices are yours, this system
                   ships none.
                 </p>
               )}
@@ -409,7 +409,7 @@ export function OrderPad({
                               {/* A dish sold by variation has no price of
                                   its own. A dash, never a zero. */}
                               {item.variations.length > 0
-                                ? "—"
+                                ? "-"
                                 : money(item.price)}
                             </span>
                           </button>
@@ -518,7 +518,7 @@ export function OrderPad({
                 <p className="flex items-start gap-1.5 text-2xs text-grey-500 mt-3 leading-relaxed">
                   <WifiOff className="size-3.5 shrink-0 mt-px" />
                   <span>
-                    Held on this device. Nothing has been sent — the kitchen
+                    Held on this device. Nothing has been sent - the kitchen
                     sees it when you press Send.
                   </span>
                 </p>

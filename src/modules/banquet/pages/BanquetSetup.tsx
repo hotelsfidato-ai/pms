@@ -154,7 +154,7 @@ export default function BanquetSetupPage() {
           {packages.length === 0 ? (
             <p className="rounded-lg border border-dashed border-grey-200
                           px-3 py-6 text-center text-sm text-grey-500">
-              None. Packages are optional — a function can be fed off-menu, or
+              None. Packages are optional - a function can be fed off-menu, or
               from the till, or not at all.
             </p>
           ) : (
@@ -167,7 +167,7 @@ export default function BanquetSetupPage() {
                   </p>
                   <p className="text-sm text-grey-500">
                     {p.ratePerHead === null
-                      ? <span className="text-grey-500">no rate — agreed per function</span>
+                      ? <span className="text-grey-500">no rate - agreed per function</span>
                       : `${money(p.ratePerHead)} a head`}
                     {p.description ? ` · ${p.description}` : ""}
                   </p>
@@ -268,14 +268,14 @@ function VenueDialog({
                    hint="Leave blank if it has not been measured.">
               {(f) => (
                 <Input {...fieldProps(f)} value={seated} inputMode="numeric"
-                       placeholder="—"
+                       placeholder="-"
                        onChange={(e) => setSeated(e.target.value)} />
               )}
             </Field>
             <Field label="Standing capacity">
               {(f) => (
                 <Input {...fieldProps(f)} value={floating} inputMode="numeric"
-                       placeholder="—"
+                       placeholder="-"
                        onChange={(e) => setFloating(e.target.value)} />
               )}
             </Field>
@@ -291,7 +291,7 @@ function VenueDialog({
           >
             {(f) => (
               <Input {...fieldProps(f)} value={rate} inputMode="decimal"
-                     placeholder="—"
+                     placeholder="-"
                      onChange={(e) => setRate(e.target.value)} />
             )}
           </Field>
@@ -339,7 +339,7 @@ function PackageDialog({
       <DialogContent
         title="Add a package"
         description={"A package can name what is served without carrying a "
-                     + "price — that is how most banquet food is sold here."}
+                     + "price - that is how most banquet food is sold here."}
         footer={
           <>
             <DialogClose asChild>
@@ -363,7 +363,7 @@ function PackageDialog({
             <Field label="Rate a head" hint="Optional.">
               {(f) => (
                 <Input {...fieldProps(f)} value={rate} inputMode="decimal"
-                       placeholder="—"
+                       placeholder="-"
                        onChange={(e) => setRate(e.target.value)} />
               )}
             </Field>

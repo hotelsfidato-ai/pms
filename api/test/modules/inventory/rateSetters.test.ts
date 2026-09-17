@@ -146,7 +146,7 @@ describe("setting a price on the Rate calendar (INV-5)", () => {
     });
   }
 
-  it("asks the role AT THIS HOTEL — a GM elsewhere is reception here", async () => {
+  it("asks the role AT THIS HOTEL - a GM elsewhere is reception here", async () => {
     await clearWrites();
     const res = await setPrice(gmElsewhereId, 3300);
     expect(res.status, await res.clone().text()).toBe(403);

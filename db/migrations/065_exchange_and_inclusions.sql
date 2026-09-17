@@ -60,7 +60,7 @@ begin
 
   if length(trim(coalesce(p_reason, ''))) = 0 then
     raise exception 'an exchange needs a reason'
-      using hint = 'Two guests changed rooms — somebody will ask why.';
+      using hint = 'Two guests changed rooms - somebody will ask why.';
   end if;
 
   /* Locked in a fixed order, by id. Two clerks swapping the same pair from

@@ -79,7 +79,7 @@ export function StayMarks({ stay }: { stay: Stay }) {
           corridors. Neither is read out at the counter. */}
       {stay.isVip && <StatusPill tone="accent">VIP</StatusPill>}
       {stay.isSingleLady && (
-        <StatusPill tone="info">Single lady — placement</StatusPill>
+        <StatusPill tone="info">Single lady - placement</StatusPill>
       )}
     </>
   );

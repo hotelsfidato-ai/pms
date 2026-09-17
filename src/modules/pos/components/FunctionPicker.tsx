@@ -58,7 +58,7 @@ export function FunctionPicker({
       label="Banquet function"
       className={className}
       hint={value
-        ? "Paid on the function's bill — settled to the function, not at the till."
+        ? "Paid on the function's bill - settled to the function, not at the till."
         : "Only for food that goes on a function's bill."}
     >
       {(f) => (

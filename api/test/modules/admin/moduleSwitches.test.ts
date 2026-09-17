@@ -116,7 +116,7 @@ describe("every role tries to flip Banquet hall", () => {
         const body = (await res.json()) as { ok: boolean; reason: string };
         expect(body.ok).toBe(false);
         expect(body.reason).toBe(MODULE_SWITCH_REFUSED);
-        expect(await banquetIsOn(), `${role}'s refusal was cosmetic — the switch moved`).toBe(before);
+        expect(await banquetIsOn(), `${role}'s refusal was cosmetic - the switch moved`).toBe(before);
       }
     },
   );

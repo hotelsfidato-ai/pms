@@ -231,7 +231,7 @@ describe("attaching an order to a banquet function", () => {
   });
 });
 
-describe("paying for an order on a function — on the function's bill only", () => {
+describe("paying for an order on a function - on the function's bill only", () => {
   it("refuses cash, card, UPI and a split for it, and takes nothing", async () => {
     const { body: order } = await newOrder({ eventId: ids["Dinner"] });
 
@@ -294,7 +294,7 @@ describe("paying for an order on a function — on the function's bill only", ()
     expect((await orderRow(order.id)).status).toBe("open");
   });
 
-  it("asks the rule again at the settle — a function cancelled over dinner takes no bill", async () => {
+  it("asks the rule again at the settle - a function cancelled over dinner takes no bill", async () => {
     await func("Cancelled", `${day(0)}T06:00`, `${day(0)}T07:30`, true);
     const { body: order } = await newOrder({ eventId: ids["Cancelled"] });
     expect((await send("POST", `/5EL/banquet/events/${ids["Cancelled"]}/cancel`,

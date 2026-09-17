@@ -155,7 +155,7 @@ export default function KitchenPage() {
           <p className="text-2xs text-grey-500 tabular flex items-center gap-2">
             {/* A dash until the board has loaded — "0 dishes working" over
                 a board that never arrived is the empty-list lie again. */}
-            {board.data ? lines.filter((l) => !l.cancelled).length : "—"} dishes working
+            {board.data ? lines.filter((l) => !l.cancelled).length : "-"} dishes working
             {/* NAMED, because the failure it describes is invisible.
                 A dropped stream leaves a screen that looks exactly
                 like a working one until somebody shouts about a dish
@@ -475,7 +475,7 @@ function Ticket({ line, action, busy, onMove }: {
             {atPass != null
               ? "at the pass"
               : line.prepMinutes == null
-                ? "— est"
+                ? "- est"
                 : `${line.prepMinutes} min est`}
           </span>
         </span>

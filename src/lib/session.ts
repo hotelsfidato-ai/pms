@@ -83,7 +83,7 @@ export function roleFor(scope: ApiScope, hotelId: string | null): Role {
      product mysteriously empty. */
   if (!KNOWN.has(grant.role)) {
     console.error(
-      `[session] unknown role "${grant.role}" — this build does not know it. ` +
+      `[session] unknown role "${grant.role}" - this build does not know it. ` +
       `Treating as read-only. The role lists have drifted; see 078.`,
     );
     return "read_only";

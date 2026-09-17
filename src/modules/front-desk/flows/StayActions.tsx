@@ -60,7 +60,7 @@ export function StayActions({ hotelId, stay, businessDate }: {
                  which is a different act with its own control on the
                  chart. */
               over ? "This stay is over."
-                   : "They have not arrived yet — assign a room instead."
+                   : "They have not arrived yet - assign a room instead."
             }
           >
             Move to another room

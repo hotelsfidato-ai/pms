@@ -149,7 +149,7 @@ begin
        and s.is_active
   ) then
     raise exception
-      'Staff % has no access to hotel % — cannot be recorded on %',
+      'Staff % has no access to hotel % - cannot be recorded on %',
       v_staff, new.hotel_id, tg_table_name
       using hint = 'Add a staff_hotels row, or use a member of that property.';
   end if;
@@ -202,7 +202,7 @@ begin
        and status = 'completed'
   ) then
     raise exception
-      'Business date % is closed for this property — post to the current date instead.',
+      'Business date % is closed for this property - post to the current date instead.',
       new.business_date
       using hint = 'Night audit has already run. Late charges belong to today.';
   end if;

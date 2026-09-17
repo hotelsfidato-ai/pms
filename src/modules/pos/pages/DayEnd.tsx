@@ -62,7 +62,7 @@ const DENOMINATIONS = [500, 200, 100, 50, 20, 10, 5, 2];
 const MOVEMENTS: { kind: MovementKind; label: string; hint: string;
                    sign: -1 | 1; icon: typeof Plus }[] = [
   { kind: "expense",        label: "Expense",    sign: -1, icon: ArrowUpRight,
-    hint: "Paid out of the drawer — a delivery of vegetables, a repair" },
+    hint: "Paid out of the drawer - a delivery of vegetables, a repair" },
   { kind: "top_up",         label: "Cash in",    sign: 1,  icon: ArrowDownLeft,
     hint: "Change brought from the safe" },
   { kind: "withdrawal",     label: "To the safe", sign: -1, icon: Lock,
@@ -281,7 +281,7 @@ function Overview({ day }: { day: DayEnd }) {
           {/* The distinction the drawer stands or falls on. */}
           <p className="mt-3 text-sm text-grey-500">
             Only cash reaches the drawer. A card settlement and a bill
-            charged to a room are business done — they are not in the tin.
+            charged to a room are business done - they are not in the tin.
             {s.byMethod["function"] !== undefined
               && " Nor is an order settled to a banquet function: the host pays for it on the function's bill."}
           </p>
@@ -398,7 +398,7 @@ function CashStep({ hotelId, day, onDone }: {
                     />
                     {/* A dash, not a zero. Nobody counted zero here. */}
                     <span className="ml-auto text-base tabular text-grey-600">
-                      {n > 0 ? money(value * n) : "—"}
+                      {n > 0 ? money(value * n) : "-"}
                     </span>
                   </div>
                 );
@@ -407,7 +407,7 @@ function CashStep({ hotelId, day, onDone }: {
 
             {!closed && (
               <Button onClick={save} disabled={saving} className="h-12 w-full text-base">
-                {saving ? "Saving…" : `Save the count — ${money(counted)}`}
+                {saving ? "Saving…" : `Save the count - ${money(counted)}`}
               </Button>
             )}
           </CardBody>
@@ -443,7 +443,7 @@ function CashStep({ hotelId, day, onDone }: {
               <div className="flex items-baseline justify-between py-3">
                 <dt className="text-base font-medium">Counted</dt>
                 <dd className="text-lg font-semibold tabular">
-                  {counted > 0 ? moneyPrecise(counted) : "—"}
+                  {counted > 0 ? moneyPrecise(counted) : "-"}
                 </dd>
               </div>
             </dl>
@@ -523,7 +523,7 @@ function Movements({ hotelId, day, onDone }: {
     setSaving(false);
     if (!res.ok) return toast.error("Not recorded", res.reason);
     setOpen(false); setAmount(""); setReason("");
-    toast.success("Recorded", `${chosen.label} — ${money(Number(amount))}`);
+    toast.success("Recorded", `${chosen.label} - ${money(Number(amount))}`);
     onDone();
   };
 
@@ -724,7 +724,7 @@ function Finalize({ hotelId, hotelName, day, onDone, onBack }: {
             <div className="flex items-baseline justify-between py-2.5">
               <dt className="text-base text-grey-600">Counted</dt>
               <dd className="text-base tabular">
-                {day.cash.counted === null ? "—" : money(day.cash.counted)}
+                {day.cash.counted === null ? "-" : money(day.cash.counted)}
               </dd>
             </div>
           </dl>

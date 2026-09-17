@@ -211,7 +211,7 @@ export function AmendStayFlow({
             <p className="text-sm text-grey-600 leading-relaxed">
               The room hold moves with the booking. If it is taken for the
               nights being added, nothing changes at all and you will be told
-              which. Added nights are charged at the rate already agreed —
+              which. Added nights are charged at the rate already agreed - 
               changing that is separate.
             </p>
           </div>

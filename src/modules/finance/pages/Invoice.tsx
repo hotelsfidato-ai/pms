@@ -60,7 +60,7 @@ function Party({
       <p className="text-2xs uppercase tracking-wide text-grey-500 mb-1">
         {title}
       </p>
-      <p className="text-base font-semibold text-ink-900">{name ?? "—"}</p>
+      <p className="text-base font-semibold text-ink-900">{name ?? "-"}</p>
       {lines.filter(Boolean).map((l) => (
         <p key={l} className="text-sm text-grey-700 leading-snug">{l}</p>
       ))}
@@ -226,7 +226,7 @@ export default function InvoicePage() {
             })()}
             <p className="text-sm mt-1">
               <span className="text-grey-500">GSTIN </span>
-              <span className="tabular">{data.supplier.gstin ?? "—"}</span>
+              <span className="tabular">{data.supplier.gstin ?? "-"}</span>
             </p>
           </div>
 
@@ -252,7 +252,7 @@ export default function InvoicePage() {
               <span className="font-semibold">This is a credit note.</span>{" "}
               It cancels tax invoice{" "}
               <span className="tabular font-medium">
-                {data.creditsNumber ?? "—"}
+                {data.creditsNumber ?? "-"}
               </span>
               .
             </p>
@@ -287,13 +287,13 @@ export default function InvoicePage() {
               <span className="text-2xs uppercase tracking-wide text-grey-500">
                 Place of supply
               </span>
-              <p className="font-medium">{data.placeOfSupply ?? "—"}</p>
+              <p className="font-medium">{data.placeOfSupply ?? "-"}</p>
               {/* Said on the page, because it is the line people query.
                   Accommodation is supplied where the property is, so the
                   tax is always CGST + SGST. */}
               <p className="text-2xs text-grey-500 leading-snug mt-0.5">
-                Accommodation is supplied at the property's location —
-                IGST Act s.12(3)(b) — so this supply is intra-state.
+                Accommodation is supplied at the property's location - 
+                IGST Act s.12(3)(b) - so this supply is intra-state.
               </p>
             </div>
             <div>

@@ -39,7 +39,7 @@ const LABEL: Record<TaxKind, string> = {
 };
 
 const WHAT: Record<TaxKind, string> = {
-  room: "The night, and everything the front desk adds to it — an early "
+  room: "The night, and everything the front desk adds to it - an early "
       + "arrival, a late departure, laundry, transport.",
   restaurant: "Food and non-alcoholic drink, on any menu category set to it.",
   bar: "Alcohol. Its own rate, and its own decision.",
@@ -89,7 +89,7 @@ export function TaxRulesCard({ hotelId }: { hotelId: string }) {
               <AlertTriangle className="size-4 text-amber-600 shrink-0 mt-0.5" />
               <p className="text-sm text-ink-900 leading-relaxed">
                 {orphaned.length === 1 ? "One menu category sells" : `${orphaned.length} menu categories sell`}
-                {" "}under a heading with no rate set —{" "}
+                {" "}under a heading with no rate set - {" "}
                 <span className="font-medium">
                   {orphaned.map((c) => c.name).join(", ")}
                 </span>
@@ -153,7 +153,7 @@ function KindTile({ rules, onEdit }: {
       {unset ? (
         /* A DASH, not 0%. Nothing here has decided the rate is nought;
            nobody has said what it is. */
-        <p className="text-lg font-semibold text-grey-500 tabular mt-0.5">—</p>
+        <p className="text-lg font-semibold text-grey-500 tabular mt-0.5">-</p>
       ) : (
         <ul className="mt-1 space-y-0.5">
           {rules.slabs.map((s) => (
@@ -252,7 +252,7 @@ function SlabsDialog({ hotelId, rules, open, onOpenChange, onSaved }: {
           <p className="text-sm text-grey-600 leading-relaxed">
             One row is one rate. Leave the amount at zero for the rate that
             applies to everything; add a second row to charge more above a
-            figure — rooms above {money(7500)} being the usual one.
+            figure - rooms above {money(7500)} being the usual one.
           </p>
 
           <ul className="space-y-2">
@@ -309,7 +309,7 @@ function SlabsDialog({ hotelId, rules, open, onOpenChange, onSaved }: {
           {rows.length === 0 && (
             <p className="text-sm text-grey-600 rounded-md border border-grey-200
                           bg-grey-50 p-3 leading-relaxed">
-              With no rates, nothing under this heading can be billed — the
+              With no rates, nothing under this heading can be billed - the
               desk and the till will refuse it and say why. That is the right
               state for something the property does not sell yet.
             </p>

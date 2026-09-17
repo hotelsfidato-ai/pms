@@ -180,7 +180,7 @@ invoices.post("/:code/stays/:id/invoice", async (c) => {
     const totals = await totalsFor(client, f.id);
     if (totals.total <= 0) {
       return refuse(
-        "There is nothing to invoice — the folio carries no charges.",
+        "There is nothing to invoice - the folio carries no charges.",
       );
     }
 

@@ -43,7 +43,7 @@ const REASONS: { value: string; label: string; hint: string }[] = [
   { value: "upgrade", label: "Upgrade",
     hint: "A better room, usually at the same rate" },
   { value: "downgrade", label: "Downgrade",
-    hint: "A lesser room — the rate usually comes down with it" },
+    hint: "A lesser room - the rate usually comes down with it" },
   { value: "fault", label: "Something wrong with the room",
     hint: "The hotel had to move them. Worth being able to find later" },
   { value: "group_consolidation", label: "Putting a group together",
@@ -180,7 +180,7 @@ export function MoveRoomFlow({
 
             <Field
               label="From which night"
-              hint={`The first night in the new room. Up to ${lastMovable} —`
+              hint={`The first night in the new room. Up to ${lastMovable} -`
                 + " the night of departure belongs to nobody."}
             >
               {(f) => (
@@ -228,7 +228,7 @@ export function MoveRoomFlow({
                 otherwise ask a manager, and the manager will guess. */}
             <p className="text-sm text-grey-600 leading-relaxed">
               Moving rooms changes no charge on its own. Nights already
-              posted stay as they are — the guest slept in{" "}
+              posted stay as they are - the guest slept in{" "}
               {stay.roomNumber || "that room"} for them. A new rate applies
               from tonight forward; to change a night already billed, adjust
               it on the folio so there is a reason beside it.

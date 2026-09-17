@@ -168,7 +168,7 @@ afterAll(async () => {
 });
 
 describe("reading what somebody typed", () => {
-  it("reads a date written day first, or as the calendar writes it — and nothing else", () => {
+  it("reads a date written day first, or as the calendar writes it - and nothing else", () => {
     expect(readDate("14/03/2025")).toBe("2025-03-14");
     expect(readDate("4-3-2025")).toBe("2025-03-04");
     expect(readDate("2025-03-14")).toBe("2025-03-14");
@@ -177,7 +177,7 @@ describe("reading what somebody typed", () => {
     expect(readDate("yesterday")).toBeNull();
   });
 
-  it("reads a blank cost as not known — never zero", () => {
+  it("reads a blank cost as not known - never zero", () => {
     expect(readCost("")).toBeNull();
     expect(readCost(null)).toBeNull();
     expect(readCost("₹32,000")).toBe(32000);
@@ -322,7 +322,7 @@ describe("leaving the store (S12–S15)", () => {
     expect(body.reason).toMatch(/waiting in the approvals inbox/);
   });
 
-  it("is in the ONE inbox for the Inventory Manager, with who asked — and the asker may not decide", async () => {
+  it("is in the ONE inbox for the Inventory Manager, with who asked - and the asker may not decide", async () => {
     const { item } = await page(fridge, keeper);
     const row = (await queue(keeper)).find((r) => r.id === item.leaving!.approvalId)!;
     expect(row).toMatchObject({
@@ -385,7 +385,7 @@ describe("leaving the store (S12–S15)", () => {
     expect((await page(shelf)).item.locationId).toBe(store2);
   });
 
-  it("asks even the Inventory Manager — and the GM decides that one", async () => {
+  it("asks even the Inventory Manager - and the GM decides that one", async () => {
     const oven = await add({ name: "EQTEST-R Oven", heldAs: "tagged", tag: "EQTEST-R-O1", locationId: store });
     const asked = await json<{ requested: boolean; approvalId: string }>(
       await call(keeper, `/equipment/items/${oven}/move`, "POST", { locationId: lobby, note: "For the buffet" }));
@@ -497,7 +497,7 @@ describe("importing the opening register", () => {
     expect(await named("EQTEST-R Split AC")).toHaveLength(0);
   });
 
-  it("applies the rows it can read — into the store with no approval, since adding is not leaving", async () => {
+  it("applies the rows it can read - into the store with no approval, since adding is not leaving", async () => {
     await json(await call(gm, "/equipment/import", "POST", { dryRun: false, rows: rowsFor() }));
     const [ac] = await named("EQTEST-R Split AC");
     expect(ac!.tag).toMatch(/^EQ-\d{4,}$/);
@@ -512,7 +512,7 @@ describe("importing the opening register", () => {
 });
 
 describe("the website's import template, read by the server", () => {
-  it("lands every column it offers — none is silently ignored", async () => {
+  it("lands every column it offers - none is silently ignored", async () => {
     await sql(
       `insert into suppliers (hotel_id, name) values ($1, 'EQTEST-R Electricals')
        on conflict (hotel_id, name) do nothing`, [hotelId]);

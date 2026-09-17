@@ -154,7 +154,7 @@ as $$
 begin
   if tg_op = 'INSERT' then
     if new.cancelled_at is not null then
-      raise exception 'A cost is recorded, then cancelled — not recorded cancelled.'
+      raise exception 'A cost is recorded, then cancelled - not recorded cancelled.'
         using errcode = 'check_violation';
     end if;
     if not exists (

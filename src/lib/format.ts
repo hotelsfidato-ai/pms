@@ -78,7 +78,7 @@ export function delta(value: number, digits = 1): string {
    ══════════════════════════════════════════════════════════════════ */
 
 /** Shown wherever a date is absent or unparseable. */
-export const NO_DATE = "—";
+export const NO_DATE = "-";
 
 /** null when the value cannot become a real date. */
 function toDate(value: string | Date | null | undefined): Date | null {
@@ -235,7 +235,7 @@ function underThousand(n: number): string {
  * Sum in SQL and print what came back.
  */
 export function amountInWords(value: number): string {
-  if (!Number.isFinite(value)) return "—";
+  if (!Number.isFinite(value)) return "-";
 
   const negative = value < 0;
   const abs = Math.abs(value);

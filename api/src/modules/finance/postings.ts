@@ -179,7 +179,7 @@ postings.post("/:code/stays/:id/charges/:postingId/reverse", async (c) => {
          values ($1,$2,$3,$4,$5,$6,$7,$8,$9::bigint)
          returning id::text`,
         [hotelId, p.folio_id, p.business_date, p.category,
-         `Reversal — ${p.description}`,
+         `Reversal - ${p.description}`,
          -Number(p.amount), p.tax_rate, -Number(p.tax_amount), postingId],
       );
       return { ok: true, data: { id: made[0]?.id } };
@@ -231,7 +231,7 @@ postings.post("/:code/stays/:id/payments", async (c) => {
        await resolveDate(client, hotelId, body.businessDate),
        method === "city_ledger"
          ? "Transferred to city ledger"
-         : `Received — ${body.method}`,
+         : `Received - ${body.method}`,
        -Math.round(body.amount * 100) / 100],
     );
 

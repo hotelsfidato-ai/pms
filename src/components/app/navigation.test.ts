@@ -95,7 +95,7 @@ function searchable(role: Role): string[] {
 }
 
 describe("each person's menu", () => {
-  it("gives reception the core eight, bookings and the drawer — and the POS only when switched on", () => {
+  it("gives reception the core eight, bookings and the drawer - and the POS only when switched on", () => {
     const core = [
       "Dashboard", "Rooms", "Calendar",
       "Arrivals", "Upcoming", "In house", "Due out", "Walk-ins",
@@ -125,7 +125,7 @@ describe("each person's menu", () => {
     expect(menu("kitchen_manager")).toEqual(["Kitchen", "Menu", "Close restaurant day", "Notifications"]);
   });
 
-  it("gives housekeeping and the stores their work — and no revenue Dashboard", () => {
+  it("gives housekeeping and the stores their work - and no revenue Dashboard", () => {
     /* Equipment joined on 16 September — the owner's answer to the equipment chat. */
     expect(menu("housekeeping")).toEqual(["Housekeeping", "Work orders", "Store", "Equipment", "Notifications"]);
     expect(menu("stores")).toEqual(["Store", "Equipment", "Notifications"]);
@@ -147,7 +147,7 @@ describe("each person's menu", () => {
     expect(searchable("owner")).toContain("Lodging tax");
   });
 
-  it("lists every service not built yet under Coming soon — for the owner, admins and GMs only", () => {
+  it("lists every service not built yet under Coming soon - for the owner, admins and GMs only", () => {
     /* The owner's decision, 16 September: one section at the foot of the
        menu, every service the system does not have yet, alphabetical. */
     /* 16 September, the stock-and-equipment plan: "Hotel equipment" became

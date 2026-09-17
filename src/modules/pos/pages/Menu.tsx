@@ -111,7 +111,7 @@ export default function MenuPage() {
           </p>
           <p className="text-sm text-grey-600 mt-0.5 leading-relaxed">
             Nothing here was shipped with the system. A price changed today
-            applies to the next order — bills already printed keep the price
+            applies to the next order - bills already printed keep the price
             they were sold at.
           </p>
         </div>
@@ -123,7 +123,7 @@ export default function MenuPage() {
             Add a part of the menu
           </p>
           <p className="text-sm text-grey-600 mb-3">
-            Starters, Main course, Beverages — whatever the card is organised by.
+            Starters, Main course, Beverages - whatever the card is organised by.
           </p>
           <div className="flex flex-wrap gap-2">
             <input
@@ -272,7 +272,7 @@ function Promotions({ hotelId }: { hotelId: string }) {
                   second thing to be wrong. */}
               A biller may take {cap === null ? "a limited amount" : `up to ${cap}%`}
               {" "}off a bill by hand. Anything larger is one of these, applied
-              by code — so it is the same concession every time, and the
+              by code - so it is the same concession every time, and the
               month-end report can count what it cost.
             </p>
           </div>
@@ -398,7 +398,7 @@ function PromotionDialog({
         title={promotion ? `Edit ${promotion.name}` : "Add a promotion"}
         description={
           promotion
-            ? "The code cannot change — bills already printed name it."
+            ? "The code cannot change - bills already printed name it."
             : "A named discount a biller applies by typing its code."
         }
         size="sm"
@@ -417,7 +417,7 @@ function PromotionDialog({
         <div className="space-y-4">
           {!promotion && (
             <Field label="Code" required
-                   hint="What the biller types. Short — a terminal has a queue behind it.">
+                   hint="What the biller types. Short - a terminal has a queue behind it.">
               {(f) => (
                 <Input {...fieldProps(f)} value={code} placeholder="HOUSE"
                        autoFocus
@@ -477,7 +477,7 @@ function PromotionDialog({
                 </span>
                 <span className="block text-sm text-grey-600">
                   Switching it off hides it from the discount dialog. Bills
-                  that already used it keep it — a promotion is never
+                  that already used it keep it - a promotion is never
                   deleted.
                 </span>
               </span>
@@ -565,11 +565,11 @@ function OffControl({
   if (off) {
     return (
       <Button variant="secondary" size="sm" loading={busy}
-        aria-label={`Off till ${back} — put back ${name}`}
+        aria-label={`Off till ${back} - put back ${name}`}
         onClick={() => void restore()}>
         {/* When, not just whether. A waiter asked "is it back?" needs a
             time, and the row is where they look. */}
-        Off till {back} — put back
+        Off till {back} - put back
       </Button>
     );
   }
@@ -972,7 +972,7 @@ function PrepControl({ minutes, own, label, onSet }: {
       }
     >
       {/* The dash IS the answer, not a placeholder. */}
-      {unset ? "—" : `${minutes}${inherited ? "*" : ""} min`}
+      {unset ? "-" : `${minutes}${inherited ? "*" : ""} min`}
     </button>
   );
 }
@@ -1013,7 +1013,7 @@ function CourseControl({ course, own, label, onSet }: {
       toast.error(
         "That is not a course",
         "A whole number from 1 to 9. Leave it empty for a dish that is "
-        + "not part of the sequence — a drink goes when it is poured.",
+        + "not part of the sequence - a drink goes when it is poured.",
       );
       return;
     }
@@ -1059,7 +1059,7 @@ function CourseControl({ course, own, label, onSet }: {
       )}
       title={
         unset
-          ? "Not part of the sequence — goes when it is ready"
+          ? "Not part of the sequence - goes when it is ready"
           : inherited
             ? `Course ${course}, from the category`
             : `Course ${course}, set here`

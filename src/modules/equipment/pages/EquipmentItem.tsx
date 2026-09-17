@@ -157,7 +157,7 @@ export default function EquipmentItemPage() {
               <Clock className="size-4 text-amber-600 shrink-0 mt-1" />
               <span>
                 <span className="font-medium">Waiting to leave the store</span> for{" "}
-                {item.leaving.to ?? DASH} — asked by {item.leaving.by ?? DASH} on{" "}
+                {item.leaving.to ?? DASH} - asked by {item.leaving.by ?? DASH} on{" "}
                 {dateShort(item.leaving.at)}
                 {item.leaving.reason ? `: ${item.leaving.reason}` : "."}
               </span>
@@ -166,7 +166,7 @@ export default function EquipmentItemPage() {
               <p className="text-sm text-grey-600 mt-1.5">It waits for the {whoMay("approve")}.</p>
             )}
             <DecideButtons code={code} approval={approvalFor(item.leaving.approvalId)}
-                           approveLabel="Approve — let it go" onDone={() => done(item.id)} />
+                           approveLabel="Approve - let it go" onDone={() => done(item.id)} />
           </CardBody>
         </Card>
       )}
@@ -178,7 +178,7 @@ export default function EquipmentItemPage() {
               <span className="font-medium">
                 {item.leavingRefused.sentBack ? "Sent back" : "Refused"}
               </span>{" "}
-              — taking it to {item.leavingRefused.to ?? DASH}
+              - taking it to {item.leavingRefused.to ?? DASH}
               {item.leavingRefused.at ? ` (${dateShort(item.leavingRefused.at)})` : ""}
               {item.leavingRefused.note ? `: ${item.leavingRefused.note}` : "."} It is still here.
             </p>
@@ -192,7 +192,7 @@ export default function EquipmentItemPage() {
             <p className="text-base text-ink-900 flex items-start gap-2">
               <Clock className="size-4 text-amber-600 shrink-0 mt-1" />
               <span>
-                <span className="font-medium">Retirement waiting</span> — asked by{" "}
+                <span className="font-medium">Retirement waiting</span> - asked by{" "}
                 {item.retireRequest.by ?? DASH} on {dateShort(item.retireRequest.at)}
                 {item.retireRequest.reason ? `: ${item.retireRequest.reason}` : "."}
               </span>
@@ -201,7 +201,7 @@ export default function EquipmentItemPage() {
               <p className="text-sm text-grey-600 mt-1.5">It waits for the {whoMay("approve")}.</p>
             )}
             <DecideButtons code={code} approval={approvalFor(item.retireRequest.approvalId)}
-                           approveLabel="Approve — retire it" onDone={() => done(item.id)} />
+                           approveLabel="Approve - retire it" onDone={() => done(item.id)} />
           </CardBody>
         </Card>
       )}
@@ -227,7 +227,7 @@ export default function EquipmentItemPage() {
               Retired on {dateShort(item.retired.at)} by{" "}
               <span className="font-medium">{item.retired.by ?? DASH}</span>
               {item.retired.requestedBy ? `, asked for by ${item.retired.requestedBy}` : ""}
-              {item.retired.reason ? ` — ${item.retired.reason}` : ""}
+              {item.retired.reason ? ` - ${item.retired.reason}` : ""}
             </p>
           </CardBody>
         </Card>
@@ -380,7 +380,7 @@ function DecisionLine({ entry: h }: { entry: HistoryEntry }) {
   const word = d.status === "approved" ? "Approved" : d.status === "rejected" ? "Refused" : "Sent back";
   return (
     <p className="text-sm text-grey-600">
-      {word}{d.at ? ` ${dateTime(d.at)}` : ""} · {d.by ?? DASH}{d.note ? ` — ${d.note}` : ""}
+      {word}{d.at ? ` ${dateTime(d.at)}` : ""} · {d.by ?? DASH}{d.note ? ` - ${d.note}` : ""}
     </p>
   );
 }

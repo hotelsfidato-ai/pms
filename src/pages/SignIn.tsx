@@ -85,7 +85,7 @@ export default function SignInPage() {
           </p>
           <p className="text-md text-white/70 mt-3 leading-relaxed">
             The front desk, housekeeping, the restaurant and the day's
-            figures — one system, every property.
+            figures - one system, every property.
           </p>
         </div>
 
@@ -225,7 +225,7 @@ export default function SignInPage() {
 
               <p className="text-xs text-grey-500 mt-3 leading-relaxed">
                 These sign in through the same <code className="tabular">firebase_uid</code>{" "}
-                path a real account uses — only the token check is skipped. The API
+                path a real account uses - only the token check is skipped. The API
                 refuses to start this way with{" "}
                 <code className="tabular">NODE_ENV=production</code>.
               </p>

@@ -103,7 +103,7 @@ export function ReadStale({ error, loadedAt, onRetry, className }: {
 
   const cause =
     problem.kind === "unreachable" ? "no connection"
-      : problem.kind === "refused" ? `refused — ${problem.reason}`
+      : problem.kind === "refused" ? `refused - ${problem.reason}`
         : problem.status ? `the server answered with an error (${problem.status})`
           : problem.message;
 

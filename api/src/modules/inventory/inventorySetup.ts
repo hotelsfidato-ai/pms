@@ -57,7 +57,7 @@ inventorySetup.post("/:code/room-types", async (c) => {
   if (!code) return c.json(refuse("A short code, like DLX."), 409);
   if (!/^[A-Z0-9]{2,10}$/.test(code)) {
     return c.json(refuse(
-      "Two to ten letters or digits — it prints on the tape chart and "
+      "Two to ten letters or digits - it prints on the tape chart and "
       + "the rate grid, where there is no room for a sentence."), 409);
   }
   if (!name) return c.json(refuse("What is this type called?"), 409);
@@ -69,7 +69,7 @@ inventorySetup.post("/:code/room-types", async (c) => {
   }
   if (!Number.isInteger(max) || max < base) {
     return c.json(refuse(
-      "The maximum is at least the number the rate covers — otherwise "
+      "The maximum is at least the number the rate covers - otherwise "
       + "an extra person costs less than nobody."), 409);
   }
 
@@ -234,7 +234,7 @@ inventorySetup.patch("/:code/rooms/:number", async (c) => {
        has a reason — that is what 022 built blocks for. */
     if (input.isActive === false && room[0].occupied) {
       return refuse(
-        "Somebody is in that room. Block it instead — a block has dates "
+        "Somebody is in that room. Block it instead - a block has dates "
         + "and a reason, and this does not.");
     }
 
@@ -399,14 +399,14 @@ inventorySetup.post("/:code/room-types/import", async (c) => {
       if (!code && !name) return;
       if (!code) return reject("No code.");
       if (!/^[A-Z0-9]{2,6}$/.test(code)) {
-        return reject(`"${code}" is not a short code — two to six letters or digits.`);
+        return reject(`"${code}" is not a short code - two to six letters or digits.`);
       }
       if (!name) return reject("No name.");
 
       const base = num(raw.baseOccupancy);
       const max = num(raw.maxOccupancy);
-      if (base === null) return reject("No Sleeps — how many does the tariff cover?");
-      if (max === null) return reject("No Maximum — the most the room may hold.");
+      if (base === null) return reject("No Sleeps - how many does the tariff cover?");
+      if (max === null) return reject("No Maximum - the most the room may hold.");
       if (Number.isNaN(base) || Number.isNaN(max) || base < 1 || max < 1) {
         return reject("Sleeps and Maximum are whole numbers of people.");
       }
@@ -432,7 +432,7 @@ inventorySetup.post("/:code/room-types/import", async (c) => {
         line, name: `${code} · ${name}`,
         action: already.has(code) ? "update" : "create",
         detail: rate === null
-          ? "unpriced — shows a dash and cannot be sold"
+          ? "unpriced - shows a dash and cannot be sold"
           : `sleeps ${base}, up to ${max}, ${rate}`,
       });
       good.push({ code, name, base, max, rate, extraAdult, extraChild });

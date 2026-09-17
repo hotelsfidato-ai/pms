@@ -51,7 +51,7 @@ export function ItemRepairs({ hotelId, item }: ItemRepairsProps) {
      retired one is kept as it was retired. */
   const why = item.retired ? "A retired item is kept exactly as it was retired."
     : item.heldAs !== "tagged" ? "A counted line is retired or replaced, not repaired."
-    : !reportsRepairs(role) ? "Reporting a repair is for the people who work with the equipment — not the accountant or a viewer."
+    : !reportsRepairs(role) ? "Reporting a repair is for the people who work with the equipment - not the accountant or a viewer."
     : null;
 
   return (
@@ -59,7 +59,7 @@ export function ItemRepairs({ hotelId, item }: ItemRepairsProps) {
       <CardHeader
         title="Repairs"
         description={seesMoney
-          ? `Every repair on it, open and closed. Cost recorded: ${total == null ? "—" : money(total)}.`
+          ? `Every repair on it, open and closed. Cost recorded: ${total == null ? "-" : money(total)}.`
           : "Every repair on it, open and closed."}
         actions={
           <Button variant="secondary" className="h-11" disabled={why !== null}
@@ -126,7 +126,7 @@ function RepairLine({ order: o, onCosts }: { order: WorkOrder; onCosts: () => vo
       {o.costs !== undefined && (
         <div className="flex flex-wrap items-center gap-3 mt-1">
           <span className="text-sm text-ink-900 tabular">
-            Cost {o.costTotal == null ? "—" : money(o.costTotal)}
+            Cost {o.costTotal == null ? "-" : money(o.costTotal)}
           </span>
           <Button variant="ghost" className="h-11" onClick={onCosts}>
             <Receipt className="size-4" /> Costs

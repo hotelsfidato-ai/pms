@@ -137,7 +137,7 @@ export async function listIntegrations(): Promise<Integration[]> {
     },
     {
       id: "sattva", name: "Sattva POS", kind: "POS", status: "not-connected",
-      detail: "Live in eZee today — ₹1,44,849 posted to rooms in August. This is a migration off a running system, not a new build.",
+      detail: "Live in eZee today - ₹1,44,849 posted to rooms in August. This is a migration off a running system, not a new build.",
       stage: "Stage 7",
     },
     {

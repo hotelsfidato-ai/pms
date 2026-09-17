@@ -284,7 +284,7 @@ export async function api<T>(path: string, init: RequestInit = {}): Promise<T> {
     throw new HeldError(
       rule.tier === "queue-warn"
         ? `${rule.label} is held and will be sent when the connection is back. `
-          + "It is not confirmed until then — the room could be taken by "
+          + "It is not confirmed until then - the room could be taken by "
           + "another desk in the meantime."
         : `${rule.label} is held and will be sent when the connection is back.`,
       entry.id,

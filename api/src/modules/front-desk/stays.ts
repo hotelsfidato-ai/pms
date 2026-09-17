@@ -96,7 +96,7 @@ const SELECT = `
          /* THE GROUP'S NAME AND SIZE, so a stay panel can say "one of
             nine rooms in the Kulkarni wedding" instead of showing a
             booking that looks like every other booking. The join for
-            this has been here since 056 and selected nothing from it —
+            this has been here since 056 and selected nothing from it - 
             the relationship was available and thrown away at the last
             step. */
          g.name as group_name,
@@ -105,7 +105,7 @@ const SELECT = `
              and sib.status not in ('void', 'cancelled'))::text
            as group_rooms,
          /* The marks that change what a clerk DOES. VIP travels with the
-            GUEST — somebody who is one this visit was one last visit —
+            GUEST - somebody who is one this visit was one last visit - 
             and the single-lady flag sits on the RESERVATION, because the
             same person travelling with family is a different allocation. */
          gu.is_vip, gu.id::text as guest_id, r.is_single_lady,
@@ -336,7 +336,7 @@ stays.get("/:code/groups", async (c) => {
               count(*) filter (where r.status = 'cancelled')::text  as cancelled,
 
               /* How many rooms bill to the host. PER ROOM, not per
-                 group — the couple's own room is usually settled by them
+                 group - the couple's own room is usually settled by them
                  while the rest go to the host, and a list that said
                  "billed to the host" over a mixed group would be wrong
                  for whoever asked. */

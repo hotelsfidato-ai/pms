@@ -46,9 +46,9 @@ function describe(
     case "nothing": return "Nothing is retained";
     case "first_night": return "The first night";
     case "full_stay": return "The whole stay";
-    case "percent": return percent === null ? "—" : `${percent}% of the booking`;
-    case "flat": return amount === null ? "—" : money(amount);
-    default: return "—";
+    case "percent": return percent === null ? "-" : `${percent}% of the booking`;
+    case "flat": return amount === null ? "-" : money(amount);
+    default: return "-";
   }
 }
 
@@ -121,7 +121,7 @@ export default function CancellationTermsPage() {
              this should not read as an error. */
           description={
             "Until a policy exists, the night audit charges nothing on a "
-            + "no-show. That is a valid way to run a hotel — write terms "
+            + "no-show. That is a valid way to run a hotel - write terms "
             + "here only if this property actually bills for them."
           }
           action={

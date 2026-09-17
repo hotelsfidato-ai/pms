@@ -314,7 +314,7 @@ describe("a posting can be reversed once", () => {
     if (!folio.rows[0]) {
       throw new Error(
         "No folio at Pune to reverse against. This test cannot prove " +
-          "anything — run the night audit tests first, which create one.",
+          "anything - run the night audit tests first, which create one.",
       );
     }
 
@@ -339,7 +339,7 @@ describe("a posting can be reversed once", () => {
            (hotel_id, folio_id, business_date, category, description,
             amount, reverses_id)
          select $1, folio_id, business_date, category,
-                'Reversal — ' || description, -amount, id
+                'Reversal - ' || description, -amount, id
            from folio_postings where id = $2::bigint`,
         [puneId, target],
       );

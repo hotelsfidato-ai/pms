@@ -674,7 +674,7 @@ export default function StayViewPage({ view }: {
                             room types were not called Superior or Deluxe,
                             which looks like a rate rather than an absence. */}
                         {cell.rate === null
-                          ? "—"
+                          ? "-"
                           : `${(cell.rate / 1000).toFixed(1)}k`}
                       </div>
                     </div>
@@ -947,8 +947,8 @@ function StaleRooms({ failure, shownAt, missingWindow, refreshing, onRetry }: {
       <div className="min-w-0 flex-1">
         <p className="text-sm font-medium text-ink-900">
           {noConnection
-            ? `No connection — these rooms are ${age}.`
-            : `The rooms did not refresh — these are ${age}.`}
+            ? `No connection - these rooms are ${age}.`
+            : `The rooms did not refresh - these are ${age}.`}
           {missingWindow && ` The fortnight from ${dateShort(missingWindow)} has not loaded.`}
         </p>
         {!noConnection && (

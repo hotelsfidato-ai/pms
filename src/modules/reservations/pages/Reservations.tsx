@@ -123,7 +123,7 @@ export default function ReservationsPage() {
           emptyTitle={q ? "Nothing matches that" : "No bookings in this state"}
           emptyBody={
             q
-              ? "Try a shorter search — a surname, or the last few digits of a reference."
+              ? "Try a shorter search - a surname, or the last few digits of a reference."
               : "Bookings move between these states as the day runs. Nothing here is missing; there is simply nothing in this state."
           }
         />

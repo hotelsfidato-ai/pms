@@ -141,7 +141,7 @@ export default function GroupPanelPage() {
               <>
                 {/* A dash, not a zero. No master folio is not the same as a
                     host who owes nothing. */}
-                <p className="mt-1 text-2xl font-semibold text-grey-300">—</p>
+                <p className="mt-1 text-2xl font-semibold text-grey-300">-</p>
                 <p className="mt-0.5 text-sm text-grey-500">
                   No host account. Every room settles its own.
                 </p>
@@ -220,7 +220,7 @@ export default function GroupPanelPage() {
                       {r.room ? (
                         <span className="tabular">{r.room}</span>
                       ) : (
-                        <span className="text-grey-300">—</span>
+                        <span className="text-grey-300">-</span>
                       )}
                       <span className="block text-xs text-grey-500">
                         {r.roomType}
@@ -310,7 +310,7 @@ export default function GroupPanelPage() {
       <p className="mt-4 text-sm text-grey-600">
         Changing who pays affects nights <b>not yet charged</b>. The audit
         posts one night at a time, so anything already on a folio stays where
-        it was posted — moving it is a reversal and a re-post, with a reason
+        it was posted - moving it is a reversal and a re-post, with a reason
         beside it. <ArrowRight className="inline size-3" /> the folio.
       </p>
     </Page>

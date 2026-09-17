@@ -762,7 +762,7 @@ export default function TerminalPage() {
                         ? order.paymentMethod === "function"
                           ? `On ${order.eventTitle ?? "the function"}'s bill.`
                           : `Paid by ${order.paymentMethod}.`
-                        : `Closed unpaid — ${order.abandonedReason}`}
+                        : `Closed unpaid - ${order.abandonedReason}`}
                     </p>
                     {order.status === "settled" && (
                       <button

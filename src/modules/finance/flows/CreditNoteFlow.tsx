@@ -88,7 +88,7 @@ export function CreditNoteFlow({ hotelId, number, total }: {
             <p className="text-sm text-grey-600 leading-relaxed">
               Invoice <span className="tabular font-medium">{number}</span> for{" "}
               <span className="tabular font-medium">{total}</span> is not
-              edited and not deleted — a GST document that changes after a
+              edited and not deleted - a GST document that changes after a
               guest was handed it is the one an auditor asks about. A credit
               note with its own number is issued against it, and both stay on
               the record.
@@ -105,7 +105,7 @@ export function CreditNoteFlow({ hotelId, number, total }: {
                   rows={3}
                   value={reason}
                   onChange={(e) => setReason(e.target.value)}
-                  placeholder="Billed to the wrong guest — charges belong to FH-2608-4858."
+                  placeholder="Billed to the wrong guest - charges belong to FH-2608-4858."
                 />
               )}
             </Field>

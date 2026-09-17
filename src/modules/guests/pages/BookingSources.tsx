@@ -58,7 +58,7 @@ const KIND_TONES: Record<string, "info" | "accent" | "neutral" | "success"> = {
 /** A percentage, or a dash. Never a zero standing in for silence. */
 function Commission({ pct }: { pct: number | null }) {
   if (pct === null) {
-    return <span className="text-grey-500" title="No rate agreed">—</span>;
+    return <span className="text-grey-500" title="No rate agreed">-</span>;
   }
   return (
     <span className="tabular font-medium text-ink-900">
@@ -126,7 +126,7 @@ export default function BookingSourcesPage() {
           /* A walk-in has no code and never will. A dash says "none",
              which is the truth, rather than an empty cell that reads
              as "not filled in yet". */
-          : <span className="text-grey-500">—</span>
+          : <span className="text-grey-500">-</span>
       ),
     },
     {
@@ -230,7 +230,7 @@ export default function BookingSourcesPage() {
         <EmptyState
           title="No booking sources yet"
           description={
-            "A source is where a booking arrived from — an OTA, a travel "
+            "A source is where a booking arrived from - an OTA, a travel "
             + "agent, a corporate account, the property's own website, or "
             + "somebody at the door."
           }
@@ -346,7 +346,7 @@ function SourceDialog({
           </Field>
 
           <Field label="Channel code"
-                 hint="What a channel manager will send for this source. Leave it blank if there is none — a walk-in has no code.">
+                 hint="What a channel manager will send for this source. Leave it blank if there is none - a walk-in has no code.">
             {(f) => (
               <Input {...fieldProps(f)} value={code} placeholder="AGODA"
                      className="h-12 text-base"
@@ -364,7 +364,7 @@ function SourceDialog({
                 </span>
                 <span className="block text-sm text-grey-600">
                   Switching it off hides it from the booking form. It stays
-                  on every booking that already used it — a source is never
+                  on every booking that already used it - a source is never
                   deleted.
                 </span>
               </span>
@@ -411,7 +411,7 @@ function CommissionDialog({
   return (
     <Dialog open onOpenChange={(o) => !o && onClose()}>
       <DialogContent
-        title={`${source.name} — commission here`}
+        title={`${source.name} - commission here`}
         description={
           "What this property pays. Other properties keep their own rate, "
           + "and bookings already taken keep the rate they were taken at."
@@ -437,7 +437,7 @@ function CommissionDialog({
             {(f) => (
               <div className="flex items-center gap-2">
                 <Input {...fieldProps(f)} value={pct} inputMode="decimal"
-                       placeholder="—" className="h-12 text-base tabular"
+                       placeholder="-" className="h-12 text-base tabular"
                        onChange={(e) => setPct(e.target.value)} />
                 <span className="text-grey-500">%</span>
               </div>
@@ -453,7 +453,7 @@ function CommissionDialog({
               ? "Blank means no rate has been agreed. The list shows a dash, "
                 + "and bookings taken through this source record no commission."
               : value === 0
-                ? "Zero means you agreed to pay nothing — which is not the "
+                ? "Zero means you agreed to pay nothing - which is not the "
                   + "same as leaving it blank."
                 : "Copied onto each booking as it is taken. Changing it later "
                   + "does not change bookings already made."}

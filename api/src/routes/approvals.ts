@@ -110,12 +110,12 @@ approvals.get("/:code/approvals", async (c) => {
          from approvals a
          /* ⚠ LEFT, NOT INNER (16 September). The staff table is row-secured: most
             roles read only their own row (027). An inner join therefore
-            HID every request somebody else raised — the Inventory Manager,
+            HID every request somebody else raised - the Inventory Manager,
             the one person the equipment queue is for, saw it empty, and
             so did an administrator. A waiting request is never hidden;
             where the name is not visible it is null, and the screen shows
             a dash. The owner then answered (16 September, migration 096):
-            the people who may decide see who asked — see "names" below. */
+            the people who may decide see who asked - see "names" below. */
          left join staff rq on rq.id = a.requested_by
          left join staff dc on dc.id = a.decided_by
         where a.hotel_id = $1
@@ -234,7 +234,7 @@ approvals.post("/:code/approvals/:id/:decision", async (c) => {
 
     if (row.status !== "pending") {
       return refuse(
-        `That was already ${row.status}. To change it, raise a new request — ` +
+        `That was already ${row.status}. To change it, raise a new request - ` +
         `the first decision stays on the record.`,
       );
     }

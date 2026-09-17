@@ -79,7 +79,7 @@ export function ImportDialog({
     if (parsed.missing.length > 0) {
       setProblem(
         `That file has no ${parsed.missing.join(" or ")} column. `
-        + "Start from the template — the headers have to match.");
+        + "Start from the template - the headers have to match.");
       return;
     }
     if (parsed.rows.length === 0) {
@@ -120,7 +120,7 @@ export function ImportDialog({
     toast.success(
       `${done.creates + done.updates} ${spec.what} imported`,
       done.rejected > 0
-        ? `${done.rejected} rows were rejected and are listed — fix them and send the file again.`
+        ? `${done.rejected} rows were rejected and are listed - fix them and send the file again.`
         : "Nothing was rejected.");
     onImported();
   };
@@ -234,7 +234,7 @@ export function ImportDialog({
                   <CheckCircle2 className="size-4 text-green-700 shrink-0 mt-0.5" />
                   <p className="text-sm text-ink-900 leading-relaxed">
                     Saved. {report.rejected > 0
-                      ? "The rejected rows below did not land — correct them in "
+                      ? "The rejected rows below did not land - correct them in "
                         + "the file and import it again, which updates rather "
                         + "than duplicates."
                       : "Every row landed."}
@@ -257,7 +257,7 @@ export function ImportDialog({
                         </span>
                         <span className="text-ink-900 min-w-0">
                           <span className="font-medium">{v.name}</span>
-                          {" — "}{v.detail}
+                          {" - "}{v.detail}
                         </span>
                       </li>
                     ))}

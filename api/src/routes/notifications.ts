@@ -58,7 +58,7 @@ notifications.get("/:code/notifications", async (c) => {
          select r.id, r.reference, r.status, r.check_out, g.full_name as guest,
                 /* app.stay_room (086), not the HELD assignment: a refund
                    is owed to somebody who has LEFT, and their room was
-                   released at check-out — this printed "—" for them. */
+                   released at check-out - this printed "-" for them. */
                 app.stay_room(r.id) as room,
                 coalesce((select sum(amount + tax_amount) from live
                            where reservation_id = r.id), 0) as balance
@@ -67,17 +67,17 @@ notifications.get("/:code/notifications", async (c) => {
           where r.hotel_id = $1
        )
        select 'arrival' as kind, b.id::text, b.guest as label,
-              coalesce(b.room, '—') as detail, null::text as amount
+              coalesce(b.room, '-') as detail, null::text as amount
          from balances b
         where b.status = 'confirmed' and b.check_out > $2::date
           and exists (select 1 from reservations r2
                        where r2.id = b.id and r2.check_in = $2::date)
        union all
-       select 'owing', b.id::text, b.guest, coalesce(b.room, '—'), b.balance::text
+       select 'owing', b.id::text, b.guest, coalesce(b.room, '-'), b.balance::text
          from balances b
         where b.status = 'checked_in' and b.check_out = $2::date and b.balance > 0.5
        union all
-       select 'refund', b.id::text, b.guest, coalesce(b.room, '—'), b.balance::text
+       select 'refund', b.id::text, b.guest, coalesce(b.room, '-'), b.balance::text
          from balances b
         where b.balance < -0.5
        union all
@@ -126,7 +126,7 @@ notifications.get("/:code/notifications", async (c) => {
     for (const r of by("refund")) {
       out.push({
         id: `refund-${r.id}`, hotelId: code, category: "payment",
-        title: `${money(Number(r.amount))} to refund — ${r.label}`,
+        title: `${money(Number(r.amount))} to refund - ${r.label}`,
         body: `Room ${r.detail} is paid beyond its charges. The hotel is holding money that is not its own.`,
         isRead: false, at, link: `/h/${code}/folios`, actionRequired: true,
       });

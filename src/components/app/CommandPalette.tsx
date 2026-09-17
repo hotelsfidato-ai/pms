@@ -165,7 +165,7 @@ export function CommandPalette() {
               value={query}
               onChange={(e) => setQuery(e.currentTarget.value)}
               onKeyDown={onKeyDown}
-              placeholder="Find a screen — try “bill”, “night audit”, “stock”"
+              placeholder="Find a screen - try “bill”, “night audit”, “stock”"
               aria-label="Find a screen"
               role="combobox"
               aria-expanded

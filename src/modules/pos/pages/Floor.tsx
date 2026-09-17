@@ -60,7 +60,7 @@ const LEGEND: { state: TableState; label: string; swatch: string }[] = [
   { state: "running", label: "Running", swatch: "bg-info-50 border-info" },
   { state: "kot",     label: "In the kitchen", swatch: "bg-orange-50 border-brand-orange" },
   { state: "printed", label: "Bill printed",   swatch: "bg-green-50 border-success" },
-  { state: "paid",    label: "Paid — clear it", swatch: "bg-yellow-50 border-brand-yellow" },
+  { state: "paid",    label: "Paid - clear it", swatch: "bg-yellow-50 border-brand-yellow" },
 ];
 
 const TILE: Record<TableState, string> = {
@@ -172,7 +172,7 @@ export default function FloorPage() {
         /* "Tables", as the menu says (15 September). "Floor" also names the
            Rooms screen's building-floor grouping — one word, two things. */
         title="Tables"
-        description="The room as it stands. Tap any table to take an order on it — the pad opens here, and nothing reaches the kitchen until you send it."
+        description="The room as it stands. Tap any table to take an order on it - the pad opens here, and nothing reaches the kitchen until you send it."
         actions={outlet && (
           <CloseOutlet outlet={outlet} closed={!!closed} hotelId={hotelId}
                        onDone={refresh} />
@@ -201,7 +201,7 @@ export default function FloorPage() {
                   always carried the reason; the banner a manager reads
                   did not, and the two disagreed about how much they
                   knew. */}
-              {outlet?.closedReason ? ` — ${outlet.closedReason}` : ""}.
+              {outlet?.closedReason ? ` - ${outlet.closedReason}` : ""}.
             </p>
             <p className="text-sm text-grey-600 mt-0.5">
               Bills already open can still be settled and printed. New orders
@@ -251,7 +251,7 @@ export default function FloorPage() {
                 No tables have been laid out yet.
               </p>
               <p className="text-sm text-grey-600 mt-1 max-w-md mx-auto leading-relaxed">
-                A section is a part of the room — A/C, Non A/C, the bar — and
+                A section is a part of the room - A/C, Non A/C, the bar - and
                 tables sit inside one. Until they exist, an order carries
                 whatever the waiter types.
               </p>
@@ -336,7 +336,7 @@ export default function FloorPage() {
                           {t.label}
                         </span>
                         <span className="tabular text-base font-semibold text-ink-900 mt-auto">
-                          {t.payable === null ? "—" : money(t.payable)}
+                          {t.payable === null ? "-" : money(t.payable)}
                         </span>
                       </button>
 

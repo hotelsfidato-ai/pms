@@ -311,7 +311,7 @@ export default function NewBookingPage() {
                   )}
                 </Field>
                 <Field label="Expected check-in"
-                       hint="If they said. Blank is fine — most do not.">
+                       hint="If they said. Blank is fine - most do not.">
                   {(f) => (
                     <Input {...fieldProps(f)} type="time" value={expected}
                       onChange={(e) => setExpected(e.target.value)}
@@ -456,7 +456,7 @@ function RoomLine({ line, types, left, hotelId, from, to, onChange, onRemove }: 
         <Field label="Rate" hint="Empty uses the calendar.">
           {(f) => (
             <Input {...fieldProps(f)} type="number" inputMode="decimal" min={0}
-              value={line.rate} placeholder="—"
+              value={line.rate} placeholder="-"
               onChange={(e) => onChange({ ...line, rate: e.target.value })}
               className="h-12 text-base tabular" />
           )}
@@ -467,7 +467,7 @@ function RoomLine({ line, types, left, hotelId, from, to, onChange, onRemove }: 
         {/* Availability, reported. A reservation is for a room TYPE, and
             deliberate overbooking is something every hotel does. */}
         <span className={cn(over ? "text-warning-dark font-medium" : "text-grey-600")}>
-          {left === null ? "—" : `${left} left`}
+          {left === null ? "-" : `${left} left`}
           {over && " · this books more than that"}
         </span>
         <LinePrice line={line} tariff={tariff.data ?? null}
@@ -488,7 +488,7 @@ function LinePrice({ line, tariff, loading }: {
     );
   }
   if (loading) return <span className="text-grey-500">Pricing…</span>;
-  if (!tariff) return <span className="text-grey-500">—</span>;
+  if (!tariff) return <span className="text-grey-500">-</span>;
 
   if (tariff.total === null) {
     /* The whole point. A number here that quietly charged for two would
@@ -574,13 +574,13 @@ function Summary({ hotelId, from, to, nights, lines, types, disabled, onSubmit }
               <li key={i} className="flex justify-between gap-2">
                 <span className="truncate">
                   {r.line.rooms} ×{" "}
-                  {types.find((t) => t.id === r.line.roomTypeId)?.name ?? "—"}
+                  {types.find((t) => t.id === r.line.roomTypeId)?.name ?? "-"}
                 </span>
                 <span className="tabular shrink-0">
                   {r.line.rate.trim() !== ""
                     ? money(Number(r.line.rate) * nights * r.line.rooms)
                     : r.tariff?.total === null || r.tariff === null
-                      ? "—"
+                      ? "-"
                       : money(r.tariff.total * r.line.rooms)}
                 </span>
               </li>
@@ -593,7 +593,7 @@ function Summary({ hotelId, from, to, nights, lines, types, disabled, onSubmit }
             <>
               {/* A total that omitted the unpriced part would be short by
                   exactly the amount nobody checks. */}
-              <p className="text-2xl font-semibold text-grey-300">—</p>
+              <p className="text-2xl font-semibold text-grey-300">-</p>
               {lines.length === 0 ? (
                 <p className="mt-1 text-sm text-grey-500">
                   Add a room and the total appears here.

@@ -45,7 +45,7 @@ const DENOMINATIONS = [500, 200, 100, 50, 20, 10, 5, 2];
 
 const MOVEMENTS = [
   { kind: "expense" as const, label: "Paid out",
-    hint: "A taxi, a courier — money that left the drawer", sign: -1 },
+    hint: "A taxi, a courier - money that left the drawer", sign: -1 },
   { kind: "top_up" as const, label: "Cash in",
     hint: "Change brought from the safe", sign: 1 },
   { kind: "withdrawal" as const, label: "To the safe",
@@ -228,7 +228,7 @@ function Shift({ hotelId, shift, colleagues, onDone }: {
             )}
             <p className="mt-3 text-sm text-grey-500">
               Only cash reaches the drawer. A card receipt and a bill left on
-              a folio are business done — they are not in the tin.
+              a folio are business done - they are not in the tin.
             </p>
           </CardBody>
         </Card>
@@ -259,7 +259,7 @@ function Shift({ hotelId, shift, colleagues, onDone }: {
                     />
                     {/* A dash, not a zero. Nobody counted zero here. */}
                     <span className="ml-auto text-base tabular text-grey-600">
-                      {n > 0 ? money(value * n) : "—"}
+                      {n > 0 ? money(value * n) : "-"}
                     </span>
                   </div>
                 );
@@ -267,7 +267,7 @@ function Shift({ hotelId, shift, colleagues, onDone }: {
             </div>
             <Button variant="primary" onClick={() => void save()} disabled={saving}
                     className="h-12 w-full text-base">
-              {saving ? "Saving…" : `Save the count — ${money(counted)}`}
+              {saving ? "Saving…" : `Save the count - ${money(counted)}`}
             </Button>
           </CardBody>
         </Card>
@@ -336,7 +336,7 @@ function Shift({ hotelId, shift, colleagues, onDone }: {
             <div className="flex items-baseline justify-between py-3">
               <dt className="text-base font-medium">Counted</dt>
               <dd className="text-lg font-semibold tabular">
-                {counted > 0 ? moneyPrecise(counted) : "—"}
+                {counted > 0 ? moneyPrecise(counted) : "-"}
               </dd>
             </div>
           </dl>
@@ -426,7 +426,7 @@ function MovementDialog({ hotelId, onClose, onDone }: {
       { kind, amount: Number(amount), reason });
     setBusy(false);
     if (!res.ok) return toast.error("Not recorded", res.reason);
-    toast.success("Recorded", `${chosen.label} — ${money(Number(amount))}`);
+    toast.success("Recorded", `${chosen.label} - ${money(Number(amount))}`);
     onClose();
     onDone();
   };
@@ -505,7 +505,7 @@ function CloseDialog({ hotelId, shift, colleagues, onClose, onDone }: {
     toast.success("Shift closed",
       handOverTo
         ? `Handed to ${colleagues.find((c) => c.id === handOverTo)?.name ?? "the next shift"}.`
-        : "Handed to nobody — the drawer is closed.");
+        : "Handed to nobody - the drawer is closed.");
     onClose();
     onDone();
   };
@@ -528,7 +528,7 @@ function CloseDialog({ hotelId, shift, colleagues, onClose, onDone }: {
 
           <Field
             label="Hand the drawer to"
-            hint="Leave empty if nobody is taking it — the last close of the night hands over to no one."
+            hint="Leave empty if nobody is taking it - the last close of the night hands over to no one."
           >
             {(f) => (
               <NativeSelect {...fieldProps(f)} value={handOverTo}

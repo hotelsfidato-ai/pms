@@ -73,7 +73,7 @@ const ALL_COLUMNS: Record<StayColumn, Column<StayRow>> = {
   source: {
     key: "source", header: "Source", hideBelow: "lg",
     /* A dash, never a guess — see defect 219. */
-    cell: (s) => <span className="text-grey-600">{s.source ?? "—"}</span>,
+    cell: (s) => <span className="text-grey-600">{s.source ?? "-"}</span>,
   },
   arrival: {
     key: "arrival", header: "Arrival", hideBelow: "sm",
@@ -110,7 +110,7 @@ const ALL_COLUMNS: Record<StayColumn, Column<StayRow>> = {
     key: "balance", header: "Balance", numeric: true,
     cell: (s) =>
       s.balance === undefined ? (
-        <span className="text-grey-500">—</span>
+        <span className="text-grey-500">-</span>
       ) : (
         <span
           className={cn(
@@ -193,7 +193,7 @@ function StayCards({ rows, columns, onOpen }: {
               {columns.includes("room") && (
                 <span className="text-lg tabular font-semibold text-ink-900
                                  shrink-0">
-                  {s.roomNumber || <span className="text-grey-500">—</span>}
+                  {s.roomNumber || <span className="text-grey-500">-</span>}
                 </span>
               )}
             </div>

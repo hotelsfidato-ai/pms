@@ -81,7 +81,7 @@ export default function RatePlansPage() {
               {data.roomTypes.length - priced.length === 1 ? " has" : "s have"} no rate
             </p>
             <p className="text-sm text-grey-600 mt-0.5 leading-relaxed">
-              A room with no rate cannot be sold at the desk — a walk-in into
+              A room with no rate cannot be sold at the desk - a walk-in into
               one is refused rather than checked in at a guessed figure. This
               system ships no prices; these are yours to set.
             </p>
@@ -93,7 +93,7 @@ export default function RatePlansPage() {
       <Card className="mb-6">
         <div className="px-4 pt-3.5 pb-1">
           <p className="text-2xs uppercase tracking-wide text-grey-500">
-            Rack rate — the standing price
+            Rack rate - the standing price
           </p>
         </div>
         <ul className="divide-y divide-grey-100">
@@ -204,7 +204,7 @@ function RackRow({ hotelId, type, onDone }: {
           value={value}
           onChange={(e) => setValue(e.target.value)}
           inputMode="decimal"
-          placeholder="—"
+          placeholder="-"
           aria-label={`Rack rate for ${type.name}`}
           className="w-28 h-11 px-3 rounded-md border border-grey-300 text-base tabular text-right"
         />
@@ -312,7 +312,7 @@ function NewSeason({ hotelId, types, plans, onDone }: {
               className="w-full h-11 px-3 rounded-md border border-grey-300 text-base" />
           </Labelled>
 
-          <Labelled label="Name it" hint="Winter, Diwali week — for your own eyes.">
+          <Labelled label="Name it" hint="Winter, Diwali week - for your own eyes.">
             <input value={label} onChange={(e) => setLabel(e.target.value)}
               placeholder="Winter"
               className="w-full h-11 px-3 rounded-md border border-grey-300 text-base" />

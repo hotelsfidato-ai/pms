@@ -170,7 +170,7 @@ pos.post("/tickets", async (c) => {
   if (!ticketRef) {
     return c.json(
       refuse(
-        "A bill number is required. It is your number, not ours — it is what " +
+        "A bill number is required. It is your number, not ours - it is what " +
           "lets a retry after a timeout be recognised instead of charged twice.",
       ),
       409,
@@ -256,7 +256,7 @@ pos.post("/tickets", async (c) => {
     if (chargeable.rows.length > 1 && !body.folioId) {
       const reason =
         `Room ${room} has ${chargeable.rows.length} open folios today ` +
-        `(${chargeable.rows.map((r) => r.guest_name).join(", ")}) — a same-day ` +
+        `(${chargeable.rows.map((r) => r.guest_name).join(", ")}) - a same-day ` +
         `changeover. Send folioId to say which guest this bill is for.`;
       return {
         ok: false,
@@ -297,7 +297,7 @@ pos.post("/tickets", async (c) => {
     }
 
     const category = body.category ?? outlet.category;
-    const description = body.description?.trim() || `${outlet.name} — ${ticketRef}`;
+    const description = body.description?.trim() || `${outlet.name} - ${ticketRef}`;
     const taxRate = Number(body.taxRate ?? 0);
     const taxAmount = Number(body.taxAmount ?? 0);
 
@@ -439,7 +439,7 @@ pos.post("/tickets/:ref/void", async (c) => {
           amount, tax_rate, tax_amount, reverses_id, source_type, source_id,
           posted_by)
        select $1, fp.folio_id, $2, fp.category,
-              'Void — ' || fp.description,
+              'Void - ' || fp.description,
               -fp.amount, fp.tax_rate, -fp.tax_amount, fp.id, 'pos', $4, $5
          from folio_postings fp
         where fp.id = $3::bigint

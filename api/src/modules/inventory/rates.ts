@@ -49,7 +49,7 @@ function reasonFor(error: unknown, ctx: { plan?: string }): string | null {
   if (!e?.code) return null;
   if (e.code === "23P01") {
     return `Another ${ctx.plan ?? ""} rate already covers part of those dates. `
-      + `A day cannot have two prices — change the existing one, or pick dates `
+      + `A day cannot have two prices - change the existing one, or pick dates `
       + `that do not overlap it.`;
   }
   if (e.code === "23514") return "That range or price is not valid.";
@@ -703,7 +703,7 @@ rates.get("/:code/tariff", async (c) => {
 
     if (adults + children > owned[0].max) {
       return refuse(
-        `${adults + children} people will not fit a ${owned[0].name} — it `
+        `${adults + children} people will not fit a ${owned[0].name} - it `
         + `sleeps ${owned[0].max}.`);
     }
 

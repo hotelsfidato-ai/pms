@@ -205,7 +205,7 @@ describe("the running total the waiter sees", () => {
 
     expect(
       withSides,
-      "no active dish on 5EL's menu has a side that is on today — "
+      "no active dish on 5EL's menu has a side that is on today - "
       + "this test cannot check what it exists to check",
     ).toBeTruthy();
     expect(outlet, "5EL needs an active outlet").toBeTruthy();
@@ -217,7 +217,7 @@ describe("the running total the waiter sees", () => {
       .slice(0, 2);
     const addonIds = sides.map((a) => a.id);
     const sidesCost = sides.reduce((sum, a) => sum + a.price, 0);
-    expect(sidesCost, "the sides picked are all free — nothing to check")
+    expect(sidesCost, "the sides picked are all free - nothing to check")
       .toBeGreaterThan(0);
 
     /* The variation, when the dish is sold by one. The database refuses

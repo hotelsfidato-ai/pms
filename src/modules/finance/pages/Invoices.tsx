@@ -68,7 +68,7 @@ const BILLABLE_COLUMNS: Column<BillableRow>[] = [
     key: "balance", header: "Balance", numeric: true,
     cell: (b) => (
       <span className={cn("tabular", b.balance !== 0 && "text-brand-red font-medium")}>
-        {b.balance === 0 ? "—" : money(b.balance)}
+        {b.balance === 0 ? "-" : money(b.balance)}
       </span>
     ),
   },
@@ -94,7 +94,7 @@ function issuedColumns(hotelId: string): Column<IssuedInvoice>[] {
   },
   {
     key: "recipient", header: "Billed to",
-    cell: (i) => <span className="truncate">{i.recipient ?? "—"}</span>,
+    cell: (i) => <span className="truncate">{i.recipient ?? "-"}</span>,
   },
   {
     key: "issued", header: "Issued", hideBelow: "md",
@@ -123,7 +123,7 @@ function issuedColumns(hotelId: string): Column<IssuedInvoice>[] {
           <span><StatusPill tone="warning">credited</StatusPill></span>
         </Tooltip>
       ) : i.isCreditNote ? (
-        <span className="text-2xs text-grey-500">—</span>
+        <span className="text-2xs text-grey-500">-</span>
       ) : (
         <StatusPill tone="success">issued</StatusPill>
       ),
@@ -240,7 +240,7 @@ export default function InvoicesPage() {
         <Clock className="size-4 text-grey-400 shrink-0 mt-0.5" />
         <div className="min-w-0">
           <p className="text-base font-medium text-ink-900">
-            E-invoicing (IRN and signed QR) — coming soon
+            E-invoicing (IRN and signed QR) - coming soon
           </p>
           <p className="text-sm text-grey-600 mt-0.5 leading-relaxed">
             Not required of this group: registering each B2B invoice with
@@ -250,7 +250,7 @@ export default function InvoicesPage() {
             <strong className="font-medium text-ink-900">
               {" "}Tell us the year this group crosses ₹5 crore
             </strong>{" "}
-            — from the April after that, every B2B invoice needs an IRN
+            - from the April after that, every B2B invoice needs an IRN
             before it reaches the guest, and this is where it will appear.
           </p>
         </div>
@@ -265,7 +265,7 @@ export default function InvoicesPage() {
           <p className="text-sm text-grey-600 mt-0.5 leading-relaxed">
             The number is allocated and written against the folio in one
             transaction, so the GST series cannot gain a hole. An issued
-            invoice is never edited — a wrong one is corrected with a credit
+            invoice is never edited - a wrong one is corrected with a credit
             note carrying its own number, and both remain.
           </p>
           {series.data && (
@@ -273,7 +273,7 @@ export default function InvoicesPage() {
               {series.data.map((s) => (
                 <div key={`${s.prefix}-${s.finYear}`}>
                   <span className="text-2xs text-grey-500">
-                    {s.finYear} — next{" "}
+                    {s.finYear} - next{" "}
                   </span>
                   <span className="text-sm tabular font-medium text-ink-900">
                     {s.next}

@@ -249,7 +249,7 @@ function EventRow({ event, hotelId }: { event: BanquetEventSummary; hotelId: str
               would read as a hall given away. */}
           <span className={cn("tabular-nums",
                               event.agreedAmount === null && "text-grey-500")}>
-            {event.agreedAmount === null ? "—" : money(event.agreedAmount)}
+            {event.agreedAmount === null ? "-" : money(event.agreedAmount)}
           </span>
         </p>
         {event.registeredBy && (
@@ -304,7 +304,7 @@ function RegisterDialog({
 
     if (!res.ok) return toast.error("Not registered", res.reason);
     if (res.warning) toast.warning("Registered as an enquiry", res.warning);
-    else toast.success("Registered", `${res.reference} — an enquiry until it is confirmed.`);
+    else toast.success("Registered", `${res.reference} - an enquiry until it is confirmed.`);
     onDone(res.id);
   };
 
@@ -403,7 +403,7 @@ function RegisterDialog({
               {(f) => (
                 <div className="flex gap-2">
                   <Input {...fieldProps(f)} value={amount} inputMode="decimal"
-                         placeholder="—"
+                         placeholder="-"
                          onChange={(e) => setAmount(e.target.value)} />
                   {/* OFFERED, never applied on its own. The number that
                       gets billed is the one somebody put here. */}

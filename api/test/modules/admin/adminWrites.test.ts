@@ -93,7 +93,7 @@ describe("the admin property list", () => {
     isActive: boolean; rooms: number; checkedIn: number;
   };
 
-  it("REFUSES a clerk — it carries every property's GSTIN", async () => {
+  it("REFUSES a clerk - it carries every property's GSTIN", async () => {
     const res = await as(clerkUid, "/admin/hotels");
     expect(res.status).toBe(403);
     expect(((await res.json()) as { reason: string }).reason)
@@ -128,7 +128,7 @@ describe("the admin property list", () => {
       const res = await as(ownerUid, "/admin/hotels");
       const { hotels } = (await res.json()) as { hotels: Row[] };
       const pun = hotels.find((h) => h.code === "PUN");
-      expect(pun, "a closed property vanished from the admin list too — "
+      expect(pun, "a closed property vanished from the admin list too - "
         + "there would be no way to reopen it").toBeTruthy();
       expect(pun!.isActive).toBe(false);
 
@@ -207,7 +207,7 @@ describe("changing a property", () => {
     }
   });
 
-  it("refuses a GSTIN that is not one — it prints on every invoice", async () => {
+  it("refuses a GSTIN that is not one - it prints on every invoice", async () => {
     const res = await as(ownerUid, "/admin/hotels/AGR", "PATCH", {
       gstin: "NONSENSE",
     });

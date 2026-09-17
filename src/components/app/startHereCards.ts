@@ -41,7 +41,7 @@ export const START_HERE: Partial<Record<Role, { intro: string; tasks: StartTask[
       { job: "Take a payment", to: "/h/:code/in-house", icon: Wallet,
         how: "Open the guest, go to Bill, Settle, then Take payment." },
       { job: "Check a guest out", to: "/h/:code/in-house/due-out", icon: LogOut,
-        how: "Open the guest, go to Bill — Check out opens once nothing is owed." },
+        how: "Open the guest, go to Bill - Check out opens once nothing is owed." },
       { job: "Open the cash drawer", to: "/h/:code/cashiering", icon: Banknote,
         how: "Enter the opening float, then Open the drawer. Close the shift when you hand over." },
     ],
@@ -61,7 +61,7 @@ export const START_HERE: Partial<Record<Role, { intro: string; tasks: StartTask[
     intro: "Your three jobs. Each one opens the screen it happens on.",
     tasks: [
       { job: "Open a table", to: "/h/:code/floor", icon: LayoutGrid,
-        how: "Tap the table — its order pad opens right there." },
+        how: "Tap the table - its order pad opens right there." },
       { job: "Send an order to the kitchen", to: "/h/:code/floor", icon: Send,
         how: "Add the dishes on the table's pad, then Send." },
       { job: "Settle a bill", to: "/h/:code/till", icon: Receipt,

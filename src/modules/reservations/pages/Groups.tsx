@@ -56,7 +56,7 @@ export default function GroupsPage() {
         title="Groups"
         description={
           groups.length === 0
-            ? "A wedding, a conference, a family — one booking with several rooms."
+            ? "A wedding, a conference, a family - one booking with several rooms."
             : `${groups.length} group${groups.length === 1 ? "" : "s"} · `
               + `${groups.reduce((n, g) => n + g.rooms, 0)} rooms`
         }
@@ -192,7 +192,7 @@ function GroupRow({ group, code, open, onToggle }: {
                 group.masterBalance === null ? "text-grey-500" : "text-ink-900")}>
                 {/* A dash, because most groups have no host account and
                     zero would say the host owes nothing. */}
-                {group.masterBalance === null ? "—" : money(group.masterBalance)}
+                {group.masterBalance === null ? "-" : money(group.masterBalance)}
               </p>
             </div>
           </button>
@@ -225,7 +225,7 @@ function GroupRow({ group, code, open, onToggle }: {
                             {/* Null once they have left. Inventing a room
                                 number for somebody who has gone would put
                                 them back in it. */}
-                            {r.room ?? "—"}
+                            {r.room ?? "-"}
                           </span>
                           <span className="text-base text-ink-900 truncate min-w-0 flex-1">
                             {r.guest}

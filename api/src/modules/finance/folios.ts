@@ -46,7 +46,7 @@ interface FolioRow {
 const FOLIO_SELECT = `
   with live as (
     /* fp.* CARRIES reservation_id SINCE 056, so the folio's own is no longer
-       selected alongside it — two columns of one name made every later
+       selected alongside it - two columns of one name made every later
        reference ambiguous and broke this endpoint, the notification count and
        the night-audit checklist together.
 
@@ -435,7 +435,7 @@ folios.post("/:code/postings/:id/transfer", async (c) => {
           amount, tax_rate, tax_amount, reverses_id, posted_by)
        values ($1,$2,$3::date,$4,$5,$6,$7,$8,$9,app.current_user_id())`,
       [hotelId, line.folio_id, today, line.category,
-       `Transferred out — ${on}`,
+       `Transferred out - ${on}`,
        -Number(line.amount), line.tax_rate, -Number(line.tax_amount),
        line.id],
     );
@@ -450,7 +450,7 @@ folios.post("/:code/postings/:id/transfer", async (c) => {
                app.current_user_id())
        returning id::text`,
       [hotelId, input.toFolioId, today, line.category,
-       `Transferred in — ${on}`,
+       `Transferred in - ${on}`,
        line.amount, line.tax_rate, line.tax_amount],
     );
 

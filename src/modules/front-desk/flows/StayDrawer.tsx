@@ -214,7 +214,7 @@ function StayBody({
    half the height, and the value — the thing being looked up — is the
    larger, darker text. Three sections, in the order a clerk asks:
    when and where, at what price, and who sent them. */
-const DASH = "—";
+const DASH = "-";
 
 function StayFacts({ stay: s }: { stay: Stay }) {
   const party = `${s.adults} adult${s.adults === 1 ? "" : "s"}`
@@ -264,7 +264,7 @@ function StayFacts({ stay: s }: { stay: Stay }) {
             Voided
           </p>
           <p className="text-base text-grey-700 leading-relaxed">
-            {s.voidReason} — this booking is on the record as never having
+            {s.voidReason} - this booking is on the record as never having
             happened, and is left out of revenue and cancellation figures alike.
           </p>
         </div>
@@ -403,7 +403,7 @@ function VipToggle({ hotelId, stay }: { hotelId: string; stay: Stay }) {
     if (!result.ok) return toast.error("Not changed", result.reason);
     toast.success(
       stay.isVip ? "No longer marked VIP" : "Marked VIP",
-      `${result.guest} — this holds for their next visit too.`);
+      `${result.guest} - this holds for their next visit too.`);
     void queryClient.invalidateQueries();
   };
 

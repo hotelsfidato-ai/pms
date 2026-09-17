@@ -86,7 +86,7 @@ begin
     raise exception 'a stay has at least one adult';
   end if;
   if p_adults + p_children > v_max_occ then
-    raise exception '% people will not fit a % — it sleeps %',
+    raise exception '% people will not fit a % - it sleeps %',
       p_adults + p_children, (select name from room_types where id = r.room_type_id),
       v_max_occ
       using hint = 'Move them to a larger room type, or split across two rooms.';

@@ -118,7 +118,7 @@ export function RepairFlow({
            off sale cannot be held (src/lib/offline.ts), so it is said out loud
            rather than silently dropped. */
         toast.warning("Saved on this phone", takeOut
-          ? `${error.message} Taking room ${here} out of service needs the connection — do it when you are back online.`
+          ? `${error.message} Taking room ${here} out of service needs the connection - do it when you are back online.`
           : error.message);
         onOpenChange(false);
         return;
@@ -137,7 +137,7 @@ export function RepairFlow({
         });
         if (!out.ok) {
           /* The repair exists; the room is still on sale. Both said. */
-          toast.error(`Repair raised — room ${here} was not taken out`, out.reason);
+          toast.error(`Repair raised - room ${here} was not taken out`, out.reason);
         } else {
           toast.success("Repair raised", [
             said,
@@ -176,7 +176,7 @@ export function RepairFlow({
 
           {room ? null : (
             <Field label="Room"
-                   hint="Leave empty for anything that is not a room — a lift, the lobby.">
+                   hint="Leave empty for anything that is not a room - a lift, the lobby.">
               {(f) => (
                 <Input {...fieldProps(f)} value={roomNumber}
                   onChange={(e) => setRoomNumber(e.target.value)}
@@ -203,13 +203,13 @@ export function RepairFlow({
                   className="h-12 text-base" data-repair-equipment>
                   <option value="">
                     {equipment.isLoading ? "Loading equipment…"
-                      : equipment.isError ? "Equipment did not load — not a piece of equipment"
+                      : equipment.isError ? "Equipment did not load - not a piece of equipment"
                       : "Not a piece of equipment"}
                   </option>
                   {items.map((i) => (
                     <option key={i.id} value={i.id} disabled={i.waiting}>
                       {i.name} · {i.tag} · {i.place}
-                      {i.waiting ? " — waiting in the approvals inbox" : ""}
+                      {i.waiting ? " - waiting in the approvals inbox" : ""}
                     </option>
                   ))}
                 </NativeSelect>

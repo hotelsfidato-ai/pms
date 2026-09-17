@@ -23,7 +23,7 @@ export const EQUIPMENT_COLUMNS = [
     note: "Appliance, Furniture, Kitchen equipment. Made if the property "
         + "does not have it yet; capitals do not matter." },
   { header: "Held as", field: "heldAs", required: true,
-    note: "tag — one thing with its own tag. count — a number of the "
+    note: "tag - one thing with its own tag. count - a number of the "
         + "same thing in one place." },
   { header: "Tag", field: "tag", required: false,
     note: "For a tag row. Blank gives it the next free number (EQ-0001…). "
@@ -33,7 +33,7 @@ export const EQUIPMENT_COLUMNS = [
   { header: "Room", field: "room", required: false,
     note: "The room number it is in. Give a Room or a Place, not both." },
   { header: "Place", field: "place", required: false,
-    note: "Where it is if not in a room — a place already set up at the "
+    note: "Where it is if not in a room - a place already set up at the "
         + "property, spelled the same. Putting it in a place by import is "
         + "adding it, so nothing waits for approval." },
   { header: "Supplier", field: "supplier", required: false,
@@ -41,10 +41,10 @@ export const EQUIPMENT_COLUMNS = [
   { header: "Bought on", field: "purchaseDate", required: false,
     note: "Day first: 14/03/2025. Blank if not known." },
   { header: "Cost", field: "unitCost", required: false,
-    note: "Rupees, PER PIECE on a count row. Blank is NOT KNOWN — it is "
+    note: "Rupees, PER PIECE on a count row. Blank is NOT KNOWN - it is "
         + "never read as zero." },
   { header: "Warranty ends", field: "warrantyEnds", required: false,
-    note: "Day first. Blank means nobody entered one — never 'expired'." },
+    note: "Day first. Blank means nobody entered one - never 'expired'." },
   { header: "Service contract ends", field: "amcEnds", required: false,
     note: "The AMC. Day first. Blank if there is none." },
   { header: "Status", field: "status", required: false,

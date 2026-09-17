@@ -110,7 +110,7 @@ afterAll(async () => {
 });
 
 describe("preparation times over the wire", () => {
-  it("sends null for an untimed dish — present, and not a number", async () => {
+  it("sends null for an untimed dish - present, and not a number", async () => {
     const cat = await mine();
     const a = cat.items.find((i) => i.id === dishA)!;
 

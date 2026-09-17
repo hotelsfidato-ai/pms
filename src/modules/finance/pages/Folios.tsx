@@ -47,7 +47,7 @@ export default function FoliosPage() {
     <Page>
       <PageHeader
         title="Folios"
-        description={<>Open <Term name="folio">folios</Term>. A charge is never edited — a wrong posting is reversed, and the reversal is its own line.</>}
+        description={<>Open <Term name="folio">folios</Term>. A charge is never edited - a wrong posting is reversed, and the reversal is its own line.</>}
         badge={
           folios.data ? (
             <StatusPill tone={rows.length ? "warning" : "success"}>
@@ -125,7 +125,7 @@ export default function FoliosPage() {
         <ArrowUp className="size-3.5 shrink-0 mt-0.5" />
         <span>
           A positive balance is owed by the guest; a negative one is owed to them.
-          Both are real and both print — neither is hidden or shown as zero.
+          Both are real and both print - neither is hidden or shown as zero.
         </span>
       </p>
     </Page>

@@ -40,7 +40,7 @@ const TYPE_COLUMNS: Column<RoomTypeRecord>[] = [
     key: "rack", header: "Rack rate", numeric: true,
     /* A dash for a room type nobody has priced — a zero would say it is free. */
     cell: (t) => t.rackRate === null
-      ? <span className="text-grey-500">—</span>
+      ? <span className="text-grey-500">-</span>
       : <span className="tabular">{money(t.rackRate)}</span>,
   },
   {
@@ -93,7 +93,7 @@ const PLAN_COLUMNS: Column<RatePlanRecord>[] = [
   { key: "includes", header: "Includes", cell: (p) => <span className="text-grey-600">{p.includes}</span> },
   {
     key: "seen", header: "In the live system", hideBelow: "md",
-    cell: (p) => p.seenAs ? <span className="tabular text-grey-600">{p.seenAs}</span> : <span className="text-grey-500">—</span>,
+    cell: (p) => p.seenAs ? <span className="tabular text-grey-600">{p.seenAs}</span> : <span className="text-grey-500">-</span>,
   },
 ];
 
@@ -117,7 +117,7 @@ export function RatePlansPage() {
         />
       </Card>
       <p className="text-xs text-grey-500 mt-4 leading-relaxed">
-        The live Night Audit shows plans as <span className="tabular">Deluxe CP</span> —
+        The live Night Audit shows plans as <span className="tabular">Deluxe CP</span> - 
         room type and meal plan together. A published rate calendar arrives at Stage 9;
         until then the rack rate is what a room type carries.
       </p>
