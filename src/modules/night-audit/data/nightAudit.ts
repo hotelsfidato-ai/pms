@@ -36,19 +36,43 @@ export async function getNightAudit(hotelId: string): Promise<NightAuditState | 
   );
 }
 
+/** What one closed day's night audit did — a line of the history
+    (D17-13), and what a second press of Run is shown (D17-12). A figure
+    the record does not hold is null, and is shown as a dash. */
+export interface ClosedDay {
+  businessDate: string;
+  /** null where nobody was recorded (every run before 17 September). */
+  ranBy: string | null;
+  startedAt: string;
+  completedAt: string | null;
+  roomsPosted: number | null;
+  /** The room charges the audit posted, before tax. */
+  revenuePosted: number | null;
+  noShows: number | null;
+}
+
+/** The days this property has closed, newest first (the last 60). */
+export async function listClosedDays(hotelId: string): Promise<ClosedDay[]> {
+  if (!hotelId) return [];
+  return fetchOr<ClosedDay[]>(`/api/hotels/${hotelId}/night-audit/runs`, []);
+}
+
 /** What one completed audit did. */
 export interface NightAuditResult {
   ok: boolean;
   reason?: string;
   businessDate: string;
   nextBusinessDate?: string;
+  /** The day named was already closed: nothing was run, and `record` is
+      what that audit did (D17-12). Arrives as a refusal (409). */
+  alreadyClosed?: boolean;
+  record?: ClosedDay;
   roomsPosted?: number;
   revenuePosted?: number;
   complimentary?: number;
   noShows?: number;
   retentionCharged?: number;
   noShowsWithoutTerms?: number;
-  duplicate?: boolean;
   blockers?: Array<{ id: string; reason: string; rooms: string[] }>;
 
   /** The restaurant's day, READ from settled orders — the audit does
@@ -84,10 +108,11 @@ export interface NightAuditResult {
  * every other guarded action uses, so the screen shows the reason
  * rather than a status code.
  *
- * `closing` is the day the screen SAYS it is closing, and the server
- * refuses it if that day is already closed (NA-2). Without it the
- * server closes whatever day it is on — which, for a screen that did
- * not see the day close on another device, is tomorrow.
+ * `closing` is the day the screen SAYS it is closing, and it is required.
+ * A day already closed changes nothing and comes back with the record
+ * that was made (NA-2, D17-12); a day the property is not on is refused.
+ * Without it the server would close whatever day it is on — which, for a
+ * screen that did not see the day close on another device, is tomorrow.
  */
 export async function runNightAudit(hotelId: string, closing: string): Promise<NightAuditResult> {
   return api<NightAuditResult>(`/api/hotels/${hotelId}/night-audit/run`, {

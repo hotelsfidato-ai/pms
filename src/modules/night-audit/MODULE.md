@@ -58,8 +58,8 @@ All hang from `/api/hotels`, in two files mounted by
 | Method | Path | What it does |
 |---|---|---|
 | GET | `/:code/night-audit/can-run` | may this day be closed, and if not, why — for the **server's** date. **No screen calls it** (the API tests do). Read-only. NA-1, NA-2 |
-| POST | `/:code/night-audit/run` | close the day (the five steps in the file's header, one transaction). Body `{ businessDate }` — the day the screen says it is closing: **409 "… was already closed. Reload to see today."** if that day is closed, changing nothing; 400 if it is not a date. With no body it closes whatever day the server is on (NA-2, fixed 16 September) |
-| GET | `/:code/night-audit/runs` | the last 60 runs — **no screen calls it** (`api/scripts/capture-demo.ts` reads it). Read-only. A history screen that was never built (NA-1) |
+| POST | `/:code/night-audit/run` | close the day (the steps in the file's header, one transaction, one audit at a time per property — an advisory lock, NA-3). Body `{ businessDate }` — the day the screen says it is closing, **required** (400 if missing or not a date). A day already closed: **409 "… was already closed. Reload to see today."** with `alreadyClosed` and the `record` that was made, changing nothing (NA-2, D17-12). A day the property is not on: 409, changing nothing. Records who ran it in `run_by` |
+| GET | `/:code/night-audit/runs` | the screen's **Closed days**: the last 60 completed days, newest first — day, who ran it (`app.colleague_name`), started, closed, rooms posted, room revenue, no-shows; null where the record holds nothing (D17-13). Read-only. `api/scripts/capture-demo.ts` reads it too |
 
 **`api/src/modules/night-audit/checklist.ts`** (cut from the old `api/src/routes/billing.ts`)
 
@@ -98,6 +98,8 @@ fix made elsewhere does not reach them unless it changes these queries.
 | The Run button and its reason | `blockersFor(X)` in `nightAudit.ts` | the same function the run refuses with — asked for X, while the run asks for the server's date. Run sends X, and the server refuses it once X is closed (NA-2) |
 | Last run | latest completed `night_audit_runs.business_date`, printed by Postgres as `DD Mon YYYY` | a date formatted in SQL, not by `src/lib/format.ts` |
 | The result card | the `POST /run` answer: rooms posted, revenue, complimentary, no-shows; the restaurant from settled `pos_orders`, `pos_order_lines`, `pos_order_tenders`; the two drawers from closed `cashier_shifts` and `pos_day_ends` | the answer also carries `retentionCharged` and `noShowsWithoutTerms`; **the card shows neither** |
+| "… was already closed" card | the 409 answer's `record` — the same row the Closed days list reads | shown instead of the red failure card: the day IS closed (D17-12) |
+| Closed days | `GET /runs`: completed `night_audit_runs`, the name through `app.colleague_name(run_by, hotel)` | "Ran by" is a dash for every day closed before 17 September — `run_by` was never written until then. "Room revenue" is `revenue_posted`: the room charges the audit posted, before tax |
 
 ## Data
 
@@ -105,7 +107,7 @@ fix made elsewhere does not reach them unless it changes these queries.
 
 | File | What it does |
 |---|---|
-| `nightAudit.ts` | `getNightAudit` (the checklist, as at the business date) and `runNightAudit` |
+| `nightAudit.ts` | `getNightAudit` (the checklist, as at the business date), `runNightAudit` (sends the day being closed) and `listClosedDays` (the history) |
 
 ## Database
 
@@ -114,7 +116,7 @@ migrations that made or changed them:
 
 | Table | What the night audit does to it | Migrations |
 |---|---|---|
-| `night_audit_runs` | one row per hotel per day: running, then completed (or failed) | created `006_folio.sql` (unique per hotel and date — the safety net against a second run); `014_simulation_fixes.sql` (a completed run must carry its finish; the audit writes `running` first, posts, then completes), `016_audit_coverage.sql` (audited) |
+| `night_audit_runs` | one row per hotel per day: running, then completed (or failed); `run_by` is who pressed Run (written since 17 September) | created `006_folio.sql` (unique per hotel and date — the safety net against a second run); `014_simulation_fixes.sql` (a completed run must carry its finish; the audit writes `running` first, posts, then completes), `016_audit_coverage.sql` (audited), **`099_closed_day_record_needs_gm.sql`** (a completed run is corrected only by the property's owner or GM, or a group administrator — D17-12) |
 
 It writes into other services' tables, directly in SQL: `folio_postings`
 (tonight's room charge per stay, and a retention charge for a no-show whose
@@ -192,13 +194,13 @@ From `PENDING.md` and `HANDOVER.md`, and one found while writing this brief:
 - **The printed Night Audit report does not exist** — the audit runs; the
   owner's four-page, 13-section report is part of staff-first phase 2,
   **ask first** (`HANDOVER.md` § 3.4; `docs/REPORTS-SPEC.md`).
-- **Two endpoints with no screen** — `GET /:code/night-audit/can-run` and
-  `GET /:code/night-audit/runs` (checked 15 September). There is no gate for
-  an API route nobody calls (PENDING § 5). Investigated 16 September: neither
-  writes; `runs` is a history screen never built, `can-run` is superseded
-  except that it knows the server's date. **The owner decides** (NA-1).
-- **A stale screen closes the next day** — proved 16 September on a scratch
-  database; not fixed, because the fix changes a condition of the run (NA-2).
+- **`GET /:code/night-audit/can-run` still has no caller.** It writes nothing;
+  `runs` became the Closed days list (NA-1, D17-13). Whether `can-run` goes is
+  undecided.
+- **No screen corrects a closed day's record.** The database allows only the
+  GM (099); a correction screen, if one is wanted, is the owner's to ask for.
+- **A web test cannot see a refusal's payload** — the shared stub drops it
+  (NA-4, core, reported to the master).
 - **Defect 243's shape in these routes has not been checked** — a refusal
   written below a write keeps the write (PENDING § 2 and § 5).
 - **Found while writing this brief:** the old `billing.ts` header saying

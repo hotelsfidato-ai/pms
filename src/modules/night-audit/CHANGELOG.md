@@ -8,6 +8,85 @@ project, still goes in the root `CHANGELOG.md`.
 
 ---
 
+## 2026-09-17 · D17-12 and D17-13: a second press shows the record; the closed days are listed
+
+**Asked for:** the master chat, relaying the owner's answers of 17 September
+(`docs/briefs/decisions-2026-09-17.md`). **D17-12** (NA-3): a day already closed
+is not run again — a second press, at the same moment or later, changes nothing
+and shows the record that was made; any correction to a closed day's record
+needs the GM. **D17-13** (NA-1): a history of closed days on the Night audit
+screen — who ran it, rooms posted, revenue, no-shows. And: `nightAudit.test.tsx`
+waited one second for "Run night audit" and failed on a busy machine.
+
+**Shipped** — on `night-audit/closed-days-d17`
+- `api/src/modules/night-audit/nightAudit.ts` — `POST /run` takes the advisory
+  lock 006 described; a day already closed answers 409 with `alreadyClosed` and
+  the `record`; the day is required (400 without it); a day the property is not
+  on is refused; `run_by` is written. `GET /runs` lists completed days with who
+  ran each, through `app.colleague_name`. One reader, `closedDays`, serves both.
+- **`db/migrations/099_closed_day_record_needs_gm.sql`** — a completed run is
+  corrected only by the property's owner or GM, or a group administrator.
+  Re-runnable, writes no rows. **The master renumbers it if 099 is taken.**
+- `src/modules/night-audit/pages/NightAudit.tsx` — the **Closed days** card
+  (day · ran by · closed · rooms posted · room revenue · no-shows; a dash where
+  the record holds nothing; loading, failed and empty states from `DataTable`),
+  and the record card shown when Run meets a day already closed.
+  `data/nightAudit.ts` — `listClosedDays`, `ClosedDay`.
+- Tests: API "a stale screen" (five) and "the closed days"; database
+  `db/tests/modules/night-audit.sql` (new, 11 assertions); web
+  `nightAudit.test.tsx` (three), with 10-second waits inside a 30-second test.
+- `DEFECTS.md` — NA-1 and NA-3 fixed, NA-4 new. `MODULE.md` — the endpoints,
+  what the screen reads, the table and 099.
+
+**Found**
+- **`run_by` has existed since 006 and nothing wrote it**, so "who ran it" needed
+  no migration — and every day closed before today shows a dash.
+- **NA-4:** the shared test setup's `StubApiError` drops the refusal body, so no
+  web test can see a payload; the real class keeps it (checked in the built
+  bundle). Worked around in this service's test; the stub is the master's.
+- My first race test fired two requests side by side and they did not overlap
+  (one came back refused on the OLD code) — it would have passed or failed by
+  timing. It now holds the run table until both presses are seen waiting.
+- My first round of new API tests used three-night stays and pushed Pune out of
+  clean rooms, breaking "lets a manager waive it". One-night stays now.
+- A `timeout 580` around `npm test` killed the harness before its cleanup on a
+  loaded machine and left `fidato_test_4380` behind (created 14:11:50, unused);
+  dropped. Long suites run in the background without a timeout now.
+
+**Proved**
+- **Seen to fail first.** API, against the old server: 5 failed — the stale
+  test (no record), no day (200, closed a day), a day the property is not on
+  (200), the race (**both presses 200**) and the closed days (no `ranBy`).
+  Database, without 099: a clerk's four corrections all went through (6 of 11
+  failed). Web, against the old page and data: all 3 failed.
+- **The screen, opened** on this copy's own API (8797) and web (5197), database
+  `fidato_night_audit`, signed in as the Owner, Pune. Two tabs on the Night
+  audit screen, both "closing Wednesday, 16 September 2026". Tab 1: Run → "is
+  closed", and Closed days read `16 Sep 2026 · Group Owner · 17 Sep 2026, 3:15
+  PM · 0 · ₹0 · 0`. Tab 2, still saying the 16th: Run → "16 September was
+  already closed. Reload to see today. Nothing was run again. The record that
+  was made: Ran by Group Owner · closed 17 Sep 2026, 3:15 PM · rooms posted 0 ·
+  room revenue ₹0 · no-shows 0", and its list refreshed. Database afterwards:
+  one run at Pune, `run_by` owner@fidato.in, business date 17 September. Console:
+  only the 409 of the refused press. At 375px: the list is one card per day,
+  no sideways scroll, nothing outside the viewport.
+- **Gates, on the tree committed:** `npx tsc -b --force` exit 0 · `npx vitest
+  run` 28 files, 271 passed, exit 0 · `cd api; npx tsc --noEmit` exit 0 ·
+  `cd api; npm test` 39 files, 760 passed, exit 0 · `bash db/tests/run.sh` all
+  747 assertions, "closed day record" 11/11, exit 0 · `bash db/tests/rerun.sh`
+  all 99 migrations re-runnable, with a property between passes, exit 0 ·
+  `npm run build` exit 0, "no test sign-in in dist".
+- **Two red runs on the way, both read before they were believed.** The first
+  full web run: 2 front-desk tests killed at vitest's 5 s under load; both files
+  passed alone (14/14). The second full API run: `isolation.test.ts` lost its
+  Postgres connection and `padTotal.test.ts`'s setup passed 30 s, with 85 node
+  processes on the machine; the next run, on a quiet database, was the green
+  one quoted above.
+
+**Left open**
+- `GET /:code/night-audit/can-run` still has no caller; not decided.
+- No screen corrects a closed day's record; the database allows only the GM.
+
 ## 2026-09-16 · NA-2 fixed: a stale close is refused — and NA-3 found
 
 **Asked for:** the master chat, relaying the owner's decision of 16 September:

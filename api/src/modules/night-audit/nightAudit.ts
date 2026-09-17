@@ -13,8 +13,10 @@ import type { Client } from "../../db.ts";
 
    WHAT IT DOES, IN ORDER, IN ONE TRANSACTION
 
-     0. refuses if the day the screen says it is closing is already
-        closed (NA-2) — before anything is written
+     0. waits for any other audit at this property to finish (NA-3);
+        then, before anything is written, answers a day already closed
+        with the record that was made (NA-2, D17-12), and refuses a day
+        the property is not on
      1. refuses if a human decision is outstanding
      2. opens a run row, status 'running'
      3. posts one night's room charge for every in-house stay
@@ -274,12 +276,22 @@ nightAudit.post("/:code/night-audit/run", async (c) => {
 
      The owner's decision, the same day: the button sends the day it
      shows, and a day that is already closed is refused, changing
-     nothing. Asked before the first write below — inside withSession a
-     refusal is a commit (MEMORY 243). A caller that sends no date is
-     answered as before. */
+     nothing. And on 17 September (D17-12): a second press — at the
+     same moment or later — changes nothing and SHOWS THE RECORD THAT
+     WAS MADE. So the day is required: a caller that names none would
+     be answered with whatever day the server is on, which a moment
+     after somebody else closed it is tomorrow.
+
+     Every refusal below comes before the first write — inside
+     withSession a refusal is a commit (MEMORY 243). */
   const body = (await c.req.json().catch(() => ({}))) as { businessDate?: unknown };
   const closing = body.businessDate;
-  if (closing !== undefined && !isIsoDate(closing)) {
+  if (closing === undefined) {
+    return c.json({
+      error: "Say which day is being closed: businessDate, YYYY-MM-DD.",
+    }, 400);
+  }
+  if (!isIsoDate(closing)) {
     return c.json({ error: "businessDate must be a date, YYYY-MM-DD." }, 400);
   }
 
@@ -287,55 +299,40 @@ nightAudit.post("/:code/night-audit/run", async (c) => {
     const hotelId = await hotelIdFor(client, c.req.param("code"));
     if (!hotelId) return null;
 
-    if (closing !== undefined) {
-      const { rows: closed } = await client.query<{ day: string }>(
-        `select to_char(business_date, 'FMDD FMMonth') as day
-           from night_audit_runs
-          where hotel_id = $1 and business_date = $2::date
-            and status = 'completed'`,
-        [hotelId, closing],
-      );
-      if (closed[0]) {
-        return refuse(
-          `${closed[0].day} was already closed. Reload to see today.`,
-          { businessDate: closing },
-        ) as unknown as Record<string, unknown>;
-      }
+    /* ── One audit at a time per property (NA-3, D17-12) ──────────────
+       Two presses at the same moment could not see each other's
+       uncommitted run row, so both passed every check below; the second
+       waited on the unique index and, when the first committed, took the
+       COMPLETED row back to 'running', found nothing left to post, and
+       completed it again with zeros. 006 described this lock and nothing
+       took it. Held to the end of the transaction, so the second press
+       waits for the first to finish and then meets the check below. */
+    await client.query(
+      "select pg_advisory_xact_lock(hashtext('night_audit:' || $1::text))",
+      [hotelId],
+    );
+
+    /* ── Already closed: change nothing, show what was done ─────────── */
+    const made = await closedDays(client, hotelId, { day: closing });
+    if (made[0]) {
+      return refuse(
+        `${dayMonth(closing)} was already closed. Reload to see today.`,
+        { businessDate: closing, alreadyClosed: true, record: made[0] },
+      ) as unknown as Record<string, unknown>;
     }
 
     const businessDate = await businessDateFor(client, hotelId);
 
-    /* ── Already closed? ─────────────────────────────────────────────
-       Answer with what that run did, rather than an error. A second
-       press of the button, or a retried request, is not a mistake
-       worth punishing — and the caller wants the same answer either
-       way.
-
-       ⚠ This cannot happen as written: `businessDate` is the day AFTER
-       the last completed run, so it never has one. A second press did
-       not land here — it closed the next day (NA-2). What catches that
-       is the check on the day the screen sends, above. Left in place:
-       removing it changes nothing, and was not asked for. */
-    const { rows: prior } = await client.query<{
-      status: string; rooms_posted: string | null;
-      revenue_posted: string | null; no_shows: string | null;
-      completed_at: string | null;
-    }>(
-      `select status, rooms_posted::text, revenue_posted::text,
-              no_shows::text, completed_at::text
-         from night_audit_runs
-        where hotel_id = $1 and business_date = $2::date`,
-      [hotelId, businessDate],
-    );
-
-    if (prior[0]?.status === "completed") {
-      return {
-        ok: true, duplicate: true, businessDate,
-        roomsPosted: Number(prior[0].rooms_posted ?? 0),
-        revenuePosted: Number(prior[0].revenue_posted ?? 0),
-        noShows: Number(prior[0].no_shows ?? 0),
-        completedAt: prior[0].completed_at,
-      } as Record<string, unknown>;
+    /* ── Not the day this property is on ─────────────────────────────
+       Closing a day other than the one the screen names is the fault
+       NA-2 was, from the other side. A screen cannot be AHEAD of the
+       server in normal use; refused all the same, changing nothing. */
+    if (closing !== businessDate) {
+      return refuse(
+        `This property is on ${dayMonth(businessDate)}, not `
+          + `${dayMonth(closing)}. Reload to see today.`,
+        { businessDate: closing },
+      ) as unknown as Record<string, unknown>;
     }
 
     const blockers = await blockersFor(client, hotelId, businessDate);
@@ -352,11 +349,13 @@ nightAudit.post("/:code/night-audit/run", async (c) => {
        a 'running' row that never advanced the date — which is the
        correct failure: the day stays open. */
     const { rows: run } = await client.query<{ id: string }>(
-      `insert into night_audit_runs (hotel_id, business_date, status)
-       values ($1, $2::date, 'running')
+      /* `run_by` has been a column since 006 and nothing wrote it, so
+         no closed day could say who closed it (D17-13). */
+      `insert into night_audit_runs (hotel_id, business_date, status, run_by)
+       values ($1, $2::date, 'running', app.current_user_id())
        on conflict (hotel_id, business_date)
          do update set status = 'running', started_at = now(),
-                       error_message = null
+                       error_message = null, run_by = app.current_user_id()
        returning id::text`,
       [hotelId, businessDate],
     );
@@ -717,42 +716,78 @@ nightAudit.post("/:code/night-audit/run", async (c) => {
 
 /* ── What has been closed ────────────────────────────────────────── */
 
+/* The Night audit screen's history (D17-13, the owner, 17 September): who
+   ran it, rooms posted, revenue and no-shows, newest first. Closed days
+   only — a run that has not completed has closed nothing. */
 nightAudit.get("/:code/night-audit/runs", async (c) => {
   const body = await withSession(c.get("subject"), async (client) => {
     const hotelId = await hotelIdFor(client, c.req.param("code"));
     if (!hotelId) return null;
-
-    const { rows } = await client.query<{
-      business_date: string; status: string; rooms_posted: string | null;
-      revenue_posted: string | null; no_shows: string | null;
-      started_at: string; completed_at: string | null;
-      error_message: string | null;
-    }>(
-      `select to_char(business_date,'YYYY-MM-DD') as business_date,
-              status, rooms_posted::text, revenue_posted::text,
-              no_shows::text, started_at::text, completed_at::text,
-              error_message
-         from night_audit_runs
-        where hotel_id = $1
-        order by business_date desc
-        limit 60`,
-      [hotelId],
-    );
-
-    return rows.map((r) => ({
-      businessDate: r.business_date,
-      status: r.status,
-      /* null, not 0. A run that failed before posting anything posted
-         NOTHING, which is a different fact from having posted zero
-         rooms — and a dash is the honest way to show it. */
-      roomsPosted: r.rooms_posted === null ? null : Number(r.rooms_posted),
-      revenuePosted: r.revenue_posted === null ? null : Number(r.revenue_posted),
-      noShows: r.no_shows === null ? null : Number(r.no_shows),
-      startedAt: r.started_at,
-      completedAt: r.completed_at,
-      error: r.error_message,
-    }));
+    return closedDays(client, hotelId, { limit: 60 });
   });
 
   return body ? c.json(body) : c.json({ error: "No such property." }, 404);
 });
+
+/** What one closed day's night audit did — the record a second press is
+    shown (D17-12) and a line of the history (D17-13). */
+export interface ClosedDay {
+  businessDate: string;
+  /** null where the run recorded nobody (every run before 17 September)
+      or the viewer may not see the name — a dash, never a guess. */
+  ranBy: string | null;
+  startedAt: string;
+  completedAt: string | null;
+  /* null, not 0, wherever the record holds nothing: posting nothing and
+     posting zero rooms are different facts, and a dash tells them apart. */
+  roomsPosted: number | null;
+  revenuePosted: number | null;
+  noShows: number | null;
+}
+
+async function closedDays(
+  client: Client, hotelId: string, only: { day?: string; limit?: number } = {},
+): Promise<ClosedDay[]> {
+  const { rows } = await client.query<{
+    business_date: string; ran_by: string | null;
+    started_at: Date; completed_at: Date | null;
+    rooms_posted: number | null; revenue_posted: string | null;
+    no_shows: number | null;
+  }>(
+    /* The name through app.colleague_name (096), never a join to `staff`:
+       staff is row-secured, and most roles read only their own row, so a
+       join hides the name — or, inner, the whole day (MEMORY 283). */
+    `select to_char(na.business_date, 'YYYY-MM-DD') as business_date,
+            app.colleague_name(na.run_by, na.hotel_id) as ran_by,
+            na.started_at, na.completed_at,
+            na.rooms_posted, na.revenue_posted::text as revenue_posted,
+            na.no_shows
+       from night_audit_runs na
+      where na.hotel_id = $1
+        and na.status = 'completed'
+        and ($2::date is null or na.business_date = $2::date)
+      order by na.business_date desc
+      limit $3`,
+    [hotelId, only.day ?? null, only.limit ?? 1],
+  );
+
+  return rows.map((r) => ({
+    businessDate: r.business_date,
+    ranBy: r.ran_by,
+    startedAt: r.started_at.toISOString(),
+    completedAt: r.completed_at ? r.completed_at.toISOString() : null,
+    roomsPosted: r.rooms_posted,
+    revenuePosted: r.revenue_posted === null ? null : Number(r.revenue_posted),
+    noShows: r.no_shows,
+  }));
+}
+
+const MONTHS = [
+  "January", "February", "March", "April", "May", "June", "July",
+  "August", "September", "October", "November", "December",
+];
+
+/** "16 September" — how a refusal names a day. */
+function dayMonth(iso: string): string {
+  return `${Number(iso.slice(8, 10))} ${MONTHS[Number(iso.slice(5, 7)) - 1]}`;
+}
