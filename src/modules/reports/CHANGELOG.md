@@ -11,6 +11,61 @@ Work that touches the core or several services still goes in the root
 
 ---
 
+## 2026-09-18 · The owner's answers on what the reports print (D17-93 to D17-99)
+
+**Asked for:** the seven questions this service left with the owner, answered
+through the master. Six needed nothing; one was a change.
+
+**Shipped**
+- **D17-93 · available room-nights start at the property's first trading day.**
+  `firstTradingDay()` in `figures.ts`, beside the other shared definitions: the
+  earliest arrival or the earliest day anything was posted, whichever came
+  first. `dailyFigures()` counts nothing available before it, so the Manager
+  report, Monthly and Yearly statistics and the occupancy chart all say the same
+  thing about a year. A property that has never traded is not held back by it.
+  Every report that prints an available figure now says which day it counted
+  from: *"Available rooms are counted from 02/08/2026, the day this property
+  first traded."*
+- **D17-97 · Cancellation Sales prints "-"** on the Night audit's Daily Sales.
+  Nothing in this system charges a cancellation fee, so there is nothing to
+  count — and the total still adds up the rows that do.
+- **D17-99 · the lodging tax sheet says the accountant confirms it** before
+  anything is filed from it. On the report, not only in a note here.
+- REP-11 closed as answered (D17-94, leave the not-yet-arrived booking); the
+  meal plan stays as Rate Type (D17-95), Extra Charges stay as the desk posts
+  them (D17-96), Block Room keeps this system's count (D17-98).
+
+**Proved** — in `D:\fidato-reports`
+- API reports tests 37/37, with `businessDate` alongside: 37 green together.
+- **Four deliberate breaks, each failing its own test** and then restored:
+  counting the house before the property traded (2 tests, including the YTD
+  window one), Block Room back to zero, Cancellation Sales back to zeros, and
+  the accountant's sentence removed.
+- A test of mine was wrong first: it counted blocked nights from the first
+  trading day while the report counts them over its own YTD window, and another
+  fixture in the same run posts in March. The report was right; the test now
+  measures the window the report was asked for.
+- The year on screen: January to July show nothing, August counts from the 2nd
+  (516 room-nights, not 533), and the footnote names 02/08/2026.
+
+**Found**
+- **Block Room would have counted every night before go-live as a room held
+  back.** It was the room count times the days, less what was available - and
+  once available started at the first trading day, a YTD from 1 April against a
+  property that opened on 2 August read 2,238 blocked room-nights instead of 18.
+  Caught by reading the consequence of the change before committing it, not by a
+  test. Block Room is now counted day by day in `figures.ts`, beside available,
+  and is nil before the property traded.
+- The REP-2 window test compared the YTD room-nights against the database's raw
+  `sellable_rooms` sum, which is no longer the definition. It counts from the
+  later of the window and the first trading day now, so it still fails on a year
+  that starts on the wrong 1 April — which is what it is for.
+
+**Left open** — nothing on this service. The bills and vouchers (D17-63/64) wait
+on the owner saving CRS voucher FH-2026-00002 into the reports folder.
+
+---
+
 ## 2026-09-17 · Every report in the owner's layout (D17-62)
 
 **Asked for:** all eight reports in `docs/REPORTS-SPEC.md` laid out like the
@@ -71,7 +126,19 @@ Commission is "-"; "Folio No." prints the booking reference; dates print
   `su/client.ts` and `su/token.ts` use constructor parameter properties, which
   the server cannot load. The next deploy would not have started.
 
-**Proved** - run in `D:\fidato-reports`
+**Proved** - every number below was run in `D:\fidato-reports` on the tree that
+was committed, and judged by its exit code (MEMORY 274, 285)
+- **The gates, on the finished branch:** web `npx tsc -b --force` clean ·
+  `npx vitest run` **362 passed, 41 files**, exit 0 · api `npx tsc --noEmit`
+  clean · `npm run strip-check` 86 files · `cd api && npm test` **958 passed, 1
+  failed** · `bash db/tests/run.sh` **787 assertions passed** · `npm run build`
+  clean, "no test sign-in in dist" · `npm run lane -- reports` all inside the
+  lane (the files it lists outside are cp6's own commits this branch carries
+  through the merge).
+- **The one failing API test was the master's**, not this service's:
+  `test/reportFiles.test.ts` asserted that a report "not built yet" cannot be
+  downloaded, and after this work there is no key in `REPORT_KEYS` that is not in
+  `BUILT_KEYS`. Told to the master with the fix; they had already made it.
 - API reports tests 34/34, with `businessDate` alongside them: 34 green together.
 - **Eleven deliberate breaks, each seen to fail its own test**, each restored:
   the night split, booked-ahead nights, comps counted as sold, an unknown report
@@ -96,8 +163,12 @@ Commission is "-"; "Folio No." prints the booking reference; dates print
 - Service charges, tips, item discounts and Expense are not recorded anywhere in
   this system, and print "-".
 
-**Commits:** `b418833` `2b95465` `2996129` `8fd1cc3` `3800355` and the Lodging
-tax, the downloads and the dash pass.
+**Commits:** `b418833` (the three statistics reports) · `2b95465` (No show, City
+ledger) · `2996129` (the Manager report) · `8fd1cc3` (dates as 25/08/2026) ·
+`3800355` (the Night audit report, and the money the tests left in 5EL put back)
+· `73626fb` (Lodging tax, the PDF/Excel/CSV buttons, the long dash) · `1d4ed60`
+(two report cards whose words the new figures had outdated) · `11f89ce` and
+`76102fe`, the two merges of cp6 this branch carries.
 
 ---
 

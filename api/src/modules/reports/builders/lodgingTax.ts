@@ -159,6 +159,7 @@ export async function lodgingTaxReport(
       "The tax columns carry the room rent less its discount. CGST and SGST are half the tax the bills carried, each.",
       "Everything else charged to those bills is in Other Bills.",
       "Service charges are not recorded in this system and show \"-\".",
+      "The group's accountant confirms this sheet before anything is filed from it (the owner, 17 September). Nothing here is filed on this system's word alone.",
     ],
   };
 }

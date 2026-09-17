@@ -35,12 +35,28 @@ import { round2 } from "./document.ts";
        date. A day-use room occupies no night: it is counted apart, and
        its charge is room revenue on its day.
 
+     AVAILABLE STARTS ON THE PROPERTY'S FIRST TRADING DAY (the owner,
+       D17-93). Before a property traded it had nothing to sell, and
+       counting a full month of empty rooms against it is a lie about a
+       year: the eZee export shows nothing for those months and so do we.
+       The first trading day is the earliest date the property has a
+       record for - its earliest arrival, or the earliest day anything
+       was posted, whichever came first. A property that has never traded
+       is not held back by this: it has no first day, so every day of the
+       window counts, which is what a new property planning its year
+       needs to see. Every report that prints an available figure says
+       which day it counted from.
+
    Nothing in reservations or postings is changed by any of this.
    ══════════════════════════════════════════════════════════════════ */
 
 export interface DayFigures {
   date: string;
   available: number;
+  /** Rooms the property has but could not sell that day: out of service,
+      house use. Nil before it traded — a room it had not opened yet was
+      not being held back. */
+  blocked: number;
   /** Paying room-nights. */
   paying: number;
   complimentary: number;
@@ -133,11 +149,37 @@ export const NIGHTS = `
                              and p.night = s.night)
      )`;
 
+/**
+ * The first day this property has any trading record: its earliest
+ * arrival, or the earliest day anything was posted to a bill, whichever
+ * is earlier. Null when it has never traded (the owner, D17-93).
+ *
+ * ONE definition, here beside the others, because four reports print a
+ * figure that divides by it. A year's occupancy that changed definition
+ * silently is exactly the figure somebody compares next year.
+ */
+export async function firstTradingDay(
+  client: Client, hotelId: string,
+): Promise<string | null> {
+  const { rows } = await client.query<{ day: string | null }>(
+    `select to_char(least(
+              (select min(r.check_in) from reservations r
+                where r.hotel_id = $1
+                  and r.status in ('confirmed','checked_in','checked_out','no_show')),
+              (select min(fp.business_date) from folio_postings fp
+                where fp.hotel_id = $1)
+            ), 'YYYY-MM-DD') as day`,
+    [hotelId],
+  );
+  return rows[0]?.day ?? null;
+}
+
 export async function dailyFigures(
   client: Client, hotelId: string, from: string, to: string,
 ): Promise<DayFigures[]> {
+  const opened = await firstTradingDay(client, hotelId);
   const { rows } = await client.query<{
-    date: string; available: number; paying: number; complimentary: number;
+    date: string; available: number; blocked: number; paying: number; complimentary: number;
     day_use: number; adults: number; children: number;
     room: string; room_tax: string; extra: string; extra_tax: string;
     discount: string; receipt: string;
@@ -191,7 +233,15 @@ export async function dailyFigures(
         group by fp.business_date
      )
      select days.date::text                          as date,
-            app.sellable_rooms($1, days.date)        as available,
+            /* Nothing was available before the property traded (D17-93),
+               and nothing was held back either: a room the property had
+               not opened yet was not out of service. */
+            case when $4::date is not null and days.date < $4::date then 0
+                 else app.sellable_rooms($1, days.date) end as available,
+            case when $4::date is not null and days.date < $4::date then 0
+                 else greatest(0, (select count(*) from rooms rm
+                                    where rm.hotel_id = $1 and rm.is_active)
+                                  - app.sellable_rooms($1, days.date)) end as blocked,
             coalesce(o.paying, 0)                    as paying,
             coalesce(o.complimentary, 0)             as complimentary,
             coalesce(u.n, 0)                         as day_use,
@@ -209,12 +259,13 @@ export async function dailyFigures(
        left join day_use u   on u.date   = days.date
        left join other       on other.date = days.date
       order by days.date`,
-    [hotelId, from, to],
+    [hotelId, from, to, opened],
   );
 
   return rows.map((r) => ({
     date: r.date,
     available: Number(r.available),
+    blocked: Number(r.blocked),
     paying: Number(r.paying),
     complimentary: Number(r.complimentary),
     sold: Number(r.paying) + Number(r.complimentary),
@@ -236,6 +287,7 @@ export function sumDays(days: DayFigures[]): Omit<DayFigures, "date"> {
     round2(days.reduce((t, d) => t + d[k], 0));
   return {
     available: add("available"),
+    blocked: add("blocked"),
     paying: add("paying"),
     complimentary: add("complimentary"),
     sold: add("sold"),

@@ -3,7 +3,11 @@ import {
   col, row, total, band, round2, pct, ratio,
   type ReportDoc, type ReportRow, type ReportSection, type Cell, type CellKind,
 } from "../document.ts";
-import { dailyFigures, sumDays, heading, LIVE, type Property, type DayFigures } from "../figures.ts";
+import {
+  dailyFigures, sumDays, heading, firstTradingDay, LIVE,
+  type Property, type DayFigures,
+} from "../figures.ts";
+import { countedFrom } from "./statistics.ts";
 
 /* ══════════════════════════════════════════════════════════════════
    MANAGER REPORT — the daily flash, in the owner's eZee layout
@@ -123,6 +127,7 @@ export async function managerReport(
 
   /* ── Rooms, nights, guests ─────────────────────────────────────────── */
   const days = await dailyFigures(client, hotelId, w.ytd, asOn);
+  const opened = await firstTradingDay(client, hotelId);
   const pick = (from: string) => sumDays(days.filter((d) => d.date >= from));
   const t = { today: pick(w.today), ptd: pick(w.ptd), ytd: pick(w.ytd) };
   const of = (f: (x: Omit<DayFigures, "date">) => number) =>
@@ -222,7 +227,6 @@ export async function managerReport(
   const { rows: [counts] } = await client.query<Record<string, string>>(
     `with win as (select $2::date as today, $3::date as ptd, $4::date as ytd)
      select
-       (select count(*) from rooms where hotel_id = $1 and is_active)::text as physical,
        ${["today", "ptd", "ytd"].map((k) => `
        (select count(*) from reservations r, win
          where r.hotel_id = $1 and r.status = 'no_show'
@@ -303,7 +307,6 @@ export async function managerReport(
   const guests = (x: Omit<DayFigures, "date">) => pair(x.adults, x.children);
   const perRoom = (x: Omit<DayFigures, "date">) => pair(ratio(x.adults, x.sold), ratio(x.children, x.sold));
   const compDayUse = counted("comp_day_use");
-  const physical = n("physical");
 
   const sections: ReportSection[] = [
     section("room-charges", "Room Charges", [
@@ -348,11 +351,12 @@ export async function managerReport(
     ]),
     section("room-summary", "Room Summary", [
       line("Total Room", of((x) => x.available), { unit: "count" }),
-      line("Block Room", {
-        today: Math.max(0, physical - t.today.available),
-        ptd: Math.max(0, physical * daysIn(w.ptd, asOn) - t.ptd.available),
-        ytd: Math.max(0, physical * daysIn(w.ytd, asOn) - t.ytd.available),
-      }, { unit: "count" }),
+      /* Room-nights the house could not sell, day by day (figures.ts).
+         It used to be the room count times the days, less what was
+         available — which counted every night before the property traded
+         as a room held back, once available started at its first trading
+         day (D17-93). */
+      line("Block Room", of((x) => x.blocked), { unit: "count" }),
       line("No of Guest (Adult/Child)", { today: guests(t.today), ptd: guests(t.ptd), ytd: guests(t.ytd) }, { unit: "text" }),
       line("Total Available Room nights", of((x) => x.available), { unit: "count" }),
       line("Sold Room", of((x) => x.sold), { unit: "count" }),
@@ -405,13 +409,11 @@ export async function managerReport(
       "Total Revenue = PMS Revenue + POS Revenue",
       "Sold Room, occupancy and the average rate count complimentary rooms, as the owner's eZee reports do. A night's room charge is shown on that night.",
       "City Ledger: Charges Raised is the bills transferred to a company or booking site. The other rows show \"-\": this system does not record a company's payment, or commission paid, yet.",
+      countedFrom(opened),
       "A \"-\" means the figure is not held in this system. It is not a zero.",
     ],
   };
 }
-
-const daysIn = (from: string, to: string) =>
-  Math.round((Date.parse(`${to}T00:00:00Z`) - Date.parse(`${from}T00:00:00Z`)) / 86_400_000) + 1;
 
 /* ── The restaurant, by outlet ─────────────────────────────────────── */
 

@@ -271,8 +271,13 @@ export async function nightAuditReport(
       roomTax: part("direct", "room_tax"), extraTax: taxOf("direct"),
       discount: part("direct", "discount"), adjustment: part("direct", "refund"),
     }),
-    /* Nothing in this system charges a cancellation fee: a true zero. */
-    salesRow("Cancellation Sales", { room: 0, extra: 0, roomTax: 0, extraTax: 0, discount: 0, adjustment: 0 }),
+    /* Nothing in this system charges a cancellation fee, so there is
+       nothing to count: "-", never 0 (the owner, D17-97). */
+    row({
+      salesType: "Cancellation Sales",
+      room: null, extra: null, roomTax: null, extraTax: null,
+      discount: null, adjustment: null, totalSales: null,
+    }),
     salesRow("No Show Sales", {
       room: 0, extra: extraOf("no_show"), roomTax: 0, extraTax: taxOf("no_show"),
       discount: 0, adjustment: 0,
