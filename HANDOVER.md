@@ -404,6 +404,24 @@ menus at the equipment merge, EQ-2. **Next free migration: 097.** Owner chose:
   in `navigation.ts` and 068 (left: they may be the owner's), EQ-3 (dev only).
 - **Next free migration: 099.**
 
+**17 September morning — the audit, and the Reports page.**
+- **LIVE: the owner deployed at 22:00 on 16 September** — server `eaf6916`, website
+  published 22:02 (Inventory Manager, Rooms and rates, Store and equipment are on it).
+  Everything saved after 22:00 is NOT live: equipment register, places and suppliers,
+  walk-in references, 098, touch targets, and the replay guard for 095/096 — the next
+  deploy must bring that guard before any deploy after it.
+- **MEMORY 286: my worktree clean-up deleted `node_modules/.bin` and `api/node_modules`**
+  (git followed the junctions). Every chat's copy was broken overnight. Fixed with
+  `npm ci` in root and api; both servers start, every gate passes.
+- **Audit, every gate on cp6 `014b4b2`:** web 269 · API 756 · database 736 (98) ·
+  replay 98/98 · build clean. The Night audit screen test failed once under load
+  (1s findByRole) and passed 3/3 alone — for the night audit chat.
+- **Store chat saved STO-2 to STO-11 on `stores/phase-1a`, not merged.**
+- **Reports page** https://claude.ai/artifact/7y6HN9Ug7DZAttxoMX5ek6 — built from
+  `docs/reports/report-<date>.json` by `docs/reports/build.py`. A scheduled task
+  (`fidato-daily-report`, ~09:07 daily, runs while the Claude app is open) audits the
+  previous day and adds it; it commits `docs/reports` only and never pushes.
+
 ### 3.0g · Round 1 of the service chats — who holds what, 16 September
 
 The owner talks to the master chat; the master hands out the work. Checked for

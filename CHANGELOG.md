@@ -129,6 +129,34 @@ Then, second question: **can this POS route a KOT and give a printout?**
 
 ---
 
+## 2026-09-17 (morning) · A blind audit of 16 September, and the Reports page
+
+**Asked for:** start the system locally, audit what was completed yesterday without
+trusting the chats' notes, a report as an artifact called Reports updated every day,
+and what is done and pending in each service chat.
+
+**Found starting it:** nothing ran — the database had to recover, and neither dev
+server could start: my worktree clean-up of the night before had deleted the shared
+packages through the junctions (MEMORY 286), breaking every chat's copy too.
+Reinstalled with `npm ci`; both servers up.
+
+**Live, read-only:** the owner deployed at 22:00 on 16 September (`eaf6916`); the
+website carries the Inventory Manager and the new menu names. Everything after 22:00
+waits for the next deploy.
+
+**Checked by running it:** reception refused the Store (page and 403) and adding a
+place (403, nothing written); a stale night-audit close refused, the day unmoved;
+Pricing, Equipment and Places and suppliers open as the GM; Inventory Manager on the
+Roles page as the owner; stay lists as cards at 375px, no sideways scroll; the
+equipment approval rules present. Gates: web 269 (one timing failure under load,
+rerun clean), API 756, database 736, replay 98/98, build clean.
+
+**Built:** the Reports page (docs/reports: one JSON per day, `build.py`, a template)
+published at https://claude.ai/artifact/7y6HN9Ug7DZAttxoMX5ek6, and a daily scheduled
+task that audits the previous day and adds it.
+
+---
+
 ## 2026-09-16 (pending tasks) · Equipment merged, a deploy-breaking migration caught, places and suppliers
 
 **Asked for:** "finish your pending tasks".

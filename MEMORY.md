@@ -6539,6 +6539,29 @@ copy will see of theirs.**
 
 ---
 
+### 286 · MINE: removing old worktrees deleted the shared node_modules
+
+16 September, evening. I removed six old `.claude/worktrees/agent-*` copies with
+`git worktree remove`. Each held a `node_modules` JUNCTION to the main folder's.
+On Windows git followed the junction and deleted what it found — the main
+`node_modules/.bin` and the whole of `api/node_modules` — then stopped with
+"failed to delete … Invalid argument". Git had already forgotten the copies, so
+I unlinked the junctions and deleted the folders, and "checked" the main install
+by COUNTING its top-level folders: 379 before, 379 after. Both counts were taken
+after the damage. I told the owner the install was untouched. It was not.
+
+Found the next morning: neither dev server could start ("'tsx' is not
+recognized", "'vite' is not recognized"). Every service chat's copy links to the
+same folders, so every copy was broken too. **Fixed:** `npm ci` in the root and
+in `api`.
+
+**The rule: never let git, rm or Remove-Item walk into a folder that holds a
+junction — unlink every junction FIRST (`cmd /c rmdir <link>`), then remove. And
+prove "untouched" by running the thing (a dev server, a test), never by counting
+folders.**
+
+---
+
 ### 285 · Equipment's EQ-4: a gate quoted from before the last edit
 
 16 September, reported by the equipment chat about itself: it quoted `api tsc`
