@@ -3,6 +3,7 @@ import type { Context, Next } from "hono";
 import { withSession } from "../../auth.ts";
 import { businessDateFor } from "../../businessDate.ts";
 import type { PoolClient as Client } from "pg";
+import { attachableFunctions } from "./attach.ts";
 
 /* ══════════════════════════════════════════════════════════════════
    THE BANQUET HALL
@@ -50,6 +51,12 @@ async function moduleGate(
   const code = c.req.param("code");
   if (!code) return c.json({ error: "No such property." }, 404);
 
+  /* The one route that answers while banquet is off. The till asks it
+     at every property, and "this property has no hall" is an answer it
+     acts on (no way to attach an order), not a refusal. It gives nothing
+     away: an empty list, and `enabled: false`. */
+  if (c.req.path.endsWith("/banquet/attachable")) return next();
+
   const allowed = await withSession(c.get("subject"), async (client) => {
     const hotelId = await hotelFor(client, code);
     if (!hotelId) return null;
@@ -91,16 +98,29 @@ banquet.get("/:code/banquet", async (c) => {
       event_id: string | null; reference: string | null; title: string | null;
       status: string | null; starts_at: string | null; ends_at: string | null;
       host_name: string | null; pax_expected: number | null;
-      agreed_amount: string | null; registered_by: string | null;
+      agreed_amount: string | null;
     }>(
       `select venue_id::text, venue_name, event_id::text, reference, title,
               status,
               to_char(starts_at, 'YYYY-MM-DD"T"HH24:MI') as starts_at,
               to_char(ends_at,   'YYYY-MM-DD"T"HH24:MI') as ends_at,
-              host_name, pax_expected, agreed_amount::text, registered_by
+              host_name, pax_expected, agreed_amount::text
          from app.banquet_calendar($1, $2::date, $3::date)`,
       [hotelId, from, to],
     );
+
+    /* WHO REGISTERED EACH, for the diary's line (BQ-7). 060's calendar
+       reads the name through `staff`, which is row-secured, so a GM got
+       no name for a function the owner registered. 096's colleague_name
+       answers for anybody at this property, and null where the viewer may
+       not know. The calendar's own column is not read. */
+    const { rows: names } = await client.query<{ id: string; name: string | null }>(
+      `select e.id::text, app.colleague_name(e.registered_by, e.hotel_id) as name
+         from banquet_events e
+        where e.hotel_id = $1 and e.id = any($2::uuid[])`,
+      [hotelId, rows.flatMap((r) => (r.event_id ? [r.event_id] : []))],
+    );
+    const registeredBy = new Map(names.map((n) => [n.id, n.name]));
 
     const venues = new Map<string, {
       id: string; name: string;
@@ -125,11 +145,25 @@ banquet.get("/:code/banquet", async (c) => {
            here would turn "nobody has priced this" into "this is free"
            three layers away from anyone who could notice. */
         agreedAmount: r.agreed_amount === null ? null : Number(r.agreed_amount),
-        registeredBy: r.registered_by,
+        registeredBy: registeredBy.get(r.event_id) ?? null,
       });
     }
 
     return { businessDate, from, to, venues: [...venues.values()] };
+  });
+
+  return body ? c.json(body) : c.json({ error: "No such property." }, 404);
+});
+
+
+/* ── The functions a restaurant order may be attached to ─────────────
+   For the till (D17-21). The rule and why it is shaped so are in
+   attach.ts, which the till's server also asks before it writes. */
+banquet.get("/:code/banquet/attachable", async (c) => {
+  const body = await withSession(c.get("subject"), async (client) => {
+    const hotelId = await hotelFor(client, c.req.param("code"));
+    if (!hotelId) return null;
+    return attachableFunctions(client, hotelId);
   });
 
   return body ? c.json(body) : c.json({ error: "No such property." }, 404);
@@ -142,6 +176,12 @@ banquet.get("/:code/banquet/events/:id", async (c) => {
     const hotelId = await hotelFor(client, c.req.param("code"));
     if (!hotelId) return null;
 
+    /* NO JOIN TO staff (BQ-7). `staff` is row-secured: a GM cannot read
+       the owner's row, a clerk only their own. `join staff` for the name
+       dropped the WHOLE FUNCTION for them — "No such function" for one
+       that exists. A name is a label, and a label never hides a row (root
+       MEMORY.md 283); 096's colleague_name gives it, or null where the
+       viewer may not know. */
     const { rows: ev } = await client.query<Record<string, string | null>>(
       `select e.id::text, e.reference, e.title, e.event_type, e.status,
               to_char(e.starts_at, 'YYYY-MM-DD"T"HH24:MI') as starts_at,
@@ -152,14 +192,12 @@ banquet.get("/:code/banquet/events/:id", async (c) => {
               v.id::text as venue_id, v.name as venue_name,
               v.seated_capacity::text, v.floating_capacity::text,
               v.default_rate::text,
-              reg.full_name as registered_by,
-              to_char(e.registered_at, 'DD Mon YYYY, HH24:MI') as registered_at,
-              con.full_name as confirmed_by,
+              app.colleague_name(e.registered_by, e.hotel_id) as registered_by,
+              to_char(e.registered_at, 'YYYY-MM-DD"T"HH24:MI') as registered_at,
+              app.colleague_name(e.confirmed_by, e.hotel_id) as confirmed_by,
               f.id::text as folio_id
          from banquet_events e
          join banquet_venues v on v.id = e.venue_id
-         join staff reg on reg.id = e.registered_by
-         left join staff con on con.id = e.confirmed_by
          left join folios f on f.event_id = e.id and f.status = 'open'
         where e.id = $1 and e.hotel_id = $2`,
       [c.req.param("id"), hotelId],
@@ -167,14 +205,15 @@ banquet.get("/:code/banquet/events/:id", async (c) => {
     if (!ev[0]) return "missing" as const;
     const e = ev[0];
 
+    /* Every course, whoever added it (BQ-7): a join to `staff` here hid
+       the courses a colleague added while the total still counted them. */
     const { rows: food } = await client.query<{
       id: string; name: string; pax: number; rate: string | null;
-      notes: string | null; added_by: string;
+      notes: string | null; added_by: string | null;
     }>(
       `select p.id::text, p.name, p.pax, p.rate_per_head::text as rate,
-              p.notes, s.full_name as added_by
+              p.notes, app.colleague_name(p.added_by, p.hotel_id) as added_by
          from banquet_event_packages p
-         join staff s on s.id = p.added_by
         where p.event_id = $1 order by p.created_at`,
       [e.id],
     );
@@ -188,6 +227,32 @@ banquet.get("/:code/banquet/events/:id", async (c) => {
       [e.id],
     );
     const t = total[0]!;
+
+    /* THE RESTAURANT ORDERS ON THIS FUNCTION'S BILL (D17-21). Open ones
+       are listed too, with their status: an order still being added to
+       is real food, and hiding it would let the bill look finished. Only
+       settled ones are in the total — app.banquet_event_total's rule, so
+       the list and the total cannot disagree about what counts.
+
+       Abandoned orders are left out: nothing was charged. The outlet is
+       a LEFT join because it is a label, and a label never hides a row
+       (root MEMORY.md 283). */
+    const { rows: orders } = await client.query<{
+      id: string; order_no: string; table_ref: string | null;
+      outlet: string | null; status: string; opened_at: string;
+      settled_at: string | null; payable: string | null;
+    }>(
+      `select o.id::text, o.order_no, o.table_ref, po.name as outlet, o.status,
+              to_char(o.opened_at,  'YYYY-MM-DD"T"HH24:MI') as opened_at,
+              to_char(o.settled_at, 'YYYY-MM-DD"T"HH24:MI') as settled_at,
+              t.payable::text
+         from pos_orders o
+         left join pos_outlets po on po.id = o.outlet_id
+         cross join lateral app.pos_order_total(o.id) t
+        where o.event_id = $1 and o.hotel_id = $2 and o.status <> 'abandoned'
+        order by o.opened_at, o.order_no`,
+      [e.id, hotelId],
+    );
 
     const num = (v: string | null | undefined) =>
       (v === null || v === undefined ? null : Number(v));
@@ -211,6 +276,11 @@ banquet.get("/:code/banquet/events/:id", async (c) => {
       catering: food.map((f) => ({
         id: f.id, name: f.name, pax: f.pax,
         ratePerHead: num(f.rate), notes: f.notes, addedBy: f.added_by,
+      })),
+      restaurantOrders: orders.map((o) => ({
+        id: o.id, orderNo: o.order_no, table: o.table_ref, outlet: o.outlet,
+        status: o.status, openedAt: o.opened_at, settledAt: o.settled_at,
+        amount: num(o.payable),
       })),
       /* The total is NULL when anything is unpriced, and `unpriced` says
          which. A quotation short by two hundred plates is worse than no

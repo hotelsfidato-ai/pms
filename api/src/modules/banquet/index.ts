@@ -7,3 +7,12 @@ import { banquet } from "./banquet.ts";
 export const mounts: readonly Mount[] = [
   ["/api/hotels", banquet],
 ];
+
+/* For the till's server (D17-21): the one rule for which functions a
+   restaurant order may be attached to. Ask `whyNotAttachable` before
+   writing `pos_orders.event_id`, so the server refuses exactly what the
+   screen would not have offered. */
+export {
+  attachableFunctions, whyNotAttachable,
+  type AttachableFunction, type AttachableFunctions,
+} from "./attach.ts";
