@@ -31,11 +31,11 @@ export type TermKey =
 export const GLOSSARY: Record<TermKey, { term: string; means: string }> = {
   occupancy: {
     term: "Occupancy",
-    means: "Rooms sold, as a share of the rooms that could be sold. Rooms out of service are left out, and a free room does not count as sold.",
+    means: "Rooms sold, as a share of the rooms that could be sold. Rooms out of service are left out. A complimentary room counts as sold, as in the group's eZee reports.",
   },
   adr: {
     term: "Average daily rate (ADR)",
-    means: "Room revenue divided by rooms sold: what a sold room earned, on average. Room charges only. Extras, food and tax are not in it.",
+    means: "Room revenue divided by rooms sold, complimentary rooms included: what a sold room earned, on average. Room charges only. Extras, food and tax are not in it.",
   },
   revpar: {
     term: "RevPAR",
@@ -67,7 +67,7 @@ export const GLOSSARY: Record<TermKey, { term: string; means: string }> = {
   },
   complimentary: {
     term: "Complimentary room",
-    means: "A room given free. It is not counted as sold, so it lifts neither occupancy nor the average rate.",
+    means: "A room given free. It counts as sold, as in the group's eZee reports: it lifts occupancy and lowers the average rate, because it earns nothing.",
   },
   nightAudit: {
     term: "Night audit",
