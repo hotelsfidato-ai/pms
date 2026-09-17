@@ -11,6 +11,113 @@ Work that touches the core or several services still goes in the root
 
 ---
 
+## 2026-09-17 (phase 1A, merge 1) · Stock held per store, moves between stores, and the long dash gone
+
+**Asked for:** the master, relaying the owner's third interview: merge cp6, read
+`docs/briefs/decisions-2026-09-17.md`, build stock per place, clean the long
+dash from this folder (D17-59, D17-60), then crockery (D17-69); migration 106;
+tell the master the branch when stock per place is done.
+
+**Decided by the owner on the way** — asked with a recommendation each, all taken
+- **Two merges.** This one: stock per store, moves between stores, the dash
+  pass — enough for the deploy (D17-61) and Purchasing (D17-67). The next: par
+  levels, the count sheet, gas by cylinder. Then crockery.
+- **One list, pick a store:** "All stores" shows the total and "Main 30 ·
+  Kitchen 8 · Bar -"; one store shows only its own.
+- **Which store:** every dialog asks, starting on the picked store, else Main.
+- **Moving stock** is `create`: the kitchen manager may.
+- Already decided (D17-2, D17-3): stock recorded before sits in the Main store;
+  the three stores were made by the master's 104.
+
+**Shipped** — branch `stores/phase-1a`, merged with cp6 `f9e144b`
+- `db/migrations/106_stock_held_per_store.sql` — `location_id` on every
+  movement, back-filled into the Main store; a movement's store checked to be
+  a store at its property, the Main store filled in for a writer that names
+  none; `app.main_store`, `app.stock_on_hand(item, store)`,
+  `app.transfer_stock`; a move is two halves checked at the end of the
+  statement; `app.reverse_stock_movement` undoes in the row's store and both
+  halves of a move. 069, 094 and 104 untouched.
+- `db/tests/modules/stores.sql` — new, 19 assertions.
+- `api/src/modules/stores/stores.ts` — the list returns the stores and
+  `byStore`; a movement requires its store, refuses a switched-off store for a
+  receipt, checks the store's own on hand; `POST /:code/stores/transfers`; the
+  undo checks every store it touches; the history names the store and shows a
+  move as one row. The one long dash a person could read ("No unit - forty of
+  what?") and the three in refusal sentences are gone.
+- `src/modules/stores/data/stores.ts` — stores, `byStore`, `locationId`,
+  `moveStock`.
+- `src/modules/stores/pages/Stores.tsx` — the Store picker; the per-store line;
+  "In Kitchen store"; Which store in every dialog; Move to another store; a
+  move in History as one line and its undo; every long dash a person reads
+  replaced (" - " in a sentence, "-" for nothing held or set).
+- Tests: `stockPerStore.test.ts` (11), the three store server tests updated
+  (every movement names its store; every role tries a move), `stores.test.tsx`
+  (per-store line, picking a store, no long dash).
+- `MODULE.md` — the screen, 7 endpoints, 106, the tests.
+
+**Found**
+- **A deferred check blocks ALTER TABLE.** My first version of the two-halves
+  rule was a deferred constraint trigger. Postgres then refuses ALTER TABLE on
+  the table in any transaction with a stock insert ("pending trigger events"),
+  and the frozen `suite.sql` lifts the append-only guard to clean up — it
+  stopped there. Replaced by a statement-level check, which is enough because
+  both writers put every half in one statement. For the master's root
+  `MEMORY.md`: a deferred constraint trigger queues an event for every row it
+  watches, and any later ALTER TABLE in that transaction fails.
+- **Two writers name no store:** the frozen `suite.sql` and the master's
+  `shared.sql`. Neither is this lane's; the database gives them the Main store,
+  D17-2's own rule, while the API refuses a request that names none.
+- **A break that tested two things at once** (MEMORY 270's shape): removing the
+  store trigger also removed the Main-store default, so the suite stopped for a
+  reason that was not the rule. Redone one rule at a time.
+- **The order of the stores** first read "Main · Bar · Kitchen" (alphabetical);
+  the owner's approved layout reads "Main · Kitchen · Bar". Ordered by the
+  owner's names (D17-3), then by name.
+- A dialog said "0 piece in Kitchen store" beside a store the list shows as
+  "-": it now says "None in Kitchen store".
+
+**Proved** — in `D:\fidato-stores`, every exit code read
+- Database: `bash db/tests/run.sh` **806 assertions**, exit 0 (19 new);
+  `bash db/tests/rerun.sh` **106 migrations re-runnable**, exit 0. Breaks: the
+  two-halves check removed → 4 failed (three its own, one knock-on); the
+  store-at-this-property check removed → 2 failed, exactly its own.
+- The back-fill on real data, `fidato_stores`: 14 movements → all in Main
+  store, 14 audit rows; migrated again → nothing added.
+- Server: `npm test -- test/modules/stores` **181 passed**. Breaks: the issue
+  check read the hotel's total → 1 failed ("more than THAT store holds"); the
+  move route asked `view` → 4 failed, exactly the look-only roles; the history
+  showed both halves → 1 failed.
+- Web: a long dash put back in a dialog title → the D17-48 test failed
+  ("expected 'Receive — Bath towel…' not to contain '—'").
+- On the screen, own database, as `dev-store`: picker All / Main / Kitchen /
+  Bar; received 10 towels into the Kitchen store → "Main 3 · Kitchen 10 ·
+  Bar -", average ₹231; moved 2 Main → Kitchen → "Main 1 · Kitchen 12", total
+  13; History "Moved from Main store to Kitchen store 2 piece"; undo asked "It
+  goes back from Kitchen store to Main store", then "Undo of a move" and "Main
+  3 · Kitchen 10". At 375px: no sideways scroll, nothing outside, 0 controls
+  under 44px, 0 unnamed buttons, 0 contrast failures, buttons on one row, no
+  long dash; cards 234–290px (the store line adds a row). As `dev-hk`: the
+  picker, the store line, History only, the look-only sentence.
+- Gates: `npx tsc -b --force` exit 0 · `npx vitest run` **347 passed**, exit 0
+  · `cd api; npm test` **933 passed, 53 files**, exit 0 · `npm run
+  strip-check` 81 files, exit 0 · `npm run build` exit 0, "no test sign-in in
+  dist".
+
+**Left open**
+- Merge 2, straight after: par levels per store, the count sheet, gas by
+  cylinder (D17-4: the refill price per full cylinder received, and the
+  deposit held on each cylinder tracked). Then phase 2A, crockery and cutlery.
+- The low-stock warning still reads the hotel's total per item — par levels per
+  store (merge 2) replace it.
+- The markdown papers in this folder keep their long dashes: they are notes for
+  the next chat, not screens.
+- `fidato_stores` (development only): towels received into the Kitchen store,
+  a move and its undo.
+
+**Commits:** the stock-per-store commit on `stores/phase-1a`.
+
+---
+
 ## 2026-09-16 (phase 1A, part 2) · STO-2 to STO-11: the Store's screen, fixed as the owner chose
 
 **Asked for:** the master, after merging STO-1: merge cp6, re-read the brief,

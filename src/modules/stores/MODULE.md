@@ -64,6 +64,20 @@ and both stay. A list can be imported from a file.
   again), empty, full — and a failed refresh keeps the last list, marked "Not up
   to date".
 - **Add an item** starts "Where it belongs" on nothing chosen (STO-10).
+- **Per store** (106, the owner's answers of 17 September): a **Store** picker
+  under the heading — All stores, then the Main, Kitchen and Bar store in the
+  owner's order, then any added later. On "All stores" each card shows the
+  total and a line **"Main 30 · Kitchen 8 · Bar -"**; one store shows "In
+  Kitchen store" and only what is there. Every dialog asks **Which store**,
+  starting on the picked store, else the Main store; a receipt is offered only
+  stores switched on.
+- **Move to another store** in More (`create`): From (a store holding some,
+  starting as above), To (a store switched on, chosen each time), how many.
+  History shows a move, and its undo, as **one line** naming both stores; its
+  undo asks first and takes both halves back.
+- **No long dash** in anything the page shows (D17-48, D17-60): " - " inside a
+  sentence, "-" where nothing is held or nothing is set. `stores.test.tsx`
+  fails on one.
 - The `stores` role — **the Inventory Manager** since 16 September, key
   unchanged — lands on the Store after sign-in: it is the first entry
   of their working menu, and they have no Dashboard (`workingHomeFor`,
@@ -72,24 +86,32 @@ and both stay. A list can be imported from a file.
 
 ---
 
-## Server endpoints — 6
+## Server endpoints — 7
 
-The code is in `api/src/modules/stores/stores.ts` (474 lines; moved 15
-September); the door `index.ts` mounts it at `/api/hotels`. There is no module switch for the store.
+The code is in `api/src/modules/stores/stores.ts` (moved 15 September); the
+door `index.ts` mounts it at `/api/hotels`. There is no module switch for the
+store.
 
 ```
                                               grant needed (403 otherwise)
-GET    /:code/stores                          view     items, on hand, value
-GET    /:code/stores/items/:id/movements      view     one item's history; `who` named for the
-                                                       Inventory Manager too (STO-4), and
-                                                       `reversesKind` on an undo (STO-6)
+GET    /:code/stores                          view     `stores` (Main first) and items: on hand,
+                                                       value, and `byStore` — what each store holds
+GET    /:code/stores/items/:id/movements      view     one item's history; each row's `store`; a move
+                                                       (and its undo) as ONE row with `fromStore`,
+                                                       `toStore`; `who` named for the Inventory
+                                                       Manager too (STO-4); `reversesKind` (STO-6)
 POST   /:code/stores/items                    create   add an item
                                               + edit   if the name is already there (it overwrites)
 POST   /:code/stores/movements                create   receipt · issue · wastage · return
                                               edit     adjustment
-POST   /:code/stores/movements/:id/reverse    edit     undo one movement with its own row —
-                                                       refused (409) if it would leave the
-                                                       shelf below zero (STO-11)
+                                                       `locationId` REQUIRED — a store at this
+                                                       property; nothing received into a switched-off
+                                                       one; an out-movement checks THAT store's on hand
+POST   /:code/stores/transfers                create   move from one store to another (106): both
+                                                       halves in one statement, via app.transfer_stock
+POST   /:code/stores/movements/:id/reverse    edit     undo one movement with its own row, in its own
+                                                       store — both halves of a move; refused (409) if
+                                                       any store would be left below zero (STO-11)
 POST   /:code/stores/import                   create   items from a file; a row that changes
                                                        an existing item needs edit, or is rejected
 ```
@@ -113,9 +135,10 @@ copy follows in the same commit. Each route asks before its first write.
 ## Data
 
 ```
-data/stores.ts   173 lines. getStore, getStockHistory, addStockItem,
-                 recordStockMovement, reverseStockMovement, importStockItems.
-                 The import report type comes from the core
+data/stores.ts   getStore (stores and items), getStockHistory, addStockItem,
+                 recordStockMovement (a locationId), moveStock,
+                 reverseStockMovement, importStockItems. The reads throw
+                 (STO-2). The import report type comes from the core
                  (@/data/repositories/importReport).
 ```
 
@@ -133,7 +156,26 @@ stock_items, stock_movements          069_stores.sql
   one property cannot move another's   composite key on (hotel_id, item_id), added only if absent
   where an issue went                  to_outlet → pos_outlets; null for housekeeping and the like
   audit trigger on both tables         076_approvals.sql
+
+stock per store, moves between stores 106_stock_held_per_store.sql
+  every movement names its store       location_id, NOT NULL; checked to be a `store` at the
+                                       movement's property (trigger stock_movements_place). A
+                                       writer that names none gets the Main store (D17-2's rule)
+  the Main store                       app.main_store(hotel): named "Main store", else the oldest
+  on hand per store                    app.stock_on_hand(item, store); the total is unchanged
+  a move is two halves                 kind 'transfer', one out + one in sharing transfer_id,
+                                       written by app.transfer_stock in ONE statement
+  neither half alone                   statement-level trigger stock_movements_transfer_whole:
+                                       a move, or its undo, whole or refused. NOT deferred — a
+                                       deferred check blocks ALTER TABLE in the same transaction
+  undo per store, a move as a whole    app.reverse_stock_movement, replaced: in the row's store,
+                                       both halves of a move in one statement
+  stock recorded before                back-filled into the Main store (D17-2), with the append-
+                                       only and staff-scope guards lifted for that one statement
 ```
+
+Value stays per item (S4): a store's worth is the item's average cost times
+what that store holds.
 
 Deliberately absent (069's header): no price on an item — a delivery has a
 price; no supplier table yet.
@@ -244,13 +286,16 @@ only through theirs.
 
 Where the checks are today: `db/tests/suite.sql` group `store` — on hand,
 weighted value, reversal, and the cross-property refusal (frozen; new checks
-go in `db/tests/modules/stores.sql`, which does not exist yet);
+go in `db/tests/modules/stores.sql`, created 17 September for 106);
 `src/components/app/navigation.test.ts` pins the store roles' menus.
 
 ```
 api/test/modules/stores/stockGrants.test.ts   who may do what, every act × every role (STO-1)
 api/test/modules/stores/historyNames.test.ts  names in a history; what an undo undid (STO-4, 6)
-api/test/modules/stores/undoBelowZero.test.ts an undo may not leave less than nothing (STO-11)
+api/test/modules/stores/undoBelowZero.test.ts an undo may not leave less than nothing (STO-11), per store
+api/test/modules/stores/stockPerStore.test.ts the stores, per-store on hand, moves (106)
+db/tests/modules/stores.sql                   106 in the database: the store check, per-store on
+                                              hand, a move's two halves, undoing a move
 src/modules/stores/stores.test.tsx            the page: four states, More, look-only,
                                               undo asks first, a category must be chosen
 src/modules/stores/data/stores.test.ts        a failed read throws, never answers empty (STO-2)

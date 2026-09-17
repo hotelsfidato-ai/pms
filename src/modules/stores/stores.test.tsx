@@ -30,35 +30,48 @@ vi.mock("@/modules/stores/data/stores", async (importOriginal) => {
     new ApiError(0, "Could not reach the server. Showing the last data received.");
   const item = (id: string, name: string, over: Record<string, unknown>) => ({
     id, name, unit: "piece", category: "Housekeeping", onHand: 0,
-    reorderLevel: null, low: false, unitCost: null, value: null,
+    reorderLevel: null, low: false, unitCost: null, value: null, byStore: {},
     lastMovement: null, movements: 0, isActive: true, ...over,
   });
+  /* The three stores every hotel has (104), the Main store first. */
+  const stores = [
+    { id: "main", name: "Main store", isActive: true, isMain: true },
+    { id: "kitchen", name: "Kitchen store", isActive: true, isMain: false },
+    { id: "bar", name: "Bar store", isActive: true, isMain: false },
+  ];
   return {
     ...actual,
     getStore: async () => {
       if (control.store === "unreachable") throw unreachable();
-      if (control.store === "empty") return [];
-      return [
-        item("towels", "Bath towel", {
-          onHand: 58, unitCost: 310, value: 17980, lastMovement: "2026-08-25", movements: 3 }),
-        item("rolls", "Toilet roll", {}),
-        item("gas", "LPG cylinder", {
-          category: "Kitchen", unit: "cylinder", onHand: 1, unitCost: 1850, value: 1850,
-          lastMovement: "2026-08-25", movements: 2 }),
-      ];
+      if (control.store === "empty") return { stores, items: [] };
+      return {
+        stores,
+        items: [
+          item("towels", "Bath towel", {
+            onHand: 58, unitCost: 310, value: 17980, byStore: { main: 50, kitchen: 8 },
+            lastMovement: "2026-08-25", movements: 3 }),
+          item("rolls", "Toilet roll", {}),
+          item("gas", "LPG cylinder", {
+            category: "Kitchen", unit: "cylinder", onHand: 1, unitCost: 1850, value: 1850,
+            byStore: { kitchen: 1 }, lastMovement: "2026-08-25", movements: 2 }),
+        ],
+      };
     },
     getStockHistory: async () => {
       if (control.history === "unreachable") throw unreachable();
+      const row = (over: Record<string, unknown>) => ({
+        date: "2026-08-25", unitCost: null, supplier: null, reference: null, note: null,
+        outlet: null, who: null, store: "Main store", fromStore: null, toStore: null,
+        isReversal: false, reversesKind: null, reversed: false, ...over,
+      });
       return [
-        { id: "3", date: "2026-08-25", kind: "adjustment", quantity: 2, unitCost: null,
-          supplier: null, reference: null, note: null, outlet: null, who: "Test Store",
-          isReversal: true, reversesKind: "issue", reversed: false },
-        { id: "2", date: "2026-08-25", kind: "issue", quantity: -2, unitCost: null,
-          supplier: null, reference: null, note: "Room 204", outlet: null, who: null,
-          isReversal: false, reversesKind: null, reversed: true },
-        { id: "1", date: "2026-08-25", kind: "receipt", quantity: 60, unitCost: 310,
-          supplier: "Solapur Textiles", reference: "INV-2231", note: null, outlet: null,
-          who: null, isReversal: false, reversesKind: null, reversed: false },
+        row({ id: "4", kind: "transfer", quantity: 8, store: "Kitchen store",
+              fromStore: "Main store", toStore: "Kitchen store" }),
+        row({ id: "3", kind: "adjustment", quantity: 2, who: "Test Store",
+              isReversal: true, reversesKind: "issue" }),
+        row({ id: "2", kind: "issue", quantity: -2, note: "Room 204", reversed: true }),
+        row({ id: "1", kind: "receipt", quantity: 60, unitCost: 310,
+              supplier: "Solapur Textiles", reference: "INV-2231" }),
       ];
     },
     addStockItem: async (_hotel: string, input: unknown) => {
@@ -151,7 +164,7 @@ describe("the Store", () => {
     expect(towels.getByRole("button", { name: /Issue/ })).toBeTruthy();
 
     const menu = await openMore("Bath towel");
-    for (const name of [/Waste/, /Return to supplier/, /Correct the count/, /History/]) {
+    for (const name of [/Waste/, /Return to supplier/, /Move to another store/, /Correct the count/, /History/]) {
       expect(within(menu).getByRole("menuitem", { name })).toBeTruthy();
     }
     fireEvent.keyDown(menu, { key: "Escape" });
@@ -196,6 +209,8 @@ describe("the Store", () => {
     fireEvent.click(within(await openMore("Bath towel")).getByRole("menuitem", { name: /History/ }));
     const history = await screen.findByRole("dialog");
     expect(await within(history).findByText("Undo of an issue")).toBeTruthy();
+    /* A move between stores is one line, naming both (106). */
+    expect(within(history).getByText("Moved from Main store to Kitchen store")).toBeTruthy();
 
     fireEvent.click(within(history).getByRole("button", { name: "Undo this delivery" }));
     expect(await screen.findByText("Undo this delivery of 60 piece?")).toBeTruthy();
@@ -203,6 +218,37 @@ describe("the Store", () => {
 
     fireEvent.click(screen.getByRole("button", { name: "Undo delivery" }));
     await waitFor(() => expect(control.reversed).toEqual(["1"]));
+  });
+
+  it("106 · all stores together shows what each store holds; one store shows only its own", async () => {
+    as("stores");
+    render(<App />);
+    await screen.findByText("Bath towel");
+
+    const towels = within(card("Bath towel"));
+    expect(towels.getByText("Main 50 · Kitchen 8 · Bar -")).toBeTruthy();
+
+    fireEvent.change(screen.getByLabelText("Store"), { target: { value: "bar" } });
+    await waitFor(() => expect(within(card("Bath towel")).getByText("In Bar store")).toBeTruthy());
+    /* Nothing of it in the Bar store: a dash, never a zero. */
+    expect(within(card("Bath towel")).queryByText("Main 50 · Kitchen 8 · Bar -")).toBeNull();
+    expect(within(card("Bath towel")).getByText(/Nothing in Bar store to issue/)).toBeTruthy();
+
+    fireEvent.change(screen.getByLabelText("Store"), { target: { value: "__all-stores" } });
+    await waitFor(() => expect(within(card("Bath towel")).getByText("On hand")).toBeTruthy());
+  });
+
+  it("D17-48 · no long dash anywhere a person reads on the Store", async () => {
+    as("stores");
+    render(<App />);
+    await screen.findByText("Bath towel");
+    const LONG_DASH = String.fromCharCode(0x2014);
+    expect(document.querySelector("main")!.textContent).not.toContain(LONG_DASH);
+
+    fireEvent.click(within(card("Bath towel")).getByRole("button", { name: /Receive/ }));
+    const dialog = await screen.findByRole("dialog");
+    expect(dialog.textContent).not.toContain(LONG_DASH);
+    fireEvent.keyDown(dialog, { key: "Escape" });
   });
 
   it("STO-2 · a history that could not be read says so", async () => {

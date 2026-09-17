@@ -38,6 +38,9 @@ const HOTEL = "5EL";
 let ownerId: string;
 let shelfId: string;
 let gmElsewhereId: string;
+/** The hotel's Main store and Kitchen store (104), where every movement here happens. */
+let mainId: string;
+let kitchenId: string;
 const staffByRole = new Map<string, string>();
 /** Per role: a delivery for that role to try to undo. */
 const targetByRole = new Map<string, string>();
@@ -101,19 +104,25 @@ beforeAll(async () => {
     { hotel: HOTEL, role: "front_desk" },
   ]);
 
+  const storeNamed = async (name: string) => (await one(
+    `select l.id::text from locations l join hotels h on h.id = l.hotel_id
+      where h.code = $1 and l.name = $2`, [HOTEL, name]))!.id as string;
+  mainId = await storeNamed("Main store");
+  kitchenId = await storeNamed("Kitchen store");
+
   /* The shelf every out-movement draws from, stocked by the owner. */
   const shelf = await ok(await call(ownerId, "POST", "/items",
     { name: `${TAG} shelf`, unit: "piece" }), "the owner adds the shelf item");
   shelfId = shelf.id as string;
   await ok(await call(ownerId, "POST", "/movements",
-    { itemId: shelfId, kind: "receipt", quantity: 10000, unitCost: 1, note: `${TAG} opening` }),
+    { itemId: shelfId, locationId: mainId, kind: "receipt", quantity: 10000, unitCost: 1, note: `${TAG} opening` }),
     "the owner stocks the shelf");
 
   for (const role of ASSIGNABLE_ROLES) {
     /* A delivery for this role to try to undo, and an item for it to try
        to change — one each, so one role's success cannot hide another's. */
     const target = await ok(await call(ownerId, "POST", "/movements",
-      { itemId: shelfId, kind: "receipt", quantity: 1, unitCost: 1, note: `${TAG} target ${role}` }),
+      { itemId: shelfId, locationId: mainId, kind: "receipt", quantity: 1, unitCost: 1, note: `${TAG} target ${role}` }),
       `the owner receives ${role}'s target`);
     targetByRole.set(role, target.id as string);
     await ok(await call(ownerId, "POST", "/items",
@@ -195,7 +204,7 @@ describe("the Store, as every role a person can be given (STO-1)", () => {
         it(`${may ? "may" : "may not"} record a ${kind}`, async () => {
           const note = `${TAG} ${kind} ${role}`;
           const res = await call(who(), "POST", "/movements", {
-            itemId: shelfId, kind, quantity: 1, note,
+            itemId: shelfId, locationId: mainId, kind, quantity: 1, note,
             ...(kind === "receipt" ? { unitCost: 2 } : {}),
           });
           if (may) {
@@ -208,6 +217,23 @@ describe("the Store, as every role a person can be given (STO-1)", () => {
           }
         });
       }
+
+      /* A move between stores is a new movement: `create` (the owner, 17
+         September), so the kitchen manager may, and a look-only person may not. */
+      it(`${create ? "may" : "may not"} move stock from one store to another`, async () => {
+        const note = `${TAG} move ${role}`;
+        const res = await call(who(), "POST", "/transfers", {
+          itemId: shelfId, fromId: mainId, toId: kitchenId, quantity: 1, note,
+        });
+        if (create) {
+          await ok(res, "moving");
+          expect(await movementsNoted(note)).toBe(2);
+        } else {
+          await refused(res, "moving");
+          expect(await movementsNoted(note), `${role} was refused and a move was written anyway`)
+            .toBe(0);
+        }
+      });
 
       it(`${edit ? "may" : "may not"} undo a delivery`, async () => {
         const target = targetByRole.get(role)!;
@@ -270,7 +296,7 @@ describe("the Store, as every role a person can be given (STO-1)", () => {
     const note = `${TAG} receipt gm-elsewhere`;
     await refused(await call(gmElsewhereId, "GET", ""), "the list");
     await refused(await call(gmElsewhereId, "POST", "/movements",
-      { itemId: shelfId, kind: "receipt", quantity: 1, unitCost: 1, note }), "receiving");
+      { itemId: shelfId, locationId: mainId, kind: "receipt", quantity: 1, unitCost: 1, note }), "receiving");
     expect(await movementsNoted(note)).toBe(0);
   });
 
