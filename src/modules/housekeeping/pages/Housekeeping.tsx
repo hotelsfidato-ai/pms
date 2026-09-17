@@ -2,7 +2,7 @@ import { useState, useEffect, useCallback } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useParams } from "react-router";
 import {
-  Check, CloudOff, RefreshCw, Sparkle, Wrench, BedDouble, UserRound, SprayCan,
+  Check, CloudOff, RefreshCw, Sparkle, Wrench, BedDouble, UserRound, SprayCan, RotateCcw,
 } from "lucide-react";
 import { cn } from "@/lib/cn";
 import { HeldError } from "@/lib/api";
@@ -17,6 +17,7 @@ import { StartHere } from "@/components/app/StartHere";
 import { listHousekeeping, markRoom, type HousekeepingRoom, listHousekeepers, listRoomAssignments, assignHousekeeper, unassignHousekeeper, type Housekeeper, type RoomAssignment } from "@/modules/housekeeping/data/housekeeping";
 import { BUSINESS_DATE, listAllRooms, type RoomBlock } from "@/data/repositories";
 import { OutOfOrderFlow } from "@/modules/housekeeping/flows/OutOfOrderFlow";
+import { RepairFlow } from "@/modules/housekeeping/flows/RepairFlow";
 
 /* ══════════════════════════════════════════════════════════════════
    FLOW E — housekeeping, on a phone
@@ -396,6 +397,17 @@ function RoomCard({
   const effective = pending?.state ?? room.housekeeping;
   const blocked = room.housekeeping === "out-of-service";
 
+  /* WHY A GREY BUTTON IS GREY, said when it is tapped (the owner, D17-8,
+     17 September). The icons were greyed in silence: a screen reader was
+     told "Mark room 202 clean, dimmed" and the housekeeper looking at the
+     screen was told nothing. The sentence belongs to this card and goes
+     when the room moves on, because it is only true of the state it was
+     said about. */
+  const [said, setSaid] = useState<string | null>(null);
+  useEffect(() => setSaid(null), [effective]);
+  const [repairing, setRepairing] = useState(false);
+  const [takingOut, setTakingOut] = useState(false);
+
   return (
     <div
       data-hk-room={room.number}
@@ -471,8 +483,12 @@ function RoomCard({
 
       {/* 44px tap targets — a phone, one-handed, in a stairwell.
           `mt-auto` pins this to the bottom of the card so the buttons
-          line up across a row whatever the text above them does. */}
-      <div className="flex items-center gap-2 mt-auto pt-1">
+          line up across a row whatever the text above them does.
+          THREE EQUAL COLUMNS once each carries a word: measured at 375px
+          the card's inside is 311px, so a column is about 98px — room
+          for "Inspected" on one line with the icon above it. */}
+      <div className="mt-auto pt-1">
+      <div className={cn(blocked ? "flex items-center gap-2" : "grid grid-cols-3 gap-2")}>
         {blocked ? (
           /* This was a text label. A room could get INTO this state and
              the board offered nothing to get it out again — the only
@@ -486,6 +502,7 @@ function RoomCard({
               <button
                 type="button"
                 onClick={open}
+                data-hk-put-back={room.number}
                 className={cn(
                   "flex items-center gap-1.5 min-h-11 px-2.5 rounded-md",
                   "text-sm text-brand-red border border-transparent",
@@ -493,58 +510,145 @@ function RoomCard({
                   "transition-colors duration-150",
                 )}
               >
-                <Wrench className="size-4" />
-                {/* An action, so a verb: it takes the room out for a
-                    period. "Out of order" read as a state it was already in. */}
-                Take out of service
+                <RotateCcw className="size-4" />
+                {/* WHAT IT DOES (the owner, 17 September). It said "Take out
+                    of service" on a room that was already out, and opened
+                    what is out with "Put back" on it. */}
+                Put back
               </button>
             )}
           />
         ) : (
           <>
-            <button
-              type="button"
-              onClick={() => onMark("clean")}
-              disabled={effective !== "dirty"}
-              aria-label={`Mark room ${room.number} clean`}
-              className={cn(
-                "flex items-center justify-center size-11 rounded-md border transition-colors duration-150",
-                effective === "dirty"
-                  ? "border-grey-300 bg-white hover:border-brand-orange hover:bg-brand-orange-50"
-                  : "border-grey-200 bg-grey-50 text-grey-300 cursor-not-allowed",
-              )}
-            >
-              <Sparkle className="size-5" />
-            </button>
-            <button
-              type="button"
-              onClick={() => onMark("inspected")}
-              disabled={effective !== "clean"}
-              aria-label={`Mark room ${room.number} inspected`}
-              className={cn(
-                "flex items-center justify-center size-11 rounded-md border transition-colors duration-150",
-                effective === "clean"
-                  ? "border-grey-300 bg-white hover:border-success hover:bg-success-50"
-                  : "border-grey-200 bg-grey-50 text-grey-300 cursor-not-allowed",
-              )}
-            >
-              <Check className="size-5" />
-            </button>
+            <MarkButton
+              label="Clean"
+              icon={Sparkle}
+              ariaLabel={`Mark room ${room.number} clean`}
+              ready={effective === "dirty"}
+              reason={whyNotClean(room.number, effective, !!pending)}
+              onPress={() => onMark("clean")}
+              onRefused={setSaid}
+              hover="hover:border-brand-orange hover:bg-brand-orange-50"
+            />
+            <MarkButton
+              label="Inspected"
+              icon={Check}
+              ariaLabel={`Mark room ${room.number} inspected`}
+              ready={effective === "clean"}
+              reason={whyNotInspected(room.number, effective, !!pending)}
+              onPress={() => onMark("inspected")}
+              onRefused={setSaid}
+              hover="hover:border-success hover:bg-success-50"
+            />
           </>
         )}
-        {/* The bed moved up beside the room number, where it reads as
-            "this one has somebody in it" rather than trailing the
-            buttons like a third control. */}
+        {/* REPAIR (the owner, D17-8 and 17 September): it reports a repair
+            for this room. Taking the room out of service is a second choice
+            inside it — a dripping tap does not cost a night's sale — and
+            "out of service without a repair" (NC, refurbishment) is at its
+            foot. It is never grey: anybody on the board may report one. */}
         {!blocked && (
-          <OutOfOrderFlow
-            hotelId={hotelId}
-            roomNumber={room.number}
-            blocks={blocks}
-            occupied={room.occupied}
-          />
+          <>
+            <MarkButton
+              label="Repair"
+              icon={Wrench}
+              ariaLabel={`Report a repair in room ${room.number}`}
+              ready
+              reason=""
+              onPress={() => setRepairing(true)}
+              onRefused={setSaid}
+              hover="hover:border-grey-400 hover:bg-grey-50"
+            />
+            <RepairFlow
+              hotelId={hotelId}
+              open={repairing}
+              onOpenChange={setRepairing}
+              title={`Report a repair · Room ${room.number}`}
+              room={{ number: room.number, occupied: room.occupied }}
+              onOutOfServiceOnly={() => setTakingOut(true)}
+            />
+            <OutOfOrderFlow
+              hotelId={hotelId}
+              roomNumber={room.number}
+              blocks={blocks}
+              occupied={room.occupied}
+              open={takingOut}
+              onOpenChange={setTakingOut}
+            />
+          </>
         )}
       </div>
+      {/* Always in the page, empty until something is said, so a screen
+          reader is listening before the sentence arrives. The words are
+          the style the desk's menu uses for a reason (`MenuItem`). */}
+      <p
+        role="status"
+        data-hk-reason={room.number}
+        className={cn("text-sm text-grey-500 leading-snug", said ? "mt-2" : "sr-only")}
+      >
+        {said ?? ""}
+      </p>
+      </div>
     </div>
+  );
+}
+
+/* ── Why a button is grey ─────────────────────────────────────────────
+   The same order the server refuses in (`roomStatus.ts`): a room is
+   cleaned, then inspected. "On this phone" when the state is a tap still
+   waiting to sync, because the server has not heard it yet and the
+   housekeeper should not think it has. */
+function whyNotClean(number: string, state: string, held: boolean): string {
+  const here = held ? " on this phone, waiting to sync" : "";
+  if (state === "clean") return `Room ${number} is already marked clean${here}.`;
+  if (state === "inspected") return `Room ${number} is already inspected${here}.`;
+  return `Room ${number} cannot be marked clean from here.`;
+}
+
+function whyNotInspected(number: string, state: string, held: boolean): string {
+  const here = held ? " on this phone, waiting to sync" : "";
+  if (state === "dirty") return `Room ${number} needs cleaning first.`;
+  if (state === "inspected") return `Room ${number} is already inspected${here}.`;
+  return `Room ${number} cannot be marked inspected from here.`;
+}
+
+/**
+ * One of the room card's buttons: its icon, and its word under it.
+ *
+ * NOT `disabled`. A disabled button swallows the tap, and the tap is the
+ * only moment a housekeeper asks why. `aria-disabled` keeps it announced as
+ * unavailable and lets the tap through to say so.
+ */
+function MarkButton({
+  label, icon: Icon, ariaLabel, ready, reason, onPress, onRefused, hover,
+}: {
+  label: string;
+  icon: React.ComponentType<{ className?: string }>;
+  ariaLabel: string;
+  ready: boolean;
+  reason: string;
+  onPress: () => void;
+  onRefused: (reason: string) => void;
+  hover: string;
+}) {
+  return (
+    <button
+      type="button"
+      aria-label={ariaLabel}
+      aria-disabled={ready ? undefined : true}
+      data-hk-mark={label}
+      onClick={() => (ready ? onPress() : onRefused(reason))}
+      className={cn(
+        "flex flex-col items-center justify-center gap-1 min-h-14 w-full px-1",
+        "rounded-md border text-sm leading-none transition-colors duration-150",
+        ready
+          ? cn("border-grey-300 bg-white text-ink-900 cursor-pointer", hover)
+          : "border-grey-200 bg-grey-50 text-grey-500 cursor-not-allowed",
+      )}
+    >
+      <Icon className={cn("size-5 shrink-0", !ready && "text-grey-300")} />
+      <span>{label}</span>
+    </button>
   );
 }
 

@@ -20,7 +20,7 @@ the real person, not "admin"; **D17-15** (API-2): `GET /:code/audit-log` and
 screens, tested for every role.
 
 **Shipped** — branch `admin/audit-log-who`
-- `db/migrations/099_audit_log_names_the_person.sql` — `folio_postings.posted_by`
+- `db/migrations/101_audit_log_names_the_person.sql` — `folio_postings.posted_by`
   defaults to the signed-in person, so the four statements that never set it
   (finance's charge, reversal and payment; front desk's walk-in room charge)
   now record who, with no change to either service's files; and

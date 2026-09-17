@@ -2,6 +2,10 @@ import { Hono } from "hono";
 import { withSession } from "../../auth.ts";
 import { businessDateFor } from "../../businessDate.ts";
 import type { Client } from "../../db.ts";
+import { checkRepairable, setRepairStatus, REPAIR_WAITING } from "../equipment/index.ts";
+import {
+  roleAt, may, REPAIR_REPORTERS, REPORT_REFUSED, COST_RECORDERS, COST_VIEWERS,
+} from "./repairRoles.ts";
 
 /* ══════════════════════════════════════════════════════════════════
    WHOSE ROOMS ARE THESE
@@ -201,42 +205,162 @@ housekeeping.delete("/:code/housekeeping/assignments/:number", async (c) => {
    fixing it, and the order points at the block.
    ══════════════════════════════════════════════════════════════════ */
 
+const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+const isId = (v: unknown): v is string => typeof v === "string" && UUID.test(v);
+
+interface OrderRow {
+  id: string; room: string | null; title: string; detail: string | null;
+  category: string; priority: string; status: string;
+  raised_by: string | null; raised_at: string;
+  assigned_to: string | null; days_open: number; blocks_room: boolean;
+  closed_by: string | null; closed_at: string | null; resolution: string | null;
+  equipment_id: string | null; equipment_name: string | null; equipment_tag: string | null;
+}
+
+interface CostRow {
+  id: string; work_order_id: string; amount: string; note: string | null;
+  recorded_by: string | null; recorded_at: string;
+  proof_id: string; proof_name: string; proof_type: string;
+  cancelled_by: string | null; cancelled_at: string | null; cancel_reason: string | null;
+}
+
+/* ONE QUERY FOR THE THREE LISTS — outstanding work, closed work, and every
+   repair on one piece of equipment (its page, phase 2B) — so the three
+   cannot describe an order three ways. Names come from `staff` with a LEFT
+   join: a name the viewer may not see is a dash, never a missing row
+   (root MEMORY 283). */
+const ORDER_SELECT = `
+  select w.id::text, rm.number as room, w.title, w.detail, w.category,
+         w.priority, w.status,
+         rs.full_name as raised_by, to_char(w.raised_at,'YYYY-MM-DD') as raised_at,
+         asg.full_name as assigned_to,
+         (current_date - w.raised_at::date)::int as days_open,
+         w.block_id is not null as blocks_room,
+         cl.full_name as closed_by, to_char(w.closed_at,'YYYY-MM-DD') as closed_at,
+         w.resolution,
+         w.equipment_item_id::text as equipment_id,
+         ei.name as equipment_name, ei.tag as equipment_tag
+    from work_orders w
+    left join rooms rm on rm.id = w.room_id
+    left join staff rs on rs.id = w.raised_by
+    left join staff asg on asg.id = w.assigned_to
+    left join staff cl on cl.id = w.closed_by
+    left join equipment_items ei on ei.id = w.equipment_item_id
+   where w.hotel_id = $1`;
+
+/* Most urgent first, oldest first within that — a maintenance list exists
+   to surface what has been ignored (058's own order, kept). */
+const OUTSTANDING_ORDER = `
+   order by case w.priority when 'urgent' then 0 when 'high' then 1
+                            when 'normal' then 2 else 3 end,
+            w.raised_at`;
+
+/** How many closed repairs the Closed list shows, newest first. */
+const CLOSED_SHOWN = 100;
+
 housekeeping.get("/:code/work-orders", async (c) => {
+  const view = c.req.query("view") === "closed" ? "closed" : "open";
+  const item = c.req.query("item");
+
   const body = await withSession(c.get("subject"), async (client) => {
     const hotel = await resolve(client, c.req.param("code"));
     if (!hotel) return null;
 
-    const { rows } = await client.query<{
-      id: string; room: string | null; title: string; detail: string | null;
-      category: string; priority: string; status: string;
-      raised_by: string | null; raised_at: string;
-      assigned_to: string | null; days_open: number; blocks_room: boolean;
-    }>(
-      `select id::text, room, title, detail, category, priority, status,
-              raised_by, to_char(raised_at,'YYYY-MM-DD') as raised_at,
-              assigned_to, days_open, blocks_room
-         from app.work_orders_open($1)`,
-      [hotel.id],
-    );
+    const role = await roleAt(client, hotel.id);
 
-    /* Closed work is asked for separately. "How many times have we fixed
+    let rows: OrderRow[];
+    if (item !== undefined) {
+      /* Every repair on one thing, open or closed, newest first. */
+      rows = isId(item)
+        ? (await client.query<OrderRow>(
+            `${ORDER_SELECT} and w.equipment_item_id = $2 order by w.raised_at desc, w.id`,
+            [hotel.id, item])).rows
+        : [];
+    } else if (view === "closed") {
+      rows = (await client.query<OrderRow>(
+        `${ORDER_SELECT} and w.status in ('done','cancelled')
+          order by w.closed_at desc, w.id limit ${CLOSED_SHOWN}`,
+        [hotel.id])).rows;
+    } else {
+      rows = (await client.query<OrderRow>(
+        `${ORDER_SELECT} and w.status in ('open','in_progress') ${OUTSTANDING_ORDER}`,
+        [hotel.id])).rows;
+    }
+
+    /* Closed work is counted separately. "How many times have we fixed
        this room this year" is a different question from "what is
        outstanding", and mixing them buries the second. */
-    const { rows: done } = await client.query<{ n: string }>(
-      `select count(*)::text as n from work_orders
-        where hotel_id = $1 and status in ('done','cancelled')`,
+    const { rows: counts } = await client.query<{ open: string; closed: string }>(
+      `select count(*) filter (where status in ('open','in_progress'))::text as open,
+              count(*) filter (where status in ('done','cancelled'))::text as closed
+         from work_orders where hotel_id = $1`,
       [hotel.id],
     );
 
+    /* THE MONEY ONLY TO THOSE WHO MAY SEE IT (the owner, 17 September):
+       the five who record costs, and the accountant. Everybody else gets
+       the repair without a `costs` field at all — not an empty list, which
+       would read as "it cost nothing". */
+    const seesMoney = may(role, COST_VIEWERS);
+    const costsFor = new Map<string, CostRow[]>();
+    if (seesMoney && rows.length > 0) {
+      const { rows: costs } = await client.query<CostRow>(
+        `select k.id::text, k.work_order_id::text, k.amount::text, k.note,
+                rb.full_name as recorded_by,
+                to_char(k.recorded_at,'YYYY-MM-DD') as recorded_at,
+                k.proof_id::text, a.filename as proof_name, a.content_type as proof_type,
+                cb.full_name as cancelled_by,
+                to_char(k.cancelled_at,'YYYY-MM-DD') as cancelled_at,
+                k.cancel_reason
+           from work_order_costs k
+           join attachments a on a.id = k.proof_id
+           left join staff rb on rb.id = k.recorded_by
+           left join staff cb on cb.id = k.cancelled_by
+          where k.hotel_id = $1 and k.work_order_id = any($2::uuid[])
+          order by k.recorded_at, k.id`,
+        [hotel.id, rows.map((r) => r.id)],
+      );
+      for (const k of costs) {
+        costsFor.set(k.work_order_id, [...(costsFor.get(k.work_order_id) ?? []), k]);
+      }
+    }
+
     return {
-      orders: rows.map((r) => ({
-        id: r.id, room: r.room, title: r.title, detail: r.detail,
-        category: r.category, priority: r.priority, status: r.status,
-        raisedBy: r.raised_by, raisedAt: r.raised_at,
-        assignedTo: r.assigned_to, daysOpen: r.days_open,
-        blocksRoom: r.blocks_room,
-      })),
-      closed: Number(done[0]!.n),
+      view: item !== undefined ? "item" : view,
+      orders: rows.map((r) => {
+        const costs = costsFor.get(r.id) ?? [];
+        const standing = costs.filter((k) => k.cancelled_at === null);
+        return {
+          id: r.id, room: r.room, title: r.title, detail: r.detail,
+          category: r.category, priority: r.priority, status: r.status,
+          raisedBy: r.raised_by, raisedAt: r.raised_at,
+          assignedTo: r.assigned_to, daysOpen: r.days_open,
+          blocksRoom: r.blocks_room,
+          closedBy: r.closed_by, closedAt: r.closed_at, resolution: r.resolution,
+          equipment: r.equipment_id
+            ? { id: r.equipment_id, name: r.equipment_name, tag: r.equipment_tag }
+            : null,
+          ...(seesMoney ? {
+            costs: costs.map((k) => ({
+              id: k.id, amount: Number(k.amount), note: k.note,
+              recordedBy: k.recorded_by, recordedAt: k.recorded_at,
+              proof: { id: k.proof_id, filename: k.proof_name, contentType: k.proof_type },
+              cancelled: k.cancelled_at
+                ? { by: k.cancelled_by, at: k.cancelled_at, reason: k.cancel_reason }
+                : null,
+            })),
+            /* NULL when nothing stands — a dash on the screen, never ₹0. */
+            costTotal: standing.length
+              ? Math.round(standing.reduce((s, k) => s + Number(k.amount), 0) * 100) / 100
+              : null,
+          } : {}),
+        };
+      }),
+      open: Number(counts[0]!.open),
+      closed: Number(counts[0]!.closed),
+      closedShown: CLOSED_SHOWN,
+      mayRecordCosts: may(role, COST_RECORDERS),
+      maySeeCosts: seesMoney,
     };
   });
 
@@ -246,7 +370,7 @@ housekeeping.get("/:code/work-orders", async (c) => {
 housekeeping.post("/:code/work-orders", async (c) => {
   type Body = {
     roomNumber?: string; title?: string; detail?: string;
-    category?: string; priority?: string;
+    category?: string; priority?: string; equipmentItemId?: string | null;
   };
   const input = await c.req.json<Body>().catch(() => ({}) as Body);
 
@@ -254,11 +378,32 @@ housekeeping.post("/:code/work-orders", async (c) => {
   if (!title) {
     return c.json({ ok: false, reason: "What needs fixing?" }, 409);
   }
+  const itemId = input.equipmentItemId?.trim() || null;
 
   const result = await withSession(c.get("subject"), async (client, session) => {
     const hotel = await resolve(client, c.req.param("code"));
     if (!hotel) return null;
 
+    /* THE CLIENT'S KEY, minted when somebody TAPPED — not when the
+       request was sent. A tablet that loses signal in a lift resends,
+       and without this a dripping tap becomes two dripping taps in the
+       maintenance list. 011 wrote the same mechanism for the ledger and
+       said why; 062 adds it here.
+
+       Asked FIRST, before any check: a retry of a repair that already
+       exists is a success, even if the thing it names has since gone
+       into the approvals inbox. */
+    const idem = c.req.header("idempotency-key") ?? null;
+    if (idem) {
+      const { rows: already } = await client.query<{ id: string }>(
+        `select id::text from work_orders
+          where hotel_id = $1 and idempotency_key = $2`, [hotel.id, idem]);
+      if (already[0]) return { ok: true as const, id: already[0].id, duplicate: true };
+    }
+
+    /* ── Every refusal before the first write (root MEMORY 243) ───────
+       Inside withSession a refusal is a COMMIT, so nothing is written
+       until everything that could say no has had its say. */
     let roomId: string | null = null;
     const number = input.roomNumber?.trim();
     if (number) {
@@ -273,29 +418,32 @@ housekeeping.post("/:code/work-orders", async (c) => {
     /* No room is a real answer, not a missing one — a lift, a generator,
        the lobby door. */
 
-    /* THE CLIENT'S KEY, minted when somebody TAPPED — not when the
-       request was sent. A tablet that loses signal in a lift resends,
-       and without this a dripping tap becomes two dripping taps in the
-       maintenance list. 011 wrote the same mechanism for the ledger and
-       said why; 062 adds it here.
-
-       `on conflict do nothing` then returns no row, so the existing
-       order is fetched and reported as success. It IS success: the work
-       order the person asked for exists. */
-    const idem = c.req.header("idempotency-key") ?? null;
+    /* A REPAIR ON A PIECE OF EQUIPMENT (phase 2B). Who may: the plan's
+       table (repairRoles.ts). What the thing allows: the register's own
+       rules, asked through its front door — which also LOCKS it, so
+       nothing changes it between this answer and the write below. */
+    if (itemId) {
+      if (!may(await roleAt(client, hotel.id), REPAIR_REPORTERS)) {
+        return { forbidden: REPORT_REFUSED };
+      }
+      const check = await checkRepairable(client, hotel.id, itemId);
+      if (!check.ok) return { ok: false as const, reason: check.reason };
+    }
 
     try {
+      /* `on conflict do nothing` still, for two retries of one tap racing
+         each other past the lookup above: the second finds the first. */
       const { rows } = await client.query<{ id: string }>(
         `insert into work_orders
            (hotel_id, room_id, title, detail, category, priority, raised_by,
-            idempotency_key)
-         values ($1,$2,$3,nullif($4,''),$5,$6,$7,$8)
+            idempotency_key, equipment_item_id)
+         values ($1,$2,$3,nullif($4,''),$5,$6,$7,$8,$9)
          on conflict (hotel_id, idempotency_key)
            where idempotency_key is not null do nothing
          returning id::text`,
         [hotel.id, roomId, title, input.detail?.trim() ?? "",
          input.category ?? "maintenance", input.priority ?? "normal",
-         session.staffId, idem]);
+         session.staffId, idem, itemId]);
 
       if (!rows[0]) {
         const { rows: already } = await client.query<{ id: string }>(
@@ -304,14 +452,25 @@ housekeeping.post("/:code/work-orders", async (c) => {
         /* Already raised by an earlier attempt of this same tap. */
         return { ok: true as const, id: already[0]!.id, duplicate: true };
       }
+
+      /* D17-7: opening a repair sets the thing "Under repair" — through
+         the register's door, in this transaction, so a repair never exists
+         without its item saying so. Already under repair (by hand, or by
+         another open repair) changes nothing. */
+      if (itemId) {
+        await setRepairStatus(client, hotel.id, itemId, "under_repair", `Repair raised: ${title}`);
+      }
       return { ok: true as const, id: rows[0].id };
     } catch (error) {
-      const e = error as { code?: string; message?: string } | undefined;
-      if (e?.code === "23514") {
+      /* A statement that FAILED leaves this transaction aborted, and the
+         commit withSession then sends becomes a rollback — so answering the
+         failure as a refusal keeps nothing, the repair included. */
+      const e = error as { code?: string; message?: string; constraint?: string } | undefined;
+      if (e?.code === "23514" && e.constraint) {
         return { ok: false as const,
                  reason: "That category or priority is not one this uses." };
       }
-      if (e?.code === "P0001" && e.message) {
+      if ((e?.code === "23514" || e?.code === "P0001") && e.message) {
         return { ok: false as const, reason: e.message };
       }
       throw error;
@@ -319,6 +478,7 @@ housekeeping.post("/:code/work-orders", async (c) => {
   });
 
   if (!result) return c.json({ error: "No such property." }, 404);
+  if ("forbidden" in result) return c.json({ ok: false, reason: result.forbidden }, 403);
   return c.json(result, "ok" in result && result.ok ? 200 : 409);
 });
 
@@ -339,6 +499,41 @@ housekeeping.patch("/:code/work-orders/:id", async (c) => {
   const result = await withSession(c.get("subject"), async (client, session) => {
     const hotel = await resolve(client, c.req.param("code"));
     if (!hotel) return null;
+    if (!isId(c.req.param("id"))) return { ok: false as const, reason: "No such work order." };
+
+    /* ── Every refusal before the first write (root MEMORY 243) ─────── */
+    const { rows: found } = await client.query<{
+      title: string; status: string; equipment_item_id: string | null;
+    }>(
+      `select title, status, equipment_item_id::text
+         from work_orders where id = $1 and hotel_id = $2 for update`,
+      [c.req.param("id"), hotel.id]);
+    const order = found[0];
+    if (!order) return { ok: false as const, reason: "No such work order." };
+
+    /* A closed repair stays as it was closed. Closing it again would
+       overwrite who closed it, when, and what they said was done. */
+    if (order.status === "done" || order.status === "cancelled") {
+      return { ok: false as const, reason: "This repair is already closed." };
+    }
+
+    /* D17-7: closing a repair puts the thing back "In use" — once no OTHER
+       repair on it is still open. A retired thing stays retired. A thing
+       waiting in the approvals inbox is decided there first, the owner's
+       rule for raising a repair applied to closing one. */
+    let backInUse = false;
+    if (closing && order.equipment_item_id) {
+      const { rows: others } = await client.query<{ n: number }>(
+        `select count(*)::int as n from work_orders
+          where hotel_id = $1 and equipment_item_id = $2 and id <> $3
+            and status in ('open','in_progress')`,
+        [hotel.id, order.equipment_item_id, c.req.param("id")]);
+      if (others[0]!.n === 0) {
+        const check = await checkRepairable(client, hotel.id, order.equipment_item_id);
+        if (check.ok) backInUse = true;
+        else if (check.reason === REPAIR_WAITING) return { ok: false as const, reason: check.reason };
+      }
+    }
 
     const { rows } = await client.query<{ title: string }>(
       `update work_orders
@@ -359,8 +554,11 @@ housekeeping.patch("/:code/work-orders/:id", async (c) => {
        input.resolution?.trim() ?? null, session.staffId,
        c.req.param("id"), hotel.id]);
 
-    if (!rows[0]) return { ok: false as const, reason: "No such work order." };
-    return { ok: true as const, title: rows[0].title };
+    if (backInUse) {
+      await setRepairStatus(client, hotel.id, order.equipment_item_id!, "in_use",
+        `Repair closed: ${input.resolution?.trim() ?? ""}`);
+    }
+    return { ok: true as const, title: rows[0]!.title };
   });
 
   if (!result) return c.json({ error: "No such property." }, 404);

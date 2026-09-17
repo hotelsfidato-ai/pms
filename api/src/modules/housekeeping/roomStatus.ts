@@ -109,7 +109,10 @@ property.put("/:code/rooms/:number/housekeeping", async (c) => {
    only blocks in the system came from the demo loader.
    ═══════════════════════════════════════════════════════════════════ */
 property.post("/:code/rooms/:number/block", async (c) => {
-  type Body = { reason?: string; from?: string; to?: string | null; note?: string };
+  type Body = {
+    reason?: string; from?: string; to?: string | null; note?: string;
+    workOrderId?: string | null;
+  };
   const input = await c.req.json<Body>().catch(() => ({}) as Body);
 
   const REASONS = [
@@ -163,6 +166,32 @@ property.post("/:code/rooms/:number/block", async (c) => {
       };
     }
 
+    /* THE REPAIR THIS BLOCK IS FOR, when "Report a repair" also takes the
+       room out (the owner, 17 September). The order then points at the
+       block (058's `block_id`), so Work orders says "Room is out" and
+       putting the room back is one decision. Checked before the first
+       write (root MEMORY 243). */
+    const workOrderId = input.workOrderId?.trim() || null;
+    if (workOrderId) {
+      const { rows: order } = await client.query<{
+        room_id: string | null; status: string; block_id: string | null;
+      }>(
+        `select room_id::text, status, block_id::text from work_orders
+          where id::text = $1 and hotel_id = $2 for update`,
+        [workOrderId, hotel.id],
+      );
+      if (!order[0]) return { ok: false, reason: "No such repair here." };
+      if (order[0].room_id !== room[0].id) {
+        return { ok: false, reason: "That repair is not for this room." };
+      }
+      if (order[0].status === "done" || order[0].status === "cancelled") {
+        return { ok: false, reason: "That repair is closed." };
+      }
+      if (order[0].block_id) {
+        return { ok: false, reason: "That repair has already taken the room out." };
+      }
+    }
+
     const { rows } = await client.query<{ id: string }>(
       `insert into room_blocks
          (hotel_id, room_id, from_date, to_date, reason, note, created_by)
@@ -179,6 +208,13 @@ property.post("/:code/rooms/:number/block", async (c) => {
       await client.query(
         `update rooms set housekeeping_status = 'out_of_service' where id = $1`,
         [room[0].id],
+      );
+    }
+
+    if (workOrderId) {
+      await client.query(
+        `update work_orders set block_id = $1::uuid where id::text = $2 and hotel_id = $3`,
+        [rows[0]!.id, workOrderId, hotel.id],
       );
     }
 
@@ -200,12 +236,27 @@ property.delete("/:code/rooms/:number/block/:id", async (c) => {
     );
     if (!room[0]) return { ok: false, reason: "No such room." };
 
-    const { rowCount } = await client.query(
-      `delete from room_blocks
-        where id = $1 and room_id = $2 and hotel_id = $3`,
+    /* A repair that took the room out points at this block (058's
+       `block_id`, set by "Report a repair" since 17 September). The room is
+       back, so the repair no longer takes it out — and a pointer left in
+       place would refuse this delete. */
+    const { rows: block } = await client.query<{ id: string }>(
+      `select id::text from room_blocks
+        where id::text = $1 and room_id = $2 and hotel_id = $3 for update`,
       [c.req.param("id"), room[0].id, hotel.id],
     );
-    if (!rowCount) return { ok: false, reason: "That block is not here." };
+    /* Refused BEFORE anything is written (root MEMORY 243). */
+    if (!block[0]) return { ok: false, reason: "That block is not here." };
+
+    await client.query(
+      `update work_orders set block_id = null
+        where block_id = $1::uuid and hotel_id = $2`,
+      [block[0].id, hotel.id],
+    );
+    await client.query(
+      `delete from room_blocks where id = $1::uuid and hotel_id = $2`,
+      [block[0].id, hotel.id],
+    );
 
     /* Back into inventory DIRTY, never clean. A room that has been out
        for a fortnight of refurbishment needs looking at before somebody

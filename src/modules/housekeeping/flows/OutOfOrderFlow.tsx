@@ -33,16 +33,24 @@ import {
    ══════════════════════════════════════════════════════════════════ */
 
 export function OutOfOrderFlow({
-  hotelId, roomNumber, blocks, occupied, trigger,
+  hotelId, roomNumber, blocks, occupied, trigger, open: openFrom, onOpenChange,
 }: {
   hotelId: string;
   roomNumber: string;
   blocks: RoomBlock[];
   occupied?: boolean;
   trigger?: (open: () => void) => ReactNode;
+  /* Opened from somewhere else — the room card's "Repair" dialog offers
+     "Out of service without a repair" (17 September) — with no trigger of
+     its own. */
+  open?: boolean;
+  onOpenChange?: (open: boolean) => void;
 }) {
   const qc = useQueryClient();
-  const [open, setOpen] = useState(false);
+  const [openHere, setOpenHere] = useState(false);
+  const controlled = openFrom !== undefined;
+  const open = controlled ? openFrom : openHere;
+  const setOpen = (next: boolean) => (controlled ? onOpenChange?.(next) : setOpenHere(next));
   const [reason, setReason] = useState<string>(BLOCK_REASONS[0].value);
   const [from, setFrom] = useState(BUSINESS_DATE);
   const [to, setTo] = useState("");
@@ -87,7 +95,7 @@ export function OutOfOrderFlow({
 
   return (
     <>
-      {trigger ? trigger(() => setOpen(true)) : (
+      {controlled ? null : trigger ? trigger(() => setOpen(true)) : (
         <Button
           variant="ghost"
           size="sm"
