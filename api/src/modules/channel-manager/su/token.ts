@@ -48,7 +48,10 @@ export class SuTokenHolder {
   private issuedAt: number[] = [];
   private lastFailure: { at: number; result: TokenResult } | null = null;
 
-  /* Longhand, not constructor parameter properties: see client.ts. */
+  /* ⚠ FIELDS WRITTEN OUT, NOT CONSTRUCTOR PARAMETER PROPERTIES. The server
+     runs node's type stripping, which emits no code: a parameter property
+     never gets assigned and the process cannot load the file. `tsc` accepts
+     them, so only `cd api && npm run strip-check` catches it (CM-3). */
   private readonly settings: SuSettings;
   private readonly transport: SuTransport;
   private readonly now: () => number;

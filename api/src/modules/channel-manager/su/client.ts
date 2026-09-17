@@ -38,10 +38,8 @@ const AUTH_REQUIRED = /authorization required/i;
 const LIMIT_REACHED = /limit has been reached/i;
 
 export class SuClient {
-  /* Written out longhand, not as constructor parameter properties: the
-     server runs node's type stripping, which emits nothing, so a parameter
-     property leaves the field unset and the process will not start
-     (api/scripts/strip-check.mjs, 17 September). */
+  /* Written out, not parameter properties: the server strips types and emits
+     nothing, so a parameter property is never assigned (CM-3). */
   readonly settings: SuSettings;
   private readonly transport: SuTransport;
   private readonly tokens: SuTokenHolder;

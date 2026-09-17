@@ -227,6 +227,10 @@ const MATRIX: Record<Role, ResourceGrants> = {
     notification: ["view", "create", "edit"],
     user: ["view", "create", "edit"],
     role: ["view"],
+    /* The channel manager's keys and its room and rate mapping (the owner's
+       D17-85, 17 September: "the owner and an administrator"). The GM sees
+       the status page only. */
+    integration: ["view", "create", "edit"],
     audit_log: READ_EXPORT,
     setting: READ,
     ai: READ,

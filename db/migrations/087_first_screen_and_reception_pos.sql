@@ -103,9 +103,27 @@ grant execute on function app.set_home_screen(uuid, text) to pms_app;
 -- screen, the same who-and-when. `app.module_enabled` reads an ABSENT row as
 -- off for anything but `pos`, so a hotel added after this is off until its GM
 -- turns it on — the owner's call.
-alter table hotel_modules drop constraint if exists hotel_modules_known;
-alter table hotel_modules add constraint hotel_modules_known
-  check (module in ('pos', 'banquet', 'reception_pos'));
+-- ⚠ ONLY IF IT IS NOT ALREADY THERE. Every migration replays on every deploy,
+-- and a LATER migration widens this same constraint (108 adds
+-- 'channel_manager'). Rewritten blindly, this line puts the narrow list back on
+-- the next deploy and Postgres validates it against the rows that exist: one
+-- hotel switched on for the channel manager and the whole run rolls back, so
+-- the API is never upgraded. Found by the channel-manager chat on 17 September
+-- by switching a hotel on and running db/migrate.sh; the same shape as MEMORY
+-- 284, which 095 and 096 were fixed into.
+do $$
+begin
+  if not exists (
+    select 1 from pg_constraint
+     where conrelid = 'hotel_modules'::regclass
+       and conname  = 'hotel_modules_known'
+       and pg_get_constraintdef(oid) like '%reception_pos%'
+  ) then
+    alter table hotel_modules drop constraint if exists hotel_modules_known;
+    alter table hotel_modules add constraint hotel_modules_known
+      check (module in ('pos', 'banquet', 'reception_pos'));
+  end if;
+end $$;
 
 -- ⚠ ONCE, AND ONLY ONCE. Every hotel that exists when this arrives keeps what
 -- its reception has today — the till never checked their role, so they could

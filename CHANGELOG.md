@@ -50,6 +50,97 @@ Write it **as you go**, not at the end from memory. Copy this shape:
 
 ---
 
+## 2026-09-17 (late night) · Step 3: every report on paper, the channel manager's first three parts, and two faults that would have stopped a deploy
+
+**Asked for:** "complete the remaining and also question me on this — give the
+other services things to continue building." Step 3 of
+`docs/NEXT-BUILD-PLAN.md`, the master's half, and the chats kept fed.
+
+**Shipped by the master**
+- **Every report as a file** (D17-31, D17-32):
+  `GET /api/hotels/:code/reports/<key>.pdf|.xlsx|.csv`, built through the
+  reports service's own `buildReport` under the caller's session, rendered in
+  the eZee layout with Fidato's colours (`api/src/reportRender.ts`, pdfkit and
+  exceljs). Only the report grant's `export` may download.
+- **One contract, not two:** the renderer takes `ReportDoc` from the reports
+  service's front door; the core copy was deleted the same night.
+- **D17-77 dates:** `dateReport` and `dateTimeReport` in `src/lib/format.ts` —
+  25/08/2026 and 25/08/2026 04:12:43 PM in the property's time. The renderer
+  keeps a copy (the API never imports web code) and a test holds the two to the
+  same answers.
+- **`downloadFile`** in `src/lib/api.ts`: a file fetched with the sign-in, which
+  a plain link cannot carry, saved under the name the server gave. The API now
+  exposes `content-disposition` across origins — without it the name would have
+  been unreadable in production only.
+- **Money freshness (FIN-3, D17-58)** and the **long dash** off every screen the
+  master owns (D17-48, D17-59, D17-60), earlier the same evening.
+- **The scripts (D17-90):** `load-demo`, `demo-history`, `reset-property`,
+  `retire-staff` and `pos:outlet` take the database from the copy they run in,
+  or refuse (`api/scripts/scriptDatabase.ts`).
+- **108** makes `channel_manager` a module a property is switched on for — off
+  everywhere — with its switch on Settings; `server.ts` starts and stops the
+  channel manager's every-minute push; the administrator reaches Integrations
+  (D17-85); `Checkbox` can be named by a screen reader.
+- **docs/briefs/n8n-sending.md:** the steps the owner follows in n8n, with the
+  JSON the PMS will send (D17-65, D17-87 to D17-89).
+
+**Merged**
+- **reports/ezee-layout, four times:** all eight reports in the owner's layout —
+  Monthly statistics, Monthly occupancy, Yearly statistics, No show, City
+  ledger, Manager, Night audit, Lodging tax — with Download on every screen.
+- **channel-manager/su-connection, parts 1 to 3:** the SU token login, the
+  mapping and content send, the every-minute push. Their migrations renumbered
+  107→106 and 108→107 at merge, because the Store chat's 106 has not arrived
+  and cp6 may not carry a gap.
+- **pos/module-note-099:** the POS notes catch up.
+
+**The owner answered twelve more** (D17-79 to D17-90), including SU bookings
+arriving by PUSH, an OTA booking with no room free refused and shown to the GM,
+an unpriced date sent to SU closed, per-night prices kept, card numbers never
+kept, and the SU screen for the owner and an administrator.
+
+**Found**
+- **293 (mine, found by the channel-manager chat):** my 108 widened a
+  constraint that 087 rewrites on every replay, so the first hotel switched on
+  for the channel manager would have rolled back the whole migration run and
+  left the API un-upgraded. Both files are guarded now, and `rerun.sh` switches
+  a module on between its passes so the fault has a gate.
+- **Strip-check was red on cp6** since the channel-manager merge (found by the
+  Reports chat): the server strips types and cannot load constructor parameter
+  properties. Fixed, and `strip-check` is in the gate script from tonight.
+- **287 (the channel-manager chat's CM-1):** a demo script run from a copy began
+  tearing down the main development database.
+- **292 (the Reports chat's REP-8):** its tests left ₹2,734.50 in the demo
+  property and the damage landed in `businessDate.test.ts`.
+- **Mine, in the renderer:** a footer written below the bottom margin made
+  pdfkit add pages; the download route answered the reports service's own
+  addresses and 14 tests got a 404.
+- **288 and 294 (mine, process):** a push that ran although its commit had
+  failed; a `git stash` that swallowed my own fix.
+
+**Proved** (on the merged tree, the last run)
+- web types clean · API types clean · **web 365** · **strip-check 109 files** ·
+  **API 983** · **database 808 assertions, 108 migrations** · **replay 108/108** ·
+  build clean, no test sign-in in dist.
+- **Guards seen to fail with their fault put back:** the bare download route,
+  a row's unit ignored, a lowercase "pm", the front desk added to the
+  exporters, the helper ignoring the server's file name, the old database
+  fallback, the unguarded 087 (with the production error), and the Checkbox
+  before it could be named.
+
+**Left open**
+- The **deploy** (D17-61) still waits on the Store chat's stock per place; live
+  is `eaf6916`. The Store chat is not running.
+- The owner's answers still needed: seven on what the reports print (the
+  Reports chat's list), whether a rack price may go to SU, and whether the
+  bill's PDF travels with the JSON to n8n.
+- Part 4 of the channel manager (SU pushing bookings in), and the reservations
+  door a machine needs.
+
+**Commits:** `f9e144b … 24cc50a`
+
+---
+
 ## 2026-09-16 (plan) · Desktop, kiosk tablet and phone — which architecture
 
 **Asked for:** the owner asked which architecture to build desktop, mobile and

@@ -193,3 +193,19 @@ channel manager, then QA.** The order is `docs/NEXT-BUILD-PLAN.md`.
 | D17-88 | The email account | **Set up in n8n already.** The PMS sends only the guest's email address |
 | D17-89 | The WhatsApp number | **The number the leads app uses** (its Meta token expires about 27 September) |
 | D17-90 | Which database the demo, reset and retire-staff scripts use (CM-1, MEMORY 287) | **The copy's own database, from its own settings; with none, refuse to run** |
+
+---
+
+# The fifth interview — 18 September, small hours
+
+| # | Question | Answer |
+|---|---|---|
+| D17-91 | The bill sent to n8n | **The PMS attaches its own PDF** as well as the JSON, so the guest gets the A4 document the desk prints (D17-64) |
+| D17-92 | SU and the rack rate (P3-b) | **Send the rack rate** where a meal plan has no price of its own, instead of closing the date. Breakfast then sells at the room-only price until somebody prices it |
+| D17-93 | Yearly statistics before go-live | **Available room-nights start at the property's first trading day**, as the eZee export does. Earlier months show nothing |
+| D17-94 | The Night audit report before the audit closes (REP-11) | **Leave the not-yet-arrived booking in Room Charges.** It agrees with the Manager report, the footnote says the rule, and it goes when the audit marks the no-show |
+| D17-95 | "Rate Type" on reports | **The meal plan the booking carries** (CP, EP, MAP, RO, All Inclusive). No separate rate-plan names to maintain |
+| D17-96 | Extra Charges on reports | **By what the desk posts** — the eleven kinds — not a configured list somebody maintains |
+| D17-97 | Daily Sales, the three eZee rows | **All three readings confirmed:** Incidental Sales is a banquet function's bill; Direct Room Sales is a bill with no stay behind it; Cancellation Sales has nothing to count, so it prints "-" |
+| D17-98 | Block Room against the eZee export | **Keep this system's count** (the GM's NC room is blocked and is counted). The old export differs by that room, on purpose |
+| D17-99 | Lodging tax, CGST and SGST columns | Read as **room rent less its discount**, everything else on those bills in Other Bills. **The group's accountant confirms before anything is filed from here** |

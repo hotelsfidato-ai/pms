@@ -3,6 +3,7 @@ import ExcelJS from "exceljs";
 import { app } from "../src/server.ts";
 import { closePool } from "../src/db.ts";
 import { REPORT_EXPORTERS } from "../src/routes/reportFiles.ts";
+import { REPORT_KEYS, BUILT_KEYS } from "../src/modules/reports/index.ts";
 import {
   inr, formatCell, dateReport, dateTimeReport, renderPdf, renderXlsx, renderCsv,
 } from "../src/reportRender.ts";
@@ -208,10 +209,19 @@ describe("who may download", () => {
     expect(((await res.json()) as { error: string }).error).toContain("general manager");
   });
 
-  it("says a report that is not built yet cannot be downloaded, and refuses a bad month", async () => {
-    const later = await get(uid.gm, "/5EL/reports/night-audit.pdf");
-    expect(later.status).toBe(404);
-    expect(((await later.json()) as { error: string }).error).toBe("This report cannot be downloaded yet.");
+  it("tells a report apart from one not built yet and from no report at all, and refuses a bad month", async () => {
+    /* Whichever report is still to be built, rather than a name that
+       becomes wrong the day that report lands (17 September: this test
+       named the Night audit report on the morning it was built). */
+    const waiting = REPORT_KEYS.find((key) => !(BUILT_KEYS as readonly string[]).includes(key));
+    if (waiting) {
+      const later = await get(uid.gm, `/5EL/reports/${waiting}.pdf`);
+      expect(later.status, waiting).toBe(404);
+      expect(((await later.json()) as { error: string }).error).toBe("This report cannot be downloaded yet.");
+    }
+    const never = await get(uid.gm, "/5EL/reports/tea-drunk-by-floor.pdf");
+    expect(never.status).toBe(404);
+    expect(((await never.json()) as { error: string }).error).toBe("No such report.");
     const bad = await get(uid.gm, "/5EL/reports/monthly-statistics.csv?month=2026-13");
     expect(bad.status).toBe(400);
   });

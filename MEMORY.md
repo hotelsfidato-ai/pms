@@ -6539,6 +6539,103 @@ copy will see of theirs.**
 
 ---
 
+### 294 · MINE: `git stash push <file>` to test the old version, and the change never came back
+
+17 September, fixing 293. To prove the guard I wanted the file without it for
+one run, so I did `git stash push -q db/migrations/087_….sql`, ran the test,
+and then `git stash pop -q` answered "No stash entries found". The stash list
+was empty and my edit was gone - written again from the script that made it,
+which is the only reason it cost minutes rather than the whole fix.
+
+**The rule: never park work in the stash to try the old version. Copy the file
+aside (`cp x x.bak`, put it back with `cp`) or read the old one out of git
+(`git show HEAD:path > /tmp/old`). The stash is not a scratchpad; it is a place
+work disappears into.**
+
+---
+
+### 293 · MINE: a migration widened a constraint that an EARLIER migration rewrites on every replay
+
+17 September. My 108 widened `hotel_modules_known` to accept
+`'channel_manager'`. 087 rewrites that same constraint - drop, then add the
+narrower list - and every migration replays from 001 on every deploy, so 087
+runs again BEFORE 108 and puts the narrow list back. Postgres validates a new
+check against the rows that are there: one hotel switched on for the channel
+manager and 087 raises 23514, the whole run rolls back, and the API is never
+upgraded. In other words, the moment the owner used the switch I had just built
+them, the next deploy would have failed.
+
+Found by the channel-manager chat, not by me and not by the gates: it switched
+a hotel on in its own copy and ran `db/migrate.sh`. The gates could not see it
+- `run.sh` builds from zero, and `rerun.sh` replayed on a database with a
+property but no module rows, so nothing violated the narrow list.
+
+Fixed: 087 and 108 both rewrite the constraint ONLY when it does not already
+accept what they add - MEMORY 284's shape, which 095 and 096 were fixed into
+and which I then failed to apply to my own file a day later. `rerun.sh` now
+switches a module on between its two passes, so this class of fault has a gate:
+without the guard it fails with the production error, with it 108 migrations
+replay clean.
+
+**The rule: before rewriting a constraint, look for every OTHER migration that
+writes the same one. The earlier file is the one that replays over yours.**
+
+---
+
+### 292 · A test that writes into the demo property owns putting it back - and the SUITE is the check
+
+The Reports chat's REP-8, 17 September. Its new tests posted payments into
+5EL's folios and left them there. Its own file was green, 25 of 25. The damage
+landed in somebody else's file: `businessDate.test.ts` reads 5EL's calibrated
+payment total - the figure the demo reconciles to the owner's real eZee export,
+to the paisa - and it was 2,734.50 out. Fixed by reversing every posted payment
+in afterAll (a reversal, never a delete: the ledger is append-only) and then
+measuring that the total is where it started.
+
+A demo that reconciles to a real export is evidence. Anything that moves it
+quietly turns every later comparison into a lie.
+
+**The rule: a test that writes into shared demo data undoes it the way the
+system undoes things, and then MEASURES that it did. And the gate is the whole
+suite, never the one file you are working on - a fixture's damage always lands
+in somebody else's test.**
+
+---
+
+### 291 · A test that asserts the request a screen sent, not what the screen then did
+
+The POS chat's POS-8. A switch on the Menu screen posted its change and the
+dialog never closed, so the person pressed it again. The test asserted that
+the POST was sent, and passed, every run.
+
+**The rule: assert what the person is left looking at - the dialog closed, the
+row changed, the message shown - not that a request went out. A request is the
+middle of the act, not the end of it.**
+
+---
+
+### 290 · Anything that must happen on a send has to happen BEFORE window.open
+
+The POS chat's POS-11. Where the new tab replaces the page, nothing written
+after `window.open` runs. Work queued after it - clearing a pad, marking a
+round sent - silently never happens.
+
+**The rule: do the work, then open the window. `window.open` is the last line
+of the function.**
+
+---
+
+### 289 · A failing check that leaves rows its own clean-up cannot remove stops the suite
+
+The POS chat's POS-13. One assertion failed, its teardown could not undo what
+it had inserted (the ledger is append-only, and a delete is refused), and the
+rest of the file never ran. One red test read as a broken suite.
+
+**The rule: a fixture is undone the way the system undoes things - a reversal,
+a void - and the teardown runs whether the assertion passed or not.**
+
+---
+
 ### 288 · MINE: a push ran after the commit it was meant to follow had failed
 
 17 September, late. I committed and pushed in one shell call: `git add … &&

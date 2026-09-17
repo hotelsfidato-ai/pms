@@ -22,7 +22,8 @@ import {
    3. A token is reused, renewed before it lapses, and SU's 30 an hour
       are never spent by a loop.
    4. A test key cannot push to the live account, or the reverse.
-   5. Only the owner reaches it (the `integration` grant is the owner's).
+   5. Only the owner and an administrator reach it (D17-85), and the screen's
+      list of who is the same list as the server's.
 
    SU itself is stood in for by the answers SU's documents give
    (./suExamples.ts). No test here reaches the internet.
@@ -211,6 +212,7 @@ describe("a call to SU", () => {
 let ownerId: string;
 let gmId: string;
 let clerkId: string;
+let adminId: string;
 const SU_NAMES = ["SU_ENVIRONMENT", "SU_CLIENT_ID", "SU_CLIENT_SECRET"] as const;
 
 const admin = async () =>
@@ -238,6 +240,7 @@ beforeAll(async () => {
       return rows[0]!.id;
     };
     gmId = await mk("cm-gm@fidato.in", "gm");
+    adminId = await mk("cm-admin@fidato.in", "admin");
     clerkId = await mk("cm-clerk@fidato.in", "front_desk");
   } finally { await db.end(); }
 });
@@ -250,8 +253,8 @@ afterEach(() => {
 afterAll(async () => {
   const db = await admin();
   try {
-    await db.query("delete from staff_hotels where staff_id = any($1)", [[gmId, clerkId]]);
-    await db.query("update staff set is_active = false where id = any($1)", [[gmId, clerkId]]);
+    await db.query("delete from staff_hotels where staff_id = any($1)", [[gmId, clerkId, adminId]]);
+    await db.query("update staff set is_active = false where id = any($1)", [[gmId, clerkId, adminId]]);
   } finally { await db.end(); }
   await closePool();
 });
@@ -260,6 +263,17 @@ const as = (staffId: string, path: string, method = "GET") =>
   app.request(path, { method, headers: { "x-dev-staff-id": staffId } });
 
 describe("GET and POST /api/channel-manager/su", () => {
+  it("lets the owner and an administrator in, and nobody else (D17-85)", async () => {
+    const { SU_ROLES } = await import("../../../src/modules/channel-manager/access.ts");
+    const { SU_SETUP_ROLES } = await import("../../../../src/modules/channel-manager/data/suRoles.ts");
+    /* The screen's list and the server's are the same list, or one refuses
+       somebody the other lets in. */
+    expect([...SU_ROLES]).toEqual([...SU_SETUP_ROLES]);
+
+    const asAdmin = await as(adminId, "/api/channel-manager/su");
+    expect(asAdmin.status).toBe(200);
+  });
+
   it("is refused to a GM and to reception, by the server and not only the screen", async () => {
     for (const who of [gmId, clerkId]) {
       const get = await as(who, "/api/channel-manager/su");
