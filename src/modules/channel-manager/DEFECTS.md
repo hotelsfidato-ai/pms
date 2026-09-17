@@ -61,7 +61,9 @@ plain text. Every file in the three channel-manager folders scanned for a NUL
 byte: none. `tsc` clean and the 18 tests pass after the change.
 
 **The rule** — Read the commit's stat, not only its message. A source file git
-calls binary has a byte in it nobody meant to type.
+calls binary has a byte in it nobody meant to type. (Writing this entry put a
+third one into this file the same way: the editor turns the escape into the
+character. Name it in words, never as the escape.)
 
 ---
 
