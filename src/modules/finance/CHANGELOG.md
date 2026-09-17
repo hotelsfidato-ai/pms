@@ -8,6 +8,58 @@ project, still goes in the root `CHANGELOG.md`.
 
 ---
 
+## 2026-09-16/17 · the /in-house balance, FIN-1, and FIN-2 traced
+
+**Asked for:** 16 September, the brief's first question: which of the two
+`/in-house` figures is wrong ("a query, not an opinion"). 17 September, from the
+master after the owner's answers: **D17-16** (FIN-2, a stay with no bill shows a
+dash and never ₹0, confirmed on screen first) and **FIN-1**.
+
+**Shipped**
+- FIN-1: the header of `api/src/modules/finance/billing.ts` now says what the
+  file does: two reads, with issuing in `invoices.ts` and the night audit in
+  its own service. A comment only; no behaviour changed.
+- `DEFECTS.md`: FIN-1 moved to Fixed. FIN-2 records the owner's decision and
+  what the trace found. New entry **FIN-3**.
+
+**Found**
+- **FIN-3, the critique's `/in-house` P0.** The database says ₹0 for
+  `FH-2608-4858`: ₹7,084.69 charged and ₹7,084.69 paid in cash at 11:45 IST on
+  16 September. The drawer was right. Both screens call
+  `GET /:code/stays/:id/folio`, so this is not two definitions. The list kept a
+  copy fetched before the payment, because `src/App.tsx` (core) never lets a
+  query go stale and keeps its cache for a week. Not reproduced in a browser.
+  The fix is not finance's.
+- The same development guest's bill carries 26 test lines. They were written
+  by root `MEMORY.md` 277's run of the API suite against the development
+  database, and they net to zero.
+- **FIN-2 traced:** a stay with no folio gets a folio of **zeros marked
+  settled** from the API. The Bill tab prints ₹0 "Settled", the stay panel's
+  footer and the In house column print ₹0, and check-out is allowed.
+- Tooling, for the master: `db/migrate.sh` hides its own error behind six
+  notice lines, and failed twice where the identical `psql` run by hand passed.
+  A fresh lane database has no hotel or staff, so `--with-dev-identities`
+  fails. `api/scripts/load-demo.ts` failed with "Cannot read properties of
+  undefined (reading 'id')" and rolled back. This lane's database is a
+  `pg_dump` copy of `fidato` taken on 17 September instead.
+
+**Proved**
+- Read-only queries against `fidato`, and the FIN-2 trace in `fidato_finance`,
+  whose empty folio on `FH-1409-5032` was removed to make a stay with no bill.
+- After FIN-1: `npx tsc --noEmit` in `api/`, exit 0. `npm run lane -- finance`,
+  exit 0: three files, all finance's. The web suite was not run, because no web
+  file changed.
+
+**Left open**
+- **FIN-2 is not built.** It has not been seen on a screen: this chat's
+  browser pane serves `D:\fidato pms`, not this copy. Building it changes two
+  front-desk files and one core rule, so the split is the master's to make.
+- FIN-3's fix is in the core and front desk.
+
+**Commits:** see `git log finance/in-house-balance`.
+
+---
+
 ## 2026-09-15 · moved into its own folder
 
 **Asked for:** the owner, 15 September — one folder per hotel service, so

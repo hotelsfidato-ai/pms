@@ -3,21 +3,25 @@ import { withSession } from "../../auth.ts";
 import type { Client } from "../../db.ts";
 
 /* ══════════════════════════════════════════════════════════════════
-   BILLING — receipts, billable folios, rates, and the night audit
+   BILLING — receipts, and the stays ready to invoice
 
-   Two things here are deliberately NOT done, and each is refused with
-   its reason on screen rather than quietly missing.
+   Two reads, and nothing here writes:
 
-   NO INVOICE NUMBER IS ISSUED. 5EFH154 is the hotel's real next GST
-   number. A number shown here but never printed on a filed return
-   leaves a hole in a statutory sequence, and a hole in a GST series is
-   a question from an assessor.
+   GET /:code/payments   every receipt, newest first. A reversed one
+                         stays on the list.
+   GET /:code/billable   departed stays, with what they were charged,
+                         what was paid, the balance, and the number of
+                         any tax invoice already issued against them.
 
-   THE NIGHT AUDIT DOES NOT RUN. It posts room charges and rolls the
-   business date, and the business date is still a constant. Posting
-   without advancing it would double-charge every occupied room the
-   next time anyone pressed the button. Everything it would CHECK is
-   computed anyway — that is the part a manager reads.
+   Issuing is not here. A tax invoice and a credit note are numbered
+   in invoices.ts, through app.next_invoice_number() — one gapless
+   series per hotel per financial year. The night audit, which posts
+   room charges and moves the business date, is the night-audit
+   service's.
+
+   (Until 17 September this header said no invoice number was issued
+   and the night audit did not run. Both have been built since
+   stage 8 — FIN-1.)
    ══════════════════════════════════════════════════════════════════ */
 
 /* Split on 15 September in the service-folder move
