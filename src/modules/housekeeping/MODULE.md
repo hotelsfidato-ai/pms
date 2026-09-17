@@ -159,6 +159,7 @@ migrations that made or changed them:
 | `work_orders` | what needs fixing | `058_work_orders.sql` (`app.work_orders_open`; a trigger keeps the room in the same hotel), `062_idempotency.sql` (`idempotency_key`, so a held tap sent twice lands once), **repairs on equipment** (`equipment_item_id`: one TAGGED item at the same property, chosen when the repair is raised and never changed; `block_id` is now set by Report a repair) |
 | `work_order_costs` | what a repair cost | **repairs on equipment** — amount > 0; `proof_id` NOT NULL and a trigger that refuses any proof not kept against THIS cost; never edited; cancelled once with who, when and why; DELETE revoked; RLS forced; the shared audit trail |
 | `attachments` | the proof photo of a cost (`subject_table = 'work_order_costs'`) | `077_attachments.sql` (the core's) |
+| — (announces) | `rooms` (cleaning state, occupancy), `room_blocks`, `housekeeping_assignments`, `work_orders`: each change raises `<hotel id>:housekeeping` on the live channel `pos_changed` | **housekeeping changes are announced** (`103_…`, 17 September, HK-1) |
 
 The migration is `db/migrations/102_repairs_on_equipment.sql` — **refer to it by
 what it does**; renumbered 102 by the master at merge (099 to 101 were taken). Its
@@ -191,10 +192,14 @@ when another service needs one, and only through this file.
 
 ## Rules that bind it
 
-- **Housekeeping never refreshes itself — deferred by the owner** on
-  8 September: *"leave this for now and keep this in the upcoming files."*
-  (PENDING § 3; MEMORY 218). The fix is known and small (below) — do not
-  build it unasked.
+- **The board refreshes itself — the owner, 17 September evening, D17-39**
+  ("build it now"; it had been deferred on 8 September, MEMORY 218). The way
+  Tables and the Kitchen do: told the moment a room changes, with a slow poll
+  underneath. **Half built on 17 September** — every change announces itself
+  from the database, and the board polls every 30 seconds; the live half waits
+  on the master (Requests from this service). **D17-40: the assignee dropdown
+  on each card stays as it is.** **D17-38: closing a repair while its item's
+  request waits is refused, as built.**
 - **The owner's answers of 17 September** (`docs/briefs/decisions-2026-09-17.md`,
   and the questions asked the same morning) — build to them, do not re-ask:
   - **D17-8** the room card's words are **Clean · Inspected · Repair**, and a
@@ -254,12 +259,16 @@ when another service needs one, and only through this file.
 
 From `PENDING.md`:
 
-- **No refresh of any kind (defect 218) — deferred by the owner.** A
-  housekeeper marks 204 clean and the supervisor's board does not change
-  until a reload. Measured: five requests, none duplicated, all under 15 ms —
-  not slow. The known fix: extend the Postgres `NOTIFY` trigger from
-  `075_live_orders.sql` to housekeeping changes and add `useLiveOrders`-style
-  invalidation to the board (PENDING § 3).
+- **HK-1, the board refreshing itself (D17-39) — half built, 17 September.**
+  Done here: migration `103_housekeeping_changes_are_announced.sql` raises
+  `<hotel id>:housekeeping` on the live channel from triggers on `rooms`
+  (cleaning state and occupancy), `room_blocks`, `housekeeping_assignments` and
+  `work_orders`; and the board polls every 30 seconds (its rooms, the sheet
+  and the blocks), keeping the rooms it has when a poll fails. **Measured:** a
+  room changed from outside the browser moved on the open board 21.5 s later,
+  no reload; with the API stopped the 18 rooms stayed and the line said
+  Offline. **Not done:** being told the moment a room changes — the shared
+  listener does not read a topic yet (Requests from this service).
 - **Worth asking the owner:** the housekeeper's list has no Rooms screen —
   approved as listed, one search away (PENDING § 5a).
 - **Defect 243's shape** — checked on 17 September in the work order routes,
@@ -269,11 +278,6 @@ From `PENDING.md`:
   their endpoints now live here — see Data. Moving the calls is a change to
   the core, so it is the core owner's to agree. (`blockRoomForRepair` in this
   folder is the one block call that is not the core's — it carries the repair.)
-- **Closing a repair on a thing waiting in the approvals inbox is refused**
-  with the same sentence as raising one — the owner's rule for raising,
-  applied to closing by this chat. Rare (a thing under repair that somebody
-  also asked to move or retire); **the owner may want it the other way** —
-  close, and leave the status by hand. Ask before changing it.
 - **Equipment's own "Under repair / Back in use" button** still sets the
   status by hand, with a repair open or not. Equipment's page; not changed.
 - **Work orders prints the priority words and categories as stored**
@@ -324,10 +328,46 @@ The guards this service must respect:
 - `api/test/modules/housekeeping/repairs.test.ts` — every role at every repair
   door; Under repair / In use; costs with proof (seen to fail, 19 red).
 - `db/tests/modules/housekeeping.sql` — what the database refuses.
+- `api/test/modules/housekeeping/live.test.ts` — every change the board shows
+  announces `<hotel>:housekeeping`, never a bare hotel id (seen to fail, 5 red).
+- `housekeeping.test.tsx` "the board refreshes itself" — it reads the rooms
+  again on its own, and keeps them when that read fails (seen to fail both ways).
 
 ## Requests from this service
 
 For the master, 17 September — each is a file this service may not change:
+
+- **The live channel carries a topic — so the board is told the moment a room
+  changes (HK-1, the owner's D17-39, 17 September evening).** Asked by the
+  housekeeping chat. The housekeeping half is on branch
+  `housekeeping/live-board`; what it needs from the core:
+  1. `api/src/realtime.ts` — read the payload as `<hotel id>` or
+     `<hotel id>:<topic>`. A bare id is the topic `orders`, so 075's triggers and
+     every POS screen are unchanged. Watchers are still keyed by hotel and are
+     told the topic. Today `fanOut(msg.payload)` looks up the WHOLE payload, so
+     `<hotel id>:housekeeping` reaches nobody — which is why the housekeeping
+     migration is safe to merge before this.
+  2. `api/src/routes/live.ts` — `event: changed` with `data: <topic>` (it sends
+     `"1"` today).
+  3. `src/lib/useLiveOrders.ts` — invalidate the POS keys only for `orders`,
+     so a room marked clean does not refetch every till and kitchen in the
+     hotel; and a hook for a topic and its keys, e.g.
+     `useLive(hotelId, "housekeeping", keys)`, reusing the same reader,
+     reconnect and 350 ms debounce rather than a second copy of them.
+  4. `api/test/live.test.ts` — a topic reaches its own screens and no others.
+
+  **Then the board's wiring** (this service's, a few lines, or the master's at
+  merge): `const { live } = useLive(hotelId, "housekeeping", [["housekeeping"],
+  ["hk-assignments"], ["rooms"], ["work-orders"], ["item-repairs"]])`; the
+  floor becomes `live ? 60_000 : 30_000` like the Kitchen's; the Online line
+  says live or reconnecting as the Kitchen does. ⚠ `["rooms", hotelId]` is also
+  the front desk's `AssignRoomFlow` key — refreshing it when a room turns dirty
+  is right (the room's state is the tape chart's too), but it is the master's
+  to agree.
+
+  **If a second channel is preferred** (`housekeeping_changed`): the one
+  listening connection can `LISTEN` on both; the housekeeping migration changes
+  in one line.
 
 - **Review two edits in equipment's folder**, made on the owner's yes:
   `api/src/modules/equipment/repairs.ts` + its three exports in `index.ts`
