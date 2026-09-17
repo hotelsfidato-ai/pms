@@ -114,16 +114,16 @@ folios.get("/:code/stays/:id/folio", async (c) => {
       [hotelId, c.req.param("id")],
     );
 
-    /* A stay with no postings has an empty folio, not no folio. */
-    return rows[0]
-      ? toFolio(rows[0])
-      : {
-          stayId: c.req.param("id"),
-          roomCharges: 0, extraCharges: 0, tax: 0,
-          discount: 0, payments: 0, balance: 0, status: "settled",
-        };
+    /* A STAY WITH NOTHING POSTED HAS NO BILL (FIN-2, the owner's D17-16).
+       This returned a folio of zeros marked "settled", and the Bill tab
+       said ₹0 Settled in green, the In house list ₹0 — a paid bill, for a
+       stay nobody has billed. "No bill" is its own answer. */
+    return rows[0] ? toFolio(rows[0]) : { noBill: true as const };
   });
 
+  if (body && "noBill" in body) {
+    return c.json({ error: "This stay has no bill yet.", noBill: true }, 404);
+  }
   return body ? c.json(body) : c.json({ error: "Not found." }, 404);
 });
 

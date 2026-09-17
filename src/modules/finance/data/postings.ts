@@ -25,9 +25,11 @@ export async function getFolioPostings(hotelId: string, stayId: string): Promise
   }
 }
 
-export async function getFolioBalance(hotelId: string, stayId: string): Promise<number> {
+/** What this stay owes, or null when it has no bill (FIN-2, D17-16): a
+    stay nobody has billed shows the no-figure mark, never ₹0. */
+export async function getFolioBalance(hotelId: string, stayId: string): Promise<number | null> {
   const folio = await getFolio(hotelId, stayId);
-  return folio?.balance ?? 0;
+  return folio ? folio.balance : null;
 }
 
 /* ── B · In house → charge ────────────────────────────────────────── */

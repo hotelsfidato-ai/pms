@@ -14,36 +14,6 @@ entries stay here: they are the reason the fault does not come back.
 
 ## Open — not fixed
 
-### FIN-2 · `getFolioBalance` returns 0 for a stay with no bill
-
-**Found** — 15 September, writing the brief. **The owner decided on 17 September
-(D17-16): a dash, never ₹0.**
-
-Check-out and In house read it. A stay with no folio may therefore read as a zero balance rather than as nothing to settle.
-
-**Traced on 17 September, in code and data. Not yet seen on a screen.** The
-database does not promise every stay a folio. Defect 144's bookings were taken
-without one, and nothing refuses a reservation that has none. The zero does not
-come from `?? 0`, which is only reached when the stay is unknown. It starts
-earlier: `GET /:code/stays/:id/folio` checks that the reservation exists, finds
-no lines, and returns a folio of zeros marked `settled`. So a stay with no folio
-reads:
-
-- **₹0 "Settled"**, in green, at the top of the Bill tab (`FolioPanel`, finance's).
-- **Charged ₹0 · Paid ₹0 · Balance ₹0** in the stay panel's footer (`StayDrawer`, front desk's). That code already prints dashes for a null folio. It never gets one.
-- **₹0**, in green, in the In house list (`InHouse.tsx`, front desk's).
-- **Nothing owed, so check-out is allowed** (`operations.ts` → `canCheckOut` in `src/lib/rules.ts`, the core).
-
-To reproduce: in your own database, remove an empty folio (`FH-1409-5032` in a
-copy of the 17 September development data) and open that stay.
-
-**The fix, when it is done** — The API answers "no bill" rather than a folio of
-zeros, and the Bill tab prints a dash. The In house column and check-out need
-`getFolioBalance` to return `null`, which changes two front-desk files and one
-core rule. That part is the master's to split.
-
-**The rule** — Zero and 'nothing here' are different answers; a balance may not blur them.
-
 ### FIN-3 · `/in-house` showed ₹7,085 owed by a guest who had paid — the list was an old copy
 
 **Found** — 16 September, the critique's P0, answered by a query (read-only
@@ -91,6 +61,46 @@ screen keeps its answer.
 ---
 
 ## Fixed
+
+### FIN-2 · `getFolioBalance` returns 0 for a stay with no bill — FIXED 17 September
+
+**Found** — 15 September, writing the brief. **The owner decided on 17 September
+(D17-16): a dash, never ₹0.**
+
+Check-out and In house read it. A stay with no folio may therefore read as a zero balance rather than as nothing to settle.
+
+**Traced on 17 September, in code and data. Not yet seen on a screen.** The
+database does not promise every stay a folio. Defect 144's bookings were taken
+without one, and nothing refuses a reservation that has none. The zero does not
+come from `?? 0`, which is only reached when the stay is unknown. It starts
+earlier: `GET /:code/stays/:id/folio` checks that the reservation exists, finds
+no lines, and returns a folio of zeros marked `settled`. So a stay with no folio
+reads:
+
+- **₹0 "Settled"**, in green, at the top of the Bill tab (`FolioPanel`, finance's).
+- **Charged ₹0 · Paid ₹0 · Balance ₹0** in the stay panel's footer (`StayDrawer`, front desk's). That code already prints dashes for a null folio. It never gets one.
+- **₹0**, in green, in the In house list (`InHouse.tsx`, front desk's).
+- **Nothing owed, so check-out is allowed** (`operations.ts` → `canCheckOut` in `src/lib/rules.ts`, the core).
+
+To reproduce: in your own database, remove an empty folio (`FH-1409-5032` in a
+copy of the 17 September development data) and open that stay.
+
+**The fix, when it is done** — The API answers "no bill" rather than a folio of
+zeros, and the Bill tab prints a dash. The In house column and check-out need
+`getFolioBalance` to return `null`, which changes two front-desk files and one
+core rule. That part is the master's to split.
+
+**The rule** — Zero and 'nothing here' are different answers; a balance may not blur them.
+
+**Fixed by the master, 17 September (D17-16).** `GET /:code/stays/:id/folio`
+answers a stay with nothing posted as 404 `{ noBill: true }`, not a folio of
+zeros; `getFolioBalance` returns `null`; the Bill tab says **No bill yet** with the
+no-figure mark; In house prints the mark; check-out still sees nothing owed.
+Proved: `api/test/modules/finance/noBill.test.ts` (no bill, unknown stay, billed
+stay unchanged); opened FH-1409-5032's Bill tab locally — "No bill yet", no
+"Settled".
+
+---
 
 ### FIN-1 · A stale comment at the top of billing.ts
 

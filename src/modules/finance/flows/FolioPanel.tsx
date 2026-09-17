@@ -82,11 +82,14 @@ export function FolioPanel({
   const folios = stayFolios.data ?? [];
   const all = postings.data ?? [];
   const lines = only === null ? all : all.filter((p) => p.folioId === only);
-  const due = balance.data ?? 0;
+  /* null: no bill yet (D17-16). The header says so; settling and the
+     invoice work on the zero they always did, since nothing is owed. */
+  const billed = balance.data ?? null;
+  const due = billed ?? 0;
 
   return (
     <div className="space-y-5">
-      <BalanceHeader stay={stay} balance={due} />
+      <BalanceHeader stay={stay} balance={billed} />
 
       <FolioStrip folios={folios} active={only} onPick={setOnly} />
 
@@ -159,7 +162,28 @@ export function FolioPanel({
   );
 }
 
-function BalanceHeader({ stay, balance }: { stay: Stay; balance: number }) {
+/** The mark for a figure nobody has — the same one the stay table prints. */
+const DASH_MARK = "—";
+
+function BalanceHeader({ stay, balance }: { stay: Stay; balance: number | null }) {
+  if (balance === null) {
+    return (
+      <div className="flex items-baseline justify-between gap-4 flex-wrap">
+        <div>
+          <p className="text-2xs font-semibold uppercase tracking-wide text-grey-500">
+            Balance
+          </p>
+          <p className="text-2xl font-semibold tabular mt-0.5 text-grey-500">{DASH_MARK}</p>
+        </div>
+        <div className="text-right">
+          <StatusPill tone="neutral" dot>No bill yet</StatusPill>
+          <p className="text-2xs text-grey-500 tabular mt-1.5">
+            Room {stay.roomNumber} · {stay.reference}
+          </p>
+        </div>
+      </div>
+    );
+  }
   const tone = balance > 0 ? "danger" : balance < 0 ? "info" : "success";
   const label = balance > 0 ? "Outstanding" : balance < 0 ? "Overpaid" : "Settled";
   return (

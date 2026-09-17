@@ -212,7 +212,9 @@ export async function checkIn(
 export async function checkOutAllowed(hotelId: string, stayId: string): Promise<Permitted> {
   const stay = await getStay(hotelId, stayId);
   if (!stay) return { allowed: false, reason: "Reservation not found." };
-  return canCheckOut(stay, await getFolioBalance(hotelId, stayId), money);
+  /* A stay with no bill owes nothing, so it may check out (D17-16 changes
+     what is SHOWN, not what is owed). */
+  return canCheckOut(stay, (await getFolioBalance(hotelId, stayId)) ?? 0, money);
 }
 
 export async function checkOut(

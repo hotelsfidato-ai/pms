@@ -25,7 +25,8 @@ const COLUMNS: StayColumn[] = [
 /** Attaches each stay's live folio balance. */
 async function withBalances(hotelId: string, stays: StayRow[]): Promise<StayRow[]> {
   return Promise.all(
-    stays.map(async (s) => ({ ...s, balance: await getFolioBalance(hotelId, s.id) })),
+    /* No bill is no figure (D17-16): undefined prints the table's mark, never ₹0. */
+    stays.map(async (s) => ({ ...s, balance: (await getFolioBalance(hotelId, s.id)) ?? undefined })),
   );
 }
 
