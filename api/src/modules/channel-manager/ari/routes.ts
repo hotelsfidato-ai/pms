@@ -37,17 +37,29 @@ availability.get("/:code/channel-manager/availability", async (c) => {
     if (!(await maySetUpSuAt(client, hotelId))) return { ok: false as const, reason: SU_REFUSED };
     const { rows } = await client.query<{
       kind: string; window_from: string; window_to: string; requests: number; dates: number;
-      ok: boolean; result: string; unpriced: number; rack_only: number; sent_at: string;
+      ok: boolean; result: string; unpriced: number; rack_dates: number; sent_at: string;
     }>(
       `select kind, window_from::text, window_to::text, requests, dates, ok, result,
-              unpriced, rack_only, sent_at::text
+              unpriced, rack_dates, sent_at::text
          from channel_ari_pushes where hotel_id = $1 order by sent_at desc limit 10`,
+      [hotelId]);
+    /* D17-92: what is selling at the rack rate RIGHT NOW — not what some past
+       push counted. It is read from what SU was last sent, for tonight onwards,
+       so the owner can see how much is going out at a figure nobody typed for
+       that meal plan. */
+    const { rows: rack } = await client.query<{ nights: number; first_date: string | null }>(
+      `select count(*)::int as nights, min(s.for_date)::text as first_date
+         from channel_ari_sent s
+         join hotels h on h.id = s.hotel_id
+        where s.hotel_id = $1 and s.price_source = 'rack'
+          and s.for_date >= greatest(h.business_date, (now() at time zone h.timezone)::date)`,
       [hotelId]);
     return {
       pushes: rows.map((r) => ({
         kind: r.kind, from: r.window_from, to: r.window_to, requests: r.requests, dates: r.dates,
-        ok: r.ok, result: r.result, unpricedDates: r.unpriced, rackOnlyDates: r.rack_only, at: r.sent_at,
+        ok: r.ok, result: r.result, unpricedDates: r.unpriced, rackDates: r.rack_dates, at: r.sent_at,
       })),
+      atRackRate: { nights: rack[0]?.nights ?? 0, firstDate: rack[0]?.first_date ?? null },
       policy: THE_OWNERS_POLICY,
     };
   });

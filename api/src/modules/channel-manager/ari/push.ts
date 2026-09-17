@@ -42,7 +42,7 @@ export interface PushOutcome {
   requests: number;
   dates: number;
   unpricedDates: number;
-  rackOnlyDates: number;
+  rackDates: number;
   results: Array<{ ok: boolean; ticketId: string | null; reason: string | null }>;
   reason: string;
 }
@@ -72,22 +72,34 @@ export async function pushAri(
 
     const summary = ariCells(snapshot, policy);
     let cells = summary.cells;
+    /* Nights SU already holds at this figure, where the figure now comes from
+       somewhere else — a rack rate that somebody has since typed for the plan at
+       the same amount. SU needs nothing; the record does, or it would answer the
+       next question with "rack" for a price that was typed (D17-92). */
+    let restamp: AriCell[] = [];
     if (kind === "changes") {
-      const { rows } = await client.query<{ room_type_id: string; meal_plan: string; for_date: string; value: string }>(
-        `select room_type_id::text, meal_plan, for_date::text, value::text
+      const { rows } = await client.query<{
+        room_type_id: string; meal_plan: string; for_date: string; value: string;
+        price_source: string | null;
+      }>(
+        `select room_type_id::text, meal_plan, for_date::text, value::text, price_source
            from channel_ari_sent where hotel_id = $1 and for_date between $2 and $3`,
         [hotelId, from, to]);
       const sent = new Map(rows.map((r) => [
         cellKey({ roomTypeId: r.room_type_id, mealPlan: r.meal_plan === "-" ? null : r.meal_plan, date: r.for_date }),
-        canonical(JSON.parse(r.value)),
+        { value: canonical(JSON.parse(r.value)), priceSource: r.price_source },
       ]));
-      cells = cells.filter((c) => sent.get(cellKey(c)) !== canonical(c.value));
+      const unchanged = (c: AriCell) => sent.get(cellKey(c))?.value === canonical(c.value);
+      restamp = cells.filter((c) =>
+        unchanged(c) && (sent.get(cellKey(c))?.priceSource ?? null) !== c.priceSource);
+      cells = cells.filter((c) => !unchanged(c));
     }
-    return { from, to, suHotelId: snapshot.suHotelId, summary, cells };
+    return { from, to, suHotelId: snapshot.suHotelId, summary, cells, restamp };
   });
   if (!prepared) return null;
 
-  const { from, to, suHotelId, summary, cells } = prepared;
+  const { from, to, suHotelId, summary, cells, restamp } = prepared;
+  if (restamp.length > 0) await inSession((client) => restampSource(client, hotelId, restamp));
   const requests = ariRequests(suHotelId, cells);
   const results: PushOutcome["results"] = [];
 
@@ -105,24 +117,31 @@ export async function pushAri(
   }
 
   const ok = results.every((r) => r.ok) && results.length === requests.length;
+  /* D17-92: the rack rate sells a room at a figure nobody typed for that meal
+     plan, so every answer that says what went says how much of it went that
+     way, in words. */
+  const atRack = summary.rackDates === 0 ? "" : ` ${summary.rackDates} night${
+    summary.rackDates === 1 ? " is" : "s are"} selling at the rack rate, where the meal plan `
+    + "has no price of its own.";
   const reason = requests.length === 0
-    ? "Nothing to send: SU already has what the PMS says."
+    ? `Nothing to send: SU already has what the PMS says.${atRack}`
     : ok
-      ? `SU accepted ${requests.length} request${requests.length === 1 ? "" : "s"} for ${cells.length} dates.`
+      ? `SU accepted ${requests.length} request${requests.length === 1 ? "" : "s"} `
+        + `for ${cells.length} dates.${atRack}`
       : results.find((r) => !r.ok)?.reason ?? "Not every request reached SU.";
 
   await inSession((client, staffId) => client.query(
     `insert into channel_ari_pushes
        (hotel_id, kind, started_by, window_from, window_to, requests, dates, ok, result,
-        ticket_ids, unpriced, rack_only)
+        ticket_ids, unpriced, rack_dates)
      values ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)`,
     [hotelId, kind, staffId, from, to, requests.length, cells.length, ok, reason,
      results.flatMap((r) => (r.ticketId ? [r.ticketId] : [])),
-     summary.unpricedDates, summary.rackOnlyDates]));
+     summary.unpricedDates, summary.rackDates]));
 
   return {
     ok, kind, from, to, requests: requests.length, dates: cells.length,
-    unpricedDates: summary.unpricedDates, rackOnlyDates: summary.rackOnlyDates,
+    unpricedDates: summary.unpricedDates, rackDates: summary.rackDates,
     results, reason,
   };
 }
@@ -130,14 +149,37 @@ export async function pushAri(
 async function recordSent(client: Client, hotelId: string, cells: AriCell[]): Promise<void> {
   if (cells.length === 0) return;
   await client.query(
-    `insert into channel_ari_sent (hotel_id, room_type_id, meal_plan, for_date, value, sent_at)
-     select $1, c.room_type_id, c.meal_plan, c.for_date, c.value, now()
+    `insert into channel_ari_sent
+       (hotel_id, room_type_id, meal_plan, for_date, value, price_source, sent_at)
+     select $1, c.room_type_id, c.meal_plan, c.for_date, c.value, c.price_source, now()
        from jsonb_to_recordset($2::jsonb)
-            as c(room_type_id uuid, meal_plan text, for_date date, value jsonb)
+            as c(room_type_id uuid, meal_plan text, for_date date, value jsonb,
+                 price_source text)
      on conflict (hotel_id, room_type_id, meal_plan, for_date) do update
-        set value = excluded.value, sent_at = excluded.sent_at`,
+        set value = excluded.value, price_source = excluded.price_source,
+            sent_at = excluded.sent_at`,
     [hotelId, JSON.stringify(cells.map((c) => ({
       room_type_id: c.roomTypeId, meal_plan: c.mealPlan ?? "-", for_date: c.date, value: c.value,
+      /* D17-92: which figure went, and why, night by night (110). */
+      price_source: c.priceSource,
+    })))]);
+}
+
+/* The figure SU holds has not changed — only where it comes from has, so
+   nothing goes to SU and `sent_at` is left where it was: nothing was sent. */
+async function restampSource(client: Client, hotelId: string, cells: AriCell[]): Promise<void> {
+  await client.query(
+    `update channel_ari_sent s
+        set price_source = c.price_source
+       from jsonb_to_recordset($2::jsonb)
+            as c(room_type_id uuid, meal_plan text, for_date date, price_source text)
+      where s.hotel_id = $1
+        and s.room_type_id = c.room_type_id
+        and s.meal_plan = c.meal_plan
+        and s.for_date = c.for_date`,
+    [hotelId, JSON.stringify(cells.map((c) => ({
+      room_type_id: c.roomTypeId, meal_plan: c.mealPlan ?? "-", for_date: c.date,
+      price_source: c.priceSource,
     })))]);
 }
 

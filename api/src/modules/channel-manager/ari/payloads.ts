@@ -41,11 +41,21 @@ import type { AriSnapshot } from "./source.ts";
      has not said to close it: "closed: 0" would open the rate on SU, where an
      old price may still be held. With D17-81 answered (closed), such a date
      goes as closed instead.
-   - The two owner questions, held in `AriPolicy` until answered.
+   - The owner's answers are held in `AriPolicy`, so what goes to SU can be
+     read in one place and changed in one place.
+
+   THE RACK RATE DOES GO (D17-92, 18 September). Where a meal plan has no price
+   of its own the room type's own rate goes, rather than the date closing: a
+   closed date sells nothing at all, while the rack rate keeps the room selling
+   until somebody prices that plan. It is the same figure for room only and for
+   breakfast, so breakfast sells at the room-only price meanwhile — the owner's
+   call, made knowing that. Every such cell carries `priceSource: "rack"`, which
+   is written into what SU was last sent (110) and counted for the screen, so a
+   later question about a night's price has an answer.
    ══════════════════════════════════════════════════════════════════ */
 
 export interface AriPolicy {
-  /** P3-b, the owner's: may a "rack" price go to SU? That is the room type's
+  /** D17-92, the owner's: a "rack" price goes to SU. That is the room type's
       own rate, used when nothing was set for the meal plan and date, and it
       is the same figure for room only and for breakfast. */
   sendRackRate: boolean;
@@ -56,11 +66,11 @@ export interface AriPolicy {
   closeUnpriced: boolean;
 }
 
-/** What the owner has said. D17-81: an unpriced date is closed. P3-b, whether
-    the rack rate (the room type's own rate, the same figure whatever the meal
-    plan) may go, is still with the owner, so it does not. */
+/** What the owner has said. D17-81: a date with no price anywhere is closed.
+    D17-92: where the meal plan has no price of its own, the room type's rack
+    rate goes rather than the date closing. */
 export const THE_OWNERS_POLICY: AriPolicy = {
-  sendRackRate: false,
+  sendRackRate: true,
   closeUnpriced: true,
 };
 
@@ -73,6 +83,10 @@ export interface AriCell {
   date: string;
   /** Exactly the fields SU receives for this date, without the date. */
   value: Record<string, unknown>;
+  /** Where the price in `value` came from, kept with what SU was last sent so a
+      later question about a night has an answer (110). Null when the cell
+      carries no price: rooms left, or a date closed for want of one. */
+  priceSource: "typed" | "derived" | "rack" | null;
 }
 
 export const cellKey = (c: Pick<AriCell, "roomTypeId" | "mealPlan" | "date">) =>
@@ -82,8 +96,10 @@ export interface CellSummary {
   cells: AriCell[];
   /** Dates a meal plan had no price that could go (the owner sees the count). */
   unpricedDates: number;
-  /** Dates whose only price was the rack fallback, kept back by the policy. */
-  rackOnlyDates: number;
+  /** Dates whose price was the room type's rack rate because the meal plan had
+      none of its own (D17-92): sent, and counted so the owner can see how much
+      is selling at a figure nobody typed for that plan. */
+  rackDates: number;
 }
 
 const flag = (b: boolean) => (b ? "1" : "0");
@@ -91,7 +107,7 @@ const flag = (b: boolean) => (b ? "1" : "0");
 export function ariCells(snapshot: AriSnapshot, policy: AriPolicy): CellSummary {
   const cells: AriCell[] = [];
   let unpricedDates = 0;
-  let rackOnlyDates = 0;
+  let rackDates = 0;
 
   for (const room of snapshot.rooms) {
     const dayByDate = new Map(room.days.map((d) => [d.date, d]));
@@ -99,7 +115,7 @@ export function ariCells(snapshot: AriSnapshot, policy: AriPolicy): CellSummary 
     for (const day of room.days) {
       cells.push({
         roomTypeId: room.roomTypeId, suRoomId: room.suRoomId, mealPlan: null, suRatePlanId: null,
-        date: day.date, value: { roomstosell: String(day.roomsLeft) },
+        date: day.date, value: { roomstosell: String(day.roomsLeft) }, priceSource: null,
       });
     }
 
@@ -110,13 +126,16 @@ export function ariCells(snapshot: AriSnapshot, policy: AriPolicy): CellSummary 
 
         const priceAllowed = p.source === "typed" || p.source === "derived"
           || (p.source === "rack" && policy.sendRackRate);
-        if (p.source === "rack" && !policy.sendRackRate) rackOnlyDates += 1;
 
         const price = priceAllowed
           ? p.byGuests.flatMap((v, i) => (v === null || !(Number(v) > 0)
               ? [] : [{ NumberOfGuests: String(i + 1), value: v }]))
           : [];
         if (price.length === 0) unpricedDates += 1;
+        /* Counted when it actually goes, not when it is refused: the owner reads
+           it as how many nights are selling at a figure nobody typed for this
+           meal plan (D17-92). */
+        if (p.source === "rack" && price.length > 0) rackDates += 1;
         /* No price, nobody closed it, and closing unpriced dates is not the
            owner's rule: nothing is said to SU about this date. */
         if (price.length === 0 && !day.stopSell && !policy.closeUnpriced) continue;
@@ -136,11 +155,12 @@ export function ariCells(snapshot: AriSnapshot, policy: AriPolicy): CellSummary 
           roomTypeId: room.roomTypeId, suRoomId: room.suRoomId,
           mealPlan: plan.mealPlan, suRatePlanId: plan.suRatePlanId,
           date: p.date, value,
+          priceSource: price.length > 0 ? p.source : null,
         });
       }
     }
   }
-  return { cells, unpricedDates, rackOnlyDates };
+  return { cells, unpricedDates, rackDates };
 }
 
 const ENTRIES_PER_REQUEST = 1000;

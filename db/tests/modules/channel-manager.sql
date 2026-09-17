@@ -19,7 +19,9 @@
 --   6. every write is audited;
 --   7. a booking SU pushed is one row however often SU sends it again, and the
 --      door can only find a hotel that is on SU AND switched on for the channel
---      manager.
+--      manager;
+--   8. what SU was sent records WHERE the figure came from — typed, derived or
+--      the room type's rack rate (D17-92) — and nothing else is allowed in it.
 -- =============================================================================
 do $$
 declare
@@ -124,6 +126,22 @@ begin
 
   perform test.ok('su mapping', 'the door finds no hotel while none is switched on',
     not exists (select 1 from app.channel_hotel_for('CMQ-1')));
+
+  -- ---------- 8 · which figure went to SU, and why (D17-92) ----------
+  perform test.allows('su mapping', 'a night sent at the room type''s rack rate says so',
+    format($q$insert into channel_ari_sent (hotel_id, room_type_id, meal_plan, for_date, value, price_source)
+              values (%L, %L, 'EP', current_date, '{"price":[]}'::jsonb, 'rack')$q$, h, dlx));
+  perform test.allows('su mapping', 'rooms left carries no price, so it records no source',
+    format($q$insert into channel_ari_sent (hotel_id, room_type_id, meal_plan, for_date, value, price_source)
+              values (%L, %L, '-', current_date, '{"roomstosell":"4"}'::jsonb, null)$q$, h, dlx));
+  perform test.raises('su mapping', 'a source the PMS never sends is refused',
+    format($q$insert into channel_ari_sent (hotel_id, room_type_id, meal_plan, for_date, value, price_source)
+              values (%L, %L, 'CP', current_date, '{}'::jsonb, 'guessed')$q$, h, dlx), '23514');
+  perform test.ok('su mapping', 'the push log counts the nights that went at the rack rate',
+    exists (select 1 from information_schema.columns
+             where table_name = 'channel_ari_pushes' and column_name = 'rack_dates')
+    and not exists (select 1 from information_schema.columns
+             where table_name = 'channel_ari_pushes' and column_name = 'rack_only'));
 
   -- ---------- and the fixtures go ----------
   alter table hotels disable trigger hotels_no_delete;

@@ -32,7 +32,7 @@ master's fix lands (CM-1): each falls back to the master's `fidato` database.
 |---|---|---|
 | 1 | **Token login.** SU's keys from the server's settings only; a token reused, renewed before it lapses, SU's 30 logins an hour never spent by a loop, a test key never used against the live account | **Built** 17 September, branch `channel-manager/su-connection`; audited by the master |
 | 2 | **Content:** the hotel, its room types and its rate plans, sent to SU from the PMS (the record, D17-28); a mapping table per hotel | **Built** 17 September, same branch; migration 106 (the SU mapping) |
-| 3 | **Rates and availability:** rooms left, prices and restrictions pushed whenever they change and on demand | **Built** 17 September, same branch; migration 107 (what SU was last sent) |
+| 3 | **Rates and availability:** rooms left, prices and restrictions pushed whenever they change and on demand | **Built** 17 September, same branch; migrations 107 (what SU was last sent) and 110 (which figure went, D17-92) |
 | 4 | **Reservations:** SU **pushes** each booking to the PMS (D17-79): the door, the inbox, the refusal path (D17-80) and the Channel bookings screen | **Built** 18 September, same branch; migration 109 (the inbox). Waiting on two things: the master mounting `/api/channel`, and reservations' machine door before a pushed booking can become a booking |
 
 The owner's rules for it (D17-43 to D17-45, D17-79 to D17-85):
@@ -43,6 +43,8 @@ The owner's rules for it (D17-43 to D17-45, D17-79 to D17-85):
   hotel's terms (D17-44);
 - **each hotel is switched on separately**, none by default (D17-45);
 - **a date with no price goes to SU closed** (D17-81);
+- **a meal plan with no price of its own sells at the room type's rack rate**
+  (D17-92), and what SU was last sent records that the figure was the rack rate;
 - **each night's price is kept** as SU sent it (D17-82; a reservations change);
 - a **card number or CVC is never kept** (D17-83);
 - commission: **SU's amount, else the source's %, else "-"** (D17-84);
@@ -83,7 +85,10 @@ and what it still needs before it goes live.
    thing sent with what SU said.
 6. **Rooms left, prices and closures** - *Send a year* and *Send what changed*,
    and the last ten pushes: when, which kind, how many dates in how many
-   requests, what SU said, and how many dates went closed for want of a price.
+   requests, what SU said, how many dates went closed for want of a price, and
+   how many went at the rack rate. Above them, in words: how many nights are
+   selling at the rack rate right now and from when, because that is a room
+   selling at a figure nobody typed for that meal plan (D17-92).
 7. **Bookings from the booking sites** - every booking SU has pushed, newest
    first: the guest, the site, the nights, the money, what became of it
    ("Refused: no room free", "Needs somebody", "Booked"), why, whether SU has
@@ -107,7 +112,7 @@ from a name, no SU meal plan from "Continental". Saving sends nothing.
 | `PUT /api/hotels/:code/channel-manager/room-types/:roomTypeId` | Saves a room type's SU room id, SU room type, children at most, and whether it goes to SU. Refuses children that fill the room, a type not on SU's list, an id used twice, a change once SU has it | owner or admin here |
 | `PUT /api/hotels/:code/channel-manager/rate-plans/:mealPlan` | The same for a meal plan as an SU rate plan | owner or admin here |
 | `POST /api/hotels/:code/channel-manager/content/send` | Sends the hotel, then its room types, then its rate plans to SU (below) | owner or admin here |
-| `GET /api/hotels/:code/channel-manager/availability` | The last ten pushes of rooms left, prices and closures, and what SU said | owner or admin here |
+| `GET /api/hotels/:code/channel-manager/availability` | The last ten pushes of rooms left, prices and closures, what SU said, and how many nights SU is holding at the rack rate from tonight on (D17-92) | owner or admin here |
 | `POST /api/hotels/:code/channel-manager/availability/send` | Sends a year (`all`) or only the dates that changed (`changes`) | owner or admin here |
 | `GET /api/hotels/:code/channel-manager/bookings` | The last hundred bookings SU pushed, and what became of each | owner or admin here |
 | `POST /api/hotels/:code/channel-manager/bookings/:id/done` | A person has dealt with one. Changes nothing at SU and makes no booking | owner or admin here |
@@ -150,7 +155,14 @@ No answer carries the client id, the secret or the token.
   one range; requests are cut at 1,000 entries.
 - **The price for each number of guests** from one to what the room sleeps, from
   the PMS's own price and extra-adult figure. A guest count nobody priced is left
-  out; a price of zero is never sent; a rack fallback is held back (P3-b).
+  out; a price of zero is never sent. **Where the meal plan has no price of its
+  own the room type's rack rate goes** (D17-92): a closed date sells nothing,
+  while the rack rate keeps the room selling until somebody prices that plan.
+  Breakfast then sells at the room-only price, which is the owner's call, made
+  knowing it — so every night records WHERE its figure came from
+  (`channel_ari_sent.price_source`: typed, derived or rack, migration 110), the
+  answer to the push says how many nights went that way in words, and the screen
+  says how many are selling at the rack rate right now, and from when.
 - **A date with no price that may go is sent closed** (D17-81), so SU cannot keep
   selling a price the PMS no longer has.
 - **Only what changed:** each date's value is kept in `channel_ari_sent` after SU
@@ -291,6 +303,21 @@ room type and meal plan would bury the audit log - and the push log is the recor
 instead. The application may add and change the copy, add to the log, and delete
 neither.
 
+Migration 110, **which figure went to SU, and why** (`110_channel_manager_price_source.sql`),
+the second half of D17-92:
+
+```
+channel_ari_sent.price_source   typed | derived | rack | null (no price in the
+                                cell: rooms left, or a date closed for want of
+                                one). A night selling at the rack rate can be
+                                answered for afterwards
+channel_ari_pushes.rack_dates   was rack_only. The same count, no longer meaning
+                                "held back": from D17-92 those nights are sent
+```
+
+Rows written before 18 September keep a null `price_source`: what SU was sent for
+them is known and where it came from is not, and a migration does not invent it.
+
 **107 and 108, not 106:** 106 is the Store chat's (stock per place), so on this branch
 alone `src/test/migrationNumbers.test.ts` reports a gap until the Store's 106 is
 in cp6. The master renumbers at merge if cp6 moves first.
@@ -407,10 +434,10 @@ db      bash db/tests/run.sh    all pass; bash db/tests/rerun.sh re-runnable
    written by the door above when a caller sends `nights`; the night audit posts
    from it where rows exist and from `agreed_rate` where they do not, so nothing
    changes for a booking taken at the desk.
-7. **17 Sep · P3-b, still with the owner:** may a **rack** price go to SU? It is
-   the room type's own rate, the same figure whatever the meal plan, so breakfast
-   would go out at the room-only price. Until answered, such a date is treated as
-   unpriced, and D17-81 sends it closed.
+7. **17 Sep · P3-b — ANSWERED 18 September, D17-92:** the rack price goes, rather
+   than the date closing, and breakfast sells at the room-only price until
+   somebody prices it. Built the same day: migration 110 records which figure went
+   and why, and the screen says it in words. Nothing is open here.
 8. **17 Sep · part 4's door** (D17-79). Design approved by the master, 17 Sep.
    Needed from them, because the files are theirs: the fourth mount prefix
    `/api/channel` in `mount.ts`, with `server.ts` leaving it outside the staff
@@ -419,8 +446,9 @@ db      bash db/tests/run.sh    all pass; bash db/tests/rerun.sh re-runnable
    SU gives them. The key itself is the owner's: generated by them, in the
    server's settings (`SU_PUSH_KEY`) and SU's extranet, never in the repository,
    a test or a chat.
-9. **17 Sep · a migration number for part 4's inbox.** Asked: 109 unless the
-   master says otherwise.
+9. **17 Sep · a migration number for part 4's inbox.** Answered: **109** is this
+   lane's (the master, 18 Sep). **110** (which figure went to SU, D17-92) taken
+   the same day on the same rule: after cp6's highest.
 
 ## Requests from other services
 

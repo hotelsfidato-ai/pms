@@ -5,7 +5,7 @@ import {
   Button, Card, CardBody, Checkbox, Field, fieldProps, Input, NativeSelect, Textarea,
   StatusPill, ReadFailed, Skeleton, toast,
 } from "@/components/ui";
-import { money, dateTime } from "@/lib/format";
+import { money, dateTime, dateShort } from "@/lib/format";
 import {
   getSuStatus, checkSuLogin, getSuContent, saveSuHotel, saveSuRoomType,
   saveSuRatePlan, sendSuContent, getSuAvailability, sendSuAvailability,
@@ -461,8 +461,10 @@ function RoomsAndPrices({ code, data }: { code: string; data: SuContent }) {
           <h2 className="text-md font-semibold text-ink-900">Rooms left, prices and closures</h2>
           <p className="text-sm text-grey-500">
             A year at a time. Send a year when a hotel first goes on SU; after that only what
-            changed is sent, on its own every minute once the hotel is switched on. A date
-            nobody has priced goes to SU closed, so no booking site sells it at an old price.
+            changed is sent, on its own every minute once the hotel is switched on. Where a meal
+            plan has no price of its own, the room type's rack rate goes, so the room keeps
+            selling; where there is no price at all, the date goes to SU closed, so no booking
+            site sells it at an old price.
           </p>
         </div>
         {blocked && (
@@ -482,6 +484,18 @@ function RoomsAndPrices({ code, data }: { code: string; data: SuContent }) {
           <ReadFailed compact error={state.error} what="what was sent to SU"
                       onRetry={() => void state.refetch()} />
         )}
+        {/* D17-92. A night SU is holding at the room type's own rate sells at a
+            figure nobody typed for that meal plan, so it is said in words, with
+            the first such night, rather than left in a count nobody reads. */}
+        {state.data && state.data.atRackRate.nights > 0 && (
+          <p className="text-base text-ink-900">
+            {state.data.atRackRate.nights} night
+            {state.data.atRackRate.nights === 1 ? " is" : "s are"} selling at the rack rate
+            {state.data.atRackRate.firstDate
+              ? `, from ${dateShort(state.data.atRackRate.firstDate)}` : ""}
+            {" "}— no price set for that meal plan.
+          </p>
+        )}
         {state.data && state.data.pushes.length > 0 && (
           <ul className="space-y-1">
             {state.data.pushes.map((p) => (
@@ -489,6 +503,7 @@ function RoomsAndPrices({ code, data }: { code: string; data: SuContent }) {
                 {dateTime(p.at)} · {p.kind === "all" ? "a year" : "what changed"} · {p.dates} dates
                 {" "}in {p.requests} request{p.requests === 1 ? "" : "s"} · {p.result}
                 {p.unpricedDates > 0 && ` · ${p.unpricedDates} closed for want of a price`}
+                {p.rackDates > 0 && ` · ${p.rackDates} at the rack rate, no price set for the plan`}
               </li>
             ))}
           </ul>

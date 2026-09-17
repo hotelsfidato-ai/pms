@@ -129,12 +129,15 @@ export interface AriPush {
   from: string; to: string;
   requests: number; dates: number;
   ok: boolean; result: string;
-  unpricedDates: number; rackOnlyDates: number;
+  unpricedDates: number; rackDates: number;
   at: string;
 }
 
 export interface AriState {
   pushes: AriPush[];
+  /** D17-92: what SU is holding at the room type's rack rate right now, because
+      the meal plan has no price of its own. Nights from tonight onwards. */
+  atRackRate: { nights: number; firstDate: string | null };
   policy: { sendRackRate: boolean; closeUnpriced: boolean };
 }
 
@@ -142,7 +145,7 @@ export interface AriOutcome {
   kind: "all" | "changes";
   from: string; to: string;
   requests: number; dates: number;
-  unpricedDates: number; rackOnlyDates: number;
+  unpricedDates: number; rackDates: number;
   reason: string;
 }
 

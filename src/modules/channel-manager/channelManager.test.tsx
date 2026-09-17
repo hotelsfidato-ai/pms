@@ -35,7 +35,13 @@ const content: SuContent = {
   suMealPlans: [{ code: 15, name: "Room only" }],
 };
 
-const availability: AriState = { pushes: [], policy: { sendRackRate: false, closeUnpriced: true } };
+/* D17-92: twelve nights are on SU at the room type's own rate because nothing
+   was priced for the meal plan. The owner must be able to read that in words. */
+const availability: AriState = {
+  pushes: [],
+  atRackRate: { nights: 12, firstDate: "2026-11-02" },
+  policy: { sendRackRate: true, closeUnpriced: true },
+};
 
 /* One booking SU pushed and the PMS refused: the owner sees why, and that no
    card detail was kept (D17-80, D17-83). */
@@ -107,6 +113,18 @@ describe("the channel manager page", () => {
     render(<App />);
     expect(await screen.findByText("This hotel on SU")).toBeTruthy();
     expect(screen.getByText("Rooms left, prices and closures")).toBeTruthy();
+  });
+
+  /* D17-92. The rack rate sells a room at a figure nobody typed for that meal
+     plan, so the screen says so in words and says from when — a count in a log
+     line would not tell the owner how much is going out that way. */
+  it("says in words which nights are selling at the rack rate (D17-92)", async () => {
+    as("owner");
+    render(<App />);
+    expect(await screen.findByText(/12 nights are selling at the rack rate/)).toBeTruthy();
+    expect(screen.getByText(/no price set for that meal plan/)).toBeTruthy();
+    /* The screen's own date, as the rest of this page prints one. */
+    expect(screen.getByText(/from 2 Nov 2026/)).toBeTruthy();
   });
 
   it("shows a refused booking with its reason, and that no card detail was kept", async () => {
