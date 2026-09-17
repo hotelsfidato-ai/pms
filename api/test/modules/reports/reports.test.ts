@@ -49,67 +49,171 @@ beforeAll(async () => {
 
 afterAll(async () => { await closePool(); });
 
-interface ManagerRow { label: string; ptd: number | null }
-interface ManagerSection { title: string; rows: ManagerRow[] }
+/* ── The Manager report, in the owner's layout ────────────────────── */
 
-async function manager(): Promise<ManagerSection[]> {
-  const body = (await (await call("/5EL/reports/manager")).json()) as
-    { sections: ManagerSection[] };
-  return body.sections;
-}
+const managerDoc = async (query = "") =>
+  (await (await call(`/5EL/reports/manager${query}`)).json()) as ReportDoc;
 
-const rowOf = (sections: ManagerSection[], section: string, label: string) =>
-  sections.find((s) => s.title === section)?.rows.find((r) => r.label === label);
+type Three = { today: number | null; ptd: number | null; ytd: number | null };
+const figure = (doc: ReportDoc, section: string, label: string): Three => {
+  const r = doc.sections.find((x) => x.key === section)?.rows.find((x) => x.cells["label"] === label);
+  expect(r, `${section} / ${label}`).toBeDefined();
+  return {
+    today: r!.cells["today"] as number | null,
+    ptd: r!.cells["ptd"] as number | null,
+    ytd: r!.cells["ytd"] as number | null,
+  };
+};
 
-/* ── The one that caught the discount ─────────────────────────────── */
-
-describe("the Manager Report and the Guest Ledger agree", () => {
-  it("reports the same charges to the paisa", async () => {
-    const ledger = (await (await call("/5EL/reports/guest-ledger")).json()) as
-      { rows: Array<{ charges: number; payments: number; closing: number }> };
-
-    const charges = ledger.rows.reduce((n, r) => n + r.charges, 0);
-    const sections = await manager();
-    const posted = rowOf(sections, "Guest Ledger", "Charge Posted to Guest Ledger");
-
-    expect(posted?.ptd).toBeCloseTo(charges, 2);
+describe("the Manager report adds up the way its own page says", () => {
+  it("builds its revenue lines from the rows above them, discount included", async () => {
+    /* The report once showed ₹4,60,697.76 of revenue against a ledger
+       holding ₹4,59,697.76: a discount fetched and never subtracted.
+       Every total is checked against the rows printed above it. */
+    const doc = await managerDoc();
+    const extra = doc.sections.find((x) => x.key === "extra-charges")!;
+    expect(extra.rows.some((r) => r.cells["label"] === "Discount")).toBe(true);
+    for (const col of ["today", "ptd", "ytd"] as const) {
+      const v = (s: string, l: string) => figure(doc, s, l)[col] as number;
+      const extraRows = extra.rows.filter((r) => r.kind === "row")
+        .reduce((t, r) => t + (r.cells[col] as number), 0);
+      expect(extraRows, `${col} extra`).toBeCloseTo(v("extra-charges", "Total"), 2);
+      expect(v("room-charges", "Total"))
+        .toBeCloseTo(v("room-charges", "Room Charges") + v("room-charges", "Cancellation Revenue"), 2);
+      expect(v("tax", "Total")).toBeCloseTo(v("tax", "SGST") + v("tax", "CGST"), 2);
+      expect(v("revenue", "Total Revenue without Tax"))
+        .toBeCloseTo(v("room-charges", "Total") + v("extra-charges", "Total"), 2);
+      expect(v("revenue", "Total Revenue with Tax"))
+        .toBeCloseTo(v("revenue", "Total Revenue without Tax") + v("tax", "Total"), 2);
+      expect(v("revenue", "Transfer Charges to Guest Ledger"))
+        .toBeCloseTo(v("revenue", "Total Revenue with Tax") + v("revenue", "POS to PMS Posting"), 2);
+      expect(v("revenue-summary", "PMS Revenue")).toBeCloseTo(v("revenue", "Total Revenue without Tax"), 2);
+      expect(v("revenue-summary", "Total Revenue"))
+        .toBeCloseTo(v("revenue-summary", "PMS Revenue") + v("revenue-summary", "POS Revenue"), 2);
+      expect(v("revenue-summary", "POS Revenue"))
+        .toBeCloseTo(v("pos-summary", "All Outlet's Total Revenue without Tax"), 2);
+    }
   });
 
-  it("reports the same settlement, and the same closing balance", async () => {
-    const ledger = (await (await call("/5EL/reports/guest-ledger")).json()) as
-      { rows: Array<{ charges: number; payments: number; closing: number }> };
+  it("closes the guest ledger by its printed formula, at the balance the bills hold", async () => {
+    const doc = await managerDoc("?asOn=2026-08-25");
+    const g = (l: string) => figure(doc, "guest-ledger", l).today as number;
+    expect(g("Closing Balance*")).toBeCloseTo(
+      g("Opening Balance") - g("Carry Forwarded Advance Deposit")
+        + g("Charge Posted to Guest Ledger") - g("Settlement by Guest"), 2);
+    expect(g("Transfer From Advance Deposit*"))
+      .toBe(figure(doc, "advance-deposit-ledger", "Balance Transfer to Guest Ledger").today);
 
-    const payments = ledger.rows.reduce((n, r) => n + r.payments, 0);
-    const closing = ledger.rows.reduce((n, r) => n + r.closing, 0);
-
-    const sections = await manager();
-    expect(rowOf(sections, "Guest Ledger", "Settlement by Guest")?.ptd)
-      .toBeCloseTo(payments, 2);
-    expect(rowOf(sections, "Guest Ledger", "Closing Balance")?.ptd)
-      .toBeCloseTo(closing, 2);
+    /* And the closing IS what the bills hold, asked of the database:
+       every live posting to the day, less deposits still waiting for a
+       guest who has not arrived. */
+    const db = await admin();
+    try {
+      const { rows } = await db.query<{ held: string }>(
+        `with live as (
+           select fp.* from folio_postings fp join hotels h on h.id = fp.hotel_id
+            where h.code = '5EL' and fp.reverses_id is null
+              and not exists (select 1 from folio_postings x where x.reverses_id = fp.id)
+              and fp.business_date <= '2026-08-25')
+         select (coalesce((select sum(amount + tax_amount) from live), 0)
+                 + coalesce((select sum(-l.amount) from live l
+                              join folios f on f.id = l.folio_id
+                              join reservations r on r.id = coalesce(l.reservation_id, f.reservation_id)
+                             where l.category = 'payment'
+                               and l.business_date < r.check_in and r.check_in > '2026-08-25'
+                               and not exists (select 1 from payments p
+                                                where p.posting_id = l.id and p.method = 'city_ledger')), 0)
+                )::text as held`);
+      expect(g("Closing Balance*")).toBeCloseTo(Number(rows[0]!.held), 2);
+    } finally { await db.end(); }
   });
 
-  it("subtracts the discount from revenue", async () => {
-    /* `net = room + extra` omitted it entirely. The rows are checked
-       against the total rather than against a constant, so this holds
-       whatever the fixture contains. */
-    const sections = await manager();
-    const room = rowOf(sections, "Revenue", "Room Charges")?.ptd ?? 0;
-    const extra = rowOf(sections, "Revenue", "Extra Charges")?.ptd ?? 0;
-    const discount = rowOf(sections, "Revenue", "Discount")?.ptd ?? 0;
-    const sgst = rowOf(sections, "Revenue", "SGST")?.ptd ?? 0;
-    const cgst = rowOf(sections, "Revenue", "CGST")?.ptd ?? 0;
-    const net = rowOf(sections, "Revenue", "Total Revenue without Tax")?.ptd ?? 0;
-    const gross = rowOf(sections, "Revenue", "Total Revenue with Tax")?.ptd ?? 0;
+  it("keeps money taken before arrival in the advance deposit ledger until the guest comes", async () => {
+    const db = await admin();
+    let stay = "";
+    let arrival = "";
+    try {
+      const { rows } = await db.query<{ id: string; arrival: string }>(
+        `select r.id, to_char(r.check_in, 'YYYY-MM-DD') as arrival
+           from reservations r join hotels h on h.id = r.hotel_id
+          where h.code = '5EL' and r.status = 'confirmed' and r.check_in > '2026-08-26'
+          order by r.check_in, r.reference limit 1`);
+      stay = rows[0]!.id;
+      arrival = rows[0]!.arrival;
+    } finally { await db.end(); }
 
-    /* Discount is SHOWN, so the total can be reconstructed from what is
-       printed. A total nobody can rebuild from the rows above it is a
-       total nobody can check. */
-    expect(rowOf(sections, "Revenue", "Discount")).toBeTruthy();
-    expect(discount).toBeLessThanOrEqual(0);
+    const before = await managerDoc("?asOn=2026-08-25");
+    const paid = await app.request(`/api/hotels/5EL/stays/${stay}/payments`, {
+      method: "POST",
+      headers: { "x-dev-staff-id": ownerId, "content-type": "application/json" },
+      body: JSON.stringify({ method: "UPI", amount: 1500 }),
+    });
+    expect(paid.status).toBe(200);
+    const after = await managerDoc("?asOn=2026-08-25");
+    const delta = (s: string, l: string) => Math.round(
+      ((figure(after, s, l).today as number) - (figure(before, s, l).today as number)) * 100) / 100;
 
-    expect(net).toBeCloseTo(room + extra + discount, 2);
-    expect(gross).toBeCloseTo(net + sgst + cgst, 2);
+    expect(delta("advance-deposit-ledger", "Advance Deposit Collected")).toBe(1500);
+    expect(delta("advance-deposit-ledger", "Closing Balance")).toBe(1500);
+    expect(delta("guest-ledger", "Settlement by Guest")).toBe(0);
+    expect(delta("guest-ledger", "Closing Balance*")).toBe(0);
+    expect(delta("payment", "UPI")).toBe(1500);
+
+    /* On the day the guest arrives, it crosses into the guest ledger. */
+    const onArrival = await managerDoc(`?asOn=${arrival}`);
+    expect(figure(onArrival, "advance-deposit-ledger", "Balance Transfer to Guest Ledger").today)
+      .toBeGreaterThanOrEqual(1500);
+    expect(figure(onArrival, "guest-ledger", "Carry Forwarded Advance Deposit").today)
+      .toBe(figure(onArrival, "advance-deposit-ledger", "Balance Transfer to Guest Ledger").today);
+  });
+
+  it("counts the restaurant's settled bills as the till does", async () => {
+    const db = await admin();
+    let outlet = "";
+    let item = "";
+    try {
+      const hotel = (await db.query<{ id: string }>("select id from hotels where code = '5EL'")).rows[0]!.id;
+      outlet = (await db.query<{ code: string }>(
+        "select code from pos_outlets where hotel_id = $1 and is_active order by code limit 1",
+        [hotel])).rows[0]!.code;
+      item = (await db.query<{ id: string }>(
+        `select i.id::text from pos_menu_items i
+          where i.hotel_id = $1 and i.is_active and i.off_until is null
+            and not exists (select 1 from pos_item_variations v where v.item_id = i.id and v.is_active)
+          limit 1`, [hotel])).rows[0]!.id;
+    } finally { await db.end(); }
+
+    const before = await managerDoc("?asOn=2026-08-25");
+    const send = (method: string, path: string, body: unknown) => app.request(`/api/hotels${path}`, {
+      method,
+      headers: { "x-dev-staff-id": ownerId, "content-type": "application/json" },
+      body: JSON.stringify(body),
+    });
+    const made = await send("POST", "/5EL/till/orders/batch",
+      { outlet, table: "REP-1", lines: [{ itemId: item, qty: 2 }] });
+    expect(made.status).toBe(200);
+    const order = (await made.json()) as { id: string };
+    const settled = await send("POST", `/5EL/till/orders/${order.id}/settle`, { method: "cash" });
+    expect(settled.status).toBe(200);
+    const after = await managerDoc("?asOn=2026-08-25");
+
+    const db2 = await admin();
+    let payable = 0;
+    let withoutTax = 0;
+    try {
+      const { rows } = await db2.query<{ payable: string; taxable: string; round_off: string }>(
+        "select payable::text, taxable::text, round_off::text from app.pos_order_total($1)", [order.id]);
+      payable = Number(rows[0]!.payable);
+      withoutTax = Number(rows[0]!.taxable) + Number(rows[0]!.round_off);
+    } finally { await db2.end(); }
+
+    const delta = (s: string, l: string) => Math.round(
+      ((figure(after, s, l).today as number) - (figure(before, s, l).today as number)) * 100) / 100;
+    expect(payable).toBeGreaterThan(0);
+    expect(delta("pos-summary", "All Outlet's Total Revenue with Tax")).toBeCloseTo(payable, 2);
+    expect(delta("pos-summary", "All Outlet's Total Revenue without Tax")).toBeCloseTo(withoutTax, 2);
+    expect(delta("pos-payment-summary", "All Outlet's Payment Total")).toBeCloseTo(payable, 2);
+    expect(delta("revenue-summary", "POS Revenue")).toBeCloseTo(withoutTax, 2);
   });
 });
 
@@ -151,26 +255,13 @@ describe("the GST sales register", () => {
 /* ── Cashier shift ────────────────────────────────────────────────── */
 
 describe("the cashier shift", () => {
-  it("totals the same money the Manager Report calls received", async () => {
+  it("totals the same money the Manager report calls received today", async () => {
     const shift = (await (await call("/5EL/reports/cashier-shift")).json()) as
       { rows: Array<{ amount: number }> };
     const taken = shift.rows.reduce((n, r) => n + r.amount, 0);
-
-    const sections = await manager();
-    const today = sections.find((s) => s.title === "Payment")
-      ?.rows.find((r) => r.label === "Total Payment");
-
-    const body = (await (await call("/5EL/reports/manager")).json()) as {
-      sections: Array<{ title: string; rows: Array<{ label: string; today: number | null }> }>;
-    };
-    const managerToday = body.sections
-      .find((s) => s.title === "Payment")
-      ?.rows.find((r) => r.label === "Total Payment")?.today ?? 0;
-
-    expect(today, "the Manager Report has no Total Payment row").toBeTruthy();
     /* The shift report defaults to TODAY, so it compares against the
-       Manager Report's today column, not its period-to-date one. */
-    expect(taken).toBeCloseTo(managerToday, 2);
+       Manager report's Today column. */
+    expect(taken).toBeCloseTo(figure(await managerDoc(), "payment", "Total Payment").today as number, 2);
   });
 
   it("says nothing rather than naming a cashier it does not know", async () => {
@@ -178,7 +269,7 @@ describe("the cashier shift", () => {
       { rows: Array<{ cashier: string | null }> };
 
     /* The demo's postings predate staff attribution, so `cashier` is
-       null. That must arrive as null — a "System" placeholder would
+       null. That must arrive as null: a "System" placeholder would
        name somebody who did not take the money. */
     for (const r of shift.rows) {
       expect(r.cashier === null || typeof r.cashier === "string").toBe(true);
@@ -212,13 +303,11 @@ describe("the C-Form report", () => {
    month and ANOTHER financial year, where a literal cannot pass. */
 
 describe("the reports' dates come from the report's own day", () => {
-  interface ManagerDates {
-    asOn: string; ptdFrom: string; ytdFrom: string;
-    roomSummary: Array<{ label: string; ytd: number | null }>;
-    statistics: Array<{ label: string; unit?: string }>;
-  }
-  const managerAsOn = async (query = "") =>
-    (await (await call(`/5EL/reports/manager${query}`)).json()) as ManagerDates;
+  const managerAsOn = async (query = "") => {
+    const doc = await managerDoc(query);
+    const fact = (label: string) => doc.facts.find((f) => f.label === label)?.value as string;
+    return { doc, asOn: fact("As on Date"), ptdFrom: fact("PTD"), ytdFrom: fact("YTD") };
+  };
 
   /** Sellable room-nights from `from` to `to`, asked of the database —
       what the YTD column must have counted if its window starts there. */
@@ -258,7 +347,7 @@ describe("the reports' dates come from the report's own day", () => {
        window the label names. */
     for (const [asOn, ytdFrom] of [["2027-05-10", "2027-04-01"], ["2027-02-10", "2026-04-01"]]) {
       const body = await managerAsOn(`?asOn=${asOn}`);
-      const ytd = body.roomSummary.find((r) => r.label === "Total Available Room nights")?.ytd;
+      const ytd = figure(body.doc, "room-summary", "Total Available Room nights").ytd;
       expect(ytd, `YTD room-nights as on ${asOn}`).toBe(await sellable(ytdFrom!, asOn!));
     }
   });
@@ -300,8 +389,9 @@ describe("the reports' dates come from the report's own day", () => {
   });
 
   it("says what each statistic is, so the screen prints it as that", async () => {
-    const { statistics } = await managerAsOn();
-    expect(Object.fromEntries(statistics.map((r) => [r.label, r.unit]))).toEqual({
+    const { doc } = await managerAsOn();
+    const statistics = doc.sections.find((x) => x.key === "statistics")!.rows;
+    expect(Object.fromEntries(statistics.map((r) => [r.cells["label"], r.unit]))).toEqual({
       "Occupancy Rate (%)": "percent",
       "Average Daily Rate (ADR)": "money",
       "Revenue Per Available Room": "money",
@@ -311,12 +401,12 @@ describe("the reports' dates come from the report's own day", () => {
 
 /* ── City ledger ──────────────────────────────────────────────────── */
 
-describe("the city ledger", () => {
+describe("balances by booking source (finance's Company accounts)", () => {
   /* It printed "Mr. Agoda", "Mr. Walk-in" — a contact person made up for
      every account, on screen and in the CSV (found 15 September). */
   type LedgerRow = { account: string; contact: string | null; phone: string | null };
   const ledger = async () =>
-    (await (await call("/5EL/reports/city-ledger")).json()) as LedgerRow[];
+    (await (await call("/5EL/reports/balances-by-source")).json()) as LedgerRow[];
 
   it("names no contact it does not hold", async () => {
     const rows = await ledger();
@@ -467,5 +557,86 @@ describe("the statistics, in the owner's layout", () => {
       buildReport(client, hotelId, "profit-and-loss", { asOn: "2026-08-25" }))).rejects.toThrow(/no report/);
     const bad = await call("/5EL/reports/monthly-statistics?month=2026-13");
     expect(bad.status).toBe(400);
+  });
+});
+
+/* ── No show, and the City ledger (D17-62; the owner's decisions of 17 Sep) ── */
+
+describe("the no show report", () => {
+  it("still prints an empty day, with its date, and says nobody failed to arrive", async () => {
+    const doc = (await (await call("/5EL/reports/no-show?asOn=2026-08-25")).json()) as ReportDoc;
+    expect(doc.facts).toEqual([{ label: "As On Date", value: "2026-08-25", kind: "date" }]);
+    expect(doc.sections[0]!.rows).toEqual([]);
+    expect(doc.sections[0]!.empty).toMatch(/Nobody failed to arrive/);
+  });
+
+  it("lists a booking the audit marked no-show, on its arrival day only", async () => {
+    const db = await admin();
+    let reference = "";
+    let arrival = "";
+    try {
+      const { rows } = await db.query<{ reference: string; arrival: string }>(
+        `update reservations r set status = 'no_show'
+          where r.id = (select r2.id from reservations r2 join hotels h on h.id = r2.hotel_id
+                         where h.code = '5EL' and r2.status = 'confirmed' and r2.check_in > '2026-08-25'
+                         order by r2.check_in limit 1)
+          returning r.reference, to_char(r.check_in, 'YYYY-MM-DD') as arrival`);
+      reference = rows[0]!.reference;
+      arrival = rows[0]!.arrival;
+    } finally { await db.end(); }
+
+    const that = (await (await call(`/5EL/reports/no-show?asOn=${arrival}`)).json()) as ReportDoc;
+    expect(that.sections[0]!.rows.map((r) => r.cells["reference"])).toContain(reference);
+    const before = (await (await call("/5EL/reports/no-show?asOn=2026-08-25")).json()) as ReportDoc;
+    expect(before.sections[0]!.rows.map((r) => r.cells["reference"])).not.toContain(reference);
+  });
+});
+
+describe("the city ledger, as the owner decided", () => {
+  it("debits the bills transferred to an account, and claims no balance it cannot know", async () => {
+    const db = await admin();
+    let stay = "";
+    try {
+      stay = (await db.query<{ id: string }>(
+        `select r.id from reservations r join hotels h on h.id = r.hotel_id
+          where h.code = '5EL' and r.status = 'checked_in' order by r.reference limit 1`)).rows[0]!.id;
+    } finally { await db.end(); }
+
+    const statsBefore = (await (await call("/5EL/reports/monthly-statistics?month=2026-08")).json()) as ReportDoc;
+    const moved = await app.request(`/api/hotels/5EL/stays/${stay}/payments`, {
+      method: "POST",
+      headers: { "x-dev-staff-id": ownerId, "content-type": "application/json" },
+      body: JSON.stringify({ method: "Bill to company", amount: 1234.5 }),
+    });
+    expect(moved.status).toBe(200);
+
+    const doc = (await (await call("/5EL/reports/city-ledger?asOn=2026-08-25")).json()) as ReportDoc;
+    const rows = doc.sections[0]!.rows;
+    const accounts = rows.filter((r) => r.kind === "row");
+    const totalRow = rows.find((r) => r.kind === "total")!;
+    expect(totalRow.cells["debit"] as number).toBeCloseTo(
+      accounts.reduce((t, r) => t + (r.cells["debit"] as number), 0), 2);
+    expect(accounts.some((r) => r.cells["debit"] === 1234.5)).toBe(true);
+    for (const r of rows) {
+      expect(r.cells["opening"]).toBeNull();
+      expect(r.cells["credit"]).toBeNull();
+      expect(r.cells["closing"]).toBeNull();
+    }
+
+    /* A transfer is not money received: the day's Receipt did not move. */
+    const statsAfter = (await (await call("/5EL/reports/monthly-statistics?month=2026-08")).json()) as ReportDoc;
+    const receipt = (d: ReportDoc) =>
+      d.sections[0]!.rows.find((r) => r.cells["label"] === "25 Tue")!.cells["receipt"];
+    expect(receipt(statsAfter)).toBe(receipt(statsBefore));
+  });
+
+  it("leaves out an account with nothing on the day unless asked to show it", async () => {
+    const other = (await (await call("/5EL/reports/city-ledger?asOn=2026-08-20")).json()) as ReportDoc;
+    expect(other.sections[0]!.rows).toEqual([]);
+    const all = (await (await call("/5EL/reports/city-ledger?asOn=2026-08-26&from=2026-08-26&ignoreZero=0")).json()) as ReportDoc;
+    expect(all.facts.find((f) => f.label === "Ignore zero balance account")?.value).toBe("No");
+    const accounts = all.sections[0]!.rows.filter((r) => r.kind === "row");
+    expect(accounts.length).toBeGreaterThan(0);
+    for (const r of accounts) expect(r.cells["debit"]).toBe(0);
   });
 });

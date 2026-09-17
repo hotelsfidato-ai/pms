@@ -1,7 +1,6 @@
 import type { Mount } from "../../mount.ts";
 import { statistics } from "./statistics.ts";
 import { reports } from "./reports.ts";
-import { manager } from "./manager.ts";
 import { documents } from "./documents.ts";
 
 /* The front door of the reports service on the server — the only file
@@ -14,7 +13,6 @@ export const mounts: readonly Mount[] = [
   ["/api/hotels", documents],
   ["/api/hotels", statistics],
   ["/api/hotels", reports],
-  ["/api/hotels", manager],
 ];
 
 export { buildReport, BUILT_KEYS } from "./build.ts";

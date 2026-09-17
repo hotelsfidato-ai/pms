@@ -20,7 +20,7 @@ import type { TermKey } from "@/lib/glossary";
 import { listProperties, BUSINESS_DATE, type Property } from "@/data/repositories";
 import { listArrivalsOutstanding, getStayViewCounts } from "@/modules/front-desk";
 import { getPeriodStatistics } from "@/modules/reports/data/statistics";
-import { getManagerReport, type ThreeColumn } from "@/modules/reports/data/managerReport";
+import { getReport, type ReportDoc } from "@/modules/reports/data/document";
 
 /* ══════════════════════════════════════════════════════════════════
    DASHBOARD — `/`
@@ -46,9 +46,16 @@ function monthStart(date: string): string {
   return `${date.slice(0, 7)}-01`;
 }
 
-/** A row from the Manager Report, found by the label the report prints. */
-const pick = (rows: ThreeColumn[] | undefined, label: string) =>
-  rows?.find((r) => r.label === label);
+type Figure = { today: number | null; ptd: number | null; ytd: number | null };
+
+/** A row of the Manager report, found by its section and the label it
+    prints. A figure the report does not hold stays null: a dash. */
+function pick(doc: ReportDoc | null | undefined, section: string, label: string): Figure | undefined {
+  const r = doc?.sections.find((s) => s.key === section)?.rows.find((x) => x.cells["label"] === label);
+  if (!r) return undefined;
+  const num = (v: unknown) => (typeof v === "number" ? v : null);
+  return { today: num(r.cells["today"]), ptd: num(r.cells["ptd"]), ytd: num(r.cells["ytd"]) };
+}
 
 const pct = (n: number | null | undefined) => (n == null ? DASH : `${n}%`);
 const cash = (n: number | null | undefined) => (n == null ? DASH : money(n));
@@ -80,7 +87,7 @@ export default function DashboardPage() {
 
   const report = useQuery({
     queryKey: ["dashboard-manager", code, date],
-    queryFn: () => getManagerReport(code, date, monthStart(date)),
+    queryFn: () => getReport(code, "manager", { asOn: date }),
     enabled: Boolean(code),
   });
   const counts = useQuery({
@@ -90,19 +97,17 @@ export default function DashboardPage() {
   });
 
   const r = report.data;
-  const stats = r?.statistics;
-  const revenue = r?.sections.find((s) => s.title === "Revenue")?.rows;
-  const paid = r?.sections.find((s) => s.title === "Payment")?.rows;
-  const guestLedger = r?.sections.find((s) => s.title === "Guest Ledger")?.rows;
-  const cityLedger = r?.sections.find((s) => s.title === "City Ledger")?.rows;
-
-  const occ = pick(stats, "Occupancy Rate (%)");
-  const adr = pick(stats, "Average Daily Rate (ADR)");
-  const revpar = pick(stats, "Revenue Per Available Room");
-  const roomRev = pick(revenue, "Room Charges");
-  const payToday = pick(paid, "Total Payment");
-  const methods = (paid ?? []).filter((p) => !p.total && (p.today ?? 0) !== 0);
-  const noShow = pick(r?.roomSummary, "No Show Rooms");
+  const occ = pick(r, "statistics", "Occupancy Rate (%)");
+  const adr = pick(r, "statistics", "Average Daily Rate (ADR)");
+  const revpar = pick(r, "statistics", "Revenue Per Available Room");
+  const roomRev = pick(r, "room-charges", "Room Charges");
+  const payToday = pick(r, "payment", "Total Payment");
+  const methods = (r?.sections.find((x) => x.key === "payment")?.rows ?? [])
+    .filter((p) => p.kind === "row" && typeof p.cells["today"] === "number" && p.cells["today"] !== 0)
+    .map((p) => ({ label: String(p.cells["label"]), today: p.cells["today"] as number }));
+  const noShow = pick(r, "room-summary", "No Show Rooms");
+  const owedByGuests = pick(r, "guest-ledger", "Closing Balance*");
+  const cityLedger = pick(r, "city-ledger", "Closing Balance");
   const c = counts.data;
 
   const loading = report.isLoading || counts.isLoading;
@@ -170,11 +175,11 @@ export default function DashboardPage() {
         <TileGroup title="Money" note="From the same figures as the Manager Report. A dash is a figure this system does not hold yet, never a zero.">
           <Tile icon={Wallet} label="Collected today" value={cash(payToday?.today)} loading={loading}
                 sub={methods.length
-                  ? methods.map((m) => `${m.label} ${money(m.today ?? 0)}`).join(" · ")
+                  ? methods.map((m) => `${m.label} ${money(m.today)}`).join(" · ")
                   : "Nothing taken yet today"} />
-          <Tile icon={ReceiptText} label="Owed by guests, less refunds" term="guestLedger" value={cash(pick(guestLedger, "Closing Balance")?.today)}
+          <Tile icon={ReceiptText} label="Owed by guests, less refunds" term="guestLedger" value={cash(owedByGuests?.today)}
                 loading={loading} sub="Every guest bill still open" />
-          <Tile icon={Building2} label="City ledger" term="cityLedger" value={cash(pick(cityLedger, "Closing Balance")?.today)}
+          <Tile icon={Building2} label="City ledger" term="cityLedger" value={cash(cityLedger?.today)}
                 loading={loading} sub="Settled outside the PMS today" />
           <Tile icon={UserX} label="No-shows" value={count(noShow?.today)} loading={loading}
                 tone={(noShow?.today ?? 0) > 0 ? "warning" : undefined}

@@ -47,61 +47,17 @@ const LIVE_POSTINGS = `
      )
 `;
 
-/* ── No show ─────────────────────────────────────────────────────── */
+/* No show is a report in the owner's layout now: builders/noShow.ts. */
 
-reports.get("/:code/reports/no-show", async (c) => {
-  const fromParam = c.req.query("from");
-  const toParam = c.req.query("to");
+/* ── Balances by booking source ───────────────────────────────────
+   WAS "/reports/city-ledger". The City ledger is a report in the owner's
+   layout now (builders/cityLedger.ts), counting bills transferred to a
+   company, as the owner decided on 17 September. These by-source
+   figures stay only for finance's "Company accounts" screen, which
+   reads them through getCityLedger; whether that screen should move to
+   the transfers is finance's question (asked through the master). */
 
-  const body = await withSession(c.get("subject"), async (client) => {
-    const hotelId = await hotelIdFor(client, c.req.param("code"));
-    if (!hotelId) return null;
-    const bd = await businessDateFor(client, hotelId);
-    const from = fromParam ?? monthStart(bd);
-    const to = toParam ?? bd;
-
-    const { rows } = await client.query<{
-      reference: string; guest: string; room_type: string;
-      arrival: string; departure: string; source: string; rate: string;
-    }>(
-      `select r.reference,
-              g.full_name                        as guest,
-              rt.name                            as room_type,
-              r.check_in::text                   as arrival,
-              r.check_out::text                  as departure,
-              app.booking_source_label(bs.name, co.name, r.source) as source,
-              r.agreed_rate                      as rate
-         from reservations r
-         join guests g      on g.id  = r.guest_id
-         join room_types rt on rt.id = r.room_type_id
-         left join companies co on co.id = r.company_id
-         left join booking_sources bs on bs.id = r.booking_source_id
-        where r.hotel_id = $1
-          and r.status = 'no_show'
-          and r.check_in between $2::date and $3::date
-        order by r.check_in, r.reference`,
-      [hotelId, from, to],
-    );
-
-    /* An empty array is the answer, not a missing one. The real export
-       prints headers and no rows for exactly this case. */
-    return rows.map((r) => ({
-      reference: r.reference,
-      guest: r.guest,
-      roomType: r.room_type,
-      arrival: r.arrival,
-      departure: r.departure,
-      source: r.source,
-      rate: Number(r.rate),
-    }));
-  });
-
-  return body ? c.json(body) : c.json({ error: "No such property." }, 404);
-});
-
-/* ── City ledger ─────────────────────────────────────────────────── */
-
-reports.get("/:code/reports/city-ledger", async (c) => {
+reports.get("/:code/reports/balances-by-source", async (c) => {
   const fromParam = c.req.query("from");
   const toParam = c.req.query("to");
 
@@ -387,6 +343,10 @@ reports.get("/:code/reports/cashier-shift", async (c) => {
          left join staff s on s.id = fp.posted_by
         where fp.hotel_id = $1
           and fp.category = 'payment'
+          /* Money in the drawer. A bill transferred to the city ledger is
+             posted as a payment, and nobody handed over any money for it
+             (the owner, 17 September). */
+          and coalesce(p.method, '') <> 'city_ledger'
           and fp.business_date between $2::date and $3::date
           and fp.reverses_id is null
           and not exists (

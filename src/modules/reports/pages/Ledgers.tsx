@@ -1,13 +1,15 @@
+import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { useParams } from "react-router";
 import { cn } from "@/lib/cn";
 import { money, dateShort } from "@/lib/format";
 import { useUi } from "@/lib/ui";
-import { Skeleton } from "@/components/ui";
+import { Skeleton, Switch } from "@/components/ui";
 import {
-  ReportShell, ReportTable, ReportHead, Amount,
+  ReportShell, Amount,
 } from "@/modules/reports/components/ReportShell";
-import { getCityLedger, getNoShowReport, getLodgingTax, type LodgingTaxRow } from "@/modules/reports/data/reportData";
+import { getLodgingTax, type LodgingTaxRow } from "@/modules/reports/data/reportData";
+import { DocumentReport } from "@/modules/reports/components/DocumentReport";
 import { PTD_FROM } from "@/modules/reports/data/statistics";
 import { BUSINESS_DATE } from "@/data/repositories";
 
@@ -22,150 +24,43 @@ import { BUSINESS_DATE } from "@/data/repositories";
 
 /* ── City Ledger ─────────────────────────────────────────────────── */
 
-const LEDGER_COLUMNS = [
-  { label: "Account Name" },
-  { label: "Contact Person" },
-  { label: "Phone" },
-  { label: "Opening Balance", numeric: true },
-  { label: "Debit (₹)", numeric: true },
-  { label: "Credit (₹)", numeric: true },
-  { label: "Closing Balance (₹)", numeric: true },
-];
-
+/* The bills transferred to a company or booking site (the owner's
+   decision of 17 September). eZee's defaults: the one day, and accounts
+   with nothing on them left out, which the switch puts back. */
 export function CityLedgerPage() {
-  const params = useParams();
-  const fallback = useUi((s) => s.hotelId);
-  const hotelId = params.code ?? fallback;
-
-  const { data, isLoading } = useQuery({
-    queryKey: ["city-ledger", hotelId, PTD_FROM, BUSINESS_DATE],
-    queryFn: () => getCityLedger(hotelId, PTD_FROM, BUSINESS_DATE),
-  });
-
-  const rows = data ?? [];
-  const totalDebit = rows.reduce((t, r) => t + r.debit, 0);
-  const totalCredit = rows.reduce((t, r) => t + r.credit, 0);
-  const totalClosing = rows.reduce((t, r) => t + (r.closing ?? 0), 0);
-
+  const [ignoreZero, setIgnoreZero] = useState(true);
   return (
-    <ReportShell
+    <DocumentReport
+      report="city-ledger"
       title="City ledger"
-      period={`${dateShort(PTD_FROM)} to ${dateShort(BUSINESS_DATE)}`}
-      meta={`Date From ${dateShort(PTD_FROM)} To ${dateShort(BUSINESS_DATE)}   Ignore zero balance account`}
-      csv={() => ({
-        headers: ["Account", "Contact", "Phone", "Opening", "Debit", "Credit", "Closing"],
-        /* Raw numbers, not the formatted strings on screen. An export
-           somebody has to strip currency symbols out of before summing
-           is an export that wasted their afternoon. */
-        rows: rows.map((r) => [
-          r.account, r.contact ?? "", r.phone ?? "",
-          r.opening, r.debit, r.credit, r.closing ?? 0,
-        ]),
-      })}
-    >
-      {isLoading ? (
-        <div className="p-5 space-y-2">
-          {Array.from({ length: 5 }).map((_, i) => <Skeleton key={i} className="h-7 w-full" />)}
-        </div>
-      ) : (
-        <>
-          <ReportTable>
-            <ReportHead columns={LEDGER_COLUMNS} />
-            <tbody>
-              {rows.map((r) => (
-                <tr key={r.account} className="border-b border-grey-100">
-                  <td className="px-4 py-2 text-ink-900">{r.account}</td>
-                  <td className={r.contact ? "px-4 py-2 text-grey-600" : "px-4 py-2 text-grey-500"}>{r.contact ?? "—"}</td>
-                  <td className="px-4 py-2 text-grey-500">{r.phone ?? "—"}</td>
-                  <td className="px-4 py-2 text-right"><Amount value={r.opening} format={money} /></td>
-                  <td className="px-4 py-2 text-right"><Amount value={r.debit} format={money} /></td>
-                  <td className="px-4 py-2 text-right"><Amount value={r.credit} format={money} /></td>
-                  <td className="px-4 py-2 text-right"><Amount value={r.closing} format={money} bold /></td>
-                </tr>
-              ))}
-              <tr className="bg-grey-50 border-t-2 border-ink-900">
-                <td colSpan={4} className="px-4 py-2.5 font-semibold text-ink-900">Total</td>
-                <td className="px-4 py-2.5 text-right"><Amount value={totalDebit} format={money} bold /></td>
-                <td className="px-4 py-2.5 text-right"><Amount value={totalCredit} format={money} bold /></td>
-                <td className="px-4 py-2.5 text-right"><Amount value={totalClosing} format={money} bold /></td>
-              </tr>
-            </tbody>
-          </ReportTable>
-
-          <p className="px-4 py-3 text-2xs text-grey-500 leading-relaxed border-t border-grey-200">
-            A negative closing balance means the account owes the property nothing
-            and the property owes them — the real export carries several. Opening
-            balances predate this system and print as a dash.
-          </p>
-        </>
-      )}
-    </ReportShell>
+      period={dateShort(BUSINESS_DATE)}
+      query={{ asOn: BUSINESS_DATE, from: BUSINESS_DATE, ignoreZero }}
+      what="the city ledger"
+      controls={
+        <Switch
+          checked={ignoreZero}
+          onCheckedChange={setIgnoreZero}
+          label="Ignore zero balance account"
+        />
+      }
+    />
   );
 }
 
 /* ── No Show ─────────────────────────────────────────────────────── */
 
-const NOSHOW_COLUMNS = [
-  { label: "Reference" },
-  { label: "Guest" },
-  { label: "Room Type" },
-  { label: "Arrival" },
-  { label: "Departure" },
-  { label: "Source" },
-  { label: "Rate", numeric: true },
-];
-
+/* The owner's export for 25 August 2026 has no rows at all: the
+   property, the title and the date. It still prints, and it says that
+   nobody failed to arrive rather than asking anyone to create something. */
 export function NoShowPage() {
-  const params = useParams();
-  const fallback = useUi((s) => s.hotelId);
-  const hotelId = params.code ?? fallback;
-
-  const { data, isLoading } = useQuery({
-    queryKey: ["no-show", hotelId, BUSINESS_DATE],
-    queryFn: () => getNoShowReport(hotelId, BUSINESS_DATE),
-  });
-
-  const rows = data ?? [];
-
   return (
-    <ReportShell
+    <DocumentReport
+      report="no-show"
       title="No show"
       period={dateShort(BUSINESS_DATE)}
-      meta={`As On Date ${dateShort(BUSINESS_DATE)}`}
-    >
-      {isLoading ? (
-        <div className="p-5"><Skeleton className="h-7 w-full" /></div>
-      ) : rows.length === 0 ? (
-        /* The real export for this date has no rows at all — just the
-           property, the title and the date. It still prints, and it is
-           not an empty state asking anyone to create something. */
-        <div className="px-4 py-12 text-center">
-          <p className="text-base text-grey-500">
-            No no-shows recorded for {dateShort(BUSINESS_DATE)}.
-          </p>
-          <p className="text-2xs text-grey-500 mt-2">
-            This report prints whether or not it has rows.
-          </p>
-        </div>
-      ) : (
-        <ReportTable>
-          <ReportHead columns={NOSHOW_COLUMNS} />
-          <tbody>
-            {rows.map((r) => (
-              <tr key={r.reference} className="border-b border-grey-100">
-                <td className="px-4 py-2 tabular">{r.reference}</td>
-                <td className="px-4 py-2">{r.guest}</td>
-                <td className="px-4 py-2 text-grey-600">{r.roomType}</td>
-                <td className="px-4 py-2 tabular">{dateShort(r.arrival)}</td>
-                <td className="px-4 py-2 tabular">{dateShort(r.departure)}</td>
-                <td className="px-4 py-2 text-grey-600">{r.source}</td>
-                <td className="px-4 py-2 text-right"><Amount value={r.rate} format={money} /></td>
-              </tr>
-            ))}
-          </tbody>
-        </ReportTable>
-      )}
-    </ReportShell>
+      query={{ asOn: BUSINESS_DATE }}
+      what="the no show report"
+    />
   );
 }
 

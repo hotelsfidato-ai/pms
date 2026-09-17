@@ -23,7 +23,7 @@ function useHotel(): string {
 
 /** One report screen: load the document, then draw it. */
 export function DocumentReport({
-  report, title, period, query, what,
+  report, title, period, query, what, controls,
 }: {
   report: ReportKey;
   /** The screen's heading while the document is loading. */
@@ -31,6 +31,7 @@ export function DocumentReport({
   period: string;
   query: ReportQuery;
   what: string;
+  controls?: import("react").ReactNode;
 }) {
   const hotelId = useHotel();
   const q = useQuery({
@@ -47,6 +48,7 @@ export function DocumentReport({
       period={period}
       meta={doc ? factsLine(doc.facts) : undefined}
       csv={doc ? () => documentCsv(doc) : undefined}
+      controls={controls}
     >
       {q.isLoading ? (
         <div className="p-5 space-y-2">
