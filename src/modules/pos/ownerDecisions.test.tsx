@@ -4,12 +4,15 @@ import { render, screen, fireEvent, within } from "@testing-library/react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { MemoryRouter, Routes, Route } from "react-router";
 import * as apiModule from "@/lib/api";
+import * as draftModule from "@/lib/draft";
 import { useSession } from "@/lib/session";
 import { HOTEL, startSignedIn } from "@/test/app";
 import type { DayEnd, MenuCategory, MenuItem, Order } from "@/modules/pos/data/till";
 import { OrderPad } from "@/modules/pos/flows/OrderPad";
 import MenuPage from "@/modules/pos/pages/Menu";
 import DayEndPage from "@/modules/pos/pages/DayEnd";
+import TerminalPage from "@/modules/pos/pages/Terminal";
+import { SlipNotice, type BlockedSlip } from "@/modules/pos/components/SlipNotice";
 
 /* ══════════════════════════════════════════════════════════════════
    THE OWNER'S ANSWERS OF 17 SEPTEMBER, FOR THE RESTAURANT
@@ -87,7 +90,14 @@ const BATCH = `/api/hotels/${HOTEL}/till/orders/batch`;
 
 const AN_ORDER = { id: "o-9", orderNo: "12", lines: [] } as unknown as Order;
 
-async function sendARound(answer: (body: unknown) => unknown) {
+async function sendARound(
+  answer: (body: unknown) => unknown,
+  /** What the browser does with the new tab. Null is a refusal. */
+  browser: () => Window | null = () => null,
+  onSlipBlocked?: (slip: BlockedSlip) => void,
+  /** Just before Send is pressed. */
+  beforeSend?: () => void,
+) {
   const calls = server({
     [`GET ${MENU}`]: () => ({
       categories: [{
@@ -97,12 +107,13 @@ async function sendARound(answer: (body: unknown) => unknown) {
     }),
     [`POST ${BATCH}`]: answer,
   });
-  const opened = vi.spyOn(window, "open").mockReturnValue(null);
+  const opened = vi.spyOn(window, "open").mockImplementation(browser);
   const sent = vi.fn();
 
   renderAt(`/h/${HOTEL}/floor`, "/h/:code/floor", (
     <OrderPad hotelId={HOTEL} outlet="REST" tableId="t-7" tableLabel="Table 7"
-              open onOpenChange={() => {}} onSent={sent} />
+              open onOpenChange={() => {}} onSent={sent}
+              {...(onSlipBlocked ? { onSlipBlocked } : {})} />
   ));
 
   /* The pad reads any draft kept on the device first, and a dish tapped
@@ -110,6 +121,7 @@ async function sendARound(answer: (body: unknown) => unknown) {
      no drafts, so the pad says "not saved" once it has looked. */
   await screen.findByText("not saved");
   fireEvent.click(await screen.findByRole("button", { name: /Paneer Tikka/ }));
+  beforeSend?.();
   fireEvent.click(screen.getByRole("button", { name: "Send" }));
   await vi.waitFor(() => expect(sent).toHaveBeenCalled());
 
@@ -138,6 +150,114 @@ describe("Tables sending a round (D17-18)", () => {
       throw new HeldError("Held until the connection is back.", "e-1", false);
     });
     expect(opened).not.toHaveBeenCalled();
+  });
+
+  it("takes the sent round off the device BEFORE it opens the slip (POS-11)", async () => {
+    /* Where the new tab replaces this page, whatever comes after the open
+       never runs — and a sent round left on the device reads "not sent". */
+    const order: string[] = [];
+    vi.spyOn(draftModule, "clearDraft").mockImplementation(async () => {
+      order.push("draft cleared");
+    });
+    const { opened } = await sendARound(
+      () => ({ ...AN_ORDER, ok: true, opened: true, sent: 1, kotNo: 7 }),
+      () => { order.push("slip opened"); return null; },
+      undefined,
+      /* The pad also clears an empty draft by itself as it opens, so only
+         what happens from Send onward counts. A first version of this
+         test counted that one and passed with the fault put back. */
+      () => { order.length = 0; });
+
+    expect(opened).toHaveBeenCalledTimes(1);
+    expect(order[0]).toBe("draft cleared");
+    expect(order.indexOf("slip opened")).toBeGreaterThan(0);
+  });
+});
+
+/* ── POS-10 · the slip the browser would not open ───────────────── */
+
+describe("a kitchen slip the browser refuses (POS-10)", () => {
+  it("is handed to the screen under the pad, naming the order and the table", async () => {
+    const blocked = vi.fn();
+    await sendARound(
+      () => ({ ...AN_ORDER, ok: true, opened: true, sent: 1, kotNo: 7 }),
+      () => null,
+      blocked);
+
+    expect(blocked).toHaveBeenCalledWith({
+      url: `/h/${HOTEL}/till/orders/o-9/kot/7`, what: "Order 7 for Table 7",
+    });
+  });
+
+  it("is not reported when the slip opened", async () => {
+    const blocked = vi.fn();
+    await sendARound(
+      () => ({ ...AN_ORDER, ok: true, opened: true, sent: 1, kotNo: 7 }),
+      () => ({}) as Window,
+      blocked);
+    expect(blocked).not.toHaveBeenCalled();
+  });
+
+  it("offers the slip on a new tap, and goes once it opens", async () => {
+    const done = vi.fn();
+    const opened = vi.spyOn(window, "open").mockReturnValue({} as Window);
+    render(<SlipNotice slip={{ url: "/h/5EL/till/orders/o-9/kot/7", what: "Order 7 for AC2" }}
+                       onDone={done} />);
+
+    expect(screen.getByRole("alert").textContent)
+      .toContain("Order 7 for AC2 is with the kitchen, but its slip did not open");
+    fireEvent.click(screen.getByRole("button", { name: "Open the kitchen slip" }));
+    expect(opened).toHaveBeenCalledWith("/h/5EL/till/orders/o-9/kot/7", "_blank");
+    expect(done).toHaveBeenCalledTimes(1);
+  });
+
+  it("says so when the browser refuses the new tap as well, and stays", async () => {
+    const done = vi.fn();
+    vi.spyOn(window, "open").mockReturnValue(null);
+    render(<SlipNotice slip={{ url: "/k", what: "Order 7" }} onDone={done} />);
+
+    fireEvent.click(screen.getByRole("button", { name: "Open the kitchen slip" }));
+    expect(screen.getByRole("alert").textContent)
+      .toContain("allow pop-ups for this site");
+    expect(done).not.toHaveBeenCalled();
+  });
+
+  it("shows on the Terminal when its send's slip is refused", async () => {
+    localStorage.setItem("fidato.terminal-outlet", "REST");
+    const ORDER = {
+      ...AN_ORDER, id: "o-5", orderNo: "20260825-5", outlet: "REST",
+      status: "open", table: "4", gross: 320, payable: 320, tenders: [],
+      paymentMethod: null, abandonedReason: null,
+      lines: [{
+        id: "l-1", name: "Paneer Tikka", qty: 1, unitPrice: 320, taxRate: 5,
+        note: null, voided: false, kotStatus: "pending", addedBy: "Owner",
+        parentLineId: null, isAddon: false, variationId: null,
+      }],
+    };
+    server({
+      [`GET /api/hotels/${HOTEL}/pos/outlets`]: () => [{
+        code: "REST", name: "Fidato Restaurant", category: "food",
+        hasKey: false, isActive: true, bills: 0,
+      }],
+      [`GET ${MENU}`]: () => ({ categories: [] }),
+      [`GET /api/hotels/${HOTEL}/till/orders`]: () => ({
+        businessDate: "2026-08-25",
+        orders: [{ id: "o-5", orderNo: "20260825-5", outlet: "REST", table: "4",
+                   status: "open", businessDate: "2026-08-25", gross: 320,
+                   paymentMethod: null, openedAt: "2026-08-25T19:00", lines: 1 }],
+      }),
+      [`GET /api/hotels/${HOTEL}/till/orders/o-5`]: () => ORDER,
+      [`POST /api/hotels/${HOTEL}/till/orders/o-5/kot`]: () =>
+        ({ ...ORDER, ok: true, kotNo: 5 }),
+    });
+    vi.spyOn(window, "open").mockReturnValue(null);
+    renderAt(`/h/${HOTEL}/till/terminal`, "/h/:code/till/terminal", <TerminalPage />);
+
+    fireEvent.click(await screen.findByRole("button", { name: /20260825-5/ }));
+    fireEvent.click(await screen.findByRole("button", { name: /Send to the kitchen/ }));
+
+    expect((await screen.findByRole("alert")).textContent)
+      .toContain("Order 5 is with the kitchen, but its slip did not open");
   });
 });
 

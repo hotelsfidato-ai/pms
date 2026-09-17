@@ -14,27 +14,43 @@ entries stay here: they are the reason the fault does not come back.
 
 ## Open — not fixed
 
-### POS-9 · On a phone, every dish row on the Menu screen shows no dish name
-
-**Found** — 17 September, measuring the add-on switches (D17-19) at 375px. Each dish row puts the name, the tax rate, the price, the course, the preparation time, "Out of stock" and "Take off" on one line that cannot wrap. At 375px the row needs 465px and has 302: **the dish name is squeezed to 0px** and the last two buttons sit 77px outside the card. Measured on "Paneer Tikka"; the markup is the same on every dish, and it was the same before 17 September.
-
-**Not fixed** — it changes how the Menu screen looks on a phone, which the owner has not been asked about, and it was not part of D17-19. The add-on rows added the same day wrap instead (the button drops under the name) and were measured doing so.
-
-**The fix, when it is done** — The same wrap on the dish row: the name keeps a minimum width, the controls go to a second line below `sm`. The desk is unchanged.
-
-**The rule** — A row of controls is measured at phone width before it is called done; a name squeezed to nothing looks like a missing name, not like a layout.
-
-### POS-10 · A slow send can open no kitchen slip, silently — Tables and the Terminal alike
-
-**Found** — 17 September, building D17-18. A browser lets a tap open a new tab only for a few seconds after the tap (Chrome and Firefox: about five). Both screens open the slip AFTER the send answers, so on a line slow enough that the answer takes longer, the browser blocks the tab and says nothing to the waiter. `window.open` returns `null` when that happens, and neither screen reads it.
-
-**Not fixed** — what the waiter should be told is a change to what they see; the owner decides. Recommended: when `window.open` returns `null`, say so in the toast with a button that opens the slip (a new tap, so the browser allows it). The Terminal has had the same gap since 2 September.
-
-**The rule** — A tab opened after a network call is a tab the browser may refuse; read the return value.
+None, as of 17 September. D17-21 (a restaurant order on a banquet function's bill) is work waiting on the banquet chat's front door, not a defect — `MODULE.md`, Open items.
 
 ---
 
 ## Fixed
+
+### POS-12 · An order taken on Tables printed no table — on its kitchen slip, its bill and the Terminal's list — FIXED 17 September
+
+**Found** — 17 September, on screen, checking the slip Tables now opens (D17-18): "KOT - 1 · Dine In" and no table, while the Terminal listed orders 1 to 4 — taken on AC1 to AC4 — as "no table". In the database each had `table_id` set and `table_ref` empty. The slip, the bill and the list all print `table_ref`. Opening one order by itself (`POST /till/orders`) copies the table's name into `table_ref`, and its comment says why; the order pad's route (`POST /till/orders/batch`) kept only the id. So since the order pad was built (8 September) the paper a kitchen works from has not said which table.
+
+**What was done** — On the owner's yes ("Fix it", 17 September; not back-filled): the batch route's insert takes the table's name when a table is given, the floor's name winning over typed text, as the other route does (`api/src/modules/pos/till.ts`). Guarded by `api/test/modules/pos/tillBatch.test.ts` ("copies the table's name…"), which failed on the old insert with `expected null to be 'AC1'`. **Opened**: AC5, Jeera Rice, Send → the slip "KOT - 6 · Dine In · Table No: AC5". Orders taken before the fix keep no name.
+
+**The rule** — Two routes that make the same row must write the same columns. A column one of them fills "for the paper" is the first one the other forgets, because nothing on the screen that made the order shows it.
+
+### POS-11 · MINE: a sent round could stay saved on the device as unsent — caught before merge
+
+**Found** — 17 September, on screen, after `50080a0`. D17-18 opened the slip before the pad cleared its saved draft. In the preview pane the new tab REPLACED the page, so the clearing never ran: table AC1 read "not sent", with Bhaaji Pau still in "This round" after it had gone to the kitchen as slip 1 — one Send from being cooked and billed twice. A desktop browser keeps the page, but a browser set to open new windows in the same tab, or a kiosk's web view, does not.
+
+**What was done** — `flows/OrderPad.tsx` clears the draft first, then opens the slip (milliseconds of the browser's few seconds). Guarded by `ownerDecisions.test.tsx` ("takes the sent round off the device BEFORE it opens the slip"). **Its first version passed with the fault put back**: the pad also clears an empty draft by itself as it opens, and the test counted that one. It now records only from the moment Send is pressed, and fails on the fault (`expected 'slip opened' to be 'draft cleared'`). Re-checked on screen: two sends that replaced the page left no draft and no "not sent".
+
+**The rule** — Anything after `window.open` may never run: do what must happen before opening. And when a deliberate break leaves a test green, find out whether the test counts something else that looks the same (root MEMORY 270).
+
+### POS-10 · A slow send opened no kitchen slip, silently — Tables and the Terminal alike — FIXED 17 September
+
+**Found** — 17 September, building D17-18. A browser lets a tap open a new tab only for a few seconds after the tap (Chrome and Firefox: about five). Both screens open the slip AFTER the send answers, so on a line slow enough that the answer takes longer, the browser blocks the tab and says nothing to the waiter. `window.open` returns `null` when that happens, and neither screen read it. The Terminal had had the gap since 2 September.
+
+**What was done** — The owner's answers (17 September): say so, with a button, **on the screen** rather than in a pop-up (the shared pop-up has no button and is gone in 4.5 seconds). `components/SlipNotice.tsx`: `openSlip` reads the refusal; the notice reads "Order 4 for AC4 is with the kitchen, but its slip did not open — the browser blocked the new tab." with **Open the kitchen slip** (a new tap, which the browser allows) and a close button; one line per slip, until opened or closed; refused on the new tap too, it adds "allow pop-ups for this site in the browser". On Tables (under Start here) and the Terminal (under its header). Guarded by five tests in `ownerDecisions.test.tsx`; with the hand-off, the Terminal's notice and the "blocked again" line each taken out, three failed. **Opened**, with the browser made to refuse: Tables AC3 and AC4 (the notice, the second refusal's sentence, then the button opened slip 4), the Terminal order 5 (the notice under the header, 61px, no page scroll, no console error).
+
+**The rule** — A tab opened after a network call is a tab the browser may refuse; read the return value.
+
+### POS-9 · On a phone, every dish row on the Menu screen showed no dish name — FIXED 17 September
+
+**Found** — 17 September, measuring the add-on switches (D17-19) at 375px. Each dish row put the name, the tax rate, the price, the course, the preparation time, "Out of stock" and "Take off" on one line that could not wrap. At 375px the row needed 465px and had 302: **the dish name was squeezed to 0px** and the last buttons sat outside the card. It had been so before 17 September.
+
+**What was done** — On the owner's yes: the controls are one group that goes under the name when the row is too narrow; the name keeps at least 8rem (`pages/Menu.tsx`). Measured: at 375px four dishes' names 171–178px wide, nothing past the row, no sideways scroll; at a desk every control still on the one 44px line. No test — jsdom has no layout; the measurement is the proof.
+
+**The rule** — A row of controls is measured at phone width before it is called done; a name squeezed to nothing looks like a missing name, not like a layout.
 
 ### POS-5 · The kitchen docket is built, and nothing ever opens it — FIXED 17 September (Tables)
 

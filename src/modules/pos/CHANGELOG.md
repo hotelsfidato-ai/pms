@@ -11,6 +11,82 @@ Work that touches the core or several services still goes in the root
 
 ---
 
+## 2026-09-17 (later) · The owner's four answers: a blocked slip, the Menu on a phone, a table on the slip, how function food is paid
+
+**Asked for:** after `50080a0` the owner answered what that entry left open,
+each on the recommendation: **POS-10** — say so when the browser refuses the
+slip, with a button, as a notice on the screen (not in the pop-up, which has
+no button and is gone in 4.5 seconds); **POS-9** — wrap the Menu's dish rows
+on a phone; **POS-12**, found on screen after it — copy the table's name onto
+orders taken on Tables, no back-fill; and for **D17-21** — an order attached to
+a banquet function is paid on the function's bill only.
+
+**Shipped**
+- `components/SlipNotice.tsx` (new), `pages/Floor.tsx`, `pages/Terminal.tsx`,
+  `flows/OrderPad.tsx` — a refused slip becomes a line on Tables or the
+  Terminal: "Order 4 for AC4 is with the kitchen, but its slip did not open —
+  the browser blocked the new tab." · **Open the kitchen slip** · close. One per
+  slip; refused again, it says to allow pop-ups.
+- `flows/OrderPad.tsx` — the sent round leaves the device BEFORE the slip opens
+  (POS-11, below).
+- `pages/Menu.tsx` — a dish row's controls go under the name when the row is
+  too narrow; unchanged at a desk.
+- `api/src/modules/pos/till.ts` — the order pad's route copies the table's
+  name into `table_ref`, as opening one order does. **A server change**, the
+  batch route only; no migration.
+- Tests: `ownerDecisions.test.tsx` 9 → 15; `api/test/modules/pos/tillBatch.test.ts`
+  4 → 5.
+- `DEFECTS.md` — POS-9, 10 fixed; POS-11 (mine) and POS-12 added and fixed;
+  nothing open. `MODULE.md` — the notice, and D17-21's answer.
+
+**Found**
+- **POS-11, mine, from `50080a0`:** the slip opened before the pad cleared the
+  saved round. In the preview pane the new tab replaced the page, and AC1 read
+  "not sent" with a dish already at the kitchen still on its pad — one Send
+  from cooking and billing it twice. Fixed; see `DEFECTS.md`.
+- **My first POS-11 test passed with the fault put back** — the pad clears an
+  empty draft by itself as it opens, and the test counted that. Rewritten; it
+  fails on the fault now.
+- **POS-12:** the order pad's route never wrote `table_ref`, so every slip,
+  bill and Terminal line for an order taken on Tables had no table, since
+  8 September.
+- **My own slip on screen:** a script that was meant to hand the page its real
+  `window.open` back handed it nothing, and the notice's button threw "window.open
+  is not a function". The test rig's fault, not the screen's; redone on AC4
+  with the real one kept.
+
+**Proved** — this copy, after the last code edit, one gate after another
+- `npx tsc -b --force` exit 0 · `npx vitest run` **29 files, 284 tests, exit 0**
+  · `npm run build` built, "no test sign-in in dist", exit 0.
+- `cd api && npx tsc --noEmit` exit 0 · `npm run strip-check` 75 files load ·
+  `npm test` **39 files, 757 tests, exit 0**.
+- Guards against the faults put back: POS-10 — hand-off, Terminal notice and
+  "blocked again" each removed → 3 failed; POS-11 → failed ("expected 'slip
+  opened' to be 'draft cleared'"); POS-12 → failed ("expected null to be
+  'AC1'"). Each restored and green.
+- `db/tests/run.sh`: not run — no database change.
+- **Opened**, as the owner, API 8795 on `fidato_pos`, website 5178, the
+  browser made to refuse new tabs where needed: Tables AC3 and AC4 (the
+  notice; the second refusal's sentence; the button opened slip 4), the
+  Terminal order 5 (notice under the header, no page scroll, no console
+  error); two sends that replaced the page left no draft and no "not sent";
+  AC5 → slip "KOT - 6 · Dine In · Table No: AC5"; the Menu at 375px (names
+  171–178px, nothing past the row) and at a desk (one 44px line).
+
+**Left open**
+- **D17-21, this service's half** — still waits on banquet's front door. Built
+  to the owner's answer when it is ready: an attached order settles "to the
+  function" only. The banquet chat should hear the answer (its total rule is
+  unchanged by it).
+- Orders taken on Tables before the POS-12 fix keep no table name (the owner
+  chose no back-fill).
+- The Terminal sets no browser-tab title and its page reads "Fidato PMS" —
+  the brief's P2, not touched today.
+
+**Commits:** the commit that adds this entry.
+
+---
+
 ## 2026-09-17 · The owner's D17-18, D17-19 and D17-20
 
 **Asked for:** the owner's answers of 17 September

@@ -711,10 +711,10 @@ function CategoryCard({ category, hotelId, dishesByGroup, onChanged }: {
       <ul className="divide-y divide-grey-100">
         {category.items.map((item) => (
           <li key={item.id} className="px-4 py-2.5">
-            <div className="flex items-center gap-3 min-h-9">
+            <div className="flex flex-wrap items-center gap-x-3 gap-y-1 min-h-9">
               <span
                 className={cn(
-                  "flex-1 min-w-0 text-base truncate",
+                  "flex-1 min-w-32 text-base truncate",
                   item.isActive ? "text-ink-900" : "text-grey-500 line-through",
                 )}
               >
@@ -726,58 +726,64 @@ function CategoryCard({ category, hotelId, dishesByGroup, onChanged }: {
               <span className="tabular text-base text-ink-900 shrink-0 w-20 text-right">
                 {moneyPrecise(item.price)}
               </span>
-              <CourseControl
-                course={item.course}
-                own={item.ownCourse}
-                label={`Course for ${item.name}`}
-                onSet={async (v) => {
-                  const res = await setItemCourse(hotelId, item.id, v);
-                  if (!res.ok) {
-                    toast.error("Not changed", res.reason ?? "Refused.");
-                    return;
-                  }
-                  onChanged();
-                }}
-              />
-              <PrepControl
-                minutes={item.prepMinutes}
-                own={item.ownPrepMinutes}
-                label={`Preparation time for ${item.name}`}
-                onSet={async (m) => {
-                  const res = await setItemPrepMinutes(hotelId, item.id, m);
-                  if (!res.ok) {
-                    toast.error("Not changed", res.reason ?? "Refused.");
-                    return;
-                  }
-                  onChanged();
-                }}
-              />
-              {/* TWO DIFFERENT ACTS, and the words are different because
-                  the decisions are.
+              {/* POS-9: THE CONTROLS GO UNDER THE NAME ON A PHONE. On one line
+                  at 375px the row needed 465px of 302 and the dish name was
+                  squeezed to nothing (17 September). A desk has the room, and
+                  there nothing moves. */}
+              <div className="flex flex-wrap items-center justify-end gap-x-3 gap-y-1 ml-auto">
+                <CourseControl
+                  course={item.course}
+                  own={item.ownCourse}
+                  label={`Course for ${item.name}`}
+                  onSet={async (v) => {
+                    const res = await setItemCourse(hotelId, item.id, v);
+                    if (!res.ok) {
+                      toast.error("Not changed", res.reason ?? "Refused.");
+                      return;
+                    }
+                    onChanged();
+                  }}
+                />
+                <PrepControl
+                  minutes={item.prepMinutes}
+                  own={item.ownPrepMinutes}
+                  label={`Preparation time for ${item.name}`}
+                  onSet={async (m) => {
+                    const res = await setItemPrepMinutes(hotelId, item.id, m);
+                    if (!res.ok) {
+                      toast.error("Not changed", res.reason ?? "Refused.");
+                      return;
+                    }
+                    onChanged();
+                  }}
+                />
+                {/* TWO DIFFERENT ACTS, and the words are different because
+                    the decisions are.
 
-                  "Out of paneer" is a shift decision with an end on it.
-                  "Take off the card" is a menu decision with none — and
-                  a dish taken off the card is still off tomorrow, which
-                  is exactly what nobody wants from the first one. */}
-              <OffControl
-                name={item.name}
-                offUntil={item.offUntil}
-                askWhy
-                takeOff={(until, reason) =>
-                  takeItemOff(hotelId, item.id, until, reason)}
-                putBack={() => putItemBack(hotelId, item.id)}
-                onDone={onChanged}
-              />
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={() => void toggle(item.id)}
-              >
-                {/* Off, not gone. The lines that sold it point at this row,
-                    and a dish that is unavailable today was on the card
-                    yesterday. */}
-                {item.isActive ? "Take off" : "Put back"}
-              </Button>
+                    "Out of paneer" is a shift decision with an end on it.
+                    "Take off the card" is a menu decision with none — and
+                    a dish taken off the card is still off tomorrow, which
+                    is exactly what nobody wants from the first one. */}
+                <OffControl
+                  name={item.name}
+                  offUntil={item.offUntil}
+                  askWhy
+                  takeOff={(until, reason) =>
+                    takeItemOff(hotelId, item.id, until, reason)}
+                  putBack={() => putItemBack(hotelId, item.id)}
+                  onDone={onChanged}
+                />
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => void toggle(item.id)}
+                >
+                  {/* Off, not gone. The lines that sold it point at this row,
+                      and a dish that is unavailable today was on the card
+                      yesterday. */}
+                  {item.isActive ? "Take off" : "Put back"}
+                </Button>
+              </div>
             </div>
 
             {/* ── Its add-ons ──────────────────────────────────────────

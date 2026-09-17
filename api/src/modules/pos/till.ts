@@ -3271,12 +3271,19 @@ till.post("/:code/till/orders/batch", async (c) => {
       const bd = await businessDateFor(client, hotelId);
       businessDate = bd;
 
+      /* THE TABLE'S NAME IS COPIED ONTO THE ORDER, as opening one by
+         itself does (above): the kitchen slip, the bill and the Terminal's
+         list all print `table_ref`. This route kept only `table_id`, so
+         every order taken on Tables printed with no table — found 17
+         September opening the slip Tables now opens (POS-12). The floor's
+         name wins over typed text, the same as there. */
       const { rows: made } = await client.query<{ id: string }>(
         `insert into pos_orders
            (hotel_id, outlet_id, order_no, business_date, opened_by,
             table_ref, table_id, order_type)
          values ($1, $2, app.pos_next_order_no($1, $3::date), $3::date, $4,
-                 $5, $6::uuid, coalesce($7, 'dine_in'))
+                 coalesce((select t.label from pos_tables t where t.id = $6::uuid), $5),
+                 $6::uuid, coalesce($7, 'dine_in'))
          returning id::text`,
         [hotelId, outletId, businessDate, session.staffId,
          input.table?.trim() || null, input.tableId || null,

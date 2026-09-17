@@ -207,6 +207,43 @@ describe("sending a whole order at once", () => {
     expect(two.kotNo).toBeGreaterThan(one.kotNo);
   });
 
+  it("copies the table's name onto an order taken on Tables (POS-12)", async () => {
+    /* The kitchen slip, the bill and the Terminal print `table_ref`. The
+       pad sends a table by id, and this route kept only the id — so a
+       slip from Tables said nothing about which table. */
+    if (!outlet || items.length < 1) return;
+
+    const db = await admin();
+    let table: { id: string; label: string } | undefined;
+    try {
+      const { rows } = await db.query<{ id: string; label: string }>(
+        `select t.id::text, t.label from pos_tables t
+           join pos_sections s on s.id = t.section_id
+           join pos_outlets o on o.id = s.outlet_id
+          where o.code = $1 and t.is_active
+            and not exists (select 1 from pos_orders p
+                             where p.table_id = t.id and p.cleared_at is null
+                               and p.status = 'open')
+          limit 1`,
+        [outlet],
+      );
+      table = rows[0];
+    } finally {
+      await db.end();
+    }
+    expect(table, "5EL's outlet needs a free table").toBeTruthy();
+
+    const res = await post("/5EL/till/orders/batch", {
+      outlet, tableId: table!.id, send: true,
+      lines: [{ itemId: items[0], qty: 1 }],
+    });
+    expect(res.status).toBe(200);
+    const body = (await res.json()) as { id: string; table: string | null };
+    made.push(body.id);
+
+    expect(body.table).toBe(table!.label);
+  });
+
   it("refuses an empty send rather than opening an empty bill", async () => {
     const res = await post("/5EL/till/orders/batch", {
       outlet, table: "EMPTY-1", lines: [],

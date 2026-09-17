@@ -13,6 +13,7 @@ import { getMenu, listOrders, getOrder, listChargeableRooms, openOrder, addLine,
 import { listPosOutlets } from "@/modules/pos/data/posBridge";
 import { BUSINESS_DATE } from "@/data/repositories";
 import { ReadFailed, ReadStale } from "@/modules/pos/components/ReadProblem";
+import { SlipNotice, openSlip, type BlockedSlip } from "@/modules/pos/components/SlipNotice";
 
 /* ══════════════════════════════════════════════════════════════════
    THE TERMINAL
@@ -69,6 +70,7 @@ export default function TerminalPage() {
   const [orderId, setOrderId] = useState<string | null>(null);
   const [table, setTable] = useState("");
   const [busy, setBusy] = useState(false);
+  const [blockedSlips, setBlockedSlips] = useState<BlockedSlip[]>([]);
   const [settling, setSettling] = useState(false);
   const [room, setRoom] = useState("");
   /* A sixteen-item demo menu fits on a screen. A real card does not, and
@@ -195,8 +197,14 @@ export default function TerminalPage() {
        has the same lines and is better — oldest first, colour by wait —
        so this opens alongside rather than instead. */
     if (res.kotNo) {
-      window.open(
-        `/h/${hotelId}/till/orders/${orderId}/kot/${res.kotNo}`, "_blank");
+      const url = `/h/${hotelId}/till/orders/${orderId}/kot/${res.kotNo}`;
+      /* POS-10: a slow send outlives the browser's few seconds for a new
+         tab, and the refusal is silent. The terminal says so and offers
+         it. */
+      if (!openSlip(url)) {
+        const slip = { url, what: `Order ${res.kotNo}` };
+        setBlockedSlips((s) => [...s, slip]);
+      }
     }
     refresh();
   };
@@ -349,6 +357,15 @@ export default function TerminalPage() {
           onRetry={retryAll}
         />
       )}
+
+      {blockedSlips.map((slip) => (
+        <SlipNotice
+          key={slip.url}
+          slip={slip}
+          className="mx-4 mt-3 shrink-0"
+          onDone={() => setBlockedSlips((s) => s.filter((x) => x.url !== slip.url))}
+        />
+      ))}
 
       <div className="flex-1 min-h-0 flex">
         {/* ── The menu ─────────────────────────────────────────── */}

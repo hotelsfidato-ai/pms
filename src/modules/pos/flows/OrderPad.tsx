@@ -14,6 +14,7 @@ import {
 import { DishDialog } from "@/modules/pos/flows/DishDialog";
 import { getMenu, sendOrder, type MenuItem } from "@/modules/pos/data/till";
 import { ReadFailed } from "@/modules/pos/components/ReadProblem";
+import { openSlip, type BlockedSlip } from "@/modules/pos/components/SlipNotice";
 
 /* ══════════════════════════════════════════════════════════════════
    THE ORDER PAD
@@ -43,6 +44,7 @@ import { ReadFailed } from "@/modules/pos/components/ReadProblem";
 
 export function OrderPad({
   hotelId, outlet, tableId, tableLabel, orderId, open, onOpenChange, onSent,
+  onSlipBlocked,
 }: {
   hotelId: string;
   outlet: string;
@@ -54,6 +56,10 @@ export function OrderPad({
   open: boolean;
   onOpenChange: (open: boolean) => void;
   onSent: () => void;
+  /** The kitchen slip the browser would not open (POS-10). The pad has
+      closed by the time anybody could act on it, so the screen under it
+      keeps the notice. */
+  onSlipBlocked?: (slip: BlockedSlip) => void;
 }) {
   const qc = useQueryClient();
   const key = draftKey(hotelId, outlet, tableId);
@@ -220,22 +226,29 @@ export function OrderPad({
       return;
     }
 
+    /* ⚠ THE DRAFT GOES FIRST, THEN THE SLIP (POS-11). Opening the slip
+       first left a SENT round saved on the device as unsent wherever the
+       new tab replaced this page — a browser set to open new windows in
+       the same tab, a kiosk's web view — and the table then read "not
+       sent" with the dishes still on its pad, one Send away from cooking
+       and billing them twice. Seen in the preview pane, 17 September.
+       Deleting a draft takes milliseconds of the browser's few seconds. */
+    await clearDraft(key);
+    setLines([]);
+
     /* The paper, the same as the Terminal (POS-5; the owner's D17-18,
        17 September: "Tables opens the kitchen slip on every send"). Only
        when the kitchen has a docket number — a round that went on the
-       bill alone has no slip, and a held round is answered above.
-
-       Opened before anything else is awaited: a browser lets a tap open
-       a tab only for a few seconds after the tap, and the send has
-       already spent some of them. */
+       bill alone has no slip, and a held round is answered above. */
     if (result.kotNo !== null) {
-      window.open(
-        `/h/${hotelId}/till/orders/${result.order.id}/kot/${result.kotNo}`,
-        "_blank");
+      const url =
+        `/h/${hotelId}/till/orders/${result.order.id}/kot/${result.kotNo}`;
+      /* POS-10: refused on a slow line. Tables says so and offers it. */
+      if (!openSlip(url)) {
+        onSlipBlocked?.({ url, what: `Order ${result.kotNo} for ${tableLabel}` });
+      }
     }
 
-    await clearDraft(key);
-    setLines([]);
     qc.setQueryData(["till-order", hotelId, result.order.id], result.order);
     void qc.invalidateQueries({ queryKey: ["till-orders"] });
     void qc.invalidateQueries({ queryKey: ["floor"] });

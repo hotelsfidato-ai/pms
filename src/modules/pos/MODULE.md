@@ -178,6 +178,12 @@ components/ReadProblem.tsx   what a failed read says (POS-4): readProblem() sort
                     failed; ReadFailed stands in for a list with nothing to show,
                     ReadStale is one line over a list whose refresh failed.
                     Every screen with a read uses one of them.
+components/SlipNotice.tsx   the kitchen slip the browser would not open (POS-10):
+                    openSlip() reads window.open's refusal; SlipNotice is the
+                    line on Tables and the Terminal with "Open the kitchen slip".
+                    Anything that must happen on a send happens BEFORE the slip
+                    opens — where the tab replaces the page, nothing after it
+                    runs (POS-11).
 ```
 
 The screens also use core pieces: the live channel (`@/lib/useLiveOrders`,
@@ -358,10 +364,14 @@ From `PENDING.md` and `PROGRESS.md`, as of 15 September:
     said build it (D17-21, 17 September), banquet first.** This half waits on
     banquet's front door (`getAttachableFunctions` on the website,
     `whyNotAttachable` on the server — in progress on `banquet/diary-heading`,
-    not committed when last looked) and on one answer: how an attached order is
-    paid. `app.banquet_event_total` (061) counts every SETTLED order on the
-    function whatever its method, so one paid in cash at the till would be
-    billed to the host as well.
+    not committed when last looked). **How an attached order is paid — the
+    owner's answer, 17 September: on the function's bill only.** The till
+    settles it "to the function", like Charge to room; cash, card, UPI and room
+    are refused for an attached order, so the host pays it once; it may be
+    detached while still open. (Why it had to be asked:
+    `app.banquet_event_total` (061) counts every SETTLED order on the function
+    whatever its method, so one paid in cash at the till would have been billed
+    to the host as well.) The banquet chat's total rule stays as it is.
 
 ---
 
