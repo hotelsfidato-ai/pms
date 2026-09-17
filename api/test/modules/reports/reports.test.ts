@@ -854,6 +854,27 @@ describe("what the reports print once the owner had seen them", () => {
        with itself across two reports. */
     const manager = await managerDoc(`?asOn=${day.slice(0, 4)}-12-31`);
     expect(manager.footnotes.some((f) => f.includes("first traded"))).toBe(true);
+
+    /* Block Room is room-nights the house could not sell — which, before
+       the property traded, is none of them. It used to be the room count
+       times the days less what was available, and that turned every night
+       before go-live into a room held back. */
+    const blocked = figure(manager, "room-summary", "Block Room").ytd as number;
+    const ytdFrom = manager.facts.find((f) => f.label === "YTD")!.value as string;
+    const db2 = await admin();
+    try {
+      /* Over the report's OWN window, from the later of its start and the
+         day the property traded: the fixtures above post in March, which
+         moves that day, and a window this test invented would measure
+         something the report was never asked for. */
+      const { rows } = await db2.query<{ n: string }>(
+        `select coalesce(sum(greatest(0,
+                  (select count(*) from rooms rm where rm.hotel_id = h.id and rm.is_active)
+                  - app.sellable_rooms(h.id, d::date))), 0)::text as n
+           from hotels h, generate_series(greatest($1::date, $2::date), $3::date, interval '1 day') d
+          where h.code = '5EL'`, [day, ytdFrom, `${day.slice(0, 4)}-12-31`]);
+      expect(blocked).toBe(Number(rows[0]!.n));
+    } finally { await db2.end(); }
   });
 
   it("prints Cancellation Sales as a dash: there is nothing to count", async () => {

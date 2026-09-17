@@ -37,14 +37,25 @@ through the master. Six needed nothing; one was a change.
 
 **Proved** — in `D:\fidato-reports`
 - API reports tests 37/37, with `businessDate` alongside: 37 green together.
-- **Three deliberate breaks, each failing its own test** and then restored:
+- **Four deliberate breaks, each failing its own test** and then restored:
   counting the house before the property traded (2 tests, including the YTD
-  window one), Cancellation Sales back to zeros, and the accountant's sentence
-  removed.
+  window one), Block Room back to zero, Cancellation Sales back to zeros, and
+  the accountant's sentence removed.
+- A test of mine was wrong first: it counted blocked nights from the first
+  trading day while the report counts them over its own YTD window, and another
+  fixture in the same run posts in March. The report was right; the test now
+  measures the window the report was asked for.
 - The year on screen: January to July show nothing, August counts from the 2nd
   (516 room-nights, not 533), and the footnote names 02/08/2026.
 
 **Found**
+- **Block Room would have counted every night before go-live as a room held
+  back.** It was the room count times the days, less what was available - and
+  once available started at the first trading day, a YTD from 1 April against a
+  property that opened on 2 August read 2,238 blocked room-nights instead of 18.
+  Caught by reading the consequence of the change before committing it, not by a
+  test. Block Room is now counted day by day in `figures.ts`, beside available,
+  and is nil before the property traded.
 - The REP-2 window test compared the YTD room-nights against the database's raw
   `sellable_rooms` sum, which is no longer the definition. It counts from the
   later of the window and the first trading day now, so it still fails on a year

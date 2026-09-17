@@ -227,7 +227,6 @@ export async function managerReport(
   const { rows: [counts] } = await client.query<Record<string, string>>(
     `with win as (select $2::date as today, $3::date as ptd, $4::date as ytd)
      select
-       (select count(*) from rooms where hotel_id = $1 and is_active)::text as physical,
        ${["today", "ptd", "ytd"].map((k) => `
        (select count(*) from reservations r, win
          where r.hotel_id = $1 and r.status = 'no_show'
@@ -308,7 +307,6 @@ export async function managerReport(
   const guests = (x: Omit<DayFigures, "date">) => pair(x.adults, x.children);
   const perRoom = (x: Omit<DayFigures, "date">) => pair(ratio(x.adults, x.sold), ratio(x.children, x.sold));
   const compDayUse = counted("comp_day_use");
-  const physical = n("physical");
 
   const sections: ReportSection[] = [
     section("room-charges", "Room Charges", [
@@ -353,11 +351,12 @@ export async function managerReport(
     ]),
     section("room-summary", "Room Summary", [
       line("Total Room", of((x) => x.available), { unit: "count" }),
-      line("Block Room", {
-        today: Math.max(0, physical - t.today.available),
-        ptd: Math.max(0, physical * daysIn(w.ptd, asOn) - t.ptd.available),
-        ytd: Math.max(0, physical * daysIn(w.ytd, asOn) - t.ytd.available),
-      }, { unit: "count" }),
+      /* Room-nights the house could not sell, day by day (figures.ts).
+         It used to be the room count times the days, less what was
+         available — which counted every night before the property traded
+         as a room held back, once available started at its first trading
+         day (D17-93). */
+      line("Block Room", of((x) => x.blocked), { unit: "count" }),
       line("No of Guest (Adult/Child)", { today: guests(t.today), ptd: guests(t.ptd), ytd: guests(t.ytd) }, { unit: "text" }),
       line("Total Available Room nights", of((x) => x.available), { unit: "count" }),
       line("Sold Room", of((x) => x.sold), { unit: "count" }),
@@ -415,9 +414,6 @@ export async function managerReport(
     ],
   };
 }
-
-const daysIn = (from: string, to: string) =>
-  Math.round((Date.parse(`${to}T00:00:00Z`) - Date.parse(`${from}T00:00:00Z`)) / 86_400_000) + 1;
 
 /* ── The restaurant, by outlet ─────────────────────────────────────── */
 
