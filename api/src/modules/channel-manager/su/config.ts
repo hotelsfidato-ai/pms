@@ -23,6 +23,18 @@
    would be "not set" for the life of the process.
    ══════════════════════════════════════════════════════════════════ */
 
+/* ── The key SU presents when it pushes a booking to us ──────────────
+   D17-79: SU pushes each booking the moment it happens, to one address on
+   this server. That address is open to the internet, so SU proves a call is
+   its own with a key the owner generates, gives to SU on SU's extranet, and
+   sets here. It is a password: it lives in `api/.env` on the server and
+   nowhere else - not in the repository, not in a test, not in a message.
+   Absent means the door refuses everything, which is the right answer for a
+   server nobody has set up to receive bookings. */
+export const readSuPushKey = (
+  source: Readonly<Record<string, string | undefined>> = process.env,
+): string | null => (source["SU_PUSH_KEY"] ?? "").trim() || null;
+
 export type SuEnvironment = "sandbox" | "live";
 
 /* From SU's "Getting Started" and "Certification": the same APIs on both,

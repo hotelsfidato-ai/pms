@@ -16,7 +16,10 @@
 --   4. a room type can only be mapped at its own property;
 --   5. the application may read, add and change, never delete: a room type
 --      once on SU is taken off, not forgotten, so its id is never reused;
---   6. every write is audited.
+--   6. every write is audited;
+--   7. a booking SU pushed is one row however often SU sends it again, and the
+--      door can only find a hotel that is on SU AND switched on for the channel
+--      manager.
 -- =============================================================================
 do $$
 declare
@@ -98,6 +101,29 @@ begin
    where table_name in ('channel_hotels', 'channel_room_types', 'channel_rate_plans')
      and hotel_id = h;
   perform test.ok('su mapping', 'the SU writes at the test property are in the audit log', n >= 3, n || ' entries');
+
+  -- ---------- 7 · a pushed booking, and which hotel the door may find ----------
+  perform test.allows('su mapping', 'a booking SU pushed is stored',
+    format($q$insert into channel_bookings
+              (hotel_id, su_booking_id, notif_id, status, payload)
+              values (%L, 'B-1', 'N-1', 'new', '{"kept":"yes"}'::jsonb)$q$, h));
+  perform test.raises('su mapping', 'the same message twice is refused',
+    format($q$insert into channel_bookings
+              (hotel_id, su_booking_id, notif_id, status, payload)
+              values (%L, 'B-1', 'N-1', 'new', '{}'::jsonb)$q$, h), '23505');
+  perform test.allows('su mapping', 'a second message about the same booking is a second row',
+    format($q$insert into channel_bookings
+              (hotel_id, su_booking_id, notif_id, status, payload)
+              values (%L, 'B-1', 'N-2', 'cancelled', '{}'::jsonb)$q$, h));
+  perform test.raises('su mapping', 'a status SU does not send is refused',
+    format($q$insert into channel_bookings
+              (hotel_id, su_booking_id, notif_id, status, payload)
+              values (%L, 'B-2', 'N-3', 'maybe', '{}'::jsonb)$q$, h), '23514');
+  perform test.ok('su mapping', 'the application may not delete a pushed booking',
+    not has_table_privilege('pms_app', 'channel_bookings', 'delete'));
+
+  perform test.ok('su mapping', 'the door finds no hotel while none is switched on',
+    not exists (select 1 from app.channel_hotel_for('CMQ-1')));
 
   -- ---------- and the fixtures go ----------
   alter table hotels disable trigger hotels_no_delete;

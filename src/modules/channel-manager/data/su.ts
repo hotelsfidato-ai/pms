@@ -150,3 +150,32 @@ export const getSuAvailability = (code: string) => api<AriState>(`${base(code)}/
 
 export const sendSuAvailability = (code: string, kind: "all" | "changes") =>
   call<AriOutcome>(`${base(code)}/availability/send`, "POST", { kind });
+
+/* ── Part 4: bookings SU pushes ────────────────────────────────────── */
+
+export interface ChannelBooking {
+  id: string;
+  suBookingId: string;
+  channel: string | null;
+  status: "new" | "modified" | "cancelled" | "request";
+  arrival: string | null;
+  departure: string | null;
+  guestName: string | null;
+  rooms: number;
+  currency: string | null;
+  total: string | null;
+  commission: string | null;
+  outcome: "received" | "created" | "changed" | "cancelled" | "refused_no_room" | "needs_attention" | "ignored";
+  reason: string | null;
+  receivedAt: string;
+  acknowledged: boolean;
+  handled: boolean;
+  /** How many card fields SU sent that were dropped before anything was kept. */
+  cardFieldsRemoved: number;
+}
+
+export const getChannelBookings = (code: string) =>
+  api<{ bookings: ChannelBooking[] }>(`${base(code)}/bookings`);
+
+export const markChannelBookingDone = (code: string, id: string) =>
+  call(`${base(code)}/bookings/${id}/done`, "POST");

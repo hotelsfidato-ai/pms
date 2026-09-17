@@ -2,7 +2,7 @@ import { describe, it, expect, vi, beforeEach } from "vitest";
 import { render, screen } from "@testing-library/react";
 import App from "@/App";
 import { AGRA_HOTEL, go, signedIn, startSignedIn } from "@/test/app";
-import type { AriState, SuContent, SuStatus } from "./data/su";
+import type { AriState, ChannelBooking, SuContent, SuStatus } from "./data/su";
 
 /* ══════════════════════════════════════════════════════════════════
    THE CHANNEL MANAGER PAGE — who sees the SU setup (D17-66)
@@ -36,6 +36,18 @@ const content: SuContent = {
 };
 
 const availability: AriState = { pushes: [], policy: { sendRackRate: false, closeUnpriced: true } };
+
+/* One booking SU pushed and the PMS refused: the owner sees why, and that no
+   card detail was kept (D17-80, D17-83). */
+const pushed: ChannelBooking[] = [{
+  id: "1", suBookingId: "6026344507_AGR", channel: "Booking.com", status: "new",
+  arrival: "2026-11-02", departure: "2026-11-04", guestName: "Asha Rao", rooms: 1,
+  currency: "INR", total: "10080.00", commission: "450.00",
+  outcome: "refused_no_room",
+  reason: "No Deluxe is free for these nights, so no booking was made.",
+  receivedAt: "2026-09-18T04:30:00.000Z", acknowledged: true, handled: false,
+  cardFieldsRemoved: 3,
+}];
 const getSuContent = vi.fn(async () => content);
 
 vi.mock("@/modules/channel-manager/data/su", async (importOriginal) => {
@@ -44,6 +56,7 @@ vi.mock("@/modules/channel-manager/data/su", async (importOriginal) => {
     ...actual,
     getSuStatus: async () => status,
     getSuAvailability: async () => availability,
+    getChannelBookings: async () => ({ bookings: pushed }),
     getSuContent: (...a: unknown[]) => getSuContent(...(a as [])),
   };
 });
@@ -94,6 +107,16 @@ describe("the channel manager page", () => {
     render(<App />);
     expect(await screen.findByText("This hotel on SU")).toBeTruthy();
     expect(screen.getByText("Rooms left, prices and closures")).toBeTruthy();
+  });
+
+  it("shows a refused booking with its reason, and that no card detail was kept", async () => {
+    as("owner");
+    render(<App />);
+    expect(await screen.findByText("Bookings from the booking sites")).toBeTruthy();
+    expect(screen.getByText("Refused: no room free")).toBeTruthy();
+    expect(screen.getByText(pushed[0]!.reason!)).toBeTruthy();
+    expect(screen.getByText(/card details were not kept/)).toBeTruthy();
+    expect(screen.getByRole("button", { name: /I have dealt with this/ })).toBeTruthy();
   });
 
   it("shows a GM what the connection is, without the setup, and never asks for it", async () => {

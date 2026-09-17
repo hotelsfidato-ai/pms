@@ -12,6 +12,71 @@ nothing is sent to SU or any booking site until the owner has SU's test keys.**
 
 ---
 
+## 2026-09-18 · SU connection, part 4: the bookings SU pushes
+
+**Asked for:** part 4 of D17-66, to the owner's D17-79 (SU pushes each booking
+the moment it happens, to one address on this server) and the design the master
+approved on 17 September.
+
+**Shipped**
+- **109 the inbox:** `channel_bookings` - one row per message SU pushes, whole,
+  keyed unique on (hotel, SU booking id, notification id) because SU resends
+  every ten minutes for an hour until it is told the message arrived. Row
+  security per hotel, forced; insert and update for the application, never
+  delete; audited. And `app.channel_hotel_for`, which answers which hotel an SU
+  hotel id is - and only a hotel on SU and switched on for the channel manager.
+- **The door** (`POST /api/channel/su/reservations`, not mounted yet): SU's key
+  compared as a hash in constant time, a wrong one refused with 401 and no
+  detail, no key on the server at all and the door is shut; a flood refused;
+  **the card fields cut out before anything else touches the message**; the
+  message stored; SU told we have it; then, and only then, worked out.
+- **What becomes of a booking** (`inbound/handle.ts`): no room of that type free
+  means **no booking is made** (D17-80), those dates go straight back to SU as 0
+  rooms left, and it is listed for the GM; a room free means it waits for
+  reservations' machine door, which is the master's to build; an unmapped room,
+  a modified or cancelled booking, or anything missing waits for a person.
+  Nothing is guessed, and no half-booking is written.
+- **The screen:** *Bookings from the booking sites* - each one with the guest,
+  the site, the nights, the money, what became of it and why, whether SU has
+  been told, whether card details were dropped, and *I have dealt with this*.
+
+**Found**
+- **CM-4, the master's to fix, and it stops a deploy:** switching a hotel on for
+  the channel manager makes the next deploy roll back. 087 re-adds
+  `hotel_modules_known` with its old list on every replay, before 108 widens it,
+  and Postgres checks the old list against the rows there. Seen by switching 5EL
+  on in this copy and running `db/migrate.sh`: 087 raised 23514 and the whole run
+  rolled back; the row deleted, 109 migrations applied clean. Reported to the
+  master with the fix they used after MEMORY 284 and the gate that would have
+  caught it (`rerun.sh` switching a module on between passes). Not in production:
+  nothing is switched on anywhere yet.
+- SU's own documents do not say what this server should answer SU with; it
+  answers `{"Status":"Success"}` once the message is stored, which is SU's own
+  shape and is true at that moment.
+
+**Proved** - in `D:\fidato-channel-manager`, on this commit's tree
+- `api: npm test`: 990 passed, 59 files, exit 0 (9 new). **Broken on purpose,
+  seen to fail, restored:** the card scrub, the key check, the "no room free"
+  check, answering a repeat with the first answer, and the switched-on condition
+  in `app.channel_hotel_for` - five red tests, one per guard.
+- `api: npm run strip-check`: 113 files load. `npx tsc -b --force`: clean.
+- `bash db/tests/run.sh`: 814 assertions, su mapping 27. `rerun.sh`: re-runnable.
+- Opened as the owner at `/h/5EL/channels` on this copy's servers: the new card
+  with a refused booking, its reason, "card details were not kept", and *I have
+  dealt with this* marking it dealt with and taking the button away.
+- The door itself is not reachable on a running server yet: it is exported and
+  unmounted until the master adds `["/api/channel", inbound]`, so its proof is
+  its tests, which call the router directly.
+
+**Left open**
+- The master: mounting `/api/channel`, the nginx limit, CM-4, and reservations'
+  `createChannelBooking` / `amendChannelBooking` / `cancelChannelBooking`
+  (MODULE.md requests 6 and 7). Until the door exists, a pushed booking that
+  could be made waits on the screen saying so.
+- The owner: SU's keys, the push key, and P3-b (may a rack price go to SU).
+
+---
+
 ## 2026-09-17 · SU connection, part 3: rooms left, prices and closures
 
 **Asked for:** part 3 of D17-66 - push availability, prices and restrictions

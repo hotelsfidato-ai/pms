@@ -45,6 +45,45 @@ copy, and "it uses my settings file" is a guess until the line says so.
 
 ---
 
+### CM-4 · Switching the channel manager on breaks the next deploy — the master's to fix
+
+**Found** — 18 September, switching 5 Elements on in this copy to open the
+Channel bookings screen, then running `db/migrate.sh`:
+
+```
+psql:db/migrations/087_first_screen_and_reception_pos.sql:108: ERROR:
+  check constraint "hotel_modules_known" of relation "hotel_modules"
+  is violated by some row
+  x the migration run failed and was ROLLED BACK
+```
+
+087 drops `hotel_modules_known` and adds it back as
+`check (module in ('pos', 'banquet', 'reception_pos'))`. 108 (the master's, the
+same evening) adds it back again with `channel_manager`. Migrations replay from
+001 on every deploy, so 087 runs first and re-adds the narrow list - and
+Postgres checks it against the rows already there. One `hotel_modules` row
+saying `channel_manager` and the whole deploy rolls back.
+
+**Not mine to fix:** 087 and 108 are the shared core. Reported to the master on
+18 September with the error, the fix they took after MEMORY 284 (drop and re-add
+only when the constraint does not already accept what it is adding), and the
+suggestion that `rerun.sh` switch a module on between its two passes, since that
+is why no gate saw this: `run.sh` builds from zero and `rerun.sh` replays on a
+database with no module rows.
+
+**Not in production** while nothing is switched on anywhere. It bites the first
+time somebody turns the channel manager on for a hotel - which is the first
+thing that will happen when SU's keys arrive.
+
+**In this copy:** the row was deleted and migrations replay clean again (109
+applied). No test switches a module on outside its own scratch database.
+
+**The rule** — A migration that widens a constraint an earlier migration
+rewrites has not widened anything: the earlier one replays first. Switch the new
+thing ON and replay before believing it.
+
+---
+
 ## Fixed — the solution is here; do not work it out again
 
 ### CM-3 · Part 1 shipped code the production server cannot load — FIXED 17 September

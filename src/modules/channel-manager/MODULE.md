@@ -13,7 +13,7 @@ owner's yes.
 
 ```
 src/modules/channel-manager/          the page, the owner's SU setup, these notes
-api/src/modules/channel-manager/      the SU connection (parts 1, 2 and 3 built)
+api/src/modules/channel-manager/      the SU connection (parts 1 to 4 built)
 api/test/modules/channel-manager/     its tests, against SU's documented answers
 db/tests/modules/channel-manager.sql  the SU tables: ids, uniqueness, grants, audit
 ```
@@ -33,7 +33,7 @@ master's fix lands (CM-1): each falls back to the master's `fidato` database.
 | 1 | **Token login.** SU's keys from the server's settings only; a token reused, renewed before it lapses, SU's 30 logins an hour never spent by a loop, a test key never used against the live account | **Built** 17 September, branch `channel-manager/su-connection`; audited by the master |
 | 2 | **Content:** the hotel, its room types and its rate plans, sent to SU from the PMS (the record, D17-28); a mapping table per hotel | **Built** 17 September, same branch; migration 106 (the SU mapping) |
 | 3 | **Rates and availability:** rooms left, prices and restrictions pushed whenever they change and on demand | **Built** 17 September, same branch; migration 107 (what SU was last sent) |
-| 4 | **Reservations:** SU **pushes** each booking to the PMS (D17-79); it lands through reservations' front door (idempotent since RES-3) with its OTA source and commission | Next. The door's design goes to the master first: the address, how SU proves a call is its own, a repeat, a flood |
+| 4 | **Reservations:** SU **pushes** each booking to the PMS (D17-79): the door, the inbox, the refusal path (D17-80) and the Channel bookings screen | **Built** 18 September, same branch; migration 109 (the inbox). Waiting on two things: the master mounting `/api/channel`, and reservations' machine door before a pushed booking can become a booking |
 
 The owner's rules for it (D17-43 to D17-45, D17-79 to D17-85):
 
@@ -84,6 +84,12 @@ and what it still needs before it goes live.
 6. **Rooms left, prices and closures** - *Send a year* and *Send what changed*,
    and the last ten pushes: when, which kind, how many dates in how many
    requests, what SU said, and how many dates went closed for want of a price.
+7. **Bookings from the booking sites** - every booking SU has pushed, newest
+   first: the guest, the site, the nights, the money, what became of it
+   ("Refused: no room free", "Needs somebody", "Booked"), why, whether SU has
+   been told we have it, and whether card details were dropped. *I have dealt
+   with this* takes one off the list; it changes nothing at SU and makes no
+   booking.
 
 Nothing on it is suggested or filled in: no SU id from a code, no SU room type
 from a name, no SU meal plan from "Continental". Saving sends nothing.
@@ -103,6 +109,9 @@ from a name, no SU meal plan from "Continental". Saving sends nothing.
 | `POST /api/hotels/:code/channel-manager/content/send` | Sends the hotel, then its room types, then its rate plans to SU (below) | owner or admin here |
 | `GET /api/hotels/:code/channel-manager/availability` | The last ten pushes of rooms left, prices and closures, and what SU said | owner or admin here |
 | `POST /api/hotels/:code/channel-manager/availability/send` | Sends a year (`all`) or only the dates that changed (`changes`) | owner or admin here |
+| `GET /api/hotels/:code/channel-manager/bookings` | The last hundred bookings SU pushed, and what became of each | owner or admin here |
+| `POST /api/hotels/:code/channel-manager/bookings/:id/done` | A person has dealt with one. Changes nothing at SU and makes no booking | owner or admin here |
+| `POST /api/channel/su/reservations` | **SU's own door**, answering to SU's key alone. Not mounted yet: the master adds `["/api/channel", inbound]` outside the staff sign-in | SU |
 
 **The owner and an administrator** (D17-85, 17 September), a group administrator
 counting as the owner. The list lives twice, held together by a test:
@@ -151,12 +160,39 @@ No answer carries the client id, the secret or the token.
   names - on SU, switched on, and with an active service account in
   `channel_hotels.run_as`. `server.ts` (the master's) starts it after listen.
 
+### A booking SU pushes (part 4)
+
+1. **SU's key** (`SU_PUSH_KEY`, the server's settings only) is compared as a
+   hash, in constant time. Anything else: 401, no detail, nothing written. No
+   key set on the server at all: the door is shut (503).
+2. **The card fields are cut out** of the message before anything else touches
+   it (D17-83): `inbound/scrub.ts`, by the name of the field, so a field SU adds
+   later that looks like a card goes too. What is kept says how many went.
+3. **The hotel** is found from the id SU was given, and only a hotel on SU and
+   switched on for the channel manager (`app.channel_hotel_for`). Anything else
+   is refused, so SU keeps the booking, resends, and in the end emails the
+   property - better than a booking vanishing into a server that will not use it.
+4. **The message is stored** (migration 109), whole, before it is worked out.
+   The same message twice is one row and the first answer.
+5. **SU is told we have it** (`Reservation_notif`), which stops it resending
+   every ten minutes and dropping the booking after an hour.
+6. **Then it is worked out** (`inbound/handle.ts`):
+   - a room of that type free for every night: it waits for reservations'
+     machine door, marked "Needs somebody" with the reason;
+   - **no room free: no booking is made** (D17-80), those dates go back to SU at
+     once as 0 rooms left, and the GM settles it with the site and the guest;
+   - a room SU has not mapped, a modified or cancelled booking, a request to
+     book, or anything the message is missing: kept for a person, never guessed.
+7. **A flood** is refused (429) above a minute's worth, with nginx's own limit
+   in front of it (the master's).
+
 ### The server's settings (set by the owner, on the server)
 
 ```
 SU_ENVIRONMENT    sandbox | live
 SU_CLIENT_ID      from SU when the account is made
 SU_CLIENT_SECRET  generated on SU's extranet
+SU_PUSH_KEY       the key SU presents when it pushes a booking (part 4)
 ```
 
 In `api/.env` on the server, never in the repository, a screen, a test or a
@@ -189,6 +225,11 @@ ari/payloads.ts    the owner's policy, the cells, and SU's availability requests
 ari/push.ts        one push: read, compare, send, record what SU accepted, log
 ari/routes.ts      part 3's two routes
 jobs.ts            the minute job the master's server.ts starts
+inbound/scrub.ts   card fields out of SU's message before anything else
+inbound/parse.ts   what the PMS needs read out of the message; nothing guessed
+inbound/handle.ts  what becomes of a booking, and what goes back to SU
+inbound/door.ts    SU's own door: the key, the flood, store, acknowledge, work out
+inbound/routes.ts  the Channel bookings list, and marking one dealt with
 ```
 
 ---
@@ -304,29 +345,82 @@ db      bash db/tests/run.sh    all pass; bash db/tests/rerun.sh re-runnable
 2. **17 Sep · SU's settings in `env.ts`.** Answered 17 Sep: leave them in
    `su/config.ts`.
 3. **17 Sep · who may reach the SU connection.** Answered by the owner (D17-85):
-   the owner and an administrator. **Still open for the master:** widen
-   `integration` in `src/lib/permissions.ts` to the administrator, so the grant
-   matrix says what the two `SU_ROLES` lists say; the lists move with it.
-4. **17 Sep · migration numbers.** Answered: 107 (the SU mapping), 108 (what SU
-   was last sent). `server.ts` starts `jobs` after listen.
+   the owner and an administrator. Done on both sides: the master widened
+   `integration` in `src/lib/permissions.ts`, and the two role lists agree.
+4. **17 Sep · migration numbers.** Answered: **106** (the SU mapping) and **107**
+   (what SU was last sent), after the master renumbered them at merge. 108 is the
+   master's own, which makes `channel_manager` a module a hotel is switched on
+   for, so part 3's gate can be true. `server.ts` starts `jobs` after listen,
+   never under the tests.
 5. **17 Sep · a set-based tariff in inventory.** `app.tariff_for` per date and
    per guest count costs 11 seconds a year under row security, so part 3 keeps a
    copy of its arithmetic for adults. Something like
    `app.tariff_grid(hotel, from, to, guests)` in inventory would end the copy.
-6. **17 Sep · a reservation that keeps each night's price** (D17-82). Reservations
-   stores one `agreed_rate` for a stay; SU sends a price per night, and part 4
-   must keep them. The shape asked for: a `reservation_nights` row per
-   reservation and date (price before tax, tax, meal plan, the source's own
-   line), written by the booking door when a caller sends nights, and the night
-   audit posting from it where it exists. The reservations lane's change, with a
-   migration number from the master.
+6. **17 Sep · a booking door a machine can call, in process** (D17-79). **Needed
+   first**, before the per-night price. Exported from
+   `api/src/modules/reservations/index.ts`, called inside the caller's own
+   session so the whole thing is one transaction:
+
+   ```ts
+   createChannelBooking(client, staffId, {
+     hotelId, guestName, phone?, email?,
+     checkIn, checkOut,                  // YYYY-MM-DD
+     bookingSourceId,                    // the OTA's row in booking_sources
+     externalRef,                        // SU's booking id: the repeat key (RES-3)
+     commissionAmount?,                  // SU's figure when it sends one (D17-84)
+     specialRequest?, expectedArrival?,
+     lines: [{ roomTypeId, mealPlan, adults, children, rooms,
+               nights: [{ date, priceBeforeTax, tax? }],   // D17-82
+               agreedRate? }],
+   }): Promise<
+     | { ok: true; duplicate: boolean; reference: string;
+         reservationIds: string[]; folioIds: string[]; guestId: string }
+     | { ok: false; kind: "no_room" | "unpriced" | "refused"; reason: string }>
+   ```
+
+   What it must hold, beyond what the HTTP door already does:
+   - **refuse, never overbook** (D17-43, D17-80): `kind: "no_room"` when a line
+     has no room free for every night, having written nothing;
+   - **a repeat is the first answer** (RES-3), `duplicate: true`;
+   - **nothing survives a refusal** (RES-1), including the guest;
+   - money as strings, and no figure invented: a line with no price is
+     `kind: "unpriced"`, never zero.
+
+   And beside it, for a change and a cancellation SU sends:
+
+   ```ts
+   amendChannelBooking(client, staffId, { hotelId, externalRef, lines, checkIn?, checkOut? })
+   cancelChannelBooking(client, staffId, { hotelId, externalRef, reason,
+                                           chargeFrom: "channel", channelFee? })
+   ```
+   `chargeFrom: "channel"` because an OTA booking follows the OTA's policy
+   (D17-44), not the hotel's terms.
+
+7. **17 Sep · a reservation that keeps each night's price** (D17-82), after the
+   door. Reservations stores one `agreed_rate` for a stay; SU sends a price a
+   night. The shape asked for:
+
+   ```
+   reservation_nights(reservation_id, for_date, price_before_tax, tax,
+                      meal_plan, primary key (reservation_id, for_date))
+   ```
+   written by the door above when a caller sends `nights`; the night audit posts
+   from it where rows exist and from `agreed_rate` where they do not, so nothing
+   changes for a booking taken at the desk.
 7. **17 Sep · P3-b, still with the owner:** may a **rack** price go to SU? It is
    the room type's own rate, the same figure whatever the meal plan, so breakfast
    would go out at the room-only price. Until answered, such a date is treated as
    unpriced, and D17-81 sends it closed.
-8. **17 Sep · part 4's door** (D17-79, SU pushes each booking): design going to
-   the master before anything is built - the address, how SU proves a call is
-   SU's, a repeat, and a flood.
+8. **17 Sep · part 4's door** (D17-79). Design approved by the master, 17 Sep.
+   Needed from them, because the files are theirs: the fourth mount prefix
+   `/api/channel` in `mount.ts`, with `server.ts` leaving it outside the staff
+   bearer gate (the door checks SU's key itself), and the nginx lines - a rate
+   limit on that address, and an allowlist of the addresses SU pushes from once
+   SU gives them. The key itself is the owner's: generated by them, in the
+   server's settings (`SU_PUSH_KEY`) and SU's extranet, never in the repository,
+   a test or a chat.
+9. **17 Sep · a migration number for part 4's inbox.** Asked: 109 unless the
+   master says otherwise.
 
 ## Requests from other services
 
