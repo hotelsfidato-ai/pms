@@ -75,11 +75,15 @@ checklist.get("/:code/night-audit", async (c) => {
        POST /night-audit/run. Rule 6 works only if the disabled button
        and the server's refusal are the same answer. */
     const blockers = await blockersFor(client, hotelId, asOn);
+    /* `blockers` joined on 17 September, when the unused
+       GET /night-audit/can-run was removed (D17-42): this answer was already
+       the one the screen and POST /run share, so it is the one kept. */
     const canRun = {
       allowed: blockers.length === 0,
       ...(blockers.length
         ? { reason: blockers.map((b) => b.reason).join(" ") }
         : {}),
+      blockers,
     };
 
     const { rows: last } = await client.query<{ d: string }>(

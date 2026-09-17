@@ -68,7 +68,7 @@ export default function RoomSetupPage() {
   if (q.isLoading) {
     return (
       <Page>
-        <PageHeader title="The house" description="Loading…" />
+        <PageHeader title="Room types" description="Loading…" />
         <Skeleton className="h-64" />
       </Page>
     );
@@ -77,7 +77,7 @@ export default function RoomSetupPage() {
   if (!q.data) {
     return (
       <Page>
-        <PageHeader title="The house" />
+        <PageHeader title="Room types" />
         <EmptyState
           title="This property did not load"
           description="Nothing was changed."
@@ -92,7 +92,7 @@ export default function RoomSetupPage() {
   return (
     <Page className="max-w-6xl">
       <PageHeader
-        title="The house"
+        title="Room types"
         description={
           types.length === 0
             ? "Nothing is set up yet. Add a room type, then the rooms that are of it."

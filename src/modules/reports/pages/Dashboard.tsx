@@ -172,7 +172,7 @@ export default function DashboardPage() {
                 sub={methods.length
                   ? methods.map((m) => `${m.label} ${money(m.today ?? 0)}`).join(" · ")
                   : "Nothing taken yet today"} />
-          <Tile icon={ReceiptText} label="Owed by guests" term="guestLedger" value={cash(pick(guestLedger, "Closing Balance")?.today)}
+          <Tile icon={ReceiptText} label="Owed by guests, less refunds" term="guestLedger" value={cash(pick(guestLedger, "Closing Balance")?.today)}
                 loading={loading} sub="Every guest bill still open" />
           <Tile icon={Building2} label="City ledger" term="cityLedger" value={cash(pick(cityLedger, "Closing Balance")?.today)}
                 loading={loading} sub="Settled outside the PMS today" />

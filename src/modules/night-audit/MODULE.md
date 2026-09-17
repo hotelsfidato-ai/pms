@@ -57,7 +57,6 @@ All hang from `/api/hotels`, in two files mounted by
 
 | Method | Path | What it does |
 |---|---|---|
-| GET | `/:code/night-audit/can-run` | may this day be closed, and if not, why — for the **server's** date. **No screen calls it** (the API tests do). Read-only. NA-1, NA-2 |
 | POST | `/:code/night-audit/run` | close the day (the steps in the file's header, one transaction, one audit at a time per property — an advisory lock, NA-3). Body `{ businessDate }` — the day the screen says it is closing, **required** (400 if missing or not a date). A day already closed: **409 "… was already closed. Reload to see today."** with `alreadyClosed` and the `record` that was made, changing nothing (NA-2, D17-12). A day the property is not on: 409, changing nothing. Records who ran it in `run_by` |
 | GET | `/:code/night-audit/runs` | the screen's **Closed days**: the last 60 completed days, newest first — day, who ran it (`app.colleague_name`), started, closed, rooms posted, room revenue, no-shows; null where the record holds nothing (D17-13). Read-only. `api/scripts/capture-demo.ts` reads it too |
 
@@ -194,11 +193,12 @@ From `PENDING.md` and `HANDOVER.md`, and one found while writing this brief:
 - **The printed Night Audit report does not exist** — the audit runs; the
   owner's four-page, 13-section report is part of staff-first phase 2,
   **ask first** (`HANDOVER.md` § 3.4; `docs/REPORTS-SPEC.md`).
-- **`GET /:code/night-audit/can-run` still has no caller.** It writes nothing;
-  `runs` became the Closed days list (NA-1, D17-13). Whether `can-run` goes is
-  undecided.
+- **`GET /:code/night-audit/can-run` was removed** on 17 September (the owner's
+  D17-42): no screen ever called it. Whether a day may close is the checklist's
+  `canRun`, which now carries the `blockers` too, and POST /run obeys the same
+  `blockersFor`.
 - **No screen corrects a closed day's record.** The database allows only the
-  GM (099); a correction screen, if one is wanted, is the owner's to ask for.
+  GM (100); a correction screen, if one is wanted, is the owner's to ask for.
 - **A web test cannot see a refusal's payload** — the shared stub drops it
   (NA-4, core, reported to the master).
 - **Defect 243's shape in these routes has not been checked** — a refusal

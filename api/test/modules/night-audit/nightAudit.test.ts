@@ -522,7 +522,7 @@ describe("a day cannot close over an unresolved departure", () => {
        blocks today's close until somebody decides. */
     const stay = await checkInAtPune(1, 3000, 1);
 
-    const can = (await (await asOwner("/PUN/night-audit/can-run")).json()) as {
+    const can = ((await (await asOwner("/PUN/night-audit")).json()) as { canRun: unknown }).canRun as {
       allowed: boolean; reason: string | null;
       blockers: Array<{ id: string; rooms: string[] }>;
     };
@@ -555,8 +555,8 @@ describe("a day cannot close over an unresolved departure", () => {
       await db.end();
     }
 
-    const after = (await (await asOwner("/PUN/night-audit/can-run"))
-      .json()) as { allowed: boolean };
+    const after = ((await (await asOwner("/PUN/night-audit"))
+      .json()) as { canRun: unknown }).canRun as { allowed: boolean };
     expect(after.allowed).toBe(true);
   });
 });
@@ -1027,7 +1027,7 @@ describe("a day cannot close over an uncounted drawer", () => {
     const bd = await businessDate();
 
     /* Before: whatever else is outstanding, the drawer is not. */
-    const before = (await (await asOwner("/PUN/night-audit/can-run")).json()) as
+    const before = ((await (await asOwner("/PUN/night-audit")).json()) as { canRun: unknown }).canRun as
       { blockers: Array<{ id: string }> };
     expect(before.blockers.some((b) => b.id === "front-desk-drawer")).toBe(false);
 
@@ -1045,7 +1045,7 @@ describe("a day cannot close over an uncounted drawer", () => {
       await db.end();
     }
 
-    const after = (await (await asOwner("/PUN/night-audit/can-run")).json()) as
+    const after = ((await (await asOwner("/PUN/night-audit")).json()) as { canRun: unknown }).canRun as
       { allowed: boolean; blockers: Array<{ id: string; reason: string; rooms: string[] }> };
 
     const drawer = after.blockers.find((b) => b.id === "front-desk-drawer");
@@ -1078,7 +1078,7 @@ describe("a day cannot close over an uncounted drawer", () => {
       await db.end();
     }
 
-    const after = (await (await asOwner("/PUN/night-audit/can-run")).json()) as
+    const after = ((await (await asOwner("/PUN/night-audit")).json()) as { canRun: unknown }).canRun as
       { blockers: Array<{ id: string }> };
     expect(after.blockers.some((b) => b.id === "front-desk-drawer")).toBe(false);
   });

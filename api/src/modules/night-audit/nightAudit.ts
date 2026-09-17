@@ -225,42 +225,11 @@ export async function blockersFor(
   return blockers;
 }
 
-/* ── Can this day be closed? ─────────────────────────────────────── */
-
-nightAudit.get("/:code/night-audit/can-run", async (c) => {
-  const body = await withSession(c.get("subject"), async (client) => {
-    const hotelId = await hotelIdFor(client, c.req.param("code"));
-    if (!hotelId) return null;
-
-    const businessDate = await businessDateFor(client, hotelId);
-    const blockers = await blockersFor(client, hotelId, businessDate);
-
-    const { rows: already } = await client.query<{ status: string }>(
-      `select status from night_audit_runs
-        where hotel_id = $1 and business_date = $2::date`,
-      [hotelId, businessDate],
-    );
-
-    if (already[0]?.status === "completed") {
-      return {
-        allowed: false,
-        reason: `${businessDate} is already closed.`,
-        businessDate,
-        blockers: [],
-      };
-    }
-
-    return {
-      allowed: blockers.length === 0,
-      /* Shown DISABLED with its reason, never hidden. Rule 6. */
-      reason: blockers.length ? blockers.map((b) => b.reason).join(" ") : null,
-      businessDate,
-      blockers,
-    };
-  });
-
-  return body ? c.json(body) : c.json({ error: "No such property." }, 404);
-});
+/* ── Can this day be closed? ─────────────────────────────────────
+   GET /:code/night-audit/can-run was here until 17 September. No screen ever
+   called it (NA-1); the owner's D17-42 removed it. Whether a day may close is
+   answered once, by blockersFor, and served in the Night audit checklist
+   (checklist.ts, `canRun.blockers`), which POST /run also obeys. */
 
 /* ── Close the day ───────────────────────────────────────────────── */
 

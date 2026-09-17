@@ -14,7 +14,7 @@ import { ApiError } from "@/lib/api";
 import { useUi } from "@/lib/ui";
 import { AssignRoomFlow } from "@/modules/front-desk/flows/AssignRoomFlow";
 import {
-  Button, Segmented, Tooltip, Skeleton, ErrorState, toast, type Tone,
+  Button, Segmented, Tooltip, Skeleton, ErrorState, EmptyState, toast, type Tone,
 } from "@/components/ui";
 import { StartHere } from "@/components/app/StartHere";
 import { StayDrawer } from "@/modules/front-desk/flows/StayDrawer";
@@ -316,10 +316,20 @@ export default function StayViewPage({ view }: {
   const refreshing = reads.some((q) => q.isFetching);
   const retry = () => { for (const q of reads) void q.refetch(); };
 
+  /* `null` is a successful answer: a hotel with no rooms at all. It drew the
+     loading skeleton forever until FD-5 — the owner's words, D17-23. */
+  if (data === null) {
+    return (
+      <StayViewFrame title={title}>
+        <EmptyState
+          title="No rooms set up yet"
+          description="Add them in Room types."
+        />
+      </StayViewFrame>
+    );
+  }
+
   if (!data) {
-    /* `null` is a successful answer — a hotel with no rooms at all — and
-       it still draws the skeleton it always drew. What that hotel should
-       see instead is FD-5, the owner's to decide. */
     if (data === undefined && paused) {
       return (
         <StayViewFrame title={title}>
@@ -428,7 +438,9 @@ export default function StayViewPage({ view }: {
           <h1 className="text-lg font-semibold text-ink-900">
             {view === "calendar" ? "Calendar" : "Rooms"}
           </h1>
-          <div className="flex items-center gap-1">
+          {/* WRAPS (FD-7, D17-41): on a phone the week's dates and "Today" ran
+              past the right edge of the screen. */}
+          <div className="flex flex-wrap items-center gap-1">
             <Button
               variant="secondary" size="sm"
               onClick={() => setStart(addDays(start, -7))}

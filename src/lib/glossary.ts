@@ -55,7 +55,7 @@ export const GLOSSARY: Record<TermKey, { term: string; means: string }> = {
   },
   guestLedger: {
     term: "Guest ledger",
-    means: "What guests owe on their bills: the charges posted, less what they have paid. It clears as each bill is settled.",
+    means: "What guests owe on their bills, less refunds: the charges posted, less what they have paid, less what is owed back to guests who paid too much. It clears as each bill is settled.",
   },
   noShow: {
     term: "No-show",
