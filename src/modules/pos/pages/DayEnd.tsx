@@ -74,6 +74,8 @@ const MOVEMENTS: { kind: MovementKind; label: string; hint: string;
 const METHOD_LABEL: Record<string, string> = {
   cash: "Cash", card: "Card", upi: "UPI",
   room: "To a room", due: "Due", comp: "Complimentary",
+  /* D17-21: on a banquet function's bill. Business done, not in the tin. */
+  function: "To a function",
 };
 
 /** The property this page is closing, by name.
@@ -280,6 +282,8 @@ function Overview({ day }: { day: DayEnd }) {
           <p className="mt-3 text-sm text-grey-500">
             Only cash reaches the drawer. A card settlement and a bill
             charged to a room are business done — they are not in the tin.
+            {s.byMethod["function"] !== undefined
+              && " Nor is an order settled to a banquet function: the host pays for it on the function's bill."}
           </p>
         </CardBody>
       </Card>

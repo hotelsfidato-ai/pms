@@ -4,12 +4,14 @@ import { useParams, Link } from "react-router";
 import {
   UtensilsCrossed, X, BedDouble, Banknote, CreditCard, Smartphone,
   ArrowLeft, Printer, Lock, Search, Minus, Plus, MessageSquare, Flame,
+  CalendarHeart,
 } from "lucide-react";
 import { cn } from "@/lib/cn";
 import { dateLong, moneyPrecise } from "@/lib/format";
 import { useUi } from "@/lib/ui";
 import { toast } from "@/components/ui";
-import { getMenu, listOrders, getOrder, listChargeableRooms, openOrder, addLine, voidLine, setLineQty, sendToKitchen, settleOrder, abandonOrder, type MenuItem } from "@/modules/pos/data/till";
+import { getMenu, listOrders, getOrder, listChargeableRooms, openOrder, addLine, voidLine, setLineQty, sendToKitchen, settleOrder, abandonOrder, setOrderHeader, type MenuItem } from "@/modules/pos/data/till";
+import { FunctionPicker } from "@/modules/pos/components/FunctionPicker";
 import { listPosOutlets } from "@/modules/pos/data/posBridge";
 import { BUSINESS_DATE } from "@/data/repositories";
 import { ReadFailed, ReadStale } from "@/modules/pos/components/ReadProblem";
@@ -210,7 +212,7 @@ export default function TerminalPage() {
   };
 
   const settle = async (
-    method: "room" | "cash" | "card" | "upi", folioId?: string,
+    method: "room" | "cash" | "card" | "upi" | "function", folioId?: string,
   ) => {
     if (!orderId) return;
     setBusy(true);
@@ -222,8 +224,24 @@ export default function TerminalPage() {
       if (res.choices) { setChoices(res.choices); return; }
       return toast.error("Not settled", res.reason);
     }
-    toast.success("Settled", res.guest ? `Charged to ${res.guest}` : undefined);
+    toast.success("Settled",
+      res.guest ? `Charged to ${res.guest}`
+        : method === "function" ? `On ${res.order.eventTitle ?? "the function"}'s bill`
+          : undefined);
     setOrderId(null); setSettling(false); setRoom(""); setChoices(null);
+    refresh();
+  };
+
+  /* D17-21: the banquet function this order is on, or off it. */
+  const attach = async (eventId: string | null) => {
+    if (!orderId) return;
+    setBusy(true);
+    const res = await setOrderHeader(hotelId, orderId, { eventId });
+    setBusy(false);
+    if (!res.ok) return toast.error("Not changed", res.reason);
+    toast.success(eventId
+      ? `On ${res.order.eventTitle ?? "the function"}'s bill`
+      : "Off the function");
     refresh();
   };
 
@@ -632,6 +650,16 @@ export default function TerminalPage() {
                 <p className="text-2xs text-grey-500">
                   {order.table ?? "no table"} · {order.openedBy}
                 </p>
+                {order.status === "open" && (
+                  <FunctionPicker
+                    className="mt-2"
+                    hotelId={hotelId}
+                    value={order.eventId}
+                    currentTitle={order.eventTitle}
+                    disabled={busy}
+                    onChange={(id) => void attach(id)}
+                  />
+                )}
               </div>
 
               <ul className="flex-1 min-h-0 overflow-y-auto p-3 space-y-1.5">
@@ -731,7 +759,9 @@ export default function TerminalPage() {
                   <div className="space-y-2">
                     <p className="text-base text-grey-600">
                       {order.status === "settled"
-                        ? `Paid by ${order.paymentMethod}.`
+                        ? order.paymentMethod === "function"
+                          ? `On ${order.eventTitle ?? "the function"}'s bill.`
+                          : `Paid by ${order.paymentMethod}.`
                         : `Closed unpaid — ${order.abandonedReason}`}
                     </p>
                     {order.status === "settled" && (
@@ -823,11 +853,43 @@ export default function TerminalPage() {
                         ? "Send to the kitchen"
                         : "Kitchen has it all"}
                     </button>
+                    {/* ON A FUNCTION'S BILL (D17-21): paid there and
+                        nowhere else, so that is the one way offered — the
+                        others stay in sight, switched off, with the reason
+                        (Rule 6), rather than vanishing. */}
+                    {order.eventId && (
+                      <>
+                        <button
+                          type="button"
+                          disabled={busy
+                            || order.lines.filter((l) => !l.voided).length === 0}
+                          onClick={() => void settle("function")}
+                          className="w-full h-16 rounded-lg bg-brand-orange text-white text-lg font-semibold inline-flex items-center justify-center gap-2 disabled:opacity-40"
+                        >
+                          <CalendarHeart className="size-5 shrink-0" />
+                          <span className="truncate">
+                            Charge to {order.eventTitle ?? "the function"}
+                          </span>
+                        </button>
+                        <p className="text-2xs text-grey-600 leading-relaxed">
+                          This order is on {order.eventTitle ?? "a function"}'s
+                          bill, so the host pays for it there. To take cash,
+                          a card, UPI or a room, choose "Not for a function"
+                          above first.
+                        </p>
+                      </>
+                    )}
                     <button
                       type="button"
-                      disabled={order.lines.filter((l) => !l.voided).length === 0}
+                      disabled={Boolean(order.eventId)
+                        || order.lines.filter((l) => !l.voided).length === 0}
                       onClick={() => setSettling(true)}
-                      className="w-full h-16 rounded-lg bg-brand-orange text-white text-lg font-semibold inline-flex items-center justify-center gap-2 disabled:opacity-40"
+                      className={cn(
+                        "w-full h-16 rounded-lg text-lg font-semibold inline-flex items-center justify-center gap-2 disabled:opacity-40",
+                        order.eventId
+                          ? "border border-grey-300 text-ink-900"
+                          : "bg-brand-orange text-white",
+                      )}
                     >
                       <BedDouble className="size-5" />
                       Charge to a room
@@ -837,7 +899,7 @@ export default function TerminalPage() {
                         <button
                           key={m.key}
                           type="button"
-                          disabled={busy
+                          disabled={busy || Boolean(order.eventId)
                             || order.lines.filter((l) => !l.voided).length === 0}
                           onClick={() => void settle(m.key)}
                           className="h-16 rounded-lg border border-grey-300 text-base font-medium inline-flex flex-col items-center justify-center gap-1 disabled:opacity-40"

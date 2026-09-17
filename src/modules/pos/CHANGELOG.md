@@ -11,6 +11,92 @@ Work that touches the core or several services still goes in the root
 
 ---
 
+## 2026-09-17 (evening) · D17-21, the till's half — restaurant food on a banquet function's bill
+
+**Asked for:** the owner's D17-21 — *"the POS chat then lets staff attach an
+order to one of those functions when ordering (`pos_orders.event_id` exists).
+Banquet goes first."* The banquet chat committed its half (`f16a1bd`) during
+the day. The owner's answers the same afternoon: **build on banquet's commit**
+(its branch alone leaves Rule 2b red until the till calls its door); attach on
+**Tables, the Terminal and the Till**; an attached order is **paid on the
+function's bill only**, recorded as a new payment **"To a function"**.
+
+**Shipped** — branch `pos/d17-slip-addons-dates`, banquet's `f16a1bd` merged in
+(`30a8d3a`).
+- `db/migrations/099_pos_settled_to_a_function.sql` — payment method
+  `function` on orders and payment rows, and a bill settled to a function must
+  name one. Replay-guarded (MEMORY 284). **Number 099 is also the night-audit
+  chat's**; the master renumbers at merge.
+- `api/src/modules/pos/till.ts` — the order header and the pad's round take
+  `eventId`; the server asks banquet's `whyNotAttachable` (its front door)
+  before writing, and again before settling to the function; cash, card, UPI, a
+  room and a split are refused for an order on a function, with the function's
+  name; settling to it writes nothing to a folio; `readOrder` returns
+  `eventId` and `eventTitle`.
+- `components/FunctionPicker.tsx` — "Banquet function", banquet's list through
+  `@/modules/banquet`; not drawn where there is nothing to choose. On Tables'
+  pad (sent with the round), the Terminal's order and the Till's order.
+- The Terminal and the Till — an order on a function offers **Charge to
+  {function}** and shows room, cash, card, UPI (and on the Till, Part)
+  switched off with the reason. A settled one reads "On {function}'s bill".
+  The printed bill says "Charged to {function}'s bill". Close restaurant day
+  lists "To a function", and says it is not in the tin.
+- Tests: `api/test/modules/pos/functionOrders.test.ts` (8), `src/modules/pos/
+  functionOrders.test.tsx` (8), `db/tests/modules/pos.sql` (new, 8).
+- `MODULE.md` (endpoints, the picker, 099, banquet's door under "Leans on",
+  the rule), `DEFECTS.md` (POS-13).
+
+**Found**
+- **Why the payment question had to be asked:** `app.banquet_event_total` (061)
+  counts every settled order on a function whatever its method — cash at the
+  till would have been billed to the host as well.
+- **POS-13, mine, before commit:** the first database check, with the
+  constraint taken out, did not fail by name — its clean-up could not remove a
+  settled order's payment and the suite stopped. Rewritten to undo the attempt;
+  it now fails by name.
+
+**Proved** — this copy, after the last code edit
+- Web: `npx tsc -b --force` exit 0. `npx vitest run` three runs on this tree:
+  **302 of 303, exit 1** twice — each time `nightAudit.test.tsx` "sends the day
+  it shows" (its one-second wait, the night-audit chat's to fix; alone: 1
+  passed, exit 0); and **286 passed, exit 1** once, with `repositories.test.ts`
+  failing as a file — its error not captured; alone it passed 17 of 17 (Rule 2b
+  included), and it passed in both other runs. **No full web run on this tree
+  exited 0.** `npm run build` clean, "no test sign-in in dist".
+- API: `npx tsc --noEmit` exit 0 · strip-check 76 files · `npm test` **42
+  files, 773 tests, exit 0**.
+- Database: `db/tests/run.sh` **744 assertions, exit 0** (pos function 8 of 8) ·
+  `db/tests/rerun.sh` all 99 re-runnable, exit 0.
+- Guards against the faults put back: the server's four refusals removed → 4
+  of 8 failed (the cash one now on "the order was settled anyway"); six screen
+  faults → 7 of 8 failed; the constraint removed → "a bill settled to a function
+  with no function is refused | it was allowed". Each restored and green.
+- **Opened**, as the owner, API 8795 on `fidato_pos` (banquet switched on there,
+  a hall "Lawn", "Sharma wedding" confirmed for 25 August 18:00–23:30):
+  Tables AC6 — "Banquet function" offered Sharma wedding, chosen, Paneer
+  Butter Masala sent; the order written on the function. The Till — "Charge to
+  Sharma wedding" the one primary action, room/cash/card/UPI/Part off, the
+  reason; pressed → 200, "Settled today · function · ₹357". Banquet's page for
+  Sharma wedding — "Restaurant orders ₹357", "20260825-7 · Settled · Table
+  AC6"; total a dash (the hall is unpriced). Database: `pos_amount` 357 once, a
+  `function` payment row, no folio posting. Close restaurant day — "To a
+  function ₹357". The Terminal — a new order put on the function: the same
+  offer and the same switched-off buttons.
+
+**Left open**
+- A function chosen on Tables is not kept in the pad's saved draft (the draft's
+  shape is the core's); close the pad before Send and the choice goes.
+- Settling to a function with the line down gets the shared offline sentence
+  "…unless it is charged to a room" (`@/lib/offline.ts`, the core's).
+- The Till's list of today's bills reads "· function", as it reads "· cash".
+- **For the master:** merge banquet (`f16a1bd`) before this branch — it is in
+  this branch already; renumber 099 against night audit's; the root MEMORY
+  lessons from POS-8 and POS-13.
+
+**Commits:** the commit that adds this entry.
+
+---
+
 ## 2026-09-17 (later) · The owner's four answers: a blocked slip, the Menu on a phone, a table on the slip, how function food is paid
 
 **Asked for:** after `50080a0` the owner answered what that entry left open,

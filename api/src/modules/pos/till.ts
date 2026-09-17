@@ -4,6 +4,9 @@ import { randomUUID } from "node:crypto";
 import { withSession } from "../../auth.ts";
 import { businessDateFor } from "../../businessDate.ts";
 import type { PoolClient as Client } from "pg";
+/* The banquet service's rule for which functions an order may go on
+   (D17-21) — through its front door, never its files. */
+import { whyNotAttachable } from "../banquet/index.ts";
 
 /* ══════════════════════════════════════════════════════════════════
    THE TILL — the POS built into the PMS
@@ -899,6 +902,7 @@ async function readOrder(client: Client, orderId: string) {
     held_at: string | null;
     settled_by_name: string | null; settled_at: string | null;
     abandoned_reason: string | null; ticket_id: string | null;
+    event_id: string | null; event_title: string | null;
   }>(
     /* The hotel's details travel WITH the order, the way the invoice
        carries its own. A bill printed today should still read the same
@@ -917,7 +921,8 @@ async function readOrder(client: Client, orderId: string) {
             s1.full_name as opened_by_name,
             s2.full_name as settled_by_name,
             to_char(o.settled_at,'DD Mon, HH24:MI') as settled_at,
-            o.abandoned_reason, o.ticket_id::text
+            o.abandoned_reason, o.ticket_id::text,
+            o.event_id::text, e.title as event_title
        from pos_orders o
        join pos_outlets ou on ou.id = o.outlet_id
        join hotels h on h.id = o.hotel_id
@@ -925,6 +930,7 @@ async function readOrder(client: Client, orderId: string) {
        join staff s1 on s1.id = o.opened_by
        left join staff s2 on s2.id = o.settled_by
        left join staff s3 on s3.id = o.waiter_id
+       left join banquet_events e on e.id = o.event_id
       where o.id = $1`,
     [orderId],
   );
@@ -994,6 +1000,11 @@ async function readOrder(client: Client, orderId: string) {
     settledAt: h.settled_at,
     abandonedReason: h.abandoned_reason,
     ticketId: h.ticket_id,
+    /* The banquet function this order is on (D17-21), and its name for
+       the screen. An order on a function is paid on the function's bill
+       and settles to it alone. */
+    eventId: h.event_id,
+    eventTitle: h.event_title,
 
     /* The header. `covers` is people eating, not seats — average per
        cover is the metric a restaurant runs on, and a table for two
@@ -2261,8 +2272,16 @@ till.patch("/:code/till/orders/:id", async (c) => {
     customerAddress?: string | null;
     customerLocality?: string | null;
     held?: boolean;
+    /** The banquet function this order goes on (D17-21). Null takes it
+        off; absent leaves it as it is. */
+    eventId?: string | null;
   };
   const input = await c.req.json<HeaderBody>().catch(() => ({}) as HeaderBody);
+
+  if (input.eventId !== undefined && input.eventId !== null
+      && typeof input.eventId !== "string") {
+    return c.json(refuse("Which function is this order for?"), 409);
+  }
 
   const TYPES = ["dine_in", "takeaway", "room_service", "delivery"];
   if (input.orderType !== undefined && !TYPES.includes(input.orderType)) {
@@ -2287,6 +2306,17 @@ till.patch("/:code/till/orders/:id", async (c) => {
     if (!order[0]) return refuse("No such order.");
     if (order[0].status !== "open") {
       return refuse(`This order is ${order[0].status} and cannot be changed.`);
+    }
+
+    /* ON A BANQUET FUNCTION'S BILL (D17-21). Which functions may take an
+       order is the banquet service's rule, asked through its door — the
+       same rule its list for this screen is drawn from, so the till never
+       accepts a function the screen would not have offered. Asked BEFORE
+       the write: inside withSession a refusal after it is a commit
+       (MEMORY 243). Taking an order off a function needs no rule. */
+    if (input.eventId) {
+      const why = await whyNotAttachable(client, hotelId, input.eventId);
+      if (why) return refuse(why);
     }
 
     /* Only what was sent. A patch that wrote every column would blank
@@ -2318,6 +2348,7 @@ till.patch("/:code/till/orders/:id", async (c) => {
     if (input.held !== undefined) {
       sets.push(input.held ? "held_at = now()" : "held_at = null");
     }
+    if (input.eventId !== undefined) set("event_id", input.eventId || null);
 
     if (!sets.length) return refuse("Nothing to change.");
 
@@ -2711,6 +2742,16 @@ till.post("/:code/till/orders/:id/settle", async (c) => {
 
   const METHODS = ["room", "cash", "card", "upi"];
 
+  /* A FUNCTION IS NOT A WAY TO PAY PART OF A BILL (D17-21). An order on a
+     banquet function goes onto the function's bill whole — the host pays
+     it there — so 'function' is never one tender among several. */
+  if (Array.isArray(input.tenders)
+      && input.tenders.some((t) => t?.method === "function")) {
+    return c.json(refuse(
+      "A bill on a function goes to the function in full. Settle it to the "
+      + "function, or take it off the function and split it."), 409);
+  }
+
   /* Two shapes reach here. `method` alone is the ordinary bill: one way,
      the whole amount. `tenders` is the Part button — several payments that
      must add up. Both end as rows in pos_order_tenders, so the drawer
@@ -2764,7 +2805,8 @@ till.post("/:code/till/orders/:id/settle", async (c) => {
     ? (tenders.length === 1 ? tenders[0]!.method : "split")
     : input.method;
 
-  if (!method || !(METHODS.includes(method) || method === "split")) {
+  if (!method
+      || !(METHODS.includes(method) || method === "split" || method === "function")) {
     return c.json(refuse("How was this paid — room, cash, card or upi?"), 409);
   }
 
@@ -2777,19 +2819,43 @@ till.post("/:code/till/orders/:id/settle", async (c) => {
       status: string; order_no: string; outlet_id: string;
       business_date: string; outlet_name: string; category: string;
       order_type: string; customer_phone: string | null;
+      event_id: string | null; event_title: string | null;
     }>(
       `select o.status, o.order_no, o.outlet_id::text,
               to_char(o.business_date,'YYYY-MM-DD') as business_date,
               ou.name as outlet_name, ou.category,
-              o.order_type, o.customer_phone
+              o.order_type, o.customer_phone,
+              o.event_id::text, e.title as event_title
          from pos_orders o
          join pos_outlets ou on ou.id = o.outlet_id
+         left join banquet_events e on e.id = o.event_id
         where o.id = $1 and o.hotel_id = $2`,
       [orderId, hotelId],
     );
     if (!order[0]) return refuse("No such order.");
     if (order[0].status !== "open") {
       return refuse(`This order is already ${order[0].status}.`);
+    }
+
+    /* ON A FUNCTION'S BILL, PAID THERE AND NOWHERE ELSE — the owner's
+       answer of 17 September (D17-21). The function's bill already counts
+       every settled order on it (app.banquet_event_total, 061), so cash
+       taken here as well would bill the host for food already paid for. */
+    const onFunction = order[0].event_id;
+    if (onFunction && method !== "function") {
+      return refuse(
+        `This order is on ${order[0].event_title ?? "a function"}'s bill. `
+        + "Settle it to the function, or take it off the function first.");
+    }
+    if (method === "function") {
+      if (!onFunction) {
+        return refuse("This order is not on a function. Choose the function first.");
+      }
+      /* Asked again at the settle, not only when it was attached: a
+         function can be cancelled, or its bill closed, while dinner is
+         being eaten. */
+      const why = await whyNotAttachable(client, hotelId, onFunction);
+      if (why) return refuse(why);
     }
 
     /* YOU CANNOT DELIVER TO NOBODY, and the database says so at
@@ -2858,7 +2924,9 @@ till.post("/:code/till/orders/:id/settle", async (c) => {
       }
     };
 
-    /* ── Cash, card, upi: nothing touches a folio ────────────────── */
+    /* ── Cash, card, upi — and a function: nothing touches a folio ──
+       A function's bill is the banquet service's sum, which counts this
+       order once it is settled (099). */
     if (method !== "room") {
       await client.query(
         `update pos_orders
@@ -3219,8 +3287,16 @@ till.post("/:code/till/orders/batch", async (c) => {
        taking an order has finished; making them press twice is a tap
        they pay for at every table. */
     send?: boolean;
+    /* The banquet function this order goes on (D17-21), chosen on the
+       pad. Null takes an open order off its function; absent leaves it. */
+    eventId?: string | null;
   };
   const input = await c.req.json<BatchBody>().catch(() => ({}) as BatchBody);
+
+  if (input.eventId !== undefined && input.eventId !== null
+      && typeof input.eventId !== "string") {
+    return c.json(refuse("Which function is this order for?"), 409);
+  }
 
   const lines = input.lines ?? [];
   if (lines.length === 0) return c.json(refuse("There is nothing to send."), 409);
@@ -3242,6 +3318,13 @@ till.post("/:code/till/orders/batch", async (c) => {
     let businessDate: string;
     let opened = false;
 
+    /* The banquet service's rule, before anything is written (D17-21;
+       MEMORY 243). The same rule as the header route's. */
+    if (input.eventId) {
+      const why = await whyNotAttachable(client, hotelId, input.eventId);
+      if (why) return refuse(why);
+    }
+
     if (orderId) {
       const { rows } = await client.query<{
         status: string; outlet_id: string; business_date: string;
@@ -3259,6 +3342,14 @@ till.post("/:code/till/orders/batch", async (c) => {
       }
       outletId = rows[0].outlet_id;
       businessDate = rows[0].business_date;
+
+      if (input.eventId !== undefined) {
+        await client.query(
+          `update pos_orders set event_id = $1, updated_at = now()
+            where id = $2 and hotel_id = $3`,
+          [input.eventId || null, orderId, hotelId],
+        );
+      }
     } else {
       const { rows: outlet } = await client.query<{ id: string }>(
         `select id::text from pos_outlets
@@ -3280,14 +3371,14 @@ till.post("/:code/till/orders/batch", async (c) => {
       const { rows: made } = await client.query<{ id: string }>(
         `insert into pos_orders
            (hotel_id, outlet_id, order_no, business_date, opened_by,
-            table_ref, table_id, order_type)
+            table_ref, table_id, order_type, event_id)
          values ($1, $2, app.pos_next_order_no($1, $3::date), $3::date, $4,
                  coalesce((select t.label from pos_tables t where t.id = $6::uuid), $5),
-                 $6::uuid, coalesce($7, 'dine_in'))
+                 $6::uuid, coalesce($7, 'dine_in'), $8::uuid)
          returning id::text`,
         [hotelId, outletId, businessDate, session.staffId,
          input.table?.trim() || null, input.tableId || null,
-         input.orderType || null],
+         input.orderType || null, input.eventId || null],
       );
       orderId = made[0]!.id;
       opened = true;

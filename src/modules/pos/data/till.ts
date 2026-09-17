@@ -166,6 +166,11 @@ export interface Order {
   settledAt: string | null;
   abandonedReason: string | null;
   ticketId: string | null;
+  /** The banquet function this order is on (D17-21), and its name. An
+      order on a function is paid on the function's bill: it settles "to
+      the function" and no other way (the owner, 17 September). */
+  eventId: string | null;
+  eventTitle: string | null;
   lines: OrderLine[];
 
   net: number;
@@ -568,7 +573,9 @@ export async function moveKitchenLine(
 
 export function settleOrder(
   hotelId: string, orderId: string,
-  method: "room" | "cash" | "card" | "upi",
+  /** "function" — onto the banquet function the order is on, whole
+      (D17-21). The server refuses every other method for such an order. */
+  method: "room" | "cash" | "card" | "upi" | "function",
   room?: string, folioId?: string,
 ): Promise<TillResult> {
   return write(`/api/hotels/${hotelId}/till/orders/${orderId}/settle`,
@@ -896,6 +903,9 @@ export async function sendOrder(
     /** Straight to the kitchen in the same breath. A waiter who has
         finished taking an order has finished. */
     send?: boolean;
+    /** The banquet function this order goes on (D17-21). Null takes an
+        open order off its function; absent leaves it as it is. */
+    eventId?: string | null;
   },
 ): Promise<SendResult> {
   try {
@@ -957,6 +967,8 @@ export interface OrderHeader {
   customerAddress?: string | null;
   customerLocality?: string | null;
   held?: boolean;
+  /** The banquet function (D17-21). Null takes the order off it. */
+  eventId?: string | null;
 }
 
 export async function setOrderHeader(

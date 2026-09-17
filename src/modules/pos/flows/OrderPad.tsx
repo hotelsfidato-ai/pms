@@ -12,7 +12,8 @@ import {
   Button, Dialog, DialogContent, Input, StatusPill, toast,
 } from "@/components/ui";
 import { DishDialog } from "@/modules/pos/flows/DishDialog";
-import { getMenu, sendOrder, type MenuItem } from "@/modules/pos/data/till";
+import { getMenu, getOrder, sendOrder, type MenuItem } from "@/modules/pos/data/till";
+import { FunctionPicker } from "@/modules/pos/components/FunctionPicker";
 import { ReadFailed } from "@/modules/pos/components/ReadProblem";
 import { openSlip, type BlockedSlip } from "@/modules/pos/components/SlipNotice";
 
@@ -76,6 +77,21 @@ export function OrderPad({
     queryFn: () => getMenu(hotelId),
     enabled: Boolean(hotelId),
   });
+
+  /* ── Which banquet function (D17-21) ──────────────────────────
+     A second round on an open bill shows the function it is already on;
+     `undefined` is "not touched here", and only a change is sent. Not
+     kept with the draft: the draft's shape is the core's (`@/lib/draft`),
+     and a function is chosen at the moment of sending. */
+  const existing = useQuery({
+    queryKey: ["till-order", hotelId, orderId],
+    queryFn: () => getOrder(hotelId, orderId!),
+    enabled: open && Boolean(orderId),
+  });
+  const [eventChoice, setEventChoice] = useState<string | null | undefined>(undefined);
+  useEffect(() => { if (!open) setEventChoice(undefined); }, [open]);
+  const eventId = eventChoice !== undefined
+    ? eventChoice : (existing.data?.eventId ?? null);
 
   /* ── Reopening ────────────────────────────────────────────────
      Whatever was on this table when the app was last closed. Loaded
@@ -191,6 +207,7 @@ export function OrderPad({
         ...(l.addonIds.length ? { addonIds: l.addonIds } : {}),
       })),
       send: true,
+      ...(eventChoice !== undefined ? { eventId: eventChoice } : {}),
     });
     setSending(false);
 
@@ -418,6 +435,15 @@ export function OrderPad({
                   works, but closing the app loses it.
                 </p>
               )}
+
+              <FunctionPicker
+                className="mb-3"
+                hotelId={hotelId}
+                value={eventId}
+                currentTitle={existing.data?.eventTitle ?? null}
+                disabled={sending}
+                onChange={setEventChoice}
+              />
 
               {lines.length === 0 ? (
                 <p className="text-sm text-grey-600 leading-relaxed py-3">

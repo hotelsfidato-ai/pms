@@ -14,11 +14,19 @@ entries stay here: they are the reason the fault does not come back.
 
 ## Open — not fixed
 
-None, as of 17 September. D17-21 (a restaurant order on a banquet function's bill) is work waiting on the banquet chat's front door, not a defect — `MODULE.md`, Open items.
+None, as of 17 September.
 
 ---
 
 ## Fixed
+
+### POS-13 · MINE: a database check that crashed the suite instead of failing — caught before commit
+
+**Found** — 17 September, building D17-21. `db/tests/modules/pos.sql` checks that a bill settled "to a function" with no function is refused. With the constraint taken out of the migration, the suite exited 1 — but not on that check: the wrong settle went through, and the file's own clean-up then could not remove a settled order's payment ("tenders on a settled order cannot be removed"), so the whole suite stopped with "the suite did not finish". A red run for the wrong reason, and every assertion after it silently unrun.
+
+**What was done** — The attempt runs inside its own block that raises to undo itself when the settle is allowed, and records "it was allowed"; the check fails by name. Re-run with the constraint out: `pos function 7 passed, 1 failed — a bill settled to a function with no function is refused | it was allowed`, the suite finished. Restored: 744 of 744.
+
+**The rule** — A guard's failure proves something only when it is the guard's own message (root MEMORY 259). A check whose failure case leaves rows its clean-up cannot remove turns one failure into a stopped suite — undo the attempt inside the check.
 
 ### POS-12 · An order taken on Tables printed no table — on its kitchen slip, its bill and the Terminal's list — FIXED 17 September
 
