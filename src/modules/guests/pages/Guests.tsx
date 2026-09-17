@@ -127,7 +127,12 @@ export function GuestsPage() {
   );
 }
 
-/* ── Booking sources ─────────────────────────────────────────────
+/* ── Companies and agents ────────────────────────────────────────
+   Headed "Booking sources" until 17 September — which is also the
+   name of the commission list under Configuration, so the heading now
+   says what the menu says (GUE-1; `nav.ts`). The history below is why
+   it stopped being "Companies" alone.
+
    CALLED "COMPANIES" UNTIL SOMEBODY LOOKED AT IT. In hotel software a
    company is a corporate account — a firm that books rooms for its own
    staff and settles monthly on the city ledger. This screen is not that.
@@ -210,8 +215,11 @@ export function CompaniesPage() {
 
   return (
     <Page>
+      {/* The menu's words (GUE-1; the owner, 17 September, D17-22).
+          It said "Booking sources" — the name of a different screen,
+          under Configuration — so one name meant two places. */}
       <PageHeader
-        title="Booking sources"
+        title="Companies and agents"
         description="Where the business came from, and what each channel is worth."
       />
 
