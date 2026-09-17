@@ -1,5 +1,6 @@
 import type { Mount } from "../../mount.ts";
 import { connection } from "./connection.ts";
+import { content } from "./content/routes.ts";
 
 /* The front door of the channel manager on the server — the only file the core
    or another service may import (src/test/boundaries.test.ts).
@@ -9,7 +10,10 @@ import { connection } from "./connection.ts";
    channel-manager chat adds its routers here and never has to touch
    `server.ts`, which every service shares.
 
-   Part 1 (token login): `connection` — is SU set up, and does its login work. */
+   Part 1 (token login): `connection` — is SU set up, and does its login work.
+   Part 2 (content): `content` — a hotel's SU id, its room types and rate plans
+   mapped, and sent to SU. */
 export const mounts: readonly Mount[] = [
   ["/api", connection],
+  ["/api/hotels", content],
 ];

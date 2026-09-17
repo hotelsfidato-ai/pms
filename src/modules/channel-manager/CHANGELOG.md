@@ -12,6 +12,70 @@ nothing is sent to SU or any booking site until the owner has SU's test keys.**
 
 ---
 
+## 2026-09-17 · SU connection, part 2: the hotel, its room types and rate plans
+
+**Asked for:** part 2 of D17-66, in order after the login: the property, its room
+types and its rate plans sent to SU from the PMS, with a mapping table per hotel.
+The master's answers to part 1 (17 September): migration **107** (106 is the
+Store's); SU settings stay in `su/config.ts`; owner only until the owner answers.
+
+**Shipped**
+- **107 the SU mapping:** `channel_hotels` (SU hotel id, unique in the group in any
+  case; postcode, country, position, contact name, description; `on_su`; the last
+  send), `channel_room_types` (SU room id unique per hotel in any case, SU room type,
+  children at most, `is_connected`, `on_su`, the last send), `channel_rate_plans`
+  (a meal plan as an SU rate plan). Row security per hotel, forced; no delete for
+  the application; audited; nothing created for any hotel.
+- Routes under `/api/hotels/:code/channel-manager`: `GET content`, `PUT hotel`,
+  `PUT room-types/:id`, `PUT rate-plans/:mealPlan`, `POST content/send`. Owner of the
+  hotel only (`access.ts`, the `integration` grant).
+- Sending: everything SU requires is checked first and every gap named at once;
+  then the property (New, then Overlay, whole every time), room types (Initial,
+  Modify, Deactivated, Active), rate plans (New, Overlay, Remove, Activate), one
+  request each; `on_su` moves only on SU's acceptance; an SU id cannot change once
+  SU has it; the live account only for a hotel switched on
+  (`app.module_enabled(hotel, 'channel_manager')`, the master's switch, off today).
+- The owner's SU setup on the channel manager page (`components/SuSetup.tsx`,
+  `data/su.ts`): the login, the hotel on SU, room types, meal plans, *Send to SU*.
+  Nothing suggested or filled in; rack rate "-" when none. Admin and GM see the page
+  without it.
+
+**Found**
+- The demo 5 Elements' phone is `+91 2181 220 555`. SU refuses spaces, so the send
+  names it rather than rewriting the number: the hotel record is the owner's.
+- The design system's `Checkbox` gives the checkbox itself no accessible name (the
+  label sits beside it). Seen with the browser's accessibility read; not changed,
+  the component is the master's.
+
+**Proved** — in `D:\fidato-channel-manager`, on this commit's tree
+- `api: npm test`: 937 passed, 54 files, exit 0 (11 new in `suContent.test.ts`).
+  **Broken on purpose, seen to fail, restored:** the check-before-send skipped (2
+  red), `on_su` moved on a refusal (1 red), an SU id allowed to change (1 red), the
+  live account allowed for a hotel not switched on (1 red).
+- `bash db/tests/run.sh`: 808 assertions passed, su mapping 21. **Broken on
+  purpose:** the rate plan id made case-sensitive, and "a second rate plan cannot
+  take ep" went red; restored. `bash db/tests/rerun.sh`: all migrations re-runnable.
+- `npx tsc -b --force`: clean. `npx vitest run`: 346 passed, 1 failed, exit 1 - the
+  failure is `migrationNumbers` ("no gaps"), because 107 is here and the Store's 106
+  is not yet in cp6; expected, told to the master. The 2 new screen tests: owner sees
+  the setup with *Send to SU* disabled; a GM does not, and the setup is never asked
+  for. **Broken on purpose:** the setup shown to everybody, and the GM test went red.
+- `npm run build`: exit 0, no test sign-in in dist.
+- Opened as the owner at `/h/5EL/channels` on this copy's servers: saved the hotel's
+  SU details (toast "Saved. Nothing has been sent to SU."; the list of what SU needs
+  shrank to the phone's format), saved Deluxe as DLX, Triple, 2 children, to SU; the
+  rows are in the database and the audit log; after a reload the row reads back DLX /
+  Triple, not sent; no console error after the reload.
+- `npm run lane -- channel-manager`: all mine but `db/migrations/107_…` (shared core;
+  the number is the master's).
+
+**Left open**
+- A real send: SU's test keys (the owner).
+- Part 3, rates and availability: next. Part 4 waits on the owner's answers through the
+  master.
+
+---
+
 ## 2026-09-17 · SU connection, part 1: the token login
 
 **Asked for:** the owner, 17 September (D17-66): build SU's mandatory set in
