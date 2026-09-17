@@ -284,7 +284,7 @@ async function propertyWhere(client: Client, where: string, value: string): Prom
 
 /** The property as a report heads it. */
 export const heading = (p: Property) =>
-  ({ code: p.code, name: p.name, address: p.address, gstin: p.gstin });
+  ({ code: p.code, name: p.name, address: p.address, gstin: p.gstin, timezone: p.timezone });
 
 /** A date sent in a query string, or null if it is not one. */
 export function isoDateParam(value: string | undefined): string | null {

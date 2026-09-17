@@ -46,7 +46,7 @@ export function DocumentReport({
       title={doc?.title ?? title}
       property={doc?.property.name}
       period={period}
-      meta={doc ? factsLine(doc.facts) : undefined}
+      meta={doc ? factsLine(doc.facts, doc.property.timezone) : undefined}
       csv={doc ? () => documentCsv(doc) : undefined}
       controls={controls}
     >

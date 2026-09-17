@@ -15,7 +15,7 @@ import type { ReportDoc } from "@/modules/reports/data/document";
 const DOC: ReportDoc = {
   report: "lodging-tax",
   title: "Lodging tax",
-  property: { code: "5EL", name: "5 Elements Akkalkot", address: null, gstin: null },
+  property: { code: "5EL", name: "5 Elements Akkalkot", address: null, gstin: null, timezone: "Asia/Kolkata" },
   orientation: "landscape",
   facts: [{ label: "Month", value: "August 2026", kind: "text" }],
   sections: [
@@ -59,6 +59,14 @@ describe("a report document on screen", () => {
     render(<ReportView doc={DOC} />);
     const negative = screen.getByText("-₹784.00");
     expect(negative.className).toContain("text-brand-red");
+  });
+
+  it("prints dates and moments as the owner's reports do", () => {
+    expect(formatCell("2026-08-25", "date")).toBe("25/08/2026");
+    expect(formatCell("2026-08-25T10:42:43Z", "datetime", "Asia/Kolkata")).toBe("25/08/2026 04:12:43 PM");
+    expect(formatCell("Total", "date")).toBe("Total");
+    render(<ReportView doc={DOC} />);
+    expect(screen.getByText("25/08/2026")).toBeDefined();
   });
 
   it("puts grouped columns under one heading that spans them", () => {

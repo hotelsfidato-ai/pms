@@ -4,7 +4,7 @@ import {
   ResponsiveContainer, Legend,
 } from "recharts";
 import { cn } from "@/lib/cn";
-import { moneyPrecise, number, percent, dateShort, dateTime, isValidDate } from "@/lib/format";
+import { moneyPrecise, number, percent, dateReport, dateTimeReport, isValidDate } from "@/lib/format";
 import type {
   ReportDoc, ReportSection, ReportColumn, ReportRow, Cell, CellKind, ReportFact,
 } from "@/modules/reports/data/document";
@@ -23,12 +23,13 @@ import type {
 /** A figure nobody holds (D17-49): a short hyphen, never a zero. */
 export const NO_FIGURE = "-";
 
-export function formatCell(value: Cell, kind: CellKind): string {
+/** Dates as the owner's eZee reports print them (D17-77): 25/08/2026. */
+export function formatCell(value: Cell, kind: CellKind, timeZone = "Asia/Kolkata"): string {
   if (value === null || value === undefined || value === "") return NO_FIGURE;
   if (typeof value === "string") {
     /* A label in a date column ("Total") is words, not a broken date. */
-    if (kind === "date" && isValidDate(value)) return dateShort(value);
-    if (kind === "datetime" && isValidDate(value)) return dateTime(value);
+    if (kind === "date" && /^\d{4}-\d{2}-\d{2}$/.test(value)) return dateReport(value);
+    if (kind === "datetime" && isValidDate(value)) return dateTimeReport(value, timeZone);
     return value;
   }
   switch (kind) {
@@ -42,8 +43,8 @@ export function formatCell(value: Cell, kind: CellKind): string {
 
 const numeric = (kind: CellKind) => kind !== "text" && kind !== "date" && kind !== "datetime";
 
-export function factsLine(facts: ReportFact[]) {
-  return facts.map((f) => `${f.label} ${formatCell(f.value, f.kind)}`).join("   ");
+export function factsLine(facts: ReportFact[], timeZone?: string) {
+  return facts.map((f) => `${f.label} ${formatCell(f.value, f.kind, timeZone)}`).join("   ");
 }
 
 export function ReportView({ doc }: { doc: ReportDoc }) {
@@ -54,7 +55,7 @@ export function ReportView({ doc }: { doc: ReportDoc }) {
         <table key={run[0]!.key} className="w-full border-collapse text-sm">
           <Head columns={run[0]!.columns} />
           {run.map((section) => (
-            <SectionBody key={section.key} section={section} />
+            <SectionBody key={section.key} section={section} timeZone={doc.property.timezone ?? "Asia/Kolkata"} />
           ))}
         </table>
       ))}
@@ -139,7 +140,7 @@ function Head({ columns }: { columns: ReportColumn[] }) {
   );
 }
 
-function SectionBody({ section }: { section: ReportSection }) {
+function SectionBody({ section, timeZone }: { section: ReportSection; timeZone: string }) {
   const span = section.columns.length;
   return (
     <tbody>
@@ -160,7 +161,7 @@ function SectionBody({ section }: { section: ReportSection }) {
         </tr>
       ) : (
         section.rows.map((r, i) => (
-          <Line key={i} row={r} columns={section.columns} />
+          <Line key={i} row={r} columns={section.columns} timeZone={timeZone} />
         ))
       )}
       {section.note && (
@@ -176,7 +177,7 @@ function SectionBody({ section }: { section: ReportSection }) {
 
 const INDENT = ["", "pl-7", "pl-11", "pl-15"];
 
-function Line({ row, columns }: { row: ReportRow; columns: ReportColumn[] }) {
+function Line({ row, columns, timeZone }: { row: ReportRow; columns: ReportColumn[]; timeZone: string }) {
   if (row.kind === "band") {
     const first = columns[0]!;
     return (
@@ -213,7 +214,7 @@ function Line({ row, columns }: { row: ReportRow; columns: ReportColumn[] }) {
               typeof value === "number" && value < 0 && kind === "money" && "text-brand-red",
             )}
           >
-            {formatCell(value, kind)}
+            {formatCell(value, kind, timeZone)}
           </td>
         );
       })}
