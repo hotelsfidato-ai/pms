@@ -74,8 +74,15 @@ green "  all migrations applied to an empty database"
 # writes a kind 095's list does not have — but only for properties that exist.
 # Here there were none, so the second pass was green; the local database had
 # one, and failed. Production has five. So give the second pass a property.
+# And SWITCH A MODULE ON for it. A constraint on `hotel_modules.module` is
+# validated against the rows that are there, so a migration that rewrites that
+# constraint is only tested by a replay that has such a row. Without this, 087
+# put the narrow module list back over 108's wider one and every pass here was
+# green while the next real deploy would have rolled back (MEMORY 293).
 if ! out=$("$PSQL" $S -d "$DB" -q -v ON_ERROR_STOP=1 \
-     -c "insert into hotels (code, name, city) values ('RRN','Rerun Property','Nowhere')" 2>&1); then
+     -c "insert into hotels (code, name, city) values ('RRN','Rerun Property','Nowhere')" \
+     -c "insert into hotel_modules (hotel_id, module, is_enabled)
+         select id, 'channel_manager', true from hotels where code = 'RRN'" 2>&1); then
   red "  x could not create a property between the passes"
   echo "$out" | grep -m1 "ERROR" | sed 's/^/      /'
   exit 1

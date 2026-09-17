@@ -196,7 +196,7 @@ export function CashierShiftPage() {
         rows: rows.map((r) => [
           /* A dash, never "System". 042 established that a posting with
              no attributed staff says so. */
-          r.cashier ?? "—", r.method, r.count, r.amount,
+          r.cashier ?? "-", r.method, r.count, r.amount,
         ]),
       })}
     >
@@ -316,13 +316,13 @@ export function GstSalesPage() {
                     )}
                   </td>
                   <td className="px-4 py-2 tabular text-grey-600">{dateShort(r.issued)}</td>
-                  <td className="px-4 py-2 text-grey-700">{r.recipient ?? "—"}</td>
+                  <td className="px-4 py-2 text-grey-700">{r.recipient ?? "-"}</td>
                   <td className="px-4 py-2 tabular text-grey-600">
                     {/* A dash, not "URP". An unregistered recipient is a
                         fact; a code invented here would not be. */}
-                    {r.gstin ?? <span className="text-grey-500">—</span>}
+                    {r.gstin ?? <span className="text-grey-500">-</span>}
                   </td>
-                  <td className="px-4 py-2 text-grey-600">{r.placeOfSupply ?? "—"}</td>
+                  <td className="px-4 py-2 text-grey-600">{r.placeOfSupply ?? "-"}</td>
                   <td className="px-4 py-2 text-right"><Amount value={r.taxable} format={money} /></td>
                   <td className="px-4 py-2 text-right"><Amount value={r.cgst} format={money} /></td>
                   <td className="px-4 py-2 text-right"><Amount value={r.sgst} format={money} /></td>
@@ -352,7 +352,7 @@ export function GstSalesPage() {
             Credit notes appear as their own rows with negative values, because
             that is how they are filed. Netting them into the invoice would
             leave this register disagreeing with the invoices actually issued.
-            Place of supply is the property's state on every row — accommodation
+            Place of supply is the property's state on every row - accommodation
             is supplied where the hotel is, so a hotel supply is never IGST.
           </p>
         </>
@@ -436,7 +436,7 @@ export function CFormPage() {
                     )}
                   </td>
                   <td className="px-4 py-2 tabular text-grey-700">
-                    {r.visaNumber ?? <span className="text-grey-500">—</span>}
+                    {r.visaNumber ?? <span className="text-grey-500">-</span>}
                     {r.visaExpiry && (
                       <span className="block text-2xs text-grey-500">
                         expires {dateShort(r.visaExpiry)}

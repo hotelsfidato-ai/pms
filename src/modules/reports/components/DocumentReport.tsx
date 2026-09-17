@@ -22,6 +22,18 @@ function useHotel(): string {
 }
 
 /** One report screen: load the document, then draw it. */
+/** The question this screen asked, as the file routes take it. */
+function fileQuery(query: ReportQuery): string {
+  const params = new URLSearchParams();
+  if (query.asOn) params.set("asOn", query.asOn);
+  if (query.month) params.set("month", query.month);
+  if (query.year) params.set("year", String(query.year));
+  if (query.from) params.set("from", query.from);
+  if (query.ignoreZero !== undefined) params.set("ignoreZero", query.ignoreZero ? "1" : "0");
+  const qs = params.toString();
+  return qs ? `?${qs}` : "";
+}
+
 export function DocumentReport({
   report, title, period, query, what, controls,
 }: {
@@ -49,6 +61,12 @@ export function DocumentReport({
       meta={doc ? factsLine(doc.facts, doc.property.timezone) : undefined}
       csv={doc ? () => documentCsv(doc) : undefined}
       controls={controls}
+      download={{
+        ready: Boolean(doc),
+        /* The server's file routes, asked the same question the screen
+           asked, so the file and the screen cannot show two answers. */
+        path: (kind) => `/api/hotels/${hotelId}/reports/${report}.${kind}${fileQuery(query)}`,
+      }}
     >
       {q.isLoading ? (
         <div className="p-5 space-y-2">

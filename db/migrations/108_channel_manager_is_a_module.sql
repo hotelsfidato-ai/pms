@@ -12,10 +12,24 @@
 -- every property made later — stays off until the owner or an administrator
 -- turns it on, on the Settings screen (D17-36: the switches are theirs).
 --
--- Replayed on every deploy, like every file here: the constraint is dropped
--- if it is there and put back, which is what 087 does and is safe to repeat.
+-- Replayed on every deploy, like every file here, so the rewrite is GUARDED BY
+-- WHAT IT ADDS: it touches the constraint only when the constraint does not
+-- already accept 'channel_manager'. 087 is guarded the same way, and for a
+-- sharper reason - it replays BEFORE this file and would otherwise put the
+-- narrower list back over the top of this one, failing on the first hotel
+-- switched on (MEMORY 293).
 -- =============================================================================
 
-alter table hotel_modules drop constraint if exists hotel_modules_known;
-alter table hotel_modules add constraint hotel_modules_known
-  check (module in ('pos', 'banquet', 'reception_pos', 'channel_manager'));
+do $$
+begin
+  if not exists (
+    select 1 from pg_constraint
+     where conrelid = 'hotel_modules'::regclass
+       and conname  = 'hotel_modules_known'
+       and pg_get_constraintdef(oid) like '%channel_manager%'
+  ) then
+    alter table hotel_modules drop constraint if exists hotel_modules_known;
+    alter table hotel_modules add constraint hotel_modules_known
+      check (module in ('pos', 'banquet', 'reception_pos', 'channel_manager'));
+  end if;
+end $$;
