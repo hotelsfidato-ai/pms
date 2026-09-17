@@ -14,15 +14,21 @@ entries stay here: they are the reason the fault does not come back.
 
 ## Open — not fixed
 
+None.
+
+---
+
+## Fixed
+
 ### GUE-1 · Companies and agents opens a screen headed "Booking sources"
 
 **Found** — 15 September, writing the brief; confirmed on screen 16 September.
 
 Worse than the other heading mismatches: "Booking sources" is also the name of a different, real screen, so the same words name two places.
 
-**The fix, when it is done** — Make the heading the menu's words: "Companies and agents".
+**What was done** — 17 September, the owner's answer D17-22 ("the heading is the menu name"; `docs/briefs/decisions-2026-09-17.md`). `CompaniesPage` in `pages/Guests.tsx` is headed "Companies and agents", and so is its browser tab. `guests.test.tsx` opens all four of this service's screens and compares each heading and tab with that screen's own entry in `nav.ts`; with the old heading put back, it failed. Branch `guests/brief`.
 
-**The rule** — Two screens with one name is the fault the menu tests exist to catch.
+**The rule** — Two screens with one name is the fault the menu tests exist to catch — and they could not catch this one, because they read `nav.ts` and never a page. A heading is checked on the rendered screen, against the menu entry it sits under.
 
 ---
 

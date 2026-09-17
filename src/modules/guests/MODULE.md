@@ -50,9 +50,10 @@ they read the property in view (`useHotel` in `Guests.tsx`). Form C sits in
 the Finance section on purpose — it is filed by the person who bills, and
 "burying it under Reports is how a 24-hour deadline gets missed" (`nav.ts`).
 
-⚠ The `/companies` screen's heading — and so its browser tab — reads
-"Booking sources", not "Companies and agents": GUE-1 in this folder's
-`DEFECTS.md`.
+Each screen's heading and browser tab are its menu label — the owner's
+rule, D17-22 (17 September). `guests.test.tsx` opens all four and fails
+if a heading and its `nav.ts` entry disagree. `/companies` read "Booking
+sources" until then: GUE-1, fixed.
 
 ## Server endpoints
 
@@ -167,7 +168,8 @@ wrong as a picker into anything that wants a company (MEMORY 83).
   (`directory.ts` header) — ask the owner before building a merge.
 - **Menu label, heading and browser tab say the same words**
   (`HANDOVER.md` § 6). "Companies and agents" is the name for `/companies`
-  (MEMORY 228); GUE-1 is where the heading still disagrees.
+  (MEMORY 228), and since GUE-1 was fixed its heading says so too
+  (guarded by `guests.test.tsx`).
 - **Form C:** the `formC` line of `src/lib/glossary.ts` is the one definition
   — "reported to the FRRO within 24 hours of arrival; anybody whose
   nationality is not Indian needs one"; change the rule, change the line.
@@ -193,10 +195,6 @@ wrong as a picker into anything that wants a company (MEMORY 83).
 
 From `PENDING.md`, and one found while writing this brief:
 
-- **GUE-1, found while writing this brief:** `/companies` shows the heading
-  and browser tab "Booking sources" under the menu entry "Companies and
-  agents" — the same words as the real Booking sources screen. Seen in the
-  code (`pages/Guests.tsx`, `CompaniesPage`), not yet on screen; not fixed.
 - **`companies` contains channels** — "Walk-in", "Fidato Hotels" and
   "Walk-In" are rows there, still offered as Business source; cleaning them
   up means checking nothing points at them first (PENDING § 6). The demo's
@@ -214,8 +212,11 @@ From `PENDING.md`, and one found while writing this brief:
 
 ## Gates
 
-Before the first edit: claim this service in `HANDOVER.md` → Folder claims
-(service, branch, date), and work in your own worktree with your own
+Before the first edit: claim this service with `npm run claim -- guests
+"what you are doing"` (from a copy older than that command,
+`node "D:\fidato pms\scripts\claim.mjs" claim guests "…"`), and
+`npm run release -- guests` when you stop — never in `HANDOVER.md` and
+never a committed file. Work in your own worktree with your own
 database and ports — how, in `AGENTS.md` ("Before your first write"); the
 rules for parallel agents, in `docs/SERVICE-FOLDERS-PLAN.md`.
 
@@ -248,6 +249,8 @@ The guards this service must respect:
 - `src/test/migrationNumbers.test.ts` — one number, one migration.
 - `src/components/app/navigation.test.ts` — pins Reception's working menu;
   sentence case; no two menu entries share a name.
+- `src/modules/guests/guests.test.tsx` — each of the four screens is headed
+  and tabbed with its own menu label (GUE-1, D17-22).
 - `src/components/ui/primaryAction.test.ts` — every dialog declares its main
   action.
 - `src/data/repositories/repositories.test.ts` — no exported data function
