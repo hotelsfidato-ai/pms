@@ -129,6 +129,31 @@ Then, second question: **can this POS route a KOT and give a printout?**
 
 ---
 
+## 2026-09-17 (evening) · The owner's D17 answers, built by seven chats and merged
+
+**Asked for:** the owner interviewed on every open question (25 answers,
+`docs/briefs/decisions-2026-09-17.md`), seven chats built their share, then "what is
+pending next".
+
+**Merged, audited first** (lane, migrations, edits outside their service):
+banquet (Diary heading, a function's bill shows its restaurant orders), POS (kitchen
+slip from Tables, add-on switches, dated closes with the hotel's name, the till's half
+of banquet food; migration 099), night audit (a second press shows the record, closed
+days listed, a closed day's record is the GM's; 099→**100**), guests (GUE-1), finance
+(FIN-1; FIN-2 traced, not built), admin (the audit log names the person, the server
+refuses what the screen refuses; 099→**101**), housekeeping (words on room cards,
+repairs on equipment with proof and automatic status; 099→**102**; its three edits to
+equipment reviewed: through both front doors, hotel-scoped), stores STO-2..11.
+
+**Proved:** web 327 · API 873 · database 785 with 102 migrations · replay 102/102 ·
+build clean. Opened: Closed days on Night audit, labels on room cards, the Store,
+Companies and agents. The four new migrations read for production-only privilege
+gaps: guarded rewrites, one security-definer function owned by the migrator.
+
+**Not done — the master's:** D17-1, D17-3, D17-10, D17-11, INV-2, REP-6, FD-5, FIN-2.
+
+---
+
 ## 2026-09-17 (morning) · A blind audit of 16 September, and the Reports page
 
 **Asked for:** start the system locally, audit what was completed yesterday without

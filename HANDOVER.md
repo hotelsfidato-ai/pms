@@ -404,6 +404,16 @@ menus at the equipment merge, EQ-2. **Next free migration: 097.** Owner chose:
   in `navigation.ts` and 068 (left: they may be the owner's), EQ-3 (dev only).
 - **Next free migration: 099.**
 
+**17 September evening — round D17 MERGED.** Banquet, POS, night audit (migration
+renumbered 100), guests, finance, admin (101), housekeeping (102, its equipment
+edits reviewed), stores STO-2..11. Gates on `842487b`: web 327 · API 873 ·
+database 785 (102) · replay 102/102 · build clean. Spot-checked: Closed days on
+Night audit, words on room cards, the Store, Companies and agents. **Not done yet
+(the master's D17 share):** D17-1 places for Hotel/Inventory Manager, D17-3
+Main/Kitchen/Bar stores (the Store chat waits on it), D17-10 In house, D17-11 out of
+service, INV-2, REP-6, FD-5, and FIN-2's dash (finance traced it; it spans front desk
+and core). **Next free migration: 103.**
+
 **17 September — THE OWNER ANSWERED EVERY OPEN QUESTION (25 decisions, D17-1 to
 D17-25): `docs/briefs/decisions-2026-09-17.md`.** Every chat reads it before its
 next write. The master's share: places for Hotel/Inventory Manager, Main/Kitchen/Bar
