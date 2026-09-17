@@ -1,6 +1,7 @@
 import { Route } from "react-router";
 import DashboardPage from "@/modules/reports/pages/Dashboard";
 import ManagerReportPage from "@/modules/reports/pages/ManagerReport";
+import NightAuditReportPage from "@/modules/reports/pages/NightAudit";
 import {
   MonthlyOccupancyPage, MonthlyStatisticsPage, YearlyStatisticsPage,
 } from "@/modules/reports/pages/Statistics";
@@ -19,6 +20,7 @@ export const routes = (
     {/* Group level */}
     <Route path="/" element={<DashboardPage />} />
     <Route path="/reports/manager" element={<ManagerReportPage />} />
+    <Route path="/reports/night-audit" element={<NightAuditReportPage />} />
     <Route path="/reports/city-ledger" element={<CityLedgerPage />} />
     <Route path="/reports/no-show" element={<NoShowPage />} />
     <Route path="/reports/monthly-occupancy" element={<MonthlyOccupancyPage />} />

@@ -3,7 +3,7 @@ import { Link } from "react-router";
 import {
   Star, Search, ArrowRight, ClipboardList, CalendarDays, ChartColumn,
   ChartNoAxesColumn, Building2, UserX, ReceiptText, Wallet, Landmark,
-  FileSpreadsheet, Plane, type LucideIcon,
+  FileSpreadsheet, Plane, ScrollText, type LucideIcon,
 } from "lucide-react";
 import { cn } from "@/lib/cn";
 import { useUi } from "@/lib/ui";
@@ -49,6 +49,12 @@ const GROUPS: Group[] = [
         icon: ClipboardList,
         path: "/reports/manager",
         description: "Today, period to date and year to date in three columns. The one an owner opens first.",
+      },
+      {
+        title: "Night audit report",
+        icon: ScrollText,
+        path: "/reports/night-audit",
+        description: "What happened on one day, to the paisa: rooms charged, who left, every receipt, the restaurant.",
       },
       {
         title: "Monthly occupancy",

@@ -201,20 +201,22 @@ function Line({ row, columns, timeZone }: { row: ReportRow; columns: ReportColum
         const kind = numeric(c.kind) && row.unit ? row.unit : c.kind;
         const value = row.cells[c.key] ?? null;
         const isNumber = numeric(c.kind);
+        /* A total row leaves its empty words blank. A dash means "this
+           system does not hold the figure", and a total has no guest. */
+        const blank = value === null && !isNumber && isTotal;
         return (
           <td
             key={c.key}
             className={cn(
               "px-3 py-1.5 align-top",
               isNumber ? "text-right tabular whitespace-nowrap" : "text-left",
-              kind === "date" || kind === "datetime" || (i === 0 && String(value ?? "").length < 14)
-                ? "whitespace-nowrap" : undefined,
+              String(value ?? "").length <= 22 ? "whitespace-nowrap" : undefined,
               i === 0 && INDENT[row.indent ?? 0],
               value === null && "text-grey-500",
               typeof value === "number" && value < 0 && kind === "money" && "text-brand-red",
             )}
           >
-            {formatCell(value, kind, timeZone)}
+            {blank ? "" : formatCell(value, kind, timeZone)}
           </td>
         );
       })}
