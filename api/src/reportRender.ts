@@ -1,9 +1,15 @@
 import PDFDocument from "pdfkit";
 import ExcelJS from "exceljs";
-import type { ReportDoc, ReportColumn, ReportRow, PrintedBy } from "./reportDoc.ts";
+import type { ReportDoc, ReportColumn, ReportRow, CellKind, Cell } from "./modules/reports/index.ts";
 
 /* ══════════════════════════════════════════════════════════════════
-   THE REPORT RENDERER — one document, three files (D17-31, D17-32)
+   THE REPORT RENDERER - one document, three files (D17-31, D17-32)
+
+   The reports service builds a report as one object (its `ReportDoc`,
+   api/src/modules/reports/document.ts, the contract of 17 September);
+   this file draws it as a PDF, a real .xlsx and a CSV. The shape is the
+   reports service's, not a copy here, so the screen and the files can
+   never read two different contracts.
 
    The eZee exports' LAYOUT with the group's own BRANDING (D17-70): the
    hotel's name top left, the report's title top right with its facts under
@@ -12,9 +18,18 @@ import type { ReportDoc, ReportColumn, ReportRow, PrintedBy } from "./reportDoc.
    (src/styles/theme.css), not eZee's navy and maroon.
 
    A4. Money in Indian grouping with two decimals and no symbol, as the
-   exports print it ("Currency INR" is a fact at the top). A figure nobody
-   has prints "-".
+   exports print it ("Currency INR" is a fact at the top). Dates 25/08/2026
+   and moments 25/08/2026 04:12:43 PM in the property's time (D17-77). A
+   figure nobody has prints "-".
    ══════════════════════════════════════════════════════════════════ */
+
+/** Who printed it and when: the footer, written here, never by a builder. */
+export interface PrintedBy {
+  name: string;
+  at: Date;
+  /** The property's, so "printed at" reads as the hotel's clock. */
+  timezone: string;
+}
 
 const INK = "#031728";
 const MUTED = "#4c5b67";
@@ -24,7 +39,7 @@ const ACCENT = "#c4521d";
 
 /* ── formatting ────────────────────────────────────────────────── */
 
-/** 4,19,578.77 — lakhs and crores, two decimals, a minus where it is owed back. */
+/** 4,19,578.77 - lakhs and crores, two decimals, a minus where it is owed back. */
 export function inr(n: number): string {
   const sign = n < 0 ? "-" : "";
   const [whole, dec] = Math.abs(n).toFixed(2).split(".");
@@ -34,40 +49,79 @@ export function inr(n: number): string {
   return `${sign}${grouped}.${dec}`;
 }
 
-const MONTHS = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+/* A COPY of dateReport and dateTimeReport in src/lib/format.ts: the API
+   never imports web code. api/test/reportFiles.test.ts holds the two to
+   the same answers. */
 
-export function formatCell(value: string | number | null | undefined, kind: ReportColumn["kind"]): string {
+/** "2026-08-25" -> "25/08/2026". Anything that is not a calendar date: "-". */
+export function dateReport(value: string | null | undefined): string {
+  const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(value ?? "");
+  return m ? `${m[3]}/${m[2]}/${m[1]}` : "-";
+}
+
+/** The wall-clock parts of a moment in a time zone. */
+function clockParts(d: Date, timeZone: string, hour12: boolean) {
+  const parts = new Intl.DateTimeFormat("en-US", {
+    timeZone, day: "2-digit", month: "2-digit", year: "numeric",
+    hour: "2-digit", minute: "2-digit", second: "2-digit", hour12,
+  }).formatToParts(d);
+  const get = (type: string) => parts.find((p) => p.type === type)?.value ?? "";
+  return {
+    day: get("day"), month: get("month"), year: get("year"),
+    hour: get("hour"), minute: get("minute"), second: get("second"),
+    period: get("dayPeriod").toUpperCase(),
+  };
+}
+
+const toMoment = (value: string | Date | null | undefined): Date | null => {
+  if (value === null || value === undefined || value === "") return null;
+  const d = value instanceof Date ? value : new Date(value);
+  return Number.isNaN(d.getTime()) ? null : d;
+};
+
+/** An ISO moment -> "25/08/2026 04:12:43 PM" in the given time zone. */
+export function dateTimeReport(value: string | Date | null | undefined, timeZone: string): string {
+  const d = toMoment(value);
+  if (!d) return "-";
+  const p = clockParts(d, timeZone, true);
+  return `${p.day}/${p.month}/${p.year} ${p.hour}:${p.minute}:${p.second} ${p.period}`;
+}
+
+/** What a cell holds: the row's unit where one column mixes units, else the column's. */
+export const kindOf = (column: ReportColumn, row: ReportRow): CellKind =>
+  column.kind === "text" ? "text" : (row.unit ?? column.kind);
+
+/** One cell as it prints. A string in a figure's column (the "Total" label
+    in a date column) prints as it is. */
+export function formatCell(value: Cell | undefined, kind: CellKind, timeZone: string): string {
   if (value === null || value === undefined || value === "") return "-";
-  if (typeof value === "string" && kind !== "date") return value;
   switch (kind) {
-    case "money": return inr(Number(value));
-    case "count": return String(Math.round(Number(value)));
-    case "percent": return `${Number(value).toFixed(2)}%`;
-    case "ratio": return Number(value).toFixed(2);
+    case "text": return String(value);
+    case "money": return typeof value === "number" ? inr(value) : value;
+    case "count": return typeof value === "number" ? String(Math.round(value)) : value;
+    case "percent": return typeof value === "number" ? `${value.toFixed(2)}%` : value;
+    case "ratio": return typeof value === "number" ? value.toFixed(2) : value;
     case "date": {
-      const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(String(value));
-      return m ? `${m[3]} ${MONTHS[Number(m[2]) - 1]} ${m[1]}` : String(value);
+      const s = typeof value === "string" ? dateReport(value) : "-";
+      return s === "-" ? String(value) : s;
     }
-    default: return String(value);
+    case "datetime": {
+      const s = typeof value === "string" ? dateTimeReport(value, timeZone) : "-";
+      return s === "-" ? String(value) : s;
+    }
   }
 }
 
-const numeric = (kind: ReportColumn["kind"]) => kind !== "text" && kind !== "date";
+const numeric = (kind: CellKind) => kind !== "text" && kind !== "date" && kind !== "datetime";
 
-function printedLine(by: PrintedBy): string {
-  const parts = new Intl.DateTimeFormat("en-GB", {
-    timeZone: by.timezone, day: "2-digit", month: "short", year: "numeric",
-    hour: "2-digit", minute: "2-digit", hour12: false,
-  }).formatToParts(by.at);
-  const get = (t: string) => parts.find((p) => p.type === t)?.value ?? "";
-  /* The month by number, not Intl's short name: en-GB spells September "Sept". */
-  const monthNo = Number(new Intl.DateTimeFormat("en-GB", { timeZone: by.timezone, month: "numeric" }).format(by.at));
-  return `Printed ${get("day")} ${MONTHS[monthNo - 1]} ${get("year")} · ${get("hour")}:${get("minute")} · ${by.name}`;
+export function printedLine(by: PrintedBy): string {
+  return `Printed ${dateTimeReport(by.at, by.timezone)} · ${by.name}`;
 }
 
 /* ── PDF ───────────────────────────────────────────────────────── */
 
 export async function renderPdf(doc: ReportDoc, by: PrintedBy): Promise<Buffer> {
+  const tz = by.timezone;
   const pdf = new PDFDocument({
     size: "A4", layout: doc.orientation,
     margins: { top: 36, bottom: 48, left: 36, right: 36 },
@@ -96,7 +150,8 @@ export async function renderPdf(doc: ReportDoc, by: PrintedBy): Promise<Buffer> 
       .text(doc.title, left + width * 0.55, top, { width: width * 0.45, align: "right" });
     pdf.font("Helvetica").fontSize(8).fillColor(MUTED);
     for (const f of doc.facts) {
-      pdf.text(`${f.label}  ${f.value}`, left + width * 0.55, pdf.y + 1, { width: width * 0.45, align: "right" });
+      pdf.text(`${f.label}  ${formatCell(f.value, f.kind, tz)}`, left + width * 0.55, pdf.y + 1,
+        { width: width * 0.45, align: "right" });
     }
     const y = Math.max(leftEnd, pdf.y) + 8;
     pdf.moveTo(left, y).lineTo(left + width, y).lineWidth(1.2).strokeColor(ACCENT).stroke();
@@ -105,8 +160,7 @@ export async function renderPdf(doc: ReportDoc, by: PrintedBy): Promise<Buffer> 
 
   const ROW_H = 15;
   const tableHead = (cols: ReportColumn[], widths: number[]) => {
-    const hasGroups = cols.some((c) => c.group);
-    if (hasGroups) {
+    if (cols.some((c) => c.group)) {
       let x = left;
       let i = 0;
       while (i < cols.length) {
@@ -134,6 +188,12 @@ export async function renderPdf(doc: ReportDoc, by: PrintedBy): Promise<Buffer> 
     pdf.y += 3;
   };
 
+  const quiet = (text: string, italic: boolean) => {
+    if (pdf.y + 12 > bottom()) { pdf.addPage(); header(); }
+    pdf.font(italic ? "Helvetica-Oblique" : "Helvetica").fontSize(7.5).fillColor(MUTED)
+      .text(text, left + 3, pdf.y + 3, { width: width - 6 });
+  };
+
   header();
 
   for (const section of doc.sections) {
@@ -146,30 +206,26 @@ export async function renderPdf(doc: ReportDoc, by: PrintedBy): Promise<Buffer> 
     pdf.y += 4;
     tableHead(section.columns, widths);
 
+    if (section.rows.length === 0 && section.empty) quiet(section.empty, true);
     for (const row of section.rows) {
       if (pdf.y + ROW_H > bottom()) {
         pdf.addPage(); header();
         tableHead(section.columns, widths);
       }
-      drawRow(pdf, section.columns, widths, row, left, width, ROW_H);
+      drawRow(pdf, section.columns, widths, row, left, width, ROW_H, tz);
     }
+    if (section.note) quiet(section.note, false);
     pdf.y += 10;
   }
 
   if (doc.chart && doc.chart.x.length) {
-    const h = 150;
+    const h = 170;
     if (pdf.y + h + 20 > bottom()) { pdf.addPage(); header(); }
-    drawChart(pdf, doc.chart, left, pdf.y + 6, width, h);
+    drawChart(pdf, doc.chart, left, pdf.y + 6, width, h, tz);
     pdf.y += h + 20;
   }
 
-  if (doc.footnotes?.length) {
-    pdf.font("Helvetica").fontSize(7.5).fillColor(MUTED);
-    for (const note of doc.footnotes) {
-      if (pdf.y + 12 > bottom()) { pdf.addPage(); header(); }
-      pdf.text(note, left, pdf.y + 2, { width });
-    }
-  }
+  for (const note of doc.footnotes) quiet(note, false);
 
   const range = pdf.bufferedPageRange();
   for (let i = 0; i < range.count; i++) {
@@ -192,28 +248,27 @@ export async function renderPdf(doc: ReportDoc, by: PrintedBy): Promise<Buffer> 
 
 function drawRow(
   pdf: PDFKit.PDFDocument, cols: ReportColumn[], widths: number[], row: ReportRow,
-  left: number, width: number, rowH: number,
+  left: number, width: number, rowH: number, tz: string,
 ): void {
   const y = pdf.y;
-  const kind = row.kind ?? "row";
-  if (kind === "band") {
+  if (row.kind === "band") {
     pdf.rect(left, y, width, rowH - 2).fill(BAND);
-    const first = cols[0]!;
     pdf.font("Helvetica-Bold").fontSize(8.5).fillColor(INK)
-      .text(formatCell(row.cells[first.key], "text"), left + 3, y + 3, { width: width - 6, lineBreak: false });
+      .text(formatCell(row.cells[cols[0]!.key], "text", tz), left + 3, y + 3, { width: width - 6, lineBreak: false });
     pdf.y = y + rowH;
     return;
   }
-  if (kind === "total") {
+  if (row.kind === "total") {
     pdf.moveTo(left, y).lineTo(left + width, y).lineWidth(0.8).strokeColor(INK).stroke();
   }
   let x = left;
   const indent = Math.min(3, Math.max(0, row.indent ?? 0)) * 8;
   cols.forEach((c, k) => {
     const pad = k === 0 ? indent : 0;
-    pdf.font(kind === "total" ? "Helvetica-Bold" : "Helvetica").fontSize(8.5).fillColor(INK)
-      .text(formatCell(row.cells[c.key], c.kind), x + 3 + pad, y + 3, {
-        width: widths[k]! - 6 - pad, align: numeric(c.kind) ? "right" : "left", lineBreak: false, ellipsis: true,
+    const kind = kindOf(c, row);
+    pdf.font(row.kind === "total" ? "Helvetica-Bold" : "Helvetica").fontSize(8.5).fillColor(INK)
+      .text(formatCell(row.cells[c.key], kind, tz), x + 3 + pad, y + 3, {
+        width: widths[k]! - 6 - pad, align: numeric(kind) ? "right" : "left", lineBreak: false, ellipsis: true,
       });
     x += widths[k]!;
   });
@@ -223,24 +278,44 @@ function drawRow(
 
 function drawChart(
   pdf: PDFKit.PDFDocument, chart: NonNullable<ReportDoc["chart"]>,
-  left: number, top: number, width: number, height: number,
+  left: number, top: number, width: number, height: number, tz: string,
 ): void {
   const colours = [ACCENT, INK, MUTED];
+  pdf.font("Helvetica-Bold").fontSize(9).fillColor(INK)
+    .text(chart.title, left, top, { width: width * 0.6, lineBreak: false });
+  if (chart.series.length > 1) {
+    let x = left + width;
+    [...chart.series].reverse().forEach((s, ri) => {
+      const si = chart.series.length - 1 - ri;
+      const w = pdf.font("Helvetica").fontSize(7.5).widthOfString(s.label);
+      x -= w;
+      pdf.fillColor(MUTED).text(s.label, x, top + 1, { lineBreak: false });
+      x -= 10;
+      pdf.rect(x, top + 2, 6, 6).fill(colours[si % colours.length]!);
+      x -= 10;
+    });
+  }
+
+  const plotTop = top + 18;
+  const plotH = height - 18 - 16;
   const values = chart.series.flatMap((s) => s.values.filter((v): v is number => v !== null));
   const max = Math.max(1, ...values);
-  const plotH = height - 18;
   const slot = width / chart.x.length;
-  const barW = Math.max(2, (slot * 0.7) / chart.series.length);
-  pdf.moveTo(left, top + plotH).lineTo(left + width, top + plotH).lineWidth(0.5).strokeColor(RULE).stroke();
+  const barW = Math.max(2, (slot * 0.7) / Math.max(1, chart.series.length));
+
+  pdf.font("Helvetica").fontSize(6.5).fillColor(MUTED)
+    .text(formatCell(max, chart.unit === "text" ? "ratio" : chart.unit, tz), left, plotTop - 2, { lineBreak: false });
+  pdf.moveTo(left, plotTop + plotH).lineTo(left + width, plotTop + plotH).lineWidth(0.5).strokeColor(RULE).stroke();
   chart.x.forEach((label, i) => {
     chart.series.forEach((s, si) => {
       const v = s.values[i];
       if (v === null || v === undefined) return;
-      const h = (v / max) * (plotH - 4);
-      pdf.rect(left + i * slot + slot * 0.15 + si * barW, top + plotH - h, barW - 1, h).fill(colours[si % colours.length]!);
+      const h = (v / max) * (plotH - 8);
+      pdf.rect(left + i * slot + slot * 0.15 + si * barW, plotTop + plotH - h, barW - 1, h)
+        .fill(colours[si % colours.length]!);
     });
     pdf.font("Helvetica").fontSize(6.5).fillColor(MUTED)
-      .text(label, left + i * slot, top + plotH + 3, { width: slot, align: "center", lineBreak: false });
+      .text(label, left + i * slot, plotTop + plotH + 3, { width: slot, align: "center", lineBreak: false });
   });
 }
 
@@ -249,7 +324,13 @@ function drawChart(
 /** Indian grouping in Excel: crores, lakhs, thousands. */
 const INR_FORMAT = '[>=10000000]##\\,##\\,##\\,##0.00;[>=100000]##\\,##\\,##0.00;##,##0.00';
 
+const NUMBER_FORMAT: Partial<Record<CellKind, string>> = {
+  money: INR_FORMAT, percent: "0.00%", count: "0", ratio: "0.00",
+  date: "dd/mm/yyyy", datetime: "dd/mm/yyyy hh:mm:ss AM/PM",
+};
+
 export async function renderXlsx(doc: ReportDoc, by: PrintedBy): Promise<Buffer> {
+  const tz = by.timezone;
   const book = new ExcelJS.Workbook();
   book.creator = "Fidato PMS";
   book.created = by.at;
@@ -257,12 +338,15 @@ export async function renderXlsx(doc: ReportDoc, by: PrintedBy): Promise<Buffer>
     pageSetup: { paperSize: 9, orientation: doc.orientation, fitToPage: true, fitToWidth: 1, fitToHeight: 0 },
   });
   const widest = Math.max(1, ...doc.sections.map((s) => s.columns.length));
+  const quiet = (text: string) => { sheet.addRow([text]).font = { italic: true, color: { argb: "FF4C5B67" } }; };
 
   const title = sheet.addRow([doc.property.name]);
   title.font = { bold: true, size: 14, color: { argb: "FF031728" } };
   const reportRow = sheet.addRow([doc.title]);
   reportRow.font = { bold: true, size: 12, color: { argb: "FFC4521D" } };
-  for (const f of doc.facts) sheet.addRow([f.label, f.value]).font = { color: { argb: "FF4C5B67" } };
+  for (const f of doc.facts) {
+    sheet.addRow([f.label, formatCell(f.value, f.kind, tz)]).font = { color: { argb: "FF4C5B67" } };
+  }
   sheet.addRow([]);
 
   for (const section of doc.sections) {
@@ -287,34 +371,34 @@ export async function renderXlsx(doc: ReportDoc, by: PrintedBy): Promise<Buffer>
       cell.alignment = { horizontal: numeric(section.columns[n - 1]!.kind) ? "right" : "left" };
     });
 
+    if (section.rows.length === 0 && section.empty) quiet(section.empty);
     for (const row of section.rows) {
-      const kind = row.kind ?? "row";
-      if (kind === "band") {
-        const band = sheet.addRow([formatCell(row.cells[section.columns[0]!.key], "text")]);
+      if (row.kind === "band") {
+        const band = sheet.addRow([formatCell(row.cells[section.columns[0]!.key], "text", tz)]);
         band.font = { bold: true, italic: true };
         continue;
       }
-      const values = section.columns.map((c) => xlsxValue(row.cells[c.key], c.kind));
-      const r = sheet.addRow(values);
+      const r = sheet.addRow(section.columns.map((c) => xlsxValue(row.cells[c.key], kindOf(c, row), tz)));
       section.columns.forEach((c, k) => {
+        const kind = kindOf(c, row);
         const cell = r.getCell(k + 1);
-        if (typeof cell.value === "number") {
-          cell.numFmt = c.kind === "money" ? INR_FORMAT
-            : c.kind === "percent" ? "0.00%" : c.kind === "count" ? "0" : "0.00";
+        if (typeof cell.value === "number" || cell.value instanceof Date) {
+          const fmt = NUMBER_FORMAT[kind];
+          if (fmt) cell.numFmt = fmt;
         }
-        if (cell.value instanceof Date) cell.numFmt = "dd mmm yyyy";
-        if (cell.value === "-" || numeric(c.kind)) cell.alignment = { horizontal: "right" };
+        if (cell.value === "-" || numeric(kind)) cell.alignment = { horizontal: "right" };
         if (k === 0 && row.indent) cell.alignment = { indent: row.indent };
       });
-      if (kind === "total") {
+      if (row.kind === "total") {
         r.font = { bold: true };
         r.eachCell((cell) => { cell.border = { top: { style: "thin", color: { argb: "FF031728" } } }; });
       }
     }
+    if (section.note) quiet(section.note);
     sheet.addRow([]);
   }
 
-  for (const note of doc.footnotes ?? []) sheet.addRow([note]).font = { italic: true, color: { argb: "FF4C5B67" } };
+  for (const note of doc.footnotes) quiet(note);
   sheet.addRow([printedLine(by)]).font = { size: 9, color: { argb: "FF4C5B67" } };
 
   for (let c = 1; c <= widest; c++) sheet.getColumn(c).width = c === 1 ? 34 : 16;
@@ -322,12 +406,22 @@ export async function renderXlsx(doc: ReportDoc, by: PrintedBy): Promise<Buffer>
   return Buffer.from(buffer as ArrayBuffer);
 }
 
-function xlsxValue(value: string | number | null | undefined, kind: ReportColumn["kind"]): string | number | Date {
+/** A cell as Excel should hold it: numbers as numbers, a percent as a
+    fraction, a date or a moment as a real date (a moment at the property's
+    wall-clock time, since Excel has no time zones). */
+function xlsxValue(value: Cell | undefined, kind: CellKind, tz: string): string | number | Date {
   if (value === null || value === undefined || value === "") return "-";
-  if (kind === "percent" && typeof value === "number") return value / 100;
-  if (kind === "date" && typeof value === "string") {
+  if (typeof value === "number") return kind === "percent" ? value / 100 : value;
+  if (kind === "date") {
     const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(value);
     return m ? new Date(Date.UTC(Number(m[1]), Number(m[2]) - 1, Number(m[3]))) : value;
+  }
+  if (kind === "datetime") {
+    const d = toMoment(value);
+    if (!d) return value;
+    const p = clockParts(d, tz, false);
+    const hour = Number(p.hour) % 24;
+    return new Date(Date.UTC(Number(p.year), Number(p.month) - 1, Number(p.day), hour, Number(p.minute), Number(p.second)));
   }
   return value;
 }
@@ -335,31 +429,35 @@ function xlsxValue(value: string | number | null | undefined, kind: ReportColumn
 /* ── CSV ───────────────────────────────────────────────────────── */
 
 /** One section after another, each with its title and header. Numbers are
-    plain (no grouping) so a spreadsheet reads them as numbers; "-" where a
-    figure nobody has. */
+    plain (no grouping) so a spreadsheet reads them as numbers; dates as
+    25/08/2026 (D17-77); "-" where a figure nobody has. */
 export function renderCsv(doc: ReportDoc, by: PrintedBy): string {
-  const esc = (v: string) => (/[",\n]/.test(v) ? `"${v.replace(/"/g, '""')}"` : v);
+  const tz = by.timezone;
+  const esc = (v: string) => (/[",\r\n]/.test(v) ? `"${v.replace(/"/g, '""')}"` : v);
   const lines: string[] = [esc(doc.property.name), esc(doc.title)];
-  for (const f of doc.facts) lines.push(`${esc(f.label)},${esc(f.value)}`);
+  for (const f of doc.facts) lines.push(`${esc(f.label)},${esc(formatCell(f.value, f.kind, tz))}`);
   lines.push("");
   for (const section of doc.sections) {
     lines.push(esc(section.title));
     lines.push(section.columns.map((c) => esc(c.label)).join(","));
+    if (section.rows.length === 0 && section.empty) lines.push(esc(section.empty));
     for (const row of section.rows) {
       if (row.kind === "band") {
-        lines.push(esc(formatCell(row.cells[section.columns[0]!.key], "text")));
+        lines.push(esc(formatCell(row.cells[section.columns[0]!.key], "text", tz)));
         continue;
       }
       lines.push(section.columns.map((c) => {
+        const kind = kindOf(c, row);
         const v = row.cells[c.key];
         if (v === null || v === undefined || v === "") return "-";
-        if (typeof v === "number") return c.kind === "count" ? String(Math.round(v)) : v.toFixed(2);
-        return esc(String(v));
+        if (typeof v === "number") return kind === "count" ? String(Math.round(v)) : v.toFixed(2);
+        return esc(formatCell(v, kind, tz));
       }).join(","));
     }
+    if (section.note) lines.push(esc(section.note));
     lines.push("");
   }
-  for (const note of doc.footnotes ?? []) lines.push(esc(note));
+  for (const note of doc.footnotes) lines.push(esc(note));
   lines.push(esc(printedLine(by)));
   return lines.join("\r\n") + "\r\n";
 }

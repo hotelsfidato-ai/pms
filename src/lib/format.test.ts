@@ -1,5 +1,19 @@
 import { describe, it, expect } from "vitest";
-import { amountInWords, money } from "./format";
+import { amountInWords, money, dateReport, dateTimeReport } from "./format";
+
+describe("dates on reports (D17-77)", () => {
+  it("prints a calendar date as eZee does, and nothing else as a date", () => {
+    expect(dateReport("2026-08-25")).toBe("25/08/2026");
+    expect(dateReport("Total")).toBe("-");
+    expect(dateReport(null)).toBe("-");
+  });
+
+  it("prints a moment in the property's time, with seconds and AM or PM", () => {
+    expect(dateTimeReport("2026-08-25T10:42:43Z", "Asia/Kolkata")).toBe("25/08/2026 04:12:43 PM");
+    expect(dateTimeReport("2026-08-24T18:30:05Z", "Asia/Kolkata")).toBe("25/08/2026 12:00:05 AM");
+    expect(dateTimeReport("not a date", "Asia/Kolkata")).toBe("-");
+  });
+});
 
 /* ══════════════════════════════════════════════════════════════════
    AMOUNT IN WORDS

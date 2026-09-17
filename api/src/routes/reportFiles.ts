@@ -1,22 +1,22 @@
 import { Hono } from "hono";
-import type { PoolClient as Client } from "pg";
 import { withSession } from "../auth.ts";
 import { businessDateFor } from "../businessDate.ts";
-import * as reportsService from "../modules/reports/index.ts";
-import type { ReportDoc } from "../reportDoc.ts";
+import {
+  buildReport, BUILT_KEYS, REPORT_KEYS, type ReportParams,
+} from "../modules/reports/index.ts";
 import { renderPdf, renderXlsx, renderCsv } from "../reportRender.ts";
 
 /* ══════════════════════════════════════════════════════════════════
-   A REPORT AS A FILE — GET /api/hotels/:code/reports/:key.(pdf|xlsx|csv)
+   A REPORT AS A FILE - GET /api/hotels/:code/reports/:key.(pdf|xlsx|csv)
 
    The owner's D17-31 and D17-32: every report as a PDF made on the server,
    a real .xlsx and a CSV. The reports service builds the document
    (`buildReport`, exported by its front door); this route checks who is
-   asking, builds it under their own session — so row level security
-   decides what it holds — and renders it.
+   asking, builds it under their own session, so row level security
+   decides what it holds, and renders it.
 
-   Until the reports service exports `buildReport`, every download answers
-   that reports cannot be downloaded yet, rather than a file of nothing.
+   The same parameters as the screen's route (reports/documents.ts): asOn,
+   month, year, from, ignoreZero. A malformed one is refused in a sentence.
 
    WHO: downloading is the `report` grant's `export` (src/lib/permissions.ts).
    A copy of that list is below, held to the matrix by
@@ -25,7 +25,7 @@ import { renderPdf, renderXlsx, renderCsv } from "../reportRender.ts";
 
 export const reportFiles = new Hono<{ Variables: { subject: string } }>();
 
-/** The roles holding `export` on `report`, and the owner. A COPY — see above. */
+/** The roles holding `export` on `report`, and the owner. A COPY - see above. */
 export const REPORT_EXPORTERS: readonly string[] = [
   "owner", "admin", "gm", "hotel_manager", "revenue_manager", "finance",
 ];
@@ -36,10 +36,7 @@ const TYPES = {
   csv: "text/csv; charset=utf-8",
 } as const;
 
-type Builder = (
-  client: Client, hotelId: string, key: string,
-  params: { asOn: string; month?: string; year?: number },
-) => Promise<ReportDoc>;
+const ISO_DATE = /^\d{4}-\d{2}-\d{2}$/;
 
 /* The file name is held to its pattern IN THE PATH, not inside the handler.
    Mounted on /api/hotels beside the reports service, a bare `:file` would
@@ -50,9 +47,25 @@ reportFiles.get("/:code/reports/:file{[a-z0-9-]+\\.(?:pdf|xlsx|csv)}", async (c)
   if (!match) return c.json({ error: "No such report." }, 404);
   const [, key, ext] = match as unknown as [string, string, keyof typeof TYPES];
 
-  const build = (reportsService as Record<string, unknown>)["buildReport"];
-  if (typeof build !== "function") {
-    return c.json({ error: "Reports cannot be downloaded yet." }, 404);
+  if (!(REPORT_KEYS as readonly string[]).includes(key)) {
+    return c.json({ error: "No such report." }, 404);
+  }
+  if (!(BUILT_KEYS as readonly string[]).includes(key)) {
+    return c.json({ error: "This report cannot be downloaded yet." }, 404);
+  }
+
+  const q = c.req.query();
+  if (q["asOn"] !== undefined && !ISO_DATE.test(q["asOn"])) {
+    return c.json({ error: "The date must be written YYYY-MM-DD." }, 400);
+  }
+  if (q["month"] !== undefined && !/^\d{4}-(0[1-9]|1[0-2])$/.test(q["month"])) {
+    return c.json({ error: "The month must be written YYYY-MM." }, 400);
+  }
+  if (q["year"] !== undefined && !/^\d{4}$/.test(q["year"])) {
+    return c.json({ error: "The year must be four digits." }, 400);
+  }
+  if (q["from"] !== undefined && !ISO_DATE.test(q["from"])) {
+    return c.json({ error: "The first date must be written YYYY-MM-DD." }, 400);
   }
 
   const result = await withSession(c.get("subject"), async (client) => {
@@ -77,23 +90,27 @@ reportFiles.get("/:code/reports/:file{[a-z0-9-]+\\.(?:pdf|xlsx|csv)}", async (c)
       };
     }
 
-    const asOn = c.req.query("asOn") ?? await businessDateFor(client, hotel.id);
-    const month = c.req.query("month");
-    const yearParam = c.req.query("year");
-    let doc: ReportDoc;
-    try {
-      doc = await (build as Builder)(client, hotel.id, key, {
-        asOn, ...(month ? { month } : {}), ...(yearParam ? { year: Number(yearParam) } : {}),
-      });
-    } catch {
-      return { status: 404 as const, error: "No such report." };
-    }
-    return { status: 200 as const, doc, by: { name: me[0].name, at: new Date(), timezone: hotel.timezone }, asOn };
+    const params: ReportParams = {
+      asOn: q["asOn"] ?? await businessDateFor(client, hotel.id),
+      ...(q["month"] ? { month: q["month"] } : {}),
+      ...(q["year"] ? { year: Number(q["year"]) } : {}),
+      ...(q["from"] ? { from: q["from"] } : {}),
+      ...(q["ignoreZero"] !== undefined ? { ignoreZero: q["ignoreZero"] === "1" } : {}),
+    };
+    /* A builder that fails is a fault, not "no such report": it is left to
+       throw, so the server's error handler answers it and it is logged. */
+    const doc = await buildReport(client, hotel.id, key, params);
+    return {
+      status: 200 as const, doc, params,
+      by: { name: me[0].name, at: new Date(), timezone: hotel.timezone },
+    };
   });
 
   if (result.status !== 200) return c.json({ error: result.error }, result.status);
 
-  const filename = `${c.req.param("code").toUpperCase()}-${key}-${result.asOn}.${ext}`;
+  const { params } = result;
+  const period = params.month ?? (params.year ? String(params.year) : params.asOn);
+  const filename = `${c.req.param("code").toUpperCase()}-${key}-${period}.${ext}`;
   const body = ext === "pdf" ? await renderPdf(result.doc, result.by)
     : ext === "xlsx" ? await renderXlsx(result.doc, result.by)
     : Buffer.from(renderCsv(result.doc, result.by), "utf-8");
