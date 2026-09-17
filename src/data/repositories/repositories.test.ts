@@ -61,10 +61,20 @@ describe("the seam — the front desk's lists", () => {
     expect(ids).toContain("stay-turn-in");
   });
 
-  it("excludes day-use stays from in-house", async () => {
+  /* In house is who has checked in (the owner's D17-10). A checked-in
+     day-use guest is in the room, so they count; a guest still to arrive
+     does not, whatever the dates say. */
+  it("counts a checked-in day-use guest in house", async () => {
     const id = await defaultPropertyId();
     const ids = (await listInHouse(id)).map((s) => s.id);
-    expect(ids).not.toContain("stay-dayuse");
+    expect(ids).toContain("stay-dayuse");
+  });
+
+  it("never counts a guest who has not checked in", async () => {
+    const id = await defaultPropertyId();
+    const stays = await listInHouse(id);
+    expect(stays.every((s) => s.status === "in-house" || s.status === "due-out")).toBe(true);
+    expect(stays.map((s) => s.id)).not.toContain("stay-turn-in");
   });
 
   it("keeps the complimentary guest in house", async () => {

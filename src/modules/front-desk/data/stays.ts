@@ -118,27 +118,42 @@ export async function listArrivalsOutstanding(
   return (await listArrivals(hotelId, date)).filter((s) => s.status === "due-in");
 }
 
-export async function listInHouse(hotelId: string, date = BUSINESS_DATE) {
+/* ══ IN HOUSE IS WHO HAS CHECKED IN — the owner's D17-10, 17 September ══
+   "Guests checked in now": checked in and not checked out. This list read
+   DATES — every booking covering tonight — so it showed guests who had not
+   arrived and even void bookings, 8 rows while the Dashboard, the housekeeping
+   board and All bookings (which read status) said 1. One definition now, and
+   Due out is the part of it leaving today. The date is kept in the signature
+   so every caller still names the day it asks about. */
+export async function listInHouse(hotelId: string, _date = BUSINESS_DATE) {
   const rows = (await fetchStays(hotelId)).filter(
+    (s) => s.status === "in-house" || s.status === "due-out",
+  );
+  return clone(rows).sort((a, b) => a.roomNumber.localeCompare(b.roomNumber));
+}
+
+/** Checked-in guests leaving today (D17-10: a part of In house). */
+export async function listDepartures(hotelId: string, _date = BUSINESS_DATE) {
+  const rows = (await fetchStays(hotelId)).filter((s) => s.status === "due-out");
+  return clone(rows).sort((a, b) => a.roomNumber.localeCompare(b.roomNumber));
+}
+
+/** Every booking holding a room tonight, arrived or not — what a walk-in may
+    NOT be given. Not "In house": a room sold for tonight is taken even before
+    its guest checks in. */
+async function listSoldTonight(hotelId: string, date: string) {
+  return (await fetchStays(hotelId)).filter(
     (s) =>
       s.status !== "cancelled" &&
       !s.isDayUse &&
       s.arrival <= date &&
       s.departure > date,
   );
-  return clone(rows).sort((a, b) => a.roomNumber.localeCompare(b.roomNumber));
-}
-
-export async function listDepartures(hotelId: string, date = BUSINESS_DATE) {
-  const rows = (await fetchStays(hotelId)).filter(
-    (s) => s.departure === date && s.status !== "cancelled",
-  );
-  return clone(rows).sort((a, b) => a.roomNumber.localeCompare(b.roomNumber));
 }
 
 /** Rooms with nobody in them tonight — what a walk-in can be given. */
 export async function listVacant(hotelId: string, date = BUSINESS_DATE) {
-  const taken = new Set((await listInHouse(hotelId, date)).map((s) => s.roomNumber));
+  const taken = new Set((await listSoldTonight(hotelId, date)).map((s) => s.roomNumber));
   const arriving = new Set((await listArrivals(hotelId, date)).map((s) => s.roomNumber));
   return { taken, arriving };
 }

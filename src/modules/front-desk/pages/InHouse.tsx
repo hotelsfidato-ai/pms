@@ -12,7 +12,8 @@ import { getFolioBalance } from "@/modules/finance";
 /* ══════════════════════════════════════════════════════════════════
    IN HOUSE · DUE OUT
 
-   Everyone staying tonight, and everyone leaving today. Both carry a
+   Every guest checked in now (the owner's D17-10), and those of them
+   leaving today. Both carry a
    folio balance, because on the departure list that number is the one
    thing standing between a guest and the door — check-out stays
    disabled until it reaches zero.
@@ -62,7 +63,7 @@ export default function InHousePage() {
         description={
           dueOut
             ? `Departing ${dateLong(BUSINESS_DATE)}. Check-out unlocks when the bill reaches zero.`
-            : `Staying the night of ${dateLong(BUSINESS_DATE)}.`
+            : `Guests checked in now, on ${dateLong(BUSINESS_DATE)}.`
         }
         badge={
           active.data ? (

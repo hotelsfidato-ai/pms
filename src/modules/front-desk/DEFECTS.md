@@ -14,16 +14,6 @@ entries stay here: they are the reason the fault does not come back.
 
 ## Open — not fixed
 
-### FD-1 · Two "in house" numbers for the same moment
-
-**Found** — 14 September, comparing screens: the property page said In house 11 / Vacant 9 while the Dashboard and Rooms said 10 / 7.
-
-Two definitions — stays against rooms, sold tonight against occupied now — and neither is labelled, so nobody can say which is right.
-
-**The fix, when it is done** — Pick one definition, name it on both screens, and derive the other from it.
-
-**The rule** — One definition, or two screens disagree and nobody can say which is right.
-
 ### FD-5 · Rooms and Calendar show the skeleton forever for a hotel with no rooms
 
 **Found** — 16 September, reading `StayView.tsx` while fixing FD-6. **Not yet
@@ -60,6 +50,29 @@ width in every state it has, not only the first one.
 ---
 
 ## Fixed — the solution is here; do not work it out again
+
+### FD-1 · Two "in house" numbers for the same moment — FIXED 17 September
+
+**Found** — 14 September, comparing screens: the property page said In house 11 / Vacant 9 while the Dashboard and Rooms said 10 / 7.
+
+Two definitions — stays against rooms, sold tonight against occupied now — and neither is labelled, so nobody can say which is right.
+
+**The fix, when it is done** — Pick one definition, name it on both screens, and derive the other from it.
+
+**The rule** — One definition, or two screens disagree and nobody can say which is right.
+
+**Fixed by the master, 17 September — the owner's D17-10: "In house" is guests
+checked in now.** The cause, measured locally: the In house page (`listInHouse`)
+read DATES — every booking covering tonight — and listed 8 rows (five not yet
+arrived, three void) while the Dashboard, the housekeeping board, All bookings and
+the property page read STATUS and said 1. `listInHouse` and `listDepartures` now read
+status (Due out is the part of In house leaving today); the walk-in vacancy check
+keeps "sold tonight" in its own function. The page reads "Guests checked in now".
+Proved: `repositories.test.ts` — a checked-in day-use guest counts, a guest still to
+arrive never does; both fail on the old code. Seen: In house 1 room, matching the
+Dashboard's 1.
+
+---
 
 ### FD-6 · `/stay` loaded forever when the server did not answer
 
