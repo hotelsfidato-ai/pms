@@ -276,7 +276,9 @@ const AUDIT_COLUMNS: Column<AuditEntry>[] = [
   },
   {
     key: "actor", header: "By", hideBelow: "sm",
-    cell: (e) => <span className="text-grey-600">{e.actor}</span>,
+    /* A dash, never a stand-in: this column said "admin" on every row
+       until ADM-1, which answered what happened and not who did it. */
+    cell: (e) => <span className="text-grey-600">{e.actor ?? "—"}</span>,
   },
 ];
 
@@ -311,7 +313,10 @@ export function AuditLogPage() {
       <p className="text-xs text-grey-500 mt-4 leading-relaxed">
         The folio ledger <em>is</em> the audit trail for money. It is append-only by
         construction, so nothing is recorded twice and nothing can be quietly
-        rewritten.
+        rewritten. <strong className="font-medium text-grey-600">By</strong> is the
+        person who made the entry. A dash means nobody was recorded — older
+        charges, payments and reversals made at the desk did not record who made
+        them.
       </p>
     </Page>
   );

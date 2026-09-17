@@ -103,9 +103,15 @@ GET    /api/admin/overview                   the Console's figures
 
 ```
 GET    /:code/staff        Users
-GET    /:code/audit-log    Audit log
-GET    /:code/settings     Settings
+GET    /:code/audit-log    Audit log — owner, admin, GM only; 403 otherwise (D17-15)
+GET    /:code/settings     Settings  — owner, admin only; 403 otherwise (D17-15)
 ```
+
+**Who may read the audit log and Settings** is `grants.ts` (17 September,
+API-2): a copy of the screen's rule, `canAccess(role, resource)` in
+`src/lib/permissions.ts`, held to it by `api/test/modules/admin/grants.test.ts`.
+A change to who may do what is made in `permissions.ts` by the master and
+copied into `grants.ts` in the same commit, or that test fails.
 
 `moduleSwitches.ts` (split out of property.ts) — 2, at `/api/hotels`:
 
@@ -181,15 +187,20 @@ hotel_modules                           041_hotel_modules.sql — pos on unless 
   Start here "Got it"                   089_start_here.sql
 audit_log                               011_model_additions.sql; triggers from
                                         016_audit_coverage.sql and 076_approvals.sql —
-                                        the Audit log screen does not read it (ADM-1)
+                                        the Audit log screen does not read it; it reads
+                                        the folio ledger
+  who made a posting, recorded and      099_audit_log_names_the_person.sql —
+  named                                 folio_postings.posted_by defaults to the signed-in
+                                        person; app.posted_by_name(posting) (ADM-1)
 ```
 
 Isolation is checked as the application role in `db/tests/rls.sql`, never in
 `suite.sql`, which runs as a superuser (MEMORY 47).
 
-**A new migration needs a number claimed in `HANDOVER.md` first.**
+**A new migration takes the next number after cp6's highest and tells the
+master**, who renumbers at merge if two lanes collide (`docs/briefs/README.md`).
 `src/test/migrationNumbers.test.ts` fails on two files with one number or a
-gap. The highest today is 089.
+gap. This service's newest is 099 (17 September).
 
 ---
 
@@ -299,7 +310,8 @@ From `PENDING.md`, `PROGRESS.md` and `HANDOVER.md`, as of 15 September:
 - **"Which room was this stay in"** is written by hand in the Audit log's
   query (`directory.ts`) — one of seven copies (PENDING § 6).
 - Found while writing this brief (15 September):
-  - **ADM-1** — the Audit log names "admin" as the person behind every entry.
+  - ~~ADM-1~~ — fixed 17 September: the Audit log records and names the person
+    (`DEFECTS.md`).
   - **ADM-2** — Settings shows the flat CGST/SGST that 067 replaced, "editable
     at Stage 8", and adds "— demo, not a real GSTIN" to every GSTIN.
   - **Integrations is a fixed list in the code** (`listIntegrations`), with
@@ -339,7 +351,9 @@ service") — moving to `api/test/modules/admin/`. Web: `src/App.test.tsx`
 `provisioning`, `provisioning key`, `modules`, `property admin`,
 `delete property`, `first screen`, `claim address`, `start here`, and
 `db/tests/rls.sql` (frozen — new checks go in `db/tests/modules/admin.sql`,
-which does not exist yet).
+which since 17 September holds "audit log names the person").
+`api/test/modules/admin/grants.test.ts` (who may read the audit log and
+Settings, every role) and `auditLog.test.ts` (the person recorded and named).
 
 ---
 

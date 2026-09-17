@@ -1,6 +1,7 @@
 import { Hono } from "hono";
 import { withSession } from "../../auth.ts";
 import type { Client } from "../../db.ts";
+import { mayRead, ADMIN_READ_REFUSED, type AdminRead } from "./grants.ts";
 
 /* ══════════════════════════════════════════════════════════════════
    STAFF, THE AUDIT LOG AND SETTINGS
@@ -22,6 +23,13 @@ async function hotelIdFor(client: Client, code: string) {
   );
   return rows[0]?.id ?? null;
 }
+
+/* WHO IS ASKING comes before the read (D17-15). The callback hands back
+   this marker and the route answers 403 with a sentence naming who may —
+   the shape the Store's routes use. */
+const forbid = (what: AdminRead) => ({ forbidden: what });
+const forbidden = (what: AdminRead) =>
+  ({ ok: false as const, reason: ADMIN_READ_REFUSED[what] });
 
 /* ── Staff and access ────────────────────────────────────────────── */
 
@@ -91,6 +99,7 @@ directory.get("/:code/audit-log", async (c) => {
   const body = await withSession(c.get("subject"), async (client) => {
     const hotelId = await hotelIdFor(client, c.req.param("code"));
     if (!hotelId) return null;
+    if (!(await mayRead(client, hotelId, "audit_log"))) return forbid("audit_log");
 
     /* The ledger IS the audit trail for money. It is append-only, so
        every posting and every reversal is already a permanent record —
@@ -98,10 +107,17 @@ directory.get("/:code/audit-log", async (c) => {
     const { rows } = await client.query<{
       id: string; at: string; business_date: string; category: string;
       description: string; guest: string; room: string | null;
-      reverses_id: string | null;
+      reverses_id: string | null; actor: string | null;
     }>(
+      /* WHO, BY NAME (ADM-1, D17-14). This said `actor: "admin"` for every
+         row. `app.posted_by_name` (099) reads `posted_by`, which 099 also
+         made every posting record — and it names somebody who has since
+         lost their access, where a join to `staff` would print a dash for
+         anybody the reader cannot see. NULL when nobody was recorded:
+         postings made before 099 at the desk, and bulk loads. */
       `select fp.id::text, fp.created_at::text as at,
               fp.business_date::text, fp.category, fp.description,
+              app.posted_by_name(fp.id) as actor,
               g.full_name as guest,
               (select rm.number from room_assignments ra
                  join rooms rm on rm.id = ra.room_id
@@ -123,7 +139,7 @@ directory.get("/:code/audit-log", async (c) => {
       id: r.id,
       at: r.at,
       businessDate: r.business_date,
-      actor: "admin",
+      actor: r.actor,
       action: r.reverses_id
         ? "Reversed a posting"
         : r.category === "payment"
@@ -135,7 +151,9 @@ directory.get("/:code/audit-log", async (c) => {
     }));
   });
 
-  return body ? c.json(body) : c.json({ error: "No such property." }, 404);
+  if (!body) return c.json({ error: "No such property." }, 404);
+  if ("forbidden" in body) return c.json(forbidden(body.forbidden), 403);
+  return c.json(body);
 });
 
 /* ── Settings ────────────────────────────────────────────────────── */
@@ -144,6 +162,7 @@ directory.get("/:code/settings", async (c) => {
   const body = await withSession(c.get("subject"), async (client) => {
     const hotelId = await hotelIdFor(client, c.req.param("code"));
     if (!hotelId) return null;
+    if (!(await mayRead(client, hotelId, "setting"))) return forbid("setting");
 
     const { rows } = await client.query<{
       name: string; address_line: string | null; city: string;
@@ -204,5 +223,7 @@ directory.get("/:code/settings", async (c) => {
     ];
   });
 
-  return body ? c.json(body) : c.json({ error: "No such property." }, 404);
+  if (!body) return c.json({ error: "No such property." }, 404);
+  if ("forbidden" in body) return c.json(forbidden(body.forbidden), 403);
+  return c.json(body);
 });

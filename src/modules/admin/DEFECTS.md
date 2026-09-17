@@ -14,17 +14,6 @@ entries stay here: they are the reason the fault does not come back.
 
 ## Open — not fixed
 
-
-### ADM-1 · The Audit log names "admin" as the person behind every entry
-
-**Found** — 15 September, writing the brief, by reading.
-
-Every row is attributed to "admin" rather than to whoever acted, so the log answers what happened and not who did it.
-
-**The fix, when it is done** — Record the acting staff id on the row (`app.current_user_id()`) and show that person's name.
-
-**The rule** — An audit log that cannot name the person is a list, not an audit.
-
 ### ADM-2 · Settings and the Properties cards show a tax the database no longer uses
 
 **Found** — 15 September, writing the brief, by reading.
@@ -34,16 +23,6 @@ Both print a flat 2.5% + 2.5% GST, which migration 067's tax rules replaced, and
 **The fix, when it is done** — Read the property's tax rules; print the GSTIN as stored, and a dash when it is not set.
 
 **The rule** — Never show a figure the database has stopped agreeing with.
-
-### API-2 · A clerk can read the audit log and the property settings through the API
-
-**Found** — 16 September, the route audit: the same sweep as `dev-desk` answered 69 of 92 read routes.
-
-`GET /:code/audit-log` returned 28 KB and `GET /:code/settings` answered, though reception holds neither the `audit_log` nor the `setting` grant and both screens refuse them. The roster and the password routes are safe — row-level security hides other people's rows and staff creation is refused.
-
-**The fix, when it is done** — The owner's call: should the API refuse what the screens refuse? If yes, a role check on those two routes; if no, record that reads are hotel-wide by design.
-
-**The rule** — A screen that refuses and an API that answers are two different answers to one question.
 
 ### ADM-3 · Every deploy re-creates the placeholder administrator once it is deleted
 
@@ -55,9 +34,48 @@ Migration 008 inserts `REPLACE@fidato.in` with `on conflict (email) do nothing`,
 
 **The rule** — Deactivate, do not delete: a deleted row comes back on the next deploy.
 
+### ADM-4 · Two "audit log" links point at an address that does not exist
+
+**Found** — 17 September, reading every caller of the audit log before closing API-2, then opening the address in the browser.
+
+The night-audit checklist (`api/src/modules/night-audit/checklist.ts:144`) and a notification (`api/src/routes/notifications.ts:151`) link to `/h/<code>/admin/audit-log`. The screen lives at `/admin/audit-log`; nothing is mounted under `/h/:code/admin`, so the catch-all sends the person to the Dashboard with no word about why. Opened as reception on 17 September: `/h/5EL/admin/audit-log` landed on `/`.
+
+**Not fixed here** — neither file is this service's (night audit's, and the core's). The fix is one path in each: `/admin/audit-log`. Passed to the master on 17 September.
+
+**The rule** — A link is a claim about an address. Open it.
+
 ---
 
 ## Fixed — the solution is here; do not work it out again
+
+### ADM-1 · The Audit log names "admin" as the person behind every entry
+
+**Found** — 15 September, writing the brief, by reading.
+
+Every row is attributed to "admin" rather than to whoever acted, so the log answers what happened and not who did it.
+
+**Worse than it read.** The route typed `actor: "admin"`, but fixing that line alone would have printed a dash on nearly everything the desk does: `folio_postings.posted_by` has existed since 006 and **four of the thirteen statements that write a posting never set it** — the charge, the reversal and the payment in `api/src/modules/finance/postings.ts`, and the walk-in's room charge in `api/src/modules/front-desk/operations.ts`. Measured in the development database on 17 September: **148 of 176 postings named nobody, every one made at the desk.** The till and the night audit named their person every time.
+
+**Fixed** — 17 September, the owner's decision D17-14 ("record and show the real person"), branch `admin/audit-log-who`:
+- **Recorded, in one place.** Migration `099_audit_log_names_the_person.sql` gives `posted_by` a default of `app.current_user_id()`. A default applies exactly when a statement leaves the column out — the four doors above and any door written later — and never overrides one that names somebody (the till names its operator). No finance or front-desk file changed. With nobody signed in (a migration, a bulk load) it stays null: nothing invented. Rows written before stay as they are — the ledger is append-only.
+- **Shown, by name.** The same migration adds `app.posted_by_name(posting)`, SECURITY DEFINER, answering the name of whoever made a posting at a property the caller is at. Not a join to `staff` — row security would show a GM a dash for the owner. Not `app.colleague_name` (096) — that names only people rostered there now, and an audit log is read after somebody has gone.
+- `api/src/modules/admin/adminLists.ts` returns that name, or null; the screen prints a dash for null and says under the table what a dash means.
+
+**Proved** — `db/tests/modules/admin.sql` (12 assertions) and `api/test/modules/admin/auditLog.test.ts` (8 tests: a clerk's charge, payment and both reversals through finance's own routes record the clerk; the owner, an administrator and the GM read the clerk's name; the name survives the clerk's access being removed; no row says "admin"). Seen to fail: without the default, 4 database assertions; with the name function narrowed to people still rostered, exactly the "access removed" assertion; with `actor: "admin"` put back, all 6 "shown" API tests.
+
+**The rule** — An audit log that cannot name the person is a list, not an audit. And "show who" is two jobs: check the column is WRITTEN by every door before fixing what reads it.
+
+### API-2 · A clerk can read the audit log and the property settings through the API
+
+**Found** — 16 September, the route audit: the same sweep as `dev-desk` answered 69 of 92 read routes.
+
+`GET /:code/audit-log` returned 28 KB and `GET /:code/settings` answered, though reception holds neither the `audit_log` nor the `setting` grant and both screens refuse them. The roster and the password routes are safe — row-level security hides other people's rows and staff creation is refused.
+
+**Fixed** — 17 September, the owner's decision D17-15 ("refuse it, like the screen, for every role without the grant"), branch `admin/audit-log-who`. `api/src/modules/admin/grants.ts` holds the screen's rule — `canAccess(role, resource)`, any grant opens the page — as two lists: the audit log for the owner, an administrator and the GM; Settings for the owner and an administrator (**not the GM**: the matrix never gave the GM `setting`, and the screen has always refused them). The role is the one held at this hotel; a group administrator counts as the owner. Both routes ask before reading and answer **403** with a sentence naming who may.
+
+**Proved** — `api/test/modules/admin/grants.test.ts` (35 tests): both lists equal `permissions.ts`; both reads as every assignable role, the expected answer taken from `permissions.ts` itself; a group administrator; a GM elsewhere who is reception here (refused); somebody not rostered here (404). Seen to fail: with the audit-log check removed, all 10 roles without the grant and the GM-elsewhere; with the hotel manager added to Settings, the list test and that role's refusal.
+
+**The rule** — A screen that refuses and an API that answers are two different answers to one question. A server copy of the role map is held to the original by a test that reads the original.
 
 ### PEO-1 · The People screen has no route guard
 
