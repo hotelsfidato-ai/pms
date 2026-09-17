@@ -39,6 +39,8 @@ export function ReportShell({
   csv,
   /** Shown above the table — the report's own header line. */
   meta,
+  /** The report's own settings (a switch, a date), above it and never printed. */
+  controls,
 }: {
   title: string;
   property?: string;
@@ -57,6 +59,7 @@ export function ReportShell({
    *  than one that is missing. */
   csv?: () => { headers: string[]; rows: unknown[][] };
   meta?: ReactNode;
+  controls?: ReactNode;
 }) {
   const identity = useDocumentIdentity();
   useDocumentTitle(title);
@@ -111,6 +114,10 @@ export function ReportShell({
           )}
         </div>
       </div>
+
+      {controls && (
+        <div className="no-print flex flex-wrap items-center gap-4 mb-4">{controls}</div>
+      )}
 
       <Card className="overflow-hidden">
         {/* The report's own header, as the exports carry it */}

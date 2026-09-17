@@ -19,30 +19,6 @@ const range = (from: string, to: string) =>
   `from=${encodeURIComponent(from)}&to=${encodeURIComponent(to)}`;
 
 
-/* ── No show ─────────────────────────────────────────────────────── */
-
-export interface NoShowRow {
-  reference: string;
-  guest: string;
-  roomType: string;
-  arrival: string;
-  departure: string;
-  source: string;
-  rate: number;
-}
-
-export async function getNoShowReport(
-  hotelId: string,
-  from = PTD_FROM,
-  to = BUSINESS_DATE,
-): Promise<NoShowRow[]> {
-  if (!hotelId) return [];
-  return fetchOr<NoShowRow[]>(
-    `/api/hotels/${hotelId}/reports/no-show?${range(from, to)}`,
-    [],
-  );
-}
-
 /* ── City ledger ─────────────────────────────────────────────────── */
 
 export interface CityLedgerRow {
@@ -57,9 +33,11 @@ export interface CityLedgerRow {
 }
 
 /**
- * One row per booking source that carries a balance. Several are
- * legitimately NEGATIVE — the OTA is in credit, having paid ahead of
- * what it has been charged. Shown as it is rather than flattened.
+ * Balances by booking source: every stay's charges less its payments,
+ * grouped by where it came from. For finance's "Company accounts" screen
+ * only. It is NOT the City ledger report, which counts bills transferred
+ * to a company (the owner's decision of 17 September); whether that
+ * screen should move to the transfers is finance's question.
  */
 export async function getCityLedger(
   hotelId: string,
@@ -68,7 +46,7 @@ export async function getCityLedger(
 ): Promise<CityLedgerRow[]> {
   if (!hotelId) return [];
   return fetchOr<CityLedgerRow[]>(
-    `/api/hotels/${hotelId}/reports/city-ledger?${range(from, to)}`,
+    `/api/hotels/${hotelId}/reports/balances-by-source?${range(from, to)}`,
     [],
   );
 }

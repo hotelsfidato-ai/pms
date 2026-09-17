@@ -311,12 +311,12 @@ describe("the reports' dates come from the report's own day", () => {
 
 /* ── City ledger ──────────────────────────────────────────────────── */
 
-describe("the city ledger", () => {
+describe("balances by booking source (finance's Company accounts)", () => {
   /* It printed "Mr. Agoda", "Mr. Walk-in" — a contact person made up for
      every account, on screen and in the CSV (found 15 September). */
   type LedgerRow = { account: string; contact: string | null; phone: string | null };
   const ledger = async () =>
-    (await (await call("/5EL/reports/city-ledger")).json()) as LedgerRow[];
+    (await (await call("/5EL/reports/balances-by-source")).json()) as LedgerRow[];
 
   it("names no contact it does not hold", async () => {
     const rows = await ledger();
@@ -467,5 +467,86 @@ describe("the statistics, in the owner's layout", () => {
       buildReport(client, hotelId, "profit-and-loss", { asOn: "2026-08-25" }))).rejects.toThrow(/no report/);
     const bad = await call("/5EL/reports/monthly-statistics?month=2026-13");
     expect(bad.status).toBe(400);
+  });
+});
+
+/* ── No show, and the City ledger (D17-62; the owner's decisions of 17 Sep) ── */
+
+describe("the no show report", () => {
+  it("still prints an empty day, with its date, and says nobody failed to arrive", async () => {
+    const doc = (await (await call("/5EL/reports/no-show?asOn=2026-08-25")).json()) as ReportDoc;
+    expect(doc.facts).toEqual([{ label: "As On Date", value: "2026-08-25", kind: "date" }]);
+    expect(doc.sections[0]!.rows).toEqual([]);
+    expect(doc.sections[0]!.empty).toMatch(/Nobody failed to arrive/);
+  });
+
+  it("lists a booking the audit marked no-show, on its arrival day only", async () => {
+    const db = await admin();
+    let reference = "";
+    let arrival = "";
+    try {
+      const { rows } = await db.query<{ reference: string; arrival: string }>(
+        `update reservations r set status = 'no_show'
+          where r.id = (select r2.id from reservations r2 join hotels h on h.id = r2.hotel_id
+                         where h.code = '5EL' and r2.status = 'confirmed' and r2.check_in > '2026-08-25'
+                         order by r2.check_in limit 1)
+          returning r.reference, to_char(r.check_in, 'YYYY-MM-DD') as arrival`);
+      reference = rows[0]!.reference;
+      arrival = rows[0]!.arrival;
+    } finally { await db.end(); }
+
+    const that = (await (await call(`/5EL/reports/no-show?asOn=${arrival}`)).json()) as ReportDoc;
+    expect(that.sections[0]!.rows.map((r) => r.cells["reference"])).toContain(reference);
+    const before = (await (await call("/5EL/reports/no-show?asOn=2026-08-25")).json()) as ReportDoc;
+    expect(before.sections[0]!.rows.map((r) => r.cells["reference"])).not.toContain(reference);
+  });
+});
+
+describe("the city ledger, as the owner decided", () => {
+  it("debits the bills transferred to an account, and claims no balance it cannot know", async () => {
+    const db = await admin();
+    let stay = "";
+    try {
+      stay = (await db.query<{ id: string }>(
+        `select r.id from reservations r join hotels h on h.id = r.hotel_id
+          where h.code = '5EL' and r.status = 'checked_in' order by r.reference limit 1`)).rows[0]!.id;
+    } finally { await db.end(); }
+
+    const statsBefore = (await (await call("/5EL/reports/monthly-statistics?month=2026-08")).json()) as ReportDoc;
+    const moved = await app.request(`/api/hotels/5EL/stays/${stay}/payments`, {
+      method: "POST",
+      headers: { "x-dev-staff-id": ownerId, "content-type": "application/json" },
+      body: JSON.stringify({ method: "Bill to company", amount: 1234.5 }),
+    });
+    expect(moved.status).toBe(200);
+
+    const doc = (await (await call("/5EL/reports/city-ledger?asOn=2026-08-25")).json()) as ReportDoc;
+    const rows = doc.sections[0]!.rows;
+    const accounts = rows.filter((r) => r.kind === "row");
+    const totalRow = rows.find((r) => r.kind === "total")!;
+    expect(totalRow.cells["debit"] as number).toBeCloseTo(
+      accounts.reduce((t, r) => t + (r.cells["debit"] as number), 0), 2);
+    expect(accounts.some((r) => r.cells["debit"] === 1234.5)).toBe(true);
+    for (const r of rows) {
+      expect(r.cells["opening"]).toBeNull();
+      expect(r.cells["credit"]).toBeNull();
+      expect(r.cells["closing"]).toBeNull();
+    }
+
+    /* A transfer is not money received: the day's Receipt did not move. */
+    const statsAfter = (await (await call("/5EL/reports/monthly-statistics?month=2026-08")).json()) as ReportDoc;
+    const receipt = (d: ReportDoc) =>
+      d.sections[0]!.rows.find((r) => r.cells["label"] === "25 Tue")!.cells["receipt"];
+    expect(receipt(statsAfter)).toBe(receipt(statsBefore));
+  });
+
+  it("leaves out an account with nothing on the day unless asked to show it", async () => {
+    const other = (await (await call("/5EL/reports/city-ledger?asOn=2026-08-20")).json()) as ReportDoc;
+    expect(other.sections[0]!.rows).toEqual([]);
+    const all = (await (await call("/5EL/reports/city-ledger?asOn=2026-08-26&from=2026-08-26&ignoreZero=0")).json()) as ReportDoc;
+    expect(all.facts.find((f) => f.label === "Ignore zero balance account")?.value).toBe("No");
+    const accounts = all.sections[0]!.rows.filter((r) => r.kind === "row");
+    expect(accounts.length).toBeGreaterThan(0);
+    for (const r of accounts) expect(r.cells["debit"]).toBe(0);
   });
 });

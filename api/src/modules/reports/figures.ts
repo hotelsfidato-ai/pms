@@ -167,7 +167,11 @@ export async function dailyFigures(
               coalesce(sum(fp.tax_amount) filter (where fp.category <> 'room'), 0)
                 + coalesce(sum(fp.amount) filter (where fp.category = 'tax'), 0) as extra_tax,
               -sum(fp.amount) filter (where fp.category = 'discount')        as discount,
-              -sum(fp.amount) filter (where fp.category = 'payment')         as receipt
+              /* Money received. A bill transferred to the city ledger is
+                 posted as a payment, but nobody has paid it yet. */
+              -sum(fp.amount) filter (where fp.category = 'payment'
+                 and not exists (select 1 from payments p
+                                  where p.posting_id = fp.id and p.method = 'city_ledger')) as receipt
          from folio_postings fp
         where fp.hotel_id = $1
           and ${LIVE}
