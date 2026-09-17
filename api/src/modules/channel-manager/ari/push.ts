@@ -56,11 +56,17 @@ const addDays = (date: string, days: number) => {
 export async function pushAri(
   inSession: InSession, su: SuClient, hotelId: string,
   kind: "all" | "changes", policy: AriPolicy,
+  /* A few dates instead of the year: a booking SU sent for a room that is no
+     longer free is refused, and those dates go back to SU as 0 rooms left at
+     once (D17-80) rather than waiting for the minute job. */
+  window?: { from: string; to: string },
 ): Promise<PushOutcome | null> {
   const prepared = await inSession(async (client) => {
-    const from = await firstSellableDate(client, hotelId);
-    if (!from) return null;
-    const to = addDays(from, WINDOW_DAYS - 1);
+    const first = await firstSellableDate(client, hotelId);
+    if (!first) return null;
+    const from = window ? (window.from < first ? first : window.from) : first;
+    const to = window ? window.to : addDays(first, WINDOW_DAYS - 1);
+    if (to < from) return null;
     const snapshot = await readAri(client, hotelId, from, to);
     if (!snapshot) return null;
 

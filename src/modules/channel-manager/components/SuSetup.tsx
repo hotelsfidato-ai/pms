@@ -9,20 +9,24 @@ import { money, dateTime } from "@/lib/format";
 import {
   getSuStatus, checkSuLogin, getSuContent, saveSuHotel, saveSuRoomType,
   saveSuRatePlan, sendSuContent, getSuAvailability, sendSuAvailability,
+  getChannelBookings, markChannelBookingDone,
   type SuContent, type ContentRoomType, type ContentMealPlan, type SendResult,
+  type ChannelBooking,
 } from "../data/su";
 
 /* ══════════════════════════════════════════════════════════════════
-   THE OWNER'S SU SETUP — parts 1 and 2 of the connection (D17-66)
+   THE SU CONNECTION, FOR THE OWNER AND AN ADMINISTRATOR (D17-66, D17-85)
 
-   Four things, in the order they are needed:
+   In the order they are needed:
      1. Is SU set up on the server, and does its login work?
      2. This hotel on SU: its SU id, and what SU requires that the hotel
         record does not hold.
      3. Its room types and meal plans, each with the id SU will know it by
         and whether it goes to SU.
-     4. Send it to SU. The one main action, and it says first what is
-        still missing.
+     4. Send it to SU. The main action, and it says first what is still
+        missing.
+     5. Rooms left, prices and closures: a year, or only what changed.
+     6. The bookings SU has pushed, and what became of each.
 
    NOTHING IS SUGGESTED. No SU id is filled in from a code, no SU room
    type from a name, no SU meal plan from "Continental": each is a choice
@@ -48,6 +52,7 @@ export function SuSetup({ code }: { code: string }) {
       <MealPlansOnSu code={code} data={content.data} />
       <SendToSu code={code} data={content.data} />
       <RoomsAndPrices code={code} data={content.data} />
+      <ChannelBookings code={code} />
     </div>
   );
 }
@@ -347,6 +352,84 @@ function MealPlanRow({ code, plan, suMealPlans }: {
         <LastSend record={m} />
       </div>
     </li>
+  );
+}
+
+/* ── 6. Bookings SU has pushed ────────────────────────────────────── */
+
+const OUTCOME: Record<ChannelBooking["outcome"], { words: string; tone: "neutral" | "warning" | "danger" | "success" }> = {
+  received: { words: "Just arrived", tone: "neutral" },
+  created: { words: "Booked", tone: "success" },
+  changed: { words: "Changed", tone: "success" },
+  cancelled: { words: "Cancelled", tone: "neutral" },
+  refused_no_room: { words: "Refused: no room free", tone: "danger" },
+  needs_attention: { words: "Needs somebody", tone: "warning" },
+  ignored: { words: "Nothing to do", tone: "neutral" },
+};
+
+function ChannelBookings({ code }: { code: string }) {
+  const qc = useQueryClient();
+  const list = useQuery({ queryKey: ["channel-bookings", code], queryFn: () => getChannelBookings(code) });
+  const [marking, setMarking] = useState<string | null>(null);
+
+  const done = async (id: string) => {
+    setMarking(id);
+    try {
+      const r = await markChannelBookingDone(code, id);
+      if (!r.ok) toast.error("Not marked", r.reason);
+      await qc.invalidateQueries({ queryKey: ["channel-bookings", code] });
+    } finally { setMarking(null); }
+  };
+
+  const bookings = list.data?.bookings ?? [];
+  return (
+    <Card>
+      <CardBody className="space-y-3">
+        <div>
+          <h2 className="text-md font-semibold text-ink-900">Bookings from the booking sites</h2>
+          <p className="text-sm text-grey-500">
+            Every booking SU has sent, as it arrived. A booking for a room that was no longer
+            free is refused and the site is told there is nothing left; somebody then settles
+            it with the site and the guest. Card details are never kept.
+          </p>
+        </div>
+        {list.isError && (
+          <ReadFailed compact error={list.error} what="the bookings from SU"
+                      onRetry={() => void list.refetch()} />
+        )}
+        {list.data && bookings.length === 0 && (
+          <p className="text-base text-grey-600">SU has not sent a booking yet.</p>
+        )}
+        <ul className="space-y-2">
+          {bookings.map((b) => (
+            <li key={b.id} className="rounded-md border border-grey-200 p-3 space-y-1">
+              <div className="flex flex-wrap items-baseline gap-x-3">
+                <span className="text-base font-medium text-ink-900">{b.guestName ?? "-"}</span>
+                <span className="text-sm text-grey-500">
+                  {b.channel ?? "-"} · {b.arrival ?? "-"} to {b.departure ?? "-"} ·{" "}
+                  {b.rooms} room{b.rooms === 1 ? "" : "s"} ·{" "}
+                  {b.total === null ? "-" : money(Number(b.total))}
+                </span>
+                <StatusPill tone={OUTCOME[b.outcome].tone}>{OUTCOME[b.outcome].words}</StatusPill>
+                {b.handled && <StatusPill tone="neutral">Dealt with</StatusPill>}
+              </div>
+              {b.reason && <p className="text-sm text-grey-600">{b.reason}</p>}
+              <p className="text-sm text-grey-500">
+                {dateTime(b.receivedAt)} · SU reference {b.suBookingId}
+                {b.acknowledged ? " · SU told we have it" : " · SU not yet told"}
+                {b.cardFieldsRemoved > 0 && " · card details were not kept"}
+              </p>
+              {!b.handled && b.outcome !== "created" && (
+                <Button variant="secondary" size="sm" onClick={() => done(b.id)}
+                        disabled={marking === b.id}>
+                  {marking === b.id ? "Marking" : "I have dealt with this"}
+                </Button>
+              )}
+            </li>
+          ))}
+        </ul>
+      </CardBody>
+    </Card>
   );
 }
 

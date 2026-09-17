@@ -1,0 +1,376 @@
+import { describe, it, expect, beforeAll, afterAll, beforeEach, afterEach } from "vitest";
+import { app } from "../../../src/server.ts";
+import { closePool } from "../../../src/db.ts";
+import { useTransportForTests } from "../../../src/modules/channel-manager/su/runtime.ts";
+import { inbound, resetDoorLimitForTests, PUSHES_A_MINUTE } from "../../../src/modules/channel-manager/inbound/door.ts";
+import { TOKEN_SANDBOX, ARI_SUCCESS, ok200 } from "./suExamples.ts";
+
+/* ══════════════════════════════════════════════════════════════════
+   PART 4 — THE DOOR SU PUSHES BOOKINGS THROUGH (D17-79)
+
+   What must hold:
+   1. No key on the server: the door is shut. A wrong key: 401, nothing
+      stored, no detail given.
+   2. A card number, CVC or token in SU's message is NEVER written anywhere
+      (D17-83) - not in the row, not in the payload it keeps.
+   3. The message is stored BEFORE it is worked out, and SU is told we have
+      it, so SU stops resending and does not drop it after an hour.
+   4. The same message twice is one row, answered the same way, and SU is not
+      told twice.
+   5. A booking for a room that is no longer free makes NO booking, and those
+      dates go back to SU as 0 rooms left at once (D17-80).
+   6. A hotel that is not connected, or not switched on, is refused - SU keeps
+      the booking and tells the property, rather than it vanishing here.
+   7. A flood is refused.
+
+   The door is mounted here the way the master mounts it in server.ts
+   (`/api/channel`, outside the staff sign-in), because this copy's server.ts
+   is the master's file.
+   ══════════════════════════════════════════════════════════════════ */
+
+const KEY = "test-push-key-DO-NOT-SHOW";
+const SU_HOTEL = "FIDATO-5EL";
+
+let hotelId: string;
+let superiorId: string;
+let deluxeId: string;
+let serviceId: string;
+let first: string;
+
+const admin = async () =>
+  new (await import("pg")).default.Pool({
+    connectionString:
+      process.env["SUPER_DATABASE_URL"] ?? "postgres://postgres:pw@127.0.0.1:55432/fidato",
+  });
+
+const addDays = (date: string, days: number) => {
+  const d = new Date(`${date}T00:00:00Z`);
+  d.setUTCDate(d.getUTCDate() + days);
+  return d.toISOString().slice(0, 10);
+};
+
+/* SU's own booking message, from its "Response of Reservation Information",
+   carrying the card fields SU sends so the test can prove they are dropped. */
+const message = (over: Record<string, unknown> = {}, room: Record<string, unknown> = {}) => ({
+  reservations: [{
+    booked_at: "2026-09-18 06:18:41",
+    commissionamount: "450.00",
+    currencycode: "INR",
+    paymenttype: "Hotel Collect",
+    hotel_id: SU_HOTEL,
+    hotel_name: "5 Elements",
+    customer: {
+      first_name: "Asha", last_name: "Rao",
+      email: "asha@example.com", telephone: "+919800000000",
+      remarks: "late arrival",
+      cc_number: "4111111111111111", cc_cvc: "737", cc_name: "ASHA RAO",
+      cc_expiration_date: "0929", cc_type: "Visa",
+      cc_token: "tok_live_SHOULD_NEVER_BE_STORED",
+      cc_vault_token: "vault_SHOULD_NEVER_BE_STORED",
+    },
+    rooms: [{
+      arrival_date: addDays(first, 30), departure_date: addDays(first, 32),
+      id: "DLX", roomreservation_id: "177424661", roomstaystatus: "new",
+      guest_name: "Asha Rao", numberofadults: "2", numberofchildren: "0",
+      totalprice: "9000.00",
+      price: [
+        { date: addDays(first, 30), rate_id: "EP", mealplan: "Room only", pricebeforetax: "4500.00", tax: "540.00" },
+        { date: addDays(first, 31), rate_id: "EP", mealplan: "Room only", pricebeforetax: "4500.00", tax: "540.00" },
+      ],
+      ...room,
+    }],
+    affiliation: { pos: "booking.com", source: "Booking.com", OTA_Code: "19" },
+    channel_booking_id: "6026344507",
+    id: "6026344507_" + SU_HOTEL,
+    reservation_notif_id: "175325153100890355556",
+    status: "new",
+    totalprice: "10080.00",
+    totaltax: "1080.00",
+    su_payments: { action: "charge", tokenid: "tok_SHOULD_NEVER_BE_STORED", pgid: "pg1" },
+    pgtransactionid: "pg-txn-SHOULD-NEVER-BE-STORED",
+    ...over,
+  }],
+});
+
+const push = (body: unknown, key: string | null = KEY) =>
+  inbound.request("/su/reservations", {
+    method: "POST",
+    headers: {
+      "content-type": "application/json",
+      ...(key === null ? {} : { "x-su-key": key }),
+    },
+    body: JSON.stringify(body),
+  });
+
+const su = () => {
+  const calls: Array<{ path: string; body: unknown }> = [];
+  useTransportForTests(async (req) => {
+    const path = new URL(req.url).pathname;
+    if (path.endsWith("/auth/generate-access-token")) return ok200(TOKEN_SANDBOX);
+    calls.push({ path, body: JSON.parse(req.body ?? "{}") });
+    return ok200(path.endsWith("/availability") ? ARI_SUCCESS : { Status: "Success" });
+  });
+  return calls;
+};
+
+const rows = async (sql: string, params: unknown[] = []) => {
+  const db = await admin();
+  try { return (await db.query(sql, params)).rows as Record<string, unknown>[]; }
+  finally { await db.end(); }
+};
+
+beforeAll(async () => {
+  const db = await admin();
+  try {
+    hotelId = (await db.query<{ id: string }>("select id::text from hotels where code = '5EL'")).rows[0]!.id;
+    first = (await db.query<{ d: string }>(
+      "select greatest(business_date, (now() at time zone timezone)::date)::text as d from hotels where id = $1",
+      [hotelId])).rows[0]!.d;
+    const types = (await db.query<{ id: string; code: string }>(
+      "select id::text, code from room_types where hotel_id = $1", [hotelId])).rows;
+    superiorId = types.find((t) => t.code === "SUP")!.id;
+    deluxeId = types.find((t) => t.code === "DLX")!.id;
+
+    serviceId = (await db.query<{ id: string }>(
+      `insert into staff (email, full_name) values ('cm4-service@fidato.in', 'CMTEST4 service')
+       on conflict (email) do update set is_active = true returning id::text`)).rows[0]!.id;
+    await db.query(
+      `insert into staff_hotels (staff_id, hotel_id, role) values ($1, $2, 'read_only')
+       on conflict (staff_id, hotel_id) do update set role = 'read_only'`, [serviceId, hotelId]);
+  } finally { await db.end(); }
+});
+
+/* On SU, switched on for the channel manager (the master's 108), with a
+   service account: everything the door needs before it will take anything. */
+const connected = async (switchedOn = true) => {
+  const db = await admin();
+  try {
+    await db.query(
+      `insert into channel_hotels (hotel_id, su_hotel_id, on_su, run_as) values ($1, $2, true, $3)`,
+      [hotelId, SU_HOTEL, serviceId]);
+    await db.query(
+      `insert into channel_room_types (room_type_id, hotel_id, su_room_id, su_room_type, max_children, is_connected, on_su)
+       values ($1, $3, 'SUP', 9, 1, true, 'active'), ($2, $3, 'DLX', 7, 2, true, 'active')`,
+      [superiorId, deluxeId, hotelId]);
+    await db.query(
+      `insert into channel_rate_plans (hotel_id, meal_plan, su_rate_plan_id, su_meal_plan, is_connected, on_su)
+       values ($1, 'EP', 'EP', 15, true, 'active')`, [hotelId]);
+    if (switchedOn) {
+      await db.query(
+        `insert into hotel_modules (hotel_id, module, is_enabled) values ($1, 'channel_manager', true)
+         on conflict (hotel_id, module) do update set is_enabled = true`, [hotelId]);
+    }
+  } finally { await db.end(); }
+};
+
+beforeEach(() => {
+  resetDoorLimitForTests();
+  process.env["SU_PUSH_KEY"] = KEY;
+  process.env["SU_ENVIRONMENT"] = "sandbox";
+  process.env["SU_CLIENT_ID"] = "test-client";
+  process.env["SU_CLIENT_SECRET"] = "test-secret";
+});
+
+afterEach(async () => {
+  for (const n of ["SU_PUSH_KEY", "SU_ENVIRONMENT", "SU_CLIENT_ID", "SU_CLIENT_SECRET"]) delete process.env[n];
+  useTransportForTests(null);
+  const db = await admin();
+  try {
+    for (const t of ["channel_bookings", "channel_ari_sent", "channel_ari_pushes",
+                     "channel_room_types", "channel_rate_plans", "channel_hotels"]) {
+      await db.query(`delete from ${t} where hotel_id = $1`, [hotelId]);
+    }
+    await db.query("delete from hotel_modules where hotel_id = $1 and module = 'channel_manager'", [hotelId]);
+    await db.query("delete from room_blocks where hotel_id = $1 and note = 'CMTEST4'", [hotelId]);
+  } finally { await db.end(); }
+});
+
+afterAll(async () => {
+  const db = await admin();
+  try {
+    await db.query("delete from staff_hotels where staff_id = $1", [serviceId]);
+    await db.query("update staff set is_active = false where id = $1", [serviceId]);
+  } finally { await db.end(); }
+  await closePool();
+});
+
+describe("the key", () => {
+  it("shuts the door when the server has no key, and refuses a wrong one without saying why", async () => {
+    await connected();
+    delete process.env["SU_PUSH_KEY"];
+    expect((await push(message())).status).toBe(503);
+
+    process.env["SU_PUSH_KEY"] = KEY;
+    const wrong = await push(message(), "not-the-key");
+    expect(wrong.status).toBe(401);
+    expect(JSON.stringify(await wrong.json())).not.toContain(KEY);
+    expect((await push(message(), null)).status).toBe(401);
+    expect(await rows("select id from channel_bookings where hotel_id = $1", [hotelId])).toHaveLength(0);
+  });
+
+  it("refuses a flood", async () => {
+    /* The cheap path: a hotel SU does not know. Every one still counts. */
+    const none = { reservations: [{ hotel_id: "NOT-CONNECTED", id: "x_1", reservation_notif_id: "n1", status: "new", rooms: [] }] };
+    for (let i = 0; i < PUSHES_A_MINUTE; i += 1) {
+      expect((await push(none)).status).toBe(409);
+    }
+    expect((await push(none)).status).toBe(429);
+  });
+});
+
+describe("a booking SU pushes", () => {
+  it("is stored whole, without one card field, and acknowledged to SU", async () => {
+    await connected();
+    const calls = su();
+    const res = await push(message());
+    expect(res.status, JSON.stringify(await res.clone().json())).toBe(200);
+    expect(await res.json()).toEqual({ Status: "Success" });
+
+    const [row] = await rows(
+      `select guest_name, arrival::text, departure::text, rooms, status, channel_code,
+              channel_name, total::text, commission::text, acknowledged_at, outcome,
+              payload::text as payload, (payload->>'cardFieldsRemoved')::int as removed
+         from channel_bookings where hotel_id = $1`, [hotelId]);
+    expect(row).toMatchObject({
+      guest_name: "Asha Rao", arrival: addDays(first, 30), departure: addDays(first, 32),
+      rooms: 1, status: "new", channel_code: "19", channel_name: "Booking.com",
+      total: "10080.00", commission: "450.00",
+    });
+    expect(row!["acknowledged_at"]).not.toBeNull();
+
+    /* Not one card field, anywhere in what was kept. */
+    const kept = row!["payload"] as string;
+    for (const secret of ["4111111111111111", "737", "tok_live_SHOULD_NEVER_BE_STORED",
+                          "vault_SHOULD_NEVER_BE_STORED", "tok_SHOULD_NEVER_BE_STORED",
+                          "pg-txn-SHOULD-NEVER-BE-STORED", "cc_number", "cc_cvc", "su_payments"]) {
+      expect(kept, secret).not.toContain(secret);
+    }
+    /* What was kept is still the booking. */
+    expect(kept).toContain("Asha");
+    expect(kept).toContain("4500.00");
+    expect(Number(row!["removed"])).toBeGreaterThan(0);
+
+    /* SU was told we have it, by its own endpoint and its own shape. */
+    const ack = calls.find((x) => x.path.endsWith("/Reservation_notif"));
+    expect(ack?.body).toEqual({
+      hotelid: SU_HOTEL,
+      reservation_notif: { reservation_notif_id: ["175325153100890355556"] },
+    });
+  });
+
+  it("waits for the reservations door rather than inventing a booking", async () => {
+    await connected();
+    su();
+    await push(message());
+    const [row] = await rows(
+      "select outcome, outcome_reason from channel_bookings where hotel_id = $1", [hotelId]);
+    expect(row!["outcome"]).toBe("needs_attention");
+    expect(String(row!["outcome_reason"])).toContain("not built yet");
+    expect(await rows(
+      "select id from reservations where hotel_id = $1 and ota_reference = $2",
+      [hotelId, "6026344507_" + SU_HOTEL])).toHaveLength(0);
+  });
+
+  it("is one row and one acknowledgement however often SU sends it again", async () => {
+    await connected();
+    const calls = su();
+    expect((await push(message())).status).toBe(200);
+    expect((await push(message())).status).toBe(200);
+    expect((await push(message())).status).toBe(200);
+
+    expect(await rows("select id from channel_bookings where hotel_id = $1", [hotelId])).toHaveLength(1);
+    expect(calls.filter((x) => x.path.endsWith("/Reservation_notif"))).toHaveLength(1);
+  });
+
+  it("refuses a room that is no longer free, and tells SU there is nothing left (D17-80)", async () => {
+    await connected();
+    /* Every Deluxe out of service for those nights: nothing is free. */
+    const db = await admin();
+    try {
+      await db.query(
+        `insert into room_blocks (hotel_id, room_id, from_date, to_date, reason, note)
+         select $1, r.id, $2::date, $3::date, 'out_of_order', 'CMTEST4'
+           from rooms r where r.room_type_id = $4 and r.is_active`,
+        [hotelId, addDays(first, 30), addDays(first, 31), deluxeId]);
+    } finally { await db.end(); }
+
+    const calls = su();
+    expect((await push(message())).status).toBe(200);
+
+    const [row] = await rows(
+      "select outcome, outcome_reason from channel_bookings where hotel_id = $1", [hotelId]);
+    expect(row!["outcome"]).toBe("refused_no_room");
+    expect(String(row!["outcome_reason"])).toContain("Deluxe");
+    expect(await rows("select id from reservations where hotel_id = $1 and ota_reference is not null and ota_reference like '6026344507%'", [hotelId])).toHaveLength(0);
+
+    /* SU heard at once: 0 rooms left on those dates, for that room. */
+    const ari = calls.filter((x) => x.path.endsWith("/availability"));
+    expect(ari.length).toBeGreaterThan(0);
+    const sent = JSON.stringify(ari.map((x) => x.body));
+    expect(sent).toContain("DLX");
+    expect(sent).toContain("\"roomstosell\":\"0\"");
+  });
+
+  it("keeps a room SU has not mapped, and a cancellation, for a person", async () => {
+    await connected();
+    su();
+    await push(message({ id: "unmapped_1", reservation_notif_id: "n-unmapped" }, { id: "SUITE" }));
+    await push(message({ id: "cancel_1", reservation_notif_id: "n-cancel", status: "cancelled" }));
+
+    const found = await rows(
+      "select su_booking_id, outcome, outcome_reason from channel_bookings where hotel_id = $1 order by su_booking_id", [hotelId]);
+    expect(found.map((r) => r["outcome"])).toEqual(["needs_attention", "needs_attention"]);
+    expect(String(found.find((r) => r["su_booking_id"] === "unmapped_1")!["outcome_reason"])).toContain("SUITE");
+    expect(String(found.find((r) => r["su_booking_id"] === "cancel_1")!["outcome_reason"])).toContain("cancel");
+  });
+
+  it("refuses a hotel it does not know, or one not switched on, and keeps nothing", async () => {
+    su();
+    const unknown = await push(message());
+    expect(unknown.status).toBe(409);
+    expect(JSON.stringify(await unknown.json())).toContain("not switched on");
+
+    await connected(false);
+    const off = await push(message());
+    expect(off.status).toBe(409);
+    expect(await rows("select id from channel_bookings where hotel_id = $1", [hotelId])).toHaveLength(0);
+  });
+});
+
+describe("the list a person reads", () => {
+  it("is refused to a GM and shows the owner what happened, without a card field", async () => {
+    await connected();
+    su();
+    await push(message());
+
+    const db = await admin();
+    let gmId = "";
+    try {
+      gmId = (await db.query<{ id: string }>(
+        `insert into staff (email, full_name, firebase_uid) values ('cm4-gm@fidato.in', 'CMTEST4 gm', 'test-uid-cm4gm')
+         on conflict (email) do update set is_active = true returning id::text`)).rows[0]!.id;
+      await db.query(
+        `insert into staff_hotels (staff_id, hotel_id, role) values ($1, $2, 'gm')
+         on conflict (staff_id, hotel_id) do update set role = 'gm'`, [gmId, hotelId]);
+    } finally { await db.end(); }
+
+    const ownerId = (await rows("select id::text as id from staff where email = 'owner@fidato.in'"))[0]!["id"] as string;
+    const get = (who: string) =>
+      app.request("/api/hotels/5EL/channel-manager/bookings", { headers: { "x-dev-staff-id": who } });
+
+    expect((await get(gmId)).status).toBe(403);
+    const res = await get(ownerId);
+    expect(res.status).toBe(200);
+    const text = await res.text();
+    expect(text).toContain("Asha Rao");
+    expect(text).toContain("Booking.com");
+    expect(text).not.toContain("4111111111111111");
+    expect(JSON.parse(text).bookings[0]).toMatchObject({ outcome: "needs_attention", acknowledged: true });
+
+    const cleanup = await admin();
+    try {
+      await cleanup.query("delete from staff_hotels where staff_id = $1", [gmId]);
+      await cleanup.query("update staff set is_active = false where id = $1", [gmId]);
+    } finally { await cleanup.end(); }
+  });
+});

@@ -2,7 +2,14 @@ import type { Mount } from "../../mount.ts";
 import { connection } from "./connection.ts";
 import { content } from "./content/routes.ts";
 import { availability } from "./ari/routes.ts";
+import { bookings } from "./inbound/routes.ts";
 export { jobs } from "./jobs.ts";
+
+/* Part 4 (D17-79): the door SU pushes bookings through. NOT in `mounts`: it
+   answers to SU's key, not a person's sign-in, so it hangs from its own prefix
+   (`/api/channel`) outside the staff gate - the master's line in mount.ts and
+   server.ts. */
+export { inbound } from "./inbound/door.ts";
 
 /* The front door of the channel manager on the server — the only file the core
    or another service may import (src/test/boundaries.test.ts).
@@ -23,4 +30,5 @@ export const mounts: readonly Mount[] = [
   ["/api", connection],
   ["/api/hotels", content],
   ["/api/hotels", availability],
+  ["/api/hotels", bookings],
 ];
