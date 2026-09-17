@@ -168,13 +168,11 @@ directory.get("/:code/settings", async (c) => {
       name: string; address_line: string | null; city: string;
       gstin: string | null; currency: string; timezone: string;
       check_in: string; check_out: string;
-      cgst_rate: string; sgst_rate: string;
       sellable: string; room_types: string[]; plans: string[];
     }>(
       `select h.name, h.address_line, h.city, h.gstin, h.currency, h.timezone,
               to_char(h.check_in_time,  'HH24:MI') as check_in,
               to_char(h.check_out_time, 'HH24:MI') as check_out,
-              h.cgst_rate, h.sgst_rate,
               (select count(*) from rooms r
                 where r.hotel_id = h.id and r.is_active
                   and r.housekeeping_status <> 'out_of_service')::text as sellable,
@@ -194,7 +192,10 @@ directory.get("/:code/settings", async (c) => {
         rows: [
           { label: "Name", value: h.name },
           { label: "Address", value: h.address_line ?? h.city },
-          { label: "GSTIN", value: `${h.gstin ?? "—"} — demo, not a real GSTIN` },
+          /* As stored, or "-" where nobody has set one (ADM-2, D17-49). It
+             said "— demo, not a real GSTIN" after every property's GSTIN,
+             including a real one. */
+          { label: "GSTIN", value: h.gstin ?? "-" },
           { label: "Currency", value: h.currency },
           { label: "Time zone", value: h.timezone },
         ],
@@ -211,12 +212,18 @@ directory.get("/:code/settings", async (c) => {
       },
       {
         title: "Tax and billing",
+        /* ADM-2, the owner's decision D17-37: show the tax actually used.
+           This printed `hotels.cgst_rate` and `sgst_rate` — 2.5% + 2.5% —
+           "editable at Stage 8", a flat pair migration 067 replaced with
+           `tax_rules`, which nothing here read. The rules are finance's and
+           are read from finance's own `GET /:code/tax` by the screen
+           (`TaxInUse`), so Settings and the Properties cards print one
+           answer from one reader; `taxInUse` says where they go. */
         note:
-          "Rates are fixed by statute. Changing them is an administrative act, " +
-          "not a preference — they become editable at Stage 8.",
+          "GST is set on Room types, under GST. The front desk and the till "
+          + "both charge what is shown here.",
+        taxInUse: true,
         rows: [
-          { label: "CGST", value: `${Number(h.cgst_rate)}%`, editableAt: "Stage 8" },
-          { label: "SGST", value: `${Number(h.sgst_rate)}%`, editableAt: "Stage 8" },
           { label: "Financial year starts", value: "1 April" },
         ],
       },

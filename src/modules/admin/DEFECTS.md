@@ -14,16 +14,6 @@ entries stay here: they are the reason the fault does not come back.
 
 ## Open — not fixed
 
-### ADM-2 · Settings and the Properties cards show a tax the database no longer uses
-
-**Found** — 15 September, writing the brief, by reading.
-
-Both print a flat 2.5% + 2.5% GST, which migration 067's tax rules replaced, and Settings appends "— demo, not a real GSTIN" to every property's GSTIN.
-
-**The fix, when it is done** — Read the property's tax rules; print the GSTIN as stored, and a dash when it is not set.
-
-**The rule** — Never show a figure the database has stopped agreeing with.
-
 ### ADM-3 · Every deploy re-creates the placeholder administrator once it is deleted
 
 **Found** — 9 September, deleting it; it came back on the 15 September deploy. Root MEMORY 271.
@@ -47,6 +37,32 @@ The night-audit checklist (`api/src/modules/night-audit/checklist.ts:144`) and a
 ---
 
 ## Fixed — the solution is here; do not work it out again
+
+### ADM-2 · Settings and the Properties cards show a tax the database no longer uses
+
+**Found** — 15 September, writing the brief, by reading.
+
+Both print a flat 2.5% + 2.5% GST, which migration 067's tax rules replaced, and Settings appends "— demo, not a real GSTIN" to every property's GSTIN.
+
+**Fixed** — 17 September, the owner's decision D17-37 ("show the tax actually used; a dash where nothing is set"), branch `admin/audit-log-who`. The rules are finance's, so admin reads them from finance's own `GET /:code/tax` (`data/taxInUse.ts`) rather than reading `tax_rules` a second way, and words them once (`components/TaxInUse.tsx`): one row per kind — rooms, restaurant, bar, banquet, everything else — as "5% up to ₹7,500 · 18% above ₹7,500", "5%", or **"-"** where nobody has set a rate (D17-49). A failed read says "Could not load", never "-". Settings draws them in "Tax and billing", whose note now says GST is set on Room types; its CGST/SGST rows and "editable at Stage 8" are gone. **Every** Properties card draws the same rows: the clerk's and GM's card lost its "CGST 2.5% + SGST 2.5%", and the owner's card, which showed no tax at all, gained them (the owner's answer, 17 September). The GSTIN prints as stored, or "-".
+
+**Proved** — `src/modules/admin/admin.test.tsx` (the wording, Settings, the failed read, both cards) and `api/test/modules/admin/settings.test.ts` (no CGST/SGST or Stage 8, the GSTIN as stored and "-", finance's rules answer a GM and reception). Seen to fail: "0%" for an unset kind broke 4 web tests; dashes on a failed read broke its test; the "demo" suffix put back broke 2 API tests.
+
+**Left for the master** — the core still sends `tax: { cgst, sgst }` in `GET /api/hotels/:code` (`api/src/routes/property.ts`, `Property` in `src/data/repositories/types.ts`, the fixture). Nothing reads it any more.
+
+**The rule** — Never show a figure the database has stopped agreeing with. And when the figure moved to another service, read it from that service's door, not from its table.
+
+### ADM-5 · The module switches let the GM in and kept the administrator out
+
+**Found** — 17 September, before building D17-36, by reading the route the screen calls.
+
+`POST /:code/modules/:module` asked `app.manages_hotel` (084): a group administrator, or `owner`/`gm` at the hotel. The owner's decision D17-36 is "the module switches stay owner and admin only" — the same two roles, the wrong way round. Hiding the switches from the GM on screen alone would have left a GM able to flip one by URL, and shown an administrator switches that refused them with "Only this property's general manager can switch its modules".
+
+**Fixed** — 17 September, on the owner's answer ("screen and server"): `maySwitchModules` in `api/src/modules/admin/grants.ts` — owner or administrator at this hotel, or a group administrator — asked before the write, 403 with a sentence naming who may. The Settings screen shows the switches to exactly `MODULE_SWITCH_ROLES` (`moduleSwitchRoles.ts`) and hides them from everybody else; `api/test/modules/admin/moduleSwitches.test.ts` holds the two lists together. No migration: `app.manages_hotel` is unchanged and still decides who may roster staff.
+
+**Proved** — every assignable role tries to flip Banquet hall (a refusal leaves it where it was; an allowed flip is put back), plus a group administrator and a GM elsewhere who is reception here; `api/test/firstScreen.test.ts` "the GM can flip it" is now "the GM cannot flip it". Seen to fail: with the GM added to the server's list, the list test and the GM's case; with the switches shown to everyone on screen, the GM test.
+
+**The rule** — A decision about who may do something is checked against the route, not only the screen. Read what the server says today before building the half you were given.
 
 ### ADM-1 · The Audit log names "admin" as the person behind every entry
 

@@ -7,6 +7,7 @@ import { Page, PageHeader, Card, CardBody, StatusPill, Skeleton, ErrorState, But
 import { listProperties } from "@/data/repositories";
 import { listAdminProperties, amendProperty, setPropertyOpen, type AdminProperty } from "@/modules/admin/data/admin";
 import { NewProperty } from "@/modules/admin/flows/StaffAdmin";
+import { TaxInUseRows } from "@/modules/admin/components/TaxInUse";
 
 /* Split out of Directory.tsx on 15 September in the service-folder move
    (docs/SERVICE-FOLDERS-PLAN.md). Service: admin. Unchanged. */
@@ -125,7 +126,12 @@ export function PropertiesPage() {
                   <Line label="Rooms" value={String(p.rooms)} />
                   <Line label="Types" value={p.roomTypes.join(" · ")} />
                   <Line label="Check in / out" value={`${p.checkInTime} / ${p.checkOutTime}`} />
-                  <Line label="Tax" value={`CGST ${p.tax.cgst}% + SGST ${p.tax.sgst}%`} />
+                  {/* ADM-2, D17-37. This printed `p.tax` — the flat CGST +
+                      SGST pair migration 067 replaced — as "CGST 2.5% + SGST
+                      2.5%" at every property, whatever it charged. */}
+                  <TaxInUseRows hotelCode={p.id} row={(label, value, key) => (
+                    <Line key={key} label={label} value={value} wrap />
+                  )} />
                 </dl>
                 <Link
                   to={`/h/${p.id}/stay`}
@@ -190,6 +196,12 @@ function AdminPropertyCard({ hotel, onEdit, onToggle }: {
           {/* The GSTIN prints on every invoice this property issues, so
               it belongs where somebody will notice it is wrong. */}
           <Line label="GSTIN" value={hotel.gstin ?? "—"} />
+          {/* ADM-2, D17-37: the owner's cards showed no tax at all. The
+              same rows as every other card and as Settings, from one
+              reader. */}
+          <TaxInUseRows hotelCode={hotel.code} row={(label, value, key) => (
+            <Line key={key} label={label} value={value} wrap />
+          )} />
         </dl>
 
         {hotel.isActive && hotel.checkedIn > 0 && (
@@ -348,11 +360,28 @@ function EditPropertyDialog({ hotel, onClose, onSaved }: {
   );
 }
 
-function Line({ label, value }: { label: string; value: string }) {
+/* `wrap` for a value that must be read whole. A tax line cut to
+   "5% up to ₹7,500 · 18% abo…" hides the rate a room above ₹7,500 is
+   charged — found opening the card on 17 September. */
+function Line({ label, value, wrap = false }: { label: string; value: string; wrap?: boolean }) {
   return (
     <div className="flex justify-between gap-3 text-sm">
-      <span className="text-grey-500">{label}</span>
-      <span className="text-ink-900 tabular text-right min-w-0 truncate">{value}</span>
+      <span className="text-grey-500 shrink-0">{label}</span>
+      <span className={cn(
+        "text-ink-900 tabular text-right min-w-0",
+        wrap ? "break-words" : "truncate",
+      )}>
+        {/* Break between rates, never inside one: "18% above" on one line
+            and "₹7,500" on the next reads as two figures. */}
+        {wrap
+          ? value.split(" · ").map((part, i) => (
+              <span key={i}>
+                {i > 0 && " · "}
+                <span className="whitespace-nowrap">{part}</span>
+              </span>
+            ))
+          : value}
+      </span>
     </div>
   );
 }
