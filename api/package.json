@@ -3,7 +3,7 @@
   "version": "0.1.0",
   "private": true,
   "type": "module",
-  "description": "The App API \u2014 verifies a Firebase ID token, sets app.user_id, and talks to Postgres as pms_app. MASTER.md \u00a75.",
+  "description": "The App API — verifies a Firebase ID token, sets app.user_id, and talks to Postgres as pms_app. MASTER.md §5.",
   "scripts": {
     "dev": "tsx watch src/server.ts",
     "start": "node --experimental-strip-types src/server.ts",
@@ -24,12 +24,15 @@
   },
   "dependencies": {
     "@hono/node-server": "^1.13.7",
+    "exceljs": "4.4",
     "firebase-admin": "^13.0.2",
     "hono": "^4.6.14",
+    "pdfkit": "^0.17.2",
     "pg": "^8.13.1"
   },
   "devDependencies": {
     "@types/node": "^22.10.2",
+    "@types/pdfkit": "^0.17.6",
     "@types/pg": "^8.11.10",
     "tsx": "^4.19.2",
     "typescript": "~5.7.2",

@@ -6539,6 +6539,31 @@ copy will see of theirs.**
 
 ---
 
+### 287 · A demo script, run from a chat's copy, began tearing down the main database
+
+17 September. The Channel manager chat ran `scripts/load-demo.ts` in its own
+copy (`D:\fidato-channel-manager`). The script never reads the copy's
+`api/.env`. It connects to `SUPER_DATABASE_URL`, or else to
+`postgres://postgres:pw@127.0.0.1:55432/fidato`, the main checkout's
+development database on the one Postgres server every copy shares. So it began
+tearing down 5EL in the MAIN database, not the copy's. The append-only guard on
+`stock_movements` stopped it inside its transaction and nothing was kept. The
+chat checked afterwards: 5 triggers enabled, 5EL with 86 reservations, 32
+guests, 1 stock movement. It reported this as CM-1. `demo-history.ts`,
+`reset-property.ts`, `retire-staff.ts` and `pos-outlet.ts` fall back to the
+same database.
+
+A guard written for another reason is all that saved it. Every copy has its
+own settings file naming its own database, and a script that ignores the file
+writes wherever its fallback points, which is somebody else's data.
+
+**The rule: a script that writes connects to the database its own copy names,
+or refuses to run. A built-in fallback on a shared server is not a default,
+it is another chat's work.** Open: the fix is with the owner (17 September).
+Until then no copy runs the demo, reset, retire-staff or pos:outlet scripts.
+
+---
+
 ### 286 · MINE: removing old worktrees deleted the shared node_modules
 
 16 September, evening. I removed six old `.claude/worktrees/agent-*` copies with
