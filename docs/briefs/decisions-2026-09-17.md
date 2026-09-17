@@ -169,3 +169,8 @@ channel manager, then QA.** The order is `docs/NEXT-BUILD-PLAN.md`.
 | D17-71 | Room charges on reports | **Spread over the stay's nights, as eZee does:** Today is tonight's rent; monthly and yearly statistics show nights booked ahead at the booking's rate. Posting itself stays whole-stay on arrival (D17-33) |
 | D17-72 | Complimentary rooms | **Count as sold, as eZee does**, on every report and the Dashboard: occupancy and ADR include them. `src/lib/glossary.ts` says so |
 | D17-73 | Card payments | **Record Credit Card and Debit Card separately** — the Finance chat's (today one `card`). Reports print one "Card" row until it lands |
+| D17-74 | The City ledger: what Debit is | **Debit (the Manager report's "Charges Raised") is bills transferred to the account** ("Bill to company", payments of method `city_ledger`) in the period. **Opening, Credit ("Payment Received") and Closing print "-"** until Finance can record a company's payment. The by-source figures are replaced. `getCityLedger` keeps its name and row type, so Finance's Billing screen does not break |
+| D17-75 | Outstanding commission | **Prints "-"** until commission paid to OTAs is recorded |
+| D17-76 | Folio No. on the Night audit report | **Prints the booking reference, headed "Booking"** |
+| D17-77 | Dates on reports | **25/08/2026 (DD/MM/YYYY)** on screen, PDF and Excel, as eZee; **timestamps "25/08/2026 04:12:43 PM"** in the property's time. Shared formatters: `dateReport` and `dateTimeReport` in `src/lib/format.ts`, with the server renderer's copy held to them by a test |
+| D17-78 | The printed Night audit report | **A report in All reports** ("Night audit report", under The day, found by search), not part of the night-audit service's screen |
