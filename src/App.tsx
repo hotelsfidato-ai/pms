@@ -25,6 +25,7 @@ import { homePath } from "@/lib/homeScreen";
 import { workingHomeFor } from "@/components/app/navigation";
 import { PropertyScope, PropertyIndex } from "@/components/app/PropertyScope";
 import { RequireAccess } from "@/components/app/RequireAccess";
+import { reCheckMoney } from "@/lib/freshness";
 import { NotificationsPage } from "@/pages/Notifications";
 import PlacesAndSuppliersPage from "@/pages/PlacesAndSuppliers";
 import SignInPage from "@/pages/SignIn";
@@ -97,6 +98,9 @@ const queryClient = new QueryClient({
     },
   },
 });
+/* Money is the exception: re-checked whenever a screen opens or comes back
+   into view (FIN-3, the owner's D17-58). The list is src/lib/freshness.ts. */
+reCheckMoney(queryClient);
 
 /* Read once when a screen opens with no connection. Anything not named
    here is fetched or absent — never silently stale.

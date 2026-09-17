@@ -14,7 +14,9 @@ entries stay here: they are the reason the fault does not come back.
 
 ## Open — not fixed
 
-### FIN-3 · `/in-house` showed ₹7,085 owed by a guest who had paid — the list was an old copy
+## Fixed
+
+### FIN-3 · `/in-house` showed ₹7,085 owed by a guest who had paid — the list was an old copy — FIXED 17 September
 
 **Found** — 16 September, the critique's P0, answered by a query (read-only
 session, development database `fidato`). **Not yet reproduced in a browser.**
@@ -58,9 +60,15 @@ the bill a critique opens.
 one of them asked earlier. Before blaming the query, check how long each
 screen keeps its answer.
 
----
+**Fixed by the master, 17 September — the owner's D17-58: a money figure is
+re-checked every time a screen is opened or brought back into view.**
+`src/lib/freshness.ts` makes every money query (folio, balances, open folios, In
+house, Due out, payments, city ledger, the drawer, invoices, the Dashboard's report)
+stale at once and refetched on focus; App.tsx applies it. Rooms, menus and the floor
+keep their quiet default. Proved: `freshness.test.ts`; opening In house twice
+locally fetched the folio from the server both times.
 
-## Fixed
+---
 
 ### FIN-2 · `getFolioBalance` returns 0 for a stay with no bill — FIXED 17 September
 
