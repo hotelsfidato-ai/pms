@@ -1,162 +1,171 @@
 # Channel manager
 
 The wire between this system and the booking sites (Agoda, Booking.com,
-go-MMT and the rest): rooms and prices out, bookings in.
+Expedia, Goibibo/MMT and the rest), through **SU** (Su channel manager): rooms
+left, prices and restrictions out; bookings in.
 
-**NOT CONNECTED. Only a "not connected" status page exists, in the Coming
-soon section since 16 September.** Excluded by the owner on 8 September; on 15
-September the owner said the channel manager is being defined, to be
-finalised on 16 September. Nothing is built here until the owner asks.
-
-**Folder name:** `channel-manager` — the same word in all three places:
+**BEING BUILT, NOT CONNECTED.** The owner chose SU and asked for the connection
+to be built on 17 September (D17-66, `docs/briefs/decisions-2026-09-17.md`).
+SU's API documents: https://suissu.gitbook.io/su-api-documentation/su-channel-manager
+(the full index is `llms.txt` beside it). Nothing is sent to SU or any booking
+site until the owner has SU's test keys, and nothing goes live without the
+owner's yes.
 
 ```
-src/modules/channel-manager/          the status page
-api/src/modules/channel-manager/      does not exist — there is no server code for this service
-db/tests/modules/channel-manager.sql  does not exist — NEW database checks only, when there is something to check
+src/modules/channel-manager/          the page, the menu entry, these notes
+api/src/modules/channel-manager/      the SU connection (part 1 built)
+api/test/modules/channel-manager/     its tests, against SU's documented answers
+db/tests/modules/channel-manager.sql  not yet: no table of its own until part 2
 ```
 
-Before any edit: ask the owner. Then claim the service in `HANDOVER.md` →
-"Folder claims". Written 15 September 2026 from the code at `880a5b6`.
+The brief is `docs/briefs/channel-manager.md` (its 17 September section wins).
+Claim with `npm run claim -- channel-manager "what"`; `npm run lane --
+channel-manager` before a commit.
 
 ---
 
-## What it is
+## The build, in the owner's order
 
-Today every booking-site reservation is typed in by hand, and every closed
-room is closed by somebody logging in to each site. A channel manager would
-push availability and prices from this system to the sites, and pull their
-bookings in as bookings. It is the largest gap between this system and a
-finished one (`PROGRESS.md`, "What a market-leading HMS has that this does
-not"). What exists is a page that says so.
+| Part | What | State |
+|---|---|---|
+| 1 | **Token login.** SU's keys from the server's settings only; a token reused, renewed before it lapses, SU's 30 logins an hour never spent by a loop, a test key never used against the live account | **Built** 17 September, branch `channel-manager/su-connection` |
+| 2 | **Content:** the hotel, its room types and its rate plans, sent to SU from the PMS (the record, D17-28); a mapping table per hotel | Next |
+| 3 | **Rates and availability:** rooms left, prices and restrictions pushed whenever they change and on demand, read through inventory's front door | After 2 |
+| 4 | **Reservations:** new, modified and cancelled bookings from SU, landing through reservations' front door (idempotent since RES-3) with their OTA source and commission | After 3 |
 
----
+The owner's rules for it (D17-43 to D17-45): a booking for a room no longer
+free is **refused and SU told**, never an overbooking; an OTA booking follows
+**the OTA's cancellation policy**, a direct one the hotel's terms; **each hotel
+is switched on separately**, none by default.
 
-## Status — and where that comes from
-
-- **Excluded by the owner, 8 September**: "Channel manager and payment
-  gateway: excluded for now" (CHANGELOG 2026-09-08 "Three gates aimed at an
-  act…", "Decided by the owner"; `HANDOVER.md` § 4, "earlier").
-- **Out of scope until the owner asks** (`PENDING.md` § 3, "Channel manager —
-  excluded for now"). Stage 9's five open units are this (`PROGRESS.md`);
-  with the CRS bridge they are the 17 of 228 still open (`HANDOVER.md` § 2).
-- **In the Coming soon section — the owner's decision, 16 September**: every
-  service the system does not have yet, in one section at the foot of the
-  menu, for the owner, admins and general managers (`seesComingSoon`). From
-  15 September until then it was in nobody's menu (`listed: false`) and a
-  search away for anybody holding the `rate` grant.
-- **Being defined** — the owner, 15 September: "channel manager things also
-  is being defined and also finalised tomorrow" (root `CHANGELOG.md`,
-  2026-09-15, "one system"; `docs/HMS-INTEGRATION-PLAN.md` Phase 4).
+**Stop and ask the owner** before anything that would change a price or close a
+room without a person, anything about money SU collects, and the first live push.
 
 ---
 
 ## Screens
 
-| Menu name | Address (`routes.tsx`) | Page file | Working menus (`nav.ts`) |
+| Menu name | Address (`routes.tsx`) | Page file | Who (`nav.ts`) |
 |---|---|---|---|
-| Channel manager | `/h/:code/channels` | `pages/ChannelManager.tsx` | owner, admin, GM — the Coming soon section (`seesComingSoon`) |
+| Channel manager | `/h/:code/channels` | `pages/ChannelManager.tsx` | owner, admin, GM (Coming soon section, `seesComingSoon`) |
 
-The entry sits in the Coming soon section, is seen by the owner, admins and
-general managers only — the route refuses anybody else — and answers to
-"staah", "ota" and "channels" in Find a screen. The page says
-"Coming soon", what the connection will do, what it needs first, and lists
-the booking sites already recorded as sources — real rows or a dash, never
-an invented list of logos.
+Still the status page, in the Coming soon section. Since 17 September it says
+the connection is through SU, is being built and sends nothing yet, and lists
+what it still needs before it goes live. It lists the booking sources recorded
+as OTAs, or says none have been.
 
 ---
 
 ## Server endpoints
 
-None of its own. The page reads the companies list through the guests
-service (`listCompanies` → `GET /api/hotels/:code/companies`,
-`api/src/modules/guests/directory.ts`) and keeps the ones of kind "OTA".
+| Method and path | What | Who |
+|---|---|---|
+| `GET /api/channel-manager/su` | Whether SU is set up on this server (test or live account), what is missing, the last login and this hour's count against SU's 30 | owner |
+| `POST /api/channel-manager/su/login` | Logs in to SU now and says whether it worked. Sends nothing to any booking site | owner |
+
+Mounted under `/api`, not `/api/hotels/:code`: SU's keys belong to the PMS as
+SU's partner, and one pair serves every hotel connected.
+
+**Owner only** because the `integration` grant in `src/lib/permissions.ts` is
+held by the owner alone (a group administrator counts as the owner). Whether an
+administrator or a GM should also reach it is the owner's to say.
+
+No answer carries the client id, the secret or the token.
+
+### The server's settings (set by the owner, on the server)
+
+```
+SU_ENVIRONMENT    sandbox | live
+SU_CLIENT_ID      from SU when the account is made
+SU_CLIENT_SECRET  generated on SU's extranet
+```
+
+In `api/.env` on the server, never in the repository, a screen, a test or a
+chat. The host is not a setting: `sandbox` means `https://connect-sandbox.su-api.com`
+and `live` means `https://connect.su-api.com`, so a mistyped address can never
+receive the secret.
+
+### Files
+
+```
+su/config.ts    the three settings, read at call time; the two hosts
+su/http.ts      the wire (fetch, 30 s timeout); the one thing a test replaces
+su/token.ts     the token holder: reuse, renew 5 min early, 30 an hour, a
+                minute's wait after a refusal, test/live prefix check, keys
+                scrubbed from every message; SU's four ways of writing a failure
+su/client.ts    a signed call: Bearer header, SU's 200-with-Fail read as a
+                refusal, one fresh login on "Authorization Required", the
+                hourly limit named
+su/runtime.ts   one connection per server process
+connection.ts   the two routes above
+```
 
 ---
 
 ## Data
 
-None — no `data/`, `lib/` or `components/`.
+None yet. Part 2 adds the mapping tables.
 
 ---
 
 ## Database
 
-No tables. What a connection would build on, already there:
+No tables of its own yet. What the connection stands on:
 
 ```
-booking_sources.channel_code   082_booking_sources.sql — what a channel manager will send,
-                               unique across the group (PENDING § 3)
-rates · app.set_rate           033, 053 — every price write goes through app.set_rate,
-                               "the channel manager will price dates too" (MEMORY 96)
-reservations_freeze_terms      037 — cancellation terms attach however a booking is made,
-                               the channel manager included (MEMORY 81)
+booking_sources.channel_code   082 - what a channel manager sends, unique across the group
+rates · app.set_rate           033, 053 - every price write goes through app.set_rate
+app.inventory_grid             044 - rooms left per room type per date
+rate_restrictions              044 - stop sell, closed to arrival/departure, min/max nights
+reservations.ota_reference     005, 091 - the sender's own reference, unique per source (RES-3)
+reservations_freeze_terms      037 - cancellation terms attach however a booking is made
 ```
 
-**A new migration needs a number claimed in `HANDOVER.md` first**
-(`src/test/migrationNumbers.test.ts`).
+A migration takes the next number after cp6's highest when the file is written,
+and the master is told.
 
 ---
 
 ## Front door
 
-`src/modules/channel-manager/index.ts` exports nothing (`export {};`). Nobody
-imports it. There is no server door.
+`api/src/modules/channel-manager/index.ts` exports `mounts` (the `connection`
+router under `/api`). `src/modules/channel-manager/index.ts` exports nothing.
 
 ---
 
 ## Leans on
 
-- **guests** — `listCompanies` through `@/modules/guests`, on the status page.
-
-If it is ever built it would lean on **inventory** (rooms left and prices —
-the rate calendar), **reservations** (bookings in) and **guests** (booking
-sources and their commission).
-
----
-
-## Rules that bind it
-
-- **Nothing is built here until the owner asks** (see Status).
-- **What the page says it needs before it can be built** (`pages/ChannelManager.tsx`):
-  which channel manager the group pays for — "designed against STAAH"; the
-  account and one property id per hotel; a mapping of room names; one rate
-  everywhere or a rate per channel. Those are the owner's questions, not the
-  code's.
-- **Credentials belong in the server's environment, never in a screen or a
-  chat** (the same page; `HANDOVER.md` § 5 on `api/.env`).
-- **Never invent**: the page lists recorded booking sources or a dash
-  (`ChannelManager.tsx` header).
-- **The Manager report's City ledger is all dashes until OTA balances are kept
-  here** — `manager.ts`: "fills when the channel bridge lands" (PENDING § 6).
-  Administration → Integrations lists STAAH as "planned" from a fixed list in
-  the code (`src/modules/admin/data/adminLists.ts`).
-
----
-
-## Open items
-
-Only the owner's decision to start. `PENDING.md` § 3 records the exclusion
-and the foundation above; nothing else is open.
+- **guests** - `listCompanies` through `@/modules/guests`, on the status page.
+- **inventory** (parts 2 and 3), **reservations** (part 4), through their front
+  doors. What is not exported there is a request to the master.
 
 ---
 
 ## Gates
 
 ```
-web       npx tsc -b                     clean
-          npx vitest run                 all pass (includes src/test/boundaries.test.ts)
+web     npx tsc -b --force      clean
+        npx vitest run          all pass (includes src/test/boundaries.test.ts)
+api     cd api; npm test        all pass (never npx vitest run in api/)
 ```
-
-The guard: `src/test/boundaries.test.ts` — this folder must keep its
-`index.ts` and this `MODULE.md`, and reach other services only through their
-`index.ts`. The status page's menu entry is pinned in
-`src/components/app/navigation.test.ts` (in nobody's menu).
 
 ---
 
+## Requests to the master
+
+1. **17 Sep · the demo loader aims at the main database from a copy** (CM-1).
+   `api/scripts/load-demo.ts` connects to `SUPER_DATABASE_URL` or, if unset, to
+   `fidato`, whatever the copy's `api/.env` says. Run from
+   `D:\fidato-channel-manager` it began tearing down 5EL in the master's
+   development database; the append-only stock guard stopped it inside its
+   transaction and nothing was kept. Asked: refuse to run without
+   `SUPER_DATABASE_URL`, or take the database name from `DATABASE_URL`.
+2. **17 Sep · SU's settings in `env.ts`, if wanted.** Part 1 reads the three SU
+   settings in `su/config.ts` at call time, so `env.ts` (core) is untouched and
+   the server starts without them. If the master prefers them listed in
+   `env.ts`, it is one block.
+
 ## Requests from other services
 
-None yet. To ask for a change here, add a line below — date, your service,
-what you need and why — and leave the change to whoever holds this
-service's claim.
+None yet. Add a line here (date, your service, what you need and why) and leave
+the change to whoever holds this service's claim.

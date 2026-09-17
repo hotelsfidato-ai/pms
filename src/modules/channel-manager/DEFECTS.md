@@ -14,7 +14,34 @@ entries stay here: they are the reason the fault does not come back.
 
 ## Open — not fixed
 
-None recorded for this service.
+### CM-1 · The demo loader, run from this copy, aimed at the main development database
+
+**Found** — 17 September, setting up `D:\fidato-channel-manager` to open the
+status page. I ran `npm run load-demo` in the copy's `api/`, expecting it to use
+the copy's `api/.env` (`fidato_channel_manager`). It does not read `DATABASE_URL`:
+it connects to `SUPER_DATABASE_URL`, or to `fidato` when that is unset. So it
+connected to the **master's development database** as the superuser and began
+its teardown of 5EL there, triggers lifted.
+
+**What stopped it** — the teardown runs in one transaction, and the cascade from
+the hotel reached `stock_movements`, which is append-only and refused ("Post a
+reversing entry instead of DELETE"). The error rolled the whole transaction back,
+the trigger changes with it (Postgres DDL is transactional).
+
+**Checked afterwards, in `fidato`** — the five lifted triggers are enabled again
+(`hotels_no_delete`, `folio_postings_append_only`, `invoices_immutable`,
+`pos_order_lines_frozen`, `guests_no_delete`, all `O`); 5EL is there with its 86
+reservations, 32 guests and 1 stock movement. Nothing was committed.
+
+**What was done** — the demo went into this copy's own database the way the test
+harness does it (`db/tests/harness.sql` and `suite.sql`, the dev identities,
+then `load-demo` with `SUPER_DATABASE_URL` naming `fidato_channel_manager`). The
+script itself is not this service's: asked of the master (MODULE.md, Requests 1).
+Lesson sent for the root `MEMORY.md`.
+
+**The rule** — Before running a script from a copy, read its connection line. A
+script that falls back to a default database reaches the master's data from any
+copy, and "it uses my settings file" is a guess until the line says so.
 
 ---
 
