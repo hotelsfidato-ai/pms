@@ -266,6 +266,10 @@ const MATRIX: Record<Role, ResourceGrants> = {
     notification: READ,
     user: READ,
     audit_log: READ,
+    /* The owner's D17-36, 17 September: the GM may open Settings. The module
+       switches on that screen stay the owner's and an administrator's
+       (src/modules/admin/moduleSwitchRoles.ts). */
+    setting: READ,
     ai: READ,
     stock: ["view", "create", "edit", "approve", "export"],
     equipment: ["view", "create", "edit", "approve", "export"],

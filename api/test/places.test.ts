@@ -68,8 +68,8 @@ afterAll(async () => {
 });
 
 describe("who may change places and suppliers", () => {
-  it("is the owner, an administrator and the GM", () => {
-    expect([...PLACE_KEEPERS].sort()).toEqual(["admin", "gm", "owner"]);
+  it("is the owner, an administrator, the GM, the Hotel Manager and the Inventory Manager (D17-1)", () => {
+    expect([...PLACE_KEEPERS].sort()).toEqual(["admin", "gm", "hotel_manager", "owner", "stores"]);
   });
 
   for (const role of ASSIGNABLE_ROLES) {

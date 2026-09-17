@@ -21,9 +21,15 @@ begin
   -- ---------- nothing ships ----------
   select count(*) into n from suppliers where hotel_id = h;
   perform test.ok('suppliers and locations','a new property has no suppliers', n = 0, n || ' arrived');
+  /* Until 17 September a new property had no places at all. The owner's D17-3:
+     a Main, Kitchen and Bar store at every hotel (migration 104) — and nothing
+     else is invented. */
   select count(*) into n from locations where hotel_id = h;
   perform test.ok('suppliers and locations',
-    'a new property has no locations — not even the three the owner chose', n = 0, n || ' arrived');
+    'a new property gets a Main, Kitchen and Bar store, and no other place', n = 3, n || ' arrived');
+  perform test.ok('suppliers and locations','all three are stores, by the owner''s names',
+    (select array_agg(name order by name) from locations where hotel_id = h and kind = 'store')
+      = array['Bar store', 'Kitchen store', 'Main store']);
 
   -- ---------- a supplier ----------
   insert into suppliers (hotel_id, name, phone, gstin)
@@ -48,9 +54,16 @@ begin
 
   -- ---------- locations ----------
   insert into locations (hotel_id, name, kind) values
-    (h, 'Main store', 'store'), (h, 'Kitchen store', 'store'), (h, 'Lobby', 'public_area');
-  perform test.ok('suppliers and locations','places of each kind can be added',
-    (select count(*) from locations where hotel_id = h) = 3);
+    (h, 'Back office', 'office'), (h, 'Lobby', 'public_area');
+  perform test.ok('suppliers and locations','places of each kind can be added beside the three stores',
+    (select count(*) from locations where hotel_id = h) = 5);
+
+  -- ---------- the three stores are never brought back (104, replayed) ----------
+  update locations set name = 'Main godown' where hotel_id = h and name = 'Main store';
+  update locations set is_active = false where hotel_id = h and name = 'Bar store';
+  perform test.ok('suppliers and locations',
+    'a replay adds nothing to a hotel that renamed one store and switched one off',
+    app.default_stores(h) = 0 and (select count(*) from locations where hotel_id = h) = 5);
 
   perform test.raises('suppliers and locations','a kind the hotel does not have is refused',
     format($q$insert into locations (hotel_id, name, kind) values (%L, 'Garage', 'car_park')$q$, h),
@@ -223,7 +236,7 @@ begin
 
   begin
     h := app.provision_property_unchecked('EQD','Equipment Delete Test','Nowhere');
-    insert into locations (hotel_id, name, kind) values (h, 'Main store', 'store') returning id into loc;
+    select id into loc from locations where hotel_id = h and name = 'Main store';   -- made by 104
     insert into equipment_categories (hotel_id, name) values (h, 'Appliance') returning id into cat;
     insert into equipment_items (hotel_id, name, category_id, held_as, tag, created_by)
     values (h, 'Test TV', cat, 'tagged', 'EQ-0001', who) returning id into item;

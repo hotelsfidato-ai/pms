@@ -41,8 +41,9 @@ begin
   insert into staff_hotels (staff_id, hotel_id, role) values
     (clerk, h, 'hotel_manager'), (keeper, h, 'stores'), (elsewhere, other, 'gm');
 
-  insert into locations (hotel_id, name, kind) values (h, 'Main store', 'store') returning id into store;
-  insert into locations (hotel_id, name, kind) values (h, 'Kitchen store', 'store') returning id into store2;
+  -- The Main and Kitchen stores exist already: every new property gets them (104, D17-3).
+  select id into store  from locations where hotel_id = h and name = 'Main store';
+  select id into store2 from locations where hotel_id = h and name = 'Kitchen store';
   insert into locations (hotel_id, name, kind) values (h, 'Lobby', 'public_area') returning id into lobby;
   insert into locations (hotel_id, name, kind) values (other, 'Lobby', 'public_area') returning id into lobby_other;
   insert into suppliers (hotel_id, name) values (h, 'Solapur Electricals') returning id into sup;

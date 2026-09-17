@@ -12,12 +12,9 @@ import { withSession } from "../auth.ts";
    the equipment chat on 16 September. Shared by three services and owned
    by none, so it is core, like approvals.
 
-   WHO MAY CHANGE THEM: the owner, an administrator and the GM — the three
-   roles the owner's table already gives everything on stock and equipment
-   (docs/STOCK-AND-EQUIPMENT-PLAN.md § 6). Whether the Hotel Manager and the
-   Inventory Manager may too is ASKED of the owner, not assumed; widening it
-   is this one list. Anybody rostered here may read them — the Store and
-   the register already print these names.
+   WHO MAY CHANGE THEM: the owner, an administrator, the GM, the Hotel
+   Manager and the Inventory Manager — the owner's D17-1, 17 September. Anybody
+   rostered here may read them; the Store and the register print these names.
 
    NOTHING IS DELETED. A place or a supplier is switched off: stock was kept
    there, equipment stood there, a delivery came from them, and those rows
@@ -27,15 +24,15 @@ import { withSession } from "../auth.ts";
 export const places = new Hono<{ Variables: { subject: string } }>();
 
 /** The roles that may add, change and switch off a place or a supplier. */
-export const PLACE_KEEPERS: readonly string[] = ["owner", "admin", "gm"];
+export const PLACE_KEEPERS: readonly string[] = ["owner", "admin", "gm", "hotel_manager", "stores"];
 
 export const PLACE_KINDS = [
   "store", "kitchen", "bar", "restaurant", "public_area", "office", "other",
 ] as const;
 
 const REFUSED =
-  "Adding or changing places and suppliers is for the owner, an administrator " +
-  "or the general manager. Ask one of them.";
+  "Adding or changing places and suppliers is for the owner, an administrator, " +
+  "the general manager, the hotel manager or the Inventory Manager. Ask one of them.";
 
 const refuse = (reason: string) => ({ ok: false as const, reason });
 
