@@ -6539,6 +6539,23 @@ copy will see of theirs.**
 
 ---
 
+### 298 · MINE: a commit message that claimed two files I had not changed
+
+18 September. One script wrote the CHANGELOG entry, the HANDOVER entry and a
+third file, then `git add` and `git commit` in the same call. The script's first
+edit failed on a heading that had been reworded, so it stopped - and the commit
+still ran, carrying only the third file, under a message that described all
+three. `git log` said the work was recorded. It was not.
+
+The chain hid it: the script's assertion printed above the commit's output, and
+I read the last line.
+
+**The rule: when one call writes files and commits them, the commit's own
+`--stat` is the thing to read, not the fact that it succeeded. A message names
+files; check it names the ones that moved.**
+
+---
+
 ### 297 · A bare timestamp means the SERVER's time zone, and the server is not the hotel
 
 18 September, found by the first CI run - a Linux machine, where a whole class
