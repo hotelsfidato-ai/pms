@@ -146,6 +146,21 @@ export SUPER_DATABASE_URL="postgres://${SUPER}:${SUPERPASS}@${PGHOST}:${PGPORT}/
 # in through the dev header, and anything reaching Firebase fails loudly.
 export FIREBASE_SERVICE_ACCOUNT=""
 
+# ⚠ THE TESTS NAME THEIR OWN CALLER. Every test here signs in with
+# `x-dev-staff-id`, which only works with ALLOW_DEV_AUTH, and `env.ts` refuses
+# to start with neither that nor a Firebase service account.
+#
+# It came from the developer's own `api/.env` until 18 September - a file that
+# is not committed and cannot be - so the suite ran on the machines that
+# happened to have one and nowhere else. On a Linux runner all sixty-two files
+# loaded zero tests and the reason was one line down in the log. A harness that
+# needs a file it does not create is not a harness.
+#
+# Safe here, and only here: this script is the test harness, the database it
+# points at is a scratch one it made, and `env.ts` throws if this is ever on
+# with NODE_ENV=production.
+export ALLOW_DEV_AUTH=1
+
 npx tsx scripts/load-demo.ts >/dev/null 2>&1 \
   || { red "  x the demo would not load into $DB"; npx tsx scripts/load-demo.ts; exit 1; }
 dim "   demo loaded"

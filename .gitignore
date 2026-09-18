@@ -29,6 +29,7 @@ vitest.config.ts.timestamp-*
 
 # Local environment. .env.example is committed as the template.
 .env
+!.env.test
 .env.local
 .env.*.local
 

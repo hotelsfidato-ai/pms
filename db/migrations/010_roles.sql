@@ -94,6 +94,44 @@ begin
 end
 $$;
 
+-- -----------------------------------------------------------------------------
+-- And it must BYPASS the policies, from here rather than from 068
+-- -----------------------------------------------------------------------------
+-- The block above hands pms_migrate every table and every `app.` function. A
+-- SECURITY DEFINER function therefore runs AS pms_migrate, and `force row level
+-- security` (007) applies to an owner like anybody else — so such a function
+-- can only write where it must if pms_migrate bypasses the policies. 068 says
+-- all of this at length and grants it there.
+--
+-- 068 IS TOO LATE, and 18 September proved it on a Linux runner with a fresh
+-- cluster. Migrations replay from 001 on every deploy. On the second pass, 025
+-- inserts a property to prove the invoice series works; the trigger 104 adds
+-- creates that property's three stores; that insert runs as pms_migrate; and
+-- `locations` refused it. The whole run rolled back at migration 25 of 112.
+--
+-- It never happened here because a role is CLUSTER-wide: this laptop's
+-- pms_migrate was granted BYPASSRLS months ago, and every scratch database the
+-- gate builds inherited it. A new server would not have. Proved both ways by
+-- taking the grant away and putting it back.
+--
+-- Where the role is made is where it gets what it needs. Guarded, so a replay
+-- is a no-op, and silent when this is not run by a superuser: 068 still checks,
+-- and still refuses in a sentence if nothing has granted it by then.
+do $$
+begin
+  if not (select rolbypassrls from pg_roles where rolname = 'pms_migrate') then
+    begin
+      alter role pms_migrate bypassrls;
+      raise notice 'pms_migrate now bypasses row level security (it owns the tables)';
+    exception when insufficient_privilege then
+      raise notice
+        'pms_migrate has no BYPASSRLS and this connection cannot grant it. '
+        '068 will say so again, with what to run by hand.';
+    end;
+  end if;
+end
+$$;
+
 -- SECURITY DEFINER functions now run as pms_migrate rather than the installing
 -- superuser. That is the intent — they need to bypass RLS on staff_hotels, not
 -- to hold superuser rights.
