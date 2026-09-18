@@ -123,7 +123,7 @@ booked by the desk, closed to the room or settled at the spa.
   `closed_by`, `closed_at` and `posting_id`, and the routes for it wait on the
   two doors above. Nothing half-written was left in place.
 
-**Commits:** `COMMIT_SHA` — on `spa/phase-1`. The migration number in it is
+**Commits:** `074526d` — on `spa/phase-1`. The migration number in it is
 provisional and is the master's to confirm or renumber at merge.
 
 ---
