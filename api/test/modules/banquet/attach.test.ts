@@ -76,6 +76,22 @@ const day = (offset: number) => {
   return d.toISOString().slice(0, 10);
 };
 
+/* ⚠ EVERY TIME BELOW CARRIES THE PROPERTY'S OWN OFFSET, and that is the rule
+   being tested rather than a detail of it.
+
+   These times were written bare - `${t}T19:00${IST}` - and a bare time means
+   whatever zone the DATABASE SESSION is in. On the machine this was written on
+   that is Asia/Kolkata, so it read as the hotel's clock and every case passed.
+   On a Linux runner - and on the hotel's own server, whose Postgres runs in
+   GMT - the same string means 19:00 GMT: the "Midnight" function then ended at
+   05:30 the next morning in Akkalkot, and the till offered a function that had
+   finished the day before (found by the first CI run, 18 September).
+
+   That the API stores a bare time in the SERVER's zone rather than the
+   PROPERTY's is a real fault underneath this one. It is written up as BQ-8,
+   not papered over here. */
+const IST = "+05:30";
+
 /* The functions, by what the rule should say about each. */
 const ids: Record<string, string> = {};
 
@@ -125,25 +141,25 @@ beforeAll(async () => {
   const t = day(0);
 
   /* Offered: confirmed, bill open, on today. */
-  await register("Tonight", north, `${t}T18:00`, `${t}T23:00`);
+  await register("Tonight", north, `${t}T18:00${IST}`, `${t}T23:00${IST}`);
   await confirm("Tonight");
   /* Offered: a three-day wedding is running on its middle day. */
-  await register("Wedding", south, `${day(-1)}T10:00`, `${day(1)}T22:00`);
+  await register("Wedding", south, `${day(-1)}T10:00${IST}`, `${day(1)}T22:00${IST}`);
   await confirm("Wedding");
 
   /* Not offered: an enquiry has no bill. */
-  await register("Enquiry", north, `${t}T08:00`, `${t}T10:00`);
+  await register("Enquiry", north, `${t}T08:00${IST}`, `${t}T10:00${IST}`);
   /* Not offered: confirmed, but tomorrow. */
-  await register("Tomorrow", north, `${day(1)}T18:00`, `${day(1)}T23:00`);
+  await register("Tomorrow", north, `${day(1)}T18:00${IST}`, `${day(1)}T23:00${IST}`);
   await confirm("Tomorrow");
   /* Not offered: cancelled, though it was confirmed for today. */
-  await register("Cancelled", lawn, `${t}T08:00`, `${t}T10:00`);
+  await register("Cancelled", lawn, `${t}T08:00${IST}`, `${t}T10:00${IST}`);
   await confirm("Cancelled");
   expect((await post(`/5EL/banquet/events/${ids["Cancelled"]}/cancel`,
     { reason: "family postponed" })).status).toBe(200);
   /* Not offered: ended at the stroke of midnight, so yesterday was its
      last day — not today. */
-  await register("Midnight", lawn, `${day(-1)}T19:00`, `${t}T00:00`);
+  await register("Midnight", lawn, `${day(-1)}T19:00${IST}`, `${t}T00:00${IST}`);
   await confirm("Midnight");
 });
 

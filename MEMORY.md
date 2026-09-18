@@ -6539,6 +6539,35 @@ copy will see of theirs.**
 
 ---
 
+### 297 · A bare timestamp means the SERVER's time zone, and the server is not the hotel
+
+18 September, found by the first CI run - a Linux machine, where a whole class
+of "works here" stopped working.
+
+`banquet.ts` writes `$7::timestamptz` from a time with no offset. Postgres reads
+a bare time in the SESSION's zone. This laptop's session is Asia/Kolkata, so it
+happens to mean the hotel's clock and everything looked right for weeks. **The
+hotel's own server runs its database in GMT** (checked on the box: `show
+timezone` -> GMT). There, a clerk's 19:00 is stored as 19:00 GMT, which is 00:30
+the next morning in Akkalkot.
+
+Then the readers disagree about the same row: the diary prints it in the
+session's zone and shows 19:00; the till converts `at time zone h.timezone`,
+correctly, and gets the next day. One moment, two days, depending on which
+screen asks. Written up as the banquet service's BQ-8; nothing is live on
+banquet, which is the only reason it has not bitten a guest.
+
+The same trap is anywhere a time is typed by a person and stored without a
+zone, and this system is a group of properties in one country today and could
+be two countries tomorrow.
+
+**The rule: a time a person types belongs to the PROPERTY, so it carries that
+property's zone at both ends - written with it, read with it. A bare timestamp
+is a bug waiting for a server in another zone, and the hotel's server already
+is one.**
+
+---
+
 ### 296 · MINE: a refactor that quietly widened the answer every screen reads
 
 18 September. Moving the booking out of its HTTP route so a machine could make

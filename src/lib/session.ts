@@ -212,10 +212,20 @@ export const useSession = create<SessionState>()((set, get) => ({
       return;
     }
 
-    /* Without Firebase configured there is nothing to restore, and
-       leaving status on "starting" would hang the app on a spinner. */
+    /* Without Firebase configured there is nothing to restore, and leaving
+       status on "starting" would hang the app on a spinner.
+
+       ⚠ IT DOES NOT SIGN ANYBODY OUT, which is what it used to do. The branch
+       below - the one that runs when Firebase IS configured - keeps a session
+       that is already signed in; this one threw it away, so the two disagreed
+       about the same situation. Nobody saw it because this machine has a real
+       Firebase config in its .env and always took the other branch. On a
+       machine without one - a fresh clone, and the CI runner - the app wiped
+       the session the tests had just set and rendered the sign-in page, and
+       fifty screen tests timed out looking for screens behind it
+       (18 September, the first CI run). */
     if (!auth) {
-      set({ status: "signed-out" });
+      if (get().status !== "signed-in") set({ status: "signed-out" });
       return;
     }
     onAuthStateChanged(auth, (user) => {

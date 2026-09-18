@@ -14,6 +14,39 @@ the reason the fault does not come back.
 
 ## Open — not fixed
 
+### BQ-8 · A function's time is stored in the SERVER's time zone, not the property's
+
+**Found** 18 September, by the first CI run, on a Linux machine. The banquet
+tests passed here and failed there: a function registered as ending at
+`00:00` was offered to the till as running *today*, one day after it ended.
+
+`banquet.ts` writes `$7::timestamptz` from a bare time — `2026-09-17T19:00`
+with no offset — and Postgres reads a bare time in the SESSION's zone. This
+laptop's session is Asia/Kolkata, so it happens to mean the hotel's clock.
+**The hotel's own server runs its database in GMT** (checked on the box,
+18 September: `show timezone` → GMT). There, a clerk's 19:00 is stored as
+19:00 GMT, which is 00:30 the next morning in Akkalkot.
+
+Then the two readers disagree about the same row:
+
+* the diary (`banquet.ts`) prints `to_char(starts_at, …)` — the session's zone,
+  so it shows 19:00 and looks right;
+* the till (`attach.ts`) converts `at time zone h.timezone` — the property's
+  zone, correctly — and gets 00:30 the next day.
+
+So the screen and the till would place the same function on different days.
+Nothing is live on banquet yet, which is the only reason this has not bitten.
+
+**Not fixed, and not to be fixed quietly.** The right rule is the one the rest
+of the system already follows — a time a person types is the PROPERTY's local
+time — but applying it re-reads every banquet row already stored, and the owner
+decides that. The test now states its intent explicitly (`+05:30`) so the suite
+is honest on any machine; this entry is the fault itself.
+
+**The rule:** a bare timestamp means the server's zone, and the server is not
+the hotel. Every time written or read belongs to a property, so it carries that
+property's zone at both ends. Root `MEMORY.md` 297.
+
 ### BQ-1 · A restaurant bill cannot be charged to a banquet function — banquet's half DONE, the till's half open
 
 **Found** — 15 September, writing the brief, by reading.
