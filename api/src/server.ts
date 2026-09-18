@@ -22,6 +22,14 @@ import * as stores from "./modules/stores/index.ts";
 import * as housekeeping from "./modules/housekeeping/index.ts";
 import * as equipment from "./modules/equipment/index.ts";
 import * as channelManager from "./modules/channel-manager/index.ts";
+import * as laundry from "./modules/laundry/index.ts";
+import * as spa from "./modules/spa/index.ts";
+import * as revenueManagement from "./modules/revenue-management/index.ts";
+import * as accounting from "./modules/accounting/index.ts";
+import * as onlineCheckin from "./modules/online-checkin/index.ts";
+import * as guestMessaging from "./modules/guest-messaging/index.ts";
+import * as reputation from "./modules/reputation/index.ts";
+import * as marketing from "./modules/marketing/index.ts";
 import { live } from "./routes/live.ts";
 import {
   startListening, stopListening, watcherCount, isListening,
@@ -263,6 +271,10 @@ app.route("/api/hotels", attachments);
 const SERVICES = [
   frontDesk, reservations, finance, reportsService, guests, nightAudit,
   pos, admin, inventory, banquet, stores, housekeeping, equipment, channelManager,
+  /* The services of docs/BUILD-PLAN-2026-09-18.md. Mounted empty on 18
+     September, before their chats started, so none of them edits this file. */
+  laundry, spa, revenueManagement, accounting, onlineCheckin, guestMessaging,
+  reputation, marketing,
 ];
 /* Every router, with the prefix it hangs from. Exported so that
    api/test/apiGate.test.ts can hold /api/channel - the one prefix that

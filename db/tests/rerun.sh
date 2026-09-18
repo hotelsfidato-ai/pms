@@ -111,7 +111,9 @@ green "  all migrations applied to an empty database"
 if ! out=$("$PSQL" $S -d "$DB" -q -v ON_ERROR_STOP=1 \
      -c "insert into hotels (code, name, city) values ('RRN','Rerun Property','Nowhere')" \
      -c "insert into hotel_modules (hotel_id, module, is_enabled)
-         select id, 'channel_manager', true from hotels where code = 'RRN'"      -c "with people as (
+         select id, m, true
+           from hotels, unnest(array['channel_manager','laundry','spa']) as m
+          where code = 'RRN'"      -c "with people as (
            insert into staff (email, full_name)
            select 'rerun-' || r || '@fidato.in', 'Rerun ' || r
              from unnest(app.assignable_roles()) as r

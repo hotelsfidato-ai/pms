@@ -436,6 +436,18 @@ const MODULE_COPY: Record<string, { label: string; note: string }> = {
   /* D17-66: the connection to SU is being built (108). Off at every
      property until somebody turns it on, and nothing reaches a booking
      site while it is off. */
+  /* D17-54, 18 September (115): each shows only where it is switched on. Off
+     at every property until somebody turns it on. */
+  laundry: {
+    label: "Laundry",
+    note: "A guest's laundry, charged to their room, and the hotel's own linen " +
+      "going out and coming back. Off means the screens go and the API refuses them.",
+  },
+  spa: {
+    label: "Spa",
+    note: "Treatments, the day's diary, and a bill settled at the spa or put on " +
+      "the room. Off means the screens go and the API refuses them.",
+  },
   channel_manager: {
     label: "Channel manager",
     note: "Rooms, rates and bookings shared with Booking.com, Agoda and the " +

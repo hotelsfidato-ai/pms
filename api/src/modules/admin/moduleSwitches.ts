@@ -64,7 +64,8 @@ property.get("/:code/modules", async (c) => {
        API that is still serving the till. */
     const { rows } = await client.query<{ module: string; enabled: boolean }>(
       `select m.module, app.module_enabled($1, m.module) as enabled
-         from (values ('pos'), ('banquet'), ('reception_pos'), ('channel_manager')) as m(module)`,
+         from (values ('pos'), ('banquet'), ('reception_pos'), ('channel_manager'),
+                      ('laundry'), ('spa')) as m(module)`,
       [hotelId],
     );
     return { modules: rows.map((r) => ({ module: r.module, enabled: r.enabled })) };
