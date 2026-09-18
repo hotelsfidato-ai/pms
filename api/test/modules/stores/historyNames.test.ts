@@ -32,6 +32,7 @@ type Movement = { id: string; who: string | null; note: string | null;
 
 const ids = new Map<string, string>();
 let itemId: string;
+let mainId: string;
 
 const call = (staffId: string, method: string, path: string, body?: unknown) =>
   app.request(`/api/hotels/${HOTEL}/stores${path}`, {
@@ -65,6 +66,9 @@ const history = async (asKey: string) => {
 const noted = (rows: Movement[], note: string) => rows.find((m) => m.note === note)!;
 
 beforeAll(async () => {
+  mainId = (await sql(
+    `select l.id::text from locations l join hotels h on h.id = l.hotel_id
+      where h.code = $1 and l.name = 'Main store'`, [HOTEL])).rows[0].id as string;
   await person("inventory", "stores");
   await person("manager", "hotel_manager");
   await person("housekeeper", "housekeeping");
@@ -82,7 +86,7 @@ beforeAll(async () => {
     ["manager", { kind: "receipt", quantity: 20, unitCost: 300, note: `${TAG} delivery` }],
     ["inventory", { kind: "issue", quantity: 2, note: `${TAG} issue` }],
   ] as const) {
-    const res = await call(ids.get(key)!, "POST", "/movements", { itemId, ...body });
+    const res = await call(ids.get(key)!, "POST", "/movements", { itemId, locationId: mainId, ...body });
     expect(res.status, await res.clone().text()).toBe(200);
   }
   const issue = noted(await history("inventory"), `${TAG} issue`);
