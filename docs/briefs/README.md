@@ -213,6 +213,23 @@ is a request for its owner, not an edit you make.
 
 ## The gates, and what each one is
 
+**Since 18 September every one of these also runs in GitHub, on Linux, on every
+push** (`.github/workflows/ci.yml`) — against a real Postgres 17, with the
+website suite, the API suite, the database suite, the replay, the type checks,
+the stripping check and the build. A push that goes red is a push everybody can
+see, and the first three runs found four faults that had been invisible here:
+the API suite could not run at all without a private `api/.env`, fifty website
+tests needed one developer's Firebase values, the migration replay failed on a
+fresh cluster, and a banquet time was being stored in the server's time zone
+rather than the property's (root `MEMORY.md` 293, 297).
+
+So what a chat runs locally has changed shape: run them to find out quickly,
+not to prove it. **The proof is the Action.**
+
+**And a push now refuses by itself** if it touches another service's folder
+(`.githooks/pre-push`, installed by `npm install`). `git push --no-verify` is
+the way past it when the owner has said so — tell them when you use it.
+
 Run these in your own copy before you say anything works.
 
 ```powershell
@@ -237,6 +254,8 @@ at the development database and writes into it (root `MEMORY.md` 277).
 3. Your `MODULE.md` — if a screen, a route or a menu entry changed.
 4. `npm run release -- <service>`. **Never commit a claim** — two did on 16 September and had to be taken out of the merge.
 5. `npm run lane -- <service>` one last time, and tell the owner what it said.
+   The pre-push hook runs it for you and refuses a push outside your lane, but
+   reading it yourself is how you find out BEFORE you have written ten files.
 6. **You do not merge, and you do not deploy.** Commit on your branch and hand
    back. The master merges one service at a time and runs every gate after
    each.
