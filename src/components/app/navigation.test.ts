@@ -126,9 +126,16 @@ describe("each person's menu", () => {
   });
 
   it("gives housekeeping and the stores their work - and no revenue Dashboard", () => {
-    /* Equipment joined on 16 September — the owner's answer to the equipment chat. */
+    /* Equipment joined on 16 September — the owner's answer to the equipment chat.
+       Purchasing joined the Inventory Manager's on 18 September, when it was
+       built: they are the first name on D18-2's default list of who may raise a
+       request, so without the entry the one person the service is for could
+       reach their own screen only by searching. Housekeeping does NOT get it —
+       they are switched on by the owner if the owner wants them, and until then
+       the entry would be a screen that refuses them. Flagged to the owner by the
+       purchasing chat; the master reviews it at merge. */
     expect(menu("housekeeping")).toEqual(["Housekeeping", "Work orders", "Store", "Equipment", "Notifications"]);
-    expect(menu("stores")).toEqual(["Store", "Equipment", "Notifications"]);
+    expect(menu("stores")).toEqual(["Store", "Equipment", "Purchasing", "Notifications"]);
     for (const role of ["housekeeping", "stores", "chef", "kitchen_manager", "pos"] as Role[]) {
       expect(menu(role)).not.toContain("Dashboard");
     }
@@ -152,12 +159,19 @@ describe("each person's menu", () => {
        menu, every service the system does not have yet, alphabetical. */
     /* 16 September, the stock-and-equipment plan: "Hotel equipment" became
        "Equipment" (the register), its door-lock content moved to "Room
-       systems", and "Purchasing" arrived. Each takes its alphabetical place. */
+       systems", and "Purchasing" arrived. Each takes its alphabetical place.
+
+       ⚠ AND "PURCHASING" LEFT AGAIN, 18 September — it is BUILT (phase 2C),
+       so its entry moved into "Store and equipment" beside the Store and the
+       Equipment register. A service that is built cannot also be coming soon;
+       this list shrinks by one every time one of them lands, as it did when
+       Equipment left it. Edited by the purchasing chat; the master reviews it
+       at merge. */
     const SOON = [
       "Accounting export", "Booking engine", "Central CRM", "Channel manager",
       "Contracts", "Fidato CRS", "Guest messages", "Guest services",
       "Laundry", "Leads and WhatsApp", "Loyalty", "Marketing", "Online check-in",
-      "Online payments", "Purchasing", "Revenue management", "Reviews",
+      "Online payments", "Revenue management", "Reviews",
       "Room systems", "Spa",
     ];
     for (const role of COMING_SOON_ROLES) {

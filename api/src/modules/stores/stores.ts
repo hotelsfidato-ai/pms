@@ -95,6 +95,109 @@ async function onHandIn(client: Client, itemId: string, storeId: string): Promis
   return Number(rows[0]!.n);
 }
 
+/** THE statement that writes a movement — the one place the ledger is added
+    to. The route below uses it, and so does `receiveIntoStore`, which is how
+    a delivery against a purchase order gets in (116). Two writers for one
+    ledger is the shape of half the defects in MEMORY.md. */
+async function writeMovement(
+  client: Client, hotelId: string, staffId: string,
+  m: {
+    itemId: string; storeId: string; kind: StoredKind; signed: number;
+    unitCost?: number | null; supplier?: string | null;
+    reference?: string | null; note?: string | null; outletId?: string | null;
+  },
+): Promise<string> {
+  const businessDate = await businessDateFor(client, hotelId);
+  const { rows } = await client.query<{ id: string }>(
+    `insert into stock_movements
+       (hotel_id, item_id, location_id, business_date, kind, quantity, unit_cost,
+        supplier, reference, note, to_outlet, moved_by)
+     values ($1,$2,$3,$4::date,$5,$6,$7,$8,$9,$10,$11,$12)
+     returning id::text`,
+    [hotelId, m.itemId, m.storeId, businessDate, m.kind, m.signed,
+     m.unitCost ?? null, m.supplier?.trim() || null,
+     m.reference?.trim() || null, m.note?.trim() || null,
+     m.outletId || null, staffId],
+  );
+  return rows[0]!.id;
+}
+
+/* ── The Store's door for a delivery (116, the purchasing service) ──
+   A purchase order that arrives is a RECEIPT in this ledger, and it is
+   written here rather than by the service that ordered it: what may be
+   received, into which store, and by whom are the Store's rules, and a
+   second service writing `stock_movements` is a second set of them.
+
+   ⚠ A REFUSAL IS A COMMIT INSIDE `withSession` (MEMORY 243). So a caller
+   with several lines asks `mayDeliverInto` ONCE, before its first write,
+   and only then calls `receiveIntoStore` line by line — everything that
+   can be refused for the whole delivery is refused in the first call.
+   ═══════════════════════════════════════════════════════════════════ */
+
+/** Whether a delivery may be received into this store at all: the Store's
+    own `create` grant, and a store that is switched on. The refusal, in the
+    Store's words, or null when it may go ahead. */
+export async function mayDeliverInto(
+  client: Client, hotelId: string, storeId: unknown,
+): Promise<string | null> {
+  if (!(await mayStock(client, hotelId, "create"))) return STOCK_REFUSED["create"];
+  const store = await storeAt(client, hotelId, storeId);
+  if (!store) return "That is not a store at this property.";
+  /* A SWITCHED-OFF STORE TAKES NOTHING IN — the same rule the movements
+     route applies, for the same reason. */
+  if (!store.is_active) {
+    return `${store.name} is switched off. Receive into another store, or `
+      + "switch it on in Places and suppliers.";
+  }
+  return null;
+}
+
+/** One line of a delivery, as a receipt in the Store's ledger. Returns what
+    the store holds afterwards, or a refusal in a sentence. */
+export async function receiveIntoStore(
+  client: Client, hotelId: string, staffId: string,
+  input: {
+    itemId: string; storeId: string; quantity: number;
+    unitCost?: number | null; supplier?: string | null;
+    reference?: string | null; note?: string | null;
+  },
+): Promise<
+  | { ok: true; id: string; item: string; unit: string; store: string; onHandHere: number }
+  | { ok: false; reason: string }
+> {
+  const refusal = await mayDeliverInto(client, hotelId, input.storeId);
+  if (refusal) return { ok: false, reason: refusal };
+
+  const { rows: item } = await client.query<{ name: string; unit: string }>(
+    "select name, unit from stock_items where id = $1 and hotel_id = $2",
+    [input.itemId, hotelId]);
+  if (!item[0]) return { ok: false, reason: "No such item in this store." };
+
+  const store = (await storeAt(client, hotelId, input.storeId))!;
+  const qty = Number(input.quantity);
+  if (!Number.isFinite(qty) || qty <= 0) {
+    return { ok: false, reason: "How much came? A delivery of nothing is not a delivery." };
+  }
+  /* A COST IS ZERO OR MORE, OR NOBODY HAS SAID. Null is a real answer and
+     the item's value is left as it was — it is never flattened to 0
+     (MEMORY 246). */
+  if (input.unitCost !== undefined && input.unitCost !== null
+      && (!Number.isFinite(input.unitCost) || input.unitCost < 0)) {
+    return { ok: false, reason: "A unit cost is zero or more." };
+  }
+
+  const id = await writeMovement(client, hotelId, staffId, {
+    itemId: input.itemId, storeId: store.id, kind: "receipt", signed: qty,
+    unitCost: input.unitCost ?? null, supplier: input.supplier ?? null,
+    reference: input.reference ?? null, note: input.note ?? null,
+  });
+
+  return {
+    ok: true, id, item: item[0].name, unit: item[0].unit, store: store.name,
+    onHandHere: await onHandIn(client, input.itemId, store.id),
+  };
+}
+
 /* ── What is in the store ─────────────────────────────────────────── */
 
 stores.get("/:code/stores", async (c) => {
@@ -432,27 +535,21 @@ stores.post("/:code/stores/movements", async (c) => {
       }
     }
 
-    const businessDate = await businessDateFor(client, hotelId);
     const signed = direction === "either" ? qty : direction === "in" ? qty : -qty;
 
-    const { rows } = await client.query<{ id: string }>(
-      `insert into stock_movements
-         (hotel_id, item_id, location_id, business_date, kind, quantity, unit_cost,
-          supplier, reference, note, to_outlet, moved_by)
-       values ($1,$2,$3,$4::date,$5,$6,$7,$8,$9,$10,$11,$12)
-       returning id::text`,
-      [hotelId, input.itemId, store.id, businessDate, input.kind, signed,
-       input.unitCost ?? null, input.supplier?.trim() || null,
-       input.reference?.trim() || null, input.note?.trim() || null,
-       input.outletId || null, session.staffId],
-    );
+    const id = await writeMovement(client, hotelId, session.staffId, {
+      itemId: input.itemId!, storeId: store.id, kind: input.kind!, signed,
+      unitCost: input.unitCost ?? null, supplier: input.supplier ?? null,
+      reference: input.reference ?? null, note: input.note ?? null,
+      outletId: input.outletId ?? null,
+    });
 
     const { rows: now } = await client.query<{ on_hand: string }>(
       "select app.stock_on_hand($1)::text as on_hand", [input.itemId]);
 
     return {
       ok: true as const,
-      id: rows[0]!.id,
+      id,
       onHand: Number(now[0]!.on_hand),
       /* What that store holds now, named — what the person just changed. */
       onHandHere: await onHandIn(client, input.itemId!, store.id),

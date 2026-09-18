@@ -7,3 +7,15 @@ import { stores } from "./stores.ts";
 export const mounts: readonly Mount[] = [
   ["/api/hotels", stores],
 ];
+
+/* ⚠ ADDED FOR PURCHASING (116), AND BY THAT CHAT — the master reviews it
+   at merge. A delivery against a purchase order is a RECEIPT in this
+   service's ledger, and the purchasing service must not write
+   `stock_movements` itself: what may be received, into which store and by
+   whom are the Store's rules, and a second writer is a second set of them.
+   So the Store lends its door instead.
+
+   `mayDeliverInto` is asked ONCE for a whole delivery, before its first
+   write, because a refusal returned inside `withSession` is a COMMIT
+   (MEMORY 243). */
+export { receiveIntoStore, mayDeliverInto } from "./stores.ts";

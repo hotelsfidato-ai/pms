@@ -8,6 +8,124 @@ proved until it has refused something; "Left open" is the handover.
 
 ---
 
+## 2026-09-18 · Built: a request, the GM's approval, a PDF order, a delivery
+
+**Asked for:** § 1 of `docs/BUILD-PLAN-2026-09-18.md` — purchasing first, and
+the smallest thing that works end to end. The owner's D18-2, D18-3 and D18-4,
+in that order: the setting for who may raise, then the request, then the
+approval through the engine that exists, then the PDF order, then the delivery
+as a Store receipt.
+
+**Shipped**
+
+- **The setting first (D18-2).** `purchase_requesters`, a row per role per
+  property, switched off and never deleted. Every property starts with the
+  Inventory Manager, the GM, the owner and an administrator — and so does every
+  property created after, by a trigger, 095's shape. `app.may_raise_purchase`
+  is the one place the question is answered, so a screen, a later endpoint and
+  a script cannot give three answers. Its own screen, `/h/:code/purchasing/who-may-ask`.
+- **The request.** `purchase_requests` and `purchase_request_lines`. One row
+  from "we need rice" to "it arrived", with its own reference
+  (`PO-5EL-2609-0001`, its own count per hotel, and `lpad` used the way
+  MEMORY 280 says).
+- **The approval.** Raised through `app.request_approval` with kind `purchase`
+  — defined since 076 and wired to nothing until now. Every property gets the
+  owner's rule: **the GM, at any amount** (D18-4, `over_amount` null, which is
+  not 0).
+- **Where a request has got to is DERIVED ONCE**, on the server, from its own
+  status and the approval it points at. What the GM said is never copied onto
+  the request.
+- **The order (D18-3).** A PDF in the group's layout, made by the **shared**
+  renderer — `orderDocument` builds a `ReportDoc` and `api/src/reportRender.ts`
+  draws it, so no second renderer exists. Sent by hand; nothing waits on n8n,
+  and the paper says so.
+- **The delivery.** What came may differ from what was ordered and **both stay**
+  — `received_quantity` sits beside `quantity`, never over it. The stock lands
+  as a receipt **through the Store's own front door**, carrying the supplier and
+  the order's reference, so the Store's history points back at the order.
+
+**Found**
+
+- **A DEPLOY-STOPPER THAT IS NOT THIS SERVICE'S**, found because it blocked 115
+  from applying: `078_roles.sql` re-adds `staff_hotels_role_valid` from
+  `app.assignable_roles()`, and **093** is what added `revenue_manager` to that
+  function. Every deploy replays from 001, so 078 runs with the narrow list and
+  validates it against the rows that are there — one person given the Revenue
+  Manager role and **every deploy after that fails and rolls back**. MEMORY
+  293's family. Reproduced clean (fresh database → 115 migrations, exit 0 → one
+  `revenue_manager` row → replay → `ERROR: check constraint
+  "staff_hotels_role_valid" … is violated by some row` at 078:105, exit 3).
+  Reported to the master, **fixed by them on cp6 (f5a7f99)** — and their sweep
+  found a fourth of the same family in 056/060. Root `MEMORY.md` 299.
+- **`db/migrate.sh` hid the real error.** On failure it ran
+  `grep -iE "ERROR|HINT|^psql:" | head -6`, and every NOTICE matches `^psql:`,
+  so six "already exists, skipping" lines filled the window and the ERROR never
+  printed. Reported; fixed by the master.
+- **PUR-2: there is no approvals SCREEN.** The brief says the GM approves "in
+  the approvals inbox that exists". The engine and its routes are real; nothing
+  draws a shared inbox — equipment decides its own on the equipment screen.
+  Found by opening `/h/5EL/approvals` and being redirected to the Dashboard.
+  Purchasing now decides on the order, the same shape, reading `mayDecide` from
+  the core queue rather than copying its rule.
+- **PUR-1: housekeeping can be switched on and still be refused.** D18-2 lets
+  the owner switch them on; `src/lib/permissions.ts` gives them no `purchasing`
+  grant at all. One line, the owner's call, not made here.
+- **Two things wrong on the screen, found by opening it, not by a test:** Send
+  was offered on an approved order that still had an unpriced line — a button
+  the database refuses — and the roles on the setting screen were sorted by
+  their stored key, so Reception sat between Accountant and General Manager.
+  Both fixed; the first has a test.
+
+**Proved** — on the tree that was committed, exit codes read, not summaries.
+
+```
+npx tsc -b --force         clean            web
+cd api; npx tsc -b --force clean            server
+cd api; npm run strip-check 121 files       the server loads without types
+npx vitest run             382 passed       43 files, exit 0
+cd api; npm test           1067 passed      67 files, exit 0 (see below)
+bash db/tests/run.sh       879 assertions   42 of them purchasing, exit 0
+bash db/tests/rerun.sh     115/115 replay   exit 0
+npm run build              clean            "no test sign-in in dist"
+```
+
+⚠ **The API suite failed once and passed on a clean re-run.** The failure was
+`api/test/modules/finance/invoices.test.ts` ("nothing to invoice", expected 409)
+— not a file this service touches, and green on the run above and in its own
+run. Recorded rather than quietly re-run: it looks like the load flake the
+night-audit screen test has shown before.
+
+**Guards seen to refuse something** — each broken, watched to fail, put back
+(copied aside, never `git stash` — MEMORY 294):
+
+| Guard | With it removed |
+|---|---|
+| `app.mark_purchase_ordered`'s unpriced check | database suite exits 1 and stops at the assertion that an approved-but-unpriced order cannot be sent |
+| the screen's `r.unpriced === 0` on Send | "does not offer Send on an approved order that still has an unpriced line" fails: *expected button to be null* |
+| `VIEW_ROLES` parity with the matrix | two API tests fail: *expected [housekeeping, 200] to equal [housekeeping, 403]*, and the parity assertion itself |
+
+**Opened on screen, at 1353px and at 375px**, signed in as the Inventory
+Manager, the GM and the owner: raised PO-5EL-2609-0001 (rice unpriced, oil at
+₹140 — total read "-", not ₹1,400), the GM approved it, priced the rice at ₹62
+(total ₹4,500), sent it to Akkalkot Traders, downloaded the order (200,
+`application/pdf`, `PO-5EL-2609-0001.pdf`, one page), received 45 kg of the 50
+ordered with a note, and **the Store then showed 45 kg at ₹64/kg in the Main
+store** with the movement carrying the supplier and the order's reference. On a
+phone: no sideways scroll, nothing outside the viewport, every control at the
+shared touch size.
+
+**Left open**
+
+- **PUR-1** (housekeeping's grant) and **PUR-2** (a shared approvals screen) —
+  both the owner's, both in `DEFECTS.md`.
+- **Eight files outside this lane**, every one listed in `MODULE.md` under
+  Requests, made on the owner's word of 18 September and confirmed by the master
+  for review at merge. Pushed with `--no-verify`, which is what the master said
+  to do for this branch.
+- **The migration is numbered 115 here and becomes 116 at merge** — cp6's 115 is
+  the master's laundry and spa. The master does the renaming; it is not touched
+  here.
+
 ## 2026-09-16 · A folder and a Coming soon page
 
 **Asked for:** the owner approved the stock-and-equipment plan, with Purchasing

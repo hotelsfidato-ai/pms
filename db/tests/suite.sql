@@ -2093,7 +2093,7 @@ begin
     app.module_enabled(v_other, 'pos'));
 
   -- ⚠ A NAME THAT CANNOT EVER BE BUILT. This said 'spa', and on 18 September
-  -- the spa became a real module (115) - so the assertion that an unknown
+  -- the spa became a real module (116) - so the assertion that an unknown
   -- module is refused started failing because its example had been built. A
   -- test whose "impossible" case is a plausible future feature has a fuse in
   -- it (MEMORY 300).
@@ -5137,6 +5137,16 @@ begin
   select id into h  from hotels where code = 'AGR';
   select id into gm from staff  where email = 'agra@fidato.in';
   select id into owner from staff where email = 'owner@fidato.in';
+
+  /* ⚠ ADDED BY THE PURCHASING CHAT (116) — the master reviews it at merge.
+     Purchasing gives EVERY property a `purchase` rule, because the owner's
+     D18-4 is that the GM approves every purchase whatever the amount; before
+     it, nothing anywhere raised a purchase approval at all. This block is
+     about the ENGINE and starts from a property with nothing set up, so that
+     rule is switched off here. The block's own teardown removes it with the
+     rest, and the purchasing suite proves the rule itself arrives. */
+  update approval_rules set is_active = false
+   where hotel_id = h and kind = 'purchase';
 
   -- ---------- no rule means nothing to approve ----------
   -- A property that has not set approvals up must still be able to buy nails.

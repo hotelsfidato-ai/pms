@@ -22,6 +22,7 @@ import * as stores from "./modules/stores/index.ts";
 import * as housekeeping from "./modules/housekeeping/index.ts";
 import * as equipment from "./modules/equipment/index.ts";
 import * as channelManager from "./modules/channel-manager/index.ts";
+import * as purchasing from "./modules/purchasing/index.ts";
 import * as laundry from "./modules/laundry/index.ts";
 import * as spa from "./modules/spa/index.ts";
 import * as revenueManagement from "./modules/revenue-management/index.ts";
@@ -271,8 +272,11 @@ app.route("/api/hotels", attachments);
 const SERVICES = [
   frontDesk, reservations, finance, reportsService, guests, nightAudit,
   pos, admin, inventory, banquet, stores, housekeeping, equipment, channelManager,
-  /* The services of docs/BUILD-PLAN-2026-09-18.md. Mounted empty on 18
-     September, before their chats started, so none of them edits this file. */
+  /* The services of docs/BUILD-PLAN-2026-09-18.md. `purchasing` is built;
+     the rest were mounted empty on 18 September, before their chats started,
+     so that none of them has to edit this file - which is what the purchasing
+     chat had to do, because its door did not exist yet. */
+  purchasing,
   laundry, spa, revenueManagement, accounting, onlineCheckin, guestMessaging,
   reputation, marketing,
 ];

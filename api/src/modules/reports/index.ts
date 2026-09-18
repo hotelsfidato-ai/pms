@@ -17,6 +17,11 @@ export const mounts: readonly Mount[] = [
 
 export { buildReport, BUILT_KEYS } from "./build.ts";
 export { REPORT_KEYS } from "./document.ts";
+/* ⚠ ADDED FOR PURCHASING (D18-3), by that chat — the master reviews it at
+   merge. The three builders that exist so "no report spells a row by hand":
+   the purchase order is drawn by the shared renderer, so it builds its
+   document with the same three rather than keeping copies of them. */
+export { col, row, total } from "./document.ts";
 export type {
   ReportDoc, ReportKey, ReportParams, ReportSection, ReportRow, ReportColumn,
   ReportFact, ReportChart, CellKind, Cell,
