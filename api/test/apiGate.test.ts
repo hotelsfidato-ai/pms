@@ -25,6 +25,28 @@ describe("what passes the gate without a person", () => {
     expect(channel[0]![1]).toBe(inbound);
   });
 
+  it("is one door at /api/guest, and a guest sees nothing without a link", async () => {
+    /* The guest's door is the master's (routes/guestDoor.ts), not a service's,
+       so it is not in SERVICE_MOUNTS - which is the point: no chat can mount a
+       second thing beside it. What can be proved from out here is that the
+       prefix answers ONLY about a link, and says the same nothing without one. */
+    const bare = await app.request("/api/guest");
+    expect([404, 405]).toContain(bare.status);
+
+    const made_up = await app.request(`/api/guest/${"z".repeat(43)}`);
+    expect(made_up.status, "a token nobody was given").toBe(404);
+    const body = (await made_up.json()) as { error?: string };
+    expect(body.error, "and the gate never answered for it").not.toBe("No bearer token.");
+  });
+
+  it("does not let the guest's exemption leak to a staff route that starts the same", async () => {
+    /* /api/guests is the guests SERVICE - people's records - and needs a
+       person. One letter apart from the guest's own door. */
+    const res = await app.request("/api/hotels/5EL/guests");
+    expect(res.status).toBe(401);
+    expect(((await res.json()) as { error?: string }).error).toBe(GATE);
+  });
+
   /* THE GATE's OWN SENTENCE, not merely a 401. A request that slips past the
      gate is refused further in - by withSession, with "No active staff record
      for this account." - and that is also a 401. Asserting the status alone

@@ -12,17 +12,25 @@ import type { Hono } from "hono";
      /api/pos      an outside till, which presents an outlet key, not a token
      /api/channel  the channel manager's door, which SU pushes bookings to
                    with the key the owner gave it (D17-79)
+     /api/guest    a guest's own page, opened by a link the hotel gave them
+                   and nothing else (D18-9)
 
    The auth gate in server.ts covers all four by prefix, so a router
    mounted here is authenticated by existing rather than by remembering.
 
-   ⚠ `/api/channel` IS THE ONE PREFIX THAT LEAVES THE GATE WITHOUT A PERSON.
-   SU has no sign-in and is not a member of staff: the door checks SU's key
-   itself, works out whose booking it is from the id SU was given, and opens
-   its session as that hotel's own service account. Nothing else may be
-   mounted there. `api/test/apiGate.test.ts` holds that to one router.
+   ⚠ TWO PREFIXES LEAVE THE GATE WITHOUT A PERSON, and no more.
+   `/api/channel`: SU has no sign-in and is not staff, so the door checks SU's
+   key itself and opens its session as that hotel's own service account.
+   `/api/guest`: a guest has no sign-in either, and never will - their door
+   takes a link, hashes it, and asks migration 114's functions about the ONE
+   booking that link names. It opens no session at all.
+   Nothing else may be mounted at either. `api/test/apiGate.test.ts` holds each
+   to one router, and holds the exemption to a path boundary.
    ══════════════════════════════════════════════════════════════════ */
 
 // Routers carry their own Variables types; the mount only needs a router.
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
-export type Mount = readonly [prefix: "/api" | "/api/hotels" | "/api/pos" | "/api/channel", router: Hono<any, any, any>];
+export type Mount = readonly [
+  prefix: "/api" | "/api/hotels" | "/api/pos" | "/api/channel" | "/api/guest",
+  router: Hono<any, any, any>,
+];

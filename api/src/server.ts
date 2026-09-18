@@ -29,6 +29,7 @@ import {
 import { approvals } from "./routes/approvals.ts";
 import { places } from "./routes/places.ts";
 import { reportFiles } from "./routes/reportFiles.ts";
+import { guestDoor, guestLinks } from "./routes/guestDoor.ts";
 import { attachments } from "./routes/attachments.ts";
 import { notifications } from "./routes/notifications.ts";
 
@@ -187,6 +188,19 @@ app.use("/api/*", async (c, next) => {
     return;
   }
 
+  /* THE GUEST'S DOOR (D18-9). A guest is not staff and holds no sign-in. Their
+     link is the whole credential: routes/guestDoor.ts hashes it and asks
+     migration 114's functions about the one booking it names, opening no
+     session at all. Before a six-digit code to the phone on the booking is
+     answered, that page shows only what a clerk would say across a counter -
+     never the bill.
+
+     The slash matters here for the same reason it did for /api/channel. */
+  if (c.req.path === "/api/guest" || c.req.path.startsWith("/api/guest/")) {
+    await next();
+    return;
+  }
+
   if (c.req.path.startsWith("/api/pos")) {
     const outlet = await outletFor(c.req.header("x-pos-key"));
     if (!outlet) {
@@ -227,6 +241,11 @@ app.route("/api/hotels", approvals);
 app.route("/api/hotels", places);
 /* Reports as PDF, .xlsx and CSV, made on the server (D17-31, D17-32). */
 app.route("/api/hotels", reportFiles);
+/* The guest's own door, and the desk's side of it (D18-9, migration 114). Not
+   a service's: this is the one door a person the hotel does not employ opens,
+   so it stays where the master keeps it. */
+app.route("/api/guest", guestDoor);
+app.route("/api/hotels", guestLinks);
 app.route("/api/hotels", attachments);
 
 /* Every service's routers, from its own front door. Where each hangs is
