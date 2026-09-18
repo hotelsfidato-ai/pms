@@ -162,6 +162,7 @@ export interface NavSection {
 export type SectionKey =
   | "home" | "front-desk" | "bookings" | "across-properties" | "configuration"
   | "inventory" | "store-and-equipment" | "finance" | "point-of-sale" | "banquet"
+  | "laundry" | "spa"
   | "reports" | "system"
   | "coming-soon";
 
@@ -241,6 +242,22 @@ const SECTION_LAYOUT: Array<Omit<NavSection, "items"> & { key: SectionKey }> = [
      its own, because a hidden nav entry is still a URL anybody can
      type. 041 wrote that rule before either module existed. */
   { key: "banquet", label: "Banquet", module: "banquet" },
+  /* ⚠ THE TWO SERVICES OF D17-54, EACH BEHIND ITS OWN PER-HOTEL SWITCH.
+
+     Written by the master on 18 September because BOTH chats stopped here
+     rather than editing this file, which is the agreement working: each had
+     a service finished on the server and no screen at all, because
+     `SectionKey` is a typed union — an entry naming a section that does not
+     exist does not compile — and because `module:` sits on the SECTION. That
+     is the only place a whole service hides at a property that has not
+     switched it on, which is exactly what D17-54 asks for.
+
+     Absent, not greyed, where the switch is off — the rule the point of sale
+     and the banquet already follow. And the tidy half only: the API asks
+     `app.module_enabled` on every route of its own, because a hidden nav
+     entry is still a URL anybody can type. */
+  { key: "laundry", label: "Laundry", module: "laundry" },
+  { key: "spa", label: "Spa", module: "spa" },
   { key: "reports", label: "Reports" },
   { key: "system", label: "System" },
   /* ══════════════════════════════════════════════════════════════

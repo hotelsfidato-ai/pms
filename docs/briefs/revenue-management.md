@@ -40,6 +40,19 @@ A second definition of occupancy is how the Dashboard and the Manager report
 ended up disagreeing in August. If the door does not export what you need, tell
 the master what and why.
 
+> **R1 is answered** (18 September). The reports door now exports
+> `dailyFigures`, `sumDays`, `firstTradingDay`, `propertyFor`, `propertyById`,
+> `isoDateParam`, `heading` and the `NIGHTS` fragment, with the `DayFigures`,
+> `Property` and `StayNight` types. **Pull `cp6` and build pickup and the
+> week-ago column of pace** — the two things you correctly refused to build
+> rather than count room-nights your own way. `NIGHTS` is the one that matters:
+> the moment a second service writes its own, the two disagree on the day
+> somebody cancels late.
+>
+> **R2 is the master's, at merge**, not yours: dropping `"Revenue management"`
+> from `SOON` and `"listDailyStatistics"` from `KNOWN_UNREACHABLE` is only true
+> once your branch is in, and doing it early turns both tests red on `cp6`.
+
 **WHO SEES IT:** the owner, an administrator, the GM and the Revenue Manager.
 The `rate` resource in `src/lib/permissions.ts` already says who may see rates;
 ask the master rather than editing that file.

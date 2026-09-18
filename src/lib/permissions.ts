@@ -128,6 +128,16 @@ export const RESOURCES = [
   "stock",
   "equipment",
   "purchasing",
+  /* The two services of D17-54, each behind its own per-hotel switch. WHO may
+     use them is D18-8 — "reception and housekeeping, no new staff roles" — with
+     one refinement the owner gave on 18 September (D18-21): on the SPA,
+     housekeeping sees the diary and does not book or close. Nothing here
+     replaced an existing resource, because the only ones both reception and
+     housekeeping already hold are `reservation`, `inventory`, `report` and
+     `notification`, and filing a laundry docket under any of those would have
+     given four other screens away with it. */
+  "laundry",
+  "spa",
   "invoice",
   "payment",
   "commission",
@@ -174,6 +184,8 @@ export const RESOURCE_LABELS: Record<Resource, string> = {
   stock: "Store",
   equipment: "Equipment",
   purchasing: "Purchasing",
+  laundry: "Laundry",
+  spa: "Spa",
   invoice: "Invoices",
   payment: "Payments",
   commission: "Commissions",
@@ -242,6 +254,8 @@ const MATRIX: Record<Role, ResourceGrants> = {
     stock: ["view", "create", "edit", "approve", "export"],
     equipment: ["view", "create", "edit", "approve", "export"],
     purchasing: ["view", "create", "edit", "cancel", "approve", "export"],
+    laundry: ["view", "create", "edit", "cancel", "export"],
+    spa: ["view", "create", "edit", "cancel", "export"],
   },
 
   gm: {
@@ -278,6 +292,8 @@ const MATRIX: Record<Role, ResourceGrants> = {
     stock: ["view", "create", "edit", "approve", "export"],
     equipment: ["view", "create", "edit", "approve", "export"],
     purchasing: ["view", "create", "approve", "export"],
+    laundry: ["view", "create", "edit", "cancel", "export"],
+    spa: ["view", "create", "edit", "cancel", "export"],
   },
 
   /* One property, run day to day. Everything the GM has for the floor,
@@ -300,6 +316,8 @@ const MATRIX: Record<Role, ResourceGrants> = {
     stock: ["view", "create", "edit"],
     equipment: ["view", "create", "edit"],
     purchasing: ["view", "create"],
+    laundry: ["view", "create", "edit", "cancel", "export"],
+    spa: ["view", "create", "edit", "cancel", "export"],
   },
 
   /* The person who sets prices and pushes them to the booking sites when the
@@ -353,6 +371,8 @@ const MATRIX: Record<Role, ResourceGrants> = {
   },
 
   front_desk: {
+    laundry: ["view", "create", "edit", "cancel"],
+    spa: ["view", "create", "edit", "cancel"],
     dashboard: READ,
     reservation: ["view", "create", "edit", "cancel"],
     customer: ["view", "create", "edit"],
@@ -393,6 +413,8 @@ const MATRIX: Record<Role, ResourceGrants> = {
   },
 
   housekeeping: {
+    laundry: ["view", "create", "edit", "cancel"],
+    spa: ["view"],
     dashboard: READ,
     reservation: READ,
     inventory: ["view", "edit"],
@@ -403,6 +425,8 @@ const MATRIX: Record<Role, ResourceGrants> = {
   },
 
   finance: {
+    laundry: ["view", "export"],
+    spa: ["view", "export"],
     dashboard: READ,
     reservation: READ_EXPORT,
     customer: READ,
@@ -419,6 +443,8 @@ const MATRIX: Record<Role, ResourceGrants> = {
   },
 
   read_only: {
+    laundry: ["view"],
+    spa: ["view"],
     dashboard: READ,
     reservation: READ,
     customer: READ,

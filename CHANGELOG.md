@@ -113,10 +113,55 @@ the pending work which we decided."
   that already exists" describes a screen that does not exist, and a GM has
   nowhere to see everything waiting on them. **Asked.**
 
+**Then asked, answered and acted on the same evening** — D18-18 … D18-21
+
+- **D18-18 · purchasing grants stay as they are.** D18-2's per-property setting
+  only ever narrows the five roles that hold it, so nothing can be switched on
+  that the screen then refuses. Nothing changed, which was the point of asking.
+- **D18-19 · one Approvals screen is to be built** — the master's, spanning
+  every service. Queued, not started.
+- **D18-20 · a message carries the PMS's own PDF.** The sender fetches it.
+- **D18-21 · the spa's two answers stand**: its own GST rule per property, and
+  housekeeping **sees** the diary without booking or closing it.
+
+**Then built — the three asks that were holding up finished work**
+
+- **`laundry` and `spa` menu sections and permission resources**
+  (`navigation.ts`, `permissions.ts`). Granted per D18-8 with D18-21's
+  refinement. Two chats had a service running on the server and no screen at
+  all, because `SectionKey` is a typed union and `module:` — the only per-
+  property gate there is — sits on the section.
+- **`postCharge`, the door a charge reaches a room bill through** (D18-7),
+  exported from `api/src/modules/finance/index.ts`. The HTTP route's body moved
+  into it and the route calls it, so there is still ONE insert into
+  `folio_postings` for a charge and its checks run for a service exactly as for
+  the desk. `taxKind` names the tax rule — "room" unless the service has its
+  own, and the spa does.
+  **It asks `app.gst_rate_or_null` before posting**, because `app.gst_rate`
+  raises where a property has set no rule and a raise aborts the transaction —
+  and a refusal returned after an abort is a commit of nothing (MEMORY 243).
+  `api/test/modules/finance/chargeDoor.test.ts`, 7 tests. **The guard was taken
+  out and the last one seen to fail** with `No GST rule for…`, then put back.
+- **The reports front door widened** (revenue management's R1): `dailyFigures`,
+  `sumDays`, `firstTradingDay`, `propertyFor`, `propertyById`, `isoDateParam`,
+  `heading`, `NIGHTS`, and the `DayFigures` / `Property` / `StayNight` types.
+  R2 is deliberately NOT done here: dropping `"Revenue management"` from `SOON`
+  and `"listDailyStatistics"` from `KNOWN_UNREACHABLE` is only true once that
+  branch is merged, and doing it early turns both tests red. It goes in the
+  merge commit.
+- **The fresh-copy database trap** written into `docs/briefs/README.md`: a new
+  worktree's database has no people in it, `--with-dev-identities` blames
+  `008_seed.sql` when the three demo staff actually come from the test suite,
+  and `npm run demo` then dies on a null lookup and rolls back so it reads as
+  if nothing ran.
+
 **Left open**
-- The shared PMS → n8n sender. Three chats are blocked on it; it is next.
-- Laundry, spa and revenue-management are committed in their copies and have
-  not pushed. Nothing merges until each one's Action is green.
+- The shared PMS → n8n sender, now with the PDF (D18-20). Three wave-2 chats
+  are blocked on it; it is next.
+- The Approvals inbox (D18-19).
+- Laundry, spa and revenue-management **pull `cp6` first** — what each was
+  waiting for is in it — then finish their screens. Nothing merges until each
+  one's Action is green.
 
 ---
 

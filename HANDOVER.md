@@ -65,8 +65,18 @@ in flight           laundry, spa, revenue-management — built and committed in 
                     copies, not yet pushed or handed back
 starting            accounting (the Tally export) — brief and copy ready, 18 Sep
 waiting for a slot  online-checkin, guest-messaging, reputation, marketing
-the master's next   the shared PMS → n8n sender (three chats are blocked on it), then the
-                    guest door's next rooms
+doors opened 18 Sep `postCharge` from api/src/modules/finance/index.ts — the ONE way a
+                    charge reaches a room bill (D18-7), with `taxKind` because the spa
+                    bills under its own GST rule (D18-21). It asks gst_rate_or_null
+                    first: app.gst_rate RAISES where no rule is set, and a raise aborts
+                    the transaction. Also the reports door, widened for pickup (R1).
+laundry + spa       `laundry` and `spa` are menu sections and permission resources now,
+                    per D18-8 with D18-21 (housekeeping SEES the spa diary). Both
+                    services were finished on the server with no screens at all
+                    without them.
+the master's next   the shared PMS → n8n sender WITH THE PDF (D18-20) — three wave-2
+                    chats are blocked on it; then the Approvals inbox (D18-19); then
+                    the guest door's next rooms
 THE RUN SHEET       docs/PARALLEL-PLAN-2026-09-18.md — who builds what, in what order, and
                     what each one waits on. Kept current; read it before handing out work.
 what is being built docs/BUILD-PLAN-2026-09-18.md — the seven services the owner still wants

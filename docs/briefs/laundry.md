@@ -35,10 +35,17 @@ The owner's rule: **the smallest thing that works end to end.**
    That is a required field, not a tag: a hotel docket is never charged, and a
    guest docket always names the stay.
 4. **A guest's docket charges to the room** as its own line on the bill
-   (D18-7), through **finance's / front desk's front door** for posting a
-   charge — **not** by writing `folio_postings` yourself, and **not** through
-   the restaurant till. The Extra Charges report already has a "Laundry" row;
-   your charges must land in it.
+   (D18-7), through **finance's front door** for posting a charge — **not** by
+   writing `folio_postings` yourself, and **not** through the restaurant till.
+   The Extra Charges report already has a "Laundry" row; your charges must land
+   in it.
+
+   **That door is `postCharge`**, exported from
+   `api/src/modules/finance/index.ts` since 18 September — the master opened it
+   for you and the spa chat. `category: "Laundry"`; leave `taxKind` alone, as
+   laundry follows the **room** rule (the spa is the one service with its own,
+   D18-21). It answers `{ok:false, reason}` and never throws for a refusal,
+   because a refusal returned inside `withSession` is a commit (MEMORY 243).
 5. **The hotel's linen** — the same docket, marked the hotel's: what went out,
    what came back, what is still out. Counts only.
 

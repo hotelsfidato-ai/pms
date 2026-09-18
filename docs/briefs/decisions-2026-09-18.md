@@ -44,6 +44,15 @@ is built.
 | D18-16 | The Tally export | **All three on the screen, as options:** Tally Prime XML, Tally ERP 9 XML, and a day-book CSV. Whoever exports picks what their accountant wants |
 | D18-17 | Marketing, first version | **Guest lists that can be acted on** — stayed twice, not returned in a year, came from which site — with an export, and a send through n8n when an offer goes out |
 
+## Asked the same evening, once purchasing was merged and the three chats had reported
+
+| # | Question | Answer |
+|---|---|---|
+| D18-18 | Who may raise a purchase request **at all** — housekeeping and the front desk hold no purchasing permission today, so D18-2's setting can name them and the screen still refuses | **Leave it as it is.** The five roles that hold it today. D18-2's setting only ever narrows that list, never widens it — so nothing can be switched on that the screen then refuses |
+| D18-19 | There is no Approvals **screen** — the engine is one, but each service decides inside its own screen and a GM cannot see everything waiting on them | **Build one Approvals screen.** One inbox, everything waiting on you, decided in place. The service screens keep their own buttons. *The master's, not a service chat's* |
+| D18-20 | Whether a WhatsApp or email message carries the PMS's own **PDF**, or only the figures | **Attach the PDF** — the exact A4 document the desk prints. The sender fetches it and n8n forwards it |
+| D18-21 | Confirming the two answers the **spa** chat reported but which never came through the master | **Both stand:** a treatment bills under the **spa's own GST rule per property**, and **reception books and closes while housekeeping only sees** the diary. *Finance's own comment says laundry and the like follow the ROOM rate; that comment is made to agree rather than contradict* |
+
 ---
 
 ## Still the owner's to give

@@ -45,6 +45,15 @@ no therapist logins, no new roles.
      for posting a charge — never by writing `folio_postings` yourself, never
      through the restaurant till. The Extra Charges report already has a "Spa"
      row; your charges must land in it.
+
+     **That door is `postCharge`**, exported from
+     `api/src/modules/finance/index.ts` since 18 September — the master opened
+     it for you and the laundry chat. Pass **`taxKind: "spa"`**: the owner's
+     D18-21 says a treatment bills under the spa's **own** GST rule per
+     property, so a property that has not set one cannot bill a treatment at
+     all, and the door refuses with a sentence naming Settings → Tax rather
+     than aborting your transaction. `category: "Spa"` puts it in the Extra
+     Charges row.
    - **At the spa:** cash, card or UPI taken there. Ask the master which
      existing door records that money before you invent one — a second way of
      taking a payment is how two screens end up disagreeing about the day's

@@ -120,6 +120,28 @@ New-Item -ItemType Junction -Path "D:\fidato-pos\api\node_modules" -Target "D:\f
 
 - **Your own database:** `DB=fidato_pos ./db/migrate.sh --with-dev-identities`
   (Git Bash, in your copy). Never point two chats at one database.
+
+  ⚠ **A fresh one comes up with no people in it, and the next two things fail
+  without naming the cause.** `--with-dev-identities` says *"expected 3 staff
+  with dev uids, found 0. Has 008_seed.sql changed the demo emails?"* — it has
+  not: `008` seeds only the placeholder administrator, and the three demo staff
+  come from `db/tests/suite.sql`, which a real database never runs. Then
+  `npm run demo` dies on *"Cannot read properties of undefined (reading 'id')"*,
+  because `load-demo.ts` looks up `owner@fidato.in` for the POS outlet and finds
+  nobody — and it rolls back, so `hotels` is still 0 and it reads as if nothing
+  ran at all. Put the three in first:
+
+  ```sql
+  insert into staff (email, full_name, is_group_admin) values
+    ('owner@fidato.in','Group Owner', true),
+    ('agra@fidato.in','Agra Clerk',  false),
+    ('pune@fidato.in','Pune Clerk',  false)
+  on conflict (email) do nothing;
+  ```
+
+  then `cd api && npm run demo`, then `psql … -f db/dev/dev-identities.sql` and
+  `-f db/dev/dev-testers.sql` — the second adds a sign-in per role at 5EL, which
+  the sign-in screen's development buttons use.
 - **Your own ports:** `PORT` for the API, `VITE_API_URL` and
   `VITE_ALLOW_DEV_AUTH=1` in your copy's `.env.local`. Vite finds its own port.
 - **Copy the ROOT `.env`** from the main checkout (the website's public

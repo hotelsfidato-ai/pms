@@ -68,6 +68,129 @@ const PAYMENT_METHOD: Record<string, string> = {
 
 /* ── Post a charge ───────────────────────────────────────────────── */
 
+/* ══════════════════════════════════════════════════════════════════
+   THE DOOR A CHARGE REACHES A ROOM BILL THROUGH
+
+   Exported from `api/src/modules/finance/index.ts`, written 18 September
+   because the laundry and the spa both need D18-7 — "straight onto the
+   room bill as its own charge line" — and there was nothing to call.
+   Posting a charge existed only as the HTTP route below, and a service
+   that cannot reach a door writes the table itself, which is how a
+   ledger ends up with two sets of rules about what may be posted.
+
+   So the route's body is HERE now and the route calls it. There is still
+   ONE insert into `folio_postings` for a charge, in one place, and the
+   checks in front of it cannot be skipped by whoever calls: a cancelled
+   booking, a closed folio, a charge with no description and a charge of
+   nothing are refused for the desk and for a service alike.
+
+   A REFUSAL RETURNED INSIDE `withSession` IS A COMMIT (MEMORY 243), so
+   this answers `{ok:false, reason}` and never throws for a refusal — the
+   caller decides what to do with its own transaction.
+   ══════════════════════════════════════════════════════════════════ */
+export interface ChargeToPost {
+  /** What the guest reads on the bill. Required: a line with no words is
+      an amount nobody can query at check-out. */
+  description: string;
+  amount: number;
+  /** The interface's word — "Laundry", "Spa", "Miscellaneous"… */
+  category?: string | undefined;
+  /** false where somebody has determined the charge bears no GST. That is
+      a decision and it is recorded as one; there is no silent default. */
+  taxable?: boolean | undefined;
+  businessDate?: string | undefined;
+  /** WHICH TAX RULE THE CHARGE FOLLOWS, asked of `app.gst_rate`.
+      "room" unless the service has its own, which the SPA does — the
+      owner's D18-21, 18 September: a treatment bills under the spa's own
+      rule per property, so a property that has not set one cannot bill a
+      treatment at all rather than billing it at the room's rate. Laundry
+      has no rule of its own and stays on "room". */
+  taxKind?: string;
+}
+
+export async function postCharge(
+  client: Client, hotelId: string, stayId: string, input: ChargeToPost,
+): Promise<{ ok: true; id: string } | { ok: false; reason: string }> {
+  const description = input.description?.trim();
+  if (!description) return { ok: false, reason: "A charge needs a description." };
+  if (!input.amount) return { ok: false, reason: "A charge of zero is not a charge." };
+
+  const { rows } = await client.query<{ status: string }>(
+    "select status from reservations where hotel_id = $1 and id = $2",
+    [hotelId, stayId],
+  );
+  const stay = rows[0];
+  if (!stay) return { ok: false, reason: "Reservation not found." };
+  if (stay.status === "cancelled") return { ok: false, reason: "This booking was cancelled." };
+  if (stay.status === "checked_out") {
+    return { ok: false, reason: "This folio is closed. Reopen the stay to post to it." };
+  }
+
+  const folioId = await folioFor(client, hotelId, stayId);
+  if (!folioId) return { ok: false, reason: "Could not open a folio for this stay." };
+
+  /* THE RATE COMES FROM THE RULE, AND ZERO IS STILL A DECISION.
+     This read `(cgst_rate + sgst_rate) ?? 5` — a property rate with a
+     hardcoded 5% behind it, which is a shipped price in a project
+     whose first rule is that nothing ships a price. A property that
+     had never set a rate billed at five percent and looked correct.
+
+     `taxable: false` stays: a clerk saying a charge bears no GST is
+     making a determination, and it is recorded as one. What is gone
+     is the silent fallback for the case where nobody said anything.
+
+     Everything the front desk posts follows the ROOM rule — laundry,
+     transport, a damage charge are ancillary to the accommodation and
+     carry its rate. The till's own outlets follow theirs, and since
+     D18-21 so does the spa: `taxKind` names which, and it is "room"
+     for every caller that does not say otherwise. */
+  const amount = Math.round(input.amount * 100) / 100;
+  const taxKind = input.taxKind ?? "room";
+  const taxable = input.taxable ?? true;
+
+  /* ASK BEFORE POSTING, BECAUSE `app.gst_rate` RAISES.
+     A property with no rule for this kind is a real and ordinary state —
+     the spa's own rule (D18-21) is one somebody sets once, and until they
+     do, a treatment cannot be billed at all. `gst_rate` answers that by
+     raising, which ABORTS THE TRANSACTION: a caller that meant to refuse
+     politely would instead lose everything else it had done, and a
+     refusal returned after an abort is a commit of nothing (MEMORY 243).
+
+     So the rate is asked for with `gst_rate_or_null` first and the
+     refusal carries the sentence that says what to do. The raise stays
+     where it is as the backstop for anybody who posts without asking. */
+  if (taxable) {
+    const { rows: rate } = await client.query<{ rate: string | null }>(
+      "select app.gst_rate_or_null($1, $2, $3::numeric) as rate",
+      [hotelId, taxKind, amount],
+    );
+    if (rate[0]?.rate === null || rate[0]?.rate === undefined) {
+      return {
+        ok: false,
+        reason: `This property has no GST rule for ${taxKind}. Settings → Tax. `
+              + "A missing rate is not zero — nothing is billed until somebody sets it.",
+      };
+    }
+  }
+
+  const { rows: made } = await client.query<{ id: string }>(
+    `insert into folio_postings
+       (hotel_id, folio_id, business_date, category, description,
+        amount, tax_rate, tax_amount)
+     select $1::uuid, $2::uuid, $3::date, $4::text, $5::text, $6::numeric,
+            t.rate, round($6::numeric * t.rate / 100.0, 2)
+       from (select case when $7::boolean
+                         then app.gst_rate($1, $8::text, $6::numeric)
+                         else 0::numeric end as rate) t
+     returning id::text`,
+    [hotelId, folioId, await resolveDate(client, hotelId, input.businessDate),
+     CATEGORY[input.category ?? "Miscellaneous"] ?? "misc",
+     description, amount, taxable, taxKind],
+  );
+
+  return { ok: true, id: made[0]!.id };
+}
+
 postings.post("/:code/stays/:id/charges", async (c) => {
   const body = (await c.req.json().catch(() => ({}))) as {
     category?: string; description?: string; amount?: number;
@@ -78,55 +201,14 @@ postings.post("/:code/stays/:id/charges", async (c) => {
     const hotelId = await hotelIdFor(client, c.req.param("code"));
     if (!hotelId) return null;
 
-    const description = body.description?.trim();
-    if (!description) return refuse("A charge needs a description.");
-    if (!body.amount) return refuse("A charge of zero is not a charge.");
-
-    const { rows } = await client.query<{ status: string }>(
-      "select status from reservations where hotel_id = $1 and id = $2",
-      [hotelId, c.req.param("id")],
-    );
-    const stay = rows[0];
-    if (!stay) return refuse("Reservation not found.");
-    if (stay.status === "cancelled") return refuse("This booking was cancelled.");
-    if (stay.status === "checked_out") {
-      return refuse("This folio is closed. Reopen the stay to post to it.");
-    }
-
-    const folioId = await folioFor(client, hotelId, c.req.param("id"));
-    if (!folioId) return refuse("Could not open a folio for this stay.");
-
-    /* THE RATE COMES FROM THE RULE, AND ZERO IS STILL A DECISION.
-       This read `(cgst_rate + sgst_rate) ?? 5` — a property rate with a
-       hardcoded 5% behind it, which is a shipped price in a project
-       whose first rule is that nothing ships a price. A property that
-       had never set a rate billed at five percent and looked correct.
-
-       `taxable: false` stays: a clerk saying a charge bears no GST is
-       making a determination, and it is recorded as one. What is gone
-       is the silent fallback for the case where nobody said anything.
-
-       Everything the front desk posts follows the ROOM rule — laundry,
-       transport, a damage charge are ancillary to the accommodation and
-       carry its rate. The till's own outlets follow theirs. */
-    const amount = Math.round(body.amount * 100) / 100;
-
-    const { rows: made } = await client.query<{ id: string }>(
-      `insert into folio_postings
-         (hotel_id, folio_id, business_date, category, description,
-          amount, tax_rate, tax_amount)
-       select $1::uuid, $2::uuid, $3::date, $4::text, $5::text, $6::numeric,
-              t.rate, round($6::numeric * t.rate / 100.0, 2)
-         from (select case when $7::boolean
-                           then app.gst_rate($1, 'room', $6::numeric)
-                           else 0::numeric end as rate) t
-       returning id::text`,
-      [hotelId, folioId, await resolveDate(client, hotelId, body.businessDate),
-       CATEGORY[body.category ?? "Miscellaneous"] ?? "misc",
-       description, amount, body.taxable ?? true],
-    );
-
-    return { ok: true, data: { id: made[0]?.id } };
+    const posted = await postCharge(client, hotelId, c.req.param("id"), {
+      description: body.description ?? "",
+      amount: body.amount as number,
+      category: body.category,
+      taxable: body.taxable,
+      businessDate: body.businessDate,
+    });
+    return posted.ok ? { ok: true, data: { id: posted.id } } : refuse(posted.reason);
   });
 
   if (!result) return c.json({ error: "No such property." }, 404);

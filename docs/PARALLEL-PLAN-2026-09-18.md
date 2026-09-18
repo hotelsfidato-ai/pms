@@ -18,9 +18,13 @@ it is the rules, which do not move.
 | | Chat | State | What is left on it |
 |---|---|---|---|
 | ✅ | **purchasing** | **merged into cp6** | nothing — it goes out with the next deploy |
-| 🔨 | **laundry** | built, committed in its copy | push, Action green, hand back |
-| 🔨 | **spa** | built, committed in its copy | push, Action green, hand back |
-| 🔨 | **revenue-management** | built, committed in its copy | push, Action green, hand back |
+| 🔨 | **laundry** | server done, **no screens yet** | **pull `cp6`** — the section and the resource it stopped at are in — then the screens, push, Action green, hand back. Migration → **117** |
+| 🔨 | **spa** | server done, **no screens yet** | **pull `cp6`** — same two files, plus `postCharge` for D18-7 and "settle at the spa" — then the screens, push, hand back. Migration → **118** |
+| 🔨 | **revenue-management** | screen done, **no pickup, no week-ago pace** | **pull `cp6`** — the reports door now exports the eight names R1 asked for — then build both, push, hand back |
+
+> **All three pull first.** Each stopped at a file that was not theirs and said
+> so, which is the agreement working; what they asked for is in `cp6` as of
+> 18 September. In your copy: `git fetch origin && git rebase origin/cp6`.
 | ▶ | **accounting** (Tally export) | **starts now** — purchasing's slot | brief written, copy ready |
 | ⏸ | **online-checkin** (the guest's page) | waits on the master's next rooms on the guest door | brief when the slot opens |
 | ⏸ | **guest-messaging** | waits on the master's sender | brief when the slot opens |
@@ -36,43 +40,59 @@ voucher FH-2026-00002 (D17-63). **The booking engine stays parked** (D18-1).
 ### The master's own lane, in order
 
 **Three chats stopped where they were supposed to stop** — at a file that is
-not theirs — and wrote down what they need. Those asks come first, because each
-one is holding up work that is otherwise finished.
+not theirs — and wrote down what they need. Those asks came first, because each
+was holding up work that is otherwise finished. **All three are done.**
 
-1. **Two menu sections and two permission resources** — `laundry` and `spa`, in
-   `src/components/app/navigation.ts` (`SectionKey`, `SECTION_LAYOUT`, gated
+1. ✅ **Two menu sections and two permission resources** — `laundry` and `spa`,
+   in `src/components/app/navigation.ts` (`SectionKey`, `SECTION_LAYOUT`, gated
    `module:`) and `src/lib/permissions.ts` (`RESOURCES`, `RESOURCE_LABELS`,
-   the grants). **Both services are built on the server and have no screens at
-   all** without this. `SectionKey` is a typed union, so a nav entry naming a
-   section that does not exist does not compile; and `module:` sits on the
-   **section**, so it is the only place a screen can be hidden at a property
-   where the switch is off. D18-8 already answers who may use them.
-   *One change unblocks two chats.*
-2. **A front door on finance for posting a charge to a room bill** (D18-7).
-   `api/src/modules/finance/index.ts` exports no in-process function today, and
-   neither laundry nor spa may write `folio_postings` themselves. The posting
-   already exists as an HTTP route in `finance/postings.ts` — the door is that
-   route's body lifted into one exported function, so there is still one
-   insert, not two.
-3. **Widen the reports front door** (revenue management's R1): `dailyFigures`,
-   `sumDays`, `firstTradingDay`, `propertyFor`, `isoDateParam`, the `NIGHTS`
-   fragment and the `DayFigures` / `Property` types. Without them that service
-   cannot build **pickup** or the week-ago column of **pace**, and it correctly
-   built neither rather than counting room-nights its own way. Plus R2: two
-   one-line deletions in shared test files that this service's existence makes
-   wrong.
-4. **The shared PMS → n8n sender** (D17-87, D17-91) — JSON and the PDF, signed
+   the grants). Both services were built on the server with **no screens at
+   all** without this: `SectionKey` is a typed union, so an entry naming a
+   section that does not exist does not compile, and `module:` sits on the
+   **section**, which is the only place a whole service hides at a property
+   that has not switched it on. Granted per **D18-8** — reception and
+   housekeeping — with **D18-21**'s refinement: on the spa, housekeeping
+   **sees** the diary and does not book or close it.
+2. ✅ **`postCharge`, the door a charge reaches a room bill through** (D18-7),
+   exported from `api/src/modules/finance/index.ts`. The HTTP route's body
+   moved into it and the route now calls it, so there is still **one** insert
+   into `folio_postings` for a charge and the checks in front of it run for a
+   service exactly as they run for the desk. `taxKind` names which tax rule the
+   charge follows — `"room"` unless the service has its own, and the **spa
+   does** (D18-21). It asks `app.gst_rate_or_null` **before** posting, because
+   `app.gst_rate` raises where a property has set no rule and a raise aborts
+   the transaction; the refusal names Settings → Tax instead.
+   `api/test/modules/finance/chargeDoor.test.ts` — 7 tests, and the last one
+   seen to fail with the guard taken out.
+3. ✅ **The reports front door is widened** (R1): `dailyFigures`, `sumDays`,
+   `firstTradingDay`, `propertyFor`, `propertyById`, `isoDateParam`, `heading`,
+   the `NIGHTS` fragment and the `DayFigures` / `Property` / `StayNight` types.
+   Revenue management can now build **pickup** and the week-ago column of
+   **pace**, both of which it correctly refused to build rather than count
+   room-nights its own way.
+   **R2 is a merge-time step, not this one:** dropping `"Revenue management"`
+   from `SOON` and `"listDailyStatistics"` from `KNOWN_UNREACHABLE` is only
+   true once that branch is in, and doing it early turns both tests red.
+   It goes in the merge commit.
+4. **The shared PMS → n8n sender** (D17-87, D17-91) — JSON and **the PDF**
+   (D18-20: the exact A4 document the desk prints, because a guest whose
+   company pays needs the document, not a summary), signed
    with a secret that lives only in the server's settings, proved against a
    fake receiver before n8n is connected. **Guest messages, reviews and
    marketing all send through it and through nothing else.** *Three wave-2
    chats are blocked until this exists.*
-5. **The guest's door, next rooms** — saving the check-in details and the ID
+5. **One Approvals screen** (**D18-19**, asked and answered 18 September). The
+   engine is one and every service decides through it — but inside its own
+   screen, so a GM cannot see everything waiting on them. One inbox, decided in
+   place; the service screens keep their own buttons. **The master's**, because
+   it spans every service.
+6. **The guest's door, next rooms** — saving the check-in details and the ID
    photo, showing the bill once the code is answered, carrying a spa or laundry
    request. Each one a function that takes the link's hash and answers about
    one booking (migration 114). **No chat adds to that door.**
-6. **Merging** — one service at a time, the Action green before each,
+7. **Merging** — one service at a time, the Action green before each,
    migrations renumbered per the ledger.
-7. **Everything shared**: `server.ts`, `mount.ts`, `permissions.ts`,
+8. **Everything shared**: `server.ts`, `mount.ts`, `permissions.ts`,
    `navigation.ts`, `components/ui/`, the migrations' numbering.
 
 ### How a slot frees
@@ -218,26 +238,16 @@ exist would describe them wrongly.
 | **CRS voucher FH-2026-00002** (`D:\reports fidato\`) | bills and vouchers in the group's layout (D17-63) | they print in the plain layout |
 | **Five GitHub secrets** (`DEPLOY_SSH_KEY`, `DEPLOY_HOST`, `DEPLOY_USER`, `DEPLOY_EMAIL`, `FIREBASE_SERVICE_ACCOUNT`) | the deploy button | deploys stay by hand, from this chat, with the owner's yes |
 
-### Four answers, asked 18 September
+### Four answers, asked and given on 18 September
 
-Each one widens what a person can do, so none of them is the master's to make.
+All four are now **D18-18 … D18-21** in `docs/briefs/decisions-2026-09-18.md`.
 
-1. **May housekeeping and the front desk raise a purchase request?** Today
-   neither holds any purchasing grant at all, so D18-2's per-property setting
-   can name them and the screen still refuses them.
-2. **One Approvals screen, or keep deciding inside each service's own screen?**
-   The engine is one (migration 076) and both equipment and purchasing decide
-   through it, correctly. But there is no screen that lists everything waiting
-   on a GM, and the build plan said there was.
-3. **Does a WhatsApp or email message carry the PMS's own PDF, or the data
-   alone?** Recommended: attach it — a guest whose company pays needs the
-   document, not a summary.
-4. **The spa's two answers.** The spa chat reports the owner answered, on 18
-   September, that a treatment bills under the spa's **own** GST rule per
-   property, and that **reception books and closes while housekeeping only
-   sees** the diary. Neither came through the master, and finance's own code
-   says the opposite about tax — that laundry and the like follow the **room**
-   rule. Confirm both before that service merges.
+| | Asked | Answered |
+|---|---|---|
+| **D18-18** | Housekeeping and the front desk hold no purchasing grant, so D18-2's setting can name them and the screen still refuses | **Leave it.** D18-2's setting only ever narrows the five roles that hold it, never widens — so nothing can be switched on that the screen then refuses |
+| **D18-19** | There is no Approvals **screen**; each service decides inside its own | **Build one inbox.** The master's, spanning every service |
+| **D18-20** | PDF on a WhatsApp or email message, or the figures alone | **Attach the PDF** — the A4 the desk prints |
+| **D18-21** | The two answers the spa chat reported but which never came through the master | **Both stand** — the spa's own GST rule per property, and housekeeping **sees** the diary without booking or closing. Finance's own comment now agrees rather than contradicting |
 
 ---
 

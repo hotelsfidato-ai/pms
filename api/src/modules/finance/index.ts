@@ -17,3 +17,21 @@ export const mounts: readonly Mount[] = [
   ["/api/hotels", invoices],
   ["/api/hotels", tax],
 ];
+
+/* ⚠ THE DOOR A CHARGE REACHES A ROOM BILL THROUGH — opened 18 September
+   for the laundry and the spa, which both owe D18-7: a charge goes
+   "straight onto the room bill as its own charge line", not through the
+   restaurant till and not by writing `folio_postings`.
+
+   Both chats asked for this rather than writing the table, which is the
+   agreement working. There is still exactly ONE insert for a charge, and
+   the checks in front of it — a cancelled booking, a closed folio, a
+   charge with no words, a charge of nothing — run for a service exactly
+   as they run for the desk.
+
+   It answers `{ok:false, reason}` and never throws for a refusal,
+   because a refusal returned inside `withSession` is a COMMIT
+   (MEMORY 243). `taxKind` is "room" unless the service has its own rule;
+   the spa does (D18-21) and laundry does not. */
+export { postCharge } from "./postings.ts";
+export type { ChargeToPost } from "./postings.ts";
