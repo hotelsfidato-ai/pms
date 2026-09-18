@@ -50,6 +50,44 @@ Write it **as you go**, not at the end from memory. Copy this shape:
 
 ---
 
+## 2026-09-18 (evening) · Live: `main` at 79e358e, and the first deploy in two days
+
+**Asked for:** "create a pull request and also deploy this to the server and make
+the current system live, also merge this to the main branch — and check all the
+branches for any pending merges before a pull, push and deployment."
+
+**Checked first.** Every local and remote branch against `cp6`: nothing pending.
+The seven service chats' branches were all merged already; only `main` was
+"ahead", by its own earlier merge commit. CI green on `2445bc5`.
+
+**Shipped**
+- **PR #2**, `cp6` → `main`, merged as `79e358e`. `main` now matches `cp6` file
+  for file.
+- **The server**: backed up (812 KB dump, before anything moved), moved to
+  `main`, `deploy/launch.sh` run — migrations 095 to 113 applied, 75 tables to
+  81, preflight green on every check, API answering in seconds.
+- **The website**: rebuilt against the live API and released to Firebase.
+
+**Proved, on the live system**
+- `https://api.fidatohotels.com/health` → `ok`, database reachable, role
+  `pms_app`.
+- The website's `/config.json` points at the live API; the new bundle is served.
+- The API answers the website's origin, and **exposes `content-disposition`**, so
+  a downloaded report keeps its name — the fault that would only ever have shown
+  in production.
+- `/api/hotels` with no token → 401. The sign-in screen carries no development
+  sign-in.
+- **n8n: 200 on the box, container up 2 days.** The firewall fix (MEMORY 279)
+  held through a deploy for the first time.
+
+**Left open**
+- n8n's screen refuses the owner's line (403): its allowlist holds the old
+  address. One command, on the server.
+- The deploy workflow's five secrets are still unset — this deploy was run by
+  hand over ssh, on the owner's explicit yes.
+
+---
+
 ## 2026-09-18 · The gates leave this laptop: one Action, every push, and a deploy button
 
 **Asked for:** "One GitHub Action. npm test, npm run lint, tsc -b, the API

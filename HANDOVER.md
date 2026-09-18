@@ -404,6 +404,23 @@ menus at the equipment merge, EQ-2. **Next free migration: 097.** Owner chose:
   in `navigation.ts` and 068 (left: they may be the owner's), EQ-3 (dev only).
 - **Next free migration: 099.**
 
+**18 September, 17:21 IST — DEPLOYED, AND MERGED TO `main`.** The owner asked for
+it live. **Live is now `79e358e`** (PR #2, `cp6` → `main`), the first deploy since
+`eaf6916` on 16 September: 97 commits, 25 migrations, 409 files. The database
+was backed up first (`/var/backups/fidato/pre-deploy-20260918-114951.dump`,
+812 KB, beside the nightlies). The server's preflight passed every check — dev
+auth off, no development uids, no demo properties, row level security on every
+table — and the API answered `ok` within seconds of the restart. The website was
+rebuilt against `https://api.fidatohotels.com` and released to Firebase
+(`index-Ds2VcNjz.js`); the sign-in screen carries no development sign-in, as the
+build check requires. **n8n survived this deploy** (200 on the box, container up
+2 days) — MEMORY 279's firewall fix held. The database went from 75 tables to 81.
+
+⚠ **n8n's screen answers 403 from the owner's line**, because its allowlist still
+holds `106.213.87.54` and the line is now on `106.213.83.154`. Not a fault, and
+not the deploy: one command on the server, `sudo ALLOW_FROM=${SSH_CLIENT%% *}
+deploy/n8n.sh allow`.
+
 **18 September — THE GATES LEFT THIS LAPTOP.** `.github/workflows/ci.yml` runs
 every gate on every push, on Linux, against Postgres 17: lint, both type
 checks, strip-check, the website suite, the API suite, the database suite, the
