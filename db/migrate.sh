@@ -143,7 +143,12 @@ N=$(( ${#FILES[@]} / 2 ))
 out=$("$PSQL" $S -d "$DB" -1 -v ON_ERROR_STOP=1 -q "${FILES[@]}" 2>&1)
 if [ $? -ne 0 ]; then
   red "  x the migration run failed and was ROLLED BACK"
-  echo "$out" | grep -iE "ERROR|HINT|^psql:" | head -6 | sed 's/^/      /'
+  # THE ERROR FIRST, and the notices never. This was one grep for
+  # "ERROR|HINT|^psql:" cut to six lines - and every NOTICE psql prints starts
+  # `psql:`, so six "already exists, skipping" lines filled the window and the
+  # actual ERROR never appeared. It cost the master a wrong diagnosis on 18
+  # September and the purchasing chat an afternoon (MEMORY 299).
+  echo "$out" | grep -E "ERROR|FATAL|HINT|DETAIL|CONTEXT" | head -8 | sed 's/^/      /'
   red "    $DB is exactly as it was before this ran. Fix the file named"
   red "    above and run this again."
   exit 1

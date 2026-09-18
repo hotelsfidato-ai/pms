@@ -51,10 +51,29 @@ comment on column folios.group_id is
 -- Every folio belongs to exactly one thing. A folio attached to neither is
 -- unreachable from any screen; one attached to both has two owners and two
 -- answers to "who settles this".
-alter table folios drop constraint if exists folios_belongs_to_one;
-alter table folios add constraint folios_belongs_to_one check (
-  (reservation_id is not null) <> (group_id is not null)
-);
+-- ⚠ ONLY WHILE NOTHING LATER HAS WIDENED IT. 060 adds a third owner - a banquet
+-- function's bill - and rewrites this constraint to allow it. Every deploy
+-- replays from 001, so this file ran again FIRST and put back "a stay or a
+-- group, and nothing else"; Postgres validates a new check against the rows
+-- that exist, and a function's folio belongs to neither. **The first confirmed
+-- banquet on production would have failed every deploy after it**, here, and
+-- rolled the whole run back. Production held no banquet on 18 September, which
+-- is the only reason it had not. Found by sweeping for the family the day its
+-- third member turned up (MEMORY 284, 293, 299).
+do $$
+begin
+  if not exists (
+    select 1 from pg_constraint
+     where conrelid = 'folios'::regclass
+       and conname  = 'folios_belongs_to_one'
+       and pg_get_constraintdef(oid) like '%event_id%'
+  ) then
+    alter table folios drop constraint if exists folios_belongs_to_one;
+    alter table folios add constraint folios_belongs_to_one check (
+      (reservation_id is not null) <> (group_id is not null)
+    );
+  end if;
+end $$;
 
 create index if not exists folios_group_idx on folios (group_id)
   where group_id is not null;

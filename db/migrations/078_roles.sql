@@ -98,11 +98,33 @@ comment on function app.assignable_roles() is
 -- -----------------------------------------------------------------------------
 -- The constraint, derived from it
 -- -----------------------------------------------------------------------------
--- Dropped and re-added rather than left alone: the old list is a subset, so no
--- existing row can fail the new one, and re-running this file is safe.
-alter table staff_hotels drop constraint if exists staff_hotels_role_valid;
-alter table staff_hotels add constraint staff_hotels_role_valid
-  check (role = any (app.assignable_roles()));
+-- ⚠ "RE-RUNNING THIS FILE IS SAFE" WAS TRUE FOR FIFTEEN MIGRATIONS AND THEN
+-- STOPPED BEING. This said: dropped and re-added, the old list is a subset, no
+-- existing row can fail. Then 093 added `revenue_manager` to
+-- app.assignable_roles(). Every deploy replays from 001, so THIS file runs
+-- again with its own narrower function in force, re-adds the constraint, and
+-- Postgres validates it against the rows that exist - and the first person
+-- given the Revenue Manager role makes every later deploy fail here and roll
+-- back. Found by the purchasing chat on 18 September, reproduced clean: all
+-- migrations, one revenue_manager row, replay, exit 3 at this line.
+--
+-- Production held only the owner role that day, which is the only reason it
+-- had not bitten. The third of its family (MEMORY 284, 293): a constraint is
+-- rewritten only when it is not already the one this file wants, so a later,
+-- wider world is left alone.
+do $$
+begin
+  if not exists (
+    select 1 from pg_constraint
+     where conrelid = 'staff_hotels'::regclass
+       and conname  = 'staff_hotels_role_valid'
+       and pg_get_constraintdef(oid) like '%assignable_roles%'
+  ) then
+    alter table staff_hotels drop constraint if exists staff_hotels_role_valid;
+    alter table staff_hotels add constraint staff_hotels_role_valid
+      check (role = any (app.assignable_roles()));
+  end if;
+end $$;
 
 
 -- -----------------------------------------------------------------------------

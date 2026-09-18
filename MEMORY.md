@@ -6539,6 +6539,48 @@ copy will see of theirs.**
 
 ---
 
+### 299 · The third constraint an older migration narrows on every replay - and I had already hit it and misread it
+
+18 September, found by the purchasing chat. 078 drops and re-adds
+`staff_hotels_role_valid` as `role = any (app.assignable_roles())`, under a
+comment saying "re-running this file is safe". It was, until 093 added
+`revenue_manager` to that function: every deploy replays from 001, so 078 runs
+again with its own narrower list in force and Postgres validates the constraint
+against the rows that exist. **The first Revenue Manager appointed on production
+would have failed every deploy after that, at migration 78.** Production held
+only the owner role, which is the only reason that day's deploy went through.
+
+MINE, twice over. First: this is 284 and 293's family, and after 293 I fixed
+the one file in front of me instead of asking where else the pattern lived.
+Second: **I hit this exact failure myself that afternoon and misdiagnosed it.**
+I had just created a test Revenue Manager for the owner's QA; `db/migrate.sh`
+then failed with "fidato is exactly as it was" and no error - because its
+filter was `grep "ERROR|HINT|^psql:" | head -6`, every NOTICE starts `psql:`,
+and six of them filled the window. I found a real but different error in my
+new migration, fixed that, applied it by hand, and never ran migrate.sh again.
+The purchasing chat lost an afternoon to the same hidden message.
+
+Fixed: 078 rewrites the constraint only when it is not already the one it
+wants; `rerun.sh` now gives somebody EVERY assignable role between its passes,
+so a role list narrowed by any earlier file is caught (old 078 fails it with
+the production error; guarded, 114 of 114 replay); and migrate.sh prints
+ERROR, HINT, DETAIL and CONTEXT, never the notices.
+
+**And rule 1 below, applied the same hour, found a FOURTH:** every constraint
+that more than one migration defines - six of them. Four were already guarded.
+`room_types_rate_sane` is harmless (a NULL passes `>= 0`). But 056 re-adds
+`folios_belongs_to_one` as "a stay or a group" over 060's "...or a banquet
+function": **the first confirmed banquet on production would have failed every
+deploy after it.** 056 is guarded now, and `rerun.sh` carries a function with a
+bill between its passes - the old 056 fails it with the production error.
+
+**The rules: (1) when a fault has a family, grep for the family - every
+`drop constraint … add constraint` in the numbered set - the day the second one
+is found, not the third. (2) A failure whose message you did not see is not
+diagnosed. Make the tool show it before believing a theory about it.**
+
+---
+
 ### 298 · MINE: a commit message that claimed two files I had not changed
 
 18 September. One script wrote the CHANGELOG entry, the HANDOVER entry and a

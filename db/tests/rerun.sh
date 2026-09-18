@@ -92,6 +92,17 @@ green "  all migrations applied to an empty database"
 # writes a kind 095's list does not have — but only for properties that exist.
 # Here there were none, so the second pass was green; the local database had
 # one, and failed. Production has five. So give the second pass a property.
+# AND A BANQUET FUNCTION WITH A BILL. 056 re-added "a folio belongs to a stay or
+# a group" over 060's "…or a function", and the first confirmed banquet would
+# have failed every deploy after (MEMORY 299). A folio owned by a function is
+# the row that proves 056 leaves the wider rule alone.
+#
+# AND GIVE SOMEBODY EVERY ROLE THERE IS. 078 re-added the role constraint with
+# its own older, narrower list, and the first Revenue Manager (a role 093 added)
+# would have failed every deploy after - while this script, which gave nobody
+# any role, stayed green (MEMORY 299). One person per assignable role means a
+# role list narrowed by ANY earlier file is caught here, not in production.
+#
 # And SWITCH A MODULE ON for it. A constraint on `hotel_modules.module` is
 # validated against the rows that are there, so a migration that rewrites that
 # constraint is only tested by a replay that has such a row. Without this, 087
@@ -100,7 +111,28 @@ green "  all migrations applied to an empty database"
 if ! out=$("$PSQL" $S -d "$DB" -q -v ON_ERROR_STOP=1 \
      -c "insert into hotels (code, name, city) values ('RRN','Rerun Property','Nowhere')" \
      -c "insert into hotel_modules (hotel_id, module, is_enabled)
-         select id, 'channel_manager', true from hotels where code = 'RRN'" 2>&1); then
+         select id, 'channel_manager', true from hotels where code = 'RRN'"      -c "with people as (
+           insert into staff (email, full_name)
+           select 'rerun-' || r || '@fidato.in', 'Rerun ' || r
+             from unnest(app.assignable_roles()) as r
+           returning id, full_name)
+         insert into staff_hotels (staff_id, hotel_id, role)
+         select p.id, h.id, replace(p.full_name, 'Rerun ', '')
+           from people p, hotels h where h.code = 'RRN'"      -c "with hall as (
+           insert into banquet_venues (hotel_id, name)
+           select id, 'Rerun Hall' from hotels where code = 'RRN'
+           returning id, hotel_id),
+         fn as (
+           insert into banquet_events
+             (hotel_id, venue_id, reference, title, starts_at, ends_at,
+              business_date, host_name, registered_by)
+           select hall.hotel_id, hall.id, 'BQ-RERUN-1', 'Rerun function',
+                  now(), now() + interval '4 hours', current_date, 'Rerun Host',
+                  (select id from staff where email like 'rerun-%' limit 1)
+             from hall
+           returning id, hotel_id)
+         insert into folios (hotel_id, event_id, status)
+         select hotel_id, id, 'open' from fn" 2>&1); then
   red "  x could not create a property between the passes"
   echo "$out" | grep -m1 "ERROR" | sed 's/^/      /'
   exit 1
