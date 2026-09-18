@@ -157,7 +157,7 @@ stock_items, stock_movements          069_stores.sql
   where an issue went                  to_outlet → pos_outlets; null for housekeeping and the like
   audit trigger on both tables         076_approvals.sql
 
-stock per store, moves between stores 106_stock_held_per_store.sql
+stock per store, moves between stores 112_stock_held_per_store.sql
   every movement names its store       location_id, NOT NULL; checked to be a `store` at the
                                        movement's property (trigger stock_movements_place). A
                                        writer that names none gets the Main store (D17-2's rule)

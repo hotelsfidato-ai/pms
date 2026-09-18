@@ -46,7 +46,7 @@ import { STOCK_SPEC } from "@/lib/importSpec";
    Somebody has to be able to ask why the rice says forty kilos and get
    an answer that goes back to a delivery note.
 
-   PER STORE since 17 September (migration 106, the owner's answers): one
+   PER STORE since 17 September (migration 112, the owner's answers): one
    list with a store picked at the top; every act happens in a named store;
    moving stock between stores is one act, and so is undoing it.
    ══════════════════════════════════════════════════════════════════ */

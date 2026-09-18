@@ -15,7 +15,7 @@ Work that touches the core or several services still goes in the root
 
 **Asked for:** the master, relaying the owner's third interview: merge cp6, read
 `docs/briefs/decisions-2026-09-17.md`, build stock per place, clean the long
-dash from this folder (D17-59, D17-60), then crockery (D17-69); migration 106;
+dash from this folder (D17-59, D17-60), then crockery (D17-69); migration 112;
 tell the master the branch when stock per place is done.
 
 **Decided by the owner on the way** — asked with a recommendation each, all taken
@@ -30,7 +30,7 @@ tell the master the branch when stock per place is done.
   the three stores were made by the master's 104.
 
 **Shipped** — branch `stores/phase-1a`, merged with cp6 `f9e144b`
-- `db/migrations/106_stock_held_per_store.sql` — `location_id` on every
+- `db/migrations/112_stock_held_per_store.sql` — `location_id` on every
   movement, back-filled into the Main store; a movement's store checked to be
   a store at its property, the Main store filled in for a writer that names
   none; `app.main_store`, `app.stock_on_hand(item, store)`,

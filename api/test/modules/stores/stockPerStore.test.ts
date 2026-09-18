@@ -3,7 +3,7 @@ import { app } from "../../../src/server.ts";
 import { closePool } from "../../../src/db.ts";
 
 /* ══════════════════════════════════════════════════════════════════
-   STOCK HELD PER STORE, AND MOVED BETWEEN STORES — migration 106
+   STOCK HELD PER STORE, AND MOVED BETWEEN STORES — migration 112
 
    The owner, 17 September: one list, a store picked at the top; every
    receive, issue, waste, return and count happens in a named store; moving

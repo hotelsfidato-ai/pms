@@ -1,5 +1,5 @@
 -- =============================================================================
--- 106 · Stock is held in a store, and moves between stores
+-- 112 · Stock is held in a store, and moves between stores
 -- =============================================================================
 -- Phase 1A of docs/STOCK-AND-EQUIPMENT-PLAN.md, the Store chat. Until now a
 -- hotel's stock was one number per item: nothing said whether the forty kilos
