@@ -271,9 +271,39 @@ The guards this service must respect:
 - `db/tests/modules/reservations.sql` — 091's index and CHECK refuse a second
   line 1 and a line number without its reference, channel or fingerprint.
 
+## A booking a machine makes (18 September)
+
+The owner's D17-79: SU pushes a booking the moment a site takes one, and the
+channel manager turns it into a real booking **in process**, inside its own
+transaction. The server's front door
+(`api/src/modules/reservations/index.ts`) exports three functions for that,
+and no route:
+
+| Export | What it does |
+|---|---|
+| `createChannelBooking(client, staffId, input)` | The booking. Refuses rather than overbooking (D17-43, D17-80); a repeat is answered with the booking already here (RES-3); an unpriced line comes back `unpriced`, never charged at zero; keeps the commission the site sent (D17-84) and what the guest asked for |
+| `cancelChannelBooking(client, staffId, input)` | **Cancelled, not voided** - the booking was real and the guest called it off (111). Refuses a guest who has already arrived; says so when it is cancelled twice |
+| `channelBookingAlreadyHere(client, input)` | For a caller that lost a race: the booking as it stands, read in a fresh session |
+
+**The booking itself is `api/src/modules/reservations/book.ts`**, moved out of
+the HTTP route on 18 September so that a person's booking and a machine's are
+the same act with the same refusals. `POST /:code/bookings` now reads a
+request body and calls it. Anything that changes what a booking IS belongs in
+that file, not in either caller.
+
+Still to come: each night at its own price (D17-82, migration and the night
+audit's reading of it), and `amendChannelBooking` for a change SU sends.
+
 ## Requests from other services
 
-None yet.
+- **18 September, channel manager:** a booking door a machine can call, in
+  process (their request 6). **Done** - the three functions above, migration
+  111 (the commission a site sends, and cancelling), and
+  `api/test/modules/reservations/channelDoor.test.ts`.
+- **18 September, channel manager:** a reservation that keeps each night's own
+  price (their request 7, the owner's D17-82). **Open** - it needs the night
+  audit to post from those rows where they exist, so it lands with that
+  change, not before.
 
 Another service's agent that needs a change here writes it in this list —
 what, why, who asked, the date — and the reservations agent does it.

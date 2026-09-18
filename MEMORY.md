@@ -6539,6 +6539,26 @@ copy will see of theirs.**
 
 ---
 
+### 296 · MINE: a refactor that quietly widened the answer every screen reads
+
+18 September. Moving the booking out of its HTTP route so a machine could make
+one in process, I gave the shared function what a machine needs - the rows'
+ids, and `duplicate: false` for a booking made now - and the route returned
+whatever it got. So `POST /bookings` started answering with four fields it had
+never sent, `duplicate: false` among them, where the key had simply been absent
+before. Three tests in the suite said so at once ("expected false to be
+undefined").
+
+The route now builds its answer field by field: the shape a screen already
+reads, `duplicate` only when true, and the ids kept for the caller in process,
+where they belong.
+
+**The rule: when one function starts serving two callers, the older caller's
+answer is BUILT, not passed through. What a new caller needs is not something
+to hand every old one.**
+
+---
+
 ### 295 · MINE: an exemption from the sign-in gate that matched a SIBLING path
 
 18 September. The channel manager's door is the one address a machine outside

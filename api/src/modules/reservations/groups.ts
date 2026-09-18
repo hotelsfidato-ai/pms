@@ -1,7 +1,10 @@
 import { Hono } from "hono";
-import { createHash } from "node:crypto";
 import { withSession } from "../../auth.ts";
 import type { Client } from "../../db.ts";
+import {
+  makeBooking, alreadyReceived, answerRepeat, fingerprintOf, isUniqueViolation,
+  type BookingRequest, type BookingLineInput,
+} from "./book.ts";
 
 /* ══════════════════════════════════════════════════════════════════
    GROUPS — twelve rooms and one host
@@ -247,424 +250,110 @@ groups.post("/:code/stays/:id/routing", async (c) => {
    type from room precisely so it stays possible. The summary says how many
    are left; the clerk decides. */
 groups.post("/:code/bookings", async (c) => {
-  type Line = {
-    roomTypeId?: string; mealPlan?: string;
-    adults?: number; children?: number;
-    rooms?: number; agreedRate?: number;
-  };
   type Body = {
     guestName?: string; phone?: string; email?: string;
     checkIn?: string; checkOut?: string;
     groupName?: string; blockCode?: string;
-    /* ⚠ `bookingSourceId` IS REQUIRED AND `source` IS NOT. The free
-       text 042 left behind is still accepted so nothing that posts to
-       this endpoint breaks, but the channel is now a row in
-       booking_sources and a booking without one cannot be saved. The
-       owner asked for that on 8 September: an unrecorded channel is a
-       lead nobody can trace back. */
+    /* ⚠ `bookingSourceId` IS REQUIRED AND `source` IS NOT. The free text 042
+       left behind is still accepted so nothing that posts to this endpoint
+       breaks, but the channel is now a row in booking_sources and a booking
+       without one cannot be saved. The owner asked for that on 8 September:
+       an unrecorded channel is a lead nobody can trace back. */
     bookingSourceId?: string;
     source?: string; businessSource?: string; marketSegment?: string;
-    /* The hour they said they would arrive. Optional, and NULL when
-       they did not say — which is most bookings. Nothing should hold a
-       room against a time nobody gave. */
+    /* The hour they said they would arrive. Optional, and NULL when they did
+       not say - which is most bookings. Nothing should hold a room against a
+       time nobody gave. */
     expectedArrival?: string;
-    /* The SENDER'S own reference for this booking — the OTA's number, or
-       the CRS's reservation id. Optional: the desk has none and sends
-       none. A machine sends it, and a second request with the same one
-       from the same channel is answered with the first booking instead
-       of making another (RES-3, 091). */
+    /* The SENDER'S own reference - the OTA's number, or the CRS's id.
+       Optional: the desk has none and sends none. A machine sends it, and a
+       second request with the same one from the same channel is answered
+       with the first booking instead of making another (RES-3, 091). */
     externalRef?: unknown;
-    lines?: Line[];
+    lines?: BookingLineInput[];
   };
   const input = await c.req.json<Body>().catch(() => ({}) as Body);
 
-  const guestName = input.guestName?.trim();
-  if (!guestName) return c.json(refuse("Whose booking is it?"), 409);
-  if (!input.checkIn || !input.checkOut) {
-    return c.json(refuse("Which nights?"), 409);
-  }
-  if (input.checkOut <= input.checkIn) {
-    return c.json(refuse(
-      "A stay ends after it starts. The night of departure is not charged, "
-      + "so a guest leaving on the 5th has their last night on the 4th."), 409);
-  }
-
-  const lines = (input.lines ?? []).filter((l) => l.roomTypeId);
-  if (lines.length === 0) return c.json(refuse("Which rooms?"), 409);
-
-  /* ⚠ REFUSED HERE AS WELL AS DISABLED IN THE FORM. Rule 6: a browser
-     that has not reloaded, a queued offline booking made before this
-     shipped, or anything posting straight to the endpoint all reach
-     this line, and the server has to answer for itself. There is no
-     CHECK constraint behind it — see 082 for why one would break
-     check-in on every booking taken before the column existed. */
-  if (!input.bookingSourceId) {
-    return c.json(refuse(
-      "Where did this booking come from? Pick the channel - it is what "
-      + "the source-mix report counts, and it cannot be filled in later."),
-      409);
-  }
-
-  const total = lines.reduce((n, l) => n + Math.max(1, l.rooms ?? 1), 0);
-  if (total > 40) {
-    /* Not a policy — a guard against a typo in the quantity box turning into
-       four hundred reservations nobody can undo one at a time. */
-    return c.json(refuse(
-      `${total} rooms in one booking looks like a mistake. Split it, or say `
-      + "so and it can be raised."), 409);
-  }
-
-  /* ── The sender's reference (RES-3) ─────────────────────────────────
-     Absent (or null) is the desk, and nothing below changes for it. Present
-     but not usable is refused rather than ignored: a feed that believes it is
-     protected against its own retries, and is not, finds out the day a
-     timeout makes two bookings. */
+  /* ⚠ THE BOOKING ITSELF IS `makeBooking` (book.ts), and it holds every
+     refusal. This route's whole job is to turn a request body into what that
+     function takes, and its answer into an HTTP one - so a booking made by a
+     machine in process (the channel manager, D17-79) cannot behave
+     differently from one made here. */
   let externalRef: string | null = null;
   if (input.externalRef !== undefined && input.externalRef !== null) {
-    externalRef = typeof input.externalRef === "string"
-      ? input.externalRef.trim() : "";
+    /* Present but not usable is refused rather than ignored: a feed that
+       believes it is protected against its own retries, and is not, finds
+       out the day a timeout makes two bookings. */
+    externalRef = typeof input.externalRef === "string" ? input.externalRef.trim() : "";
     if (!externalRef) {
-      return c.json(refuse(
-        "externalRef must be your own reference for this booking, as text."),
+      return c.json(
+        { ok: false, reason: "externalRef must be your own reference for this booking, as text." },
         409);
     }
-    if (externalRef.length > 100) {
-      return c.json(refuse(
-        "externalRef is longer than 100 characters. Send the booking's own "
-        + "reference, not the whole message."), 409);
-    }
   }
-  const fingerprint = externalRef ? fingerprintOf(guestName, input, lines) : null;
-  const sourceId = input.bookingSourceId;
+
+  const build = (hotelId: string): BookingRequest => ({
+    hotelId,
+    guestName: input.guestName?.trim() ?? "",
+    ...(input.phone === undefined ? {} : { phone: input.phone }),
+    ...(input.email === undefined ? {} : { email: input.email }),
+    checkIn: input.checkIn ?? "",
+    checkOut: input.checkOut ?? "",
+    ...(input.groupName === undefined ? {} : { groupName: input.groupName }),
+    ...(input.blockCode === undefined ? {} : { blockCode: input.blockCode }),
+    ...(input.bookingSourceId === undefined ? {} : { bookingSourceId: input.bookingSourceId }),
+    ...(input.source === undefined ? {} : { source: input.source }),
+    ...(input.businessSource === undefined ? {} : { businessSource: input.businessSource }),
+    ...(input.marketSegment === undefined ? {} : { marketSegment: input.marketSegment }),
+    ...(input.expectedArrival === undefined ? {} : { expectedArrival: input.expectedArrival }),
+    externalRef,
+    lines: input.lines ?? [],
+  });
 
   const result = await withSession(c.get("subject"), async (client) => {
     const hotelId = await hotelFor(client, c.req.param("code"));
     if (!hotelId) return null;
-
-    /* ⚠ ALREADY RECEIVED? Asked before anything is written, and before the
-       channel is checked: a source switched off since the first request must
-       not turn a retry into a refusal of a booking that exists. This is the
-       courteous answer; the unique index on line 1 is the guarantee, and a
-       copy racing this one past the check is caught at the bottom. */
-    if (externalRef && fingerprint) {
-      const earlier = await alreadyReceived(client, hotelId, sourceId, externalRef);
-      if (earlier.length > 0) return answerRepeat(earlier, externalRef, fingerprint);
-    }
-
-    /* ⚠ EVERY REFUSAL GOES ABOVE THE FIRST WRITE (RES-1). `withSession`
-       commits whatever the callback returns, a refusal included, so a
-       refusal below an insert keeps the insert. This route wrote the guest
-       and the group first and could then refuse four ways — a channel
-       switched off, a room type not here, a party too big, a line with no
-       price — and in a booking of several room types the earlier lines'
-       rooms were already confirmed, with open folios, holding inventory.
-       The caller saw ok:false and tried again, and every try added more.
-       The walk-in desk had the same fault (root MEMORY 243) and is fixed
-       the same way: read and check everything, then write. */
-
-    /* ⚠ THE COMMISSION IS READ ONCE AND COPIED ONTO EVERY ROOM. Read
-       per room it would be the same number four times; read at report
-       time it would be whatever was agreed later. 082 explains the
-       choice — a report about March must not change because of
-       something negotiated in April.
-
-       NULL when no rate has been agreed with this source at this
-       property, and NULL is what gets stored. Not zero: zero would
-       claim the booking cost nothing in commission. */
-    const { rows: src } = await client.query<{
-      name: string; commission_pct: string | null;
-    }>(
-      `select bs.name, r.commission_pct::text as commission_pct
-         from booking_sources bs
-         left join booking_source_rates r
-                on r.booking_source_id = bs.id and r.hotel_id = $2
-        where bs.id = $1 and bs.is_active`,
-      [input.bookingSourceId, hotelId]);
-    if (!src[0]) {
-      return refuse("That booking source is not on the list any more.");
-    }
-    const commission = src[0].commission_pct;
-
-    /* EVERY LINE IS PRICED AND FITTED BEFORE ANY IS BOOKED. A refusal on
-       the second room type must find nothing of the first on file. */
-    const planned: {
-      line: Line; typeName: string; adults: number; children: number;
-      rate: number;
-    }[] = [];
-
-    for (const line of lines) {
-      const { rows: rt } = await client.query<{
-        name: string; max: number;
-      }>(`select name, max_occupancy as max from room_types
-           where id = $1 and hotel_id = $2`, [line.roomTypeId, hotelId]);
-      if (!rt[0]) return refuse("One of those room types is not here.");
-
-      const adults = line.adults ?? 1;
-      const children = line.children ?? 0;
-      if (adults + children > rt[0].max) {
-        return refuse(
-          `${adults + children} people will not fit a ${rt[0].name} - it `
-          + `sleeps ${rt[0].max}.`);
-      }
-
-      /* The FIRST night's tariff, and the clerk sees the whole breakdown
-         before submitting. agreed_rate is one number the audit posts every
-         night — that is what "snapshotted at booking" means — so a stay
-         crossing a season is charged what was agreed, not what the calendar
-         says on night four. */
-      let rate = line.agreedRate ?? null;
-      if (rate === null) {
-        const { rows: t } = await client.query<{
-          total: string | null; unpriced: string | null;
-        }>(
-          `select total::text, unpriced
-             from app.tariff_for($1,$2,$3::date,$4,$5)`,
-          [line.roomTypeId, line.mealPlan ?? "EP", input.checkIn,
-           adults, children]);
-        if (t[0]?.total === null || t[0]?.total === undefined) {
-          return refuse(
-            `${rt[0].name} has no price for ${t[0]?.unpriced ?? "this party"}. `
-            + "Set it on the rate calendar, or enter a rate for this booking.");
-        }
-        rate = Number(t[0].total);
-      }
-
-      planned.push({ line, typeName: rt[0].name, adults, children, rate });
-    }
-
-    /* ── Nothing below this line refuses. ─────────────────────────────── */
-
-    /* One guest for the whole booking. A block belongs to whoever made it;
-       individual names are filled in as the rooming list arrives, which is
-       usually days later and often never for a wedding. */
-    const { rows: guest } = await client.query<{ id: string }>(
-      `insert into guests (full_name, phone, email)
-       values ($1, nullif($2,''), nullif($3,''))
-       returning id::text`,
-      [guestName, input.phone?.trim() ?? "", input.email?.trim() ?? ""]);
-    const guestId = guest[0]!.id;
-
-    let groupId: string | null = null;
-    if (total > 1) {
-      const { rows: g } = await client.query<{ id: string }>(
-        `insert into reservation_groups (name, block_code, lead_hotel_id)
-         values ($1, nullif($2,''), $3) returning id::text`,
-        [input.groupName?.trim() || `${guestName} - ${total} rooms`,
-         input.blockCode?.trim() ?? "", hotelId]);
-      groupId = g[0]!.id;
-    }
-
-    const made: { reference: string; roomType: string; rate: number }[] = [];
-
-    for (const { line, typeName, adults, children, rate } of planned) {
-      for (let i = 0; i < Math.max(1, line.rooms ?? 1); i += 1) {
-        /* ONE REFERENCE, FROM ONE PLACE (RES-2, 092). FH-<hotel code>-<YYMM>-
-           <number>, the month on the hotel's own clock — the owner's format of
-           16 September. This was an inline copy of the generator: no lock,
-           so two bookings in the same second built the same reference and
-           the second was a 500; DDMM, so `FH-2608-…` meant the 26th here and
-           August at the desk; and lpad, which CUTS a number past four digits.
-
-           ⚠ IN THIS TRANSACTION, BEFORE THIS INSERT. app.next_reference takes
-           a per-hotel lock held until the transaction ends, and the next
-           caller waits there and then sees this row. Asked anywhere else —
-           a separate query, before withSession — the lock would be gone
-           before the row it protects exists. */
-        const { rows: ref } = await client.query<{ reference: string }>(
-          "select app.next_reference($1) as reference", [hotelId]);
-
-        const { rows: booked } = await client.query<{ id: string }>(
-          `insert into reservations
-             (hotel_id, reference, guest_id, room_type_id, check_in, check_out,
-              adults, children, occupancy, agreed_rate, status, source,
-              meal_plan, group_id, business_source, market_segment,
-              expected_arrival, booking_source_id, commission_pct,
-              ota_reference, ota_line, ota_fingerprint)
-           values ($1,$2,$3,$4,$5::date,$6::date,$7,$8,$9,$10,'confirmed',$11,
-                   $12,$13,$14,$15,$16::time,$17,$18::numeric,
-                   $19,$20,$21)
-           returning id::text`,
-          [hotelId, ref[0]!.reference, guestId, line.roomTypeId,
-           input.checkIn, input.checkOut, adults, children, adults + children,
-           /* The legacy column keeps the source's NAME rather than a
-              second free-text answer. Two fields describing one fact is
-              how they drift; this one is now derived from the other and
-              stays only because reports written before 082 read it. */
-           rate, input.source?.trim() || src[0].name,
-           line.mealPlan ?? "EP", groupId,
-           /* Blank stays NULL, never "" — an empty segment would sort as its
-              own category in the source-mix report and read as an answer. */
-           input.businessSource?.trim() || null,
-           input.marketSegment?.trim() || null,
-           /* NULL when they did not say, which is most bookings. Never
-              midnight — nothing should hold a room against a time
-              nobody gave. */
-           input.expectedArrival?.trim() || null,
-           input.bookingSourceId, commission,
-           /* All NULL for the desk. For a sender, every room carries its
-              reference and its place in the request — line 1 is the one two
-              racing copies collide on (091). */
-           externalRef, externalRef ? made.length + 1 : null, fingerprint],
-        );
-
-        /* A BOOKING NEEDS SOMEWHERE TO PUT MONEY, from the moment it
-           exists. Nothing created a folio for a reservation made here:
-           the walk-in opened one and this did not, so a guest booked
-           through the interface was checked in with nowhere to bill —
-           the till could not charge their room, and check-out had
-           nothing to settle.
-
-           At BOOKING rather than at check-in, because most guests here
-           pay a token amount when they book. A deposit taken before
-           arrival needs a folio to land in, and one created at arrival
-           is a day too late. */
-        await client.query(
-          `insert into folios (hotel_id, reservation_id, status)
-           values ($1, $2, 'open')`,
-          [hotelId, booked[0]!.id]);
-        made.push({ reference: ref[0]!.reference, roomType: typeName,
-                    rate: Number(rate) });
-      }
-    }
-
-    return {
-      ok: true as const,
-      groupId,
-      rooms: made.length,
-      guest: guestName,
-      bookings: made,
-      nightly: made.reduce((sum, m) => sum + m.rate, 0),
-    };
+    return makeBooking(client, build(hotelId));
   }).catch(async (error: unknown) => {
-    /* TWO COPIES AT ONCE. Both passed the check above before either had
-       committed; this one reached line 1 second, waited for the other to
-       commit, and lost at a unique index. The throw rolled back everything
-       it had written. From the sender's side the booking DID land, so
-       answer as the repeat it is — in a fresh transaction, where the
-       winner's rows are visible.
+    /* TWO COPIES AT ONCE. Both passed the already-received check before
+       either had committed; this one reached line 1 second, waited for the
+       other to commit, and lost at a unique index. The throw rolled back
+       everything it had written. From the sender's side the booking DID
+       land, so answer as the repeat it is - in a FRESH transaction, where
+       the winner's rows are visible.
 
-       ⚠ ANY unique index, not only reservations_ota_line_idx. Since 092 two
-       copies no longer build the same booking reference — the second waits
-       at app.next_reference's lock, then collides at line 1 — but the
-       walk-in desk still makes its references inline until front desk
-       switches it, and a collision there reports the reference index
-       instead. Whether it was our copy's twin is settled by looking, not by
-       the constraint's name: if no earlier request with this reference
-       exists, the collision was with somebody else's booking and the error
-       stands. */
-    if (!externalRef || !fingerprint || !isUniqueViolation(error)) throw error;
+       ⚠ ANY unique index, not only reservations_ota_line_idx: whether it was
+       our copy's twin is settled by looking, not by the constraint's name.
+       If no earlier request with this reference exists, the collision was
+       with somebody else's booking and the error stands. */
+    if (!externalRef || !isUniqueViolation(error)) throw error;
     return withSession(c.get("subject"), async (client) => {
       const hotelId = await hotelFor(client, c.req.param("code"));
       if (!hotelId) return null;
-      const earlier = await alreadyReceived(client, hotelId, sourceId, externalRef);
+      const request = build(hotelId);
+      const earlier = await alreadyReceived(
+        client, hotelId, request.bookingSourceId, externalRef);
       if (earlier.length === 0) throw error;
-      return answerRepeat(earlier, externalRef, fingerprint);
+      return answerRepeat(earlier, externalRef, fingerprintOf(request));
     });
   });
 
   if (!result) return c.json({ error: "No such property." }, 404);
-  return c.json(result, "ok" in result && result.ok ? 200 : 409);
-});
 
-/* ── A booking sent twice (RES-3) ──────────────────────────────────
-   What makes two requests THE SAME booking: everything the sender said
-   about it, after the defaults this route applies — so a line sent with
-   `adults` left out and the same line sent with `adults: 1` are one
-   booking, as they would make one. Not the reference itself; that is the
-   key the fingerprint sits under. Keys in a fixed order, because the hash
-   is of the text. */
-type BookingInput = {
-  phone?: string; email?: string; checkIn?: string; checkOut?: string;
-  groupName?: string; blockCode?: string; bookingSourceId?: string;
-  source?: string; businessSource?: string; marketSegment?: string;
-  expectedArrival?: string;
-};
-type BookingLine = {
-  roomTypeId?: string; mealPlan?: string; adults?: number; children?: number;
-  rooms?: number; agreedRate?: number;
-};
-
-function fingerprintOf(
-  guestName: string, input: BookingInput, lines: BookingLine[],
-): string {
-  const text = (v: string | undefined) => v?.trim() || null;
-  const canonical = {
-    guestName,
-    phone: text(input.phone), email: text(input.email),
-    checkIn: input.checkIn ?? null, checkOut: input.checkOut ?? null,
-    groupName: text(input.groupName), blockCode: text(input.blockCode),
-    bookingSourceId: input.bookingSourceId ?? null,
-    source: text(input.source),
-    businessSource: text(input.businessSource),
-    marketSegment: text(input.marketSegment),
-    expectedArrival: text(input.expectedArrival),
-    lines: lines.map((l) => ({
-      roomTypeId: l.roomTypeId ?? null,
-      mealPlan: l.mealPlan ?? "EP",
-      adults: l.adults ?? 1,
-      children: l.children ?? 0,
-      rooms: Math.max(1, l.rooms ?? 1),
-      agreedRate: l.agreedRate ?? null,
-    })),
-  };
-  return createHash("sha256").update(JSON.stringify(canonical)).digest("hex");
-}
-
-type Received = {
-  reference: string; room_type: string; agreed_rate: string;
-  group_id: string | null; guest: string; ota_fingerprint: string;
-};
-
-/* The rooms an earlier request with this reference made, in the order it
-   made them. Keyed by the booking source as well as the reference: two
-   channels number their bookings independently (091). */
-async function alreadyReceived(
-  client: Client, hotelId: string, sourceId: string | undefined,
-  externalRef: string,
-): Promise<Received[]> {
-  const { rows } = await client.query<Received>(
-    `select r.reference, rt.name as room_type, r.agreed_rate::text,
-            r.group_id::text, g.full_name as guest, r.ota_fingerprint
-       from reservations r
-       join room_types rt on rt.id = r.room_type_id
-       join guests g on g.id = r.guest_id
-      where r.hotel_id = $1 and r.booking_source_id = $2
-        and r.ota_reference = $3 and r.ota_line is not null
-      order by r.ota_line`,
-    [hotelId, sourceId, externalRef]);
-  return rows;
-}
-
-/* THE SECOND KNOCK GETS THE FIRST ANSWER — the same shape the booking was
-   answered with, marked `duplicate`, from what is stored. A different
-   fingerprint is not a retry: it is the booking CHANGED, and this door does
-   not take changes (HMS-INTEGRATION-PLAN step 1.3; amendments stay with the
-   desk, CRS-22). Refused by name, with the references that exist, so
-   whoever reads the refusal knows which booking to open. Nothing is
-   written either way. */
-function answerRepeat(earlier: Received[], externalRef: string, fingerprint: string) {
-  const references = earlier.map((r) => r.reference);
-  if (earlier[0]!.ota_fingerprint !== fingerprint) {
-    return refuse(
-      `Booking ${externalRef} was already received from this channel as `
-      + `${references.join(", ")}, with different details. A change to a `
-      + "booking is not taken this way - it is made on the booking, at the desk.");
-  }
-  const bookings = earlier.map((r) => ({
-    reference: r.reference, roomType: r.room_type, rate: Number(r.agreed_rate),
-  }));
-  return {
+  /* ⚠ THE ANSWER A SCREEN ALREADY READS, and nothing more. `makeBooking` also
+     hands back the rows' ids, and `duplicate: false` for a booking made now -
+     both for a caller in process. Sent over HTTP they would be a new shape for
+     every screen and every queued offline booking to cope with, and the ids
+     are nobody's business out here: a booking is named by its reference.
+     `duplicate` still appears, as it always did, only when it is true. */
+  if (!result.ok) return c.json({ ok: false, reason: result.reason }, 409);
+  return c.json({
     ok: true as const,
-    duplicate: true as const,
-    groupId: earlier[0]!.group_id,
-    rooms: bookings.length,
-    guest: earlier[0]!.guest,
-    bookings,
-    nightly: bookings.reduce((sum, b) => sum + b.rate, 0),
-  };
-}
-
-function isUniqueViolation(error: unknown): boolean {
-  return typeof error === "object" && error !== null
-    && (error as { code?: string }).code === "23505";
-}
+    ...(result.duplicate ? { duplicate: true as const } : {}),
+    groupId: result.groupId,
+    rooms: result.rooms,
+    guest: result.guest,
+    bookings: result.bookings,
+    nightly: result.nightly,
+  }, 200);
+});
