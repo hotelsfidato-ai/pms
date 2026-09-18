@@ -138,7 +138,7 @@ async function arrivalAndRoom(): Promise<{ stay: string; room: string; guest: st
     );
     if (!room.rows[0]) {
       throw new Error(
-        "No clean, free room at Pune. This test cannot prove anything — " +
+        "No clean, free room at Pune. This test cannot prove anything - " +
           "the night-audit tests may have filled it; rebuild the database.",
       );
     }
@@ -187,7 +187,7 @@ async function arrivalAndRoom(): Promise<{ stay: string; room: string; guest: st
    disagree with itself. The reason is stated here so the arrival hour
    stops being a variable — the property still refuses an unexplained
    early arrival, and `test/frontDesk.test.ts` is where that is proved. */
-const EARLY = "Identity fixture — arrival hour is not what these test";
+const EARLY = "Identity fixture - arrival hour is not what these test";
 
 describe("check-in will not accept a claim in place of a document", () => {
   it("refuses a document type with no number", async () => {

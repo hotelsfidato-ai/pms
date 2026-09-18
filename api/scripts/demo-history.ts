@@ -1,5 +1,6 @@
 import pg from "pg";
 import { fileURLToPath } from "node:url";
+import { databaseForScript } from "./scriptDatabase.ts";
 
 /* ══════════════════════════════════════════════════════════════════
    MORE OF THE DEMO — history, and the other two properties
@@ -35,10 +36,7 @@ import { fileURLToPath } from "node:url";
    the hardest to notice — the figures simply look better.
    ══════════════════════════════════════════════════════════════════ */
 
-const CONNECTION =
-  process.env["SUPER_DATABASE_URL"] ??
-  process.env["DATABASE_URL"] ??
-  "postgres://postgres:pw@127.0.0.1:55432/fidato";
+const CONNECTION = databaseForScript("demo-history");
 
 const TAG = "DH";
 

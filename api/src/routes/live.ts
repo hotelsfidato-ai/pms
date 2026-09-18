@@ -71,12 +71,14 @@ live.get("/:code/live", async (c) => {
       data: JSON.stringify({ live: isListening() }),
     });
 
-    const unwatch = watch(hotelId, () => {
+    const unwatch = watch(hotelId, (topic) => {
       if (!alive) return;
       /* No await: this runs from the notification handler, and one slow
          socket must not hold up telling the other screens. */
       void stream
-        .writeSSE({ event: "changed", data: "1" })
+        /* The topic that moved (HK-1): `orders` or `housekeeping`. It
+           said "1" before topics; the client still reads "1" as orders. */
+        .writeSSE({ event: "changed", data: topic })
         .catch(() => { alive = false; });
     });
 

@@ -26,6 +26,7 @@ try {
 }
 
 import { fileURLToPath } from "node:url";
+import { databaseForScript } from "./scriptDatabase.ts";
 
 /* ══════════════════════════════════════════════════════════════════
    CLEAR A PROPERTY AND BRING IT TO TODAY
@@ -81,10 +82,7 @@ import { fileURLToPath } from "node:url";
    purpose: a production box has no such server, so a missing
    ADMIN_DATABASE_URL fails to connect rather than quietly doing
    something to the wrong database. */
-const CONNECTION =
-  process.env["ADMIN_DATABASE_URL"] ??
-  process.env["SUPER_DATABASE_URL"] ??
-  "postgres://postgres:pw@127.0.0.1:55432/fidato";
+const CONNECTION = databaseForScript("reset-property");
 
 /* Order is the whole of this. Children before parents, every time —
    a teardown is a migration run backwards and has the same rules

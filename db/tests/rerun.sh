@@ -28,7 +28,25 @@ SUPERPASS="${SUPERPASS:-pw}"
 DB="fidato_rerun_$$"
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
 
-PSQL="$PGBIN/psql.exe"
+# WHICH psql. This said `$PGBIN/psql.exe` and nothing else, so this suite ran
+# on one Windows machine and nowhere else - not on the server, and not on a
+# Linux runner, which is exactly where a gate belongs. The same ladder as
+# db/migrate.sh and api/scripts/with-test-db.sh, which both learned it the
+# hard way (defect 188). A fourth spelling of "find psql" is how they drift,
+# so this is the third and last copy.
+if [ -n "${PSQL:-}" ]; then
+  :                                       # told explicitly; use it
+elif [ -x "$PGBIN/psql.exe" ]; then
+  PSQL="$PGBIN/psql.exe"
+elif [ -x "$PGBIN/psql" ]; then
+  PSQL="$PGBIN/psql"
+elif command -v psql >/dev/null 2>&1; then
+  PSQL="$(command -v psql)"
+else
+  printf "[31m  x no psql found. Set PGBIN to the directory holding it, or PSQL to the binary.[0m
+"
+  exit 1
+fi
 S="-h $PGHOST -p $PGPORT -U $SUPER"
 export PGPASSWORD="$SUPERPASS"
 export PGCLIENTENCODING=UTF8
@@ -67,6 +85,27 @@ if [ "$FIRST_FAIL" -ne 0 ]; then
   exit 1
 fi
 green "  all migrations applied to an empty database"
+
+# ---- between the passes: a property, as production has ---------------------
+# An EMPTY database hides every replay fault that depends on rows. Found
+# 16 September (MEMORY 284): 095 re-adds a check on approval kinds, 096 then
+# writes a kind 095's list does not have — but only for properties that exist.
+# Here there were none, so the second pass was green; the local database had
+# one, and failed. Production has five. So give the second pass a property.
+# And SWITCH A MODULE ON for it. A constraint on `hotel_modules.module` is
+# validated against the rows that are there, so a migration that rewrites that
+# constraint is only tested by a replay that has such a row. Without this, 087
+# put the narrow module list back over 108's wider one and every pass here was
+# green while the next real deploy would have rolled back (MEMORY 293).
+if ! out=$("$PSQL" $S -d "$DB" -q -v ON_ERROR_STOP=1 \
+     -c "insert into hotels (code, name, city) values ('RRN','Rerun Property','Nowhere')" \
+     -c "insert into hotel_modules (hotel_id, module, is_enabled)
+         select id, 'channel_manager', true from hotels where code = 'RRN'" 2>&1); then
+  red "  x could not create a property between the passes"
+  echo "$out" | grep -m1 "ERROR" | sed 's/^/      /'
+  exit 1
+fi
+dim "  a property created between the passes, as a real database has"
 
 # ---- second pass: the one every deploy after the first performs ------------
 echo "-- second pass — what a redeploy actually does ------------"

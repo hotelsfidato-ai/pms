@@ -145,7 +145,7 @@ const notableStays: Stay[] = [
     adults: 2, children: 0, status: "in-house",
     isDayUse: false, isComplimentary: true,
     rackTariff: 3699, offeredTariff: 0,
-    notes: "Complimentary — management guest.",
+    notes: "Complimentary - management guest.",
   },
   {
     /* Day-use: arrival and departure on the same date, zero nights */
@@ -193,7 +193,7 @@ const notableStays: Stay[] = [
     isDayUse: false, isComplimentary: false,
     rackTariff: 3699, offeredTariff: 3100,
     groupId: GROUP_ID, group: GROUP,
-    notes: "Pancham Hall function block — the weekend that filled the house.",
+    notes: "Pancham Hall function block - the weekend that filled the house.",
   },
   {
     ...UNREMARKABLE,
@@ -227,7 +227,7 @@ const notableStays: Stay[] = [
     adults: 2, children: 0, status: "due-in",
     isDayUse: false, isComplimentary: false,
     rackTariff: 3699, offeredTariff: 2900,
-    notes: "Departs 2 September — spans the month boundary.",
+    notes: "Departs 2 September - spans the month boundary.",
   },
   {
     /* Cancelled, so the room was released and can be resold */
@@ -542,7 +542,7 @@ if (mismatches.length > 0) {
   const detail = mismatches
     .map((d) => `${d}: stays say ${derived[d] ?? 0}, calibration says ${nightsSoldPerDay[d]}`)
     .join("; ");
-  throw new Error(`Reservation fixture diverges from calibrated occupancy — ${detail}`);
+  throw new Error(`Reservation fixture diverges from calibrated occupancy - ${detail}`);
 }
 
 /* ══════════════════════════════════════════════════════════════════

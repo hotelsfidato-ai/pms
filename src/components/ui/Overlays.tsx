@@ -65,7 +65,7 @@ export function DialogContent({
             )}
           </div>
           <DialogPrimitive.Close
-            className="text-grey-400 hover:text-ink-900 hover:bg-grey-100 rounded-sm p-1 -m-1 transition-colors duration-150"
+            className="text-grey-500 hover:text-ink-900 hover:bg-grey-100 rounded-sm p-1 -m-1 pointer-coarse:p-3.5 pointer-coarse:-m-3.5 transition-colors duration-150"
             aria-label="Close"
           >
             <X className="size-4" />
@@ -132,7 +132,7 @@ export function DrawerContent({
             )}
           </div>
           <DialogPrimitive.Close
-            className="text-grey-400 hover:text-ink-900 hover:bg-grey-100 rounded-sm p-1 -m-1 transition-colors duration-150"
+            className="text-grey-500 hover:text-ink-900 hover:bg-grey-100 rounded-sm p-1 -m-1 pointer-coarse:p-3.5 pointer-coarse:-m-3.5 transition-colors duration-150"
             aria-label="Close"
           >
             <X className="size-4" />
@@ -205,7 +205,7 @@ export function DropdownMenuItem({
         "flex items-center gap-2.5 px-2.5 py-1.5 rounded-sm text-base cursor-pointer select-none outline-none",
         "transition-colors duration-150",
         "data-[highlighted]:bg-grey-100 data-[highlighted]:text-ink-900",
-        "data-[disabled]:text-grey-400 data-[disabled]:cursor-not-allowed data-[disabled]:bg-transparent",
+        "data-[disabled]:text-grey-500 data-[disabled]:cursor-not-allowed data-[disabled]:bg-transparent",
         danger
           ? "text-brand-red data-[highlighted]:bg-brand-red-50 data-[highlighted]:text-brand-red"
           : "text-grey-700",
@@ -225,7 +225,7 @@ export function DropdownMenuSeparator() {
 
 export function DropdownMenuLabel({ children }: { children: ReactNode }) {
   return (
-    <DropdownPrimitive.Label className="px-2.5 py-1.5 text-2xs font-semibold uppercase tracking-wide text-grey-400">
+    <DropdownPrimitive.Label className="px-2.5 py-1.5 text-2xs font-semibold uppercase tracking-wide text-grey-500">
       {children}
     </DropdownPrimitive.Label>
   );
@@ -333,7 +333,7 @@ export function TabsTrigger({
     >
       {children}
       {count !== undefined && (
-        <span className="ml-1.5 text-2xs text-grey-400 tabular">{count}</span>
+        <span className="ml-1.5 text-2xs text-grey-500 tabular">{count}</span>
       )}
     </TabsPrimitive.Trigger>
   );

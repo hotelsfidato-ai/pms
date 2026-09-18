@@ -55,7 +55,7 @@ hotels.get("/", async (c) => {
               /* Each property's OWN operating day. Two hotels are
                  routinely on different dates: one has run its night
                  audit and the other has not. Returned per row for
-                 exactly that reason — there is no group business
+                 exactly that reason - there is no group business
                  date to return instead. */
               to_char(app.business_date(id), 'YYYY-MM-DD') as business_date
          from hotels

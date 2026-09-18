@@ -56,3 +56,60 @@ begin
 
   raise notice 'dev-testers: Test GM (gm at 5EL) and Test Reception (front desk at 5EL) are ready.';
 end $$;
+
+-- -----------------------------------------------------------------------------
+-- One tester per role, for the owner's QA (18 September)
+-- -----------------------------------------------------------------------------
+-- The owner asked for "one test account per role" before testing. A screen is
+-- only proved by the person who actually holds it: housekeeping sees no
+-- revenue, the Inventory Manager sees the store, the accountant sees the money.
+--
+-- Same shape as the GM and the desk above: an ordinary staff row rostered at
+-- 5EL, with the role deciding everything. Nothing here overrides a permission.
+-- Re-runnable: a second run changes nothing.
+-- -----------------------------------------------------------------------------
+do $$
+declare
+  v_hotel uuid;
+  v_staff uuid;
+  r record;
+begin
+  select id into v_hotel from hotels where code = '5EL';
+  if v_hotel is null then
+    raise notice 'dev-testers: there is no 5EL here - run load-demo first. Nothing done.';
+    return;
+  end if;
+
+  for r in
+    select * from (values
+      ('dev-admin',          'admin',           'Test Admin',            true),
+      ('dev-hotel-manager',  'hotel_manager',   'Test Hotel Manager',    false),
+      ('dev-revenue',        'revenue_manager', 'Test Revenue Manager',  false),
+      ('dev-housekeeping',   'housekeeping',    'Test Housekeeper',      false),
+      ('dev-stores',         'stores',          'Test Inventory Manager', false),
+      ('dev-kitchen',        'kitchen_manager', 'Test Kitchen Manager',  false),
+      ('dev-chef',           'chef',            'Test Chef',             false),
+      ('dev-finance',        'finance',         'Test Accountant',       false)
+    ) as t(uid, role, full_name, group_admin)
+  loop
+    insert into staff (email, full_name, is_group_admin, is_active, firebase_uid)
+    values (r.uid || '@fidato.in', r.full_name, r.group_admin, true, r.uid)
+    on conflict (email) do update
+      set full_name      = excluded.full_name,
+          is_group_admin = excluded.is_group_admin,
+          is_active      = true,
+          firebase_uid   = excluded.firebase_uid
+    returning id into v_staff;
+
+    /* The roster, not the role on the staff row: every permission in this
+       system comes from staff_hotels, and an administrator is a group
+       administrator rather than somebody rostered everywhere. */
+    if not r.group_admin then
+      insert into staff_hotels (staff_id, hotel_id, role)
+      values (v_staff, v_hotel, r.role)
+      on conflict (staff_id, hotel_id) do update set role = excluded.role;
+    end if;
+  end loop;
+
+  raise notice 'dev-testers: one sign-in per role at 5EL';
+end $$;

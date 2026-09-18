@@ -11,7 +11,7 @@ const folioFor = (id: string) => folios.find((f) => f.stayId === id)!;
 const dayOf = (iso: string) =>
   iso.startsWith("2026-09") ? 31 + Number(iso.slice(-2)) : Number(iso.slice(-2));
 
-describe("reservations — integrity", () => {
+describe("reservations - integrity", () => {
   it("gives every stay a folio", () => {
     for (const s of stays) {
       expect(folios.find((f) => f.stayId === s.id), `no folio for ${s.id}`).toBeDefined();
@@ -43,7 +43,7 @@ describe("reservations — integrity", () => {
   });
 });
 
-describe("reservations — the awkward cases", () => {
+describe("reservations - the awkward cases", () => {
   it("has an overpaid folio with a negative balance", () => {
     const f = folioFor("stay-overpaid");
     expect(f.balance).toBeLessThan(0);

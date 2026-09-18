@@ -1,0 +1,108 @@
+import { api, ApiError } from "@/lib/api";
+
+/* ══════════════════════════════════════════════════════════════════
+   A REPORT, AS ONE OBJECT — the web's copy of the contract
+
+   The server builds every report in the eZee layout as one document
+   (api/src/modules/reports/document.ts, agreed with the master on
+   17 September). The screen draws it with ReportView; the master's
+   PDF, .xlsx and CSV routes take the same object on the server. These
+   types are a copy of the server's. Change both, or neither.
+
+   Values are raw: money in rupees, percent 0 to 100, dates
+   "YYYY-MM-DD". A null is a figure this system does not hold, and
+   prints "-", never 0.
+   ══════════════════════════════════════════════════════════════════ */
+
+export type CellKind =
+  | "text" | "money" | "count" | "ratio" | "percent" | "date" | "datetime";
+
+export type Cell = string | number | null;
+
+export interface ReportColumn {
+  key: string;
+  label: string;
+  kind: CellKind;
+  group?: string;
+}
+
+export interface ReportRow {
+  kind: "row" | "total" | "band";
+  indent?: 0 | 1 | 2 | 3;
+  unit?: CellKind;
+  cells: Record<string, Cell>;
+}
+
+export interface ReportSection {
+  key: string;
+  title: string;
+  columns: ReportColumn[];
+  rows: ReportRow[];
+  empty?: string;
+  note?: string;
+}
+
+export interface ReportFact {
+  label: string;
+  value: Cell;
+  kind: CellKind;
+}
+
+export interface ReportChart {
+  kind: "bar";
+  title: string;
+  x: string[];
+  unit: CellKind;
+  series: Array<{ label: string; values: Array<number | null> }>;
+}
+
+export type ReportKey =
+  | "night-audit" | "manager" | "city-ledger" | "no-show"
+  | "monthly-occupancy" | "monthly-statistics" | "yearly-statistics"
+  | "lodging-tax";
+
+export interface ReportDoc {
+  report: ReportKey;
+  title: string;
+  property: { code: string; name: string; address: string | null; gstin: string | null; timezone?: string };
+  orientation: "portrait" | "landscape";
+  facts: ReportFact[];
+  sections: ReportSection[];
+  chart?: ReportChart;
+  footnotes: string[];
+}
+
+export interface ReportQuery {
+  asOn?: string;
+  month?: string;
+  year?: number;
+  from?: string;
+  ignoreZero?: boolean;
+}
+
+/**
+ * One report for one property. Null when the property is not one this
+ * person may see; any other failure throws, so the screen can say the
+ * report did not load rather than print an empty one as if nothing
+ * happened.
+ */
+export async function getReport(
+  hotelId: string, key: ReportKey, query: ReportQuery = {},
+): Promise<ReportDoc | null> {
+  if (!hotelId) return null;
+  const params = new URLSearchParams();
+  if (query.asOn) params.set("asOn", query.asOn);
+  if (query.month) params.set("month", query.month);
+  if (query.year) params.set("year", String(query.year));
+  if (query.from) params.set("from", query.from);
+  if (query.ignoreZero !== undefined) params.set("ignoreZero", query.ignoreZero ? "1" : "0");
+  const qs = params.toString();
+  try {
+    return await api<ReportDoc>(
+      `/api/hotels/${hotelId}/reports/${key}${qs ? `?${qs}` : ""}`,
+    );
+  } catch (error) {
+    if (error instanceof ApiError && error.status === 404) return null;
+    throw error;
+  }
+}

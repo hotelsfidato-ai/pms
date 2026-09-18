@@ -1,0 +1,230 @@
+<title>Fidato PMS Reports</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500&display=swap">
+<style>
+  :root {
+    --ground: #f4f6f7;
+    --surface: #ffffff;
+    --ink: #031728;
+    --muted: #4c5b67;
+    --faint: #7a8792;
+    --line: #dfe4e8;
+    --accent: #c4521d;
+    --accent-soft: #fdf1eb;
+    --good: #1f6f5c;
+    --good-soft: #e6f3ef;
+    --wait: #8a6300;
+    --wait-soft: #fff4d6;
+    --bad: #b42318;
+    --bad-soft: #fdecea;
+    --idle: #4c5b67;
+    --idle-soft: #eef0f2;
+    --sans: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    --mono: "IBM Plex Mono", ui-monospace, "Cascadia Mono", Consolas, monospace;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --ground: #0a141c; --surface: #111e28; --ink: #e7edf1; --muted: #a3b1bc; --faint: #7d8b96;
+      --line: #22323e; --accent: #f08a5d; --accent-soft: #2a1a12;
+      --good: #6cc9ae; --good-soft: #10271f; --wait: #f2c14e; --wait-soft: #2a2310;
+      --bad: #ff8f80; --bad-soft: #2d1614; --idle: #a3b1bc; --idle-soft: #1a2833;
+    }
+  }
+  :root[data-theme="dark"] {
+    --ground: #0a141c; --surface: #111e28; --ink: #e7edf1; --muted: #a3b1bc; --faint: #7d8b96;
+    --line: #22323e; --accent: #f08a5d; --accent-soft: #2a1a12;
+    --good: #6cc9ae; --good-soft: #10271f; --wait: #f2c14e; --wait-soft: #2a2310;
+    --bad: #ff8f80; --bad-soft: #2d1614; --idle: #a3b1bc; --idle-soft: #1a2833;
+  }
+
+  * { box-sizing: border-box; }
+  body {
+    background: var(--ground); color: var(--ink); font-family: var(--sans);
+    font-size: 15px; line-height: 1.55; padding-inline: 16px; padding-block: 28px 64px;
+  }
+  .wrap { max-width: 980px; margin: 0 auto; display: grid; grid-template-columns: minmax(0, 1fr); gap: 28px; }
+  .wrap > *, section > * { min-width: 0; }
+  h1, h2, h3 { text-wrap: balance; margin: 0; }
+  p { margin: 0; }
+  .mono { font-family: var(--mono); font-size: 0.86em; }
+
+  /* ── masthead ───────────────────────────── */
+  .mast { display: grid; gap: 14px; }
+  .mast-top { display: flex; flex-wrap: wrap; align-items: baseline; justify-content: space-between; gap: 8px 20px; }
+  .brand { display: flex; align-items: baseline; gap: 10px; }
+  .brand h1 { font-size: 26px; font-weight: 700; letter-spacing: -0.02em; }
+  .brand .dot { width: 10px; height: 10px; border-radius: 3px; background: var(--accent); align-self: center; }
+  .updated { color: var(--faint); font-size: 13px; }
+  .days { display: flex; flex-wrap: wrap; gap: 8px; }
+  .day-btn {
+    font: 500 13px var(--sans); color: var(--muted); background: var(--surface);
+    border: 1px solid var(--line); border-radius: 999px; padding: 7px 14px; cursor: pointer; min-height: 36px;
+  }
+  .day-btn[aria-pressed="true"] { color: var(--accent); border-color: var(--accent); background: var(--accent-soft); }
+  .day-btn:focus-visible, summary:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+
+  /* ── verdict + tiles ────────────────────── */
+  .verdict { display: grid; gap: 16px; }
+  .verdict h2 { font-size: 21px; font-weight: 650; letter-spacing: -0.01em; max-width: 40ch; }
+  .verdict .sub { color: var(--muted); max-width: 68ch; }
+  .tiles { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 12px; }
+  @media (max-width: 760px) { .tiles { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+  .tile { background: var(--surface); border: 1px solid var(--line); border-radius: 10px; padding: 14px 16px; display: grid; gap: 2px; }
+  .tile b { font: 600 28px var(--sans); letter-spacing: -0.02em; font-variant-numeric: tabular-nums; }
+  .tile span { color: var(--muted); font-size: 13px; }
+  .tile.good b { color: var(--good); } .tile.wait b { color: var(--wait); } .tile.bad b { color: var(--bad); }
+
+  /* ── sections ───────────────────────────── */
+  section { display: grid; grid-template-columns: minmax(0, 1fr); gap: 12px; }
+  .sec-head { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; flex-wrap: wrap; border-bottom: 1px solid var(--line); padding-bottom: 8px; }
+  .sec-head h3 { font-size: 16px; font-weight: 650; }
+  .sec-head .note { color: var(--faint); font-size: 13px; }
+
+  .live { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px; }
+  @media (max-width: 760px) { .live { grid-template-columns: 1fr; } }
+  .live > div { background: var(--surface); border: 1px solid var(--line); border-radius: 10px; padding: 12px 14px; display: grid; gap: 4px; }
+  .live .k { color: var(--faint); font-size: 12px; text-transform: uppercase; letter-spacing: 0.06em; }
+
+  .group { background: var(--surface); border: 1px solid var(--line); border-radius: 10px; }
+  .group > summary { list-style: none; cursor: pointer; padding: 12px 16px; display: flex; justify-content: space-between; gap: 12px; align-items: center; }
+  .group > summary::-webkit-details-marker { display: none; }
+  .group > summary h4 { margin: 0; font-size: 15px; font-weight: 600; }
+  .group > summary .count { color: var(--faint); font-size: 13px; white-space: nowrap; }
+  .group > summary .chev { transition: transform .15s; color: var(--faint); }
+  .group[open] > summary .chev { transform: rotate(90deg); }
+  .items { list-style: none; margin: 0; padding: 0 16px 8px; display: grid; }
+  .items li { display: grid; grid-template-columns: auto minmax(0, 1fr); gap: 4px 12px; padding: 10px 0; border-top: 1px solid var(--line); }
+  .items li .how { grid-column: 2; color: var(--faint); font-size: 13px; }
+
+  .pill { font: 600 11px var(--sans); letter-spacing: 0.04em; text-transform: uppercase; border-radius: 999px; padding: 3px 9px; white-space: nowrap; align-self: start; margin-top: 2px; }
+  .pill.good { color: var(--good); background: var(--good-soft); }
+  .pill.wait { color: var(--wait); background: var(--wait-soft); }
+  .pill.bad { color: var(--bad); background: var(--bad-soft); }
+  .pill.idle { color: var(--idle); background: var(--idle-soft); }
+  .pill.accent { color: var(--accent); background: var(--accent-soft); }
+
+  .problems { display: grid; gap: 10px; }
+  .problem { background: var(--surface); border: 1px solid var(--line); border-left: 4px solid var(--bad); border-radius: 8px; padding: 12px 14px; display: grid; gap: 4px; }
+  .problem.medium { border-left-color: var(--wait); }
+  .problem.low { border-left-color: var(--faint); }
+  .problem .state { color: var(--muted); font-size: 13px; }
+
+  .chats { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
+  @media (max-width: 760px) { .chats { grid-template-columns: 1fr; } }
+  .chat { background: var(--surface); border: 1px solid var(--line); border-radius: 10px; padding: 14px 16px; display: grid; gap: 8px; align-content: start; }
+  .chat-top { display: flex; justify-content: space-between; gap: 10px; align-items: start; }
+  .chat h4 { margin: 0; font-size: 15px; font-weight: 600; }
+  .chat .row { display: grid; grid-template-columns: 76px minmax(0, 1fr); gap: 8px; font-size: 14px; }
+  .chat .row .k { color: var(--faint); font-size: 12px; text-transform: uppercase; letter-spacing: 0.05em; padding-top: 2px; }
+  .chat ul { margin: 0; padding-left: 16px; display: grid; gap: 2px; }
+
+  .decisions { list-style: none; margin: 0; padding: 0; display: grid; gap: 8px; }
+  .decisions li { background: var(--wait-soft); border-radius: 8px; padding: 10px 14px; display: grid; gap: 2px; }
+  .decisions .from { color: var(--wait); font-size: 12px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.05em; }
+
+  .table-wrap { overflow-x: auto; background: var(--surface); border: 1px solid var(--line); border-radius: 10px; }
+  table { border-collapse: collapse; width: 100%; min-width: 520px; }
+  th, td { text-align: left; padding: 9px 14px; border-top: 1px solid var(--line); font-size: 14px; vertical-align: top; }
+  thead th { border-top: 0; color: var(--faint); font-size: 12px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.05em; }
+  td.num { font-variant-numeric: tabular-nums; font-family: var(--mono); font-size: 13px; }
+
+  .foot { color: var(--faint); font-size: 13px; border-top: 1px solid var(--line); padding-top: 14px; }
+  @media (prefers-reduced-motion: reduce) { .group > summary .chev { transition: none; } }
+</style>
+
+<div class="wrap">
+  <header class="mast">
+    <div class="mast-top">
+      <div class="brand"><span class="dot" aria-hidden="true"></span><h1>Fidato PMS Reports</h1></div>
+      <p class="updated" id="updated"></p>
+    </div>
+    <nav class="days" id="days" aria-label="Choose a day"></nav>
+  </header>
+  <main id="report" class="wrap" style="gap:28px"></main>
+  <p class="foot">Checked the next morning, not copied from the chats' own notes: each item says how it was checked.
+    Nothing here was deployed, merged or decided by the report itself.</p>
+</div>
+
+<script id="report-data" type="application/json">
+__DATA__
+</script>
+<script>
+(function () {
+  var data;
+  try { data = JSON.parse(document.getElementById("report-data").textContent); } catch (e) { data = { days: [] }; }
+  var days = data.days || [];
+  var esc = function (s) { return String(s == null ? "" : s).replace(/[&<>"]/g, function (c) { return ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" })[c]; }); };
+  var CHECK = { verified: ["good", "Checked"], live: ["accent", "Live"], unverified: ["idle", "Not checked"], failed: ["bad", "Failed"] };
+  var STATE = { active: ["good", "Working"], waiting: ["wait", "Waiting on you"], ready: ["accent", "Ready to merge"], done: ["idle", "Finished"], idle: ["idle", "Idle"] };
+
+  document.getElementById("updated").textContent = data.updated ? "Updated " + data.updated : "";
+
+  function render(i) {
+    var d = days[i]; if (!d) return;
+    Array.prototype.forEach.call(document.querySelectorAll(".day-btn"), function (b, j) { b.setAttribute("aria-pressed", j === i ? "true" : "false"); });
+    var h = "";
+    h += '<section class="verdict"><h2>' + esc(d.headline) + '</h2><p class="sub">' + esc(d.summary) + '</p><div class="tiles">';
+    (d.tiles || []).forEach(function (t) { h += '<div class="tile ' + esc(t.tone) + '"><b>' + esc(t.value) + '</b><span>' + esc(t.label) + '</span></div>'; });
+    h += '</div></section>';
+
+    if (d.live) {
+      h += '<section><div class="sec-head"><h3>What is live right now</h3><span class="note">' + esc(d.live.checked) + '</span></div><div class="live">';
+      d.live.cards.forEach(function (c) { h += '<div><span class="k">' + esc(c.k) + '</span><span>' + esc(c.v) + '</span>' + (c.mono ? '<span class="mono">' + esc(c.mono) + '</span>' : '') + '</div>'; });
+      h += '</div></section>';
+    }
+
+    if (d.decisions && d.decisions.length) {
+      h += '<section><div class="sec-head"><h3>Waiting on you</h3><span class="note">' + d.decisions.length + ' things to run or decide</span></div><ul class="decisions">';
+      d.decisions.forEach(function (x) { h += '<li><span class="from">' + esc(x.from) + '</span><span>' + esc(x.text) + '</span></li>'; });
+      h += '</ul></section>';
+    }
+
+    if (d.problems && d.problems.length) {
+      h += '<section><div class="sec-head"><h3>Problems found</h3><span class="note">including mistakes</span></div><div class="problems">';
+      d.problems.forEach(function (p) { h += '<div class="problem ' + esc(p.sev) + '"><strong>' + esc(p.title) + '</strong><span>' + esc(p.text) + '</span><span class="state">' + esc(p.state) + '</span></div>'; });
+      h += '</div></section>';
+    }
+
+    h += '<section><div class="sec-head"><h3>Completed</h3><span class="note">tap a group to open it</span></div>';
+    (d.completed || []).forEach(function (g, gi) {
+      h += '<details class="group"' + (gi === 0 ? " open" : "") + '><summary><h4>' + esc(g.area) + '</h4><span class="count">' + g.items.length + ' <span class="chev" aria-hidden="true">›</span></span></summary><ul class="items">';
+      g.items.forEach(function (it) { var c = CHECK[it.check] || CHECK.unverified; h += '<li><span class="pill ' + c[0] + '">' + c[1] + '</span><span>' + esc(it.text) + '</span><span class="how">' + esc(it.how) + '</span></li>'; });
+      h += '</ul></details>';
+    });
+    h += '</section>';
+
+    if (d.chats && d.chats.length) {
+      h += '<section><div class="sec-head"><h3>The service chats</h3><span class="note">from what each chat has saved</span></div><div class="chats">';
+      d.chats.forEach(function (c) {
+        var s = STATE[c.state] || STATE.idle;
+        var list = function (a) { return a && a.length ? '<ul>' + a.map(function (x) { return '<li>' + esc(x) + '</li>'; }).join("") + '</ul>' : '<span style="color:var(--faint)">—</span>'; };
+        h += '<div class="chat"><div class="chat-top"><h4>' + esc(c.name) + '</h4><span class="pill ' + s[0] + '">' + s[1] + '</span></div>'
+          + '<div class="row"><span class="k">Done</span>' + list(c.done) + '</div>'
+          + '<div class="row"><span class="k">Pending</span>' + list(c.pending) + '</div></div>';
+      });
+      h += '</div></section>';
+    }
+
+    if (d.gates && d.gates.length) {
+      h += '<section><div class="sec-head"><h3>The checks</h3><span class="note">' + esc(d.gatesNote || "") + '</span></div><div class="table-wrap"><table><thead><tr><th>Check</th><th>Result</th><th>Numbers</th></tr></thead><tbody>';
+      d.gates.forEach(function (g) { h += '<tr><td>' + esc(g.name) + '</td><td><span class="pill ' + (g.ok ? "good" : "bad") + '">' + (g.ok ? "Passed" : "Failed") + '</span></td><td class="num">' + esc(g.numbers) + '</td></tr>'; });
+      h += '</tbody></table></div></section>';
+    }
+
+    document.getElementById("report").innerHTML = h;
+    try { history.replaceState(null, "", "#" + d.date); } catch (e) {}
+  }
+
+  var nav = document.getElementById("days");
+  days.forEach(function (d, i) {
+    var b = document.createElement("button");
+    b.className = "day-btn"; b.type = "button"; b.id = "day-" + d.date; b.textContent = d.label;
+    b.addEventListener("click", function () { render(i); });
+    nav.appendChild(b);
+  });
+  var start = 0, want = (location.hash || "").slice(1);
+  days.forEach(function (d, i) { if (d.date === want) start = i; });
+  render(start);
+})();
+</script>

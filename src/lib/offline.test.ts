@@ -111,7 +111,7 @@ describe("the default", () => {
     /* Reads are answered from the query cache, which can say how old
        the answer is. A read is never queued and never refused here. */
     expect(ruleFor(`${P}/invoices`, "GET").tier).toBe("queue");
-    expect(ruleFor(`${P}/night-audit/can-run`, "GET").tier).toBe("queue");
+    expect(ruleFor(`${P}/night-audit`, "GET").tier).toBe("queue");
   });
 });
 

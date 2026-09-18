@@ -1,0 +1,151 @@
+# ═══════════════════════════════════════════════════════════════════════
+# EVERY GATE, ON EVERY PUSH, ON A MACHINE THAT IS NOT THIS ONE
+#
+# Until 18 September every gate in this project ran by hand, on the owner's
+# Windows laptop, by whichever chat remembered. That is how a broken tree was
+# pushed at 03:00 with nobody awake to see it, and how two faults that would
+# each have stopped a deploy reached `cp6` and were found by another chat
+# rather than by a gate.
+#
+# What this runs is exactly what a chat is told to run before it pushes -
+# the same commands, no CI-only variants. If it passes here and fails there,
+# the difference is the machine, and that is worth knowing too.
+#
+# THE DATABASE IS REAL. Postgres 17, the version the hotel runs, as a service
+# container. The suites make their own scratch databases and drop them; the
+# app's database is never opened.
+# ═══════════════════════════════════════════════════════════════════════
+name: gates
+
+on:
+  push:
+  pull_request:
+
+# A second push to the same branch makes the first run pointless. Cancelling
+# it keeps a burst of commits from spending ten minutes each.
+concurrency:
+  group: gates-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  gates:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+
+    services:
+      postgres:
+        image: postgres:17
+        env:
+          POSTGRES_PASSWORD: pw
+          POSTGRES_USER: postgres
+          POSTGRES_DB: postgres
+        ports:
+          - 5432:5432
+        # Without this the first psql runs before the server is listening and
+        # the whole job fails on "could not connect" for no reason at all.
+        options: >-
+          --health-cmd "pg_isready -U postgres"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 20
+
+    env:
+      # What every script here reads. The defaults in those files are this
+      # laptop's Postgres; these point them at the service container.
+      PGHOST: 127.0.0.1
+      PGPORT: 5432
+      SUPER: postgres
+      SUPERPASS: pw
+
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          # `npm run lane` compares this branch against origin/cp6, so the
+          # history has to be here - a shallow clone has no merge base.
+          fetch-depth: 0
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: |
+            package-lock.json
+            api/package-lock.json
+
+      - name: The psql client
+        run: sudo apt-get update && sudo apt-get install -y --no-install-recommends postgresql-client
+
+      - name: Install (website)
+        run: npm ci
+
+      - name: Install (API)
+        run: cd api && npm ci
+
+      # ── The five commands, in the order a person would run them ────────
+      # Cheapest first, so an obvious mistake is told in a minute rather than
+      # in ten. Every step runs even if an earlier one failed (`if: always()`),
+      # because "types are broken AND four tests fail" is one trip back, and
+      # "types are broken" followed tomorrow by "and four tests fail" is two.
+
+      - name: Lint
+        if: always()
+        run: npm run lint
+
+      - name: Types (website)
+        if: always()
+        run: npx tsc -b --force
+
+      - name: Types (API)
+        if: always()
+        run: cd api && npx tsc --noEmit
+
+      - name: The server can load its own files
+        if: always()
+        # `tsc` accepts things node's type stripping cannot run. This caught a
+        # deploy-stopper on 17 September that types, tests and the build all
+        # passed over.
+        run: cd api && npm run strip-check
+
+      - name: Website tests
+        if: always()
+        run: npm test
+
+      - name: API suite
+        if: always()
+        # Makes its own database per run, loads the fixtures, drops it after.
+        run: cd api && npm test
+
+      - name: Database suite
+        if: always()
+        run: bash db/tests/run.sh
+
+      - name: Every migration replays
+        if: always()
+        # What a deploy actually does: migrations run from 001 again, over a
+        # database that already has rows. MEMORY 284 and 293 are both here.
+        run: bash db/tests/rerun.sh
+
+      - name: The build, with no test sign-in in it
+        if: always()
+        run: npm run build
+
+      # ── Stay in your lane ──────────────────────────────────────────────
+      # One chat per service, each in its own folder (AGENTS.md). The branch
+      # says whose lane it is: `stores/phase-1a` is the Store chat's. A branch
+      # with no service prefix - cp6, or a master branch - touches everything
+      # by design and is not checked.
+      - name: Stay in your lane
+        if: always()
+        run: |
+          branch="${GITHUB_HEAD_REF:-${GITHUB_REF_NAME}}"
+          service="${branch%%/*}"
+          if [ "$service" = "$branch" ]; then
+            echo "  $branch is not a service branch - no lane to check."
+            exit 0
+          fi
+          if [ ! -d "src/modules/$service" ]; then
+            echo "  No service called '$service' (from branch $branch) - nothing to check."
+            exit 0
+          fi
+          git fetch --no-tags origin cp6:refs/remotes/origin/cp6 || true
+          npm run lane -- "$service"

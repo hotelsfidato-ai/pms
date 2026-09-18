@@ -83,7 +83,7 @@ const RULES: Rule[] = [
     tier: "refuse",
     label: "Payment",
     reason:
-      "A receipt cannot be taken offline — the drawer is counted against "
+      "A receipt cannot be taken offline - the drawer is counted against "
       + "what the server knows, and money applied later moves the count "
       + "after it was made. Take it on paper and enter it when the "
       + "connection is back.",
@@ -96,7 +96,8 @@ const RULES: Rule[] = [
     tier: "refuse",
     label: "Bill settlement",
     reason:
-      "A bill cannot be settled offline unless it is charged to a room. "
+      "A bill cannot be settled offline unless it is charged to a room; "
+      + "a bill for a banquet function waits for the connection too. "
       + "The order is saved and the kitchen has it; take cash on paper "
       + "and enter it when the connection is back.",
   },

@@ -89,7 +89,10 @@ export const Input = forwardRef<HTMLInputElement, InputProps>(function Input(
       aria-invalid={invalid || undefined}
       className={cn(
         FIELD_BASE,
-        "h-9 px-3 text-base",
+        /* STO-9, 16 September: under a finger a box is 44px tall and its text
+           16px — under 16px an iPhone zooms the page on tap. `pointer-coarse:`,
+           as Button does, so a mouse keeps the dense 36px desk. */
+        "h-9 px-3 text-base pointer-coarse:h-11 pointer-coarse:text-[16px]",
         leadingIcon && "pl-9",
         trailingSlot && "pr-9",
         numeric && "tabular",
@@ -134,7 +137,7 @@ export const Textarea = forwardRef<HTMLTextAreaElement, TextareaProps>(function 
       ref={ref}
       rows={rows}
       aria-invalid={invalid || undefined}
-      className={cn(FIELD_BASE, "px-3 py-2 text-base resize-y leading-relaxed", invalid && INVALID, className)}
+      className={cn(FIELD_BASE, "px-3 py-2 text-base pointer-coarse:text-[16px] resize-y leading-relaxed", invalid && INVALID, className)}
       {...props}
     />
   );
@@ -155,7 +158,7 @@ export const NativeSelect = forwardRef<HTMLSelectElement, NativeSelectProps>(
         aria-invalid={invalid || undefined}
         className={cn(
           FIELD_BASE,
-          "h-9 pl-3 pr-8 text-base appearance-none cursor-pointer",
+          "h-9 pl-3 pr-8 text-base pointer-coarse:h-11 pointer-coarse:text-[16px] appearance-none cursor-pointer",
           "bg-[url('data:image/svg+xml;utf8,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 24 24%22 fill=%22none%22 stroke=%22%2367737e%22 stroke-width=%222%22 stroke-linecap=%22round%22 stroke-linejoin=%22round%22><polyline points=%226 9 12 15 18 9%22/></svg>')]",
           "bg-[length:16px] bg-[right_0.6rem_center] bg-no-repeat",
           invalid && INVALID,

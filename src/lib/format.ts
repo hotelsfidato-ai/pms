@@ -78,7 +78,7 @@ export function delta(value: number, digits = 1): string {
    ══════════════════════════════════════════════════════════════════ */
 
 /** Shown wherever a date is absent or unparseable. */
-export const NO_DATE = "—";
+export const NO_DATE = "-";
 
 /** null when the value cannot become a real date. */
 function toDate(value: string | Date | null | undefined): Date | null {
@@ -142,6 +142,35 @@ export function nightsLabel(checkIn: string | Date, checkOut: string | Date): st
 export function isoDate(value: Date | string | null | undefined): string {
   const d = toDate(value);
   return d ? format(d, "yyyy-MM-dd") : "";
+}
+
+/* ── Dates on reports (the owner's D17-77) ─────────────────────────
+   Reports print dates as eZee does: 25/08/2026, and a moment as
+   25/08/2026 04:12:43 PM in the PROPERTY's time, on screen, in the PDF
+   and in the spreadsheet. The server's renderer (api/src/reportRender.ts)
+   keeps its own copy, because the API never imports web code;
+   api/test/reportFiles.test.ts holds the two to the same answers.
+
+   No date-fns here, and no `new Date("2026-08-25")`: a calendar date has
+   no time zone, and parsing one as midnight UTC prints the day before
+   anywhere west of Greenwich. */
+
+/** "2026-08-25" -> "25/08/2026". Anything that is not a calendar date: "-". */
+export function dateReport(value: string | null | undefined): string {
+  const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(value ?? "");
+  return m ? `${m[3]}/${m[2]}/${m[1]}` : NO_DATE;
+}
+
+/** An ISO moment -> "25/08/2026 04:12:43 PM" in the given time zone. */
+export function dateTimeReport(value: string | Date | null | undefined, timeZone: string): string {
+  const d = toDate(value);
+  if (!d) return NO_DATE;
+  const parts = new Intl.DateTimeFormat("en-US", {
+    timeZone, day: "2-digit", month: "2-digit", year: "numeric",
+    hour: "2-digit", minute: "2-digit", second: "2-digit", hour12: true,
+  }).formatToParts(d);
+  const get = (type: string) => parts.find((p) => p.type === type)?.value ?? "";
+  return `${get("day")}/${get("month")}/${get("year")} ${get("hour")}:${get("minute")}:${get("second")} ${get("dayPeriod").toUpperCase()}`;
 }
 
 /* ── Text ──────────────────────────────────────────────────────── */
@@ -235,7 +264,7 @@ function underThousand(n: number): string {
  * Sum in SQL and print what came back.
  */
 export function amountInWords(value: number): string {
-  if (!Number.isFinite(value)) return "—";
+  if (!Number.isFinite(value)) return "-";
 
   const negative = value < 0;
   const abs = Math.abs(value);

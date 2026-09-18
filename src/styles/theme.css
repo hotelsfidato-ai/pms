@@ -18,6 +18,16 @@
   --color-grey-700: #354552;
   --color-grey-600: #4c5b67;
   --color-grey-500: #67737e;
+  /* ⚠ NOT A TEXT COLOUR. 2.59:1 on white, 2.27:1 on a tinted card —
+     it fails AA against every surface in this system. It was carrying
+     the most important word on a room tile (FREE, Superior) and the
+     count in every filter chip, which made the product's own state the
+     faintest thing on the screen. 16 September: 155 text uses moved to
+     grey-500. What is left here is for ICONS, DIVIDERS, PLACEHOLDER
+     text and DISABLED controls — none of which AA measures.
+       grey-500 #67737e  4.85 on white · 4.56 on grey-50 · 4.24 on a tint
+       grey-600 #4c5b67  6.13 or better on every surface here
+     On a tinted surface, text takes grey-600. */
   --color-grey-400: #9aa2a9;
   --color-grey-300: #ccd0d4;
   --color-grey-200: #e2e5e8;
@@ -30,6 +40,28 @@
   --color-brand-orange: #df6128;
   --color-brand-rose: #db536a;
   --color-brand-red: #e0301e;
+
+  /* ── The readable steps, measured 16 September ──────────────────
+     Every one of these exists because white text, or the brand colour
+     AS text, did not clear 4.5:1 against what it sat on. The ratios are
+     WCAG 2.1 relative luminance, computed, not judged by eye:
+
+       white on brand-orange       #df6128   3.57   ✗ the primary button
+       white on brand-orange-600   #c4521d   4.59   ✓ it now
+       white on brand-tangerine    #eb8c00   2.54   ✗ the due-out tile
+       white on brand-tangerine-700 #a96500  4.62   ✓ it now
+       white on brand-rose         #db536a   3.85   ✗ the no-show tile
+       white on brand-rose-700     #b84659   5.17   ✓ it now
+       brand-red on brand-red-50   #e0301e   3.98   ✗ the danger pill
+       brand-red-700 on red-50     #c52a1a   4.94   ✓ it now
+
+     The ORIGINAL five warm colours are untouched — they are the brand,
+     from the identity guide. These are darker steps of the same hues,
+     for the one job the brand colours cannot do: carry small text. */
+  --color-brand-orange-800: #8f3b12;
+  --color-brand-tangerine-700: #a96500;
+  --color-brand-rose-700: #b84659;
+  --color-brand-red-700: #c52a1a;
 
   /* Tints for surfaces / soft badges */
   --color-brand-orange-50: #fdf1eb;

@@ -1,6 +1,5 @@
 import { Hono } from "hono";
 import { withSession } from "../auth.ts";
-import { businessDateFor } from "../businessDate.ts";
 import type { Client } from "../db.ts";
 
 /* ══════════════════════════════════════════════════════════════════
@@ -16,6 +15,12 @@ import type { Client } from "../db.ts";
    telling someone a property exists but is not theirs is still
    telling them it exists.
    ══════════════════════════════════════════════════════════════════ */
+
+/* The core keeps the two reads every service leans on: the property and
+   its rooms. Split by service on 15 September
+   (docs/SERVICE-FOLDERS-PLAN.md): a room's housekeeping state and its
+   blocks are in modules/housekeeping/roomStatus.ts, the module switches
+   in modules/admin/moduleSwitches.ts. No endpoint changed. */
 
 export const property = new Hono<{ Variables: { subject: string } }>();
 
@@ -75,11 +80,15 @@ property.get("/:code", async (c) => {
       ),
       /* The SELLABLE count, not the physical one. Occupancy divides by
          this, and a room held out of service is inventory that cannot
-         be sold — 17 of the 18 here. */
+         be sold — 17 of the 18 here.
+
+         OUT OF SERVICE IS THE DATED BLOCK (INV-6, the owner's D17-11).
+         This read `housekeeping_status`, while availability, occupancy and
+         the bell read `room_blocks` — two records, and nothing kept them in
+         step. It now asks the same function every occupancy figure divides
+         by, for the hotel's own business date. */
       client.query<{ n: string }>(
-        `select count(*)::text as n from rooms
-          where hotel_id = $1 and is_active
-            and housekeeping_status <> 'out_of_service'`,
+        "select app.sellable_rooms($1, app.business_date($1))::text as n",
         [hotel.id],
       ),
     ]);
@@ -114,12 +123,6 @@ const HOUSEKEEPING_OUT: Record<string, string> = {
   inspected: "inspected",
   out_of_service: "out-of-service",
   out_of_order: "out-of-order",
-};
-
-const HOUSEKEEPING_IN: Record<string, string> = {
-  clean: "clean",
-  dirty: "dirty",
-  inspected: "inspected",
 };
 
 property.get("/:code/rooms", async (c) => {
@@ -191,252 +194,4 @@ property.get("/:code/rooms", async (c) => {
   });
 
   return body ? c.json(body) : c.json({ error: "No such property." }, 404);
-});
-
-property.put("/:code/rooms/:number/housekeeping", async (c) => {
-  const wanted = (await c.req.json().catch(() => ({}))) as { state?: string };
-  const state = HOUSEKEEPING_IN[wanted.state ?? ""];
-
-  if (!state) {
-    return c.json(
-      { allowed: false, reason: `"${wanted.state}" is not a housekeeping state.` },
-      400,
-    );
-  }
-
-  const result = await withSession(c.get("subject"), async (client) => {
-    const hotel = await resolve(client, c.req.param("code"));
-    if (!hotel) return null;
-
-    /* The room is read first so a refusal can name a reason rather
-       than reporting "0 rows updated", which tells a clerk nothing. */
-    const { rows } = await client.query<{ housekeeping_status: string }>(
-      "select housekeeping_status from rooms where hotel_id = $1 and number = $2",
-      [hotel.id, c.req.param("number")],
-    );
-    const room = rows[0];
-    if (!room) return { allowed: false, reason: "Room not found." };
-
-    if (room.housekeeping_status === "out_of_service") {
-      return {
-        allowed: false,
-        reason: "This room is held out of service. Release it before cleaning it.",
-      };
-    }
-    if (state === "inspected" && room.housekeeping_status === "dirty") {
-      return {
-        allowed: false,
-        reason: "A dirty room is cleaned before it is inspected.",
-      };
-    }
-
-    await client.query(
-      "update rooms set housekeeping_status = $3 where hotel_id = $1 and number = $2",
-      [hotel.id, c.req.param("number"), state],
-    );
-    return { allowed: true as const };
-  });
-
-  if (!result) return c.json({ error: "No such property." }, 404);
-  return c.json(result, result.allowed ? 200 : 409);
-});
-
-/* ── Taking a room out of inventory ───────────────────────────────────
-   `room_blocks` has existed since 022 with a reason, dates and an
-   author. The tape chart draws from it. Nothing has ever written to it,
-   so a housekeeper finding a broken shower could not record it and the
-   only blocks in the system came from the demo loader.
-   ═══════════════════════════════════════════════════════════════════ */
-property.post("/:code/rooms/:number/block", async (c) => {
-  type Body = { reason?: string; from?: string; to?: string | null; note?: string };
-  const input = await c.req.json<Body>().catch(() => ({}) as Body);
-
-  const REASONS = [
-    "out_of_service", "out_of_order", "refurbishment",
-    "house_use", "owner_occupied",
-  ];
-  if (!input.reason || !REASONS.includes(input.reason)) {
-    return c.json({ ok: false, reason: "Why is the room coming out?" }, 409);
-  }
-  const from = input.from;
-  if (!from) {
-    return c.json({ ok: false, reason: "From which date?" }, 409);
-  }
-  if (input.to && input.to < from) {
-    return c.json({
-      ok: false,
-      reason: "A block cannot end before it starts.",
-    }, 409);
-  }
-
-  const body = await withSession(c.get("subject"), async (client, session) => {
-    const hotel = await resolve(client, c.req.param("code"));
-    if (!hotel) return null;
-
-    const { rows: room } = await client.query<{ id: string }>(
-      `select id::text from rooms
-        where hotel_id = $1 and number = $2 and is_active`,
-      [hotel.id, c.req.param("number")],
-    );
-    if (!room[0]) {
-      return { ok: false, reason: `There is no room ${c.req.param("number")} here.` };
-    }
-
-    /* A room with somebody in it is not a room you can take out. The
-       tape chart would draw it blocked while a guest slept in it, and
-       the night audit would still post their room charge. */
-    const { rows: occupied } = await client.query<{ guest: string }>(
-      `select g.full_name as guest
-         from room_assignments ra
-         join reservations r on r.id = ra.reservation_id
-         join guests g on g.id = r.guest_id
-        where ra.room_id = $1 and ra.released_at is null
-          and r.status = 'checked_in'
-        limit 1`,
-      [room[0].id],
-    );
-    if (occupied[0]) {
-      return {
-        ok: false,
-        reason: `${occupied[0].guest} is in that room. Move them out first.`,
-      };
-    }
-
-    const { rows } = await client.query<{ id: string }>(
-      `insert into room_blocks
-         (hotel_id, room_id, from_date, to_date, reason, note, created_by)
-       values ($1,$2,$3::date,$4::date,$5,$6,$7)
-       returning id::text`,
-      [hotel.id, room[0].id, from, input.to ?? null,
-       input.reason, input.note?.trim() || null, session.staffId],
-    );
-
-    /* The room's own status too, when the block starts today or earlier
-       — the board reads `housekeeping_status`, the chart reads the
-       block, and the two disagreeing is how a room gets sold twice. */
-    if (from <= (await businessDateFor(client, hotel.id))) {
-      await client.query(
-        `update rooms set housekeeping_status = 'out_of_service' where id = $1`,
-        [room[0].id],
-      );
-    }
-
-    return { ok: true as const, id: rows[0]!.id };
-  });
-
-  if (!body) return c.json({ error: "No such property." }, 404);
-  return c.json(body, "ok" in body && body.ok ? 200 : 409);
-});
-
-property.delete("/:code/rooms/:number/block/:id", async (c) => {
-  const body = await withSession(c.get("subject"), async (client) => {
-    const hotel = await resolve(client, c.req.param("code"));
-    if (!hotel) return null;
-
-    const { rows: room } = await client.query<{ id: string }>(
-      `select id::text from rooms where hotel_id = $1 and number = $2`,
-      [hotel.id, c.req.param("number")],
-    );
-    if (!room[0]) return { ok: false, reason: "No such room." };
-
-    const { rowCount } = await client.query(
-      `delete from room_blocks
-        where id = $1 and room_id = $2 and hotel_id = $3`,
-      [c.req.param("id"), room[0].id, hotel.id],
-    );
-    if (!rowCount) return { ok: false, reason: "That block is not here." };
-
-    /* Back into inventory DIRTY, never clean. A room that has been out
-       for a fortnight of refurbishment needs looking at before somebody
-       sleeps in it, and "clean" is a claim nobody has checked. */
-    await client.query(
-      `update rooms set housekeeping_status = 'dirty'
-        where id = $1 and housekeeping_status = 'out_of_service'`,
-      [room[0].id],
-    );
-
-    return { ok: true as const };
-  });
-
-  if (!body) return c.json({ error: "No such property." }, 404);
-  return c.json(body, "ok" in body && body.ok ? 200 : 409);
-});
-
-/* ── Modules ──────────────────────────────────────────────────────
-   Which of them this property has. Not every hotel in the group runs
-   a restaurant, and a property with no kitchen should not be showing
-   its staff a menu screen that will never have anything in it. */
-
-property.get("/:code/modules", async (c) => {
-  const body = await withSession(c.get("subject"), async (client) => {
-    const hotel = await resolve(client, c.req.param("code"));
-    if (!hotel) return null;
-    const hotelId = hotel.id;
-
-    /* Read through app.module_enabled rather than the table, so this
-       answers exactly what the gate on the routes answers. Reading the
-       rows directly would report "no row" as off and disagree with the
-       API that is still serving the till. */
-    const { rows } = await client.query<{ module: string; enabled: boolean }>(
-      `select m.module, app.module_enabled($1, m.module) as enabled
-         from (values ('pos'), ('banquet'), ('reception_pos')) as m(module)`,
-      [hotelId],
-    );
-    return { modules: rows.map((r) => ({ module: r.module, enabled: r.enabled })) };
-  });
-
-  if (!body) return c.json({ error: "No such property." }, 404);
-  return c.json(body);
-});
-
-property.post("/:code/modules/:module", async (c) => {
-  type Body = { enabled?: boolean };
-  const input = await c.req.json<Body>().catch(() => ({}) as Body);
-  const module = c.req.param("module");
-
-  if (!["pos", "banquet", "reception_pos"].includes(module)) {
-    return c.json({ reason: `There is no "${module}" module.` }, 409);
-  }
-  if (typeof input.enabled !== "boolean") {
-    return c.json({ reason: "On or off?" }, 409);
-  }
-
-  const result = await withSession(c.get("subject"), async (client, session) => {
-    const hotel = await resolve(client, c.req.param("code"));
-    if (!hotel) return null;
-    const hotelId = hotel.id;
-
-    /* ⚠ THE GM'S SWITCH, NOT ANYBODY'S. This had no check at all: the
-       table's policy is hotel isolation, so any clerk rostered here could
-       close the till for the whole property — and, once `reception_pos`
-       existed, a receptionist could turn their own POS access back on.
-       Found on 14 September adding that module. app.manages_hotel (084)
-       is a GM here or a group administrator. */
-    const { rows: may } = await client.query<{ ok: boolean }>(
-      "select app.manages_hotel($1) as ok", [hotelId]);
-    if (!may[0]?.ok) {
-      return {
-        ok: false as const,
-        reason: "Only this property's general manager can switch its modules on or off.",
-      };
-    }
-
-    /* Who and when. A module that quietly stopped working is a support
-       call; one somebody switched off on a date is an answer. */
-    await client.query(
-      `insert into hotel_modules (hotel_id, module, is_enabled, changed_by)
-       values ($1,$2,$3,$4)
-       on conflict (hotel_id, module) do update
-          set is_enabled = excluded.is_enabled,
-              changed_by = excluded.changed_by,
-              changed_at = now()`,
-      [hotelId, module, input.enabled, session.staffId],
-    );
-
-    return { ok: true as const, module, enabled: input.enabled };
-  });
-
-  if (!result) return c.json({ error: "No such property." }, 404);
-  /* A refusal is not a 200 — defect 231. */
-  return c.json(result, result.ok ? 200 : 403);
 });

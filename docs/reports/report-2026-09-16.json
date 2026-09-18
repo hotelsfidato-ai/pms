@@ -1,0 +1,102 @@
+{
+  "date": "2026-09-16",
+  "label": "Wed 16 Sep",
+  "headline": "Stock and equipment became one system, and most of the day went live at 22:00.",
+  "summary": "You deployed at 22:00. Everything saved before then is live; the equipment register, the places and suppliers screen and the late fixes were saved after it and wait for the next deploy. Checked this morning by running the system, the tests and the live server, not by reading the chats' notes.",
+  "live": {
+    "checked": "read on the live server, 17 Sep 13:10",
+    "cards": [
+      { "k": "Server", "v": "Updated 16 Sep, 22:00. Healthy.", "mono": "eaf6916" },
+      { "k": "Website", "v": "Published 16 Sep, 22:02. Shows Inventory Manager, Rooms and rates, Store and equipment.", "mono": "" },
+      { "k": "n8n", "v": "Running and reachable after the deploy. Still version 2.38.5 — the update was not run.", "mono": "n8n.fidatohotels.com" }
+    ]
+  },
+  "decisions": [
+    { "from": "You to run", "text": "Deploy what was saved after 22:00: the equipment register, places and suppliers, walk-in references, the delete-hotel refusal, bigger touch targets on phones, and the database fix that keeps later deploys working." },
+    { "from": "You to run", "text": "The n8n update to 2.39.6 (live is 2.38.5)." },
+    { "from": "Master", "text": "Places and suppliers: may the Hotel Manager and the Inventory Manager add them too? Today only the owner, admin and GM can." },
+    { "from": "Master", "text": "FD-1: two screens count 'in house' differently. Which count is the right one?" },
+    { "from": "Store chat", "text": "Where the stock already recorded should sit (recommended: Main store), whether Main, Kitchen and Bar stores are created automatically, and how a gas cylinder is priced." },
+    { "from": "Night audit chat", "text": "NA-3: two people pressing Run at the same moment leaves the day's record at 0 rooms and ₹0. NA-1: two night-audit features nothing uses." },
+    { "from": "Admin chat", "text": "ADM-1: the audit log names 'admin' for every entry. API-2: should the server refuse reception reading the audit log, as the screen does?" },
+    { "from": "Finance chat", "text": "A stay with no bill: show ₹0 or a dash (FIN-2)." },
+    { "from": "Banquet chat", "text": "BQ-1: charging a restaurant bill to a function. BQ-2: the Diary screen is headed 'Banquet'." },
+    { "from": "POS chat", "text": "POS-2: two add-on features with no button. POS-5: the kitchen docket. POS-7: three dates printed raw on Close restaurant day." },
+    { "from": "Other chats", "text": "Headings and words: GUE-1 'Booking sources', INV-2 'The house', REP-6 'Owed by guests', FD-5 a hotel with no rooms, the housekeeping room-card labels." }
+  ],
+  "problems": [
+    { "sev": "high", "title": "My clean-up deleted the installed packages on this PC",
+      "text": "Removing six old project copies last night followed their links and deleted the website's tools and the server's packages. I checked by counting folders and said nothing was touched. It was. Every service chat's copy shares those packages, so theirs broke overnight too.",
+      "state": "Fixed this morning: reinstalled; both servers start and every test runs. Recorded as MEMORY 286." },
+    { "sev": "high", "title": "A database change would have stopped every deploy after the next",
+      "text": "Database changes are re-run on every deploy. My change 095, run a second time, clashed with 096. The deploy last night went through (first run); the one after it would have failed.",
+      "state": "Fixed at 23:06, before any second deploy. The re-run test now includes a hotel, so it catches this. The live server has the old files; the next deploy brings the fix." },
+    { "sev": "medium", "title": "The Night audit screen test fails when the computer is busy",
+      "text": "It waits one second for the Run button. Under load it gave up; run alone it passed 3 times out of 3. The feature itself works — the stale-close refusal was tried on the server this morning.",
+      "state": "Open — for the night audit chat: give the test more time." },
+    { "sev": "low", "title": "Seen this morning, not investigated",
+      "text": "On a phone, In house lists a stay marked 'void', and balances show ₹0 where no bill exists.",
+      "state": "The ₹0 is your pending decision (FIN-2). The 'void' stay needs a look." }
+  ],
+  "completed": [
+    { "area": "Stock and equipment", "items": [
+      { "check": "verified", "text": "The plan and all eleven decisions, plus the table of who may do what, approved and written down.", "how": "docs/STOCK-AND-EQUIPMENT-PLAN.md" },
+      { "check": "live", "text": "Menu renamed: 'Rooms and rates', and a new 'Store and equipment' section.", "how": "Seen in the menu locally; both words are in the live website's code." },
+      { "check": "live", "text": "Store Manager renamed Inventory Manager, who now adds, edits and approves equipment.", "how": "Roles page opened as the owner; 'Store Manager' is gone from the live website." },
+      { "check": "live", "text": "Reception and the Viewer can no longer see or change stock (STO-1).", "how": "Opened the Store as reception: 'not part of your role'. Server refuses reading (403) and adding; nothing written." },
+      { "check": "verified", "text": "Equipment leaving the store waits for the Inventory Manager; owner, admin or GM can decide instead; nobody approves their own.", "how": "Rule present at 5 Elements; server tests try every role." },
+      { "check": "verified", "text": "Retiring equipment goes to the same approvals inbox, and approvers see who asked.", "how": "Server tests: names only for whoever decides or asked; retirement decided by the Inventory Manager." },
+      { "check": "verified", "text": "The equipment register: add, import, move, retire, export; works on a phone.", "how": "Screen opened as the GM; server answers as GM and reception. Not live yet." },
+      { "check": "verified", "text": "Places and suppliers screen, so a Main store can exist.", "how": "Opened as the GM with Add a place; reception refused adding (403, with the sentence), nothing written. Not live yet." },
+      { "check": "verified", "text": "Suppliers and places tables, with nothing pre-filled.", "how": "Database checks pass." },
+      { "check": "verified", "text": "Deleting a hotel that holds equipment or stock is refused with a clear reason.", "how": "Database checks name both. Not live yet." }
+    ]},
+    { "area": "Bookings, front desk and night audit", "items": [
+      { "check": "live", "text": "Night audit refuses to close a day that is already closed (NA-2).", "how": "Tried on the server: '26 August was already closed. Reload to see today.' The day did not move." },
+      { "check": "live", "text": "Stay lists are cards on a phone.", "how": "In house at 375px: 8 cards, no table, no sideways scroll." },
+      { "check": "live", "text": "One booking reference format, FH-5EL-2609-5001, made in one locked place.", "how": "Its tests pass, including two bookings at the same moment." },
+      { "check": "verified", "text": "Walk-ins use the same reference (RES-2 closed).", "how": "Test checks the format; it failed on the old code. Not live yet." },
+      { "check": "live", "text": "Revenue Manager role: sets prices, nothing else.", "how": "Role tests pass." },
+      { "check": "unverified", "text": "Rooms says when the server does not answer; FD-2. RES-1 and RES-3 (a double-tapped booking is made once).", "how": "Merged, tests pass; screens not opened today." }
+    ]},
+    { "area": "Prices", "items": [
+      { "check": "live", "text": "Pricing: one base price, every other price a difference, on a calendar.", "how": "Pricing opened as the GM; unpriced days show a dash, never a zero." },
+      { "check": "unverified", "text": "An unpriced room is a dash, not ₹0 (INV-3); only rate setters reach the Rate calendar (INV-5).", "how": "Merged, tests pass; screens not opened today." }
+    ]},
+    { "area": "Look and feel", "items": [
+      { "check": "unverified", "text": "Text contrast fixed across the system.", "how": "Measured on 16 Sep (0 failures on 6 pages); not re-measured today." },
+      { "check": "unverified", "text": "On phones, a dialog's Close and every form box are finger-sized, and iPhones no longer zoom on tap.", "how": "Measured last night at 375px; not re-measured today. Not live yet." }
+    ]},
+    { "area": "Safety and set-up", "items": [
+      { "check": "verified", "text": "Every database change can be re-run safely, now tested with a hotel present.", "how": "Re-run test: 98 of 98." },
+      { "check": "verified", "text": "Service chats can see each other's claims.", "how": "Claims list shows 7 chats from the main folder." },
+      { "check": "verified", "text": "A written brief for every service, so each chat can start alone.", "how": "docs/briefs." },
+      { "check": "live", "text": "n8n working on its own address.", "how": "n8n.fidatohotels.com answers 200; running after the deploy." }
+    ]}
+  ],
+  "chats": [
+    { "name": "Store", "state": "active", "done": ["STO-1 merged and live", "STO-2 to STO-11 saved: a failed read says so, phone layout, Undo asks first, the Inventory Manager sees who moved stock — not merged yet"], "pending": ["Master to merge STO-2..11", "Stock per place, minimum levels, the count sheet, gas cylinders", "Your three questions (see Waiting on you)"] },
+    { "name": "Equipment", "state": "done", "done": ["Register merged", "Leaving the store needs approval", "Retirement in the one inbox"], "pending": ["Goes live with the next deploy", "EQ-3: two database runs at once clash on this PC (development only)"] },
+    { "name": "Night audit", "state": "waiting", "done": ["NA-2 merged and live", "Found NA-3"], "pending": ["NA-3 and NA-1: your decisions", "Screen test needs more time under load"] },
+    { "name": "Reservations", "state": "done", "done": ["RES-1, RES-3", "RES-2 booking door (walk-ins finished by the master)"], "pending": [] },
+    { "name": "Front desk", "state": "idle", "done": ["Rooms says when the server does not answer", "FD-2"], "pending": ["FD-5 wording (yours)", "FD-7 'Today' runs off a phone screen", "FD-1 (yours, via the master)"] },
+    { "name": "Inventory (rooms and rates)", "state": "done", "done": ["INV-3", "INV-5", "Out-of-service test"], "pending": ["INV-2 heading (yours)", "INV-6 out of service kept in two records"] },
+    { "name": "POS", "state": "done", "done": ["Two dates fixed", "A failed read says so", "Kitchen heading"], "pending": ["POS-2, POS-5, POS-7 (yours)"] },
+    { "name": "Reports", "state": "done", "done": ["REP-1, REP-2, REP-3", "Statistics shown as money"], "pending": ["REP-6 wording (yours)"] },
+    { "name": "Admin", "state": "waiting", "done": ["Questions put to you"], "pending": ["ADM-1, API-2 (yours)", "ADM-2 Settings shows a tax no longer used", "ADM-3 placeholder admin (switched off live)"] },
+    { "name": "Finance", "state": "waiting", "done": ["Traced the In House balance question"], "pending": ["₹0 or a dash (yours)", "FIN-1 an old comment"] },
+    { "name": "Banquet", "state": "waiting", "done": [], "pending": ["BQ-1, BQ-2 and BQ-3 to 5 (yours)"] },
+    { "name": "Guests", "state": "waiting", "done": [], "pending": ["GUE-1 heading (yours)"] },
+    { "name": "Housekeeping", "state": "waiting", "done": [], "pending": ["Room-card labels and 'Needs cleaning' words (yours)", "HK-1 board refresh — you said leave it"] }
+  ],
+  "gatesNote": "run on 17 Sep, 13:15–13:30, on everything saved",
+  "gates": [
+    { "name": "Website type check", "ok": true, "numbers": "no errors" },
+    { "name": "Server type check", "ok": true, "numbers": "no errors" },
+    { "name": "Website tests", "ok": true, "numbers": "269 passed · 1 skipped (a first run under load had 1 timing failure; rerun clean)" },
+    { "name": "Server tests", "ok": true, "numbers": "756 passed" },
+    { "name": "Database checks", "ok": true, "numbers": "736 passed · 98 changes" },
+    { "name": "Re-running every database change", "ok": true, "numbers": "98 of 98" },
+    { "name": "Production build", "ok": true, "numbers": "clean · no test sign-in" }
+  ]
+}

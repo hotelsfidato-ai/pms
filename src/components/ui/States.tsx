@@ -109,7 +109,7 @@ export function ErrorState({
           href={detail.indexUrl}
           target="_blank"
           rel="noreferrer"
-          className="mt-3 text-sm text-brand-orange hover:underline font-medium"
+          className="mt-3 text-sm text-brand-orange-700 hover:underline font-medium"
         >
           Create the missing index in Firebase →
         </a>
@@ -245,7 +245,7 @@ export function describeError(error: unknown): ErrorDetail {
       title: "You do not have access to this",
       message:
         "The security rules refused this read. If you should be able to see it, your " +
-        "role needs changing — an administrator can do that from Admin → Users.",
+        "role needs changing - an administrator can do that from Admin → Users.",
     };
   }
 

@@ -71,7 +71,7 @@ const asOwner = (path: string) =>
   app.request(path, { headers: { "x-dev-staff-id": ownerStaffId } });
 
 describe("the business date is the property's, not the server's", () => {
-  it("is NOT today — which is the whole point", () => {
+  it("is NOT today - which is the whole point", () => {
     const today = new Date().toISOString().slice(0, 10);
     expect(
       today,
@@ -157,7 +157,7 @@ describe("reads default to the property's day, not the clock", () => {
   });
 });
 
-describe("WRITES take the property's day — the 00:40 receipt", () => {
+describe("WRITES take the property's day - the 00:40 receipt", () => {
   it("a payment with no date supplied lands on the business date", async () => {
     const admin = new (await import("pg")).default.Pool({
       connectionString:

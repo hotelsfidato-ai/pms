@@ -68,6 +68,10 @@ export interface Draft {
   /** Set when the table already had an open order, so the round joins
       that bill instead of starting a second one on the same table. */
   orderId?: string;
+  /** The banquet function this bill will be settled to (D17-21), when one was
+      chosen. Kept with the dishes, so closing the pad before Send loses
+      neither. `null` means chosen as "no function". */
+  eventId?: string | null;
   lines: DraftLine[];
   /** So a draft from three days ago can be recognised as stale by
       whoever opens it. Not used to expire anything automatically —
@@ -158,7 +162,7 @@ export async function draftedTables(hotelId: string): Promise<Set<string>> {
    waiter must be able to answer "how much is that?" at the table
    without a round trip.
 
-   The guard is `api/test/padTotal.test.ts`: the same lines are priced
+   The guard is `api/test/modules/pos/padTotal.test.ts`: the same lines are priced
    here and by the server, and the two must agree. If you change how a
    dish is priced ANYWHERE, that test is the one that catches you.
 

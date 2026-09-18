@@ -335,11 +335,15 @@ describe("a walk-in records where it came from", () => {
     try {
       const { rows } = await check.query<{
         business_source: string | null; market_segment: string | null;
-        sales_person: string | null; is_single_lady: boolean;
+        sales_person: string | null; is_single_lady: boolean; reference: string;
       }>(
-        `select business_source, market_segment, sales_person, is_single_lady
+        `select business_source, market_segment, sales_person, is_single_lady,
+                reference
            from reservations where id = $1`, [made]);
 
+      /* RES-2: a walk-in's reference comes from app.next_reference, in the
+         owner's format — FH-<hotel code>-<YYMM>-<number> — like every booking. */
+      expect(rows[0]!.reference).toMatch(/^FH-5EL-\d{4}-\d{4,}$/);
       expect(rows[0]!.business_source).toBe("Sharma Travels");
       expect(rows[0]!.market_segment).toBe("Corporate");
       expect(rows[0]!.sales_person).toBe("R Patil");
@@ -349,7 +353,7 @@ describe("a walk-in records where it came from", () => {
     }
   });
 
-  it("⚠ RECORDS THE WALK-IN CHANNEL — defect 242", async () => {
+  it("⚠ RECORDS THE WALK-IN CHANNEL - defect 242", async () => {
     /* The booking form refused a booking with no channel; this route
        saved one on every walk-in, and the stay list hid it by reading
        "Walk-in" off the legacy column. The channel is the row, not the
@@ -451,7 +455,7 @@ describe("a walk-in records where it came from", () => {
     expect(await guestsNamed("No Channel Guest")).toBe("0");
   });
 
-  it("⚠ A REFUSED WALK-IN LEAVES NO GUEST BEHIND — defect 243", async () => {
+  it("⚠ A REFUSED WALK-IN LEAVES NO GUEST BEHIND - defect 243", async () => {
     /* `withSession` commits a refusal like any other return. The rate
        check sat under the guest insert, so a walk-in refused for having
        no rate kept its guest — and guests_no_delete means that row could
@@ -1191,7 +1195,7 @@ describe("a stay, as the panel reads it", () => {
     }
   };
 
-  it("⚠ AN UNPRICED ROOM TYPE IS A NULL RACK RATE, NOT ₹0 — defect 246", async () => {
+  it("⚠ AN UNPRICED ROOM TYPE IS A NULL RACK RATE, NOT ₹0 - defect 246", async () => {
     /* `Number(row.base_rate)` turned NULL into 0, and every panel printed
        "Rack rate ₹0" for a room type nobody had priced. */
     const s = await pickStay();

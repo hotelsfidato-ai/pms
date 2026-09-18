@@ -284,7 +284,7 @@ export async function api<T>(path: string, init: RequestInit = {}): Promise<T> {
     throw new HeldError(
       rule.tier === "queue-warn"
         ? `${rule.label} is held and will be sent when the connection is back. `
-          + "It is not confirmed until then — the room could be taken by "
+          + "It is not confirmed until then - the room could be taken by "
           + "another desk in the meantime."
         : `${rule.label} is held and will be sent when the connection is back.`,
       entry.id,
@@ -312,6 +312,69 @@ export async function api<T>(path: string, init: RequestInit = {}): Promise<T> {
   }
 
   return (await response.json()) as T;
+}
+
+/* ── A file from the API ─────────────────────────────────────────────
+   A report as a PDF, a spreadsheet or a CSV (D17-31, D17-32); later a bill.
+   A plain link cannot carry the sign-in, so the file is fetched here with
+   it and handed to the browser to save, under the name the server gave in
+   Content-Disposition (which the API exposes to the website's origin;
+   without that the browser hides it).
+
+   A download is a read, but there is no cached copy of a file, so when the
+   server cannot be reached it is refused in a sentence rather than held.
+   The preview build has no files at all. */
+
+/** The file name in a Content-Disposition header, or null. */
+export function filenameFrom(disposition: string | null): string | null {
+  const m = /filename="([^"]+)"/.exec(disposition ?? "");
+  return m ? m[1]! : null;
+}
+
+/** Fetches `path` with the sign-in and saves it. Resolves to the file's name. */
+export async function downloadFile(path: string): Promise<string> {
+  if (DEMO) {
+    throw new ApiError(409, "Files cannot be downloaded in the preview.");
+  }
+  const base = await apiBase();
+  let response: Response;
+  try {
+    /* No content-type: a GET for a file carries no body. */
+    const headers = { ...((await authHeaders()) as Record<string, string>) };
+    delete headers["content-type"];
+    response = await fetch(`${base}${path}`, { headers });
+  } catch {
+    noteUnreachable();
+    throw new ApiError(0, "Could not reach the server, so the file was not downloaded. Try again when the connection is back.");
+  }
+  noteReachable();
+
+  if (!response.ok) {
+    const body = (await response.json().catch(() => null)) as
+      | { error?: string; reason?: string }
+      | null;
+    throw new ApiError(
+      response.status,
+      body?.error ?? body?.reason ?? `Request failed (${response.status}).`,
+      body ?? undefined,
+    );
+  }
+
+  const name = filenameFrom(response.headers.get("content-disposition"))
+    ?? path.split("?")[0]!.split("/").pop()
+    ?? "download";
+  const url = URL.createObjectURL(await response.blob());
+  const link = document.createElement("a");
+  link.href = url;
+  link.download = name;
+  link.rel = "noopener";
+  document.body.appendChild(link);
+  link.click();
+  link.remove();
+  /* Revoked later, not at once: some browsers start the save after click()
+     returns, and a revoked address saves nothing. */
+  setTimeout(() => URL.revokeObjectURL(url), 60_000);
+  return name;
 }
 
 /* ── Shapes the API returns ──────────────────────────────────────── */

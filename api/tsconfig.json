@@ -41,7 +41,7 @@
      Nothing in `api/src` may import from the frontend — the server is
      deployed without it. */
   "exclude": [
-    "test/padTotal.test.ts",
-    "test/roomChargeOffline.test.ts"
+    "test/modules/pos/padTotal.test.ts",
+    "test/modules/pos/roomChargeOffline.test.ts"
   ]
 }

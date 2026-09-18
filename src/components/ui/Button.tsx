@@ -16,14 +16,23 @@ export type ButtonVariant =
 export type ButtonSize = "sm" | "md" | "lg" | "icon";
 
 const VARIANTS: Record<ButtonVariant, string> = {
-  // Solid brand orange — one primary action per view.
+  /* Solid brand orange — one primary action per view.
+
+     THE FILL IS orange-600, NOT orange. White on #df6128 is 3.57:1,
+     which fails AA for a 14px label — and the old hover step darkened
+     it to 4.59:1, so the button became readable only while the pointer
+     was on it, and never on a touch screen. Measured 16 September. */
   primary:
-    "bg-brand-orange text-white hover:bg-brand-orange-600 active:bg-brand-orange-700 disabled:bg-grey-300 disabled:text-grey-500",
+    "bg-brand-orange-600 text-white hover:bg-brand-orange-700 active:bg-brand-orange-800 disabled:bg-grey-300 disabled:text-grey-600",
+  /* A DISABLED LABEL STAYS READABLE — grey-500 on grey-50 is 4.56:1,
+     where grey-400 was 2.43:1. This product explains every disabled
+     control in words (StayActions, MenuItem's `reason`); a label
+     nobody can read is a poor place to start that sentence. */
   // The workhorse. Hairline border, not a shadow.
   secondary:
-    "bg-white text-ink-900 border border-grey-300 hover:bg-grey-50 hover:border-grey-400 active:bg-grey-100 disabled:text-grey-400 disabled:bg-grey-50",
+    "bg-white text-ink-900 border border-grey-300 hover:bg-grey-50 hover:border-grey-400 active:bg-grey-100 disabled:text-grey-500 disabled:bg-grey-50",
   ghost:
-    "text-grey-600 hover:bg-grey-100 hover:text-ink-900 active:bg-grey-200 disabled:text-grey-400",
+    "text-grey-600 hover:bg-grey-100 hover:text-ink-900 active:bg-grey-200 disabled:text-grey-500",
   danger:
     "bg-brand-red text-white hover:bg-[#c22718] active:bg-[#a82115] disabled:bg-grey-300",
   link: "text-brand-orange hover:text-brand-orange-600 hover:underline underline-offset-4 p-0 h-auto",

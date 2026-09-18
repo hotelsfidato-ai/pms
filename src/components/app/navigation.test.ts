@@ -1,8 +1,9 @@
 import { describe, expect, it } from "vitest";
 import {
   navigationFor, sidebarFor, flatNavigationFor, workingHomeFor, type NavItem,
+  declaredEntries, sectionKeys, mayReach,
 } from "./navigation";
-import type { Role } from "@/lib/permissions";
+import { ROLES, COMING_SOON_ROLES, type Role } from "@/lib/permissions";
 
 /* ══════════════════════════════════════════════════════════════════
    THE MENU'S NAMING RULES, ENFORCED
@@ -33,7 +34,7 @@ function everyLabel(): string[] {
 /* Words that keep their capitals wherever they fall: acronyms, and the
    names of statutory forms. Anything else capitalised after the first
    word is Title Case creeping back. */
-const PROPER = new Set(["GST", "Form", "F", "C", "C-Form", "Fidato", "POS"]);
+const PROPER = new Set(["GST", "Form", "F", "C", "C-Form", "Fidato", "POS", "CRS", "CRM", "WhatsApp"]);
 
 describe("the menu speaks one way", () => {
   it("writes every label in sentence case", () => {
@@ -44,6 +45,14 @@ describe("the menu speaks one way", () => {
         .some((word) => /^[A-Z]/.test(word) && !PROPER.has(word)),
     );
     expect(offenders).toEqual([]);
+  });
+
+  it("keeps every label short enough for the sidebar", () => {
+    /* The sidebar is 248px and cuts a long label with an ellipsis. On
+       16 September "Contracts and allotments" (24 characters) showed as
+       "Contracts and allotm…" — found by opening the screen, not by a
+       test. The longest label that fits is 21 characters today. */
+    expect(everyLabel().filter((label) => label.length > 21)).toEqual([]);
   });
 
   it("never gives two places the same name", () => {
@@ -86,7 +95,7 @@ function searchable(role: Role): string[] {
 }
 
 describe("each person's menu", () => {
-  it("gives reception the core eight, bookings and the drawer — and the POS only when switched on", () => {
+  it("gives reception the core eight, bookings and the drawer - and the POS only when switched on", () => {
     const core = [
       "Dashboard", "Rooms", "Calendar",
       "Arrivals", "Upcoming", "In house", "Due out", "Walk-ins",
@@ -116,9 +125,10 @@ describe("each person's menu", () => {
     expect(menu("kitchen_manager")).toEqual(["Kitchen", "Menu", "Close restaurant day", "Notifications"]);
   });
 
-  it("gives housekeeping and the stores their work — and no revenue Dashboard", () => {
-    expect(menu("housekeeping")).toEqual(["Housekeeping", "Work orders", "Store", "Notifications"]);
-    expect(menu("stores")).toEqual(["Store", "Notifications"]);
+  it("gives housekeeping and the stores their work - and no revenue Dashboard", () => {
+    /* Equipment joined on 16 September — the owner's answer to the equipment chat. */
+    expect(menu("housekeeping")).toEqual(["Housekeeping", "Work orders", "Store", "Equipment", "Notifications"]);
+    expect(menu("stores")).toEqual(["Store", "Equipment", "Notifications"]);
     for (const role of ["housekeeping", "stores", "chef", "kitchen_manager", "pos"] as Role[]) {
       expect(menu(role)).not.toContain("Dashboard");
     }
@@ -137,10 +147,59 @@ describe("each person's menu", () => {
     expect(searchable("owner")).toContain("Lodging tax");
   });
 
-  it("lists the channel manager for nobody — it is not connected", () => {
-    for (const role of ["owner", "gm", "front_desk"] as Role[]) {
-      expect(menu(role)).not.toContain("Channel manager");
+  it("lists every service not built yet under Coming soon - for the owner, admins and GMs only", () => {
+    /* The owner's decision, 16 September: one section at the foot of the
+       menu, every service the system does not have yet, alphabetical. */
+    /* 16 September, the stock-and-equipment plan: "Hotel equipment" became
+       "Equipment" (the register), its door-lock content moved to "Room
+       systems", and "Purchasing" arrived. Each takes its alphabetical place. */
+    const SOON = [
+      "Accounting export", "Booking engine", "Central CRM", "Channel manager",
+      "Contracts", "Fidato CRS", "Guest messages", "Guest services",
+      "Laundry", "Leads and WhatsApp", "Loyalty", "Marketing", "Online check-in",
+      "Online payments", "Purchasing", "Revenue management", "Reviews",
+      "Room systems", "Spa",
+    ];
+    for (const role of COMING_SOON_ROLES) {
+      const sections = sidebarFor(role, "5EL", ALL_ON);
+      const last = sections[sections.length - 1];
+      expect(last?.label, `${role}: the section sits at the foot`).toBe("Coming soon");
+      expect(last?.items.map((i) => i.label)).toEqual(SOON);
     }
-    expect(searchable("owner")).toContain("Channel manager");
+    for (const role of ROLES.filter((r) => !COMING_SOON_ROLES.includes(r))) {
+      expect(navigationFor(role, "5EL", ALL_ON).some((s) => s.label === "Coming soon"), role).toBe(false);
+      for (const label of SOON) expect(searchable(role), `${role} finds ${label}`).not.toContain(label);
+    }
+  });
+
+  it("refuses a Coming soon page to exactly the people the menu hides it from", () => {
+    expect(mayReach("gm", "/coming-soon/spa")).toBe(true);
+    expect(mayReach("front_desk", "/coming-soon/spa")).toBe(false);
+    expect(mayReach("hotel_manager", "/coming-soon/leads")).toBe(false);
+    expect(mayReach("owner", "/h/:code/channels")).toBe(true);
+    expect(mayReach("front_desk", "/h/:code/channels")).toBe(false);
+  });
+});
+
+/* The menu is assembled from each service's own entries (the service-folder
+   move, 15 September). Two ways that can go wrong without an error: an entry
+   naming a section that does not exist simply never appears, and two entries
+   claiming one place sort by accident. */
+describe("the menu assembled from the services", () => {
+  it("puts every entry in a section that exists", () => {
+    const known = new Set(sectionKeys());
+    expect(declaredEntries().filter((e) => !known.has(e.section)).map((e) => e.to)).toEqual([]);
+  });
+
+  it("gives no two entries the same place in a section", () => {
+    const seen = new Map<string, string>();
+    const clashes: string[] = [];
+    for (const e of declaredEntries()) {
+      const place = `${e.section} #${e.order}`;
+      const other = seen.get(place);
+      if (other) clashes.push(`${place}: ${other} and ${e.to}`);
+      seen.set(place, e.to);
+    }
+    expect(clashes).toEqual([]);
   });
 });

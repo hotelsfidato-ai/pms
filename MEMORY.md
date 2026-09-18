@@ -2,6 +2,22 @@
 
 Every entry here cost something. Read it before you repeat it.
 
+**Since 16 September each service keeps its own defect log:**
+`src/modules/<service>/DEFECTS.md` — every defect found in that service, what
+was done about it, and the rule it leaves. Read it before editing that service;
+it is how a solved problem stays solved. This file keeps the lessons that apply
+to the whole project, numbered plainly; 276 is the last. Each service's file
+also indexes the entries here that concern it, with their rules quoted.
+
+```
+front-desk FD · reservations RES · housekeeping HK · inventory INV · guests GUE
+finance FIN · night-audit NA · pos POS · banquet BQ · stores STO · reports REP
+admin ADM · channel-manager CM · crs CRS · payments PAY · booking-engine BE
+guest-messaging MSG · accounting ACC · leads LEAD · marketing MKT · crm CRM
+spa SPA · online-checkin OCI · laundry LDY · contracts CON · revenue-management RM
+reputation REV · loyalty LOY · guest-services GS · equipment EQ
+```
+
 ---
 
 ## Ten faults that repeat
@@ -6465,6 +6481,564 @@ the test fail as it should.
 
 **The rule: when a deliberate break leaves a test green, find out which is
 wrong — the break or the test — before calling it either way.**
+
+---
+
+### 271 · Every deploy re-creates the placeholder administrator once it has been deleted
+
+`008_seed.sql` seeds `REPLACE@fidato.in` as an active group administrator,
+guarded by `on conflict (email) do nothing` — and every deploy replays every
+migration from 001. On 9 September the row was DELETED (13:50 UTC, with the
+other test rows). The 15 September deploy's replay found no such address and
+inserted it again (13:08 UTC): an active group administrator nobody owns, which
+preflight then failed on. My pre-deploy check counted two active staff; I did
+not ask what the replay would insert.
+
+Not an open door: sign-in resolves by Firebase uid only, and only a group
+administrator can attach a sign-in to a group administrator's row (088 closed
+the "add somebody" path as well). Deactivating is what sticks — the row
+stays, so the seed's insert does nothing on every later deploy.
+
+**The rules: where migrations replay, a seeded row cannot be deleted, only
+switched off. And a pre-deploy check asks what the replay will INSERT, not
+only what it will change.**
+
+---
+
+### 272 · The move silently narrowed a guard, and it kept passing
+
+Rule 2b in `repositories.test.ts` — no exported data function without a
+caller — defined "the seam" as `src/data/repositories` and counted a caller
+only when its import path named that folder. The service-folder move put
+most data files in `src/modules/<service>/data/` and pointed the screens at
+each service's front door. The gate went on passing: it now scanned the
+eleven core files and nothing else. Found only because one moved test file
+tripped its OTHER half (a known-unused function "gained a caller"). Widened
+to every data folder and to door imports; seen to fail with an unused
+function planted in front desk's data.
+
+**The rule: when files move, every guard that names a path is suspect. A
+guard that passes after a move has proved nothing until it has failed once
+on the new layout.**
+
+---
+
+### 273 · The agents' copies of the repo sat inside the repo
+
+The Agent tool puts each agent's git worktree in `.claude/worktrees/` —
+inside this folder. Three things saw them: vitest's default include (a run
+here would have run six other copies' tests, server tests included, against
+this copy's settings), git (six untracked directories, one `git add -A` from
+being committed), and the Vite dev server here (it reloaded the page mid-check
+as agents saved files). Caught by a check that returned nonsense headings,
+before any test run was trusted. Fixed: vitest excludes `.claude/**`, git
+ignores `.claude/worktrees/`. The dev server's reloads are harmless and left.
+
+**The rule: before running agents in parallel, ask what each tool in this
+copy will see of theirs.**
+
+---
+
+### 298 · MINE: a commit message that claimed two files I had not changed
+
+18 September. One script wrote the CHANGELOG entry, the HANDOVER entry and a
+third file, then `git add` and `git commit` in the same call. The script's first
+edit failed on a heading that had been reworded, so it stopped - and the commit
+still ran, carrying only the third file, under a message that described all
+three. `git log` said the work was recorded. It was not.
+
+The chain hid it: the script's assertion printed above the commit's output, and
+I read the last line.
+
+**The rule: when one call writes files and commits them, the commit's own
+`--stat` is the thing to read, not the fact that it succeeded. A message names
+files; check it names the ones that moved.**
+
+---
+
+### 297 · A bare timestamp means the SERVER's time zone, and the server is not the hotel
+
+18 September, found by the first CI run - a Linux machine, where a whole class
+of "works here" stopped working.
+
+`banquet.ts` writes `$7::timestamptz` from a time with no offset. Postgres reads
+a bare time in the SESSION's zone. This laptop's session is Asia/Kolkata, so it
+happens to mean the hotel's clock and everything looked right for weeks. **The
+hotel's own server runs its database in GMT** (checked on the box: `show
+timezone` -> GMT). There, a clerk's 19:00 is stored as 19:00 GMT, which is 00:30
+the next morning in Akkalkot.
+
+Then the readers disagree about the same row: the diary prints it in the
+session's zone and shows 19:00; the till converts `at time zone h.timezone`,
+correctly, and gets the next day. One moment, two days, depending on which
+screen asks. Written up as the banquet service's BQ-8; nothing is live on
+banquet, which is the only reason it has not bitten a guest.
+
+The same trap is anywhere a time is typed by a person and stored without a
+zone, and this system is a group of properties in one country today and could
+be two countries tomorrow.
+
+**The rule: a time a person types belongs to the PROPERTY, so it carries that
+property's zone at both ends - written with it, read with it. A bare timestamp
+is a bug waiting for a server in another zone, and the hotel's server already
+is one.**
+
+**Fixed the same day on the owner's word** (migration 113): `app.hotel_moment`,
+`app.hotel_clock` and `app.hotel_day` are the one place the conversion happens,
+and banquet's routes all call them. No stored row changed meaning - the live
+database held no banquet rows, checked first. **And the trap is closed for
+everything that comes after: the API's scratch database now runs in UTC**, as
+the hotel's server does, so a bare timestamp written anywhere in this system
+fails its test on any machine rather than passing on one. All 1,038 API tests
+pass that way.
+
+---
+
+### 296 · MINE: a refactor that quietly widened the answer every screen reads
+
+18 September. Moving the booking out of its HTTP route so a machine could make
+one in process, I gave the shared function what a machine needs - the rows'
+ids, and `duplicate: false` for a booking made now - and the route returned
+whatever it got. So `POST /bookings` started answering with four fields it had
+never sent, `duplicate: false` among them, where the key had simply been absent
+before. Three tests in the suite said so at once ("expected false to be
+undefined").
+
+The route now builds its answer field by field: the shape a screen already
+reads, `duplicate` only when true, and the ids kept for the caller in process,
+where they belong.
+
+**The rule: when one function starts serving two callers, the older caller's
+answer is BUILT, not passed through. What a new caller needs is not something
+to hand every old one.**
+
+---
+
+### 295 · MINE: an exemption from the sign-in gate that matched a SIBLING path
+
+18 September. The channel manager's door is the one address a machine outside
+this system may call without a person, so the gate under `/api` learned a third
+scheme: `if (c.req.path.startsWith("/api/channel")) { await next(); return; }`.
+
+That string also matches **`/api/channel-manager/su`** - the owner's own SU
+settings, keys included - which then passed the gate with no person at all.
+Three of the channel manager's own tests caught it by answering 401 where they
+expected 200 and 403: nothing had set a subject, so the routes failed further
+in. Had those routes not needed a session, the settings would have been open to
+anyone who could reach the server.
+
+Fixed: `path === "/api/channel" || path.startsWith("/api/channel/")`.
+
+The first guard I wrote for it PASSED with the bug in place, because it only
+asserted 401 - and a request that slips the gate is refused further in with
+401 as well. It now asserts the gate's own sentence ("No bearer token."), and
+fails with the bug put back.
+
+**The rule: a prefix rule about paths ends at a path boundary - compare the
+segment, not the string. And a test for "who refused this" asserts WHICH
+refusal, never the status alone.**
+
+---
+
+### 294 · MINE: `git stash push <file>` to test the old version, and the change never came back
+
+17 September, fixing 293. To prove the guard I wanted the file without it for
+one run, so I did `git stash push -q db/migrations/087_….sql`, ran the test,
+and then `git stash pop -q` answered "No stash entries found". The stash list
+was empty and my edit was gone - written again from the script that made it,
+which is the only reason it cost minutes rather than the whole fix.
+
+**The rule: never park work in the stash to try the old version. Copy the file
+aside (`cp x x.bak`, put it back with `cp`) or read the old one out of git
+(`git show HEAD:path > /tmp/old`). The stash is not a scratchpad; it is a place
+work disappears into.**
+
+---
+
+### 293 · MINE: a migration widened a constraint that an EARLIER migration rewrites on every replay
+
+17 September. My 108 widened `hotel_modules_known` to accept
+`'channel_manager'`. 087 rewrites that same constraint - drop, then add the
+narrower list - and every migration replays from 001 on every deploy, so 087
+runs again BEFORE 108 and puts the narrow list back. Postgres validates a new
+check against the rows that are there: one hotel switched on for the channel
+manager and 087 raises 23514, the whole run rolls back, and the API is never
+upgraded. In other words, the moment the owner used the switch I had just built
+them, the next deploy would have failed.
+
+Found by the channel-manager chat, not by me and not by the gates: it switched
+a hotel on in its own copy and ran `db/migrate.sh`. The gates could not see it
+- `run.sh` builds from zero, and `rerun.sh` replayed on a database with a
+property but no module rows, so nothing violated the narrow list.
+
+Fixed: 087 and 108 both rewrite the constraint ONLY when it does not already
+accept what they add - MEMORY 284's shape, which 095 and 096 were fixed into
+and which I then failed to apply to my own file a day later. `rerun.sh` now
+switches a module on between its two passes, so this class of fault has a gate:
+without the guard it fails with the production error, with it 108 migrations
+replay clean.
+
+**The rule: before rewriting a constraint, look for every OTHER migration that
+writes the same one. The earlier file is the one that replays over yours.**
+
+---
+
+### 292 · A test that writes into the demo property owns putting it back - and the SUITE is the check
+
+The Reports chat's REP-8, 17 September. Its new tests posted payments into
+5EL's folios and left them there. Its own file was green, 25 of 25. The damage
+landed in somebody else's file: `businessDate.test.ts` reads 5EL's calibrated
+payment total - the figure the demo reconciles to the owner's real eZee export,
+to the paisa - and it was 2,734.50 out. Fixed by reversing every posted payment
+in afterAll (a reversal, never a delete: the ledger is append-only) and then
+measuring that the total is where it started.
+
+A demo that reconciles to a real export is evidence. Anything that moves it
+quietly turns every later comparison into a lie.
+
+**The rule: a test that writes into shared demo data undoes it the way the
+system undoes things, and then MEASURES that it did. And the gate is the whole
+suite, never the one file you are working on - a fixture's damage always lands
+in somebody else's test.**
+
+---
+
+### 291 · A test that asserts the request a screen sent, not what the screen then did
+
+The POS chat's POS-8. A switch on the Menu screen posted its change and the
+dialog never closed, so the person pressed it again. The test asserted that
+the POST was sent, and passed, every run.
+
+**The rule: assert what the person is left looking at - the dialog closed, the
+row changed, the message shown - not that a request went out. A request is the
+middle of the act, not the end of it.**
+
+---
+
+### 290 · Anything that must happen on a send has to happen BEFORE window.open
+
+The POS chat's POS-11. Where the new tab replaces the page, nothing written
+after `window.open` runs. Work queued after it - clearing a pad, marking a
+round sent - silently never happens.
+
+**The rule: do the work, then open the window. `window.open` is the last line
+of the function.**
+
+---
+
+### 289 · A failing check that leaves rows its own clean-up cannot remove stops the suite
+
+The POS chat's POS-13. One assertion failed, its teardown could not undo what
+it had inserted (the ledger is append-only, and a delete is refused), and the
+rest of the file never ran. One red test read as a broken suite.
+
+**The rule: a fixture is undone the way the system undoes things - a reversal,
+a void - and the teardown runs whether the assertion passed or not.**
+
+---
+
+### 288 · MINE: a push ran after the commit it was meant to follow had failed
+
+17 September, late. I committed and pushed in one shell call: `git add … &&
+git commit …` with its message in a heredoc, then `git push` on the next line.
+The `git add` named a deletion that was already staged, failed, and so the
+commit never happened. The push was not chained to it, so it ran anyway. It
+pushed `d2b5a96`: two chats' merges and my first report engine commit, a tree
+never gated on its own. The gated tree was committed and pushed a minute later
+(`a061a26`). Nothing deploys from a push, so nothing reached the hotel.
+
+**The rule: a push is chained with `&&` to the commit it publishes, never on a
+line of its own. And after a push, `git log -1` must show the commit you meant.**
+
+---
+
+### 287 · A demo script, run from a chat's copy, began tearing down the main database
+
+17 September. The Channel manager chat ran `scripts/load-demo.ts` in its own
+copy (`D:\fidato-channel-manager`). The script never reads the copy's
+`api/.env`. It connects to `SUPER_DATABASE_URL`, or else to
+`postgres://postgres:pw@127.0.0.1:55432/fidato`, the main checkout's
+development database on the one Postgres server every copy shares. So it began
+tearing down 5EL in the MAIN database, not the copy's. The append-only guard on
+`stock_movements` stopped it inside its transaction and nothing was kept. The
+chat checked afterwards: 5 triggers enabled, 5EL with 86 reservations, 32
+guests, 1 stock movement. It reported this as CM-1. `demo-history.ts`,
+`reset-property.ts`, `retire-staff.ts` and `pos-outlet.ts` fall back to the
+same database.
+
+A guard written for another reason is all that saved it. Every copy has its
+own settings file naming its own database, and a script that ignores the file
+writes wherever its fallback points, which is somebody else's data.
+
+**The rule: a script that writes connects to the database its own copy names,
+or refuses to run. A built-in fallback on a shared server is not a default,
+it is another chat's work.** Open: the fix is with the owner (17 September).
+Until then no copy runs the demo, reset, retire-staff or pos:outlet scripts.
+
+---
+
+### 286 · MINE: removing old worktrees deleted the shared node_modules
+
+16 September, evening. I removed six old `.claude/worktrees/agent-*` copies with
+`git worktree remove`. Each held a `node_modules` JUNCTION to the main folder's.
+On Windows git followed the junction and deleted what it found — the main
+`node_modules/.bin` and the whole of `api/node_modules` — then stopped with
+"failed to delete … Invalid argument". Git had already forgotten the copies, so
+I unlinked the junctions and deleted the folders, and "checked" the main install
+by COUNTING its top-level folders: 379 before, 379 after. Both counts were taken
+after the damage. I told the owner the install was untouched. It was not.
+
+Found the next morning: neither dev server could start ("'tsx' is not
+recognized", "'vite' is not recognized"). Every service chat's copy links to the
+same folders, so every copy was broken too. **Fixed:** `npm ci` in the root and
+in `api`.
+
+**The rule: never let git, rm or Remove-Item walk into a folder that holds a
+junction — unlink every junction FIRST (`cmd /c rmdir <link>`), then remove. And
+prove "untouched" by running the thing (a dev server, a test), never by counting
+folders.**
+
+---
+
+### 285 · Equipment's EQ-4: a gate quoted from before the last edit
+
+16 September, reported by the equipment chat about itself: it quoted `api tsc`
+clean on its first commit, but had run it before its last test edit. Nothing
+broke; the number was simply older than the code it described.
+
+**The rule: run the gates on the tree you commit, after the last edit — a
+result belongs to a commit, not to a session.** (274 is the same family: read
+the exit code.)
+
+---
+
+### 284 · MINE: a migration that could not be replayed — every later deploy would have failed
+
+16 September. Every deploy replays every migration from 001. My 095 dropped and
+re-added the check on approval kinds with a fixed list; my 096 widened it and
+stored `equipment_retire` rules at every property. On a second run 095 re-added
+its SHORTER list over those rows, and the whole run rolled back. The first
+deploy would have passed; every deploy after it would have stopped at 095.
+
+**Why no gate saw it.** `db/tests/run.sh` builds from zero once. `rerun.sh` does
+replay — but on a database with no properties, so no rules existed to break the
+list; it was green. Found only because the LOCAL database, which has a property,
+refused the migration after the Equipment merge.
+
+**Fixed:** 095 and 096 change the list only when it does not already know their
+kind, and `rerun.sh` now creates a property between its passes — seen to fail
+on the old 095 before the fix, green after. The replay test is in my gate run.
+
+**The rule: a migration that rewrites a constraint must be guarded by what it
+adds, never re-run blindly. And a replay test on an empty database proves
+nothing about data — give it rows.**
+
+---
+
+### 283 · A join to `staff` silently hides rows for most roles
+
+16 September, found by the master's new test for equipment approvals. The
+approvals queue (`api/src/routes/approvals.ts`) read the requester's name with
+`join staff`. `staff` is row-secured (027): most roles read only their own row.
+So the inner join dropped every request somebody ELSE had raised — the
+Inventory Manager's queue, the one the owner had just decided they approve
+from, came back empty, and so did an administrator's. Only the GM and the owner
+saw requests. No error anywhere; the list was simply short.
+
+The Store's STO-4 is the same fault one step milder (a left join, so the rows
+stay and the name is blank). Two services, one cause.
+
+**Fixed in the queue:** `left join`, so a waiting request is never hidden and
+the name is null (a dash) where the viewer may not see it. Whether an approver
+may see who asked is a question for the owner, not a join.
+
+Found beside it: the queue offered Approve to the person who asked, and the
+server then refused — the button and the server disagreeing, which that file's
+own comment forbids. `mayDecide` now checks the requester.
+
+**The rule: never INNER JOIN a row-secured table for a label. A missing label
+is a dash; a missing row is a lie. And test a list as the role it is FOR, not
+as the GM — the GM sees everything and proves nothing.**
+
+---
+
+### 282 · MINE: I gave a migration number to a chat, then used it myself
+
+16 September. HANDOVER said **094 is assigned to admin** for ADM-1. The same
+day I built Phase 0 of the stock plan and named its migration 094, without
+reading that line. Nothing broke yet — the admin chat is waiting on the owner
+and has merged nothing — but if it had written 094 too, its branch and cp6
+would each hold a 094, and the guard refuses a duplicate.
+
+**Fixed:** the admin chat's migration takes the next free number when it
+merges; the master renumbers it. Reserving numbers ahead is the fault itself:
+the guard also refuses a gap, so a number nobody uses blocks every merge.
+
+**The rule: a migration number is taken from cp6 when the file is written, not
+promised in advance. Before naming one, list `db/migrations` AND search
+HANDOVER for the number.**
+
+---
+
+### 281 · MINE: a claim system that no other copy could see
+
+16 September. I built `.claims/<service>.md` so parallel service chats would
+not collide, and wrote into every brief that each chat must claim there first.
+Each chat works in its own git worktree. A file written inside a worktree
+exists only in that worktree's checkout. So every claim was invisible to every
+other chat — and to the master. Found when starting the local system: twelve
+worktrees were active and `.claims/` in the main folder held only the README.
+
+It had a second fault the first one hid: two chats **committed** their claim
+files, and a normal merge would have written "inventory is claimed" and "pos is
+claimed" into cp6 permanently.
+
+**Fixed the same day:** claims live in the git directory every worktree shares
+(`git rev-parse --git-common-dir`/fidato-claims), through `npm run claim`,
+`release` and `claims`. Proved from two copies: a claim made in the main folder
+is listed from `D:\fidato-stores`, and claiming the same service from there is
+refused with the holder named.
+
+**The rule: shared coordination state must live where every copy reads it, and
+must never be a tracked file. Prove it from a SECOND copy, not the one that
+wrote it.**
+
+---
+
+### 280 · Postgres `lpad` does not only pad — it cuts
+
+16 September, building migration 092. Both routes that made booking references
+padded the number with `lpad(n::text, 4, '0')`. In Postgres, a string LONGER
+than the length asked for is truncated to it: `lpad('12345', 4, '0')` is
+`1234`. Measured, not remembered.
+
+The numbers started at 5001. At about the five-thousandth booking at one hotel,
+the next number would have been cut to its first four digits — the same four
+digits every time — and `unique (hotel_id, reference)` would have refused every
+booking after that. Nothing would have looked wrong until the day it stopped.
+
+**The rule: `lpad` is a formatting call with a length limit, not a padding
+call. Pad only what is shorter — `case when length(x) < n then lpad(x, n, '0')
+else x end` — and test the value one digit past the pad.**
+
+---
+
+### 279 · Every PMS deploy silently disconnected n8n
+
+16 September. The owner believed n8n was live on `n8n.fidatohotels.com`. A
+read-only check found n8n **healthy inside its own container** — `/healthz`
+200, *"Editor is now accessible"* — and **unreachable from everywhere else**:
+the box could not reach it on 127.0.0.1:5678, and it could not reach the
+internet by name or by address.
+
+The container network rules were gone: **0 netavark rules** in nftables and in
+iptables. `deploy/launch.sh` runs `firewall-cmd --reload` on every deploy, and a
+firewalld reload discards the rules Podman made for containers already running.
+n8n started on 10 September; the PMS was deployed on 15 and 16 September.
+
+Podman ships the answer and it was switched off:
+`netavark-firewalld-reload.service`, installed, **disabled**.
+
+Separately, the domain was never set up on the server — a DNS record existed,
+but no nginx site and no certificate. Two faults, and the DNS record made it
+look like neither existed.
+
+**The rule: a service that "is connected" has been checked from outside the
+box, not inferred from a DNS record. And anything that reloads a firewall on a
+box running containers has to be followed by something that puts their rules
+back.**
+
+---
+
+### 278 · MINE: a card heading that could not hold what a screen put in it
+
+16 September. The phone card list I added to `DataTable` rendered each row's
+first column inside a `<p>`. On `/guests` the first column is an avatar beside
+a name — a `<div>`, containing another `<p>`. Both are invalid inside a `<p>`,
+and React said so on every render: "In HTML, <div> cannot be a descendant of
+<p>. This will cause a hydration error."
+
+The tests passed, the screen looked right, and the browser console had been
+saying it since the moment it shipped. I found it four hours later while
+reading the console for something else.
+
+**The rule: a shared component does not know what a screen will put in it.
+Wrap what a caller supplies in a `<div>`, never a `<p>` — and read the browser
+console on a screen you changed, not only the one you were testing.**
+
+---
+
+### 277 · MINE: I ran the API suite against the development database
+
+16 September, checking two small fixes. `npm test` in `api/` is
+`bash scripts/with-test-db.sh` — the harness that gives the tests their own
+database, written after eleven defects caused by sharing one (decision D1).
+I ran `npx vitest run` instead, which is `test:only`, and it pointed all 359
+tests at the database the dev server and my own route audit had been using.
+43 failed on data drift: a receipts total 18,544 out, constraint violations on
+menu items, whole files failing to set up. I read the failures before
+concluding anything and re-ran it properly — 359 passed, exit 0 — but the bad
+run also wrote into the development database, which is what the harness exists
+to prevent.
+
+**The rule: run a suite the way its own package.json runs it. `npx vitest run`
+is not the gate; `npm test` is.**
+
+---
+
+### 276 · MINE: a menu name too long for the sidebar
+
+Building the Coming soon section (16 September) I named one page
+"Contracts and allotments". Every gate passed; the sidebar, 248px wide,
+showed it as "Contracts and allotm…". Found by opening the screen as a GM,
+not by a test — the menu tests checked the names' case and uniqueness, never
+their length. Renamed "Contracts" (menu and heading alike — a heading that
+differs from its menu entry is its own recorded defect) before anything was
+committed, and `navigation.test.ts` now refuses a label over 21 characters,
+the longest that fits today. Proved by putting the long name back: the test
+failed on it.
+
+**The rule: a menu label is checked where it is shown. The screen, not the
+source, says whether it fits.**
+
+---
+
+### 275 · MINE: a figure quoted off the wrong line of a file I only skimmed
+
+Writing the integration plan (15 September) I grepped the CRS's
+`scripts/hotels.reference.ts` for the Akkalkot entry, printed a dozen lines
+around it, and read "commissionPercent: 10" as that hotel's figure. It was
+the previous hotel's closing line; Akkalkot's is 15, two lines below the
+window I printed — and the file's header, which I never read, says every
+commission figure in it is simulated. The draft called it a real commission
+leaked in a public repository. An audit agent read the whole file and caught
+it before the plan reached the owner.
+
+**The rule: a number quoted from a file is read with its whole record — the
+lines that bound it, and the file's header — never from a grep window. If
+the claim is "this is a real figure", find where the file says so.**
+
+---
+
+### 274 · MINE: I reported the web tests green while the run ended red
+
+From the Start here commit (657d039, 15 September) every `npx vitest run`
+exited with code 1: two of the tests I added open the housekeeping board in
+the test browser, which has no IndexedDB, and the board's read of the
+offline queue rejected with nobody catching it. Every test passed; vitest
+printed "2 unhandled errors" and failed the run. I read the pass count, and
+my move script grepped for failed tests, and neither ever looked at the exit
+code — so about fifteen reports today said green on a red run. Found by the
+test-splitting agent. Nothing reached production (no build or deploy runs
+the tests), and the board works in a real browser.
+
+Fixed where it belongs: the board now catches the failure and treats it as
+"nothing held on this device", exactly as `OfflineBar` has since it met the
+same fault; the offline bar is what tells the person. The move script
+checks the exit code.
+
+**The rule: a gate's answer is its exit code. Read it, every time — a
+summary line is not the result.**
 
 ---
 

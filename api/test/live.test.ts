@@ -174,6 +174,28 @@ describe("the live channel", () => {
     expect(frames, frames).not.toContain("event: changed");
   });
 
+  it("names the topic: a housekeeping change says housekeeping, an order says orders (HK-1)", async () => {
+    const db = await admin();
+    let hotel = "";
+    try {
+      hotel = (await db.query<{ id: string }>(
+        "select id::text from hotels where code = '5EL'")).rows[0]!.id;
+    } finally {
+      await db.end();
+    }
+    const notify = (payload: string) => async () => {
+      const d = await admin();
+      try { await d.query("select pg_notify('pos_changed', $1)", [payload]); } finally { await d.end(); }
+    };
+
+    const board = await listen("5EL", "data: housekeeping", 4_000, notify(`${hotel}:housekeeping`));
+    expect(board.frames, board.frames).toContain("data: housekeeping");
+    expect(board.frames).not.toContain("data: orders");
+
+    const till = await listen("5EL", "data: orders", 4_000, notify(hotel));
+    expect(till.frames, till.frames).toContain("data: orders");
+  });
+
   it("refuses a property that does not exist, rather than hanging open", async () => {
     const res = await app.request("/api/hotels/ZZZ/live", {
       headers: { "x-dev-staff-id": ownerId },

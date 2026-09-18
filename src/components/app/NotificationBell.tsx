@@ -57,7 +57,7 @@ export function NotificationBell() {
         >
           <Bell className="size-[18px]" />
           {unread > 0 && (
-            <span className="absolute top-1 right-1 flex items-center justify-center min-w-4 h-4 px-1 rounded-full bg-brand-orange text-white text-[9px] font-semibold tabular">
+            <span className="absolute top-1 right-1 flex items-center justify-center min-w-4 h-4 px-1 rounded-full bg-brand-orange-600 text-white text-[9px] font-semibold tabular">
               {unread > 9 ? "9+" : unread}
             </span>
           )}
@@ -120,7 +120,7 @@ export function NotificationBell() {
                     <StatusPill tone={CATEGORY_TONES[n.category] ?? "neutral"} dot={false}>
                       {n.category}
                     </StatusPill>
-                    <span className="text-2xs text-grey-400">{relative(n.at)}</span>
+                    <span className="text-2xs text-grey-500">{relative(n.at)}</span>
                   </div>
                 </>
               );

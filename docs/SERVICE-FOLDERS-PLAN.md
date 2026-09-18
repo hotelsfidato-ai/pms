@@ -1,0 +1,249 @@
+# One folder per service — the plan (15 September 2026)
+
+**Status: BUILT and verified on branch `service-folders`, 15 September (from
+tag `pre-service-folders`). Not merged into `cp6`; not deployed — both the
+owner's. The owner took all four recommendations — see the end of this file.**
+
+The owner's request, 15 September: split the code so each segment of the hotel
+system — front desk, reservations, housekeeping, inventory, CRS, reports, POS
+and the rest — lives in its own folder, so one agent can be given one segment
+and several agents can run at once. Also a folder for each service a hotel
+system offers, including the ones not built yet.
+
+The owner's page: https://claude.ai/artifact/2hxwNWXdAC9DpfitP935xR (private;
+everything on it is in this file).
+
+---
+
+## What the code is today
+
+Sorted by kind of file, not by service. Counted 15 September:
+
+```
+src/pages/                  51 screens
+src/components/flows/       24 dialogs and panels
+src/data/repositories/      22 data files, one barrel imported by 79 files
+api/src/routes/             26 server files, mounted by hand in server.ts (27 mounts)
+db/migrations/              89 files, one fixed order, replayed on every deploy
+db/tests/suite.sql          5,867 lines — every database check
+src/App.test.tsx            881 lines — most screen tests
+```
+
+---
+
+## The services
+
+Folder names are the same in the web app, the server and the database checks.
+
+| Service | Folder | Screens | Server | Leans on |
+|---|---|---|---|---|
+| Front desk | `front-desk` | Rooms, Calendar, Arrivals, In house, Due out, Walk-ins; check in/out, moves, exchanges, the stay panel | stays, stayExtras, front-desk half of operations (9 endpoints) | finance (Bill tab), housekeeping (room status) |
+| Reservations | `reservations` | New booking, All bookings, Groups | groups, booking creation | inventory, guests |
+| Housekeeping | `housekeeping` | The board, assignments, Work orders, out of service | housekeeping; room status and blocks from property | rooms list |
+| Inventory and rates | `inventory` | Room types and rooms, Rate plans, Rate calendar, Rate performance, restrictions, promotions, Cancellation terms | rates; room setup from inventorySetup | — |
+| Guests and companies | `guests` | Guests, Companies and agents, Booking sources, ID capture, Form C | bookingSources; guests/companies from directory; Form C from invoices | reservations (read) |
+| Finance | `finance` | Folios, Payments, Invoices, credit notes, Cashiering, Company accounts, tax rules | folios, invoices, payments; money half of operations (8 endpoints) | — (others post into it) |
+| Night audit | `night-audit` | Night audit | nightAudit | front desk, finance, POS — alone because it is the worst to break |
+| Restaurant (POS) | `pos` | Tables, Till, Terminal, Kitchen, Menu, Close restaurant day, Docket, the POS bill, Charges to rooms | till (3,555 lines), pos bridge (`/api/pos`) | finance (charge to room) |
+| Banquet | `banquet` | Diary, event, Halls and packages | banquet | POS menu (banquet food, 061) |
+| Store | `stores` | Store | stores | — |
+| Reports | `reports` | Dashboard, All reports, Manager report, statistics, ledgers, registers | reports, manager, statistics | everything, read only |
+| Administration | `admin` | People, Properties, Users, Roles, Settings, Integrations, Audit log, Console, module switches | admin; parts of directory, property, inventorySetup | — |
+| Shared core | stays in place | shell, menu, Find a screen, sign-in, design system, session, offline queue, live updates, approvals, notifications, attachments | server, auth, db, env, identity, realtime, storage, businessDate, hotels, live, approvals, attachments | one owner; others ask |
+
+**Not built — a folder with a one-page brief and no code, until the owner asks:**
+
+| Service | Folder | Status |
+|---|---|---|
+| CRS connection | `crs` | waiting on the CRS's API documents |
+| Channel manager | `channel-manager` | parked by the owner; its status page moves here |
+| Online payments | `payments` | parked by the owner |
+| Booking engine | `booking-engine` | not built; may belong in the CRS — ask first |
+| Guest messages | `guest-messaging` | not built |
+| Accounting export | `accounting` | not built |
+
+"Inventory" means rooms and prices. The shelves are "Store".
+
+---
+
+## One service, after the move (the restaurant)
+
+```
+src/modules/pos/            MODULE.md · index.ts (the only door in) · nav.ts · routes.tsx
+                            data.ts · pages/ · flows/ · pos.test.tsx
+api/src/modules/pos/        index.ts (mounted by the server) · till/ (in parts) · bridge.ts · test/
+db/tests/modules/pos.sql    its database checks
+db/migrations/              shared history; a new file needs a CLAIMED number
+```
+
+Why three places rather than one top-level folder: the web app and the server
+are separate installs, and the server's install is what `deploy/launch.sh`
+runs. One folder per service holding both would mean changing both installs
+and the live deploy. Why migrations stay one sequence: 001–089 run in one
+order every deploy and later ones build on earlier ones across services.
+
+---
+
+## The six mixed server files
+
+Split endpoint by endpoint; the code inside each endpoint does not change.
+
+```
+operations.ts      1,965 lines, 17 endpoints  → front desk (check-in/out, walk-ins, assign, move,
+                                                 amend, void, early arrival) · finance (charges,
+                                                 reverse, payments, cash drawer ×5)
+inventorySetup.ts  1,037 lines, 12 endpoints  → inventory (room types, rooms, imports, room setup)
+                                                 · finance (tax, menu tax kind) · admin (commissioning,
+                                                 front-desk hours)
+invoices.ts          645 lines,  7 endpoints  → finance (invoices, series) · guests (Form C)
+billing.ts           558 lines,  5 endpoints  → finance (payments, billable) · inventory (rates)
+                                                 · night audit · core (notifications)
+directory.ts         496 lines,  8 endpoints  → guests (guests, companies) · admin (audit log,
+                                                 settings, staff) · inventory (room types, rate plans)
+property.ts          442 lines,  7 endpoints  → core (hotel details) · housekeeping (room status,
+                                                 blocks) · admin (modules)
+```
+
+Found while mapping: `RoomTypesPage` and `RatePlansPage` in
+`src/pages/Directory.tsx` are routed nowhere (PENDING).
+
+---
+
+## Shared files that become lists
+
+```
+navigation.ts (615 lines)      → each service declares its entries and who sees them
+App.tsx (653 lines)            → each service lists its routes
+server.ts (27 mounts)          → mounts a list of services
+data/repositories barrel       → each service's data file; core keeps api()
+App.test.tsx, suite.sql        → tests beside their service
+CHANGELOG.md, MEMORY.md        → owner's decision (below)
+```
+
+---
+
+## Rules for parallel agents, afterwards
+
+1. **Own copy:** each agent works in its own git worktree and branch. Never two
+   agents in one folder on disk (the incident in MEMORY, "Two processes, one
+   folder").
+2. **Own database and ports:** its own local database and API/web ports.
+3. **Claimed in writing:** service, branch and date in HANDOVER's folder claims
+   before the first edit. Writes only inside that service.
+4. **Other services are asked:** a needed change elsewhere goes on that service's
+   Requests list in its MODULE.md.
+5. **Guards:** a test fails on a reach into another service's insides (only its
+   `index.ts` may be imported) and on two migrations with one number.
+6. **Merged one at a time** by the core owner, all gates after each. Deploys stay
+   the owner's.
+7. **Start with three** agents plus the core owner. The owner's answers are the
+   limit.
+
+---
+
+## The order of work (one agent, all others paused; ~2–4 working days)
+
+Every step leaves every gate green and the app working; safe to stop after any.
+
+1. Pause other agents; tag the start; write down every gate count.
+2. Guards first: door check (report-only), migration-number check, a database
+   test runner that takes several files.
+3. Shared files become lists (menu, routes, server mounts, data). No screen moves.
+   Done when adding a service needs no edit to a shared file.
+4. Move the small services: stores, banquet, reports, admin, guests, inventory,
+   housekeeping. One commit each, screens checked.
+5. Split the six mixed server files. Server tests follow their endpoints.
+6. Move the most connected last: reservations, front desk, finance, night audit,
+   POS.
+7. Split `App.test.tsx` and `suite.sql` by service.
+8. MODULE.md for every service, including the six not built; HANDOVER and
+   AGENTS.md learn the new claims.
+9. Door guard on; all gates, build, strip-check, screens as Owner, GM, Reception.
+   Done when behaviour is unchanged and every count matches step 1.
+10. Deploy on the owner's yes, on its own.
+
+---
+
+## Twelve more folders, 16 September
+
+The owner asked for "a HMS with all the requested services which are
+currently missing" and chose a folder and a Coming soon page for every one:
+leads, marketing, crm, spa, online-checkin, laundry, contracts, revenue-management, reputation, loyalty, guest-services, equipment — thirty folders in all, twelve
+working services and eighteen not built. Each not-built folder holds its
+brief, log, memory, an empty front door, one menu entry in the Coming soon
+section (owner, admin and GM only), one address (`/coming-soon/<service>`,
+the channel manager keeps `/h/:code/channels`) and a page on the shared
+`src/pages/ComingSoon.tsx`. Root `CHANGELOG.md`, 2026-09-16.
+
+## The owner's decisions, 15 September
+
+1. **Depth:** screens and server per service; the database history shared.
+2. **Folders:** all of them; the six not built get a brief and no code.
+3. **When:** now, by one agent, every other agent paused.
+4. **Notes and mistakes:** each service keeps its own CHANGELOG and MEMORY;
+   the root files keep an index and the lessons that apply everywhere.
+
+## Progress
+
+```
+1  pause, tag, baseline                 done  tag pre-service-folders
+2  guards first                         done  411fd7b
+3  shared files become lists            done  menu, screen addresses and server mounts
+                                              read from each service's nav.ts, routes.tsx
+                                              and api index.ts. Proved identical: 1,023
+                                              menu facts, 73 addresses, 214 API routes with
+                                              0 first-match differences, 10 middleware in order
+4  move the small services              done  the data and Directory.tsx split in place
+                                              first (23cd2e4, 8a1e9a4), then one commit per
+                                              service: stores, banquet, reports, admin,
+                                              guests, inventory, housekeeping, channel manager
+5  split the mixed server files          done  by three agents in parallel worktrees, merged
+                                              one at a time (ef82ee4, 7cc020e, 6afb9dc)
+6  move the most connected, last         done  reservations, night audit, finance, pos,
+                                              front desk (web); their server parts in step 5
+7  split the big test files              done  App.test.tsx by an agent (c0aebfa); API tests
+                                              into api/test/modules/<service>/ by the server
+                                              agents; suite.sql frozen, new checks per service
+8  every service's brief                 done  two agents: 13 full briefs, 5 not-built
+                                              folders, each with CHANGELOG.md and MEMORY.md
+9  door guard on, check everything       done  the guard was on from step 2 and never
+                                              needed a known-crossings list; all gates green
+                                              (CHANGELOG, 15 September, "the move")
+10 deploy — the owner's, on its own      waiting
+```
+
+## What differs from the plan, and why
+
+- **The till is not split into parts** (`api/src/modules/pos/till.ts`, 3,555
+  lines). Only worth it if two agents ever work on the restaurant at once.
+- **The front desk's hours** (`PATCH /:code/front-desk`) went to inventory, not
+  admin: the form that uses them is on inventory's Room types page, and the
+  website side already kept its data call there.
+- **`GET /:code/groups` stayed in front desk's `stays.ts`** — whole-file move;
+  whether it belongs to reservations is the owner's call (PENDING § 2a).
+- **Shared server helpers** were copied into each part of a split file (every
+  route file already carries its own hotel lookup), except `folioFor`, which
+  both check-in and postings call and which moved unchanged to a core
+  `api/src/folio.ts`. The core also gained `api/src/routes/notifications.ts`.
+- **Web tests:** three service test files (reports, front desk, pos) plus the
+  core's; most screens' tests were already in the core's cross-cutting blocks.
+
+## Two refinements made while building, for safety
+
+- **Server tests live in `api/test/modules/<service>/`,** not inside
+  `api/src/`. The test runner and the server's type check already cover
+  `api/test/**`, so nothing about the server's install or deploy changes.
+- **`db/tests/suite.sql` is frozen, not re-sorted.** Its blocks were written in
+  order and lean on each other (the test properties AGR and PUN, for one).
+  New checks go in `db/tests/modules/<service>.sql`, which `run.sh` runs after
+  the suite in the same session.
+
+## Baseline, measured on the branch before anything moved
+
+```
+web type check      clean            web tests        197
+api type check      clean            api tests        359
+database            588 assertions   server load      42 files
+API route table     224 entries, no address registered twice
+screen addresses    73               menus            every role, 4 module states
+```

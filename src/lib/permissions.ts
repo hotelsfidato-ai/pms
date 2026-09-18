@@ -26,6 +26,7 @@ export const ROLES = [
   "admin",
   "gm",
   "hotel_manager",
+  "revenue_manager",
   "front_desk",
   "housekeeping",
   "kitchen_manager",
@@ -47,6 +48,34 @@ export const ASSIGNABLE_ROLES: Role[] = ROLES.filter(
   (r) => !SYSTEM_ROLES.includes(r),
 );
 
+/**
+ * Who sees the "Coming soon" section — the pages for services the system
+ * does not have yet. The owner's decision, 16 September: the owner, admins
+ * and general managers, the people deciding what gets built. Reception's
+ * menu does not change. Asked by the menu and by each page's route guard
+ * alike, so a hidden link and a refused page cannot disagree.
+ */
+/* WHO MAY MOVE A PRICE, as opposed to read one.
+
+   This file has said it since the start without anywhere enforcing it: the
+   GM "approves overrides, rate changes and purchases", and a hotel manager
+   "may not waive a charge or move a rate". But the grant is `rate: READ` for
+   reception, hotel_manager and finance alike — and `mayReach` reads a grant,
+   not an intention, so a screen carrying `resource: "rate"` opens for all of
+   them whether it only shows prices or sets them.
+
+   The Pricing screen sets the base every other price is built from, so it is
+   the first to ask the question out loud. Its menu entry uses this. The Rate
+   calendar, which can also write a price, does NOT yet — that is a defect
+   recorded in `src/modules/inventory/DEFECTS.md`, not something to change
+   under the owner without asking. */
+/* RATE_SETTER_ROLES and setsRates are defined below the MATRIX, derived
+   from it. See the note there. */
+
+export const COMING_SOON_ROLES: readonly Role[] = ["owner", "admin", "gm"];
+
+export const seesComingSoon = (role: Role): boolean => COMING_SOON_ROLES.includes(role);
+
 /* The words an Indian hotel actually uses. "Reception" is what the desk
    is called; "Front Desk" is software language. "Accountant" is a
    person; "Finance" is a department. Somebody recognises their own job
@@ -56,12 +85,13 @@ export const ROLE_LABELS: Record<Role, string> = {
   admin: "Admin",
   gm: "General Manager",
   hotel_manager: "Hotel Manager",
+  revenue_manager: "Revenue Manager",
   front_desk: "Reception",
   housekeeping: "Housekeeping",
   kitchen_manager: "Kitchen Manager",
   chef: "Chef",
   pos: "Till Operator",
-  stores: "Store Manager",
+  stores: "Inventory Manager",
   finance: "Accountant",
   read_only: "Viewer",
   automation: "Automation",
@@ -72,12 +102,13 @@ export const ROLE_DESCRIPTIONS: Record<Role, string> = {
   admin: "Runs the platform day to day, including user accounts.",
   gm: "Sees the whole book. Approves overrides, rate changes and purchases.",
   hotel_manager: "One property, run day to day. Below the GM on approvals.",
+  revenue_manager: "Prices, restrictions and what the booking sites sell. No bills, guests or staff.",
   front_desk: "Arrivals, check-in, charges, settle, check-out. One property.",
   housekeeping: "Room status, task queue, offline sync. One property.",
   kitchen_manager: "The pass and the menu. Sees what the kitchen owes and when.",
   chef: "The pass. Moves dishes along; changes nothing about money.",
   pos: "A till, not a person. Opens orders and settles them.",
-  stores: "Stock, receiving and issues. Raises purchases; approves none.",
+  stores: "Stock and equipment. Approves equipment leaving the store; raises purchases.",
   finance: "Folios, invoices, payments, city ledger, reports.",
   read_only: "Read-only across the platform. No write access anywhere.",
   automation: "Service account for background jobs. Not a person.",
@@ -94,6 +125,9 @@ export const RESOURCES = [
   "inventory",
   "room_config",
   "rate",
+  "stock",
+  "equipment",
+  "purchasing",
   "invoice",
   "payment",
   "commission",
@@ -132,9 +166,14 @@ export const RESOURCE_LABELS: Record<Resource, string> = {
   customer: "Customers",
   company: "Companies",
   hotel: "Properties",
-  inventory: "Inventory",
+  /* Not "Inventory": since 16 September the Store holds stock, and a role
+     screen saying "Inventory" beside "Store" was two words for two things. */
+  inventory: "Room availability",
   room_config: "Room configuration",
   rate: "Rate plans",
+  stock: "Store",
+  equipment: "Equipment",
+  purchasing: "Purchasing",
   invoice: "Invoices",
   payment: "Payments",
   commission: "Commissions",
@@ -188,9 +227,21 @@ const MATRIX: Record<Role, ResourceGrants> = {
     notification: ["view", "create", "edit"],
     user: ["view", "create", "edit"],
     role: ["view"],
+    /* The channel manager's keys and its room and rate mapping (the owner's
+       D17-85, 17 September: "the owner and an administrator"). The GM sees
+       the status page only. */
+    integration: ["view", "create", "edit"],
     audit_log: READ_EXPORT,
     setting: READ,
     ai: READ,
+    /* STORE, EQUIPMENT, PURCHASING — the owner's table, 16 September
+       (docs/STOCK-AND-EQUIPMENT-PLAN.md). For stock, `create` is a new
+       movement (receive, issue, breakage, wastage, return), `edit` is the
+       adjustment a count makes, `approve` is the stock-adjustment approval
+       of 076. Nothing is `delete`: stock is a ledger. */
+    stock: ["view", "create", "edit", "approve", "export"],
+    equipment: ["view", "create", "edit", "approve", "export"],
+    purchasing: ["view", "create", "edit", "cancel", "approve", "export"],
   },
 
   gm: {
@@ -208,7 +259,10 @@ const MATRIX: Record<Role, ResourceGrants> = {
     hotel: READ_EXPORT,
     inventory: ["view", "edit"],
     room_config: READ,
-    rate: READ,
+    /* The owner, 16 September: the GM sets prices. This said READ while a
+       hand-written list beside it said the GM could set them — two answers
+       to one question, and the matrix was the one being ignored. */
+    rate: ["view", "create", "edit"],
     invoice: ["view", "create", "edit", "export"],
     payment: ["view", "create", "edit", "export"],
     commission: READ_EXPORT,
@@ -216,7 +270,14 @@ const MATRIX: Record<Role, ResourceGrants> = {
     notification: READ,
     user: READ,
     audit_log: READ,
+    /* The owner's D17-36, 17 September: the GM may open Settings. The module
+       switches on that screen stay the owner's and an administrator's
+       (src/modules/admin/moduleSwitchRoles.ts). */
+    setting: READ,
     ai: READ,
+    stock: ["view", "create", "edit", "approve", "export"],
+    equipment: ["view", "create", "edit", "approve", "export"],
+    purchasing: ["view", "create", "approve", "export"],
   },
 
   /* One property, run day to day. Everything the GM has for the floor,
@@ -236,6 +297,35 @@ const MATRIX: Record<Role, ResourceGrants> = {
     report: READ_EXPORT,
     notification: READ,
     user: READ,
+    stock: ["view", "create", "edit"],
+    equipment: ["view", "create", "edit"],
+    purchasing: ["view", "create"],
+  },
+
+  /* The person who sets prices and pushes them to the booking sites when the
+     owner, admin and GM are away. Approved by the owner, 16 September, as
+     exactly this: prices and restrictions, and enough to see what they are
+     selling — nothing about money taken, guests, staff or setup.
+
+     CAN     set prices (Pricing, Rate calendar, Rate plans); set restrictions
+             (stop sell, minimum nights, closed to arrival or departure); see
+             availability, every booking, occupancy and ADR, OTA commission.
+     CANNOT  bills, payments, invoices; guest details and identity documents;
+             staff and roles; property and room setup; check-in and check-out;
+             the POS.
+
+     Named Revenue Manager, not Channel Manager, so the person is never
+     confused with the channel manager SERVICE — the wire to SU. */
+  revenue_manager: {
+    dashboard: READ,
+    reservation: READ,
+    hotel: READ,
+    inventory: ["view", "edit"],
+    room_config: READ,
+    rate: ["view", "create", "edit"],
+    commission: READ,
+    report: READ_EXPORT,
+    notification: READ,
   },
 
   /* The pass and the menu. Reads the book because a kitchen plans
@@ -247,6 +337,9 @@ const MATRIX: Record<Role, ResourceGrants> = {
     inventory: ["view", "edit"],
     report: READ,
     notification: READ,
+    stock: ["view", "create"],
+    equipment: READ,
+    purchasing: ["view", "create"],
   },
 
   /* Narrower again. A chef moves dishes along and sees what is waiting;
@@ -255,6 +348,8 @@ const MATRIX: Record<Role, ResourceGrants> = {
     dashboard: READ,
     inventory: READ,
     notification: READ,
+    stock: READ,
+    equipment: READ,
   },
 
   front_desk: {
@@ -270,16 +365,23 @@ const MATRIX: Record<Role, ResourceGrants> = {
     payment: ["view", "create"],
     report: READ,
     notification: READ,
+    equipment: READ,
   },
 
-  /* Stock, receiving and issues. RAISES a purchase and approves none —
-     the whole point of the approval engine is that the person who asks
-     is not the person who decides. */
+  /* The INVENTORY MANAGER (the owner's name for this role, 16 September —
+     it was "Store Manager"; the key stays `stores`). Stock, and the
+     equipment register. APPROVES equipment leaving the store (S12–S13,
+     migration 095); the owner, an administrator or the GM decide instead
+     when they are away (S14). Still RAISES a purchase and approves none —
+     and never approves their own request (076, in the database). */
   stores: {
     dashboard: READ,
     inventory: ["view", "create", "edit", "export"],
     report: READ,
     notification: READ,
+    stock: ["view", "create", "edit", "export"],
+    equipment: ["view", "create", "edit", "approve"],
+    purchasing: ["view", "create"],
   },
 
   /* A till, not a person. It opens orders and settles them, and it can
@@ -296,6 +398,8 @@ const MATRIX: Record<Role, ResourceGrants> = {
     inventory: ["view", "edit"],
     report: READ,
     notification: READ,
+    stock: READ,
+    equipment: READ,
   },
 
   finance: {
@@ -309,6 +413,9 @@ const MATRIX: Record<Role, ResourceGrants> = {
     commission: READ_EXPORT,
     report: READ_EXPORT,
     notification: READ,
+    stock: READ_EXPORT,
+    equipment: READ_EXPORT,
+    purchasing: READ_EXPORT,
   },
 
   read_only: {
@@ -325,6 +432,9 @@ const MATRIX: Record<Role, ResourceGrants> = {
     commission: READ,
     report: READ,
     notification: READ,
+    stock: READ,
+    equipment: READ,
+    purchasing: READ,
   },
 
   automation: {
@@ -348,6 +458,24 @@ export function canAccess(role: Role, resource: Resource): boolean {
 export function grantsFor(role: Role, resource: Resource): readonly Action[] {
   return MATRIX[role]?.[resource] ?? [];
 }
+
+/* WHO MAY MOVE A PRICE, as opposed to read one — DERIVED, not listed.
+
+   This was a hand-written ["owner", "admin", "gm"] until 16 September, while
+   the matrix above still gave the GM `rate: READ`. Two answers to one question,
+   and the menu read one while a route check would have read the other. Now it
+   is whoever holds `edit` on `rate`, so a role is given the power in exactly
+   one place and every screen and route that asks gets the same answer.
+
+   `src/lib/permissions.test.ts` pins the result to the owner's decision —
+   owner, admin, GM, revenue manager — so widening it by accident fails a gate.
+
+   Defined here, below the MATRIX, because a `const` read before it is
+   initialised throws on import. */
+export const RATE_SETTER_ROLES: readonly Role[] =
+  ROLES.filter((role) => grantsFor(role, "rate").includes("edit"));
+
+export const setsRates = (role: Role): boolean => RATE_SETTER_ROLES.includes(role);
 
 /** Whole matrix, for the /admin/roles screen. */
 export function permissionMatrix() {

@@ -1,9 +1,10 @@
-import { defineConfig } from 'vite'
+import { defineConfig, searchForWorkspaceRoot } from 'vite'
 import react from '@vitejs/plugin-react'
 import tailwindcss from '@tailwindcss/vite'
 import { viteSingleFile } from 'vite-plugin-singlefile'
 import { VitePWA } from 'vite-plugin-pwa'
 import path from 'path'
+import fs from 'fs'
 
 /* The preview build is ONE html file: script, styles and the captured
    demo snapshot all inlined. That is what lets it be opened from any
@@ -12,6 +13,12 @@ import path from 'path'
 
    Only in demo mode. The real build keeps hashed, cacheable assets,
    which is what nginx is configured for in deploy/nginx.conf. */
+/** Where node_modules really is — through a junction, in a chat's copy. */
+function realNodeModules(): string {
+  const here = path.resolve(process.cwd(), 'node_modules')
+  try { return fs.realpathSync(here) } catch { return here }
+}
+
 // https://vite.dev/config/
 export default defineConfig(({ mode }) => {
   // The MODE, not process.env: Vite does not put .env files on
@@ -55,6 +62,16 @@ export default defineConfig(({ mode }) => {
   server: {
     port: Number(process.env.PORT) || 5173,
     strictPort: Boolean(process.env.PORT),
+    /* ⚠ A SERVICE CHAT'S COPY SHARES THE MAIN node_modules THROUGH A
+       JUNCTION (docs/briefs/README.md). Vite follows it to the real folder,
+       which is outside the copy, and refused to serve the Inter font from
+       there — two 403s on every page load in every copy, and the page in a
+       fallback font (reported by the store and equipment chats, 16
+       September). Allowing the junction's real target fixes it; in the main
+       folder it is the same folder and changes nothing. */
+    fs: {
+      allow: [searchForWorkspaceRoot(process.cwd()), realNodeModules()],
+    },
   },
   plugins: [
     react(),

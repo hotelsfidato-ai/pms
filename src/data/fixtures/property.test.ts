@@ -22,7 +22,7 @@ const ptdDates = Object.keys(dailyAvailableRooms).filter((d) => d <= PTD_END);
 const sum = (o: Record<string, number>, keys: string[]) =>
   keys.reduce((t, k) => t + (o[k] ?? 0), 0);
 
-describe("property fixture — inventory", () => {
+describe("property fixture - inventory", () => {
   it("sells 17 rooms on an ordinary day, from one source", () => {
     /* The Manager Report's "Total Room 17" was taken on 25 August, when
        308 was out of service. 18 rooms exist physically. */
@@ -56,7 +56,7 @@ describe("property fixture — inventory", () => {
   });
 });
 
-describe("property fixture — calibration against the Manager Report", () => {
+describe("property fixture - calibration against the Manager Report", () => {
   /* Source: Manager Report, "As on Date 25/08/2026  PTD 01/08/2026".
      PTD covers 1–25 August — 25 days, not the full month. */
 
@@ -81,7 +81,7 @@ describe("property fixture — calibration against the Manager Report", () => {
   });
 });
 
-describe("property fixture — occupancy shape", () => {
+describe("property fixture - occupancy shape", () => {
   it("never sells more rooms than exist on any day", () => {
     for (const [date, sold] of Object.entries(nightsSoldPerDay)) {
       expect(sold).toBeLessThanOrEqual(dailyAvailableRooms[date] ?? 0);
@@ -111,7 +111,7 @@ describe("property fixture — occupancy shape", () => {
   });
 });
 
-describe("property fixture — demo identifiers are obviously fake", () => {
+describe("property fixture - demo identifiers are obviously fake", () => {
   it("does not carry a plausible real GSTIN", () => {
     /* A GSTIN prints on tax invoices. An invented-but-plausible one on a
        document that looks real is a hazard, not a placeholder. */

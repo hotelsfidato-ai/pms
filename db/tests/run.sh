@@ -46,7 +46,25 @@ APPPASS="${APPPASS:-CHANGE_ME_app}"
 DB="fidato_gate_$$"
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
 
-PSQL="$PGBIN/psql.exe"
+# WHICH psql. This said `$PGBIN/psql.exe` and nothing else, so this suite ran
+# on one Windows machine and nowhere else - not on the server, and not on a
+# Linux runner, which is exactly where a gate belongs. The same ladder as
+# db/migrate.sh and api/scripts/with-test-db.sh, which both learned it the
+# hard way (defect 188). A fourth spelling of "find psql" is how they drift,
+# so this is the third and last copy.
+if [ -n "${PSQL:-}" ]; then
+  :                                       # told explicitly; use it
+elif [ -x "$PGBIN/psql.exe" ]; then
+  PSQL="$PGBIN/psql.exe"
+elif [ -x "$PGBIN/psql" ]; then
+  PSQL="$PGBIN/psql"
+elif command -v psql >/dev/null 2>&1; then
+  PSQL="$(command -v psql)"
+else
+  printf "[31m  x no psql found. Set PGBIN to the directory holding it, or PSQL to the binary.[0m
+"
+  exit 1
+fi
 S="-h $PGHOST -p $PGPORT -U $SUPER"
 
 red()   { printf "\033[31m%s\033[0m\n" "$1"; }
@@ -147,7 +165,17 @@ echo "── harness + suite ─────────────────
 #     passed" -- SEVEN FEWER than the run before it, reported as success.
 #     A count that can only fall in silence is not a gate.
 #
-SUITE_OUT=$(PGPASSWORD=$SUPERPASS "$PSQL" $S -d "$DB" -v ON_ERROR_STOP=1 -q   -f "$ROOT/db/tests/harness.sql" -f "$ROOT/db/tests/suite.sql" 2>&1)
+# ONE FILE PER SERVICE, AFTER THE SUITE (docs/SERVICE-FOLDERS-PLAN.md).
+# suite.sql is the history up to 089 and is no longer appended to: its blocks
+# lean on each other in the order they were written, so it is not re-sorted.
+# New checks go in db/tests/modules/<service>.sql — one file per service, so
+# two agents never write at the end of the same file. Run in name order, in
+# the same session, after the suite.
+MODULE_TESTS=()
+for f in "$ROOT"/db/tests/modules/*.sql; do
+  [ -f "$f" ] && MODULE_TESTS+=(-f "$f")
+done
+SUITE_OUT=$(PGPASSWORD=$SUPERPASS "$PSQL" $S -d "$DB" -v ON_ERROR_STOP=1 -q   -f "$ROOT/db/tests/harness.sql" -f "$ROOT/db/tests/suite.sql" "${MODULE_TESTS[@]}" 2>&1)
 SUITE_RC=$?
 
 if [ $SUITE_RC -ne 0 ]; then

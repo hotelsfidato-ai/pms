@@ -1,17 +1,15 @@
 import { describe, it, expect } from "vitest";
-import { readFileSync, readdirSync, statSync } from "node:fs";
+import { existsSync, readFileSync, readdirSync, statSync } from "node:fs";
 import { join } from "node:path";
-import {
-  getProperty, listRooms, listAllRooms, defaultPropertyId,
-  listStays, getStay, listArrivals, listInHouse, listDepartures,
-  getFolio, listOpenFolios, listGroups, listGroupMembers,
-  listDailyStatistics, getPeriodStatistics, getTodaySnapshot,
-  queryKeys, BUSINESS_DATE,
-} from "./index";
+import { getProperty, listRooms, listAllRooms, defaultPropertyId, queryKeys, BUSINESS_DATE } from "./index";
+import { listStays, getStay, listArrivals, listInHouse, listDepartures } from "@/modules/front-desk";
+import { getFolio, listOpenFolios } from "@/modules/finance";
+import { listGroups, listGroupMembers } from "@/modules/reservations";
+import { listDailyStatistics, getPeriodStatistics, getTodaySnapshot } from "@/modules/reports";
 
 const OTHER_HOTEL = "some-other-property";
 
-describe("the seam — scoping", () => {
+describe("the seam - scoping", () => {
   it("returns nothing for a hotel the user has no data for", async () => {
     expect(await getProperty(OTHER_HOTEL)).toBeNull();
     expect(await listRooms(OTHER_HOTEL)).toEqual([]);
@@ -44,7 +42,7 @@ describe("the seam — scoping", () => {
   });
 });
 
-describe("the seam — the front desk's lists", () => {
+describe("the seam - the front desk's lists", () => {
   it("pins the demo to the Night Audit's business date", () => {
     expect(BUSINESS_DATE).toBe("2026-08-25");
   });
@@ -63,10 +61,20 @@ describe("the seam — the front desk's lists", () => {
     expect(ids).toContain("stay-turn-in");
   });
 
-  it("excludes day-use stays from in-house", async () => {
+  /* In house is who has checked in (the owner's D17-10). A checked-in
+     day-use guest is in the room, so they count; a guest still to arrive
+     does not, whatever the dates say. */
+  it("counts a checked-in day-use guest in house", async () => {
     const id = await defaultPropertyId();
     const ids = (await listInHouse(id)).map((s) => s.id);
-    expect(ids).not.toContain("stay-dayuse");
+    expect(ids).toContain("stay-dayuse");
+  });
+
+  it("never counts a guest who has not checked in", async () => {
+    const id = await defaultPropertyId();
+    const stays = await listInHouse(id);
+    expect(stays.every((s) => s.status === "in-house" || s.status === "due-out")).toBe(true);
+    expect(stays.map((s) => s.id)).not.toContain("stay-turn-in");
   });
 
   it("keeps the complimentary guest in house", async () => {
@@ -83,7 +91,7 @@ describe("the seam — the front desk's lists", () => {
   });
 });
 
-describe("the seam — statistics reconcile to the Manager Report", () => {
+describe("the seam - statistics reconcile to the Manager Report", () => {
   it("reports 431 available, 132 sold, 30.63% for the PTD window", async () => {
     const id = await defaultPropertyId();
     const s = (await getPeriodStatistics(id))!;
@@ -100,7 +108,7 @@ describe("the seam — statistics reconcile to the Manager Report", () => {
   });
 });
 
-describe("the seam — group bookings", () => {
+describe("the seam - group bookings", () => {
   it("returns three rooms on one reference", async () => {
     const id = await defaultPropertyId();
     /* "all", not the default. `listGroups` now answers "here and
@@ -117,7 +125,7 @@ describe("the seam — group bookings", () => {
   });
 });
 
-describe("Rule 5 — hotelId in every query key", () => {
+describe("Rule 5 - hotelId in every query key", () => {
   it("carries the hotel id in every key that is hotel-scoped", () => {
     const hotelId = "hotel-under-test";
     const built: unknown[][] = [
@@ -146,7 +154,7 @@ describe("Rule 5 — hotelId in every query key", () => {
   });
 });
 
-describe("Rule 2 — nothing outside the seam reaches for a fixture", () => {
+describe("Rule 2 - nothing outside the seam reaches for a fixture", () => {
   /* This is the rule that makes the backend swappable. It is worth a
      test rather than a comment, because it fails silently otherwise. */
   const SRC = join(process.cwd(), "src");
@@ -175,7 +183,7 @@ describe("Rule 2 — nothing outside the seam reaches for a fixture", () => {
   });
 });
 
-describe("Rule 2b — a function nobody calls is a capability nobody can reach", () => {
+describe("Rule 2b - a function nobody calls is a capability nobody can reach", () => {
   /* ══════════════════════════════════════════════════════════════════
      THE GATE THIS PROJECT NEEDED SIX TIMES BEFORE IT EXISTED
 
@@ -206,7 +214,23 @@ describe("Rule 2b — a function nobody calls is a capability nobody can reach",
      the second test below fails if an entry gains a caller and stays.
      ══════════════════════════════════════════════════════════════════ */
   const SRC = join(process.cwd(), "src");
-  const SEAM = join("src", "data", "repositories");
+
+  /* ⚠ THE SEAM IS EVERY DATA FOLDER SINCE THE SERVICE-FOLDER MOVE (15 Sep).
+     This read only src/data/repositories and counted only imports whose
+     path said "data/repositories" — so when the services' data files moved
+     to src/modules/<service>/data and the screens began importing them
+     through each service's front door, the gate kept passing while checking
+     almost nothing (MEMORY 272). The seam is the core's data folder plus
+     every service's `data/`; a caller's import counts whether it names the
+     index, a service's door or a service's data file. */
+  const SEAM_DIRS = [
+    join(SRC, "data", "repositories"),
+    ...readdirSync(join(SRC, "modules"))
+      .map((service) => join(SRC, "modules", service, "data"))
+      .filter((dir) => existsSync(dir)),
+  ];
+  const inSeam = (file: string) => SEAM_DIRS.some((dir) => file.startsWith(dir));
+  const seamFiles = () => SEAM_DIRS.flatMap((dir) => walk(dir));
 
   function walk(dir: string, out: string[] = []): string[] {
     for (const entry of readdirSync(dir)) {
@@ -241,7 +265,7 @@ describe("Rule 2b — a function nobody calls is a capability nobody can reach",
 
   const exported = () => {
     const names = new Set<string>();
-    for (const file of walk(join(SRC, "data", "repositories"))) {
+    for (const file of seamFiles()) {
       if (/\.test\.tsx?$/.test(file)) continue;
       for (const m of readFileSync(file, "utf8")
         .matchAll(/^export (?:async )?function ([A-Za-z0-9_]+)/gm)) {
@@ -267,7 +291,7 @@ describe("Rule 2b — a function nobody calls is a capability nobody can reach",
      worse, not better — `queryFn: listArrivals` passes a live function
      by reference and never writes a bracket after it. */
   const IMPORT_FROM_SEAM = String.raw`import\s*(?:type\s*)?\{([^}]*)\}` +
-    String.raw`\s*from\s*["'][^"']*(?:data/repositories|\.\/|\.\.\/)`;
+    String.raw`\s*from\s*["'][^"']*(?:data/repositories|modules/|\.\/|\.\.\/)`;
 
   const namesIn = (text: string, tail: string) => {
     const out: string[] = [];
@@ -294,17 +318,16 @@ describe("Rule 2b — a function nobody calls is a capability nobody can reach",
      needs a call graph; say so rather than imply the gate is tighter
      than it is. */
   const reachableNames = () => {
-    const seamFiles = walk(join(SRC, "data", "repositories"))
-      .filter((f) => !/\.test\.tsx?$/.test(f));
+    const within_ = seamFiles().filter((f) => !/\.test\.tsx?$/.test(f));
 
     const reachable = new Set<string>();
-    for (const file of walk(SRC).filter((f) => !f.includes(SEAM))) {
+    for (const file of walk(SRC).filter((f) => !inSeam(f))) {
       for (const n of namesIn(readFileSync(file, "utf8"), String.raw`[^"']*["']`)) {
         reachable.add(n);
       }
     }
 
-    const within = seamFiles.map((file) => {
+    const within = within_.map((file) => {
       const text = readFileSync(file, "utf8");
       return {
         exports: [...text.matchAll(/^export (?:async )?function ([A-Za-z0-9_]+)/gm)]
@@ -335,7 +358,7 @@ describe("Rule 2b — a function nobody calls is a capability nobody can reach",
 
     expect(
       unreachable,
-      "these exist and nothing can reach them — build the path, or delete "
+      "these exist and nothing can reach them - build the path, or delete "
       + `them: ${unreachable.join(", ")}`,
     ).toEqual([]);
   });
@@ -348,7 +371,7 @@ describe("Rule 2b — a function nobody calls is a capability nobody can reach",
 
     expect(
       nowReachable,
-      "these are reachable now — take them off KNOWN_UNREACHABLE: "
+      "these are reachable now - take them off KNOWN_UNREACHABLE: "
       + nowReachable.join(", "),
     ).toEqual([]);
   });

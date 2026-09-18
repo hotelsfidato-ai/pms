@@ -7,6 +7,19 @@ import { SkeletonTable, NoResultsState, ErrorState, EmptyState } from "./States"
    DATA TABLE
    Dense, quiet, zebra-free. Numeric columns get tabular figures and
    right alignment so the eye can scan a column of money.
+
+   ⚠ ON A PHONE IT IS NOT A TABLE. Measured at 375px on 16 September:
+   six screens a receptionist lives in — Arrivals, In house, Walk-ins,
+   All bookings, Guests, Folios — put a table wider than the screen
+   inside a sideways scroller, so reading one guest's row meant swiping
+   right and losing the name off the left edge. Below `sm` each row is
+   a CARD instead: the first column is its heading and every other
+   column is a labelled line under it.
+
+   NOTHING IS DROPPED. `hideBelow` exists because a narrow screen has
+   no room for a tenth column — a card has room, so a column hidden on
+   a small screen is still shown in the card, with its header as the
+   label. `DataTable.test.tsx` fails if a column goes missing.
    ══════════════════════════════════════════════════════════════════ */
 
 export interface Column<T> {
@@ -85,6 +98,8 @@ export function DataTable<T>({
     );
   }
 
+  const sortable = columns.filter((c) => c.sortable);
+
   return (
     <div
       className={cn(
@@ -92,7 +107,117 @@ export function DataTable<T>({
         className,
       )}
     >
-      <div className="overflow-x-auto scrollbar-quiet">
+      {/* ── a phone: one card per row ───────────────────────────────
+          The header row goes with the table, so sorting needs its own
+          control here or it would be lost on the screens that have it. */}
+      <div className="sm:hidden">
+        {sortable.length > 0 && onSort && (
+          <div className="flex items-center gap-2 px-3 py-2 border-b border-grey-100 bg-grey-50">
+            <label className="text-2xs uppercase tracking-wide text-grey-500" htmlFor="dt-sort">
+              Sort by
+            </label>
+            <select
+              id="dt-sort"
+              value={sortBy ?? ""}
+              onChange={(e) => onSort(e.target.value)}
+              className={cn(
+                "min-h-11 flex-1 rounded-md border border-grey-200 bg-white px-2",
+                "text-base text-ink-900 cursor-pointer",
+                "focus:outline-none focus:ring-2 focus:ring-brand-orange",
+              )}
+            >
+              {sortable.map((col) => (
+                <option key={col.key} value={col.key}>
+                  {typeof col.header === "string" ? col.header : col.key}
+                </option>
+              ))}
+            </select>
+            {sortBy && (
+              <button
+                type="button"
+                onClick={() => onSort(sortBy)}
+                aria-label={sortDir === "asc" ? "Sort highest first" : "Sort lowest first"}
+                className={cn(
+                  "flex items-center justify-center size-11 rounded-md",
+                  "border border-grey-200 bg-white text-grey-600",
+                )}
+              >
+                {sortDir === "asc" ? <ChevronUp className="size-4" /> : <ChevronDown className="size-4" />}
+              </button>
+            )}
+          </div>
+        )}
+
+        <ul>
+          {rows.map((row, index) => {
+            const [first, ...rest] = columns;
+            const body = (
+              <>
+                {first && (
+                  /* A DIV, not a <p>. A first column is whatever the screen
+                     put there — Guests renders an avatar beside the name, in
+                     its own <div>, and a <div> inside a <p> is invalid HTML
+                     that React reports as a nesting error at runtime. Found
+                     in the browser console on /guests the same day. */
+                  <div data-card-heading className="text-base font-medium text-ink-900">
+                    {first.cell(row, index)}
+                  </div>
+                )}
+                <dl className="mt-1.5 grid grid-cols-[minmax(6.5rem,auto)_1fr] gap-x-3 gap-y-1">
+                  {rest.map((col) => (
+                    <div key={col.key} className="contents">
+                      <dt className="text-2xs uppercase tracking-wide text-grey-500 pt-0.5">
+                        {col.header}
+                      </dt>
+                      <dd
+                        data-numeric={col.numeric || undefined}
+                        /* min-w-0 AND overflow-hidden: a cell whose own
+                           renderer wraps the text in a flex row (the guest
+                           list's "Agoda, Booking.com, …") otherwise pushes
+                           past the card's edge, truncate or not. */
+                        className={cn(
+                          "text-base text-ink-900 min-w-0 overflow-hidden",
+                          /* A cell written for a table truncates on one line.
+                             A card has vertical room, so let it wrap instead:
+                             a guest's source list read "Agoda, Booking.c…"
+                             clipped at the card's edge, without even an
+                             ellipsis — truncate does not clip an inline box. */
+                          "[&_.truncate]:whitespace-normal [&_.truncate]:overflow-visible",
+                          col.numeric && "tabular",
+                        )}
+                      >
+                        {col.cell(row, index)}
+                      </dd>
+                    </div>
+                  ))}
+                </dl>
+              </>
+            );
+            return (
+              <li key={rowKey(row)} className="border-b border-grey-100 last:border-b-0">
+                {onRowClick ? (
+                  <button
+                    type="button"
+                    onClick={() => onRowClick(row)}
+                    className={cn(
+                      "w-full text-left px-4 py-3 min-h-11",
+                      "hover:bg-grey-50 focus:bg-grey-50 outline-none",
+                      "focus-visible:ring-2 focus-visible:ring-brand-orange rounded-sm",
+                    )}
+                  >
+                    {body}
+                  </button>
+                ) : (
+                  <div className="px-4 py-3">{body}</div>
+                )}
+              </li>
+            );
+          })}
+        </ul>
+      </div>
+
+      {/* ── a desk: the table, as it was ─────────────────────────── */}
+      <div className="hidden sm:block overflow-x-auto scrollbar-quiet">
         <table className="w-full border-collapse text-base">
           <thead
             className={cn(
@@ -233,7 +358,7 @@ export function Pagination({
 
         {window.map((entry, i) =>
           entry === "gap" ? (
-            <span key={`gap-${i}`} className="px-1.5 text-grey-400 text-sm">
+            <span key={`gap-${i}`} className="px-1.5 text-grey-500 text-sm">
               …
             </span>
           ) : (

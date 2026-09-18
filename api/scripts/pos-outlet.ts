@@ -1,5 +1,6 @@
 import { closePool } from "../src/db.ts";
-import { hashKey, issueKey } from "../src/routes/pos.ts";
+import { hashKey, issueKey } from "../src/modules/pos/index.ts";
+import { databaseForScript } from "./scriptDatabase.ts";
 
 /* ══════════════════════════════════════════════════════════════════
    POS OUTLET PROVISIONING
@@ -52,9 +53,7 @@ async function main(): Promise<void> {
   }
 
   const admin = new (await import("pg")).default.Pool({
-    connectionString:
-      process.env["SUPER_DATABASE_URL"] ??
-      "postgres://postgres:pw@127.0.0.1:55432/fidato",
+    connectionString: databaseForScript("pos:outlet"),
   });
 
   try {
@@ -161,9 +160,7 @@ function printKey(hotel: string, code: string, key: string, note: string): void 
 
 async function list(): Promise<void> {
   const admin = new (await import("pg")).default.Pool({
-    connectionString:
-      process.env["SUPER_DATABASE_URL"] ??
-      "postgres://postgres:pw@127.0.0.1:55432/fidato",
+    connectionString: databaseForScript("pos:outlet"),
   });
   try {
     const { rows } = await admin.query<{

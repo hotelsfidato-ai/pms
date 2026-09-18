@@ -152,7 +152,7 @@ begin
 
   if v_rate is null then
     raise exception 'No GST rule for % at this property.', p_kind
-      using hint = 'Settings → Tax. A missing rate is not zero — nothing '
+      using hint = 'Settings → Tax. A missing rate is not zero - nothing '
                    'can be billed under this heading until it is set.',
             errcode = 'check_violation';
   end if;

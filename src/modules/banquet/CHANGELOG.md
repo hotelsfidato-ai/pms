@@ -1,0 +1,181 @@
+# Changelog — banquet
+
+**This service's own log. One entry per working session on this service,
+newest first.** Use the entry shape in the root `CHANGELOG.md` ("How to write
+an entry"): Asked for · Shipped · Found · Proved · Left open · Commits — and
+its three rules: numbers you ran, not numbers you remember; a guard is not
+proved until it has refused something; "Left open" is the handover.
+
+Work that touches the core or several services still goes in the root
+`CHANGELOG.md`.
+
+---
+
+## 2026-09-17 · The Diary's heading, restaurant food on a function's bill, and four more
+
+**Asked for:** the owner's answers of 17 September
+(`docs/briefs/decisions-2026-09-17.md`). D17-22: the Diary is headed "Diary"
+(BQ-2). D17-21, banquet's half of BQ-1: a function's bill shows the restaurant
+orders attached to it, and the front door exports the functions an order may
+be attached to — the POS chat builds the till side after. And the three
+questions from the brief read (BQ-3 to BQ-5), put to the owner with
+recommendations. Branch `banquet/diary-heading`, copy `D:\fidato-banquet`,
+database `fidato_banquet` (a copy of the development database).
+
+**Decided by the owner, 17 September** (asked in this session, each with a
+recommendation; every recommendation taken)
+- Which functions the till may offer: **confirmed, bill open, running on the
+  business date** (from its first day to its last).
+- BQ-3: a failed read says so **the restaurant's way** (POS-4).
+- BQ-4: the function's account is a **bill**.
+- BQ-5: dates and times in **the shared formats**, 12-hour times included.
+- BQ-7 (found today): **fix it now and keep the names**.
+- BQ-6 (found today): **record it, fix later**.
+
+**Shipped**
+- BQ-2 — `pages/Banquet.tsx`: headed "Diary" in all three states (sets the tab).
+- BQ-1, banquet's half:
+  - `api/src/modules/banquet/attach.ts` — the one rule, in the property's time
+    zone (a function ending at midnight has ended): `attachableFunctions` and
+    `whyNotAttachable`, which says which part of the rule failed.
+  - `GET /:code/banquet/attachable` — answers `{ enabled: false }` rather than
+    refusing where banquet is off, because the till asks at every property.
+  - The function route returns `restaurantOrders` (open and settled, not
+    abandoned); `pages/BanquetEvent.tsx` lists them with outlet, table, time,
+    status and amount, says an open one is not in the total until settled,
+    and says plainly when there are none. The money line "From the till" is
+    now "Restaurant orders", the list's own words.
+  - Front doors: `getAttachableFunctions` and its types (website);
+    `attachableFunctions` and `whyNotAttachable` (server).
+- BQ-3 — the three reads throw; every screen tells refused (the server's
+  sentence), unreachable (including a read React Query paused offline) and
+  failed apart with Try again, and keeps what it had under "Not up to date"
+  when a refresh fails. `components/ReadProblem.tsx`, a named copy of POS's.
+- BQ-4 — "A bill is open for this function."
+- BQ-5 — `format.ts` everywhere on the three screens; the API sends
+  "Registered at" as a timestamp instead of a sentence.
+- BQ-7 — no join to `staff`: names come from `app.colleague_name` (096) on the
+  function, its courses and the diary.
+- `MODULE.md` rewritten for all of the above; `DEFECTS.md` — BQ-2, 3, 4, 5, 7
+  fixed, BQ-1 half done, BQ-6 open.
+
+**Found**
+- **BQ-3, BQ-4, BQ-5** — by reading on 16 September; described in `DEFECTS.md`.
+- **BQ-7** — a function the owner registered opened as "No such function" for
+  the GM; for a clerk, every function somebody else registered did. Measured:
+  as the GM the readable `staff` rows were agra, desk and gm; as a clerk, their
+  own. Root `MEMORY.md` 283's fault. Fixed.
+- **BQ-6** — the reference maker has no lock and `lpad` cuts (`lpad('10000',
+  4, '0')` is `1000`, measured). Root 280's fault. Open, by the owner's choice.
+- **`db/migrate.sh --with-dev-identities` reports ✓ after an ERROR.** On a
+  fresh database it printed `ERROR: dev-identities: expected 3 staff with dev
+  uids, found 0` and then `✓ local sign-in accounts linked`, exit 0. And
+  `api/scripts/load-demo.ts` fails on a fresh database (`Cannot read properties
+  of undefined (reading 'id')` — it looks for `owner@fidato.in`, which 008 no
+  longer seeds). Both are shared files: for the master, not fixed here. This
+  copy's database was made from a dump of `fidato` instead.
+
+**Proved** — run in `D:\fidato-banquet` on 17 September, on the tree committed
+below
+- `npx tsc -b --force`: exit 0. `cd api && npx tsc --noEmit`: exit 0.
+  `npm run strip-check`: 76 files, exit 0.
+- `cd api && npm test`: **764 passed, 41 files, exit 0.**
+- `bash db/tests/run.sh`: **736 assertions, exit 0** — run before the BQ-7
+  change, which touched no file under `db/`.
+- `npx vitest run`: **278 passed, 2 failed, exit 1** —
+  - `repositories.test.ts` Rule 2b, naming only `getAttachableFunctions`.
+    Correct: nothing reaches it until the till imports it. Not worked around;
+    the master's decision (`MODULE.md`, Requests).
+  - `nightAudit.test.tsx` "sends the day it shows" — the master recorded it
+    (HANDOVER, 17 September) as failing under load and passing alone. Here
+    the full run was heavily loaded (collect 2,074 s); run alone straight
+    after: 1 passed, exit 0. Not banquet's.
+- `npm run build`: exit 0, "no test sign-in in dist (6 files checked)".
+- Each new guard was seen to refuse:
+  - `attach.test.ts` — the status filter removed (a cancelled function
+    offered), the midnight rule removed (a function that ended at midnight
+    offered the next day), abandoned orders let through: 3 failed, each with
+    its own message. Restored and compared byte for byte.
+  - `names.test.ts` — on the old route the GM and the clerk got 404 and the
+    diary no name: 3 failed.
+  - `banquet.test.tsx` — all 11 failed on the old pages, data and door, each
+    on its own assertion; the heading test failed again with only the old
+    heading put back.
+- `npm run lane -- banquet`: all inside the lane, exit 0.
+- **Not yet opened on screen.** The Browser pane starts servers only from the
+  main folder's `.claude/launch.json`, which is the master's, and this copy's
+  API has to run on its own port (8799) against `fidato_banquet`. The session
+  moves into this copy for that check — the next step, before anybody relies
+  on the screens.
+
+**Left open**
+- **The till's half of BQ-1** — the POS chat. Its claim says it is waiting on
+  this front door.
+- **Rule 2b** fails until then — the master decides how to carry it.
+- **Request to the master:** one `ReadProblem` in the shared kit.
+- **BQ-6**, by the owner's choice. Server-written sentences still print their
+  own times (BQ-5, "Not covered").
+- `db/tests/modules/banquet.sql` still does not exist: nothing here changed
+  the database.
+
+**Commits:** the commit that adds this entry, on `banquet/diary-heading`.
+
+---
+
+## 2026-09-15 · moved into its own folder
+
+**Asked for:** the owner's request of 15 September — the code split into one
+folder per hotel service, so one agent can be given one service and several
+can work at once (`docs/SERVICE-FOLDERS-PLAN.md`). For this folder: its brief.
+
+**Shipped**
+- Step 3 (`e9dd6b1`): `nav.ts` — Diary and Halls and packages; `routes.tsx` —
+  three screen addresses; `index.ts`; a first `MODULE.md`; and
+  `api/src/modules/banquet/index.ts`, which mounts `banquet.ts`.
+- Step 4 (`264e51b`): moved in — `data/banquet.ts` (from
+  `src/data/repositories/`) and pages Banquet, BanquetEvent, BanquetSetup
+  (from `src/pages/`). The shared data index stopped re-exporting them.
+- This brief: `MODULE.md` rewritten from the code — three screens, 12
+  endpoints, four tables, the owner's rules; this file; `DEFECTS.md` with two
+  new entries and four root entries indexed.
+
+**Found** (while writing the brief, by reading the code)
+- BQ-1 · the till cannot charge a function: nothing sets `pos_orders.event_id`.
+- BQ-2 · the Diary is headed "Banquet".
+
+**Proved** — run in this worktree on 15 September, on the commit that adds
+this file
+- `npx tsc -b`: clean.
+- `npx vitest run src/test/boundaries.test.ts`: 4 passed. With
+  `src/modules/crs/MODULE.md` taken away it failed naming that file; put back,
+  it passed.
+- `npx vitest run`: 204 passed in 15 files, with placeholder
+  `VITE_FIREBASE_*` values supplied. Without them 31 tests in
+  `src/App.test.tsx` fail here — this worktree has no `.env` (gitignored) —
+  and the same 31 failed with the brief-only folders taken out. Every run also
+  reports 2 unhandled rejections from `src/lib/outbox.ts` under jsdom.
+- Every line under "Before the move" below, and in `DEFECTS.md`, was matched
+  against the root files' headings by a script: all exact.
+- Not run for this entry: the server's gates and `db/tests/run.sh` — nothing
+  here touches the server or the database.
+
+**Left open**
+- BQ-1 and BQ-2 — the owner's calls (whether the till should charge a
+  function; which word the Diary keeps).
+- The server code is still in `api/src/routes/banquet.ts`; moving it into
+  `api/src/modules/banquet/` is step 5, in progress elsewhere.
+- `api/test/banquet.test.ts` has not moved (step 7);
+  `db/tests/modules/banquet.sql` does not exist yet.
+
+**Commits:** `e9dd6b1` · `264e51b`, and the commit that added this file.
+
+---
+
+## Before the move — entries in the root CHANGELOG.md
+
+- 2026-09-15 (step 2) · One main action per screen
+- 2026-09-14 · The walk-in bug, n8n webhooks, the stay panel, test sign-ins, and staff-first phase 1
+- 2026-09-08 (phase 1) · Three gates aimed at an act, applied to a screen
+
+Before 8 September the root file has no entries: `git log` and
+`PROGRESS.md` (stage 14, "Modules + banquet") are the record.

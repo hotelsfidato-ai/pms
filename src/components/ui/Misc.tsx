@@ -1,4 +1,4 @@
-import { forwardRef, type ReactNode, type InputHTMLAttributes } from "react";
+import { forwardRef, useId, type ReactNode, type InputHTMLAttributes } from "react";
 import * as CheckboxPrimitive from "@radix-ui/react-checkbox";
 import * as SwitchPrimitive from "@radix-ui/react-switch";
 import { Check, Minus, Star } from "lucide-react";
@@ -37,10 +37,16 @@ export function Avatar({
   );
 }
 
-/* ── Checkbox ──────────────────────────────────────────────────── */
+/* ── Checkbox ──────────────────────────────────────────────────────
+   A box must say what it ticks to a screen reader, not only to the eye.
+   With `label`, the text is tied to the box. Without one, the screen names
+   it: an `id` for its own <label htmlFor>, or `aria-label`, or
+   `aria-labelledby`. The Channel manager chat found boxes read out as
+   "checkbox, not checked" and nothing else (17 September). */
 
 export function Checkbox({
   checked, onCheckedChange, label, disabled, indeterminate, className,
+  id, "aria-label": ariaLabel, "aria-labelledby": ariaLabelledBy,
 }: {
   checked?: boolean;
   onCheckedChange?: (checked: boolean) => void;
@@ -48,9 +54,16 @@ export function Checkbox({
   disabled?: boolean;
   indeterminate?: boolean;
   className?: string;
+  id?: string;
+  "aria-label"?: string;
+  "aria-labelledby"?: string;
 }) {
+  const labelId = useId();
   const control = (
     <CheckboxPrimitive.Root
+      id={id}
+      aria-label={ariaLabel}
+      aria-labelledby={label ? labelId : ariaLabelledBy}
       checked={indeterminate ? "indeterminate" : checked}
       onCheckedChange={(value) => onCheckedChange?.(value === true)}
       disabled={disabled}
@@ -75,7 +88,7 @@ export function Checkbox({
   return (
     <label className={cn("flex items-center gap-2.5 cursor-pointer select-none", disabled && "cursor-not-allowed opacity-60")}>
       {control}
-      <span className="text-base text-ink-900">{label}</span>
+      <span id={labelId} className="text-base text-ink-900">{label}</span>
     </label>
   );
 }
@@ -206,7 +219,9 @@ export function Segmented<T extends string>({
             "transition-colors duration-150 ease-out",
             value === opt.value
               ? "bg-white text-ink-900 shadow-raise"
-              : "text-grey-500 hover:text-ink-900",
+              /* grey-600: the unselected tab sits on the grey-100 track,
+                 where grey-500 measures 4.24:1. */
+              : "text-grey-600 hover:text-ink-900",
           )}
         >
           {opt.label}
@@ -255,7 +270,7 @@ export function Stat({
 }) {
   return (
     <div className={className}>
-      <p className="text-2xs font-medium uppercase tracking-wide text-grey-400">{label}</p>
+      <p className="text-2xs font-medium uppercase tracking-wide text-grey-500">{label}</p>
       <p className="text-lg font-semibold text-ink-900 tabular mt-1">{value}</p>
       {hint && <p className="text-xs text-grey-500 mt-0.5">{hint}</p>}
     </div>

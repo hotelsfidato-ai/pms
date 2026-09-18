@@ -6,6 +6,10 @@ This exists because a commit message explains a commit, and nobody reads 165
 of them to find out what happened last week. `MEMORY.md` records *mistakes*;
 this records *work*.
 
+**Since 15 September each service keeps its own log too:**
+`src/modules/<service>/CHANGELOG.md`, same entry shape. Work inside one service
+goes there; work across services, in the core, or on the process goes here.
+
 ---
 
 ## How to write an entry
@@ -43,6 +47,1198 @@ Write it **as you go**, not at the end from memory. Copy this shape:
    this project passed with the bug reintroduced before anyone checked.
 3. **"Left open" is not a confession, it is the handover.** The next agent's
    first question is always *what was in flight?*
+
+---
+
+## 2026-09-18 · The gates leave this laptop: one Action, every push, and a deploy button
+
+**Asked for:** "One GitHub Action. npm test, npm run lint, tsc -b, the API
+suite, the DB suite against a Postgres service container, on every push. On
+Linux... Add npm run lane to that Action, and to a pre-push hook. Make your own
+guard refuse automatically." And: automate the deploy steps.
+
+**Shipped**
+- **`.github/workflows/ci.yml`** — on every push and pull request: lint, both
+  type checks, the stripping check, the website suite, the API suite, the
+  database suite, the replay, the build, and the lane check. Postgres 17 as a
+  service container. Every step runs even when an earlier one failed, so one
+  trip back carries every fault; runs on a branch cancel each other.
+  **354 seconds on Linux, against 755 on this laptop.**
+- **`.githooks/pre-push`** and a `prepare` script — a push that touches another
+  service's folder is refused, by the branch's own name. `npm install` points
+  git at it, so every copy gets it without anybody remembering. Proved both
+  ways: refused out of lane, silent inside it.
+- **`.github/workflows/deploy.yml`** — the deploy as a button (the owner's
+  answer, 18 September): it refuses unless the word `deploy` is typed, refuses
+  unless the gates passed for that exact commit, backs the database up before
+  anything moves, fails loudly if the API does not answer 200 afterwards, and
+  checks n8n, which a deploy's firewall reload has cut off before.
+
+**Found — four faults, every one invisible on this machine**
+- **The API suite could not run at all** without a private `api/.env`:
+  sixty-two files, zero tests. `with-test-db.sh` now sets what it needs.
+- **Fifty website tests** needed one developer's Firebase values. `restore()`
+  signed a person out when Firebase was absent, while the branch beside it kept
+  them — two answers to one situation. `.env.test` is committed and blanks
+  Firebase, so the suite tests the same app here as on the runner.
+- **MEMORY 293's family again:** the replay failed at migration 25 of 112 on a
+  fresh cluster. `pms_migrate` owns every table and needs BYPASSRLS; 068 grants
+  it forty-three migrations too late. It never bit here because a role is
+  cluster-wide and this laptop was granted it months ago — **a new server would
+  have failed its second deploy.** 010 grants it where the role is made.
+- **MEMORY 297 / BQ-8, and this one touches the live box:** a banquet time is
+  stored in the SERVER's time zone, and **the hotel's server runs its database
+  in GMT**. A clerk's 19:00 becomes 00:30 the next morning in Akkalkot; the
+  diary then shows one day and the till another. **Not fixed** — the fix
+  re-reads every banquet row already stored, so it is the owner's to approve.
+
+**Proved**
+- Three CI runs: red, red, **green** (run 35337958308).
+- Locally: web 369 with Firebase blanked as the runner has it, banquet 22, and
+  the replay 112/112 with the migrator's grant taken away to imitate a fresh
+  cluster — and failing exactly as the runner did with the fix removed.
+- The hook refused a push touching the reports service from a `stores/` branch,
+  and passed one inside the lane.
+
+**Left open**
+- The deploy button needs five secrets the owner adds once (named in the
+  workflow). Until then it refuses at the first step that needs one.
+- BQ-8 waits on the owner.
+
+**Commits:** `7709f07 … 4010436`
+
+---
+
+## 2026-09-17 (late night) · Step 3: every report on paper, the channel manager's first three parts, and two faults that would have stopped a deploy
+
+**Asked for:** "complete the remaining and also question me on this — give the
+other services things to continue building." Step 3 of
+`docs/NEXT-BUILD-PLAN.md`, the master's half, and the chats kept fed.
+
+**Shipped by the master**
+- **Every report as a file** (D17-31, D17-32):
+  `GET /api/hotels/:code/reports/<key>.pdf|.xlsx|.csv`, built through the
+  reports service's own `buildReport` under the caller's session, rendered in
+  the eZee layout with Fidato's colours (`api/src/reportRender.ts`, pdfkit and
+  exceljs). Only the report grant's `export` may download.
+- **One contract, not two:** the renderer takes `ReportDoc` from the reports
+  service's front door; the core copy was deleted the same night.
+- **D17-77 dates:** `dateReport` and `dateTimeReport` in `src/lib/format.ts` —
+  25/08/2026 and 25/08/2026 04:12:43 PM in the property's time. The renderer
+  keeps a copy (the API never imports web code) and a test holds the two to the
+  same answers.
+- **`downloadFile`** in `src/lib/api.ts`: a file fetched with the sign-in, which
+  a plain link cannot carry, saved under the name the server gave. The API now
+  exposes `content-disposition` across origins — without it the name would have
+  been unreadable in production only.
+- **Money freshness (FIN-3, D17-58)** and the **long dash** off every screen the
+  master owns (D17-48, D17-59, D17-60), earlier the same evening.
+- **The scripts (D17-90):** `load-demo`, `demo-history`, `reset-property`,
+  `retire-staff` and `pos:outlet` take the database from the copy they run in,
+  or refuse (`api/scripts/scriptDatabase.ts`).
+- **108** makes `channel_manager` a module a property is switched on for — off
+  everywhere — with its switch on Settings; `server.ts` starts and stops the
+  channel manager's every-minute push; the administrator reaches Integrations
+  (D17-85); `Checkbox` can be named by a screen reader.
+- **docs/briefs/n8n-sending.md:** the steps the owner follows in n8n, with the
+  JSON the PMS will send (D17-65, D17-87 to D17-89).
+
+**Merged**
+- **reports/ezee-layout, four times:** all eight reports in the owner's layout —
+  Monthly statistics, Monthly occupancy, Yearly statistics, No show, City
+  ledger, Manager, Night audit, Lodging tax — with Download on every screen.
+- **channel-manager/su-connection, parts 1 to 3:** the SU token login, the
+  mapping and content send, the every-minute push. Their migrations renumbered
+  107→106 and 108→107 at merge, because the Store chat's 106 has not arrived
+  and cp6 may not carry a gap.
+- **pos/module-note-099:** the POS notes catch up.
+
+**The owner answered twelve more** (D17-79 to D17-90), including SU bookings
+arriving by PUSH, an OTA booking with no room free refused and shown to the GM,
+an unpriced date sent to SU closed, per-night prices kept, card numbers never
+kept, and the SU screen for the owner and an administrator.
+
+**Found**
+- **293 (mine, found by the channel-manager chat):** my 108 widened a
+  constraint that 087 rewrites on every replay, so the first hotel switched on
+  for the channel manager would have rolled back the whole migration run and
+  left the API un-upgraded. Both files are guarded now, and `rerun.sh` switches
+  a module on between its passes so the fault has a gate.
+- **Strip-check was red on cp6** since the channel-manager merge (found by the
+  Reports chat): the server strips types and cannot load constructor parameter
+  properties. Fixed, and `strip-check` is in the gate script from tonight.
+- **287 (the channel-manager chat's CM-1):** a demo script run from a copy began
+  tearing down the main development database.
+- **292 (the Reports chat's REP-8):** its tests left ₹2,734.50 in the demo
+  property and the damage landed in `businessDate.test.ts`.
+- **Mine, in the renderer:** a footer written below the bottom margin made
+  pdfkit add pages; the download route answered the reports service's own
+  addresses and 14 tests got a 404.
+- **288 and 294 (mine, process):** a push that ran although its commit had
+  failed; a `git stash` that swallowed my own fix.
+
+**Proved** (on the merged tree, the last run)
+- web types clean · API types clean · **web 365** · **strip-check 109 files** ·
+  **API 983** · **database 808 assertions, 108 migrations** · **replay 108/108** ·
+  build clean, no test sign-in in dist.
+- **Guards seen to fail with their fault put back:** the bare download route,
+  a row's unit ignored, a lowercase "pm", the front desk added to the
+  exporters, the helper ignoring the server's file name, the old database
+  fallback, the unguarded 087 (with the production error), and the Checkbox
+  before it could be named.
+
+**Left open**
+- The **deploy** (D17-61) still waits on the Store chat's stock per place; live
+  is `eaf6916`. The Store chat is not running.
+- The owner's answers still needed: seven on what the reports print (the
+  Reports chat's list), whether a rack price may go to SU, and whether the
+  bill's PDF travels with the JSON to n8n.
+- Part 4 of the channel manager (SU pushing bookings in), and the reservations
+  door a machine needs.
+
+**Commits:** `f9e144b … 24cc50a`
+
+---
+
+## 2026-09-16 (plan) · Desktop, kiosk tablet and phone — which architecture
+
+**Asked for:** the owner asked which architecture to build desktop, mobile and
+tablet applications on, naming Expo for Android and iOS and asking what is
+better for desktop given this system. Their answers on the two questions put
+back: the desktop must be a real installed application because silent printing
+matters; the tablet is Android and must be locked so "the tab is only of this
+software"; the phone is for staff and guests eventually; and the reason behind
+all of it is availability — "many places will have a server but not very
+reliable network".
+
+Then, second question: **can this POS route a KOT and give a printout?**
+
+**Shipped**
+- `docs/APPS-PLAN.md` — the plan. One shared core, three shells: Tauri wraps
+  today's `dist/` for desktop, Capacitor wraps the *same* `dist/` for the
+  Android kiosk tablet, and Expo is a new small staff phone app rather than a
+  port of the 89 screens. Eleven decisions (A1–A11) with a recommendation each.
+- `docs/APPS-PLAN.md` § 4.2a — the KOT answer, measured against the schema,
+  and Phase 0a ahead of the Tauri work.
+- `src/modules/pos/DEFECTS.md` — **POS-5**, below.
+- `HANDOVER.md` § 2 (the state block), § 3.0c (the new item) and § 4 (three
+  decisions the owner made today).
+
+**Found** (no code defects; four findings that shape the plan)
+- **React Native cannot reuse this UI.** Measured: 285 files and 48,435 lines
+  in `src/` excluding tests, 72 pages and 27 shared components, all of it
+  Tailwind v4, Radix, react-router and Recharts. Only `src/data/repositories`
+  and most of `src/lib` port. "Expo for all three surfaces" is a multi-month
+  rewrite of a live hotel for a desktop result worse than the deployed one.
+- **The guest app cannot be started.** `booking-engine`, `online-checkin` and
+  `guest-messaging` are Coming-soon stubs — two `.tsx` files each, no screens.
+  There is nothing to put in an app, and it also waits on the CRS bridge.
+- **The gapless GST counter is what constrains every offline design.**
+  `app.next_invoice_number()` (migration 011) locks a row in `invoice_series`
+  per hotel per financial year. Two writers cannot issue from one series, so a
+  local property node is only safe if it is the *sole* issuer for its own
+  hotel — which the `(hotel_id, fin_year)` key does allow.
+- **The API needs no change for any of this.** A native `fetch` sends no
+  `Origin`, so the allowlist at `api/src/server.ts:61` is not even reached;
+  the same Firebase ID token and the same RLS apply unchanged.
+- **POS-5 · the kitchen docket is built and nothing opens it.** `DocketPage`
+  is real, thermal width, no prices, with a Print button
+  (`pages/Docket.tsx:64`) at `/h/:code/till/orders/:id/kot/:no`. No file in
+  `src/` navigates to it; the bill, by contrast, is opened from three screens.
+  The waiter is told "Kitchen docket 5" and no paper appears. Logged in
+  `src/modules/pos/DEFECTS.md`. The 16 September route audit missed it because
+  it matched **API** routes to callers, and this is a **website** route.
+- **KOT routing does not exist.** There is no station in the schema:
+  `pos_menu_items` (028) has no station or printer column; `pos_menu_categories`
+  is the card and says so in its own comment; `pos_sections` (047) is where the
+  *table* is, not where the dish is cooked; `pos_outlets` (024) is a credential
+  with a revenue category. `Kitchen.tsx` is one board for every line. Today a
+  tandoor dish, a bar drink and a dessert share one slip.
+
+**Proved**
+- Nothing to prove: no code was written, no gate was run, and none is claimed.
+  Every figure above was counted on this machine on 16 September, branch
+  `cp6`, by reading the files named.
+
+**Left open**
+- All eleven decisions A1–A11 except A2, which the owner answered. Nothing
+  starts before **A1** (extracting `packages/core`), and Phases 0a, 1 and 2
+  cannot finish without **A6** — which thermal printer the desk and the POS
+  actually use — or **A11**, how many kitchens 5 Elements actually has.
+- **POS-5 is not fixed**, only recorded. Whether dockets are meant to print at
+  5 Elements today, or the pass screen is the intended path with the docket
+  kept for a reprint, is the owner's answer and nobody has asked them.
+- The `pos` folder was **not claimed**: no code in that service was touched,
+  only its defect log.
+- **A8** is a question only the owner can answer: does any property already
+  have a local server, and what is it? Phase 5 cannot be scoped without it.
+- Whether a property node is built at all is deliberately deferred to Phase 3,
+  which measures real outage minutes per property from the outbox for a month.
+
+**Commits:** documentation only; not yet committed.
+
+---
+
+## 2026-09-17 (night) · Step 1: finish and align — done but for the Store's phase 1A
+
+**Asked for:** step 1 of `docs/NEXT-BUILD-PLAN.md` ("ok so step 1 is completed" — the
+admin and housekeeping chats' halves; the master's half had not started).
+
+**Merged:** admin (the tax actually used; the GM's Settings without the switches) and
+housekeeping (the board refreshes every 30 seconds; migration 103).
+
+**Built by the master, each proved against the old code where a test could:**
+- **104** Main, Kitchen and Bar stores at every hotel and every new one; a replay adds
+  nothing to a hotel that renamed or switched one off.
+- Places and suppliers for the Hotel and Inventory Manager (D17-1); the GM reads
+  Settings (D17-36).
+- **FD-1 / D17-10 — found:** the In house page read dates and listed eight rows, five
+  not yet arrived and three void, while every other screen read status and said one.
+  In house and Due out now read status; the walk-in vacancy check keeps "sold tonight".
+- **INV-6 / D17-11:** Rooms, the property count and the admin list follow the dated
+  block; room 308 (inspected, blocked) is counted out.
+- **FIN-2 / D17-16:** a stay with nothing posted is "No bill yet", never ₹0 settled.
+- **HK-1 / D17-39:** the live channel names a topic; the board updates the moment a
+  room changes (seen: a room set dirty appeared without a reload).
+- **105** All Inclusive (D17-50), no price. Room types heading, "Owed by guests, less
+  refunds", the no-rooms message, Today on a phone, can-run removed (the checklist
+  carries its blockers), one shared ReadProblem, Tables keeps the chosen function,
+  ADM-4 links, the offline and Channel manager sentences.
+
+**Proved:** web 342 · API 908 · database 787 with 105 migrations · replay 105/105 ·
+build clean.
+
+**Found and left for the owner:** FIN-3 — a list keeps an old balance until reloaded,
+because queries never go stale; how fresh a money figure must be is the owner's call.
+
+---
+
+## 2026-09-17 (evening) · The owner's D17 answers, built by seven chats and merged
+
+**Asked for:** the owner interviewed on every open question (25 answers,
+`docs/briefs/decisions-2026-09-17.md`), seven chats built their share, then "what is
+pending next".
+
+**Merged, audited first** (lane, migrations, edits outside their service):
+banquet (Diary heading, a function's bill shows its restaurant orders), POS (kitchen
+slip from Tables, add-on switches, dated closes with the hotel's name, the till's half
+of banquet food; migration 099), night audit (a second press shows the record, closed
+days listed, a closed day's record is the GM's; 099→**100**), guests (GUE-1), finance
+(FIN-1; FIN-2 traced, not built), admin (the audit log names the person, the server
+refuses what the screen refuses; 099→**101**), housekeeping (words on room cards,
+repairs on equipment with proof and automatic status; 099→**102**; its three edits to
+equipment reviewed: through both front doors, hotel-scoped), stores STO-2..11.
+
+**Proved:** web 327 · API 873 · database 785 with 102 migrations · replay 102/102 ·
+build clean. Opened: Closed days on Night audit, labels on room cards, the Store,
+Companies and agents. The four new migrations read for production-only privilege
+gaps: guarded rewrites, one security-definer function owned by the migrator.
+
+**Not done — the master's:** D17-1, D17-3, D17-10, D17-11, INV-2, REP-6, FD-5, FIN-2.
+
+---
+
+## 2026-09-17 (morning) · A blind audit of 16 September, and the Reports page
+
+**Asked for:** start the system locally, audit what was completed yesterday without
+trusting the chats' notes, a report as an artifact called Reports updated every day,
+and what is done and pending in each service chat.
+
+**Found starting it:** nothing ran — the database had to recover, and neither dev
+server could start: my worktree clean-up of the night before had deleted the shared
+packages through the junctions (MEMORY 286), breaking every chat's copy too.
+Reinstalled with `npm ci`; both servers up.
+
+**Live, read-only:** the owner deployed at 22:00 on 16 September (`eaf6916`); the
+website carries the Inventory Manager and the new menu names. Everything after 22:00
+waits for the next deploy.
+
+**Checked by running it:** reception refused the Store (page and 403) and adding a
+place (403, nothing written); a stale night-audit close refused, the day unmoved;
+Pricing, Equipment and Places and suppliers open as the GM; Inventory Manager on the
+Roles page as the owner; stay lists as cards at 375px, no sideways scroll; the
+equipment approval rules present. Gates: web 269 (one timing failure under load,
+rerun clean), API 756, database 736, replay 98/98, build clean.
+
+**Built:** the Reports page (docs/reports: one JSON per day, `build.py`, a template)
+published at https://claude.ai/artifact/7y6HN9Ug7DZAttxoMX5ek6, and a daily scheduled
+task that audits the previous day and adds it.
+
+---
+
+## 2026-09-16 (pending tasks) · Equipment merged, a deploy-breaking migration caught, places and suppliers
+
+**Asked for:** "finish your pending tasks".
+
+**Merged:** equipment phase 1B with S12–S16 (`a093808`) — audited first: only its
+folders, migration 097, two permitted test lines, core approvals untouched.
+Opened: the register loads as the GM.
+
+**Caught before production — MEMORY 284.** After the merge the LOCAL database
+refused the migrations: 095, replayed, re-added a shorter list of approval kinds
+over the `equipment_retire` rows 096 had written. Every deploy after the next
+would have rolled back at 095. The replay test (`rerun.sh`) was green because
+its database has no properties. Fixed: 095 and 096 change the list only when it
+lacks their kind; `rerun.sh` adds a property between passes and failed on the old
+095. The replay test joins the gates.
+
+**Fixed from the master's list:**
+- **RES-2** — walk-ins use `app.next_reference`; the test failed on the old code
+  with `FH-2609-5031`.
+- **EQ-2** — migration 098: equipment items and stock movements count as
+  trading; both checks fail without it.
+- **STO-9** — the shared kit under a finger: dialog Close 44×44, inputs and
+  selects 44px with 16px text. Measured at 375px on a touch screen (44, 44, 16px,
+  no sideways scroll) and on the desk (unchanged: 36px, 15px, Close 24).
+- Equipment in Housekeeping's working menu (the owner's answer).
+- Vite allows a chat copy's junctioned `node_modules` (the Inter font 403).
+
+**Built: Places and suppliers** — `/h/:code/places`, in Store and equipment.
+Nothing could add a place or a supplier, so no property had a store for
+equipment to leave. Anyone who sees stock or equipment may read; the owner,
+admin and GM may add, change and switch off — never delete. Proved: every role
+tried (only those three may write; a refusal writes nothing; guard removed → 10
+failures); on screen as the GM (added a store, the equipment form offered it,
+removed afterwards from the local database) and as reception (read-only, the
+sentence, buttons off). **Asked of the owner:** the Hotel Manager and the
+Inventory Manager too?
+
+**Not done:** HK-1 (deferred by the owner), FD-1 (the owner picks the
+definition), the stray notes in two comments (possibly the owner's), EQ-3 (dev).
+
+---
+
+## 2026-09-16 (audit, round 3) · NA-2 and STO-1 merged; names; retirement in the one inbox
+
+**Asked for:** an audit — what the chats finished, what I think, and every open
+defect. Then, with the owner's four answers: merge NA-2 and STO-1 and deploy;
+show names; the Inventory Manager approves retirements; one inbox.
+
+**Audit found:** three branches with commits, every one in its own lane.
+**Night audit** NA-2 fixed, screen never opened. **Store** STO-1 fixed, proved.
+**Equipment** the register built well, but before the owner's S12–S15: its
+migration numbered 095 like the master's, a role copy with the Inventory Manager
+able only to look, no leaving-the-store approval, and a second approvals inbox
+of its own for retirements. Seven chats have committed nothing; all wait on the
+owner. Production is 53 commits and six migrations behind cp6.
+
+**Merged:** night-audit (`7382603`) and stores STO-1 (`009430a`), all gates
+after each. **Opened:** the Night audit screen (no console errors in a fresh
+tab), a stale close tried on the local API (409, "26 August was already closed",
+the day unmoved); the Store as reception (the page refuses; the API 403 on read
+and on a real add, nothing written).
+
+**Built:** migration **096** — `app.colleague_name` (a name only, for someone
+rostered at a property the caller is at) and approval kind `equipment_retire`
+with its rule everywhere; the approvals queue shows the requester's name to
+whoever may decide and the decider's to the asker. Briefs tell the Equipment
+chat to move retirements to the shared inbox and fix its role copy, and the
+Store chat to show names for STO-4 and rename "the store manager".
+
+**Proved:** names given to everybody instead → the "neither asked nor decides"
+test fails. Gates after 096 in the entry's commit.
+
+---
+
+## 2026-09-16 (inventory manager) · One system: equipment leaving the store waits for approval
+
+**Asked for:** *"this is one system… there is an inventory manager whose
+responsibility is to store all the inventory"* — stock can go out freely,
+equipment cannot. **Approved, four decisions (plan S12–S15):** equipment leaving
+the store waits for the **Inventory Manager**; that is the Store Manager role
+renamed; the owner, admin or GM may decide instead; anybody who sees equipment
+may ask.
+
+**Built (the master's — approvals are core):**
+- **Migration 095** — approval kind `equipment_issue`; `also_decided_by` on rules
+  and requests, frozen like the first approver, so backups can decide without a
+  purchase's single approver changing; the rule at every property, and a trigger
+  so a new property gets it too.
+- **`api/src/routes/approvals.ts`** — backups may decide. **Two faults found by the
+  new test:** the queue hid every request somebody else raised from most roles
+  (an inner join to the row-secured staff table — MEMORY 283), and offered Approve
+  to the person who asked. Both fixed.
+- **The role:** "Store Manager" reads **Inventory Manager**; equipment grants
+  view, create, edit, approve. Pinned.
+- **Briefs:** equipment raises the request with the core function and shows the
+  Inventory Manager what is waiting; the Store is told stock needs no approval.
+  Next free migration 096.
+
+**Proved:** every role tried against a waiting request — only the Inventory
+Manager, owner, admin and GM may decide; the asker never; a purchase still has
+one decider. With the backups removed from the code, the owner, admin and GM
+tests fail. **Not provable here:** the new-property trigger runs as a security
+definer; the gate's database is a superuser's, production's is `pms_migrate`
+with BYPASSRLS (068) — the same privilege gap 068 names.
+
+**Asked of the owner:** may the Inventory Manager see who asked (names are
+hidden from most roles; the Store's STO-4 is the same question).
+
+---
+
+## 2026-09-16 (stock and equipment) · The plan approved, and Phase 0 built
+
+**Asked for:** two kinds of inventory, planned for several chats — equipment
+with repairs and buying, and consumables with the crockery and cutlery.
+**Plan:** `docs/STOCK-AND-EQUIPMENT-PLAN.md`. The owner approved all eleven
+decisions and the table of who may do what.
+
+**Phase 0, the master's:**
+- **Migration 094** — suppliers and locations, shared by the Store, Equipment
+  and Purchasing, seeding nothing. The shared test found the application holding
+  DELETE on both anyway (010's default privileges); revoked explicitly.
+- **Three permissions** — stock, equipment, purchasing — with the owner's table,
+  pinned, and seen to fail when the Viewer was given stock edit.
+- **Names** — "Inventory" reads **Rooms and rates**; a **Store and equipment**
+  section; **Equipment** is the register; door locks moved to **Room systems**;
+  **Purchasing** has its folder. Coming soon stays alphabetical.
+
+**Found by opening the screen, and said plainly:** reception can still open the
+Store. The grants exist; the Store's route and server do not read them yet.
+STO-1 is phase 1A's first task. I had told the owner Phase 0 fixed it — it
+does not.
+
+**Phase 1 made ready:** `docs/briefs/stores.md` rewritten for 1A (STO-1 first,
+page guard + server refusal + every-role proof); `docs/briefs/equipment.md` new,
+for 1B, with five questions for the owner. The server front door
+`api/src/modules/equipment/index.ts` exists empty and is mounted in `server.ts`,
+so the equipment chat never edits a shared server file. Its one permitted
+master-file edit: drop "Equipment" from the Coming soon list in
+`navigation.test.ts` when the real screen replaces the page. Migration numbers:
+a lane takes the next after cp6's highest and the master renumbers collisions
+(MEMORY 282 — I had used admin's promised 094).
+
+Web 255 · API 425 · database 648 with 94 migrations · build clean.
+
+---
+
+## 2026-09-16 (round 1 merged) · Six branches audited and merged into cp6
+
+**Asked for:** audit everything the service chats finished, clean it, merge it.
+
+**Audited before any merge** — each branch's commits, every file against its
+lane, what it left uncommitted, migration numbers, and a read of the riskiest
+change in each. All six stayed inside their lanes; the migration numbers were
+the ones assigned.
+
+**Merged one at a time, every gate after each** (web types, API types, web
+tests, API tests, the database suite — each judged by its exit code):
+
+```
+                                    web    API   database
+before                              212    376   622 · 90 migrations
+1  reservations   RES-3, RES-1      212    383   636 · 91
+2  master         092, 093          219    389   636 · 93
+3  inventory      INV-3, OOS, INV-5 222    419   636 · 93
+4  reports        REP-1/2/3         224    423   636 · 93
+5  pos            dates, POS-4/3    236    423   636 · 93
+6  night-audit    NA-1, NA-2 found  236    423   636 · 93   + build clean
+```
+
+**Done in the merges, not by the chats:**
+- **Two claim files were committed** (`inventory`, `pos`) and left out — merged,
+  cp6 would have said both services are claimed for good.
+- **The Revenue Manager joined inventory's server-side price check.** Inventory
+  kept a server copy of the rate-setter list with a test that fails when it
+  differs from the website's; merging 093 made it fail, naming the role, and the
+  role was added to the server list, its refusal sentence and both hand-named
+  role lists in the test. It now also proves a revenue manager CAN set a price.
+
+**Found by the night-audit chat, and serious — NA-2:** a Night audit screen left
+open after the day was closed elsewhere still offers to close the day it shows,
+and Run closes the NEXT day. Proven on a scratch database. Not fixed: the owner
+decides first (night audit posts real charges).
+
+**The local system** was migrated to 093 and checked: a new reference is
+`FH-5EL-2609-5034`, and `revenue_manager` is an accepted role. Nothing deployed.
+
+---
+
+## 2026-09-16 (master) · One booking reference, and the Revenue Manager
+
+**On branch `master/references-and-revenue-role`, not yet on cp6.** It merges
+after the reservations chat's migration 091, because `migrationNumbers.test.ts`
+refuses a gap — that single test is the one failure on this branch, and it is
+expected.
+
+### Migration 092 — one reference, under a lock (RES-2, part 1)
+
+Two inline copies in two services made every reference: front-desk's walk-ins
+(`FH-YYMM-n`) and reservations' bookings (`FH-DDMM-n`) — so `FH-2608-4858` was
+August on one door and the 26th on the other. Neither locked, so two bookings
+in the same second took the same number and `unique (hotel_id, reference)`
+refused the second. **And a third fault, found writing this: both pad with
+`lpad(n, 4, '0')`, which in Postgres CUTS a longer string** — `lpad('12345',
+4, '0')` is `1234`. After about five thousand bookings at one hotel, every new
+reference would have been the same four digits and refused.
+
+`app.next_reference` (005) already had a per-hotel lock and nothing had ever
+called it. It now makes the owner's format, **`FH-<hotel code>-<YYMM>-<number>`**
+(e.g. `FH-5EL-2608-4858`): the month on the hotel's own clock, the number
+continuing the hotel's existing count so nothing repeats across the change, and
+never truncated. Old bookings keep their references. **The two routes are
+switched over by their own services** — this changes neither.
+
+`api/test/bookingReference.test.ts`, 6 tests: the format, continuation from both
+the new and the old shape, no truncation past four digits, and two open
+transactions raced — **once through the old inline SQL, which gives both the
+same number, and once through the function, where the second waits.** Proven by
+removing the lock: *"the second caller must wait for the first"*.
+
+### Migration 093 — the Revenue Manager
+
+Approved by the owner: a person who sets prices and pushes them to the booking
+sites when the owner, admin and GM are away. **Can** set prices and restrictions
+and see availability, bookings, occupancy, ADR and commission. **Cannot** touch
+bills, payments, invoices, guest details, staff, roles, room setup, check-in or
+the POS. Named so it is never confused with the channel manager service.
+
+**And an inconsistency of mine from the same morning, fixed:** the matrix gave
+the GM `rate: READ` while the hand-written `RATE_SETTER_ROLES` beside it let the
+GM set prices. The list is now **derived from the matrix** — whoever holds `edit`
+on `rate` — and `src/lib/permissions.test.ts` pins it to owner, admin, GM and
+revenue manager. Proven by giving reception the grant: two tests fail, naming it.
+
+**Gates:** types clean · web 218 passed, 1 expected (the 091 gap) · **API 376,
+exit 0** (the roles test holds database and interface equal) · **database 92
+migrations, 622 assertions, exit 0**.
+
+---
+
+## 2026-09-16 (contrast) · The state of a room is no longer the faintest word on it
+
+**Asked for:** a critique of every screen, and then — the owner's answer to the
+first question it raised — "I fix it once, before the lanes run."
+
+**What the critique measured.** A design review and a mechanical detector ran
+as two isolated agents. The detector's live scan found **39 contrast failures
+on `/stay` alone**; the review traced them to one token: `--color-grey-400`
+(#9aa2a9) is **2.59:1 on white and 2.27:1 on a tinted card**, and it was
+carrying `FREE`, `Superior` and the count in every filter chip — 209 uses. Two
+more the review did not catch and the DOM did: **white on `brand-orange` is
+3.57:1**, which is the primary button's own label, and it got *more* readable
+on hover; **white on `brand-tangerine` is 2.54:1**, which is the due-out room
+tile.
+
+**Shipped.** Every ratio below is computed WCAG 2.1 relative luminance, not
+judged by eye.
+
+- **Four darker steps of the existing brand hues** — `brand-orange-800`,
+  `brand-tangerine-700`, `brand-rose-700`, `brand-red-700`. The five warm
+  colours from the identity guide are untouched; these are for the one job
+  they cannot do, which is carry small text.
+- **`grey-400` is no longer a text colour.** 148 lines in 67 files moved to
+  `grey-500`; on a tinted surface text takes `grey-600` (4.24 → 6.13). Left
+  alone on purpose: 50 icons, 4 placeholders, 7 disabled states — none of
+  which AA measures. The token's comment now says so.
+- **The primary button fills with `orange-600`** (4.59:1), hovers to `-700`,
+  presses to `-800`. **The brand orange as TEXT** — 25 uses across 18 files —
+  moved to `orange-700` (5.63:1 on its own tint).
+- **Room tiles:** due-out → tangerine-700 (4.62), no-show → rose-700 (5.17),
+  void → red-700 on the red tint (4.94) instead of red on 25% red (3.11).
+- **Disabled labels stay readable** — grey-500 on grey-50 is 4.56:1, where
+  grey-400 was 2.43:1. A product that explains every disabled control in words
+  should not start that sentence with a label nobody can read.
+
+**Proved by measuring the same pages again**, in the browser, with the
+computed ratio of every text node against the background actually behind it:
+
+```
+                 before          after
+/stay            39 failures  →  0
+/pricing         7            →  0
+/housekeeping    1            →  0
+/till/terminal   2            →  0
+/cashiering      2            →  0
+/arrivals        —            →  0
+```
+
+Types clean · 212 web tests, exit 0 · build clean, "no test sign-in in dist".
+
+**The critique's other findings are not fixed** and are listed in
+`docs/audits/2026-09-16-design-critique.md`: three screens disagree about one
+booking's status, `/stay` has no error branch at all, and `/in-house` prints a
+paid guest's charges under a column headed BALANCE.
+
+---
+
+## 2026-09-16 (pricing B and C) · The Pricing screen
+
+**Shipped** — the screen the owner asked for: one screen, shaped like a
+calendar, holding the dates, the base and each difference.
+
+- `/h/:code/pricing` — a month of dates with the base on each; click one, or
+  choose **a period**, and type a figure. The differences sit under it: every
+  room type (per room) and every meal plan (per person), each a figure or a
+  dash. Under that, **what a room actually costs on that date** for every type
+  × plan, read back from the database rather than worked out on the screen,
+  each marked *Set here* · *From the base* · *Old rack rate* · *Not priced*.
+- `api/src/modules/inventory/pricing.ts` — one read for the whole screen, and
+  three writes: which room is the base, the base figure, a difference. The
+  arithmetic stays in the database, where the channel manager will meet the
+  same rules.
+- **Guarded.** The first rate screen with a `canSee` and a route guard:
+  `RATE_SETTER_ROLES` = owner, admin, GM. Reception's grant is `rate: READ`,
+  and the guard asks the navigation, which asks the grant — so without this a
+  clerk could set the figure every price is built from. Proved by opening it
+  as reception: "This page is not part of your role."
+
+**Proved, at 1280 and at 375:** chose the base, typed a figure for one date,
+and watched every other room and plan derive it; set a room-type difference
+and watched that room read the base plus it — *From the base · 1 person*. At
+375px: nothing outside the viewport, no sideways scroll, **0 controls under
+44px**. 212 web tests · 370 API tests (a new `pricing.test.ts`) · 622 database
+assertions · types and build clean. Every figure written while testing was
+removed from the development database afterwards.
+
+**Three found, all recorded:**
+- **INV-4, fixed before it shipped** — with no base typed, the screen showed
+  the room type's **rack rate** as "the base, one person": a two-person figure
+  presented as a one-person one, and the figure everything else would then be
+  built from. It now shows a dash and names the rack rate that still answers.
+  `app.price_for` returns a price AND its source; reading the number without
+  the source is how a fallback becomes a fact.
+- **INV-5, open and NOT fixed** — the **Rate calendar** writes prices and has
+  no guard at all, so a reception clerk who types the address can set one
+  today. Closing it takes something away from a role that has it, which is the
+  owner's call.
+- **MEMORY 278, mine** — this morning's card heading was a `<p>`, and Guests
+  puts a `<div>` in its first column. Invalid HTML, which React reported on
+  every render since it shipped; found by reading the browser console. Now a
+  `<div>` marked `data-card-heading`, with the test reading that rather than
+  the tag.
+
+---
+
+## 2026-09-16 (pricing A) · One base price, and everything else a difference
+
+**Asked for:** *"this room is the base price and other things are connected by
+a difference to this, so that when a change happens it reflects all through the
+system"*. The plan is `docs/PRICING-PLAN.md`; this is its first phase, the
+schema. **No screen yet, and nothing is priced.**
+
+**Migration 090**
+- `pricing_basis` — one row per property naming **which** room type and plan is
+  the base. A pointer, not a number: the figure stays in `rates`, so a season on
+  the base flows into every derived price for free.
+- `rate_offsets` — a difference in **rupees**, with dates, per room type (per
+  room) or per meal plan (per person). The same no-overlap constraint `rates`
+  has: two differences covering one day is the same unanswerable state two
+  prices are.
+- `rates.covers_persons` — **the line that stops this repricing anything already
+  sold.** The base covers one person; every row written before today covers
+  what its room type says, and NULL means exactly that. An old typed price
+  keeps its meaning to the rupee.
+- `room_types.category` — Deluxe, Deluxe valley view, Deluxe with an extra bed
+  group under one name while each stays its own sellable type with its own
+  capacity. Configuration, not price; the owner's distinction.
+- `app.price_for` answers a price **and what it covers** — typed → derived →
+  rack → NULL. `app.rate_for` keeps its name, signature and meaning.
+  `app.tariff_for` counts extra people above what the covering price covers, so
+  two adults on a derived price are the base plus one extra adult.
+- `app.set_offset` writes a difference over a range, splitting and trimming what
+  is already there and putting the tail back.
+
+**Nothing changes until the owner acts.** No property has a basis, so nothing
+derives; `covers_persons` is NULL everywhere, so nothing recounts.
+
+**Two rules the gate found, not me:**
+1. A difference on the **base** room type can never apply — the base's price is
+   typed. It must not reach the base type's other plans either, or breakfast on
+   the base room would cost it twice over. A season on the base is a typed base
+   row.
+2. A standing difference and a seasonal one cannot both cover a day — which is
+   why `app.set_offset` exists. Asserted that the standing difference is still
+   there a year after the season ends.
+
+**Proved:** `db/tests/modules/inventory.sql`, 23 new assertions — **620
+assertions, exit 0**, RLS proven as `pms_app`; **API 359 tests, exit 0** via
+`npm test`; migration numbering and web types clean.
+
+---
+
+## 2026-09-16 (mobile, part two) · The stay screens use their own cards
+
+**Asked for:** the owner's answer to the question the first mobile pass raised —
+should the five screens that already have purpose-built cards show them on a
+phone? **Yes.**
+
+**Shipped** — `src/modules/front-desk/components/StayTable.tsx`:
+- Below `sm` the bespoke `StayCards` render **whatever the remembered toggle
+  says**. The toggle hides on a phone: at a desk, a table of forty rows against
+  cards is a real choice; on a phone it is not one.
+- The pairs inside a card go to one column below `sm` and wrap instead of
+  truncating — two 160px columns turned "Booking.com" into "Booking.c…".
+- `data-stay-cards` marks the list, because `DataTable` now has cards too and a
+  test that matched the shape alone passed with these cards deleted. **Proven
+  by deleting them**: "the stay cards are not rendered on a phone".
+
+**Measured at 375px**, signed in and reading each screen: Arrivals 10 cards, In
+house 9, Walk-ins 21, All bookings 86, Folios 5 — nothing outside the viewport,
+no page scrolling sideways, no toggle. At 1280: the table and the toggle
+unchanged, 0 cards. Types clean · **212 web tests**, exit 0 · build clean, "no
+test sign-in in dist".
+
+**Recorded** — `src/modules/front-desk/DEFECTS.md` FD-4, including the two
+things the next person needs: there are two card renderers, and the wrapper
+that hides one of them is not a bug to be tidied away.
+
+---
+
+## 2026-09-16 (mobile) · A list is a card list on a phone
+
+**Asked for:** improve the mobile experience; the owner chose the mobile pass
+before the pricing build.
+
+**Measured first**, at 375px as a reception clerk, twelve screens: no screen
+scrolled the page sideways, but **six screens a receptionist lives in put a
+table wider than the phone inside a sideways scroller** — Arrivals, In house,
+Walk-ins, All bookings, Guests, Folios. Housekeeping, the one screen built for
+a phone, had **36 controls under 44px**. The Till has no heading (like the
+Kitchen — POS-3).
+
+**Shipped**
+- `src/components/ui/DataTable.tsx` (the shared core, so this reaches every
+  screen that uses it): below `sm` each row renders as a **card** — the first
+  column its heading, every other column a labelled line — and the table
+  renders unchanged from `sm` up. **A column hidden on narrow screens
+  (`hideBelow`) is shown in the card**, because the card has the room the
+  table did not. Sorting keeps a control, which the card list would otherwise
+  lose with the header row. A long value wraps instead of being clipped.
+- Housekeeping: the assignee picker 36 → 44px; the out-of-service button
+  40×44 → 44×44.
+- `src/components/ui/DataTable.test.tsx` — four tests. The one that matters
+  fails if a column goes missing from the card, **proved by making the card
+  skip hidden columns**: "the card dropped Source".
+
+**Proved:** re-measured at 375px — six screens now render cards (10, 9, 21,
+86, 32, 7 of them), nothing outside the viewport, no page scroll; Housekeeping
+0 controls under 44px. Types clean · 210 web tests, exit 0 · build clean.
+
+**Found, and the owner's to decide:** `StayTable` already had a card view
+(`StayCards`) with a manual table/cards toggle, used by Arrivals, In house,
+Walk-ins, All bookings and Folios. I should have grepped before writing a
+generic one (`AGENTS.md`: "reusable pieces — check before you build"). Nothing
+is duplicated on screen — a person sees one or the other — but there are now
+two card designs, and on a phone the bespoke one only shows if that person has
+chosen "cards". The question is in the handover.
+
+---
+
+## 2026-09-16 (fixes) · The People guard and the shadowed rate-plans route
+
+**Asked for:** "now fix the people guard and the rate-plans route."
+
+**Shipped**
+- **PEO-1 fixed** — `/people` is wrapped in
+  `<RequireAccess path="/people" resource="user">`
+  (`src/modules/admin/routes.tsx`), with the reason above it. A reception
+  clerk who types the address now gets "This page is not part of your role"
+  instead of a screen with Add somebody, Password, Edit and Deactivate on it.
+- **INV-1 fixed** — `GET /api/hotels/rate-plans` removed from
+  `api/src/modules/inventory/roomTypesAndPlans.ts`; the reason stays in its
+  place. It could never run: `GET /api/hotels/:code` matched "rate-plans" as a
+  property code, so it answered 404. Nothing called it; the meal plans come
+  with `GET /:code/rate-plans`.
+- Both closed in their service's `DEFECTS.md` with what was done, and marked
+  fixed in `PENDING.md`.
+
+**Proved:** web types clean · 206 web tests, exit 0 · **359 API tests, exit 0**
+· strip-check 68 files · api types clean.
+
+**Found — MEMORY 277, mine:** I first ran the API suite as `npx vitest run`,
+which points it at the development database, and 43 tests failed on data
+drift. The suite is `npm test` (its own database, decision D1). Re-run
+properly: 359 passed. The development database was written into by that bad
+run; `npm run demo` reloads it.
+
+---
+
+## 2026-09-16 (defects) · Every service carries its own defect log
+
+**Asked for:** "each folder needs to contain its own defects file, so that when
+I start a new session on a specific service it shows all the defects for that
+service and what the previous solution was — so you don't recompute the
+solution, and errors are prevented before they become big."
+
+**Shipped** — `src/modules/<service>/DEFECTS.md`, thirty of them, replacing the
+per-service `MEMORY.md` (same content, the name everybody uses, no second file
+to drift):
+- **Open defects, with the fix when it is done** — 26 across eleven services,
+  every one from `PENDING.md` § 2a and § 2c and the audits, now sitting in the
+  service a session will be working in: RES-1/2/3, REP-1/2/3, ADM-1/2/3 with
+  PEO-1 and API-2, INV-1/2/3, POS-2/3/4, GUE-1, FIN-1/2, BQ-1/2, HK-1, NA-1,
+  FD-1/2.
+- **Fixed ones, with what was actually done** — so the solution is read, not
+  worked out again. FD-3 (the walk-in refusal) is named as the worked example
+  for RES-1; HK-2 (the board's offline read) carries 274's fix.
+- **Each service's project-wide entries**, carried over from the old file and
+  now quoting each root entry's own rule line where it has one — 49 for the
+  front desk, 42 for the restaurant, 30 for administration.
+- Every pointer repointed in 45 files (`CLAUDE.md` step 4, `AGENTS.md`,
+  `HANDOVER.md`, the root `MEMORY.md` header, every `MODULE.md` and service
+  changelog). The root `MEMORY.md` keeps its name and its plain numbers; 276 is
+  the last.
+
+**Proved:** `src/test/boundaries.test.ts` now requires `DEFECTS.md` in every
+service folder beside `index.ts` and `MODULE.md` — **shown to refuse**: with
+`spa/DEFECTS.md` moved away the run failed naming that file, and passed when it
+was back. Web types clean; 206 tests, exit 0.
+
+**Left open:** the 26 open defects themselves. The file says, for each, what the
+fix is when somebody does it.
+
+---
+
+## 2026-09-16 (audit) · Every route called, every screen opened, and PENDING checked
+
+**Asked for:** "do a full in-code audit on what was pending, and if all the
+routes are working well; start it in local for testing; an audit of all the
+routes which are present at the moment."
+
+**Done —** `docs/audits/2026-09-16-routes-and-pending.md`. Run locally
+(Postgres 55432, API 8787, website 5173) with the demo data; production read
+read-only for § 5. Two local writes, both undone: the banquet module switch,
+and probes that created nothing.
+
+**Measured**
+```
+routes                214  (92 GET · 92 POST · 13 PATCH · 10 PUT · 7 DELETE)
+GET proven answering   81 as the owner · 69 as a reception clerk
+answering wrongly       1  GET /api/hotels/rate-plans (INV-1, confirmed live)
+no caller anywhere     13  attachments 5 · approvals 4 · night-audit 2 · add-ons 2
+called by something
+  other than the web    5  /health and the four POS-bridge routes
+screens                89 addresses · 86 opened and rendered · 0 console errors
+```
+
+**Found (PENDING § 2c)**
+- **PEO-1**: `/people` has no route guard — a clerk can open it and sees
+  buttons the server refuses. One line to fix; the test already exists.
+- **POS-2**: two restaurant add-on routes have no caller anywhere.
+- **API-2**: a clerk can read the audit log and the property settings through
+  the API, though both screens are refused to them.
+- **POS-3**: the Kitchen screen has no heading.
+- The five heading mismatches and INV-1 confirmed on screen and by running.
+
+**Corrected mid-audit, before it reached the owner:** a probe made it look as
+though a clerk could create staff and set another person's password. The
+routes validate the body before they check authority, which is what I saw;
+the guards are there (`app.may_set_password`, `app.require_group_admin`), and
+row-level security hides the rows. Nothing was created or changed.
+
+**Proved:** the sweeps above; `PENDING.md` § 5's missing route-reachability
+gate was built as a script and is now a candidate test.
+
+**Left open:** the seven-step order in the audit's § 6, for the owner to
+approve, and everything already in `PENDING.md`.
+
+---
+
+## 2026-09-16 · Every missing service: a folder and a Coming soon page
+
+**Asked for:** "ok now for a hms with all the requested services which are
+currently missing in the current system". Asked how (four questions, each
+with a recommendation), the owner took every recommendation: a folder and a
+Coming soon page for every missing service — all twelve, not only the four
+they had named; one "Coming soon" section at the foot of the menu for the
+owner, admins and general managers; on a branch after the service-folder
+move, deployed after it; then a build order to approve, one service at a
+time.
+
+**Shipped — branch `coming-soon`, on top of `service-folders`, not deployed:**
+- **Twelve new service folders:** `leads` (Leads and WhatsApp), `marketing`,
+  `crm` (Central CRM), `spa` — the four the owner asked for on 15 September —
+  and `online-checkin`, `laundry`, `contracts`, `revenue-management`,
+  `reputation` (Reviews), `loyalty`, `guest-services`, `equipment` (Hotel
+  equipment, "When a hotel asks") — the standard list in `PROGRESS.md`. Each
+  has `MODULE.md`, `CHANGELOG.md`, `DEFECTS.md` (its own defect prefix, added
+  to the root `MEMORY.md` header), an empty `index.ts`, `nav.ts`,
+  `routes.tsx` and `pages/<Name>.tsx`.
+- **The five brief-only folders** (`crs`, `payments` — marked "Parked" —
+  `booking-engine`, `guest-messaging`, `accounting`) got the same page, entry
+  and address; their briefs and front doors say so.
+- **The channel manager** moved from Inventory (unlisted) into the section;
+  its route is now guarded.
+- **Core:** `src/pages/ComingSoon.tsx` — one page for all of them: what it
+  will do, what it needs before it can be built, where it stands today;
+  nothing invented. `seesComingSoon` in `src/lib/permissions.ts` — owner,
+  admin, GM — asked by the menu and by every route guard alike.
+  `navigation.ts` has the `coming-soon` section; `App.tsx` mounts the routes.
+- **Thirty service folders:** twelve working services, eighteen not built.
+
+**Found**
+- Checked before writing: the desk's Post a charge list
+  (`src/lib/rules.ts`, `CHARGE_CATEGORIES`) offers Laundry but no Spa,
+  minibar or telephone line, though the folio has those categories. The
+  pages say exactly that.
+- **MEMORY 276, mine:** "Contracts and allotments" was cut off in the
+  sidebar ("Contracts and allotm…"). Found by opening the screen as a GM,
+  after every gate had passed. Renamed "Contracts" before committing; a new
+  test refuses a menu label over 21 characters — proved by putting the long
+  name back.
+
+**Proved** (on the final code, exit codes read)
+```
+web types        clean (tsc -b --force)
+web tests        206 passed, exit 0 (two new: the Coming soon list for
+                 owner/admin/GM and nobody else; the pages refused to exactly
+                 the people the menu hides them from; plus the label length)
+build            clean; no test sign-in in dist
+api types        clean (untouched)
+menus            every role's menu and search compared fact by fact with
+                 before: owner, admin and GM gain the 18-entry section at the
+                 foot; Reception, Hotel Manager and Viewer lose only the
+                 channel manager's page from search (and cannot open it);
+                 nothing else in any menu moved, appeared or went
+screens          as Reception: no section, /coming-soon/spa refused; as GM:
+                 the section at the foot, all 18 pages opened from the menu,
+                 each with its heading and pill (Online payments "Parked",
+                 Hotel equipment "When a hotel asks"); phone and desktop widths
+```
+
+**The build order — proposed, the owner approves one service at a time**
+```
+before any   deploy the service-folder move, then this; RES-1 and 008; which rooms 5 Elements has
+ 1  Channel manager      the definition arrives 16 Sep; the largest gap; needs the three doors
+ 2  Leads and WhatsApp   the Meta token expires about 27 Sep; the app exists — connect it
+ 3  Fidato CRS           bookings in, rooms and prices out
+ 4  Guest messages       the leads app's WhatsApp pipeline, reused; four later services need it
+ 5  Accounting export    independent and small — can run alongside 1–3
+ 6  Online payments      only if the owner un-parks it; before the booking engine
+ 7  Booking engine       after 4 (and 6, for deposits)
+ 8  Online check-in      after 4
+ 9  Central CRM          after 2 and 3
+10  Marketing            after 2 and 9
+11  Contracts            independent — alongside
+12  Laundry              independent, small — alongside
+13  Guest services       independent, small — alongside
+14  Spa                  once the owner says which hotels have one
+15  Reviews              after 4
+16  Loyalty              after 9
+17  Revenue management   needs a year of bookings in this system
+18  Hotel equipment      when a hotel asks
+```
+
+**Decided by the owner:** the four answers above (HANDOVER § 4).
+
+**Left open:** the build order's approval; merging `service-folders` and
+then `coming-soon` into `cp6`, and deploying each on its own.
+
+---
+
+## 2026-09-15 (one system) · The plan to connect the CRS, the live inventory, the leads and a channel manager
+
+**Asked:** "integrate the 3 to 4 different services into this … the CRS system
+into this itself, and the channel manager (being defined, finalised tomorrow) —
+prep sections saying coming soon … build a full HMS … the live inventory and the
+leads captured from Meta ads over WhatsApp as a CRM … a central CRM with all the
+data … the ability to replicate this and sell it as a product … use agents to
+find the compatibility issues … create the plan of execution."
+
+**Done — a plan, nothing built, nothing changed in any system:**
+`docs/HMS-INTEGRATION-PLAN.md`, with its page at
+https://claude.ai/artifact/WzopVpwms2vPUrgawHUapy. Read from the code of
+all three applications (`D:\fidato crs`, `D:\fidato tools\new live invetory`)
+and a read-only look at production (one hotel, 5EL, 18 rooms; six booking
+sources; modules banquet and reception_pos; n8n running on the box in local
+mode). Three read-only audit agents — the PMS's own readiness, CRS ↔ PMS, live
+inventory + leads ↔ PMS — 66 findings, their reports in `docs/audits/`.
+
+**What the plan says, in short.** Only the PMS has a server, so it is the hub:
+its API is the contract and the n8n on its box is the only place the other
+systems' credentials may live (MASTER-ARCHITECTURE already says so). For a
+hotel on the PMS, the PMS is the record; the other apps hold display copies.
+Three doors to open in the PMS (an identity for machines, a home for other
+systems' ids, an idempotent booking route), then three wires (availability
+out, bookings in from the CRS and the leads, the channel manager on the same
+paths). Phases 0–7; six agents in six folders after Phase 0.
+
+**Found on the way, each the owner's call (PENDING § 2a):** the server
+enforces no role on writes (API-1); two API responses turn an unpriced room
+into ₹0 (INV-3); the booking reference is generated unlocked in two copies
+(RES-2); `POST /bookings` has no idempotency, and RES-1 is worse than written
+(RES-3). And the same hotel is 18 rooms in the PMS, 17 in the CRS's reference
+file and 17 differently-numbered rooms in the live inventory.
+
+**Mistake, MEMORY 275:** I quoted a commission figure off the wrong line of a
+file I had only skimmed; an audit agent caught it before it reached the owner.
+
+**Decided by the owner:** nothing yet — fourteen decisions (D1–D14) wait in
+the plan's § 5, each with a recommendation.
+
+---
+
+## 2026-09-15 (the move) · One folder per service — built and verified
+
+**Asked for:** split the code so each segment has its own folder and several
+agents can work at once; the owner took all four recommendations and said
+"now"; then "run multiple agents to complete this".
+
+**Shipped** — on branch `service-folders`, from tag `pre-service-folders`
+- **Eighteen service folders** in `src/modules/`: thirteen built, five with a
+  brief and no code (crs, payments, booking-engine, guest-messaging,
+  accounting). Every screen, dialog and data file of a service lives in its
+  folder; its server routes in `api/src/modules/<service>/`; its server tests
+  in `api/test/modules/<service>/`; new database checks in
+  `db/tests/modules/<service>.sql` (suite.sql frozen as history).
+- **The shared files became lists:** the menu, the screen addresses and the
+  server's mounts are assembled from each service's `nav.ts`, `routes.tsx` and
+  `api/src/modules/<service>/index.ts`. A service adding a screen edits no
+  shared file.
+- **The mixed files were split along whole sections:** six web data files and
+  `Directory.tsx` in place first, then six server files endpoint by endpoint.
+  Shared helpers moved to core `result.ts`, `http.ts` and `api/src/folio.ts`.
+- **Guards:** a service is reached only through its front door (web and
+  server); every service folder has its door and brief; migration numbers are
+  unique and contiguous; every menu entry lands in a real section and no two
+  claim one place. All seen to fail when broken.
+- **Each service's brief**, `CHANGELOG.md` and `DEFECTS.md`; AGENTS.md rewritten
+  for working by service (own worktree, database and ports; claims; requests;
+  notes with prefixed defect numbers).
+- **How it was done:** the web moves, guards and lists by me, one commit per
+  service; then six agents in parallel git worktrees — three for the server,
+  one for the web tests, two for the briefs — merged one at a time, every gate
+  after each.
+
+**Found**
+- 272 · the move silently narrowed a guard (Rule 2b); widened, seen to fail.
+- 273 · the agents' worktrees sat inside the repo — test runner and git saw
+  them; excluded and ignored.
+- 274 · MINE: since the Start here commit every web test run exited 1 (two
+  uncaught rejections) while I reported green by reading pass counts. The
+  housekeeping board now catches a missing offline store, as OfflineBar does.
+- The business date was about to be homed in a service; it is the core's.
+- From the briefs, not fixed, the owner's call (PENDING § 2a): RES-1 a refused
+  booking can leave records behind; REP-2 the Manager report's year is typed
+  as 2026; REP-1 the monthly and yearly statistics show fixed months; ADM-2
+  the flat 2.5% + 2.5% GST on Settings and Properties; ADM-1 the audit log's
+  "admin"; BQ-1 no bill can be charged to a banquet function; INV-1 a
+  shadowed route; headings unlike their menu entries; FIN-1 a stale comment.
+
+**Proved** — final run on 7f60029, every gate judged by its exit code
+- Web: types clean; 204 tests in 18 files, exit 0.
+- API: types clean; 359 tests in 28 files, exit 0; 68 files load.
+- Database: 588 assertions; 89 migrations re-runnable.
+- Build: clean, no test sign-in, config at the live API.
+- Unchanged from the start: every role's menu under four module states (1,023
+  facts), all 73 screen addresses with the same screens, the API's 214 routes
+  with the same pattern answering first for every request, 10 middleware in
+  order.
+- On screen, local: 41 screens across every service as the General Manager;
+  as Reception, the working menu of 15, Start here on Rooms, the till.
+
+**Left open**
+- Merging `service-folders` into `cp6`, and deploying it on its own — the
+  owner's.
+- PENDING § 2a (the briefs' defects) and § 2b (the till is one 3,555-line
+  file; the web tests need this machine's root `.env`; the agents' worktrees
+  are still in `.claude/worktrees/`).
+- The owner's stray note in a comment in `navigation.ts` (there since 5
+  September) — theirs to keep or remove.
+
+**Commits:** `pre-service-folders..service-folders`.
+
+---
+
+## 2026-09-15 (plan) · One folder per service
+
+**Asked for:** split the code so each segment — inventory, CRS, reports, POS
+and the rest — has its own folder, and a folder for every service a hotel
+system offers, so several agents can each work on one; "plan this task".
+
+**Shipped**
+- `docs/SERVICE-FOLDERS-PLAN.md` and the owner's page: 12 built services plus
+  the core, 6 not-built ones as brief-only folders, the six server files that
+  serve several services and where each endpoint goes, the shared files that
+  become lists, the rules for parallel agents, and a ten-step order of work.
+- `HANDOVER.md` § 3.0 points at it: planned, nothing moved.
+
+**Found**
+- `RoomTypesPage` and `RatePlansPage` in `src/pages/Directory.tsx` are routed
+  nowhere (already in PENDING).
+
+**Proved**
+- Counts measured, not estimated: 51 screens, 24 flows, 22 data files (barrel
+  used by 79 files), 26 server files and 27 mounts, 89 migrations, `suite.sql`
+  5,867 lines; each mixed file's endpoints grouped by path.
+
+**Left open**
+- The owner's four decisions (depth, which folders, when, where notes go).
+
+**Commits:** the plan commit.
+
+---
+
+## 2026-09-15 (deploy) · Everything since 10 September is live
+
+**Asked for:** the owner ran the deploy a day early and asked what preflight's
+errors meant, then "deploy complete, check the live site".
+
+**Shipped** (by the owner, from `HANDOVER.md` § 9)
+- Server: `1c2e5d0`, migrations 085–089, API restarted 15 Sep 13:09 GMT.
+- Website: the owner's build `index-DkwUzh40.js`, published to Firebase.
+
+**Found**
+- 271 · the deploy re-created the placeholder administrator `REPLACE@fidato.in`
+  (deleted 9 September; migration 008 re-inserts it whenever the row is
+  missing). Preflight refused to call the server ready. The owner switched it
+  off from People at 13:14 GMT; preflight then passed. Not an open door —
+  sign-in needs a Firebase uid that only a group administrator can attach.
+- The folder name needs quotes in PowerShell (`cd "D:\fidato pms"`); § 9 now
+  carries them.
+
+**Proved** — read-only, after the deploy
+- API: healthy, as `pms_app`, started 13:09 GMT; 088's guard and the new staff
+  columns present; both walk-ins have their channel; "Reception can use the
+  POS" on; the owner's sign-in link untouched (only `updated_at` moved).
+- Preflight: every check green, "Ready." (the owner's run).
+- Website: the live main bundle is the owner's build, byte-named the same as
+  `dist`; it carries the new screens; `config.json` points at
+  `https://api.fidatohotels.com`; no test sign-in in any built file; the API
+  answers the test header with 401 and allows the live site's origin (CORS).
+- NOT checked by me: the signed-in screens — I do not enter the owner's
+  password, and the in-app browser could not open the live site. The owner's
+  checklist is in this session's reply.
+
+**Left open**
+- The owner's answer on fixing 008 (PENDING 1a).
+
+**Commits:** the post-deploy documentation commit.
+
+---
+
+## 2026-09-15 (deploy prep) · The steps for the 16 September deploy
+
+**Asked for:** "give me the deploy steps for tomorrow".
+
+**Shipped**
+- `HANDOVER.md` § 9 rewritten from the checks below: a backup BEFORE the
+  pull (`launch.sh` backs up only after it has migrated), what each step
+  prints when it worked, a health check that the server really restarted,
+  what to look at on the site, and what to do if it goes wrong.
+
+**Found**
+- `launch.sh` migrates before it backs up. Not changed — the step is added
+  to the procedure instead.
+- `api/.db-password` (written by `launch.sh`) is not in `.gitignore`: it shows
+  as untracked on the server. Harmless while nobody commits there; a one-line
+  ignore is worth adding.
+
+**Proved** — read-only, nothing on the server changed
+- Server: on `cp6` at `1f77239`, clean but for that file, so the pull
+  fast-forwards; root's git trusts `/opt/fidato`; the deploy key reads
+  GitHub's `cp6`; API healthy since 9 Sep; disk 46%; last backup 15 Sep 03:00.
+- Database: 088 and the 087/089 columns absent, as expected; 085 will fill
+  the channel on 2 walk-ins; 087 will switch "Reception can use the POS" on
+  for the one hotel.
+- Locally: strip-check loads all 42 API files; `npm run build:app` passes
+  (no test sign-in in `dist`, config points at the live API). Not published.
+
+**Left open**
+- The deploy itself — the owner's, on 16 September.
+
+**Commits:** the deploy-prep commit.
 
 ---
 

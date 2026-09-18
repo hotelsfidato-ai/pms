@@ -1,5 +1,12 @@
 /* ══════════════════════════════════════════════════════════════════
-   THE SEAM
+   THE SEAM — the core's half of it
+
+   Since the service-folder move (15 September) each service keeps its own
+   data calls in `src/modules/<service>/data/`, and other services reach
+   them through its front door. This index carries only what belongs to no
+   one service: the model's types, the business date, properties, rooms,
+   notifications, your own preferences, the import report, and the query
+   keys. The rule below still holds for all of it.
 
    Screens import from here and from nowhere else in `src/data`.
    Importing `@/data/fixtures/*` from a screen is a defect, not a
@@ -17,28 +24,17 @@
    ══════════════════════════════════════════════════════════════════ */
 
 export * from "./types";
+/* The property's operating day — core. Exported here by name, so that a
+   service's data file which passes it along (stays.ts, statistics.ts) is
+   never taken for its home: an explicit export wins over `export *`. */
+export { BUSINESS_DATE, PTD_FROM, PTD_TO } from "./businessDate";
 export * from "./properties";
 export * from "./rooms";
-export * from "./folios";
-export * from "./stays";
-export * from "./statistics";
-export * from "./managerReport";
-export * from "./reportData";
-export * from "./stayview";
-export * from "./operations";
 export * from "./notifications";
-export * from "./admin";
-export * from "./directory";
-export * from "./billing";
-export * from "./groups";
-export * from "./rates";
-export * from "./till";
-export * from "./banquet";
-export * from "./roomSetup";
-export * from "./bookingSources";
-export * from "./stores";
-export * from "./stayExtras";
-
+/* The two shapes a write answers with, shared by every service's data. */
+export type { OperationResult, AdminResult } from "./result";
+export * from "./me";
+export * from "./importReport";
 
 /* ── Query keys ────────────────────────────────────────────────────
    Rule 5: `hotelId` in every TanStack Query key. Miss it and

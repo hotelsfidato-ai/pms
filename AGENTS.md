@@ -19,7 +19,7 @@ useful one.
 |---|---|
 | `HANDOVER.md` | **the top section only** — the current state, what is next, and the rules. Kept current; everything under "Archive" is history |
 | `CONTEXT.md` | what this system is, and who it is for |
-| `MEMORY.md` | **258 numbered defects.** Not history — the mistakes this codebase has already made. About a third were made *twice* before being written down. |
+| `MEMORY.md` | **272 numbered defects** (and each service's own, since 15 September). Not history — the mistakes this codebase has already made. About a third were made *twice* before being written down. |
 | `CHANGELOG.md` | what the last agent did, and what they left in flight |
 | `START-HERE.md` | how to run it, and where everything lives |
 
@@ -52,119 +52,192 @@ anything a server runs, read defects 187–193 first.
 
 ---
 
+## Starting a chat for ONE service?
+
+`docs/briefs/<service>.md` is written for exactly that, and
+`docs/briefs/README.md` carries what every lane shares: the five rules, how to
+make your own working copy and database, the gates, and the list of files
+nobody but the master chat may change. Read your brief before this file.
+
+## Before that: nothing is decided without the owner
+
+16 September, in their words: *"if u have any dought u need to ask me and you
+are not allowed to take decisions unless they are approved"*. If a choice
+changes what gets built, what a person sees, what a figure means or what
+ships, it is the owner's. Ask it as a question with your recommendation, and
+wait for the answer. Do the parts that need no decision meanwhile. A plan you
+wrote is not approval; neither is silence.
+
 ## The rule that matters most
 
-**One agent owns one folder at a time. Never two.**
+**One agent owns one service at a time. Never two agents in one service, and
+never two agents in one folder on disk.**
 
-Not "coordinate carefully" — *own*. Claim it in writing before your first
-write, release it when your checkpoint closes.
+Since 15 September the code is sorted by service (`docs/SERVICE-FOLDERS-PLAN.md`):
+front desk, reservations, housekeeping, inventory and rates, guests and
+companies, finance, night audit, the restaurant (`pos`), banquet, store,
+reports, administration — plus eighteen not built yet, each with a Coming
+soon page since 16 September: the channel manager, `crs`, `payments`,
+`booking-engine`, `guest-messaging`, `accounting`, and `leads`, `marketing`,
+`crm`, `spa`, `online-checkin`, `laundry`, `contracts`, `revenue-management`,
+`reputation`, `loyalty`, `guest-services`, `equipment`. A service is one word,
+and it lives in three places:
 
 ```
-CLAIMED   src/pages/reports/, docs/REPORTS-SPEC.md      agent-reports
-CLAIMED   src/pages/admin/                              agent-admin
-FREE      src/data/, src/components/ui/
+src/modules/<service>/          its screens, menu entries, addresses, data, tests
+api/src/modules/<service>/      its server routes, and its front door index.ts
+db/tests/modules/<service>.sql  its database checks (suite.sql is frozen history)
 ```
 
-Keep that block current in `HANDOVER.md`. If a folder you need is claimed,
-**stop and say so** rather than writing into it. Waiting costs minutes;
-colliding cost a day.
+**Read `src/modules/<service>/MODULE.md` before your first edit.** It is the
+service's brief: its screens, endpoints and tables, the owner's decisions that
+bind it, its open items, and requests from other services.
+
+**Then read `src/modules/<service>/DEFECTS.md`** — every defect found in that
+service, what was done about the fixed ones, and the fix waiting for the open
+ones. It exists so a solved problem is not solved twice and a known trap is not
+walked into again; `src/test/boundaries.test.ts` fails if a service loses it.
+A new defect goes there, numbered with the service's prefix; a lesson that
+would bite another service goes in the root `MEMORY.md` with a plain number.
+
+**Building a service that is still Coming soon?** Only after the owner has
+said which. Its `MODULE.md` has a "When it is built" list: replace
+`pages/<Name>.tsx` with the real screens at their real addresses, move the
+menu entry out of the Coming soon section into its working section (and
+update the Coming soon list pinned in `navigation.test.ts`), and add a
+module switch if not every hotel has it.
+
+Claim the service **before your first write**, in your copy's folder:
+`npm run claim -- <service> "what you are doing"`. Release it when you stop:
+`npm run release -- <service>`. `npm run claims` lists who holds what.
+
+Claims live in the git folder every worktree shares (`scripts/claim.mjs`). The
+first design wrote `.claims/<service>.md` inside the checkout, and a file there
+is visible only in the copy that wrote it — on 16 September twelve chats were
+working and nobody could see any of their claims (root `MEMORY.md` 281).
+
+**If your service is already claimed, `claim` refuses and names who holds it.
+Stop and say so** rather than writing into it. Waiting costs minutes; colliding
+costs a day.
+
+Before you commit, in your own copy:
+
+```powershell
+# the owner's PC, PowerShell, in YOUR working copy
+npm run lane -- pos
+```
+
+It sorts everything this session has changed into **yours · nobody's · the
+shared core · another service's**, and exits 2 if anything is outside your
+lane. It refuses nothing and blocks nothing; what it gives you is the sentence
+you owe the owner before a commit that reaches past your service.
+
+### What "owning a service" lets you touch
+
+- Everything inside your service's three places.
+- A new migration — only after claiming its number in HANDOVER. The guard
+  `src/test/migrationNumbers.test.ts` fails on a duplicate or a gap.
+- **Nothing in another service.** You use another service only through its
+  front door, `index.ts`; the guard `src/test/boundaries.test.ts` fails on any
+  reach into its insides. If you need a change there, write it on that service's
+  "Requests" list in its `MODULE.md` and tell the owner — its owner makes it.
+- **Nothing in the shared core** (below) without saying so first.
+
+### Your notes
+
+Each service keeps its own `CHANGELOG.md` and `DEFECTS.md`. A defect in your
+service is numbered with its prefix (FD-1, POS-1, FIN-1 …, listed in its
+`MEMORY.md`). A lesson that applies to the whole project goes in the root
+`MEMORY.md` with the next plain number. Work that is project-wide goes in the
+root `CHANGELOG.md`.
 
 ---
 
-## Before your first write
+## Before your first write — your own copy, database and ports
 
-```bash
-cd "D:\fidato pms"
-git status                 # must be clean
-git checkout -b <your-lane>
+Several agents run at once, so each gets its own working copy. **Never work in
+`D:\fidato pms` itself while another agent is running.**
+
+```powershell
+# the owner's PC, PowerShell, in D:\fidato pms — a copy on its own branch
+git worktree add "..\fidato-pos" -b pos/<task>
 ```
 
-Work on a branch. `main` holds the last verified state. Commit at every
-checkpoint, not at the end.
+```powershell
+# the owner's PC, PowerShell — share the installed packages instead of installing
+New-Item -ItemType Junction -Path "D:\fidato-pos\node_modules" -Target "D:\fidato pms\node_modules"
+New-Item -ItemType Junction -Path "D:\fidato-pos\api\node_modules" -Target "D:\fidato pms\api\node_modules"
+```
+
+- **Your own database.** `DB=fidato_pos ./db/migrate.sh --with-dev-identities`
+  (Git Bash, in your copy) creates and migrates `fidato_pos`; it starts with no
+  demo data (`api/scripts/load-demo.ts` loads it — read its header). Never
+  point two agents at one database.
+- **Your own ports.** Run the API with `PORT` set to a free port and your
+  database in `DATABASE_URL`; give the web app `VITE_API_URL` for that port and
+  `VITE_ALLOW_DEV_AUTH=1` in your copy's `.env.local` (git ignores it). Vite
+  finds a free port by itself.
+- **Your copy's `api/.env`** holds only development settings — `NODE_ENV=development`
+  and `ALLOW_DEV_AUTH=1`. **Never copy the main checkout's `api/.env`** — it
+  carries the production Firebase key.
+- **The website's tests need the root `.env`** (the website's own settings:
+  its public Firebase web config and the local sign-in switch). Copy the main
+  checkout's root `.env` into your copy — without it 31 web tests fail on the
+  sign-in screen. It is gitignored; never commit it.
+- **Type checks: use `npx tsc -b --force`.** The linked `node_modules` shares
+  the type checker's cache between copies, so a plain `tsc -b` can report
+  another copy's "clean".
+- **Judge every gate by its exit code**, not its summary line (MEMORY 274).
+- The API tests need no setup beyond that: `cd api && npm test` builds and drops
+  its own scratch database every run.
+
+Commit on your branch at every checkpoint. **You do not merge.** When you are
+done, the agent that owns the core merges services into the main line one at a
+time and runs every gate after each. Deploys stay the owner's.
+
+**Start with three agents at once, not seven.** Every agent asks the owner
+before any doubt, and three is what one person can keep up with.
 
 ---
 
-## Lanes — all four are now built
+## The lanes of CP6 — closed, for history
 
-The four lanes below ran and closed during CP6. **They are recorded here so
-nobody rebuilds them under a different filename.** The files that exist are not
-always the ones the lane predicted: several screens were grouped into one file
-because they share their data and their chrome.
-
-### Lane A — reports · closed
-
-```
-src/pages/reports/ManagerReport.tsx    the daily flash
-src/pages/reports/Statistics.tsx       MonthlyOccupancy · Monthly · Yearly
-src/pages/reports/Ledgers.tsx          CityLedger · NoShow · LodgingTax
-src/pages/reports/Index.tsx            the taxonomy, starrable
-src/components/reports/ReportShell.tsx chrome · print · Amount (null vs zero)
-```
-
-Lodging Tax is a bespoke table — `DataTable` cannot span columns, and widening
-a ported CRS file to make it would have been drift.
-
-### Lane B — admin · closed
-
-```
-src/pages/admin/Admin.tsx    Users · Roles · AuditLog · Integrations
-                             Settings · AdminProperties     (six exports)
-src/data/repositories/directory.ts   staff · audit · integrations · settings
-```
-
-### Lane C — guests, companies, inventory · closed
-
-```
-src/pages/Directory.tsx      Guests · Companies · Properties · Notifications
-                             RoomTypes · RatePlans           (six exports)
-src/data/repositories/directory.ts   shared with Lane B
-```
-
-### Lane D — the remaining property screens · closed
-
-```
-src/pages/Reservations.tsx           the whole book, five filters
-src/pages/Billing.tsx                Payments · Invoices · PropertyCityLedger
-src/pages/Rates.tsx                  rack against achieved
-src/pages/NightAudit.tsx             the pre-flight checklist
-src/pages/WalkIns.tsx                the record; the flow is in Stay view
-src/data/repositories/billing.ts     payments · billable · rates · audit
-```
-
-`cashiering` and `pos` remain placeholders — unspecified, and an honest
-placeholder naming what a screen will carry is a correct answer.
+The four lanes that built the first screens (reports, admin, guests/companies,
+the remaining property screens) closed during CP6. Their files have since moved
+into the service folders; each service's `MODULE.md` says where everything is
+now.
 
 ---
 
 ## Where the next work is
 
-**`HANDOVER.md` § 3, in order.** As of 15 September: the clarity plan's steps
-2–4 (one primary button per screen, a menu per role, help in place), then the
-staff-first programme's phases 2–4 (reports in the owner's layout with PDF and
-Excel, documents on the voucher template, three screens per reservation task).
-Items marked "ask first" there need the owner's answer before any code.
-
-If a new lane is needed, claim a folder in `HANDOVER.md` first. The rule at the
-top of this file has not relaxed.
+**`HANDOVER.md` § 3, in order.** Items marked "ask first" there need the
+owner's answer before any code.
 
 ---
 
-## Shared, and therefore frozen
+## Shared, and therefore frozen — the core
 
-**Nobody edits these without saying so first.**
+**Nobody edits these without saying so first**, because every service stands on
+them. One agent owns the core at a time.
 
 ```
-src/components/ui/          ported from the CRS · 13/15 byte-identical
-src/data/repositories/      the seam · additive only, never restructure
-src/data/store.ts           the mutable store
-src/data/fixtures/          calibrated demo data with import-time assertions
-src/lib/rules.ts            every business rule (Rule 3)
-src/App.tsx                 routes — append yours, touch nothing else
-src/components/app/         AppShell, Sidebar, TopBar, navigation
+src/components/ui/          the design system · ported from the CRS
+src/components/app/         the shell: sidebar, top bar, Find a screen, Start here,
+                            and navigation.ts — the SECTION LAYOUT only; each
+                            service declares its own entries in its nav.ts
+src/App.tsx                 routes that belong to no service; services' come
+                            from their own routes.tsx
+src/data/repositories/      the core data: types, the business date, rooms,
+                            properties, notifications, http.ts and result.ts helpers
+src/data/store.ts, src/data/fixtures/, src/lib/
+api/src/server.ts, mount.ts, auth.ts, db.ts, env.ts, identity.ts, realtime.ts,
+storage.ts, businessDate.ts, and the core routers in api/src/routes/
+db/migrations/              ONE ordered history for everybody — claim a number
 ```
 
-**`src/App.tsx` is the one file every lane needs.** Add your route, add your
-import, change nothing else. Keep the diff to the lines you added.
+A service adding a screen, a menu entry or a route **edits none of these**: its
+`nav.ts`, `routes.tsx` and `api/src/modules/<service>/index.ts` are its own.
 
 ---
 
@@ -172,18 +245,36 @@ import, change nothing else. Keep the diff to the lines you added.
 
 Someone already built these. Rebuilding one is drift.
 
+Addresses re-checked 16 September: the service-folder move (15 September) took
+every one of these out of `src/components/`, and this list still pointed at the
+old places.
+
 ```
-src/components/lists/StayTable.tsx   configurable stay list — columns, filter,
-                                     search, row → panel. Six screens use it:
-                                     arrivals, upcoming, in-house, due-out,
-                                     reservations, walk-ins.
-src/components/flows/CheckInFlow     five-step check-in, gates on clean rooms
-src/components/flows/FolioPanel      ledger, charge, reverse, settle, check out
-src/components/flows/WalkInFlow      one-action walk-in with rate override
-src/components/ui/                   32 primitives — every one on /design-system
-src/components/reports/ReportShell   report chrome, print styling, and Amount —
+src/modules/front-desk/components/StayTable.tsx
+                                     configurable stay list — columns, filter,
+                                     search, row → panel. Five screens use it:
+                                     arrivals, in-house, reservations, walk-ins,
+                                     folios. It also has its OWN card view
+                                     (StayCards) — a phone gets that, not the
+                                     generic DataTable card. Read its header.
+src/modules/front-desk/flows/CheckInFlow.tsx
+                                     five-step check-in, gates on clean rooms
+src/modules/finance/flows/FolioPanel.tsx
+                                     ledger, charge, reverse, settle, check out
+src/modules/front-desk/flows/WalkInFlow.tsx
+                                     one-action walk-in with rate override
+src/components/ui/                   17 files of primitives, one import surface
+                                     (`@/components/ui`) — every one on
+                                     /design-system
+src/modules/reports/components/ReportShell.tsx
+                                     report chrome, print styling, and Amount —
                                      which prints a dash for null, never a zero
 ```
+
+**Reaching into another service to use one of these is what
+`src/test/boundaries.test.ts` refuses.** Import it through that service's front
+door, `src/modules/<service>/index.ts`; if what you need is not exported there,
+that is a request for its owner, not an edit you make.
 
 The seam already exposes ~68 functions. `listArrivals`, `listOpenFolios`,
 `getPeriodStatistics`, `getFolioPostings` and the rest are written and tested.

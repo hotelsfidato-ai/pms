@@ -147,7 +147,7 @@ returns trigger
 language plpgsql
 as $$
 begin
-  raise exception 'A guest is never deleted — stay history and the audit trail depend on the row.'
+  raise exception 'A guest is never deleted - stay history and the audit trail depend on the row.'
     using hint = 'Anonymise the identity documents instead, per the retention policy.';
 end $$;
 

@@ -195,6 +195,17 @@ fi
 # This handles the first. THE SECOND IS A WEB CONSOLE STEP AND CANNOT BE
 # SCRIPTED — see deploy/README.md. A box that passes this script and is still
 # unreachable is almost always the VCN.
+# ⚠ THIS RELOAD DELETES THE NETWORK RULES OF EVERY RUNNING CONTAINER.
+#   Podman (netavark) writes the rules that let a container reach the
+#   internet and let this box reach the container, and a firewalld reload
+#   throws them away. n8n runs in a container here: from 10 September every
+#   PMS deploy silently cut it off in both directions, and nothing said so.
+#   Found 16 September — 0 netavark rules on the box, n8n healthy inside its
+#   container and unreachable from outside it (MEMORY 279).
+#   The fix is on the SERVER, not here: `netavark-firewalld-reload.service`,
+#   shipped with netavark, puts the rules back after every reload. It must
+#   stay ENABLED. Do not remove this reload to "fix" n8n — the box needs
+#   http and https open, and the service is what keeps both working.
 if command -v firewall-cmd >/dev/null; then
   firewall-cmd --permanent --add-service=http  --quiet || true
   firewall-cmd --permanent --add-service=https --quiet || true

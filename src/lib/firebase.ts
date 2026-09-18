@@ -68,7 +68,7 @@ if (isConfigured) {
     });
 } else if (import.meta.env.DEV) {
   console.warn(
-    "[firebase] Not configured — copy .env.example to .env. " +
+    "[firebase] Not configured - copy .env.example to .env. " +
       "The application runs on demo data regardless; only analytics and " +
       "the Stage 3 auth bridge need this.",
   );

@@ -1,0 +1,198 @@
+# Defects — the restaurant (POS)
+
+**Read this before your first edit here.** Every defect found in this service:
+what happened, how it was found, whether it is fixed, **what was done about
+it**, and the rule it leaves behind. A solved problem stays solved only if the
+solution is written where the next person will look.
+
+**Numbering:** `POS-1`, `POS-2`, … A lesson that would bite another service
+too goes in the root `MEMORY.md` with a plain number instead — 276 was the
+next free one on 16 September 2026; check that file before taking a number. Fixed
+entries stay here: they are the reason the fault does not come back.
+
+---
+
+## Open — not fixed
+
+None, as of 17 September.
+
+---
+
+## Fixed
+
+### POS-13 · MINE: a database check that crashed the suite instead of failing — caught before commit
+
+**Found** — 17 September, building D17-21. `db/tests/modules/pos.sql` checks that a bill settled "to a function" with no function is refused. With the constraint taken out of the migration, the suite exited 1 — but not on that check: the wrong settle went through, and the file's own clean-up then could not remove a settled order's payment ("tenders on a settled order cannot be removed"), so the whole suite stopped with "the suite did not finish". A red run for the wrong reason, and every assertion after it silently unrun.
+
+**What was done** — The attempt runs inside its own block that raises to undo itself when the settle is allowed, and records "it was allowed"; the check fails by name. Re-run with the constraint out: `pos function 7 passed, 1 failed — a bill settled to a function with no function is refused | it was allowed`, the suite finished. Restored: 744 of 744.
+
+**The rule** — A guard's failure proves something only when it is the guard's own message (root MEMORY 259). A check whose failure case leaves rows its clean-up cannot remove turns one failure into a stopped suite — undo the attempt inside the check.
+
+### POS-12 · An order taken on Tables printed no table — on its kitchen slip, its bill and the Terminal's list — FIXED 17 September
+
+**Found** — 17 September, on screen, checking the slip Tables now opens (D17-18): "KOT - 1 · Dine In" and no table, while the Terminal listed orders 1 to 4 — taken on AC1 to AC4 — as "no table". In the database each had `table_id` set and `table_ref` empty. The slip, the bill and the list all print `table_ref`. Opening one order by itself (`POST /till/orders`) copies the table's name into `table_ref`, and its comment says why; the order pad's route (`POST /till/orders/batch`) kept only the id. So since the order pad was built (8 September) the paper a kitchen works from has not said which table.
+
+**What was done** — On the owner's yes ("Fix it", 17 September; not back-filled): the batch route's insert takes the table's name when a table is given, the floor's name winning over typed text, as the other route does (`api/src/modules/pos/till.ts`). Guarded by `api/test/modules/pos/tillBatch.test.ts` ("copies the table's name…"), which failed on the old insert with `expected null to be 'AC1'`. **Opened**: AC5, Jeera Rice, Send → the slip "KOT - 6 · Dine In · Table No: AC5". Orders taken before the fix keep no name.
+
+**The rule** — Two routes that make the same row must write the same columns. A column one of them fills "for the paper" is the first one the other forgets, because nothing on the screen that made the order shows it.
+
+### POS-11 · MINE: a sent round could stay saved on the device as unsent — caught before merge
+
+**Found** — 17 September, on screen, after `50080a0`. D17-18 opened the slip before the pad cleared its saved draft. In the preview pane the new tab REPLACED the page, so the clearing never ran: table AC1 read "not sent", with Bhaaji Pau still in "This round" after it had gone to the kitchen as slip 1 — one Send from being cooked and billed twice. A desktop browser keeps the page, but a browser set to open new windows in the same tab, or a kiosk's web view, does not.
+
+**What was done** — `flows/OrderPad.tsx` clears the draft first, then opens the slip (milliseconds of the browser's few seconds). Guarded by `ownerDecisions.test.tsx` ("takes the sent round off the device BEFORE it opens the slip"). **Its first version passed with the fault put back**: the pad also clears an empty draft by itself as it opens, and the test counted that one. It now records only from the moment Send is pressed, and fails on the fault (`expected 'slip opened' to be 'draft cleared'`). Re-checked on screen: two sends that replaced the page left no draft and no "not sent".
+
+**The rule** — Anything after `window.open` may never run: do what must happen before opening. And when a deliberate break leaves a test green, find out whether the test counts something else that looks the same (root MEMORY 270).
+
+### POS-10 · A slow send opened no kitchen slip, silently — Tables and the Terminal alike — FIXED 17 September
+
+**Found** — 17 September, building D17-18. A browser lets a tap open a new tab only for a few seconds after the tap (Chrome and Firefox: about five). Both screens open the slip AFTER the send answers, so on a line slow enough that the answer takes longer, the browser blocks the tab and says nothing to the waiter. `window.open` returns `null` when that happens, and neither screen read it. The Terminal had had the gap since 2 September.
+
+**What was done** — The owner's answers (17 September): say so, with a button, **on the screen** rather than in a pop-up (the shared pop-up has no button and is gone in 4.5 seconds). `components/SlipNotice.tsx`: `openSlip` reads the refusal; the notice reads "Order 4 for AC4 is with the kitchen, but its slip did not open — the browser blocked the new tab." with **Open the kitchen slip** (a new tap, which the browser allows) and a close button; one line per slip, until opened or closed; refused on the new tap too, it adds "allow pop-ups for this site in the browser". On Tables (under Start here) and the Terminal (under its header). Guarded by five tests in `ownerDecisions.test.tsx`; with the hand-off, the Terminal's notice and the "blocked again" line each taken out, three failed. **Opened**, with the browser made to refuse: Tables AC3 and AC4 (the notice, the second refusal's sentence, then the button opened slip 4), the Terminal order 5 (the notice under the header, 61px, no page scroll, no console error).
+
+**The rule** — A tab opened after a network call is a tab the browser may refuse; read the return value.
+
+### POS-9 · On a phone, every dish row on the Menu screen showed no dish name — FIXED 17 September
+
+**Found** — 17 September, measuring the add-on switches (D17-19) at 375px. Each dish row put the name, the tax rate, the price, the course, the preparation time, "Out of stock" and "Take off" on one line that could not wrap. At 375px the row needed 465px and had 302: **the dish name was squeezed to 0px** and the last buttons sat outside the card. It had been so before 17 September.
+
+**What was done** — On the owner's yes: the controls are one group that goes under the name when the row is too narrow; the name keeps at least 8rem (`pages/Menu.tsx`). Measured: at 375px four dishes' names 171–178px wide, nothing past the row, no sideways scroll; at a desk every control still on the one 44px line. No test — jsdom has no layout; the measurement is the proof.
+
+**The rule** — A row of controls is measured at phone width before it is called done; a name squeezed to nothing looks like a missing name, not like a layout.
+
+### POS-5 · The kitchen docket is built, and nothing ever opens it — FIXED 17 September (Tables)
+
+**Found** — 16 September, checking whether this system can route and print a KOT. `DocketPage` is real, thermal-roll width, prices deliberately absent, with a Print button at `pages/Docket.tsx:64`. Its address is `/h/:code/till/orders/:id/kot/:no` (`routes.tsx:53`). **No file in `src/` navigates to it.** Grepped for `till/docket`, `/docket/` and the built path: nothing. Compare the bill, which is opened with `window.open` from three places — `Floor.tsx:138`, `Terminal.tsx:657`, `Till.tsx:985`.
+
+So when a waiter presses Send, the toast says "Kitchen docket 5" (`flows/OrderPad.tsx:230`) and no paper appears. The chef's slip exists as a screen nobody is taken to.
+
+This is the website twin of POS-2, and the 16 September route audit did not catch it: that audit matched **API** routes against their callers, and this is a **website** route.
+
+**The fix, when it is done** — Ask the owner first: is the pass screen the intended path at 5 Elements today, with the docket kept for a reprint? If dockets are meant to print, the fire path opens the docket for each new KOT number, the way the bill is already opened. Both halves of a KOT — routing it and printing it — are planned in `docs/APPS-PLAN.md`; this is the smaller half and does not wait on it.
+
+**Corrected 16 September (POS lane, round 1) — half of this entry is wrong.** The **Terminal does open the docket**, on every send, and has since 2 September (`76c400f`, "P6: the kitchen docket"): `pages/Terminal.tsx`, `kot()`, `window.open(\`/h/${hotelId}/till/orders/${orderId}/kot/${res.kotNo}\`)`. The grep missed it because the path is assembled from pieces. What is true: **sending from Tables** — the order pad, `flows/OrderPad.tsx` — opens nothing, and says "Kitchen docket 5". So the owner's question is narrower than it reads above: should Tables do what the Terminal already does. Not started — the owner decides (round 1, `HANDOVER.md` § 3.0g).
+
+**What was done** — The owner's D17-18 (17 September): *"Tables opens the kitchen slip on every send, like the Terminal."* `flows/OrderPad.tsx` opens `/h/:code/till/orders/:id/kot/:no` when the send comes back with a docket number, before anything else is awaited (a browser allows the tab only for a few seconds after the tap — POS-10). Nothing opens for a round that went on the bill alone, or for a round held on the device: the kitchen has neither. The toast's words did not change. Guarded by `ownerDecisions.test.tsx` ("Tables sending a round"), the first test seen to fail on the old code. **Opened on screen** (17 September, `fidato_pos`, as the owner): table AC1, Bhaaji Pau (Oil) with Curd, Send → the slip "KOT - 1 · Dine In · Bhaaji Pau (Oil) 1 · Sides: Curd - 1", no price on it, for order `20260825-1`.
+
+**The rule** — A screen with no caller is the same defect as a route with no caller, and the audit that only checks the server finds half of them. **And a grep for a built path proves nothing about a path built from template pieces** — search for the route's distinctive fragment (`/kot/`) before writing "nothing opens it".
+
+### POS-2 · Two restaurant add-on routes are unreachable — FIXED 17 September
+
+**Found** — 16 September, the route audit — every route matched against every path the website builds, then checked by hand.
+
+`POST /:code/till/addons/:id/on` and `/off` (`till.ts:2011, 2035`) have no caller anywhere. Menu items can be switched from the Menu screen; the add-ons on a dish cannot be switched from any screen.
+
+**What was done** — The owner's D17-19 (17 September): *"On/off switches for add-ons on the Menu screen, like dishes have."* The Menu screen had never shown add-ons at all. Each dish now lists its add-on groups under it, and each add-on has the dish's own control — "Out of stock" → 2, 4, 8, 24 hours or Tomorrow → "Off till 04:46 pm — put back" (`pages/Menu.tsx`, one `OffControl` for both; `data/till.ts` `takeAddonOff`, `putAddonBack`). Two differences, both the database's: **no "Why"** (`pos_addons` keeps no reason and the route takes none), and **a group can be on several dishes**, so the dialog names every dish it goes off on. No permanent "take off the card" for an add-on: nothing on the server does that (`is_active` has no route, and the menu read hides inactive add-ons). On a phone the add-on row wraps rather than squeezing the name (measured, 375px). Guarded by `ownerDecisions.test.tsx` ("the Menu screen's add-ons"). **Opened on screen**: Onions off for 2 hours → 200, the dialog closed, "Onions is off · Back in 2 hours", the row "Off till 04:46 pm — put back", `off_until` 16:46 in the database; the waiter's dish dialog on Tables showed Onions struck, "off today"; put back → 200, "Onions is back on".
+
+**The rule** — A route with no caller is either a missing screen or dead weight; it is never 'done'.
+
+### POS-7 · Three more raw business dates on Close restaurant day — FIXED 17 September
+
+**Found** — 16 September (POS lane, round 1), fixing the one named in the brief. `pages/DayEnd.tsx` prints `day.businessDate` raw in three more places: the "… is closed" line on the Finalize step, the toast "… is finalised.", and the button itself — **"Close 2026-08-25"**. The heading above them now reads "Tuesday, 25 August 2026", so the same screen shows the date two ways.
+
+**What was done** — The owner's D17-20 (17 September): *"Tuesday, 25 August 2026" — and the hotel's name with it, the button too.* All three, and the line under the heading: "5 Elements Akkalkot · Fidato Restaurant · Tuesday, 25 August 2026"; "Tuesday, 25 August 2026 · 5 Elements Akkalkot is closed"; the toast "… is finalised."; the button **"Close Tuesday, 25 August 2026" over "5 Elements Akkalkot"**. The name is the session's name for the page's OWN code, not the property "in view" (the store follows the address a moment late), and the code itself when no name is known — never another hotel's. Guarded by `ownerDecisions.test.tsx` ("Close restaurant day"). **Found on screen before commit:** on one line the button's label was 355px in a 317px button and ran out over both edges; it is two lines now, the full sentence kept as the button's spoken name. Re-measured: 317 = 317 at a desk, 294px with nothing over at 375px, no sideways scroll.
+
+**The rule** — A format fixed in one place on a screen is not fixed on the screen: read every place the same field is printed. **And a longer label is measured in the button that holds it.**
+
+### POS-8 · MINE: the add-on dialog's duration buttons bypassed their own handler — caught before commit
+
+**Found** — 17 September, by `npx tsc -b --force`, after the tests had passed. Making the dish's off control serve add-ons too, I renamed its handler `choose` and left the dialog's buttons calling `takeOff(o.key)` — which was now the prop that posts to the server. The request went out; the dialog never closed, no toast, the menu was not read again. **The tests passed** because they asserted only that the request was sent.
+
+**What was done** — The buttons call `choose`. The test now also waits for the dialog to close and the menu to be read again; with the fault put back it fails ("expected dialog to be null").
+
+**The rule** — A test that checks the request a screen sent passes while the screen never finishes the act. Assert what the person sees afterwards too. And run the type check before trusting a green test run — here it was the only gate that saw it.
+
+### POS-3 · The Kitchen screen had no heading — FIXED 16 September
+
+**Found** — 16 September, opening all 89 screens: it is the only one without an `h1`.
+
+The kitchen wallboard opened straight into its columns under a title drawn as a paragraph ("The pass"), and its browser tab read "Fidato PMS".
+
+**What was done** — The wall screen keeps its own slim header (a `PageHeader` would add chrome to a screen read from across a kitchen), but the title in it is now the page's `h1`, and it says **Kitchen** — the menu's word, as `HANDOVER.md` § 6 requires of a heading and a tab. `useDocumentTitle("Kitchen")` sets the tab. Guarded by `readStates.test.tsx` ("has a heading and a tab title"), seen to fail on the old code.
+
+**The rule** — The only screen unlike every other screen is either special on purpose or an oversight; say which. This one is special on purpose in its chrome and was an oversight in its heading.
+
+### POS-4 · A server fault on the till's reads showed as an empty list — FIXED 16 September
+
+**Found** — 8 September (root MEMORY 251 fixed the refusal half); the rest was recorded in PENDING § 6.
+
+Nine reads in `data/till.ts` ended in `catch { return [] }` (or `null`): the menu, today's orders, one order, the chargeable rooms, the kitchen board, the tables, the waiters, a docket and the day end. So Close restaurant day told a cashier "This property has no restaurant configured" when the line dropped; the kitchen board said "Nothing ordered yet." while nothing had loaded; the Terminal said "No outlet is configured" while its outlets were still loading, and for good when they failed; a bill that failed to load printed "No such order."
+
+**What was done**
+- The nine reads **throw**. A missing hotel or order id still answers empty without a request.
+- `components/ReadProblem.tsx` names the failure: **refused** (a 4xx — the server's own sentence, as it wrote it), **unreachable** (nothing arrived), **failed** (a fault, with its status). `ReadFailed` stands in for a list that has nothing to show; `ReadStale` is one line above a list that IS shown when its last refresh failed, with the time it was loaded.
+- Every screen reading them draws the right one: Kitchen, Tables, Till, Terminal, Menu (and its promotions, whose read already threw and whose error nothing drew), Close restaurant day, Docket, Bill, the order pad, and the header panel's waiter list. **Empty keeps each screen's own words**, now shown only for a read that succeeded.
+- Kitchen and Menu also drew their empty words **while loading**; they show a loading state now.
+- Guarded by `src/modules/pos/readStates.test.tsx` — 12 tests, 11 of them seen to fail against the old code.
+
+**The rule** — An error that renders as emptiness is the most expensive kind: nobody reports it. **And catching an error in a data function is not handling it — it takes the decision away from the only place that knows what to say.**
+
+### POS-6 · The rooms list kept on the device for an offline room charge was wiped by the first offline refresh — FIXED 16 September
+
+**Found** — 16 September, fixing POS-4. `till-rooms` is in `PERSISTED` (`src/App.tsx`) by the owner's decision of 8 September, so a waiter can charge a dinner to a room with the line down. Both settle panels ask for it again every time they open (the Terminal with `staleTime: 0`), and `listChargeableRooms` answered a failed request with `[]` — a **successful** empty answer, which React Query stored over the kept list and persisted. So the first time the panel opened with no connection, the room list the owner chose to keep was replaced by an empty one.
+
+**How it was proved** — `readStates.test.tsx`, "keep the rooms list kept on the device…": a query cache holding a room, then a refresh that cannot reach the server. Against the old code: `expected [] to deeply equal [ { room: '203', … } ]`. Against the fix it keeps the room.
+
+**What was done** — `listChargeableRooms` throws (POS-4), and React Query keeps the last good list when a refresh fails. **Nothing that posts a charge changed**: the room box has always accepted a typed room number, the list is only its suggestions, and `settleOrder` and the server's settle route are untouched.
+
+**The rule** — A value kept for offline use must never be overwritten by a read that failed. A `catch` that returns a default turns a failure into a fact, and a cache believes facts.
+
+---
+
+## Project-wide entries about this service
+
+Their bodies are in the root `MEMORY.md`; where the entry ends in a rule,
+it is quoted here so the lesson is visible without opening the file.
+
+- **21** · A grant list that read as a restriction
+- **22** · A self-test that could not run, in a file lecturing about self-tests
+- **23** · One room, two guests — and code that picked whichever came first
+- **24** · A convenience UPDATE against an append-only ledger
+- **25** · A cleanup that worked and a measurement that did not
+- **54** · Test fixtures with a seat in the application
+- **55** · One posting cannot carry two tax rates
+- **56** · Fixing the trigger instead of the caller
+- **57** · Rupees on a document somebody pays from
+- **72** · I contaminated my own reproduction, then reported it as a defect
+- **75** · A till that made six taps into six lines
+- **76** · A till the kitchen never heard from
+- **92** · The dev database was empty and I blamed the code
+- **93** · The refusal did not agree with itself
+- **112** · A test staff row that had been an employee for months
+- **131** · A button is shrink-to-fit, and it took the card with it
+- **132** · The window is not the thing the cards live in
+- **133** · A screenshot is not a measurement
+- **144** · A booking with nowhere to put money
+- **154** · The template imported its own instructions
+- **171** · A moved guest was charged for the night TWICE
+- **172** · The fix broke a departure, and the suite caught it
+- **173** · The assertion that reproduced the bug it was checking for
+- **181** · The kitchen's live channel — and where it would have gone wrong
+- **194** · The till cost three round trips per dish — Rule 2 exists because the CRS replaced its entire backend by rewriting one folder instead of touching 34 screens.
+- **195** · A guard that skipped itself, and passed with the bug in
+- **199** · The guard the owner asked for was already in the database
+- **200** · A settle is four different acts at one address
+- **201** · A persisted cache outlived the shape of the thing it cached
+- **202** · A function in RETURNING reads the row as it was, not as it is
+- **203** · The API typecheck gate was red and I did not notice
+- **204** · The assertion that mattered most passed with its own bug in — The rule this earns, on top of 195's:
+- **205** · I spelled row-level security by hand and broke nine tests
+- **206** · An append-only guard that blocked every teardown in the repo
+- **207** · A guard that could not fail, caught before it was trusted
+- **208** · `sort_order` and a course are two questions, and the menu proves it
+- **209** · A parameter property took the production API down
+- **213** · I shipped the audit's own finding, in the audit's own hour — The rule this earns, and it is sharper than "open the screen":
+- **223** · Two tests broke on a cap they were never about
+- **250** · Any clerk could switch a hotel's modules on or off
+- **251** · A refused receptionist was told "There is no menu yet"
+- **260** · The restaurant's own roles could not see the restaurant — The rule: a comment that says who a screen is for is a claim — test it against that role's actual menu.
+
+---
+
+## Adding one
+
+Newest last, in the shape above: **Found** (when, and how — reading, a test, a
+screen, production), what happens, **what was done** (or the fix when it is
+done), and the rule. If it changes something a person sees, it also belongs in
+`PENDING.md` until the owner has decided. If it would bite another service,
+put the lesson in the root `MEMORY.md` and point at it from here.

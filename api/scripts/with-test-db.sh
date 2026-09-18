@@ -85,7 +85,19 @@ trap 'drop_db' EXIT
 dim "-- a database for this test run only ----------------------"
 "$PSQL" $S -d postgres -q -v ON_ERROR_STOP=1 -c "create database $DB" >/dev/null 2>&1 \
   || { red "  x could not create $DB — is Postgres running on $PGPORT?"; exit 1; }
-dim "   $DB"
+
+# ⚠ IN THE SERVER'S TIME ZONE, NOT THIS MACHINE'S, and that is deliberate.
+#
+# The hotel's box keeps its database in GMT (`show timezone` on the server, 18
+# September). This laptop keeps it in Asia/Kolkata. A bare timestamp means the
+# SESSION's zone, so for weeks a banquet time stored here landed on the hotel's
+# clock by luck and would have landed five and a half hours out in Akkalkot -
+# and no test on this machine could tell (BQ-8, root MEMORY 297).
+#
+# UTC here makes every API test ask the question the live server asks. A test
+# that needs a particular zone says so itself.
+"$PSQL" $S -d postgres -q -v ON_ERROR_STOP=1   -c "alter database $DB set timezone to 'UTC'" >/dev/null 2>&1   || { red "  x could not set $DB to UTC"; exit 1; }
+dim "   $DB · UTC, as the hotel's server runs"
 
 for f in "$ROOT"/db/migrations/*.sql; do
   if ! out=$("$PSQL" $S -d "$DB" -q -v ON_ERROR_STOP=1 -f "$f" 2>&1); then
@@ -145,6 +157,21 @@ export SUPER_DATABASE_URL="postgres://${SUPER}:${SUPERPASS}@${PGHOST}:${PGPORT}/
 # survives it, and env.ts reads "" as "no service account" — the tests sign
 # in through the dev header, and anything reaching Firebase fails loudly.
 export FIREBASE_SERVICE_ACCOUNT=""
+
+# ⚠ THE TESTS NAME THEIR OWN CALLER. Every test here signs in with
+# `x-dev-staff-id`, which only works with ALLOW_DEV_AUTH, and `env.ts` refuses
+# to start with neither that nor a Firebase service account.
+#
+# It came from the developer's own `api/.env` until 18 September - a file that
+# is not committed and cannot be - so the suite ran on the machines that
+# happened to have one and nowhere else. On a Linux runner all sixty-two files
+# loaded zero tests and the reason was one line down in the log. A harness that
+# needs a file it does not create is not a harness.
+#
+# Safe here, and only here: this script is the test harness, the database it
+# points at is a scratch one it made, and `env.ts` throws if this is ever on
+# with NODE_ENV=production.
+export ALLOW_DEV_AUTH=1
 
 npx tsx scripts/load-demo.ts >/dev/null 2>&1 \
   || { red "  x the demo would not load into $DB"; npx tsx scripts/load-demo.ts; exit 1; }

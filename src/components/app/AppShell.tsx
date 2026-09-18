@@ -76,7 +76,7 @@ export function AppShell() {
               <p className="text-sm text-[#8a6300]">
                 <span className="font-semibold">Preview.</span>{" "}
                 Real screens and real figures from the calibrated demo
-                property — nothing saves, because there is no server behind
+                property - nothing saves, because there is no server behind
                 this build yet.
               </p>
             </div>
