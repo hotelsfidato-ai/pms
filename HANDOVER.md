@@ -404,6 +404,23 @@ menus at the equipment merge, EQ-2. **Next free migration: 097.** Owner chose:
   in `navigation.ts` and 068 (left: they may be the owner's), EQ-3 (dev only).
 - **Next free migration: 099.**
 
+**18 September — THE GATES LEFT THIS LAPTOP.** `.github/workflows/ci.yml` runs
+every gate on every push, on Linux, against Postgres 17: lint, both type
+checks, strip-check, the website suite, the API suite, the database suite, the
+replay, the build and the lane check — **354 seconds, against 755 here**. A
+pre-push hook (`.githooks/pre-push`, installed by `npm install`) refuses a push
+that touches another service's folder. `.github/workflows/deploy.yml` is the
+deploy as a button: it refuses unless the word `deploy` is typed and unless the
+gates passed for that commit, backs up the database first, and checks the API
+and n8n after. **It needs five secrets from the owner**, named in the file.
+The first three runs found four faults that could not be seen here: the API
+suite needed a private `api/.env` to run at all, fifty website tests needed one
+developer's Firebase values, the migration replay failed on a fresh cluster
+(MEMORY 293's family — a NEW server would have failed its second deploy), and
+**a banquet time is stored in the server's time zone while the hotel's server
+runs GMT** (MEMORY 297, BQ-8: open, the owner's call, because the fix re-reads
+every banquet row already stored).
+
 **18 September, small hours — STEP 3 DONE: EVERY REPORT ON PAPER, AND THE
 CHANNEL MANAGER IS THREE QUARTERS BUILT.** All eight reports in the owner's eZee
 layout with Fidato's branding, each downloadable as a PDF made on the server, a

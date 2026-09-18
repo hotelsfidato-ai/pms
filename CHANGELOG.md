@@ -50,6 +50,65 @@ Write it **as you go**, not at the end from memory. Copy this shape:
 
 ---
 
+## 2026-09-18 · The gates leave this laptop: one Action, every push, and a deploy button
+
+**Asked for:** "One GitHub Action. npm test, npm run lint, tsc -b, the API
+suite, the DB suite against a Postgres service container, on every push. On
+Linux... Add npm run lane to that Action, and to a pre-push hook. Make your own
+guard refuse automatically." And: automate the deploy steps.
+
+**Shipped**
+- **`.github/workflows/ci.yml`** — on every push and pull request: lint, both
+  type checks, the stripping check, the website suite, the API suite, the
+  database suite, the replay, the build, and the lane check. Postgres 17 as a
+  service container. Every step runs even when an earlier one failed, so one
+  trip back carries every fault; runs on a branch cancel each other.
+  **354 seconds on Linux, against 755 on this laptop.**
+- **`.githooks/pre-push`** and a `prepare` script — a push that touches another
+  service's folder is refused, by the branch's own name. `npm install` points
+  git at it, so every copy gets it without anybody remembering. Proved both
+  ways: refused out of lane, silent inside it.
+- **`.github/workflows/deploy.yml`** — the deploy as a button (the owner's
+  answer, 18 September): it refuses unless the word `deploy` is typed, refuses
+  unless the gates passed for that exact commit, backs the database up before
+  anything moves, fails loudly if the API does not answer 200 afterwards, and
+  checks n8n, which a deploy's firewall reload has cut off before.
+
+**Found — four faults, every one invisible on this machine**
+- **The API suite could not run at all** without a private `api/.env`:
+  sixty-two files, zero tests. `with-test-db.sh` now sets what it needs.
+- **Fifty website tests** needed one developer's Firebase values. `restore()`
+  signed a person out when Firebase was absent, while the branch beside it kept
+  them — two answers to one situation. `.env.test` is committed and blanks
+  Firebase, so the suite tests the same app here as on the runner.
+- **MEMORY 293's family again:** the replay failed at migration 25 of 112 on a
+  fresh cluster. `pms_migrate` owns every table and needs BYPASSRLS; 068 grants
+  it forty-three migrations too late. It never bit here because a role is
+  cluster-wide and this laptop was granted it months ago — **a new server would
+  have failed its second deploy.** 010 grants it where the role is made.
+- **MEMORY 297 / BQ-8, and this one touches the live box:** a banquet time is
+  stored in the SERVER's time zone, and **the hotel's server runs its database
+  in GMT**. A clerk's 19:00 becomes 00:30 the next morning in Akkalkot; the
+  diary then shows one day and the till another. **Not fixed** — the fix
+  re-reads every banquet row already stored, so it is the owner's to approve.
+
+**Proved**
+- Three CI runs: red, red, **green** (run 35337958308).
+- Locally: web 369 with Firebase blanked as the runner has it, banquet 22, and
+  the replay 112/112 with the migrator's grant taken away to imitate a fresh
+  cluster — and failing exactly as the runner did with the fix removed.
+- The hook refused a push touching the reports service from a `stores/` branch,
+  and passed one inside the lane.
+
+**Left open**
+- The deploy button needs five secrets the owner adds once (named in the
+  workflow). Until then it refuses at the first step that needs one.
+- BQ-8 waits on the owner.
+
+**Commits:** `7709f07 … 4010436`
+
+---
+
 ## 2026-09-17 (late night) · Step 3: every report on paper, the channel manager's first three parts, and two faults that would have stopped a deploy
 
 **Asked for:** "complete the remaining and also question me on this — give the
