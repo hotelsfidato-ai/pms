@@ -14,8 +14,40 @@ entries stay here: they are the reason the fault does not come back.
 
 ## Open — not fixed
 
-None. This service is not built: it has a brief, a menu entry
-and a Coming soon page, and no code behind them.
+### SPA-1 · The Spa switch is on the Settings screen and the server refuses it
+
+**Found** 18 September, reading `api/src/modules/admin/moduleSwitches.ts`
+against `src/modules/admin/pages/Admin.tsx` while looking for the switch
+migration 115 made.
+
+`GET /:code/modules` lists six modules — `pos`, `banquet`, `reception_pos`,
+`channel_manager`, `laundry`, `spa` — and the Settings screen draws a live
+switch for every one it is given, with the copy for Spa and Laundry already
+written (`MODULE_COPY`). **`POST /:code/modules/:module` accepts three:**
+
+```js
+if (!["pos", "banquet", "reception_pos"].includes(module)) {
+  return c.json({ reason: `There is no "${module}" module.` }, 409);
+}
+```
+
+So Spa, Laundry **and the channel manager** are drawn as working switches and
+answer 409 when pressed. D17-54 says each shows only where it is switched on;
+today it cannot be switched on anywhere. That file's own comment describes this
+exact fault in its previous form — banquet's switch disabled with stale copy,
+found by the owner "trying to turn banquet on and watching nothing happen" —
+and `moduleSwitchesAreLive` guards only one direction: that no module the API
+accepts comes back disabled. Nothing asks the reverse, which is the direction
+that broke.
+
+**Not mine to fix** — `api/src/modules/admin/` is the admin lane. Reported to
+the master 18 September. **Not blocking this service's build:** the tests and
+the database suite switch the module on by writing `hotel_modules` directly.
+It blocks the owner using it.
+
+**The rule:** a guard on a list of names checks BOTH directions — that nothing
+offered is refused, and that nothing accepted is hidden. One direction is half
+a guard, and the half that was missing is the half that broke.
 
 ---
 

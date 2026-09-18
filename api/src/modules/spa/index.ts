@@ -1,4 +1,5 @@
 import type { Mount } from "../../mount.ts";
+import { spa } from "./spa.ts";
 
 /* The front door of this service on the server - the only file the core or
    another service may import (src/test/boundaries.test.ts).
@@ -9,4 +10,11 @@ import type { Mount } from "../../mount.ts";
    that the chat which builds this service adds its routers HERE and never has
    to touch `server.ts` - the file every service shares, and the one a chat
    reached into that same day because its door did not exist yet. */
-export const mounts: readonly Mount[] = [];
+export const mounts: readonly Mount[] = [
+  ["/api/hotels", spa],
+];
+
+/* Who may do what here, for the test that holds this and the menu's copy of
+   the same rule together. The owner's answer of 18 September: reception books
+   and closes, housekeeping looks. */
+export { SPA_READ_ROLES, SPA_BOOK_ROLES, SPA_LIST_ROLES } from "./spa.ts";
