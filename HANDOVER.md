@@ -45,7 +45,40 @@ seam); a test enforces it.
 
 ---
 
-## 2 · Where it stands on 15 September
+## 2 · Where it stands
+
+### 18 September, evening — read this first
+
+```
+production runs     79e358e  (18 Sep)     the owner said yes; deployed live, 97 commits,
+                                          25 migrations, health 200, n8n still answering
+CI                  .github/workflows/ci.yml — every push, on Linux: lint, tsc -b, api
+                    tsc, strip-check, web tests, the API suite, the DB suite against a
+                    Postgres 17 service container, the replay, the build, the lane check.
+                    354s in GitHub against 755s on this laptop. A PUSH IS NOT FINISHED
+                    UNTIL ITS ACTION IS GREEN (MEMORY 300).
+deploy              .github/workflows/deploy.yml — a button, with "deploy" typed to confirm.
+                    WAITING on five secrets from the owner; until then deploys are by hand.
+pre-push hook       .githooks/pre-push refuses a push that touches another service's folder
+services            14 live: the 13 that ran the hotel, plus PURCHASING (merged 18 Sep)
+in flight           laundry, spa, revenue-management — built and committed in their own
+                    copies, not yet pushed or handed back
+starting            accounting (the Tally export) — brief and copy ready, 18 Sep
+waiting for a slot  online-checkin, guest-messaging, reputation, marketing
+the master's next   the shared PMS → n8n sender (three chats are blocked on it), then the
+                    guest door's next rooms
+THE RUN SHEET       docs/PARALLEL-PLAN-2026-09-18.md — who builds what, in what order, and
+                    what each one waits on. Kept current; read it before handing out work.
+what is being built docs/BUILD-PLAN-2026-09-18.md — the seven services the owner still wants
+decisions           docs/briefs/decisions-2026-09-18.md (D18-1 … D18-17)
+guest's own door    BUILT 18 Sep, migration 114 — one private page per booking, a six-digit
+                    code to the number the booking carries, nothing else reachable from it
+a time belongs to   migration 113 — app.hotel_moment / app.hotel_clock / app.hotel_day. The
+its property        hotel's server runs in GMT and the test database now runs in UTC, so a
+                    bare timestamp fails on a laptop rather than in Akkalkot (MEMORY 297)
+```
+
+### Where it stood on 15 September
 
 ```
 production runs     59ce389  (16 Sep)     the owner deployed both stages, checked read-only:
@@ -134,6 +167,19 @@ npx vitest run          197 passed, 13 files
 ---
 
 ## 3 · What to do next, in order
+
+> **18 September: the order now lives in `docs/PARALLEL-PLAN-2026-09-18.md` § 1.**
+> That file is the board — which chat holds which service, what each one waits
+> on, and what the owner still owes. It is kept current; everything below it in
+> this section is the history of how the system got here, and is still true,
+> but it is not the queue any more.
+>
+> **Three answers are outstanding** and are named in the run sheet: whether
+> housekeeping and the front desk should be able to raise a purchase request
+> (they have no grant today, so D18-2's setting cannot reach them), whether
+> there should be one Approvals screen instead of deciding inside each
+> service's own screen, and whether the PMS attaches its own PDF to a
+> WhatsApp or email message or sends the data alone.
 
 Each item is scoped, with its "done when". **Ask the owner before building
 anything the item marks "ask first" — and before any other doubt.** That is

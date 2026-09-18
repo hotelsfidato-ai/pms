@@ -6539,6 +6539,34 @@ copy will see of theirs.**
 
 ---
 
+### 301 · MINE: I gave four chats a lane each and no migration numbers, so three of them took 116
+
+18 September. The run sheet's own rule 4 says *take no migration number
+yourself; the master gives it.* I opened purchasing, laundry, spa and revenue
+management, wrote that rule into every brief, and then handed out **no
+numbers** — so all three chats that needed one did the only thing they could
+to run their gates: took the next free number on the cp6 they were cut from.
+Purchasing wrote `115_purchasing.sql`, laundry wrote `116_laundry_service.sql`,
+spa wrote `116_the_spa.sql`, and I wrote `115_laundry_and_spa_are_modules.sql`
+here without telling any of them. Four files, two numbers, three collisions.
+
+Nothing broke, because every chat flagged the number as provisional in its own
+commit and none of them pushed on top of another — and because a collision
+surfaces at merge, where renaming a file is cheap. But that is luck plus three
+careful chats, not a process: **two migrations with one number is a deploy that
+replays wrong on the third property**, and the whole reason this repository
+replays from 001 on every deploy is that it must not depend on luck.
+
+Fixed at merge: purchasing takes 116, laundry 117, spa 118, each renumbered
+with every sentence inside it that named its own number.
+
+**The rule: a lane is not handed out until its migration number is handed out
+with it. "Ask me for a number" is not a plan when four chats start in the same
+hour and the master is the one who is busy — reserve the block up front, write
+it in the brief, and keep the ledger in the run sheet.**
+
+---
+
 ### 300 · MINE: I pushed a red commit and said so instead of waiting ninety seconds
 
 18 September. I widened `hotel_modules_known` to name `laundry` and `spa`

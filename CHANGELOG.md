@@ -50,6 +50,76 @@ Write it **as you go**, not at the end from memory. Copy this shape:
 
 ---
 
+## 2026-09-18 (night) · Purchasing merged, and one run sheet for every chat still to come
+
+**Asked for:** "compose all the work — I want to run multiple agents which can
+work to cover and complete this — so make me a plan on how we can complete all
+the pending work which we decided."
+
+**Shipped**
+- **Purchasing is merged** (`ade129d`) — the fourteenth service. Its migration
+  was renumbered **115 → 116**, because the laundry and spa switch took 115
+  here while that chat was building, and two migrations sharing one number is a
+  deploy that replays wrong on the third property. Every sentence in that
+  service that named its own number moved with it, so the code and the file
+  agree.
+- **The one conflict** was `api/src/server.ts` — their line mounting purchasing
+  against mine mounting the eight empty doors. Both sides kept.
+- **Nine files outside their lane, audited before the merge.** Their CI went red
+  on the lane check and nothing else; every one of the nine was principled and
+  is quoted in the merge commit. The one that mattered most: `stores/index.ts`
+  grew `receiveIntoStore` and `mayDeliverInto`, and there is still exactly ONE
+  `insert into stock_movements` in the whole repository.
+- **`docs/PARALLEL-PLAN-2026-09-18.md` is now the run sheet**, not a snapshot:
+  § 1 is the board — who holds which service, what each waits on, what the
+  master owes, what the owner owes and what stops without it. Kept current.
+- **`docs/briefs/accounting.md`** — the Tally export's brief, written because
+  purchasing's slot freed. Its one rule: every figure in the file is the figure
+  the reports already print, read through the reports door, so the export and
+  the reports can never disagree.
+- **`D:\fidato-accounting`** made from this cp6, `node_modules` linked both
+  sides, `api/.env` deliberately absent. Its paste-line is in the run sheet.
+
+**Found**
+- **Three chats had each taken migration 116** — purchasing's (renumbered from
+  115 at this merge), laundry's and spa's. Nothing broke, because all three
+  marked the number provisional and none pushed over another; but that is three
+  careful chats, not a process, and two migrations with one number is a deploy
+  that replays wrong on the third property. **MEMORY 301**, and the run sheet
+  now carries a **migration ledger** reserving a number per lane before the
+  lane is handed out. Laundry takes 117, spa 118.
+- **Laundry and spa are built on the server and have no screens at all**, both
+  stopped at the same two files of mine: a menu section in `navigation.ts`
+  (without one, `RequireAccess` refuses the path to everybody) and a permission
+  resource in `permissions.ts`. They asked instead of editing. One change
+  unblocks both, and D18-8 already answers who.
+- **Revenue management built no pickup and no week-ago pace**, because no front
+  door answers when a booking was made or how the reports service counts a
+  night — and it refused to count room-nights its own way, which is exactly the
+  fault its brief names. Its ask (R1) is a list of eight names to export from
+  the reports door.
+- **Nobody can post a charge to a room bill through a door.** The posting
+  exists only as an HTTP route inside finance, so laundry and spa (D18-7) have
+  nowhere to send one. Next in the master's lane.
+- **Housekeeping and the front desk hold no purchasing grant at all** in
+  `src/lib/permissions.ts` — checked role by role. D18-2 makes *who may raise a
+  request* a setting per property, so the owner can switch housekeeping on and
+  the screen still refuses them. **The owner's to decide; not made here,
+  because a grant widens who can open a screen.**
+- **There is no Approvals screen.** The engine (migration 076,
+  `api/src/routes/approvals.ts`) is real, and both equipment and purchasing
+  decide *inside their own screen* through it — correctly, one engine, no
+  second Approve button. But the BUILD-PLAN's line "the one approvals inbox
+  that already exists" describes a screen that does not exist, and a GM has
+  nowhere to see everything waiting on them. **Asked.**
+
+**Left open**
+- The shared PMS → n8n sender. Three chats are blocked on it; it is next.
+- Laundry, spa and revenue-management are committed in their copies and have
+  not pushed. Nothing merges until each one's Action is green.
+
+---
+
 ## 2026-09-18 (evening) · Live: `main` at 79e358e, and the first deploy in two days
 
 **Asked for:** "create a pull request and also deploy this to the server and make
