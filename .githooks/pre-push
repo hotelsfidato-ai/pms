@@ -1,0 +1,66 @@
+#!/usr/bin/env bash
+# ═══════════════════════════════════════════════════════════════════════
+# BEFORE A PUSH — stay in your lane
+#
+# One chat per service, each in its own folder (AGENTS.md). `npm run lane`
+# has said since 16 September whether a copy has touched somebody else's
+# work, and nothing ran it: it was a thing to remember, so it was a thing
+# to forget. Now the push refuses.
+#
+# WHICH LANE: the branch says so. `stores/phase-1a` is the Store chat's,
+# `channel-manager/su-connection` is the channel manager's. A branch with no
+# service prefix - cp6, or a master's own branch - touches everything by
+# design and is not checked.
+#
+# IT IS A GUARD, NOT A GATE. It takes a second, runs no tests and opens no
+# database. The gates run on every push, on Linux, in GitHub (.github/
+# workflows/ci.yml); this only stops work going out in the wrong folder.
+#
+# To push anyway - and there are real reasons, such as a change the owner
+# asked for in the shared core:
+#
+#     git push --no-verify
+#
+# Say so to the owner when you do.
+# ═══════════════════════════════════════════════════════════════════════
+set -u
+
+branch="$(git rev-parse --abbrev-ref HEAD 2>/dev/null || echo '')"
+service="${branch%%/*}"
+
+if [ -z "$branch" ] || [ "$service" = "$branch" ]; then
+  exit 0                                   # not a service branch
+fi
+
+root="$(git rev-parse --show-toplevel 2>/dev/null || pwd)"
+if [ ! -d "$root/src/modules/$service" ]; then
+  exit 0                                   # not a service we know
+fi
+
+# `npm` on a Windows shell is npm.cmd; on Linux and the server it is npm.
+if command -v npm >/dev/null 2>&1; then
+  NPM=npm
+elif command -v npm.cmd >/dev/null 2>&1; then
+  NPM=npm.cmd
+else
+  echo "  pre-push: no npm here, so the lane was not checked."
+  exit 0
+fi
+
+echo "  pre-push: is this push inside the $service lane?"
+if ( cd "$root" && "$NPM" run --silent lane -- "$service" ); then
+  exit 0
+fi
+
+cat <<MESSAGE
+
+  ✗ This push touches files outside the $service lane.
+
+    Another chat may be in them, and two copies editing one file is how a
+    night's work is lost. Either take those files out of the push, or ask
+    the owner and push with:
+
+        git push --no-verify
+
+MESSAGE
+exit 1

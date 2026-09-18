@@ -1,0 +1,181 @@
+# ═══════════════════════════════════════════════════════════════════════
+# THE DEPLOY, AS A BUTTON THE OWNER PRESSES
+#
+# The owner's rule has not changed: a deploy needs their explicit yes, and it
+# is theirs to start. What changes here is only the typing. Instead of four
+# commands in an ssh session at midnight, it is: Actions → deploy → Run
+# workflow → type `deploy`.
+#
+# It does the same four things, in the same order, and it REFUSES in three
+# places a person would not have:
+#   · the word `deploy` was not typed
+#   · the gates did not pass for this exact commit
+#   · the API did not answer after the restart (and it says so loudly)
+#
+# WHAT IT NEEDS ONCE, from the owner, in Settings → Secrets and variables →
+# Actions. None of these ever appears in a log, a screen, or a chat:
+#
+#   DEPLOY_SSH_KEY        the private key that opens the server (the whole
+#                         file, BEGIN and END lines included)
+#   DEPLOY_HOST           130.210.49.220
+#   DEPLOY_USER           opc
+#   DEPLOY_EMAIL          the address the certificate is registered to
+#   FIREBASE_SERVICE_ACCOUNT   a Google service-account key (JSON) with
+#                         Firebase Hosting Admin on project poms-fad05
+#
+# Without the Firebase one, the server still deploys and the website step says
+# what is missing rather than failing in a way nobody can read.
+# ═══════════════════════════════════════════════════════════════════════
+name: deploy
+
+on:
+  workflow_dispatch:
+    inputs:
+      confirm:
+        description: 'Type "deploy" to confirm. Anything else refuses.'
+        required: true
+        default: ""
+      what:
+        description: "What to put live"
+        required: true
+        default: both
+        type: choice
+        options: [both, server, website]
+      skip_gate_check:
+        description: "Deploy even if the gates did not pass for this commit (say why in the run's title)"
+        required: false
+        default: false
+        type: boolean
+
+concurrency:
+  group: deploy-production
+  cancel-in-progress: false
+
+env:
+  API_DOMAIN: api.fidatohotels.com
+  APP_ORIGIN: https://pms.fidatohotels.com
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+
+    steps:
+      - name: The word
+        run: |
+          if [ "${{ inputs.confirm }}" != "deploy" ]; then
+            echo "::error::Nothing was deployed. Type the word deploy to confirm."
+            exit 1
+          fi
+
+      - uses: actions/checkout@v4
+
+      - name: The gates passed for this commit
+        if: ${{ !inputs.skip_gate_check }}
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          # A green tree is not a claim, it is a check run on THIS sha. A
+          # deploy of a commit nobody ran the gates on is how a bad night
+          # reaches the hotel.
+          state=$(gh api "repos/${{ github.repository }}/commits/${{ github.sha }}/check-runs" \
+                    --jq '[.check_runs[] | select(.name | test("gates")) | .conclusion] | join(",")')
+          echo "  gates for ${{ github.sha }}: ${state:-none found}"
+          case "$state" in
+            *failure*|*cancelled*|*timed_out*) echo "::error::The gates did not pass for this commit."; exit 1 ;;
+            "") echo "::error::No gates run found for this commit. Push it and wait for the gates, or tick skip_gate_check and say why."; exit 1 ;;
+            *) echo "  gates green." ;;
+          esac
+
+      # ── The server ─────────────────────────────────────────────────────
+      - name: Open the server
+        if: ${{ inputs.what != 'website' }}
+        run: |
+          mkdir -p ~/.ssh
+          printf '%s\n' "${{ secrets.DEPLOY_SSH_KEY }}" > ~/.ssh/id_deploy
+          chmod 600 ~/.ssh/id_deploy
+          ssh-keyscan -H "${{ secrets.DEPLOY_HOST }}" >> ~/.ssh/known_hosts 2>/dev/null
+
+      - name: Back up the database FIRST
+        if: ${{ inputs.what != 'website' }}
+        run: |
+          # Before anything moves. 25 migrations have run against this data
+          # since the last deploy and one of them moves every stock movement
+          # into a store; a dump takes seconds and answers "what if".
+          ssh -i ~/.ssh/id_deploy "${{ secrets.DEPLOY_USER }}@${{ secrets.DEPLOY_HOST }}" \
+            'set -e
+             sudo mkdir -p /var/backups/fidato
+             stamp=$(date +%Y%m%d-%H%M%S)
+             sudo -u postgres pg_dump -Fc -d fidato -f "/var/backups/fidato/pre-deploy-$stamp.dump"
+             ls -lh "/var/backups/fidato/pre-deploy-$stamp.dump"'
+
+      - name: Pull, migrate, restart
+        if: ${{ inputs.what != 'website' }}
+        run: |
+          ssh -i ~/.ssh/id_deploy "${{ secrets.DEPLOY_USER }}@${{ secrets.DEPLOY_HOST }}" \
+            'set -e
+             sudo GIT_SSH_COMMAND="ssh -i /home/'"${{ secrets.DEPLOY_USER }}"'/.ssh/fidato_deploy -o IdentitiesOnly=yes" \
+               git -C /opt/fidato fetch --all
+             sudo GIT_SSH_COMMAND="ssh -i /home/'"${{ secrets.DEPLOY_USER }}"'/.ssh/fidato_deploy -o IdentitiesOnly=yes" \
+               git -C /opt/fidato checkout '"${{ github.sha }}"'
+             cd /opt/fidato
+             sudo DOMAIN='"$API_DOMAIN"' APP_ORIGIN='"$APP_ORIGIN"' EMAIL='"${{ secrets.DEPLOY_EMAIL }}"' deploy/launch.sh'
+
+      - name: Did it answer?
+        if: ${{ inputs.what != 'website' }}
+        run: |
+          sleep 5
+          code=$(curl -s -o /tmp/health -w '%{http_code}' "https://$API_DOMAIN/health" || true)
+          cat /tmp/health || true
+          echo
+          if [ "$code" != "200" ]; then
+            echo "::error::The API did not answer 200 after the deploy (got ${code:-nothing}). The server is mid-deploy - look now."
+            exit 1
+          fi
+          grep -q '"database":"reachable"' /tmp/health || {
+            echo "::error::The API answered but cannot reach its database."; exit 1; }
+
+      - name: Is n8n still there?
+        if: ${{ inputs.what != 'website' }}
+        continue-on-error: true
+        run: |
+          # A deploy's firewall reload has cut n8n off before (MEMORY 279).
+          # Not a reason to fail the deploy, but never again a surprise.
+          code=$(curl -s -o /dev/null -w '%{http_code}' https://n8n.fidatohotels.com/healthz || true)
+          if [ "$code" = "200" ]; then echo "  n8n answers."; else echo "::warning::n8n answered ${code:-nothing} - check it."; fi
+
+      # ── The website ────────────────────────────────────────────────────
+      - uses: actions/setup-node@v4
+        if: ${{ inputs.what != 'server' }}
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Build it, with the API's address in it
+        if: ${{ inputs.what != 'server' }}
+        run: |
+          npm ci
+          API_URL="https://$API_DOMAIN" npm run build:app
+
+      - name: Put the website live
+        if: ${{ inputs.what != 'server' }}
+        env:
+          KEY: ${{ secrets.FIREBASE_SERVICE_ACCOUNT }}
+        run: |
+          if [ -z "$KEY" ]; then
+            echo "::error::FIREBASE_SERVICE_ACCOUNT is not set, so the website was not deployed. The server, if it was part of this run, IS live."
+            exit 1
+          fi
+          printf '%s' "$KEY" > "$RUNNER_TEMP/firebase.json"
+          export GOOGLE_APPLICATION_CREDENTIALS="$RUNNER_TEMP/firebase.json"
+          npx --yes firebase-tools@13 deploy --only hosting:app --project poms-fad05 --non-interactive
+          rm -f "$RUNNER_TEMP/firebase.json"
+
+      - name: What went live
+        if: always()
+        run: |
+          echo "### Deploy" >> "$GITHUB_STEP_SUMMARY"
+          echo "" >> "$GITHUB_STEP_SUMMARY"
+          echo "* commit: \`${{ github.sha }}\`" >> "$GITHUB_STEP_SUMMARY"
+          echo "* what: ${{ inputs.what }}" >> "$GITHUB_STEP_SUMMARY"
+          echo "* started by: @${{ github.actor }}" >> "$GITHUB_STEP_SUMMARY"

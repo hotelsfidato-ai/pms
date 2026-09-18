@@ -8,6 +8,7 @@
     "build": "tsc -b && vite build && node scripts/check-no-dev-login.mjs dist",
     "preview": "vite preview",
     "lint": "oxlint",
+    "prepare": "node scripts/hooks-setup.mjs",
     "test": "vitest run",
     "test:watch": "vitest",
     "build:preview": "vite build --mode preview && node scripts/check-no-dev-login.mjs dist-preview",
