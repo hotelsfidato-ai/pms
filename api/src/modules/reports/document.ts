@@ -110,7 +110,15 @@ export interface ReportParams {
 }
 
 export interface ReportDoc {
-  report: ReportKey;
+  /* ⚠ WIDENED BY ONE WORD FOR PURCHASING (D18-3), by that chat — the
+     master reviews it at merge. A purchase order is a document in the
+     group's layout, and the brief for that service says plainly: the PDF
+     is made by the shared renderer, do not write a second one. So the
+     order is built as a ReportDoc and drawn by api/src/reportRender.ts.
+
+     It is deliberately NOT in REPORT_KEYS: that list is what the Reports
+     screen offers, and a purchase order is not a report anybody runs. */
+  report: ReportKey | "purchase-order";
   title: string;
   /** From the database, never a literal (MEMORY 256). */
   /** timezone: where "datetime" cells are printed, e.g. "Asia/Kolkata"; India when absent. */

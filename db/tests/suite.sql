@@ -5133,6 +5133,16 @@ begin
   select id into gm from staff  where email = 'agra@fidato.in';
   select id into owner from staff where email = 'owner@fidato.in';
 
+  /* ⚠ ADDED BY THE PURCHASING CHAT (115) — the master reviews it at merge.
+     Purchasing gives EVERY property a `purchase` rule, because the owner's
+     D18-4 is that the GM approves every purchase whatever the amount; before
+     it, nothing anywhere raised a purchase approval at all. This block is
+     about the ENGINE and starts from a property with nothing set up, so that
+     rule is switched off here. The block's own teardown removes it with the
+     rest, and the purchasing suite proves the rule itself arrives. */
+  update approval_rules set is_active = false
+   where hotel_id = h and kind = 'purchase';
+
   -- ---------- no rule means nothing to approve ----------
   -- A property that has not set approvals up must still be able to buy nails.
   -- Returning null here rather than raising is what makes that true.

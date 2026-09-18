@@ -22,6 +22,9 @@ import * as stores from "./modules/stores/index.ts";
 import * as housekeeping from "./modules/housekeeping/index.ts";
 import * as equipment from "./modules/equipment/index.ts";
 import * as channelManager from "./modules/channel-manager/index.ts";
+/* ⚠ ADDED BY THE PURCHASING CHAT (115, D18-2/3/4) — the master reviews it
+   at merge. Without these two lines the service has no routes at all. */
+import * as purchasing from "./modules/purchasing/index.ts";
 import { live } from "./routes/live.ts";
 import {
   startListening, stopListening, watcherCount, isListening,
@@ -263,6 +266,7 @@ app.route("/api/hotels", attachments);
 const SERVICES = [
   frontDesk, reservations, finance, reportsService, guests, nightAudit,
   pos, admin, inventory, banquet, stores, housekeeping, equipment, channelManager,
+  purchasing,
 ];
 /* Every router, with the prefix it hangs from. Exported so that
    api/test/apiGate.test.ts can hold /api/channel - the one prefix that
