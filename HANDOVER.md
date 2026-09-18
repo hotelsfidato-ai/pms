@@ -404,6 +404,23 @@ menus at the equipment merge, EQ-2. **Next free migration: 097.** Owner chose:
   in `navigation.ts` and 068 (left: they may be the owner's), EQ-3 (dev only).
 - **Next free migration: 099.**
 
+**18 September, evening — WHAT IS LEFT TO BUILD IS PLANNED AND ANSWERED.**
+Thirteen services run the hotel and are live; the channel manager is three
+quarters built and waits on SU's keys. **`docs/BUILD-PLAN-2026-09-18.md`** is
+the seven the owner still wants, in the owner's own order (D18-1): purchasing,
+laundry and spa, the guest's own page (online check-in), guest messages,
+reviews, revenue management, the Tally export, marketing. Seventeen decisions
+were taken to write it — `docs/briefs/decisions-2026-09-18.md`, D18-1 to D18-17
+— and every one is the owner's. The booking engine, loyalty, contracts, guest
+services and room systems stay parked; the CRS, leads, CRM and payments belong
+to other systems.
+
+**The rule for all seven: the smallest thing that works end to end, first.**
+**The one piece the master builds before any chat starts** is the guest's door
+— a private page per booking, outside the staff gate, a signed expiring link, a
+six-digit code to the phone on the booking, nothing about any other booking
+reachable from it (D18-9, D18-10, D18-13).
+
 **18 September, 17:21 IST — DEPLOYED, AND MERGED TO `main`.** The owner asked for
 it live. **Live is now `79e358e`** (PR #2, `cp6` → `main`), the first deploy since
 `eaf6916` on 16 September: 97 commits, 25 migrations, 409 files. The database
