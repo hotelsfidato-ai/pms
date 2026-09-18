@@ -6539,6 +6539,31 @@ copy will see of theirs.**
 
 ---
 
+### 300 · MINE: I pushed a red commit and said so instead of waiting ninety seconds
+
+18 September. I widened `hotel_modules_known` to name `laundry` and `spa`
+(migration 115), ran the quick gates - types, stripping, the website suite -
+and pushed. The database suite, which the quick run skips, was red on the
+runner within four minutes. I told the owner I had not checked it, which is
+honest and is not the same as not doing it: the Action existed precisely so
+nobody pushes blind, and I pushed blind anyway and left a broken `cp6` for
+another chat to pull.
+
+**What broke is worth its own line.** `db/tests/suite.sql` proved "an unknown
+module is refused" by trying to insert **`spa`** - and I had just made the spa
+a module. The assertion did not fail because the rule broke; it failed because
+its example had been BUILT. Its impossible case was a plausible future feature,
+and this project's plan named that feature on the same day.
+
+Fixed: the example is `not_a_module_and_never_will_be`.
+
+**The rules: (1) a push is not finished until its Action is green - wait for
+it, or do not push. (2) A test's "impossible" case must be impossible for ever,
+not merely unbuilt: never spell it with the name of something somebody could
+build.**
+
+---
+
 ### 299 · The third constraint an older migration narrows on every replay - and I had already hit it and misread it
 
 18 September, found by the purchasing chat. 078 drops and re-adds

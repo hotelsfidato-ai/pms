@@ -2092,9 +2092,14 @@ begin
   perform test.ok('modules','and does not reach the other property',
     app.module_enabled(v_other, 'pos'));
 
+  -- ⚠ A NAME THAT CANNOT EVER BE BUILT. This said 'spa', and on 18 September
+  -- the spa became a real module (115) - so the assertion that an unknown
+  -- module is refused started failing because its example had been built. A
+  -- test whose "impossible" case is a plausible future feature has a fuse in
+  -- it (MEMORY 300).
   perform test.raises('modules','an unknown module is refused',
     format($q$insert into hotel_modules (hotel_id, module)
-             values (%L,'spa')$q$, v_hotel), '23514');
+             values (%L,'not_a_module_and_never_will_be')$q$, v_hotel), '23514');
 
   -- ---------- rooms, and the connecting door ----------
   insert into room_types (hotel_id, code, name, base_occupancy, max_occupancy)
