@@ -93,7 +93,9 @@ last edit
 - The API front door is still empty. There is nothing to run in the API suite
   for this service yet.
 
-**Commits:** see the branch `revenue-management/phase-1`.
+**Commits:** `d6a7b59` on `revenue-management/phase-1`. Not pushed: the branch is
+red on the two lines R2 asks the master for, and a knowingly red Action is
+not a proof.
 
 ---
 
