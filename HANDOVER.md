@@ -416,10 +416,13 @@ rebuilt against `https://api.fidatohotels.com` and released to Firebase
 build check requires. **n8n survived this deploy** (200 on the box, container up
 2 days) — MEMORY 279's firewall fix held. The database went from 75 tables to 81.
 
-⚠ **n8n's screen answers 403 from the owner's line**, because its allowlist still
-holds `106.213.87.54` and the line is now on `106.213.83.154`. Not a fault, and
-not the deploy: one command on the server, `sudo ALLOW_FROM=${SSH_CLIENT%% *}
-deploy/n8n.sh allow`.
+**n8n's screen was answering 403** from the owner's line: its allowlist held
+`106.213.87.54` and the line had moved to `106.213.83.154`. Not a fault and not
+the deploy. Run on the owner's word, 17:40 IST: `sudo ALLOW_FROM=${SSH_CLIENT%% *}
+deploy/n8n.sh allow`. The screen now answers 200 from that address and webhooks
+still answer everybody; nothing else was touched (the API's start time did not
+change). **When the broadband address changes again, that is the command** — the
+n8n screen itself prints the new address.
 
 **18 September — THE GATES LEFT THIS LAPTOP.** `.github/workflows/ci.yml` runs
 every gate on every push, on Linux, against Postgres 17: lint, both type
