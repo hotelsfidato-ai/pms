@@ -6583,6 +6583,15 @@ property's zone at both ends - written with it, read with it. A bare timestamp
 is a bug waiting for a server in another zone, and the hotel's server already
 is one.**
 
+**Fixed the same day on the owner's word** (migration 113): `app.hotel_moment`,
+`app.hotel_clock` and `app.hotel_day` are the one place the conversion happens,
+and banquet's routes all call them. No stored row changed meaning - the live
+database held no banquet rows, checked first. **And the trap is closed for
+everything that comes after: the API's scratch database now runs in UTC**, as
+the hotel's server does, so a bare timestamp written anywhere in this system
+fails its test on any machine rather than passing on one. All 1,038 API tests
+pass that way.
+
 ---
 
 ### 296 · MINE: a refactor that quietly widened the answer every screen reads

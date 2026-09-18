@@ -102,8 +102,8 @@ banquet.get("/:code/banquet", async (c) => {
     }>(
       `select venue_id::text, venue_name, event_id::text, reference, title,
               status,
-              to_char(starts_at, 'YYYY-MM-DD"T"HH24:MI') as starts_at,
-              to_char(ends_at,   'YYYY-MM-DD"T"HH24:MI') as ends_at,
+              app.hotel_clock($1, starts_at) as starts_at,
+              app.hotel_clock($1, ends_at)   as ends_at,
               host_name, pax_expected, agreed_amount::text
          from app.banquet_calendar($1, $2::date, $3::date)`,
       [hotelId, from, to],
@@ -184,8 +184,8 @@ banquet.get("/:code/banquet/events/:id", async (c) => {
        viewer may not know. */
     const { rows: ev } = await client.query<Record<string, string | null>>(
       `select e.id::text, e.reference, e.title, e.event_type, e.status,
-              to_char(e.starts_at, 'YYYY-MM-DD"T"HH24:MI') as starts_at,
-              to_char(e.ends_at,   'YYYY-MM-DD"T"HH24:MI') as ends_at,
+              app.hotel_clock(e.hotel_id, e.starts_at) as starts_at,
+              app.hotel_clock(e.hotel_id, e.ends_at)   as ends_at,
               e.business_date::text, e.host_name, e.host_phone, e.host_email,
               e.pax_expected::text, e.pax_guaranteed::text,
               e.agreed_amount::text, e.notes, e.cancel_reason,
@@ -347,10 +347,10 @@ banquet.post("/:code/banquet/events", async (c) => {
       title: string; reference: string; starts_at: string; ends_at: string;
     }>(
       `select title, reference,
-              to_char(starts_at,'DD Mon HH24:MI') as starts_at,
-              to_char(ends_at,'DD Mon HH24:MI') as ends_at
-         from app.banquet_conflicts($1, $2::timestamptz, $3::timestamptz)`,
-      [venueId, startsAt, endsAt],
+              app.hotel_clock($4, starts_at, 'DD Mon HH24:MI') as starts_at,
+              app.hotel_clock($4, ends_at,   'DD Mon HH24:MI') as ends_at
+         from app.banquet_conflicts($1, app.hotel_moment($4, $2), app.hotel_moment($4, $3))`,
+      [venueId, startsAt, endsAt, hotelId],
     );
 
     const { rows: refRows } = await client.query<{ reference: string }>(
@@ -384,7 +384,8 @@ banquet.post("/:code/banquet/events", async (c) => {
             starts_at, ends_at, host_name, host_phone, host_email,
             guest_id, company_id, pax_expected, agreed_amount, notes,
             registered_by, idempotency_key)
-         values ($1,$2,$3,$4,$5,$6::date,$7::timestamptz,$8::timestamptz,
+         values ($1,$2,$3,$4,$5,$6::date,
+                 app.hotel_moment($1, $7), app.hotel_moment($1, $8),
                  $9,$10,$11,$12,$13,$14,$15,$16,$17,$18)
          returning id::text, reference`,
         [hotelId, venueId, refRows[0]!.reference, title,
@@ -498,8 +499,12 @@ banquet.patch("/:code/banquet/events/:id", async (c) => {
       id: string; venue_id: string; status: string;
       starts_at: string; ends_at: string;
     }>(
+      /* On the PROPERTY's clock, because these come back as the times an
+         unchanged field keeps - and a moment read in the server's zone would
+         be written back as a different one (BQ-8). */
       `select id::text, venue_id::text, status,
-              starts_at::text, ends_at::text
+              app.hotel_clock(hotel_id, starts_at) as starts_at,
+              app.hotel_clock(hotel_id, ends_at)   as ends_at
          from banquet_events where id = $1 and hotel_id = $2`,
       [c.req.param("id"), hotelId]);
     if (!cur[0]) return "missing" as const;
@@ -519,10 +524,11 @@ banquet.patch("/:code/banquet/events/:id", async (c) => {
         title: string; reference: string; starts_at: string; ends_at: string;
       }>(
         `select title, reference,
-                to_char(starts_at,'DD Mon HH24:MI') as starts_at,
-                to_char(ends_at,'DD Mon HH24:MI') as ends_at
-           from app.banquet_conflicts($1, $2::timestamptz, $3::timestamptz, $4)`,
-        [cur[0].venue_id, startsAt, endsAt, cur[0].id]);
+                app.hotel_clock($5, starts_at, 'DD Mon HH24:MI') as starts_at,
+                app.hotel_clock($5, ends_at,   'DD Mon HH24:MI') as ends_at
+           from app.banquet_conflicts($1, app.hotel_moment($5, $2),
+                                      app.hotel_moment($5, $3), $4)`,
+        [cur[0].venue_id, startsAt, endsAt, cur[0].id, hotelId]);
       if (clash[0]) {
         return refuse(
           `The hall is taken then: ${clash[0].title} (${clash[0].reference}), `
@@ -536,7 +542,8 @@ banquet.patch("/:code/banquet/events/:id", async (c) => {
             agreed_amount  = case when $3::boolean then $4::numeric else agreed_amount end,
             pax_expected   = case when $5::boolean then $6::int     else pax_expected end,
             pax_guaranteed = case when $7::boolean then $8::int     else pax_guaranteed end,
-            starts_at = $9::timestamptz, ends_at = $10::timestamptz,
+            starts_at = app.hotel_moment($2, $9),
+            ends_at   = app.hotel_moment($2, $10),
             notes = coalesce($11, notes),
             title = coalesce($12, title)
           where id = $1 and hotel_id = $2`,

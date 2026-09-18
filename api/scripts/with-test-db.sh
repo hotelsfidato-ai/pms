@@ -85,7 +85,19 @@ trap 'drop_db' EXIT
 dim "-- a database for this test run only ----------------------"
 "$PSQL" $S -d postgres -q -v ON_ERROR_STOP=1 -c "create database $DB" >/dev/null 2>&1 \
   || { red "  x could not create $DB — is Postgres running on $PGPORT?"; exit 1; }
-dim "   $DB"
+
+# ⚠ IN THE SERVER'S TIME ZONE, NOT THIS MACHINE'S, and that is deliberate.
+#
+# The hotel's box keeps its database in GMT (`show timezone` on the server, 18
+# September). This laptop keeps it in Asia/Kolkata. A bare timestamp means the
+# SESSION's zone, so for weeks a banquet time stored here landed on the hotel's
+# clock by luck and would have landed five and a half hours out in Akkalkot -
+# and no test on this machine could tell (BQ-8, root MEMORY 297).
+#
+# UTC here makes every API test ask the question the live server asks. A test
+# that needs a particular zone says so itself.
+"$PSQL" $S -d postgres -q -v ON_ERROR_STOP=1   -c "alter database $DB set timezone to 'UTC'" >/dev/null 2>&1   || { red "  x could not set $DB to UTC"; exit 1; }
+dim "   $DB · UTC, as the hotel's server runs"
 
 for f in "$ROOT"/db/migrations/*.sql; do
   if ! out=$("$PSQL" $S -d "$DB" -q -v ON_ERROR_STOP=1 -f "$f" 2>&1); then

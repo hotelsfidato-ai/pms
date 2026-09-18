@@ -58,16 +58,16 @@ async function banquetIsOn(client: Client, hotelId: string): Promise<boolean> {
 /* The rule itself. `$3` narrows it to one function for the check. */
 const RULE = `
   select e.id::text, e.reference, e.title, v.name as venue_name, e.host_name,
-         to_char(e.starts_at at time zone h.timezone, 'YYYY-MM-DD"T"HH24:MI') as starts_at,
-         to_char(e.ends_at   at time zone h.timezone, 'YYYY-MM-DD"T"HH24:MI') as ends_at
+         app.hotel_clock(e.hotel_id, e.starts_at) as starts_at,
+         app.hotel_clock(e.hotel_id, e.ends_at)   as ends_at
     from banquet_events e
     join hotels h         on h.id = e.hotel_id
     join banquet_venues v on v.id = e.venue_id
     join folios f         on f.event_id = e.id and f.status = 'open'
    where e.hotel_id = $1
      and e.status = 'confirmed'
-     and (e.starts_at at time zone h.timezone)::date <= $2::date
-     and ((e.ends_at at time zone h.timezone) - interval '1 second')::date >= $2::date
+     and app.hotel_day(e.hotel_id, e.starts_at) <= $2::date
+     and app.hotel_day(e.hotel_id, e.ends_at - interval '1 second') >= $2::date
      and ($3::uuid is null or e.id = $3::uuid)
    order by e.starts_at, e.title`;
 
@@ -123,8 +123,8 @@ export async function whyNotAttachable(
     `select e.title, e.status,
             exists (select 1 from folios f
                      where f.event_id = e.id and f.status = 'open') as bill_open,
-            to_char((e.starts_at at time zone h.timezone)::date, 'FMDD Mon YYYY') as first_day,
-            to_char(((e.ends_at at time zone h.timezone) - interval '1 second')::date,
+            app.hotel_clock(e.hotel_id, e.starts_at, 'FMDD Mon YYYY') as first_day,
+            to_char(app.hotel_day(e.hotel_id, e.ends_at - interval '1 second'),
                     'FMDD Mon YYYY') as last_day
        from banquet_events e
        join hotels h on h.id = e.hotel_id
