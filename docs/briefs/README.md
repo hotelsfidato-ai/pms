@@ -1,5 +1,11 @@
 # Service briefs — one chat per service
 
+> ⚠ **19 September — the owner: nothing leaves this machine.** No `git push`,
+> no GitHub Action, no deploy. Commit on your branch locally, run the full
+> gates HERE and quote what you saw, and tell the master — they merge locally.
+> Your local run is the only proof there is now, so it is not optional.
+
+
 **The owner runs several chats at once, one per service. This folder is what
 each of them starts from.** Every brief is written so a chat that has never
 seen this project can read its own file, claim its service, and work without

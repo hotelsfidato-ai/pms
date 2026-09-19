@@ -6539,6 +6539,32 @@ copy will see of theirs.**
 
 ---
 
+### 302 · MINE: the fix for 301 was a reservation the repository forbids, and a gate refused it in a minute
+
+18 September, an hour after 301. Having watched three chats collide on 116, I
+wrote a **migration ledger** into the run sheet that reserved 117 for laundry,
+118 for spa and 119 onwards for the master and wave 2 — a number booked per
+lane before the lane is handed out. Then I took 119 for the sender and ran the
+gates.
+
+`src/test/migrationNumbers.test.ts`: *"migrations are numbered 001 upwards,
+once each, **with no gaps**"*. Red in ninety-three seconds. The repository has
+said since 090 that the sequence is unbroken, and a reserved number is a gap by
+definition — **you cannot hold a migration number open here at all.** I had
+read that file's existence into my plan and not its assertions.
+
+Fixed: the sender's migration is 117, and the ledger is a **queue** settled at
+merge in merge order, not a booking made in advance. Which is what the three
+chats had each done by themselves — write the next free number they could see
+and flag it as provisional — and it was right.
+
+**The rules: (1) before writing a rule about how this repository works, read
+the test that already enforces one. (2) A process invented to prevent yesterday's
+collision is worth exactly as much as the gate that accepts it — run the gates
+on the PROCESS change, not only on the code.**
+
+---
+
 ### 301 · MINE: I gave four chats a lane each and no migration numbers, so three of them took 116
 
 18 September. The run sheet's own rule 4 says *take no migration number
@@ -6560,10 +6586,11 @@ replays from 001 on every deploy is that it must not depend on luck.
 Fixed at merge: purchasing takes 116, laundry 117, spa 118, each renumbered
 with every sentence inside it that named its own number.
 
-**The rule: a lane is not handed out until its migration number is handed out
-with it. "Ask me for a number" is not a plan when four chats start in the same
-hour and the master is the one who is busy — reserve the block up front, write
-it in the brief, and keep the ledger in the run sheet.**
+**The rule: when four chats start in the same hour, "ask me for a number" is
+not a plan — the master is the one who is busy. Each chat writes the next free
+number it can see, SAYS SO IN ITS COMMIT as all three of these did, and the
+master settles it at merge in merge order. NOT by reserving one ahead: an hour
+later I tried exactly that and a gate refused it (MEMORY 302).**
 
 ---
 

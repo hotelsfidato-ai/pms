@@ -1,5 +1,11 @@
 # Central CRM — your brief
 
+> ⚠ **19 September — the owner: nothing leaves this machine.** No `git push`,
+> no GitHub Action, no deploy. Commit on your branch locally, run the full
+> gates HERE and quote what you saw, and tell the master — they merge locally.
+> Your local run is the only proof there is now, so it is not optional.
+
+
 **Read `docs/briefs/README.md` and `docs/briefs/coming-soon.md` first.** This
 service is **not built**. This file is what is specific to the CRM.
 

@@ -74,9 +74,14 @@ laundry + spa       `laundry` and `spa` are menu sections and permission resourc
                     per D18-8 with D18-21 (housekeeping SEES the spa diary). Both
                     services were finished on the server with no screens at all
                     without them.
-the master's next   the shared PMS → n8n sender WITH THE PDF (D18-20) — three wave-2
-                    chats are blocked on it; then the Approvals inbox (D18-19); then
-                    the guest door's next rooms
+the one door out    BUILT 18 Sep — api/src/sending.ts, migration 117. Every message the
+                    hotel sends leaves through it: guest messages, reviews and
+                    marketing all use it and nothing else calls n8n. The PDF goes
+                    base64 inside the same POST (D18-20). Proved against a real HTTP
+                    server shaped like the workflow, secret header and all.
+                    ⚠ NOT SWITCHED ON: N8N_SEND_URL and N8N_SEND_SECRET are unset, so
+                    canSend() is false, screens say so, and no row is written.
+the master's next   the Approvals inbox (D18-19), then the guest door's next rooms
 THE RUN SHEET       docs/PARALLEL-PLAN-2026-09-18.md — who builds what, in what order, and
                     what each one waits on. Kept current; read it before handing out work.
 what is being built docs/BUILD-PLAN-2026-09-18.md — the seven services the owner still wants
@@ -869,6 +874,22 @@ earlier  channel manager and payment gateway excluded; attachments parked;
 
 These come from the owner, in their words where quoted, and override any
 habit of yours.
+
+- **NOTHING LEAVES THIS MACHINE — 19 September, and it outranks every other
+  rule here.** Their words: *"add this rule where u dont push anything, all
+  the things are committed locally and nothing is pushed to actions, also
+  [not] deploy the site"*. So:
+  - **No `git push`.** No branch, no `--no-verify`, not to run the Action.
+  - **No GitHub Action runs**, because nothing reaches GitHub.
+  - **No deploy** — not the API, not the website, not the workflow button.
+  - **Commit locally, every time.** Work is finished when it is committed here
+    with its gates run here. The local gate script is the proof now; the
+    Action cannot be, so MEMORY 300's "a push is not finished until its Action
+    is green" is suspended for as long as this rule stands.
+  - A service chat does not push either. They commit on their branch; the
+    master merges locally.
+
+  It lifts only when the owner says so in their own words.
 
 - **NO DECISION WITHOUT THE OWNER'S APPROVAL.** Their words, 16 September:
   *"if u have any dought u need to ask me and you are not allowed to take

@@ -17,6 +17,24 @@ re-explain it, and they should not have to.
    **Claim the service with `npm run claim -- <service> "what"`** — not in a file — and
    run `npm run lane -- <service>` before you commit.
 
+**⚠ 19 SEPTEMBER, THE OWNER, AND IT OVERRIDES EVERYTHING BELOW:
+NOTHING LEAVES THIS MACHINE.**
+
+- **Do not `git push`.** Not to `cp6`, not to any branch, not with
+  `--no-verify`, not "just to run the Action".
+- **Nothing runs in GitHub Actions**, because nothing reaches GitHub.
+- **Do not deploy.** Not the API, not the website, not the deploy button.
+- **Commit locally, always.** Work is finished when it is committed on this
+  machine with its gates run HERE. `bash <scratchpad>/gates.sh <label>` is the
+  proof now — the Action cannot be.
+- A service chat's own push is refused the same way. They commit; the master
+  merges locally.
+
+This lifts only when the owner says so in their own words. Until then, a green
+local gate run is the whole of the bar, and the standing rule that a push is
+not finished until its Action is green (MEMORY 300) is suspended because there
+are no pushes.
+
 The rules that are never negotiable, in short — the full list is
 `HANDOVER.md` § 5:
 

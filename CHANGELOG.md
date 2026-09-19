@@ -155,10 +155,35 @@ the pending work which we decided."
   and `npm run demo` then dies on a null lookup and rolls back so it reads as
   if nothing ran.
 
+**Then built — the one door out of the PMS**
+
+- **`api/src/sending.ts` and migration 117.** Every message the hotel sends a
+  guest leaves through this file and nothing else: a second caller would be a
+  second set of rules about what may be sent, a second place the secret lives,
+  and a second record of what went. Guest messaging, reviews and marketing are
+  all built on it, so **wave 2 is no longer blocked on the master**.
+- **The PDF goes inside the same POST**, base64 (D18-20). Not a link — a link
+  means a public address for a private document plus a token to expire, which
+  is a second guest door built for a machine already sitting on this server.
+- **`api/test/sending.test.ts` runs a real HTTP server shaped like the owner's
+  workflow**: it reads `x-fidato-secret` the way step 5's node will, answers
+  401 without it, and hands back what it received — including the PDF, decoded,
+  so "the document went with it" is proved byte for byte rather than asserted.
+  7 tests. **The not-connected guard was taken out and seen to fail**, then put
+  back.
+- **Nothing sends, and nothing is recorded, until the owner's n8n steps are
+  done.** `canSend()` is false, every screen says so plainly rather than
+  offering a button that fails, and no row is written — a table full of "not
+  configured" would be a log of the system's own unfinished state, not of
+  anything anybody did.
+- `docs/briefs/n8n-sending.md` answers its own open question with D18-20 and
+  says what the owner does in n8n to attach the file.
+
 **Left open**
-- The shared PMS → n8n sender, now with the PDF (D18-20). Three wave-2 chats
-  are blocked on it; it is next.
-- The Approvals inbox (D18-19).
+- The Approvals inbox (D18-19). Traced: both equipment and purchasing already
+  filter ONE core endpoint (`GET /:code/approvals`) by kind, and it already
+  answers `mayDecide` and `blockedBecause` — so the inbox is that endpoint
+  unfiltered with the decide buttons both services already use. No API work.
 - Laundry, spa and revenue-management **pull `cp6` first** — what each was
   waiting for is in it — then finish their screens. Nothing merges until each
   one's Action is green.

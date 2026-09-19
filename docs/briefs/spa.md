@@ -1,5 +1,11 @@
 # Spa — the brief
 
+> ⚠ **19 September — the owner: nothing leaves this machine.** No `git push`,
+> no GitHub Action, no deploy. Commit on your branch locally, run the full
+> gates HERE and quote what you saw, and tell the master — they merge locally.
+> Your local run is the only proof there is now, so it is not optional.
+
+
 **Read `docs/briefs/README.md` first**, then this, then
 `src/modules/spa/MODULE.md`. Your decisions are **D18-6, D18-7, D18-8** in
 `docs/briefs/decisions-2026-09-18.md` and **D17-54** before it. The whole plan is
@@ -73,8 +79,9 @@ before building that).
 
 ## The gates
 
-They run **in GitHub on every push**, and a push outside your lane is refused
-by the hook. Locally, to find out fast:
+**They run HERE and nowhere else** — the owner stopped all pushes on 19
+September, so there is no Action and no Linux run. Your own full run before you
+hand back is the whole of the proof. While you work:
 
 ```powershell
 npx tsc -b --force
@@ -89,6 +96,6 @@ is not a guard until it has refused something.**
 ## When you finish
 
 Your `CHANGELOG.md`, `DEFECTS.md`, `MODULE.md`; `npm run lane -- spa`;
-`npm run release -- spa`. **You do not merge and you do not deploy.** Commit,
-push, and send the master the head commit with your gate numbers and the guards
-you saw fail.
+`npm run release -- spa`. **You do not merge, you do not deploy, and since 19 September you do not
+push either — the owner's rule: nothing leaves this machine.** Commit on your branch — NOT pushed — and send the master
+the head commit with your gate numbers and the guards you saw fail.

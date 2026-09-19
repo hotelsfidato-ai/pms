@@ -1,5 +1,11 @@
 # Store — your brief (phase 1A, then 2A)
 
+> ⚠ **19 September — the owner: nothing leaves this machine.** No `git push`,
+> no GitHub Action, no deploy. Commit on your branch locally, run the full
+> gates HERE and quote what you saw, and tell the master — they merge locally.
+> Your local run is the only proof there is now, so it is not optional.
+
+
 > **17 September, the owner:** after stock per place, go **straight on to phase 2A,
 > crockery and cutlery** (D17-69): breakage with who and where, in use per outlet,
 > par per outlet, the monthly count. **Clean the long dash from your folder** as part

@@ -1,5 +1,11 @@
 # Accounting — the Tally export — the brief
 
+> ⚠ **19 September — the owner: nothing leaves this machine.** No `git push`,
+> no GitHub Action, no deploy. Commit on your branch locally, run the full
+> gates HERE and quote what you saw, and tell the master — they merge locally.
+> Your local run is the only proof there is now, so it is not optional.
+
+
 **Read `docs/briefs/README.md` first**, then this, then
 `src/modules/accounting/MODULE.md`. Your decision is **D18-16** in
 `docs/briefs/decisions-2026-09-18.md`. The whole plan is
@@ -81,8 +87,9 @@ already says who sees the ledgers; ask the master rather than editing that file.
 
 ## The gates
 
-They run **in GitHub on every push** (`.github/workflows/ci.yml`), and a push
-outside your lane is refused by the hook. Locally, to find out fast:
+**They run HERE and nowhere else** — the owner stopped all pushes on 19
+September, so there is no Action and no Linux run. Your own full run before you
+hand back is the whole of the proof. While you work:
 
 ```powershell
 npx tsc -b --force
@@ -97,6 +104,7 @@ something**: break each one, watch it fail, put it back, say so.
 ## When you finish
 
 Your `CHANGELOG.md`, `DEFECTS.md`, `MODULE.md`; `npm run lane -- accounting`;
-`npm run release -- accounting`. **You do not merge and you do not deploy.**
-Commit on your branch, push, and send the master the head commit with your gate
+`npm run release -- accounting`. **You do not merge, you do not deploy, and since 19 September you do not
+push either — the owner's rule: nothing leaves this machine.**
+Commit on your branch — NOT pushed — and send the master the head commit with your gate
 numbers and the guards you saw fail.

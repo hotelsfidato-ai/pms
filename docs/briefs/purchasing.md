@@ -1,5 +1,11 @@
 # Purchasing — the brief
 
+> ⚠ **19 September — the owner: nothing leaves this machine.** No `git push`,
+> no GitHub Action, no deploy. Commit on your branch locally, run the full
+> gates HERE and quote what you saw, and tell the master — they merge locally.
+> Your local run is the only proof there is now, so it is not optional.
+
+
 **Read `docs/briefs/README.md` first** (the rules every lane shares), then this,
 then `src/modules/purchasing/MODULE.md`. Your decisions are **D18-1 to D18-4**
 in `docs/briefs/decisions-2026-09-18.md`, and the shape of the whole thing is

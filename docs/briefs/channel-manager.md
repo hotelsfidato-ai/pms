@@ -1,5 +1,11 @@
 # Channel manager — your brief
 
+> ⚠ **19 September — the owner: nothing leaves this machine.** No `git push`,
+> no GitHub Action, no deploy. Commit on your branch locally, run the full
+> gates HERE and quote what you saw, and tell the master — they merge locally.
+> Your local run is the only proof there is now, so it is not optional.
+
+
 ## ⚠ 17 SEPTEMBER: BUILD IT — the owner's D17-66. This overrides everything below.
 
 The owner chose **SU** (Su channel manager) and gave its API documents:

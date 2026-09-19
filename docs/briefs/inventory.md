@@ -1,5 +1,11 @@
 # Inventory and rates — your brief
 
+> ⚠ **19 September — the owner: nothing leaves this machine.** No `git push`,
+> no GitHub Action, no deploy. Commit on your branch locally, run the full
+> gates HERE and quote what you saw, and tell the master — they merge locally.
+> Your local run is the only proof there is now, so it is not optional.
+
+
 **Read `docs/briefs/README.md` first.** It holds the five rules, how to make
 your own working copy, the list of files nobody but the master may change, and
 the gates. This file is only what is yours.
