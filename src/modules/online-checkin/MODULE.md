@@ -2,11 +2,16 @@
 
 Guests give their details and ID before they arrive, so the desk only hands over the key.
 
-**NOT BUILT. A Coming soon page only.** On the list of what every comparable system has; the owner chose on
-16 September to give every missing service a folder and a Coming soon page.
-The page says what the service will do, what it needs before it can be built
-and what exists today. There is no working feature, no server code and no
-database table.
+**BEING BUILT since 19 September** (the owner's D18-9 to D18-13;
+`docs/briefs/guest-page.md`). What exists now is the guest's own page up to
+the six-digit code: `/g/:token` opens the booking, asks for the number the
+booking carries, and answers the code. **Everything behind the code — the
+bill, the check-in details and the ID photo, a spa or laundry request — is
+not built yet**, and waits on two things the master owns (see "Waiting on
+the master" below).
+
+The staff-facing Coming soon page is still here and still in the Coming soon
+menu section: nothing a clerk sees has changed yet.
 
 **Folder name:** `online-checkin` — the word the other two places will use when it is
 built:
@@ -48,6 +53,20 @@ scanning (`PROGRESS.md`, items 6 and 7). ID capture at the desk exists
 | Menu name | Address (`routes.tsx`) | Page file | Who sees it (`nav.ts`) |
 |---|---|---|---|
 | Online check-in | `/coming-soon/online-checkin` | `pages/OnlineCheckin.tsx` | owner, admin, GM — the Coming soon section (`seesComingSoon`) |
+| — (no menu entry, ever) | `/g/:token` | `pages/GuestPage.tsx` | **the guest**, and nobody else |
+
+⚠ **`/g/:token` is exported separately, as `publicRoutes`.** The routes above
+sit inside `RequireSession` in `App.tsx`; this one must not, because the
+person opening it has no sign-in and never will. It carries no sidebar, no
+property picker and no menu. The token in the address is the whole
+credential (migration 114) — there is no session, no account and no guest
+role — and everything behind the six digits is refused **by the server**
+(`api/src/routes/guestDoor.ts`), never by this screen.
+
+**What the page calls** (`data/guestPage.ts`): `GET /api/guest/:token`,
+`POST /api/guest/:token/code`, `POST /api/guest/:token/verify`. Nothing else.
+A test asserts exactly that list, so a screen cannot quietly fetch the bill
+and hide it.
 
 The page is the shared Coming soon page (`src/pages/ComingSoon.tsx`) with
 this service's words: what it will do, what it needs, where it stands.
@@ -106,6 +125,32 @@ this `MODULE.md`; `src/components/app/navigation.test.ts` pins the Coming
 soon section.
 
 ---
+
+## Waiting on the master — 19 September
+
+Each of these is one line or one number in a file this lane may not change.
+Nothing behind the code can be built until the first two are answered.
+
+1. **Mount the guest's page outside the session gate.** In `src/App.tsx`,
+   beside `/signin`:
+   `import { routes as onlineCheckinRoutes, publicRoutes as guestPagePublicRoutes } from "@/modules/online-checkin/routes";`
+   and `{guestPagePublicRoutes}` immediately after the `/signin` route. Proved
+   locally with exactly that line and then reverted — `App.tsx` is the
+   master's. Without it `/g/:token` falls through to the catch-all.
+2. **A migration number**, for the definer functions the verified half needs
+   (the bill as it stands, the check-in details and the ID photo, a request).
+   None taken; 119 is the highest in the tree today.
+3. **`src/lib/api.ts` loses a refusal's own sentence.** It lifts a body's
+   `error` or `reason` into the `ApiError` message but not its `message`, and
+   this door writes its "codes cannot be sent yet" sentence in `message`
+   (OCI-1). One line — `body?.error ?? body?.reason ?? body?.message ?? …` —
+   fixes it for every screen; this lane worked around it in its own file.
+4. **`ApiError` is a different shape in the two environments.** In the dev
+   server its `body` survives; under vitest the transform drops it
+   (`Object.keys` → `["status","name"]` against `["status","body","name"]`).
+   Any screen reading `error.body` is untestable here, and a test that builds
+   one with `new ApiError(...)` tests the transform. Worth a root `MEMORY.md`
+   number — the master's to write.
 
 ## Requests from other services
 

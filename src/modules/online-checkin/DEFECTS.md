@@ -14,8 +14,34 @@ entries stay here: they are the reason the fault does not come back.
 
 ## Open — not fixed
 
-None. This service is not built: it has a brief, a menu entry
-and a Coming soon page, and no code behind them.
+None.
+
+---
+
+## Fixed
+
+### OCI-1 · The guest was shown "Request failed (503)." where the door had written them a sentence
+
+**Found** — 19 September, by opening `/g/:token` on a phone-sized window
+against this copy's own API and pressing "Send me the code". Not by a test:
+the test stubbed the answer, and the shape it stubbed was the 200.
+
+The door refuses to send while n8n is not connected, and says so usefully:
+*"Codes cannot be sent yet - WhatsApp is not connected to this server. Ask the
+desk to send you the link instead."* It puts that in the body's `message`
+field, with a 503. `src/lib/api.ts` lifts a refusal's `error` or `reason` into
+the `ApiError`, **not** its `message` — so the sentence never reached the
+screen, and the guest read a status code instead of what to do next. Today
+that is *every* guest who tries, because n8n is not connected anywhere yet.
+
+**What was done** — `messageFrom` in `pages/GuestPage.tsx` reads the body's
+`message` first, then the `ApiError`'s own. The door was NOT changed: both
+halves of its send answer — the right number and a wrong one — carry the same
+field, and that sameness is what stops a stranger finding the guest's number
+by trying.
+
+**The rule** — A screen that prints "the server's own words" has to be opened
+against the server that says them. A stub proves the shape you thought of.
 
 ---
 
