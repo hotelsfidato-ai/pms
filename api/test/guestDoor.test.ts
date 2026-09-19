@@ -224,21 +224,68 @@ describe("the six digits that prove it is that guest", () => {
       .toBe(((await right.json()) as { message: string }).message);
   });
 
-  it("never puts the code in the answer, and makes one only for the booking's own number", async () => {
-    await sql("delete from guest_link_codes where link_id in (select id from guest_links where reservation_id = $1)", [stayId]);
-    const res = await asGuest(`/${link}/code`, "POST", { phone });
-    const text = await res.clone().text();
-    expect([200, 503]).toContain(res.status);
+  /* ⚠ THIS TEST USED TO SAY `expect([200, 503]).toContain(res.status)` AND
+     THEREFORE SAID NOTHING. The door gated on `N8N_SEND_WEBHOOK`, a name
+     nothing in this repository has ever set, so it answered 503 for ever and
+     this assertion passed anyway — and with it every guest was permanently
+     unverifiable, and the whole half of D18-9 that sits behind verification
+     was unreachable (MEMORY 304). A test that accepts either state of a
+     half-built feature asserts nothing about either.
 
-    const { rows } = await sql(
-      `select code_hash, sent_to from guest_link_codes c
-         join guest_links l on l.id = c.link_id
-        where l.reservation_id = $1 order by c.created_at desc limit 1`, [stayId]);
-    expect(rows.length, "the booking's own number gets a code").toBe(1);
-    expect(rows[0].sent_to).toMatch(/^…\d{4}$/);
-    expect(text, "the answer carries no code, in any environment")
-      .not.toMatch(/\b\d{6}\b/);
-    expect(rows[0].code_hash, "and the code is stored hashed").toHaveLength(64);
+     Both states are pinned now, each to its own condition. */
+  const codesFor = () => sql(
+    `select code_hash, sent_to from guest_link_codes c
+       join guest_links l on l.id = c.link_id
+      where l.reservation_id = $1 order by c.created_at desc`, [stayId]);
+
+  it("sends nothing AND ISSUES NOTHING while the hotel has not connected n8n", async () => {
+    delete process.env["N8N_SEND_URL"];
+    delete process.env["N8N_SEND_SECRET"];
+    await sql("delete from guest_link_codes where link_id in (select id from guest_links where reservation_id = $1)", [stayId]);
+    forgetKnocksForTests();
+
+    const res = await asGuest(`/${link}/code`, "POST", { phone });
+    expect(res.status, "it says plainly that it cannot send").toBe(503);
+
+    /* The issue call used to sit ABOVE the check, so a knock at a server that
+       could not send spent the guest's previous live code on an attempt
+       nobody ever made. */
+    const { rows } = await codesFor();
+    expect(rows.length, "no code is issued when none can be sent").toBe(0);
+  });
+
+  it("issues one, keeps it hashed, and never puts it in the answer, once n8n is connected", async () => {
+    /* A receiver that simply answers, so `canSend()` is true and the door
+       takes its other branch. WHAT the sender hands over is proved in
+       api/test/sending.test.ts against a receiver that inspects it; the only
+       question here is whether this door issues the code and hides it. */
+    const { createServer } = await import("node:http");
+    const server = createServer((_req, res) => { res.writeHead(200).end("ok"); });
+    await new Promise<void>((done) => server.listen(0, "127.0.0.1", done));
+    const port = (server.address() as { port: number }).port;
+    process.env["N8N_SEND_URL"] = `http://127.0.0.1:${port}/pms-send`;
+    process.env["N8N_SEND_SECRET"] = "only-this-test-run-knows-this";
+
+    try {
+      await sql("delete from guest_link_codes where link_id in (select id from guest_links where reservation_id = $1)", [stayId]);
+      forgetKnocksForTests();
+
+      const res = await asGuest(`/${link}/code`, "POST", { phone });
+      const text = await res.clone().text();
+      expect(res.status).toBe(200);
+
+      const { rows } = await codesFor();
+      expect(rows.length, "the booking's own number gets a code").toBe(1);
+      expect(rows[0].sent_to, "and only the last four digits are kept")
+        .toMatch(/^…\d{4}$/);
+      expect(rows[0].code_hash, "the code is stored hashed").toHaveLength(64);
+      expect(text, "and it is never in the answer, in any environment")
+        .not.toMatch(/\b\d{6}\b/);
+    } finally {
+      delete process.env["N8N_SEND_URL"];
+      delete process.env["N8N_SEND_SECRET"];
+      await new Promise<void>((done) => server.close(() => done()));
+    }
   });
 
   it("opens for the right code, and refuses a wrong one", async () => {

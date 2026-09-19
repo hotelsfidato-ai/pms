@@ -3,6 +3,7 @@ import { createHash, randomBytes, timingSafeEqual } from "node:crypto";
 import { withSession } from "../auth.ts";
 import { pool } from "../db.ts";
 import { env } from "../env.ts";
+import { canSend, send } from "../sending.ts";
 
 /* ══════════════════════════════════════════════════════════════════
    THE GUEST'S OWN DOOR — one private page per booking (D18-9, D18-10, D18-13)
@@ -51,8 +52,28 @@ const OPENS_A_MINUTE = 30;
 const CODES_AN_HOUR = 5;
 const knocks = new Map<string, { at: number; opens: number; codes: number; hour: number }>();
 
+/* ⚠ AND IT IS SWEPT, WHICH IT WAS NOT (19 September, found by audit).
+   A token hash was added on the first knock and never removed, and this is
+   the one door in the system that needs no credential of any kind: anybody
+   could walk random tokens and grow this map until the process died, taking
+   the front desk and the tills with it. The comment above claimed nginx had
+   a limit in front — it does not. `deploy/nginx.conf` applied `limit_req`
+   only to /api/channel/, and /api/guest/ fell through the plain /api/ block.
+   Both halves are fixed: nginx has its own zone now, and nothing here is
+   remembered longer than the hour its counters cover. */
+const KEEP_FOR = 60 * A_MINUTE;
+function sweep(now: number): void {
+  for (const [hash, seen] of knocks) {
+    if (now - seen.at * A_MINUTE > KEEP_FOR) knocks.delete(hash);
+  }
+}
+
 function tooOften(tokenHash: string, kind: "open" | "code"): boolean {
   const now = Date.now();
+  /* Cheap: this map holds one small object per token seen in the last hour,
+     and the sweep only walks that. It runs on the knock rather than on a
+     timer so a process with no guests does no work at all. */
+  if (knocks.size > 1_000) sweep(now);
   const minute = Math.floor(now / A_MINUTE);
   const hour = Math.floor(now / (60 * A_MINUTE));
   const seen = knocks.get(tokenHash);
@@ -131,10 +152,6 @@ guestDoor.post("/:token/code", async (c) => {
   }
   const body = await c.req.json<{ phone?: string }>().catch(() => ({}) as { phone?: string });
 
-  const rows = await ask<{ code: string; sent_to: string }>(
-    "select * from app.guest_code_issue($1, $2)", [hash, body.phone ?? ""]);
-  const made = rows[0];
-
   /* ⚠ THE SAME ANSWER WHETHER OR NOT A CODE WAS MADE. A page that says "that
      is not the number on the booking" lets a stranger find the number by
      trying. The guest who typed their own number gets the code; anybody else
@@ -150,7 +167,18 @@ guestDoor.post("/:token/code", async (c) => {
      both answers are the same 503; when it is connected both become the same
      200. The code is NEVER in this answer, in any environment: an answer that
      carries the code is a door with no lock. */
-  if (!process.env["N8N_SEND_WEBHOOK"]) {
+  /* ⚠ THIS ASKED FOR `N8N_SEND_WEBHOOK` UNTIL 19 SEPTEMBER, AND NOTHING HAS
+     EVER SET THAT NAME. It was invented here, in a file written before the
+     sender existed; the sender reads N8N_SEND_URL and N8N_SEND_SECRET, and
+     those are the two the owner is told to set. So the owner would have
+     followed the brief to the letter, restarted the API, and this door would
+     have gone on answering 503 for ever - with no error anywhere saying why,
+     and the whole of the verified half of the guest's page (the bill, the
+     identity form, the requests) unreachable behind it. Found by audit.
+
+     Its own test could not catch it: it asserted `[200, 503]` contained the
+     status, which is true either way. The test below now pins BOTH states. */
+  if (!canSend()) {
     return c.json({
       sent: false,
       message: "Codes cannot be sent yet - WhatsApp is not connected to this "
@@ -158,11 +186,47 @@ guestDoor.post("/:token/code", async (c) => {
     }, 503);
   }
 
-  if (made) {
-    /* TODO, with the guest-messages service: hand `made.code` to n8n here and
-       nowhere else. It does not leave this block. */
+  /* ⚠ AND NOTHING IS ISSUED ABOVE THIS LINE. The call to `guest_code_issue`
+     used to sit before the check, so every knock at a server that could not
+     send burned the guest's previous live code (migration 114 keeps one) for
+     an attempt nobody ever made. A record of what was never attempted is
+     exactly what migration 117 refuses to write; issuing one is worse. */
+  const client = await pool.connect();
+  try {
+    const { rows } = await client.query<{ code: string; sent_to: string }>(
+      "select * from app.guest_code_issue($1, $2)", [hash, body.phone ?? ""]);
+    const made = rows[0];
+
+    if (made) {
+      const { rows: link } = await client.query<OpenRow>(
+        "select * from app.guest_link_open($1)", [hash]);
+      const it = link[0];
+      if (it) {
+        /* THE CODE LEAVES THROUGH THE ONE DOOR OUT AND NOWHERE ELSE
+           (api/src/sending.ts). It is not logged, not returned, and not put
+           in the answer below in any environment - an answer that carries
+           the code is a door with no lock. Whether this succeeded does not
+           change what the caller is told. */
+        await send(client, {
+          channel: "whatsapp",
+          kind: "guest-link-code",
+          hotel: { id: it.hotel_id, code: it.hotel_code, name: it.hotel_name },
+          to: { name: it.guest_name, phone: made.sent_to },
+          data: { code: made.code, reference: it.reference },
+          about: { kind: "reservation", id: it.reservation_id },
+        });
+      }
+    }
+  } finally {
+    client.release();
   }
 
+  /* ⚠ THE ANSWER IS THE SAME WHETHER OR NOT A CODE WAS MADE, WAS SENT, OR
+     FAILED TO SEND. A known and accepted limit: a determined attacker could
+     time the difference, because a matching number does an HTTP call and a
+     wrong one does not. The words, the status and the shape give nothing
+     away, which is what stops somebody finding the guest's number by
+     trying. */
   return c.json({
     sent: true,
     message: "If that is the number on the booking, the code has been sent to it.",

@@ -6539,6 +6539,94 @@ copy will see of theirs.**
 
 ---
 
+### 305 · MINE: `TaskStop` killed the pipe, not the script, so two full suites ran at once - and killing them by PID took Postgres down with them
+
+18-19 September. I stopped a gate run with `TaskStop`. It reported success. It
+had killed the shell reading the script's output and left the SCRIPT running,
+so when I started a replacement, two full suites ran side by side for five
+minutes - the exact thing that exhausted this laptop on 18 September, and the
+thing the gate script's own header warns about in capitals.
+
+I only found it by listing processes. My first check had been `pgrep -f
+"vitest|with-test-db"`, which answered nothing and which I read as "clean";
+the real answer was that three `gates.sh` processes were running, two of them
+a parent chain of the same invocation and one a second run entirely.
+
+**Then the cure was worse.** I killed both by PID with `taskkill /T /F`, and
+a later sweep of "remaining test processes" took down the DEVELOPMENT POSTGRES
+with them - the server that had been up since 14:47 and that every suite on
+this machine connects to. An unclean kill means Postgres fsyncs the entire
+data directory on restart: **fifteen minutes and still going**, with every
+database-backed gate unable to run in the meantime.
+
+**The rules: (1) `TaskStop` on anything that spawns a tree stops the pipe, not
+the tree - verify with a process list and kill the script by PID. (2) Before
+`taskkill /T /F`, read the command line of every PID you are about to kill.
+(3) `pgrep` answering nothing is not proof of nothing: check that pgrep can
+see the processes you already know are there before you trust its silence.**
+
+---
+
+### 304 · The guest's door could never have verified a single guest: it gated on an environment variable that nothing sets
+
+19 September, found by an audit of the twelve undeployed commits - not by a
+test, and not by me.
+
+`api/src/routes/guestDoor.ts` refused to send the six-digit code unless
+`N8N_SEND_WEBHOOK` was set. **That name appears nowhere else in the
+repository.** I invented it in a file written before the sender existed. The
+sender reads `N8N_SEND_URL` and `N8N_SEND_SECRET`, and those are the two names
+`api/.env.example` and the owner's own brief tell them to set.
+
+So the owner would have followed the brief exactly, restarted the API, and the
+door would have gone on answering 503 for ever - and with `verified` never
+true, the whole half of D18-9 that sits behind verification (the bill, the
+identity form, the spa and laundry requests) would have been unreachable for
+every guest, with nothing anywhere saying why.
+
+**Its own test could not catch it.** `expect([200, 503]).toContain(res.status)`
+is true whichever branch runs. A test written to tolerate both states of a
+feature that is half-built asserts nothing about either.
+
+**Worse, underneath:** `app.guest_code_issue` was called BEFORE the check, so
+every knock at a server that could not send burned the guest's previous live
+code for an attempt nobody ever made.
+
+Fixed: the door asks `canSend()`, issues nothing until that is true, and hands
+the code to the one door out (`api/src/sending.ts`) and nowhere else.
+
+**The rules: (1) a name only one file uses is a name nothing sets - grep it
+before you ship it. (2) A test that accepts either state of a half-built
+feature is not a test; pin BOTH states, each to its own condition. (3) Do not
+spend something irreversible - a code, a number, a row - above the check that
+decides whether it was worth spending.**
+
+---
+
+### 303 · The one door with no credential was the one door with no limit, and the code said otherwise
+
+19 September, the same audit. `/api/guest/` is opened by people the hotel does
+not employ and needs no credential of any kind. Its rate limiter is a `Map`
+keyed by token hash - and entries were **never evicted**, so anybody walking
+random tokens grew it until the Node process died, taking the front desk, the
+tills and the channel manager with it.
+
+The file's own comment said *"nginx has its own limit in front
+(deploy/nginx.conf, the master's)"*. **It did not.** `limit_req` was applied
+only to `location /api/channel/`; `/api/guest/` fell through the plain
+`/api/` block with no limit at all. I wrote both files and the comment was
+wrong the day it was written.
+
+Fixed: the map is swept of anything older than the hour its counters cover,
+and nginx has a `fidato_guest` zone, 30 a minute with a burst of 10 and a 16k
+body cap.
+
+**The rule: a comment claiming another file protects you is a claim to CHECK,
+not to write. The dangerous ones are the ones that make a reviewer skip the
+thing they were about to look at.**
+
+---
+
 ### 302 · MINE: the fix for 301 was a reservation the repository forbids, and a gate refused it in a minute
 
 18 September, an hour after 301. Having watched three chats collide on 116, I

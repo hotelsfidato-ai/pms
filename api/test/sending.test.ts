@@ -112,13 +112,22 @@ const attempt = <T>(fn: (client: Client) => Promise<T>) =>
     try { return await fn(client); } finally { await client.query("rollback"); }
   });
 
+/* ⚠ THIS FILE COUNTS ITS OWN MESSAGES, NOT EVERY MESSAGE (19 September).
+   It used `count(*) from messages_sent` and expected 0, which held only
+   while nothing else could write the table. The guest's own door now
+   genuinely sends a code, and it does so OUTSIDE a transaction — a guest
+   has no session to roll back — so that row commits and stays. A test
+   that assumes an empty table is a test that fails the day the feature
+   beside it starts working. */
+const MINE = "00000000-0000-0000-0000-00000000se4d";
+
 const aBill = (hotel: { id: string; code: string; name: string }) => ({
   channel: "whatsapp" as const,
   kind: "bill",
   hotel: { ...hotel, phone: "+911234567890" },
   to: { name: "Mr Sharma", phone: "+919876543210", email: null },
   document: { number: "5EL/2026-27/000123", date: "18/09/2026", total: "12,142.88", currency: "INR" },
-  about: { kind: "reservation", id: "00000000-0000-0000-0000-000000000001" },
+  about: { kind: "reservation", id: MINE },
 });
 
 describe("the one door out", () => {
@@ -129,7 +138,7 @@ describe("the one door out", () => {
     const out = await attempt(async (client) => {
       const result = await send(client, aBill(hotel));
       const { rows } = await client.query<{ n: number }>(
-        "select count(*)::int as n from messages_sent");
+        "select count(*)::int as n from messages_sent where about_id = $1", [MINE]);
       return { result, rows: rows[0]!.n };
     });
 
@@ -147,7 +156,7 @@ describe("the one door out", () => {
     const out = await attempt(async (client) => {
       const result = await send(client, aBill(hotel));
       const { rows } = await client.query<{ status: string; kind: string; to_phone: string }>(
-        "select status, kind, to_phone from messages_sent order by id desc limit 1");
+        "select status, kind, to_phone from messages_sent where about_id = $1 order by id desc limit 1", [MINE]);
       return { result, row: rows[0] };
     });
 
@@ -188,7 +197,7 @@ describe("the one door out", () => {
         to: { name: "Mr Sharma", phone: null, email: "sharma@example.com" },
       });
       const { rows } = await client.query<{ n: number }>(
-        "select count(*)::int as n from messages_sent");
+        "select count(*)::int as n from messages_sent where about_id = $1", [MINE]);
       return { result, rows: rows[0]!.n };
     });
 
@@ -208,7 +217,7 @@ describe("the one door out", () => {
     const out = await attempt(async (client) => {
       const result = await send(client, aBill(hotel));
       const { rows } = await client.query<{ status: string; detail: string }>(
-        "select status, detail from messages_sent order by id desc limit 1");
+        "select status, detail from messages_sent where about_id = $1 order by id desc limit 1", [MINE]);
       return { result, row: rows[0] };
     });
 
@@ -228,7 +237,7 @@ describe("the one door out", () => {
     const out = await attempt(async (client) => {
       const result = await send(client, aBill(hotel));
       const { rows } = await client.query<{ status: string; detail: string }>(
-        "select status, detail from messages_sent order by id desc limit 1");
+        "select status, detail from messages_sent where about_id = $1 order by id desc limit 1", [MINE]);
       return { result, row: rows[0] };
     });
 
@@ -240,7 +249,8 @@ describe("the one door out", () => {
   it("leaves no message behind on the demo property", async () => {
     const { rows } = await sql(
       `select count(*)::int as n from messages_sent ms
-         join hotels h on h.id = ms.hotel_id where h.code = '5EL'`);
+         join hotels h on h.id = ms.hotel_id
+        where h.code = '5EL' and ms.about_id = $1`, [MINE]);
     expect(rows[0].n, "every message this file sent was rolled back").toBe(0);
   });
 });

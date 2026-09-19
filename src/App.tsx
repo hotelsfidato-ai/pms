@@ -24,6 +24,7 @@ import { useSession, useRole } from "@/lib/session";
 import { homePath } from "@/lib/homeScreen";
 import { workingHomeFor } from "@/components/app/navigation";
 import { PropertyScope, PropertyIndex } from "@/components/app/PropertyScope";
+import ApprovalsPage from "@/pages/Approvals";
 import { RequireAccess } from "@/components/app/RequireAccess";
 import { reCheckMoney } from "@/lib/freshness";
 import { NotificationsPage } from "@/pages/Notifications";
@@ -316,6 +317,16 @@ export default function App() {
               <Route path="/design-system" element={<DesignSystemPage />} />
             )}
             <Route path="/notifications" element={<NotificationsPage />} />
+            {/* Everything waiting on you, from every service (D18-19).
+                Core, because the approvals engine spans them all. */}
+            <Route
+              path="/h/:code/approvals"
+              element={
+                <RequireAccess path="/h/:code/approvals" resource="notification">
+                  <PropertyScope /><ApprovalsPage />
+                </RequireAccess>
+              }
+            />
             {/* Places and suppliers: shared by the Store, equipment and
                 purchasing, so core. Guarded like the Store. */}
             <Route

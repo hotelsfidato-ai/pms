@@ -1,5 +1,6 @@
-import { Bell, MapPin, Palette, type LucideIcon } from "lucide-react";
+import { CheckCircle2, Bell, MapPin, Palette, type LucideIcon } from "lucide-react";
 import { canAccess, type Resource, type Role } from "@/lib/permissions";
+import { decidesSomething } from "@/data/repositories/approvals";
 /* Each service's own menu entries (docs/SERVICE-FOLDERS-PLAN.md). */
 import { nav as frontDesk } from "@/modules/front-desk/nav";
 import { nav as reservations } from "@/modules/reservations/nav";
@@ -290,6 +291,31 @@ const CORE_ENTRIES: ServiceNavEntry[] = [
   { section: "system", order: 10,
     workingMenus: ["front_desk", "pos", "chef", "kitchen_manager", "housekeeping", "stores"],
     label: "Notifications", to: "/notifications", icon: Bell, resource: "notification", matchPrefix: true },
+  /* ⚠ ONE PLACE TO SEE EVERYTHING WAITING ON YOU — the owner's D18-19.
+     CORE, not a service's: the engine (076) spans every service, and
+     equipment and purchasing each decide inside their own screen. A GM
+     with four things waiting had to know to open four screens.
+
+     `resource: "notification"` deliberately — it is the same idea, the
+     roles who need it already hold it, and NO NEW RESOURCE was invented,
+     because who may see a screen is the owner's to widen and not mine.
+     `canSee` narrows the MENU to the roles that can decide anything at
+     all, so a till operator is not offered an inbox that is empty by
+     construction; the server still decides every row. */
+  { section: "system", order: 5,
+    label: "Approvals", to: "/h/:code/approvals", icon: CheckCircle2,
+    resource: "notification", canSee: decidesSomething,
+    /* ⚠ IN NOBODY'S WORKING MENU, deliberately. The Inventory Manager
+       decides equipment gate passes, so it was in theirs — and
+       `navigation.test.ts` refused it, correctly: that test pins every
+       role's shortened menu entry for entry, because the owner chose
+       those lists themselves on 15 September. Widening one is the
+       owner's call, not a side effect of adding a screen.
+
+       Nothing is lost. It sits in the SYSTEM section for every role that
+       can decide anything, and "Find a screen" answers to approve,
+       waiting, inbox, gate pass and sign off. */
+    keywords: ["approve", "approval", "waiting", "inbox", "purchase request", "gate pass", "sign off"] },
   /* devOnly, like the admin console. It is a component showcase —
      developer documentation, not a screen anybody at a hotel has a
      reason to open, and it carries its own sample guest names into

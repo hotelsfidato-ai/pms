@@ -81,6 +81,12 @@ export interface Message {
   } | null;
   /** The A4 the desk prints (D18-20). */
   file?: SendableFile | null;
+  /** Values this KIND of message needs and a document does not — the guest
+      link's six-digit code is the first, read in n8n as `{{$json.data.code}}`.
+      Kept as plain named strings rather than a second shape per kind: the
+      wording lives in n8n, and a new kind of message should not be a change
+      to this file. */
+  data?: Record<string, string> | undefined;
   /** What it is about, so the desk can answer "was it sent?" */
   about?: { kind: string; id: string } | null;
   /** Null where the system sent it by itself. */
@@ -130,6 +136,7 @@ export async function send(client: Client, message: Message): Promise<SendResult
       email: message.to.email ?? null,
     },
     document: message.document ?? null,
+    ...(message.data ? { data: message.data } : {}),
     /* base64, and named, so the workflow forwards it without knowing what
        is in it. Absent rather than null when there is no document, so a
        workflow can branch on its presence. */
@@ -172,13 +179,22 @@ export async function send(client: Client, message: Message): Promise<SendResult
       : `Could not reach the receiver. ${(error as Error)?.message ?? ""}`.trim();
   }
 
+  /* ⚠ THROUGH THE DEFINER FUNCTION, NOT A BARE INSERT (migration 117).
+     `messages_sent` is FORCE row-secured and scoped to
+     `app.auth_hotel_ids()`, which answers for a signed-in member of
+     staff — and most messages have no staff behind them at all. The
+     guest's own door was the first caller and was refused outright; the
+     confirmation the CRS triggers, the reminder the day before and the
+     review request after check-out would all have been refused the same
+     way. Found by this file's own test, 19 September.
+
+     The hotel is named by a caller that already reached the booking
+     legitimately. Reading what was sent is still governed by the
+     policy on the table, unchanged. */
   const { rows } = await client.query<{ id: string }>(
-    `insert into messages_sent
-       (hotel_id, channel, kind, to_name, to_phone, to_email,
-        about_kind, about_id, document_name, document_bytes,
-        status, detail, sent_by)
-     values ($1::uuid, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13::uuid)
-     returning id::text`,
+    `select app.record_message_sent(
+       $1::uuid, $2, $3, $4, $5, $6, $7, $8, $9, $10::integer, $11, $12, $13::uuid
+     )::text as id`,
     [message.hotel.id, message.channel, message.kind,
      message.to.name ?? null, message.to.phone ?? null, message.to.email ?? null,
      message.about?.kind ?? null, message.about?.id ?? null,

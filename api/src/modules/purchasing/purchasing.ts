@@ -634,6 +634,25 @@ purchasing.post("/:code/purchasing/requests/:id/delivery", async (c) => {
     for (const l of lines) {
       if (!known.has(l.lineId!)) return refuse("That line is not on this order.");
     }
+    /* ⚠ AND EACH LINE ONLY ONCE (19 September, found by audit). This checked
+       that every line BELONGED to the order and not that it appeared once.
+       Send the same lineId twice and the loop below ran twice for it: the
+       `received_quantity` update is idempotent and recorded 40, while
+       `receiveIntoStore` wrote TWO receipts - the store showing 80 kg of rice
+       against an order whose own record says 40 came. Nothing refused it, so
+       it committed, and the stock ledger is append-only: undoing it needs a
+       reversing movement and somebody noticing first.
+
+       Refused here, ABOVE the first write, because a refusal returned inside
+       `withSession` after a write is a commit (MEMORY 243). */
+    const seen = new Set<string>();
+    for (const l of lines) {
+      if (seen.has(l.lineId!)) {
+        return refuse("That line is on this delivery twice. Put the whole "
+          + "quantity received on one line.");
+      }
+      seen.add(l.lineId!);
+    }
 
     const received: { item: string; quantity: number; store: string; onHandHere: number }[] = [];
 

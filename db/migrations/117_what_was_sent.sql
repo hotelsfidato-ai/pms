@@ -100,3 +100,55 @@ create policy messages_sent_by_hotel on messages_sent
 
 -- Append-only in practice: a record of what was sent is not edited afterwards.
 grant select, insert on messages_sent to pms_app;
+
+-- -----------------------------------------------------------------------------
+-- Recording it, for a caller that has no staff session
+-- -----------------------------------------------------------------------------
+-- ⚠ FOUND BY ITS OWN TEST, 19 September. `messages_sent` is FORCE row-secured
+-- and scoped to `app.auth_hotel_ids()`, which answers for a signed-in member of
+-- staff. The first caller of the sender is THE GUEST'S OWN DOOR, which has no
+-- staff session by design (migration 114: a guest is not staff and holds no
+-- sign-in), so the insert was refused outright — and so would every message the
+-- system sends by itself: the confirmation when the CRS makes a booking, the
+-- reminder the day before, the review request after check-out. Nearly every
+-- message this table exists to record.
+--
+-- So the WRITE goes through here. The hotel is named explicitly by a caller
+-- that already reached the booking legitimately — the guest door through the
+-- link's own token, a clerk through their session — and this function only
+-- ever writes the row it is given.
+--
+-- THE READ IS UNCHANGED AND STILL FORCE-SECURED: the policy above decides who
+-- can SEE what was sent, and nothing here widens it. A definer function that
+-- inserts is not a definer function that selects.
+create or replace function app.record_message_sent(
+  p_hotel uuid, p_channel text, p_kind text,
+  p_to_name text, p_to_phone text, p_to_email text,
+  p_about_kind text, p_about_id text,
+  p_document_name text, p_document_bytes integer,
+  p_status text, p_detail text, p_sent_by uuid
+) returns bigint
+language sql
+security definer
+set search_path = public, pg_temp
+as $$
+  insert into messages_sent
+    (hotel_id, channel, kind, to_name, to_phone, to_email,
+     about_kind, about_id, document_name, document_bytes,
+     status, detail, sent_by)
+  values
+    (p_hotel, p_channel, p_kind, p_to_name, p_to_phone, p_to_email,
+     p_about_kind, p_about_id, p_document_name, p_document_bytes,
+     p_status, p_detail, p_sent_by)
+  returning id
+$$;
+
+comment on function app.record_message_sent(uuid, text, text, text, text, text, text, text, text, integer, text, text, uuid) is
+  'Records one attempt to send. SECURITY DEFINER because most messages are '
+  'sent by the system with no staff session behind them - the guest door, the '
+  'booking confirmation, the reminder - and messages_sent is FORCE row-secured. '
+  'It writes the row it is given and reads nothing; who may SEE what was sent '
+  'is the policy on the table, unchanged.';
+
+revoke all on function app.record_message_sent(uuid, text, text, text, text, text, text, text, text, integer, text, text, uuid) from public;
+grant execute on function app.record_message_sent(uuid, text, text, text, text, text, text, text, text, integer, text, text, uuid) to pms_app;
