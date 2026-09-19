@@ -60,6 +60,43 @@ the other 938 assertions still run.
 **The rule:** a test that proves a refusal must clean up as if the refusal had
 not happened - because the day it matters is the day it did not.
 
+### REV-4 · My teardown took an exclusive lock on `hotels` and turned other people's tests red
+
+**Found** 19 September 2026, by running the FULL API suite after rebasing onto
+`cp6` - not by my own file, which was green every time.
+
+Two full runs went red in two DIFFERENT files: a POS promotion timed out at
+twenty seconds on one, and `refuses a folio with nothing on it` came back 200
+instead of 409 on the next. Each file passed when run alone. Each passed when
+run beside mine. **The suite passed with my file taken out entirely** - which
+is what named the culprit.
+
+**The cause:** my `afterAll` removed the test property, and removing one needs
+
+```
+alter table hotels disable trigger hotels_no_delete
+```
+
+`ALTER TABLE` takes an **ACCESS EXCLUSIVE** lock on `hotels`, it is global
+rather than session-local, and it is not rolled back. Vitest runs test files in
+parallel, so for that window every other file's query touching `hotels` queued
+behind mine - and under the full suite's load the window was long enough to
+time one out and to change what another saw.
+
+**Fixed:** the teardown no longer removes the property. Nothing needed to:
+`api/scripts/with-test-db.sh` builds a scratch database per run and **drops
+it**, pass or fail. The property carries the run's pid in its code and the
+guests carry it in their names, so nothing can be confused with anything real.
+The staff are still switched off, which takes row locks and nothing more.
+Full suite after the fix: **73 files, 1156 tests, all green.**
+
+**The rule:** `alter table` inside a test is not a fixture, it is a lock every
+other file waits on. A teardown that can make somebody else's file red is
+worse than no teardown - and in a harness that throws the whole database away,
+no teardown is often the right answer. (The same shape as MEMORY 292 seen from
+the other end: that was a test leaving rows behind; this is a test trying too
+hard not to.)
+
 ### REV-2 · I asserted the shared door records a send it never attempted
 
 **Found** 19 September 2026, by a red test. I wrote that asking a guest whose

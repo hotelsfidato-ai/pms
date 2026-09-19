@@ -67,6 +67,14 @@ and send nothing.
   Exactly MEMORY 289. Fixed: every refused insert cleans up after itself, and
   the four now fail by name with the suite finishing. **Found only by breaking
   the guard** - the file was green before and after.
+- **REV-4: my own teardown turned OTHER people's tests red** - and only the
+  full suite, after rebasing onto cp6, could show it. Two runs went red in two
+  different files (a POS promotion timing out at 20s, a tax-invoice refusal
+  answering 200); each was green alone, and the suite was green with my file
+  taken out. The cause was `alter table hotels disable trigger` in my
+  `afterAll` - an ACCESS EXCLUSIVE lock on `hotels`, global and not rolled
+  back, while vitest runs the files in parallel. Fixed by not removing the
+  property at all: `with-test-db.sh` drops the whole database after every run.
 - **REV-2: I expected `send()` to record an attempt with no address on the
   booking, and it does not.** The door checks the address BEFORE it reaches
   the receiver, so nothing that never left the building is recorded - the same
@@ -76,9 +84,16 @@ and send nothing.
 
 **Proved** (all on this machine, 19 September - there is no Action)
 - `npx tsc -b --force` - clean, exit 0
-- `npx vitest run` - **416 passed, 46 files**, of which 15 are this service's
-- `cd api; npm test -- modules/reputation` - **22 passed**
+- `npx vitest run` - **450 passed, 49 files**, of which 15 are this service's
+  (416 across 46 before the rebase; cp6's laundry and spa screens arrived with
+  it)
+- `cd api; npm test` - **1156 passed, 73 files** (22 this service's). Two
+  earlier full runs were red in other people's files; that was REV-4, mine,
+  and it is fixed - see below.
 - `bash db/tests/run.sh` - **951 assertions passed**, 13 of them `reviews`
+- `bash db/tests/rerun.sh` - **all 120 migrations are re-runnable**, which is
+  the gate that matters for a new migration (MEMORY 284, 293, 299)
+- `npm run build` - "no test sign-in in dist"
 - **The screen opened** at `/h/5EL/reviews` as the owner, against this copy's
   own database: the link reads a dash, the not-connected sentence is at the
   top, three real demo departures list with "-" under Review asked, no send
@@ -103,7 +118,13 @@ and send nothing.
 - **A group booking is several reservations**, so several rooms of one party
   each appear as their own departure and could each be asked. Recorded as
   **REV-3**, not fixed: which of them is "the guest" is the owner's, not mine.
-- The migration number is provisional; the master settles it at merge.
+- The migration number is provisional; the master settles it at merge. After
+  the rebase onto cp6 (`41c0990`), **120 is still the next free number and
+  there is no gap** - `ls db/migrations` and the replay both agree.
+- **The rebase took one conflict and it is resolved here**, not handed over:
+  cp6 removed "Laundry" and "Spa" from `navigation.test.ts`'s SOON list in the
+  same hour this chat removed "Reviews". Both sides taken; the comment beside
+  it says so.
 
 **Commits:** see the branch `reputation/phase-1`.
 

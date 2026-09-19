@@ -185,18 +185,23 @@ afterAll(async () => {
       await q("delete from staff_hotels where staff_id = $1", [id]);
       await q("update staff set is_active = false where id = $1", [id]);
     }
-    /* The property goes, and everything that points at it goes with it -
-       the reservations, the review link and the messages, all on
-       `on delete cascade`. This is a fixture, not a ledger, and the
-       scratch database is dropped after the run anyway. */
-    await q("alter table hotels disable trigger hotels_no_delete");
-    await q("delete from hotels where id = $1", [hotelId]);
-    await q("alter table hotels enable trigger hotels_no_delete");
-    /* The guests STAY. `guests_no_delete` refuses to remove one - "a guest
-       is never deleted; stay history and the audit trail depend on the
-       row" - and that rule is right and is not this file's to switch off.
-       They are tagged with this run's pid, their stays went with the
-       property, and the scratch database is dropped after the run. */
+    /* ⚠ THE PROPERTY IS LEFT WHERE IT IS, and that is the fix for a fault
+       this file caused (19 September). Removing it needs
+       `alter table hotels disable trigger hotels_no_delete`, and ALTER
+       TABLE takes an ACCESS EXCLUSIVE lock on `hotels` that every other
+       test file's queries queue behind - global, not session-local, and
+       not rolled back. Vitest runs the files in parallel, so under the
+       FULL suite that window made somebody else's file go red: a POS
+       promotion timed out at twenty seconds on one run and a tax-invoice
+       refusal came back 200 on the next, each green when run alone, and
+       the whole suite green with this file taken out. A teardown that
+       breaks other people's tests is not a teardown.
+
+       Nothing needs removing anyway: `scripts/with-test-db.sh` builds a
+       scratch database per run and DROPS IT, pass or fail. The property
+       carries this run's pid in its code, the guests carry it in their
+       names, and none of it can reach anything real. The staff below are
+       still switched off, which takes row locks and nothing more. */
   });
   await closePool();
 });

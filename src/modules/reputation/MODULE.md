@@ -119,8 +119,31 @@ The wording the guest reads lives in n8n. This sends `data.link` and
 
 ## Requests
 
-**None outstanding.** One shared file was touched and it is named here so the
-master sees it at merge:
+### For the root `MEMORY.md` - the master's file, not this chat's
+
+**A test's `alter table` is an ACCESS EXCLUSIVE lock that every other test file
+queues behind, and vitest runs the files in parallel.** Found here as REV-4:
+this service's teardown removed its own property, which needs
+`alter table hotels disable trigger hotels_no_delete`, and under the full API
+suite that window turned two OTHER people's files red on two runs - a POS
+promotion timing out at twenty seconds, and a tax-invoice refusal answering
+200 instead of 409. Each was green alone; the suite was green with this
+service's file taken out.
+
+**It is not one file's problem. Seventeen API test files do the same thing**
+(`grep -rl "disable trigger" api/test`), including both of the two that went
+red. It has been survivable until now and this service was the one that tipped
+it; the next lane to add a file will tip it again.
+
+**A recommendation, since the master owns the fix:** a test in this harness
+does not need to remove anything - `api/scripts/with-test-db.sh` builds a
+scratch database per run and drops it, pass or fail. Dropping the property
+teardowns removes seventeen exclusive locks and makes the suite both faster
+and honest. This service has already stopped doing it.
+
+### The one shared file this chat touched
+
+Named here so the master sees it at merge:
 
 - `src/components/app/navigation.test.ts` - "Reviews" removed from the `SOON`
   list, because a service that is built cannot also be coming soon. Exactly
