@@ -166,10 +166,16 @@ describe("each person's menu", () => {
        Equipment register. A service that is built cannot also be coming soon;
        this list shrinks by one every time one of them lands, as it did when
        Equipment left it. Edited by the purchasing chat; the master reviews it
-       at merge. */
+       at merge.
+
+       ⚠ AND "GUEST MESSAGES" LEFT, 19 September — it is BUILT (BUILD-PLAN § 4),
+       so its entry moved into "Bookings": what was sent to a guest is part of
+       their booking, and that is where somebody goes looking for it. Edited by
+       the guest-messaging chat, the same way and for the same reason as
+       purchasing; the master reviews it at merge. */
     const SOON = [
       "Accounting export", "Booking engine", "Central CRM", "Channel manager",
-      "Contracts", "Fidato CRS", "Guest messages", "Guest services",
+      "Contracts", "Fidato CRS", "Guest services",
       "Laundry", "Leads and WhatsApp", "Loyalty", "Marketing", "Online check-in",
       "Online payments", "Reviews",
       "Room systems", "Spa",
