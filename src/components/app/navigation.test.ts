@@ -166,12 +166,21 @@ describe("each person's menu", () => {
        Equipment register. A service that is built cannot also be coming soon;
        this list shrinks by one every time one of them lands, as it did when
        Equipment left it. Edited by the purchasing chat; the master reviews it
-       at merge. */
+       at merge.
+
+       ⚠ AND "REVIEWS" LEFT, 19 September — it is BUILT (D18-14), so its entry
+       moved into "Front desk" on the Guests permission, which is the owner's
+       answer of the same day. Edited by the reviews chat, which owns no file
+       in this folder; the master reviews it at merge, exactly as it did the
+       line above. Laundry and Spa left in the same hour, by the master's own
+       merge of their screens — this chat rebased onto that and took both
+       sides rather than handing over a conflict. Nothing else here was
+       touched. */
     const SOON = [
       "Accounting export", "Booking engine", "Central CRM", "Channel manager",
       "Contracts", "Fidato CRS", "Guest messages", "Guest services",
       "Leads and WhatsApp", "Loyalty", "Marketing", "Online check-in",
-      "Online payments", "Reviews",
+      "Online payments",
       "Room systems",
     ];
     for (const role of COMING_SOON_ROLES) {
