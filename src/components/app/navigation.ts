@@ -129,6 +129,12 @@ export function mayReach(role: Role, path: string): boolean {
 }
 
 export interface NavSection {
+  /** ⚠ CARRIED THROUGH SINCE 19 SEPTEMBER, when sections became
+      foldable. The layout used to strip it and the sidebar had only the
+      LABEL to go on — and a label is a word the owner may reword any
+      afternoon, which would silently un-fold whatever it named and lose
+      whatever a person had folded. The key does not change. */
+  key?: string;
   /** When set, the section is hidden at properties without this module. */
   module?: string;
   /** Hidden from RECEPTION at a property where this module is off (087):
@@ -347,6 +353,7 @@ function asItem(entry: NavItem): NavItem {
 
 const SECTIONS: NavSection[] = SECTION_LAYOUT.map(({ key, ...section }) => ({
   ...section,
+  key,
   items: entriesIn(key).map(asItem),
 }));
 

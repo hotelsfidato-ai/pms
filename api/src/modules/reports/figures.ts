@@ -282,6 +282,82 @@ export async function dailyFigures(
 }
 
 /** The days added up. Rates are made from these totals, never averaged. */
+
+/* ══════════════════════════════════════════════════════════════════
+   WHAT THE RESTAURANT SOLD, PER DAY — and why it is HERE
+
+   ⚠ ADDED 19 SEPTEMBER, BECAUSE THE TALLY EXPORT WAS UNDERSTATING SALES.
+
+   A POS order only reaches `folio_postings` when it is charged TO A ROOM.
+   An order settled in cash, by card or by UPI at the outlet lives in
+   `pos_orders` and never touches a folio — so `dailyFigures().extra`,
+   which sums `folio_postings`, cannot see it and never could.
+
+   The Manager report has always known this: it reads the outlets
+   separately and prints `Total Revenue = PMS Revenue + POS Revenue`. But
+   it did that in a PRIVATE function inside `builders/manager.ts`, so the
+   accounting service had no way to reach it and built its sales figure
+   from `dailyFigures` alone. A walk-in diner paying cash appeared on the
+   Manager report and not in the export handed to the accountant — which
+   is GST filed on an understated figure, and exactly the disagreement the
+   accounting service exists to prevent.
+
+   So the definition lives here, where every service reads it through one
+   door. `settled` and `not l.voided` are the Manager report's own
+   predicates, word for word: a figure that is only ALMOST the same as the
+   one already in use is worse than no figure at all.
+   ══════════════════════════════════════════════════════════════════ */
+export interface PosDay {
+  date: string;
+  /** Before tax, after nothing else. Discounts are already off the line. */
+  net: number;
+  tax: number;
+}
+
+export async function posSales(
+  client: Client, hotelId: string, from: string, to: string,
+): Promise<PosDay[]> {
+  const { rows } = await client.query<{ date: string; net: string; tax: string }>(
+    `with settled as (
+       select o.id, o.business_date
+         from pos_orders o
+        where o.hotel_id = $1
+          and o.status = 'settled'
+          and o.business_date between $2::date and $3::date
+     ),
+     lines as (
+       select s.business_date as date,
+              sum(round(l.qty * l.unit_price, 2)) as gross
+         from settled s
+         join pos_order_lines l on l.order_id = s.id and not l.voided
+        group by 1
+     ),
+     rated as (
+       /* The discount and the tax as the till itself resolved them, per
+          rate — the same function the Manager report reads. */
+       select s.business_date as date,
+              sum(r.discount) as discount,
+              sum(r.tax)      as tax
+         from settled s
+         cross join lateral app.pos_order_by_rate(s.id) r
+        group by 1
+     )
+     select to_char(d.date, 'YYYY-MM-DD') as date,
+            coalesce(l.gross, 0) - coalesce(r.discount, 0) as net,
+            coalesce(r.tax, 0)                             as tax
+       from (select distinct business_date as date from settled) d
+       left join lines l on l.date = d.date
+       left join rated r on r.date = d.date
+      order by 1`,
+    [hotelId, from, to],
+  );
+  return rows.map((r) => ({
+    date: r.date,
+    net: Number(r.net),
+    tax: Number(r.tax),
+  }));
+}
+
 export function sumDays(days: DayFigures[]): Omit<DayFigures, "date"> {
   const add = (k: keyof Omit<DayFigures, "date">) =>
     round2(days.reduce((t, d) => t + d[k], 0));

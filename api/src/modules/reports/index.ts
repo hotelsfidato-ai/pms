@@ -42,8 +42,14 @@ export { col, row, total } from "./document.ts";
 export {
   dailyFigures, sumDays, firstTradingDay, propertyFor, propertyById,
   isoDateParam, heading, NIGHTS,
+  /* ⚠ WHAT THE RESTAURANT SOLD, opened 19 September. `dailyFigures`
+     answers about `folio_postings` and a POS order only lands there when
+     it is charged to a room — so anything settled in cash at the outlet
+     is invisible to it. Any service totalling SALES needs both, or it
+     understates the day. See the note on `posSales` itself. */
+  posSales,
 } from "./figures.ts";
-export type { DayFigures, Property, StayNight } from "./figures.ts";
+export type { DayFigures, Property, StayNight, PosDay } from "./figures.ts";
 
 export type {
   ReportDoc, ReportKey, ReportParams, ReportSection, ReportRow, ReportColumn,

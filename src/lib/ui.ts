@@ -11,6 +11,15 @@ import { selectProperty } from "@/data/repositories/businessDate";
 interface UiState {
   sidebarCollapsed: boolean;
   toggleSidebar: () => void;
+  /* WHICH SECTIONS A PERSON HAS FOLDED AWAY, by section key.
+     Absent means "as it comes" — the sidebar decides the first state
+     from what the section IS, not from anything stored, so a new
+     section behaves sensibly for somebody who has never seen it. Only
+     a deliberate fold or unfold is remembered, and it is remembered
+     per person because it is a fact about them and not about the
+     hotel. */
+  foldedSections: Record<string, boolean>;
+  toggleSection: (key: string) => void;
   mobileNavOpen: boolean;
   setMobileNavOpen: (open: boolean) => void;
   commandOpen: boolean;
@@ -44,6 +53,10 @@ export const useUi = create<UiState>()(
     (set) => ({
       sidebarCollapsed: false,
       toggleSidebar: () => set((s) => ({ sidebarCollapsed: !s.sidebarCollapsed })),
+      foldedSections: {},
+      toggleSection: (key) => set((s) => ({
+        foldedSections: { ...s.foldedSections, [key]: !s.foldedSections[key] },
+      })),
       mobileNavOpen: false,
       setMobileNavOpen: (open) => set({ mobileNavOpen: open }),
       commandOpen: false,
@@ -72,6 +85,7 @@ export const useUi = create<UiState>()(
       partialize: (state) =>
         ({
           sidebarCollapsed: state.sidebarCollapsed,
+          foldedSections: state.foldedSections,
           hotelId: state.hotelId,
           favouriteReports: state.favouriteReports,
         }) as UiState,

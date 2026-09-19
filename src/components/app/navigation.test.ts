@@ -175,9 +175,14 @@ describe("each person's menu", () => {
        line above. Laundry and Spa left in the same hour, by the master's own
        merge of their screens — this chat rebased onto that and took both
        sides rather than handing over a conflict. Nothing else here was
-       touched. */
+       touched.
+
+       ⚠ AND "ACCOUNTING EXPORT" LEFT, 19 September - the Tally export is
+       BUILT (D18-16), so its entry moved into "Reports", beside the figures
+       it is made of. The same rule, one service later. Edited by the
+       accounting chat; the master reviews it at merge. */
     const SOON = [
-      "Accounting export", "Booking engine", "Central CRM", "Channel manager",
+      "Booking engine", "Central CRM", "Channel manager",
       "Contracts", "Fidato CRS", "Guest messages", "Guest services",
       "Leads and WhatsApp", "Loyalty", "Marketing", "Online check-in",
       "Online payments",

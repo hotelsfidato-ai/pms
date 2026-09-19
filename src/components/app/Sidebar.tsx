@@ -1,6 +1,6 @@
 import { useQuery } from "@tanstack/react-query";
 import { NavLink, useLocation } from "react-router";
-import { PanelLeftClose, PanelLeftOpen, Search } from "lucide-react";
+import { ChevronDown, PanelLeftClose, PanelLeftOpen, Search } from "lucide-react";
 import { cn } from "@/lib/cn";
 import { useUi } from "@/lib/ui";
 import { useRole } from "@/lib/session";
@@ -14,11 +14,40 @@ import { getModules } from "@/data/repositories";
    permission set, so switching role visibly rebuilds it.
    ══════════════════════════════════════════════════════════════════ */
 
+
+/* ══════════════════════════════════════════════════════════════════
+   WHICH SECTIONS OPEN BY THEMSELVES — the owner's call, 19 September
+
+   Their words: keep the main things as default and let the rest be a
+   toggle. So the work of running a hotel stays open and everything a
+   property may not even have folds away: the spa, the laundry, the
+   banquet, the point of sale, reports, system, and the Coming soon
+   list.
+
+   ⚠ NOT A PERMISSION, AND NOT A HIDING PLACE. A folded section is
+   still in the menu, still found by "Find a screen", and still reached
+   by its address. This only decides how much of the rail a person is
+   looking at before they touch anything.
+
+   ⚠ AND A SECTION HOLDING THE SCREEN YOU ARE ON IS NEVER FOLDED. You
+   cannot end up on a page whose own place in the menu is hidden from
+   you — that is how somebody loses their bearings entirely.
+
+   A section not named here opens. That is deliberate: a service built
+   next month appears where somebody can see it, rather than folded
+   away by a default nobody wrote. */
+const FOLDED_AS_IT_COMES = new Set([
+  "point-of-sale", "banquet", "laundry", "spa", "reports", "system",
+  "coming-soon",
+]);
+
 export function Sidebar({ onNavigate }: { onNavigate?: () => void }) {
   const role = useRole();
   const hotelId = useUi((s) => s.hotelId);
   const collapsed = useUi((s) => s.sidebarCollapsed);
   const toggle = useUi((s) => s.toggleSidebar);
+  const folded = useUi((s) => s.foldedSections);
+  const toggleSection = useUi((s) => s.toggleSection);
   const location = useLocation();
   /* Undefined until it answers, and navigationFor keeps a section while
      the answer is unknown — hiding it and showing it a moment later makes
@@ -99,30 +128,64 @@ export function Sidebar({ onNavigate }: { onNavigate?: () => void }) {
 
       {/* Navigation */}
       <nav className="flex-1 overflow-y-auto scrollbar-quiet py-3 px-2.5">
-        {sections.map((section, i) => (
-          <div key={section.label ?? `section-${i}`} className="mb-4 last:mb-0">
-            {section.label && !collapsed && (
-              <p className="px-2.5 mb-1.5 text-2xs font-semibold uppercase tracking-wider text-white/35">
-                {section.label}
-              </p>
-            )}
-            {section.label && collapsed && i > 0 && (
-              <div className="h-px bg-white/8 mx-2 mb-3" />
-            )}
+        {sections.map((section, i) => {
+          const key = section.key ?? section.label ?? `section-${i}`;
+          /* The section holding the screen in view is never folded. */
+          const holdsCurrent = section.items.some((it) =>
+            location.pathname === it.to ||
+            (it.matchPrefix && location.pathname.startsWith(it.to.split(":")[0]!)));
+          const asItComes = FOLDED_AS_IT_COMES.has(key);
+          const isFolded = !collapsed && !holdsCurrent && section.label
+            ? (folded[key] ?? asItComes)
+            : false;
 
-            <ul className="space-y-0.5">
-              {section.items.map((item) => (
-                <SidebarItem
-                  key={`${section.label ?? "top"}-${item.label}-${item.to}`}
-                  item={item}
-                  collapsed={collapsed}
-                  currentPath={location.pathname}
-                  onNavigate={onNavigate}
-                />
-              ))}
-            </ul>
-          </div>
-        ))}
+          return (
+            <div key={key} className="mb-4 last:mb-0">
+              {section.label && !collapsed && (
+                <button
+                  type="button"
+                  onClick={() => toggleSection(key)}
+                  aria-expanded={!isFolded}
+                  className="w-full flex items-center gap-1 px-2.5 mb-1.5 text-2xs
+                             font-semibold uppercase tracking-wider text-white/35
+                             hover:text-white/60 focus-visible:outline-none
+                             focus-visible:ring-1 focus-visible:ring-white/40 rounded"
+                >
+                  <ChevronDown
+                    className={cn("h-3 w-3 shrink-0 transition-transform",
+                      isFolded && "-rotate-90")}
+                    aria-hidden
+                  />
+                  <span>{section.label}</span>
+                  {/* How many are folded away, so a closed section never
+                      reads as an empty one. */}
+                  {isFolded && (
+                    <span className="ml-auto tabular-nums text-white/25">
+                      {section.items.length}
+                    </span>
+                  )}
+                </button>
+              )}
+              {section.label && collapsed && i > 0 && (
+                <div className="h-px bg-white/8 mx-2 mb-3" />
+              )}
+
+              {!isFolded && (
+                <ul className="space-y-0.5">
+                  {section.items.map((item) => (
+                    <SidebarItem
+                      key={`${section.label ?? "top"}-${item.label}-${item.to}`}
+                      item={item}
+                      collapsed={collapsed}
+                      currentPath={location.pathname}
+                      onNavigate={onNavigate}
+                    />
+                  ))}
+                </ul>
+              )}
+            </div>
+          );
+        })}
       </nav>
 
       {/* The way to everything not listed above. Shown whenever the menu
