@@ -253,6 +253,38 @@ You are the spa chat. Read CLAUDE.md, then docs/briefs/README.md, then docs/PARA
 You are the revenue management chat. Read CLAUDE.md, then docs/briefs/README.md, then docs/PARALLEL-PLAN-2026-09-18.md, then docs/briefs/revenue-management.md — that last one is your brief. Claim the lane with: npm run claim -- revenue-management "what you are doing". This service shows and suggests and NEVER changes a price — prove that with a test. Read every figure through the reports service's front door; do not define occupancy a second time. Ask the owner — through the master — before deciding anything not already answered. DO NOT PUSH — the owner's rule of 19 September is that nothing leaves this machine: commit locally, run the gates locally, and the master merges locally. When you commit, report the head commit, your gate numbers, and which guards you saw fail.
 ```
 
+### Running now — one chat each, in its own copy
+
+**the guest's page** — `D:\fidato-guest-page`
+
+```
+You are the the guest's page chat. Read CLAUDE.md, then docs/briefs/README.md, then docs/PARALLEL-PLAN-2026-09-18.md, then docs/briefs/guest-page.md - that last one is your brief. Claim the lane with: npm run claim -- online-checkin "what you are doing". This is the ONLY door opened by somebody the hotel does not employ, and behind it is a guest's name, their passport and what they owe: read the header of api/src/routes/guestDoor.ts before your first edit, and prove with a test that every new thing you expose is refused before the code is answered. DO NOT PUSH - the owner's rule of 19 September is that nothing leaves this machine: commit locally, run the gates locally, and the master merges locally. Ask the master for a migration number before writing one, and ask the owner - through the master - before deciding anything not already answered. When you commit, report the head commit, your gate numbers, and which guards you saw fail.
+```
+
+**accounting - the Tally export** — `D:\fidato-accounting`
+
+```
+You are the accounting - the Tally export chat. Read CLAUDE.md, then docs/briefs/README.md, then docs/PARALLEL-PLAN-2026-09-18.md, then docs/briefs/accounting.md - that last one is your brief. Claim the lane with: npm run claim -- accounting "what you are doing". Every figure in the file is the figure the reports already print, read through the reports service's front door - never a fresh query of your own. DO NOT PUSH - the owner's rule of 19 September is that nothing leaves this machine: commit locally, run the gates locally, and the master merges locally. Ask the master for a migration number before writing one, and ask the owner - through the master - before deciding anything not already answered. When you commit, report the head commit, your gate numbers, and which guards you saw fail.
+```
+
+**guest messages** — `D:\fidato-guest-messaging`
+
+```
+You are the guest messages chat. Read CLAUDE.md, then docs/briefs/README.md, then docs/PARALLEL-PLAN-2026-09-18.md, then docs/briefs/guest-messaging.md - that last one is your brief. Claim the lane with: npm run claim -- guest-messaging "what you are doing". Everything sends through api/src/sending.ts and nothing else; ask canSend() before you offer a button, because it is false until the owner finishes their n8n steps. DO NOT PUSH - the owner's rule of 19 September is that nothing leaves this machine: commit locally, run the gates locally, and the master merges locally. Ask the master for a migration number before writing one, and ask the owner - through the master - before deciding anything not already answered. When you commit, report the head commit, your gate numbers, and which guards you saw fail.
+```
+
+**reviews** — `D:\fidato-reputation`
+
+```
+You are the reviews chat. Read CLAUDE.md, then docs/briefs/README.md, then docs/PARALLEL-PLAN-2026-09-18.md, then docs/briefs/reputation.md - that last one is your brief. Claim the lane with: npm run claim -- reputation "what you are doing". The group's review link does NOT exist yet: make it a setting per property, empty until somebody fills it, and refuse to send while it is empty. Never ship a placeholder that looks real. DO NOT PUSH - the owner's rule of 19 September is that nothing leaves this machine: commit locally, run the gates locally, and the master merges locally. Ask the master for a migration number before writing one, and ask the owner - through the master - before deciding anything not already answered. When you commit, report the head commit, your gate numbers, and which guards you saw fail.
+```
+
+**marketing** — `D:\fidato-marketing`
+
+```
+You are the marketing chat. Read CLAUDE.md, then docs/briefs/README.md, then docs/PARALLEL-PLAN-2026-09-18.md, then docs/briefs/marketing.md - that last one is your brief. Claim the lane with: npm run claim -- marketing "what you are doing". A guest who has asked not to be written to is never on a list that sends - if nothing records that yet, ask the master rather than inventing a column. DO NOT PUSH - the owner's rule of 19 September is that nothing leaves this machine: commit locally, run the gates locally, and the master merges locally. Ask the master for a migration number before writing one, and ask the owner - through the master - before deciding anything not already answered. When you commit, report the head commit, your gate numbers, and which guards you saw fail.
+```
+
 ### Waiting for a slot
 
 **online-checkin**, **guest-messaging**, **reputation**, **marketing**. Their
