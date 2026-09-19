@@ -75,6 +75,12 @@ and send nothing.
   `afterAll` - an ACCESS EXCLUSIVE lock on `hotels`, global and not rolled
   back, while vitest runs the files in parallel. Fixed by not removing the
   property at all: `with-test-db.sh` drops the whole database after every run.
+  **A confounder I could not exclude:** this laptop is shared, the run sheet
+  says one full suite at a time, and I did not check with the master before
+  starting mine - a later confirmation run took over thirty minutes against
+  the eight these normally take, so something else was running. Four runs in
+  one window point at the lock; a contended machine cannot prove it outright.
+  The fix stands either way.
 - **REV-2: I expected `send()` to record an attempt with no address on the
   booking, and it does not.** The door checks the address BEFORE it reaches
   the receiver, so nothing that never left the building is recorded - the same

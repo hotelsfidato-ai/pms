@@ -90,6 +90,16 @@ guests carry it in their names, so nothing can be confused with anything real.
 The staff are still switched off, which takes row locks and nothing more.
 Full suite after the fix: **73 files, 1156 tests, all green.**
 
+**⚠ ONE CONFOUNDER, SAID OUT LOUD.** This laptop is shared by several chats
+and the run sheet's rule is one full suite at a time; I did not check with the
+master before starting mine, and a later confirmation run took over thirty
+minutes against the eight these normally take, which means something else was
+running. So "the lock caused those two failures" is the best reading of four
+runs in one window (red, red with the lock; green without this file; green
+with the lock removed) and **not** something a contended machine can prove
+outright. The fix stands either way: the lock is real, it is global, and the
+teardown it was there for was never needed.
+
 **The rule:** `alter table` inside a test is not a fixture, it is a lock every
 other file waits on. A teardown that can make somebody else's file red is
 worse than no teardown - and in a harness that throws the whole database away,
