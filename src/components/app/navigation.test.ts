@@ -180,13 +180,17 @@ describe("each person's menu", () => {
        ⚠ AND "ACCOUNTING EXPORT" LEFT, 19 September - the Tally export is
        BUILT (D18-16), so its entry moved into "Reports", beside the figures
        it is made of. The same rule, one service later. Edited by the
-       accounting chat; the master reviews it at merge. */
+       accounting chat; the master reviews it at merge.
+
+       ⚠ AND "GUEST MESSAGES" LEFT, 19 September — it is BUILT (BUILD-PLAN § 4),
+       so its entry moved into "Bookings": what was sent to a guest is part of
+       their booking, and that is where somebody goes looking for it. Edited by
+       the guest-messaging chat, the same way and for the same reason as
+       purchasing; the master reviews it at merge. */
     const SOON = [
-      "Booking engine", "Central CRM", "Channel manager",
-      "Contracts", "Fidato CRS", "Guest messages", "Guest services",
-      "Leads and WhatsApp", "Loyalty", "Marketing", "Online check-in",
-      "Online payments",
-      "Room systems",
+      "Booking engine", "Central CRM", "Channel manager", "Contracts",
+      "Fidato CRS", "Guest services", "Leads and WhatsApp", "Loyalty",
+      "Marketing", "Online check-in", "Online payments", "Room systems",
     ];
     for (const role of COMING_SOON_ROLES) {
       const sections = sidebarFor(role, "5EL", ALL_ON);
