@@ -1,0 +1,103 @@
+import { Hono } from "hono";
+import { withSession } from "../../auth.ts";
+import type { Client } from "../../db.ts";
+import { propertyFor, isoDateParam } from "../reports/index.ts";
+import { dayBook } from "./dayBook.ts";
+
+/* ══════════════════════════════════════════════════════════════════
+   GET /:code/accounting/day-book?from=&to=
+
+   The one route of this service. It answers with the day book as an
+   object - the days, the totals and the days the night audit has not
+   closed - and the screen both DRAWS and SAVES that same object, so
+   the figures on the screen and the figures in the file are not two
+   things that have to be kept in step.
+
+   The two Tally XML formats are offered on the screen and produce no
+   file yet: they need the ledger names in the owner's own books, which
+   only the owner has (MODULE.md, and the owner's answer of 19
+   September). A ledger name invented here would be created inside
+   their Tally on import, and an accountant would spend an evening
+   merging ledgers this service made up. When the names arrive the XML
+   is built HERE, as its own route, not in the browser - escaping and
+   the property's own date belong in the API suite, which runs in UTC.
+   ══════════════════════════════════════════════════════════════════ */
+
+/** The owner, an administrator and the general manager, and nobody
+    else. This is the brief's line, and `src/lib/permissions.ts` - the
+    master's file - already grants those three everything the ledgers
+    need, so no new resource was invented to say it. The menu hides the
+    screen from everyone else and this refuses them. */
+const MAY_EXPORT = ["owner", "admin", "gm"];
+
+/** The caller's role at this property, or "owner" for a group admin.
+
+    ⚠ THE THIRD COPY of this query in the API (equipment/grants.ts and
+    housekeeping/repairRoles.ts hold the other two). A service may not
+    import another's insides, so a copy is the only way to ask it from
+    here today; hoisting it into `auth.ts` is the master's, and is
+    written down in MODULE.md under Requests. */
+async function roleAt(client: Client, hotelId: string): Promise<string | null> {
+  const { rows } = await client.query<{ role: string | null }>(
+    `select case
+              when exists (select 1 from staff s
+                            where s.id = app.current_user_id()
+                              and s.is_active and s.is_group_admin)
+              then 'owner'
+              else (select sh.role
+                      from staff_hotels sh
+                      join staff s on s.id = sh.staff_id
+                     where sh.staff_id = app.current_user_id()
+                       and sh.hotel_id = $1
+                       and s.is_active
+                     limit 1)
+            end as role`,
+    [hotelId],
+  );
+  return rows[0]?.role ?? null;
+}
+
+/** A financial year at a time. The export is a month or a year; a range
+    of a decade is a mistyped year, and answering it means generating a
+    row per day and scanning the ledger for all of them. */
+const LONGEST_DAYS = 366;
+
+/** Whole days between two 'YYYY-MM-DD' strings, counting both ends.
+    Done in UTC on purpose: both are dates, not moments, and UTC is the
+    one zone where adding a day cannot land on the same date twice. */
+function daysBetween(from: string, to: string): number {
+  const ms = Date.UTC(+to.slice(0, 4), +to.slice(5, 7) - 1, +to.slice(8, 10))
+    - Date.UTC(+from.slice(0, 4), +from.slice(5, 7) - 1, +from.slice(8, 10));
+  return ms / 86_400_000 + 1;
+}
+
+export const accounting = new Hono<{ Variables: { subject: string } }>();
+
+accounting.get("/:code/accounting/day-book", async (c) => {
+  const q = c.req.query();
+  const from = isoDateParam(q["from"]);
+  const to = isoDateParam(q["to"]);
+  if (!from) return c.json({ error: "The first date must be written YYYY-MM-DD." }, 400);
+  if (!to) return c.json({ error: "The last date must be written YYYY-MM-DD." }, 400);
+  if (to < from) return c.json({ error: "The last date is before the first one." }, 400);
+  if (daysBetween(from, to) > LONGEST_DAYS) {
+    return c.json({ error: "A range covers a year at most. Export one financial year at a time." }, 400);
+  }
+
+  const answer = await withSession(c.get("subject"), async (client) => {
+    const property = await propertyFor(client, c.req.param("code"));
+    if (!property) return { status: 404 as const, body: { error: "No such property." } };
+
+    const role = await roleAt(client, property.id);
+    if (!role || !MAY_EXPORT.includes(role)) {
+      return {
+        status: 403 as const,
+        body: { error: "The accounting export is the owner's, an administrator's and the general manager's." },
+      };
+    }
+
+    return { status: 200 as const, body: await dayBook(client, property, from, to) };
+  });
+
+  return c.json(answer.body, answer.status);
+});

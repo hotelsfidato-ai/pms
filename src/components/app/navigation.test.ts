@@ -166,9 +166,14 @@ describe("each person's menu", () => {
        Equipment register. A service that is built cannot also be coming soon;
        this list shrinks by one every time one of them lands, as it did when
        Equipment left it. Edited by the purchasing chat; the master reviews it
-       at merge. */
+       at merge.
+
+       ⚠ AND "ACCOUNTING EXPORT" LEFT, 19 September - the Tally export is
+       BUILT (D18-16), so its entry moved into "Reports", beside the figures
+       it is made of. The same rule, one service later. Edited by the
+       accounting chat; the master reviews it at merge. */
     const SOON = [
-      "Accounting export", "Booking engine", "Central CRM", "Channel manager",
+      "Booking engine", "Central CRM", "Channel manager",
       "Contracts", "Fidato CRS", "Guest messages", "Guest services",
       "Laundry", "Leads and WhatsApp", "Loyalty", "Marketing", "Online check-in",
       "Online payments", "Reviews",
