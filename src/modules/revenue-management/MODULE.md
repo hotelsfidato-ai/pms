@@ -1,45 +1,43 @@
 # Revenue management
 
-What the coming months look like, and whether they are ahead of last year.
+What the coming nights look like, and what they suggest.
 
-**NOT BUILT. A Coming soon page only.** On the list of what every comparable system has; the owner chose on
-16 September to give every missing service a folder and a Coming soon page.
-The page says what the service will do, what it needs before it can be built
-and what exists today. There is no working feature, no server code and no
-database table.
+**IT SHOWS AND IT SUGGESTS. IT NEVER CHANGES A PRICE BY ITSELF** (D18-15, the
+owner's own words, 18 September). Nothing here writes to a rate, a restriction
+or the channel manager. The GM or the owner makes the change on the Rate
+calendar, exactly as today. That promise is a test, not a habit:
+`neverWritesARate.test.ts` reads every file in both of this service's folders
+and refuses an SQL write, a write over HTTP, a router answering anything but a
+GET, the inventory service's rate setters by name, or a word to the channel
+manager. Seen to fail on all three shapes before the first commit.
 
-**Folder name:** `revenue-management` — the word the other two places will use when it is
-built:
+**BUILT 18 September**, first version. Its brief is
+`docs/briefs/revenue-management.md`; the plan is
+`docs/BUILD-PLAN-2026-09-18.md` § 6.
 
 ```
-src/modules/revenue-management/    the Coming soon page, its menu entry and its address
-api/src/modules/revenue-management/ does not exist
-db/tests/modules/revenue-management.sql does not exist
+src/modules/revenue-management/      the screen, its menu entry and its address
+api/src/modules/revenue-management/  the front door, mounted and still empty
+db/tests/modules/revenue-management.sql   does not exist: this service has no table
 ```
 
-Before any edit: ask the owner. Then claim the service in `HANDOVER.md` →
-"Folder claims". Written 16 September 2026.
+**No migration, and no table.** Everything here is read from what already
+exists, which is what the brief predicted.
 
 ---
 
-## What it would be
+## One definition of every figure
 
-Forecast, pace and pickup, rate shopping and parity, yield rules, budget
-against actual (`PROGRESS.md`, items 16–19: "Every report here looks
-BACKWARDS").
+Occupancy, rooms sold, available rooms and a complimentary room's treatment are
+the **reports service's**, read through its front door (`@/modules/reports`):
+`getTodaySnapshot`, `listDailyStatistics` and `getPeriodStatistics`, all of
+which add up `dailyFigures()` in `api/src/modules/reports/figures.ts` (D17-71,
+D17-72, D17-93). Nothing is derived a second time here. A second definition of
+occupancy is how the Dashboard and the Manager report came to disagree in
+August, and this service is the one most likely to do it again.
 
----
-
-## Where it stands, and where that comes from
-
-- **What comparable systems ship as standard** — `PROGRESS.md`, "What a
-  market-leading HMS has that this does not", item 16–19. Domain
-  knowledge about the category, not a decision by the owner.
-- **Its Coming soon page — the owner's decision, 16 September:** a folder and a
-  Coming soon page for every service the system does not have, in one
-  "Coming soon" section at the foot of the menu, for the owner, admins and
-  general managers (root `CHANGELOG.md`, 2026-09-16).
-- **Today:** The reports look back. Nothing compares what is booked for the coming months with last year.
+`src/modules/revenue-management/data/outlook.ts` is the only file that fetches.
+`logic/outlook.ts` holds no query at all: it turns those figures into words.
 
 ---
 
@@ -47,68 +45,130 @@ BACKWARDS").
 
 | Menu name | Address (`routes.tsx`) | Page file | Who sees it (`nav.ts`) |
 |---|---|---|---|
-| Revenue management | `/coming-soon/revenue-management` | `pages/RevenueManagement.tsx` | owner, admin, GM — the Coming soon section (`seesComingSoon`) |
+| Revenue outlook | `/h/:code/revenue-outlook` | `pages/Outlook.tsx` | `setsRates`: owner, administrator, GM, Revenue Manager |
 
-The page is the shared Coming soon page (`src/pages/ComingSoon.tsx`) with
-this service's words: what it will do, what it needs, where it stands.
-Find a screen answers to "forecast", "pace", "pickup", "yield", "budget", "rate shopping". Anybody else who types the address is
-refused ("This page is not part of your role").
+**It left the Coming soon section** when it was built, into **Rooms and rates**,
+after the Rate calendar, because that is where the person who reads it goes
+next. `pages/RevenueManagement.tsx` and `/coming-soon/revenue-management` are
+gone.
 
-**What the page says it needs before it can be built** — the owner's
-questions, not the code's:
+**Who sees it** is `setsRates` in `src/lib/permissions.ts`, which is derived
+from who holds `edit` on `rate`, and is the brief's four roles exactly. The
+route guard asks the navigation (`mayReach`), so the menu entry and the page
+cannot disagree, and an entry the navigation has never heard of is reachable by
+anybody, which is why the two land together.
 
-1. A year of bookings in this system to compare against.
-2. Each hotel's budget.
-3. Competitors' rates, if you want them. They come from a paid data service.
-
----
-
-## What it would lean on
-
-- **reports** — the history it compares against.
-- **inventory** — availability and the rate calendar.
-- **reservations** — what is on the books.
+Measured on the screen, 18 September, signed in as the Revenue Manager at 5EL:
+the entry sits under Rooms and rates; the page opens at 1280 and at 375 with no
+sideways scroll and no console error; Reception is refused by name.
 
 ---
 
-## Rules that will bind it
+## What it shows
 
-- **Ask the owner before building anything** (`HANDOVER.md` § 3 and § 5).
-- **Claim the folder** in `HANDOVER.md` → "Folder claims" before the first edit.
-- **A forecast is labelled a forecast** and never shown as booked; a rule may suggest a rate, a person sets it — no price is invented (`HANDOVER.md` § 5).
-- **Never invent a figure; a missing one is a dash, never a zero**
+1. **Pace.** This month on the books against the same month last year. **Where
+   there is no last year it says so** in a sentence and shows a dash: a month
+   the property could not have traded in has nil available (D17-93), and nil
+   available is not nought per cent. 5 Elements opened in this system in August
+   2026, so that is the branch that runs today, and the screen was checked
+   showing it.
+2. **What to consider.** A sentence and its reason, per date. **The sentence
+   never names a figure** (a test asserts that: take the date out of it and no
+   digit may be left), because a suggestion carrying a number would be this
+   service setting a price with extra steps.
+3. **Dates worth a look.** The soft nights first, with rooms left, of how many,
+   how full, and how far out.
+
+## What it does not show yet
+
+**Pickup.** "How many of those rooms were sold in the last 1, 7 and 30 days"
+needs each booking's creation date, and no front door answers that today. The
+screen shows no pickup column rather than one it cannot fill. The ask is R1
+below; the defect is RM-1.
+
+Competitor rates, automatic rules, forecasting past the comparison above, and
+anything that writes: **not in the first version**, by the brief.
+
+---
+
+## Requests
+
+Date, service, what is needed and why. **The master makes these; a lane does
+not edit a shared file.**
+
+- **R1 · 18 September · revenue-management asks REPORTS and the MASTER.**
+  Export the day's figures from `api/src/modules/reports/index.ts` so this
+  service can build pickup on the server:
+  `dailyFigures`, `sumDays`, `firstTradingDay`, `propertyFor`, `isoDateParam`,
+  the `NIGHTS` fragment, and the types `DayFigures` and `Property`.
+  **Why:** pickup counts, for each coming night, how many of the room-nights
+  already on the books were booked in the last 1, 7 and 30 days. The count of
+  nights must be the reports service's own `stay_nights` rule or this service
+  will disagree with the Manager report about how many rooms are sold. `NIGHTS`
+  is that rule as one text; `dailyFigures` is the denominator. Everything asked
+  for is read-only. Without it there is no way to reach them:
+  `src/test/boundaries.test.ts` refuses any path but the door, correctly.
+- **R2 · 18 September · revenue-management asks the MASTER.** Two one-line
+  deletions the gates themselves ask for, both caused by this service being
+  built and by nothing else:
+  - `src/components/app/navigation.test.ts`, the `SOON` array: drop
+    `"Revenue management",`. The service has left the Coming soon section.
+  - `src/data/repositories/repositories.test.ts`, `KNOWN_UNREACHABLE`: drop
+    `"listDailyStatistics",`. This screen is its first caller, and the
+    shrink-only test is designed to fail exactly here.
+
+## Questions for the owner (asked 18 September, through the master)
+
+Nothing below is decided, and nothing below is deployed.
+
+- **RM-Q1 · where the entry sits, and what it is called.** Put in Rooms and
+  rates, after the Rate calendar, labelled **Revenue outlook** (15 characters;
+  the sidebar refuses over 21, MEMORY 276), with the heading the same word.
+  **Recommendation:** as built. The alternative is its own section, which is
+  one entry in a section of one.
+- **RM-Q2 · "the rate they are selling at" on a soft date.** The brief asks for
+  it and there are two honest answers: the **achieved** rate (room revenue for
+  that night divided by the rooms sold, the reports service's ADR, a dash where
+  nothing is sold), or the **listed** price from the rate calendar, which needs
+  a door out of the inventory service that does not exist. **Recommendation:**
+  the achieved rate, because it says what the date is really going for and
+  needs nobody else's door; add the listed price later if the owner wants both
+  side by side. Not built either way until they answer.
+- **RM-Q3 · what counts as soft.** Today: a night 14 or fewer days out and 50%
+  sold or less is **Soft**; 85% or more is **Filling well**; anything else says
+  nothing. The three figures are one exported constant (`THRESHOLDS`) so the
+  answer is a one-line change. **Recommendation:** as above, then watch it for a
+  month. What it looks like on today's data is in `DEFECTS.md`, RM-2, and it is
+  not flattering: with almost nothing booked past next week, every date beyond
+  it reads Soft at 0%.
+
+---
+
+## What it leans on
+
+- **reports** (`@/modules/reports`) for every figure. Its front door, never its
+  files.
+- **inventory** owns the Rate calendar, which is where a rate is actually
+  changed. This service links nobody to it and calls nothing in it.
+
+## Rules that bind it
+
+- **It never changes a price** (D18-15). `neverWritesARate.test.ts`.
+- **One definition of every figure**, the reports service's.
+- **No figure is invented; a missing one is a dash, never a zero**
   (`HANDOVER.md` § 5).
-- **Credentials live in the server's environment** (`api/.env`) or the n8n on
-  the server — never in the repo, a screen or a chat (`HANDOVER.md` § 5).
-- **A new migration needs a number claimed in `HANDOVER.md` first**
-  (`src/test/migrationNumbers.test.ts`); reach other services only through
-  their `index.ts` (`src/test/boundaries.test.ts`).
-
----
-
-## When it is built
-
-- Replace `pages/RevenueManagement.tsx` with the real screens, at their real addresses.
-- Move the menu entry out of the Coming soon section into the section it
-  works in, with the working menus it belongs to (`navigation.test.ts` pins
-  every role's list, and the Coming soon list).
-- If not every hotel has it, a module switch per hotel: one migration on
-  `hotel_modules_known` (`041`, `087`) and the two lists in
-  `api/src/modules/admin/moduleSwitches.ts`.
-
----
+- **No long dash** in anything a person reads (D17-48).
+- **Ask the owner before deciding anything**, through the master.
 
 ## Gates
 
-`npx tsc -b --force` and `npx vitest run`, judged by the exit code —
-`src/test/boundaries.test.ts` fails if this folder loses its `index.ts` or
-this `MODULE.md`; `src/components/app/navigation.test.ts` pins the Coming
-soon section.
+```
+npx tsc -b --force
+npx vitest run src/modules/revenue-management src/test
+cd api; npm test -- modules/revenue-management
+```
 
----
-
-## Requests from other services
-
-None. To ask for something here, add a line below — date, your service, what
-you need and why — and raise it with the owner; nothing is built here
-unasked.
+The API suite has nothing of this service to run until R1 is answered and the
+routes exist. `src/test/boundaries.test.ts` fails if this folder loses its
+`index.ts`, its `MODULE.md` or its `DEFECTS.md`, or if it reaches past another
+service's door.

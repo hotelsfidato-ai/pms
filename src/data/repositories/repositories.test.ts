@@ -259,7 +259,7 @@ describe("Rule 2b - a function nobody calls is a capability nobody can reach", (
        it had simply never had a screen. The gate noticed before I did:
        the shrink-only test failed the moment the caller appeared. */
     "getProperty", "listAssignableRoles",
-    "listDailyStatistics", "listGroupMembers", "listRoles",
+    "listGroupMembers", "listRoles",
     "listSellableRooms", "listVacant", "windowFrom",
   ];
 

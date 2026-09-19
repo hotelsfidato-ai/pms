@@ -171,7 +171,7 @@ describe("each person's menu", () => {
       "Accounting export", "Booking engine", "Central CRM", "Channel manager",
       "Contracts", "Fidato CRS", "Guest messages", "Guest services",
       "Laundry", "Leads and WhatsApp", "Loyalty", "Marketing", "Online check-in",
-      "Online payments", "Revenue management", "Reviews",
+      "Online payments", "Reviews",
       "Room systems", "Spa",
     ];
     for (const role of COMING_SOON_ROLES) {
