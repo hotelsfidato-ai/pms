@@ -204,7 +204,7 @@ spa.get("/:code/spa/treatments", async (c) => {
 spa.post("/:code/spa/treatments", async (c) => {
   const input = await c.req.json<{
     name?: string; minutes?: number; price?: number | null; notes?: string;
-  }>().catch(() => ({}));
+  }>().catch(() => ({}) as { name?: string; minutes?: number; price?: number | null; notes?: string; });
 
   const result = await withSession(c.get("subject"), async (client) => {
     const hotelId = await hotelFor(client, c.req.param("code"));
@@ -253,7 +253,7 @@ spa.patch("/:code/spa/treatments/:id", async (c) => {
   const input = await c.req.json<{
     name?: string; minutes?: number; price?: number | null;
     isActive?: boolean; notes?: string | null;
-  }>().catch(() => ({}));
+  }>().catch(() => ({}) as { name?: string; minutes?: number; price?: number | null; isActive?: boolean; notes?: string | null; });
 
   const result = await withSession(c.get("subject"), async (client) => {
     const hotelId = await hotelFor(client, c.req.param("code"));
@@ -334,7 +334,7 @@ spa.get("/:code/spa/therapists", async (c) => {
 });
 
 spa.post("/:code/spa/therapists", async (c) => {
-  const input = await c.req.json<{ name?: string }>().catch(() => ({}));
+  const input = await c.req.json<{ name?: string }>().catch(() => ({}) as { name?: string });
 
   const result = await withSession(c.get("subject"), async (client) => {
     const hotelId = await hotelFor(client, c.req.param("code"));
@@ -368,7 +368,7 @@ spa.post("/:code/spa/therapists", async (c) => {
 /* Somebody leaves; their past appointments stay exactly as they were. */
 spa.patch("/:code/spa/therapists/:id", async (c) => {
   const input = await c.req.json<{ name?: string; isActive?: boolean }>()
-    .catch(() => ({}));
+    .catch(() => ({}) as { name?: string; isActive?: boolean });
 
   const result = await withSession(c.get("subject"), async (client) => {
     const hotelId = await hotelFor(client, c.req.param("code"));
@@ -474,7 +474,7 @@ spa.post("/:code/spa/appointments", async (c) => {
   const input = await c.req.json<{
     stayId?: string; treatmentId?: string; therapistId?: string;
     startsAt?: string;
-  }>().catch(() => ({}));
+  }>().catch(() => ({}) as { stayId?: string; treatmentId?: string; therapistId?: string; startsAt?: string; });
 
   const result = await withSession(c.get("subject"), async (client, session) => {
     const hotelId = await hotelFor(client, c.req.param("code"));
@@ -530,7 +530,7 @@ spa.post("/:code/spa/appointments", async (c) => {
    about a month later — the rule the banquet cancellation and the
    folio adjustment both follow. */
 spa.post("/:code/spa/appointments/:id/cancel", async (c) => {
-  const input = await c.req.json<{ reason?: string }>().catch(() => ({}));
+  const input = await c.req.json<{ reason?: string }>().catch(() => ({}) as { reason?: string });
   const reason = input.reason?.trim();
   if (!reason) {
     return c.json(refuse(

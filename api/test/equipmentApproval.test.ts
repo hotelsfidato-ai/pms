@@ -177,6 +177,22 @@ describe("equipment leaving the store (095)", () => {
   });
 
   it("changes nothing about a purchase: the GM still cannot decide one the owner's rule sends to the owner", async () => {
+    /* ⚠ PURCHASING SEEDS A GM RULE FOR EVERY PROPERTY (migration 116,
+       D18-4: the GM approves every purchase). This test asks whether an
+       OWNER-only rule keeps the GM out — and it cannot, while the GM's
+       own rule is still active beside it, because a rule is matched and
+       not replaced: the unique key is (hotel, kind, approver_role), so
+       ('purchase','owner') sits BESIDE ('purchase','gm') rather than
+       over it.
+
+       Before purchasing existed there was no seeded rule and this test
+       was right. It is switched off for the length of the test and put
+       back afterwards — not deleted, which is what the cleanup below
+       used to do to a rule this file never created. */
+    await sql(
+      `update approval_rules set is_active = false
+        where hotel_id = $1 and kind = 'purchase' and approver_role = 'gm'`,
+      [hotelId]);
     await sql(
       `insert into approval_rules (hotel_id, kind, approver_role, over_amount)
        values ($1, 'purchase', 'owner', null)
@@ -194,7 +210,16 @@ describe("equipment leaving the store (095)", () => {
       expect(res.status).toBe(409);
     } finally {
       await sql("delete from approvals where reason like $1", [`${TAG} vegetables`]);
-      await sql("delete from approval_rules where hotel_id = $1 and kind = 'purchase'", [hotelId]);
+      /* Only the rule this file made. The GM's is purchasing's, seeded by
+         its migration, and is switched back on rather than removed. */
+      await sql(
+        `delete from approval_rules
+          where hotel_id = $1 and kind = 'purchase' and approver_role = 'owner'`,
+        [hotelId]);
+      await sql(
+        `update approval_rules set is_active = true
+          where hotel_id = $1 and kind = 'purchase' and approver_role = 'gm'`,
+        [hotelId]);
     }
   });
 });
