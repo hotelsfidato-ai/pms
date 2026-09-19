@@ -137,12 +137,44 @@ One POST per message, JSON, to the address from step 4:
 Everything n8n needs to write the message is in the JSON, as you asked. The
 wording lives in n8n.
 
-**One thing to confirm:** should the PMS also attach its own **PDF** of the
-bill (the A4 layout, D17-64), so the guest gets exactly what the desk prints —
-or is the data alone enough, with n8n writing a plain message? My
-recommendation is to attach the PDF: a guest who asks their company to pay
-needs the document, not a summary. Say the word and it goes in as a link the
-workflow fetches.
+**Answered, 18 September — D18-20: the PDF goes with it.** A guest who asks
+their company to pay needs the document, not a summary.
+
+It travels **inside the same POST**, not as a link:
+
+```json
+  "file": {
+    "name": "5EL-000123.pdf",
+    "contentType": "application/pdf",
+    "base64": "JVBERi0xLjcK…"
+  }
+```
+
+A link would have meant a public address for a private document and a token to
+expire — a second guest door, built for a machine already sitting on this same
+server. One POST carries it. **In n8n:** a Convert to File node turns
+`file.base64` into a binary, and the WhatsApp or Send Email node attaches it.
+The `file` key is **absent**, not null, when there is no document, so the
+workflow can branch on whether it is there.
+
+---
+
+## What is already built, waiting on steps 1–5
+
+The PMS's half is done and proved (18 September). `api/src/sending.ts` is the
+**one door out** — guest messages, reviews and marketing all send through it
+and through nothing else — and `api/test/sending.test.ts` runs a real HTTP
+server shaped like the workflow above: it checks the `x-fidato-secret` header
+the way step 5's node will, refuses without it, and decodes the PDF back out to
+prove it arrived unchanged.
+
+**Until steps 1–5 are done, nothing sends and nothing is recorded.** No screen
+offers to send. That is deliberate: a record of what was never attempted would
+be a log of the system's own unfinished state.
+
+**When you send me the production URL and the secret**, two lines go into the
+server's settings and the API restarts — that is the whole of it, and the
+screens light up by themselves.
 
 ---
 
@@ -150,4 +182,5 @@ workflow fetches.
 
 Nothing sends. Bills and vouchers print and download as today; no screen
 offers "Send on WhatsApp" until the address and the secret are in the
-server's settings.
+server's settings. **Three services are built on this door and are waiting for
+it**: guest messages, reviews and marketing.
