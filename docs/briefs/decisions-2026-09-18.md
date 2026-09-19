@@ -52,6 +52,7 @@ is built.
 | D18-19 | There is no Approvals **screen** — the engine is one, but each service decides inside its own screen and a GM cannot see everything waiting on them | **Build one Approvals screen.** One inbox, everything waiting on you, decided in place. The service screens keep their own buttons. *The master's, not a service chat's* |
 | D18-20 | Whether a WhatsApp or email message carries the PMS's own **PDF**, or only the figures | **Attach the PDF** — the exact A4 document the desk prints. The sender fetches it and n8n forwards it |
 | D18-21 | Confirming the two answers the **spa** chat reported but which never came through the master | **Both stand:** a treatment bills under the **spa's own GST rule per property**, and **reception books and closes while housekeeping only sees** the diary. *Finance's own comment says laundry and the like follow the ROOM rate; that comment is made to agree rather than contradict* |
+| D18-22 | Closing a spa treatment — which door records money taken AT the spa (asked 18 Sep, answered 19 Sep) | **It goes on the room bill. The spa does not need its own connection to the server for money** — no second way of taking a payment is built. **"Settled at the spa" is set aside and will be done later.** So closing a treatment posts through `postCharge` with `taxKind: "spa"` and nothing else |
 
 ---
 
