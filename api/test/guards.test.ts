@@ -156,7 +156,19 @@ describe("the module gate", () => {
   });
 
   it("refuses a module nobody has heard of", async () => {
-    const res = await post("/5EL/modules/spa", { enabled: true });
+    /* ⚠ THIS SAID `spa` UNTIL 19 SEPTEMBER, AND THE SPA IS NOW REAL.
+       It is MEMORY 300 exactly, in a second file: that defect was the
+       database suite proving "an unknown module is refused" with the name
+       of a module the plan named the same day. The rule written then was
+       to never spell an impossible case with the name of something
+       somebody could build — and this copy was not grepped for, so it sat
+       here waiting to pass for the wrong reason and then fail for the
+       right one.
+
+       The name is now one nobody can ever build, which is the whole
+       requirement: it must be impossible FOR EVER, not merely unbuilt. */
+    const res = await post("/5EL/modules/not_a_module_and_never_will_be",
+      { enabled: true });
     expect(res.status).toBe(409);
   });
 });

@@ -12,6 +12,98 @@ yet** (`MODULE.md`).
 
 ---
 
+## 2026-09-19 · phase 2: three screens, and a price list nobody has priced
+
+**Asked for:** the screens, now that the two things phase 1 was waiting on have
+landed — the `laundry` menu section (`navigation.ts`) and the `laundry`
+permission resource (`permissions.ts`), both the master's. Nothing on the
+server, in the database or in another service was touched.
+
+**Shipped** — all of it inside `src/modules/laundry/`
+- **`data/laundry.ts`** — the typed client for all eight routes, in
+  purchasing's shape: the reads throw and the writes answer
+  `{ok:false, reason}`. Money is a `number | null` here rather than
+  purchasing's string, because this service's server already converts it and a
+  string would be a second conversion of one figure. `null` survives both ways,
+  which is the part that matters.
+- **`pages/PriceList.tsx`** — a row per (item, service), the price typed in
+  place. **An unpriced item's field is EMPTY and reads a dash**; `0` typed in is
+  kept and shown, because it means somebody decided it is free. Retiring is not
+  deleting, and the screen says so.
+- **`pages/Dockets.tsx`** — open first, and **whose it is in its own column on
+  every row** (D18-5). The Collect dialog asks whose it is FIRST, **with no
+  answer filled in**, and shows nothing else until it is answered.
+- **`pages/Docket.tsx`** — what is in the bag, what has come back, and the
+  three acts, each offered only where the server would take it. **The hotel's
+  own linen gets a card saying why there is no charge button** rather than a
+  button that answers with a refusal.
+- **`nav.ts`** — the Coming soon entry is gone; two entries in the `laundry`
+  section, which carries `module: "laundry"`. **No `workingMenus`** — that
+  changes a role's pinned menu and is the owner's call.
+- **`routes.tsx`** — three addresses, `price-list` before `:id` so it is not
+  read as a docket whose id is those words. `pages/Laundry.tsx` deleted.
+- **`laundry.test.tsx`** — 8 tests.
+
+**Found**
+- **LAU-3 — the Settings switch for laundry draws and refuses.**
+  `api/src/modules/admin/moduleSwitches.ts` lists six modules on the GET and
+  guards the POST with three. `POST …/modules/laundry` answers 409 `There is no
+  "laundry" module.` `channel_manager` has the same fault. **The master's file;
+  reported, not fixed.** `DEFECTS.md` → LAU-3.
+- **The charge could be connected now and is not.** `postCharge` landed on
+  finance's door on 18 September; `api/src/modules/laundry/laundry.ts` still
+  answers "not connected yet". Seen on screen on a priced guest docket.
+  **Outside this lane's files; reported.** `MODULE.md` → Requests 1.
+- **Migration 118 was not applied to the development database** — `hotel_modules_known`
+  knew `laundry` (115) but the three tables did not exist, so every route
+  answered 500. Applied that one file to `fidato`.
+
+**Proved** — numbers as run, on this machine
+- `npx tsc -b --force` — clean for this lane (the only errors were the revenue
+  chat's `Outlook.tsx`, in progress beside this one).
+- `npx vitest run src/modules/laundry` — **8 passed**. The full suite was NOT
+  run: two other chats are working and the machine has limited process slots.
+- **Every screen opened**, signed in as the Owner at 5EL, at 713px and again at
+  375px with no horizontal scroll on any of the three:
+  - the price list with three items — Shirt/wash `80`, Saree/dry-clean **empty,
+    placeholder `-`**, Bed sheet/wash `0`. Never a `0` where nobody has priced.
+  - the module switched off first: "This property does not run a laundry." —
+    the server's own sentence, shown by the screen.
+  - collecting with whose-it-is unanswered: refused on the screen, nothing sent.
+  - a hotel docket (LD-0001, 40 sheets): **no charge button**, and the card
+    saying why. 41 back out of 40 refused by name; 30 accepted, 10 still out.
+  - a guest docket holding the unpriced saree (LD-0002): total `-`, both money
+    columns `-`, **no charge button**.
+  - a guest docket of 3 shirts (LD-0003, ₹240): the charge button IS offered,
+    it goes through the API, and the screen shows what the API said.
+- **Five guards broken on purpose, each seen to fail, each put back:**
+  1. an unpriced price reading `0` instead of empty — "shows an item nobody has
+     priced as a dash" failed with `expected '0' to be ''`;
+  2. `belongsTo === "guest"` dropped from the charge button — "offers NO way to
+     charge the hotel's own linen" failed with `expected <button> to be null`
+     (the fixture's hotel docket is PRICED on purpose, or the test would have
+     passed for the wrong reason);
+  3. `total !== null` dropped from the same — "does not offer a bill to a bag
+     with anything unpriced in it" failed the same way;
+  4. the Collect dialog defaulted to `"guest"` — "refuses a docket that does not
+     say whose it is" failed with `expected 'guest' to be ''`;
+  5. the failed-read branch let an error fall through to the empty state — "says
+     a read that failed did not load" failed, having drawn "Nothing has gone to
+     the laundry yet" instead.
+
+**Left open**
+1. **The charge** (`MODULE.md` → Requests 1). One route, in this service's own
+   API file, which this session's lane did not include.
+2. **LAU-3**, the Settings switch (`api/src/modules/admin/moduleSwitches.ts`).
+3. **`src/components/app/navigation.test.ts`** still lists "Laundry" under
+   `SOON`, and now fails twice: the Coming soon list no longer contains it, and
+   `searchable(role)` finds "Laundry" for reception and housekeeping, who hold
+   the resource. Purchasing's own entry has the note saying this list shrinks by
+   one every time a service lands, and that the master reviews it at merge. The
+   spa chat needs the identical removal.
+
+---
+
 ## 2026-09-18 · phase 1: the price list, the dockets, and nothing a person can open yet
 
 **Asked for:** the laundry chat's brief (`docs/briefs/laundry.md`) - "the

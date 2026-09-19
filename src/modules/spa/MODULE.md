@@ -3,17 +3,20 @@
 Treatments, a day diary, and a bill settled at the spa or put on the room —
 behind a per-hotel switch (D17-54).
 
-**PART BUILT, 18 September.** The database and the server are done; the screens
-are not. The Coming soon page is still what a person sees, and it stays until
-the screens replace it. What is real today:
+**BUILT, 19 September, EXCEPT CLOSING A TREATMENT.** A treatment is entered,
+priced, booked by the desk and cancelled, all on screen. It is **not yet
+settled at the spa or charged to the room** — that route does not exist on the
+server, and nothing here pretends it does (see the requests at the foot).
 
 ```
 db/migrations/119_the_spa.sql      the tables and the guards
-                                   ⚠ THE NUMBER IS PROVISIONAL — the master's to give
 db/tests/modules/spa.sql           30 assertions
 api/src/modules/spa/spa.ts         the routes, mounted through this service's own door
 api/test/modules/spa/spa.test.ts   18 tests
-src/modules/spa/                   still the Coming soon page — no screens yet
+src/modules/spa/data/spa.ts        the typed client, and the property's clock
+src/modules/spa/pages/SpaDiary.tsx the day diary, the booking, the cancellation
+src/modules/spa/pages/SpaSetup.tsx treatments and therapists
+src/modules/spa/spa.test.tsx       14 tests
 ```
 
 Before any edit: claim the service (`npm run claim -- spa "what"`), and read
@@ -102,12 +105,26 @@ test caught it.
 
 | Menu name | Address | Page file | Who sees it |
 |---|---|---|---|
-| Spa | `/coming-soon/spa` | `pages/Spa.tsx` | owner, admin, GM — the Coming soon section |
+| Diary | `/h/:code/spa` | `pages/SpaDiary.tsx` | owner, admin, GM, hotel manager, reception, housekeeping |
+| Treatments and therapists | `/h/:code/spa/setup` | `pages/SpaSetup.tsx` | owner, admin, GM |
 
-**Unchanged, and that is the remaining work.** The screens wait on one thing
-only: a `spa` section in `src/components/app/navigation.ts`, gated
-`module: "spa"`, as banquet has. That file is the master's and laundry needs
-the identical change.
+Both sit in the `spa` section, which carries `module: "spa"` — the whole
+service is **absent** at a property that has not switched it on, not greyed out
+with a reason nobody can act on. That is the tidy half only: every route asks
+`app.module_enabled` of its own, because a hidden entry is still a URL anybody
+can type.
+
+`canSee` on each entry reads `SEES_THE_DIARY` and `SETS_THE_LIST` in
+`data/spa.ts` — the menu's copy of the server's own three lists, **not**
+`canAccess(role, "spa")`. The shared matrix is wider than the server here;
+that is **SPA-2** in `DEFECTS.md`.
+
+**A time on these screens is never parsed.** `app.hotel_clock` writes
+`YYYY-MM-DDTHH:MM` with no offset, so `format.ts`'s `dateShort()` and
+`timeOnly()` — which build a `Date` first — would read the property's day in
+whatever zone the browser happens to be in. `clockTime`, `clockDate` and
+`shiftDay` in `data/spa.ts` work on the string; the test file runs in
+`TZ=America/New_York` to prove it.
 
 ---
 
@@ -117,14 +134,30 @@ the identical change.
    September. `116` was taken from cp6 to run the gates; it is the
    master's to confirm or renumber. Purchasing and laundry are numbering in the
    same window.
-2. **A `spa` section in `navigation.ts`**, `module: "spa"`. Laundry needs the
-   same; one change for both.
-3. **A front door for posting a charge.** `api/src/modules/finance/index.ts`
-   exports no in-process function, and this service must not write
-   `folio_postings` itself (the brief). Needed for "charge it to the room"
-   (D18-7). Laundry needs the same door.
+2. ~~**A `spa` section in `navigation.ts`**~~ **Answered:** the master wrote it
+   on 18 September, gated `module: "spa"`. The screens use it.
+3. ~~**A front door for posting a charge.**~~ **Answered:** `postCharge` is
+   exported from `api/src/modules/finance/index.ts` since 18 September. **It is
+   not called yet** — see 5.
 4. **Which existing door records money taken AT the spa** — the brief says ask
-   before inventing a second way of taking a payment.
+   before inventing a second way of taking a payment. Still unanswered.
+5. **A ROUTE FOR CLOSING A TREATMENT.** Raised 19 September by the chat that
+   built the screens. `api/src/modules/spa/spa.ts` has nine routes and none of
+   them closes an appointment: nothing writes `settlement`, `closed_by`,
+   `closed_at` or `posting_id`, and nothing calls `postCharge`. So D18-6's
+   second half — settled at the spa, or charged to the room — **has no door to
+   knock on**, and no button was drawn for it: a button that answers 404 is
+   worse on a live desk than no button at all. The diary already SHOWS a
+   settlement where the database has one.
+
+   What it needs, all of it already decided: `POST
+   /:code/spa/appointments/:id/close` taking `{ settlement: "room" | "spa" }`,
+   in `SPA_BOOK_ROLES`; refusing an appointment whose `agreed_amount` is null
+   (the migration's own rule — an unpriced treatment cannot be closed);
+   `postCharge` with `taxKind: "spa"` and `category: "Spa"` for the room, whose
+   refusal already names Settings → Tax (D18-21); and question 4's answer for
+   the money taken at the spa. Server work, and the screens' lane could not
+   touch it.
 
 ---
 

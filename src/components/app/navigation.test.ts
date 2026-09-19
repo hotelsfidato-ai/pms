@@ -170,9 +170,9 @@ describe("each person's menu", () => {
     const SOON = [
       "Accounting export", "Booking engine", "Central CRM", "Channel manager",
       "Contracts", "Fidato CRS", "Guest messages", "Guest services",
-      "Laundry", "Leads and WhatsApp", "Loyalty", "Marketing", "Online check-in",
+      "Leads and WhatsApp", "Loyalty", "Marketing", "Online check-in",
       "Online payments", "Reviews",
-      "Room systems", "Spa",
+      "Room systems",
     ];
     for (const role of COMING_SOON_ROLES) {
       const sections = sidebarFor(role, "5EL", ALL_ON);
@@ -187,8 +187,18 @@ describe("each person's menu", () => {
   });
 
   it("refuses a Coming soon page to exactly the people the menu hides it from", () => {
-    expect(mayReach("gm", "/coming-soon/spa")).toBe(true);
-    expect(mayReach("front_desk", "/coming-soon/spa")).toBe(false);
+    /* ⚠ THIS USED /coming-soon/spa AND HAD TO MOVE, 19 September. The spa
+       and the laundry were built, so their Coming soon pages are gone —
+       and `mayReach` answers TRUE for a path the navigation has never
+       heard of, deliberately (a stay view, a printed invoice). So an
+       assertion naming a DELETED path does not test a refusal at all; it
+       passes for the opposite reason and would go on passing for ever.
+
+       Named a page that is still Coming soon instead. When room systems
+       is built, this line moves again — and that is the point: it is only
+       ever a real check while the page it names still exists. */
+    expect(mayReach("gm", "/coming-soon/room-systems")).toBe(true);
+    expect(mayReach("front_desk", "/coming-soon/room-systems")).toBe(false);
     expect(mayReach("hotel_manager", "/coming-soon/leads")).toBe(false);
     expect(mayReach("owner", "/h/:code/channels")).toBe(true);
     expect(mayReach("front_desk", "/h/:code/channels")).toBe(false);

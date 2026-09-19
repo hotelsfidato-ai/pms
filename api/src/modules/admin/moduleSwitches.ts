@@ -4,6 +4,31 @@ import type { Client } from "../../db.ts";
 import { maySwitchModules, MODULE_SWITCH_REFUSED } from "./grants.ts";
 
 /* ══════════════════════════════════════════════════════════════════
+   THE MODULES A PROPERTY CAN SWITCH ON — ONE LIST, READ BY BOTH ENDS
+
+   ⚠ IT WAS TWO LISTS, AND THEY DISAGREED (LAU-3, found by the laundry
+   chat on 19 September). The GET offered six modules and the POST
+   accepted three, so the Settings screen drew a switch for `laundry`,
+   `spa` and `channel_manager` and every one of them answered
+   `409 There is no "laundry" module.` when somebody used it.
+
+   Nothing in the database refused it — `hotel_modules_known` has known
+   all six since migration 115 — so the fault was entirely these two
+   literals drifting apart. `channel_manager` had been live in that state
+   since 108.
+
+   The list is declared HERE and both ends read it, so they cannot drift
+   again, and `moduleSwitches.test.ts` holds it to `hotel_modules_known`
+   as well: a module the database has never heard of must not be
+   offered, and a module the database knows must not be silently
+   unswitchable.
+   ══════════════════════════════════════════════════════════════════ */
+export const SWITCHABLE = [
+  "pos", "banquet", "reception_pos", "channel_manager", "laundry", "spa",
+] as const;
+
+
+/* ══════════════════════════════════════════════════════════════════
    THE MODULE SWITCHES
 
    Split out of api/src/routes/property.ts on 15 September in the
@@ -64,9 +89,8 @@ property.get("/:code/modules", async (c) => {
        API that is still serving the till. */
     const { rows } = await client.query<{ module: string; enabled: boolean }>(
       `select m.module, app.module_enabled($1, m.module) as enabled
-         from (values ('pos'), ('banquet'), ('reception_pos'), ('channel_manager'),
-                      ('laundry'), ('spa')) as m(module)`,
-      [hotelId],
+         from unnest($2::text[]) as m(module)`,
+      [hotelId, [...SWITCHABLE]],
     );
     return { modules: rows.map((r) => ({ module: r.module, enabled: r.enabled })) };
   });
@@ -80,7 +104,7 @@ property.post("/:code/modules/:module", async (c) => {
   const input = await c.req.json<Body>().catch(() => ({}) as Body);
   const module = c.req.param("module");
 
-  if (!["pos", "banquet", "reception_pos"].includes(module)) {
+  if (!(SWITCHABLE as readonly string[]).includes(module)) {
     return c.json({ reason: `There is no "${module}" module.` }, 409);
   }
   if (typeof input.enabled !== "boolean") {

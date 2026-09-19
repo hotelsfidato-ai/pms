@@ -14,5 +14,14 @@ export {
   THRESHOLDS,
 } from "./logic/outlook";
 export type { OutlookDay, DateAhead, Suggestion, Temper, Pace } from "./logic/outlook";
-export { getOutlook, getPace, WINDOW_NIGHTS } from "./data/outlook";
+/* Pickup and the week-ago column of pace (RM-1, built 19 September once
+   the reports door exported the `stay_nights` rule). `counted` and
+   `whyNoPickup` travel with the figures on purpose: a reader who takes
+   the numbers without the rule that says when they are a dash would
+   print a nought where this service refuses to. */
+export {
+  pickupOn, counted, windowOpens, onTheBooksAWeekAgo, whyNoPickup, WINDOWS,
+} from "./logic/pickup";
+export type { Pickup, PickupNight, Picked, Window } from "./logic/pickup";
+export { getOutlook, getPace, getPickup, WINDOW_NIGHTS } from "./data/outlook";
 export type { Outlook } from "./data/outlook";

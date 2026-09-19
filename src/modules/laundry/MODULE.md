@@ -4,19 +4,27 @@ One place for everything that goes to the laundry — a guest's bag and the
 hotel's own linen — behind a per-hotel switch (D17-54). Run by reception and
 housekeeping (D18-8); no new roles.
 
-**Where it stands, 18 September: the database and the server are built and
-proved. There is no screen yet**, and the menu still shows the Coming soon
-page, because two of the master's files have to change before a screen can be
-reached at all (see **Requests** below). The brief is `docs/briefs/laundry.md`;
-the decisions are **D17-54**, **D18-5**, **D18-7**, **D18-8**.
+**Where it stands, 19 September: the screens are built.** The menu section and
+the permission resource the master was asked for both landed, so the three
+screens were written against the server that was already there. The Coming
+soon page is gone. The brief is `docs/briefs/laundry.md`; the decisions are
+**D17-54**, **D18-5**, **D18-7**, **D18-8**.
 
 ```
-src/modules/laundry/            the Coming soon page still — no working screens yet
+src/modules/laundry/            BUILT: data/laundry.ts and three screens
 api/src/modules/laundry/        BUILT: laundry.ts, mounted on this service's own front door
 db/migrations/118_laundry…      BUILT: the price list, the dockets, the guards
 db/tests/modules/laundry.sql    BUILT: 29 assertions
 api/test/modules/laundry/       BUILT: 23 tests
+src/modules/laundry/laundry.test.tsx   BUILT: 8 screen tests
 ```
+
+**One thing a guest's bag still cannot do: reach the bill.** `postCharge` is
+on finance's door now (the master opened it on 18 September), but this
+service's `POST …/dockets/:id/charge` has not been changed to call it — it
+makes every refusal that is its own and then says plainly that the connection
+is not there. The button is on the screen, it goes through the API, and what
+the API says is what the screen says. See **Requests** below.
 
 **Migration 118**, settled at the merge on 19 September. It was written as 116
 in this service's own copy, and so was the spa's — three chats reached for the
@@ -75,17 +83,41 @@ rule cannot be gone around by a route that forgets to ask.
 
 | Menu name | Address | Page file | Who sees it |
 |---|---|---|---|
-| Laundry | `/coming-soon/laundry` | `pages/Laundry.tsx` | owner, admin, GM — still the Coming soon section |
+| Dockets | `/h/:code/laundry` | `pages/Dockets.tsx` | anyone holding `laundry` — D18-8 |
+| Price list | `/h/:code/laundry/price-list` | `pages/PriceList.tsx` | the same |
+| (a docket) | `/h/:code/laundry/:id` | `pages/Docket.tsx` | the same |
 
-**This table is what is true today, not what is planned.** The working screens
-(a price list, a docket list split into the guests' bags and the hotel's linen,
-and one docket) are written the moment the two requests below are answered.
+**The whole section is absent where the property has laundry switched off** —
+`module: "laundry"` sits on the section in `navigation.ts`, which is the only
+place a whole service hides (D17-54). The routes are guarded by `mayReach`, and
+the API refuses every one of them on its own, because a hidden menu entry is
+still a URL anybody can type.
+
+**No `workingMenus`.** That changes what a role finds pinned in front of them,
+and it is the owner's call. Until they make it, laundry is in the full menu for
+everybody who holds the resource, and one search away for all of them.
+
+### What each screen refuses to do
+
+- **The price list** draws `null` as `-`. The price field is a text box that
+  starts EMPTY for an unpriced item, never `0` — and `0` typed in is kept, and
+  shown, because it means somebody decided it is free.
+- **The dockets list** puts whose it is in its own column on every row, in
+  every filter, and sorts what is still out to the top.
+- **Collecting a bag** asks whose it is FIRST and with no answer filled in, and
+  shows nothing else until it is answered. What goes in the bag comes off the
+  price list — one catalogue, nothing typed free-hand onto a bill — and an
+  unpriced item says "not priced" in the list you pick it from.
+- **One docket** offers Charge to the room only when the server would take it:
+  a guest's bag, not cancelled, not already on a bill, and with a total. The
+  hotel's own linen gets a card saying why there is no button, rather than a
+  button that answers with a refusal.
 
 ---
 
 ## Not in the first version
 
-Say so on screen where a person would look, when the screens exist: linen par
+Said on screen where a person would look — the foot of every docket: linen par
 levels per room type, an outside laundry's bills, express surcharges, and a
 guest sending a bag from their own page (that arrives with the guest's door —
 the master says when it can carry a request).
@@ -94,65 +126,56 @@ the master says when it can carry a request).
 
 ## Requests — what this service needs from the master
 
-Three, in the order they block. Each is in a file this lane may not touch.
+**Two of the three are answered.** `src/components/app/navigation.ts` has the
+`laundry` section with `module: "laundry"` on it, and `src/lib/permissions.ts`
+has the `laundry` resource granted as D18-8 said — reception and housekeeping,
+and no new roles. The screens exist because of those two edits.
 
-### 1 · A menu section, so a screen can be reached at all
+What is left is in files this lane may not touch:
 
-`src/components/app/navigation.ts` — `SectionKey` and `SECTION_LAYOUT`.
+### 1 · The charge still does not reach the bill — the door is open, nobody walked through it
 
-```ts
-export type SectionKey = … | "laundry" | …
-{ key: "laundry", label: "Laundry", module: "laundry" },
-```
+`postCharge` is exported from `api/src/modules/finance/index.ts` (the master,
+18 September). **`api/src/modules/laundry/laundry.ts` has not been changed to
+call it.** Its `POST …/dockets/:id/charge` makes every refusal that is this
+service's own — the hotel's linen, a cancelled docket, one already charged, one
+with anything unpriced in it — and then answers:
 
-**Why it cannot be worked around.** `RequireAccess` asks `mayReach(role, path)`,
-which reads the navigation — so a route whose section does not exist is refused
-to everybody, and a nav entry in an existing section would show at properties
-that have laundry switched off. The `module` key is the only per-section gate
-there is. **The spa chat needs the identical change**, which is why it is one
-request to the master and not two edits.
+> Charging to the room is not connected yet: finance's door does not hand out a
+> way to post a charge.
 
-### 2 · A permission resource
+That sentence was true when it was written and is not any more. The route needs
+its last `refuse(...)` replaced by the call: `category: "Laundry"`, `taxKind`
+left alone because laundry follows the room rule (the spa is the one service
+with its own, D18-21), then `charge_posting_id` set on the docket — the
+database's own `laundry_charge_needs_a_total` trigger refuses the whole thing if
+anything in the bag is unpriced. **Seen on screen, 19 September**, on a priced
+guest docket: the button is there, it goes through the API, and the screen shows
+that sentence back.
 
-`src/lib/permissions.ts` — `RESOURCES`, `RESOURCE_LABELS`, and the grants.
+### 2 · The Settings switch cannot turn laundry on — `LAU-3`
 
-```
-"laundry"  ·  label "Laundry"
-granted to: owner, admin, gm, hotel_manager, front_desk, housekeeping
-```
-
-**D18-8 already answers who** — "reception and housekeeping, no new staff
-roles" — so this is the owner's decision written down, not a new one. No
-existing resource fits: the only ones both reception and housekeeping hold are
-`reservation`, `inventory`, `report` and `notification`, and putting laundry
-behind any of them would hand it to roles the owner did not name.
-
-### 3 · A way to post a charge, on finance's front door
-
-`api/src/modules/finance/index.ts` exports its routers and nothing else, so
-there is **no function** to call.
+`api/src/modules/admin/moduleSwitches.ts`. Its `GET /:code/modules` lists six
+modules including `laundry` and `spa`; its `POST /:code/modules/:module` has a
+list of its own that was never widened:
 
 ```ts
-export async function postCharge(client, {
-  hotelId, stayId, category, description, amount, taxable, businessDate,
-}): Promise<{ ok: true; id: string } | { ok: false; reason: string }>
+if (!["pos", "banquet", "reception_pos"].includes(module)) {
+  return c.json({ reason: `There is no "${module}" module.` }, 409);
+}
 ```
 
-That is exactly what `POST /:code/stays/:id/charges` already does between
-reading the body and answering (`api/src/modules/finance/postings.ts`) — the
-same closed-folio and cancelled-booking refusals, the same `app.gst_rate(hotel,
-'room', amount)`, the same append-only insert.
+So the switch draws, and refuses. `DEFECTS.md` → **LAU-3** has what was seen.
 
-**Why this lane will not do it another way.** D18-7 says the charge goes
-straight onto the room bill as its own line, and the Extra Charges report
-already reads `category = 'laundry'`
-(`api/src/modules/reports/builders/manager.ts`, `EXTRA_KINDS`). Writing
-`folio_postings` from this service would put a second author on finance's
-ledger; calling its own HTTP endpoint from inside the server is a way around a
-front door, not a use of one. Until the function exists,
-`POST …/dockets/:id/charge` makes every refusal that is this service's own —
-the hotel's linen, a cancelled docket, one already charged, one with anything
-unpriced in it — and then says plainly that the connection is not there.
+---
+
+## What it leans on, on the screen side
+
+- **the front desk**, over HTTP — `GET /:code/stays`, for the stays a guest's
+  docket may name. Read through its own door, never by importing its data layer
+  (`src/test/boundaries.test.ts` refuses that, and is right to).
+- **`@/data/repositories/types`** for the `Stay` shape — the shared core, not
+  another service.
 
 ---
 

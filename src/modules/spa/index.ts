@@ -1,6 +1,14 @@
-/* Spa — NOT BUILT. A Coming soon page only (the owner's decision,
-   16 September): `pages/Spa.tsx`, its menu entry (`nav.ts`) and its address
-   (`routes.tsx`). No other service uses anything from here yet, so this
-   front door exports nothing. What the service will be, and what it needs,
-   is in MODULE.md beside this file. */
+/* Spa — the front door of this service on the website: the only file
+   another service may import (src/test/boundaries.test.ts).
+
+   BUILT, 19 September. The screens are `pages/SpaDiary.tsx` and
+   `pages/SpaSetup.tsx`, their menu entries are `nav.ts` and their
+   addresses are `routes.tsx`; the Coming soon page is gone, because a
+   service that is built cannot also be coming soon.
+
+   Nothing else needs anything from the spa yet, so this door still
+   exports nothing. The day a folio line wants to name the treatment it
+   came from, it is added HERE and not reached for inside `pages/` or
+   `data/`. What the service is, and what it is still waiting on, is in
+   MODULE.md beside this file. */
 export {};

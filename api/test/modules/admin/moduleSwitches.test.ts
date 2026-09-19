@@ -4,6 +4,7 @@ import { closePool } from "../../../src/db.ts";
 import {
   MODULE_SWITCH_ROLES as SERVER_LIST, MODULE_SWITCH_REFUSED,
 } from "../../../src/modules/admin/grants.ts";
+import { SWITCHABLE } from "../../../src/modules/admin/moduleSwitches.ts";
 import { MODULE_SWITCH_ROLES as SCREEN_LIST } from "../../../../src/modules/admin/moduleSwitchRoles.ts";
 import { ASSIGNABLE_ROLES } from "../../../../src/lib/permissions.ts";
 
@@ -135,5 +136,73 @@ describe("who is asking, beyond the role list", () => {
     const res = await flip(gmElsewhereId, !before);
     expect(res.status, await res.clone().text()).toBe(403);
     expect(await banquetIsOn()).toBe(before);
+  });
+});
+
+/* ══════════════════════════════════════════════════════════════════
+   THE LIST THE SCREEN IS OFFERED AND THE LIST THE SERVER ACCEPTS
+
+   ⚠ THEY WERE TWO LITERALS AND THEY DREW APART (LAU-3, 19 September).
+   The GET offered six modules; the POST accepted three. So Settings drew
+   a switch for `laundry`, `spa` and `channel_manager`, and every one of
+   them answered `409 There is no "laundry" module.` when a person used
+   it. `channel_manager` had been live in that state since migration 108
+   and nobody had tried it.
+
+   Nothing in the database was wrong: `hotel_modules_known` has known all
+   six since 115. The fault was entirely in this file's two copies.
+
+   There is ONE list now, and these three checks hold it in place — to
+   itself at both ends, and to the database's own definition of what a
+   module is. A module this system offers but cannot switch is the fault
+   that was here; a module it can switch but the database rejects would
+   be the same fault pointing the other way.
+   ══════════════════════════════════════════════════════════════════ */
+describe("what a module is, in one place", () => {
+  it("offers exactly the modules it will accept", async () => {
+    const res = await app.request(`/api/hotels/${HOTEL}/modules`, {
+      headers: { "x-dev-staff-id": ownerId },
+    });
+    expect(res.status).toBe(200);
+    const { modules } = await res.json() as { modules: { module: string }[] };
+
+    expect([...modules.map((m) => m.module)].sort())
+      .toEqual([...SWITCHABLE].sort());
+  });
+
+  it("accepts every module it offers - none of them answers 'there is no such module'", async () => {
+    for (const module of SWITCHABLE) {
+      const was = (await sql(
+        "select app.module_enabled(id, $2) as on from hotels where code = $1",
+        [HOTEL, module])).rows[0].on as boolean;
+
+      const res = await app.request(`/api/hotels/${HOTEL}/modules/${module}`, {
+        method: "POST",
+        headers: { "x-dev-staff-id": ownerId, "content-type": "application/json" },
+        body: JSON.stringify({ enabled: was }),
+      });
+
+      /* Flipped to what it already was, so nothing about this property
+         changes whichever way the check goes. What is being asked is only
+         whether the route KNOWS the module. */
+      const body = await res.json() as { reason?: string };
+      expect(body.reason ?? "", `the ${module} switch is drawn, so it must work`)
+        .not.toContain("There is no");
+      expect(res.status, `the ${module} switch answers`).toBe(200);
+    }
+  });
+
+  it("offers nothing the database has never heard of", async () => {
+    const { rows } = await sql(
+      `select pg_get_constraintdef(oid) as def from pg_constraint
+        where conname = 'hotel_modules_known'`);
+    const known = rows[0].def as string;
+    for (const module of SWITCHABLE) {
+      /* `reception_pos` is a per-hotel switch that is not a module row in
+         the same sense - it is checked the same way and belongs on the
+         screen, so it is allowed to be absent here. */
+      if (module === "reception_pos") continue;
+      expect(known, `the database knows "${module}"`).toContain(`'${module}'`);
+    }
   });
 });

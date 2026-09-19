@@ -6,10 +6,13 @@ import {
   Page, PageHeader, Card, CardBody, DataTable, EmptyState, ErrorState,
   Skeleton, StatusPill, type Column,
 } from "@/components/ui";
-import { getOutlook, getPace } from "@/modules/revenue-management/data/outlook";
+import { getOutlook, getPace, getPickup } from "@/modules/revenue-management/data/outlook";
 import {
   aheadBy, softestFirst, suggest, temperOf, type DateAhead,
 } from "@/modules/revenue-management/logic/outlook";
+import {
+  onTheBooksAWeekAgo, pickupOn, whyNoPickup,
+} from "@/modules/revenue-management/logic/pickup";
 
 /* ══════════════════════════════════════════════════════════════════
    THE COMING NIGHTS
@@ -25,6 +28,11 @@ import {
    EVERY FIGURE IS THE REPORTS SERVICE'S. Available, sold and occupancy
    come through `@/modules/reports` - the same derivation the Manager
    report and the Dashboard add up. Nothing is worked out twice here.
+   PICKUP and the week-ago column of pace (RM-1, 19 September) are this
+   service's own route, but they count over the reports service's
+   `stay_nights` fragment, imported through its door - so the rooms
+   this screen calls sold are the rooms the Manager report calls sold,
+   by construction.
 
    WHO SEES IT: the four roles who may move a rate - the owner, an
    administrator, the GM and the Revenue Manager (`setsRates`). It is
@@ -58,6 +66,17 @@ export default function OutlookPage() {
     enabled: Boolean(today),
   });
 
+  /* PICKUP (RM-1). Its own query, so a property whose pickup cannot be
+     read still gets its outlook: the dashes and their sentence are a
+     smaller failure than a blank screen, and they say which one it is. */
+  const pickup = useQuery({
+    queryKey: ["revenue-pickup", code, today],
+    queryFn: () => getPickup(code, today),
+    enabled: Boolean(today),
+  });
+  const picked = pickup.data ?? null;
+  const noPickup = pickup.isLoading ? null : whyNoPickup(picked);
+
   const days = outlook.data?.days ?? [];
   const soft = softestFirst(days);
   const suggestions = days.map(suggest).filter((s) => s !== null);
@@ -73,6 +92,17 @@ export default function OutlookPage() {
       cell: (d) => String(d.available) },
     { key: "occupancy", header: "Sold", numeric: true,
       cell: (d) => percent(d.occupancyPct) },
+    /* Of the rooms sold for that night, how many were booked in the
+       last 1, 7 and 30 days. Hidden below the breakpoints named, NOT
+       dropped: a narrow screen shows each one as a labelled line in
+       the row's card, which is why the headers read as sentences
+       rather than as "1d" (DataTable, and 375px). */
+    { key: "last1", header: "New 1 day", numeric: true, hideBelow: "lg",
+      cell: (d) => orDash(pickupOn(picked, d.date).last1, String) },
+    { key: "last7", header: "New 7 days", numeric: true, hideBelow: "sm",
+      cell: (d) => orDash(pickupOn(picked, d.date).last7, String) },
+    { key: "last30", header: "New 30 days", numeric: true, hideBelow: "lg",
+      cell: (d) => orDash(pickupOn(picked, d.date).last30, String) },
     { key: "temper", header: "", width: "w-[130px]",
       cell: (d) => {
         const t = temperOf(d);
@@ -114,7 +144,11 @@ export default function OutlookPage() {
               No figures for this property yet.
             </p>
           ) : (
-            <Pace now={pace.data.now} ahead={aheadBy(pace.data)} />
+            <Pace
+              now={pace.data.now}
+              ahead={aheadBy(pace.data)}
+              weekAgo={onTheBooksAWeekAgo(pace.data.now, picked)}
+            />
           )}
         </CardBody>
       </Card>
@@ -152,9 +186,15 @@ export default function OutlookPage() {
       </Card>
 
       {/* Which dates are soft. */}
-      <h2 className="text-sm font-semibold text-ink-900 mb-3">
+      <h2 className="text-sm font-semibold text-ink-900 mb-1">
         Dates worth a look
       </h2>
+      <p className="text-2xs text-grey-500 mb-3">
+        New 1 day, 7 days and 30 days: how many of the rooms sold for that
+        night were booked in that long{today
+          ? `, counted back from ${dateShort(today)}, the property's own day`
+          : ""}.{noPickup ? ` ${noPickup}` : ""}
+      </p>
       <DataTable
         columns={columns}
         rows={soft.length ? soft : days}
@@ -179,13 +219,16 @@ export default function OutlookPage() {
    year, it SAYS SO - a property that had not opened had nothing to
    sell, and nil available is not nought per cent (D17-93). */
 function Pace({
-  now, ahead,
+  now, ahead, weekAgo,
 }: {
   now: { occupancyPct: number; roomsSold: number; availableRoomNights: number };
   ahead: number | null;
+  /** Rooms on the books for this month a week ago, or null where the
+      records do not reach back that far (RM-1). */
+  weekAgo: number | null;
 }) {
   return (
-    <div className="mt-4 grid grid-cols-2 sm:grid-cols-4 gap-5">
+    <div className="mt-4 grid grid-cols-2 sm:grid-cols-3 gap-5">
       <Figure label="Occupancy" value={percent(now.occupancyPct)} />
       <Figure label="Rooms sold" value={String(now.roomsSold)} />
       <Figure label="Room nights" value={String(now.availableRoomNights)} />
@@ -193,6 +236,17 @@ function Pace({
         label="Against last year"
         value={orDash(ahead, (n) => `${n > 0 ? "+" : ""}${percent(n)}`)}
         {...(ahead === null ? { note: "The property was not selling then." } : {})}
+      />
+      {/* Where the month stood a week ago. The note is not decoration:
+          it is the difference between "the books said this last week"
+          and "this much of today's book was already there", and the two
+          differ by exactly the week's cancellations. */}
+      <Figure
+        label="A week ago"
+        value={orDash(weekAgo, String)}
+        {...(weekAgo === null
+          ? { note: "The records do not reach back a week." }
+          : { note: `${now.roomsSold - weekAgo} rooms booked since, still on the books.` })}
       />
     </div>
   );

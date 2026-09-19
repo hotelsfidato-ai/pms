@@ -6539,6 +6539,61 @@ copy will see of theirs.**
 
 ---
 
+### 307 · MINE: I fixed MEMORY 300 in the file it broke and never grepped for the second copy
+
+19 September. On the 18th the database suite proved "an unknown module is
+refused" by trying to insert **`spa`** - and I had just made the spa a module.
+I fixed that file, wrote the rule, and numbered it 300: *a test's "impossible"
+case must be impossible FOR EVER, not merely unbuilt.*
+
+`api/test/guards.test.ts:158` said the same thing with the same word:
+
+    it("refuses a module nobody has heard of", async () => {
+      const res = await post("/5EL/modules/spa", { enabled: true });
+
+It passed on the 18th because the module switch route refused `spa` for an
+unrelated reason - its POST guard listed three modules and the GET offered six
+(LAU-3, below). The moment I repaired THAT, this test failed. Two faults had
+been holding each other up, and fixing the real one exposed a test that had
+been passing for the wrong reason the whole time.
+
+**The rule: a defect written into MEMORY is not fixed until you have grepped
+the whole tree for the same shape. One file is where you FOUND it, not where it
+LIVES.** Every impossible-case sentinel in this repository is now the single
+string `not_a_module_and_never_will_be`, and there is exactly one of it.
+
+---
+
+### 306 · The Settings screen offered six switches and the server accepted three, and one of them had been live for a day
+
+19 September, found by the laundry chat building its screens - not by any test,
+because no test ever pressed the switch.
+
+`api/src/modules/admin/moduleSwitches.ts` held the list of modules TWICE: the
+GET selected from `(values ('pos'),('banquet'),('reception_pos'),
+('channel_manager'),('laundry'),('spa'))`, and the POST guarded with
+`["pos","banquet","reception_pos"]`. So Settings drew a switch for three
+modules that answered `409 There is no "laundry" module.` when anybody used
+one.
+
+Nothing in the database was wrong - `hotel_modules_known` has known all six
+since 115. **`channel_manager` had been in that state since migration 108**:
+a switch on a live screen that could not be switched, for a day, and the only
+reason it did no harm is that nobody reached for it.
+
+Fixed: `SWITCHABLE` is declared once and both ends read it, and
+`moduleSwitches.test.ts` now asserts three things - the GET offers exactly what
+the POST accepts, every offered module actually answers 200 (flipped to the
+value it already held, so no property changes), and nothing is offered that
+`hotel_modules_known` has never heard of.
+
+**The rule: a list written twice is a list that will disagree. When one end
+enumerates and the other validates, they are the same list or they are a
+defect - and the gap is invisible to every test that does not actually press
+the control.**
+
+---
+
 ### 305 · MINE: `TaskStop` killed the pipe, not the script, so two full suites ran at once - and killing them by PID took Postgres down with them
 
 18-19 September. I stopped a gate run with `TaskStop`. It reported success. It

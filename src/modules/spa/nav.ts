@@ -1,13 +1,54 @@
-import { Flower2 } from "lucide-react";
+import { Flower2, Sparkles } from "lucide-react";
 import type { ServiceNavEntry } from "@/components/app/navigation";
-import { seesComingSoon } from "@/lib/permissions";
+import { SEES_THE_DIARY, SETS_THE_LIST } from "@/modules/spa/data/spa";
 
-/* Spa — not built. Its Coming soon page sits in the section the owner
-   chose on 16 September: one section at the foot of the menu, for the owner,
-   admins and general managers only. Assembled by `navigation.ts`. When the
-   service is built its real screens take their place in a working section. */
+/* Spa — BUILT. Its entries left the Coming soon section for the `spa`
+   section the master wrote on 18 September, which carries `module: "spa"`:
+   the whole service is ABSENT at a property that has not switched it on
+   (D17-54), not greyed out with a reason nobody can act on.
+
+   ⚠ AND THAT IS THE TIDY HALF ONLY. Every route asks
+   `app.module_enabled(hotel, 'spa')` on its own, because a hidden entry
+   is still a URL anybody can type (041, MEMORY 250).
+
+   WHO SEES WHAT is the owner's D18-21, 18 September: housekeeping sees
+   the diary and does not touch it, reception books and closes, and the
+   owner, an administrator or the GM set the price list. `canSee` reads
+   the copy in `data/spa.ts` of the server's own three lists — NOT
+   `canAccess(role, "spa")`, which the permissions matrix gives to
+   finance and to a viewer while the server gives them nothing. Offering
+   either of them a Spa section would be offering a door that answers
+   403.
+
+   No `workingMenus`: every role's shortened menu is the owner's own list
+   (15 September), and widening one is their call, not a side effect of a
+   service being built. The diary is found in the section and by "Find a
+   screen". */
+/* ⚠ TWO LABELS MOVED BY THE MASTER AT MERGE, 19 September, because
+   `navigation.test.ts` refused them and it was right both times.
+
+   "Diary" — the banquet has had a screen by that name since before this
+   service existed, and "Find a screen" flattens every section into one
+   list: a clerk searching "diary" would have been offered two identical
+   words and no way to tell which was which. The banquet's is live and
+   the owner named it, so this one moved. "Spa diary" inside a section
+   already called Spa reads as mild repetition on the sidebar and as the
+   only sensible answer in search, and search is where the confusion was.
+
+   "Treatments and therapists" was 25 characters. The sidebar is 248px
+   and cuts at 21 — "Contracts and allotm…" is how that was found in
+   September, by opening the screen rather than by a test. The therapists
+   are names attached to treatments, not a thing of their own, so the
+   shorter word loses nothing a person needs. */
 export const nav: ServiceNavEntry[] = [
-  { section: "coming-soon", order: 180,
-    label: "Spa", to: "/coming-soon/spa", icon: Flower2, resource: "integration",
-    canSee: seesComingSoon, keywords: ["wellness", "massage", "treatment", "therapist"] },
+  /* The diary first: the question is almost always "who is free at four"
+     and only then "what does a facial cost". */
+  { section: "spa", order: 10,
+    label: "Spa diary", to: "/h/:code/spa", icon: Flower2, resource: "spa",
+    canSee: (role) => SEES_THE_DIARY.includes(role),
+    keywords: ["spa", "massage", "treatment", "therapist", "wellness", "appointment"] },
+  { section: "spa", order: 20,
+    label: "Treatments", to: "/h/:code/spa/setup", icon: Sparkles,
+    resource: "spa", canSee: (role) => SETS_THE_LIST.includes(role),
+    keywords: ["spa price list", "treatment price", "therapist", "spa setup"] },
 ];

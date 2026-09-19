@@ -1,9 +1,11 @@
+import { api } from "@/lib/api";
 import {
   getPeriodStatistics, getTodaySnapshot, listDailyStatistics,
 } from "@/modules/reports";
 import {
   datesAhead, sameMonthLastYear, type DateAhead, type Pace,
 } from "@/modules/revenue-management/logic/outlook";
+import type { Pickup } from "@/modules/revenue-management/logic/pickup";
 
 /* ══════════════════════════════════════════════════════════════════
    EVERY FIGURE THROUGH THE REPORTS SERVICE'S FRONT DOOR
@@ -25,12 +27,15 @@ import {
    so the window ahead is measured from the property, never from `new
    Date()`.
 
-   ⚠ NOT HERE YET: PICKUP, and the third column of pace. "How many of
-   those rooms were sold in the last 1, 7 and 30 days" needs each
-   booking's creation date, which no front door answers today. The ask
-   is written up in MODULE.md under Requests (R1) and in DEFECTS.md as
-   RM-1. Nothing is guessed in the meantime: the screen does not show a
-   pickup column at all rather than show one it cannot fill.
+   PICKUP IS HERE NOW (19 September, RM-1). It was absent because a
+   booking's creation date could not be reached: the reports door
+   exported the finished documents and nothing they were made of. R1
+   asked, the master opened the door on 18 September, and this
+   service's OWN server route now counts creation dates over the
+   reports service's `stay_nights` rule - ITS fragment, imported, not a
+   second copy of it. So `sold` on the pickup route and `roomsSold` on
+   the statistics route are the same number by construction, not by
+   coincidence.
    ══════════════════════════════════════════════════════════════════ */
 
 /** How far ahead the outlook looks. Ninety nights is a quarter - far
@@ -83,6 +88,30 @@ export async function getOutlook(
       today,
     ),
   };
+}
+
+/**
+ * When each room-night on the books was booked, for every night the
+ * screen asks about.
+ *
+ * ONE FETCH, BOTH ANSWERS. The window runs from the first of the
+ * property's own month - which is behind the business date, and is
+ * what pace needs - to the end of the outlook window ahead, which is
+ * what the table needs. Asking twice for two overlapping windows is
+ * two chances to disagree about a night in the overlap.
+ *
+ * Null when the caller may not see this property: a refusal, not an
+ * empty screen.
+ */
+export async function getPickup(
+  code: string, today: string, nights = WINDOW_NIGHTS,
+): Promise<Pickup | null> {
+  if (!code || !today) return null;
+  const month = monthOfDate(today);
+  return api<Pickup>(
+    `/api/hotels/${encodeURIComponent(code)}/revenue/pickup`
+    + `?from=${month.from}&to=${plusDays(today, nights)}`,
+  );
 }
 
 /** This month on the books, and the same month last year. */

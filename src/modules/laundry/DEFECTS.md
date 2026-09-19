@@ -63,12 +63,50 @@ The master's, because every lane's Action is red until it is made.
 
 ---
 
+## LAU-3 · The Settings switch for laundry draws, and refuses
+
+**19 September, found while opening the screens. NOT fixed here —
+`api/src/modules/admin/moduleSwitches.ts` is the master's file.**
+
+Settings shows a Laundry switch. Turning it on answers:
+
+```
+POST /api/hotels/5EL/modules/laundry → 409
+{"reason":"There is no \"laundry\" module."}
+```
+
+The two halves of that file disagree. `GET /:code/modules` asks
+`app.module_enabled` for six modules by name — `pos`, `banquet`,
+`reception_pos`, `channel_manager`, `laundry`, `spa` — so all six draw a switch.
+`POST /:code/modules/:module` guards with a list of three that was never
+widened:
+
+```ts
+if (!["pos", "banquet", "reception_pos"].includes(module)) {
+```
+
+`channel_manager` has the same fault and has had it longer; **the spa's switch
+is unaffected only because that property already had its row.** Nothing in the
+database refuses it — `hotel_modules_known` has named `laundry` since migration
+115, and the row went in by hand without complaint.
+
+**The fix is the list.** Better, the list is the same six the GET already
+names, in one constant, so the next module cannot draw a switch that refuses.
+That is a judgement about the master's file and is theirs to make.
+
+**Worked around for this session only**, to see the screens at all: the row was
+written straight into `hotel_modules` on the development database
+(`5EL`, `laundry`, enabled). Nothing in this lane depends on it.
+
+---
+
 ## Open, and why
 
-- **The screens are not built** (see `MODULE.md` → Requests). The service's
-  database and server are built and proved; nothing a person can open exists,
-  because a menu section and a permission resource are the master's to add.
-- **The charge does not reach the bill.** `POST …/dockets/:id/charge` makes
-  every refusal that is this service's own and then says plainly that the
-  connection is not there, because finance's front door exports no way to post
-  a charge. It does not write `folio_postings` itself, and it must not.
+- **The charge does not reach the bill, and now it could.** `postCharge` is on
+  finance's door since 18 September; `api/src/modules/laundry/laundry.ts` has
+  not been changed to call it, so `POST …/dockets/:id/charge` still makes every
+  refusal that is its own and then says the connection is not there. The screen
+  shows that sentence, which is honest and is not the finished thing.
+  `MODULE.md` → Requests 1 has what the route needs.
+- **LAU-3 above** — the switch a property is turned on with does not work.
+- **LAU-2 above** — `db/tests/suite.sql` red on `cp6`, and not this lane's.

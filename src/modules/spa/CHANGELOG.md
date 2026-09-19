@@ -12,6 +12,107 @@ are done, the screens are not** (`MODULE.md`).
 
 ---
 
+## 2026-09-19 · the screens: a day diary, a price list, and a booking taken by telephone
+
+**Asked for:** the screens, and only the screens. The database and the server
+were done and merged on 18 September; what a person could see was still the
+Coming soon page.
+
+**Shipped** — everything inside `src/modules/spa/`
+- `data/spa.ts` — the typed client for all nine routes, the menu's copy of the
+  server's three role lists, and `clockTime` / `clockDate` / `shiftDay`.
+- `pages/SpaDiary.tsx` — therapist by therapist, one day at a time, with the
+  booking and the cancellation.
+- `pages/SpaSetup.tsx` — treatments (name, how long, price) and therapists.
+- `nav.ts` — two entries in the `spa` section the master wrote, `module: "spa"`,
+  so the whole service is absent where the switch is off. The Coming soon entry
+  and `pages/Spa.tsx` are gone: a service that is built cannot also be coming
+  soon.
+- `routes.tsx` — `/h/:code/spa` and `/h/:code/spa/setup`, both guarded.
+- `spa.test.tsx` — 14 tests.
+
+**Decisions inside my own lane, with the reasoning in the files**
+- **The times are read as STRINGS, not parsed.** `app.hotel_clock` writes
+  `YYYY-MM-DDTHH:MM` with no offset, so `format.ts`'s `dateShort()` and
+  `timeOnly()` — which call `new Date()` first — would read the property's day
+  in THIS browser's zone. `clockDate` and `clockTime` slice; `shiftDay` does
+  its arithmetic in UTC. Proved by running the whole file in
+  `TZ=America/New_York`.
+- **The guest list is who is HERE OR COMING**, not who is in the house. The
+  server refuses a cancelled or checked-out stay and accepts everything else,
+  and a stricter rule here would be this screen inventing one. Found by opening
+  the dialog on the demo property, where nobody is checked in and the list came
+  back empty.
+- **`canSee` reads the SERVER's role lists, not the permissions matrix.** The
+  matrix gives finance and a viewer `spa: view`, which the server does not — so
+  the matrix would have put a Spa section in two people's menus that answers
+  403. **SPA-2**, reported; theirs to settle.
+
+**Found**
+- **SPA-2** — `src/lib/permissions.ts` and `api/src/modules/spa/spa.ts`
+  disagree about finance and `read_only`. Not my lane; worked around in `nav.ts`
+  and written down.
+- **`src/components/app/navigation.test.ts` fails on this change**, in two
+  assertions that name the Coming soon page this service no longer has. The
+  master's file; the laundry chat needs the identical edit.
+- **`db/migrations/119_the_spa.sql` had never been applied to the development
+  database `fidato`.** The screens answered 500 until it was. Applied here,
+  additively, and the spa switched on for 5EL by hand — because **SPA-1** is
+  still open and the Settings switch still answers 409.
+- **`addDays` in `src/modules/banquet/pages/Banquet.tsx` is off by a day** at
+  every property east of Greenwich. Not my lane; written down below.
+
+**Proved** — numbers I ran, on the tree as it stands
+- `npx vitest run src/modules/spa` — **14 tests, exit 0**, and **again with
+  `TZ=America/New_York`, 14, exit 0.**
+- `npx tsc -b --force` — exit 0.
+- **Every screen opened**, signed in through the DEVELOPMENT ONLY buttons at
+  `localhost:5173`, against the live API and database: the diary empty, the
+  diary with a booking, the price list, both dialogs, at 1280px and at **375px
+  with no horizontal scroll**.
+- **A booking taken end to end**: Rohit Deshpande, Aromatherapy massage, Priya,
+  11:00 → the diary drew **11:00 AM → 12:00 PM, ₹2,500**. Eleven at the hotel,
+  eleven on the screen.
+- **Guards seen to refuse, each broken and put back:**
+  - the unpriced dash → `money(t.price ?? 0)`: the test failed, and ₹0.00
+    appeared where "-" belongs.
+  - the server's own sentence → `setProblem("That time is unavailable.")`: both
+    refusal tests failed.
+  - `shiftDay` → banquet's `new Date(\`${on}T00:00:00\`)` version: **"2026-09-20"
+    came back as "2026-09-19"** on this machine.
+  - `clockDate` → parsing through `new Date`: under `TZ=America/New_York` the
+    property's **19 September read as 18 September**.
+  - `mayBook` → `true`: housekeeping was offered the booking button, and the
+    test failed.
+  - **the module gate, on the real screen**: `spa` switched off in the database,
+    and the diary showed the server's own sentence — *"This property has no spa.
+    Turn it on in the property's settings if that is wrong."* Switched back on.
+  - **the role guard, on the real screen**: signed in as Housekeeping —
+    the diary drew, with no Book, no Cancel and no price list, and
+    `/h/5EL/spa/setup` was refused outright.
+  - **the cancellation reason, on the real screen**: Cancel with an empty box
+    returned the server's *"Why is it cancelled? This is the line somebody asks
+    about."*
+  - **the overlap, on the real screen**: a second booking for Priya at 11:30
+    was refused with the DATABASE's own sentence — *"Priya is already with
+    Rohit Deshpande: Aromatherapy massage at 27 Aug 11:00"*.
+
+**Left open** — none of it is mine to do
+- **CLOSING A TREATMENT IS NOT BUILT, and nothing half-built was left behind.**
+  `api/src/modules/spa/spa.ts` has no close route: the schema carries
+  `settlement`, `closed_by`, `closed_at` and `posting_id`, and `postCharge` has
+  been exported from finance since 18 September, but no route joins them. The
+  diary SHOWS a settlement where one exists and offers no button that would
+  answer 404. See MODULE.md's requests.
+- **`src/components/app/navigation.test.ts`** — two assertions to edit, the
+  master's.
+- **SPA-1** — the Settings switch still refuses `spa`.
+- **SPA-2** — the permissions matrix.
+
+**Commits:** on `cp6`, not pushed (the owner, 19 September).
+
+---
+
 ## 2026-09-18 · treatments, therapists and the day diary — database and server
 
 **Asked for:** build the spa, smallest thing that works end to end, in the

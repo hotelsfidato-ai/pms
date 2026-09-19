@@ -51,6 +51,35 @@ a guard, and the half that was missing is the half that broke.
 
 ---
 
+### SPA-2 · The permissions matrix and the server disagree about who sees the diary
+
+**Found** 19 September, building `nav.ts` and asking which roles the Spa
+section should be shown to.
+
+`src/lib/permissions.ts` grants `spa` to eight roles — and two of them,
+`finance` (`["view", "export"]`) and `read_only` (`["view"]`), are **not in
+`SPA_READ_ROLES`** in `api/src/modules/spa/spa.ts`, which is
+`owner, admin, gm, hotel_manager, front_desk, housekeeping`. The owner's answer
+of 18 September named those six and no others.
+
+So `canAccess(role, "spa")` — the menu's default test — would have put a Spa
+section in the accountant's and the viewer's sidebar, and every screen in it
+answers **403** with "The spa diary is open to reception, housekeeping, the
+manager, an administrator and the owner."
+
+**Worked around, not fixed.** `nav.ts` asks `SEES_THE_DIARY` in
+`src/modules/spa/data/spa.ts`, which is the menu's copy of the server's list
+and says so. Nobody is offered a door that would refuse them. **The matrix is
+the master's file** (`src/lib/permissions.ts`) and widening or narrowing a
+role's grants is the owner's decision, not this chat's — reported, not touched.
+
+**The rule:** when a service's own role list is narrower than the shared
+matrix, the MENU follows the service and the matrix is reported. A menu that
+follows the wider list hands somebody a screen that refuses them, which reads
+as a broken system rather than as a permission.
+
+---
+
 ## Adding one
 
 Newest last, in the shape above: **Found** (when, and how — reading, a test, a

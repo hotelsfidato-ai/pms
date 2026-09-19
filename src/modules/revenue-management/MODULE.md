@@ -15,9 +15,12 @@ manager. Seen to fail on all three shapes before the first commit.
 `docs/briefs/revenue-management.md`; the plan is
 `docs/BUILD-PLAN-2026-09-18.md` § 6.
 
+**PICKUP AND THE WEEK-AGO COLUMN OF PACE ADDED 19 September** (RM-1), once the
+reports door exported the `NIGHTS` fragment R1 asked for.
+
 ```
 src/modules/revenue-management/      the screen, its menu entry and its address
-api/src/modules/revenue-management/  the front door, mounted and still empty
+api/src/modules/revenue-management/  the front door, and the pickup route
 db/tests/modules/revenue-management.sql   does not exist: this service has no table
 ```
 
@@ -37,7 +40,18 @@ occupancy is how the Dashboard and the Manager report came to disagree in
 August, and this service is the one most likely to do it again.
 
 `src/modules/revenue-management/data/outlook.ts` is the only file that fetches.
-`logic/outlook.ts` holds no query at all: it turns those figures into words.
+`logic/outlook.ts` and `logic/pickup.ts` hold no query at all: they turn those
+figures into words.
+
+**And the one query this service does own counts the reports service's nights.**
+`api/src/modules/revenue-management/pickup.ts` is the only SQL here. It imports
+the **`NIGHTS`** fragment from `@/modules/reports`' server door and joins its
+`stay_nights` back to `reservations` for one fact the reports service does not
+carry: when the booking was made. It does not count `sold` at all - that is
+`dailyFigures().sold`, so the pickup figures are visibly subsets of a figure
+this service did not derive. `api/test/modules/revenue-management/pickup.test.ts`
+holds this route and `/statistics/daily` to the same `sold` on every night of
+the window, which is the whole purpose of R1.
 
 ---
 
@@ -66,12 +80,19 @@ sideways scroll and no console error; Reception is refused by name.
 
 ## What it shows
 
-1. **Pace.** This month on the books against the same month last year. **Where
-   there is no last year it says so** in a sentence and shows a dash: a month
-   the property could not have traded in has nil available (D17-93), and nil
-   available is not nought per cent. 5 Elements opened in this system in August
-   2026, so that is the branch that runs today, and the screen was checked
-   showing it.
+1. **Pace.** This month on the books against the same month last year, and
+   against **where it stood a week ago**. **Where there is no last year it says
+   so** in a sentence and shows a dash: a month the property could not have
+   traded in has nil available (D17-93), and nil available is not nought per
+   cent. 5 Elements opened in this system in August 2026, so that is the branch
+   that runs today, and the screen was checked showing it.
+
+   The week-ago figure is what is on the books for this month **less every
+   room-night of it booked in the last seven days**. It is not a snapshot and
+   the screen does not pretend it is: nobody wrote down what the books held
+   last Tuesday, so a booking made a fortnight ago and cancelled yesterday is
+   not counted. The two readings differ by exactly the week's cancellations.
+   A dash, not a nought, when the records do not reach back a week.
 2. **What to consider.** A sentence and its reason, per date. **The sentence
    never names a figure** (a test asserts that: take the date out of it and no
    digit may be left), because a suggestion carrying a number would be this
@@ -79,12 +100,26 @@ sideways scroll and no console error; Reception is refused by name.
 3. **Dates worth a look.** The soft nights first, with rooms left, of how many,
    how full, and how far out.
 
-## What it does not show yet
+4. **Pickup**, added 19 September. For every night of the window, how many of
+   the rooms sold for it were booked in the last 1, 7 and 30 days. Three
+   columns on the dates table, hidden below `sm` and `lg` and therefore still
+   shown as labelled lines in each row's card at 375px.
 
-**Pickup.** "How many of those rooms were sold in the last 1, 7 and 30 days"
-needs each booking's creation date, and no front door answers that today. The
-screen shows no pickup column rather than one it cannot fill. The ask is R1
-below; the defect is RM-1.
+   **The windows are counted back from the property's own day** and have no top
+   end: a booking taken after the business date - the audit for the 27th has
+   not run and it is already the 28th outside - was made more recently still,
+   so it belongs in the nearest window rather than in none of them. Creation
+   dates are read in the property's own time zone, never the session's
+   (root MEMORY 297).
+
+   **A window that opens before this property's booking records begin is a
+   dash**, with one sentence naming both dates. It cannot tell "booked in the
+   last 30 days" from "every booking we have", and a figure that cannot be told
+   apart from another figure is not a figure. Same shape as D17-93, where
+   available rooms start on the property's first trading day. On the demo that
+   is every window, and RM-3 in `DEFECTS.md` says exactly why.
+
+## What it does not show
 
 Competitor rates, automatic rules, forecasting past the comparison above, and
 anything that writes: **not in the first version**, by the brief.
@@ -96,7 +131,13 @@ anything that writes: **not in the first version**, by the brief.
 Date, service, what is needed and why. **The master makes these; a lane does
 not edit a shared file.**
 
-- **R1 · 18 September · revenue-management asks REPORTS and the MASTER.**
+- **R1 · ANSWERED 18 September by the master, and used on the 19th.** The
+  reports door exports `dailyFigures`, `sumDays`, `firstTradingDay`,
+  `propertyFor`, `propertyById`, `isoDateParam`, `heading` and `NIGHTS`, with
+  `DayFigures`, `Property` and `StayNight`. Pickup and the week-ago column of
+  pace are built on it and RM-1 is closed. The ask, as it was put:
+
+  **R1 · 18 September · revenue-management asks REPORTS and the MASTER.**
   Export the day's figures from `api/src/modules/reports/index.ts` so this
   service can build pickup on the server:
   `dailyFigures`, `sumDays`, `firstTradingDay`, `propertyFor`, `isoDateParam`,
@@ -168,7 +209,15 @@ npx vitest run src/modules/revenue-management src/test
 cd api; npm test -- modules/revenue-management
 ```
 
-The API suite has nothing of this service to run until R1 is answered and the
-routes exist. `src/test/boundaries.test.ts` fails if this folder loses its
+**The API suite has something to run now** (19 September):
+`api/test/modules/revenue-management/pickup.test.ts` — 7 checks, the first of
+them holding this service's pickup route and the reports service's
+`/statistics/daily` to the same `sold` on every night. It sits under
+`api/test/` because that is the only place `api/vitest.config.ts` collects
+from; it is a new folder, nobody else's file, and the same shape as the spa's
+and the laundry's. **It is outside the three paths this lane owns, and the
+master should see it as part of this work rather than find it.**
+
+`src/test/boundaries.test.ts` fails if this folder loses its
 `index.ts`, its `MODULE.md` or its `DEFECTS.md`, or if it reaches past another
 service's door.

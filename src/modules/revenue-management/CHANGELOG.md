@@ -12,6 +12,111 @@ Work that touches the core or several services still goes in the root
 
 ---
 
+## 2026-09-19 · pickup, and the week-ago column of pace (RM-1 closed)
+
+**Asked for:** the two things the first version deliberately did not build,
+because the door they needed did not exist. R1 was answered on 18 September -
+`api/src/modules/reports/index.ts` now exports `dailyFigures`, `sumDays`,
+`firstTradingDay`, `propertyFor`, `propertyById`, `isoDateParam`, `heading`
+and the **`NIGHTS`** fragment - so the reason for refusing is gone and the
+work is owed.
+
+**Shipped**
+- **This service's first server route**, and its front door is no longer empty:
+  `api/src/modules/revenue-management/pickup.ts`, a GET at
+  `/api/hotels/:code/revenue/pickup?from&to`. For every night it answers
+  `sold`, `last1`, `last7` and `last30`.
+- **It counts over the reports service's `NIGHTS`**, imported through that
+  service's door, not a second `stay_nights` of its own. `sold` is not counted
+  here at all: it is `dailyFigures().sold`, so the three pickup figures are
+  visibly subsets of a number this service did not derive. That is the whole
+  point of R1, and a test holds the two routes to the same figure night by
+  night.
+- **The windows are counted back from the property's OWN day** and have no top
+  end: a booking taken after the business date - the audit for the 27th has
+  not run and it is already the 28th outside - was made more recently still,
+  so it belongs in the nearest window rather than in none. Creation dates are
+  read in the property's time zone, never the session's (root MEMORY 297).
+- **`logic/pickup.ts`** - no query and no count. It decides one thing: when a
+  pickup figure is a figure. A window that opens before this property's
+  booking records begin cannot tell "booked in the last 30 days" from "every
+  booking we have", so it is a dash and one sentence saying why. Same shape as
+  D17-93, where available rooms start on the first trading day.
+- **The week-ago column of pace** - what is on the books for this month, less
+  every room-night of it booked in the last seven days. Null, not nought, when
+  the records do not reach back a week. It is **not a snapshot** and says so:
+  nobody wrote down what the books held last Tuesday, so a booking made a
+  fortnight ago and cancelled yesterday is not counted. The two readings
+  differ by exactly the week's cancellations.
+- **The screen**, in its existing style: three more columns on the dates
+  table, hidden below `sm`/`lg` and therefore still shown as labelled lines in
+  each row's card at 375px; one caption saying what the columns count and from
+  which day; and "A week ago" beside "Against last year" in the pace card.
+
+**Found**
+- **RM-3** - on this demo every pickup figure is a dash, and honestly so: the
+  demo is loaded in one go weeks after the business date it leaves the
+  property stopped at, so every booking it holds was recorded on 14 September
+  against a business date of 27 August. Every window opens before the first
+  record. Written up in `DEFECTS.md`.
+- **Mine, caught by the API test log:** the route asked its three queries with
+  `Promise.all` on the session's one client, and pg warned that it queues them
+  and will stop doing so in pg@9. Made sequential.
+
+**Proved** - the numbers as run, in `D:\fidato pms` on `cp6`, after the last
+edit
+- `npx tsc -b` - exit 0. `cd api; npx tsc --noEmit` - exit 0.
+- `npx vitest run src/modules/revenue-management` - **31 passed, 3 files**,
+  exit 0.
+- `cd api; npm test -- modules/revenue-management` - **7 passed, 1 file**,
+  exit 0, against a scratch database at 119 migrations with the demo loaded.
+- **The guards seen to fail, each put back and re-run green:**
+  - `neverWritesARate.test.ts` - five shapes added to `logic/pickup.ts` at
+    once (`insert into rate_calendar`, `method: "POST"`, `.patch(`, `setRate`,
+    `pushRate`); it named all five by file and line.
+  - The dash rule - `counted()` made to always answer yes: **3 of 12** in
+    `logic/pickup.test.ts` went red, naming the two partial-window cases and
+    the week-ago one.
+  - The one-definition rule - the route made to answer `d.paying` instead of
+    `d.sold`, which is the D17-72 fault exactly (a complimentary room is
+    sold): **3 of 7** API checks went red and named the night, 25 August, the
+    fixture's one complimentary stay.
+- **The window arithmetic proved against the real database** by hand, since
+  the demo cannot exercise it: with a business date of 20 September the
+  one-day window counts 0 and the seven-day window counts every room-night
+  (the records start on the 14th, exactly the boundary); with 20 October all
+  three count 0.
+- **The screen opened** at `/h/5EL/revenue-outlook`, signed in as the owner at
+  5EL, business date 27 August 2026: pace 30.6%, 158 rooms sold, 517 room
+  nights, a dash against last year, **a dash for "A week ago" with "The
+  records do not reach back a week."**; the dates table showing New 1 day, New
+  7 days and New 30 days, all dashes, under the sentence "Booking records here
+  start on Monday, 14 September 2026, and this property's own day is Thursday,
+  27 August 2026. A window that opens before the records do is shown as a
+  dash: it cannot tell what was picked up from everything on the books."
+  At 375px: `scrollWidth` 375 against a 375 viewport, nothing wider than the
+  page, every column a labelled line in the card. At 1280: nine columns, no
+  sideways scroll. Every request the screen makes is a GET and every one
+  answered 200.
+
+**Left open**
+- **RM-2 and RM-Q1 to RM-Q3** - unchanged, all the owner's.
+- **Not committed.** The working tree carries three other lanes' work in it at
+  the same time (laundry, spa, purchasing), so a commit here would sweep up
+  somebody else's. The master commits.
+- **`api/test/modules/revenue-management/pickup.test.ts` is outside the three
+  paths this lane owns** - the API suite only collects `api/test/**`, so a
+  route with no test there is a route nobody checks. New folder, nobody else's
+  file, same shape as the spa's and the laundry's. Named here so the master
+  sees it rather than finds it.
+- **The preview build** does not know the new path: `api/scripts/capture-demo.ts`
+  is the master's and would need `/revenue/pickup` recorded. Until then the
+  demo build shows the dash and its sentence rather than an error.
+
+**Commits:** none. Working tree on `cp6`.
+
+---
+
 ## 2026-09-18 · the first version: pickup, pace, soft dates and the words
 
 **Asked for:** the owner, D18-15, in their own words: revenue management
