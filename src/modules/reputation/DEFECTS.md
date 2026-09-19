@@ -88,16 +88,20 @@ time one out and to change what another saw.
 it**, pass or fail. The property carries the run's pid in its code and the
 guests carry it in their names, so nothing can be confused with anything real.
 The staff are still switched off, which takes row locks and nothing more.
-Full suite after the fix: **73 files, 1156 tests, all green.**
+Full suite after the fix: **73 files, 1156 tests, all green - twice.** The
+second run took forty minutes against the eight these normally take and
+finished clean (exit 0), which is what a contended laptop looks like rather
+than a hang: no database connection was open while it ran, and it dropped its
+own scratch database at the end.
 
 **⚠ ONE CONFOUNDER, SAID OUT LOUD.** This laptop is shared by several chats
 and the run sheet's rule is one full suite at a time; I did not check with the
 master before starting mine, and a later confirmation run took over thirty
 minutes against the eight these normally take, which means something else was
-running. So "the lock caused those two failures" is the best reading of four
-runs in one window (red, red with the lock; green without this file; green
-with the lock removed) and **not** something a contended machine can prove
-outright. The fix stands either way: the lock is real, it is global, and the
+running. So "the lock caused those two failures" is the best reading of five
+runs in one window - red and red with the lock, green without this file, and
+green twice with the lock removed - and **not** something a contended machine
+can prove outright. The fix stands either way: the lock is real, it is global, and the
 teardown it was there for was never needed.
 
 **The rule:** `alter table` inside a test is not a fixture, it is a lock every

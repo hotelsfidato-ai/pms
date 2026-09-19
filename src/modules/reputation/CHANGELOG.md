@@ -79,8 +79,9 @@ and send nothing.
   says one full suite at a time, and I did not check with the master before
   starting mine - a later confirmation run took over thirty minutes against
   the eight these normally take, so something else was running. Four runs in
-  one window point at the lock; a contended machine cannot prove it outright.
-  The fix stands either way.
+  one window point at the lock, and the suite has since gone green twice with
+  the fix in; a contended machine still cannot prove it outright. The fix
+  stands either way.
 - **REV-2: I expected `send()` to record an attempt with no address on the
   booking, and it does not.** The door checks the address BEFORE it reaches
   the receiver, so nothing that never left the building is recorded - the same
@@ -93,9 +94,12 @@ and send nothing.
 - `npx vitest run` - **450 passed, 49 files**, of which 15 are this service's
   (416 across 46 before the rebase; cp6's laundry and spa screens arrived with
   it)
-- `cd api; npm test` - **1156 passed, 73 files** (22 this service's). Two
-  earlier full runs were red in other people's files; that was REV-4, mine,
-  and it is fixed - see below.
+- `cd api; npm test` - **1156 passed, 73 files** (22 this service's), and
+  **run twice, green both times**. Two earlier full runs were red in other
+  people's files; that was REV-4, mine, and it is fixed - see below. The
+  second confirming run took forty minutes against the eight these normally
+  take and still finished clean, which is a contended laptop rather than a
+  hang.
 - `bash db/tests/run.sh` - **951 assertions passed**, 13 of them `reviews`
 - `bash db/tests/rerun.sh` - **all 120 migrations are re-runnable**, which is
   the gate that matters for a new migration (MEMORY 284, 293, 299)
