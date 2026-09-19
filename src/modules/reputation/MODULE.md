@@ -1,111 +1,144 @@
 # Reviews
 
-Each hotel's reviews from Google, TripAdvisor and the booking sites in one place, and answered.
+Ask a guest for a review after they have left, and see who has been asked.
 
-**NOT BUILT. A Coming soon page only.** On the list of what every comparable system has; the owner chose on
-16 September to give every missing service a folder and a Coming soon page.
-The page says what the service will do, what it needs before it can be built
-and what exists today. There is no working feature, no server code and no
-database table.
-
-**Folder name:** `reputation` — the word the other two places will use when it is
-built:
+**BUILT 19 September 2026** (the owner's **D18-14**), replacing the Coming soon
+page. Its brief is `docs/briefs/reputation.md`; the plan is
+`docs/BUILD-PLAN-2026-09-18.md` § 5.
 
 ```
-src/modules/reputation/            the Coming soon page, its menu entry and its address
-api/src/modules/reputation/        does not exist
-db/tests/modules/reputation.sql    does not exist
+src/modules/reputation/            the screen, its menu entry and its address
+api/src/modules/reputation/        the three routes
+db/tests/modules/reputation.sql    the database's own rules, 13 assertions
+db/migrations/120_the_review_link  PROVISIONAL NUMBER - the master settles it at merge
 ```
-
-Before any edit: ask the owner. Then claim the service in `HANDOVER.md` →
-"Folder claims". Written 16 September 2026.
 
 ---
 
-## What it would be
+## What it does
 
-Google and TripAdvisor reviews in one place (`PROGRESS.md`, item 13),
-with replies and a feedback request after each stay.
+1. **A list of departures** at this property, the last 30 days, with whether
+   each guest was asked for a review, when, and which way it went.
+2. **Asking one of them** - WhatsApp or email, picked per guest, and only
+   offered where the booking carries an address for it.
+3. **The property's review link**, typed in by the owner or an administrator.
 
----
+## ⚠ The link the owner has not given
 
-## Where it stands, and where that comes from
+**There is no review link anywhere in this repository**, and that is the whole
+point rather than an omission. The owner owes the group's Google review link
+(`docs/PARALLEL-PLAN-2026-09-18.md` § 6); until it arrives:
 
-- **What comparable systems ship as standard** — `PROGRESS.md`, "What a
-  market-leading HMS has that this does not", item 13. Domain
-  knowledge about the category, not a decision by the owner.
-- **Its Coming soon page — the owner's decision, 16 September:** a folder and a
-  Coming soon page for every service the system does not have, in one
-  "Coming soon" section at the foot of the menu, for the owner, admins and
-  general managers (root `CHANGELOG.md`, 2026-09-16).
-- **Today:** Nothing about reviews is recorded here.
+- a property has **no row** in `review_links` - not `''`, not a placeholder
+- the screen shows a **dash**, the same as any figure nobody has set
+- **no row offers to send**, and the server refuses with a sentence that says
+  there is no link and names who can add one
+- **nothing is recorded**, because a message that could never have carried a
+  link is not an attempt anybody made
+- the input box has **no placeholder** - an example in a box is an example
+  somebody copies out and sends to a guest
+
+The day the link arrives, somebody pastes it in. No deploy, no migration.
+
+## ⚠ Nothing sends yet either
+
+`canSend()` is false until the owner finishes the n8n steps
+(`docs/briefs/n8n-sending.md`). The screen says so at the top, in the sender's
+own wording, and draws no button. Both refusals exist independently: a
+connected sender is not a link, and a link is not a connected sender.
+
+## Nothing is pulled in
+
+No Google, no TripAdvisor, no booking sites (**D18-14**). The last card on the
+screen says so where a person would go looking for the reviews themselves,
+rather than leaving them to wonder why the page is empty.
 
 ---
 
 ## Screens
 
-| Menu name | Address (`routes.tsx`) | Page file | Who sees it (`nav.ts`) |
+| Menu name | Address | Page file | Who sees it |
 |---|---|---|---|
-| Reviews | `/coming-soon/reputation` | `pages/Reputation.tsx` | owner, admin, GM — the Coming soon section (`seesComingSoon`) |
+| Reviews | `/h/:code/reviews` | `pages/Reviews.tsx` | the Guests permission (`customer`) - owner, admin, GM, hotel manager, reception, accountant, viewer |
 
-The page is the shared Coming soon page (`src/pages/ComingSoon.tsx`) with
-this service's words: what it will do, what it needs, where it stands.
-Find a screen answers to "reputation", "google reviews", "tripadvisor", "feedback", "ratings". Anybody else who types the address is
-refused ("This page is not part of your role").
+In the **Front desk** section, order 60, after Work orders. **Not** in
+reception's working menu: the owner's shorter menu is the eight screens a clerk
+uses in a shift. Find a screen reaches it under "reputation", "google reviews",
+"tripadvisor", "feedback", "ratings", "review link".
 
-**What the page says it needs before it can be built** — the owner's
-questions, not the code's:
+### Three questions, three answers
 
-1. Each hotel's Google Business profile and its booking-site accounts.
-2. Guest messages, for the feedback request.
-3. Who replies to reviews at each hotel.
+| | Who | Where it is decided |
+|---|---|---|
+| **Look** | `customer: view` | the matrix, copied into `api/src/modules/reputation/reputation.ts` and held to it by a test |
+| **Ask** | `customer: create` - so the accountant and a viewer read and send nothing | the same |
+| **Set the link** | `hotel: edit` - the owner and an administrator | the same |
 
----
-
-## What it would lean on
-
-- **guest-messaging** — the feedback request.
-- **guests** — who stayed.
-
----
-
-## Rules that will bind it
-
-- **Ask the owner before building anything** (`HANDOVER.md` § 3 and § 5).
-- **Claim the folder** in `HANDOVER.md` → "Folder claims" before the first edit.
-- **Never invent a figure; a missing one is a dash, never a zero**
-  (`HANDOVER.md` § 5).
-- **Credentials live in the server's environment** (`api/.env`) or the n8n on
-  the server — never in the repo, a screen or a chat (`HANDOVER.md` § 5).
-- **A new migration needs a number claimed in `HANDOVER.md` first**
-  (`src/test/migrationNumbers.test.ts`); reach other services only through
-  their `index.ts` (`src/test/boundaries.test.ts`).
+The owner answered all three on 19 September, asked with a recommendation.
+**Reviews sits on the Guests permission and widens nobody**: everybody who can
+open it can already open the Guests screen and read the same names, numbers and
+stays. A resource of its own would have meant a new column in the master's
+`src/lib/permissions.ts` to say what the matrix already says.
 
 ---
 
-## When it is built
+## The server
 
-- Replace `pages/Reputation.tsx` with the real screens, at their real addresses.
-- Move the menu entry out of the Coming soon section into the section it
-  works in, with the working menus it belongs to (`navigation.test.ts` pins
-  every role's list, and the Coming soon list).
-- If not every hotel has it, a module switch per hotel: one migration on
-  `hotel_modules_known` (`041`, `087`) and the two lists in
-  `api/src/modules/admin/moduleSwitches.ts`.
+| | |
+|---|---|
+| `GET /api/hotels/:code/reviews` | the link, who may do what, whether anything can send, and the departures |
+| `PUT /api/hotels/:code/reviews/link` | set it, or clear it back to nothing with `""` |
+| `POST /api/hotels/:code/reviews/:id/ask` | ask one departed guest |
+
+**Everything leaves through `api/src/sending.ts`** and nothing else. This
+service never calls n8n, never holds the secret, and **never writes
+`messages_sent`** - the sender records the attempt itself. "Who was asked" is
+read back out of that table rather than kept a second time here, so the screen
+and the record of what was sent cannot disagree.
+
+The wording the guest reads lives in n8n. This sends `data.link` and
+`data.reference` and no sentence at all.
 
 ---
+
+## What it leans on
+
+- **`api/src/sending.ts`** - the one door out. The master's.
+- **`reservations`** - read for departures. Read only, and never written.
+- **`app.hotel_day` / `app.hotel_clock`** (migration 113) - the 30 days and
+  every moment shown are the property's own, not the server's.
+
+## Rules that bind it
+
+- **No default anything.** A link nobody has set is a dash, never a guess.
+- **After check-out, never before.** The server refuses any other status.
+- **Never invent a figure or an address.**
+- **Nothing is recorded when nothing was attempted.**
+
+---
+
+## Requests
+
+**None outstanding.** One shared file was touched and it is named here so the
+master sees it at merge:
+
+- `src/components/app/navigation.test.ts` - "Reviews" removed from the `SOON`
+  list, because a service that is built cannot also be coming soon. Exactly
+  what the purchasing chat did on 18 September, and the comment beside it says
+  so. **Nothing else in the master's files was changed** - no new resource, no
+  new section, no edit to `permissions.ts`, `navigation.ts`, `server.ts` or
+  `sending.ts`.
+
+## Not in this version
+
+Pulling reviews in from anywhere, replying to them, scoring or sentiment, and
+chasing somebody who did not answer (`docs/briefs/reputation.md`).
 
 ## Gates
 
-`npx tsc -b --force` and `npx vitest run`, judged by the exit code —
-`src/test/boundaries.test.ts` fails if this folder loses its `index.ts` or
-this `MODULE.md`; `src/components/app/navigation.test.ts` pins the Coming
-soon section.
-
----
-
-## Requests from other services
-
-None. To ask for something here, add a line below — date, your service, what
-you need and why — and raise it with the owner; nothing is built here
-unasked.
+```
+npx tsc -b --force
+npx vitest run src/modules/reputation src/test
+cd api; npm test -- modules/reputation
+bash db/tests/run.sh
+```
