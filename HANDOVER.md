@@ -79,6 +79,12 @@ the master owes     a one-page "set up your hotel" guide per GM (D21-47); financ
                     a list of what is hard-wired to Fidato (D21-27); the POS release
                     onto 79e358e when the owner says yes
 on hold             the channel manager (D21-32)
+THE LAPTOP IS EMPTY 21 Sep (D21-80, D21-82): no demo guests, bookings, bills, menu, rates,
+                    treatments or price lists — only the 18 rooms, 2 room types, logins,
+                    tables and the pricing basis. `npm run demo` rebuilds the demo; the
+                    copy from before is D:idato-pgackupsidato-before-clearing-2026-09-21.dump.
+                    A test that expects demo data on the dev database will now find none.
+menu                "Guests & CRM" is a section (D21-79); Central CRM left Coming soon
 GOING LIVE          docs/GO-LIVE-PLAN.md (the second interview, D21-49 … D21-74). Live
                     is 79e358e on `main`, ONE hotel (5EL), and nobody uses it for real:
                     its 5 bookings and 6 orders are tests. Three stages; the first real

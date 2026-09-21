@@ -142,3 +142,5 @@ The plan these make is `docs/GO-LIVE-PLAN.md`.
 |---|---|---|
 | D21-79 | Where the CRM lives in the menu | **A "Guests & CRM" section now**: Guests, Companies and agents, Guest messages, Reviews. "Central CRM" leaves Coming soon; its screens join the section as they are built |
 | D21-80 | The laptop's demo data | **Cleared** — guests, bookings, bills, spa and laundry records. Settings kept (rooms, rates, staff, the menu, price lists). Backup first: `D:\fidato-pg\backups\fidato-before-clearing-2026-09-21.dump` |
+| D21-81 | "Show the finished services in their own category now" — on live? | **The laptop only.** Live keeps its menu until stage 2 (D21-24 stands) |
+| D21-82 | The laptop's demo SETTINGS | **Cleared too:** the menu (dishes, sections, sizes, add-ons), the room rates on both room types, the spa's treatments and therapist, the laundry price list. Kept: the 18 rooms, the room types, the logins, the restaurant's tables, the pricing basis (the owner's own decision of 16 September). The backup of D21-80 holds all of it |
