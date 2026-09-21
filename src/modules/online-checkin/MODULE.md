@@ -128,6 +128,20 @@ soon section.
 
 ## Waiting on the master — 19 September
 
+**Answered 21 September, by the master:**
+1. **Done** — mounted exactly as asked (`src/App.tsx`), and `src/App.test.tsx`
+   now opens `/g/…` signed out and fails if the route goes (root MEMORY 310).
+2. **At merge, not before** — a reserved number is a gap the migration-number
+   test refuses (root MEMORY 302). Write it as the next free number in your
+   copy; the master renumbers at merge if another lane took it first.
+   **But first read `docs/architecture/online-checkin.md`** — the half behind
+   the code waits on the owner's D21-6 to D21-11.
+3. **Done** — `src/lib/api.ts` reads `error`, then `reason`, then `message`.
+   Your own workaround can go.
+4. Noted; not numbered in root MEMORY — it bites tests that build an
+   `ApiError` by hand, and the rule is already OCI-1's: test through the
+   browser's real object, not a constructed one.
+
 Each of these is one line or one number in a file this lane may not change.
 Nothing behind the code can be built until the first two are answered.
 

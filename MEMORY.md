@@ -6539,6 +6539,34 @@ copy will see of theirs.**
 
 ---
 
+### 310 · MINE: the guest's page was merged, tested and on the map for two days, and no guest could open it
+
+21 September. The guest-page chat built `/g/:token` on the 19th and exported
+it as `publicRoutes`, separately from its staff routes, because the guest has
+no sign-in and the page must sit OUTSIDE `RequireSession`. `App.tsx` is the
+master's, so the chat wrote the one line it needed as request #1 in its
+MODULE.md ("Waiting on the master"), proved it locally, and reverted it.
+
+I merged the branch, ran the gates, green, and marked the guest page built on
+the system map. **I never added the line.** Every guest link fell through to
+the catch-all. Found while designing the half behind the code, by opening a
+link signed out - not by any gate. The same MODULE.md also asked for
+`src/lib/api.ts` to read a refusal's `message`; the page's one sentence to the
+guest ("codes cannot be sent yet") reached the screen as "Request failed
+(503)." Both fixed the same day; the page opened signed out with the booking,
+the dates and the code form, and no menu.
+
+**Why nothing caught it:** the module's tests render `GuestPage` directly, so
+they pass whether or not the app routes to it. The same class as 308: a door
+built for someone, and the last step - connecting it - left to nobody.
+
+**The rules: (1) merging a lane includes reading its "Waiting on the master"
+list and doing or answering every line of it, the same day. (2) A route is
+proven by opening its ADDRESS in the running app, as the person it is for -
+here, signed out - never by rendering the component.**
+
+---
+
 ### 309 · The date bug was in one screen, not five — and I told the owner five, and put it on a map, without reading the code
 
 21 September. The spa builder reported that banquet's day arithmetic was off

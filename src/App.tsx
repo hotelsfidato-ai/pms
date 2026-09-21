@@ -62,7 +62,9 @@ import { routes as laundryRoutes } from "@/modules/laundry/routes";
 import { routes as leadsRoutes } from "@/modules/leads/routes";
 import { routes as loyaltyRoutes } from "@/modules/loyalty/routes";
 import { routes as marketingRoutes } from "@/modules/marketing/routes";
-import { routes as onlineCheckinRoutes } from "@/modules/online-checkin/routes";
+import {
+  routes as onlineCheckinRoutes, publicRoutes as guestPagePublicRoutes,
+} from "@/modules/online-checkin/routes";
 import { routes as paymentsRoutes } from "@/modules/payments/routes";
 import { routes as revenueManagementRoutes } from "@/modules/revenue-management/routes";
 import { routes as reputationRoutes } from "@/modules/reputation/routes";
@@ -269,6 +271,17 @@ export default function App() {
       <Router>
         <Routes>
           <Route path="/signin" element={<SignInRoute />} />
+          {/* ⚠ THE GUEST'S OWN PAGE, OUTSIDE THE SESSION GATE — mounted 21
+              September, two days after the guest-page chat asked for exactly
+              this line, proved it, and reverted it because this file is the
+              master's. Until then /g/:token fell through to the catch-all:
+              the page was merged and NO GUEST COULD OPEN IT (root MEMORY 310).
+
+              It is outside RequireSession on purpose. A guest has no sign-in
+              and never will; the token in the address is the whole credential
+              (migration 114), and everything behind the six-digit code is
+              refused by the SERVER, not by this router. */}
+          {guestPagePublicRoutes}
 
           <Route element={<RequireSession />}>
             {/* Each service's screens come from its own routes file

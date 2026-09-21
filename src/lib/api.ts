@@ -298,7 +298,7 @@ export async function api<T>(path: string, init: RequestInit = {}): Promise<T> {
 
   if (!response.ok) {
     const body = (await response.json().catch(() => null)) as
-      | { error?: string; reason?: string }
+      | { error?: string; reason?: string; message?: string }
       | null;
     /* `error` first, because that is what every route written before
        the till returns and what `setHousekeeping` reads. `reason` is
@@ -306,7 +306,7 @@ export async function api<T>(path: string, init: RequestInit = {}): Promise<T> {
        fault. Falling through to neither is still a real failure. */
     throw new ApiError(
       response.status,
-      body?.error ?? body?.reason ?? `Request failed (${response.status}).`,
+      body?.error ?? body?.reason ?? body?.message ?? `Request failed (${response.status}).`,
       body ?? undefined,
     );
   }
@@ -351,11 +351,11 @@ export async function downloadFile(path: string): Promise<string> {
 
   if (!response.ok) {
     const body = (await response.json().catch(() => null)) as
-      | { error?: string; reason?: string }
+      | { error?: string; reason?: string; message?: string }
       | null;
     throw new ApiError(
       response.status,
-      body?.error ?? body?.reason ?? `Request failed (${response.status}).`,
+      body?.error ?? body?.reason ?? body?.message ?? `Request failed (${response.status}).`,
       body ?? undefined,
     );
   }

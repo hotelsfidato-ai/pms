@@ -66,6 +66,22 @@ describe("the session guard", () => {
     expect(screen.queryByRole("navigation")).toBeNull();
   });
 
+  it("lets a signed-out guest open their own page, and shows them no menu", async () => {
+    /* Root MEMORY 310: the page was merged and its own tests passed while
+       no guest could reach it — they render the component, not the address.
+       This opens the ADDRESS, signed out, as the guest does. */
+    useSession.setState({ status: "signed-out", scope: null, hotels: [], hotelId: null });
+    go("/g/a-guest-token");
+
+    render(<App />);
+
+    expect(
+      await screen.findByText(/one moment|this link is not usable/i),
+    ).toBeDefined();
+    expect(screen.queryByRole("heading", { name: /^sign in$/i })).toBeNull();
+    expect(screen.queryByRole("navigation")).toBeNull();
+  });
+
   it("shows the signed-in person and their role, not a role picker", async () => {
     render(<App />);
 

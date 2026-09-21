@@ -50,6 +50,54 @@ Write it **as you go**, not at the end from memory. Copy this shape:
 
 ---
 
+## 2026-09-21 · Laundry and spa reach the room bill, the date bug, the guest page that nobody could open, and two designs
+
+**Asked for:** "fix the laundry charge and spa close"; then "fix the date bug in
+the five live screens and start architecting the central CRM and also the
+online check-in". Nothing pushed, nothing deployed (the owner's rule of 19
+September).
+
+**Shipped**
+- Laundry's Charge button posts to the guest's bill through finance's
+  `postCharge`; the spa closes a treatment onto the room bill under the spa's
+  own tax rule, with a "Charge to room" button on the diary (D18-21, D18-22) —
+  `9af60ec`
+- `addDays` in `src/lib/format.ts`, UTC-safe; banquet uses it — `fc6b9e0`
+- The guest's page `/g/:token` mounted in `src/App.tsx`, outside the sign-in
+  gate; `src/lib/api.ts` keeps a refusal's `message`
+- `docs/architecture/central-crm.md` and `docs/architecture/online-checkin.md` —
+  designs only, eleven questions for the owner (D21-1 to D21-11)
+
+**Found** (MEMORY 308, 309, 310)
+- `postCharge` was built on the 18th for laundry and the spa and connected to
+  neither for three days (308)
+- The date bug was in one screen, not five; the other four were right (309)
+- The guest's page was merged on the 19th and never routed: no guest could
+  open a link (310). Found by opening one signed out
+- Designing check-in: once a code is answered, the LINK alone would open
+  everything behind it, for the life of the link (D21-6); Form C shows
+  today's passport against past stays
+
+**Proved**
+- At `9af60ec`: web 497, API 1204, database 951 assertions, 120 migrations
+  re-runnable. At `fc6b9e0`: web 509. Now: `tsc -b --force` exit 0, web 510
+- Every new guard failed with its bug put back: laundry's 2 new tests (the
+  old 23 still passed), spa "no spa rate", 4 date checks in Asia/Kolkata, the
+  guest route test
+- On screen: LD-0003 on Rohit Deshpande's bill (₹240, 5%); the spa's refusal
+  at 5EL naming Settings → Tax; the guest page signed out with no menu. The two
+  guest links made for that check are revoked
+
+**Left open**
+- The owner's answers to D21-1 to D21-11
+- Demo data this left on 5EL: the ₹240 laundry line, a booked ₹2,500
+  treatment (27 Aug 11:00) — the owner's to keep or clear
+- Banquet's screen not opened (the module is off at 5EL)
+
+**Commits:** `9af60ec`, `fc6b9e0`, and this one
+
+---
+
 ## 2026-09-18 (night) · Purchasing merged, and one run sheet for every chat still to come
 
 **Asked for:** "compose all the work — I want to run multiple agents which can

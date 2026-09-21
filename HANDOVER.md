@@ -47,7 +47,35 @@ seam); a test enforces it.
 
 ## 2 · Where it stands
 
-### 18 September, evening — read this first
+### 21 September — read this first
+
+```
+NOTHING LEAVES THIS MACHINE  the owner's rule of 19 Sep (CLAUDE.md). No push, no Action,
+                    no deploy. cp6 is 42 commits and 7 migrations (114–120) ahead of
+                    production (79e358e, 18 Sep). Commit locally; the local gates are
+                    the proof.
+merged 19 Sep       laundry, spa, revenue-management, accounting, reviews, guest
+                    messages, marketing (phase 1), the guest's page (as far as the code)
+connected 21 Sep    laundry's Charge and the spa's close go to the room bill through
+                    finance's postCharge (MEMORY 308); the guest's page is ROUTED at
+                    /g/:token, outside the sign-in gate — it was merged and unreachable
+                    for two days (MEMORY 310)
+date bug            one screen (banquet), fixed with addDays in src/lib/format.ts,
+                    tested in Asia/Kolkata (MEMORY 309)
+designs, no code    docs/architecture/central-crm.md and online-checkin.md — questions
+                    D21-1 to D21-11 are with the owner, unanswered. Build neither
+                    before the answers.
+gates, 21 Sep       at 9af60ec: web 497, API 1204, database 951, 120 migrations
+                    re-runnable. Now: tsc clean, web 510
+still open          reviews: sentBy missing; the guest page asks for a code without
+                    asking canSend() first; a rate-limited answer shows a blank line;
+                    the spa's permission matrix and server disagree (SPA-2)
+the owner owes      n8n steps (WhatsApp token expires ~27 Sep); SU keys; the Google
+                    review link; CRS voucher FH-2026-00002; when things may leave
+                    this machine; D21-1 … D21-11
+```
+
+### 18 September, evening
 
 ```
 production runs     79e358e  (18 Sep)     the owner said yes; deployed live, 97 commits,
@@ -188,6 +216,11 @@ npx vitest run          197 passed, 13 files
 > on, and what the owner still owes. It is kept current; everything below it in
 > this section is the history of how the system got here, and is still true,
 > but it is not the queue any more.
+>
+> **21 September: next is the owner's answers to D21-1 … D21-11**
+> (`docs/architecture/`). Online check-in's first step behind the code is
+> D21-6 — without it, a verified link alone opens the bill. The three answers
+> below were given on 19 September (D18-18 … D18-21).
 >
 > **Three answers are outstanding** and are named in the run sheet: whether
 > housekeeping and the front desk should be able to raise a purchase request
