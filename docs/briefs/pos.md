@@ -24,7 +24,8 @@ an add-on group or an add-on** — no screen, no route, no import. Only
 `api/scripts/load-demo.ts` and the tests ever insert into migration 045's four
 tables. And 5 Elements' menu is the demo's (D21-39): the owner is about to put
 in the real one, and without this no real dish can have a Half / Full or an
-extra cheese.
+extra cheese. (Nobody uses live for real yet — its 6 orders are tests, root
+MEMORY 312 — and the owner still wants this first and on its own, D21-56.)
 
 **What to build:**
 
@@ -66,8 +67,6 @@ and nothing else in that file**; name it in your hand-back.
 **Proof:** open the Menu screen, add a dish with two variations and a shared
 add-on group, then ring it on the order pad and see it on the kitchen slip.
 And a test that a variation or add-on typed with no price is refused.
-
----
 
 ---
 

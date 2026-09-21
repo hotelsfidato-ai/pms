@@ -6539,6 +6539,30 @@ copy will see of theirs.**
 
 ---
 
+### 312 · MINE: I told the owner real bills were rung against the demo menu, from a note six days old, and they decided on it
+
+21 September. `src/modules/pos/MODULE.md` said, as of 15 September, that 5
+Elements' menu was the demo's "and real bills are rung against them". In the
+first interview I put that to the owner as fact — *"Real bills are being rung
+against a fake menu on the live system today"* — and the owner answered D21-44
+on it: ship the menu work on its own, ahead of everything else.
+
+An hour later, allowed a read-only look at the live server, I found 5 bookings
+and 6 restaurant orders in total, and the owner confirmed all of them are
+tests. **Nobody uses live for real.** The owner was asked again on the true
+facts and chose the same (D21-56), so nothing was lost this time. It still
+decided a release order on something I had not checked.
+
+**The third of the day** — 309 (a count of screens), 311 (what the guests
+table holds), 312 (what live is used for) — and all three the same fault: a
+document's description of the system repeated as the system's state.
+
+**The rule: a claim about PRODUCTION put to the owner is read from production
+that day, or said to be unchecked. A MODULE.md line is a note, dated; it is
+not a measurement.**
+
+---
+
 ### 311 · MINE: I designed the CRM on "one person, one record" from a migration's comment, and never read how a record is made
 
 21 September. `central-crm.md` said the central record of a person "already

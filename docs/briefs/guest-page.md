@@ -84,6 +84,19 @@ merge if another lane took it.
 
 **Nothing new names Fidato** (D21-27, `README.md`).
 
+**Added by the go-live interview (D21-59 to D21-63, D21-72):**
+- **Spa and laundry requests appear only where that module is switched on.**
+  5 Elements, the first hotel live, has neither (D21-63).
+- **A privacy notice before the first question** — what is asked, why, who
+  sees it, how long it is kept. The master drafts the words and the owner's
+  advisor checks them (D21-61); leave a place for them.
+- **Room cards come out as a printable sheet per hotel** — hotel name, room
+  number, the QR — which the owner prints however they choose (D21-62).
+- **The link stays on pms.fidatohotels.com** for now (D21-60), read from the
+  server's settings as today, never written into the code.
+- The six-digit code is asked for by the guest; whether it is held back by the
+  booking's WhatsApp tick (D21-72) is being confirmed with the owner.
+
 ---
 
 ## ⚠ READ THIS BEFORE ANYTHING ELSE

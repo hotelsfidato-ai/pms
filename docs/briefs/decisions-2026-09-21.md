@@ -98,3 +98,36 @@ choice, recorded as given, not an error to correct.
 | D21-46 | Tally ledger names | **The owner gets them from their accountant.** The day-book CSV until then |
 | D21-47 | The six hotels not yet set up | **Each GM sets up their own hotel** on the screens that exist; the owner checks each before it opens. The master writes each GM a one-page guide |
 | D21-48 | The plan's own test — somebody new, alone, books, checks in, takes a payment, checks out | **Before go-live, a real receptionist, on this laptop**, the owner watching; what they stick on is fixed before it reaches a hotel |
+
+## Going live (the second interview, 21 September — with a read-only look at the live server)
+
+The plan these make is `docs/GO-LIVE-PLAN.md`.
+
+| # | Question | Answer |
+|---|---|---|
+| D21-49 | How the code reaches the server | **Pushed to GitHub on a deploy day only** — the server pulls as it always has; "nothing leaves this machine" lifts for that push and returns straight after |
+| D21-50 | Who types the commands | **The owner, one at a time; the master guides** and reads each output |
+| D21-51 | May the master look at the live server? | **Yes, read-only.** Done 21 September |
+| D21-52 | 5 Elements' 5 bookings and 6 orders on live | **Tests — cleared before the first real day**, a backup first, the owner's yes on the day |
+| D21-53 | The shared demo@ login (the only login at 5 Elements) | **Everyone gets their own login and role; demo@ is switched off — never deleted — at go-live** |
+| D21-54 | The six hotels that do not exist on live (no provisioning key there either) | **5 Elements first, then one hotel at a time** as each GM is ready; the owner makes the key once, the master guiding |
+| D21-55 | One release or stages | **Stages, a few days apart:** the menu; then staff screens; then what guests see |
+| D21-56 | D21-44 asked again: the master had said real bills were rung against the demo menu, and there are none (root MEMORY 312) | **Still first, and on its own** |
+| D21-57 | What decides the first real day | **The new-receptionist test passing ON LIVE** after every stage is deployed (D21-48 moved from the laptop to live); then the owner picks the day |
+| D21-58 | When a stage is deployed | **Daytime, when the owner is free** (about an hour); nobody uses live yet |
+| D21-59 | WhatsApp templates | **The owner starts them now; the master writes the wording** — `docs/go-live/whatsapp-templates.md` |
+| D21-60 | The address a guest's link carries | **pms.fidatohotels.com for now** |
+| D21-61 | The privacy notice on the guest page | **The master drafts it; the owner's advisor checks it.** The page shows it before the first question |
+| D21-62 | Room cards | **The system prints a sheet per hotel; the owner chooses how it is printed** |
+| D21-63 | What 5 Elements offers | **Neither a spa nor laundry** — both stay switched off there; the guest page offers no spa or laundry request where they are off |
+| D21-64 | 5 Elements' 18 rooms on live | **Correct.** The master lists them for a final yes before day one |
+| D21-65 | 5 Elements' GST (room 5% below ₹7,500, 18% from ₹7,500; restaurant 5%) | **The accountant confirms before the first real bill** |
+| D21-66 | Banquet at 5 Elements | **Yes, it has a hall — stays on**; real halls and packages before the first event |
+| D21-67 | Who makes the logins | **The owner makes the GM's; the GM makes everybody else's** on People |
+| D21-68 | Stale claims and old copies | **Laundry and spa released (done); old copies left** — they are linked to the shared packages |
+| D21-69 | The guest-messages chat | **Takes the first free slot** of the three |
+| D21-70 | After the first real day | **A read-only look at the server each day the owner opens a chat, for two weeks** |
+| D21-71 | Teaching 5 Elements' staff | **A one-page sheet per role**, checked against the receptionist test |
+| D21-72 | WhatsApp's own rule: a business may start a conversation only with somebody who agreed | **A "guest agreed to WhatsApp" tick on each booking.** The desk asks on phone and walk-in bookings; an unticked booking gets email if it has one, else nothing. Changes D21-35 accordingly. ⚠ **Not the owner's words, to confirm with them:** the master reads the six-digit code as outside the tick, because the guest asks for it themselves on their own page |
+| D21-73 | Languages | **English only** for now |
+| D21-74 | When a second language comes | **Chosen on the booking, with a default per hotel.** Nothing is built for it until there is a second language |

@@ -82,6 +82,13 @@ write the next free number in your copy; the master renumbers if needed).
    blacklist and opt-out. **Only the owner, an administrator and the GM** see
    it. The leads app's conversations are a link, never a copy.
 
+7. **The WhatsApp tick on every booking (D21-72).** "Guest agreed to
+   WhatsApp", on the booking and the walk-in — the screens you already hold for
+   step 1. The desk asks on phone and walk-in bookings; a booking from a
+   channel arrives unticked. Guest messages reads it later (its chat takes the
+   next free slot): unticked means email if there is one, else nothing. Your
+   job is the tick and its column, with a test that it is saved and read back.
+
 **Not yours:** anything from the leads app or the CRS (their sources are not
 connected), and anything that sells the product — a buyer gets their own
 separate copy (D21-12), so there is **no group or tenant column** to add.

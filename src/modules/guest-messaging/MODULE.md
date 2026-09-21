@@ -124,6 +124,12 @@ answers to one question.
   kind of link — a fixed card per ROOM (D21-7) — so name yours for what it is,
   a booking's link.
 - **Master, 2 (`server.ts`):** at merge, when there is a sweep to start.
+- **Owner, 21 September, later (D21-72, D21-73):** WhatsApp only to a booking
+  ticked "guest agreed to WhatsApp" — the CRM chat adds the tick; an unticked
+  booking gets email if it has one, else nothing. So `channelFor` gains one
+  condition. **English only**; a second language, when it comes, is chosen on
+  the booking with a hotel default (D21-74). The template names and their
+  fields are `docs/go-live/whatsapp-templates.md`.
 
 ### To the OWNER - open, 19 September, each with a recommendation
 

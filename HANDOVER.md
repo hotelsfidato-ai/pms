@@ -79,6 +79,12 @@ the master owes     a one-page "set up your hotel" guide per GM (D21-47); financ
                     a list of what is hard-wired to Fidato (D21-27); the POS release
                     onto 79e358e when the owner says yes
 on hold             the channel manager (D21-32)
+GOING LIVE          docs/GO-LIVE-PLAN.md (the second interview, D21-49 … D21-74). Live
+                    is 79e358e on `main`, ONE hotel (5EL), and nobody uses it for real:
+                    its 5 bookings and 6 orders are tests. Three stages; the first real
+                    day comes after the receptionist test passes on live. A push to
+                    GitHub happens on a deploy day only (D21-49); the owner types, the
+                    master guides (D21-50)
 gates, 21 Sep       at 9af60ec: web 497, API 1204, database 951, 120 migrations
                     re-runnable. Now: tsc clean, web 510
 still open          reviews: sentBy missing; the guest page asks for a code without
@@ -1090,6 +1096,10 @@ chat); the demo's rates and menu are what the hotel is selling; the
 ---
 
 ## 9 · Deploying — only when the owner says so
+
+> **From 21 September the plan is `docs/GO-LIVE-PLAN.md`.** The runbook below
+> is the shape every deploy follows (backup, pull, launch.sh, website, look);
+> the server now tracks `main`, not `cp6`.
 
 Server first, then the website: the new screens need the new server (a
 "Got it" sent to the old one is refused). At a quiet moment at the desk —
