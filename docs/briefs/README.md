@@ -161,6 +161,11 @@ New-Item -ItemType Junction -Path "D:\fidato-pos\api\node_modules" -Target "D:\f
   the sign-in screen's development buttons use.
 - **Your own ports:** `PORT` for the API, `VITE_API_URL` and
   `VITE_ALLOW_DEV_AUTH=1` in your copy's `.env.local`. Vite finds its own port.
+  ⚠ **Pick the API port from `npm run claims`, not from memory** (21
+  September: the POS and CRM chats both ran on 8797, root MEMORY 314). Every
+  claim names its port; take one no live claim names, and write it in yours.
+  The master's copy is **8787**. Taken today: **8793** online check-in, **8797**
+  CRM. A new chat starts at **8800** and counts up.
 - **Copy the ROOT `.env`** from the main checkout (the website's public
   settings) or 31 web tests fail on the sign-in screen. **Never the
   `api/.env`.**

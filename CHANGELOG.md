@@ -96,6 +96,27 @@ September).
 
 **Commits:** `9af60ec`, `fc6b9e0`, `0a98086`
 
+### Evening: three chats started, and the POS chat's work merged
+
+**Asked for:** "start the three chats now". The check-in chat was messaged
+(it already existed); the CRM and POS chats were started from one-click
+buttons.
+
+**Merged:** `pos/menu-variations` (45eb087, built on production 79e358e so it
+can go live on its own, D21-44/56) as `429890d`. Sizes on each dish, add-on
+groups shared across dishes, ₹0 preferences typed by a person, and both
+imports. No migration. The chat's answers from the owner are D21-83 to
+D21-87. Its own gates: web 380, API 1046, database 837, build clean.
+
+**Found at review, not in the branch:** the new menu routes, like the live
+ones, check only WHICH HOTEL a person works at, not their role (PMS-2, the
+owner's D12: deferred to its own project). With everyone about to get their
+own login (D21-53), any staff member could change a price by calling the
+server directly. Put to the owner.
+
+**Also:** a port rule in `docs/briefs/README.md` (MEMORY 314), the hidden
+pane trap (MEMORY 315). POS-15 open: a dish with no GST rate shows "0%".
+
 ### Later still: going live, the privacy notice, the staff pages, and the spa's GST
 
 **Asked for:** an interview on going live and anything open (D21-49 to D21-78),

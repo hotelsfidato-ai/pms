@@ -144,3 +144,13 @@ The plan these make is `docs/GO-LIVE-PLAN.md`.
 | D21-80 | The laptop's demo data | **Cleared** — guests, bookings, bills, spa and laundry records. Settings kept (rooms, rates, staff, the menu, price lists). Backup first: `D:\fidato-pg\backups\fidato-before-clearing-2026-09-21.dump` |
 | D21-81 | "Show the finished services in their own category now" — on live? | **The laptop only.** Live keeps its menu until stage 2 (D21-24 stands) |
 | D21-82 | The laptop's demo SETTINGS | **Cleared too:** the menu (dishes, sections, sizes, add-ons), the room rates on both room types, the spa's treatments and therapist, the laundry price list. Kept: the 18 rooms, the room types, the logins, the restaurant's tables, the pricing basis (the owner's own decision of 16 September). The backup of D21-80 holds all of it |
+
+## The POS chat's questions (21 September, answered in that chat; recorded here at merge)
+
+| # | Question | Answer |
+|---|---|---|
+| D21-83 | How the import carries sizes and add-ons | **Two files:** the menu file gains a Variation column (one row per variation) and its add-on groups; a separate add-ons file (Group, Option, Price, Choose at least, Choose at most) is imported first |
+| D21-84 | The Terminal and sized dishes | **The Terminal opens the same dish dialog as Tables and the Till** (before, it could not ring a sized dish at all); a sized dish's tile shows "-" |
+| D21-85 | Removing a dish's last variation | **"The way Bhaaji Pau works"**: it asks for the dish's own price, typed |
+| D21-86 | A dish added with a blank price | **Refused**, as a variation or option is (POS-14: it used to land at ₹0.00) |
+| D21-87 | ₹0 add-ons on the guest's bill | **Printed like any other add-on** (unchanged) |
