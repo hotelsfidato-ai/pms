@@ -1116,9 +1116,13 @@ chat); the demo's rates and menu are what the hotel is selling; the
 > ```
 >
 > then open **http://localhost:5678**; close the window to close the link.
+> **The owner has this as one click: `Open n8n.cmd` on their desktop** (21
+> September) — it opens the link and the browser by itself; keep its window
+> open while using n8n. The n8n address itself now says so (deployed from a
+> copy in /tmp; the server's /opt/fidato is untouched and catches up with
+> stage 2).
 > ⚠ **Never run `n8n.sh allow` with a home address again** — that reopens
-> the screen. Until stage 2 carries the new `deploy/n8n.sh`, the refusal page
-> still shows the old "run allow" sentence; ignore it.
+> the screen.
 >
 > **From 21 September the plan is `docs/GO-LIVE-PLAN.md`.** The runbook below
 > is the shape every deploy follows (backup, pull, launch.sh, website, look);

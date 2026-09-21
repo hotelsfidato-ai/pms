@@ -419,7 +419,7 @@ LOCKED="        allow $ADMIN_IP;
 # through nginx. The refusal must then say THAT, not "run allow with your
 # address", which would undo the choice.
 if [ "$ADMIN_IP" = "127.0.0.1" ]; then
-  LOCKED_MSG="The n8n screen is closed to the internet.\n\nThe owner opens it through the secure link from their own computer (HANDOVER, section 9).\n"
+  LOCKED_MSG="This address is closed on purpose - n8n is not broken.\n\nOpen n8n with the 'Open n8n' icon on the owner's desktop.\nIt makes a secure link to the server and opens n8n by itself.\n"
 else
   LOCKED_MSG="This n8n answers only the internet address saved on the server, and you are coming from \$remote_addr.\n\nIf that is you, connect to the server with SSH and run:\n\n    sudo ALLOW_FROM=\$remote_addr /opt/fidato/deploy/n8n.sh allow\n"
 fi
@@ -530,10 +530,17 @@ if [ "$MODE" = "install" ]; then install_backups; fi
 printf "\n\033[32m  n8n is running at https://%s\033[0m\n" "$N8N_DOMAIN"
 case "$ACCESS" in
   webhooks)
-    printf "\n  The screen answers only %s. Webhook addresses answer anybody:\n" "$ADMIN_IP"
-    printf "    https://%s/webhook/...\n" "$N8N_DOMAIN"
-    printf "\n  When your internet address changes, the screen tells you the new one.\n"
-    printf "  Connect with SSH and run:  sudo ALLOW_FROM=\${SSH_CLIENT%%%% *} deploy/n8n.sh allow\n\n" ;;
+    if [ "$ADMIN_IP" = "127.0.0.1" ]; then
+      printf "\n  The screen is closed to the internet. Webhook addresses answer anybody:\n"
+      printf "    https://%s/webhook/...\n" "$N8N_DOMAIN"
+      printf "\n  Open n8n with the 'Open n8n' icon on the owner's desktop (an SSH tunnel\n"
+      printf "  to 127.0.0.1:5678). Do NOT run 'allow' with a home address: it reopens it.\n\n"
+    else
+      printf "\n  The screen answers only %s. Webhook addresses answer anybody:\n" "$ADMIN_IP"
+      printf "    https://%s/webhook/...\n" "$N8N_DOMAIN"
+      printf "\n  When your internet address changes, the screen tells you the new one.\n"
+      printf "  Connect with SSH and run:  sudo ALLOW_FROM=\${SSH_CLIENT%%%% *} deploy/n8n.sh allow\n\n"
+    fi ;;
   lock)
     printf "\n  Everything, webhooks too, answers only %s.\n" "$ADMIN_IP"
     printf "  To let outside services in again:  sudo deploy/n8n.sh webhooks\n\n" ;;

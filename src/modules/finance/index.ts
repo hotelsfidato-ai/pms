@@ -5,3 +5,7 @@ export { getFolio, listOpenFolios } from "./data/folios";
 export { getFolioBalance } from "./data/postings";
 export { FolioPanel } from "./flows/FolioPanel";
 export { TaxRulesCard } from "./flows/TaxRulesCard";
+/* The bill as it stands (D21-10): one definition on the server
+   (app.stay_bill), one printed layout — the desk's and the guest's page's. */
+export { getStayBill, type StayBill, type StayBillLine } from "./data/bill";
+export { BillPrint } from "./flows/BillPrint";

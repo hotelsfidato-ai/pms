@@ -210,6 +210,28 @@ folios.get("/:code/stays/:id/postings", async (c) => {
   return body ? c.json(body) : c.json({ error: "Not found." }, 404);
 });
 
+/* THE BILL AS IT STANDS (D21-10) — what the desk prints and the guest's
+   page shows, from ONE definition: `app.stay_bill` in migration 123. The
+   hotel's own name and GSTIN, the live lines, tax by each line's own rate.
+   The printed bill used to build itself in the browser with a made-up
+   GSTIN and a fixed 2.5% (21 September). Row security decides whose stay
+   this session may read, as for every other finance read. */
+folios.get("/:code/stays/:id/bill", async (c) => {
+  const body = await withSession(c.get("subject"), async (client) => {
+    const hotelId = await hotelIdFor(client, c.req.param("code"));
+    if (!hotelId) return null;
+    const { rows } = await client.query<{ bill: unknown }>(
+      `select app.stay_bill(r.id) as bill
+         from reservations r
+        where r.hotel_id = $1 and r.id = $2`,
+      [hotelId, c.req.param("id")],
+    );
+    return rows[0]?.bill ?? null;
+  });
+
+  return body ? c.json(body) : c.json({ error: "Not found." }, 404);
+});
+
 
 /* ══════════════════════════════════════════════════════════════════
    SPLIT BILLING

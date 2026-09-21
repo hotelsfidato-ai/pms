@@ -114,7 +114,9 @@ is why the backup comes first.
 - [ ] The test data cleared from live — a backup first, the owner's yes on the
       day (D21-52)
 - [ ] demo@ switched off (never deleted) once the real logins work (D21-53)
-- [ ] Finance's one definition of a bill, for the guest page
+- [x] Finance's one definition of a bill, for the guest page — **done 21 September**
+      (`app.stay_bill`, migration 123); it also fixed the desk's printed bill's
+      made-up GSTIN and fixed 2.5%
 
 **Then, in order**
 1. Stage 3 switched on.

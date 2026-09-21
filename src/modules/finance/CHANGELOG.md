@@ -8,7 +8,36 @@ project, still goes in the root `CHANGELOG.md`.
 
 ---
 
-## 2026-09-16/17 · the /in-house balance, FIN-1, and FIN-2 traced
+## 2026-09-21 · the bill as it stands — one definition, and the printed bill's made-up GSTIN
+
+**Asked for:** the owner's D21-10 (a guest sees exactly the bill the desk
+prints) and, approved the same day, fixing the desk's printed bill.
+
+**Found:** the Bill tab's Invoice print built itself in the browser and
+printed "5 Elements By Fidato Hotels · Akkalkot · GSTIN 27AAAAA0000A1Z5" —
+the demo's made-up number — at every hotel; "CGST 2.5% / SGST 2.5%" whatever
+the lines were taxed at (a room over ₹7,500 is 18%); and counted a reversing
+line while leaving out the one it reversed, so a correction came off twice.
+Live on 18 September's version too; nobody had been handed one.
+
+**Shipped:** `app.stay_bill(reservation)` (migration 123, invoker rights, so
+row security decides who reads it) — the hotel's own name, address and GSTIN,
+the ledger's live lines, one CGST/SGST pair per rate, totals, what was paid.
+`GET /:code/stays/:id/bill`. `flows/BillPrint.tsx` draws it and computes
+nothing; the desk's Invoice dialog uses it, and the guest's page is to.
+Exported from the front door.
+
+**Proved:** `api/test/modules/finance/stayBill.test.ts` (2) — with reversing
+lines let back in, it fails; `billPrint.test.tsx` (4) — with the demo GSTIN put
+back, two fail. On the running laptop: the route answers with the hotel's own
+record.
+
+**Still open:** the Add charge window's preview still says "CGST 2.5% +
+SGST 2.5%" for every charge; `hotels.cgst_rate`/`sgst_rate` still default to
+2.5 (019). The print says "Tax Invoice" with no invoice number — the owner's
+to answer.
+
+
 
 **Asked for:** 16 September, the brief's first question: which of the two
 `/in-house` figures is wrong ("a query, not an opinion"). 17 September, from the

@@ -7,7 +7,7 @@ import {
 import { cn } from "@/lib/cn";
 import { money, dateShort } from "@/lib/format";
 import {
-  CHARGE_CATEGORIES, PAYMENT_METHODS, taxOn, splitTax, roundOff,
+  CHARGE_CATEGORIES, PAYMENT_METHODS, taxOn, splitTax,
   type ChargeCategory, type PaymentMethod,
 } from "@/lib/rules";
 import {
@@ -21,6 +21,8 @@ import { checkOut, checkOutAllowed, earlyArrival } from "@/modules/front-desk";
 import { type Posting, type Stay } from "@/data/repositories";
 import { listStayFolios, openFolio, transferPosting, listBillingCompanies, type StayFolio } from "@/modules/finance/data/folios";
 import { LateCheckOutFlow } from "@/modules/front-desk";
+import { getStayBill } from "@/modules/finance/data/bill";
+import { BillPrint } from "./BillPrint";
 
 /* ══════════════════════════════════════════════════════════════════
    FLOWS B AND C — charge, settle, check out
@@ -115,7 +117,7 @@ export function FolioPanel({
           businessDate={businessDate}
           onDone={refresh}
         />
-        <InvoiceDialog stay={stay} lines={lines} balance={due} />
+        <InvoiceDialog hotelId={hotelId} stayId={stay.id} />
         <SplitBillButton hotelId={hotelId} stayId={stay.id} onDone={refresh} />
       </div>
 
@@ -576,20 +578,21 @@ function SettleDialog({
   );
 }
 
-function InvoiceDialog({
-  stay, lines, balance,
-}: {
-  stay: Stay;
-  lines: Posting[];
-  balance: number;
-}) {
-  const live = lines.filter((p) => !p.reversed && p.kind !== "payment");
-  const net = live.reduce((t, p) => t + p.amount, 0);
-  const tax = live.reduce((t, p) => t + p.tax, 0);
-  const { rounded, adjustment } = roundOff(net + tax);
+/* THE PRINTED BILL (D21-10). It fetches the one definition of the bill,
+   `app.stay_bill`, only when the dialog opens, and draws it with the same
+   layout the guest's page uses. It used to add up the lines here, with a
+   made-up GSTIN and a fixed 2.5% printed on every bill, and counted a
+   reversing line while leaving out the line it reversed (21 September). */
+function InvoiceDialog({ hotelId, stayId }: { hotelId: string; stayId: string }) {
+  const [open, setOpen] = useState(false);
+  const bill = useQuery({
+    queryKey: ["stay-bill", hotelId, stayId],
+    queryFn: () => getStayBill(hotelId, stayId),
+    enabled: open,
+  });
 
   return (
-    <Dialog>
+    <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>
         <Button variant="ghost" size="sm">
           <Printer className="size-4" />
@@ -597,46 +600,15 @@ function InvoiceDialog({
         </Button>
       </DialogTrigger>
       <DialogContent title="Tax invoice" description="Print preview">
-        {/* Georgia is retained for printed documents, and only there. */}
-        <div className="print-serif bg-white border border-grey-200 rounded-md p-6">
-          <p className="text-xl text-ink-900">Tax Invoice</p>
-          <p className="text-base text-grey-600">5 Elements By Fidato Hotels</p>
-          <p className="text-xs text-grey-500 mt-1">
-            Akkalkot, Solapur District · GSTIN 27AAAAA0000A1Z5
-          </p>
-
-          <div className="mt-5 pt-4 border-t border-grey-200 space-y-1 text-base">
-            <Row label="Guest" value={stay.guest} />
-            <Row label="Room" value={`${stay.roomNumber} · ${stay.roomType}`} />
-            <Row label="Stay" value={`${dateShort(stay.arrival)} – ${dateShort(stay.departure)}`} />
-          </div>
-
-          <ul className="mt-4 pt-4 border-t border-grey-200 space-y-1.5">
-            {live.map((p) => (
-              <li key={p.id} className="flex justify-between gap-4 text-base">
-                <span className="text-grey-700 min-w-0 truncate">{p.description}</span>
-                <span className="tabular shrink-0">{money(p.amount)}</span>
-              </li>
-            ))}
-          </ul>
-
-          <div className="mt-4 pt-4 border-t border-grey-200 space-y-1">
-            <Row label="Net" value={money(net)} />
-            <Row label="CGST 2.5%" value={money(tax / 2)} muted />
-            <Row label="SGST 2.5%" value={money(tax / 2)} muted />
-            {adjustment !== 0 && (
-              <Row label="Round off" value={money(adjustment)} muted />
-            )}
-            <div className="pt-1.5 border-t border-grey-200">
-              <Row label="Total" value={money(rounded)} bold />
-            </div>
-            <Row
-              label={balance > 0 ? "Outstanding" : "Paid"}
-              value={money(Math.abs(balance))}
-              muted
-            />
-          </div>
-        </div>
+        {bill.data ? (
+          <BillPrint bill={bill.data} title="Tax Invoice" />
+        ) : bill.isError ? (
+          <p className="text-sm text-brand-red">The bill could not be read. Try again.</p>
+        ) : bill.isFetched ? (
+          <p className="text-sm text-grey-600">This stay has no bill yet.</p>
+        ) : (
+          <p className="text-sm text-grey-600">One moment…</p>
+        )}
       </DialogContent>
     </Dialog>
   );
