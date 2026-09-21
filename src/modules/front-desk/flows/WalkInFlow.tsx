@@ -5,12 +5,12 @@ import { cn } from "@/lib/cn";
 import { money } from "@/lib/format";
 import { rateOverrideNeedsReason, canConfirmWalkIn } from "@/lib/rules";
 import {
-  Button, Field, Input, NativeSelect, StatusPill, Switch, toast,
+  Button, Field, Input, NativeSelect, Switch, toast,
   Dialog, DialogContent,
 } from "@/components/ui";
 import { createWalkIn } from "@/modules/front-desk/data/operations";
-import { listStays } from "@/modules/front-desk/data/stays";
 import { getRoom } from "@/data/repositories";
+import { ReturningGuest, ConsentTicks } from "@/modules/guests";
 
 /* ══════════════════════════════════════════════════════════════════
    FLOW D — the walk-in at 23:40
@@ -19,9 +19,12 @@ import { getRoom } from "@/data/repositories";
    most systems get wrong by treating it as a booking followed by a
    check-in. It is ONE act, and it ends in one button.
 
-   The guest field searches existing guests and creates a new one in
-   the same input — a clerk with someone standing at the desk should
-   not have to decide which mode they are in first.
+   The guest is typed once. A returning guest is recognised by their
+   PHONE OR EMAIL, never by their name (the owner, 21 September): the
+   list that used to open under the name matched anybody sharing a
+   surname, at this hotel only, and picking from it still made a new
+   guest record - a duplicate. Now the phone or email suggests "stayed
+   with the group N times - same person?", and the clerk decides.
    ══════════════════════════════════════════════════════════════════ */
 
 export function WalkInFlow({
@@ -36,6 +39,14 @@ export function WalkInFlow({
   const qc = useQueryClient();
 
   const [guestName, setGuestName] = useState("");
+  /* Optional, like the booking form's. They let a returning guest be
+     suggested, a blacklisted one warned of, and the two ticks be kept
+     against something (D21-20, D21-21, D21-72, D21-22). */
+  const [phone, setPhone] = useState("");
+  const [email, setEmail] = useState("");
+  const [returning, setReturning] = useState<{ id: string; name: string } | null>(null);
+  const [whatsapp, setWhatsapp] = useState(false);
+  const [noOffers, setNoOffers] = useState(false);
   const [nights, setNights] = useState(1);
   /* NO GUARD MEANT A DOUBLE PRESS BOOKED TWICE. The button stayed live
      through the request, so two taps sent two walk-ins: the first put
@@ -77,12 +88,6 @@ export function WalkInFlow({
     room.data !== null && room.data !== undefined
     && party > room.data.maxOccupancy;
 
-  const existing = useQuery({
-    queryKey: ["guest-search", hotelId, guestName],
-    queryFn: () => listStays(hotelId, { search: guestName }),
-    enabled: open && guestName.trim().length >= 2,
-  });
-
   /* THE RATE IS THE HOTEL'S, NOT THIS FILE'S.
 
      This read `RACK[room.data.type] ?? 4099` — a table of two names
@@ -107,14 +112,10 @@ export function WalkInFlow({
     overrideReason,
   });
 
-  /* Distinct guests already known by that name — a walk-in is often a
-     returning guest, and re-typing them creates a duplicate. */
-  const matches = [
-    ...new Map((existing.data ?? []).map((s) => [s.guest, s])).values(),
-  ].filter((s) => s.guest.toLowerCase().includes(guestName.trim().toLowerCase()));
-
   const reset = () => {
     setGuestName(""); setNights(1); setAdults(2); setChildren(0);
+    setPhone(""); setEmail(""); setReturning(null);
+    setWhatsapp(false); setNoOffers(false);
     setRatePlan("CP"); setRate(""); setOverrideReason("");
     /* Cleared too. A source left over from the last walk-in would be
        attributed to the next guest, silently, and nobody would find it. */
@@ -129,12 +130,7 @@ export function WalkInFlow({
         description={`Room ${roomNumber} · arriving ${date}`}
       >
         <div className="space-y-4">
-          {/* Search and create in the same field */}
-          <Field
-            label="Guest"
-            hint="Type a name - existing guests appear as you type"
-            required
-          >
+          <Field label="Guest" required>
             {({ id }) => (
               <Input
                 id={id}
@@ -146,24 +142,23 @@ export function WalkInFlow({
             )}
           </Field>
 
-          {matches.length > 0 && (
-            <ul className="-mt-2 border border-grey-200 rounded-md divide-y divide-grey-100 max-h-32 overflow-y-auto scrollbar-quiet">
-              {matches.slice(0, 4).map((s) => (
-                <li key={s.id}>
-                  <button
-                    type="button"
-                    onClick={() => setGuestName(s.guest)}
-                    className="w-full flex items-center gap-2 px-3 py-2 text-left hover:bg-grey-50 transition-colors duration-150"
-                  >
-                    <span className="text-base text-ink-900 truncate">{s.guest}</span>
-                    <StatusPill tone="neutral" className="ml-auto shrink-0">
-                      stayed before
-                    </StatusPill>
-                  </button>
-                </li>
-              ))}
-            </ul>
-          )}
+          <div className="grid grid-cols-2 gap-3">
+            <Field label="Phone" hint="Optional">
+              {({ id }) => (
+                <Input id={id} type="tel" value={phone}
+                  onChange={(e) => { setPhone(e.target.value); setReturning(null); }} />
+              )}
+            </Field>
+            <Field label="Email" hint="Optional">
+              {({ id }) => (
+                <Input id={id} type="email" value={email}
+                  onChange={(e) => { setEmail(e.target.value); setReturning(null); }} />
+              )}
+            </Field>
+          </div>
+
+          <ReturningGuest hotelId={hotelId} phone={phone} email={email}
+            chosen={returning} onChoose={setReturning} />
 
           {/* ── WILL THEY FIT ───────────────────────────────────────
               A walk-in is the ONE path where the clerk is looking at
@@ -287,6 +282,9 @@ export function WalkInFlow({
             description="Placed away from stairwells and service corridors. Not announced at the desk."
           />
 
+          <ConsentTicks whatsapp={whatsapp} onWhatsapp={setWhatsapp}
+            noOffers={noOffers} onNoOffers={setNoOffers} />
+
           <Field
             label="Rate per night"
             hint={
@@ -360,11 +358,16 @@ export function WalkInFlow({
                 overrideReason, businessDate: date,
                 businessSource, marketSegment: segment, salesPerson,
                 isSingleLady: singleLady,
+                phone, email,
+                ...(returning ? { guestId: returning.id } : {}),
+                whatsappAgreed: whatsapp, noOffers,
               });
               setBusy(false);
               if (res.ok) {
                 toast.success(
-                  `${guestName} is in house`,
+                  /* The name as it stands on file - the returning guest's,
+                     when the clerk said "same person". */
+                  `${res.data?.guest ?? guestName} is in house`,
                   `Room ${roomNumber} · ${nights} night${nights === 1 ? "" : "s"}`,
                 );
                 onOpenChange(false);

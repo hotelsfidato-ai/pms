@@ -117,7 +117,15 @@ describe("each person's menu", () => {
     const section = sidebarFor("gm", "5EL", ALL_ON).find((s) => s.label === "Guests & CRM");
     expect(section?.items.map((i) => i.label)).toEqual([
       "Guests", "Companies and agents", "Guest messages", "Reviews",
+      /* The CRM's screens join it as they are built (D21-79): 21 September,
+         for the owner, an administrator and the GM only (D21-4). */
+      "Guest 360", "Possible same person",
     ]);
+    const clerk = sidebarFor("front_desk", "5EL", ALL_ON).find((s) => s.label === "Guests & CRM");
+    expect(clerk?.items.map((i) => i.label) ?? []).not.toContain("Guest 360");
+    expect(mayReach("front_desk", "/crm/guests")).toBe(false);
+    expect(mayReach("hotel_manager", "/crm/same-person")).toBe(false);
+    expect(mayReach("admin", "/crm/guests")).toBe(true);
   });
 
   it("still lets reception FIND what left its menu", () => {

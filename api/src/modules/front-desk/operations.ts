@@ -792,6 +792,14 @@ operations.post("/:code/walk-ins", async (c) => {
        walk-in, and the source-mix report is built from exactly this. */
     businessSource?: string; marketSegment?: string; salesPerson?: string;
     isSingleLady?: boolean;
+    /* The CRM's (docs/briefs/crm.md; the owner, 21 September). A phone and
+       an email, both optional, so a returning guest can be suggested, a
+       blacklisted one warned of, and the two ticks below kept against
+       something. `guestId` is the returning guest the clerk confirmed
+       (D21-20), checked again below; `whatsappAgreed` is D21-72;
+       `noOffers` is D21-22, kept against the phone and email themselves. */
+    phone?: string; email?: string; guestId?: string;
+    whatsappAgreed?: boolean; noOffers?: boolean;
   };
 
   const result = await withSession(c.get("subject"), async (client): Promise<Outcome | null> => {
@@ -800,6 +808,8 @@ operations.post("/:code/walk-ins", async (c) => {
 
     const guestName = body.guestName?.trim();
     if (!guestName) return refuse("A walk-in needs a guest name.");
+    const phone = body.phone?.trim() || null;
+    const email = body.email?.trim() || null;
 
     const nights = body.nights ?? 1;
     if (nights < 1) return refuse("A stay is at least one night.");
@@ -928,10 +938,29 @@ operations.post("/:code/walk-ins", async (c) => {
       );
     }
 
-    const { rows: guestRows } = await client.query<{ id: string }>(
-      "insert into guests (full_name) values ($1) returning id",
-      [guestName],
-    );
+    /* THE RETURNING GUEST (D21-20), the last refusal. The database asks
+       again whether the phone or email typed still suggests exactly that
+       person; only then does it fill a blank phone or email on their record,
+       and it writes nothing when it refuses - so this is still above the
+       first write. */
+    let guestId: string | null = null;
+    if (body.guestId) {
+      const { rows: same } = await client.query<{ id: string | null }>(
+        "select app.use_returning_guest($1::uuid, $2, $3)::text as id",
+        [body.guestId, phone, email]);
+      if (!same[0]?.id) {
+        return refuse(
+          "That guest no longer matches the phone or email typed. Check the "
+          + "suggestion again, or check them in as a new guest.");
+      }
+      guestId = same[0].id;
+    } else {
+      const { rows: guestRows } = await client.query<{ id: string }>(
+        "insert into guests (full_name, phone, email) values ($1, $2, $3) returning id",
+        [guestName, phone, email],
+      );
+      guestId = guestRows[0]!.id;
+    }
 
     /* ONE REFERENCE, FROM ONE PLACE (RES-2, migration 092) — the last door to
        join, 16 September. This was the second inline copy of the generator:
@@ -952,11 +981,11 @@ operations.post("/:code/walk-ins", async (c) => {
           adults, children, occupancy, agreed_rate, status, source,
           meal_plan, notes,
           business_source, market_segment, sales_person, is_single_lady,
-          booking_source_id, commission_pct)
+          booking_source_id, commission_pct, whatsapp_agreed)
        values ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,'checked_in','walk_in',$11,$12,
-               $13,$14,$15,$16,$17,$18::numeric)
+               $13,$14,$15,$16,$17,$18::numeric,$19)
        returning id`,
-      [hotelId, refRows[0]?.reference, guestRows[0]?.id, room.room_type_id,
+      [hotelId, refRows[0]?.reference, guestId, room.room_type_id,
        businessDate, checkOut, body.adults ?? 1, body.children ?? 0,
        (body.adults ?? 1) + (body.children ?? 0), offered,
        body.ratePlan === "Room Only" ? "RO" : body.ratePlan ?? null, notes,
@@ -967,9 +996,14 @@ operations.post("/:code/walk-ins", async (c) => {
        body.marketSegment?.trim() || null,
        body.salesPerson?.trim() || null,
        body.isSingleLady === true,
-       channel[0].id, channel[0].commission_pct],
+       channel[0].id, channel[0].commission_pct,
+       body.whatsappAgreed === true],
     );
     const stayId = made[0]!.id;
+
+    if (body.noOffers === true) {
+      await client.query("select app.record_no_offers($1, $2)", [phone, email]);
+    }
 
     /* 'arrival', not 'walk_in'. ra_reason_valid does not list the
        latter and should not: a walk-in IS an arrival — the guest turns

@@ -11,7 +11,9 @@ import {
 } from "@/components/ui";
 import { getInventory, getTariff, type Tariff } from "@/modules/inventory";
 import { createBooking } from "@/modules/reservations/data/groups";
-import { listCompanies, listBookingSources } from "@/modules/guests";
+import {
+  listCompanies, listBookingSources, ReturningGuest, ConsentTicks,
+} from "@/modules/guests";
 
 /* ══════════════════════════════════════════════════════════════════
    BOOKING SEVERAL ROOMS
@@ -77,6 +79,12 @@ export default function NewBookingPage() {
   const [guestName, setGuestName] = useState("");
   const [phone, setPhone] = useState("");
   const [email, setEmail] = useState("");
+  /* The returning guest the clerk confirmed (D21-20), and the two ticks the
+     desk asks on a phone booking (D21-72, D21-22). Typing the phone or the
+     email again clears the choice: it was made about what was typed. */
+  const [returning, setReturning] = useState<{ id: string; name: string } | null>(null);
+  const [whatsapp, setWhatsapp] = useState(false);
+  const [noOffers, setNoOffers] = useState(false);
   /* ⚠ TWO QUESTIONS, TWO FIELDS, because the database has always asked
      two and this form asked one.
 
@@ -185,6 +193,9 @@ export default function NewBookingPage() {
       ...(expected ? { expectedArrival: expected } : {}),
       checkIn: from, checkOut: to,
       ...(groupName.trim() ? { groupName: groupName.trim() } : {}),
+      ...(returning ? { guestId: returning.id } : {}),
+      whatsappAgreed: whatsapp,
+      noOffers,
       lines: lines.map((l) => ({
         roomTypeId: l.roomTypeId, mealPlan: l.mealPlan,
         adults: l.adults, children: l.children, rooms: l.rooms,
@@ -240,7 +251,7 @@ export default function NewBookingPage() {
                 <Field label="Phone">
                   {(f) => (
                     <Input {...fieldProps(f)} value={phone} type="tel"
-                      onChange={(e) => setPhone(e.target.value)}
+                      onChange={(e) => { setPhone(e.target.value); setReturning(null); }}
                       className="h-12 text-base" />
                   )}
                 </Field>
@@ -250,7 +261,7 @@ export default function NewBookingPage() {
                 <Field label="Email">
                   {(f) => (
                     <Input {...fieldProps(f)} value={email} type="email"
-                      onChange={(e) => setEmail(e.target.value)}
+                      onChange={(e) => { setEmail(e.target.value); setReturning(null); }}
                       className="h-12 text-base" />
                   )}
                 </Field>
@@ -276,6 +287,9 @@ export default function NewBookingPage() {
                   )}
                 </Field>
               </div>
+
+              <ReturningGuest hotelId={hotelId} phone={phone} email={email}
+                chosen={returning} onChoose={setReturning} />
 
               <div className="grid gap-3 sm:grid-cols-2">
                 {/* ⚠ THE SECOND QUESTION, and it IS optional. Most
@@ -332,6 +346,9 @@ export default function NewBookingPage() {
                   )}
                 </Field>
               </div>
+
+              <ConsentTicks whatsapp={whatsapp} onWhatsapp={setWhatsapp}
+                noOffers={noOffers} onNoOffers={setNoOffers} />
 
               {totalRooms > 1 && (
                 <Field label="Group name"

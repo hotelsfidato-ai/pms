@@ -14,6 +14,7 @@ import { CheckInFlow } from "@/modules/front-desk/flows/CheckInFlow";
 import { StayActions } from "@/modules/front-desk/flows/StayActions";
 import { FolioPanel } from "@/modules/finance";
 import { StayMarks } from "@/modules/front-desk/flows/StayMarks";
+import { GuestMarks } from "@/modules/front-desk/flows/GuestMarks";
 import { GroupRoomsList } from "@/modules/reservations";
 
 /* ══════════════════════════════════════════════════════════════════
@@ -151,6 +152,9 @@ function StayBody({
           {/* The toggle, not a mark — it CHANGES the guest rather than
               reporting them, so it sits beside the marks, not in them. */}
           {stay.guestId && <VipToggle hotelId={hotelId} stay={stay} />}
+          {/* The CRM's: stayed with the group before, the WhatsApp tick,
+              and Guest 360 for the three who may open it. */}
+          <GuestMarks hotelId={hotelId} stay={stay} />
         </div>
 
         {/* ── The act, then everything else ──────────────────────────

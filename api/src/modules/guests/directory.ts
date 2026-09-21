@@ -81,13 +81,6 @@ directory.get("/:code/guests", async (c) => {
           where fp.hotel_id = $1 and ${LIVE}
           group by f.reservation_id
        ),
-       charges as (
-         select f.reservation_id, sum(fp.amount + fp.tax_amount) as amount
-           from folio_postings fp
-           join folios f on f.id = fp.folio_id
-          where fp.hotel_id = $1 and ${LIVE} and fp.category <> 'payment'
-          group by f.reservation_id
-       ),
        /* One person cannot be in two rooms on the same night. Any pair
           of live stays under one name whose date ranges intersect is
           worth a look before anyone merges them. */
@@ -112,13 +105,15 @@ directory.get("/:code/guests", async (c) => {
               max(m.check_out) filter (where m.check_out <= $2::date)::text as last_stay,
               min(m.check_in)  filter (where m.check_in  >  $2::date
                                          and m.status <> 'cancelled')::text as next_stay,
-              coalesce(sum(charges.amount), 0)::text            as total_spend,
+              /* ONE DEFINITION OF WHAT A STAY WAS CHARGED, shared with Guest
+                 360 (the owner, 21 September): app.stay_charged, migration
+                 "one guest, one record". Its body is the CTE that stood here. */
+              coalesce(sum(app.stay_charged(m.id)), 0)::text   as total_spend,
               coalesce(sum(spend.amount), 0)::text              as open_balance,
               array_agg(distinct m.source_label)                as sources,
               bool_or(o.key is not null)                        as overlapping
          from mine m
          left join spend   on spend.reservation_id   = m.id
-         left join charges on charges.reservation_id = m.id
          left join overlapping_names o on o.key = m.key
         group by m.key
         order by count(*) desc, min(m.full_name)`,

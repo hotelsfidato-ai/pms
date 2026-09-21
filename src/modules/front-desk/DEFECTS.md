@@ -14,6 +14,19 @@ entries stay here: they are the reason the fault does not come back.
 
 ## Open — not fixed
 
+### FD-8 · The walk-in refuses a room the board shows Free: "Somebody is already in that room"
+
+**Found** — 21 September, the CRM chat, taking a walk-in on screen in its own
+copy (`fidato_crm`, the demo loaded that day). Room 208 at 5 Elements showed
+FREE on Rooms; the walk-in into it was refused "Somebody is already in that
+room". In the database `rooms.occupancy_status` was `occupied`, with one
+unreleased assignment and nobody in house tonight - the walk-in checks the
+column, the board reads the stays. Room 209 took the same walk-in.
+
+**What was done** — nothing: not investigated (outside the CRM's job). Whether
+the demo loader leaves the column wrong, or the column can drift in real use,
+is the next front-desk chat's first question.
+
 ### FD-5 · Rooms and Calendar show the skeleton forever for a hotel with no rooms
 
 **Found** — 16 September, reading `StayView.tsx` while fixing FD-6. **Not yet

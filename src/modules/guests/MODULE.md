@@ -136,6 +136,19 @@ What `index.ts` exports, and who uses each (grep of `@/modules/guests`,
 | `listBookingSources` | reservations (`pages/NewBooking.tsx`) |
 | `listCompanies` | reservations (`pages/NewBooking.tsx`), channel manager (`pages/ChannelManager.tsx`) |
 | `setGuestVip` | front desk (`flows/StayDrawer.tsx`) |
+| `ReturningGuest`, `ConsentTicks` | reservations (`pages/NewBooking.tsx`), front desk (`flows/WalkInFlow.tsx`) - the CRM's suggestion and ticks, 21 September |
+| `stayedWords` | crm (both pages), front desk (`flows/GuestMarks.tsx`) |
+| `phoneKey`, `emailKey`, `refusesOffers`, type `NoOffers` | nobody yet - for marketing's gate (`src/modules/crm/MODULE.md`, Requests) |
+
+**21 September - the Central CRM, phase 1.** One guest, one record: the
+returning-guest suggestion, joins, the blacklist, "no offers" and Guest 360.
+Their server routes are in this service, `api/src/modules/guests/people.ts`
+(mounted from `index.ts`); the whole of it is described in
+`src/modules/crm/MODULE.md`. Two things here changed with it: a booking or a
+walk-in no longer ALWAYS inserts a guest - a clerk may confirm an earlier one
+(D21-20) - and "total spend" on the Guests screen is read from
+`app.stay_charged`, the one definition Guest 360 shares (same figure, one
+place).
 
 `listCompanies` is keyed by a name slug, not a company id — right for a list,
 wrong as a picker into anything that wants a company (MEMORY 83).

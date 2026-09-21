@@ -135,3 +135,41 @@ async function call<T>(
     throw error;
   }
 }
+
+/* ── What the desk may know about the guest on a stay ──────────────
+   From the CRM (docs/briefs/crm.md): how many times they stayed with the
+   group BEFORE this stay - a number and nothing else (D21-13) - and
+   whether they agreed to WhatsApp (D21-72), which the desk may change
+   here at any time (the owner, 21 September). */
+
+export interface GuestMarks {
+  stayedBefore: number;
+  whatsappAgreed: boolean;
+}
+
+export async function getGuestMarks(hotelId: string, stayId: string): Promise<GuestMarks | null> {
+  if (!hotelId || !stayId) return null;
+  try {
+    return await api<GuestMarks>(`/api/hotels/${hotelId}/stays/${stayId}/guest-marks`);
+  } catch {
+    /* A stay the stand-in data made up, or the line down: no marks, rather
+       than a panel that will not open. */
+    return null;
+  }
+}
+
+export async function setWhatsappAgreed(
+  hotelId: string, stayId: string, agreed: boolean,
+): Promise<Result<{ agreed: boolean }>> {
+  try {
+    return await api(`/api/hotels/${hotelId}/stays/${stayId}/whatsapp`, {
+      method: "POST", body: JSON.stringify({ agreed }),
+    });
+  } catch (error) {
+    if (error instanceof ApiError) {
+      const p = error.body as { reason?: string } | undefined;
+      return { ok: false, reason: p?.reason ?? error.message };
+    }
+    throw error;
+  }
+}
