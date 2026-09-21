@@ -109,6 +109,22 @@ answers to one question.
 2. **At merge**, `guestMessaging.jobs.start()` / `.stop()` in `server.ts`, once
    there is a sweep to start.
 
+### Answered 21 September
+
+- **Owner, 1:** **every future booking** gets the confirmation on switch-on day
+  — not the 48-hour recommendation (D21-33) — **spread out, soonest arrival
+  first**, at the pace the WhatsApp account allows; that pace is the owner's
+  number to give, so ask for it, never guess it (D21-34).
+- **Owner, 2:** WhatsApp where the booking has a number, email where it has
+  only an address, neither where it has neither (D21-35) — as recommended.
+- **Master, 1 (the migration number):** at merge, not before (root MEMORY 302).
+  Write it as the next free number in your copy. `app.guest_link_issue` stays
+  yours to write, in the same shape as 114's functions; the master reviews it
+  at merge beside `guestDoor.ts`. Note the guest's page is building a second
+  kind of link — a fixed card per ROOM (D21-7) — so name yours for what it is,
+  a booking's link.
+- **Master, 2 (`server.ts`):** at merge, when there is a sweep to start.
+
 ### To the OWNER - open, 19 September, each with a recommendation
 
 1. **Does the confirmation reach bookings made BEFORE sending was switched on?**

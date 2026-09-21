@@ -12,6 +12,65 @@ the gates. This file is only what is yours.
 
 ---
 
+## 21 September — sizes and add-ons on the Menu. THIS IS YOUR JOB NOW
+
+**The owner's answers are D21-38 to D21-45** in
+`docs/briefs/decisions-2026-09-21.md`. The rest of this brief is background.
+
+**What is wrong.** The order pad already lets a waiter choose a dish's
+variation and its add-ons (`flows/DishDialog.tsx`, `lib/pricing.ts`), and the
+Menu screen switches add-ons on and off. But **nothing can CREATE a variation,
+an add-on group or an add-on** — no screen, no route, no import. Only
+`api/scripts/load-demo.ts` and the tests ever insert into migration 045's four
+tables. And 5 Elements' menu is the demo's (D21-39): the owner is about to put
+in the real one, and without this no real dish can have a Half / Full or an
+extra cheese.
+
+**What to build:**
+
+1. **"Add variation" on each dish** on the Menu screen (D21-40): a name and a
+   price; rename, reprice, remove. A dish with variations has no price of its
+   own — the variation carries it (`lib/pricing.ts` already says so).
+2. **Add-on groups made once, attached to many dishes** (D21-41): the group's
+   name, its options and prices, how many a guest may choose (045's
+   `min_select` / `max_select`), and which dishes offer it.
+3. **"Preferences" — ₹0 options** (D21-42) such as no onion, less spicy, Jain,
+   printed on the kitchen slip like any add-on. **₹0 is typed by a person,
+   never a default**: an option with no price typed is refused, not saved as
+   zero (no default prices, `HANDOVER.md` § 5).
+4. **The menu import carries variations and add-on groups** (D21-43) — the
+   owner will import the real menu, and the buttons are for changes afterwards.
+
+**⚠ THIS GOES LIVE ON ITS OWN (D21-44)**, before the 43 commits on `cp6` that
+wait for check-in and the CRM. So **build on what is live, not on `cp6`:**
+
+```powershell
+# the owner's PC, PowerShell, in D:\fidato pms — a copy from the LIVE commit
+git worktree add "..\fidato-pos-menu" -b pos/menu-variations 79e358e
+```
+
+`79e358e` is production (18 September). Nothing in `src/modules/pos`,
+`api/src/modules/pos` or the package files has changed on `cp6` since, so your
+work merges into both. **Aim for no migration** — 045's tables already hold
+everything above; a migration numbered on top of production would collide
+with `cp6`'s 114–120. If you find you cannot avoid one, stop and ask the
+master first. The master merges your branch onto production for the owner's
+yes, and into `cp6`.
+
+**The import's columns are `MENU_SPEC` in `src/lib/importSpec.ts`** — a
+master's file. For this job the master grants you **`MENU_SPEC` and its tests,
+and nothing else in that file**; name it in your hand-back.
+
+**Nothing new names Fidato** (D21-27, `README.md`).
+
+**Proof:** open the Menu screen, add a dish with two variations and a shared
+add-on group, then ring it on the order pad and see it on the kitchen slip.
+And a test that a variation or add-on typed with no price is refused.
+
+---
+
+---
+
 ## What you own
 
 ```

@@ -87,13 +87,6 @@ export const IS_DEV = import.meta.env.DEV;
  *  create tenants should not be reachable in production because somebody
  *  happens to hold the right role — it should not be there at all. The
  *  route is gated separately in App.tsx, because hiding a link has never
- * 
- * this is the the sercer sectiosa nda needs to hold complina de and i need ot 
- * this she shnnot need sto do some bull shite 
- * 
- * awd
- * 
- * jtosm
  *  been access control. */
 const visible = (role: Role, item: NavItem): boolean => {
   if (item.devOnly && !IS_DEV) return false;

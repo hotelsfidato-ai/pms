@@ -6539,6 +6539,32 @@ copy will see of theirs.**
 
 ---
 
+### 311 · MINE: I designed the CRM on "one person, one record" from a migration's comment, and never read how a record is made
+
+21 September. `central-crm.md` said the central record of a person "already
+exists": `guests` has no `hotel_id`, and migration 004's comment says a guest
+who stays at Agra and Pune is ONE person, blacklist and all. I quoted the
+comment and built the design on it, and on the table's shape.
+
+**Nothing makes it true.** Every booking inserts a fresh `guests` row with no
+lookup (`reservations/book.ts`, `front-desk/operations.ts`), so the same
+person twice is two rows; and `is_blacklisted` is set by no screen and read by
+no route - a grep for "blacklist" across the API and the website finds only
+marketing's list logic. The marketing chat had written exactly this in its
+MODULE.md on the 19th, and the guests directory says it in its header. Found
+an hour after the design, while preparing the owner's interview, before any
+of it was built.
+
+The same class as 309: a claim about the data, taken from something that
+DESCRIBES it rather than from the code that WRITES it. The owner's answers
+were given on the corrected picture (D21-20, D21-21).
+
+**The rule: before a design leans on "the data already holds X", find the
+INSERT - the code that writes X - and read it. A schema says what a row may
+hold; only the writer says what it does hold.**
+
+---
+
 ### 310 · MINE: the guest's page was merged, tested and on the map for two days, and no guest could open it
 
 21 September. The guest-page chat built `/g/:token` on the 19th and exported

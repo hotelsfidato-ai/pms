@@ -83,6 +83,17 @@ the tests that assert them. Code comments may keep theirs; a date range's short
 
 ---
 
+## Nothing new is hard-wired to Fidato — every chat, from 21 September (D21-27)
+
+The owner will sell the whole system, **one separate copy per buying group**
+(D21-1, D21-12). So nothing you add may name Fidato in code: not the group's
+name, a logo, `fidatohotels.com`, a WhatsApp number or account, a GSTIN. Read it
+from the property's or the group's settings, or from the server's environment.
+What is already hard-wired is being listed by the master and is not yours to
+clean; just add nothing to it. Tests and demo data may say Fidato.
+
+---
+
 ## The five rules every lane obeys
 
 These are not this folder's rules. They are the project's, from `HANDOVER.md`

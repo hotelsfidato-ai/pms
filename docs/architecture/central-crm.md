@@ -9,6 +9,20 @@ with a recommendation. Nothing here is decided until they answer.
 inventory, leads and PMS data — and later replicable and sellable as a
 product.*
 
+> **ANSWERED 21 September — `docs/briefs/decisions-2026-09-21.md`, D21-1 to
+> D21-5, D21-12, D21-13, D21-20 to D21-22, D21-27.** Two answers changed this
+> design, and one fact in it was wrong:
+>
+> - **Each buyer gets their own separate copy (D21-12)**, so § 4's group column
+>   is NOT added. What selling needs instead is that nothing is hard-wired to
+>   Fidato (D21-27).
+> - **§ 1 overstated what exists.** `guests` is group-wide in *shape*, but
+>   **every booking inserts a new row** — `reservations/book.ts` and
+>   `front-desk/operations.ts` never look anybody up — so a returning guest is a
+>   second record, and **the blacklist is a column nothing sets or reads.** The
+>   first thing built is therefore returning-guest matching (D21-20), and the
+>   blacklist becomes a warning to the clerk (D21-21). Root MEMORY 311.
+
 ---
 
 ## 1 · The finding that shapes everything: the core already exists
@@ -21,8 +35,14 @@ that way on purpose** (migration 004):
 > loyalty, no repeat-guest recognition, and — the one that actually costs you
 > money — a guest blacklisted at one property walks into another.*
 
-So for the seven hotels on this PMS, the central record of a person **already
-exists**, and every stay already hangs off it through `reservations`. A CRM
+⚠ **Corrected 21 September: the SHAPE exists, the practice does not.** Every
+booking inserts a fresh `guests` row with no lookup, so the same person
+staying twice is two rows, and the blacklist is set by no screen and checked
+by no booking. What follows holds for the shape; returning-guest matching
+(D21-20) is what makes it true of the data.
+
+So for the seven hotels on this PMS, the central record of a person exists in
+shape, and every stay already hangs off a guest row through `reservations`. A CRM
 that copied guests into a table of its own would build a second list of the
 same people, drifting apart the day it was made. **The CRM extends `guests`;
 it never copies it.**
@@ -32,7 +52,7 @@ it never copies it.**
 | What | Where | Scope | A CRM would |
 |---|---|---|---|
 | Name, email, phone, nationality | `guests` (004) | **the whole group** | reuse — it IS the record |
-| Blacklisted, and why | `guests` (004) | the whole group | reuse — the reason it is group-wide |
+| Blacklisted, and why | `guests` (004) | the whole group | **a column nothing sets or reads** — made a warning to the clerk (D21-21) |
 | Passport, visa, ID number | `guest_documents` (013, 026) | behind the stay's hotel | **leave exactly where it is** — see § 5 |
 | Every stay, at which hotel, how much | `reservations`, folios | per property | read through the front doors |
 | How they booked | booking sources (082) | per property | reuse |
@@ -90,6 +110,10 @@ today.
 ---
 
 ## 4 · What "sellable as a product" would demand — and the one thing to decide now
+
+> **Superseded by D21-12:** a buyer gets their own separate copy, so one
+> database never holds two groups and no group column is added. Kept below as
+> the reasoning the owner answered.
 
 **The PMS's tenancy is per property, inside ONE group.** Row-level security
 isolates hotel from hotel (002, 007, 013). But `guests` and `companies` have
@@ -153,7 +177,11 @@ joined and who joined it, so a wrong one can be taken apart. That is D21-2.
 
 ---
 
-## 8 · The owner's to decide
+## 8 · The owner's to decide — ANSWERED 21 September
+
+The owner's answers are in `docs/briefs/decisions-2026-09-21.md`. All five below
+went as recommended, **except D21-1's consequence**: sold, but as separate
+copies (D21-12), so no group column. The questions are kept as they were asked.
 
 | # | Question | Recommendation |
 |---|---|---|

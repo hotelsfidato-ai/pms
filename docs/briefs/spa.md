@@ -6,6 +6,15 @@
 > Your local run is the only proof there is now, so it is not optional.
 
 
+> **21 September — first job for the next spa chat (D21-25): SPA-2.** The
+> shared matrix (`src/lib/permissions.ts`) grants `spa` to `finance` and
+> `read_only`, whom the server refuses — the owner named six roles (D18-8,
+> D18-21) and those two are not among them. **The server is right.** The
+> master grants you the `spa` entries of those two roles in `permissions.ts`
+> for this and nothing else in that file; remove them, then retire the
+> workaround in `nav.ts` so the menu reads the matrix again, with a test that
+> pins the matrix to `SPA_READ_ROLES`. See `src/modules/spa/DEFECTS.md`.
+
 **Read `docs/briefs/README.md` first**, then this, then
 `src/modules/spa/MODULE.md`. Your decisions are **D18-6, D18-7, D18-8** in
 `docs/briefs/decisions-2026-09-18.md` and **D17-54** before it. The whole plan is

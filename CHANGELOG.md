@@ -94,7 +94,39 @@ September).
   treatment (27 Aug 11:00) — the owner's to keep or clear
 - Banquet's screen not opened (the module is off at 5EL)
 
-**Commits:** `9af60ec`, `fc6b9e0`, and this one
+**Commits:** `9af60ec`, `fc6b9e0`, `0a98086`
+
+### Later the same day: the owner's interview
+
+**Asked for:** "ask me like an interview and grill me … everything needs to be
+grilled." Thirteen rounds, 48 answers: `docs/briefs/decisions-2026-09-21.md`.
+
+**Shipped**
+- The decisions file; both designs marked answered and corrected
+  (`central-crm.md` § 1 overstated "one person, one record" — root MEMORY 311)
+- Briefs for the three chats the owner chose: `guest-page.md` (the half behind
+  the code, in order), `crm.md` (rewritten as a build: matching first),
+  `pos.md` (sizes and add-ons, built from production `79e358e`, released on its
+  own). SPA-2 into `spa.md`, with the one `permissions.ts` line granted
+- Answers written into the lanes that asked: `guest-messaging`, `marketing`,
+  `online-checkin`, `front-desk` (the in-house and vacant rules)
+- `docs/briefs/README.md`: nothing new names Fidato (D21-27)
+- Reviews record the clerk who asked, not "The system" (D21-25) —
+  `api/src/modules/reputation/reputation.ts`
+- The owner's stray note removed from `src/components/app/navigation.ts` (D21-26)
+- 5EL demo data cleared on the laptop: the ₹240 laundry line and the ₹2,500
+  treatment. LD-0003 predates the check and is left, uncharged
+
+**Found**
+- Every booking creates a new guest row; the blacklist is used by nothing
+  (MEMORY 311)
+- No screen, route or import can create a variation or an add-on — only the
+  demo loader (D21-39)
+
+**Proved**
+- Reviews: 23 of 23; the new test fails with `sentBy: null` put back.
+  API `tsc` exit 0. Web `tsc -b --force` exit 0; shell and navigation tests 45
+  of 45
 
 ---
 

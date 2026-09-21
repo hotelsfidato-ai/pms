@@ -41,6 +41,12 @@ the BOM Excel wants. This service supplies rows.
 
 **Nothing below was decided here.** Each is a recommendation and a reason.
 
+> **Answered 21 September (D21-22):** recorded against **the phone number or
+> email itself, for the whole group** — as recommended. The CRM chat builds the
+> table (`docs/briefs/crm.md`, step 5); `mayBeWrittenTo` then reads it, a line
+> the master makes or grants. Until that lands, nothing here is put behind a
+> send — unchanged.
+
 ### 1 - A guest who has asked not to be written to: nothing records it
 
 The brief's one rule that is not about tidiness: *"a guest who has asked not to

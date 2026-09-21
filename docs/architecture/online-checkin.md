@@ -8,6 +8,16 @@ and a spa or laundry request. Every choice that changes what a guest sees or
 what reaches the legal register is a question for the owner at the end, with a
 recommendation. Nothing here is decided until they answer.
 
+> **ANSWERED 21 September — `docs/briefs/decisions-2026-09-21.md`, D21-6 to
+> D21-11, D21-14 to D21-19, D21-29.** As recommended except two: **the QR is
+> one fixed card per room (D21-7)**, finding whoever is checked in there now,
+> showing only the hotel and room before the code (D21-14), "opens once you're
+> checked in" when the room is empty (D21-15), reprintable by the desk
+> (D21-16) — see § 1; and **a full Aadhaar number is accepted (D21-17)**,
+> shown as the last four digits on screens and in full only on the printed
+> registration card (D21-18). The guest fills in ID, address, and for a
+> foreign guest passport and visa (D21-19). The photo upload waits on D21-11.
+
 **The owner's decisions it builds on (18 September):** one private page per
 booking, no public page (D18-9); details and a photo of the ID, the signature
 stays at the desk, three ways in — the confirmation, a QR code in the room, the
@@ -59,6 +69,18 @@ shapes fit D18-10:
   thing between one guest and the next guest's bill.
 
 **Recommendation (D21-7): a card per stay.**
+
+**Answered: one fixed card per room.** So the room card is a second kind of
+link beside the booking's own: its token names a ROOM, and every call through
+it resolves the room to the stay checked in there *at that moment* (a live
+room assignment on a checked-in reservation) — never to a booking stored on
+the card. What keeps it safe is the answers around it: before the code it
+shows only the hotel and room (D21-14); with nobody checked in it shows one
+sentence (D21-15); the code goes only to the phone on the stay it resolved to;
+the unlock is per phone (D21-6), so the next guest's scan unlocks nothing of
+the last guest's; and the desk can reprint a card, killing the old token
+(D21-16). A room move needs nothing — the new room's card finds them. **The
+hash-only rule holds for room tokens too.**
 
 ---
 
@@ -199,7 +221,11 @@ a suite made only of refusals cannot tell a guard from a wall (MEMORY 308).
 
 ---
 
-## 9 · The owner's to decide
+## 9 · The owner's to decide — ANSWERED 21 September
+
+Answers in `docs/briefs/decisions-2026-09-21.md`; the two that differ from the
+recommendations are named at the top of this file. The questions are kept as
+they were asked.
 
 | # | Question | Recommendation |
 |---|---|---|

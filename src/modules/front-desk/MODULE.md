@@ -272,6 +272,10 @@ From `PENDING.md`, and one found while writing this brief:
   while the Dashboard and Rooms (the stay-view counts) said 10 / 7, same
   minute, 14 September. Needs one definition, the owner's to choose
   (PENDING § 6; MEMORY "Open"; CHANGELOG 14 September).
+  **CHOSEN 21 September:** in house = checked in and not yet checked out,
+  whatever the departure date (D21-36); vacant = nobody in it AND sellable
+  tonight, with out-of-order and blocked rooms their own count (D21-37).
+  Every screen showing either number moves onto one rule; not built yet.
 - **"Which room was this stay in" written by hand** —
   `api/src/modules/front-desk/stays.ts` holds one of the seven copies; `app.stay_room()` (086) is the one rule; moving onto it
   is tidying, not a fix (PENDING § 6).

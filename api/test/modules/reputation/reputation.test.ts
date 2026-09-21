@@ -363,6 +363,15 @@ describe("asking, once the owner has connected n8n", () => {
     expect(Object.keys(seen?.body.data ?? {}).sort()).toEqual(["link", "reference"]);
   });
 
+  it("records the clerk who pressed it, not \"The system\"", async () => {
+    connected();
+    const res = await asOwner(`/reviews/${departedId}/ask`, "POST", { channel: "whatsapp" });
+    const { id } = await res.json() as { id: string };
+    const { rows } = await sql(
+      "select sent_by::text as sent_by from messages_sent where id = $1::bigint", [id]);
+    expect(rows[0]?.sent_by).toBe(ownerStaffId);
+  });
+
   it("is then shown on the screen as asked, with when and which way", async () => {
     connected();
     await asOwner(`/reviews/${departedId}/ask`, "POST", { channel: "email" });

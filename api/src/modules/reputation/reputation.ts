@@ -293,7 +293,7 @@ reputation.post("/:code/reviews/:id/ask", async (c) => {
     return c.json(refuse("Say whether this goes by WhatsApp or by email."), 400);
   }
 
-  const answer = await withSession(c.get("subject"), async (client) => {
+  const answer = await withSession(c.get("subject"), async (client, session) => {
     const hotel = await hotelFor(client, code);
     if (!hotel) return { status: 404 as const, body: { error: "No such property." } };
     if (!(await hasRoleAt(client, hotel.id, ASK_ROLES))) {
@@ -346,6 +346,10 @@ reputation.post("/:code/reviews/:id/ask", async (c) => {
       to: { name: stay.guest, phone: stay.phone, email: stay.email },
       data: { link: link.url, reference: stay.reference },
       about: { kind: "reservation", id: stay.id },
+      /* A clerk pressed this, so the record names them. Without it the
+         Guest messages screen filed every review request under "The system"
+         (audit, 21 September). */
+      sentBy: { id: session.staffId, name: session.fullName },
     });
 
     return result.ok

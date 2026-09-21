@@ -62,17 +62,33 @@ connected 21 Sep    laundry's Charge and the spa's close go to the room bill thr
                     for two days (MEMORY 310)
 date bug            one screen (banquet), fixed with addDays in src/lib/format.ts,
                     tested in Asia/Kolkata (MEMORY 309)
-designs, no code    docs/architecture/central-crm.md and online-checkin.md — questions
-                    D21-1 to D21-11 are with the owner, unanswered. Build neither
-                    before the answers.
+designs, no code    docs/architecture/central-crm.md and online-checkin.md
+THE OWNER ANSWERED  48 questions in an interview, 21 Sep: docs/briefs/decisions-2026-09-21.md
+                    (D21-1 … D21-48). Read it before anything else. Against the
+                    recommendation, and theirs: one fixed QR card per ROOM (D21-7),
+                    full Aadhaar stored (D21-17), every future booking confirmed on
+                    switch-on (D21-33), WhatsApp token renewed only at go-live (D21-31),
+                    no backup of this laptop's work (D21-23), nothing live until
+                    check-in and the CRM are built (D21-24).
+three chats next    online-checkin (docs/briefs/guest-page.md, the 21 Sep section),
+                    crm (docs/briefs/crm.md, rewritten: returning-guest matching first),
+                    pos (docs/briefs/pos.md: sizes and add-ons, built FROM 79e358e and
+                    released ON ITS OWN, D21-44 — the one exception to D21-24)
+the master owes     a one-page "set up your hotel" guide per GM (D21-47); finance's one
+                    definition of a bill, for the guest page (online-checkin.md § 3);
+                    a list of what is hard-wired to Fidato (D21-27); the POS release
+                    onto 79e358e when the owner says yes
+on hold             the channel manager (D21-32)
 gates, 21 Sep       at 9af60ec: web 497, API 1204, database 951, 120 migrations
                     re-runnable. Now: tsc clean, web 510
 still open          reviews: sentBy missing; the guest page asks for a code without
                     asking canSend() first; a rate-limited answer shows a blank line;
                     the spa's permission matrix and server disagree (SPA-2)
-the owner owes      n8n steps (WhatsApp token expires ~27 Sep); SU keys; the Google
-                    review link; CRS voucher FH-2026-00002; when things may leave
-                    this machine; D21-1 … D21-11
+the owner owes      n8n steps, at go-live (D21-31); each hotel's own Google review link
+                    (D21-30); the WhatsApp sending pace (D21-34); the ID-photo keeping
+                    rule and an advisor's word on full Aadhaar (D21-11, D21-17); Tally
+                    ledger names from their accountant (D21-46); 5EL's real rates
+                    and menu (D21-38, D21-39); CRS voucher FH-2026-00002
 ```
 
 ### 18 September, evening
@@ -826,6 +842,10 @@ early.
 ---
 
 ## 4 · Decisions the owner has made — do not re-ask
+
+**The full lists are `docs/briefs/decisions-2026-09-17.md`, `-18.md` and
+`-21.md` (D21-1 … D21-48, the interview of 21 September).** What follows is
+the older record.
 
 ```
 16 Sep   the desktop app is a real installed application, because silent thermal printing matters (APPS A2)
