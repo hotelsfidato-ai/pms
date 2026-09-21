@@ -6539,6 +6539,23 @@ copy will see of theirs.**
 
 ---
 
+### 318 · Two guards in a row test as one: the guest door's database functions had no test of their own
+
+21 September, found by the online check-in chat (OCI-5). The brief names the
+database functions behind the six-digit code as the guard: every one asks
+`app.guest_unlocked` itself. The chat broke `app.guest_bill` to take the link
+alone — and all 34 door tests PASSED, because the route checks the unlock
+before it calls any function behind the code. The outer guard hid the inner
+one; the same was true of all five functions, not only the bill. A test now
+calls each function directly in the database with the link's hash and no
+unlock, after the code has been answered, and fails with either broken.
+
+**The rule: when two guards stand in a row, test each with the other still
+standing — break the inner one and prove a test fails. A suite that only
+knocks on the outer door cannot tell whether the inner one is locked.**
+
+---
+
 ### 317 · A migration never changes the return type of a function an earlier one made
 
 21 September, found by the online check-in chat. Migrations replay from 001 on
