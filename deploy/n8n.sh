@@ -412,6 +412,18 @@ PROXY="        proxy_pass http://127.0.0.1:5678;
 LOCKED="        allow $ADMIN_IP;
         deny all;"
 
+# ⚠ 127.0.0.1 MEANS "CLOSED TO THE INTERNET" (the owner's choice, 21
+# September). Nobody outside arrives from the server's own address, so the
+# screen refuses everybody, webhooks stay open, and the owner opens n8n
+# through an SSH tunnel straight to 127.0.0.1:5678 -- which never passes
+# through nginx. The refusal must then say THAT, not "run allow with your
+# address", which would undo the choice.
+if [ "$ADMIN_IP" = "127.0.0.1" ]; then
+  LOCKED_MSG="The n8n screen is closed to the internet.\n\nThe owner opens it through the secure link from their own computer (HANDOVER, section 9).\n"
+else
+  LOCKED_MSG="This n8n answers only the internet address saved on the server, and you are coming from \$remote_addr.\n\nIf that is you, connect to the server with SSH and run:\n\n    sudo ALLOW_FROM=\$remote_addr /opt/fidato/deploy/n8n.sh allow\n"
+fi
+
 # ⚠ ONLY THE THREE WEBHOOK PATHS. n8n's own screen, its REST API under
 # /rest/ and its sign-in all live under / -- opening "everything except the
 # editor" by listing what to close would miss the next path n8n adds. This
@@ -477,7 +489,7 @@ server {
     error_page 403 = @n8n_locked;
     location @n8n_locked {
         default_type text/plain;
-        return 403 "This n8n answers only the internet address saved on the server, and you are coming from \$remote_addr.\n\nIf that is you, connect to the server with SSH and run:\n\n    sudo ALLOW_FROM=\$remote_addr /opt/fidato/deploy/n8n.sh allow\n";
+        return 403 "$LOCKED_MSG";
     }
 
     location ~ ^/(webhook|webhook-test|webhook-waiting)/ {

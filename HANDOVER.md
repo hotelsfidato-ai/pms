@@ -1104,6 +1104,22 @@ chat); the demo's rates and menu are what the hotel is selling; the
 
 ## 9 · Deploying — only when the owner says so
 
+> **Opening n8n, from 21 September (the owner's option 3).** The n8n screen is
+> closed to the internet: its saved address is the server's own, 127.0.0.1, so
+> nginx refuses every visitor; webhooks stay open. The owner opens it through a
+> tunnel from their own computer, which reaches n8n directly and never passes
+> nginx, so a changing home address no longer locks them out:
+>
+> ```powershell
+> # the owner's PC, PowerShell - leave this window open while using n8n
+> ssh -i "$HOME\Downloads\ssh-key-2026-09-01.key" -N -L 5678:127.0.0.1:5678 opc@130.210.49.220
+> ```
+>
+> then open **http://localhost:5678**; close the window to close the link.
+> ⚠ **Never run `n8n.sh allow` with a home address again** — that reopens
+> the screen. Until stage 2 carries the new `deploy/n8n.sh`, the refusal page
+> still shows the old "run allow" sentence; ignore it.
+>
 > **From 21 September the plan is `docs/GO-LIVE-PLAN.md`.** The runbook below
 > is the shape every deploy follows (backup, pull, launch.sh, website, look);
 > the server now tracks `main`, not `cp6`.
