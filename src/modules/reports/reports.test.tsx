@@ -3,8 +3,7 @@ import { render, screen, within, waitFor } from "@testing-library/react";
 import App from "@/App";
 import * as apiModule from "@/lib/api";
 import { HOTEL, startSignedIn, signedIn } from "@/test/app";
-import { setBusinessDate } from "@/data/repositories/businessDate";
-import { FIXTURE_BUSINESS_DATE } from "@/data/fixtures/property";
+import { BUSINESS_DATE, setBusinessDate } from "@/data/repositories/businessDate";
 
 /* Reports' screens, rendered through the whole application — the shell,
    the session and the route included. Moved here from `src/App.test.tsx`
@@ -63,6 +62,7 @@ describe("the dashboard at /", () => {
       id: code, code, name, city: "", state: "", gstin: null, timezone: "Asia/Kolkata",
       currency: "INR", checkInTime: "14:00", checkOutTime: "11:00", businessDate,
     });
+    const before = BUSINESS_DATE;
     setBusinessDate("2026-09-02");
     signedIn({ hotels: [hotel(HOTEL, "5 Elements", "2026-08-25"), hotel("AGR", "Fidato Agra", "2026-09-02")] });
     const real = apiModule.api;
@@ -78,7 +78,7 @@ describe("the dashboard at /", () => {
         .toContainEqual(expect.stringMatching(/from=2026-08-01.*to=2026-08-25/)));
     } finally {
       spy.mockRestore();
-      setBusinessDate(FIXTURE_BUSINESS_DATE);
+      setBusinessDate(before);
     }
   }, 20000);
 });

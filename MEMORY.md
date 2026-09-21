@@ -6539,6 +6539,22 @@ copy will see of theirs.**
 
 ---
 
+### 319 · MINE: a test I wrote reached into the demo fixtures, and only the full gate run saw it
+
+21 September, the Dashboard's finishing pass. The new test for "every hotel on
+its own day" restored the business date with `FIXTURE_BUSINESS_DATE`, imported
+from `@/data/fixtures`. The repositories suite (Rule 2) refuses any import of
+the fixtures outside `src/data`, because a screen's test that reads the demo
+directly is not testing through the seam. I had run the reports tests and the
+App tests, 45 green, and committed; the full gate run said 1 failed. Fixed by
+reading `BUSINESS_DATE` before changing it and putting that back.
+
+**The rule: the tests beside the change are not the gates. A new import in a
+test is a new edge in the boundary rules, and only the whole web suite checks
+those. Quote a green only from the full run.**
+
+---
+
 ### 318 · Two guards in a row test as one: the guest door's database functions had no test of their own
 
 21 September, found by the online check-in chat (OCI-5). The brief names the
