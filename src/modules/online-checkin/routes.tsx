@@ -2,6 +2,8 @@ import { Route } from "react-router";
 import { RequireAccess } from "@/components/app/RequireAccess";
 import OnlineCheckinPage from "@/modules/online-checkin/pages/OnlineCheckin";
 import GuestPage from "@/modules/online-checkin/pages/GuestPage";
+import DeskPage from "@/modules/online-checkin/pages/Desk";
+import { PropertyScope } from "@/components/app/PropertyScope";
 
 /* ⚠ THE GUEST'S OWN PAGE IS NOT IN THE ROUTES BELOW, AND MUST NOT BE.
    Those sit inside `RequireSession` in `App.tsx`; this one is opened by
@@ -17,12 +19,23 @@ export const publicRoutes = (
    the signed-in shell. The guard asks the navigation (`mayReach`), so the
    page is refused to exactly the people the menu does not show it to. */
 export const routes = (
-  <Route
-    path="/coming-soon/online-checkin"
-    element={
-      <RequireAccess path="/coming-soon/online-checkin" resource="integration">
-        <OnlineCheckinPage />
-      </RequireAccess>
-    }
-  />
+  <>
+    <Route
+      path="/coming-soon/online-checkin"
+      element={
+        <RequireAccess path="/coming-soon/online-checkin" resource="integration">
+          <OnlineCheckinPage />
+        </RequireAccess>
+      }
+    />
+    {/* The desk's side (21 September). No menu entry of its own yet: moving
+        "Online check-in" out of the Coming soon section changes the list
+        the master's navigation test pins, so that move is the master's
+        (MODULE.md). Until then it is reached by its address, and the
+        SERVER refuses every role but the desk's (guestDoor.ts, DESK_ROLES). */}
+    <Route
+      path="/h/:code/online-checkin"
+      element={<><PropertyScope /><DeskPage /></>}
+    />
+  </>
 );

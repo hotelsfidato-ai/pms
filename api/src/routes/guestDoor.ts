@@ -42,7 +42,7 @@ import { canSend, send } from "../sending.ts";
    POST /api/guest/:token/requests   ask for one, where the hotel offers it
 
    · THE CODE UNLOCKS THIS PHONE, NOT THE LINK (D21-6). `verify` hands back an
-     unlock, once; the page sends it as `x-guest-unlock` and it is hashed here
+     unlock, once; the page sends it as `Authorization: Guest …` and it is hashed here
      like the token. Every room behind the code takes BOTH hashes, and asks
      `app.guest_unlocked` in the database every time. The link alone, however
      many times the code was answered on it, opens nothing behind it.
@@ -125,9 +125,19 @@ interface OpenRow extends Record<string, unknown> {
   verified: boolean; phone_hint: string | null; offers: string[] | null;
 }
 
-/** The unlock this phone holds, hashed - or null, which unlocks nothing. */
+/** The unlock this phone holds, hashed - or null, which unlocks nothing.
+
+    ⚠ IN `Authorization: Guest <unlock>`, NOT A HEADER OF ITS OWN (OCI-4).
+    It was `x-guest-unlock` until the page was opened in a browser on 21
+    September: the API's CORS list (server.ts, the master's) does not name
+    it, so every call behind the code was blocked by its preflight and the
+    guest read "could not reach the hotel" the moment the code was right.
+    The tests run in-process and never meet a preflight. `authorization` is
+    already allowed, is not written to access logs, and is ignored on
+    /api/guest by the staff gate - and a signed-in clerk's `Bearer` token on
+    the same browser is not a `Guest` one, so it unlocks nothing here. */
 const unlockOf = (c: Context) => {
-  const held = c.req.header("x-guest-unlock");
+  const held = /^Guest\s+(\S+)$/.exec(c.req.header("authorization") ?? "")?.[1];
   return held ? sha256(held) : null;
 };
 
@@ -196,6 +206,7 @@ guestDoor.get("/:token", async (c) => {
        This is about the SERVER, not the booking - it is the same answer for
        every link, so it tells a stranger nothing about this one. */
     canSendCodes: canSend(),
+    cannotSend: canSend() ? null : CANNOT_SEND,
     /* What this hotel offers behind the code (D21-63): only once unlocked. */
     offers: it.verified ? (it.offers ?? []) : [],
   });
@@ -205,6 +216,12 @@ guestDoor.get("/:token", async (c) => {
    ONE shape: a right number, a wrong number and one knock too many all get
    exactly this (D21-25 - the rate-limited answer used to be
    `{ sent: true, hint: null }`, which the page printed as a blank line). */
+/* And the one sentence for a server that cannot send at all - on opening, so
+   the page can say it BEFORE asking for a number (D21-25), and again if a
+   code is asked for anyway. One definition, here. */
+const CANNOT_SEND = "Codes cannot be sent yet - WhatsApp is not connected to "
+  + "this server. Ask the desk to send you the link instead.";
+
 const MAYBE_SENT = {
   sent: true,
   message: "If that is the number on the booking, the code has been sent to it.",
@@ -214,13 +231,7 @@ guestDoor.post("/:token/code", async (c) => {
   const hash = sha256(c.req.param("token"));
   /* Nothing can be sent: say so first. Asked before the knock is counted, so
      a guest reading this sentence has not spent one of their five an hour. */
-  if (!canSend()) {
-    return c.json({
-      sent: false,
-      message: "Codes cannot be sent yet - WhatsApp is not connected to this "
-        + "server. Ask the desk to send you the link instead.",
-    }, 503);
-  }
+  if (!canSend()) return c.json({ sent: false, message: CANNOT_SEND }, 503);
   if (tooOften(hash, "code")) return c.json(MAYBE_SENT);
   const body = await c.req.json<{ phone?: string }>().catch(() => ({}) as { phone?: string });
 

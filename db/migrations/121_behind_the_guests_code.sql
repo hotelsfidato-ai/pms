@@ -61,8 +61,17 @@ create unique index if not exists guest_links_one_live_card_per_room
 -- For a booking's link that is always its booking. For a room card it is the
 -- stay checked in when the code was asked for - so a code asked for by one
 -- guest cannot be answered after the next has checked in.
-alter table guest_link_codes
-  add column if not exists reservation_id uuid references reservations(id);
+alter table guest_link_codes add column if not exists reservation_id uuid;
+
+-- NAMED, and dropped and made again each run, so the rule it carries can
+-- change: a column added `if not exists` keeps whatever foreign key it was
+-- first made with. ON DELETE CASCADE because a code exists only for its stay -
+-- and a property reset that clears bookings must not stop at this table
+-- (api/test/resetOrder.test.ts, "leaves nothing behind").
+alter table guest_link_codes drop constraint if exists guest_link_codes_reservation_id_fkey;
+alter table guest_link_codes drop constraint if exists guest_link_codes_for_the_stay;
+alter table guest_link_codes add constraint guest_link_codes_for_the_stay
+  foreign key (reservation_id) references reservations(id) on delete cascade;
 
 -- -----------------------------------------------------------------------------
 -- 3 · The unlock: what answering the code gives THIS phone (D21-6)
@@ -70,7 +79,7 @@ alter table guest_link_codes
 create table if not exists guest_unlocks (
   id             uuid primary key default gen_random_uuid(),
   link_id        uuid not null references guest_links(id) on delete cascade,
-  reservation_id uuid not null references reservations(id),
+  reservation_id uuid not null references reservations(id) on delete cascade,
   -- sha256, hex. The secret itself lives in the guest's open tab and nowhere
   -- else; a query log or a backup is not a set of unlocked pages.
   unlock_hash    text not null unique,
@@ -96,7 +105,9 @@ alter table guest_unlocks force  row level security;
 create table if not exists guest_detail_submissions (
   id              uuid primary key default gen_random_uuid(),
   hotel_id        uuid not null references hotels(id),
-  reservation_id  uuid not null references reservations(id),
+  -- Goes with its stay: a submission is not the record - guest_documents is,
+  -- once a clerk has confirmed it.
+  reservation_id  uuid not null references reservations(id) on delete cascade,
   guest_id        uuid not null references guests(id),
 
   id_type         text not null,
@@ -150,7 +161,7 @@ grant select, update on guest_detail_submissions to pms_app;
 create table if not exists guest_requests (
   id             uuid primary key default gen_random_uuid(),
   hotel_id       uuid not null references hotels(id),
-  reservation_id uuid not null references reservations(id),
+  reservation_id uuid not null references reservations(id) on delete cascade,
   kind           text not null,
   what           text not null,
   -- In the guest's own words ("tomorrow morning"): a request, not a booking,

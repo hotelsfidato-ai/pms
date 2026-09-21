@@ -58,7 +58,7 @@ const asGuest = (path: string, method = "GET", body?: unknown, unlock?: string) 
     method,
     headers: {
       "content-type": "application/json",
-      ...(unlock ? { "x-guest-unlock": unlock } : {}),
+      ...(unlock ? { authorization: `Guest ${unlock}` } : {}),
     },
     ...(body === undefined ? {} : { body: JSON.stringify(body) }),
   });
@@ -295,6 +295,30 @@ describe("the code unlocks the phone that answered, not the link (D21-6)", () =>
     await sql("update guest_unlocks set expires_at = now() - interval '1 second' where unlock_hash = $1",
       [hashForTests(unlock)]);
     expect((await asGuest(`/${link}/details`, "GET", undefined, unlock)).status).toBe(404);
+  });
+
+  /* OCI-4. The unlock travelled in `x-guest-unlock` and every test above
+     passed, because they call the app in-process and no browser ever sends
+     a preflight. In a browser the API's CORS list did not name it, so the
+     first call behind the code was blocked and the guest read "could not
+     reach the hotel". This asks the preflight the question a browser asks. */
+  it("travels in a header a browser's preflight lets through", async () => {
+    const res = await app.request("/api/guest/anything", {
+      method: "OPTIONS",
+      headers: {
+        origin: "http://localhost:5173",
+        "access-control-request-method": "POST",
+        "access-control-request-headers": "authorization,content-type",
+      },
+    });
+    const allowed = (res.headers.get("access-control-allow-headers") ?? "").toLowerCase().split(",");
+    expect(allowed).toContain("authorization");
+
+    const unlock = await unlockWith(link);
+    const res2 = await app.request(`/api/guest/${link}/details`, {
+      headers: { authorization: `Guest ${unlock}` },
+    });
+    expect(res2.status, "and the door reads it from there").toBe(200);
   });
 
   it("keeps only the unlock's hash", async () => {
