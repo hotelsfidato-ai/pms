@@ -143,11 +143,23 @@ describe("money is money", () => {
     clean(b.total.sales); clean(b.total.tax); clean(b.total.receipt);
   });
 
-  it("sales are the room and the extras less the discount", async () => {
+  /* ⚠ THIS TEST USED TO SAY "the room and the extras less the discount",
+     AND IT WAS GUARDING THE BUG. That was the export's old definition of
+     Sales — the one that left out every meal paid for at the restaurant.
+     It passed when this file ran alone, because an empty database has no
+     restaurant orders and the missing term was zero; in the full suite the
+     POS tests leave settled orders behind and it failed by ₹64,000, which
+     was exactly the restaurant revenue it had been told to exclude.
+
+     A test that holds only while the thing it forgets about happens to be
+     zero is not a test of the sum. The restaurant is in it now. */
+  it("sales are the room, the extras and the restaurant, less the discount", async () => {
     const b = await theBook();
     for (const d of b.days) {
-      expect(paise(d.sales)).toBe(paise(d.room) + paise(d.extra) - paise(d.discount));
-      expect(paise(d.tax)).toBe(paise(d.roomTax) + paise(d.extraTax));
+      expect(paise(d.sales))
+        .toBe(paise(d.room) + paise(d.extra) + paise(d.pos) - paise(d.discount));
+      expect(paise(d.tax))
+        .toBe(paise(d.roomTax) + paise(d.extraTax) + paise(d.posTax));
     }
   });
 });
@@ -319,9 +331,19 @@ describe("the export and the Manager report cannot disagree", () => {
 
   afterAll(async () => {
     /* Only what this block made. The order's lines and tenders go with
-       it; nothing else on the property is touched (MEMORY 292). */
-    await sql(
-      `delete from pos_orders where order_no like $1`, [`${TAG}%`]);
+       it; nothing else on the property is touched (MEMORY 292).
+
+       ⚠ A SETTLED ORDER'S LINES ARE FROZEN, and the delete was refused
+       the first time this ran in the full suite — leaving a ₹2,400 meal
+       in the database for every test after it. The trigger is lifted for
+       this one delete and put back in a finally, which is how the POS
+       suite's own teardown does it (courses.test.ts). */
+    await sql("alter table pos_order_lines disable trigger pos_order_lines_frozen");
+    try {
+      await sql(`delete from pos_orders where order_no like $1`, [`${TAG}%`]);
+    } finally {
+      await sql("alter table pos_order_lines enable trigger pos_order_lines_frozen");
+    }
   });
 
   it("counts a meal paid for in cash at the restaurant, which never reaches a folio", async () => {

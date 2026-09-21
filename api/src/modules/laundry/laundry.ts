@@ -2,6 +2,7 @@ import { Hono } from "hono";
 import type { Context, Next } from "hono";
 import { withSession } from "../../auth.ts";
 import { businessDateFor, resolveDate } from "../../businessDate.ts";
+import { postCharge } from "../finance/index.ts";
 import type { PoolClient as Client } from "pg";
 
 /* ══════════════════════════════════════════════════════════════════
@@ -537,7 +538,7 @@ laundry.post("/:code/laundry/dockets/:id/cancel", async (c) => {
 
 
 /* ══════════════════════════════════════════════════════════════════
-   THE CHARGE — NOT BUILT HERE, AND WAITING ON ONE DOOR
+   THE CHARGE — through finance's door, and nowhere else
 
    D18-7: a guest's docket goes straight onto the room bill as its own
    line, and the Extra Charges report already reads `category = 'laundry'`
@@ -550,19 +551,24 @@ laundry.post("/:code/laundry/dockets/:id/cancel", async (c) => {
    an HTTP call from the server to its own endpoint is not a front door,
    it is a way around one.
 
-   THE REQUEST IS WITH THE MASTER (src/modules/laundry/MODULE.md,
-   "Requests"): one exported function on finance's door, taking an open
-   client, the property, the stay, the category, the description, the
-   amount and the business date, and answering with the posting's id or
-   a refusal - exactly what POST /:code/stays/:id/charges does today
-   between reading the body and answering.
+   IT IS `postCharge`, on finance's front door since 18 September —
+   exactly the function this chat asked for in MODULE.md's Requests, down
+   to the argument list. ⚠ AND FOR THREE DAYS NOBODY CONNECTED IT. The
+   door was built for this route and the spa, and the master never came
+   back to say it existed; the route went on refusing with "finance's door
+   does not hand out a way to post a charge" while that door stood open.
+   Found by an audit on 21 September (root MEMORY 308).
 
-   The moment it exists, this route is the call, `charge_posting_id` is
-   set on the docket, and the database's own trigger
-   (`laundry_charge_needs_a_total`) refuses the whole thing if anything in
-   the bag is unpriced. Until then the route answers plainly rather than
-   pretending, because a button that looks like it charged and did not is
-   worse than a button that says it cannot yet.
+   So: this route is the call now. `charge_posting_id` is set on the
+   docket, and the database's own trigger (`laundry_charge_needs_a_total`)
+   still refuses the whole thing if anything in the bag is unpriced.
+   Laundry follows the ROOM tax rule (D18-21 gave the spa its own; laundry
+   has none), so `taxKind` is left alone.
+
+   THE ROW IS LOCKED FIRST. Two clerks pressing Charge at the same moment
+   would otherwise both read "not charged", both post, and put the same
+   bag on the bill twice; the second now waits for the first and then
+   reads "already on the bill".
    ══════════════════════════════════════════════════════════════════ */
 laundry.post("/:code/laundry/dockets/:id/charge", async (c) => {
   const result = await withSession(c.get("subject"), async (client) => {
@@ -571,12 +577,15 @@ laundry.post("/:code/laundry/dockets/:id/charge", async (c) => {
 
     const { rows } = await client.query<{
       belongs_to: string; status: string; charged: boolean; total: string | null;
+      reservation_id: string | null; number: string;
     }>(
-      `select d.belongs_to, d.status,
+      `select d.belongs_to, d.status, d.number,
+              d.reservation_id::text as reservation_id,
               d.charge_posting_id is not null as charged,
               app.laundry_docket_total(d.id)::text as total
          from laundry_dockets d
-        where d.hotel_id = $1 and d.id = $2::uuid`,
+        where d.hotel_id = $1 and d.id = $2::uuid
+          for update of d`,
       [hotelId, c.req.param("id")],
     );
     const docket = rows[0];
@@ -593,10 +602,41 @@ laundry.post("/:code/laundry/dockets/:id/charge", async (c) => {
       return refuse("Something in this bag has no price yet. Price it first.");
     }
 
-    return refuse(
-      "Charging to the room is not connected yet: finance's door does not "
-      + "hand out a way to post a charge. Post it by hand on the folio for "
-      + "now - the desk's Laundry charge does exactly this.");
+    /* WHAT THE GUEST READS ON THE BILL: the docket number and what was
+       in the bag, so a guest asking "what is this ₹270?" at check-out is
+       answered by the line itself. */
+    const { rows: lines } = await client.query<{
+      description: string; service: string; quantity: number;
+    }>(
+      `select description, service, quantity from laundry_docket_lines
+        where hotel_id = $1 and docket_id = $2::uuid
+        order by description`,
+      [hotelId, c.req.param("id")],
+    );
+    const inTheBag = lines
+      .map((l) => `${l.quantity} x ${l.description} (${l.service})`)
+      .join(", ");
+
+    /* ⚠ A REFUSAL HERE IS SAFE, and it is worth knowing why: every one of
+       postCharge's refusals comes before its own insert, so returning it
+       commits nothing (MEMORY 243). A cancelled or checked-out stay, a
+       closed bill, a property with no room tax rule — each is its own
+       sentence and reaches the screen as it is. */
+    const posted = await postCharge(client, hotelId, docket.reservation_id!, {
+      description: `Laundry ${docket.number}${inTheBag ? `: ${inTheBag}` : ""}`.slice(0, 240),
+      amount: Number(docket.total),
+      category: "Laundry",
+    });
+    if (!posted.ok) return refuse(posted.reason);
+
+    /* If THIS raises — the trigger finding an unpriced line after all —
+       the whole transaction rolls back, the posting with it. */
+    await client.query(
+      `update laundry_dockets set charge_posting_id = $3
+        where hotel_id = $1 and id = $2::uuid`,
+      [hotelId, c.req.param("id"), posted.id],
+    );
+    return { ok: true as const, data: { postingId: posted.id } };
   });
 
   if (!result) return c.json({ error: "No such property." }, 404);

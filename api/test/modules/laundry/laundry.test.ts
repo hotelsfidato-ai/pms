@@ -372,3 +372,86 @@ describe("the list a screen reads", () => {
     expect(body.nextNumber).toMatch(/^LD-\d{4,}$/);
   });
 });
+
+/* ══════════════════════════════════════════════════════════════════
+   A GUEST'S BAG REACHES THE ROOM BILL (D18-7)
+
+   ⚠ NO TEST COULD PROVE THIS BEFORE 21 SEPTEMBER, because the route
+   could not do it. Every test above proves a REFUSAL — unpriced, the
+   hotel's own linen — and they all passed while the one thing the route
+   exists for was impossible: it ended in "finance's door does not hand
+   out a way to post a charge", three days after that door was built for
+   it. A suite made only of refusals cannot tell a guard from a wall.
+
+   This is the half that was missing: a priced guest docket is charged,
+   the line lands on THAT stay's bill with the laundry category the Extra
+   Charges report reads, and the same bag cannot be charged twice.
+
+   This file provisions its own property and removes it afterwards, so the
+   line it posts is taken away with it and nothing reaches a real bill.
+   ══════════════════════════════════════════════════════════════════ */
+describe("a guest's bag, charged to the room", () => {
+  let docketId: string;
+  let total: number;
+
+  beforeAll(async () => {
+    await setLaundry(true);
+    /* A freshly provisioned property has NO tax rule — nothing ships a
+       price (032) — and finance refuses to post without one. Laundry
+       follows the room's rule. The rate here is this fixture's own. */
+    const db = await admin();
+    await db.query(
+      `insert into tax_rules (hotel_id, kind, over_amount, rate, note)
+       values ($1, 'room', 0, 5, 'laundry test fixture')
+       on conflict (hotel_id, kind, over_amount) do nothing`, [hotelId]);
+    await db.end();
+
+    const items = (await (await get(`/${CODE}/laundry/price-list`)).json() as
+      { items: Array<{ id: string; name: string; price: number | null }> }).items;
+    const priced = items.find((i) => i.price !== null && i.price > 0)!;
+    expect(priced, "the test property has a priced item to bag").toBeTruthy();
+
+    const made = await post(`/${CODE}/laundry/dockets`, {
+      belongsTo: "guest", stayId,
+      lines: [{ priceItemId: priced.id, quantity: 3 }],
+    });
+    docketId = (await made.json() as { data: { id: string } }).data.id;
+    total = (await (await get(`/${CODE}/laundry/dockets/${docketId}`)).json() as
+      { total: number }).total;
+    expect(total, "the bag has a total to charge").toBeGreaterThan(0);
+  });
+
+  it("puts the bag on the guest's own bill, as its own laundry line", async () => {
+    const res = await post(`/${CODE}/laundry/dockets/${docketId}/charge`);
+    expect(res.status, await res.clone().text()).toBe(200);
+    const { data } = await res.json() as { data: { postingId: string } };
+
+    const db = await admin();
+    const { rows } = await db.query<{
+      category: string; amount: string; reservation_id: string; description: string;
+    }>(
+      `select fp.category, fp.amount::text, f.reservation_id::text, fp.description
+         from folio_postings fp join folios f on f.id = fp.folio_id
+        where fp.id = $1`, [data.postingId]);
+    await db.end();
+
+    expect(rows[0], "a line was posted").toBeTruthy();
+    /* The Extra Charges report reads category 'laundry' — land anywhere
+       else and the report's Laundry row stays empty (D18-7). */
+    expect(rows[0]!.category).toBe("laundry");
+    expect(Number(rows[0]!.amount)).toBe(total);
+    expect(rows[0]!.reservation_id, "on THIS stay's bill").toBe(stayId);
+    expect(rows[0]!.description).toMatch(/^Laundry LD-/);
+  });
+
+  it("shows the docket as charged, and will not charge it twice", async () => {
+    const body = await (await get(`/${CODE}/laundry/dockets/${docketId}`)).json() as
+      { charged: boolean };
+    expect(body.charged).toBe(true);
+
+    const again = await post(`/${CODE}/laundry/dockets/${docketId}/charge`);
+    expect(again.status).toBe(409);
+    expect((await again.json() as { reason: string }).reason)
+      .toMatch(/already on the bill/i);
+  });
+});

@@ -13,6 +13,7 @@ import {
 import { listStays } from "@/modules/front-desk";
 import {
   getSpaDiary, getTherapists, getTreatments, bookTreatment, cancelAppointment,
+  closeAppointment,
   clockDate, clockTime, shiftDay, TAKES_A_BOOKING, SETS_THE_LIST,
   type SpaAppointment, type SpaDiaryTherapist,
 } from "@/modules/spa/data/spa";
@@ -67,6 +68,7 @@ export default function SpaDiaryPage() {
   const [day, setDay] = useState<string | null>(null);
   const [booking, setBooking] = useState(false);
   const [cancelling, setCancelling] = useState<SpaAppointment | null>(null);
+  const [closing, setClosing] = useState<SpaAppointment | null>(null);
 
   const mayBook = TAKES_A_BOOKING.includes(role);
 
@@ -184,6 +186,7 @@ export default function SpaDiaryPage() {
             <TherapistDay
               key={t.id} therapist={t} mayBook={mayBook}
               onCancel={(a) => setCancelling(a)}
+              onClose={(a) => setClosing(a)}
             />
           ))}
         </div>
@@ -198,16 +201,23 @@ export default function SpaDiaryPage() {
           onClose={() => setCancelling(null)}
         />
       )}
+      {closing && (
+        <CloseDialog
+          code={code} appointment={closing}
+          onClose={() => setClosing(null)}
+        />
+      )}
     </Page>
   );
 }
 
 function TherapistDay({
-  therapist, mayBook, onCancel,
+  therapist, mayBook, onCancel, onClose,
 }: {
   therapist: SpaDiaryTherapist;
   mayBook: boolean;
   onCancel: (appointment: SpaAppointment) => void;
+  onClose: (appointment: SpaAppointment) => void;
 }) {
   return (
     <Card>
@@ -262,10 +272,22 @@ function TherapistDay({
                     </span>
                   )}
                   {mayBook && a.status === "booked" && (
-                    <Button variant="ghost" size="sm" className="ml-auto"
-                            onClick={() => onCancel(a)}>
-                      Cancel
-                    </Button>
+                    <span className="ml-auto flex gap-1">
+                      <Button variant="ghost" size="sm"
+                              onClick={() => onCancel(a)}>
+                        Cancel
+                      </Button>
+                      {/* The treatment was given: it goes on the room bill
+                          (D18-22). Not offered while it is unpriced — the
+                          line above already says why, and a button that is
+                          refused is worse than no button. */}
+                      {a.amount !== null && (
+                        <Button variant="secondary" size="sm"
+                                onClick={() => onClose(a)}>
+                          Charge to room
+                        </Button>
+                      )}
+                    </span>
                   )}
                 </div>
               </li>
@@ -513,6 +535,73 @@ function CancelDialog({
             <Button variant="secondary" onClick={onClose}>Keep it</Button>
             <Button variant="danger" loading={saving} onClick={() => void submit()}>
               Cancel the treatment
+            </Button>
+          </div>
+        </div>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
+/* ══════════════════════════════════════════════════════════════════
+   THE TREATMENT WAS GIVEN, AND IT GOES ON THE ROOM BILL (D18-22)
+
+   The owner, 19 September: a treatment goes on the room bill, the spa
+   needs no connection of its own for money, and "settled at the spa" is
+   set aside for later. So there is nothing to choose here — this says
+   exactly what is about to happen and to whose bill, because once it is
+   posted the only way back is a reversal on the folio.
+
+   Every refusal is the SERVER'S OWN SENTENCE, shown as it comes: no spa
+   tax rule set at this property (D18-21, and it names Settings → Tax),
+   a bill that is already closed, a treatment somebody else closed a
+   moment ago. None of them is rewritten here.
+   ══════════════════════════════════════════════════════════════════ */
+function CloseDialog({
+  code, appointment, onClose,
+}: {
+  code: string; appointment: SpaAppointment; onClose: () => void;
+}) {
+  const qc = useQueryClient();
+  const [saving, setSaving] = useState(false);
+  const [problem, setProblem] = useState<string | null>(null);
+
+  const submit = async () => {
+    setProblem(null);
+    setSaving(true);
+    const out = await closeAppointment(code, appointment.id);
+    setSaving(false);
+    if (!out.ok) { setProblem(out.reason); return; }
+    void qc.invalidateQueries({ queryKey: ["spa", "diary", code] });
+    onClose();
+    toast.success(appointment.room
+      ? `Charged to room ${appointment.room}.`
+      : "Charged to the guest's bill.");
+  };
+
+  return (
+    <Dialog open onOpenChange={(open) => { if (!open) onClose(); }}>
+      <DialogContent title="Charge this treatment to the room" className="max-w-md">
+        <div className="space-y-4">
+          <p className="text-sm text-ink-700">
+            {appointment.treatment ?? "The treatment"} for{" "}
+            {appointment.guestName ?? "the guest"} at {clockTime(appointment.startsAt)}
+            {appointment.room ? `, room ${appointment.room}` : ""}.
+          </p>
+          <p className="text-sm text-ink-700">
+            <span className="font-medium tabular-nums">{rupees(appointment.amount)}</span>{" "}
+            goes on their bill as its own line, taxed at this property's spa rate.
+            To undo it later, reverse the line on the bill.
+          </p>
+
+          {problem && (
+            <p role="alert" className="text-sm text-brand-red">{problem}</p>
+          )}
+
+          <div className="flex justify-end gap-2">
+            <Button variant="secondary" onClick={onClose}>Not yet</Button>
+            <Button loading={saving} onClick={() => void submit()}>
+              Charge to room
             </Button>
           </div>
         </div>

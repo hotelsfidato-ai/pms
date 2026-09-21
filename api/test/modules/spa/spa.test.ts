@@ -94,6 +94,18 @@ afterAll(async () => {
   /* Everything this file made, and the switch back to where it was: OFF
      at every property until somebody turns it on (115). A fixture's
      damage always lands in somebody else's test (root MEMORY 292). */
+  /* ⚠ THE BILL LINES A CLOSE POSTED, FIRST — and only those. This file
+     runs at 5EL, the real demo property, against a real in-house stay,
+     and a treatment that closes puts a real line on that guest's bill.
+     A test once left ₹2,734.50 on the demo property's bills (root MEMORY
+     292). The ledger is append-only, so the trigger is lifted for exactly
+     these rows — found by this file's own tag in the line's words — and
+     put straight back. The appointments go next, which releases their
+     reference to the line. */
+  await sql("update spa_appointments set posting_id = null where hotel_id = $1", [hotelId]);
+  await sql("alter table folio_postings disable trigger folio_postings_append_only");
+  await sql("delete from folio_postings where description like $1", [`%${TAG}%`]);
+  await sql("alter table folio_postings enable trigger folio_postings_append_only");
   await sql("delete from spa_appointments where hotel_id = $1", [hotelId]);
   await sql("delete from spa_treatments where name like $1", [`${TAG}%`]);
   await sql("delete from spa_therapists where name like $1", [`${TAG}%`]);
@@ -365,5 +377,99 @@ describe("the day diary", () => {
       startsAt: "2027-04-04T15:00",
     });
     expect(again.status, await again.clone().text()).toBe(200);
+  });
+});
+
+/* ══════════════════════════════════════════════════════════════════
+   CLOSING A TREATMENT — onto the room bill (D18-22)
+
+   The owner, 19 September: a treatment goes on the room bill, the spa
+   needs no money connection of its own, and settling at the spa is set
+   aside. So there is one way to close, and these prove it both ways —
+   what it refuses and what it does.
+   ══════════════════════════════════════════════════════════════════ */
+describe("closing a treatment", () => {
+  let closeId: string;
+
+  beforeAll(async () => {
+    await setModule(true);
+    const made = await post(byRole.get("front_desk")!, "/spa/appointments", {
+      stayId, treatmentId: massageId, therapistId: priyaId,
+      startsAt: "2027-04-06T10:00",
+    });
+    expect(made.status, await made.clone().text()).toBe(200);
+    closeId = ((await made.json()) as { id: string }).id;
+  });
+
+  it("refuses housekeeping, who sees the diary and does not close (D18-21)", async () => {
+    const r = await post(byRole.get("housekeeping")!, `/spa/appointments/${closeId}/close`, {});
+    expect(r.status).toBe(403);
+  });
+
+  it("refuses while the property has set no spa tax rate, and names where to set it", async () => {
+    /* D18-21: a treatment bills under the spa's OWN rule, and a property
+       that has not set one cannot bill a treatment at all. Finance says so
+       in a sentence rather than aborting the whole transaction. */
+    await sql("delete from tax_rules where hotel_id = $1 and kind = 'spa'", [hotelId]);
+    const r = await post(byRole.get("front_desk")!, `/spa/appointments/${closeId}/close`, {});
+    expect(r.status).toBe(409);
+    expect(((await r.json()) as { reason: string }).reason).toContain("Settings");
+
+    /* And nothing moved: still booked, nothing on the bill. */
+    const { rows } = await sql(
+      "select status, posting_id from spa_appointments where id = $1", [closeId]);
+    expect(rows[0].status).toBe("booked");
+    expect(rows[0].posting_id).toBeNull();
+  });
+
+  it("puts the treatment on the guest's bill under the spa's own rate, and closes it", async () => {
+    await sql(
+      `insert into tax_rules (hotel_id, kind, over_amount, rate, note)
+       values ($1, 'spa', 0, 18, $2)
+       on conflict (hotel_id, kind, over_amount) do update set rate = 18`,
+      [hotelId, `${TAG} fixture`]);
+
+    const r = await post(byRole.get("front_desk")!, `/spa/appointments/${closeId}/close`, {});
+    expect(r.status, await r.clone().text()).toBe(200);
+    const { postingId } = (await r.json()) as { postingId: string };
+
+    const { rows: line } = await sql(
+      `select fp.category, fp.amount::text, fp.tax_rate::text, f.reservation_id::text,
+              fp.description
+         from folio_postings fp join folios f on f.id = fp.folio_id
+        where fp.id = $1`, [postingId]);
+    /* Its own line in the Extra Charges report's Spa row (D18-7). */
+    expect(line[0].category).toBe("spa");
+    expect(Number(line[0].amount)).toBe(2500);
+    /* The SPA's rate, not the room's — the whole point of D18-21. */
+    expect(Number(line[0].tax_rate)).toBe(18);
+    expect(line[0].reservation_id).toBe(stayId);
+    /* On the property's clock, as a clerk reads it (D17-77). */
+    expect(line[0].description).toContain("06/04/2027 10:00");
+
+    const { rows: appt } = await sql(
+      `select status, settlement, closed_by::text, posting_id::text
+         from spa_appointments where id = $1`, [closeId]);
+    expect(appt[0].status).toBe("completed");
+    expect(appt[0].settlement).toBe("room");
+    expect(appt[0].closed_by).toBe(byRole.get("front_desk"));
+    expect(appt[0].posting_id).toBe(postingId);
+  });
+
+  it("will not close it twice", async () => {
+    const r = await post(byRole.get("front_desk")!, `/spa/appointments/${closeId}/close`, {});
+    expect(r.status).toBe(409);
+    expect(((await r.json()) as { reason: string }).reason).toContain("already closed");
+  });
+
+  it("will not put an unpriced treatment on a bill", async () => {
+    const made = await post(byRole.get("front_desk")!, "/spa/appointments", {
+      stayId, treatmentId: unpricedId, therapistId: sunitaId,
+      startsAt: "2027-04-06T14:00",
+    });
+    const id = ((await made.json()) as { id: string }).id;
+    const r = await post(byRole.get("front_desk")!, `/spa/appointments/${id}/close`, {});
+    expect(r.status).toBe(409);
+    expect(((await r.json()) as { reason: string }).reason).toContain("no price");
   });
 });

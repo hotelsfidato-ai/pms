@@ -6539,6 +6539,45 @@ copy will see of theirs.**
 
 ---
 
+### 308 · MINE: I built the door two chats asked for, and never told either of them it existed
+
+18-21 September. The laundry chat stopped at a file that was not theirs and
+wrote in MODULE.md exactly what it needed: *"one exported function on
+finance's door, taking an open client, the property, the stay, the category,
+the description, the amount and the business date, and answering with the
+posting's id or a refusal."* Its route ended in a refusal saying so. The spa
+chat asked for the same thing.
+
+On 18 September I built precisely that - `postCharge`, down to the argument
+list - exported it, tested it, wrote in the commit that it was "for the laundry
+and the spa", and moved on. **I never went back to either route.** For three
+days laundry's charge answered *"finance's door does not hand out a way to post
+a charge"* while that door stood open beside it, and the spa had no way to
+close a treatment at all. D18-7 did not work for either service. Found by the
+audit on the 21st, not by me.
+
+**Why nothing caught it:** every laundry test was a REFUSAL - unpriced, the
+hotel's own linen - and all 23 passed with the wall in place. A suite made
+only of refusals cannot tell a guard from a wall. When the charge was
+connected, the old refusal was put back to prove the new test: the two new
+tests failed and **all 23 old ones still passed.**
+
+**And a second thing the same week:** `dayBook.test.ts`'s "money is money"
+asserted Sales = room + extras - discount. That was the export's OLD
+definition, the one that left out the restaurant. It passed alone because an
+empty database has no restaurant orders; in the full suite it failed by
+₹64,000 - exactly the revenue it had been told to exclude. A test that holds
+only while the term it forgets happens to be zero was guarding the bug.
+
+**The rules: (1) building the door somebody asked for is half the job - the
+other half is going back to the route that asked and connecting it, or telling
+its owner in so many words. A door with no caller is not finished. (2) Every
+service needs at least one test of the thing it EXISTS FOR succeeding, not only
+of what it refuses. (3) A sum tested only on data where one of its terms is
+zero has not been tested.**
+
+---
+
 ### 307 · MINE: I fixed MEMORY 300 in the file it broke and never grepped for the second copy
 
 19 September. On the 18th the database suite proved "an unknown module is

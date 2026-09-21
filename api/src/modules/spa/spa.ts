@@ -2,6 +2,7 @@ import { Hono } from "hono";
 import type { Context, Next } from "hono";
 import { withSession } from "../../auth.ts";
 import { businessDateFor } from "../../businessDate.ts";
+import { postCharge } from "../finance/index.ts";
 import type { PoolClient as Client } from "pg";
 
 /* ══════════════════════════════════════════════════════════════════
@@ -566,6 +567,108 @@ spa.post("/:code/spa/appointments/:id/cancel", async (c) => {
           + "on the bill instead.");
     }
     return { ok: true as const, id: rows[0].id };
+  });
+
+  if (result === null) return c.json({ error: "No such property." }, 404);
+  if (result === "missing") return c.json({ error: "No such appointment." }, 404);
+  return c.json(result, statusFor(result));
+});
+
+/* ══════════════════════════════════════════════════════════════════
+   CLOSING A TREATMENT — onto the room bill (D18-22)
+
+   The owner, 19 September, answering the question this chat asked on the
+   18th — which door records money taken AT the spa — by removing it: a
+   treatment goes on the room bill, the spa needs no connection of its
+   own for money, and "settled at the spa" is set aside for later. So
+   there is ONE branch here and the route takes no choice. When settling
+   at the spa is built, it is a parameter added to this route, not a
+   second route.
+
+   THROUGH FINANCE'S DOOR. `postCharge` with the spa's OWN tax rule
+   (D18-21): a property that has not set one cannot bill a treatment, and
+   finance answers with the sentence naming Settings → Tax rather than
+   aborting the transaction. `category: "Spa"` puts it in the Extra
+   Charges report's Spa row.
+
+   THE TABLE ALREADY INSISTS ON THE REST (migration 119): closed means
+   settled and settled means closed; a closed one names who and when; a
+   posting belongs only to a room settlement. So a half-done close cannot
+   be written even by mistake.
+
+   A TREATMENT AGREED AT ₹0 IS CLOSED WITH NO LINE ON THE BILL. Zero is a
+   real answer — somebody decided it was free — and finance rightly
+   refuses "a charge of nothing". Refusing to close it would leave a free
+   treatment open in the diary for ever. It is recorded as settled to the
+   room with no posting, which the table allows.
+
+   THE ROW IS LOCKED FIRST, so two clerks closing the same treatment at
+   once cannot both post it. */
+spa.post("/:code/spa/appointments/:id/close", async (c) => {
+  const result = await withSession(c.get("subject"), async (client, session) => {
+    const hotelId = await hotelFor(client, c.req.param("code"));
+    if (!hotelId) return null;
+    /* D18-21: reception books AND closes; housekeeping only sees. */
+    if (!(await holdsRoleHere(client, hotelId, SPA_BOOK_ROLES))) {
+      return forbidden(BOOK_REFUSED);
+    }
+
+    const { rows } = await client.query<{
+      status: string; agreed_amount: string | null; reservation_id: string;
+      treatment: string; therapist: string; starts_at: string;
+    }>(
+      `select a.status, a.agreed_amount::text, a.reservation_id::text,
+              t.name as treatment, th.name as therapist,
+              app.hotel_clock(a.hotel_id, a.starts_at) as starts_at
+         from spa_appointments a
+         join spa_treatments t  on t.id  = a.treatment_id
+         join spa_therapists th on th.id = a.therapist_id
+        where a.id = $1 and a.hotel_id = $2
+          for update of a`,
+      [c.req.param("id"), hotelId],
+    );
+    const a = rows[0];
+    if (!a) return "missing" as const;
+
+    /* Every refusal is ABOVE the first write (MEMORY 243). */
+    if (a.status === "cancelled") {
+      return refuse("That appointment was cancelled, so there is nothing to charge.");
+    }
+    if (a.status === "completed") {
+      return refuse("That treatment is already closed and on the bill.");
+    }
+    if (a.agreed_amount === null) {
+      return refuse("This treatment has no price, so it cannot go on a bill. "
+        + "Price it under Treatments first.");
+    }
+
+    let postingId: string | null = null;
+    if (Number(a.agreed_amount) > 0) {
+      /* The property's own clock, as a clerk would read it: 27/08/2026 11:00
+         (D17-77). Sliced from the string app.hotel_clock wrote — nothing
+         here builds a Date. */
+      const [y, m, d] = a.starts_at.slice(0, 10).split("-");
+      const when = `${d}/${m}/${y} ${a.starts_at.slice(11, 16)}`;
+
+      const posted = await postCharge(client, hotelId, a.reservation_id, {
+        description: `Spa: ${a.treatment} with ${a.therapist}, ${when}`.slice(0, 240),
+        amount: Number(a.agreed_amount),
+        category: "Spa",
+        taxKind: "spa",
+      });
+      if (!posted.ok) return refuse(posted.reason);
+      postingId = posted.id;
+    }
+
+    await client.query(
+      `update spa_appointments
+          set status = 'completed', settlement = 'room',
+              closed_by = $3, closed_at = now(), posting_id = $4,
+              updated_at = now()
+        where id = $1 and hotel_id = $2`,
+      [c.req.param("id"), hotelId, session.staffId, postingId],
+    );
+    return { ok: true as const, id: c.req.param("id"), postingId };
   });
 
   if (result === null) return c.json({ error: "No such property." }, 404);

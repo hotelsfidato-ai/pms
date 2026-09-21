@@ -241,6 +241,17 @@ export async function cancelAppointment(
   return call(`/api/hotels/${code}/spa/appointments/${id}/cancel`, "POST", { reason });
 }
 
+/** The treatment was given: it goes onto the guest's room bill (D18-22).
+    There is no settlement to choose — "settled at the spa" is set aside
+    by the owner for later, so the server takes no choice and the screen
+    offers none. The server refuses an unpriced one, a property with no
+    spa tax rule, and a bill that is already closed, each in a sentence. */
+export async function closeAppointment(
+  code: string, id: string,
+): Promise<Result<{ id: string; postingId: string }>> {
+  return call(`/api/hotels/${code}/spa/appointments/${id}/close`, "POST", {});
+}
+
 async function call<T>(path: string, method: string, body?: unknown): Promise<Result<T>> {
   try {
     const out = await api<T & { ok?: boolean }>(path, {
