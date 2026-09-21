@@ -12,6 +12,52 @@ exists** (`MODULE.md`).
 
 ---
 
+## 2026-09-21 (evening) · the guest's bill, on finance's one definition
+
+**Asked for:** the master, once `app.stay_bill` was on `cp6` (migration 123):
+build the guest's bill on it, the D21-6 way — refused with the link alone,
+refused before the code, works after — and show the same figures the desk's
+print shows. Pick the title and say so.
+
+**Shipped**
+- Migration **124** (`124_the_guests_bill.sql`, settled at merge):
+  `app.guest_bill(token_hash, unlock_hash)` — finance's `app.stay_bill` for
+  the one stay `app.guest_unlocked` answers, and nothing else. No arithmetic.
+- `GET /api/guest/:token/bill` in the door, behind `openedHere`.
+- The page: "Your bill so far", drawn by finance's own `BillPrint` from the
+  front door, titled **"Interim bill"** — an unnumbered bill before
+  check-out, which a guest reading "Tax Invoice" would take for the final
+  one — and "Pay at the desk before you leave".
+
+**Found**
+- **OCI-5** — breaking `app.guest_bill` to take the link alone left all 34
+  door tests green: the door asks for the unlock first, so no test ever
+  reached a function behind the code without one. True of all five such
+  functions. Each is now asked directly in the database.
+- The demo's 5 Elements row carries GSTIN `27AAAAA0000A1Z5` in `hotels` — the
+  printed bill shows what the database holds, which is right; the value is
+  the demo's, not code's.
+
+**Proved** — in `D:\fidato-guests`, nothing pushed
+- **The full gates, by exit code:** `npx tsc -b --force` 0 · server types 0 ·
+  `npx vitest run` **564 of 564**, 61 files, 0 · `cd api; npm test`
+  **1,268 of 1,268**, 80 files, 0 · `bash db/tests/run.sh` **965
+  assertions**, 0 · `bash db/tests/rerun.sh` **all 124 migrations
+  re-runnable**, 0 · `npm run build` 0, "no test sign-in in dist".
+- **Guards seen to refuse:** `guest_bill` taking the link alone (the new
+  database-level test); `guest_details_submit` taking the link alone (the
+  same test, run on its own); the page's bill titled "Tax Invoice"; the page
+  asking for the bill without this tab's unlock.
+- **On the screen**, at 375px, against this copy's API with a stand-in sender
+  (D21-29): a code to the booking's whole number, Verified, and the bill —
+  Room 202 · 1 night ₹1,800.00, CGST 2.5% ₹45.00, SGST 2.5% ₹45.00, Total
+  ₹1,890.00, Outstanding ₹1,890.00. Nothing wider than the screen (359 of
+  375px). The guest's `/bill` and the desk's `/stays/:id/bill` for the same
+  stay: the same JSON.
+
+**Left open** — the QR code (after the master installs `qrcode`); the link
+from the check-in flow (front desk's file). The claim stays held for the QR.
+
 ## 2026-09-21 (later) · the master's answers, taken in
 
 **Asked for:** the master, after merging this branch into `cp6` (`b7fc99b`):

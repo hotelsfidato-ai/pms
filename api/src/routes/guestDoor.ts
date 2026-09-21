@@ -38,6 +38,7 @@ import { canSend, send } from "../sending.ts";
 
    GET  /api/guest/:token/details    what the guest has sent, and its state
    POST /api/guest/:token/details    their ID and address - a SUBMISSION
+   GET  /api/guest/:token/bill       the bill as it stands (D21-10, migration 124)
    GET  /api/guest/:token/requests   their spa / laundry requests
    POST /api/guest/:token/requests   ask for one, where the hotel offers it
 
@@ -400,6 +401,19 @@ guestDoor.post("/:token/details", async (c) => {
     })]);
   if (!rows[0]?.ok) return refused(c);
   return c.json({ sent: true });
+});
+
+/* THE BILL AS IT STANDS (D21-10) - finance's one definition, `app.stay_bill`
+   (123), through `app.guest_bill` (124), which answers only for the stay this
+   link and this phone's unlock reach. Nothing is added up here. */
+guestDoor.get("/:token/bill", async (c) => {
+  const door = await openedHere(c);
+  if (!door) return refused(c);
+  const rows = await ask<{ bill: unknown }>(
+    "select app.guest_bill($1, $2) as bill", [door.hash, door.unlock]);
+  const bill = rows[0]?.bill;
+  if (!bill) return refused(c);
+  return c.json(bill);
 });
 
 guestDoor.get("/:token/requests", async (c) => {

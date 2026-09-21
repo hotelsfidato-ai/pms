@@ -303,6 +303,41 @@ describe("behind the code", () => {
     expect(screen.getByText("Passport ending 4567")).toBeTruthy();
   });
 
+  /* D21-10: exactly the bill the desk prints. The page draws finance's own
+     BillPrint from what the door sends, and asks for it with this tab's
+     unlock like everything behind the code. */
+  it("shows the desk's own bill, as an interim bill, and says where to pay", async () => {
+    const BILL = {
+      hotel: { name: "5 Elements Akkalkot", address: null, city: "Akkalkot", state: "Maharashtra",
+        phone: null, gstin: null },
+      stay: { reference: "FH-2609-5001", guest: "A. Guest", checkIn: "2026-08-25",
+        checkOut: "2026-08-27", room: "204" },
+      lines: [{ date: "2026-08-25", description: "Room charge", category: "room", amount: 1800,
+        tax: 90, rate: 5, billTo: "guest", company: null }],
+      taxes: [{ rate: 5, taxable: 1800, cgst: 45, sgst: 45 }],
+      net: 1800, tax: 90, total: 1890, rounded: 1890, roundOff: 0, paid: 500, balance: 1390,
+    };
+    let billAsked: RequestInit | undefined;
+    server({
+      [OPEN]: () => unlocked,
+      [`${OPEN}/details`]: () => ({ sent: null }),
+      [`${OPEN}/bill`]: (init) => { billAsked = init; return BILL; },
+    });
+    open();
+
+    const print = await waitFor(() => {
+      const el = document.querySelector("[data-bill-print]");
+      if (!el) throw new Error("no bill yet");
+      return el as HTMLElement;
+    });
+    expect(print.textContent).toContain("Interim bill");
+    expect(print.textContent, "not the final invoice").not.toContain("Tax Invoice");
+    expect(print.textContent).toContain("Room charge");
+    expect(print.textContent).toContain("Outstanding");
+    expect(screen.getByText("Pay at the desk before you leave.")).toBeTruthy();
+    expect(unlockSent(billAsked), "asked for with this tab's unlock").toBe(UNLOCK);
+  });
+
   it("offers a spa or laundry request only where the hotel has one on (D21-63)", async () => {
     server({ [OPEN]: () => unlocked, [`${OPEN}/details`]: () => ({ sent: null }) });
     open();

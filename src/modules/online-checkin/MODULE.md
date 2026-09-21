@@ -9,14 +9,13 @@ and D21-6 to D21-19, D21-25, D21-29, D21-59 to D21-63, D21-72, D21-75
 (`docs/briefs/decisions-2026-09-21.md`). The design is
 `docs/architecture/online-checkin.md`; the brief is `docs/briefs/guest-page.md`.
 
-**Not built, on purpose:** the bill (waits on finance's one definition of a
-bill — "Waiting on the master" below), the ID photo (waits on the owner's rule
-for how long it is kept, D21-11), paying online, choosing a room.
+**Not built, on purpose:** the ID photo (waits on the owner's rule for how
+long it is kept, D21-11), paying online, choosing a room.
 
 ```
 src/modules/online-checkin/        the guest's page, the desk's screen, their data and tests
 api/src/routes/guestDoor.ts        the door (the brief gives this lane that file)
-db/migrations/121_…                everything behind the code - numbered at merge
+db/migrations/121_…, 124_…         everything behind the code; the guest's bill
 ```
 
 ---
@@ -71,7 +70,9 @@ Coming soon page and its address are gone.
 - **Behind the code** — the details form (ID type, ID number, address; for a
   passport, its expiry and the visa with its expiry — D21-19, nothing else),
   what was sent and whether the desk has checked it, with an Aadhaar as its
-  last four digits; and a spa or laundry request **only where the hotel has
+  last four digits; **the bill as it stands**, exactly the desk's print,
+  titled "Interim bill", with "Pay at the desk before you leave"; and a spa or
+  laundry request **only where the hotel has
   that module switched on (D21-63)** — 5 Elements has neither.
 - **The privacy notice (D21-61)** has its place before the first question
   (`privacyNotice.ts`) and **shows nothing** until the advisor has approved
@@ -93,6 +94,7 @@ room number and the link).
 | POST | `/api/guest/:token/code` | answers | a code to the phone on the stay it resolves to — one answer whatever happened |
 | POST | `/api/guest/:token/verify` | answers | the six digits; hands back the unlock once |
 | GET/POST | `/api/guest/:token/details` | **refused** | what the guest sent / send it, as a submission |
+| GET | `/api/guest/:token/bill` | **refused** | the bill as it stands — `app.guest_bill` (124), which is finance's `app.stay_bill` (123) for the one stay the link and the unlock reach |
 | GET/POST | `/api/guest/:token/requests` | **refused** | their requests / make one |
 | POST | `/api/hotels/:code/stays/:id/guest-link` | staff | a booking's link, shown once |
 | GET | `/api/hotels/:code/online-checkin` | staff | waiting details (Aadhaar masked), open requests, rooms and their cards |
@@ -115,6 +117,19 @@ Staff routes are for owner, admin, GM, hotel manager and reception
 | `guest_detail_submissions` | what a guest typed, waiting for a clerk; Aadhaar whole (D21-17) |
 | `guest_requests` | a spa or laundry request, open / done / declined |
 
+**The bill (D21-10, migration 124):** `app.guest_bill(token_hash,
+unlock_hash)` is one line — finance's `app.stay_bill` for the stay
+`app.guest_unlocked` answers — and adds no arithmetic. The page draws it with
+finance's own `BillPrint` (the front door), titled **"Interim bill"**: an
+unnumbered bill before check-out, which a guest reading "Tax Invoice" would
+take for the final one. It says "Pay at the desk before you leave" — paying
+online is not in this version. A test checks the guest's bill and the desk's
+print of the same stay are the same answer.
+
+⚠ **Every function behind the code is tested in the database itself**, with
+the link's hash and no unlock. Tests through the door cannot see a function
+that forgot to ask `app.guest_unlocked`, because the door asks first — OCI-5.
+
 Every function the door may call takes hashes only. Two are internal and not
 granted: `app.guest_link_stay` (a token → the stay it reaches now; a room card
 → whoever is checked in there, the latest assignment winning when the one due
@@ -122,11 +137,8 @@ out has not been checked out yet) and `app.guest_unlocked`.
 
 ## Waiting on the master — answered 21 September
 
-**Still open, and this lane's claim is held for them:**
+**Still open, and this lane's claim is held for it:**
 
-- **Finance's one definition of a bill** (D21-10) — the master writes it and
-  will name its function and signature when it is on `cp6`. **Build nothing
-  over `folio_postings` meanwhile.**
 - **The QR code** — the owner approved `qrcode` (MIT, the desk's screen only,
   D21-95). The master installs it on `cp6` after the live release, because
   `node_modules` is shared with the release copy. **Do not import it before
@@ -135,6 +147,10 @@ out has not been checked out yet) and `app.guest_unlocked`.
   claim is held by another chat.
 
 **Answered:**
+
+- **Finance's one definition of a bill** — `app.stay_bill(uuid)` (migration
+  123, the master's), wrapped by this lane's `app.guest_bill` (124) and drawn
+  by finance's own `BillPrint`. Built on 21 September; see "The bill" above.
 
 - **The menu entry** — done by the master (`d6cef4a`, D21-89): under Front
   desk and in reception's menu, offered to exactly `DESK_ROLES`.
