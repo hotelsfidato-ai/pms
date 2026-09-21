@@ -1,0 +1,443 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Fidato PMS Design System</title>
+<!-- Companion to DESIGN.md. Values copied from src/styles/theme.css, which is the
+     source of truth. Self-contained: open this file in any browser. The product has
+     one light theme, so this page does too. -->
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+:root {
+  --ink-950:#010d17; --ink-900:#031728; --ink-800:#0b2135; --ink-700:#142b3a; --ink-600:#24384a;
+  --grey-700:#354552; --grey-600:#4c5b67; --grey-500:#67737e; --grey-400:#9aa2a9; --grey-300:#ccd0d4;
+  --grey-200:#e2e5e8; --grey-100:#eef0f2; --grey-50:#f7f8f9;
+  --orange:#df6128; --orange-600:#c4521d; --orange-700:#a34314; --orange-800:#8f3b12; --orange-100:#f9dccd; --orange-50:#fdf1eb;
+  --yellow:#ffb600; --yellow-100:#ffedbf; --yellow-50:#fff8e6; --warning-ink:#8a6300;
+  --tangerine:#eb8c00; --tangerine-700:#a96500; --tangerine-50:#fdf4e6;
+  --rose:#db536a; --rose-700:#b84659; --rose-100:#f8d4da; --rose-50:#fdeef0;
+  --red:#e0301e; --red-700:#c52a1a; --red-100:#f9d0cc; --red-50:#fdeceb;
+  --success:#1f6f5c; --success-600:#1a5f4f; --success-100:#cde5de; --success-50:#eaf4f1;
+  --info:#2b6cb0; --info-100:#d2e2f2; --info-50:#ebf2f9;
+  --accent-from:#fe611f; --accent-to:#f4bf54;
+  --font:"Inter Variable","Inter",-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;
+  --r-xs:4px; --r-sm:6px; --r-md:10px; --r-lg:12px;
+  --shadow-overlay:0 12px 32px -8px rgb(3 23 40 / .18),0 2px 8px -2px rgb(3 23 40 / .08);
+  --shadow-popover:0 8px 24px -6px rgb(3 23 40 / .14),0 1px 4px rgb(3 23 40 / .06);
+  --ease:cubic-bezier(.16,1,.3,1);
+}
+* { box-sizing:border-box; border-color:var(--grey-200); }
+body { margin:0; background:var(--grey-50); color:var(--ink-900); font:400 15px/23px var(--font);
+  font-feature-settings:"cv02","cv03","cv04","cv11"; -webkit-font-smoothing:antialiased; }
+::selection { background:var(--orange-100); }
+:focus-visible { outline:2px solid var(--orange); outline-offset:2px; border-radius:var(--r-xs); }
+h1,h2,h3 { font-weight:600; letter-spacing:-.014em; margin:0; }
+.tabular { font-variant-numeric:tabular-nums; }
+.ds-page { max-width:1200px; margin:0 auto; padding:32px 28px 64px; }
+.ds-intro h1 { font-size:24px; line-height:32px; letter-spacing:-.021em; }
+.ds-intro p { color:var(--grey-500); max-width:42rem; margin:6px 0 0; }
+.ds-section { margin-top:48px; }
+.ds-section > h2 { font-size:18px; line-height:27px; }
+.ds-section > p.ds-desc { font-size:14px; line-height:21px; color:var(--grey-500); margin:4px 0 14px; max-width:42rem; }
+.ds-sub { font-size:14px; font-weight:600; margin:24px 0 10px; color:var(--grey-700); }
+.ds-row { display:flex; flex-wrap:wrap; gap:12px; align-items:center; }
+.ds-grid { display:grid; gap:12px; grid-template-columns:repeat(auto-fill,minmax(170px,1fr)); }
+.ds-note { font-size:13px; line-height:19px; color:var(--grey-500); margin:8px 0 0; }
+code { font:13px ui-monospace,"SF Mono","Cascadia Mono",Menlo,monospace; background:var(--grey-100); padding:1px 5px; border-radius:var(--r-xs); color:var(--ink-800); }
+svg.i { width:16px; height:16px; stroke:currentColor; fill:none; stroke-width:2; stroke-linecap:round; stroke-linejoin:round; flex-shrink:0; }
+
+/* Swatches */
+.ds-swatch { background:#fff; border:1px solid var(--grey-200); border-radius:var(--r-md); overflow:hidden; }
+.ds-swatch .chip { height:64px; display:flex; align-items:flex-end; padding:8px 10px; font-size:13px; font-weight:500; }
+.ds-swatch .meta { padding:8px 10px 10px; font-size:13px; line-height:18px; }
+.ds-swatch .meta b { display:block; font-weight:600; font-size:14px; }
+.ds-swatch .meta span { color:var(--grey-500); }
+
+/* Type */
+.ds-type { background:#fff; border:1px solid var(--grey-200); border-radius:var(--r-md); }
+.ds-type > div { display:grid; grid-template-columns:minmax(0,11rem) minmax(0,1fr); gap:16px; padding:14px 20px; border-bottom:1px solid var(--grey-100); align-items:baseline; }
+.ds-type > div:last-child { border-bottom:0; }
+.ds-type .spec { font-size:13px; color:var(--grey-500); line-height:18px; }
+
+/* Buttons */
+.ds-btn { display:inline-flex; align-items:center; justify-content:center; gap:8px; height:36px; padding:0 14px; border-radius:var(--r-md);
+  font:500 15px/23px var(--font); white-space:nowrap; border:1px solid transparent; cursor:pointer; transition:background-color .15s ease-out,border-color .15s ease-out,color .15s ease-out; }
+.ds-btn-primary { background:var(--orange-600); color:#fff; }
+.ds-btn-primary:hover { background:var(--orange-700); } .ds-btn-primary:active { background:var(--orange-800); }
+.ds-btn-secondary { background:#fff; color:var(--ink-900); border-color:var(--grey-300); }
+.ds-btn-secondary:hover { background:var(--grey-50); border-color:var(--grey-400); } .ds-btn-secondary:active { background:var(--grey-100); }
+.ds-btn-ghost { background:transparent; color:var(--grey-600); }
+.ds-btn-ghost:hover { background:var(--grey-100); color:var(--ink-900); }
+.ds-btn-danger { background:var(--red); color:#fff; }
+.ds-btn-link { background:none; border:0; height:auto; padding:0; color:var(--orange-700); }
+.ds-btn-link:hover { text-decoration:underline; text-underline-offset:4px; }
+.ds-btn-sm { height:32px; padding:0 12px; font-size:13px; border-radius:var(--r-sm); gap:6px; }
+.ds-btn-lg { height:44px; padding:0 20px; font-size:16px; }
+.ds-btn[disabled] { cursor:not-allowed; }
+.ds-btn-primary[disabled] { background:var(--grey-300); color:var(--grey-600); }
+.ds-btn-secondary[disabled] { background:var(--grey-50); color:var(--grey-500); }
+.ds-spin { animation:ds-spin .8s linear infinite; }
+@keyframes ds-spin { to { transform:rotate(360deg); } }
+@media (pointer:coarse) { .ds-btn { min-height:44px; } .ds-field input { height:44px; font-size:16px; } }
+
+/* Fields */
+.ds-field { display:flex; flex-direction:column; gap:6px; min-width:0; }
+.ds-field label { font-size:14px; line-height:21px; font-weight:500; color:var(--grey-700); }
+.ds-field label .req { color:var(--red); margin-left:2px; }
+.ds-field input { height:36px; padding:0 12px; font:400 15px var(--font); color:var(--ink-900); background:#fff; border:1px solid var(--grey-300);
+  border-radius:var(--r-md); transition:border-color .15s ease-out; width:100%; }
+.ds-field input::placeholder { color:var(--grey-400); }
+.ds-field input:hover { border-color:var(--grey-400); }
+.ds-field input:focus, .ds-field input.is-focus { outline:none; border-color:var(--orange); box-shadow:0 0 0 2px rgb(223 97 40 / .2); }
+.ds-field input.is-invalid { border-color:var(--red); }
+.ds-field input:disabled { background:var(--grey-50); color:var(--grey-400); cursor:not-allowed; }
+.ds-field .hint { font-size:13px; line-height:19px; color:var(--grey-500); margin:0; }
+.ds-field .err { font-size:13px; line-height:19px; color:var(--red); margin:0; }
+
+/* Pills */
+.ds-pill { display:inline-flex; align-items:center; gap:6px; border-radius:999px; padding:2px 8px; font-size:12px; line-height:17px; font-weight:500; box-shadow:inset 0 0 0 1px var(--ring); background:var(--bg); color:var(--fg); }
+.ds-pill::before { content:""; width:6px; height:6px; border-radius:50%; background:var(--dot); }
+
+/* Card and tiles */
+.ds-card { background:#fff; border:1px solid var(--grey-200); border-radius:var(--r-md); padding:20px; }
+.ds-tile { background:#fff; border:1px solid var(--grey-200); border-radius:var(--r-md); padding:16px; display:flex; flex-direction:column; color:inherit; text-decoration:none; transition:border-color .15s; }
+a.ds-tile:hover { border-color:var(--grey-400); }
+.ds-tile .head { display:flex; align-items:center; gap:10px; font-size:14px; color:var(--grey-600); }
+.ds-tile .ico { width:32px; height:32px; border-radius:var(--r-md); display:grid; place-items:center; background:var(--grey-100); color:var(--grey-500); }
+.ds-tile .ico.warm { background:var(--orange-50); color:var(--orange-700); }
+.ds-tile .fig { display:flex; justify-content:space-between; align-items:center; margin-top:10px; }
+.ds-tile .fig p { margin:0; font-weight:600; font-size:24px; line-height:32px; font-variant-numeric:tabular-nums; }
+.ds-tile .fig p.lead { font-size:30px; line-height:36px; }
+.ds-tile .fig p.warm { color:var(--orange-700); } .ds-tile .fig p.missing { color:var(--grey-500); }
+.ds-tile .fig svg { color:var(--grey-300); }
+.ds-tile dl { margin:12px 0 0; padding-top:12px; border-top:1px solid var(--grey-100); font-size:14px; line-height:21px; }
+.ds-tile dl div { display:flex; justify-content:space-between; gap:12px; }
+.ds-tile dt { color:var(--grey-600); } .ds-tile dd { margin:0; font-variant-numeric:tabular-nums; }
+.ds-tile .note { font-size:14px; line-height:19px; color:var(--grey-600); margin:4px 0 0; }
+.ds-term { text-decoration:underline dotted; text-decoration-color:rgb(76 91 103 / .4); text-underline-offset:3px; cursor:help; }
+
+/* Table */
+.ds-table { background:#fff; border:1px solid var(--grey-200); border-radius:var(--r-md); overflow-x:auto; }
+.ds-table table { border-collapse:collapse; width:100%; font-size:15px; }
+.ds-table th { background:var(--grey-50); height:40px; padding:0 16px; text-align:left; font-size:12px; font-weight:600; letter-spacing:.025em; text-transform:uppercase; color:var(--grey-500); border-bottom:1px solid var(--grey-200); white-space:nowrap; }
+.ds-table td { padding:10px 16px; border-bottom:1px solid var(--grey-100); white-space:nowrap; }
+.ds-table tr:last-child td { border-bottom:0; }
+.ds-table .num { text-align:right; font-variant-numeric:tabular-nums; }
+
+/* Shell */
+.ds-shell { display:grid; grid-template-columns:248px minmax(0,1fr); border:1px solid var(--grey-200); border-radius:var(--r-md); overflow:hidden; min-height:320px; }
+.ds-side { background:var(--ink-900); color:#fff; padding:14px 10px; font-size:15px; }
+.ds-side .brand { font-weight:600; padding:4px 10px 14px; }
+.ds-side .label { font-size:12px; font-weight:600; letter-spacing:.05em; text-transform:uppercase; color:rgb(255 255 255 / .35); padding:12px 10px 6px; }
+.ds-side a { display:flex; align-items:center; gap:10px; padding:7px 10px; border-radius:var(--r-md); color:rgb(255 255 255 / .65); text-decoration:none; }
+.ds-side a:hover { color:#fff; background:rgb(255 255 255 / .06); }
+.ds-side a.on { color:#fff; background:rgb(255 255 255 / .10); }
+.ds-main { background:var(--grey-50); display:flex; flex-direction:column; min-width:0; }
+.ds-top { height:56px; background:#fff; border-bottom:1px solid var(--grey-200); display:flex; align-items:center; gap:12px; padding:0 20px; }
+.ds-search { display:flex; align-items:center; gap:8px; height:36px; padding:0 10px; border:1px solid var(--grey-200); border-radius:var(--r-md); color:var(--grey-500); font-size:14px; width:260px; max-width:100%; background:var(--grey-50); }
+.ds-search kbd { margin-left:auto; font:12px ui-monospace,monospace; border:1px solid var(--grey-200); border-radius:var(--r-xs); padding:0 4px; background:#fff; }
+.ds-top .bell { margin-left:auto; color:var(--grey-500); }
+.ds-main .body { padding:24px 28px; }
+.ds-main .body h1 { font-size:24px; line-height:32px; letter-spacing:-.021em; }
+.ds-main .body p { color:var(--grey-500); margin:6px 0 0; }
+
+/* Tabs */
+.ds-tabs { display:flex; gap:4px; border-bottom:1px solid var(--grey-200); overflow-x:auto; }
+.ds-tabs a { padding:10px 12px; font-weight:500; color:var(--grey-500); text-decoration:none; border-bottom:2px solid transparent; margin-bottom:-1px; white-space:nowrap; }
+.ds-tabs a:hover { color:var(--ink-900); }
+.ds-tabs a.on { color:var(--ink-900); border-bottom-color:var(--orange); }
+
+/* Dialog (drawn in place, not floating) */
+.ds-scrim { background:rgb(3 23 40 / .45); border-radius:var(--r-md); padding:32px 16px; display:flex; justify-content:center; }
+.ds-dialog { background:#fff; border:1px solid var(--grey-200); border-radius:var(--r-lg); box-shadow:var(--shadow-overlay); width:100%; max-width:420px; }
+.ds-dialog header { display:flex; justify-content:space-between; gap:16px; padding:16px 20px; border-bottom:1px solid var(--grey-200); }
+.ds-dialog header h3 { font-size:16px; line-height:24px; }
+.ds-dialog header p { font-size:14px; color:var(--grey-500); margin:4px 0 0; }
+.ds-dialog .content { padding:16px 20px; }
+.ds-dialog footer { display:flex; justify-content:flex-end; gap:8px; padding:14px 20px; border-top:1px solid var(--grey-200); background:var(--grey-50); border-radius:0 0 var(--r-lg) var(--r-lg); }
+
+/* States */
+.ds-state { text-align:center; padding:40px 24px; display:flex; flex-direction:column; align-items:center; }
+.ds-state .dot { width:44px; height:44px; border-radius:50%; display:grid; place-items:center; background:var(--grey-100); color:var(--grey-400); margin-bottom:16px; }
+.ds-state .dot svg { width:20px; height:20px; }
+.ds-state.err .dot { background:var(--red-50); color:var(--red); }
+.ds-state h3 { font-size:16px; line-height:24px; }
+.ds-state p { color:var(--grey-500); margin:6px 0 0; max-width:24rem; }
+.ds-tip { display:inline-block; background:var(--ink-900); color:#fff; font-size:13px; line-height:18px; padding:6px 10px; border-radius:var(--r-sm); max-width:260px; }
+.ds-toast { background:#fff; border:1px solid var(--grey-200); border-radius:var(--r-md); box-shadow:var(--shadow-overlay); padding:12px 16px; max-width:340px; }
+.ds-toast b { display:block; font-weight:600; } .ds-toast span { color:var(--grey-600); font-size:14px; }
+
+.ds-rules { display:grid; gap:12px; grid-template-columns:repeat(auto-fit,minmax(280px,1fr)); }
+.ds-rules ul { margin:8px 0 0; padding-left:18px; font-size:14px; line-height:21px; }
+.ds-rules li { margin-bottom:6px; }
+.ds-rules h3 { font-size:16px; }
+.ds-do h3 { color:var(--success-600); } .ds-dont h3 { color:var(--red-700); }
+
+@media (max-width:760px) {
+  .ds-page { padding:24px 16px 48px; }
+  .ds-shell { grid-template-columns:1fr; }
+  .ds-side { display:none; }
+  .ds-type > div { grid-template-columns:1fr; gap:4px; }
+}
+@media (prefers-reduced-motion:reduce) { *,*::before,*::after { animation-duration:.01ms !important; transition-duration:.01ms !important; } }
+</style>
+</head>
+<body>
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+  <symbol id="i-chevron" viewBox="0 0 24 24"><path d="m9 18 6-6-6-6"/></symbol>
+  <symbol id="i-search" viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></symbol>
+  <symbol id="i-bell" viewBox="0 0 24 24"><path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9"/><path d="M10.3 21a1.94 1.94 0 0 0 3.4 0"/></symbol>
+  <symbol id="i-x" viewBox="0 0 24 24"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></symbol>
+  <symbol id="i-alert" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><line x1="12" x2="12" y1="8" y2="12"/><line x1="12" x2="12.01" y1="16" y2="16"/></symbol>
+  <symbol id="i-plus" viewBox="0 0 24 24"><path d="M5 12h14"/><path d="M12 5v14"/></symbol>
+  <symbol id="i-inbox" viewBox="0 0 24 24"><polyline points="22 12 16 12 14 15 10 15 8 12 2 12"/><path d="M5.45 5.11 2 12v6a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2v-6l-3.45-6.89A2 2 0 0 0 16.76 4H7.24a2 2 0 0 0-1.79 1.11z"/></symbol>
+  <symbol id="i-trend" viewBox="0 0 24 24"><polyline points="22 7 13.5 15.5 8.5 10.5 2 17"/><polyline points="16 7 22 7 22 13"/></symbol>
+  <symbol id="i-login" viewBox="0 0 24 24"><path d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4"/><polyline points="10 17 15 12 10 7"/><line x1="15" x2="3" y1="12" y2="12"/></symbol>
+  <symbol id="i-dash" viewBox="0 0 24 24"><rect width="7" height="9" x="3" y="3" rx="1"/><rect width="7" height="5" x="14" y="3" rx="1"/><rect width="7" height="9" x="14" y="12" rx="1"/><rect width="7" height="5" x="3" y="16" rx="1"/></symbol>
+  <symbol id="i-cal" viewBox="0 0 24 24"><rect width="18" height="18" x="3" y="4" rx="2"/><line x1="16" x2="16" y1="2" y2="6"/><line x1="8" x2="8" y1="2" y2="6"/><line x1="3" x2="21" y1="10" y2="10"/></symbol>
+  <symbol id="i-users" viewBox="0 0 24 24"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></symbol>
+  <symbol id="i-home" viewBox="0 0 24 24"><path d="m3 9 9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></symbol>
+  <symbol id="i-loader" viewBox="0 0 24 24"><path d="M21 12a9 9 0 1 1-6.219-8.56"/></symbol>
+</svg>
+
+<main class="ds-page">
+  <header class="ds-intro">
+    <h1>Fidato PMS design system</h1>
+    <p>The Calm Front Desk: quiet navy and greys, one orange action per view, every figure easy to scan. This page draws what <code>DESIGN.md</code> describes. The values come from <code>src/styles/theme.css</code>; if they ever disagree, the CSS is right.</p>
+  </header>
+
+  <section class="ds-section">
+    <h2>Colours</h2>
+    <p class="ds-desc">Grouped by job. The full-strength brand colours are for fills, rings and marks; text and white-on-colour fills use the darker step made for them.</p>
+
+    <h3 class="ds-sub">Brand orange, and the steps that carry text</h3>
+    <div class="ds-grid">
+      <div class="ds-swatch"><div class="chip" style="background:var(--orange);color:#fff">Aa 3.57:1</div><div class="meta"><b>Fidato Orange</b><span>brand-orange #df6128<br>Focus ring, tab underline, marks. Not for text.</span></div></div>
+      <div class="ds-swatch"><div class="chip" style="background:var(--orange-600);color:#fff">Aa 4.59:1</div><div class="meta"><b>Action Orange</b><span>brand-orange-600 #c4521d<br>The primary button.</span></div></div>
+      <div class="ds-swatch"><div class="chip" style="background:var(--orange-700);color:#fff">Aa</div><div class="meta"><b>Readable Orange</b><span>brand-orange-700 #a34314<br>Orange text, hover of primary.</span></div></div>
+      <div class="ds-swatch"><div class="chip" style="background:var(--orange-800);color:#fff">Aa</div><div class="meta"><b>Pressed Orange</b><span>brand-orange-800 #8f3b12<br>Primary while pressed.</span></div></div>
+      <div class="ds-swatch"><div class="chip" style="background:var(--orange-100);color:var(--ink-900)">Aa</div><div class="meta"><b>Orange 100</b><span>#f9dccd<br>Text selection, pill ring.</span></div></div>
+      <div class="ds-swatch"><div class="chip" style="background:var(--orange-50);color:var(--orange-700)">Aa</div><div class="meta"><b>Orange Wash</b><span>brand-orange-50 #fdf1eb<br>Accent pill, warm icon chip.</span></div></div>
+    </div>
+
+    <h3 class="ds-sub">The other warm brand colours, as status</h3>
+    <div class="ds-grid">
+      <div class="ds-swatch"><div class="chip" style="background:var(--yellow);color:var(--ink-900)">Aa</div><div class="meta"><b>Signal Yellow</b><span>brand-yellow #ffb600<br>Warning dot. Text on its wash: #8a6300.</span></div></div>
+      <div class="ds-swatch"><div class="chip" style="background:var(--tangerine);color:var(--ink-900)">Aa</div><div class="meta"><b>Tangerine</b><span>brand-tangerine #eb8c00<br>Due out. Readable step #a96500.</span></div></div>
+      <div class="ds-swatch"><div class="chip" style="background:var(--rose);color:#fff">Aa</div><div class="meta"><b>Rose</b><span>brand-rose #db536a<br>No-shows. Readable step #b84659.</span></div></div>
+      <div class="ds-swatch"><div class="chip" style="background:var(--red);color:#fff">Aa 4.56:1</div><div class="meta"><b>Alarm Red</b><span>brand-red #e0301e<br>Danger button, errors. On its wash, #c52a1a.</span></div></div>
+      <div class="ds-swatch"><div class="chip" style="background:var(--success);color:#fff">Aa</div><div class="meta"><b>Settled Teal</b><span>success #1f6f5c<br>Paid, confirmed. System addition.</span></div></div>
+      <div class="ds-swatch"><div class="chip" style="background:var(--info);color:#fff">Aa</div><div class="meta"><b>Ink Blue</b><span>info #2b6cb0<br>Neutral information. System addition.</span></div></div>
+    </div>
+
+    <h3 class="ds-sub">Navy and greys</h3>
+    <div class="ds-grid">
+      <div class="ds-swatch"><div class="chip" style="background:var(--ink-900);color:#fff">Aa</div><div class="meta"><b>Fidato Black</b><span>ink-900 #031728<br>Text, sidebar, tooltips.</span></div></div>
+      <div class="ds-swatch"><div class="chip" style="background:var(--grey-700);color:#fff">Aa</div><div class="meta"><b>Slate</b><span>grey-700 #354552<br>Form labels.</span></div></div>
+      <div class="ds-swatch"><div class="chip" style="background:var(--grey-600);color:#fff">Aa</div><div class="meta"><b>Muted Slate</b><span>grey-600 #4c5b67<br>Secondary text; text on tints.</span></div></div>
+      <div class="ds-swatch"><div class="chip" style="background:var(--grey-500);color:#fff">Aa 4.85:1</div><div class="meta"><b>Quiet Slate</b><span>grey-500 #67737e<br>Hints, descriptions, a dash. Lowest text grey.</span></div></div>
+      <div class="ds-swatch"><div class="chip" style="background:var(--grey-400);color:var(--ink-900)">not text</div><div class="meta"><b>Mist</b><span>grey-400 #9aa2a9<br>Icons, placeholders, disabled. 2.59:1.</span></div></div>
+      <div class="ds-swatch"><div class="chip" style="background:var(--grey-300)"></div><div class="meta"><b>Hairline Strong</b><span>grey-300 #ccd0d4<br>Input and button borders.</span></div></div>
+      <div class="ds-swatch"><div class="chip" style="background:var(--grey-200)"></div><div class="meta"><b>Hairline</b><span>grey-200 #e2e5e8<br>Every surface border.</span></div></div>
+      <div class="ds-swatch"><div class="chip" style="background:var(--grey-100)"></div><div class="meta"><b>Cloud</b><span>grey-100 #eef0f2<br>Icon chips, hover fills.</span></div></div>
+      <div class="ds-swatch"><div class="chip" style="background:var(--grey-50)"></div><div class="meta"><b>Page</b><span>grey-50 #f7f8f9<br>App background, table headers.</span></div></div>
+      <div class="ds-swatch"><div class="chip" style="background:linear-gradient(100deg,var(--accent-from),var(--accent-to))"></div><div class="meta"><b>Logo gradient</b><span>#fe611f to #f4bf54<br>The logo mark only.</span></div></div>
+    </div>
+  </section>
+
+  <section class="ds-section">
+    <h2>Type</h2>
+    <p class="ds-desc">One family, Inter, with open digits switched on. Nothing below 12px.</p>
+    <div class="ds-type">
+      <div><div class="spec">Headline<br>24px / 600 / -0.021em</div><div style="font-size:24px;line-height:32px;font-weight:600;letter-spacing:-.021em">Dashboard</div></div>
+      <div><div class="spec">Title<br>18px / 600</div><div style="font-size:18px;line-height:27px;font-weight:600;letter-spacing:-.014em">The house now</div></div>
+      <div><div class="spec">Title small<br>16px / 600</div><div style="font-size:16px;line-height:24px;font-weight:600">Check in Anil Deshmukh</div></div>
+      <div><div class="spec">Figure<br>30px / 600 / tabular</div><div class="tabular" style="font-size:30px;line-height:36px;font-weight:600">₹4,09,690</div></div>
+      <div><div class="spec">Body<br>15px / 400</div><div>Room 204 is due out today. The balance is settled.</div></div>
+      <div><div class="spec">Body small<br>14px / 400</div><div style="font-size:14px;line-height:21px;color:var(--grey-500)">Counts for the business date. Each opens the list behind it.</div></div>
+      <div><div class="spec">Caption<br>12px / 500 (the floor)</div><div style="font-size:12px;line-height:17px;font-weight:500">SUP-204 · 25 Aug 2026, 14:05</div></div>
+      <div><div class="spec">Table header<br>12px / 600 / uppercase</div><div style="font-size:12px;font-weight:600;letter-spacing:.025em;text-transform:uppercase;color:var(--grey-500)">Guest · Room · Balance</div></div>
+      <div><div class="spec">Print<br>Georgia 10.5pt</div><div style="font-family:Georgia,'Times New Roman',serif">Tax Invoice, 5 Elements Akkalkot</div></div>
+    </div>
+  </section>
+
+  <section class="ds-section">
+    <h2>Corners, borders and depth</h2>
+    <p class="ds-desc">A 10px house radius. Surfaces are flat with a 1px hairline; only things that float get a shadow.</p>
+    <div class="ds-row">
+      <div class="ds-card" style="border-radius:var(--r-sm);padding:14px 16px">6px small</div>
+      <div class="ds-card" style="padding:14px 16px">10px house radius</div>
+      <div class="ds-card" style="border-radius:var(--r-lg);padding:14px 16px">12px dialogs</div>
+      <span class="ds-pill" style="--bg:var(--grey-100);--fg:var(--grey-600);--ring:var(--grey-200);--dot:var(--grey-400)">full round</span>
+      <div class="ds-card" style="box-shadow:var(--shadow-popover);padding:14px 16px">Popover shadow</div>
+      <div class="ds-card" style="box-shadow:var(--shadow-overlay);padding:14px 16px">Overlay shadow</div>
+    </div>
+  </section>
+
+  <section class="ds-section">
+    <h2>Buttons</h2>
+    <p class="ds-desc">One orange primary per view. Secondary is the default. Hover each to see its state; under a finger every button is at least 44px tall.</p>
+    <div class="ds-row">
+      <button class="ds-btn ds-btn-primary"><svg class="i"><use href="#i-plus"/></svg>New booking</button>
+      <button class="ds-btn ds-btn-secondary">Assign room</button>
+      <button class="ds-btn ds-btn-ghost">Clear filters</button>
+      <button class="ds-btn ds-btn-danger">Cancel booking</button>
+      <button class="ds-btn ds-btn-link">View the bill</button>
+    </div>
+    <div class="ds-row" style="margin-top:12px">
+      <button class="ds-btn ds-btn-secondary ds-btn-sm">Small</button>
+      <button class="ds-btn ds-btn-secondary">Medium</button>
+      <button class="ds-btn ds-btn-secondary ds-btn-lg">Large</button>
+      <button class="ds-btn ds-btn-primary" disabled>Check in</button>
+      <button class="ds-btn ds-btn-secondary" disabled>Move room</button>
+      <button class="ds-btn ds-btn-primary" disabled><svg class="i ds-spin"><use href="#i-loader"/></svg>Saving</button>
+    </div>
+    <p class="ds-note">A disabled button stays readable and the screen says why nearby, in words.</p>
+  </section>
+
+  <section class="ds-section">
+    <h2>Fields</h2>
+    <p class="ds-desc">Label above, hint or error below. Focus turns the border orange with a soft orange ring.</p>
+    <div class="ds-grid" style="grid-template-columns:repeat(auto-fill,minmax(240px,1fr))">
+      <div class="ds-field"><label for="f1">Guest name<span class="req">*</span></label><input id="f1" placeholder="Anil Deshmukh"><p class="hint">As on their ID.</p></div>
+      <div class="ds-field"><label for="f2">Phone</label><input id="f2" class="is-focus" value="98220 41567"><p class="hint">Shown focused.</p></div>
+      <div class="ds-field"><label for="f3">Nights<span class="req">*</span></label><input id="f3" class="is-invalid" value="0" aria-invalid="true"><p class="err">A stay is at least one night.</p></div>
+      <div class="ds-field"><label for="f4">Rate plan</label><input id="f4" value="European Plan" disabled><p class="hint">Set on the booking.</p></div>
+    </div>
+  </section>
+
+  <section class="ds-section">
+    <h2>Status pills</h2>
+    <p class="ds-desc">A soft tint, a readable ink and a dot. Never a solid block.</p>
+    <div class="ds-row">
+      <span class="ds-pill" style="--bg:var(--grey-100);--fg:var(--grey-600);--ring:var(--grey-200);--dot:var(--grey-400)">Draft</span>
+      <span class="ds-pill" style="--bg:var(--info-50);--fg:var(--info);--ring:var(--info-100);--dot:var(--info)">Reserved</span>
+      <span class="ds-pill" style="--bg:var(--success-50);--fg:var(--success-600);--ring:var(--success-100);--dot:var(--success)">Paid</span>
+      <span class="ds-pill" style="--bg:var(--yellow-50);--fg:var(--warning-ink);--ring:var(--yellow-100);--dot:var(--yellow)">Due out</span>
+      <span class="ds-pill" style="--bg:var(--red-50);--fg:var(--red-700);--ring:var(--red-100);--dot:var(--red)">Cancelled</span>
+      <span class="ds-pill" style="--bg:var(--orange-50);--fg:var(--orange-700);--ring:var(--orange-100);--dot:var(--orange)">In house</span>
+    </div>
+  </section>
+
+  <section class="ds-section">
+    <h2>Cards and Dashboard tiles</h2>
+    <p class="ds-desc">White, a hairline, 10px corners, no shadow. A figure's breakdown sits in label and value rows; a tile that opens a list has a chevron and darkens its border on hover.</p>
+    <div class="ds-grid" style="grid-template-columns:repeat(auto-fill,minmax(230px,1fr))">
+      <div class="ds-tile">
+        <div class="head"><span class="ico"><svg class="i"><use href="#i-trend"/></svg></span><span class="ds-term" title="Room revenue divided by every room that could be sold">RevPAR</span></div>
+        <div class="fig"><p class="lead">₹1,037</p></div>
+        <dl><div><dt>Month so far</dt><dd>₹951</dd></div><div><dt>Year so far</dt><dd>₹2,276</dd></div></dl>
+      </div>
+      <a class="ds-tile" href="#tiles">
+        <div class="head"><span class="ico"><svg class="i"><use href="#i-login"/></svg></span>Arrivals</div>
+        <div class="fig" style="margin-top:auto;padding-top:10px"><p>1</p><svg class="i"><use href="#i-chevron"/></svg></div>
+      </a>
+      <a class="ds-tile" href="#tiles">
+        <div class="head"><span class="ico warm"><svg class="i"><use href="#i-alert"/></svg></span>Out of service</div>
+        <div class="fig" style="margin-top:auto;padding-top:10px"><p class="warm">1</p><svg class="i"><use href="#i-chevron"/></svg></div>
+      </a>
+      <div class="ds-tile">
+        <div class="head"><span class="ico"><svg class="i"><use href="#i-users"/></svg></span><span class="ds-term">City ledger</span></div>
+        <div class="fig"><p class="missing">-</p></div>
+        <p class="note">A dash: a figure the system does not hold yet. Never a zero.</p>
+      </div>
+    </div>
+    <div class="ds-card" style="margin-top:12px;max-width:560px">
+      <h3 style="font-size:16px;line-height:24px">A plain card</h3>
+      <p style="margin:6px 0 0;color:var(--grey-600)">20px padding, used for forms, panels and settings blocks.</p>
+    </div>
+  </section>
+
+  <section class="ds-section">
+    <h2>Tables</h2>
+    <p class="ds-desc">Numbers right-aligned and tabular. On a phone each row becomes a card of label and value pairs.</p>
+    <div class="ds-table">
+      <table>
+        <thead><tr><th>Guest</th><th>Room</th><th>Stay</th><th>Status</th><th class="num">Balance</th></tr></thead>
+        <tbody>
+          <tr><td>Tanvi Bhide</td><td class="tabular">201</td><td>25 Aug - 27 Aug</td><td><span class="ds-pill" style="--bg:var(--orange-50);--fg:var(--orange-700);--ring:var(--orange-100);--dot:var(--orange)">In house</span></td><td class="num">₹6,780.00</td></tr>
+          <tr><td>Vikram Desai</td><td class="tabular">202</td><td>24 Aug - 25 Aug</td><td><span class="ds-pill" style="--bg:var(--yellow-50);--fg:var(--warning-ink);--ring:var(--yellow-100);--dot:var(--yellow)">Due out</span></td><td class="num">₹0.00</td></tr>
+          <tr><td>Meera Iyer</td><td class="tabular">203</td><td>26 Aug - 29 Aug</td><td><span class="ds-pill" style="--bg:var(--info-50);--fg:var(--info);--ring:var(--info-100);--dot:var(--info)">Reserved</span></td><td class="num">-</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  <section class="ds-section">
+    <h2>The app shell</h2>
+    <p class="ds-desc">Navy menu (248px, 68px collapsed), white 56px top bar, the page on grey-50. Under 1024px the menu becomes a drawer behind a menu button.</p>
+    <div class="ds-shell">
+      <nav class="ds-side" aria-label="Example menu">
+        <div class="brand">Fidato Hotels</div>
+        <a class="on" href="#shell"><svg class="i"><use href="#i-dash"/></svg>Dashboard</a>
+        <a href="#shell"><svg class="i"><use href="#i-home"/></svg>Rooms</a>
+        <a href="#shell"><svg class="i"><use href="#i-cal"/></svg>Calendar</a>
+        <div class="label">Front desk</div>
+        <a href="#shell"><svg class="i"><use href="#i-login"/></svg>Arrivals</a>
+        <a href="#shell"><svg class="i"><use href="#i-users"/></svg>In house</a>
+      </nav>
+      <div class="ds-main">
+        <div class="ds-top"><div class="ds-search"><svg class="i"><use href="#i-search"/></svg>Find a screen<kbd>Ctrl K</kbd></div><svg class="i bell"><use href="#i-bell"/></svg></div>
+        <div class="body">
+          <h1>Arrivals</h1>
+          <p>5 Elements Akkalkot · business date 25 Aug 2026</p>
+          <div class="ds-tabs" style="margin-top:20px"><a class="on" href="#shell">Today</a><a href="#shell">Upcoming</a></div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section class="ds-section">
+    <h2>Dialogs, tooltips and toasts</h2>
+    <p class="ds-desc">A dialog's footer holds Cancel and then its one primary. Drawn here in place; in the app it floats over a dimmed page.</p>
+    <div class="ds-scrim">
+      <div class="ds-dialog" role="dialog" aria-label="Example dialog">
+        <header><div><h3>Check in Tanvi Bhide</h3><p>Room 201, two nights.</p></div><svg class="i" style="color:var(--grey-500)"><use href="#i-x"/></svg></header>
+        <div class="content"><div class="ds-field"><label for="f5">ID number<span class="req">*</span></label><input id="f5" placeholder="As printed on the ID"></div></div>
+        <footer><button class="ds-btn ds-btn-secondary">Cancel</button><button class="ds-btn ds-btn-primary">Check in</button></footer>
+      </div>
+    </div>
+    <div class="ds-row" style="margin-top:16px;align-items:flex-start">
+      <span class="ds-tip">Revenue per available room: room revenue divided by every room that could be sold.</span>
+      <div class="ds-toast"><b>Checked in</b><span>Tanvi Bhide is in room 201.</span></div>
+    </div>
+  </section>
+
+  <section class="ds-section">
+    <h2>Empty and error states</h2>
+    <p class="ds-desc">Name the space and say how to fill it. A failed read says it failed and offers to try again; it never looks empty.</p>
+    <div class="ds-grid" style="grid-template-columns:repeat(auto-fill,minmax(300px,1fr))">
+      <div class="ds-card ds-state"><div class="dot"><svg class="i"><use href="#i-inbox"/></svg></div><h3>Nothing in the store yet</h3><p>Add what the property keeps and what it is counted in.</p><div style="margin-top:20px"><button class="ds-btn ds-btn-primary">Add the first</button></div></div>
+      <div class="ds-card ds-state err"><div class="dot"><svg class="i"><use href="#i-alert"/></svg></div><h3>Today's figures did not load</h3><p>The server answered with an error (500). Try again, and tell the manager if it keeps happening.</p><div style="margin-top:20px"><button class="ds-btn ds-btn-secondary">Try again</button></div></div>
+    </div>
+  </section>
+
+  <section class="ds-section">
+    <h2>Rules to keep</h2>
+    <div class="ds-rules">
+      <div class="ds-card ds-do"><h3>Do</h3><ul>
+        <li>Use Action Orange for the primary button and Readable Orange for orange text.</li>
+        <li>Give each view one primary; a button next to Cancel says what it is.</li>
+        <li>Show a missing figure as a grey dash, never 0; never invent a price.</li>
+        <li>Use tabular figures and right-align numbers.</li>
+        <li>Separate surfaces with a 1px hairline; shadows only for what floats.</li>
+        <li>Put a section's description under its heading.</li>
+        <li>Say what failed and how to recover; say why a control is off.</li>
+      </ul></div>
+      <div class="ds-card ds-dont"><h3>Don't</h3><ul>
+        <li>Set text in Mist (grey-400), or small text in a full-strength brand colour.</li>
+        <li>Put the logo gradient on a button, heading or background.</li>
+        <li>Colour a count orange when it is zero.</li>
+        <li>Add a shadow to a card, tile or table.</li>
+        <li>Use a second icon family, or emoji as icons.</li>
+        <li>Go below 12px text or a 44px touch target on a phone.</li>
+        <li>Show a failed read as an empty list or a row of dashes.</li>
+      </ul></div>
+    </div>
+  </section>
+</main>
+</body>
+</html>

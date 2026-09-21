@@ -3,7 +3,8 @@
 /* ══════════════════════════════════════════════════════════════════
    FIDATO HOSPITALITY PLATFORM — DESIGN TOKENS
    Source: Fidato Hotels Visual-Identity-Guidance.pdf (p.13)
-   See docs/design-system.md for documented deviations.
+   DESIGN.md (root) describes this system for people and agents, and
+   DESIGN.html draws it. This file is the source of truth.
    ══════════════════════════════════════════════════════════════════ */
 
 @theme {
@@ -80,7 +81,7 @@
      The brand guide has no success colour. An ERP cannot express
      confirmed / paid / synced without one. This muted teal-green is
      tuned to sit beside the warm palette rather than fight it.
-     Flagged in docs/design-system.md for brand review.           */
+     Flagged in DESIGN.md for brand review.           */
   --color-success: #1f6f5c;
   --color-success-50: #eaf4f1;
   --color-success-100: #cde5de;
