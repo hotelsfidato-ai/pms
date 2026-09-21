@@ -11,6 +11,138 @@ Work that touches the core or several services still goes in the root
 
 ---
 
+## 2026-09-21 · Variations and add-ons on the Menu — D21-40 to D21-45, built on PRODUCTION
+
+**Asked for:** `docs/briefs/pos.md`, the 21 September section, and the owner's
+D21-38 to D21-45 and D21-56: an "Add variation" button on each dish (a name
+and a price; renamed, repriced, removed); add-on groups made once and offered
+on many dishes, saying how many a guest may choose; "Preferences" as options
+priced at 0 by a person, never by default; and the menu import carrying
+variations and add-on groups. **Built on `79e358e`** (production), not `cp6`,
+because it goes live on its own (D21-44, D21-56). No migration: 045's four
+tables hold all of it.
+
+**The owner's answers during the job (21 September, asked with a recommendation
+each; all five took the recommendation):**
+- **The import is two files.** The menu file gains **Variation** (one row per
+  variation, each with its price) and **Add-on groups** (names, `;` between);
+  a separate **add-ons file** - Group, Option, Price, Choose at least, Choose
+  at most - is imported first. Re-importing updates and never removes.
+- **The Terminal opens the same dish dialog** as Tables and the Till for a dish
+  with variations or add-ons (it could not ring a sized dish at all: the server
+  refused "Choose one" and there was nothing to choose with), and the Terminal
+  and the Till show **"-"** on a sized dish's tile instead of its own price.
+- **Build it "the way Bhaaji Pau works, for the whole menu"** - and for the one
+  case that does not cover: **removing a dish's last variation asks for the
+  dish's price**, typed, before anything is removed.
+- **A blank price is refused for a dish too** (POS-14): a typed 0 is kept.
+- **₹0 add-ons print on the guest's bill like any add-on** - no change there.
+
+**Shipped** — branch `pos/menu-variations` from `79e358e`.
+- `api/src/modules/pos/till.ts`
+  - `typedPrice`: a number or a string holding one, 0 or more - null for a
+    blank, a null or a word. Used by the dish route (POS-14) and every new one.
+  - Variations: add (a removed one of the same name comes back at the new
+    price), rename and reprice, remove (switched off, never deleted - a sold
+    line points at it; the last one needs `dishPrice`).
+  - Add-on groups: list (with their dishes, including a group on none), make,
+    edit (name, choose at least, choose at most - refused if a guest could
+    never meet it), which dishes offer it (the whole list; every dish checked
+    to be this hotel's first). Options: add, rename and reprice, remove.
+  - The menu import reads Variation and Add-on groups: a row without a
+    variation for a dish that has them (in the file or on the menu) is refused
+    with the reason; an unknown group is refused and says to import the
+    add-ons file first. The add-ons file import: a blank price refused ("type 0
+    for a preference such as No onion"); a group's rule read from any of its
+    rows, a row that disagrees with an earlier one refused by name.
+  - `addOneLine` holds a line to the group's rule - and every check on the
+    sides now comes BEFORE the dish's line is written (POS-16).
+  - **Untouched: the "has no GST rate … Settings → Tax" refusal** (cp6 changed
+    that line; the master carries it).
+- `src/lib/importSpec.ts` — **MENU_SPEC only** (the master's grant): Variation
+  and Add-on groups columns and examples. `importSpec.test.ts`: two tests.
+- `src/modules/pos/lib/addonSpec.ts` — ADDON_SPEC, the add-ons file.
+- `pages/Menu.tsx` — "Add variation" on each dish; variations under the dish
+  with Change and Remove; a sized dish's own price is "-"; an **Add-on groups**
+  section (rule, options, Change, Remove, Add option, Dishes); **Import
+  add-ons** and **Import the menu**. `EntryDialog`: Save waits for a typed
+  price. An empty price box on "Add" is refused (POS-14).
+- `flows/DishDialog.tsx` — each group says "choose 1 to 2"; Add waits for a
+  required choice; a full group greys the rest.
+- `pages/Terminal.tsx` — the dish dialog, and "-" on a sized tile.
+  `pages/Till.tsx` — "-" on a sized tile.
+- `data/till.ts` — ten calls for the routes above, and `importAddons`.
+
+**Found**
+- **POS-14** — an empty price box added a dish at ₹0.00 (`Number("")` is 0),
+  on the screen and the server. Fixed on the owner's yes.
+- **POS-16** — the single-tap route (Till, Terminal) wrote the dish's line and
+  then checked its sides; a refusal after a write is a commit (MEMORY 243), so
+  the dish reached the bill without the side the guest chose. Fixed.
+- **POS-15, open** — a dish imported with its GST column blank reads "0%" on the
+  Menu and the Terminal (`Number(null)`); measured, its section has no heading,
+  so it has no rate at all and ringing it is refused. Older than this job.
+- The Terminal could not sell a dish with variations (above).
+
+**Proved** — this copy, `fidato_pos_menu`, after the last code edit
+- `npx tsc -b --force` exit 0 · `cd api; npx tsc --noEmit` exit 0 ·
+  `npm run strip-check` 116 files.
+- `npx vitest run` **380 of 380, 43 files, exit 0**.
+- `cd api; npm test` **1046 of 1046, 64 files, exit 0** (new:
+  `api/test/modules/pos/menuOptions.test.ts`, 8).
+- `bash db/tests/run.sh` **all 837 assertions passed, exit 0**.
+- `npm run build` exit 0, "no test sign-in in dist (6 files checked)".
+- **Guards seen to fail**, each put back and re-run:
+  - `typedPrice` reading a blank as 0 → 5 of 8 API tests failed ("price
+    undefined: expected 200 to be 409"; the dish, the variation, the option,
+    the reprice, the last-variation remove).
+  - The group's rule checked after the dish's line is written → "a refused
+    dish left a line on the bill: expected 2 to be +0".
+  - The rule check removed → "expected 200 to be 409".
+  - On the screens (`ownerDecisions.test.tsx`, 21 of 21 before): the Terminal
+    without the dialog; its tile with the dish's price; Add not waiting for a
+    required choice; a full group not greyed; Save enabled with no price (3
+    failed); the last variation removed without a price; the Menu showing a
+    sized dish's own price - each failed 1 test by its own name.
+- **Opened on screen** (`fidato_pos_menu`, as the owner, API 8797, web 5197):
+  Main course, "Chicken Biryani" with an empty price → "Not added", no request
+  sent; at 250 → added. "Add variation": Half with no price → Save disabled; Half
+  ₹180, Full ₹320 → the dish reads "-", its variations under it. "Choice of
+  raita" (choose up to 1: Plain ₹40, Boondi ₹50) on Chicken Biryani AND Veg
+  Biryani - "Choice of raita is on 2 dishes". "Preferences": No onion with no
+  price → Save disabled; typed 0 → saved; Jain 0; on Chicken Biryani.
+  **Tables, AC5**: the pad tile "Chicken Biryani -"; the dialog - Add disabled
+  until a variation; Full, Plain then Boondi (Boondi replaced Plain), No onion →
+  ₹370; Send → **kitchen slip KOT 2: "Chicken Biryani (Full) 1 · Choice of
+  raita: Boondi raita - 1 · Preferences: No onion - 1"**, no prices. In the
+  database: 320.00, 50.00, 0.00; net 370.00, tax 18.50, gross 388.50.
+  **The Terminal**: tile "Chicken Biryani · 5% · -", tap → the dish dialog;
+  Half + Jain → "Chicken Biryani (Half) ₹180.00 · Preferences: Jain ₹0.00",
+  total 388.50 → 577.50. **Both imports through the dialog's file box**: the
+  add-ons file - 2 new, "Garlic naan" refused for its blank price; the menu
+  file - Mutton Rogan Josh Half ₹280 / Full ₹480 with Choice of bread (choose 1
+  to 2) and Preferences. At 375px: no sideways scroll, every name 170-180px
+  wide; at 1280px every dish row still one 44px line. No console error after a
+  marked reload.
+  ⚠ The pane was hidden for most of it: dialogs froze mid-animation off-screen
+  and screenshots timed out, so the pad, the Terminal and the imports were
+  driven with `element.click()` / a file set on the input and read back as
+  text; screenshots of the Menu, the groups and the slip were taken at an
+  explicit 1280x720.
+
+**Left open**
+- **POS-15** (above) - the owner's to say; recommendation: send the resolved
+  rate, and a dash where there is none.
+- `npm run lane` was not trusted for file counts (it diffs against a frozen
+  `origin/cp6`); the real set is `git diff --name-only 79e358e..HEAD`.
+- For the master: this branch is on `79e358e`, not `cp6`, and must stay there
+  (D21-44) - do not rebase it onto `cp6`. Since `79e358e`, `cp6` changed one
+  line in these files: the GST refusal in `till.ts`, untouched here.
+
+**Commits:** see the hand-back.
+
+---
+
 ## 2026-09-17 (evening) · D17-21, the till's half — restaurant food on a banquet function's bill
 
 **Asked for:** the owner's D17-21 — *"the POS chat then lets staff attach an

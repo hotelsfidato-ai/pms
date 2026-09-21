@@ -69,12 +69,20 @@ off (`navigation.ts`, section `point-of-sale`, `receptionNeeds: "reception_pos"`
   the server's own sentence when the answer is no (MEMORY 251). Docket, Bill
   and Charges to rooms are not wrapped.
 - Dialogs and panels in `flows/`: `OrderPad.tsx` (the pad over the floor),
-  `DishDialog.tsx` (variations, sides, a note), `OrderHeaderPanel.tsx`
-  (covers, waiter, customer, order type).
+  `DishDialog.tsx` (variations, sides, a note - and since 21 September each
+  group's "choose 1 to 2", Add held until it is met; opened by Tables, the Till
+  and the Terminal), `OrderHeaderPanel.tsx` (covers, waiter, customer, order type).
+- **The Menu screen, 21 September (D21-40 to D21-43):** "Add variation" on each
+  dish, and its variations under it with Change and Remove (a dish with
+  variations shows "-" for its own price); an **Add-on groups** section - each
+  group's rule, its options with Change and Remove, "Add option", "Dishes" to
+  choose which dishes offer it; **Import add-ons** and **Import the menu**, two
+  files, add-ons first. Every price is typed: Save waits for one, and a typed 0
+  is kept (Preferences such as No onion, D21-42).
 
 ---
 
-## Server endpoints — 51
+## Server endpoints — 62
 
 The code is in `api/src/modules/pos/` (moved 15 September): `till.ts` (the
 till, **3,555 lines** — splitting it into parts is not done yet) and `pos.ts`
@@ -100,6 +108,18 @@ menu        GET    /:code/till/menu
             POST   /:code/till/menu/items/:id/on
             POST   /:code/till/addons/:id/off              the Menu screen's add-on switch (17 Sep, POS-2)
             POST   /:code/till/addons/:id/on               the Menu screen's add-on switch (17 Sep, POS-2)
+variations  POST   /:code/till/menu/items/:id/variations   D21-40, 21 Sep: a name and a TYPED price
+            PATCH  /:code/till/menu/variations/:id         rename and reprice, both sent
+            POST   /:code/till/menu/variations/:id/remove  switched off, never deleted; the LAST one
+                                                           needs { dishPrice } (the owner, 21 Sep)
+add-ons     GET    /:code/till/menu/addon-groups           every group, its options and its dishes
+            POST   /:code/till/menu/addon-groups           D21-41: name, minSelect, maxSelect
+            PATCH  /:code/till/menu/addon-groups/:id       the same three
+            POST   /:code/till/menu/addon-groups/:id/dishes  the whole list of dishes offering it
+            POST   /:code/till/menu/addon-groups/:id/addons  an option: a name and a TYPED price
+            PATCH  /:code/till/menu/addons/:id             rename and reprice, both sent
+            POST   /:code/till/menu/addons/:id/remove      switched off, never deleted
+            POST   /:code/till/menu/addon-groups/import    the add-ons file (D21-43), dry run first
 outlet      POST   /:code/till/outlet/:outlet/closed        "we are closed" for a while
 rooms       GET    /:code/till/rooms                        rooms a bill may be charged to
 orders      GET    /:code/till/orders
@@ -168,6 +188,10 @@ data/till.ts        Every call the till, floor, pad, terminal, kitchen,
                     order pad; safe to delete").
 data/posBridge.ts   What an outside till sent: listPosOutlets, listPosTickets.
                     Split out of the old billing.ts on 15 September.
+lib/addonSpec.ts    ADDON_SPEC - the add-ons file's columns (D21-43). Here and
+                    not in `@/lib/importSpec` (the master's), where this lane was
+                    granted MENU_SPEC alone; MENU_SPEC gained Variation and
+                    Add-on groups the same day.
 lib/pricing.ts      unitPriceOf, chosenLabels — the price of ONE dish with its
                     sides, on the client, so the pad can show a running total.
                     The same rule is on the server (addOneLine in till.ts);
@@ -213,6 +237,9 @@ pos_orders, pos_order_lines
 pos_item_variations, pos_addon_groups,         045_variations_and_addons.sql
 pos_addons, pos_item_addon_groups
   an item or add-on off until a time           045, 046
+  (045's four tables are WRITTEN by the Menu screen and the two import
+   files since 21 September - no migration: a removed variation or option is
+   is_active false, because a sold line points at it)
 pos_sections, pos_tables                       047_tables_and_floor.sql
   covers, waiter, customer, held               048_order_header.sql
   kitchen docket numbers                       049_kot_docket.sql

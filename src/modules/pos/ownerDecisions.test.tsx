@@ -426,3 +426,201 @@ describe("Close restaurant day (D17-20)", () => {
     expect(document.body.textContent).not.toMatch(/Fidato Agra/);
   });
 });
+
+/* ══════════════════════════════════════════════════════════════════
+   THE OWNER'S ANSWERS OF 21 SEPTEMBER — variations and add-ons
+
+   D21-40  "Add variation" on each dish: a name and a price; renamed,
+           repriced, removed. Removing the LAST asks for the dish's own
+           price (the owner, the same day).
+   D21-41  An add-on group made once, offered on many dishes, saying how
+           many a guest may choose - held to on the pad.
+   D21-42  "Preferences" at 0: TYPED, never a default. Save waits for a
+           figure; a typed "0" is sent as "0".
+   And the Terminal opens the same dish dialog, with a dash on a sized
+   dish's tile (the owner, 21 September).
+   ══════════════════════════════════════════════════════════════════ */
+
+const GROUPS = `/api/hotels/${HOTEL}/till/menu/addon-groups`;
+const OIL = { id: "v-1", label: "Oil", price: 300 };
+
+function menuWithVariation() {
+  return server({
+    [`GET ${MENU}`]: () => ({
+      categories: [{
+        id: "c-1", name: "Starters", prepMinutes: null, course: null,
+        items: [
+          dish({ id: "i-1", name: "Bhaaji Pau", variations: [OIL] }),
+          dish({ id: "i-3", name: "Paneer Tikka" }),
+        ],
+      }] satisfies MenuCategory[],
+    }),
+    [`GET ${PROMOTIONS}`]: () => ({ freehandCapPercent: 10, promotions: [] }),
+    [`GET ${GROUPS}`]: () => ({ groups: [{
+      id: "g-9", label: "Preferences", minSelect: 0, maxSelect: null,
+      itemIds: ["i-1"], addons: [],
+    }] }),
+    [`POST /api/hotels/${HOTEL}/till/menu/items/i-3/variations`]: () => ({ ok: true, id: "v-2" }),
+    [`POST /api/hotels/${HOTEL}/till/menu/variations/v-1/remove`]: () => ({ ok: true }),
+    [`POST ${GROUPS}/g-9/addons`]: () => ({ ok: true, id: "a-9" }),
+  });
+}
+
+describe("variations and add-ons on the Menu screen (D21-40 to 42)", () => {
+  it("adds a variation only once a price is typed, and a typed 0 is kept", async () => {
+    const calls = menuWithVariation();
+    menuAt();
+
+    fireEvent.click(await screen.findByRole("button", { name: "Add variation to Paneer Tikka" }));
+    const dialog = await screen.findByRole("dialog");
+    fireEvent.change(within(dialog).getByLabelText(/Variation/), { target: { value: "Taster" } });
+
+    /* A name and no price: nothing to save. A blank is not zero. */
+    const save = within(dialog).getByRole("button", { name: "Save" });
+    expect(save.hasAttribute("disabled")).toBe(true);
+
+    fireEvent.change(within(dialog).getByLabelText(/Price/), { target: { value: "0" } });
+    expect(save.hasAttribute("disabled")).toBe(false);
+    fireEvent.click(save);
+
+    await vi.waitFor(() => expect(
+      calls.find((c) => c.path.endsWith("/items/i-3/variations")),
+    ).toMatchObject({ method: "POST", body: { label: "Taster", price: "0" } }));
+    await vi.waitFor(() => expect(screen.queryByRole("dialog")).toBeNull());
+  });
+
+  it("shows a dash, not the dish's own price, for a dish sold by variation", async () => {
+    menuWithVariation();
+    menuAt();
+    const slot = await screen.findByTitle("Sold by variation - each has its own price");
+    expect(slot.textContent).toBe("-");
+  });
+
+  it("asks for the dish's price before removing its last variation", async () => {
+    const calls = menuWithVariation();
+    menuAt();
+
+    fireEvent.click(await screen.findByRole("button", { name: "Remove Bhaaji Pau Oil" }));
+    const dialog = await screen.findByRole("dialog");
+    expect(within(dialog).getByText(/sold at one price again\. What price\?/)).toBeTruthy();
+    /* Nothing was removed on the tap alone. */
+    expect(calls.some((c) => c.path.endsWith("/variations/v-1/remove"))).toBe(false);
+
+    const remove = within(dialog).getByRole("button", { name: "Remove" });
+    expect(remove.hasAttribute("disabled")).toBe(true);
+    fireEvent.change(within(dialog).getByLabelText(/Price of Bhaaji Pau/), { target: { value: "300" } });
+    fireEvent.click(remove);
+
+    await vi.waitFor(() => expect(
+      calls.find((c) => c.path.endsWith("/variations/v-1/remove")),
+    ).toMatchObject({ method: "POST", body: { dishPrice: "300" } }));
+  });
+
+  it("adds a Preference only once its price is typed - 0 included", async () => {
+    const calls = menuWithVariation();
+    menuAt();
+
+    expect(await screen.findByText("On Bhaaji Pau")).toBeTruthy();
+    fireEvent.click(await screen.findByRole("button", { name: /Add option/ }));
+    const dialog = await screen.findByRole("dialog");
+    fireEvent.change(within(dialog).getByLabelText(/Option/), { target: { value: "No onion" } });
+    const save = within(dialog).getByRole("button", { name: "Save" });
+    expect(save.hasAttribute("disabled")).toBe(true);
+
+    fireEvent.change(within(dialog).getByLabelText(/Price/), { target: { value: "0" } });
+    fireEvent.click(save);
+    await vi.waitFor(() => expect(
+      calls.find((c) => c.path === `${GROUPS}/g-9/addons`),
+    ).toMatchObject({ method: "POST", body: { label: "No onion", price: "0" } }));
+  });
+});
+
+describe("the dish dialog holds a waiter to the group's rule (D21-41)", () => {
+  const BREAD = {
+    id: "g-2", label: "Choice of bread", minSelect: 1, maxSelect: 2,
+    addons: ["Naan", "Roti", "Kulcha"].map((label, i) =>
+      ({ id: `b-${i}`, label, price: 20, offUntil: null })),
+  };
+
+  it("waits for the required choice and stops at the most allowed", async () => {
+    const calls = server({
+      [`GET ${MENU}`]: () => ({
+        categories: [{
+          id: "c-1", name: "Mains", prepMinutes: null, course: null,
+          items: [dish({ id: "i-5", name: "Dal", addonGroups: [BREAD] })],
+        }] satisfies MenuCategory[],
+      }),
+    });
+    renderAt(`/h/${HOTEL}/floor`, "/h/:code/floor", (
+      <OrderPad hotelId={HOTEL} outlet="REST" tableId="t-7" tableLabel="Table 7"
+                open onOpenChange={() => {}} onSent={() => {}} />
+    ));
+
+    fireEvent.click(await screen.findByRole("button", { name: /Dal/ }));
+    const dialog = (await screen.findAllByRole("dialog")).at(-1)!;
+    expect(within(dialog).getByText("choose 1 to 2")).toBeTruthy();
+
+    const add = within(dialog).getByRole("button", { name: "Add" });
+    expect(add.hasAttribute("disabled")).toBe(true);
+
+    fireEvent.click(within(dialog).getByRole("button", { name: /Naan/ }));
+    expect(add.hasAttribute("disabled")).toBe(false);
+    fireEvent.click(within(dialog).getByRole("button", { name: /Roti/ }));
+    /* Two is the most: the third waits until one is taken back. */
+    expect(within(dialog).getByRole("button", { name: /Kulcha/ }).hasAttribute("disabled"))
+      .toBe(true);
+    expect(calls.some((c) => c.method === "POST")).toBe(false);
+  });
+});
+
+describe("the Terminal rings a dish sold by variation (the owner, 21 Sep)", () => {
+  it("opens the dish dialog, with a dash on the tile, and sends the variation", async () => {
+    localStorage.setItem("fidato.terminal-outlet", "REST");
+    const ORDER = {
+      ...AN_ORDER, id: "o-5", orderNo: "20260825-5", outlet: "REST",
+      status: "open", table: "4", gross: 0, payable: 0, tenders: [],
+      paymentMethod: null, abandonedReason: null, lines: [],
+    };
+    const calls = server({
+      [`GET /api/hotels/${HOTEL}/pos/outlets`]: () => [{
+        code: "REST", name: "Restaurant", category: "food",
+        hasKey: false, isActive: true, bills: 0,
+      }],
+      [`GET ${MENU}`]: () => ({
+        categories: [{
+          id: "c-1", name: "Mains", prepMinutes: null, course: null,
+          items: [dish({ id: "i-7", name: "Chicken Biryani", price: 250,
+            variations: [{ id: "v-h", label: "Half", price: 180 },
+                         { id: "v-f", label: "Full", price: 320 }] })],
+        }] satisfies MenuCategory[],
+      }),
+      [`GET /api/hotels/${HOTEL}/till/orders`]: () => ({
+        businessDate: "2026-08-25",
+        orders: [{ id: "o-5", orderNo: "20260825-5", outlet: "REST", table: "4",
+                   status: "open", businessDate: "2026-08-25", gross: 0,
+                   paymentMethod: null, openedAt: "2026-08-25T19:00", lines: 0 }],
+      }),
+      [`GET /api/hotels/${HOTEL}/till/orders/o-5`]: () => ORDER,
+      [`POST /api/hotels/${HOTEL}/till/orders/o-5/lines`]: () => ({ ...ORDER, ok: true }),
+    });
+    renderAt(`/h/${HOTEL}/till/terminal`, "/h/:code/till/terminal", <TerminalPage />);
+
+    fireEvent.click(await screen.findByRole("button", { name: /20260825-5/ }));
+    const tile = await screen.findByRole("button", { name: /^Chicken Biryani/ });
+    /* No ₹250 anywhere on it: that column is on no menu. */
+    expect(tile.textContent).not.toMatch(/250/);
+    expect(tile.textContent).toMatch(/-$/);
+
+    /* Live once the order has loaded. */
+    await vi.waitFor(() => expect(tile.hasAttribute("disabled")).toBe(false));
+    fireEvent.click(tile);
+    const dialog = await screen.findByRole("dialog");
+    expect(calls.some((c) => c.path.endsWith("/o-5/lines"))).toBe(false);
+    fireEvent.click(within(dialog).getByRole("button", { name: /Half/ }));
+    fireEvent.click(within(dialog).getByRole("button", { name: "Add" }));
+
+    await vi.waitFor(() => expect(
+      calls.find((c) => c.path.endsWith("/o-5/lines")),
+    ).toMatchObject({ method: "POST", body: { itemId: "i-7", variationId: "v-h" } }));
+  });
+});
