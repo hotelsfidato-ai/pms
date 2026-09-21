@@ -443,8 +443,8 @@ begin
 
   if v_ok then
     update guest_links set verified_at = now() where id = v_link;
-    -- ponytail: an hour, flat. Long enough to fill the form on a slow wifi;
-    -- a guest who comes back later asks for a new code. The owner's to move.
+    -- AN HOUR - the owner's answer, D21-92. Long enough to fill the form on a
+    -- slow wifi; a guest who comes back later asks for a new code.
     insert into guest_unlocks (link_id, reservation_id, unlock_hash, expires_at)
     values (v_link, v_stay, p_unlock_hash, now() + interval '1 hour');
   end if;

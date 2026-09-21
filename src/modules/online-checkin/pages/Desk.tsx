@@ -236,10 +236,11 @@ function RoomCards(
 
 /* ── The printable sheet (D21-62) ───────────────────────────────────
    The hotel's cards, one per room, to print however the owner chooses.
-   ⚠ NO QR CODE YET: nothing in this project draws one, and adding a
-   library is the master's call (MODULE.md, "Waiting on the master"). The
-   link is printed in its place so a sheet printed today is not blank -
-   and the screen says so rather than pretending. */
+   ⚠ NO QR CODE YET. The owner approved `qrcode` for this screen (D21-95);
+   the master installs it after the live release, because `node_modules`
+   is shared with the release copy - it is not imported before their word
+   (MODULE.md). The link is printed in its place so a sheet printed today
+   is not blank, and the screen says so rather than pretending. */
 function CardSheet({ cards, onDone }: { cards: PrintedCard[]; onDone: () => void }) {
   const { property } = useDocumentIdentity();
   return (

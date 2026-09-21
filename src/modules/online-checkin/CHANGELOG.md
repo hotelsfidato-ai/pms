@@ -12,6 +12,26 @@ exists** (`MODULE.md`).
 
 ---
 
+## 2026-09-21 (later) · the master's answers, taken in
+
+**Asked for:** the master, after merging this branch into `cp6` (`b7fc99b`):
+take `cp6`, cite the owner's answer on the unlock, and keep the claim for the
+bill and the QR code.
+
+**Shipped** — `git merge cp6` (to `d6cef4a`, where the master moved the menu
+entry to Front desk and reception's menu, D21-89, and removed the Coming soon
+page). Migration 121's comment on the unlock cites D21-92 instead of calling
+the hour a placeholder — a comment only; nothing it does changed. `MODULE.md`:
+the screens table and the waiting list say what is answered and what is not;
+`pages/Desk.tsx`'s comment says the QR library is approved (D21-95) and waits
+on the master's install.
+
+**Left open** — finance's one definition of a bill (the master's, next); the
+QR code (after the master installs `qrcode`); the link from the check-in flow
+(front desk's file, claimed by another chat). The claim stays held.
+
+**Proved** — see the commit message for the gates run on this change.
+
 ## 2026-09-21 · behind the code: the unlock, room cards, details, requests
 
 **Asked for:** the master, 21 September, on the owner's answers of that day

@@ -50,8 +50,13 @@ put back (CHANGELOG, 21 September).
 | Name | Address | Page file | Who |
 |---|---|---|---|
 | — (no menu entry, ever) | `/g/:token` | `pages/GuestPage.tsx` | **the guest**, signed out; mounted outside `RequireSession` (`publicRoutes`) |
-| Online check-in | `/h/:code/online-checkin` | `pages/Desk.tsx` | the desk — **no menu entry yet** ("Waiting on the master") |
-| Online check-in | `/coming-soon/online-checkin` | `pages/OnlineCheckin.tsx` | the old Coming soon page, still in the Coming soon section until the master moves the entry |
+| Online check-in (Front desk) | `/h/:code/online-checkin` | `pages/Desk.tsx` | exactly `DESK_ROLES` — the menu's `canSee` in `nav.ts`, also in reception's own menu (D21-89, the master, `d6cef4a`); behind `RequireAccess` |
+
+⚠ **`DESK_ROLES` is written twice and must stay one list:** the server's in
+`api/src/routes/guestDoor.ts` and the menu's in `nav.ts`. The menu does not
+use the `customer` grant because the accountant and the viewer hold it and
+the server refuses them. Change one, change the other; a test pins it. The
+Coming soon page and its address are gone.
 
 **The guest's page, at 375px (the primary size):**
 
@@ -115,29 +120,29 @@ granted: `app.guest_link_stay` (a token → the stay it reaches now; a room card
 → whoever is checked in there, the latest assignment winning when the one due
 out has not been checked out yet) and `app.guest_unlocked`.
 
-## Waiting on the master — 21 September
+## Waiting on the master — answered 21 September
 
-1. **The menu entry.** Moving "Online check-in" out of the Coming soon section
-   to `/h/:code/online-checkin` changes the list
-   `src/components/app/navigation.test.ts` pins. `nav.ts` is this lane's; the
-   test is not, so the move is not made. Recommendation: section
-   `front-desk`, resource `customer`, and a link from the check-in flow
-   (front desk's file).
-2. **Finance's one definition of a bill** — a database function "this stay's
-   bill as it stands", callable only by other definer functions, for the
-   guest's bill (D21-10). Not built here; no query over `folio_postings` was
-   written.
-3. **A QR code.** Nothing in the project draws one; the card sheet prints the
-   link in its place and says so. Adding a library is a dependency in the
-   shared `node_modules`. Recommendation: `qrcode` (MIT), drawn on the desk's
-   screen only.
-4. **The privacy notice's words** (D21-61) — the advisor's; the place is ready.
-5. **"Fidato" in a guest's tab before the page loads.** `index.html`'s title
-   is "Fidato PMS", and `useDocumentTitle` adds "· Fidato" when nobody is
-   signed in. The guest's page sets its own title; the HTML shell is the
-   master's (D21-27).
-6. **How long an unlock lasts** — an hour, flat (`guest_code_answer`, marked
-   `ponytail:`). The owner's number if they want another.
+**Still open, and this lane's claim is held for them:**
+
+- **Finance's one definition of a bill** (D21-10) — the master writes it and
+  will name its function and signature when it is on `cp6`. **Build nothing
+  over `folio_postings` meanwhile.**
+- **The QR code** — the owner approved `qrcode` (MIT, the desk's screen only,
+  D21-95). The master installs it on `cp6` after the live release, because
+  `node_modules` is shared with the release copy. **Do not import it before
+  the master's word.** Until then the card sheet prints the link and says so.
+- **A link into this screen from the check-in flow** — front desk's file; that
+  claim is held by another chat.
+
+**Answered:**
+
+- **The menu entry** — done by the master (`d6cef4a`, D21-89): under Front
+  desk and in reception's menu, offered to exactly `DESK_ROLES`.
+- **How long an unlock lasts** — an hour, confirmed by the owner (D21-92).
+- **"Fidato" in a guest's tab before the page loads** (`index.html`,
+  `useDocumentTitle`) — noted on the master's list of places the code names
+  the group (D21-27); left as it is for now.
+- **The privacy notice's words** (D21-61) — the advisor's; the place is ready.
 
 ## Rules that bind it
 
