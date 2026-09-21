@@ -1,6 +1,5 @@
 import { Route } from "react-router";
 import { RequireAccess } from "@/components/app/RequireAccess";
-import OnlineCheckinPage from "@/modules/online-checkin/pages/OnlineCheckin";
 import GuestPage from "@/modules/online-checkin/pages/GuestPage";
 import DeskPage from "@/modules/online-checkin/pages/Desk";
 import { PropertyScope } from "@/components/app/PropertyScope";
@@ -15,27 +14,18 @@ export const publicRoutes = (
   <Route path="/g/:token" element={<GuestPage />} />
 );
 
-/* Online check-in's one address — its Coming soon page. Mounted by App.tsx inside
-   the signed-in shell. The guard asks the navigation (`mayReach`), so the
-   page is refused to exactly the people the menu does not show it to. */
+/* The desk's screen. Mounted by App.tsx inside the signed-in shell. Its Coming
+   soon page went on 21 September, when the entry moved to Front desk (D21-89).
+   The guard asks the navigation (`mayReach`), so the screen is refused to
+   exactly the people the menu does not show it to — and the SERVER refuses
+   every role but the desk's too (guestDoor.ts, DESK_ROLES). */
 export const routes = (
-  <>
-    <Route
-      path="/coming-soon/online-checkin"
-      element={
-        <RequireAccess path="/coming-soon/online-checkin" resource="integration">
-          <OnlineCheckinPage />
-        </RequireAccess>
-      }
-    />
-    {/* The desk's side (21 September). No menu entry of its own yet: moving
-        "Online check-in" out of the Coming soon section changes the list
-        the master's navigation test pins, so that move is the master's
-        (MODULE.md). Until then it is reached by its address, and the
-        SERVER refuses every role but the desk's (guestDoor.ts, DESK_ROLES). */}
-    <Route
-      path="/h/:code/online-checkin"
-      element={<><PropertyScope /><DeskPage /></>}
-    />
-  </>
+  <Route
+    path="/h/:code/online-checkin"
+    element={
+      <RequireAccess path="/h/:code/online-checkin" resource="customer">
+        <PropertyScope /><DeskPage />
+      </RequireAccess>
+    }
+  />
 );

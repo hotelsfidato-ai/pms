@@ -99,6 +99,9 @@ describe("each person's menu", () => {
     const core = [
       "Dashboard", "Rooms", "Calendar",
       "Arrivals", "Upcoming", "In house", "Due out", "Walk-ins",
+      /* Online check-in's desk screen, 21 September (the owner's D21-89):
+         reception confirms a guest's details against the ID here. */
+      "Online check-in",
       "All bookings", "New booking",
       /* Guests & CRM, from 21 September (the owner): the same screen, its
          own section. */
@@ -118,6 +121,18 @@ describe("each person's menu", () => {
     expect(section?.items.map((i) => i.label)).toEqual([
       "Guests", "Companies and agents", "Guest messages", "Reviews",
     ]);
+  });
+
+  it("offers the check-in desk to exactly the server's DESK_ROLES (21 September)", () => {
+    /* guestDoor.ts refuses everybody else; the accountant and a viewer hold
+       the Guests grant, so a menu keyed on it would offer them a screen that
+       refuses them (SPA-2). */
+    for (const role of ["owner", "admin", "gm", "hotel_manager", "front_desk"] as const) {
+      expect(mayReach(role, "/h/:code/online-checkin"), role).toBe(true);
+    }
+    for (const role of ["finance", "read_only", "housekeeping", "pos"] as const) {
+      expect(mayReach(role, "/h/:code/online-checkin"), role).toBe(false);
+    }
   });
 
   it("still lets reception FIND what left its menu", () => {
@@ -202,7 +217,7 @@ describe("each person's menu", () => {
     const SOON = [
       "Booking engine", "Channel manager", "Contracts",
       "Fidato CRS", "Guest services", "Leads and WhatsApp", "Loyalty",
-      "Marketing", "Online check-in", "Online payments", "Room systems",
+      "Marketing", "Online payments", "Room systems",
     ];
     for (const role of COMING_SOON_ROLES) {
       const sections = sidebarFor(role, "5EL", ALL_ON);

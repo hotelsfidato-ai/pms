@@ -1,6 +1,5 @@
-/* Online check-in — NOT BUILT. A Coming soon page only (the owner's decision,
-   16 September): `pages/OnlineCheckin.tsx`, its menu entry (`nav.ts`) and its address
-   (`routes.tsx`). No other service uses anything from here yet, so this
-   front door exports nothing. What the service will be, and what it needs,
-   is in MODULE.md beside this file. */
+/* Online check-in — BUILT 21 September: the guest's page (`/g/:token`,
+   mounted outside the sign-in gate) and the desk's screen under Front desk.
+   No other service uses anything from here yet, so this front door exports
+   nothing. What it does, and what it still waits on, is in MODULE.md. */
 export {};

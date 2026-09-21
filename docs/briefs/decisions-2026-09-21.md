@@ -154,3 +154,16 @@ The plan these make is `docs/GO-LIVE-PLAN.md`.
 | D21-85 | Removing a dish's last variation | **"The way Bhaaji Pau works"**: it asks for the dish's own price, typed |
 | D21-86 | A dish added with a blank price | **Refused**, as a variation or option is (POS-14: it used to land at ₹0.00) |
 | D21-87 | ₹0 add-ons on the guest's bill | **Printed like any other add-on** (unchanged) |
+
+## Later still (21 September)
+
+| # | Question | Answer |
+|---|---|---|
+| D21-88 | PMS-2 — the server checks which hotel, not which role, on every write | **Fix it before 5 Elements' first real day** (reverses the timing of D12, 15 September) |
+| D21-89 | Where the online check-in desk screen goes | **Front desk, and in reception's own menu.** It leaves Coming soon |
+| D21-90 | Alcohol | **A switch per hotel — "serves alcohol" — because some do and many do not.** Off by default |
+| D21-91 | How alcohol is taxed | **10% VAT, not GST: one "VAT 10%" line on the bill, never split into CGST/SGST, kept out of the GST sales register and the GST part of the accountant's export, with its own VAT ledger.** The accountant confirms the rate on the tax screen |
+| D21-92 | How long a guest's phone stays unlocked after the code | **1 hour** |
+| D21-93 | The menu work (release 1) | **Live today, 21 September** — the owner types, the master guides |
+| D21-94 | POS-15, a dish with no GST rate showing "0%" | The owner: the restaurant is 5%, so a dish never has "no GST". **Show the rate its section actually charges, or a dash where none is set** |
+| D21-95 | A QR library for the room card sheet | **Yes — `qrcode` (MIT), desk screen only** |
