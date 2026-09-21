@@ -1104,25 +1104,14 @@ chat); the demo's rates and menu are what the hotel is selling; the
 
 ## 9 · Deploying — only when the owner says so
 
-> **Opening n8n, from 21 September (the owner's option 3).** The n8n screen is
-> closed to the internet: its saved address is the server's own, 127.0.0.1, so
-> nginx refuses every visitor; webhooks stay open. The owner opens it through a
-> tunnel from their own computer, which reaches n8n directly and never passes
-> nginx, so a changing home address no longer locks them out:
->
-> ```powershell
-> # the owner's PC, PowerShell - leave this window open while using n8n
-> ssh -i "$HOME\Downloads\ssh-key-2026-09-01.key" -N -L 5678:127.0.0.1:5678 opc@130.210.49.220
-> ```
->
-> then open **http://localhost:5678**; close the window to close the link.
-> **The owner has this as one click: `Open n8n.cmd` on their desktop** (21
-> September) — it opens the link and the browser by itself; keep its window
-> open while using n8n. The n8n address itself now says so (deployed from a
-> copy in /tmp; the server's /opt/fidato is untouched and catches up with
-> stage 2).
-> ⚠ **Never run `n8n.sh allow` with a home address again** — that reopens
-> the screen.
+> **n8n, from 21 September evening (D21-96): the address is OPEN.** The owner
+> wants to type https://n8n.fidatohotels.com, sign in, and work, from anywhere.
+> So `n8n.sh open` was run: everybody reaches n8n's own sign-in page, and its
+> password is the lock. **Two-step sign-in should be on for every n8n user**
+> (Settings → Personal → Enable 2FA) — n8n holds the WhatsApp key. The
+> address-lock and the tunnel (option 3, earlier the same day) are undone;
+> `n8n.sh` still carries the 127.0.0.1 wording for if the owner ever wants it
+> closed again.
 >
 > **From 21 September the plan is `docs/GO-LIVE-PLAN.md`.** The runbook below
 > is the shape every deploy follows (backup, pull, launch.sh, website, look);
