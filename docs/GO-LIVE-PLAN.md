@@ -1,7 +1,7 @@
 # Going live — the plan
 
 **21 September 2026. Every line here comes from the owner's answers**
-(`docs/briefs/decisions-2026-09-21.md`, D21-1 to D21-74) or from a read-only
+(`docs/briefs/decisions-2026-09-21.md`, D21-1 to D21-76) or from a read-only
 look at the live server the owner allowed the same day. Nothing is deployed
 until the owner says yes on the day, and the owner types every command (D21-50).
 
@@ -69,7 +69,7 @@ is why the backup comes first.
 - **The guest-facing parts arrive in this deploy but stay dark:** with the two
   sending settings unset nothing can be sent, no guest is sent a link, and no
   room card is printed. Stage 3 is switching them on, not a second code
-  deploy.
+  deploy (D21-76).
 
 ### Stage 3 — what guests see
 

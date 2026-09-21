@@ -104,5 +104,4 @@ If you have a minute, we would be grateful for a review: {{3}}
   with the same names, chosen on the booking (D21-74).
 - **The guest's agreement (D21-72):** WhatsApp goes only to a booking ticked
   "guest agreed to WhatsApp"; the desk asks on phone and walk-in bookings.
-  Whether the code, which the guest asks for themselves, waits for the tick is
-  being confirmed with the owner.
+  The code does not wait for the tick: the guest asks for it (D21-75).

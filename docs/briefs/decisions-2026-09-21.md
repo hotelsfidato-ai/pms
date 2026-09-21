@@ -128,6 +128,8 @@ The plan these make is `docs/GO-LIVE-PLAN.md`.
 | D21-69 | The guest-messages chat | **Takes the first free slot** of the three |
 | D21-70 | After the first real day | **A read-only look at the server each day the owner opens a chat, for two weeks** |
 | D21-71 | Teaching 5 Elements' staff | **A one-page sheet per role**, checked against the receptionist test |
-| D21-72 | WhatsApp's own rule: a business may start a conversation only with somebody who agreed | **A "guest agreed to WhatsApp" tick on each booking.** The desk asks on phone and walk-in bookings; an unticked booking gets email if it has one, else nothing. Changes D21-35 accordingly. ⚠ **Not the owner's words, to confirm with them:** the master reads the six-digit code as outside the tick, because the guest asks for it themselves on their own page |
+| D21-72 | WhatsApp's own rule: a business may start a conversation only with somebody who agreed | **A "guest agreed to WhatsApp" tick on each booking.** The desk asks on phone and walk-in bookings; an unticked booking gets email if it has one, else nothing. Changes D21-35 accordingly |
+| D21-75 | Does the six-digit code wait for the tick? | **No — the guest pressing "Send me the code" is their own request**, so it goes to any booking's phone (confirmed by the owner) |
+| D21-76 | Stage 3: a second code release, or a switch-on? | **A switch-on.** Stage 2 puts all the code on the server with the guest-facing parts dark; stage 3 sets the two sending settings, sends the first WhatsApp to the owner's phone, and places the room cards |
 | D21-73 | Languages | **English only** for now |
 | D21-74 | When a second language comes | **Chosen on the booking, with a default per hotel.** Nothing is built for it until there is a second language |

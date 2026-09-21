@@ -94,8 +94,8 @@ merge if another lane took it.
   number, the QR — which the owner prints however they choose (D21-62).
 - **The link stays on pms.fidatohotels.com** for now (D21-60), read from the
   server's settings as today, never written into the code.
-- The six-digit code is asked for by the guest; whether it is held back by the
-  booking's WhatsApp tick (D21-72) is being confirmed with the owner.
+- **The six-digit code is NOT held back by the booking's WhatsApp tick**
+  (D21-75): the guest asking for it is their own request.
 
 ---
 
