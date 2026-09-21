@@ -83,7 +83,8 @@ THE LAPTOP IS EMPTY 21 Sep (D21-80, D21-82): no demo guests, bookings, bills, me
                     treatments or price lists — only the 18 rooms, 2 room types, logins,
                     tables and the pricing basis. `npm run demo` rebuilds the demo; the
                     copy from before is D:idato-pgackupsidato-before-clearing-2026-09-21.dump.
-                    A test that expects demo data on the dev database will now find none.
+                    The gates are unaffected: API and database suites build their own
+                    scratch database each run, and the web tests use stand-in data.
 menu                "Guests & CRM" is a section (D21-79); Central CRM left Coming soon
 GOING LIVE          docs/GO-LIVE-PLAN.md (the second interview, D21-49 … D21-74). Live
                     is 79e358e on `main`, ONE hotel (5EL), and nobody uses it for real:
