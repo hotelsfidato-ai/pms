@@ -1,6 +1,7 @@
-import { describe, it, expect, beforeEach } from "vitest";
+import { describe, it, expect, beforeEach, vi } from "vitest";
 import { render, screen, within } from "@testing-library/react";
 import App from "@/App";
+import * as apiModule from "@/lib/api";
 import { HOTEL, startSignedIn } from "@/test/app";
 
 /* Reports' screens, rendered through the whole application — the shell,
@@ -34,4 +35,21 @@ describe("the dashboard at /", () => {
     const arrivals = await within(main).findByRole("link", { name: /Arrivals/ });
     expect(arrivals.getAttribute("href")).toBe(`/h/${HOTEL}/arrivals`);
   });
+
+  it("says the figures did not load, rather than show a failure as dashes", async () => {
+    /* A dash on this page means "a figure this system does not hold yet".
+       A report that failed printed the same dashes and said nothing, so a
+       server fault read as a business with no figures. */
+    const real = apiModule.api;
+    const spy = vi.spyOn(apiModule, "api").mockImplementation(((url: string, init?: RequestInit) =>
+      url.includes("/reports/manager")
+        ? Promise.reject(new apiModule.ApiError(500, "Request failed (500)."))
+        : real(url, init)) as typeof real);
+    try {
+      render(<App />);
+      expect(await screen.findByText("Today's figures did not load", {}, { timeout: 15000 })).toBeDefined();
+    } finally {
+      spy.mockRestore();
+    }
+  }, 20000);
 });

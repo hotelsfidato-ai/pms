@@ -11,6 +11,50 @@ Work that touches the core or several services still goes in the root
 
 ---
 
+## 2026-09-21 · The Dashboard, easier to read (the master, for the owner)
+
+**Asked for:** the owner — "fix the UI/UX in the dashboard, make it more
+readable", with the design system, the taste skill and the impeccable skill.
+The Dashboard (`/`) only; a polish pass, not a redesign.
+
+**Shipped** (`pages/Dashboard.tsx`; every figure is the one it was)
+- **The month and the year under a figure are a label and a value** in two
+  columns, set off by one hairline, not a sentence in grey: "Month so far
+  ₹4,09,690" became "Month so far" on the left and ₹4,09,690 on the right. The
+  money collected today is broken down the same way, one row per way of
+  paying, instead of packed behind middle dots.
+- **A section's note sits under its heading** — the design system's own
+  `Section` replaces the page's one-off header, whose note floated at the far
+  right of the line and whose heading was a size smaller than every other
+  section heading in the app.
+- **Two by two, not three and an orphan.** The four lead tiles and the four
+  money tiles sat three to a row between 768 and 1280 pixels wide, leaving the
+  fourth alone; they are now two by two there, and one to a row on a phone,
+  where two across wrapped "Month so far" away from its number.
+- **The six counts line up.** A count sits at the foot of its tile and its
+  chevron beside it, so "Needs cleaning" running to two lines no longer drops
+  its number below the others' — and the label gets the chevron's width back.
+- **A dash reads as absent**: the rule's dash keeps its size but takes the
+  secondary grey, so it is not read as a figure.
+- **The page line wraps between its parts**, with the dot at the end of a
+  line, never the start of one.
+- **A read that fails says so** ("Today's figures did not load", with Try
+  again). It printed the same dashes as "not held yet" and nothing else — a
+  server fault read as a business with no figures. "Nothing taken yet today"
+  also showed while the figures were still loading; it no longer does.
+
+**Proved:** `npx tsc -b --force` clean; `vitest run src/modules/reports
+src/App.test.tsx` 43 passed, then 44 with the new test; the new test — the
+Manager report's read failing with a 500 — seen to fail with the error line
+taken out, and pass with it back. Looked at on the demo data at 1440, 1024 and
+390 pixels wide: no sideways scroll at 390. The design detector found nothing.
+
+**Left open**
+- The City ledger tile's note ("A balance waits on their payments being
+  recorded") is hard to follow; its words are the owner's to change, not mine.
+- Not touched: the tile idea itself (icon, label, big figure). Changing it
+  would be a redesign, which was not asked for.
+
 ## 2026-09-18 · The owner's answers on what the reports print (D17-93 to D17-99)
 
 **Asked for:** the seven questions this service left with the owner, answered
