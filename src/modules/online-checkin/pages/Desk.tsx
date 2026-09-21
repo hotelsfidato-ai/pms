@@ -1,0 +1,274 @@
+import { useState } from "react";
+import { useParams } from "react-router";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { dateShort, dateTime } from "@/lib/format";
+import { useDocumentIdentity } from "@/lib/documentIdentity";
+import {
+  Button, Card, CardBody, Dialog, DialogContent, EmptyState, ErrorState, Page, PageHeader,
+  Skeleton,
+} from "@/components/ui";
+import {
+  confirmDetails, getDesk, handleRequest, printEveryCard, printRoomCard, setAsideDetails,
+  type PrintedCard, type WaitingDetails,
+} from "@/modules/online-checkin/data/desk";
+
+/* ══════════════════════════════════════════════════════════════════
+   ONLINE CHECK-IN — THE DESK'S SIDE (/h/:code/online-checkin)
+
+   Three things a guest's own page leaves for a person:
+
+   · DETAILS WAITING TO BE CHECKED (D21-8). What a guest typed reaches
+     guest_documents - and so Form C - only when a clerk has compared it
+     with the ID and pressed Confirm. That is the whole point of the
+     button: the desk stops typing; nobody stops looking.
+   · REQUESTS (D21-9). A spa treatment or a laundry bag the guest asked
+     for. Booked through the spa's and laundry's own screens, then marked
+     done here. This screen books nothing.
+   · ROOM CARDS (D21-7, D21-16, D21-62). One fixed card per room. A card
+     is shown once, when it is made, to be printed - only its hash is
+     kept - so printing is always making, and a new card stops the old
+     one at once.
+   ══════════════════════════════════════════════════════════════════ */
+
+const ID_LABEL: Record<string, string> = {
+  aadhaar: "Aadhaar", passport: "Passport", driving_licence: "Driving licence",
+  voter: "Voter ID", other: "Other ID",
+};
+const KIND_LABEL: Record<string, string> = { spa: "Spa", laundry: "Laundry" };
+
+export default function DeskPage() {
+  const code = useParams().code ?? "";
+  const qc = useQueryClient();
+  const desk = useQuery({ queryKey: ["online-checkin-desk", code], queryFn: () => getDesk(code) });
+  const refresh = () => qc.invalidateQueries({ queryKey: ["online-checkin-desk", code] });
+  const [printed, setPrinted] = useState<PrintedCard[] | null>(null);
+
+  if (printed) return <CardSheet cards={printed} onDone={() => { setPrinted(null); void refresh(); }} />;
+
+  return (
+    <Page className="max-w-4xl">
+      <PageHeader
+        title="Online check-in"
+        description="What guests sent from their own page, waiting for the desk."
+      />
+      {desk.isLoading ? (
+        <Skeleton className="h-64" />
+      ) : desk.error ? (
+        <ErrorState error={desk.error} onRetry={() => void desk.refetch()} />
+      ) : (
+        <div className="flex flex-col gap-8">
+          <Waiting code={code} rows={desk.data!.waiting} onChanged={refresh} />
+          <Requests code={code} rows={desk.data!.requests} onChanged={refresh} />
+          <RoomCards code={code} rooms={desk.data!.rooms} onPrinted={setPrinted} />
+        </div>
+      )}
+    </Page>
+  );
+}
+
+function Waiting(
+  { code, rows, onChanged }: { code: string; rows: WaitingDetails[]; onChanged: () => void },
+) {
+  const confirm = useMutation({ mutationFn: (id: string) => confirmDetails(code, id), onSuccess: onChanged });
+  const aside = useMutation({ mutationFn: (id: string) => setAsideDetails(code, id), onSuccess: onChanged });
+  const busy = confirm.isPending || aside.isPending;
+
+  return (
+    <section>
+      <h2 className="text-md font-semibold text-ink-900 mb-3">Details waiting to be checked</h2>
+      {rows.length === 0 ? (
+        <Card><CardBody>
+          <EmptyState compact title="Nothing waiting"
+            description="When a guest sends their ID and address from their own page, it waits here until somebody checks it against the ID." />
+        </CardBody></Card>
+      ) : (
+        <ul className="flex flex-col gap-3">
+          {rows.map((d) => (
+            <li key={d.id}>
+              <Card><CardBody>
+                <div className="flex flex-wrap items-baseline justify-between gap-2">
+                  <p className="text-base font-medium text-ink-900">{d.guest}</p>
+                  <p className="text-sm text-grey-600 tabular">{d.reference} · sent {dateTime(d.submittedAt)}</p>
+                </div>
+                <dl className="mt-3 grid grid-cols-[auto_1fr] gap-x-4 gap-y-1.5 text-sm">
+                  <dt className="text-grey-600">{ID_LABEL[d.idType] ?? d.idType}</dt>
+                  <dd className="text-ink-900 tabular">{d.idNumber}</dd>
+                  {d.passportExpiry && <><dt className="text-grey-600">Passport expires</dt>
+                    <dd className="tabular">{dateShort(d.passportExpiry)}</dd></>}
+                  {d.visaNumber && <><dt className="text-grey-600">Visa</dt>
+                    <dd className="tabular">{d.visaNumber}{d.visaExpiry ? `, expires ${dateShort(d.visaExpiry)}` : ""}</dd></>}
+                  {(d.addressLine || d.city || d.country) && <><dt className="text-grey-600">Address</dt>
+                    <dd>{[d.addressLine, d.city, d.country].filter(Boolean).join(", ")}</dd></>}
+                </dl>
+                <div className="mt-4 flex flex-wrap gap-2">
+                  <Button variant="secondary" disabled={busy} onClick={() => confirm.mutate(d.id)}>
+                    Confirm against the ID
+                  </Button>
+                  <Button variant="ghost" disabled={busy} onClick={() => aside.mutate(d.id)}>
+                    Not right - take them at the desk
+                  </Button>
+                </div>
+              </CardBody></Card>
+            </li>
+          ))}
+        </ul>
+      )}
+      {(confirm.error || aside.error) && (
+        <p className="text-sm text-brand-red mt-2">{((confirm.error ?? aside.error) as Error).message}</p>
+      )}
+    </section>
+  );
+}
+
+function Requests(
+  { code, rows, onChanged }: {
+    code: string; rows: { id: string; kind: string; what: string; wanted: string | null;
+      guest: string; reference: string; createdAt: string }[];
+    onChanged: () => void;
+  },
+) {
+  const handle = useMutation({
+    mutationFn: (v: { id: string; status: "done" | "declined" }) => handleRequest(code, v.id, v.status),
+    onSuccess: onChanged,
+  });
+
+  return (
+    <section>
+      <h2 className="text-md font-semibold text-ink-900 mb-1">Requests</h2>
+      <p className="text-sm text-grey-600 mb-3">
+        Book them on the spa's or the laundry's own screen, then mark them done here.
+      </p>
+      {rows.length === 0 ? (
+        <Card><CardBody>
+          <EmptyState compact title="No requests"
+            description="A guest can ask for the spa or laundry from their own page, where this property has them switched on." />
+        </CardBody></Card>
+      ) : (
+        <ul className="flex flex-col gap-3">
+          {rows.map((q) => (
+            <li key={q.id}>
+              <Card><CardBody>
+                <p className="text-base text-ink-900">
+                  <span className="font-medium">{KIND_LABEL[q.kind] ?? q.kind}:</span> {q.what}
+                </p>
+                <p className="text-sm text-grey-600 mt-0.5">
+                  {q.guest} · {q.reference}{q.wanted ? ` · wanted ${q.wanted}` : ""} · asked {dateTime(q.createdAt)}
+                </p>
+                <div className="mt-3 flex gap-2">
+                  <Button variant="secondary" disabled={handle.isPending}
+                    onClick={() => handle.mutate({ id: q.id, status: "done" })}>
+                    Done
+                  </Button>
+                  <Button variant="ghost" disabled={handle.isPending}
+                    onClick={() => handle.mutate({ id: q.id, status: "declined" })}>
+                    Declined
+                  </Button>
+                </div>
+              </CardBody></Card>
+            </li>
+          ))}
+        </ul>
+      )}
+    </section>
+  );
+}
+
+function RoomCards(
+  { code, rooms, onPrinted }: {
+    code: string; rooms: { id: string; number: string; cardSince: string | null }[];
+    onPrinted: (cards: PrintedCard[]) => void;
+  },
+) {
+  const [askEvery, setAskEvery] = useState(false);
+  const one = useMutation({ mutationFn: (roomId: string) => printRoomCard(code, roomId), onSuccess: (r) => onPrinted(r.cards) });
+  const every = useMutation({ mutationFn: () => printEveryCard(code), onSuccess: (r) => onPrinted(r.cards) });
+
+  return (
+    <section>
+      <div className="flex flex-wrap items-baseline justify-between gap-2 mb-1">
+        <h2 className="text-md font-semibold text-ink-900">Room cards</h2>
+        <Button variant="secondary" onClick={() => setAskEvery(true)}>Print cards for every room</Button>
+      </div>
+      <p className="text-sm text-grey-600 mb-3">
+        One card per room. A guest scans it and a code goes to the phone on their booking.
+        Printing a new card stops the old one at once.
+      </p>
+      <Card>
+        <ul className="divide-y divide-grey-200">
+          {rooms.map((r) => (
+            <li key={r.id} className="flex items-center justify-between gap-3 px-4 py-2.5">
+              <div>
+                <p className="text-base text-ink-900">Room {r.number}</p>
+                <p className="text-sm text-grey-600">
+                  {r.cardSince ? `Card printed ${dateShort(r.cardSince)}` : "No card yet"}
+                </p>
+              </div>
+              <Button variant="ghost" disabled={one.isPending} onClick={() => one.mutate(r.id)}>
+                {r.cardSince ? "Print a new card" : "Print a card"}
+              </Button>
+            </li>
+          ))}
+        </ul>
+      </Card>
+
+      <Dialog open={askEvery} onOpenChange={setAskEvery}>
+        <DialogContent
+          title="Print cards for every room?"
+          footer={
+            <>
+              <Button variant="secondary" onClick={() => setAskEvery(false)}>Cancel</Button>
+              <Button variant="danger" disabled={every.isPending}
+                onClick={() => { setAskEvery(false); every.mutate(); }}>
+                Print new cards
+              </Button>
+            </>
+          }
+        >
+          <p className="text-base text-grey-600">
+            Every card already in a room stops working the moment this is pressed.
+            Put the new ones out straight away.
+          </p>
+        </DialogContent>
+      </Dialog>
+    </section>
+  );
+}
+
+/* ── The printable sheet (D21-62) ───────────────────────────────────
+   The hotel's cards, one per room, to print however the owner chooses.
+   ⚠ NO QR CODE YET: nothing in this project draws one, and adding a
+   library is the master's call (MODULE.md, "Waiting on the master"). The
+   link is printed in its place so a sheet printed today is not blank -
+   and the screen says so rather than pretending. */
+function CardSheet({ cards, onDone }: { cards: PrintedCard[]; onDone: () => void }) {
+  const { property } = useDocumentIdentity();
+  return (
+    <Page className="max-w-4xl">
+      <div className="print:hidden">
+        <PageHeader
+          title="Online check-in"
+          description="These cards are shown once. Print them now - they cannot be shown again, only replaced."
+        />
+        <div className="flex gap-2 mb-5">
+          <Button variant="primary" onClick={() => window.print()}>Print</Button>
+          <Button variant="secondary" onClick={onDone}>Done</Button>
+        </div>
+        <p className="text-sm text-grey-600 mb-4">
+          The QR code is not drawn yet; each card carries its link instead.
+        </p>
+      </div>
+      <div className="grid gap-4 sm:grid-cols-2 print:grid-cols-2">
+        {cards.map((c) => (
+          <div key={c.room} data-room-card className="rounded-md border border-grey-300 p-5 break-inside-avoid">
+            {property && <p className="text-sm text-grey-600">{property}</p>}
+            <p className="text-2xl font-semibold text-ink-900">Room {c.room}</p>
+            {/* Nothing more promised: requests appear only where the hotel
+                has the spa or laundry switched on (D21-63). */}
+            <p className="text-sm text-grey-600 mt-2">Scan to check in.</p>
+            <p className="text-xs text-ink-900 mt-3 break-all font-mono">{c.link}</p>
+          </div>
+        ))}
+      </div>
+    </Page>
+  );
+}

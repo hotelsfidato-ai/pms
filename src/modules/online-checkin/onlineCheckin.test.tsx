@@ -3,15 +3,18 @@ import { render, screen, cleanup, waitFor, fireEvent } from "@testing-library/re
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { MemoryRouter, Routes, Route } from "react-router";
 import * as apiModule from "@/lib/api";
+import * as notice from "@/modules/online-checkin/privacyNotice";
 import GuestPage from "@/modules/online-checkin/pages/GuestPage";
+import DeskPage from "@/modules/online-checkin/pages/Desk";
 
 /* ══════════════════════════════════════════════════════════════════
    THE GUEST'S PAGE — what a stranger holding the link can see
 
    The screen's half of the door's rules (api/src/routes/guestDoor.ts).
-   The server keeps its own half and is tested beside it; these say the
-   page does not leak what the server withholds, and does not tell a
-   wrong phone number from a right one.
+   The server keeps its own half and is tested beside it
+   (api/test/guestDoor*.test.ts); these say the page does not leak what
+   the server withholds, does not tell a wrong phone number from a right
+   one, and carries THIS TAB's unlock - never the link alone (D21-6).
 
    `api` is stubbed per path: the page must never call anything else,
    and an unlisted call fails the test rather than answering empty.
@@ -21,35 +24,49 @@ const TOKEN = "a-token-from-the-desk";
 const OPEN = `/api/guest/${TOKEN}`;
 
 const BOOKING = {
+  kind: "booking" as const,
   hotel: { code: "5EL", name: "5 Elements Akkalkot" },
+  room: null,
+  occupied: true,
   booking: {
     reference: "FH-2609-5001", guestName: "A. Guest",
     checkIn: "2026-08-25", checkOut: "2026-08-27", status: "confirmed",
   },
   verified: false,
   phoneHint: "…4321",
+  canSendCodes: true,
+  cannotSend: null,
+  offers: [] as string[],
 };
 
-function server(routes: Record<string, () => unknown>) {
-  return vi.spyOn(apiModule, "api").mockImplementation(async (url: string) => {
+type Answer = (init?: RequestInit) => unknown;
+
+function server(routes: Record<string, Answer>) {
+  return vi.spyOn(apiModule, "api").mockImplementation(async (url: string, init?: RequestInit) => {
     const answer = routes[url.split("?")[0]!];
     if (!answer) throw new apiModule.ApiError(500, `the page called ${url}`);
-    return answer() as never;
+    return answer(init) as never;
   });
 }
 
-function open() {
+const unlockSent = (init?: RequestInit) =>
+  /^Guest (\S+)$/.exec((init?.headers as Record<string, string> | undefined)?.["authorization"] ?? "")?.[1];
+
+function open(path = `/g/${TOKEN}`, route = "/g/:token", page = <GuestPage />) {
   const qc = new QueryClient({ defaultOptions: { queries: { retry: false } } });
   render(
     <QueryClientProvider client={qc}>
-      <MemoryRouter initialEntries={[`/g/${TOKEN}`]}>
-        <Routes><Route path="/g/:token" element={<GuestPage />} /></Routes>
+      <MemoryRouter initialEntries={[path]}>
+        <Routes><Route path={route} element={page} /></Routes>
       </MemoryRouter>
     </QueryClientProvider>,
   );
 }
 
-beforeEach(() => { document.title = ""; });
+beforeEach(() => {
+  document.title = "";
+  try { sessionStorage.clear(); localStorage.clear(); } catch { /* jsdom without storage */ }
+});
 afterEach(() => { cleanup(); vi.restoreAllMocks(); });
 
 describe("before the six digits are answered", () => {
@@ -59,24 +76,23 @@ describe("before the six digits are answered", () => {
 
     expect(await screen.findByText("A. Guest")).toBeTruthy();
     expect(screen.getByText("FH-2609-5001")).toBeTruthy();
-    /* The number itself is never here — only the last four digits the
-       door sent, and only as a hint about where the code is going. */
     expect(screen.getByText(/ending …4321/)).toBeTruthy();
     expect(screen.queryByText(/Verified/)).toBeNull();
   });
 
-  it("asks the server for nothing else — no bill, no identity, no requests", async () => {
+  it("asks the server for nothing else — no details, no requests", async () => {
     const spy = server({ [OPEN]: () => BOOKING });
     open();
     await screen.findByText("A. Guest");
 
     /* One call, and it is the one the token names. A screen that
-       fetched the bill and hid it would be a leak with a stylesheet. */
+       fetched what is behind the code and hid it would be a leak with a
+       stylesheet. */
     expect(spy.mock.calls.map((c) => c[0])).toEqual([OPEN]);
   });
 
   it("says the same nothing for a link that is dead, whatever killed it", async () => {
-    server({});  // any failure at all
+    server({});
     open();
 
     expect(await screen.findByRole("heading", {
@@ -84,13 +100,62 @@ describe("before the six digits are answered", () => {
     })).toBeTruthy();
     expect(screen.queryByText("A. Guest")).toBeNull();
   });
+
+  /* OCI-3. A request that never arrived said "Ask the desk for a new one"
+     to a guest whose link was fine - found by opening the page while its
+     server was still starting. */
+  it("tells a line that is down from a link that is dead", async () => {
+    server({ [OPEN]: () => { throw new apiModule.ApiError(0, "Could not reach the server."); } });
+    open();
+
+    expect(await screen.findByRole("heading", { name: "We could not reach the hotel" })).toBeTruthy();
+    expect(screen.getByRole("button", { name: "Try again" })).toBeTruthy();
+    expect(screen.queryByText(/Ask the desk for a new one/)).toBeNull();
+  });
+
+  /* D21-25: "Send me the code" was offered when nothing could send. */
+  it("does not offer a code when none can be sent, and says why first", async () => {
+    const cannot = "Codes cannot be sent yet - WhatsApp is not connected to this server. "
+      + "Ask the desk to send you the link instead.";
+    server({ [OPEN]: () => ({ ...BOOKING, canSendCodes: false, cannotSend: cannot }) });
+    open();
+
+    expect(await screen.findByText(cannot)).toBeTruthy();
+    expect(screen.queryByRole("button", { name: "Send me the code" })).toBeNull();
+    expect(screen.queryByLabelText("Your phone number")).toBeNull();
+  });
+});
+
+describe("a room's fixed card (D21-7)", () => {
+  const CARD = {
+    ...BOOKING, kind: "room" as const, room: "204", booking: null, phoneHint: null,
+  };
+
+  it("shows the hotel and the room number, and nothing of the guest (D21-14)", async () => {
+    server({ [OPEN]: () => CARD });
+    open();
+
+    expect(await screen.findByRole("heading", { name: "Room 204" })).toBeTruthy();
+    expect(screen.getByText("5 Elements Akkalkot")).toBeTruthy();
+    expect(screen.queryByText(/ending/), "not even the last four digits").toBeNull();
+    expect(screen.queryByText("Arriving")).toBeNull();
+  });
+
+  it("says only that it opens once you are checked in, for an empty room (D21-15)", async () => {
+    server({ [OPEN]: () => ({ ...CARD, occupied: false }) });
+    open();
+
+    expect(await screen.findByRole("heading", { name: "This opens once you're checked in" })).toBeTruthy();
+    expect(screen.getByText("5 Elements Akkalkot")).toBeTruthy();
+    expect(screen.queryByLabelText("Your phone number")).toBeNull();
+  });
 });
 
 describe("the number that gets the code", () => {
   /* ⚠ THE ONE THAT MATTERS. The door answers a wrong number and a right
      one identically; if this screen ever decided anything from that
      answer, trying numbers until the page changed would find the
-     guest's own. Both cases are driven here and the screens compared. */
+     guest's own. */
   it("looks exactly the same whether or not the number was the booking's", async () => {
     const answer = {
       sent: true,
@@ -116,27 +181,14 @@ describe("the number that gets the code", () => {
     expect(await shown("9812344321")).toBe(await shown("0000000000"));
   });
 
-  /* OCI-1. The door refuses to send while n8n is not connected and says
-     what to do instead, in the body's `message` with a 503 — a field
-     `api()` does not lift into the error. The guest read "Request failed
-     (503)." until this was found by opening the screen. */
-  it("prints the door's refusal to send, not its status code", async () => {
+  it("prints the door's refusal to send, not a status code", async () => {
+    /* OCI-1's screen half. `api()` has read a refusal's `message` since
+       21 September, so the sentence arrives as the error's own. */
     const message = "Codes cannot be sent yet - WhatsApp is not connected to this "
       + "server. Ask the desk to send you the link instead.";
-    /* ⚠ SHAPED BY HAND, NOT `new ApiError(...)`, AND THAT IS THE POINT.
-       In the browser `api()` builds an ApiError carrying the parsed body;
-       under vitest the class's optional `body` is dropped by the
-       transform (measured 19 September — `Object.keys` is
-       ["status","name"] here and ["status","body","name"] in the dev
-       server). Constructing one here would therefore test the transform
-       and not this screen. This is the object the browser really hands
-       it. */
     server({
       [OPEN]: () => BOOKING,
-      [`${OPEN}/code`]: () => {
-        throw Object.assign(new Error("Request failed (503)."),
-          { status: 503, body: { sent: false, message } });
-      },
+      [`${OPEN}/code`]: () => { throw new apiModule.ApiError(503, message); },
     });
     open();
     await screen.findByText("A. Guest");
@@ -146,22 +198,6 @@ describe("the number that gets the code", () => {
 
     expect(await screen.findByText(message)).toBeTruthy();
     expect(screen.queryByText(/Request failed/)).toBeNull();
-  });
-
-  it("opens the booking once the right code is answered", async () => {
-    let verified = false;
-    server({
-      [OPEN]: () => ({ ...BOOKING, verified }),
-      [`${OPEN}/verify`]: () => { verified = true; return { verified: true }; },
-    });
-    open();
-    await screen.findByText("A. Guest");
-
-    fireEvent.change(screen.getByLabelText("The six digits"), { target: { value: "123456" } });
-    fireEvent.click(screen.getByRole("button", { name: "Open my booking" }));
-
-    expect(await screen.findByText("Verified")).toBeTruthy();
-    expect(screen.queryByLabelText("The six digits")).toBeNull();
   });
 
   it("prints the server's refusal of a wrong code, and stays shut", async () => {
@@ -180,6 +216,150 @@ describe("the number that gets the code", () => {
 
     await waitFor(() => expect(screen.getByText(
       "That code is not right, or it has expired. Ask for a new one.")).toBeTruthy());
-    expect(screen.queryByText("Verified")).toBeNull();
+    expect(screen.queryByText(/Verified/)).toBeNull();
+  });
+});
+
+describe("the unlock this phone holds (D21-6)", () => {
+  const UNLOCK = "this-tab-only-unlock-0123456789abcdefghijk";
+
+  /** A door that opens only with the unlock it handed back. */
+  const door = () => ({
+    [OPEN]: (init?: RequestInit) => ({ ...BOOKING, verified: unlockSent(init) === UNLOCK }),
+    [`${OPEN}/verify`]: () => ({ verified: true, unlock: UNLOCK }),
+    [`${OPEN}/details`]: (init?: RequestInit) => {
+      if (unlockSent(init) !== UNLOCK) throw new apiModule.ApiError(404, "no");
+      return { sent: null };
+    },
+  });
+
+  it("is kept for this tab only, and carried on every call behind the code", async () => {
+    const spy = server(door());
+    open();
+    await screen.findByText("A. Guest");
+
+    fireEvent.change(screen.getByLabelText("The six digits"), { target: { value: "123456" } });
+    fireEvent.click(screen.getByRole("button", { name: "Open my booking" }));
+    expect(await screen.findByText("Verified on this phone")).toBeTruthy();
+
+    const stored = Object.values(Object.fromEntries(
+      Object.keys(sessionStorage).map((k) => [k, sessionStorage.getItem(k)])));
+    expect(stored, "held by the tab").toContain(UNLOCK);
+    expect(JSON.stringify(localStorage), "never in storage that outlives the tab").not.toContain(UNLOCK);
+
+    await screen.findByLabelText("Your ID");
+    const behind = spy.mock.calls.filter((c) => String(c[0]).endsWith("/details"));
+    expect(behind.length).toBeGreaterThan(0);
+    for (const call of behind) expect(unlockSent(call[1])).toBe(UNLOCK);
+  });
+
+  it("goes back to asking for the code when the door refuses it", async () => {
+    sessionStorage.setItem(`guest-unlock:${TOKEN.slice(0, 12)}`, "an-unlock-that-has-expired");
+    let opens = 0;
+    server({
+      /* The first open believes the tab; the door then refuses the
+         details, and the page must ask again rather than show a fault. */
+      [OPEN]: () => ({ ...BOOKING, verified: opens++ === 0 }),
+      [`${OPEN}/details`]: () => { throw new apiModule.ApiError(404, "no"); },
+    });
+    open();
+
+    expect(await screen.findByLabelText("The six digits")).toBeTruthy();
+    expect(sessionStorage.getItem(`guest-unlock:${TOKEN.slice(0, 12)}`), "the dead unlock is dropped").toBeNull();
+  });
+});
+
+describe("behind the code", () => {
+  const UNLOCK = "unlocked-for-these-tests-0123456789abcdef";
+  const unlocked = { ...BOOKING, verified: true };
+  beforeEach(() => { sessionStorage.setItem(`guest-unlock:${TOKEN.slice(0, 12)}`, UNLOCK); });
+
+  it("sends only the details the owner named, as a submission for the desk (D21-19)", async () => {
+    let sent: Record<string, unknown> | null = null;
+    server({
+      [OPEN]: () => unlocked,
+      [`${OPEN}/details`]: (init) => {
+        if (init?.method === "POST") { sent = JSON.parse(String(init.body)); return { sent: true }; }
+        return sent
+          ? { sent: { status: "waiting", submittedAt: "2026-08-25T09:00:00Z", idType: "passport", idLastFour: "4567" } }
+          : { sent: null };
+      },
+    });
+    open();
+
+    fireEvent.change(await screen.findByLabelText("Your ID"), { target: { value: "passport" } });
+    /* A passport brings its own two dates and the visa - and nothing else. */
+    expect(screen.getByLabelText("Passport expires")).toBeTruthy();
+    expect(screen.getByLabelText("Visa expires")).toBeTruthy();
+    fireEvent.change(screen.getByLabelText("The number on it"), { target: { value: "Z1234567" } });
+    fireEvent.change(screen.getByLabelText("Passport expires"), { target: { value: "2030-01-31" } });
+    fireEvent.click(screen.getByRole("button", { name: "Send my details" }));
+
+    expect(await screen.findByText(/The desk will check them against your ID/)).toBeTruthy();
+    const named = ["idType", "idNumber", "addressLine", "city", "country",
+      "passportExpiry", "visaNumber", "visaExpiry"];
+    expect(Object.keys(sent!).filter((k) => !named.includes(k)), "nothing else is asked").toEqual([]);
+    expect(sent!.idType).toBe("passport");
+    expect(screen.getByText("Passport ending 4567")).toBeTruthy();
+  });
+
+  it("offers a spa or laundry request only where the hotel has one on (D21-63)", async () => {
+    server({ [OPEN]: () => unlocked, [`${OPEN}/details`]: () => ({ sent: null }) });
+    open();
+    await screen.findByLabelText("Your ID");
+    expect(screen.queryByRole("heading", { name: "Ask for something" })).toBeNull();
+    cleanup();
+    vi.restoreAllMocks();
+
+    server({
+      [OPEN]: () => ({ ...unlocked, offers: ["spa"] }),
+      [`${OPEN}/details`]: () => ({ sent: null }),
+      [`${OPEN}/requests`]: () => ({ offers: ["spa"], requests: [] }),
+    });
+    open();
+    expect(await screen.findByRole("heading", { name: "Ask for something" })).toBeTruthy();
+  });
+});
+
+describe("the privacy notice (D21-61)", () => {
+  it("has its place before the first question, and shows nothing until its words are approved", async () => {
+    server({ [OPEN]: () => BOOKING });
+    open();
+    await screen.findByLabelText("Your phone number");
+    expect(document.querySelector("[data-privacy-notice]"), "no words yet: nothing shown").toBeNull();
+    cleanup();
+    vi.restoreAllMocks();
+
+    vi.spyOn(notice, "privacyNoticeFor").mockReturnValue({ heading: "Before you start", body: "Approved words." });
+    server({ [OPEN]: () => BOOKING });
+    open();
+    const phone = await screen.findByLabelText("Your phone number");
+    const words = document.querySelector("[data-privacy-notice]")!;
+    expect(words.textContent).toContain("Approved words.");
+    expect(words.compareDocumentPosition(phone) & Node.DOCUMENT_POSITION_FOLLOWING,
+      "the notice comes before the first question").toBeTruthy();
+  });
+});
+
+describe("the desk's side", () => {
+  it("confirms a guest's details through its own route, with one press", async () => {
+    const spy = server({
+      "/api/hotels/5EL/online-checkin": () => ({
+        waiting: [{
+          id: "sub-1", guest: "A. Guest", reference: "FH-2609-5001", idType: "aadhaar",
+          idNumber: "…9012", passportExpiry: null, visaNumber: null, visaExpiry: null,
+          addressLine: null, city: null, country: null, submittedAt: "2026-08-25T09:00:00Z",
+        }],
+        requests: [], rooms: [],
+      }),
+      "/api/hotels/5EL/online-checkin/submissions/sub-1/confirm": () => ({ confirmed: true }),
+    });
+    open("/h/5EL/online-checkin", "/h/:code/online-checkin", <DeskPage />);
+
+    /* The desk sees an Aadhaar as the server sent it: its last four. */
+    expect(await screen.findByText("…9012")).toBeTruthy();
+    fireEvent.click(screen.getByRole("button", { name: "Confirm against the ID" }));
+    await waitFor(() => expect(spy.mock.calls.map((c) => c[0]))
+      .toContain("/api/hotels/5EL/online-checkin/submissions/sub-1/confirm"));
   });
 });

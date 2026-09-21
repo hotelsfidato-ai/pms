@@ -12,6 +12,107 @@ exists** (`MODULE.md`).
 
 ---
 
+## 2026-09-21 · behind the code: the unlock, room cards, details, requests
+
+**Asked for:** the master, 21 September, on the owner's answers of that day
+(D21-6 to D21-19, D21-25, D21-29, D21-59 to D21-63, D21-72, D21-75): the half
+behind the six digits, in the brief's order — the two open faults, the
+per-phone unlock before anything else, the fixed room cards, the details as a
+submission the desk confirms, the bill, spa and laundry requests. Not the ID
+photo.
+
+**Shipped** — migration 121 (numbered at merge), `api/src/routes/guestDoor.ts`,
+and this folder
+- **D21-25** — the door says on opening whether a code can be sent, and the
+  page offers nothing when it cannot, in the door's own sentence. A knock too
+  many gets exactly the right number's answer.
+- **D21-6** — `verify` hands back an unlock for THIS phone, kept for the open
+  tab and sent as `Authorization: Guest …`; stored as a hash against the link
+  and the stay, for an hour. Every function behind the code takes both hashes.
+- **D21-7, D21-14 to D21-16, D21-62** — one fixed card per room. It finds
+  whoever is checked in there now; before the code it shows the hotel and the
+  room only; an empty room says "This opens once you're checked in"; printing
+  a new card kills the old one at once. The desk prints one room or every
+  room, on a sheet shown once.
+- **D21-8, D21-17 to D21-19** — the details are a submission: ID type and
+  number, address, and for a passport its expiry and the visa. They reach
+  `guest_documents` only when a clerk presses Confirm against the ID, under
+  the clerk's name. Aadhaar is stored whole; every screen shows the last four.
+- **D21-9, D21-63** — spa and laundry requests, only where the hotel has the
+  module on; the desk books them on the spa's and laundry's own screens.
+- **D21-61** — the privacy notice has its place before the first question, and
+  shows nothing until the advisor approves its words.
+- **The desk's screen** at `/h/:code/online-checkin` — waiting details,
+  requests, room cards. No menu entry yet (the master's; `MODULE.md`).
+
+**Found**
+- **OCI-2** — the door handed the sender the masked "…0011" as the recipient:
+  once WhatsApp was connected, every code would have gone to nobody.
+- **OCI-3** — a line that was down read as a dead link, and sent the guest to
+  the desk for a new one.
+- **OCI-4** — the unlock's own header was blocked by the browser's CORS
+  preflight the moment the code was right. Every test passed; opening the page
+  found it.
+- **Replaying the migrations broke.** 121 first changed the return type of
+  114's `guest_code_issue`; every deploy replays from 001, so the second run
+  stopped at 114 with "cannot change return type of existing function". The
+  extended function has its own name now and 114's is dropped each run. For
+  the root MEMORY: a migration must never change the return type of a
+  function an earlier one makes.
+- **A property reset would have stopped at four of this lane's tables.**
+  `guest_link_codes`, `guest_unlocks`, `guest_detail_submissions` and
+  `guest_requests` pointed at `reservations` with no cascade, and
+  `api/scripts/reset-property.ts` does not clear them. Caught by the master's
+  own guard (`api/test/resetOrder.test.ts`, "leaves nothing behind") in the
+  full API run — not by this lane's tests. Each now goes with its booking
+  (`on delete cascade`); the one on `guest_link_codes` is a named constraint
+  dropped and made again each run, because a column added `if not exists`
+  keeps whatever foreign key it was first made with.
+- **The demo's room 201 holds two checked-in stays** — the guest due out,
+  still checked in, and the arrival. The card finds the arrival (the latest
+  assignment), with the tie broken. Front desk's data; not changed.
+- **The guest's tab said "· Fidato"** (D21-27): the shared title helper adds
+  the group's name for nobody signed in. The page sets its own title; the HTML
+  shell's "Fidato PMS" is the master's.
+
+**Proved** — in `D:\fidato-guests`, on `online-checkin/guest-page`, nothing
+pushed
+- **The full gates, run here, judged by exit code:** `npx tsc -b --force`
+  exit 0 · server types exit 0 · `npx vitest run` **520 of 520**, 54 files,
+  exit 0 · `cd api; npm test` **1,230 of 1,230**, 77 files, exit 0 (32 of
+  them the door's) · `bash db/tests/run.sh` **951 assertions**, exit 0 ·
+  `bash db/tests/rerun.sh` **all 121 migrations re-runnable**, exit 0 ·
+  `npm run build` exit 0, "no test sign-in in dist". The first full runs
+  were red twice, and both were right: an exported helper nobody else called
+  (`repositories.test.ts`), and the reset guard above.
+- **Guards seen to refuse, each with its fault put back:**
+  - the server — the link alone opening anything behind the code (4 tests
+    failed); an unlock not tied to its stay; a room card handing back the stay
+    before the code; details reaching `guest_documents` unchecked; a whole
+    Aadhaar leaving for a screen; the masked number sent to (2 tests); the
+    rate-limited answer's old shape. One break did NOT show at first — a room
+    card's name leaked by the database but not emitted by the door — because
+    it was not a real leak from outside; the realistic one (the database
+    handing back the booking) was caught.
+  - the screen — the unlock in localStorage; the unlock not sent; a code
+    offered when none can be sent; the privacy notice after the questions; a
+    line that is down shown as a dead link.
+- **On the screen**, against this copy's API and database, with a stand-in
+  sender on this laptop (D21-29): a room card at 375px (hotel and room only);
+  an empty room's sentence; a booking's link; the code received by the
+  stand-in at the booking's whole number; Verified on this phone; an Aadhaar
+  sent and shown back as its last four; the submission waiting and
+  `guest_documents` untouched; the desk seeing "…0123", pressing Confirm, and
+  `guest_documents` written under `desk@fidato.in`; a reprinted card, and the
+  old one answering 404.
+
+**Left open**
+- **The bill (D21-10)** — waits on finance's one definition of a bill.
+- **The ID photo (D21-11)** — waits on the owner's rule.
+- **The menu entry, the QR code, the privacy words, the HTML shell's title** —
+  `MODULE.md`, "Waiting on the master".
+- The unlock lasts an hour — the owner's number to change if they want.
+
 ## 2026-09-19 · the guest's own page, as far as the six digits
 
 **Asked for:** the master, 19 September — the guest page lane

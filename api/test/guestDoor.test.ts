@@ -293,8 +293,8 @@ describe("the six digits that prove it is that guest", () => {
        is the point: nothing a guest receives passes through the answer. */
     await sql("delete from guest_link_codes where link_id in (select id from guest_links where reservation_id = $1)", [stayId]);
     await sql(
-      `insert into guest_link_codes (link_id, code_hash, sent_to, expires_at)
-       select id, encode(digest('424242','sha256'),'hex'), '…9999', now() + interval '10 minutes'
+      `insert into guest_link_codes (link_id, reservation_id, code_hash, sent_to, expires_at)
+       select id, reservation_id, encode(digest('424242','sha256'),'hex'), '…9999', now() + interval '10 minutes'
          from guest_links where reservation_id = $1`, [stayId]);
 
     const wrong = await asGuest(`/${link}/verify`, "POST", { code: "111111" });
@@ -303,7 +303,11 @@ describe("the six digits that prove it is that guest", () => {
 
     const right = await asGuest(`/${link}/verify`, "POST", { code: "424242" });
     expect(right.status, await right.clone().text()).toBe(200);
-    expect(((await right.json()) as { verified: boolean }).verified).toBe(true);
+    const answered = (await right.json()) as { verified: boolean; unlock?: string };
+    expect(answered.verified).toBe(true);
+    /* D21-6: the answer unlocks THIS phone - api/test/guestDoorBehindTheCode
+       .test.ts proves the link alone opens nothing behind the code. */
+    expect(answered.unlock, "this phone's unlock, handed back once").toMatch(/^[\w-]{43}$/);
 
     const { rows } = await sql(
       "select verified_at is not null as verified from guest_links where reservation_id = $1", [stayId]);
@@ -314,8 +318,8 @@ describe("the six digits that prove it is that guest", () => {
     await sql("update guest_links set verified_at = null where reservation_id = $1", [stayId]);
     await sql("delete from guest_link_codes where link_id in (select id from guest_links where reservation_id = $1)", [stayId]);
     await sql(
-      `insert into guest_link_codes (link_id, code_hash, sent_to, expires_at)
-       select id, encode(digest('123456','sha256'),'hex'), '…9999', now() + interval '10 minutes'
+      `insert into guest_link_codes (link_id, reservation_id, code_hash, sent_to, expires_at)
+       select id, reservation_id, encode(digest('123456','sha256'),'hex'), '…9999', now() + interval '10 minutes'
          from guest_links where reservation_id = $1`, [stayId]);
 
     for (let i = 0; i < 5; i += 1) {
