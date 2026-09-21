@@ -1355,7 +1355,7 @@ async function addOneLine(
       return refuse(
         `${item[0].name} has no GST rate. Nothing is set for `
         + `${KIND[item[0].tax_kind] ?? "this category"}, and a missing rate `
-        + `is not zero - a manager can set it in Settings → Tax.`);
+        + `is not zero - a manager can set it under Rooms and rates → Room types, in the GST card.`);
     }
 
     /* THE PRICE COMES FROM THE VARIATION, NOT THE ITEM.

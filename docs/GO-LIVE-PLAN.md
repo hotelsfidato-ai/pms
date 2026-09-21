@@ -93,7 +93,9 @@ is why the backup comes first.
 - [ ] The privacy notice checked by the advisor (the master drafts it)
 - [ ] The ID-photo rule and the advisor's word on full Aadhaar (D21-11,
       D21-17) — without the first, the photo upload is simply not there
-- [ ] The accountant confirms 5 Elements' GST rates (D21-65)
+- [ ] The accountant confirms 5 Elements' GST rates (D21-65) — **and sets
+      banquet's, which live does not have: banquet is on there, so its first
+      bill would be refused**
 - [ ] Real room rates in the rate calendar (D21-38)
 - [ ] The real menu imported (D21-43)
 - [ ] The GM's login made by the owner; the GM makes every staff login on

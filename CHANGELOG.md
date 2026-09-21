@@ -96,6 +96,38 @@ September).
 
 **Commits:** `9af60ec`, `fc6b9e0`, `0a98086`
 
+### Later still: going live, the privacy notice, the staff pages, and the spa's GST
+
+**Asked for:** an interview on going live and anything open (D21-49 to D21-78),
+then "draft the privacy notice and the staff sheets".
+
+**Shipped**
+- `docs/GO-LIVE-PLAN.md`, `docs/go-live/whatsapp-templates.md`,
+  `docs/go-live/privacy-notice-draft.md` (for the owner's advisor; every
+  undecided fact a blank), `docs/go-live/staff-sheets-5EL.md` (reception,
+  restaurant, GM; every button checked on screen or in code)
+- Three refusals named "Settings → Tax", which only shows rates; they now
+  name Rooms and rates → Room types, the GST card (D21-78). Reviews asks for
+  this hotel's own link (D21-30)
+- **A spa GST rate can be set** — the Spa row on the GST card, the route,
+  Settings and the Properties cards. A menu category taxed as the spa is
+  refused in a sentence (root MEMORY 313)
+
+**Found**
+- Live (read-only): `main` at 79e358e, one hotel, all its data tests, one
+  shared login, no provisioning key, a real GSTIN at 5 Elements, banquet on
+  with no banquet GST rule
+- No spa GST rule could be set anywhere; the spa test had inserted its own
+  (MEMORY 313). I told the owner real bills were rung on the demo menu from a
+  six-day-old note (MEMORY 312)
+
+**Proved**
+- API: spa, settings, charge door 38 of 38; with "spa" taken back out of the
+  list, 3 fail. chargeDoor, spa, night audit, till, reviews 160 of 160 after
+  the wording. Web: tsc clean; finance, admin, inventory, spa, reviews 43 of
+  43. On screen: the Spa row "Not set - Set it"; Reviews' new sentence; the
+  GM's Run night audit live
+
 ### Later the same day: the owner's interview
 
 **Asked for:** "ask me like an interview and grill me … everything needs to be

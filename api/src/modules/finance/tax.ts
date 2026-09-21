@@ -37,7 +37,12 @@ async function hotelFor(client: Client, code: string): Promise<string | null> {
    dash is not a zero.
    ══════════════════════════════════════════════════════════════════ */
 
-const TAX_KINDS = ["room", "restaurant", "bar", "banquet", "other"] as const;
+/* ⚠ "spa" WAS MISSING UNTIL 21 SEPTEMBER. Migration 119 let tax_rules hold a
+   spa rule and closing a treatment demands one (D18-21), but this list is the
+   only way a person sets a rule — so no hotel could ever bill a treatment.
+   Its own test inserted the rule straight into the database and passed
+   (root MEMORY 313). */
+const TAX_KINDS = ["room", "restaurant", "bar", "banquet", "spa", "other"] as const;
 type TaxKind = (typeof TAX_KINDS)[number];
 
 inventorySetup.get("/:code/tax", async (c) => {
@@ -181,6 +186,14 @@ inventorySetup.patch("/:code/menu-categories/:name/tax-kind", async (c) => {
     return c.json(refuse(
       "A menu category cannot be taxed as a room. Rooms are the front "
       + "desk's; a category sells under the restaurant, the bar or "
+      + "banqueting."), 409);
+  }
+  /* The database refuses it too (067's check on pos_menu_categories); this
+     says so in a sentence instead of an error. */
+  if (kind === "spa") {
+    return c.json(refuse(
+      "A menu category cannot be taxed as the spa. Treatments are the "
+      + "spa's; a category sells under the restaurant, the bar or "
       + "banqueting."), 409);
   }
 

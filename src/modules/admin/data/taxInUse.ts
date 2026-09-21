@@ -21,7 +21,7 @@ import { api } from "@/lib/api";
    has not said that (MEMORY 251).
    ══════════════════════════════════════════════════════════════════ */
 
-export type TaxKind = "room" | "restaurant" | "bar" | "banquet" | "other";
+export type TaxKind = "room" | "restaurant" | "bar" | "banquet" | "spa" | "other";
 
 export interface TaxInUse {
   kind: TaxKind;

@@ -186,7 +186,7 @@ export async function getTherapists(code: string): Promise<SpaTherapist[]> {
    therapist, the guest, the treatment and the hour standing in the way,
    and "That time is unavailable" would throw away the only half a
    receptionist on a telephone can act on. Same for the tax refusal,
-   which names Settings → Tax (D18-21). ═══════════════════════════ */
+   which names where GST is set (D18-21). ═══════════════════════════ */
 
 export type Result<T> = ({ ok: true } & T) | { ok: false; reason: string };
 

@@ -26,7 +26,7 @@ type Result<T = unknown> = ({ ok: true } & T) | { ok: false; reason: string };
    system: a dash is an admission, a zero is a claim.
    ══════════════════════════════════════════════════════════════════ */
 
-export type TaxKind = "room" | "restaurant" | "bar" | "banquet" | "other";
+export type TaxKind = "room" | "restaurant" | "bar" | "banquet" | "spa" | "other";
 
 export interface TaxSlab {
   id: string;

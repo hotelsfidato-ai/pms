@@ -135,7 +135,7 @@ describe("the charge door", () => {
     });
 
     expect(out!.refused.ok).toBe(false);
-    expect((out!.refused as { reason: string }).reason).toContain("Settings → Tax");
+    expect((out!.refused as { reason: string }).reason).toContain("Rooms and rates → Room types");
     expect(out!.alive, "the transaction is still usable after the refusal").toBe(1);
   });
 

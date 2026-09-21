@@ -413,7 +413,7 @@ describe("closing a treatment", () => {
     await sql("delete from tax_rules where hotel_id = $1 and kind = 'spa'", [hotelId]);
     const r = await post(byRole.get("front_desk")!, `/spa/appointments/${closeId}/close`, {});
     expect(r.status).toBe(409);
-    expect(((await r.json()) as { reason: string }).reason).toContain("Settings");
+    expect(((await r.json()) as { reason: string }).reason).toContain("Rooms and rates → Room types");
 
     /* And nothing moved: still booked, nothing on the bill. */
     const { rows } = await sql(
@@ -423,11 +423,12 @@ describe("closing a treatment", () => {
   });
 
   it("puts the treatment on the guest's bill under the spa's own rate, and closes it", async () => {
-    await sql(
-      `insert into tax_rules (hotel_id, kind, over_amount, rate, note)
-       values ($1, 'spa', 0, 18, $2)
-       on conflict (hotel_id, kind, over_amount) do update set rate = 18`,
-      [hotelId, `${TAG} fixture`]);
+    /* SET THE WAY A PERSON SETS IT: the GM, on the GST card's own route.
+       This used to insert the row straight into the database, and passed
+       while no screen could make that row at all (root MEMORY 313). */
+    const set = await send(byRole.get("gm")!, "PUT", "/tax/spa",
+      { slabs: [{ overAmount: 0, rate: 18, note: `${TAG} fixture` }] });
+    expect(set.status, await set.clone().text()).toBe(200);
 
     const r = await post(byRole.get("front_desk")!, `/spa/appointments/${closeId}/close`, {});
     expect(r.status, await r.clone().text()).toBe(200);
@@ -454,6 +455,13 @@ describe("closing a treatment", () => {
     expect(appt[0].settlement).toBe("room");
     expect(appt[0].closed_by).toBe(byRole.get("front_desk"));
     expect(appt[0].posting_id).toBe(postingId);
+  });
+
+  it("will not let a menu category be taxed as the spa", async () => {
+    const r = await send(byRole.get("gm")!, "PATCH", "/menu-categories/Starters/tax-kind",
+      { kind: "spa" });
+    expect(r.status).toBe(409);
+    expect(((await r.json()) as { reason: string }).reason).toContain("cannot be taxed as the spa");
   });
 
   it("will not close it twice", async () => {

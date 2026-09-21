@@ -377,7 +377,7 @@ function BookDialog({
 
     /* THE SERVER'S OWN SENTENCE. When a therapist is already busy it
        names them, the guest, the treatment and the hour; when the
-       property has set no spa GST rule it names Settings → Tax (D18-21).
+       property has set no spa GST rule it names where GST is set (D18-21).
        Either is what the person needs; "could not book" is not. */
     if (!out.ok) { setProblem(out.reason); return; }
 
@@ -553,7 +553,7 @@ function CancelDialog({
    posted the only way back is a reversal on the folio.
 
    Every refusal is the SERVER'S OWN SENTENCE, shown as it comes: no spa
-   tax rule set at this property (D18-21, and it names Settings → Tax),
+   tax rule set at this property (D18-21, and it names where GST is set),
    a bill that is already closed, a treatment somebody else closed a
    moment ago. None of them is rewritten here.
    ══════════════════════════════════════════════════════════════════ */

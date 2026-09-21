@@ -6539,6 +6539,32 @@ copy will see of theirs.**
 
 ---
 
+### 313 · MINE: I proved the spa bills a treatment with a GST rate no screen can set
+
+21 September. Closing a treatment (D18-22) bills it under the spa's OWN GST
+rule (D18-21), and refuses where a property has none — both proved by my
+test that morning. To get the rule, the test inserted a `tax_rules` row with
+`kind = 'spa'` straight into the database.
+
+**Nothing else can.** Migration 119 widened the table's check to allow
+'spa', but the one route that sets GST (`PUT /:code/tax/:kind`,
+`api/src/modules/finance/tax.ts`) accepts only room, restaurant, bar, banquet
+and other; the GST card on Room types draws those five; both `TaxKind` types
+say the same. So at every real hotel the spa's close would refuse for ever,
+naming a place to set the rate that has no Spa row. Found writing the GM's
+page, by opening the card the refusal names.
+
+The same blind spot as 308, from the other side: 308 was a suite of refusals
+that could not tell a guard from a wall; this was a success test that built
+its own door. **A fixture that inserts a row is a claim that something in the
+system can make that row — check that something can.**
+
+**The rule: when a test sets up the precondition a person would need, set it
+up the way the person would (the route or the screen), or find the route
+first. A direct insert is only for what no person ever makes.**
+
+---
+
 ### 312 · MINE: I told the owner real bills were rung against the demo menu, from a note six days old, and they decided on it
 
 21 September. `src/modules/pos/MODULE.md` said, as of 15 September, that 5

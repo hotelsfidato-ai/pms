@@ -35,6 +35,7 @@ const LABEL: Record<TaxKind, string> = {
   restaurant: "Restaurant",
   bar: "Bar",
   banquet: "Banquet",
+  spa: "Spa",
   other: "Everything else",
 };
 
@@ -44,6 +45,7 @@ const WHAT: Record<TaxKind, string> = {
   restaurant: "Food and non-alcoholic drink, on any menu category set to it.",
   bar: "Alcohol. Its own rate, and its own decision.",
   banquet: "Hall hire and the packages sold with it.",
+  spa: "Treatments, when they go on the room bill. Its own rate, and its own decision.",
   other: "Anything that belongs under none of the above.",
 };
 

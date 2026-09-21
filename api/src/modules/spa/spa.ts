@@ -587,7 +587,7 @@ spa.post("/:code/spa/appointments/:id/cancel", async (c) => {
 
    THROUGH FINANCE'S DOOR. `postCharge` with the spa's OWN tax rule
    (D18-21): a property that has not set one cannot bill a treatment, and
-   finance answers with the sentence naming Settings → Tax rather than
+   finance answers with the sentence naming where GST is set rather than
    aborting the transaction. `category: "Spa"` puts it in the Extra
    Charges report's Spa row.
 

@@ -121,6 +121,6 @@ describe("the readers the screens rely on answer the people who open them", () =
     const res = await get(id(), "/tax");
     expect(res.status, await res.clone().text()).toBe(200);
     const body = (await res.json()) as { kinds: { kind: string }[] };
-    expect(body.kinds.map((k) => k.kind)).toEqual(["room", "restaurant", "bar", "banquet", "other"]);
+    expect(body.kinds.map((k) => k.kind)).toEqual(["room", "restaurant", "bar", "banquet", "spa", "other"]);
   });
 });

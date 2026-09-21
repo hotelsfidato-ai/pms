@@ -188,7 +188,7 @@ export default function ReviewsPage() {
             {page.link === null ? (
               <p className="text-sm text-ink-700">
                 No review link has been set for this property, so nobody can be
-                asked for a review yet. The group's own link has not been given.
+                asked for a review yet. This hotel's own Google review link has not been given.
                 Nothing is sent until somebody pastes one here.
               </p>
             ) : (

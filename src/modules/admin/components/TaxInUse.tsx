@@ -18,13 +18,14 @@ import { getTaxInUse, type TaxInUse, type TaxKind } from "@/modules/admin/data/t
    door does not export them; if finance renames one, rename it here.
    ══════════════════════════════════════════════════════════════════ */
 
-export const TAX_KINDS: readonly TaxKind[] = ["room", "restaurant", "bar", "banquet", "other"];
+export const TAX_KINDS: readonly TaxKind[] = ["room", "restaurant", "bar", "banquet", "spa", "other"];
 
 export const TAX_KIND_LABEL: Record<TaxKind, string> = {
   room: "Rooms",
   restaurant: "Restaurant",
   bar: "Bar",
   banquet: "Banquet",
+  spa: "Spa",
   other: "Everything else",
 };
 

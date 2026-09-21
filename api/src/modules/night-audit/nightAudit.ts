@@ -146,7 +146,7 @@ export async function blockersFor(
       id: "no-tax-rule",
       reason:
         "This property has no GST rule for rooms, so a room charge has no " +
-        "rate to carry. Set it in Settings → Tax. A missing rate is not " +
+        "rate to carry. Set it under Rooms and rates → Room types, in the GST card. A missing rate is not " +
         "zero - the audit will not invent one.",
       rooms: [],
     });

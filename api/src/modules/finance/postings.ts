@@ -167,8 +167,8 @@ export async function postCharge(
     if (rate[0]?.rate === null || rate[0]?.rate === undefined) {
       return {
         ok: false,
-        reason: `This property has no GST rule for ${taxKind}. Settings → Tax. `
-              + "A missing rate is not zero — nothing is billed until somebody sets it.",
+        reason: `This property has no GST rule for ${taxKind}. Set it under Rooms and rates → Room types, in the GST card. `
+              + "A missing rate is not zero - nothing is billed until somebody sets it.",
       };
     }
   }

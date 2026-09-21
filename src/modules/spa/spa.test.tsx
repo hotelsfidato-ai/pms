@@ -18,7 +18,7 @@ import SpaSetupPage from "@/modules/spa/pages/SpaSetup";
      an unpriced treatment reads "-" and nowhere ₹0
      the diary's OWN refusal reaches the screen, naming the therapist,
        the guest and the hour — not a sentence this screen wrote
-     the tax refusal naming Settings → Tax reaches it too (D18-21)
+     the tax refusal naming where GST is set reaches it too (D18-21)
      a read that failed says so, and never "nothing booked today"
      housekeeping sees the diary and is not offered a booking (D18-21)
      a time is shown as the PROPERTY sent it, whatever zone this
@@ -265,9 +265,9 @@ describe("what the desk is told when a booking is refused", () => {
     expect(screen.queryByText(/unavailable/i)).toBeNull();
   });
 
-  it("shows the tax refusal naming Settings → Tax (D18-21)", async () => {
+  it("shows the tax refusal naming where GST is set (D18-21)", async () => {
     const noRate = "This property has not set a GST rate for the spa, so a "
-      + "treatment cannot be billed. Set it in Settings → Tax.";
+      + "treatment cannot be billed. Set it under Rooms and rates → Room types, in the GST card.";
     server(booking(refuse(409, noRate)));
     diaryPage();
 

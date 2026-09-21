@@ -90,13 +90,14 @@ You see every screen at 5 Elements. The jobs that are **yours**:
 
 | Your job | Where | How |
 |---|---|---|
+| **Before the first guest** | Rooms and rates → **Room types**, the card at the top | **"Before 5 Elements Akkalkot can take a guest"** lists what is still not settled — the GSTIN on the invoice, cancellation terms and more. Work it down to nothing. |
 | **Give each person their login** | Across properties → **People** | **Add somebody**: their name, email and role here. **Password** resets a forgotten one. **Deactivate** when somebody leaves; never delete. |
 | **Room rates** | Rooms and rates → **Rate calendar** | The real rates, before the first booking (D21-38). |
-| **GST rates** | Rooms and rates → **Room types**, the **GST** card | With your accountant, before the first bill (D21-65). *(Staff may be told "Settings → Tax" when a rate is missing. Settings only shows the rates; this card is where they are set.)* |
+| **GST rates** | Rooms and rates → **Room types**, the **GST** card | **Edit** or **Set it**, with your accountant, before the first bill (D21-65). **Banquet has no rate yet**: set it before the first event, or its bill is refused. (Spa has a row too; 5 Elements has no spa.) When a rate is missing, the system names this card. |
 | **Banquet** | Banquet → **Halls and packages**, then **Diary** | Real halls and packages before the first event. |
 | **Approvals** | System → **Approvals** | Purchases and anything else waiting for your decision. |
 | **The day's figures** | **Dashboard**; Reports → **Manager report** | Occupancy, rates, revenue, what is owed. |
-| **The night audit** | Reports → **Night audit** | **Run night audit** closes the day. *[Who runs it each night: the owner's to decide.]* |
+| **The night audit, every night** | Reports → **Night audit** | Yours (D21-77). Read what it lists first (arrivals not checked in become no-shows), then **Run night audit** to close the day. |
 
 **Not yours:** the Google review link. On **Reviews** it is set by the owner or
 an administrator. Switching services on or off is theirs too.

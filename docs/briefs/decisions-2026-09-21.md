@@ -130,6 +130,8 @@ The plan these make is `docs/GO-LIVE-PLAN.md`.
 | D21-71 | Teaching 5 Elements' staff | **A one-page sheet per role**, checked against the receptionist test |
 | D21-72 | WhatsApp's own rule: a business may start a conversation only with somebody who agreed | **A "guest agreed to WhatsApp" tick on each booking.** The desk asks on phone and walk-in bookings; an unticked booking gets email if it has one, else nothing. Changes D21-35 accordingly |
 | D21-75 | Does the six-digit code wait for the tick? | **No — the guest pressing "Send me the code" is their own request**, so it goes to any booking's phone (confirmed by the owner) |
+| D21-77 | Who runs the night audit at 5 Elements | **The GM, every night** |
+| D21-78 | The messages sending staff to "Settings → Tax" (which only shows rates), and Reviews asking for "the group's own link" | **Fixed**: they name Rooms and rates → Room types, the GST card; Reviews asks for this hotel's own link |
 | D21-76 | Stage 3: a second code release, or a switch-on? | **A switch-on.** Stage 2 puts all the code on the server with the guest-facing parts dark; stage 3 sets the two sending settings, sends the first WhatsApp to the owner's phone, and places the room cards |
 | D21-73 | Languages | **English only** for now |
 | D21-74 | When a second language comes | **Chosen on the booking, with a default per hotel.** Nothing is built for it until there is a second language |
