@@ -297,7 +297,9 @@ export default function TillPage() {
                         </span>
                         <span className="shrink-0 text-right">
                           <span className="block text-base tabular text-ink-900">
-                            {money(item.price)}
+                            {/* Sold by variation: a dash, never the dish's
+                                own column (the owner, 21 September). */}
+                            {item.variations.length > 0 ? "-" : money(item.price)}
                           </span>
                           {/* Shown because a bill mixing 5% and 18% is
                               the normal case, and the guest will see

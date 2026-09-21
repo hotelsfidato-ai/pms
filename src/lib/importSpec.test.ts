@@ -73,6 +73,25 @@ describe.each(SPECS)("the %s template", (_name, spec) => {
   });
 });
 
+describe("the menu template teaches variations and add-on groups (D21-43)", () => {
+  it("shows one dish on two rows, each with its own variation and price", () => {
+    const { rows } = parseCsv(templateText(MENU_SPEC), MENU_SPEC);
+    const sized = rows.filter((r) => r["variation"]);
+    const twice = sized.find((r) =>
+      sized.filter((o) => o["name"] === r["name"]).length >= 2);
+    expect(twice, "no dish shows two variations").toBeTruthy();
+    expect(rows.some((r) => (r["addonGroups"] ?? "").includes(";")),
+      "no dish names two add-on groups").toBe(true);
+  });
+
+  it("still reads an old file with no Variation or Add-on groups column", () => {
+    const { rows, missing } = parseCsv(
+      "Section,Dish,Price\nStarters,Papad,40\n", MENU_SPEC);
+    expect(missing).toEqual([]);
+    expect(rows[0]).toEqual({ category: "Starters", name: "Papad", price: "40" });
+  });
+});
+
 describe("reading a file back", () => {
   it("keeps a comma inside quotes in one field", () => {
     /* "Chicken Tikka, half" is a real dish name, and splitting on every
