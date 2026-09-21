@@ -6539,6 +6539,29 @@ copy will see of theirs.**
 
 ---
 
+### 317 · A migration never changes the return type of a function an earlier one made
+
+21 September, found by the online check-in chat. Migrations replay from 001 on
+every deploy. 121 changed what 114's `app.guest_code_issue` returns, and the
+replay failed at 114 ("cannot change return type of existing function"): 114
+runs `create or replace` against the function 121 had already reshaped.
+`db/tests/rerun.sh` caught it; the function was renamed (`guest_code_make`)
+and 114's is dropped each run. **The rule: to change a function's return
+type, make a new function with a new name, or drop it first in the SAME
+migration that creates it — never reshape one an earlier migration creates.**
+
+---
+
+### 316 · `app.is_manager()` does not include the administrator
+
+21 September, found by the CRM chat. 013's blacklist trigger asked
+`app.is_manager()` and so refused an administrator — who is meant to hold
+everything a GM does. The CRM added `app.is_crm_manager()` (owner, admin,
+GM). **Anything else that reads `is_manager` as "owner, admin or GM" has the
+same gap**; check before trusting it, and name the roles a rule means.
+
+---
+
 ### 315 · A hidden browser pane freezes dialogs and times out screenshots
 
 21 September, reported by the POS chat. When the Browser pane is hidden,

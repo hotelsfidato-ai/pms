@@ -167,3 +167,21 @@ The plan these make is `docs/GO-LIVE-PLAN.md`.
 | D21-93 | The menu work (release 1) | **Live today, 21 September** — the owner types, the master guides |
 | D21-94 | POS-15, a dish with no GST rate showing "0%" | The owner: the restaurant is 5%, so a dish never has "no GST". **Show the rate its section actually charges, or a dash where none is set** |
 | D21-95 | A QR library for the room card sheet | **Yes — `qrcode` (MIT), desk screen only** |
+
+## The CRM chat's questions (21 September, answered in that chat; recorded here at merge)
+
+Numbered CRM-Q1 to CRM-Q11 in `src/modules/crm/MODULE.md`; all as recommended.
+
+| # | Question | Answer |
+|---|---|---|
+| CRM-Q1 | When is a typed phone "the same" as one on file? | **The same 10-digit number**: +91 98765 43210, 098765 43210 and 9876543210 are one; anything else digit for digit; under 10 digits, or all one digit, suggests nobody |
+| CRM-Q2 | What does "stayed 3 times" count? | **Checked-in visits** at any hotel; several rooms booked together once; cancelled, no-show, voided and future bookings not |
+| CRM-Q3 | The group's name (no setting holds it; D21-27) | **"the group"** - "Stayed with the group 3 times" |
+| CRM-Q4 | The walk-in has no phone or email | **Add both, optional; drop the name list** under Guest (it matched a shared surname, at one hotel, and still made a duplicate) |
+| CRM-Q5 | Who works the "possible same person" list | **Owner, admin, GM** |
+| CRM-Q6 | What a join does to details and marks | **The manager picks which record's name, phone and email stand; a blacklist or VIP on either stays on the joined guest and comes off on undo; if only one record has an ID on file, that one stands; if both, the manager picks and the other is kept for an undo** |
+| CRM-Q7 | Who records "do not send me offers", and where | **The desk, with a tick on the booking form and the walk-in; owner, admin and GM also set or clear it on Guest 360** |
+| CRM-Q8 | May the desk change the WhatsApp tick later | **Yes, on the stay panel, at any time** |
+| CRM-Q9 | Guest 360's "spent" | **The Guests screen's own "total spend"**, moved to one place both read (`app.stay_charged`) |
+| CRM-Q10 | How Guest 360 is reached | **A "Guest 360" entry that searches by name, phone or email, plus links** from the stay panel and the same-person list, for the three only |
+| CRM-Q11 | A typed phone matches but the email differs from the one on file | **Suggest nothing** (doubt); on a confirmed match a blank phone or email is filled in; nothing on file is overwritten |

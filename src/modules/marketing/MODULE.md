@@ -41,6 +41,12 @@ the BOM Excel wants. This service supplies rows.
 
 **Nothing below was decided here.** Each is a recommendation and a reason.
 
+> **Built 21 September by the CRM chat:** `refusesOffers(noOffers, phone,
+> email)` is exported from `@/modules/guests`, and the list comes from
+> `GET /api/hotels/:code/crm/no-offers`. **The next marketing chat's first
+> job:** `mayBeWrittenTo` refuses a guest `refusesOffers` names, with a data
+> call for the list and a test. Nothing sends until then.
+>
 > **Answered 21 September (D21-22):** recorded against **the phone number or
 > email itself, for the whole group** — as recommended. The CRM chat builds the
 > table (`docs/briefs/crm.md`, step 5); `mayBeWrittenTo` then reads it, a line
