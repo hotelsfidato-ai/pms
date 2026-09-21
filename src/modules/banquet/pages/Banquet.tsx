@@ -3,7 +3,7 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useNavigate, useParams } from "react-router";
 import { CalendarDays, Plus, Settings2, Users, Clock } from "lucide-react";
 import { cn } from "@/lib/cn";
-import { money, dateShort, timeOnly } from "@/lib/format";
+import { money, dateShort, timeOnly, addDays } from "@/lib/format";
 import { useUi } from "@/lib/ui";
 import {
   Page, PageHeader, Card, CardBody, Button, Skeleton, EmptyState, toast,
@@ -57,12 +57,6 @@ function whenLabel(startsAt: string, endsAt: string): string {
   return dateShort(startsAt) === dateShort(endsAt)
     ? `${dateShort(startsAt)}, ${timeOnly(startsAt)} → ${timeOnly(endsAt)}`
     : `${dateShort(startsAt)}, ${timeOnly(startsAt)} → ${dateShort(endsAt)}, ${timeOnly(endsAt)}`;
-}
-
-function addDays(iso: string, days: number): string {
-  const d = new Date(`${iso}T00:00:00`);
-  d.setDate(d.getDate() + days);
-  return d.toISOString().slice(0, 10);
 }
 
 export default function BanquetPage() {

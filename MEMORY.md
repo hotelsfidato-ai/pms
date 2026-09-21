@@ -6539,6 +6539,37 @@ copy will see of theirs.**
 
 ---
 
+### 309 · The date bug was in one screen, not five — and I told the owner five, and put it on a map, without reading the code
+
+21 September. The spa builder reported that banquet's day arithmetic was off
+by one east of Greenwich, "and the same pattern is in front-desk's stay view,
+the move-room flow, the rate grids and the new-booking screen." I relayed that
+to the owner as **"a date bug is in five screens that are already live"**,
+printed it on the system map as an open finding, and was then asked to fix it.
+
+Four of the five were correct. They build `T00:00:00Z` - UTC midnight - and
+step with `setUTCDate`, which gives the same answer in every zone. The report
+had matched on the text `T00:00:00` and not seen the `Z` after it. Only banquet
+built LOCAL midnight (`T00:00:00`, no Z), stepped it with the local `setDate`,
+and read it back with `toISOString()` - so in India every step came back one
+day short, and its 30-day windows crept.
+
+A second finding, the more useful one: with banquet's old helper put back, the
+new test FAILS all four checks in Asia/Kolkata and PASSES all four in UTC and in
+America/New_York. **The bug exists only east of Greenwich** - which is where
+the hotel is, and where no gate this project has ever run is. MEMORY 297 set
+the API suite to UTC so a bare timestamp fails on a laptop; the BROWSER's
+danger is the opposite, and a UTC test environment hides it completely.
+
+**The rules: (1) a report of a bug in N places is a claim about N places -
+read each one before repeating the number, and never put a relayed claim on a
+page the owner reads as measured. (2) Date arithmetic in the browser is tested
+in the zone the browser is actually in: `src/lib/addDays.test.ts` sets
+Asia/Kolkata itself, and runs the same checks west of Greenwich so a fix cannot
+just move the bug.**
+
+---
+
 ### 308 · MINE: I built the door two chats asked for, and never told either of them it existed
 
 18-21 September. The laundry chat stopped at a file that was not theirs and

@@ -92,6 +92,32 @@ export function isValidDate(value: string | Date | null | undefined): boolean {
   return toDate(value) !== null;
 }
 
+/* ══════════════════════════════════════════════════════════════════
+   A DAY FORWARD OR BACK, ON A "YYYY-MM-DD" STRING — the same answer in
+   every time zone
+
+   ⚠ WRITTEN 21 SEPTEMBER, BECAUSE THE BANQUET DIARY HAD ITS OWN COPY AND
+   IT WAS WRONG IN INDIA. It built LOCAL midnight — `new Date(iso +
+   "T00:00:00")` — moved it with the local `setDate`, and read it back
+   with `toISOString()`, which answers in UTC. In India midnight on the
+   20th IS 18:30 on the 19th in UTC, so every step came back one day
+   short: "From today" covered 29 days, and every Earlier or Later moved
+   the window a day less than it said and let it creep.
+
+   Nothing caught it because every gate ran in UTC, where local and UTC
+   are the same clock and the bug cannot happen at all. The browser at the
+   desk runs in IST. `format.test.ts` now pins this in Asia/Kolkata.
+
+   This version never leaves UTC: UTC midnight, UTC setters, read back in
+   UTC. Four services already carry a correct private copy of exactly this
+   (stay view, move room, the rate grids, new booking); they are right and
+   were left alone. Banquet uses this one. */
+export function addDays(iso: string, days: number): string {
+  const d = new Date(`${iso}T00:00:00Z`);
+  d.setUTCDate(d.getUTCDate() + days);
+  return d.toISOString().slice(0, 10);
+}
+
 export function dateShort(value: string | Date | null | undefined): string {
   const d = toDate(value);
   return d ? format(d, "d MMM yyyy") : NO_DATE;
