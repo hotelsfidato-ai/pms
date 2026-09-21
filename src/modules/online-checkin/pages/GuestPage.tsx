@@ -1,13 +1,17 @@
-import { useState, type FormEvent } from "react";
+import { useEffect, useState, type FormEvent, type ReactNode } from "react";
 import { useParams } from "react-router";
-import { useMutation, useQuery } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { ShieldCheck } from "lucide-react";
-import { dateLong } from "@/lib/format";
-import { useDocumentTitle } from "@/lib/documentTitle";
-import { Button, Field, fieldProps, Input, StatusPill } from "@/components/ui";
+import { ApiError } from "@/lib/api";
+import { dateLong, dateTime } from "@/lib/format";
 import {
-  openGuestPage, sendCode, verifyCode, type GuestPageView,
+  Button, Field, fieldProps, Input, NativeSelect, Segmented, StatusPill, Textarea,
+} from "@/components/ui";
+import {
+  dropUnlock, getDetails, getRequests, makeRequest, openGuestPage, sendCode,
+  sendDetails, verifyCode, type Details, type GuestPageView,
 } from "@/modules/online-checkin/data/guestPage";
+import { privacyNoticeFor } from "@/modules/online-checkin/privacyNotice";
 
 /* ══════════════════════════════════════════════════════════════════
    THE GUEST'S OWN PAGE — /g/:token
@@ -16,17 +20,22 @@ import {
    EMPLOY. It is outside the signed-in shell: no sidebar, no menu, no
    property picker, nothing that belongs to staff.
 
-   What it may show before the six digits are answered is what a clerk
-   would say across the counter — the guest's own name, their dates,
-   and the last four digits of the number the booking carries. The
-   bill, the check-in form and the requests are behind the code, and
-   each one asks the SERVER again (guestDoor.ts): this screen deciding
-   what to draw is not a guard.
+   Two kinds of link open it (D21-7): a booking's own, and a room's fixed
+   card. Before the six digits:
+     · a booking's link shows what a clerk would say across the counter -
+       the guest's own name, their dates, the last four digits of the
+       number the booking carries;
+     · a room card shows the hotel and the room number, and nothing of
+       whoever is staying there (D21-14); an empty room says only that it
+       opens once you are checked in (D21-15).
 
-   ⚠ A WRONG NUMBER AND A RIGHT ONE MUST LOOK THE SAME HERE TOO. The
-   door answers both with one sentence; this prints that sentence and
-   works out nothing of its own. Saying "that is not the number on the
-   booking" is how a stranger finds the number by trying.
+   Behind the code - their details, their requests - every call carries
+   THIS TAB's unlock (D21-6), and the server asks for it every time. This
+   screen deciding what to draw is not a guard.
+
+   ⚠ A WRONG NUMBER AND A RIGHT ONE LOOK THE SAME HERE TOO. The door
+   answers both with one sentence; this prints it and works out nothing
+   of its own.
 
    375px is the primary size: this is read on a phone, usually one
    handed, often on hotel wifi.
@@ -35,8 +44,13 @@ import {
 /** The door's own sentence for everything it refuses, in its words. */
 const NOTHING_HERE = "This link is not usable. Ask the desk for a new one.";
 
+/** Refused behind the code: the unlock has gone - expired, or a new guest
+    is in the room. Not an error to show: the page asks for a code again. */
+const unlockGone = (error: unknown) => error instanceof ApiError && error.status === 404;
+
 export default function GuestPage() {
   const token = useParams().token ?? "";
+  const qc = useQueryClient();
 
   const link = useQuery({
     queryKey: ["guest-page", token],
@@ -44,13 +58,40 @@ export default function GuestPage() {
     retry: false,
   });
 
-  useDocumentTitle(link.data ? link.data.hotel.name : "Your booking");
+  /* The hotel's own name, and nothing after it. The shared title helper
+     adds the signed-in property or, for nobody signed in, the group's name
+     - and nothing new names the group (D21-27): a guest's tab read
+     "5 Elements Akkalkot · Fidato" until it was opened on 21 September. */
+  const title = link.data ? link.data.hotel.name : "Your booking";
+  useEffect(() => { document.title = title; }, [title]);
+
+  const askAgain = () => {
+    dropUnlock(token);
+    qc.removeQueries({ queryKey: ["guest-behind", token] });
+    void link.refetch();
+  };
 
   if (link.isLoading) {
     return <Shell><p className="text-base text-grey-600">One moment…</p></Shell>;
   }
 
-  /* Every failure reads the same, because a link that was revoked, one
+  /* ⚠ A LINE THAT IS DOWN IS NOT A DEAD LINK (OCI-3, found by opening the
+     page while its server was starting). It said "Ask the desk for a new
+     one" to a guest on hotel wifi whose link was fine. Nothing reached the
+     door, so saying so tells a stranger nothing about the link. */
+  if (link.error instanceof ApiError && link.error.status === 0) {
+    return (
+      <Shell>
+        <h1 className="text-xl font-semibold text-ink-900">We could not reach the hotel</h1>
+        <p className="text-base text-grey-600 mt-2">Check your connection, then try again.</p>
+        <Button variant="primary" className="mt-4" onClick={() => void link.refetch()}>
+          Try again
+        </Button>
+      </Shell>
+    );
+  }
+
+  /* Every refusal reads the same, because a link that was revoked, one
      that expired and one that never existed must not be told apart. */
   if (link.error || !link.data) {
     return (
@@ -60,49 +101,82 @@ export default function GuestPage() {
     );
   }
 
-  return <Booking token={token} view={link.data} onVerified={() => void link.refetch()} />;
-}
+  const view = link.data;
 
-function Booking(
-  { token, view, onVerified }:
-  { token: string; view: GuestPageView; onVerified: () => void },
-) {
-  const { booking, hotel } = view;
+  /* D21-15, in the owner's words, with the hotel's name and nothing else. */
+  if (view.kind === "room" && !view.occupied) {
+    return (
+      <Shell>
+        <p className="text-sm text-grey-600">{view.hotel.name}</p>
+        <h1 className="text-xl font-semibold text-ink-900 mt-0.5">
+          This opens once you're checked in
+        </h1>
+      </Shell>
+    );
+  }
 
   return (
     <Shell>
-      <p className="text-sm text-grey-600">{hotel.name}</p>
-      <h1 className="text-xl font-semibold text-ink-900 mt-0.5">{booking.guestName}</h1>
-
-      <dl className="mt-4 grid grid-cols-[auto_1fr] gap-x-4 gap-y-2 text-base">
-        <dt className="text-grey-600">Arriving</dt>
-        <dd className="text-ink-900 tabular">{dateLong(booking.checkIn)}</dd>
-        <dt className="text-grey-600">Leaving</dt>
-        <dd className="text-ink-900 tabular">{dateLong(booking.checkOut)}</dd>
-        <dt className="text-grey-600">Booking</dt>
-        <dd className="text-ink-900 tabular">{booking.reference}</dd>
-      </dl>
-
+      <Heading view={view} />
       {view.verified ? (
-        <div className="mt-6 flex items-center gap-2">
-          <ShieldCheck className="size-4 text-success shrink-0" />
-          <StatusPill tone="success">Verified</StatusPill>
-        </div>
+        <Behind token={token} view={view} onUnlockGone={askAgain} />
+      ) : view.canSendCodes ? (
+        <ProveIt token={token} view={view} onVerified={() => void link.refetch()} />
       ) : (
-        <ProveIt token={token} phoneHint={view.phoneHint} onVerified={onVerified} />
+        /* D21-25: nothing can be sent, so nothing is offered - the door's
+           own sentence, before anybody types a number. */
+        <p className="mt-6 border-t border-grey-200 pt-5 text-base text-grey-600">
+          {view.cannotSend ?? NOTHING_HERE}
+        </p>
       )}
     </Shell>
   );
 }
 
+function Heading({ view }: { view: GuestPageView }) {
+  const { booking } = view;
+  return (
+    <>
+      <p className="text-sm text-grey-600">{view.hotel.name}</p>
+      <h1 className="text-xl font-semibold text-ink-900 mt-0.5">
+        {booking ? booking.guestName : `Room ${view.room}`}
+      </h1>
+      {booking && (
+        <dl className="mt-4 grid grid-cols-[auto_1fr] gap-x-4 gap-y-2 text-base">
+          <dt className="text-grey-600">Arriving</dt>
+          <dd className="text-ink-900 tabular">{dateLong(booking.checkIn)}</dd>
+          <dt className="text-grey-600">Leaving</dt>
+          <dd className="text-ink-900 tabular">{dateLong(booking.checkOut)}</dd>
+          <dt className="text-grey-600">Booking</dt>
+          <dd className="text-ink-900 tabular">{booking.reference}</dd>
+        </dl>
+      )}
+    </>
+  );
+}
+
+/* ── The privacy notice, BEFORE THE FIRST QUESTION (D21-61) ──────────
+   A place for the advisor's words; empty until they are approved
+   (`privacyNotice.ts`). */
+function Notice({ hotel }: { hotel: string }) {
+  const notice = privacyNoticeFor(hotel);
+  if (!notice) return null;
+  return (
+    <section data-privacy-notice className="mb-5 rounded-md border border-grey-200 bg-grey-50 p-3.5">
+      <h2 className="text-base font-medium text-ink-900">{notice.heading}</h2>
+      <p className="text-sm text-grey-600 mt-1 whitespace-pre-line">{notice.body}</p>
+    </section>
+  );
+}
+
 /* ── The six digits ───────────────────────────────────────────────
-   Two steps on one screen: the number, then the code that arrives on
-   it. The number is asked for even though the booking already carries
-   one — the guest proves they hold the phone, and typing a number the
-   booking does not have gets exactly this same screen back. */
+   The number is asked for even though the booking already carries one:
+   the guest proves they hold the phone, and a number the booking does not
+   have gets exactly this same screen back. On a room card there is no
+   hint - whoever holds the card is standing in somebody's room. */
 function ProveIt(
-  { token, phoneHint, onVerified }:
-  { token: string; phoneHint: string | null; onVerified: () => void },
+  { token, view, onVerified }:
+  { token: string; view: GuestPageView; onVerified: () => void },
 ) {
   const [phone, setPhone] = useState("");
   const [code, setCode] = useState("");
@@ -118,12 +192,13 @@ function ProveIt(
 
   return (
     <section className="mt-6 border-t border-grey-200 pt-5">
+      <Notice hotel={view.hotel.name} />
       <h2 className="text-base font-medium text-ink-900">
-        Your bill and your check-in details are behind a code
+        Your check-in details are behind a code
       </h2>
       <p className="text-sm text-grey-600 mt-1">
-        We send six digits on WhatsApp to the number this booking carries
-        {phoneHint ? `, ending ${phoneHint}` : ""}.
+        We send six digits on WhatsApp to the number the booking carries
+        {view.phoneHint ? `, ending ${view.phoneHint}` : ""}.
       </p>
 
       <form onSubmit={ask} className="mt-4 flex flex-col gap-3">
@@ -142,16 +217,10 @@ function ProveIt(
         </Button>
       </form>
 
-      {/* The door's sentence, printed as it came. Its status says
-          nothing either: a wrong number and a right one both land here. */}
-      {asked.data && (
-        <p className="text-sm text-grey-600 mt-3">{asked.data.message}</p>
-      )}
-      {asked.error && (
-        <p className="text-sm text-grey-600 mt-3">
-          {messageFrom(asked.error)}
-        </p>
-      )}
+      {/* The door's sentence, printed as it came - one shape for a right
+          number, a wrong one and one knock too many (D21-25). */}
+      {asked.data && <p className="text-sm text-grey-600 mt-3">{asked.data.message}</p>}
+      {asked.error && <p className="text-sm text-grey-600 mt-3">{messageFrom(asked.error)}</p>}
 
       <form onSubmit={answer} className="mt-5 flex flex-col gap-3">
         <Field label="The six digits">
@@ -176,22 +245,234 @@ function ProveIt(
   );
 }
 
-/** The server's own words where it gave some; nothing invented here.
-    ⚠ `api()` lifts a body's `error` or `reason` into the message and
-    NOT its `message` — and this door answers "codes cannot be sent
-    yet" in `message` with a 503. So the guest was shown "Request
-    failed (503)." where the door had written them a sentence saying
-    what to do instead (OC-1, found by opening the screen). The body is
-    read first here; the door's shape is not changed, because both
-    halves of the send answer — the right number and a wrong one —
-    carry the same field, and that sameness is the whole point. */
+/* ── Behind the code ──────────────────────────────────────────────── */
+
+function Behind(
+  { token, view, onUnlockGone }:
+  { token: string; view: GuestPageView; onUnlockGone: () => void },
+) {
+  return (
+    <>
+      <div className="mt-5 flex items-center gap-2">
+        <ShieldCheck className="size-4 text-success shrink-0" />
+        <StatusPill tone="success">Verified on this phone</StatusPill>
+      </div>
+      <DetailsSection token={token} hotel={view.hotel.name} onUnlockGone={onUnlockGone} />
+      {/* Only what this hotel has switched on (D21-63). */}
+      {view.offers.length > 0 && (
+        <RequestsSection token={token} offers={view.offers} onUnlockGone={onUnlockGone} />
+      )}
+    </>
+  );
+}
+
+const ID_TYPES: { value: Details["idType"]; label: string }[] = [
+  { value: "aadhaar", label: "Aadhaar" },
+  { value: "passport", label: "Passport" },
+  { value: "driving_licence", label: "Driving licence" },
+  { value: "voter", label: "Voter ID" },
+  { value: "other", label: "Other" },
+];
+const idLabel = (type: string) => ID_TYPES.find((t) => t.value === type)?.label ?? type;
+
+/** Refused behind the code → ask for a code again, once. */
+function useUnlockGone(error: unknown, onUnlockGone: () => void) {
+  useEffect(() => { if (unlockGone(error)) onUnlockGone(); }, [error, onUnlockGone]);
+}
+
+/* ── Their details: a SUBMISSION the desk confirms (D21-8, D21-19) ──── */
+function DetailsSection(
+  { token, hotel, onUnlockGone }:
+  { token: string; hotel: string; onUnlockGone: () => void },
+) {
+  const qc = useQueryClient();
+  const state = useQuery({
+    queryKey: ["guest-behind", token, "details"],
+    queryFn: () => getDetails(token),
+    retry: false,
+  });
+  const [editing, setEditing] = useState(false);
+  const [d, setD] = useState<Partial<Details>>({});
+  const set = (k: keyof Details) => (v: string) => setD((was) => ({ ...was, [k]: v }));
+
+  const send = useMutation({
+    mutationFn: () => sendDetails(token, d as Details),
+    onSuccess: async () => {
+      setEditing(false);
+      await qc.invalidateQueries({ queryKey: ["guest-behind", token, "details"] });
+    },
+  });
+  useUnlockGone(state.error ?? send.error, onUnlockGone);
+
+  const sent = state.data?.sent ?? null;
+  const showForm = editing || !sent || sent.status === "set_aside";
+
+  return (
+    <section className="mt-6 border-t border-grey-200 pt-5">
+      <h2 className="text-base font-medium text-ink-900">Your check-in details</h2>
+
+      {sent && !showForm && (
+        <div className="mt-2 text-sm text-grey-600">
+          <p className="text-base text-ink-900">
+            {idLabel(sent.idType)} ending {sent.idLastFour}
+          </p>
+          <p className="mt-1">
+            {sent.status === "confirmed"
+              ? "Checked by the desk. Nothing more is needed."
+              : `Sent ${dateTime(sent.submittedAt)}. The desk will check them against your ID when you arrive.`}
+          </p>
+          {sent.status === "waiting" && (
+            <Button variant="secondary" className="mt-3" onClick={() => setEditing(true)}>
+              Change what I sent
+            </Button>
+          )}
+        </div>
+      )}
+
+      {showForm && (
+        <form
+          onSubmit={(e) => { e.preventDefault(); send.mutate(); }}
+          className="mt-3 flex flex-col gap-3"
+        >
+          {!sent && <Notice hotel={hotel} />}
+          <p className="text-sm text-grey-600">
+            The desk checks these against your ID when you arrive, so you do not
+            have to wait while they are typed. You sign at the desk as usual.
+          </p>
+          <Field label="Your ID">
+            {(f) => (
+              <NativeSelect
+                {...fieldProps(f)} value={d.idType ?? ""}
+                onChange={(e) => set("idType")(e.target.value)}
+              >
+                <option value="" disabled>Choose one</option>
+                {ID_TYPES.map((t) => <option key={t.value} value={t.value}>{t.label}</option>)}
+              </NativeSelect>
+            )}
+          </Field>
+          <TextField label="The number on it" value={d.idNumber} onChange={set("idNumber")} />
+          {d.idType === "passport" && (
+            <>
+              <TextField label="Passport expires" type="date" value={d.passportExpiry} onChange={set("passportExpiry")} />
+              <TextField label="Visa number" value={d.visaNumber} onChange={set("visaNumber")} />
+              <TextField label="Visa expires" type="date" value={d.visaExpiry} onChange={set("visaExpiry")} />
+            </>
+          )}
+          <TextField label="Address" value={d.addressLine} onChange={set("addressLine")} autoComplete="street-address" />
+          <TextField label="City" value={d.city} onChange={set("city")} autoComplete="address-level2" />
+          <TextField label="Country" value={d.country} onChange={set("country")} autoComplete="country-name" />
+          <Button
+            type="submit" variant="primary"
+            disabled={send.isPending || !d.idType || !(d.idNumber ?? "").trim()}
+          >
+            {send.isPending ? "Sending…" : "Send my details"}
+          </Button>
+          {send.error && !unlockGone(send.error) && (
+            <p className="text-sm text-brand-red">{messageFrom(send.error)}</p>
+          )}
+        </form>
+      )}
+    </section>
+  );
+}
+
+/* ── A spa or laundry request (D21-9) ────────────────────────────────
+   A request the desk confirms, never a booking: the spa and laundry keep
+   their own rules on their own screens. */
+const KIND_LABEL: Record<string, string> = { spa: "Spa", laundry: "Laundry" };
+const STATUS_LABEL: Record<string, string> = {
+  open: "Waiting for the desk", done: "Done", declined: "Declined",
+};
+
+function RequestsSection(
+  { token, offers, onUnlockGone }:
+  { token: string; offers: string[]; onUnlockGone: () => void },
+) {
+  const qc = useQueryClient();
+  const list = useQuery({
+    queryKey: ["guest-behind", token, "requests"],
+    queryFn: () => getRequests(token),
+    retry: false,
+  });
+  const [kind, setKind] = useState(offers[0]!);
+  const [what, setWhat] = useState("");
+  const [wanted, setWanted] = useState("");
+
+  const ask = useMutation({
+    mutationFn: () => makeRequest(token, { kind, what, wanted }),
+    onSuccess: async () => {
+      setWhat(""); setWanted("");
+      await qc.invalidateQueries({ queryKey: ["guest-behind", token, "requests"] });
+    },
+  });
+  useUnlockGone(list.error ?? ask.error, onUnlockGone);
+
+  return (
+    <section className="mt-6 border-t border-grey-200 pt-5">
+      <h2 className="text-base font-medium text-ink-900">Ask for something</h2>
+      <form onSubmit={(e) => { e.preventDefault(); ask.mutate(); }} className="mt-3 flex flex-col gap-3">
+        {offers.length > 1 && (
+          <Segmented
+            value={kind} onChange={setKind}
+            options={offers.map((k) => ({ value: k, label: KIND_LABEL[k] ?? k }))}
+          />
+        )}
+        <Field label={offers.length > 1 ? "What would you like?" : `${KIND_LABEL[kind] ?? kind}: what would you like?`}>
+          {(f) => (
+            <Textarea {...fieldProps(f)} rows={3} maxLength={500}
+              value={what} onChange={(e) => setWhat(e.target.value)} />
+          )}
+        </Field>
+        <TextField label="When would suit you?" value={wanted} onChange={setWanted} maxLength={100} />
+        <Button type="submit" variant="secondary" disabled={ask.isPending || what.trim() === ""}>
+          {ask.isPending ? "Sending…" : "Send the request"}
+        </Button>
+        {ask.error && !unlockGone(ask.error) && (
+          <p className="text-sm text-brand-red">{messageFrom(ask.error)}</p>
+        )}
+      </form>
+
+      {(list.data?.requests.length ?? 0) > 0 && (
+        <ul className="mt-4 flex flex-col gap-2">
+          {list.data!.requests.map((q) => (
+            <li key={q.createdAt} className="rounded-md border border-grey-200 p-3 text-sm">
+              <p className="text-ink-900">{KIND_LABEL[q.kind] ?? q.kind}: {q.what}</p>
+              <p className="text-grey-600 mt-0.5">
+                {q.wanted ? `${q.wanted} · ` : ""}{STATUS_LABEL[q.status] ?? q.status}
+              </p>
+            </li>
+          ))}
+        </ul>
+      )}
+    </section>
+  );
+}
+
+function TextField(
+  { label, value, onChange, type = "text", autoComplete, maxLength }:
+  {
+    label: string; value: string | undefined; onChange: (v: string) => void;
+    type?: string; autoComplete?: string; maxLength?: number;
+  },
+) {
+  return (
+    <Field label={label}>
+      {(f) => (
+        <Input {...fieldProps(f)} type={type} autoComplete={autoComplete} maxLength={maxLength}
+          value={value ?? ""} onChange={(e) => onChange(e.target.value)} />
+      )}
+    </Field>
+  );
+}
+
+/** The server's own words (`api()` reads `error`, `reason`, then
+    `message` - fixed for every screen on 21 September); nothing invented. */
 function messageFrom(error: unknown): string {
-  const said = (error as { body?: { message?: string } } | null)?.body?.message;
-  return said || (error instanceof Error && error.message) || NOTHING_HERE;
+  return (error instanceof Error && error.message) || NOTHING_HERE;
 }
 
 /* One narrow column, centred, no shell around it. */
-function Shell({ children }: { children: React.ReactNode }) {
+function Shell({ children }: { children: ReactNode }) {
   return (
     <main className="min-h-dvh bg-grey-50 px-4 py-8">
       <div className="mx-auto w-full max-w-md rounded-lg border border-grey-200 bg-white p-5">

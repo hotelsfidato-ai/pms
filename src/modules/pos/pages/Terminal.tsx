@@ -16,6 +16,7 @@ import { listPosOutlets } from "@/modules/pos/data/posBridge";
 import { BUSINESS_DATE } from "@/data/repositories";
 import { ReadFailed, ReadStale } from "@/components/ui";
 import { SlipNotice, openSlip, type BlockedSlip } from "@/modules/pos/components/SlipNotice";
+import { DishDialog } from "@/modules/pos/flows/DishDialog";
 
 /* ══════════════════════════════════════════════════════════════════
    THE TERMINAL
@@ -72,6 +73,7 @@ export default function TerminalPage() {
   const [orderId, setOrderId] = useState<string | null>(null);
   const [table, setTable] = useState("");
   const [busy, setBusy] = useState(false);
+  const [asking, setAsking] = useState<MenuItem | null>(null);
   const [blockedSlips, setBlockedSlips] = useState<BlockedSlip[]>([]);
   const [settling, setSettling] = useState(false);
   const [room, setRoom] = useState("");
@@ -153,10 +155,32 @@ export default function TerminalPage() {
     refresh();
   };
 
+  /* A dish with something to ASK opens the dish dialog, as on the Till
+     and Tables (the owner, 21 September). The Terminal had none, so a
+     dish sold by variation could not be rung here at all - the server
+     refused it with "Choose one" and there was nothing to choose with. */
+  const asks = (item: MenuItem) =>
+    item.variations.length > 0 || item.addonGroups.length > 0;
+
   const add = async (item: MenuItem) => {
     if (!orderId) return;
+    if (asks(item)) { setAsking(item); return; }
     const res = await addLine(hotelId, orderId, item.id, 1);
     if (!res.ok) return toast.error("Not added", res.reason);
+    refresh();
+  };
+
+  const addChosen = async (
+    itemId: string, qty: number, text: string,
+    variationId?: string, addonIds?: string[],
+  ) => {
+    if (!orderId) return;
+    setBusy(true);
+    const res = await addLine(hotelId, orderId, itemId, qty,
+      text.trim() || undefined, variationId, addonIds);
+    setBusy(false);
+    if (!res.ok) return toast.error("Not added", res.reason);
+    setAsking(null);
     refresh();
   };
 
@@ -169,6 +193,8 @@ export default function TerminalPage() {
 
   const note = async (item: MenuItem) => {
     if (!orderId) return;
+    /* The dish dialog has its own note field. */
+    if (asks(item)) { setAsking(item); return; }
     /* Modifiers. The column and the API have carried a note per line
        since 028 and nothing ever sent one, so "no chilli" reached the
        kitchen by shouting. */
@@ -530,7 +556,11 @@ export default function TerminalPage() {
                             {item.taxRate}%
                           </span>
                           <span className="text-lg tabular text-ink-900 leading-none">
-                            {moneyPrecise(item.price)}
+                            {/* Sold by variation: no price of its own. A
+                                dash, as on Tables' pad - the dish's own
+                                column is a number on no menu. */}
+                            {item.variations.length > 0
+                              ? "-" : moneyPrecise(item.price)}
                           </span>
                         </span>
                       </button>
@@ -966,6 +996,14 @@ export default function TerminalPage() {
           Change outlet
         </button>
       </footer>
+      <DishDialog
+        item={asking}
+        open={asking !== null}
+        onOpenChange={(o) => { if (!o) setAsking(null); }}
+        onAdd={(id, qty, text, variationId, addonIds) =>
+          void addChosen(id, qty, text, variationId, addonIds)}
+        busy={busy}
+      />
     </Shell>
   );
 }

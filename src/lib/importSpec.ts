@@ -52,6 +52,11 @@ export const MENU_SPEC: ImportSpec = {
       note: "Starters, Main course, Spirits. Created if it does not exist." },
     { header: "Dish", field: "name", required: true,
       note: "The name a guest reads on the bill." },
+    /* The owner's D21-43 (21 September): the import carries variations.
+       One row per variation, so a price never shares a cell. */
+    { header: "Variation", field: "variation", required: false,
+      note: "Half, Full, 250 ml. One row for each, with its own price. "
+          + "Blank for a dish sold at one price." },
     { header: "Price", field: "price", required: true,
       note: "Rupees. A blank is REJECTED - it is not zero." },
     { header: "Tax heading", field: "taxKind", required: false,
@@ -65,6 +70,9 @@ export const MENU_SPEC: ImportSpec = {
       note: "yes or no. Blank leaves it unsaid." },
     { header: "Short code", field: "shortCode", required: false,
       note: "What a waiter types instead of the name. Optional." },
+    { header: "Add-on groups", field: "addonGroups", required: false,
+      note: "The groups this dish offers, separated by ; - they come from "
+          + "the add-ons file, which is imported FIRST." },
   ],
   /* Deliberately obvious as examples and deliberately plausible as a
      menu: somebody has to be able to see the SHAPE, and a row reading
@@ -72,10 +80,14 @@ export const MENU_SPEC: ImportSpec = {
      Tax heading column. The prices are round numbers for the same
      reason — nobody will mistake them for the property's own. */
   examples: [
-    ["Starters", "Paneer Tikka", "300", "restaurant", "", "yes", "PT"],
-    ["Starters", "Chicken 65", "350", "restaurant", "", "no", ""],
-    ["Beverages", "Bottled water", "50", "restaurant", "18", "yes", ""],
-    ["Spirits", "Old Monk 60ml", "250", "bar", "", "", ""],
+    ["Starters", "Paneer Tikka", "", "300", "restaurant", "", "yes", "PT", "Preferences"],
+    ["Starters", "Chicken 65", "", "350", "restaurant", "", "no", "", ""],
+    ["Main course", "Chicken Biryani", "Half", "180", "restaurant", "", "no", "CB",
+     "Choice of raita; Preferences"],
+    ["Main course", "Chicken Biryani", "Full", "320", "", "", "", "", ""],
+    ["Beverages", "Bottled water", "", "50", "restaurant", "18", "yes", "", ""],
+    ["Spirits", "Old Monk", "30 ml", "150", "bar", "", "", "", ""],
+    ["Spirits", "Old Monk", "60 ml", "250", "", "", "", "", ""],
   ],
 };
 

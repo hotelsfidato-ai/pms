@@ -6539,6 +6539,29 @@ copy will see of theirs.**
 
 ---
 
+### 315 · A hidden browser pane freezes dialogs and times out screenshots
+
+21 September, reported by the POS chat. When the Browser pane is hidden,
+screenshots time out and dialogs sit at frame 0 of their opening animation,
+off screen, so a check reads as "the dialog never opened". `resize_window`
+with an explicit 1280 x 720 makes both work; the "desktop" preset on a hidden
+pane gives `innerWidth` 0. **The rule: before judging a dialog in the pane,
+give the pane a real size.**
+
+---
+
+### 314 · MINE: I gave three chats their briefs and no ports, and two of them took 8797
+
+21 September. The CRM chat's claim names API port 8797; the POS chat, started
+the same hour, ran its API on 8797 too. Nothing collided only because the POS
+chat stopped its server before the CRM chat started one. The same fault as
+301, with a port instead of a migration number: a shared, numbered resource
+handed out by nobody. **The rule: every brief that starts a server says how
+the port is chosen — `docs/briefs/README.md` now does (read `npm run claims`,
+take one nobody names, write it in your claim).**
+
+---
+
 ### 313 · MINE: I proved the spa bills a treatment with a GST rate no screen can set
 
 21 September. Closing a treatment (D18-22) bills it under the spa's OWN GST

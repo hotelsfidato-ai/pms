@@ -14,11 +14,31 @@ entries stay here: they are the reason the fault does not come back.
 
 ## Open — not fixed
 
-None, as of 17 September.
+### POS-15 · A dish imported with its GST column blank reads "0%" on the Menu screen and the Terminal
+
+**Found** — 21 September, on screen, importing a menu file with variations: "Mutton Rogan Josh | 0% | -". The import stores `tax_rate` NULL when the GST % column is blank — meaning "follow the section's heading" — and `addOneLine` resolves it when the dish is rung. But `GET /till/menu` sends `taxRate: Number(r.tax_rate)`, and `Number(null)` is 0, so the Menu row and the Terminal tile print **0%**. Measured in `fidato_pos_menu`: that dish's section (Main course) has no tax heading, so `app.gst_rate_or_null` answers NULL and ringing it would be refused with the "has no GST rate" sentence — the screen shows 0% for a dish that has no rate at all. A missing figure shown as a zero (HANDOVER § 5). Older than this job: every dish imported with the column blank.
+
+**Not fixed** — outside the 21 September job. The fix, when the owner says: the menu read sends the RESOLVED rate (`app.gst_rate_or_null` for the dish's section, as `addOneLine` does), and a null shows as a dash. Asked in the hand-back.
 
 ---
 
 ## Fixed
+
+### POS-16 · A single tap refused over a side put the dish on the bill without it — FIXED 21 September
+
+**Found** — 21 September, adding "how many a guest may choose" to `addOneLine` (`api/src/modules/pos/till.ts`). The dish's line was written first and its sides checked after; a side not offered with the dish, or off today, returned a refusal — and inside `withSession` a returned refusal is a COMMIT (root MEMORY 243). The pad's batch route throws and rolls back, so Tables was safe; the Till and the Terminal (one dish per request) left the dish on the bill with no sides and told the waiter it was refused.
+
+**What was done** — Every check on the sides — offered with this dish, off today, and the group's choose-at-least / choose-at-most (D21-41) — now runs before anything is written. Guarded by `api/test/modules/pos/menuOptions.test.ts` ("is rung on the pad as the rule says…"), which asserts that a refused dish left no line: with the rule check moved back after the insert it failed with `a refused dish left a line on the bill: expected 2 to be +0`.
+
+**The rule** — In a function that writes, every refusal comes before the first write, or it throws. Read the whole function for it, not the line you are adding.
+
+### POS-14 · A dish added with an empty price box landed at ₹0.00 — FIXED 21 September
+
+**Found** — 21 September, reading the Menu screen before adding variations. `CategoryCard.add` did `Number(price)` and the route did `Number(input.price)`: `Number("")` and `Number(null)` are both 0, so an empty box added the dish at ₹0.00 — a default price, which HANDOVER § 5 forbids and D21-42 had just ruled out for add-ons.
+
+**What was done** — On the owner's yes (21 September, "Refuse a blank"): the screen refuses an empty box ("Type a price. A blank is not zero - type 0 for something that is free."), and the server's `typedPrice` returns null for a blank, a null or a word, used by the dish route and every new variation and add-on route. A typed 0 is kept. Guarded by `menuOptions.test.ts` ("refuses a DISH added with an empty price box"); with `typedPrice` reading a blank as 0, five tests failed. **Opened**: Main course, "Chicken Biryani", empty price, Add → "Not added", no request sent; 250 typed → added.
+
+**The rule** — `Number()` of a blank is 0. A price read from a person goes through one function that knows the difference.
 
 ### POS-13 · MINE: a database check that crashed the suite instead of failing — caught before commit
 

@@ -1,173 +1,170 @@
-# Online check-in
+# Online check-in — the guest's own page
 
-Guests give their details and ID before they arrive, so the desk only hands over the key.
+A guest gives their ID and address before they arrive, from a page nobody else
+can open, and the desk checks them against the ID instead of typing them.
 
-**BEING BUILT since 19 September** (the owner's D18-9 to D18-13;
-`docs/briefs/guest-page.md`). What exists now is the guest's own page up to
-the six-digit code: `/g/:token` opens the booking, asks for the number the
-booking carries, and answers the code. **Everything behind the code — the
-bill, the check-in details and the ID photo, a spa or laundry request — is
-not built yet**, and waits on two things the master owns (see "Waiting on
-the master" below).
+**BUILT 21 September, on branch `online-checkin/guest-page`, not deployed.**
+The owner's answers: D18-9 to D18-13 (`docs/briefs/decisions-2026-09-18.md`)
+and D21-6 to D21-19, D21-25, D21-29, D21-59 to D21-63, D21-72, D21-75
+(`docs/briefs/decisions-2026-09-21.md`). The design is
+`docs/architecture/online-checkin.md`; the brief is `docs/briefs/guest-page.md`.
 
-The staff-facing Coming soon page is still here and still in the Coming soon
-menu section: nothing a clerk sees has changed yet.
-
-**Folder name:** `online-checkin` — the word the other two places will use when it is
-built:
+**Not built, on purpose:** the bill (waits on finance's one definition of a
+bill — "Waiting on the master" below), the ID photo (waits on the owner's rule
+for how long it is kept, D21-11), paying online, choosing a room.
 
 ```
-src/modules/online-checkin/        the Coming soon page, its menu entry and its address
-api/src/modules/online-checkin/    does not exist
-db/tests/modules/online-checkin.sql does not exist
+src/modules/online-checkin/        the guest's page, the desk's screen, their data and tests
+api/src/routes/guestDoor.ts        the door (the brief gives this lane that file)
+db/migrations/121_…                everything behind the code - numbered at merge
 ```
 
-Before any edit: ask the owner. Then claim the service in `HANDOVER.md` →
-"Folder claims". Written 16 September 2026.
-
 ---
 
-## What it would be
+## ⚠ The door's rules — they survive everything added
 
-Web check-in, a digital registration card with a signature, and ID
-scanning (`PROGRESS.md`, items 6 and 7). ID capture at the desk exists
-(`026_identity_capture.sql`), and so does Form C (the guests service).
+This is the only door in the system opened by somebody the hotel does not
+employ. Every one of these is a test that has been seen to fail with its fault
+put back (CHANGELOG, 21 September).
 
----
-
-## Where it stands, and where that comes from
-
-- **What comparable systems ship as standard** — `PROGRESS.md`, "What a
-  market-leading HMS has that this does not", item 6 and 7. Domain
-  knowledge about the category, not a decision by the owner.
-- **Its Coming soon page — the owner's decision, 16 September:** a folder and a
-  Coming soon page for every service the system does not have, in one
-  "Coming soon" section at the foot of the menu, for the owner, admins and
-  general managers (root `CHANGELOG.md`, 2026-09-16).
-- **Today:** ID is recorded at the desk at check-in. Nothing reaches the guest before they arrive.
-
----
+1. **A token names one booking, or one room** — never a booking id from the
+   caller. There is no session, no account, no guest role.
+2. **Only hashes reach the database** — the token's, the code's, the unlock's.
+3. **The code unlocks THIS PHONE, not the link (D21-6).** `verify` hands back
+   an unlock once; the page keeps it for the open tab (sessionStorage, never
+   localStorage) and sends it as `Authorization: Guest <unlock>`. It is stored
+   as a hash, tied to the link AND the stay, for an hour. Every function behind
+   the code takes both hashes and asks `app.guest_unlocked` in the database
+   every time. A forwarded link shows what it showed before and asks for a code.
+4. **A wrong phone and a right one are indistinguishable** — same status, same
+   words, same shape; one knock too many too (D21-25).
+5. **Every refusal takes the same shape** — behind the code, a refused call
+   answers what an unknown link answers: 404 and one sentence.
+6. **Nothing a guest types reaches the legal register without a person
+   (D21-8).** Their details are a submission; a clerk confirms them against
+   the ID and only then are they written to `guest_documents`, under the
+   clerk's own session.
 
 ## Screens
 
-| Menu name | Address (`routes.tsx`) | Page file | Who sees it (`nav.ts`) |
+| Name | Address | Page file | Who |
 |---|---|---|---|
-| Online check-in | `/coming-soon/online-checkin` | `pages/OnlineCheckin.tsx` | owner, admin, GM — the Coming soon section (`seesComingSoon`) |
-| — (no menu entry, ever) | `/g/:token` | `pages/GuestPage.tsx` | **the guest**, and nobody else |
+| — (no menu entry, ever) | `/g/:token` | `pages/GuestPage.tsx` | **the guest**, signed out; mounted outside `RequireSession` (`publicRoutes`) |
+| Online check-in | `/h/:code/online-checkin` | `pages/Desk.tsx` | the desk — **no menu entry yet** ("Waiting on the master") |
+| Online check-in | `/coming-soon/online-checkin` | `pages/OnlineCheckin.tsx` | the old Coming soon page, still in the Coming soon section until the master moves the entry |
 
-⚠ **`/g/:token` is exported separately, as `publicRoutes`.** The routes above
-sit inside `RequireSession` in `App.tsx`; this one must not, because the
-person opening it has no sign-in and never will. It carries no sidebar, no
-property picker and no menu. The token in the address is the whole
-credential (migration 114) — there is no session, no account and no guest
-role — and everything behind the six digits is refused **by the server**
-(`api/src/routes/guestDoor.ts`), never by this screen.
+**The guest's page, at 375px (the primary size):**
 
-**What the page calls** (`data/guestPage.ts`): `GET /api/guest/:token`,
-`POST /api/guest/:token/code`, `POST /api/guest/:token/verify`. Nothing else.
-A test asserts exactly that list, so a screen cannot quietly fetch the bill
-and hide it.
+- **A booking's link, before the code** — the guest's own name, dates,
+  reference, and the last four digits of the number on the booking.
+- **A room's card, before the code (D21-14)** — the hotel and the room number,
+  nothing of the guest: not even the last four digits. **Nobody checked in
+  (D21-15)** — "This opens once you're checked in", with the hotel's name.
+- **When no code can be sent (D21-25)** — the door's own sentence, and no send
+  button. **When the server cannot be reached (OCI-3)** — "We could not reach
+  the hotel", not "your link is dead".
+- **Behind the code** — the details form (ID type, ID number, address; for a
+  passport, its expiry and the visa with its expiry — D21-19, nothing else),
+  what was sent and whether the desk has checked it, with an Aadhaar as its
+  last four digits; and a spa or laundry request **only where the hotel has
+  that module switched on (D21-63)** — 5 Elements has neither.
+- **The privacy notice (D21-61)** has its place before the first question
+  (`privacyNotice.ts`) and **shows nothing** until the advisor has approved
+  its words: the draft still has blanks only the owner and the advisor can
+  fill.
+- The tab carries the hotel's name and nothing after it (D21-27).
 
-The page is the shared Coming soon page (`src/pages/ComingSoon.tsx`) with
-this service's words: what it will do, what it needs, where it stands.
-Find a screen answers to "web check-in", "registration card", "pre check-in", "id scan", "e-signature". Anybody else who types the address is
-refused ("This page is not part of your role").
+**The desk's screen:** details waiting to be checked (Confirm against the ID ·
+Not right — take them at the desk), requests (Done · Declined — booked on the
+spa's or laundry's own screen, D21-9), and room cards (print one, or print a
+new card for every room; the sheet is shown once, with the hotel's name, the
+room number and the link).
 
-**What the page says it needs before it can be built** — the owner's
-questions, not the code's:
+## The door (`api/src/routes/guestDoor.ts`)
 
-1. Guest messages, to send the link.
-2. Your rule for ID photos: whether they are kept and for how long. They are personal data.
-3. The registration card wording each hotel uses.
+| Method | Path | Before the code | What it does |
+|---|---|---|---|
+| GET | `/api/guest/:token` | answers | the booking or the room; `verified` for THIS phone; `canSendCodes`; `offers` once unlocked |
+| POST | `/api/guest/:token/code` | answers | a code to the phone on the stay it resolves to — one answer whatever happened |
+| POST | `/api/guest/:token/verify` | answers | the six digits; hands back the unlock once |
+| GET/POST | `/api/guest/:token/details` | **refused** | what the guest sent / send it, as a submission |
+| GET/POST | `/api/guest/:token/requests` | **refused** | their requests / make one |
+| POST | `/api/hotels/:code/stays/:id/guest-link` | staff | a booking's link, shown once |
+| GET | `/api/hotels/:code/online-checkin` | staff | waiting details (Aadhaar masked), open requests, rooms and their cards |
+| POST | `/api/hotels/:code/online-checkin/submissions/:id/confirm` | staff | write the details to `guest_documents`, under the clerk |
+| POST | `/api/hotels/:code/online-checkin/submissions/:id/set-aside` | staff | not right: nothing written |
+| POST | `/api/hotels/:code/online-checkin/requests/:id` | staff | `done` or `declined` |
+| POST | `/api/hotels/:code/online-checkin/rooms/:roomId/card` | staff | a new card for a room; the old one dies |
+| POST | `/api/hotels/:code/online-checkin/cards` | staff | a new card for every room |
 
----
+Staff routes are for owner, admin, GM, hotel manager and reception
+(`DESK_ROLES`); anybody else is refused with a sentence naming who may.
 
-## What it would lean on
+## Database (migrations 114 and 121)
 
-- **front-desk** — arrivals and check-in.
-- **guests** — ID capture and Form C.
-- **guest-messaging** — the link to the guest.
+| Table | Holds |
+|---|---|
+| `guest_links` | a booking's link OR a room's card (`room_id`, one live card per room); the token as a hash |
+| `guest_link_codes` | the six digits, hashed, and the stay they were sent for |
+| `guest_unlocks` | this phone's unlock, hashed, for one link and one stay, an hour |
+| `guest_detail_submissions` | what a guest typed, waiting for a clerk; Aadhaar whole (D21-17) |
+| `guest_requests` | a spa or laundry request, open / done / declined |
 
----
+Every function the door may call takes hashes only. Two are internal and not
+granted: `app.guest_link_stay` (a token → the stay it reaches now; a room card
+→ whoever is checked in there, the latest assignment winning when the one due
+out has not been checked out yet) and `app.guest_unlocked`.
 
-## Rules that will bind it
+## Waiting on the master — 21 September
 
-- **Ask the owner before building anything** (`HANDOVER.md` § 3 and § 5).
-- **Claim the folder** in `HANDOVER.md` → "Folder claims" before the first edit.
-- **ID documents are personal data.** They are not persisted in the browser (`App.tsx`, the `PERSISTED` list); how long a scan is kept is the owner's rule to set.
-- **Never invent a figure; a missing one is a dash, never a zero**
-  (`HANDOVER.md` § 5).
-- **Credentials live in the server's environment** (`api/.env`) or the n8n on
-  the server — never in the repo, a screen or a chat (`HANDOVER.md` § 5).
-- **A new migration needs a number claimed in `HANDOVER.md` first**
-  (`src/test/migrationNumbers.test.ts`); reach other services only through
-  their `index.ts` (`src/test/boundaries.test.ts`).
+1. **The menu entry.** Moving "Online check-in" out of the Coming soon section
+   to `/h/:code/online-checkin` changes the list
+   `src/components/app/navigation.test.ts` pins. `nav.ts` is this lane's; the
+   test is not, so the move is not made. Recommendation: section
+   `front-desk`, resource `customer`, and a link from the check-in flow
+   (front desk's file).
+2. **Finance's one definition of a bill** — a database function "this stay's
+   bill as it stands", callable only by other definer functions, for the
+   guest's bill (D21-10). Not built here; no query over `folio_postings` was
+   written.
+3. **A QR code.** Nothing in the project draws one; the card sheet prints the
+   link in its place and says so. Adding a library is a dependency in the
+   shared `node_modules`. Recommendation: `qrcode` (MIT), drawn on the desk's
+   screen only.
+4. **The privacy notice's words** (D21-61) — the advisor's; the place is ready.
+5. **"Fidato" in a guest's tab before the page loads.** `index.html`'s title
+   is "Fidato PMS", and `useDocumentTitle` adds "· Fidato" when nobody is
+   signed in. The guest's page sets its own title; the HTML shell is the
+   master's (D21-27).
+6. **How long an unlock lasts** — an hour, flat (`guest_code_answer`, marked
+   `ponytail:`). The owner's number if they want another.
 
----
+## Rules that bind it
 
-## When it is built
-
-- Replace `pages/OnlineCheckin.tsx` with the real screens, at their real addresses.
-- Move the menu entry out of the Coming soon section into the section it
-  works in, with the working menus it belongs to (`navigation.test.ts` pins
-  every role's list, and the Coming soon list).
-- If not every hotel has it, a module switch per hotel: one migration on
-  `hotel_modules_known` (`041`, `087`) and the two lists in
-  `api/src/modules/admin/moduleSwitches.ts`.
-
----
+- Nothing leaves this machine (19 September): no push, no deploy.
+- Ask the owner before any doubt, with a recommendation (`HANDOVER.md` § 5).
+- Reach other services only through their front doors; never another
+  service's tables — the spa and laundry are booked on their own screens.
+- A new migration is numbered at merge (root MEMORY 302); **and it must not
+  change the return type of a function an earlier migration makes** — every
+  deploy replays from 001 (CHANGELOG, 21 September).
+- Guest documents are personal data and are not persisted in the browser;
+  the unlock is kept for the open tab only.
 
 ## Gates
 
-`npx tsc -b --force` and `npx vitest run`, judged by the exit code —
-`src/test/boundaries.test.ts` fails if this folder loses its `index.ts` or
-this `MODULE.md`; `src/components/app/navigation.test.ts` pins the Coming
-soon section.
+```
+npx tsc -b --force
+npx vitest run src/modules/online-checkin src/test
+cd api; npm test -- guestDoor
+bash db/tests/run.sh
+bash db/tests/rerun.sh          # this lane added a migration: it must replay twice
+```
 
----
-
-## Waiting on the master — 19 September
-
-**Answered 21 September, by the master:**
-1. **Done** — mounted exactly as asked (`src/App.tsx`), and `src/App.test.tsx`
-   now opens `/g/…` signed out and fails if the route goes (root MEMORY 310).
-2. **At merge, not before** — a reserved number is a gap the migration-number
-   test refuses (root MEMORY 302). Write it as the next free number in your
-   copy; the master renumbers at merge if another lane took it first.
-   **But first read `docs/architecture/online-checkin.md`** — the half behind
-   the code waits on the owner's D21-6 to D21-11.
-3. **Done** — `src/lib/api.ts` reads `error`, then `reason`, then `message`.
-   Your own workaround can go.
-4. Noted; not numbered in root MEMORY — it bites tests that build an
-   `ApiError` by hand, and the rule is already OCI-1's: test through the
-   browser's real object, not a constructed one.
-
-Each of these is one line or one number in a file this lane may not change.
-Nothing behind the code can be built until the first two are answered.
-
-1. **Mount the guest's page outside the session gate.** In `src/App.tsx`,
-   beside `/signin`:
-   `import { routes as onlineCheckinRoutes, publicRoutes as guestPagePublicRoutes } from "@/modules/online-checkin/routes";`
-   and `{guestPagePublicRoutes}` immediately after the `/signin` route. Proved
-   locally with exactly that line and then reverted — `App.tsx` is the
-   master's. Without it `/g/:token` falls through to the catch-all.
-2. **A migration number**, for the definer functions the verified half needs
-   (the bill as it stands, the check-in details and the ID photo, a request).
-   None taken; 119 is the highest in the tree today.
-3. **`src/lib/api.ts` loses a refusal's own sentence.** It lifts a body's
-   `error` or `reason` into the `ApiError` message but not its `message`, and
-   this door writes its "codes cannot be sent yet" sentence in `message`
-   (OCI-1). One line — `body?.error ?? body?.reason ?? body?.message ?? …` —
-   fixes it for every screen; this lane worked around it in its own file.
-4. **`ApiError` is a different shape in the two environments.** In the dev
-   server its `body` survives; under vitest the transform drops it
-   (`Object.keys` → `["status","name"]` against `["status","body","name"]`).
-   Any screen reading `error.body` is untestable here, and a test that builds
-   one with `new ApiError(...)` tests the transform. Worth a root `MEMORY.md`
-   number — the master's to write.
+Guards: `onlineCheckin.test.tsx` (the screen), `api/test/guestDoor.test.ts`
+and `api/test/guestDoorBehindTheCode.test.ts` (the door), and the core's
+`boundaries`, `migrationNumbers`, `navigation` and `primaryAction` tests.
 
 ## Requests from other services
 
-None. To ask for something here, add a line below — date, your service, what
-you need and why — and raise it with the owner; nothing is built here
-unasked.
+None.

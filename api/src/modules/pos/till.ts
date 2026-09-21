@@ -33,6 +33,21 @@ export const till = new Hono<{ Variables: { subject: string } }>();
 
 const refuse = (reason: string) => ({ ok: false as const, reason });
 
+/** A price a person TYPED: a number, or a string holding one, zero or
+    more. Null for a blank, a null or a word — never zero. `Number("")`
+    and `Number(null)` are both 0, which is how a dish added with an
+    empty price box landed on the menu at ₹0.00 (POS-14). */
+function typedPrice(raw: unknown): number | null {
+  const text = typeof raw === "number" ? String(raw)
+    : typeof raw === "string" ? raw.replace(/[,\s₹]/g, "") : "";
+  if (text === "") return null;
+  const n = Number(text);
+  return Number.isFinite(n) && n >= 0 ? n : null;
+}
+
+const NO_PRICE =
+  "Type a price. A blank is not zero - type 0 for something that is free.";
+
 /** The hotel this route is about, or null if the code is unknown. */
 async function hotelFor(client: Client, code: string): Promise<string | null> {
   const { rows } = await client.query<{ id: string }>(
@@ -330,7 +345,7 @@ till.post("/:code/till/menu/categories", async (c) => {
 
 till.post("/:code/till/menu/items", async (c) => {
   type ItemBody = {
-    categoryId?: string; name?: string; price?: number; taxRate?: number;
+    categoryId?: string; name?: string; price?: unknown; taxRate?: number;
   };
   const input = await c.req.json<ItemBody>().catch(() => ({}) as ItemBody);
 
@@ -342,11 +357,10 @@ till.post("/:code/till/menu/items", async (c) => {
 
   /* A price of zero is legitimate — a complimentary welcome drink still
      goes on the bill at nil. A NEGATIVE one is not, and neither is a
-     blank pretending to be one. */
-  const price = Number(input.price);
-  if (!Number.isFinite(price) || price < 0) {
-    return c.json(refuse("A price must be zero or more."), 409);
-  }
+     blank pretending to be one: this read `Number(input.price)`, and a
+     blank or a null is 0 to Number (POS-14). */
+  const price = typedPrice(input.price);
+  if (price === null) return c.json(refuse(NO_PRICE), 409);
 
   /* ⚠ THIS WAS `Number(input.taxRate ?? 5)`.
      A shipped tax rate, in a project whose first rule is that nothing
@@ -417,11 +431,18 @@ till.post("/:code/till/menu/items", async (c) => {
 interface ImportRow {
   category?: string;
   name?: string;
+  /* One row per variation (the owner's D21-43, 21 September): Chicken
+     Biryani is two rows, Half and Full, each with its own price. Blank
+     on a dish sold at one price. */
+  variation?: string;
   price?: string | number;
   taxKind?: string;
   taxRate?: string | number;
   veg?: string | boolean;
   shortCode?: string;
+  /* Groups made by the add-ons file, named: "Choice of bread; Preferences".
+     Attached, never detached - taking one off is the Menu screen's. */
+  addonGroups?: string;
 }
 
 interface Verdict {
@@ -456,25 +477,50 @@ till.post("/:code/till/menu/import", async (c) => {
     /* Everything that already exists, read once. Asking per row turns a
        two-hundred-line import into four hundred queries. */
     const { rows: existing } = await client.query<{
-      category: string; name: string;
+      category: string; name: string; variations: string[];
     }>(
-      `select c.name as category, i.name
+      `select c.name as category, i.name,
+              coalesce(array_agg(v.label) filter (where v.id is not null),
+                       '{}') as variations
          from pos_menu_items i
          join pos_menu_categories c on c.id = i.category_id
-        where i.hotel_id = $1`,
+         left join pos_item_variations v on v.item_id = i.id and v.is_active
+        where i.hotel_id = $1
+        group by c.name, i.name`,
       [hotelId],
     );
     const key = (cat: string, name: string) =>
       `${cat.toLowerCase()}|${name.toLowerCase()}`;
-    const already = new Set(existing.map((r) => key(r.category, r.name)));
+    /* dish → its variations on the menu now, lower case → as spelled. */
+    const already = new Map(existing.map((r) => [
+      key(r.category, r.name),
+      new Map(r.variations.map((v) => [v.toLowerCase(), v])),
+    ]));
+
+    const { rows: groupRows } = await client.query<{ id: string; label: string }>(
+      "select id::text, label from pos_addon_groups where hotel_id = $1",
+      [hotelId],
+    );
+    const groupIdOf = new Map(groupRows.map((g) => [g.label.toLowerCase(), g.id]));
+
+    /* Which dishes have a variation row ANYWHERE in the file, so a row
+       without one is refused whichever comes first. */
+    const sizedInFile = new Set(
+      rows.filter((r) => String(r.variation ?? "").trim())
+        .map((r) => key(String(r.category ?? "").trim(),
+                        String(r.name ?? "").trim())));
 
     const verdicts: Verdict[] = [];
     const seen = new Set<string>();
-    const good: {
-      category: string; name: string; price: number;
+    /* One entry per dish, its variations gathered from its rows. The
+       dish's other columns are read from the first row that fills them. */
+    const good = new Map<string, {
+      category: string; name: string; price: number | null;
       taxKind: string | null; taxRate: number | null;
       veg: boolean | null; shortCode: string | null;
-    }[] = [];
+      variations: { label: string; price: number }[];
+      groupIds: Set<string>;
+    }>();
 
     rows.forEach((raw, i) => {
       const line = i + 2;                    // +1 zero-based, +1 for the header
@@ -527,28 +573,64 @@ till.post("/:code/till/menu/import", async (c) => {
         else return reject(`"${raw.veg}" is not yes or no.`);
       }
 
-      /* The same dish twice in one file is worth naming: the second
-         would overwrite the first and nobody would know which price
-         won. */
+      /* A dish sold by variation has no price of its own to set (045):
+         a row without a variation would change a number nobody is
+         charged, and look as if it had worked. */
+      const variation = String(raw.variation ?? "").trim();
       const k = key(category, name);
-      if (seen.has(k)) {
-        return reject(`"${name}" appears twice under ${category} in this file.`);
+      const onMenu = already.get(k);
+      if (!variation && sizedInFile.has(k)) {
+        return reject(`"${name}" has variations in this file, so a row `
+          + "without one has nothing to price.");
       }
-      seen.add(k);
+      if (!variation && onMenu && onMenu.size > 0) {
+        return reject(`"${name}" is sold by variation. Give this row a `
+          + "variation, or remove the variations on the Menu screen first.");
+      }
 
+      /* The same dish (or variation) twice in one file is worth naming:
+         the second would overwrite the first and nobody would know which
+         price won. */
+      const rowKey = `${k}|${variation.toLowerCase()}`;
+      if (seen.has(rowKey)) {
+        return reject(variation
+          ? `"${name} (${variation})" appears twice in this file.`
+          : `"${name}" appears twice under ${category} in this file.`);
+      }
+
+      const groupNames = String(raw.addonGroups ?? "").split(";")
+        .map((g) => g.trim()).filter(Boolean);
+      const unknownGroup = groupNames.find((g) => !groupIdOf.has(g.toLowerCase()));
+      if (unknownGroup) {
+        return reject(`"${unknownGroup}" is not an add-on group yet. Import `
+          + "the add-ons file first, or make the group on the Menu screen.");
+      }
+      seen.add(rowKey);
+
+      const label = onMenu?.get(variation.toLowerCase()) ?? variation;
+      const isUpdate = variation ? onMenu?.has(variation.toLowerCase()) === true
+                                 : onMenu !== undefined;
       verdicts.push({
         line,
-        name,
-        action: already.has(k) ? "update" : "create",
-        detail: already.has(k)
+        name: variation ? `${name} (${label})` : name,
+        action: isUpdate ? "update" : "create",
+        detail: isUpdate
           ? `${category} · price becomes ${price}`
           : `${category} · ${price}`,
       });
-      good.push({
-        category, name, price,
-        taxKind: kindRaw || null, taxRate, veg,
-        shortCode: String(raw.shortCode ?? "").trim() || null,
-      });
+
+      const dish = good.get(k) ?? {
+        category, name, price: null, taxKind: null, taxRate: null,
+        veg: null, shortCode: null, variations: [], groupIds: new Set<string>(),
+      };
+      good.set(k, dish);
+      if (variation) dish.variations.push({ label, price });
+      else dish.price = price;
+      dish.taxKind ??= kindRaw || null;
+      dish.taxRate ??= taxRate;
+      dish.veg ??= veg;
+      dish.shortCode ??= String(raw.shortCode ?? "").trim() || null;
+      for (const g of groupNames) dish.groupIds.add(groupIdOf.get(g.toLowerCase())!);
     });
 
     const tally = {
@@ -567,7 +649,7 @@ till.post("/:code/till/menu/import", async (c) => {
        silently repairing the typo is worse. The good rows land, the bad
        ones are listed, and the file can be corrected and sent again —
        which updates rather than duplicates. */
-    for (const row of good) {
+    for (const row of good.values()) {
       const { rows: cat } = await client.query<{ id: string }>(
         `insert into pos_menu_categories (hotel_id, name, tax_kind)
          values ($1, $2, $3)
@@ -579,20 +661,46 @@ till.post("/:code/till/menu/import", async (c) => {
         [hotelId, row.category, row.taxKind],
       );
 
-      await client.query(
+      /* A dish sold by variation still needs a price of its own - the
+         column cannot be empty - and it is never charged while it has
+         variations (045's trigger; addOneLine). A new one takes its
+         first variation's; one already on the menu keeps what it has.
+         Removing its last variation asks for a price (the owner, 21 Sep). */
+      const sized = row.variations.length > 0;
+      const { rows: item } = await client.query<{ id: string }>(
         `insert into pos_menu_items
            (hotel_id, category_id, name, price, tax_rate, is_veg, short_code)
          values ($1,$2,$3,$4,$5,$6,$7)
          on conflict (hotel_id, category_id, name) do update
-           set price      = excluded.price,
+           set price      = case when $8::boolean then pos_menu_items.price
+                                 else excluded.price end,
                tax_rate   = excluded.tax_rate,
                is_veg     = coalesce(excluded.is_veg, pos_menu_items.is_veg),
                short_code = coalesce(excluded.short_code,
                                      pos_menu_items.short_code),
-               is_active  = true`,
-        [hotelId, cat[0]!.id, row.name, row.price, row.taxRate,
-         row.veg, row.shortCode],
+               is_active  = true
+         returning id::text`,
+        [hotelId, cat[0]!.id, row.name, row.price ?? row.variations[0]!.price,
+         row.taxRate, row.veg, row.shortCode, sized],
       );
+
+      for (const [i, v] of row.variations.entries()) {
+        await client.query(
+          `insert into pos_item_variations
+             (hotel_id, item_id, label, price, sort_order)
+           values ($1,$2,$3,$4,$5)
+           on conflict (item_id, label) do update
+             set price = excluded.price, is_active = true`,
+          [hotelId, item[0]!.id, v.label, v.price, i + 1],
+        );
+      }
+      for (const groupId of row.groupIds) {
+        await client.query(
+          `insert into pos_item_addon_groups (item_id, group_id)
+           values ($1,$2) on conflict do nothing`,
+          [item[0]!.id, groupId],
+        );
+      }
     }
 
     return { ok: true as const, dryRun: false, verdicts, ...tally };
@@ -852,6 +960,554 @@ till.post("/:code/till/menu/items/:id/toggle", async (c) => {
 
   if (!result) return c.json({ error: "No such property." }, 404);
   return c.json(result, result.ok ? 200 : 409);
+});
+
+/* ══════════════════════════════════════════════════════════════════
+   VARIATIONS AND ADD-ONS, AS THE KITCHEN MANAGER KEEPS THEM
+
+   045 made the tables and the order pad has sold from them since; until
+   21 September nothing but the demo loader could write one (D21-39). The
+   owner's answers: an "Add variation" button on each dish (D21-40); an
+   add-on group made once and offered on many dishes, saying how many a
+   guest may choose (D21-41); "Preferences" as options a person prices
+   at 0 (D21-42). "The way Bhaaji Pau works, for the whole menu."
+
+   REMOVED, NEVER DELETED. A line on a printed bill points at the
+   variation or add-on it sold, so removing one switches it off
+   (`is_active`) and the menu stops offering it. Adding the same name
+   again brings the old row back at the new price.
+
+   EVERY PRICE IS TYPED. A blank is refused, never kept as zero; a typed
+   0 is a real answer - "no onion" costs nothing.
+   ══════════════════════════════════════════════════════════════════ */
+
+type Named = { label?: unknown; price?: unknown };
+const labelOf = (raw: unknown) => (typeof raw === "string" ? raw.trim() : "");
+
+till.post("/:code/till/menu/items/:id/variations", async (c) => {
+  const input = await c.req.json<Named>().catch(() => ({}) as Named);
+  const label = labelOf(input.label);
+  if (!label) return c.json(refuse("A variation needs a name - Half, Full, 500 ml."), 409);
+  const price = typedPrice(input.price);
+  if (price === null) return c.json(refuse(NO_PRICE), 409);
+
+  const result = await withSession(c.get("subject"), async (client) => {
+    const hotelId = await hotelFor(client, c.req.param("code"));
+    if (!hotelId) return null;
+    const itemId = c.req.param("id");
+
+    const { rows: dish } = await client.query<{ name: string }>(
+      "select name from pos_menu_items where id = $1 and hotel_id = $2",
+      [itemId, hotelId]);
+    if (!dish[0]) return refuse("No such dish.");
+
+    const { rows } = await client.query<{ id: string }>(
+      `insert into pos_item_variations (hotel_id, item_id, label, price, sort_order)
+       values ($1, $2, $3, $4,
+               (select coalesce(max(sort_order), 0) + 1
+                  from pos_item_variations where item_id = $2))
+       on conflict (item_id, label) do update
+         set price = excluded.price, is_active = true
+         where not pos_item_variations.is_active
+       returning id::text`,
+      [hotelId, itemId, label, price]);
+    if (!rows[0]) return refuse(`${dish[0].name} already has ${label}.`);
+    return { ok: true as const, id: rows[0].id };
+  });
+
+  if (!result) return c.json({ error: "No such property." }, 404);
+  return c.json(result, result.ok ? 200 : 409);
+});
+
+/** Rename and reprice, both sent. */
+till.patch("/:code/till/menu/variations/:id", async (c) => {
+  const input = await c.req.json<Named>().catch(() => ({}) as Named);
+  const label = labelOf(input.label);
+  if (!label) return c.json(refuse("A variation needs a name."), 409);
+  const price = typedPrice(input.price);
+  if (price === null) return c.json(refuse(NO_PRICE), 409);
+
+  const result = await withSession(c.get("subject"), async (client) => {
+    const hotelId = await hotelFor(client, c.req.param("code"));
+    if (!hotelId) return null;
+    const id = c.req.param("id");
+
+    const { rows: clash } = await client.query<{ is_active: boolean; dish: string }>(
+      `select o.is_active, i.name as dish
+         from pos_item_variations v
+         join pos_item_variations o on o.item_id = v.item_id
+                                   and o.label = $3 and o.id <> v.id
+         join pos_menu_items i on i.id = v.item_id
+        where v.id = $1 and v.hotel_id = $2`,
+      [id, hotelId, label]);
+    if (clash[0]) {
+      return refuse(clash[0].is_active
+        ? `${clash[0].dish} already has ${label}.`
+        : `${clash[0].dish} had a ${label} that was removed. Add ${label} again `
+          + "to bring it back.");
+    }
+
+    const { rowCount } = await client.query(
+      `update pos_item_variations set label = $3, price = $4
+        where id = $1 and hotel_id = $2 and is_active`,
+      [id, hotelId, label, price]);
+    if (!rowCount) return refuse("No such variation.");
+    return { ok: true as const };
+  });
+
+  if (!result) return c.json({ error: "No such property." }, 404);
+  return c.json(result, result.ok ? 200 : 409);
+});
+
+/** Removing the LAST variation makes the dish a one-price dish again, and
+    its own price has not been looked at since it gained variations. So
+    that removal needs the price, typed (the owner, 21 September). */
+till.post("/:code/till/menu/variations/:id/remove", async (c) => {
+  const input = await c.req.json<{ dishPrice?: unknown }>()
+    .catch(() => ({}) as { dishPrice?: unknown });
+  const dishPrice = typedPrice(input.dishPrice);
+
+  const result = await withSession(c.get("subject"), async (client) => {
+    const hotelId = await hotelFor(client, c.req.param("code"));
+    if (!hotelId) return null;
+    const id = c.req.param("id");
+
+    const { rows: v } = await client.query<{
+      item_id: string; dish: string; others: string;
+    }>(
+      `select v.item_id::text, i.name as dish,
+              (select count(*) from pos_item_variations o
+                where o.item_id = v.item_id and o.is_active
+                  and o.id <> v.id)::text as others
+         from pos_item_variations v
+         join pos_menu_items i on i.id = v.item_id
+        where v.id = $1 and v.hotel_id = $2 and v.is_active`,
+      [id, hotelId]);
+    if (!v[0]) return refuse("No such variation.");
+
+    const last = v[0].others === "0";
+    if (last && dishPrice === null) {
+      return refuse(`${v[0].dish} will be sold at one price again. What price?`);
+    }
+    if (last) {
+      await client.query(
+        `update pos_menu_items set price = $3, updated_at = now()
+          where id = $1 and hotel_id = $2`,
+        [v[0].item_id, hotelId, dishPrice]);
+    }
+    await client.query(
+      "update pos_item_variations set is_active = false where id = $1", [id]);
+    return { ok: true as const };
+  });
+
+  if (!result) return c.json({ error: "No such property." }, 404);
+  return c.json(result, result.ok ? 200 : 409);
+});
+
+/* ── Add-on groups ───────────────────────────────────────────────── */
+
+till.get("/:code/till/menu/addon-groups", async (c) => {
+  const body = await withSession(c.get("subject"), async (client) => {
+    const hotelId = await hotelFor(client, c.req.param("code"));
+    if (!hotelId) return null;
+
+    const { rows: groups } = await client.query<{
+      id: string; label: string; min_select: number;
+      max_select: number | null; item_ids: string[];
+    }>(
+      `select g.id::text, g.label, g.min_select, g.max_select,
+              array(select ig.item_id::text from pos_item_addon_groups ig
+                     where ig.group_id = g.id) as item_ids
+         from pos_addon_groups g
+        where g.hotel_id = $1
+        order by g.sort_order, g.label`,
+      [hotelId]);
+
+    const { rows: addons } = await client.query<{
+      id: string; group_id: string; label: string; price: string;
+      off_until: string | null;
+    }>(
+      `select id::text, group_id::text, label, price::text, off_until::text
+         from pos_addons
+        where hotel_id = $1 and is_active
+        order by sort_order, label`,
+      [hotelId]);
+
+    return {
+      groups: groups.map((g) => ({
+        id: g.id, label: g.label, minSelect: g.min_select,
+        maxSelect: g.max_select, itemIds: g.item_ids,
+        addons: addons.filter((a) => a.group_id === g.id).map((a) => ({
+          id: a.id, label: a.label, price: Number(a.price), offUntil: a.off_until,
+        })),
+      })),
+    };
+  });
+
+  return body ? c.json(body) : c.json({ error: "No such property." }, 404);
+});
+
+type GroupBody = { label?: unknown; minSelect?: unknown; maxSelect?: unknown };
+
+/** "How many a guest may choose" (D21-41): at least a whole number from
+    0 (0 is optional), at most one from 1 or null for no limit. A sentence
+    when it is not. */
+function groupRule(input: GroupBody):
+  { label: string; min: number; max: number | null } | string {
+  const label = labelOf(input.label);
+  if (!label) return "A group needs a name - Choice of bread, Preferences.";
+  const min = input.minSelect;
+  const max = input.maxSelect ?? null;
+  if (!Number.isInteger(min) || (min as number) < 0 || (min as number) > 99) {
+    return "Choose at least: a whole number. 0 means the guest may take none.";
+  }
+  if (max !== null && (!Number.isInteger(max) || (max as number) < 1
+                       || (max as number) > 99)) {
+    return "Choose at most: a whole number from 1, or empty for no limit.";
+  }
+  if (max !== null && (min as number) > (max as number)) {
+    return "Choose at least cannot be more than choose at most.";
+  }
+  return { label, min: min as number, max: max as number | null };
+}
+
+till.post("/:code/till/menu/addon-groups", async (c) => {
+  const rule = groupRule(await c.req.json<GroupBody>().catch(() => ({})));
+  if (typeof rule === "string") return c.json(refuse(rule), 409);
+
+  const result = await withSession(c.get("subject"), async (client) => {
+    const hotelId = await hotelFor(client, c.req.param("code"));
+    if (!hotelId) return null;
+    const { rows } = await client.query<{ id: string }>(
+      `insert into pos_addon_groups (hotel_id, label, min_select, max_select)
+       values ($1,$2,$3,$4)
+       on conflict (hotel_id, label) do nothing
+       returning id::text`,
+      [hotelId, rule.label, rule.min, rule.max]);
+    if (!rows[0]) return refuse(`There is already a group called ${rule.label}.`);
+    return { ok: true as const, id: rows[0].id };
+  });
+
+  if (!result) return c.json({ error: "No such property." }, 404);
+  return c.json(result, result.ok ? 200 : 409);
+});
+
+till.patch("/:code/till/menu/addon-groups/:id", async (c) => {
+  const rule = groupRule(await c.req.json<GroupBody>().catch(() => ({})));
+  if (typeof rule === "string") return c.json(refuse(rule), 409);
+
+  const result = await withSession(c.get("subject"), async (client) => {
+    const hotelId = await hotelFor(client, c.req.param("code"));
+    if (!hotelId) return null;
+    const id = c.req.param("id");
+
+    const { rows: clash } = await client.query(
+      `select 1 from pos_addon_groups
+        where hotel_id = $1 and label = $2 and id <> $3`,
+      [hotelId, rule.label, id]);
+    if (clash[0]) return refuse(`There is already a group called ${rule.label}.`);
+
+    const { rowCount } = await client.query(
+      `update pos_addon_groups set label = $3, min_select = $4, max_select = $5
+        where id = $1 and hotel_id = $2`,
+      [id, hotelId, rule.label, rule.min, rule.max]);
+    if (!rowCount) return refuse("No such add-on group.");
+    return { ok: true as const };
+  });
+
+  if (!result) return c.json({ error: "No such property." }, 404);
+  return c.json(result, result.ok ? 200 : 409);
+});
+
+/** Which dishes offer this group: the whole list, replacing the last. */
+till.post("/:code/till/menu/addon-groups/:id/dishes", async (c) => {
+  const input = await c.req.json<{ itemIds?: unknown }>()
+    .catch(() => ({}) as { itemIds?: unknown });
+  const itemIds = Array.isArray(input.itemIds)
+    && input.itemIds.every((x) => typeof x === "string")
+    ? [...new Set(input.itemIds as string[])] : null;
+  if (!itemIds) return c.json(refuse("Which dishes?"), 409);
+
+  const result = await withSession(c.get("subject"), async (client) => {
+    const hotelId = await hotelFor(client, c.req.param("code"));
+    if (!hotelId) return null;
+    const id = c.req.param("id");
+
+    const { rows: group } = await client.query(
+      "select 1 from pos_addon_groups where id = $1 and hotel_id = $2",
+      [id, hotelId]);
+    if (!group[0]) return refuse("No such add-on group.");
+
+    /* Every dish this hotel's, before anything is written: the join
+       table carries no hotel of its own (045). */
+    const { rows: mine } = await client.query<{ n: string }>(
+      `select count(*)::text as n from pos_menu_items
+        where id = any($1::uuid[]) and hotel_id = $2`,
+      [itemIds, hotelId]);
+    if (Number(mine[0]!.n) !== itemIds.length) return refuse("No such dish.");
+
+    await client.query(
+      `delete from pos_item_addon_groups
+        where group_id = $1 and not (item_id = any($2::uuid[]))`,
+      [id, itemIds]);
+    await client.query(
+      `insert into pos_item_addon_groups (item_id, group_id)
+       select unnest($2::uuid[]), $1 on conflict do nothing`,
+      [id, itemIds]);
+    return { ok: true as const, dishes: itemIds.length };
+  });
+
+  if (!result) return c.json({ error: "No such property." }, 404);
+  return c.json(result, result.ok ? 200 : 409);
+});
+
+/* ── The options in a group ──────────────────────────────────────── */
+
+till.post("/:code/till/menu/addon-groups/:id/addons", async (c) => {
+  const input = await c.req.json<Named>().catch(() => ({}) as Named);
+  const label = labelOf(input.label);
+  if (!label) return c.json(refuse("An option needs a name - Butter naan, No onion."), 409);
+  const price = typedPrice(input.price);
+  if (price === null) return c.json(refuse(NO_PRICE), 409);
+
+  const result = await withSession(c.get("subject"), async (client) => {
+    const hotelId = await hotelFor(client, c.req.param("code"));
+    if (!hotelId) return null;
+    const groupId = c.req.param("id");
+
+    const { rows: group } = await client.query<{ label: string }>(
+      "select label from pos_addon_groups where id = $1 and hotel_id = $2",
+      [groupId, hotelId]);
+    if (!group[0]) return refuse("No such add-on group.");
+
+    const { rows } = await client.query<{ id: string }>(
+      `insert into pos_addons (hotel_id, group_id, label, price, sort_order)
+       values ($1, $2, $3, $4,
+               (select coalesce(max(sort_order), 0) + 1
+                  from pos_addons where group_id = $2))
+       on conflict (group_id, label) do update
+         set price = excluded.price, is_active = true
+         where not pos_addons.is_active
+       returning id::text`,
+      [hotelId, groupId, label, price]);
+    if (!rows[0]) return refuse(`${group[0].label} already has ${label}.`);
+    return { ok: true as const, id: rows[0].id };
+  });
+
+  if (!result) return c.json({ error: "No such property." }, 404);
+  return c.json(result, result.ok ? 200 : 409);
+});
+
+/** Rename and reprice, both sent. A price changed here changes on every
+    dish that offers the group - it is one row (D21-41). */
+till.patch("/:code/till/menu/addons/:id", async (c) => {
+  const input = await c.req.json<Named>().catch(() => ({}) as Named);
+  const label = labelOf(input.label);
+  if (!label) return c.json(refuse("An option needs a name."), 409);
+  const price = typedPrice(input.price);
+  if (price === null) return c.json(refuse(NO_PRICE), 409);
+
+  const result = await withSession(c.get("subject"), async (client) => {
+    const hotelId = await hotelFor(client, c.req.param("code"));
+    if (!hotelId) return null;
+    const id = c.req.param("id");
+
+    const { rows: clash } = await client.query<{ is_active: boolean; grp: string }>(
+      `select o.is_active, g.label as grp
+         from pos_addons a
+         join pos_addons o on o.group_id = a.group_id
+                          and o.label = $3 and o.id <> a.id
+         join pos_addon_groups g on g.id = a.group_id
+        where a.id = $1 and a.hotel_id = $2`,
+      [id, hotelId, label]);
+    if (clash[0]) {
+      return refuse(clash[0].is_active
+        ? `${clash[0].grp} already has ${label}.`
+        : `${clash[0].grp} had a ${label} that was removed. Add ${label} again `
+          + "to bring it back.");
+    }
+
+    const { rowCount } = await client.query(
+      `update pos_addons set label = $3, price = $4
+        where id = $1 and hotel_id = $2 and is_active`,
+      [id, hotelId, label, price]);
+    if (!rowCount) return refuse("No such option.");
+    return { ok: true as const };
+  });
+
+  if (!result) return c.json({ error: "No such property." }, 404);
+  return c.json(result, result.ok ? 200 : 409);
+});
+
+till.post("/:code/till/menu/addons/:id/remove", async (c) => {
+  const result = await withSession(c.get("subject"), async (client) => {
+    const hotelId = await hotelFor(client, c.req.param("code"));
+    if (!hotelId) return null;
+    const { rowCount } = await client.query(
+      `update pos_addons set is_active = false
+        where id = $1 and hotel_id = $2 and is_active`,
+      [c.req.param("id"), hotelId]);
+    if (!rowCount) return refuse("No such option.");
+    return { ok: true as const };
+  });
+
+  if (!result) return c.json({ error: "No such property." }, 404);
+  return c.json(result, result.ok ? 200 : 409);
+});
+
+/* ── The add-ons file (the owner's D21-43, 21 September) ─────────────
+   Its own file, imported BEFORE the menu file that names its groups:
+   one row per option - Group, Option, Price, and the group's rule on any
+   of its rows. Same two passes and the same refusals as the menu: a
+   blank price is refused, never zero; re-importing updates and never
+   removes. */
+
+interface AddonRow {
+  group?: string; option?: string; price?: string | number;
+  minSelect?: string | number; maxSelect?: string | number;
+}
+
+till.post("/:code/till/menu/addon-groups/import", async (c) => {
+  const input = await c.req.json<{ rows?: AddonRow[]; dryRun?: boolean }>()
+    .catch(() => ({}) as { rows?: AddonRow[]; dryRun?: boolean });
+  const rows = input.rows ?? [];
+  const dryRun = input.dryRun !== false;
+  if (rows.length === 0) return c.json(refuse("There are no rows in that file."), 409);
+  if (rows.length > 2000) {
+    return c.json(refuse(`That file has ${rows.length} rows. Two thousand is the limit.`), 409);
+  }
+
+  const result = await withSession(c.get("subject"), async (client) => {
+    const hotelId = await hotelFor(client, c.req.param("code"));
+    if (!hotelId) return null;
+
+    const { rows: existing } = await client.query<{
+      label: string; min_select: number; max_select: number | null;
+      options: string[];
+    }>(
+      `select g.label, g.min_select, g.max_select,
+              array(select a.label from pos_addons a
+                     where a.group_id = g.id and a.is_active) as options
+         from pos_addon_groups g where g.hotel_id = $1`,
+      [hotelId]);
+    const onMenu = new Map(existing.map((g) => [g.label.toLowerCase(), g]));
+
+    const verdicts: Verdict[] = [];
+    const seen = new Set<string>();
+    /* group, as spelled on the menu or first in the file → its rule and options */
+    const good = new Map<string, {
+      label: string; min?: number; max?: number | null;
+      options: { label: string; price: number }[];
+    }>();
+
+    const whole = (raw: unknown) => {
+      const t = String(raw ?? "").trim();
+      return t === "" ? undefined : /^\d+$/.test(t) ? Number(t) : NaN;
+    };
+
+    rows.forEach((raw, i) => {
+      const line = i + 2;
+      const groupName = String(raw.group ?? "").trim();
+      const option = String(raw.option ?? "").trim();
+      const reject = (detail: string) => verdicts.push({
+        line, name: option || groupName || "(no name)", action: "rejected", detail,
+      });
+
+      if (!groupName && !option) return;
+      if (!groupName) return reject("No group - which list is this option in?");
+      if (!option) return reject("No option name.");
+
+      const rawPrice = String(raw.price ?? "").trim();
+      if (rawPrice === "") {
+        return reject("No price. A blank is not zero - type 0 for a preference "
+          + "such as No onion.");
+      }
+      const price = typedPrice(rawPrice);
+      if (price === null) return reject(`"${rawPrice}" is not a price.`);
+
+      const min = whole(raw.minSelect);
+      const max = whole(raw.maxSelect);
+      if (Number.isNaN(min)) return reject(`"${raw.minSelect}" is not a whole number.`);
+      if (Number.isNaN(max) || max === 0) {
+        return reject(`"${raw.maxSelect}" is not a whole number from 1.`);
+      }
+
+      const gk = groupName.toLowerCase();
+      const before = onMenu.get(gk);
+      const group = good.get(gk) ?? {
+        label: before?.label ?? groupName, options: [],
+      };
+      /* The group's rule, as it would stand after this row: what the menu
+         has, then what earlier rows said, then this row. A row that
+         disagrees with an earlier one is named, not quietly outvoted. */
+      if (min !== undefined && group.min !== undefined && group.min !== min) {
+        return reject(`Choose at least is ${group.min} on an earlier row of `
+          + `${group.label}.`);
+      }
+      if (max !== undefined && group.max !== undefined && group.max !== max) {
+        return reject(`Choose at most is ${group.max} on an earlier row of `
+          + `${group.label}.`);
+      }
+      const effMin = min ?? group.min ?? before?.min_select ?? 0;
+      const effMax = max ?? (group.max === undefined
+        ? before?.max_select ?? null : group.max);
+      if (effMax !== null && effMin > effMax) {
+        return reject(`${group.label}: choose at least ${effMin} is more than `
+          + `choose at most ${effMax}.`);
+      }
+
+      const ok = `${gk}|${option.toLowerCase()}`;
+      if (seen.has(ok)) return reject(`"${option}" appears twice in ${group.label}.`);
+      seen.add(ok);
+
+      const spelled = before?.options.find((o) => o.toLowerCase() === option.toLowerCase());
+      if (min !== undefined) group.min = min;
+      if (max !== undefined) group.max = max;
+      group.options.push({ label: spelled ?? option, price });
+      good.set(gk, group);
+
+      verdicts.push({
+        line,
+        name: `${group.label}: ${spelled ?? option}`,
+        action: spelled ? "update" : "create",
+        detail: spelled ? `price becomes ${price}` : `${price}`,
+      });
+    });
+
+    const tally = {
+      creates: verdicts.filter((v) => v.action === "create").length,
+      updates: verdicts.filter((v) => v.action === "update").length,
+      rejected: verdicts.filter((v) => v.action === "rejected").length,
+    };
+    if (dryRun) return { ok: true as const, dryRun: true, verdicts, ...tally };
+
+    for (const g of good.values()) {
+      /* Unsaid on a new group means optional and no limit - the
+         database's own reading of an empty rule (045). Unsaid on one
+         already on the menu keeps what it has. */
+      const { rows: made } = await client.query<{ id: string }>(
+        `insert into pos_addon_groups (hotel_id, label, min_select, max_select)
+         values ($1, $2, coalesce($3::smallint, 0), $4::smallint)
+         on conflict (hotel_id, label) do update
+           set min_select = coalesce($3::smallint, pos_addon_groups.min_select),
+               max_select = case when $5::boolean then $4::smallint
+                                 else pos_addon_groups.max_select end
+         returning id::text`,
+        [hotelId, g.label, g.min ?? null, g.max ?? null, g.max !== undefined]);
+      for (const [i, o] of g.options.entries()) {
+        await client.query(
+          `insert into pos_addons (hotel_id, group_id, label, price, sort_order)
+           values ($1,$2,$3,$4,$5)
+           on conflict (group_id, label) do update
+             set price = excluded.price, is_active = true`,
+          [hotelId, made[0]!.id, o.label, o.price, i + 1]);
+      }
+    }
+    return { ok: true as const, dryRun: false, verdicts, ...tally };
+  });
+
+  if (!result) return c.json({ error: "No such property." }, 404);
+  return c.json(result, "ok" in result && result.ok ? 200 : 409);
 });
 
 /* ── Rooms a bill can be charged to ───────────────────────────────── */
@@ -1383,6 +2039,61 @@ async function addOneLine(
       return refuse(`${item[0].name} has no variations.`);
     }
 
+    /* ── The sides, checked BEFORE anything is written ────────────
+       They were checked after the dish's line went in, and a refusal
+       returned after a write is committed (root MEMORY 243): the single
+       tap route put the dish on the bill without the sides its guest
+       chose. So every refusal about them comes first. */
+    const addonIds = input.addonIds ?? [];
+    type Chosen = {
+      id: string; label: string; price: string; group_id: string;
+      group_label: string; off_until: string | null;
+    };
+    const chosen: Chosen[] = addonIds.length === 0 ? [] : (await client.query<Chosen>(
+      `select a.id::text, a.label, a.price::text, g.id::text as group_id,
+              g.label as group_label, a.off_until::text
+         from pos_addons a
+         join pos_addon_groups g on g.id = a.group_id
+        where a.id = any($1::uuid[]) and a.hotel_id = $2 and a.is_active
+          and exists (select 1 from pos_item_addon_groups ig
+                       where ig.group_id = a.group_id and ig.item_id = $3)`,
+      [addonIds, hotelId, input.itemId],
+    )).rows;
+
+    /* Named, not silently dropped. An add-on the guest asked for that
+       does not reach the kitchen is a complaint at the table. */
+    if (chosen.length !== addonIds.length) {
+      return refuse(
+        "One of those sides is not offered with this dish, or is off today.");
+    }
+    const offNow = chosen.find(
+      (a) => a.off_until && Date.parse(a.off_until) > Date.now());
+    if (offNow) return refuse(`${offNow.label} is off today.`);
+
+    /* HOW MANY A GUEST MAY CHOOSE (D21-41) — each group the dish offers,
+       counting only groups with an option to choose, as the pad shows. */
+    const { rows: rules } = await client.query<{
+      id: string; label: string; min_select: number; max_select: number | null;
+    }>(
+      `select g.id::text, g.label, g.min_select, g.max_select
+         from pos_item_addon_groups ig
+         join pos_addon_groups g on g.id = ig.group_id
+        where ig.item_id = $1 and g.hotel_id = $2
+          and exists (select 1 from pos_addons a
+                       where a.group_id = g.id and a.is_active)`,
+      [input.itemId, hotelId],
+    );
+    for (const g of rules) {
+      const n = chosen.filter((a) => a.group_id === g.id).length;
+      if (n < g.min_select) {
+        return refuse(`${item[0].name}: choose ${
+          g.min_select === 1 ? "one" : `at least ${g.min_select}`} from ${g.label}.`);
+      }
+      if (g.max_select !== null && n > g.max_select) {
+        return refuse(`${item[0].name}: ${g.label} allows ${g.max_select}.`);
+      }
+    }
+
     /* Price and tax are COPIED onto the line. A menu price that rises
        next month must not silently re-price a bill printed today. */
       /* Increment first. Only if nothing matched does a row get added. */
@@ -1440,32 +2151,8 @@ async function addOneLine(
        of, and a side sold at a different rate to the thing it garnishes
        would split one dish across two folio postings. */
     const parentId = added?.rows[0]?.id;
-    if (parentId && input.addonIds?.length) {
-      const { rows: chosen } = await client.query<{
-        id: string; label: string; price: string; group_label: string;
-        off_until: string | null;
-      }>(
-        `select a.id::text, a.label, a.price::text, g.label as group_label,
-                a.off_until::text
-           from pos_addons a
-           join pos_addon_groups g on g.id = a.group_id
-          where a.id = any($1::uuid[]) and a.hotel_id = $2 and a.is_active
-            and exists (select 1 from pos_item_addon_groups ig
-                         where ig.group_id = a.group_id and ig.item_id = $3)`,
-        [input.addonIds, hotelId, input.itemId],
-      );
-
-      /* Named, not silently dropped. An add-on the guest asked for that
-         does not reach the kitchen is a complaint at the table. */
-      if (chosen.length !== input.addonIds.length) {
-        return refuse(
-          "One of those sides is not offered with this dish, or is off today.");
-      }
-
+    if (parentId) {
       for (const a of chosen) {
-        if (a.off_until && Date.parse(a.off_until) > Date.now()) {
-          return refuse(`${a.label} is off today.`);
-        }
         await client.query(
           `insert into pos_order_lines
              (order_id, hotel_id, addon_id, parent_line_id, name, qty,

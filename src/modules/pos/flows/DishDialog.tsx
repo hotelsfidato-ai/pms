@@ -70,7 +70,12 @@ export function DishDialog({
   if (!item) return null;
 
   const needsVariation = item.variations.length > 0;
-  const ready = !needsVariation || variationId !== null;
+  /* How many a guest may choose from each group (D21-41). The server
+     refuses the same, so this only saves the waiter the round trip. */
+  const countIn = (g: MenuItem["addonGroups"][number]) =>
+    g.addons.filter((a) => chosen.has(a.id)).length;
+  const short = item.addonGroups.find((g) => countIn(g) < g.minSelect);
+  const ready = (!needsVariation || variationId !== null) && !short;
 
   const toggle = (id: string, group: MenuItem["addonGroups"][number]) => {
     setChosen((prev) => {
@@ -81,6 +86,9 @@ export function DishDialog({
          is what a person expects from a row of buttons. */
       if (group.maxSelect === 1) {
         for (const a of group.addons) next.delete(a.id);
+      } else if (group.maxSelect !== null
+                 && group.addons.filter((a) => next.has(a.id)).length >= group.maxSelect) {
+        return prev;                         // full: the tap does nothing
       }
       next.add(id);
       return next;
@@ -153,7 +161,7 @@ export function DishDialog({
                   </button>
                 ))}
               </div>
-              {!ready && (
+              {variationId === null && (
                 <p className="text-sm text-grey-600 mt-2">
                   This dish is sold by variation - it has no price of its own.
                 </p>
@@ -180,23 +188,29 @@ export function DishDialog({
                   <div key={g.id} className="mb-4 last:mb-0">
                     <h4 className="text-2xs font-semibold uppercase tracking-wide text-grey-500 mb-2">
                       {g.label}
-                      {g.minSelect > 0 && (
-                        <span className="text-brand-red ml-1">required</span>
-                      )}
+                      <span className={cn("ml-1 normal-case tracking-normal",
+                        countIn(g) < g.minSelect ? "text-brand-red" : "text-grey-500")}>
+                        {chooseRule(g.minSelect, g.maxSelect)}
+                      </span>
                     </h4>
                     <div className="grid grid-cols-2 gap-2">
                       {shown.map((a) => {
                         const off = a.offUntil
                           && Date.parse(a.offUntil) > Date.now();
+                        /* The group has all it allows: the rest wait
+                           until one is taken back. */
+                        const full = !chosen.has(a.id) && g.maxSelect !== null
+                          && g.maxSelect > 1 && countIn(g) >= g.maxSelect;
                         return (
                           <button
                             key={a.id}
                             type="button"
-                            disabled={Boolean(off)}
+                            disabled={Boolean(off) || full}
                             onClick={() => toggle(a.id, g)}
                             className={cn(
                               "min-h-16 px-3 rounded-md border text-left",
                               "transition-colors duration-200",
+                              full && "opacity-50",
                               off
                                 ? "border-grey-200 bg-grey-50 cursor-not-allowed"
                                 : "cursor-pointer",
@@ -278,6 +292,14 @@ export function DishDialog({
       </DialogContent>
     </Dialog>
   );
+}
+
+/** "choose 1", "choose up to 2", "choose 1 to 3" - the group's rule as a
+    waiter reads it. Nothing when any number, including none, will do. */
+export function chooseRule(min: number, max: number | null): string {
+  if (max === null) return min > 0 ? `choose at least ${min}` : "";
+  if (min === max) return `choose ${min}`;
+  return min > 0 ? `choose ${min} to ${max}` : `choose up to ${max}`;
 }
 
 /* The list from the screenshots. A picked note prints identically every

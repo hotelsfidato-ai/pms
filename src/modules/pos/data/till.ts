@@ -766,6 +766,80 @@ export async function putAddonBack(
   return simplePost(`/api/hotels/${hotelId}/till/addons/${addonId}/on`);
 }
 
+/* ── Variations and add-on groups, as the kitchen manager keeps them ─
+   The owner's D21-40 to D21-43 (21 September). Every price is the TEXT a
+   person typed: the server refuses a blank rather than reading it as
+   zero, and a typed "0" is a real answer ("No onion", D21-42). */
+
+type Done = Promise<{ ok: boolean; reason?: string }>;
+const menuPath = (hotelId: string, rest: string) =>
+  `/api/hotels/${hotelId}/till/menu/${rest}`;
+
+export function addVariation(
+  hotelId: string, itemId: string, label: string, price: string,
+): Done {
+  return simplePost(menuPath(hotelId, `items/${itemId}/variations`), { label, price });
+}
+
+export function editVariation(
+  hotelId: string, id: string, label: string, price: string,
+): Done {
+  return simplePost(menuPath(hotelId, `variations/${id}`), { label, price }, "PATCH");
+}
+
+/** `dishPrice` is needed - and refused without - when this is the dish's
+    last variation: it is sold at one price again (the owner, 21 Sep). */
+export function removeVariation(
+  hotelId: string, id: string, dishPrice?: string,
+): Done {
+  return simplePost(menuPath(hotelId, `variations/${id}/remove`),
+    dishPrice === undefined ? undefined : { dishPrice });
+}
+
+/** Every group the hotel has, with the dishes that offer it — including
+    a group on no dish yet, which the menu read cannot show. */
+export interface AddonGroupSetup extends AddonGroup {
+  itemIds: string[];
+}
+
+export async function listAddonGroups(hotelId: string): Promise<AddonGroupSetup[]> {
+  if (!hotelId) return [];
+  const body = await api<{ groups: AddonGroupSetup[] }>(
+    menuPath(hotelId, "addon-groups"));
+  return body.groups;
+}
+
+export interface GroupRule { label: string; minSelect: number; maxSelect: number | null }
+
+export function addAddonGroup(hotelId: string, rule: GroupRule): Done {
+  return simplePost(menuPath(hotelId, "addon-groups"), rule);
+}
+
+export function editAddonGroup(hotelId: string, id: string, rule: GroupRule): Done {
+  return simplePost(menuPath(hotelId, `addon-groups/${id}`), rule, "PATCH");
+}
+
+/** The whole list of dishes that offer the group, replacing the last. */
+export function setGroupDishes(hotelId: string, id: string, itemIds: string[]): Done {
+  return simplePost(menuPath(hotelId, `addon-groups/${id}/dishes`), { itemIds });
+}
+
+export function addAddonOption(
+  hotelId: string, groupId: string, label: string, price: string,
+): Done {
+  return simplePost(menuPath(hotelId, `addon-groups/${groupId}/addons`), { label, price });
+}
+
+export function editAddonOption(
+  hotelId: string, id: string, label: string, price: string,
+): Done {
+  return simplePost(menuPath(hotelId, `addons/${id}`), { label, price }, "PATCH");
+}
+
+export function removeAddonOption(hotelId: string, id: string): Done {
+  return simplePost(menuPath(hotelId, `addons/${id}/remove`));
+}
+
 export async function setOutletClosed(
   hotelId: string, outlet: string,
   closed: boolean, until?: OffFor, reason?: string,
@@ -778,11 +852,11 @@ export async function setOutletClosed(
 /** A refusal a person can act on, or nothing. The shape used by every
     write on this page that has no order to hand back. */
 async function simplePost(
-  path: string, body?: unknown,
+  path: string, body?: unknown, method = "POST",
 ): Promise<{ ok: boolean; reason?: string }> {
   try {
     await api(path, {
-      method: "POST",
+      method,
       ...(body ? { body: JSON.stringify(body) } : {}),
     });
     return { ok: true };
@@ -1151,14 +1225,27 @@ async function till(
    chosen is how somebody replaces a card they meant to look at first.
    ══════════════════════════════════════════════════════════════════ */
 
-export async function importMenu(
-  hotelId: string,
-  rows: Record<string, string>[],
-  dryRun: boolean,
+export function importMenu(
+  hotelId: string, rows: Record<string, string>[], dryRun: boolean,
+): Promise<ImportReport> {
+  return importFile(`/api/hotels/${hotelId}/till/menu/import`, rows, dryRun);
+}
+
+/** The add-ons file (D21-43): imported before the menu file that names
+    its groups. */
+export function importAddons(
+  hotelId: string, rows: Record<string, string>[], dryRun: boolean,
+): Promise<ImportReport> {
+  return importFile(
+    `/api/hotels/${hotelId}/till/menu/addon-groups/import`, rows, dryRun);
+}
+
+async function importFile(
+  path: string, rows: Record<string, string>[], dryRun: boolean,
 ): Promise<ImportReport> {
   try {
     return await api<ImportReport>(
-      `/api/hotels/${hotelId}/till/menu/import`,
+      path,
       { method: "POST", body: JSON.stringify({ rows, dryRun }) },
     );
   } catch (error) {

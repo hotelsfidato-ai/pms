@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useParams } from "react-router";
-import { UtensilsCrossed, Plus, Upload, TicketPercent } from "lucide-react";
+import { UtensilsCrossed, Plus, Upload, TicketPercent, ListPlus } from "lucide-react";
 import { cn } from "@/lib/cn";
 import { money, moneyPrecise } from "@/lib/format";
 import { useUi } from "@/lib/ui";
@@ -9,10 +9,12 @@ import {
   Page, PageHeader, Card, CardBody, Button, StatusPill, Skeleton, toast,
   Dialog, DialogContent, Field, fieldProps, Input,
 } from "@/components/ui";
-import { getMenu, addCategory, addItem, toggleItem, takeItemOff, putItemBack, takeAddonOff, putAddonBack, importMenu, setItemPrepMinutes, setCategoryPrepMinutes, setItemCourse, setCategoryCourse, listPromotions, addPromotion, amendPromotion, type OffFor, type Promotion, type MenuCategory } from "@/modules/pos/data/till";
+import { getMenu, addCategory, addItem, toggleItem, takeItemOff, putItemBack, takeAddonOff, putAddonBack, importMenu, importAddons, setItemPrepMinutes, setCategoryPrepMinutes, setItemCourse, setCategoryCourse, listPromotions, addPromotion, amendPromotion, addVariation, editVariation, removeVariation, listAddonGroups, addAddonGroup, editAddonGroup, setGroupDishes, addAddonOption, editAddonOption, removeAddonOption, type OffFor, type Promotion, type MenuCategory, type MenuItem, type MenuVariation, type Addon, type AddonGroupSetup } from "@/modules/pos/data/till";
 import { ReadFailed, ReadStale } from "@/components/ui";
 import { ImportDialog } from "@/components/flows/ImportDialog";
 import { MENU_SPEC } from "@/lib/importSpec";
+import { ADDON_SPEC } from "@/modules/pos/lib/addonSpec";
+import { chooseRule } from "@/modules/pos/flows/DishDialog";
 
 /* ══════════════════════════════════════════════════════════════════
    THE MENU
@@ -43,7 +45,7 @@ export default function MenuPage() {
 
   const [category, setCategory] = useState("");
   const [busy, setBusy] = useState(false);
-  const [importing, setImporting] = useState(false);
+  const [importing, setImporting] = useState<"menu" | "addons" | null>(null);
 
   const menu = useQuery({
     queryKey: ["till-menu", hotelId],
@@ -52,6 +54,7 @@ export default function MenuPage() {
 
   const refresh = () => {
     void qc.invalidateQueries({ queryKey: ["till-menu"] });
+    void qc.invalidateQueries({ queryKey: ["till-addon-groups"] });
   };
 
   const createCategory = async () => {
@@ -96,10 +99,18 @@ export default function MenuPage() {
              Typing that into a dialog one at a time is not something
              anybody will do, so the file route sits beside the manual
              one rather than hidden behind it. */
-          <Button variant="secondary" className="h-11"
-                  onClick={() => setImporting(true)}>
-            <Upload className="size-4" /> Import from a file
-          </Button>
+          /* Two files, the owner's D21-43: the add-ons first, because the
+             menu file names their groups. Left to right in that order. */
+          <>
+            <Button variant="secondary" className="h-11"
+                    onClick={() => setImporting("addons")}>
+              <Upload className="size-4" /> Import add-ons
+            </Button>
+            <Button variant="secondary" className="h-11"
+                    onClick={() => setImporting("menu")}>
+              <Upload className="size-4" /> Import the menu
+            </Button>
+          </>
         }
       />
 
@@ -193,6 +204,10 @@ export default function MenuPage() {
           ))}
         </div>
       )}
+      {menu.data !== undefined && (
+        <AddonGroups hotelId={hotelId} categories={cats} onChanged={refresh} />
+      )}
+
       {/* ── Promotions ────────────────────────────────────────────
           Beside the dishes and the taxes, because it is the same
           question: what does this restaurant sell and on what terms.
@@ -202,10 +217,13 @@ export default function MenuPage() {
 
       {importing && (
         <ImportDialog
-          spec={MENU_SPEC}
-          load={(rows, dry) => importMenu(hotelId, rows, dry)}
+          key={importing}
+          spec={importing === "menu" ? MENU_SPEC : ADDON_SPEC}
+          load={(rows, dry) => importing === "menu"
+            ? importMenu(hotelId, rows, dry)
+            : importAddons(hotelId, rows, dry)}
           open
-          onOpenChange={(o) => { if (!o) setImporting(false); }}
+          onOpenChange={(o) => { if (!o) setImporting(null); }}
           onImported={refresh}
         />
       )}
@@ -642,11 +660,32 @@ function CategoryCard({ category, hotelId, dishesByGroup, onChanged }: {
   const [price, setPrice] = useState("");
   const [tax, setTax] = useState("5");
   const [busy, setBusy] = useState(false);
+  /* The variation dialog: adding one to a dish, or changing one. */
+  const [entry, setEntry] =
+    useState<{ item: MenuItem; variation?: MenuVariation } | null>(null);
+  /* Removing a dish's LAST variation: it is sold at one price again, and
+     that price is typed now (the owner, 21 September). */
+  const [lastOf, setLastOf] =
+    useState<{ item: MenuItem; variation: MenuVariation } | null>(null);
+
+  const remove = async (item: MenuItem, variation: MenuVariation) => {
+    if (item.variations.length === 1) return setLastOf({ item, variation });
+    const res = await removeVariation(hotelId, variation.id);
+    if (!res.ok) return toast.error("Not removed", res.reason);
+    toast.success(`${variation.label} is off ${item.name}`);
+    onChanged();
+  };
 
   const add = async () => {
     const trimmed = name.trim();
     if (!trimmed) return;
 
+    /* POS-14: `Number("")` is 0, so an empty price box added the dish at
+       ₹0.00. A blank is not zero; a typed 0 still is (the owner, 21 Sep). */
+    if (price.trim() === "") {
+      return toast.error("Not added",
+        "Type a price. A blank is not zero - type 0 for something that is free.");
+    }
     const rupees = Number(price);
     if (!Number.isFinite(rupees) || rupees < 0) {
       return toast.error("Not added", "A price must be zero or more.");
@@ -723,8 +762,12 @@ function CategoryCard({ category, hotelId, dishesByGroup, onChanged }: {
               <span className="text-2xs text-grey-500 tabular shrink-0">
                 {item.taxRate}%
               </span>
-              <span className="tabular text-base text-ink-900 shrink-0 w-20 text-right">
-                {moneyPrecise(item.price)}
+              <span className="tabular text-base text-ink-900 shrink-0 w-20 text-right"
+                    title={item.variations.length > 0
+                      ? "Sold by variation - each has its own price" : undefined}>
+                {/* A dish with variations has no price of its own (045): a
+                    dash, never the column nobody has looked at since. */}
+                {item.variations.length > 0 ? "-" : moneyPrecise(item.price)}
               </span>
               {/* POS-9: THE CONTROLS GO UNDER THE NAME ON A PHONE. On one line
                   at 375px the row needed 465px of 302 and the dish name was
@@ -764,6 +807,11 @@ function CategoryCard({ category, hotelId, dishesByGroup, onChanged }: {
                     "Take off the card" is a menu decision with none — and
                     a dish taken off the card is still off tomorrow, which
                     is exactly what nobody wants from the first one. */}
+                <Button variant="ghost" size="sm"
+                        aria-label={`Add variation to ${item.name}`}
+                        onClick={() => setEntry({ item })}>
+                  <ListPlus className="size-4" /> Add variation
+                </Button>
                 <OffControl
                   name={item.name}
                   offUntil={item.offUntil}
@@ -785,6 +833,41 @@ function CategoryCard({ category, hotelId, dishesByGroup, onChanged }: {
                 </Button>
               </div>
             </div>
+
+            {/* ── Its variations (D21-40) ──────────────────────────────
+                Each carries its own price; the waiter must pick one. */}
+            {item.variations.length > 0 && (
+              <div className="mt-2 ml-4 pl-3 border-l border-grey-200">
+                <p className="text-2xs uppercase tracking-wide text-grey-500 pt-1">
+                  Variations
+                </p>
+                <ul>
+                  {item.variations.map((v) => (
+                    <li key={v.id}
+                        className="flex flex-wrap items-center gap-x-3 min-h-9 py-0.5">
+                      <span className="flex-1 min-w-28 text-base text-ink-900 truncate">
+                        {v.label}
+                      </span>
+                      <span className="tabular text-base text-ink-900 shrink-0 w-20 text-right">
+                        {moneyPrecise(v.price)}
+                      </span>
+                      <div className="ml-auto flex gap-1">
+                        <Button variant="ghost" size="sm"
+                                aria-label={`Change ${item.name} ${v.label}`}
+                                onClick={() => setEntry({ item, variation: v })}>
+                          Change
+                        </Button>
+                        <Button variant="ghost" size="sm"
+                                aria-label={`Remove ${item.name} ${v.label}`}
+                                onClick={() => void remove(item, v)}>
+                          Remove
+                        </Button>
+                      </div>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            )}
 
             {/* ── Its add-ons ──────────────────────────────────────────
                 Under the dish, because that is where a kitchen manager
@@ -868,7 +951,452 @@ function CategoryCard({ category, hotelId, dishesByGroup, onChanged }: {
           </Button>
         </div>
       </CardBody>
+
+      {entry && (
+        <EntryDialog
+          title={entry.variation
+            ? `Change ${entry.item.name} - ${entry.variation.label}`
+            : `Add a variation to ${entry.item.name}`}
+          description={entry.item.variations.length === 0 && !entry.variation
+            ? "Half, Full, 250 ml. Once a dish has variations, each carries "
+              + "its own price and the waiter must choose one."
+            : "Each variation carries its own price."}
+          name={{ label: "Variation", initial: entry.variation?.label ?? "",
+                  placeholder: "Half" }}
+          initialPrice={entry.variation ? String(entry.variation.price) : ""}
+          onSave={async (label, typed) => {
+            const res = entry.variation
+              ? await editVariation(hotelId, entry.variation.id, label, typed)
+              : await addVariation(hotelId, entry.item.id, label, typed);
+            if (res.ok) {
+              toast.success(entry.variation ? `${label} saved`
+                : `${label} added to ${entry.item.name}`);
+              onChanged();
+            }
+            return res;
+          }}
+          onClose={() => setEntry(null)}
+        />
+      )}
+      {lastOf && (
+        <EntryDialog
+          title={`Remove ${lastOf.variation.label} from ${lastOf.item.name}`}
+          description={`It is the last variation, so ${lastOf.item.name} will `
+            + "be sold at one price again. What price?"}
+          priceLabel={`Price of ${lastOf.item.name}`}
+          confirm="Remove"
+          onSave={async (_label, typed) => {
+            const res = await removeVariation(hotelId, lastOf.variation.id, typed);
+            if (res.ok) {
+              toast.success(`${lastOf.item.name} is one price again`);
+              onChanged();
+            }
+            return res;
+          }}
+          onClose={() => setLastOf(null)}
+        />
+      )}
     </Card>
+  );
+}
+
+/* ══════════════════════════════════════════════════════════════════
+   A NAME AND A PRICE — a variation, an add-on option, or a dish's own
+   price when its last variation goes.
+
+   THE PRICE IS TYPED OR NOTHING IS SAVED. Save waits for a figure, and
+   the server refuses a blank as well: "0" typed is a real answer - a
+   Preference such as No onion costs nothing (D21-42) - and a blank is
+   not zero (HANDOVER § 5).
+   ══════════════════════════════════════════════════════════════════ */
+function EntryDialog({
+  title, description, name, priceLabel = "Price", initialPrice = "",
+  confirm = "Save", onSave, onClose,
+}: {
+  title: string;
+  description: string;
+  /** Asked for when given; a dish's own price needs no name. */
+  name?: { label: string; initial: string; placeholder: string };
+  priceLabel?: string;
+  initialPrice?: string;
+  confirm?: string;
+  onSave: (label: string, price: string) => Promise<{ ok: boolean; reason?: string }>;
+  onClose: () => void;
+}) {
+  const [label, setLabel] = useState(name?.initial ?? "");
+  const [price, setPrice] = useState(initialPrice);
+  const [busy, setBusy] = useState(false);
+
+  const typed = price.trim();
+  const rupees = Number(typed.replace(/[,₹\s]/g, ""));
+  const bad = typed !== "" && (!Number.isFinite(rupees) || rupees < 0);
+  const ready = (!name || label.trim() !== "") && typed !== "" && !bad;
+
+  const submit = async () => {
+    setBusy(true);
+    const res = await onSave(label.trim(), typed);
+    setBusy(false);
+    if (!res.ok) return toast.error("Not saved", res.reason);
+    onClose();
+  };
+
+  return (
+    <Dialog open onOpenChange={(o) => !o && onClose()}>
+      <DialogContent
+        title={title}
+        description={description}
+        size="sm"
+        footer={
+          <>
+            <Button variant="secondary" size="lg" onClick={onClose}>
+              Cancel
+            </Button>
+            <Button variant="primary" size="lg" loading={busy} disabled={!ready}
+                    onClick={() => void submit()}>
+              {confirm}
+            </Button>
+          </>
+        }
+      >
+        <div className="space-y-4">
+          {name && (
+            <Field label={name.label} required>
+              {(f) => (
+                <Input {...fieldProps(f)} value={label} autoFocus
+                       placeholder={name.placeholder}
+                       onChange={(e) => setLabel(e.target.value)} />
+              )}
+            </Field>
+          )}
+          <Field label={priceLabel} required
+                 hint="Rupees. Type 0 for something that is free - a blank is not zero."
+                 error={bad ? "A price is a number, 0 or more." : undefined}>
+            {(f) => (
+              <Input {...fieldProps(f)} value={price} inputMode="decimal"
+                     autoFocus={!name} className="tabular"
+                     onChange={(e) => setPrice(e.target.value)} />
+            )}
+          </Field>
+        </div>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
+/* ══════════════════════════════════════════════════════════════════
+   ADD-ON GROUPS — made once, offered on many dishes (D21-41)
+
+   "Choice of bread" is one group on every curry, so a price changed here
+   changes on all of them: it is one row. A group says how many a guest
+   may choose, and the order pad and the server both hold the waiter to
+   it. "Preferences" - No onion, Less spicy, Jain - is a group like any
+   other whose options somebody priced at 0 (D21-42); it prints on the
+   kitchen slip under the dish.
+
+   Listed from its own read, because the menu shows a group only under
+   a dish that offers it, and a group just made is on none yet.
+   ══════════════════════════════════════════════════════════════════ */
+function AddonGroups({ hotelId, categories, onChanged }: {
+  hotelId: string;
+  categories: MenuCategory[];
+  onChanged: () => void;
+}) {
+  const q = useQuery({
+    queryKey: ["till-addon-groups", hotelId],
+    queryFn: () => listAddonGroups(hotelId),
+  });
+  const [editing, setEditing] = useState<AddonGroupSetup | "new" | null>(null);
+  const [dishesFor, setDishesFor] = useState<AddonGroupSetup | null>(null);
+  const [option, setOption] =
+    useState<{ group: AddonGroupSetup; addon?: Addon } | null>(null);
+
+  const dishName = new Map(
+    categories.flatMap((c) => c.items).map((i) => [i.id, i.name]));
+  const groups = q.data ?? [];
+
+  const remove = async (group: AddonGroupSetup, addon: Addon) => {
+    const res = await removeAddonOption(hotelId, addon.id);
+    if (!res.ok) return toast.error("Not removed", res.reason);
+    toast.success(`${addon.label} is off ${group.label}`);
+    onChanged();
+  };
+
+  return (
+    <section className="mt-5">
+      <div className="flex items-center justify-between mb-2.5">
+        <h2 className="text-md font-semibold text-ink-900">Add-on groups</h2>
+        <Button variant="secondary" className="h-11"
+                onClick={() => setEditing("new")}>
+          <Plus className="size-4" /> Add an add-on group
+        </Button>
+      </div>
+
+      {q.error && q.data !== undefined && (
+        <ReadStale className="mb-3" error={q.error} loadedAt={q.dataUpdatedAt}
+                   onRetry={() => void q.refetch()} />
+      )}
+
+      {q.data === undefined ? (
+        q.error ? (
+          <Card>
+            <ReadFailed compact error={q.error} what="the add-on groups"
+                        onRetry={() => void q.refetch()} />
+          </Card>
+        ) : (
+          <Skeleton className="h-24 w-full" />
+        )
+      ) : groups.length === 0 ? (
+        <Card>
+          <CardBody>
+            <p className="text-sm text-grey-500">
+              None yet. A group is a list a dish offers - Choice of bread,
+              Extra toppings, or Preferences such as No onion at 0 - made once
+              and offered on as many dishes as you like.
+            </p>
+          </CardBody>
+        </Card>
+      ) : (
+        <div className="space-y-3">
+          {groups.map((g) => {
+            const rule = chooseRule(g.minSelect, g.maxSelect);
+            const on = g.itemIds.map((id) => dishName.get(id)).filter(Boolean);
+            return (
+              <Card key={g.id}>
+                <div className="flex flex-wrap items-center gap-x-3 gap-y-1 px-4 pt-3.5">
+                  <p className="flex-1 min-w-32 text-base font-medium text-ink-900">
+                    {g.label}
+                    <span className="ml-2 text-sm font-normal text-grey-500">
+                      {rule ? rule[0]!.toUpperCase() + rule.slice(1) : "Any number, or none"}
+                    </span>
+                  </p>
+                  <div className="flex flex-wrap gap-1 ml-auto">
+                    <Button variant="ghost" size="sm"
+                            aria-label={`Edit ${g.label}`}
+                            onClick={() => setEditing(g)}>
+                      Edit
+                    </Button>
+                    <Button variant="ghost" size="sm"
+                            aria-label={`Dishes offering ${g.label}`}
+                            onClick={() => setDishesFor(g)}>
+                      Dishes
+                    </Button>
+                  </div>
+                </div>
+                <p className="px-4 text-sm text-grey-600">
+                  {on.length > 0 ? `On ${on.join(", ")}` : "Not on any dish yet."}
+                </p>
+                <ul className="divide-y divide-grey-100 mt-1">
+                  {g.addons.map((a) => (
+                    <li key={a.id}
+                        className="flex flex-wrap items-center gap-x-3 px-4 min-h-11 py-0.5">
+                      <span className="flex-1 min-w-28 text-base text-ink-900 truncate">
+                        {a.label}
+                      </span>
+                      <span className="tabular text-base text-ink-900 shrink-0 w-20 text-right">
+                        {moneyPrecise(a.price)}
+                      </span>
+                      <div className="ml-auto flex gap-1">
+                        <Button variant="ghost" size="sm"
+                                aria-label={`Change ${g.label} ${a.label}`}
+                                onClick={() => setOption({ group: g, addon: a })}>
+                          Change
+                        </Button>
+                        <Button variant="ghost" size="sm"
+                                aria-label={`Remove ${g.label} ${a.label}`}
+                                onClick={() => void remove(g, a)}>
+                          Remove
+                        </Button>
+                      </div>
+                    </li>
+                  ))}
+                </ul>
+                <CardBody className="border-t border-grey-100">
+                  <Button variant="secondary" size="sm"
+                          onClick={() => setOption({ group: g })}>
+                    <Plus className="size-4" /> Add option
+                  </Button>
+                </CardBody>
+              </Card>
+            );
+          })}
+        </div>
+      )}
+
+      {editing && (
+        <GroupDialog hotelId={hotelId}
+                     group={editing === "new" ? undefined : editing}
+                     onClose={() => setEditing(null)} onSaved={onChanged} />
+      )}
+      {dishesFor && (
+        <DishesDialog hotelId={hotelId} group={dishesFor} categories={categories}
+                      onClose={() => setDishesFor(null)} onSaved={onChanged} />
+      )}
+      {option && (
+        <EntryDialog
+          title={option.addon
+            ? `Change ${option.group.label} - ${option.addon.label}`
+            : `Add an option to ${option.group.label}`}
+          description="A price changed here changes on every dish that offers the group."
+          name={{ label: "Option", initial: option.addon?.label ?? "",
+                  placeholder: "Butter naan" }}
+          initialPrice={option.addon ? String(option.addon.price) : ""}
+          onSave={async (label, typed) => {
+            const res = option.addon
+              ? await editAddonOption(hotelId, option.addon.id, label, typed)
+              : await addAddonOption(hotelId, option.group.id, label, typed);
+            if (res.ok) {
+              toast.success(option.addon ? `${label} saved`
+                : `${label} added to ${option.group.label}`);
+              onChanged();
+            }
+            return res;
+          }}
+          onClose={() => setOption(null)}
+        />
+      )}
+    </section>
+  );
+}
+
+function GroupDialog({ hotelId, group, onClose, onSaved }: {
+  hotelId: string; group?: AddonGroupSetup;
+  onClose: () => void; onSaved: () => void;
+}) {
+  const [label, setLabel] = useState(group?.label ?? "");
+  const [min, setMin] = useState(String(group?.minSelect ?? 0));
+  const [max, setMax] = useState(group?.maxSelect == null ? "" : String(group.maxSelect));
+  const [busy, setBusy] = useState(false);
+
+  const minBad = !/^\d+$/.test(min.trim());
+  const maxN = max.trim() === "" ? null : Number(max.trim());
+  const maxBad = maxN !== null && (!/^\d+$/.test(max.trim()) || maxN < 1);
+  const crossed = !minBad && !maxBad && maxN !== null && Number(min) > maxN;
+  const ready = label.trim() !== "" && !minBad && !maxBad && !crossed;
+
+  const submit = async () => {
+    setBusy(true);
+    const rule = { label: label.trim(), minSelect: Number(min), maxSelect: maxN };
+    const res = group
+      ? await editAddonGroup(hotelId, group.id, rule)
+      : await addAddonGroup(hotelId, rule);
+    setBusy(false);
+    if (!res.ok) return toast.error("Not saved", res.reason);
+    toast.success(group ? `${rule.label} saved` : `${rule.label} added`);
+    onSaved();
+    onClose();
+  };
+
+  return (
+    <Dialog open onOpenChange={(o) => !o && onClose()}>
+      <DialogContent
+        title={group ? `Edit ${group.label}` : "Add an add-on group"}
+        description="A list a dish offers, and how many of it a guest may choose."
+        size="sm"
+        footer={
+          <>
+            <Button variant="secondary" size="lg" onClick={onClose}>
+              Cancel
+            </Button>
+            <Button variant="primary" size="lg" loading={busy} disabled={!ready}
+                    onClick={() => void submit()}>
+              Save
+            </Button>
+          </>
+        }
+      >
+        <div className="space-y-4">
+          <Field label="Name" required hint="Printed on the kitchen slip beside each option.">
+            {(f) => (
+              <Input {...fieldProps(f)} value={label} autoFocus
+                     placeholder="Choice of bread"
+                     onChange={(e) => setLabel(e.target.value)} />
+            )}
+          </Field>
+          <div className="grid grid-cols-2 gap-3">
+            <Field label="Choose at least" required
+                   hint="0 if the guest may take none."
+                   error={minBad ? "A whole number." : undefined}>
+              {(f) => (
+                <Input {...fieldProps(f)} value={min} inputMode="numeric"
+                       onChange={(e) => setMin(e.target.value)} />
+              )}
+            </Field>
+            <Field label="Choose at most"
+                   hint="Empty for no limit."
+                   error={maxBad ? "A whole number from 1."
+                     : crossed ? "Not fewer than at least." : undefined}>
+              {(f) => (
+                <Input {...fieldProps(f)} value={max} inputMode="numeric"
+                       onChange={(e) => setMax(e.target.value)} />
+              )}
+            </Field>
+          </div>
+        </div>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
+function DishesDialog({ hotelId, group, categories, onClose, onSaved }: {
+  hotelId: string; group: AddonGroupSetup; categories: MenuCategory[];
+  onClose: () => void; onSaved: () => void;
+}) {
+  const [picked, setPicked] = useState(() => new Set(group.itemIds));
+  const [busy, setBusy] = useState(false);
+
+  const flip = (id: string) => setPicked((prev) => {
+    const next = new Set(prev);
+    if (next.has(id)) next.delete(id); else next.add(id);
+    return next;
+  });
+
+  const submit = async () => {
+    setBusy(true);
+    const res = await setGroupDishes(hotelId, group.id, [...picked]);
+    setBusy(false);
+    if (!res.ok) return toast.error("Not saved", res.reason);
+    toast.success(`${group.label} is on ${picked.size} dish${picked.size === 1 ? "" : "es"}`);
+    onSaved();
+    onClose();
+  };
+
+  return (
+    <Dialog open onOpenChange={(o) => !o && onClose()}>
+      <DialogContent
+        title={`Dishes offering ${group.label}`}
+        description="Tick every dish a waiter should be offered it with."
+        footer={
+          <>
+            <Button variant="secondary" size="lg" onClick={onClose}>
+              Cancel
+            </Button>
+            <Button variant="primary" size="lg" loading={busy}
+                    onClick={() => void submit()}>
+              Save
+            </Button>
+          </>
+        }
+      >
+        <div className="space-y-4">
+          {categories.filter((c) => c.items.length > 0).map((c) => (
+            <fieldset key={c.id}>
+              <legend className="text-2xs uppercase tracking-wide text-grey-500 mb-1">
+                {c.name}
+              </legend>
+              {c.items.map((item) => (
+                <label key={item.id}
+                       className="flex items-center gap-3 min-h-11 cursor-pointer">
+                  <input type="checkbox" className="size-4"
+                         checked={picked.has(item.id)}
+                         onChange={() => flip(item.id)} />
+                  <span className="text-base text-ink-900">{item.name}</span>
+                </label>
+              ))}
+            </fieldset>
+          ))}
+        </div>
+      </DialogContent>
+    </Dialog>
   );
 }
 

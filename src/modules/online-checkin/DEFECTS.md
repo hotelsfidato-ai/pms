@@ -43,6 +43,72 @@ by trying.
 **The rule** — A screen that prints "the server's own words" has to be opened
 against the server that says them. A stub proves the shape you thought of.
 
+**21 September** — the root fix landed in `src/lib/api.ts` (the master: it
+reads `error`, then `reason`, then `message`), and this workaround is gone.
+
+### OCI-2 · Every six-digit code would have been sent to "…0011" — nobody
+
+**Found** — 21 September, reading the send call while making room cards work,
+not by a test.
+
+`guest_code_issue` (114) returned the code and `sent_to` — the MASKED number,
+"…0011", kept for the record. The door passed `sent_to` to `send()` as the
+recipient. So the day WhatsApp was connected, every guest's code would have
+gone to "…0011", which is nobody, and the whole half of the page behind the
+code would have been unreachable with no error anywhere. The test that covered
+sending used a stand-in receiver that answered "ok" and never looked at what
+it was sent.
+
+**What was done** — migration 121's `guest_code_make` also returns the
+booking's whole number, which the door hands to `send()` and to nothing else.
+`guestDoorBehindTheCode.test.ts` keeps what the stand-in receives and checks
+`to.phone` is the whole number; with the masked one put back, it failed. Seen
+live the same day: the stand-in on this laptop received the code addressed to
+the booking's own number.
+
+**The rule** — A stand-in that does not read what it is sent proves only that
+something was sent.
+
+### OCI-3 · A line that was down told the guest their link was dead
+
+**Found** — 21 September, by opening a booking's link while this copy's API
+was still starting.
+
+Every failure read "This link is not usable. Ask the desk for a new one." —
+including a request that never reached the server. A guest on hotel wifi with
+a perfectly good link would have been sent to the desk for a new one.
+
+**What was done** — a request that never arrived (`ApiError` status 0) reads
+"We could not reach the hotel", with Try again. Nothing reached the door, so
+this tells a stranger nothing about the link. Refusals still read the one
+sentence. Guarded in `onlineCheckin.test.tsx`; seen to fail with the fault put
+back.
+
+**The rule** — "Refused" and "not reached" are different answers; only the
+first must be kept uniform.
+
+### OCI-4 · The unlock was blocked by the browser the moment the code was right
+
+**Found** — 21 September, by answering a real code on the page in a browser.
+Every test passed.
+
+The unlock travelled in its own header, `x-guest-unlock`. The API's CORS list
+(`api/src/server.ts`, the master's) does not name it, so the browser's
+preflight refused it and the first call behind the code never left the phone —
+"We could not reach the hotel", straight after "Verified". The server tests
+call the app in-process and never meet a preflight; the screen tests stub
+`api()`. `server.ts` has a comment warning of exactly this trap, from two
+earlier headers.
+
+**What was done** — the unlock travels as `Authorization: Guest <unlock>`,
+which the list already allows, access logs do not record, and the staff gate
+ignores on `/api/guest`. A clerk's `Bearer` token on the same browser is not a
+`Guest` one and unlocks nothing. A test asks the preflight the question a
+browser asks.
+
+**The rule** — A new request header is a question for the CORS list, and only
+a browser asks it. Open the screen.
+
 ---
 
 ## Adding one

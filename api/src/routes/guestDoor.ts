@@ -1,4 +1,4 @@
-import { Hono } from "hono";
+import { Hono, type Context } from "hono";
 import { createHash, randomBytes, timingSafeEqual } from "node:crypto";
 import { withSession } from "../auth.ts";
 import { pool } from "../db.ts";
@@ -33,6 +33,24 @@ import { canSend, send } from "../sending.ts";
      "Wrong number" tells a stranger which number is right.
    · Every refusal takes the same shape, so what is refused cannot be told
      apart from what does not exist.
+
+   BEHIND THE CODE (21 September, D21-6 to D21-19, migration 121):
+
+   GET  /api/guest/:token/details    what the guest has sent, and its state
+   POST /api/guest/:token/details    their ID and address - a SUBMISSION
+   GET  /api/guest/:token/requests   their spa / laundry requests
+   POST /api/guest/:token/requests   ask for one, where the hotel offers it
+
+   · THE CODE UNLOCKS THIS PHONE, NOT THE LINK (D21-6). `verify` hands back an
+     unlock, once; the page sends it as `Authorization: Guest …` and it is hashed here
+     like the token. Every room behind the code takes BOTH hashes, and asks
+     `app.guest_unlocked` in the database every time. The link alone, however
+     many times the code was answered on it, opens nothing behind it.
+   · A ROOM CARD NAMES A ROOM (D21-7). Same address, `/g/:token`; the database
+     resolves it to whoever is checked in there now. Before the code it shows
+     the hotel and the room number and nothing else (D21-14).
+   · NOTHING THE GUEST TYPES REACHES guest_documents (D21-8). It waits for a
+     clerk, who confirms it through the staff routes at the foot of this file.
    ══════════════════════════════════════════════════════════════════ */
 
 export const guestDoor = new Hono();
@@ -98,10 +116,45 @@ export function forgetKnocksForTests(): void {
 }
 
 interface OpenRow extends Record<string, unknown> {
-  link_id: string; hotel_id: string; hotel_code: string; hotel_name: string;
-  reservation_id: string; reference: string; guest_name: string;
-  check_in: string; check_out: string; status: string;
-  verified: boolean; phone_hint: string | null;
+  link_id: string; kind: "booking" | "room";
+  hotel_id: string; hotel_code: string; hotel_name: string;
+  room_number: string | null; occupied: boolean;
+  /* Null on a room card until THIS phone has answered the code (D21-14). */
+  reservation_id: string | null; reference: string | null; guest_name: string | null;
+  check_in: string | null; check_out: string | null; status: string | null;
+  verified: boolean; phone_hint: string | null; offers: string[] | null;
+}
+
+/** The unlock this phone holds, hashed - or null, which unlocks nothing.
+
+    ⚠ IN `Authorization: Guest <unlock>`, NOT A HEADER OF ITS OWN (OCI-4).
+    It was `x-guest-unlock` until the page was opened in a browser on 21
+    September: the API's CORS list (server.ts, the master's) does not name
+    it, so every call behind the code was blocked by its preflight and the
+    guest read "could not reach the hotel" the moment the code was right.
+    The tests run in-process and never meet a preflight. `authorization` is
+    already allowed, is not written to access logs, and is ignored on
+    /api/guest by the staff gate - and a signed-in clerk's `Bearer` token on
+    the same browser is not a `Guest` one, so it unlocks nothing here. */
+const unlockOf = (c: Context) => {
+  const held = /^Guest\s+(\S+)$/.exec(c.req.header("authorization") ?? "")?.[1];
+  return held ? sha256(held) : null;
+};
+
+const refused = (c: Context) => c.json({ error: NOTHING_HERE }, 404);
+
+/* Opened WITH this phone's unlock: the one check every route behind the code
+   makes before it does anything. Each database function behind it asks again
+   - this is the door's courtesy, the function is the guard. */
+async function openedHere(
+  c: Context,
+): Promise<{ hash: string; unlock: string; it: OpenRow } | null> {
+  const hash = sha256(c.req.param("token") ?? "");
+  const unlock = unlockOf(c);
+  if (tooOften(hash, "open") || !unlock) return null;
+  const rows = await ask<OpenRow>("select * from app.guest_link_open($1, $2)", [hash, unlock]);
+  const it = rows[0];
+  return it?.verified ? { hash, unlock, it } : null;
 }
 
 /* The door's own connection. NOT `withSession`: a guest has no staff id to run
@@ -124,32 +177,62 @@ guestDoor.get("/:token", async (c) => {
   const hash = sha256(c.req.param("token"));
   if (tooOften(hash, "open")) return c.json({ error: NOTHING_HERE }, 429);
 
-  const rows = await ask<OpenRow>("select * from app.guest_link_open($1)", [hash]);
+  /* WITH this phone's unlock, if it holds one: `verified` means "this phone
+     has answered the code for this stay" and nothing wider (D21-6). */
+  const rows = await ask<OpenRow>(
+    "select * from app.guest_link_open($1, $2)", [hash, unlockOf(c)]);
   const it = rows[0];
   if (!it) return c.json({ error: NOTHING_HERE }, 404);
 
   return c.json({
+    kind: it.kind,
     hotel: { code: it.hotel_code, name: it.hotel_name },
-    booking: {
+    /* A room card's own number; null on a booking's link. */
+    room: it.room_number,
+    /* A room card with nobody checked in says only that (D21-15). */
+    occupied: it.occupied,
+    /* The database has already emptied these on a room card that this phone
+       has not unlocked (D21-14). Null, not an empty booking. */
+    booking: it.reference === null ? null : {
       reference: it.reference,
       guestName: it.guest_name,
       checkIn: it.check_in,
       checkOut: it.check_out,
       status: it.status,
     },
-    /* Until the code is answered this is all there is. The bill, the identity
-       form and the requests come next, and each one asks `verified` again on
-       the server - a screen deciding what to show is not a guard. */
     verified: it.verified,
     phoneHint: it.phone_hint,
+    /* D21-25: the page offers "Send me the code" only when one can be sent.
+       This is about the SERVER, not the booking - it is the same answer for
+       every link, so it tells a stranger nothing about this one. */
+    canSendCodes: canSend(),
+    cannotSend: canSend() ? null : CANNOT_SEND,
+    /* What this hotel offers behind the code (D21-63): only once unlocked. */
+    offers: it.verified ? (it.offers ?? []) : [],
   });
 });
 
+/* The answer to "send me the code", whichever way it went. ONE sentence and
+   ONE shape: a right number, a wrong number and one knock too many all get
+   exactly this (D21-25 - the rate-limited answer used to be
+   `{ sent: true, hint: null }`, which the page printed as a blank line). */
+/* And the one sentence for a server that cannot send at all - on opening, so
+   the page can say it BEFORE asking for a number (D21-25), and again if a
+   code is asked for anyway. One definition, here. */
+const CANNOT_SEND = "Codes cannot be sent yet - WhatsApp is not connected to "
+  + "this server. Ask the desk to send you the link instead.";
+
+const MAYBE_SENT = {
+  sent: true,
+  message: "If that is the number on the booking, the code has been sent to it.",
+};
+
 guestDoor.post("/:token/code", async (c) => {
   const hash = sha256(c.req.param("token"));
-  if (tooOften(hash, "code")) {
-    return c.json({ sent: true, hint: null }, 200);   // says nothing either way
-  }
+  /* Nothing can be sent: say so first. Asked before the knock is counted, so
+     a guest reading this sentence has not spent one of their five an hour. */
+  if (!canSend()) return c.json({ sent: false, message: CANNOT_SEND }, 503);
+  if (tooOften(hash, "code")) return c.json(MAYBE_SENT);
   const body = await c.req.json<{ phone?: string }>().catch(() => ({}) as { phone?: string });
 
   /* ⚠ THE SAME ANSWER WHETHER OR NOT A CODE WAS MADE. A page that says "that
@@ -177,14 +260,9 @@ guestDoor.post("/:token/code", async (c) => {
      identity form, the requests) unreachable behind it. Found by audit.
 
      Its own test could not catch it: it asserted `[200, 503]` contained the
-     status, which is true either way. The test below now pins BOTH states. */
-  if (!canSend()) {
-    return c.json({
-      sent: false,
-      message: "Codes cannot be sent yet - WhatsApp is not connected to this "
-        + "server. Ask the desk to send you the link instead.",
-    }, 503);
-  }
+     status, which is true either way. The test below now pins BOTH states.
+     (The `canSend` check that refuses now sits at the top of this handler,
+     above the knock count - 21 September, D21-25.) */
 
   /* ⚠ AND NOTHING IS ISSUED ABOVE THIS LINE. The call to `guest_code_issue`
      used to sit before the check, so every knock at a server that could not
@@ -193,29 +271,33 @@ guestDoor.post("/:token/code", async (c) => {
      exactly what migration 117 refuses to write; issuing one is worse. */
   const client = await pool.connect();
   try {
-    const { rows } = await client.query<{ code: string; sent_to: string }>(
-      "select * from app.guest_code_issue($1, $2)", [hash, body.phone ?? ""]);
+    /* One call: the code, AND what the message needs - the stay, its name and
+       the booking's own number (migration 121). None of it goes into the
+       answer below; it goes only into the message. */
+    const { rows } = await client.query<{
+      code: string; phone: string; reservation_id: string; reference: string;
+      guest_name: string; hotel_id: string; hotel_code: string; hotel_name: string;
+    }>("select * from app.guest_code_make($1, $2)", [hash, body.phone ?? ""]);
     const made = rows[0];
 
     if (made) {
-      const { rows: link } = await client.query<OpenRow>(
-        "select * from app.guest_link_open($1)", [hash]);
-      const it = link[0];
-      if (it) {
-        /* THE CODE LEAVES THROUGH THE ONE DOOR OUT AND NOWHERE ELSE
-           (api/src/sending.ts). It is not logged, not returned, and not put
-           in the answer below in any environment - an answer that carries
-           the code is a door with no lock. Whether this succeeded does not
-           change what the caller is told. */
-        await send(client, {
-          channel: "whatsapp",
-          kind: "guest-link-code",
-          hotel: { id: it.hotel_id, code: it.hotel_code, name: it.hotel_name },
-          to: { name: it.guest_name, phone: made.sent_to },
-          data: { code: made.code, reference: it.reference },
-          about: { kind: "reservation", id: it.reservation_id },
-        });
-      }
+      /* THE CODE LEAVES THROUGH THE ONE DOOR OUT AND NOWHERE ELSE
+         (api/src/sending.ts). It is not logged, not returned, and not put in
+         the answer below in any environment - an answer that carries the
+         code is a door with no lock. Whether this succeeded does not change
+         what the caller is told.
+
+         ⚠ TO THE WHOLE NUMBER (OCI-2). This passed `sent_to`, the masked
+         "…0011" kept for the record, as the recipient - so the first code
+         sent once WhatsApp was connected would have reached nobody. */
+      await send(client, {
+        channel: "whatsapp",
+        kind: "guest-link-code",
+        hotel: { id: made.hotel_id, code: made.hotel_code, name: made.hotel_name },
+        to: { name: made.guest_name, phone: made.phone },
+        data: { code: made.code, reference: made.reference },
+        about: { kind: "reservation", id: made.reservation_id },
+      });
     }
   } finally {
     client.release();
@@ -227,10 +309,7 @@ guestDoor.post("/:token/code", async (c) => {
      wrong one does not. The words, the status and the shape give nothing
      away, which is what stops somebody finding the guest's number by
      trying. */
-  return c.json({
-    sent: true,
-    message: "If that is the number on the booking, the code has been sent to it.",
-  });
+  return c.json(MAYBE_SENT);
 });
 
 guestDoor.post("/:token/verify", async (c) => {
@@ -244,8 +323,14 @@ guestDoor.post("/:token/verify", async (c) => {
     return c.json({ verified: false, error: "The code is six digits." }, 400);
   }
 
+  /* THE UNLOCK (D21-6). Made here, 32 bytes; only its hash is handed to the
+     database, which records it against this link AND the stay the code was
+     sent for, in the same statement that accepts the code. The secret goes
+     back in this answer once and lives in the guest's open tab. The link
+     itself gains nothing: another phone holding it is asked for a code. */
+  const unlock = randomBytes(32).toString("base64url");
   const rows = await ask<{ ok: boolean }>(
-    "select app.guest_code_check($1, $2) as ok", [hash, digits]);
+    "select app.guest_code_answer($1, $2, $3) as ok", [hash, digits, sha256(unlock)]);
 
   if (!rows[0]?.ok) {
     return c.json({
@@ -253,7 +338,102 @@ guestDoor.post("/:token/verify", async (c) => {
       error: "That code is not right, or it has expired. Ask for a new one.",
     }, 401);
   }
-  return c.json({ verified: true });
+  return c.json({ verified: true, unlock });
+});
+
+/* ── Behind the code ───────────────────────────────────────────────
+   Every route here starts with `openedHere` (the link AND this phone's
+   unlock), and every database function it calls asks `app.guest_unlocked`
+   again. Refused, each one answers exactly what an unknown link answers:
+   the same 404 and the same sentence, so a stranger cannot learn from these
+   either whether the link is real (property 5). */
+
+const ID_TYPES = ["aadhaar", "passport", "driving_licence", "voter", "other"];
+const isDate = (v: unknown) => v === undefined || v === null || v === ""
+  || (typeof v === "string" && /^\d{4}-\d{2}-\d{2}$/.test(v) && !Number.isNaN(Date.parse(v)));
+
+guestDoor.get("/:token/details", async (c) => {
+  const door = await openedHere(c);
+  if (!door) return refused(c);
+  const rows = await ask<{
+    status: string; submitted_at: string; id_type: string; id_last_four: string;
+  }>("select * from app.guest_details_state($1, $2)", [door.hash, door.unlock]);
+  const d = rows[0];
+  return c.json({
+    sent: d ? {
+      status: d.status, submittedAt: d.submitted_at,
+      idType: d.id_type, idLastFour: d.id_last_four,
+    } : null,
+  });
+});
+
+guestDoor.post("/:token/details", async (c) => {
+  const door = await openedHere(c);
+  if (!door) return refused(c);
+  const b = await c.req.json<Record<string, unknown>>().catch(() => ({}) as Record<string, unknown>);
+
+  /* Checked here only so a typing slip gets a sentence rather than a fault;
+     the table's own constraints are the rule. Only the fields D21-19 names. */
+  const text = (v: unknown, max: number) => typeof v === "string" && v.trim().length <= max;
+  if (typeof b.idType !== "string" || !ID_TYPES.includes(b.idType)) {
+    return c.json({ error: "Choose which ID this is." }, 400);
+  }
+  if (typeof b.idNumber !== "string" || b.idNumber.trim() === "" || !text(b.idNumber, 40)) {
+    return c.json({ error: "Type the number on the ID." }, 400);
+  }
+  if (!isDate(b.passportExpiry) || !isDate(b.visaExpiry)) {
+    return c.json({ error: "A date is not a date - check the expiry dates." }, 400);
+  }
+  for (const [k, max] of [["visaNumber", 40], ["addressLine", 300], ["city", 80], ["country", 80]] as const) {
+    if (b[k] !== undefined && b[k] !== null && !text(b[k], max)) {
+      return c.json({ error: "Something typed is too long." }, 400);
+    }
+  }
+
+  const rows = await ask<{ ok: boolean }>(
+    "select app.guest_details_submit($1, $2, $3::jsonb) as ok",
+    [door.hash, door.unlock, JSON.stringify({
+      idType: b.idType, idNumber: b.idNumber,
+      passportExpiry: b.passportExpiry ?? null, visaNumber: b.visaNumber ?? null,
+      visaExpiry: b.visaExpiry ?? null, addressLine: b.addressLine ?? null,
+      city: b.city ?? null, country: b.country ?? null,
+    })]);
+  if (!rows[0]?.ok) return refused(c);
+  return c.json({ sent: true });
+});
+
+guestDoor.get("/:token/requests", async (c) => {
+  const door = await openedHere(c);
+  if (!door) return refused(c);
+  const rows = await ask<{
+    kind: string; what: string; wanted: string | null; status: string; created_at: string;
+  }>("select * from app.guest_requests_mine($1, $2)", [door.hash, door.unlock]);
+  return c.json({
+    offers: door.it.offers ?? [],
+    requests: rows.map((r) => ({
+      kind: r.kind, what: r.what, wanted: r.wanted, status: r.status, createdAt: r.created_at,
+    })),
+  });
+});
+
+guestDoor.post("/:token/requests", async (c) => {
+  const door = await openedHere(c);
+  if (!door) return refused(c);
+  const b = await c.req.json<{ kind?: string; what?: string; wanted?: string }>()
+    .catch(() => ({}) as { kind?: string; what?: string; wanted?: string });
+  if (!b.what || b.what.trim() === "" || b.what.length > 500 || (b.wanted?.length ?? 0) > 100) {
+    return c.json({ error: "Say what you would like, in a sentence or two." }, 400);
+  }
+
+  const rows = await ask<{ ok: boolean }>(
+    "select app.guest_request_make($1, $2, $3, $4, $5) as ok",
+    [door.hash, door.unlock, b.kind ?? "", b.what, b.wanted ?? null]);
+  /* Unlocked, so a plain sentence is safe here: the hotel does not offer it,
+     or ten are already waiting. */
+  if (!rows[0]?.ok) {
+    return c.json({ error: "That cannot be asked for here. Ask the desk." }, 409);
+  }
+  return c.json({ sent: true });
 });
 
 /* ── The desk's side ──────────────────────────────────────────────
@@ -311,7 +491,7 @@ guestLinks.post("/:code/stays/:id/guest-link", async (c) => {
 
     return {
       status: 200 as const,
-      link: `${env.corsOrigins[0] ?? "http://localhost:5173"}/g/${token}`,
+      link: linkFor(token),
       guest: stay.guest,
       phoneOnBooking: stay.phone ? `…${stay.phone.replace(/\D/g, "").slice(-4)}` : null,
     };
@@ -319,6 +499,235 @@ guestLinks.post("/:code/stays/:id/guest-link", async (c) => {
 
   if (result.status !== 200) return c.json({ error: result.error }, result.status);
   return c.json(result);
+});
+
+/* The address a guest's link carries: the server's own setting, never written
+   into the code (D21-60 - pms.fidatohotels.com for now). */
+function linkFor(token: string): string {
+  return `${env.corsOrigins[0] ?? "http://localhost:5173"}/g/${token}`;
+}
+
+/* ── The desk's side of online check-in (D21-8, D21-9, D21-16, D21-62) ──
+   Ordinary staff routes: row level security decides which hotel's rows a
+   clerk sees, and these roles decide who may act. Reception does all of it
+   at the desk; the floor above it may too. */
+const DESK_ROLES: readonly string[] = ["owner", "admin", "gm", "hotel_manager", "front_desk"];
+const DESK_REFUSED = "Online check-in is handled by reception, the manager, an "
+  + "administrator or the owner. Ask one of them.";
+
+type Db = Parameters<Parameters<typeof withSession>[1]>[0];
+
+/* The hotel, if this person holds a desk role there - the same question the
+   spa and the other services ask, in the same words. */
+async function deskAt(client: Db, code: string): Promise<string | null> {
+  const { rows } = await client.query<{ id: string; may: boolean }>(
+    `select h.id::text,
+            exists (select 1 from staff s
+                     where s.id = app.current_user_id() and s.is_active and s.is_group_admin)
+         or exists (select 1 from staff_hotels sh join staff s on s.id = sh.staff_id
+                     where sh.staff_id = app.current_user_id() and sh.hotel_id = h.id
+                       and s.is_active and sh.role = any($2::text[])) as may
+       from hotels h where h.code = $1`,
+    [code.toUpperCase(), DESK_ROLES]);
+  return rows[0]?.may ? rows[0].id : null;
+}
+
+/* AADHAAR: THE LAST FOUR, ON EVERY SCREEN (D21-18). The full number is stored
+   (D21-17) and appears only on the printed registration card; it never leaves
+   this API for a screen. A passport is shown whole - the clerk compares it
+   with the passport in their hand. */
+const shownNumber = (type: string, n: string) =>
+  type === "aadhaar" ? `…${n.slice(-4)}` : n;
+
+guestLinks.get("/:code/online-checkin", async (c) => {
+  const body = await withSession(c.get("subject"), async (client) => {
+    const hotelId = await deskAt(client, c.req.param("code"));
+    if (!hotelId) return null;
+
+    const { rows: waiting } = await client.query<{
+      id: string; guest: string; reference: string; id_type: string; id_number: string;
+      passport_expiry: string | null; visa_number: string | null; visa_expiry: string | null;
+      address_line: string | null; city: string | null; country: string | null;
+      submitted_at: string;
+    }>(
+      `select d.id::text, g.full_name as guest, r.reference, d.id_type, d.id_number,
+              d.passport_expiry::text, d.visa_number, d.visa_expiry::text,
+              d.address_line, d.city, d.country, d.submitted_at
+         from guest_detail_submissions d
+         join reservations r on r.id = d.reservation_id
+         join guests g       on g.id = d.guest_id
+        where d.hotel_id = $1 and d.status = 'waiting'
+        order by d.submitted_at`, [hotelId]);
+
+    const { rows: requests } = await client.query<{
+      id: string; kind: string; what: string; wanted: string | null;
+      created_at: string; guest: string; reference: string;
+    }>(
+      `select q.id::text, q.kind, q.what, q.wanted, q.created_at,
+              g.full_name as guest, r.reference
+         from guest_requests q
+         join reservations r on r.id = q.reservation_id
+         join guests g       on g.id = r.guest_id
+        where q.hotel_id = $1 and q.status = 'open'
+        order by q.created_at`, [hotelId]);
+
+    const { rows: rooms } = await client.query<{
+      id: string; number: string; card_since: string | null;
+    }>(
+      `select rm.id::text, rm.number,
+              (select l.created_at from guest_links l
+                where l.room_id = rm.id and l.revoked_at is null) as card_since
+         from rooms rm
+        where rm.hotel_id = $1 and rm.is_active
+        order by rm.number`, [hotelId]);
+
+    return {
+      waiting: waiting.map((d) => ({
+        id: d.id, guest: d.guest, reference: d.reference, idType: d.id_type,
+        idNumber: shownNumber(d.id_type, d.id_number),
+        passportExpiry: d.passport_expiry, visaNumber: d.visa_number,
+        visaExpiry: d.visa_expiry, addressLine: d.address_line, city: d.city,
+        country: d.country, submittedAt: d.submitted_at,
+      })),
+      requests: requests.map((q) => ({
+        id: q.id, kind: q.kind, what: q.what, wanted: q.wanted,
+        createdAt: q.created_at, guest: q.guest, reference: q.reference,
+      })),
+      rooms: rooms.map((r) => ({ id: r.id, number: r.number, cardSince: r.card_since })),
+    };
+  });
+  if (!body) return c.json({ error: DESK_REFUSED }, 403);
+  return c.json(body);
+});
+
+/* CONFIRMED BY A PERSON, UNDER THEIR NAME (D21-8). The one place a guest's
+   details reach guest_documents - and so Form C - and it is the clerk's own
+   session writing them, with the same merge the check-in flow uses: a field
+   the guest left blank does not blank one already on file. */
+guestLinks.post("/:code/online-checkin/submissions/:id/confirm", async (c) => {
+  const result = await withSession(c.get("subject"), async (client, session) => {
+    const hotelId = await deskAt(client, c.req.param("code"));
+    if (!hotelId) return 403 as const;
+
+    const { rows } = await client.query(
+      `with d as (
+         select * from guest_detail_submissions
+          where id = $1 and hotel_id = $2 and status = 'waiting'
+          for update)
+       insert into guest_documents
+         (guest_id, id_type, id_number, passport_expiry, visa_number,
+          visa_expiry, address_line, city, country, captured_by, captured_at)
+       select guest_id, id_type, id_number, passport_expiry, visa_number,
+              visa_expiry, address_line, city, country, app.current_user_id(), now()
+         from d
+       on conflict (guest_id) do update set
+         id_type         = excluded.id_type,
+         id_number       = excluded.id_number,
+         passport_expiry = coalesce(excluded.passport_expiry, guest_documents.passport_expiry),
+         visa_number     = coalesce(excluded.visa_number, guest_documents.visa_number),
+         visa_expiry     = coalesce(excluded.visa_expiry, guest_documents.visa_expiry),
+         address_line    = coalesce(excluded.address_line, guest_documents.address_line),
+         city            = coalesce(excluded.city, guest_documents.city),
+         country         = coalesce(excluded.country, guest_documents.country),
+         captured_by     = excluded.captured_by,
+         captured_at     = excluded.captured_at
+       returning guest_id`, [c.req.param("id"), hotelId]);
+    if (rows.length === 0) return 409 as const;
+
+    await client.query(
+      `update guest_detail_submissions
+          set status = 'confirmed', handled_by = $2, handled_at = now()
+        where id = $1`, [c.req.param("id"), session.staffId]);
+    return 200 as const;
+  });
+  if (result === 403) return c.json({ error: DESK_REFUSED }, 403);
+  if (result === 409) {
+    return c.json({ error: "Those details were already handled, or are not this property's." }, 409);
+  }
+  return c.json({ confirmed: true });
+});
+
+/* Not this: the clerk found it wrong and will take the details from the ID at
+   the desk, as before. Nothing is written to guest_documents. */
+guestLinks.post("/:code/online-checkin/submissions/:id/set-aside", async (c) => {
+  const result = await withSession(c.get("subject"), async (client, session) => {
+    const hotelId = await deskAt(client, c.req.param("code"));
+    if (!hotelId) return 403 as const;
+    const { rowCount } = await client.query(
+      `update guest_detail_submissions
+          set status = 'set_aside', handled_by = $3, handled_at = now()
+        where id = $1 and hotel_id = $2 and status = 'waiting'`,
+      [c.req.param("id"), hotelId, session.staffId]);
+    return rowCount ? 200 as const : 409 as const;
+  });
+  if (result === 403) return c.json({ error: DESK_REFUSED }, 403);
+  if (result === 409) return c.json({ error: "Already handled." }, 409);
+  return c.json({ setAside: true });
+});
+
+/* A request, handled - booked through the spa's or laundry's own screen, or
+   declined. This marks it; it books nothing (D21-9). */
+guestLinks.post("/:code/online-checkin/requests/:id", async (c) => {
+  const { status } = await c.req.json<{ status?: string }>().catch(() => ({}) as { status?: string });
+  if (status !== "done" && status !== "declined") {
+    return c.json({ error: "Done, or declined?" }, 400);
+  }
+  const result = await withSession(c.get("subject"), async (client, session) => {
+    const hotelId = await deskAt(client, c.req.param("code"));
+    if (!hotelId) return 403 as const;
+    const { rowCount } = await client.query(
+      `update guest_requests set status = $3, handled_by = $4, handled_at = now()
+        where id = $1 and hotel_id = $2 and status = 'open'`,
+      [c.req.param("id"), hotelId, status, session.staffId]);
+    return rowCount ? 200 as const : 409 as const;
+  });
+  if (result === 403) return c.json({ error: DESK_REFUSED }, 403);
+  if (result === 409) return c.json({ error: "Already handled." }, 409);
+  return c.json({ status });
+});
+
+/* ROOM CARDS (D21-7, D21-16, D21-62). A card's token is shown ONCE, here, to
+   be printed - only its hash is kept - so printing is always making: a new
+   card for a room kills that room's old card in the same transaction. The
+   sheet does it for every room at once, and the screen says so before it is
+   pressed. A card never expires; the desk ends it by printing another. */
+async function newCards(client: Db, hotelId: string, staffId: string, roomId: string | null) {
+  const { rows: rooms } = await client.query<{ id: string; number: string }>(
+    `select id::text, number from rooms
+      where hotel_id = $1 and is_active and ($2::uuid is null or id = $2::uuid)
+      order by number`, [hotelId, roomId]);
+  const cards: { room: string; link: string }[] = [];
+  for (const room of rooms) {
+    const token = randomBytes(32).toString("base64url");
+    await client.query(
+      `update guest_links set revoked_at = now(), revoked_by = $2
+        where room_id = $1 and revoked_at is null`, [room.id, staffId]);
+    await client.query(
+      `insert into guest_links (hotel_id, room_id, token_hash, origin, created_by, expires_at)
+       values ($1, $2, $3, 'room', $4, 'infinity')`,
+      [hotelId, room.id, sha256(token), staffId]);
+    cards.push({ room: room.number, link: linkFor(token) });
+  }
+  return cards;
+}
+
+guestLinks.post("/:code/online-checkin/rooms/:roomId/card", async (c) => {
+  const cards = await withSession(c.get("subject"), async (client, session) => {
+    const hotelId = await deskAt(client, c.req.param("code"));
+    return hotelId ? newCards(client, hotelId, session.staffId, c.req.param("roomId")) : null;
+  });
+  if (!cards) return c.json({ error: DESK_REFUSED }, 403);
+  if (cards.length === 0) return c.json({ error: "No such room here." }, 404);
+  return c.json({ cards });
+});
+
+guestLinks.post("/:code/online-checkin/cards", async (c) => {
+  const cards = await withSession(c.get("subject"), async (client, session) => {
+    const hotelId = await deskAt(client, c.req.param("code"));
+    return hotelId ? newCards(client, hotelId, session.staffId, null) : null;
+  });
+  if (!cards) return c.json({ error: DESK_REFUSED }, 403);
+  return c.json({ cards });
 });
 
 /* Exported for the test that proves a stolen token is not a key to anything
