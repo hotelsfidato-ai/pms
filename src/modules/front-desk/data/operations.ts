@@ -286,6 +286,15 @@ export async function createWalkIn(
     marketSegment?: string;
     salesPerson?: string;
     isSingleLady?: boolean;
+    /* The CRM's (docs/briefs/crm.md). Optional, like the booking form's:
+       a phone and an email, the returning guest the clerk confirmed
+       (D21-20, checked again by the server), and the two ticks - "guest
+       agreed to WhatsApp" (D21-72) and "do not send offers" (D21-22). */
+    phone?: string;
+    email?: string;
+    guestId?: string;
+    whatsappAgreed?: boolean;
+    noOffers?: boolean;
   },
 ): Promise<OperationResult<Stay>> {
   /* This wrote the new stay into the in-memory store while every

@@ -273,3 +273,58 @@ stayExtras.delete("/:code/stays/:id/inclusions/:lineId", async (c) => {
   if (!result) return c.json({ error: "No such property." }, 404);
   return c.json(result, 200);
 });
+
+/* ── What the desk may know about the guest on this stay ───────────
+   Two things, from the CRM (docs/briefs/crm.md), and nothing else:
+
+     stayedBefore    "stayed with the group N times" - checked-in visits at
+                     any hotel, several rooms booked together once, NOT
+                     counting the visit this stay belongs to. A number and
+                     nothing more: no hotels, no dates, no amounts (D21-13).
+     whatsappAgreed  "guest agreed to WhatsApp" (D21-72), which the desk may
+                     tick or untick here at any time (the owner, 21
+                     September). The reservations audit trigger keeps who
+                     and when.
+
+   Asked of THIS property's booking: row security answers "no such stay"
+   for another hotel's, so the count is never a window into it. */
+stayExtras.get("/:code/stays/:id/guest-marks", async (c) => {
+  const result = await withSession(c.get("subject"), async (client) => {
+    const hotelId = await hotelFor(client, c.req.param("code"));
+    if (!hotelId) return null;
+    const { rows } = await client.query<{ stayed_before: number; whatsapp_agreed: boolean }>(
+      `select app.guest_visits(r.guest_id, r.id) as stayed_before, r.whatsapp_agreed
+         from reservations r
+        where r.id = $1::uuid and r.hotel_id = $2`,
+      [c.req.param("id"), hotelId]);
+    return rows[0] ?? "none";
+  }).catch((error: unknown) => {
+    if ((error as { code?: string }).code === "22P02") return "none" as const;
+    throw error;
+  });
+  if (!result) return c.json({ error: "No such property." }, 404);
+  if (result === "none") return c.json({ error: "No such stay." }, 404);
+  return c.json({ stayedBefore: result.stayed_before, whatsappAgreed: result.whatsapp_agreed });
+});
+
+stayExtras.post("/:code/stays/:id/whatsapp", async (c) => {
+  const input = await c.req.json<{ agreed?: boolean }>().catch(() => ({}) as { agreed?: boolean });
+  if (typeof input.agreed !== "boolean") {
+    return c.json({ ok: false, reason: "Say whether the guest agreed." }, 409);
+  }
+  const result = await withSession(c.get("subject"), async (client) => {
+    const hotelId = await hotelFor(client, c.req.param("code"));
+    if (!hotelId) return null;
+    const { rows } = await client.query<{ agreed: boolean }>(
+      `update reservations set whatsapp_agreed = $3
+        where id = $1::uuid and hotel_id = $2
+        returning whatsapp_agreed as agreed`,
+      [c.req.param("id"), hotelId, input.agreed]);
+    return rows[0] ? { ok: true as const, agreed: rows[0].agreed } : refuse("No such stay.");
+  }).catch((error: unknown) => {
+    if ((error as { code?: string }).code === "22P02") return refuse("No such stay.");
+    throw error;
+  });
+  if (!result) return c.json({ error: "No such property." }, 404);
+  return c.json(result, result.ok ? 200 : 409);
+});

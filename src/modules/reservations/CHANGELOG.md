@@ -8,6 +8,25 @@ project, still goes in the root `CHANGELOG.md`.
 
 ---
 
+## 2026-09-21 · A booking may be a returning guest's, and carries the two ticks
+
+**Asked for:** the CRM chat's phase 1 (`docs/briefs/crm.md`, D21-20, D21-72,
+D21-22); the whole entry is `src/modules/crm/CHANGELOG.md`.
+
+**Shipped** - `book.ts`: `guestId` checked again by `app.use_returning_guest`
+above the first write, the guest's own name in the answer, `whatsapp_agreed`
+on every room; `groups.ts`: the three fields, and "no offers" recorded in the
+booking's own transaction; `NewBooking.tsx`: the suggestion and the ticks.
+The fingerprint (RES-3) is unchanged; a machine sends none of these.
+
+**Proved** - `newBookingReturning.test.tsx` (what Confirm sends, what the
+clerk is told); the API half in `oneGuestOneRecord.test.ts`. Gates in the CRM
+entry.
+
+**Commits:** branch `crm/phase-1`, `1d62c8d`.
+
+---
+
 ## 2026-09-16 · RES-2 part 2 — the booking door takes its reference from app.next_reference
 
 **Asked for:** the master chat, after merging RES-3, RES-1 and migration 092

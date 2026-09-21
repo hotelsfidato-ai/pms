@@ -153,6 +153,13 @@ export async function createBooking(
         did not say — which is most bookings, and is not midnight. */
     expectedArrival?: string;
     lines: BookingLine[];
+    /** The returning guest the clerk confirmed (D21-20). The server checks
+        it again against the phone and email typed. */
+    guestId?: string;
+    /** "Guest agreed to WhatsApp" (D21-72). */
+    whatsappAgreed?: boolean;
+    /** "Do not send me offers" - kept against the phone and email (D21-22). */
+    noOffers?: boolean;
   },
 ): Promise<
   | { ok: true; groupId: string | null; rooms: number; guest: string;

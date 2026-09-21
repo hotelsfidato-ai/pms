@@ -8,6 +8,23 @@ project, still goes in the root `CHANGELOG.md`.
 
 ---
 
+## 2026-09-21 · The Central CRM's routes and the suggestion live here
+
+**Asked for:** the CRM chat's phase 1 (`docs/briefs/crm.md`); the whole entry
+is `src/modules/crm/CHANGELOG.md`.
+
+**Shipped** - `api/src/modules/guests/people.ts` (every CRM route, mounted from
+`index.ts`); `directory.ts` reads "total spend" from `app.stay_charged`, the one
+definition Guest 360 shares (same figure); `components/ReturningGuest.tsx`
+(the suggestion and the two ticks), `data/people.ts`, `logic/contactKeys.ts`
+(the phone key for marketing's gate), all through the front door.
+
+**Proved** - see the CRM entry: API 1264, web 558, database 965, all exit 0.
+
+**Commits:** branch `crm/phase-1`, `1d62c8d`.
+
+---
+
 ## 2026-09-17 · GUE-1: the Companies and agents screen says so
 
 **Asked for:** the owner's answer D17-22, 17 September — "the heading is

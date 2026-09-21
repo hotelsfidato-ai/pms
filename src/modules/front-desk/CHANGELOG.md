@@ -8,6 +8,28 @@ project, still goes in the root `CHANGELOG.md`.
 
 ---
 
+## 2026-09-21 · The walk-in asks a phone and email; the stay panel's CRM marks
+
+**Asked for:** the CRM chat's phase 1 (`docs/briefs/crm.md`); the whole entry
+is `src/modules/crm/CHANGELOG.md`.
+
+**Shipped** - the walk-in: optional phone and email, the returning-guest
+suggestion and blacklist warning, the two ticks; the name list under Guest is
+gone (the owner, CRM-Q4). `operations.ts` takes them and checks a confirmed
+guest above the first write. The stay panel (`flows/GuestMarks.tsx`):
+"stayed with the group N times", the WhatsApp tick the desk may change, a
+Guest 360 link for owner, admin and GM (`stayExtras.ts` routes).
+
+**Found** - FD-8 (open): the walk-in refused a room Rooms showed Free.
+
+**Proved** - `walkInReturning.test.tsx` (5; all 5 fail on the old form),
+`guestMarks.test.tsx` (2); on screen, a walk-in on a returning guest's record
+and the tick saved from the panel. Gates in the CRM entry.
+
+**Commits:** branch `crm/phase-1`, `1d62c8d`.
+
+---
+
 ## 2026-09-16 · Rooms says when the server does not answer, and FD-2
 
 **Asked for:** the owner, round 1 of the service chats — (1) the `/stay` error

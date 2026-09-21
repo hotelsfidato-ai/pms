@@ -49,6 +49,16 @@ export interface BookingRequest {
   /** A MACHINE MAY NOT OVERBOOK (D17-43, D17-80). A person may: deliberate
       overbooking is something every hotel does, and the desk decides. */
   refuseWhenFull?: boolean;
+  /** THE RETURNING GUEST THE CLERK CONFIRMED (D21-20): "same person? - yes".
+      Only the desk sends it; a machine never does, so a channel booking
+      still makes its own guest. Checked again here against the phone and
+      email typed - never trusted from the browser. Left out of the
+      fingerprint on purpose: it is the desk's, and the fingerprint is a
+      sender's (RES-3). */
+  guestId?: string | null;
+  /** "Guest agreed to WhatsApp" (D21-72). A booking from a channel arrives
+      unticked; the desk asks on phone and walk-in bookings. */
+  whatsappAgreed?: boolean;
 }
 
 export interface BookingMade {
@@ -344,17 +354,42 @@ export async function makeBooking(
       planned.push({ line, typeName: rt[0].name, adults, children, rate });
     }
 
+    /* ── THE RETURNING GUEST, the last refusal (D21-20). ────────────────
+       The clerk said "same person". The database asks again whether the
+       phone or email typed still suggests exactly that person, and only
+       then fills a blank phone or email on their record from what was
+       typed - it writes NOTHING when it refuses, so this refusal is still
+       above the first write (RES-1). Nothing on file is overwritten. */
+    let guestId: string | null = null;
+    let guestName = request.guestName;
+    if (request.guestId) {
+      const { rows: same } = await client.query<{ id: string | null; name: string | null }>(
+        `select u.id::text, g.full_name as name
+           from (select app.use_returning_guest($1::uuid, $2, $3) as id) u
+           left join guests g on g.id = u.id`,
+        [request.guestId, request.phone ?? null, request.email ?? null]);
+      if (!same[0]?.id) {
+        return refuse(
+          "That guest no longer matches the phone or email typed. Check the "
+          + "suggestion again, or book them as a new guest.");
+      }
+      guestId = same[0].id;
+      guestName = same[0].name ?? guestName;
+    }
+
     /* ── Nothing below this line refuses. ─────────────────────────────── */
 
     /* One guest for the whole booking. A block belongs to whoever made it;
        individual names are filled in as the rooming list arrives, which is
        usually days later and often never for a wedding. */
-    const { rows: guest } = await client.query<{ id: string }>(
-      `insert into guests (full_name, phone, email)
-       values ($1, nullif($2,''), nullif($3,''))
-       returning id::text`,
-      [request.guestName, request.phone?.trim() ?? "", request.email?.trim() ?? ""]);
-    const guestId = guest[0]!.id;
+    if (!guestId) {
+      const { rows: guest } = await client.query<{ id: string }>(
+        `insert into guests (full_name, phone, email)
+         values ($1, nullif($2,''), nullif($3,''))
+         returning id::text`,
+        [request.guestName, request.phone?.trim() ?? "", request.email?.trim() ?? ""]);
+      guestId = guest[0]!.id;
+    }
 
     let groupId: string | null = null;
     if (total > 1) {
@@ -397,10 +432,10 @@ export async function makeBooking(
               adults, children, occupancy, agreed_rate, status, source,
               meal_plan, group_id, business_source, market_segment,
               expected_arrival, booking_source_id, commission_pct,
-              ota_reference, ota_line, ota_fingerprint)
+              ota_reference, ota_line, ota_fingerprint, whatsapp_agreed)
            values ($1,$2,$3,$4,$5::date,$6::date,$7,$8,$9,$10,'confirmed',$11,
                    $12,$13,$14,$15,$16::time,$17,$18::numeric,
-                   $19,$20,$21)
+                   $19,$20,$21,$22)
            returning id::text`,
           [hotelId, ref[0]!.reference, guestId, line.roomTypeId,
            request.checkIn, request.checkOut, adults, children, adults + children,
@@ -422,7 +457,9 @@ export async function makeBooking(
            /* All NULL for the desk. For a sender, every room carries its
               reference and its place in the request — line 1 is the one two
               racing copies collide on (091). */
-           externalRef, externalRef ? made.length + 1 : null, fingerprint],
+           externalRef, externalRef ? made.length + 1 : null, fingerprint,
+           /* Every room of the booking carries the guest's answer. */
+           request.whatsappAgreed === true],
         );
 
         /* A BOOKING NEEDS SOMEWHERE TO PUT MONEY, from the moment it
@@ -453,7 +490,9 @@ export async function makeBooking(
       duplicate: false,
       groupId,
       rooms: made.length,
-      guest: request.guestName,
+      /* The returning guest's name as it stands on file, when the clerk
+         confirmed one - that is whose booking it now is. */
+      guest: guestName,
       bookings: made,
       nightly: made.reduce((sum, m) => sum + m.rate, 0),
       reservationIds,

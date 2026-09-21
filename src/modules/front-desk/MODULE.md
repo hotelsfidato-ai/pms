@@ -179,6 +179,18 @@ What `index.ts` exports, and who uses each (grep of `@/modules/front-desk`,
 | `listArrivalsOutstanding`, `getStayViewCounts` | reports (`pages/Dashboard.tsx`) |
 | `LateCheckOutFlow` | finance (`flows/FolioPanel.tsx`) |
 
+**21 September - the Central CRM** (`src/modules/crm/MODULE.md`). The walk-in
+asks an optional phone and email; they suggest a returning guest ("stayed
+with the group N times - same person?") and warn of a blacklisted one, and
+the name list that matched a shared surname is gone (the owner). `POST
+/:code/walk-ins` takes `phone`, `email`, `guestId`, `whatsappAgreed`,
+`noOffers`. The stay panel (`flows/GuestMarks.tsx`) shows "stayed with the
+group N times" (not counting this stay), the WhatsApp tick the desk may
+change (`GET /:code/stays/:id/guest-marks`, `POST /:code/stays/:id/whatsapp`,
+in `stayExtras.ts`), and a Guest 360 link for the owner, an administrator and
+the GM. It leans on **guests** (`ReturningGuest`, `ConsentTicks`,
+`stayedWords`) and **crm** (`seesGuest360`, `guest360Path`).
+
 ## Leans on
 
 Other services, through their doors only:

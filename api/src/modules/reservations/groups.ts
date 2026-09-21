@@ -271,6 +271,13 @@ groups.post("/:code/bookings", async (c) => {
        with the first booking instead of making another (RES-3, 091). */
     externalRef?: unknown;
     lines?: BookingLineInput[];
+    /* The CRM's three (docs/briefs/crm.md). The returning guest the clerk
+       confirmed (D21-20) - checked again in makeBooking; "guest agreed to
+       WhatsApp" (D21-72); and "do not send me offers", kept against the
+       phone and email themselves for the whole group (D21-22). */
+    guestId?: string;
+    whatsappAgreed?: boolean;
+    noOffers?: boolean;
   };
   const input = await c.req.json<Body>().catch(() => ({}) as Body);
 
@@ -308,12 +315,21 @@ groups.post("/:code/bookings", async (c) => {
     ...(input.expectedArrival === undefined ? {} : { expectedArrival: input.expectedArrival }),
     externalRef,
     lines: input.lines ?? [],
+    ...(typeof input.guestId === "string" && input.guestId ? { guestId: input.guestId } : {}),
+    whatsappAgreed: input.whatsappAgreed === true,
   });
 
   const result = await withSession(c.get("subject"), async (client) => {
     const hotelId = await hotelFor(client, c.req.param("code"));
     if (!hotelId) return null;
-    return makeBooking(client, build(hotelId));
+    const made = await makeBooking(client, build(hotelId));
+    /* In the booking's own transaction, after it is made: a refused booking
+       records nothing, and a repeat was recorded the first time. */
+    if (made.ok && !made.duplicate && input.noOffers === true) {
+      await client.query("select app.record_no_offers($1, $2)",
+        [input.phone ?? null, input.email ?? null]);
+    }
+    return made;
   }).catch(async (error: unknown) => {
     /* TWO COPIES AT ONCE. Both passed the already-received check before
        either had committed; this one reached line 1 second, waited for the

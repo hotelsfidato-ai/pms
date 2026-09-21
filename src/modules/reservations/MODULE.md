@@ -138,6 +138,15 @@ What `index.ts` exports, and who uses each (grep of `@/modules/reservations`,
 | `GroupRoomsList`, `GROUP_ROOMS_ID` | front desk (`flows/StayDrawer.tsx`, `flows/StayMarks.tsx`) |
 | `listGroups`, `listGroupMembers` | the core test `src/data/repositories/repositories.test.ts` only |
 
+**21 September - the Central CRM** (`src/modules/crm/MODULE.md`). The booking
+form shows the returning-guest suggestion under the phone and email, and two
+ticks, "Guest agreed to WhatsApp" and "Do not send offers". `POST
+/:code/bookings` takes `guestId` (checked again by `app.use_returning_guest`
+in `book.ts`, above the first write), `whatsappAgreed` (every room of the
+booking) and `noOffers`. A machine's booking sends none of them: it makes its
+own guest, as before, and arrives unticked (D21-72). The fingerprint (RES-3)
+is unchanged.
+
 ## Leans on
 
 Other services, through their doors only:
