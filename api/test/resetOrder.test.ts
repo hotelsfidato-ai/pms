@@ -30,14 +30,15 @@ const SUPER =
   process.env["SUPER_DATABASE_URL"] ??
   "postgres://postgres:pw@127.0.0.1:55432/fidato";
 
-type Edge = { child: string; parent: string };
+type Edge = { child: string; parent: string; cascades: boolean };
 let edges: Edge[] = [];
 
 beforeAll(async () => {
   const pool = new (await import("pg")).default.Pool({ connectionString: SUPER });
   try {
     const { rows } = await pool.query<Edge>(
-      `select c.relname as child, f.relname as parent
+      `select c.relname as child, f.relname as parent,
+              con.confdeltype in ('c', 'n') as cascades
          from pg_constraint con
          join pg_class c on c.oid = con.conrelid
          join pg_class f on f.oid = con.confrelid
@@ -86,5 +87,20 @@ describe("the reset deletes children before parents", () => {
       "the reset would fail on a foreign key part-way through, with the "
       + "append-only guards already lifted:\n  " + wrong.join("\n  "),
     ).toEqual([]);
+  });
+
+  it("⚠ LEAVES NOTHING BEHIND THAT STILL POINTS AT WHAT IT CLEARS (21 September)", () => {
+    /* The order test above only looks at tables ON the list. Spa
+       appointments, laundry dockets and guests' links were built after it
+       was written, each pointing at a booking or a bill with no cascade -
+       so the reset would have stopped at the first one, and every test
+       here passed. Found by asking pg_constraint before clearing the
+       owner's laptop. A table that points at something cleared must be
+       cleared itself, or go by cascade. */
+    const cleared = new Set(CLEAR.map(([t]) => t));
+    const stranded = edges
+      .filter((e) => cleared.has(e.parent) && !cleared.has(e.child) && !e.cascades)
+      .map((e) => `${e.child} points at ${e.parent} and is not cleared`);
+    expect([...new Set(stranded)], stranded.join("\n  ")).toEqual([]);
   });
 });

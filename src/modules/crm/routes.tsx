@@ -1,17 +1,8 @@
-import { Route } from "react-router";
-import { RequireAccess } from "@/components/app/RequireAccess";
-import CrmPage from "@/modules/crm/pages/Crm";
-
-/* Central CRM's one address — its Coming soon page. Mounted by App.tsx inside
-   the signed-in shell. The guard asks the navigation (`mayReach`), so the
-   page is refused to exactly the people the menu does not show it to. */
-export const routes = (
-  <Route
-    path="/coming-soon/crm"
-    element={
-      <RequireAccess path="/coming-soon/crm" resource="integration">
-        <CrmPage />
-      </RequireAccess>
-    }
-  />
-);
+/* Central CRM has no address of its own yet. Its Coming soon page and its
+   menu entry went on 21 September, when the owner gave it a home in the
+   "Guests & CRM" section (see nav.ts). The page's address could not stay
+   behind on its own: the guard asks the navigation who may open it
+   (`mayReach`), and an address the navigation has never heard of is waved
+   through for everybody — App.test.tsx refused exactly that. The CRM chat's
+   screens add their routes here. */
+export const routes = <></>;

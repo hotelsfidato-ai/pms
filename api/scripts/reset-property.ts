@@ -42,7 +42,8 @@ import { databaseForScript } from "./scriptDatabase.ts";
      GOES     bookings, guests, folios, postings, payments, invoices,
               Form C filings, room assignments, blocks, work orders,
               restaurant orders, banquet events, night audit runs,
-              cashier shifts
+              cashier shifts, spa appointments, laundry dockets, the
+              guests' own links
      STAYS    the property, its rooms and room types, rates, staff,
               outlets, the menu, tables, sections, modules, and the
               hours and charges on the front desk
@@ -120,6 +121,19 @@ export const CLEAR: [table: string, how: string][] = [
   ["cashier_movements", "hotel_id = $1"],
   ["cashier_shifts",    "hotel_id = $1"],
 
+  /* ⚠ ADDED 21 SEPTEMBER: THREE SERVICES BUILT AFTER THIS LIST WAS WRITTEN.
+     A treatment and a laundry bag each point at a stay AND at the line they
+     put on its bill, and a guest's link points at the booking — so each goes
+     before `folio_postings` and `reservations`, or the run stops at the first
+     key they hold. Found by asking pg_constraint which tables point at a
+     booking, a guest or a bill, before clearing the owner's laptop. Their
+     children (docket lines, link codes) and a booking's inclusions go by
+     ON DELETE CASCADE. `resetOrder.test.ts` checks this list against the
+     schema's keys. */
+  ["spa_appointments",  "hotel_id = $1"],
+  ["laundry_dockets",   "hotel_id = $1"],
+  ["guest_links",       "hotel_id = $1"],
+
   ["form_c_filings",    "hotel_id = $1"],
   ["invoices",          "hotel_id = $1"],
   ["payments",          "hotel_id = $1"],
@@ -132,6 +146,9 @@ export const CLEAR: [table: string, how: string][] = [
   ["housekeeping_assignments", "hotel_id = $1"],
   ["room_assignments",  "hotel_id = $1"],
   ["room_status_log",   "hotel_id = $1"],
+  /* A repair's costs point at the work order with no cascade — found by
+     the completeness test the day it was written (21 September). */
+  ["work_order_costs",  "hotel_id = $1"],
   ["work_orders",       "hotel_id = $1"],
   ["room_blocks",       "hotel_id = $1"],
 
@@ -163,6 +180,9 @@ const GUARDS: [table: string, trigger: string][] = [
   ["reservations",      "reservations_void_releases"],
   ["room_assignments",  "ra_within_stay"],
   ["guests",            "guests_no_delete"],
+  /* 21 September: a restaurant order's history goes by cascade with the
+     order, and this trigger refuses every delete of it. */
+  ["pos_line_events",   "pos_line_events_no_delete"],
 ];
 
 async function main() {

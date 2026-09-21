@@ -135,3 +135,10 @@ The plan these make is `docs/GO-LIVE-PLAN.md`.
 | D21-76 | Stage 3: a second code release, or a switch-on? | **A switch-on.** Stage 2 puts all the code on the server with the guest-facing parts dark; stage 3 sets the two sending settings, sends the first WhatsApp to the owner's phone, and places the room cards |
 | D21-73 | Languages | **English only** for now |
 | D21-74 | When a second language comes | **Chosen on the booking, with a default per hotel.** Nothing is built for it until there is a second language |
+
+## The menu, and the laptop's data (21 September, later)
+
+| # | Question | Answer |
+|---|---|---|
+| D21-79 | Where the CRM lives in the menu | **A "Guests & CRM" section now**: Guests, Companies and agents, Guest messages, Reviews. "Central CRM" leaves Coming soon; its screens join the section as they are built |
+| D21-80 | The laptop's demo data | **Cleared** — guests, bookings, bills, spa and laundry records. Settings kept (rooms, rates, staff, the menu, price lists). Backup first: `D:\fidato-pg\backups\fidato-before-clearing-2026-09-21.dump` |

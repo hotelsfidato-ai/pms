@@ -160,7 +160,7 @@ export interface NavSection {
    ══════════════════════════════════════════════════════════════════ */
 
 export type SectionKey =
-  | "home" | "front-desk" | "bookings" | "across-properties" | "configuration"
+  | "home" | "front-desk" | "bookings" | "guests-crm" | "across-properties" | "configuration"
   | "inventory" | "store-and-equipment" | "finance" | "point-of-sale" | "banquet"
   | "laundry" | "spa"
   | "reports" | "system"
@@ -177,6 +177,14 @@ const SECTION_LAYOUT: Array<Omit<NavSection, "items"> & { key: SectionKey }> = [
   { key: "home" },
   { key: "front-desk", label: "Front desk" },
   { key: "bookings", label: "Bookings" },
+  /* GUESTS & CRM — the owner, 21 September (asked with a recommendation).
+     Everything the system knows about a PERSON rather than a booking, in one
+     place: the guest list, companies and agents, what was sent to them, the
+     reviews asked for. The CRM's own screens join it as they are built
+     (docs/briefs/crm.md: matching, the blacklist, Guest 360), and "Central
+     CRM" left Coming soon the same day, because its home is now here.
+     No screen gained or lost a permission; four entries changed section. */
+  { key: "guests-crm", label: "Guests & CRM" },
   /* ══════════════════════════════════════════════════════════════
      WHAT BELONGS TO THE GROUP, AND WHAT BELONGS TO ONE HOTEL
 

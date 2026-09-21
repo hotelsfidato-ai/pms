@@ -99,7 +99,10 @@ describe("each person's menu", () => {
     const core = [
       "Dashboard", "Rooms", "Calendar",
       "Arrivals", "Upcoming", "In house", "Due out", "Walk-ins",
-      "All bookings", "Guests", "New booking",
+      "All bookings", "New booking",
+      /* Guests & CRM, from 21 September (the owner): the same screen, its
+         own section. */
+      "Guests",
       "Cashiering",
     ];
     expect(menu("front_desk", { ...ALL_ON, reception_pos: false })).toEqual([...core, "Notifications"]);
@@ -107,6 +110,13 @@ describe("each person's menu", () => {
       ...core,
       "Tables", "Till", "Terminal", "Close restaurant day",
       "Notifications",
+    ]);
+  });
+
+  it("gathers what the system knows about a person in Guests & CRM (21 September)", () => {
+    const section = sidebarFor("gm", "5EL", ALL_ON).find((s) => s.label === "Guests & CRM");
+    expect(section?.items.map((i) => i.label)).toEqual([
+      "Guests", "Companies and agents", "Guest messages", "Reviews",
     ]);
   });
 
@@ -187,8 +197,10 @@ describe("each person's menu", () => {
        their booking, and that is where somebody goes looking for it. Edited by
        the guest-messaging chat, the same way and for the same reason as
        purchasing; the master reviews it at merge. */
+    /* ⚠ AND "CENTRAL CRM" LEFT, 21 September — the owner gave it a home:
+       the "Guests & CRM" section, which its screens join as they are built. */
     const SOON = [
-      "Booking engine", "Central CRM", "Channel manager", "Contracts",
+      "Booking engine", "Channel manager", "Contracts",
       "Fidato CRS", "Guest services", "Leads and WhatsApp", "Loyalty",
       "Marketing", "Online check-in", "Online payments", "Room systems",
     ];

@@ -1,13 +1,10 @@
-import { Contact } from "lucide-react";
 import type { ServiceNavEntry } from "@/components/app/navigation";
-import { seesComingSoon } from "@/lib/permissions";
 
-/* Central CRM — not built. Its Coming soon page sits in the section the owner
-   chose on 16 September: one section at the foot of the menu, for the owner,
-   admins and general managers only. Assembled by `navigation.ts`. When the
-   service is built its real screens take their place in a working section. */
+/* Central CRM — its home is the "Guests & CRM" section (the owner, 21
+   September), which already holds the guest list, companies and agents,
+   guest messages and reviews. It left Coming soon that day. Its own screens
+   — returning-guest matching, the blacklist, Guest 360 — are added here, in
+   section "guests-crm", as the CRM chat builds them (docs/briefs/crm.md).
+   The Coming soon page at /coming-soon/crm stays until then. */
 export const nav: ServiceNavEntry[] = [
-  { section: "coming-soon", order: 30,
-    label: "Central CRM", to: "/coming-soon/crm", icon: Contact, resource: "integration",
-    canSee: seesComingSoon, keywords: ["crm", "customer", "guest history", "partners", "relationship"] },
 ];

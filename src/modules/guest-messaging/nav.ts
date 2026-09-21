@@ -18,8 +18,10 @@ import type { ServiceNavEntry } from "@/components/app/navigation";
 
    Reached from a booking as `?reservation=<id>`, which is the question
    the desk actually asks; the plain address is the property's whole list. */
+/* 21 September: moved from Bookings to Guests & CRM with the guest list
+   (the owner's decision). Same resource, same people. */
 export const nav: ServiceNavEntry[] = [
-  { section: "bookings", order: 60,
+  { section: "guests-crm", order: 30,
     label: "Guest messages", to: "/h/:code/guest-messages", icon: MessageSquare,
     resource: "reservation",
     keywords: ["whatsapp", "email", "confirmation", "pre-arrival", "sent", "message", "sms"] },

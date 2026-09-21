@@ -24,8 +24,10 @@ import type { ServiceNavEntry } from "@/components/app/navigation";
    menu is the eight screens a clerk uses in a shift; asking for a review is
    not one of them, and nothing is lost because Find a screen still reaches it
    under the words somebody would type. */
+/* 21 September: moved from Front desk to Guests & CRM, with what else the
+   system knows about a guest (the owner's decision). Same resource. */
 export const nav: ServiceNavEntry[] = [
-  { section: "front-desk", order: 60,
+  { section: "guests-crm", order: 40,
     label: "Reviews", to: "/h/:code/reviews", icon: Star, resource: "customer",
     keywords: ["reputation", "google reviews", "tripadvisor", "feedback", "ratings", "review link"] },
 ];

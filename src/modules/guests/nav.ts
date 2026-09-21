@@ -1,10 +1,12 @@
 import { Users, Building2, Plug, ShieldAlert } from "lucide-react";
 import type { ServiceNavEntry } from "@/components/app/navigation";
 
-/* Guests and companies — entries in three sections (Bookings,
-   Configuration, Finance). Assembled by `navigation.ts`. */
+/* Guests and companies — entries in three sections (Guests & CRM,
+   Configuration, Finance). Assembled by `navigation.ts`. Guests and
+   Companies and agents moved from Bookings to Guests & CRM on 21 September
+   (the owner's decision). */
 export const nav: ServiceNavEntry[] = [
-  { section: "bookings", order: 20, workingMenus: ["front_desk"],
+  { section: "guests-crm", order: 10, workingMenus: ["front_desk"],
     label: "Guests", to: "/guests", icon: Users, resource: "customer", matchPrefix: true },
   /* ⚠ THIS SAID "BOOKING SOURCES" AND THERE ARE NOW TWO OF THOSE.
      It was renamed from "Companies" for a good reason at the time —
@@ -17,7 +19,7 @@ export const nav: ServiceNavEntry[] = [
      the same vocabulary as the booking form's Business source field.
      Found by auditing the navigation against itself on 9 September;
      I introduced the collision the day before and did not look. */
-  { section: "bookings", order: 40,
+  { section: "guests-crm", order: 20,
     label: "Companies and agents", to: "/companies", icon: Building2, resource: "company",
     keywords: ["travel agent", "corporate", "ota"], matchPrefix: true },
   /* `commission` rather than `rate`: the list is where a booking

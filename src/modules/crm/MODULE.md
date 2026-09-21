@@ -1,5 +1,11 @@
 # Central CRM
 
+> **21 September — the owner:** the CRM's home is the **Guests & CRM** menu
+> section (Guests, Companies and agents, Guest messages, Reviews). Its Coming
+> soon page, menu entry and address were removed the same day; its screens
+> join that section as they are built (`docs/briefs/crm.md`,
+> `docs/architecture/central-crm.md`).
+
 One record for each guest, company and partner hotel, whichever system they came through.
 
 **NOT BUILT. A Coming soon page only.** Asked for by the owner; the owner chose on
