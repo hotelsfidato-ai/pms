@@ -100,49 +100,35 @@ async function main() {
       [HOTEL_CODE],
     );
     if (existing.rows.length) {
-      /* Two guards stand in the way, and both are correct:
+      /* Every guard that refuses a DELETE stands in the way, and every one
+         is correct: a property is not deleted casually, a ledger posting is
+         reversed and never removed, an issued invoice is immutable, a paid
+         bill's lines are frozen (and Postgres drops the order before the
+         cascade reaches its lines, so the trigger sees a NULL status), a
+         stock or equipment movement is append-only.
 
-           hotels_no_delete             a property is not deleted casually
-           folio_postings_append_only   a wrong posting is REVERSED, never
-                                        removed — the ledger is the record
+         They are READ FROM THE CATALOGUE, not listed here. The list was
+         written by hand and every service that added an append-only table
+         after it broke this script (stock_movements, equipment_history,
+         equipment_moves, pos_line_events, pos_order_tenders; 21 September).
 
-         Neither is a nuisance to route around. They are lifted for these
-         statements only and restored immediately, exactly as migration
-         017 does for the placeholder seed. Reloading a demo property is
-         an administrative act; nothing in `api/src` may do this. */
+         They are lifted inside this one transaction and restored before it
+         commits, exactly as migration 017 does for the placeholder seed.
+         Reloading a demo property is an administrative act; nothing in
+         `api/src` may do this. */
       await client.query("begin");
-      await client.query("alter table hotels disable trigger hotels_no_delete");
-      await client.query(
-        "alter table folio_postings disable trigger folio_postings_append_only",
-      );
-      /* And invoices, for the same reason and with the same caveat.
-         Dropping the property cascades to its folios and therefore to
-         any tax invoice issued against them, and `invoices_immutable`
-         refuses that — correctly, for every invoice that was ever
-         handed to a guest. Reloading a demo property is an
-         administrative act; nothing in `api/src` may do this. */
-      await client.query(
-        "alter table invoices disable trigger invoices_immutable",
-      );
-      /* And the till, for the third time and the same reason.
-
-         `pos_order_lines_frozen` refuses to let a paid bill change,
-         including being deleted — and dropping the property cascades
-         to its orders and therefore to their lines. Postgres removes
-         the parent order BEFORE the cascade reaches the lines, so the
-         trigger sees a NULL status and refuses:
-
-             Order f38da989 is <NULL>, so its lines cannot change.
-
-         The first attempt at this made the trigger tolerate a missing
-         parent instead. That looked reasonable and was wrong: it also
-         let `delete from pos_orders` remove a settled order outright,
-         and the db suite said so immediately. Lifting it here is the
-         narrower answer and the one this file already uses three
-         times over. */
-      await client.query(
-        "alter table pos_order_lines disable trigger pos_order_lines_frozen",
-      );
+      const guards = (await client.query<{ tbl: string; trg: string }>(
+        `select c.relname as tbl, t.tgname as trg
+           from pg_trigger t
+           join pg_class c on c.oid = t.tgrelid
+           join pg_namespace n on n.oid = c.relnamespace
+          where n.nspname = 'public' and not t.tgisinternal
+            and t.tgenabled <> 'D'
+            and (t.tgtype & 10) = 10`, /* BEFORE (2) and DELETE (8) */
+      )).rows;
+      for (const g of guards) {
+        await client.query(`alter table ${g.tbl} disable trigger ${g.trg}`);
+      }
       /* Order matters, and the constraints spell it out.
 
          `reservation_groups.lead_hotel_id` has no ON DELETE CASCADE —
@@ -200,26 +186,17 @@ async function main() {
 
          Only those with NO reservation at ANY property go: a guest shared
          with Agra or Pune is still somebody's guest. */
-      await client.query("alter table guests disable trigger guests_no_delete");
       const orphans = await client.query(
         `delete from guests g
           where not exists (select 1 from reservations r
                              where r.guest_id = g.id)`,
       );
-      await client.query("alter table guests enable trigger guests_no_delete");
       if (orphans.rowCount) {
         say(`released ${orphans.rowCount} guests with no remaining stay`);
       }
-      await client.query(
-        "alter table folio_postings enable trigger folio_postings_append_only",
-      );
-      await client.query(
-        "alter table invoices enable trigger invoices_immutable",
-      );
-      await client.query(
-        "alter table pos_order_lines enable trigger pos_order_lines_frozen",
-      );
-      await client.query("alter table hotels enable trigger hotels_no_delete");
+      for (const g of guards) {
+        await client.query(`alter table ${g.tbl} enable trigger ${g.trg}`);
+      }
       await client.query("commit");
       say(`removed the previous ${HOTEL_CODE}`);
     }
