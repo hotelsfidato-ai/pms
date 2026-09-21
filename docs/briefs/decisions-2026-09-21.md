@@ -186,3 +186,4 @@ Numbered CRM-Q1 to CRM-Q11 in `src/modules/crm/MODULE.md`; all as recommended.
 | CRM-Q10 | How Guest 360 is reached | **A "Guest 360" entry that searches by name, phone or email, plus links** from the stay panel and the same-person list, for the three only |
 | CRM-Q11 | A typed phone matches but the email differs from the one on file | **Suggest nothing** (doubt); on a confirmed match a blank phone or email is filled in; nothing on file is overwritten |
 | D21-96 | n8n's address (after trying the locked screen and the tunnel the same day) | **Open to everyone at https://n8n.fidatohotels.com, protected by n8n's own sign-in.** Two-step sign-in recommended for every user. Replaces option 3 |
+| D21-97 | What goes live now | **Everything built so far, in one release** (21 September, night) — the menu work and stage 2 together, with guest-facing sending still off. Replaces the separate release 1 and the few days between stages (D21-55) for these |
