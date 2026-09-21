@@ -50,9 +50,12 @@ wait for check-in and the CRM. So **build on what is live, not on `cp6`:**
 git worktree add "..\fidato-pos-menu" -b pos/menu-variations 79e358e
 ```
 
-`79e358e` is production (18 September). Nothing in `src/modules/pos`,
-`api/src/modules/pos` or the package files has changed on `cp6` since, so your
-work merges into both. **Aim for no migration** — 045's tables already hold
+`79e358e` is production (18 September). Since then `cp6` has changed ONE
+line in your folders: the refusal in `api/src/modules/pos/till.ts` for a dish
+with no GST rate now names "Rooms and rates → Room types, in the GST card"
+instead of "Settings → Tax" (21 September, D21-78). Leave that line alone
+and your work merges into both; the master carries the wording onto
+production with stage 2. **Aim for no migration** — 045's tables already hold
 everything above; a migration numbered on top of production would collide
 with `cp6`'s 114–120. If you find you cannot avoid one, stop and ask the
 master first. The master merges your branch onto production for the owner's
