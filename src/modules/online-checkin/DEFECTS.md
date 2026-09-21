@@ -109,6 +109,30 @@ browser asks.
 **The rule** — A new request header is a question for the CORS list, and only
 a browser asks it. Open the screen.
 
+### OCI-5 · A database function behind the code could forget the unlock, and every test would pass
+
+**Found** — 21 September, proving the guest's bill guard: `app.guest_bill` was
+broken on purpose to take the link's hash alone (`app.guest_link_stay`
+instead of `app.guest_unlocked`) — and all 34 door tests passed.
+
+The door asks for the unlock (`openedHere`) BEFORE it calls any function
+behind the code, so every test that goes through the door is refused at the
+door and never reaches the function. That is defence in depth working — and
+it means the database function, which the brief names as THE guard ("asked
+ON THE SERVER, in the database function, every time"), had no test of its
+own. The same was true of `guest_details_submit`, `guest_details_state`,
+`guest_request_make` and `guest_requests_mine`. No function was actually
+wrong; nothing would have said so if one had become wrong.
+
+**What was done** — `guestDoorBehindTheCode.test.ts` calls every function
+behind the code directly, with the link's hash and no unlock, and with an
+unlock nobody was given, after the code HAS been answered on that link: each
+must answer nothing. Seen to fail twice — with `guest_bill` taking the link
+alone, and separately with `guest_details_submit` doing the same.
+
+**The rule** — Two guards in a row test as one unless each is asked on its
+own. Break the inner one with the outer one standing.
+
 ---
 
 ## Adding one

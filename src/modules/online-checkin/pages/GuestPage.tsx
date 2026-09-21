@@ -8,10 +8,11 @@ import {
   Button, Field, fieldProps, Input, NativeSelect, Segmented, StatusPill, Textarea,
 } from "@/components/ui";
 import {
-  dropUnlock, getDetails, getRequests, makeRequest, openGuestPage, sendCode,
+  dropUnlock, getBill, getDetails, getRequests, makeRequest, openGuestPage, sendCode,
   sendDetails, verifyCode, type Details, type GuestPageView,
 } from "@/modules/online-checkin/data/guestPage";
 import { privacyNoticeFor } from "@/modules/online-checkin/privacyNotice";
+import { BillPrint } from "@/modules/finance";
 
 /* ══════════════════════════════════════════════════════════════════
    THE GUEST'S OWN PAGE — /g/:token
@@ -258,6 +259,7 @@ function Behind(
         <StatusPill tone="success">Verified on this phone</StatusPill>
       </div>
       <DetailsSection token={token} hotel={view.hotel.name} onUnlockGone={onUnlockGone} />
+      <BillSection token={token} onUnlockGone={onUnlockGone} />
       {/* Only what this hotel has switched on (D21-63). */}
       {view.offers.length > 0 && (
         <RequestsSection token={token} offers={view.offers} onUnlockGone={onUnlockGone} />
@@ -371,6 +373,40 @@ function DetailsSection(
             <p className="text-sm text-brand-red">{messageFrom(send.error)}</p>
           )}
         </form>
+      )}
+    </section>
+  );
+}
+
+/* ── The bill as it stands (D21-10) ─────────────────────────────────
+   EXACTLY THE BILL THE DESK PRINTS: finance's own `BillPrint`, drawing
+   finance's one definition of a bill (`app.stay_bill`, migration 123)
+   through the door. Nothing here adds, taxes or rounds.
+
+   Titled "Interim bill", not "Tax Invoice": this is a bill with no invoice
+   number, before check-out, and a guest reading "Tax Invoice" would take it
+   for the final one. Paying online is not in this version (the brief), so
+   it says where to pay. */
+function BillSection({ token, onUnlockGone }: { token: string; onUnlockGone: () => void }) {
+  const bill = useQuery({
+    queryKey: ["guest-behind", token, "bill"],
+    queryFn: () => getBill(token),
+    retry: false,
+  });
+  useUnlockGone(bill.error, onUnlockGone);
+
+  return (
+    <section className="mt-6 border-t border-grey-200 pt-5">
+      <h2 className="text-base font-medium text-ink-900">Your bill so far</h2>
+      {bill.isLoading && <p className="text-sm text-grey-600 mt-2">One moment…</p>}
+      {bill.error && !unlockGone(bill.error) && (
+        <p className="text-sm text-grey-600 mt-2">{messageFrom(bill.error)}</p>
+      )}
+      {bill.data && (
+        <>
+          <p className="text-sm text-grey-600 mt-1 mb-3">Pay at the desk before you leave.</p>
+          <BillPrint bill={bill.data} title="Interim bill" />
+        </>
       )}
     </section>
   );

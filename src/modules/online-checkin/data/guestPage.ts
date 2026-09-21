@@ -1,4 +1,5 @@
 import { api } from "@/lib/api";
+import type { StayBill } from "@/modules/finance";
 
 /* ══════════════════════════════════════════════════════════════════
    THE GUEST'S OWN PAGE — the calls the door answers
@@ -131,6 +132,11 @@ export const sendDetails = (token: string, details: Details): Promise<{ sent: tr
     method: "POST",
     body: JSON.stringify(details),
   }));
+
+/** The bill as it stands (D21-10): finance's one definition (`app.stay_bill`,
+    migration 123) for this stay, through the door. Nothing here adds a figure. */
+export const getBill = (token: string): Promise<StayBill> =>
+  api<StayBill>(at(token, "/bill"), withUnlock(token));
 
 export interface GuestRequest {
   kind: "spa" | "laundry";

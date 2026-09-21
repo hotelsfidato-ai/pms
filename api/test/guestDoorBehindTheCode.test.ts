@@ -262,6 +262,7 @@ describe("the code unlocks the phone that answered, not the link (D21-6)", () =>
       ["POST", "/details", { idType: "voter", idNumber: "ABC1234567" }],
       ["GET", "/requests"],
       ["POST", "/requests", { kind: "spa", what: "A massage" }],
+      ["GET", "/bill"],
     ];
 
     for (const [method, path, body] of rooms) {
@@ -279,6 +280,31 @@ describe("the code unlocks the phone that answered, not the link (D21-6)", () =>
     /* And it WORKS with the unlock - or the refusals above prove a wall. */
     expect((await asGuest(`/${link}/details`, "GET", undefined, unlock)).status).toBe(200);
     expect((await asGuest(`/${link}/requests`, "GET", undefined, unlock)).status).toBe(200);
+  });
+
+  /* ⚠ THE DATABASE IS THE GUARD, AND THE TESTS ABOVE CANNOT SEE IT. Every
+     one of them goes through the door, and the door checks the unlock BEFORE
+     it calls a function behind the code - so a function that forgot to ask
+     `app.guest_unlocked` passed all of them. Found on 21 September by
+     breaking `app.guest_bill` to take the link alone: 34 passed. The brief
+     says it plainly: asked in the database function, every time. So each
+     one is asked here directly, with the link's hash and no unlock, and with
+     an unlock nobody was given - and must answer nothing. */
+  it("is asked for in every function behind the code, in the database itself", async () => {
+    const hash = hashForTests(link);
+    await unlockWith(link);   // the link HAS been answered; its hash alone is still nothing
+
+    for (const unlock of [null, hashForTests("an-unlock-nobody-was-given")]) {
+      const one = async (text: string) => (await sql(text, [hash, unlock])).rows[0];
+      expect((await one("select app.guest_bill($1, $2) as v")).v, "guest_bill").toBeNull();
+      expect(await one("select * from app.guest_details_state($1, $2)"), "guest_details_state").toBeUndefined();
+      expect(await one("select * from app.guest_requests_mine($1, $2)"), "guest_requests_mine").toBeUndefined();
+      expect((await one(
+        `select app.guest_details_submit($1, $2, '{"idType":"voter","idNumber":"X1"}'::jsonb) as v`)).v,
+        "guest_details_submit").toBe(false);
+      expect((await one("select app.guest_request_make($1, $2, 'spa', 'A massage', null) as v")).v,
+        "guest_request_make").toBe(false);
+    }
   });
 
   it("keeps the unlock to the link it was answered on", async () => {
@@ -543,6 +569,33 @@ describe("the check-in details wait for a clerk", () => {
     const after = (await sql(
       "select to_jsonb(d) as row from guest_documents d where guest_id = $1", [guestId])).rows[0]?.row;
     expect(after).toEqual(before);
+  });
+});
+
+/* ── The bill as it stands (D21-10, migration 124) ─────────────────── */
+
+describe("the guest's bill", () => {
+  it("is refused before the code and to the link alone, and is the desk's own bill after", async () => {
+    const before = await asGuest(`/${link}/bill`);
+    expect(before.status, "before the code").toBe(404);
+    expect(((await before.json()) as { error: string }).error).toBe(NOTHING);
+
+    const unlock = await unlockWith(link);
+    expect((await asGuest(`/${link}/bill`)).status, "the link alone, after the code").toBe(404);
+    expect((await asGuest(`/${link}/bill`, "GET", undefined, "an-unlock-nobody-was-given")).status)
+      .toBe(404);
+
+    const theirs = await asGuest(`/${link}/bill`, "GET", undefined, unlock);
+    expect(theirs.status, await theirs.clone().text()).toBe(200);
+
+    /* EXACTLY THE DESK'S (D21-10): the same stay's bill, asked for through the
+       staff route the desk's print uses. One definition, so one answer. */
+    const desks = await asStaff(deskId, `/5EL/stays/${stayId}/bill`);
+    expect(desks.status).toBe(200);
+    const guestBill = (await theirs.json()) as { stay: { reference: string }; balance: number };
+    expect(guestBill).toEqual(await desks.json());
+    expect(guestBill.stay.reference).toBeTruthy();
+    expect(typeof guestBill.balance).toBe("number");
   });
 });
 
