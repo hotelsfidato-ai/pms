@@ -378,9 +378,11 @@ function Tile({ icon: Icon, label, value, rows, note, to, tone, loading, lead, t
 
   if (!to) return <Card className="h-full">{body}</Card>;
   return (
+    /* The focus ring follows the card's own corner (radius-md), not a
+       larger one drawn around it. */
     <Link
       to={to}
-      className="group block rounded-lg focus-visible:outline-2 focus-visible:outline-brand-orange"
+      className="group block rounded-md focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-orange"
     >
       <Card className="h-full transition-colors duration-150 group-hover:border-grey-400">
         {body}
@@ -402,15 +404,20 @@ interface Row {
   dirty: number;
 }
 
-async function buildRows(): Promise<Row[]> {
+/** Each hotel on ITS OWN operating day and its own month so far. This
+    table read every row on the date of the hotel in view — BUSINESS_DATE
+    and the period that goes with it — so with Agra a day behind Pune,
+    Agra's "arrivals due" were Pune's tomorrow (21 September). */
+async function buildRows(dates: Map<string, string>): Promise<Row[]> {
   const properties = await listProperties();
   return Promise.all(
     properties.map(async (property) => {
-      const stats = await getPeriodStatistics(property.id);
+      const date = dates.get(property.id) ?? BUSINESS_DATE;
+      const stats = await getPeriodStatistics(property.id, monthStart(date), date);
       /* STILL TO COME, not everyone whose date is today. A guest who has
          already checked in is not due. */
-      const arrivals = await listArrivalsOutstanding(property.id, BUSINESS_DATE);
-      const counts = await getStayViewCounts(property.id, BUSINESS_DATE);
+      const arrivals = await listArrivalsOutstanding(property.id, date);
+      const counts = await getStayViewCounts(property.id, date);
       /* NULL WHEN THE FIGURES DID NOT COME BACK, not zero. `dirty` is
          different: the count genuinely IS zero when no room is dirty. */
       return {
@@ -435,7 +442,7 @@ const columns: Column<Row>[] = [
         className="group inline-flex items-center gap-1.5 font-medium text-ink-900 hover:text-brand-orange-700 transition-colors duration-150"
       >
         {r.property.name}
-        <ArrowRight className="size-3.5 opacity-0 group-hover:opacity-100 transition-opacity duration-150" />
+        <ArrowRight className="size-3.5 opacity-0 group-hover:opacity-100 group-focus-visible:opacity-100 transition-opacity duration-150" aria-hidden />
       </Link>
     ),
   },
@@ -474,15 +481,23 @@ const columns: Column<Row>[] = [
 ];
 
 function EveryHotel() {
-  const { data, isLoading } = useQuery({
-    queryKey: ["dashboard", BUSINESS_DATE],
-    queryFn: buildRows,
+  const hotels = useSession((s) => s.hotels);
+  const dates = new Map(hotels.map((h) => [h.code, h.businessDate]));
+  const query = useQuery({
+    queryKey: ["dashboard", [...dates].join()],
+    queryFn: () => buildRows(dates),
   });
+  const { data, isLoading } = query;
+  const failed = readError(query);
 
   return (
     <Section title="Every property" description="The month so far. Each reconciles to that property's Manager report.">
       <Card>
-        {isLoading ? (
+        {failed ? (
+          /* Not an empty table: a group whose figures failed to load is
+             not a group with no hotels. */
+          <ReadFailed compact error={failed} what="every property's figures" onRetry={() => void query.refetch()} />
+        ) : isLoading ? (
           <CardBody className="space-y-3">
             <Skeleton className="h-3.5 w-full" />
             <Skeleton className="h-3.5 w-11/12" />

@@ -49,6 +49,26 @@ Manager report's read failing with a 500 — seen to fail with the error line
 taken out, and pass with it back. Looked at on the demo data at 1440, 1024 and
 390 pixels wide: no sideways scroll at 390. The design detector found nothing.
 
+**The finishing pass, the same evening** (the owner chose "finish it" over
+another round of looks)
+- **Found: the table of every property read every row on the date of the
+  hotel in view.** `buildRows` used `BUSINESS_DATE` and the period that goes
+  with it for each property, so with one hotel a day behind another its
+  arrivals due, rooms to clean and month so far were the other hotel's day.
+  Each row now reads its own hotel's business date and its own month. Only
+  an owner of more than one hotel sees this table, which is why the demo
+  never showed it.
+- That table says when its figures failed to load, instead of drawing an
+  empty table, which reads as a group with no hotels.
+- A tile's focus ring follows the tile's own corner, two pixels out; the
+  arrow beside a property's name shows on keyboard focus too, and is hidden
+  from screen readers.
+- **Proved:** 45 passed (`vitest run src/modules/reports src/App.test.tsx`);
+  the new test (two hotels, 25 August and 2 September) seen to fail with the
+  old date put back and pass with the fix; in the running app, the manager
+  report forced to answer 500 shows "Today's figures did not load" with Try
+  again, and Tab from RevPAR lands on the Arrivals tile with its ring drawn.
+
 **Left open**
 - The City ledger tile's note ("A balance waits on their payments being
   recorded") is hard to follow; its words are the owner's to change, not mine.
