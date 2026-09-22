@@ -11,6 +11,7 @@ import {
 } from "@/components/ui";
 import { checkIn, assignableRooms, checkInAllowed, earlyArrival } from "@/modules/front-desk/data/operations";
 import { type Stay } from "@/data/repositories";
+import { BookingSiteBlacklist } from "@/modules/guests";
 
 /* ══════════════════════════════════════════════════════════════════
    FLOW A — arrival to in house
@@ -142,6 +143,10 @@ export function CheckInFlow({
         title={`Check in ${stay.guest}`}
         description={`${stay.reference} · ${stay.roomType}`}
       >
+        {/* CRM-3 (D22-8): a booking site's guest on a blacklisted phone or email. */}
+        <div className="mb-4 empty:hidden">
+          <BookingSiteBlacklist hotelId={hotelId} from={stay.arrival} to={stay.arrival} stayIds={[stay.id]} />
+        </div>
         <Stepper current={step} />
 
         <div className="mt-5 min-h-[220px]">

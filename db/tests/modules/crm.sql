@@ -14,6 +14,10 @@
 --     role was refused by 013's trigger until this migration
 --   * a join is made only through its function, by a manager
 --   * "no offers" is stored as its key, recorded by anybody, cleared by a manager
+--   * "not the same person" (CRM-2): a manager's, only through its function;
+--     the pair leaves the list, follows a join, comes back on undo
+--   * a booking site's guest on a blacklisted number (CRM-3): warned of, a
+--     desk booking not, and nothing told to another hotel's clerk
 -- =============================================================================
 do $$
 declare
@@ -21,6 +25,8 @@ declare
   clerk uuid; adm uuid;
   g uuid; ok_count int; n int; failed boolean; v text;
   grp uuid;
+  w uuid; hb uuid; th uuid; ans uuid; jn uuid;
+  ota uuid; dsrc uuid; og uuid; dg uuid; h2 uuid; other uuid; pair_reason text;
 begin
   -- ---------- the phone key: the same samples as contactKeys.test.ts --------
   select count(*) into ok_count
@@ -37,6 +43,9 @@ begin
 
   -- ---------- a property, a clerk and an administrator -----------------------
   h := app.provision_property_unchecked('CRM', 'CRM Test', 'Nowhere');
+  -- A second property, for CRM-3's "another hotel's clerk" (provisioned here,
+  -- while the session is still the group administrator's).
+  h2 := app.provision_property_unchecked('CRN', 'CRM Test Two', 'Elsewhere');
   select id into t from room_types where hotel_id = h order by sort_order limit 1;
 
   insert into staff (email, full_name) values ('crm-clerk@fidato.in', 'CRM Clerk')
@@ -141,20 +150,111 @@ begin
   perform test.ok('crm', 'a booking nobody ticked has not agreed to WhatsApp',
     not (select whatsapp_agreed from reservations where reference = 'CRM-T-5'));
 
+  -- ---------- "not the same person" (CRM-2, D22-8) -------------------------
+  -- Three records on one mobile: a wife, her husband, and a second record of
+  -- the husband. Every two of them is a pair until somebody answers.
+  insert into guests (full_name, phone) values ('CRM Test Wife', '+91 70000 22222') returning id into w;
+  insert into guests (full_name, phone) values ('CRM Test Husband', '7000022222') returning id into hb;
+  insert into guests (full_name, phone) values ('CRM Test Husband Again', '07000022222') returning id into th;
+
+  perform set_config('app.user_id', clerk::text, true);
+  set local role pms_app;
+  failed := false;
+  begin
+    perform app.guest_not_same(w, hb);
+  exception when insufficient_privilege then failed := true;
+  end;
+  reset role;
+  perform test.ok('crm', 'a clerk cannot say two guests are not the same person', failed);
+
+  perform set_config('app.user_id', adm::text, true);
+  set local role pms_app;
+  failed := false;
+  begin
+    insert into guest_not_same (a, b, said_by) values (least(w, hb), greatest(w, hb), adm);
+  exception when insufficient_privilege then failed := true;
+  end;
+  reset role;
+  perform test.ok('crm', 'the application cannot write that answer except through app.guest_not_same', failed);
+
+  set local role pms_app;
+  ans := app.guest_not_same(hb, w);
+  select count(*) into n from app.same_person_pairs() p
+   where (p.a, p.b) = (least(w, hb), greatest(w, hb));
+  select count(*) into ok_count from app.same_person_pairs() p
+   where (p.a, p.b) = (least(w, th), greatest(w, th));
+  reset role;
+  perform test.ok('crm', 'an answered pair leaves the list, and only that pair',
+    n = 0 and ok_count = 1, n || ' answered pairs listed, ' || ok_count || ' of the other pair');
+  perform test.ok('crm', 'the answer keeps who gave it',
+    (select said_by from guest_not_same where id = ans) = adm);
+
+  -- The husband's first record is joined into his second (`hb` into `th`).
+  -- The wife is still not him, now that `th` stands for him.
+  set local role pms_app;
+  jn := app.guest_join(th, hb);
+  select count(*) into n from app.same_person_pairs() p
+   where (p.a, p.b) = (least(w, th), greatest(w, th));
+  perform app.guest_join_undo(jn);
+  perform app.guest_not_same_undo(ans);
+  select count(*) into ok_count from app.same_person_pairs() p
+   where (p.a, p.b) = (least(w, hb), greatest(w, hb));
+  reset role;
+  perform test.ok('crm', 'an answer follows a record joined into another, and an undo lists the pair again',
+    n = 0 and ok_count = 1, n || ' listed after the join, ' || ok_count || ' after the undo');
+
+  -- ---------- a booking site's guest who is blacklisted (CRM-3, D22-8) ------
+  -- `g` is blacklisted ('Unpaid', above). His number arrives on a booking
+  -- from a booking site and on one taken at the desk; only the first warns.
+  select id into ota from booking_sources where kind = 'ota' order by name limit 1;
+  select id into dsrc from booking_sources where kind = 'direct' order by name limit 1;
+  insert into guests (full_name, phone) values ('CRM Test Site Guest', '7000012345') returning id into og;
+  insert into guests (full_name, phone) values ('CRM Test Desk Guest', '07000012345') returning id into dg;
+  insert into reservations (hotel_id, guest_id, room_type_id, reference, check_in, check_out,
+                            adults, status, source, agreed_rate, booking_source_id)
+  values (h, og, t, 'CRM-T-6', '2027-05-01', '2027-05-02', 1, 'confirmed', 'ota', 1000, ota),
+         (h, dg, t, 'CRM-T-7', '2027-05-01', '2027-05-02', 1, 'confirmed', 'direct', 1000, dsrc);
+
+  insert into staff (email, full_name) values ('crm-other@fidato.in', 'CRM Other Clerk')
+  on conflict (email) do update set is_active = true returning id into other;
+  delete from staff_hotels where staff_id = other;
+  insert into staff_hotels (staff_id, hotel_id, role) values (other, h2, 'front_desk');
+
+  perform set_config('app.user_id', clerk::text, true);
+  set local role pms_app;
+  select count(*), max(b.reference), max(b.blacklist_reason) into n, v, pair_reason
+    from app.booking_site_blacklist(h, '2027-05-01', '2027-05-01') b;
+  select count(*) into ok_count from app.booking_site_blacklist(h, '2027-05-02', '2027-06-01');
+  reset role;
+  perform test.ok('crm', 'a booking site''s guest on a blacklisted number is warned of, with the reason; a desk booking is not',
+    n = 1 and v = 'CRM-T-6' and pair_reason = 'Unpaid',
+    n || ' warnings, ' || coalesce(v, 'none') || ', ' || coalesce(pair_reason, 'no reason'));
+  perform test.ok('crm', 'the warning keeps to the arrival dates asked', ok_count = 0, ok_count || ' outside the dates');
+
+  perform set_config('app.user_id', other::text, true);
+  set local role pms_app;
+  select count(*) into n from app.booking_site_blacklist(h, '2027-05-01', '2027-05-01');
+  reset role;
+  perform test.ok('crm', 'another hotel''s clerk is told nothing of this hotel''s bookings', n = 0, n || ' rows');
+
   -- ---------- clean up ------------------------------------------------------
   delete from offer_opt_outs where value in ('7000012345', 'crm.test@example.com');
+  delete from guest_not_same where a in (w, hb, th) or b in (w, hb, th);
+  delete from guest_joins where kept_id in (w, hb, th) or joined_id in (w, hb, th);
   delete from reservations where hotel_id = h;
   delete from reservation_groups where id = grp;
   alter table guests disable trigger guests_no_delete;
-  delete from guests where id = g;
+  update guests set joined_into = null where id in (w, hb, th);
+  delete from guests where id in (g, w, hb, th, og, dg);
   alter table guests enable trigger guests_no_delete;
   alter table hotels disable trigger hotels_no_delete;
-  delete from hotels where id = h;
+  delete from staff_hotels where hotel_id in (h, h2);
+  delete from hotels where id in (h, h2);
   alter table hotels enable trigger hotels_no_delete;
-  delete from staff_hotels where staff_id in (clerk, adm);
-  update staff set is_active = false where id in (clerk, adm);
+  delete from staff_hotels where staff_id in (clerk, adm, other);
+  update staff set is_active = false where id in (clerk, adm, other);
 
-  select count(*) into n from hotels where code = 'CRM';
+  select count(*) into n from hotels where code in ('CRM', 'CRN');
   perform test.ok('crm', 'the fixtures do not outlive the test', n = 0, n || ' left behind');
 end $$;
 

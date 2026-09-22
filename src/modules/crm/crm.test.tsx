@@ -34,11 +34,13 @@ const card = (id: string, name: string, hasId: boolean) => ({
 });
 
 let joined = false;
+let apart = false;
 const posted: Array<{ path: string; method: string; body: unknown }> = [];
 
 beforeEach(() => {
   startSignedIn();
   joined = false;
+  apart = false;
   posted.length = 0;
 });
 
@@ -52,11 +54,17 @@ function answer(path: string, init?: RequestInit): unknown {
   if (init?.method && init.method !== "GET") {
     posted.push({ path, method: init.method, body: init.body ? JSON.parse(String(init.body)) : null });
     if (path.endsWith("/crm/joins")) joined = true;
-    if (path.endsWith("/undo")) joined = false;
-    return { ok: true, joinId: "j-1" };
+    if (path.endsWith("/crm/not-same")) apart = true;
+    if (path.includes("/crm/joins/") && path.endsWith("/undo")) joined = false;
+    if (path.includes("/crm/not-same/") && path.endsWith("/undo")) apart = false;
+    return { ok: true, joinId: "j-1", id: "n-1" };
+  }
+  if (path.includes("/crm/not-same")) {
+    return { answers: apart ? [{ id: "n-1", aId: "g-a", aName: "R Deshpande",
+      bId: "g-b", bName: "Rohit Deshpande", by: "Agra Manager", at: "2026-09-22T10:00:00Z" }] : [] };
   }
   if (path.includes("/crm/same-person")) {
-    return { pairs: joined ? [] : [{ a: card("g-a", "R Deshpande", false),
+    return { pairs: joined || apart ? [] : [{ a: card("g-a", "R Deshpande", false),
                                      b: card("g-b", "Rohit Deshpande", true),
                                      samePhone: true, sameEmail: false }] };
   }
@@ -165,6 +173,32 @@ describe("possible same person", () => {
       path: "/api/hotels/5EL/crm/joins/j-1/undo", method: "POST",
     }));
     expect(await screen.findByText(/Only Rohit Deshpande has an ID on file/)).toBeTruthy();
+  });
+});
+
+describe("not the same person (CRM-2, D22-8)", () => {
+  it("takes the pair off the list, shows who said so, and undoes it", async () => {
+    renderAt("/crm/same-person", "/crm/same-person", <SamePersonPage />);
+
+    fireEvent.click(await screen.findByRole("button", { name: "Not the same person" }));
+    await waitFor(() => expect(posted).toHaveLength(1));
+    expect(posted[0]).toMatchObject({
+      path: "/api/hotels/5EL/crm/not-same", method: "POST",
+      body: { aId: "g-a", bId: "g-b" },
+    });
+
+    /* The pair is gone; the answer stands below, with who gave it. */
+    expect(await screen.findByText("No records share a phone or email")).toBeTruthy();
+    expect(await screen.findByText(/are two people/)).toBeTruthy();
+    expect(screen.getByText(/by Agra Manager/)).toBeTruthy();
+    /* Not a join: nothing was joined. */
+    expect(posted.some((p) => p.path.endsWith("/crm/joins"))).toBe(false);
+
+    fireEvent.click(screen.getByRole("button", { name: /Undo/ }));
+    await waitFor(() => expect(posted.at(-1)).toMatchObject({
+      path: "/api/hotels/5EL/crm/not-same/n-1/undo", method: "POST",
+    }));
+    expect(await screen.findByRole("button", { name: "Not the same person" })).toBeTruthy();
   });
 });
 

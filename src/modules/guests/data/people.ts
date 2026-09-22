@@ -34,3 +34,34 @@ export async function findReturningGuest(
     `/api/hotels/${hotelId}/guests/returning?${query}`, { matches: [] });
   return out.matches;
 }
+
+/* ══════════════════════════════════════════════════════════════════
+   A BOOKING SITE'S GUEST WHO IS A BLACKLISTED GUEST (CRM-3, D22-8)
+
+   A booking the channel manager makes has no clerk to see the warning
+   above. Arrivals and the check-in ask the server instead: which bookings
+   from a booking site, arriving between these dates, have a guest whose
+   phone or email is a blacklisted guest's (the same exact match). A
+   warning only - nothing is joined and nothing refused (D21-2, D21-21).
+   ══════════════════════════════════════════════════════════════════ */
+
+export interface BlacklistWarning {
+  stayId: string;
+  reference: string;
+  /** The name the booking site sent. */
+  guest: string;
+  /** The booking site: Booking.com, Agoda... */
+  source: string;
+  blacklistedName: string;
+  reason: string | null;
+}
+
+export async function listBlacklistWarnings(
+  hotelId: string, from: string, to: string,
+): Promise<BlacklistWarning[]> {
+  if (!hotelId) return [];
+  const query = new URLSearchParams({ from, to });
+  const out = await fetchOr<{ warnings?: BlacklistWarning[] }>(
+    `/api/hotels/${hotelId}/guests/blacklist-warnings?${query}`, { warnings: [] });
+  return out.warnings ?? [];
+}

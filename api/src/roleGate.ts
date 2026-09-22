@@ -220,6 +220,8 @@ export const WRITE_RULES: Readonly<Record<string, Rule>> = {
   [`PUT ${H}/booking-sources/:id/commission`]: COMMISSION,
   [`POST ${H}/crm/joins`]: own("guests/people.ts: app.is_crm_manager"),
   [`POST ${H}/crm/joins/:id/undo`]: own("guests/people.ts: app.is_crm_manager"),
+  [`POST ${H}/crm/not-same`]: own("guests/people.ts: app.is_crm_manager"),
+  [`POST ${H}/crm/not-same/:id/undo`]: own("guests/people.ts: app.is_crm_manager"),
   [`POST ${H}/crm/guests/:id/blacklist`]: own("guests/people.ts: app.is_crm_manager"),
   [`DELETE ${H}/crm/guests/:id/blacklist`]: own("guests/people.ts: app.is_crm_manager"),
   [`POST ${H}/crm/no-offers`]: own("guests/people.ts: app.is_crm_manager"),
