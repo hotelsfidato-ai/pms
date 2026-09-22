@@ -305,7 +305,8 @@ export default function TillPage() {
                               the normal case, and the guest will see
                               two lines on their folio because of it. */}
                           <span className="block text-2xs text-grey-500 tabular">
-                            {item.taxRate}%
+                            {/* A dash when none is set, never 0% (POS-15). */}
+                            {item.taxRate === null ? "-" : `${item.taxRate}%`}
                           </span>
                         </span>
                       </button>

@@ -14,15 +14,19 @@ entries stay here: they are the reason the fault does not come back.
 
 ## Open — not fixed
 
-### POS-15 · A dish imported with its GST column blank reads "0%" on the Menu screen and the Terminal
-
-**Found** — 21 September, on screen, importing a menu file with variations: "Mutton Rogan Josh | 0% | -". The import stores `tax_rate` NULL when the GST % column is blank — meaning "follow the section's heading" — and `addOneLine` resolves it when the dish is rung. But `GET /till/menu` sends `taxRate: Number(r.tax_rate)`, and `Number(null)` is 0, so the Menu row and the Terminal tile print **0%**. Measured in `fidato_pos_menu`: that dish's section (Main course) has no tax heading, so `app.gst_rate_or_null` answers NULL and ringing it would be refused with the "has no GST rate" sentence — the screen shows 0% for a dish that has no rate at all. A missing figure shown as a zero (HANDOVER § 5). Older than this job: every dish imported with the column blank.
-
-**Not fixed** — outside the 21 September job. The fix, when the owner says: the menu read sends the RESOLVED rate (`app.gst_rate_or_null` for the dish's section, as `addOneLine` does), and a null shows as a dash. Asked in the hand-back.
+Nothing open.
 
 ---
 
 ## Fixed
+
+### POS-15 · A dish imported with its GST column blank reads "0%" on the Menu screen and the Terminal — FIXED 22 September
+
+**Found** — 21 September, on screen, importing a menu file with variations: "Mutton Rogan Josh | 0% | -". The import stores `tax_rate` NULL when the GST % column is blank — meaning "follow the section's heading" — and `addOneLine` resolves it when the dish is rung. But `GET /till/menu` sends `taxRate: Number(r.tax_rate)`, and `Number(null)` is 0, so the Menu row and the Terminal tile print **0%**. Measured in `fidato_pos_menu`: that dish's section (Main course) has no tax heading, so `app.gst_rate_or_null` answers NULL and ringing it would be refused with the "has no GST rate" sentence — the screen shows 0% for a dish that has no rate at all. A missing figure shown as a zero (HANDOVER § 5). Older than this job: every dish imported with the column blank.
+
+**What was done** — On the owner's D21-94 ("Show the rate its section actually charges, or a dash where none is set"): the rate a dish is rung at is written once, `DISH_TAX_RATE` in `api/src/modules/pos/till.ts` (its own rate, else `app.gst_rate_or_null` for its section's heading and price). `addOneLine` copies it onto the line and the menu read now sends it, null when nothing is set, so the screen cannot show a rate the bill does not charge. The Menu row, the Terminal tile and the Till tile print "-" for a null and keep a real 0% as "0%". Guarded by `api/test/modules/pos/menuTaxRate.test.ts` (the menu's rate equals the rung line's; null for a section with no rule; a dish's own 0 stays 0) — before the server change it failed `expected +0 to be 5` and `expected +0 to be null`; and by `ownerDecisions.test.tsx` ("a dish's GST reads its section's rate, or a dash") — with the three screens' dash taken out, all three failed on `Unset Dish%₹200.00` (a bare "%").
+
+**The rule** — A figure a screen shows beside a thing is the figure the server will act on, read from the same expression, not a column that feeds it. And `Number(null)` is 0 - a nullable number crosses the wire as null.
 
 ### POS-16 · A single tap refused over a side put the dish on the bill without it — FIXED 21 September
 

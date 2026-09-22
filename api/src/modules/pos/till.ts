@@ -146,6 +146,16 @@ till.get("/:code/till/access", (c) => c.json({ ok: true as const }));
 
 /* ── The menu ─────────────────────────────────────────────────────── */
 
+/* THE GST A DISH IS RUNG AT: its own rate, else its section's rule for
+   its price - null when neither is set. Written ONCE, for `i` a menu item
+   and `c` its category: `addOneLine` copies it onto the line, and the
+   menu read shows it, so a screen cannot print a rate the bill does not
+   charge. It sent the dish's own column, and `Number(null)` printed "0%"
+   for a dish that follows its section (POS-15, D21-94). */
+const DISH_TAX_RATE = `coalesce(
+  i.tax_rate,
+  app.gst_rate_or_null(i.hotel_id, coalesce(c.tax_kind, 'other'), i.price))`;
+
 till.get("/:code/till/menu", async (c) => {
   const body = await withSession(c.get("subject"), async (client) => {
     const hotelId = await hotelFor(client, c.req.param("code"));
@@ -169,7 +179,8 @@ till.get("/:code/till/menu", async (c) => {
          A kitchen that has created "Desserts" and not filled it needs
          to see the empty shelf, not wonder where it went. */
       `select c.id::text as category_id, c.name as category,
-              i.id::text, i.name, i.price::text, i.tax_rate::text,
+              i.id::text, i.name, i.price::text,
+              ${DISH_TAX_RATE}::text as tax_rate,
               i.is_active, coalesce(i.sort_order, 0) as sort_order,
               i.short_code, i.is_veg, i.is_favourite,
               i.off_until::text, i.off_reason,
@@ -199,7 +210,10 @@ till.get("/:code/till/menu", async (c) => {
           a sequence — a drink — and is not course zero. */
       course: number | null;
       items: {
-        id: string; name: string; price: number; taxRate: number;
+        id: string; name: string; price: number;
+        /** The rate it is rung at. Null is "none set" - a dash on
+            screen, never 0%. A real 0 stays 0. */
+        taxRate: number | null;
         isActive: boolean; shortCode: string | null;
         isVeg: boolean | null; isFavourite: boolean;
         offUntil: string | null; offReason: string | null;
@@ -235,7 +249,7 @@ till.get("/:code/till/menu", async (c) => {
           id: r.id,
           name: r.name,
           price: Number(r.price),
-          taxRate: Number(r.tax_rate),
+          taxRate: r.tax_rate === null ? null : Number(r.tax_rate),
           isActive: r.is_active ?? false,
           shortCode: r.short_code,
           /* NULL is a real answer: nobody has said whether this is veg,
@@ -1972,11 +1986,7 @@ async function addOneLine(
       `select i.name, i.price::text, i.is_active,
               i.off_until::text, i.off_reason,
               coalesce(c.tax_kind, 'other') as tax_kind,
-              coalesce(
-                i.tax_rate,
-                app.gst_rate_or_null(i.hotel_id, coalesce(c.tax_kind, 'other'),
-                                     i.price)
-              )::text as tax_rate,
+              ${DISH_TAX_RATE}::text as tax_rate,
               (select count(*)::text from pos_item_variations v
                 where v.item_id = i.id and v.is_active) as variation_count
          from pos_menu_items i

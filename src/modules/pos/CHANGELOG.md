@@ -11,6 +11,41 @@ Work that touches the core or several services still goes in the root
 
 ---
 
+## 2026-09-22 · POS-15: a dish's GST is the rate it is rung at, or a dash — D21-94
+
+**Asked for:** the owner's D21-94 - a dish imported with its GST column blank
+read "0%"; "the restaurant is 5%, so a dish never has 'no GST'. Show the rate
+its section actually charges, or a dash where none is set." Only what the POS
+shows; how tax is computed is unchanged (the finance lane is adding the
+alcohol/VAT kind at the same time).
+
+**Shipped:**
+- `api/src/modules/pos/till.ts` - `DISH_TAX_RATE`, the one expression for the
+  rate a dish is rung at (its own, else its section's rule for its price).
+  `addOneLine` uses it as before; `GET /till/menu` now sends it too, and sends
+  null, not `Number(null)` = 0, when nothing is set.
+- `MenuItem.taxRate` is `number | null`. The Menu row, the Terminal tile and
+  the Till tile print "-" for null; a real 0 still reads "0%".
+- Looked at and unchanged: the dish dialog, the order pad and the import
+  preview show no dish rate; a bill's lines carry the rate copied when rung,
+  never null.
+
+**Proved:** `api/test/modules/pos/menuTaxRate.test.ts` (3) - failed before the
+server change (`expected +0 to be 5`, `expected +0 to be null`), passes after.
+`ownerDecisions.test.tsx` "a dish's GST reads its section's rate, or a dash"
+(3) - with the screens' dash removed all three failed on a bare "%", pass with
+it. `npx tsc -b --force` 0; `api` `tsc --noEmit` 0; `npx vitest run
+src/modules/pos` 55/55; `api` `npm test -- pos` 141/141. **The screens were
+not opened in a browser** (a helper chat, no browser pane).
+
+**Left open:** a section created on the Menu screen, or imported with the Tax
+heading blank, has no heading - so its dishes with no rate of their own now
+read "-" and the till refuses them, which is the truth. Nothing on the Menu
+screen sets a section's heading; only a re-import does. And the add-dish form
+still sends an explicit rate, 5% preselected. Both asked in the hand-back.
+
+---
+
 ## 2026-09-21 · Variations and add-ons on the Menu — D21-40 to D21-45, built on PRODUCTION
 
 **Asked for:** `docs/briefs/pos.md`, the 21 September section, and the owner's

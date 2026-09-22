@@ -760,7 +760,9 @@ function CategoryCard({ category, hotelId, dishesByGroup, onChanged }: {
                 {item.name}
               </span>
               <span className="text-2xs text-grey-500 tabular shrink-0">
-                {item.taxRate}%
+                {/* The rate the till rings it at; a dash when its section
+                    has none set - never "0%" (POS-15, D21-94). */}
+                {item.taxRate === null ? "-" : `${item.taxRate}%`}
               </span>
               <span className="tabular text-base text-ink-900 shrink-0 w-20 text-right"
                     title={item.variations.length > 0
