@@ -44,3 +44,7 @@
 | D22-40 | A booking made the day before arrival | **One message: the confirmation** (it carries the link); no reminder within a day of it |
 | D22-41 | Several rooms booked by one guest | **One confirmation per group, to the lead guest** |
 | D22-42 | Switch-on day: catch-up confirmations for older bookings | **Only between 09:00 and 21:00, hotel time**; new bookings are confirmed at once, any hour |
+| D22-43 | Soft drinks and snacks sold at a bar that serves alcohol | **GST, as built**: the menu section decides; a dish in an Alcohol section with its own rate stays GST at that rate |
+| D22-44 | A separate VAT bill for alcohol? | **Yes, a separate VAT bill** — issued at the same moment as the GST document for the same sale (restaurant settlement; check-out for drinks on the room bill); **its own series per hotel, restarting each 1 April** (e.g. VAT/5EL/2026-27/0001), never sharing numbers with GST invoices; the GST invoice names the VAT bill and the VAT bill names the GST invoice; **cancelled like a credit note, with a reason, by owner, admin, GM and accountant** |
+| D22-45 | The Lodging tax report's "Other bills" includes alcohol | **Take alcohol and its VAT out** |
+| D22-46 | "Alcohol" as a section's tax heading in the menu import | **Yes**, with the heading picker (D22-4); only where the hotel serves alcohol |
