@@ -36,7 +36,9 @@ Three processes. All three must be up, in this order.
 
 ### Postgres
 
-A portable Postgres 17 lives at `D:\fidato-pg` — `pgsql\` is the program,
+A portable Postgres 17 lives inside the project at `D:\fidato pms\.local\pg`
+(moved from `D:\fidato-pg` on 22 September, D22-1: nothing about the PMS lives
+outside its folder; `.local\` is ignored by git) — `pgsql\` is the program,
 `data\` the cluster, and the port (55432) is written in the cluster's own
 `postgresql.conf`, so a plain start comes up where every script expects it.
 
@@ -46,7 +48,7 @@ every ten seconds. Off, a crash can lose the last moment of work and cannot
 corrupt anything. **A setting for this test machine only; never on the server.**
 
 ```powershell
-D:\fidato-pg\pgsql\bin\pg_ctl.exe -D D:\fidato-pg\data -l D:\fidato-pg\pg.log start
+& "D:\fidato pms\.local\pg\pgsql\bin\pg_ctl.exe" -D "D:\fidato pms\.local\pg\data" -l "D:\fidato pms\.local\pg\pg.log" start
 ```
 
 ⚠ **NEVER PUT IT BACK UNDER `%TEMP%`.** It lived in a Claude scratchpad under
@@ -94,7 +96,7 @@ database and must not change what those tests count:
 
 ```bash
 cd "D:\fidato pms"
-D:/fidato-pg/pgsql/bin/psql.exe -h 127.0.0.1 -p 55432 -U postgres -d fidato -f db/dev/dev-testers.sql
+"D:/fidato pms/.local/pg/pgsql/bin/psql.exe" -h 127.0.0.1 -p 55432 -U postgres -d fidato -f db/dev/dev-testers.sql
 ```
 
 Then **General Manager** and **Reception** appear under "Development only",

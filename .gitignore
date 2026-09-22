@@ -53,3 +53,8 @@ skills-lock.json
 
 # Agents' git worktrees — each a whole copy of the repo on its own branch.
 .claude/worktrees/
+
+# Everything this project keeps on this machine that is not code:
+# the local Postgres (program and data), screenshots, gate logs.
+# Inside the project on purpose (D22-1): nothing about the PMS lives outside it.
+.local/

@@ -121,19 +121,30 @@ These are not this folder's rules. They are the project's, from `HANDOVER.md`
 
 ## Before your first write — your own copy
 
-**Two chats editing `D:\fidato pms` at the same time will overwrite each
-other.** Every lane gets its own working copy.
+**Two agents editing `D:\fidato pms` at the same time will overwrite each
+other.** Every lane gets its own working copy — **inside the project, in
+`.claude\worktrees\`** (D22-1, 22 September: nothing about the PMS lives
+outside `D:\fidato pms`). The owner gives orders in one main chat; lanes are
+helper agents it sends, and they report back to it.
 
 ```powershell
 # the owner's PC, PowerShell, in D:\fidato pms — a copy on its own branch
-git worktree add "..\fidato-pos" -b pos/<task>
+git worktree add ".claude\worktrees\pos" -b pos/<task>
 ```
 
 ```powershell
 # the owner's PC, PowerShell — share the packages instead of installing again
-New-Item -ItemType Junction -Path "D:\fidato-pos\node_modules" -Target "D:\fidato pms\node_modules"
-New-Item -ItemType Junction -Path "D:\fidato-pos\api\node_modules" -Target "D:\fidato pms\api\node_modules"
+New-Item -ItemType Junction -Path "D:\fidato pms\.claude\worktrees\pos\node_modules" -Target "D:\fidato pms\node_modules"
+New-Item -ItemType Junction -Path "D:\fidato pms\.claude\worktrees\pos\api\node_modules" -Target "D:\fidato pms\api\node_modules"
 ```
+
+A helper started by the app with its own worktree gets a copy in
+`.claude\worktrees\` already; it still needs the two junctions, its own
+database and its own ports. **When its branch is merged, the copy goes** —
+junctions first, then the Recycle Bin, then `git worktree prune`.
+
+The gates: `bash scripts/gates.sh <label>` in the copy being checked (Git
+Bash). Its logs go to that copy's `.local\gates\`.
 
 - **Your own database:** `DB=fidato_pos ./db/migrate.sh --with-dev-identities`
   (Git Bash, in your copy). Never point two chats at one database.

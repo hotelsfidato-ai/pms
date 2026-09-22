@@ -158,16 +158,29 @@ root `CHANGELOG.md`.
 Several agents run at once, so each gets its own working copy. **Never work in
 `D:\fidato pms` itself while another agent is running.**
 
+**Nothing about this project lives outside `D:\fidato pms` (the owner, D22-1,
+22 September).** The owner talks to ONE main chat; the main chat sends helper
+agents, and each helper's copy is inside the project, in `.claude\worktrees\`
+(ignored by git, by the tests and by the type checks). Local things that are
+not code — the Postgres, screenshots, gate logs — live in `.local\`, also
+ignored. A copy goes to the Recycle Bin as soon as its branch is merged; do
+not leave finished copies behind (MEMORY 320).
+
 ```powershell
 # the owner's PC, PowerShell, in D:\fidato pms — a copy on its own branch
-git worktree add "..\fidato-pos" -b pos/<task>
+git worktree add ".claude\worktrees\pos" -b pos/<task>
 ```
 
 ```powershell
 # the owner's PC, PowerShell — share the installed packages instead of installing
-New-Item -ItemType Junction -Path "D:\fidato-pos\node_modules" -Target "D:\fidato pms\node_modules"
-New-Item -ItemType Junction -Path "D:\fidato-pos\api\node_modules" -Target "D:\fidato pms\api\node_modules"
+New-Item -ItemType Junction -Path "D:\fidato pms\.claude\worktrees\pos\node_modules" -Target "D:\fidato pms\node_modules"
+New-Item -ItemType Junction -Path "D:\fidato pms\.claude\worktrees\pos\api\node_modules" -Target "D:\fidato pms\api\node_modules"
 ```
+
+⚠ **Removing a copy: take the two junctions out first** (`Remove-Item` on the
+junction itself, or `[System.IO.Directory]::Delete(path, $false)`), then send
+the folder to the Recycle Bin and run `git worktree prune`. Anything that
+walks into a junction deletes the main project's packages.
 
 - **Your own database.** `DB=fidato_pos ./db/migrate.sh --with-dev-identities`
   (Git Bash, in your copy) creates and migrates `fidato_pos`; it starts with no

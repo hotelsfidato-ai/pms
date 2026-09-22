@@ -72,6 +72,12 @@ export default defineConfig(({ mode }) => {
     fs: {
       allow: [searchForWorkspaceRoot(process.cwd()), realNodeModules()],
     },
+    /* The local Postgres writes inside .local/ all day, and every helper
+       agent's copy of the repo sits in .claude/worktrees/ (D22-1). Neither
+       is part of the app, so the dev server does not watch them. */
+    watch: {
+      ignored: ["**/.local/**", "**/.claude/worktrees/**"],
+    },
   },
   plugins: [
     react(),

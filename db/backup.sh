@@ -47,7 +47,7 @@ if command -v pg_dump >/dev/null 2>&1; then
   SUPER="${SUPER:-postgres}"
   SUPERPASS="${SUPERPASS:-}"
 else
-  PGBIN="${PGBIN:-D:/fidato-pg/pgsql/bin}"
+  PGBIN="${PGBIN:-D:/fidato pms/.local/pg/pgsql/bin}"
   PGDUMP="$PGBIN/pg_dump.exe"
   PGHOST="${PGHOST:-127.0.0.1}"
   PGPORT="${PGPORT:-55432}"

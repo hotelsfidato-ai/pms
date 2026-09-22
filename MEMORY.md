@@ -6539,6 +6539,25 @@ copy will see of theirs.**
 
 ---
 
+### 320 · MINE: 22 finished service copies were left on D:, and the owner found them
+
+22 September. Every lane got its own git worktree beside the project
+(`D:idato-pos`, `D:idato-spa`, ...), and when I merged a lane I never took
+its copy away. The owner opened D: and saw twenty-odd `fidato-*` folders and
+read them, fairly, as the PMS split into pieces outside the project, the
+opposite of what the split was for. Every one was already merged into `cp6`;
+nothing was lost, but nothing said so either. With them sat the local
+Postgres, the screenshots and the gate script, all outside the project too.
+
+Now (D22-1): copies live in `.claude/worktrees/`, local tools in `.local/`, the
+gate script in `scripts/`, and a copy goes to the Recycle Bin when its branch
+is merged, junctions out first.
+
+**The rule: a merge is not finished until the copy it came from is gone. If
+it is merged, it goes; if it is not, say what is still in it.**
+
+---
+
 ### 319 · MINE: a test I wrote reached into the demo fixtures, and only the full gate run saw it
 
 21 September, the Dashboard's finishing pass. The new test for "every hotel on

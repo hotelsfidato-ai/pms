@@ -50,6 +50,81 @@ Write it **as you go**, not at the end from memory. Copy this shape:
 
 ---
 
+## 2026-09-22 · The owner's UI-transformation prompt, fitted to this project
+
+**Asked for:** the owner's "Lead UI Transformation Agent" prompt, refined for
+this PMS so it can be handed to an agent to carry out.
+
+**Shipped**
+- `docs/briefs/ui-transformation.md`, with a one-line paste for the main chat.
+  It covers: what is already built (so no redesign from nothing), what wins
+  when sources disagree (the owner, then theme.css, DESIGN.md, DESIGN.html),
+  the owner's rules that outrank the job, the existing kit mapped to DESIGN.md,
+  the known drift as leads, the six agents fitted to D22-1 (at most three
+  writing at once, one holder of the core, the Dashboard in the reports lane),
+  a plan the owner must approve before any code, a per-screen checklist, this
+  machine's traps, and the A to G report.
+
+**Found**
+- Drift counted with grep for the brief: 10 files use literal colour classes
+  (nine carry `#8a6300`, which is the `warning-ink` token); shadows in 3
+  non-floating candidates (Invoice, Kitchen, Terminal); `FilterBar` is still
+  used only by /design-system.
+
+**Proved:** nothing ran. This is a document only, and no code changed.
+
+**Left open:** the brief is not committed, and the owner has not approved it.
+The transformation itself waits on the owner's yes to its Phase 2 plan.
+
+---
+
+## 2026-09-21/22 · Languages decided as an option, the Dashboard made readable, every screen photographed, the design system written down, and everything moved inside the project
+
+**Asked for:** how multiple languages would work and how long it would take;
+"start this locally, add some demo data"; "fix the UI UX in the dashboard, make
+it more readable" with the design system and the taste and impeccable skills,
+then "polish — finish it"; "a screenshot of all the screens, mobile and
+desktop, in a folder"; "create the design md files so I can give this to
+another agent" (one md, one html); and, looking at D:, "nothing about this
+project needs to be outside this PMS folder" — one main chat, helper agents
+under it.
+
+**Shipped**
+- D21-99 (the GM sets the hotel's language, each person their own) and
+  D21-100 (languages kept as an option, not built) — `docs/briefs/decisions-2026-09-21.md`
+- The demo loader lifts every BEFORE DELETE guard it finds in the catalogue
+  instead of a hand list five tables out of date — `api/scripts/load-demo.ts` (ef2de9d)
+- The Dashboard: breakdowns as label and value rows, the system's `Section`
+  headers, two by two below 1280px, counts aligned, a grey dash, a failed read
+  that says so; then each hotel in the every-hotel table read on its own day —
+  `src/modules/reports/pages/Dashboard.tsx` (ec99e27, 06f01b0, 2b44341)
+- 81 screens at 1440 and 390 wide, full length, with a browsing page —
+  `.local/screenshots/2026-09-21/` (not in git)
+- `DESIGN.md` and `DESIGN.html` at the root (bbdd5fd)
+- D22-1: helper copies in `.claude/worktrees/`, Postgres in `.local/pg`, the
+  gate script in `scripts/gates.sh`; 22 merged copies to the Recycle Bin and
+  their databases dropped with backups; rule books, START-HERE, CLAUDE.md,
+  vitest and the Vite watcher updated — `docs/briefs/decisions-2026-09-22.md`
+
+**Found**
+- The every-hotel table used the hotel-in-view's date for every hotel (fixed,
+  tested with two hotels on different days, seen to fail on the old code).
+- A failed Manager report read printed the same dashes as "not held yet"
+  (fixed, tested, seen to fail without it).
+- MEMORY 319: my new test imported the demo fixtures; only the full run saw it.
+- MEMORY 320: 22 finished copies were left loose on D:.
+- DESIGN.md names three older design one-offs (the link button's orange text,
+  the danger button's literal hover shades, the warning pill's literal ink).
+
+**Proved:** the Dashboard commits: web 566 passed | 1 skipped, API 1268, the
+database suite and all 124 migrations re-runnable (the replay rerun on its own
+after the laptop stopped mid-run at 21:40). The move: `db/migrate.sh` and the
+full gates from `scripts/gates.sh` on the moved Postgres (see the commit).
+
+**Left open:** the release push (the owner); the qrcode install and online
+check-in's room cards; guest messaging's migration number and two answers;
+the City ledger tile's words; the three design one-offs.
+
 ## 2026-09-21 · Laundry and spa reach the room bill, the date bug, the guest page that nobody could open, and two designs
 
 **Asked for:** "fix the laundry charge and spa close"; then "fix the date bug in
