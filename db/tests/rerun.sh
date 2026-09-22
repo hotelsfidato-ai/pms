@@ -108,12 +108,22 @@ green "  all migrations applied to an empty database"
 # constraint is only tested by a replay that has such a row. Without this, 087
 # put the narrow module list back over 108's wider one and every pass here was
 # green while the next real deploy would have rolled back (MEMORY 293).
+#
+# AND ALCOHOL, ON, WITH A RATE AND A SECTION SOLD UNDER IT (D21-90, D21-91).
+# 067 used to drop and re-add the menu section's list of headings with its own
+# narrow one; the first section set to alcohol would have stopped every deploy
+# after it at 067. The 10 is this script's, not anybody's rate.
 if ! out=$("$PSQL" $S -d "$DB" -q -v ON_ERROR_STOP=1 \
      -c "insert into hotels (code, name, city) values ('RRN','Rerun Property','Nowhere')" \
      -c "insert into hotel_modules (hotel_id, module, is_enabled)
          select id, m, true
-           from hotels, unnest(array['channel_manager','laundry','spa']) as m
-          where code = 'RRN'"      -c "with people as (
+           from hotels, unnest(array['channel_manager','laundry','spa','alcohol']) as m
+          where code = 'RRN'" \
+     -c "insert into tax_rules (hotel_id, kind, over_amount, rate)
+         select id, 'alcohol', 0, 10 from hotels where code = 'RRN'" \
+     -c "insert into pos_menu_categories (hotel_id, name, tax_kind)
+         select id, 'Rerun Spirits', 'alcohol' from hotels where code = 'RRN'" \
+     -c "with people as (
            insert into staff (email, full_name)
            select 'rerun-' || r || '@fidato.in', 'Rerun ' || r
              from unnest(app.assignable_roles()) as r

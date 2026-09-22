@@ -42,8 +42,26 @@ async function hotelFor(client: Client, code: string): Promise<string | null> {
    only way a person sets a rule — so no hotel could ever bill a treatment.
    Its own test inserted the rule straight into the database and passed
    (root MEMORY 313). */
-const TAX_KINDS = ["room", "restaurant", "bar", "banquet", "spa", "other"] as const;
+/* ⚠ "alcohol" IS VAT, NOT GST (D21-91, 22 September), and only where the
+   property is switched on for it (D21-90). Its rule is the VAT rate: one
+   rate, never slabs, never halved into CGST and SGST, and never seeded - the
+   accountant confirms it here, and until somebody does, nothing sold under it
+   can be billed. */
+const TAX_KINDS = ["room", "restaurant", "bar", "banquet", "spa", "alcohol", "other"] as const;
 type TaxKind = (typeof TAX_KINDS)[number];
+
+/** Whether the property is switched on for alcohol (D21-90) - the same
+    question the till asks before it rings a drink up. Off unless an owner or
+    administrator turned it on: app.module_enabled reads no row as off. */
+async function servesAlcohol(client: Client, hotelId: string): Promise<boolean> {
+  const { rows } = await client.query<{ on: boolean }>(
+    "select app.module_enabled($1, 'alcohol') as on", [hotelId]);
+  return rows[0]?.on === true;
+}
+
+const NOT_SERVING_ALCOHOL =
+  "This property is not switched on for alcohol. The owner or an "
+  + "administrator turns it on in Settings, under Modules.";
 
 inventorySetup.get("/:code/tax", async (c) => {
   const body = await withSession(c.get("subject"), async (client) => {
@@ -80,8 +98,14 @@ inventorySetup.get("/:code/tax", async (c) => {
       byKind.set(r.kind, [...(byKind.get(r.kind) ?? []), r]);
     }
 
+    /* Alcohol is listed only where the property serves it (D21-90). A rate
+       set before the switch went off stays in the table, unused, and comes
+       back with the switch. */
+    const alcohol = await servesAlcohol(client, hotelId);
+
     return {
-      kinds: TAX_KINDS.map((kind) => ({
+      servesAlcohol: alcohol,
+      kinds: TAX_KINDS.filter((kind) => kind !== "alcohol" || alcohol).map((kind) => ({
         kind,
         slabs: (byKind.get(kind) ?? []).map((r) => ({
           id: r.id,
@@ -120,7 +144,8 @@ inventorySetup.put("/:code/tax/:kind", async (c) => {
 
   for (const s of slabs) {
     if (!Number.isFinite(s.rate) || s.rate! < 0 || s.rate! > 100) {
-      return c.json(refuse("A GST rate is a percentage between 0 and 100."), 409);
+      return c.json(refuse(
+        `A ${kind === "alcohol" ? "VAT" : "GST"} rate is a percentage between 0 and 100.`), 409);
     }
     if (s.overAmount !== undefined
         && (!Number.isFinite(s.overAmount) || s.overAmount < 0)) {
@@ -137,6 +162,12 @@ inventorySetup.put("/:code/tax/:kind", async (c) => {
       + "cheapest rooms. Add a row for everything up to the threshold."), 409);
   }
 
+  /* VAT on alcohol is one rate on everything (D21-91): "one VAT 10% line on
+     the bill". A band would print two. */
+  if (kind === "alcohol" && (slabs.length > 1 || (slabs[0]?.overAmount ?? 0) !== 0)) {
+    return c.json(refuse("VAT on alcohol is one rate, on everything."), 409);
+  }
+
   const seen = new Set<number>();
   for (const s of slabs) {
     const over = s.overAmount ?? 0;
@@ -150,6 +181,12 @@ inventorySetup.put("/:code/tax/:kind", async (c) => {
   const result = await withSession(c.get("subject"), async (client) => {
     const hotelId = await hotelFor(client, c.req.param("code"));
     if (!hotelId) return null;
+
+    /* Asked BEFORE the delete below: a refusal returned after a write
+       inside withSession keeps the write (MEMORY 243). */
+    if (kind === "alcohol" && !(await servesAlcohol(client, hotelId))) {
+      return refuse(NOT_SERVING_ALCOHOL);
+    }
 
     /* Deleting a kind's rules is allowed and MEANS SOMETHING: it puts
        that kind back to unset, so it refuses to bill rather than billing
@@ -201,6 +238,10 @@ inventorySetup.patch("/:code/menu-categories/:name/tax-kind", async (c) => {
     const hotelId = await hotelFor(client, c.req.param("code"));
     if (!hotelId) return null;
 
+    if (kind === "alcohol" && !(await servesAlcohol(client, hotelId))) {
+      return refuse(NOT_SERVING_ALCOHOL);
+    }
+
     const { rowCount } = await client.query(
       `update pos_menu_categories set tax_kind = $3
         where hotel_id = $1 and name = $2`,
@@ -212,4 +253,37 @@ inventorySetup.patch("/:code/menu-categories/:name/tax-kind", async (c) => {
 
   if (!result) return c.json({ error: "No such property." }, 404);
   return c.json(result, "ok" in result && result.ok ? 200 : 409);
+});
+
+/** The rate one charge of this kind and value would carry, or null where no
+    rule covers it - `app.gst_rate_or_null`, the one place the slab is worked
+    out - so the Add charge dialog shows what the posting will really carry
+    rather than a second copy of the arithmetic (or a fixed 2.5% + 2.5%). */
+inventorySetup.get("/:code/tax/:kind/rate", async (c) => {
+  const kind = c.req.param("kind") as TaxKind;
+  if (!TAX_KINDS.includes(kind)) {
+    return c.json(refuse(`${kind} is not something this system taxes.`), 409);
+  }
+  const amount = Number(c.req.query("amount"));
+  if (!Number.isFinite(amount) || amount < 0) {
+    return c.json(refuse("An amount is a number of rupees, zero or more."), 409);
+  }
+
+  const body = await withSession(c.get("subject"), async (client) => {
+    const hotelId = await hotelFor(client, c.req.param("code"));
+    if (!hotelId) return null;
+    const { rows } = await client.query<{ rate: string | null }>(
+      "select app.gst_rate_or_null($1, $2, $3::numeric)::text as rate",
+      [hotelId, kind, amount]);
+    const rate = rows[0]?.rate ?? null;
+    return {
+      kind,
+      amount,
+      /* Null is "nobody has set it": the dialog prints a dash, never 0%. */
+      rate: rate === null ? null : Number(rate),
+      scheme: kind === "alcohol" ? ("vat" as const) : ("gst" as const),
+    };
+  });
+
+  return body ? c.json(body) : c.json({ error: "No such property." }, 404);
 });

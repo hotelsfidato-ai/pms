@@ -69,6 +69,12 @@ export interface DayFigures {
   roomTax: number;
   extra: number;
   extraTax: number;
+  /** OF `extra` AND `extraTax`, what was alcohol and the VAT on it (D21-91).
+      Inside the two figures above, not beside them: every report that adds
+      up `extra` still does, and the accountant's export takes these out to
+      keep VAT off its GST columns. Nil where nothing was sold under VAT. */
+  alcohol: number;
+  vat: number;
   /** Positive: the discount given. */
   discount: number;
   receipt: number;
@@ -182,6 +188,7 @@ export async function dailyFigures(
     date: string; available: number; blocked: number; paying: number; complimentary: number;
     day_use: number; adults: number; children: number;
     room: string; room_tax: string; extra: string; extra_tax: string;
+    alcohol: string; vat: string;
     discount: string; receipt: string;
   }>(
     `with days as (
@@ -220,6 +227,11 @@ export async function dailyFigures(
                     ('room','payment','discount','tax','refund'))            as extra,
               coalesce(sum(fp.tax_amount) filter (where fp.category <> 'room'), 0)
                 + coalesce(sum(fp.amount) filter (where fp.category = 'tax'), 0) as extra_tax,
+              /* Of the two above: alcohol, and its VAT (D21-91). */
+              sum(fp.amount) filter (where fp.tax_scheme = 'vat' and fp.category not in
+                    ('room','payment','discount','tax','refund'))            as alcohol,
+              sum(fp.tax_amount) filter (where fp.tax_scheme = 'vat'
+                    and fp.category <> 'room')                               as vat,
               -sum(fp.amount) filter (where fp.category = 'discount')        as discount,
               /* Money received. A bill transferred to the city ledger is
                  posted as a payment, but nobody has paid it yet. */
@@ -251,6 +263,8 @@ export async function dailyFigures(
             coalesce(rent.room_tax, 0)::text         as room_tax,
             coalesce(other.extra, 0)::text           as extra,
             coalesce(other.extra_tax, 0)::text       as extra_tax,
+            coalesce(other.alcohol, 0)::text         as alcohol,
+            coalesce(other.vat, 0)::text             as vat,
             coalesce(other.discount, 0)::text        as discount,
             coalesce(other.receipt, 0)::text         as receipt
        from days
@@ -276,6 +290,8 @@ export async function dailyFigures(
     roomTax: round2(Number(r.room_tax)),
     extra: round2(Number(r.extra)),
     extraTax: round2(Number(r.extra_tax)),
+    alcohol: round2(Number(r.alcohol)),
+    vat: round2(Number(r.vat)),
     discount: round2(Number(r.discount)),
     receipt: round2(Number(r.receipt)),
   }));
@@ -312,12 +328,18 @@ export interface PosDay {
   /** Before tax, after nothing else. Discounts are already off the line. */
   net: number;
   tax: number;
+  /** Of `net` and `tax`: alcohol after its share of the discount, and its
+      VAT (D21-91). Inside them, as in DayFigures. */
+  alcohol: number;
+  vat: number;
 }
 
 export async function posSales(
   client: Client, hotelId: string, from: string, to: string,
 ): Promise<PosDay[]> {
-  const { rows } = await client.query<{ date: string; net: string; tax: string }>(
+  const { rows } = await client.query<{
+    date: string; net: string; tax: string; alcohol: string; vat: string;
+  }>(
     `with settled as (
        select o.id, o.business_date
          from pos_orders o
@@ -337,14 +359,19 @@ export async function posSales(
           rate — the same function the Manager report reads. */
        select s.business_date as date,
               sum(r.discount) as discount,
-              sum(r.tax)      as tax
+              sum(r.tax)      as tax,
+              /* ...and by tax, so VAT can be named apart (D21-91). */
+              sum(r.taxable) filter (where r.tax_scheme = 'vat') as alcohol,
+              sum(r.tax)     filter (where r.tax_scheme = 'vat') as vat
          from settled s
-         cross join lateral app.pos_order_by_rate(s.id) r
+         cross join lateral app.pos_order_by_tax(s.id) r
         group by 1
      )
      select to_char(d.date, 'YYYY-MM-DD') as date,
             coalesce(l.gross, 0) - coalesce(r.discount, 0) as net,
-            coalesce(r.tax, 0)                             as tax
+            coalesce(r.tax, 0)                             as tax,
+            coalesce(r.alcohol, 0)                         as alcohol,
+            coalesce(r.vat, 0)                             as vat
        from (select distinct business_date as date from settled) d
        left join lines l on l.date = d.date
        left join rated r on r.date = d.date
@@ -355,6 +382,8 @@ export async function posSales(
     date: r.date,
     net: Number(r.net),
     tax: Number(r.tax),
+    alcohol: Number(r.alcohol),
+    vat: Number(r.vat),
   }));
 }
 
@@ -374,6 +403,8 @@ export function sumDays(days: DayFigures[]): Omit<DayFigures, "date"> {
     roomTax: add("roomTax"),
     extra: add("extra"),
     extraTax: add("extraTax"),
+    alcohol: add("alcohol"),
+    vat: add("vat"),
     discount: add("discount"),
     receipt: add("receipt"),
   };

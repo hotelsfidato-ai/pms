@@ -60,11 +60,15 @@ export default function BillPage() {
      line per rate. A total that hid the split would disagree with the
      postings it produced. */
   const byRate = new Map<number, { net: number; tax: number }>();
+  /* VAT on alcohol apart from GST (D21-91): one line per rate, never
+     halved - and never merged into a GST rate that happens to be equal. */
+  const vatByRate = new Map<number, { net: number; tax: number }>();
   for (const l of live) {
     const net = Math.round(l.qty * l.unitPrice * 100) / 100;
     const tax = Math.round(net * l.taxRate) / 100;
-    const at = byRate.get(l.taxRate) ?? { net: 0, tax: 0 };
-    byRate.set(l.taxRate, { net: at.net + net, tax: at.tax + tax });
+    const into = l.taxScheme === "vat" ? vatByRate : byRate;
+    const at = into.get(l.taxRate) ?? { net: 0, tax: 0 };
+    into.set(l.taxRate, { net: at.net + net, tax: at.tax + tax });
   }
 
   return (
@@ -147,6 +151,9 @@ export default function BillPage() {
               <Line label={`CGST ${rate / 2}%`} value={moneyPrecise(v.tax / 2)} />
               <Line label={`SGST ${rate / 2}%`} value={moneyPrecise(v.tax / 2)} />
             </div>
+          ))}
+          {[...vatByRate.entries()].sort((a, b) => a[0] - b[0]).map(([rate, v]) => (
+            <Line key={`vat-${rate}`} label={`VAT ${rate}%`} value={moneyPrecise(v.tax)} />
           ))}
         </div>
 

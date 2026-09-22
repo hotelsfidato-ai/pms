@@ -26,7 +26,9 @@ type Result<T = unknown> = ({ ok: true } & T) | { ok: false; reason: string };
    system: a dash is an admission, a zero is a claim.
    ══════════════════════════════════════════════════════════════════ */
 
-export type TaxKind = "room" | "restaurant" | "bar" | "banquet" | "spa" | "other";
+/** "alcohol" is VAT, not GST (D21-91), and is listed only where the property
+    is switched on for it (D21-90). */
+export type TaxKind = "room" | "restaurant" | "bar" | "banquet" | "spa" | "alcohol" | "other";
 
 export interface TaxSlab {
   id: string;
@@ -51,13 +53,25 @@ export interface MenuCategoryTax {
 }
 
 export interface TaxSetup {
+  /** Whether the property is switched on for alcohol (D21-90). The
+      "alcohol" kind is in `kinds` only when it is. */
+  servesAlcohol: boolean;
   kinds: TaxKindRules[];
   categories: MenuCategoryTax[];
 }
 
 export async function getTaxSetup(hotelId: string): Promise<TaxSetup> {
-  if (!hotelId) return { kinds: [], categories: [] };
+  if (!hotelId) return { servesAlcohol: false, kinds: [], categories: [] };
   return api<TaxSetup>(`/api/hotels/${hotelId}/tax`);
+}
+
+/** The rate one charge of this kind and value will carry, from the server's
+    one slab rule (`app.gst_rate_or_null`) - or null where nobody has set
+    one, which a screen prints as a dash, never 0%. */
+export async function getTaxRate(
+  hotelId: string, kind: TaxKind, amount: number,
+): Promise<{ rate: number | null; scheme: "gst" | "vat" }> {
+  return api(`/api/hotels/${hotelId}/tax/${kind}/rate?amount=${encodeURIComponent(String(amount))}`);
 }
 
 /** Replaces every slab for one kind. Whole-kind rather than row-by-row

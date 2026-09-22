@@ -18,7 +18,7 @@ import { getTaxInUse, type TaxInUse, type TaxKind } from "@/modules/admin/data/t
    door does not export them; if finance renames one, rename it here.
    ══════════════════════════════════════════════════════════════════ */
 
-export const TAX_KINDS: readonly TaxKind[] = ["room", "restaurant", "bar", "banquet", "spa", "other"];
+export const TAX_KINDS: readonly TaxKind[] = ["room", "restaurant", "bar", "banquet", "spa", "alcohol", "other"];
 
 export const TAX_KIND_LABEL: Record<TaxKind, string> = {
   room: "Rooms",
@@ -26,8 +26,14 @@ export const TAX_KIND_LABEL: Record<TaxKind, string> = {
   bar: "Bar",
   banquet: "Banquet",
   spa: "Spa",
+  alcohol: "Alcohol",
   other: "Everything else",
 };
+
+/* Alcohol is VAT, not GST (D21-91), and finance lists it only where the
+   property serves it (D21-90) - so it has a row only when it is there. */
+const OPTIONAL: readonly TaxKind[] = ["alcohol"];
+const TAX_NAME = (kind: TaxKind) => (kind === "alcohol" ? "VAT" : "GST");
 
 /* A boundary is printed exactly. `money` rounds to the rupee, and a slab
    above ₹7,500.50 printed as "above ₹7,501" would misstate where the rate
@@ -86,8 +92,9 @@ export function TaxInUseRows({ hotelCode, row }: {
     <>
       {TAX_KINDS.map((kind) => {
         const rules = tax.data.find((k) => k.kind === kind);
+        if (!rules && OPTIONAL.includes(kind)) return null;
         return row(
-          `GST on ${TAX_KIND_LABEL[kind].toLowerCase()}`,
+          `${TAX_NAME(kind)} on ${TAX_KIND_LABEL[kind].toLowerCase()}`,
           taxLine(rules?.slabs ?? []),
           `gst-${kind}`,
         );

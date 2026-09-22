@@ -1,7 +1,7 @@
 import type { Client } from "../../db.ts";
 import {
   dailyFigures, sumDays, heading, posSales,
-  type DayFigures, type Property,
+  type DayFigures, type PosDay, type Property,
 } from "../reports/index.ts";
 
 /* ══════════════════════════════════════════════════════════════════
@@ -54,9 +54,16 @@ export interface DayBookRow {
       not have to subtract two other figures to find out. */
   pos: number;
   posTax: number;
-  /** Room + extras + the outlets, less the discount. */
+  /** ALCOHOL, AND ITS VAT (D21-91, 22 September) - its own ledger, charged
+      to a room or settled at the outlet. Taken OUT of `extra`, `extraTax`,
+      `pos` and `posTax` above, so those and `tax` are GST and nothing else:
+      "kept out of the GST part of the accountant's export, with its own VAT
+      ledger". Both halves come from the reports door, which names them. */
+  alcohol: number;
+  vat: number;
+  /** Room + extras + the outlets + alcohol, less the discount. */
   sales: number;
-  /** The tax on all of it. */
+  /** The GST on all of it. VAT is not in it; it is `vat`. */
   tax: number;
   /** Money actually received. A bill moved to the city ledger is not
       money received - the reports door already takes it out (D17-74). */
@@ -124,18 +131,36 @@ async function closedDays(
 
     Both halves now come through the reports door: `dailyFigures` for the
     hotel, `posSales` for the outlets. Neither is computed here. */
-const sales = (
-  f: Pick<DayFigures, "room" | "extra" | "discount">,
-  pos: { net: number },
-) => round2(f.room + f.extra - f.discount + pos.net);
+type Outlets = Pick<PosDay, "net" | "tax" | "alcohol" | "vat">;
 
-const taxOf = (
-  f: Pick<DayFigures, "roomTax" | "extraTax">,
-  pos: { tax: number },
-) => round2(f.roomTax + f.extraTax + pos.tax);
+/** A day's columns, and the total's, from the reports door's figures.
+    Alcohol and its VAT are named inside `extra`/`extraTax` and the outlets'
+    `net`/`tax` by the reports door; here they are only moved into their own
+    two columns, so sales is unchanged and `tax` is GST alone (D21-91). */
+const columns = (
+  f: Pick<DayFigures,
+    "room" | "roomTax" | "extra" | "extraTax" | "alcohol" | "vat" | "discount" | "receipt">,
+  pos: Outlets,
+): DayBookTotal => ({
+  room: f.room,
+  roomTax: f.roomTax,
+  extra: round2(f.extra - f.alcohol),
+  extraTax: round2(f.extraTax - f.vat),
+  discount: f.discount,
+  /* Its own column, because an accountant asked what the restaurant
+     took that day should not have to subtract two other numbers to
+     find out. */
+  pos: round2(pos.net - pos.alcohol),
+  posTax: round2(pos.tax - pos.vat),
+  alcohol: round2(f.alcohol + pos.alcohol),
+  vat: round2(f.vat + pos.vat),
+  sales: round2(f.room + f.extra - f.discount + pos.net),
+  tax: round2(f.roomTax + f.extraTax - f.vat + pos.tax - pos.vat),
+  receipt: f.receipt,
+});
 
 /** Nothing sold at an outlet that day is nil, not a missing row. */
-const NO_POS = { net: 0, tax: 0 };
+const NO_POS: Outlets = { net: 0, tax: 0, alcohol: 0, vat: 0 };
 
 export async function dayBook(
   client: Client, property: Property, from: string, to: string,
@@ -145,36 +170,25 @@ export async function dayBook(
   const outlets = new Map(
     (await posSales(client, property.id, from, to)).map((p) => [p.date, p]));
 
-  const days: DayBookRow[] = figures.map((f) => {
-    const pos = outlets.get(f.date) ?? NO_POS;
-    return {
-      date: f.date,
-      room: f.room,
-      roomTax: f.roomTax,
-      extra: f.extra,
-      extraTax: f.extraTax,
-      discount: f.discount,
-      /* Its own column, because an accountant asked what the restaurant
-         took that day should not have to subtract two other numbers to
-         find out. */
-      pos: pos.net,
-      posTax: pos.tax,
-      sales: sales(f, pos),
-      tax: taxOf(f, pos),
-      receipt: f.receipt,
-      closed: closed.has(f.date),
-    };
-  });
+  const days: DayBookRow[] = figures.map((f) => ({
+    date: f.date,
+    ...columns(f, outlets.get(f.date) ?? NO_POS),
+    closed: closed.has(f.date),
+  }));
 
   /* The range's own totals, added up by the reports service's `sumDays`
      - not by a second sum of my own. */
   const t = sumDays(figures);
-  /* The range's outlet total is the sum of the DAYS ALREADY BUILT, not a
-     second query over a slightly different window — so the total of the
-     days and the total of the range cannot part company here either. */
-  const posTotal = days.reduce(
-    (acc, d) => ({ net: round2(acc.net + d.pos), tax: round2(acc.tax + d.posTax) }),
-    { net: 0, tax: 0 });
+  /* The range's outlet total is the sum of the SAME DAYS' outlet figures,
+     not a second query over a slightly different window — so the total of
+     the days and the total of the range cannot part company here either. */
+  const posTotal = figures.reduce((acc, f) => {
+    const p = outlets.get(f.date) ?? NO_POS;
+    return {
+      net: round2(acc.net + p.net), tax: round2(acc.tax + p.tax),
+      alcohol: round2(acc.alcohol + p.alcohol), vat: round2(acc.vat + p.vat),
+    };
+  }, NO_POS);
 
   return {
     property: heading(property),
@@ -183,18 +197,7 @@ export async function dayBook(
     from,
     to,
     days,
-    total: {
-      room: t.room,
-      roomTax: t.roomTax,
-      extra: t.extra,
-      extraTax: t.extraTax,
-      discount: t.discount,
-      pos: posTotal.net,
-      posTax: posTotal.tax,
-      sales: sales(t, posTotal),
-      tax: taxOf(t, posTotal),
-      receipt: t.receipt,
-    },
+    total: columns(t, posTotal),
     openDays: days.filter((d) => !d.closed).map((d) => d.date),
   };
 }

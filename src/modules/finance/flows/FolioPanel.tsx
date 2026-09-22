@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { keepPreviousData, useQuery, useQueryClient } from "@tanstack/react-query";
 import {
   Undo2, Plus, Receipt, LogOut, Printer, ArrowLeftRight,
   Split as SplitIcon,
@@ -7,9 +7,10 @@ import {
 import { cn } from "@/lib/cn";
 import { money, dateShort } from "@/lib/format";
 import {
-  CHARGE_CATEGORIES, PAYMENT_METHODS, taxOn, splitTax,
+  CHARGE_CATEGORIES, PAYMENT_METHODS,
   type ChargeCategory, type PaymentMethod,
 } from "@/lib/rules";
+import { getTaxRate } from "@/modules/finance/data/tax";
 import {
   Button, Field, Input, NativeSelect, StatusPill, Tooltip, toast,
   Dialog, DialogContent, DialogTrigger,
@@ -367,8 +368,27 @@ function AddChargeDialog({
   const [taxable, setTaxable] = useState(true);
 
   const value = Number(amount) || 0;
-  const tax = taxable ? taxOn(value) : 0;
-  const split = splitTax(value);
+
+  /* THE RATE THIS CHARGE WILL REALLY CARRY, from the server's one slab rule.
+     Everything the desk posts follows the room's GST (postings.ts), and a
+     room's rate turns on the amount - so this asks for this amount. It
+     printed "CGST 2.5% + SGST 2.5%" whatever the property had set, and
+     whatever the charge came to (22 September). Nobody has set one: a dash,
+     and the post is refused with the reason. */
+  const rateQuery = useQuery({
+    queryKey: ["tax-rate", hotelId, "room", value],
+    queryFn: () => getTaxRate(hotelId, "room", value),
+    enabled: open && taxable && !!hotelId,
+    placeholderData: keepPreviousData,
+  });
+  const rate = rateQuery.data ? rateQuery.data.rate : undefined;
+  const rateText = rateQuery.isError ? "not loaded"
+    : rate === undefined ? "…"
+    : rate === null ? "-" : `${rate}%`;
+  const tax = !taxable ? 0 : typeof rate === "number" ? Math.round(value * rate) / 100 : null;
+  /* CGST takes the half, SGST the rest - the bill's own split (app.stay_bill). */
+  const cgst = tax === null ? null : Math.round((tax / 2) * 100) / 100;
+  const half = typeof rate === "number" ? `${Math.round((rate / 2) * 100) / 100}%` : rateText;
 
   return (
     <Dialog open={open} onOpenChange={setOpen}>
@@ -426,8 +446,8 @@ function AddChargeDialog({
               onChange={(e) => setTaxable(e.target.checked)}
               className="size-4 rounded-xs accent-brand-orange"
             />
-            <span className="text-base text-ink-900">
-              Taxable - CGST 2.5% + SGST 2.5%
+            <span className="text-base text-ink-900" data-charge-rate>
+              Taxable - GST {rateText}
             </span>
           </label>
 
@@ -436,12 +456,14 @@ function AddChargeDialog({
               <Row label="Charge" value={money(value)} />
               {taxable && (
                 <>
-                  <Row label="CGST 2.5%" value={money(split.cgst)} muted />
-                  <Row label="SGST 2.5%" value={money(split.sgst)} muted />
+                  <Row label={`CGST ${half}`}
+                       value={cgst === null || tax === null ? "-" : money(cgst)} muted />
+                  <Row label={`SGST ${half}`}
+                       value={cgst === null || tax === null ? "-" : money(tax - cgst)} muted />
                 </>
               )}
               <div className="pt-1 border-t border-grey-200">
-                <Row label="Total" value={money(value + tax)} bold />
+                <Row label="Total" value={tax === null ? "-" : money(value + tax)} bold />
               </div>
             </div>
           )}
@@ -455,7 +477,7 @@ function AddChargeDialog({
                   category, description, amount: value, taxable, businessDate, user: USER,
                 });
                 if (res.ok) {
-                  toast.success("Charge posted", `${money(value + tax)} on room ${stay.roomNumber}`);
+                  toast.success("Charge posted", `${money(value + (tax ?? 0))} on room ${stay.roomNumber}`);
                   setDescription(""); setAmount("");
                   setOpen(false);
                   onDone();

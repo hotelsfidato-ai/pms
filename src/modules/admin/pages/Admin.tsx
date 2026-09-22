@@ -448,6 +448,14 @@ const MODULE_COPY: Record<string, { label: string; note: string }> = {
     note: "Treatments, the day's diary, and a bill settled at the spa or put on " +
       "the room. Off means the screens go and the API refuses them.",
   },
+  /* D21-90, 22 September: "some do and many do not". Off at every property
+     until the owner or an administrator turns it on. */
+  alcohol: {
+    label: "Serves alcohol",
+    note: "Alcohol on the menu, taxed as VAT rather than GST: its own rate on " +
+      "the tax card, and one VAT line on the bill. Off means no menu section " +
+      "can sell it and the till refuses it.",
+  },
   channel_manager: {
     label: "Channel manager",
     note: "Rooms, rates and bookings shared with Booking.com, Agoda and the " +

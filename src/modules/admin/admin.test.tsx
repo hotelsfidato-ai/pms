@@ -155,6 +155,26 @@ describe("D17-37 - Settings shows the tax actually used", () => {
     expect(await valueOf("GST")).toMatch(/could not load/i);
     expect(screen.queryByText("GST on rooms")).toBeNull();
   });
+
+  /* D21-90 and D21-91, 22 September: alcohol is VAT, not GST, and only where
+     the property serves it - finance lists the heading only then. */
+  it("no alcohol row where the property does not serve it", async () => {
+    as("group-admin");
+    settingsServer();
+    renderAt("/admin/settings", <SettingsPage />);
+    await valueOf("GST on rooms");
+    expect(screen.queryByText(/on alcohol/)).toBeNull();
+  });
+
+  it("where it does, the row says VAT - and '-' until the accountant's rate is set", async () => {
+    as("group-admin");
+    settingsServer(() => ({
+      ...TAX, servesAlcohol: true, kinds: [...TAX.kinds, { kind: "alcohol", slabs: [] }],
+    }));
+    renderAt("/admin/settings", <SettingsPage />);
+    expect(await valueOf("VAT on alcohol")).toBe("-");
+    expect(screen.queryByText("GST on alcohol")).toBeNull();
+  });
 });
 
 describe("D17-36 - the switches are the owner's and an administrator's", () => {

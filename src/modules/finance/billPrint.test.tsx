@@ -23,6 +23,7 @@ const bill = (over: Partial<StayBill> = {}): StayBill => ({
     { rate: 5, taxable: 200, cgst: 5, sgst: 5 },
     { rate: 18, taxable: 8000, cgst: 720, sgst: 720 },
   ],
+  vat: [],
   net: 8200, tax: 1450, total: 9650, rounded: 9650, roundOff: 0, paid: 0, balance: 9650,
   ...over,
 });
@@ -52,5 +53,20 @@ describe("the printed bill", () => {
   it("prints no tax rows for a bill with no taxed line", () => {
     render(<BillPrint bill={bill({ taxes: [] })} title="Tax Invoice" />);
     expect(screen.queryByText(/CGST/)).toBeNull();
+  });
+
+  /* D21-91: alcohol is "one 'VAT 10%' line on the bill, never split into
+     CGST/SGST". The rate is whatever app.stay_bill answers - 10 here is the
+     fixture's, not a figure the component knows. */
+  it("prints VAT on alcohol as one line, never as a CGST and SGST pair", () => {
+    render(<BillPrint bill={bill({
+      taxes: [],
+      vat: [{ rate: 10, taxable: 1500, vat: 150 }],
+    })} title="Tax Invoice" />);
+    expect(screen.getByText("VAT 10%")).toBeDefined();
+    expect(document.querySelectorAll("[data-bill-vat-rate]").length).toBe(1);
+    expect(screen.queryByText(/CGST/)).toBeNull();
+    expect(screen.queryByText(/SGST/)).toBeNull();
+    expect(screen.queryByText("CGST 5%")).toBeNull();
   });
 });

@@ -38,6 +38,9 @@ export interface StayBill {
   lines: StayBillLine[];
   /** One row per GST rate on the bill; CGST and SGST are each half of it. */
   taxes: { rate: number; taxable: number; cgst: number; sgst: number }[];
+  /** One row per VAT rate - alcohol (D21-91). Never halved. `tax` and the
+      totals below include it: it is tax the guest pays. */
+  vat: { rate: number; taxable: number; vat: number }[];
   net: number;
   tax: number;
   total: number;
