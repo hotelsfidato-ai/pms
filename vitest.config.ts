@@ -27,7 +27,8 @@ export default defineConfig({
     /* .claude/ holds agents' git worktrees — whole copies of this repo,
        tests included. Several agents run at once since the service-folder
        move; without this a run here also runs every copy's tests. */
-    exclude: ["**/node_modules/**", "**/dist/**", "docs/**", "api/**", ".claude/**"],
+    /* .local/ is this machine's Postgres, screenshots and gate logs (D22-1). */
+    exclude: ["**/node_modules/**", "**/dist/**", "docs/**", "api/**", ".claude/**", ".local/**"],
     globals: true,
     environment: 'jsdom',
     /* Stubs @/lib/api for every frontend test — CP9 moved the

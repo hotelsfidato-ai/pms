@@ -1,0 +1,5 @@
+# The owner's decisions, 22 September 2026
+
+| # | Question | Answer |
+|---|---|---|
+| D22-1 | Where the project's working copies and local tools live, and how parallel work runs | **Nothing about this project lives outside `D:\fidato pms`.** The owner gives orders in ONE main chat; the main chat sends helper agents, each working in its own copy inside the project (`.claude\worktrees\<service>`), and merges their work. The local Postgres moved from `D:\fidato-pg` to `.local\pg`, the screenshots to `.local\screenshots`, the gate script into `scripts\gates.sh` (its logs to `.local\gates\`). 22 finished service copies went to the Recycle Bin (every branch was already merged into `cp6`; all 46 branches stay in the history) and their 22 test databases were dropped, with a backup of each in `.local\pg\backups\service-copies-2026-09-22\`. The two copies still in use (guest messaging, online check-in) moved into `.claude\worktrees\`. `D:\fidato-crs-backups` belongs to the CRS project and was left alone |

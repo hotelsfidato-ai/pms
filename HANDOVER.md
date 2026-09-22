@@ -47,7 +47,34 @@ seam); a test enforces it.
 
 ## 2 · Where it stands
 
-### 21 September — read this first
+### 22 September — read this first
+
+```
+EVERYTHING INSIDE    D22-1 (the owner): nothing about the PMS lives outside D:\fidato pms.
+                     The owner talks to ONE main chat; it sends helper agents, each in its
+                     own copy in .claude\worktrees\, and merges their work. Postgres is
+                     .local\pg (was D:\fidato-pg), screenshots .local\screenshots, the
+                     gate script scripts\gates.sh (logs .local\gates\). 22 merged copies
+                     went to the Recycle Bin, their databases dropped with a backup each
+                     in .local\pg\backups\service-copies-2026-09-22\ (MEMORY 320).
+still in copies      guest-messaging (.claude\worktrees\guest-messaging, waiting on a
+                     migration number and two owner answers) and online-checkin
+                     (.claude\worktrees\online-checkin, waiting on the qrcode install)
+done 21-22 Sep       the Dashboard easier to read, then finished (every-hotel table read
+                     each hotel on the wrong day, fixed); demo data loaded locally (the
+                     loader lifts every delete guard it finds); 81 screens photographed
+                     at desktop and phone size (.local\screenshots\2026-09-21\index.html);
+                     DESIGN.md + DESIGN.html at the root, the design system for any agent;
+                     multiple languages kept as an option, not built (D21-99, D21-100)
+UI brief 22 Sep      docs/briefs/ui-transformation.md: the owner's UI-transformation prompt
+                     fitted to this repo. Paste its line into the main chat. It plans
+                     first and builds nothing until the owner approves (not committed)
+the owner owes       the release push (still waiting, D21-97); the City ledger tile's
+                     words; whether to fix the three older design one-offs DESIGN.md
+                     lists; whether the briefs README should point every lane at DESIGN.md
+```
+
+### 21 September
 
 ```
 NOTHING LEAVES THIS MACHINE  the owner's rule of 19 Sep (CLAUDE.md). No push, no Action,
@@ -239,6 +266,15 @@ npx vitest run          197 passed, 13 files
 ---
 
 ## 3 · What to do next, in order
+
+> **22 September: the queue.** (1) The owner's release push and the nine
+> deploy steps (D21-97), then a read-only check. (2) After it: `npm install
+> qrcode` (D21-95) and send a helper into `.claude\worktrees\online-checkin` to
+> finish the room cards. (3) Guest messaging: settle its migration number and
+> put the two answers it waits on to the owner. (4) Ask first: the three design
+> one-offs in DESIGN.md's Don'ts; the City ledger tile's words; the briefs
+> README pointing every lane at DESIGN.md. All work now runs as helper agents
+> from the main chat, in copies inside the project (D22-1).
 
 > **18 September: the order now lives in `docs/PARALLEL-PLAN-2026-09-18.md` § 1.**
 > That file is the board — which chat holds which service, what each one waits
@@ -1064,9 +1100,10 @@ hold `const USER = "front desk"`** (MEMORY 256) — named, not yet fixed.
 ## 7 · Working on this machine — the traps
 
 ```
-Postgres        D:\fidato-pg, port 55432, password pw. Does NOT restart after a
-                reboot. Start (PowerShell on this PC):
-                D:\fidato-pg\pgsql\bin\pg_ctl.exe -D D:\fidato-pg\data -l D:\fidato-pg\pg.log start
+Postgres        D:\fidato pms\.local\pg (since 22 Sep, D22-1; was D:\fidato-pg), port
+                55432, password pw. Does NOT restart after a reboot. Start (PowerShell
+                on this PC):
+                & "D:\fidato pms\.local\pg\pgsql\bin\pg_ctl.exe" -D "D:\fidato pms\.local\pg\data" -l "D:\fidato pms\.local\pg\pg.log" start
                 From Git Bash pg_ctl never returns — the server IS up; check with psql.
 servers         In the Claude desktop app, start them with the Browser pane's
                 preview_start: "api" (8787) then "web" (5173, or the next free

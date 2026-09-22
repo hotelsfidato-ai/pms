@@ -12,6 +12,7 @@ import { OrderPad } from "@/modules/pos/flows/OrderPad";
 import MenuPage from "@/modules/pos/pages/Menu";
 import DayEndPage from "@/modules/pos/pages/DayEnd";
 import TerminalPage from "@/modules/pos/pages/Terminal";
+import TillPage from "@/modules/pos/pages/Till";
 import { SlipNotice, type BlockedSlip } from "@/modules/pos/components/SlipNotice";
 
 /* ══════════════════════════════════════════════════════════════════
@@ -622,5 +623,82 @@ describe("the Terminal rings a dish sold by variation (the owner, 21 Sep)", () =
     await vi.waitFor(() => expect(
       calls.find((c) => c.path.endsWith("/o-5/lines")),
     ).toMatchObject({ method: "POST", body: { itemId: "i-7", variationId: "v-h" } }));
+  });
+});
+
+/* ── D21-94 · the GST a dish shows (POS-15) ─────────────────────────
+   The server sends the rate the till rings a dish at - its own, else
+   its section's - and null when none is set (api/test/modules/pos/
+   menuTaxRate.test.ts holds that side). These hold the screens to it:
+   null is a dash, never "0%" or a bare "%", and a real 0% stays 0%. */
+
+describe("a dish's GST reads its section's rate, or a dash (D21-94, POS-15)", () => {
+  const RATES = {
+    categories: [{
+      id: "c-1", name: "Mains", prepMinutes: null, course: null,
+      items: [
+        dish({ id: "i-1", name: "Follows Dish", price: 200, taxRate: 5 }),
+        dish({ id: "i-2", name: "Unset Dish", price: 200, taxRate: null }),
+        dish({ id: "i-3", name: "Nought Dish", price: 200, taxRate: 0 }),
+      ],
+    }] satisfies MenuCategory[],
+  };
+  const ORDER = {
+    ...AN_ORDER, id: "o-5", orderNo: "20260825-5", outlet: "REST",
+    status: "open", table: "4", gross: 0, payable: 0, tenders: [],
+    paymentMethod: null, abandonedReason: null, lines: [],
+  };
+  const ORDERS = {
+    businessDate: "2026-08-25",
+    orders: [{ id: "o-5", orderNo: "20260825-5", outlet: "REST", table: "4",
+               status: "open", businessDate: "2026-08-25", gross: 0,
+               paymentMethod: null, openedAt: "2026-08-25T19:00", lines: 0 }],
+  };
+  const text = async (role: "row" | "tile", name: string) => role === "row"
+    ? (await screen.findByText(name)).closest("li")!.textContent
+    : (await screen.findByRole("button", { name: new RegExp(`^${name}`) })).textContent;
+
+  it("on the Menu screen", async () => {
+    server({
+      [`GET ${MENU}`]: () => RATES,
+      [`GET ${PROMOTIONS}`]: () => ({ freehandCapPercent: 10, promotions: [] }),
+    });
+    menuAt();
+    expect(await text("row", "Follows Dish")).toMatch(/^Follows Dish5%₹/);
+    expect(await text("row", "Unset Dish")).toMatch(/^Unset Dish-₹/);
+    expect(await text("row", "Nought Dish")).toMatch(/^Nought Dish0%₹/);
+  });
+
+  it("on the Terminal's tiles", async () => {
+    localStorage.setItem("fidato.terminal-outlet", "REST");
+    server({
+      [`GET /api/hotels/${HOTEL}/pos/outlets`]: () => [{
+        code: "REST", name: "Restaurant", category: "food",
+        hasKey: false, isActive: true, bills: 0,
+      }],
+      [`GET ${MENU}`]: () => RATES,
+      [`GET /api/hotels/${HOTEL}/till/orders`]: () => ORDERS,
+      [`GET /api/hotels/${HOTEL}/till/orders/o-5`]: () => ORDER,
+    });
+    renderAt(`/h/${HOTEL}/till/terminal`, "/h/:code/till/terminal", <TerminalPage />);
+    fireEvent.click(await screen.findByRole("button", { name: /20260825-5/ }));
+    expect(await text("tile", "Follows Dish")).toMatch(/^Follows Dish5%₹/);
+    expect(await text("tile", "Unset Dish")).toMatch(/^Unset Dish-₹/);
+    expect(await text("tile", "Nought Dish")).toMatch(/^Nought Dish0%₹/);
+  });
+
+  it("on the Till's tiles", async () => {
+    server({
+      [`GET /api/hotels/${HOTEL}/till/orders`]: () => ORDERS,
+      [`GET ${MENU}`]: () => RATES,
+      [`GET /api/hotels/${HOTEL}/till/orders/o-5`]: () => ORDER,
+      [`GET /api/hotels/${HOTEL}/till/rooms`]: () => ({ rooms: [] }),
+      [`GET ${PROMOTIONS}`]: () => ({ freehandCapPercent: 10, promotions: [] }),
+    });
+    renderAt(`/h/${HOTEL}/till?order=o-5`, "/h/:code/till", <TillPage />);
+    /* The Till prints the price first and the rate under it. */
+    expect(await text("tile", "Follows Dish")).toMatch(/₹200 ?5%$/);
+    expect(await text("tile", "Unset Dish")).toMatch(/₹200 ?-$/);
+    expect(await text("tile", "Nought Dish")).toMatch(/₹200 ?0%$/);
   });
 });

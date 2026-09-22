@@ -1,6 +1,9 @@
 # Apps — desktop, kiosk tablet and phone (16 September 2026)
 
-**Status: a plan, nothing built.** Waiting on decisions A1–A11 in § 7.
+**Status: a plan, nothing built — and set aside for now.** The owner, 21
+September (D21-98): the web version first and foremost; the desktop and
+phone apps come later. When they do, the owner wants all three as installed
+apps to sell. Waiting on decisions A1–A11 in § 7.
 
 Asked for by the owner on 16 September: applications for desktop, tablet and
 phone; Expo named for Android and iOS; "more connectivity … also give offline

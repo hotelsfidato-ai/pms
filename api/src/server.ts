@@ -4,6 +4,7 @@ import { cors } from "hono/cors";
 import { env } from "./env.ts";
 import { healthCheck, closePool } from "./db.ts";
 import { subjectFor, Unauthenticated } from "./auth.ts";
+import { roleGate } from "./roleGate.ts";
 import { hotels } from "./routes/hotels.ts";
 import { property } from "./routes/property.ts";
 /* Every service, through its front door (docs/SERVICE-FOLDERS-PLAN.md). */
@@ -46,9 +47,10 @@ import { notifications } from "./routes/notifications.ts";
    THE APP API — MASTER.md §5
 
    Verifies a Firebase ID token, sets `app.user_id`, and talks to
-   Postgres as `pms_app`. It decides no permissions of its own: every
-   isolation guarantee is a policy in the database, and this process
-   exists to make sure the right person's name is on the transaction.
+   Postgres as `pms_app`. Which HOTEL is a policy in the database, and
+   this process makes sure the right person's name is on the transaction.
+   Which ROLE may write is the one question it asks itself: roleGate.ts,
+   from the matrix the website reads (api/src/permissions.ts).
    ══════════════════════════════════════════════════════════════════ */
 
 type Env = {
@@ -234,6 +236,12 @@ app.use("/api/*", async (c, next) => {
   }
   await next();
 });
+
+/* ── Every staff write asks the person's role (PMS-2, D21-88) ─────
+   After the gate above, so there is a subject; before every router, so
+   no route can be reached without it. The doors with no person (guest,
+   pos, channel) pass straight through. See roleGate.ts.            ═══ */
+app.use("/api/*", roleGate);
 
 /* The core's own routes: the session, the property, the live stream,
    approvals and attachments belong to no one service. */

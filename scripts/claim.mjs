@@ -2,8 +2,8 @@
 /* ══════════════════════════════════════════════════════════════════
    CLAIMS — who holds which service, seen from EVERY working copy
 
-   The owner runs one chat per service, each in its own git worktree
-   (D:\fidato-pos, D:\fidato-front-desk, …). The first claim design put a
+   Each service is worked in its own git worktree (since D22-1 inside the
+   project, .claude\worktrees\<service>). The first claim design put a
    file in `.claims/` inside the repository, and on 16 September twelve
    chats were working while `.claims/` in the main folder showed none of
    them: a file written inside a worktree exists only in that worktree's

@@ -553,7 +553,8 @@ export default function TerminalPage() {
                               bill, not the waiter taking the order. Quiet,
                               and out of the way of the number that matters. */}
                           <span className="text-2xs text-grey-500 tabular leading-none pb-0.5">
-                            {item.taxRate}%
+                            {/* A dash when none is set, never 0% (POS-15). */}
+                            {item.taxRate === null ? "-" : `${item.taxRate}%`}
                           </span>
                           <span className="text-lg tabular text-ink-900 leading-none">
                             {/* Sold by variation: no price of its own. A

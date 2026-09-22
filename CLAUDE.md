@@ -25,7 +25,7 @@ NOTHING LEAVES THIS MACHINE.**
 - **Nothing runs in GitHub Actions**, because nothing reaches GitHub.
 - **Do not deploy.** Not the API, not the website, not the deploy button.
 - **Commit locally, always.** Work is finished when it is committed on this
-  machine with its gates run HERE. `bash <scratchpad>/gates.sh <label>` is the
+  machine with its gates run HERE. `bash scripts/gates.sh <label>` is the
   proof now — the Action cannot be.
 - A service chat's own push is refused the same way. They commit; the master
   merges locally.
@@ -34,6 +34,13 @@ This lifts only when the owner says so in their own words. Until then, a green
 local gate run is the whole of the bar, and the standing rule that a push is
 not finished until its Action is green (MEMORY 300) is suspended because there
 are no pushes.
+
+**22 SEPTEMBER, THE OWNER (D22-1): NOTHING ABOUT THIS PROJECT LIVES OUTSIDE
+`D:\fidato pms`.** The owner talks to ONE main chat. The main chat sends helper
+agents; each works in its own copy inside the project, `.claude\worktrees\`,
+and reports back; the main chat merges. Local things that are not code (the
+Postgres, screenshots, gate logs) are in `.local\`. A copy goes to the Recycle
+Bin as soon as its branch is merged — junctions out first (AGENTS.md).
 
 The rules that are never negotiable, in short — the full list is
 `HANDOVER.md` § 5:

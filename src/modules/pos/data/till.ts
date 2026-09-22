@@ -21,8 +21,10 @@ export interface MenuItem {
       variation carries the price, and the database refuses a line that
       names none. */
   price: number;
-  /** Per ITEM, not per outlet: 5% on food, 18% on packaged water. */
-  taxRate: number;
+  /** Per ITEM, not per outlet: 5% on food, 18% on packaged water. The
+      rate the till RINGS it at - its own, else its section's - as the
+      server resolves it. Null is "none set": a dash, never 0% (POS-15). */
+  taxRate: number | null;
   isActive: boolean;
 
   /** What a fast biller types. Null for most items. */

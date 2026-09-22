@@ -6539,6 +6539,41 @@ copy will see of theirs.**
 
 ---
 
+### 320 · MINE: 22 finished service copies were left on D:, and the owner found them
+
+22 September. Every lane got its own git worktree beside the project
+(`D:idato-pos`, `D:idato-spa`, ...), and when I merged a lane I never took
+its copy away. The owner opened D: and saw twenty-odd `fidato-*` folders and
+read them, fairly, as the PMS split into pieces outside the project, the
+opposite of what the split was for. Every one was already merged into `cp6`;
+nothing was lost, but nothing said so either. With them sat the local
+Postgres, the screenshots and the gate script, all outside the project too.
+
+Now (D22-1): copies live in `.claude/worktrees/`, local tools in `.local/`, the
+gate script in `scripts/`, and a copy goes to the Recycle Bin when its branch
+is merged, junctions out first.
+
+**The rule: a merge is not finished until the copy it came from is gone. If
+it is merged, it goes; if it is not, say what is still in it.**
+
+---
+
+### 319 · MINE: a test I wrote reached into the demo fixtures, and only the full gate run saw it
+
+21 September, the Dashboard's finishing pass. The new test for "every hotel on
+its own day" restored the business date with `FIXTURE_BUSINESS_DATE`, imported
+from `@/data/fixtures`. The repositories suite (Rule 2) refuses any import of
+the fixtures outside `src/data`, because a screen's test that reads the demo
+directly is not testing through the seam. I had run the reports tests and the
+App tests, 45 green, and committed; the full gate run said 1 failed. Fixed by
+reading `BUSINESS_DATE` before changing it and putting that back.
+
+**The rule: the tests beside the change are not the gates. A new import in a
+test is a new edge in the boundary rules, and only the whole web suite checks
+those. Quote a green only from the full run.**
+
+---
+
 ### 318 · Two guards in a row test as one: the guest door's database functions had no test of their own
 
 21 September, found by the online check-in chat (OCI-5). The brief names the
