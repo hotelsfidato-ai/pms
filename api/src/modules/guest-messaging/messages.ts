@@ -2,6 +2,7 @@ import { Hono } from "hono";
 import { withSession } from "../../auth.ts";
 import type { Client } from "../../db.ts";
 import { canSend, NOT_CONNECTED } from "../../sending.ts";
+import { channelFor, dueFromDatabase, LIMITS, type Due } from "./jobs.ts";
 
 /* ══════════════════════════════════════════════════════════════════
    WHAT WAS SENT TO THIS GUEST — the reading side, and nothing else
@@ -174,6 +175,34 @@ const asMessage = (row: SentRow) => ({
   byAPerson: row.by_a_person,
 });
 
+/* ── The bookings no message can reach (MSG-3) ─────────────────────
+   Nothing is recorded where nothing was attempted (migration 117), so a
+   booking with nowhere to send left no trace at all: the desk had no way
+   to see that this guest will never get a confirmation. Read from the SAME
+   answer the sweep reads and filtered by the SAME `channelFor`, so this
+   lists exactly what the sweep skips - one rule, not a second copy of it.
+
+   Listed whether or not sending is switched on: a booking fixed before the
+   switch-on is a guest reached on the day. */
+const whyNot = (due: Due) => due.guest.phone?.trim()
+  ? "Not agreed to WhatsApp, and no email address"
+  : "No telephone number and no email address";
+
+async function unreachableAt(client: Client, hotelId: string, reservation: string | null) {
+  const seen = new Map<string, {
+    id: string; reference: string; guest: string; checkIn: string; why: string;
+  }>();
+  for (const due of await dueFromDatabase(client, LIMITS, hotelId)) {
+    if (channelFor(due) || seen.has(due.reservationId)) continue;
+    if (reservation && due.reservationId !== reservation) continue;
+    seen.set(due.reservationId, {
+      id: due.reservationId, reference: due.reference, guest: due.guest.name,
+      checkIn: due.checkIn, why: whyNot(due),
+    });
+  }
+  return [...seen.values()];
+}
+
 /* ── The list ──────────────────────────────────────────────────────
    One property, newest first, and `?reservation=<id>` for one booking —
    which is the question the desk actually asks. The index migration 117
@@ -211,6 +240,7 @@ guestMessages.get("/:code/guest-messages", async (c) => {
       connected: canSend(),
       notConnected: canSend() ? null : NOT_CONNECTED,
       messages: rows.map(asMessage),
+      unreachable: await unreachableAt(client, hotelId, reservation),
     };
   });
 

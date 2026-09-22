@@ -57,6 +57,21 @@ export interface GuestMessages {
       the desk reads the same thing wherever it meets this. */
   notConnected: string | null;
   messages: SentMessage[];
+  /** Future bookings no message can reach (MSG-3): no email, and no
+      number the guest agreed to WhatsApp on (D21-72). Nothing is recorded
+      where nothing was attempted, so without this list the desk would
+      never learn it. The server reads it from the sweep's own answer. */
+  unreachable: Unreachable[];
+}
+
+export interface Unreachable {
+  id: string;
+  reference: string;
+  guest: string;
+  /** YYYY-MM-DD, the property's own day. */
+  checkIn: string;
+  /** Why, in the desk's words: what to add to the booking. */
+  why: string;
 }
 
 /** Everything sent at one property, newest first - or, given a booking,

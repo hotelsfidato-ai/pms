@@ -14,22 +14,16 @@ export const mounts: readonly Mount[] = [
   ["/api/hotels", guestMessages],
 ];
 
-/* ⚠ THERE IS NO `jobs` HERE YET, AND THAT IS THE HONEST STATE.
+/* THE SWEEP, and it is NOT started here. `server.ts` (the master's file)
+   starts it at merge, beside the channel manager's - one line to start, one
+   to stop - and it does nothing at all until the owner switches sending on
+   (D21-76): the n8n settings and the owner's pace both have to be there.
 
-   The channel manager exports one and `server.ts` calls `jobs.start()`;
-   this service will do the same, and that one line in the master's file is
-   a merge-time step like R2 was. It is not asked for yet, because the sweep
-   it would start cannot read a booking: a job has no staff session, and
-   `reservations` and `guest_links` are both FORCE row-secured on
-   `app.auth_hotel_ids()`. Both need a SECURITY DEFINER function, the way
-   `messages_sent` needed `app.record_message_sent` in migration 117, and
-   that migration is asked for and not yet given (19 September).
-
-   A timer started over an empty list would be machinery pretending to work.
-   What `jobs.ts` holds is the DECIDING - which bookings are due, which way
-   each goes, when to stop trying - and it is proved against fakes. */
+   It reads and mints through the two SECURITY DEFINER functions of "what the
+   guest is owed", because a job has no staff session and `reservations` and
+   `guest_links` are FORCE row-secured on `app.auth_hotel_ids()`. */
 export {
-  runOnce, channelFor, messageFor, KIND, CONFIRM_WITHIN_HOURS, MOST_ATTEMPTS,
+  jobs, runOnce, channelFor, messageFor, KIND, CONFIRM_WITHIN_HOURS, MOST_ATTEMPTS,
   type Due, type Limits, type ListDue, type MakeLink,
   type MessageKind, type SweepResult,
 } from "./jobs.ts";

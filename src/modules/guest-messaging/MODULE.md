@@ -5,12 +5,16 @@ The owner's D18-11 and D18-12; `docs/BUILD-PLAN-2026-09-18.md` § 4.
 
 ```
 src/modules/guest-messaging/          the screen, its menu entry and its address
-api/src/modules/guest-messaging/      the reading route, and the sweep's deciding
-db/tests/modules/guest-messaging.sql  not written - this service adds no table
+api/src/modules/guest-messaging/      the reading route, and the sweep
+db/migrations/125_what_the_guest_is_owed.sql   the sweep's two ways in (the
+                                      master renumbers at merge; refer to it
+                                      as "what the guest is owed")
+db/tests/modules/guest-messaging.sql  those two functions, called directly
 ```
 
 **This service writes no table of its own.** `messages_sent` (migration 117) is
-the record, and the sender writes it - see below.
+the record, and the sender writes it - see below. The migration adds functions
+only.
 
 ---
 
@@ -32,32 +36,54 @@ nothing else. This service calls `send()`; it does **not** call n8n, and it does
 
 | | |
 |---|---|
-| **The screen** | `/h/:code/guest-messages` - what was sent at this property, newest first, and `?reservation=<id>` for one booking. Read only: nothing here sends, in any state |
-| **The route** | `GET /api/hotels/:code/guest-messages`, in `api/src/modules/guest-messaging/messages.ts` |
-| **The deciding** | `api/src/modules/guest-messaging/jobs.ts` - which bookings are due a message, which way each goes, and when to stop trying |
+| **The screen** | `/h/:code/guest-messages` - what was sent at this property, newest first, and `?reservation=<id>` for one booking. Read only: nothing here sends, in any state. Above the record, **the bookings no message can reach** (MSG-3), with what to add to each |
+| **The route** | `GET /api/hotels/:code/guest-messages`, in `api/src/modules/guest-messaging/messages.ts` - the record, `connected`, and `unreachable` |
+| **The sweep** | `api/src/modules/guest-messaging/jobs.ts` - `jobs.start()` / `jobs.stop()`, once a minute: which bookings are owed a message, which way each goes, the guest's own link, and when to stop trying. Built and **not started** (below) |
+| **Its two ways in** | `app.guest_messages_due(within_hours, most_attempts, remind_from, hotel)` and `app.guest_booking_link_issue(reservation, token_hash)`, both SECURITY DEFINER, `revoke all from public`, granted to `pms_app`; and `app.guest_link_expires(hotel, check_out)`, the link's expiry rule |
+
+**The rules, and where each one lives** (every one named, so an answer is a
+one-line change):
+
+| Rule | Where | Whose |
+|---|---|---|
+| Every future confirmed booking is owed its confirmation, however long ago it was made | `CONFIRM_WITHIN_HOURS = null` | the owner, **D21-33** |
+| Soonest arrival first | the function's `order by` | the owner, **D21-34** |
+| No more than the owner's pace in a minute, and **nothing at all until it is given** | `GUEST_MESSAGES_PER_MINUTE`, a server setting | the owner, **D21-34** - the number is still to come |
+| WhatsApp only where the booking is ticked "guest agreed to WhatsApp" and has a number; else email where there is one; else nothing. Never both | `channelFor` | the owner, **D21-35, D21-72** |
+| The reminder: the day before arrival on the property's clock, from 10:00 | `REMIND_FROM` | **recommended, not decided** - asked below |
+| No reminder while the confirmation is still owed, or within a day of it - it carries the same link | the function | **recommended, not decided** - asked below |
+| Three failed attempts and it stops | `MOST_ATTEMPTS` | this service, 19 September |
+| A booking's link dies at 11:00 the morning after check-out, never under a day from now | `app.guest_link_expires` | D18-9, as the desk's route has it |
+
+English only (D21-73): nothing is built for a second language (D21-74). n8n
+maps the two kinds onto the two templates in `docs/go-live/whatsapp-templates.md`:
+`booking-confirmation` to `booking_confirmation`, `arrival-reminder` to
+`stay_reminder`. Every field either template reads is in `data`.
 
 **The bill after check-out is not here and is not going to be** (D17-34,
 D17-91): it stays a button the front desk presses, on the front desk's screen.
 A review request belongs to the reputation service.
 
-## What is NOT wired, and why
+## The sweep is built and not started - and does nothing until switched on
 
-**The sweep does not run yet.** It has no staff session - nobody is signed in at
-three in the morning - and `reservations` and `guest_links` are both FORCE
-row-secured on `app.auth_hotel_ids()`, which answers for a signed-in person. So
-it can neither read which bookings are due nor mint the guest's own link.
+`server.ts` is the master's, so the two lines that start and stop the sweep are
+a merge-time step (below). Even started, it does nothing at all until **both**
+are in the server's settings: the owner's n8n steps (`N8N_SEND_URL`,
+`N8N_SEND_SECRET` - `canSend()`), and the owner's pace
+(`GUEST_MESSAGES_PER_MINUTE`, D21-34). Without either it does not even ask which
+bookings are due, and no row is written. Stage 3 is a switch-on (D21-76), so the
+pace is a setting beside the other two, not a constant that would need a
+release.
 
-Both need a **SECURITY DEFINER** function, exactly as `messages_sent` needed
-`app.record_message_sent` in migration 117. **That migration is asked for and
-not yet given** (19 September), so `listDue` and `makeLink` are parameters of
-`runOnce` and the tests hand in their own. Nothing pretends to run, and there is
-no `jobs.start()` in the front door: a timer over an empty list is machinery
-pretending to work.
+**Nobody is signed in when it runs**, and `reservations`, `guests`,
+`messages_sent` and `guest_links` are all FORCE row-secured on
+`app.auth_hotel_ids()`. So it reads and mints only through the two definer
+functions, the shape 117 gave `app.record_message_sent`.
 
-When the number arrives, the remaining work is that one migration, the two
-functions behind those parameters, a `jobs` export, and **one line in
-`server.ts`** (`guestMessaging.jobs.start()`), which is a merge-time step in the
-master's file like R2 was.
+**One transaction per step, not one for the pass.** In one transaction the first
+failed statement aborts every statement after it, and the rollback takes the
+record of every message already sent that pass - so the next minute would send
+them all again. `sweep.test.ts` proves it with a real Postgres error.
 
 ## Why a sweep and not a hook in `makeBooking`
 
@@ -96,18 +122,22 @@ answers to one question.
 
 ## Requests
 
-### To the MASTER - open, 19 September
+### To the MASTER - open, 22 September
 
-1. **A migration number**, for one migration adding two SECURITY DEFINER
-   functions: `app.guest_messages_due(...)` (which bookings are owed a
-   confirmation or a reminder) and `app.guest_link_issue(...)` (mint the guest's
-   own page for one booking). The second belongs to migration 114's family and
-   `api/src/routes/guestDoor.ts` is the master's twice-checked file - **the
-   master may prefer to write it.** Recommended either way: the staff route
-   calls the same function, so the expiry rule (11:00 the morning after
-   check-out, never less than 24 hours) lives once rather than twice.
-2. **At merge**, `guestMessaging.jobs.start()` / `.stop()` in `server.ts`, once
-   there is a sweep to start.
+1. **At merge, two lines in `server.ts`**, beside the channel manager's:
+   `guestMessaging.jobs.start();` after `channelManager.jobs.start();`, and
+   `await guestMessaging.jobs.stop();` after `await channelManager.jobs.stop();`
+   in `shutdown`. Safe to add before stage 3: it sends nothing until the owner's
+   settings are in.
+2. **The migration number.** Written as 125, the next free one in this copy.
+3. **`linkFor` in `api/src/routes/guestDoor.ts` is copied** in `jobs.ts`
+   (`linkFromDatabase`), because it is not exported and that file is yours.
+   Export it and this service imports it - one line each side.
+4. **The link's expiry rule is now `app.guest_link_expires`**; the desk's route
+   in `guestDoor.ts` still writes the same `greatest(...)` inline. Making it call
+   the function puts the rule in one place (the recommendation of 19 September).
+5. **Stage 3's list gains a third setting**, `GUEST_MESSAGES_PER_MINUTE`, for the
+   owner's number (D21-34).
 
 ### Answered 21 September
 
@@ -131,23 +161,34 @@ answers to one question.
   the booking with a hotel default (D21-74). The template names and their
   fields are `docs/go-live/whatsapp-templates.md`.
 
-### To the OWNER - open, 19 September, each with a recommendation
+**All of the above applied, 22 September** (see "What is built"). The booking's
+link function is named for what it is: **`app.guest_booking_link_issue`**, not
+`guest_link_issue`, beside 121's room cards.
 
-1. **Does the confirmation reach bookings made BEFORE sending was switched on?**
-   Recommended: **no** - only bookings made in the last 48 hours. On the day the
-   owner finishes their n8n steps, every future booking already in the system
-   becomes due at once, and a guest who booked three weeks ago and has their
-   voucher does not want a confirmation now. The day-before reminder reaches
-   them anyway.
-2. **Which way do the two messages go?** Recommended: **WhatsApp where the
-   booking carries a number, email where it carries only an address, neither
-   where it carries neither** - WhatsApp is the channel in this market (D17-89),
-   and this sends once rather than the same thing twice.
+### To the OWNER - open, 22 September, each with a recommendation
 
-Both are one named constant and one named function (`CONFIRM_WITHIN_HOURS`,
-`channelFor`), so either answer is a one-line change. The constants are **passed
-into** the query rather than read where it lives, so nothing here is a name
-nobody uses (MEMORY 304).
+1. **The pace (D21-34): how many messages a minute?** Your number, from what the
+   WhatsApp account allows; nothing is sent until it is given. It counts email
+   too - one number for both. Recommended: ask what Meta allows the account,
+   and give a number well inside it.
+2. **What time of day does the reminder go?** "The day before arrival" with no
+   hour would mean one minute past midnight. Recommended: **10:00 on the
+   hotel's own clock** (built so, and a one-line change).
+3. **A booking made the day before arrival: one message or two?** Recommended
+   and built: **one** - no reminder while the confirmation is still owed or
+   within a day of it, because the confirmation carries the same link.
+4. **Several rooms booked together for one guest.** Each booking gets its own
+   confirmation and its own link today, so a guest with three rooms gets three.
+   Recommended: **one per group** - not built; it needs the answer first.
+5. **Switch-on day, at night.** Every future booking is owed at once (D21-33)
+   and goes soonest arrival first at your pace; if the pace spreads them past
+   the evening, some leave in the night. Recommended: **confirmations for
+   bookings made before switch-on only between 09:00 and 21:00 on the hotel's
+   clock** - not built.
+6. **The words on the new list**: "N bookings no message can reach", and
+   "These guests will get no confirmation and no reminder. Add an email address
+   to the booking, or tick WhatsApp on it if the guest agrees." Recommended: as
+   written.
 
 ## Requests from other services
 

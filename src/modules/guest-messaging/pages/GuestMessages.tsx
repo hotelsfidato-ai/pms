@@ -4,7 +4,7 @@ import { MessageSquare, Mail, Phone } from "lucide-react";
 import { dateShort } from "@/lib/format";
 import { ApiError } from "@/lib/api";
 import {
-  Page, PageHeader, Card, CardBody, Skeleton, EmptyState, ErrorState,
+  Page, PageHeader, Card, CardHeader, CardBody, Skeleton, EmptyState, ErrorState,
   DataTable, StatusPill, type Column, type Tone,
 } from "@/components/ui";
 import {
@@ -204,6 +204,38 @@ export default function GuestMessagesPage() {
               {" - "}
               {data.notConnected}
             </p>
+          </CardBody>
+        </Card>
+      )}
+
+      {/* MSG-3. Nothing is recorded where nothing was attempted, so a guest
+          the sweep cannot reach would otherwise leave no trace on this
+          screen at all. Shown whether or not sending is on: a booking
+          fixed now is a guest reached on the day it is. A list, not a
+          second table - the record below is the table. */}
+      {data && data.unreachable.length > 0 && (
+        <Card>
+          <CardHeader
+            title={data.unreachable.length === 1
+              ? "1 booking no message can reach"
+              : `${data.unreachable.length} bookings no message can reach`}
+            description={
+              "These guests will get no confirmation and no reminder. Add an "
+              + "email address to the booking, or tick WhatsApp on it if the "
+              + "guest agrees."
+            }
+          />
+          <CardBody>
+            <ul className="divide-y divide-grey-200 text-sm">
+              {data.unreachable.map((u) => (
+                <li key={u.id} className="flex flex-wrap gap-x-4 gap-y-0.5 py-2">
+                  <span className="font-medium text-ink-900">{u.reference}</span>
+                  <span className="text-ink-700">{u.guest}</span>
+                  <span className="text-grey-600">Arrives {dateShort(u.checkIn)}</span>
+                  <span className="text-grey-600">{u.why}</span>
+                </li>
+              ))}
+            </ul>
           </CardBody>
         </Card>
       )}

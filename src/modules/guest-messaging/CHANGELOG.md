@@ -11,6 +11,84 @@ Work that touches the core or several services still goes in the root
 
 ---
 
+## 2026-09-22 · phase 1 finished: what the guest is owed, and their booking's own link
+
+**Asked for:** by the master, 22 September - finish phase 1 now the owner has
+answered: D21-33 (every future booking gets the confirmation), D21-34 (soonest
+arrival first, at the owner's pace), D21-35 and D21-72 (WhatsApp only to a
+booking ticked "guest agreed to WhatsApp", else email, else nothing), D21-73
+(English only). The migration the sweep was waiting on, the two functions behind
+it, and MSG-3 if small. Sending stays off (D21-76); `server.ts` is the master's.
+
+**Shipped**
+- **Migration "what the guest is owed"** (written as 125; the master renumbers).
+  `app.guest_messages_due(within_hours, most_attempts, remind_from, hotel)` -
+  which confirmed bookings are owed their confirmation or their day-before
+  reminder, soonest arrival first; `app.guest_booking_link_issue(reservation,
+  token_hash)` - one CONFIRMED booking's own page, from the hash of a token the
+  API made (named for a booking, beside 121's room cards); and
+  `app.guest_link_expires(hotel, check_out)`, the link's expiry rule. The two
+  are SECURITY DEFINER, `revoke all from public`, granted to `pms_app`. No table.
+- **The sweep, finished and not started** - `jobs.ts`: `dueFromDatabase`,
+  `linkFromDatabase`, `runOnce` and `jobs.start()` / `.stop()`, the channel
+  manager's shape. `channelFor` takes the tick (D21-72); `CONFIRM_WITHIN_HOURS`
+  is null (D21-33); the pace is the server setting `GUEST_MESSAGES_PER_MINUTE`
+  and **nothing is sent until it is given** (D21-34: nobody guesses it).
+- **MSG-3** - the screen lists the bookings no message can reach, and why, from
+  the sweep's own answer and the sweep's own `channelFor`.
+
+**Found** (in `DEFECTS.md`)
+- **MSG-5 · one transaction for the whole sweep would send every message
+  twice** - found by reading before it ran; proved with a real Postgres error.
+- Found while designing, and built the safe way round: a booking nobody can
+  reach is owed for ever, so counted against the pace it would starve everyone
+  else (the pace now counts only reachable bookings); and "the day before
+  arrival" with no hour is one minute past midnight (`REMIND_FROM`, asked).
+
+**Proved** - in this copy, 22 September, on the branch merged up to cp6 `fde1e82`:
+
+```
+npx tsc -b --force                     exit 0
+api  npx tsc --noEmit -p .             exit 0
+npx vitest run src/modules/guest-messaging   1 file, 12 tests passed, exit 0
+npx vitest run src/test                2 files, 5 tests passed, exit 0
+api  npm test -- guest                 7 files, 114 tests passed, exit 0
+bash db/tests/run.sh                   all 992 assertions passed (27 guest-messaging), exit 0
+bash db/tests/rerun.sh                 all 125 migrations re-runnable, exit 0
+```
+
+**Guards seen to fail, with the change taken out** - every new test:
+- the database file (27 assertions): 20 breaks of the migration, one clause
+  each - no window, a tentative booking, a past stay, failures never stopping,
+  a sent confirmation or reminder owed again, no gap after the confirmation, a
+  reminder while the confirmation is owed, no hour, every property answered,
+  latest arrival first, no definer, any string as a hash, a link for any
+  booking, the wrong expiry, no floor of a day, the read-only role granted,
+  pms_app not granted, D21-33 undone to 48 hours, the tick answered true - each
+  failed the assertion that names it.
+- the API (37 tests in the lane): 13 breaks - no pace needed, D21-33 undone,
+  D21-72 undone (4 tests, two of them MSG-3's), no pace applied, the pace
+  counted before the unreachable are set aside, a second timer, one
+  transaction for the pass, the wrong hash, a refused link not noticed, and
+  MSG-3's list emptied, its reasons swapped, not narrowed, and gated on sending.
+- the web (12 tests): the MSG-3 card removed, and drawn when empty.
+
+**Not opened in a browser** - the master's rule for this job: no servers on
+8787 or 5173 and no browser pane. The new card is proved by the web tests only.
+
+**Left open**
+- **At merge (the master):** the two `server.ts` lines, the number, exporting
+  `linkFor`, `guestDoor.ts` calling `app.guest_link_expires`, and a third stage-3
+  setting - all in `MODULE.md`, Requests.
+- **To the owner**, six questions with recommendations in `MODULE.md`: the pace,
+  the reminder's hour, one message or two for a booking made the day before,
+  several rooms for one guest, switch-on night, and the list's words.
+- **MSG-4** - the date formatted twice, unchanged.
+
+**Commits:** see the branch `guest-messaging/phase-1`.
+
+---
+
 ## 2026-09-19 · the record of what was sent, and the deciding behind the two messages
 
 **Asked for:** the owner's D18-11 and D18-12, through `docs/BUILD-PLAN-2026-09-18.md`
