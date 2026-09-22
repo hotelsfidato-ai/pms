@@ -101,6 +101,9 @@ export interface OrderLine {
       month does not re-price a bill printed today. */
   unitPrice: number;
   taxRate: number;
+  /** "vat" for alcohol (D21-91): its tax prints as one VAT line, never as a
+      CGST and SGST pair. The server always sends it; absent reads as GST. */
+  taxScheme?: "gst" | "vat";
   note: string | null;
   /** Struck, not removed. A manager settling a dispute wants to see
       that a dish was added and cancelled four times. */

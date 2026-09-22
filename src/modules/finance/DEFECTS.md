@@ -16,6 +16,32 @@ entries stay here: they are the reason the fault does not come back.
 
 ## Fixed
 
+### FIN-4 · The Add charge window previewed "CGST 2.5% + SGST 2.5%" on every charge — FIXED 22 September
+
+**Found** — 21 September, left open in this service's CHANGELOG (the bill as
+it stands). The dialog's tick box read "Taxable - CGST 2.5% + SGST 2.5%" and
+its preview worked the tax out with `taxOn`/`splitTax` from `src/lib/rules.ts`
+— a fixed 5% — while the posting itself (`postCharge`) takes the room's rule
+from `app.gst_rate`, which turns on the amount. So an ₹8,000 charge at a
+property whose room rule is 18% above ₹7,500 previewed at 5% and posted at
+18%, and a property with no rule at all previewed 5% and was then refused.
+
+**Fixed** — the dialog asks `GET /:code/tax/room/rate?amount=` (new, in
+`api/src/modules/finance/tax.ts`), which is `app.gst_rate_or_null` — the one
+place the slab is worked out — and shows that rate, its CGST/SGST halves and
+the total; a dash where nobody has set a rate, "…" while it asks, "not
+loaded" if the question failed. `taxOn`/`splitTax` stay in the core's
+`rules.ts` (not this service's file); finance no longer calls them.
+
+**Proved** — `src/modules/finance/addCharge.test.tsx` (3): ₹8,000 previews
+GST 18% as CGST 9% + SGST 9%, ₹400 previews 5%, an unset rule previews "-".
+All three fail with the old label put back. The route:
+`api/test/modules/finance/alcoholVat.test.ts`, "the rate a charge will
+carry" (2), both fail with the route removed.
+
+**The rule:** a preview asks the rule the posting will use; it never carries
+its own copy of the rate.
+
 ### FIN-3 · `/in-house` showed ₹7,085 owed by a guest who had paid — the list was an old copy — FIXED 17 September
 
 **Found** — 16 September, the critique's P0, answered by a query (read-only

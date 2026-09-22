@@ -99,6 +99,11 @@ async function totalsFor(client: Client, folioId: string): Promise<Totals> {
        from folio_postings fp
       where fp.folio_id = $1
         and fp.category not in ('payment', 'refund')
+        /* GST SUPPLIES ONLY. Alcohol is VAT (D21-91): it stays on the
+           guest's bill as its own "VAT 10%" line and is kept out of the
+           GST invoice, and so out of the GST sales register that is read
+           from these invoices. */
+        and fp.tax_scheme = 'gst'
         and fp.reverses_id is null
         and not exists (
           select 1 from folio_postings rev where rev.reverses_id = fp.id
@@ -180,7 +185,8 @@ invoices.post("/:code/stays/:id/invoice", async (c) => {
     const totals = await totalsFor(client, f.id);
     if (totals.total <= 0) {
       return refuse(
-        "There is nothing to invoice - the folio carries no charges.",
+        "There is nothing to invoice - the folio carries no charges under GST. "
+        + "Alcohol is billed under VAT and is not on a GST invoice.",
       );
     }
 
@@ -314,6 +320,8 @@ invoices.get("/:code/invoices/:number{.+}", async (c) => {
          from folio_postings fp
         where fp.folio_id = $1
           and fp.category not in ('payment','refund')
+          -- The invoice's own supplies: GST only, as its totals (D21-91).
+          and fp.tax_scheme = 'gst'
           and fp.reverses_id is null
           and not exists (
             select 1 from folio_postings rev where rev.reverses_id = fp.id

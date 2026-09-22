@@ -8,6 +8,65 @@ project, still goes in the root `CHANGELOG.md`.
 
 ---
 
+## 2026-09-22 · alcohol, a switch per property, and the VAT it is taxed under (D21-90, D21-91) — and FIN-4
+
+**Asked for:** the owner's D21-90 ("a switch per hotel - 'serves alcohol'",
+off by default) and D21-91 (10% VAT, not GST: one "VAT 10%" line on the
+bill, never CGST/SGST, kept out of the GST sales register and the GST part of
+the accountant's export, its own VAT ledger; the accountant confirms the
+rate). Who sets the rate: D22-32 (owner, admin, GM, accountant) — which is
+what PMS-2's `GST` rule in `api/src/roleGate.ts` already says. And the Add
+charge dialog's fixed "CGST 2.5% + SGST 2.5%" (FIN-4).
+
+**Shipped:**
+- A module switch `alcohol` ("Serves alcohol" on Settings → Modules), owner
+  and admin only like the others, off everywhere: no row is written.
+- A tax kind `alcohol`, taxed as VAT. Listed on the tax card only where the
+  switch is on; one rate, no bands; **never seeded** — "Not set", a dash,
+  until somebody types it. While the switch is off the rate cannot be set, a
+  section cannot be given the heading, and the till refuses a drink in a
+  section still set to it.
+- The till rings a dish in an alcohol section that follows its section's
+  rate as VAT (`pos_order_lines.tax_scheme`); settling to a room posts it as
+  its own VAT posting (`folio_postings.tax_scheme`), split by tax as well as
+  rate (`app.pos_order_by_tax`; `pos_order_by_rate` is built from it and
+  keeps its shape). A reversal of any posting takes its original's tax, by
+  trigger, whoever writes it; a transfer carries it.
+- `app.stay_bill` answers `vat` rows; `BillPrint` prints "VAT 10%" as one
+  line, and the restaurant's bill does the same. The GST invoice (and so the
+  GST sales register) leaves VAT out. The day book has Alcohol and VAT
+  columns and its "GST" column (was "Tax") and extra/outlet tax carry none of
+  it; the Manager report prints "Tax - VAT 10%" as one line and keeps VAT out
+  of its SGST/CGST.
+- `GET /:code/tax/:kind/rate?amount=` — the rate one charge would carry. The
+  Add charge dialog asks it: GST 18% → CGST 9% + SGST 9% on ₹8,000; a dash
+  where nothing is set (FIN-4).
+- 067's unguarded rewrite of the menu section's heading list is guarded
+  (the first section set to alcohol would have stopped every deploy at 067 —
+  seen with the old 067: rerun.sh "067_tax_rules.sql ... violated by some
+  row"); rerun.sh now gives its property alcohol, a VAT rate and a section.
+
+**Chosen where the owner's words did not settle it** (questions in the
+report): per menu SECTION, not per dish; a dish with its own rate in an
+alcohol section stays GST (the soft-drink answer); the VAT is not on the GST
+invoice at all and no separate VAT invoice exists; the day book moves VAT out
+of Extra tax / Restaurant tax into its own columns, sales unchanged.
+
+**Proved** (each seen failing with its fix taken out): `db/tests/modules/
+finance.sql` (25; 4 fail with the trigger, the stay_bill split and the
+by-tax grouping broken); `api/test/modules/finance/alcoholVat.test.ts` (13;
+10 fail with the switch and till guards out, 6 with the invoice filter, the
+day book split, the Manager report's VAT line, the trigger and the rate
+route out, 1 with the Manager report's VAT bucket out); web: `addCharge`
+(3), `taxCard` (2), `billPrint` (+1), `pos/billVat` (1), accounting (+1),
+admin (+2).
+
+**Left open:** the menu import still knows only restaurant, bar, banquet and
+other; `migrationNumbers.test.ts` fails on the gap at 125 until the master
+renumbers 126.
+
+---
+
 ## 2026-09-21 · the bill as it stands — one definition, and the printed bill's made-up GSTIN
 
 **Asked for:** the owner's D21-10 (a guest sees exactly the bill the desk

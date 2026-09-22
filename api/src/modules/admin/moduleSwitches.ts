@@ -25,6 +25,10 @@ import { maySwitchModules, MODULE_SWITCH_REFUSED } from "./grants.ts";
    ══════════════════════════════════════════════════════════════════ */
 export const SWITCHABLE = [
   "pos", "banquet", "reception_pos", "channel_manager", "laundry", "spa",
+  /* D21-90, 22 September: "serves alcohol", per property, off by default.
+     It opens the Alcohol heading on the tax card - VAT, not GST (D21-91) -
+     and lets the till sell a dish in a section taxed as alcohol. */
+  "alcohol",
 ] as const;
 
 

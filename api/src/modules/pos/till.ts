@@ -1608,14 +1608,14 @@ async function readOrder(client: Client, orderId: string) {
 
   const { rows: lines } = await client.query<{
     id: string; name: string; qty: string; unit_price: string;
-    tax_rate: string; note: string | null; voided: boolean;
+    tax_rate: string; tax_scheme: "gst" | "vat"; note: string | null; voided: boolean;
     kot_status: string;
     added_by_name: string;
     parent_line_id: string | null;
     variation_id: string | null; addon_id: string | null;
   }>(
     `select l.id::text, l.name, l.qty::text, l.unit_price::text,
-            l.tax_rate::text, l.note, l.voided, l.kot_status,
+            l.tax_rate::text, l.tax_scheme, l.note, l.voided, l.kot_status,
             s.full_name as added_by_name,
             l.parent_line_id::text, l.variation_id::text, l.addon_id::text
        from pos_order_lines l
@@ -1693,6 +1693,9 @@ async function readOrder(client: Client, orderId: string) {
       qty: Number(l.qty),
       unitPrice: Number(l.unit_price),
       taxRate: Number(l.tax_rate),
+      /* "vat" for alcohol (D21-91): the bill prints it as one VAT line,
+         never as a CGST and SGST pair. */
+      taxScheme: l.tax_scheme,
       note: l.note,
       voided: l.voided,
       /* pending until a waiter sends it. The till shows which dishes the
@@ -1964,6 +1967,7 @@ async function addOneLine(
       name: string; price: string; tax_rate: string | null; is_active: boolean;
       off_until: string | null; off_reason: string | null;
       tax_kind: string; variation_count: string;
+      tax_scheme: "gst" | "vat"; serves_alcohol: boolean;
     }>(
       /* THE ITEM'S OWN RATE, OR THE OUTLET'S RULE.
          `pos_menu_items.tax_rate` was `not null default 5.00` — a
@@ -1982,10 +1986,18 @@ async function addOneLine(
 
          An outlet whose kind has no rule raises, and the refusal below
          turns that into a sentence a waiter can act on. That is how the
-         bar stays honest until the owner sets its rate. */
+         bar stays honest until the owner sets its rate.
+
+         ALCOHOL IS VAT (D21-91). A dish in a section taxed as alcohol that
+         follows the section's rate is rung as VAT; one with its own rate is
+         the section's exception and keeps that rate as GST - a soft drink
+         sold beside the spirits, as bottled water is on a food bill. */
       `select i.name, i.price::text, i.is_active,
               i.off_until::text, i.off_reason,
               coalesce(c.tax_kind, 'other') as tax_kind,
+              case when c.tax_kind = 'alcohol' and i.tax_rate is null
+                   then 'vat' else 'gst' end as tax_scheme,
+              app.module_enabled(i.hotel_id, 'alcohol') as serves_alcohol,
               ${DISH_TAX_RATE}::text as tax_rate,
               (select count(*)::text from pos_item_variations v
                 where v.item_id = i.id and v.is_active) as variation_count
@@ -2013,6 +2025,20 @@ async function addOneLine(
        the tablet needs to know which heading to go and set — not that
        something threw. This is the bar, on the day it opens and before
        anybody has told the system what a peg is taxed at. */
+    /* A property that does not serve alcohol sells none (D21-90), whatever
+       its sections were once set to. Asked before anything is written. */
+    if (item[0].tax_kind === "alcohol" && !item[0].serves_alcohol) {
+      return refuse(
+        `${item[0].name} is in a section taxed as alcohol, and this property is `
+        + "not switched on for alcohol. The owner or an administrator turns it on "
+        + "in Settings, under Modules.");
+    }
+    if (item[0].tax_rate === null && item[0].tax_kind === "alcohol") {
+      return refuse(
+        `${item[0].name} has no VAT rate. Nothing is set for alcohol, and a `
+        + "missing rate is not zero - a manager can set it under Rooms and rates "
+        + "→ Room types, in the GST and VAT card.");
+    }
     if (item[0].tax_rate === null) {
       const KIND: Record<string, string> = {
         bar: "the bar", restaurant: "the restaurant",
@@ -2142,12 +2168,12 @@ async function addOneLine(
          re-adding something that was cancelled starts fresh. */
       `insert into pos_order_lines
          (order_id, hotel_id, item_id, variation_id, name, qty, unit_price,
-          tax_rate, note, added_by)
-       values ($1,$2,$3,$10,$4,$5,$6,$7,$8,$9)
+          tax_rate, tax_scheme, note, added_by)
+       values ($1,$2,$3,$10,$4,$5,$6,$7,$11,$8,$9)
        returning id`,
       [orderId, hotelId, input.itemId, name, qty,
        unitPrice, item[0].tax_rate, input.note?.trim() || null, session.staffId,
-       input.variationId ?? null],
+       input.variationId ?? null, item[0].tax_scheme],
     ) : null;
 
     /* ── The sides, as child lines ────────────────────────────────
@@ -2166,11 +2192,11 @@ async function addOneLine(
         await client.query(
           `insert into pos_order_lines
              (order_id, hotel_id, addon_id, parent_line_id, name, qty,
-              unit_price, tax_rate, added_by)
-           values ($1,$2,$3,$4,$5,$6,$7,$8,$9)`,
+              unit_price, tax_rate, tax_scheme, added_by)
+           values ($1,$2,$3,$4,$5,$6,$7,$8,$10,$9)`,
           [orderId, hotelId, a.id, parentId,
            `${a.group_label}: ${a.label}`, qty, a.price,
-           item[0].tax_rate, session.staffId],
+           item[0].tax_rate, session.staffId, item[0].tax_scheme],
         );
       }
     }
@@ -3692,7 +3718,8 @@ till.post("/:code/till/orders/:id/settle", async (c) => {
        separately. The first version of this posted one row with
        tax_rate 0 and the tax in tax_amount; the database rejected it
        immediately, which is the constraint doing its job. */
-    /* app.pos_order_by_rate, NOT a second copy of the arithmetic here.
+    /* app.pos_order_by_rate (now app.pos_order_by_tax, which it is built
+       from), NOT a second copy of the arithmetic here.
        This query used to compute the split itself from the lines, which was
        correct until discounts existed and silently wrong afterwards: the
        guest holds a discounted bill and the folio receives the full amount.
@@ -3700,13 +3727,16 @@ till.post("/:code/till/orders/:id/settle", async (c) => {
 
        `taxable` is the discounted net — what the folio must actually be
        charged. */
+    /* BY TAX AS WELL AS BY RATE (D21-91): alcohol reaches the folio as its
+       own VAT posting, so the bill can print it as one "VAT 10%" line and
+       the GST invoice and register can leave it out. */
     const { rows: byRate } = await client.query<{
-      tax_rate: string; net: string; tax: string;
+      tax_scheme: "gst" | "vat"; tax_rate: string; net: string; tax: string;
     }>(
-      `select tax_rate::text, taxable::text as net, tax::text
-         from app.pos_order_by_rate($1)
+      `select tax_scheme, tax_rate::text, taxable::text as net, tax::text
+         from app.pos_order_by_tax($1)
         where taxable > 0
-        order by tax_rate`,
+        order by tax_rate, tax_scheme`,
       [orderId],
     );
 
@@ -3717,6 +3747,7 @@ till.post("/:code/till/orders/:id/settle", async (c) => {
       const rate = Number(group.tax_rate);
       const groupNet = Number(group.net);
       const groupTax = Number(group.tax);
+      const vat = group.tax_scheme === "vat";
 
       /* The ticket id is generated before either insert so the posting
          can name the ticket in one pass. The obvious shape — post,
@@ -3727,24 +3758,27 @@ till.post("/:code/till/orders/:id/settle", async (c) => {
       /* A guest reading their folio should be able to tell why one
          restaurant bill became two lines. */
       const description = split
-        ? `${order[0].outlet_name} - ${order[0].order_no} (${rate}%)`
+        ? `${order[0].outlet_name} - ${order[0].order_no} (${vat ? "VAT " : ""}${rate}%)`
         : `${order[0].outlet_name} - ${order[0].order_no}`;
 
       const { rows: posted } = await client.query<{ id: string }>(
         `insert into folio_postings
            (hotel_id, folio_id, business_date, category, description,
-            amount, tax_rate, tax_amount, source_type, source_id, posted_by)
-         values ($1,$2,$3,$4,$5,$6,$7,$8,'pos',$9,$10)
+            amount, tax_rate, tax_amount, tax_scheme, source_type, source_id,
+            posted_by)
+         values ($1,$2,$3,$4,$5,$6,$7,$8,$11,'pos',$9,$10)
          returning id::text`,
         [hotelId, target.folio_id, businessDate, order[0].category,
-         description, groupNet, rate, groupTax, ticketId, session.staffId],
+         description, groupNet, rate, groupTax, ticketId, session.staffId,
+         group.tax_scheme],
       );
 
       /* The order number is the idempotency key, exactly as an outside
          POS's bill number is. A split bill suffixes the rate so both
-         halves can live under `unique (outlet_id, ticket_ref)`. */
+         halves can live under `unique (outlet_id, ticket_ref)` - and VAT
+         says so, or a VAT and a GST group at one rate would collide. */
       const ticketRef = split
-        ? `${order[0].order_no}/${rate}`
+        ? `${order[0].order_no}/${vat ? "VAT" : ""}${rate}`
         : order[0].order_no;
 
       await client.query(

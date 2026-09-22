@@ -382,12 +382,12 @@ folios.post("/:code/postings/:id/transfer", async (c) => {
       id: string; folio_id: string; reservation_id: string;
       business_date: string; category: string; description: string;
       amount: string; tax_rate: string; tax_amount: string;
-      folio_status: string;
+      tax_scheme: string; folio_status: string;
     }>(
       `select fp.id::text, fp.folio_id::text, f.reservation_id::text,
               fp.business_date::text, fp.category, fp.description,
               fp.amount::text, fp.tax_rate::text, fp.tax_amount::text,
-              f.status as folio_status
+              fp.tax_scheme, f.status as folio_status
          from folio_postings fp
          join folios f on f.id = fp.folio_id
         where fp.id = $1 and fp.hotel_id = $2`,
@@ -463,17 +463,20 @@ folios.post("/:code/postings/:id/transfer", async (c) => {
     );
 
     /* And onto that one. A fresh charge, not a copy of a reversed row:
-       it is the same money arriving on a different account. */
+       it is the same money arriving on a different account - under the
+       same tax. The row above takes its tax from the line it reverses (126's
+       trigger); this one is not a reversal, so it is told: VAT on alcohol
+       moved to a company's folio is still VAT (D21-91). */
     const { rows: moved } = await client.query<{ id: string }>(
       `insert into folio_postings
          (hotel_id, folio_id, business_date, category, description,
-          amount, tax_rate, tax_amount, source_type, posted_by)
-       values ($1,$2,$3::date,$4,$5,$6,$7,$8,'transfer',
+          amount, tax_rate, tax_amount, tax_scheme, source_type, posted_by)
+       values ($1,$2,$3::date,$4,$5,$6,$7,$8,$9,'transfer',
                app.current_user_id())
        returning id::text`,
       [hotelId, input.toFolioId, today, line.category,
        `Transferred in - ${on}`,
-       line.amount, line.tax_rate, line.tax_amount],
+       line.amount, line.tax_rate, line.tax_amount, line.tax_scheme],
     );
 
     return { ok: true as const, id: moved[0]!.id };

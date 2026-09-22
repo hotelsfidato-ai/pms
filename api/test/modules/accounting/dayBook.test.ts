@@ -109,8 +109,10 @@ describe("the day book is the figures the reports already print", () => {
        to define. This service may arrange them; it may not restate them. */
     expect(b.total.room).toBe(totals.room);
     expect(b.total.roomTax).toBe(totals.roomTax);
-    expect(b.total.extra).toBe(totals.extra);
-    expect(b.total.extraTax).toBe(totals.extraTax);
+    /* Alcohol and its VAT are named by the reports door inside the extras
+       and moved to their own columns here (D21-91) - arranged, not restated. */
+    expect(b.total.extra).toBe(Math.round((totals.extra - totals.alcohol) * 100) / 100);
+    expect(b.total.extraTax).toBe(Math.round((totals.extraTax - totals.vat) * 100) / 100);
     expect(b.total.discount).toBe(totals.discount);
     expect(b.total.receipt).toBe(totals.receipt);
     expect(b.days.map((d) => d.room)).toEqual(figures.map((f) => f.room));

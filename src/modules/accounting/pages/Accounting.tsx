@@ -156,7 +156,8 @@ const cash = (v: number) => moneyPrecise(v);
 /** A range in which the hotel charged nothing and received nothing.
     Not the same as "no rows": there is always a row per day. */
 const quiet = (book: DayBook) =>
-  book.total.sales === 0 && book.total.tax === 0 && book.total.receipt === 0;
+  book.total.sales === 0 && book.total.tax === 0 && book.total.vat === 0
+  && book.total.receipt === 0;
 
 const COLUMNS: Column<DayBookRow>[] = [
   { key: "date", header: "Date", cell: (d) => dateShort(d.date) },
@@ -165,8 +166,11 @@ const COLUMNS: Column<DayBookRow>[] = [
   { key: "extra", header: "Extra charges", numeric: true, cell: (d) => cash(d.extra) },
   { key: "extraTax", header: "Extra tax", numeric: true, hideBelow: "lg", cell: (d) => cash(d.extraTax) },
   { key: "discount", header: "Discount", numeric: true, hideBelow: "xl", cell: (d) => cash(d.discount) },
+  /* Alcohol and its VAT, apart from everything GST (D21-91). */
+  { key: "alcohol", header: "Alcohol", numeric: true, hideBelow: "xl", cell: (d) => cash(d.alcohol) },
+  { key: "vat", header: "VAT", numeric: true, hideBelow: "lg", cell: (d) => cash(d.vat) },
   { key: "sales", header: "Sales", numeric: true, cell: (d) => cash(d.sales) },
-  { key: "tax", header: "Tax", numeric: true, cell: (d) => cash(d.tax) },
+  { key: "tax", header: "GST", numeric: true, cell: (d) => cash(d.tax) },
   { key: "receipt", header: "Receipts", numeric: true, cell: (d) => cash(d.receipt) },
   /* The one column that is not a figure, and the reason this screen
      can be trusted: a day the night audit has not run is exported

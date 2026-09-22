@@ -14,7 +14,8 @@ import type { StayBill } from "../data/bill";
    "5 Elements By Fidato Hotels · Akkalkot · GSTIN 27AAAAA0000A1Z5", the
    demo's made-up number, at every hotel — and "CGST 2.5% / SGST 2.5%"
    whatever the lines were taxed at. Now the hotel's own name and GSTIN are
-   printed, a dash where no GSTIN is set, and one CGST/SGST pair per rate.
+   printed, a dash where no GSTIN is set, and one CGST/SGST pair per rate -
+   and, since 22 September, VAT on alcohol as one line per rate (D21-91).
    ══════════════════════════════════════════════════════════════════ */
 
 /** "2.5" for 5, "9" for 18: half a GST rate, without trailing zeros. */
@@ -55,6 +56,14 @@ export function BillPrint({ bill, title }: { bill: StayBill; title: string }) {
           <div key={t.rate} data-bill-tax-rate={t.rate}>
             <Row label={`CGST ${half(t.rate)}%`} value={moneyPrecise(t.cgst)} muted />
             <Row label={`SGST ${half(t.rate)}%`} value={moneyPrecise(t.sgst)} muted />
+          </div>
+        ))}
+        {/* VAT on alcohol (D21-91): ONE line per rate, never halved into
+            CGST and SGST. `?? []` because a bill drawn from an older answer
+            has no such key. */}
+        {(bill.vat ?? []).map((v) => (
+          <div key={`vat-${v.rate}`} data-bill-vat-rate={v.rate}>
+            <Row label={`VAT ${v.rate}%`} value={moneyPrecise(v.vat)} muted />
           </div>
         ))}
         {bill.roundOff !== 0 && (

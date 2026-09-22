@@ -138,7 +138,10 @@ export async function managerReport(
     date: string; bucket: string; amount: string; tax: string;
   }>(
     `select to_char(fp.business_date, 'YYYY-MM-DD') as date,
-            case when fp.source_type = 'pos'                        then 'pos'
+            /* VAT only ever comes from the till (D21-91); a VAT line moved to
+               another folio stays with the POS posting it was, and out of
+               the CGST/SGST split below. */
+            case when fp.source_type = 'pos' or fp.tax_scheme = 'vat' then 'pos'
                  when fp.category = 'discount'                      then 'discount'
                  when fp.category = 'tax'                           then 'tax_line'
                  when fp.category = 'refund'                        then 'refund'
@@ -436,11 +439,15 @@ async function posFigures(client: Client, hotelId: string, w: Windows) {
          left join pos_menu_categories c on c.id = i.category_id
         where ${settled}
         group by 1, 2, 3`, params),
+    /* By tax as well as rate: alcohol's VAT is one line, never a CGST and
+       SGST pair (D21-91). `rate` carries the tax in front of it - "vat:10",
+       "gst:5" - so the loop below keeps one key per line it prints. */
     client.query<{ outlet: string; date: string; rate: string; discount: string; tax: string }>(
       `select o.outlet_id::text as outlet, to_char(o.business_date, 'YYYY-MM-DD') as date,
-              r.tax_rate::text as rate, sum(r.discount)::text as discount, sum(r.tax)::text as tax
+              r.tax_scheme || ':' || r.tax_rate::text as rate,
+              sum(r.discount)::text as discount, sum(r.tax)::text as tax
          from pos_orders o
-         cross join lateral app.pos_order_by_rate(o.id) r
+         cross join lateral app.pos_order_by_tax(o.id) r
         where ${settled}
         group by 1, 2, 3`, params),
     client.query<{ outlet: string; date: string; round_off: string }>(
@@ -486,12 +493,20 @@ async function posFigures(client: Client, hotelId: string, w: Windows) {
       summary.push(line(`Category - ${name}`, v));
     }
     const taxes: Money3[] = [];
-    for (const rate of [...new Set(mine(rates).map((r) => r.rate))].sort((a, b) => Number(a) - Number(b))) {
-      const tax = three(mine(rates).filter((r) => r.rate === rate).map((r) => ({ date: r.date, v: Number(r.tax) })));
+    const rateOf = (key: string) => Number(key.split(":")[1]);
+    const keys = [...new Set(mine(rates).map((r) => r.rate))]
+      .sort((a, b) => rateOf(a) - rateOf(b) || a.localeCompare(b));
+    for (const key of keys) {
+      const tax = three(mine(rates).filter((r) => r.rate === key).map((r) => ({ date: r.date, v: Number(r.tax) })));
       if (!tax.today && !tax.ptd && !tax.ytd) continue;
+      if (key.startsWith("vat:")) {
+        summary.push(line(`Tax - VAT ${rateOf(key)}%`, tax));
+        taxes.push(tax);
+        continue;
+      }
       const cgstPart = { today: round2(tax.today / 2), ptd: round2(tax.ptd / 2), ytd: round2(tax.ytd / 2) };
       const sgstPart = { today: round2(tax.today - cgstPart.today), ptd: round2(tax.ptd - cgstPart.ptd), ytd: round2(tax.ytd - cgstPart.ytd) };
-      const halfRate = String(Number(rate) / 2);
+      const halfRate = String(rateOf(key) / 2);
       summary.push(line(`Tax - CGST ${halfRate}%`, cgstPart));
       summary.push(line(`Tax - SGST ${halfRate}%`, sgstPart));
       taxes.push(tax);

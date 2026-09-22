@@ -50,7 +50,7 @@ export const FORMATS: readonly ExportFormatChoice[] = [
     key: "tally-prime-xml",
     label: "Tally Prime (XML)",
     what: "Sales and receipt vouchers, imported straight into Tally Prime.",
-    blocked: "Waiting on the ledger names in your books. Tell us what your Tally calls room rent, food, CGST, SGST and cash, and this is switched on.",
+    blocked: "Waiting on the ledger names in your books. Tell us what your Tally calls room rent, food, CGST, SGST and cash - and alcohol sales and VAT, if you serve alcohol - and this is switched on.",
   },
   {
     key: "tally-erp9-xml",
@@ -67,7 +67,12 @@ export interface DayBookRow {
   extra: number;
   extraTax: number;
   discount: number;
+  /** Alcohol and its VAT - their own ledger (D21-91, 22 September). They
+      are NOT in `extra`, `extraTax` or `tax`, which are GST alone. */
+  alcohol: number;
+  vat: number;
   sales: number;
+  /** GST on everything. VAT is `vat`. */
   tax: number;
   receipt: number;
   /** Whether the night audit has closed this day. */
@@ -112,15 +117,18 @@ export async function getDayBook(
 
 /* ── The file ──────────────────────────────────────────────────────── */
 
+/* "GST", not "Tax", since 22 September: alcohol's VAT is its own column and
+   is kept out of the GST ones (D21-91). */
 const HEADERS = [
   "Date", "Room revenue", "Room tax", "Extra charges", "Extra tax",
-  "Discount", "Sales", "Tax", "Receipts", "Night audit",
+  "Discount", "Alcohol", "VAT", "Sales", "GST", "Receipts", "Night audit",
 ];
 
 /** A day's row, and the total's, written once so the last line of the
     file is made the same way as every line above it. */
 const figures = (r: DayBookRow | DayBookTotal) =>
-  [r.room, r.roomTax, r.extra, r.extraTax, r.discount, r.sales, r.tax, r.receipt];
+  [r.room, r.roomTax, r.extra, r.extraTax, r.discount, r.alcohol, r.vat,
+   r.sales, r.tax, r.receipt];
 
 /**
  * The day book as a sheet: a row per day, then the total.

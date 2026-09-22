@@ -214,10 +214,21 @@ begin
   end if;
 end $$;
 
-alter table pos_menu_categories drop constraint if exists pos_menu_categories_tax_kind_known;
-alter table pos_menu_categories
-  add constraint pos_menu_categories_tax_kind_known
-  check (tax_kind is null or tax_kind in ('restaurant', 'bar', 'banquet', 'other'));
+-- ⚠ ONLY WHEN IT IS NOT THERE YET (22 September). This was an unguarded drop
+-- and re-add, and every deploy replays from 001: once the migration that makes
+-- 'alcohol' a heading (D21-90) had widened the list and a hotel had set a
+-- section to it, this file would put the narrow list back over that row and
+-- stop the deploy here. MEMORY 284, 293 and 299 - the same shape a fourth time.
+do $$
+begin
+  if not exists (select 1 from pg_constraint
+                  where conrelid = 'pos_menu_categories'::regclass
+                    and conname  = 'pos_menu_categories_tax_kind_known') then
+    alter table pos_menu_categories
+      add constraint pos_menu_categories_tax_kind_known
+      check (tax_kind is null or tax_kind in ('restaurant', 'bar', 'banquet', 'other'));
+  end if;
+end $$;
 
 -- Everything that exists today is food. A category created for the bar is
 -- created as one and never has to be corrected.

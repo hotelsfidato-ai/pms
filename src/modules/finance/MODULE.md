@@ -122,9 +122,10 @@ of the old `inventorySetup.ts` (`3ca215d`).
 
 | Method | Path | What it does |
 |---|---|---|
-| GET | `/:code/tax` | the GST rules |
-| PUT | `/:code/tax/:kind` | set the rules for one kind — room, restaurant, bar, banquet or other (067) |
-| PATCH | `/:code/menu-categories/:name/tax-kind` | say which kind a menu category is taxed as |
+| GET | `/:code/tax` | the GST rules, and `servesAlcohol`; the `alcohol` kind is listed only where the property is switched on for it (D21-90) |
+| PUT | `/:code/tax/:kind` | set the rules for one kind — room, restaurant, bar, banquet, spa, alcohol or other (067, 119, 126). `alcohol` is VAT: one rate, no bands, refused while the property is not switched on for alcohol |
+| PATCH | `/:code/menu-categories/:name/tax-kind` | say which kind a menu category is taxed as; `alcohol` refused while the switch is off |
+| GET | `/:code/tax/:kind/rate?amount=` | the rate one charge of that kind and value would carry (`app.gst_rate_or_null`), or null — the Add charge dialog's preview (22 September) |
 
 25 endpoints. The old `billing.ts`'s other endpoints went to inventory
 (`rateGrid.ts`), the night audit (`checklist.ts`) and the core
@@ -143,7 +144,7 @@ be reversed once") is still in `api/test/`.
 | `folios.ts` | one stay's folio (`getFolio`), the open folios (`listOpenFolios`), split billing (`listStayFolios`, `openFolio`, `transferPosting`, `listBillingCompanies`) |
 | `billing.ts` | payments and payments by method, billable stays, the invoice series, invoices, issuing one, a credit note |
 | `cashier.ts` | the drawer: read, open, money in or out, count, close |
-| `tax.ts` | the GST rules: read, set for a kind, a menu category's kind |
+| `tax.ts` | the GST (and alcohol's VAT) rules: read, set for a kind, a menu category's kind, and the rate one charge would carry (`getTaxRate`, the Add charge preview) |
 
 ## Database
 
@@ -157,7 +158,7 @@ migrations that made or changed them:
 | `payments` | the receipt behind a payment line | created `011_model_additions.sql`; `014_simulation_fixes.sql` (same hotel as its posting), `016_audit_coverage.sql` (never zero; audited) |
 | `invoices`, `invoice_series` | tax invoices and credit notes, numbered from a statutory series | created `011_model_additions.sql` (`app.next_invoice_number`); `013_policies.sql` (numbering protected), `014_simulation_fixes.sql` (the first invoice at a property), `016_audit_coverage.sql` (a series only moves forward), `025_invoices_form_c.sql` (the GST fields, credit notes, never edited, a series opened for each new property) |
 | `cashier_shifts`, `cashier_movements`, `cashier_denominations` | the desk's drawer | created `059_cashier_shift.sql` (`app.cashier_expected_cash`; a closed shift is final) |
-| `tax_rules` | GST as rules, one set for the desk and the till | created `067_tax_rules.sql` (`app.gst_rate`; the tax kind on outlets and menu categories) |
+| `tax_rules` | GST as rules, one set for the desk and the till — and VAT on alcohol (kind `alcohol`) | created `067_tax_rules.sql` (`app.gst_rate`; the tax kind on outlets and menu categories); `119_the_spa.sql` (`spa`); "alcohol, a switch per property, and the VAT it is taxed under" (126 in this branch: `alcohol` as a kind and a menu heading, `folio_postings.tax_scheme` and `pos_order_lines.tax_scheme` gst/vat, a reversal takes its original's scheme, `app.pos_order_by_tax`, `app.stay_bill`'s `vat` rows) |
 
 Others post into it directly in SQL: front desk (a folio at check-in and
 walk-in, early and late charges, the walk-in's first night, the folio closed
@@ -221,6 +222,16 @@ types, `BUSINESS_DATE` and `PTD_FROM`.
   at 00:40 belongs to the day the hotel is still in (006's rule 3; MEMORY 19).
 - **One posting carries one tax rate** (015; MEMORY 55), and **GST is one
   set of rules for the desk and the till** (067).
+- **Alcohol is VAT, not GST, and only where the property serves it** (owner,
+  D21-90 and D21-91, 21 September). The "serves alcohol" module switch is off
+  by default and is the owner's and an administrator's. The VAT rate is never
+  seeded — the tax card shows a dash until somebody types it (the accountant
+  confirms it). A dish in a section taxed as alcohol that follows the
+  section's rate is rung as VAT; a dish with its own rate is the section's GST
+  exception. VAT prints as ONE line per rate on the stay's bill and the
+  restaurant's bill, never as CGST/SGST; it is left off the GST invoice (so
+  off the GST sales register) and has its own Alcohol and VAT columns in the
+  accountant's day book, whose GST columns carry none of it.
 - **An invoice states what was charged and never recomputes tax; the place of
   supply is the hotel, so CGST + SGST, never IGST; an issued invoice is never
   edited — it is corrected by a credit note** (`invoices.ts` header; 025;

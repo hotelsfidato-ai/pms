@@ -36,6 +36,7 @@ const LABEL: Record<TaxKind, string> = {
   bar: "Bar",
   banquet: "Banquet",
   spa: "Spa",
+  alcohol: "Alcohol",
   other: "Everything else",
 };
 
@@ -43,11 +44,19 @@ const WHAT: Record<TaxKind, string> = {
   room: "The night, and everything the front desk adds to it - an early "
       + "arrival, a late departure, laundry, transport.",
   restaurant: "Food and non-alcoholic drink, on any menu category set to it.",
-  bar: "Alcohol. Its own rate, and its own decision.",
+  bar: "What the bar sells under GST - soft drinks, mocktails, snacks. "
+     + "Alcohol itself is VAT, under its own heading, where the property serves it.",
   banquet: "Hall hire and the packages sold with it.",
   spa: "Treatments, when they go on the room bill. Its own rate, and its own decision.",
+  /* D21-91: VAT, not GST. One rate; the accountant confirms it. */
+  alcohol: "Beer, wine and spirits, on any menu category set to it. VAT, not "
+         + "GST: one VAT line on the bill, never split into CGST and SGST, and "
+         + "kept off the GST invoice. Your accountant confirms the rate.",
   other: "Anything that belongs under none of the above.",
 };
+
+/** Which tax a kind's rate is. Only alcohol is VAT (D21-91). */
+const TAX_NAME = (kind: TaxKind) => (kind === "alcohol" ? "VAT" : "GST");
 
 export function TaxRulesCard({ hotelId }: { hotelId: string }) {
   const qc = useQueryClient();
@@ -79,7 +88,9 @@ export function TaxRulesCard({ hotelId }: { hotelId: string }) {
         <CardBody className="space-y-3">
           <div className="flex items-center gap-2">
             <Receipt className="size-4 text-grey-400" />
-            <h2 className="text-md font-semibold text-ink-900">GST</h2>
+            <h2 className="text-md font-semibold text-ink-900">
+              {setup.data?.servesAlcohol ? "GST and VAT" : "GST"}
+            </h2>
             <span className="text-sm text-grey-500">
               One set of rules, for the front desk and the till
             </span>
@@ -110,6 +121,7 @@ export function TaxRulesCard({ hotelId }: { hotelId: string }) {
 
           {categories.length > 0 && (
             <CategoryKinds hotelId={hotelId} categories={categories}
+                           servesAlcohol={setup.data?.servesAlcohol === true}
                            onChanged={() => {
                              void qc.invalidateQueries({
                                queryKey: ["tax-setup", hotelId] });
@@ -149,6 +161,9 @@ function KindTile({ rules, onEdit }: {
         <p className="text-base font-medium text-ink-900">
           {LABEL[rules.kind]}
         </p>
+        {rules.kind === "alcohol" && (
+          <span className="text-sm text-grey-500">VAT</span>
+        )}
         {unset && <StatusPill tone="neutral">Not set</StatusPill>}
       </div>
 
@@ -194,6 +209,9 @@ function SlabsDialog({ hotelId, rules, open, onOpenChange, onSaved }: {
   onOpenChange: (o: boolean) => void;
   onSaved: () => void;
 }) {
+  /* VAT on alcohol is one rate on everything (D21-91): no bands, and the
+     server refuses a second. */
+  const single = rules.kind === "alcohol";
   type Draft = { overAmount: string; rate: string; note: string };
   const [rows, setRows] = useState<Draft[]>(
     rules.slabs.length > 0
@@ -225,7 +243,7 @@ function SlabsDialog({ hotelId, rules, open, onOpenChange, onSaved }: {
     setBusy(false);
     if (!res.ok) return toast.error("Not saved", res.reason);
     toast.success(
-      `${LABEL[rules.kind]} GST saved`,
+      `${LABEL[rules.kind]} ${TAX_NAME(rules.kind)} saved`,
       res.slabs === 0
         ? "Cleared. Nothing under this heading can be billed until a rate is set."
         : `${res.slabs} ${res.slabs === 1 ? "rate" : "rates"}.`,
@@ -236,7 +254,7 @@ function SlabsDialog({ hotelId, rules, open, onOpenChange, onSaved }: {
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent
-        title={`GST on ${LABEL[rules.kind].toLowerCase()}`}
+        title={`${TAX_NAME(rules.kind)} on ${LABEL[rules.kind].toLowerCase()}`}
         description={WHAT[rules.kind]}
         footer={
           <>
@@ -251,30 +269,41 @@ function SlabsDialog({ hotelId, rules, open, onOpenChange, onSaved }: {
         }
       >
         <div className="space-y-3">
-          <p className="text-sm text-grey-600 leading-relaxed">
-            One row is one rate. Leave the amount at zero for the rate that
-            applies to everything; add a second row to charge more above a
-            figure - rooms above {money(7500)} being the usual one.
-          </p>
+          {single ? (
+            <p className="text-sm text-grey-600 leading-relaxed">
+              One rate, on everything sold under this heading. It prints on
+              the bill as one VAT line.
+            </p>
+          ) : (
+            <p className="text-sm text-grey-600 leading-relaxed">
+              One row is one rate. Leave the amount at zero for the rate that
+              applies to everything; add a second row to charge more above a
+              figure - rooms above {money(7500)} being the usual one.
+            </p>
+          )}
 
           <ul className="space-y-2">
             {rows.map((r, i) => (
               <li key={i} className="rounded-md border border-grey-200 bg-grey-50 p-3">
                 <div className="flex gap-2 items-end">
-                  <div className="flex-1 min-w-0">
-                    <Field label={i === 0 ? "On everything from" : "Above"}>
+                  {!single && (
+                    <div className="flex-1 min-w-0">
+                      <Field label={i === 0 ? "On everything from" : "Above"}>
+                        {(f) => (
+                          <Input {...fieldProps(f)} value={r.overAmount}
+                                 inputMode="decimal"
+                                 onChange={(e) => set(i, { overAmount: e.target.value })} />
+                        )}
+                      </Field>
+                    </div>
+                  )}
+                  <div className={single ? "flex-1 min-w-0" : "w-28 shrink-0"}>
+                    <Field label={`${TAX_NAME(rules.kind)} %`} required>
                       {(f) => (
-                        <Input {...fieldProps(f)} value={r.overAmount}
-                               inputMode="decimal"
-                               onChange={(e) => set(i, { overAmount: e.target.value })} />
-                      )}
-                    </Field>
-                  </div>
-                  <div className="w-28 shrink-0">
-                    <Field label="GST %" required>
-                      {(f) => (
+                        /* No placeholder figure for VAT: the rate is the
+                           accountant's to confirm, not ours to suggest. */
                         <Input {...fieldProps(f)} value={r.rate}
-                               inputMode="decimal" placeholder="5"
+                               inputMode="decimal" placeholder={single ? undefined : "5"}
                                onChange={(e) => set(i, { rate: e.target.value })} />
                       )}
                     </Field>
@@ -291,10 +320,11 @@ function SlabsDialog({ hotelId, rules, open, onOpenChange, onSaved }: {
                   </button>
                 </div>
                 <Field label="Note"
-                       hint="Why this band exists. It shows on this card.">
+                       hint={single ? "Who confirmed it, and when. It shows on this card."
+                                    : "Why this band exists. It shows on this card."}>
                   {(f) => (
                     <Input {...fieldProps(f)} value={r.note}
-                           placeholder="Rooms above 7,500 a night"
+                           placeholder={single ? undefined : "Rooms above 7,500 a night"}
                            onChange={(e) => set(i, { note: e.target.value })} />
                   )}
                 </Field>
@@ -302,11 +332,19 @@ function SlabsDialog({ hotelId, rules, open, onOpenChange, onSaved }: {
             ))}
           </ul>
 
-          <Button variant="secondary" className="h-11 w-full"
-                  onClick={() => setRows((r) => [
-                    ...r, { overAmount: "7500", rate: "", note: "" }])}>
-            <Plus className="size-4" /> Add a band
-          </Button>
+          {!single && (
+            <Button variant="secondary" className="h-11 w-full"
+                    onClick={() => setRows((r) => [
+                      ...r, { overAmount: "7500", rate: "", note: "" }])}>
+              <Plus className="size-4" /> Add a band
+            </Button>
+          )}
+          {single && rows.length === 0 && (
+            <Button variant="secondary" className="h-11 w-full"
+                    onClick={() => setRows([{ overAmount: "0", rate: "", note: "" }])}>
+              <Plus className="size-4" /> Add the rate
+            </Button>
+          )}
 
           {rows.length === 0 && (
             <p className="text-sm text-grey-600 rounded-md border border-grey-200
@@ -324,9 +362,11 @@ function SlabsDialog({ hotelId, rules, open, onOpenChange, onSaved }: {
 
 /* ── Which menu category is taxed as what ─────────────────────────── */
 
-function CategoryKinds({ hotelId, categories, onChanged }: {
+function CategoryKinds({ hotelId, categories, servesAlcohol, onChanged }: {
   hotelId: string;
   categories: { name: string; kind: TaxKind | null; items: number }[];
+  /** Alcohol is offered only where the property serves it (D21-90). */
+  servesAlcohol: boolean;
   onChanged: () => void;
 }) {
   const change = async (name: string, kind: string) => {
@@ -362,6 +402,12 @@ function CategoryKinds({ hotelId, categories, onChanged }: {
                 <option value="restaurant">Restaurant</option>
                 <option value="bar">Bar</option>
                 <option value="banquet">Banquet</option>
+                {/* Still drawn for a section already set to it, so the
+                    select says what the section is after the switch went
+                    off - the till refuses it either way. */}
+                {(servesAlcohol || c.kind === "alcohol") && (
+                  <option value="alcohol">Alcohol (VAT)</option>
+                )}
                 <option value="other">Everything else</option>
               </NativeSelect>
             </div>
