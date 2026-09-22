@@ -95,7 +95,9 @@ on (`app.module_enabled`) and, for Reception, the hotel's reception switch
 
 ```
 access      GET    /:code/till/access                       answers ok only past both gates
-menu        GET    /:code/till/menu
+menu        GET    /:code/till/menu                         a dish's taxRate is the rate it is RUNG at (own, else
+                                                            its section's rule; DISH_TAX_RATE in till.ts), null when
+                                                            none is set - a dash on screen (D21-94, POS-15)
             POST   /:code/till/menu/categories
             POST   /:code/till/menu/items
             POST   /:code/till/menu/import
