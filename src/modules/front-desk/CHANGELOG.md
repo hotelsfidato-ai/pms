@@ -8,6 +8,62 @@ project, still goes in the root `CHANGELOG.md`.
 
 ---
 
+## 2026-09-22 · One rule for In house and Empty (D21-36, D21-37), and FD-8
+
+**Asked for:** the master, for the owner's D21-36 and D21-37 - one
+definition every screen reads, and a test that fails if any screen
+disagrees; and FD-8, found and fixed at its root.
+
+**Shipped** - the rule is in the database (the one in-house rule migration,
+numbered 129 on this branch for the master to renumber): `app.in_house`
+(every stay checked in and not checked out, whatever its departure date, in
+the room `app.room_for` gives on the business date) and `app.house_now`
+(every room: in house, out of order - a block covering tonight - or Empty).
+`GET /:code/house-now` serves it. Rooms, the Dashboard's The house now, In
+house (its badge), the property page (In house now and Vacant) and the
+housekeeping board (its In house group) read it and count nothing themselves.
+The counts are ROOMS. `rooms.occupancy_status` is set from `app.in_house` by
+070's two triggers (new bodies) and a new one on a stay's status, and
+corrected once for every room; the check-in and walk-in no longer write it.
+
+**Found** - FD-8's cause (DEFECTS.md): 070 set the column `occupied` on any
+live assignment, so every room given in advance to a later booking was
+"occupied" - 208 and 307 in the demo - and a room left by a mid-stay move
+stayed "occupied". Also FD-9 (a mid-stay move never dirties the room left),
+FD-10 (a room nobody entered is dirtied when its advance booking lets it go),
+FD-11 (a check-in does not ask whether a late-checkout guest is still in the
+room), FD-12 (a room checked out of stays clean while a later booking holds
+it). On the demo, 25 August: 8 checked-in bookings in 7 rooms (201 holds
+FH-2608-4857, due out, and FH-2608-4858, arrived into it) - so In house is 7
+rooms, Empty 10, Out of service 1.
+
+**Changed for housekeeping** - only what reading the rule needs: the board's
+In house group is every room with a guest in it (a guest's room marked out of
+service sat in no group). What makes a room dirty is untouched.
+
+**Proved** - `inHouseRule.test.tsx` 6/6 (all 5 screen tests fail with the
+screens' own counting put back); `api/test/modules/front-desk/inHouseRule
+.test.ts` 7/7 (6 fail with the walk-in and triggers put back);
+`db/tests/modules/front-desk.sql` 16/16 (5 fail with the triggers put back).
+Gates here: both type checks exit 0; the front-desk, reports, housekeeping and
+App web tests 105/105 exit 0; `db/tests/run.sh` 981/981 exit 0; `rerun.sh`
+125 re-runnable exit 0; the API suite twice, 1297/1298 each, a different
+order-dependent test failing each time (`guestDoor.test.ts`, which the
+master's own gate log of 22 September shows failing too, then
+`guest-messaging/messages.test.ts`), both files run before this one's; then,
+with 074's dirty guard put back exactly (FD-12 left open rather than changed),
+the five API files that touch rooms and dirt: 70/70.
+`src/test/migrationNumbers.test.ts` fails on the gap 125-128 until the master
+renumbers the migration.
+
+**Left open** - questions for the owner in the master's report: rooms or
+bookings for In house; "Vacant" on the property page against "Empty"
+everywhere else; the Properties list's "N guests in house" (bookings, for the
+close refusal); the night audit's Room Status Occupied/Vacant (a closed day's
+own figure, unchanged); FD-9 to FD-12.
+
+---
+
 ## 2026-09-21 · The walk-in asks a phone and email; the stay panel's CRM marks
 
 **Asked for:** the CRM chat's phase 1 (`docs/briefs/crm.md`); the whole entry

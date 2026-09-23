@@ -5,7 +5,7 @@ import { dateLong, money } from "@/lib/format";
 import { useUi } from "@/lib/ui";
 import { Page, PageHeader, Card, StatusPill } from "@/components/ui";
 import { StayTable, type StayColumn, type StayRow } from "@/modules/front-desk/components/StayTable";
-import { listInHouse, listDepartures } from "@/modules/front-desk/data/stays";
+import { listInHouse, listDepartures, getHouseNow } from "@/modules/front-desk/data/stays";
 import { queryKeys, BUSINESS_DATE } from "@/data/repositories";
 import { getFolioBalance } from "@/modules/finance";
 
@@ -50,7 +50,18 @@ export default function InHousePage() {
       withBalances(hotelId, await listDepartures(hotelId, BUSINESS_DATE)),
   });
 
+  /* HOW MANY ROOMS are in house is the server's one count (D21-36), the
+     number the Dashboard's In house tile shows. The list can hold more
+     bookings than rooms: a guest due out and not yet checked out, and the
+     guest arriving into the same room, are two rows in one room. */
+  const house = useQuery({
+    queryKey: ["house-now", hotelId],
+    queryFn: () => getHouseNow(hotelId),
+    enabled: !dueOut,
+  });
+
   const active = dueOut ? departures : inHouse;
+  const rooms = dueOut ? departures.data?.length : house.data?.inHouse;
 
   /* What a clerk needs to know before the queue forms at 11am. */
   const outstanding = (departures.data ?? []).filter((s) => (s.balance ?? 0) > 0);
@@ -66,9 +77,9 @@ export default function InHousePage() {
             : `Guests checked in now, on ${dateLong(BUSINESS_DATE)}.`
         }
         badge={
-          active.data ? (
+          rooms !== undefined ? (
             <StatusPill tone={dueOut ? "warning" : "success"}>
-              {active.data.length} room{active.data.length === 1 ? "" : "s"}
+              {rooms} room{rooms === 1 ? "" : "s"}
             </StatusPill>
           ) : undefined
         }

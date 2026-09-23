@@ -38,6 +38,41 @@ export async function fetchStays(hotelId: string): Promise<Stay[]> {
   }
 }
 
+/** One room on the business date, by the one rule (D21-36, D21-37). */
+export interface HouseNowRoom {
+  number: string;
+  /** A checked-in guest is in it now, whatever their departure date. */
+  inHouse: boolean;
+  /** A block covers tonight. */
+  outOfOrder: boolean;
+  /** Neither: nobody in it and sellable tonight. */
+  empty: boolean;
+}
+
+export interface HouseNow {
+  rooms: HouseNowRoom[];
+  /** Rooms, both. */
+  inHouse: number;
+  empty: number;
+}
+
+/**
+ * THE HOUSE NOW — In house, Empty and Out of service, counted ONCE, by the
+ * server (app.house_now, migration 129). Every screen that prints either
+ * number reads this rather than counting stays itself: that is how the
+ * property page came to say 11 in house while the Dashboard said 10.
+ * Null for a property the caller cannot see.
+ */
+export async function getHouseNow(hotelId: string): Promise<HouseNow | null> {
+  if (!hotelId) return null;
+  try {
+    return await api<HouseNow>(`/api/hotels/${hotelId}/house-now`);
+  } catch (error) {
+    if (error instanceof ApiError && error.status === 404) return null;
+    throw error;
+  }
+}
+
 export interface StayFilter {
   status?: Stay["status"][];
   source?: Stay["source"][];

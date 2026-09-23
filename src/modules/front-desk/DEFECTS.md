@@ -14,18 +14,58 @@ entries stay here: they are the reason the fault does not come back.
 
 ## Open — not fixed
 
-### FD-8 · The walk-in refuses a room the board shows Free: "Somebody is already in that room"
+### FD-9 · A guest moved mid-stay leaves the old room clean for the next guest
 
-**Found** — 21 September, the CRM chat, taking a walk-in on screen in its own
-copy (`fidato_crm`, the demo loaded that day). Room 208 at 5 Elements showed
-FREE on Rooms; the walk-in into it was refused "Somebody is already in that
-room". In the database `rooms.occupancy_status` was `occupied`, with one
-unreleased assignment and nobody in house tonight - the walk-in checks the
-column, the board reads the stays. Room 209 took the same walk-in.
+**Found** - 22 September, fixing FD-8, reading 054 against 070. Not fixed:
+it is housekeeping's rule, and it changes what the board shows.
 
-**What was done** — nothing: not investigated (outside the CRM's job). Whether
-the demo loader leaves the column wrong, or the column can drift in real use,
-is the next front-desk chat's first question.
+`app.move_room` (054) SHORTENS the old room's assignment when the guest has
+already slept in it (it releases only a room they never spent a night in).
+070's trigger dirties a room only on a RELEASE, so the room a guest moved out
+of stays clean - the very case 070's header names ("the guest goes to 205 and
+201 is left behind"). Until FD-8's fix the walk-in happened to refuse that
+room, because the column still said occupied; the check-in never did, and the
+board has always shown it Free and clean. After FD-8 the walk-in takes it too.
+
+**The fix, when it is done** - a move leaving a room it cut short to end by
+the business date dirties that room, in 070's trigger, if nobody is in it by
+`app.in_house`. Housekeeping's and the master's call (a room reaches the
+cleaning queue it does not reach today).
+
+### FD-10 · A room nobody entered is dirtied when its advance booking lets it go
+
+**Found** - 22 September, the same reading. 074 leaves a room clean when a
+booking ends void, no-show or cancelled, and dirties it for every other
+status - so taking a CONFIRMED booking out of the room it was given in
+advance (unassign), or checking that booking into a different room, sends the
+first room to the cleaning queue with nobody ever in it. Not fixed: 074's
+list is housekeeping's.
+
+**The fix, when it is done** - dirty only when the stay had arrived
+(`checked_in` or `checked_out`), which is 074's own question, "did anybody
+actually go in?".
+
+### FD-11 · A check-in does not ask whether somebody is still in the room
+
+**Found** - 22 September. The walk-in refuses a room a late-checkout guest is
+still in ("Somebody is already in that room", D21-36 kept by FD-8's fix); the
+check-in of a booking asks only whether another booking's DATES overlap, so an
+arrival can be checked into a room whose guest was due out yesterday and has
+not been checked out. The demo has one: 201 on 25 August holds FH-2608-4857
+(due out, still checked in) and FH-2608-4858 (arrived into it). Not changed -
+a new refusal at check-in is the owner's to approve.
+
+### FD-12 · A room checked out of stays clean while a later booking holds it
+
+**Found** - 22 September, the same reading. 070's trigger dirties a released
+room only if no OTHER live assignment holds it ("somebody else may already be
+in it") - and a room given in advance to next week's booking is held, so the
+room a guest has just left is not sent for cleaning. The same confusion as
+FD-8 (held is not in), in housekeeping's rule. Kept exactly as it was: what
+reaches the cleaning queue is housekeeping's and the owner's.
+
+**The fix, when it is done** - ask whether anybody is IN the room
+(`app.in_house`, or the column now set from it) instead of whether it is held.
 
 ### FD-5 · Rooms and Calendar show the skeleton forever for a hotel with no rooms
 
@@ -64,6 +104,46 @@ width in every state it has, not only the first one.
 
 ## Fixed — the solution is here; do not work it out again
 
+### FD-8 · The walk-in refused a room the board showed Free - FIXED 22 September
+
+**Found** - 21 September, the CRM chat: room 208 at 5 Elements showed Free on
+Rooms and the walk-in into it was refused "Somebody is already in that room".
+
+**The cause** - two definitions of "somebody is in the room". The walk-in read
+the column `rooms.occupancy_status`; the board read the stays. 070's trigger
+set the column `occupied` on the INSERT of any live assignment, so a room
+given in advance to a booking arriving later was "occupied" from the moment
+the clerk chose it, with nobody in it. The demo shows it twice: 208 (held for
+FH-2608-4870, 27 to 30 August) and 307 (FH-2608-5020, 30 August on), both
+`occupied` on 25 August. A room a guest moved out of mid-stay was the same:
+054 shortens that assignment rather than releasing it, and 070 only reset the
+column on a release. Real use, not only the demo loader: every "Assign room"
+on a future booking did it.
+
+**Fixed** - one rule, in the database (the one in-house rule migration, 129
+on this branch): `app.in_house` - checked in and not checked out, in the room
+`app.room_for` gives on the business date (D21-36) - and `app.house_now` for
+every room (D21-37). The walk-in asks `app.in_house`; the column is set from
+it and nothing else, by 070's two triggers (same names, new bodies) and one on
+a stay's status, and corrected once for every room. The check-in and walk-in
+no longer write the column. A walk-in into nights another booking holds is
+still refused - by the clash check, which names the booking.
+
+**Proved** - `api/test/modules/front-desk/inHouseRule.test.ts` (7): a room
+given in advance to a booking arriving on the 27th is Empty and `vacant`; a
+one-night walk-in on the 25th is taken; a two-night one is refused "held by
+FDW-SOON"; two days on the walk-in guest, not checked out, is still in house
+and the walk-in refuses their room. With the change taken out, 6 of 7 fail -
+the first three on exactly "Somebody is already in that room." -
+`db/tests/modules/front-desk.sql` (16; 5 fail with the triggers put back).
+Every screen: `inHouseRule.test.tsx` (6; with the screens' own counting put
+back, all 5 screen tests fail - 7, 7, 8 rows, 11, 7 where the rule says 2).
+
+**The rule** - a room HELD is not a room somebody is IN. Ask the one rule;
+never a column that a second writer keeps.
+
+---
+
 ### FD-1 · Two "in house" numbers for the same moment — FIXED 17 September
 
 **Found** — 14 September, comparing screens: the property page said In house 11 / Vacant 9 while the Dashboard and Rooms said 10 / 7.
@@ -84,6 +164,11 @@ keeps "sold tonight" in its own function. The page reads "Guests checked in now"
 Proved: `repositories.test.ts` — a checked-in day-use guest counts, a guest still to
 arrive never does; both fail on the old code. Seen: In house 1 room, matching the
 Dashboard's 1.
+
+**Finished 22 September - the owner's D21-36 and D21-37.** The property page
+still printed its own two numbers (every checked-in booking, and "not sold
+tonight"). All five screens now read one rule, `GET /:code/house-now`
+(`app.house_now`); see FD-8 and `inHouseRule.test.tsx`.
 
 ---
 

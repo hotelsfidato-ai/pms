@@ -75,6 +75,7 @@ They moved there in the server split of 15 September (`3424882`, `b772047`).
 |---|---|---|
 | GET | `/:code/stays` | every stay with the room it is in; "due out" is worked out here, stored nowhere |
 | GET | `/:code/stays/:id` | one stay |
+| GET | `/:code/house-now` | every room on the business date - in house, out of order or Empty - and the In house and Empty counts (rooms), from `app.house_now` (the one in-house rule, D21-36 and D21-37). Rooms, the Dashboard, In house, the property page and the housekeeping board read this and nothing else for either number |
 | GET | `/:code/groups` | the groups list that reservations' Groups screen reads — see the warning below |
 
 ⚠ `GET /:code/groups` lives in `stays.ts`, not in reservations' `groups.ts`.
@@ -147,7 +148,7 @@ migrations that made or changed them:
 |---|---|---|
 | `reservations` | checks in, checks out, voids; records early and late times and reasons; inserts the walk-in's booking | created `005_reservations.sql`; `011_model_additions.sql` (the room moved out to `room_assignments`), `015_edge_cases.sql` (day use, dates in order), `042_void_and_sources.sql` (void and its reason), `043_indicators.sql` (single-lady mark), `055_amend_stay.sql`, `063_early_late.sql`, `064_expected_arrival.sql`, `085_walk_in_channel.sql` |
 | `room_assignments` | which room a stay holds, night by night: assign, move, exchange, unassign, release | created `011_model_additions.sql` (`ra_no_double_booking`); `015_edge_cases.sql` (an assignment stays inside its booking), `054_room_move.sql`, `065_exchange_and_inclusions.sql`, `070_vacating_dirties.sql`, `072_room_tonight.sql` (`app.room_on`, `app.room_for`), `073_no_show_releases_rooms.sql`, `074_nobody_slept_there.sql`, `086_stay_room.sql` (`app.stay_room`) |
-| `rooms` (`occupancy_status`) | set to occupied at check-in and walk-in | `003_rooms.sql`; `043_indicators.sql` (smoking, connected rooms); `070_vacating_dirties.sql` (a trigger keeps it true) |
+| `rooms` (`occupancy_status`) | NOT written here any more (22 September, FD-8): set from `app.in_house` by the one in-house rule's triggers, on every assignment and every status change | `003_rooms.sql`; `043_indicators.sql` (smoking, connected rooms); `070_vacating_dirties.sql`; the one in-house rule (`app.in_house`, `app.house_now`, `app.sync_room_occupancy`) |
 | `inclusions`, `reservation_inclusions` | what a rate includes, its price snapshotted onto the stay | `065_exchange_and_inclusions.sql` |
 
 It also writes into other services' tables, directly in SQL: `guests` (the
@@ -177,6 +178,7 @@ What `index.ts` exports, and who uses each (grep of `@/modules/front-desk`,
 | `listStays` | housekeeping (`data/housekeeping.ts`), reservations (`pages/Reservations.tsx`); the core test |
 | `listArrivals`, `listInHouse`, `listDepartures` | the core test `repositories.test.ts` only |
 | `listArrivalsOutstanding`, `getStayViewCounts` | reports (`pages/Dashboard.tsx`) |
+| `getHouseNow`, types `HouseNow`, `HouseNowRoom` | admin (`pages/Property.tsx`), housekeeping (`data/housekeeping.ts`) - 22 September |
 | `LateCheckOutFlow` | finance (`flows/FolioPanel.tsx`) |
 
 **21 September - the Central CRM** (`src/modules/crm/MODULE.md`). The walk-in
@@ -287,7 +289,13 @@ From `PENDING.md`, and one found while writing this brief:
   **CHOSEN 21 September:** in house = checked in and not yet checked out,
   whatever the departure date (D21-36); vacant = nobody in it AND sellable
   tonight, with out-of-order and blocked rooms their own count (D21-37).
-  Every screen showing either number moves onto one rule; not built yet.
+  **BUILT 22 September:** `app.in_house` and `app.house_now` in the
+  database, served by `GET /:code/house-now`; Rooms, the Dashboard, In
+  house, the property page and the housekeeping board read it. The counts
+  are ROOMS - 201 holding a guest due out and the guest who arrived into it
+  is one room in house (a question for the owner in the 22 September
+  CHANGELOG entry). Proved by `inHouseRule.test.tsx` (every screen) and
+  `api/test/modules/front-desk/inHouseRule.test.ts`.
 - **"Which room was this stay in" written by hand** —
   `api/src/modules/front-desk/stays.ts` holds one of the seven copies; `app.stay_room()` (086) is the one rule; moving onto it
   is tidying, not a fix (PENDING § 6).

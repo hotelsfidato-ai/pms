@@ -11,6 +11,7 @@ import {
 } from "@/components/ui";
 import { getPropertyDetail, createStaff, revokeAccess, setStaffPassword, setHomeScreen, MIN_PASSWORD, type PropertyTeamMember, type HomeScreen } from "@/modules/admin/data/admin";
 import { getTodaySnapshot, getPeriodStatistics } from "@/modules/reports";
+import { getHouseNow } from "@/modules/front-desk";
 import { HOME_SCREENS, homeScreenLabel } from "@/lib/homeScreen";
 
 /* The GM setting where somebody starts after sign-in (087). */
@@ -69,6 +70,13 @@ export default function PropertyPage() {
   const today = useQuery({
     queryKey: ["property-today", code],
     queryFn: () => getTodaySnapshot(code),
+  });
+  /* In house and Vacant are the one rule the Dashboard and Rooms read
+     (D21-36, D21-37). This page printed its own: every checked-in booking,
+     and "not sold tonight" - 11 and 9 where the Dashboard said 10 and 7. */
+  const house = useQuery({
+    queryKey: ["house-now", code],
+    queryFn: () => getHouseNow(code),
   });
   const period = useQuery({
     queryKey: ["property-period", code],
@@ -144,9 +152,9 @@ export default function PropertyPage() {
           <Figure label="Occupancy"
                   value={today.data ? `${today.data.occupancyPct}%` : null} />
           <Figure label="Vacant"
-                  value={today.data ? String(today.data.vacant) : null} />
+                  value={house.data ? String(house.data.empty) : null} />
           <Figure label="In house now"
-                  value={String(property.checkedIn)} />
+                  value={house.data ? String(house.data.inHouse) : null} />
         </CardBody>
       </Card>
 
