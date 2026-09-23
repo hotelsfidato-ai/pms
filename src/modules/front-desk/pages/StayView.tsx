@@ -414,10 +414,12 @@ export default function StayViewPage({ view }: {
       rooms physically exist. */
   const roomVisible = (room: ChartRoom) => {
     if (pill === "Blocked") return room.outOfService;
+    /* A guest in a room a block has started on is still in house (D21-36),
+       so In house shows it as its count does. */
+    if (pill === "Occupied") return room.state.occupied;
     if (room.outOfService) return false;
     switch (pill) {
       case "Vacant": return !room.state.occupied;
-      case "Occupied": return room.state.occupied;
       case "Arrivals": return room.state.arriving;
       case "Reserved": return room.state.reserved;
       case "Due Out": return room.state.dueOut;

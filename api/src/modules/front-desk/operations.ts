@@ -502,10 +502,8 @@ operations.post("/:code/stays/:id/check-in", async (c) => {
         [hotelId, stayId, room.id, stay.check_in, stay.check_out],
       );
 
-      await client.query(
-        "update rooms set occupancy_status = 'occupied' where id = $1",
-        [room.id],
-      );
+      /* No write to rooms.occupancy_status here: the check-in above and
+         the assignment re-read it from app.in_house (129), the one rule. */
 
       void session;
       return { ok: true };
@@ -819,13 +817,22 @@ operations.post("/:code/walk-ins", async (c) => {
 
     const businessDate = await resolveDate(client, hotelId, body.businessDate);
 
+    /* ⚠ FD-8: "is somebody in it" is the one rule, app.in_house (129) -
+       a checked-in guest in this room now. This read the column
+       rooms.occupancy_status, which 070 set 'occupied' for any room
+       HELD, so a room given in advance to a booking arriving on the 27th
+       refused a one-night walk-in on the 25th while Rooms showed it Free.
+       A booking holding the room later in the stay is the clash check's
+       question below, and it names the booking. */
     const { rows: roomRows } = await client.query<{
       id: string; room_type_id: string; housekeeping_status: string;
-      occupancy_status: string; base_rate: string | null;
+      occupied: boolean; base_rate: string | null;
       type_name: string; max_occupancy: number;
     }>(
       `select rm.id, rm.room_type_id, rm.housekeeping_status,
-              rm.occupancy_status, rt.base_rate,
+              exists (select 1 from app.in_house(rm.hotel_id) i
+                       where i.room_id = rm.id) as occupied,
+              rt.base_rate,
               rt.name as type_name, rt.max_occupancy
          from rooms rm
          join room_types rt on rt.id = rm.room_type_id
@@ -859,7 +866,7 @@ operations.post("/:code/walk-ins", async (c) => {
       );
     }
 
-    if (room.occupancy_status === "occupied") {
+    if (room.occupied) {
       return refuse("Somebody is already in that room.");
     }
 
@@ -1018,10 +1025,7 @@ operations.post("/:code/walk-ins", async (c) => {
        values ($1,$2,$3,$4,$5,'arrival')`,
       [hotelId, stayId, room.id, businessDate, checkOut],
     );
-    await client.query(
-      "update rooms set occupancy_status = 'occupied' where id = $1",
-      [room.id],
-    );
+    /* rooms.occupancy_status follows from the assignment (129's trigger). */
 
     const { rows: folio } = await client.query<{ id: string }>(
       `insert into folios (hotel_id, reservation_id, status)

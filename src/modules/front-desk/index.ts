@@ -5,6 +5,7 @@ export { StayTable } from "./components/StayTable";
 export type { StayColumn, StayRow } from "./components/StayTable";
 export { checkOut, checkOutAllowed, earlyArrival } from "./data/operations";
 export type { Posting } from "./data/operations";
-export { fetchStays, getStay, listArrivals, listArrivalsOutstanding, listDepartures, listInHouse, listStays } from "./data/stays";
+export { fetchStays, getHouseNow, getStay, listArrivals, listArrivalsOutstanding, listDepartures, listInHouse, listStays } from "./data/stays";
+export type { HouseNow, HouseNowRoom } from "./data/stays";
 export { getStayViewCounts } from "./data/stayview";
 export { LateCheckOutFlow } from "./flows/LateCheckOutFlow";

@@ -1,4 +1,4 @@
-import { listStays } from "@/modules/front-desk";
+import { listStays, getHouseNow } from "@/modules/front-desk";
 import { listAllRooms, setHousekeeping } from "@/data/repositories/rooms";
 import type { OperationResult } from "@/data/repositories/result";
 import { refuse } from "@/data/repositories/result";
@@ -39,6 +39,10 @@ export async function listHousekeeping(
      the store here would have left this board writing to Postgres and
      reading its own change back from somewhere else. */
   const rooms = await listAllRooms(hotelId);
+  /* WHETHER SOMEBODY IS IN THE ROOM is the front desk's one rule (D21-36,
+     app.in_house on the server) - the In house the Dashboard and Rooms
+     count. The stays below only name who. */
+  const now = new Map(((await getHouseNow(hotelId))?.rooms ?? []).map((r) => [r.number, r]));
 
   return rooms.map((room) => {
     /* Status, not dates. `departure > businessDate` read a DUE-OUT
@@ -68,7 +72,7 @@ export async function listHousekeeping(
       type: room.type,
       floor: room.floor,
       housekeeping: room.status,
-      occupied: !!inRoom,
+      occupied: now.get(room.number)?.inHouse ?? false,
       guest: inRoom?.guest ?? leaving?.guest,
       dueOut: !!leaving,
     };

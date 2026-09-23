@@ -1,5 +1,5 @@
 import { listAllRooms } from "@/data/repositories/rooms";
-import { listStays } from "./stays";
+import { listStays, getHouseNow } from "./stays";
 import type { Stay } from "@/data/repositories/types";
 import { listOpenFolios } from "@/modules/finance";
 
@@ -144,13 +144,20 @@ export async function getStayView(
      for the transport inside the per-room loop would have made this
      eighteen requests, and eighteen chances for the chart to disagree
      with itself halfway down. */
-  const [allRooms, allStays, openFolios] = await Promise.all([
+  const [allRooms, allStays, openFolios, houseNow] = await Promise.all([
     listAllRooms(hotelId),
     listStays(hotelId),
     listOpenFolios(hotelId),
+    getHouseNow(hotelId),
   ]);
 
   if (allRooms.length === 0) return null;
+
+  /* IN HOUSE AND OUT OF SERVICE TONIGHT ARE THE SERVER'S (D21-36, D21-37).
+     This page used to work both out for itself from the stays and the
+     blocks, and the property page worked them out another way - 11 in
+     house there, 10 here, the same minute. */
+  const now = new Map((houseNow?.rooms ?? []).map((r) => [r.number, r]));
 
   /* A folio only appears in `openFolios` when it carries a balance,
      so absent IS zero. Looking each one up separately would have been
@@ -217,14 +224,15 @@ export async function getStayView(
       /* THE DATED BLOCK decides (INV-6, the owner's D17-11): the same
          record availability, occupancy and the bell read. The room's
          status alone said room 308 was clean while a block held it out. */
-      outOfService: !sellableOn(room.number, businessDate),
+      outOfService: now.get(room.number)?.outOfOrder ?? false,
       bars,
       /* All four read STATUS where status is what changes. A room is
          occupied when someone has actually checked in, not merely
          because a booking covers tonight — otherwise a check-in moves
-         no number and the clerk cannot see their work land. */
+         no number and the clerk cannot see their work land. Occupied is
+         the server's one rule, app.in_house. */
       state: {
-        occupied: live.some((s) => s.status === "in-house" || s.status === "due-out"),
+        occupied: now.get(room.number)?.inHouse ?? false,
         arriving: live.some((s) => s.status === "due-in" && s.arrival === businessDate),
         reserved: live.some((s) => s.status === "due-in" && s.arrival > businessDate),
         dueOut: live.some((s) => s.status === "due-out" || (s.status === "in-house" && s.departure === businessDate)),
@@ -284,12 +292,18 @@ export async function getStayView(
   });
 
   /* Counts derive from the same room state the filters read, so a pill
-     can never say six and then show nine. */
+     can never say six and then show nine.
+
+     In house (Occupied) counts EVERY room with a guest in it, blocked or
+     not - D21-36 does not stop counting a guest because a block started;
+     Empty (Vacant) is nobody in it AND sellable (D21-37). The same three
+     numbers as the server's house-now, which src/modules/front-desk/
+     inHouseRule.test.tsx holds every screen to. */
   const sellable = rooms.filter((r) => !r.outOfService);
   const counts: Record<string, number> = {
     All: sellable.length,
     Vacant: sellable.filter((r) => !r.state.occupied).length,
-    Occupied: sellable.filter((r) => r.state.occupied).length,
+    Occupied: rooms.filter((r) => r.state.occupied).length,
     Arrivals: sellable.filter((r) => r.state.arriving).length,
     Reserved: sellable.filter((r) => r.state.reserved).length,
     Blocked: rooms.filter((r) => r.outOfService).length,

@@ -286,6 +286,40 @@ stays.get("/:code/stays/:id", async (c) => {
   return body ? c.json(body) : c.json({ error: "Not found." }, 404);
 });
 
+/* ── The house now: In house and Empty, one rule (D21-36, D21-37) ──
+   Every room with the one fact each screen counts, from app.house_now
+   (migration 129): a checked-in guest in it now, whatever the departure
+   date says; a block covering tonight; or neither, which is Empty. The
+   Dashboard, Rooms, In house, the property page and the housekeeping
+   board all read this, so none of them counts for itself.
+
+   The counts are ROOMS. A room holding two checked-in bookings (a due-out
+   guest not yet checked out, and the guest arriving into it) is one room
+   in house; the In house list still shows both bookings. */
+stays.get("/:code/house-now", async (c) => {
+  const body = await withSession(c.get("subject"), async (client) => {
+    const hotelId = await hotelIdFor(client, c.req.param("code"));
+    if (!hotelId) return null;
+
+    const { rows } = await client.query<{
+      number: string; in_house: boolean; out_of_order: boolean; empty: boolean;
+    }>(
+      "select number, in_house, out_of_order, empty from app.house_now($1)",
+      [hotelId],
+    );
+    const rooms = rows.map((r) => ({
+      number: r.number, inHouse: r.in_house, outOfOrder: r.out_of_order, empty: r.empty,
+    }));
+    return {
+      rooms,
+      inHouse: rooms.filter((r) => r.inHouse).length,
+      empty: rooms.filter((r) => r.empty).length,
+    };
+  });
+
+  return body ? c.json(body) : c.json({ error: "No such property." }, 404);
+});
+
 /* ── Groups ──────────────────────────────────────────────────────── */
 
 stays.get("/:code/groups", async (c) => {

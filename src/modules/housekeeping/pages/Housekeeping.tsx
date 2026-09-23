@@ -242,8 +242,11 @@ export default function HousekeepingPage() {
   const sheetOwner = (staff.data ?? []).find((p) => p.id === only)?.name;
 
   const bucket = (key: string) =>
+    /* Every room with a guest in it (D21-36), as the Dashboard counts
+       them. It left out a guest's room marked out of service, which then
+       sat in no group at all - the other groups are rooms nobody is in. */
     key === "occupied"
-      ? all.filter((r) => r.occupied && r.housekeeping !== "out-of-service")
+      ? all.filter((r) => r.occupied)
       : all.filter((r) => !r.occupied && r.housekeeping === key);
 
   const queuedFor = (number: string) => held.filter((q) => q.roomNumber === number);

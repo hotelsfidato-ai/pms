@@ -184,6 +184,25 @@ vi.mock("@/lib/api", () => ({
     }
 
 
+    /* The house now (front desk, migration 129's app.house_now): the
+       fixture rooms, in house when a checked-in fixture stay is in them,
+       out of order when the block above covers the business date (every
+       out-of-service fixture room's does, from 14 August). Whether the SQL
+       is right is api/test/modules/front-desk/inHouseRule.test.ts. */
+    if (path === `/api/hotels/${PROPERTY_CODE}/house-now`) {
+      const rooms = roomInventory.map((r) => {
+        const inHouse = stays.some((s) => s.roomNumber === r.number
+          && (s.status === "in-house" || s.status === "due-out"));
+        const outOfOrder = r.status === "out-of-service";
+        return { number: r.number, inHouse, outOfOrder, empty: !inHouse && !outOfOrder };
+      });
+      return {
+        rooms,
+        inHouse: rooms.filter((r) => r.inHouse).length,
+        empty: rooms.filter((r) => r.empty).length,
+      };
+    }
+
     /* Stays, folios and groups come back as the FIXTURES define them —
        including their `stay-*` ids rather than the uuids Postgres
        hands out. That is deliberate: these tests assert the seam's
