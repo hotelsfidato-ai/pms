@@ -229,6 +229,9 @@ export const WRITE_RULES: Readonly<Record<string, Rule>> = {
   [`POST ${H}/till/menu/categories/:id/course`]: MENU,
   [`POST ${H}/till/menu/items/:id/prep`]: MENU,
   [`POST ${H}/till/menu/categories/:id/prep`]: MENU,
+  /* A section's tax heading on the Menu screen (D22-4): the menu's, as the
+     import that also sets it. The tax card's own picker stays GST. */
+  [`POST ${H}/till/menu/categories/:id/tax-kind`]: MENU,
   [`POST ${H}/till/menu/items/:id/toggle`]: MENU,
   [`POST ${H}/till/menu/items/:id/variations`]: MENU,
   [`PATCH ${H}/till/menu/variations/:id`]: MENU,

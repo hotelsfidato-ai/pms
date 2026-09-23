@@ -7,9 +7,10 @@ import { money, moneyPrecise } from "@/lib/format";
 import { useUi } from "@/lib/ui";
 import {
   Page, PageHeader, Card, CardBody, Button, StatusPill, Skeleton, toast,
-  Dialog, DialogContent, Field, fieldProps, Input,
+  Dialog, DialogContent, Field, fieldProps, Input, NativeSelect,
 } from "@/components/ui";
-import { getMenu, addCategory, addItem, toggleItem, takeItemOff, putItemBack, takeAddonOff, putAddonBack, importMenu, importAddons, setItemPrepMinutes, setCategoryPrepMinutes, setItemCourse, setCategoryCourse, listPromotions, addPromotion, amendPromotion, addVariation, editVariation, removeVariation, listAddonGroups, addAddonGroup, editAddonGroup, setGroupDishes, addAddonOption, editAddonOption, removeAddonOption, type OffFor, type Promotion, type MenuCategory, type MenuItem, type MenuVariation, type Addon, type AddonGroupSetup } from "@/modules/pos/data/till";
+import { getModules } from "@/data/repositories";
+import { getMenu, addCategory, addItem, toggleItem, takeItemOff, putItemBack, takeAddonOff, putAddonBack, importMenu, importAddons, setItemPrepMinutes, setCategoryPrepMinutes, setItemCourse, setCategoryCourse, setCategoryTaxKind, type SectionHeading, listPromotions, addPromotion, amendPromotion, addVariation, editVariation, removeVariation, listAddonGroups, addAddonGroup, editAddonGroup, setGroupDishes, addAddonOption, editAddonOption, removeAddonOption, type OffFor, type Promotion, type MenuCategory, type MenuItem, type MenuVariation, type Addon, type AddonGroupSetup } from "@/modules/pos/data/till";
 import { ReadFailed, ReadStale } from "@/components/ui";
 import { ImportDialog } from "@/components/flows/ImportDialog";
 import { MENU_SPEC } from "@/lib/importSpec";
@@ -51,6 +52,14 @@ export default function MenuPage() {
     queryKey: ["till-menu", hotelId],
     queryFn: () => getMenu(hotelId),
   });
+  /* The sidebar's own read: whether this property serves alcohol, which
+     opens the Alcohol heading (D21-90). The server refuses it either way. */
+  const modules = useQuery({
+    queryKey: ["modules", hotelId],
+    queryFn: () => getModules(hotelId),
+    enabled: Boolean(hotelId),
+  });
+  const servesAlcohol = modules.data?.["alcohol"] === true;
 
   const refresh = () => {
     void qc.invalidateQueries({ queryKey: ["till-menu"] });
@@ -198,6 +207,7 @@ export default function MenuPage() {
               key={cat.id}
               category={cat}
               hotelId={hotelId}
+              servesAlcohol={servesAlcohol}
               dishesByGroup={dishesByGroup}
               onChanged={refresh}
             />
@@ -650,8 +660,10 @@ function OffControl({
   );
 }
 
-function CategoryCard({ category, hotelId, dishesByGroup, onChanged }: {
+function CategoryCard({ category, hotelId, servesAlcohol, dishesByGroup, onChanged }: {
   category: MenuCategory; hotelId: string;
+  /** Whether the Alcohol heading may be chosen (D21-90). */
+  servesAlcohol: boolean;
   /** Add-on group → every dish on the menu that offers it. */
   dishesByGroup: Map<string, string[]>;
   onChanged: () => void;
@@ -710,10 +722,18 @@ function CategoryCard({ category, hotelId, dishesByGroup, onChanged }: {
     onChanged();
   };
 
+  const setHeading = async (kind: SectionHeading) => {
+    const res = await setCategoryTaxKind(hotelId, category.id, kind);
+    if (!res.ok) return toast.error("Not changed", res.reason ?? "Refused.");
+    onChanged();
+  };
+
   return (
     <Card>
-      <div className="flex items-center gap-3 px-4 pt-3.5 pb-1">
-        <p className="text-2xs uppercase tracking-wide text-grey-500 flex-1">
+      {/* Wraps on a phone: the heading picker goes under the name rather
+          than squeezing it (D22-49). */}
+      <div className="flex flex-wrap items-center gap-x-3 gap-y-2 px-4 pt-3.5 pb-1">
+        <p className="text-2xs uppercase tracking-wide text-grey-500 flex-1 min-w-32">
           {category.name}
         </p>
         {/* The default every dish in here inherits. Set once for two
@@ -745,6 +765,25 @@ function CategoryCard({ category, hotelId, dishesByGroup, onChanged }: {
             onChanged();
           }}
         />
+        {/* THE SECTION'S TAX HEADING (D22-4): every dish in here without a
+            rate of its own is rung at this heading's rate. The tax card's
+            words. "Not set" and an Alcohol section at a property that no
+            longer serves it are shown as they are, and cannot be chosen. */}
+        <NativeSelect
+          aria-label={`Tax heading for ${category.name}`}
+          value={category.taxKind ?? ""}
+          onChange={(e) => void setHeading(e.target.value as SectionHeading)}
+          className="w-auto h-11"
+        >
+          {!category.taxKind && <option value="" disabled>Not set</option>}
+          <option value="restaurant">Restaurant</option>
+          <option value="bar">Bar</option>
+          <option value="banquet">Banquet</option>
+          {(servesAlcohol || category.taxKind === "alcohol") && (
+            <option value="alcohol" disabled={!servesAlcohol}>Alcohol (VAT)</option>
+          )}
+          <option value="other">Everything else</option>
+        </NativeSelect>
       </div>
 
       <ul className="divide-y divide-grey-100">
