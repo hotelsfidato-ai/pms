@@ -2,6 +2,7 @@ import { Hono } from "hono";
 import { withSession } from "../../auth.ts";
 import type { Client } from "../../db.ts";
 import { canSend, NOT_CONNECTED } from "../../sending.ts";
+import { channelFor, dueFromDatabase, LIMITS, type Due } from "./jobs.ts";
 
 /* ══════════════════════════════════════════════════════════════════
    WHAT WAS SENT TO THIS GUEST — the reading side, and nothing else
@@ -174,6 +175,54 @@ const asMessage = (row: SentRow) => ({
   byAPerson: row.by_a_person,
 });
 
+/* ── The bookings no message can reach (MSG-3) ─────────────────────
+   Nothing is recorded where nothing was attempted (migration 117), so a
+   booking with nowhere to send left no trace at all: the desk had no way
+   to see that this guest will never get a confirmation. Read from the SAME
+   answer the sweep reads and filtered by the SAME `channelFor`, so this
+   lists exactly what the sweep skips - one rule, not a second copy of it.
+
+   Listed whether or not sending is switched on: a booking fixed before the
+   switch-on is a guest reached on the day. */
+const whyNot = (due: Due) => due.guest.phone?.trim()
+  ? "Not agreed to WhatsApp, and no email address"
+  : "No telephone number and no email address";
+
+async function unreachableAt(client: Client, hotelId: string, party: string[] | null) {
+  const seen = new Map<string, {
+    id: string; reference: string; guest: string; checkIn: string; why: string;
+  }>();
+  for (const due of await dueFromDatabase(client, LIMITS, hotelId)) {
+    if (channelFor(due) || seen.has(due.reservationId)) continue;
+    if (party && !party.includes(due.reservationId)) continue;
+    seen.set(due.reservationId, {
+      id: due.reservationId, reference: due.reference, guest: due.guest.name,
+      checkIn: due.checkIn, why: whyNot(due),
+    });
+  }
+  return [...seen.values()];
+}
+
+/* ── One booking, or its whole group (D22-41) ──────────────────────
+   A group is sent ONE confirmation, about its lead booking, and every
+   other room is covered by it. So "was this room's confirmation sent?"
+   is answered by the group's messages: asked about any room, the record
+   shows what went about any room of its group - the lead's, in practice.
+   Read under the clerk's own session, so it is the rooms they may see.
+
+   The id is not always a booking's (the filter is text, as `about_id` is -
+   MSG-1), so it is only looked up when it is a uuid's shape; otherwise it
+   filters as itself, as it always did. */
+async function partyOf(client: Client, reservation: string): Promise<string[]> {
+  if (!new RegExp(A_UUID).test(reservation)) return [reservation];
+  const { rows } = await client.query<{ id: string }>(
+    `select r.id::text from reservations r
+      where r.id = $1::uuid
+         or r.group_id = (select x.group_id from reservations x where x.id = $1::uuid)`,
+    [reservation]);
+  return rows.length ? rows.map((r) => r.id) : [reservation];
+}
+
 /* ── The list ──────────────────────────────────────────────────────
    One property, newest first, and `?reservation=<id>` for one booking —
    which is the question the desk actually asks. The index migration 117
@@ -192,12 +241,14 @@ guestMessages.get("/:code/guest-messages", async (c) => {
       return { forbidden: MESSAGES_REFUSED };
     }
 
-    const { rows } = reservation
+    const party = reservation ? await partyOf(client, reservation) : null;
+    const { rows } = party
       ? await client.query<SentRow>(
           `${SENT_SELECT}
-            where m.hotel_id = $1 and m.about_kind = 'reservation' and m.about_id = $2
+            where m.hotel_id = $1 and m.about_kind = 'reservation'
+              and m.about_id = any($2::text[])
             order by m.sent_at desc limit 200`,
-          [hotelId, reservation])
+          [hotelId, party])
       : await client.query<SentRow>(
           `${SENT_SELECT}
             where m.hotel_id = $1
@@ -211,6 +262,7 @@ guestMessages.get("/:code/guest-messages", async (c) => {
       connected: canSend(),
       notConnected: canSend() ? null : NOT_CONNECTED,
       messages: rows.map(asMessage),
+      unreachable: await unreachableAt(client, hotelId, party),
     };
   });
 

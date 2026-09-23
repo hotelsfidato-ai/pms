@@ -1,4 +1,6 @@
-import type { Client } from "../../db.ts";
+import { createHash, randomBytes } from "node:crypto";
+import { withUser, type Client } from "../../db.ts";
+import { env } from "../../env.ts";
 import { canSend, send, type Message, type SendResult } from "../../sending.ts";
 
 /* ══════════════════════════════════════════════════════════════════
@@ -7,6 +9,11 @@ import { canSend, send, type Message, type SendResult } from "../../sending.ts";
      booking-confirmation   the booking's details and the guest's own
                             link, when a booking is confirmed
      arrival-reminder       the same link again, the day before arrival
+
+   n8n turns these kinds into the two WhatsApp templates the owner is
+   putting to Meta (docs/go-live/whatsapp-templates.md):
+   booking-confirmation → `booking_confirmation`, arrival-reminder →
+   `stay_reminder`. The fields each template reads are all in `data`.
 
    ⚠ A SWEEP, NOT A HOOK INSIDE `makeBooking`, and both halves of that
    are deliberate.
@@ -26,20 +33,18 @@ import { canSend, send, type Message, type SendResult } from "../../sending.ts";
    The cost, said out loud: the message follows the booking by up to a
    sweep rather than leaving the instant Save is pressed.
 
-   ⚠ NOTHING HAPPENS UNTIL THE OWNER'S n8n STEPS ARE DONE. `canSend()`
-   is false, this does not run, and no row is written — the same shape
-   the channel manager's jobs take while SU is not set up.
+   ⚠ NOBODY IS SIGNED IN AT THREE IN THE MORNING. `reservations`,
+   `guests`, `messages_sent` and `guest_links` are all FORCE row-secured
+   on `app.auth_hotel_ids()`, so the sweep reads and mints through the two
+   SECURITY DEFINER functions of "what the guest is owed"
+   (`app.guest_messages_due`, `app.guest_booking_link_issue`) and nothing
+   else — the shape `app.record_message_sent` gave the sender.
 
-   ⚠ WHAT IS NOT WIRED YET, AND WHY. Both `listDue` and `makeLink` are
-   parameters rather than imports. A sweep has no staff session — nobody
-   is signed in at three in the morning — and `reservations` and
-   `guest_links` are both FORCE row-secured on `app.auth_hotel_ids()`,
-   which answers for a signed-in person. So both need a SECURITY DEFINER
-   function, exactly as `messages_sent` needed `app.record_message_sent`
-   in migration 117. That migration is asked for and not yet given, so
-   what is here is the deciding — which bookings are due, which way each
-   goes, when to stop trying — and it is proved against fakes. Nothing
-   pretends to run.
+   ⚠ NOTHING HAPPENS UNTIL IT IS SWITCHED ON (D21-76), and that takes two
+   things, both in the server's settings: the owner's n8n steps
+   (`canSend()`), and the owner's pace (`perSweep()`, D21-34). Without
+   either, the sweep does not even ask which bookings are due and no row
+   is written.
    ══════════════════════════════════════════════════════════════════ */
 
 export const KIND = {
@@ -49,45 +54,69 @@ export const KIND = {
 
 export type MessageKind = (typeof KIND)[keyof typeof KIND];
 
-/* ── Two rules that are the OWNER'S and are recommended, not decided ──
-   Asked on 19 September, through the master, and named here so that
-   either answer is a one-line change rather than a hunt.
+/* ── The owner's rules, each named so an answer is a one-line change ──
 
-   1. A booking made BEFORE sending was switched on gets no confirmation
-      after the fact. The day the owner finishes their n8n steps, every
-      future booking already in the system would otherwise become due at
-      once, and a guest who booked three weeks ago and has their voucher
-      does not want a confirmation now. The reminder reaches them anyway.
+   1. D21-33 (21 September): EVERY future booking gets its confirmation,
+      however long ago it was made — not the recommended 48 hours. So no
+      window: null.
    2. Three attempts and no more. A number that is wrong is wrong every
-      minute, and a row per minute for ever is a log of one fault. */
-export const CONFIRM_WITHIN_HOURS = 48;
+      minute, and a row per minute for ever is a log of one fault.
+   3. D22-39 (22 September): the reminder goes the day before arrival
+      (D18-11) from 10:00 on the PROPERTY's clock - not at one minute past
+      midnight, the first sweep of "the day before". And never within a
+      day of the confirmation (D22-40), which the database decides.
+   4. D22-42: a CATCH-UP confirmation - for a booking made before sending
+      was first switched on - goes only from 09:00 until 21:00 on the
+      property's clock. A booking made after is confirmed at once, at any
+      hour. The switch-on moment is recorded once, by the first
+      switched-on pass (`owedNow`), and nothing moves it after. */
+export const CONFIRM_WITHIN_HOURS: number | null = null;
 export const MOST_ATTEMPTS = 3;
+export const REMIND_FROM = "10:00";
+export const CATCH_UP_FROM = "09:00";
+export const CATCH_UP_UNTIL = "21:00";
 
-/** One booking that has not had one of the two messages yet, as the
-    database answers it. Everything the message needs is here, because a
-    second query per booking is a second thing to go wrong in a loop. */
+/** How often the sweep runs. The owner's pace is per sweep, so per minute. */
+export const SWEEP_EVERY_MS = 60_000;
+
+/** One booking owed one of the two messages, as the database answers it.
+    Everything the message needs is here, because a second query per
+    booking is a second thing to go wrong in a loop.
+
+    FOR A GROUP IT IS THE LEAD BOOKING (D22-41): several rooms booked
+    together are owed ONE confirmation and one reminder, about the group's
+    room booked first, to its guest. The other rooms never appear here -
+    the database counts a message about any room as the group's. */
 export interface Due {
   kind: MessageKind;
   reservationId: string;
   reference: string;
   hotel: { id: string; code: string; name: string; phone: string | null };
   guest: { name: string; phone: string | null; email: string | null };
+  /** The desk's "guest agreed to WhatsApp" tick (D21-72). False for a
+      channel booking, and for anybody the desk did not ask. */
+  whatsappAgreed: boolean;
   checkIn: string;
   checkOut: string;
   nights: number;
+  /** Owed, but a catch-up confirmation outside its hours (D22-42): the
+      sweep leaves it for the morning. Still owed, so the desk's list of
+      bookings no message can reach does not change with the clock. */
+  held: boolean;
 }
 
-/* ── Which way it goes ─────────────────────────────────────────────
-   RECOMMENDED, NOT DECIDED (asked 19 September). WhatsApp is the channel
-   in this market and is the number the booking already carries (D17-89);
-   email is the fallback for a booking that has only an address. Sending
-   BOTH would be the same message twice to the same person.
+/* ── Which way it goes (D21-35, D21-72) ────────────────────────────
+   WhatsApp only to a booking TICKED "guest agreed to WhatsApp" that has a
+   number — Meta's own rule, that a business may start a conversation only
+   with somebody who agreed. Otherwise email where there is an address.
+   Never both: one message per guest.
 
    Neither, and NOTHING IS ATTEMPTED — so nothing is recorded, which is
    migration 117's own rule. The sender refuses the same way one step
-   later; this just does not waste the call. */
+   later; this just does not waste the call. The desk's screen lists
+   those bookings (MSG-3) through this same function. */
 export function channelFor(due: Due): "whatsapp" | "email" | null {
-  if (due.guest.phone?.trim()) return "whatsapp";
+  if (due.whatsappAgreed && due.guest.phone?.trim()) return "whatsapp";
   if (due.guest.email?.trim()) return "email";
   return null;
 }
@@ -131,73 +160,182 @@ export function messageFor(due: Due, link: string): Message | null {
   };
 }
 
-/** The two rules above, as the query will be asked them. They are PASSED
-    rather than read where the query lives, so there is one place the
-    owner's answer lands and nothing here is a constant nobody reads
-    (MEMORY 304: a name only one file uses is a name nothing sets). */
+/** The owner's rules, as the query is asked them. PASSED rather than read
+    where the query lives, so there is one place an answer lands (MEMORY
+    304: a name only one file uses is a name nothing sets). */
 export interface Limits {
-  withinHours: number;
+  withinHours: number | null;
   mostAttempts: number;
+  remindFrom: string;
+  catchUpFrom: string;
+  catchUpUntil: string;
 }
 
-/** Where the bookings come from. A function because it needs the definer
-    the migration will add; the tests hand in their own. */
+export const LIMITS: Limits = {
+  withinHours: CONFIRM_WITHIN_HOURS,
+  mostAttempts: MOST_ATTEMPTS,
+  remindFrom: REMIND_FROM,
+  catchUpFrom: CATCH_UP_FROM,
+  catchUpUntil: CATCH_UP_UNTIL,
+};
+
+/* ── The pace (D21-34) ─────────────────────────────────────────────
+   On switch-on day every future booking is owed at once, and the owner
+   said: spread out, soonest arrival first, at the pace the WhatsApp
+   account allows — "that pace is the owner's number to give; nobody
+   guesses it". So there is no default. Until the server's settings carry
+   GUEST_MESSAGES_PER_MINUTE the sweep sends nothing at all, rather than
+   everything at once.
+
+   A SETTING, not a constant, because stage 3 is a switch-on and not a
+   release (D21-76): the owner's number goes in beside the two sending
+   settings, without a deploy. Read at call time, as `sendingTarget()`
+   reads its two. */
+export function perSweep(): number | null {
+  const n = Number(process.env["GUEST_MESSAGES_PER_MINUTE"]);
+  return Number.isInteger(n) && n > 0 ? n : null;
+}
+
+/** A transaction to work in. The sweep's is `withUser("")` — nobody — and
+    the tests hand in their own. */
+export type Run = <T>(fn: (client: Client) => Promise<T>) => Promise<T>;
+
+/** Where the bookings come from. */
 export type ListDue = (client: Client, limits: Limits) => Promise<Due[]>;
 
 /** Mints the guest's own private page for this booking and answers the
-    link (api/src/routes/guestDoor.ts, migration 114 — `origin` there
-    already has a `'confirmation'` value waiting for this). A function for
-    the same reason: it writes a row no unsigned-in caller may write. */
+    link. It writes a row no unsigned-in caller may write, so it too goes
+    through a definer. */
 export type MakeLink = (client: Client, due: Due) => Promise<string>;
 
+interface DueRow extends Record<string, unknown> {
+  kind: MessageKind; reservation_id: string; reference: string;
+  hotel_id: string; hotel_code: string; hotel_name: string; hotel_phone: string | null;
+  guest_name: string; guest_phone: string | null; guest_email: string | null;
+  whatsapp_agreed: boolean; check_in: string; check_out: string; nights: number;
+  held: boolean;
+}
+
+/** Every booking owed a message — or, given a property, that property's.
+    The desk's screen asks the same question for MSG-3, so what it lists
+    is exactly what the sweep would skip. */
+export async function dueFromDatabase(
+  client: Client, limits: Limits, hotelId: string | null = null,
+): Promise<Due[]> {
+  const { rows } = await client.query<DueRow>(
+    `select kind, reservation_id::text, reference,
+            hotel_id::text, hotel_code, hotel_name, hotel_phone,
+            guest_name, guest_phone, guest_email, whatsapp_agreed,
+            check_in, check_out, nights, held
+       from app.guest_messages_due($1::integer, $2::integer, $3::time,
+                                   $4::time, $5::time, $6::uuid)`,
+    [limits.withinHours, limits.mostAttempts, limits.remindFrom,
+     limits.catchUpFrom, limits.catchUpUntil, hotelId]);
+  return rows.map((r) => ({
+    kind: r.kind,
+    reservationId: r.reservation_id,
+    reference: r.reference,
+    hotel: { id: r.hotel_id, code: r.hotel_code, name: r.hotel_name, phone: r.hotel_phone },
+    guest: { name: r.guest_name, phone: r.guest_phone, email: r.guest_email },
+    whatsappAgreed: r.whatsapp_agreed,
+    checkIn: r.check_in,
+    checkOut: r.check_out,
+    nights: r.nights,
+    held: r.held,
+  }));
+}
+
+/** What the SWEEP asks, and only the sweep: the first time it finds sending
+    switched on, the moment is recorded - once, and never moved - and it is
+    that moment which makes a booking a catch-up (D22-42). The desk's screen
+    reads `dueFromDatabase` and records nothing: looking at a list is not
+    switching anything on. */
+export async function owedNow(
+  client: Client, limits: Limits, hotelId: string | null = null,
+): Promise<Due[]> {
+  await client.query("select app.guest_messages_begin()");
+  return dueFromDatabase(client, limits, hotelId);
+}
+
+/* ── The guest's own link, for this message ────────────────────────
+   The shape of the desk's own route (api/src/routes/guestDoor.ts): 32
+   random bytes, and ONLY THEIR HASH reaches the database. The token lives
+   in this process for one message and then in the guest's hands, and
+   nowhere else.
+
+   The address is the server's own setting, as the desk's route writes it
+   (D21-60).
+   ponytail: a copy of `linkFor` in guestDoor.ts, which is not exported —
+   the master's file. Import it instead once it is. */
+export async function linkFromDatabase(client: Client, due: Due): Promise<string> {
+  const token = randomBytes(32).toString("base64url");
+  const hash = createHash("sha256").update(token, "utf8").digest("hex");
+  const { rows } = await client.query<{ made: boolean }>(
+    "select app.guest_booking_link_issue($1::uuid, $2) as made",
+    [due.reservationId, hash]);
+  if (!rows[0]?.made) throw new Error("the booking is no longer confirmed, so it has no page");
+  return `${env.corsOrigins[0] ?? "http://localhost:5173"}/g/${token}`;
+}
+
 export interface SweepResult {
-  /** Bookings the database said were due. */
+  /** Bookings the database said were owed a message. */
   due: number;
   /** Messages handed to the one door out. */
   attempted: number;
   /** Of those, the ones the receiver took. */
   sent: number;
-  /** Due, but with no number and no address, so nothing was attempted. */
+  /** Owed, but with nowhere to send, so nothing was attempted. */
   nowhereToSend: number;
+  /** Owed, reachable, and a catch-up outside its hours: left for 09:00. */
+  waiting: number;
 }
 
 /* ── One pass ──────────────────────────────────────────────────────
    Everything leaves through `api/src/sending.ts` and nothing else, and
    `send` records its own attempt — this file never writes `messages_sent`.
 
+   ⚠ ONE TRANSACTION PER STEP, NOT ONE FOR THE PASS. In one transaction a
+   single failed statement aborts every statement after it, and the
+   rollback takes with it the record of every message already sent this
+   pass — so the next minute sends them all again. The link commits on its
+   own, and the send and its record commit together, booking by booking.
+
    ONE BOOKING'S FAULT DOES NOT STOP THE OTHERS. The next sweep tries
-   again, up to MOST_ATTEMPTS, which `listDue` counts. */
+   again, up to MOST_ATTEMPTS, which the database counts. */
 export async function runOnce(
-  client: Client,
-  listDue: ListDue,
-  makeLink: MakeLink,
+  run: Run,
+  listDue: ListDue = owedNow,
+  makeLink: MakeLink = linkFromDatabase,
   sender: (client: Client, message: Message) => Promise<SendResult> = send,
 ): Promise<SweepResult> {
-  const result: SweepResult = { due: 0, attempted: 0, sent: 0, nowhereToSend: 0 };
-  if (!canSend()) return result;
+  const result: SweepResult = { due: 0, attempted: 0, sent: 0, nowhereToSend: 0, waiting: 0 };
+  const pace = perSweep();
+  if (!canSend() || pace === null) return result;
 
-  const due = await listDue(client, {
-    withinHours: CONFIRM_WITHIN_HOURS, mostAttempts: MOST_ATTEMPTS,
-  });
+  const due = await run((client) => listDue(client, LIMITS));
+  /* ASKED BEFORE THE LINK IS MINTED — and before the pace is counted. A
+     link made for a booking with nowhere to send it is a private page
+     handed to nobody (MEMORY 304: do not spend something irreversible
+     above the check that decides whether it was worth spending). And a
+     booking nobody can reach is owed for ever, so counted against the
+     pace it would take a place every minute and starve the ones that can
+     be reached. */
+  const reachable = due.filter((booking) => channelFor(booking));
+  /* A catch-up outside its hours waits for the morning (D22-42), and like
+     the unreachable it takes no place in the pace - or the night's backlog
+     would hold up a booking made five minutes ago. */
+  const now = reachable.filter((booking) => !booking.held);
   result.due = due.length;
+  result.nowhereToSend = due.length - reachable.length;
+  result.waiting = reachable.length - now.length;
 
-  for (const booking of due) {
-    /* ASKED BEFORE THE LINK IS MINTED. A link made for a booking with
-       nowhere to send it is a private page handed to nobody, and it
-       would sit in `guest_links` until it expired. The same rule the
-       guest door learned the hard way (MEMORY 304): do not spend
-       something irreversible above the check that decides whether it
-       was worth spending. */
-    if (!channelFor(booking)) {
-      result.nowhereToSend += 1;
-      continue;
-    }
-
+  for (const booking of now.slice(0, pace)) {
     try {
-      const message = messageFor(booking, await makeLink(client, booking));
+      const link = await run((client) => makeLink(client, booking));
+      const message = messageFor(booking, link);
       if (!message) continue;
       result.attempted += 1;
-      const answer = await sender(client, message);
+      const answer = await run((client) => sender(client, message));
       if (answer.ok) result.sent += 1;
     } catch (error) {
       console.error("[guest-messaging] could not send for booking",
@@ -207,3 +345,29 @@ export async function runOnce(
 
   return result;
 }
+
+/* ── The timer ─────────────────────────────────────────────────────
+   STARTED BY THE SERVER, not by importing this file: `server.ts` (the
+   master's) calls `jobs.start()` after the port is open and never under
+   the tests; `jobs.stop()` waits for a pass in progress. A pass never
+   overlaps the one before it. The channel manager's shape, exactly. */
+let timer: ReturnType<typeof setInterval> | null = null;
+let running: Promise<unknown> | null = null;
+
+export const jobs = {
+  start(): void {
+    if (timer) return;
+    timer = setInterval(() => {
+      if (running) return;
+      running = runOnce((fn) => withUser("", fn))
+        .catch((error) => console.error("[guest-messaging] sweep failed",
+          error instanceof Error ? error.message : error))
+        .finally(() => { running = null; });
+    }, SWEEP_EVERY_MS);
+  },
+  async stop(): Promise<void> {
+    if (timer) clearInterval(timer);
+    timer = null;
+    if (running) await running;
+  },
+};

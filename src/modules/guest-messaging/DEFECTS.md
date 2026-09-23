@@ -77,19 +77,54 @@ of a row somebody else was allowed to read.**
 
 ---
 
-## Open — not fixed
-
 ### MSG-3 · A booking with no number and no address leaves no trace
 
-The sweep skips a booking that has neither a telephone number nor an email
-address, and it is right to: `send()` refuses it one step later anyway, and
-**nothing is recorded where nothing was attempted** (migration 117's own rule).
-But the desk then has no way to see that this guest will never get a
-confirmation - the screen simply has no row for them.
+**Found** 19 September, by reading: the sweep skips a booking it cannot send to,
+and it is right to - `send()` refuses it one step later anyway, and **nothing is
+recorded where nothing was attempted** (migration 117's own rule). But the desk
+then had no way to see that this guest will never get a confirmation: the
+screen simply had no row for them. D21-72 widened it on 21 September - a
+booking with a number and no "agreed to WhatsApp" tick, and no email, is now
+unreachable too.
 
-Not fixed on purpose: the answer is a list read from `reservations`, not an
-invented row in `messages_sent`, and that is phase 2. The sweep counts them
-(`nowhereToSend`) so the number is at least reachable.
+**What was done** (22 September): the screen lists **the bookings no message
+can reach**, each with what to add. It is not an invented row in
+`messages_sent`: the route reads the sweep's own answer
+(`app.guest_messages_due`, one property) and keeps what the sweep's own
+`channelFor` says has nowhere to go - so the list is exactly what the sweep
+skips, and the rule is written once. Shown whether or not sending is on, so a
+booking fixed now is a guest reached on the day. Tests on both sides, each
+seen to fail with the change taken out.
+
+**The rule: a thing the system decided not to do is still a fact the desk
+needs. Show it from the same answer that decided it, not from a second copy of
+the rule.**
+
+---
+
+### MSG-5 · One transaction for the whole sweep would send every message twice
+
+**Found** 22 September, by reading, before the sweep ever ran. The channel
+manager's sweep opens one `withUser` per hotel; the obvious shape here was one
+for the whole pass. In Postgres the first failed statement aborts the
+transaction, every statement after it fails, and the commit becomes a rollback
+- which takes with it **the record of every message already sent that pass**.
+The next minute finds them all still owed and sends them all again, to guests
+who already have them.
+
+**What was done:** one transaction per step - the due list, each link, each
+send with its own record - so one booking's fault costs only that booking.
+`sweep.test.ts` raises a real Postgres error for the middle of three bookings
+and checks the other two are recorded and not sent again; with the pass put
+back into one transaction, it fails.
+
+**The rule: a loop that does something irreversible outside the database (a
+message, a payment) commits its record per item. One transaction around the
+loop turns one failure into a repeat of everything before it.**
+
+---
+
+## Open — not fixed
 
 ### MSG-4 · The date is formatted twice in this repository
 

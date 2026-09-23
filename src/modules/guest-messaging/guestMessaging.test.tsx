@@ -17,6 +17,7 @@ import { go, startSignedIn, signedIn, AGRA_HOTEL } from "@/test/app";
      a message the system sent by itself says so rather than reading blank
      a message about something that is not a booking reads "-", not 0
        and not an empty cell
+     a booking no message can reach is listed, with what to add (MSG-3)
 
    ⚠ EVERY TEST USES ITS OWN PROPERTY CODE. The application's query cache
    lives as long as this file (App.tsx makes it once, staleTime Infinity),
@@ -27,6 +28,7 @@ import { go, startSignedIn, signedIn, AGRA_HOTEL } from "@/test/app";
 const control = vi.hoisted(() => ({
   list: "rows" as "rows" | "empty" | "unreachable",
   connected: false,
+  nobodyToSendTo: false,
 }));
 
 const THE_SERVERS_SENTENCE =
@@ -60,6 +62,12 @@ vi.mock("@/modules/guest-messaging/data/guestMessages", async (importOriginal) =
       return {
         connected: control.connected,
         notConnected: control.connected ? null : THE_SERVERS_SENTENCE,
+        unreachable: control.nobodyToSendTo ? [
+          { id: "r9", reference: "FH-2609-5009", guest: "Walk-in Guest",
+            checkIn: "2026-09-30", why: "No telephone number and no email address" },
+          { id: "r8", reference: "FH-2609-5008", guest: "Mr Rao",
+            checkIn: "2026-10-02", why: "Not agreed to WhatsApp, and no email address" },
+        ] : [],
         messages: control.list === "empty" ? [] : [
           message(),
           message({
@@ -99,6 +107,7 @@ beforeEach(() => {
   startSignedIn();
   control.list = "rows";
   control.connected = false;
+  control.nobodyToSendTo = false;
 });
 
 describe("guest messages", () => {
@@ -249,5 +258,36 @@ describe("guest messages", () => {
 
     expect(await screen.findByText(/not part of your role/i)).toBeTruthy();
     expect(screen.queryByRole("table")).toBeNull();
+  });
+
+  /* ⚠ MSG-3. Nothing is recorded where nothing was attempted, so a booking
+     the sweep cannot reach left no trace here at all - the desk could not
+     know this guest will never get a confirmation. */
+  it("lists the bookings no message can reach, and what to add", async () => {
+    as("front_desk");
+    control.nobodyToSendTo = true;
+    go("/h/GM11/guest-messages");
+    render(<App />);
+
+    expect(await screen.findByText("2 bookings no message can reach")).toBeTruthy();
+    const walkIn = screen.getByText("FH-2609-5009").closest("li") as HTMLElement;
+    expect(within(walkIn).getByText("Walk-in Guest")).toBeTruthy();
+    expect(within(walkIn).getByText("Arrives 30 Sep 2026")).toBeTruthy();
+    expect(within(walkIn).getByText("No telephone number and no email address")).toBeTruthy();
+    const rao = screen.getByText("FH-2609-5008").closest("li") as HTMLElement;
+    expect(within(rao).getByText(/Not agreed to WhatsApp/)).toBeTruthy();
+    /* And it offers nothing to press: this screen still never sends. */
+    for (const button of screen.queryAllByRole("button")) {
+      expect(button.textContent ?? "").not.toMatch(/send|resend|whatsapp|email again/i);
+    }
+  });
+
+  it("says nothing about it when every booking can be reached", async () => {
+    as("front_desk");
+    go("/h/GM12/guest-messages");
+    render(<App />);
+
+    await screen.findByRole("table");
+    expect(screen.queryByText(/no message can reach/)).toBeNull();
   });
 });
