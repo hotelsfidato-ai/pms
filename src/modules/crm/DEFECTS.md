@@ -14,29 +14,7 @@ entries stay here: they are the reason the fault does not come back.
 
 ## Open — not fixed
 
-### CRM-2 · Two people who share a phone stay on the "possible same person" list for ever
-
-**Found** — 21 September, building the list. A family that books on one
-mobile, or a travel agent's number typed as the guest's, is two people who
-share a phone. The list shows them until somebody joins them, and joining
-them would be the wrong join the brief warns about. There is no "not the same
-person" answer a manager can give that takes a pair off the list.
-
-**What was done** — nothing yet: whether to add one (a dismissal, recorded
-and undoable like a join) changes what a manager sees, so it is the owner's
-question. Recommendation: yes.
-
-### CRM-3 · A booking from a channel is never matched, and a blacklisted guest arriving through one is not flagged
-
-**Found** — 21 September. The suggestion and the blacklist warning are shown
-to a CLERK typing a phone or email (D21-20, D21-21). A booking the channel
-manager turns into a real one has no clerk: it makes its own guest record, as
-before, and nobody is warned. It surfaces later on "Possible same person".
-
-**What was done** — nothing: where a machine-made booking should warn (the
-arrivals list? the booking's panel?) is the owner's question. Recommendation:
-the same warning on the stay panel of any booking whose phone or email is a
-blacklisted guest's.
+Nothing open. CRM-2 and CRM-3 were fixed on 22 September (below).
 
 ---
 
@@ -62,6 +40,57 @@ manager are refused).
 **The rule** — when the owner names who may do something, read the function
 the database asks, not its name: `is_manager` sounded like the answer and was
 one role short.
+
+### CRM-2 · Two people who share a phone stayed on the "possible same person" list for ever
+
+**Found** — 21 September, building the list. A family that books on one
+mobile, or a travel agent's number typed as the guest's, is two people who
+share a phone. The list showed them until somebody joined them, and joining
+them would be the wrong join the brief warns about. There was no "not the
+same person" answer a manager could give that took a pair off the list.
+
+**What was done** — 22 September, the owner's D22-8 ("both"). The owner, an
+administrator or a GM (CRM-Q5) presses **Not the same person** on the pair.
+Migration "not the same person" (written as 128): `guest_not_same` (who, when,
+and an undo's who and when; one live answer per pair), written only by
+`app.guest_not_same` and `app.guest_not_same_undo` (SECURITY DEFINER,
+managers only), and `app.same_person_pairs` - same signature (MEMORY 317) -
+leaves out every pair a live answer stands between. The answer follows each
+record to the one that stands for it, so a record answered "not him" and later
+joined into a third is not offered through the third. Undone from the list
+under "Not the same person", as a join is. Proved in
+`db/tests/modules/crm.sql` (the function refuses a clerk; the table cannot be
+written but through it; the pair leaves, follows a join, comes back on undo),
+`api/test/modules/guests/notSamePersonAndBookingSites.test.ts` and
+`src/modules/crm/crm.test.tsx`.
+
+**The rule** — an answer a manager can give must be one they can take back:
+every answer on this list (join, not the same) is recorded and undoable.
+
+### CRM-3 · A booking from a channel was never matched, and a blacklisted guest arriving through one was not flagged
+
+**Found** — 21 September. The suggestion and the blacklist warning were shown
+to a CLERK typing a phone or email (D21-20, D21-21). A booking the channel
+manager turns into a real one has no clerk: it makes its own guest record,
+and nobody was warned. It surfaced later on "Possible same person".
+
+**What was done** — 22 September, the owner's D22-8: **a warning on Arrivals
+and at check-in** when a booking-site guest matches a blacklisted guest.
+`app.booking_site_blacklist(hotel, from, to)` (same migration) lists bookings
+from a source of kind `ota` - the channel manager's door and a site's booking
+typed in alike - arriving in the dates, whose guest's phone or email is a
+blacklisted guest's by the desk's own rule (`app.guest_suggestions`: exact
+key, never a name). INVOKER, so row security keeps it to the asker's hotel.
+Route `GET /:code/guests/blacklist-warnings`; the guests service's
+`BookingSiteBlacklist` component, placed by front desk on Arrivals (today, and
+the next fourteen days) and at the top of the check-in dialog. A warning with
+the reason, "not refused - you decide": nothing is joined (D21-2) and nothing
+is refused (D21-21). "Never matched" stays as the owner chose: the site's
+guest record is not joined to anybody; a manager meets it on the same-person
+list.
+
+**The rule** — a warning meant for "whoever takes this booking" must be shown
+where somebody meets a booking that arrived with nobody there.
 
 ---
 

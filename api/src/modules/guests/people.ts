@@ -16,9 +16,12 @@ import type { Client } from "../../db.ts";
                  nothing more: no hotels, no dates, no amounts (D21-13).
                  It chooses; nothing is joined for it (D21-2, D21-20).
                  A blacklisted guest is a WARNING with its reason, never a
-                 refusal (D21-21).
+                 refusal (D21-21). Arrivals and the check-in are warned the
+                 same way of a booking site's guest who matches a
+                 blacklisted guest (CRM-3, D22-8).
      MANAGERS    the owner, an administrator and the GM: the "possible same
-                 person" list, joins and their undo, the blacklist, and
+                 person" list, joins and their undo, "not the same person"
+                 and its undo (CRM-2, D22-8), the blacklist, and
                  Guest 360 - a person's whole history across the group
                  (D21-3, D21-4).
 
@@ -92,6 +95,44 @@ people.get("/:code/guests/returning", async (c) => {
           suggested: r.suggested,
           blacklisted: r.is_blacklisted,
           blacklistReason: r.is_blacklisted ? r.blacklist_reason : null,
+        })),
+      },
+    };
+  });
+  return c.json(answer.body as object, answer.status);
+});
+
+/* ── The desk: a booking site's guest who is a blacklisted guest ────
+   CRM-3, the owner's D22-8. A booking the channel manager makes has no
+   clerk to see the warning a typed phone gives, so Arrivals and the
+   check-in ask here: which bookings from a booking site, arriving between
+   these dates, have a guest whose phone or email is a blacklisted guest's.
+   The match is the desk's own (app.guest_suggestions). A WARNING with its
+   reason: nothing is joined, nothing refused (D21-2, D21-21). Row security
+   keeps it to this hotel's bookings, as the Arrivals list is. */
+const A_DAY = /^\d{4}-\d{2}-\d{2}$/;
+
+people.get("/:code/guests/blacklist-warnings", async (c) => {
+  const from = c.req.query("from") ?? "";
+  const to = c.req.query("to") ?? "";
+  if (!A_DAY.test(from) || !A_DAY.test(to) || to < from) {
+    return c.json({ error: "Give the arrival dates as from and to, YYYY-MM-DD." }, 400);
+  }
+  const answer = await withSession(c.get("subject"), async (client): Promise<Answer> => {
+    const hotelId = await hotelIdFor(client, c.req.param("code"));
+    if (!hotelId) return noProperty;
+    const { rows } = await client.query<{
+      reservation_id: string; reference: string; guest_name: string; source: string;
+      blacklisted_name: string; blacklist_reason: string | null;
+    }>(
+      `select reservation_id::text, reference, guest_name, source, blacklisted_name, blacklist_reason
+         from app.booking_site_blacklist($1, $2::date, $3::date)`, [hotelId, from, to]);
+    return {
+      status: 200,
+      body: {
+        warnings: rows.map((r) => ({
+          stayId: r.reservation_id, reference: r.reference, guest: r.guest_name,
+          source: r.source, blacklistedName: r.blacklisted_name, reason: r.blacklist_reason,
         })),
       },
     };
@@ -220,6 +261,86 @@ people.post("/:code/crm/joins/:id/undo", async (c) => {
       if ((error as { code?: string }).code === "22P02") {
         return { status: 409, body: { ok: false, reason: "There is no such join." } };
       }
+      throw error;
+    }
+  });
+  return c.json(answer.body as object, answer.status);
+});
+
+/* ── Managers: "not the same person" (CRM-2, D22-8) ────────────────
+   Two people who share a phone - a family on one mobile, an agent's
+   number - are not one guest, and a join would be the wrong join. The
+   answer takes the pair off the list for good, says who gave it and
+   when, and is undone the way a join is. */
+people.post("/:code/crm/not-same", async (c) => {
+  const input = await c.req.json<{ aId?: string; bId?: string }>()
+    .catch(() => ({}) as { aId?: string; bId?: string });
+
+  const answer = await withSession(c.get("subject"), async (client): Promise<Answer> => {
+    if (!await hotelIdFor(client, c.req.param("code"))) return noProperty;
+    if (!await isManager(client)) return managersOnly;
+    if (!A_UUID.test(input.aId ?? "") || !A_UUID.test(input.bId ?? "")) {
+      return { status: 409, body: { ok: false, reason: "Choose the two records from the list." } };
+    }
+    try {
+      const { rows } = await client.query<{ id: string }>(
+        "select app.guest_not_same($1, $2)::text as id", [input.aId, input.bId]);
+      return { status: 200, body: { ok: true, id: rows[0]!.id } };
+    } catch (error) {
+      const reason = reasonFor(error);
+      if (reason) return { status: 409, body: { ok: false, reason } };
+      throw error;
+    }
+  });
+  return c.json(answer.body as object, answer.status);
+});
+
+/** The "not the same person" answers that stand, newest first. */
+people.get("/:code/crm/not-same", async (c) => {
+  const answer = await withSession(c.get("subject"), async (client): Promise<Answer> => {
+    if (!await hotelIdFor(client, c.req.param("code"))) return noProperty;
+    if (!await isManager(client)) return managersOnly;
+    /* LEFT join to staff: a name the viewer may not read is a dash (MEMORY 283). */
+    const { rows } = await client.query<{
+      id: string; a_id: string; a_name: string; b_id: string; b_name: string;
+      by: string | null; at: string;
+    }>(
+      `select n.id::text, n.a::text as a_id, ga.full_name as a_name,
+              n.b::text as b_id, gb.full_name as b_name,
+              s.full_name as by, n.said_at::text as at
+         from guest_not_same n
+         join guests ga on ga.id = n.a
+         join guests gb on gb.id = n.b
+         left join staff s on s.id = n.said_by
+        where n.undone_at is null
+        order by n.said_at desc
+        limit 100`);
+    return {
+      status: 200,
+      body: {
+        answers: rows.map((r) => ({
+          id: r.id, aId: r.a_id, aName: r.a_name, bId: r.b_id, bName: r.b_name,
+          by: r.by, at: r.at,
+        })),
+      },
+    };
+  });
+  return c.json(answer.body as object, answer.status);
+});
+
+people.post("/:code/crm/not-same/:id/undo", async (c) => {
+  const answer = await withSession(c.get("subject"), async (client): Promise<Answer> => {
+    if (!await hotelIdFor(client, c.req.param("code"))) return noProperty;
+    if (!await isManager(client)) return managersOnly;
+    if (!A_UUID.test(c.req.param("id"))) {
+      return { status: 409, body: { ok: false, reason: "There is no such answer." } };
+    }
+    try {
+      await client.query("select app.guest_not_same_undo($1)", [c.req.param("id")]);
+      return { status: 200, body: { ok: true } };
+    } catch (error) {
+      const reason = reasonFor(error);
+      if (reason) return { status: 409, body: { ok: false, reason } };
       throw error;
     }
   });

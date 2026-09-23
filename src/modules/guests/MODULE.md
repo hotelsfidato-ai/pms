@@ -139,6 +139,7 @@ What `index.ts` exports, and who uses each (grep of `@/modules/guests`,
 | `ReturningGuest`, `ConsentTicks` | reservations (`pages/NewBooking.tsx`), front desk (`flows/WalkInFlow.tsx`) - the CRM's suggestion and ticks, 21 September |
 | `stayedWords` | crm (both pages), front desk (`flows/GuestMarks.tsx`) |
 | `phoneKey`, `emailKey`, `refusesOffers`, type `NoOffers` | nobody yet - for marketing's gate (`src/modules/crm/MODULE.md`, Requests) |
+| `BookingSiteBlacklist` | front desk (`pages/Arrivals.tsx`, `flows/CheckInFlow.tsx`) - CRM-3, a booking site's guest who matches a blacklisted guest, 22 September (D22-8) |
 
 **21 September - the Central CRM, phase 1.** One guest, one record: the
 returning-guest suggestion, joins, the blacklist, "no offers" and Guest 360.

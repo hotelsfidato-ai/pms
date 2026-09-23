@@ -9,7 +9,7 @@ import {
   Skeleton, toast,
 } from "@/components/ui";
 import {
-  listSamePerson, listJoins, joinGuests, undoJoin,
+  listSamePerson, listJoins, joinGuests, undoJoin, listNotSame, sayNotSame, undoNotSame,
   type GuestCard, type SamePersonPair,
 } from "@/modules/crm/data/crm";
 import { stayedWords } from "@/modules/guests";
@@ -31,6 +31,11 @@ import { stayedWords } from "@/modules/guests";
        is lost; the ID itself is never shown (the brief, rule 1)
      · two people who share a surname are never a pair: nothing here
        reads a name
+
+   And the owner's D22-8 (CRM-2), 22 September: two people who share a
+   phone - a family on one mobile, an agent's number - are answered "Not
+   the same person". The pair leaves the list and is not listed again;
+   who said so and when is kept, and it is undone below, as a join is.
    ══════════════════════════════════════════════════════════════════ */
 
 export default function SamePersonPage() {
@@ -43,12 +48,16 @@ export default function SamePersonPage() {
     queryKey: ["crm", "joins", hotelId],
     queryFn: () => listJoins(hotelId),
   });
+  const apart = useQuery({
+    queryKey: ["crm", "not-same", hotelId],
+    queryFn: () => listNotSame(hotelId),
+  });
 
   return (
     <Page>
       <PageHeader
         title="Possible same person"
-        description="Guest records that share a phone number or an email, across every hotel. Join two that are one person; every join can be undone."
+        description="Guest records that share a phone number or an email, across every hotel. Join two that are one person, or say they are not; either can be undone."
         badge={pairs.data
           ? <StatusPill tone="neutral">{pairs.data.length} to look at</StatusPill>
           : undefined}
@@ -87,7 +96,37 @@ export default function SamePersonPage() {
                     {" "}· {j.stays} {j.stays === 1 ? "stay" : "stays"} moved · by {j.by ?? "-"} · {dateShort(j.at.slice(0, 10))}
                   </span>
                 </span>
-                <UndoButton hotelId={hotelId} joinId={j.id} />
+                <UndoButton undo={() => undoJoin(hotelId, j.id)}
+                  said="Every stay is back on the record it came from." />
+              </li>
+            ))}
+          </ul>
+        </Card>
+      )}
+
+      <h2 className="text-lg font-semibold text-ink-900 mt-10 mb-3">Not the same person</h2>
+      {apart.error && <ErrorState error={apart.error} onRetry={() => void apart.refetch()} />}
+      {apart.data?.length === 0 && (
+        <p className="text-grey-500">No answers stand. Two records answered "Not the same person" above appear here, with the undo.</p>
+      )}
+      {!!apart.data?.length && (
+        <Card>
+          <ul className="divide-y divide-grey-100">
+            {apart.data.map((n) => (
+              <li key={n.id} className="flex flex-wrap items-center gap-3 px-4 py-3">
+                <span className="min-w-0 flex-1 text-base text-ink-900">
+                  <Link to={`/crm/guests/${n.aId}`} className="font-medium underline underline-offset-4">
+                    {n.aName}
+                  </Link>{" "}and{" "}
+                  <Link to={`/crm/guests/${n.bId}`} className="font-medium underline underline-offset-4">
+                    {n.bName}
+                  </Link>{" "}are two people
+                  <span className="text-grey-500">
+                    {" "}· by {n.by ?? "-"} · {dateShort(n.at.slice(0, 10))}
+                  </span>
+                </span>
+                <UndoButton undo={() => undoNotSame(hotelId, n.id)}
+                  said="The two records are listed again." />
               </li>
             ))}
           </ul>
@@ -116,10 +155,25 @@ function PairCard({ hotelId, pair }: { hotelId: string; pair: SamePersonPair }) 
     void qc.invalidateQueries({ queryKey: ["crm"] });
   };
 
+  /* CRM-2: two people, not one. Undoable below, like a join. */
+  const apart = async () => {
+    setBusy(true);
+    const done = await sayNotSame(hotelId, pair.a.id, pair.b.id);
+    setBusy(false);
+    if (!done.ok) return toast.error("Not recorded", done.reason);
+    toast.success("Kept apart", `${pair.a.name} and ${pair.b.name} will not be listed again. It can be undone below.`);
+    void qc.invalidateQueries({ queryKey: ["crm"] });
+  };
+
   return (
     <Card>
       <CardBody className="space-y-4">
-        <p className="text-sm text-grey-600">Same {shared}.</p>
+        <div className="flex flex-wrap items-center gap-3">
+          <p className="min-w-0 flex-1 text-sm text-grey-600">Same {shared}.</p>
+          <Button variant="secondary" disabled={busy} onClick={() => void apart()}>
+            Not the same person
+          </Button>
+        </div>
         <div className="grid gap-3 md:grid-cols-2">
           {[pair.a, pair.b].map((g) => (
             <Side key={g.id} guest={g}
@@ -174,16 +228,17 @@ function Side({ guest: g, chosen, locked, onChoose }: {
   );
 }
 
-function UndoButton({ hotelId, joinId }: { hotelId: string; joinId: string }) {
+/** Undoes a join or a "not the same person" answer; `said` is the toast. */
+function UndoButton({ undo, said }: { undo: () => ReturnType<typeof undoJoin>; said: string }) {
   const qc = useQueryClient();
   const [busy, setBusy] = useState(false);
   return (
     <Button variant="secondary" disabled={busy} onClick={async () => {
       setBusy(true);
-      const done = await undoJoin(hotelId, joinId);
+      const done = await undo();
       setBusy(false);
       if (!done.ok) return toast.error("Not undone", done.reason);
-      toast.success("Undone", "Every stay is back on the record it came from.");
+      toast.success("Undone", said);
       void qc.invalidateQueries({ queryKey: ["crm"] });
     }}>
       <Undo2 className="size-4" /> Undo

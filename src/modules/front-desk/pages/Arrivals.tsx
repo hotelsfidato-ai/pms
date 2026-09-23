@@ -8,6 +8,7 @@ import { StayTable, type StayColumn } from "@/modules/front-desk/components/Stay
 import { listArrivals, listStays } from "@/modules/front-desk/data/stays";
 import { queryKeys, BUSINESS_DATE } from "@/data/repositories";
 import { addDays } from "@/modules/front-desk/data/stayview";
+import { BookingSiteBlacklist } from "@/modules/guests";
 
 /* ══════════════════════════════════════════════════════════════════
    ARRIVALS
@@ -76,6 +77,14 @@ export default function ArrivalsPage() {
           Next fourteen days
         </Tab>
       </nav>
+
+      {/* CRM-3 (D22-8): a booking site's guest on a blacklisted phone or email. */}
+      <div className="mb-4 empty:hidden">
+        <BookingSiteBlacklist hotelId={hotelId}
+          from={upcoming ? addDays(BUSINESS_DATE, 1) : BUSINESS_DATE}
+          to={upcoming ? addDays(BUSINESS_DATE, 14) : BUSINESS_DATE}
+          stayIds={active.data?.map((s) => s.id)} />
+      </div>
 
       <Card className="p-4">
         <StayTable

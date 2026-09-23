@@ -86,6 +86,36 @@ export function undoJoin(hotelId: string, joinId: string): Promise<Done> {
   return send(`/api/hotels/${hotelId}/crm/joins/${joinId}/undo`, "POST");
 }
 
+/* ── "Not the same person" (CRM-2, D22-8) ─────────────────────────
+   Two records that share a phone or email and are two people: the pair
+   leaves the list, and the answer can be undone as a join can. */
+
+export interface NotSameAnswer {
+  id: string;
+  aId: string;
+  aName: string;
+  bId: string;
+  bName: string;
+  /** Null where the viewer may not read that member of staff: a dash. */
+  by: string | null;
+  at: string;
+}
+
+export async function listNotSame(hotelId: string): Promise<NotSameAnswer[]> {
+  if (!hotelId) return [];
+  const out = await fetchOr<{ answers: NotSameAnswer[] }>(
+    `/api/hotels/${hotelId}/crm/not-same`, { answers: [] });
+  return out.answers;
+}
+
+export function sayNotSame(hotelId: string, aId: string, bId: string): Promise<Done> {
+  return send(`/api/hotels/${hotelId}/crm/not-same`, "POST", { aId, bId });
+}
+
+export function undoNotSame(hotelId: string, id: string): Promise<Done> {
+  return send(`/api/hotels/${hotelId}/crm/not-same/${id}/undo`, "POST");
+}
+
 /* ── Guest 360 ───────────────────────────────────────────────────── */
 
 export interface GuestFound {
