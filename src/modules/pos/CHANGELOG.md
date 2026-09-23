@@ -11,6 +11,61 @@ Work that touches the core or several services still goes in the root
 
 ---
 
+## 2026-09-23 · A tax-heading picker on each menu section, and Alcohol in the import — D22-4, D22-46
+
+**Asked for:** the owner's D22-4 - "a tax-heading picker on each menu section:
+yes" (the add-dish form keeps its 5% choice; "Section's rate" first was not
+chosen) - and D22-46: "Alcohol" as a section's heading in the menu import,
+only where the hotel serves alcohol. D22-43 (a dish in an Alcohol section with
+its own rate stays GST) is as built and untouched. A helper of the master's,
+branch `pos/section-heading-picker`.
+
+**Shipped:**
+- `api/src/modules/pos/till.ts`
+  - `GET /till/menu` sends each section's `taxKind` (null when not set).
+  - `POST /till/menu/categories/:id/tax-kind` - restaurant, bar, banquet,
+    other, and alcohol only where `app.module_enabled(hotel, 'alcohol')`;
+    anything else refused with a sentence. The alcohol question is asked
+    before the write (root MEMORY 243). No "not set": nothing asked for one.
+  - The import reads the switch once and accepts "Alcohol" (any case) as a
+    Tax heading where it is on; where it is off the row is refused: "Alcohol
+    is a heading only where this property serves alcohol. The owner or an
+    administrator turns it on in Settings, under Modules." The unknown-heading
+    sentence lists alcohol only where it is on.
+- `api/src/roleGate.ts` (the core's, as the master asked) - the new route on
+  `MENU`: owner, admin, GM, kitchen manager - the same people the import
+  already lets set a heading. The tax card's own picker stays `GST`.
+- `src/modules/pos/pages/Menu.tsx` - a select in each section card's header,
+  after Course and Prep, in the tax card's words (Restaurant, Bar, Banquet,
+  Alcohol (VAT), Everything else). Alcohol is offered only where the
+  property serves it (the sidebar's own `getModules` read); a section already
+  Alcohol at a property that stopped serving it shows it, disabled; a
+  section with none shows "Not set", disabled. The header now wraps, so on a
+  phone the picker goes under the name rather than squeezing it.
+- `src/modules/pos/data/till.ts` - `SectionHeading`, `MenuCategory.taxKind`
+  (optional: a menu cached before today lacks it and reads as not set), and
+  `setCategoryTaxKind`.
+- `src/lib/importSpec.ts` (the master's) - one sentence in `MENU_SPEC`'s Tax
+  heading note: "- or alcohol, where the property serves it".
+
+**Proved:** `api/test/modules/pos/sectionHeading.test.ts` (7) and three tests
+in `ownerDecisions.test.tsx` ("the tax heading on each menu section"). Each
+was seen failing with its piece taken out: the route's alcohol check and the
+import's refusal (`expected 200 to be 409`; the import said "is not a tax
+heading" instead of the sentence); the import never accepting alcohol
+(`expected 1 to be +0`); the menu read without `taxKind` (6 of 7 failed); the
+roleGate row removed (roleGate's "has a rule" named the route, and the
+picker's writes got 403 "Nobody has been given this yet"); the screen's
+picker not sending, and offering Alcohol regardless (2 failed); never
+offering it (the third failed). Numbers in the hand-back. **The screen was
+not opened in a browser** (a helper, no browser pane).
+
+**Left open:** who may set a section's heading - asked in the hand-back
+(the Menu screen's picker is the menu's grant, the tax card's is GST's, so
+the kitchen manager can on one and the accountant on the other).
+
+---
+
 ## 2026-09-22 · POS-15: a dish's GST is the rate it is rung at, or a dash — D21-94
 
 **Asked for:** the owner's D21-94 - a dish imported with its GST column blank
