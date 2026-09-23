@@ -8,6 +8,23 @@ project, still goes in the root `CHANGELOG.md`.
 
 ---
 
+## 2026-09-22 · CRM-2 and CRM-3's routes and the booking-site warning (D22-8)
+
+**Asked for:** the owner's D22-8, through the master; the whole entry is
+`src/modules/crm/CHANGELOG.md`.
+
+**Shipped** - in `api/src/modules/guests/people.ts`: `GET
+/:code/guests/blacklist-warnings` (any staff) and the three "not the same
+person" routes (managers). `components/BookingSiteBlacklist.tsx` and
+`listBlacklistWarnings` in `data/people.ts`, exported from the front door for
+front desk to place.
+
+**Proved** - see the CRM entry.
+
+**Commits:** branch `crm/crm-2-crm-3`.
+
+---
+
 ## 2026-09-21 · The Central CRM's routes and the suggestion live here
 
 **Asked for:** the CRM chat's phase 1 (`docs/briefs/crm.md`); the whole entry

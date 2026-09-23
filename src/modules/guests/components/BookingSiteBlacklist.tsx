@@ -39,7 +39,7 @@ export function BookingSiteBlacklist({
   if (warnings.length === 0) return null;
 
   return (
-    <div className="space-y-2" data-booking-site-blacklist>
+    <div className="space-y-2">
       {warnings.map((w) => (
         <div key={`${w.stayId}-${w.blacklistedName}`} role="alert"
           className="flex items-start gap-2 rounded-md border border-brand-red-100 bg-brand-red-50 p-3 text-sm text-brand-red-700">

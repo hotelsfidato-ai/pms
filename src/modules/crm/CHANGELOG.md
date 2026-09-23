@@ -11,6 +11,75 @@ Work that touches the core or several services still goes in the root
 
 ---
 
+## 2026-09-22/23 · CRM-2 and CRM-3 built (the owner's D22-8)
+
+**Asked for:** the owner's D22-8, through the master: "Both" - a "not the
+same person" answer on the same-person list (owner, admin, GM; recorded who
+and when; undoable, as a join is), and a warning on Arrivals and at check-in
+when a booking-site guest matches a blacklisted guest (exact phone or email,
+as D21-2/D21-20; suggested, never automatic, never blocking, D21-21).
+
+**Shipped** (branch `crm/crm-2-crm-3`, copy `.claude/worktrees/agent-a0cfb728aea00c59d`)
+- Migration "not the same person", written as 128 on the master's word:
+  `guest_not_same`, `app.guest_not_same` and its undo (managers only, the
+  only way in), `app.same_person_pairs` (same signature) leaving answered
+  pairs out and following each record to the one that stands;
+  `app.booking_site_blacklist` (INVOKER), the match being
+  `app.guest_suggestions`'.
+- Routes in `api/src/modules/guests/people.ts`: `POST/GET /crm/not-same`,
+  `POST /crm/not-same/:id/undo`, `GET /guests/blacklist-warnings`. The two
+  writes mapped in `api/src/roleGate.ts` like the joins.
+- Possible same person: a "Not the same person" button on each pair, and a
+  "Not the same person" list under "Joined" with who, when and Undo.
+- `BookingSiteBlacklist` (guests' front door), placed by one line each in
+  front desk's `pages/Arrivals.tsx` and `flows/CheckInFlow.tsx`.
+- `channel.ts` is not touched: the warning is read when Arrivals and the
+  check-in open, so it also covers a guest blacklisted after the booking came.
+
+**Found**
+- Two slips in my own tests, each caught by its first run: the database test
+  provisioned its second property after the session had become the clerk's
+  ("Only a group administrator may provision a property"), and the API test
+  expected an administrator to read a GM's name on the list. The list gives a
+  dash there, as the joins list does (MEMORY 283).
+- `src/test/migrationNumbers.test.ts` fails in this copy, and only here:
+  125-127 are not in it. The master renumbers at merge.
+
+**Proved** (numbers from the final runs, 23 September, on the finished code)
+- web `npx tsc -b --force` 0; API `npx tsc --noEmit -p .` 0
+- `npx vitest run src/modules/crm src/modules/front-desk src/modules/guests`:
+  11 files, 74 tests, exit 0
+- `cd api; npm test -- guests crm roleGate`: 4 files, 73 tests, exit 0 (62
+  before; `notSamePersonAndBookingSites.test.ts` adds 11)
+- `bash db/tests/run.sh`: 973 assertions, 22 in "crm" (14 before), exit 0;
+  `bash db/tests/rerun.sh`: "all 125 migrations are re-runnable", exit 0
+- Every new test seen to FAIL with the change taken out, then pass:
+  - list keeps answered pairs: API "takes the pair off the list", DB "an
+    answered pair leaves the list"; no booking-site filter: API and DB "a
+    desk booking is not"; route's manager check removed from POST not-same
+    (the function's still standing): API "answered only by owner, admin or GM"
+  - the inner guards alone, the route checks still standing (MEMORY 318): the
+    function's manager check: DB "a clerk cannot say..." and "keeps who gave
+    it"; the answer not following a join: DB "follows a record joined";
+    `booking_site_blacklist` made SECURITY DEFINER: DB "another hotel's clerk
+    is told nothing"
+  - no blacklist filter: API 3 CRM-3 tests, DB 1; the undo route's manager
+    check removed: API "is undone by a manager"
+  - web: no placement in the check-in: "warned of again in the check-in";
+    no on-screen filter: the Arrivals and upcoming tests; no Arrivals
+    placement: all three; no button: crm "not the same person"
+- Not opened in a browser: the brief for this job forbade the browser pane
+  and ports 8787/5173. The two front-desk placements are proved through the
+  whole app in jsdom (`bookingSiteBlacklist.test.tsx`), not on screen.
+
+**Left open** - the questions in the report to the master (which bookings
+count as "from a booking site"; the CRS; a join of a pair answered "not the
+same"). Front desk's own notes do not yet mention the two placements.
+
+**Commits:** `91d743c` (code and tests), and the notes commit after it.
+
+---
+
 ## 2026-09-21 · Phase 1 built: one guest, one record
 
 **Asked for:** the owner, through the master: "build in the brief's order" -

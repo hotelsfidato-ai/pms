@@ -5,6 +5,11 @@
 > list with undoable joins, the blacklist as a warning, "stayed with the
 > group before", "do not send me offers", the WhatsApp tick, and Guest 360.
 > Its home is the **Guests & CRM** menu section (D21-79).
+>
+> **22 September — CRM-2 and CRM-3 built** (the owner's D22-8, branch
+> `crm/crm-2-crm-3`): a "Not the same person" answer on the same-person
+> list, undoable; and a warning on Arrivals and at check-in when a booking
+> site's guest matches a blacklisted guest.
 
 One record for each guest across every hotel of the group. The design is
 `docs/architecture/central-crm.md`; the owner's answers are D21-1 to D21-5,
@@ -53,6 +58,7 @@ it touches; this folder holds the two managers' screens.
 
 ```
 db/migrations/122_one_guest_one_record.sql   ONE migration; 122, given by the master (online check-in took 121)
+db/migrations/128_not_the_same_person.sql    CRM-2 and CRM-3 (D22-8); written as 128, renumbered at merge
 db/tests/modules/crm.sql                      what only the database can promise (14 assertions)
 
 api/src/modules/guests/people.ts              every CRM route - see below. In GUESTS, not in
@@ -66,6 +72,8 @@ api/src/modules/guests/directory.ts           "total spend" now reads app.stay_c
 
 src/modules/crm/                              Guest 360 and "Possible same person"
 src/modules/guests/components/ReturningGuest.tsx   the suggestion and the two ticks (front door)
+src/modules/guests/components/BookingSiteBlacklist.tsx   CRM-3's warning (front door), placed by
+                                              front desk on Arrivals.tsx and in CheckInFlow.tsx
 src/modules/guests/logic/contactKeys.ts       the phone key in TypeScript, for marketing's gate
 src/modules/reservations/pages/NewBooking.tsx the suggestion and the ticks on the booking form
 src/modules/front-desk/flows/WalkInFlow.tsx   ...and on the walk-in
@@ -93,6 +101,10 @@ asks the navigation (`RequireAccess`), and the server refuses the others
 | POST | `/:code/crm/joins` | managers | `{ keptId, joinedId }` - moves the stays, carries the marks, records all of it |
 | GET | `/:code/crm/joins` | managers | the joins that stand, newest first |
 | POST | `/:code/crm/joins/:id/undo` | managers | exactly the stays it moved go back |
+| POST | `/:code/crm/not-same` | managers | `{ aId, bId }` - two people, not one: the pair leaves the list (CRM-2) |
+| GET | `/:code/crm/not-same` | managers | the answers that stand, newest first, with who and when |
+| POST | `/:code/crm/not-same/:id/undo` | managers | the pair is listed again |
+| GET | `/:code/guests/blacklist-warnings?from=&to=` | any staff | bookings from a booking site arriving in the dates whose guest's phone or email is a blacklisted guest's, with the reason (CRM-3) |
 | GET | `/:code/crm/guests?q=` | managers | Guest 360's search |
 | GET | `/:code/crm/guests/:id` | managers | Guest 360 |
 | POST / DELETE | `/:code/crm/guests/:id/blacklist` | managers | set with a reason / clear |
@@ -119,6 +131,8 @@ And in front desk (`stayExtras.ts`): `GET /:code/stays/:id/guest-marks`
 | one "charged" | `app.stay_charged(reservation)` - the Guests screen and Guest 360 both |
 | no offers | `offer_opt_outs` (kind, key) - read and recorded by any staff, cleared by managers; audited; `app.record_no_offers` |
 | the WhatsApp tick | `reservations.whatsapp_agreed`, false unless ticked; audited by 011's trigger |
+| not the same person (CRM-2) | `guest_not_same` (select for managers; written only by `app.guest_not_same` / `app.guest_not_same_undo`); `app.same_person_pairs` leaves answered pairs out, following each record to the one that stands |
+| a booking site's blacklisted guest (CRM-3) | `app.booking_site_blacklist(hotel, from, to)` - INVOKER, so row security keeps it to the asker's hotel; the match is `app.guest_suggestions`' |
 
 ## Rules that bind it
 
@@ -126,7 +140,11 @@ And in front desk (`stayExtras.ts`): `GET /:code/stays/:id/guest-marks`
   every join can be undone. **A wrong join is worse than a missed one**: in
   doubt, nothing is suggested (CRM-Q11). Nothing reads a name.
 - **The desk sees a name and a count, nothing more** (D21-13).
-- **The blacklist warns; it never refuses** (D21-21).
+- **The blacklist warns; it never refuses** (D21-21). That includes a booking
+  site's guest on Arrivals and at check-in (D22-8): a warning, not a join and
+  not a refusal.
+- **Every answer on the same-person list can be taken back**: a join, and
+  "not the same person" (D22-8).
 - **Identity documents do not move and are never shown** - only "an ID is on
   file" (the brief, rule 1).
 - **Nothing names Fidato** (D21-27): "the group", from CRM-Q3.
@@ -149,6 +167,15 @@ And in front desk (`stayExtras.ts`): `GET /:code/stays/:id/guest-marks`
 4. **`api/src/modules/crm/`** does not exist: the routes are in guests,
    because a new server folder needs a line in `server.ts`. Move them if you
    prefer, at merge.
+5. **Front desk (22 September, CRM-3)** - front desk was claimed by another
+   helper (`front-desk/in-house-rule-fd8`), so its two files carry only one
+   import and one placed component each: `pages/Arrivals.tsx` (above the
+   list) and `flows/CheckInFlow.tsx` (top of the dialog), both
+   `BookingSiteBlacklist` from `@/modules/guests`. Front desk's `MODULE.md`
+   and `CHANGELOG.md` were not touched; its owner may want a line.
+6. **`api/src/roleGate.ts`** - the two new writes (`POST /crm/not-same`,
+   `POST /crm/not-same/:id/undo`) are mapped as `own(... app.is_crm_manager)`,
+   like the joins.
 
 ## Gates
 
@@ -159,4 +186,7 @@ CRM's own tests: `api/test/modules/guests/oneGuestOneRecord.test.ts` (26),
 `src/modules/front-desk/walkInReturning.test.tsx` (5),
 `src/modules/front-desk/guestMarks.test.tsx` (2),
 `src/modules/reservations/newBookingReturning.test.tsx` (1),
-`src/modules/guests/logic/contactKeys.test.ts` (13).
+`src/modules/guests/logic/contactKeys.test.ts` (13). CRM-2 and CRM-3 (22
+September): `api/test/modules/guests/notSamePersonAndBookingSites.test.ts`
+(11), `db/tests/modules/crm.sql` (now 22), `src/modules/crm/crm.test.tsx`
+(now 7), `src/modules/guests/bookingSiteBlacklist.test.tsx` (3).
