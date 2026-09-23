@@ -12,3 +12,7 @@ Standing rule from today: all code minimal (ponytail, YAGNI), and anything not s
 | D23-6 | Joining a pair answered "not the same person", by calling the server | **Not blocked: a manager undoes the answer first** |
 | D23-7 | The "not the same person" answer after a later join | **Carried over to the joined record** |
 | D23-8 | The revenue manager and the Menu page's address | **Left reachable, read-only** |
+| D23-9 | "In house": rooms or bookings | **Rooms**: In house + Empty + Out of service add up to the hotel; the In house list still shows every checked-in booking |
+| D23-10 | A room reserved for tonight's arrival but still empty | **Empty**, as built |
+| D23-11 | Wording | **Property page "Vacant" becomes "Empty"; the Properties list's "N guests in house" becomes "N bookings checked in"** |
+| D23-12 | FD-11 and FD-9 | **Both fixed:** check-in refuses a room a late-checkout guest is still in (FD-11); a mid-stay move marks the old room dirty (FD-9) |
