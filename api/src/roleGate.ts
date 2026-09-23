@@ -19,9 +19,7 @@ import { ROLES, can, type Action, type Resource, type Role } from "./permissions
      grant   the matrix (api/src/permissions.ts, the website's own) must give
              the role this action on this resource - plus any role named in
              `also`, each one there for a reason written beside it
-     staff   anybody who works here except a viewer: no grant in the matrix
-             fits, and picking one is the owner's call (said where it is used)
-     own     the route already decides who, in its own words; the gate lets
+     own    the route already decides who, in its own words; the gate lets
              every role through so that answer is unchanged
      self    a person's own settings, which belong to no hotel
 
@@ -56,14 +54,12 @@ type Grant = {
 
 export type Rule =
   | Grant
-  | { readonly kind: "staff"; readonly doing: string }
   | { readonly kind: "own"; readonly where: string }
   | { readonly kind: "self" };
 
 const grant = (
   resource: Resource, action: Action, doing: string, also: readonly Role[] = [],
 ): Grant => ({ kind: "grant", resource, action, also, doing });
-const staff = (doing: string): Rule => ({ kind: "staff", doing });
 const own = (where: string): Rule => ({ kind: "own", where });
 const SELF: Rule = { kind: "self" };
 
@@ -90,9 +86,13 @@ const FORM_C = grant("customer", "edit", "Recording Form C");
 const CHARGE = grant("invoice", "create", "Adding to a bill");
 const CHANGE_BILL = grant("invoice", "edit", "Changing a bill");
 const TAX_INVOICE = grant("invoice", "create", "Issuing a tax invoice");
-const CREDIT_NOTE = grant("invoice", "edit", "Issuing a credit note");
+/* The owner's D22-33: the owner, an administrator, the GM and the accountant -
+   no longer reception or the hotel manager. `approve` on an invoice is exactly
+   those four in the matrix. */
+const CREDIT_NOTE = grant("invoice", "approve", "Issuing a credit note");
 /* The night audit posts the night's room charges to every bill in the house,
-   so it is asked the question a charge is asked. */
+   so it is asked the question a charge is asked - the owner, an administrator,
+   the GM, the hotel manager, reception and the accountant, as it is (D22-36). */
 const CLOSE_DAY = grant("invoice", "create", "Closing the day");
 const PAYMENT = grant("payment", "create", "Taking a payment");
 const DRAWER = grant("payment", "create", "Running the cashier's drawer");
@@ -102,27 +102,24 @@ const ROOM_STATE = grant("inventory", "edit", "Changing a room's status");
 const OUT_OF_SERVICE = grant("inventory", "edit", "Taking a room out of service, or back");
 const HOUSEKEEPING_ROUNDS = grant("inventory", "edit", "Giving rooms to housekeeping");
 
-/* Setting the hotel up: `room_config`, which the matrix gives the owner and an
-   administrator. THE GM TOO, because the owner decided "each GM sets up their
-   own hotel on the screens that exist" (D21-47) while the matrix still says
-   the GM only reads room configuration. Kept as it is today until the owner
-   says which of the two is right. */
-const SETUP_ADD = grant("room_config", "create", "Setting the hotel up", ["gm"]);
-const SETUP_CHANGE = grant("room_config", "edit", "Changing the hotel's setup", ["gm"]);
-const HALLS = grant("room_config", "edit", "Setting up the banquet halls and packages", ["gm"]);
-/* GST sits on Room types, so it is setup - and the accountant confirms the
-   rate on the tax screen (D21-91). */
-const GST = grant("room_config", "edit", "Setting GST", ["gm", "finance"]);
+/* Setting the hotel up: `room_config`, which the matrix gives the owner, an
+   administrator and the GM (the owner's D22-30, in the matrix itself). */
+const SETUP_ADD = grant("room_config", "create", "Setting the hotel up");
+const SETUP_CHANGE = grant("room_config", "edit", "Changing the hotel's setup");
+const HALLS = grant("room_config", "edit", "Setting up the banquet halls and packages");
+/* GST sits on Room types, so it is setup - and the accountant, who holds no
+   setup grant, sets the rate too: "the accountant confirms the rate on the tax
+   screen" (D21-91), and "owner, admin, GM and accountant" (D22-32). */
+const GST = grant("room_config", "edit", "Setting GST", ["finance"]);
 
 /* Prices: `rate` with `edit`, which is exactly RATE_SETTER_ROLES - the owner's
    INV-5 (owner, admin, GM, and the revenue manager of 16 September). */
 const PRICE = grant("rate", "edit", "Setting a price");
 const RESTRICTION = grant("rate", "edit", "Setting a stop sell or a minimum stay");
 const TERMS = grant("rate", "edit", "Setting the cancellation terms");
-/* A source's commission is a commercial term "a manager is allowed to make"
-   (bookingSources.ts). The matrix gives `commission` edit to the owner alone;
-   the administrator and the GM keep it, as today, until the owner says. */
-const COMMISSION = grant("commission", "edit", "Setting a booking source's commission", ["admin", "gm"]);
+/* A source's commission: the owner, an administrator and the GM, in the
+   matrix (D22-30). */
+const COMMISSION = grant("commission", "edit", "Setting a booking source's commission");
 
 /* Laundry: its own resource (D18-8, reception and housekeeping). */
 const LAUNDRY_TAKE = grant("laundry", "create", "Taking in laundry");
@@ -139,20 +136,14 @@ const LAUNDRY_PRICE = grant("laundry", "edit", "Changing the laundry price list"
 const TILL = grant("payment", "create", "Ringing up an order", ["pos"]);
 const DAY_END = grant("payment", "create", "Closing the restaurant's day", ["pos", "kitchen_manager"]);
 const PASS = grant("payment", "create", "Moving a dish along at the pass", ["chef", "kitchen_manager"]);
-/* "Setting what a dish costs is the same kind of act as setting what a room
-   costs" (pos/nav.ts): the rate setters, and the kitchen manager. */
-const MENU = grant("rate", "edit", "Changing the menu", ["kitchen_manager"]);
+/* The menu has its own resource since D22-35 kept the revenue manager out of
+   it: the owner, an administrator, the GM and the kitchen manager. */
+const MENU = grant("menu", "edit", "Changing the menu");
 
 /* No screen calls these two yet. A bill photographed for a purchase (§15) is
    purchasing's; where n8n copied a file is an integration's. */
 const BILL_PHOTO = grant("purchasing", "create", "Attaching a bill");
 const MIRROR = grant("integration", "edit", "Recording where a file was copied");
-
-/* Closing or reassigning a repair. The Work orders screen is `room_config`'s,
-   whose edit the GM and the hotel manager do not hold, and a GM who cannot
-   close a repair is not what anybody decided. Every working role, as today,
-   until the owner says who. */
-const REPAIR_UPDATE = staff("Updating a repair");
 
 /* ── Every write the staff API mounts ──────────────────────────────── */
 
@@ -281,15 +272,15 @@ export const WRITE_RULES: Readonly<Record<string, Rule>> = {
   [`POST /api/admin/hotels`]: own("admin/admin.ts: a group administrator, with the provisioning key"),
   [`PATCH /api/admin/hotels/:code`]: own("admin/admin.ts: a group administrator"),
   [`POST /api/admin/hotels/:code/:state`]: own("admin/admin.ts: a group administrator"),
-  [`PATCH /api/admin/staff/:id`]: own("admin/admin.ts: app.may_manage_person"),
+  [`PATCH /api/admin/staff/:id`]: own("admin/admin.ts: app.manages_person (D22-3)"),
   [`PUT /api/admin/staff/:id/home-screen`]: own("admin/admin.ts: app.set_home_screen asks app.may_manage_person"),
   [`PUT /api/me/preferences`]: SELF,
-  [`POST /api/admin/staff/:id/reactivate`]: own("admin/admin.ts: a group administrator"),
-  [`POST /api/admin/staff`]: own("admin/admin.ts: app.require_hotel_admin and the grantable roles"),
+  [`POST /api/admin/staff/:id/reactivate`]: own("admin/admin.ts: app.may_switch_person (D22-3)"),
+  [`POST /api/admin/staff`]: own("admin/admin.ts: app.require_hotel_admin and the grantable roles (D22-2)"),
   [`POST /api/admin/staff/:id/password`]: own("admin/admin.ts: app.may_set_password"),
   [`POST /api/admin/staff/:id/access`]: own("admin/admin.ts: app.require_hotel_admin and the grantable roles"),
   [`DELETE /api/admin/staff/:id/access/:code`]: own("admin/admin.ts: app.require_hotel_admin"),
-  [`POST /api/admin/staff/:id/deactivate`]: own("admin/admin.ts: app.require_group_admin"),
+  [`POST /api/admin/staff/:id/deactivate`]: own("admin/admin.ts: app.may_switch_person (D22-3)"),
 
   /* inventory */
   [`PUT ${H}/room-types/:id/rate`]: PRICE,
@@ -336,9 +327,11 @@ export const WRITE_RULES: Readonly<Record<string, Rule>> = {
   [`DELETE ${H}/rooms/:number/block/:id`]: OUT_OF_SERVICE,
   [`PUT ${H}/housekeeping/assignments/:number`]: HOUSEKEEPING_ROUNDS,
   [`DELETE ${H}/housekeeping/assignments/:number`]: HOUSEKEEPING_ROUNDS,
-  /* A repair on equipment asks REPAIR_REPORTERS; a room repair asks nobody. */
-  [`POST ${H}/work-orders`]: own("housekeeping/repairRoles.ts: REPAIR_REPORTERS, for equipment"),
-  [`PATCH ${H}/work-orders/:id`]: REPAIR_UPDATE,
+  /* A repair on equipment asks REPAIR_REPORTERS; any other repair, and every
+     update, asks REPAIR_UPDATERS (D22-34). The route decides, because only
+     the body says whether a repair names a piece of equipment. */
+  [`POST ${H}/work-orders`]: own("housekeeping/repairRoles.ts: REPAIR_REPORTERS for equipment, REPAIR_UPDATERS for the rest"),
+  [`PATCH ${H}/work-orders/:id`]: own("housekeeping/repairRoles.ts: REPAIR_UPDATERS"),
   [`POST ${H}/repair-costs`]: own("housekeeping/repairRoles.ts: COST_RECORDERS"),
   [`POST ${H}/repair-costs/:id/cancel`]: own("housekeeping/repairRoles.ts: COST_RECORDERS"),
 
@@ -420,7 +413,6 @@ const WHO: Readonly<Record<Role, string>> = {
 export function allows(rule: Rule, role: Role): boolean {
   switch (rule.kind) {
     case "grant": return can(role, rule.action, rule.resource) || rule.also.includes(role);
-    case "staff": return role !== "read_only" && role !== "automation";
     case "own": case "self": return true;
   }
 }
@@ -435,9 +427,6 @@ const list = (names: string[]): string =>
 
 /** What a refused person reads: what they tried, and whom to ask. */
 export function refusalFor(rule: Rule): string {
-  if (rule.kind === "staff") {
-    return `${rule.doing} is for anybody who works here except a viewer. Ask one of them.`;
-  }
   if (rule.kind !== "grant") return "";
   return `${rule.doing} is for ${list(whoMay(rule).map((r) => WHO[r]))}. Ask one of them.`;
 }
@@ -461,7 +450,7 @@ export const roleGate: MiddlewareHandler<{ Variables: { subject: string } }> = a
   if (!rule) return c.json({ ok: false, reason: UNMAPPED }, 403);
   if (rule.kind === "own" || rule.kind === "self") return next();
 
-  /* Every grant and staff rule is a /api/hotels/:code route (the guard test
+  /* Every grant rule is a /api/hotels/:code route (the guard test
      holds them to it), so the fourth segment is the hotel. */
   const code = decodeURIComponent(c.req.path.split("/")[3] ?? "").toUpperCase();
   const role = await withSession(c.get("subject"), async (client, session) => {

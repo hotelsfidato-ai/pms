@@ -106,6 +106,14 @@ export default function WorkOrdersPage() {
         ]}
       />
 
+      {/* Rule 6: said once, rather than a button that is always refused. */}
+      {work.data && !work.data.mayUpdate && (
+        <p className="mb-3 text-sm text-grey-600" data-repair-who>
+          Starting and closing a repair is for the owner, an administrator, the
+          general manager, the hotel manager, the Inventory Manager or housekeeping.
+        </p>
+      )}
+
       {/* Four states — loading, failed, empty, full (root MEMORY 269). The
           list used to turn a failure into "Nothing outstanding". */}
       {work.isLoading ? (
@@ -132,6 +140,7 @@ export default function WorkOrdersPage() {
               key={o.id}
               hotelId={hotelId}
               order={o}
+              mayUpdate={work.data?.mayUpdate ?? false}
               onStart={() => void start(o)}
               onClose={() => setClosing(o)}
               onCosts={() => setCosting(o)}
@@ -178,8 +187,11 @@ export default function WorkOrdersPage() {
   );
 }
 
-function OrderCard({ hotelId, order: o, onStart, onClose, onCosts }: {
+function OrderCard({ hotelId, order: o, mayUpdate, onStart, onClose, onCosts }: {
   hotelId: string; order: WorkOrder;
+  /** D22-34: the owner, admin, GM, hotel manager, Inventory Manager and
+      housekeeping. The server says, and refuses everybody else. */
+  mayUpdate: boolean;
   onStart: () => void; onClose: () => void; onCosts: () => void;
 }) {
   const p = PRIORITY[o.priority] ?? PRIORITY["normal"]!;
@@ -255,7 +267,7 @@ function OrderCard({ hotelId, order: o, onStart, onClose, onCosts }: {
               <Receipt className="size-4" /> Costs
             </Button>
           )}
-          {!closed && (
+          {!closed && mayUpdate && (
             <>
               <Button variant="secondary" className="h-11" onClick={onStart}>
                 {o.status === "open" ? "Start" : "Put back"}

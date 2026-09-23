@@ -41,13 +41,14 @@ export const nav: ServiceNavEntry[] = [
     keywords: ["kot", "pass", "orders"],
     canSee: (role) =>
       canAccess(role, "payment") || role === "chef" || role === "kitchen_manager" },
-  /* The prices, which are the hotel's. Behind the same permission as
-     rates, because setting what a dish costs is the same kind of act
-     as setting what a room costs. */
+  /* The dishes and their prices. The menu's own grant since 22 September:
+     it rode on `rate` - "setting what a dish costs is the same kind of act
+     as setting what a room costs" - until the owner kept the revenue
+     manager, who sets room prices only, out of it (D22-35). The kitchen
+     manager holds it in the matrix now rather than by name. */
   { section: "point-of-sale", order: 50, workingMenus: ["kitchen_manager"],
-    label: "Menu", to: "/h/:code/menu", icon: UtensilsCrossed, resource: "rate",
-    keywords: ["dishes", "items"],
-    canSee: (role) => canAccess(role, "rate") || role === "kitchen_manager" },
+    label: "Menu", to: "/h/:code/menu", icon: UtensilsCrossed, resource: "menu",
+    keywords: ["dishes", "items"] },
   /* Where the shift ends. Last, because it is — and beside the
      till rather than under Finance, for the same reason the till
      is here: a cashier counting a drawer at midnight is doing

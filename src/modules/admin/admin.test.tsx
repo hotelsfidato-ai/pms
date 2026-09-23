@@ -1,6 +1,6 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from "vitest";
 import type { ReactElement } from "react";
-import { render, screen, within } from "@testing-library/react";
+import { render, screen, within, fireEvent, waitFor } from "@testing-library/react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { MemoryRouter, Routes, Route } from "react-router";
 import * as apiModule from "@/lib/api";
@@ -8,6 +8,7 @@ import { AGRA_HOTEL, signedIn, startSignedIn } from "@/test/app";
 import { SettingsPage } from "@/modules/admin/pages/Admin";
 import { PropertiesPage } from "@/modules/admin/pages/Properties";
 import { taxLine } from "@/modules/admin/components/TaxInUse";
+import PeoplePage from "@/modules/admin/pages/People";
 import type { Role } from "@/lib/permissions";
 
 /* ══════════════════════════════════════════════════════════════════
@@ -233,5 +234,117 @@ describe("D17-37 - every Properties card shows the tax actually used", () => {
     expect(await valueOf("GST on restaurant")).toBe("5%");
     expect(await valueOf("GST on everything else")).toBe("-");
     wholeRates();
+  });
+});
+
+/* ══════════════════════════════════════════════════════════════════
+   D22-3  People works for the GM, for their own hotel only.
+   D22-2  A GM cannot give the Admin role (nor Owner).
+
+   The screen offers what the server said: the hotels in `rosterAt`, the
+   roles each carries (app.grantable_roles), and on each person only the
+   buttons their flags allow.
+   ══════════════════════════════════════════════════════════════════ */
+describe("D22-3 and D22-2 - People, for a GM", () => {
+  /* What the server hands a GM at 5EL: their hotel, and every role but
+     Owner and Admin. */
+  const GM_ROLES = ["gm", "hotel_manager", "revenue_manager", "front_desk", "housekeeping",
+                    "kitchen_manager", "chef", "pos", "stores", "finance", "read_only"];
+  const person = (over: Record<string, unknown>) => ({
+    id: "p-1", email: "asha@fidato.in", name: "Asha", phone: null, canSignIn: true,
+    isGroupAdmin: false, isActive: true, homeScreen: "dashboard",
+    mayEdit: true, maySwitch: true, maySetPassword: true,
+    access: [{ code: "5EL", role: "front_desk" }], ...over,
+  });
+
+  function peopleServer(staff: unknown[], sent: unknown[] = []) {
+    vi.spyOn(apiModule, "api").mockImplementation(async (url: string, init?: RequestInit) => {
+      const method = init?.method ?? "GET";
+      if (method === "GET" && url === "/api/admin/staff") {
+        return { staff, rosterAt: [{ code: "5EL", name: "5 Elements Akkalkot", roles: GM_ROLES }] } as never;
+      }
+      if (method === "POST" && url === "/api/admin/staff") {
+        sent.push(JSON.parse(String(init?.body)));
+        return { ok: true, id: "p-new", existed: false } as never;
+      }
+      throw new ApiError(500, "Request failed (500).");
+    });
+  }
+
+  it("adds somebody AT the GM's hotel, and offers no Owner or Admin", async () => {
+    as("gm");
+    const sent: unknown[] = [];
+    peopleServer([person({})], sent);
+    renderAt("/people", <PeoplePage />);
+
+    /* The button waits for the list: until the server has said where this
+       GM may roster, there is nowhere to add anybody. */
+    await screen.findByText("Asha");
+    fireEvent.click(await screen.findByRole("button", { name: /Add somebody/ }));
+    const dialog = await screen.findByRole("dialog");
+    const where = within(dialog).getByLabelText(/Where they work/) as HTMLSelectElement;
+    expect([...where.options].map((o) => o.value)).toEqual(["5EL"]);
+    const doing = within(dialog).getByLabelText(/Doing what/) as HTMLSelectElement;
+    const offered = [...doing.options].map((o) => o.textContent);
+    expect(offered).not.toContain("Admin");
+    expect(offered).not.toContain("Owner");
+    expect(offered).toContain("Reception");
+    expect(within(dialog).getByText(/Only the owner or an administrator can make somebody an Admin/))
+      .toBeDefined();
+
+    fireEvent.change(within(dialog).getByLabelText(/Their name/), { target: { value: "Sunita K" } });
+    fireEvent.change(within(dialog).getByLabelText(/The email they will sign in with/),
+      { target: { value: "sunita@fidato.in" } });
+    fireEvent.change(within(dialog).getByLabelText(/A password for them/),
+      { target: { value: "a-real-password" } });
+    fireEvent.click(within(dialog).getByRole("button", { name: "Add" }));
+
+    await waitFor(() => expect(sent).toHaveLength(1));
+    /* The property and the role go with the person - without them the
+       server treated it as a group administrator's act and refused. */
+    expect(sent[0]).toMatchObject({
+      email: "sunita@fidato.in", name: "Sunita K", hotelCode: "5EL", role: "front_desk",
+    });
+  });
+
+  it("offers on each person only what the server said this GM may do to them", async () => {
+    as("gm");
+    peopleServer([
+      person({ id: "p-1", name: "Asha" }),
+      /* Works at another hotel too: the GM may reset and edit, not switch off. */
+      person({ id: "p-2", name: "Ravi", email: "ravi@fidato.in", maySwitch: false }),
+      /* The owner, visible because rostered here: nothing at all. */
+      person({ id: "p-3", name: "The Owner", email: "owner@fidato.in", isGroupAdmin: true,
+               mayEdit: false, maySwitch: false, maySetPassword: false, access: [] }),
+    ]);
+    renderAt("/people", <PeoplePage />);
+
+    const card = async (name: string) =>
+      within((await screen.findByText(name)).closest("li")!);
+    const asha = await card("Asha");
+    expect(asha.getByRole("button", { name: "Edit" })).toBeDefined();
+    expect(asha.getByRole("button", { name: "Deactivate" })).toBeDefined();
+
+    const ravi = await card("Ravi");
+    expect(ravi.getByRole("button", { name: "Edit" })).toBeDefined();
+    expect(ravi.queryByRole("button", { name: "Deactivate" })).toBeNull();
+
+    const owner = await card("The Owner");
+    for (const name of ["Edit", "Deactivate", "Password", /Give a property/]) {
+      expect(owner.queryByRole("button", { name })).toBeNull();
+    }
+  });
+
+  it("does not offer Add somebody to somebody who may roster nobody", async () => {
+    as("hotel_manager");
+    vi.spyOn(apiModule, "api").mockImplementation(async (url: string) => {
+      if (url === "/api/admin/staff") return { staff: [person({ mayEdit: false, maySwitch: false })], rosterAt: [] } as never;
+      throw new ApiError(500, "Request failed (500).");
+    });
+    renderAt("/people", <PeoplePage />);
+    const add = await screen.findByRole("button", { name: /Add somebody/ });
+    await waitFor(() => expect((add as HTMLButtonElement).disabled).toBe(true));
+    expect(screen.getByText(/Adding somebody is for a group administrator or a property's general manager/))
+      .toBeDefined();
   });
 });

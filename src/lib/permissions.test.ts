@@ -63,6 +63,43 @@ describe("the revenue manager", () => {
 });
 
 /* ══════════════════════════════════════════════════════════════════
+   THE OWNER'S ANSWERS OF 22 SEPTEMBER (docs/briefs/decisions-2026-09-22.md)
+
+   In the matrix itself - the server asks the same grants (roleGate.ts), so
+   each line here is a menu and a refusal at once.
+   ══════════════════════════════════════════════════════════════════ */
+
+const holders = (action: "create" | "edit" | "approve", resource: Resource) =>
+  ASSIGNABLE_ROLES.filter((role) => grantsFor(role, resource).includes(action)).sort();
+
+describe("the owner's answers of 22 September", () => {
+  it("D22-30: the GM creates and edits room setup, with the owner and an administrator", () => {
+    expect(holders("create", "room_config")).toEqual(["admin", "gm", "owner"]);
+    expect(holders("edit", "room_config")).toEqual(["admin", "gm", "owner"]);
+  });
+
+  it("D22-30: an administrator and the GM edit commission", () => {
+    expect(holders("edit", "commission")).toEqual(["admin", "gm", "owner"]);
+  });
+
+  it("D22-33: a credit note (approve, on an invoice) is the owner's, admin's, GM's and accountant's", () => {
+    expect(holders("approve", "invoice")).toEqual(["admin", "finance", "gm", "owner"]);
+    /* Reception and the hotel manager still change a bill. */
+    expect(grantsFor("front_desk", "invoice")).toContain("edit");
+    expect(grantsFor("hotel_manager", "invoice")).toContain("edit");
+  });
+
+  it("D22-35: the menu is the owner's, admin's, GM's and kitchen manager's - never the revenue manager's", () => {
+    expect(holders("edit", "menu")).toEqual(["admin", "gm", "kitchen_manager", "owner"]);
+    expect(canAccess("revenue_manager", "menu")).toBe(false);
+    /* Everybody who could look at the menu through `rate` still can. */
+    for (const role of ["hotel_manager", "front_desk", "read_only"] as const) {
+      expect(grantsFor(role, "menu"), role).toEqual(["view"]);
+    }
+  });
+});
+
+/* ══════════════════════════════════════════════════════════════════
    STORE, EQUIPMENT, PURCHASING — the owner's table, 16 September
 
    Approved row by row (docs/STOCK-AND-EQUIPMENT-PLAN.md). The Store used

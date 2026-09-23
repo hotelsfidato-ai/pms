@@ -102,6 +102,7 @@ export const RESOURCE_LABELS: Record<Resource, string> = {
   inventory: "Room availability",
   room_config: "Room configuration",
   rate: "Rate plans",
+  menu: "Restaurant menu",
   stock: "Store",
   equipment: "Equipment",
   purchasing: "Purchasing",

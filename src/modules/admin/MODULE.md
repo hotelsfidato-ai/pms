@@ -58,6 +58,12 @@ properties and people.
   and Users `user`, Roles `role`, Integrations `integration`, Audit log
   `audit_log`, Settings `setting`. The Console is `devOnly` and shown only to a
   role that may *create* a hotel.
+- **People works for the GM at their own hotel (D22-3, 22 September).**
+  `GET /admin/staff` returns `rosterAt` (the hotels the signed-in person may
+  roster at, with `app.grantable_roles` for each) and, per person, `mayEdit`,
+  `maySwitch`, `maySetPassword` - the server's own answers. The screen offers
+  only those buttons and pickers; a GM's "Add somebody" names the property and
+  the role, and the role pickers never hold Owner or Admin for a GM (D22-2).
 - The `/admin/*` routes are wrapped in `RequireAccess`; the Console's route
   does not exist at all in a production build (`IS_DEV`). `/properties/:code`
   answers a GM for their own hotel and 404 for anybody else's, because it
@@ -200,6 +206,11 @@ audit_log                               011_model_additions.sql; triggers from
   who made a posting, recorded and      099_audit_log_names_the_person.sql —
   named                                 folio_postings.posted_by defaults to the signed-in
                                         person; app.posted_by_name(posting) (ADM-1)
+  the GM runs their hotel's people,     127_the_gm_runs_their_people.sql (D22-2, D22-3):
+  and makes no Admin                    app.grantable_roles without admin for a GM, the
+                                        staff_hotels manager policies check the role,
+                                        app.manages_person (edit), app.may_switch_person
+                                        (switch off / on: every hotel theirs)
 ```
 
 Isolation is checked as the application role in `db/tests/rls.sql`, never in
@@ -208,7 +219,8 @@ Isolation is checked as the application role in `db/tests/rls.sql`, never in
 **A new migration takes the next number after cp6's highest and tells the
 master**, who renumbers at merge if two lanes collide (`docs/briefs/README.md`).
 `src/test/migrationNumbers.test.ts` fails on two files with one number or a
-gap. This service's newest is 099 (17 September).
+gap. This service's newest is 127 (22 September; numbered by the master's
+word, so the master renumbers it at merge).
 
 ---
 

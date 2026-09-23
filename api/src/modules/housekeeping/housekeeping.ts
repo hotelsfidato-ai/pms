@@ -5,6 +5,7 @@ import type { Client } from "../../db.ts";
 import { checkRepairable, setRepairStatus, REPAIR_WAITING } from "../equipment/index.ts";
 import {
   roleAt, may, REPAIR_REPORTERS, REPORT_REFUSED, COST_RECORDERS, COST_VIEWERS,
+  REPAIR_UPDATERS, ROOM_REPORT_REFUSED, UPDATE_REFUSED,
 } from "./repairRoles.ts";
 
 /* ══════════════════════════════════════════════════════════════════
@@ -361,6 +362,9 @@ housekeeping.get("/:code/work-orders", async (c) => {
       closedShown: CLOSED_SHOWN,
       mayRecordCosts: may(role, COST_RECORDERS),
       maySeeCosts: seesMoney,
+      /* Start, Put back and Close are offered only where PATCH would take
+         them (D22-34). */
+      mayUpdate: may(role, REPAIR_UPDATERS),
     };
   });
 
@@ -428,6 +432,9 @@ housekeeping.post("/:code/work-orders", async (c) => {
       }
       const check = await checkRepairable(client, hotel.id, itemId);
       if (!check.ok) return { ok: false as const, reason: check.reason };
+    } else if (!may(await roleAt(client, hotel.id), REPAIR_UPDATERS)) {
+      /* Any other repair - a room, the lift, the lobby door: D22-34. */
+      return { forbidden: ROOM_REPORT_REFUSED };
     }
 
     try {
@@ -499,9 +506,12 @@ housekeeping.patch("/:code/work-orders/:id", async (c) => {
   const result = await withSession(c.get("subject"), async (client, session) => {
     const hotel = await resolve(client, c.req.param("code"));
     if (!hotel) return null;
+    /* ── Every refusal before the first write (root MEMORY 243) ─────── */
+    if (!may(await roleAt(client, hotel.id), REPAIR_UPDATERS)) {
+      return { forbidden: UPDATE_REFUSED };
+    }
     if (!isId(c.req.param("id"))) return { ok: false as const, reason: "No such work order." };
 
-    /* ── Every refusal before the first write (root MEMORY 243) ─────── */
     const { rows: found } = await client.query<{
       title: string; status: string; equipment_item_id: string | null;
     }>(
@@ -562,5 +572,6 @@ housekeeping.patch("/:code/work-orders/:id", async (c) => {
   });
 
   if (!result) return c.json({ error: "No such property." }, 404);
+  if ("forbidden" in result) return c.json({ ok: false, reason: result.forbidden }, 403);
   return c.json(result, "ok" in result && result.ok ? 200 : 409);
 });

@@ -220,10 +220,13 @@ export interface WorkOrderList {
   closedShown: number;
   mayRecordCosts: boolean;
   maySeeCosts: boolean;
+  /** Start, Put back and Close: the server's answer (D22-34). */
+  mayUpdate: boolean;
 }
 
 const NO_ORDERS: WorkOrderList = {
   orders: [], open: 0, closed: 0, closedShown: 0, mayRecordCosts: false, maySeeCosts: false,
+  mayUpdate: false,
 };
 
 /** Outstanding work, or closed work newest first. A failure is thrown, so the
