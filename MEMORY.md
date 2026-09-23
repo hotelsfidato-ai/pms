@@ -6539,6 +6539,24 @@ copy will see of theirs.**
 
 ---
 
+### 324 · MINE: I took three decision numbers from an old read, the day after 321 was written, and committed another chat's rows with them
+
+23 September, 17:18. I appended the owner's answers on a group's lead guest
+to `docs/briefs/decisions-2026-09-22.md` as D22-47 to D22-49, numbered from
+my own earlier read of the file. The owner's design chat had written D22-47
+to D22-51 (the design rules) there in the meantime, uncommitted, and my
+`git add` of the file committed its rows together with mine (6b58587). For
+40 minutes two decisions carried each of three numbers, and a helper was
+briefed with "D22-47 (23 Sep)". Found at 18:10 while choosing questions for
+the owner. Fixed: my three rows are D22-52 to D22-54, the helper was told,
+and the tracker says so.
+
+**The rule (321's, now for me too): before appending a decision, read the
+file's last number at that moment, and `git diff` the file before `git add`
+— whatever is not mine is another chat's work and stays out of my commit.**
+
+---
+
 ### 320 · MINE: 22 finished service copies were left on D:, and the owner found them
 
 22 September. Every lane got its own git worktree beside the project
