@@ -323,6 +323,9 @@ if (process.argv[1]?.endsWith("server.ts")) {
      must run on a timer. It does nothing at all until a hotel is switched on
      for the channel manager and has an account to run as. */
   channelManager.jobs.start();
+  /* Guest messages' once-a-minute sweep (D18-11, D18-12). It sends nothing
+     until the owner's sending settings and pace are in (D21-34, D21-76). */
+  guestMessaging.jobs.start();
 
   const server = serve({ fetch: app.fetch, port: env.port }, (info) => {
     console.log(
@@ -352,6 +355,7 @@ if (process.argv[1]?.endsWith("server.ts")) {
     server.close();
     /* Before the pool closes: a push in flight has a client out. */
     await channelManager.jobs.stop();
+    await guestMessaging.jobs.stop();
     await stopListening();
     await closePool();
     process.exit(0);
