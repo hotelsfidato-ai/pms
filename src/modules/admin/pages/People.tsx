@@ -10,8 +10,8 @@ import {
   Dialog, DialogContent, Field, fieldProps, Input, NativeSelect,
   StatusPill, toast,
 } from "@/components/ui";
-import { listAdminStaff, createStaff, grantAccess, revokeAccess, deactivateStaff, amendStaff, reactivateStaff, setStaffPassword, setHomeScreen, MIN_PASSWORD, type AdminStaff, type HomeScreen } from "@/modules/admin/data/admin";
-import { listProperties } from "@/data/repositories";
+import { listPeople, createStaff, grantAccess, revokeAccess, deactivateStaff, amendStaff, reactivateStaff, setStaffPassword, setHomeScreen, MIN_PASSWORD, type AdminStaff, type HomeScreen, type RosterPlace } from "@/modules/admin/data/admin";
+import { useSession } from "@/lib/session";
 import { HOME_SCREENS } from "@/lib/homeScreen";
 
 /* ══════════════════════════════════════════════════════════════════
@@ -86,20 +86,33 @@ const ROLES: { value: Role; label: string; what: string }[] =
 const roleLabel = (r: string) =>
   ROLES.find((x) => x.value === r)?.label ?? r;
 
+/* ⚠ THE GM'S TOO, SINCE 22 SEPTEMBER (D22-3): "People works for the GM, for
+   their own hotel only". Every button below asks what the SERVER said this
+   person may do to that one (`mayEdit`, `maySwitch`, `maySetPassword`), and
+   the property and role pickers offer only `rosterAt` - the hotels the
+   signed-in person runs, with the roles they may give there. A GM adds
+   somebody AT their hotel, in one act; "Add somebody" used to send no
+   property at all and was refused "Only a group administrator may
+   provision a property." */
 export default function PeoplePage() {
   const qc = useQueryClient();
   const [adding, setAdding] = useState(false);
   const [granting, setGranting] = useState<AdminStaff | null>(null);
+  const groupAdmin = useSession((s) => s.scope?.isGroupAdmin ?? false);
 
   const staff = useQuery({
     queryKey: ["people"],
-    queryFn: () => listAdminStaff(),
+    queryFn: () => listPeople(),
   });
 
   const refresh = () => { void qc.invalidateQueries({ queryKey: ["people"] }); };
 
-  const rows = staff.data ?? [];
+  const rows = staff.data?.staff ?? [];
+  const places = staff.data?.rosterAt ?? [];
   const active = rows.filter((s) => s.isActive);
+  /* A group administrator may add somebody with no property yet; anybody
+     else adds them AT a property they run, or not at all. */
+  const mayAdd = groupAdmin || places.length > 0;
 
   /* Signed in and able to reach nothing. A real state and an easy one
      to create — add somebody, get called away before granting them a
@@ -112,13 +125,17 @@ export default function PeoplePage() {
       <PageHeader
         title="People"
         description={
-          rows.length === 0
+          (rows.length === 0
             ? "Nobody yet."
             : `${active.length} active · `
-              + `${active.filter((s) => s.isGroupAdmin).length} can reach every property`
+              + `${active.filter((s) => s.isGroupAdmin).length} can reach every property`)
+          + (staff.data && !mayAdd
+            ? ". Adding somebody is for a group administrator or a property's general manager."
+            : "")
         }
         actions={
-          <Button variant="primary" className="h-11" onClick={() => setAdding(true)}>
+          <Button variant="primary" className="h-11" disabled={!mayAdd}
+                  onClick={() => setAdding(true)}>
             <UserPlus className="size-4" /> Add somebody
           </Button>
         }
@@ -151,12 +168,14 @@ export default function PeoplePage() {
             + "sign in with. Access is given per property, so somebody at one "
             + "hotel never sees another's guests."
           }
-          action={<Button onClick={() => setAdding(true)}>Add the first</Button>}
+          action={mayAdd
+            ? <Button onClick={() => setAdding(true)}>Add the first</Button>
+            : undefined}
         />
       ) : (
         <ul className="space-y-2">
           {rows.map((s) => (
-            <PersonCard key={s.id} person={s}
+            <PersonCard key={s.id} person={s} places={places}
                         onGrant={() => setGranting(s)}
                         onChanged={refresh} />
           ))}
@@ -181,11 +200,12 @@ export default function PeoplePage() {
       </p>
 
       {adding && (
-        <AddPersonDialog open onOpenChange={(o) => { if (!o) setAdding(false); }}
+        <AddPersonDialog open places={places} placeRequired={!groupAdmin}
+                         onOpenChange={(o) => { if (!o) setAdding(false); }}
                          onAdded={() => { setAdding(false); refresh(); }} />
       )}
       {granting && (
-        <GrantDialog person={granting} open
+        <GrantDialog person={granting} open places={places}
                      onOpenChange={(o) => { if (!o) setGranting(null); }}
                      onGranted={() => { setGranting(null); refresh(); }} />
       )}
@@ -195,9 +215,15 @@ export default function PeoplePage() {
 
 /* ── One person, and what they can reach ──────────────────────────── */
 
-function PersonCard({ person, onGrant, onChanged }: {
-  person: AdminStaff; onGrant: () => void; onChanged: () => void;
+function PersonCard({ person, places, onGrant, onChanged }: {
+  person: AdminStaff; places: RosterPlace[];
+  onGrant: () => void; onChanged: () => void;
 }) {
+  /* A property of theirs the signed-in person runs - the only chips they may
+     take away, and the only reason to offer "Give a property". */
+  const runs = (code: string) => places.some((p) => p.code === code);
+  const mayGrant = !person.isGroupAdmin
+    && places.some((p) => !person.access.some((a) => a.code === p.code));
   const [busy, setBusy] = useState(false);
   const [editing, setEditing] = useState(false);
   const [password, setPassword] = useState(false);
@@ -270,23 +296,31 @@ function PersonCard({ person, onGrant, onChanged }: {
 
             {person.isActive ? (
               <div className="flex gap-2 flex-wrap">
-                <Button variant="secondary" className="h-11" onClick={onGrant}>
-                  <Building2 className="size-4" /> Give a property
-                </Button>
-                <Button variant="ghost" className="h-11"
-                        onClick={() => setPassword(true)}>
-                  {person.canSignIn ? "Password" : "Set a password"}
-                </Button>
-                <Button variant="ghost" className="h-11"
-                        onClick={() => setEditing(true)}>
-                  Edit
-                </Button>
-                <Button variant="secondary" className="h-11" disabled={busy}
-                        onClick={() => void deactivate()}>
-                  {busy ? "…" : "Deactivate"}
-                </Button>
+                {mayGrant && (
+                  <Button variant="secondary" className="h-11" onClick={onGrant}>
+                    <Building2 className="size-4" /> Give a property
+                  </Button>
+                )}
+                {person.maySetPassword && (
+                  <Button variant="ghost" className="h-11"
+                          onClick={() => setPassword(true)}>
+                    {person.canSignIn ? "Password" : "Set a password"}
+                  </Button>
+                )}
+                {person.mayEdit && (
+                  <Button variant="ghost" className="h-11"
+                          onClick={() => setEditing(true)}>
+                    Edit
+                  </Button>
+                )}
+                {person.maySwitch && (
+                  <Button variant="secondary" className="h-11" disabled={busy}
+                          onClick={() => void deactivate()}>
+                    {busy ? "…" : "Deactivate"}
+                  </Button>
+                )}
               </div>
-            ) : (
+            ) : !person.maySwitch ? null : (
               /* ⚠ THE ENDPOINT FOR THIS HAS EXISTED SINCE THE ADMIN
                  WORK AND HAD NO BUTTON. Its own comment in the route
                  file says reactivating was added because "a person
@@ -328,7 +362,7 @@ function PersonCard({ person, onGrant, onChanged }: {
                     <span className="tabular font-medium">{a.code}</span>
                     <span className="text-grey-500"> · {roleLabel(a.role)}</span>
                   </span>
-                  <button
+                  {runs(a.code) && <button
                     type="button"
                     aria-label={`Remove ${a.code} from ${person.name}`}
                     onClick={() => void revoke(a.code)}
@@ -337,7 +371,7 @@ function PersonCard({ person, onGrant, onChanged }: {
                                hover:bg-red-50 cursor-pointer"
                   >
                     <X className="size-3.5" />
-                  </button>
+                  </button>}
                 </li>
               ))}
             </ul>
@@ -532,32 +566,49 @@ function EditPersonDialog({ person, onClose, onSaved }: {
 
 /* ── Adding somebody ──────────────────────────────────────────────── */
 
-function AddPersonDialog({ open, onOpenChange, onAdded }: {
-  open: boolean; onOpenChange: (o: boolean) => void; onAdded: () => void;
+function AddPersonDialog({ open, places, placeRequired, onOpenChange, onAdded }: {
+  open: boolean;
+  /** Where the signed-in person may roster, and as what. */
+  places: RosterPlace[];
+  /** A GM adds somebody AT their property, in one act (D22-3). A group
+      administrator may add somebody and give them a property afterwards. */
+  placeRequired: boolean;
+  onOpenChange: (o: boolean) => void; onAdded: () => void;
 }) {
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [code, setCode] = useState(places.length === 1 ? places[0]!.code : "");
+  const [role, setRole] = useState("");
   const [busy, setBusy] = useState(false);
+
+  const place = places.find((p) => p.code === code);
+  const roles = place?.roles ?? [];
+  const chosenRole = roles.includes(role) ? role
+    : roles.includes("front_desk") ? "front_desk" : roles[0] ?? "";
 
   const submit = async () => {
     if (busy) return;
     setBusy(true);
     const res = await createStaff({
       email: email.trim().toLowerCase(), name: name.trim(), password,
+      ...(placeRequired ? { hotelCode: code, role: chosenRole } : {}),
     });
     setBusy(false);
     if (!res.ok) return toast.error("Not added", res.reason);
     toast.success(
       res.existed ? `${name.trim()} was already here` : `${name.trim()} added`,
-      "They can sign in now. Give them a property next - until then the "
-      + "app opens empty for them.");
+      placeRequired
+        ? `They can sign in now, and they work at ${code} as ${roleLabel(chosenRole).toLowerCase()}.`
+        : "They can sign in now. Give them a property next - until then the "
+          + "app opens empty for them.");
     setName(""); setEmail(""); setPassword("");
     onAdded();
   };
 
   const ready = name.trim() && email.trim().includes("@")
-    && password.length >= MIN_PASSWORD;
+    && password.length >= MIN_PASSWORD
+    && (!placeRequired || (place && chosenRole));
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -612,12 +663,47 @@ function AddPersonDialog({ open, onOpenChange, onAdded }: {
                      onChange={(e) => setPassword(e.target.value)} />
             )}
           </Field>
+          {placeRequired && (
+            <>
+              <Field label="Where they work" required>
+                {(f) => (
+                  <NativeSelect {...fieldProps(f)} value={code}
+                                onChange={(e) => setCode(e.target.value)}>
+                    {places.length > 1 && <option value="">Choose…</option>}
+                    {places.map((p) => (
+                      <option key={p.code} value={p.code}>{p.code} · {p.name}</option>
+                    ))}
+                  </NativeSelect>
+                )}
+              </Field>
+              <Field label="Doing what" required>
+                {(f) => (
+                  <NativeSelect {...fieldProps(f)} value={chosenRole}
+                                disabled={!place}
+                                onChange={(e) => setRole(e.target.value)}>
+                    {roles.map((r) => (
+                      <option key={r} value={r}>{roleLabel(r)}</option>
+                    ))}
+                  </NativeSelect>
+                )}
+              </Field>
+            </>
+          )}
           <p className="text-sm text-grey-600 rounded-md border border-grey-200
                         bg-grey-50 p-3 leading-relaxed">
-            This adds an ordinary member of staff. Somebody who should reach
-            <em> every</em> property is a group administrator, and making one
-            takes the provisioning key - a deliberate step, because it is the
-            only role that steps outside per-property access.
+            {placeRequired
+              /* D22-2: the picker holds no Admin for a GM, and the server
+                 refuses one in the same words. */
+              ? "They see this property only."
+                + (place && !roles.includes("admin")
+                  ? " Only the owner or an administrator can make somebody an Admin."
+                  : "")
+              : <>
+                  This adds an ordinary member of staff. Somebody who should reach
+                  <em> every</em> property is a group administrator, and making one
+                  takes the provisioning key - a deliberate step, because it is the
+                  only role that steps outside per-property access.
+                </>}
           </p>
         </div>
       </DialogContent>
@@ -627,31 +713,28 @@ function AddPersonDialog({ open, onOpenChange, onAdded }: {
 
 /* ── Giving somebody a property ───────────────────────────────────── */
 
-function GrantDialog({ person, open, onOpenChange, onGranted }: {
+function GrantDialog({ person, open, places, onOpenChange, onGranted }: {
   person: AdminStaff; open: boolean;
+  /** Where the signed-in person may roster, with the roles they may give
+      there - the server's list, so a GM is offered their own hotels and no
+      Owner or Admin (D22-2, D22-3). */
+  places: RosterPlace[];
   onOpenChange: (o: boolean) => void; onGranted: () => void;
 }) {
   const [code, setCode] = useState("");
-  const [role, setRole] = useState("front_desk");
+  const [picked, setPicked] = useState("front_desk");
   const [busy, setBusy] = useState(false);
-
-  const props = useQuery({
-    queryKey: ["properties-for-grant"],
-    queryFn: () => listProperties(),
-    enabled: open,
-  });
 
   /* Only properties they do not already hold. Offering one they have
      invites a grant that silently replaces their role. */
-  /* `Property.id` IS the three-letter code — every route in this app is
-     /api/hotels/:code, and the repository carries it as `id`. Named
-     `code` here because that is what a grant is against. */
-  const available = (props.data ?? [])
-    .map((p) => ({ code: p.id, name: p.name }))
+  const available = places
     .filter((p) => !person.access.some((a) => a.code === p.code));
+  const roles = ROLES.filter((r) =>
+    (available.find((p) => p.code === code)?.roles ?? []).includes(r.value));
+  const role = roles.some((r) => r.value === picked) ? picked : roles[0]?.value ?? "";
 
   const submit = async () => {
-    if (busy || !code) return;
+    if (busy || !code || !role) return;
     setBusy(true);
     const res = await grantAccess(person.id, code, role);
     setBusy(false);
@@ -673,7 +756,7 @@ function GrantDialog({ person, open, onOpenChange, onGranted }: {
           <>
             <Button variant="secondary" className="h-11"
                     onClick={() => onOpenChange(false)}>Cancel</Button>
-            <Button variant="primary" className="h-11" disabled={!code || busy}
+            <Button variant="primary" className="h-11" disabled={!code || !role || busy}
                     onClick={() => void submit()}>
               {busy ? "Saving…" : "Give access"}
             </Button>
@@ -684,9 +767,9 @@ function GrantDialog({ person, open, onOpenChange, onGranted }: {
           <EmptyState
             title="Nothing left to give"
             description={
-              props.data && props.data.length > 0
-                ? `${person.name} already works at every property that exists.`
-                : "No properties have been set up yet."
+              places.length > 0
+                ? `${person.name} already works at every property you can give.`
+                : "There is no property you can give anybody."
             }
           />
         ) : (
@@ -706,9 +789,9 @@ function GrantDialog({ person, open, onOpenChange, onGranted }: {
             </Field>
             <Field label="Doing what" required>
               {(f) => (
-                <NativeSelect {...fieldProps(f)} value={role}
-                              onChange={(e) => setRole(e.target.value)}>
-                  {ROLES.map((r) => (
+                <NativeSelect {...fieldProps(f)} value={role} disabled={!code}
+                              onChange={(e) => setPicked(e.target.value)}>
+                  {roles.map((r) => (
                     <option key={r.value} value={r.value}>{r.label}</option>
                   ))}
                 </NativeSelect>

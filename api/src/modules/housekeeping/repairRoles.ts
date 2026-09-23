@@ -30,6 +30,13 @@ export const REPAIR_REPORTERS: readonly string[] = [
   "kitchen_manager", "chef", "housekeeping", "front_desk",
 ];
 
+/* UPDATE ANY REPAIR, AND REPORT ONE THAT IS NOT ON A PIECE OF EQUIPMENT - the
+   owner's D22-34 (22 September): the owner, admin, GM, Hotel Manager,
+   Inventory Manager and housekeeping. Until then every working role could. */
+export const REPAIR_UPDATERS: readonly string[] = [
+  "owner", "admin", "gm", "hotel_manager", "stores", "housekeeping",
+];
+
 export const COST_RECORDERS: readonly string[] = [
   "owner", "admin", "gm", "hotel_manager", "stores",
 ];
@@ -40,6 +47,14 @@ export const REPORT_REFUSED =
   "Reporting a repair on a piece of equipment is for the owner, an administrator, "
   + "the general manager, the hotel manager, the Inventory Manager, the kitchen, "
   + "housekeeping or reception. Ask one of them.";
+
+const UPDATERS_WORDS =
+  "the owner, an administrator, the general manager, the hotel manager, the "
+  + "Inventory Manager or housekeeping. Ask one of them.";
+
+export const ROOM_REPORT_REFUSED =
+  `Reporting a repair to a room or the building is for ${UPDATERS_WORDS}`;
+export const UPDATE_REFUSED = `Updating a repair is for ${UPDATERS_WORDS}`;
 
 export const COST_REFUSED =
   "Recording a repair cost is for the owner, an administrator, the general manager, "

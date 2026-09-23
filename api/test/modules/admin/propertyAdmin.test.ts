@@ -302,6 +302,185 @@ describe("adding somebody", () => {
   });
 });
 
+/* ══════════════════════════════════════════════════════════════════
+   THE OWNER'S ANSWERS OF 22 SEPTEMBER
+
+   D22-2  "Only the owner or an admin makes an admin. A GM gives every
+          other role."
+   D22-3  "People works for the GM, for their own hotel only": add, edit,
+          switch off and back on - never at another hotel.
+   ══════════════════════════════════════════════════════════════════ */
+describe("D22-2 - a GM makes no Admin", () => {
+  const ADMIN_REFUSED = /^Only the owner or an administrator can make somebody an Admin\./;
+
+  it("refuses giving Admin to somebody, in a sentence, and writes nothing", async () => {
+    const res = await as(gmId, `/admin/staff/${strangerId}/access`, "POST",
+      { code: "AGR", role: "admin" });
+    expect(res.status, await res.clone().text()).toBe(409);
+    const reason = ((await res.json()) as { reason: string }).reason;
+    expect(reason).toMatch(ADMIN_REFUSED);
+    expect(reason.split("You may give:")[1]).not.toMatch(/\badmin\b|\bowner\b/);
+
+    const db = await admin();
+    try {
+      const { rows } = await db.query(
+        `select 1 from staff_hotels sh join hotels h on h.id = sh.hotel_id
+          where sh.staff_id = $1 and h.code = 'AGR' and sh.role = 'admin'`, [strangerId]);
+      expect(rows.length, "the refusal was cosmetic - the Admin row was written").toBe(0);
+    } finally { await db.end(); }
+  });
+
+  it("refuses adding somebody new as Admin, before any account is made", async () => {
+    const res = await as(gmId, "/admin/staff", "POST", {
+      email: "pa-new-admin@fidato.in", name: "PATEST New Admin",
+      password: "a-real-password", hotelCode: "AGR", role: "admin",
+    });
+    expect(res.status, await res.clone().text()).toBe(409);
+    expect(((await res.json()) as { reason: string }).reason).toMatch(ADMIN_REFUSED);
+    const db = await admin();
+    try {
+      const { rows } = await db.query("select 1 from staff where email = 'pa-new-admin@fidato.in'");
+      expect(rows.length).toBe(0);
+    } finally { await db.end(); }
+  });
+
+  it("hides Admin and Owner from the GM's picker, and the owner's still has both", async () => {
+    const mine = (await (await as(gmId, "/admin/hotels/AGR")).json()) as { grantableRoles: string[] };
+    expect(mine.grantableRoles).not.toContain("admin");
+    expect(mine.grantableRoles).not.toContain("owner");
+    expect(mine.grantableRoles).toContain("gm");
+    const owners = (await (await as(ownerId, "/admin/hotels/AGR")).json()) as { grantableRoles: string[] };
+    expect(owners.grantableRoles).toEqual(expect.arrayContaining(["admin", "owner"]));
+  });
+
+  it("lets the group administrator give Admin", async () => {
+    const res = await as(ownerId, `/admin/staff/${strangerId}/access`, "POST",
+      { code: "AGR", role: "admin" });
+    expect(res.status, await res.clone().text()).toBe(200);
+    await as(ownerId, `/admin/staff/${strangerId}/access/AGR`, "DELETE");
+  });
+});
+
+describe("D22-3 - People works for the GM, at their own hotel only", () => {
+  let twoId: string;
+  let puneOnlyId: string;
+  let clerkName: string;
+
+  beforeAll(async () => {
+    const db = await admin();
+    try {
+      const mk = async (email: string, name: string, hotels: string[]) => {
+        const { rows } = await db.query<{ id: string }>(
+          `insert into staff (email, full_name, firebase_uid) values ($1, $2, $3)
+           on conflict (email) do update set is_active = true, full_name = excluded.full_name
+           returning id::text`, [email, name, `test-uid-${email.replace(/\W/g, "")}`]);
+        const id = rows[0]!.id;
+        await db.query("delete from staff_hotels where staff_id = $1", [id]);
+        for (const code of hotels) {
+          await db.query(
+            `insert into staff_hotels (staff_id, hotel_id, role)
+             select $1, id, 'housekeeping' from hotels where code = $2`, [id, code]);
+        }
+        return id;
+      };
+      /* At AGR and at PUN: switching them off would stop them at Pune too. */
+      twoId = await mk("pa-two@fidato.in", "PATEST Two Hotels", ["AGR", "PUN"]);
+      puneOnlyId = await mk("pa-pune@fidato.in", "PATEST Pune Only", ["PUN"]);
+      clerkName = (await db.query<{ n: string }>(
+        "select full_name as n from staff where id = $1", [clerkId])).rows[0]!.n;
+    } finally { await db.end(); }
+  });
+
+  afterAll(async () => {
+    const db = await admin();
+    try {
+      await db.query("update staff set full_name = $2, is_active = true where id = $1",
+        [clerkId, clerkName]);
+      await db.query("delete from staff_hotels where staff_id = any($1)", [[twoId, puneOnlyId]]);
+      await db.query("update staff set is_active = false where id = any($1)", [[twoId, puneOnlyId]]);
+    } finally { await db.end(); }
+  });
+
+  const active = async (id: string) => {
+    const db = await admin();
+    try {
+      return (await db.query<{ a: boolean }>("select is_active as a from staff where id = $1", [id]))
+        .rows[0]!.a;
+    } finally { await db.end(); }
+  };
+
+  it("tells People where the GM may roster, and what they may do to each person", async () => {
+    const res = await as(gmId, "/admin/staff");
+    expect(res.status).toBe(200);
+    const body = (await res.json()) as {
+      rosterAt: { code: string; roles: string[] }[];
+      staff: { id: string; mayEdit: boolean; maySwitch: boolean; maySetPassword: boolean }[];
+    };
+    expect(body.rosterAt.map((p) => p.code)).toEqual(["AGR"]);
+    expect(body.rosterAt[0]!.roles).not.toContain("admin");
+    const clerk = body.staff.find((p) => p.id === clerkId)!;
+    expect(clerk).toMatchObject({ mayEdit: true, maySwitch: true, maySetPassword: true });
+    const two = body.staff.find((p) => p.id === twoId)!;
+    expect(two).toMatchObject({ mayEdit: true, maySwitch: false });
+  });
+
+  it("lets the GM correct a name at their hotel, and the change lands", async () => {
+    const res = await as(gmId, `/admin/staff/${clerkId}`, "PATCH", { fullName: "PATEST Clerk Renamed" });
+    expect(res.status, await res.clone().text()).toBe(200);
+    const db = await admin();
+    try {
+      expect((await db.query("select full_name from staff where id = $1", [clerkId])).rows[0].full_name)
+        .toBe("PATEST Clerk Renamed");
+    } finally { await db.end(); }
+  });
+
+  it("⚠ REFUSES the GM somebody who works at another hotel only", async () => {
+    const res = await as(gmId, `/admin/staff/${puneOnlyId}`, "PATCH", { fullName: "Renamed From Agra" });
+    expect(res.status).toBe(409);
+    expect(((await res.json()) as { reason: string }).reason).toMatch(/group administrator/);
+    for (const act of ["deactivate", "reactivate"]) {
+      const r = await as(gmId, `/admin/staff/${puneOnlyId}/${act}`, "POST", {});
+      expect(r.status, `${act}: ${await r.clone().text()}`).toBe(409);
+    }
+    expect(await active(puneOnlyId)).toBe(true);
+  });
+
+  it("switches off, and back on, somebody who works only at the GM's hotel", async () => {
+    const off = await as(gmId, `/admin/staff/${clerkId}/deactivate`, "POST", {});
+    expect(off.status, await off.clone().text()).toBe(200);
+    expect(await active(clerkId)).toBe(false);
+    const on = await as(gmId, `/admin/staff/${clerkId}/reactivate`, "POST", {});
+    expect(on.status, await on.clone().text()).toBe(200);
+    expect(await active(clerkId)).toBe(true);
+  });
+
+  it("⚠ REFUSES switching off somebody who also works at another hotel, and says what to do", async () => {
+    const res = await as(gmId, `/admin/staff/${twoId}/deactivate`, "POST", {});
+    expect(res.status).toBe(409);
+    expect(((await res.json()) as { reason: string }).reason).toMatch(/take them off your property instead/);
+    expect(await active(twoId), "the refusal was cosmetic - they were switched off at Pune too").toBe(true);
+  });
+
+  it("still refuses a clerk switching anybody off", async () => {
+    const res = await as(clerkId, `/admin/staff/${twoId}/deactivate`, "POST", {});
+    expect(res.status).toBe(409);
+    expect(await active(twoId)).toBe(true);
+  });
+
+  it("lets the GM add somebody AT their hotel - past every check, to the account", async () => {
+    /* Firebase is not in this suite, so a request that clears every check
+       reaches ensureAccount and fails there (a 500), writing no row - the
+       account comes first. Any refusal would be a 403 or a 409 with a
+       sentence; "Only a group administrator may provision a property" was a
+       403, and it came from People sending no property at all. */
+    const res = await as(gmId, "/admin/staff", "POST", {
+      email: "pa-gm-adds@fidato.in", name: "PATEST Added By GM",
+      password: "a-real-password", hotelCode: "AGR", role: "front_desk",
+    });
+    expect([403, 409], await res.clone().text()).not.toContain(res.status);
+  });
+});
+
 describe("one property, for whoever runs it", () => {
   it("gives the manager their own hotel, with its team", async () => {
     const res = await as(gmId, "/admin/hotels/AGR");

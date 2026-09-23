@@ -143,3 +143,133 @@ end $$;
 
 select set_config('app.user_id',
        (select id::text from staff where email = 'owner@fidato.in'), false);
+
+
+-- =============================================================================
+-- THE GM RUNS THEIR OWN HOTEL'S PEOPLE, AND MAKES NO ADMIN (D22-2, D22-3)
+-- =============================================================================
+-- The owner, 22 September: "Only the owner or an admin makes an admin. A GM
+-- gives every other role", and "People works for the GM, for their own hotel
+-- only". The list a manager may hand out, and the ROW ITSELF - a GM who
+-- reached staff_hotels by any door still writes no Admin (MEMORY 318: each
+-- guard tested with the other standing, so the policy is asked directly).
+-- =============================================================================
+do $$
+declare
+  h uuid; other uuid; owner uuid;
+  gm uuid; hotel_owner uuid; clerk uuid; two uuid; newbie uuid;
+  roles text[]; failed boolean;
+begin
+  h     := app.provision_property_unchecked('ADP', 'People Test', 'Nowhere');
+  other := app.provision_property_unchecked('ADQ', 'People Other', 'Nowhere');
+  select id into owner from staff where email = 'owner@fidato.in';
+
+  insert into staff (email, full_name) values ('d22-gm@fidato.in', 'D22 Manager')
+  on conflict (email) do update set is_active = true returning id into gm;
+  insert into staff (email, full_name) values ('d22-owner@fidato.in', 'D22 Hotel Owner')
+  on conflict (email) do update set is_active = true returning id into hotel_owner;
+  insert into staff (email, full_name) values ('d22-clerk@fidato.in', 'D22 Clerk')
+  on conflict (email) do update set is_active = true returning id into clerk;
+  insert into staff (email, full_name) values ('d22-both@fidato.in', 'D22 Two Hotels')
+  on conflict (email) do update set is_active = true returning id into two;
+  insert into staff (email, full_name) values ('d22-new@fidato.in', 'D22 Newcomer')
+  on conflict (email) do update set is_active = true returning id into newbie;
+  delete from staff_hotels where staff_id in (gm, hotel_owner, clerk, two, newbie);
+  insert into staff_hotels (staff_id, hotel_id, role) values
+    (gm, h, 'gm'), (hotel_owner, h, 'owner'), (clerk, h, 'front_desk'),
+    (two, h, 'housekeeping'), (two, other, 'housekeeping');
+
+  -- ---------- as the GM ----------
+  perform set_config('app.user_id', gm::text, true);
+  roles := app.grantable_roles(h);
+  perform test.ok('gm runs people', 'a GM may not make an Admin (D22-2)',
+    not ('admin' = any (roles)), array_to_string(roles, ','));
+  perform test.ok('gm runs people', 'nor an Owner, as before', not ('owner' = any (roles)));
+  perform test.ok('gm runs people', 'and gives every other role',
+    roles @> array['gm', 'hotel_manager', 'front_desk', 'housekeeping', 'finance', 'read_only']);
+  perform test.ok('gm runs people', 'and nothing at a hotel they do not run',
+    cardinality(app.grantable_roles(other)) = 0);
+
+  perform test.ok('gm runs people', 'a GM edits somebody at their hotel (D22-3)',
+    app.manages_person(clerk) and app.manages_person(two));
+  perform test.ok('gm runs people', 'never a group administrator',
+    not app.manages_person(owner));
+  perform test.ok('gm runs people', 'a GM switches off somebody who works only at their hotel',
+    app.may_switch_person(clerk));
+  perform test.ok('gm runs people', 'but not somebody who also works at another hotel - it would stop them there',
+    not app.may_switch_person(two));
+  perform test.ok('gm runs people', 'nor a group administrator, nor somebody rostered nowhere',
+    not app.may_switch_person(owner) and not app.may_switch_person(newbie));
+
+  -- ---------- the row itself, as the application ----------
+  set local role pms_app;
+  failed := false;
+  begin
+    insert into staff_hotels (staff_id, hotel_id, role) values (newbie, h, 'admin');
+  exception when insufficient_privilege then failed := true;
+  end;
+  reset role;
+  perform test.ok('gm runs people', 'the database refuses a GM''s Admin row, whatever the route',
+    failed and not exists (select 1 from staff_hotels where staff_id = newbie));
+
+  set local role pms_app;
+  failed := false;
+  begin
+    update staff_hotels set role = 'admin' where staff_id = clerk and hotel_id = h;
+  exception when insufficient_privilege then failed := true;
+  end;
+  reset role;
+  perform test.ok('gm runs people', 'nor by changing somebody''s role to Admin',
+    failed and (select role from staff_hotels where staff_id = clerk and hotel_id = h) = 'front_desk');
+
+  set local role pms_app;
+  failed := false;
+  begin
+    insert into staff_hotels (staff_id, hotel_id, role) values (newbie, h, 'front_desk');
+  exception when others then failed := true;
+  end;
+  reset role;
+  perform test.ok('gm runs people', 'and still takes the GM''s Reception row',
+    not failed and exists (select 1 from staff_hotels where staff_id = newbie and role = 'front_desk'));
+
+  -- ---------- as the hotel's owner, who is not a group administrator ----------
+  perform set_config('app.user_id', hotel_owner::text, true);
+  roles := app.grantable_roles(h);
+  perform test.ok('gm runs people', 'the owner there makes an Admin, and no Owner - as before',
+    'admin' = any (roles) and not ('owner' = any (roles)), array_to_string(roles, ','));
+
+  -- ---------- as the group administrator ----------
+  perform set_config('app.user_id', owner::text, true);
+  perform test.ok('gm runs people', 'a group administrator gives every role, Admin and Owner included',
+    app.grantable_roles(h) @> array['owner', 'admin']);
+  perform test.ok('gm runs people', 'and switches off anybody',
+    app.may_switch_person(two) and app.manages_person(two));
+
+  -- ---------- as a clerk ----------
+  perform set_config('app.user_id', clerk::text, true);
+  perform test.ok('gm runs people', 'a clerk edits nobody - not even themselves, which may_manage_person allows',
+    not app.manages_person(clerk) and app.may_manage_person(clerk) and not app.manages_person(two));
+  perform test.ok('gm runs people', 'and switches nobody off',
+    not app.may_switch_person(two) and cardinality(app.grantable_roles(h)) = 0);
+
+  perform test.ok('gm runs people', 'the application may ask both, and PUBLIC may not',
+    has_function_privilege('pms_app', 'app.manages_person(uuid)', 'execute')
+    and has_function_privilege('pms_app', 'app.may_switch_person(uuid)', 'execute')
+    and not exists (select 1 from information_schema.routine_privileges
+                     where routine_schema = 'app'
+                       and routine_name in ('manages_person', 'may_switch_person')
+                       and grantee = 'PUBLIC'));
+
+  -- ---------- and the fixtures go ----------
+  perform set_config('app.user_id', '', true);
+  delete from staff_hotels where staff_id in (gm, hotel_owner, clerk, two, newbie);
+  update staff set is_active = false where id in (gm, hotel_owner, clerk, two, newbie);
+  alter table hotels disable trigger hotels_no_delete;
+  delete from hotels where id in (h, other);
+  alter table hotels enable trigger hotels_no_delete;
+  perform test.ok('gm runs people', 'the fixtures do not outlive the test',
+    not exists (select 1 from hotels where code in ('ADP', 'ADQ')));
+end $$;
+
+select set_config('app.user_id',
+       (select id::text from staff where email = 'owner@fidato.in'), false);

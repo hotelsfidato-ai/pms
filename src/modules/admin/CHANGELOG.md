@@ -11,6 +11,57 @@ Work that touches the core or several services still goes in the root
 
 ---
 
+## 2026-09-22 · The role list after PMS-2, and People for the GM (D22-2, D22-3, D22-30 to D22-36)
+
+**Asked for:** the owner's answers of 22 September
+(`docs/briefs/decisions-2026-09-22.md`), handed over by the master as one
+helper task on branch `admin/roles-d22`.
+
+**Shipped**
+- **The matrix** (`api/src/permissions.ts`, which the website re-exports):
+  the GM creates and edits room setup (D22-30); an administrator and the GM
+  edit commission (D22-30); `approve` on an invoice - the credit note - is the
+  owner's, an administrator's, the GM's and the accountant's (D22-33); a new
+  resource `menu` (the restaurant's menu) held by the owner, admin, GM and
+  kitchen manager, viewed by the hotel manager, reception and a viewer - never
+  the revenue manager (D22-35).
+- **The server's gate** (`api/src/roleGate.ts`): the by-name GM and admin
+  exceptions for room setup and commission are gone; the credit note asks
+  `invoice approve`; the menu asks `menu edit`; the unused `staff` rule kind is
+  gone. GST stays owner, admin, GM and accountant (D22-32, confirmed); the
+  night audit stays as it is (D22-36, pinned by a test).
+- **Repairs** (housekeeping's files, D22-34): `REPAIR_UPDATERS` - owner, admin,
+  GM, hotel manager, Inventory Manager, housekeeping - asked by PATCH
+  work-orders and by POST for any repair that names no equipment. The list
+  says `mayUpdate`; Work orders offers Start and Close only then, and says who
+  may otherwise.
+- **Credit note button** (finance's `CreditNoteFlow.tsx`): disabled, with who
+  may, for anybody without `invoice approve`.
+- **Menu entry** (pos's `nav.ts`): the `menu` grant, so the revenue manager's
+  menu no longer lists it.
+- **People for the GM** (D22-3): migration 127 adds `app.manages_person`
+  (edit) and `app.may_switch_person` (switch off and on - only somebody who
+  works at no hotel the GM does not run). `PATCH /admin/staff/:id`,
+  `reactivate` and `deactivate` ask them instead of "group administrator
+  only". `GET /admin/staff` returns `rosterAt` and three flags per person;
+  People offers only what the server will take, and a GM's Add somebody names
+  their property and the role.
+- **No Admin from a GM** (D22-2): `app.grantable_roles` drops `admin` for a
+  GM (a hotel-level owner keeps it); the manager policies on `staff_hotels`
+  refuse a role outside that list; both routes that grant a role answer
+  "Only the owner or an administrator can make somebody an Admin."
+
+**Found:** the accountant holds the GST write on the server but has no way to
+the GST card (it sits on Room types, a `room_config` screen). A hotel-level
+`admin` role cannot manage staff at all (`app.manages_hotel` is owner and gm
+only). Both are questions for the owner, in the master's report.
+
+**Left open:** see the report - the accountant's way to the GST card; whether
+a hotel-level Admin should manage staff; whether a repair to the lobby counts
+as "a room repair".
+
+---
+
 ## 2026-09-17 (evening) · The tax actually charged, and the GM's Settings without the switches
 
 **Asked for:** the owner's second interview of 17 September, handed over by

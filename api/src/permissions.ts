@@ -67,6 +67,11 @@ export const RESOURCES = [
   "inventory",
   "room_config",
   "rate",
+  /* The restaurant's menu: dishes, add-ons, promotions, taking a dish off.
+     It rode on `rate` until 22 September, which gave it to every rate setter
+     - and the owner's D22-35 keeps the revenue manager out of it ("sets room
+     prices only"). Its own resource, so the matrix says who in one place. */
+  "menu",
   "stock",
   "equipment",
   "purchasing",
@@ -135,9 +140,15 @@ const MATRIX: Record<Role, ResourceGrants> = {
     inventory: ["view", "edit"],
     room_config: ["view", "create", "edit"],
     rate: ["view", "create", "edit"],
-    invoice: ["view", "create", "edit", "export"],
+    menu: ["view", "create", "edit"],
+    /* `approve` on an invoice is issuing a credit note against it - the
+       owner's D22-33: the owner, an administrator, the GM and the accountant,
+       no longer reception or the hotel manager, who keep `edit` for the
+       ordinary changes to a bill. */
+    invoice: ["view", "create", "edit", "approve", "export"],
     payment: ["view", "create", "edit", "export"],
-    commission: READ_EXPORT,
+    /* D22-30: an administrator and the GM set a booking source's commission. */
+    commission: ["view", "edit", "export"],
     report: READ_EXPORT,
     notification: ["view", "create", "edit"],
     user: ["view", "create", "edit"],
@@ -175,14 +186,21 @@ const MATRIX: Record<Role, ResourceGrants> = {
     company: ["view", "create", "edit", "export"],
     hotel: READ_EXPORT,
     inventory: ["view", "edit"],
-    room_config: READ,
+    /* The owner's D22-30: the GM creates and edits the hotel's setup - room
+       types, rooms, their imports, the front desk's hours, the banquet halls
+       and packages ("each GM sets up their own hotel", D21-47). This said
+       READ while the server let the GM in by name. */
+    room_config: ["view", "create", "edit"],
     /* The owner, 16 September: the GM sets prices. This said READ while a
        hand-written list beside it said the GM could set them — two answers
        to one question, and the matrix was the one being ignored. */
     rate: ["view", "create", "edit"],
-    invoice: ["view", "create", "edit", "export"],
+    menu: ["view", "create", "edit"],
+    /* `approve` is the credit note (D22-33), as for an administrator. */
+    invoice: ["view", "create", "edit", "approve", "export"],
     payment: ["view", "create", "edit", "export"],
-    commission: READ_EXPORT,
+    /* D22-30, as for an administrator. */
+    commission: ["view", "edit", "export"],
     report: READ_EXPORT,
     notification: READ,
     user: READ,
@@ -211,6 +229,7 @@ const MATRIX: Record<Role, ResourceGrants> = {
     inventory: ["view", "edit"],
     room_config: READ,
     rate: READ,
+    menu: READ,
     invoice: ["view", "create", "edit", "export"],
     payment: ["view", "create", "export"],
     report: READ_EXPORT,
@@ -233,7 +252,8 @@ const MATRIX: Record<Role, ResourceGrants> = {
              availability, every booking, occupancy and ADR, OTA commission.
      CANNOT  bills, payments, invoices; guest details and identity documents;
              staff and roles; property and room setup; check-in and check-out;
-             the POS.
+             the POS, its menu included (D22-35: room prices only - no `menu`
+             grant, where `rate` used to carry the menu with it).
 
      Named Revenue Manager, not Channel Manager, so the person is never
      confused with the channel manager SERVICE — the wire to SU. */
@@ -256,6 +276,9 @@ const MATRIX: Record<Role, ResourceGrants> = {
     dashboard: READ,
     reservation: READ,
     inventory: ["view", "edit"],
+    /* The menu is theirs to keep (pos/nav.ts); it was a by-name exception
+       beside the rate setters' grant until it had a resource of its own. */
+    menu: ["view", "create", "edit"],
     report: READ,
     notification: READ,
     stock: ["view", "create"],
@@ -284,6 +307,7 @@ const MATRIX: Record<Role, ResourceGrants> = {
     inventory: ["view", "edit"],
     room_config: READ,
     rate: READ,
+    menu: READ,
     invoice: ["view", "create", "edit"],
     payment: ["view", "create"],
     report: READ,
@@ -356,6 +380,7 @@ const MATRIX: Record<Role, ResourceGrants> = {
     inventory: READ,
     room_config: READ,
     rate: READ,
+    menu: READ,
     invoice: READ,
     payment: READ,
     commission: READ,

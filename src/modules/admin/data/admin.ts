@@ -97,8 +97,20 @@ export interface AdminStaff {
   isActive: boolean;
   /** Where they start after signing in (087). */
   homeScreen: HomeScreen;
+  /** What the signed-in person may do to them - the server's own answers
+      (127), so People offers a button only where it will be taken (D22-3). */
+  mayEdit: boolean;
+  maySwitch: boolean;
+  maySetPassword: boolean;
   access: { code: string; role: string }[];
 }
+
+/** A property the signed-in person may roster somebody at, and the roles
+    they may give there: every property for a group administrator, a GM's
+    own for a GM - never Owner or Admin for a GM (D22-2). */
+export interface RosterPlace { code: string; name: string; roles: string[] }
+
+export interface PeopleList { staff: AdminStaff[]; rosterAt: RosterPlace[] }
 
 export interface AdminOverview {
   staff: {
@@ -128,11 +140,16 @@ export async function getAdminOverview(): Promise<AdminOverview | null> {
 }
 
 export async function listAdminStaff(): Promise<AdminStaff[]> {
+  return (await listPeople()).staff;
+}
+
+/** The People screen's list, with where the signed-in person may roster. */
+export async function listPeople(): Promise<PeopleList> {
   try {
-    const body = await api<{ staff: AdminStaff[] }>("/api/admin/staff");
-    return body.staff;
+    const body = await api<Partial<PeopleList>>("/api/admin/staff");
+    return { staff: body.staff ?? [], rosterAt: body.rosterAt ?? [] };
   } catch {
-    return [];
+    return { staff: [], rosterAt: [] };
   }
 }
 

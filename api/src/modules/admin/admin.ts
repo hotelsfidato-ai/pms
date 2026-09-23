@@ -176,6 +176,40 @@ async function requireGroupAdmin(
   );
 }
 
+/* ── Who may change a PERSON (the owner's D22-3, 22 September) ──────
+   "People works for the GM, for their own hotel only." Each answer is the
+   database's (127), asked before anything is written (root MEMORY 243). */
+
+/** Their name and phone: a group administrator, or a manager of a hotel
+    they work at - never a group administrator's (app.manages_person). */
+async function mayEditPerson(client: Client, staffId: string) {
+  const { rows } = await client.query<{ ok: boolean }>(
+    "select app.manages_person($1) as ok", [staffId]);
+  return rows[0]?.ok === true ? null : refuse(
+    "Only a group administrator, or the manager of a property they work at, "
+    + "can change somebody's name or phone.");
+}
+
+/** Switching them off or back on stops or starts them at EVERY hotel, so a
+    manager may do it only for somebody who works nowhere else
+    (app.may_switch_person). */
+async function maySwitchPerson(client: Client, staffId: string) {
+  const { rows } = await client.query<{ ok: boolean }>(
+    "select app.may_switch_person($1) as ok", [staffId]);
+  return rows[0]?.ok === true ? null : refuse(
+    "Only a group administrator, or the manager of every property they work "
+    + "at, can switch somebody off or back on. If they also work somewhere you "
+    + "do not manage, take them off your property instead.");
+}
+
+/** D22-2: the sentence for a GM asking to make an Admin. Null for any other
+    refusal, which keeps its own words. */
+const adminRefusal = (role: string, allowed: string[]): string | null =>
+  role === "admin" && !allowed.includes("admin") && allowed.length > 0
+    ? "Only the owner or an administrator can make somebody an Admin. "
+      + `You may give: ${allowed.join(", ")}.`
+    : null;
+
 /** A write that matched no row did not happen, whatever it returned. */
 function changedOrRefuse(
   rowCount: number | null, what: string,
@@ -482,7 +516,8 @@ admin.patch("/admin/staff/:id", async (c) => {
   }
 
   const result = await withSession(c.get("subject"), async (client) => {
-    const denied = await requireGroupAdmin(client);
+    /* A GM too, for somebody at their hotel (D22-3). */
+    const denied = await mayEditPerson(client, c.req.param("id"));
     if (denied) return denied;
 
     const { rowCount } = await client.query(
@@ -572,7 +607,8 @@ admin.put("/me/preferences", async (c) => {
    ═══════════════════════════════════════════════════════════════════ */
 admin.post("/admin/staff/:id/reactivate", async (c) => {
   const result = await withSession(c.get("subject"), async (client) => {
-    const denied = await requireGroupAdmin(client);
+    /* A GM too, for somebody who works only at their hotels (D22-3). */
+    const denied = await maySwitchPerson(client, c.req.param("id"));
     if (denied) return denied;
 
     const { rows } = await client.query<{ uid: string | null }>(
@@ -606,6 +642,7 @@ admin.get("/admin/staff", async (c) => {
       id: string; email: string; full_name: string; phone: string | null;
       is_group_admin: boolean; is_active: boolean; hotels: string | null;
       can_sign_in: boolean; home_screen: string;
+      may_edit: boolean; may_switch: boolean; may_password: boolean;
     }>(
       /* RLS decides what comes back. A group admin sees everyone; a
          clerk sees themselves and the colleagues they share a property
@@ -626,12 +663,31 @@ admin.get("/admin/staff", async (c) => {
               coalesce(s.home_screen, 'dashboard') as home_screen,
               (select string_agg(h.code || ':' || sh.role, ',' order by h.code)
                  from staff_hotels sh join hotels h on h.id = sh.hotel_id
-                where sh.staff_id = s.id) as hotels
+                where sh.staff_id = s.id) as hotels,
+              /* What THIS caller may do to them (D22-3): the same three
+                 questions the write routes ask, so the screen offers a
+                 button only where the server will take it. */
+              app.manages_person(s.id)    as may_edit,
+              app.may_switch_person(s.id) as may_switch,
+              app.may_set_password(s.id)  as may_password
          from staff s
         order by s.is_group_admin desc, s.full_name`,
     );
 
+    /* Where THIS caller may roster somebody, and as what: every property for
+       a group administrator, the GM's own for a GM, none for anybody else.
+       app.grantable_roles is the one list (084, 127), so a GM's picker never
+       holds Owner or Admin (D22-2). */
+    const { rows: places } = await client.query<{
+      code: string; name: string; roles: string[];
+    }>(
+      `select h.code, h.name, app.grantable_roles(h.id) as roles
+         from hotels h
+        where h.is_active and cardinality(app.grantable_roles(h.id)) > 0
+        order by h.code`);
+
     return {
+      rosterAt: places,
       staff: rows.map((r) => ({
         id: r.id,
         email: r.email,
@@ -641,6 +697,9 @@ admin.get("/admin/staff", async (c) => {
         isGroupAdmin: r.is_group_admin,
         isActive: r.is_active,
         homeScreen: r.home_screen,
+        mayEdit: r.may_edit,
+        maySwitch: r.may_switch,
+        maySetPassword: r.may_password,
         access: (r.hotels ?? "").split(",").filter(Boolean).map((pair) => {
           const [code, role] = pair.split(":");
           return { code: code!, role: role! };
@@ -724,9 +783,10 @@ admin.post("/admin/staff", async (c) => {
           "select app.grantable_roles($1) as roles", [hotelId]);
         if (!allowed[0]!.roles.includes(role!)) {
           return refuse(
-            allowed[0]!.roles.length === 0
+            adminRefusal(role!, allowed[0]!.roles)
+            ?? (allowed[0]!.roles.length === 0
               ? "You cannot give anybody a role at this property."
-              : `You may give: ${allowed[0]!.roles.join(", ")}.`);
+              : `You may give: ${allowed[0]!.roles.join(", ")}.`));
         }
       } else {
         /* No hotel named, so this is the group-level act it always was. */
@@ -934,10 +994,11 @@ admin.post("/admin/staff/:id/access", async (c) => {
       }
       if (!allowed.includes(role)) {
         return refuse(
-          allowed.length === 0
+          adminRefusal(role, allowed)
+          ?? (allowed.length === 0
             ? "You cannot give anybody a role at this property."
             : `"${role}" is not yours to give here. You may give: `
-              + `${allowed.join(", ")}.`);
+              + `${allowed.join(", ")}.`));
       }
 
       /* THIS ROW IS THE ISOLATION.
@@ -992,8 +1053,6 @@ admin.delete("/admin/staff/:id/access/:code", async (c) => {
 admin.post("/admin/staff/:id/deactivate", async (c) => {
   try {
     const result = await withSession(c.get("subject"), async (client, session) => {
-      await client.query("select app.require_group_admin()");
-
       /* Locking yourself out is not a thing the system should help with,
          and on a single-admin deployment it is unrecoverable from the
          interface. */
@@ -1003,6 +1062,12 @@ admin.post("/admin/staff/:id/deactivate", async (c) => {
           "administrator access has to do it.",
         );
       }
+
+      /* A GM too, for somebody who works only at their hotels (D22-3). It
+         was app.require_group_admin(), whose sentence a GM read on People:
+         "Only a group administrator may provision a property." */
+      const denied = await maySwitchPerson(client, c.req.param("id"));
+      if (denied) return denied;
 
       /* Deactivated, never deleted. Their name is on folio postings,
          invoices and the audit log, and a deleted row makes every one

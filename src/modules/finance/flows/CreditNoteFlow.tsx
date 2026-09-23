@@ -5,6 +5,13 @@ import {
   Button, Dialog, DialogContent, Field, fieldProps, Textarea, toast,
 } from "@/components/ui";
 import { issueCreditNote } from "@/modules/finance/data/billing";
+import { can } from "@/lib/permissions";
+import { useRole } from "@/lib/session";
+
+/* Who may: `approve` on an invoice - the owner, an administrator, the GM and
+   the accountant (the owner's D22-33). The server asks the same grant. */
+export const CREDIT_NOTE_WHO =
+  "Cancelling an invoice is for the owner, an administrator, the general manager or the accountant.";
 
 /* ══════════════════════════════════════════════════════════════════
    CANCELLING AN INVOICE
@@ -37,6 +44,20 @@ export function CreditNoteFlow({ hotelId, number, total }: {
   const [reason, setReason] = useState("");
   const [busy, setBusy] = useState(false);
   const queryClient = useQueryClient();
+  const role = useRole();
+
+  /* Rule 6: shown, disabled, with the reason - not a button that is refused. */
+  if (!can(role, "approve", "invoice")) {
+    return (
+      <span className="inline-flex items-center gap-2" data-credit-note-refused>
+        <Button variant="secondary" disabled>
+          <FileMinus className="size-4" />
+          Cancel this invoice
+        </Button>
+        <span className="text-sm text-grey-600 max-w-64">{CREDIT_NOTE_WHO}</span>
+      </span>
+    );
+  }
 
   const submit = async () => {
     setBusy(true);

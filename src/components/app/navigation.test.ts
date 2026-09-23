@@ -158,6 +158,13 @@ describe("each person's menu", () => {
     expect(menu("kitchen_manager")).toEqual(["Kitchen", "Menu", "Close restaurant day", "Notifications"]);
   });
 
+  it("keeps the revenue manager out of the restaurant's menu (D22-35)", () => {
+    expect(mayReach("revenue_manager", "/h/:code/menu")).toBe(false);
+    for (const role of ["owner", "admin", "gm", "kitchen_manager", "hotel_manager", "front_desk"] as const) {
+      expect(mayReach(role, "/h/:code/menu"), role).toBe(true);
+    }
+  });
+
   it("gives housekeeping and the stores their work - and no revenue Dashboard", () => {
     /* Equipment joined on 16 September — the owner's answer to the equipment chat.
        Purchasing joined the Inventory Manager's on 18 September, when it was

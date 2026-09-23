@@ -88,7 +88,7 @@ describe("every write the server mounts", () => {
 
   it("asks a role only where it can find the hotel in the address", () => {
     const outside = Object.entries(WRITE_RULES)
-      .filter(([, r]) => r.kind === "grant" || r.kind === "staff")
+      .filter(([, r]) => r.kind === "grant")
       .map(([k]) => k)
       .filter((k) => !k.split(" ")[1]!.startsWith(`${H}/`));
     expect(outside).toEqual([]);
@@ -110,7 +110,7 @@ describe("the matrix the server asks", () => {
   it("never lets a viewer write", () => {
     /* read_only: "Read-only across the platform. No write access anywhere." */
     const open = Object.entries(WRITE_RULES)
-      .filter(([, r]) => r.kind === "grant" || r.kind === "staff")
+      .filter(([, r]) => r.kind === "grant")
       .filter(([, r]) => allows(r, "read_only"))
       .map(([k]) => k);
     expect(open).toEqual([]);
@@ -140,9 +140,62 @@ describe("the matrix the server asks", () => {
     expect(allows(rule(`POST ${H}/till/orders`), "housekeeping")).toBe(false);
   });
 
+  /* ── The owner's answers of 22 September (docs/briefs/decisions-2026-09-22.md) ── */
+
+  const who = (key: string) => whoMay(rule(key));
+  const byName = (key: string) => { const r = rule(key); return r.kind === "grant" ? r.also : null; };
+
+  it("D22-30: the GM sets the hotel up - in the matrix, not by name", () => {
+    for (const key of [
+      `POST ${H}/room-types`, `PATCH ${H}/room-types/:id`, `POST ${H}/rooms`,
+      `PATCH ${H}/rooms/:number`, `PATCH ${H}/front-desk`, `POST ${H}/room-types/import`,
+      `POST ${H}/rooms/import`, `POST ${H}/banquet/venues`, `PATCH ${H}/banquet/venues/:id`,
+      `POST ${H}/banquet/packages`,
+    ]) {
+      expect(who(key), key).toEqual(["owner", "admin", "gm"]);
+      expect(byName(key), key).toEqual([]);
+    }
+  });
+
+  it("D22-30: an administrator and the GM set a commission - in the matrix", () => {
+    const key = `PUT ${H}/booking-sources/:id/commission`;
+    expect(who(key)).toEqual(["owner", "admin", "gm"]);
+    expect(byName(key)).toEqual([]);
+  });
+
+  it("D22-32: GST is the owner's, an administrator's, the GM's and the accountant's", () => {
+    for (const key of [`PUT ${H}/tax/:kind`, `PATCH ${H}/menu-categories/:name/tax-kind`]) {
+      expect(who(key), key).toEqual(["owner", "admin", "gm", "finance"]);
+    }
+  });
+
+  it("D22-33: a credit note is no longer reception's or the hotel manager's", () => {
+    expect(who(`POST ${H}/invoices/:number{.+}/credit-note`))
+      .toEqual(["owner", "admin", "gm", "finance"]);
+  });
+
+  it("D22-36: the night audit stays as it is", () => {
+    expect(who(`POST ${H}/night-audit/run`))
+      .toEqual(["owner", "admin", "gm", "hotel_manager", "front_desk", "finance"]);
+  });
+
+  it("D22-35: the menu - dishes, add-ons, promotions, a dish off - is not the revenue manager's", () => {
+    const menu = Object.keys(WRITE_RULES).filter((k) => /\/till\/(menu|promotions|addons)\//.test(k)
+      || k.endsWith("/till/promotions"));
+    expect(menu.length).toBeGreaterThanOrEqual(24);
+    for (const key of menu) {
+      expect(who(key), key).toEqual(["owner", "admin", "gm", "kitchen_manager"]);
+    }
+  });
+
+  it("D22-34: a repair's writes are the route's, which alone can see whether it names equipment", () => {
+    expect(rule(`POST ${H}/work-orders`).kind).toBe("own");
+    expect(rule(`PATCH ${H}/work-orders/:id`).kind).toBe("own");
+  });
+
   it("says who may, in a sentence a person reads", () => {
     for (const [key, r] of Object.entries(WRITE_RULES)) {
-      if (r.kind !== "grant" && r.kind !== "staff") continue;
+      if (r.kind !== "grant") continue;
       const text = refusalFor(r);
       expect(text, key).toMatch(/^[A-Z][^—]* is for [^—]+\. Ask one of them\.$/);
       expect(text, key).not.toMatch(/automation/);
@@ -324,6 +377,57 @@ describe("the owner, an administrator and the GM", () => {
   it("but a GM elsewhere who is reception here is asked as reception", async () => {
     await refusedByGate(await send(gmElsewhereId, "PUT", "/pricing/base", {}),
       `PUT ${H}/pricing/base`);
+  });
+});
+
+describe("the owner's answers of 22 September, through the real server", () => {
+  /* Each probe that passes the gate carries a body its route refuses on its
+     own (409) before anything is written. */
+  it("D22-30: the GM passes the gate on room setup; the hotel manager does not", async () => {
+    /* Not the banquet halls here: the scratch database has 5EL's banquet
+       module off, and its own gate would answer first. The halls' rule is
+       the same grant (the unit test above). */
+    for (const [path, key] of [
+      ["/room-types", `POST ${H}/room-types`],
+      ["/rooms", `POST ${H}/rooms`],
+    ] as const) {
+      const gm = await send(as("gm"), "POST", path, {});
+      expect(gm.status, `gm ${path}: ${await gm.clone().text()}`).toBe(409);
+      await refusedByGate(await send(as("hotel_manager"), "POST", path, {}), key);
+    }
+  });
+
+  it("D22-30: an administrator and the GM pass the gate on a commission", async () => {
+    for (const role of ["admin", "gm"]) {
+      const res = await send(as(role), "PUT", `/booking-sources/${UUID}/commission`,
+        { commissionPct: "not a number" });
+      expect(res.status, `${role}: ${await res.clone().text()}`).toBe(409);
+    }
+    await refusedByGate(
+      await send(as("revenue_manager"), "PUT", `/booking-sources/${UUID}/commission`, {}),
+      `PUT ${H}/booking-sources/:id/commission`);
+  });
+
+  it("D22-33: reception and the hotel manager are refused a credit note; the accountant and GM are not", async () => {
+    const key = `POST ${H}/invoices/:number{.+}/credit-note`;
+    for (const role of ["front_desk", "hotel_manager"]) {
+      await refusedByGate(await send(as(role), "POST", "/invoices/NO-SUCH/credit-note", {}), key);
+    }
+    for (const role of ["finance", "gm"]) {
+      const res = await send(as(role), "POST", "/invoices/NO-SUCH/credit-note", {});
+      expect(res.status, `${role}: ${await res.clone().text()}`).toBe(409);
+      expect(((await res.json()) as { reason: string }).reason).toMatch(/must say why/);
+    }
+  });
+
+  it("D22-35: the revenue manager is refused the menu, a dish off and a promotion", async () => {
+    for (const [path, key] of [
+      ["/till/menu/items", `POST ${H}/till/menu/items`],
+      [`/till/menu/items/${UUID}/off`, `POST ${H}/till/menu/items/:id/off`],
+      ["/till/promotions", `POST ${H}/till/promotions`],
+    ] as const) {
+      await refusedByGate(await send(as("revenue_manager"), "POST", path, {}), key);
+    }
   });
 });
 

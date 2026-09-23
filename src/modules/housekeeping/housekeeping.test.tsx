@@ -22,7 +22,11 @@ beforeEach(startSignedIn);
 
 /* The board's room list, counted, and made to fail on demand — a refresh
    on a stairwell with the signal gone. Everything else passes through. */
-const board = vi.hoisted(() => ({ calls: 0, failing: false }));
+const board = vi.hoisted(() => ({
+  calls: 0, failing: false,
+  /* When set, the Work orders list answers with it (D22-34's test). */
+  orders: null as null | { mayUpdate: boolean },
+}));
 vi.mock("@/modules/housekeeping/data/housekeeping", async (importOriginal) => {
   const real = await importOriginal<typeof import("@/modules/housekeeping/data/housekeeping")>();
   return {
@@ -31,6 +35,19 @@ vi.mock("@/modules/housekeeping/data/housekeeping", async (importOriginal) => {
       board.calls += 1;
       if (board.failing) throw new Error("Could not reach the server.");
       return real.listHousekeeping(...args);
+    },
+    listWorkOrders: async (...args: Parameters<typeof real.listWorkOrders>) => {
+      if (!board.orders) return real.listWorkOrders(...args);
+      return {
+        orders: [{
+          id: "wo-1", room: "204", title: "Dripping tap", detail: null, category: "plumbing",
+          priority: "normal", status: "open", raisedBy: "Asha", raisedAt: "2026-09-21",
+          assignedTo: null, daysOpen: 1, blocksRoom: false, closedBy: null, closedAt: null,
+          resolution: null, equipment: null,
+        }],
+        open: 1, closed: 0, closedShown: 50,
+        mayRecordCosts: false, maySeeCosts: false, mayUpdate: board.orders.mayUpdate,
+      };
     },
   };
 });
@@ -152,6 +169,24 @@ describe("Work orders", () => {
     expect(screen.queryByText("Nothing outstanding")).toBeNull();
     expect(screen.getByRole("tab", { name: /^Open/ })).toBeDefined();
     expect(screen.getByRole("tab", { name: /^Closed/ })).toBeDefined();
+  });
+
+  /* A property each, because the app's one query cache would hand the second
+     render the first one's list. */
+  it.each([[true, "AGR"], [false, HOTEL]] as const)(
+    "offers Start and Close only where the server says so (D22-34): %s", async (mayUpdate, code) => {
+    board.orders = { mayUpdate };
+    try {
+      go(`/h/${code}/work-orders`);
+      render(<App />);
+      const order = await screen.findByText("Dripping tap");
+      const cardEl = order.closest<HTMLElement>("[data-work-order]")!;
+      expect(within(cardEl).queryByRole("button", { name: "Start" }) !== null).toBe(mayUpdate);
+      expect(within(cardEl).queryByRole("button", { name: /Close/ }) !== null).toBe(mayUpdate);
+      expect(document.querySelector("[data-repair-who]") !== null).toBe(!mayUpdate);
+    } finally {
+      board.orders = null;
+    }
   });
 });
 

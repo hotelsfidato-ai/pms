@@ -298,6 +298,59 @@ describe("a repair on a piece of equipment (D17-7)", () => {
   }
 });
 
+/* ══════════════════════════════════════════════════════════════════
+   D22-34, THE OWNER, 22 SEPTEMBER: updating a repair, and reporting one that
+   is not on a piece of equipment, are for the owner, admin, GM, hotel manager,
+   Inventory Manager and housekeeping. Until then every working role could.
+   ══════════════════════════════════════════════════════════════════ */
+describe("who updates a repair and reports a room repair (D22-34)", () => {
+  const ROLES = ["owner", "admin", "gm", "hotel_manager", "revenue_manager", "front_desk",
+                 "housekeeping", "kitchen_manager", "chef", "pos", "stores", "finance",
+                 "read_only"];
+  const MAY = ["owner", "admin", "gm", "hotel_manager", "stores", "housekeeping"];
+
+  it("is the owner's list, word for word", () => {
+    expect([...SERVER.REPAIR_UPDATERS].sort()).toEqual([...MAY].sort());
+  });
+
+  for (const role of ROLES) {
+    const may = MAY.includes(role);
+    it(`${may ? "lets" : "refuses"} ${role} ${may ? "report" : "reporting"} a room repair`, async () => {
+      const title = `HKTEST-R Room tap ${role}`;
+      const res = await raise(staff.get(role)!, { title, roomNumber: vacantRoom.number });
+      const written = (await sql("select count(*)::int as n from work_orders where title = $1",
+        [title])).rows[0].n;
+      if (may) {
+        expect(res.status, await res.clone().text()).toBe(200);
+        expect(written).toBe(1);
+      } else {
+        expect(res.status, await res.clone().text()).toBe(403);
+        expect(((await res.json()) as { reason: string }).reason).toBe(SERVER.ROOM_REPORT_REFUSED);
+        expect(written, `${role} was refused and a repair was written anyway`).toBe(0);
+      }
+    });
+
+    it(`${may ? "lets" : "refuses"} ${role} ${may ? "update" : "updating"} a repair, and says so in the list`, async () => {
+      const { id } = await json<{ id: string }>(
+        await raise(gm(), { title: `HKTEST-R Update by ${role}` }));
+      const res = await call(staff.get(role)!, `/work-orders/${id}`, "PATCH", { status: "in_progress" });
+      const { rows } = await sql("select status from work_orders where id = $1", [id]);
+      if (may) {
+        expect(res.status, await res.clone().text()).toBe(200);
+        expect(rows[0].status).toBe("in_progress");
+      } else {
+        expect(res.status, await res.clone().text()).toBe(403);
+        expect(((await res.json()) as { reason: string }).reason).toBe(SERVER.UPDATE_REFUSED);
+        expect(rows[0].status, `${role} was refused and the repair changed anyway`).toBe("open");
+      }
+      const list = await call(staff.get(role)!, "/work-orders");
+      if (list.status === 200) {
+        expect(((await list.json()) as { mayUpdate: boolean }).mayUpdate, role).toBe(may);
+      }
+    });
+  }
+});
+
 describe("a repair cost, with its proof (D17-5, D17-6)", () => {
   let order: string;
   beforeAll(async () => {
