@@ -16,3 +16,4 @@ Standing rule from today: all code minimal (ponytail, YAGNI), and anything not s
 | D23-10 | A room reserved for tonight's arrival but still empty | **Empty**, as built |
 | D23-11 | Wording | **Property page "Vacant" becomes "Empty"; the Properties list's "N guests in house" becomes "N bookings checked in"** |
 | D23-12 | FD-11 and FD-9 | **Both fixed:** check-in refuses a room a late-checkout guest is still in (FD-11); a mid-stay move marks the old room dirty (FD-9) |
+| D23-13 | FD-13, the Calendar's second row of "book here" cells under a booking | **Fix it now**, with the FD-11/FD-9 helper |
