@@ -11,6 +11,92 @@ Work that touches the core or several services still goes in the root
 
 ---
 
+## 2026-09-22 (later) · one message per group, and the catch-up hours
+
+**Asked for:** by the master, after the owner answered D22-39 to D22-42: keep
+the 10:00 reminder (D22-39) and the one-message rule for a booking made the day
+before (D22-40), as built; build **one confirmation and one reminder per group,
+to the lead guest** (D22-41), and **catch-up confirmations - for bookings made
+before sending was switched on - only between 09:00 and 21:00 hotel time**, new
+bookings at once, any hour (D22-42), with "made before switch-on" defined so it
+cannot drift. On top of `a9625cf`, without merging cp6 again.
+
+**Shipped** (migration "what the guest is owed" changed in place - it is not
+merged anywhere yet - and still re-runnable)
+- **One per group (D22-41).** `app.guest_messages_due` treats the rooms of a
+  group as one party (`coalesce(group_id, id)`, the key `app.guest_visits`
+  already uses). The party is owed one confirmation and one reminder, about its
+  **lead booking** - the group's room booked first that still stands - to that
+  booking's guest by that booking's tick. `reservation_groups` names no lead
+  guest; every room of a booking made together carries the one guest who made
+  it (`reservations/book.ts`), so the first room is theirs. A message sent about
+  any room counts for the whole group, and so do failed attempts; the other
+  rooms are never owed on their own, not even when the lead is cancelled after
+  the message went. A booking in no group is its own party, unchanged.
+- **The desk sees it as covered.** `?reservation=<a room of a group>` shows the
+  group's messages, and the MSG-3 list names a group once, by its lead.
+- **The catch-up hours (D22-42).** A confirmation owed to a booking made before
+  switch-on comes back `held` outside `CATCH_UP_FROM` 09:00 to `CATCH_UP_UNTIL`
+  21:00 on the property's clock. Still owed - the MSG-3 list does not change
+  with the hour - and the sweep leaves it without taking a place in the pace
+  (`waiting` in the sweep's result).
+- **"Made before switch-on", exactly.** New table `guest_messaging_began`, one
+  row by construction, written only by `app.guest_messages_begin()`, which
+  inserts `now()` on the sweep's FIRST switched-on pass (`owedNow`) and never
+  updates; the API's role has no privilege on the table at all. A booking is a
+  catch-up when `created_at` is before that moment, or when none is recorded.
+  The desk's screen reads without recording.
+- `app.guest_messages_due` gained two parameters and a `held` column. It is
+  dropped by both signatures it has had and made again each run (MEMORY 317 -
+  the function is this migration's own).
+
+**Found** - nothing that shipped. Two test-writing slips caught at once: an
+uncorrelated `count(*)` beside a function call in one expression can be planned
+to run BEFORE the call (so it counted the row the call had not written yet); and
+a refused insert that is not undone stops every assertion after it (MEMORY
+289). Both written the safe way round in the database file.
+
+**Proved** - in this copy, on `a9625cf` plus this work, 22 September:
+
+```
+npx tsc -b --force                           exit 0
+api  npx tsc --noEmit -p .                   exit 0
+npx vitest run src/modules/guest-messaging   1 file, 12 tests passed, exit 0
+api  npm test -- guest                       7 files, 121 tests passed, exit 0
+bash db/tests/run.sh                         all 1012 assertions passed (47 guest-messaging), exit 0
+bash db/tests/rerun.sh                       all 125 migrations re-runnable, exit 0
+```
+
+**Guards seen to fail, with the change taken out** - every new test:
+- database (20 new assertions, 47 in the file): 10 new breaks - every room its
+  own party, the lead by the latest room, a cancelled room able to lead, a
+  message counting only for its own room, never held, every booking a
+  catch-up, no record meaning nothing is a catch-up, `begin` moving the moment,
+  the API role able to write the record, more than one row allowed - each failed
+  the assertions that name it. The 20 earlier breaks, re-pointed at the
+  rewritten function, all still fail theirs.
+- API: 8 breaks - a held confirmation sent anyway, a held confirmation taking a
+  place in the pace, the catch-up hours wrong, the sweep not recording the
+  moment, the moment recorded when not switched on, the desk screen recording
+  it, a room asked about without its group, and the database with no groups.
+- A power cut stopped the first run of these; the source files were checked
+  against their backups (identical) and the runs repeated.
+
+**Not opened in a browser** - the master's rule for this job. Nothing on the
+screen changed shape; the route's answers are proved by the API tests.
+
+**Left open**
+- To the owner, in `MODULE.md`: the pace (D21-34); the new list's words;
+  whether a group's confirmation should say how many rooms; who the "lead
+  guest" is (built: the room booked first that still stands); and what the desk
+  sees for a group's other rooms (built: the group's messages).
+- At merge: as before - the two `server.ts` lines, the number, `linkFor`,
+  `app.guest_link_expires` in `guestDoor.ts`, the third stage-3 setting.
+
+**Commits:** see the branch `guest-messaging/phase-1`.
+
+---
+
 ## 2026-09-22 · phase 1 finished: what the guest is owed, and their booking's own link
 
 **Asked for:** by the master, 22 September - finish phase 1 now the owner has

@@ -61,20 +61,32 @@ export type MessageKind = (typeof KIND)[keyof typeof KIND];
       window: null.
    2. Three attempts and no more. A number that is wrong is wrong every
       minute, and a row per minute for ever is a log of one fault.
-   3. The reminder goes the day before arrival (D18-11) from this time on
-      the PROPERTY's clock. RECOMMENDED, NOT DECIDED — asked of the owner
-      on 22 September: without an hour it would leave at one minute past
-      midnight, the first sweep of "the day before". */
+   3. D22-39 (22 September): the reminder goes the day before arrival
+      (D18-11) from 10:00 on the PROPERTY's clock - not at one minute past
+      midnight, the first sweep of "the day before". And never within a
+      day of the confirmation (D22-40), which the database decides.
+   4. D22-42: a CATCH-UP confirmation - for a booking made before sending
+      was first switched on - goes only from 09:00 until 21:00 on the
+      property's clock. A booking made after is confirmed at once, at any
+      hour. The switch-on moment is recorded once, by the first
+      switched-on pass (`owedNow`), and nothing moves it after. */
 export const CONFIRM_WITHIN_HOURS: number | null = null;
 export const MOST_ATTEMPTS = 3;
 export const REMIND_FROM = "10:00";
+export const CATCH_UP_FROM = "09:00";
+export const CATCH_UP_UNTIL = "21:00";
 
 /** How often the sweep runs. The owner's pace is per sweep, so per minute. */
 export const SWEEP_EVERY_MS = 60_000;
 
 /** One booking owed one of the two messages, as the database answers it.
     Everything the message needs is here, because a second query per
-    booking is a second thing to go wrong in a loop. */
+    booking is a second thing to go wrong in a loop.
+
+    FOR A GROUP IT IS THE LEAD BOOKING (D22-41): several rooms booked
+    together are owed ONE confirmation and one reminder, about the group's
+    room booked first, to its guest. The other rooms never appear here -
+    the database counts a message about any room as the group's. */
 export interface Due {
   kind: MessageKind;
   reservationId: string;
@@ -87,6 +99,10 @@ export interface Due {
   checkIn: string;
   checkOut: string;
   nights: number;
+  /** Owed, but a catch-up confirmation outside its hours (D22-42): the
+      sweep leaves it for the morning. Still owed, so the desk's list of
+      bookings no message can reach does not change with the clock. */
+  held: boolean;
 }
 
 /* ── Which way it goes (D21-35, D21-72) ────────────────────────────
@@ -151,12 +167,16 @@ export interface Limits {
   withinHours: number | null;
   mostAttempts: number;
   remindFrom: string;
+  catchUpFrom: string;
+  catchUpUntil: string;
 }
 
 export const LIMITS: Limits = {
   withinHours: CONFIRM_WITHIN_HOURS,
   mostAttempts: MOST_ATTEMPTS,
   remindFrom: REMIND_FROM,
+  catchUpFrom: CATCH_UP_FROM,
+  catchUpUntil: CATCH_UP_UNTIL,
 };
 
 /* ── The pace (D21-34) ─────────────────────────────────────────────
@@ -193,6 +213,7 @@ interface DueRow extends Record<string, unknown> {
   hotel_id: string; hotel_code: string; hotel_name: string; hotel_phone: string | null;
   guest_name: string; guest_phone: string | null; guest_email: string | null;
   whatsapp_agreed: boolean; check_in: string; check_out: string; nights: number;
+  held: boolean;
 }
 
 /** Every booking owed a message — or, given a property, that property's.
@@ -205,9 +226,11 @@ export async function dueFromDatabase(
     `select kind, reservation_id::text, reference,
             hotel_id::text, hotel_code, hotel_name, hotel_phone,
             guest_name, guest_phone, guest_email, whatsapp_agreed,
-            check_in, check_out, nights
-       from app.guest_messages_due($1::integer, $2::integer, $3::time, $4::uuid)`,
-    [limits.withinHours, limits.mostAttempts, limits.remindFrom, hotelId]);
+            check_in, check_out, nights, held
+       from app.guest_messages_due($1::integer, $2::integer, $3::time,
+                                   $4::time, $5::time, $6::uuid)`,
+    [limits.withinHours, limits.mostAttempts, limits.remindFrom,
+     limits.catchUpFrom, limits.catchUpUntil, hotelId]);
   return rows.map((r) => ({
     kind: r.kind,
     reservationId: r.reservation_id,
@@ -218,7 +241,20 @@ export async function dueFromDatabase(
     checkIn: r.check_in,
     checkOut: r.check_out,
     nights: r.nights,
+    held: r.held,
   }));
+}
+
+/** What the SWEEP asks, and only the sweep: the first time it finds sending
+    switched on, the moment is recorded - once, and never moved - and it is
+    that moment which makes a booking a catch-up (D22-42). The desk's screen
+    reads `dueFromDatabase` and records nothing: looking at a list is not
+    switching anything on. */
+export async function owedNow(
+  client: Client, limits: Limits, hotelId: string | null = null,
+): Promise<Due[]> {
+  await client.query("select app.guest_messages_begin()");
+  return dueFromDatabase(client, limits, hotelId);
 }
 
 /* ── The guest's own link, for this message ────────────────────────
@@ -250,6 +286,8 @@ export interface SweepResult {
   sent: number;
   /** Owed, but with nowhere to send, so nothing was attempted. */
   nowhereToSend: number;
+  /** Owed, reachable, and a catch-up outside its hours: left for 09:00. */
+  waiting: number;
 }
 
 /* ── One pass ──────────────────────────────────────────────────────
@@ -266,11 +304,11 @@ export interface SweepResult {
    again, up to MOST_ATTEMPTS, which the database counts. */
 export async function runOnce(
   run: Run,
-  listDue: ListDue = dueFromDatabase,
+  listDue: ListDue = owedNow,
   makeLink: MakeLink = linkFromDatabase,
   sender: (client: Client, message: Message) => Promise<SendResult> = send,
 ): Promise<SweepResult> {
-  const result: SweepResult = { due: 0, attempted: 0, sent: 0, nowhereToSend: 0 };
+  const result: SweepResult = { due: 0, attempted: 0, sent: 0, nowhereToSend: 0, waiting: 0 };
   const pace = perSweep();
   if (!canSend() || pace === null) return result;
 
@@ -283,10 +321,15 @@ export async function runOnce(
      pace it would take a place every minute and starve the ones that can
      be reached. */
   const reachable = due.filter((booking) => channelFor(booking));
+  /* A catch-up outside its hours waits for the morning (D22-42), and like
+     the unreachable it takes no place in the pace - or the night's backlog
+     would hold up a booking made five minutes ago. */
+  const now = reachable.filter((booking) => !booking.held);
   result.due = due.length;
   result.nowhereToSend = due.length - reachable.length;
+  result.waiting = reachable.length - now.length;
 
-  for (const booking of reachable.slice(0, pace)) {
+  for (const booking of now.slice(0, pace)) {
     try {
       const link = await run((client) => makeLink(client, booking));
       const message = messageFor(booking, link);

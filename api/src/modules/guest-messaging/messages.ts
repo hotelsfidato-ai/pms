@@ -188,19 +188,39 @@ const whyNot = (due: Due) => due.guest.phone?.trim()
   ? "Not agreed to WhatsApp, and no email address"
   : "No telephone number and no email address";
 
-async function unreachableAt(client: Client, hotelId: string, reservation: string | null) {
+async function unreachableAt(client: Client, hotelId: string, party: string[] | null) {
   const seen = new Map<string, {
     id: string; reference: string; guest: string; checkIn: string; why: string;
   }>();
   for (const due of await dueFromDatabase(client, LIMITS, hotelId)) {
     if (channelFor(due) || seen.has(due.reservationId)) continue;
-    if (reservation && due.reservationId !== reservation) continue;
+    if (party && !party.includes(due.reservationId)) continue;
     seen.set(due.reservationId, {
       id: due.reservationId, reference: due.reference, guest: due.guest.name,
       checkIn: due.checkIn, why: whyNot(due),
     });
   }
   return [...seen.values()];
+}
+
+/* ── One booking, or its whole group (D22-41) ──────────────────────
+   A group is sent ONE confirmation, about its lead booking, and every
+   other room is covered by it. So "was this room's confirmation sent?"
+   is answered by the group's messages: asked about any room, the record
+   shows what went about any room of its group - the lead's, in practice.
+   Read under the clerk's own session, so it is the rooms they may see.
+
+   The id is not always a booking's (the filter is text, as `about_id` is -
+   MSG-1), so it is only looked up when it is a uuid's shape; otherwise it
+   filters as itself, as it always did. */
+async function partyOf(client: Client, reservation: string): Promise<string[]> {
+  if (!new RegExp(A_UUID).test(reservation)) return [reservation];
+  const { rows } = await client.query<{ id: string }>(
+    `select r.id::text from reservations r
+      where r.id = $1::uuid
+         or r.group_id = (select x.group_id from reservations x where x.id = $1::uuid)`,
+    [reservation]);
+  return rows.length ? rows.map((r) => r.id) : [reservation];
 }
 
 /* ── The list ──────────────────────────────────────────────────────
@@ -221,12 +241,14 @@ guestMessages.get("/:code/guest-messages", async (c) => {
       return { forbidden: MESSAGES_REFUSED };
     }
 
-    const { rows } = reservation
+    const party = reservation ? await partyOf(client, reservation) : null;
+    const { rows } = party
       ? await client.query<SentRow>(
           `${SENT_SELECT}
-            where m.hotel_id = $1 and m.about_kind = 'reservation' and m.about_id = $2
+            where m.hotel_id = $1 and m.about_kind = 'reservation'
+              and m.about_id = any($2::text[])
             order by m.sent_at desc limit 200`,
-          [hotelId, reservation])
+          [hotelId, party])
       : await client.query<SentRow>(
           `${SENT_SELECT}
             where m.hotel_id = $1
@@ -240,7 +262,7 @@ guestMessages.get("/:code/guest-messages", async (c) => {
       connected: canSend(),
       notConnected: canSend() ? null : NOT_CONNECTED,
       messages: rows.map(asMessage),
-      unreachable: await unreachableAt(client, hotelId, reservation),
+      unreachable: await unreachableAt(client, hotelId, party),
     };
   });
 

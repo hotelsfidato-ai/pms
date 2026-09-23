@@ -340,11 +340,78 @@ describe("the bookings no message can reach (MSG-3)", () => {
     expect(body.unreachable.some((u) => u.reference === "GMQ-1")).toBe(true);
   });
 
+  /* Looking is not switching on: only the sweep records the moment sending
+     began (D22-42). A screen that did would turn every booking made after
+     somebody opened it into a "new" one. */
+  it("records no switch-on moment by being looked at", async () => {
+    await sql("delete from guest_messaging_began");
+    await call(staffByRole.get("front_desk")!, "/guest-messages");
+    expect((await sql("select count(*)::int as n from guest_messaging_began")).rows[0].n).toBe(0);
+  });
+
   it("narrows to one booking with the rest of the screen", async () => {
     const res = await call(staffByRole.get("front_desk")!,
       `/guest-messages?reservation=${made.get("GMQ-2")}`);
     const body = await res.json() as Listed;
     expect(body.unreachable.map((u) => u.reference)).toEqual(["GMQ-2"]);
+  });
+});
+
+/* ⚠ D22-41. A group is sent one confirmation, about its lead booking. Asked
+   about any other room of the group, "was it sent?" is answered by that
+   message - the room is covered by it, not forgotten. */
+describe("a group's rooms share its messages (D22-41)", () => {
+  let group: string;
+  const rooms: string[] = [];
+
+  beforeAll(async () => {
+    group = (await sql(
+      "insert into reservation_groups (name, lead_hotel_id) values ($1, $2) returning id::text",
+      [`${TAG} party`, hotelId])).rows[0].id as string;
+    const guest = (await sql(
+      "insert into guests (full_name) values ($1) returning id::text", [`${TAG} party guest`]))
+      .rows[0].id as string;
+    for (const ref of ["GMP-1", "GMP-2"]) {
+      rooms.push((await sql(
+        `insert into reservations (hotel_id, guest_id, room_type_id, reference,
+                                   check_in, check_out, adults, status, source,
+                                   agreed_rate, group_id)
+         select $1, $2, (select id from room_types where hotel_id = $1 limit 1), $3,
+                (now() at time zone 'Asia/Kolkata')::date + 30,
+                (now() at time zone 'Asia/Kolkata')::date + 31,
+                1, 'confirmed', 'direct', 1000, $4
+         returning id::text`, [hotelId, guest, ref, group])).rows[0].id as string);
+    }
+  });
+
+  afterAll(async () => {
+    const guests = (await sql("select guest_id::text as id from reservations where id = any($1::uuid[])",
+      [rooms])).rows.map((r) => r.id as string);
+    await sql("delete from reservations where id = any($1::uuid[])", [rooms]);
+    await sql("delete from reservation_groups where id = $1", [group]);
+    await sql("alter table guests disable trigger guests_no_delete");
+    await sql("delete from guests where id = any($1::uuid[])", [guests]);
+    await sql("alter table guests enable trigger guests_no_delete");
+  });
+
+  it("shows the lead's confirmation when asked about another room", async () => {
+    await recordOne({ aboutId: rooms[0]! });
+    const res = await call(staffByRole.get("front_desk")!, `/guest-messages?reservation=${rooms[1]}`);
+    const body = await res.json() as {
+      messages: Array<{ about: { id: string; reference: string | null } | null }>;
+    };
+    expect(body.messages.map((m) => m.about?.reference)).toEqual(["GMP-1"]);
+  });
+
+  it("lists a group nobody can be sent to once, by its lead, for any of its rooms", async () => {
+    const all = await (await call(staffByRole.get("front_desk")!, "/guest-messages")).json() as {
+      unreachable: Array<{ reference: string }>;
+    };
+    expect(all.unreachable.filter((u) => u.reference.startsWith("GMP-")).map((u) => u.reference))
+      .toEqual(["GMP-1"]);
+    const one = await (await call(staffByRole.get("front_desk")!,
+      `/guest-messages?reservation=${rooms[1]}`)).json() as { unreachable: Array<{ reference: string }> };
+    expect(one.unreachable.map((u) => u.reference)).toEqual(["GMP-1"]);
   });
 });
 

@@ -4,7 +4,7 @@ import type { AddressInfo } from "node:net";
 import { app } from "../../../src/server.ts";
 import { closePool, withUser, type Client } from "../../../src/db.ts";
 import {
-  runOnce, dueFromDatabase, linkFromDatabase, KIND, type Due,
+  runOnce, owedNow, linkFromDatabase, KIND, LIMITS, type Due, type Limits,
 } from "../../../src/modules/guest-messaging/jobs.ts";
 
 /* ══════════════════════════════════════════════════════════════════
@@ -20,6 +20,10 @@ import {
      the link in the message opens the guest's page - the hash the
        database keeps is the hash of the token the guest was sent
      a message sent is not sent again the next minute
+     several rooms booked together get ONE message, about the room booked
+       first, and the others are never owed on their own (D22-41)
+     the first switched-on pass records the moment sending began, once,
+       and a pass that is not switched on records nothing (D22-42)
      ONE BOOKING'S DATABASE FAULT DOES NOT UNDO ANOTHER'S RECORD. In one
        transaction for the whole pass, Postgres aborts every statement
        after the first error and the rollback takes the record of every
@@ -60,9 +64,12 @@ const sql = async (text: string, params: unknown[] = []) => {
 /** Nobody signed in - the sweep's own transaction. */
 const asTheSweep = <T>(fn: (client: Client) => Promise<T>) => withUser("", fn);
 
-/** This property's bookings only. */
-const mine = (client: Client, limits: Parameters<typeof dueFromDatabase>[1]) =>
-  dueFromDatabase(client, limits, hotelId);
+/** This property's bookings only - through the sweep's own door, which
+    records the switch-on moment before it asks. */
+const mine = (client: Client, limits: Limits) => owedNow(client, limits, hotelId);
+
+const began = async () => (await sql(
+  "select began_at::text from guest_messaging_began")).rows[0]?.began_at as string | undefined;
 
 beforeAll(async () => {
   const boot = new (await import("pg")).default.Client({ connectionString: SUPER });
@@ -110,9 +117,11 @@ afterAll(async () => {
   await new Promise<void>((done) => server.close(() => done()));
   const db = await admin();
   try {
+    await db.query("delete from guest_messaging_began");
     await db.query("delete from guest_links where hotel_id = $1", [hotelId]);
     await db.query("delete from messages_sent where hotel_id = $1", [hotelId]);
     await db.query("delete from reservations where hotel_id = $1", [hotelId]);
+    await db.query("delete from reservation_groups where name like 'GMW %'");
     await db.query("alter table guests disable trigger guests_no_delete");
     await db.query("delete from guests where id = any($1::uuid[])", [guests]);
     await db.query("alter table guests enable trigger guests_no_delete");
@@ -135,6 +144,11 @@ beforeEach(async () => {
   process.env["GUEST_MESSAGES_PER_MINUTE"] = "10";
   await sql("delete from guest_links where hotel_id = $1", [hotelId]);
   await sql("delete from messages_sent where hotel_id = $1", [hotelId]);
+  /* Switched on a day ago, BEFORE this file's bookings were made - so they
+     are new bookings, confirmed at any hour, and no test here depends on
+     the time of day it runs (D22-42). */
+  await sql("delete from guest_messaging_began");
+  await sql("insert into guest_messaging_began (began_at) values (now() - interval '1 day')");
 });
 
 const recorded = async () => (await sql(
@@ -145,7 +159,7 @@ describe("the sweep, as the server runs it", () => {
   it("sends each owed confirmation once, with a link that opens that guest's page", async () => {
     const out = await runOnce(asTheSweep, mine);
 
-    expect(out).toEqual({ due: 3, attempted: 3, sent: 3, nowhereToSend: 0 });
+    expect(out).toEqual({ due: 3, attempted: 3, sent: 3, nowhereToSend: 0, waiting: 0 });
     expect(received.map((m) => m.data["reference"])).toEqual(["GMW-1", "GMW-2", "GMW-3"]);
     expect(received.every((m) => m.kind === KIND.confirmation && m.channel === "whatsapp"))
       .toBe(true);
@@ -167,7 +181,7 @@ describe("the sweep, as the server runs it", () => {
     /* And the next minute, nothing: each one is recorded as sent. */
     received = [];
     expect(await runOnce(asTheSweep, mine))
-      .toEqual({ due: 0, attempted: 0, sent: 0, nowhereToSend: 0 });
+      .toEqual({ due: 0, attempted: 0, sent: 0, nowhereToSend: 0, waiting: 0 });
     expect(received).toEqual([]);
   });
 
@@ -181,7 +195,7 @@ describe("the sweep, as the server runs it", () => {
 
     const out = await runOnce(asTheSweep, mine, makeLink);
 
-    expect(out).toEqual({ due: 3, attempted: 2, sent: 2, nowhereToSend: 0 });
+    expect(out).toEqual({ due: 3, attempted: 2, sent: 2, nowhereToSend: 0, waiting: 0 });
     expect((await recorded()).map((r) => r.about_id).sort())
       .toEqual([booking.get("GMW-1"), booking.get("GMW-3")].sort());
 
@@ -192,9 +206,7 @@ describe("the sweep, as the server runs it", () => {
   });
 
   it("is refused a link for a booking that stopped being confirmed", async () => {
-    const [due] = await asTheSweep((client) => mine(client, {
-      withinHours: null, mostAttempts: 3, remindFrom: "10:00",
-    }));
+    const [due] = await asTheSweep((client) => mine(client, LIMITS));
     await sql("update reservations set status = 'cancelled' where id = $1",
       [booking.get(due!.reference)]);
     try {
@@ -206,5 +218,66 @@ describe("the sweep, as the server runs it", () => {
     }
     expect((await sql("select count(*)::int as n from guest_links where hotel_id = $1",
       [hotelId])).rows[0].n).toBe(0);
+  });
+
+  /* ⚠ D22-41. Three rooms booked together are one party: the owner said one
+     confirmation per group, to the lead guest. */
+  it("sends a group one confirmation, about the room booked first, and never the others", async () => {
+    const group = (await sql(
+      "insert into reservation_groups (name, lead_hotel_id) values ('GMW party', $1) returning id::text",
+      [hotelId])).rows[0].id as string;
+    const rooms: string[] = [];
+    for (const ref of ["GMW-G1", "GMW-G2", "GMW-G3"]) {
+      rooms.push((await sql(
+        `insert into reservations (hotel_id, guest_id, room_type_id, reference,
+                                   check_in, check_out, adults, status, source,
+                                   agreed_rate, whatsapp_agreed, group_id)
+         select $1, $2, (select id from room_types where hotel_id = $1 limit 1), $3,
+                (now() at time zone 'Asia/Kolkata')::date + 9,
+                (now() at time zone 'Asia/Kolkata')::date + 11,
+                1, 'confirmed', 'direct', 1000, true, $4
+         returning id::text`, [hotelId, guests[0], ref, group])).rows[0].id as string);
+    }
+    try {
+      await runOnce(asTheSweep, mine);
+      const forTheGroup = received.filter((m) => m.data["reference"]!.startsWith("GMW-G"));
+      expect(forTheGroup.map((m) => m.data["reference"])).toEqual(["GMW-G1"]);
+
+      /* Covered: the next minute owes the group nothing - not even once the
+         room the message was about is cancelled. */
+      await sql("update reservations set status = 'cancelled' where id = $1", [rooms[0]]);
+      received = [];
+      await runOnce(asTheSweep, mine);
+      expect(received.filter((m) => m.data["reference"]!.startsWith("GMW-G"))).toEqual([]);
+    } finally {
+      await sql("delete from guest_links where reservation_id = any($1::uuid[])", [rooms]);
+      await sql("delete from messages_sent where about_id = any($1::text[])", [rooms]);
+      await sql("delete from reservations where id = any($1::uuid[])", [rooms]);
+      await sql("delete from reservation_groups where id = $1", [group]);
+    }
+  });
+});
+
+describe("the moment sending began (D22-42)", () => {
+  it("is recorded by the first switched-on pass, and never moved by a later one", async () => {
+    await sql("delete from guest_messaging_began");
+    await runOnce(asTheSweep, mine);
+    const first = await began();
+    expect(first).toBeTruthy();
+    expect((await sql("select now() - began_at < interval '1 minute' as fresh from guest_messaging_began"))
+      .rows[0].fresh).toBe(true);
+
+    await runOnce(asTheSweep, mine);
+    expect(await began()).toBe(first);
+  });
+
+  it("is not recorded by a pass that is not switched on", async () => {
+    await sql("delete from guest_messaging_began");
+    delete process.env["GUEST_MESSAGES_PER_MINUTE"];
+    await runOnce(asTheSweep, mine);
+    delete process.env["N8N_SEND_URL"];
+    process.env["GUEST_MESSAGES_PER_MINUTE"] = "10";
+    await runOnce(asTheSweep, mine);
+    expect(await began()).toBeUndefined();
   });
 });

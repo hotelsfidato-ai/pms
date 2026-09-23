@@ -1,7 +1,7 @@
 import { describe, it, expect, beforeEach, afterAll, vi } from "vitest";
 import { closePool, type Client } from "../../../src/db.ts";
 import {
-  runOnce, channelFor, messageFor, jobs, KIND, REMIND_FROM,
+  runOnce, channelFor, messageFor, jobs, KIND,
   type Due, type Limits, type Run,
 } from "../../../src/modules/guest-messaging/jobs.ts";
 import type { Message, SendResult } from "../../../src/sending.ts";
@@ -41,6 +41,7 @@ const aBooking = (over: Partial<Due> = {}): Due => ({
   checkIn: "2026-09-21",
   checkOut: "2026-09-23",
   nights: 2,
+  held: false,
   ...over,
 });
 
@@ -97,7 +98,7 @@ describe("nothing sends until it is switched on", () => {
     expect(asked).toBe(false);
     expect(link.asked).toEqual([]);
     expect(post.seen).toEqual([]);
-    expect(out).toEqual({ due: 0, attempted: 0, sent: 0, nowhereToSend: 0 });
+    expect(out).toEqual({ due: 0, attempted: 0, sent: 0, nowhereToSend: 0, waiting: 0 });
   });
 
   /* ⚠ D21-34: "that pace is the owner's number to give; nobody guesses
@@ -133,8 +134,13 @@ describe("which booking is due", () => {
     );
 
     /* D21-33: EVERY future booking, however long ago it was made - no
-       window. The recommendation was 48 hours; the owner said no. */
-    expect(limits).toEqual({ withinHours: null, mostAttempts: 3, remindFrom: REMIND_FROM });
+       window. The recommendation was 48 hours; the owner said no.
+       D22-39: the reminder from 10:00. D22-42: a catch-up confirmation
+       from 09:00 until 21:00. All on the property's own clock. */
+    expect(limits).toEqual({
+      withinHours: null, mostAttempts: 3, remindFrom: "10:00",
+      catchUpFrom: "09:00", catchUpUntil: "21:00",
+    });
   });
 
   it("sends the confirmation and the reminder, each to its own booking", async () => {
@@ -151,7 +157,7 @@ describe("which booking is due", () => {
       link.make, post.send,
     );
 
-    expect(out).toEqual({ due: 2, attempted: 2, sent: 2, nowhereToSend: 0 });
+    expect(out).toEqual({ due: 2, attempted: 2, sent: 2, nowhereToSend: 0, waiting: 0 });
     expect(post.seen.map((m) => m.kind))
       .toEqual(["booking-confirmation", "arrival-reminder"]);
   });
@@ -220,7 +226,7 @@ describe("a booking with nowhere to send", () => {
        spending. */
     expect(link.asked).toEqual([]);
     expect(post.seen).toEqual([]);
-    expect(out).toEqual({ due: 1, attempted: 0, sent: 0, nowhereToSend: 1 });
+    expect(out).toEqual({ due: 1, attempted: 0, sent: 0, nowhereToSend: 1, waiting: 0 });
   });
 });
 
@@ -236,7 +242,7 @@ describe("the owner's pace (D21-34)", () => {
     );
 
     expect(post.seen.map((m) => m.data?.["reference"])).toEqual(["FH-1", "FH-2"]);
-    expect(out).toEqual({ due: 3, attempted: 2, sent: 2, nowhereToSend: 0 });
+    expect(out).toEqual({ due: 3, attempted: 2, sent: 2, nowhereToSend: 0, waiting: 0 });
   });
 
   /* ⚠ A booking nobody can reach is never attempted, so it is owed for
@@ -258,7 +264,32 @@ describe("the owner's pace (D21-34)", () => {
     );
 
     expect(post.seen.map((m) => m.data?.["reference"])).toEqual(["FH-3"]);
-    expect(out).toEqual({ due: 3, attempted: 1, sent: 1, nowhereToSend: 2 });
+    expect(out).toEqual({ due: 3, attempted: 1, sent: 1, nowhereToSend: 2, waiting: 0 });
+  });
+});
+
+/* ⚠ D22-42: a confirmation owed to a booking made before sending was
+   switched on goes only between 09:00 and 21:00. The database marks it
+   held outside those hours; the sweep must leave it - and not let it take a
+   place a booking made five minutes ago is waiting for. */
+describe("the catch-up hours (D22-42)", () => {
+  it("leaves a held confirmation for the morning, and mints it no link", async () => {
+    connected("1");
+    const link = aLinkMaker();
+    const post = aReceiver();
+
+    const out = await runOnce(
+      NOWHERE,
+      async () => [
+        aBooking({ reference: "FH-OLD", held: true }),
+        aBooking({ reference: "FH-NEW" }),
+      ],
+      link.make, post.send,
+    );
+
+    expect(link.asked).toEqual(["FH-NEW"]);
+    expect(post.seen.map((m) => m.data?.["reference"])).toEqual(["FH-NEW"]);
+    expect(out).toEqual({ due: 2, attempted: 1, sent: 1, nowhereToSend: 0, waiting: 1 });
   });
 });
 
@@ -312,7 +343,7 @@ describe("one booking's fault does not stop the others", () => {
     );
 
     expect(post.seen.map((m) => m.data?.["reference"])).toEqual(["FH-2609-5002"]);
-    expect(out).toEqual({ due: 2, attempted: 1, sent: 1, nowhereToSend: 0 });
+    expect(out).toEqual({ due: 2, attempted: 1, sent: 1, nowhereToSend: 0, waiting: 0 });
   });
 
   it("counts a refusal as attempted and not as sent", async () => {
@@ -321,7 +352,7 @@ describe("one booking's fault does not stop the others", () => {
 
     const out = await runOnce(NOWHERE, async () => [aBooking()], aLinkMaker().make, post.send);
 
-    expect(out).toEqual({ due: 1, attempted: 1, sent: 0, nowhereToSend: 0 });
+    expect(out).toEqual({ due: 1, attempted: 1, sent: 0, nowhereToSend: 0, waiting: 0 });
   });
 });
 
