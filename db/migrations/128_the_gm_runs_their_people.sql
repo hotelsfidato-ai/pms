@@ -1,5 +1,5 @@
 -- =============================================================================
--- 127 · The GM runs their own hotel's people, and makes no administrator
+-- 128 · The GM runs their own hotel's people, and makes no administrator
 -- =============================================================================
 -- The owner's answers of 22 September (docs/briefs/decisions-2026-09-22.md):
 --
