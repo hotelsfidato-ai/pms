@@ -14,6 +14,29 @@ entries stay here: they are the reason the fault does not come back.
 
 ## Open — not fixed
 
+### FD-13 · On the Calendar, every room with a booking is two rows tall, with "book here" cells under its bars
+
+**Found** — 22 September, by the master chat, reading `StayView.tsx` for the
+Calendar render. The 21 Sep screenshot
+(`.local/screenshots/2026-09-21/desktop/03-home-calendar.png`) shows it: rooms
+201 to 208 and 307 each have an empty second band, while 209, 210 and 301 to
+306 (no bars) are one row. The cause is in the room row's grid:
+- each `BookingBar` sets `gridRow: 1`;
+- the empty day cells set only `gridColumn` (`style={{ gridColumn: i + 2 }}`,
+  about line 730);
+- grid auto-placement therefore puts every cell whose column a bar already
+  holds into a second row, and the placement cursor keeps the cells after it
+  there too.
+
+The second band is made of those cells. Each one is a "Book room N on date"
+button, so a click under an existing booking starts a new booking for a night
+the room is already sold. Whether the server refuses it was not tested.
+
+**What was done** — nothing yet, and the owner was told. The fix is one line:
+`gridRow: 1` on the empty cells, like the bars. Guard it by measuring that a
+room row with a bar is one cell tall (`h-9`), and watch that test fail without
+the fix.
+
 ### FD-9 · A guest moved mid-stay leaves the old room clean for the next guest
 
 **Found** - 22 September, fixing FD-8, reading 054 against 070. Not fixed:
