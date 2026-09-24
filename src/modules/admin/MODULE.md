@@ -66,9 +66,14 @@ properties and people.
   the role, and the role pickers never hold Owner or Admin for a GM (D22-2).
 - **And for a hotel's Admin (D23-2, 23 September)** - somebody whose role AT a
   hotel is `admin`: the same as the GM there, plus Admin in the picker. Owner
-  never. Migration 131 (`app.manages_hotel` counts `admin`; a closed day's
-  record still needs owner or GM). Adding somebody NEW fails for both at the
-  staff row - ADM-6.
+  never. Migration 130 (`app.manages_hotel` counts `admin`; a closed day's
+  record still needs owner or GM). They also open their own property's page,
+  read-only, as the GM does (the owner, 24 September).
+- **Nobody runs somebody above them (the owner, 24 September)** - nobody
+  edits, removes, re-roles, switches off or resets the password of somebody
+  whose role at that hotel they could not give: the GM leaves the hotel's
+  Admin and Owner alone, a hotel's Admin its Owner (130's last section,
+  ADM-7). People shows the × on a chip only for such a role (`mayTake`).
 - The `/admin/*` routes are wrapped in `RequireAccess`; the Console's route
   does not exist at all in a production build (`IS_DEV`). `/properties/:code`
   answers a GM for their own hotel and 404 for anybody else's, because it

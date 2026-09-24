@@ -37,7 +37,16 @@ Requests).
 - **Birthdays dropped.** Nothing had been built; the mention in `lists.ts` and
   the line in `docs/briefs/marketing.md` say so.
 
-**Proved** - this copy, 23 September:
+**Finished and proved again 24 September** on `admin/finish-24sep` (the
+helper was stopped on 23 September before committing; the table below is its
+own run, in its own copy). In this copy: `npx vitest run src/modules/marketing`
+22 passed; with the No offers check taken out of `mayBeWrittenTo` AND reception
+given `marketing: view`, 4 failed (the three No offers tests and "who sees the
+lists"), then both put back. Screens: `.local/screenshots/2026-09-24-admin/`
+`10-marketing-gm-*` (the GM, the page) and `11-marketing-reception-refused-*`
+(reception, refused by address: "does not include marketing").
+
+**Proved** - the helper's copy, 23 September:
 
 | Gate | Result |
 |---|---|

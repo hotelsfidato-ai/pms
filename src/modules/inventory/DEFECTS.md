@@ -28,6 +28,27 @@ The menu says "Room types"; the page says "The house".
 
 ## Fixed — the solution is here; do not work it out again
 
+### INV-7 · Marking a default cancellation policy with a wrong id lost the default - FIXED 24 September
+
+**Found** - by the route audit behind `api/test/roleGate.test.ts` (its probe of
+this route was refused-only, because an allowed probe would write).
+
+`PUT /:code/cancellation-policies/:id/default` cleared the hotel's default
+first, then looked for the policy it was sent and refused - and inside
+`withSession` a refusal is a commit (MEMORY 243). So a wrong or retired id left
+the hotel with no default, and every new booking carried no terms.
+
+**Fixed** - 24 September (the helper branch `stores/issue-outlet-rooms-persist`,
+finished on `admin/finish-24sep`): the policy is looked for first, `for update`,
+and a wrong id is refused before anything is cleared.
+
+**Proved** - `api/test/modules/inventory/policyDefault.test.ts`: a wrong id
+answers 409 "That policy is not here." and the default stays; with cp6's route
+it fails ("expected [] to deeply equal [ Array(1) ]" - the default gone). The
+role-gate probe now tries this route as every role, like the other price writes.
+
+**The rule** - in a route whose refusal commits, ask before you change anything.
+
 ### INV-6 · A room is out of service in two records, and nothing keeps them in step — FIXED 17 September
 
 **Found** — 16 September, asked by the owner to prove whether

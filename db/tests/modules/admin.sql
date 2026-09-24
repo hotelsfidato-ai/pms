@@ -381,6 +381,85 @@ select set_config('app.user_id',
 
 
 -- =============================================================================
+-- NOBODY RUNS SOMEBODY ABOVE THEM (the owner, 24 September)
+-- =============================================================================
+-- Nobody edits, removes, re-roles, switches off or resets the password of
+-- somebody whose role at that hotel they could not give. A GM leaves the
+-- hotel's Admin and Owner alone; a hotel's Admin leaves its Owner alone and
+-- still runs the GM. The functions (what the routes ask) and the rows (what
+-- the application may write) are two guards, each asked on its own (MEMORY
+-- 318).
+-- =============================================================================
+do $$
+declare
+  h uuid; gm uuid; adm uuid; own uuid; n int;
+begin
+  h := app.provision_property_unchecked('ADU', 'Above Them Test', 'Nowhere');
+  insert into staff (email, full_name) values ('d24-gm@fidato.in', 'D24 GM')
+  on conflict (email) do update set is_active = true returning id into gm;
+  insert into staff (email, full_name) values ('d24-admin@fidato.in', 'D24 Admin')
+  on conflict (email) do update set is_active = true returning id into adm;
+  insert into staff (email, full_name) values ('d24-owner@fidato.in', 'D24 Owner')
+  on conflict (email) do update set is_active = true returning id into own;
+  delete from staff_hotels where staff_id in (gm, adm, own);
+  insert into staff_hotels (staff_id, hotel_id, role) values
+    (gm, h, 'gm'), (adm, h, 'admin'), (own, h, 'owner');
+
+  -- ---------- the GM, and the hotel's Admin above them ----------
+  perform set_config('app.user_id', gm::text, true);
+  perform test.ok('above them', 'a GM does not reset the hotel''s Admin''s password',
+    not app.may_set_password(adm));
+  perform test.ok('above them', 'a GM does not edit the hotel''s Admin', not app.manages_person(adm));
+  perform test.ok('above them', 'a GM does not switch off the hotel''s Admin', not app.may_switch_person(adm));
+  perform test.ok('above them', 'nor any of it to the hotel''s Owner',
+    not app.may_set_password(own) and not app.manages_person(own) and not app.may_switch_person(own));
+
+  set local role pms_app;
+  delete from staff_hotels where staff_id = adm and hotel_id = h;
+  get diagnostics n = row_count;
+  reset role;
+  perform test.ok('above them', 'the row: a GM cannot take the hotel''s Admin off it', n = 0, n || ' removed');
+
+  set local role pms_app;
+  update staff_hotels set role = 'front_desk' where staff_id = adm and hotel_id = h;
+  get diagnostics n = row_count;
+  reset role;
+  perform test.ok('above them', 'the row: nor make the Admin something else', n = 0, n || ' changed');
+
+  set local role pms_app;
+  update staff set full_name = 'Renamed' where id = adm;
+  get diagnostics n = row_count;
+  reset role;
+  perform test.ok('above them', 'the row: nor rename them', n = 0, n || ' renamed');
+
+  -- ---------- the hotel's Admin: the GM yes, the Owner no ----------
+  perform set_config('app.user_id', adm::text, true);
+  perform test.ok('above them', 'a hotel''s Admin still resets the GM''s password and may switch them off',
+    app.may_set_password(gm) and app.may_switch_person(gm));
+  perform test.ok('above them', 'a hotel''s Admin does not reset the hotel''s Owner''s password',
+    not app.may_set_password(own));
+  perform test.ok('above them', 'nor switch the Owner off', not app.may_switch_person(own));
+
+  set local role pms_app;
+  delete from staff_hotels where staff_id = own and hotel_id = h;
+  get diagnostics n = row_count;
+  reset role;
+  perform test.ok('above them', 'the row: a hotel''s Admin cannot take the Owner off it', n = 0, n || ' removed');
+
+  -- ---------- and the fixtures go ----------
+  perform set_config('app.user_id', '', true);
+  delete from staff_hotels where staff_id in (gm, adm, own);
+  update staff set is_active = false where id in (gm, adm, own);
+  alter table hotels disable trigger hotels_no_delete;
+  delete from hotels where id = h;
+  alter table hotels enable trigger hotels_no_delete;
+end $$;
+
+select set_config('app.user_id',
+       (select id::text from staff where email = 'owner@fidato.in'), false);
+
+
+-- =============================================================================
 -- A DEPLOY DOES NOT BRING THE PLACEHOLDER ADMINISTRATOR BACK (ADM-3, MEMORY 271)
 -- =============================================================================
 -- Every deploy replays 008_seed.sql. By now this database has real group

@@ -11,38 +11,78 @@ Work that touches the core or several services still goes in the root
 
 ---
 
-## 2026-09-23 · A hotel's Admin runs its people; ADM-3; SPA-2; PUR-1; working menus (D23-2, D22-9, D22-11, D22-19, D22-22)
+## 2026-09-24 · A hotel's Admin runs its people; nobody runs somebody above them; adding somebody new works; ADM-3; SPA-2; PUR-1; working menus (D23-2, D22-9, D22-11, D22-19, D22-22)
 
-**Asked for:** one helper task from the master, branch `admin/hotel-admin-menus`.
+**Asked for:** the master, 24 September: finish three helper branches stopped
+on 23 September mid-task (`admin/hotel-admin-menus`, `marketing/mkt1-d22-17`,
+`stores/issue-outlet-rooms-persist`), on `admin/finish-24sep`.
+
+**The owner's answers, 24 September (asked in this chat):** adding somebody
+new is fixed now (ADM-6); Purchasing goes in housekeeping's menu; laundry's
+working-menu entry is Dockets only; a hotel's Admin also opens their own
+property's page, read-only, as the GM does; **nobody edits, removes,
+re-roles, switches off or resets the password of somebody whose role at that
+hotel they could not give.**
 
 **Shipped**
-- **D23-2** - migration 131: `app.manages_hotel` counts `admin` at the hotel,
-  so a hotel's Admin rosters, removes, edits, switches off and resets
-  passwords for that hotel's people as a GM does; `app.grantable_roles` gives
-  them Admin there (owner never); the staff insert policy takes a person they
-  add. The closed-day trigger (100) now names owner and GM itself, so a hotel's
-  Admin still cannot correct a closed day (D17-12). People's "may not add"
-  sentence names the Admin.
-- **ADM-3** - `008_seed.sql` inserts `REPLACE@fidato.in` only where nobody else
-  holds group access.
-- **SPA-2** - `spa` off the accountant and the viewer in the matrix; the diary's
-  menu entry reads the matrix again (`SEES_THE_DIARY` gone).
-- **PUR-1 / D22-11** - housekeeping `purchasing: view, create`; `VIEW_ROLES`
-  and its refusal sentence follow.
-- **D22-19 / D22-22** - Rooms in housekeeping's working menu, the Store in the
+- **D23-2** - migration **130** (the helper's 131, renumbered):
+  `app.manages_hotel` counts `admin` at the hotel, so a hotel's Admin adds,
+  rosters, edits, switches off and resets passwords for that hotel's people
+  as a GM does, and `app.grantable_roles` gives them Admin there (Owner
+  never). A closed day's record still needs owner or GM (100's trigger names
+  them itself). People's "may not add" sentence names the Admin.
+- **Nobody runs somebody above them** (the owner, 24 September) - the same
+  migration: `may_manage_person`, `manages_person`, `may_switch_person` and
+  the `staff_hotels` update and delete policies ask "a role I could give
+  there" (`role = any (app.grantable_roles(hotel))`) instead of "a hotel I
+  run". The GM leaves the hotel's Admin and Owner alone - until now a GM
+  could reset an Admin's password and sign in as one (ADM-7); a hotel's
+  Admin leaves its Owner alone. People offers the × on a chip only for a role
+  the viewer could give (`mayTake`).
+- **ADM-6** - `POST /admin/staff` no longer writes the person with one
+  `insert … on conflict do update … returning`, which asks staff's READ
+  policies about a row a GM cannot read yet. Somebody already here is
+  updated; anybody else is inserted with an id made in the route.
+- **ADM-3** - `008_seed.sql` inserts `REPLACE@fidato.in` only where nobody
+  else holds group access. Kept as an edit to 008 on purpose: every deploy
+  replays 001 onwards, so a later migration cannot stop 008 inserting the row
+  earlier in the same replay - it could only switch it off again afterwards.
+- **SPA-2** - `spa` off the accountant and the viewer; the diary's menu entry
+  reads the matrix again.
+- **PUR-1 / D22-11** - housekeeping `purchasing: view, create`, and
+  Purchasing in housekeeping's menu (the owner, 24 September).
+- **D22-19 / D22-22** - Rooms in housekeeping's menu, the Store in the
   kitchen manager's, laundry's Dockets in reception's and housekeeping's (the
-  GM and hotel manager have no working menu and already see the Laundry
-  section where it is on). Housekeeping still lands on Housekeeping and the
-  kitchen manager on Kitchen (`WORKING_HOME` in navigation.ts).
+  GM and hotel manager see the Laundry section already). Housekeeping still
+  lands on Housekeeping and the kitchen manager on Kitchen (`WORKING_HOME`).
+- Also on this branch, not this service's: D22-23 (`src/App.tsx`, the
+  master's file - the Rooms board kept for an offline reload), MKT-1 and
+  D22-17 (marketing), D22-20 (stores), the default-policy fix (inventory).
+  Each is in its own service's log.
 
-**Found** - ADM-6: adding somebody NEW as a GM (and now a hotel's Admin) fails
-at the staff row under RLS, after the Firebase account is made. Not fixed.
+**Found**
+- **ADM-7** (fixed here) - above.
+- The helper's ADM-6 was right: the add path had never run past Firebase in
+  any suite. `api/test/modules/admin/addPerson.test.ts` stands in for the
+  account and runs the route to the rows.
 
-**Proved** - see the master's report for counts; every new test seen failing
-with its change taken out.
+**Proved** (this copy, database `fidato_s3`, API 8815, web 5215)
+- `api/test/modules/admin/addPerson.test.ts` - 3 tests; with the old route,
+  all 3 fail on "new row violates row-level security policy for table staff".
+- `db/tests/modules/admin.sql` - "hotel admin" 12, "above them" 11,
+  "placeholder" 1. With 130's last section taken out and cp6's 008 put back:
+  7 failed ("1 removed", "1 placeholder rows after a replay").
+- `admin.test.tsx` "takes nobody off the hotel whose role there the GM could
+  not give" - fails with the old `runs(code)`.
+- A second `db/migrate.sh` over the loaded demo database: 0 placeholder rows.
+- Screens: `.local/screenshots/2026-09-24-admin/` 01-06 (menus by role), 12
+  (Purchasing as housekeeping), 13 (Rooms as housekeeping), 14 (People as a
+  hotel's Admin: the GM's card has every action), 15 (People as the GM: the
+  Admin's card has none, and no × on "5EL · Admin").
 
-**Left open** - ADM-6; migration 131 needs its number at merge (the
-`migrationNumbers` test fails on the gap until then).
+**Left open**
+- On People a GM or a hotel's Admin can still switch THEMSELVES off (as the GM
+  could before). Not asked.
 
 ## 2026-09-22 · The role list after PMS-2, and People for the GM (D22-2, D22-3, D22-30 to D22-36)
 

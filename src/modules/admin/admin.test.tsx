@@ -355,6 +355,20 @@ describe("D22-3 and D22-2 - People, for a GM", () => {
     }
   });
 
+  it("takes nobody off the hotel whose role there the GM could not give (24 September)", async () => {
+    as("gm");
+    peopleServer([
+      person({ id: "p-1", name: "Asha" }),
+      person({ id: "p-4", name: "Meena", email: "meena@fidato.in", access: [{ code: "5EL", role: "admin" }],
+               mayEdit: false, maySwitch: false, maySetPassword: false }),
+    ]);
+    renderAt("/people", <PeoplePage />);
+
+    expect(await screen.findByRole("button", { name: "Remove 5EL from Asha" })).toBeDefined();
+    await screen.findByText("Meena");
+    expect(screen.queryByRole("button", { name: "Remove 5EL from Meena" })).toBeNull();
+  });
+
   it("does not offer Add somebody to somebody who may roster nobody", async () => {
     as("hotel_manager");
     vi.spyOn(apiModule, "api").mockImplementation(async (url: string) => {

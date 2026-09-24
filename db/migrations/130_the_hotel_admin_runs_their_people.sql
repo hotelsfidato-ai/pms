@@ -1,5 +1,5 @@
 -- =============================================================================
--- 131 · A hotel's Admin runs that hotel's people, and may make an Admin there
+-- 130 · A hotel's Admin runs that hotel's people, and may make an Admin there
 -- =============================================================================
 -- The owner's D23-2, 23 September (docs/briefs/decisions-2026-09-23.md): "a
 -- hotel-level Admin manages staff at their own hotel, including giving Admin
@@ -16,6 +16,13 @@
 -- ⚠ AND ONE RULE THAT READ IT IS NOT ABOUT PEOPLE: correcting a closed night
 -- audit (100, D17-12: "needs the GM"). Nobody has decided that a hotel's Admin
 -- corrects a closed day, so that trigger now names owner and GM itself.
+--
+-- ⚠ AND NOBODY RUNS SOMEBODY ABOVE THEM (the owner, 24 September): nobody
+-- edits, removes, re-roles, switches off or resets the password of somebody
+-- whose role at that hotel they could not give. The GM leaves the hotel's
+-- Admin and Owner alone (D22-2 already said a GM makes neither - and a GM who
+-- could reset an Admin's password could become one); a hotel's Admin leaves
+-- its Owner alone. The last section of this file.
 --
 -- Re-runnable: every function keeps the signature and return type an earlier
 -- migration gave it (root MEMORY 317).
@@ -47,7 +54,7 @@ $$;
 comment on function app.manages_hotel(uuid) is
   'Group administrator, or owner, GM or Admin AT THIS HOTEL (Admin: D23-2, '
   '23 September 2026). Runs that hotel''s people. Not app.is_manager(), which '
-  'has no hotel in it. Correcting a closed day does NOT ask this (131).';
+  'has no hotel in it. Correcting a closed day does NOT ask this (130).';
 
 
 -- -----------------------------------------------------------------------------
@@ -141,3 +148,87 @@ begin
     to_char(old.business_date, 'FMDD FMMonth YYYY')
     using errcode = '42501';
 end $$;
+
+
+-- =============================================================================
+-- NOBODY RUNS SOMEBODY ABOVE THEM (the owner, 24 September)
+-- =============================================================================
+-- "Somebody at a hotel I run" becomes "somebody whose role at a hotel I run is
+-- one I may give": `sh.role = any (app.grantable_roles(sh.hotel_id))`, which
+-- is empty at a hotel the caller does not run, so it carries manages_hotel in
+-- it. 084's and 128's functions, word for word apart from that line.
+-- -----------------------------------------------------------------------------
+create or replace function app.may_manage_person(p_staff uuid)
+returns boolean
+language sql stable security definer
+set search_path = public, pg_temp
+as $$
+  select case
+    when p_staff = app.current_user_id() then true
+    when exists (select 1 from staff s
+                  where s.id = app.current_user_id()
+                    and s.is_active and s.is_group_admin) then true
+    when exists (select 1 from staff t where t.id = p_staff
+                   and t.is_group_admin) then false
+    else exists (
+      select 1 from staff_hotels sh
+       where sh.staff_id = p_staff
+         and sh.role = any (app.grantable_roles(sh.hotel_id))
+    )
+  end;
+$$;
+
+comment on function app.may_manage_person(uuid) is
+  'Yourself, always. A group administrator, anybody. A property manager, '
+  'somebody at a hotel they run whose role there they could give (the owner, '
+  '24 September 2026) - never a group administrator. The row policies on '
+  '`staff` ask it and so does app.may_set_password.';
+
+create or replace function app.manages_person(p_staff uuid)
+returns boolean
+language sql stable security definer
+set search_path = public, pg_temp
+as $$
+  select app.is_group_admin() or (
+        not exists (select 1 from staff t where t.id = p_staff and t.is_group_admin)
+    and exists (select 1 from staff_hotels sh
+                 where sh.staff_id = p_staff
+                   and sh.role = any (app.grantable_roles(sh.hotel_id))));
+$$;
+
+comment on function app.manages_person(uuid) is
+  'A group administrator: anybody. A property manager: somebody at a hotel '
+  'they run whose role there they could give, never a group administrator. '
+  'Asked by PATCH /admin/staff/:id (D22-3).';
+
+create or replace function app.may_switch_person(p_staff uuid)
+returns boolean
+language sql stable security definer
+set search_path = public, pg_temp
+as $$
+  select case
+    when app.is_group_admin() then true
+    when exists (select 1 from staff t where t.id = p_staff and t.is_group_admin) then false
+    else exists (select 1 from staff_hotels sh where sh.staff_id = p_staff)
+     and not exists (select 1 from staff_hotels sh
+                      where sh.staff_id = p_staff
+                        and not sh.role = any (app.grantable_roles(sh.hotel_id)))
+  end;
+$$;
+
+comment on function app.may_switch_person(uuid) is
+  'A group administrator: anybody. A property manager: somebody rostered only '
+  'at hotels they run, in roles they could give there - never a group '
+  'administrator. Switching a person off stops them at every hotel (D22-3).';
+
+-- The rows: re-roling or removing somebody asks the same of the row as it
+-- stands (USING); the row it becomes still asks 128's WITH CHECK.
+drop policy if exists staff_hotels_manager_update on staff_hotels;
+create policy staff_hotels_manager_update on staff_hotels
+  for update using ( role = any (app.grantable_roles(hotel_id)) )
+             with check (
+    app.manages_hotel(hotel_id) and role = any (app.grantable_roles(hotel_id)));
+
+drop policy if exists staff_hotels_manager_delete on staff_hotels;
+create policy staff_hotels_manager_delete on staff_hotels
+  for delete using ( role = any (app.grantable_roles(hotel_id)) );

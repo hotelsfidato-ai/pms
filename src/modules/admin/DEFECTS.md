@@ -14,16 +14,6 @@ entries stay here: they are the reason the fault does not come back.
 
 ## Open — not fixed
 
-### ADM-6 · A GM (and now a hotel's Admin) cannot add somebody new: the staff row is refused after the account is made
-
-**Found** — 23 September, building D23-2, by running the route's own statement as `pms_app` for a GM in a scratch database.
-
-`POST /admin/staff` writes the person with `insert … on conflict (email) do update … returning id`. Both `on conflict do update` and `returning` make Postgres check the new row against `staff`'s SELECT policies, and a brand-new person matches none of them for a manager: not a group administrator, not themselves, and not yet rostered anywhere (`staff_colleague_read`). So it fails with `new row violates row-level security policy for table "staff"` (a 403 carrying that sentence) - AFTER `ensureAccount` has made the Firebase account. A plain insert passes (the insert policy is fine). The API tests never get that far: Firebase is not in the suite, so "lets the GM add somebody AT their hotel" stops at `ensureAccount`.
-
-**Not fixed here** — it needs a shape chosen (a SECURITY DEFINER function that adds a person at a hotel the caller runs, after `app.require_hotel_admin`, is the smallest that keeps RLS as it is). Passed to the master, 23 September.
-
-**The rule** — A route's authorisation proved only up to the first thing a suite cannot run is not proved. Run the statement past that point, as the role that will run it.
-
 ### ADM-4 · Two "audit log" links point at an address that does not exist
 
 **Found** — 17 September, reading every caller of the audit log before closing API-2, then opening the address in the browser.
@@ -38,15 +28,39 @@ The night-audit checklist (`api/src/modules/night-audit/checklist.ts:144`) and a
 
 ## Fixed — the solution is here; do not work it out again
 
+### ADM-7 · A GM could take over the hotel's Admin: people "at a hotel I run" included people above the caller
+
+**Found** — 24 September, finishing D23-2: with it a hotel's Admin would reset a hotel-level Owner's password the same way.
+
+`may_manage_person`, `manages_person`, `may_switch_person` (084, 128) and the `staff_hotels` update and delete policies asked only whether the person was rostered at a hotel the caller runs. So a GM - who may not MAKE an Admin (D22-2) - could reset the hotel Admin's password and sign in as them, remove their Admin row, or re-role it.
+
+**Fixed** — 24 September, the owner's answer: nobody edits, removes, re-roles, switches off or resets the password of somebody whose role at that hotel they could not give. The last section of migration 130 asks `role = any (app.grantable_roles(hotel))` - empty at a hotel the caller does not run - in all five places; People shows the × on a chip only for a role the viewer could give.
+
+**Proved** — `db/tests/modules/admin.sql` "above them" (11): each function asked on its own, and the rows as `pms_app` (remove, re-role, rename). With the section taken out: 6 of them fail, among them "a GM cannot take the hotel's Admin off it - 1 removed". `admin.test.tsx`: no "Remove 5EL from" on an Admin's chip for a GM.
+
+**The rule** — "Who may make X" and "who may unmake X" are one question. A rule written for granting only is half a rule.
+
+### ADM-6 · A GM (and now a hotel's Admin) cannot add somebody new: the staff row is refused after the account is made
+
+**Found** — 23 September, building D23-2, by running the route's own statement as `pms_app` for a GM in a scratch database.
+
+`POST /admin/staff` writes the person with `insert … on conflict (email) do update … returning id`. Both `on conflict do update` and `returning` make Postgres check the new row against `staff`'s SELECT policies, and a brand-new person matches none of them for a manager: not a group administrator, not themselves, and not yet rostered anywhere (`staff_colleague_read`). So it fails with `new row violates row-level security policy for table "staff"` (a 403 carrying that sentence) - AFTER `ensureAccount` has made the Firebase account. A plain insert passes (the insert policy is fine). The API tests never get that far: Firebase is not in the suite, so "lets the GM add somebody AT their hotel" stops at `ensureAccount`.
+
+**Fixed** — 24 September, the owner's "fix it now" (branch `admin/finish-24sep`), in the route alone and with no new privilege: somebody already here is UPDATED (the address check before it, `app.require_claimable_address`, means the caller may manage them, so the update sees them); anybody else is INSERTED with an id made in the route (`randomUUID`) and no `returning`, which asks only the insert policy. The roster row follows with that id.
+
+**Proved** — `api/test/modules/admin/addPerson.test.ts` stands in for the Firebase account (`vi.mock` of `ensureAccount`) and runs the route to the rows: a GM adds a new person, a hotel's Admin adds a new Admin, and re-adding brings the same id back with `existed: true`. With the old statement all 3 fail on "new row violates row-level security policy for table staff".
+
+**The rule** — A route's authorisation proved only up to the first thing a suite cannot run is not proved. Run the statement past that point, as the role that will run it.
+
 ### ADM-3 · Every deploy re-creates the placeholder administrator once it is deleted
 
 **Found** — 9 September, deleting it; it came back on the 15 September deploy. Root MEMORY 271.
 
 Migration 008 inserted `REPLACE@fidato.in` with `on conflict (email) do nothing`, so a deleted row was re-created by the next replay — active, and a group administrator. Every replay on a fresh database did it too: 051 renames the placeholder to the owner, and the next pass of 008 finds no placeholder and inserts it again.
 
-**Fixed** — 23 September (D22-9, branch `admin/hotel-admin-menus`): 008 inserts it only where nobody else holds group access (`where not exists (… is_group_admin and email <> 'REPLACE@fidato.in')`). A fresh database still gets it, so the first sign-in still has a row. Production's deactivated row is left as it is.
+**Fixed** — 23-24 September (D22-9; `admin/hotel-admin-menus`, finished on `admin/finish-24sep`): 008 inserts it only where nobody else holds group access (`where not exists (… is_group_admin and email <> 'REPLACE@fidato.in')`). A fresh database still gets it, so the first sign-in still has a row. Production's deactivated row is left as it is. **Why an edit to 008 and not a new migration:** every deploy replays from 001, so 008 inserts the row before any later file runs; a new migration could only switch it off again after the fact, every deploy. The edited statement does nothing at all where a real administrator exists.
 
-**Proved** — `db/tests/modules/admin.sql` replays 008 itself (`\ir`, inside a transaction rolled back so its placeholder hotels do not return) and counts the placeholder: 0. With the old 008: "1 placeholder rows after a replay".
+**Proved** — `db/tests/modules/admin.sql` replays 008 itself (`\ir`, inside a transaction rolled back so its placeholder hotels do not return) and counts the placeholder: 0. With the old 008: "1 placeholder rows after a replay" (seen 24 September). And a second `db/migrate.sh` over a loaded demo database left 0 placeholder rows.
 
 **The rule** — Deactivate, do not delete: a deleted row comes back on the next deploy — unless the seed asks whether it is still needed.
 

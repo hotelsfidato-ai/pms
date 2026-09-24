@@ -219,9 +219,11 @@ function PersonCard({ person, places, onGrant, onChanged }: {
   person: AdminStaff; places: RosterPlace[];
   onGrant: () => void; onChanged: () => void;
 }) {
-  /* A property of theirs the signed-in person runs - the only chips they may
-     take away, and the only reason to offer "Give a property". */
-  const runs = (code: string) => places.some((p) => p.code === code);
+  /* A property of theirs the signed-in person runs, in a role they could
+     give there - the only chips they may take away (the owner, 24
+     September: nobody removes somebody above them). */
+  const mayTake = (a: { code: string; role: string }) =>
+    places.some((p) => p.code === a.code && p.roles.includes(a.role));
   const mayGrant = !person.isGroupAdmin
     && places.some((p) => !person.access.some((a) => a.code === p.code));
   const [busy, setBusy] = useState(false);
@@ -362,7 +364,7 @@ function PersonCard({ person, places, onGrant, onChanged }: {
                     <span className="tabular font-medium">{a.code}</span>
                     <span className="text-grey-500"> · {roleLabel(a.role)}</span>
                   </span>
-                  {runs(a.code) && <button
+                  {mayTake(a) && <button
                     type="button"
                     aria-label={`Remove ${a.code} from ${person.name}`}
                     onClick={() => void revoke(a.code)}

@@ -116,6 +116,7 @@ beforeEach(() => {
   go(`/h/${HOTEL}/stores`);
   control.history = "rows";
   control.reversed.splice(0);
+  control.recorded.splice(0);
 });
 
 describe("the Store", () => {
@@ -260,7 +261,7 @@ describe("the Store", () => {
     fireEvent.keyDown(dialog, { key: "Escape" });
   });
 
-  it("D22-20 · an issue records the outlet it went to, and the history names it", async () => {
+  it("D22-20 · an issue must say where it went, and the history names the outlet", async () => {
     as("stores");
     render(<App />);
     await screen.findByText("Bath towel");
@@ -268,10 +269,14 @@ describe("the Store", () => {
     fireEvent.click(within(card("Bath towel")).getByRole("button", { name: /Issue/ }));
     const dialog = await screen.findByRole("dialog");
     const outlet = within(dialog).getByLabelText(/Which outlet/) as HTMLSelectElement;
-    expect(outlet.value).toBe("");
-    fireEvent.change(outlet, { target: { value: "rest" } });
     fireEvent.change(within(dialog).getByLabelText(/How many/), { target: { value: "2" } });
-    fireEvent.click(within(dialog).getByRole("button", { name: "Issue" }));
+    /* Nothing is chosen for them (the owner, 24 September). */
+    const issue = within(dialog).getByRole("button", { name: "Issue" }) as HTMLButtonElement;
+    expect(outlet.value).toBe("");
+    expect(issue.disabled).toBe(true);
+    fireEvent.change(outlet, { target: { value: "rest" } });
+    expect(issue.disabled).toBe(false);
+    fireEvent.click(issue);
     await waitFor(() => expect(control.recorded).toHaveLength(1));
     expect(control.recorded[0]).toMatchObject({ kind: "issue", quantity: 2, outletId: "rest" });
     await waitFor(() => expect(screen.queryByRole("dialog")).toBeNull());
@@ -280,6 +285,20 @@ describe("the Store", () => {
     const history = await screen.findByRole("dialog");
     expect(await within(history).findByText(/to Fidato Restaurant/)).toBeTruthy();
     fireEvent.keyDown(history, { key: "Escape" });
+  });
+
+  it("D22-20 · Not an outlet is an answer, sent as none", async () => {
+    as("stores");
+    render(<App />);
+    await screen.findByText("Bath towel");
+
+    fireEvent.click(within(card("Bath towel")).getByRole("button", { name: /Issue/ }));
+    const dialog = await screen.findByRole("dialog");
+    fireEvent.change(within(dialog).getByLabelText(/How many/), { target: { value: "1" } });
+    fireEvent.change(within(dialog).getByLabelText(/Which outlet/), { target: { value: "none" } });
+    fireEvent.click(within(dialog).getByRole("button", { name: "Issue" }));
+    await waitFor(() => expect(control.recorded).toHaveLength(1));
+    expect(control.recorded[0]).toMatchObject({ kind: "issue", quantity: 1, outletId: null });
   });
 
   it("STO-2 · a history that could not be read says so", async () => {

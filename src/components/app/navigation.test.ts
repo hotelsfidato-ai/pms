@@ -194,10 +194,12 @@ describe("each person's menu", () => {
        they are switched on by the owner if the owner wants them, and until then
        the entry would be a screen that refuses them. Flagged to the owner by the
        purchasing chat; the master reviews it at merge. */
-    /* Rooms joined on 22 September (D22-19), and laundry's Dockets where the
-       hotel has it on (D22-22). */
+    /* Rooms joined on 22 September (D22-19), laundry's Dockets where the
+       hotel has it on (D22-22), and Purchasing once D22-11 let housekeeping
+       see it (the owner, 24 September). */
     expect(menu("housekeeping")).toEqual(
-      ["Rooms", "Housekeeping", "Work orders", "Store", "Equipment", "Dockets", "Notifications"]);
+      ["Rooms", "Housekeeping", "Work orders", "Store", "Equipment", "Purchasing", "Dockets",
+       "Notifications"]);
     expect(menu("stores")).toEqual(["Store", "Equipment", "Purchasing", "Notifications"]);
     for (const role of ["housekeeping", "stores", "chef", "kitchen_manager", "pos"] as Role[]) {
       expect(menu(role)).not.toContain("Dashboard");

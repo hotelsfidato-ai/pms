@@ -20,13 +20,17 @@ import type { ServiceNavEntry } from "@/components/app/navigation";
    owner when the owner wants them, and until then the entry would be a
    screen that refuses them.
 
+   AND IN HOUSEKEEPING'S, since the owner's D22-11 gave them view and raise
+   (24 September: "yes, in their menu"). Raising still waits on their
+   switch in "Who may ask to buy".
+
    The setting's own screen is `listed: false` — it is reached from the
    Purchasing screen, and it is not a fourth thing in the sidebar. It stays
    findable by search, under the words somebody would type for it. */
 export const nav: ServiceNavEntry[] = [
   { section: "store-and-equipment", order: 40,
     label: "Purchasing", to: "/h/:code/purchasing", icon: ShoppingCart,
-    resource: "purchasing", matchPrefix: true, workingMenus: ["stores"],
+    resource: "purchasing", matchPrefix: true, workingMenus: ["stores", "housekeeping"],
     keywords: ["purchase", "order", "supplier", "buy", "requisition", "po", "delivery"] },
   { section: "store-and-equipment", order: 41,
     label: "Who may ask to buy", to: "/h/:code/purchasing/who-may-ask",

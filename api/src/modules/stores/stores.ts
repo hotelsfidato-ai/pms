@@ -533,6 +533,15 @@ stores.post("/:code/stores/movements", async (c) => {
         "select 1 from pos_outlets where id::text = $1 and hotel_id = $2",
         [input.outletId, hotelId]);
       if (!outlet[0]) return refuse("That is not an outlet at this property.");
+    } else if (input.kind === "issue" && input.outletId === undefined) {
+      /* SAID EVERY TIME (the owner, 24 September): where the hotel has an
+         outlet, an issue names one, or sends null for "not an outlet". */
+      const { rows: hasOutlet } = await client.query(
+        "select 1 from pos_outlets where hotel_id = $1 and is_active limit 1", [hotelId]);
+      if (hasOutlet[0]) {
+        return refuse("Which outlet did it go to? Choose Not an outlet for "
+          + "housekeeping or a floor.");
+      }
     }
 
     /* WOULD THIS TAKE IT BELOW ZERO?
