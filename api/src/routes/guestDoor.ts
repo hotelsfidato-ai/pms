@@ -40,7 +40,9 @@ import { canSend, send } from "../sending.ts";
    POST /api/guest/:token/details    their ID and address - a SUBMISSION
    GET  /api/guest/:token/bill       the bill as it stands (D21-10, migration 124)
    GET  /api/guest/:token/requests   their spa / laundry requests
-   POST /api/guest/:token/requests   ask for one, where the hotel offers it
+   POST /api/guest/:token/requests   ask for one, where the hotel offers it -
+                                     or, kind 'desk', message the front desk
+                                     (D23-14, migration 130)
 
    · THE CODE UNLOCKS THIS PHONE, NOT THE LINK (D21-6). `verify` hands back an
      unlock, once; the page sends it as `Authorization: Guest …` and it is hashed here
@@ -582,7 +584,7 @@ guestLinks.get("/:code/online-checkin", async (c) => {
          from guest_requests q
          join reservations r on r.id = q.reservation_id
          join guests g       on g.id = r.guest_id
-        where q.hotel_id = $1 and q.status = 'open'
+        where q.hotel_id = $1 and q.status = 'open' and q.kind <> 'desk'
         order by q.created_at`, [hotelId]);
 
     const { rows: rooms } = await client.query<{
@@ -698,6 +700,43 @@ guestLinks.post("/:code/online-checkin/requests/:id", async (c) => {
   if (result === 403) return c.json({ error: DESK_REFUSED }, 403);
   if (result === 409) return c.json({ error: "Already handled." }, 409);
   return c.json({ status });
+});
+
+/* MESSAGES TO THE FRONT DESK (D23-14) - guest requests of kind 'desk', read
+   on the desk's Guest messages screen: one booking's, handled ones too, or
+   (no `reservation`) every booking's still unread. Marked handled through the
+   request route above, as `done` - who and when are its columns. */
+const A_UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
+guestLinks.get("/:code/online-checkin/messages", async (c) => {
+  const reservation = c.req.query("reservation") ?? null;
+  const body = await withSession(c.get("subject"), async (client) => {
+    const hotelId = await deskAt(client, c.req.param("code"));
+    if (!hotelId) return null;
+    if (reservation !== null && !A_UUID.test(reservation)) return { messages: [] };
+    const { rows } = await client.query<{
+      id: string; what: string; created_at: string; guest: string; reference: string;
+      handled_by: string | null; handled_at: string | null;
+    }>(
+      `select q.id::text, q.what, q.created_at, g.full_name as guest, r.reference,
+              s.full_name as handled_by, q.handled_at
+         from guest_requests q
+         join reservations r on r.id = q.reservation_id
+         join guests g       on g.id = r.guest_id
+         left join staff s   on s.id = q.handled_by
+        where q.hotel_id = $1 and q.kind = 'desk'
+          and (q.reservation_id = $2::uuid or ($2::uuid is null and q.status = 'open'))
+        order by q.created_at desc
+        limit 200`, [hotelId, reservation]);
+    return {
+      messages: rows.map((m) => ({
+        id: m.id, what: m.what, createdAt: m.created_at, guest: m.guest,
+        reference: m.reference, handledBy: m.handled_by, handledAt: m.handled_at,
+      })),
+    };
+  });
+  if (!body) return c.json({ error: DESK_REFUSED }, 403);
+  return c.json(body);
 });
 
 /* ROOM CARDS (D21-7, D21-16, D21-62). A card's token is shown ONCE, here, to
