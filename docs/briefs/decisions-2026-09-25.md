@@ -28,3 +28,5 @@
 | D25-24 | Where it sits in the menu | **Point of sale → "Restaurant setup"**, the last entry |
 | D25-25 | The empty Tables screen | **A "Set up tables" button for owner, admin and GM**; a waiter sees today's sentence only |
 | D25-26 | The ready-to-open list | **Six ticks, each linking to its screen**: restaurant named; at least one table; at least one dish; every dish has a GST rate; at least one person with the Waiter role; restaurant switched on |
+| D25-27 | Five fixes built but held by no test (ADM-4 audit-log links, FD-7 Today on a phone, INV-2 Room types heading, HK-1 the board refreshing itself, PUR-2 the Approvals screen), found by the notes session | **One small test each, then close them**; no behaviour changes |
+| D25-28 | The Rate calendar screen is headed "Inventory and rates" while its menu says "Rate calendar" (INV-2's second half) | **"Rate calendar"** (D17-22: a heading is its menu name); its test updated |
