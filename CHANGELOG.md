@@ -50,6 +50,69 @@ Write it **as you go**, not at the end from memory. Copy this shape:
 
 ---
 
+## 2026-09-24 · The master: the queue finished by four lane sessions, and everything merged
+
+**Asked for:** "complete all the things which were pending/stopped", with minimal
+code (ponytail, YAGNI) and no assumption — ask. Then (24 Sep): act as the main
+orchestrator, and spread the work over new chat sessions, four at a time, each
+with its own brief. Also: the questions for the CA, for every Fidato hotel.
+
+**Shipped** (cp6, all merged locally; nothing pushed)
+- **23 Sep:** In house / Empty counted one way on every screen (129) and FD-8;
+  the flaky guest-door tests given their own bookings; the menu heading picker
+  and "Alcohol" in the import; the closed-day correction plan; D22-12 (the
+  three design one-offs on tokens, the City ledger tile's words, every lane
+  pointed at DESIGN.md).
+- **24 Sep, by four sessions and two follow-ups** (the owner clicked each card;
+  each worked in its own copy in `.claude\worktrees\`, took in cp6 before its
+  last checks, and was merged as exactly the tree it tested):
+  - **Front desk and guests** (130–132): "Empty"; FD-9, FD-11, FD-13, FD-14,
+    FD-15 (every early check-in from the screen had been refused since 4 Sep);
+    a group's lead guest; one review per group; "Message the front desk".
+  - **Admin, marketing, stores** (133): a hotel's admin runs their people;
+    ADM-3, ADM-6, ADM-7 (a GM could reset the admin's password); SPA-2,
+    PUR-1, menus; MKT-1 and D22-17; the store issue's outlet; the Rooms board
+    offline; INV-7.
+  - **Night audit** (134): correcting a closed day (D22-18, D24-1 to D24-9);
+    NA-5 (a multi-night walk-in charged twice from the second night); NA-6.
+  - **Finance** (135, 136, 138): the VAT bill for alcohol; "Interim bill"; the
+    tax card; the three rule-breakers; the day book in Excel; alcohol out of
+    Lodging tax; ACC-11 (restaurant bills on a room counted twice); the new
+    year's invoice series opening itself; Restaurant columns; headings with
+    no rate.
+  - **Front desk follow-ups** (137) and **polish**: the "still in the room"
+    rule everywhere a guest goes in now; a future move dirties the old room;
+    controls the server refuses are hidden; nobody takes away their own
+    access or changes their own role; FD-16 to FD-18; printed reports'
+    columns never overlap.
+- `vite.config.ts`: ignores only this checkout's `.local` and copies (9dfdd3f).
+- Decisions D23-9 to D23-16, D24-1 to D24-31 recorded; D22-47 to D22-49 of
+  23 Sep renumbered D22-52 to D22-54 (MEMORY 324).
+- The CA's question page (49 questions, every hotel):
+  https://claude.ai/artifact/U3czHHj4zrdURCzpGNkwVz — answers save to it.
+
+**Found** (MEMORY 324 to 329)
+- My numbers taken twice (324); Postgres killed with my background command,
+  13:53–13:56 (325); my Vite glob (326); the In house merge I never checked
+  (327); guessed times in the tracker (328); the sessions' own lessons (329).
+
+**Proved**
+- Full gates on 1b95bc3 ("release-24sep", 1,288 s; the code has not changed since): web types 0, api types 0, strip 142 files, web 661 passed + 1 skipped, API 1,463 of 1,463, database 1,154 assertions on 138 migrations, all 138 re-runnable.
+
+**Left open**
+- The release push and deploy: the owner's (D22-13), steps given in chat.
+- The CA's answers; the GM's name and email; the direct review link and the
+  WhatsApp pace; the rates and menu files in `.local\inbox`.
+- Queued: D24-13 (a closed day's other charges); the Bill tab's actions for
+  housekeeping (D24-18); two more readers of the stale `hotels.business_date`
+  (channel manager, till); QR codes; the services' notes; the till setup
+  screen; the CRS connection; the Store's second part.
+- `.local\uploads-s1` (40 files, left by the finance session) not yet looked at.
+
+**Commits:** `dea4a1d … 2a9c151`
+
+---
+
 ## 2026-09-22 · The owner's UI-transformation prompt, fitted to this project
 
 **Asked for:** the owner's "Lead UI Transformation Agent" prompt, refined for

@@ -47,7 +47,37 @@ seam); a test enforces it.
 
 ## 2 · Where it stands
 
-### 22 September — read this first
+### 24 September — read this first
+
+```
+HOW WORK RUNS NOW    One master chat (this one) orchestrates. Building is done by lane
+                     SESSIONS the owner starts with one click from a card the master
+                     writes (spawn_task): each gets a fresh copy in .claude\worktrees\,
+                     its own brief, ports and scratch database, asks the owner directly,
+                     takes in cp6 before its last checks, and reports to the master by
+                     message. The master merges exactly the tree it tested, archives the
+                     session and recycles its copy (standing yes, D24-21). Nothing left
+                     in .claude\worktrees\ tonight.
+cp6 tonight          1b95bc3 (code), 2a9c151 (notes). Migrations to 138. Everything decided up to D24-31 that
+                     was queued is built and merged (CHANGELOG, 24 Sep). Full gates on
+                     this tree: all green
+                     (web 661 + 1 skipped, API 1,463, database 1,154, 138 migrations
+                     re-runnable; release-24sep, 1,288 s)
+live                 still release 0b4766e (21-22 Sep). cp6 is 113+ commits ahead. The
+                     next release is the owner's to push (D22-13) — steps given in chat,
+                     the § 9 runbook shape (backup, pull, launch.sh, website, look).
+the owner owes       the release; the CA's answers (question page, 49 questions:
+                     https://claude.ai/artifact/U3czHHj4zrdURCzpGNkwVz); the GM's name
+                     and email; the direct Google review link; the WhatsApp pace; the
+                     rates and menu files into .local\inbox (D23-16); the seventh hotel's
+                     name; n8n two-step sign-in, CRS repo private, Meta templates, the
+                     privacy notice (all "not yet", 23 Sep)
+the tracker          https://claude.ai/artifact/QJ31A1BLSMSmaB3uANDDLR (db: tasks, meta)
+Postgres             .local\pg does NOT restart after a reboot. Start it through WMI,
+                     never from a background command (MEMORY 325).
+```
+
+### 22 September
 
 ```
 EVERYTHING INSIDE    D22-1 (the owner): nothing about the PMS lives outside D:\fidato pms.
@@ -266,6 +296,17 @@ npx vitest run          197 passed, 13 files
 ---
 
 ## 3 · What to do next, in order
+
+> **24 September: the queue.** (1) The owner's release push and deploy
+> (D22-13), then a read-only look. (2) The CA's answers → rates, VAT, SAC codes
+> and Tally names set locally first, then live with the owner's yes. (3) Small
+> queued fixes, each a lane session: the Bill tab's actions hidden from
+> housekeeping (D24-18); two more readers of the stale `hotels.business_date`
+> (channel manager, till); D24-13 (a closed day's other charges). (4) Then:
+> QR codes (`npm install qrcode`, D21-95), the services' notes (13 stale
+> defects), the till setup screen (D22-6), the CRS connection (D22-26/27), the
+> Store's second part (D22-38), and before 5 Elements' first real day D22-21
+> and D22-25. Work runs as lane sessions from the master's cards (24 Sep).
 
 > **22 September: the queue.** (1) The owner's release push and the nine
 > deploy steps (D21-97), then a read-only check. (2) After it: `npm install
