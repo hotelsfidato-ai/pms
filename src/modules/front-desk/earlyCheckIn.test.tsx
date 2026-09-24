@@ -4,7 +4,7 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { MemoryRouter } from "react-router";
 import * as apiModule from "@/lib/api";
 import * as operations from "@/modules/front-desk/data/operations";
-import { signedIn, startSignedIn } from "@/test/app";
+import { AGRA_HOTEL, signedIn, startSignedIn } from "@/test/app";
 import { CheckInFlow } from "@/modules/front-desk/flows/CheckInFlow";
 import type { Stay } from "@/data/repositories";
 
@@ -25,16 +25,20 @@ const STAY = {
 } as unknown as Stay;
 
 let sent: Parameters<typeof operations.checkIn>[2] | null = null;
+/* What the server says of the person signed in (its own mayWaive). */
+let serverMayWaive = false;
 
 beforeEach(() => {
   startSignedIn();
   sent = null;
+  serverMayWaive = false;
   /* Every screen read that is not the flow's own: nothing on file. */
   vi.spyOn(apiModule, "api").mockResolvedValue([] as never);
   vi.spyOn(operations, "checkInAllowed").mockResolvedValue({ allowed: true });
-  vi.spyOn(operations, "earlyArrival").mockResolvedValue({
+  vi.spyOn(operations, "earlyArrival").mockImplementation(async () => ({
     isEarly: true, checkInTime: "14:00", checkOutTime: "11:00", charge: 500, lateCharge: null,
-  });
+    mayWaive: serverMayWaive,
+  }));
   vi.spyOn(operations, "assignableRooms").mockResolvedValue([
     { number: "204", type: "Superior", status: "clean", housekeeping: "clean", allowed: true },
   ] as never);
@@ -49,7 +53,7 @@ afterEach(() => {
   vi.restoreAllMocks();
 });
 
-async function checkInEarly({ waive }: { waive: boolean }) {
+async function toRateStep() {
   const qc = new QueryClient({ defaultOptions: { queries: { retry: false } } });
   render(
     <QueryClientProvider client={qc}>
@@ -67,6 +71,11 @@ async function checkInEarly({ waive }: { waive: boolean }) {
   next();                                                   // ID
   fireEvent.change(await screen.findByLabelText(/Why the room is being given early/),
     { target: { value: "Overnight train" } });
+  return next;
+}
+
+async function checkInEarly({ waive }: { waive: boolean }) {
+  const next = await toRateStep();
   if (waive) fireEvent.click(screen.getByLabelText(/Waive the charge/));
   next();                                                   // Rate
   const buttons = await screen.findAllByRole("button", { name: /Check in/ });
@@ -85,7 +94,23 @@ describe("checking in before the property's check-in time", () => {
       staffId: "22222222-2222-2222-2222-222222222222", email: "owner@fidato.in",
       fullName: "Owner", isGroupAdmin: true, hotels: [],
     } });
+    serverMayWaive = true;
     await checkInEarly({ waive: true });
     expect(sent).toMatchObject({ earlyReason: "Overnight train", waiveEarly: true });
+  });
+
+  /* Rule C (the owner, 24 September): the tick is offered to exactly those
+     the server takes a waive from. A hotel's own administrator holds
+     reservation: approve, which the screen used to ask, and the server's
+     mayWaive (owner or GM there, or a group administrator) refuses them. */
+  it("offers no waive to a hotel administrator the server would refuse", async () => {
+    signedIn({ scope: {
+      staffId: "33333333-3333-3333-3333-333333333333", email: "admin@fidato.in",
+      fullName: "Hotel Admin", isGroupAdmin: false,
+      hotels: [{ hotelId: AGRA_HOTEL, role: "admin" }],
+    } });
+    await toRateStep();
+    expect(screen.getByLabelText(/Why the room is being given early/)).toBeTruthy();
+    expect(screen.queryByLabelText(/Waive the charge/)).toBeNull();
   });
 });

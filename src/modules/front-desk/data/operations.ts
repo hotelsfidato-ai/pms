@@ -125,6 +125,9 @@ export interface EarlyArrival {
       different sentences and only one of them is a decision. */
   charge: number | null;
   lateCharge: number | null;
+  /** Whether the server will take a waive of either charge from this
+      person - its own `mayWaive`, asked for them. */
+  mayWaive: boolean;
 }
 
 /** The property's clock and its charges, from the server. */

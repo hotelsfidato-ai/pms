@@ -341,7 +341,11 @@ describe("behind the code", () => {
   });
 
   it("offers a spa or laundry request only where the hotel has one on (D21-63)", async () => {
-    server({ [OPEN]: () => unlocked, [`${OPEN}/details`]: () => ({ sent: null }) });
+    server({
+      [OPEN]: () => unlocked,
+      [`${OPEN}/details`]: () => ({ sent: null }),
+      [`${OPEN}/requests`]: () => ({ offers: [], requests: [] }),
+    });
     open();
     await screen.findByLabelText("Your ID");
     expect(screen.queryByRole("heading", { name: "Ask for something" })).toBeNull();
@@ -363,7 +367,8 @@ describe("behind the code", () => {
       [OPEN]: () => unlocked,
       [`${OPEN}/details`]: () => ({ sent: null }),
       [`${OPEN}/requests`]: (init) => {
-        sent = { body: JSON.parse(String(init?.body)), unlock: unlockSent(init) };
+        if (init?.method !== "POST") return { offers: [], requests: [] };
+        sent = { body: JSON.parse(String(init.body)), unlock: unlockSent(init) };
         return { sent: true };
       },
     });
@@ -373,6 +378,37 @@ describe("behind the code", () => {
     fireEvent.click(screen.getByRole("button", { name: "Send to the front desk" }));
     expect(await screen.findByText("Sent. The front desk will see it.")).toBeTruthy();
     expect(sent).toEqual({ body: { kind: "desk", what: "Two more towels, please" }, unlock: UNLOCK });
+  });
+
+  /* The owner, 24 September: under the box, what they sent - each Sent or
+     Handled, the day only, no staff names - from the door's own list of
+     this stay's requests, asked with this tab's unlock. */
+  it("lists the messages they sent, each Sent or Handled, the day only, none drawn as HTML", async () => {
+    let listAsked: RequestInit | undefined;
+    server({
+      [OPEN]: () => unlocked,
+      [`${OPEN}/details`]: () => ({ sent: null }),
+      [`${OPEN}/requests`]: (init) => {
+        listAsked = init;
+        return { offers: [], requests: [
+          { kind: "desk", what: "<b>Two more towels</b>", wanted: null, status: "open",
+            createdAt: "2026-08-25T10:00:00Z" },
+          { kind: "desk", what: "A taxi at six", wanted: null, status: "done",
+            createdAt: "2026-08-24T10:00:00Z" },
+          { kind: "spa", what: "A massage", wanted: "4pm", status: "open",
+            createdAt: "2026-08-24T11:00:00Z" },
+        ] };
+      },
+    });
+    open();
+
+    const towels = (await screen.findByText("<b>Two more towels</b>")).closest("li")!;
+    expect(towels.textContent).toBe("<b>Two more towels</b>25 Aug 2026Sent");
+    expect(towels.querySelector("b"), "the guest's words are text, not HTML").toBeNull();
+    expect(screen.getByText("A taxi at six").closest("li")!.textContent)
+      .toBe("A taxi at six24 Aug 2026Handled");
+    expect(screen.queryByText("A massage"), "a spa request is not a message").toBeNull();
+    expect(unlockSent(listAsked), "asked with this tab's unlock").toBe(UNLOCK);
   });
 });
 

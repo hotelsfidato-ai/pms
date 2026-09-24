@@ -1,6 +1,8 @@
 import { Hono } from "hono";
 import { withSession } from "../../auth.ts";
 import type { PoolClient as Client } from "pg";
+import { businessDateFor } from "../../businessDate.ts";
+import { stillIn } from "./operations.ts";
 
 /* ══════════════════════════════════════════════════════════════════
    EXCHANGING TWO ROOMS, AND WHAT A RATE INCLUDES
@@ -68,6 +70,7 @@ stayExtras.post("/:code/stays/:id/exchange", async (c) => {
   const input = await c.req.json<Body>().catch(() => ({}) as Body);
 
   if (!input.withStayId) return c.json(refuse("Swap with whom?"), 409);
+  const pair = [c.req.param("id"), input.withStayId];
   const reason = input.reason?.trim();
   if (!reason) {
     return c.json(refuse(
@@ -83,6 +86,24 @@ stayExtras.post("/:code/stays/:id/exchange", async (c) => {
       ?? (await client.query<{ bd: string }>(
             `select business_date::text as bd from hotels where id = $1`,
             [hotelId])).rows[0]!.bd;
+
+    /* Rule A (24 September): a checked-in guest swapped from tonight goes
+       into the other's room now, so nobody but the two may still be in it. */
+    if (from <= await businessDateFor(client, hotelId)) {
+      const { rows: going } = await client.query<{ id: string; number: string }>(
+        `select rm.id::text, rm.number
+           from reservations me
+           join reservations other on other.id = any($2::uuid[]) and other.id <> me.id
+           join rooms rm on rm.hotel_id = me.hotel_id
+                        and rm.number = app.room_for(other.id, $3::date)
+          where me.hotel_id = $1 and me.id = any($2::uuid[])
+            and me.status = 'checked_in'`,
+        [hotelId, pair, from]);
+      for (const g of going) {
+        const inRoom = await stillIn(client, hotelId, g.id, g.number, pair);
+        if (inRoom) return refuse(inRoom);
+      }
+    }
 
     try {
       const { rows } = await client.query<{
