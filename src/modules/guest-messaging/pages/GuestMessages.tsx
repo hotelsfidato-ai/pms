@@ -10,6 +10,7 @@ import {
 import {
   getGuestMessages, type SentMessage,
 } from "@/modules/guest-messaging/data/guestMessages";
+import { MessagesToTheDesk } from "@/modules/online-checkin";
 
 /* ══════════════════════════════════════════════════════════════════
    WHAT WAS SENT TO THIS GUEST
@@ -191,6 +192,9 @@ export default function GuestMessagesPage() {
           ? "What this system sent about this booking"
           : "What this system sent guests, and whether it arrived"}
       />
+
+      {/* What guests wrote to the desk from their own page (D23-14). */}
+      <MessagesToTheDesk code={code} reservation={reservation} />
 
       {/* THE SENDER'S OWN SENTENCE, not a second one written here. One
           wording, so the desk reads the same thing wherever it meets

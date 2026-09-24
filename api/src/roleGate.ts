@@ -189,6 +189,9 @@ export const WRITE_RULES: Readonly<Record<string, Rule>> = {
 
   /* reservations */
   [`POST ${H}/groups/:id/master`]: CHARGE,
+  /* Who leads a group - who gets its one confirmation and its one review
+     request (D22-52, D22-10) - is a change to the booking. */
+  [`POST ${H}/groups/:id/lead`]: CHANGE_BOOKING,
   [`POST ${H}/stays/:id/routing`]: CHANGE_BILL,
   [`POST ${H}/bookings`]: BOOK,
 

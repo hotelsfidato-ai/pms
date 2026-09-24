@@ -74,6 +74,12 @@ Coming soon page and its address are gone.
   titled "Interim bill", with "Pay at the desk before you leave"; and a spa or
   laundry request **only where the hotel has
   that module switched on (D21-63)** — 5 Elements has neither.
+- **"Message the front desk" (D23-14)** - always there behind the code: the
+  guest types anything (500 characters at most), "Send to the front desk",
+  and "Sent. The front desk will see it." It is a request of kind `desk`
+  through the same door and the same limits as a spa or laundry request (the
+  owner, 24 September: as built - at most ten open at once for the stay,
+  shared with those requests; the door's 30 opens a minute).
 - **The privacy notice (D21-61)** has its place before the first question
   (`privacyNotice.ts`) and **shows nothing** until the advisor has approved
   its words: the draft still has blanks only the owner and the advisor can
@@ -86,6 +92,14 @@ spa's or laundry's own screen, D21-9), and room cards (print one, or print a
 new card for every room; the sheet is shown once, with the hotel's name, the
 room number and the link).
 
+**A guest's message to the front desk (D23-14)** is not on this screen: it
+is drawn inside Guest messages (`MessagesToTheDesk.tsx`, exported from this
+folder's `index.ts`) - on a booking's Guest messages every message it sent,
+handled ones with who and when; on the property's, every booking's unread
+ones - with an unread count and "Mark handled". The guest's words are a text
+node, never HTML. Only `DESK_ROLES` are shown it. Guest messages is in
+reception's menu for this (the owner, 24 September).
+
 ## The door (`api/src/routes/guestDoor.ts`)
 
 | Method | Path | Before the code | What it does |
@@ -95,19 +109,20 @@ room number and the link).
 | POST | `/api/guest/:token/verify` | answers | the six digits; hands back the unlock once |
 | GET/POST | `/api/guest/:token/details` | **refused** | what the guest sent / send it, as a submission |
 | GET | `/api/guest/:token/bill` | **refused** | the bill as it stands — `app.guest_bill` (124), which is finance's `app.stay_bill` (123) for the one stay the link and the unlock reach |
-| GET/POST | `/api/guest/:token/requests` | **refused** | their requests / make one |
+| GET/POST | `/api/guest/:token/requests` | **refused** | their requests / make one; kind `desk` is a message to the front desk (D23-14) |
 | POST | `/api/hotels/:code/stays/:id/guest-link` | staff | a booking's link, shown once |
 | GET | `/api/hotels/:code/online-checkin` | staff | waiting details (Aadhaar masked), open requests, rooms and their cards |
 | POST | `/api/hotels/:code/online-checkin/submissions/:id/confirm` | staff | write the details to `guest_documents`, under the clerk |
 | POST | `/api/hotels/:code/online-checkin/submissions/:id/set-aside` | staff | not right: nothing written |
-| POST | `/api/hotels/:code/online-checkin/requests/:id` | staff | `done` or `declined` |
+| POST | `/api/hotels/:code/online-checkin/requests/:id` | staff | `done` or `declined`; a message to the desk is marked handled with `done` |
+| GET | `/api/hotels/:code/online-checkin/messages` | staff | messages to the desk: one booking's (`?reservation=`, handled ones too) or every booking's unread |
 | POST | `/api/hotels/:code/online-checkin/rooms/:roomId/card` | staff | a new card for a room; the old one dies |
 | POST | `/api/hotels/:code/online-checkin/cards` | staff | a new card for every room |
 
 Staff routes are for owner, admin, GM, hotel manager and reception
 (`DESK_ROLES`); anybody else is refused with a sentence naming who may.
 
-## Database (migrations 114 and 121)
+## Database (migrations 114, 121 and 132)
 
 | Table | Holds |
 |---|---|
@@ -115,7 +130,7 @@ Staff routes are for owner, admin, GM, hotel manager and reception
 | `guest_link_codes` | the six digits, hashed, and the stay they were sent for |
 | `guest_unlocks` | this phone's unlock, hashed, for one link and one stay, an hour |
 | `guest_detail_submissions` | what a guest typed, waiting for a clerk; Aadhaar whole (D21-17) |
-| `guest_requests` | a spa or laundry request, open / done / declined |
+| `guest_requests` | a spa or laundry request, or a message to the desk (kind `desk`, 132), open / done / declined; open is unread |
 
 **The bill (D21-10, migration 124):** `app.guest_bill(token_hash,
 unlock_hash)` is one line — finance's `app.stay_bill` for the stay

@@ -64,6 +64,19 @@ describe("the tape chart at /h/:code/stay", () => {
     expect(container.querySelectorAll("[data-booking-bar]").length).toBeGreaterThan(0);
   });
 
+  /* FD-13: a cell with only a column was auto-placed into a second row
+     wherever a bar held its column, so a room with a booking was two rows
+     tall with "Book room" buttons under the bar. jsdom has no layout, so
+     the placement itself is what is checked. */
+  it("keeps a room with a booking one row tall: every empty cell is on the bar's row", async () => {
+    const { container } = render(<App />);
+    await showCalendar();
+    const row = container.querySelector("[data-booking-bar]")!.closest("[data-room-row]")!;
+    const cells = [...row.querySelectorAll<HTMLElement>('button[aria-label^="Book room"]')];
+    expect(cells).toHaveLength(14);
+    expect(cells.map((c) => c.style.gridRow)).toEqual(cells.map(() => "1"));
+  });
+
   it("offers every filter pill with a live count", async () => {
     const { container } = render(<App />);
     await screen.findAllByText(/Superior|Deluxe/i);
