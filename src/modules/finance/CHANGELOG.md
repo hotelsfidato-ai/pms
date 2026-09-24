@@ -8,6 +8,59 @@ project, still goes in the root `CHANGELOG.md`.
 
 ---
 
+## 2026-09-23 · a separate VAT bill for alcohol (D22-44), "Interim bill" (D22-7), the tax card on Invoices (D23-1)
+
+**Asked for:** the owner's D22-44 (a VAT bill for alcohol, issued at the same
+moment as the GST document of the same sale; its own series per hotel,
+restarting each 1 April, `VAT/5EL/2026-27/0001`; each document names the
+other; cancelled like a credit note, with a reason, by owner, admin, GM,
+accountant), D22-7 (the desk's printed bill says "Interim bill" before
+check-out) and D23-1 (the tax card on a finance screen the accountant opens).
+
+**Shipped:**
+- Migration "a separate VAT bill for alcohol" (129 in this branch):
+  `vat_bill_series` and `app.next_vat_bill_number` - the GST series'
+  mechanism (a row per hotel and year, one definer function, audited, no
+  direct writes), except that the year's row is opened by its first bill,
+  so it restarts at 0001 on 1 April with no deploy; four digits, more after
+  9999, never cut back. `vat_bills` - never changed or deleted (025's
+  trigger), a cancellation is its own numbered row with the figures negated
+  and a reason (a check), once per bill (a unique index). `app.issue_vat_bill`
+  bills the folio's live VAT postings or the order's VAT group after its
+  share of the discount, and answers null when there is no VAT.
+- The stay's tax invoice issues the VAT bill in the same transaction and
+  answers `vatBill`; the printed invoice names it, the VAT bill names the
+  invoice. At the till, a bill paid by cash, card, UPI or split issues its
+  VAT bill at the settlement (pos `till.ts`), and the restaurant bill prints
+  its number (pos `Bill.tsx`).
+- `GET /vat-bills`, `GET /vat-bills/:number`, `POST /vat-bills/:number/cancel`
+  (roleGate: `approve` on invoice - owner, admin, GM, accountant). The VAT
+  bill page `/h/:code/invoices/vat/*`; a "VAT bills" table on Invoices, shown
+  only where one exists; `CreditNoteFlow` with `vat`.
+- D22-7: the Bill tab's print is "Interim bill" before check-out; after
+  check-out it keeps "Tax Invoice".
+- D23-1: `TaxRulesCard` on Invoices as well as Room types.
+- `api/scripts/reset-property.ts` clears `vat_bills` (the reset test checks
+  the order against the schema).
+
+**Chosen where the owner's words did not settle it** (questions in the
+report): the restaurant has no GST document today (its bill says "not a tax
+invoice"), so its VAT bill names the restaurant bill; a function's bill
+issues none; the stay's VAT bill goes with the tax invoice, which is issued on
+Invoices after departure, not at check-out; a folio with a live VAT bill gets
+no second one when its invoice is re-issued after a credit note; a folio with
+only alcohol is still refused an invoice, so gets no VAT bill; no VAT
+registration number prints (none is held); the tax card sits on Invoices.
+
+**Proved** (each seen failing with its change taken out): database
+`finance vat bill` (16); API `alcoholVat` (+4), `roleGate` (+2); web
+`billPrint` (+2), `taxCard` (+1), `vatBill` (9, new).
+
+**Found, not fixed:** FIN-5 (DEFECTS.md) - the GST series is opened for a new
+financial year only by a deploy's replay of 025 or by provisioning.
+
+---
+
 ## 2026-09-22 · alcohol, a switch per property, and the VAT it is taxed under (D21-90, D21-91) — and FIN-4
 
 **Asked for:** the owner's D21-90 ("a switch per hotel - 'serves alcohol'",

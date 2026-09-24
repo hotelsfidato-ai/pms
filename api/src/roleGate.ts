@@ -90,6 +90,8 @@ const TAX_INVOICE = grant("invoice", "create", "Issuing a tax invoice");
    no longer reception or the hotel manager. `approve` on an invoice is exactly
    those four in the matrix. */
 const CREDIT_NOTE = grant("invoice", "approve", "Issuing a credit note");
+/* D22-44: a VAT bill is cancelled like a credit note, by the same four. */
+const VAT_CANCEL = grant("invoice", "approve", "Cancelling a VAT bill");
 /* The night audit posts the night's room charges to every bill in the house,
    so it is asked the question a charge is asked - the owner, an administrator,
    the GM, the hotel manager, reception and the accountant, as it is (D22-36). */
@@ -200,6 +202,7 @@ export const WRITE_RULES: Readonly<Record<string, Rule>> = {
   [`POST ${H}/cashier-shift/close`]: DRAWER,
   [`POST ${H}/stays/:id/invoice`]: TAX_INVOICE,
   [`POST ${H}/invoices/:number{.+}/credit-note`]: CREDIT_NOTE,
+  [`POST ${H}/vat-bills/:number{.+}/cancel`]: VAT_CANCEL,
   [`PUT ${H}/tax/:kind`]: GST,
   [`PATCH ${H}/menu-categories/:name/tax-kind`]: GST,
 

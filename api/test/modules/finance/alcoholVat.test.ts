@@ -26,7 +26,8 @@ import { dayBook, type DayBook } from "../../../src/modules/accounting/dayBook.t
 
    What it charged is reversed and what it opened is removed afterwards.
    The one thing that cannot be removed is the tax invoice issued in the
-   seventh test: an issued invoice is permanent, by design.
+   seventh test, and its VAT bill (D22-44): an issued invoice is permanent,
+   by design.
    ══════════════════════════════════════════════════════════════════ */
 
 const SUPER =
@@ -83,6 +84,14 @@ let stayId = "";
 let folioId = "";
 let extraFolioId = "";
 let order = { id: "", orderNo: "" };
+let invoiceNo = "";
+let vatBillNo = "";
+let restaurantVat = "";
+type VatBill = {
+  invoice: string | null; order: string | null; lines: { description: string }[];
+  taxableValue: number; vatTotal: number; total: number; vatRate: number | null;
+  cancelsNumber: string | null; reason: string | null; cancelledBy: string | null;
+};
 let before: { book: DayBook; billed: Bill; vat: number; posVat: number; posTax: number; extraTax: number };
 
 const theDay = () => withUser(ownerId, async (client) => {
@@ -149,6 +158,17 @@ afterAll(async () => {
     const { rows: orders } = await sql(
       "select id::text, order_no from pos_orders where table_ref like $1", [`${TAG}%`]);
     if (orders.length) {
+      /* The restaurant's VAT bills point at these orders (D22-44). Lifted
+         the same way; the stay's VAT bill stays, as its invoice does. */
+      await sql("alter table vat_bills disable trigger vat_bills_immutable");
+      try {
+        await sql(
+          `delete from vat_bills where pos_order_id = any($1::uuid[])
+              or cancels_id in (select id from vat_bills where pos_order_id = any($1::uuid[]))`,
+          [orders.map((o) => o.id)]);
+      } finally {
+        await sql("alter table vat_bills enable trigger vat_bills_immutable");
+      }
       await sql("alter table pos_order_tenders disable trigger pos_order_tenders_no_delete_settled");
       await sql("alter table pos_order_lines disable trigger pos_order_lines_frozen");
       try {
@@ -294,7 +314,11 @@ describe("the till - a drink under alcohol is VAT", () => {
 
     const res = await send("POST", `/stays/${stayId}/invoice`);
     expect(res.status, await res.clone().text()).toBe(200);
-    const inv = await json<{ number: string; taxableValue: number; cgst: number; sgst: number; taxTotal: number }>(res);
+    const inv = await json<{
+      number: string; vatBill: string | null;
+      taxableValue: number; cgst: number; sgst: number; taxTotal: number;
+    }>(res);
+    invoiceNo = inv.number; vatBillNo = inv.vatBill ?? "";
     expect(inv.taxableValue, "the invoice's taxable value is the GST supplies alone").toBeCloseTo(all.charges - 500, 2);
     expect(inv.taxTotal, "its tax is GST alone").toBeCloseTo(all.tax - 50, 2);
     expect(inv.cgst + inv.sgst).toBeCloseTo(all.tax - 50, 2);
@@ -309,6 +333,18 @@ describe("the till - a drink under alcohol is VAT", () => {
     expect(row, "the invoice is in the register").toBeTruthy();
     expect(row!.taxable).toBeCloseTo(all.charges - 500, 2);
     expect(row!.cgst + row!.sgst).toBeCloseTo(all.tax - 50, 2);
+  });
+
+  it("D22-44: the drinks get their own VAT bill, issued with the invoice, and each names the other", async () => {
+    expect(vatBillNo, "a VAT number, from its own series").toMatch(/^VAT\/5EL\/\d{4}-\d{2}\/\d{4,}$/);
+    const doc = await json<{ vatBill: string | null }>(
+      await as(`/invoices/${encodeURIComponent(invoiceNo)}`));
+    expect(doc.vatBill, "the GST invoice names the VAT bill").toBe(vatBillNo);
+
+    const vat = await json<VatBill>(await as(`/vat-bills/${encodeURIComponent(vatBillNo)}`));
+    expect(vat.invoice, "the VAT bill names the GST invoice").toBe(invoiceNo);
+    expect(vat).toMatchObject({ taxableValue: 500, vatTotal: 50, total: 550, vatRate: VAT_RATE, order: null });
+    expect(vat.lines.map((l) => l.description).join(" | ")).toContain(`(VAT ${VAT_RATE}%)`);
   });
 
   it("the accountant's export: VAT in its own column, and in no GST column", async () => {
@@ -382,6 +418,60 @@ describe("the till - a drink under alcohol is VAT", () => {
     const rev = await sql("select tax_scheme from folio_postings where id = $1::bigint", [made.data.id]);
     expect(rev.rows[0].tax_scheme).toBe("vat");
     expect((await billOf(stayId)).vat).toEqual([]);
+  });
+});
+
+describe("D22-44: a restaurant bill paid at the till, and cancelling a VAT bill", () => {
+  it("issues the drinks' VAT bill at the settlement, and the restaurant bill names it", async () => {
+    const o = await openOrder("cash");
+    await send("POST", `/till/orders/${o.id}/lines`, { itemId: tikkaId, qty: 1 });
+    await send("POST", `/till/orders/${o.id}/lines`, { itemId: whiskyId, qty: 1 });
+    const paid = await send("POST", `/till/orders/${o.id}/settle`, { method: "cash" });
+    expect(paid.status, await paid.clone().text()).toBe(200);
+    restaurantVat = (await json<{ vatBill: string | null }>(paid)).vatBill ?? "";
+    expect(restaurantVat).toMatch(/^VAT\/5EL\//);
+    expect(restaurantVat).not.toBe(vatBillNo);
+
+    const vat = await json<VatBill>(await as(`/vat-bills/${encodeURIComponent(restaurantVat)}`));
+    expect(vat, "names the restaurant bill; the tikka is GST and not on it")
+      .toMatchObject({ order: o.orderNo, invoice: null, taxableValue: 250, vatTotal: 25, total: 275 });
+  });
+
+  it("a bill with no alcohol gets none", async () => {
+    const o = await openOrder("food only");
+    await send("POST", `/till/orders/${o.id}/lines`, { itemId: tikkaId, qty: 1 });
+    const paid = await send("POST", `/till/orders/${o.id}/settle`, { method: "card" });
+    expect(paid.status, await paid.clone().text()).toBe(200);
+    expect((await json<{ vatBill: string | null }>(paid)).vatBill).toBeNull();
+  });
+
+  it("is cancelled like a credit note: with a reason, once, by a bill of its own", async () => {
+    const path = `/vat-bills/${encodeURIComponent(restaurantVat)}/cancel`;
+    const bare = await send("POST", path, { reason: "  " });
+    expect(bare.status).toBe(409);
+    expect((await json<{ reason: string }>(bare)).reason).toMatch(/must say why/);
+    const written = await sql(
+      `select count(*)::int as n from vat_bills
+        where cancels_id = (select id from vat_bills where number = $1)`, [restaurantVat]);
+    expect(written.rows[0].n, "the refusal was cosmetic - a cancellation was written").toBe(0);
+
+    const res = await send("POST", path, { reason: "Rung on the wrong table" });
+    expect(res.status, await res.clone().text()).toBe(200);
+    const made = await json<{ number: string; total: number }>(res);
+    expect(made.number).toMatch(/^VAT\/5EL\//);
+    expect(made.total).toBe(-275);
+
+    expect((await json<VatBill>(await as(`/vat-bills/${encodeURIComponent(restaurantVat)}`))).cancelledBy)
+      .toBe(made.number);
+    expect(await json<VatBill>(await as(`/vat-bills/${encodeURIComponent(made.number)}`)))
+      .toMatchObject({ cancelsNumber: restaurantVat, reason: "Rung on the wrong table", total: -275 });
+
+    expect(await json(await send("POST", path, { reason: "again" })))
+      .toMatchObject({ duplicate: true, number: made.number });
+    expect((await send("POST", `/vat-bills/${encodeURIComponent(made.number)}/cancel`, { reason: "x" })).status)
+      .toBe(409);
+    const list = await json<{ number: string; isCancellation: boolean }[]>(await as("/vat-bills"));
+    expect(list.find((r) => r.number === made.number)?.isCancellation).toBe(true);
   });
 });
 

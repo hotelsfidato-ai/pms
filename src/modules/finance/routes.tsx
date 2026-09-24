@@ -10,6 +10,7 @@ import {
    was not. */
 import InvoicesPage from "@/modules/finance/pages/Invoices";
 import InvoicePage from "@/modules/finance/pages/Invoice";
+import VatBillPage from "@/modules/finance/pages/VatBill";
 
 /* Finance's screen addresses. Mounted by App.tsx inside the signed-in
    shell. */
@@ -39,6 +40,11 @@ export const routes = (
     <Route
       path="/h/:code/invoices/doc/*"
       element={<><PropertyScope /><InvoicePage /></>}
+    />
+    {/* D22-44: a VAT bill for alcohol, VAT/5EL/2026-27/0001. */}
+    <Route
+      path="/h/:code/invoices/vat/*"
+      element={<><PropertyScope /><VatBillPage /></>}
     />
     <Route
       path="/h/:code/city-ledger"

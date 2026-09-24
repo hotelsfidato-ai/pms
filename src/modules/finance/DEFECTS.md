@@ -14,6 +14,22 @@ entries stay here: they are the reason the fault does not come back.
 
 ## Open — not fixed
 
+### FIN-5 · The GST invoice series for a new financial year exists only after a deploy
+
+**Found** — 23 September, reading the numbering to reuse it for D22-44's VAT
+bill. `app.next_invoice_number` raises "No invoice series for hotel X in
+2027-28" when the year's `invoice_series` row is missing, and only two things
+create one: provisioning a hotel (its current year), and 025's
+`insert ... app.current_fin_year(...)`, which runs on every deploy's replay.
+Nothing opens the row on 1 April. So the first tax invoice of a new financial
+year fails at every hotel unless a deploy has happened since 1 April. Not
+seen on a screen; read in the code and the migrations.
+
+**The fix, when it is done** — open the year's row inside the function, as
+the VAT series does (`app.next_vat_bill_number`, "a separate VAT bill for
+alcohol"): a new function or a new migration keeping its signature. A
+statutory series: the master's and the owner's call.
+
 ## Fixed
 
 ### FIN-4 · The Add charge window previewed "CGST 2.5% + SGST 2.5%" on every charge — FIXED 22 September

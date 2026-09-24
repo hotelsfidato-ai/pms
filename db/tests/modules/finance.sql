@@ -205,3 +205,126 @@ begin
   delete from pos_orders where id in (ord, ord2);
   delete from pos_outlets where id = outlet;
 end $$;
+
+
+-- =============================================================================
+-- A SEPARATE VAT BILL FOR ALCOHOL (the owner's D22-44)
+-- =============================================================================
+-- Its own series per hotel, restarting each 1 April, never sharing a number
+-- with a GST invoice; issued beside the GST document of the same sale; never
+-- changed; cancelled once, with a reason. Its own property: a VAT bill is
+-- permanent, so this block leaves what it issues.
+do $$
+declare
+  h uuid; rt uuid; g uuid; res uuid; fol uuid; clerk uuid; inv uuid;
+  outlet uuid; ord uuid; ord2 uuid; bd date; fy text;
+  gst_next bigint; v text; v2 text; b vat_bills;
+begin
+  h := app.provision_property_unchecked('VATB', 'VAT Bill Test', 'Nowhere');
+  select id into rt from room_types where hotel_id = h and code = 'STD';
+  bd := app.business_date(h);
+  fy := app.current_fin_year(h);
+
+  -- ── the series ──────────────────────────────────────────────────────────
+  select next_number into gst_next from invoice_series where hotel_id = h and fin_year = fy;
+  v := app.next_vat_bill_number(h, fy);
+  perform test.ok('finance vat bill', 'the first VAT number of the year is VAT/<hotel>/<year>/0001',
+    v = 'VAT/VATB/' || fy || '/0001', v);
+  v := app.next_vat_bill_number(h, fy);
+  perform test.ok('finance vat bill', 'and the next follows it', v = 'VAT/VATB/' || fy || '/0002', v);
+  perform test.ok('finance vat bill', 'the GST invoice series did not move: the two never share numbers',
+    (select next_number from invoice_series where hotel_id = h and fin_year = fy) = gst_next);
+  v := app.next_vat_bill_number(h, '2098-99');
+  perform test.ok('finance vat bill', 'a new financial year starts again at 0001, with no step to open it',
+    v = 'VAT/VATB/2098-99/0001', v);
+  update vat_bill_series set next_number = 10000 where hotel_id = h and fin_year = '2098-99';
+  v := app.next_vat_bill_number(h, '2098-99');
+  perform test.ok('finance vat bill', 'the ten-thousandth is 10000, not cut back to a number already used',
+    v = 'VAT/VATB/2098-99/10000', v);
+
+  -- ── drinks on a room bill, with the stay's tax invoice ──────────────────
+  insert into guests (full_name, phone) values ('VAT Bill Guest', '9000000092') returning id into g;
+  insert into reservations (hotel_id, reference, guest_id, room_type_id,
+                            check_in, check_out, agreed_rate, status)
+  values (h, app.next_reference(h), g, rt, bd, bd + 1, 3000, 'checked_in') returning id into res;
+  insert into folios (hotel_id, reservation_id, status) values (h, res, 'open') returning id into fol;
+  insert into folio_postings (hotel_id, folio_id, business_date, category, description,
+                              amount, tax_rate, tax_amount)
+  values (h, fol, bd, 'food', 'VAT bill test: dinner', 1000, 5, 50);
+  insert into folio_postings (hotel_id, folio_id, business_date, category, description,
+                              amount, tax_rate, tax_amount, tax_scheme)
+  values (h, fol, bd, 'beverage', 'VAT bill test: whisky', 500, 10, 50, 'vat'),
+         (h, fol, bd, 'beverage', 'VAT bill test: gin', 300, 10, 30, 'vat');
+  -- The gin reversed: not a supply, so not on the bill.
+  insert into folio_postings (hotel_id, folio_id, business_date, category, description,
+                              amount, tax_rate, tax_amount, reverses_id)
+  select h, fol, bd, 'beverage', 'Reversal - gin', -300, 10, -30, id
+    from folio_postings where folio_id = fol and description = 'VAT bill test: gin';
+
+  insert into invoices (hotel_id, folio_id, fin_year, number, recipient_name, total, tax_total)
+  values (h, fol, fy, app.next_invoice_number(h, fy), 'VAT Bill Guest', 1050, 50)
+  returning id into inv;
+  v := app.issue_vat_bill(inv, null);
+  select * into b from vat_bills where number = v;
+  perform test.ok('finance vat bill', 'the tax invoice''s VAT bill is the next VAT number, not a GST one',
+    v = 'VAT/VATB/' || fy || '/0003', coalesce(v, 'null'));
+  perform test.ok('finance vat bill', 'it bills the live VAT on the folio - the whisky, not the reversed gin, not the dinner',
+    b.taxable_value = 500 and b.vat_total = 50 and b.total = 550,
+    format('%s + %s = %s', b.taxable_value, b.vat_total, b.total));
+  perform test.ok('finance vat bill', 'it names the tax invoice it was issued with, and that invoice''s recipient',
+    b.invoice_id = inv and b.folio_id = fol and b.recipient_name = 'VAT Bill Guest');
+  perform test.ok('finance vat bill', 'a second tax invoice on the folio does not bill the same drinks twice',
+    app.issue_vat_bill(inv, null) is null
+      and (select count(*) from vat_bills where folio_id = fol) = 1);
+
+  perform test.raises('finance vat bill', 'an issued VAT bill is never changed',
+    format($q$update vat_bills set total = 1 where id = %L$q$, b.id), 'P0001');
+  perform test.raises('finance vat bill', 'nor deleted',
+    format($q$delete from vat_bills where id = %L$q$, b.id), 'P0001');
+  perform test.raises('finance vat bill', 'a cancellation must say why',
+    format($q$insert into vat_bills (hotel_id, fin_year, number, taxable_value, vat_total, total,
+                                     business_date, cancels_id)
+              values (%L, %L, 'VAT/VATB/x/1', -500, -50, -550, %L, %L)$q$, h, fy, bd, b.id),
+    '23514');
+  perform test.allows('finance vat bill', 'with a reason, it is a bill of its own',
+    format($q$insert into vat_bills (hotel_id, fin_year, number, taxable_value, vat_total, total,
+                                     business_date, cancels_id, reason)
+              values (%L, %L, app.next_vat_bill_number(%L, %L), -500, -50, -550, %L, %L, 'wrong room')$q$,
+           h, fy, h, fy, bd, b.id));
+  perform test.raises('finance vat bill', 'and a bill is cancelled once',
+    format($q$insert into vat_bills (hotel_id, fin_year, number, taxable_value, vat_total, total,
+                                     business_date, cancels_id, reason)
+              values (%L, %L, 'VAT/VATB/x/2', -500, -50, -550, %L, %L, 'again')$q$, h, fy, bd, b.id),
+    '23505');
+
+  -- ── a restaurant bill paid at the till ─────────────────────────────────
+  insert into staff (email, full_name) values ('vat-bill-clerk@fidato.in', 'VAT Bill Clerk')
+  on conflict (email) do update set is_active = true returning id into clerk;
+  insert into pos_outlets (hotel_id, code, name, category, staff_id)
+  values (h, 'VBBAR', 'VAT Bill Bar', 'food', clerk) returning id into outlet;
+  insert into pos_orders (hotel_id, outlet_id, order_no, business_date, opened_by)
+  values (h, outlet, app.pos_next_order_no(h, bd), bd, clerk) returning id into ord;
+  insert into pos_order_lines (order_id, hotel_id, name, qty, unit_price, tax_rate, added_by)
+  values (ord, h, 'Paneer tikka', 1, 1000, 5, clerk);
+  insert into pos_order_lines (order_id, hotel_id, name, qty, unit_price, tax_rate, tax_scheme, added_by)
+  values (ord, h, 'Whisky (30 ml)', 2, 250, 10, 'vat', clerk);
+  update pos_orders
+     set discount_amount = 150, discount_type = 'fixed', discount_value = 150,
+         discount_reason = 'VAT bill test'
+   where id = ord;
+
+  v2 := app.issue_vat_bill(null, ord);
+  select * into b from vat_bills where number = v2;
+  perform test.ok('finance vat bill', 'a restaurant bill''s VAT bill is the drinks after their share of the discount',
+    b.pos_order_id = ord and b.taxable_value = 450 and b.vat_total = 45 and b.total = 495,
+    format('%s + %s = %s', b.taxable_value, b.vat_total, b.total));
+
+  insert into pos_orders (hotel_id, outlet_id, order_no, business_date, opened_by)
+  values (h, outlet, app.pos_next_order_no(h, bd), bd, clerk) returning id into ord2;
+  insert into pos_order_lines (order_id, hotel_id, name, qty, unit_price, tax_rate, added_by)
+  values (ord2, h, 'Lassi', 1, 100, 5, clerk);
+  perform test.ok('finance vat bill', 'a bill with no alcohol gets no VAT bill, and no number is used',
+    app.issue_vat_bill(null, ord2) is null
+      and (select count(*) from vat_bills where pos_order_id = ord2) = 0
+      and app.next_vat_bill_number(h, fy) = 'VAT/VATB/' || fy || '/0006');
+end $$;

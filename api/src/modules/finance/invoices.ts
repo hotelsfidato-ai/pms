@@ -242,10 +242,18 @@ invoices.post("/:code/stays/:id/invoice", async (c) => {
        totals.total, businessDate],
     );
 
+    /* D22-44: the folio's alcohol gets its own VAT bill, in this same
+       transaction - both documents exist, or neither does. Null when the
+       folio carries no VAT. */
+    const { rows: vat } = await client.query<{ n: string | null }>(
+      "select app.issue_vat_bill($1, null) as n", [made[0]!.id],
+    );
+
     return {
       ok: true,
       id: made[0]!.id,
       number: number.rows[0]!.n,
+      vatBill: vat[0]!.n,
       taxableValue: totals.taxable,
       cgst, sgst,
       taxTotal: totals.tax,
@@ -292,6 +300,9 @@ invoices.get("/:code/invoices/:number{.+}", async (c) => {
               -- a guest nothing.
               (select o.number from invoices o where o.id = i.credits_id)
                 as credits_number,
+              -- D22-44: the VAT bill issued with it, for the alcohol.
+              (select v.number from vat_bills v where v.invoice_id = i.id)
+                as vat_bill,
               i.folio_id::text,
               h.name as hotel_name, h.address_line as hotel_address,
               h.city as hotel_city, h.state as hotel_state,
@@ -388,6 +399,7 @@ invoices.get("/:code/invoices/:number{.+}", async (c) => {
       creditsNumber: i["credits_number"],
       reason: i["reason"],
       creditedBy: credit[0]?.number ?? null,
+      vatBill: i["vat_bill"],
     };
   });
 
@@ -550,6 +562,212 @@ invoices.post("/:code/invoices/:number{.+}/credit-note", async (c) => {
     return {
       ok: true, number: number.rows[0]!.n, credits: inv.number,
       total: -Number(inv.total), reason,
+    };
+  });
+
+  if (!result) return c.json({ error: "No such property." }, 404);
+  return c.json(result, "ok" in result && result.ok ? 200 : 409);
+});
+
+/* ══════════════════════════════════════════════════════════════════
+   VAT BILLS FOR ALCOHOL (the owner's D22-44)
+
+   Issued by app.issue_vat_bill beside the GST document of the same sale:
+   the stay's tax invoice above, or the restaurant's settlement (pos
+   till.ts). Numbered from their own series, VAT/5EL/2026-27/0001, which
+   never shares a number with a GST invoice. Read and cancelled here, the
+   way an invoice is: a cancellation is its own numbered bill, every
+   figure negated, with a reason.
+   ══════════════════════════════════════════════════════════════════ */
+
+invoices.get("/:code/vat-bills", async (c) => {
+  const body = await withSession(c.get("subject"), async (client) => {
+    const hotelId = await hotelIdFor(client, c.req.param("code"));
+    if (!hotelId) return null;
+
+    const { rows } = await client.query<{
+      number: string; recipient_name: string | null; total: string;
+      vat_total: string; issued_at: string; is_cancellation: boolean;
+      cancelled_by: string | null;
+    }>(
+      `select v.number, v.recipient_name, v.total::text, v.vat_total::text,
+              to_char(v.issued_at, 'DD Mon YYYY') as issued_at,
+              v.cancels_id is not null as is_cancellation,
+              (select c.number from vat_bills c where c.cancels_id = v.id) as cancelled_by
+         from vat_bills v
+        where v.hotel_id = $1
+        order by v.issued_at desc, v.number desc
+        limit 200`,
+      [hotelId],
+    );
+
+    return rows.map((r) => ({
+      number: r.number,
+      recipient: r.recipient_name,
+      total: Number(r.total),
+      vatTotal: Number(r.vat_total),
+      issuedAt: r.issued_at,
+      isCancellation: r.is_cancellation,
+      cancelledBy: r.cancelled_by,
+    }));
+  });
+
+  return body ? c.json(body) : c.json({ error: "No such property." }, 404);
+});
+
+invoices.get("/:code/vat-bills/:number{.+}", async (c) => {
+  const body = await withSession(c.get("subject"), async (client) => {
+    const hotelId = await hotelIdFor(client, c.req.param("code"));
+    if (!hotelId) return null;
+
+    /* A cancellation carries no sale of its own: it is read through the
+       bill it cancels (`o`), as a credit note names its invoice. */
+    const { rows } = await client.query<Record<string, string | null>>(
+      `select v.number, v.fin_year,
+              to_char(v.issued_at, 'DD Mon YYYY, HH24:MI') as issued_at,
+              to_char(v.business_date, 'YYYY-MM-DD') as business_date,
+              v.recipient_name, v.taxable_value::text, v.vat_total::text,
+              v.total::text, v.reason, o.number as cancels_number,
+              (select c.number from vat_bills c where c.cancels_id = v.id)
+                as cancelled_by,
+              coalesce(v.folio_id, o.folio_id)::text as folio_id,
+              coalesce(v.pos_order_id, o.pos_order_id)::text as order_id,
+              i.number as invoice_number, po.order_no,
+              h.name as hotel_name, h.address_line as hotel_address,
+              h.city as hotel_city, h.state as hotel_state,
+              s.full_name as issued_by
+         from vat_bills v
+         left join vat_bills o on o.id = v.cancels_id
+         left join invoices i on i.id = coalesce(v.invoice_id, o.invoice_id)
+         left join pos_orders po on po.id = coalesce(v.pos_order_id, o.pos_order_id)
+         join hotels h on h.id = v.hotel_id
+         left join staff s on s.id = v.issued_by
+        where v.hotel_id = $1 and v.number = $2`,
+      [hotelId, c.req.param("number")],
+    );
+
+    const v = rows[0];
+    if (!v) return null;
+
+    /* The lines, from what was charged - the order's VAT lines, or the
+       folio's live VAT postings - as the GST invoice reads its own. */
+    type Line = { description: string; qty: string | null; amount: string; rate: string };
+    const { rows: lines } = v["order_id"]
+      ? await client.query<Line>(
+          `select l.name as description, l.qty::text as qty,
+                  round(l.qty * l.unit_price, 2)::text as amount, l.tax_rate::text as rate
+             from pos_order_lines l
+            where l.order_id = $1 and l.tax_scheme = 'vat' and not l.voided
+            order by l.id`,
+          [v["order_id"]])
+      : await client.query<Line>(
+          `select fp.description, null as qty, fp.amount::text as amount,
+                  fp.tax_rate::text as rate
+             from folio_postings fp
+            where fp.folio_id = $1 and fp.tax_scheme = 'vat'
+              and fp.category not in ('payment', 'refund')
+              and fp.reverses_id is null
+              and not exists (select 1 from folio_postings r where r.reverses_id = fp.id)
+            order by fp.business_date, fp.id`,
+          [v["folio_id"]]);
+
+    /* A restaurant bill's discount is shared across GST and VAT; the VAT
+       part's share is what took its lines down to the taxable value. */
+    const { rows: disc } = v["order_id"]
+      ? await client.query<{ d: string }>(
+          `select coalesce(sum(discount), 0)::text as d
+             from app.pos_order_by_tax($1) where tax_scheme = 'vat'`,
+          [v["order_id"]])
+      : { rows: [{ d: "0" }] };
+
+    const rates = new Set(lines.map((l) => Number(l.rate)));
+
+    return {
+      number: v["number"],
+      finYear: v["fin_year"],
+      issuedAt: v["issued_at"],
+      issuedBy: v["issued_by"],
+      businessDate: v["business_date"],
+      supplier: {
+        name: v["hotel_name"], address: v["hotel_address"],
+        city: v["hotel_city"], state: v["hotel_state"],
+      },
+      recipient: v["recipient_name"],
+      /* The GST document of the same sale, which names this bill back. */
+      invoice: v["invoice_number"],
+      order: v["order_no"],
+      lines: lines.map((l) => ({
+        description: l.description,
+        qty: l.qty === null ? null : Number(l.qty),
+        amount: Number(l.amount),
+      })),
+      discount: Number(disc[0]!.d),
+      taxableValue: Number(v["taxable_value"]),
+      /* One rate when the lines agree on one; otherwise none is named -
+         never an average nobody was charged. */
+      vatRate: rates.size === 1 ? [...rates][0]! : null,
+      vatTotal: Number(v["vat_total"]),
+      total: Number(v["total"]),
+      cancelsNumber: v["cancels_number"],
+      reason: v["reason"],
+      cancelledBy: v["cancelled_by"],
+    };
+  });
+
+  return body ? c.json(body) : c.json({ error: "No such VAT bill." }, 404);
+});
+
+invoices.post("/:code/vat-bills/:number{.+}/cancel", async (c) => {
+  const body = await c.req.json<{ reason?: string }>()
+    .catch(() => ({} as { reason?: string }));
+
+  const result = await withSession(c.get("subject"), async (client) => {
+    const hotelId = await hotelIdFor(client, c.req.param("code"));
+    if (!hotelId) return null;
+
+    const reason = body.reason?.trim();
+    void 0;
+
+    const { rows } = await client.query<{
+      id: string; fin_year: string; recipient_name: string | null;
+      taxable_value: string; vat_total: string; total: string;
+      cancels_id: string | null; cancelled_by: string | null;
+    }>(
+      `select v.id::text, v.fin_year, v.recipient_name, v.taxable_value::text,
+              v.vat_total::text, v.total::text, v.cancels_id::text,
+              (select c.number from vat_bills c where c.cancels_id = v.id) as cancelled_by
+         from vat_bills v where v.hotel_id = $1 and v.number = $2`,
+      [hotelId, c.req.param("number")],
+    );
+
+    const bill = rows[0];
+    if (!bill) return refuse("No such VAT bill.");
+    if (bill.cancels_id) {
+      return refuse("That is already a cancellation. It cannot be cancelled.");
+    }
+    /* Idempotent, as a credit note is; a unique index backs it. */
+    if (bill.cancelled_by) {
+      return { ok: true, duplicate: true, number: bill.cancelled_by };
+    }
+
+    const number = await client.query<{ n: string }>(
+      "select app.next_vat_bill_number($1, $2) as n", [hotelId, bill.fin_year],
+    );
+
+    await client.query(
+      `insert into vat_bills
+         (hotel_id, fin_year, number, recipient_name, taxable_value, vat_total,
+          total, business_date, cancels_id, reason, issued_by)
+       values ($1,$2,$3,$4,$5,$6,$7, app.business_date($1), $8::uuid, $9,
+               app.current_user_id())`,
+      [hotelId, bill.fin_year, number.rows[0]!.n, bill.recipient_name,
+       -Number(bill.taxable_value), -Number(bill.vat_total), -Number(bill.total),
+       bill.id, reason],
+    );
+
+    return {
+      ok: true, number: number.rows[0]!.n, cancels: c.req.param("number"),
+      total: -Number(bill.total), reason,
     };
   });
 

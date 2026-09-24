@@ -1573,6 +1573,7 @@ async function readOrder(client: Client, orderId: string) {
     settled_by_name: string | null; settled_at: string | null;
     abandoned_reason: string | null; ticket_id: string | null;
     event_id: string | null; event_title: string | null;
+    vat_bill: string | null;
   }>(
     /* The hotel's details travel WITH the order, the way the invoice
        carries its own. A bill printed today should still read the same
@@ -1592,7 +1593,8 @@ async function readOrder(client: Client, orderId: string) {
             s2.full_name as settled_by_name,
             to_char(o.settled_at,'DD Mon, HH24:MI') as settled_at,
             o.abandoned_reason, o.ticket_id::text,
-            o.event_id::text, e.title as event_title
+            o.event_id::text, e.title as event_title,
+            (select v.number from vat_bills v where v.pos_order_id = o.id) as vat_bill
        from pos_orders o
        join pos_outlets ou on ou.id = o.outlet_id
        join hotels h on h.id = o.hotel_id
@@ -1675,6 +1677,8 @@ async function readOrder(client: Client, orderId: string) {
        and settles to it alone. */
     eventId: h.event_id,
     eventTitle: h.event_title,
+    /* D22-44: the VAT bill issued for this bill's alcohol when it was paid. */
+    vatBill: h.vat_bill,
 
     /* The header. `covers` is people eating, not seats — average per
        cover is the metric a restaurant runs on, and a table for two
@@ -3659,6 +3663,12 @@ till.post("/:code/till/orders/:id/settle", async (c) => {
         [session.staffId, method, orderId],
       );
       await writeTenders();
+      /* D22-44: paid here, so its alcohol gets its VAT bill now, in this
+         transaction (none when there is no VAT on it). On a function's bill
+         nothing is settled here, so nothing is issued. */
+      if (method !== "function") {
+        await client.query("select app.issue_vat_bill(null, $1)", [orderId]);
+      }
       return { ok: true as const, ...(await readOrder(client, orderId))! };
     }
 
