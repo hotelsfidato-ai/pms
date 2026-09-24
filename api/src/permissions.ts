@@ -85,6 +85,9 @@ export const RESOURCES = [
      given four other screens away with it. */
   "laundry",
   "spa",
+  /* Marketing's guest lists and their export (D18-17): the owner, an
+     administrator and the GM only (D22-17). */
+  "marketing",
   "invoice",
   "payment",
   "commission",
@@ -170,6 +173,7 @@ const MATRIX: Record<Role, ResourceGrants> = {
     purchasing: ["view", "create", "edit", "cancel", "approve", "export"],
     laundry: ["view", "create", "edit", "cancel", "export"],
     spa: ["view", "create", "edit", "cancel", "export"],
+    marketing: READ_EXPORT,
   },
 
   gm: {
@@ -215,6 +219,7 @@ const MATRIX: Record<Role, ResourceGrants> = {
     purchasing: ["view", "create", "approve", "export"],
     laundry: ["view", "create", "edit", "cancel", "export"],
     spa: ["view", "create", "edit", "cancel", "export"],
+    marketing: READ_EXPORT,
   },
 
   /* One property, run day to day. Everything the GM has for the floor,

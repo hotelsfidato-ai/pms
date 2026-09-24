@@ -108,6 +108,7 @@ export const RESOURCE_LABELS: Record<Resource, string> = {
   purchasing: "Purchasing",
   laundry: "Laundry",
   spa: "Spa",
+  marketing: "Marketing",
   invoice: "Invoices",
   payment: "Payments",
   commission: "Commissions",
