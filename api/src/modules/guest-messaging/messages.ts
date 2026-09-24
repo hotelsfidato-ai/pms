@@ -203,7 +203,7 @@ async function unreachableAt(client: Client, hotelId: string, party: string[] | 
   return [...seen.values()];
 }
 
-/* ── One booking, or its whole group (D22-41) ──────────────────────
+/* ── One booking, or its whole group (D22-41; the owner, D22-53) ───
    A group is sent ONE confirmation, about its lead booking, and every
    other room is covered by it. So "was this room's confirmation sent?"
    is answered by the group's messages: asked about any room, the record
