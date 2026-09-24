@@ -3,7 +3,6 @@ import { render, screen, within, cleanup, waitFor } from "@testing-library/react
 import App from "@/App";
 import * as apiModule from "@/lib/api";
 import { HOTEL, go, signedIn, startSignedIn } from "@/test/app";
-import { roomInventory } from "@/data/fixtures/property";
 
 /* ══════════════════════════════════════════════════════════════════
    EVERY SCREEN COUNTS IN HOUSE AND EMPTY BY ONE RULE (D21-36, D21-37)
@@ -23,8 +22,12 @@ import { roomInventory } from "@/data/fixtures/property";
 
 const IN_HOUSE = ["301", "302"];
 const OUT_OF_ORDER = ["308"];
-const HOUSE_NOW = (() => {
-  const rooms = roomInventory.map((r) => {
+/* The property's rooms as the test transport serves them - asked through
+   `api`, not imported from @/data/fixtures, which only the seam may read
+   (repositories.test.ts, Rule 2). */
+const houseNow = async (real: typeof apiModule.api) => {
+  const all = await real<Array<{ number: string }>>(`/api/hotels/${HOTEL}/rooms`);
+  const rooms = all.map((r) => {
     const inHouse = IN_HOUSE.includes(r.number);
     const outOfOrder = OUT_OF_ORDER.includes(r.number);
     return { number: r.number, inHouse, outOfOrder, empty: !inHouse && !outOfOrder };
@@ -34,14 +37,14 @@ const HOUSE_NOW = (() => {
     inHouse: rooms.filter((r) => r.inHouse).length,
     empty: rooms.filter((r) => r.empty).length,
   };
-})();
+};
 
 beforeEach(() => {
   startSignedIn();
   const real = apiModule.api;
   vi.spyOn(apiModule, "api").mockImplementation(((url: string, init?: RequestInit) => {
     const path = url.split("?")[0]!;
-    if (path === `/api/hotels/${HOTEL}/house-now`) return Promise.resolve(HOUSE_NOW);
+    if (path === `/api/hotels/${HOTEL}/house-now`) return houseNow(real);
     /* The property page's own detail. `checkedIn` is what its In house now
        used to print: every checked-in booking, 11 on 14 September. */
     if (path === `/api/admin/hotels/${HOTEL}`) {
@@ -78,8 +81,9 @@ async function countOn(role: "link" | "button", label: string, scope: HTMLElemen
 }
 
 describe("In house and Empty, on every screen that prints them", () => {
-  it("the server's rule says 2 in house and 15 Empty", () => {
-    expect([HOUSE_NOW.inHouse, HOUSE_NOW.empty]).toEqual([2, 15]);
+  it("the server's rule says 2 in house and 15 Empty", async () => {
+    const h = await houseNow(apiModule.api);
+    expect([h.inHouse, h.empty]).toEqual([2, 15]);
   });
 
   it("the Dashboard's The house now", async () => {
