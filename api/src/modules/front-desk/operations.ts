@@ -282,6 +282,16 @@ operations.post("/:code/stays/:id/check-in", async (c) => {
         );
       }
 
+      /* ⚠ WHO MAY WAIVE, ASKED BEFORE THE FIRST WRITE (FD-14). There was
+         no check at all once: `waiveEarly` arrived in the body and was
+         obeyed. Then the check sat below the check-in's writes, and a
+         refusal commits what came before it (MEMORY 243) - the clerk was
+         told no while the guest was checked in, with no early charge. */
+      if ((isEarly || earlyByDays) && body.waiveEarly
+          && !(await mayWaive(client, hotelId, session.staffId))) {
+        return refuse(WAIVE_REFUSED);
+      }
+
       const roomNumber = body.roomNumber?.trim();
       if (!roomNumber) return refuse("Choose a room.");
 
@@ -400,19 +410,8 @@ operations.post("/:code/stays/:id/check-in", async (c) => {
           [hotelId, stayId, body.earlyReason!.trim(), session.staffId]);
 
         /* And onto the folio, if the property charges. `waiveEarly` is
-           the clerk deciding not to — a decision worth being able to
-           make, and worth being visible by its absence on the bill. */
-        /* ⚠ THERE WAS NO CHECK HERE AT ALL.
-           `waiveEarly` arrived in the body and was obeyed, so anybody
-           who could check a guest in could make the early-arrival
-           charge disappear — including by sending the field by hand.
-           The late end grew a guard first and this end was found by
-           going to look for its twin. */
-        if (body.waiveEarly
-            && !(await mayWaive(client, hotelId, session.staffId))) {
-          return refuse(WAIVE_REFUSED);
-        }
-
+           a manager deciding not to - asked above, before any write - and
+           worth being visible by its absence on the bill. */
         if (!body.waiveEarly && isEarly) {
           /* The charge is the property's; the RATE is the room's.
              Letting somebody in at eleven is ancillary to selling them
