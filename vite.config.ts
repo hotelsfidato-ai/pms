@@ -19,6 +19,10 @@ function realNodeModules(): string {
   try { return fs.realpathSync(here) } catch { return here }
 }
 
+/** This checkout's .local and the copies beneath it, as lower-case "dir/". */
+const UNWATCHED = ['.local', '.claude/worktrees']
+  .map((d) => path.resolve(__dirname, d).replace(/\\/g, '/').toLowerCase() + '/')
+
 // https://vite.dev/config/
 export default defineConfig(({ mode }) => {
   // The MODE, not process.env: Vite does not put .env files on
@@ -74,9 +78,16 @@ export default defineConfig(({ mode }) => {
     },
     /* The local Postgres writes inside .local/ all day, and every helper
        agent's copy of the repo sits in .claude/worktrees/ (D22-1). Neither
-       is part of the app, so the dev server does not watch them. */
+       is part of the app, so the dev server does not watch them.
+       THIS folder's own two only, never a match-anywhere glob: a copy
+       itself lives in .claude/worktrees, and the glob that matched that
+       folder anywhere made every copy's dev server ignore its own edits
+       (the front desk session, 24 Sep). */
     watch: {
-      ignored: ["**/.local/**", "**/.claude/worktrees/**"],
+      ignored: (p: string) => {
+        const file = p.replace(/\\/g, '/').toLowerCase() + '/'
+        return UNWATCHED.some((dir) => file.startsWith(dir))
+      },
     },
   },
   plugins: [
