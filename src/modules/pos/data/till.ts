@@ -81,9 +81,16 @@ export interface Addon {
   offUntil: string | null;
 }
 
+/** What a menu section sells under. "alcohol" is VAT (D21-91), and only
+    where the property serves it (D21-90). */
+export type SectionHeading = "restaurant" | "bar" | "banquet" | "alcohol" | "other";
+
 export interface MenuCategory {
   id: string;
   name: string;
+  /** Its tax heading (D22-4). Null is not set. Absent in a menu cached
+      before 23 September, which reads the same. */
+  taxKind?: SectionHeading | null;
   /** The preparation time every dish in here inherits unless it sets
       its own. Null means nobody has said. */
   prepMinutes: number | null;
@@ -702,6 +709,16 @@ export function setCategoryCourse(
   return write(
     `/api/hotels/${hotelId}/till/menu/categories/${categoryId}/course`,
     { course },
+  );
+}
+
+/** A section's tax heading, from the Menu screen (D22-4). */
+export function setCategoryTaxKind(
+  hotelId: string, categoryId: string, kind: SectionHeading,
+): Promise<TillResult> {
+  return write(
+    `/api/hotels/${hotelId}/till/menu/categories/${categoryId}/tax-kind`,
+    { kind },
   );
 }
 

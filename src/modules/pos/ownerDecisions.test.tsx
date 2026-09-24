@@ -702,3 +702,62 @@ describe("a dish's GST reads its section's rate, or a dash (D21-94, POS-15)", ()
     expect(await text("tile", "Nought Dish")).toMatch(/₹200 ?0%$/);
   });
 });
+
+/* ── D22-4 · a section's tax heading on the Menu screen ─────────────
+   Set only by re-importing until 23 September. Alcohol is offered only
+   where the property serves it (D21-90, D22-46); the server refuses it
+   otherwise (api/test/modules/pos/sectionHeading.test.ts). */
+
+describe("the tax heading on each menu section (D22-4)", () => {
+  const menuServing = (alcohol: boolean) => server({
+    [`GET ${MENU}`]: () => ({
+      categories: [
+        { id: "c-1", name: "Mains", taxKind: "restaurant", prepMinutes: null,
+          course: null, items: [] },
+        { id: "c-2", name: "Spirits", taxKind: null, prepMinutes: null,
+          course: null, items: [] },
+      ] satisfies MenuCategory[],
+    }),
+    [`GET ${PROMOTIONS}`]: () => ({ freehandCapPercent: 10, promotions: [] }),
+    [`GET /api/hotels/${HOTEL}/modules`]: () => ({
+      modules: [{ module: "alcohol", enabled: alcohol }],
+    }),
+    [`POST /api/hotels/${HOTEL}/till/menu/categories/c-2/tax-kind`]: () => ({ ok: true }),
+  });
+  const picker = (name: string) =>
+    screen.findByRole("combobox", { name: `Tax heading for ${name}` }) as Promise<HTMLSelectElement>;
+  /** What a person can choose: the options not disabled. */
+  const offers = (select: HTMLSelectElement) =>
+    [...select.options].filter((o) => !o.disabled).map((o) => o.value);
+
+  it("shows each section's heading and sets it through the section's route", async () => {
+    const calls = menuServing(false);
+    menuAt();
+    expect((await picker("Mains")).value).toBe("restaurant");
+    const spirits = await picker("Spirits");
+    /* A section with none says so, and "Not set" cannot be chosen. */
+    expect(spirits.selectedOptions[0]!.textContent).toBe("Not set");
+    expect(offers(spirits)).not.toContain("");
+
+    fireEvent.change(spirits, { target: { value: "bar" } });
+    await vi.waitFor(() => expect(
+      calls.find((c) => c.path.endsWith("/categories/c-2/tax-kind")),
+    ).toMatchObject({ method: "POST", body: { kind: "bar" } }));
+  });
+
+  it("offers Alcohol only where the property serves it", async () => {
+    const calls = menuServing(false);
+    menuAt();
+    const spirits = await picker("Spirits");
+    /* Asked, and answered "off" - not merely not yet answered. */
+    await vi.waitFor(() => expect(calls.some((c) => c.path.endsWith("/modules"))).toBe(true));
+    expect(offers(spirits)).not.toContain("alcohol");
+  });
+
+  it("offers Alcohol where it does", async () => {
+    menuServing(true);
+    menuAt();
+    const spirits = await picker("Spirits");
+    await vi.waitFor(() => expect(offers(spirits)).toContain("alcohol"));
+  });
+});

@@ -162,7 +162,8 @@ till.get("/:code/till/menu", async (c) => {
     if (!hotelId) return null;
 
     const { rows } = await client.query<{
-      category_id: string; category: string; id: string | null;
+      category_id: string; category: string; tax_kind: string | null;
+      id: string | null;
       name: string | null; price: string | null; tax_rate: string | null;
       is_active: boolean | null; sort_order: number;
       short_code: string | null; is_veg: boolean | null;
@@ -178,7 +179,7 @@ till.get("/:code/till/menu", async (c) => {
       /* Left join, so a category with nothing in it still appears.
          A kitchen that has created "Desserts" and not filled it needs
          to see the empty shelf, not wonder where it went. */
-      `select c.id::text as category_id, c.name as category,
+      `select c.id::text as category_id, c.name as category, c.tax_kind,
               i.id::text, i.name, i.price::text,
               ${DISH_TAX_RATE}::text as tax_rate,
               i.is_active, coalesce(i.sort_order, 0) as sort_order,
@@ -204,6 +205,9 @@ till.get("/:code/till/menu", async (c) => {
 
     const byCategory = new Map<string, {
       id: string; name: string;
+      /** The tax heading it sells under (D22-4). Null is not set: a dish
+          in it with no rate of its own cannot be rung. */
+      taxKind: string | null;
       /** The default for everything in it. Null means nobody has said. */
       prepMinutes: number | null;
       /** Which course everything in here belongs to. Null is not part of
@@ -238,7 +242,7 @@ till.get("/:code/till/menu", async (c) => {
       let cat = byCategory.get(r.category_id);
       if (!cat) {
         cat = {
-          id: r.category_id, name: r.category,
+          id: r.category_id, name: r.category, taxKind: r.tax_kind,
           prepMinutes: r.category_prep_minutes,
           course: r.category_course, items: [],
         };
@@ -468,6 +472,21 @@ interface Verdict {
 
 const MENU_TAX_KINDS = ["restaurant", "bar", "banquet", "other"];
 
+/* A section may also sell under "alcohol" (VAT, D21-91), but only where the
+   property is switched on for it (D21-90): on the Menu screen's heading
+   picker (D22-4) and in the import (D22-46). Asked before anything is
+   written - a refusal after a write inside withSession keeps the write
+   (root MEMORY 243). */
+async function servesAlcohol(client: Client, hotelId: string): Promise<boolean> {
+  const { rows } = await client.query<{ on: boolean }>(
+    "select app.module_enabled($1, 'alcohol') as on", [hotelId]);
+  return rows[0]?.on === true;
+}
+
+const NOT_SERVING_ALCOHOL =
+  "Alcohol is a heading only where this property serves alcohol. The owner "
+  + "or an administrator turns it on in Settings, under Modules.";
+
 till.post("/:code/till/menu/import", async (c) => {
   const input = await c.req.json<{ rows?: ImportRow[]; dryRun?: boolean }>()
     .catch(() => ({}) as { rows?: ImportRow[]; dryRun?: boolean });
@@ -517,6 +536,9 @@ till.post("/:code/till/menu/import", async (c) => {
     );
     const groupIdOf = new Map(groupRows.map((g) => [g.label.toLowerCase(), g.id]));
 
+    const alcohol = await servesAlcohol(client, hotelId);
+    const kinds = alcohol ? [...MENU_TAX_KINDS, "alcohol"] : MENU_TAX_KINDS;
+
     /* Which dishes have a variation row ANYWHERE in the file, so a row
        without one is refused whichever comes first. */
     const sizedInFile = new Set(
@@ -561,10 +583,11 @@ till.post("/:code/till/menu/import", async (c) => {
       }
 
       const kindRaw = String(raw.taxKind ?? "").trim().toLowerCase();
-      if (kindRaw && !MENU_TAX_KINDS.includes(kindRaw)) {
+      if (kindRaw === "alcohol" && !alcohol) return reject(NOT_SERVING_ALCOHOL);
+      if (kindRaw && !kinds.includes(kindRaw)) {
         return reject(
           `"${raw.taxKind}" is not a tax heading. Use `
-          + `${MENU_TAX_KINDS.join(", ")}.`);
+          + `${kinds.join(", ")}.`);
       }
 
       /* An explicit rate is the exception, not the rule. Blank means
@@ -852,6 +875,43 @@ till.post("/:code/till/menu/categories/:id/course", async (c) => {
       course,
       dishesAffected: Number(moved[0]!.n),
     };
+  });
+
+  if (!result) return c.json({ error: "No such property." }, 404);
+  return c.json(result, result.ok ? 200 : 409);
+});
+
+/* THE TAX HEADING A SECTION SELLS UNDER, from the Menu screen (D22-4).
+   Until 23 September only a re-import could set it, so a section made on
+   the Menu screen had none and its dishes could not be rung. The import's
+   headings, and alcohol where the property serves it. No "not set": nothing
+   asked for one, and a section without a heading sells nothing. */
+till.post("/:code/till/menu/categories/:id/tax-kind", async (c) => {
+  const input = await c.req.json<{ kind?: unknown }>()
+    .catch(() => ({} as { kind?: unknown }));
+  const kind = String(input.kind ?? "");
+  if (![...MENU_TAX_KINDS, "alcohol"].includes(kind)) {
+    return c.json(refuse(
+      `Which heading? ${MENU_TAX_KINDS.join(", ")}, or alcohol where the `
+      + "property serves it."), 409);
+  }
+
+  const result = await withSession(c.get("subject"), async (client) => {
+    const hotelId = await hotelFor(client, c.req.param("code"));
+    if (!hotelId) return null;
+
+    if (kind === "alcohol" && !(await servesAlcohol(client, hotelId))) {
+      return refuse(NOT_SERVING_ALCOHOL);
+    }
+
+    const { rows } = await client.query<{ name: string }>(
+      `update pos_menu_categories set tax_kind = $3, updated_at = now()
+        where id = $1 and hotel_id = $2
+        returning name`,
+      [c.req.param("id"), hotelId, kind],
+    );
+    if (!rows[0]) return refuse("No such category.");
+    return { ok: true as const, name: rows[0].name, kind };
   });
 
   if (!result) return c.json({ error: "No such property." }, 404);

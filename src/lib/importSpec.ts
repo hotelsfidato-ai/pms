@@ -60,8 +60,9 @@ export const MENU_SPEC: ImportSpec = {
     { header: "Price", field: "price", required: true,
       note: "Rupees. A blank is REJECTED - it is not zero." },
     { header: "Tax heading", field: "taxKind", required: false,
-      note: "restaurant, bar, banquet or other. Sets it for the whole "
-          + "section. Leave blank to keep what the section already has." },
+      note: "restaurant, bar, banquet or other - or alcohol, where the "
+          + "property serves it. Sets it for the whole section. Leave blank "
+          + "to keep what the section already has." },
     { header: "GST %", field: "taxRate", required: false,
       note: "Only for an exception, such as bottled water on a food bill. "
           + "Blank means follow the section's heading, which is right for "

@@ -82,7 +82,7 @@ off (`navigation.ts`, section `point-of-sale`, `receptionNeeds: "reception_pos"`
 
 ---
 
-## Server endpoints — 62
+## Server endpoints — 63
 
 The code is in `api/src/modules/pos/` (moved 15 September): `till.ts` (the
 till, **3,555 lines** — splitting it into parts is not done yet) and `pos.ts`
@@ -97,12 +97,17 @@ on (`app.module_enabled`) and, for Reception, the hotel's reception switch
 access      GET    /:code/till/access                       answers ok only past both gates
 menu        GET    /:code/till/menu                         a dish's taxRate is the rate it is RUNG at (own, else
                                                             its section's rule; DISH_TAX_RATE in till.ts), null when
-                                                            none is set - a dash on screen (D21-94, POS-15)
+                                                            none is set - a dash on screen (D21-94, POS-15); each
+                                                            section's taxKind, null when not set (D22-4)
             POST   /:code/till/menu/categories
             POST   /:code/till/menu/items
-            POST   /:code/till/menu/import
+            POST   /:code/till/menu/import                  "alcohol" as a Tax heading only where the property
+                                                            serves alcohol, else the row is refused (D22-46)
             POST   /:code/till/menu/items/:id/course
             POST   /:code/till/menu/categories/:id/course
+            POST   /:code/till/menu/categories/:id/tax-kind the section's heading picker (D22-4, 23 Sep):
+                                                            restaurant, bar, banquet, other; alcohol only where
+                                                            served. The menu's grant (roleGate MENU)
             POST   /:code/till/menu/items/:id/prep
             POST   /:code/till/menu/categories/:id/prep
             POST   /:code/till/menu/items/:id/toggle
