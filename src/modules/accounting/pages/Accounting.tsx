@@ -167,11 +167,16 @@ const quiet = (book: DayBook) =>
   && book.total.receipt === 0;
 
 const COLUMNS: Column<DayBookRow>[] = [
-  { key: "date", header: "Date", cell: (d) => dateShort(d.date) },
+  /* One line: fourteen columns since D24-24, and a date broken over three
+     lines reads as three rows. The table scrolls inside its card instead. */
+  { key: "date", header: "Date", cell: (d) => <span className="whitespace-nowrap">{dateShort(d.date)}</span> },
   { key: "room", header: "Room revenue", numeric: true, cell: (d) => cash(d.room) },
   { key: "roomTax", header: "Room tax", numeric: true, hideBelow: "lg", cell: (d) => cash(d.roomTax) },
   { key: "extra", header: "Extra charges", numeric: true, cell: (d) => cash(d.extra) },
   { key: "extraTax", header: "Extra tax", numeric: true, hideBelow: "lg", cell: (d) => cash(d.extraTax) },
+  /* What the outlets took, as the file has it (D24-24). */
+  { key: "pos", header: "Restaurant", numeric: true, hideBelow: "lg", cell: (d) => cash(d.pos) },
+  { key: "posTax", header: "Restaurant tax", numeric: true, hideBelow: "xl", cell: (d) => cash(d.posTax) },
   { key: "discount", header: "Discount", numeric: true, hideBelow: "xl", cell: (d) => cash(d.discount) },
   /* Alcohol and its VAT, apart from everything GST (D21-91). */
   { key: "alcohol", header: "Alcohol", numeric: true, hideBelow: "xl", cell: (d) => cash(d.alcohol) },

@@ -756,7 +756,8 @@ describe("the lodging tax sheet", () => {
     /* The two-level heading the sheet is filed with. */
     expect(band.columns.filter((c) => c.group?.startsWith("CGST")).map((c) => c.label))
       .toEqual(["Net Amt.", "Tax Amt."]);
-    expect(band.columns.find((c) => c.group?.startsWith("CGST"))!.group).toBe("CGST @2.5%");
+    /* No rate in the heading (D24-23): "CGST", not "CGST @2.5%". */
+    expect(band.columns.find((c) => c.group?.startsWith("CGST"))!.group).toBe("CGST");
     if (band.rows.length === 0) expect(band.empty).toMatch(/No bill was issued/);
   });
 

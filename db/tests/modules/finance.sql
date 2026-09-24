@@ -32,6 +32,26 @@ begin
        from hotels where id = h));
 end $$;
 
+-- A NEW YEAR'S GST SERIES OPENS ITSELF (D24-22, FIN-8): the first invoice of
+-- a year with no series row is numbered 00001, not refused; the prefix is the
+-- one the hotel already uses, and the old year's series does not move.
+do $$
+declare h uuid; fy text; before bigint; n text;
+begin
+  h := app.provision_property_unchecked('NFY', 'New Year Test', 'Nowhere');
+  fy := app.current_fin_year(h);
+  update invoice_series set prefix = 'NFY-X' where hotel_id = h and fin_year = fy;
+  select next_number into before from invoice_series where hotel_id = h and fin_year = fy;
+  n := app.next_invoice_number(h, '2097-98');
+  perform test.ok('finance gst', 'a new year''s first GST invoice opens its own series, at 00001',
+    n = 'NFY-X/2097-98/00001', n);
+  n := app.next_invoice_number(h, '2097-98');
+  perform test.ok('finance gst', 'and the next follows it, in the same five digits',
+    n = 'NFY-X/2097-98/00002', n);
+  perform test.ok('finance gst', 'the year before is not touched',
+    (select next_number from invoice_series where hotel_id = h and fin_year = fy) = before);
+end $$;
+
 do $$
 declare
   h uuid; rt uuid; g uuid; res uuid; fol uuid; clerk uuid;

@@ -14,7 +14,9 @@ entries stay here: they are the reason the fault does not come back.
 
 ## Open — not fixed
 
-### REP-13 · The Lodging tax heading reads a rate nobody can set
+## Fixed
+
+### REP-13 · The Lodging tax heading read a rate nobody can set — FIXED 24 September
 
 **Found** — 23 September, while taking the 2.5% default off
 `hotels.cgst_rate`/`sgst_rate` (finance's FIN-5, D22-9). The sheet's "CGST
@@ -28,7 +30,13 @@ owner's and the accountant's (the sheet is theirs, D17-99). The question is
 with the master: the room rule from `tax_rules` (one heading per slab, or
 none when there are two), or the rate the bills of that month carried.
 
-## Fixed
+**Fixed** — the owner's D24-23: no rate in the heading, "CGST" and "SGST";
+the amounts unchanged. `builders/lodgingTax.ts` names none, and the
+property's `cgstRate`/`sgstRate`, read by nothing else, left `figures.ts`.
+
+**Proved** — `api/test/modules/reports/reports.test.ts` and
+`lodgingTaxAlcohol.test.ts` read the group "CGST"; both fail with "CGST @2.5%"
+put back.
 
 ### REP-12 · Lodging tax's Other Bills carried alcohol and its VAT — FIXED 24 September
 

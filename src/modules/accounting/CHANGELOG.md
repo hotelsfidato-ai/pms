@@ -44,8 +44,12 @@ by reading the .xlsx back. Started by a helper on 23 September
   page (`.local/screenshots/2026-09-24-finance/export-files/`), 27 rows by 12
   columns each, 0 cells differing.
 
-**Left open:** ACC-10 (no Restaurant column in the file) - the owner's
-question, recommendation in DEFECTS.md.
+**Then ACC-10, the owner's D24-24:** "Restaurant" and "Restaurant tax" after
+"Extra tax", in both files and on the screen's table, added once in
+`sheet.ts`. Web `accounting.test.tsx` (16) fails with them taken out; the
+API's cell-for-cell read-back carries them.
+
+**Left open:** nothing of this session's.
 
 ---
 
