@@ -8,6 +8,20 @@ proved until it has refused something; "Left open" is the handover.
 
 ---
 
+## 2026-09-24 · Housekeeping sees and raises requests (D22-11, PUR-1)
+
+On `admin/finish-24sep` (the helper's `admin/hotel-admin-menus`, finished):
+housekeeping holds `purchasing: view, create` (`api/src/permissions.ts`),
+`VIEW_ROLES` and the refusal's sentence name them, and - the owner, 24
+September - Purchasing is in housekeeping's menu. Raising still waits on their
+switch in "Who may ask to buy" (D18-2, off by default). **Proved:**
+`purchasingGrants.test.ts` "lets housekeeping raise one once the setting names
+them"; `navigation.test.ts` pins their menu. Screen:
+`.local/screenshots/2026-09-24-admin/12-purchasing-housekeeping-*` ("Your role
+cannot raise a purchase request at this property" until switched on).
+
+---
+
 ## 2026-09-18 · Built: a request, the GM's approval, a PDF order, a delivery
 
 **Asked for:** § 1 of `docs/BUILD-PLAN-2026-09-18.md` — purchasing first, and

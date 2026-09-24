@@ -12,6 +12,18 @@ are done, the screens are not** (`MODULE.md`).
 
 ---
 
+## 2026-09-24 · SPA-2: the matrix names the server's six
+
+On `admin/finish-24sep` (the helper's `admin/hotel-admin-menus`, finished):
+`spa` is off the accountant and the viewer in `api/src/permissions.ts`, and the
+diary's entry reads the matrix again (`SEES_THE_DIARY` gone). **Proved:**
+`api/test/modules/spa/spa.test.ts` holds the matrix to `SPA_READ_ROLES`;
+`navigation.test.ts` "offers the spa diary to exactly the server's six" fails
+with the accountant's grant put back (seen 24 September). Screen:
+`.local/screenshots/2026-09-24-admin/06-accountant-no-spa-*`.
+
+---
+
 ## 2026-09-19 · the screens: a day diary, a price list, and a booking taken by telephone
 
 **Asked for:** the screens, and only the screens. The database and the server

@@ -12,9 +12,26 @@ entries stay here: they are the reason the fault does not come back.
 
 ---
 
-## Open — not fixed
+## Fixed or answered
 
 ### MKT-1 · Nothing records a guest who has asked not to be written to, and the obvious column would not work
+
+**Fixed 23 September 2026.** The owner answered on 21 September (D21-22):
+recorded against the phone number or email itself, for the whole group. The
+CRM chat built it - `offer_opt_outs` (migration 122), ticked on the booking
+form and the walk-in, recorded or cleared on Guest 360 - and
+`refusesOffers(noOffers, phone, email)` in `@/modules/guests`, which compares
+a phone the way `app.phone_key` does. `mayBeWrittenTo` now refuses any guest
+it names, and takes the No offers list as an argument, so no list can be
+called without it. Every list goes through that one gate. Test: "No offers
+(MKT-1, D21-22)" in `logic/lists.test.ts` - a guest on all three lists is on
+none once their phone (typed another way) or their email (other capitals) is
+on No offers; seen to fail with the check taken out (3 failed).
+
+Still to come with the screen: the data call that reads the list
+(`GET /api/hotels/:code/crm/no-offers`). It is not added now because a data
+function with no caller fails `repositories.test.ts`, and nothing calls the
+lists yet (MKT-4).
 
 **Found** 19 September 2026, reading the schema before building the lists -
 the brief tells this service to check, and to ask rather than invent.
@@ -45,6 +62,11 @@ that guest's rows it is true of.
 
 ### MKT-2 · Birthdays this month cannot be built: this system has no date of birth
 
+**Answered 22 September 2026 (D22-17): the birthdays list is dropped** - no
+date of birth is kept. Nothing had been built for it; the mention in
+`logic/lists.ts` and the line in `docs/briefs/marketing.md` now say it was
+dropped.
+
 **Found** 19 September 2026, the same reading. `docs/briefs/marketing.md` names
 "birthdays this month" as the fourth list. **There is no date of birth on
 `guests`, on `reservations`, or in any of the 119 migrations.**
@@ -65,6 +87,16 @@ wins and the difference is reported - it is usually the brief that drifted.
 
 ### MKT-3 · This service has no menu section and no permission resource, so it can have no screen
 
+**Answered 22 September 2026 (D22-17): marketing's lists are for the owner,
+an administrator and the GM only.** Made 23 September: a `marketing` resource
+in `api/src/permissions.ts` (view and export, for admin and GM; the owner holds
+everything), labelled "Marketing". The Coming soon entry and its route now ask
+that grant instead of `integration` plus `seesComingSoon` - the same three
+people, now said in one place. Test: "who sees the lists (D22-17)" in
+`logic/lists.test.ts`, every role; seen to fail with reception given a grant.
+**No menu section was made**: there is still no lists screen to put in one
+(MKT-4), so the entry stays in Coming soon.
+
 **Found** 19 September 2026, before writing a screen. `SectionKey` in
 `src/components/app/navigation.ts` does not include `"marketing"` and
 `RESOURCES` in `src/lib/permissions.ts` does not either. Both are the master's
@@ -77,6 +109,8 @@ both, and the run sheet records that stopping there was the agreement working.
 **What was done:** stopped, and asked (MODULE.md, request 3). The Coming soon
 entry is untouched and no screen was built. **Who may see a screen is the
 owner's**, so the recommendation names a reading rather than making the grant.
+
+## Open — not fixed
 
 ### MKT-4 · The guests door answers without a telephone number or an email, so its list cannot be written to
 

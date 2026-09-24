@@ -205,7 +205,12 @@ No other service's door is imported by this folder (checked 15 September).
 
 - **pos**, at the database only: `stock_movements.to_outlet` references
   `pos_outlets` — where an issue went, when it went to a till outlet (069).
-  The API accepts an `outletId`; the Store screen never sends one.
+  Since 24 September (D22-20) every issue says where it went: `GET
+  /stores` lists the hotel's active outlets, and where there is one the
+  Issue dialog will not record until the person picks an outlet or "Not an
+  outlet" (sent as `outletId: null`). The server refuses an issue that
+  does not say, another property's outlet, and an outlet on anything but an
+  issue.
 
 ---
 
@@ -262,9 +267,8 @@ From `PENDING.md` and `PROGRESS.md`, as of 15 September:
     `api/test/modules/stores/stockGrants.test.ts` covers who may do what
     (STO-1). The ledger's own rules are still checked only in
     `db/tests/suite.sql`'s `store` group.
-  - **An issue cannot say which outlet it went to from the screen.** The
-    column and the API take one (`outletId`); `pages/Stores.tsx` never sends
-    it. Whether it is wanted is the owner's call.
+  - ~~An issue cannot say which outlet it went to from the screen.~~ It
+    must, since 24 September (D22-20; the owner: "must choose each time").
 
 ---
 

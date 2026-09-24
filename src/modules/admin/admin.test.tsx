@@ -355,6 +355,20 @@ describe("D22-3 and D22-2 - People, for a GM", () => {
     }
   });
 
+  it("takes nobody off the hotel whose role there the GM could not give (24 September)", async () => {
+    as("gm");
+    peopleServer([
+      person({ id: "p-1", name: "Asha" }),
+      person({ id: "p-4", name: "Meena", email: "meena@fidato.in", access: [{ code: "5EL", role: "admin" }],
+               mayEdit: false, maySwitch: false, maySetPassword: false }),
+    ]);
+    renderAt("/people", <PeoplePage />);
+
+    expect(await screen.findByRole("button", { name: "Remove 5EL from Asha" })).toBeDefined();
+    await screen.findByText("Meena");
+    expect(screen.queryByRole("button", { name: "Remove 5EL from Meena" })).toBeNull();
+  });
+
   it("does not offer Add somebody to somebody who may roster nobody", async () => {
     as("hotel_manager");
     vi.spyOn(apiModule, "api").mockImplementation(async (url: string) => {
@@ -364,7 +378,8 @@ describe("D22-3 and D22-2 - People, for a GM", () => {
     renderAt("/people", <PeoplePage />);
     const add = await screen.findByRole("button", { name: /Add somebody/ });
     await waitFor(() => expect((add as HTMLButtonElement).disabled).toBe(true));
-    expect(screen.getByText(/Adding somebody is for a group administrator or a property's general manager/))
+    /* D23-2: a hotel's Admin adds people there too. */
+    expect(screen.getByText(/Adding somebody is for a group administrator, or a property's general manager or Admin\./))
       .toBeDefined();
   });
 });

@@ -53,7 +53,9 @@ const newItem = async (name: string) =>
 
 const record = (itemId: string, kind: string, quantity: number, locationId: string, extra = {}) =>
   call("POST", "/movements", {
-    itemId, locationId, kind, quantity, ...(kind === "receipt" ? { unitCost: 50 } : {}), ...extra,
+    itemId, locationId, kind, quantity, ...(kind === "receipt" ? { unitCost: 50 } : {}),
+    /* An issue says where it went (D22-20): null is "not an outlet". */
+    ...(kind === "issue" ? { outletId: null } : {}), ...extra,
   });
 
 const list = async () => (await json(await call("GET", ""), 200)) as {
@@ -94,6 +96,7 @@ beforeAll(async () => {
 });
 
 afterAll(async () => {
+  await sql("update pos_outlets set is_active = false where code = $1", [TAG]);
   await sql("delete from staff_hotels where staff_id = $1", [keeper]);
   await sql("update staff set is_active = false where id = $1", [keeper]);
   await closePool();
@@ -212,5 +215,55 @@ describe("moving stock between stores", () => {
       { itemId: rava, fromId: mainId, toId: kitchenId, quantity: 4 }), 409);
     expect(much.reason).toMatch(/There are 3 kg of STOPS rava in Main store, and this would move 4/);
     expect((await item(rava)).byStore).toEqual({ [mainId]: 3 });
+  });
+});
+
+describe("an issue and the outlet it went to (D22-20)", () => {
+  const outletAt = async (code: string) => (await sql(
+    `insert into pos_outlets (hotel_id, code, name, staff_id)
+     select id, 'STOPS', $2, $3 from hotels where code = $1
+     on conflict (hotel_id, code) do update set name = excluded.name, is_active = true
+     returning id::text`, [code, `${TAG} outlet ${code}`, keeper])).rows[0].id as string;
+
+  it("lists this hotel's outlets, and the history names the one an issue went to", async () => {
+    const here = await outletAt(HOTEL);
+    const there = await outletAt("AGR");
+    const outlets = ((await json(await call("GET", ""), 200)).outlets) as { id: string }[];
+    expect(outlets.map((o) => o.id)).toContain(here);
+    expect(outlets.map((o) => o.id)).not.toContain(there);
+
+    const oil = await newItem("oil");
+    await json(await record(oil, "receipt", 5, mainId), 200);
+    await json(await record(oil, "issue", 2, mainId, { outletId: here }), 200);
+    const issue = (await history(oil)).find((m) => m.kind === "issue") as Movement & { outlet: string };
+    expect(issue.outlet).toBe(`${TAG} outlet ${HOTEL}`);
+  });
+
+  it("refuses another property's outlet, and an outlet on anything but an issue", async () => {
+    const there = await outletAt("AGR");
+    const here = await outletAt(HOTEL);
+    const jeera = await newItem("jeera");
+    await json(await record(jeera, "receipt", 5, mainId), 200);
+
+    const elsewhere = await json(await record(jeera, "issue", 1, mainId, { outletId: there }), 409);
+    expect(elsewhere.reason).toBe("That is not an outlet at this property.");
+    const onReceipt = await json(await record(jeera, "receipt", 1, mainId, { outletId: here }), 409);
+    expect(onReceipt.reason).toBe("Only an issue goes to an outlet.");
+    expect((await item(jeera)).onHand).toBe(5);
+  });
+
+  it("refuses an issue that does not say where it went, and takes \"not an outlet\"", async () => {
+    await outletAt(HOTEL);
+    const salt = await newItem("salt");
+    await json(await record(salt, "receipt", 5, mainId), 200);
+
+    const unsaid = await json(await call("POST", "/movements", {
+      itemId: salt, locationId: mainId, kind: "issue", quantity: 1 }), 409);
+    expect(unsaid.reason).toBe(
+      "Which outlet did it go to? Choose Not an outlet for housekeeping or a floor.");
+    expect((await item(salt)).onHand).toBe(5);
+
+    await json(await record(salt, "issue", 1, mainId, { outletId: null }), 200);
+    expect((await item(salt)).onHand).toBe(4);
   });
 });

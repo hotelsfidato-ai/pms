@@ -21,10 +21,13 @@ db/tests/modules/marketing.sql     not needed yet - this service writes no table
 
 ---
 
-## Where it stands - 19 September
+## Where it stands - 23 September
 
 **Built:** `logic/lists.ts` - the three lists of D18-17 and the rows of their
-export, with one gate every list goes through. 17 tests, `logic/lists.test.ts`.
+export, with one gate every list goes through. That gate refuses any phone or
+email on the "No offers" list (MKT-1, D21-22), and each list must be handed
+that list. **Who sees the lists:** the `marketing` grant - owner, admin, GM
+(D22-17). Birthdays is dropped (D22-17). 22 tests, `logic/lists.test.ts`.
 
 **Not built, and each one waits on somebody else:** the screen, the server
 route, and the send. See Requests below. **No migration was taken** - nothing
@@ -41,11 +44,17 @@ the BOM Excel wants. This service supplies rows.
 
 **Nothing below was decided here.** Each is a recommendation and a reason.
 
+> **Done 23 September (MKT-1):** `mayBeWrittenTo` refuses a guest
+> `refusesOffers` names, and every list takes the No offers list as an
+> argument. The data call (`GET /api/hotels/:code/crm/no-offers`) comes with
+> the screen: a data function with no caller fails `repositories.test.ts`.
+>
+> **Answered 22 September (D22-17):** request 3 - owner, admin and GM only,
+> made as a `marketing` resource; request 4 - birthdays dropped.
+>
 > **Built 21 September by the CRM chat:** `refusesOffers(noOffers, phone,
 > email)` is exported from `@/modules/guests`, and the list comes from
-> `GET /api/hotels/:code/crm/no-offers`. **The next marketing chat's first
-> job:** `mayBeWrittenTo` refuses a guest `refusesOffers` names, with a data
-> call for the list and a test. Nothing sends until then.
+> `GET /api/hotels/:code/crm/no-offers`.
 >
 > **Answered 21 September (D21-22):** recorded against **the phone number or
 > email itself, for the whole group** — as recommended. The CRM chat builds the
@@ -154,7 +163,7 @@ and is not made here unasked. Logged as MKT-5.
 
 | Menu name | Address (`routes.tsx`) | Page file | Who sees it (`nav.ts`) |
 |---|---|---|---|
-| Marketing | `/coming-soon/marketing` | `pages/Marketing.tsx` | owner, admin, GM - the Coming soon section (`seesComingSoon`) |
+| Marketing | `/coming-soon/marketing` | `pages/Marketing.tsx` | owner, admin, GM - the `marketing` grant (D22-17), in the Coming soon section |
 
 **Unchanged on 19 September**, and deliberately: request 3 above. When the
 section exists the entry moves out of Coming soon and the real screens take

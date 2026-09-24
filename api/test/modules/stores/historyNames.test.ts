@@ -84,7 +84,7 @@ beforeAll(async () => {
      undoes that issue. */
   for (const [key, body] of [
     ["manager", { kind: "receipt", quantity: 20, unitCost: 300, note: `${TAG} delivery` }],
-    ["inventory", { kind: "issue", quantity: 2, note: `${TAG} issue` }],
+    ["inventory", { kind: "issue", quantity: 2, note: `${TAG} issue`, outletId: null }],
   ] as const) {
     const res = await call(ids.get(key)!, "POST", "/movements", { itemId, locationId: mainId, ...body });
     expect(res.status, await res.clone().text()).toBe(200);

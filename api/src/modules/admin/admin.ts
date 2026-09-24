@@ -1,5 +1,5 @@
 import { Hono } from "hono";
-import { createHash } from "node:crypto";
+import { createHash, randomUUID } from "node:crypto";
 import { withSession } from "../../auth.ts";
 import {
   ensureAccount, setAccountPassword, passwordProblem,
@@ -821,33 +821,44 @@ admin.post("/admin/staff", async (c) => {
          who cannot sign in. */
       const account = await ensureAccount(email, name, password);
 
-      const { rows } = await client.query<{ id: string; existed: boolean }>(
-        /* on conflict, because a person re-invited is the common case and
-           an error there teaches an admin to avoid the screen. Their
-           property access is untouched — that is a separate act. */
-        `insert into staff (email, full_name, is_group_admin, firebase_uid)
-         values ($1, $2, $3, $4)
-         on conflict (email) do update
-           set full_name = excluded.full_name,
-               is_active = true,
-               firebase_uid = excluded.firebase_uid
-         returning id::text, (xmax <> 0) as existed`,
-        [email, name, wantsAdmin, account.uid],
-      );
+      /* Somebody already here is brought back, because a person re-invited
+         is the common case and an error there teaches an admin to avoid
+         the screen (their property access is a separate act); anybody
+         else is added.
+
+         ⚠ NOT ONE `insert … on conflict do update … returning` (ADM-6).
+         Both halves make Postgres check the row against staff's READ
+         policies, and a brand-new person is nobody a GM or a hotel's
+         Admin can read yet - rostered nowhere - so it failed with "new
+         row violates row-level security", AFTER the account above was
+         made. The address check above means an existing person is one
+         the caller may manage, so the update sees them; the insert asks
+         only the insert policy, with an id made here. */
+      const { rows: known } = await client.query<{ id: string }>(
+        `update staff set full_name = $2, is_active = true, firebase_uid = $3
+          where email = $1 returning id::text`,
+        [email, name, account.uid]);
+      const id = known[0]?.id ?? randomUUID();
+      if (!known[0]) {
+        await client.query(
+          `insert into staff (id, email, full_name, is_group_admin, firebase_uid)
+           values ($1, $2, $3, $4, $5)`,
+          [id, email, name, wantsAdmin, account.uid]);
+      }
 
       if (hotelId) {
         await client.query(
           `insert into staff_hotels (staff_id, hotel_id, role)
            values ($1, $2, $3)
            on conflict (staff_id, hotel_id) do update set role = excluded.role`,
-          [rows[0]!.id, hotelId, role]);
+          [id, hotelId, role]);
       }
 
       return {
         ok: true as const,
-        id: rows[0]!.id,
+        id,
         email, name,
-        existed: rows[0]!.existed,
+        existed: known.length > 0,
         /* Said plainly, because it changes what the manager tells them.
            An adopted account keeps whatever password it already had
            unless this call set one — and this call always sets one. */
