@@ -7,6 +7,8 @@ import { VoidFlow } from "@/modules/front-desk/flows/VoidFlow";
 import { ExchangeRoomFlow } from "@/modules/front-desk/flows/ExchangeRoomFlow";
 import { InclusionsFlow } from "@/modules/front-desk/flows/InclusionsFlow";
 import type { Stay } from "@/data/repositories";
+import { useRole } from "@/lib/session";
+import { can } from "@/lib/permissions";
 
 /* ══════════════════════════════════════════════════════════════════
    EVERYTHING THAT IS NOT THE OBVIOUS ACT
@@ -34,6 +36,13 @@ export function StayActions({ hotelId, stay, businessDate }: {
      due-out and no-show, and a comparison against a value outside that
      union is a condition that can never be true. */
   const over = stay.status === "no-show";
+
+  /* D24-27: the server's own questions (roleGate). Dates, moves, the swap
+     and the inclusions are all `reservation: edit`; the void is `cancel`.
+     Nobody refused them is offered the menu. */
+  const role = useRole();
+  if (!can(role, "edit", "reservation")) return null;
+  const mayVoid = can(role, "cancel", "reservation");
 
   return (
     <>
@@ -86,19 +95,21 @@ export function StayActions({ hotelId, stay, businessDate }: {
             What this booking includes
           </MenuItem>
 
-          <MenuSeparator />
-          <MenuItem
-            icon={Ban}
-            danger
-            onSelect={() => setVoiding(true)}
-            disabled={stay.status !== "due-in"}
-            reason={
-              arrived ? "They have arrived. Check them out instead."
-                      : "Only a booking that has not arrived can be voided."
-            }
-          >
-            Void this booking
-          </MenuItem>
+          {mayVoid && <>
+            <MenuSeparator />
+            <MenuItem
+              icon={Ban}
+              danger
+              onSelect={() => setVoiding(true)}
+              disabled={stay.status !== "due-in"}
+              reason={
+                arrived ? "They have arrived. Check them out instead."
+                        : "Only a booking that has not arrived can be voided."
+              }
+            >
+              Void this booking
+            </MenuItem>
+          </>}
         </Menu>
       </div>
 

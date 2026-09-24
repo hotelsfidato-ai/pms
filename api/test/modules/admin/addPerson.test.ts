@@ -99,3 +99,20 @@ describe("adding somebody new at their own hotel (ADM-6)", () => {
     expect(await rosteredAs(email)).toEqual(["housekeeping"]);
   });
 });
+
+/* D24-28's other door: "adding" your own address with a property set your
+   own role there (the person already here is brought back, and the row
+   upserted). Refused before the sign-in account is touched. */
+describe("nobody changes their own role by adding themselves (D24-28)", () => {
+  it("refuses a GM and a hotel's Admin re-adding their own address as Reception", async () => {
+    for (const [id, email, role] of [
+      [gmId, "adm6-gm@fidato.in", "gm"], [adminId, "adm6-admin@fidato.in", "admin"],
+    ] as const) {
+      const res = await add(id, email, "front_desk");
+      expect(res.status, role).toBe(409);
+      expect(((await res.json()) as { reason: string }).reason).toBe(
+        "You cannot change your own role. Ask the owner or an administrator to do it.");
+      expect(await rosteredAs(email), role).toEqual([role]);
+    }
+  });
+});

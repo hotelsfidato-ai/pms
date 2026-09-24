@@ -1,6 +1,8 @@
 import PDFDocument from "pdfkit";
 import ExcelJS from "exceljs";
-import type { ReportDoc, ReportColumn, ReportRow, CellKind, Cell } from "./modules/reports/index.ts";
+import type {
+  ReportDoc, ReportColumn, ReportRow, ReportSection, CellKind, Cell,
+} from "./modules/reports/index.ts";
 
 /* ══════════════════════════════════════════════════════════════════
    THE REPORT RENDERER - one document, three files (D17-31, D17-32)
@@ -120,6 +122,42 @@ export function printedLine(by: PrintedBy): string {
 
 /* ── PDF ───────────────────────────────────────────────────────── */
 
+/** Each column's width, and the type size its section prints at.
+
+    A text column takes 2.6 shares to a figure's 1, and that stands while
+    everything fits. The Night audit's Room Charges and Checked Out did not:
+    thirteen columns in landscape left a figure 32pt, so "11,897.00" and a
+    check-out's date and time wrapped under themselves into the next row.
+    Where anything would not fit its share, every column is sized to the
+    widest thing it prints, the page's spare width shared out in proportion;
+    a section wider than the page even then prints smaller. Never over its
+    neighbour. */
+export function columnLayout(
+  pdf: PDFKit.PDFDocument, section: ReportSection, width: number, tz: string,
+): { widths: number[]; scale: number } {
+  const PAD = 7;   // 3pt each side, and 1 so an exact fit is not wrapped
+  const need = section.columns.map((c, k) => {
+    let w = pdf.font("Helvetica-Bold").fontSize(8).widthOfString(c.label);
+    for (const row of section.rows) {
+      if (row.kind === "band") continue;   // a band spans the whole row
+      const indent = k === 0 ? Math.min(3, Math.max(0, row.indent ?? 0)) * 8 : 0;
+      pdf.font(row.kind === "total" ? "Helvetica-Bold" : "Helvetica").fontSize(8.5);
+      w = Math.max(w, pdf.widthOfString(formatCell(row.cells[c.key], kindOf(c, row), tz)) + indent);
+    }
+    return w;
+  });
+
+  const weights = section.columns.map((c) => (c.kind === "text" ? 2.6 : 1));
+  const total = weights.reduce((a, b) => a + b, 0);
+  const shares = weights.map((w) => (w / total) * width);
+  if (need.every((n, k) => n + PAD <= shares[k]!)) return { widths: shares, scale: 1 };
+
+  const scale = Math.min(1, (width - PAD * need.length) / need.reduce((a, b) => a + b, 0));
+  const fitted = need.map((n) => n * scale + PAD);
+  const used = fitted.reduce((a, b) => a + b, 0);
+  return { widths: fitted.map((w) => w + (width - used) * (w / used)), scale };
+}
+
 export async function renderPdf(doc: ReportDoc, by: PrintedBy): Promise<Buffer> {
   const tz = by.timezone;
   const pdf = new PDFDocument({
@@ -159,7 +197,7 @@ export async function renderPdf(doc: ReportDoc, by: PrintedBy): Promise<Buffer> 
   };
 
   const ROW_H = 15;
-  const tableHead = (cols: ReportColumn[], widths: number[]) => {
+  const tableHead = (cols: ReportColumn[], widths: number[], scale: number) => {
     if (cols.some((c) => c.group)) {
       let x = left;
       let i = 0;
@@ -168,7 +206,7 @@ export async function renderPdf(doc: ReportDoc, by: PrintedBy): Promise<Buffer> 
         let w = 0, j = i;
         while (j < cols.length && cols[j]!.group === g) { w += widths[j]!; j++; }
         if (g) {
-          pdf.font("Helvetica-Bold").fontSize(8).fillColor(MUTED)
+          pdf.font("Helvetica-Bold").fontSize(8 * scale).fillColor(MUTED)
             .text(g, x, pdf.y, { width: w - 4, align: "center", lineBreak: false });
           pdf.moveTo(x + 4, pdf.y + 11).lineTo(x + w - 4, pdf.y + 11).lineWidth(0.5).strokeColor(RULE).stroke();
         }
@@ -179,7 +217,7 @@ export async function renderPdf(doc: ReportDoc, by: PrintedBy): Promise<Buffer> 
     let x = left;
     const y = pdf.y;
     cols.forEach((c, k) => {
-      pdf.font("Helvetica-Bold").fontSize(8).fillColor(INK)
+      pdf.font("Helvetica-Bold").fontSize(8 * scale).fillColor(INK)
         .text(c.label, x + 3, y, { width: widths[k]! - 6, align: numeric(c.kind) ? "right" : "left", lineBreak: false, ellipsis: true });
       x += widths[k]!;
     });
@@ -197,22 +235,20 @@ export async function renderPdf(doc: ReportDoc, by: PrintedBy): Promise<Buffer> 
   header();
 
   for (const section of doc.sections) {
-    const weights = section.columns.map((c) => (c.kind === "text" ? 2.6 : 1));
-    const total = weights.reduce((a, b) => a + b, 0);
-    const widths = weights.map((w) => (w / total) * width);
+    const { widths, scale } = columnLayout(pdf, section, width, tz);
 
     if (pdf.y + 50 > bottom()) { pdf.addPage(); header(); }
     pdf.font("Helvetica-Bold").fontSize(10).fillColor(INK).text(section.title, left, pdf.y + 4);
     pdf.y += 4;
-    tableHead(section.columns, widths);
+    tableHead(section.columns, widths, scale);
 
     if (section.rows.length === 0 && section.empty) quiet(section.empty, true);
     for (const row of section.rows) {
       if (pdf.y + ROW_H > bottom()) {
         pdf.addPage(); header();
-        tableHead(section.columns, widths);
+        tableHead(section.columns, widths, scale);
       }
-      drawRow(pdf, section.columns, widths, row, left, width, ROW_H, tz);
+      drawRow(pdf, section.columns, widths, row, left, width, ROW_H, tz, scale);
     }
     if (section.note) quiet(section.note, false);
     pdf.y += 10;
@@ -248,7 +284,7 @@ export async function renderPdf(doc: ReportDoc, by: PrintedBy): Promise<Buffer> 
 
 function drawRow(
   pdf: PDFKit.PDFDocument, cols: ReportColumn[], widths: number[], row: ReportRow,
-  left: number, width: number, rowH: number, tz: string,
+  left: number, width: number, rowH: number, tz: string, scale: number,
 ): void {
   const y = pdf.y;
   if (row.kind === "band") {
@@ -262,11 +298,11 @@ function drawRow(
     pdf.moveTo(left, y).lineTo(left + width, y).lineWidth(0.8).strokeColor(INK).stroke();
   }
   let x = left;
-  const indent = Math.min(3, Math.max(0, row.indent ?? 0)) * 8;
+  const indent = Math.min(3, Math.max(0, row.indent ?? 0)) * 8 * scale;
   cols.forEach((c, k) => {
     const pad = k === 0 ? indent : 0;
     const kind = kindOf(c, row);
-    pdf.font(row.kind === "total" ? "Helvetica-Bold" : "Helvetica").fontSize(8.5).fillColor(INK)
+    pdf.font(row.kind === "total" ? "Helvetica-Bold" : "Helvetica").fontSize(8.5 * scale).fillColor(INK)
       .text(formatCell(row.cells[c.key], kind, tz), x + 3 + pad, y + 3, {
         width: widths[k]! - 6 - pad, align: numeric(kind) ? "right" : "left", lineBreak: false, ellipsis: true,
       });

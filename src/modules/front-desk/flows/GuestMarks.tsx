@@ -2,6 +2,7 @@ import { useState } from "react";
 import { Link } from "react-router";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useRole } from "@/lib/session";
+import { can } from "@/lib/permissions";
 import { Checkbox, StatusPill, toast } from "@/components/ui";
 import { stayedWords } from "@/modules/guests";
 import { seesGuest360, guest360Path } from "@/modules/crm";
@@ -47,7 +48,9 @@ export function GuestMarks({ hotelId, stay }: { hotelId: string; stay: Stay }) {
       {m && m.stayedBefore > 0 && (
         <StatusPill tone="info">{stayedWords(m.stayedBefore)}</StatusPill>
       )}
-      {m && (
+      {/* The tick writes the guest's record (roleGate's GUEST, customer
+          edit): hidden from anybody refused it (D24-18, the owner, 24 Sep). */}
+      {m && can(role, "edit", "customer") && (
         <Checkbox checked={m.whatsappAgreed} disabled={busy}
           onCheckedChange={(v) => void tick(v)} label="Agreed to WhatsApp" />
       )}

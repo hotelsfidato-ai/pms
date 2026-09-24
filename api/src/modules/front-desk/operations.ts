@@ -222,11 +222,10 @@ operations.post("/:code/stays/:id/check-in", async (c) => {
          Defect 14's shape exactly — a gate reading a different source
          from the action it guards. The hotel's business date is the
          only honest answer, and the client's is accepted only as an
-         override for the audit's own replay. */
-      const { rows: bdRows } = await client.query<{ bd: string }>(
-        `select business_date::text as bd from hotels where id = $1`,
-        [hotelId]);
-      const businessDate = body.businessDate ?? bdRows[0]!.bd;
+         override for the audit's own replay. The hotel's date is
+         app.business_date, the day after the last closed day: the column
+         `hotels.business_date` never moves once an audit has run (FD-16). */
+      const businessDate = await resolveDate(client, hotelId, body.businessDate);
 
       /* ── ARRIVING A DAY OR MORE EARLY ─────────────────────────────
          This used to be a flat refusal: "it cannot be checked in

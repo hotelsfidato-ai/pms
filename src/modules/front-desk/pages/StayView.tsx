@@ -156,8 +156,11 @@ export default function StayViewPage({ view }: {
   /* The question the server's gate asks of "Assign room" (roleGate's
      ROOMING: reservation edit, nobody added by name), from the same matrix.
      Housekeeping read Rooms and are refused it, so they are not offered it
-     (D24-18). */
-  const mayRoom = can(useRole(), "edit", "reservation");
+     (D24-18). A free tile and an empty Calendar cell open the walk-in, which
+     roleGate's WALK_IN asks as reservation create (D24-27). */
+  const role = useRole();
+  const mayRoom = can(role, "edit", "reservation");
+  const mayBook = can(role, "create", "reservation");
 
   const [searchParams, setSearchParams] = useSearchParams();
   const selectedId = searchParams.get("res");
@@ -259,7 +262,10 @@ export default function StayViewPage({ view }: {
          label and the name under it cannot answer different questions. */
       const live = s.status === "in-house" || s.status === "due-out"
         || (s.status === "due-in" && s.arrival === BUSINESS_DATE);
-      if (live) map.set(s.roomNumber, s);
+      /* The guest IN the room is its name: an arrival given the room ahead
+         (D24-26) must not print under "Due out" (the owner, 24 September). */
+      const arrivalBehindGuest = s.status === "due-in" && map.has(s.roomNumber);
+      if (live && !arrivalBehindGuest) map.set(s.roomNumber, s);
     }
     return map;
   }, [todaysStayList]);
@@ -577,10 +583,10 @@ export default function StayViewPage({ view }: {
             businessDate={BUSINESS_DATE}
             todaysStays={todaysStays}
             onOpenStay={openStay}
-            onWalkIn={(roomNumber, date) => {
+            onWalkIn={mayBook ? (roomNumber, date) => {
               searchParams.set("res", `new:${roomNumber}:${date}`);
               setSearchParams(searchParams);
-            }}
+            } : undefined}
           />
         </div>
       ) : (
@@ -726,25 +732,30 @@ export default function StayViewPage({ view }: {
                       </span>
                     </div>
 
-                    {/* Empty cells — clicking one starts a booking there */}
-                    {dates.map((d, i) => (
-                      <button
-                        key={d}
-                        type="button"
-                        onClick={() => openStay(`new:${room.number}:${d}`)}
-                        aria-label={`Book room ${room.number} on ${d}`}
-                        className={cn(
-                          "h-9 border-r border-grey-100 last:border-r-0 transition-colors duration-150",
-                          isWeekend(d) && "bg-brand-orange-50/40",
-                          d === BUSINESS_DATE && "bg-ink-900/[0.03]",
-                          "hover:bg-brand-orange-50",
-                        )}
-                        /* gridRow 1, like the bars: with a column alone,
-                           auto-placement put every cell under a bar - and
-                           each one after it - into a second row (FD-13). */
-                        style={{ gridColumn: i + 2, gridRow: 1 }}
-                      />
-                    ))}
+                    {/* Empty cells — clicking one starts a booking there,
+                        for whoever may book (D24-27); a plain cell for
+                        anybody else. */}
+                    {dates.map((d, i) => {
+                      const cell = cn(
+                        "h-9 border-r border-grey-100 last:border-r-0 transition-colors duration-150",
+                        isWeekend(d) && "bg-brand-orange-50/40",
+                        d === BUSINESS_DATE && "bg-ink-900/[0.03]",
+                      );
+                      /* gridRow 1, like the bars: with a column alone,
+                         auto-placement put every cell under a bar - and
+                         each one after it - into a second row (FD-13). */
+                      const place = { gridColumn: i + 2, gridRow: 1 };
+                      return mayBook ? (
+                        <button
+                          key={d}
+                          type="button"
+                          onClick={() => openStay(`new:${room.number}:${d}`)}
+                          aria-label={`Book room ${room.number} on ${d}`}
+                          className={cn(cell, "hover:bg-brand-orange-50")}
+                          style={place}
+                        />
+                      ) : <div key={d} className={cell} style={place} />;
+                    })}
 
                     {/* Bars sit on top of the cells, spanning their nights */}
                     {room.bars.map((bar) => (
