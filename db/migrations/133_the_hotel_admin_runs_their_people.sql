@@ -1,5 +1,5 @@
 -- =============================================================================
--- 130 · A hotel's Admin runs that hotel's people, and may make an Admin there
+-- 133 · A hotel's Admin runs that hotel's people, and may make an Admin there
 -- =============================================================================
 -- The owner's D23-2, 23 September (docs/briefs/decisions-2026-09-23.md): "a
 -- hotel-level Admin manages staff at their own hotel, including giving Admin
@@ -54,7 +54,7 @@ $$;
 comment on function app.manages_hotel(uuid) is
   'Group administrator, or owner, GM or Admin AT THIS HOTEL (Admin: D23-2, '
   '23 September 2026). Runs that hotel''s people. Not app.is_manager(), which '
-  'has no hotel in it. Correcting a closed day does NOT ask this (130).';
+  'has no hotel in it. Correcting a closed day does NOT ask this (133).';
 
 
 -- -----------------------------------------------------------------------------

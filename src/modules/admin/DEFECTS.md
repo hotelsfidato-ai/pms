@@ -34,7 +34,7 @@ The night-audit checklist (`api/src/modules/night-audit/checklist.ts:144`) and a
 
 `may_manage_person`, `manages_person`, `may_switch_person` (084, 128) and the `staff_hotels` update and delete policies asked only whether the person was rostered at a hotel the caller runs. So a GM - who may not MAKE an Admin (D22-2) - could reset the hotel Admin's password and sign in as them, remove their Admin row, or re-role it.
 
-**Fixed** — 24 September, the owner's answer: nobody edits, removes, re-roles, switches off or resets the password of somebody whose role at that hotel they could not give. The last section of migration 130 asks `role = any (app.grantable_roles(hotel))` - empty at a hotel the caller does not run - in all five places; People shows the × on a chip only for a role the viewer could give.
+**Fixed** — 24 September, the owner's answer: nobody edits, removes, re-roles, switches off or resets the password of somebody whose role at that hotel they could not give. The last section of migration 133 asks `role = any (app.grantable_roles(hotel))` - empty at a hotel the caller does not run - in all five places; People shows the × on a chip only for a role the viewer could give.
 
 **Proved** — `db/tests/modules/admin.sql` "above them" (11): each function asked on its own, and the rows as `pms_app` (remove, re-role, rename). With the section taken out: 6 of them fail, among them "a GM cannot take the hotel's Admin off it - 1 removed". `admin.test.tsx`: no "Remove 5EL from" on an Admin's chip for a GM.
 

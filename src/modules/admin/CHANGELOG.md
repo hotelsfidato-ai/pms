@@ -25,7 +25,7 @@ re-roles, switches off or resets the password of somebody whose role at that
 hotel they could not give.**
 
 **Shipped**
-- **D23-2** - migration **130** (the helper's 131, renumbered):
+- **D23-2** - migration **133** (the helper's 131; cp6's front-desk merge took 130-132 while this ran):
   `app.manages_hotel` counts `admin` at the hotel, so a hotel's Admin adds,
   rosters, edits, switches off and resets passwords for that hotel's people
   as a GM does, and `app.grantable_roles` gives them Admin there (Owner
@@ -70,7 +70,7 @@ hotel they could not give.**
 - `api/test/modules/admin/addPerson.test.ts` - 3 tests; with the old route,
   all 3 fail on "new row violates row-level security policy for table staff".
 - `db/tests/modules/admin.sql` - "hotel admin" 12, "above them" 11,
-  "placeholder" 1. With 130's last section taken out and cp6's 008 put back:
+  "placeholder" 1. With 133's last section taken out and cp6's 008 put back:
   7 failed ("1 removed", "1 placeholder rows after a replay").
 - `admin.test.tsx` "takes nobody off the hotel whose role there the GM could
   not give" - fails with the old `runs(code)`.
