@@ -54,7 +54,7 @@ const PAYMENT_COLUMNS: Column<PaymentRow>[] = [
   },
   {
     key: "user", header: "Taken by", hideBelow: "xl",
-    cell: (p) => <span className="text-grey-600">{p.user}</span>,
+    cell: (p) => <span className="text-grey-600">{p.user ?? "-"}</span>,
   },
   {
     key: "amount", header: "Amount", numeric: true,

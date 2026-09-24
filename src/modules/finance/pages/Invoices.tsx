@@ -5,6 +5,8 @@ import { FileText, Receipt, FileCheck2, Clock } from "lucide-react";
 import { cn } from "@/lib/cn";
 import { money } from "@/lib/format";
 import { useUi } from "@/lib/ui";
+import { useRole } from "@/lib/session";
+import { can } from "@/lib/permissions";
 import {
   Page, PageHeader, Card, CardBody, DataTable, StatusPill,
   Button, Tooltip, type Column,
@@ -188,6 +190,7 @@ function vatColumns(hotelId: string): Column<IssuedVatBill>[] {
 
 export default function InvoicesPage() {
   const hotelId = useHotel();
+  const role = useRole();
   const queryClient = useQueryClient();
   const [issued, setIssued] = useState<{ number: string; vatBill?: string | null } | null>(null);
 
@@ -441,11 +444,15 @@ export default function InvoicesPage() {
       )}
 
       {/* D23-1: the accountant sets GST and VAT here - the same card as on
-          Room types, which the accountant cannot open; the server asks the
-          same four roles (D22-32). */}
-      <div className="mt-7">
-        <TaxRulesCard hotelId={hotelId} />
-      </div>
+          Room types, which the accountant cannot open. Shown to the four who
+          may set a rate (D22-32), the server's own rule (roleGate.ts `GST`);
+          reception, the hotel manager and the viewer are not shown a Save
+          the server would refuse (the owner, 24 September). */}
+      {(can(role, "edit", "room_config") || role === "finance") && (
+        <div className="mt-7">
+          <TaxRulesCard hotelId={hotelId} />
+        </div>
+      )}
     </Page>
   );
 }

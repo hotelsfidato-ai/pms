@@ -11,7 +11,7 @@ import {
 } from "@/components/ui";
 import { ApiError } from "@/lib/api";
 import {
-  FORMATS, getDayBook, downloadDayBook,
+  FORMATS, getDayBook, downloadDayBook, downloadDayBookXlsx,
   type DayBook, type DayBookRow, type ExportFormat,
 } from "@/modules/accounting/data/accounting";
 
@@ -70,11 +70,11 @@ export default function AccountingPage() {
             variant="primary"
             disabled={!canExport}
             onClick={() => {
-              if (book) {
-                downloadDayBook(book).catch((error: unknown) => toast.error(
-                  "The Excel file was not made",
-                  error instanceof ApiError ? error.message : String(error)));
-              }
+              if (!book) return;
+              if (format !== "day-book-xlsx") return downloadDayBook(book);
+              downloadDayBookXlsx(book).catch((error: unknown) => toast.error(
+                "The Excel file was not made",
+                error instanceof ApiError ? error.message : String(error)));
             }}
           >
             <Download className="size-4" />

@@ -11,6 +11,29 @@ Work that touches the core or several services still goes in the root
 
 ---
 
+## 2026-09-24 · Lodging tax without alcohol (D22-45); no invented GST rate in its heading (D22-9); the outlets' sales counted once (ACC-11)
+
+Done from the finance session (the owner's list for 24 September), in this
+service's files because the figures live here.
+
+**Shipped:**
+- `builders/lodgingTax.ts`: the sheet reads the bill's GST lines only
+  (`tax_scheme = 'gst'`), so Other Bills carries no alcohol and no VAT; a
+  footnote says so (REP-12, D22-45).
+- `figures.ts` `Property.cgstRate`/`sgstRate` are null where a hotel has no
+  rate (D22-9: new hotels have none), and the heading reads "CGST @-", never
+  "0%". REP-13 (which rate the heading should name) is open.
+- `figures.ts` `posSales` leaves out a bill settled to a room, which the
+  room's folio already carries: the day book, its only reader, counted it
+  twice (accounting's ACC-11, fixed with the owner's yes).
+
+**Proved:** `api/test/modules/reports/lodgingTaxAlcohol.test.ts` (Other
+Bills ₹1,050 not ₹1,600; the heading "CGST @-"), failing with the filter
+taken out; `accounting/dayBook.test.ts` for ACC-11. On screen: Lodging tax,
+August 2026, Other Bills ₹126.00 on a bill with ₹550 of whisky and VAT.
+
+---
+
 ## 2026-09-21 · The Dashboard, easier to read (the master, for the owner)
 
 **Asked for:** the owner — "fix the UI/UX in the dashboard, make it more

@@ -473,6 +473,28 @@ describe("D22-44: a restaurant bill paid at the till, and cancelling a VAT bill"
     const list = await json<{ number: string; isCancellation: boolean }[]>(await as("/vat-bills"));
     expect(list.find((r) => r.number === made.number)?.isCancellation).toBe(true);
   });
+
+  /* The owner, 24 September: an invoice issued again after a credit note
+     names the VAT bill still standing - the drinks are not billed twice. */
+  it("an invoice issued again after a credit note names the VAT bill still standing", async () => {
+    const credited = await send("POST", `/invoices/${encodeURIComponent(invoiceNo)}/credit-note`,
+      { reason: "Wrong name on the invoice" });
+    expect(credited.status, await credited.clone().text()).toBe(200);
+    const creditNo = (await json<{ number: string }>(credited)).number;
+
+    const again = await send("POST", `/stays/${stayId}/invoice`);
+    expect(again.status, await again.clone().text()).toBe(200);
+    const made = await json<{ number: string; vatBill: string | null }>(again);
+    expect(made.number).not.toBe(invoiceNo);
+    expect(made.vatBill, "no second VAT bill for the same drinks").toBeNull();
+
+    const name = async (n: string) =>
+      (await json<{ vatBill: string | null }>(await as(`/invoices/${encodeURIComponent(n)}`))).vatBill;
+    expect(await name(made.number), "the new invoice names the VAT bill still standing").toBe(vatBillNo);
+    expect(await name(creditNo), "a credit note names none").toBeNull();
+    expect((await json<VatBill>(await as(`/vat-bills/${encodeURIComponent(vatBillNo)}`))).invoice,
+      "the VAT bill keeps naming the invoice it was issued with").toBe(invoiceNo);
+  });
 });
 
 describe("the rate a charge will carry - the Add charge dialog's question", () => {

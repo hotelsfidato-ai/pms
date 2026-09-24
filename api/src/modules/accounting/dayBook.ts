@@ -1,5 +1,6 @@
 import ExcelJS from "exceljs";
 import type { Client } from "../../db.ts";
+import { dayBookSheet } from "./sheet.ts";
 import {
   dailyFigures, sumDays, heading, posSales,
   type DayFigures, type PosDay, type Property,
@@ -204,25 +205,13 @@ export async function dayBook(
 }
 
 /* ── The day book as a real .xlsx (D22-37: "both the CSV and a real .xlsx") ──
-   The same columns and figures as the CSV the screen writes - `HEADERS` and
-   `figures` in src/modules/accounting/data/accounting.ts. A COPY, because the
-   server may not import the website's code (api/tsconfig.json);
-   dayBook.test.ts reads the website's header row and fails if the two part.
-   Raw numbers, as in the CSV: an accountant sums these columns. */
-const HEADERS = [
-  "Date", "Room revenue", "Room tax", "Extra charges", "Extra tax",
-  "Discount", "Alcohol", "VAT", "Sales", "GST", "Receipts", "Night audit",
-];
-
-const figures = (r: DayBookTotal) =>
-  [r.room, r.roomTax, r.extra, r.extraTax, r.discount, r.alcohol, r.vat,
-   r.sales, r.tax, r.receipt];
-
+   Laid out by `dayBookSheet` (sheet.ts), the one the screen writes its CSV
+   with, so the two files carry the same columns and the same figures. */
 export async function dayBookXlsx(book: DayBook): Promise<Buffer> {
+  const { headers, rows } = dayBookSheet(book);
   const workbook = new ExcelJS.Workbook();
   const sheet = workbook.addWorksheet("Day book");
-  sheet.addRow(HEADERS).font = { bold: true };
-  for (const d of book.days) sheet.addRow([d.date, ...figures(d), d.closed ? "Closed" : "Not run"]);
-  sheet.addRow(["Total", ...figures(book.total), ""]);
+  sheet.addRow(headers).font = { bold: true };
+  sheet.addRows(rows);
   return Buffer.from((await workbook.xlsx.writeBuffer()) as ArrayBuffer);
 }

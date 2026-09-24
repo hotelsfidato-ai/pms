@@ -322,6 +322,12 @@ export async function dailyFigures(
    door. `settled` and `not l.voided` are the Manager report's own
    predicates, word for word: a figure that is only ALMOST the same as the
    one already in use is worse than no figure at all.
+
+   ⚠ ONE DIFFERENCE, ON PURPOSE (24 September): a bill charged to a room is
+   left out. The Manager report keeps the restaurant's room postings out of
+   its extra charges instead ("POS to PMS Posting"); the day book takes the
+   folio whole from `dailyFigures`, so it is this side that leaves them out.
+   Either way each bill is counted once, and the totals agree.
    ══════════════════════════════════════════════════════════════════ */
 export interface PosDay {
   date: string;
@@ -345,6 +351,11 @@ export async function posSales(
          from pos_orders o
         where o.hotel_id = $1
           and o.status = 'settled'
+          -- ⚠ NOT A BILL CHARGED TO A ROOM (24 September, the owner's yes):
+          -- that one is already a posting on the room's folio, so
+          -- dailyFigures counts it, and the day book - this function's one
+          -- reader - added it twice. Only what never reaches a folio here.
+          and o.payment_method is distinct from 'room'
           and o.business_date between $2::date and $3::date
      ),
      lines as (

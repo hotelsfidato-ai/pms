@@ -78,9 +78,10 @@ describe("the printed bill", () => {
 });
 
 /* D22-7, the owner: the desk's printed bill said "Tax Invoice" with no
-   number. Before check-out it is the "Interim bill", as the guest's page
-   says; after check-out it keeps today's title. The panel's other reads are
-   left unanswered, so only the print is in play. */
+   number. It is the "Interim bill", as the guest's page says, before
+   check-out and after (24 September): the numbered tax invoice is issued on
+   Invoices. The panel's other reads are left unanswered, so only the print
+   is in play. */
 describe("the desk's printed bill, from the Bill tab", () => {
   afterEach(() => { vi.restoreAllMocks(); vi.unstubAllGlobals(); });
 
@@ -101,13 +102,10 @@ describe("the desk's printed bill, from the Bill tab", () => {
     return document.querySelector("[data-bill-print]")!.textContent!;
   };
 
-  it("says Interim bill while the guest is in the house - never Tax Invoice", async () => {
-    const text = await print("in-house");
-    expect(text).toContain("Interim bill");
-    expect(text).not.toContain("Tax Invoice");
-  });
-
-  it("keeps Tax Invoice once the guest has checked out", async () => {
-    expect(await print("checked-out")).toContain("Tax Invoice");
-  });
+  it.each(["in-house", "checked-out"] as const)(
+    "says Interim bill, never Tax Invoice, when the stay is %s", async (status) => {
+      const text = await print(status);
+      expect(text).toContain("Interim bill");
+      expect(text).not.toMatch(/tax invoice/i);
+    });
 });

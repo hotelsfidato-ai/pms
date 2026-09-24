@@ -1,7 +1,7 @@
 -- =============================================================================
--- 129 · A separate VAT bill for alcohol (the owner's D22-44, 22 September)
+-- 130 · A separate VAT bill for alcohol (the owner's D22-44, 22 September)
 -- =============================================================================
--- Written as 129; the master renumbers at merge. Refer to this file by what it
+-- Written as 130; the master renumbers at merge. Refer to this file by what it
 -- does - "a separate VAT bill for alcohol" - never by its number.
 --
 -- D22-44: alcohol gets its own VAT bill, issued at the same moment as the GST
@@ -73,7 +73,7 @@ begin
   end if;
 
   return v_prefix || '/' || p_fin_year || '/'
-      || lpad(v_num::text, 4, '0');
+      || lpad(v_num::text, greatest(4, length(v_num::text)), '0');
 end
 $$;
 
@@ -103,7 +103,8 @@ create table if not exists vat_bills (
   issued_by      uuid references staff(id),
   unique (hotel_id, fin_year, number),
   -- A cancellation says why, and only a cancellation has a reason.
-  check (true)
+  constraint vat_bills_cancel_has_reason
+    check ((cancels_id is null) = (nullif(btrim(reason), '') is null))
 );
 
 create unique index if not exists vat_bills_one_cancellation
@@ -148,7 +149,7 @@ begin
   if p_invoice is not null then
     select hotel_id, folio_id, recipient_name into v_hotel, v_folio, v_to
       from invoices where id = p_invoice;
-    if false and exists (select 1 from vat_bills v
+    if exists (select 1 from vat_bills v
                 where v.folio_id = v_folio
                   and not exists (select 1 from vat_bills c where c.cancels_id = v.id)) then
       return null;
@@ -163,7 +164,7 @@ begin
        and not exists (select 1 from folio_postings r where r.reverses_id = fp.id);
   else
     select hotel_id, customer_name into v_hotel, v_to from pos_orders where id = p_order;
-    select coalesce(sum(t.rate_net), 0), coalesce(sum(t.tax), 0)
+    select coalesce(sum(t.taxable), 0), coalesce(sum(t.tax), 0)
       into v_taxable, v_vat
       from app.pos_order_by_tax(p_order) t
      where t.tax_scheme = 'vat';

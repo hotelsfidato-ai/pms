@@ -1,5 +1,10 @@
 import { api, ApiError, downloadFile } from "@/lib/api";
 import { toCsv, downloadCsv, reportFilename } from "@/lib/csv";
+import { dayBookSheet } from "../../../../api/src/modules/accounting/sheet.ts";
+
+/* The layout of both files, from the one list the server's .xlsx is made
+   with (D22-37). Re-exported so the screen's tests read the same one. */
+export { dayBookSheet };
 
 /* ══════════════════════════════════════════════════════════════════
    THE ACCOUNTING EXPORT — the seam
@@ -17,9 +22,10 @@ import { toCsv, downloadCsv, reportFilename } from "@/lib/csv";
    the same contract the reports service keeps with its documents.
    ══════════════════════════════════════════════════════════════════ */
 
-/** The three formats the owner chose (D18-16). The person exporting
-    picks what their accountant asks for. */
-export type ExportFormat = "day-book-csv" | "tally-prime-xml" | "tally-erp9-xml";
+/** The three formats the owner chose (D18-16), and the day book as a real
+    .xlsx beside its CSV (D22-37). The person exporting picks what their
+    accountant asks for. */
+export type ExportFormat = "day-book-csv" | "day-book-xlsx" | "tally-prime-xml" | "tally-erp9-xml";
 
 export interface ExportFormatChoice {
   key: ExportFormat;
@@ -35,8 +41,16 @@ export interface ExportFormatChoice {
 export const FORMATS: readonly ExportFormatChoice[] = [
   {
     key: "day-book-csv",
-    label: "Day book (CSV and Excel)",
+    label: "Day book (CSV)",
     what: "One row a day: sales, the tax on them and what was received. Every accounting package opens it.",
+    blocked: null,
+  },
+  /* D22-37, the owner: "both the CSV and a real .xlsx" - a choice of its
+     own, so Export hands over the one file chosen (24 September). */
+  {
+    key: "day-book-xlsx",
+    label: "Day book (Excel)",
+    what: "The same columns and figures as the CSV, as an Excel workbook.",
     blocked: null,
   },
   /* Offered, and honest about why they produce nothing yet. A Tally
@@ -117,51 +131,18 @@ export async function getDayBook(
 
 /* ── The file ──────────────────────────────────────────────────────── */
 
-/* "GST", not "Tax", since 22 September: alcohol's VAT is its own column and
-   is kept out of the GST ones (D21-91). The .xlsx is written on the server
-   from a copy of this row and `figures` (api/src/modules/accounting/
-   dayBook.ts): change both, or neither - its test reads this line. */
-const HEADERS = [
-  "Date", "Room revenue", "Room tax", "Extra charges", "Extra tax",
-  "Discount", "Alcohol", "VAT", "Sales", "GST", "Receipts", "Night audit",
-];
-
-/** A day's row, and the total's, written once so the last line of the
-    file is made the same way as every line above it. */
-const figures = (r: DayBookRow | DayBookTotal) =>
-  [r.room, r.roomTax, r.extra, r.extraTax, r.discount, r.alcohol, r.vat,
-   r.sales, r.tax, r.receipt];
-
-/**
- * The day book as a sheet: a row per day, then the total.
- *
- * RAW NUMBERS, not "Rs 1,234.56". An accountant sums this column; a
- * currency symbol and a thousands comma turn it into text that sums
- * to nothing. The quoting, the BOM, the CRLF endings and the leading
- * `=` that a spreadsheet would execute are all `src/lib/csv.ts`'s
- * business and are not repeated here.
- *
- * The "Night audit" column is the point of the last one: a day it has
- * not closed still appears with its figures, and says so. A day
- * silently printed as zero is the one an accountant files.
- */
-export function dayBookSheet(book: DayBook): { headers: string[]; rows: unknown[][] } {
-  const rows: unknown[][] = book.days.map((d) => [
-    d.date, ...figures(d), d.closed ? "Closed" : "Not run",
-  ]);
-  rows.push(["Total", ...figures(book.total), ""]);
-  return { headers: HEADERS, rows };
-}
-
-/** Hand the day book to the browser as files somebody can find again: the
-    CSV, as before, and a real .xlsx of the same columns and figures, made on
-    the server (D22-37: "both"). Throws if the .xlsx was not made. */
-export async function downloadDayBook(book: DayBook): Promise<void> {
+/** Hand the day book to the browser as a file somebody can find again. */
+export function downloadDayBook(book: DayBook): void {
   const { headers, rows } = dayBookSheet(book);
   downloadCsv(
     reportFilename(book.property.name, "day book", `${book.from} to ${book.to}`),
     toCsv(headers, rows),
   );
+}
+
+/** The same day book as a real .xlsx, made on the server (the browser
+    carries no spreadsheet library). Throws if it was not made. */
+export async function downloadDayBookXlsx(book: DayBook): Promise<void> {
   const range = new URLSearchParams({ from: book.from, to: book.to });
   await downloadFile(`/api/hotels/${book.property.code}/accounting/day-book.xlsx?${range}`);
 }

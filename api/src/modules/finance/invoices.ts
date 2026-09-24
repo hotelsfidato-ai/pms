@@ -300,8 +300,15 @@ invoices.get("/:code/invoices/:number{.+}", async (c) => {
               -- a guest nothing.
               (select o.number from invoices o where o.id = i.credits_id)
                 as credits_number,
-              -- D22-44: the VAT bill issued with it, for the alcohol.
-              (select v.number from vat_bills v where v.invoice_id = i.id)
+              -- D22-44: the VAT bill issued with it, for the alcohol - or,
+              -- on an invoice issued again after a credit note, the VAT bill
+              -- still standing for the same bill, which was not issued twice
+              -- (the owner, 24 September). A credit note names none.
+              coalesce(
+                (select v.number from vat_bills v where v.invoice_id = i.id),
+                (select v.number from vat_bills v
+                  where i.credits_id is null and v.folio_id = i.folio_id
+                    and not exists (select 1 from vat_bills c where c.cancels_id = v.id)))
                 as vat_bill,
               i.folio_id::text,
               h.name as hotel_name, h.address_line as hotel_address,
@@ -726,7 +733,7 @@ invoices.post("/:code/vat-bills/:number{.+}/cancel", async (c) => {
     if (!hotelId) return null;
 
     const reason = body.reason?.trim();
-    void 0;
+    if (!reason) return refuse("A VAT bill's cancellation must say why it was wrong.");
 
     const { rows } = await client.query<{
       id: string; fin_year: string; recipient_name: string | null;

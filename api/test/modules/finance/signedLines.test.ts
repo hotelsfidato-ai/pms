@@ -14,6 +14,8 @@ import { closePool } from "../../../src/db.ts";
      sent `const USER = "front desk"`, which the server never read, and
      printed the posting's uuid (or "admin" for nobody). It now prints
      `app.posted_by_name` - the person signed in when the line was made.
+     So does the Payments list's "Taken by", which printed "admin" for
+     every receipt (the owner, 24 September).
 
    Its own property (RBW), deleted afterwards, so no demo figure moves.
    ══════════════════════════════════════════════════════════════════ */
@@ -86,6 +88,7 @@ describe("a charge refused for a missing GST rule", () => {
     const body = await res.json() as { ok: boolean; reason?: string };
     expect(res.status).toBe(409);
     expect(body.reason).toMatch(/no GST rule for room/);
+    expect(body.reason, "says where the rate is set").toMatch(/Room types or Finance → Invoices/);
 
     const [folios] = await sql<{ n: number }>(
       "select count(*)::int as n from folios where reservation_id = $1", [stayId]);
@@ -95,9 +98,9 @@ describe("a charge refused for a missing GST rule", () => {
 
 describe("a bill line", () => {
   it("names the person signed in when it was posted, and a dash for nobody", async () => {
-    await sql(
-      `insert into tax_rules (hotel_id, kind, over_amount, rate, note)
-       values ($1, 'room', 0, 5, 'Test')`, [hotelId]);
+    /* Set the way a person sets it: the tax card's route (MEMORY 313). */
+    const rule = await call(`/${CODE}/tax/room`, "PUT", { slabs: [{ overAmount: 0, rate: 5 }] });
+    expect(rule.status, await rule.clone().text()).toBe(200);
     const res = await call(`/${CODE}/stays/${stayId}/charges`, "POST", {
       category: "Laundry", description: "Signed by the owner", amount: 500, taxable: true,
     });
@@ -114,5 +117,19 @@ describe("a bill line", () => {
       Array<{ description: string; user: string | null }>;
     expect(lines.find((l) => l.description === "Signed by the owner")?.user).toBe(ownerName);
     expect(lines.find((l) => l.description === "Nobody signed in")?.user).toBeNull();
+  });
+});
+
+describe("a payment on the Payments list", () => {
+  it("names the person who took it, not \"admin\"", async () => {
+    const res = await call(`/${CODE}/stays/${stayId}/payments`, "POST", {
+      method: "Cash", amount: 250,
+    });
+    expect(res.status, await res.clone().text()).toBe(200);
+    const id = (await res.json() as { data: { id: string } }).data.id;
+
+    const list = await (await call(`/${CODE}/payments`)).json() as
+      Array<{ id: string; user: string | null }>;
+    expect(list.find((p) => p.id === id)?.user).toBe(ownerName);
   });
 });

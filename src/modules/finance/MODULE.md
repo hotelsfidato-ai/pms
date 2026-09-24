@@ -55,12 +55,15 @@ holds guests' Form C (order 60).
 
 - `flows/FolioPanel.tsx` — the Bill tab inside front desk's stay panel:
   postings, charge, reverse, settle, split billing, and check out (which it
-  asks front desk to do).
+  asks front desk to do). Each line names who posted it; its print is the
+  "Interim bill", before check-out and after (D22-7, 24 September) - the
+  numbered tax invoice is issued on Invoices.
 - `flows/CreditNoteFlow.tsx` — correct an issued invoice, from the invoice
   page; with `vat`, cancel a VAT bill the same way, from the VAT bill page.
 - `flows/TaxRulesCard.tsx` — the GST (and VAT) rules card, shown on
-  inventory's Room setup page and, since D23-1, on Invoices, which the
-  accountant can open.
+  inventory's Room setup page and, since D23-1, on Invoices for the four
+  who may set a rate (owner, admin, GM, accountant; the owner, 24
+  September).
 
 ## Server endpoints
 
@@ -107,7 +110,7 @@ of the old `inventorySetup.ts` (`3ca215d`).
 
 | Method | Path | What it does |
 |---|---|---|
-| GET | `/:code/payments` | every receipt, newest first; reversed ones stay on the list |
+| GET | `/:code/payments` | every receipt, newest first; reversed ones stay on the list; "Taken by" is who took it (`app.posted_by_name`), a dash for nobody |
 | GET | `/:code/billable` | departed stays ready to invoice, with the number already issued against any |
 
 **`api/src/modules/finance/invoices.ts`** (was `api/src/routes/invoices.ts`, less Form C)
@@ -161,7 +164,7 @@ migrations that made or changed them:
 | `folios` | one running account; several per stay when the bill is split, or a group's master | created `006_folio.sql`; `056_group_billing.sql` (a group's master; a folio belongs to exactly one thing), `060_banquet.sql` (a function's folio) |
 | `folio_postings` | every charge, reversal and payment line | created `006_folio.sql` (money is `numeric(12,2)`; append-only; `business_date` is a real column); `011_model_additions.sql` (`idempotency_key`), `012_integrity.sql` (no posting onto a closed day), `014_simulation_fixes.sql` (UPDATE and DELETE revoked; same-hotel keys), `015_edge_cases.sql` (the tax must match the one rate on the line; no zero lines), `021_reversal_once.sql` (a line is reversed at most once), `056_group_billing.sql` (`reservation_id`, filled by a trigger) |
 | `payments` | the receipt behind a payment line | created `011_model_additions.sql`; `014_simulation_fixes.sql` (same hotel as its posting), `016_audit_coverage.sql` (never zero; audited) |
-| `vat_bills`, `vat_bill_series` | VAT bills for alcohol and their credit notes (D22-44): their own series per hotel, `VAT/5EL/2026-27/0001`, opened by the year's first bill so it restarts each 1 April | "a separate VAT bill for alcohol" (129 in this branch: `app.next_vat_bill_number`, `app.issue_vat_bill`; 025's immutability trigger) |
+| `vat_bills`, `vat_bill_series` | VAT bills for alcohol and their credit notes (D22-44): their own series per hotel, `VAT/5EL/2026-27/0001`, opened by the year's first bill so it restarts each 1 April | "a separate VAT bill for alcohol" (130 in this branch: `app.next_vat_bill_number`, `app.issue_vat_bill`; 025's immutability trigger) |
 | `invoices`, `invoice_series` | tax invoices and credit notes, numbered from a statutory series | created `011_model_additions.sql` (`app.next_invoice_number`); `013_policies.sql` (numbering protected), `014_simulation_fixes.sql` (the first invoice at a property), `016_audit_coverage.sql` (a series only moves forward), `025_invoices_form_c.sql` (the GST fields, credit notes, never edited, a series opened for each new property) |
 | `cashier_shifts`, `cashier_movements`, `cashier_denominations` | the desk's drawer | created `059_cashier_shift.sql` (`app.cashier_expected_cash`; a closed shift is final) |
 | `tax_rules` | GST as rules, one set for the desk and the till — and VAT on alcohol (kind `alcohol`) | created `067_tax_rules.sql` (`app.gst_rate`; the tax kind on outlets and menu categories); `119_the_spa.sql` (`spa`); "alcohol, a switch per property, and the VAT it is taxed under" (126 in this branch: `alcohol` as a kind and a menu heading, `folio_postings.tax_scheme` and `pos_order_lines.tax_scheme` gst/vat, a reversal takes its original's scheme, `app.pos_order_by_tax`, `app.stay_bill`'s `vat` rows) |
@@ -282,14 +285,16 @@ From `PENDING.md` and `HANDOVER.md`, and two found while writing this brief:
   into `D:\reports fidato\` first. Still needed from the owner: Fidato's
   registered name as it prints, the GSTIN for bills, bank details per hotel,
   policies and times, and how WhatsApp and email should send.
-- ~~`const USER = "front desk"` in `flows/FolioPanel.tsx`~~ — fixed 23
+- ~~`const USER = "front desk"` in `flows/FolioPanel.tsx`~~ — fixed 24
   September (FIN-6): gone, and a bill line names the person who posted it.
 - **"Which room was this stay in" written by hand** in two of the seven
   copies — `GET /:code/payments` and `GET /:code/billable`
   (`api/src/modules/finance/billing.ts`); `app.stay_room()` (086) is the one
   rule; moving onto it is tidying (PENDING § 6).
 - ~~Defect 243's shape in these routes has not been checked~~ — checked 23
-  September: one found and fixed, `postCharge` (FIN-7).
+  and 24 September: one found and fixed, `postCharge` (FIN-7).
+- **FIN-8:** the GST series for a new financial year exists only after a
+  deploy (DEFECTS.md) - the master's and the owner's call.
 - **FIN-1, found while writing this brief:** the header of
   `api/src/modules/finance/billing.ts` still says "NO INVOICE NUMBER IS
   ISSUED" and "THE NIGHT AUDIT DOES NOT RUN"; both have been built. A

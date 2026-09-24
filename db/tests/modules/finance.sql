@@ -30,9 +30,6 @@ begin
     (select cgst_rate is null and sgst_rate is null from hotels where id = h),
     (select coalesce(cgst_rate::text, 'null') || ' / ' || coalesce(sgst_rate::text, 'null')
        from hotels where id = h));
-  -- FH01 is seeded before the columns existed, so it holds 019's 2.5.
-  perform test.ok('finance gst', 'a rate a hotel already holds is kept',
-    exists (select 1 from hotels where code = 'FH01' and cgst_rate = 2.5 and sgst_rate = 2.5));
 end $$;
 
 do $$

@@ -14,7 +14,10 @@ entries stay here: they are the reason the fault does not come back.
 
 ## Open — not fixed
 
-### FIN-5 · The GST invoice series for a new financial year exists only after a deploy
+### FIN-8 · The GST invoice series for a new financial year exists only after a deploy
+
+(Written as FIN-5 by the VAT-bill helper; the rule-breakers helper took FIN-5
+the same day for the default rate below. Renumbered 24 September.)
 
 **Found** — 23 September, reading the numbering to reuse it for D22-44's VAT
 bill. `app.next_invoice_number` raises "No invoice series for hotel X in
@@ -32,7 +35,7 @@ statutory series: the master's and the owner's call.
 
 ## Fixed
 
-### FIN-7 · A charge refused for a missing GST rule left an empty folio behind — FIXED 23 September
+### FIN-7 · A charge refused for a missing GST rule left an empty folio behind — FIXED 24 September
 
 **Found** — 23 September, auditing the finance routes for MEMORY 243's shape
 (D22-9, "the three finance rule-breakers"). `postCharge`
@@ -52,12 +55,14 @@ which has aborted the transaction, so the commit writes nothing).
 
 **Proved** — `api/test/modules/finance/signedLines.test.ts`, "writes nothing -
 not even the folio it would have gone on": a charge at a property with no
-room rule is refused 409 and the stay still has no folio.
+room rule is refused 409, says where the rate is set, and the stay still has
+no folio. With `folioFor` put back above the rate check, it fails (24
+September). The route audit was repeated on 24 September and agrees.
 
 **The rule:** a helper that "opens one on demand" is a write. Count it when
 checking that every refusal sits above the first write.
 
-### FIN-6 · A bill line was signed with a uuid, or "admin" — and the Bill tab sent "front desk" — FIXED 23 September
+### FIN-6 · A bill line was signed with a uuid, or "admin" — and the Bill tab sent "front desk" — FIXED 24 September
 
 **Found** — MEMORY 256 named `const USER = "front desk"` in
 `flows/FolioPanel.tsx`; D22-9 queued it. **What it actually was**, read before
@@ -74,14 +79,22 @@ log prints (ADM-1), which names somebody who has since lost access — and null
 for nobody; the line prints a dash for null. `Posting.user` in the core's
 `types.ts` is `string | null`.
 
+**And the same on Payments** (found 24 September, fixed with the owner's
+yes): `GET /:code/payments` answered `user: "admin"` for every receipt, so the
+"Taken by" column named nobody who took anything. It now answers
+`app.posted_by_name` too, a dash for nobody.
+
 **Proved** — `signedLines.test.ts`, "names the person signed in when it was
 posted, and a dash for nobody": a charge posted by the owner reads "Group
-Owner"; a line inserted with nobody signed in reads null.
+Owner"; a line inserted with nobody signed in reads null; and "a payment on
+the Payments list names the person who took it". Each fails with its change
+taken out. On screen: a laundry line posted as Test Reception reads "Test
+Reception" (`.local/screenshots/2026-09-24-finance/01-…`).
 
 **The rule:** before fixing where a value comes from, find where it goes
 (FD-2) - here it went nowhere, and the real fault was on the way back.
 
-### FIN-5 · Every new hotel was born charging 2.5% + 2.5% GST — FIXED 23 September
+### FIN-5 · Every new hotel was born charging 2.5% + 2.5% GST — FIXED 24 September
 
 **Found** — D22-9 queued it. `019_property_details.sql` gave
 `hotels.cgst_rate` and `sgst_rate` `not null default 2.5`: a rate the system
@@ -97,8 +110,11 @@ record `null`. Billing with no rate was already refused, with where to set
 it, by `postCharge` and the night audit (067); an invoice never read the pair.
 
 **Proved** — `db/tests/modules/finance.sql`, "a new property is made with no
-CGST or SGST rate" (asked of `app.provision_property_unchecked` directly) and
-"a rate a hotel already holds is kept";
+CGST or SGST rate" (asked of `app.provision_property_unchecked` directly;
+fails with the migration's statement taken out). The helper's second check,
+"a rate a hotel already holds is kept", read FH01, which 017 deletes, so it
+could never pass and was removed; what it meant was proved by replaying all
+131 migrations over `fidato_s1`, whose 5EL kept 2.50 / 2.50;
 `api/test/modules/reports/lodgingTaxAlcohol.test.ts` asserts the heading "CGST
 @-" at a new property.
 

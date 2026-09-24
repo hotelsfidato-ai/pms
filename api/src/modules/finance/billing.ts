@@ -64,6 +64,7 @@ billing.get("/:code/payments", async (c) => {
       id: string; business_date: string; at: string; guest: string;
       room: string | null; reference: string; method: string | null;
       description: string; amount: string; reversed: boolean;
+      taken_by: string | null;
     }>(
       `select fp.id::text, fp.business_date::text, fp.created_at::text as at,
               g.full_name as guest,
@@ -74,7 +75,10 @@ billing.get("/:code/payments", async (c) => {
                 limit 1) as room,
               r.reference, p.method, fp.description, fp.amount,
               exists (select 1 from folio_postings rev
-                       where rev.reverses_id = fp.id) as reversed
+                       where rev.reverses_id = fp.id) as reversed,
+              -- WHO TOOK IT, by name (101), as a bill line names who posted
+              -- it. This column printed the word "admin" for every receipt.
+              app.posted_by_name(fp.id) as taken_by
          from folio_postings fp
          join folios f       on f.id = fp.folio_id
          join reservations r on r.id = f.reservation_id
@@ -99,7 +103,8 @@ billing.get("/:code/payments", async (c) => {
       method: p.method ? METHOD_LABEL[p.method] ?? p.method : "Unrecorded",
       description: p.description,
       amount: round(-Number(p.amount)),
-      user: "admin",
+      /* Null where nobody was recorded: the screen prints a dash. */
+      user: p.taken_by,
       reversed: p.reversed,
     }));
   });

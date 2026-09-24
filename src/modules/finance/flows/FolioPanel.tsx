@@ -120,7 +120,7 @@ export function FolioPanel({
           businessDate={businessDate}
           onDone={refresh}
         />
-        <InvoiceDialog hotelId={hotelId} stayId={stay.id} departed={stay.status === "checked-out"} />
+        <InvoiceDialog hotelId={hotelId} stayId={stay.id} />
         <SplitBillButton hotelId={hotelId} stayId={stay.id} onDone={refresh} />
       </div>
 
@@ -608,14 +608,12 @@ function SettleDialog({
    made-up GSTIN and a fixed 2.5% printed on every bill, and counted a
    reversing line while leaving out the line it reversed (21 September).
 
-   D22-7: before check-out it is the "Interim bill", as on the guest's page -
-   it carries no invoice number, and "Tax Invoice" read as the final one.
-   After check-out it keeps today's title. */
-function InvoiceDialog({ hotelId, stayId, departed }: {
-  hotelId: string; stayId: string; departed: boolean;
-}) {
+   D22-7: it is the "Interim bill", as on the guest's page, before check-out
+   and after (the owner, 24 September): it carries no invoice number, and
+   "Tax Invoice" read as the final one. The numbered tax invoice is issued
+   on Invoices. */
+function InvoiceDialog({ hotelId, stayId }: { hotelId: string; stayId: string }) {
   const [open, setOpen] = useState(false);
-  const title = departed ? "Tax Invoice" : "Interim bill";
   const bill = useQuery({
     queryKey: ["stay-bill", hotelId, stayId],
     queryFn: () => getStayBill(hotelId, stayId),
@@ -630,9 +628,9 @@ function InvoiceDialog({ hotelId, stayId, departed }: {
           Invoice
         </Button>
       </DialogTrigger>
-      <DialogContent title={departed ? "Tax invoice" : title} description="Print preview">
+      <DialogContent title="Interim bill" description="Print preview">
         {bill.data ? (
-          <BillPrint bill={bill.data} title={title} />
+          <BillPrint bill={bill.data} title="Interim bill" />
         ) : bill.isError ? (
           <p className="text-sm text-brand-red">The bill could not be read. Try again.</p>
         ) : bill.isFetched ? (

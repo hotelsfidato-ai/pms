@@ -3,7 +3,8 @@ import { render, screen, fireEvent, within } from "@testing-library/react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { MemoryRouter, Routes, Route } from "react-router";
 import * as apiModule from "@/lib/api";
-import { can } from "@/lib/permissions";
+import { can, type Role } from "@/lib/permissions";
+import { AGRA_HOTEL, signedIn, startSignedIn } from "@/test/app";
 import { TaxRulesCard } from "./flows/TaxRulesCard";
 import InvoicesPage from "./pages/Invoices";
 
@@ -71,12 +72,18 @@ describe("the tax card and alcohol", () => {
 
 /* D23-1, the owner: the accountant sets GST and VAT (D22-32) but could not
    open Room types, the card's only home. The same card is on Invoices, a
-   finance screen the accountant opens. */
+   finance screen the accountant opens - shown to the four who may set a
+   rate, and not to the others who open Invoices (the owner, 24 September). */
 describe("the tax card on a finance screen", () => {
-  it("is on Invoices, which the accountant may open", async () => {
-    expect(can("finance", "view", "invoice")).toBe(true);
-    expect(can("finance", "view", "room_config")).toBe(false);
-
+  const invoices = (role: Role) => {
+    startSignedIn();
+    signedIn({
+      scope: {
+        staffId: "22222222-2222-2222-2222-222222222222",
+        email: "someone@fidato.in", fullName: "Someone", isGroupAdmin: false,
+        hotels: [{ hotelId: AGRA_HOTEL, role }],
+      },
+    });
     vi.spyOn(apiModule, "api").mockImplementation(async (url: string) => {
       if (url === "/api/hotels/5EL/tax") {
         return { servesAlcohol: true, kinds: [...KINDS, { kind: "alcohol", slabs: [] }], categories: [] } as never;
@@ -91,7 +98,19 @@ describe("the tax card on a finance screen", () => {
         </MemoryRouter>
       </QueryClientProvider>,
     );
+  };
+
+  it.each(["finance", "gm", "admin", "owner"] as const)("is on Invoices for %s", async (role) => {
+    expect(can(role, "view", "invoice")).toBe(true);
+    invoices(role);
     expect(await screen.findByRole("heading", { name: "GST and VAT" })).toBeTruthy();
     expect(screen.getByText("Alcohol")).toBeTruthy();
+  });
+
+  it.each(["front_desk", "hotel_manager", "read_only"] as const)("is not on Invoices for %s", async (role) => {
+    expect(can(role, "view", "invoice")).toBe(true);
+    invoices(role);
+    expect(await screen.findByRole("heading", { name: "Invoices" })).toBeTruthy();
+    expect(screen.queryByRole("heading", { name: /^GST/ })).toBeNull();
   });
 });

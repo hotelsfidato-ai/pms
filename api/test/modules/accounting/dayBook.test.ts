@@ -1,6 +1,6 @@
 import { describe, it, expect, beforeAll, afterAll } from "vitest";
-import { readFileSync } from "node:fs";
 import ExcelJS from "exceljs";
+import { dayBookSheet } from "../../../src/modules/accounting/sheet.ts";
 import { app } from "../../../src/server.ts";
 import { closePool, withUser } from "../../../src/db.ts";
 import {
@@ -342,12 +342,32 @@ describe("the export and the Manager report cannot disagree", () => {
        in the database for every test after it. The trigger is lifted for
        this one delete and put back in a finally, which is how the POS
        suite's own teardown does it (courses.test.ts). */
+    /* The meal the till charged to a room: its posting reversed (the ledger
+       is append-only), then the order and its ticket gone, as the alcohol
+       test does it. */
+    await sql(
+      `insert into folio_postings (hotel_id, folio_id, business_date, category, description,
+                                   amount, tax_rate, tax_amount, reverses_id, source_type)
+       select fp.hotel_id, fp.folio_id, fp.business_date, fp.category,
+              'Reversal - day book test', -fp.amount, fp.tax_rate, -fp.tax_amount, fp.id, 'pos'
+         from folio_postings fp
+         join pos_tickets t on t.posting_id = fp.id
+         join pos_orders o on o.ticket_id = t.id
+        where o.table_ref like $1
+          and not exists (select 1 from folio_postings r where r.reverses_id = fp.id)`,
+      [`${TAG}%`]);
+    const { rows: rung } = await sql(
+      "select ticket_id::text as ticket from pos_orders where table_ref like $1", [`${TAG}%`]);
     await sql("alter table pos_order_lines disable trigger pos_order_lines_frozen");
+    await sql("alter table pos_order_tenders disable trigger pos_order_tenders_no_delete_settled");
     try {
-      await sql(`delete from pos_orders where order_no like $1`, [`${TAG}%`]);
+      await sql(`delete from pos_orders where order_no like $1 or table_ref like $1`, [`${TAG}%`]);
     } finally {
+      await sql("alter table pos_order_tenders enable trigger pos_order_tenders_no_delete_settled");
       await sql("alter table pos_order_lines enable trigger pos_order_lines_frozen");
     }
+    await sql("delete from pos_tickets where id = any($1::uuid[])",
+      [rung.map((r) => r.ticket).filter(Boolean)]);
   });
 
   it("counts a meal paid for in cash at the restaurant, which never reaches a folio", async () => {
@@ -419,38 +439,66 @@ describe("the export and the Manager report cannot disagree", () => {
     expect(body.total.sales, "and Sales grew by it")
       .toBeGreaterThan(salesBefore);
   });
+
+  /* ⚠ 24 SEPTEMBER: A MEAL CHARGED TO A ROOM WAS COUNTED TWICE - once as
+     the posting on the room's folio (dailyFigures), and again as an outlet
+     sale (posSales), so Sales, GST and alcohol's VAT were too high by every
+     such bill. Rung through the till as a waiter does, to a real room. */
+  it("counts a meal charged to a room once - on the room's bill, not again as an outlet sale", async () => {
+    const { rows: [{ day }] } = await sql(
+      "select to_char(app.business_date(id), 'YYYY-MM-DD') as day from hotels where code = '5EL'");
+    const read = async () => (await book(`/5EL/accounting/day-book?from=${day}&to=${day}`)).body as
+      { days: { pos: number }[]; total: { sales: number } };
+    const post = (path: string, body: unknown) => app.request(`/api/hotels/5EL${path}`, {
+      method: "POST", body: JSON.stringify(body),
+      headers: { "x-dev-staff-id": ownerId, "content-type": "application/json" },
+    });
+    const before = await read();
+
+    const menu = await (await call("/5EL/till/menu")).json() as
+      { categories: { items: { id: string; name: string }[] }[] };
+    const dish = menu.categories.flatMap((c) => c.items).find((i) => i.name === "Paneer Tikka")!;
+    const { rooms } = await (await call("/5EL/till/rooms")).json() as
+      { rooms: { room: string; folioId: string }[] };
+    const opened = await (await post("/till/orders", { outlet: "REST", table: `${TAG} room` })).json() as
+      { id: string };
+    expect((await post(`/till/orders/${opened.id}/lines`, { itemId: dish.id, qty: 2 })).status).toBe(200);
+    const settled = await post(`/till/orders/${opened.id}/settle`,
+      { method: "room", room: rooms[0]!.room, folioId: rooms[0]!.folioId });
+    expect(settled.status, await settled.clone().text()).toBe(200);
+    const { net } = await settled.json() as { net: number };
+    expect(net).toBeGreaterThan(0);
+
+    const after = await read();
+    expect(after.days[0]!.pos, "a room's bill is not an outlet sale").toBe(before.days[0]!.pos);
+    expect(after.total.sales - before.total.sales, "counted once, on the room's bill").toBeCloseTo(net, 2);
+  });
 });
 
 /* ── D22-37: the same day book as a real .xlsx ────────────────────────
-   The owner: "both the CSV and a real .xlsx". The CSV is written by the
-   screen from `HEADERS` and the day book's own figures
-   (src/modules/accounting/data/accounting.ts); the .xlsx by the server from
-   a copy of that row. So the header row is read from the SCREEN'S source,
-   and the figure from the object the CSV is written from. */
+   The owner: "both the CSV and a real .xlsx". The screen writes the CSV
+   with `dayBookSheet` (sheet.ts, which it imports); the server writes the
+   .xlsx with the same function. Read back, every cell of the workbook is
+   the cell the CSV carries: the same columns, the same figures. */
 describe("the day book as a real .xlsx", () => {
-  it("opens with the CSV's header row and the CSV's figures", async () => {
+  it("reads back cell for cell as the CSV's rows", async () => {
     const range = `from=${from}&to=${to}`;
     const csvBook = (await book(`/5EL/accounting/day-book?${range}`)).body as DayBook;
     const res = await call(`/5EL/accounting/day-book.xlsx?${range}`);
     expect(res.status).toBe(200);
+    expect(res.headers.get("content-type")).toMatch(/spreadsheetml/);
     expect(res.headers.get("content-disposition")).toMatch(/day-book-.+\.xlsx"$/);
 
     const workbook = new ExcelJS.Workbook();
     await workbook.xlsx.load(await res.arrayBuffer());
     const sheet = workbook.worksheets[0]!;
+    const read = (n: number) => (sheet.getRow(n).values as unknown[]).slice(1);
 
-    const screen = readFileSync(
-      new URL("../../../../src/modules/accounting/data/accounting.ts", import.meta.url), "utf8");
-    const csvHeaders = [...(/const HEADERS = \[([\s\S]*?)\];/.exec(screen)?.[1] ?? "")
-      .matchAll(/"([^"]+)"/g)].map((m) => m[1]);
-    expect(csvHeaders.length, "read the screen's header row").toBeGreaterThan(5);
-    expect((sheet.getRow(1).values as unknown[]).slice(1)).toEqual(csvHeaders);
-
-    const last = csvBook.days.at(-1)!;
-    const row = sheet.getRow(1 + csvBook.days.length);
-    expect(row.getCell(1).value).toBe(last.date);
-    expect(row.getCell(csvHeaders.indexOf("Room revenue") + 1).value).toBe(last.room);
-    expect(sheet.getRow(2 + csvBook.days.length).getCell(1).value).toBe("Total");
+    const { headers, rows } = dayBookSheet(csvBook);
+    expect(rows.length, "a row per day and the total").toBe(csvBook.days.length + 1);
+    expect(sheet.rowCount).toBe(1 + rows.length);
+    expect(read(1)).toEqual(headers);
+    rows.forEach((r, i) => expect(read(2 + i), `row ${i + 2}`).toEqual(r));
   });
 
   it("is refused to reception, as the day book is", async () => {

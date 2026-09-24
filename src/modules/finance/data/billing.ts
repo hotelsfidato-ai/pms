@@ -32,7 +32,8 @@ export interface PaymentRow {
   method: string;
   description: string;
   amount: number;
-  user: string;
+  /** Who took it, by name; null where nobody was recorded. */
+  user: string | null;
   reversed: boolean;
 }
 
