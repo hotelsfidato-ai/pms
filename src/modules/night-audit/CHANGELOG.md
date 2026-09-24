@@ -70,7 +70,11 @@ fixed later) and D24-14 (NA-5, below: fix the audit now).
   of Pune's ten rooms dirty, and the identity and guest tests found no clean,
   free room. Both tests now leave the room released and clean.
 
-**Proved** (in this copy; counts in the hand-back to the master):
+**Proved** (in this copy). The six checks, on this branch with cp6 `a733ca4`
+merged in, exactly the tree the master merges: web `tsc` exit 0; API `tsc`
+exit 0; web suite 629/629 in 68 files, exit 0; API suite 1433/1433 in 90
+files on 134 migrations, exit 0; `db/tests/run.sh` all 1131 assertions,
+exit 0; `db/tests/rerun.sh` all 134 migrations re-runnable, exit 0.
 - `db/tests/modules/night-audit.sql` - 14 new checks. Each guard was switched
   off in turn and its check failed: the line's role test, its day, its
   property, the whole exception, who writes a correction, the name it keeps,
@@ -108,6 +112,12 @@ fixed later) and D24-14 (NA-5, below: fix the audit now).
   them off on Closed days; an invoiced bill needs a credit note).
 - A no-show who arrived: only the charge comes off here (D24-7); the booking is
   the front desk's, not asked yet.
+
+**Commits** (on `night-audit/finish-24sep`): `a0ce93d` the work; `3df72f0` and
+`7d911f3` cp6 merged in (`9dfdd3f`, then `a733ca4`); `c900afb` and `de424c8`
+the migration renumbered to 133, then 134, and who may correct written out
+rather than read from `app.manages_hotel` (which the admin lane's 133 widened);
+and this entry.
 
 ---
 
