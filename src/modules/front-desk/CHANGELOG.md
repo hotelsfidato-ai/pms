@@ -8,6 +8,117 @@ project, still goes in the root `CHANGELOG.md`.
 
 ---
 
+## 2026-09-24 · Follow-ups A-I: the in-house rule everywhere, a future move's room, controls the server refuses, the guest's messages, own access
+
+**Asked for:** the master, for the owner's answers of 24 September (D24-15,
+D24-16, D24-17, and a web test): branch `front-desk/follow-ups-24sep`.
+**A** - moving a guest into a room, or assigning one, where `app.in_house`
+says somebody is still in it is refused with FD-11's words; the walk-in's
+refusal names the guest; fixed where every caller passes. **B** - a move
+booked for a future day dirties the old room when that day comes. **C** -
+the early check-in waive tick only for those the server lets waive. **D** -
+the guest's page lists their messages, Sent or Handled. **E** - a web test
+for the group panel's lead button. Added the same afternoon: **F** (D24-18) -
+a control the server refuses is hidden: "Assign room" on the Rooms board for
+housekeeping; **G** (D24-19) - a GM or a hotel's Admin may not switch their
+own access off on People; **H** - a refused access removal said "They did
+not have access"; **I** - close FD-6's note and the `PERSISTED` request.
+
+**The owner's answer in this chat** - asked whether A also refuses a room
+given ahead (this morning, for this afternoon's arrival, while the room's
+guest leaves at 11) or a move for a later night: **"Only when they go in
+now"** - refused: check-in, walk-in, a move or swap from tonight, a room for
+a guest already checked in; allowed: a room given ahead to a booking not yet
+here, and a move for a later night (the check-in still refuses on the day).
+
+**Shipped**
+- **A** - `stillIn()` in `api/src/modules/front-desk/operations.ts`: FD-11's
+  query and sentence, once. Asked by the check-in (as before), the walk-in
+  (was "Somebody is already in that room."), the move (a checked-in guest,
+  from the business date or earlier), the assign (a guest already checked
+  in) and the swap in `stayExtras.ts` (from the business date or earlier;
+  neither of the two counts) - each above its first write (MEMORY 243).
+- **B** - `db/migrations/137_future_move_room_is_dirty.sql` (cp6 took 134
+  to 136 while this ran): the business date moves in one place, a night audit run
+  becoming `completed`, so a trigger there asks 130's question for the new
+  date. New function and trigger; no earlier function changed (MEMORY 317).
+- **C** - `GET /:code/early-arrival` answers `mayWaive` (the server's own
+  `mayWaive`, for the caller); `CheckInFlow` draws the tick from it instead
+  of `can(role, "approve", "reservation")`. Who may waive is unchanged.
+  (The server decides waiving in `mayWaive`, not in `api/src/permissions.ts`
+  or `roleGate.ts`, so the screen asks it rather than copying a list.)
+- **D** - online-checkin's `MessageTheDesk` (its CHANGELOG has the entry).
+- **E** - `src/modules/reservations/groupLead.test.tsx` (its CHANGELOG).
+- **F** - `pages/StayView.tsx` draws "Assign room" only for a role the
+  matrix gives `reservation: edit` - the question roleGate's `ROOMING` asks
+  of `/stays/:id/assign`, from the same matrix (`api/src/permissions.ts`,
+  which the website re-exports). Who may do what is unchanged.
+- **G, H** - `api/src/modules/admin/admin.ts` and `admin/pages/People.tsx`;
+  admin's ADM-8 has the whole of it.
+- **I** - MODULE.md's `PERSISTED` request and DEFECTS.md's FD-6 "Still true
+  after this" closed: the admin lane's merge keeps `stay-view` (D22-23).
+
+**Found**
+- **FD-17** (open) - a booking taken out of its room still shows that room
+  (`GET /stays/:id` and the Rooms tile: Lata Bhosale on 204 after "Take them
+  out of the room").
+- Controls on these screens the server refuses for housekeeping, seen as
+  the Housekeeping sign-in (F asked for a list, not a sweep): a free room's
+  tile opens the Walk-in form (a walk-in is `reservation: create`); the
+  Calendar's 238 "Book room" cells (the same); the stay panel's "Settle and
+  check out", "Mark VIP" and "More options" (change dates, move, exchange,
+  inclusions, void - all `reservation: edit` or `cancel`).
+- **FD-16** (open, DEFECTS.md) - the check-in's and the swap's fallback date
+  is `hotels.business_date`, which never moves once a night audit has run;
+  the screens send their own date, so only a hand-sent call is behind.
+- The late check-out's waive tick still asks the role (FD-14's note); the
+  same `mayWaive` answer would do it and D24-18 reads as covering it. Not
+  done - not in A-E.
+
+**Proved** (this copy, database `fidato_s5`, API 8813, web 5213)
+- The six, on cp6 `c57d7ee` merged into this branch (migration 137):
+  `npx tsc -p tsconfig.app.json --noEmit` exit 0; `cd api && npx tsc
+  --noEmit` exit 0; `npm test` 70 files, 653 tests, exit 0; `cd api && npm
+  test` 92 files, 1455 tests, exit 0; `bash db/tests/run.sh` all 1151
+  assertions, exit 0 ("moved-out room" 9/9); `bash db/tests/rerun.sh` all
+  137 migrations re-runnable, exit 0.
+- Each fix's test fails without it: **A** - `inHouseRule.test.ts` on the old
+  routes, 6 of 14 fail (walk-in sentence; move, swap, assign "expected 200
+  to be 409" or another sentence; the sixth a knock-on of the old move going
+  through). **B** - the database suite with 137's trigger left out: "moved-out
+  room" 8 passed, 1 failed, "got clean". **C** - `earlyCheckIn.test.tsx` on
+  the old screen, "expected <input> to be null"; the route's answer,
+  "expected undefined to be false". **D** - `onlineCheckin.test.tsx` on the
+  old page, the words never shown. **E** - `groupLead.test.tsx` with the
+  wrong id sent, "res-a" for "res-b". **F** - `front-desk.test.tsx` without
+  the guard, "expected <button> to be null". **G, H** - ADM-8.
+- Screens, `.local/screenshots/2026-09-24-follow-ups/` in the main folder,
+  desktop 1280x800 and phone 390x844: `01-move-refused-names-guest-*` ("Not
+  moved: Ganesh Patil (FH-2608-5004) is still in room 204. Check them out
+  first, or choose another room."), `02-walk-in-refused-names-guest-*`
+  ("Could not check in", the same words), `03-check-in-waive-hidden-hotel-
+  admin-*` and `03-check-in-waive-offered-owner-desktop`, `04-guest-page-
+  messages-sent-and-handled-*`, `05-rooms-board-assign-room-hidden-
+  housekeeping-*` and `05-...-shown-reception-desktop`, `06-people-gm-own-
+  row-no-switch-off-*`. Taken with headless Edge driven over its debugging
+  port (the app's pane could not draw while hidden).
+
+**Left open** - FD-16, FD-17; the late check-out's tick and the
+housekeeping controls above (D24-18 reads as covering them); changing your
+own role on People (ADM-8); FD-10 and FD-12 as before.
+A move dated for a later night into a room whose late-checkout guest has
+still not left when that night comes goes through with no refusal (nothing
+is written that night; the owner's scope allows it ahead of time). The demo
+setup used for the screens (Lata Bhosale's advance room on 204 taken off;
+5EL's check-in hour 23:30 and a ₹500 early charge; the "Admin" dev sign-in
+made a 5EL-only administrator; a guest link unlocked with a code put in by
+hand, as the door's tests do) lived only in `fidato_s5`, now dropped.
+
+**Commits:** `c899565` (A-E), `f740274` (F-I and notes), `39f1ada` (137); merges
+`b777b73`, `8036dba`, `c45f5d5`; and these notes.
+
+---
+
 ## 2026-09-24 · The three stopped branches finished; early check-in works again (FD-15, FD-14)
 
 **Asked for:** the master, for the owner - finish and prove the three

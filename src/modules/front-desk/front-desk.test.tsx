@@ -1,9 +1,9 @@
 import { describe, it, expect, beforeEach } from "vitest";
 import {
-  render, screen, within, fireEvent, waitFor,
+  render, screen, within, fireEvent, waitFor, cleanup,
 } from "@testing-library/react";
 import App from "@/App";
-import { HOTEL, go, startSignedIn } from "@/test/app";
+import { AGRA_HOTEL, HOTEL, go, signedIn, startSignedIn } from "@/test/app";
 
 /* The front desk's screens, rendered through the whole application —
    the shell, the session and the route included. Moved here from
@@ -44,6 +44,27 @@ describe("the tape chart at /h/:code/stay", () => {
       (await screen.findByRole("tab", { name: "Rooms" }))
         .getAttribute("aria-selected"),
     ).toBe("true");
+  });
+
+  /* D24-18: a control the server refuses is not offered. "Assign room" is
+     roleGate's ROOMING (reservation edit); housekeeping read Rooms and hold
+     no such grant. Who may do what is unchanged. */
+  it("offers Assign room to reception, and not to housekeeping, whom the server refuses", async () => {
+    render(<App />);
+    await screen.findAllByText(/Superior|Deluxe/i);
+    expect(screen.getByRole("button", { name: /Assign room/ })).toBeTruthy();
+    cleanup();
+
+    signedIn({ scope: {
+      staffId: "44444444-4444-4444-4444-444444444444", email: "hk@fidato.in",
+      fullName: "Housekeeper", isGroupAdmin: false,
+      hotels: [{ hotelId: AGRA_HOTEL, role: "housekeeping" }],
+    } });
+    render(<App />);
+    await screen.findAllByText(/Superior|Deluxe/i);
+    expect(screen.getByRole("tab", { name: "Rooms" }).getAttribute("aria-selected"),
+      "the Rooms board is open to them").toBe("true");
+    expect(screen.queryByRole("button", { name: /Assign room/ })).toBeNull();
   });
 
   it("renders fourteen date columns", async () => {

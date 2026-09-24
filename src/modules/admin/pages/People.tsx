@@ -222,8 +222,10 @@ function PersonCard({ person, places, onGrant, onChanged }: {
   /* A property of theirs the signed-in person runs, in a role they could
      give there - the only chips they may take away (the owner, 24
      September: nobody removes somebody above them). */
+  const me = useSession((s) => s.scope?.staffId);
   const mayTake = (a: { code: string; role: string }) =>
-    places.some((p) => p.code === a.code && p.roles.includes(a.role));
+    person.id !== me   // never your own (D24-19); the server refuses it
+    && places.some((p) => p.code === a.code && p.roles.includes(a.role));
   const mayGrant = !person.isGroupAdmin
     && places.some((p) => !person.access.some((a) => a.code === p.code));
   const [busy, setBusy] = useState(false);

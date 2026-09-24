@@ -1,7 +1,8 @@
 import { useState, useMemo, useEffect, type ReactNode } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useNavigate, useParams, useSearchParams } from "react-router";
-import { useSession } from "@/lib/session";
+import { useRole, useSession } from "@/lib/session";
+import { can } from "@/lib/permissions";
 import {
   ChevronDown, ChevronRight, ChevronLeft, Globe, User, Building2,
   Sparkle, Wrench, AlertTriangle, CloudOff, RotateCw,
@@ -152,6 +153,11 @@ export default function StayViewPage({ view }: {
   const hotelId = params.code ?? fallbackHotel;
   const navigate = useNavigate();
   const scope = useSession((s) => s.scope);
+  /* The question the server's gate asks of "Assign room" (roleGate's
+     ROOMING: reservation edit, nobody added by name), from the same matrix.
+     Housekeeping read Rooms and are refused it, so they are not offered it
+     (D24-18). */
+  const mayRoom = can(useRole(), "edit", "reservation");
 
   const [searchParams, setSearchParams] = useSearchParams();
   const selectedId = searchParams.get("res");
@@ -501,7 +507,7 @@ export default function StayViewPage({ view }: {
                 nothing. The flow it needed did not exist: check-in
                 assigns a room AT arrival, and nothing assigned one
                 before it. */}
-            <AssignRoomFlow hotelId={hotelId} />
+            {mayRoom && <AssignRoomFlow hotelId={hotelId} />}
           </div>
         </div>
 

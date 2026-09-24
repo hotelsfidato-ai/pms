@@ -28,6 +28,46 @@ The night-audit checklist (`api/src/modules/night-audit/checklist.ts:144`) and a
 
 ## Fixed — the solution is here; do not work it out again
 
+### ADM-8 · A GM or a hotel's Admin could take their own property away, and a refused removal said "They did not have access" - FIXED 24 September
+
+**Found** - by the owner's D24-19 question and the master (24 September).
+`DELETE /admin/staff/:id/access/:code` asked only whether the caller runs
+the hotel; a GM's own `gm` row, or a hotel Admin's own `admin` row, is a
+role they may give there, so they could remove it and lock themselves out
+of the hotel they run. People offered the ✕ on their own chip. Their own
+Deactivate was refused by the route ("You cannot deactivate your own
+account...") but offered: `may_switch_person` is true for yourself. And
+removing a row the caller may not remove (a GM on the hotel's Admin) matched
+no row under 133's policy and answered "They did not have access to that
+property."
+
+**Fixed** (the owner's D24-19; H needed no decision) - the delete route
+refuses your own access first ("You cannot take away your own access. Ask
+the owner or an administrator to do it."), then reads the row: none, "They
+did not have access to that property."; a role the caller cannot give,
+"You may not remove their access: their role here is one you cannot give.
+Ask the owner or an administrator to do it." - all before the delete. The
+list's `maySwitch` is false on your own row; People draws no ✕ on your own
+chips. No migration: the rule is the routes'.
+
+**Proved** - `api/test/modules/admin/propertyAdmin.test.ts`, "D24-19 -
+nobody switches their own access off" (3): on the old routes all 3 fail
+("gm: expected 200 to be 409"; two are knock-ons, the GM having removed
+themselves); with only the row check taken out, H fails alone ("expected
+'They did not have access to that prop…'"); with only the list line taken
+out, "gm's own row: expected true to be false". `admin.test.tsx`, "offers
+the signed-in GM no way to take their own access away" (fails on the old
+screen: the ✕ is there). On screen as the GM at 5EL, desktop and phone:
+their own row has Password and Edit only; Test Reception's has Deactivate
+and "Remove 5EL" (`.local/screenshots/2026-09-24-follow-ups/06-*`).
+
+**Left** - changing your OWN role (`POST /admin/staff/:id/access` for
+yourself, e.g. a GM making themselves Reception) is still allowed; it is
+not switching access off, and was not asked. A question for the owner.
+
+**The rule** - a refusal must name what was refused: "matched no row" is
+not "had nothing".
+
 ### ADM-7 · A GM could take over the hotel's Admin: people "at a hotel I run" included people above the caller
 
 **Found** — 24 September, finishing D23-2: with it a hotel's Admin would reset a hotel-level Owner's password the same way.

@@ -3,8 +3,6 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { Check, LogIn, BedDouble, Users, Sparkle } from "lucide-react";
 import { cn } from "@/lib/cn";
 import { money, dateShort } from "@/lib/format";
-import { useRole } from "@/lib/session";
-import { can } from "@/lib/permissions";
 import {
   Button, Field, Input, NativeSelect, StatusPill, Tooltip, toast,
   Dialog, DialogContent, DialogTrigger, Term,
@@ -53,7 +51,6 @@ export function CheckInFlow({
   const [idSkipReason, setIdSkipReason] = useState("");
   const [earlyReason, setEarlyReason] = useState("");
   const [waiveEarly, setWaiveEarly] = useState(false);
-  const mayWaive = can(useRole(), "approve", "reservation");
 
   /* Captured means a TYPE and a NUMBER. Derived, never asserted — the
      server derives it the same way and cannot be told otherwise. */
@@ -378,10 +375,11 @@ export function CheckInFlow({
                     )}
                   </Field>
                   {/* THE WAIVE IS A MANAGER'S. Shown only to somebody
-                      who holds it — and refused again on the server,
-                      because a hidden checkbox is a courtesy and not a
-                      permission. */}
-                  {earlyByClock && early.data?.charge != null && mayWaive && (
+                      the server says may waive (rule C: its own mayWaive,
+                      not a role list here) — and refused again on the
+                      server, because a hidden checkbox is a courtesy and
+                      not a permission. */}
+                  {earlyByClock && early.data?.charge != null && early.data.mayWaive && (
                     <label className="flex items-start gap-2.5 cursor-pointer">
                       <input
                         type="checkbox"

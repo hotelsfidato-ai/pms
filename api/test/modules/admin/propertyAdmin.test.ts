@@ -601,3 +601,87 @@ describe("one property, for whoever runs it", () => {
     }
   });
 });
+
+/* ══════════════════════════════════════════════════════════════════
+   D24-19 - a GM or a hotel's Admin may not switch their OWN access off
+   (the owner, 24 September: "refuse it"). Taking away their own property
+   was allowed - their role is one they may give - and locked them out of
+   the hotel they run. Deactivating themselves was refused already, but
+   People offered the button. And the delete of a row the caller may not
+   remove said "They did not have access to that property" (item H).
+   ══════════════════════════════════════════════════════════════════ */
+describe("D24-19 - nobody switches their own access off", () => {
+  const ids: Record<string, string> = {};
+  const rowAt = async (id: string) => {
+    const db = await admin();
+    try {
+      return (await db.query<{ role: string }>(
+        `select sh.role from staff_hotels sh join hotels h on h.id = sh.hotel_id
+          where sh.staff_id = $1 and h.code = 'AGR'`, [id])).rows[0]?.role ?? null;
+    } finally { await db.end(); }
+  };
+
+  beforeAll(async () => {
+    const db = await admin();
+    try {
+      for (const [key, role] of [["gm", "gm"], ["adm", "admin"], ["clerk", "front_desk"]] as const) {
+        ids[key] = (await db.query<{ id: string }>(
+          `insert into staff (email, full_name, firebase_uid)
+           values ($1, $2, $3)
+           on conflict (email) do update set is_active = true
+           returning id::text`,
+          [`pa-self-${key}@fidato.in`, `PATEST Self ${key}`, `test-uid-paself${key}`])).rows[0]!.id;
+        await db.query(
+          `insert into staff_hotels (staff_id, hotel_id, role)
+           select $1, id, $2 from hotels where code = 'AGR'
+           on conflict (staff_id, hotel_id) do update set role = $2`, [ids[key], role]);
+      }
+    } finally { await db.end(); }
+  });
+
+  afterAll(async () => {
+    const db = await admin();
+    try {
+      await db.query("delete from staff_hotels where staff_id = any($1)", [Object.values(ids)]);
+      await db.query("update staff set is_active = false where id = any($1)", [Object.values(ids)]);
+    } finally { await db.end(); }
+  });
+
+  it("refuses a GM and a hotel's Admin taking their own property away, and writes nothing", async () => {
+    for (const key of ["gm", "adm"]) {
+      const res = await as(ids[key]!, `/admin/staff/${ids[key]}/access/AGR`, "DELETE");
+      expect(res.status, key).toBe(409);
+      expect(((await res.json()) as { reason: string }).reason).toBe(
+        "You cannot take away your own access. Ask the owner or an administrator to do it.");
+      expect(await rowAt(ids[key]!), key).toBe(key === "gm" ? "gm" : "admin");
+    }
+  });
+
+  it("offers neither a switch on their own row, and still on somebody else's", async () => {
+    for (const key of ["gm", "adm"]) {
+      const { staff } = (await (await as(ids[key]!, "/admin/staff")).json()) as {
+        staff: { id: string; maySwitch: boolean }[];
+      };
+      expect(staff.find((p) => p.id === ids[key])?.maySwitch, `${key}'s own row`).toBe(false);
+      expect(staff.find((p) => p.id === ids["clerk"])?.maySwitch, `${key} on the clerk`).toBe(true);
+    }
+    const self = await as(ids["gm"]!, `/admin/staff/${ids["gm"]}/deactivate`, "POST", {});
+    expect(self.status).toBe(409);
+    expect(((await self.json()) as { reason: string }).reason).toMatch(/^You cannot deactivate your own account/);
+  });
+
+  it("tells a GM they may not remove an Admin, not that the Admin had no access (H)", async () => {
+    const res = await as(ids["gm"]!, `/admin/staff/${ids["adm"]}/access/AGR`, "DELETE");
+    expect(res.status).toBe(409);
+    expect(((await res.json()) as { reason: string }).reason).toBe(
+      "You may not remove their access: their role here is one you cannot give. "
+      + "Ask the owner or an administrator to do it.");
+    expect(await rowAt(ids["adm"]!)).toBe("admin");
+
+    /* Somebody with no row there still hears that. */
+    await as(ids["adm"]!, `/admin/staff/${ids["clerk"]}/access/AGR`, "DELETE");
+    const none = await as(ids["gm"]!, `/admin/staff/${ids["clerk"]}/access/AGR`, "DELETE");
+    expect(((await none.json()) as { reason: string }).reason).toBe(
+      "They did not have access to that property.");
+  });
+});

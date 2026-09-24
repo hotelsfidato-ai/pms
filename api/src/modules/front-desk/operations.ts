@@ -106,6 +106,31 @@ const refuse = (
   reason: string, needs?: "late-reason" | "early-reason",
 ): Outcome => (needs ? { ok: false, reason, needs } : { ok: false, reason });
 
+/** Is somebody still IN this room - app.in_house (129), the one rule - other
+    than the stays in `except`? The sentence if so. FD-11's, and the owner's
+    rule A (24 September): asked by every route that puts a guest in a room
+    NOW - the check-in, the walk-in, a move or a swap from tonight, a room for
+    a guest already checked in. A room given ahead to a booking that has not
+    arrived is a hold, not a guest in it: its check-in asks again on the day. */
+export async function stillIn(
+  client: Client, hotelId: string, roomId: string, roomNumber: string,
+  except: string[] = [],
+): Promise<string | null> {
+  const { rows } = await client.query<{ guest: string; reference: string }>(
+    `select g.full_name as guest, r.reference
+       from app.in_house($1) i
+       join reservations r on r.id = i.reservation_id
+       join guests g on g.id = r.guest_id
+      where i.room_id = $2 and i.reservation_id <> all($3::uuid[])
+      limit 1`,
+    [hotelId, roomId, except],
+  );
+  return rows[0]
+    ? `${rows[0].guest} (${rows[0].reference}) is still in room ${roomNumber}. `
+      + "Check them out first, or choose another room."
+    : null;
+}
+
 interface CheckInBody {
   roomNumber?: string;
   /* Why the room was given before the property's check-in time, and
@@ -322,21 +347,8 @@ operations.post("/:code/stays/:id/check-in", async (c) => {
          one rule (129). A guest past their departure date who has not
          checked out holds no night that overlaps this stay, so the clash
          check below never saw them. */
-      const { rows: inRoom } = await client.query<{ guest: string; reference: string }>(
-        `select g.full_name as guest, r.reference
-           from app.in_house($1) i
-           join reservations r on r.id = i.reservation_id
-           join guests g on g.id = r.guest_id
-          where i.room_id = $2
-          limit 1`,
-        [hotelId, room.id],
-      );
-      if (inRoom[0]) {
-        return refuse(
-          `${inRoom[0].guest} (${inRoom[0].reference}) is still in room ${roomNumber}. `
-          + "Check them out first, or choose another room.",
-        );
-      }
+      const inRoom = await stillIn(client, hotelId, room.id, roomNumber);
+      if (inRoom) return refuse(inRoom);
 
       /* The room must be free for the WHOLE stay, not merely tonight.
          The EXCLUDE constraint on room_assignments would catch an
@@ -539,7 +551,7 @@ operations.post("/:code/stays/:id/check-in", async (c) => {
    ordinary one — and the check-in route refuses independently either
    way, so this is what the screen shows, never what it decides. */
 operations.get("/:code/early-arrival", async (c) => {
-  const body = await withSession(c.get("subject"), async (client) => {
+  const body = await withSession(c.get("subject"), async (client, session) => {
     const hotelId = await hotelIdFor(client, c.req.param("code"));
     if (!hotelId) return null;
     const { rows } = await client.query<{
@@ -563,6 +575,10 @@ operations.get("/:code/early-arrival", async (c) => {
          screens show a dash rather than a zero. */
       charge: r.charge === null ? null : Number(r.charge),
       lateCharge: r.late_charge === null ? null : Number(r.late_charge),
+      /* Whether THIS person may waive either charge: the check-in's and the
+         check-out's own question (mayWaive), so a screen offers the tick to
+         exactly those the server will then accept it from (rule C). */
+      mayWaive: await mayWaive(client, hotelId, session.staffId),
     };
   });
   return body ? c.json(body) : c.json({ error: "No such property." }, 404);
@@ -845,12 +861,10 @@ operations.post("/:code/walk-ins", async (c) => {
        question below, and it names the booking. */
     const { rows: roomRows } = await client.query<{
       id: string; room_type_id: string; housekeeping_status: string;
-      occupied: boolean; base_rate: string | null;
+      base_rate: string | null;
       type_name: string; max_occupancy: number;
     }>(
       `select rm.id, rm.room_type_id, rm.housekeeping_status,
-              exists (select 1 from app.in_house(rm.hotel_id) i
-                       where i.room_id = rm.id) as occupied,
               rt.base_rate,
               rt.name as type_name, rt.max_occupancy
          from rooms rm
@@ -885,9 +899,9 @@ operations.post("/:code/walk-ins", async (c) => {
       );
     }
 
-    if (room.occupied) {
-      return refuse("Somebody is already in that room.");
-    }
+    /* Named, as the check-in names them (rule A, 24 September). */
+    const inRoom = await stillIn(client, hotelId, room.id, roomNumber);
+    if (inRoom) return refuse(inRoom);
 
     const departure = new Date(`${businessDate}T00:00:00Z`);
     departure.setUTCDate(departure.getUTCDate() + nights);
@@ -1147,6 +1161,12 @@ operations.post("/:code/stays/:id/assign", async (c) => {
     if (room[0].oos) {
       return refuse(`Room ${roomNumber} is out of service.`);
     }
+    /* A guest already checked in goes into the room now (rule A). A booking
+       not yet arrived is only held: its check-in asks on the day. */
+    if (stay[0].status === "checked_in") {
+      const inRoom = await stillIn(client, hotelId, room[0].id, roomNumber, [stayId]);
+      if (inRoom) return refuse(inRoom);
+    }
 
     /* A different room TYPE is allowed but said out loud. Upgrades and
        downgrades happen constantly; silently changing what the guest
@@ -1221,7 +1241,8 @@ operations.post("/:code/stays/:id/move", async (c) => {
 
   const roomNumber = input.roomNumber?.trim();
   if (!roomNumber) return c.json(refuse("Which room?"), 409);
-  if (!input.from) return c.json(refuse("Moving from which night?"), 409);
+  const from = input.from;
+  if (!from) return c.json(refuse("Moving from which night?"), 409);
 
   const REASONS = ["move", "upgrade", "downgrade", "fault", "group_consolidation"];
   const reason = input.reason ?? "move";
@@ -1264,6 +1285,15 @@ operations.post("/:code/stays/:id/move", async (c) => {
     );
     if (!room[0]) return refuse(`There is no room ${roomNumber} here.`);
     if (room[0].oos) return refuse(`Room ${roomNumber} is out of service.`);
+
+    /* A checked-in guest moved from tonight (or earlier) goes in now (rule
+       A). A move for a later night, or of a booking not yet arrived, is a
+       hold changing. Asked before app.move_room writes anything. */
+    if (stay[0].status === "checked_in"
+        && from <= await businessDateFor(client, hotelId)) {
+      const inRoom = await stillIn(client, hotelId, room[0].id, roomNumber, [stayId]);
+      if (inRoom) return refuse(inRoom);
+    }
 
     try {
       const { rows: moved } = await client.query<{

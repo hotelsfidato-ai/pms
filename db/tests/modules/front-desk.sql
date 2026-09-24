@@ -220,6 +220,26 @@ begin
   perform test.ok('moved-out room','a booking that never arrived, moved, leaves its room clean',
     hk = 'clean', 'got ' || hk);
 
+  -- The night audit closes the 25th, the way it does: a run opened, then
+  -- completed. The move dated the 26th now takes effect, so 203 - slept in
+  -- until tonight - is dirty; 204, the room moved into, is not (the owner,
+  -- 24 September).
+  insert into night_audit_runs (hotel_id, business_date, status)
+  values (h, date '2026-08-25', 'running');
+  select housekeeping_status into hk from rooms where hotel_id = h and number = '203';
+  perform test.ok('moved-out room','a run still running moves no date and dirties nothing',
+    hk = 'clean', 'got ' || hk);
+  update night_audit_runs set status = 'completed', completed_at = now()
+   where hotel_id = h and business_date = date '2026-08-25';
+  select housekeeping_status into hk from rooms where hotel_id = h and number = '203';
+  perform test.ok('moved-out room','a move dated tomorrow dirties the old room when the day closes',
+    hk = 'dirty', 'got ' || hk);
+  select count(*) into n from rooms
+   where hotel_id = h and number in ('204','205','206','207','208')
+     and housekeeping_status = 'clean';
+  perform test.ok('moved-out room','and no other room: moved into, swapped, never entered',
+    n = 5, n || ' of 5 clean');
+
   alter table hotels disable trigger hotels_no_delete;
   delete from hotels where id = h;
   alter table hotels enable trigger hotels_no_delete;

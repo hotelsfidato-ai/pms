@@ -668,7 +668,8 @@ admin.get("/admin/staff", async (c) => {
                  questions the write routes ask, so the screen offers a
                  button only where the server will take it. */
               app.manages_person(s.id)    as may_edit,
-              app.may_switch_person(s.id) as may_switch,
+              /* Never your own row: the deactivate route refuses it (D24-19). */
+              (app.may_switch_person(s.id) and s.id <> app.current_user_id()) as may_switch,
               app.may_set_password(s.id)  as may_password
          from staff s
         order by s.is_group_admin desc, s.full_name`,
@@ -1037,13 +1038,36 @@ admin.post("/admin/staff/:id/access", async (c) => {
 
 admin.delete("/admin/staff/:id/access/:code", async (c) => {
   try {
-    const result = await withSession(c.get("subject"), async (client) => {
+    const result = await withSession(c.get("subject"), async (client, session) => {
+      /* D24-19: nobody switches their own access off - a GM or a hotel's
+         Admin who did would be locked out of the hotel they run. */
+      if (c.req.param("id") === session.staffId) {
+        return refuse(
+          "You cannot take away your own access. Ask the owner or an "
+          + "administrator to do it.");
+      }
+
       const hotelId = await hotelFor(client, c.req.param("code"));
       if (!hotelId) return refuse("No such property.");
 
       /* Taking access away is scoped exactly as giving it is. A gate on
          one and not the other is a gate. */
       await client.query("select app.require_hotel_admin($1)", [hotelId]);
+
+      /* A role the caller cannot give is not theirs to take away (133's
+         row policy). Asked first, so the refusal says that - the delete
+         matching no row used to answer "They did not have access". */
+      const { rows: held } = await client.query<{ may: boolean }>(
+        `select role = any (app.grantable_roles(hotel_id)) as may
+           from staff_hotels where staff_id = $1 and hotel_id = $2`,
+        [c.req.param("id"), hotelId],
+      );
+      if (!held[0]) return refuse("They did not have access to that property.");
+      if (!held[0].may) {
+        return refuse(
+          "You may not remove their access: their role here is one you "
+          + "cannot give. Ask the owner or an administrator to do it.");
+      }
 
       const { rowCount } = await client.query(
         "delete from staff_hotels where staff_id = $1 and hotel_id = $2",

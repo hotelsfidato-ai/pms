@@ -719,6 +719,15 @@ describe("a message to the front desk (D23-14)", () => {
     expect(handled?.handledAt).toBeTruthy();
     expect((await messagesOf(deskId)).map((m) => m.id), "no longer unread").not.toContain(unread!.id);
     expect(await messagesOf(deskId, "?reservation=not-a-booking")).toEqual([]);
+
+    /* The guest's own page lists it as Handled (the owner, 24 September):
+       the door's list of this stay's requests, and nobody's name in it. */
+    const theirs = (await (await asGuest(`/${link}/requests`, "GET", undefined, unlock)).json()) as {
+      requests: Record<string, unknown>[];
+    };
+    const mine = theirs.requests.find((q) => q["what"] === "A late checkout?");
+    expect(mine).toMatchObject({ kind: "desk", status: "done" });
+    expect(Object.keys(mine!).sort()).toEqual(["createdAt", "kind", "status", "wanted", "what"]);
   });
 
   it("stops at ten waiting, like a request", async () => {
