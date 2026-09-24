@@ -13,7 +13,7 @@ import type { Role } from "@/lib/permissions";
    viewer: the server refuses both, and a menu that offers somebody a screen
    that refuses them reads as a broken system (SPA-2's lesson). If the server
    list changes, this one changes with it. */
-const DESK_ROLES: readonly Role[] = ["owner", "admin", "gm", "hotel_manager", "front_desk"];
+export const DESK_ROLES: readonly Role[] = ["owner", "admin", "gm", "hotel_manager", "front_desk"];
 
 export const nav: ServiceNavEntry[] = [
   { section: "front-desk", order: 35, workingMenus: ["front_desk"],

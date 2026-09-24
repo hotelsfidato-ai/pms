@@ -8,6 +8,36 @@ project, still goes in the root `CHANGELOG.md`.
 
 ---
 
+## 2026-09-24 · The group's lead guest, chosen on the group's screen (D22-52)
+
+**Asked for:** the owner's D22-52 - the lead is by default the room booked
+first that still stands, and the desk can assign another. Started by a helper
+on `guest-messaging/group-lead`, finished on `front-desk/finish-24sep`.
+
+**Shipped** - `POST /:code/groups/:id/lead` (`groups.ts`): the room must be in
+this group at this property and still stand, both refused above the one
+write (MEMORY 243); mapped in `api/src/roleGate.ts` as a change to a booking
+(`reservation: edit`). `GET /:code/groups/:id` answers `leadId` from
+`app.group_lead`. The group panel has a "Lead guest" column: the lead's
+button carries a flag, a cancelled room's is disabled, and a press says
+"<guest> leads the group - The group's confirmation and its review request go
+to them."
+
+**Proved** - the route in `api/test/modules/reputation/reputation.test.ts`
+(assign, refuse outside the group or cancelled, refuse a role that may not
+change a booking). On screen: pressing Kavita Salunkhe's button in the demo's
+Pancham Hall function moved the flag and `app.group_lead` answered
+FH-2608-5010-303 (`.local/screenshots/2026-09-24-front-desk/05-group-lead-*`).
+
+**Left open** - on a phone the rooms table slides sideways and "Lead guest"
+is at its far right, beside "Host pays". **The owner, 24 September: keep it
+for now**; the panel's phone layout goes with the design work. No web test
+drives the lead button.
+
+**Commits:** `8e3c1e2` (the helper's), merged in `891790f`.
+
+---
+
 ## 2026-09-21 · A booking may be a returning guest's, and carries the two ticks
 
 **Asked for:** the CRM chat's phase 1 (`docs/briefs/crm.md`, D21-20, D21-72,

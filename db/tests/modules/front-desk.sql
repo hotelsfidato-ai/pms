@@ -151,3 +151,82 @@ begin
   select count(*) into n from hotels where code = 'FDH';
   perform test.ok('one in-house rule','the fixture does not outlive the test', n = 0, n || ' left behind');
 end $$;
+
+
+-- =============================================================================
+-- FD-9 · the room a guest moved out of is dirty (the owner's D23-12)
+-- =============================================================================
+-- 054 shortens the old room's assignment instead of releasing it, and 070 only
+-- dirtied on a release, so the room left behind stayed clean for the next
+-- guest. Called through app.move_room and app.exchange_rooms directly, as the
+-- routes call them (MEMORY 318). Its own property, on 25 August 2026.
+do $$
+declare
+  h uuid; t uuid; g uuid;
+  stays uuid[] := '{}'; s uuid;
+  hk text; n int;
+  room_of text[] := array['201','203','205','206','207'];
+  i int;
+begin
+  h := app.provision_property_unchecked('FDM','Moved Out Test','Nowhere');
+  update hotels set business_date = date '2026-08-25' where id = h;
+  perform app.bulk_create_rooms(h, 'STD', 2::smallint, 201, 208);
+  select id into t from room_types where hotel_id = h and code = 'STD';
+  update rooms set housekeeping_status = 'clean' where hotel_id = h;
+  insert into guests (full_name) values ('Moved-out fixture guest') returning id into g;
+
+  -- Five stays, each in its room since the 23rd: four checked in, and the one
+  -- in 207 confirmed and never arrived.
+  for i in 1..5 loop
+    insert into reservations (hotel_id, reference, guest_id, room_type_id,
+                              check_in, check_out, agreed_rate, status)
+    values (h, 'FDM-' || room_of[i], g, t, date '2026-08-23', date '2026-08-28', 2000,
+            case when room_of[i] = '207' then 'confirmed' else 'checked_in' end)
+    returning id into s;
+    insert into room_assignments (hotel_id, reservation_id, room_id, from_date, to_date, reason)
+    select h, s, id, date '2026-08-23', date '2026-08-28', 'arrival'
+      from rooms where hotel_id = h and number = room_of[i];
+    stays := stays || s;
+  end loop;
+
+  -- Moved tonight: 201 is left behind, slept in.
+  perform app.move_room(h, stays[1], (select id from rooms where hotel_id = h and number = '202'),
+                        date '2026-08-25', 'move', null);
+  select housekeeping_status into hk from rooms where hotel_id = h and number = '201';
+  perform test.ok('moved-out room','a guest moved out tonight leaves the old room dirty (FD-9)',
+    hk = 'dirty', 'got ' || hk);
+  select housekeeping_status into hk from rooms where hotel_id = h and number = '202';
+  perform test.ok('moved-out room','and the room they moved into is left as it was',
+    hk = 'clean', 'got ' || hk);
+
+  -- Moved from tomorrow: they sleep in 203 tonight, so it is not dirty yet.
+  perform app.move_room(h, stays[2], (select id from rooms where hotel_id = h and number = '204'),
+                        date '2026-08-26', 'move', null);
+  select housekeeping_status into hk from rooms where hotel_id = h and number = '203';
+  perform test.ok('moved-out room','a move dated tomorrow leaves tonight''s room clean',
+    hk = 'clean', 'got ' || hk);
+
+  -- Two guests swap: somebody is in both rooms, so neither is dirtied under them.
+  perform app.exchange_rooms(h, stays[3], stays[4], date '2026-08-25', 'swap', null);
+  select count(*) into n from rooms
+   where hotel_id = h and number in ('205','206') and housekeeping_status = 'clean';
+  perform test.ok('moved-out room','an exchange dirties neither room - both have a guest in them',
+    n = 2, n || ' of 2 clean');
+
+  -- Nobody ever went into 207 (FD-10's question): moving the booking dirties nothing.
+  perform app.move_room(h, stays[5], (select id from rooms where hotel_id = h and number = '208'),
+                        date '2026-08-25', 'move', null);
+  select housekeeping_status into hk from rooms where hotel_id = h and number = '207';
+  perform test.ok('moved-out room','a booking that never arrived, moved, leaves its room clean',
+    hk = 'clean', 'got ' || hk);
+
+  alter table hotels disable trigger hotels_no_delete;
+  delete from hotels where id = h;
+  alter table hotels enable trigger hotels_no_delete;
+  alter table guests disable trigger guests_no_delete;
+  delete from guests where id = g;
+  alter table guests enable trigger guests_no_delete;
+
+  select count(*) into n from hotels where code = 'FDM';
+  perform test.ok('moved-out room','the fixture does not outlive the test', n = 0, n || ' left behind');
+end $$;

@@ -12,6 +12,36 @@ what it is, and what it still waits on, is in `MODULE.md`.
 
 ---
 
+## 2026-09-24 · A group is asked once, at its lead guest's room (D22-10, REV-3)
+
+**Asked for:** the owner's D22-10 - one review request per group, at the
+lead guest's room - with the lead as D22-52 decides it (`app.group_lead`,
+guest messages' migration "a group's lead"). Started by a helper on
+`guest-messaging/group-lead` (stopped mid-task, 23 September), finished on
+`front-desk/finish-24sep`.
+
+**Shipped** - `POST /:code/reviews/:id/ask` refuses any other room of a
+group (`REVIEWS_REFUSED.notLead`, 409) before the sender is touched, so
+nothing is recorded. The list shows every room of a group with the GROUP's
+ask - the latest about any of its rooms - and the lead's id and reference;
+only the lead's row offers the buttons, the others read "The group is asked
+once, at <reference>." REV-3 moved to Fixed.
+
+**Proved** - `api/test/modules/reputation/reputation.test.ts`, "a group,
+asked once at its lead guest's room" (5): the other rooms refused and nothing
+recorded; the room booked first asked, every room then shown as asked; the
+desk moves the lead and the ask moves with it; a lead outside the group or
+cancelled refused, nothing changed; a role that may not change a booking
+refused (403). With the `notLead` refusal and the lead route's "no longer
+stands" refusal switched off, 3 of them fail ("expected 200 to be 409");
+back on, the targeted run is 8 files, 145 tests, exit 0.
+`reputation.test.tsx`, "offers a group's ask at its lead's room only": one
+WhatsApp button per drawing, the sentence on the other room.
+
+**Commits:** `8e3c1e2` (the helper's), merged in `891790f`.
+
+---
+
 ## 2026-09-19 · Reviews, and the link the owner has not given
 
 **Asked for:** the owner's **D18-14** - "ask the guest after check-out and

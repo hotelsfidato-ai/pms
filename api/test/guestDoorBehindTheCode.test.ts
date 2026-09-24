@@ -304,6 +304,8 @@ describe("the code unlocks the phone that answered, not the link (D21-6)", () =>
         "guest_details_submit").toBe(false);
       expect((await one("select app.guest_request_make($1, $2, 'spa', 'A massage', null) as v")).v,
         "guest_request_make").toBe(false);
+      expect((await one("select app.guest_request_make($1, $2, 'desk', 'Towels', null) as v")).v,
+        "guest_request_make, a message to the desk (D23-14)").toBe(false);
     }
   });
 
@@ -636,5 +638,96 @@ describe("a spa or laundry request", () => {
       requests: { what: string; status: string }[];
     };
     expect(theirs.requests.find((q) => q.what === "A massage")?.status).toBe("done");
+  });
+});
+
+/* ── A message to the front desk (D23-14, migration 132) ───────────── */
+
+describe("a message to the front desk (D23-14)", () => {
+  type Msg = { id: string; what: string; reference: string; handledBy: string | null; handledAt: string | null };
+  const messagesOf = async (who: string, query = "") =>
+    ((await (await asStaff(who, `/5EL/online-checkin/messages${query}`)).json()) as { messages: Msg[] }).messages;
+  const deskRows = async () => (await sql(
+    `select reservation_id::text as stay, what from guest_requests
+      where hotel_id = $1 and kind = 'desk' order by created_at`, [hotelId])).rows;
+
+  it("is refused after a wrong code and to the link alone, and nothing is kept", async () => {
+    await sql(
+      `insert into guest_link_codes (link_id, reservation_id, code_hash, sent_to, expires_at)
+       select s.link_id, s.reservation_id, encode(digest('424242','sha256'),'hex'), '…0000',
+              now() + interval '10 minutes'
+         from app.guest_link_stay($1) s`, [hashForTests(link)]);
+    const wrong = await asGuest(`/${link}/verify`, "POST", { code: "111111" });
+    expect(wrong.status).toBe(401);
+    expect(((await wrong.json()) as { unlock?: string }).unlock, "a wrong code unlocks nothing").toBeUndefined();
+
+    for (const holding of [undefined, "an-unlock-nobody-was-given"]) {
+      const res = await asGuest(`/${link}/requests`, "POST", { kind: "desk", what: "Towels please" }, holding);
+      expect(res.status, `with ${holding ?? "the link alone"}`).toBe(404);
+      expect(((await res.json()) as { error: string }).error).toBe(NOTHING);
+    }
+    expect(await deskRows(), "nothing refused was written").toEqual([]);
+  });
+
+  it("lands on the booking its link names, and cannot reach another booking", async () => {
+    const unlock = await unlockWith(link);
+    const { rows: others } = await sql(
+      `select id::text as id from reservations
+        where hotel_id = $1 and id <> $2 and status not in ('cancelled', 'void')
+        order by created_at limit 1`, [hotelId, stayId]);
+    const otherStay = others[0].id as string;
+    const made = await asStaff(ownerId, `/5EL/stays/${otherStay}/guest-link`, "POST", {});
+    const otherLink = tokenOf(((await made.json()) as { link: string }).link);
+
+    try {
+      /* This phone's unlock on another booking's link: refused at the door,
+         and by the database function on its own (MEMORY 318). */
+      const across = await asGuest(`/${otherLink}/requests`, "POST", { kind: "desk", what: "Across" }, unlock);
+      expect(across.status).toBe(404);
+      expect((await sql("select app.guest_request_make($1, $2, 'desk', 'Across', null) as v",
+        [hashForTests(otherLink), hashForTests(unlock)])).rows[0].v).toBe(false);
+
+      /* A booking named in the body is not read: the link decides. */
+      const sent = await asGuest(`/${link}/requests`, "POST",
+        { kind: "desk", what: "Towels please", reservationId: otherStay }, unlock);
+      expect(sent.status, await sent.clone().text()).toBe(200);
+      expect(await deskRows()).toEqual([{ stay: stayId, what: "Towels please" }]);
+    } finally {
+      await sql("delete from guest_links where token_hash = $1", [hashForTests(otherLink)]);
+    }
+  });
+
+  it("waits unread in the booking's Guest messages, and the desk marks it handled under its name", async () => {
+    const unlock = await unlockWith(link);
+    expect((await asGuest(`/${link}/requests`, "POST", { kind: "desk", what: "A late checkout?" }, unlock)).status)
+      .toBe(200);
+
+    const unread = (await messagesOf(deskId)).find((m) => m.what === "A late checkout?");
+    expect(unread, "the property's unread list").toBeTruthy();
+    expect(unread!.handledAt).toBeNull();
+    const booking = await messagesOf(deskId, `?reservation=${stayId}`);
+    expect(booking.map((m) => m.id)).toContain(unread!.id);
+
+    const checkin = (await (await asStaff(deskId, "/5EL/online-checkin")).json()) as { requests: { what: string }[] };
+    expect(checkin.requests.map((q) => q.what), "not a spa or laundry request").not.toContain("A late checkout?");
+    expect((await asStaff(housekeeperId, "/5EL/online-checkin/messages")).status).toBe(403);
+
+    const done = await asStaff(deskId, `/5EL/online-checkin/requests/${unread!.id}`, "POST", { status: "done" });
+    expect(done.status).toBe(200);
+    const handled = (await messagesOf(deskId, `?reservation=${stayId}`)).find((m) => m.id === unread!.id);
+    expect(handled?.handledBy).toBe(`${TAG} Desk`);
+    expect(handled?.handledAt).toBeTruthy();
+    expect((await messagesOf(deskId)).map((m) => m.id), "no longer unread").not.toContain(unread!.id);
+    expect(await messagesOf(deskId, "?reservation=not-a-booking")).toEqual([]);
+  });
+
+  it("stops at ten waiting, like a request", async () => {
+    await sql("delete from guest_requests where reservation_id = $1", [stayId]);
+    await sql(
+      `insert into guest_requests (hotel_id, reservation_id, kind, what)
+       select $1, $2, 'desk', 'Message ' || n from generate_series(1, 10) n`, [hotelId, stayId]);
+    const unlock = await unlockWith(link);
+    const res = await asGuest(`/${link}/requests`, "POST", { kind: "desk", what: "An eleventh" }, unlock);
+    expect(res.status).toBe(409);
   });
 });

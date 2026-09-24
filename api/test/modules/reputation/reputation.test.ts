@@ -460,3 +460,98 @@ describe("who may see and use Reviews", () => {
     expect(body.maySetLink).toBe(false);
   });
 });
+
+/* ══════════════════════════════════════════════════════════════════
+   A GROUP IS ASKED ONCE, AT ITS LEAD GUEST'S ROOM (D22-10)
+   And the lead is app.group_lead (D22-52): the room booked first that
+   still stands, unless the desk has picked another.
+   ══════════════════════════════════════════════════════════════════ */
+
+describe("a group, asked once at its lead guest's room (D22-10, D22-52)", () => {
+  let groupId: string;
+  let first: string;
+  let second: string;
+  let cancelled: string;
+
+  beforeAll(async () => {
+    await asSession(ownerStaffId, async (q) => {
+      groupId = (await q(
+        "insert into reservation_groups (name, lead_hotel_id) values ($1, $2) returning id::text",
+        [`${TAG} party`, hotelId])).rows[0]!.id as string;
+      const guest = (await q(
+        `insert into guests (full_name, phone, email)
+         values ($1, '+919876543219', 'party@example.com') returning id::text`,
+        [`${TAG} Party Guest`])).rows[0]!.id as string;
+      const room = async (status: string) => (await q(
+        `insert into reservations (hotel_id, reference, guest_id, room_type_id,
+                                   check_in, check_out, agreed_rate, status, group_id)
+         values ($1, app.next_reference($1), $2,
+                 (select id from room_types where hotel_id = $1 limit 1),
+                 current_date - 2, current_date - 1, 2000, $3, $4)
+         returning id::text`, [hotelId, guest, status, groupId])).rows[0]!.id as string;
+      first = await room("checked_out");
+      second = await room("checked_out");
+      cancelled = await room("cancelled");
+    });
+  });
+
+  beforeEach(async () => {
+    await asOwner("/reviews/link", "PUT", { url: "https://g.page/r/example-review-link/review" });
+  });
+
+  it("refuses the group's other rooms by name, and records nothing", async () => {
+    connected();
+    const before = await reviewsRecorded();
+    const res = await asOwner(`/reviews/${second}/ask`, "POST", { channel: "whatsapp" });
+    expect(res.status).toBe(409);
+    expect((await res.json() as { reason: string }).reason).toBe(REVIEWS_REFUSED.notLead);
+    expect(seen, "nothing reached the receiver").toBeNull();
+    expect(await reviewsRecorded()).toBe(before);
+  });
+
+  it("asks at the room booked first, and shows every room of the group as asked", async () => {
+    connected();
+    expect((await asOwner(`/reviews/${first}/ask`, "POST", { channel: "whatsapp" })).status)
+      .toBe(200);
+    const body = await (await asOwner("/reviews")).json() as {
+      departures: Array<{ id: string; reference: string; askStatus: string | null;
+                          leadId: string | null; leadReference: string | null }>;
+    };
+    const lead = body.departures.find((r) => r.id === first)!;
+    const other = body.departures.find((r) => r.id === second)!;
+    expect(lead.leadId).toBe(first);
+    expect(other.leadId).toBe(first);
+    expect(other.leadReference).toBe(lead.reference);
+    expect(other.askStatus, "the group's ask, not the room's").toBe("sent");
+  });
+
+  it("lets the desk make another room the lead, and the ask moves with it", async () => {
+    const res = await call(staffByRole.get("front_desk")!,
+      `/groups/${groupId}/lead`, "POST", { reservationId: second });
+    expect(res.status, await res.clone().text()).toBe(200);
+    const group = await (await asOwner(`/groups/${groupId}`)).json() as { leadId: string };
+    expect(group.leadId).toBe(second);
+
+    connected();
+    expect((await asOwner(`/reviews/${first}/ask`, "POST", { channel: "whatsapp" })).status)
+      .toBe(409);
+    expect((await asOwner(`/reviews/${second}/ask`, "POST", { channel: "whatsapp" })).status)
+      .toBe(200);
+  });
+
+  it("refuses a lead outside the group or no longer standing, and changes nothing", async () => {
+    for (const reservationId of [departedId, cancelled]) {
+      const res = await asOwner(`/groups/${groupId}/lead`, "POST", { reservationId });
+      expect(res.status, reservationId).toBe(409);
+    }
+    const group = await (await asOwner(`/groups/${groupId}`)).json() as { leadId: string };
+    expect(group.leadId).toBe(second);
+  });
+
+  it("is refused to a role that may not change a booking", async () => {
+    const role = ASSIGNABLE_ROLES.find((r) => !grantsFor(r, "reservation").includes("edit"))!;
+    const res = await call(staffByRole.get(role)!,
+      `/groups/${groupId}/lead`, "POST", { reservationId: first });
+    expect(res.status, role).toBe(403);
+  });
+});

@@ -93,6 +93,9 @@ export const REVIEWS_REFUSED = {
   notCheckedOut:
     "A guest is asked for a review after they have left, never before. This "
     + "stay has not been checked out.",
+  notLead:
+    "A group is asked for a review once, at its lead guest's room. This room "
+    + "is not the lead.",
 } as const;
 
 /** Does the signed-in person hold one of these roles at this property? A
@@ -162,6 +165,10 @@ const DAYS_BACK = 30;
    one column filled in differently, because that is one question.
    ══════════════════════════════════════════════════════════════════ */
 
+/* ONCE PER GROUP, AT THE LEAD GUEST'S ROOM (D22-10). A group's rooms are
+   several departures and one party, so each row shows the GROUP's ask -
+   the latest about any of its rooms - and names its lead (app.group_lead,
+   D22-52). Only the lead's row is offered the ask; `ask` refuses the rest. */
 reputation.get("/:code/reviews", async (c) => {
   const code = c.req.param("code");
 
@@ -185,16 +192,21 @@ reputation.get("/:code/reviews", async (c) => {
               m.status                                       as "askStatus",
               m.channel                                      as "askChannel",
               app.hotel_clock($1, m.sent_at)                 as "askedAt",
-              m.detail                                       as "askDetail"
+              m.detail                                       as "askDetail",
+              gl.lead::text                                  as "leadId",
+              lr.reference                                   as "leadReference"
          from reservations r
          join guests g on g.id = r.guest_id
+         left join lateral (select app.group_lead(r.group_id) as lead) gl on true
+         left join reservations lr on lr.id = gl.lead
          left join lateral (
               select s.status, s.channel, s.sent_at, s.detail
                 from messages_sent s
                where s.hotel_id   = r.hotel_id
                  and s.kind       = 'review'
                  and s.about_kind = 'reservation'
-                 and s.about_id   = r.id::text
+                 and s.about_id in (select x.id::text from reservations x
+                                     where x.id = r.id or x.group_id = r.group_id)
                order by s.sent_at desc
                limit 1
          ) m on true
@@ -301,10 +313,11 @@ reputation.post("/:code/reviews/:id/ask", async (c) => {
     }
 
     const { rows } = await client.query<{
-      id: string; reference: string; status: string;
+      id: string; reference: string; status: string; lead: string | null;
       guest: string; phone: string | null; email: string | null;
     }>(
       `select r.id::text as id, r.reference, r.status,
+              app.group_lead(r.group_id)::text               as lead,
               g.full_name                                    as guest,
               nullif(btrim(coalesce(g.phone, '')), '')       as phone,
               nullif(btrim(coalesce(g.email::text, '')), '') as email
@@ -321,6 +334,11 @@ reputation.post("/:code/reviews/:id/ask", async (c) => {
     /* AFTER CHECK-OUT, NEVER BEFORE. */
     if (stay.status !== "checked_out") {
       return { status: 409 as const, body: refuse(REVIEWS_REFUSED.notCheckedOut) };
+    }
+
+    /* ONCE PER GROUP, AT THE LEAD GUEST'S ROOM (D22-10, D22-52). */
+    if (stay.lead && stay.lead !== stay.id) {
+      return { status: 409 as const, body: refuse(REVIEWS_REFUSED.notLead) };
     }
 
     /* ⚠ THE LINK IS CHECKED BEFORE THE SENDER IS TOUCHED. The sender

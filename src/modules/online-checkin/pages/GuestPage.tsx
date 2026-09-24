@@ -264,7 +264,44 @@ function Behind(
       {view.offers.length > 0 && (
         <RequestsSection token={token} offers={view.offers} onUnlockGone={onUnlockGone} />
       )}
+      <MessageTheDesk token={token} onUnlockGone={onUnlockGone} />
     </>
+  );
+}
+
+/* ── Message the front desk (D23-14) ─────────────────────────────────
+   Anything, in the guest's own words. A request of kind 'desk' through the
+   same door and the same limits as a spa or laundry request; it lands in
+   the booking's Guest messages at the desk, unread until handled. */
+function MessageTheDesk({ token, onUnlockGone }: { token: string; onUnlockGone: () => void }) {
+  const [what, setWhat] = useState("");
+  const send = useMutation({
+    mutationFn: () => makeRequest(token, { kind: "desk", what }),
+    onSuccess: () => setWhat(""),
+  });
+  useUnlockGone(send.error, onUnlockGone);
+
+  return (
+    <section className="mt-6 border-t border-grey-200 pt-5">
+      <h2 className="text-base font-medium text-ink-900">Message the front desk</h2>
+      <form onSubmit={(e) => { e.preventDefault(); send.mutate(); }} className="mt-3 flex flex-col gap-3">
+        <Field label="Your message">
+          {(f) => (
+            <Textarea {...fieldProps(f)} rows={3} maxLength={500}
+              value={what} onChange={(e) => setWhat(e.target.value)} />
+          )}
+        </Field>
+        <Button type="submit" variant="secondary" disabled={send.isPending || what.trim() === ""}>
+          {send.isPending ? "Sending…" : "Send to the front desk"}
+        </Button>
+        {send.isSuccess && what === "" && (
+          <p className="text-sm text-grey-600">Sent. The front desk will see it.</p>
+        )}
+        {send.error && !unlockGone(send.error) && (
+          <p className="text-sm text-brand-red">{messageFrom(send.error)}</p>
+        )}
+      </form>
+    </section>
   );
 }
 
@@ -442,6 +479,8 @@ function RequestsSection(
     },
   });
   useUnlockGone(list.error ?? ask.error, onUnlockGone);
+  /* A message to the desk is not a request for the spa or laundry. */
+  const mine = (list.data?.requests ?? []).filter((q) => q.kind !== "desk");
 
   return (
     <section className="mt-6 border-t border-grey-200 pt-5">
@@ -468,9 +507,9 @@ function RequestsSection(
         )}
       </form>
 
-      {(list.data?.requests.length ?? 0) > 0 && (
+      {mine.length > 0 && (
         <ul className="mt-4 flex flex-col gap-2">
-          {list.data!.requests.map((q) => (
+          {mine.map((q) => (
             <li key={q.createdAt} className="rounded-md border border-grey-200 p-3 text-sm">
               <p className="text-ink-900">{KIND_LABEL[q.kind] ?? q.kind}: {q.what}</p>
               <p className="text-grey-600 mt-0.5">

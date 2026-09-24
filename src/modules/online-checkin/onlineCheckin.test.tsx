@@ -6,6 +6,8 @@ import * as apiModule from "@/lib/api";
 import * as notice from "@/modules/online-checkin/privacyNotice";
 import GuestPage from "@/modules/online-checkin/pages/GuestPage";
 import DeskPage from "@/modules/online-checkin/pages/Desk";
+import { MessagesToTheDesk } from "@/modules/online-checkin";
+import { signedIn, AGRA_HOTEL } from "@/test/app";
 
 /* ══════════════════════════════════════════════════════════════════
    THE GUEST'S PAGE — what a stranger holding the link can see
@@ -354,6 +356,24 @@ describe("behind the code", () => {
     open();
     expect(await screen.findByRole("heading", { name: "Ask for something" })).toBeTruthy();
   });
+
+  it("sends a message to the front desk, with this tab's unlock, where nothing else is offered (D23-14)", async () => {
+    let sent: { body: unknown; unlock?: string } | null = null;
+    server({
+      [OPEN]: () => unlocked,
+      [`${OPEN}/details`]: () => ({ sent: null }),
+      [`${OPEN}/requests`]: (init) => {
+        sent = { body: JSON.parse(String(init?.body)), unlock: unlockSent(init) };
+        return { sent: true };
+      },
+    });
+    open();
+
+    fireEvent.change(await screen.findByLabelText("Your message"), { target: { value: "Two more towels, please" } });
+    fireEvent.click(screen.getByRole("button", { name: "Send to the front desk" }));
+    expect(await screen.findByText("Sent. The front desk will see it.")).toBeTruthy();
+    expect(sent).toEqual({ body: { kind: "desk", what: "Two more towels, please" }, unlock: UNLOCK });
+  });
 });
 
 describe("the privacy notice (D21-61)", () => {
@@ -396,5 +416,39 @@ describe("the desk's side", () => {
     fireEvent.click(screen.getByRole("button", { name: "Confirm against the ID" }));
     await waitFor(() => expect(spy.mock.calls.map((c) => c[0]))
       .toContain("/api/hotels/5EL/online-checkin/submissions/sub-1/confirm"));
+  });
+
+  /* D23-14, drawn inside Guest messages. */
+  it("shows a guest's message as text, with the unread count, and marks it handled", async () => {
+    signedIn();   // reception
+    const MARK = "/api/hotels/5EL/online-checkin/requests/q-1";
+    const spy = server({
+      "/api/hotels/5EL/online-checkin/messages": () => ({
+        messages: [{
+          id: "q-1", what: "<img src=x onerror=alert(1)>Towels", createdAt: "2026-08-25T09:00:00Z",
+          guest: "A. Guest", reference: "FH-2609-5001", handledBy: null, handledAt: null,
+        }],
+      }),
+      [MARK]: () => ({ status: "done" }),
+    });
+    open("/", "/", <MessagesToTheDesk code="5EL" />);
+
+    expect(await screen.findByText("1 unread")).toBeTruthy();
+    expect(screen.getByText("<img src=x onerror=alert(1)>Towels")).toBeTruthy();
+    expect(document.querySelector("img"), "a guest's words are never drawn as HTML").toBeNull();
+    fireEvent.click(screen.getByRole("button", { name: "Mark handled" }));
+    await waitFor(() => expect(spy.mock.calls.find((c) => c[0] === MARK)?.[1]?.body)
+      .toBe(JSON.stringify({ status: "done" })));
+  });
+
+  it("draws nothing, and asks nothing, for a role that is not the desk's", async () => {
+    signedIn({ scope: {
+      staffId: "33333333-3333-3333-3333-333333333333", email: "hk@fidato.in", fullName: "HK",
+      isGroupAdmin: false, hotels: [{ hotelId: AGRA_HOTEL, role: "housekeeping" }],
+    } });
+    const spy = server({});
+    open("/", "/", <MessagesToTheDesk code="5EL" />);
+    await waitFor(() => expect(document.body.textContent).toBe(""));
+    expect(spy).not.toHaveBeenCalled();
   });
 });
