@@ -132,6 +132,11 @@ const SELECT = `
        still held and then the most recent. That is also what a room
        MOVE needs: two assignments, and the current one wins.
 
+       Except for a booking still to arrive (FD-17): one taken out of the
+       room it was given ahead holds no room, and showed the released one -
+       on the Rooms tile, on the Calendar, in its panel. Every other status
+       keeps the room it had, as before.
+
        (No backticks in here. This whole string is a JS template
        literal, and one would end it.) */
     left join lateral (
@@ -139,6 +144,7 @@ const SELECT = `
         from room_assignments ra2
         join rooms rm2 on rm2.id = ra2.room_id
        where ra2.reservation_id = r.id
+         and (ra2.released_at is null or r.status <> 'confirmed')
        order by ra2.released_at nulls first, ra2.from_date desc
        limit 1
     ) rm on true
@@ -407,8 +413,9 @@ stays.get("/:code/groups", async (c) => {
                 select 1 from reservations x
                  where x.group_id = g.id
                    and x.status not in ('void', 'cancelled')
-                   and x.check_out >= (select business_date from hotels
-                                        where id = $1)))
+                   /* app.business_date: the column stops at the first
+                      night audit (FD-16). */
+                   and x.check_out >= app.business_date($1)))
         group by g.id, g.name, g.block_code, co.name, m.id
         order by min(r.check_in), g.name`,
       [hotelId, scope],

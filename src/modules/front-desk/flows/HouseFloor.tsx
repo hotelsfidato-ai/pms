@@ -97,8 +97,9 @@ export function HouseFloor({
   todaysStays: Map<string, Stay>;
   onOpenStay: (stayId: string) => void;
   /** A free room, tapped, starts a walk-in into it — the same thing an
-      empty cell on the chart does. */
-  onWalkIn: (roomNumber: string, date: string) => void;
+      empty cell on the chart does. Absent for somebody who may not take
+      one (D24-27): the free tile is then not a button at all. */
+  onWalkIn?: (roomNumber: string, date: string) => void;
 }) {
   return (
     <div>
@@ -150,29 +151,33 @@ function RoomTile({ room, businessDate, stay, onOpenStay, onWalkIn }: {
   businessDate: string;
   stay: Stay | undefined;
   onOpenStay: (stayId: string) => void;
-  onWalkIn: (roomNumber: string, date: string) => void;
+  onWalkIn?: (roomNumber: string, date: string) => void;
 }) {
   const state = stateOf(room);
 
   const act = () => {
     if (stay) return onOpenStay(stay.id);
     if (state === "out-of-service") return;
-    onWalkIn(room.number, businessDate);
+    onWalkIn?.(room.number, businessDate);
   };
 
+  /* Nothing to open and no walk-in to take: the tile only shows the room
+     (D24-27), so it is not a control. */
+  const Tile = !stay && !onWalkIn && state !== "out-of-service" ? "div" : "button";
+
   return (
-    <button
-      type="button"
+    <Tile
+      {...(Tile === "button"
+        ? { type: "button" as const, onClick: act, disabled: state === "out-of-service" }
+        : {})}
       data-room-tile={room.number}
-      onClick={act}
-      disabled={state === "out-of-service"}
       className={cn(
         "rounded-lg border p-2.5 text-left w-full",
         /* 5.5rem, so three tiles and their labels fit above the fold on
            a phone. Tall enough for a name to wrap once. */
         "min-h-[5.5rem] flex flex-col",
         "transition-colors duration-200",
-        state === "out-of-service" ? "cursor-not-allowed" : "cursor-pointer",
+        Tile === "div" ? "" : state === "out-of-service" ? "cursor-not-allowed" : "cursor-pointer",
         TILE[state],
       )}
     >
@@ -221,6 +226,6 @@ function RoomTile({ room, businessDate, stay, onOpenStay, onWalkIn }: {
           {state === "out-of-service" ? "-" : room.type}
         </p>
       )}
-    </button>
+    </Tile>
   );
 }

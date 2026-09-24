@@ -1,12 +1,11 @@
 import { useState } from "react";
+import { useQuery } from "@tanstack/react-query";
 import { Clock, ShieldCheck } from "lucide-react";
 import { money } from "@/lib/format";
-import { useRole } from "@/lib/session";
-import { can } from "@/lib/permissions";
 import {
   Button, Dialog, DialogContent, Field, fieldProps, Input, toast,
 } from "@/components/ui";
-import { checkOut } from "@/modules/front-desk/data/operations";
+import { checkOut, earlyArrival } from "@/modules/front-desk/data/operations";
 import { type Stay } from "@/data/repositories";
 
 /* ══════════════════════════════════════════════════════════════════
@@ -56,8 +55,15 @@ export function LateCheckOutFlow({
   onOpenChange: (o: boolean) => void;
   onDone: () => void;
 }) {
-  const role = useRole();
-  const mayWaive = can(role, "approve", "reservation");
+  /* The server's own answer (its mayWaive, for this person), as the
+     check-in's tick reads it (D24-16, D24-27) - not the role's
+     `reservation: approve`, which a hotel's administrator holds and the
+     server still refuses. The Bill tab has already asked it. */
+  const clock = useQuery({
+    queryKey: ["early-arrival", hotelId],
+    queryFn: () => earlyArrival(hotelId),
+  });
+  const mayWaive = clock.data?.mayWaive === true;
 
   const [reason, setReason] = useState("");
   const [waive, setWaive] = useState(false);

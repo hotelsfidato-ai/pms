@@ -202,6 +202,10 @@ async function maySwitchPerson(client: Client, staffId: string) {
     + "do not manage, take them off your property instead.");
 }
 
+/** D24-28, in D24-19's words: who can do it instead. */
+const OWN_ROLE =
+  "You cannot change your own role. Ask the owner or an administrator to do it.";
+
 /** D22-2: the sentence for a GM asking to make an Admin. Null for any other
     refusal, which keeps its own words. */
 const adminRefusal = (role: string, allowed: string[]): string | null =>
@@ -771,7 +775,7 @@ admin.post("/admin/staff", async (c) => {
   }
 
   try {
-    const result = await withSession(c.get("subject"), async (client) => {
+    const result = await withSession(c.get("subject"), async (client, session) => {
       let hotelId: string | null = null;
       if (hotelCode) {
         hotelId = await hotelFor(client, hotelCode);
@@ -792,6 +796,15 @@ admin.post("/admin/staff", async (c) => {
       } else {
         /* No hotel named, so this is the group-level act it always was. */
         await client.query("select app.require_group_admin()");
+      }
+
+      /* D24-28's other door: "adding" your own address with a property
+         would set your own role there. Asked before Firebase is touched. */
+      if (hotelId) {
+        const { rows: self } = await client.query<{ me: boolean }>(
+          "select email = $2::citext as me from staff where id = $1",
+          [session.staffId, email]);
+        if (self[0]?.me) return refuse(OWN_ROLE);
       }
 
       if (wantsAdmin) {
@@ -973,7 +986,11 @@ admin.post("/admin/staff/:id/access", async (c) => {
      question the moment a general manager can roster their own staff.
      A gm gets everything except `owner` — see 084 for why. */
   try {
-    const result = await withSession(c.get("subject"), async (client) => {
+    const result = await withSession(c.get("subject"), async (client, session) => {
+      /* D24-28: nobody changes their own role, as nobody switches their own
+         access off (D24-19). Before anything is read or written. */
+      if (c.req.param("id") === session.staffId) return refuse(OWN_ROLE);
+
       const hotelId = await hotelFor(client, code);
       if (!hotelId) return refuse(`No property with code ${code}.`);
 

@@ -16,6 +16,8 @@ import { FolioPanel } from "@/modules/finance";
 import { StayMarks } from "@/modules/front-desk/flows/StayMarks";
 import { GuestMarks } from "@/modules/front-desk/flows/GuestMarks";
 import { GroupRoomsList } from "@/modules/reservations";
+import { useRole } from "@/lib/session";
+import { can } from "@/lib/permissions";
 
 /* ══════════════════════════════════════════════════════════════════
    THE STAY PANEL — one of it
@@ -137,6 +139,14 @@ function StayBody({
 }) {
   const [tab, setTab] = useState<"stay" | "folio">(defaultTab);
   const arrived = stay.status === "in-house" || stay.status === "due-out";
+  /* D24-27: each act offered only to a role the server's gate lets do it
+     (roleGate, from the one matrix). Check-in is reservation edit; the VIP
+     mark is the guest's record, customer edit; "Settle and check out" leads
+     to both a payment (payment create) and the check-out (reservation edit),
+     so it is for whoever may do either (the owner, 24 September). */
+  const role = useRole();
+  const mayEdit = can(role, "edit", "reservation");
+  const maySettle = can(role, "create", "payment") || mayEdit;
 
   return (
     <div
@@ -151,7 +161,9 @@ function StayBody({
           <StayMarks stay={stay} />
           {/* The toggle, not a mark — it CHANGES the guest rather than
               reporting them, so it sits beside the marks, not in them. */}
-          {stay.guestId && <VipToggle hotelId={hotelId} stay={stay} />}
+          {stay.guestId && can(role, "edit", "customer") && (
+            <VipToggle hotelId={hotelId} stay={stay} />
+          )}
           {/* The CRM's: stayed with the group before, the WhatsApp tick,
               and Guest 360 for the three who may open it. */}
           <GuestMarks hotelId={hotelId} stay={stay} />
@@ -164,10 +176,10 @@ function StayBody({
             settle-and-leave for somebody in the house. The rare acts —
             amend, move, exchange, void — stay inside More options. */}
         <div className="flex flex-wrap items-start gap-2">
-          {offerCheckIn && stay.status === "due-in" && (
+          {offerCheckIn && stay.status === "due-in" && mayEdit && (
             <CheckInFlow hotelId={hotelId} stay={stay} businessDate={businessDate} />
           )}
-          {arrived && tab !== "folio" && (
+          {arrived && tab !== "folio" && maySettle && (
             /* The folio is where settling and check-out happen, with
                check-out shown blocked and the reason why while anything
                is owed. This takes the clerk there; it does not bypass it. */

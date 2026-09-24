@@ -61,9 +61,20 @@ screen: the ✕ is there). On screen as the GM at 5EL, desktop and phone:
 their own row has Password and Edit only; Test Reception's has Deactivate
 and "Remove 5EL" (`.local/screenshots/2026-09-24-follow-ups/06-*`).
 
-**Left** - changing your OWN role (`POST /admin/staff/:id/access` for
-yourself, e.g. a GM making themselves Reception) is still allowed; it is
-not switching access off, and was not asked. A question for the owner.
+**Own role, 24 September** (the owner's D24-28: refused, like D24-19) -
+changing your OWN role had two doors: `POST /admin/staff/:id/access` for
+yourself, and "adding" your own address with a property (`POST
+/admin/staff`, which brings back a person already there and upserts their
+row - `app.may_claim_address` lets anybody claim their own). Both refuse
+first: "You cannot change your own role. Ask the owner or an administrator
+to do it.", the second before the sign-in account is touched. People
+offered neither on your own row already ("Give a property" lists only
+properties the person does not hold, and a GM or hotel Admin holds every
+one they run). Proved - `propertyAdmin.test.ts` and `addPerson.test.ts`,
+"D24-28": on the old routes both "gm: expected 200 to be 409" (the GM made
+themselves Reception); `admin.test.tsx` holds the own row to no "Give a
+property" beside a person who is offered it. On screen: the GM's own row,
+Password and Edit only (`.local/screenshots/2026-09-24-polish/10-*`).
 
 **The rule** - a refusal must name what was refused: "matched no row" is
 not "had nothing".

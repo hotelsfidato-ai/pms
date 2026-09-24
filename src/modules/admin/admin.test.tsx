@@ -378,6 +378,7 @@ describe("D22-3 and D22-2 - People, for a GM", () => {
       person({ id: "p-1", name: "Asha" }),
       person({ id: "22222222-2222-2222-2222-222222222222", name: "Me The GM",
                email: "someone@fidato.in", maySwitch: false, access: [{ code: "5EL", role: "gm" }] }),
+      person({ id: "p-2", name: "Newcomer", email: "new@fidato.in", access: [] }),
     ]);
     renderAt("/people", <PeoplePage />);
 
@@ -385,6 +386,12 @@ describe("D22-3 and D22-2 - People, for a GM", () => {
     const mine = within((await screen.findByText("Me The GM")).closest("li")!);
     expect(mine.queryByRole("button", { name: "Remove 5EL from Me The GM" })).toBeNull();
     expect(mine.queryByRole("button", { name: "Deactivate" })).toBeNull();
+    /* D24-28: nor their own role. "Give a property" lists only properties
+       the person does not hold, and a GM holds every one they run, so it is
+       never on their own row; the server refuses it anyway. */
+    expect(mine.queryByRole("button", { name: /Give a property/ })).toBeNull();
+    expect(within(screen.getByText("Newcomer").closest("li")!)
+      .getByRole("button", { name: /Give a property/ })).toBeDefined();
   });
 
   it("does not offer Add somebody to somebody who may roster nobody", async () => {

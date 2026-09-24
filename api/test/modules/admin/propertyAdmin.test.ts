@@ -657,6 +657,25 @@ describe("D24-19 - nobody switches their own access off", () => {
     }
   });
 
+  /* D24-28 (the owner, 24 September): nor their own role, "like switching
+     off their own access". A GM making themselves Reception kept nobody
+     able to run the hotel's people. */
+  it("refuses a GM and a hotel's Admin changing their own role, and writes nothing (D24-28)", async () => {
+    for (const key of ["gm", "adm"]) {
+      const res = await as(ids[key]!, `/admin/staff/${ids[key]}/access`, "POST",
+        { code: "AGR", role: "front_desk" });
+      expect(res.status, key).toBe(409);
+      expect(((await res.json()) as { reason: string }).reason).toBe(
+        "You cannot change your own role. Ask the owner or an administrator to do it.");
+      expect(await rowAt(ids[key]!), key).toBe(key === "gm" ? "gm" : "admin");
+    }
+    /* Somebody else's role is still theirs to change. */
+    const other = await as(ids["gm"]!, `/admin/staff/${ids["clerk"]}/access`, "POST",
+      { code: "AGR", role: "housekeeping" });
+    expect(other.status, await other.clone().text()).toBe(200);
+    expect(await rowAt(ids["clerk"]!)).toBe("housekeeping");
+  });
+
   it("offers neither a switch on their own row, and still on somebody else's", async () => {
     for (const key of ["gm", "adm"]) {
       const { staff } = (await (await as(ids[key]!, "/admin/staff")).json()) as {

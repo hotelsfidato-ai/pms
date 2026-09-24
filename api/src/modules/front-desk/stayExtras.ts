@@ -82,10 +82,9 @@ stayExtras.post("/:code/stays/:id/exchange", async (c) => {
     const hotelId = await hotelFor(client, c.req.param("code"));
     if (!hotelId) return null;
 
-    const from = input.from
-      ?? (await client.query<{ bd: string }>(
-            `select business_date::text as bd from hotels where id = $1`,
-            [hotelId])).rows[0]!.bd;
+    /* The hotel's day, not `hotels.business_date`, which stops moving once
+       a night audit has run (FD-16). */
+    const from = input.from ?? await businessDateFor(client, hotelId);
 
     /* Rule A (24 September): a checked-in guest swapped from tonight goes
        into the other's room now, so nobody but the two may still be in it. */
