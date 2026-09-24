@@ -1,4 +1,4 @@
-import { api, ApiError } from "@/lib/api";
+import { api, ApiError, downloadFile } from "@/lib/api";
 import { toCsv, downloadCsv, reportFilename } from "@/lib/csv";
 
 /* ══════════════════════════════════════════════════════════════════
@@ -35,7 +35,7 @@ export interface ExportFormatChoice {
 export const FORMATS: readonly ExportFormatChoice[] = [
   {
     key: "day-book-csv",
-    label: "Day book (CSV)",
+    label: "Day book (CSV and Excel)",
     what: "One row a day: sales, the tax on them and what was received. Every accounting package opens it.",
     blocked: null,
   },
@@ -118,7 +118,9 @@ export async function getDayBook(
 /* ── The file ──────────────────────────────────────────────────────── */
 
 /* "GST", not "Tax", since 22 September: alcohol's VAT is its own column and
-   is kept out of the GST ones (D21-91). */
+   is kept out of the GST ones (D21-91). The .xlsx is written on the server
+   from a copy of this row and `figures` (api/src/modules/accounting/
+   dayBook.ts): change both, or neither - its test reads this line. */
 const HEADERS = [
   "Date", "Room revenue", "Room tax", "Extra charges", "Extra tax",
   "Discount", "Alcohol", "VAT", "Sales", "GST", "Receipts", "Night audit",
@@ -151,11 +153,15 @@ export function dayBookSheet(book: DayBook): { headers: string[]; rows: unknown[
   return { headers: HEADERS, rows };
 }
 
-/** Hand the day book to the browser as a file somebody can find again. */
-export function downloadDayBook(book: DayBook): void {
+/** Hand the day book to the browser as files somebody can find again: the
+    CSV, as before, and a real .xlsx of the same columns and figures, made on
+    the server (D22-37: "both"). Throws if the .xlsx was not made. */
+export async function downloadDayBook(book: DayBook): Promise<void> {
   const { headers, rows } = dayBookSheet(book);
   downloadCsv(
     reportFilename(book.property.name, "day book", `${book.from} to ${book.to}`),
     toCsv(headers, rows),
   );
+  const range = new URLSearchParams({ from: book.from, to: book.to });
+  await downloadFile(`/api/hotels/${book.property.code}/accounting/day-book.xlsx?${range}`);
 }

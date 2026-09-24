@@ -1,4 +1,6 @@
 import { describe, it, expect, beforeAll, afterAll } from "vitest";
+import { readFileSync } from "node:fs";
+import ExcelJS from "exceljs";
 import { app } from "../../../src/server.ts";
 import { closePool, withUser } from "../../../src/db.ts";
 import {
@@ -416,5 +418,43 @@ describe("the export and the Manager report cannot disagree", () => {
     expect(row!.pos, "the export sees what the restaurant sold").toBeGreaterThan(0);
     expect(body.total.sales, "and Sales grew by it")
       .toBeGreaterThan(salesBefore);
+  });
+});
+
+/* ── D22-37: the same day book as a real .xlsx ────────────────────────
+   The owner: "both the CSV and a real .xlsx". The CSV is written by the
+   screen from `HEADERS` and the day book's own figures
+   (src/modules/accounting/data/accounting.ts); the .xlsx by the server from
+   a copy of that row. So the header row is read from the SCREEN'S source,
+   and the figure from the object the CSV is written from. */
+describe("the day book as a real .xlsx", () => {
+  it("opens with the CSV's header row and the CSV's figures", async () => {
+    const range = `from=${from}&to=${to}`;
+    const csvBook = (await book(`/5EL/accounting/day-book?${range}`)).body as DayBook;
+    const res = await call(`/5EL/accounting/day-book.xlsx?${range}`);
+    expect(res.status).toBe(200);
+    expect(res.headers.get("content-disposition")).toMatch(/day-book-.+\.xlsx"$/);
+
+    const workbook = new ExcelJS.Workbook();
+    await workbook.xlsx.load(await res.arrayBuffer());
+    const sheet = workbook.worksheets[0]!;
+
+    const screen = readFileSync(
+      new URL("../../../../src/modules/accounting/data/accounting.ts", import.meta.url), "utf8");
+    const csvHeaders = [...(/const HEADERS = \[([\s\S]*?)\];/.exec(screen)?.[1] ?? "")
+      .matchAll(/"([^"]+)"/g)].map((m) => m[1]);
+    expect(csvHeaders.length, "read the screen's header row").toBeGreaterThan(5);
+    expect((sheet.getRow(1).values as unknown[]).slice(1)).toEqual(csvHeaders);
+
+    const last = csvBook.days.at(-1)!;
+    const row = sheet.getRow(1 + csvBook.days.length);
+    expect(row.getCell(1).value).toBe(last.date);
+    expect(row.getCell(csvHeaders.indexOf("Room revenue") + 1).value).toBe(last.room);
+    expect(sheet.getRow(2 + csvBook.days.length).getCell(1).value).toBe("Total");
+  });
+
+  it("is refused to reception, as the day book is", async () => {
+    const res = await call(`/5EL/accounting/day-book.xlsx?from=${from}&to=${to}`, deskId);
+    expect(res.status).toBe(403);
   });
 });
