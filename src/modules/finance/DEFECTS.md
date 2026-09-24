@@ -14,7 +14,9 @@ entries stay here: they are the reason the fault does not come back.
 
 ## Open — not fixed
 
-### FIN-8 · The GST invoice series for a new financial year exists only after a deploy
+## Fixed
+
+### FIN-8 · The GST invoice series for a new financial year existed only after a deploy — FIXED 24 September
 
 (Written as FIN-5 by the VAT-bill helper; the rule-breakers helper took FIN-5
 the same day for the default rate below. Renumbered 24 September.)
@@ -33,7 +35,17 @@ the VAT series does (`app.next_vat_bill_number`, "a separate VAT bill for
 alcohol"): a new function or a new migration keeping its signature. A
 statutory series: the master's and the owner's call.
 
-## Fixed
+**Fixed** — the owner's D24-22: the year's series opens itself with its
+first invoice, as the VAT bill's does; numbers unchanged. Migration "a
+hotel's GST invoice series for a new year opens itself" (138 in this branch)
+replaces `app.next_invoice_number` with the same signature and return type:
+it inserts the year's row (the prefix the hotel's latest year used, else its
+code) before it counts.
+
+**Proved** — `db/tests/modules/finance.sql`, "finance gst": a year with no
+series row numbers its first invoice NFY-X/2097-98/00001 and the next 00002,
+and the year before does not move. With the insert switched off the suite
+stops at that check ("No such hotel").
 
 ### FIN-7 · A charge refused for a missing GST rule left an empty folio behind — FIXED 24 September
 
@@ -112,8 +124,8 @@ or night audit reads the pair any more — but the Lodging tax heading
 
 **Fixed** — a new migration ("a new hotel has no GST rate until somebody sets
 one") drops the default and the NOT NULL; stored rates are untouched. Both
-readers now carry null: the Lodging tax heading says "CGST @-", the property
-record `null`. Billing with no rate was already refused, with where to set
+readers now carry null: the property record answers `null`, and the Lodging
+tax heading names no rate at all since the owner's D24-23 ("CGST", REP-13). Billing with no rate was already refused, with where to set
 it, by `postCharge` and the night audit (067); an invoice never read the pair.
 
 **Proved** — `db/tests/modules/finance.sql`, "a new property is made with no
@@ -122,8 +134,8 @@ fails with the migration's statement taken out). The helper's second check,
 "a rate a hotel already holds is kept", read FH01, which 017 deletes, so it
 could never pass and was removed; what it meant was proved by replaying all
 136 migrations over `fidato_s1`, whose 5EL kept 2.50 / 2.50;
-`api/test/modules/reports/lodgingTaxAlcohol.test.ts` asserts the heading "CGST
-@-" at a new property.
+`api/test/modules/reports/lodgingTaxAlcohol.test.ts` asserts the heading
+"CGST" at a new property.
 
 **The rule:** a column default is a price if the column is one.
 

@@ -611,7 +611,7 @@ function SettleDialog({
    D22-7: it is the "Interim bill", as on the guest's page, before check-out
    and after (the owner, 24 September): it carries no invoice number, and
    "Tax Invoice" read as the final one. The numbered tax invoice is issued
-   on Invoices. */
+   on Invoices. The button says the same words (D24-25). */
 function InvoiceDialog({ hotelId, stayId }: { hotelId: string; stayId: string }) {
   const [open, setOpen] = useState(false);
   const bill = useQuery({
@@ -625,7 +625,7 @@ function InvoiceDialog({ hotelId, stayId }: { hotelId: string; stayId: string })
       <DialogTrigger asChild>
         <Button variant="ghost" size="sm">
           <Printer className="size-4" />
-          Invoice
+          Interim bill
         </Button>
       </DialogTrigger>
       <DialogContent title="Interim bill" description="Print preview">

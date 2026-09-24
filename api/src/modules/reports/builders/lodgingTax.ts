@@ -123,10 +123,6 @@ export async function lodgingTaxReport(
     }));
   }
 
-  /* "2.5%", as the sheet's heading reads - not "2.50%". A rate nobody has
-     set is a dash, never "0%" (D22-9). */
-  const rate = (n: number | null) => (n === null ? "-" : `${Number(n)}%`);
-
   return {
     report: "lodging-tax",
     title: "Lodging tax",
@@ -146,10 +142,12 @@ export async function lodgingTaxReport(
         col("totalBill", "Total Bill Amount", "money"),
         col("roomRent", "Total Room Rent", "money"),
         col("nonTaxable", "Non-Taxable Amount", "money"),
-        col("cgstNet", "Net Amt.", "money", `CGST @${rate(property.cgstRate)}`),
-        col("cgstTax", "Tax Amt.", "money", `CGST @${rate(property.cgstRate)}`),
-        col("sgstNet", "Net Amt.", "money", `SGST @${rate(property.sgstRate)}`),
-        col("sgstTax", "Tax Amt.", "money", `SGST @${rate(property.sgstRate)}`),
+        /* No rate in the heading (the owner's D24-23): it came from a
+           setting nobody can change, and a bill can carry 5% and 18%. */
+        col("cgstNet", "Net Amt.", "money", "CGST"),
+        col("cgstTax", "Tax Amt.", "money", "CGST"),
+        col("sgstNet", "Net Amt.", "money", "SGST"),
+        col("sgstTax", "Tax Amt.", "money", "SGST"),
         col("serviceCharges", "Service Charges", "money"),
         col("otherBills", "Other Bills", "money"),
         col("lessDiscount", "Less Discount", "money"),

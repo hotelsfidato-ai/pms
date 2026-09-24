@@ -26,7 +26,7 @@ alter table hotels
 comment on column hotels.cgst_rate is
   'SUPERSEDED by tax_rules (067) for what a posting carries. No default since '
   'D22-9: null until somebody sets it, shown as a dash. Read only by the '
-  'Lodging tax heading and the property record.';
+  'property record (the Lodging tax heading names no rate since D24-23).';
 
 do $$
 begin

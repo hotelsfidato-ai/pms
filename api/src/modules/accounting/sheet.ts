@@ -20,20 +20,25 @@
 
 interface Figures {
   room: number; roomTax: number; extra: number; extraTax: number;
+  pos: number; posTax: number;
   discount: number; alcohol: number; vat: number; sales: number;
   tax: number; receipt: number;
 }
 
+/* "Restaurant" and "Restaurant tax": what the outlets took in cash, by card
+   or UPI, which was inside Sales and GST and in no column of its own (the
+   owner's D24-24, ACC-10). */
 const HEADERS = [
   "Date", "Room revenue", "Room tax", "Extra charges", "Extra tax",
+  "Restaurant", "Restaurant tax",
   "Discount", "Alcohol", "VAT", "Sales", "GST", "Receipts", "Night audit",
 ];
 
 /** A day's row, and the total's, written once so the last line of the
     file is made the same way as every line above it. */
 const figures = (r: Figures) =>
-  [r.room, r.roomTax, r.extra, r.extraTax, r.discount, r.alcohol, r.vat,
-   r.sales, r.tax, r.receipt];
+  [r.room, r.roomTax, r.extra, r.extraTax, r.pos, r.posTax, r.discount,
+   r.alcohol, r.vat, r.sales, r.tax, r.receipt];
 
 /**
  * The day book as a sheet: a row per day, then the total.

@@ -92,10 +92,22 @@ back byte for byte):
   (`db/migrate.sh` on `fidato_s1`, on the tree merged with cp6 ea01aef);
   `rerun.sh`: all 136 re-runnable.
 
-**Left open:** FIN-8 (the GST series for a new financial year exists only
-after a deploy). The till's and the night audit's own "no rate" sentences
-still name only Room types (pos and night-audit files; a request for the
-master). A function's bill issues no VAT bill (it has no GST document).
+**Then, the owner's D24-22 and D24-25** (decided on the master's list the
+same afternoon): FIN-8 fixed - the year's GST series opens itself with its
+first invoice (migration 138 in this branch, same function signature; db
+"finance gst" 4, the new-year check stops the suite with the insert switched
+off); the Bill tab's button says "Interim bill" (billPrint clicks it by that
+name, and fails with "Invoice" back). D24-23 and D24-24 are in reports' and
+accounting's notes.
+
+The till's two "no rate" sentences and the night audit's now name both
+places the rate is set, as `postCharge`'s does (the master's request, once
+those lanes were merged).
+
+**Left open:** a function's bill issues no VAT bill (it has no GST
+document). `housekeeping/roomStatus.ts` still selects `cgst_rate` /
+`sgst_rate` typed as strings, now nullable, and uses neither (housekeeping's
+file).
 
 ---
 

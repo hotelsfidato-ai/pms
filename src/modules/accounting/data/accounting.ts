@@ -80,6 +80,11 @@ export interface DayBookRow {
   roomTax: number;
   extra: number;
   extraTax: number;
+  /** What the outlets took in cash, by card or UPI, and its GST - never a
+      bill charged to a room, which is in `extra` (ACC-11). Its own columns
+      in both files since D24-24. */
+  pos: number;
+  posTax: number;
   discount: number;
   /** Alcohol and its VAT - their own ledger (D21-91, 22 September). They
       are NOT in `extra`, `extraTax` or `tax`, which are GST alone. */

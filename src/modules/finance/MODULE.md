@@ -55,9 +55,10 @@ holds guests' Form C (order 60).
 
 - `flows/FolioPanel.tsx` — the Bill tab inside front desk's stay panel:
   postings, charge, reverse, settle, split billing, and check out (which it
-  asks front desk to do). Each line names who posted it; its print is the
-  "Interim bill", before check-out and after (D22-7, 24 September) - the
-  numbered tax invoice is issued on Invoices.
+  asks front desk to do). Each line names who posted it ("Night audit" for
+  the audit's room charge); its print, and the button that opens it, say
+  "Interim bill", before check-out and after (D22-7, D24-25) - the numbered
+  tax invoice is issued on Invoices.
 - `flows/CreditNoteFlow.tsx` — correct an issued invoice, from the invoice
   page; with `vat`, cancel a VAT bill the same way, from the VAT bill page.
 - `flows/TaxRulesCard.tsx` — the GST (and VAT) rules card, shown on
@@ -293,8 +294,9 @@ From `PENDING.md` and `HANDOVER.md`, and two found while writing this brief:
   rule; moving onto it is tidying (PENDING § 6).
 - ~~Defect 243's shape in these routes has not been checked~~ — checked 23
   and 24 September: one found and fixed, `postCharge` (FIN-7).
-- **FIN-8:** the GST series for a new financial year exists only after a
-  deploy (DEFECTS.md) - the master's and the owner's call.
+- ~~FIN-8: the GST series for a new financial year exists only after a
+  deploy~~ — fixed 24 September (D24-22): the year's series opens itself
+  with its first invoice.
 - **FIN-1, found while writing this brief:** the header of
   `api/src/modules/finance/billing.ts` still says "NO INVOICE NUMBER IS
   ISSUED" and "THE NIGHT AUDIT DOES NOT RUN"; both have been built. A
