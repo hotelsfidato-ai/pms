@@ -20,6 +20,7 @@ const control = vi.hoisted(() => ({
   store: "items" as "items" | "empty" | "unreachable",
   history: "rows" as "rows" | "unreachable",
   added: [] as unknown[],
+  recorded: [] as unknown[],
   reversed: [] as string[],
 }));
 
@@ -39,13 +40,15 @@ vi.mock("@/modules/stores/data/stores", async (importOriginal) => {
     { id: "kitchen", name: "Kitchen store", isActive: true, isMain: false },
     { id: "bar", name: "Bar store", isActive: true, isMain: false },
   ];
+  const outlets = [{ id: "rest", name: "Fidato Restaurant" }];
   return {
     ...actual,
     getStore: async () => {
       if (control.store === "unreachable") throw unreachable();
-      if (control.store === "empty") return { stores, items: [] };
+      if (control.store === "empty") return { stores, items: [], outlets };
       return {
         stores,
+        outlets,
         items: [
           item("towels", "Bath towel", {
             onHand: 58, unitCost: 310, value: 17980, byStore: { main: 50, kitchen: 8 },
@@ -69,7 +72,8 @@ vi.mock("@/modules/stores/data/stores", async (importOriginal) => {
               fromStore: "Main store", toStore: "Kitchen store" }),
         row({ id: "3", kind: "adjustment", quantity: 2, who: "Test Store",
               isReversal: true, reversesKind: "issue" }),
-        row({ id: "2", kind: "issue", quantity: -2, note: "Room 204", reversed: true }),
+        row({ id: "2", kind: "issue", quantity: -2, note: "Room 204", reversed: true,
+            outlet: "Fidato Restaurant" }),
         row({ id: "1", kind: "receipt", quantity: 60, unitCost: 310,
               supplier: "Solapur Textiles", reference: "INV-2231" }),
       ];
@@ -78,6 +82,11 @@ vi.mock("@/modules/stores/data/stores", async (importOriginal) => {
       control.added.push(input);
       control.store = "items";
       return { ok: true, id: "new" };
+    },
+    recordStockMovement: async (_hotel: string, input: unknown) => {
+      control.recorded.push(input);
+      return { ok: true, id: "98", onHand: 56, onHandHere: 48, store: "Main store",
+               unit: "piece", name: "Bath towel" };
     },
     reverseStockMovement: async (_hotel: string, id: string) => {
       control.reversed.push(id);
@@ -249,6 +258,28 @@ describe("the Store", () => {
     const dialog = await screen.findByRole("dialog");
     expect(dialog.textContent).not.toContain(LONG_DASH);
     fireEvent.keyDown(dialog, { key: "Escape" });
+  });
+
+  it("D22-20 · an issue records the outlet it went to, and the history names it", async () => {
+    as("stores");
+    render(<App />);
+    await screen.findByText("Bath towel");
+
+    fireEvent.click(within(card("Bath towel")).getByRole("button", { name: /Issue/ }));
+    const dialog = await screen.findByRole("dialog");
+    const outlet = within(dialog).getByLabelText(/Which outlet/) as HTMLSelectElement;
+    expect(outlet.value).toBe("");
+    fireEvent.change(outlet, { target: { value: "rest" } });
+    fireEvent.change(within(dialog).getByLabelText(/How many/), { target: { value: "2" } });
+    fireEvent.click(within(dialog).getByRole("button", { name: "Issue" }));
+    await waitFor(() => expect(control.recorded).toHaveLength(1));
+    expect(control.recorded[0]).toMatchObject({ kind: "issue", quantity: 2, outletId: "rest" });
+    await waitFor(() => expect(screen.queryByRole("dialog")).toBeNull());
+
+    fireEvent.click(within(await openMore("Bath towel")).getByRole("menuitem", { name: /History/ }));
+    const history = await screen.findByRole("dialog");
+    expect(await within(history).findByText(/to Fidato Restaurant/)).toBeTruthy();
+    fireEvent.keyDown(history, { key: "Escape" });
   });
 
   it("STO-2 · a history that could not be read says so", async () => {

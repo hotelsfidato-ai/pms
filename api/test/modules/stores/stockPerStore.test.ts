@@ -214,3 +214,38 @@ describe("moving stock between stores", () => {
     expect((await item(rava)).byStore).toEqual({ [mainId]: 3 });
   });
 });
+
+describe("an issue and the outlet it went to (D22-20)", () => {
+  const outletAt = async (code: string) => (await sql(
+    `insert into pos_outlets (hotel_id, code, name, staff_id)
+     select id, 'STOPS', $2, $3 from hotels where code = $1
+     on conflict (hotel_id, code) do update set name = excluded.name, is_active = true
+     returning id::text`, [code, `${TAG} outlet ${code}`, keeper])).rows[0].id as string;
+
+  it("lists this hotel's outlets, and the history names the one an issue went to", async () => {
+    const here = await outletAt(HOTEL);
+    const there = await outletAt("AGR");
+    const outlets = ((await json(await call("GET", ""), 200)).outlets) as { id: string }[];
+    expect(outlets.map((o) => o.id)).toContain(here);
+    expect(outlets.map((o) => o.id)).not.toContain(there);
+
+    const oil = await newItem("oil");
+    await json(await record(oil, "receipt", 5, mainId), 200);
+    await json(await record(oil, "issue", 2, mainId, { outletId: here }), 200);
+    const issue = (await history(oil)).find((m) => m.kind === "issue") as Movement & { outlet: string };
+    expect(issue.outlet).toBe(`${TAG} outlet ${HOTEL}`);
+  });
+
+  it("refuses another property's outlet, and an outlet on anything but an issue", async () => {
+    const there = await outletAt("AGR");
+    const here = await outletAt(HOTEL);
+    const jeera = await newItem("jeera");
+    await json(await record(jeera, "receipt", 5, mainId), 200);
+
+    const elsewhere = await json(await record(jeera, "issue", 1, mainId, { outletId: there }), 409);
+    expect(elsewhere.reason).toBe("That is not an outlet at this property.");
+    const onReceipt = await json(await record(jeera, "receipt", 1, mainId, { outletId: here }), 409);
+    expect(onReceipt.reason).toBe("Only an issue goes to an outlet.");
+    expect((await item(jeera)).onHand).toBe(5);
+  });
+});

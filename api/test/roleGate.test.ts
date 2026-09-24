@@ -247,9 +247,7 @@ const refusedByGate = async (res: Response, key: string) => {
 
 /* Every price write INV-5 named, with a body each route refuses on its own
    (409) before it writes anything - so a probe that passes the gate changes
-   nothing. PUT /cancellation-policies/:id/default is refused-only: it clears
-   the hotel's default before it looks for the policy it was sent, so an
-   allowed probe would write. */
+   nothing. */
 const PRICE_PROBES: [string, string, unknown][] = [
   ["PUT", "/pricing/basis", {}],
   ["PUT", "/pricing/base", {}],
@@ -260,6 +258,7 @@ const PRICE_PROBES: [string, string, unknown][] = [
   ["POST", "/restrictions", {}],
   ["POST", "/cancellation-policies", {}],
   ["DELETE", `/cancellation-policies/${UUID}`, undefined],
+  ["PUT", `/cancellation-policies/${UUID}/default`, { on: false }],
 ];
 const keyOf = (method: string, path: string) =>
   `${method} ${H}${path.replace(UUID, ":id")}`;
@@ -343,9 +342,6 @@ describe("housekeeping", () => {
     for (const [method, path, body] of PRICE_PROBES) {
       await refusedByGate(await send(as("housekeeping"), method, path, body), keyOf(method, path));
     }
-    await refusedByGate(
-      await send(as("housekeeping"), "PUT", `/cancellation-policies/${UUID}/default`, { on: false }),
-      `PUT ${H}/cancellation-policies/:id/default`);
     const grid = await send(as("housekeeping"), "PUT", "/rate-grid", gridPrice());
     expect(grid.status, await grid.clone().text()).toBe(403);
     expect(await pricesWritten()).toBe(0);

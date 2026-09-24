@@ -400,6 +400,17 @@ rates.put("/:code/cancellation-policies/:id/default", async (c) => {
     const hotelId = await hotelFor(client, c.req.param("code"));
     if (!hotelId) return null;
 
+    /* ASKED BEFORE THE CLEAR BELOW. Inside withSession a refusal is a commit
+       (MEMORY 243): a wrong id cleared the old default, then refused, and the
+       clear stayed. Locked, so it cannot be retired before the update. */
+    const { rows } = await client.query<{ name: string }>(
+      `select name from cancellation_policies
+        where id = $1 and hotel_id = $2 and is_active
+        for update`,
+      [c.req.param("id"), hotelId],
+    );
+    if (!rows[0]) return refuse("That policy is not here.");
+
     /* Cleared first. The partial unique index refuses a second policy
        claiming new bookings, so setting one without clearing the other
        would fail with 23505 rather than doing what was asked. */
@@ -411,13 +422,10 @@ rates.put("/:code/cancellation-policies/:id/default", async (c) => {
 
     if (!on) return { ok: true as const, name: null };
 
-    const { rows } = await client.query<{ name: string }>(
-      `update cancellation_policies set applies_to_new_bookings = true
-        where id = $1 and hotel_id = $2 and is_active
-      returning name`,
-      [c.req.param("id"), hotelId],
+    await client.query(
+      "update cancellation_policies set applies_to_new_bookings = true where id = $1",
+      [c.req.param("id")],
     );
-    if (!rows[0]) return refuse("That policy is not here.");
     return { ok: true as const, name: rows[0].name };
   });
 
