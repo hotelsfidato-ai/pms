@@ -27,3 +27,4 @@
 | D24-23 | REP-13: the Lodging tax sheet's headings name a rate ("CGST @2.5%") from a setting nobody can change | **No rate in the heading: "CGST", "SGST"**; the amounts unchanged |
 | D24-24 | ACC-10: the accountant's day book has no Restaurant column | **Add "Restaurant" and "Restaurant tax" after "Extra tax", in the CSV and the Excel file** |
 | D24-25 | The desk's Bill tab button says "Invoice" while its page says "Interim bill" | **The button says "Interim bill"** |
+| D24-26 | D24-15's reach: is a room given AHEAD of time (this morning, for this afternoon's arrival, while its guest leaves at 11) or a move for a later night refused too? (asked by the follow-ups session) | **Only when they go in now.** Refused: check-in, walk-in, a move or swap from tonight or earlier, a room for a guest already checked in. Allowed: a room given ahead to a booking not yet here, and a move for a later night; the check-in still refuses on the day |
