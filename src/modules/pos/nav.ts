@@ -1,7 +1,7 @@
 import {
-  LayoutGrid, Receipt, MonitorSmartphone, Flame, UtensilsCrossed, Banknote, Plug,
+  LayoutGrid, Receipt, MonitorSmartphone, Flame, UtensilsCrossed, Banknote, Plug, SlidersHorizontal,
 } from "lucide-react";
-import { canAccess } from "@/lib/permissions";
+import { can, canAccess } from "@/lib/permissions";
 import type { ServiceNavEntry } from "@/components/app/navigation";
 
 /* The restaurant's menu entries — the Point of sale section, which is
@@ -66,4 +66,12 @@ export const nav: ServiceNavEntry[] = [
   { section: "point-of-sale", order: 70,
     label: "Charges to rooms", to: "/h/:code/pos", icon: Plug, resource: "invoice",
     keywords: ["bridge", "pos charges"] },
+  /* Setting a hotel's restaurant up (D22-6): its name, its sections and
+     tables, and what is left before the first order. The owner, an
+     administrator and the GM - room setup's grant (the owner, 25 Sep) - and
+     last, because it is done once and before any of the above. */
+  { section: "point-of-sale", order: 80,
+    label: "Restaurant setup", to: "/h/:code/till/setup", icon: SlidersHorizontal,
+    resource: "room_config", keywords: ["tables", "sections", "outlet", "set up restaurant"],
+    canSee: (role) => can(role, "edit", "room_config") },
 ];

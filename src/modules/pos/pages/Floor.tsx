@@ -11,6 +11,8 @@ import {
   Dialog, DialogContent, Field, fieldProps, Input,
 } from "@/components/ui";
 import { StartHere } from "@/components/app/StartHere";
+import { mayReach } from "@/components/app/navigation";
+import { useRole } from "@/lib/session";
 import { OrderPad } from "@/modules/pos/flows/OrderPad";
 import { draftedTables } from "@/lib/draft";
 import { getFloor, markPrinted, clearTable, setOutletClosed, type FloorTable, type TableState, type OffFor } from "@/modules/pos/data/till";
@@ -71,8 +73,12 @@ const TILE: Record<TableState, string> = {
   paid:    "bg-yellow-50 border-brand-yellow",
 };
 
+/** Restaurant setup (D22-6), where tables are laid out. */
+const SETUP = "/h/:code/till/setup";
+
 export default function FloorPage() {
   const hotelId = useHotel();
+  const role = useRole();
   /* The same live channel the pass uses. A kitchen moving a dish to
      ready, or another till taking a table, lands here rather than on
      the next poll -- both screens are the same service. */
@@ -255,6 +261,13 @@ export default function FloorPage() {
                 tables sit inside one. Until they exist, an order carries
                 whatever the waiter types.
               </p>
+              {/* D22-6: for the owner, an administrator and the GM, who may set
+                  them up; a waiter reads the sentence above only. */}
+              {mayReach(role, SETUP) && (
+                <Button className="mt-4" onClick={() => navigate(SETUP.replace(":code", hotelId))}>
+                  Set up tables
+                </Button>
+              )}
             </div>
           </CardBody>
         </Card>

@@ -12,5 +12,6 @@ export const mounts: readonly Mount[] = [
 ];
 
 /* The auth gate in server.ts resolves an outside till's key to its outlet,
-   and scripts/pos-outlet.ts issues keys. Both come through this door. */
-export { outletFor, hashKey, issueKey, type Outlet } from "./pos.ts";
+   and scripts/pos-outlet.ts issues keys and makes outlets. Both come through
+   this door. */
+export { outletFor, hashKey, issueKey, addOutlet, type Outlet } from "./pos.ts";

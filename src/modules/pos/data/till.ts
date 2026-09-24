@@ -945,6 +945,70 @@ export async function getFloor(
     `/api/hotels/${hotelId}/till/floor?outlet=${encodeURIComponent(outlet)}`);
 }
 
+/* ── Restaurant setup (D22-6) ─────────────────────────────────────
+   The restaurant's name, its sections and tables. Nothing is deleted: a
+   section or table taken away is switched off, and the server refuses it
+   while a bill sits on it. */
+
+export interface SetupTable {
+  id: string;
+  label: string;
+  /** Null when nobody typed it: a dash, never a number. */
+  seats: number | null;
+  /** A bill sits on it - open, or paid and not yet cleared. */
+  busy: boolean;
+}
+
+export interface TillSetup {
+  /** Null until somebody names it: there is no restaurant yet. */
+  restaurant: { name: string } | null;
+  /** Every section switched on, an empty one included. */
+  sections: { id: string; name: string; tables: SetupTable[] }[];
+  /** People with the Waiter role here. */
+  waiters: number;
+}
+
+export async function getTillSetup(hotelId: string): Promise<TillSetup> {
+  return api<TillSetup>(`/api/hotels/${hotelId}/till/setup`);
+}
+
+const setupPath = (hotelId: string, rest: string) =>
+  `/api/hotels/${hotelId}/till/setup/${rest}`;
+
+export function nameRestaurant(hotelId: string, name: string): Done {
+  return simplePost(setupPath(hotelId, "restaurant"), { name });
+}
+
+export function addSection(hotelId: string, name: string): Done {
+  return simplePost(setupPath(hotelId, "sections"), { name });
+}
+
+export function renameSection(hotelId: string, id: string, name: string): Done {
+  return simplePost(setupPath(hotelId, `sections/${id}`), { name }, "PATCH");
+}
+
+export function takeSectionAway(hotelId: string, id: string): Done {
+  return simplePost(setupPath(hotelId, `sections/${id}/off`));
+}
+
+/** One table (`label`), or a numbered run: `prefix` from `from` to `to`.
+    Every figure is the TEXT typed; the server refuses a blank. */
+export function addTables(
+  hotelId: string, sectionId: string,
+  tables: { label: string } | { prefix: string; from: string; to: string },
+  seats: string,
+): Done {
+  return simplePost(setupPath(hotelId, `sections/${sectionId}/tables`), { ...tables, seats });
+}
+
+export function changeTable(hotelId: string, id: string, label: string, seats: string): Done {
+  return simplePost(setupPath(hotelId, `tables/${id}`), { label, seats }, "PATCH");
+}
+
+export function takeTableAway(hotelId: string, id: string): Done {
+  return simplePost(setupPath(hotelId, `tables/${id}/off`));
+}
+
 export function openOrderOnTable(
   hotelId: string, outlet: string, tableId: string,
 ): Promise<TillResult> {
