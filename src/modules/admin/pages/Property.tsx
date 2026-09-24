@@ -71,7 +71,7 @@ export default function PropertyPage() {
     queryKey: ["property-today", code],
     queryFn: () => getTodaySnapshot(code),
   });
-  /* In house and Vacant are the one rule the Dashboard and Rooms read
+  /* In house and Empty are the one rule the Dashboard and Rooms read
      (D21-36, D21-37). This page printed its own: every checked-in booking,
      and "not sold tonight" - 11 and 9 where the Dashboard said 10 and 7. */
   const house = useQuery({
@@ -151,7 +151,7 @@ export default function PropertyPage() {
                   value={today.data ? String(today.data.sold) : null} />
           <Figure label="Occupancy"
                   value={today.data ? `${today.data.occupancyPct}%` : null} />
-          <Figure label="Vacant"
+          <Figure label="Empty"
                   value={house.data ? String(house.data.empty) : null} />
           <Figure label="In house now"
                   value={house.data ? String(house.data.inHouse) : null} />

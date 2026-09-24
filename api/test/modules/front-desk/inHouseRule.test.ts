@@ -168,6 +168,53 @@ describe("D21-36 · a guest past their departure date who has not checked out", 
     expect(((await res.json()) as { reason: string }).reason)
       .toBe("Somebody is already in that room.");
   });
+
+  /* FD-11 (D23-12). The booking held for 101 arrives today, and the check-in
+     asked only whether another booking's NIGHTS overlap - the walk-in's
+     ended on the 26th - so it put a second guest in with them. */
+  it("and the check-in of the booking held for that room refuses it, naming who is in it", async () => {
+    const res = await call(`/${CODE}/stays/${held}/check-in`, "POST", {
+      roomNumber: "101", earlyReason: "Test", idSkipReason: "Test",
+    });
+    expect(res.status).toBe(409);
+    expect(((await res.json()) as { reason: string }).reason).toMatch(
+      /^Walk-in 101 \d+ \(.+\) is still in room 101\. Check them out first, or choose another room\.$/);
+    /* Refused before the first write (MEMORY 243). */
+    const [stay] = await sql<{ status: string }>(
+      "select status from reservations where id = $1", [held]);
+    expect(stay!.status).toBe("confirmed");
+  });
+});
+
+/* FD-14 (the owner, 24 September). Waiving the early charge is a manager's;
+   the refusal sat below the check-in's writes, and a refusal commits what
+   came before it (MEMORY 243) - so a clerk was told no while the guest was
+   checked in, with no early charge. The screen hides the tick from a clerk,
+   so this is the hand-sent body. */
+describe("FD-14 · a clerk's waive of the early charge", () => {
+  it("is refused before anything is written", async () => {
+    const [clerk] = await sql<{ id: string }>(
+      `insert into staff (email, full_name, firebase_uid)
+       values ('fdw-clerk@fidato.in', 'FDW Clerk', 'test-uid-fdw-clerk')
+       on conflict (email) do update set is_active = true returning id::text`);
+    await sql(
+      "insert into staff_hotels (staff_id, hotel_id, role) values ($1, $2, 'front_desk') on conflict do nothing",
+      [clerk!.id, hotelId]);
+    /* Arriving tomorrow, so the check-in is early and needs the reason. */
+    const tomorrow = await heldBooking(`${CODE}-EARLY`, "2026-08-28", "2026-08-29", "103");
+
+    const res = await app.request(`/api/hotels/${CODE}/stays/${tomorrow}/check-in`, {
+      method: "POST",
+      headers: { "x-dev-staff-id": "test-uid-fdw-clerk", "content-type": "application/json" },
+      body: JSON.stringify({ roomNumber: "103", earlyReason: "Test", waiveEarly: true, idSkipReason: "Test" }),
+    });
+    expect(res.status).toBe(409);
+    expect(((await res.json()) as { reason: string }).reason).toMatch(/^Setting that charge aside is a manager's decision/);
+    const [stay] = await sql<{ status: string; check_in: string; early: string | null }>(
+      "select status, check_in::text, early_checkin_at::text as early from reservations where id = $1",
+      [tomorrow]);
+    expect(stay).toEqual({ status: "confirmed", check_in: "2026-08-28", early: null });
+  });
 });
 
 describe("D21-37 · the three counts", () => {

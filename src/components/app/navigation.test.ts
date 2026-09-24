@@ -106,6 +106,9 @@ describe("each person's menu", () => {
       /* Guests & CRM, from 21 September (the owner): the same screen, its
          own section. */
       "Guests",
+      /* 24 September (the owner): where a guest's message to the desk
+         waits (D23-14). */
+      "Guest messages",
       "Cashiering",
     ];
     /* Laundry's Dockets where the hotel has laundry on (D22-22). */

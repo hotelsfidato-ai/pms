@@ -6,10 +6,13 @@ The owner's D18-11 and D18-12; `docs/BUILD-PLAN-2026-09-18.md` § 4.
 ```
 src/modules/guest-messaging/          the screen, its menu entry and its address
 api/src/modules/guest-messaging/      the reading route, and the sweep
-db/migrations/125_what_the_guest_is_owed.sql   the sweep's ways in, and the
-                                      switch-on record (the master renumbers at
-                                      merge; refer to it as "what the guest is
-                                      owed")
+db/migrations/126_what_the_guest_is_owed.sql   the sweep's ways in, and the
+                                      switch-on record (refer to it as "what
+                                      the guest is owed")
+db/migrations/131_a_groups_lead.sql   app.group_lead, the one answer to "who
+                                      leads a group" (D22-52), and the due list
+                                      asking it (the master renumbers at merge;
+                                      refer to it as "a group's lead")
 db/tests/modules/guest-messaging.sql  those functions, called directly
 ```
 
@@ -54,7 +57,7 @@ one-line change):
 | WhatsApp only where the booking is ticked "guest agreed to WhatsApp" and has a number; else email where there is one; else nothing. Never both | `channelFor` | the owner, **D21-35, D21-72** |
 | The reminder: the day before arrival on the property's clock, from 10:00 | `REMIND_FROM` | the owner, **D22-39** |
 | No reminder while the confirmation is still owed, or within a day of it - it carries the same link | the function | the owner, **D22-40** |
-| **One confirmation and one reminder per group**, about its lead booking - the group's room booked first that still stands - to that booking's guest, by that booking's tick. A message about any room covers them all, so no other room is ever owed on its own, even if the lead is cancelled after it went. A booking in no group is unchanged | the function (`coalesce(group_id, id)`, the key app.guest_visits uses) | the owner, **D22-41** |
+| **One confirmation and one reminder per group**, about its lead booking - the room the desk assigned on the group's screen, else the group's room booked first; either only while it still stands - to that booking's guest, by that booking's tick. A message about any room covers them all, so no other room is ever owed on its own, even if the lead is cancelled or changed after it went. A booking in no group is unchanged | the function (`coalesce(group_id, id)`, the key app.guest_visits uses); the lead is `app.group_lead`, which the review request asks too | the owner, **D22-41, D22-52** |
 | **A catch-up confirmation** - a booking made before sending was first switched on - goes only from 09:00 until 21:00 on the property's clock; a booking made after is confirmed at once, any hour. Outside those hours it is still OWED (the MSG-3 list does not change with the clock), and the sweep leaves it without spending a place in the pace | `CATCH_UP_FROM`, `CATCH_UP_UNTIL`; the function's `held` | the owner, **D22-42** |
 | Three failed attempts and it stops | `MOST_ATTEMPTS` | this service, 19 September |
 | A booking's link dies at 11:00 the morning after check-out, never under a day from now | `app.guest_link_expires` | D18-9, as the desk's route has it |
@@ -189,6 +192,16 @@ link function is named for what it is: **`app.guest_booking_link_issue`**, not
 - **D22-42:** catch-up confirmations only between 09:00 and 21:00 hotel time;
   new bookings at once, any hour - built as above.
 
+### Answered 23 September (D22-52 to D22-54)
+
+- **D22-52:** the lead is by default the room booked first that still stands,
+  and the desk can assign it - built: `reservation_groups.lead_reservation_id`,
+  set on the group's screen ("Lead guest"), read only through `app.group_lead`.
+- **D22-53:** the desk sees the group's messages on a group's other rooms - as
+  built on 22 September.
+- **D22-54:** a "Rooms" line in the group's confirmation - with the next
+  WhatsApp template edit; not built here.
+
 ### To the OWNER - open, each with a recommendation
 
 1. **The pace (D21-34): how many messages a minute?** Your number, from what the
@@ -199,20 +212,9 @@ link function is named for what it is: **`app.guest_booking_link_issue`**, not
    reach", and "These guests will get no confirmation and no reminder. Add an
    email address to the booking, or tick WhatsApp on it if the guest agrees."
    Recommended: as written.
-3. **A group's confirmation names one booking** (22 September): the template's
-   "Booking: {{3}}" carries the lead room's reference, and nothing says there
-   are three rooms. Recommended: **add the number of rooms** (`data.rooms`) and
-   a line "Rooms: {{n}}" to the `booking_confirmation` template when the owner
-   next edits it; not built, as the template is the owner's wording.
-4. **Who is the "lead guest" (D22-41)?** The system records no lead guest on a
-   group, so the lead is taken to be the guest of the group's room booked
-   first that is still standing (a group booked at the desk puts the booker on
-   every room). Recommended: as built; if the owner means someone else (the
-   group's company contact, say), the group needs a lead-guest field first.
-5. **What the desk sees for a group's other rooms.** Asked about any room of a
-   group, the screen shows the group's messages (the lead's), because that
-   room is covered by them. Recommended: as built; the alternative is to show
-   nothing, which reads as "never sent".
+3. **An assigned lead that is later cancelled** (23 September): built so the
+   default takes over again - the room booked first that still stands - and
+   the desk can pick another. Recommended: as built.
 
 ## Requests from other services
 

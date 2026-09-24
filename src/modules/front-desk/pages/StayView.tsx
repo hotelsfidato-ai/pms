@@ -733,7 +733,10 @@ export default function StayViewPage({ view }: {
                           d === BUSINESS_DATE && "bg-ink-900/[0.03]",
                           "hover:bg-brand-orange-50",
                         )}
-                        style={{ gridColumn: i + 2 }}
+                        /* gridRow 1, like the bars: with a column alone,
+                           auto-placement put every cell under a bar - and
+                           each one after it - into a second row (FD-13). */
+                        style={{ gridColumn: i + 2, gridRow: 1 }}
                       />
                     ))}
 

@@ -131,6 +131,14 @@ export default function ReviewsPage() {
       {
         key: "ask", header: "", width: "w-[200px]",
         cell: (r) => {
+          /* Once per group, at its lead guest's room (D22-10). */
+          if (r.leadId && r.leadId !== r.id) {
+            return (
+              <p className="text-xs text-ink-500 text-right">
+                The group is asked once, at {r.leadReference ?? "its lead room"}.
+              </p>
+            );
+          }
           if (!mayActuallySend) return null;
           return (
             <div className="flex gap-2 justify-end">

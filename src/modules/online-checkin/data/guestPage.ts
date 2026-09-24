@@ -139,7 +139,8 @@ export const getBill = (token: string): Promise<StayBill> =>
   api<StayBill>(at(token, "/bill"), withUnlock(token));
 
 export interface GuestRequest {
-  kind: "spa" | "laundry";
+  /** 'desk' is a message to the front desk (D23-14), not a request. */
+  kind: "spa" | "laundry" | "desk";
   what: string;
   wanted: string | null;
   status: "open" | "done" | "declined";

@@ -34,6 +34,12 @@ export interface Departure {
   askChannel: "whatsapp" | "email" | null;
   askedAt: string | null;
   askDetail: string | null;
+  /** The group's lead room, null for a stay in no group. A group is asked
+      once, at its lead (D22-10, D22-52), so the ask above is the GROUP's
+      and only the lead's row may ask. */
+  leadId: string | null;
+  /** Null where the lead is at a property this reader cannot see. */
+  leadReference: string | null;
 }
 
 export interface ReviewsPage {
