@@ -1,4 +1,4 @@
-import { fetchOr } from "@/data/repositories/http";
+import { fetchOr, write } from "@/data/repositories/http";
 import { BUSINESS_DATE } from "@/data/repositories/businessDate";
 import { api } from "@/lib/api";
 /* The night audit.
@@ -49,12 +49,59 @@ export interface ClosedDay {
   /** The room charges the audit posted, before tax. */
   revenuePosted: number | null;
   noShows: number | null;
+  /** How many corrections the day has had (D24-6); the record above stays
+      as the audit made it. Absent from a list cached before 24 September. */
+  corrections?: number;
+  /** Room revenue after the day's corrections; null where no room charge
+      was corrected. */
+  correctedRevenue?: number | null;
 }
 
 /** The days this property has closed, newest first (the last 60). */
 export async function listClosedDays(hotelId: string): Promise<ClosedDay[]> {
   if (!hotelId) return [];
   return fetchOr<ClosedDay[]>(`/api/hotels/${hotelId}/night-audit/runs`, []);
+}
+
+/* ── Correcting a closed day (D22-18; the owner's D24-1 to D24-8) ─── */
+
+/** A room charge or no-show charge still standing on a closed day. */
+export interface DayCharge {
+  id: string;
+  description: string;
+  kind: "room" | "no-show";
+  guest: string | null;
+  amount: number;
+  tax: number;
+  /** The tax invoice standing on its bill: that bill is corrected by a
+      credit note, not here (D24-4). */
+  invoice: string | null;
+}
+
+export interface DayCorrection {
+  id: string;
+  description: string;
+  oldAmount: number;
+  /** 0: the charge was taken off. */
+  newAmount: number;
+  reason: string;
+  by: string | null;
+  at: string;
+}
+
+export async function getClosedDay(
+  hotelId: string, day: string,
+): Promise<{ charges: DayCharge[]; corrections: DayCorrection[] }> {
+  return api(`/api/hotels/${hotelId}/night-audit/days/${day}/charges`);
+}
+
+/** `newAmount` 0 takes the charge off. A refusal comes back as the server's
+    sentence. */
+export async function correctClosedDay(
+  hotelId: string, day: string,
+  correction: { postingId: string; newAmount: number; reason: string },
+) {
+  return write<{ id: string }>(`/api/hotels/${hotelId}/night-audit/days/${day}/corrections`, correction);
 }
 
 /** What one completed audit did. */

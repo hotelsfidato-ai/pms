@@ -40,6 +40,43 @@ they read, or the branch it drops is untested everywhere at once.
 
 ## Fixed
 
+### NA-5 · A walk-in staying two nights or more was charged twice from the second night
+
+**Found** 24 September, opening the correction screen on a closed day in a
+service copy: the Night Audit report for 26 August showed ₹14,063.04 of room
+charges for two rooms whose nights came to ₹7,031.52.
+
+A walk-in posts its whole stay on arrival, one line: "Room 201 · 2 nights"
+(front desk, `operations.ts`; the owner's D17-33). The audit's "already
+charged tonight?" asked only for a room line **dated tonight**, so on the second
+night it found none and posted the night again. Every multi-night walk-in, every
+night after the first. The reports spread the whole-stay line over its nights
+(D17-71) and counted the audit's line as well, so they doubled too.
+
+**Fixed** (the owner's D24-14): a room line counts for every night it pays for,
+read with the reports' own `POSTING_NIGHTS`. Nothing else the audit posts
+changed. Test: `nightAudit.test.ts`, "does not charge a night a walk-in's
+whole-stay line already paid for" - with the old condition it failed
+`expected '2' to be '1'`.
+
+**Not done:** live bills were not looked at. Any double charge already there is
+taken off on Closed days by the GM, with a reason (D24-14); one on a bill that
+has a tax invoice needs a credit note.
+
+**The rule** - a guard against charging twice must ask about every line that
+could already have paid, not only the lines this code writes itself.
+
+### NA-6 · The desk's Reverse on a line of a closed day said "Something went wrong"
+
+**Found** 23 September by the plan (`docs/briefs/closed-day-correction-plan.md`,
+finding 1), read in the code. A reversal is posted on its line's own date, the
+database refuses a closed date (012), and the server answered 500.
+
+**Fixed** (D24-9, D24-13), in finance's `postings.ts`, before any write: a room
+or no-show charge "This day is closed - correct it on Closed days."; anything
+else "This day is closed. Only its room and no-show charges can be corrected, on
+Closed days." Seen on the screen 24 September. Tests in `corrections.test.ts`.
+
 ### NA-1 · Two night-audit routes have no caller
 
 **Found** — 15 September by the brief; confirmed 16 September by the route audit.

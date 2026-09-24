@@ -511,6 +511,45 @@ describe("closing a day", () => {
       await db.end();
     }
   });
+
+  /* D24-14, the owner, 24 September. A walk-in posts its whole stay on
+     arrival (D17-33); the audit asked only for a line dated tonight, so it
+     charged the second night again. */
+  it("does not charge a night a walk-in's whole-stay line already paid for", async () => {
+    await clearDueOuts();
+    const stay = await checkInAtPune(2, 2500);
+    const db = await admin();
+    try {
+      /* What the walk-in route writes: both nights, one line, on arrival. */
+      await db.query(
+        `insert into folio_postings (hotel_id, folio_id, reservation_id, business_date,
+                                     category, description, amount, tax_rate, tax_amount)
+         values ($1, $2, $3, app.business_date($1), 'room', $4, 5000, 5, 250)`,
+        [puneId, stay.folioId, stay.reservationId, `Room ${stay.room} · 2 nights`]);
+
+      for (let night = 0; night < 2; night++) {
+        await clearDueOuts();
+        const body = (await (await closeDay()).json()) as { ok: boolean };
+        expect(body.ok, JSON.stringify(body)).toBe(true);
+      }
+
+      const { rows } = await db.query<{ n: string }>(
+        "select count(*)::text as n from folio_postings where folio_id = $1 and category = 'room'",
+        [stay.folioId]);
+      expect(rows[0]!.n, "the audit charged a night already paid for").toBe("1");
+
+      /* Out, and the room clean again, so this test takes no room from the
+         files after it (a release dirties the room, 074). */
+      await db.query("update room_assignments set released_at = now() where reservation_id = $1",
+        [stay.reservationId]);
+      await db.query(`update rooms set housekeeping_status = 'clean'
+                        where id in (select room_id from room_assignments where reservation_id = $1)`,
+        [stay.reservationId]);
+      await db.query("update reservations set status = 'checked_out' where id = $1", [stay.reservationId]);
+    } finally {
+      await db.end();
+    }
+  });
 });
 
 /* ── What must be settled first ───────────────────────────────────── */

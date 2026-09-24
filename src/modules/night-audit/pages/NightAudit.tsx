@@ -6,7 +6,8 @@ import { cn } from "@/lib/cn";
 import { dateLong, dateShort, dateTime, money } from "@/lib/format";
 import { ApiError } from "@/lib/api";
 import { useUi } from "@/lib/ui";
-import { useSession } from "@/lib/session";
+import { useSession, useRole } from "@/lib/session";
+import { can } from "@/lib/permissions";
 import {
   Page, PageHeader, Card, CardHeader, CardBody, Button, StatusPill, Skeleton, Tooltip,
   ErrorState, EmptyState, DataTable, Term, type Column,
@@ -16,6 +17,7 @@ import {
   getNightAudit, runNightAudit, listClosedDays,
   type NightAuditResult, type ClosedDay,
 } from "@/modules/night-audit/data/nightAudit";
+import { CorrectDay } from "@/modules/night-audit/components/CorrectDay";
 
 /* ══════════════════════════════════════════════════════════════════
    NIGHT AUDIT
@@ -55,6 +57,12 @@ export default function NightAuditPage() {
 
   const queryClient = useQueryClient();
   const [result, setResult] = useState<NightAuditResult | null>(null);
+
+  /* Correcting a closed day (D22-18): the owner, an administrator and the GM
+     (D24-3), this month and last (D24-5). Anybody else sees a day's
+     corrections, not the form. */
+  const canCorrect = can(useRole(), "approve", "reservation");
+  const [correcting, setCorrecting] = useState<string | null>(null);
 
   const run = useMutation({
     /* A day already closed comes back refused WITH its record (D17-12).
@@ -309,11 +317,13 @@ export default function NightAuditPage() {
       <Card className="mt-6">
         <CardHeader
           title="Closed days"
-          description="Every night audit run at this property, newest first."
+          description={canCorrect && firstCorrectable(data?.businessDate)
+            ? `Every night audit run at this property, newest first. Days from ${dateLong(firstCorrectable(data?.businessDate))} on can be corrected; older ones stay as they are.`
+            : "Every night audit run at this property, newest first."}
         />
         <DataTable<ClosedDay>
           className="border-0 rounded-t-none"
-          columns={CLOSED_DAY_COLUMNS}
+          columns={closedDayColumns(canCorrect, firstCorrectable(data?.businessDate), setCorrecting)}
           rows={closedDays.data ?? []}
           rowKey={(d) => d.businessDate}
           loading={closedDays.isLoading}
@@ -328,6 +338,11 @@ export default function NightAuditPage() {
           }
         />
       </Card>
+
+      {correcting && (
+        <CorrectDay hotelId={hotelId} day={correcting} canCorrect={canCorrect}
+          onClose={() => setCorrecting(null)} />
+      )}
     </Page>
   );
 }
@@ -336,16 +351,58 @@ export default function NightAuditPage() {
 const orDash = (n: number | null) => (n === null ? "-" : String(n));
 const moneyOrDash = (n: number | null) => (n === null ? "-" : money(n));
 
-const CLOSED_DAY_COLUMNS: Column<ClosedDay>[] = [
-  { key: "day", header: "Day", cell: (d) => dateShort(d.businessDate) },
-  /* Nobody was recorded before 17 September: a dash, not a guess. */
-  { key: "ranBy", header: "Ran by", cell: (d) => d.ranBy ?? "-" },
-  { key: "closed", header: "Closed", cell: (d) => dateTime(d.completedAt), hideBelow: "md" },
-  { key: "rooms", header: "Rooms posted", numeric: true, cell: (d) => orDash(d.roomsPosted) },
-  /* The room charges the audit posted, before tax. */
-  { key: "revenue", header: "Room revenue", numeric: true, cell: (d) => moneyOrDash(d.revenuePosted) },
-  { key: "noShows", header: "No-shows", numeric: true, cell: (d) => orDash(d.noShows) },
-];
+/** The first day that may still be corrected: the 1st of last month (D24-5). */
+function firstCorrectable(businessDate: string | undefined): string | null {
+  if (!businessDate) return null;
+  const [y, m] = businessDate.split("-").map(Number) as [number, number];
+  return m === 1 ? `${y - 1}-12-01` : `${y}-${String(m - 1).padStart(2, "0")}-01`;
+}
+
+function closedDayColumns(
+  canCorrect: boolean, from: string | null, open: (day: string) => void,
+): Column<ClosedDay>[] {
+  return [
+    {
+      key: "day", header: "Day",
+      cell: (d) => (
+        <span className="inline-flex items-center gap-2">
+          {dateShort(d.businessDate)}
+          {(d.corrections ?? 0) > 0 && <StatusPill tone="info">Corrected</StatusPill>}
+        </span>
+      ),
+    },
+    /* Nobody was recorded before 17 September: a dash, not a guess. */
+    { key: "ranBy", header: "Ran by", cell: (d) => d.ranBy ?? "-" },
+    { key: "closed", header: "Closed", cell: (d) => dateTime(d.completedAt), hideBelow: "md" },
+    { key: "rooms", header: "Rooms posted", numeric: true, cell: (d) => orDash(d.roomsPosted) },
+    /* The room charges the audit posted, before tax - and, once a room charge
+       of the day is corrected, what they came to after (D24-6). */
+    {
+      key: "revenue", header: "Room revenue", numeric: true,
+      cell: (d) => d.correctedRevenue == null
+        ? moneyOrDash(d.revenuePosted)
+        : `${moneyOrDash(d.revenuePosted)} → ${money(d.correctedRevenue)}`,
+    },
+    { key: "noShows", header: "No-shows", numeric: true, cell: (d) => orDash(d.noShows) },
+    {
+      key: "correct", header: "",
+      cell: (d) => {
+        if (!canCorrect) {
+          return (d.corrections ?? 0) > 0
+            ? <Button size="sm" variant="ghost" onClick={() => open(d.businessDate)}>Corrections</Button>
+            : null;
+        }
+        /* Older than last month (D24-5): off, and the card says why. */
+        return (
+          <Button size="sm" variant="secondary" disabled={from !== null && d.businessDate < from}
+            onClick={() => open(d.businessDate)}>
+            Correct
+          </Button>
+        );
+      },
+    },
+  ];
+}
 
 /* One counted drawer. A variance is shown as a COUNT of shifts that had
    to explain themselves, not as a rupee difference — the reason a

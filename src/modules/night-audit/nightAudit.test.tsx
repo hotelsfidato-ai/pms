@@ -3,7 +3,7 @@ import { render, screen, fireEvent, waitFor } from "@testing-library/react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { MemoryRouter, Routes, Route } from "react-router";
 import * as apiModule from "@/lib/api";
-import { HOTEL, startSignedIn } from "@/test/app";
+import { AGRA_HOTEL, HOTEL, signedIn, startSignedIn } from "@/test/app";
 import NightAuditPage from "@/modules/night-audit/pages/NightAudit";
 import type { ClosedDay, NightAuditState } from "@/modules/night-audit/data/nightAudit";
 
@@ -173,12 +173,92 @@ describe("the Night audit screen", TEST_LIMIT, () => {
       .filter((tr) => tr.textContent?.includes("10 Sep 2026"));
     expect(rows.length, "no table row for 10 Sep").toBeGreaterThan(0);
     const cells = Array.from(rows[0]!.querySelectorAll("td")).map((td) => td.textContent?.trim());
-    expect(cells).toEqual(["10 Sep 2026", "-", expect.any(String), "-", "-", "-"]);
+    /* The last cell is Correct's: empty for the clerk these tests sign in as. */
+    expect(cells).toEqual(["10 Sep 2026", "-", expect.any(String), "-", "-", "-", ""]);
   });
 
   it("says what belongs in the list when no day has been closed", async () => {
     server({ closedDays: [] });
     renderScreen();
     expect(await screen.findByText("No day closed yet", {}, SLOW)).toBeTruthy();
+  });
+});
+
+/* ══════════════════════════════════════════════════════════════════
+   CORRECTING A CLOSED DAY (D22-18; the owner's D24-1 to D24-8)
+   ══════════════════════════════════════════════════════════════════ */
+
+const corrected: ClosedDay = { ...madeByPriya, corrections: 1, correctedRevenue: 37900 };
+const july: ClosedDay = { ...nobodyRecorded, businessDate: "2026-07-31" };
+
+const asGm = () => signedIn({
+  scope: {
+    staffId: "33333333-3333-3333-3333-333333333333", email: "gm@fidato.in",
+    fullName: "Test GM", isGroupAdmin: false, hotels: [{ hotelId: AGRA_HOTEL, role: "gm" }],
+  },
+});
+
+describe("correcting a closed day", TEST_LIMIT, () => {
+  it("shows a corrected day as old → new; reception sees its corrections and no Correct", async () => {
+    server({ closedDays: [corrected, nobodyRecorded] });
+    renderScreen();
+
+    await waitFor(() => expect(screen.getAllByText("Priya Nair").length).toBeGreaterThan(0), SLOW);
+    const text = document.body.textContent ?? "";
+    expect(text).toMatch(/₹\s?38,400 → ₹\s?37,900/);
+    expect(screen.getAllByText("Corrected").length).toBeGreaterThan(0);
+    expect(screen.queryAllByRole("button", { name: "Correct" })).toHaveLength(0);
+    /* The corrected day only - the other has nothing to show. Twice per row:
+       the table and the phone's card. */
+    expect(screen.getAllByRole("button", { name: "Corrections" }).length).toBe(2);
+  });
+
+  it("the GM chooses a charge, and Save waits for a reason; an invoiced bill and an old day are refused on sight", async () => {
+    asGm();
+    const posted: unknown[] = [];
+    server({ closedDays: [madeByPriya, july] });
+    const plain = vi.mocked(apiModule.api).getMockImplementation()!;
+    vi.mocked(apiModule.api).mockImplementation(async (url: string, init?: RequestInit) => {
+      if (url === `/api/hotels/${HOTEL}/night-audit/days/${SHOWN}/charges`) {
+        return {
+          charges: [
+            { id: "71", description: "Room 204 · 1 night", kind: "room", guest: "Asha Rao",
+              amount: 3000, tax: 150, invoice: null },
+            { id: "72", description: "Room 205 · 1 night", kind: "room", guest: "Ravi Iyer",
+              amount: 3000, tax: 150, invoice: "FH/26-27/0042" },
+          ],
+          corrections: [],
+        } as never;
+      }
+      if (url === `/api/hotels/${HOTEL}/night-audit/days/${SHOWN}/corrections`) {
+        posted.push(JSON.parse(String(init?.body)));
+        return { ok: true, id: "c1" } as never;
+      }
+      return plain(url, init);
+    });
+    renderScreen();
+
+    const buttons = await screen.findAllByRole("button", { name: "Correct" }, SLOW);
+    /* July is older than last month (D24-5): offered, off, with the reason. */
+    expect(buttons.filter((b) => (b as HTMLButtonElement).disabled).length).toBeGreaterThan(0);
+    fireEvent.click(buttons.find((b) => !(b as HTMLButtonElement).disabled)!);
+
+    await screen.findByText("Room 204 · 1 night", {}, SLOW);
+    expect(screen.getByText("This bill has tax invoice FH/26-27/0042. Issue a credit note instead.")).toBeTruthy();
+    const radios = screen.getAllByRole("radio") as HTMLInputElement[];
+    expect(radios.map((r) => r.disabled)).toEqual([false, true]);
+
+    fireEvent.click(radios[0]!);
+    fireEvent.change(screen.getByLabelText(/The right figure/), { target: { value: "2500" } });
+    const save = screen.getByRole("button", { name: "Save correction" }) as HTMLButtonElement;
+    expect(save.disabled, "Save before a reason").toBe(true);
+
+    fireEvent.change(screen.getByLabelText(/Why it was wrong/), { target: { value: "Corporate rate" } });
+    expect(save.disabled).toBe(false);
+    fireEvent.click(save);
+
+    await waitFor(() => expect(posted).toEqual([
+      { postingId: "71", newAmount: 2500, reason: "Corporate rate" },
+    ]), SLOW);
   });
 });
