@@ -322,6 +322,12 @@ export async function dailyFigures(
    door. `settled` and `not l.voided` are the Manager report's own
    predicates, word for word: a figure that is only ALMOST the same as the
    one already in use is worse than no figure at all.
+
+   ⚠ ONE DIFFERENCE, ON PURPOSE (24 September): a bill charged to a room is
+   left out. The Manager report keeps the restaurant's room postings out of
+   its extra charges instead ("POS to PMS Posting"); the day book takes the
+   folio whole from `dailyFigures`, so it is this side that leaves them out.
+   Either way each bill is counted once, and the totals agree.
    ══════════════════════════════════════════════════════════════════ */
 export interface PosDay {
   date: string;
@@ -345,6 +351,11 @@ export async function posSales(
          from pos_orders o
         where o.hotel_id = $1
           and o.status = 'settled'
+          -- ⚠ NOT A BILL CHARGED TO A ROOM (24 September, the owner's yes):
+          -- that one is already a posting on the room's folio, so
+          -- dailyFigures counts it, and the day book - this function's one
+          -- reader - added it twice. Only what never reaches a folio here.
+          and o.payment_method is distinct from 'room'
           and o.business_date between $2::date and $3::date
      ),
      lines as (
@@ -421,9 +432,10 @@ export interface Property {
   currency: string;
   timezone: string;
   businessDate: string;
-  /** The property's own GST halves, for the Lodging tax headings. */
-  cgstRate: number;
-  sgstRate: number;
+  /** The property's own GST halves, for the Lodging tax headings. Null
+      where nobody has set them (D22-9: no default rate), never 0. */
+  cgstRate: number | null;
+  sgstRate: number | null;
 }
 
 /** By code (a route) or by id (the master's PDF route, which has the id). */
@@ -438,12 +450,12 @@ export async function propertyById(client: Client, id: string): Promise<Property
 async function propertyWhere(client: Client, where: string, value: string): Promise<Property | null> {
   const { rows } = await client.query<{
     id: string; code: string; name: string; address: string | null; gstin: string | null;
-    currency: string; timezone: string; bd: string; cgst: string; sgst: string;
+    currency: string; timezone: string; bd: string; cgst: string | null; sgst: string | null;
   }>(
     `select id, code, name,
             nullif(btrim(address_line), '') as address,
             gstin, currency, coalesce(timezone, 'Asia/Kolkata') as timezone,
-            coalesce(cgst_rate, 0)::text as cgst, coalesce(sgst_rate, 0)::text as sgst,
+            cgst_rate::text as cgst, sgst_rate::text as sgst,
             to_char(app.business_date(id), 'YYYY-MM-DD') as bd
        from hotels where ${where} and is_active`,
     [value],
@@ -453,7 +465,8 @@ async function propertyWhere(client: Client, where: string, value: string): Prom
     ? {
         id: h.id, code: h.code, name: h.name, address: h.address, gstin: h.gstin,
         currency: h.currency.trim(), timezone: h.timezone, businessDate: h.bd,
-        cgstRate: Number(h.cgst), sgstRate: Number(h.sgst),
+        cgstRate: h.cgst === null ? null : Number(h.cgst),
+        sgstRate: h.sgst === null ? null : Number(h.sgst),
       }
     : null;
 }

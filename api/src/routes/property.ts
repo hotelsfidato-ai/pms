@@ -36,8 +36,8 @@ interface HotelRow {
   currency: string;
   check_in_time: string;
   check_out_time: string;
-  cgst_rate: string;
-  sgst_rate: string;
+  cgst_rate: string | null;
+  sgst_rate: string | null;
 }
 
 async function resolve(client: Client, code: string) {
@@ -106,7 +106,12 @@ property.get("/:code", async (c) => {
       rooms: Number(rooms.rows[0]?.n ?? 0),
       roomTypes: types.rows.map((r) => r.name),
       rateTypes: plans.rows.map((r) => r.code),
-      tax: { cgst: Number(hotel.cgst_rate), sgst: Number(hotel.sgst_rate) },
+      /* Null where nobody has set it (D22-9): Number(null) is 0, a rate
+         nobody chose. */
+      tax: {
+        cgst: hotel.cgst_rate === null ? null : Number(hotel.cgst_rate),
+        sgst: hotel.sgst_rate === null ? null : Number(hotel.sgst_rate),
+      },
       paymentMethods: PAYMENT_METHODS,
     };
   });

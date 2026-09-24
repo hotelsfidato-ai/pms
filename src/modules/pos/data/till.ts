@@ -183,6 +183,9 @@ export interface Order {
       the function" and no other way (the owner, 17 September). */
   eventId: string | null;
   eventTitle: string | null;
+  /** The VAT bill issued for the alcohol when it was paid here (D22-44).
+      Optional: an answer from before it existed has no such key. */
+  vatBill?: string | null;
   lines: OrderLine[];
 
   net: number;

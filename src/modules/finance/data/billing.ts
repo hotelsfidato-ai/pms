@@ -32,7 +32,8 @@ export interface PaymentRow {
   method: string;
   description: string;
   amount: number;
-  user: string;
+  /** Who took it, by name; null where nobody was recorded. */
+  user: string | null;
   reversed: boolean;
 }
 
@@ -188,6 +189,56 @@ export interface InvoiceDetail {
   creditsNumber: string | null;
   reason: string | null;
   creditedBy: string | null;
+  /** D22-44: the VAT bill issued with it for the alcohol, if any. */
+  vatBill?: string | null;
+}
+
+/* ── VAT bills for alcohol (D22-44) ─────────────────────────────────
+   Issued beside the GST document of the same sale, from their own series,
+   and cancelled like a credit note. */
+
+export interface IssuedVatBill {
+  number: string;
+  recipient: string | null;
+  total: number;
+  vatTotal: number;
+  issuedAt: string;
+  isCancellation: boolean;
+  cancelledBy: string | null;
+}
+
+export interface VatBillDetail {
+  number: string;
+  finYear: string;
+  issuedAt: string;
+  issuedBy: string | null;
+  businessDate: string | null;
+  supplier: { name: string; address: string | null; city: string | null; state: string | null };
+  recipient: string | null;
+  /** The GST tax invoice it was issued with, or the restaurant bill it is for. */
+  invoice: string | null;
+  order: string | null;
+  lines: { description: string; qty: number | null; amount: number }[];
+  discount: number;
+  taxableValue: number;
+  vatRate: number | null;
+  vatTotal: number;
+  total: number;
+  cancelsNumber: string | null;
+  reason: string | null;
+  cancelledBy: string | null;
+}
+
+export async function listVatBills(hotelId: string): Promise<IssuedVatBill[]> {
+  if (!hotelId) return [];
+  return fetchOr<IssuedVatBill[]>(`/api/hotels/${hotelId}/vat-bills`, []);
+}
+
+export async function getVatBill(hotelId: string, number: string): Promise<VatBillDetail | null> {
+  if (!hotelId || !number) return null;
+  return fetchOr<VatBillDetail | null>(
+    `/api/hotels/${hotelId}/vat-bills/${encodeURIComponent(number)}`, null,
+  );
 }
 
 export async function listInvoices(hotelId: string): Promise<IssuedInvoice[]> {
@@ -207,7 +258,7 @@ export async function getInvoice(
 /** Issue a tax invoice for a stay. The number comes from the database. */
 export async function issueInvoice(
   hotelId: string, stayId: string,
-): Promise<{ ok: boolean; number?: string; reason?: string; duplicate?: boolean }> {
+): Promise<{ ok: boolean; number?: string; vatBill?: string | null; reason?: string; duplicate?: boolean }> {
   return api(`/api/hotels/${hotelId}/stays/${stayId}/invoice`, { method: "POST" });
 }
 
@@ -227,11 +278,24 @@ export async function issueInvoice(
 export async function issueCreditNote(
   hotelId: string, number: string, reason: string,
 ): Promise<{ ok: true; number: string } | { ok: false; reason: string }> {
+  return withReason(
+    `/api/hotels/${hotelId}/invoices/${encodeURIComponent(number)}/credit-note`, reason);
+}
+
+/** Cancels a VAT bill the same way (D22-44): a bill of its own, from the VAT
+    series, with the reason the server requires. */
+export async function cancelVatBill(
+  hotelId: string, number: string, reason: string,
+): Promise<{ ok: true; number: string } | { ok: false; reason: string }> {
+  return withReason(
+    `/api/hotels/${hotelId}/vat-bills/${encodeURIComponent(number)}/cancel`, reason);
+}
+
+async function withReason(
+  url: string, reason: string,
+): Promise<{ ok: true; number: string } | { ok: false; reason: string }> {
   try {
-    return await api(
-      `/api/hotels/${hotelId}/invoices/${encodeURIComponent(number)}/credit-note`,
-      { method: "POST", body: JSON.stringify({ reason }) },
-    );
+    return await api(url, { method: "POST", body: JSON.stringify({ reason }) });
   } catch (error) {
     if (error instanceof ApiError) {
       const p = error.body as { reason?: string } | undefined;

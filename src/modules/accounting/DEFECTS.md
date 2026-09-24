@@ -14,6 +14,31 @@ entries stay here: they are the reason the fault does not come back.
 
 ## Fixed
 
+### ACC-11 · A restaurant bill charged to a room was counted twice — FIXED 24 September
+
+**Found** — 24 September, reading the day book back while photographing the
+Excel file (D22-37) on `fidato_s1`: 25 August's Alcohol read ₹1,500 where
+₹1,000 of whisky had been sold (₹500 paid in cash at the restaurant, ₹500
+charged to room 202). `dailyFigures` counts the room's posting in `extra`,
+and `posSales` counted every settled order again as an outlet sale - the
+room-charged one included - so Sales, and its GST (or VAT, for drinks), was
+too high by every restaurant bill charged to a room, since 19 September. The
+Manager report was right: it keeps the restaurant's room postings out of its
+extra charges ("POS to PMS Posting").
+
+**Fixed** — with the owner's yes: `posSales` (reports' `figures.ts`, read by
+the day book and nothing else) leaves out a bill settled to a room. 25
+August now reads Sales ₹18,754.90 (was ₹19,254.90), Alcohol ₹1,000, VAT
+₹100.
+
+**Proved** — `api/test/modules/accounting/dayBook.test.ts`, "counts a meal
+charged to a room once": a meal rung at the till and settled to a real
+room moves Sales by its net exactly once and the outlets' figure not at
+all. With the predicate taken out it fails ("expected 3040 to be 2400").
+
+**The rule** — two sources that each hold part of a sale must agree on who
+holds the part they share.
+
 ### ACC-1 · Two menu entries on one order number, and the shared guard caught it
 
 **Found** 19 September, by `src/components/app/navigation.test.ts` on the full
@@ -141,6 +166,20 @@ person exporting should not learn it from their accountant.
 ---
 
 ## Open — not fixed
+
+### ACC-10 · The file has no Restaurant column, though the server sends one
+
+**Found** — 23 September, copying the CSV's columns for the .xlsx (D22-37).
+The server's day book has had `pos` and `posTax` since 19 September — what
+the outlets sold in cash, by card or UPI, "its own column because an
+accountant asking what the restaurant took should not have to subtract two
+other figures". The screen's `DayBookRow` never took them, so neither the
+screen nor the CSV (nor now the .xlsx, which copies the CSV) has that column:
+the takings are inside Sales and GST, and in no column of their own.
+
+**Not changed** — the .xlsx was to match the CSV. Adding the column to both
+is a question for the owner (what the accountant's file shows), with the
+recommendation: yes, "Restaurant" and "Restaurant tax" after "Extra tax".
 
 ### ACC-3 · Food is not its own line; the extras are one number
 

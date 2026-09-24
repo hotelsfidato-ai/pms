@@ -1,6 +1,12 @@
-import { describe, it, expect } from "vitest";
-import { render, screen } from "@testing-library/react";
+import { describe, it, expect, afterEach, vi } from "vitest";
+import { render, screen, fireEvent } from "@testing-library/react";
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { MemoryRouter } from "react-router";
+import * as apiModule from "@/lib/api";
+import { startSignedIn } from "@/test/app";
+import type { Stay } from "@/data/repositories";
 import { BillPrint } from "./flows/BillPrint";
+import { FolioPanel } from "./flows/FolioPanel";
 import type { StayBill } from "./data/bill";
 
 /* The desk's printed bill, 21 September: it printed the demo's made-up
@@ -69,4 +75,37 @@ describe("the printed bill", () => {
     expect(screen.queryByText(/SGST/)).toBeNull();
     expect(screen.queryByText("CGST 5%")).toBeNull();
   });
+});
+
+/* D22-7, the owner: the desk's printed bill said "Tax Invoice" with no
+   number. It is the "Interim bill", as the guest's page says, before
+   check-out and after (24 September): the numbered tax invoice is issued on
+   Invoices. The panel's other reads are left unanswered, so only the print
+   is in play. */
+describe("the desk's printed bill, from the Bill tab", () => {
+  afterEach(() => { vi.restoreAllMocks(); vi.unstubAllGlobals(); });
+
+  const print = async (status: Stay["status"]) => {
+    startSignedIn();
+    vi.stubGlobal("fetch", () => new Promise(() => {}));
+    vi.spyOn(apiModule, "api").mockImplementation(async (url: string) =>
+      (url === "/api/hotels/5EL/stays/stay-1/bill" ? bill() : new Promise(() => {})) as never);
+    const stay = { id: "stay-1", hotelId: "5EL", reference: "FH-TEST-1", guest: "A Guest",
+      roomNumber: "204", status, arrival: "2026-09-20", departure: "2026-09-22" } as unknown as Stay;
+    render(
+      <QueryClientProvider client={new QueryClient({ defaultOptions: { queries: { retry: false } } })}>
+        <MemoryRouter><FolioPanel hotelId="5EL" stay={stay} businessDate="2026-09-21" /></MemoryRouter>
+      </QueryClientProvider>,
+    );
+    fireEvent.click(screen.getByRole("button", { name: /Invoice/ }));
+    await screen.findByText("Riverside Test Hotel");
+    return document.querySelector("[data-bill-print]")!.textContent!;
+  };
+
+  it.each(["in-house", "checked-out"] as const)(
+    "says Interim bill, never Tax Invoice, when the stay is %s", async (status) => {
+      const text = await print(status);
+      expect(text).toContain("Interim bill");
+      expect(text).not.toMatch(/tax invoice/i);
+    });
 });

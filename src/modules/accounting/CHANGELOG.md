@@ -11,6 +11,44 @@ Work that touches the core or several services still goes in the root
 
 ---
 
+## 2026-09-24 · the day book as a real Excel file (D22-37), and ACC-11
+
+**Asked for:** the owner's D22-37 - "both the CSV and a real .xlsx", same
+columns and figures, with `exceljs` (already in `api/package.json`), tested
+by reading the .xlsx back. Started by a helper on 23 September
+(`finance/rule-breakers-xlsx`, stopped mid-task) and finished here.
+
+**Shipped:**
+- `GET /:code/accounting/day-book.xlsx` - the same route as the day book, so
+  the same refusals; the file named as the CSV is.
+- `api/src/modules/accounting/sheet.ts` - `dayBookSheet`, the one layout
+  both files are written from. The helper had copied the header row and the
+  figures into the server and read the website's source with a regular
+  expression to check they matched; the website now imports the server's
+  function instead (as `src/lib/permissions.ts` does), and the copy and the
+  regex are gone.
+- "Day book (Excel)" is its own choice in the Format list; Export hands over
+  the one chosen (the owner, 24 September - the helper's one button, two
+  files would have made the browser ask about several downloads).
+- ACC-11 (DEFECTS.md): a restaurant bill charged to a room was counted twice;
+  fixed with the owner's yes.
+
+**Proved:**
+- API `dayBook.test.ts`: the workbook read back with exceljs equals the
+  CSV's rows cell for cell (fails with the total row dropped); reception is
+  refused the .xlsx as the day book; a room-charged meal counts once (fails
+  with the fix taken out).
+- Web `accounting.test.tsx` (15): Excel chosen downloads the .xlsx and no
+  CSV, the CSV otherwise (fails with the choice ignored).
+- On screen, `fidato_s1`, as the Owner: both files downloaded through the
+  page (`.local/screenshots/2026-09-24-finance/export-files/`), 27 rows by 12
+  columns each, 0 cells differing.
+
+**Left open:** ACC-10 (no Restaurant column in the file) - the owner's
+question, recommendation in DEFECTS.md.
+
+---
+
 ## 2026-09-19 · the Tally export, first version: a day book that cannot disagree with the reports
 
 **Asked for:** D18-16 and `docs/BUILD-PLAN-2026-09-18.md` § 7 — one screen, a

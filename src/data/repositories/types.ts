@@ -144,7 +144,8 @@ export interface Posting {
   reversed: boolean;
   method?: string;               // payments only
   createdAt: string;
-  user: string;
+  /** Who made the line, by name; null where nobody was recorded. */
+  user: string | null;
 }
 
 /* ══════════════════════════════════════════════════════════════════
@@ -204,7 +205,8 @@ export interface Property {
   rooms: number;
   roomTypes: string[];
   rateTypes: string[];
-  tax: { cgst: number; sgst: number };
+  /** Null where nobody has set it (D22-9) - never 0. */
+  tax: { cgst: number | null; sgst: number | null };
   paymentMethods: string[];
 }
 

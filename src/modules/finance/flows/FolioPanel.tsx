@@ -38,7 +38,9 @@ import { BillPrint } from "./BillPrint";
    the whole departure flow.
    ══════════════════════════════════════════════════════════════════ */
 
-const USER = "front desk";
+/* No `const USER = "front desk"` (MEMORY 256, as FD-2 did for check-in and
+   the walk-in): the server never read it. A line is signed by whoever is
+   signed in (`posted_by`, 101), and the bill prints that person's name. */
 
 export function FolioPanel({
   hotelId, stay, businessDate,
@@ -264,7 +266,7 @@ function LedgerList({
                 </p>
                 <p className="text-2xs text-grey-500 tabular mt-0.5">
                   {dateShort(p.businessDate)} · {p.category}
-                  {p.method ? ` · ${p.method}` : ""} · {p.user}
+                  {p.method ? ` · ${p.method}` : ""} · {p.user ?? "-"}
                 </p>
               </div>
 
@@ -325,7 +327,7 @@ function ReverseButton({
       type="button"
       disabled={!allowed}
       onClick={async () => {
-        const res = await reverseCharge(hotelId, stayId, posting.id, USER);
+        const res = await reverseCharge(hotelId, stayId, posting.id);
         if (res.ok) {
           toast.success("Posting reversed", "The reversal is its own line - nothing was edited.");
           onDone();
@@ -474,7 +476,7 @@ function AddChargeDialog({
               disabled={!description.trim() || value === 0}
               onClick={async () => {
                 const res = await postCharge(hotelId, stay.id, {
-                  category, description, amount: value, taxable, businessDate, user: USER,
+                  category, description, amount: value, taxable, businessDate,
                 });
                 if (res.ok) {
                   toast.success("Charge posted", `${money(value + (tax ?? 0))} on room ${stay.roomNumber}`);
@@ -580,7 +582,7 @@ function SettleDialog({
               disabled={value <= 0}
               onClick={async () => {
                 const res = await settle(hotelId, stay.id, {
-                  method, amount: value, businessDate, user: USER,
+                  method, amount: value, businessDate,
                 });
                 if (res.ok) {
                   toast.success(`${money(value)} received`, method);
@@ -604,7 +606,12 @@ function SettleDialog({
    `app.stay_bill`, only when the dialog opens, and draws it with the same
    layout the guest's page uses. It used to add up the lines here, with a
    made-up GSTIN and a fixed 2.5% printed on every bill, and counted a
-   reversing line while leaving out the line it reversed (21 September). */
+   reversing line while leaving out the line it reversed (21 September).
+
+   D22-7: it is the "Interim bill", as on the guest's page, before check-out
+   and after (the owner, 24 September): it carries no invoice number, and
+   "Tax Invoice" read as the final one. The numbered tax invoice is issued
+   on Invoices. */
 function InvoiceDialog({ hotelId, stayId }: { hotelId: string; stayId: string }) {
   const [open, setOpen] = useState(false);
   const bill = useQuery({
@@ -621,9 +628,9 @@ function InvoiceDialog({ hotelId, stayId }: { hotelId: string; stayId: string })
           Invoice
         </Button>
       </DialogTrigger>
-      <DialogContent title="Tax invoice" description="Print preview">
+      <DialogContent title="Interim bill" description="Print preview">
         {bill.data ? (
-          <BillPrint bill={bill.data} title="Tax Invoice" />
+          <BillPrint bill={bill.data} title="Interim bill" />
         ) : bill.isError ? (
           <p className="text-sm text-brand-red">The bill could not be read. Try again.</p>
         ) : bill.isFetched ? (

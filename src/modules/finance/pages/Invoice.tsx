@@ -274,6 +274,21 @@ export default function InvoicePage() {
           </div>
         )}
 
+        {/* D22-44: the same sale's alcohol is on its own VAT bill, and each
+            document names the other. */}
+        {data.vatBill && (
+          <p className="mt-4 text-sm" data-invoice-vat-bill>
+            Alcohol on this stay is billed separately, under VAT: VAT bill{" "}
+            <Link
+              to={`/h/${hotelId}/invoices/vat/${data.vatBill}`}
+              className="tabular font-medium hover:underline"
+            >
+              {data.vatBill}
+            </Link>
+            .
+          </p>
+        )}
+
         {/* ── Parties ──────────────────────────────────────────── */}
         <section className="grid grid-cols-2 gap-8 mt-6 pb-5 border-b border-grey-300">
           <Party

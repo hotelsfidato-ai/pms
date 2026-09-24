@@ -55,8 +55,11 @@ export async function lodgingTaxReport(
               coalesce(sum(fp.amount) filter (where fp.category not in
                     ('room', 'payment', 'discount', 'refund') and fp.tax_rate = 0), 0)   as non_taxable
          from bills b
+         -- GST lines only: alcohol and its VAT are not on this sheet (D22-45),
+         -- as they are not on the GST invoice its bill numbers come from.
          left join folio_postings fp
                 on fp.folio_id = b.folio_id and fp.hotel_id = $1 and ${LIVE}
+               and fp.tax_scheme = 'gst'
         group by b.id
      )
      select to_char(b.date, 'YYYY-MM-DD')                    as date,
@@ -120,8 +123,9 @@ export async function lodgingTaxReport(
     }));
   }
 
-  /* "2.5%", as the sheet's heading reads - not "2.50%". */
-  const rate = (n: number) => `${Number(n)}%`;
+  /* "2.5%", as the sheet's heading reads - not "2.50%". A rate nobody has
+     set is a dash, never "0%" (D22-9). */
+  const rate = (n: number | null) => (n === null ? "-" : `${Number(n)}%`);
 
   return {
     report: "lodging-tax",
@@ -142,10 +146,10 @@ export async function lodgingTaxReport(
         col("totalBill", "Total Bill Amount", "money"),
         col("roomRent", "Total Room Rent", "money"),
         col("nonTaxable", "Non-Taxable Amount", "money"),
-        col("cgstNet", "Net Amt.", "money", `CGST @${rate(Number(property.cgstRate))}`),
-        col("cgstTax", "Tax Amt.", "money", `CGST @${rate(Number(property.cgstRate))}`),
-        col("sgstNet", "Net Amt.", "money", `SGST @${rate(Number(property.sgstRate))}`),
-        col("sgstTax", "Tax Amt.", "money", `SGST @${rate(Number(property.sgstRate))}`),
+        col("cgstNet", "Net Amt.", "money", `CGST @${rate(property.cgstRate)}`),
+        col("cgstTax", "Tax Amt.", "money", `CGST @${rate(property.cgstRate)}`),
+        col("sgstNet", "Net Amt.", "money", `SGST @${rate(property.sgstRate)}`),
+        col("sgstTax", "Tax Amt.", "money", `SGST @${rate(property.sgstRate)}`),
         col("serviceCharges", "Service Charges", "money"),
         col("otherBills", "Other Bills", "money"),
         col("lessDiscount", "Less Discount", "money"),
@@ -157,7 +161,7 @@ export async function lodgingTaxReport(
     footnotes: [
       "Bill numbers are contiguous per day and continuous across the month. A gap is an audit finding, not a display quirk.",
       "The tax columns carry the room rent less its discount. CGST and SGST are half the tax the bills carried, each.",
-      "Everything else charged to those bills is in Other Bills.",
+      "Everything else charged to those bills is in Other Bills, except alcohol and its VAT, which are not on this sheet.",
       "Service charges are not recorded in this system and show \"-\".",
       "The group's accountant confirms this sheet before anything is filed from it (the owner, 17 September). Nothing here is filed on this system's word alone.",
     ],

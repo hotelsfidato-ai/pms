@@ -95,7 +95,8 @@ accountant asks for.
 
 | Format | State |
 |---|---|
-| **Day book (CSV)** | **Built.** `src/lib/csv.ts` writes it - BOM, CRLF, quoting and the leading `=` a spreadsheet would execute are all already solved there. |
+| **Day book (CSV)** | **Built.** `src/lib/csv.ts` writes it in the browser - BOM, CRLF, quoting and the leading `=` a spreadsheet would execute are all already solved there. |
+| **Day book (Excel)** | **Built** (D22-37, "both the CSV and a real .xlsx"; its own choice in the list, the owner, 24 September). Made on the server, `GET /:code/accounting/day-book.xlsx` (exceljs). Both files are laid out by ONE function, `dayBookSheet` in `api/src/modules/accounting/sheet.ts`, which the screen imports as it imports `api/src/permissions.ts` - so the two cannot have different columns or figures. `dayBook.test.ts` reads the workbook back and compares it cell for cell with the CSV's rows. |
 | **Tally Prime (XML)** | Offered, produces no file. **Waiting on the owner.** |
 | **Tally ERP 9 (XML)** | Offered, produces no file. **Waiting on the owner.** |
 
@@ -164,10 +165,10 @@ accounts, ledger names mapped per hotel, posting back into Tally, payroll,
 anything with a bank in it. **And a migration** - this service owns no table
 and needs no number.
 
-Also still open, from before it was built: whether "Excel" ever has to mean a
-real `.xlsx` rather than the CSV that Excel opens. `src/lib/csv.ts` avoids a
-spreadsheet library on purpose; do not add one unasked
-(`HANDOVER.md` § 3.4, ASK FIRST).
+Whether "Excel" had to mean a real `.xlsx`: **the owner's D22-37, 22
+September - both**, as two choices in the Format list (24 September). The
+.xlsx is the server's (exceljs was already there for the reports' files); the
+browser still carries no spreadsheet library.
 
 ---
 

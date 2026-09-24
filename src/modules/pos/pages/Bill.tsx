@@ -179,6 +179,13 @@ export default function BillPage() {
           ) : (
             <p className="font-medium">NOT PAID</p>
           )}
+          {/* D22-44: the alcohol's own VAT bill, issued when this was paid,
+              and it names this bill back. */}
+          {o.vatBill && (
+            <p data-bill-vat-bill>
+              Alcohol billed under VAT: VAT bill <span className="tabular">{o.vatBill}</span>
+            </p>
+          )}
           {/* Cheaper to say than to be asked. */}
           <p>
             This is a restaurant bill, not a tax invoice. A GST invoice is
