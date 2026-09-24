@@ -19,12 +19,12 @@ api/test/modules/laundry/       BUILT: 23 tests
 src/modules/laundry/laundry.test.tsx   BUILT: 8 screen tests
 ```
 
-**One thing a guest's bag still cannot do: reach the bill.** `postCharge` is
-on finance's door now (the master opened it on 18 September), but this
-service's `POST …/dockets/:id/charge` has not been changed to call it — it
-makes every refusal that is its own and then says plainly that the connection
-is not there. The button is on the screen, it goes through the API, and what
-the API says is what the screen says. See **Requests** below.
+**A guest's bag reaches the bill** (since 21 September, commit `9af60ec`):
+`POST …/dockets/:id/charge` makes every refusal that is its own and then calls
+`postCharge` from finance's door, so the bag lands on the stay's bill as a
+laundry line. `api/test/modules/laundry/laundry.test.ts`, "a guest's bag,
+charged to the room". (Until then it said the connection was not there -
+`DEFECTS.md`, "Open, and why".)
 
 **Migration 118**, settled at the merge on 19 September. It was written as 116
 in this service's own copy, and so was the spa's — three chats reached for the
@@ -128,14 +128,14 @@ the master says when it can carry a request).
 
 ## Requests — what this service needs from the master
 
-**Two of the three are answered.** `src/components/app/navigation.ts` has the
+**All three are answered** (the last two on 19 and 21 September, below). `src/components/app/navigation.ts` has the
 `laundry` section with `module: "laundry"` on it, and `src/lib/permissions.ts`
 has the `laundry` resource granted as D18-8 said — reception and housekeeping,
 and no new roles. The screens exist because of those two edits.
 
-What is left is in files this lane may not touch:
+What was left, in files this lane may not touch - both since done:
 
-### 1 · The charge still does not reach the bill — the door is open, nobody walked through it
+### 1 · The charge still does not reach the bill — the door is open, nobody walked through it — DONE 21 September (`9af60ec`)
 
 `postCharge` is exported from `api/src/modules/finance/index.ts` (the master,
 18 September). **`api/src/modules/laundry/laundry.ts` has not been changed to
@@ -155,7 +155,7 @@ anything in the bag is unpriced. **Seen on screen, 19 September**, on a priced
 guest docket: the button is there, it goes through the API, and the screen shows
 that sentence back.
 
-### 2 · The Settings switch cannot turn laundry on — `LAU-3`
+### 2 · The Settings switch cannot turn laundry on — `LAU-3` — DONE 19 September (`41c0990`; now admin's DEFECTS entry)
 
 `api/src/modules/admin/moduleSwitches.ts`. Its `GET /:code/modules` lists six
 modules including `laundry` and `spa`; its `POST /:code/modules/:module` has a

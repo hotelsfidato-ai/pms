@@ -151,6 +151,12 @@ words written twice. **What a person reads is the owner's** in any case
 into the file: replace the page, do not re-word it. If MKT-3 is going to wait,
 say so and the three `needs` lines are corrected on their own.
 
+**Still so, 25 September**, and the reason has narrowed: MKT-1 to MKT-3 are
+answered (MKT-3 on 22 September, D22-17 - owner, administrator and GM only),
+and `pages/Marketing.tsx` still says campaigns, Meta Ads, Google Ads and the
+leads app. What the real screen waits on now is MKT-4 alone - the guests door
+answering with a phone and an email.
+
 **The rule:** when a decision narrows a service, the Coming soon page is part
 of what the decision changed. Check it in the same session, even if the answer
 is to delete it rather than edit it.
