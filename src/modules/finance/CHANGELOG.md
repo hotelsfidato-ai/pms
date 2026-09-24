@@ -94,7 +94,7 @@ back byte for byte):
 
 **Then, the owner's D24-22 and D24-25** (decided on the master's list the
 same afternoon): FIN-8 fixed - the year's GST series opens itself with its
-first invoice (migration 137 in this branch, same function signature; db
+first invoice (migration 138 in this branch, same function signature; db
 "finance gst" 4, the new-year check stops the suite with the insert switched
 off); the Bill tab's button says "Interim bill" (billPrint clicks it by that
 name, and fails with "Invoice" back). D24-23 and D24-24 are in reports' and

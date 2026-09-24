@@ -37,7 +37,7 @@ statutory series: the master's and the owner's call.
 
 **Fixed** — the owner's D24-22: the year's series opens itself with its
 first invoice, as the VAT bill's does; numbers unchanged. Migration "a
-hotel's GST invoice series for a new year opens itself" (137 in this branch)
+hotel's GST invoice series for a new year opens itself" (138 in this branch)
 replaces `app.next_invoice_number` with the same signature and return type:
 it inserts the year's row (the prefix the hotel's latest year used, else its
 code) before it counts.

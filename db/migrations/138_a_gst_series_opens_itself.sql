@@ -1,7 +1,7 @@
 -- =============================================================================
--- 137 · A hotel's GST invoice series for a new year opens itself (D24-22)
+-- 138 · A hotel's GST invoice series for a new year opens itself (D24-22)
 -- =============================================================================
--- Written as 137; the master renumbers at merge. Refer to this file by what it
+-- Written as 138; the master renumbers at merge. Refer to this file by what it
 -- does, never by its number.
 --
 -- FIN-8: app.next_invoice_number (011) raised "No invoice series for hotel X
