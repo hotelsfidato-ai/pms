@@ -262,7 +262,8 @@ function CardSheet({ cards, onDone }: { cards: PrintedCard[]; onDone: () => void
   });
 
   return (
-    <Page className="max-w-4xl">
+    /* On paper: no screen padding, or the first page loses a row. */
+    <Page className="max-w-4xl print:p-0 print:bg-white">
       <div className="print:hidden">
         <PageHeader
           title="Online check-in"
@@ -282,7 +283,7 @@ function CardSheet({ cards, onDone }: { cards: PrintedCard[]; onDone: () => void
       <div className="grid gap-4 sm:grid-cols-2 print:grid-cols-2 print:gap-0">
         {cards.map((c, i) => (
           <div key={c.room} data-room-card
-            className="flex flex-col items-center justify-center gap-3 rounded-md border border-grey-300 p-5 text-center break-inside-avoid print:h-[130mm] print:rounded-none">
+            className="flex flex-col items-center justify-center gap-3 rounded-md border border-grey-300 bg-white p-5 text-center break-inside-avoid print:h-[130mm] print:rounded-none">
             <p className="text-sm text-grey-600">{property ?? "-"}</p>
             <p className="text-2xl font-semibold text-ink-900">Room {c.room}</p>
             {qr.data ? (
