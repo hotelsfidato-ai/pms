@@ -260,7 +260,14 @@ stores.get("/:code/stores", async (c) => {
     }
     const holding = new Set(held.filter((h) => Number(h.n) !== 0).map((h) => h.store));
 
+    /* WHERE AN ISSUE CAN GO (D22-20): the outlets the hotel already has — the
+       till's own list, which 069's `to_outlet` has always pointed at. */
+    const { rows: outlets } = await client.query<{ id: string; name: string }>(
+      "select id::text, name from pos_outlets where hotel_id = $1 and is_active order by name",
+      [hotelId]);
+
     return {
+      outlets,
       stores: places
         .filter((p) => p.is_active || holding.has(p.id))
         .map((p) => ({ id: p.id, name: p.name, isActive: p.is_active, isMain: p.main })),
@@ -474,6 +481,9 @@ stores.post("/:code/stores/movements", async (c) => {
     return c.json(refuse("That is not something that happens to stock."), 409);
   }
   if (!input.locationId) return c.json(refuse("Which store?"), 409);
+  if (input.outletId && input.kind !== "issue") {
+    return c.json(refuse("Only an issue goes to an outlet."), 409);
+  }
   const qty = Number(input.quantity);
   if (!Number.isFinite(qty) || qty === 0) {
     return c.json(refuse("How much? A movement of nothing is not a movement."), 409);
@@ -514,6 +524,15 @@ stores.post("/:code/stores/movements", async (c) => {
       return refuse(
         `${store.name} is switched off. Receive into another store, or switch it `
         + "on in Places and suppliers.");
+    }
+
+    /* THIS HOTEL'S OUTLET (D22-20). 069's key is on the outlet's id alone, so
+       the database would take another property's (MEMORY 161). */
+    if (input.outletId) {
+      const { rows: outlet } = await client.query(
+        "select 1 from pos_outlets where id::text = $1 and hotel_id = $2",
+        [input.outletId, hotelId]);
+      if (!outlet[0]) return refuse("That is not an outlet at this property.");
     }
 
     /* WOULD THIS TAKE IT BELOW ZERO?

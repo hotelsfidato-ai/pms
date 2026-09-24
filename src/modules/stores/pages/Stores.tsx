@@ -349,7 +349,8 @@ export default function StoresPage() {
       )}
       {moving && (
         <MoveDialog code={code} item={moving.item} kind={moving.kind}
-                    stores={stores} startStoreId={picked?.id ?? null} open
+                    stores={stores} startStoreId={picked?.id ?? null}
+                    outlets={q.data?.outlets ?? []} open
                     onOpenChange={(o) => { if (!o) setMoving(null); }}
                     onDone={() => { setMoving(null); refresh(); }} />
       )}
@@ -641,9 +642,10 @@ function StoreField({ label, value, onChange, stores, item, hint }: {
 
 /* ── Something came in, went out, or the shelf disagreed ──────────── */
 
-function MoveDialog({ code, item, kind, stores, startStoreId, open, onOpenChange, onDone }: {
+function MoveDialog({ code, item, kind, stores, startStoreId, outlets, open, onOpenChange, onDone }: {
   code: string; item: StockItem; kind: StockKind;
   stores: StoreSummary[]; startStoreId: string | null;
+  outlets: { id: string; name: string }[];
   open: boolean; onOpenChange: (o: boolean) => void; onDone: () => void;
 }) {
   /* A switched-off store takes nothing in; what is already in one may still
@@ -655,6 +657,7 @@ function MoveDialog({ code, item, kind, stores, startStoreId, open, onOpenChange
   const [supplier, setSupplier] = useState("");
   const [reference, setReference] = useState("");
   const [note, setNote] = useState("");
+  const [outletId, setOutletId] = useState("");
   const [busy, setBusy] = useState(false);
 
   const store = offered.find((s) => s.id === storeId) ?? null;
@@ -692,6 +695,7 @@ function MoveDialog({ code, item, kind, stores, startStoreId, open, onOpenChange
       ...(supplier.trim() ? { supplier: supplier.trim() } : {}),
       ...(reference.trim() ? { reference: reference.trim() } : {}),
       ...(note.trim() ? { note: note.trim() } : {}),
+      ...(outletId ? { outletId } : {}),
     });
     setBusy(false);
     if (!res.ok) return toast.error("Not recorded", res.reason);
@@ -740,6 +744,20 @@ function MoveDialog({ code, item, kind, stores, startStoreId, open, onOpenChange
                      onChange={(e) => setQty(e.target.value)} />
             )}
           </Field>
+
+          {/* WHICH OUTLET IT WENT TO (D22-20): the hotel's own outlets. Not
+              every issue goes to one - housekeeping has none (069). */}
+          {kind === "issue" && outlets.length > 0 && (
+            <Field label="Which outlet" hint="Leave it on Not an outlet for housekeeping or a floor.">
+              {(f) => (
+                <NativeSelect {...fieldProps(f)} value={outletId}
+                              onChange={(e) => setOutletId(e.target.value)}>
+                  <option value="">Not an outlet</option>
+                  {outlets.map((o) => <option key={o.id} value={o.id}>{o.name}</option>)}
+                </NativeSelect>
+              )}
+            </Field>
+          )}
 
           {isCount && difference !== null && (
             <p className="text-sm text-grey-600" role="status">
