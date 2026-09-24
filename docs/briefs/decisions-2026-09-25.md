@@ -13,3 +13,11 @@
 | D25-9 | The tax on a corrected non-room charge | **Kept as charged** (its GST rate, or VAT for drinks), as a transfer does; a room charge's GST still follows its new figure |
 | D25-10 | A corrected restaurant line in the Manager report | **Stays under "POS to PMS Posting"** |
 | D25-11 | The desk's Reverse on a closed day | **Every charge line:** "This day is closed - correct it on Closed days." (D24-9). **A payment, refund or discount:** "This day is closed. Its payments, refunds and discounts are not changed - put the difference right today." |
+| D25-12 | Store part 2 (D22-38): today's one "Warn me below" figure per item (asked by the Store session) | **It becomes the MAIN store's level.** Levels are per store from now on; "Add an item" and the import set the Main store's level; Kitchen and Bar start as a dash |
+| D25-13 | Who sets a store's level | **Owner, admin, GM, hotel manager and Inventory Manager** (the stock `edit` grant, the people who correct counts) |
+| D25-14 | The below-level list | **Only shows** item, store, what is there and the level; it raises no purchase request (Purchasing's own screen does that) |
+| D25-15 | Does a count lock the store? | **No.** If an item moves in that store between opening the count and saving it, the save is refused and names the item to count again |
+| D25-16 | The count sheet | **The paper is blank** (item, unit, an empty box). On screen, once the counts are typed back, the book figure and the difference show before saving |
+| D25-17 | Who counted, and blank lines | **Whoever saves the sheet**, with the reason "Count of <store>" plus any reason typed on a line. **A blank line is not counted and never taken as zero** |
+| D25-18 | Gas cylinders | Any item counted in "cylinder" shows **Full and Empty**. Issuing to the kitchen asks how many empties came back; receiving a delivery asks how many empties the supplier took back; both typed each time, 0 is an answer. Empties are on the count sheet too |
+| D25-19 | The gas deposit (D17-4) | **Typed on the item**: cylinders on deposit and deposit per cylinder, a dash until typed. The Store shows the deposit held and the cylinders in use at the kitchen (on deposit, less full and empty in the stores). Set by the same people as D25-13 |
