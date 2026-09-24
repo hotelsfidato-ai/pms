@@ -1,5 +1,5 @@
 -- =============================================================================
--- 135 · A move booked for a later night dirties the old room when that night
+-- 137 · A move booked for a later night dirties the old room when that night
 --       comes (the owner, 24 September)
 -- =============================================================================
 -- 130 dirties the room a checked-in guest moved out of when the move is

@@ -38,8 +38,8 @@ here, and a move for a later night (the check-in still refuses on the day).
   from the business date or earlier), the assign (a guest already checked
   in) and the swap in `stayExtras.ts` (from the business date or earlier;
   neither of the two counts) - each above its first write (MEMORY 243).
-- **B** - `db/migrations/135_future_move_room_is_dirty.sql` (cp6 took 134
-  while this ran): the business date moves in one place, a night audit run
+- **B** - `db/migrations/137_future_move_room_is_dirty.sql` (cp6 took 134
+  to 136 while this ran): the business date moves in one place, a night audit run
   becoming `completed`, so a trigger there asks 130's question for the new
   date. New function and trigger; no earlier function changed (MEMORY 317).
 - **C** - `GET /:code/early-arrival` answers `mayWaive` (the server's own

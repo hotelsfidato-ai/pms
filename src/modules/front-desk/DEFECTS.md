@@ -268,7 +268,7 @@ reaches it: no write happens then (the same ceiling 129 names for the
 occupancy column; a `ponytail:` note in the migration says where to add it).
 
 **Finished 24 September** (the owner's D24-15) - `db/migrations/
-135_future_move_room_is_dirty.sql` (135 on this branch; cp6 took 134): the
+137_future_move_room_is_dirty.sql` (137 on this branch; cp6 took 134-136): the
 business date moves in one place, a night audit run becoming `completed`, so
 a trigger there asks 130's question for the whole hotel on the new date - a
 room a checked-in stay's assignment ends in, where another of its
