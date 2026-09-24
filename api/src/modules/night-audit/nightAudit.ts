@@ -2,6 +2,7 @@ import { Hono } from "hono";
 import { withSession } from "../../auth.ts";
 import { businessDateFor } from "../../businessDate.ts";
 import type { Client } from "../../db.ts";
+import { POSTING_NIGHTS } from "../reports/index.ts";
 
 /* ══════════════════════════════════════════════════════════════════
    THE NIGHT AUDIT — closing a day
@@ -410,12 +411,19 @@ nightAudit.post("/:code/night-audit/run", async (c) => {
              every stay has its own folio - and silently wrong the moment
              a group routes twelve rooms to one master: charge the first,
              skip the other eleven, every night, and the run's summary
-             reports what it posted so nothing looks amiss. */
+             reports what it posted so nothing looks amiss.
+
+             AND NOT ONLY A LINE DATED TONIGHT (D24-14). A walk-in posts
+             its whole stay on arrival, "Room 201 · 2 nights" (D17-33), and
+             this asked only for a line dated tonight - so every night
+             after the first was charged twice. A line counts for every
+             night it pays for, read the way the reports read it. */
           and not exists (
             select 1 from folio_postings fp
              where fp.reservation_id = r.id
                and fp.category = 'room'
-               and fp.business_date = $2::date
+               and fp.business_date <= $2::date
+               and fp.business_date + ${POSTING_NIGHTS} > $2::date
           )
         order by a.number`,
       [hotelId, businessDate],
@@ -712,6 +720,12 @@ export interface ClosedDay {
   roomsPosted: number | null;
   revenuePosted: number | null;
   noShows: number | null;
+  /** How many corrections the day has had (D24-6). The record above stays
+      as the audit made it. */
+  corrections: number;
+  /** The audit's room revenue after corrections of the room charges it
+      posted: null where none was corrected, or the record holds no revenue. */
+  correctedRevenue: number | null;
 }
 
 async function closedDays(
@@ -721,7 +735,7 @@ async function closedDays(
     business_date: string; ran_by: string | null;
     started_at: Date; completed_at: Date | null;
     rooms_posted: number | null; revenue_posted: string | null;
-    no_shows: number | null;
+    no_shows: number | null; corrections: number; room_change: string | null;
   }>(
     /* The name through app.colleague_name (096), never a join to `staff`:
        staff is row-secured, and most roles read only their own row, so a
@@ -730,7 +744,26 @@ async function closedDays(
             app.colleague_name(na.run_by, na.hotel_id) as ran_by,
             na.started_at, na.completed_at,
             na.rooms_posted, na.revenue_posted::text as revenue_posted,
-            na.no_shows
+            na.no_shows,
+            (select count(*)::int from closed_day_corrections c
+              where c.hotel_id = na.hotel_id
+                and c.business_date = na.business_date) as corrections,
+            /* The record's figure is what the AUDIT posted, so only a
+               correction of one of its room charges - or of a correction
+               made of one - moves it. A walk-in's charge posted at check-in
+               was never in it. */
+            (with recursive audited(posting_id) as (
+               select fp.id from folio_postings fp
+                where fp.hotel_id = na.hotel_id and fp.business_date = na.business_date
+                  and fp.category = 'room' and fp.source_type = 'night_audit'
+               union all
+               select n.id from audited a
+                 join closed_day_corrections c on c.posting_id = a.posting_id
+                 join folio_postings n on n.source_type = 'correction'
+                                      and n.source_id = c.id and n.reverses_id is null)
+             select sum(c.new_amount - c.old_amount)::text
+               from closed_day_corrections c
+              where c.posting_id in (select posting_id from audited)) as room_change
        from night_audit_runs na
       where na.hotel_id = $1
         and na.status = 'completed'
@@ -748,8 +781,238 @@ async function closedDays(
     roomsPosted: r.rooms_posted,
     revenuePosted: r.revenue_posted === null ? null : Number(r.revenue_posted),
     noShows: r.no_shows,
+    corrections: r.corrections,
+    correctedRevenue: r.revenue_posted === null || r.room_change === null
+      ? null
+      : Math.round((Number(r.revenue_posted) + Number(r.room_change)) * 100) / 100,
   }));
 }
+
+/* ── Correcting a closed day ─────────────────────────────────────────
+   D22-18, the owner: "a GM screen; a reason is required, and the old and
+   new figures are both kept". Their answers of 24 September
+   (docs/briefs/decisions-2026-09-24.md):
+
+     D24-1  a room charge or the audit's no-show charge, put right or taken off
+     D24-2  on the closed day itself: its reports show the corrected figure
+     D24-3  the owner, an administrator or the GM (roleGate; 130 in the database)
+     D24-4  a bill with a tax invoice is refused: a credit note is for that
+     D24-5  this month and the month before
+     D24-8  a guest who has left and paid may be owed money back: allowed
+
+   Nothing is edited. The wrong line stays; a reversal and the right charge
+   sit beside it on the same day, both naming the correction row, which the
+   database lets onto a closed day and nothing else (130). The reports drop a
+   reversed line and its reversal (reports/figures.ts, LIVE), so that day's
+   figures move by exactly the difference. */
+
+/** What can be corrected (D24-1): a room charge, or a no-show charge the
+    audit posted (or a correction made of either), still standing. */
+const CORRECTABLE = `
+  fp.reverses_id is null and fp.amount > 0
+  and (fp.category = 'room' or fp.source_type in ('night_audit', 'correction'))
+  and not exists (select 1 from folio_postings rev where rev.reverses_id = fp.id)`;
+
+/** The tax invoice standing on the line's bill: issued and not credited -
+    finance's own test before it issues another (invoices.ts). */
+const STANDING_INVOICE = `(
+  select i.number from invoices i
+   where i.folio_id = fp.folio_id and i.credits_id is null
+     and not exists (select 1 from invoices cn where cn.credits_id = i.id)
+   order by i.issued_at desc limit 1)`;
+
+nightAudit.get("/:code/night-audit/days/:date/charges", async (c) => {
+  const day = c.req.param("date");
+  if (!isIsoDate(day)) return c.json({ error: "The day must be a date, YYYY-MM-DD." }, 400);
+
+  const body = await withSession(c.get("subject"), async (client) => {
+    const hotelId = await hotelIdFor(client, c.req.param("code"));
+    if (!hotelId) return null;
+
+    const { rows: charges } = await client.query<{
+      id: string; description: string; category: string; amount: string;
+      tax: string; guest: string | null; invoice: string | null;
+    }>(
+      `select fp.id::text as id, fp.description, fp.category,
+              fp.amount::text as amount, fp.tax_amount::text as tax,
+              g.full_name as guest, ${STANDING_INVOICE} as invoice
+         from folio_postings fp
+         join folios f on f.id = fp.folio_id
+         left join reservations r on r.id = coalesce(fp.reservation_id, f.reservation_id)
+         left join guests g on g.id = r.guest_id
+        where fp.hotel_id = $1 and fp.business_date = $2::date and ${CORRECTABLE}
+        order by fp.description, fp.id`,
+      [hotelId, day],
+    );
+
+    const { rows: corrections } = await client.query<{
+      id: string; description: string; old_amount: string; new_amount: string;
+      reason: string; by: string | null; at: Date;
+    }>(
+      `select c.id::text, fp.description, c.old_amount::text, c.new_amount::text,
+              c.reason, app.colleague_name(c.corrected_by, c.hotel_id) as by,
+              c.corrected_at as at
+         from closed_day_corrections c
+         join folio_postings fp on fp.id = c.posting_id
+        where c.hotel_id = $1 and c.business_date = $2::date
+        order by c.corrected_at`,
+      [hotelId, day],
+    );
+
+    return {
+      charges: charges.map((r) => ({
+        id: r.id,
+        description: r.description,
+        kind: r.category === "room" ? "room" : "no-show",
+        guest: r.guest,
+        amount: Number(r.amount),
+        tax: Number(r.tax),
+        invoice: r.invoice,
+      })),
+      corrections: corrections.map((r) => ({
+        id: r.id,
+        description: r.description,
+        oldAmount: Number(r.old_amount),
+        newAmount: Number(r.new_amount),
+        reason: r.reason,
+        by: r.by,
+        at: r.at.toISOString(),
+      })),
+    };
+  });
+
+  return body ? c.json(body) : c.json({ error: "No such property." }, 404);
+});
+
+nightAudit.post("/:code/night-audit/days/:date/corrections", async (c) => {
+  const day = c.req.param("date");
+  const body = (await c.req.json().catch(() => ({}))) as {
+    postingId?: unknown; newAmount?: unknown; reason?: unknown;
+  };
+  const reason = typeof body.reason === "string" ? body.reason.trim() : "";
+
+  if (!isIsoDate(day)) return c.json({ error: "The day must be a date, YYYY-MM-DD." }, 400);
+  if (typeof body.postingId !== "string" || !/^\d+$/.test(body.postingId)) {
+    return c.json({ error: "Choose the charge to correct." }, 400);
+  }
+  if (typeof body.newAmount !== "number" || !Number.isFinite(body.newAmount) || body.newAmount < 0) {
+    return c.json({ error: "The right figure is a number, 0 or more. 0 takes the charge off." }, 400);
+  }
+  if (!reason) {
+    return c.json({ error: "Say why the charge was wrong. A correction is not kept without its reason." }, 400);
+  }
+  const amount = Math.round(body.newAmount * 100) / 100;
+  const postingId = body.postingId;
+
+  /* Every refusal before the first write: inside withSession a refusal is a
+     commit (MEMORY 243). */
+  const result = await withSession(c.get("subject"), async (client) => {
+    const hotelId = await hotelIdFor(client, c.req.param("code"));
+    if (!hotelId) return null;
+
+    const { rows: state } = await client.query<{ closed: boolean; recent: boolean }>(
+      `select exists (select 1 from night_audit_runs
+                       where hotel_id = $1 and business_date = $2::date
+                         and status = 'completed') as closed,
+              $2::date >= (date_trunc('month', app.business_date($1))
+                           - interval '1 month')::date as recent`,
+      [hotelId, day],
+    );
+    if (!state[0]!.closed) {
+      return refuse(`${dayMonth(day)} is not closed. Its charges are changed at the desk.`);
+    }
+    if (!state[0]!.recent) {
+      return refuse(`Only this month's and last month's days can be corrected. ${dayMonth(day)} is older.`);
+    }
+
+    const { rows: found } = await client.query<{
+      folio_id: string; reservation_id: string | null; category: string;
+      description: string; amount: string; tax_rate: string; tax_amount: string;
+      invoice: string | null;
+    }>(
+      `select fp.folio_id::text, fp.reservation_id::text, fp.category, fp.description,
+              fp.amount::text, fp.tax_rate::text, fp.tax_amount::text,
+              ${STANDING_INVOICE} as invoice
+         from folio_postings fp
+        where fp.hotel_id = $1 and fp.business_date = $2::date and fp.id = $3::bigint
+          and ${CORRECTABLE}`,
+      [hotelId, day, postingId],
+    );
+    const p = found[0];
+    if (!p) {
+      return refuse(`That is not a room charge or a no-show charge still standing on ${dayMonth(day)}.`);
+    }
+    if (p.invoice) {
+      return refuse(`This bill has tax invoice ${p.invoice}. Issue a credit note instead.`);
+    }
+    if (amount === Number(p.amount)) {
+      return refuse("That is the figure the charge already has.");
+    }
+
+    /* The GST, as the audit decides it. A room charge's slab follows its own
+       amount, so a new figure can change the rate. A no-show charge's rate was
+       decided by the room it was ancillary to, which has not changed: kept. */
+    let rate = Number(p.tax_rate);
+    if (amount > 0 && p.category === "room") {
+      const { rows } = await client.query<{ rate: string | null }>(
+        "select app.gst_rate_or_null($1, 'room', $2::numeric)::text as rate",
+        [hotelId, amount],
+      );
+      if (rows[0]?.rate == null) {
+        return refuse(
+          "This property has no GST rule for rooms. Set it under Rooms and rates → Room types, "
+          + "in the GST card. A missing rate is not zero.");
+      }
+      rate = Number(rows[0].rate);
+    }
+
+    const { rows: made } = await client.query<{ id: string }>(
+      `insert into closed_day_corrections
+         (hotel_id, business_date, posting_id, old_amount, new_amount, reason)
+       values ($1, $2::date, $3::bigint, $4::numeric, $5::numeric, $6)
+       returning id::text`,
+      [hotelId, day, postingId, p.amount, amount, reason],
+    );
+    const correction = made[0]!.id;
+
+    try {
+      await client.query(
+        `insert into folio_postings
+           (hotel_id, folio_id, reservation_id, business_date, category, description,
+            amount, tax_rate, tax_amount, reverses_id, source_type, source_id)
+         values ($1, $2, $3, $4::date, $5, $6, $7::numeric, $8::numeric, $9::numeric,
+                 $10::bigint, 'correction', $11::uuid)`,
+        [hotelId, p.folio_id, p.reservation_id, day, p.category,
+         `Reversal - ${p.description}`, -Number(p.amount), p.tax_rate,
+         -Number(p.tax_amount), postingId, correction],
+      );
+    } catch (error) {
+      /* 021's index caught a reversal made a moment ago; the transaction is
+         spoiled, so nothing above is kept. */
+      if ((error as { code?: string }).code === "23505") {
+        return refuse("That charge has just been corrected or reversed. Reload to see it.");
+      }
+      throw error;
+    }
+
+    if (amount > 0) {
+      await client.query(
+        `insert into folio_postings
+           (hotel_id, folio_id, reservation_id, business_date, category, description,
+            amount, tax_rate, tax_amount, source_type, source_id)
+         values ($1, $2, $3, $4::date, $5, $6, $7::numeric, $8::numeric,
+                 round($7::numeric * $8::numeric / 100.0, 2), 'correction', $9::uuid)`,
+        [hotelId, p.folio_id, p.reservation_id, day, p.category, p.description,
+         amount, rate, correction],
+      );
+    }
+
+    return { ok: true, id: correction } as Record<string, unknown>;
+  });
+
+  if (!result) return c.json({ error: "No such property." }, 404);
+  return c.json(result, result["ok"] ? 200 : 409);
+});
 
 const MONTHS = [
   "January", "February", "March", "April", "May", "June", "July",

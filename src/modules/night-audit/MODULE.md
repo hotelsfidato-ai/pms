@@ -58,7 +58,9 @@ All hang from `/api/hotels`, in two files mounted by
 | Method | Path | What it does |
 |---|---|---|
 | POST | `/:code/night-audit/run` | close the day (the steps in the file's header, one transaction, one audit at a time per property — an advisory lock, NA-3). Body `{ businessDate }` — the day the screen says it is closing, **required** (400 if missing or not a date). A day already closed: **409 "… was already closed. Reload to see today."** with `alreadyClosed` and the `record` that was made, changing nothing (NA-2, D17-12). A day the property is not on: 409, changing nothing. Records who ran it in `run_by` |
-| GET | `/:code/night-audit/runs` | the screen's **Closed days**: the last 60 completed days, newest first — day, who ran it (`app.colleague_name`), started, closed, rooms posted, room revenue, no-shows; null where the record holds nothing (D17-13). Read-only. `api/scripts/capture-demo.ts` reads it too |
+| GET | `/:code/night-audit/runs` | the screen's **Closed days**: the last 60 completed days, newest first — day, who ran it (`app.colleague_name`), started, closed, rooms posted, room revenue, no-shows; null where the record holds nothing (D17-13). Read-only. `api/scripts/capture-demo.ts` reads it too. Since 24 September also `corrections` (how many) and `correctedRevenue`: the audit's room revenue after corrections of the room charges IT posted (a walk-in's check-in line was never in it), null where none (D24-6) |
+| GET | `/:code/night-audit/days/:date/charges` | a closed day's room charges and no-show charges still standing (room, guest, amount, tax, the tax invoice standing on the bill) and the day's corrections (old, new, reason, who, when). Read-only (D22-18) |
+| POST | `/:code/night-audit/days/:date/corrections` | **correct a closed day** (D22-18, D24-1 to D24-8). Body `{ postingId, newAmount, reason }`; `newAmount` 0 takes the charge off. Refused before any write: no reason (400), a day not closed, older than last month, not a standing room or no-show charge of that day, a bill with a standing tax invoice ("Issue a credit note instead."), the figure it already has (409). Then one `closed_day_corrections` row, a reversing line and (above 0) the right charge, both ON THE CLOSED DAY and naming the correction. roleGate: `reservation` · approve (owner, admin, GM, D24-3) |
 
 **`api/src/modules/night-audit/checklist.ts`** (cut from the old `api/src/routes/billing.ts`)
 
@@ -66,9 +68,9 @@ All hang from `/api/hotels`, in two files mounted by
 |---|---|---|
 | GET | `/:code/night-audit` | the pre-flight checklist the screen reads, and whether the audit may run |
 
-4 endpoints. The checklist imports `blockersFor` from `nightAudit.ts`, beside
+6 endpoints. The checklist imports `blockersFor` from `nightAudit.ts`, beside
 it, so what the screen shows and what the run refuses are one function.
-Server tests: `api/test/modules/night-audit/nightAudit.test.ts`;
+Server tests: `api/test/modules/night-audit/nightAudit.test.ts` and `corrections.test.ts`;
 `api/test/businessDate.test.ts`, which also closes days, is still in
 `api/test/`.
 
@@ -106,7 +108,12 @@ fix made elsewhere does not reach them unless it changes these queries.
 
 | File | What it does |
 |---|---|
-| `nightAudit.ts` | `getNightAudit` (the checklist, as at the business date), `runNightAudit` (sends the day being closed) and `listClosedDays` (the history) |
+| `nightAudit.ts` | `getNightAudit` (the checklist, as at the business date), `runNightAudit` (sends the day being closed), `listClosedDays` (the history), `getClosedDay` and `correctClosedDay` (the correction panel, D22-18) |
+
+`components/CorrectDay.tsx` is the correction panel, a drawer opened from each
+closed day's **Correct** (owner, admin, GM: `can(role, "approve",
+"reservation")`; off for a day older than last month) or, for anybody else,
+**Corrections** on a corrected day.
 
 ## Database
 
@@ -116,6 +123,7 @@ migrations that made or changed them:
 | Table | What the night audit does to it | Migrations |
 |---|---|---|
 | `night_audit_runs` | one row per hotel per day: running, then completed (or failed); `run_by` is who pressed Run (written since 17 September) | created `006_folio.sql` (unique per hotel and date — the safety net against a second run); `014_simulation_fixes.sql` (a completed run must carry its finish; the audit writes `running` first, posts, then completes), `016_audit_coverage.sql` (audited), **`100_closed_day_record_needs_gm.sql`** (a completed run is corrected only by the property's owner or GM, or a group administrator — D17-12) |
+| `closed_day_corrections` | one row per correction of a closed day: the line, old and new figure, reason, who, when. Append-only; written only by the owner, an administrator or the GM there, or a group administrator (`app.corrects_closed_days`) | **`130_closed_day_corrections.sql`** (D22-18; renumbered at merge) — also replaces 012's `app.reject_closed_business_date` with one exception: a line may carry a closed date when it names a correction of the same property and day, posted by someone who may correct it |
 
 It writes into other services' tables, directly in SQL: `folio_postings`
 (tonight's room charge per stay, and a retention charge for a no-show whose
@@ -197,8 +205,11 @@ From `PENDING.md` and `HANDOVER.md`, and one found while writing this brief:
   D17-42): no screen ever called it. Whether a day may close is the checklist's
   `canRun`, which now carries the `blockers` too, and POST /run obeys the same
   `blockersFor`.
-- **No screen corrects a closed day's record.** The database allows only the
-  GM (100); a correction screen, if one is wanted, is the owner's to ask for.
+- **Closed days corrects room charges and no-show charges only** (D24-1). A
+  closed day's minibar, laundry or restaurant line cannot be corrected
+  anywhere yet; the desk's Reverse says so (D24-13, left open by the owner).
+- **The audit's record itself is never rewritten** by a correction (D24-6);
+  100 still lets the GM change it in the database, and no screen does.
 - **A web test cannot see a refusal's payload** — the shared stub drops it
   (NA-4, core, reported to the master).
 - **Defect 243's shape in these routes has not been checked** — a refusal

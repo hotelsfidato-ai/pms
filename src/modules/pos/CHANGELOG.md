@@ -11,6 +11,19 @@ Work that touches the core or several services still goes in the root
 
 ---
 
+## 2026-09-24 · The heading picker's three questions, answered — D24-10 to D24-12
+
+**Asked for:** the night-audit lane of 24 September put the three questions the
+picker left to the owner. **Answers** (`docs/briefs/decisions-2026-09-24.md`):
+D24-10 the Menu screen's picker keeps the menu's people (owner, admin, GM,
+kitchen manager) and the finance tax card keeps GST's; D24-11 no way to clear a
+heading back to "not set"; D24-12 the import note's "- or alcohol, where the
+property serves it" stays. **Shipped:** nothing - all three as built.
+**Proved:** the Menu screen opened at 5EL as the GM, desktop and phone
+(`.local/screenshots/2026-09-24-night-audit/11-menu-heading-picker-*.png`).
+
+---
+
 ## 2026-09-23 · A tax-heading picker on each menu section, and Alcohol in the import — D22-4, D22-46
 
 **Asked for:** the owner's D22-4 - "a tax-heading picker on each menu section:

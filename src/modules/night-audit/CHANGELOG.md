@@ -8,6 +8,109 @@ project, still goes in the root `CHANGELOG.md`.
 
 ---
 
+## 2026-09-24 · Correcting a closed day (D22-18), and a walk-in charged twice (NA-5)
+
+**Asked for:** the master's lane brief of 24 September: D22-18, the owner's "a
+GM screen; a reason is required, and the old and new figures are both kept",
+built to the plan in `docs/briefs/closed-day-correction-plan.md` once the owner
+answered its eight questions; and the three questions the menu heading picker
+left (POS). Branch `night-audit/finish-24sep`, from cp6 `c4a6c75`.
+
+**The owner's answers**, all in `docs/briefs/decisions-2026-09-24.md`:
+D24-1 to D24-8 (the plan's eight, each the recommended answer), D24-9 (the
+desk's Reverse says where to go), D24-10 to D24-12 (the menu picker, all as
+built), D24-13 (the desk's Reverse on a closed day's minibar or laundry: said,
+fixed later) and D24-14 (NA-5, below: fix the audit now).
+
+**Shipped:**
+- `db/migrations/130_closed_day_corrections.sql` (renumbered at merge; cp6 took
+  130-132 after this branch left it) - `closed_day_corrections`, append-only,
+  hotel-isolated; written only by the owner, an administrator or the GM there,
+  or a group administrator (`app.corrects_closed_days`), and the row names who
+  really did it. 012's `app.reject_closed_business_date`, same signature, with
+  one exception: a line naming a correction of the same property and day,
+  posted by someone who may correct it. Every other door refused as before, in
+  the same words. Re-runnable (the posting is referenced by its own id: 014
+  re-adds `(hotel_id, id)` on every run and a dependent stopped it halfway).
+- `api/src/modules/night-audit/nightAudit.ts` - `GET days/:date/charges`,
+  `POST days/:date/corrections` (every refusal before the first write; the
+  reversal and the right charge on the closed day; a room charge's GST worked
+  out again by `app.gst_rate` for its new amount, a no-show charge keeps its
+  rate); `GET /runs` adds `corrections` and `correctedRevenue`, which moves only
+  for the room charges the AUDIT posted (a walk-in's line never was in its
+  figure - found on the screen, where it would have read "₹0 → -₹500").
+  NA-5: the audit's "already charged tonight?" reads the nights a line pays for.
+- `api/src/roleGate.ts` - the corrections route on `reservation` · approve.
+- `api/src/modules/finance/postings.ts` (finance's) - the desk's Reverse on a
+  closed day's line: NA-6, D24-9, D24-13.
+- `api/src/modules/reports/index.ts` (reports') - `POSTING_NIGHTS` exported,
+  so the audit reads a line's nights the way the reports do.
+- `api/scripts/reset-property.ts` - clears `closed_day_corrections` before the
+  bill lines, its append-only guard lifted with the others
+  (`resetOrder.test.ts` named it).
+- `src/modules/night-audit/` - `components/CorrectDay.tsx` (the panel),
+  `data/nightAudit.ts` (two calls), `pages/NightAudit.tsx` (Correct or
+  Corrections on each day, "Corrected", old → new, the rule under the heading).
+
+**Found:**
+- NA-5 (fixed, D24-14) and NA-6 (fixed): `DEFECTS.md`.
+- A copy's own dev server never reloaded: `vite.config.ts` ignored
+  `**/.claude/worktrees/**`, which is every file in a copy. Already fixed on
+  cp6 (`9dfdd3f`) after this branch left it.
+- The folio shows the night audit's line as "room · <a staff uuid>" where the
+  desk's line shows a name (finance's FolioPanel; seen, not touched).
+- The printed Night audit report's Room Charges and Checked Out columns overlap
+  (reports' PDF; seen in the saved PDFs, not touched).
+- **Two mistakes of mine, caught by the whole API suite** (for the root
+  MEMORY): the correction test's booking outlives the file (it sits on a closed
+  day) and its reference ended in `Date.now()`; `app.next_reference` takes the
+  largest number a reference at the property ends in, so every later booking at
+  Pune became `FH-PUN-2609-1790239558818` and two booking-reference tests
+  failed. And a release dirties the room (074): my two new stays left two more
+  of Pune's ten rooms dirty, and the identity and guest tests found no clean,
+  free room. Both tests now leave the room released and clean.
+
+**Proved** (in this copy; counts in the hand-back to the master):
+- `db/tests/modules/night-audit.sql` - 14 new checks. Each guard was switched
+  off in turn and its check failed: the line's role test, its day, its
+  property, the whole exception, who writes a correction, the name it keeps,
+  append-only, the reason, the administrator.
+- `api/test/modules/night-audit/corrections.test.ts` - 12 tests: the GM's
+  correction leaves the old line, puts the reversal and the right charge on the
+  closed day, and moves the Night Audit report's Room Charges, its tax and its
+  Daily Sales and the Manager report's Room Charges by exactly -500 (and -25
+  tax); Closed days old → new; reception 403; no reason, a line already
+  corrected, a laundry line, a day not closed, a day older than last month, an
+  invoiced bill each refused writing nothing; a checked-out guest's charge
+  taken off (D24-8), and a correction of a correction still moves the audit's
+  figure; the desk's two Reverse sentences. Seen failing with the invoice,
+  month, closed-day and desk checks removed, and with the roleGate row removed
+  (roleGate's own test named the route).
+- `nightAudit.test.ts` - "does not charge a night a walk-in's whole-stay line
+  already paid for": `expected '2' to be '1'` with the old condition.
+- `nightAudit.test.tsx` - 2 new: reception sees Corrections and no Correct, and
+  old → new; the GM's Save waits for a reason, an invoiced bill's line is off,
+  an older day's Correct is off, and the figure is sent. Seen failing with each
+  rule removed.
+- **The screen, opened** at 5EL in `fidato_s4`: 25 and 26 August closed with
+  the real Run button as the GM; the correction saved with a real click; the
+  26 August reports saved before and after as PDFs and pictures in
+  `.local/screenshots/2026-09-24-night-audit/`. Every figure for the day moved
+  by exactly the correction, -₹3,373.66 (Night Audit report Room Charges
+  ₹14,063.04 → ₹10,689.38; Manager report today ₹16,920.04 → ₹13,546.38, month
+  so far ₹4,26,610.28 → ₹4,23,236.62). A day-use charge on 25 August moved
+  Day Use Sales and Total Sales by exactly -₹300, and left the audit's ₹0.
+
+**Left open:**
+- A closed day's minibar, laundry or restaurant line cannot be corrected
+  anywhere (D24-13).
+- Live bills were not looked at for NA-5's double charges (D24-14: the GM takes
+  them off on Closed days; an invoiced bill needs a credit note).
+- A no-show who arrived: only the charge comes off here (D24-7); the booking is
+  the front desk's, not asked yet.
+
+---
+
 ## 2026-09-17 · D17-12 and D17-13: a second press shows the record; the closed days are listed
 
 **Asked for:** the master chat, relaying the owner's answers of 17 September
