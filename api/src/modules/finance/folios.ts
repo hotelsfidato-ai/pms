@@ -174,8 +174,10 @@ folios.get("/:code/stays/:id/postings", async (c) => {
               fp.created_at::text,
               -- WHO, BY NAME: the person signed in when the line was made
               -- (101), as the Audit log names them. It printed the uuid, or
-              -- "admin" for nobody.
-              app.posted_by_name(fp.id) as posted_by
+              -- "admin" for nobody. The night's room charge says "Night
+              -- audit", not whoever pressed Run (the owner, 24 September).
+              case when fp.source_type = 'night_audit' then 'Night audit'
+                   else app.posted_by_name(fp.id) end as posted_by
          from folio_postings fp
          join folios f on f.id = fp.folio_id
          left join companies co on co.id = f.company_id

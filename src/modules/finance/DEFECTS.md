@@ -79,6 +79,12 @@ log prints (ADM-1), which names somebody who has since lost access — and null
 for nobody; the line prints a dash for null. `Posting.user` in the core's
 `types.ts` is `string | null`.
 
+**And the night's room charge** (reported by the night-audit session, 24
+September): the audit signs its room lines with whoever pressed Run, and on
+cp6's route the line read "room · <a staff uuid>". The owner chose "Night
+audit" for them: the route answers that word for a line with
+`source_type = 'night_audit'`, and a person's name for every other.
+
 **And the same on Payments** (found 24 September, fixed with the owner's
 yes): `GET /:code/payments` answered `user: "admin"` for every receipt, so the
 "Taken by" column named nobody who took anything. It now answers
@@ -88,8 +94,9 @@ yes): `GET /:code/payments` answered `user: "admin"` for every receipt, so the
 posted, and a dash for nobody": a charge posted by the owner reads "Group
 Owner"; a line inserted with nobody signed in reads null; and "a payment on
 the Payments list names the person who took it". Each fails with its change
-taken out. On screen: a laundry line posted as Test Reception reads "Test
-Reception" (`.local/screenshots/2026-09-24-finance/01-…`).
+taken out. On screen: a laundry line posted as Test Reception read "Test
+Reception" (first pass); the retaken `01-…` shows the till's line as "Group
+Owner" and the demo's own room line as "-".
 
 **The rule:** before fixing where a value comes from, find where it goes
 (FD-2) - here it went nowhere, and the real fault was on the way back.
@@ -114,7 +121,7 @@ CGST or SGST rate" (asked of `app.provision_property_unchecked` directly;
 fails with the migration's statement taken out). The helper's second check,
 "a rate a hotel already holds is kept", read FH01, which 017 deletes, so it
 could never pass and was removed; what it meant was proved by replaying all
-131 migrations over `fidato_s1`, whose 5EL kept 2.50 / 2.50;
+136 migrations over `fidato_s1`, whose 5EL kept 2.50 / 2.50;
 `api/test/modules/reports/lodgingTaxAlcohol.test.ts` asserts the heading "CGST
 @-" at a new property.
 

@@ -97,7 +97,7 @@ describe("a charge refused for a missing GST rule", () => {
 });
 
 describe("a bill line", () => {
-  it("names the person signed in when it was posted, and a dash for nobody", async () => {
+  it("names the person signed in when it was posted, \"Night audit\" for the audit's line, and a dash for nobody", async () => {
     /* Set the way a person sets it: the tax card's route (MEMORY 313). */
     const rule = await call(`/${CODE}/tax/room`, "PUT", { slabs: [{ overAmount: 0, rate: 5 }] });
     expect(rule.status, await rule.clone().text()).toBe(200);
@@ -113,10 +113,20 @@ describe("a bill line", () => {
        select $1, f.id, app.business_date($1), 'misc', 'Nobody signed in', 100, 0, 0
          from folios f where f.reservation_id = $2`, [hotelId, stayId]);
 
+    /* The night's room charge, as the audit writes it: signed by whoever
+       pressed Run, and read as "Night audit" (the owner, 24 September). */
+    await sql(
+      `insert into folio_postings (hotel_id, folio_id, business_date, category, description,
+                                   amount, tax_rate, tax_amount, source_type, posted_by)
+       select $1, f.id, app.business_date($1), 'room', 'Room 101 · 1 night', 2000, 5, 100,
+              'night_audit', (select id from staff where email = 'owner@fidato.in')
+         from folios f where f.reservation_id = $2`, [hotelId, stayId]);
+
     const lines = await (await call(`/${CODE}/stays/${stayId}/postings`)).json() as
       Array<{ description: string; user: string | null }>;
     expect(lines.find((l) => l.description === "Signed by the owner")?.user).toBe(ownerName);
     expect(lines.find((l) => l.description === "Nobody signed in")?.user).toBeNull();
+    expect(lines.find((l) => l.description === "Room 101 · 1 night")?.user).toBe("Night audit");
   });
 });
 

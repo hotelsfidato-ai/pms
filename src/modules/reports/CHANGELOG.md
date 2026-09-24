@@ -30,7 +30,8 @@ service's files because the figures live here.
 **Proved:** `api/test/modules/reports/lodgingTaxAlcohol.test.ts` (Other
 Bills ₹1,050 not ₹1,600; the heading "CGST @-"), failing with the filter
 taken out; `accounting/dayBook.test.ts` for ACC-11. On screen: Lodging tax,
-August 2026, Other Bills ₹126.00 on a bill with ₹550 of whisky and VAT.
+August 2026, Other Bills ₹0.00 on a bill with a room and ₹550 of whisky and
+VAT (₹126.00 when a laundry line was on it too).
 
 ---
 

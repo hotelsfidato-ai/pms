@@ -35,10 +35,12 @@ finance screen the accountant opens); D22-9's three finance rule-breakers.
 - Excel is **its own choice in the Format list** (accounting's CHANGELOG);
 - an invoice issued again after a credit note **names the VAT bill still
   standing**;
-- Payments' "Taken by" **names the person** (it printed "admin").
+- Payments' "Taken by" **names the person** (it printed "admin");
+- the night audit's room lines say **"Night audit"**, not who pressed Run
+  (asked after the night-audit session saw a staff uuid there).
 
 **Shipped:**
-- Migration "a separate VAT bill for alcohol" (130 in this branch):
+- Migration "a separate VAT bill for alcohol" (135 in this branch):
   `vat_bill_series`, `app.next_vat_bill_number` (the year's row opened by its
   first bill, so 0001 again each 1 April with no deploy; four digits, more
   after 9999), `vat_bills` (never changed or deleted, 025's trigger; a
@@ -55,13 +57,14 @@ finance screen the accountant opens); D22-9's three finance rule-breakers.
 - "Interim bill" on the Bill tab's print, always.
 - The tax card on Invoices for the four who may set a rate.
 - D22-9 (a): migration "a new hotel has no GST rate until somebody sets one"
-  (131 in this branch) - no default, no NOT NULL on `hotels.cgst_rate` /
+  (136 in this branch) - no default, no NOT NULL on `hotels.cgst_rate` /
   `sgst_rate`; stored rates untouched. The property record answers null; a
   charge refused for a missing rule says where to set it: "under Rooms and
   rates → Room types or Finance → Invoices".
 - D22-9 (b): `const USER = "front desk"` and the three dead `user` fields
   gone (FD-2's way); a bill line names who posted it (`app.posted_by_name`),
-  a dash for nobody. So does Payments' "Taken by".
+  "Night audit" for the audit's room charge, a dash for nobody. So does
+  Payments' "Taken by".
 - D22-9 (c): every finance write route read for a refusal after a write;
   one found (`postCharge` opened the folio before asking for the rate) and
   moved (FIN-7).
@@ -79,11 +82,15 @@ back byte for byte):
 - on screen, `fidato_s1`, desktop and phone
   (`.local/screenshots/2026-09-24-finance/`): a cash bill got
   VAT/5EL/2026-27/0001; room 202's whisky went on its bill, and its tax
-  invoice 5EL/2026-27/00001 (₹2,016, issued by the Test Accountant) came with
-  VAT/5EL/2026-27/0002 (₹550), each naming the other; the lines read "Group
-  Owner", "Test Reception", and "-" for the demo's own room line.
-- 5EL's stored 2.50/2.50 survived a full replay of 131 migrations
-  (`db/migrate.sh` on `fidato_s1`); `rerun.sh`: all 131 re-runnable.
+  invoice 5EL/2026-27/00001 (issued by the Test Accountant) came with
+  VAT/5EL/2026-27/0002 (₹550), each naming the other; the till's line reads
+  "Group Owner" and the demo's own room line "-" (a desk charge read "Test
+  Reception" in the first pass). Retaken on the tree merged with cp6 ea01aef,
+  on a debugging port of its own: the night audit session's Edge had used
+  9333 at the same time as the first pass.
+- 5EL's stored 2.50/2.50 survived a full replay of 136 migrations
+  (`db/migrate.sh` on `fidato_s1`, on the tree merged with cp6 ea01aef);
+  `rerun.sh`: all 136 re-runnable.
 
 **Left open:** FIN-8 (the GST series for a new financial year exists only
 after a deploy). The till's and the night audit's own "no rate" sentences

@@ -45,8 +45,8 @@ footnote says so.
 a room (₹2,000 + 5%), a dinner (₹1,000 + 5%) and a whisky (₹500 + 10% VAT)
 reads Other Bills ₹1,050, not ₹1,600; it fails with the filter taken out
 (24 September). On screen (`fidato_s1`, August 2026): room 202's bill of a
-room, a laundry line and ₹550 of whisky with its VAT reads Other Bills
-₹126.00 - the laundry and its GST
+room and ₹550 of whisky with its VAT reads Other Bills ₹0.00 (with a laundry
+line added, ₹126.00 - the laundry and its GST, never the whisky)
 (`.local/screenshots/2026-09-24-finance/11-…`).
 
 **The rule** — a sheet read from GST invoices reads GST lines.

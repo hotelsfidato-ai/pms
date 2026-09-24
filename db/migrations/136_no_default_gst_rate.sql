@@ -1,5 +1,5 @@
 -- =============================================================================
--- 131 · A new hotel has no GST rate until somebody sets one (D22-9)
+-- 136 · A new hotel has no GST rate until somebody sets one (D22-9)
 -- =============================================================================
 -- Refer to this file by what it does, never by its number (the master
 -- renumbers at merge).
