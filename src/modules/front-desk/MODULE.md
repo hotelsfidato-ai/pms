@@ -92,11 +92,11 @@ and `cashier.ts`)
 | Method | Path | What it does |
 |---|---|---|
 | POST | `/:code/stays/:id/check-in` | check in; records the ID document; posts an early-arrival charge; refuses a room somebody is still in by `app.in_house` (FD-11), and a waive of the early charge by somebody who may not give it (FD-14) - both before the first write |
-| GET | `/:code/early-arrival` | is arriving now early, with the hotel's times and charges (063) — null, never 0 |
+| GET | `/:code/early-arrival` | is arriving now early, with the hotel's times and charges (063) — null, never 0; and `mayWaive`, whether the server takes a waive of either charge from this person (the screens draw the tick from it, D24-16) |
 | POST | `/:code/stays/:id/check-out` | check out; posts a late check-out charge; closes the folio |
-| POST | `/:code/walk-ins` | a walk-in: guest, booking on the Walk-in channel (085), room, folio, first night |
-| POST | `/:code/stays/:id/assign` | give a booking a room |
-| POST | `/:code/stays/:id/move` | move a guest to another room (`app.move_room`, 054) |
+| POST | `/:code/walk-ins` | a walk-in: guest, booking on the Walk-in channel (085), room, folio, first night; refuses a room somebody is still in, by name (`stillIn`, D24-15) |
+| POST | `/:code/stays/:id/assign` | give a booking a room; for a guest already checked in, refuses a room somebody is still in (`stillIn`, D24-15) - a booking not yet here is only held |
+| POST | `/:code/stays/:id/move` | move a guest to another room (`app.move_room`, 054); a checked-in guest moved from tonight or earlier is refused a room somebody is still in (`stillIn`, D24-15) |
 | PATCH | `/:code/stays/:id` | amend the dates and number of guests (`app.amend_stay`, 055) |
 | POST | `/:code/stays/:id/unassign` | take the room back (`app.unassign_room`, 054) |
 | POST | `/:code/stays/:id/void` | void a booking entered by mistake (042) |
@@ -106,7 +106,7 @@ and `cashier.ts`)
 | Method | Path | What it does |
 |---|---|---|
 | GET | `/:code/stays/:id/exchangeable` | who this guest could swap rooms with |
-| POST | `/:code/stays/:id/exchange` | swap two guests' rooms (`app.exchange_rooms`, 065) |
+| POST | `/:code/stays/:id/exchange` | swap two guests' rooms (`app.exchange_rooms`, 065); from tonight or earlier, refused where a third guest is still in either room (`stillIn`, D24-15) |
 | GET | `/:code/inclusions` | the hotel's list of inclusions |
 | POST | `/:code/inclusions` | add one — **no screen calls it** (`addInclusion` is on `KNOWN_UNREACHABLE`) |
 | GET | `/:code/stays/:id/inclusions` | what this stay includes |
@@ -372,13 +372,12 @@ The guards this service must respect:
 Changes this service needs in files it may not touch. Written 16 September by
 the front-desk chat; each also told to the owner.
 
-- **To the master — `src/App.tsx`, `PERSISTED`.** The list of queries kept on
-  the device names `tape-chart`, which matches no query key; the stay view's
-  keys are `stay-view` and `stays`. So a RELOAD with the server down shows
-  Rooms' "The rooms did not load" instead of the last house (FD-6 keeps it
-  only within a session). Adding them puts guest names in a shared desk
-  machine's browser store, as `arrivals` and `in-house` already do — **the
-  owner's privacy call**, which the list's own comment says it is.
+- ~~**To the master — `src/App.tsx`, `PERSISTED`.**~~ **Done 24 September**
+  by the admin lane (D22-23, the owner): `PERSISTED` keeps `stay-view` - the
+  Rooms board's rooms, their states and the fortnight, which the Calendar
+  reads too - so a reload with the server down shows the last house. `stays`
+  (the names under the tiles) is deliberately not kept: the owner chose to
+  keep the hotel's whole booking list off the desk computer.
 - **To the master — the lane setup.** (1) On a fresh lane database
   `load-demo` fails with `undefined.id` unless `db/tests/harness.sql` and
   `suite.sql` load first, as `api/scripts/with-test-db.sh:99` knows and

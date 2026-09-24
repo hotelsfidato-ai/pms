@@ -11,6 +11,23 @@ Work that touches the core or several services still goes in the root
 
 ---
 
+## 2026-09-24 · Nobody switches their own access off (D24-19), and ADM-8
+
+**Asked for:** the master, through the front desk follow-ups session
+(branch `front-desk/follow-ups-24sep`): D24-19, a GM or a hotel's Admin may
+not switch their own access off on People - refused on the server before any
+write, with words that say who can, the control hidden on one's own row; and
+H, a refused removal that said "They did not have access to that property".
+
+**Shipped** - `api/src/modules/admin/admin.ts`: the access delete refuses
+your own and says so, then refuses a role you cannot give in those words,
+above the delete; `GET /admin/staff` says `maySwitch` false on your own row.
+`pages/People.tsx`: no ✕ on your own chips. Details and proof: ADM-8.
+
+**Left open** - changing your own role is still allowed (ADM-8, Left).
+
+---
+
 ## 2026-09-24 · A hotel's Admin runs its people; nobody runs somebody above them; adding somebody new works; ADM-3; SPA-2; PUR-1; working menus (D23-2, D22-9, D22-11, D22-19, D22-22)
 
 **Asked for:** the master, 24 September: finish three helper branches stopped

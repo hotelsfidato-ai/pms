@@ -165,8 +165,9 @@ describe("D21-36 · a guest past their departure date who has not checked out", 
 
     const res = await walkIn("101", 1);
     expect(res.status).toBe(409);
-    expect(((await res.json()) as { reason: string }).reason)
-      .toBe("Somebody is already in that room.");
+    /* Named, as the check-in names them (rule A, 24 September). */
+    expect(((await res.json()) as { reason: string }).reason).toMatch(
+      /^Walk-in 101 \d+ \(.+\) is still in room 101\. Check them out first, or choose another room\.$/);
   });
 
   /* FD-11 (D23-12). The booking held for 101 arrives today, and the check-in
@@ -215,6 +216,16 @@ describe("FD-14 · a clerk's waive of the early charge", () => {
       [tomorrow]);
     expect(stay).toEqual({ status: "confirmed", check_in: "2026-08-28", early: null });
   });
+
+  /* Rule C (the owner, 24 September): the check-in screen offers the tick
+     from this answer - the same mayWaive the check-in above refused with. */
+  it("and the early-arrival answer tells the screen who may waive", async () => {
+    const asClerk = await app.request(`/api/hotels/${CODE}/early-arrival`, {
+      headers: { "x-dev-staff-id": "test-uid-fdw-clerk" } });
+    expect(((await asClerk.json()) as { mayWaive: boolean }).mayWaive).toBe(false);
+    const asOwner = await call(`/${CODE}/early-arrival`);
+    expect(((await asOwner.json()) as { mayWaive: boolean }).mayWaive).toBe(true);
+  });
 });
 
 describe("D21-37 · the three counts", () => {
@@ -252,5 +263,85 @@ describe("D21-37 · the three counts", () => {
       `select x.number from app.house_now($1) x join rooms rm on rm.id = x.room_id
         where (rm.occupancy_status = 'occupied') <> x.in_house order by 1`, [hotelId]);
     expect(off).toEqual([]);
+  });
+});
+
+/* ══════════════════════════════════════════════════════════════════
+   RULE A (the owner, 24 September) - FD-11's refusal wherever a guest is
+   put into a room NOW: a move or a swap from tonight, a room for a guest
+   already checked in (and the walk-in, above). A room given ahead to a
+   booking not yet here, or a move for a later night, is a hold, and is
+   allowed: the check-in asks on the day.
+
+   On the 28th. W105 and W107 were due out on the 27th and have not been
+   checked out, so both are still in; W106 is in 106 until the 30th.
+   FDW-LEGACY was put into 107 over W107 by hand, the way the demo's 201
+   was before the check-in asked (FD-11) - the only way a third guest can
+   be in a room a swap goes to.
+   ══════════════════════════════════════════════════════════════════ */
+describe("rule A · a guest put into a room somebody is still in", () => {
+  const STILL_IN = (n: string) => new RegExp(
+    String.raw`^Walk-in ${n} \d+ \(.+\) is still in room ${n}\. Check them out first, or choose another room\.$`);
+  const ids: Record<string, string> = {};
+  const roomFor = async (id: string) => (await sql<{ n: string | null }>(
+    "select app.room_for($1, app.business_date($2)) as n", [id, hotelId]))[0]!.n;
+  const reasonOf = async (res: Response) => ((await res.json()) as { reason: string }).reason;
+  const stay = async (reference: string, from: string, to: string, status: string) =>
+    (await sql<{ id: string }>(
+      `insert into reservations (hotel_id, reference, guest_id, room_type_id,
+                                 check_in, check_out, agreed_rate, status)
+       values ($1, $2, (select id from guests where full_name = 'In-house rule guest' limit 1),
+               (select id from room_types where hotel_id = $1 and code = 'STD'),
+               $3::date, $4::date, 2000, $5)
+       returning id::text`, [hotelId, reference, from, to, status]))[0]!.id;
+
+  beforeAll(async () => {
+    await sql("select app.bulk_create_rooms($1,'STD',1::smallint,105,107)", [hotelId]);
+    for (const [n, nights] of [["105", 1], ["106", 3], ["107", 1]] as const) {
+      const res = await walkIn(n, nights);
+      expect(res.status, await res.clone().text()).toBe(200);
+      ids[n] = ((await res.json()) as { data: { id: string } }).data.id;
+    }
+    await sql("update hotels set business_date = date '2026-08-28' where id = $1", [hotelId]);
+    ids["legacy"] = await stay(`${CODE}-LEGACY`, "2026-08-28", "2026-08-30", "checked_in");
+    await sql(
+      `insert into room_assignments (hotel_id, reservation_id, room_id, from_date, to_date, reason)
+       select $1, $2, id, date '2026-08-28', date '2026-08-30', 'arrival'
+         from rooms where hotel_id = $1 and number = '107'`, [hotelId, ids["legacy"]]);
+  });
+
+  it("refuses a move from tonight, naming who is in the room, and moves nothing", async () => {
+    const res = await call(`/${CODE}/stays/${ids["106"]}/move`, "POST",
+      { roomNumber: "105", from: "2026-08-28" });
+    expect(res.status).toBe(409);
+    expect(await reasonOf(res)).toMatch(STILL_IN("105"));
+    expect(await roomFor(ids["106"]!)).toBe("106");
+  });
+
+  it("refuses a swap from tonight into a room a third guest is still in", async () => {
+    const res = await call(`/${CODE}/stays/${ids["106"]}/exchange`, "POST",
+      { withStayId: ids["legacy"], from: "2026-08-28", reason: "Test" });
+    expect(res.status).toBe(409);
+    expect(await reasonOf(res)).toMatch(STILL_IN("107"));
+    expect(await roomFor(ids["legacy"]!)).toBe("107");
+    expect(await roomFor(ids["106"]!)).toBe("106");
+  });
+
+  it("refuses a room for a guest already checked in, and writes nothing", async () => {
+    const noRoom = await stay(`${CODE}-NOROOM`, "2026-08-28", "2026-08-29", "checked_in");
+    const res = await call(`/${CODE}/stays/${noRoom}/assign`, "POST", { roomNumber: "105" });
+    expect(res.status).toBe(409);
+    expect(await reasonOf(res)).toMatch(STILL_IN("105"));
+    expect(await roomFor(noRoom)).toBeNull();
+  });
+
+  it("allows a room given ahead to a booking arriving today, and a move for a later night", async () => {
+    const ahead = await stay(`${CODE}-AHEAD`, "2026-08-28", "2026-08-29", "confirmed");
+    const given = await call(`/${CODE}/stays/${ahead}/assign`, "POST", { roomNumber: "105" });
+    expect(given.status, await given.clone().text()).toBe(200);
+
+    const later = await call(`/${CODE}/stays/${ids["106"]}/move`, "POST",
+      { roomNumber: "105", from: "2026-08-29" });
+    expect(later.status, await later.clone().text()).toBe(200);
   });
 });

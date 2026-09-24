@@ -369,6 +369,24 @@ describe("D22-3 and D22-2 - People, for a GM", () => {
     expect(screen.queryByRole("button", { name: "Remove 5EL from Meena" })).toBeNull();
   });
 
+  /* D24-19: a GM or a hotel's Admin may not switch their own access off.
+     The server refuses both (api/test/modules/admin/propertyAdmin.test.ts)
+     and says maySwitch false on their own row; the screen offers neither. */
+  it("offers the signed-in GM no way to take their own access away", async () => {
+    as("gm");
+    peopleServer([
+      person({ id: "p-1", name: "Asha" }),
+      person({ id: "22222222-2222-2222-2222-222222222222", name: "Me The GM",
+               email: "someone@fidato.in", maySwitch: false, access: [{ code: "5EL", role: "gm" }] }),
+    ]);
+    renderAt("/people", <PeoplePage />);
+
+    expect(await screen.findByRole("button", { name: "Remove 5EL from Asha" })).toBeDefined();
+    const mine = within((await screen.findByText("Me The GM")).closest("li")!);
+    expect(mine.queryByRole("button", { name: "Remove 5EL from Me The GM" })).toBeNull();
+    expect(mine.queryByRole("button", { name: "Deactivate" })).toBeNull();
+  });
+
   it("does not offer Add somebody to somebody who may roster nobody", async () => {
     as("hotel_manager");
     vi.spyOn(apiModule, "api").mockImplementation(async (url: string) => {

@@ -3,7 +3,7 @@ import { useParams } from "react-router";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { ShieldCheck } from "lucide-react";
 import { ApiError } from "@/lib/api";
-import { dateLong, dateTime } from "@/lib/format";
+import { dateLong, dateShort, dateTime } from "@/lib/format";
 import {
   Button, Field, fieldProps, Input, NativeSelect, Segmented, StatusPill, Textarea,
 } from "@/components/ui";
@@ -272,14 +272,29 @@ function Behind(
 /* ── Message the front desk (D23-14) ─────────────────────────────────
    Anything, in the guest's own words. A request of kind 'desk' through the
    same door and the same limits as a spa or laundry request; it lands in
-   the booking's Guest messages at the desk, unread until handled. */
+   the booking's Guest messages at the desk, unread until handled.
+
+   Under it, what they sent (the owner, 24 September): each Sent or
+   Handled, with the day and nothing else - no staff name, no time. The
+   door's own list of this stay's requests, the same read as above; the
+   words are a text node, never HTML. */
 function MessageTheDesk({ token, onUnlockGone }: { token: string; onUnlockGone: () => void }) {
+  const qc = useQueryClient();
   const [what, setWhat] = useState("");
+  const list = useQuery({
+    queryKey: ["guest-behind", token, "requests"],
+    queryFn: () => getRequests(token),
+    retry: false,
+  });
   const send = useMutation({
     mutationFn: () => makeRequest(token, { kind: "desk", what }),
-    onSuccess: () => setWhat(""),
+    onSuccess: async () => {
+      setWhat("");
+      await qc.invalidateQueries({ queryKey: ["guest-behind", token, "requests"] });
+    },
   });
-  useUnlockGone(send.error, onUnlockGone);
+  useUnlockGone(list.error ?? send.error, onUnlockGone);
+  const sent = (list.data?.requests ?? []).filter((q) => q.kind === "desk");
 
   return (
     <section className="mt-6 border-t border-grey-200 pt-5">
@@ -301,6 +316,22 @@ function MessageTheDesk({ token, onUnlockGone }: { token: string; onUnlockGone: 
           <p className="text-sm text-brand-red">{messageFrom(send.error)}</p>
         )}
       </form>
+
+      {sent.length > 0 && (
+        <ul className="mt-4 flex flex-col gap-2">
+          {sent.map((q) => (
+            <li key={q.createdAt} className="rounded-md border border-grey-200 p-3 text-sm">
+              <p className="text-ink-900 whitespace-pre-line break-words">{q.what}</p>
+              <p className="mt-1 flex items-center gap-2 text-grey-600">
+                {dateShort(q.createdAt)}
+                <StatusPill tone={q.status === "open" ? "neutral" : "success"}>
+                  {q.status === "open" ? "Sent" : "Handled"}
+                </StatusPill>
+              </p>
+            </li>
+          ))}
+        </ul>
+      )}
     </section>
   );
 }
