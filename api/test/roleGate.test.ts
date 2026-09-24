@@ -174,6 +174,11 @@ describe("the matrix the server asks", () => {
       .toEqual(["owner", "admin", "gm", "finance"]);
   });
 
+  it("D22-44: a VAT bill is cancelled by the four who issue a credit note", () => {
+    expect(who(`POST ${H}/vat-bills/:number{.+}/cancel`))
+      .toEqual(["owner", "admin", "gm", "finance"]);
+  });
+
   it("D22-36: the night audit stays as it is", () => {
     expect(who(`POST ${H}/night-audit/run`))
       .toEqual(["owner", "admin", "gm", "hotel_manager", "front_desk", "finance"]);
@@ -411,6 +416,18 @@ describe("the owner's answers of 22 September, through the real server", () => {
     }
     for (const role of ["finance", "gm"]) {
       const res = await send(as(role), "POST", "/invoices/NO-SUCH/credit-note", {});
+      expect(res.status, `${role}: ${await res.clone().text()}`).toBe(409);
+      expect(((await res.json()) as { reason: string }).reason).toMatch(/must say why/);
+    }
+  });
+
+  it("D22-44: reception and the hotel manager are refused a VAT bill's cancellation; the accountant and GM are not", async () => {
+    const key = `POST ${H}/vat-bills/:number{.+}/cancel`;
+    for (const role of ["front_desk", "hotel_manager"]) {
+      await refusedByGate(await send(as(role), "POST", "/vat-bills/NO-SUCH/cancel", {}), key);
+    }
+    for (const role of ["finance", "gm"]) {
+      const res = await send(as(role), "POST", "/vat-bills/NO-SUCH/cancel", {});
       expect(res.status, `${role}: ${await res.clone().text()}`).toBe(409);
       expect(((await res.json()) as { reason: string }).reason).toMatch(/must say why/);
     }

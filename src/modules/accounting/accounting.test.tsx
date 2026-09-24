@@ -5,6 +5,8 @@ import { go, startSignedIn, signedIn, AGRA_HOTEL } from "@/test/app";
 import { useUi } from "@/lib/ui";
 import { mayReach, navigationFor } from "@/components/app/navigation";
 import { dayBookSheet, FORMATS, type DayBook } from "@/modules/accounting/data/accounting";
+import * as apiModule from "@/lib/api";
+import * as csvModule from "@/lib/csv";
 
 /* ══════════════════════════════════════════════════════════════════
    ACCOUNTING EXPORT — the Tally export (D18-16)
@@ -150,7 +152,7 @@ describe("the export screen", () => {
     return render(<App />);
   };
 
-  it("offers all three formats the owner chose", async () => {
+  it("offers every format the owner chose", async () => {
     open("FMT1");
     for (const f of FORMATS) {
       expect(await screen.findByText(f.label)).toBeTruthy();
@@ -181,6 +183,29 @@ describe("the export screen", () => {
     fireEvent.click(await screen.findByRole("radio", { name: /Tally Prime/i }));
     const after = await screen.findByRole("button", { name: /export/i });
     expect((after as HTMLButtonElement).disabled).toBe(true);
+  });
+
+  /* D22-37, the owner: "both the CSV and a real .xlsx" - Excel is a choice
+     of its own, and Export hands over the one chosen (24 September). */
+  it("hands over the Excel workbook when Excel is chosen, and the CSV when it is not", async () => {
+    const xlsx = vi.spyOn(apiModule, "downloadFile").mockResolvedValue("day-book.xlsx");
+    const csv = vi.spyOn(csvModule, "downloadCsv").mockImplementation(() => {});
+    try {
+      open("XLS1");
+      await screen.findByRole("table");
+      fireEvent.click(await screen.findByRole("button", { name: /export/i }));
+      expect(csv).toHaveBeenCalledTimes(1);
+      expect(xlsx).not.toHaveBeenCalled();
+
+      fireEvent.click(await screen.findByRole("radio", { name: /Day book \(Excel\)/ }));
+      fireEvent.click(await screen.findByRole("button", { name: /export/i }));
+      expect(xlsx).toHaveBeenCalledWith(
+        "/api/hotels/5EL/accounting/day-book.xlsx?from=2026-08-24&to=2026-08-25");
+      expect(csv).toHaveBeenCalledTimes(1);
+    } finally {
+      xlsx.mockRestore();
+      csv.mockRestore();
+    }
   });
 
   it("names the days the night audit has not closed", async () => {

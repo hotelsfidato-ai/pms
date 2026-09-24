@@ -171,7 +171,13 @@ folios.get("/:code/stays/:id/postings", async (c) => {
               fp.business_date::text, fp.category, fp.description,
               fp.amount, fp.tax_amount, fp.reverses_id::text,
               exists (select 1 from folio_postings r where r.reverses_id = fp.id) as reversed,
-              fp.created_at::text, fp.posted_by::text
+              fp.created_at::text,
+              -- WHO, BY NAME: the person signed in when the line was made
+              -- (101), as the Audit log names them. It printed the uuid, or
+              -- "admin" for nobody. The night's room charge says "Night
+              -- audit", not whoever pressed Run (the owner, 24 September).
+              case when fp.source_type = 'night_audit' then 'Night audit'
+                   else app.posted_by_name(fp.id) end as posted_by
          from folio_postings fp
          join folios f on f.id = fp.folio_id
          left join companies co on co.id = f.company_id
@@ -203,7 +209,9 @@ folios.get("/:code/stays/:id/postings", async (c) => {
       ...(p.reverses_id ? { reversalOf: p.reverses_id } : {}),
       reversed: p.reversed,
       createdAt: p.created_at,
-      user: p.posted_by ?? "admin",
+      /* Null where nobody was recorded (lines from before 101, bulk loads):
+         the bill prints a dash, never a name nobody was. */
+      user: p.posted_by,
     }));
   });
 

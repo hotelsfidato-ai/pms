@@ -1,4 +1,6 @@
+import ExcelJS from "exceljs";
 import type { Client } from "../../db.ts";
+import { dayBookSheet } from "./sheet.ts";
 import {
   dailyFigures, sumDays, heading, posSales,
   type DayFigures, type PosDay, type Property,
@@ -200,4 +202,16 @@ export async function dayBook(
     total: columns(t, posTotal),
     openDays: days.filter((d) => !d.closed).map((d) => d.date),
   };
+}
+
+/* ── The day book as a real .xlsx (D22-37: "both the CSV and a real .xlsx") ──
+   Laid out by `dayBookSheet` (sheet.ts), the one the screen writes its CSV
+   with, so the two files carry the same columns and the same figures. */
+export async function dayBookXlsx(book: DayBook): Promise<Buffer> {
+  const { headers, rows } = dayBookSheet(book);
+  const workbook = new ExcelJS.Workbook();
+  const sheet = workbook.addWorksheet("Day book");
+  sheet.addRow(headers).font = { bold: true };
+  sheet.addRows(rows);
+  return Buffer.from((await workbook.xlsx.writeBuffer()) as ArrayBuffer);
 }

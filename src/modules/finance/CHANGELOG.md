@@ -8,6 +8,97 @@ project, still goes in the root `CHANGELOG.md`.
 
 ---
 
+## 2026-09-24 · a VAT bill for alcohol (D22-44), "Interim bill" (D22-7), the tax card on Invoices (D23-1), the three rule-breakers (D22-9)
+
+Two helpers started this on 23 September and were stopped mid-task
+(`finance/vat-bill-interim`, `finance/rule-breakers-xlsx`, both "WIP, NOT
+FINISHED"). This session merged both, read every change, finished them and
+proved them. Three things the first helper had switched off while testing
+were still off (a `check (true)`, an `if false and exists`, a `void 0` where
+the cancellation's reason is refused) and two were real bugs: the VAT number
+used `lpad(…, 4)`, which cuts 10000 back to "1000" (root MEMORY 280), and a
+restaurant VAT bill summed the drinks before their share of the discount.
+
+**Asked for:** D22-44 (a VAT bill for alcohol, beside the GST document of
+the same sale, its own series per hotel restarting each 1 April, each naming
+the other, cancelled like a credit note by owner, admin, GM and accountant);
+D22-7 (the desk's print says "Interim bill"); D23-1 (the tax card on a
+finance screen the accountant opens); D22-9's three finance rule-breakers.
+
+**The owner's answers, 24 September** (asked in the finance chat):
+- the stay's VAT bill is made **with the tax invoice** on Invoices, not at
+  check-out (so each can name the other);
+- the desk's print says **"Interim bill" before and after check-out** (the
+  numbered tax invoice is issued on Invoices);
+- the tax card on Invoices is shown **only to owner, admin, GM and
+  accountant**;
+- Excel is **its own choice in the Format list** (accounting's CHANGELOG);
+- an invoice issued again after a credit note **names the VAT bill still
+  standing**;
+- Payments' "Taken by" **names the person** (it printed "admin");
+- the night audit's room lines say **"Night audit"**, not who pressed Run
+  (asked after the night-audit session saw a staff uuid there).
+
+**Shipped:**
+- Migration "a separate VAT bill for alcohol" (135 in this branch):
+  `vat_bill_series`, `app.next_vat_bill_number` (the year's row opened by its
+  first bill, so 0001 again each 1 April with no deploy; four digits, more
+  after 9999), `vat_bills` (never changed or deleted, 025's trigger; a
+  cancellation is its own numbered row, figures negated, with a reason - a
+  check - once per bill), `app.issue_vat_bill` (the folio's live VAT postings,
+  or the order's VAT group after its share of the discount; none twice for
+  one folio).
+- The tax invoice issues the VAT bill in the same transaction; the invoice
+  names it (or the one still standing, after a credit note) and it names the
+  invoice. The till issues one when a bill is paid by cash, card, UPI or
+  split, and the restaurant bill prints its number. `GET /vat-bills`,
+  `GET /vat-bills/:number`, `POST /vat-bills/:number/cancel` (roleGate:
+  `approve` on invoice). `pages/VatBill.tsx`, a VAT bills table on Invoices.
+- "Interim bill" on the Bill tab's print, always.
+- The tax card on Invoices for the four who may set a rate.
+- D22-9 (a): migration "a new hotel has no GST rate until somebody sets one"
+  (136 in this branch) - no default, no NOT NULL on `hotels.cgst_rate` /
+  `sgst_rate`; stored rates untouched. The property record answers null; a
+  charge refused for a missing rule says where to set it: "under Rooms and
+  rates → Room types or Finance → Invoices".
+- D22-9 (b): `const USER = "front desk"` and the three dead `user` fields
+  gone (FD-2's way); a bill line names who posted it (`app.posted_by_name`),
+  "Night audit" for the audit's room charge, a dash for nobody. So does
+  Payments' "Taken by".
+- D22-9 (c): every finance write route read for a refusal after a write;
+  one found (`postCharge` opened the folio before asking for the rate) and
+  moved (FIN-7).
+
+**Proved** (each guard seen failing with its change taken out, then put
+back byte for byte):
+- database `finance gst` (1), `finance vat bill` (16) - with the reason
+  check, the no-second-bill guard and the no-default migration broken, all
+  three failed; the lpad and discount bugs failed before they were fixed;
+- API `alcoholVat` (+5), `signedLines` (3, new), `roleGate` (+2): the
+  cancellation's reason refusal, `postCharge`'s order, `posted_by_name`,
+  Payments' name, VAT issuing with the invoice and at the till, and the
+  re-issued invoice's naming each failed their own test when removed;
+- web `billPrint` (+2), `taxCard` (+7), `vatBill` (9);
+- on screen, `fidato_s1`, desktop and phone
+  (`.local/screenshots/2026-09-24-finance/`): a cash bill got
+  VAT/5EL/2026-27/0001; room 202's whisky went on its bill, and its tax
+  invoice 5EL/2026-27/00001 (issued by the Test Accountant) came with
+  VAT/5EL/2026-27/0002 (₹550), each naming the other; the till's line reads
+  "Group Owner" and the demo's own room line "-" (a desk charge read "Test
+  Reception" in the first pass). Retaken on the tree merged with cp6 ea01aef,
+  on a debugging port of its own: the night audit session's Edge had used
+  9333 at the same time as the first pass.
+- 5EL's stored 2.50/2.50 survived a full replay of 136 migrations
+  (`db/migrate.sh` on `fidato_s1`, on the tree merged with cp6 ea01aef);
+  `rerun.sh`: all 136 re-runnable.
+
+**Left open:** FIN-8 (the GST series for a new financial year exists only
+after a deploy). The till's and the night audit's own "no rate" sentences
+still name only Room types (pos and night-audit files; a request for the
+master). A function's bill issues no VAT bill (it has no GST document).
+
+---
+
 ## 2026-09-22 · alcohol, a switch per property, and the VAT it is taxed under (D21-90, D21-91) — and FIN-4
 
 **Asked for:** the owner's D21-90 ("a switch per hotel - 'serves alcohol'",
