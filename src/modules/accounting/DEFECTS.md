@@ -142,6 +142,20 @@ person exporting should not learn it from their accountant.
 
 ## Open — not fixed
 
+### ACC-10 · The file has no Restaurant column, though the server sends one
+
+**Found** — 23 September, copying the CSV's columns for the .xlsx (D22-37).
+The server's day book has had `pos` and `posTax` since 19 September — what
+the outlets sold in cash, by card or UPI, "its own column because an
+accountant asking what the restaurant took should not have to subtract two
+other figures". The screen's `DayBookRow` never took them, so neither the
+screen nor the CSV (nor now the .xlsx, which copies the CSV) has that column:
+the takings are inside Sales and GST, and in no column of their own.
+
+**Not changed** — the .xlsx was to match the CSV. Adding the column to both
+is a question for the owner (what the accountant's file shows), with the
+recommendation: yes, "Restaurant" and "Restaurant tax" after "Extra tax".
+
 ### ACC-3 · Food is not its own line; the extras are one number
 
 **Found** 19 September, reading the brief against the reports door before

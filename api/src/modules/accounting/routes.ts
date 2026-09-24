@@ -2,7 +2,7 @@ import { Hono } from "hono";
 import { withSession } from "../../auth.ts";
 import type { Client } from "../../db.ts";
 import { propertyFor, isoDateParam } from "../reports/index.ts";
-import { dayBook } from "./dayBook.ts";
+import { dayBook, dayBookXlsx } from "./dayBook.ts";
 
 /* ══════════════════════════════════════════════════════════════════
    GET /:code/accounting/day-book?from=&to=
@@ -73,7 +73,9 @@ function daysBetween(from: string, to: string): number {
 
 export const accounting = new Hono<{ Variables: { subject: string } }>();
 
-accounting.get("/:code/accounting/day-book", async (c) => {
+/* `day-book` answers the object; `day-book.xlsx` the same object as a real
+   .xlsx (D22-37) - the one path, so the refusals above it are the same. */
+accounting.get("/:code/accounting/:file{day-book(?:\\.xlsx)?}", async (c) => {
   const q = c.req.query();
   const from = isoDateParam(q["from"]);
   const to = isoDateParam(q["to"]);
@@ -99,5 +101,16 @@ accounting.get("/:code/accounting/day-book", async (c) => {
     return { status: 200 as const, body: await dayBook(client, property, from, to) };
   });
 
-  return c.json(answer.body, answer.status);
+  if (answer.status !== 200 || !c.req.param("file").endsWith(".xlsx")) {
+    return c.json(answer.body, answer.status);
+  }
+  /* Named as the CSV is (src/lib/csv.ts, `reportFilename`), so the two sit
+     side by side in a downloads folder. */
+  const slug = (s: string) => s.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "");
+  const name = `${slug(answer.body.property.name)}-day-book-${from}-to-${to}.xlsx`;
+  return c.body(new Uint8Array(await dayBookXlsx(answer.body)), 200, {
+    "Content-Type": "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+    "Content-Disposition": `attachment; filename="${name}"`,
+    "Cache-Control": "no-store",
+  });
 });

@@ -272,14 +272,14 @@ From `PENDING.md` and `HANDOVER.md`, and two found while writing this brief:
   into `D:\reports fidato\` first. Still needed from the owner: Fidato's
   registered name as it prints, the GSTIN for bills, bank details per hotel,
   policies and times, and how WhatsApp and email should send.
-- **`const USER = "front desk"` in `flows/FolioPanel.tsx`** — named, not
-  fixed (MEMORY 256; `HANDOVER.md` § 6; PENDING § 5a).
+- ~~`const USER = "front desk"` in `flows/FolioPanel.tsx`~~ — fixed 23
+  September (FIN-6): gone, and a bill line names the person who posted it.
 - **"Which room was this stay in" written by hand** in two of the seven
   copies — `GET /:code/payments` and `GET /:code/billable`
   (`api/src/modules/finance/billing.ts`); `app.stay_room()` (086) is the one
   rule; moving onto it is tidying (PENDING § 6).
-- **Defect 243's shape in these routes has not been checked** — a refusal
-  written below a write keeps the write (PENDING § 2 and § 5).
+- ~~Defect 243's shape in these routes has not been checked~~ — checked 23
+  September: one found and fixed, `postCharge` (FIN-7).
 - **FIN-1, found while writing this brief:** the header of
   `api/src/modules/finance/billing.ts` still says "NO INVOICE NUMBER IS
   ISSUED" and "THE NIGHT AUDIT DOES NOT RUN"; both have been built. A

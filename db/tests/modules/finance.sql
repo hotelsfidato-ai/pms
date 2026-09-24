@@ -19,6 +19,22 @@
 -- Builds its own property and leaves it, like shared.sql and spa.sql. Every
 -- figure below is this file's own, not a rate anybody has decided.
 -- =============================================================================
+
+-- A NEW HOTEL HAS NO GST RATE (D22-9, "a new hotel has no GST rate until
+-- somebody sets one"). Asked of the function that makes a property, directly.
+do $$
+declare h uuid;
+begin
+  h := app.provision_property_unchecked('NGR', 'No Rate Test', 'Nowhere');
+  perform test.ok('finance gst', 'a new property is made with no CGST or SGST rate: a dash, never 2.5',
+    (select cgst_rate is null and sgst_rate is null from hotels where id = h),
+    (select coalesce(cgst_rate::text, 'null') || ' / ' || coalesce(sgst_rate::text, 'null')
+       from hotels where id = h));
+  -- FH01 is seeded before the columns existed, so it holds 019's 2.5.
+  perform test.ok('finance gst', 'a rate a hotel already holds is kept',
+    exists (select 1 from hotels where code = 'FH01' and cgst_rate = 2.5 and sgst_rate = 2.5));
+end $$;
+
 do $$
 declare
   h uuid; rt uuid; g uuid; res uuid; fol uuid; clerk uuid;

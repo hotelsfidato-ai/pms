@@ -38,7 +38,9 @@ import { BillPrint } from "./BillPrint";
    the whole departure flow.
    ══════════════════════════════════════════════════════════════════ */
 
-const USER = "front desk";
+/* No `const USER = "front desk"` (MEMORY 256, as FD-2 did for check-in and
+   the walk-in): the server never read it. A line is signed by whoever is
+   signed in (`posted_by`, 101), and the bill prints that person's name. */
 
 export function FolioPanel({
   hotelId, stay, businessDate,
@@ -264,7 +266,7 @@ function LedgerList({
                 </p>
                 <p className="text-2xs text-grey-500 tabular mt-0.5">
                   {dateShort(p.businessDate)} · {p.category}
-                  {p.method ? ` · ${p.method}` : ""} · {p.user}
+                  {p.method ? ` · ${p.method}` : ""} · {p.user ?? "-"}
                 </p>
               </div>
 
@@ -325,7 +327,7 @@ function ReverseButton({
       type="button"
       disabled={!allowed}
       onClick={async () => {
-        const res = await reverseCharge(hotelId, stayId, posting.id, USER);
+        const res = await reverseCharge(hotelId, stayId, posting.id);
         if (res.ok) {
           toast.success("Posting reversed", "The reversal is its own line - nothing was edited.");
           onDone();
@@ -474,7 +476,7 @@ function AddChargeDialog({
               disabled={!description.trim() || value === 0}
               onClick={async () => {
                 const res = await postCharge(hotelId, stay.id, {
-                  category, description, amount: value, taxable, businessDate, user: USER,
+                  category, description, amount: value, taxable, businessDate,
                 });
                 if (res.ok) {
                   toast.success("Charge posted", `${money(value + (tax ?? 0))} on room ${stay.roomNumber}`);
@@ -580,7 +582,7 @@ function SettleDialog({
               disabled={value <= 0}
               onClick={async () => {
                 const res = await settle(hotelId, stay.id, {
-                  method, amount: value, businessDate, user: USER,
+                  method, amount: value, businessDate,
                 });
                 if (res.ok) {
                   toast.success(`${money(value)} received`, method);

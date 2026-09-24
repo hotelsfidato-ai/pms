@@ -43,7 +43,6 @@ export async function postCharge(
     amount: number;
     taxable: boolean;
     businessDate: string;
-    user: string;
   },
 ): Promise<OperationResult<Posting>> {
   /* The tax rate comes from the PROPERTY, server-side — `taxOn()` in
@@ -88,7 +87,7 @@ export async function reverseChargeAllowed(
 }
 
 export async function reverseCharge(
-  hotelId: string, stayId: string, postingId: string, user: string,
+  hotelId: string, stayId: string, postingId: string,
 ): Promise<OperationResult<Posting>> {
   /* The reversal is a NEW row. Nothing is edited and nothing is
      deleted, so the posting count goes UP when something is undone —
@@ -97,7 +96,7 @@ export async function reverseCharge(
   try {
     await api(
       `/api/hotels/${hotelId}/stays/${stayId}/charges/${postingId}/reverse`,
-      { method: "POST", body: JSON.stringify({ user }) },
+      { method: "POST" },
     );
   } catch (error) {
     if (error instanceof ApiError) return refuse(error.message);
@@ -111,7 +110,7 @@ export async function reverseCharge(
 export async function settle(
   hotelId: string,
   stayId: string,
-  input: { method: PaymentMethod; amount: number; businessDate: string; user: string },
+  input: { method: PaymentMethod; amount: number; businessDate: string },
 ): Promise<OperationResult<Posting>> {
   try {
     await api(`/api/hotels/${hotelId}/stays/${stayId}/payments`, {

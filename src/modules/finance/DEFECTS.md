@@ -16,6 +16,78 @@ entries stay here: they are the reason the fault does not come back.
 
 ## Fixed
 
+### FIN-7 · A charge refused for a missing GST rule left an empty folio behind — FIXED 23 September
+
+**Found** — 23 September, auditing the finance routes for MEMORY 243's shape
+(D22-9, "the three finance rule-breakers"). `postCharge`
+(`api/src/modules/finance/postings.ts`) called `folioFor` — which INSERTS a
+folio where the stay has none — and only then asked `app.gst_rate_or_null`,
+refusing when no rule covers the charge. Inside `withSession` a refusal is a
+commit, so the folio stayed. Three doors reach it: the desk's
+`POST /:code/stays/:id/charges`, the laundry's and the spa's.
+
+**Fixed** — `folioFor` moved below the rate check; every refusal in
+`postCharge` is now above its first write. The other finance write routes
+were read for the same shape and hold none: a payment's `folioFor` returns
+null only before it inserts; open-a-folio, transfer, invoice, credit note,
+the drawer's four and the tax card's two all refuse before they write (the
+drawer's "already open" and a second reversal refuse AFTER a failed insert,
+which has aborted the transaction, so the commit writes nothing).
+
+**Proved** — `api/test/modules/finance/signedLines.test.ts`, "writes nothing -
+not even the folio it would have gone on": a charge at a property with no
+room rule is refused 409 and the stay still has no folio.
+
+**The rule:** a helper that "opens one on demand" is a write. Count it when
+checking that every refusal sits above the first write.
+
+### FIN-6 · A bill line was signed with a uuid, or "admin" — and the Bill tab sent "front desk" — FIXED 23 September
+
+**Found** — MEMORY 256 named `const USER = "front desk"` in
+`flows/FolioPanel.tsx`; D22-9 queued it. **What it actually was**, read before
+fixing (FD-2's lesson): the literal went as `user` on a charge, a payment and
+a reversal, and **no server route ever read it** — `posted_by` defaults to the
+signed-in person (101). What the bill line printed under each posting was
+`GET /:code/stays/:id/postings`'s `user`: `posted_by::text`, a uuid, or the
+word `"admin"` when nobody was recorded.
+
+**Fixed** — the literal and the three dead `user` fields are gone
+(`FolioPanel.tsx`, `data/postings.ts`), as FD-2 did for check-in and the
+walk-in. The route answers `app.posted_by_name(fp.id)` — the name the Audit
+log prints (ADM-1), which names somebody who has since lost access — and null
+for nobody; the line prints a dash for null. `Posting.user` in the core's
+`types.ts` is `string | null`.
+
+**Proved** — `signedLines.test.ts`, "names the person signed in when it was
+posted, and a dash for nobody": a charge posted by the owner reads "Group
+Owner"; a line inserted with nobody signed in reads null.
+
+**The rule:** before fixing where a value comes from, find where it goes
+(FD-2) - here it went nowhere, and the real fault was on the way back.
+
+### FIN-5 · Every new hotel was born charging 2.5% + 2.5% GST — FIXED 23 September
+
+**Found** — D22-9 queued it. `019_property_details.sql` gave
+`hotels.cgst_rate` and `sgst_rate` `not null default 2.5`: a rate the system
+chose. 067 moved what a posting carries to `tax_rules`, so no charge, invoice
+or night audit reads the pair any more — but the Lodging tax heading
+(`reports/figures.ts` read it as `coalesce(…, 0)`) and the property record
+(`GET /api/hotels/:code`, `Number(null)` is 0) still did.
+
+**Fixed** — a new migration ("a new hotel has no GST rate until somebody sets
+one") drops the default and the NOT NULL; stored rates are untouched. Both
+readers now carry null: the Lodging tax heading says "CGST @-", the property
+record `null`. Billing with no rate was already refused, with where to set
+it, by `postCharge` and the night audit (067); an invoice never read the pair.
+
+**Proved** — `db/tests/modules/finance.sql`, "a new property is made with no
+CGST or SGST rate" (asked of `app.provision_property_unchecked` directly) and
+"a rate a hotel already holds is kept";
+`api/test/modules/reports/lodgingTaxAlcohol.test.ts` asserts the heading "CGST
+@-" at a new property.
+
+**The rule:** a column default is a price if the column is one.
+
 ### FIN-4 · The Add charge window previewed "CGST 2.5% + SGST 2.5%" on every charge — FIXED 22 September
 
 **Found** — 21 September, left open in this service's CHANGELOG (the bill as

@@ -7,8 +7,9 @@ import { moneyPrecise, dateShort } from "@/lib/format";
 import { BUSINESS_DATE, PTD_FROM } from "@/data/repositories";
 import {
   Page, PageHeader, Card, CardBody, CardHeader, Button, Field, Input, fieldProps,
-  DataTable, ReadFailed, readError, EmptyState, type Column,
+  DataTable, ReadFailed, readError, EmptyState, toast, type Column,
 } from "@/components/ui";
+import { ApiError } from "@/lib/api";
 import {
   FORMATS, getDayBook, downloadDayBook,
   type DayBook, type DayBookRow, type ExportFormat,
@@ -68,7 +69,13 @@ export default function AccountingPage() {
           <Button
             variant="primary"
             disabled={!canExport}
-            onClick={() => { if (book) downloadDayBook(book); }}
+            onClick={() => {
+              if (book) {
+                downloadDayBook(book).catch((error: unknown) => toast.error(
+                  "The Excel file was not made",
+                  error instanceof ApiError ? error.message : String(error)));
+              }
+            }}
           >
             <Download className="size-4" />
             Export

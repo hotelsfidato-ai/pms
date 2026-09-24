@@ -14,10 +14,38 @@ entries stay here: they are the reason the fault does not come back.
 
 ## Open — not fixed
 
-Nothing is open in this service today (18 September 2026). REP-6 and REP-11 were
-the last two, and the owner answered both — they are below, with the others.
+### REP-13 · The Lodging tax heading reads a rate nobody can set
+
+**Found** — 23 September, while taking the 2.5% default off
+`hotels.cgst_rate`/`sgst_rate` (finance's FIN-5, D22-9). The sheet's "CGST
+@2.5%" heading is the only report reading that pair, which 067 superseded:
+what a posting carries is `tax_rules`, and no screen writes the pair. So a
+hotel made from now on heads its sheet "CGST @-" for good, and 5 Elements'
+"@2.5%" says nothing about a room billed at 18% above ₹7,500.
+
+**Not changed** — which rate a filed sheet's heading should name is the
+owner's and the accountant's (the sheet is theirs, D17-99). The question is
+with the master: the room rule from `tax_rules` (one heading per slab, or
+none when there are two), or the rate the bills of that month carried.
 
 ## Fixed
+
+### REP-12 · Lodging tax's Other Bills carried alcohol and its VAT — FIXED 23 September
+
+**Found** — the owner's D22-45, 22 September ("take alcohol and its VAT
+out"). The sheet's bill numbers and Total Bill come from the GST invoice,
+which carries no alcohol (D21-91); Other Bills summed every non-room line on
+the folio, the VAT line and its VAT included.
+
+**Fixed** — `builders/lodgingTax.ts` reads the bill's GST lines only
+(`tax_scheme = 'gst'`), so no column of the sheet carries alcohol. The
+footnote says so.
+
+**Proved** — `api/test/modules/reports/lodgingTaxAlcohol.test.ts`: a bill with
+a room (₹2,000 + 5%), a dinner (₹1,000 + 5%) and a whisky (₹500 + 10% VAT)
+reads Other Bills ₹1,050, not ₹1,600.
+
+**The rule** — a sheet read from GST invoices reads GST lines.
 
 ### REP-11 · A booking nobody has arrived on appears in the Night audit's Room Charges
 

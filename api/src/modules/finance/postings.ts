@@ -126,9 +126,6 @@ export async function postCharge(
     return { ok: false, reason: "This folio is closed. Reopen the stay to post to it." };
   }
 
-  const folioId = await folioFor(client, hotelId, stayId);
-  if (!folioId) return { ok: false, reason: "Could not open a folio for this stay." };
-
   /* THE RATE COMES FROM THE RULE, AND ZERO IS STILL A DECISION.
      This read `(cgst_rate + sgst_rate) ?? 5` — a property rate with a
      hardcoded 5% behind it, which is a shipped price in a project
@@ -172,6 +169,13 @@ export async function postCharge(
       };
     }
   }
+
+  /* The FIRST WRITE: `folioFor` opens a folio where the stay has none. It
+     sat above the rate check, so a charge refused for a missing rate left
+     an empty folio behind, committed (MEMORY 243) - through this route, the
+     laundry's and the spa's alike. Every refusal is above it now. */
+  const folioId = await folioFor(client, hotelId, stayId);
+  if (!folioId) return { ok: false, reason: "Could not open a folio for this stay." };
 
   const { rows: made } = await client.query<{ id: string }>(
     `insert into folio_postings
