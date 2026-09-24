@@ -125,7 +125,8 @@ describe("the Store, Equipment and Purchasing", () => {
                        purchasing: ["view", "create"] },
     kitchen_manager: { stock: ["view", "create"], equipment: ["view"], purchasing: ["view", "create"] },
     chef:            { stock: ["view"], equipment: ["view"], purchasing: [] },
-    housekeeping:    { stock: ["view"], equipment: ["view"], purchasing: [] },
+    /* D22-11 (PUR-1): housekeeping views and raises purchase requests. */
+    housekeeping:    { stock: ["view"], equipment: ["view"], purchasing: ["view", "create"] },
     front_desk:      { stock: [], equipment: ["view"], purchasing: [] },
     finance:         { stock: ["view", "export"], equipment: ["view", "export"],
                        purchasing: ["view", "export"] },

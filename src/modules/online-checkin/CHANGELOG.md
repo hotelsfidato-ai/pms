@@ -12,6 +12,67 @@ exists** (`MODULE.md`).
 
 ---
 
+## 2026-09-24 · "Message the front desk" (D23-14)
+
+**Asked for:** the owner's D23-14 - one box on the guest's own page; the
+guest types anything; it lands in that booking's Guest messages at the desk
+with an unread count, and the desk marks it handled (who and when kept). The
+guest writes only through a definer function behind the proven code, with
+length and rate limits, and nothing a guest types is drawn as HTML. Started
+by a helper on `online-checkin/message-the-desk` (stopped mid-task, 23
+September), finished by the front desk and guests session on
+`front-desk/finish-24sep`.
+
+**Shipped**
+- Migration **132** (`132_a_message_to_the_desk.sql`; the master settles the
+  number): a third kind of guest request, `desk`, in 121's `guest_requests`,
+  written by the same `app.guest_request_make` behind `app.guest_unlocked` -
+  the same signature and return, its body only (MEMORY 317). `desk` needs no
+  module switched on; spa and laundry still do.
+- The door: `POST /api/guest/:token/requests` with kind `desk`; the same 500
+  characters and ten open at once for the stay (shared with spa and laundry
+  requests), and the door's 30 opens a minute. **The owner, 24 September:
+  these limits as built.** The desk's `GET /api/hotels/:code/online-checkin/
+  messages` (one booking's, handled ones too; or every booking's unread);
+  handled through the existing `POST .../online-checkin/requests/:id` with
+  `done`, which keeps who and when. The desk's Online check-in screen no
+  longer lists these as spa or laundry requests.
+- The guest's page: "Message the front desk", always behind the code.
+- `MessagesToTheDesk.tsx`, drawn inside Guest messages (the front door
+  exports it): the messages, "N unread", "Mark handled", "Handled by <name>,
+  <when>". Only `DESK_ROLES` see it or ask for it.
+- **The owner, 24 September: Guest messages in reception's menu** - it was in
+  no menu reception had, so nothing would have told the desk a message came.
+
+**Proved**
+- `api/test/guestDoorBehindTheCode.test.ts`, "a message to the front desk
+  (D23-14)" (4) and the unlock test's new line: a wrong code is refused (401,
+  no unlock) and neither the link alone nor an unlock nobody was given can
+  write (404, nothing kept); this phone's unlock on another booking's link is
+  refused at the door and by `app.guest_request_make` called directly
+  (MEMORY 318), and a booking id in the body is not read; it waits unread,
+  the desk marks it handled under its name, housekeeping is refused the list;
+  the eleventh open is refused. In the targeted run: 8 files, 145 tests,
+  exit 0.
+- `onlineCheckin.test.tsx`: the box sends `{kind: "desk", what}` with this
+  tab's unlock; `<img src=x onerror=alert(1)>` is shown as text and no `img`
+  exists; a role that is not the desk's gets nothing and asks nothing.
+- On screen, in this copy's own database (`fidato_s2`, API 8813, web 5213),
+  `.local/screenshots/2026-09-24-front-desk/`: `07-guest-page-message-*` (a
+  phone, sent), `08-desk-*` (reception: "2 unread", the guest's `<b>` shown as
+  text), `09-desk-marked-handled-*` ("Handled by Test Reception, 24 Sep 2026,
+  12:51 PM", "1 unread"). The code was planted in `fidato_s2` and answered
+  through the real verify route, because nothing can send one here.
+
+**Left open** - the guest sees "Sent" but not their past messages or
+whether they were handled; nothing tells the desk outside Guest messages (no
+notification, no line on the stay panel - the owner chose the menu entry).
+
+**Commits:** `0955076` (the helper's), merged in `e938205`; numbered 132 in
+`1ce2d3f`; the menu entry `252658c`; branch `front-desk/finish-24sep`.
+
+---
+
 ## 2026-09-21 (evening) · the guest's bill, on finance's one definition
 
 **Asked for:** the master, once `app.stay_bill` was on `cp6` (migration 123):

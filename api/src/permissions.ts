@@ -85,6 +85,9 @@ export const RESOURCES = [
      given four other screens away with it. */
   "laundry",
   "spa",
+  /* Marketing's guest lists and their export (D18-17): the owner, an
+     administrator and the GM only (D22-17). */
+  "marketing",
   "invoice",
   "payment",
   "commission",
@@ -170,6 +173,7 @@ const MATRIX: Record<Role, ResourceGrants> = {
     purchasing: ["view", "create", "edit", "cancel", "approve", "export"],
     laundry: ["view", "create", "edit", "cancel", "export"],
     spa: ["view", "create", "edit", "cancel", "export"],
+    marketing: READ_EXPORT,
   },
 
   gm: {
@@ -215,6 +219,7 @@ const MATRIX: Record<Role, ResourceGrants> = {
     purchasing: ["view", "create", "approve", "export"],
     laundry: ["view", "create", "edit", "cancel", "export"],
     spa: ["view", "create", "edit", "cancel", "export"],
+    marketing: READ_EXPORT,
   },
 
   /* One property, run day to day. Everything the GM has for the floor,
@@ -349,11 +354,15 @@ const MATRIX: Record<Role, ResourceGrants> = {
     notification: READ,
     stock: READ,
     equipment: READ,
+    /* D22-11 (PUR-1): housekeeping may view and raise purchase requests.
+       Raising still needs the property's setting (D18-2) to name them. */
+    purchasing: ["view", "create"],
   },
 
   finance: {
     laundry: ["view", "export"],
-    spa: ["view", "export"],
+    /* No `spa`: the diary is the six roles of D18-8/D18-21, and the server
+       refused the accountant the whole time (SPA-2). */
     dashboard: READ,
     reservation: READ_EXPORT,
     customer: READ,
@@ -371,7 +380,7 @@ const MATRIX: Record<Role, ResourceGrants> = {
 
   read_only: {
     laundry: ["view"],
-    spa: ["view"],
+    /* No `spa`, as for the accountant (SPA-2). */
     dashboard: READ,
     reservation: READ,
     customer: READ,

@@ -113,8 +113,15 @@ reCheckMoney(queryClient);
 const PERSISTED = new Set([
   "properties", "property", "rooms",
   "arrivals", "in-house", "departures",
-  "tape-chart", "floor", "housekeeping",
+  "stay-view", "floor", "housekeeping",
   "work-orders", "banquet-diary", "banquet-setup",
+  /* `stay-view` IS THE ROOMS BOARD (D22-23; the owner, 24 September): its
+     rooms, their states and the fortnight on screen, so a reload with the
+     server down still shows the house. It was "tape-chart" here, which no
+     query was ever called. The Calendar reads the same query, so its weeks
+     come along. `stays` - the names under the tiles - is NOT here: it is
+     the hotel's whole booking list, and the owner chose to keep that off
+     the desk computer. */
   /* THE MENU, so the order pad opens on a floor with no signal — which
      is the hill-station case this whole feature exists for. 1.2 KB
      gzipped, and it changes a few times a season.

@@ -51,6 +51,8 @@ a guard, and the half that was missing is the half that broke.
 
 ---
 
+## Fixed — the solution is here; do not work it out again
+
 ### SPA-2 · The permissions matrix and the server disagree about who sees the diary
 
 **Found** 19 September, building `nav.ts` and asking which roles the Spa
@@ -72,6 +74,15 @@ manager, an administrator and the owner."
 and says so. Nobody is offered a door that would refuse them. **The matrix is
 the master's file** (`src/lib/permissions.ts`) and widening or narrowing a
 role's grants is the owner's decision, not this chat's — reported, not touched.
+
+**Fixed** 23 September (the owner's D22-9, branch `admin/hotel-admin-menus`):
+the `spa` grant is off `finance` and `read_only` in `api/src/permissions.ts`,
+so the matrix names the server's six. `SEES_THE_DIARY` is gone; the diary's
+menu entry reads the matrix again (`resource: "spa"`). **Proved:**
+`api/test/modules/spa/spa.test.ts` holds `canAccess(role, "spa")` equal to
+`SPA_READ_ROLES` (failed with the two grants put back), and
+`navigation.test.ts` refuses the diary to the accountant and the viewer
+(failed with the grants back and the workaround gone).
 
 **The rule:** when a service's own role list is narrower than the shared
 matrix, the MENU follows the service and the matrix is reported. A menu that

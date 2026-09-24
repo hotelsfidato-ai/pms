@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useParams, Link } from "react-router";
-import { Users, Wallet, ArrowRight, Check } from "lucide-react";
+import { Users, Wallet, ArrowRight, Check, Flag } from "lucide-react";
 import { cn } from "@/lib/cn";
 import { money } from "@/lib/format";
 import { useUi } from "@/lib/ui";
@@ -9,7 +9,9 @@ import {
   Page, PageHeader, Card, CardBody, CardHeader, Button, Skeleton,
   EmptyState, StatusPill, toast,
 } from "@/components/ui";
-import { getGroup, openMasterFolio, routeRoomToGroup, type GroupRoom } from "@/modules/reservations/data/groups";
+import {
+  getGroup, openMasterFolio, routeRoomToGroup, setGroupLead, type GroupRoom,
+} from "@/modules/reservations/data/groups";
 
 /* ══════════════════════════════════════════════════════════════════
    THE GROUP PANEL
@@ -89,6 +91,17 @@ export default function GroupPanelPage() {
     if (!res.ok) return toast.error("Not opened", res.reason);
     toast.success("Host account open",
       "Room charges can now be routed to it.");
+    refresh();
+  };
+
+  /* D22-52: the room booked first leads until the desk picks another. */
+  const lead = async (room: GroupRoom) => {
+    setBusy(`lead:${room.reservationId}`);
+    const res = await setGroupLead(hotelId, g.id, room.reservationId);
+    setBusy(null);
+    if (!res.ok) return toast.error("Not changed", res.reason);
+    toast.success(`${room.guest} leads the group`,
+      "The group's confirmation and its review request go to them.");
     refresh();
   };
 
@@ -197,6 +210,7 @@ export default function GroupPanelPage() {
                   <th className="px-4 py-2 text-right font-medium">Rate</th>
                   <th className="px-4 py-2 text-right font-medium">Own bill</th>
                   <th className="px-4 py-2 text-center font-medium">Host pays</th>
+                  <th className="px-4 py-2 text-center font-medium">Lead guest</th>
                 </tr>
               </thead>
               <tbody>
@@ -260,6 +274,27 @@ export default function GroupPanelPage() {
                         )}
                       >
                         {r.routed && <Check className="size-4" />}
+                      </button>
+                    </td>
+                    <td className="px-4 py-3 text-center">
+                      {/* Only a room that still stands can lead (D22-52). */}
+                      <button
+                        type="button"
+                        onClick={() => void lead(r)}
+                        disabled={busy !== null || r.reservationId === g.leadId
+                          || ["cancelled", "void", "no_show"].includes(r.status)}
+                        aria-pressed={r.reservationId === g.leadId}
+                        aria-label={`${r.guest} leads the group`}
+                        className={cn(
+                          "size-11 rounded-lg border grid place-items-center",
+                          "cursor-pointer transition-colors duration-150",
+                          "disabled:cursor-not-allowed",
+                          r.reservationId === g.leadId
+                            ? "bg-ink-900 border-ink-900 text-white"
+                            : "bg-white border-grey-300 hover:border-grey-400 disabled:opacity-50",
+                        )}
+                      >
+                        {r.reservationId === g.leadId && <Flag className="size-4" />}
                       </button>
                     </td>
                   </tr>

@@ -14,47 +14,6 @@ entries stay here: they are the reason the fault does not come back.
 
 ## Open — not fixed
 
-### FD-13 · On the Calendar, every room with a booking is two rows tall, with "book here" cells under its bars
-
-**Found** — 22 September, by the master chat, reading `StayView.tsx` for the
-Calendar render. The 21 Sep screenshot
-(`.local/screenshots/2026-09-21/desktop/03-home-calendar.png`) shows it: rooms
-201 to 208 and 307 each have an empty second band, while 209, 210 and 301 to
-306 (no bars) are one row. The cause is in the room row's grid:
-- each `BookingBar` sets `gridRow: 1`;
-- the empty day cells set only `gridColumn` (`style={{ gridColumn: i + 2 }}`,
-  about line 730);
-- grid auto-placement therefore puts every cell whose column a bar already
-  holds into a second row, and the placement cursor keeps the cells after it
-  there too.
-
-The second band is made of those cells. Each one is a "Book room N on date"
-button, so a click under an existing booking starts a new booking for a night
-the room is already sold. Whether the server refuses it was not tested.
-
-**What was done** — nothing yet, and the owner was told. The fix is one line:
-`gridRow: 1` on the empty cells, like the bars. Guard it by measuring that a
-room row with a bar is one cell tall (`h-9`), and watch that test fail without
-the fix.
-
-### FD-9 · A guest moved mid-stay leaves the old room clean for the next guest
-
-**Found** - 22 September, fixing FD-8, reading 054 against 070. Not fixed:
-it is housekeeping's rule, and it changes what the board shows.
-
-`app.move_room` (054) SHORTENS the old room's assignment when the guest has
-already slept in it (it releases only a room they never spent a night in).
-070's trigger dirties a room only on a RELEASE, so the room a guest moved out
-of stays clean - the very case 070's header names ("the guest goes to 205 and
-201 is left behind"). Until FD-8's fix the walk-in happened to refuse that
-room, because the column still said occupied; the check-in never did, and the
-board has always shown it Free and clean. After FD-8 the walk-in takes it too.
-
-**The fix, when it is done** - a move leaving a room it cut short to end by
-the business date dirties that room, in 070's trigger, if nobody is in it by
-`app.in_house`. Housekeeping's and the master's call (a room reaches the
-cleaning queue it does not reach today).
-
 ### FD-10 · A room nobody entered is dirtied when its advance booking lets it go
 
 **Found** - 22 September, the same reading. 074 leaves a room clean when a
@@ -67,16 +26,6 @@ list is housekeeping's.
 **The fix, when it is done** - dirty only when the stay had arrived
 (`checked_in` or `checked_out`), which is 074's own question, "did anybody
 actually go in?".
-
-### FD-11 · A check-in does not ask whether somebody is still in the room
-
-**Found** - 22 September. The walk-in refuses a room a late-checkout guest is
-still in ("Somebody is already in that room", D21-36 kept by FD-8's fix); the
-check-in of a booking asks only whether another booking's DATES overlap, so an
-arrival can be checked into a room whose guest was due out yesterday and has
-not been checked out. The demo has one: 201 on 25 August holds FH-2608-4857
-(due out, still checked in) and FH-2608-4858 (arrived into it). Not changed -
-a new refusal at check-in is the owner's to approve.
 
 ### FD-12 · A room checked out of stays clean while a later booking holds it
 
@@ -126,6 +75,158 @@ width in every state it has, not only the first one.
 ---
 
 ## Fixed — the solution is here; do not work it out again
+
+### FD-15 · The check-in screen never sent the early-arrival reason - FIXED 24 September
+
+**Found** - 24 September, opening the check-in screen to show FD-11's
+refusal. Lata Bhosale (FH-2608-5005) at 12:50, before 5 Elements' 14:00: the
+Rate step asked "Why the room is being given early", the reason was typed,
+Continue was allowed - and the server answered "Rooms are ready from 14:00.
+An early arrival needs a reason and somebody to allow it." The screen kept
+`earlyReason` and `waiveEarly` in its state and never put either in the call;
+`data/operations.ts` accepted both all along. Present since the first
+early-arrival commit (`f44f93b`, 4 September), so **every check-in from the
+screen before a property's check-in hour was refused**. No test drove the
+flow as far as the call.
+
+**Fixed** (the owner, 24 September: "Fix both now") - `flows/CheckInFlow.tsx`
+sends `earlyReason, waiveEarly`. The waive tick is drawn only for somebody
+who may waive, and the server asks again (FD-14).
+
+**Proved** - `earlyCheckIn.test.tsx` (2): a clerk's reason goes with the
+check-in and no waive; a manager's waive goes with the reason. Both failed
+first (neither field in what was sent). On screen at 13:16, before 14:00:
+Lata Bhosale checked into 209, the booking recording "Overnight train" under
+Test Reception
+(`.local/screenshots/2026-09-24-front-desk/10-early-check-in-with-reason-desktop.png`).
+
+**The rule** - a field a screen asks for is proved by what the button SENDS,
+not by the box being on the screen.
+
+### FD-14 · A check-in refused for waiving the early charge was still a check-in - FIXED 24 September
+
+**Found** - 23 September, reading the check-in route for FD-11. The refusal
+"Setting that charge aside is a manager's decision..." (`WAIVE_REFUSED`, for
+`waiveEarly` from somebody `mayWaive` says no to) sat BELOW `update
+reservations set status = 'checked_in'`, the folio, the moved arrival date
+and the early-arrival record, and `withSession` commits a refusal (MEMORY
+243): the clerk was told no while the guest was checked in, with no early
+charge.
+
+**Fixed** (the owner, 24 September) - in `POST /:code/stays/:id/check-in`
+the question is asked beside the other refusals, above the first write, as
+check-out's twin already was; the check below the writes is gone.
+
+**Proved** - `api/test/modules/front-desk/inHouseRule.test.ts`, "FD-14 · a
+clerk's waive of the early charge is refused before anything is written": a
+front-desk clerk sends `waiveEarly: true` with a reason for a booking
+arriving tomorrow - 409, the sentence, and the booking still `confirmed` on
+its own date with no early record. Before the fix it failed (`status:
+'checked_in'`), and room 103 then counted in house, failing the three counts
+too. By hand on this copy: reception's waive for FH-2608-5005 refused, the
+booking still `confirmed`.
+
+**Left** - the screen offers the waive to whoever holds `reservation:
+approve` (owner, admin, GM); the server's `mayWaive` is a group administrator
+or an owner or GM at the hotel. So a hotel-level administrator (D23-2) sees
+the tick and is refused, in words, before anything is written - the same as
+the late check-out's tick. Found by reading; not run. Who may waive is the
+owner's, and was not changed.
+
+### FD-11 · A check-in did not ask whether somebody was still in the room - FIXED 23 September
+
+**Found** - 22 September, fixing FD-8. The walk-in refused a room a
+late-checkout guest was still in; the check-in of a booking asked only
+whether another booking's NIGHTS overlap, and a guest past their departure
+date holds no night that overlaps anybody's. The room picker offers the room
+the booking was given in advance whoever is in it, so the desk could check an
+arrival into a room whose guest had not left. The demo has two: 201
+(FH-2608-4858 checked in over FH-2608-4857) and 204 (FH-2608-5005, Lata
+Bhosale, arriving on the 25th into 204 while Ganesh Patil, FH-2608-5004, due
+out that day, has not checked out).
+
+**Fixed** (the owner's D23-12) - in the one route every check-in passes,
+`POST /:code/stays/:id/check-in` (`api/src/modules/front-desk/operations.ts`):
+before the clash check and above the first write (MEMORY 243), it asks
+`app.in_house` (129, the one rule) whether anybody is in the room now, and
+refuses by name: "Ganesh Patil (FH-2608-5004) is still in room 204. Check
+them out first, or choose another room." The check-in screen shows it the way
+it shows every refusal, as the "Could not check in" toast. No screen change;
+no new route.
+
+**Proved** - `api/test/modules/front-desk/inHouseRule.test.ts`, "and the
+check-in of the booking held for that room refuses it, naming who is in it":
+FDW-HELD (arriving on the 27th, given 101 in advance) into 101 while the
+walk-in due out on the 26th is still checked in - 409, the sentence above
+with the walk-in's name and reference, and the booking still `confirmed`
+afterwards. With the guard switched off it fails, and the check-in goes
+through: 1 of the file's 8 fails, "expected 200 to be 409". On screen:
+`.local/screenshots/2026-09-23-fd11/04-check-in-refused-guest-still-in-room.png`.
+Again on 24 September in the merged copy: the guard off, the test fails
+("expected 200 to be 409"); on, it passes. On screen, through the check-in
+screen once FD-15 let an early check-in reach the server: "Ganesh Patil
+(FH-2608-5004) is still in room 204. Check them out first, or choose another
+room." (`.local/screenshots/2026-09-24-front-desk/04-check-in-refused-*.png`).
+
+**The rule** - "is the room free" is two questions: does another booking hold
+these nights (the clash check), and is somebody in it now (`app.in_house`).
+
+### FD-9 · A guest moved mid-stay left the old room clean for the next guest - FIXED 23 September
+
+**Found** - 22 September, fixing FD-8, reading 054 against 070. `app.move_room`
+SHORTENS the old room's assignment when the guest has slept in it, and
+070/074's trigger dirties a room only on a RELEASE, so the room left behind
+stayed clean - the very case 070's header names.
+
+**Fixed** (the owner's D23-12) - `db/migrations/130_moved_out_room_is_dirty.sql`
+(numbered 130 on this branch; the master renumbers at merge): a new trigger on
+the INSERT of an assignment, `app.moved_out_room_is_dirty()`, because only
+once the new room is written does `app.in_house` stop putting the guest in
+the old one. It dirties another room the same stay holds when that assignment
+was cut short where the new one starts (a move or an exchange - not an amended
+departure), on or before the business date, the stay is checked in, the room
+is clean or inspected, and nobody is in it by `app.in_house`. Every move and
+exchange passes through it; no earlier function was changed.
+
+**Proved** - `db/tests/modules/front-desk.sql`, "moved-out room" (6): a guest
+moved out tonight leaves 201 dirty and 202 as it was; a move dated tomorrow
+leaves tonight's room clean; an exchange dirties neither room (a guest is in
+both); a booking that never arrived, moved, leaves its room clean. With the
+trigger dropped (in a transaction, rolled back) the first fails - "got clean"
+- and the other five pass. Again on 24 September, the whole database suite
+with the trigger left out of the migration: "moved-out room" 5 passed, 1
+failed, "got clean".
+
+**Left** - a move dated in the FUTURE is not dirtied when the business date
+reaches it: no write happens then (the same ceiling 129 names for the
+occupancy column; a `ponytail:` note in the migration says where to add it).
+
+### FD-13 · On the Calendar, every room with a booking was two rows tall - FIXED 23 September
+
+**Found** - 22 September, by the master chat: each `BookingBar` set
+`gridRow: 1` and the empty day cells set only `gridColumn`, so grid
+auto-placement put every cell whose column a bar held - and every cell after
+it - into a second row. Each of those cells is a "Book room N on date"
+button, so a click under a booking started a new one for a night already sold.
+
+**Fixed** (the owner's D23-13) - `gridRow: 1` on the empty cells in
+`pages/StayView.tsx`, like the bars. The bars come later in the DOM and sit on
+top (`z-10`), so a click on a booked night opens that booking.
+
+**Proved** - `front-desk.test.tsx`, "keeps a room with a booking one row
+tall: every empty cell is on the bar's row": the first room with a bar has 14
+"Book room" cells, each on grid row 1. Without the fix it fails (14 cells,
+grid-row empty). On screen, every room row on the Calendar measures 37px, with
+and without bars (`.local/screenshots/2026-09-23-fd11/03-calendar-one-row-per-room.png`).
+Again on 24 September in the merged copy: without the fix the test fails,
+and every one of 5 Elements' 17 room rows measures 37px with it, a bar's
+centre landing on the bar, not a "Book room" cell
+(`.local/screenshots/2026-09-24-front-desk/03-calendar-one-row-per-room-*.png`).
+
+**The rule** - in a grid where some children are placed by row and column,
+place all of them, or auto-placement will find them a row of their own.
+
+---
 
 ### FD-8 · The walk-in refused a room the board showed Free - FIXED 22 September
 

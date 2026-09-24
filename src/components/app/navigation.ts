@@ -471,6 +471,9 @@ export function flatNavigationFor(
        revenue, and their day starts at their own work
      · everything else a role may open stays reachable by "Find a screen"
        (flatNavigationFor). Nothing here changes a permission.
+     · 22 September: Rooms for housekeeping and the Store for the kitchen
+       manager (D22-19); laundry's Dockets for reception and housekeeping
+       where the hotel has laundry on (D22-22).
 
    Roles NOT listed — owner, admin, gm, hotel_manager, finance, read_only
    — keep every section they may open, minus what is unlisted for
@@ -517,6 +520,14 @@ export function sidebarFor(
     .filter((section) => section.items.length > 0);
 }
 
+/* D22-19 put Rooms above housekeeping's own work and the Store above the
+   kitchen's. It added them to the menus; it did not move where either
+   starts, so both still land on their own work (15 September). */
+const WORKING_HOME: Partial<Record<Role, string>> = {
+  housekeeping: "/h/:code/housekeeping",
+  kitchen_manager: "/h/:code/kitchen",
+};
+
 /**
  * Where a person with a working menu lands when their first screen would
  * be the Dashboard they no longer have: the top of their own list.
@@ -525,5 +536,5 @@ export function sidebarFor(
 export function workingHomeFor(role: Role, code: string): string | null {
   const working = WORKING_MENUS[role];
   if (!working || working.includes("/")) return null;
-  return resolve(working[0]!, code);
+  return resolve(WORKING_HOME[role] ?? working[0]!, code);
 }

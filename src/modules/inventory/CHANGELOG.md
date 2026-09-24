@@ -11,6 +11,16 @@ Work that touches the core or several services still goes in the root
 
 ---
 
+## 2026-09-24 · INV-7, a wrong id no longer loses the default cancellation policy
+
+**Asked for:** the master, 24 September, with the Store's D22-20 on
+`admin/finish-24sep`. **Shipped:** `PUT /:code/cancellation-policies/:id/default`
+finds the policy (`for update`) before it clears the old default. **Proved:**
+`api/test/modules/inventory/policyDefault.test.ts` (fails on cp6's route);
+`roleGate.test.ts` now probes the route as every role. See DEFECTS INV-7.
+
+---
+
 ## 2026-09-16 · INV-3, what the inventory subtracts (room 308), INV-5
 
 **Asked for:** by the owner, in order — (1) INV-3, two responses turn an

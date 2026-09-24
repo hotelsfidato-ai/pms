@@ -67,6 +67,23 @@ export const handleRequest = (code: string, id: string, status: "done" | "declin
     method: "POST", body: JSON.stringify({ status }),
   });
 
+/** A guest's message to the front desk (D23-14). Unread until handled. */
+export interface DeskMessage {
+  id: string;
+  what: string;
+  createdAt: string;
+  guest: string;
+  reference: string;
+  /** Null where this reader may not see who (`staff` is row-secured). */
+  handledBy: string | null;
+  handledAt: string | null;
+}
+
+/** One booking's messages, handled ones too; or every booking's unread. */
+export const getDeskMessages = (code: string, reservation?: string) =>
+  api<{ messages: DeskMessage[] }>(
+    at(code, `/messages${reservation ? `?reservation=${encodeURIComponent(reservation)}` : ""}`));
+
 export const printRoomCard = (code: string, roomId: string) =>
   api<{ cards: PrintedCard[] }>(at(code, `/rooms/${roomId}/card`), post);
 

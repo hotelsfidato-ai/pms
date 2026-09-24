@@ -500,6 +500,10 @@ export function CheckInFlow({
                       }
                     : {}),
                   idSkipReason, businessDate,
+                  /* Asked for on the Rate step, and never sent until 24
+                     September - so the server refused every check-in
+                     before the check-in hour. */
+                  earlyReason, waiveEarly,
                 });
                 if (res.ok) {
                   toast.success(

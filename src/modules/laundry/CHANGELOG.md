@@ -12,6 +12,16 @@ yet** (`MODULE.md`).
 
 ---
 
+## 2026-09-24 · Dockets in reception's and housekeeping's menus (D22-22)
+
+On `admin/finish-24sep`: `workingMenus: ["front_desk", "housekeeping"]` on
+Dockets; the Price list stays out of the working menus (the owner, 24
+September: "Dockets only"). **Proved:** `navigation.test.ts` "puts laundry in
+the working menus only where the hotel has it on". Screens:
+`.local/screenshots/2026-09-24-admin/` 01, 03, 04, 05.
+
+---
+
 ## 2026-09-19 · phase 2: three screens, and a price list nobody has priced
 
 **Asked for:** the screens, now that the two things phase 1 was waiting on have

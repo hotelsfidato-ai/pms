@@ -349,7 +349,8 @@ export default function StoresPage() {
       )}
       {moving && (
         <MoveDialog code={code} item={moving.item} kind={moving.kind}
-                    stores={stores} startStoreId={picked?.id ?? null} open
+                    stores={stores} startStoreId={picked?.id ?? null}
+                    outlets={q.data?.outlets ?? []} open
                     onOpenChange={(o) => { if (!o) setMoving(null); }}
                     onDone={() => { setMoving(null); refresh(); }} />
       )}
@@ -641,9 +642,13 @@ function StoreField({ label, value, onChange, stores, item, hint }: {
 
 /* ── Something came in, went out, or the shelf disagreed ──────────── */
 
-function MoveDialog({ code, item, kind, stores, startStoreId, open, onOpenChange, onDone }: {
+/** The picker's answer for an issue that went to no outlet; sent as null. */
+const NOT_AN_OUTLET = "none";
+
+function MoveDialog({ code, item, kind, stores, startStoreId, outlets, open, onOpenChange, onDone }: {
   code: string; item: StockItem; kind: StockKind;
   stores: StoreSummary[]; startStoreId: string | null;
+  outlets: { id: string; name: string }[];
   open: boolean; onOpenChange: (o: boolean) => void; onDone: () => void;
 }) {
   /* A switched-off store takes nothing in; what is already in one may still
@@ -655,6 +660,7 @@ function MoveDialog({ code, item, kind, stores, startStoreId, open, onOpenChange
   const [supplier, setSupplier] = useState("");
   const [reference, setReference] = useState("");
   const [note, setNote] = useState("");
+  const [outletId, setOutletId] = useState("");
   const [busy, setBusy] = useState(false);
 
   const store = offered.find((s) => s.id === storeId) ?? null;
@@ -673,9 +679,15 @@ function MoveDialog({ code, item, kind, stores, startStoreId, open, onOpenChange
     ? null : Math.round((counted - here) * 1000) / 1000;
   const matches = isCount && difference === 0;
 
+  /* WHERE AN ISSUE WENT IS ALWAYS SAID (D22-20; the owner, 24 September:
+     "must choose each time"). An outlet, or "Not an outlet" for
+     housekeeping or a floor - nothing is chosen for the person. */
+  const needsOutlet = kind === "issue" && outlets.length > 0;
+
   const quantity = isCount ? difference : (qty.trim() === "" ? null : Number(qty));
   const ready = store !== null && quantity !== null && Number.isFinite(quantity) && quantity !== 0
-    && (isCount ? (counted ?? -1) >= 0 : quantity > 0);
+    && (isCount ? (counted ?? -1) >= 0 : quantity > 0)
+    && (!needsOutlet || outletId !== "");
 
   const submit = async () => {
     if (busy || !ready || quantity === null || !store) return;
@@ -692,6 +704,7 @@ function MoveDialog({ code, item, kind, stores, startStoreId, open, onOpenChange
       ...(supplier.trim() ? { supplier: supplier.trim() } : {}),
       ...(reference.trim() ? { reference: reference.trim() } : {}),
       ...(note.trim() ? { note: note.trim() } : {}),
+      ...(needsOutlet ? { outletId: outletId === NOT_AN_OUTLET ? null : outletId } : {}),
     });
     setBusy(false);
     if (!res.ok) return toast.error("Not recorded", res.reason);
@@ -740,6 +753,22 @@ function MoveDialog({ code, item, kind, stores, startStoreId, open, onOpenChange
                      onChange={(e) => setQty(e.target.value)} />
             )}
           </Field>
+
+          {/* WHICH OUTLET IT WENT TO (D22-20): the hotel's own outlets. Not
+              every issue goes to one - housekeeping has none (069). */}
+          {needsOutlet && (
+            <Field label="Which outlet" required
+                   hint="Not an outlet, for housekeeping or a floor.">
+              {(f) => (
+                <NativeSelect {...fieldProps(f)} value={outletId}
+                              onChange={(e) => setOutletId(e.target.value)}>
+                  <option value="">Choose…</option>
+                  {outlets.map((o) => <option key={o.id} value={o.id}>{o.name}</option>)}
+                  <option value={NOT_AN_OUTLET}>Not an outlet</option>
+                </NativeSelect>
+              )}
+            </Field>
+          )}
 
           {isCount && difference !== null && (
             <p className="text-sm text-grey-600" role="status">

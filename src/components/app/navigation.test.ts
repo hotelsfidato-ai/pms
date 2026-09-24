@@ -77,7 +77,7 @@ describe("the menu speaks one way", () => {
    still one search away (`flatNavigationFor` feeds "Find a screen").
    ══════════════════════════════════════════════════════════════════ */
 
-const ALL_ON = { pos: true, banquet: true, reception_pos: true };
+const ALL_ON = { pos: true, banquet: true, reception_pos: true, laundry: true };
 
 /** What the sidebar lists for a role, parents and children, in order. */
 function menu(role: Role, modules: Record<string, boolean> = ALL_ON): string[] {
@@ -106,14 +106,36 @@ describe("each person's menu", () => {
       /* Guests & CRM, from 21 September (the owner): the same screen, its
          own section. */
       "Guests",
+      /* 24 September (the owner): where a guest's message to the desk
+         waits (D23-14). */
+      "Guest messages",
       "Cashiering",
     ];
-    expect(menu("front_desk", { ...ALL_ON, reception_pos: false })).toEqual([...core, "Notifications"]);
+    /* Laundry's Dockets where the hotel has laundry on (D22-22). */
+    expect(menu("front_desk", { ...ALL_ON, reception_pos: false }))
+      .toEqual([...core, "Dockets", "Notifications"]);
     expect(menu("front_desk")).toEqual([
       ...core,
       "Tables", "Till", "Terminal", "Close restaurant day",
+      "Dockets",
       "Notifications",
     ]);
+  });
+
+  it("puts laundry in the working menus only where the hotel has it on (D22-22)", () => {
+    for (const role of ["front_desk", "housekeeping", "gm", "hotel_manager"] as const) {
+      expect(menu(role), role).toContain("Dockets");
+      expect(menu(role, { ...ALL_ON, laundry: false }), role).not.toContain("Dockets");
+    }
+  });
+
+  it("offers the spa diary to exactly the server's six - not the accountant or a viewer (SPA-2)", () => {
+    for (const role of ["owner", "admin", "gm", "hotel_manager", "front_desk", "housekeeping"] as const) {
+      expect(mayReach(role, "/h/:code/spa"), role).toBe(true);
+    }
+    for (const role of ["finance", "read_only", "chef", "pos"] as const) {
+      expect(mayReach(role, "/h/:code/spa"), role).toBe(false);
+    }
   });
 
   it("gathers what the system knows about a person in Guests & CRM (21 September)", () => {
@@ -155,7 +177,8 @@ describe("each person's menu", () => {
   it("gives the restaurant and the kitchen their own screens", () => {
     expect(menu("pos")).toEqual(["Tables", "Till", "Terminal", "Close restaurant day"]);
     expect(menu("chef")).toEqual(["Kitchen", "Notifications"]);
-    expect(menu("kitchen_manager")).toEqual(["Kitchen", "Menu", "Close restaurant day", "Notifications"]);
+    /* The Store joined the kitchen manager's on 22 September (D22-19). */
+    expect(menu("kitchen_manager")).toEqual(["Store", "Kitchen", "Menu", "Close restaurant day", "Notifications"]);
   });
 
   it("keeps the revenue manager out of the restaurant's menu (D22-35)", () => {
@@ -174,7 +197,12 @@ describe("each person's menu", () => {
        they are switched on by the owner if the owner wants them, and until then
        the entry would be a screen that refuses them. Flagged to the owner by the
        purchasing chat; the master reviews it at merge. */
-    expect(menu("housekeeping")).toEqual(["Housekeeping", "Work orders", "Store", "Equipment", "Notifications"]);
+    /* Rooms joined on 22 September (D22-19), laundry's Dockets where the
+       hotel has it on (D22-22), and Purchasing once D22-11 let housekeeping
+       see it (the owner, 24 September). */
+    expect(menu("housekeeping")).toEqual(
+      ["Rooms", "Housekeeping", "Work orders", "Store", "Equipment", "Purchasing", "Dockets",
+       "Notifications"]);
     expect(menu("stores")).toEqual(["Store", "Equipment", "Purchasing", "Notifications"]);
     for (const role of ["housekeeping", "stores", "chef", "kitchen_manager", "pos"] as Role[]) {
       expect(menu(role)).not.toContain("Dashboard");
@@ -182,7 +210,9 @@ describe("each person's menu", () => {
   });
 
   it("lands them on their own work instead of the Dashboard", () => {
+    /* Still, with Rooms and the Store now above their own work (D22-19). */
     expect(workingHomeFor("housekeeping", "5EL")).toBe("/h/5EL/housekeeping");
+    expect(workingHomeFor("kitchen_manager", "5EL")).toBe("/h/5EL/kitchen");
     expect(workingHomeFor("chef", "5EL")).toBe("/h/5EL/kitchen");
     expect(workingHomeFor("front_desk", "5EL")).toBeNull();
     expect(workingHomeFor("owner", "5EL")).toBeNull();

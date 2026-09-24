@@ -11,6 +11,44 @@ Work that touches the core or several services still goes in the root
 
 ---
 
+## 2026-09-24 · Every issue says which outlet it went to (D22-20)
+
+**Asked for:** the master, 24 September: finish the helper branch
+`stores/issue-outlet-rooms-persist`, stopped on 23 September mid-task, on
+`admin/finish-24sep`. **The owner's answer, 24 September:** the person must
+choose each time - an outlet, or "Not an outlet" (housekeeping, a floor).
+
+**Shipped**
+- `GET /stores` answers `outlets`: the hotel's active till outlets.
+- The Issue dialog's "Which outlet" (required, starts on "Choose…"): the
+  outlets, then "Not an outlet". Issue stays greyed until one is picked;
+  "Not an outlet" is sent as `outletId: null`. Shown only where the hotel has
+  an outlet.
+- `POST /stores/movements` refuses an issue that does not say where it went
+  (where the hotel has an active outlet), another property's outlet (069's
+  key is on the id alone - MEMORY 161), and an outlet on anything but an
+  issue. The history already named the outlet ("to Fidato Restaurant").
+- Every API test that records an issue now says `outletId: null`; the
+  `STOPS` outlets the new test makes are switched off after it.
+
+**Proved** (this copy, `fidato_s3`, API 8815, web 5215)
+- `api/test/modules/stores/stockPerStore.test.ts` "refuses an issue that does
+  not say where it went, and takes \"not an outlet\"" - with the server check
+  taken out it fails (200, not 409).
+- `stores.test.tsx` "an issue must say where it went" - fails with the
+  dialog's check taken out (Issue enabled before a choice); "Not an outlet is
+  an answer" - sent as null.
+- By hand through the API: an issue with no answer, 409 "Which outlet did it
+  go to? Choose Not an outlet for housekeeping or a floor."; with `null`, 200.
+- Screens: `.local/screenshots/2026-09-24-admin/` 07 (the dialog, nothing
+  chosen, Issue greyed), 08 (Fidato Restaurant chosen), 09 (the history: "to
+  Fidato Restaurant", and the not-an-outlet issue with none), desktop and
+  phone.
+
+**Left open** - nothing here.
+
+---
+
 ## 2026-09-17 (phase 1A, merge 1) · Stock held per store, moves between stores, and the long dash gone
 
 **Asked for:** the master, relaying the owner's third interview: merge cp6, read

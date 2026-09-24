@@ -20,7 +20,9 @@ db/migrations/120_the_review_link  PROVISIONAL NUMBER - the master settles it at
 1. **A list of departures** at this property, the last 30 days, with whether
    each guest was asked for a review, when, and which way it went.
 2. **Asking one of them** - WhatsApp or email, picked per guest, and only
-   offered where the booking carries an address for it.
+   offered where the booking carries an address for it. **A group is asked
+   once, at its lead guest's room** (D22-10): every room of it shows the
+   group's ask, and only the lead's row offers the buttons.
 3. **The property's review link**, typed in by the owner or an administrator.
 
 ## ⚠ The link the owner has not given
@@ -88,7 +90,7 @@ stays. A resource of its own would have meant a new column in the master's
 |---|---|
 | `GET /api/hotels/:code/reviews` | the link, who may do what, whether anything can send, and the departures |
 | `PUT /api/hotels/:code/reviews/link` | set it, or clear it back to nothing with `""` |
-| `POST /api/hotels/:code/reviews/:id/ask` | ask one departed guest |
+| `POST /api/hotels/:code/reviews/:id/ask` | ask one departed guest - for a group, only at its lead guest's room (D22-10; the lead is `app.group_lead`, D22-52) |
 
 **Everything leaves through `api/src/sending.ts`** and nothing else. This
 service never calls n8n, never holds the secret, and **never writes

@@ -46,7 +46,7 @@ import type { Client } from "../../db.ts";
 /** The roles holding `view` on `purchasing`. A COPY — see above. */
 export const VIEW_ROLES: readonly string[] = [
   "owner", "admin", "gm", "hotel_manager", "kitchen_manager", "stores",
-  "finance", "read_only",
+  "housekeeping", "finance", "read_only",
 ];
 
 /** The roles that may change who may raise a request. */
@@ -56,7 +56,7 @@ export const PURCHASING_REFUSED = {
   view:
     "Purchasing is not open to your role. The owner, an administrator, the "
     + "general manager, the hotel manager, the Inventory Manager, the kitchen "
-    + "manager, the accountant and a viewer can see it.",
+    + "manager, housekeeping, the accountant and a viewer can see it.",
   raise:
     "Raising a purchase request here is a setting for this property, and your "
     + "role is not on it. The owner or an administrator can add it, on the "

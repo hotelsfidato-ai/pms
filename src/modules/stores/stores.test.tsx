@@ -20,6 +20,7 @@ const control = vi.hoisted(() => ({
   store: "items" as "items" | "empty" | "unreachable",
   history: "rows" as "rows" | "unreachable",
   added: [] as unknown[],
+  recorded: [] as unknown[],
   reversed: [] as string[],
 }));
 
@@ -39,13 +40,15 @@ vi.mock("@/modules/stores/data/stores", async (importOriginal) => {
     { id: "kitchen", name: "Kitchen store", isActive: true, isMain: false },
     { id: "bar", name: "Bar store", isActive: true, isMain: false },
   ];
+  const outlets = [{ id: "rest", name: "Fidato Restaurant" }];
   return {
     ...actual,
     getStore: async () => {
       if (control.store === "unreachable") throw unreachable();
-      if (control.store === "empty") return { stores, items: [] };
+      if (control.store === "empty") return { stores, items: [], outlets };
       return {
         stores,
+        outlets,
         items: [
           item("towels", "Bath towel", {
             onHand: 58, unitCost: 310, value: 17980, byStore: { main: 50, kitchen: 8 },
@@ -69,7 +72,8 @@ vi.mock("@/modules/stores/data/stores", async (importOriginal) => {
               fromStore: "Main store", toStore: "Kitchen store" }),
         row({ id: "3", kind: "adjustment", quantity: 2, who: "Test Store",
               isReversal: true, reversesKind: "issue" }),
-        row({ id: "2", kind: "issue", quantity: -2, note: "Room 204", reversed: true }),
+        row({ id: "2", kind: "issue", quantity: -2, note: "Room 204", reversed: true,
+            outlet: "Fidato Restaurant" }),
         row({ id: "1", kind: "receipt", quantity: 60, unitCost: 310,
               supplier: "Solapur Textiles", reference: "INV-2231" }),
       ];
@@ -78,6 +82,11 @@ vi.mock("@/modules/stores/data/stores", async (importOriginal) => {
       control.added.push(input);
       control.store = "items";
       return { ok: true, id: "new" };
+    },
+    recordStockMovement: async (_hotel: string, input: unknown) => {
+      control.recorded.push(input);
+      return { ok: true, id: "98", onHand: 56, onHandHere: 48, store: "Main store",
+               unit: "piece", name: "Bath towel" };
     },
     reverseStockMovement: async (_hotel: string, id: string) => {
       control.reversed.push(id);
@@ -107,6 +116,7 @@ beforeEach(() => {
   go(`/h/${HOTEL}/stores`);
   control.history = "rows";
   control.reversed.splice(0);
+  control.recorded.splice(0);
 });
 
 describe("the Store", () => {
@@ -249,6 +259,46 @@ describe("the Store", () => {
     const dialog = await screen.findByRole("dialog");
     expect(dialog.textContent).not.toContain(LONG_DASH);
     fireEvent.keyDown(dialog, { key: "Escape" });
+  });
+
+  it("D22-20 · an issue must say where it went, and the history names the outlet", async () => {
+    as("stores");
+    render(<App />);
+    await screen.findByText("Bath towel");
+
+    fireEvent.click(within(card("Bath towel")).getByRole("button", { name: /Issue/ }));
+    const dialog = await screen.findByRole("dialog");
+    const outlet = within(dialog).getByLabelText(/Which outlet/) as HTMLSelectElement;
+    fireEvent.change(within(dialog).getByLabelText(/How many/), { target: { value: "2" } });
+    /* Nothing is chosen for them (the owner, 24 September). */
+    const issue = within(dialog).getByRole("button", { name: "Issue" }) as HTMLButtonElement;
+    expect(outlet.value).toBe("");
+    expect(issue.disabled).toBe(true);
+    fireEvent.change(outlet, { target: { value: "rest" } });
+    expect(issue.disabled).toBe(false);
+    fireEvent.click(issue);
+    await waitFor(() => expect(control.recorded).toHaveLength(1));
+    expect(control.recorded[0]).toMatchObject({ kind: "issue", quantity: 2, outletId: "rest" });
+    await waitFor(() => expect(screen.queryByRole("dialog")).toBeNull());
+
+    fireEvent.click(within(await openMore("Bath towel")).getByRole("menuitem", { name: /History/ }));
+    const history = await screen.findByRole("dialog");
+    expect(await within(history).findByText(/to Fidato Restaurant/)).toBeTruthy();
+    fireEvent.keyDown(history, { key: "Escape" });
+  });
+
+  it("D22-20 · Not an outlet is an answer, sent as none", async () => {
+    as("stores");
+    render(<App />);
+    await screen.findByText("Bath towel");
+
+    fireEvent.click(within(card("Bath towel")).getByRole("button", { name: /Issue/ }));
+    const dialog = await screen.findByRole("dialog");
+    fireEvent.change(within(dialog).getByLabelText(/How many/), { target: { value: "1" } });
+    fireEvent.change(within(dialog).getByLabelText(/Which outlet/), { target: { value: "none" } });
+    fireEvent.click(within(dialog).getByRole("button", { name: "Issue" }));
+    await waitFor(() => expect(control.recorded).toHaveLength(1));
+    expect(control.recorded[0]).toMatchObject({ kind: "issue", quantity: 1, outletId: null });
   });
 
   it("STO-2 · a history that could not be read says so", async () => {

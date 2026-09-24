@@ -44,7 +44,7 @@ const control = vi.hoisted(() => ({
   canSend: false,
   mayAsk: true,
   maySetLink: true,
-  rows: "one" as "one" | "none" | "asked" | "failed" | "no-email",
+  rows: "one" as "one" | "none" | "asked" | "failed" | "no-email" | "group",
   asked: [] as unknown[],
   saved: [] as unknown[],
 }));
@@ -59,6 +59,7 @@ vi.mock("@/modules/reputation/data/reputation", async (importOriginal) => {
     guest: "Anita Deshmukh",
     phone: "+919876543210", email: "anita@example.com",
     askStatus: null, askChannel: null, askedAt: null, askDetail: null,
+    leadId: null, leadReference: null,
     ...over,
   });
 
@@ -75,6 +76,12 @@ vi.mock("@/modules/reputation/data/reputation", async (importOriginal) => {
       askDetail: "The receiver refused it (500).",
     })],
     "no-email": [guest({ email: null })],
+    /* Two rooms of one group; stay-1 leads it (D22-10, D22-52). */
+    group: [
+      guest({ leadId: "stay-1", leadReference: "FH-2609-0001" }),
+      guest({ id: "stay-2", reference: "FH-2609-0002", guest: "Ravi Deshmukh",
+              leadId: "stay-1", leadReference: "FH-2609-0001" }),
+    ],
   };
 
   return {
@@ -219,6 +226,16 @@ describe("Reviews, connected and with a link", () => {
     open("RVA");
     expect(await screen.findAllByText("Did not go")).toHaveLength(2);
     expect(screen.getAllByText(/The receiver refused it \(500\)/)).toHaveLength(2);
+  });
+
+  it("offers a group's ask at its lead's room only, and says so on the others", async () => {
+    control.rows = "group";
+    open("RVG");
+    expect(await screen.findAllByText("Ravi Deshmukh")).toHaveLength(2);
+    /* One WhatsApp button per drawing (table and card): the lead's. */
+    expect(screen.getAllByRole("button", { name: /WhatsApp/i })).toHaveLength(2);
+    expect(screen.getAllByText("The group is asked once, at FH-2609-0001."))
+      .toHaveLength(2);
   });
 
   it("does not offer a send to somebody who may only look", async () => {

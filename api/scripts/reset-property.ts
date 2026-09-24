@@ -138,6 +138,8 @@ export const CLEAR: [table: string, how: string][] = [
   ["guest_links",       "hotel_id = $1"],
 
   ["form_c_filings",    "hotel_id = $1"],
+  /* A closed day's correction names the line it corrected (D22-18, 24 September). */
+  ["closed_day_corrections", "hotel_id = $1"],
   ["invoices",          "hotel_id = $1"],
   ["payments",          "hotel_id = $1"],
   ["folio_postings",    "hotel_id = $1"],
@@ -174,6 +176,7 @@ const GUARDS: [table: string, trigger: string][] = [
      worst place for a clearing script to stop. */
   ["folio_postings",    "folio_postings_append_only"],
   ["folio_postings",    "folio_postings_closed_date"],
+  ["closed_day_corrections", "closed_day_corrections_append_only"],
   ["invoices",          "invoices_immutable"],
   ["vat_bills",         "vat_bills_immutable"],
   ["pos_order_lines",   "pos_order_lines_frozen"],

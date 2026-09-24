@@ -1,6 +1,6 @@
 import { Flower2, Sparkles } from "lucide-react";
 import type { ServiceNavEntry } from "@/components/app/navigation";
-import { SEES_THE_DIARY, SETS_THE_LIST } from "@/modules/spa/data/spa";
+import { SETS_THE_LIST } from "@/modules/spa/data/spa";
 
 /* Spa — BUILT. Its entries left the Coming soon section for the `spa`
    section the master wrote on 18 September, which carries `module: "spa"`:
@@ -13,12 +13,10 @@ import { SEES_THE_DIARY, SETS_THE_LIST } from "@/modules/spa/data/spa";
 
    WHO SEES WHAT is the owner's D18-21, 18 September: housekeeping sees
    the diary and does not touch it, reception books and closes, and the
-   owner, an administrator or the GM set the price list. `canSee` reads
-   the copy in `data/spa.ts` of the server's own three lists — NOT
-   `canAccess(role, "spa")`, which the permissions matrix gives to
-   finance and to a viewer while the server gives them nothing. Offering
-   either of them a Spa section would be offering a door that answers
-   403.
+   owner, an administrator or the GM set the price list. The diary asks
+   the matrix (`resource: "spa"`), which since SPA-2 grants exactly the
+   server's six; the price list reads the copy in `data/spa.ts` of the
+   server's own list.
 
    No `workingMenus`: every role's shortened menu is the owner's own list
    (15 September), and widening one is their call, not a side effect of a
@@ -45,7 +43,6 @@ export const nav: ServiceNavEntry[] = [
      and only then "what does a facial cost". */
   { section: "spa", order: 10,
     label: "Spa diary", to: "/h/:code/spa", icon: Flower2, resource: "spa",
-    canSee: (role) => SEES_THE_DIARY.includes(role),
     keywords: ["spa", "massage", "treatment", "therapist", "wellness", "appointment"] },
   { section: "spa", order: 20,
     label: "Treatments", to: "/h/:code/spa/setup", icon: Sparkles,

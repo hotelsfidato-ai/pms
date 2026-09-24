@@ -206,6 +206,7 @@ describe("the Store, as every role a person can be given (STO-1)", () => {
           const res = await call(who(), "POST", "/movements", {
             itemId: shelfId, locationId: mainId, kind, quantity: 1, note,
             ...(kind === "receipt" ? { unitCost: 2 } : {}),
+            ...(kind === "issue" ? { outletId: null } : {}),   // not an outlet (D22-20)
           });
           if (may) {
             await ok(res, kind);
