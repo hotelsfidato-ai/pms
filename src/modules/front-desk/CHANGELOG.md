@@ -8,6 +8,115 @@ project, still goes in the root `CHANGELOG.md`.
 
 ---
 
+## 2026-09-24 · Polish A-E: controls the server refuses (D24-27), own role (D24-28), FD-16, FD-17, the printed Night audit
+
+**Asked for:** the master, for the owner's D24-27 and D24-28 and two open
+defects: branch `front-desk/polish-24sep`. **A** - hide every front desk
+control the server refuses the person looking (housekeeping first), each
+asking the server's own question; the late check-out's waive from the
+server's `mayWaive`. **B** - a GM or hotel Admin may not change their own
+role on People. **C** - FD-16. **D** - FD-17. **E** - the printed Night
+audit's Room Charges and Checked Out columns overlap.
+
+**The owner's answers in this chat, 24 September**
+- "Settle and check out" (it opens the Bill tab, where both the payment and
+  the check-out happen): **shown to whoever may settle OR check out** - the
+  Accountant keeps it; only roles that may do neither lose it.
+- The stay panel's "Check in" and "Agreed to WhatsApp" tick, which the
+  server also refuses housekeeping and D24-27 did not list: **hide both**
+  (D24-18).
+- A Rooms tile whose guest leaves today, with the room given ahead to
+  today's arrival, printed the arrival's name under "Due out": **fix now -
+  name the guest in the room** (FD-18).
+
+**Shipped**
+- **A** - each control asks roleGate's question of its write, from the one
+  matrix (`can(role, ...)`): a free tile and the Calendar's cells open a
+  walk-in only with `reservation: create` (otherwise a plain tile, a plain
+  cell - not a disabled button); the panel's Check in and More options with
+  `reservation: edit`, its Void with `cancel`; Mark VIP and the WhatsApp tick
+  with `customer: edit`; Settle and check out with `payment: create` or
+  `reservation: edit`. `LateCheckOutFlow` reads `mayWaive` from
+  `GET /:code/early-arrival` (the Bill tab has already asked it), as the
+  check-in does. Files: `pages/StayView.tsx`, `flows/HouseFloor.tsx`,
+  `flows/StayDrawer.tsx`, `flows/StayActions.tsx`, `flows/GuestMarks.tsx`,
+  `flows/LateCheckOutFlow.tsx`. Who may do what is unchanged.
+- **FD-18** - `pages/StayView.tsx`: an arrival never replaces a guest
+  already named for that room.
+- **B** - `api/src/modules/admin/admin.ts`: `POST /admin/staff/:id/access`
+  for yourself, and `POST /admin/staff` with your own address and a
+  property (the second door: it brings back a person already there and
+  upserts their row), both refuse first - "You cannot change your own role.
+  Ask the owner or an administrator to do it." People needed no change:
+  nothing on your own row changes your role (admin's ADM-8).
+- **C** - FD-16: the check-in's fallback is `resolveDate`, the swap's
+  `businessDateFor`, and the groups list's "current" test
+  `app.business_date($1)` - the same stale read, found beside them.
+- **D** - FD-17: in `stays.ts`' one query, a released assignment counts for
+  every status except `confirmed`.
+- **E** - `api/src/reportRender.ts` (the shared renderer, every report's
+  PDF): a section keeps its fixed shares (text 2.6, figure 1) while
+  everything fits; where anything would not, each column is sized to the
+  widest thing it prints, the spare width shared out, and a section still
+  wider than the page prints in smaller type. Sections that fitted print as
+  before.
+
+**Found**
+- The stay panel's Bill tab (finance's `FolioPanel`: Add charge, Settle,
+  Interim bill, Split bill, Check out) is also offered to housekeeping and
+  refused by the server. Finance's files; told to the master.
+- Other reads of the frozen `hotels.business_date`: the channel manager's
+  ARI (`greatest(h.business_date, today)`) and `pos/till.ts`. Not ours; told
+  to the master.
+- An unassigned booking cannot be opened from a Rooms or Calendar link (no
+  bar to find); Arrivals opens it. As before.
+- Demo room 201 has two checked-in guests (FD-11's old case); its tile names
+  one of them under "Due out". Data from before FD-11; not changed.
+
+**Proved** (this copy, database `fidato_s6`, API 8819, web 5219)
+- The six, on cp6 `acf10a8` merged into this branch (`9caa0cb`, migration
+  138 from finance; none from here): `npx tsc -p tsconfig.app.json
+  --noEmit` exit 0; `cd api && npx tsc --noEmit` exit 0; `npm test` 71
+  files, 661 tests, exit 0; `cd api && npm test` 94 files, 1463 tests, exit
+  0; `bash db/tests/run.sh` all 1154 assertions, exit 0; `bash
+  db/tests/rerun.sh` all 138 migrations re-runnable, exit 0.
+- Each fix's test fails without it (the change set aside, the test run,
+  the change put back): **A** - `refusedControls.test.tsx` on the old
+  screens, 6 of 7 fail (free tiles "expected [BUTTON...] to not include
+  'BUTTON'"; the Calendar "got 238"; tile 204 "expected 'Lata Bhosale' to
+  be 'Ganesh Patil'"; the panel for housekeeping and for the Accountant;
+  the late tick for a hotel admin); the 7th, a GM still offered the waive,
+  holds either way. **B** - `propertyAdmin.test.ts` and
+  `addPerson.test.ts`, D24-28: "gm: expected 200 to be 409" on both doors
+  (two more in the file fail as knock-ons). **C, D** - `dayAndRoom.test.ts`
+  on the old routes, 4 of 5 fail with the defects' own words; the 5th
+  (departed stays keep their room) holds either way. **E** -
+  `api/test/reportColumns.test.ts`, the Night audit of every demo day
+  (1-25 August) printed through the file route, every cell and heading
+  measured against its column: old renderer, 474 different strings too
+  wide ("Rent Date", "Nrml. Tariff", ...); new, none.
+- Screens, `.local/screenshots/2026-09-24-polish/` in the main folder,
+  desktop 1280x800 and phone 390x844, headless Edge over its debugging
+  port, each with what the page itself reported: `01-*` Rooms for
+  housekeeping (no Assign room, free tiles plain), `02-*` Calendar for
+  housekeeping (0 Book room cells), `03-*`, `04-*` the stay panel for
+  housekeeping (no Check in, Settle and check out, Mark VIP, WhatsApp tick
+  or More options); `05-*` to `08-*` reception's (all of them, 238 cells);
+  `09-*` the Accountant's (Settle and check out only); `10-*` People, the
+  GM's own row (Password, Edit); `11-*` tile 204 names Ganesh Patil with
+  Lata Bhosale held for 204; `12-*`, `13-*` after she is taken out (tile
+  204 Ganesh, Arrivals shows her with no room); `14-*` to `17-*` the
+  printed Night audit of 20 and 24 August before and after, and the PDF.
+  Setup in `fidato_s6` only: the Start here card put away for the roles
+  photographed, Lata taken out of 204.
+
+**Left open** - FD-10, FD-12, FD-5, FD-7 as before; the Bill tab's controls
+(finance).
+
+**Commits:** `4b8dfe2` (A-E and tests), merge `9caa0cb`, and these notes.
+
+---
+
 ## 2026-09-24 · Follow-ups A-I: the in-house rule everywhere, a future move's room, controls the server refuses, the guest's messages, own access
 
 **Asked for:** the master, for the owner's answers of 24 September (D24-15,

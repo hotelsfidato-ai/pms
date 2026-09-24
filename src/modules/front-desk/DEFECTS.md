@@ -14,40 +14,6 @@ entries stay here: they are the reason the fault does not come back.
 
 ## Open — not fixed
 
-### FD-17 · A booking taken out of its room still shows that room
-
-**Found** - 24 September, on the Rooms board while taking the follow-ups'
-screenshots. Lata Bhosale (FH-2608-5005, arriving the 25th) was given 204 in
-advance; "Take them out of the room" released it. `GET /stays/:id` still
-answers `roomNumber: "204"`, and tile 204 names her ("Due out, Lata
-Bhosale") though Ganesh Patil is the guest in it. `stays.ts` takes one
-assignment per stay, "preferring the one still held and then the most
-recent" - released ones included, on purpose, so a departed stay keeps its
-room on folios and invoices. For a booking that has not arrived, a released
-room is not its room. Not fixed - outside A-I.
-
-**The fix, when it is done** - count a released assignment only for a stay
-that has arrived (checked in or out); a confirmed booking with none held has
-no room.
-
-### FD-16 · Check-in and the swap fall back to a business date that never moves
-
-**Found** - 24 September, reading the routes for rule A. `POST
-/:code/stays/:id/check-in` and `POST /:code/stays/:id/exchange` use the
-caller's date, else `select business_date from hotels` - the column 023
-calls "the day this property is operating in, when no night audit has run
-yet". Nothing advances it: `app.business_date` is the day after the last
-COMPLETED audit. So once a property has closed a day, a caller that leaves
-the date out is a day (or more) behind: a booking arriving today reads as
-arriving "early by days", and a swap is dated the day before. **Not seen on
-screen**: both screens send the date (`CheckInFlow` its `businessDate`,
-`ExchangeRoomFlow` its `from`), so only a hand-sent call reads the column.
-Not fixed - outside A-E.
-
-**The fix, when it is done** - `businessDateFor(client, hotelId)` in both
-fallbacks, as the walk-in's `resolveDate` and rule A's move and swap guards
-already do.
-
 ### FD-10 · A room nobody entered is dirtied when its advance booking lets it go
 
 **Found** - 22 September, the same reading. 074 leaves a room clean when a
@@ -109,6 +75,76 @@ width in every state it has, not only the first one.
 ---
 
 ## Fixed — the solution is here; do not work it out again
+
+### FD-18 · A Rooms tile said "Due out" over the arriving guest's name - FIXED 24 September
+
+**Found** - 24 September, fixing FD-17. The Rooms board names a tile's
+guest from a map of today's stays, one per room, and a booking arriving
+today counts as "live" there. A room whose guest leaves today and that is
+given ahead to today's arrival (allowed, D24-26) held both; the list is
+ordered by arrival, so the arrival came last and its name replaced the
+guest's: tile 204 read "Due out, Lata Bhosale" while Ganesh Patil was in
+it - the look the owner saw, which FD-17 alone did not explain.
+
+**Fixed** (the owner, 24 September: "name the guest in the room") -
+`pages/StayView.tsx`: an arrival never replaces a guest already named for
+that room.
+
+**Proved** - `refusedControls.test.tsx`, "names the guest in the room, not
+the arrival it is held for": on the old screen "expected 'Lata Bhosale' to
+be 'Ganesh Patil'". On screen with Lata still held for 204:
+`.local/screenshots/2026-09-24-polish/11-tile-204-*`.
+
+### FD-17 · A booking taken out of its room still showed that room - FIXED 24 September
+
+**Found** - 24 September, on the Rooms board while taking the follow-ups'
+screenshots. Lata Bhosale (FH-2608-5005, arriving the 25th) was given 204 in
+advance; "Take them out of the room" released it. `GET /stays/:id` still
+answered `roomNumber: "204"`. `stays.ts` takes one assignment per stay,
+"preferring the one still held and then the most recent" - released ones
+included, on purpose, so a departed stay keeps its room on folios and
+invoices. The Calendar's bars and the Rooms tiles are built from the same
+list.
+
+**Fixed** - in the one query every screen reads (`SELECT` in
+`api/src/modules/front-desk/stays.ts`): a released assignment counts for
+every status except `confirmed`. A booking still to arrive holds only the
+room it holds; checked-out, no-show, cancelled and void stays keep the room
+they had, exactly as before (narrower than the fix first written here,
+which would have taken a void's bar off the Calendar).
+
+**Proved** - `api/test/modules/front-desk/dayAndRoom.test.ts`, "FD-17": a
+booking assigned 104 and taken out answers `""` from the stay and from the
+list; on the old query "expected '104' to be ''". "keeps a departed guest's
+room": every checked-out 5EL stay still has one (passes before and after).
+On screen after taking Lata out of 204: tile 204 names Ganesh Patil, and
+Arrivals shows Lata with no room
+(`.local/screenshots/2026-09-24-polish/12-*`, `13-*`).
+
+**Left** - an unassigned booking cannot be opened from a Rooms or Calendar
+link (`?res=`): the panel looks for its bar, and a booking with no room has
+none. Open it from Arrivals. As before; not changed.
+
+### FD-16 · Check-in and the swap fell back to a business date that never moves - FIXED 24 September
+
+**Found** - 24 September, reading the routes for rule A. `POST
+/:code/stays/:id/check-in` and `POST /:code/stays/:id/exchange` used the
+caller's date, else `select business_date from hotels` - the column 023
+calls "the day this property is operating in, when no night audit has run
+yet". Nothing advances it: `app.business_date` is the day after the last
+COMPLETED audit. The screens send their own date, so only a call without
+one was behind. The same read was in `GET /:code/groups`' "current" list,
+so a group whose last guest left on a closed day still counted as current.
+
+**Fixed** - `resolveDate` in the check-in, `businessDateFor` in the swap,
+`app.business_date($1)` in the groups list.
+
+**Proved** - `dayAndRoom.test.ts`, "FD-16" (3), at a property with the 25th
+closed (column 25th, day 26th): on the old routes the check-in answered
+"This booking arrives on 2026-08-26, not today...", the swap "both guests
+have to be in a room on that date", and the group was listed. Other
+modules still reading the column (channel manager's ARI, `pos/till.ts`)
+were told to the master, not changed.
 
 ### FD-15 · The check-in screen never sent the early-arrival reason - FIXED 24 September
 
@@ -177,10 +213,10 @@ null"); `inHouseRule.test.ts`, the answer is false for a clerk and true for
 the owner (fails on the old route: "expected undefined to be false"). On
 screen, before 5EL's check-in hour: a hotel-level administrator sees the
 reason and no tick; the owner sees both
-(`.local/screenshots/2026-09-24-follow-ups/03-*`). **Still open**: the late
-check-out's tick (`flows/LateCheckOutFlow.tsx`) still asks the role; the
-same answer would do it, and D24-18 ("controls someone cannot use: hidden")
-reads as covering it - not done, not in A-E.
+(`.local/screenshots/2026-09-24-follow-ups/03-*`). **Late tick finished
+24 September** (D24-27): `flows/LateCheckOutFlow.tsx` draws its tick from
+the same `mayWaive` answer; `refusedControls.test.tsx`, "offers no waive to
+a hotel administrator the server would refuse", fails on the old dialog.
 
 ### FD-11 · A check-in did not ask whether somebody was still in the room - FIXED 23 September
 
