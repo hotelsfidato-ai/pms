@@ -21,3 +21,10 @@
 | D25-17 | Who counted, and blank lines | **Whoever saves the sheet**, with the reason "Count of <store>" plus any reason typed on a line. **A blank line is not counted and never taken as zero** |
 | D25-18 | Gas cylinders | Any item counted in "cylinder" shows **Full and Empty**. Issuing to the kitchen asks how many empties came back; receiving a delivery asks how many empties the supplier took back; both typed each time, 0 is an answer. Empties are on the count sheet too |
 | D25-19 | The gas deposit (D17-4) | **Typed on the item**: cylinders on deposit and deposit per cylinder, a dash until typed. The Store shows the deposit held and the cylinders in use at the kitchen (on deposit, less full and empty in the stores). Set by the same people as D25-13 |
+| D25-20 | D22-6: what the restaurant setup screen covers (asked by the till setup session) | **The restaurant's name, its sections and tables, and a ready-to-open list.** Not chosen: a second outlet (bar, room service); an outside till's key on screen (stays in `npm run pos:outlet`) |
+| D25-21 | Who may use it | **Owner, admin and GM** (room_config create/edit, as room setup, D22-30) |
+| D25-22 | Adding tables | **One at a time, or a numbered run** ("AC" 1 to 10 makes AC1 to AC10); seats optional, a dash when blank |
+| D25-23 | Taking a table or section away | **Switched off, its history kept; refused while a bill is still on it** |
+| D25-24 | Where it sits in the menu | **Point of sale → "Restaurant setup"**, the last entry |
+| D25-25 | The empty Tables screen | **A "Set up tables" button for owner, admin and GM**; a waiter sees today's sentence only |
+| D25-26 | The ready-to-open list | **Six ticks, each linking to its screen**: restaurant named; at least one table; at least one dish; every dish has a GST rate; at least one person with the Waiter role; restaurant switched on |
