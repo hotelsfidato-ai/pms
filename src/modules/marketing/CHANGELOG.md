@@ -13,6 +13,70 @@ Requests).
 
 ---
 
+## 2026-09-23 - No offers kept off every list (MKT-1); the lists are the owner's, admin's and GM's (D22-17)
+
+**Asked for:** the master, on the owner's D22-9 (queued fix MKT-1) and D22-17
+("Marketing's lists: owner, admin and GM only. The birthdays list is dropped").
+
+**Shipped:**
+
+- **MKT-1.** `mayBeWrittenTo`, the one gate all three lists go through, now
+  refuses a guest whose phone or email is on the No offers list
+  (`offer_opt_outs`, D21-22), through `refusesOffers` from `@/modules/guests`
+  - the CRM chat's copy of `app.phone_key`, so "+91 98200 11111" asked once
+  covers "098200 11111". Each list now takes the No offers list as an
+  argument, so none can be called without it. No migration: the list and its
+  matching rule already existed.
+- **D22-17.** A `marketing` resource in the role matrix
+  (`api/src/permissions.ts`): view and export for admin and GM, everything for
+  the owner, nothing for anyone else; labelled "Marketing" on the Roles
+  screen. The Coming soon entry and its route ask that grant instead of
+  `integration` with `seesComingSoon` - the same three people, now said once.
+  A refused person is told the page "does not include marketing" rather than
+  "integration".
+- **Birthdays dropped.** Nothing had been built; the mention in `lists.ts` and
+  the line in `docs/briefs/marketing.md` say so.
+
+**Finished and proved again 24 September** on `admin/finish-24sep` (the
+helper was stopped on 23 September before committing; the table below is its
+own run, in its own copy). In this copy: `npx vitest run src/modules/marketing`
+22 passed; with the No offers check taken out of `mayBeWrittenTo` AND reception
+given `marketing: view`, 4 failed (the three No offers tests and "who sees the
+lists"), then both put back. Screens: `.local/screenshots/2026-09-24-admin/`
+`10-marketing-gm-*` (the GM, the page) and `11-marketing-reception-refused-*`
+(reception, refused by address: "does not include marketing").
+
+**Proved** - the helper's copy, 23 September:
+
+| Gate | Result |
+|---|---|
+| `npx tsc -p tsconfig.app.json --noEmit` | exit 0 |
+| `cd api && npx tsc --noEmit` | exit 0 |
+| `npx vitest run src/modules/marketing` | 22 passed, exit 0 |
+| `npm test` (the whole web suite) | 67 files, **611 passed, 1 failed**, exit 1 - the one failure is not this branch's (below) |
+
+**Guards seen to fail**, both at once in one run, then put back: the No offers
+check taken out of `mayBeWrittenTo` - the three No offers tests failed; the
+matrix giving reception `marketing: view` - "who sees the lists" failed on
+`front_desk`. 4 failed, 18 passed.
+
+**The screen, opened** (API 8805, web 5195, database `fidato_mkt`):
+`.local/screenshots/2026-09-23-mkt/` - `01-gm-marketing.png` (the GM, the
+page and its menu entry), `02-reception-marketing-refused.png` (reception,
+refused by address, no Marketing in the menu), `03-owner-roles-matrix.png`
+(the Marketing row: owner, admin 2, GM 2, everyone else a dash).
+
+**Found:** the web suite's one failure is `repositories.test.ts` Rule 2 -
+`src/modules/front-desk/inHouseRule.test.tsx` imports `@/data/fixtures/property`,
+from cp6's own 5126bbe (the In house branch). Unchanged here; for the master.
+
+**Left open:** the data call for the No offers list and the lists screen
+(MKT-4 - there is still no data door with a phone or email, and a data function
+with no caller fails Rule 2b); the Coming soon page's out-of-date words (MKT-5).
+Not pushed, not merged, not deployed.
+
+---
+
 ## 2026-09-19 - the three lists, and the four things this service cannot decide for itself
 
 **Asked for:** D18-17, the owner, 18 September - "guest lists that can be acted

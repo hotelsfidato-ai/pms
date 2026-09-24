@@ -9,7 +9,7 @@ export const routes = (
   <Route
     path="/coming-soon/marketing"
     element={
-      <RequireAccess path="/coming-soon/marketing" resource="integration">
+      <RequireAccess path="/coming-soon/marketing" resource="marketing">
         <MarketingPage />
       </RequireAccess>
     }

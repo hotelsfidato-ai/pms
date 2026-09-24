@@ -481,6 +481,72 @@ describe("D22-3 - People works for the GM, at their own hotel only", () => {
   });
 });
 
+/* D23-2, the owner, 23 September: "a hotel-level Admin manages staff at their
+   own hotel, including giving Admin there" - a GM's People, plus Admin. */
+describe("D23-2 - a hotel's Admin runs their hotel's people, Admin included", () => {
+  let admId: string;
+
+  beforeAll(async () => {
+    const db = await admin();
+    try {
+      admId = (await db.query<{ id: string }>(
+        `insert into staff (email, full_name, firebase_uid)
+         values ('pa-admin@fidato.in', 'PATEST Hotel Admin', 'test-uid-paadmin')
+         on conflict (email) do update set is_active = true
+         returning id::text`)).rows[0]!.id;
+      await db.query(
+        `insert into staff_hotels (staff_id, hotel_id, role)
+         select $1, id, 'admin' from hotels where code = 'AGR'
+         on conflict (staff_id, hotel_id) do update set role = 'admin'`, [admId]);
+    } finally { await db.end(); }
+  });
+
+  afterAll(async () => {
+    const db = await admin();
+    try {
+      await db.query("delete from staff_hotels where staff_id = $1", [admId]);
+      await db.query("update staff set is_active = false where id = $1", [admId]);
+    } finally { await db.end(); }
+  });
+
+  it("offers them Admin at their hotel, and never Owner", async () => {
+    const people = (await (await as(admId, "/admin/staff")).json()) as {
+      rosterAt: { code: string; roles: string[] }[];
+    };
+    expect(people.rosterAt.map((p) => p.code)).toEqual(["AGR"]);
+    expect(people.rosterAt[0]!.roles).toContain("admin");
+    expect(people.rosterAt[0]!.roles).not.toContain("owner");
+  });
+
+  it("lets them give Admin at their hotel, and the row is written", async () => {
+    const res = await as(admId, `/admin/staff/${strangerId}/access`, "POST",
+      { code: "AGR", role: "admin" });
+    expect(res.status, await res.clone().text()).toBe(200);
+    const db = await admin();
+    try {
+      const { rows } = await db.query(
+        `select 1 from staff_hotels sh join hotels h on h.id = sh.hotel_id
+          where sh.staff_id = $1 and h.code = 'AGR' and sh.role = 'admin'`, [strangerId]);
+      expect(rows.length).toBe(1);
+    } finally { await db.end(); }
+    const gone = await as(admId, `/admin/staff/${strangerId}/access/AGR`, "DELETE");
+    expect(gone.status, await gone.clone().text()).toBe(200);
+  });
+
+  it("⚠ REFUSES them another hotel, and writes nothing there", async () => {
+    const res = await as(admId, `/admin/staff/${strangerId}/access`, "POST",
+      { code: "PUN", role: "front_desk" });
+    expect([403, 409]).toContain(res.status);
+    const db = await admin();
+    try {
+      const { rows } = await db.query(
+        `select 1 from staff_hotels sh join hotels h on h.id = sh.hotel_id
+          where sh.staff_id = $1 and h.code = 'PUN'`, [strangerId]);
+      expect(rows.length).toBe(0);
+    } finally { await db.end(); }
+  });
+});
+
 describe("one property, for whoever runs it", () => {
   it("gives the manager their own hotel, with its team", async () => {
     const res = await as(gmId, "/admin/hotels/AGR");

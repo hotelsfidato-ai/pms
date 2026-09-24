@@ -199,6 +199,24 @@ describe("who may see and change purchasing", () => {
     expect(refusedAgain.status).toBe(403);
   });
 
+  it("lets housekeeping raise one once the setting names them (D22-11, PUR-1)", async () => {
+    /* The switch was on the screen and the server refused housekeeping the
+       whole screen anyway: no `purchasing` grant. */
+    const owner = staffByRole.get("owner")!;
+    const housekeeper = staffByRole.get("housekeeping")!;
+    expect((await call(housekeeper, "/purchasing")).status).toBe(200);
+
+    await call(owner, "/purchasing/requesters/housekeeping", "PUT", { mayRaise: true });
+    try {
+      const res = await call(housekeeper, "/purchasing/requests", "POST", {
+        storeId, reason: `${TAG} housekeeping switched on`, lines: [{ itemId, quantity: 1 }],
+      });
+      expect(res.status, await res.clone().text()).toBe(200);
+    } finally {
+      await call(owner, "/purchasing/requesters/housekeeping", "PUT", { mayRaise: false });
+    }
+  });
+
   it("refuses everybody but the owner and an administrator the setting itself", async () => {
     for (const role of ASSIGNABLE_ROLES) {
       const res = await call(staffByRole.get(role)!, "/purchasing/requesters/housekeeping",

@@ -93,9 +93,11 @@ place a whole service hides (D17-54). The routes are guarded by `mayReach`, and
 the API refuses every one of them on its own, because a hidden menu entry is
 still a URL anybody can type.
 
-**No `workingMenus`.** That changes what a role finds pinned in front of them,
-and it is the owner's call. Until they make it, laundry is in the full menu for
-everybody who holds the resource, and one search away for all of them.
+**Working menus (D22-22, 22 September; Dockets only, the owner, 24
+September):** Dockets is in reception's and housekeeping's menus where the
+hotel has laundry on. The GM and the hotel manager have no working menu - they
+see the whole Laundry section. The Price list stays one search away, and the
+Dockets page links to it.
 
 ### What each screen refuses to do
 

@@ -4,6 +4,7 @@ import { closePool } from "../../../src/db.ts";
 import {
   SPA_READ_ROLES, SPA_BOOK_ROLES, SPA_LIST_ROLES,
 } from "../../../src/modules/spa/index.ts";
+import { ROLES, canAccess } from "../../../src/permissions.ts";
 
 /* ══════════════════════════════════════════════════════════════════
    THE SPA — the switch, the clock, who may do what, and the overlap
@@ -252,6 +253,12 @@ describe("who may do what (the owner, 18 September)", () => {
     /* Everybody who may book may also see what they booked. */
     for (const role of SPA_BOOK_ROLES) expect(SPA_READ_ROLES).toContain(role);
     for (const role of SPA_LIST_ROLES) expect(SPA_READ_ROLES).toContain(role);
+  });
+
+  it("holds the matrix to the server's diary list - the menu reads the matrix (SPA-2)", () => {
+    /* The matrix gave the accountant and the viewer `spa` while every route
+       here refused them, so a menu reading it offered two people a 403. */
+    expect(ROLES.filter((role) => canAccess(role, "spa"))).toEqual([...SPA_READ_ROLES]);
   });
 });
 

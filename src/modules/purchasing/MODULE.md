@@ -46,7 +46,8 @@ onto the request: a status copied is a status that disagrees.
 
 The menu entry sits in **Store and equipment**, beside the Store and the
 Equipment register — and in the **Inventory Manager's working menu**, because
-they are the first name on D18-2's default list.
+they are the first name on D18-2's default list, and **housekeeping's** since
+24 September (D22-11 gave them view and raise; the owner put it in their menu).
 
 ## Four rules the DATABASE keeps, not this code
 
@@ -92,10 +93,8 @@ them at merge. Listed here so none of them is lost.
 
 **Still wanted, and NOT made here:**
 
-- **`src/lib/permissions.ts` — housekeeping has no `purchasing` grant at all.**
-  D18-2 lets the owner switch housekeeping on as a requester, but the screen
-  would still refuse them. `purchasing: ["view", "create"]` for `housekeeping`
-  closes it. **The owner's call, because it widens who sees what.**
+- ~~Housekeeping has no `purchasing` grant at all.~~ Given 23-24 September
+  (D22-11, PUR-1).
 - **A shared approvals SCREEN.** There is none: the engine and its routes are
   real, but equipment decides its own requests on the equipment screen and
   purchasing now does the same on the order. If a shared inbox is built, both

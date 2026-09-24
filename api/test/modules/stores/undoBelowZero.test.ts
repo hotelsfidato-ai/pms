@@ -43,6 +43,7 @@ const newItem = async (name: string) =>
 const move = async (itemId: string, kind: string, quantity: number, locationId = mainId) =>
   (await json(await call("POST", "/movements", {
     itemId, locationId, kind, quantity, ...(kind === "receipt" ? { unitCost: 90 } : {}),
+    ...(kind === "issue" ? { outletId: null } : {}),   // not an outlet (D22-20)
   }), 200)).id as string;
 
 const onHand = async (itemId: string) => Number((await sql(

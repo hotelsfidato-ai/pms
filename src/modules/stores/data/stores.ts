@@ -39,6 +39,8 @@ export interface StoreList {
   /** The Main store first. */
   stores: StoreSummary[];
   items: StockItem[];
+  /** Where an issue can go: the hotel's outlets, switched on (D22-20). */
+  outlets: { id: string; name: string }[];
 }
 
 export interface StockItem {
@@ -99,7 +101,7 @@ type Result<T = unknown> = ({ ok: true } & T) | { ok: false; reason: string };
    first". The screen tells failed from empty now, the way the till (POS-4)
    and Rooms do. */
 export async function getStore(hotelId: string): Promise<StoreList> {
-  if (!hotelId) return { stores: [], items: [] };
+  if (!hotelId) return { stores: [], items: [], outlets: [] };
   return api<StoreList>(`/api/hotels/${hotelId}/stores`);
 }
 
