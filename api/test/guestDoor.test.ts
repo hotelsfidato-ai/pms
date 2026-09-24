@@ -35,7 +35,6 @@ let stayId: string;
 let otherStayId: string;
 let phone: string;
 let guestId: string;
-let phoneWas: string | null;
 let link: string;         // the token itself, as the guest would hold it
 
 const TAG = "GUESTDOOR";
@@ -75,23 +74,23 @@ beforeAll(async () => {
   /* Two bookings at the property, so "one token, one booking" can be proved
      rather than asserted.
 
-     THE PHONE IS THE TEST'S OWN. The demo guests carry none, and a test that
-     depends on which fixture rows happen to have one is a test that passes
-     here and not on the runner - which is how the whole of 18 September went.
-     Put back in afterAll. */
-  const { rows: stays } = await sql(
-    `select r.id::text as id, r.guest_id::text as guest_id
-       from reservations r
-      where r.hotel_id = $1 and r.status not in ('cancelled','void')
-      order by r.check_in desc limit 2`, [hotelId]);
-  stayId = stays[0].id;
-  otherStayId = stays[1].id;
-  guestId = stays[0].guest_id;
-
-  const { rows: had } = await sql("select phone from guests where id = $1", [guestId]);
-  phoneWas = had[0].phone ?? null;
+     THE GUEST, THE PHONE AND BOTH BOOKINGS ARE THE TEST'S OWN, made here and
+     removed in afterAll. They were "the latest two 5EL bookings" - a tie
+     among demo rows that other files update, send codes about and make links
+     for, so which two came back depended on what ran before. */
   phone = "9876500011";
-  await sql("update guests set phone = $2 where id = $1", [guestId, phone]);
+  guestId = (await sql("insert into guests (full_name, phone) values ($1, $2) returning id::text as id",
+    [`${TAG} Guest`, phone])).rows[0].id;
+  const book = async (ref: string) => (await sql(
+    `insert into reservations (hotel_id, guest_id, room_type_id, reference,
+                               check_in, check_out, adults, status, source, agreed_rate)
+     select $1, $2, (select id from room_types where hotel_id = $1 limit 1), $3,
+            (now() at time zone 'Asia/Kolkata')::date + 20,
+            (now() at time zone 'Asia/Kolkata')::date + 21,
+            1, 'confirmed', 'direct', 1000
+     returning id::text as id`, [hotelId, guestId, ref])).rows[0].id as string;
+  stayId = await book("GDR-1");
+  otherStayId = await book("GDR-2");
 
   /* THE LINK IS MADE HERE, not in the first test, so that every test below
      stands on its own. When it was made by the first test, breaking the door
@@ -111,7 +110,10 @@ afterAll(async () => {
                (select id from guest_links where reservation_id = any($1::uuid[]))`,
     [[stayId, otherStayId]]);
   await sql("delete from guest_links where reservation_id = any($1::uuid[])", [[stayId, otherStayId]]);
-  await sql("update guests set phone = $2 where id = $1", [guestId, phoneWas]);
+  await sql("delete from reservations where id = any($1::uuid[])", [[stayId, otherStayId]]);
+  await sql("alter table guests disable trigger guests_no_delete");
+  await sql("delete from guests where id = $1", [guestId]);
+  await sql("alter table guests enable trigger guests_no_delete");
   await sql(`delete from staff_hotels where staff_id = $1`, [deskStaffId]);
   await sql("update staff set is_active = false where id = $1", [deskStaffId]);
   await closePool();
@@ -309,8 +311,12 @@ describe("the six digits that prove it is that guest", () => {
        .test.ts proves the link alone opens nothing behind the code. */
     expect(answered.unlock, "this phone's unlock, handed back once").toMatch(/^[\w-]{43}$/);
 
+    /* THIS link, by its hash. The stay has two - the desk made it another in
+       the first test - and "where reservation_id" answered whichever one the
+       planner reached first: the verified one by index, the other by a
+       sequential scan once guest_links had statistics. */
     const { rows } = await sql(
-      "select verified_at is not null as verified from guest_links where reservation_id = $1", [stayId]);
+      "select verified_at is not null as verified from guest_links where token_hash = encode(digest($1,'sha256'),'hex')", [link]);
     expect(rows[0].verified).toBe(true);
   });
 
@@ -332,7 +338,7 @@ describe("the six digits that prove it is that guest", () => {
     expect(right.status, "five wrong answers kill the code").toBe(401);
 
     const { rows } = await sql(
-      "select verified_at is null as unverified from guest_links where reservation_id = $1", [stayId]);
+      "select verified_at is null as unverified from guest_links where token_hash = encode(digest($1,'sha256'),'hex')", [link]);
     expect(rows[0].unverified).toBe(true);
   });
 });

@@ -41,6 +41,7 @@ const HOTEL = "5EL";
 const TAG = "GMTEST";
 
 let hotelId: string;
+let guestId: string;
 let reservationId: string;
 let reference: string;
 const staffByRole = new Map<string, string>();
@@ -91,9 +92,20 @@ beforeAll(async () => {
     "select id::text from hotels where code = $1", [HOTEL]);
   hotelId = hotels[0].id as string;
 
+  /* THE FILE'S OWN BOOKING, removed in afterAll. "The latest 5EL booking"
+     was a tie between every demo booking (one transaction, one created_at),
+     settled by row order - and it could land on the stay
+     guestDoorBehindTheCode.test.ts sends seven codes about, rows that stay. */
+  guestId = (await sql(
+    "insert into guests (full_name) values ($1) returning id::text", [`${TAG} guest`])).rows[0].id as string;
   const { rows: stays } = await sql(
-    `select id::text, reference from reservations
-      where hotel_id = $1 order by created_at desc limit 1`, [hotelId]);
+    `insert into reservations (hotel_id, guest_id, room_type_id, reference,
+                               check_in, check_out, adults, status, source, agreed_rate)
+     select $1, $2, (select id from room_types where hotel_id = $1 limit 1), 'GMT-1',
+            (now() at time zone 'Asia/Kolkata')::date + 20,
+            (now() at time zone 'Asia/Kolkata')::date + 21,
+            1, 'confirmed', 'direct', 1000
+     returning id::text, reference`, [hotelId, guestId]);
   reservationId = stays[0].id as string;
   reference = stays[0].reference as string;
 
@@ -106,6 +118,10 @@ afterAll(async () => {
      these out - and the scratch database is dropped after the run anyway. */
   await sql("delete from messages_sent where to_name like $1", [`${TAG}%`]);
   expect(await countRows()).toBe(0);
+  await sql("delete from reservations where id = $1", [reservationId]);
+  await sql("alter table guests disable trigger guests_no_delete");
+  await sql("delete from guests where id = $1", [guestId]);
+  await sql("alter table guests enable trigger guests_no_delete");
   for (const id of staffByRole.values()) {
     await sql("delete from staff_hotels where staff_id = $1", [id]);
     await sql("update staff set is_active = false where id = $1", [id]);
