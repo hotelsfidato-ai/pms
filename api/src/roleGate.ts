@@ -96,7 +96,7 @@ const CREDIT_NOTE = grant("invoice", "approve", "Issuing a credit note");
 const CLOSE_DAY = grant("invoice", "create", "Closing the day");
 /* Correcting a closed day: the owner, an administrator and the GM, the people
    who may waive a charge (the owner's D24-3) - `approve` on a booking is
-   exactly those three. The database asks the same three (130). */
+   exactly those three. The database asks the same three (133). */
 const CORRECT_DAY = grant("reservation", "approve", "Correcting a closed day");
 const PAYMENT = grant("payment", "create", "Taking a payment");
 const DRAWER = grant("payment", "create", "Running the cashier's drawer");
