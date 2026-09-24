@@ -114,10 +114,10 @@ with a reason nobody can act on. That is the tidy half only: every route asks
 `app.module_enabled` of its own, because a hidden entry is still a URL anybody
 can type.
 
-`canSee` on each entry reads `SEES_THE_DIARY` and `SETS_THE_LIST` in
-`data/spa.ts` — the menu's copy of the server's own three lists, **not**
-`canAccess(role, "spa")`. The shared matrix is wider than the server here;
-that is **SPA-2** in `DEFECTS.md`.
+The diary's entry reads the matrix, `canAccess(role, "spa")`, which since
+**SPA-2** (fixed 23 September) grants exactly the server's `SPA_READ_ROLES`;
+`api/test/modules/spa/spa.test.ts` holds the two equal. Treatments reads
+`SETS_THE_LIST` in `data/spa.ts`, the menu's copy of `SPA_LIST_ROLES`.
 
 **A time on these screens is never parsed.** `app.hotel_clock` writes
 `YYYY-MM-DDTHH:MM` with no offset, so `format.ts`'s `dateShort()` and

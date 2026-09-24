@@ -77,8 +77,8 @@ export interface SpaDiary {
 /* ══════════════════════════════════════════════════════════════════
    WHO MAY DO WHAT — the menu's copy
 
-   ⚠ A COPY of `SPA_READ_ROLES`, `SPA_BOOK_ROLES` and `SPA_LIST_ROLES`
-   in `api/src/modules/spa/spa.ts`, which says so itself. THE SERVER IS
+   ⚠ A COPY of `SPA_BOOK_ROLES` and `SPA_LIST_ROLES` in
+   `api/src/modules/spa/spa.ts`, which says so itself. THE SERVER IS
    THE ENFORCEMENT: it refuses every route on its own, because a hidden
    entry is still a URL anybody can type (MEMORY 250, 263). These lists
    only stop offering a door that would be refused.
@@ -87,15 +87,11 @@ export interface SpaDiary {
    does not touch it; reception books and closes; the owner, an
    administrator or the GM set the price list.
 
-   ⚠ NOT `canAccess(role, "spa")`. The permissions matrix grants
-   `spa: ["view", "export"]` to finance and `spa: ["view"]` to a viewer,
-   and the server gives neither of them the diary — so asking the matrix
-   would put a Spa section in two people's menus that answers 403. Told
-   to the master; the matrix is theirs.
+   Who SEES the diary is the matrix again, `canAccess(role, "spa")`:
+   SPA-2 took the grant off the accountant and the viewer, whom the
+   server always refused, and api/test/modules/spa/spa.test.ts holds the
+   matrix to `SPA_READ_ROLES`.
    ══════════════════════════════════════════════════════════════════ */
-
-export const SEES_THE_DIARY: readonly string[] =
-  ["owner", "admin", "gm", "hotel_manager", "front_desk", "housekeeping"];
 
 export const TAKES_A_BOOKING: readonly string[] =
   ["owner", "admin", "gm", "hotel_manager", "front_desk"];

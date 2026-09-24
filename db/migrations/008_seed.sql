@@ -38,9 +38,16 @@ on conflict (code) do nothing;
 -- The first user. Cannot be created from inside the app — same bootstrap
 -- problem the CRS has, and for the same reason: the thing that creates users
 -- requires a user.
+--
+-- ⚠ ONLY WHERE NOBODY ELSE HOLDS GROUP ACCESS (ADM-3, root MEMORY 271). Every
+-- deploy replays this file, and `on conflict` alone re-created the placeholder
+-- the next deploy after it was deleted: an active group administrator nobody
+-- owns. Once a real one exists, the bootstrap has done its job.
 -- -----------------------------------------------------------------------------
-insert into staff (email, full_name, is_group_admin) values
-  ('REPLACE@fidato.in', 'REPLACE — your name', true)
+insert into staff (email, full_name, is_group_admin)
+select 'REPLACE@fidato.in', 'REPLACE — your name', true
+ where not exists (select 1 from staff
+                    where is_group_admin and email <> 'REPLACE@fidato.in')
 on conflict (email) do nothing;
 
 

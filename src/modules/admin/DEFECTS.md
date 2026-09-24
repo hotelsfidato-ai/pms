@@ -14,15 +14,15 @@ entries stay here: they are the reason the fault does not come back.
 
 ## Open — not fixed
 
-### ADM-3 · Every deploy re-creates the placeholder administrator once it is deleted
+### ADM-6 · A GM (and now a hotel's Admin) cannot add somebody new: the staff row is refused after the account is made
 
-**Found** — 9 September, deleting it; it came back on the 15 September deploy. Root MEMORY 271.
+**Found** — 23 September, building D23-2, by running the route's own statement as `pms_app` for a GM in a scratch database.
 
-Migration 008 inserts `REPLACE@fidato.in` with `on conflict (email) do nothing`, so a deleted row is re-created by the next replay — active, and a group administrator.
+`POST /admin/staff` writes the person with `insert … on conflict (email) do update … returning id`. Both `on conflict do update` and `returning` make Postgres check the new row against `staff`'s SELECT policies, and a brand-new person matches none of them for a manager: not a group administrator, not themselves, and not yet rostered anywhere (`staff_colleague_read`). So it fails with `new row violates row-level security policy for table "staff"` (a 403 carrying that sentence) - AFTER `ensureAccount` has made the Firebase account. A plain insert passes (the insert policy is fine). The API tests never get that far: Firebase is not in the suite, so "lets the GM add somebody AT their hotel" stops at `ensureAccount`.
 
-**The fix, when it is done** — It is deactivated in production now (checked 16 September: present, inactive) — **deactivate, never delete**. The guard still to write: make 008 skip the seed when the deployment already has a real administrator.
+**Not fixed here** — it needs a shape chosen (a SECURITY DEFINER function that adds a person at a hotel the caller runs, after `app.require_hotel_admin`, is the smallest that keeps RLS as it is). Passed to the master, 23 September.
 
-**The rule** — Deactivate, do not delete: a deleted row comes back on the next deploy.
+**The rule** — A route's authorisation proved only up to the first thing a suite cannot run is not proved. Run the statement past that point, as the role that will run it.
 
 ### ADM-4 · Two "audit log" links point at an address that does not exist
 
@@ -37,6 +37,18 @@ The night-audit checklist (`api/src/modules/night-audit/checklist.ts:144`) and a
 ---
 
 ## Fixed — the solution is here; do not work it out again
+
+### ADM-3 · Every deploy re-creates the placeholder administrator once it is deleted
+
+**Found** — 9 September, deleting it; it came back on the 15 September deploy. Root MEMORY 271.
+
+Migration 008 inserted `REPLACE@fidato.in` with `on conflict (email) do nothing`, so a deleted row was re-created by the next replay — active, and a group administrator. Every replay on a fresh database did it too: 051 renames the placeholder to the owner, and the next pass of 008 finds no placeholder and inserts it again.
+
+**Fixed** — 23 September (D22-9, branch `admin/hotel-admin-menus`): 008 inserts it only where nobody else holds group access (`where not exists (… is_group_admin and email <> 'REPLACE@fidato.in')`). A fresh database still gets it, so the first sign-in still has a row. Production's deactivated row is left as it is.
+
+**Proved** — `db/tests/modules/admin.sql` replays 008 itself (`\ir`, inside a transaction rolled back so its placeholder hotels do not return) and counts the placeholder: 0. With the old 008: "1 placeholder rows after a replay".
+
+**The rule** — Deactivate, do not delete: a deleted row comes back on the next deploy — unless the seed asks whether it is still needed.
 
 ### ADM-2 · Settings and the Properties cards show a tax the database no longer uses
 

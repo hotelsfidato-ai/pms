@@ -5,7 +5,8 @@ import type { ServiceNavEntry } from "@/components/app/navigation";
    declared here; `navigation.ts` assembles every service's entries into the
    one menu. The words and the order are the owner's (clarity plan, 15 Sep). */
 export const nav: ServiceNavEntry[] = [
-  { section: "home", order: 20, workingMenus: ["front_desk"],
+  /* Housekeeping's too: the owner's D22-19, 22 September. */
+  { section: "home", order: 20, workingMenus: ["front_desk", "housekeeping"],
     label: "Rooms", to: "/h/:code/stay", icon: Home, resource: "dashboard",
     keywords: ["house", "board", "tape chart", "vacant", "empty", "free"] },
   { section: "home", order: 30, workingMenus: ["front_desk"],

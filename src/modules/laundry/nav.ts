@@ -15,12 +15,14 @@ import type { ServiceNavEntry } from "@/components/app/navigation";
    WHO SEES IT is `resource: "laundry"` in src/lib/permissions.ts, which
    D18-8 already decided — reception and housekeeping, and no new roles.
 
-   NO `workingMenus`. An entry in a role's working menu changes what that
-   role finds pinned in front of them, and that is the owner's call, not
-   this lane's. Until they make it, laundry is in the full menu for
-   everybody who holds the resource, and one search away for all of them. */
+   WORKING MENUS: the owner's D22-22, 22 September - housekeeping,
+   reception, the GM and the hotel manager, where the hotel has laundry on
+   (the section's switch sees to that). The GM and the hotel manager have
+   no working menu - they see every section they may open - so only
+   housekeeping and reception are named. Dockets only: the price list stays
+   in the full menu and one search away. */
 export const nav: ServiceNavEntry[] = [
-  { section: "laundry", order: 10,
+  { section: "laundry", order: 10, workingMenus: ["front_desk", "housekeeping"],
     label: "Dockets", to: "/h/:code/laundry", icon: Shirt, resource: "laundry",
     matchPrefix: true,
     keywords: ["laundry", "docket", "linen", "bag", "dry cleaning", "valet", "ironing", "wash"] },
