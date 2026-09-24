@@ -23,8 +23,8 @@ built), D24-13 (the desk's Reverse on a closed day's minibar or laundry: said,
 fixed later) and D24-14 (NA-5, below: fix the audit now).
 
 **Shipped:**
-- `db/migrations/133_closed_day_corrections.sql` (133: cp6 took
-  130-132 after this branch left it) - `closed_day_corrections`, append-only,
+- `db/migrations/134_closed_day_corrections.sql` (134: cp6 took
+  130-133 after this branch left it) - `closed_day_corrections`, append-only,
   hotel-isolated; written only by the owner, an administrator or the GM there,
   or a group administrator (`app.corrects_closed_days`), and the row names who
   really did it. 012's `app.reject_closed_business_date`, same signature, with

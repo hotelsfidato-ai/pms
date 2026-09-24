@@ -795,14 +795,14 @@ async function closedDays(
 
      D24-1  a room charge or the audit's no-show charge, put right or taken off
      D24-2  on the closed day itself: its reports show the corrected figure
-     D24-3  the owner, an administrator or the GM (roleGate; 133 in the database)
+     D24-3  the owner, an administrator or the GM (roleGate; 134 in the database)
      D24-4  a bill with a tax invoice is refused: a credit note is for that
      D24-5  this month and the month before
      D24-8  a guest who has left and paid may be owed money back: allowed
 
    Nothing is edited. The wrong line stays; a reversal and the right charge
    sit beside it on the same day, both naming the correction row, which the
-   database lets onto a closed day and nothing else (133). The reports drop a
+   database lets onto a closed day and nothing else (134). The reports drop a
    reversed line and its reversal (reports/figures.ts, LIVE), so that day's
    figures move by exactly the difference. */
 

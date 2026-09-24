@@ -1,5 +1,5 @@
 -- =============================================================================
--- 133 · Correcting a closed day (D22-18, D24-1 to D24-8)
+-- 134 · Correcting a closed day (D22-18, D24-1 to D24-8)
 -- =============================================================================
 -- The owner, 22 September: "a GM screen; a reason is required, and the old and
 -- new figures are both kept." Their answers of 24 September
@@ -20,20 +20,21 @@
 -- -----------------------------------------------------------------------------
 -- 1 · Who may correct a closed day (D24-3)
 -- -----------------------------------------------------------------------------
--- app.manages_hotel (084) is a group administrator, or the owner or GM AT THIS
--- HOTEL; the owner's answer adds an administrator here.
+-- Written out, not app.manages_hotel: that one answers who runs a hotel's
+-- people and has changed meaning before (133 added the hotel's Admin); this
+-- answer is the owner's D24-3 and changes only with them.
 create or replace function app.corrects_closed_days(p_hotel uuid)
 returns boolean
 language sql stable security definer
 set search_path = public, pg_temp
 as $$
-  select app.manages_hotel(p_hotel) or exists (
+  select app.is_group_admin() or exists (
     select 1 from staff_hotels sh
       join staff s on s.id = sh.staff_id
      where sh.staff_id = app.current_user_id()
        and sh.hotel_id = p_hotel
        and s.is_active
-       and sh.role = 'admin');
+       and sh.role in ('owner', 'admin', 'gm'));
 $$;
 
 comment on function app.corrects_closed_days(uuid) is
