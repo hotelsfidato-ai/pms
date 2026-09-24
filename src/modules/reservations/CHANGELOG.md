@@ -8,6 +8,21 @@ project, still goes in the root `CHANGELOG.md`.
 
 ---
 
+## 2026-09-24 · A test for the lead button
+
+**Asked for:** the master, through the front desk follow-ups session - the
+one missing web test: the group panel's lead button sends the right request.
+
+**Shipped** - `groupLead.test.tsx` (new): on a group of two rooms, the lead's
+own button is disabled, and pressing the other's sends exactly one POST to
+`/api/hotels/5EL/groups/grp-1/lead` with `{ reservationId: "res-b" }`. No
+screen change.
+
+**Proved** - passes; with `lead()` made to send the current lead's id it
+fails ("res-a" where "res-b" was pressed).
+
+---
+
 ## 2026-09-24 · The group's lead guest, chosen on the group's screen (D22-52)
 
 **Asked for:** the owner's D22-52 - the lead is by default the room booked

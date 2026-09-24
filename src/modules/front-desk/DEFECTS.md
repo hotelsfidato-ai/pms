@@ -14,6 +14,40 @@ entries stay here: they are the reason the fault does not come back.
 
 ## Open — not fixed
 
+### FD-17 · A booking taken out of its room still shows that room
+
+**Found** - 24 September, on the Rooms board while taking the follow-ups'
+screenshots. Lata Bhosale (FH-2608-5005, arriving the 25th) was given 204 in
+advance; "Take them out of the room" released it. `GET /stays/:id` still
+answers `roomNumber: "204"`, and tile 204 names her ("Due out, Lata
+Bhosale") though Ganesh Patil is the guest in it. `stays.ts` takes one
+assignment per stay, "preferring the one still held and then the most
+recent" - released ones included, on purpose, so a departed stay keeps its
+room on folios and invoices. For a booking that has not arrived, a released
+room is not its room. Not fixed - outside A-I.
+
+**The fix, when it is done** - count a released assignment only for a stay
+that has arrived (checked in or out); a confirmed booking with none held has
+no room.
+
+### FD-16 · Check-in and the swap fall back to a business date that never moves
+
+**Found** - 24 September, reading the routes for rule A. `POST
+/:code/stays/:id/check-in` and `POST /:code/stays/:id/exchange` use the
+caller's date, else `select business_date from hotels` - the column 023
+calls "the day this property is operating in, when no night audit has run
+yet". Nothing advances it: `app.business_date` is the day after the last
+COMPLETED audit. So once a property has closed a day, a caller that leaves
+the date out is a day (or more) behind: a booking arriving today reads as
+arriving "early by days", and a swap is dated the day before. **Not seen on
+screen**: both screens send the date (`CheckInFlow` its `businessDate`,
+`ExchangeRoomFlow` its `from`), so only a hand-sent call reads the column.
+Not fixed - outside A-E.
+
+**The fix, when it is done** - `businessDateFor(client, hotelId)` in both
+fallbacks, as the walk-in's `resolveDate` and rule A's move and swap guards
+already do.
+
 ### FD-10 · A room nobody entered is dirtied when its advance booking lets it go
 
 **Found** - 22 September, the same reading. 074 leaves a room clean when a
@@ -133,6 +167,21 @@ the tick and is refused, in words, before anything is written - the same as
 the late check-out's tick. Found by reading; not run. Who may waive is the
 owner's, and was not changed.
 
+**Early tick finished 24 September** (the owner's D24-16) - `GET
+/:code/early-arrival` answers `mayWaive`, the server's own `mayWaive` asked
+for the person calling, and the check-in screen draws the tick from it
+instead of `can(role, "approve", "reservation")`. Proved -
+`earlyCheckIn.test.tsx`, "offers no waive to a hotel administrator the
+server would refuse" (fails on the old screen: "expected <input> to be
+null"); `inHouseRule.test.ts`, the answer is false for a clerk and true for
+the owner (fails on the old route: "expected undefined to be false"). On
+screen, before 5EL's check-in hour: a hotel-level administrator sees the
+reason and no tick; the owner sees both
+(`.local/screenshots/2026-09-24-follow-ups/03-*`). **Still open**: the late
+check-out's tick (`flows/LateCheckOutFlow.tsx`) still asks the role; the
+same answer would do it, and D24-18 ("controls someone cannot use: hidden")
+reads as covering it - not done, not in A-E.
+
 ### FD-11 · A check-in did not ask whether somebody was still in the room - FIXED 23 September
 
 **Found** - 22 September, fixing FD-8. The walk-in refused a room a
@@ -171,6 +220,23 @@ room." (`.local/screenshots/2026-09-24-front-desk/04-check-in-refused-*.png`).
 **The rule** - "is the room free" is two questions: does another booking hold
 these nights (the clash check), and is somebody in it now (`app.in_house`).
 
+**Everywhere a guest goes in, 24 September** (the owner's D24-15, and their
+answer in the follow-ups chat: "only when they go in now") - one helper,
+`stillIn` in `operations.ts`, gives FD-11's sentence and is asked by the
+check-in, the walk-in (which said "Somebody is already in that room." and
+now names them), a move from tonight or earlier of a checked-in guest, a
+swap from tonight (either guest, not counting the two), and a room for a
+guest already checked in - each above its first write. A room given ahead
+to a booking not yet here, or a move for a later night, is a hold and is
+allowed: its check-in asks on the day. Proved - `inHouseRule.test.ts`
+"rule A" (4) and the walk-in's own; on the old routes 6 of 14 fail (the
+walk-in's sentence, the move, the swap and the assign "expected 200 to be
+409" or a different sentence; the last because the old move went through
+and took the room). On screen: "Ganesh Patil (FH-2608-5004) is still in
+room 204. Check them out first, or choose another room." as "Not moved"
+and as the walk-in's "Could not check in"
+(`.local/screenshots/2026-09-24-follow-ups/01-*`, `02-*`).
+
 ### FD-9 · A guest moved mid-stay left the old room clean for the next guest - FIXED 23 September
 
 **Found** - 22 September, fixing FD-8, reading 054 against 070. `app.move_room`
@@ -200,6 +266,19 @@ failed, "got clean".
 **Left** - a move dated in the FUTURE is not dirtied when the business date
 reaches it: no write happens then (the same ceiling 129 names for the
 occupancy column; a `ponytail:` note in the migration says where to add it).
+
+**Finished 24 September** (the owner's D24-15) - `db/migrations/
+135_future_move_room_is_dirty.sql` (135 on this branch; cp6 took 134): the
+business date moves in one place, a night audit run becoming `completed`, so
+a trigger there asks 130's question for the whole hotel on the new date - a
+room a checked-in stay's assignment ends in, where another of its
+assignments starts, clean or inspected, nobody in it by `app.in_house`. A
+run already completed being corrected fires nothing. Proved -
+`db/tests/modules/front-desk.sql`, "moved-out room" 9/9: a run still running
+dirties nothing; completing the 25th dirties 203 (moved out from the 26th);
+204-208 stay clean. With the trigger left out of the migration: 8 passed, 1
+failed, "a move dated tomorrow dirties the old room when the day closes |
+got clean".
 
 ### FD-13 · On the Calendar, every room with a booking was two rows tall - FIXED 23 September
 
@@ -343,10 +422,11 @@ under the strip, guests' names readable (screenshot); a reload shows the error
 and Try again; with the API back, Try again returns 17 tiles and 7 names. At 375px the strip is 105px high, Try
 again is 44px, nothing scrolls sideways.
 
-**Still true after this** — a RELOAD with the server down cannot show the last
-house, because the stay view is not among the queries `App.tsx` keeps on the
-device (`PERSISTED` names `tape-chart`, which matches no query key). That is
-a request to the master in `MODULE.md`, and the owner's privacy call.
+~~**Still true after this**~~ — a RELOAD with the server down could not show
+the last house, because `PERSISTED` in `App.tsx` named `tape-chart`, which
+matches no query key. **Closed 24 September** by the admin lane (D22-23, the
+owner): `PERSISTED` keeps `stay-view`, so a reload shows the last house; the
+names under the tiles (`stays`) are deliberately not kept on the device.
 
 **The rule** — a library feature named for what you want is a claim about
 what it does; read the condition it runs under. And a loading branch is only

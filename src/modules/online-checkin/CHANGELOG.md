@@ -12,6 +12,33 @@ exists** (`MODULE.md`).
 
 ---
 
+## 2026-09-24 · The guest sees what they sent the desk (D24-17)
+
+**Asked for:** the owner's D24-17, through the front desk follow-ups session
+(branch `front-desk/follow-ups-24sep`): under "Message the front desk", the
+guest's own messages, each Sent or Handled, no staff names, no time beyond
+the day; only their own booking's, through the proven-code door; nothing
+they typed drawn as HTML.
+
+**Shipped** - `pages/GuestPage.tsx`, `MessageTheDesk` only: it reads the
+door's existing `GET /api/guest/:token/requests` (this stay's requests, with
+this tab's unlock - the same read and cache entry as the spa and laundry
+list) and lists the `desk` ones: the words as a text node, the day
+(`dateShort`), and a pill, Sent while open, Handled once the desk marks it.
+Sending refreshes the list. No server change: the door already answered
+kind, words, status and the day, and nobody's name.
+
+**Proved** - `onlineCheckin.test.tsx`, "lists the messages they sent, each
+Sent or Handled, the day only, none drawn as HTML" (fails on the old page:
+the words are never shown); `api/test/guestDoorBehindTheCode.test.ts`, the
+handled message comes back to the guest as `done` with exactly `createdAt,
+kind, status, wanted, what`. On screen, phone and desktop:
+`.local/screenshots/2026-09-24-follow-ups/04-guest-page-messages-sent-and-handled-*.png`
+("Could the <b>AC</b> be looked at?" printed as typed, Sent; "Two more
+towels, please." Handled).
+
+---
+
 ## 2026-09-24 · "Message the front desk" (D23-14)
 
 **Asked for:** the owner's D23-14 - one box on the guest's own page; the
