@@ -11,6 +11,57 @@ Work that touches the core or several services still goes in the root
 
 ---
 
+## 2026-09-24 · a group's lead, decided once (D22-52, D22-53)
+
+**Asked for:** the owner's D22-52 - a group's lead guest is, by default, the
+room booked first that still stands, and the desk can assign another; the
+group's one confirmation (D22-41) goes to the lead - and D22-53: on a group's
+other rooms, the desk's Guest messages shows the group's messages. (First
+numbered D22-47..49 by mistake; D22-54, the "Rooms" template line, is not
+part of this.) Started by a helper on `guest-messaging/group-lead` (stopped
+mid-task, 23 September), finished on `front-desk/finish-24sep`.
+
+**Shipped**
+- Migration **131** (`131_a_groups_lead.sql`; the master settles the number):
+  `reservation_groups.lead_reservation_id` (the desk's choice, NULL for the
+  default) and **`app.group_lead(group)`**, the one answer - the assigned
+  room if it still stands, else the room booked first that still stands;
+  definer, granted to `pms_app` only. `app.guest_messages_due` asks it: same
+  signature and return type, only its `lead` step changed (checked line by
+  line against 126).
+- **No foreign key on the new column** (changed 24 September): bookings point
+  at their group, and a key back made a loop the property reset cannot order
+  - `resetOrder.test.ts` failed in the first full API run. `app.group_lead`
+  ignores a lead that is not a standing room of the group, so the key added
+  nothing.
+- The desk assigns the lead on the group's screen (reservations' route and
+  panel, `reservations/CHANGELOG.md`).
+- **D22-53 was already built** (22 September, `partyOf`): asked about any
+  room of a group, Guest messages shows the group's messages. Shown on
+  screen: asked about room 302 of the demo's Pancham Hall function, it lists
+  the confirmation that went to its lead, 303.
+- **Guest messages is in reception's menu** (the owner, 24 September), where a
+  guest's message to the front desk waits (D23-14,
+  `online-checkin/CHANGELOG.md`).
+
+**Proved** - `db/tests/modules/guest-messaging.sql`, `app.group_lead` called
+directly (MEMORY 318): the default, the assigned lead, its confirmation going
+to that lead's guest, an assigned lead that stops standing giving way, a room
+of another group ignored, no group no lead, and who may execute it
+(guest-messaging 54 assertions, 0 failed, in the full database run). The API
+half is in `reputation/CHANGELOG.md`. On screen:
+`.local/screenshots/2026-09-24-front-desk/05-group-lead-*`,
+`06-group-messages-on-another-room-*` (the message row there was written
+into `fidato_s2` for the picture - nothing can send here).
+
+**Left open** - D22-54 (a "Rooms" line in the group's confirmation) waits on
+the next WhatsApp template edit, as decided.
+
+**Commits:** `8e3c1e2` (the helper's), merged in `891790f`; numbered 131 in
+`1ce2d3f`; the foreign key dropped in `3cb7c36`; the menu entry `252658c`.
+
+---
+
 ## 2026-09-22 (later) · one message per group, and the catch-up hours
 
 **Asked for:** by the master, after the owner answered D22-39 to D22-42: keep

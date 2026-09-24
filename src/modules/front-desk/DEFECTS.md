@@ -14,25 +14,6 @@ entries stay here: they are the reason the fault does not come back.
 
 ## Open — not fixed
 
-### FD-14 · A check-in refused for waiving the early charge is still a check-in
-
-**Found** - 23 September, reading the check-in route for FD-11. **Not run:
-found by reading.** In `POST /:code/stays/:id/check-in` the refusal "Setting
-that charge aside is a manager's decision..." (`WAIVE_REFUSED`, for
-`waiveEarly` sent by somebody `mayWaive` says no to) sits BELOW `update
-reservations set status = 'checked_in'`, the folio, the moved arrival date and
-the early-arrival record. `withSession` commits a refusal (MEMORY 243), so the
-clerk is told no while the guest is checked in - with no early charge posted,
-no room assignment written and no ID document saved, because the refusal
-returns before all three. The screen hides the waive option from a clerk, so
-it takes a hand-sent `waiveEarly: true`. Check-out's twin sits above its
-writes and is right.
-
-**The fix, when it is done** - ask `mayWaive` beside the other refusals,
-above the first write, as check-out does; a test that sends `waiveEarly` as a
-clerk and finds the booking still `confirmed`. Not done here: outside what
-D23-12 asked for.
-
 ### FD-10 · A room nobody entered is dirtied when its advance booking lets it go
 
 **Found** - 22 September, the same reading. 074 leaves a room clean when a
@@ -95,6 +76,63 @@ width in every state it has, not only the first one.
 
 ## Fixed — the solution is here; do not work it out again
 
+### FD-15 · The check-in screen never sent the early-arrival reason - FIXED 24 September
+
+**Found** - 24 September, opening the check-in screen to show FD-11's
+refusal. Lata Bhosale (FH-2608-5005) at 12:50, before 5 Elements' 14:00: the
+Rate step asked "Why the room is being given early", the reason was typed,
+Continue was allowed - and the server answered "Rooms are ready from 14:00.
+An early arrival needs a reason and somebody to allow it." The screen kept
+`earlyReason` and `waiveEarly` in its state and never put either in the call;
+`data/operations.ts` accepted both all along. Present since the first
+early-arrival commit (`f44f93b`, 4 September), so **every check-in from the
+screen before a property's check-in hour was refused**. No test drove the
+flow as far as the call.
+
+**Fixed** (the owner, 24 September: "Fix both now") - `flows/CheckInFlow.tsx`
+sends `earlyReason, waiveEarly`. The waive tick is drawn only for somebody
+who may waive, and the server asks again (FD-14).
+
+**Proved** - `earlyCheckIn.test.tsx` (2): a clerk's reason goes with the
+check-in and no waive; a manager's waive goes with the reason. Both failed
+first (neither field in what was sent). On screen at 13:16, before 14:00:
+Lata Bhosale checked into 209, the booking recording "Overnight train" under
+Test Reception
+(`.local/screenshots/2026-09-24-front-desk/10-early-check-in-with-reason-desktop.png`).
+
+**The rule** - a field a screen asks for is proved by what the button SENDS,
+not by the box being on the screen.
+
+### FD-14 · A check-in refused for waiving the early charge was still a check-in - FIXED 24 September
+
+**Found** - 23 September, reading the check-in route for FD-11. The refusal
+"Setting that charge aside is a manager's decision..." (`WAIVE_REFUSED`, for
+`waiveEarly` from somebody `mayWaive` says no to) sat BELOW `update
+reservations set status = 'checked_in'`, the folio, the moved arrival date
+and the early-arrival record, and `withSession` commits a refusal (MEMORY
+243): the clerk was told no while the guest was checked in, with no early
+charge.
+
+**Fixed** (the owner, 24 September) - in `POST /:code/stays/:id/check-in`
+the question is asked beside the other refusals, above the first write, as
+check-out's twin already was; the check below the writes is gone.
+
+**Proved** - `api/test/modules/front-desk/inHouseRule.test.ts`, "FD-14 · a
+clerk's waive of the early charge is refused before anything is written": a
+front-desk clerk sends `waiveEarly: true` with a reason for a booking
+arriving tomorrow - 409, the sentence, and the booking still `confirmed` on
+its own date with no early record. Before the fix it failed (`status:
+'checked_in'`), and room 103 then counted in house, failing the three counts
+too. By hand on this copy: reception's waive for FH-2608-5005 refused, the
+booking still `confirmed`.
+
+**Left** - the screen offers the waive to whoever holds `reservation:
+approve` (owner, admin, GM); the server's `mayWaive` is a group administrator
+or an owner or GM at the hotel. So a hotel-level administrator (D23-2) sees
+the tick and is refused, in words, before anything is written - the same as
+the late check-out's tick. Found by reading; not run. Who may waive is the
+owner's, and was not changed.
+
 ### FD-11 · A check-in did not ask whether somebody was still in the room - FIXED 23 September
 
 **Found** - 22 September, fixing FD-8. The walk-in refused a room a
@@ -124,6 +162,11 @@ with the walk-in's name and reference, and the booking still `confirmed`
 afterwards. With the guard switched off it fails, and the check-in goes
 through: 1 of the file's 8 fails, "expected 200 to be 409". On screen:
 `.local/screenshots/2026-09-23-fd11/04-check-in-refused-guest-still-in-room.png`.
+Again on 24 September in the merged copy: the guard off, the test fails
+("expected 200 to be 409"); on, it passes. On screen, through the check-in
+screen once FD-15 let an early check-in reach the server: "Ganesh Patil
+(FH-2608-5004) is still in room 204. Check them out first, or choose another
+room." (`.local/screenshots/2026-09-24-front-desk/04-check-in-refused-*.png`).
 
 **The rule** - "is the room free" is two questions: does another booking hold
 these nights (the clash check), and is somebody in it now (`app.in_house`).
@@ -150,7 +193,9 @@ moved out tonight leaves 201 dirty and 202 as it was; a move dated tomorrow
 leaves tonight's room clean; an exchange dirties neither room (a guest is in
 both); a booking that never arrived, moved, leaves its room clean. With the
 trigger dropped (in a transaction, rolled back) the first fails - "got clean"
-- and the other five pass.
+- and the other five pass. Again on 24 September, the whole database suite
+with the trigger left out of the migration: "moved-out room" 5 passed, 1
+failed, "got clean".
 
 **Left** - a move dated in the FUTURE is not dirtied when the business date
 reaches it: no write happens then (the same ceiling 129 names for the
@@ -173,6 +218,10 @@ tall: every empty cell is on the bar's row": the first room with a bar has 14
 "Book room" cells, each on grid row 1. Without the fix it fails (14 cells,
 grid-row empty). On screen, every room row on the Calendar measures 37px, with
 and without bars (`.local/screenshots/2026-09-23-fd11/03-calendar-one-row-per-room.png`).
+Again on 24 September in the merged copy: without the fix the test fails,
+and every one of 5 Elements' 17 room rows measures 37px with it, a bar's
+centre landing on the bar, not a "Book room" cell
+(`.local/screenshots/2026-09-24-front-desk/03-calendar-one-row-per-room-*.png`).
 
 **The rule** - in a grid where some children are placed by row and column,
 place all of them, or auto-placement will find them a row of their own.
