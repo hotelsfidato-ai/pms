@@ -22,6 +22,16 @@ The menu says "Room types"; the page says "The house".
 
 **The fix, when it is done** — Make the heading the menu's words.
 
+**Changed 17 September, not yet proved** — the owner's D17-22 ("the heading is
+the menu name"), commit `f7ae0f4`: Room types is headed "Room types" in all
+three of its states (`pages/RoomSetup.tsx`). **Still open, 25 September:** no
+test opens the screen and reads its heading, so "The house" could come back
+with every gate green (`guests.test.tsx` holds its own four screens to their
+menu entries; nothing does it here). **And a second screen was never in this
+entry:** the Rate calendar (menu "Rate calendar") is still headed "Inventory
+and rates" (`pages/Grids.tsx`) - `MODULE.md` named it on 15 September - and
+`inventory.test.tsx` asserts that heading today.
+
 **The rule** — A screen's heading is the menu entry that opened it.
 
 ---

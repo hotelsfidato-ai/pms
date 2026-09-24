@@ -326,4 +326,5 @@ service's claim.
   the page when a box under 16px is tapped). All three are in
   `src/components/ui/`, so this is likely every dialog in the system. Asked
   for: 44px targets and 16px text in the kit, once, for everybody. The Store
-  does not work around it locally.
+  does not work around it locally. **Done by the master, 16 September**
+  (`645046a`; `src/components/ui/Input.test.tsx`) - `DEFECTS.md` STO-9.

@@ -212,6 +212,14 @@ words they print) is slower and more fragile than asking. **The request is in
 wire the split in when the door opens. The screen and the file both say
 "Extra charges", so nothing claims to be a food figure that is not one.
 
+**Narrower, 25 September, and still open.** Two things have their own columns
+since: what the outlets took in cash, by card or UPI ("Restaurant" and
+"Restaurant tax", ACC-10, D24-24) and alcohol with its VAT (D21-91). What is
+still one number is everything else charged to a bill - food charged to a
+room, laundry, the spa, late check-out (`extra` in `dayBook.ts`) - because
+the reports door (`api/src/modules/reports/index.ts`) still does not export
+the Manager report's split by kind.
+
 ### ACC-4 · The two Tally XML formats produce no file
 
 **Found** 19 September, by asking rather than by a test. A Tally voucher names
@@ -226,7 +234,9 @@ of them to saying it, and holds the Export button to refusing a format it
 cannot write.
 
 **Waiting on:** what the owner's Tally calls room rent, food, other services,
-CGST, SGST and cash receipts.
+CGST, SGST and cash receipts - and, since D21-91, alcohol sales and VAT where a
+property serves alcohol (the screen's sentence in `data/accounting.ts` asks
+for both, 25 September).
 
 ### ACC-5 · Two small copies of shared code, because there is no door for them
 
@@ -243,6 +253,13 @@ CGST, SGST and cash receipts.
 **What was done:** both copied, both marked in the code with why, and both
 raised in `MODULE.md` under Requests. Hoisting them is the master's — one line
 in the reports door, and `api/src/auth.ts` for the role.
+
+**Still both copies, 25 September:** `round2` at `dayBook.ts:35` (the reports
+door exports `col`, `row` and `total` from `document.ts`, not `round2`),
+`roleAt` at `routes.ts:40`. And the role question has more homes than the three named:
+`api/src/roleGate.ts` (the core's, 22 September) and
+`api/src/routes/approvals.ts` ask it inline too. None of them is exported for
+a service to call.
 
 ### ACC-7 · `npm run lane` blames this chat for four other services, because nothing is pushed any more
 
