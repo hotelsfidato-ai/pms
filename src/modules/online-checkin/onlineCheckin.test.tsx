@@ -2,6 +2,7 @@ import { describe, it, expect, beforeEach, afterEach, vi } from "vitest";
 import { render, screen, cleanup, waitFor, fireEvent } from "@testing-library/react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { MemoryRouter, Routes, Route } from "react-router";
+import QRCode from "qrcode";
 import * as apiModule from "@/lib/api";
 import * as notice from "@/modules/online-checkin/privacyNotice";
 import GuestPage from "@/modules/online-checkin/pages/GuestPage";
@@ -64,6 +65,22 @@ function open(path = `/g/${TOKEN}`, route = "/g/:token", page = <GuestPage />) {
     </QueryClientProvider>,
   );
 }
+
+/** The dark modules a card's QR image draws, read back out of its SVG. */
+function modulesDrawn(src: string): boolean[] {
+  const svg = decodeURIComponent(src.replace("data:image/svg+xml;utf8,", ""));
+  const size = Number(/viewBox="0 0 (\d+)/.exec(svg)![1]);
+  const path = /stroke="[^"]*" d="([^"]*)"/.exec(svg)![1]!;
+  const dark = new Array<boolean>(size * size).fill(false);
+  let x = 0, y = 0;
+  for (const [, cmd, a, b] of path.matchAll(/([Mmh])(\d+)(?: ([\d.]+))?/g)) {
+    if (cmd === "M") { x = Number(a); y = Math.floor(Number(b)); }
+    else if (cmd === "m") x += Number(a);
+    else for (let k = 0; k < Number(a); k++) dark[y * size + x++] = true;
+  }
+  return dark;
+}
+const modulesOf = (text: string) => Array.from(QRCode.create(text).modules.data, Boolean);
 
 beforeEach(() => {
   document.title = "";
@@ -475,6 +492,51 @@ describe("the desk's side", () => {
     fireEvent.click(screen.getByRole("button", { name: "Mark handled" }));
     await waitFor(() => expect(spy.mock.calls.find((c) => c[0] === MARK)?.[1]?.body)
       .toBe(JSON.stringify({ status: "done" })));
+  });
+
+  /* D21-62, D21-95. The card's QR must carry exactly the link the server
+     made for that room - read back out of the picture on the sheet, module
+     by module, and held against the QR of that link and of its neighbour. */
+  it("prints each room's card with a QR code of exactly that card's link", async () => {
+    const cards = [
+      { room: "204", link: "https://pms.example.com/g/token-for-204" },
+      { room: "205", link: "https://pms.example.com/g/token-for-205" },
+    ];
+    server({
+      "/api/hotels/5EL/online-checkin": () => ({ waiting: [], requests: [], rooms: [] }),
+      "/api/hotels/5EL/online-checkin/cards": () => ({ cards }),
+    });
+    open("/h/5EL/online-checkin", "/h/:code/online-checkin", <DeskPage />);
+    fireEvent.click(await screen.findByRole("button", { name: "Print cards for every room" }));
+    fireEvent.click(await screen.findByRole("button", { name: "Print new cards" }));
+
+    const drawn = modulesDrawn(
+      (await screen.findByAltText("QR code for room 204")).getAttribute("src")!);
+    expect(drawn).toEqual(modulesOf(cards[0]!.link));
+    expect(drawn).not.toEqual(modulesOf(cards[1]!.link));
+    expect(screen.queryByText(cards[0]!.link), "the owner: QR only, no link as text").toBeNull();
+    expect((screen.getByRole("button", { name: "Print" }) as HTMLButtonElement).disabled).toBe(false);
+  });
+
+  it("keeps Print off, and says so, when the QR codes cannot be drawn", async () => {
+    vi.doMock("qrcode", () => { throw new Error("offline"); });
+    try {
+      server({
+        "/api/hotels/5EL/online-checkin": () => ({
+          waiting: [], requests: [], rooms: [{ id: "r-1", number: "204", cardSince: null }],
+        }),
+        "/api/hotels/5EL/online-checkin/rooms/r-1/card": () => ({
+          cards: [{ room: "204", link: "https://pms.example.com/g/token-for-204" }],
+        }),
+      });
+      open("/h/5EL/online-checkin", "/h/:code/online-checkin", <DeskPage />);
+      fireEvent.click(await screen.findByRole("button", { name: "Print a card" }));
+
+      expect(await screen.findByText(/The QR codes could not be drawn/)).toBeTruthy();
+      expect((screen.getByRole("button", { name: "Print" }) as HTMLButtonElement).disabled).toBe(true);
+    } finally {
+      vi.doUnmock("qrcode");
+    }
   });
 
   it("draws nothing, and asks nothing, for a role that is not the desk's", async () => {

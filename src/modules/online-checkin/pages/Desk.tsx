@@ -236,13 +236,31 @@ function RoomCards(
 
 /* ── The printable sheet (D21-62) ───────────────────────────────────
    The hotel's cards, one per room, to print however the owner chooses.
-   ⚠ NO QR CODE YET. The owner approved `qrcode` for this screen (D21-95);
-   the master installs it after the live release, because `node_modules`
-   is shared with the release copy - it is not imported before their word
-   (MODULE.md). The link is printed in its place so a sheet printed today
-   is not blank, and the screen says so rather than pretending. */
+   The owner, 25 September: four to an A4 page (about 9 x 13 cm each),
+   the hotel, the room and the QR - no link as text.
+
+   ⚠ `qrcode` IS IMPORTED HERE AND NOWHERE ELSE, AND ONLY DYNAMICALLY
+   (D21-95: desk screen only). The whole app is one bundle, and the
+   guest's page is in it; a static import would ship the library to
+   every guest's phone. The build puts it in its own chunk, fetched when
+   a sheet is drawn.
+
+   Print waits for the codes: the old cards are already dead, so a sheet
+   printed before its QR codes were drawn would be a room with no card. */
 function CardSheet({ cards, onDone }: { cards: PrintedCard[]; onDone: () => void }) {
   const { property } = useDocumentIdentity();
+  const qr = useQuery({
+    /* The links are the cards' only copy. The query cache is memory; it
+       is persisted only for the keys App.tsx lists, and this is not one. */
+    queryKey: ["room-card-qr", cards.map((c) => c.link)],
+    queryFn: async () => {
+      const { toString } = await import("qrcode");
+      return Promise.all(cards.map((c) => toString(c.link, { type: "svg", margin: 0 })));
+    },
+    staleTime: Infinity,
+    gcTime: 0,
+  });
+
   return (
     <Page className="max-w-4xl">
       <div className="print:hidden">
@@ -251,22 +269,31 @@ function CardSheet({ cards, onDone }: { cards: PrintedCard[]; onDone: () => void
           description="These cards are shown once. Print them now - they cannot be shown again, only replaced."
         />
         <div className="flex gap-2 mb-5">
-          <Button variant="primary" onClick={() => window.print()}>Print</Button>
+          <Button variant="primary" disabled={!qr.data} onClick={() => window.print()}>Print</Button>
           <Button variant="secondary" onClick={onDone}>Done</Button>
         </div>
-        <p className="text-sm text-grey-600 mb-4">
-          The QR code is not drawn yet; each card carries its link instead.
-        </p>
+        {qr.error && (
+          <p className="text-sm text-brand-red mb-4">
+            The QR codes could not be drawn. {(qr.error as Error).message}{" "}
+            <Button variant="ghost" onClick={() => void qr.refetch()}>Try again</Button>
+          </p>
+        )}
       </div>
-      <div className="grid gap-4 sm:grid-cols-2 print:grid-cols-2">
-        {cards.map((c) => (
-          <div key={c.room} data-room-card className="rounded-md border border-grey-300 p-5 break-inside-avoid">
-            {property && <p className="text-sm text-grey-600">{property}</p>}
+      <div className="grid gap-4 sm:grid-cols-2 print:grid-cols-2 print:gap-0">
+        {cards.map((c, i) => (
+          <div key={c.room} data-room-card
+            className="flex flex-col items-center justify-center gap-3 rounded-md border border-grey-300 p-5 text-center break-inside-avoid print:h-[130mm] print:rounded-none">
+            <p className="text-sm text-grey-600">{property ?? "-"}</p>
             <p className="text-2xl font-semibold text-ink-900">Room {c.room}</p>
+            {qr.data ? (
+              <img alt={`QR code for room ${c.room}`} className="w-[60mm] h-[60mm]"
+                src={`data:image/svg+xml;utf8,${encodeURIComponent(qr.data[i]!)}`} />
+            ) : (
+              <Skeleton className="w-[60mm] h-[60mm]" />
+            )}
             {/* Nothing more promised: requests appear only where the hotel
                 has the spa or laundry switched on (D21-63). */}
-            <p className="text-sm text-grey-600 mt-2">Scan to check in.</p>
-            <p className="text-xs text-ink-900 mt-3 break-all font-mono">{c.link}</p>
+            <p className="text-sm text-grey-600">Scan to check in.</p>
           </div>
         ))}
       </div>
