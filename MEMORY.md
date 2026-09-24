@@ -6539,6 +6539,98 @@ copy will see of theirs.**
 
 ---
 
+### 329 · The lane sessions' own lessons, 24 September
+
+Six sessions worked in parallel on 24 September and each reported what went
+wrong for it. Kept together, because the next session will meet the same:
+
+- **A field a screen asks for is proved by what the button sends** (FD-15: the
+  check-in screen asked for an early-arrival reason and never sent it, from 4
+  September; no test got as far as the call).
+- **"Who may make X" and "who may unmake X" are one question** (ADM-7: a GM
+  who could not give Admin could still reset the hotel admin's password).
+- **A route proved only as far as Firebase is not proved** (ADM-6: adding a new
+  person failed on the database's read rules after the Firebase account was
+  made). Mock the account and run the route to the rows.
+- **Check `git log HEAD..cp6` before the last commit**: cp6 moved under three
+  lanes and took their migration numbers.
+- **Two headless Edges on one debugging port drive each other's pages** (9333,
+  13:00-13:25): pick an unusual port, refuse one that already answers, and name
+  logs per session — %TEMP% is shared.
+- **A killed headless Edge loses localStorage and IndexedDB**: sign in, load,
+  stop the API and reload in one browser session.
+- **A restart script matching "*vite*" also kills vitest**: match
+  `\vite\bin\vite.js`.
+- **Backslashes in Windows paths inside Python strings or sed** wrote control
+  characters (`\f`, `\2`, `\b`, `\v`) into a changelog and a .ps1 — twice.
+- **`tsx watch` can die ("fatal: morestack on g0") while the old API keeps
+  answering**: a green screen can be old code; restart without watch.
+- **A test booking that outlives its file must not end its reference in a
+  number** (app.next_reference takes the largest trailing number), and **a
+  released room is dirty** (074): leave test rooms released and clean.
+- **Claim the service before the first write** (`npm run claim`), as CLAUDE.md
+  says — one lane claimed late.
+
+---
+
+### 328 · MINE: I wrote guessed times into the owner's tracker, four more times
+
+24 September. The rule after 22 September was "don't invent times", and I
+still wrote "18:12", "19:40", "12:00", "11:50" and "14:05" as when things
+happened — each one a rounded guess — and corrected them only when I
+noticed. The owner reads that log to know what happened when.
+
+**The rule: a time in anything the owner reads comes from `date`, a commit's
+`%cd`, or a log line — never from my sense of the hour. With no source, say
+"since HH:MM" from the last known time, or leave the time out.**
+
+---
+
+### 327 · MINE: I merged the In house branch without running the web suite, and cp6's web suite failed until the next afternoon
+
+23 September, 17:54 (dad2066). The branch's `inHouseRule.test.tsx` imported
+`@/data/fixtures`, which `repositories.test.ts` Rule 2 forbids, so every full
+web run on cp6 failed from then on. I had run the gates at 17:31, before the
+merge, and quoted them after it. The front desk session found it the next
+afternoon and fixed it (2594de6).
+
+**The rule: a merge is proved by checks on the merged tree — the lane's own,
+if cp6 was its ancestor and the tree is identical (`git diff --quiet HEAD
+<branch>`), otherwise the gates after the merge. Never quote a run from before
+it.**
+
+---
+
+### 326 · MINE: my Vite watch rule made every copy's dev server ignore its own edits
+
+22 September I added `watch.ignored: ["**/.local/**", "**/.claude/worktrees/**"]`
+so the main folder's dev server would stop watching the copies. Every copy
+lives in `.claude/worktrees`, so the glob matched each copy's own files too,
+and its dev server never reloaded an edit. Two sessions lost time to stale
+screens before the front desk session named it (24 September). Fixed in
+9dfdd3f: only THIS checkout's `.local` and `.claude/worktrees`, by absolute
+path.
+
+**The rule: an ignore or exclude written for the main folder must be anchored
+to the main folder, never a match-anywhere glob, because every copy runs the
+same config from inside a folder that glob matches.**
+
+---
+
+### 325 · MINE: the local Postgres died with my background command, and four sessions lost their database
+
+24 September, 13:53. I had restarted Postgres that morning with `pg_ctl start`
+inside a `run_in_background` PowerShell task that "timed out"; when the app
+closed that task, the postmaster went with it — pg.log has no shutdown line.
+Four lane sessions were using it; it was back at 13:56:43, started through WMI
+(`Invoke-CimMethod Win32_Process Create`), outside any tool's process tree. No
+session's counted run fell in the gap, as each checked.
+
+**The rule: start the shared Postgres detached (WMI), never from a background
+tool command, and poll `pg_isready`.**
+
+---
+
 ### 324 · MINE: I took three decision numbers from an old read, the day after 321 was written, and committed another chat's rows with them
 
 23 September, 17:18. I appended the owner's answers on a group's lead guest
