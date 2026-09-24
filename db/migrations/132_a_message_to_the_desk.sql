@@ -1,5 +1,5 @@
 -- =============================================================================
--- 130 · A message to the front desk, from the guest's own page (D23-14)
+-- 132 · A message to the front desk, from the guest's own page (D23-14)
 -- =============================================================================
 -- The owner, 23 September: "One 'Message the front desk' box: the guest types
 -- anything; it lands in that booking's Guest messages at the desk with an

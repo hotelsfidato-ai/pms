@@ -42,7 +42,7 @@ import { canSend, send } from "../sending.ts";
    GET  /api/guest/:token/requests   their spa / laundry requests
    POST /api/guest/:token/requests   ask for one, where the hotel offers it -
                                      or, kind 'desk', message the front desk
-                                     (D23-14, migration 130)
+                                     (D23-14, migration 132)
 
    · THE CODE UNLOCKS THIS PHONE, NOT THE LINK (D21-6). `verify` hands back an
      unlock, once; the page sends it as `Authorization: Guest …` and it is hashed here

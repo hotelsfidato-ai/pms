@@ -9,7 +9,7 @@ api/src/modules/guest-messaging/      the reading route, and the sweep
 db/migrations/126_what_the_guest_is_owed.sql   the sweep's ways in, and the
                                       switch-on record (refer to it as "what
                                       the guest is owed")
-db/migrations/130_a_groups_lead.sql   app.group_lead, the one answer to "who
+db/migrations/131_a_groups_lead.sql   app.group_lead, the one answer to "who
                                       leads a group" (D22-52), and the due list
                                       asking it (the master renumbers at merge;
                                       refer to it as "a group's lead")

@@ -641,7 +641,7 @@ describe("a spa or laundry request", () => {
   });
 });
 
-/* ── A message to the front desk (D23-14, migration 130) ───────────── */
+/* ── A message to the front desk (D23-14, migration 132) ───────────── */
 
 describe("a message to the front desk (D23-14)", () => {
   type Msg = { id: string; what: string; reference: string; handledBy: string | null; handledAt: string | null };
