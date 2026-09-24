@@ -16,3 +16,10 @@
 | D24-12 | The menu import template's note "- or alcohol, where the property serves it" | **Kept** |
 | D24-13 | The desk's Reverse on a closed day's charge that is not a room or no-show charge (minibar, laundry, a restaurant bill on the room), which Closed days does not list | **Said, fixed later**: "This day is closed. Only its room and no-show charges can be corrected, on Closed days." Nothing else changes now; left open |
 | D24-14 | A multi-night walk-in is charged twice from the second night: check-in posts the whole stay on arrival (D17-33) and the night audit charges each later night again | **Fix the night audit now**: it skips a night a whole-stay line already paid for; nothing else it posts changes. Double charges already on bills are taken off on Closed days by the GM, with a reason |
+| D24-15 | Three close cousins of FD-11, found by the front desk session | **Fix all three**: moving or assigning a guest into a room someone is still in is refused with FD-11's words; the walk-in's refusal names the guest; a room move booked for a future day dirties the old room when that day comes |
+| D24-16 | The early check-in "waive" tick shows to a hotel admin, whom the server refuses | **Hidden from anyone the server refuses**; who may waive does not change |
+| D24-17 | The guest's own page after sending a message to the desk | **The guest sees their messages, each marked Sent or Handled** |
+| D24-18 | Controls someone cannot use (e.g. "Assign room" for housekeeping on the Rooms board) | **Hidden**; nothing changes in who may do what |
+| D24-19 | A GM or a hotel admin switching their OWN access off on People | **Refused** |
+| D24-20 | The finished front desk session and its copy | **Archived and cleared** (D22-1) |
+| D24-21 | Finished lane sessions from now on | **Archived and their copies recycled without asking each time**, after the merge and a clean check, links into the main folder removed first |
