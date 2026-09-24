@@ -92,7 +92,7 @@ here, and a move for a later night (the check-in still refuses on the day).
   old page, the words never shown. **E** - `groupLead.test.tsx` with the
   wrong id sent, "res-a" for "res-b". **F** - `front-desk.test.tsx` without
   the guard, "expected <button> to be null". **G, H** - ADM-8.
-- Screens, `D:idato pms\.local\screenshots6-09-24-follow-ups\`,
+- Screens, `.local/screenshots/2026-09-24-follow-ups/` in the main folder,
   desktop 1280x800 and phone 390x844: `01-move-refused-names-guest-*` ("Not
   moved: Ganesh Patil (FH-2608-5004) is still in room 204. Check them out
   first, or choose another room."), `02-walk-in-refused-names-guest-*`
