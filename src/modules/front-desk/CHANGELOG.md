@@ -76,7 +76,32 @@ here, and a move for a later night (the check-in still refuses on the day).
   done - not in A-E.
 
 **Proved** (this copy, database `fidato_s5`, API 8813, web 5213)
-PROOF_PLACEHOLDER
+- The six, on cp6 `c57d7ee` merged into this branch (migration 137):
+  `npx tsc -p tsconfig.app.json --noEmit` exit 0; `cd api && npx tsc
+  --noEmit` exit 0; `npm test` 70 files, 653 tests, exit 0; `cd api && npm
+  test` 92 files, 1455 tests, exit 0; `bash db/tests/run.sh` all 1151
+  assertions, exit 0 ("moved-out room" 9/9); `bash db/tests/rerun.sh` all
+  137 migrations re-runnable, exit 0.
+- Each fix's test fails without it: **A** - `inHouseRule.test.ts` on the old
+  routes, 6 of 14 fail (walk-in sentence; move, swap, assign "expected 200
+  to be 409" or another sentence; the sixth a knock-on of the old move going
+  through). **B** - the database suite with 137's trigger left out: "moved-out
+  room" 8 passed, 1 failed, "got clean". **C** - `earlyCheckIn.test.tsx` on
+  the old screen, "expected <input> to be null"; the route's answer,
+  "expected undefined to be false". **D** - `onlineCheckin.test.tsx` on the
+  old page, the words never shown. **E** - `groupLead.test.tsx` with the
+  wrong id sent, "res-a" for "res-b". **F** - `front-desk.test.tsx` without
+  the guard, "expected <button> to be null". **G, H** - ADM-8.
+- Screens, `D:idato pms\.local\screenshots6-09-24-follow-ups\`,
+  desktop 1280x800 and phone 390x844: `01-move-refused-names-guest-*` ("Not
+  moved: Ganesh Patil (FH-2608-5004) is still in room 204. Check them out
+  first, or choose another room."), `02-walk-in-refused-names-guest-*`
+  ("Could not check in", the same words), `03-check-in-waive-hidden-hotel-
+  admin-*` and `03-check-in-waive-offered-owner-desktop`, `04-guest-page-
+  messages-sent-and-handled-*`, `05-rooms-board-assign-room-hidden-
+  housekeeping-*` and `05-...-shown-reception-desktop`, `06-people-gm-own-
+  row-no-switch-off-*`. Taken with headless Edge driven over its debugging
+  port (the app's pane could not draw while hidden).
 
 **Left open** - FD-16, FD-17; the late check-out's tick and the
 housekeeping controls above (D24-18 reads as covering them); changing your
@@ -89,7 +114,8 @@ setup used for the screens (Lata Bhosale's advance room on 204 taken off;
 made a 5EL-only administrator; a guest link unlocked with a code put in by
 hand, as the door's tests do) lived only in `fidato_s5`, now dropped.
 
-**Commits:** COMMITS_PLACEHOLDER
+**Commits:** `c899565` (A-E), `f740274` (F-I and notes), `39f1ada` (137); merges
+`b777b73`, `8036dba`, `c45f5d5`; and these notes.
 
 ---
 
