@@ -97,7 +97,8 @@ describe("the desk's printed bill, from the Bill tab", () => {
         <MemoryRouter><FolioPanel hotelId="5EL" stay={stay} businessDate="2026-09-21" /></MemoryRouter>
       </QueryClientProvider>,
     );
-    fireEvent.click(screen.getByRole("button", { name: /Invoice/ }));
+    /* The button says what it opens (D24-25), not "Invoice". */
+    fireEvent.click(screen.getByRole("button", { name: "Interim bill" }));
     await screen.findByText("Riverside Test Hotel");
     return document.querySelector("[data-bill-print]")!.textContent!;
   };

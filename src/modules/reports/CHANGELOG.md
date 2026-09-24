@@ -22,7 +22,9 @@ service's files because the figures live here.
   footnote says so (REP-12, D22-45).
 - `figures.ts` `Property.cgstRate`/`sgstRate` are null where a hotel has no
   rate (D22-9: new hotels have none), and the heading reads "CGST @-", never
-  "0%". REP-13 (which rate the heading should name) is open.
+  "0%" - and then, the owner's D24-23, no rate at all: "CGST", "SGST"
+  (REP-13 fixed; `Property.cgstRate`/`sgstRate` removed, nothing else read
+  them).
 - `figures.ts` `posSales` leaves out a bill settled to a room, which the
   room's folio already carries: the day book, its only reader, counted it
   twice (accounting's ACC-11, fixed with the owner's yes).

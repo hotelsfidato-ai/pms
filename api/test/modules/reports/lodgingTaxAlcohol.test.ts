@@ -9,8 +9,8 @@ import { buildReport, type ReportDoc } from "../../../src/modules/reports/index.
    alcohol (D21-91); Other Bills summed every non-room line on the folio,
    VAT line included, so a bar tab landed on a GST return.
 
-   And D22-9: a property made today has no GST rate, so the sheet's
-   CGST/SGST heading says "-", never "0%" or an invented 2.5%.
+   And D24-23: the CGST/SGST headings name no rate - "CGST", never "0%",
+   "-" or a 2.5% from a setting nobody can change.
 
    Built in one transaction that is rolled back: its own property, a
    bill with a room, a meal and a drink on it, and the invoice issued for
@@ -21,7 +21,7 @@ const SUPER =
   process.env["SUPER_DATABASE_URL"] ?? "postgres://postgres:pw@127.0.0.1:55432/fidato";
 
 describe("the lodging tax sheet, with alcohol on the bill", () => {
-  it("leaves alcohol and its VAT out of Other Bills, and heads an unset rate with a dash", async () => {
+  it("leaves alcohol and its VAT out of Other Bills, and names no rate in its headings", async () => {
     const pool = new (await import("pg")).default.Pool({ connectionString: SUPER });
     const client = await pool.connect();
     let doc: ReportDoc;
@@ -74,7 +74,8 @@ describe("the lodging tax sheet, with alcohol on the bill", () => {
     /* The dinner and its GST - not the whisky, and not its VAT (1600). */
     expect(day!.cells["otherBills"]).toBe(1050);
 
-    expect(band.columns.find((c) => c.group?.startsWith("CGST"))!.group).toBe("CGST @-");
-    expect(band.columns.find((c) => c.group?.startsWith("SGST"))!.group).toBe("SGST @-");
+    /* No rate in the heading at all (D24-23), set or not. */
+    expect(band.columns.find((c) => c.group?.startsWith("CGST"))!.group).toBe("CGST");
+    expect(band.columns.find((c) => c.group?.startsWith("SGST"))!.group).toBe("SGST");
   });
 });

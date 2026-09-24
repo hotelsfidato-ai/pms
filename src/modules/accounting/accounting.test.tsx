@@ -48,15 +48,15 @@ const BOOK: DayBook = {
   to: "2026-08-25",
   days: [
     { date: "2026-08-24", room: 12000, roomTax: 1440, extra: 2500.5, extraTax: 125.03,
-      discount: 1000, alcohol: 1200, vat: 120, sales: 14700.5, tax: 1565.03, receipt: 9000,
+      pos: 0, posTax: 0, discount: 1000, alcohol: 1200, vat: 120, sales: 14700.5, tax: 1565.03, receipt: 9000,
       closed: true },
     { date: "2026-08-25", room: 8000, roomTax: 960, extra: 400.25, extraTax: 20.01,
-      discount: 0, alcohol: 0, vat: 0, sales: 8400.25, tax: 980.01, receipt: 5000,
+      pos: 640, posTax: 32, discount: 0, alcohol: 0, vat: 0, sales: 9040.25, tax: 1012.01, receipt: 5000,
       closed: false },
   ],
   total: {
-    room: 20000, roomTax: 2400, extra: 2900.75, extraTax: 145.04,
-    discount: 1000, alcohol: 1200, vat: 120, sales: 23100.75, tax: 2545.04, receipt: 14000,
+    room: 20000, roomTax: 2400, extra: 2900.75, extraTax: 145.04, pos: 640, posTax: 32,
+    discount: 1000, alcohol: 1200, vat: 120, sales: 23740.75, tax: 2577.04, receipt: 14000,
   },
   openDays: ["2026-08-25"],
 };
@@ -112,7 +112,7 @@ describe("the day book, as the accountant opens it", () => {
   it("writes figures a spreadsheet can add up, not formatted money", () => {
     const { rows } = dayBookSheet(BOOK);
     /* "₹12,000.00" sums to nothing. Every money cell is a number. */
-    for (const cell of rows[0]!.slice(1, 11)) expect(typeof cell).toBe("number");
+    for (const cell of rows[0]!.slice(1, -1)) expect(typeof cell).toBe("number");
   });
 
   /* D21-91, 22 September: alcohol's VAT is "kept out of the GST part of the
@@ -131,6 +131,17 @@ describe("the day book, as the accountant opens it", () => {
     expect(day[at("Alcohol")]).toBe(1200);
     expect(day[at("VAT")]).toBe(120);
     expect(day[at("GST")], "the VAT is not in the GST column").toBe(1565.03);
+  });
+
+  /* D24-24, the owner: what the restaurant took gets "Restaurant" and
+     "Restaurant tax" after "Extra tax", in both files (one layout, sheet.ts). */
+  it("gives the restaurant's takings their own two columns, after Extra tax", () => {
+    const { headers, rows } = dayBookSheet(BOOK);
+    const at = (h: string) => headers.indexOf(h);
+    expect(headers.slice(at("Extra tax"), at("Extra tax") + 3))
+      .toEqual(["Extra tax", "Restaurant", "Restaurant tax"]);
+    const day = rows.find((r) => r[0] === "2026-08-25")!;
+    expect([day[at("Restaurant")], day[at("Restaurant tax")]]).toEqual([640, 32]);
   });
 });
 
@@ -230,11 +241,11 @@ describe("the export screen", () => {
     control.book = {
       ...BOOK,
       days: BOOK.days.map((d) => ({
-        ...d, room: 0, roomTax: 0, extra: 0, extraTax: 0,
+        ...d, room: 0, roomTax: 0, extra: 0, extraTax: 0, pos: 0, posTax: 0,
         discount: 0, alcohol: 0, vat: 0, sales: 0, tax: 0, receipt: 0,
       })),
       total: {
-        room: 0, roomTax: 0, extra: 0, extraTax: 0,
+        room: 0, roomTax: 0, extra: 0, extraTax: 0, pos: 0, posTax: 0,
         discount: 0, alcohol: 0, vat: 0, sales: 0, tax: 0, receipt: 0,
       },
     } satisfies DayBook;
@@ -249,7 +260,7 @@ describe("the export screen", () => {
     open("TOT1");
     const table = await screen.findByRole("table");
     expect(within(table).getByText("24 Aug 2026")).toBeTruthy();
-    expect(await screen.findByText("₹23,100.75")).toBeTruthy();
+    expect(await screen.findByText("₹23,740.75")).toBeTruthy();
   });
 });
 
