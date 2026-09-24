@@ -60,12 +60,13 @@ of 15 September (`3424882`).
 
 | Method | Path | What it does |
 |---|---|---|
-| GET | `/:code/groups/:id` | one group: its rooms (`app.group_rooms`), the host's balance and the guests' balance |
+| GET | `/:code/groups/:id` | one group: its rooms (`app.group_rooms`), its lead room (`leadId`, `app.group_lead`), the host's balance and the guests' balance |
+| POST | `/:code/groups/:id/lead` | make a room that still stands the group's lead (D22-52): its guest gets the group's one confirmation and its one review request. `reservation: edit` |
 | POST | `/:code/groups/:id/master` | open the host's master bill for the group (056); a second press returns the one already open |
 | POST | `/:code/stays/:id/routing` | send a room's charges to the group's master bill, or back (`reservations.route_room_to_group`, 056) |
 | POST | `/:code/bookings` | New booking: the guest, a group when there is more than one room, one reservation per room with its channel and commission, the rate from `app.tariff_for` (057), and a folio for each booking. A sender's `externalRef` makes it safe to send twice (091) |
 
-4 endpoints. The groups **list** the Groups screen reads, `GET /:code/groups`,
+5 endpoints. The groups **list** the Groups screen reads, `GET /:code/groups`,
 is not here: it is in front desk's `api/src/modules/front-desk/stays.ts`,
 which is mounted first, so a copy here would never run (MEMORY 118; the note
 at the top of `groups.ts`). The split left it there; whether it should move
@@ -102,7 +103,7 @@ repeat. The desk sends no `externalRef` and nothing changes for it.
 
 | File | What it does |
 |---|---|
-| `groups.ts` | one group and its rooms (`getGroup`), the master bill (`openMasterFolio`), routing a room to the group (`routeRoomToGroup`), taking a booking (`createBooking`), the groups list (`listGroups`), and `listGroupMembers` |
+| `groups.ts` | one group and its rooms (`getGroup`), the master bill (`openMasterFolio`), routing a room to the group (`routeRoomToGroup`), the group's lead guest (`setGroupLead`, D22-52), taking a booking (`createBooking`), the groups list (`listGroups`), and `listGroupMembers` |
 
 `listGroupMembers` has no caller outside a test and is on `KNOWN_UNREACHABLE`
 in `src/data/repositories/repositories.test.ts`. The All bookings list reads

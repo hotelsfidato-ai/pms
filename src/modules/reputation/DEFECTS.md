@@ -14,7 +14,13 @@ entries stay here: they are the reason the fault does not come back.
 
 ## Open — not fixed
 
-### REV-3 · A group booking is several departures, and each could be asked
+None.
+
+---
+
+## Fixed
+
+### REV-3 · A group booking is several departures, and each could be asked — FIXED 23 September
 
 **Found** 19 September 2026, writing the departures list. A party in three
 rooms is three rows in `reservations`, so it is three rows on this screen, and
@@ -34,9 +40,23 @@ without approval, which is the rule this project breaks least often.
 holding the party's lead guest, and show the other rooms as already asked.
 A family asked three times reads as a machine, not a hotel.
 
----
+**The owner's answer (D22-10):** once per group, at the lead guest's room. The
+lead is **`app.group_lead`** (D22-52, migration "a group's lead"): the room the
+desk assigned on the group's screen, else the room booked first, while it
+still stands - the same answer the group's one confirmation goes by.
 
-## Fixed
+**What was done** (23 September): `ask` refuses any other room of a group
+(`REVIEWS_REFUSED.notLead`, 409, before the sender is touched - nothing
+recorded). The list shows every room of a group with the GROUP's ask - the
+latest about any of its rooms - and the lead's id and reference; only the
+lead's row offers the buttons, the others say "The group is asked once, at
+<reference>." Tests on both sides, each seen to fail with its change taken out
+(the numbers are in `CHANGELOG.md`).
+
+**The rule: a party is one guest to ask, however many rooms it took. Decide
+who stands for it in one place, and have every message ask that place.**
+
+---
 
 ### REV-1 · One broken guard would have read as a broken harness
 

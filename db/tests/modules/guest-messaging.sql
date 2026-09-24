@@ -282,6 +282,36 @@ begin
     (select count(*) from app.guest_messages_due(null, 3, '00:00', '00:00', '24:00', h)
       where reference in ('GMU-T1', 'GMU-T2')) = 1);
 
+  -- ---------- a group's lead, decided once (D22-52) -------------------------
+  -- app.group_lead is asked directly, not only through the list (MEMORY 318).
+  perform test.ok('guest-messaging', 'app.group_lead: by default the room booked first that still stands',
+    app.group_lead(grp) = lead and app.group_lead(grp2) = lead2);
+
+  update reservation_groups set lead_reservation_id = second where id = grp;
+  perform test.ok('guest-messaging', 'app.group_lead: the room the desk assigned leads',
+    app.group_lead(grp) = second);
+  select string_agg(f.reference || ' ' || f.guest_name, ', ') into v
+    from app.guest_messages_due(null, 3, '00:00', '00:00', '24:00', h) f
+   where f.reference like 'GMU-W%';
+  perform test.ok('guest-messaging', 'and the group''s one confirmation goes to it, to its guest',
+    v = 'GMU-W2 GMU Rooming', coalesce(v, 'nothing'));
+
+  update reservations set status = 'cancelled' where id = second;
+  perform test.ok('guest-messaging', 'app.group_lead: an assigned lead that no longer stands gives way to the default',
+    app.group_lead(grp) = lead);
+  update reservations set status = 'confirmed' where id = second;
+
+  update reservation_groups set lead_reservation_id = lead2 where id = grp;
+  perform test.ok('guest-messaging', 'app.group_lead: a room of another group cannot lead this one',
+    app.group_lead(grp) = lead);
+  update reservation_groups set lead_reservation_id = null where id = grp;
+
+  perform test.ok('guest-messaging', 'app.group_lead: no group, no lead',
+    app.group_lead(null) is null);
+  perform test.ok('guest-messaging', 'app.group_lead: the API role may ask it, nobody else',
+    has_function_privilege('pms_app', 'app.group_lead(uuid)', 'execute')
+    and not has_function_privilege('pms_readonly', 'app.group_lead(uuid)', 'execute'));
+
   -- Two failures on one room and one on another are three for the group.
   insert into messages_sent (hotel_id, channel, kind, about_kind, about_id, status, sent_at)
   values (h, 'whatsapp', 'booking-confirmation', 'reservation', lead::text,   'failed', now() - interval '2 hours'),

@@ -62,6 +62,9 @@ export interface GroupDetail {
   blockCode: string | null;
   company: string | null;
   notes: string | null;
+  /** The group's lead room (D22-52): the one the desk assigned, else the
+      room booked first that still stands. Null when no room stands. */
+  leadId: string | null;
   rooms: GroupRoom[];
   /** Null until somebody opens one. Most groups never need one —
       a block where everybody settles their own room has no host
@@ -103,6 +106,14 @@ export async function routeRoomToGroup(
   hotelId: string, stayId: string, toGroup: boolean,
 ): Promise<Refused> {
   return post(`/api/hotels/${hotelId}/stays/${stayId}/routing`, { toGroup });
+}
+
+/** Makes this room the group's lead: its guest gets the group's one
+    confirmation and its one review request (D22-52, D22-10). */
+export async function setGroupLead(
+  hotelId: string, groupId: string, reservationId: string,
+): Promise<Refused> {
+  return post(`/api/hotels/${hotelId}/groups/${groupId}/lead`, { reservationId });
 }
 
 async function post(path: string, body: unknown): Promise<Refused> {

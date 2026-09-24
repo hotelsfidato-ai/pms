@@ -53,9 +53,10 @@ groups.get("/:code/groups/:id", async (c) => {
 
     const { rows: g } = await client.query<{
       name: string; block_code: string | null; company: string | null;
-      notes: string | null;
+      notes: string | null; lead: string | null;
     }>(
-      `select g.name, g.block_code, co.name as company, g.notes
+      `select g.name, g.block_code, co.name as company, g.notes,
+              app.group_lead(g.id)::text as lead
          from reservation_groups g
          left join companies co on co.id = g.company_id
         where g.id = $1`,
@@ -115,6 +116,9 @@ groups.get("/:code/groups/:id", async (c) => {
       blockCode: g[0].block_code,
       company: g[0].company,
       notes: g[0].notes,
+      /* The group's lead room (D22-52): its one confirmation and its one
+         review request go to this room's guest. */
+      leadId: g[0].lead,
       rooms: rooms.map((r) => ({
         reservationId: r.reservation_id, reference: r.reference,
         guest: r.guest, room: r.room, roomType: r.room_type,
@@ -173,6 +177,42 @@ groups.post("/:code/groups/:id/master", async (c) => {
 
   if (!result) return c.json({ error: "No such property." }, 404);
   return c.json(result);
+});
+
+/* ── Who leads the group (D22-52) ──────────────────────────────────
+   By default the room booked first that still stands; the desk may pick
+   another. Who leads is ALWAYS read through app.group_lead, so a lead
+   that is later cancelled gives way to the default by itself. Every
+   refusal comes before the one write (MEMORY 243). */
+groups.post("/:code/groups/:id/lead", async (c) => {
+  const input = await c.req.json<{ reservationId?: string }>()
+    .catch(() => ({}) as { reservationId?: string });
+
+  const result = await withSession(c.get("subject"), async (client) => {
+    const hotelId = await hotelFor(client, c.req.param("code"));
+    if (!hotelId) return null;
+    const groupId = c.req.param("id");
+
+    const { rows } = await client.query<{ guest: string; status: string }>(
+      `select g.full_name as guest, r.status
+         from reservations r join guests g on g.id = r.guest_id
+        where r.id = $1 and r.hotel_id = $2 and r.group_id = $3`,
+      [input.reservationId ?? null, hotelId, groupId]);
+    const room = rows[0];
+    if (!room) return refuse("That room is not in this group.");
+    if (["cancelled", "void", "no_show"].includes(room.status)) {
+      return refuse(
+        `${room.guest}'s booking no longer stands, so it cannot lead the group.`);
+    }
+
+    await client.query(
+      "update reservation_groups set lead_reservation_id = $1 where id = $2",
+      [input.reservationId, groupId]);
+    return { ok: true as const, guest: room.guest };
+  });
+
+  if (!result) return c.json({ error: "No such property." }, 404);
+  return c.json(result, result.ok ? 200 : 409);
 });
 
 /* ── Who pays for a room ───────────────────────────────────────── */
