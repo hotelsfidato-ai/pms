@@ -209,7 +209,7 @@ function AdminPropertyCard({ hotel, onEdit, onToggle }: {
              close a property with guests in it, and a refusal a person
              reads only after trying is a refusal they did not need. */
           <p className="text-sm text-grey-500 mt-2.5">
-            {hotel.checkedIn} guest{hotel.checkedIn === 1 ? "" : "s"} in house
+            {hotel.checkedIn} booking{hotel.checkedIn === 1 ? "" : "s"} checked in
             - it cannot be closed until they check out.
           </p>
         )}
