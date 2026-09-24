@@ -45,14 +45,16 @@ send the data; you do not write the sentence the guest reads.
 ## The first version, and nothing more
 
 1. **The lists**: stayed twice; not returned in a year; came from which booking
-   site; birthdays this month.
+   site. (Birthdays this month is dropped, D22-17: no date of birth is kept.)
+   **For the owner, an administrator and the GM only** (D22-17): the
+   `marketing` grant in `api/src/permissions.ts`.
 2. **An export** of any list.
 3. **A send through the one door out** when an offer goes out, recorded against
    each guest like every other message.
 4. ⚠ **a guest who has asked not to be written to is never on a list
-   that sends.** If nothing in the schema records that yet, **ask the master** -
-   do not invent a column, and do not ship a send without it. This is the one
-   rule here that is not about tidiness.
+   that sends.** The "No offers" list is `offer_opt_outs` (D21-22), and
+   `mayBeWrittenTo` refuses any phone or email on it (MKT-1, fixed 23
+   September). This is the one rule here that is not about tidiness.
 
 ## Where the figures come from
 
