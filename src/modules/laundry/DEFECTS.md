@@ -33,7 +33,7 @@ every assertion in the file and visible to the last line of it.
 
 ---
 
-## LAU-2 · Not a laundry defect — `db/tests/suite.sql` has been red on `cp6` since 115
+## LAU-2 · Not a laundry defect — `db/tests/suite.sql` has been red on `cp6` since 115 — FIXED 18 September
 
 **18 September. Reported to the master; NOT fixed here — `db/tests/suite.sql`
 is the master's file and this lane may not touch it.**
@@ -61,52 +61,43 @@ one failure.
 unknown (`'valet'`, say, or `'gym'`) rather than one that has since been built.
 The master's, because every lane's Action is red until it is made.
 
+**Fixed** — 18 September, by the master (commit `6fe654d`): the example is now
+`'not_a_module_and_never_will_be'`, with a comment saying why a plausible
+future feature makes a bad "impossible" case (MEMORY 300). **Proved** by that
+assertion, "an unknown module is refused" in `db/tests/suite.sql`: it expects
+the insert refused (`23514`) whatever modules are built next. Marked here 25
+September.
+
 ---
 
-## LAU-3 · The Settings switch for laundry draws, and refuses
+## LAU-3 · The Settings switch for laundry draws, and refuses — FIXED 19 September
 
-**19 September, found while opening the screens. NOT fixed here —
-`api/src/modules/admin/moduleSwitches.ts` is the master's file.**
-
-Settings shows a Laundry switch. Turning it on answers:
-
-```
-POST /api/hotels/5EL/modules/laundry → 409
-{"reason":"There is no \"laundry\" module."}
-```
-
-The two halves of that file disagree. `GET /:code/modules` asks
-`app.module_enabled` for six modules by name — `pos`, `banquet`,
-`reception_pos`, `channel_manager`, `laundry`, `spa` — so all six draw a switch.
-`POST /:code/modules/:module` guards with a list of three that was never
-widened:
-
-```ts
-if (!["pos", "banquet", "reception_pos"].includes(module)) {
-```
-
-`channel_manager` has the same fault and has had it longer; **the spa's switch
-is unaffected only because that property already had its row.** Nothing in the
-database refuses it — `hotel_modules_known` has named `laundry` since migration
-115, and the row went in by hand without complaint.
-
-**The fix is the list.** Better, the list is the same six the GET already
-names, in one constant, so the next module cannot draw a switch that refuses.
-That is a judgement about the master's file and is theirs to make.
-
-**Worked around for this session only**, to see the screens at all: the row was
-written straight into `hotel_modules` on the development database
-(`5EL`, `laundry`, enabled). Nothing in this lane depends on it.
+**The entry is admin's now** - `src/modules/admin/DEFECTS.md`, under Fixed,
+"LAU-3 / SPA-1": the fault was in `api/src/modules/admin/moduleSwitches.ts`,
+admin's file, and the spa chat had found the same one a day earlier (SPA-1).
+What was seen here (`POST /api/hotels/5EL/modules/laundry → 409`, "There is no
+\"laundry\" module."), the two lists, the hand-written `hotel_modules` row on
+the development database, and the rule are all there. Fixed by the master on 19
+September (`41c0990`): one `SWITCHABLE` list, read by both ends; proved by
+`api/test/modules/admin/moduleSwitches.test.ts`. Moved 25 September.
 
 ---
 
 ## Open, and why
 
-- **The charge does not reach the bill, and now it could.** `postCharge` is on
-  finance's door since 18 September; `api/src/modules/laundry/laundry.ts` has
-  not been changed to call it, so `POST …/dockets/:id/charge` still makes every
-  refusal that is its own and then says the connection is not there. The screen
-  shows that sentence, which is honest and is not the finished thing.
-  `MODULE.md` → Requests 1 has what the route needs.
-- **LAU-3 above** — the switch a property is turned on with does not work.
-- **LAU-2 above** — `db/tests/suite.sql` red on `cp6`, and not this lane's.
+Nothing, 25 September. The three that were listed here are fixed:
+
+- **The charge does not reach the bill, and now it could — FIXED 21
+  September.** It said: `postCharge` is on finance's door since 18 September;
+  `api/src/modules/laundry/laundry.ts` has not been changed to call it, so
+  `POST …/dockets/:id/charge` still makes every refusal that is its own and
+  then says the connection is not there. The screen shows that sentence, which
+  is honest and is not the finished thing. **Fixed** in commit `9af60ec` (21
+  September): the route calls `postCharge` after its own refusals, on the
+  stay's bill, and the docket carries the posting. **Proved** —
+  `api/test/modules/laundry/laundry.test.ts`, "a guest's bag, charged to the
+  room": a priced bag lands on THAT stay's bill as a `laundry` line for the
+  docket's total, the docket reads charged, and a second charge is refused
+  ("already on the bill").
+- **LAU-3** — FIXED 19 September; the entry is admin's (above).
+- **LAU-2** — FIXED 18 September (above).

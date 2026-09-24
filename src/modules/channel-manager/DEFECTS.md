@@ -14,38 +14,14 @@ entries stay here: they are the reason the fault does not come back.
 
 ## Open — not fixed
 
-### CM-1 · The demo loader, run from this copy, aimed at the main development database
-
-**Found** — 17 September, setting up `D:\fidato-channel-manager` to open the
-status page. I ran `npm run load-demo` in the copy's `api/`, expecting it to use
-the copy's `api/.env` (`fidato_channel_manager`). It does not read `DATABASE_URL`:
-it connects to `SUPER_DATABASE_URL`, or to `fidato` when that is unset. So it
-connected to the **master's development database** as the superuser and began
-its teardown of 5EL there, triggers lifted.
-
-**What stopped it** — the teardown runs in one transaction, and the cascade from
-the hotel reached `stock_movements`, which is append-only and refused ("Post a
-reversing entry instead of DELETE"). The error rolled the whole transaction back,
-the trigger changes with it (Postgres DDL is transactional).
-
-**Checked afterwards, in `fidato`** — the five lifted triggers are enabled again
-(`hotels_no_delete`, `folio_postings_append_only`, `invoices_immutable`,
-`pos_order_lines_frozen`, `guests_no_delete`, all `O`); 5EL is there with its 86
-reservations, 32 guests and 1 stock movement. Nothing was committed.
-
-**What was done** — the demo went into this copy's own database the way the test
-harness does it (`db/tests/harness.sql` and `suite.sql`, the dev identities,
-then `load-demo` with `SUPER_DATABASE_URL` naming `fidato_channel_manager`). The
-script itself is not this service's: asked of the master (MODULE.md, Requests 1).
-Lesson sent for the root `MEMORY.md`.
-
-**The rule** — Before running a script from a copy, read its connection line. A
-script that falls back to a default database reaches the master's data from any
-copy, and "it uses my settings file" is a guess until the line says so.
+None, 25 September. CM-1 and CM-4 were fixed by the master on 17 and 18
+September (below).
 
 ---
 
-### CM-4 · Switching the channel manager on breaks the next deploy — the master's to fix
+## Fixed — the solution is here; do not work it out again
+
+### CM-4 · Switching the channel manager on breaks the next deploy — FIXED 18 September
 
 **Found** — 18 September, switching 5 Elements on in this copy to open the
 Channel bookings screen, then running `db/migrate.sh`:
@@ -78,13 +54,61 @@ thing that will happen when SU's keys arrive.
 **In this copy:** the row was deleted and migrations replay clean again (109
 applied). No test switches a module on outside its own scratch database.
 
+**Fixed** — 18 September, by the master (commit `24cc50a`, MEMORY 293): 087
+now rewrites `hotel_modules_known` only when the constraint does not already
+name `reception_pos`, so a wider list from a later file is left alone. And
+`db/tests/rerun.sh` does what was suggested here: between its two passes it
+switches `channel_manager`, `laundry`, `spa` and `alcohol` ON for a property,
+so a migration that narrows the list again fails the replay, not a deploy.
+
+**Proved** — `db/tests/rerun.sh` (the replay gate), with those four module
+rows in place for its second pass. Moved here 25 September.
+
 **The rule** — A migration that widens a constraint an earlier migration
 rewrites has not widened anything: the earlier one replays first. Switch the new
 thing ON and replay before believing it.
 
----
+### CM-1 · The demo loader, run from this copy, aimed at the main development database — FIXED 17 September
 
-## Fixed — the solution is here; do not work it out again
+**Found** — 17 September, setting up `D:\fidato-channel-manager` to open the
+status page. I ran `npm run load-demo` in the copy's `api/`, expecting it to use
+the copy's `api/.env` (`fidato_channel_manager`). It does not read `DATABASE_URL`:
+it connects to `SUPER_DATABASE_URL`, or to `fidato` when that is unset. So it
+connected to the **master's development database** as the superuser and began
+its teardown of 5EL there, triggers lifted.
+
+**What stopped it** — the teardown runs in one transaction, and the cascade from
+the hotel reached `stock_movements`, which is append-only and refused ("Post a
+reversing entry instead of DELETE"). The error rolled the whole transaction back,
+the trigger changes with it (Postgres DDL is transactional).
+
+**Checked afterwards, in `fidato`** — the five lifted triggers are enabled again
+(`hotels_no_delete`, `folio_postings_append_only`, `invoices_immutable`,
+`pos_order_lines_frozen`, `guests_no_delete`, all `O`); 5EL is there with its 86
+reservations, 32 guests and 1 stock movement. Nothing was committed.
+
+**What was done** — the demo went into this copy's own database the way the test
+harness does it (`db/tests/harness.sql` and `suite.sql`, the dev identities,
+then `load-demo` with `SUPER_DATABASE_URL` naming `fidato_channel_manager`). The
+script itself is not this service's: asked of the master (MODULE.md, Requests 1).
+Lesson sent for the root `MEMORY.md`.
+
+**Fixed** — 17 September, by the master (commit `425fd34`, the owner's
+D17-90). Every maintenance script - `load-demo`, `demo-history` and the rest -
+asks `api/scripts/scriptDatabase.ts` which database to write to: an
+administrative string already set in the shell, else this copy's own
+`api/.env` (its `DATABASE_URL` as the local superuser), else it **refuses**. A
+database on another machine is refused rather than guessed at. Each script
+prints where it is writing before it starts.
+
+**Proved** — `api/test/scriptDatabase.test.ts`, "a script asks the copy it is
+running in" (6 tests, no database needed): it takes this copy's database and
+never another's, refuses when the copy says nothing, will not guess a
+superuser for another machine. Moved here 25 September.
+
+**The rule** — Before running a script from a copy, read its connection line. A
+script that falls back to a default database reaches the master's data from any
+copy, and "it uses my settings file" is a guess until the line says so.
 
 ### CM-3 · Part 1 shipped code the production server cannot load — FIXED 17 September
 

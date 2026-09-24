@@ -18,30 +18,14 @@ STO-1 to STO-10 were found on 16 September 2026 by the brief's first job: the
 Store opened at 375×812 as a housekeeping role, measured the way the 16
 September critique measured the other screens, and a reading of
 `pages/Stores.tsx`, `data/stores.ts` and `api/src/modules/stores/stores.ts`.
-STO-11 was found fixing them. **All are fixed except STO-9, which is the shared
-kit's** (below, under "Fixed").
+STO-11 was found fixing them. **All are fixed** (below, under "Fixed") - STO-9,
+the shared kit's, by the master on 16 September.
 
 What passed at the first measurement, and again after the fixes: no sideways
 page scroll, nothing outside the viewport, **0 controls under 44px on the
 list**, **0 text under 4.5:1**.
 
-### STO-9 · In every Store dialog, Close is 24px and each box 36px — the shared kit
-
-**Measured** at 375px in Add an item, Receive and History: **Close 24×24** and
-**every input and select 36px tall**; inputs are 15px text, and iPhones zoom
-the page when a box under 16px is tapped. These come from `DialogContent`,
-`Input` and `NativeSelect` in `src/components/ui/` — **not this lane's to
-change**, and likely every dialog in the system.
-
-**Waiting on:** the master — written as a request in `MODULE.md` ("Requests
-from this service to the master"). The Store does not work around it locally.
-
-**Left in `fidato_stores`** (development only, never production): the demo
-items and the probe rows from STO-1 and STO-11 — items named "PROBE …", ₹1
-towel receipts, the Viewer's undo of the towel delivery, the store tester's
-undo of the first rice delivery (which took rice to −12 kg: STO-11) and the
-count correction that brought it back to 0. Movements are append-only, so they
-stay.
+Nothing open, 25 September.
 
 ---
 
@@ -249,6 +233,36 @@ happened, in the past tense.
 
 **Proved** — `stores.test.tsx` checks both buttons' `data-variant`; on screen
 "Add an item" is orange.
+
+### STO-9 · In every Store dialog, Close is 24px and each box 36px — the shared kit — FIXED 16 September
+
+**Measured** at 375px in Add an item, Receive and History: **Close 24×24** and
+**every input and select 36px tall**; inputs are 15px text, and iPhones zoom
+the page when a box under 16px is tapped. These come from `DialogContent`,
+`Input` and `NativeSelect` in `src/components/ui/` — **not this lane's to
+change**, and likely every dialog in the system.
+
+**Waiting on:** the master — written as a request in `MODULE.md` ("Requests
+from this service to the master"). The Store does not work around it locally.
+
+**Fixed** — 16 September, by the master (commit `645046a`, "touch sizes"), in
+the kit, once, for every dialog: under a coarse pointer an input and a select
+are 44px tall with 16px text (`pointer-coarse:h-11`,
+`pointer-coarse:text-[16px]`), a text area's text is 16px, and a dialog's
+Close has 14px of padding round its 16px icon - 44px. A mouse keeps the
+compact 36px desk sizes.
+
+**Proved** — `src/components/ui/Input.test.tsx`, "form boxes under a finger"
+(4 tests: input, select, text area, a dialog's Close). jsdom has no media
+queries, so it holds the classes, as `Button.test.tsx` does; seen at 375px on a
+touch screen when it was made. Moved here 25 September.
+
+**Left in `fidato_stores`** (development only, never production): the demo
+items and the probe rows from STO-1 and STO-11 — items named "PROBE …", ₹1
+towel receipts, the Viewer's undo of the towel delivery, the store tester's
+undo of the first rice delivery (which took rice to −12 kg: STO-11) and the
+count correction that brought it back to 0. Movements are append-only, so they
+stay.
 
 ### STO-10 · Small ones, found on the way
 
