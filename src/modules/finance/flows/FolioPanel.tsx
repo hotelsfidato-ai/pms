@@ -5,6 +5,8 @@ import {
   Split as SplitIcon,
 } from "lucide-react";
 import { cn } from "@/lib/cn";
+import { useRole } from "@/lib/session";
+import { can } from "@/lib/permissions";
 import { money, dateShort } from "@/lib/format";
 import {
   CHARGE_CATEGORIES, PAYMENT_METHODS,
@@ -53,6 +55,18 @@ export function FolioPanel({
   const [lateOut, setLateOut] = useState(false);
   const refresh = () => qc.invalidateQueries();
 
+  /* D24-18: each act only for a role the server's gate lets do it (roleGate,
+     from the one matrix): a charge or a second bill is invoice create, a
+     payment payment create, a reversal or a move invoice edit, the check-out
+     reservation edit. The interim bill is a read the server does not gate:
+     whoever may see bills, invoice view (the owner, 25 September). */
+  const role = useRole();
+  const mayCharge = can(role, "create", "invoice");
+  const mayChange = can(role, "edit", "invoice");
+  const mayPay = can(role, "create", "payment");
+  const mayPrint = can(role, "view", "invoice");
+  const mayCheckOut = can(role, "edit", "reservation");
+
   const postings = useQuery({
     queryKey: ["folio-postings", hotelId, stay.id],
     queryFn: () => getFolioPostings(hotelId, stay.id),
@@ -74,6 +88,7 @@ export function FolioPanel({
   const checkoutPermitted = useQuery({
     queryKey: ["checkout-allowed", hotelId, stay.id, balance.data],
     queryFn: () => checkOutAllowed(hotelId, stay.id),
+    enabled: mayCheckOut,
   });
   const stayFolios = useQuery({
     queryKey: ["stay-folios", hotelId, stay.id],
@@ -103,25 +118,30 @@ export function FolioPanel({
         hotelId={hotelId}
         stayId={stay.id}
         folios={folios}
+        mayChange={mayChange}
         onChanged={refresh}
       />
 
       <div className="flex flex-wrap gap-2">
-        <AddChargeDialog
-          hotelId={hotelId}
-          stay={stay}
-          businessDate={businessDate}
-          onDone={refresh}
-        />
-        <SettleDialog
-          hotelId={hotelId}
-          stay={stay}
-          balance={due}
-          businessDate={businessDate}
-          onDone={refresh}
-        />
-        <InvoiceDialog hotelId={hotelId} stayId={stay.id} />
-        <SplitBillButton hotelId={hotelId} stayId={stay.id} onDone={refresh} />
+        {mayCharge && (
+          <AddChargeDialog
+            hotelId={hotelId}
+            stay={stay}
+            businessDate={businessDate}
+            onDone={refresh}
+          />
+        )}
+        {mayPay && (
+          <SettleDialog
+            hotelId={hotelId}
+            stay={stay}
+            balance={due}
+            businessDate={businessDate}
+            onDone={refresh}
+          />
+        )}
+        {mayPrint && <InvoiceDialog hotelId={hotelId} stayId={stay.id} />}
+        {mayCharge && <SplitBillButton hotelId={hotelId} stayId={stay.id} onDone={refresh} />}
       </div>
 
       {lateOut && (
@@ -137,7 +157,7 @@ export function FolioPanel({
       )}
 
       {/* Rule 6 — blocked, visible, and it says why */}
-      <div className="pt-4 border-t border-grey-200">
+      {mayCheckOut && <div className="pt-4 border-t border-grey-200">
         <CheckOutButton
           allowed={checkoutPermitted.data?.allowed ?? false}
           reason={checkoutPermitted.data?.reason}
@@ -162,7 +182,7 @@ export function FolioPanel({
             toast.error("Could not check out", res.reason);
           }}
         />
-      </div>
+      </div>}
     </div>
   );
 }
@@ -217,12 +237,13 @@ function BalanceHeader({ stay, balance }: { stay: Stay; balance: number | null }
 }
 
 function LedgerList({
-  lines, hotelId, stayId, folios, onChanged,
+  lines, hotelId, stayId, folios, mayChange, onChanged,
 }: {
   lines: Posting[];
   hotelId: string;
   stayId: string;
   folios: StayFolio[];
+  mayChange: boolean;
   onChanged: () => void;
 }) {
   if (lines.length === 0) {
@@ -288,18 +309,22 @@ function LedgerList({
                 )}
               </div>
 
-              <TransferButton
-                hotelId={hotelId}
-                posting={p}
-                folios={folios}
-                onDone={onChanged}
-              />
-              <ReverseButton
-                hotelId={hotelId}
-                stayId={stayId}
-                posting={p}
-                onDone={onChanged}
-              />
+              {mayChange && (
+                <>
+                  <TransferButton
+                    hotelId={hotelId}
+                    posting={p}
+                    folios={folios}
+                    onDone={onChanged}
+                  />
+                  <ReverseButton
+                    hotelId={hotelId}
+                    stayId={stayId}
+                    posting={p}
+                    onDone={onChanged}
+                  />
+                </>
+              )}
             </li>
           );
         })}

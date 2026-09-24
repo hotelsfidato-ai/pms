@@ -76,10 +76,13 @@ export interface AriSnapshot {
 }
 
 /** The first date SU will take for a hotel: its business date, or today where
-    the hotel is if that is later (SU refuses a date in the past). */
+    the hotel is if that is later (SU refuses a date in the past). The business
+    date is app.business_date, the day after the last closed one - not
+    `hotels.business_date`, which stops moving once a night audit has run
+    (FD-16's stale column). */
 export async function firstSellableDate(client: Client, hotelId: string): Promise<string | null> {
   const { rows } = await client.query<{ first: string }>(
-    `select greatest(h.business_date, (now() at time zone h.timezone)::date)::text as first
+    `select greatest(app.business_date(h.id), (now() at time zone h.timezone)::date)::text as first
        from hotels h where h.id = $1`,
     [hotelId]);
   return rows[0]?.first ?? null;
