@@ -557,7 +557,8 @@ survive), and the signature block sits at the foot of the last page.
 - **Don't** go below 12px text, or make a touch target smaller than 44px on a
   phone.
 - **Don't** show a failed read as an empty list or a row of dashes.
-- **Don't** copy three older one-offs: the link button's full-strength orange
-  text, the danger button's hard-coded hover shades (`#c22718`, `#a82115`)
-  and the warning pill's literal ink. They predate the readable-step rule and
-  are due to be moved onto tokens.
+- **Don't** write a colour as a hex in a class (`text-[#8a6300]`); use its
+  token. The three older one-offs moved onto tokens on 23 September (D22-12):
+  the link button is `brand-orange-700`, the danger button presses to
+  `brand-red-700`/`brand-red-800`, and the warning pill's ink is
+  `brand-yellow-800`. Some screens still write that ink as a hex.

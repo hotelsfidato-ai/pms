@@ -19,7 +19,7 @@ const TONES: Record<Tone, string> = {
   neutral: "bg-grey-100 text-grey-600 ring-grey-200",
   info: "bg-info-50 text-info ring-info-100",
   success: "bg-success-50 text-success-600 ring-success-100",
-  warning: "bg-brand-yellow-50 text-[#8a6300] ring-brand-yellow-100",
+  warning: "bg-brand-yellow-50 text-brand-yellow-800 ring-brand-yellow-100",
   /* red-700, not red: #e0301e on this tint is 3.98:1. */
   danger: "bg-brand-red-50 text-brand-red-700 ring-brand-red-100",
   accent: "bg-brand-orange-50 text-brand-orange-700 ring-brand-orange-100",

@@ -55,6 +55,10 @@
        white on brand-rose-700     #b84659   5.17   ✓ it now
        brand-red on brand-red-50   #e0301e   3.98   ✗ the danger pill
        brand-red-700 on red-50     #c52a1a   4.94   ✓ it now
+       brand-orange on white       #df6128   3.57   ✗ the link button
+       brand-orange-700 on white   #a34314   6.23   ✓ it now (23 Sep, D22-12)
+       yellow-800 on yellow-50     #8a6300   5.13   ✓ the warning pill's ink,
+                                                      a literal until 23 Sep
 
      The ORIGINAL five warm colours are untouched — they are the brand,
      from the identity guide. These are darker steps of the same hues,
@@ -63,6 +67,8 @@
   --color-brand-tangerine-700: #a96500;
   --color-brand-rose-700: #b84659;
   --color-brand-red-700: #c52a1a;
+  --color-brand-red-800: #a82115;   /* the danger button pressed */
+  --color-brand-yellow-800: #8a6300;
 
   /* Tints for surfaces / soft badges */
   --color-brand-orange-50: #fdf1eb;

@@ -34,8 +34,9 @@ const VARIANTS: Record<ButtonVariant, string> = {
   ghost:
     "text-grey-600 hover:bg-grey-100 hover:text-ink-900 active:bg-grey-200 disabled:text-grey-500",
   danger:
-    "bg-brand-red text-white hover:bg-[#c22718] active:bg-[#a82115] disabled:bg-grey-300",
-  link: "text-brand-orange hover:text-brand-orange-600 hover:underline underline-offset-4 p-0 h-auto",
+    "bg-brand-red text-white hover:bg-brand-red-700 active:bg-brand-red-800 disabled:bg-grey-300",
+  /* orange-700, not orange: #df6128 on white is 3.57:1 (D22-12). */
+  link: "text-brand-orange-700 hover:text-brand-orange-800 hover:underline underline-offset-4 p-0 h-auto",
 };
 
 /* `pointer-coarse:` and not `sm:`, because the thing that makes a

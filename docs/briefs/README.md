@@ -94,6 +94,17 @@ clean; just add nothing to it. Tests and demo data may say Fidato.
 
 ---
 
+## Every screen follows `DESIGN.md` — every chat, from 23 September (D22-12)
+
+Before you change anything a person sees, read `DESIGN.md` at the root: the
+colours are tokens in `src/styles/theme.css` (never a hex in a class), small
+text takes a colour's readable step, and its Named Rules (Level, Figure, No
+Dead Space, Data, Breathing Room, Rhythm, Type Ladder) are the owner's. Reuse
+`src/components/ui/`; a new look for a whole screen is the owner's call, not
+yours.
+
+---
+
 ## The five rules every lane obeys
 
 These are not this folder's rules. They are the project's, from `HANDOVER.md`
