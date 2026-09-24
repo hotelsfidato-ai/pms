@@ -94,6 +94,10 @@ const CREDIT_NOTE = grant("invoice", "approve", "Issuing a credit note");
    so it is asked the question a charge is asked - the owner, an administrator,
    the GM, the hotel manager, reception and the accountant, as it is (D22-36). */
 const CLOSE_DAY = grant("invoice", "create", "Closing the day");
+/* Correcting a closed day: the owner, an administrator and the GM, the people
+   who may waive a charge (the owner's D24-3) - `approve` on a booking is
+   exactly those three. The database asks the same three (134). */
+const CORRECT_DAY = grant("reservation", "approve", "Correcting a closed day");
 const PAYMENT = grant("payment", "create", "Taking a payment");
 const DRAWER = grant("payment", "create", "Running the cashier's drawer");
 
@@ -223,6 +227,7 @@ export const WRITE_RULES: Readonly<Record<string, Rule>> = {
 
   /* night-audit */
   [`POST ${H}/night-audit/run`]: CLOSE_DAY,
+  [`POST ${H}/night-audit/days/:date/corrections`]: CORRECT_DAY,
 
   /* pos: the menu */
   [`POST ${H}/till/menu/categories`]: MENU,

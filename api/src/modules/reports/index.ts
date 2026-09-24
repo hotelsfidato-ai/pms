@@ -42,6 +42,10 @@ export { col, row, total } from "./document.ts";
 export {
   dailyFigures, sumDays, firstTradingDay, propertyFor, propertyById,
   isoDateParam, heading, NIGHTS,
+  /* The nights a room posting pays for, read from its words. Opened 24
+     September for the night audit (D24-14): a walk-in's whole-stay line
+     has paid for tonight, and the audit must not charge it again. */
+  POSTING_NIGHTS,
   /* ⚠ WHAT THE RESTAURANT SOLD, opened 19 September. `dailyFigures`
      answers about `folio_postings` and a POS order only lands there when
      it is charged to a room — so anything settled in cash at the outlet
