@@ -118,7 +118,7 @@ export function FolioPanel({
           businessDate={businessDate}
           onDone={refresh}
         />
-        <InvoiceDialog hotelId={hotelId} stayId={stay.id} />
+        <InvoiceDialog hotelId={hotelId} stayId={stay.id} departed={stay.status === "checked-out"} />
         <SplitBillButton hotelId={hotelId} stayId={stay.id} onDone={refresh} />
       </div>
 
@@ -604,9 +604,16 @@ function SettleDialog({
    `app.stay_bill`, only when the dialog opens, and draws it with the same
    layout the guest's page uses. It used to add up the lines here, with a
    made-up GSTIN and a fixed 2.5% printed on every bill, and counted a
-   reversing line while leaving out the line it reversed (21 September). */
-function InvoiceDialog({ hotelId, stayId }: { hotelId: string; stayId: string }) {
+   reversing line while leaving out the line it reversed (21 September).
+
+   D22-7: before check-out it is the "Interim bill", as on the guest's page -
+   it carries no invoice number, and "Tax Invoice" read as the final one.
+   After check-out it keeps today's title. */
+function InvoiceDialog({ hotelId, stayId, departed }: {
+  hotelId: string; stayId: string; departed: boolean;
+}) {
   const [open, setOpen] = useState(false);
+  const title = departed ? "Tax Invoice" : "Interim bill";
   const bill = useQuery({
     queryKey: ["stay-bill", hotelId, stayId],
     queryFn: () => getStayBill(hotelId, stayId),
@@ -621,9 +628,9 @@ function InvoiceDialog({ hotelId, stayId }: { hotelId: string; stayId: string })
           Invoice
         </Button>
       </DialogTrigger>
-      <DialogContent title="Tax invoice" description="Print preview">
+      <DialogContent title={departed ? "Tax invoice" : title} description="Print preview">
         {bill.data ? (
-          <BillPrint bill={bill.data} title="Tax Invoice" />
+          <BillPrint bill={bill.data} title={title} />
         ) : bill.isError ? (
           <p className="text-sm text-brand-red">The bill could not be read. Try again.</p>
         ) : bill.isFetched ? (

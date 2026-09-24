@@ -94,6 +94,9 @@ export const CLEAR: [table: string, how: string][] = [
      exists, and the run aborted a third of the way through with the
      guards still lifted. Defect 9's shape, and the reason this list is
      now checked against information_schema. */
+  /* D22-44's VAT bills point at an order, a bill and its tax invoice, so
+     they go before all three. Their series stays, as the GST one does. */
+  ["vat_bills",         "hotel_id = $1"],
   ["pos_order_tenders", "order_id in (select id from pos_orders where hotel_id = $1)"],
   ["pos_order_lines",   "hotel_id = $1"],
   /* ⚠ ORDERS BEFORE TICKETS. `pos_orders.ticket_id` references
@@ -172,6 +175,7 @@ const GUARDS: [table: string, trigger: string][] = [
   ["folio_postings",    "folio_postings_append_only"],
   ["folio_postings",    "folio_postings_closed_date"],
   ["invoices",          "invoices_immutable"],
+  ["vat_bills",         "vat_bills_immutable"],
   ["pos_order_lines",   "pos_order_lines_frozen"],
   ["pos_order_lines",   "pos_order_lines_void_cascade"],
   ["pos_order_tenders", "pos_order_tenders_no_delete_settled"],

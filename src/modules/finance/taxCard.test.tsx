@@ -1,8 +1,11 @@
 import { describe, it, expect, afterEach, vi } from "vitest";
 import { render, screen, fireEvent, within } from "@testing-library/react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { MemoryRouter, Routes, Route } from "react-router";
 import * as apiModule from "@/lib/api";
+import { can } from "@/lib/permissions";
 import { TaxRulesCard } from "./flows/TaxRulesCard";
+import InvoicesPage from "./pages/Invoices";
 
 /* ══════════════════════════════════════════════════════════════════
    THE TAX CARD - alcohol, only where the property serves it (D21-90),
@@ -63,5 +66,32 @@ describe("the tax card and alcohol", () => {
     expect(rate.placeholder).toBe("");
     expect(screen.queryByRole("button", { name: /Add a band/ })).toBeNull();
     expect(screen.queryByLabelText("On everything from")).toBeNull();
+  });
+});
+
+/* D23-1, the owner: the accountant sets GST and VAT (D22-32) but could not
+   open Room types, the card's only home. The same card is on Invoices, a
+   finance screen the accountant opens. */
+describe("the tax card on a finance screen", () => {
+  it("is on Invoices, which the accountant may open", async () => {
+    expect(can("finance", "view", "invoice")).toBe(true);
+    expect(can("finance", "view", "room_config")).toBe(false);
+
+    vi.spyOn(apiModule, "api").mockImplementation(async (url: string) => {
+      if (url === "/api/hotels/5EL/tax") {
+        return { servesAlcohol: true, kinds: [...KINDS, { kind: "alcohol", slabs: [] }], categories: [] } as never;
+      }
+      return [] as never;
+    });
+    const qc = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+    render(
+      <QueryClientProvider client={qc}>
+        <MemoryRouter initialEntries={["/h/5EL/invoices"]}>
+          <Routes><Route path="/h/:code/invoices" element={<InvoicesPage />} /></Routes>
+        </MemoryRouter>
+      </QueryClientProvider>,
+    );
+    expect(await screen.findByRole("heading", { name: "GST and VAT" })).toBeTruthy();
+    expect(screen.getByText("Alcohol")).toBeTruthy();
   });
 });

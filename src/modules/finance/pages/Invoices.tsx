@@ -10,7 +10,8 @@ import {
   Button, Tooltip, type Column,
 } from "@/components/ui";
 import { describeError } from "@/components/ui/States";
-import { listBillable, getInvoiceSeries, listInvoices, issueInvoice, type BillableRow, type IssuedInvoice } from "@/modules/finance/data/billing";
+import { listBillable, getInvoiceSeries, listInvoices, issueInvoice, listVatBills, type BillableRow, type IssuedInvoice, type IssuedVatBill } from "@/modules/finance/data/billing";
+import { TaxRulesCard } from "@/modules/finance/flows/TaxRulesCard";
 
 /* ══════════════════════════════════════════════════════════════════
    INVOICES
@@ -131,10 +132,64 @@ function issuedColumns(hotelId: string): Column<IssuedInvoice>[] {
   ];
 }
 
+/* ── VAT bills for alcohol (D22-44) ────────────────────────────────── */
+
+function vatColumns(hotelId: string): Column<IssuedVatBill>[] {
+  return [
+    {
+      key: "number", header: "Number",
+      cell: (v) => (
+        <div className="min-w-0">
+          <Link
+            to={`/h/${hotelId}/invoices/vat/${v.number}`}
+            className="tabular font-medium truncate text-brand hover:underline"
+          >
+            {v.number}
+          </Link>
+          {v.isCancellation && <p className="text-2xs text-brand-red">credit note</p>}
+        </div>
+      ),
+    },
+    {
+      key: "recipient", header: "Billed to",
+      cell: (v) => <span className="truncate">{v.recipient ?? "-"}</span>,
+    },
+    {
+      key: "issued", header: "Issued", hideBelow: "md",
+      cell: (v) => <span className="tabular text-grey-600">{v.issuedAt}</span>,
+    },
+    {
+      key: "vat", header: "VAT", numeric: true, hideBelow: "lg",
+      cell: (v) => <span className="tabular">{money(v.vatTotal)}</span>,
+    },
+    {
+      key: "total", header: "Total", numeric: true,
+      cell: (v) => (
+        <span className={cn("tabular font-medium", v.total < 0 && "text-brand-red")}>
+          {money(v.total)}
+        </span>
+      ),
+    },
+    {
+      key: "state", header: "",
+      cell: (v) =>
+        v.cancelledBy ? (
+          <Tooltip content={`Cancelled by ${v.cancelledBy}`}>
+            <span><StatusPill tone="warning">cancelled</StatusPill></span>
+          </Tooltip>
+        ) : v.isCancellation ? (
+          <span className="text-2xs text-grey-500">-</span>
+        ) : (
+          <StatusPill tone="success">issued</StatusPill>
+        ),
+    },
+  ];
+}
+
 export default function InvoicesPage() {
   const hotelId = useHotel();
   const queryClient = useQueryClient();
-  const [issued, setIssued] = useState<string | null>(null);
+  const [issued, setIssued] = useState<{ number: string; vatBill?: string | null } | null>(null);
 
   const rows = useQuery({
     queryKey: ["billable", hotelId],
@@ -148,11 +203,15 @@ export default function InvoicesPage() {
     queryKey: ["invoices", hotelId],
     queryFn: () => listInvoices(hotelId),
   });
+  const vatBills = useQuery({
+    queryKey: ["vat-bills", hotelId],
+    queryFn: () => listVatBills(hotelId),
+  });
 
   const issue = useMutation({
     mutationFn: (stayId: string) => issueInvoice(hotelId, stayId),
     onSuccess: async (r) => {
-      if (r.number) setIssued(r.number);
+      if (r.number) setIssued({ number: r.number, vatBill: r.vatBill });
       /* The series advanced and the issued list gained a row. */
       await queryClient.invalidateQueries();
     },
@@ -302,7 +361,11 @@ export default function InvoicesPage() {
           <CardBody className="flex items-center gap-2.5">
             <FileCheck2 className="size-4 text-green-700 shrink-0" />
             <p className="text-sm text-green-900">
-              Issued <span className="tabular font-medium">{issued}</span>.
+              Issued <span className="tabular font-medium">{issued.number}</span>
+              {issued.vatBill && (
+                <>, and VAT bill <span className="tabular font-medium">{issued.vatBill}</span> for the alcohol</>
+              )}
+              .
             </p>
           </CardBody>
         </Card>
@@ -356,6 +419,33 @@ export default function InvoicesPage() {
           }
         />
       </Card>
+
+      {/* D22-44: only where a hotel has issued one - a hotel that serves no
+          alcohol has none, and an empty table would be noise. */}
+      {(vatBills.data?.length ?? 0) > 0 && (
+        <>
+          <div className="mt-7">
+            <PageHeader
+              title="VAT bills"
+              description="Alcohol, billed under VAT from its own series, each beside the GST document of the same sale."
+            />
+          </div>
+          <Card>
+            <DataTable<IssuedVatBill>
+              rows={vatBills.data ?? []}
+              columns={vatColumns(hotelId)}
+              rowKey={(v) => v.number}
+            />
+          </Card>
+        </>
+      )}
+
+      {/* D23-1: the accountant sets GST and VAT here - the same card as on
+          Room types, which the accountant cannot open; the server asks the
+          same four roles (D22-32). */}
+      <div className="mt-7">
+        <TaxRulesCard hotelId={hotelId} />
+      </div>
     </Page>
   );
 }

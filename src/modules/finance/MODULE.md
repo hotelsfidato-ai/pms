@@ -42,6 +42,7 @@ a screen (Ctrl K).
 | Folios (Finance) | `/h/:code/folios` | `pages/Folios.tsx` | none |
 | Invoices (Finance) | `/h/:code/invoices` | `pages/Invoices.tsx` | none |
 | (no menu entry) one invoice or credit note | `/h/:code/invoices/doc/*` | `pages/Invoice.tsx` | — |
+| (no menu entry) one VAT bill for alcohol, or its credit note (D22-44) | `/h/:code/invoices/vat/*` | `pages/VatBill.tsx` | — |
 | Payments (Finance) | `/h/:code/payments` | `pages/Billing.tsx` (`PaymentsPage`) | none |
 | Cashiering (Finance) | `/h/:code/cashiering` | `pages/Cashiering.tsx` | Reception |
 | Company accounts (Finance) | `/h/:code/city-ledger` | `pages/Billing.tsx` (`PropertyCityLedgerPage`) | none |
@@ -56,9 +57,10 @@ holds guests' Form C (order 60).
   postings, charge, reverse, settle, split billing, and check out (which it
   asks front desk to do).
 - `flows/CreditNoteFlow.tsx` — correct an issued invoice, from the invoice
-  page.
-- `flows/TaxRulesCard.tsx` — the GST rules card, shown on inventory's Room
-  setup page.
+  page; with `vat`, cancel a VAT bill the same way, from the VAT bill page.
+- `flows/TaxRulesCard.tsx` — the GST (and VAT) rules card, shown on
+  inventory's Room setup page and, since D23-1, on Invoices, which the
+  accountant can open.
 
 ## Server endpoints
 
@@ -112,11 +114,14 @@ of the old `inventorySetup.ts` (`3ca215d`).
 
 | Method | Path | What it does |
 |---|---|---|
-| POST | `/:code/stays/:id/invoice` | issue the tax invoice for a stay (`app.next_invoice_number`) |
+| POST | `/:code/stays/:id/invoice` | issue the tax invoice for a stay (`app.next_invoice_number`) — and, in the same transaction, the VAT bill for its alcohol (`app.issue_vat_bill`, D22-44) |
 | GET | `/:code/invoices/:number{.+}` | one invoice or credit note, with the lines it was made from |
 | GET | `/:code/invoices` | every number issued here |
 | GET | `/:code/invoice-series` | the series itself |
 | POST | `/:code/invoices/:number{.+}/credit-note` | correct an invoice with a credit note of its own number |
+| GET | `/:code/vat-bills` | every VAT bill issued here (D22-44) |
+| GET | `/:code/vat-bills/:number{.+}` | one VAT bill, naming the tax invoice or restaurant bill it was issued with |
+| POST | `/:code/vat-bills/:number{.+}/cancel` | cancel a VAT bill with a credit note from the VAT series, with a reason (owner, admin, GM, accountant) |
 
 **`api/src/modules/finance/tax.ts`** (cut from the old `api/src/routes/inventorySetup.ts`)
 
@@ -127,7 +132,7 @@ of the old `inventorySetup.ts` (`3ca215d`).
 | PATCH | `/:code/menu-categories/:name/tax-kind` | say which kind a menu category is taxed as; `alcohol` refused while the switch is off |
 | GET | `/:code/tax/:kind/rate?amount=` | the rate one charge of that kind and value would carry (`app.gst_rate_or_null`), or null — the Add charge dialog's preview (22 September) |
 
-25 endpoints. The old `billing.ts`'s other endpoints went to inventory
+29 endpoints. The old `billing.ts`'s other endpoints went to inventory
 (`rateGrid.ts`), the night audit (`checklist.ts`) and the core
 (`api/src/routes/notifications.ts`). Server tests:
 `api/test/modules/finance/invoices.test.ts` (it also holds the Form C tests,
@@ -156,6 +161,7 @@ migrations that made or changed them:
 | `folios` | one running account; several per stay when the bill is split, or a group's master | created `006_folio.sql`; `056_group_billing.sql` (a group's master; a folio belongs to exactly one thing), `060_banquet.sql` (a function's folio) |
 | `folio_postings` | every charge, reversal and payment line | created `006_folio.sql` (money is `numeric(12,2)`; append-only; `business_date` is a real column); `011_model_additions.sql` (`idempotency_key`), `012_integrity.sql` (no posting onto a closed day), `014_simulation_fixes.sql` (UPDATE and DELETE revoked; same-hotel keys), `015_edge_cases.sql` (the tax must match the one rate on the line; no zero lines), `021_reversal_once.sql` (a line is reversed at most once), `056_group_billing.sql` (`reservation_id`, filled by a trigger) |
 | `payments` | the receipt behind a payment line | created `011_model_additions.sql`; `014_simulation_fixes.sql` (same hotel as its posting), `016_audit_coverage.sql` (never zero; audited) |
+| `vat_bills`, `vat_bill_series` | VAT bills for alcohol and their credit notes (D22-44): their own series per hotel, `VAT/5EL/2026-27/0001`, opened by the year's first bill so it restarts each 1 April | "a separate VAT bill for alcohol" (129 in this branch: `app.next_vat_bill_number`, `app.issue_vat_bill`; 025's immutability trigger) |
 | `invoices`, `invoice_series` | tax invoices and credit notes, numbered from a statutory series | created `011_model_additions.sql` (`app.next_invoice_number`); `013_policies.sql` (numbering protected), `014_simulation_fixes.sql` (the first invoice at a property), `016_audit_coverage.sql` (a series only moves forward), `025_invoices_form_c.sql` (the GST fields, credit notes, never edited, a series opened for each new property) |
 | `cashier_shifts`, `cashier_movements`, `cashier_denominations` | the desk's drawer | created `059_cashier_shift.sql` (`app.cashier_expected_cash`; a closed shift is final) |
 | `tax_rules` | GST as rules, one set for the desk and the till — and VAT on alcohol (kind `alcohol`) | created `067_tax_rules.sql` (`app.gst_rate`; the tax kind on outlets and menu categories); `119_the_spa.sql` (`spa`); "alcohol, a switch per property, and the VAT it is taxed under" (126 in this branch: `alcohol` as a kind and a menu heading, `folio_postings.tax_scheme` and `pos_order_lines.tax_scheme` gst/vat, a reversal takes its original's scheme, `app.pos_order_by_tax`, `app.stay_bill`'s `vat` rows) |
@@ -231,7 +237,11 @@ types, `BUSINESS_DATE` and `PTD_FROM`.
   exception. VAT prints as ONE line per rate on the stay's bill and the
   restaurant's bill, never as CGST/SGST; it is left off the GST invoice (so
   off the GST sales register) and has its own Alcohol and VAT columns in the
-  accountant's day book, whose GST columns carry none of it.
+  accountant's day book, whose GST columns carry none of it. **It has its own
+  VAT bill (D22-44)**, issued in the same transaction as the stay's tax
+  invoice or the restaurant's settlement (cash, card, UPI or split - not a
+  function's bill), from its own series; the tax invoice (and the restaurant
+  bill) names it and it names them.
 - **An invoice states what was charged and never recomputes tax; the place of
   supply is the hotel, so CGST + SGST, never IGST; an issued invoice is never
   edited — it is corrected by a credit note** (`invoices.ts` header; 025;

@@ -4,14 +4,14 @@ import { FileMinus } from "lucide-react";
 import {
   Button, Dialog, DialogContent, Field, fieldProps, Textarea, toast,
 } from "@/components/ui";
-import { issueCreditNote } from "@/modules/finance/data/billing";
+import { issueCreditNote, cancelVatBill } from "@/modules/finance/data/billing";
 import { can } from "@/lib/permissions";
 import { useRole } from "@/lib/session";
 
 /* Who may: `approve` on an invoice - the owner, an administrator, the GM and
    the accountant (the owner's D22-33). The server asks the same grant. */
-export const CREDIT_NOTE_WHO =
-  "Cancelling an invoice is for the owner, an administrator, the general manager or the accountant.";
+const WHO = "is for the owner, an administrator, the general manager or the accountant.";
+export const CREDIT_NOTE_WHO = `Cancelling an invoice ${WHO}`;
 
 /* ══════════════════════════════════════════════════════════════════
    CANCELLING AN INVOICE
@@ -34,17 +34,20 @@ export const CREDIT_NOTE_WHO =
    is what people type when the field is optional.
    ══════════════════════════════════════════════════════════════════ */
 
-export function CreditNoteFlow({ hotelId, number, total }: {
+export function CreditNoteFlow({ hotelId, number, total, vat = false }: {
   hotelId: string;
   number: string;
   /** Shown so nobody credits the wrong document from a list of five. */
   total: string;
+  /** A VAT bill for alcohol (D22-44): cancelled the same way, by the same four. */
+  vat?: boolean;
 }) {
   const [open, setOpen] = useState(false);
   const [reason, setReason] = useState("");
   const [busy, setBusy] = useState(false);
   const queryClient = useQueryClient();
   const role = useRole();
+  const noun = vat ? "VAT bill" : "invoice";
 
   /* Rule 6: shown, disabled, with the reason - not a button that is refused. */
   if (!can(role, "approve", "invoice")) {
@@ -52,16 +55,18 @@ export function CreditNoteFlow({ hotelId, number, total }: {
       <span className="inline-flex items-center gap-2" data-credit-note-refused>
         <Button variant="secondary" disabled>
           <FileMinus className="size-4" />
-          Cancel this invoice
+          Cancel this {noun}
         </Button>
-        <span className="text-sm text-grey-600 max-w-64">{CREDIT_NOTE_WHO}</span>
+        <span className="text-sm text-grey-600 max-w-64">
+          {vat ? `Cancelling a VAT bill ${WHO}` : CREDIT_NOTE_WHO}
+        </span>
       </span>
     );
   }
 
   const submit = async () => {
     setBusy(true);
-    const result = await issueCreditNote(hotelId, number, reason.trim());
+    const result = await (vat ? cancelVatBill : issueCreditNote)(hotelId, number, reason.trim());
     setBusy(false);
 
     if (!result.ok) {
@@ -83,12 +88,12 @@ export function CreditNoteFlow({ hotelId, number, total }: {
     <>
       <Button variant="secondary" onClick={() => setOpen(true)}>
         <FileMinus className="size-4" />
-        Cancel this invoice
+        Cancel this {noun}
       </Button>
 
       <Dialog open={open} onOpenChange={setOpen}>
         <DialogContent
-          title={`Cancel invoice ${number}`}
+          title={`Cancel ${noun} ${number}`}
           description="A credit note is issued against it. Neither document is deleted."
           size="sm"
           footer={
@@ -107,16 +112,16 @@ export function CreditNoteFlow({ hotelId, number, total }: {
         >
           <div className="space-y-4">
             <p className="text-sm text-grey-600 leading-relaxed">
-              Invoice <span className="tabular font-medium">{number}</span> for{" "}
+              {vat ? "VAT bill" : "Invoice"} <span className="tabular font-medium">{number}</span> for{" "}
               <span className="tabular font-medium">{total}</span> is not
-              edited and not deleted - a GST document that changes after a
+              edited and not deleted - a {vat ? "VAT" : "GST"} document that changes after a
               guest was handed it is the one an auditor asks about. A credit
               note with its own number is issued against it, and both stay on
               the record.
             </p>
 
             <Field
-              label="Why the invoice was wrong"
+              label={`Why the ${noun} was wrong`}
               required
               hint="The line somebody is asked about a year from now."
             >
