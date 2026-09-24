@@ -14,31 +14,6 @@ the reason the fault does not come back.
 
 ## Open — not fixed
 
-### PUR-1 · Housekeeping can be switched on as a requester and still be refused the screen
-
-D18-2 says the owner may switch department heads - the kitchen and
-**housekeeping** - on as people who may raise a purchase request, at any time,
-without a deploy. The setting does exactly that: the switch is on the screen and
-`app.may_raise_purchase` answers for housekeeping the moment it is flipped.
-
-But `src/lib/permissions.ts` gives `housekeeping` **no `purchasing` grant at
-all**, so the menu entry, the route guard and the server's `VIEW_ROLES` all
-refuse them. The owner would switch the switch on and nothing would happen.
-
-The kitchen manager does not have this problem - the matrix already grants them
-`purchasing: view, create` - so only one of the two department heads D18-2 names
-actually works today.
-
-**Not fixed here:** `src/lib/permissions.ts` is the master's, and widening who
-sees a screen is the owner's decision, not a chat's. The change is one line -
-`purchasing: ["view", "create"]` for `housekeeping` - plus `"housekeeping"` in
-`api/src/modules/purchasing/purchasingGrants.ts`'s `VIEW_ROLES`, in the same
-commit, or the parity test fails (which is what it is for).
-
-**The rule:** a SETTING that widens who may do something can only widen as far
-as the permission matrix already reaches. Check both before promising the owner
-a switch.
-
 ### PUR-2 · There is no approvals screen, and the brief said there was one
 
 `docs/briefs/purchasing.md` says the GM approves "in the approvals inbox that
@@ -66,4 +41,28 @@ that a brief says so.
 
 ## Fixed — the solution is here; do not work it out again
 
-None yet.
+### PUR-1 · Housekeeping can be switched on as a requester and still be refused the screen
+
+D18-2 says the owner may switch department heads - the kitchen and
+**housekeeping** - on as people who may raise a purchase request, at any time,
+without a deploy. The setting does exactly that: the switch is on the screen and
+`app.may_raise_purchase` answers for housekeeping the moment it is flipped.
+
+But `src/lib/permissions.ts` gave `housekeeping` **no `purchasing` grant at
+all**, so the menu entry, the route guard and the server's `VIEW_ROLES` all
+refused them. The owner would switch the switch on and nothing would happen.
+
+**Fixed** 23 September - the owner's D22-11, "housekeeping may view and raise
+purchase requests" (branch `admin/hotel-admin-menus`): `purchasing: ["view",
+"create"]` for `housekeeping` in `api/src/permissions.ts`, and `"housekeeping"`
+in `VIEW_ROLES` and in the refusal's list of who can see it. Raising still needs
+the property's setting to name housekeeping (D18-2, off by default); with
+`purchasing create` housekeeping may also attach a bill photo
+(`POST /attachments`, api/src/roleGate.ts), as the kitchen manager already could.
+**Proved:** `src/lib/permissions.test.ts` (the owner's table) and
+`purchasingGrants.test.ts` ("lets housekeeping raise one once the setting names
+them": the screen answers 200) - both failed with the grant taken back.
+
+**The rule:** a SETTING that widens who may do something can only widen as far
+as the permission matrix already reaches. Check both before promising the owner
+a switch.

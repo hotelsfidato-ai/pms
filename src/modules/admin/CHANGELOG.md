@@ -11,6 +11,39 @@ Work that touches the core or several services still goes in the root
 
 ---
 
+## 2026-09-23 · A hotel's Admin runs its people; ADM-3; SPA-2; PUR-1; working menus (D23-2, D22-9, D22-11, D22-19, D22-22)
+
+**Asked for:** one helper task from the master, branch `admin/hotel-admin-menus`.
+
+**Shipped**
+- **D23-2** - migration 131: `app.manages_hotel` counts `admin` at the hotel,
+  so a hotel's Admin rosters, removes, edits, switches off and resets
+  passwords for that hotel's people as a GM does; `app.grantable_roles` gives
+  them Admin there (owner never); the staff insert policy takes a person they
+  add. The closed-day trigger (100) now names owner and GM itself, so a hotel's
+  Admin still cannot correct a closed day (D17-12). People's "may not add"
+  sentence names the Admin.
+- **ADM-3** - `008_seed.sql` inserts `REPLACE@fidato.in` only where nobody else
+  holds group access.
+- **SPA-2** - `spa` off the accountant and the viewer in the matrix; the diary's
+  menu entry reads the matrix again (`SEES_THE_DIARY` gone).
+- **PUR-1 / D22-11** - housekeeping `purchasing: view, create`; `VIEW_ROLES`
+  and its refusal sentence follow.
+- **D22-19 / D22-22** - Rooms in housekeeping's working menu, the Store in the
+  kitchen manager's, laundry's Dockets in reception's and housekeeping's (the
+  GM and hotel manager have no working menu and already see the Laundry
+  section where it is on). Housekeeping still lands on Housekeeping and the
+  kitchen manager on Kitchen (`WORKING_HOME` in navigation.ts).
+
+**Found** - ADM-6: adding somebody NEW as a GM (and now a hotel's Admin) fails
+at the staff row under RLS, after the Firebase account is made. Not fixed.
+
+**Proved** - see the master's report for counts; every new test seen failing
+with its change taken out.
+
+**Left open** - ADM-6; migration 131 needs its number at merge (the
+`migrationNumbers` test fails on the gap until then).
+
 ## 2026-09-22 · The role list after PMS-2, and People for the GM (D22-2, D22-3, D22-30 to D22-36)
 
 **Asked for:** the owner's answers of 22 September

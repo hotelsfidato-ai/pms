@@ -8,7 +8,9 @@ import type { ServiceNavEntry } from "@/components/app/navigation";
    availability's grant, so everybody who could change availability —
    reception included — could change stock, and so could the Viewer (STO-1). */
 export const nav: ServiceNavEntry[] = [
-  { section: "store-and-equipment", order: 10, workingMenus: ["housekeeping", "stores"],
+  /* The kitchen manager's too: the owner's D22-19, 22 September. */
+  { section: "store-and-equipment", order: 10,
+    workingMenus: ["housekeeping", "stores", "kitchen_manager"],
     label: "Store", to: "/h/:code/stores", icon: Package, resource: "stock",
     keywords: ["stock", "inventory", "stores"], matchPrefix: true },
 ];

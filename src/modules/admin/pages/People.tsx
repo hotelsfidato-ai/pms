@@ -130,7 +130,7 @@ export default function PeoplePage() {
             : `${active.length} active · `
               + `${active.filter((s) => s.isGroupAdmin).length} can reach every property`)
           + (staff.data && !mayAdd
-            ? ". Adding somebody is for a group administrator or a property's general manager."
+            ? ". Adding somebody is for a group administrator, or a property's general manager or Admin."
             : "")
         }
         actions={

@@ -64,6 +64,11 @@ properties and people.
   `maySwitch`, `maySetPassword` - the server's own answers. The screen offers
   only those buttons and pickers; a GM's "Add somebody" names the property and
   the role, and the role pickers never hold Owner or Admin for a GM (D22-2).
+- **And for a hotel's Admin (D23-2, 23 September)** - somebody whose role AT a
+  hotel is `admin`: the same as the GM there, plus Admin in the picker. Owner
+  never. Migration 131 (`app.manages_hotel` counts `admin`; a closed day's
+  record still needs owner or GM). Adding somebody NEW fails for both at the
+  staff row - ADM-6.
 - The `/admin/*` routes are wrapped in `RequireAccess`; the Console's route
   does not exist at all in a production build (`IS_DEV`). `/properties/:code`
   answers a GM for their own hotel and 404 for anybody else's, because it
@@ -173,8 +178,8 @@ flows/CommissioningCard.tsx   CommissioningCard (the door's export) and ReadyPil
 
 ```
 hotels, staff, staff_hotels             002_tenancy.sql
-  the placeholder administrator         008_seed.sql — REPLACE@fidato.in; re-inserted on every
-                                        deploy if the row is missing (MEMORY 271)
+  the placeholder administrator         008_seed.sql — REPLACE@fidato.in; inserted only where
+                                        nobody else holds group access (ADM-3, MEMORY 271)
   room_type_templates; provision_property   009_provisioning.sql (templates lost their
                                         prices in 032_no_default_prices.sql)
   staff_hotels readable by the API      018_api_access.sql

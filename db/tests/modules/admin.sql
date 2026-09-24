@@ -273,3 +273,125 @@ end $$;
 
 select set_config('app.user_id',
        (select id::text from staff where email = 'owner@fidato.in'), false);
+
+
+-- =============================================================================
+-- A HOTEL'S ADMIN RUNS THAT HOTEL'S PEOPLE, AND MAY MAKE AN ADMIN THERE (D23-2)
+-- =============================================================================
+-- The owner, 23 September: "a hotel-level Admin manages staff at their own
+-- hotel, including giving Admin there". What a GM may do since D22-3, plus
+-- Admin, at their own hotel and nowhere else. Each guard is asked on its own
+-- (MEMORY 318). And what it does NOT reach: a closed day is still the GM's.
+-- =============================================================================
+do $$
+declare
+  h uuid; other uuid; owner uuid;
+  adm uuid; clerk uuid; two uuid; newbie uuid;
+  roles text[]; failed boolean;
+begin
+  h     := app.provision_property_unchecked('ADR', 'Hotel Admin Test', 'Nowhere');
+  other := app.provision_property_unchecked('ADS', 'Hotel Admin Other', 'Nowhere');
+  select id into owner from staff where email = 'owner@fidato.in';
+
+  insert into staff (email, full_name) values ('d23-admin@fidato.in', 'D23 Hotel Admin')
+  on conflict (email) do update set is_active = true returning id into adm;
+  insert into staff (email, full_name) values ('d23-clerk@fidato.in', 'D23 Clerk')
+  on conflict (email) do update set is_active = true returning id into clerk;
+  insert into staff (email, full_name) values ('d23-both@fidato.in', 'D23 Two Hotels')
+  on conflict (email) do update set is_active = true returning id into two;
+  delete from staff_hotels where staff_id in (adm, clerk, two);
+  insert into staff_hotels (staff_id, hotel_id, role) values
+    (adm, h, 'admin'), (clerk, h, 'front_desk'),
+    (two, h, 'housekeeping'), (two, other, 'housekeeping');
+
+  -- ---------- as the hotel's Admin ----------
+  perform set_config('app.user_id', adm::text, true);
+  roles := app.grantable_roles(h);
+  perform test.ok('hotel admin', 'an Admin at a hotel may make an Admin there (D23-2)',
+    'admin' = any (roles), array_to_string(roles, ','));
+  perform test.ok('hotel admin', 'and every other role but Owner',
+    not ('owner' = any (roles))
+    and roles @> array['gm', 'hotel_manager', 'front_desk', 'housekeeping', 'finance', 'read_only']);
+  perform test.ok('hotel admin', 'and nothing at a hotel where they are not Admin',
+    cardinality(app.grantable_roles(other)) = 0);
+  perform test.raises('hotel admin', 'rostering at that other hotel is refused',
+    format($q$select app.require_hotel_admin(%L)$q$, other), '42501');
+
+  perform test.ok('hotel admin', 'edits somebody at their hotel, never a group administrator',
+    app.manages_person(clerk) and app.manages_person(two) and not app.manages_person(owner));
+  perform test.ok('hotel admin', 'switches off somebody who works only at their hotel, not somebody who also works elsewhere',
+    app.may_switch_person(clerk) and not app.may_switch_person(two));
+  perform test.ok('hotel admin', 'sets their people''s passwords, never a group administrator''s',
+    app.may_set_password(clerk) and not app.may_set_password(owner));
+
+  -- ---------- the rows themselves, as the application ----------
+  set local role pms_app;
+  failed := false;
+  begin
+    insert into staff (email, full_name) values ('d23-new@fidato.in', 'D23 Newcomer');
+  exception when insufficient_privilege then failed := true;
+  end;
+  reset role;
+  select id into newbie from staff where email = 'd23-new@fidato.in';
+  perform test.ok('hotel admin', 'the database takes the person a hotel''s Admin adds',
+    not failed and newbie is not null);
+
+  set local role pms_app;
+  failed := false;
+  begin
+    insert into staff_hotels (staff_id, hotel_id, role) values (newbie, h, 'admin');
+  exception when others then failed := true;
+  end;
+  reset role;
+  perform test.ok('hotel admin', 'and their Admin row at the hotel, whatever the route',
+    not failed and exists (select 1 from staff_hotels
+                            where staff_id = newbie and hotel_id = h and role = 'admin'));
+
+  set local role pms_app;
+  failed := false;
+  begin
+    insert into staff_hotels (staff_id, hotel_id, role) values (newbie, other, 'front_desk');
+  exception when insufficient_privilege then failed := true;
+  end;
+  reset role;
+  perform test.ok('hotel admin', 'and refuses them a row at another hotel',
+    failed and not exists (select 1 from staff_hotels where staff_id = newbie and hotel_id = other));
+
+  -- ---------- what D23-2 does not reach: a closed day (D17-12) ----------
+  insert into night_audit_runs (hotel_id, business_date, status, completed_at)
+  values (h, date '2028-04-01', 'completed', now());
+  perform test.raises('hotel admin', 'a hotel''s Admin still cannot correct a closed day - that stays the GM''s',
+    format($q$update night_audit_runs set rooms_posted = 9
+               where hotel_id = %L and business_date = date '2028-04-01'$q$, h), '42501');
+
+  -- ---------- and the fixtures go ----------
+  perform set_config('app.user_id', '', true);
+  delete from night_audit_runs where hotel_id = h;
+  delete from staff_hotels where staff_id in (adm, clerk, two, newbie);
+  update staff set is_active = false where id in (adm, clerk, two, newbie);
+  alter table hotels disable trigger hotels_no_delete;
+  delete from hotels where id in (h, other);
+  alter table hotels enable trigger hotels_no_delete;
+  perform test.ok('hotel admin', 'the fixtures do not outlive the test',
+    not exists (select 1 from hotels where code in ('ADR', 'ADS')));
+end $$;
+
+select set_config('app.user_id',
+       (select id::text from staff where email = 'owner@fidato.in'), false);
+
+
+-- =============================================================================
+-- A DEPLOY DOES NOT BRING THE PLACEHOLDER ADMINISTRATOR BACK (ADM-3, MEMORY 271)
+-- =============================================================================
+-- Every deploy replays 008_seed.sql. By now this database has real group
+-- administrators (051 made the owner's row out of the placeholder), so a
+-- replay must not insert `REPLACE@fidato.in` again. The seed file itself is
+-- replayed, inside a transaction that is rolled back: its placeholder hotels
+-- would otherwise come back too and change what later files count.
+-- =============================================================================
+begin;
+\ir ../../migrations/008_seed.sql
+select count(*) as adm3_placeholders from staff where email = 'REPLACE@fidato.in' \gset
+rollback;
+select test.ok('placeholder', 'a replay of the seed does not re-create the placeholder administrator (ADM-3)',
+  :adm3_placeholders = 0, :adm3_placeholders || ' placeholder rows after a replay');

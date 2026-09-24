@@ -364,7 +364,8 @@ describe("D22-3 and D22-2 - People, for a GM", () => {
     renderAt("/people", <PeoplePage />);
     const add = await screen.findByRole("button", { name: /Add somebody/ });
     await waitFor(() => expect((add as HTMLButtonElement).disabled).toBe(true));
-    expect(screen.getByText(/Adding somebody is for a group administrator or a property's general manager/))
+    /* D23-2: a hotel's Admin adds people there too. */
+    expect(screen.getByText(/Adding somebody is for a group administrator, or a property's general manager or Admin\./))
       .toBeDefined();
   });
 });
