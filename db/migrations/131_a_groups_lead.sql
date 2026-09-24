@@ -22,15 +22,19 @@
 -- -----------------------------------------------------------------------------
 -- 1 · The lead the desk assigned, if any
 -- -----------------------------------------------------------------------------
--- NULL means nobody assigned one: the default below decides. A reservation is
--- never deleted in practice, but a test fixture may be, so the lead lets go
--- rather than blocking it. Whether the room is in THIS group is the route's
--- check (api/src/modules/reservations/groups.ts) - and app.group_lead ignores
--- a lead that is not, so a stray value can never make another group's room
--- lead this one.
+-- NULL means nobody assigned one: the default below decides. Whether the room
+-- is in THIS group is the route's check (api/src/modules/reservations/
+-- groups.ts) - and app.group_lead ignores a lead that is not a standing room
+-- of the group, so a stray value can never make another group's room lead
+-- this one.
+--
+-- NO FOREIGN KEY, on purpose. Bookings point at their group (group_id), and
+-- a key back from the group to a booking is a loop: a property reset
+-- (api/scripts/reset-property.ts) must delete one before the other, and
+-- api/test/resetOrder.test.ts refuses either order. app.group_lead is the
+-- key's job done where it is read: a lead that is gone leads nothing.
 alter table reservation_groups
-  add column if not exists lead_reservation_id uuid
-      references reservations(id) on delete set null;
+  add column if not exists lead_reservation_id uuid;
 
 comment on column reservation_groups.lead_reservation_id is
   'The room the desk assigned as the group''s lead (D22-52). NULL: the room '
