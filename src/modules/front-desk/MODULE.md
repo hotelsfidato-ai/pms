@@ -91,7 +91,7 @@ and `cashier.ts`)
 
 | Method | Path | What it does |
 |---|---|---|
-| POST | `/:code/stays/:id/check-in` | check in; records the ID document; posts an early-arrival charge |
+| POST | `/:code/stays/:id/check-in` | check in; records the ID document; posts an early-arrival charge; refuses a room somebody is still in by `app.in_house` (FD-11) |
 | GET | `/:code/early-arrival` | is arriving now early, with the hotel's times and charges (063) — null, never 0 |
 | POST | `/:code/stays/:id/check-out` | check out; posts a late check-out charge; closes the folio |
 | POST | `/:code/walk-ins` | a walk-in: guest, booking on the Walk-in channel (085), room, folio, first night |
@@ -147,7 +147,7 @@ migrations that made or changed them:
 | Table | What front desk does to it | Migrations |
 |---|---|---|
 | `reservations` | checks in, checks out, voids; records early and late times and reasons; inserts the walk-in's booking | created `005_reservations.sql`; `011_model_additions.sql` (the room moved out to `room_assignments`), `015_edge_cases.sql` (day use, dates in order), `042_void_and_sources.sql` (void and its reason), `043_indicators.sql` (single-lady mark), `055_amend_stay.sql`, `063_early_late.sql`, `064_expected_arrival.sql`, `085_walk_in_channel.sql` |
-| `room_assignments` | which room a stay holds, night by night: assign, move, exchange, unassign, release | created `011_model_additions.sql` (`ra_no_double_booking`); `015_edge_cases.sql` (an assignment stays inside its booking), `054_room_move.sql`, `065_exchange_and_inclusions.sql`, `070_vacating_dirties.sql`, `072_room_tonight.sql` (`app.room_on`, `app.room_for`), `073_no_show_releases_rooms.sql`, `074_nobody_slept_there.sql`, `086_stay_room.sql` (`app.stay_room`) |
+| `room_assignments` | which room a stay holds, night by night: assign, move, exchange, unassign, release | created `011_model_additions.sql` (`ra_no_double_booking`); `015_edge_cases.sql` (an assignment stays inside its booking), `054_room_move.sql`, `065_exchange_and_inclusions.sql`, `070_vacating_dirties.sql`, `072_room_tonight.sql` (`app.room_on`, `app.room_for`), `073_no_show_releases_rooms.sql`, `074_nobody_slept_there.sql`, `086_stay_room.sql` (`app.stay_room`), the moved-out-room migration (130 on its branch: a move dirties the room left, FD-9) |
 | `rooms` (`occupancy_status`) | NOT written here any more (22 September, FD-8): set from `app.in_house` by the one in-house rule's triggers, on every assignment and every status change | `003_rooms.sql`; `043_indicators.sql` (smoking, connected rooms); `070_vacating_dirties.sql`; the one in-house rule (`app.in_house`, `app.house_now`, `app.sync_room_occupancy`) |
 | `inclusions`, `reservation_inclusions` | what a rate includes, its price snapshotted onto the stay | `065_exchange_and_inclusions.sql` |
 

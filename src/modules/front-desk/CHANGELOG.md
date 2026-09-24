@@ -8,6 +8,54 @@ project, still goes in the root `CHANGELOG.md`.
 
 ---
 
+## 2026-09-23 · FD-11, FD-9, FD-13 and the D23-11 wording
+
+**Asked for:** the master, for the owner's D23-11 (wording), D23-12 (FD-11
+and FD-9 fixed) and D23-13 (FD-13 fixed). Branch
+`front-desk/fd11-fd9-wording`.
+
+**Shipped**
+- **FD-11** - the check-in route refuses a room somebody is still in, by
+  `app.in_house`, above its first write: "Ganesh Patil (FH-2608-5004) is
+  still in room 204. Check them out first, or choose another room." Shown as
+  the check-in screen's "Could not check in" toast, like every refusal.
+- **FD-9** - a new migration, `130_moved_out_room_is_dirty.sql` (the master
+  renumbers at merge): a trigger on a new room assignment dirties the room
+  the same checked-in stay was moved out of, on or before the business date,
+  when it is clean or inspected and nobody is in it by `app.in_house`. No
+  earlier function changed.
+- **FD-13** - `gridRow: 1` on the Calendar's empty cells; every room row is
+  one row tall.
+- **D23-11** - the property page's "Vacant" reads "Empty"; the Properties
+  list reads "8 bookings checked in - it cannot be closed until they check
+  out." (singular "1 booking checked in"). Those two places only
+  (`admin/pages/Property.tsx`, `admin/pages/Properties.tsx`).
+
+**Found** - FD-14 (DEFECTS.md, open, found by reading): the check-in's
+"waive the early charge" refusal sits below its writes, so a refused waive
+is still a check-in, with no early charge. Not fixed - outside D23-12.
+
+**Proved** - FD-11: `api/test/modules/front-desk/inHouseRule.test.ts` 8/8;
+with the guard switched off, 1 fails ("expected 200 to be 409" - the second
+guest is checked in), 7 pass. FD-9: `db/tests/modules/front-desk.sql`
+"moved-out room" 6/6; with the trigger dropped, 1 fails ("got clean").
+FD-13: `front-desk.test.tsx` "keeps a room with a booking one row tall" -
+fails without the fix (14 cells, grid-row empty), passes with it.
+Screens, on this copy's own database (`fidato_fd11`, API 8797, web 5183),
+in `.local/screenshots/2026-09-23-fd11/`: `01-property-page-empty.png`
+(Empty 10, In house now 7), `02-properties-bookings-checked-in.png`,
+`03-calendar-one-row-per-room.png` (every room row measured 37px),
+`04-check-in-refused-guest-still-in-room.png`.
+Gates here: RESULT_GATES
+
+**Left open** - a move dated in the future is not dirtied when the business
+date reaches it (no write happens then); the walk-in still says "Somebody is
+already in that room." without the name; a move or an assign into a room a
+late-checkout guest is still in is not refused (only the check-in is, as
+D23-12 said). Questions in the master's report.
+
+---
+
 ## 2026-09-22 · One rule for In house and Empty (D21-36, D21-37), and FD-8
 
 **Asked for:** the master, for the owner's D21-36 and D21-37 - one

@@ -308,6 +308,26 @@ operations.post("/:code/stays/:id/check-in", async (c) => {
         return refuse("That room is a different type from the one booked.");
       }
 
+      /* FD-11 (D23-12): is somebody still IN the room - app.in_house, the
+         one rule (129). A guest past their departure date who has not
+         checked out holds no night that overlaps this stay, so the clash
+         check below never saw them. */
+      const { rows: inRoom } = await client.query<{ guest: string; reference: string }>(
+        `select g.full_name as guest, r.reference
+           from app.in_house($1) i
+           join reservations r on r.id = i.reservation_id
+           join guests g on g.id = r.guest_id
+          where i.room_id = $2
+          limit 1`,
+        [hotelId, room.id],
+      );
+      if (inRoom[0]) {
+        return refuse(
+          `${inRoom[0].guest} (${inRoom[0].reference}) is still in room ${roomNumber}. `
+          + "Check them out first, or choose another room.",
+        );
+      }
+
       /* The room must be free for the WHOLE stay, not merely tonight.
          The EXCLUDE constraint on room_assignments would catch an
          overlap anyway — but it would arrive as a constraint name, and

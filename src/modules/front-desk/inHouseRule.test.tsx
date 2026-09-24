@@ -121,7 +121,7 @@ describe("In house and Empty, on every screen that prints them", () => {
       return value;
     };
     expect(await figure("In house now")).toBe("2");
-    expect(await figure("Vacant")).toBe("15");
+    expect(await figure("Empty")).toBe("15");
   }, 20000);
 
   it("the housekeeping board's In house", async () => {

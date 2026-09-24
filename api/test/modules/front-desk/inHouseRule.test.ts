@@ -168,6 +168,22 @@ describe("D21-36 · a guest past their departure date who has not checked out", 
     expect(((await res.json()) as { reason: string }).reason)
       .toBe("Somebody is already in that room.");
   });
+
+  /* FD-11 (D23-12). The booking held for 101 arrives today, and the check-in
+     asked only whether another booking's NIGHTS overlap - the walk-in's
+     ended on the 26th - so it put a second guest in with them. */
+  it("and the check-in of the booking held for that room refuses it, naming who is in it", async () => {
+    const res = await call(`/${CODE}/stays/${held}/check-in`, "POST", {
+      roomNumber: "101", earlyReason: "Test", idSkipReason: "Test",
+    });
+    expect(res.status).toBe(409);
+    expect(((await res.json()) as { reason: string }).reason).toMatch(
+      /^Walk-in 101 \d+ \(.+\) is still in room 101\. Check them out first, or choose another room\.$/);
+    /* Refused before the first write (MEMORY 243). */
+    const [stay] = await sql<{ status: string }>(
+      "select status from reservations where id = $1", [held]);
+    expect(stay!.status).toBe("confirmed");
+  });
 });
 
 describe("D21-37 · the three counts", () => {
