@@ -64,6 +64,11 @@ something like "soft **relative to** where that weekday usually stands at this
 distance", which needs a year of bookings this system does not have yet - the
 first thing the old Coming soon page said it needed.
 
+**The owner's answer, 22 September (D22-14):** RM-Q3 - "14 days, 50% soft,
+85% filling well - as built; review after a month of real bookings". So the
+thresholds stay, and this stays open as that review: it is judged again on a
+month of a real property's bookings, not on the demo.
+
 **The rule: a screen is judged on real data before it is called finished. The
 tests were green and the arithmetic was right and the screen still said nothing
 worth reading.**

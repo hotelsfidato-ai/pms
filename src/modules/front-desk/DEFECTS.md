@@ -23,6 +23,13 @@ advance (unassign), or checking that booking into a different room, sends the
 first room to the cleaning queue with nobody ever in it. Not fixed: 074's
 list is housekeeping's.
 
+**Still so, 25 September.** 129 (the one in-house rule) rewrote
+`app.vacated_room_is_dirty` and kept 074's list exactly: a release dirties the
+room unless the booking is void, no-show or cancelled - so a CONFIRMED
+booking's advance room is still dirtied. 130 asks the right question
+(`r.status = 'checked_in'`, citing FD-10) but only for a guest moved mid-stay
+(FD-9), not for a release.
+
 **The fix, when it is done** - dirty only when the stay had arrived
 (`checked_in` or `checked_out`), which is 074's own question, "did anybody
 actually go in?".
@@ -36,26 +43,14 @@ room a guest has just left is not sent for cleaning. The same confusion as
 FD-8 (held is not in), in housekeeping's rule. Kept exactly as it was: what
 reaches the cleaning queue is housekeeping's and the owner's.
 
+**Still so, 25 September.** 129 rewrote the function and kept the "any other
+live assignment" guard; its own comment names this defect ("keeps clean a room
+checked out of while a LATER booking holds it - FD-12, left for housekeeping
+and the owner"). 130 and 137 already ask `app.in_house` instead - for a room
+moved out of, not for a check-out.
+
 **The fix, when it is done** - ask whether anybody is IN the room
 (`app.in_house`, or the column now set from it) instead of whether it is held.
-
-### FD-5 · Rooms and Calendar show the skeleton forever for a hotel with no rooms
-
-**Found** — 16 September, reading `StayView.tsx` while fixing FD-6. **Not yet
-seen on screen**: no property a test sign-in can open has zero rooms.
-
-`getStayView` answers `null` — successfully — when a hotel has no rooms
-(`data/stayview.ts`, `if (allRooms.length === 0) return null`). The screen's
-old `!data` test read that as "still loading". FD-6 deliberately left this
-case drawing the skeleton it always drew, because what an empty hotel should
-say instead is a sentence a person reads.
-
-**The fix, when it is done** — an empty state (what belongs here, and where
-rooms are added), in the words the owner approves. Housekeeping's is "No rooms
-set up yet".
-
-**The rule** — `null` is an answer, not a wait. A loading test written as
-`!data` cannot tell them apart.
 
 ### FD-7 · On a phone, after paging a week, "Today" ends past the screen's edge
 
@@ -68,6 +63,15 @@ simply cut. Part of the critique's P3 (`/stay` spends its first 600px on
 controls), which is not in round 1.
 
 **The fix, when it is done** — with P3, when the controls are laid out again.
+
+**Changed 17 September, not yet proved** — the owner's D17-41, commit
+`f7ae0f4`: the week controls' row wraps (`flex flex-wrap`, marked `FD-7` in
+`pages/StayView.tsx`), so Today drops to a second line instead of past the
+edge. **Still open, 25 September, because no test holds it:** nothing measures
+that row at 375px or asserts it wraps, so the class could go with every gate
+green. A test that asserts the wrap (jsdom has no layout, so the class, as
+`Input.test.tsx` holds the kit's touch sizes) and a measurement at 375px would
+close it.
 
 **The rule** — MEMORY 167's, again: measure a control's right edge at phone
 width in every state it has, not only the first one.
@@ -382,6 +386,33 @@ back, all 5 screen tests fail - 7, 7, 8 rows, 11, 7 where the rule says 2).
 never a column that a second writer keeps.
 
 ---
+
+### FD-5 · Rooms and Calendar show the skeleton forever for a hotel with no rooms — FIXED 17 September
+
+**Found** — 16 September, reading `StayView.tsx` while fixing FD-6. **Not yet
+seen on screen**: no property a test sign-in can open has zero rooms.
+
+`getStayView` answers `null` — successfully — when a hotel has no rooms
+(`data/stayview.ts`, `if (allRooms.length === 0) return null`). The screen's
+old `!data` test read that as "still loading". FD-6 deliberately left this
+case drawing the skeleton it always drew, because what an empty hotel should
+say instead is a sentence a person reads.
+
+**The fix, when it is done** — an empty state (what belongs here, and where
+rooms are added), in the words the owner approves. Housekeeping's is "No rooms
+set up yet".
+
+**Fixed** — 17 September, the owner's words (D17-23), commit `f7ae0f4`:
+`data === null` is read before the loading test, and Rooms and Calendar say
+"No rooms set up yet" - "Add them in Room types." (`pages/StayView.tsx`).
+
+**Proved** — `src/modules/front-desk/stayViewNoRooms.test.tsx`, "says so in
+the owner's words instead of loading forever": `getStayView` answers `null`,
+and the screen shows both sentences and no skeleton. The commit records it
+passing on the fix and failing on the old code. Moved here 25 September.
+
+**The rule** — `null` is an answer, not a wait. A loading test written as
+`!data` cannot tell them apart.
 
 ### FD-1 · Two "in house" numbers for the same moment — FIXED 17 September
 
