@@ -59,7 +59,7 @@ export function FolioPanel({
      from the one matrix): a charge or a second bill is invoice create, a
      payment payment create, a reversal or a move invoice edit, the check-out
      reservation edit. The interim bill is a read the server does not gate:
-     whoever may see bills, invoice view (the owner, 25 September). */
+     whoever may see bills, invoice view (the owner's D25-29). */
   const role = useRole();
   const mayCharge = can(role, "create", "invoice");
   const mayChange = can(role, "edit", "invoice");

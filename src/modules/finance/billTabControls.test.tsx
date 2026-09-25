@@ -9,8 +9,8 @@ import type { Stay } from "@/data/repositories";
 import { FolioPanel } from "./flows/FolioPanel";
 
 /* ══════════════════════════════════════════════════════════════════
-   THE BILL TAB OFFERS ONLY WHAT THE SERVER WILL DO (the owner's D24-18,
-   and their answers of 25 September)
+   THE BILL TAB OFFERS ONLY WHAT THE SERVER WILL DO (the owner's D24-18
+   and D25-29)
 
    Each button asks roleGate's question of its write, from the one matrix:
    Add charge and Split the bill are invoice create, Settle payment create,
