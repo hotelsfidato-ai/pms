@@ -31,3 +31,10 @@
 | D25-27 | Five fixes built but held by no test (ADM-4 audit-log links, FD-7 Today on a phone, INV-2 Room types heading, HK-1 the board refreshing itself, PUR-2 the Approvals screen), found by the notes session | **One small test each, then close them**; no behaviour changes |
 | D25-28 | The Rate calendar screen is headed "Inventory and rates" while its menu says "Rate calendar" (INV-2's second half) | **"Rate calendar"** (D17-22: a heading is its menu name); its test updated |
 | D25-29 | The Bill tab (D24-18): who sees the Interim bill print, which the server does not gate; and a line's Reverse and Move (asked by the Bill tab session; found in its commit 4e8722d) | **The Interim bill for whoever may see bills** (invoice view); **Reverse and Move hidden too** from anyone the server refuses |
+| D25-30 | Who sells and hosts the system (asked by the selling-in-India audit) | **Influvate (the owner's company) sells AND hosts every buyer's copy**; Fidato Hotels is one customer with its own copy |
+| D25-31 | Who owns the code | **Influvate** |
+| D25-32 | The product's name | **A new name, not Fidato** (to be chosen) |
+| D25-33 | Influvate's GST registration | **Already GST-registered** |
+| D25-34 | How buyers pay | **A yearly subscription per property** |
+| D25-35 | Where buyers may be | **Anywhere in India** |
+| D25-36 | Online payments | **None for now: guests pay at the desk** |
