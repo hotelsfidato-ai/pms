@@ -8,6 +8,22 @@ project, still goes in the root `CHANGELOG.md`.
 
 ---
 
+## 2026-09-25 · The check-in's line to Online check-in (D25-4), from the room cards session
+
+**Asked for:** the owner's D25-4, in the room cards session
+(`online-checkin/room-cards-25sep`), with the master's agreement to touch this
+folder: in the check-in's ID step, only when THIS booking has details waiting
+from the guest's own page, a line to Online check-in in a new tab.
+
+**Shipped** - `flows/CheckInFlow.tsx`: one import from online check-in's front
+door and `<WaitingDetailsLink reference={stay.reference} />` under the ID
+step's first paragraph. The line and who sees it (the desk's roles only) are
+online check-in's (`WaitingDetailsLink.tsx`).
+
+**Proved** - `earlyCheckIn.test.tsx`, "the ID step, when the guest sent their
+details online > points to Online check-in" (fails with the line taken out of
+the check-in: no such link).
+
 ## 2026-09-24 · Polish A-E: controls the server refuses (D24-27), own role (D24-28), FD-16, FD-17, the printed Night audit
 
 **Asked for:** the master, for the owner's D24-27 and D24-28 and two open

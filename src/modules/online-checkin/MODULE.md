@@ -169,9 +169,6 @@ out has not been checked out yet) and `app.guest_unlocked`.
 
 **Still open:**
 
-- **The two lines in the check-in flow** that draw `WaitingDetailsLink`
-  (`src/modules/front-desk/flows/CheckInFlow.tsx`, front desk's file) - see
-  the CHANGELOG, 25 September, for whether the master said yes.
 - **The service worker precaches every JS file**, the QR chunk included, so a
   guest's phone downloads it (never runs it). `vite.config.ts` is the
   master's: `globIgnores` for `browser-*.js` would stop it.
@@ -180,6 +177,9 @@ out has not been checked out yet) and `app.guest_unlocked`.
 
 - **The QR code** — `qrcode` 1.5.4 installed by the master on `cp6`
   (`fb7b2e2`, D21-95); drawn on the card sheet, 25 September.
+- **A link into this screen from the check-in flow** — D25-4: the check-in's
+  ID step draws `WaitingDetailsLink` (two lines in front desk's
+  `CheckInFlow.tsx`, with the master's agreement, 25 September).
 
 - **Finance's one definition of a bill** — `app.stay_bill(uuid)` (migration
   123, the master's), wrapped by this lane's `app.guest_bill` (124) and drawn
