@@ -40,3 +40,7 @@
 | D27-36 | Room discounts (PL-10) | **The restaurant's rule**: 10% by hand with a reason, more only by a named promotion |
 | D27-37 | Sales person on a booking (PL-11) | **Picked from a list the owner keeps** |
 | D27-38 | The Firestore → PMS copy (PL-12) | **Reads only what changed**, staying on the free plan |
+| D27-39 | Redesign order (the redesign session) | **Shared parts, then Dashboard / Rooms / Calendar, front desk, bookings, housekeeping, finance, restaurant, then the rest; the guest page and the Form III screens last.** New booking waits for Phase 1 |
+| D27-40 | Text sizes in the redesign | **15 → 14 and 13 → 12 everywhere, onto the D22-51 type ladder; typing boxes stay 16px on a phone.** Replaces the "body text 15px or more" test |
+| D27-41 | Buttons | **Capsule buttons everywhere, colours unchanged** |
+| D27-42 | The business date line | **"Business date · Tuesday, 25 August 2026" above the title on Dashboard, Rooms and Calendar only** |
