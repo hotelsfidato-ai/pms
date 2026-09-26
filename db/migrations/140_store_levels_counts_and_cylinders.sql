@@ -1,5 +1,5 @@
 -- =============================================================================
--- 139 · A store's levels, its count, and cylinders full and empty
+-- 140 · A store's levels, its count, and cylinders full and empty
 -- =============================================================================
 -- The Store's second part (D22-38), the owner's answers D25-12 to D25-19
 -- (docs/briefs/decisions-2026-09-25.md).

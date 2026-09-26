@@ -123,7 +123,7 @@ store.
                                               grant needed (403 otherwise)
 GET    /:code/stores                          view     `stores` (Main first) and items: on hand,
                                                        value, and `byStore` — what each store holds;
-                                                       `levels` and `lowIn` per store (139); for a
+                                                       `levels` and `lowIn` per store (140); for a
                                                        cylinder item `empties`, `emptiesByStore`, the
                                                        deposit, `depositHeld` and `inUse`
 GET    /:code/stores/items/:id/movements      view     one item's history; each row's `store`; a move
@@ -134,7 +134,7 @@ POST   /:code/stores/items                    create   add an item
                                               + edit   if the name is already there (it overwrites),
                                                        or with a level (the Main store's, D25-12/13)
 PATCH  /:code/stores/items/:id                edit     levels per store (null clears one) and, for a
-                                                       cylinder item, the two deposit figures (139)
+                                                       cylinder item, the two deposit figures (140)
 POST   /:code/stores/movements                create   receipt · issue · wastage · return
                                               edit     adjustment
                                                        `locationId` REQUIRED — a store at this
@@ -215,7 +215,7 @@ stock per store, moves between stores 112_stock_held_per_store.sql
                                        only and staff-scope guards lifted for that one statement
 ```
 
-levels, count, cylinders             139_store_levels_counts_and_cylinders.sql
+levels, count, cylinders             140_store_levels_counts_and_cylinders.sql
   a level per item per store           stock_levels (unique item + store; composite key to the item;
                                        112's store check; no DELETE for the app); NULL or no row is no
                                        level. Every item's old reorder_level moved to its Main store
@@ -371,7 +371,7 @@ db/tests/modules/stores.sql                   106 in the database: the store che
 src/modules/stores/stores.test.tsx            the page: four states, More, look-only,
                                               undo asks first, a category must be chosen
 src/modules/stores/data/stores.test.ts        a failed read throws, never answers empty (STO-2)
-api/test/modules/stores/levelsCountsCylinders.test.ts  levels, the below list, the count, cylinders (139)
+api/test/modules/stores/levelsCountsCylinders.test.ts  levels, the below list, the count, cylinders (140)
 ```
 
 ⚠ `stores.test.tsx` shares one query cache across the file (App.tsx's): its
