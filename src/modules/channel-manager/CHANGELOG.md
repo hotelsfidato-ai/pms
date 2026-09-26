@@ -12,6 +12,48 @@ nothing is sent to SU or any booking site until the owner has SU's test keys.**
 
 ---
 
+## 2026-09-25 · SU is never sent a closed day — CM-5 (and the branch's six checks)
+
+**Asked for:** the master, branch `fixes/billtab-date-25sep`: B - the
+availability push read `greatest(hotels.business_date, today)`;
+`hotels.business_date` stops moving once a night audit has run (FD-16). Read
+the business date the rest of the system uses.
+
+**Shipped** - `ari/source.ts`: `firstSellableDate` reads
+`app.business_date(h.id)`. `ari/routes.ts`: the rack-rate count asks
+`firstSellableDate` instead of a second copy of the rule. The test file's
+own `first` reads the same.
+
+**Found** - the brief's second reader, `pos/till.ts` around line 1728, needs
+nothing: `h` there is the order's own row and its `business_date` is
+`o.business_date`, the order's day. Not changed (pos is another lane's).
+
+**Proved**
+- `suAvailability.test.ts`, "a property whose day is closed": today closed
+  at 5EL, SU's first date and the screen's first rack date are tomorrow.
+  With `source.ts` put back: "expected '2026-09-25' to be '2026-09-26'";
+  with only `routes.ts` put back: the same, at the count.
+- The six, on `bd1bca9` (cp6 `3399768` merged in; no migrations here):
+  `npx tsc -p tsconfig.app.json --noEmit` exit 0; `cd api && npx tsc
+  --noEmit` exit 0; `npm test` 72 files, 663 tests, exit 0; `cd api && npm
+  test` 93 of 94 files, 1462 of 1464 tests, exit 1 - the two failures both
+  `guards.test.ts` "void is not cancel", each "Test timed out in 20000ms"
+  while every session's scratch database waited on one checkpoint; that
+  file alone on a fresh database, 45 of 45, exit 0; `bash db/tests/run.sh`
+  all 1154 assertions, exit 0; `bash db/tests/rerun.sh` all 138 migrations
+  re-runnable, exit 0.
+- An earlier full API run (on `3d5fa8e`, cut short by the stop) failed
+  `invoices.test.ts` "refuses a folio with nothing on it" (200 for 409); it
+  passed on `bd1bca9`. The test takes any stay with an empty bill (`limit
+  1`) and the route takes the stay's first bill, neither ordered: a stay
+  another file left with two bills, one empty, is invoiced on the other.
+  Order-dependent; nothing here makes a bill. Left for finance.
+
+**Commits:** `4e8722d`, `696b563`, merges `3d5fa8e`, `bd1bca9`, and these
+notes.
+
+---
+
 ## 2026-09-18 · The rack rate goes to SU, and every night says which figure went
 
 **Asked for:** D17-92, the owner's answer to P3-b, which came back through the
