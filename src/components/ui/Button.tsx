@@ -51,11 +51,13 @@ const VARIANTS: Record<ButtonVariant, string> = {
    grows to 44px under a thumb. */
 const TOUCH = "pointer-coarse:min-h-11";
 
+/* Capsules, every size (the owner, 27 September: one button shape across
+   the app, the fidato-design look). Colours and heights are unchanged. */
 const SIZES: Record<ButtonSize, string> = {
-  sm: `h-8 px-3 text-xs gap-1.5 rounded-sm ${TOUCH}`,
-  md: `h-9 px-3.5 text-base gap-2 rounded-md ${TOUCH}`,
-  lg: "h-11 px-5 text-md gap-2 rounded-md",
-  icon: `h-9 w-9 rounded-md ${TOUCH} pointer-coarse:min-w-11`,
+  sm: `h-8 px-3 text-sm gap-1.5 rounded-full ${TOUCH}`,
+  md: `h-9 px-3.5 text-base gap-2 rounded-full ${TOUCH}`,
+  lg: "h-11 px-5 text-md gap-2 rounded-full",
+  icon: `h-9 w-9 rounded-full ${TOUCH} pointer-coarse:min-w-11`,
 };
 
 export interface ButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {
@@ -85,7 +87,7 @@ export const Button = forwardRef<HTMLButtonElement, ButtonProps>(function Button
 ) {
   const styles = cn(
     "inline-flex items-center justify-center font-medium whitespace-nowrap",
-    "transition-colors duration-150 ease-out",
+    variant === "link" ? "transition-colors duration-150 ease-out" : "press",
     "disabled:cursor-not-allowed",
     variant !== "link" && SIZES[size],
     VARIANTS[variant],

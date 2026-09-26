@@ -180,7 +180,7 @@ export function SkeletonCards({ count = 6, className }: { count?: number; classN
   return (
     <div className={cn("grid gap-4 sm:grid-cols-2 xl:grid-cols-3", className)} role="status" aria-label="Loading">
       {Array.from({ length: count }).map((_, i) => (
-        <div key={i} className="bg-white border border-grey-200 rounded-md p-5">
+        <div key={i} className="bg-white border border-grey-200 rounded-lg px-4 py-3.5">
           <Skeleton className="h-4 w-1/2 mb-3" />
           <Skeleton className="h-3 w-1/3 mb-5" />
           <SkeletonText lines={2} />
