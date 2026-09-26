@@ -250,6 +250,53 @@ describe("the Store, as every role a person can be given (STO-1)", () => {
         }
       });
 
+      it(`${create && edit ? "may" : "may not"} add a new item with a warning level`, async () => {
+        const name = `${TAG} levelled ${role}`;
+        const res = await call(who(), "POST", "/items", { name, unit: "piece", reorderLevel: 3 });
+        if (create && edit) {
+          await ok(res, "adding with a level");
+          expect(await itemNamed(name)).toBeDefined();
+        } else {
+          /* A level is edit on a new item too (D25-13): the kitchen manager adds
+             without one, and a request with one is refused whole. */
+          await refused(res, "adding with a level");
+          expect(await itemNamed(name), `${role} was refused and the item exists anyway`)
+            .toBeUndefined();
+        }
+      });
+
+      /* A LEVEL AND A COUNT ARE `edit` (D25-13; the plan § 6 gives counting to
+         the people who correct a count). */
+      it(`${edit ? "may" : "may not"} set a store's level`, async () => {
+        const res = await call(who(), "PATCH", `/items/${shelfId}`, { levels: { [kitchenId]: 5 } });
+        const set = async () => Number((await one(
+          "select count(*)::int as n from stock_levels where item_id = $1 and set_by = $2",
+          [shelfId, who()]))!.n);
+        if (edit) {
+          await ok(res, "setting a level");
+          expect(await set()).toBe(1);
+        } else {
+          await refused(res, "setting a level");
+          expect(await set(), `${role} was refused and a level was set anyway`).toBe(0);
+        }
+      });
+
+      it(`${edit ? "may" : "may not"} save a count`, async () => {
+        const reason = `${TAG} count ${role}`;
+        const book = Number((await one(
+          "select app.stock_on_hand($1, $2)::float as n", [shelfId, mainId]))!.n);
+        const res = await call(who(), "POST", "/counts", {
+          locationId: mainId, lines: [{ itemId: shelfId, book, counted: book - 1, reason }] });
+        if (edit) {
+          await ok(res, "counting");
+          expect(await movementsNoted(`Count of Main store - ${reason}`)).toBe(1);
+        } else {
+          await refused(res, "counting");
+          expect(await movementsNoted(`Count of Main store - ${reason}`),
+            `${role} was refused and a count was written anyway`).toBe(0);
+        }
+      });
+
       it(`${create ? "may" : "may not"} import a new item`, async () => {
         const name = `${TAG} imported ${role}`;
         const rows = [{ name, unit: "box" }];

@@ -11,6 +11,138 @@ Work that touches the core or several services still goes in the root
 
 ---
 
+## 2026-09-25/26 · The Store's second part: levels per store, the count sheet, cylinders full and empty (D22-38)
+
+**Asked for:** the master's card, 25 September: D22-38 - par levels per store and
+a list of what has fallen below; a count sheet whose differences are movements
+with a reason and a person; gas by the cylinder, full and empty (S5, S6). Ask
+the owner only what is open, build the smallest version of each on the ledger
+already built.
+
+**Decided by the owner on the way** - eight questions, the recommendation taken
+on every one; relayed to the master, recorded in cp6 as D25-12 to D25-19
+- D25-12 · today's one "Warn me below" per item becomes the **Main store's**
+  level; levels are per store; Add an item and the import set the Main store's.
+- D25-13 · levels are set by owner, admin, GM, hotel manager, Inventory Manager
+  (stock `edit`).
+- D25-14 · the below-level list only shows; no purchase request.
+- D25-15 · a count locks nothing; a line whose book moved since the sheet opened
+  refuses the save and is named.
+- D25-16 · the paper is blank; the screen shows the book and the difference once
+  a count is typed.
+- D25-17 · whoever saves is recorded, with "Count of <store>" and a line's
+  reason; a blank line is never a zero.
+- D25-18 · an item counted in "cylinder" shows Full and Empty; issue asks the
+  empties back, a delivery the empties taken; typed every time, 0 an answer.
+- D25-19 · the deposit is typed on the item (on deposit, per cylinder); held and
+  in use at the kitchen are derived.
+
+**Shipped** - branch `stores/part-two-25sep`
+- `db/migrations/140_store_levels_counts_and_cylinders.sql` - `stock_levels`
+  (per item per store, composite key, 112's store check reused, no DELETE, audit
+  trigger); the old levels moved to each Main store and the column emptied;
+  `app.counted_in_cylinders`; `stock_movements.empty` (receipt, return or
+  adjustment only, no cost, only on a cylinder item); `app.stock_on_hand` (both)
+  leave empties out, `app.stock_empties` counts them; `app.reverse_stock_movement`
+  copies `empty`; the two deposit columns. Same signatures (MEMORY 317).
+  Written as 139; renumbered 140 at the last merge (the closed-day lane took 139).
+- `api/src/modules/stores/stores.ts` - the list gives `levels`, `lowIn`, and for
+  cylinders `empties`, `emptiesByStore`, the deposit, `depositHeld`, `inUse`;
+  `PATCH /items/:id` (levels, deposit, `edit`); `POST /counts` (`edit`); a
+  cylinder issue needs `emptiesBack`, a receipt `emptiesTaken`; Add an item and
+  the import write the Main store's level, `edit` needed for a level; an undo of
+  empties is checked against the empties.
+- `api/src/roleGate.ts` (shared) - the two new writes listed as the store's own,
+  as other lanes did; told to the master.
+- `src/modules/stores/pages/Stores.tsx`, `data/stores.ts` - the below-level list,
+  levels on each card, Set levels (and deposit), Count a store (print, count,
+  save), Full · Empty and the deposit line, the empties fields, the history's
+  empties labels.
+- Tests: `levelsCountsCylinders.test.ts` (11, new); `stockGrants.test.ts` +3 acts
+  for every role (add with a level, set a level, save a count);
+  `stores.test.tsx` +4; `db/tests/modules/stores.sql` +17 assertions.
+- `MODULE.md` - screens, 9 endpoints, 140, tests, open items, two requests.
+
+**Found**
+- **My headless Edge signed into the owner's Microsoft account** (26 Sep), as
+  on 25 Sep: a profile folder of its own (`.local/edge-s11`, port 9811) but no
+  `--inprivate --disable-sync` - the rule (4cde3f9) reached me after my
+  screenshot runs. The profile held one account. Every Edge of mine stopped, the
+  folder deleted, the script given both flags; the master told at once.
+- **The role gate refuses a new write for everybody** until it is listed in
+  `api/src/roleGate.ts` - my PATCH answered "Nobody has been given this yet"
+  on the running server. Listed; for the master, since the file is shared.
+- **Copying `empty` onto an undo changes no count.** Both sum functions already
+  leave an undone row and its undo out, so my first break of it passed the
+  suite. The migration's comment claimed more; corrected, and the undo row's
+  flag is now tested directly (it is what History reads).
+- **"Book" was not the right thing to test for.** With the typed-count gate
+  removed, a blank line said "Not a count" instead of showing the book, and my
+  first assertion passed. The test now also refuses any status line or book
+  figure on a blank sheet, and fails when the book is printed on each line.
+- The below list first said "3 items" for 2 items (one low in two stores); it
+  counts items now. It first printed "Main store: - cylinder"; it says "none".
+- The shared `node_modules` junction means every lane's Vite writes one
+  dependency cache: my page loaded blank ("504 Outdated Optimize Dep") while
+  another lane's server re-optimised it. Worked around with a config in this
+  copy's ignored `.local` giving its own `cacheDir`. For the master's MEMORY.
+- On this machine today the API and DB runners finished their tests and then
+  sat for many minutes: Postgres had six DROP DATABASE statements from several
+  lanes queued behind a slow checkpoint. Stopped my own runs after their result
+  was written; some `fidato_test_*` scratch databases from killed runs remain.
+
+**Proved** - this copy, own database `fidato_s11` (API 8829, web 5229), every exit code read
+- **The six checks, on the tree with cp6 `659901a` merged in:** `npx tsc -p
+  tsconfig.app.json --noEmit` exit 0, no output · `cd api && npx tsc --noEmit`
+  exit 0, no output · `npm test` **674 passed, 72 files**, exit 0 · `cd api &&
+  npm test` **1,520 passed, 95 files**, exit 0 · `bash db/tests/run.sh` **1,171
+  assertions**, exit 0 (stores levels 6, stores cylinders 11) · `bash
+  db/tests/rerun.sh` **140 migrations re-runnable**, exit 0.
+- An earlier run on cp6 `8ca49fa` (before night-audit's merge): web 670 + 1
+  failed (accounting, "Nothing was charged or received" not found; alone 16
+  passed), API 1,510 + 4 failed (night-audit, three 20 s timeouts). Neither file
+  is this lane's; both clean on the final tree.
+- **Each rule fails without it** (one break at a time, restored from the commit):
+  a level on a new item allowed for `create` → 1 failed, the kitchen manager's
+  (200, not 403); the count's book check off → 1 failed (200, not 409, 2
+  corrections written); a cylinder issue without its empties allowed → 1 failed
+  (200, not 409); the book printed on every sheet line → 1 failed
+  ('…piece · Book 50…' not to match); the Issue dialog not waiting for the
+  empties → 1 failed; the undo not copying `empty` → 1 failed, its own
+  assertion (see Found for the first try that passed).
+- **D25-12 on real data:** in `fidato_s11` before the migration, rice (level 20)
+  and towels (12) → after, Main store 20 and 12, the item column empty, 2 audit
+  rows; migrated again → still 2 levels.
+- **On the screen**, as the Inventory Manager: the below list ("Basmati rice -
+  Kitchen store: 8 kg, level 10"); rice issued from the Kitchen store while the
+  count sheet was open → Save refused "Basmati rice moved in Kitchen store since
+  the count was opened - count it again. Nothing was saved.", only that line
+  cleared; counted again with "a sack split" → one adjustment, -1, "Count of
+  Kitchen store - a sack split", Test Inventory Manager, the two matching lines
+  wrote nothing. LPG: Receive refused without the empties answer, then 3 in;
+  Issue 1 with 1 empty back → Full 2 · Empty 1; supplier "took 2" refused
+  (1 there). Deposit 5 × ₹1,700 → "₹8,500 held · 2 in use at the kitchen". As
+  housekeeping: History only, no Count, no Set levels; History reads "Empties
+  back from the kitchen +1 cylinder".
+- **Screenshots**, `.local/screenshots/2026-09-25-store-two/` (headless Edge,
+  CDP): 01-02 levels, the below list, Full · Empty and the deposit (desktop,
+  phone); 03-04 Set levels and deposit; 05-06 Issue asks the empties; 07-09 the
+  count sheet before and entered with a difference; 10 the printed paper (blank
+  boxes, no book); 11 after saving; 12-13 History showing the count, who and why.
+
+**Left open**
+- A delivery through Purchasing does not ask for empties (116's door) - a
+  request in `MODULE.md`, for the purchasing lane and the owner.
+- Undoing an issue does not undo the empties that came back with it (two rows).
+- Empties cannot be moved between stores; the count sheet corrects them.
+- No "last counted" date and no monthly reminder (S6) - not asked for.
+- `fidato_s11` dropped; the probe rows lived only there.
+
+**Commits:** the two WIP commits and the finishing commit on
+`stores/part-two-25sep`.
+
+---
+
 ## 2026-09-24 · Every issue says which outlet it went to (D22-20)
 
 **Asked for:** the master, 24 September: finish the helper branch

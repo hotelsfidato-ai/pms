@@ -22,6 +22,7 @@ const control = vi.hoisted(() => ({
   added: [] as unknown[],
   recorded: [] as unknown[],
   reversed: [] as string[],
+  counted: [] as unknown[],
 }));
 
 vi.mock("@/modules/stores/data/stores", async (importOriginal) => {
@@ -31,7 +32,9 @@ vi.mock("@/modules/stores/data/stores", async (importOriginal) => {
     new ApiError(0, "Could not reach the server. Showing the last data received.");
   const item = (id: string, name: string, over: Record<string, unknown>) => ({
     id, name, unit: "piece", category: "Housekeeping", onHand: 0,
-    reorderLevel: null, low: false, unitCost: null, value: null, byStore: {},
+    levels: {}, lowIn: [], low: false, unitCost: null, value: null, byStore: {},
+    cylinder: false, empties: 0, emptiesByStore: {}, cylindersOnDeposit: null,
+    depositPerCylinder: null, depositHeld: null, inUse: null,
     lastMovement: null, movements: 0, isActive: true, ...over,
   });
   /* The three stores every hotel has (104), the Main store first. */
@@ -52,11 +55,15 @@ vi.mock("@/modules/stores/data/stores", async (importOriginal) => {
         items: [
           item("towels", "Bath towel", {
             onHand: 58, unitCost: 310, value: 17980, byStore: { main: 50, kitchen: 8 },
-            lastMovement: "2026-08-25", movements: 3 }),
+            levels: { main: 20 }, lastMovement: "2026-08-25", movements: 3 }),
           item("rolls", "Toilet roll", {}),
           item("gas", "LPG cylinder", {
             category: "Kitchen", unit: "cylinder", onHand: 1, unitCost: 1850, value: 1850,
-            byStore: { kitchen: 1 }, lastMovement: "2026-08-25", movements: 2 }),
+            byStore: { kitchen: 1 }, lastMovement: "2026-08-25", movements: 2,
+            /* D25-18, D25-19: full and empty, and the deposit. */
+            cylinder: true, empties: 1, emptiesByStore: { kitchen: 1 },
+            levels: { kitchen: 2 }, lowIn: ["kitchen"], low: true,
+            cylindersOnDeposit: 4, depositPerCylinder: 1700, depositHeld: 6800, inUse: 2 }),
         ],
       };
     },
@@ -65,7 +72,7 @@ vi.mock("@/modules/stores/data/stores", async (importOriginal) => {
       const row = (over: Record<string, unknown>) => ({
         date: "2026-08-25", unitCost: null, supplier: null, reference: null, note: null,
         outlet: null, who: null, store: "Main store", fromStore: null, toStore: null,
-        isReversal: false, reversesKind: null, reversed: false, ...over,
+        isReversal: false, reversesKind: null, reversed: false, empty: false, ...over,
       });
       return [
         row({ id: "4", kind: "transfer", quantity: 8, store: "Kitchen store",
@@ -85,12 +92,16 @@ vi.mock("@/modules/stores/data/stores", async (importOriginal) => {
     },
     recordStockMovement: async (_hotel: string, input: unknown) => {
       control.recorded.push(input);
-      return { ok: true, id: "98", onHand: 56, onHandHere: 48, store: "Main store",
-               unit: "piece", name: "Bath towel" };
+      return { ok: true, id: "98", onHand: 56, onHandHere: 48, emptiesHere: null,
+               store: "Main store", unit: "piece", name: "Bath towel" };
     },
     reverseStockMovement: async (_hotel: string, id: string) => {
       control.reversed.push(id);
       return { ok: true, id: "99" };
+    },
+    saveStockCount: async (_hotel: string, input: unknown) => {
+      control.counted.push(input);
+      return { ok: true, recorded: 1, matched: 0, store: "Main store" };
     },
   };
 });
@@ -117,6 +128,7 @@ beforeEach(() => {
   control.history = "rows";
   control.reversed.splice(0);
   control.recorded.splice(0);
+  control.counted.splice(0);
 });
 
 describe("the Store", () => {
@@ -311,5 +323,87 @@ describe("the Store", () => {
     const dialog = await screen.findByRole("dialog");
     expect(await within(dialog).findByText("The history did not load")).toBeTruthy();
     expect(within(dialog).queryByText("Nothing has moved yet")).toBeNull();
+  });
+it("D25-14 · the below-level list names the store, what is there and the level - never an item with no level", async () => {
+    as("stores");
+    render(<App />);
+    await screen.findByText("Bath towel");
+
+    const list = document.querySelector("[data-below-list]") as HTMLElement;
+    expect(list.textContent).toContain("LPG cylinder - Kitchen store: 1 cylinder, level 2");
+    expect(list.textContent).not.toContain("Toilet roll");
+    expect(list.textContent).not.toContain("Bath towel");        // 50 in Main, level 20
+    expect(within(card("Bath towel")).getByText(/Warn at Main 20/)).toBeTruthy();
+    expect(within(card("Toilet roll")).getByText(/No level set/)).toBeTruthy();
+  });
+
+  it("D25-18 · a cylinder shows full, empty and the deposit, and its issue asks how many empties came back", async () => {
+    as("stores");
+    render(<App />);
+    await screen.findByText("LPG cylinder");
+
+    const gas = within(card("LPG cylinder"));
+    expect(gas.getByText("Full")).toBeTruthy();
+    expect(gas.getByText("Empty")).toBeTruthy();
+    expect(card("LPG cylinder").querySelector("[data-deposit-line]")!.textContent)
+      .toBe("On deposit 4 · ₹1,700 each · ₹6,800 held · 2 in use at the kitchen");
+
+    fireEvent.click(gas.getByRole("button", { name: /Issue/ }));
+    const dialog = await screen.findByRole("dialog");
+    fireEvent.change(within(dialog).getByLabelText(/Which store/), { target: { value: "kitchen" } });
+    fireEvent.change(within(dialog).getByLabelText(/How many/), { target: { value: "1" } });
+    fireEvent.change(within(dialog).getByLabelText(/Which outlet/), { target: { value: "none" } });
+    const issue = within(dialog).getByRole("button", { name: "Issue" }) as HTMLButtonElement;
+    /* Never assumed: nothing is sent until the empties are typed (0 is an answer). */
+    expect(issue.disabled).toBe(true);
+    fireEvent.change(within(dialog).getByLabelText(/Empties back from the kitchen/), { target: { value: "0" } });
+    expect(issue.disabled).toBe(false);
+    fireEvent.click(issue);
+    await waitFor(() => expect(control.recorded).toHaveLength(1));
+    expect(control.recorded[0]).toMatchObject({ kind: "issue", quantity: 1, emptiesBack: 0 });
+  });
+
+  it("D25-16, 17 · the count sheet shows the book only once a count is typed, and sends only what was counted", async () => {
+    as("stores");
+    render(<App />);
+    fireEvent.click(await screen.findByRole("button", { name: /Count a store/ }));
+
+    await screen.findByRole("button", { name: "Save the count" });
+    const sheet = document.querySelector("[data-count-sheet]") as HTMLElement;
+    /* The paper and a blank line show no book figure, and no verdict (D25-16). */
+    expect(sheet.textContent).not.toMatch(/Book|50/);
+    expect(sheet.querySelectorAll("[role=status]")).toHaveLength(0);
+    expect(within(sheet).getByLabelText("Counted, LPG cylinder - empty, in cylinder")).toBeTruthy();
+
+    fireEvent.change(within(sheet).getByLabelText("Counted, Bath towel, in piece"), { target: { value: "47" } });
+    expect(within(sheet).getByText("Book 50 piece · 3 fewer")).toBeTruthy();
+    fireEvent.change(within(sheet).getByLabelText("Why, Bath towel"), { target: { value: "laundry" } });
+
+    const save = screen.getByRole("button", { name: "Save the count" });
+    expect(save.getAttribute("data-variant")).toBe("primary");
+    fireEvent.click(save);
+    await waitFor(() => expect(control.counted).toHaveLength(1));
+    /* The Main store, and only the line that was counted - a blank is never a zero. */
+    expect(control.counted[0]).toEqual({
+      locationId: "main",
+      lines: [{ itemId: "towels", empty: false, book: 50, counted: 47, reason: "laundry" }],
+    });
+  });
+
+  it("D25-13 · the kitchen manager sets no level and counts no store", async () => {
+    as("kitchen_manager");
+    render(<App />);
+    await screen.findByText("Bath towel");
+
+    expect(screen.queryByRole("button", { name: /Count a store/ })).toBeNull();
+    const menu = await openMore("Bath towel");
+    expect(within(menu).queryByRole("menuitem", { name: /Set levels/ })).toBeNull();
+    fireEvent.keyDown(menu, { key: "Escape" });
+    await waitFor(() => expect(screen.queryByRole("menu")).toBeNull());
+
+    fireEvent.click(screen.getByRole("button", { name: /Add an item/ }));
+    const dialog = await screen.findByRole("dialog");
+    expect(within(dialog).queryByLabelText(/Warn me below/)).toBeNull();
+    fireEvent.keyDown(dialog, { key: "Escape" });
   });
 });

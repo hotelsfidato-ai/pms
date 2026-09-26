@@ -125,3 +125,88 @@ begin
   perform test.raises('stores per store', 'a move cannot be undone twice',
     format($q$select app.reverse_stock_movement(%s, null)$q$, out_leg), 'P0001');
 end $$;
+
+
+-- =============================================================================
+-- LEVELS PER STORE, AND CYLINDERS FULL AND EMPTY (D25-12, D25-18)
+-- =============================================================================
+do $$
+declare
+  h uuid; other uuid;
+  main uuid; kitchen uuid; lobby uuid; theirs uuid;
+  oil uuid; gas uuid; theirs_item uuid;
+  back bigint;
+begin
+  h     := app.provision_property_unchecked('STL', 'Stores Levels', 'Nowhere');
+  other := app.provision_property_unchecked('STM', 'Stores Levels Other', 'Nowhere');
+  select id into main    from locations where hotel_id = h and name = 'Main store';
+  select id into kitchen from locations where hotel_id = h and name = 'Kitchen store';
+  select id into theirs  from locations where hotel_id = other and name = 'Main store';
+  insert into locations (hotel_id, name, kind) values (h, 'Levels lobby', 'public_area')
+  returning id into lobby;
+
+  insert into stock_items (hotel_id, name, unit) values (h, 'Oil', 'litre') returning id into oil;
+  insert into stock_items (hotel_id, name, unit) values (h, 'LPG', ' Cylinders ') returning id into gas;
+  insert into stock_items (hotel_id, name, unit) values (other, 'Oil', 'litre') returning id into theirs_item;
+
+  -- ---------- a level is per store, at this property ----------
+  insert into stock_levels (hotel_id, item_id, location_id, reorder_level) values (h, oil, kitchen, 5);
+  perform test.ok('stores levels', 'a level is set for one store',
+    (select reorder_level from stock_levels where item_id = oil and location_id = kitchen) = 5);
+  perform test.raises('stores levels', 'a level at another property''s store is refused',
+    format($q$insert into stock_levels (hotel_id, item_id, location_id, reorder_level)
+              values (%L, %L, %L, 1)$q$, h, oil, theirs), '23514');
+  perform test.raises('stores levels', 'a level at a place that is not a store is refused',
+    format($q$insert into stock_levels (hotel_id, item_id, location_id, reorder_level)
+              values (%L, %L, %L, 1)$q$, h, oil, lobby), '23514');
+  perform test.raises('stores levels', 'a level on another property''s item is refused',
+    format($q$insert into stock_levels (hotel_id, item_id, location_id, reorder_level)
+              values (%L, %L, %L, 1)$q$, h, theirs_item, main), '23503');
+  perform test.raises('stores levels', 'a level below zero is refused',
+    format($q$insert into stock_levels (hotel_id, item_id, location_id, reorder_level)
+              values (%L, %L, %L, -1)$q$, h, oil, main), '23514');
+  perform test.ok('stores levels', 'the application may not delete a level',
+    not has_table_privilege('pms_app', 'stock_levels', 'DELETE'));
+
+  -- ---------- empties are counted apart from full ----------
+  perform test.ok('stores cylinders', 'an item counted in cylinders is a cylinder, whatever the case and spaces',
+    app.counted_in_cylinders(' Cylinders ') and app.counted_in_cylinders('cylinder')
+      and not app.counted_in_cylinders('kg'));
+
+  insert into stock_movements (hotel_id, item_id, location_id, business_date, kind, quantity, unit_cost)
+  values (h, gas, kitchen, app.business_date(h), 'receipt', 3, 1850);
+  insert into stock_movements (hotel_id, item_id, location_id, business_date, kind, quantity, empty)
+  values (h, gas, kitchen, app.business_date(h), 'receipt', 2, true)
+  returning id into back;
+  perform test.ok('stores cylinders', 'on hand is the full cylinders only',
+    app.stock_on_hand(gas) = 3 and app.stock_on_hand(gas, kitchen) = 3);
+  perform test.ok('stores cylinders', 'the empties are counted apart, per store and in all',
+    app.stock_empties(gas, kitchen) = 2 and app.stock_empties(gas) = 2 and app.stock_empties(gas, main) = 0);
+  perform test.ok('stores cylinders', 'an empty back does not change what a full cylinder cost',
+    app.stock_unit_cost(gas) = 1850);
+
+  perform test.raises('stores cylinders', 'an empty on an item not counted in cylinders is refused',
+    format($q$insert into stock_movements (hotel_id, item_id, location_id, business_date, kind, quantity, empty)
+              values (%L, %L, %L, app.business_date(%L), 'receipt', 1, true)$q$, h, oil, main, h),
+    '23514');
+  perform test.raises('stores cylinders', 'an empty carries no cost',
+    format($q$insert into stock_movements (hotel_id, item_id, location_id, business_date, kind, quantity, unit_cost, empty)
+              values (%L, %L, %L, app.business_date(%L), 'receipt', 1, 10, true)$q$, h, gas, kitchen, h),
+    '23514');
+  perform test.raises('stores cylinders', 'an empty is not issued - it comes back, goes back, or is counted',
+    format($q$insert into stock_movements (hotel_id, item_id, location_id, business_date, kind, quantity, empty)
+              values (%L, %L, %L, app.business_date(%L), 'issue', -1, true)$q$, h, gas, kitchen, h),
+    '23514');
+
+  perform app.reverse_stock_movement(back, null);
+  perform test.ok('stores cylinders', 'the undo of empties is itself marked empty',
+    (select empty from stock_movements where reverses_id = back));
+  perform test.ok('stores cylinders', 'undoing empties takes back empties, not full cylinders',
+    app.stock_empties(gas) = 0 and app.stock_on_hand(gas) = 3);
+
+  -- ---------- the deposit ----------
+  perform test.raises('stores cylinders', 'a deposit below zero is refused',
+    format($q$update stock_items set deposit_per_cylinder = -1 where id = %L$q$, gas), '23514');
+  perform test.ok('stores cylinders', 'a deposit nobody typed is null, not zero',
+    (select cylinders_on_deposit is null and deposit_per_cylinder is null from stock_items where id = gas));
+end $$;
