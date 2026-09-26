@@ -532,7 +532,8 @@ describe("the desk's side", () => {
       open("/h/5EL/online-checkin", "/h/:code/online-checkin", <DeskPage />);
       fireEvent.click(await screen.findByRole("button", { name: "Print a card" }));
 
-      expect(await screen.findByText(/The QR codes could not be drawn/)).toBeTruthy();
+      /* The mocked import fails slowly on a loaded machine: wait for it. */
+      expect(await screen.findByText(/The QR codes could not be drawn/, {}, { timeout: 5000 })).toBeTruthy();
       expect((screen.getByRole("button", { name: "Print" }) as HTMLButtonElement).disabled).toBe(true);
     } finally {
       vi.doUnmock("qrcode");

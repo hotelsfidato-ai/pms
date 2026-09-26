@@ -83,6 +83,12 @@ phone downloads the QR chunk (never runs it) - `vite.config.ts` is theirs.
   in dist": `qrcode` only in `browser-BjcGmAWY.js` (25.7 kB), the main
   `index-*.js` has none of its strings and reaches it only by `import()`,
   `index.html` does not preload it.
+- cp6 moved on during those runs; merged again (`c02761f`, front desk's
+  CHANGELOG conflict resolved, both entries kept). On that tree: web types 0,
+  server types 0, `npx vitest run src/modules/online-checkin
+  src/modules/front-desk src/test` **94 of 94**, 13 files, 0 - after
+  "keeps Print off" was given 5 seconds to see the failed import (it timed
+  out at the 1-second default on the loaded machine, still loading).
 
 **Left open** - the service worker's precache of the QR chunk (the
 master's); the ID photo (D21-11), as before.
