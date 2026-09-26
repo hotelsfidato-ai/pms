@@ -34,7 +34,7 @@ function everyLabel(): string[] {
 /* Words that keep their capitals wherever they fall: acronyms, and the
    names of statutory forms. Anything else capitalised after the first
    word is Title Case creeping back. */
-const PROPER = new Set(["GST", "Form", "F", "C", "C-Form", "Fidato", "POS", "CRS", "CRM", "WhatsApp"]);
+const PROPER = new Set(["GST", "Form", "III", "Fidato", "POS", "CRS", "CRM", "WhatsApp"]);
 
 describe("the menu speaks one way", () => {
   it("writes every label in sentence case", () => {

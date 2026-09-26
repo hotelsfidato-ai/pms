@@ -10,7 +10,10 @@ import {
 } from "@/components/ui";
 import { createWalkIn } from "@/modules/front-desk/data/operations";
 import { getRoom } from "@/data/repositories";
-import { ReturningGuest, ConsentTicks } from "@/modules/guests";
+import {
+  ReturningGuest, ConsentTicks, ForeignGuestFields, formIIIMissing,
+  particularsPayload, NO_PARTICULARS, ID_TYPES, type Particulars,
+} from "@/modules/guests";
 
 /* ══════════════════════════════════════════════════════════════════
    FLOW D — the walk-in at 23:40
@@ -73,6 +76,20 @@ export function WalkInFlow({
   const [businessSource, setBusinessSource] = useState("");
   const [salesPerson, setSalesPerson] = useState("");
   const [singleLady, setSingleLady] = useState(false);
+  /* Form III (D27-25; the owner, 27 September: what check-in asks). A
+     foreign walk-in never reached the register - this form had no
+     nationality, and a guest defaults to IN. */
+  const [nationality, setNationality] = useState("IN");
+  const [idType, setIdType] = useState("");
+  const [idNumber, setIdNumber] = useState("");
+  const [idSkipReason, setIdSkipReason] = useState("");
+  const [particulars, setParticulars] = useState<Particulars>(NO_PARTICULARS);
+  const isForeign = (nationality.trim().toUpperCase() || "IN") !== "IN";
+  const idCaptured = Boolean(idType && idNumber.trim());
+  const formIIINeeds = isForeign
+    ? [...(!idCaptured && !idSkipReason.trim() ? ["the ID document or a reason for skipping it"] : []),
+       ...formIIIMissing(particulars, nationality, idCaptured)]
+    : [];
 
   /* Derived, never stored. The party is what the two counters say and
      the capacity is what the room type says — neither is a third
@@ -121,6 +138,8 @@ export function WalkInFlow({
        attributed to the next guest, silently, and nobody would find it. */
     setSegment(""); setBusinessSource(""); setSalesPerson("");
     setSingleLady(false);
+    setNationality("IN"); setIdType(""); setIdNumber(""); setIdSkipReason("");
+    setParticulars(NO_PARTICULARS);
   };
 
   return (
@@ -159,6 +178,46 @@ export function WalkInFlow({
 
           <ReturningGuest hotelId={hotelId} phone={phone} email={email}
             chosen={returning} onChoose={setReturning} />
+
+          <Field label="Nationality"
+            hint="Anything other than IN puts this stay on the Form III register.">
+            {({ id }) => (
+              <Input id={id} value={nationality} placeholder="IN" maxLength={2}
+                className="w-24"
+                onChange={(e) => setNationality(e.target.value.toUpperCase())} />
+            )}
+          </Field>
+          {isForeign && (
+            <>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <Field label="Document">
+                  {({ id }) => (
+                    <NativeSelect id={id} value={idType}
+                      onChange={(e) => setIdType(e.target.value)}>
+                      <option value="">Not recorded</option>
+                      {ID_TYPES.map(([v, l]) => <option key={v} value={v}>{l}</option>)}
+                    </NativeSelect>
+                  )}
+                </Field>
+                <Field label="Number" required={Boolean(idType)}>
+                  {({ id }) => (
+                    <Input id={id} value={idNumber} disabled={!idType}
+                      onChange={(e) => setIdNumber(e.target.value)} />
+                  )}
+                </Field>
+              </div>
+              {!idCaptured && (
+                <Field label="Reason for skipping" required>
+                  {({ id }) => (
+                    <Input id={id} value={idSkipReason}
+                      onChange={(e) => setIdSkipReason(e.target.value)} />
+                  )}
+                </Field>
+              )}
+              <ForeignGuestFields value={particulars} onChange={setParticulars}
+                nationality={nationality} idCaptured={idCaptured} />
+            </>
+          )}
 
           {/* ── WILL THEY FIT ───────────────────────────────────────
               A walk-in is the ONE path where the clerk is looking at
@@ -339,6 +398,12 @@ export function WalkInFlow({
           {!permitted.allowed && permitted.reason && (
             <p className="text-xs text-brand-red">{permitted.reason}</p>
           )}
+          {/* Rule 6: the button says why it is blocked. */}
+          {formIIINeeds.length > 0 && (
+            <p className="text-xs text-grey-600" data-form-iii-needs>
+              Form III still needs: {formIIINeeds.join(", ")}.
+            </p>
+          )}
 
           {/* ONE action. Not "book" then "check in". */}
           <Button variant="primary"
@@ -347,7 +412,8 @@ export function WalkInFlow({
                independently, but a clerk should find out while the
                family is still standing there and a bigger room can be
                chosen -- not after pressing the one button. */
-            disabled={!permitted.allowed || overCapacity || busy}
+            disabled={!permitted.allowed || overCapacity || busy
+                      || formIIINeeds.length > 0}
             data-walkin-confirm
             onClick={async () => {
               if (busy) return;
@@ -361,6 +427,16 @@ export function WalkInFlow({
                 phone, email,
                 ...(returning ? { guestId: returning.id } : {}),
                 whatsappAgreed: whatsapp, offersAgreed,
+                nationality,
+                ...(isForeign
+                  ? {
+                      ...(idCaptured
+                        ? { identity: { idType, idNumber: idNumber.trim(),
+                                        ...particularsPayload(particulars).identity } }
+                        : { idSkipReason }),
+                      visit: particularsPayload(particulars).visit,
+                    }
+                  : {}),
               });
               setBusy(false);
               if (res.ok) {

@@ -8,6 +8,89 @@ project, still goes in the root `CHANGELOG.md`.
 
 ---
 
+## 2026-09-27 · Form III: the law's fields, both 24-hour clocks, the card (D27-25)
+
+**Asked for:** D27-25 - Form C replaced by Form III (Immigration and
+Foreigners Act 2025 s.8, in force 1 Sep 2025; Rules 2025, G.S.R. 596(E),
+Rule 17 and Form III). Branch `guests/form-iii-27sep`.
+
+**The law, read 27 September at the MHA's own copies:** Rule 17(1) the
+foreigner (OCI included) gives particulars and signs on arrival, and at
+departure the date, time and address they go to; kept electronically at
+least a year. 17(5) Form III within 24 hours of arrival; 17(6) the departure
+within 24 hours of leaving; both on indianfrro.gov.in (Rule 12(1)(b)). The
+June 2026 amendment (G.S.R. 424(E)) changes Rule 12 only (BDO's alert; the
+Gazette not reached). Exemption Order 2025 cl. 3(1)(c): Nepal and Bhutan
+need no passport or visa. The portal (indianfrro.gov.in/formIII, public page
+code read): no upload of guest data and no API; photo JPEG 5 KB to 1 MB;
+check-out asks date, time, next destination; it also asks gender, date of
+birth, passport and visa issue details, arrival in India, an address abroad,
+a reference address in India, employment and length of stay.
+`docs/selling-in-india/income-tax-and-form-iii.md` B has the detail.
+
+**The owner's answers (27 September):** the photo is taken on the portal and
+not kept here; the guest signs a printed card; next destination asked at
+check-out; companions: warn, and a portal number per person; walk-ins asked
+what check-in asks; record every portal field; the law's fields required at
+check-in (visa or OCI number and type, phone in India, arrived from,
+purpose, previous place of stay), the rest completed later; "Form III" and
+"Form III register"; a departure needs a number too (the same one if the
+portal gives no new one).
+
+**Shipped:**
+- Migration 146: `guest_documents` + gender (the portal's three), date of
+  birth, passport and visa issue date, place and country, visa type;
+  `form_iii_stays` (one row per stay: arrived from, previous stay, purpose,
+  phone in India, arrival in India, employment, reference address, remarks,
+  next destination; no delete, audited, no cascade from the booking);
+  `form_c_filings.kind` arrival or departure, unique per stay, kind and
+  number; `app.form_iii(hotel)` - every field, both deadlines 24 hours from
+  the audit log's check-in and check-out instants (the property's midnight
+  of the date only when no instant exists - never later than the truth);
+  `app.form_c_due` dropped (nothing calls it; a new function rather than a
+  new return type, MEMORY 317).
+- Server: `formIII.ts` - the rule (`formIIIRefusal`) and the two savers,
+  shared through `index.ts` with front desk's check-in, walk-in and
+  check-out, each refusing before its first write (MEMORY 243); the
+  nationality on file counts when none is sent, and a returning guest typed
+  "IN" at a walk-in stays foreign. `formC.ts` - the register with every
+  field in the property's clock, `kind` on a filing (a departure only after
+  check-out), `PUT /:code/form-c/:reservationId/details` ("Complete
+  details"; roleGate FORM_C, "Recording Form III"). The report
+  (`/reports/c-form`) reads the same function, in Form III's order.
+- Screens: `ForeignGuestFields` (one set of fields for check-in, walk-in and
+  Complete details); the check-in starts from the nationality on file and
+  always sends it (with the ID skipped too, a foreign guest never reached
+  the register); the walk-in asks nationality and, for a foreigner, the
+  document and the fields; the bill panel asks the next destination before
+  a foreign guest's check-out, and the late check-out passes it on; the
+  register (menu and heading "Form III") shows both clocks, a number per
+  person, "Complete details", the companion warning and the printed card
+  with two signature lines; the report is "Form III register". The glossary
+  term and the menu-casing test's word list (the master's files) follow.
+
+**Proved (each seen failing with its rule broken, files backed up and
+copied back, `cmp` equal):** database 13 new assertions in
+`db/tests/modules/guests.sql` (8 rules broken: 8 failed); API 14 in
+`api/test/modules/guests/formIII.test.ts` (7 rules broken: 10 failed; the
+rule itself off: 4 failed); web 8 in `guests/formIII.test.tsx`,
+`front-desk/formIIICheckIn.test.tsx`, `finance/nextDestination.test.tsx`
+(8 rules broken over 4 rounds: each test failed). The check-out test first
+passed with its rule broken - it looked before the permission had loaded;
+rewritten, then seen failing. On screen (fidato_s16): a Brazilian guest
+checked in (nationality "BR" from the booking), the register at 03:45 "due
+by 28 Sep 2026, 03:45", the card, Complete details, check-out with
+"Jaipur", the departure's own clock, the report; the walk-in's fields.
+
+**Left open:** a companion's own details (the owner chose the warning); an
+ID skipped at check-in still has no later place to record the passport
+number (Complete details records the rest); the lawyer's question whether
+the hotel must keep its own copy of the photo (with D21-11); how long the
+record is kept beyond Rule 17's year (C4); the online check-in page does not
+ask the new fields (D21-19 is the owner's list).
+
+---
+
 ## 2026-09-27 · GUE-2: the Form C register's missing room is a plain "-" (D27-1)
 
 **Asked for:** D27-1, one of five small bugs in one session

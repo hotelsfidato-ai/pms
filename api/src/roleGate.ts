@@ -80,7 +80,7 @@ const FUNCTION_CANCEL = grant("reservation", "cancel", "Cancelling a function");
 
 /* Guests: `customer`. */
 const GUEST = grant("customer", "edit", "Changing a guest's record");
-const FORM_C = grant("customer", "edit", "Recording Form C");
+const FORM_C = grant("customer", "edit", "Recording Form III");
 /* D25-38: guests' passport, visa and ID details are READ only by the people
    who check guests in - the owner, an administrator, the GM, the hotel manager
    and reception. Exactly who may record Form C, so one grant answers both. */
@@ -227,6 +227,7 @@ export const WRITE_RULES: Readonly<Record<string, Rule>> = {
   /* guests */
   [`POST ${H}/guests/:id/vip`]: GUEST,
   [`POST ${H}/form-c/:reservationId`]: FORM_C,
+  [`PUT ${H}/form-c/:reservationId/details`]: FORM_C,
   [`POST ${H}/booking-sources`]: own("guests/bookingSources.ts: the database, app.is_manager"),
   [`PATCH ${H}/booking-sources/:id`]: own("guests/bookingSources.ts: the database, app.is_manager"),
   [`PUT ${H}/booking-sources/:id/commission`]: COMMISSION,

@@ -1,12 +1,14 @@
 import { Hono } from "hono";
 import { withSession } from "../../auth.ts";
 import type { Client } from "../../db.ts";
+import { isForeign, saveIdentity, saveVisit, type Identity, type Visit } from "./formIII.ts";
 
 /* Split out of api/src/routes/invoices.ts on 15 September in the
    service-folder move (docs/SERVICE-FOLDERS-PLAN.md). Service: guests.
-   The Form C register: which foreign guests owe a filing, and who filed
-   it. The endpoints are unchanged; `refuse` and `hotelIdFor` are copies
-   of the invoices file's. */
+   The Form III register (Form C until the 2025 Act, D27-25): which
+   foreign guests owe a filing - on arrival and on departure - and the
+   portal numbers that prove it. The addresses keep "form-c": they are
+   not words anybody reads, and the role gate and the menu name them. */
 
 export const formC = new Hono<{ Variables: { subject: string } }>();
 
@@ -21,26 +23,61 @@ async function hotelIdFor(client: Client, code: string): Promise<string | null> 
   return rows[0]?.id ?? null;
 }
 
-/* ── Form C ───────────────────────────────────────────────────────── */
+/* ── The register ─────────────────────────────────────────────────── */
+
+type Row = Record<string, string | number | boolean | string[] | null>;
 
 formC.get("/:code/form-c", async (c) => {
   const body = await withSession(c.get("subject"), async (client) => {
     const hotelId = await hotelIdFor(client, c.req.param("code"));
     if (!hotelId) return null;
 
-    const { rows } = await client.query<{
-      reservation_id: string; guest_name: string; nationality: string;
-      passport: string | null; room_number: string; arrived: string;
-      due_by: string; overdue: boolean; filed: boolean;
-      reference: string | null;
-    }>(
-      `select reservation_id::text, guest_name, nationality, passport,
-              room_number, to_char(arrived,'YYYY-MM-DD') as arrived,
-              to_char(due_by,'DD Mon YYYY, HH24:MI') as due_by,
-              overdue, filed, reference
-         from app.form_c_due($1)`,
+    /* Every date as text and every instant in the PROPERTY's clock: the
+       card prints them, and a server in another zone must not move a
+       guest's arrival by five and a half hours. */
+    const { rows } = await client.query<Row>(
+      `select f.reservation_id::text as "reservationId", f.guest_name as guest,
+              f.nationality, f.gender, f.date_of_birth::text as "dateOfBirth",
+              f.id_type as "idType", f.passport,
+              f.passport_issued_on::text as "passportIssuedOn",
+              f.passport_issue_place as "passportIssuePlace",
+              f.passport_issue_country as "passportIssueCountry",
+              f.passport_expiry::text as "passportExpiry",
+              f.visa_number as "visaNumber", f.visa_type as "visaType",
+              f.visa_issued_on::text as "visaIssuedOn",
+              f.visa_issue_place as "visaIssuePlace",
+              f.visa_issue_country as "visaIssueCountry",
+              f.visa_expiry::text as "visaExpiry",
+              f.home_address as "homeAddress", f.home_city as "homeCity",
+              f.home_country as "homeCountry", f.phone_in_india as "phoneInIndia",
+              f.email, f.remarks, f.arrived_from as "arrivedFrom",
+              f.previous_stay as "previousStay", f.purpose,
+              f.purpose_other as "purposeOther",
+              f.arrived_in_india_on::text as "arrivedInIndiaOn",
+              f.arrival_port as "arrivalPort", f.employed_in_india as "employedInIndia",
+              f.ref_address as "refAddress", f.ref_city as "refCity",
+              f.ref_state as "refState", f.ref_pincode as "refPincode",
+              f.next_destination as "nextDestination", f.room_number as room,
+              f.adults, f.children, f.check_in::text as arrived,
+              f.check_out::text as "checkOut", f.status,
+              to_char(f.arrived_at at time zone h.timezone, 'YYYY-MM-DD HH24:MI') as "arrivedAt",
+              to_char(f.departed_at at time zone h.timezone, 'YYYY-MM-DD HH24:MI') as "departedAt",
+              to_char(f.arrival_due at time zone h.timezone, 'DD Mon YYYY, HH24:MI') as "dueBy",
+              to_char(f.departure_due at time zone h.timezone, 'DD Mon YYYY, HH24:MI') as "departureDueBy",
+              f.arrival_overdue as overdue, f.departure_overdue as "departureOverdue",
+              f.arrival_numbers as "arrivalNumbers",
+              f.departure_numbers as "departureNumbers"
+         from app.form_iii($1) f
+         join hotels h on h.id = $1`,
       [hotelId],
     );
+    const { rows: premises } = await client.query<Row>(
+      `select name, address_line as address, city, state, phone
+         from hotels where id = $1`, [hotelId]);
+
+    const owes = (r: Row) =>
+      (r["arrivalNumbers"] as string[]).length === 0
+      || (r["status"] === "checked_out" && (r["departureNumbers"] as string[]).length === 0);
 
     return {
       /* Said on the response, not only in a code comment. Anyone
@@ -48,22 +85,15 @@ formC.get("/:code/form-c", async (c) => {
       note:
         "This system does not file with the FRRO. Filing happens on the " +
         "government portal; this register records who owes one and who did it.",
-      due: rows.filter((r) => !r.filed).length,
-      overdue: rows.filter((r) => r.overdue).length,
+      premises: premises[0] ?? null,
+      due: rows.filter(owes).length,
+      overdue: rows.filter((r) => r["overdue"] || r["departureOverdue"]).length,
       rows: rows.map((r) => ({
-        reservationId: r.reservation_id,
-        guest: r.guest_name,
-        nationality: r.nationality,
-        /* Null when the guest has no document row. A blank passport on
-           a register that must be filed is information, not an error to
-           hide — somebody has to go and ask for it. */
-        passport: r.passport,
-        room: r.room_number,
-        arrived: r.arrived,
-        dueBy: r.due_by,
-        overdue: r.overdue,
-        filed: r.filed,
-        reference: r.reference,
+        ...r,
+        /* The arrival's, kept under the names the register has always
+           answered with. */
+        filed: (r["arrivalNumbers"] as string[]).length > 0,
+        reference: (r["arrivalNumbers"] as string[]).join(", ") || null,
       })),
     };
   });
@@ -71,10 +101,11 @@ formC.get("/:code/form-c", async (c) => {
   return body ? c.json(body) : c.json({ error: "No such property." }, 404);
 });
 
+/* ── A filing happened ────────────────────────────────────────────── */
+
 formC.post("/:code/form-c/:reservationId", async (c) => {
-  const body = await c.req
-    .json<{ reference?: string; notes?: string }>()
-    .catch(() => ({} as { reference?: string; notes?: string }));
+  type Body = { reference?: string; notes?: string; kind?: string };
+  const body = await c.req.json<Body>().catch(() => ({} as Body));
 
   const result = await withSession(c.get("subject"), async (client) => {
     const hotelId = await hotelIdFor(client, c.req.param("code"));
@@ -90,31 +121,77 @@ formC.post("/:code/form-c/:reservationId", async (c) => {
           "register is a claim, not evidence.",
       );
     }
+    const kind = body.kind ?? "arrival";
+    if (kind !== "arrival" && kind !== "departure") {
+      return refuse("A filing is for the arrival or the departure.");
+    }
 
-    const { rows: res } = await client.query<{ guest_id: string }>(
-      `select guest_id::text from reservations
+    const { rows: res } = await client.query<{ guest_id: string; status: string }>(
+      `select guest_id::text, status from reservations
         where hotel_id = $1 and id = $2::uuid`,
       [hotelId, c.req.param("reservationId")],
     );
     if (!res[0]) return refuse("No such stay at this property.");
+    /* 17(6): the departure is reported after it happens. */
+    if (kind === "departure" && res[0].status !== "checked_out") {
+      return refuse("The guest has not checked out. The departure is filed after they leave.");
+    }
 
     try {
       await client.query(
         `insert into form_c_filings
-           (hotel_id, reservation_id, guest_id, reference, notes, filed_by)
-         values ($1, $2::uuid, $3::uuid, $4, $5, app.current_user_id())`,
+           (hotel_id, reservation_id, guest_id, reference, notes, filed_by, kind)
+         values ($1, $2::uuid, $3::uuid, $4, $5, app.current_user_id(), $6)`,
         [hotelId, c.req.param("reservationId"), res[0].guest_id,
-         reference, body.notes ?? null],
+         reference, body.notes ?? null, kind],
       );
     } catch (error) {
       if (typeof error === "object" && error !== null && "code" in error &&
           (error as { code?: string }).code === "23505") {
-        return refuse("That stay has already been filed.");
+        return refuse("That number is already recorded for this stay.");
       }
       throw error;
     }
 
     return { ok: true, reference };
+  });
+
+  if (!result) return c.json({ error: "No such property." }, 404);
+  return c.json(result, "ok" in result && result.ok ? 200 : 409);
+});
+
+/* ── Complete details ─────────────────────────────────────────────
+   What check-in left blank, or got wrong, filled in later (the owner,
+   27 September). Only what is typed is written. */
+
+formC.put("/:code/form-c/:reservationId/details", async (c) => {
+  type Body = { identity?: Identity; visit?: Visit };
+  const body = await c.req.json<Body>().catch(() => ({} as Body));
+
+  const result = await withSession(c.get("subject"), async (client) => {
+    const hotelId = await hotelIdFor(client, c.req.param("code"));
+    if (!hotelId) return null;
+
+    const { rows } = await client.query<{ guest_id: string; nationality: string }>(
+      `select r.guest_id::text, g.nationality
+         from reservations r join guests g on g.id = r.guest_id
+        where r.hotel_id = $1 and r.id = $2::uuid`,
+      [hotelId, c.req.param("reservationId")],
+    );
+    const stay = rows[0];
+    if (!stay) return refuse("No such stay at this property.");
+    if (!isForeign(stay.nationality)) {
+      return refuse("Form III is for a foreign guest; this guest is recorded as Indian.");
+    }
+    const id = body.identity ?? {};
+    /* Refused here in a sentence rather than by gd_number_present (026). */
+    if (id.idType?.trim() && !id.idNumber?.trim()) {
+      return refuse(`A ${id.idType} needs its number.`);
+    }
+
+    await saveIdentity(client, stay.guest_id, id);
+    await saveVisit(client, hotelId, c.req.param("reservationId"), body.visit ?? {});
+    return { ok: true };
   });
 
   if (!result) return c.json({ error: "No such property." }, 404);

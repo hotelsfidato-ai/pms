@@ -147,20 +147,43 @@ export async function getGstSales(
   );
 }
 
+/** One foreign arrival in Form III's fields (the guests service's
+    app.form_iii, 146). Null where nothing was recorded - shown, not hidden. */
 export interface CFormRow {
   guest: string;
   nationality: string;
-  /** Null where nothing was captured — shown, not hidden. */
   passport: string | null;
+  passportIssuedOn: string | null;
+  passportIssuePlace: string | null;
   passportExpiry: string | null;
   visaNumber: string | null;
+  visaType: string | null;
+  visaIssuedOn: string | null;
   visaExpiry: string | null;
+  phoneInIndia: string | null;
+  email: string | null;
+  remarks: string | null;
+  arrivedFrom: string | null;
+  /** The property's clock, "YYYY-MM-DD HH:MM". */
+  arrivedAt: string | null;
+  purpose: string | null;
+  purposeOther: string | null;
+  previousStay: string | null;
+  departedAt: string | null;
+  nextDestination: string | null;
+  gender: string | null;
+  dateOfBirth: string | null;
+  arrivedInIndiaOn: string | null;
+  arrivalPort: string | null;
   address: string | null;
+  refAddress: string | null;
+  employedInIndia: string | null;
   room: string;
   arrived: string;
   departed: string;
+  /** The portal's numbers, arrival and departure, comma-separated. */
   reference: string | null;
-  filedAt: string | null;
+  departureReference: string | null;
 }
 
 export interface CFormReport {

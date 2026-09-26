@@ -53,6 +53,10 @@ export function FolioPanel({
 }) {
   const qc = useQueryClient();
   const [lateOut, setLateOut] = useState(false);
+  /* Form III: where a foreign guest goes next, asked at check-out while
+     they are at the desk (D27-25). The server refuses without it. */
+  const foreign = (stay.nationality ?? "IN").toUpperCase() !== "IN";
+  const [nextDestination, setNextDestination] = useState("");
   const refresh = () => qc.invalidateQueries();
 
   /* D24-18: each act only for a role the server's gate lets do it (roleGate,
@@ -150,6 +154,7 @@ export function FolioPanel({
           stay={stay}
           checkOutTime={clock.data?.checkOutTime ?? "check-out time"}
           charge={clock.data?.lateCharge ?? null}
+          nextDestination={nextDestination}
           open
           onOpenChange={(o) => { if (!o) setLateOut(false); }}
           onDone={refresh}
@@ -157,12 +162,22 @@ export function FolioPanel({
       )}
 
       {/* Rule 6 — blocked, visible, and it says why */}
-      {mayCheckOut && <div className="pt-4 border-t border-grey-200">
+      {mayCheckOut && <div className="pt-4 border-t border-grey-200 space-y-3">
+        {foreign && (
+          <Field label="Next destination" required
+            hint="Form III reports where a foreign guest goes next.">
+            {({ id }) => (
+              <Input id={id} value={nextDestination}
+                onChange={(e) => setNextDestination(e.target.value)} />
+            )}
+          </Field>
+        )}
         <CheckOutButton
-          allowed={checkoutPermitted.data?.allowed ?? false}
+          allowed={(checkoutPermitted.data?.allowed ?? false)
+                   && (!foreign || Boolean(nextDestination.trim()))}
           reason={checkoutPermitted.data?.reason}
           onCheckOut={async () => {
-            const res = await checkOut(hotelId, stay.id);
+            const res = await checkOut(hotelId, stay.id, undefined, nextDestination.trim());
             if (res.ok) {
               toast.success(`${stay.guest} checked out`, `Room ${stay.roomNumber} is now dirty and on housekeeping's board.`);
               refresh();

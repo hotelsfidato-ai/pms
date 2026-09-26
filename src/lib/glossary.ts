@@ -78,8 +78,8 @@ export const GLOSSARY: Record<TermKey, { term: string; means: string }> = {
     means: "A guest's bill as finance keeps it: every charge and payment, line by line. At the desk the same thing is called the bill.",
   },
   formC: {
-    term: "Form C",
-    means: "The police registration for a foreign guest, reported to the FRRO within 24 hours of arrival. Anybody whose nationality is not Indian needs one.",
+    term: "Form III",
+    means: "The report of a foreign guest to the FRRO portal: within 24 hours of arrival, and the departure within 24 hours of leaving. Anybody whose nationality is not Indian needs one. It was called Form C until September 2025.",
   },
 };
 

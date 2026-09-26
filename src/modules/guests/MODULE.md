@@ -1,7 +1,8 @@
 # Guests and companies
 
 Who has stayed, who a booking came through, what each source costs in
-commission, and the Form C register for foreign guests.
+commission, and the Form III register for foreign guests (Form C until the
+Immigration and Foreigners Act 2025; D27-25).
 
 **Folder name:** `guests` — the same word in all three places:
 
@@ -23,11 +24,13 @@ with possible duplicates shown rather than merged. A manager sees the
 companies and agents bookings came through, and what each was worth. The
 list of booking sources — Agoda, walk-in, a travel agent — belongs to the
 whole group; the commission agreed with each belongs to one property. For a
-foreign guest the property owes a Form C — the police registration — to the
-FRRO within 24 hours of arrival: the register says who is owed and records
-the acknowledgement once it has been filed on the government portal — this
-system does not file. A guest's passport or ID is recorded during check-in,
-which is front desk's; this service keeps and reads it.
+foreign guest the property owes Form III to the FRRO portal within 24 hours
+of arrival, and the departure within 24 hours of leaving (Rule 17 of the
+Immigration and Foreigners Rules 2025): the register says who is owed, by
+when, and records the portal's number per person once filed there — this
+system does not file. A guest's passport or ID and Form III's questions are
+asked during check-in and the walk-in, which are front desk's, with this
+service's fields (`ForeignGuestFields`); this service keeps and reads them.
 
 ## Screens
 
@@ -41,12 +44,13 @@ Find a screen (Ctrl K).
 | Guests (Bookings) | `/guests` | `pages/Guests.tsx` (`GuestsPage`) | Reception |
 | Companies and agents (Bookings) | `/companies` | `pages/Guests.tsx` (`CompaniesPage`) | none |
 | Booking sources (Configuration) | `/h/:code/booking-sources` | `pages/BookingSources.tsx` | none |
-| Form C (Finance) | `/h/:code/form-c` | `pages/FormC.tsx` | none |
+| Form III (Finance) | `/h/:code/form-c` | `pages/FormC.tsx` | none |
 
 Four addresses, three page files. Menu gates (`nav.ts`): Guests `customer`;
-Companies and agents `company`; Booking sources `commission`; Form C
-`customer`. `/guests` and `/companies` carry no property in the address;
-they read the property in view (`useHotel` in `Guests.tsx`). Form C sits in
+Companies and agents `company`; Booking sources `commission`; Form III
+`customer` (the Form III entry: the check-in roles only, D25-38). `/guests`
+and `/companies` carry no property in the address;
+they read the property in view (`useHotel` in `Guests.tsx`). Form III sits in
 the Finance section on purpose — it is filed by the person who bills, and
 "burying it under Reports is how a 24-hour deadline gets missed" (`nav.ts`).
 
@@ -84,14 +88,21 @@ Form C was cut out of the old `invoices.ts` (`1dcf9b7`).
 
 | Method | Path | What it does |
 |---|---|---|
-| GET | `/:code/form-c` | who owes a filing and by when (`app.form_c_due`, 025) |
-| POST | `/:code/form-c/:reservationId` | record that it was filed, with the FRRO acknowledgement reference |
+| GET | `/:code/form-c` | every foreign stay with all of Form III, both 24-hour clocks and the numbers filed (`app.form_iii`, 146) |
+| POST | `/:code/form-c/:reservationId` | record a filing's portal number, `kind` arrival or departure (a departure only after check-out); one per person |
+| PUT | `/:code/form-c/:reservationId/details` | "Complete details": the portal's other boxes, filled in or corrected later; only what is typed is written |
+
+`formIII.ts` holds the rule (`formIIIRefusal`: the law's fields for a foreign
+guest; none of the visa for Nepal or Bhutan or an ID skipped) and the savers
+(`saveIdentity`, `saveVisit`), exported through `index.ts` for front desk's
+check-in, walk-in and check-out.
 
 9 endpoints. The old `directory.ts`'s other endpoints went to inventory
 (`roomTypesAndPlans.ts`: room types, rate plans) and administration
 (`adminLists.ts`: staff, audit log, settings). Server tests:
-`api/test/modules/guests/bookingSources.test.ts`; Form C's are still in
-finance's `api/test/modules/finance/invoices.test.ts` ("Form C"); the
+`api/test/modules/guests/bookingSources.test.ts`; Form III's in
+`api/test/modules/guests/formIII.test.ts` and finance's
+`api/test/modules/finance/invoices.test.ts` ("Form C"); the
 documents recorded at check-in in `api/test/identity.test.ts`.
 
 ## Data
@@ -102,7 +113,7 @@ documents recorded at check-in in `api/test/identity.test.ts`.
 |---|---|
 | `directory.ts` | `listGuests`, `listCompanies`, `setGuestVip` |
 | `bookingSources.ts` | the list and its kinds (`SOURCE_KINDS`, `kindLabel`), add, amend, set a commission — null is not zero anywhere in it |
-| `formC.ts` | `getFormC` (the register), `recordFormC` (a filing happened) |
+| `formC.ts` | `getFormC` (the register), `recordFormC` (a filing happened, arrival or departure), `completeFormIII` |
 
 ## Database
 
@@ -113,7 +124,8 @@ Tables this service owns, and the migrations that made or changed them:
 | `guests` | one person, belonging to the group — no `hotel_id` | created `004_guests.sql`; `013_policies.sql` (passport and ID fields moved out to `guest_documents`), `015_edge_cases.sql` (a guest is never deleted), `043_indicators.sql` (`is_vip`) |
 | `companies` | corporate accounts, agents | created `004_guests.sql`; no endpoint writes to it (grep of `api/src`, 15 September) |
 | `guest_documents` | passport or ID number, expiry, visa, address | created `013_policies.sql` (read only at a property with a booking); `014_simulation_fixes.sql` (S2 — any active staff may record one), `026_identity_capture.sql` (who recorded it and when; a number must be present) |
-| `form_c_filings` | a Form C filing and its acknowledgement | created `025_invoices_form_c.sql` (`app.form_c_due`) |
+| `form_c_filings` | a Form III filing's portal number, arrival or departure, one per person | created `025_invoices_form_c.sql`; `146_form_iii.sql` (`kind`; unique per stay, kind and number) |
+| `form_iii_stays` | what Form III asks about one visit: arrived from, purpose, previous and next place, reference address in India | created `146_form_iii.sql` (`app.form_iii` reads it with `guest_documents` and the audit log's check-in and check-out instants) |
 | `booking_sources`, `booking_source_rates` | the group's list of sources; one commission per source per property | created `082_booking_sources.sql` (kinds, `channel_code`, `app.booking_source_label`); `085_walk_in_channel.sql` (`app.walk_in_source`) |
 
 Others write into these directly in SQL: front desk inserts the walk-in's
@@ -159,9 +171,10 @@ wrong as a picker into anything that wants a company (MEMORY 83).
 - On the web: no other service's door. The core only — `src/lib/api`,
   `src/data/repositories/http.ts` (`fetchOr`), `BUSINESS_DATE`.
 - On the server: `GET /:code/guests` and `GET /:code/companies` read
-  reservations and the folio ledger for stay history and revenue; Form C
-  reads reservations, room assignments and `guest_documents` through
-  `app.form_c_due`.
+  reservations and the folio ledger for stay history and revenue; Form III
+  reads reservations, room assignments, `guest_documents`, `form_iii_stays` and
+  the audit log's check-in and check-out instants through `app.form_iii`
+  (146).
 
 ## Rules that bind it
 

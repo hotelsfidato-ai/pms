@@ -6,7 +6,9 @@ import { Skeleton } from "@/components/ui";
 import {
   ReportShell, ReportTable, ReportHead, Amount,
 } from "@/modules/reports/components/ReportShell";
-import { getGuestLedger, getCashierShift, getGstSales, getCForm } from "@/modules/reports/data/reportData";
+import {
+  getGuestLedger, getCashierShift, getGstSales, getCForm, type CFormRow,
+} from "@/modules/reports/data/reportData";
 import { PTD_FROM } from "@/modules/reports/data/statistics";
 import { BUSINESS_DATE } from "@/data/repositories";
 
@@ -18,7 +20,7 @@ import { BUSINESS_DATE } from "@/data/repositories";
    have been met:
 
      GST Sales Register  "needs the invoice series to be live first"
-     Form F / C-Form     "needs passport capture at check-in"
+     Form III register   "needs passport capture at check-in"
 
    The other two — Guest Ledger and Cashier Shift — were waiting on
    nothing but the work.
@@ -361,17 +363,37 @@ export function GstSalesPage() {
   );
 }
 
-/* ── C-Form ───────────────────────────────────────────────────────── */
+/* ── The Form III register ────────────────────────────────────────── */
 
 const CFORM_COLUMNS = [
   { key: "guest", label: "Guest" },
-  { key: "nat", label: "Nationality" },
-  { key: "passport", label: "Passport" },
-  { key: "visa", label: "Visa" },
-  { key: "room", label: "Room" },
-  { key: "stay", label: "Stay" },
-  { key: "filed", label: "Filed" },
+  { key: "passport", label: "Passport and visa" },
+  { key: "arrival", label: "Arrival" },
+  { key: "departure", label: "Departure" },
+  { key: "filed", label: "Portal numbers" },
 ];
+
+/* Form III's own order (G.S.R. 596(E)), then the portal's other boxes. */
+const CFORM_CSV: Array<[string, keyof CFormRow]> = [
+  ["Name (as in the passport)", "guest"], ["Nationality", "nationality"],
+  ["Passport number", "passport"], ["Visa or OCI number", "visaNumber"],
+  ["Visa type", "visaType"], ["Phone in India", "phoneInIndia"], ["Email", "email"],
+  ["Remarks", "remarks"], ["Arrived from", "arrivedFrom"],
+  ["Arrival (date and time)", "arrivedAt"], ["Purpose of visit", "purpose"],
+  ["Other purpose", "purposeOther"], ["Previous place of stay", "previousStay"],
+  ["Departure (date and time)", "departedAt"], ["Next destination", "nextDestination"],
+  ["Gender", "gender"], ["Date of birth", "dateOfBirth"],
+  ["Passport issued on", "passportIssuedOn"], ["Passport issued at", "passportIssuePlace"],
+  ["Passport expiry", "passportExpiry"], ["Visa issued on", "visaIssuedOn"],
+  ["Visa expiry", "visaExpiry"], ["Arrived in India on", "arrivedInIndiaOn"],
+  ["Port of arrival", "arrivalPort"], ["Address abroad", "address"],
+  ["Reference address in India", "refAddress"], ["Employed in India", "employedInIndia"],
+  ["Room", "room"], ["Booked from", "arrived"], ["Booked to", "departed"],
+  ["Portal number, arrival", "reference"], ["Portal number, departure", "departureReference"],
+];
+
+/** "YYYY-MM-DD HH:MM" in the property's clock, as the rest of the page prints a date. */
+const when = (at: string) => `${dateShort(at.slice(0, 10))}, ${at.slice(11)}`;
 
 export function CFormPage() {
   const hotelId = useHotel();
@@ -386,24 +408,16 @@ export function CFormPage() {
 
   return (
     <ReportShell
-      title="Form F / C-Form"
+      title="Form III register"
       period={`${dateShort(PTD_FROM)} to ${dateShort(BUSINESS_DATE)}`}
-      meta={`Arrivals in the period   ${unfiled} awaiting an FRRO reference`}
+      meta={`Arrivals in the period   ${unfiled} awaiting an FRRO number`}
       csv={() => ({
-        headers: [
-          "Guest", "Nationality", "Passport", "Passport expiry",
-          "Visa number", "Visa expiry", "Address", "Room",
-          "Arrived", "Departed", "FRRO reference", "Filed at",
-        ],
-        /* Blanks, not "unknown". A missing passport number on a Form C
-           extract is a fact the person filing has to see and chase —
+        headers: CFORM_CSV.map(([h]) => h),
+        /* Blanks, not "unknown". A missing passport number on a Form III
+           extract is a fact the person filing has to see and chase -
            filling it with a placeholder hides exactly the row that
            needs attention. */
-        rows: rows.map((r) => [
-          r.guest, r.nationality, r.passport ?? "", r.passportExpiry ?? "",
-          r.visaNumber ?? "", r.visaExpiry ?? "", r.address ?? "", r.room,
-          r.arrived, r.departed, r.reference ?? "", r.filedAt ?? "",
-        ]),
+        rows: rows.map((r) => CFORM_CSV.map(([, k]) => r[k] ?? "")),
       })}
     >
       {isLoading ? <Loading /> : (
@@ -422,46 +436,46 @@ export function CFormPage() {
                 <tr key={`${r.guest}-${r.arrived}-${i}`} className="border-b border-grey-100">
                   <td className="px-4 py-2 text-ink-900">
                     {r.guest}
-                    {r.address && (
-                      <span className="block text-2xs text-grey-500">{r.address}</span>
-                    )}
+                    <span className="block text-2xs text-grey-500">
+                      {r.nationality} · room {r.room}
+                      {r.address ? ` · ${r.address}` : ""}
+                    </span>
                   </td>
-                  <td className="px-4 py-2 tabular text-grey-700">{r.nationality}</td>
                   <td className="px-4 py-2 tabular text-grey-700">
                     {r.passport ?? <Unknown what="No document was captured at check-in." />}
-                    {r.passportExpiry && (
-                      <span className="block text-2xs text-grey-500">
-                        expires {dateShort(r.passportExpiry)}
-                      </span>
-                    )}
+                    <span className="block text-2xs text-grey-500">
+                      visa {r.visaNumber ?? "-"} · {r.visaType ?? "-"}
+                    </span>
                   </td>
-                  <td className="px-4 py-2 tabular text-grey-700">
-                    {r.visaNumber ?? <span className="text-grey-500">-</span>}
-                    {r.visaExpiry && (
-                      <span className="block text-2xs text-grey-500">
-                        expires {dateShort(r.visaExpiry)}
-                      </span>
-                    )}
-                  </td>
-                  <td className="px-4 py-2 tabular text-grey-600">{r.room}</td>
                   <td className="px-4 py-2 tabular text-grey-600">
-                    {dateShort(r.arrived)} – {dateShort(r.departed)}
+                    {r.arrivedAt ? when(r.arrivedAt) : dateShort(r.arrived)}
+                    <span className="block text-2xs text-grey-500">
+                      from {r.arrivedFrom ?? "-"} · {r.purpose ?? "-"}
+                    </span>
                   </td>
-                  <td className="px-4 py-2">
-                    {r.reference ? (
-                      <span className="tabular text-2xs text-ink-900">
-                        {r.reference}
-                        <span className="block text-grey-500">{r.filedAt}</span>
+                  <td className="px-4 py-2 tabular text-grey-600">
+                    {r.departedAt ? when(r.departedAt) : "In house"}
+                    <span className="block text-2xs text-grey-500">
+                      to {r.nextDestination ?? "-"}
+                    </span>
+                  </td>
+                  <td className="px-4 py-2 tabular text-2xs">
+                    {r.reference
+                      ? <span className="text-ink-900">{r.reference}</span>
+                      : <span className="text-brand-red">not filed</span>}
+                    {r.departedAt && (
+                      <span className="block">
+                        {r.departureReference
+                          ? <span className="text-ink-900">{r.departureReference}</span>
+                          : <span className="text-brand-red">departure not filed</span>}
                       </span>
-                    ) : (
-                      <span className="text-brand-red text-2xs">not filed</span>
                     )}
                   </td>
                 </tr>
               ))}
               {rows.length === 0 && (
                 <tr>
-                  <td colSpan={7} className="px-4 py-6 text-center text-grey-500">
+                  <td colSpan={5} className="px-4 py-6 text-center text-grey-500">
                     No foreign national arrived in this period.
                   </td>
                 </tr>
@@ -473,7 +487,7 @@ export function CFormPage() {
             A blank passport is a guest whose document was not captured at
             check-in. It is shown rather than hidden: the filing cannot be made
             without it, and a report that looked complete would be worse than
-            one that names the gap.
+            one that names the gap. The download carries every Form III field.
           </p>
         </>
       )}

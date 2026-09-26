@@ -49,9 +49,9 @@ export const nav: ServiceNavEntry[] = [
     label: "GST sales register", to: "/reports/gst-sales", icon: ScrollText, resource: "report", listed: false },
   /* D25-38: passports and visas - the check-in roles only, as the server. */
   { section: "reports", order: 110,
-    label: "Form F / C-Form", to: "/reports/c-form", icon: ShieldCheck, resource: "report",
+    label: "Form III register", to: "/reports/c-form", icon: ShieldCheck, resource: "report",
     canSee: (role) => can(role, "edit", "customer"),
-    keywords: ["foreign", "frro"], listed: false },
+    keywords: ["foreign", "frro", "form c"], listed: false },
   { section: "reports", order: 120,
     label: "Guest ledger", to: "/reports/guest-ledger", icon: BookOpen, resource: "report", listed: false },
   { section: "reports", order: 130,

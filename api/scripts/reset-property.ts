@@ -138,6 +138,8 @@ export const CLEAR: [table: string, how: string][] = [
   ["guest_links",       "hotel_id = $1"],
 
   ["form_c_filings",    "hotel_id = $1"],
+  /* Form III's visit record points at the stay, no cascade (146). */
+  ["form_iii_stays",    "hotel_id = $1"],
   /* A closed day's correction names the line it corrected (D22-18, 24 September). */
   ["closed_day_corrections", "hotel_id = $1"],
   ["invoices",          "hotel_id = $1"],

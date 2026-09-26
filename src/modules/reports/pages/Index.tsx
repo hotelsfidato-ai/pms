@@ -125,10 +125,10 @@ const GROUPS: Group[] = [
         description: "Invoice-level GSTR-1 extract, credit notes as their own rows.",
       },
       {
-        title: "Form F / C-Form",
+        title: "Form III register",
         icon: Plane,
         path: "/reports/c-form",
-        description: "Foreign national arrivals, their documents, and what was filed with the FRRO.",
+        description: "Foreign guests' arrivals and departures in Form III's order, and the FRRO portal's numbers.",
       },
     ],
   },
