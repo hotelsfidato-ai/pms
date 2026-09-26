@@ -8,6 +8,76 @@ project, still goes in the root `CHANGELOG.md`.
 
 ---
 
+## 2026-09-27 · Cash and invoice follow-ups: payments take turns (D27-2), the FSSAI number frozen on the invoice (D27-3), a payment over the bill (D27-4)
+
+**Asked for:** the master, branch `compliance/cash-invoice-27sep`, for the
+owner's D27-2 to D27-4 - the three items the compliance lane left open (front
+desk's CHANGELOG, 26 September).
+
+**The owner's answers in this chat, 27 September**
+- **The outside till's door** (`/api/pos/tickets`): it only puts a restaurant
+  bill ON a guest's room bill - no cash changes hands there, and the cash for
+  that bill is asked the ₹2 lakh / PAN rule at the desk when it is paid. **Nothing
+  added at that door**: a room charge is not cash. (`pos.ts` untouched.)
+- **How the desk confirms a payment over the bill:** **a tick in the Settle
+  dialog**, "Hold it as the guest's credit", like "Form 97 taken".
+
+**Shipped**
+- **A · D27-2.** `POST /:code/stays/:id/payments` takes the guest's turn, then
+  the group's (`pg_advisory_xact_lock`, always in that order, held to the end of
+  the transaction) before it reads the cash already taken - so two same-second
+  cash payments for one guest, or one group, cannot both pass ₹2,00,000. Every
+  payment waits its turn, not only cash: the bill read for D27-4 has the same
+  race. Refused before any write, as before (MEMORY 243).
+- **B · D27-3.** Migration "the FSSAI number on the invoice" (145):
+  `invoices.fssai_number`, copied from the hotel at issue and at a credit note,
+  as the GSTIN is; `GET /invoices/:number` prints it from the invoice. An
+  invoice issued before this, or while the hotel had none, prints a dash.
+- **C · D27-4.** The route refuses a payment larger than the bill (the Settle
+  dialog's Outstanding, `GET /stays/:id/folio`, via `FOLIO_SELECT`) with "This
+  is ₹X more than the bill; it will be held as the guest's credit." and `needs:
+  "credit"`, unless `heldAsCredit: true`. The Settle dialog shows the sentence
+  and the tick as soon as the amount is over the bill; Take payment stays off
+  until ticked; changing the amount takes the tick off; a refusal re-reads the
+  bill.
+
+**Found**
+- Once taken, an overpaid bill's Check out says "This bill is overpaid. Refund
+  the difference first." (as before) - "held as the guest's credit" holds while
+  the guest stays; at check-out the desk refunds it. Told to the owner.
+- Other tests that paid more than a bill: `reports.test.ts`'s advance on a
+  future booking now says `heldAsCredit: true`; `cashLimit.test.ts`'s payments
+  on empty bills do too (its own helper).
+- A test trap: `pg_stat_activity` read inside an open transaction stays as it
+  was first read; the concurrency test polls from another connection.
+
+**Proved** (this copy, database `fidato_s15`, API 8837, web 5237)
+- `api/test/modules/front-desk/cashLimit.test.ts`: two concurrent ₹1,00,000
+  cash payments on one stay, both held at the stay's folio by another
+  transaction until both are in flight - one 200, one 409. With the turn taken
+  out: [200, 200]. Over the bill: refused with the sentence and nothing
+  written, taken with `heldAsCredit`, asked again once the bill is paid - two
+  tests fail with the check taken out.
+- `api/test/modules/admin/fssai.test.ts`: an invoice issued with
+  12345678901234 still prints it after the setting is cleared - fails reading
+  the hotel's live number (null).
+- `src/modules/finance/overpayment.test.tsx`: no warning at the bill; ₹500.00
+  more names it and holds the button until ticked, then sends `heldAsCredit`;
+  a new amount asks again - two fail with the dialog's check taken out.
+- Screens, the app's own browser: Settle on a ₹1,890 bill, ₹2,500 typed - the
+  sentence (₹610.00), the tick, the button off, then taken (Overpaid ₹610); the
+  same at 375 wide. An invoice issued with FSSAI 11111111111111, the setting
+  then changed to 22222222222222: the invoice page still prints 11111111111111.
+- The six checks on the tree with cp6 `d963239` merged in: see Commits.
+
+**Left open**
+- Whether a guest's credit should ever carry past check-out (it is refunded
+  today) - the owner's.
+
+**Commits:** `4beff57`, merge of cp6 `c70a40a`, and this note.
+
+---
+
 ## 2026-09-25 · The Bill tab offers only what the server will do (D24-18, D25-29) — FIN-9
 
 **Asked for:** the master, branch `fixes/billtab-date-25sep` (the Bill tab

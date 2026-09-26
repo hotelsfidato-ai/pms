@@ -558,7 +558,7 @@ function Movements({ hotelId, day, onDone }: {
                   <div className="min-w-0 flex-1">
                     <p className="text-base">{m.reason}</p>
                     <p className="text-sm text-grey-500">
-                      {spec?.label ?? m.kind} · {m.recordedBy} · {m.at}
+                      {spec?.label ?? m.kind} · {m.recordedBy ?? "-"} · {m.at}
                     </p>
                   </div>
                   <span className="text-base font-medium tabular shrink-0">

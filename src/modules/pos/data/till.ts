@@ -1247,7 +1247,8 @@ export interface DayEnd {
   blockers: { id: string; reason: string; detail: string | null }[];
   movements: {
     id: string; kind: MovementKind; amount: number;
-    reason: string; recordedBy: string; at: string;
+    /** null: a name the reader may not see (the owner's, to a GM; D27-9). */
+    reason: string; recordedBy: string | null; at: string;
   }[];
   cash: {
     opening: number;

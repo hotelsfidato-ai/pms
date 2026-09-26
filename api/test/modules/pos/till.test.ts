@@ -2020,6 +2020,37 @@ describe("day end", () => {
       .toEqual(["expense", "top_up"]);
   });
 
+  it("shows a GM the cash the owner paid in, with no name (D27-9, MEMORY 283)", async () => {
+    /* The owner is on no property's roster, so a GM may not read their staff
+       row; the list's inner join to staff dropped the movement altogether. */
+    expect((await post("/api/hotels/5EL/till/day-end/movements",
+      { kind: "top_up", amount: 700, reason: "D27-9 owner's paid-in" })).status).toBe(200);
+    const db = await admin();
+    const gmId = (await db.query<{ id: string }>(
+      `insert into staff (email, full_name, firebase_uid)
+       values ('till-gm@fidato.in', 'TILLTEST Manager', 'test-uid-tillgm')
+       on conflict (email) do update set is_active = true
+       returning id::text`)).rows[0]!.id;
+    await db.query(
+      `insert into staff_hotels (staff_id, hotel_id, role)
+       select $1, id, 'gm' from hotels where code = '5EL'
+       on conflict (staff_id, hotel_id) do update set role = excluded.role`,
+      [gmId]);
+    try {
+      const res = await app.request("/api/hotels/5EL/till/day-end?outlet=REST",
+        { headers: { "x-dev-staff-id": gmId } });
+      expect(res.status, await res.clone().text()).toBe(200);
+      const { movements } = (await res.json()) as {
+        movements: { reason: string; amount: number; recordedBy: string | null }[] };
+      expect(movements.find((m) => m.reason === "D27-9 owner's paid-in"))
+        .toMatchObject({ amount: 700, recordedBy: null });
+    } finally {
+      await db.query("delete from staff_hotels where staff_id = $1", [gmId]);
+      await db.query("update staff set is_active = false where id = $1", [gmId]);
+      await db.end();
+    }
+  });
+
   it("counts the drawer by denomination", async () => {
     const res = await post("/api/hotels/5EL/till/day-end/count", {
       opening: 2000,
