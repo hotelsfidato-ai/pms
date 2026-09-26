@@ -14,7 +14,13 @@ entries stay here: they are the reason the fault does not come back.
 
 ## Open — not fixed
 
-### INV-2 · Room types opens a screen headed "The house"
+Nothing open (26 September).
+
+---
+
+## Fixed — the solution is here; do not work it out again
+
+### INV-2 · Room types opens a screen headed "The house" (and the Rate calendar "Inventory and rates") - FIXED 17 and 26 September, held by tests 26 September
 
 **Found** — 15 September, writing the brief; confirmed on screen 16 September.
 
@@ -24,19 +30,22 @@ The menu says "Room types"; the page says "The house".
 
 **Changed 17 September, not yet proved** — the owner's D17-22 ("the heading is
 the menu name"), commit `f7ae0f4`: Room types is headed "Room types" in all
-three of its states (`pages/RoomSetup.tsx`). **Still open, 25 September:** no
-test opens the screen and reads its heading, so "The house" could come back
-with every gate green (`guests.test.tsx` holds its own four screens to their
-menu entries; nothing does it here). **And a second screen was never in this
-entry:** the Rate calendar (menu "Rate calendar") is still headed "Inventory
-and rates" (`pages/Grids.tsx`) - `MODULE.md` named it on 15 September - and
-`inventory.test.tsx` asserts that heading today.
+three of its states (`pages/RoomSetup.tsx`). **And a second screen was never
+in this entry:** the Rate calendar (menu "Rate calendar") was still headed
+"Inventory and rates" (`pages/Grids.tsx`) - `MODULE.md` named it on 15
+September - and `inventory.test.tsx` asserted that heading.
+
+**Held by tests, 26 September (D25-27, D25-28)** — `inventory.test.tsx`:
+- "Room types is headed with its menu name (INV-2)": the screen's h1, loading,
+  did not load, and loaded, against `nav.ts`'s "Room types". Seen failing in
+  all three with "The house" put back: `expected 'The house' to be 'Room types'`.
+- The Rate calendar is headed **"Rate calendar"** in its three states
+  (`pages/Grids.tsx`, the owner's D25-28), and "opens the Rate calendar for a
+  general manager" now reads the heading from its menu entry. Seen failing with
+  "Inventory and rates" put back: `Unable to find role="heading" and name
+  "Rate calendar"`.
 
 **The rule** — A screen's heading is the menu entry that opened it.
-
----
-
-## Fixed — the solution is here; do not work it out again
 
 ### INV-7 · Marking a default cancellation policy with a wrong id lost the default - FIXED 24 September
 

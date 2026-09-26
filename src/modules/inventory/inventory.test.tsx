@@ -1,9 +1,16 @@
-import { describe, it, expect, beforeEach } from "vitest";
-import { render, screen } from "@testing-library/react";
+import { describe, it, expect, beforeEach, afterEach, vi } from "vitest";
+import { render, screen, cleanup } from "@testing-library/react";
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { MemoryRouter, Routes, Route } from "react-router";
+import * as apiModule from "@/lib/api";
 import App from "@/App";
 import { mayReach, flatNavigationFor } from "@/components/app/navigation";
 import { ASSIGNABLE_ROLES, RATE_SETTER_ROLES } from "@/lib/permissions";
 import { HOTEL, AGRA_HOTEL, go, signedIn, startSignedIn } from "@/test/app";
+import { nav } from "@/modules/inventory/nav";
+import RoomSetupPage from "@/modules/inventory/pages/RoomSetup";
+
+const menuName = (to: string) => nav.find((e) => e.to === to)!.label;
 
 /* Inventory and rates: who reaches the screens that SET a price. The
    entries are this service's (`nav.ts`, `routes.tsx`); the menu and the
@@ -47,7 +54,7 @@ describe("the screens that set a price", () => {
       await screen.findByRole("heading", { name: /not part of your role/i }),
       "the Rate calendar rendered for a front-desk clerk",
     ).toBeDefined();
-    expect(screen.queryByRole("heading", { name: /inventory and rates/i })).toBeNull();
+    expect(screen.queryByRole("heading", { name: menuName("/h/:code/grids") })).toBeNull();
   });
 
   it("opens the Rate calendar for a general manager", async () => {
@@ -64,10 +71,51 @@ describe("the screens that set a price", () => {
     render(<App />);
 
     /* The page's own heading, because "no refusal" is also true of a
-       blank screen. */
+       blank screen. It is the menu's name, "Rate calendar" (D25-28, INV-2). */
     expect(
-      await screen.findByRole("heading", { name: /inventory and rates/i }),
+      await screen.findByRole("heading", { level: 1, name: menuName("/h/:code/grids") }),
     ).toBeDefined();
     expect(screen.queryByRole("heading", { name: /not part of your role/i })).toBeNull();
+  });
+});
+
+/* ══════════════════════════════════════════════════════════════════
+   THE HEADING IS THE MENU NAME — INV-2 (D17-22, D25-27)
+
+   Room types was headed "The house". It is read here against its own
+   menu entry in each of the three states that draw a heading, so
+   renaming either one without the other fails.
+   ══════════════════════════════════════════════════════════════════ */
+
+describe("Room types is headed with its menu name (INV-2)", () => {
+  afterEach(() => {
+    cleanup();
+    vi.restoreAllMocks();
+  });
+
+  it.each([
+    ["loading", "Loading…", () => new Promise(() => {})],
+    ["did not load", "This property did not load", () => Promise.reject(new Error("down"))],
+    ["loaded", "Nothing is set up yet", () => Promise.resolve({
+      frontDesk: { checkInTime: "14:00", checkOutTime: "11:00",
+                   earlyCheckinCharge: null, lateCheckoutCharge: null },
+      types: [], rooms: [],
+    })],
+  ])("%s", async (_state, shows, answer) => {
+    /* Only the screen's own read answers; the cards inside it never do. */
+    vi.spyOn(apiModule, "api").mockImplementation(((url: string) =>
+      url.endsWith("/room-setup") ? answer() : new Promise(() => {})) as never);
+    const qc = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+    render(
+      <QueryClientProvider client={qc}>
+        <MemoryRouter initialEntries={[`/h/${HOTEL}/room-types`]}>
+          <Routes><Route path="/h/:code/room-types" element={<RoomSetupPage />} /></Routes>
+        </MemoryRouter>
+      </QueryClientProvider>,
+    );
+
+    await screen.findByText(new RegExp(`^${shows}`));
+    expect(screen.getByRole("heading", { level: 1 }).textContent)
+      .toBe(menuName("/h/:code/room-types"));
   });
 });

@@ -98,7 +98,7 @@ export default function GridsPage() {
   if (inventory.isLoading || !from) {
     return (
       <Page>
-        <PageHeader title="Inventory and rates" description="Loading…" />
+        <PageHeader title="Rate calendar" description="Loading…" />
         <Skeleton className="h-96" />
       </Page>
     );
@@ -106,7 +106,7 @@ export default function GridsPage() {
   if (!inventory.data) {
     return (
       <Page>
-        <PageHeader title="Inventory and rates" />
+        <PageHeader title="Rate calendar" />
         <EmptyState
           title="No room types"
           description="Add room types to this property and both grids fill in."
@@ -118,7 +118,7 @@ export default function GridsPage() {
   return (
     <Page>
       <PageHeader
-        title="Inventory and rates"
+        title="Rate calendar"
         description="How many rooms are left, and what they cost."
         actions={
           <div className="flex items-center gap-1">

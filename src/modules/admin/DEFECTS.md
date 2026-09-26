@@ -14,7 +14,13 @@ entries stay here: they are the reason the fault does not come back.
 
 ## Open — not fixed
 
-### ADM-4 · Two "audit log" links point at an address that does not exist
+Nothing open (26 September).
+
+---
+
+## Fixed — the solution is here; do not work it out again
+
+### ADM-4 · Two "audit log" links point at an address that does not exist - FIXED 17 September, held by a test 25 September
 
 **Found** — 17 September, reading every caller of the audit log before closing API-2, then opening the address in the browser.
 
@@ -22,13 +28,11 @@ The night-audit checklist (`api/src/modules/night-audit/checklist.ts:144`) and a
 
 **Not fixed here** — neither file is this service's (night audit's, and the core's). The fix is one path in each: `/admin/audit-log`. Passed to the master on 17 September.
 
-**Changed 17 September, not yet proved** — the master's commit `1b05800` made both links `/admin/audit-log` (`checklist.ts:148` and `notifications.ts:151` today, each marked `ADM-4`). **Still open, 25 September, because no test holds either link:** nothing in `api/test` reads the checklist item's or the notification's `link`, so either could go back to `/h/<code>/admin/audit-log` with every gate green. Closing it takes one assertion in each: the link is `/admin/audit-log`, the address `src/modules/admin/routes.tsx` mounts.
+**Changed 17 September, not yet proved** — the master's commit `1b05800` made both links `/admin/audit-log` (`checklist.ts:148` and `notifications.ts:151` today, each marked `ADM-4`).
+
+**Held by a test, 25 September (D25-27)** — `api/test/modules/admin/auditLog.test.ts`, "the night-audit checklist and the bell both link to /admin/audit-log": it reads the checklist's `reversals` item and the bell's `reversals-today` entry (the file's own two reversals put the bell's up), and each must be `/admin/audit-log`, the address `src/modules/admin/routes.tsx` mounts. Seen failing with each link put back to `/h/<code>/admin/audit-log`, one at a time: `expected '/h/5EL/admin/audit-log' to be '/admin/audit-log'`.
 
 **The rule** — A link is a claim about an address. Open it.
-
----
-
-## Fixed — the solution is here; do not work it out again
 
 ### ADM-8 · A GM or a hotel's Admin could take their own property away, and a refused removal said "They did not have access" - FIXED 24 September
 

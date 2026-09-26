@@ -8,6 +8,12 @@ project, still goes in the root `CHANGELOG.md`.
 
 ---
 
+## 2026-09-26 · HK-1: the board's own half held by a test
+
+**Asked for:** the owner's D25-27 (a test for each fix built but held by none, then close it; no behaviour changed), in the five-tests session, branch `tests/five-25sep`. **Shipped:** `housekeeping.test.tsx`, "reads the rooms again the moment the live channel says housekeeping" (the stream stubbed, one `changed` frame). **Proved:** seen failing with `useLive` taken off the board; passes on the fix. HK-1 moved to Fixed. **Left open:** nothing here. **Commits:** `689f837`.
+
+---
+
 ## 2026-09-17 (evening) · The board refreshes itself — HK-1, half live
 
 **Asked for:** the owner's second interview, 17 September (D17-39): HK-1, the
