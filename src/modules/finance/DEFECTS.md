@@ -14,6 +14,19 @@ entries stay here: they are the reason the fault does not come back.
 
 ## Open — not fixed
 
+### FIN-10 · An invoice test passes or fails by the order the test files run in — OPEN
+
+**Found** — 25 September, the Bill tab session's full API run on `3d5fa8e`:
+`invoices.test.ts` "refuses a folio with nothing on it" got 200 for 409. It
+passed in the next full run (`bd1bca9`). The test takes any 5EL stay with an
+empty bill (`limit 1`, no order); `POST /stays/:id/invoice` takes the stay's
+first bill (`folio[0]`, no order). A stay another test file left with two
+bills, one of them empty, is picked and invoiced on the other one.
+
+**Not fixed** — the test should pick a stay whose only bill is empty, and
+whether the route should say which bill it invoices when a stay has two is
+a question for the owner. Seen once; not reproduced on demand.
+
 ## Fixed
 
 ### FIN-9 · The Bill tab offered housekeeping every act the server refuses — FIXED 25 September
