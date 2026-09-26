@@ -1,5 +1,5 @@
 -- =============================================================================
--- 141 · Cash of ₹2 lakh refused, and a PAN above ₹1 lakh (the owner's D25-40)
+-- 142 · Cash of ₹2 lakh refused, and a PAN above ₹1 lakh (the owner's D25-40)
 -- =============================================================================
 -- Income-tax Act 2025 s.186 (was 269ST): no cash of ₹2,00,000 or more from one
 -- person in a day, for one transaction, or for one event; the penalty under

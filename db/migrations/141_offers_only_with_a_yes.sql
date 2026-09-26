@@ -1,5 +1,5 @@
 -- =============================================================================
--- 140 · Offers only to a guest who said yes (the owner's D25-39, 25 September)
+-- 141 · Offers only to a guest who said yes (the owner's D25-39, 25 September)
 -- =============================================================================
 -- Until now an offer could go to anybody who had not asked for none (D21-22,
 -- `offer_opt_outs`, 122 § 7). The data protection law asks for opt-in from
