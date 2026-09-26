@@ -14,11 +14,14 @@ entries stay here: they are the reason the fault does not come back.
 
 ## Open — not fixed
 
-### POS-18 · NOT OURS (the shell's): a typed address keeps the role of the property chosen at sign-in — seen 25 September
+### POS-18 · A typed address kept the role of the property chosen at sign-in — FIXED 26 September (the shell's)
 
 **Found** — 25 September, proving Restaurant setup end to end. The Reception test sign-in was rostered as a Waiter (`pos`) at a second property and opened `/h/SEC/floor` by its address: the page was that property's (the tab read "Tables · Second Hotel (test)"), but the sidebar was Reception's and Restaurant setup refused them "signed in as Reception". `PropertyScope` sets the property in view (`useUi.hotelId`, the code), while `useRole` reads `useSession.hotelId`, the property chosen at sign-in or in the switcher (`src/lib/session.ts`, `roleFor`). The server asks the role at the property in the address (`roleGate.ts`), so it rang the order as a waiter - nothing wrong was written; the website showed another property's role.
 
-**What was done** — Nothing here: `src/components/app/` and `src/lib/session.ts` are the master's. Reported to the master on 25 September. It matters only to somebody with different roles at two properties who opens one by its address.
+**What was done** — 26 September, by the master with the owner's yes (D26-13): `useRole` in
+`src/lib/session.ts` reads the role at the property in the address (`useUi.hotelId`, the code),
+falling back to the one chosen at sign-in. `src/lib/session.test.ts`: with the old line back it
+fails "expected 'front_desk' to be 'pos'".
 
 ---
 

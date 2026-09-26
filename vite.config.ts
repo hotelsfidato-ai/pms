@@ -140,6 +140,11 @@ export default defineConfig(({ mode }) => {
       },
       workbox: {
         globPatterns: ['**/*.{js,css,html,svg,woff,woff2}'],
+        /* The room-card sheet's QR library (qrcode's browser.js, loaded by
+           import() on the desk only) is not cached onto every guest's
+           phone (D26-14). ponytail: matches any chunk named browser-*; name
+           the chunk if another library ever produces one. */
+        globIgnores: ['**/browser-*.js'],
         /* Every route is client-side, so a hard refresh on
            /h/5EL/banquet must serve index.html rather than 404. The
            same job deploy/nginx.conf does online. */
