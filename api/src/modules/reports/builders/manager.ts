@@ -140,8 +140,12 @@ export async function managerReport(
     `select to_char(fp.business_date, 'YYYY-MM-DD') as date,
             /* VAT only ever comes from the till (D21-91); a VAT line moved to
                another folio stays with the POS posting it was, and out of
-               the CGST/SGST split below. */
-            case when fp.source_type = 'pos' or fp.tax_scheme = 'vat' then 'pos'
+               the CGST/SGST split below. A restaurant bill corrected on Closed
+               days stays with it too (D25-10): its correction keeps the origin. */
+            case when fp.source_type = 'pos' or fp.tax_scheme = 'vat'
+                   or exists (select 1 from closed_day_corrections c
+                               where fp.source_type = 'correction'
+                                 and c.id = fp.source_id and c.origin = 'pos') then 'pos'
                  when fp.category = 'discount'                      then 'discount'
                  when fp.category = 'tax'                           then 'tax_line'
                  when fp.category = 'refund'                        then 'refund'

@@ -8,6 +8,79 @@ project, still goes in the root `CHANGELOG.md`.
 
 ---
 
+## 2026-09-25/26 · Correcting a closed day's other charges (D24-13, D25-5 to D25-11)
+
+**Asked for:** the master's lane brief of 25 September: D24-13, left open on
+the 24th - Closed days corrected only a closed day's room and no-show charges.
+Extend 134's correction (same table, same exception, same panel), not a second
+mechanism; update the desk's Reverse; prove the Night Audit and Manager reports
+for that day move by exactly the correction. Branch
+`night-audit/other-charges-25sep`, from cp6 `fb7b2e2`; cp6 `59b5776` merged
+before the checks.
+
+**The owner's answers** (`docs/briefs/decisions-2026-09-25.md`, D25-5 to
+D25-11, each the recommended answer): every charge, never a payment, refund or
+discount (D25-5); a restaurant bill on a room is corrected on the room bill
+only, the restaurant's own bill, day end and sales stay as rung (D25-6); drinks
+whose VAT bill stands are refused, "Cancel the VAT bill instead." (D25-7); the
+same limits as a room charge (D25-8); a charge that is not the room keeps the
+tax it was charged at (D25-9); a corrected restaurant bill stays under "POS to
+PMS Posting" (D25-10); the desk's Reverse words (D25-11).
+
+**Shipped:**
+- `db/migrations/139_closed_day_other_charges.sql` - one column,
+  `closed_day_corrections.origin`: where the charge first came from, carried
+  through a correction of a correction. Nothing else in 134 changes.
+- `api/src/modules/night-audit/nightAudit.ts` - `CORRECTABLE` is every standing
+  charge but payment, refund, discount and tax lines (the reports' own list);
+  the day's list names each line's kind (room, no-show, restaurant, or its
+  category) and the VAT bill standing on a drinks line; the correction refuses
+  a standing VAT bill before any write, keeps `origin`, and gives the right
+  charge its tax scheme (a drink's VAT stays VAT).
+- `api/src/modules/reports/builders/manager.ts` (reports', approved by the
+  master) - a correction whose origin is the till stays in the POS bucket.
+- `api/src/modules/finance/postings.ts` (finance's) - the Reverse's two
+  sentences (D25-11).
+- `components/CorrectDay.tsx`, `data/nightAudit.ts` - the panel lists every
+  charge by its kind, refuses a drinks line with a VAT bill on sight, and says
+  "The tax stays at the rate it was charged at." for a charge that is not the
+  room.
+
+**Proved:** the six checks on the merged tree (`ee68680`, cp6 `59b5776` in),
+26 September 21:03-21:59, each exit 0: web types; api types; web tests 71
+files, 662 tests; api tests 94 files, 1468 tests (139 migrations); database
+tests, all 1154 assertions; the replay, all 139 migrations re-runnable.
+`corrections.test.ts` 17 tests; each new rule was broken on purpose and a
+test failed without it (four runs: the Manager bucket, the Reverse words, the
+VAT bill refusal and the VAT scheme - 5 failed; the origin carried through a
+second correction - 1 failed; "every charge" - 5 failed; the refund kept out -
+2 failed). `nightAudit.test.tsx` 6 tests; the new one fails without the panel
+change. On the screen (fidato_s8, 5EL, 25 Aug closed through the audit route
+after the desk and till had done their day): the panel at 1280 and 390, the
+drinks line refused with its VAT bill, the restaurant food corrected 1,660 →
+1,460 and the minibar taken off through the screen, the desk's Reverse on the
+closed day's drinks line. The Night Audit and Manager reports for 25 Aug moved
+by exactly -550 net, -27.50 tax (-577.50), nothing else; POS to PMS Posting
+-210, Food 0. Screens and both reports' PDFs, before and after, in
+`.local/screenshots/2026-09-25-closed-day-others/`.
+
+**Found:**
+- The Manager report's Revenue summary counts the restaurant from its own bills
+  (`pos_orders`), so a corrected restaurant bill moves it only by the other
+  charges: D25-6's answer, as the owner was told when asked.
+- The Night Audit report's Misc. Charges joins `pos_orders.id` to a till line's
+  `source_id`, which is the TICKET's id (till.ts, pos.ts), so its Outlet and
+  Order columns are never filled for a restaurant line. Read in the code, not
+  fixed (reports' file).
+- An outside till voiding a ticket whose line was corrected on Closed days
+  would hit 021's one-reversal index and answer 500 (pos.ts void has no
+  "already reversed" check). Read in the code, not reproduced.
+- NA-7: mine, a `grep -r` through the copy's node_modules junction.
+
+**Left open:** the three found above.
+
+**Commits:** see the branch.
+
 ## 2026-09-24 · Correcting a closed day (D22-18), and a walk-in charged twice (NA-5)
 
 **Asked for:** the master's lane brief of 24 September: D22-18, the owner's "a

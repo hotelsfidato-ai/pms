@@ -15,7 +15,11 @@ import type { ReportDoc } from "../../../src/modules/reports/index.ts";
        by exactly the difference; Closed days shows old → new
      · reception is refused, and every refusal writes nothing
      · taking a charge off a checked-out guest's bill is allowed (D24-8)
-     · the desk's Reverse on that day says where to go (D24-9, D24-13)
+     · the desk's Reverse on that day says where to go (D24-9, D25-11)
+     · every other charge is corrected the same way (D25-5 to D25-10): the
+       laundry, a restaurant bill charged to the room (which stays under
+       "POS to PMS Posting"), drinks under VAT (their VAT kept); drinks whose
+       VAT bill stands, and a payment, are refused
 
    Each run closes one more day at Pune and leaves it closed, as
    nightAudit.test.ts does; the test database is dropped after the run.
@@ -101,6 +105,12 @@ let day: string;
 let stay: { stayId: string; folioId: string };
 let charge: string;
 let laundry: string;
+let food: string;
+let drinks: string;
+let payment: string;
+let minibar: string;
+let refund: string;
+let vatBill: string;
 
 beforeAll(async () => {
   [{ id: ownerId }] = await sql<{ id: string }>("select id from staff where email = 'owner@fidato.in'") as [{ id: string }];
@@ -121,15 +131,40 @@ beforeAll(async () => {
   const posted = await as(deskId, `/stays/${stay.stayId}/charges`,
     { category: "Laundry", description: `${tag} laundry`, amount: 200 });
   expect(posted.status, await posted.clone().text()).toBe(200);
+  const bar = await as(deskId, `/stays/${stay.stayId}/charges`,
+    { category: "Minibar", description: `${tag} minibar`, amount: 80 });
+  expect(bar.status, await bar.clone().text()).toBe(200);
+  /* A refund is a line above zero, like a charge: only its category keeps
+     it off Closed days (a payment is below zero). */
+  const back = await as(ownerId, `/stays/${stay.stayId}/charges`,
+    { category: "Refund", description: `${tag} refund`, amount: 50, taxable: false });
+  expect(back.status, await back.clone().text()).toBe(200);
+  const paid = await as(ownerId, `/stays/${stay.stayId}/payments`, { method: "Cash", amount: 100 });
+  expect(paid.status, await paid.clone().text()).toBe(200);
+  /* A restaurant bill charged to the room: its food under GST and its drinks
+     under VAT, as the till writes them (till.ts; alcoholVat.test.ts rings
+     them there). Written here because Pune has no till, and this file tests
+     the correction, not the till. */
+  await sql(
+    `insert into folio_postings (hotel_id, folio_id, business_date, category, description,
+                                 amount, tax_rate, tax_amount, tax_scheme, source_type, source_id)
+     values ($1, $2, $3::date, 'food', $4 || ' (5%)', 400, 5, 20, 'gst', 'pos', gen_random_uuid()),
+            ($1, $2, $3::date, 'food', $4 || ' (VAT 10%)', 500, 10, 50, 'vat', 'pos', gen_random_uuid())`,
+    [puneId, stay.folioId, day, `Restaurant - ${tag}`]);
   const closed = await as(ownerId, "/night-audit/run", { businessDate: day });
   expect(closed.status, await closed.clone().text()).toBe(200);
 
   [{ id: charge }] = await sql<{ id: string }>(
     `select id::text from folio_postings where folio_id = $1 and category = 'room'
         and business_date = $2::date`, [stay.folioId, day]) as [{ id: string }];
-  [{ id: laundry }] = await sql<{ id: string }>(
-    "select id::text from folio_postings where folio_id = $1 and description = $2",
-    [stay.folioId, `${tag} laundry`]) as [{ id: string }];
+  const line = async (where: string) => (await sql<{ id: string }>(
+    `select id::text from folio_postings where folio_id = $1 and ${where}`, [stay.folioId]))[0]!.id;
+  laundry = await line(`description = '${tag} laundry'`);
+  food = await line("source_type = 'pos' and tax_scheme = 'gst'");
+  drinks = await line("source_type = 'pos' and tax_scheme = 'vat'");
+  payment = await line("category = 'payment'");
+  minibar = await line(`description = '${tag} minibar'`);
+  refund = await line("category = 'refund'");
 });
 
 /* The stay, its bill and its corrections stay behind: they are on a closed
@@ -164,13 +199,38 @@ const figures = async () => {
   const mgr = await report("manager");
   const roomCharges = cells(na, "room-charges", (c) => String(c["room"]).startsWith("Total"));
   const sales = cells(na, "daily-sales", (c) => c["salesType"] === "Total");
+  const today = (section: string, label: string) =>
+    cells(mgr, section, (c) => c["label"] === label)["today"]!;
   return {
     naRoom: roomCharges["offered"]!,
     naTax: roomCharges["tax"]!,
     salesRoom: sales["room"]!,
-    managerRoom: cells(mgr, "room-charges", (c) => c["label"] === "Room Charges")["today"]!,
+    salesExtra: sales["extra"]!,
+    salesExtraTax: sales["extraTax"]!,
+    salesTotal: sales["totalSales"]!,
+    managerRoom: today("room-charges", "Room Charges"),
+    managerLaundry: today("extra-charges", "Laundry"),
+    managerFood: today("extra-charges", "Food"),
+    managerPos: today("revenue", "POS to PMS Posting"),
   };
 };
+
+/** How far each figure moved. */
+const moved = (a: Awaited<ReturnType<typeof figures>>, b: typeof a) =>
+  Object.fromEntries(Object.keys(a).map((k) =>
+    [k, Math.round((b[k as keyof typeof a] - a[k as keyof typeof a]) * 100) / 100]));
+
+const correct = (postingId: string, newAmount: number, reason: string) =>
+  as(gmId, `/night-audit/days/${day}/corrections`, { postingId, newAmount, reason });
+
+/** The line a correction put on the bill in place of `postingId`. */
+const rightCharge = async (postingId: string) => (await sql<{
+  id: string; amount: string; tax_rate: string; tax_amount: string; tax_scheme: string;
+}>(
+  `select n.id::text, n.amount::text, n.tax_rate::text, n.tax_amount::text, n.tax_scheme
+     from closed_day_corrections c
+     join folio_postings n on n.source_id = c.id and n.reverses_id is null
+    where c.posting_id = $1`, [postingId]))[0]!;
 
 const written = async () => (await sql<{ n: string }>(
   `select (select count(*) from closed_day_corrections where hotel_id = $1)
@@ -227,6 +287,63 @@ describe("the GM corrects a room charge on a closed day", () => {
   });
 });
 
+describe("the GM corrects the day's other charges (D25-5 to D25-10)", () => {
+  it("the laundry: the right charge at the tax it was charged at, and the day's reports move by exactly the difference", async () => {
+    const before = await figures();
+    const res = await correct(laundry, 150, "Two shirts, not three");
+    expect(res.status, await res.clone().text()).toBe(200);
+
+    const [old] = await sql<{ tax_rate: string; tax_amount: string }>(
+      "select tax_rate::text, tax_amount::text from folio_postings where id = $1", [laundry]);
+    const now = await rightCharge(laundry);
+    expect([Number(now.amount), now.tax_rate, now.tax_scheme]).toEqual([150, old!.tax_rate, "gst"]);
+    const taxDiff = Number(now.tax_amount) - Number(old!.tax_amount);
+
+    expect(moved(before, await figures())).toEqual({
+      naRoom: 0, naTax: 0, salesRoom: 0,
+      salesExtra: -50, salesExtraTax: taxDiff, salesTotal: -50 + taxDiff,
+      managerRoom: 0, managerLaundry: -50, managerFood: 0, managerPos: 0,
+    });
+  });
+
+  it("a restaurant bill charged to the room: the room bill's line only, still under POS to PMS Posting - corrected twice", async () => {
+    const before = await figures();
+    const res = await correct(food, 300, "One dish sent back");
+    expect(res.status, await res.clone().text()).toBe(200);
+    const now = await rightCharge(food);
+    expect([Number(now.amount), Number(now.tax_rate), Number(now.tax_amount), now.tax_scheme])
+      .toEqual([300, 5, 15, "gst"]);
+    const once = await figures();
+    expect(moved(before, once)).toEqual({
+      naRoom: 0, naTax: 0, salesRoom: 0, salesExtra: -100, salesExtraTax: -5, salesTotal: -105,
+      managerRoom: 0, managerLaundry: 0, managerFood: 0, managerPos: -105,
+    });
+
+    /* A correction of the correction keeps where the charge came from. */
+    const again = await correct(now.id, 250, "And a drink not served");
+    expect(again.status, await again.clone().text()).toBe(200);
+    expect(moved(once, await figures())).toMatchObject({ managerFood: 0, managerPos: -52.5, salesExtra: -50 });
+
+    const dayView = (await (await as(gmId, `/night-audit/days/${day}/charges`)).json()) as {
+      charges: Array<{ id: string; kind: string }>;
+    };
+    const last = await rightCharge(now.id);
+    expect(dayView.charges.find((c) => c.id === last.id)?.kind).toBe("restaurant");
+  });
+
+  it("drinks under VAT with no VAT bill yet: corrected like any charge, their VAT kept", async () => {
+    const before = await figures();
+    const res = await correct(drinks, 400, "Poured one, billed two");
+    expect(res.status, await res.clone().text()).toBe(200);
+    const now = await rightCharge(drinks);
+    expect([Number(now.amount), Number(now.tax_rate), Number(now.tax_amount), now.tax_scheme])
+      .toEqual([400, 10, 40, "vat"]);
+    expect(moved(before, await figures())).toMatchObject({
+      salesExtra: -100, salesExtraTax: -10, managerFood: 0, managerPos: -110,
+    });
+  });
+});
+
 /** The room line on the closed day that still stands. */
 const standing = async () => (await sql<{ id: string }>(
   `select id::text from folio_postings fp where folio_id = $1 and business_date = $2::date
@@ -257,9 +374,10 @@ describe("what is refused, writing nothing", () => {
     expect(r.status).toBe(409);
   });
 
-  it("a charge that is not a room or no-show charge", async () => {
-    const r = await refused(gmId, day, { postingId: laundry, newAmount: 100, reason: "wrong bag" });
+  it("a refund: not a charge (D25-5)", async () => {
+    const r = await refused(gmId, day, { postingId: refund, newAmount: 20, reason: "counted wrong" });
     expect(r.status).toBe(409);
+    expect(r.text).toContain("Payments, refunds and discounts are not corrected here.");
   });
 
   it("a day not closed", async () => {
@@ -285,6 +403,9 @@ describe("what is refused, writing nothing", () => {
     expect(r.status).toBe(409);
     expect(r.text).toContain(`This bill has tax invoice ${tag}-INV. Issue a credit note instead.`);
 
+    /* Its drinks' VAT bill, issued with it as the invoice route does (135). */
+    [{ n: vatBill }] = await sql<{ n: string }>("select app.issue_vat_bill($1, null) as n", [inv]) as [{ n: string }];
+
     /* An invoice is never deleted; a credit note spends it, and the bill may
        then be corrected (and invoiced again). */
     await sql(`insert into invoices (hotel_id, folio_id, fin_year, number, total, tax_total, credits_id, reason)
@@ -293,17 +414,33 @@ describe("what is refused, writing nothing", () => {
   });
 });
 
-describe("the desk's Reverse on a closed day (D24-9, D24-13)", () => {
+describe("drinks whose VAT bill stands (D25-7)", () => {
+  it("are refused, writing nothing, once the tax invoice is spent", async () => {
+    const was = await written();
+    const res = await correct((await rightCharge(drinks)).id, 300, "x");
+    expect(await written()).toBe(was);
+    expect(res.status).toBe(409);
+    expect(await res.text()).toContain(`This bill has VAT bill ${vatBill}. Cancel the VAT bill instead.`);
+  });
+});
+
+describe("the desk's Reverse on a closed day (D24-9, D25-11)", () => {
   it("sends a room charge to Closed days", async () => {
     const res = await as(ownerId, `/stays/${stay.stayId}/charges/${await standing()}/reverse`, {});
     expect(res.status).toBe(409);
     expect(await res.text()).toContain("This day is closed - correct it on Closed days.");
   });
 
-  it("says anything else cannot be corrected there", async () => {
-    const res = await as(ownerId, `/stays/${stay.stayId}/charges/${laundry}/reverse`, {});
+  it("sends every other charge there too", async () => {
+    const res = await as(ownerId, `/stays/${stay.stayId}/charges/${minibar}/reverse`, {});
     expect(res.status).toBe(409);
-    expect(await res.text()).toContain("This day is closed. Only its room and no-show charges can be corrected, on Closed days.");
+    expect(await res.text()).toContain("This day is closed - correct it on Closed days.");
+  });
+
+  it("says a payment is not changed", async () => {
+    const res = await as(ownerId, `/stays/${stay.stayId}/charges/${payment}/reverse`, {});
+    expect(res.status).toBe(409);
+    expect(await res.text()).toContain("This day is closed. Its payments, refunds and discounts are not changed - put the difference right today.");
   });
 });
 
@@ -313,7 +450,7 @@ describe("a guest who has left and paid (D24-8)", () => {
     await sql("update folios set status = 'closed' where id = $1", [stay.folioId]);
     const line = (await sql<{ id: string }>(
       `select id::text from folio_postings fp where folio_id = $1 and source_type = 'correction'
-          and reverses_id is null`, [stay.folioId]))[0]!.id;
+          and category = 'room' and reverses_id is null`, [stay.folioId]))[0]!.id;
 
     const res = await as(gmId, `/night-audit/days/${day}/corrections`,
       { postingId: line, newAmount: 0, reason: "Guest had left the day before" });
@@ -325,12 +462,13 @@ describe("a guest who has left and paid (D24-8)", () => {
     expect([n, Number(total)]).toEqual(["4", 0]);
 
     /* A correction of a correction still moves the audit's figure: the
-       3,000 it posted is now all gone from it. */
+       3,000 it posted is now all gone from it. The four corrections of the
+       other charges are counted and move no room revenue. */
     const runs = (await (await as(gmId, "/night-audit/runs")).json()) as Array<{
       businessDate: string; revenuePosted: number; correctedRevenue: number; corrections: number;
     }>;
     const row = runs.find((r) => r.businessDate === day)!;
-    expect(row.corrections).toBe(2);
+    expect(row.corrections).toBe(6);
     expect(row.correctedRevenue).toBeCloseTo(row.revenuePosted - 3000, 2);
   });
 });

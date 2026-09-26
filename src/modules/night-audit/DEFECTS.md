@@ -77,6 +77,24 @@ or no-show charge "This day is closed - correct it on Closed days."; anything
 else "This day is closed. Only its room and no-show charges can be corrected, on
 Closed days." Seen on the screen 24 September. Tests in `corrections.test.ts`.
 
+**Changed 25 September** (D25-5, D25-11): every charge is now corrected on
+Closed days, so every charge line says "This day is closed - correct it on
+Closed days."; a payment, refund or discount says "This day is closed. Its
+payments, refunds and discounts are not changed - put the difference right
+today."
+
+### NA-7 · MINE: a text search ran through the shared package folder
+
+**Found** 25 September, by me, in the closed-day other charges session. A
+`grep -rn` from the copy's root, to find the old Reverse sentence, walked into
+`node_modules` - in a copy that folder is a junction to the main folder's
+packages - and ran past two minutes. It only read files; nothing was written.
+The brief says never to grep -r into node_modules, and `| grep -v node_modules`
+after the search filters the output, not the walk.
+
+**The rule** - search a copy with the Grep tool or `git grep`, which skip
+`node_modules`; never a bare `grep -r` from its root.
+
 ### NA-1 · Two night-audit routes have no caller
 
 **Found** — 15 September by the brief; confirmed 16 September by the route audit.
