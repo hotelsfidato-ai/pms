@@ -38,3 +38,7 @@
 | D25-34 | How buyers pay | **A yearly subscription per property** |
 | D25-35 | Where buyers may be | **Anywhere in India** |
 | D25-36 | Online payments | **None for now: guests pay at the desk** |
+| D25-37 | Aadhaar (the audit's A1): the system stores the full number (D21-17); the Aadhaar Act s.8A(4)(b) may forbid it | **Ask the lawyer first**; nothing changes until the lawyer answers |
+| D25-38 | Who may read guests' ID and Form C data (A7: any login could open the Form C report) | **Owner, admin, GM, hotel manager and reception** — the people who check guests in; nobody else sees passport or ID details |
+| D25-39 | Marketing consent (C5): opt-out today (D21-22); the DPDP law asks opt-in from 13 May 2027 | **Opt-in now**: only guests who ticked yes get offers |
+| D25-40 | Cash of ₹2 lakh or more from one guest for one stay or event (A6; Income-tax Act 2025 s.186) | **Refused**, telling the desk to take the rest another way; **above ₹1 lakh the desk is asked for a PAN** (Rule 159) |
