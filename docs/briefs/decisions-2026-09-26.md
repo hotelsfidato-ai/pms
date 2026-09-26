@@ -13,3 +13,4 @@
 | D26-9 | The PAN above ₹1 lakh cash at one time | **The desk types the PAN, or ticks "Form 97 taken"**; a foreign guest is not asked; otherwise the payment is refused. Kept with the payment, shown on no screen for now |
 | D26-10 | The till | **₹2 lakh or more in cash on one bill refused; above ₹1 lakh cash on one bill asks PAN / Form 97 / foreign**, as the desk |
 | D26-11 | The FSSAI licence number on food bills (the audit's A16) | **Yes: a per-hotel setting** (owner, admin, GM), 14 digits or refused, printed on every restaurant bill and on a stay's tax invoice when it carries food; a dash until typed |
+| D26-12 | How sessions take screenshots, now that a hidden Edge signs new profiles into the owner's Microsoft account by itself (implicit sign-in; `--inprivate --disable-sync` does not stop it) | **The Claude app's own browser only**, separate from the owner's accounts; a picture file only when one really matters. No Edge from any session; no change to the PC |
