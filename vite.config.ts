@@ -57,6 +57,11 @@ export default defineConfig(({ mode }) => {
   define: {
     __CACHE_BUSTER__: JSON.stringify(cacheBuster),
   },
+  /* Each checkout's own dependency cache. The default lives in
+     node_modules/.vite, which every copy shares through its junction, so one
+     copy re-optimising left another's page blank with "504 Outdated Optimize
+     Dep" (the Store session, 26 Sep). .local is ignored by git and the watch. */
+  cacheDir: path.resolve(__dirname, '.local/vite-cache'),
   /* THE DEV SERVER TAKES THE PORT IT IS GIVEN. The preview pane assigns
      one through PORT, because on this machine 5173 is often already held
      by the CRS project's own dev server — a fixed 5173 meant the PMS
