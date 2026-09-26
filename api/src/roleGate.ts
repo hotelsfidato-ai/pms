@@ -336,6 +336,8 @@ export const WRITE_RULES: Readonly<Record<string, Rule>> = {
   [`POST ${H}/stores/movements/:id/reverse`]: own("stores/stockGrants.ts"),
   [`POST ${H}/stores/transfers`]: own("stores/stockGrants.ts"),
   [`POST ${H}/stores/import`]: own("stores/stockGrants.ts"),
+  [`PATCH ${H}/stores/items/:id`]: own("stores/stockGrants.ts"),
+  [`POST ${H}/stores/counts`]: own("stores/stockGrants.ts"),
 
   /* housekeeping */
   [`PUT ${H}/rooms/:number/housekeeping`]: ROOM_STATE,
