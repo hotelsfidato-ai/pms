@@ -14,6 +14,12 @@ entries stay here: they are the reason the fault does not come back.
 
 ## Open — not fixed
 
+Nothing open.
+
+---
+
+## Fixed
+
 ### GUE-2 · The Form C register prints a long dash for a stay with no room
 
 **Found** - 26 September, in the compliance lane's screenshot of Form C: a
@@ -22,9 +28,18 @@ the database (`app.form_c_due`, migration 025, its `coalesce` for the room),
 not from the screen, so the fix is a migration replacing that function with a
 plain "-" (D17-48). Not fixed here: outside the compliance brief.
 
----
+**What was done** - 27 September, the owner's D27-1 (branch
+`fixes/five-bugs-27sep`). Migration 144 replaces `app.form_c_due` with the
+same signature and return type (MEMORY 317), `coalesce(rm.number, '-')`.
+`db/tests/modules/guests.sql` builds a GB stay with no room and reads the
+register straight from the function: "got —" on 025's, "got -" on 144's. On
+screen, the register reads "GB · room -".
 
-## Fixed
+**The rule** - A placeholder a person reads is written where it is made. A
+long dash in a database function reaches every screen and print that reads
+it, and no screen test sees it.
+
+---
 
 ### GUE-1 · Companies and agents opens a screen headed "Booking sources"
 

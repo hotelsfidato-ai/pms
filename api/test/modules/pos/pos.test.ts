@@ -112,7 +112,10 @@ afterAll(async () => {
           union all
           select void_posting_id from pos_tickets
            where outlet_id = $1 and void_posting_id is not null
-        )`,
+        )
+           /* and a reversal made at the hotel rather than by a void */
+           or reverses_id in (select posting_id from pos_tickets
+                               where outlet_id = $1)`,
       [outletId],
     );
     /* Asserted, not assumed. A cleanup nobody measures is a cleanup
@@ -509,6 +512,48 @@ describe("voiding a bill", () => {
     }
   });
 
+  it("refuses in words a bill the hotel already took off, and writes nothing (D27-1)", async () => {
+    /* Corrected on a closed day, moved to another bill or reversed at the
+       desk: the charge already has its one reversal, and the void's own
+       reversal hit 021's index - a 500. */
+    const rooms = (await (await get("/rooms")).json()) as {
+      rooms: Array<{ room: string; folioId: string }>;
+    };
+    const r = ref("reversed");
+    const charged = (await (await post("/tickets", {
+      ticketRef: r, room: rooms.rooms[0]!.room,
+      folioId: rooms.rooms[0]!.folioId, amount: 210,
+    })).json()) as { postingId: string };
+
+    const db = await admin();
+    try {
+      await db.query(
+        `insert into folio_postings
+           (hotel_id, folio_id, business_date, category, description,
+            amount, tax_rate, tax_amount, reverses_id, posted_by)
+         select hotel_id, folio_id, business_date, category,
+                'Reversal - pos test', -amount, tax_rate, -tax_amount, id, posted_by
+           from folio_postings where id = $1::bigint`,
+        [charged.postingId],
+      );
+
+      const res = await post(`/tickets/${r}/void`);
+      expect(res.status).toBe(409);
+      expect(await res.json()).toEqual({
+        ok: false,
+        reason: `Bill ${r} has already been taken off the guest's bill at the hotel. Nothing to void.`,
+      });
+      const { rows } = await db.query(
+        `select status, void_posting_id from pos_tickets
+          where outlet_id = $1 and ticket_ref = $2`,
+        [outletId, r],
+      );
+      expect(rows[0]).toEqual({ status: "posted", void_posting_id: null });
+    } finally {
+      await db.end();
+    }
+  });
+
   it("refuses to void a bill that was never charged", async () => {
     const r = ref("norefuse");
     await post("/tickets", { ticketRef: r, room: "___", amount: 50 });
@@ -569,6 +614,29 @@ describe("the PMS can see what an outlet sent", () => {
     expect(mine!.reason, "a refusal with no reason settles nothing").toBeTruthy();
     /* Null, not a placeholder guest. It never reached a folio. */
     expect(mine!.guest).toBeNull();
+  });
+
+  it("names the outlet on the Night audit report's charge, and no order (D27-1)", async () => {
+    /* The report read the outlet through pos_orders, which an outside
+       till never writes. Its orders live in its own system, so the
+       remark is the outlet alone (the owner, 27 September). */
+    const rooms = (await (await get("/rooms")).json()) as {
+      rooms: Array<{ room: string; folioId: string }>;
+    };
+    const r = ref("report");
+    const charged = (await (await post("/tickets", {
+      ticketRef: r, room: rooms.rooms[0]!.room,
+      folioId: rooms.rooms[0]!.folioId, amount: 150,
+    })).json()) as { postingId: string; businessDate: string };
+
+    const doc = (await (await asOwner(
+      `/5EL/reports/night-audit?asOn=${charged.businessDate}`)).json()) as {
+      sections: { key: string; rows: { cells: Record<string, unknown> }[] }[];
+    };
+    const line = doc.sections.find((s) => s.key === "misc-charges")!.rows
+      .find((x) => x.cells["voucher"] === charged.postingId);
+    expect(line, "the outside till's charge is not on the report").toBeTruthy();
+    expect(line!.cells["remark"]).toBe("Outlet: Test outlet");
   });
 
   it("scopes to the property, not the group", async () => {

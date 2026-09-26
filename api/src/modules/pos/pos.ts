@@ -449,6 +449,18 @@ pos.post("/tickets/:ref/void", async (c) => {
          a second reversal, which would re-charge the guest. */
       return { ok: true, ticketRef: ref, status: "voided", duplicate: true };
     }
+    /* Already taken off at the hotel - corrected, moved to another bill or
+       reversed at the desk (D27-1). A second reversal hits 021's
+       one-reversal index and answered a 500; refused before any write. */
+    const { rows: reversed } = await client.query(
+      "select 1 from folio_postings where reverses_id = $1::bigint",
+      [t.posting_id],
+    );
+    if (reversed.length) {
+      return refuse(
+        `Bill ${ref} has already been taken off the guest's bill at the hotel. Nothing to void.`,
+      );
+    }
 
     /* A REVERSAL, not a delete. folio_postings is append-only and a
        trigger enforces it against every role, superuser included. The

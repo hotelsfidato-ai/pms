@@ -11,6 +11,22 @@ Work that touches the core or several services still goes in the root
 
 ---
 
+## 2026-09-27 · The Night audit report's restaurant lines name their outlet and order (D27-1)
+
+**Asked for:** D27-1 - Misc. Charges joined `pos_orders.id = fp.source_id`,
+but a till line's source is its TICKET, so Outlet and Order were never filled.
+The owner (27 September): an outside till's line shows its outlet only.
+**Shipped:** `builders/nightAudit.ts` reads the outlet from `pos_tickets` and
+the hotel's own till's order by the ticket's number (`split_part(ticket_ref,
+'/', 1)`, the order number, "/rate" on a split bill). **Proved:**
+`till.test.ts` "names its outlet and order on the Night audit report" and
+`pos.test.ts` "names the outlet on the Night audit report's charge, and no
+order" - both null on cp6's builder. On screen: "Outlet: Fidato Restaurant,
+Order 20260825-2". The six checks: the POS changelog's entry of the same day.
+**Left open:** nothing here.
+
+---
+
 ## 2026-09-26 · The C-Form report for the check-in roles only (D25-38)
 
 **Asked for / Shipped:** the compliance lane (in full in the front desk's
