@@ -11,6 +11,18 @@ Work that touches the core or several services still goes in the root
 
 ---
 
+## 2026-09-26 · The hotel's FSSAI licence number (the audit's A16)
+
+**Asked for / Shipped:** the compliance lane (in full in the front desk's
+changelog, 26 September; the owner's D26-11). `PUT /hotels/:code/fssai` in
+`admin.ts` (roleGate: room setup - owner, admin, GM), 14 digits or refused,
+blank clears; the hotel's page shows it with "Change" for those three.
+**Proved:** `api/test/modules/admin/fssai.test.ts` (reception refused in the
+gate's words; the shape check seen failing when taken out), `fssaiCard.test.tsx`,
+screenshots D1 and D2.
+
+---
+
 ## 2026-09-26 · ADM-4 held by a test
 
 **Asked for:** the owner's D25-27 (a test for each fix built but held by none, then close it; no behaviour changed), in the five-tests session, branch `tests/five-25sep`. **Shipped:** `api/test/modules/admin/auditLog.test.ts`, "the night-audit checklist and the bell both link to /admin/audit-log". **Proved:** seen failing with each link put back to `/h/<code>/admin/audit-log`, one at a time; passes on the fix. ADM-4 moved to Fixed. **Left open:** nothing here. **Commits:** `ab28ef4`.

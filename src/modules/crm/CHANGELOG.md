@@ -11,6 +11,18 @@ Work that touches the core or several services still goes in the root
 
 ---
 
+## 2026-09-26 · Guest 360's Offers card (D25-39, opt-in)
+
+**Asked for / Shipped:** the compliance lane (in full in the front desk's
+changelog, 26 September). The "Do not send offers" card is "Offers": it says
+whether the guest agreed (a yes and no "no", marketing's own gate), and offers
+"Record their yes" and "Record no offers" - a later answer replaces an
+earlier one (the database). **Proved:** `crm.test.tsx` "says a guest who never
+said yes gets no offers, and records their yes"; on screen as the GM,
+recorded through the real server (screenshots B3, B4).
+
+---
+
 ## 2026-09-22/23 · CRM-2 and CRM-3 built (the owner's D22-8)
 
 **Asked for:** the owner's D22-8, through the master: "Both" - a "not the

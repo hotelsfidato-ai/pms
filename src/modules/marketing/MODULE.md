@@ -44,6 +44,12 @@ the BOM Excel wants. This service supplies rows.
 
 **Nothing below was decided here.** Each is a recommendation and a reason.
 
+> **Done 26 September (D25-39, opt-in):** `mayBeWrittenTo` needs a YES -
+> `offer_opt_ins`, matched by the guests service's `agreedToOffers` - and no
+> "no offers"; a guest nobody asked is on no list. Every list takes both
+> (`{ yes, no }`). The yes keys come from `GET /api/hotels/:code/crm/offers-yes`
+> when the screen is built.
+>
 > **Done 23 September (MKT-1):** `mayBeWrittenTo` refuses a guest
 > `refusesOffers` names, and every list takes the No offers list as an
 > argument. The data call (`GET /api/hotels/:code/crm/no-offers`) comes with

@@ -13,6 +13,19 @@ Requests).
 
 ---
 
+## 2026-09-26 · Only a guest who said yes (D25-39, opt-in)
+
+**Asked for / Shipped:** the compliance lane (in full in the front desk's
+changelog, 26 September). `mayBeWrittenTo(guest, { yes, no })` needs a yes on
+the phone or email (`offer_opt_ins`, the guests service's `agreedToOffers`)
+and no "no offers"; a guest nobody asked is on no list (the owner, 26
+September). Every list goes through it, as before. **Proved:** `lists.test.ts`
+"only with a yes (D25-39)" - two tests fail with the yes check taken out.
+**Left open:** the screen, the route and the send (MODULE.md, Requests); the
+yes list they will read is `GET /api/hotels/:code/crm/offers-yes`.
+
+---
+
 ## 2026-09-23 - No offers kept off every list (MKT-1); the lists are the owner's, admin's and GM's (D22-17)
 
 **Asked for:** the master, on the owner's D22-9 (queued fix MKT-1) and D22-17

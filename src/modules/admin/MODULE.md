@@ -100,6 +100,7 @@ POST   /api/admin/hotels                     create a property — needs the pro
 GET    /api/admin/hotels                     every property, closed ones included
 GET    /api/admin/hotels/:code               one property, for whoever runs it
 PATCH  /api/admin/hotels/:code               its name, address, phone, email, GSTIN…
+PUT    /api/hotels/:code/fssai               its FSSAI licence number (A16): owner, admin, GM
 POST   /api/admin/hotels/:code/:state        close or reopen
 GET    /api/admin/staff
 POST   /api/admin/staff                      add somebody — creates their sign-in account
