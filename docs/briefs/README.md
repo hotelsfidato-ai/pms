@@ -99,9 +99,10 @@ clean; just add nothing to it. Tests and demo data may say Fidato.
 - **Smallest code that works:** YAGNI and the `/ponytail:ponytail` skill —
   reuse what exists, no speculative code. **Plan before you code** (a short
   plan of the files and the one test per rule), then build.
-- **Effort by complexity**, set by the master: low for finishing work, medium
-  for tests, high for money, tax, legal or security. **Never max effort, never
-  ultracode or multi-agent workflows.**
+- **Effort by complexity**, set by the master: **medium at the least** (the
+  owner: so no task is neglected) for finishing work and tests, high for money,
+  tax, legal or security. **Never low, never max, never ultracode or
+  multi-agent workflows.**
 - **Ask the owner before starting anything not in your brief**, and **question
   the owner's decisions** when one looks risky, with a recommendation.
 - **Never guess and never invent.** What the code, the briefs and the decisions
