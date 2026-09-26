@@ -14,7 +14,13 @@ entries stay here: they are the reason the fault does not come back.
 
 ## Open — not fixed
 
-### HK-1 · The board never refreshes itself
+Nothing open (26 September).
+
+---
+
+## Fixed — the solution is here; do not work it out again
+
+### HK-1 · The board never refreshes itself - FIXED 17 September, the board's half held by a test 26 September
 
 **Found** — 8 September, measured: five requests, no duplicates, all under 15 ms. It is not slow — it has no refresh at all. Defect 218; **deferred by the owner** ("leave this for now").
 
@@ -27,11 +33,23 @@ A housekeeper marks 204 clean on a landing and the supervisor's screen does not 
 - The board polls every 30 seconds, as Tables does. Measured: a room changed from outside the browser moved on the open board 21.5 s later, no reload.
 - **Not done: told the moment it changes.** "Known and small" was right about the size and wrong about whose it is. Reading the live channel showed two of its three halves are the core's: `api/src/realtime.ts` looks a watcher up by the WHOLE payload (so a housekeeping change can only be a bare hotel id — which would wake every till and kitchen in the hotel for a room marked clean — or reach nobody), and `src/lib/useLiveOrders.ts` invalidates a fixed list of POS keys. A request for a topic on the channel is in `MODULE.md`.
 
+**17 September evening — the core's half, done by the master** (commit
+`f4cccf5`): the live channel carries a topic (`<hotel id>:<topic>`, a bare id
+is `orders`), the stream sends it, and the board listens with
+`useLive(hotelId, "housekeeping", …)` in `pages/Housekeeping.tsx`, keeping its
+poll as a floor (30 s, 60 s while the channel is live). The commit records a
+room set dirty in the database appearing on an open board without a reload.
+
+**Both halves held by tests.** The server's: `api/test/live.test.ts`, "names
+the topic: a housekeeping change says housekeeping, an order says orders
+(HK-1)", and `api/test/modules/housekeeping/live.test.ts`, "the housekeeping
+board hears a change". The board's, from 26 September (D25-27):
+`housekeeping.test.tsx`, "reads the rooms again the moment the live channel
+says housekeeping" - the stream stubbed, one `changed` frame naming
+`housekeeping`, and the board's rooms asked for again. Seen failing with
+`useLive` taken off the board: `the board never opened the live channel`.
+
 **The rule** — A screen two people share needs to say when it last knew. And a fix called small is sized by reading whose files it touches, not how many lines it is.
-
----
-
-## Fixed — the solution is here; do not work it out again
 
 ### HK-2 · The board's offline read failed the whole test run
 

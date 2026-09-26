@@ -278,10 +278,12 @@ From `PENDING.md`, and one found while writing this brief:
 - **`const USER = "front desk"`** — FIXED here 16 September (FD-2): gone from
   `CheckInFlow.tsx` and `WalkInFlow.tsx`, and the server never read it.
   Finance's `FolioPanel.tsx` still holds one — see Requests below.
-- **A hotel with no rooms** sees the Rooms skeleton forever (FD-5) — what it
-  should say instead is the owner's.
+- **A hotel with no rooms** — FIXED 17 September (FD-5, D17-23): Rooms and
+  Calendar say "No rooms set up yet. Add them in Room types."
+  (`stayViewNoRooms.test.tsx`).
 - **"Today" three pixels past a phone's edge** after paging a week (FD-7) —
-  with the critique's P3.
+  the row wraps since 17 September (D17-41), held since 26 September by
+  `front-desk.test.tsx` (D25-27); FD-7 is fixed.
 - **Two "in house" numbers** — the property page said 11 in house / 9 vacant
   while the Dashboard and Rooms (the stay-view counts) said 10 / 7, same
   minute, 14 September. Needs one definition, the owner's to choose

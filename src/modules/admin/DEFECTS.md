@@ -14,7 +14,13 @@ entries stay here: they are the reason the fault does not come back.
 
 ## Open — not fixed
 
-### ADM-4 · Two "audit log" links point at an address that does not exist
+Nothing open (26 September).
+
+---
+
+## Fixed — the solution is here; do not work it out again
+
+### ADM-4 · Two "audit log" links point at an address that does not exist - FIXED 17 September, held by a test 25 September
 
 **Found** — 17 September, reading every caller of the audit log before closing API-2, then opening the address in the browser.
 
@@ -22,11 +28,11 @@ The night-audit checklist (`api/src/modules/night-audit/checklist.ts:144`) and a
 
 **Not fixed here** — neither file is this service's (night audit's, and the core's). The fix is one path in each: `/admin/audit-log`. Passed to the master on 17 September.
 
+**Changed 17 September, not yet proved** — the master's commit `1b05800` made both links `/admin/audit-log` (`checklist.ts:148` and `notifications.ts:151` today, each marked `ADM-4`).
+
+**Held by a test, 25 September (D25-27)** — `api/test/modules/admin/auditLog.test.ts`, "the night-audit checklist and the bell both link to /admin/audit-log": it reads the checklist's `reversals` item and the bell's `reversals-today` entry (the file's own two reversals put the bell's up), and each must be `/admin/audit-log`, the address `src/modules/admin/routes.tsx` mounts. Seen failing with each link put back to `/h/<code>/admin/audit-log`, one at a time: `expected '/h/5EL/admin/audit-log' to be '/admin/audit-log'`.
+
 **The rule** — A link is a claim about an address. Open it.
-
----
-
-## Fixed — the solution is here; do not work it out again
 
 ### ADM-8 · A GM or a hotel's Admin could take their own property away, and a refused removal said "They did not have access" - FIXED 24 September
 
@@ -114,6 +120,31 @@ Migration 008 inserted `REPLACE@fidato.in` with `on conflict (email) do nothing`
 **Proved** — `db/tests/modules/admin.sql` replays 008 itself (`\ir`, inside a transaction rolled back so its placeholder hotels do not return) and counts the placeholder: 0. With the old 008: "1 placeholder rows after a replay" (seen 24 September). And a second `db/migrate.sh` over a loaded demo database left 0 placeholder rows.
 
 **The rule** — Deactivate, do not delete: a deleted row comes back on the next deploy — unless the seed asks whether it is still needed.
+
+### LAU-3 / SPA-1 · Settings drew a switch for six modules and the server accepted three - FIXED 19 September
+
+**Found** — twice, by two lanes, in this service's file (`api/src/modules/admin/moduleSwitches.ts`): the spa chat on 18 September, reading it against `pages/Admin.tsx` while looking for the switch migration 115 made (SPA-1); the laundry chat on 19 September, pressing the Laundry switch (LAU-3):
+
+```
+POST /api/hotels/5EL/modules/laundry → 409
+{"reason":"There is no \"laundry\" module."}
+```
+
+`GET /:code/modules` asked `app.module_enabled` for six modules — `pos`, `banquet`, `reception_pos`, `channel_manager`, `laundry`, `spa` — so Settings drew six live switches, with the copy for Spa and Laundry already written (`MODULE_COPY`). `POST /:code/modules/:module` guarded with a list of three that was never widened:
+
+```js
+if (!["pos", "banquet", "reception_pos"].includes(module)) {
+  return c.json({ reason: `There is no "${module}" module.` }, 409);
+}
+```
+
+So Spa, Laundry **and the channel manager** were drawn as working switches and answered 409 when pressed; `channel_manager` had been in that state since 108. Nothing in the database refused them — `hotel_modules_known` has named all six since 115. `moduleSwitchesAreLive` guarded one direction only (no module the API accepts comes back disabled); nothing asked the reverse, which is the direction that broke. The spa's tests and the database suite switched the module on by writing `hotel_modules` directly, and the laundry chat wrote its row by hand on the development database to see its screens at all - so no lane was blocked, only the owner.
+
+**Fixed** — 19 September, by the master (commit `41c0990`): ONE list, `SWITCHABLE`, declared in `moduleSwitches.ts` and read by both ends, so they cannot drift again (`alcohol` joined it on 22 September, D21-90).
+
+**Proved** — `api/test/modules/admin/moduleSwitches.test.ts`, "what a module is, in one place": it offers exactly the modules it accepts; it accepts every module it offers, none answering "There is no"; and it offers nothing `hotel_modules_known` has never heard of. Moved here from `laundry/DEFECTS.md` (LAU-3) and `spa/DEFECTS.md` (SPA-1) on 25 September - the file was this service's; both point here.
+
+**The rules** — A guard on a list of names checks BOTH directions: that nothing offered is refused, and that nothing accepted is hidden (SPA-1). And one list read by both ends cannot drift; two literals always will (LAU-3).
 
 ### ADM-2 · Settings and the Properties cards show a tax the database no longer uses
 

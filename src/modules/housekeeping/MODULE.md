@@ -267,8 +267,11 @@ From `PENDING.md`:
   and the blocks), keeping the rooms it has when a poll fails. **Measured:** a
   room changed from outside the browser moved on the open board 21.5 s later,
   no reload; with the API stopped the 18 rooms stayed and the line said
-  Offline. **Not done:** being told the moment a room changes — the shared
-  listener does not read a topic yet (Requests from this service).
+  Offline. **Done the same evening by the master** (`f4cccf5`): being told the
+  moment a room changes — the channel carries a topic and the board listens
+  for `housekeeping`. The server half is tested (`api/test/live.test.ts`); the
+  board's own listening is too since 26 September (`housekeeping.test.tsx`,
+  D25-27), so HK-1 is fixed in `DEFECTS.md`.
 - **Worth asking the owner:** the housekeeper's list has no Rooms screen —
   approved as listed, one search away (PENDING § 5a).
 - **Defect 243's shape** — checked on 17 September in the work order routes,
