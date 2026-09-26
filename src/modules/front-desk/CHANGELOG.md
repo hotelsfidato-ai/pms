@@ -8,6 +8,12 @@ project, still goes in the root `CHANGELOG.md`.
 
 ---
 
+## 2026-09-26 · FD-7 held by a test
+
+**Asked for:** the owner's D25-27 (a test for each fix built but held by none, then close it; no behaviour changed), in the five-tests session, branch `tests/five-25sep`. **Shipped:** `front-desk.test.tsx`, "puts Today, once a week is paged, in a row that wraps (FD-7)". **Proved:** seen failing with `flex-wrap` taken out of `StayView.tsx`; passes on the fix. FD-7 moved to Fixed. **Left open:** no 375px browser measurement this time; the class is what is held. **Commits:** `689f837`.
+
+---
+
 ## 2026-09-25 · The check-in's line to Online check-in (D25-4), from the room cards session
 
 **Asked for:** the owner's D25-4, in the room cards session
@@ -23,6 +29,8 @@ online check-in's (`WaitingDetailsLink.tsx`).
 **Proved** - `earlyCheckIn.test.tsx`, "the ID step, when the guest sent their
 details online > points to Online check-in" (fails with the line taken out of
 the check-in: no such link).
+
+---
 
 ## 2026-09-24 · Polish A-E: controls the server refuses (D24-27), own role (D24-28), FD-16, FD-17, the printed Night audit
 

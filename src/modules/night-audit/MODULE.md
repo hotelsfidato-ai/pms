@@ -59,8 +59,8 @@ All hang from `/api/hotels`, in two files mounted by
 |---|---|---|
 | POST | `/:code/night-audit/run` | close the day (the steps in the file's header, one transaction, one audit at a time per property — an advisory lock, NA-3). Body `{ businessDate }` — the day the screen says it is closing, **required** (400 if missing or not a date). A day already closed: **409 "… was already closed. Reload to see today."** with `alreadyClosed` and the `record` that was made, changing nothing (NA-2, D17-12). A day the property is not on: 409, changing nothing. Records who ran it in `run_by` |
 | GET | `/:code/night-audit/runs` | the screen's **Closed days**: the last 60 completed days, newest first — day, who ran it (`app.colleague_name`), started, closed, rooms posted, room revenue, no-shows; null where the record holds nothing (D17-13). Read-only. `api/scripts/capture-demo.ts` reads it too. Since 24 September also `corrections` (how many) and `correctedRevenue`: the audit's room revenue after corrections of the room charges IT posted (a walk-in's check-in line was never in it), null where none (D24-6) |
-| GET | `/:code/night-audit/days/:date/charges` | a closed day's room charges and no-show charges still standing (room, guest, amount, tax, the tax invoice standing on the bill) and the day's corrections (old, new, reason, who, when). Read-only (D22-18) |
-| POST | `/:code/night-audit/days/:date/corrections` | **correct a closed day** (D22-18, D24-1 to D24-8). Body `{ postingId, newAmount, reason }`; `newAmount` 0 takes the charge off. Refused before any write: no reason (400), a day not closed, older than last month, not a standing room or no-show charge of that day, a bill with a standing tax invoice ("Issue a credit note instead."), the figure it already has (409). Then one `closed_day_corrections` row, a reversing line and (above 0) the right charge, both ON THE CLOSED DAY and naming the correction. roleGate: `reservation` · approve (owner, admin, GM, D24-3) |
+| GET | `/:code/night-audit/days/:date/charges` | a closed day's charges still standing - every one but payments, refunds and discounts since 25 September (D25-5) - each with its kind (room, no-show, restaurant, or the bill's category), guest, amount, tax, the tax invoice standing on the bill and, for drinks under VAT, the VAT bill standing on it; and the day's corrections (old, new, reason, who, when). Read-only (D22-18) |
+| POST | `/:code/night-audit/days/:date/corrections` | **correct a closed day** (D22-18, D24-1 to D24-8, D25-5 to D25-10). Body `{ postingId, newAmount, reason }`; `newAmount` 0 takes the charge off. Refused before any write: no reason (400), a day not closed, older than last month, not a standing charge of that day (a payment, refund or discount never is), a bill with a standing tax invoice ("Issue a credit note instead."), drinks whose VAT bill stands ("Cancel the VAT bill instead.", D25-7), the figure it already has (409). Then one `closed_day_corrections` row, a reversing line and (above 0) the right charge, both ON THE CLOSED DAY and naming the correction. A room charge's GST follows its new figure; every other charge keeps the rate and scheme (GST or VAT) it was charged at (D25-9). The correction keeps `origin`, where the charge first came from, so a corrected restaurant bill stays under the Manager report's "POS to PMS Posting" (D25-10). roleGate: `reservation` · approve (owner, admin, GM, D24-3) |
 
 **`api/src/modules/night-audit/checklist.ts`** (cut from the old `api/src/routes/billing.ts`)
 
@@ -123,7 +123,7 @@ migrations that made or changed them:
 | Table | What the night audit does to it | Migrations |
 |---|---|---|
 | `night_audit_runs` | one row per hotel per day: running, then completed (or failed); `run_by` is who pressed Run (written since 17 September) | created `006_folio.sql` (unique per hotel and date — the safety net against a second run); `014_simulation_fixes.sql` (a completed run must carry its finish; the audit writes `running` first, posts, then completes), `016_audit_coverage.sql` (audited), **`100_closed_day_record_needs_gm.sql`** (a completed run is corrected only by the property's owner or GM, or a group administrator — D17-12) |
-| `closed_day_corrections` | one row per correction of a closed day: the line, old and new figure, reason, who, when. Append-only; written only by the owner, an administrator or the GM there, or a group administrator (`app.corrects_closed_days`) | **`134_closed_day_corrections.sql`** (D22-18) — also replaces 012's `app.reject_closed_business_date` with one exception: a line may carry a closed date when it names a correction of the same property and day, posted by someone who may correct it |
+| `closed_day_corrections` | one row per correction of a closed day: the line, old and new figure, reason, who, when. Append-only; written only by the owner, an administrator or the GM there, or a group administrator (`app.corrects_closed_days`) | **`134_closed_day_corrections.sql`** (D22-18); `139_closed_day_other_charges.sql` adds `origin` (D25-10) — also replaces 012's `app.reject_closed_business_date` with one exception: a line may carry a closed date when it names a correction of the same property and day, posted by someone who may correct it |
 
 It writes into other services' tables, directly in SQL: `folio_postings`
 (tonight's room charge per stay, and a retention charge for a no-show whose
@@ -205,9 +205,11 @@ From `PENDING.md` and `HANDOVER.md`, and one found while writing this brief:
   D17-42): no screen ever called it. Whether a day may close is the checklist's
   `canRun`, which now carries the `blockers` too, and POST /run obeys the same
   `blockersFor`.
-- **Closed days corrects room charges and no-show charges only** (D24-1). A
-  closed day's minibar, laundry or restaurant line cannot be corrected
-  anywhere yet; the desk's Reverse says so (D24-13, left open by the owner).
+- **Closed days corrects every charge, never money** (D25-5, 25 September). A
+  payment, refund or discount on a closed day is not changed anywhere; the
+  desk's Reverse says to put the difference right today (D25-11). A
+  restaurant bill is corrected on the room bill only: the restaurant's own
+  bill, its closed day end and its sales lines stay as rung (D25-6).
 - **The audit's record itself is never rewritten** by a correction (D24-6);
   100 still lets the GM change it in the database, and no screen does.
 - **A web test cannot see a refusal's payload** — the shared stub drops it

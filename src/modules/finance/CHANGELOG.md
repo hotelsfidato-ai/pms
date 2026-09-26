@@ -8,6 +8,53 @@ project, still goes in the root `CHANGELOG.md`.
 
 ---
 
+## 2026-09-25 · The Bill tab offers only what the server will do (D24-18, D25-29) — FIN-9
+
+**Asked for:** the master, branch `fixes/billtab-date-25sep` (the Bill tab
+and date session): A - hide the Bill tab's Add charge, Settle, Interim bill,
+Split the bill and Check out from anyone the server refuses, each reading
+the question the server asks; B and C are the channel manager's and
+housekeeping's (their CHANGELOGs).
+
+**The owner's answers in this chat, 25 September** (now D25-29)
+- The Interim bill, a print the server does not gate: **for whoever may see
+  bills** (`invoice: view`).
+- A line's Reverse and Move, which the server also refuses housekeeping:
+  **hidden too** from anyone the server refuses.
+
+**Shipped** - `flows/FolioPanel.tsx`: each control asks roleGate's question
+of its write from the one matrix (`can(role, ...)`, as the front desk's
+`StayView.tsx` and `StayActions.tsx` do): Add charge and Split the bill
+`invoice: create`, Settle `payment: create`, Reverse and Move `invoice:
+edit`, Check out `reservation: edit` (its allowed-check no longer asked for
+anyone else), the Interim bill `invoice: view`. Housekeeping sees the
+balance and the lines; the accountant everything but Check out; a viewer
+only the print. Who may do what is unchanged.
+
+**Proved** (this copy, database `fidato_s7`, API 8821, web 5221)
+- `billTabControls.test.tsx`: reception all seven controls, housekeeping
+  none, the accountant all but Check out, a viewer only the Interim bill.
+  On the old panel both tests fail (housekeeping and the accountant offered
+  everything).
+- The checks on `bd1bca9` (cp6 `3399768` merged in; no migrations from
+  here): see the channel manager's entry of today for the six, run once for
+  the whole branch.
+- Screens, `.local/screenshots/2026-09-25-billtab/` in the main folder,
+  desktop 1280x800 and phone 390x844, headless Edge (InPrivate, its own
+  port) signed in with the development sign-ins: Ganesh Patil's stay (204),
+  Bill tab - `housekeeping-*` no buttons, `reception-*` a Reverse on each
+  line, Add charge, Settle, Interim bill, Split the bill and Check out;
+  `what-each-panel-offered.json` lists the buttons each page reported.
+
+**Left open** - housekeeping still reads the bill's balance and lines (the
+server lets them; not asked). FIN-10, an invoice test that passes or fails by
+the order the files run in (found in the full API run, not caused here).
+
+**Commits:** `4e8722d` (A-C and tests), `696b563` (DEFECTS, D25-29 cited),
+merges `3d5fa8e`, `bd1bca9`, and these notes.
+
+---
+
 ## 2026-09-24 · a VAT bill for alcohol (D22-44), "Interim bill" (D22-7), the tax card on Invoices (D23-1), the three rule-breakers (D22-9)
 
 Two helpers started this on 23 September and were stopped mid-task

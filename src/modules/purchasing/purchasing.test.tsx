@@ -1,6 +1,8 @@
 import { describe, it, expect, beforeEach, vi } from "vitest";
 import { render, screen, within, fireEvent } from "@testing-library/react";
+import * as apiModule from "@/lib/api";
 import App from "@/App";
+import { flatNavigationFor } from "@/components/app/navigation";
 import { go, startSignedIn, signedIn, AGRA_HOTEL } from "@/test/app";
 
 /* ══════════════════════════════════════════════════════════════════
@@ -228,9 +230,9 @@ describe("purchasing", () => {
   });
 
   it("offers Approve only to somebody the CORE queue says may decide", async () => {
-    /* There is no approvals SCREEN in this system - only the engine and its
-       routes - so a purchase is decided where it is, exactly as equipment
-       decides its own. `mayDecide` is the core's answer, never a copy of its
+    /* A purchase is decided where it is, exactly as equipment decides its
+       own; the Approvals screen (PUR-2, below) is a second view on the same
+       engine. `mayDecide` is the core's answer, never a copy of its
        rule here, so the button and the server cannot disagree. */
     as("stores");
     control.approval = "mine";
@@ -244,6 +246,53 @@ describe("purchasing", () => {
     /* And no Send while a line has no agreed price. */
     expect(screen.queryByRole("button", { name: "Send the order" })).toBeNull();
     expect(screen.getByText(/One line has no agreed price/)).toBeTruthy();
+  });
+
+  /* PUR-2 (the owner's D18-19): one Approvals screen at /h/:code/approvals,
+     in the menu, a second VIEW on the core engine and not a second engine.
+     It lists the waiting purchase request and decides it through the same
+     core endpoint the purchase order posts to. */
+  it("lists a waiting purchase on the Approvals screen and decides it through the core (PUR-2)", async () => {
+    as("gm");
+    expect(flatNavigationFor("gm", "PUA").map((i) => i.to)).toContain("/h/PUA/approvals");
+
+    const real = apiModule.api;
+    const posted: string[] = [];
+    vi.spyOn(apiModule, "api").mockImplementation((async (url: string, init?: RequestInit) => {
+      if (url === "/api/hotels/PUA/approvals?status=pending") {
+        return {
+          me: { staffId: "44444444-4444-4444-4444-444444444444", role: "gm" },
+          rows: [{
+            id: "ap1", kind: "purchase", subject: { table: "purchase_requests", id: "waiting" },
+            reason: "The rice is down to two days", amount: null, status: "pending",
+            approverRole: "gm", requestedBy: "Store Keeper",
+            requestedAt: "2026-09-18T06:00:00.000Z", decidedBy: null, decidedAt: null,
+            decisionNote: null, mayDecide: true,
+          }],
+        };
+      }
+      if (url.startsWith("/api/hotels/PUA/approvals/")) {
+        posted.push(`${init?.method} ${url}`);
+        return {};
+      }
+      return real(url, init as never);
+    }) as never);
+    try {
+      go("/h/PUA/approvals");
+      render(<App />);
+
+      expect(await screen.findByRole("heading", { level: 1, name: "Approvals" })).toBeTruthy();
+      expect(await screen.findByText("The rice is down to two days")).toBeTruthy();
+      // PUR-3: the link opens the request on purchasing's own page.
+      expect(screen.getByRole("link", { name: "Purchase request" }).getAttribute("href"))
+        .toBe("/h/PUA/purchasing/waiting");
+
+      fireEvent.click(screen.getByRole("button", { name: "Approve" }));
+      await vi.waitFor(() =>
+        expect(posted).toEqual(["POST /api/hotels/PUA/approvals/ap1/approved"]));
+    } finally {
+      vi.restoreAllMocks();
+    }
   });
 
   it("lets the general manager approve it, and refuses a refusal with no words", async () => {
