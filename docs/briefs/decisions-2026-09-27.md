@@ -18,3 +18,4 @@
 | D27-14 | The new product name (D25-32) | **Suggest some names**: short, trade-markable names for a hotel system, as a shortlist for the owner and the lawyer's search |
 | D27-15 | Audit work needing no CA or lawyer answer | **Start now, one session**: backups off the server and a health watch (A9), cyber-security basics under CERT-In (A8), an open-source notices file (A15) |
 | D27-16 | The 5 Elements GM's login details | **Not ready yet** |
+| D27-17 | The new product name (D25-32, D27-14): the owner's picks after a first screen (docs/selling-in-india/product-name.md) | **Tomai, Yadou, Kyado** — an invented, Japanese-sounding word of 4 or 5 letters, standalone (no "Influvate"), easy in any Indian language. To the lawyer's trade mark search (classes 9, 42; 35 optional). Tomai is risky ("TomAI", AI software); Yadou and Kyado screened clean. Not a legal clearance |
