@@ -14,7 +14,7 @@ the reason the fault does not come back.
 
 ## Open — not fixed
 
-### PUR-3 · The Approvals screen links a purchase request to an address that does not exist
+### PUR-3 · The Approvals screen linked a purchase request to an address that does not exist — FIXED 26 September
 
 **Found** — 26 September, writing PUR-2's test (the five-tests session, D25-27).
 On the Approvals screen a purchase request's "Purchase request" link goes to
@@ -25,9 +25,11 @@ On the Approvals screen a purchase request's "Purchase request" link goes to
 catch-all sends the person to `/` with no word about why - ADM-4's fault again.
 Read from the code; not yet opened in a browser.
 
-**Not fixed** — the file is the core's, and the fix was not in this session's
-brief. The fix is one path: `/h/${code}/purchasing/${a.subject.id}`, and a test
-that follows the link. For the master and the owner.
+**Fixed** — 26 September, by the master with the owner's yes: the link is
+`/h/${code}/purchasing/${a.subject.id}` (`src/data/repositories/approvals.ts`).
+`purchasing.test.tsx` PUR-2's test now also checks the link's address; with
+the old path put back it fails "expected '/h/PUA/purchasing/requests/waiting'
+to be '/h/PUA/purchasing/waiting'".
 
 **The rule** — ADM-4's: a link is a claim about an address. Open it.
 

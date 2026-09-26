@@ -51,7 +51,9 @@ export interface ApprovalsAnswer {
 const KINDS: Record<string, { label: string; where?: (a: Approval, code: string) => string }> = {
   purchase: {
     label: "Purchase request",
-    where: (a, code) => `/h/${code}/purchasing/requests/${a.subject.id}`,
+    /* The page purchasing mounts (routes.tsx); ".../requests/<id>" matched
+       nothing and the catch-all sent the approver home (PUR-3). */
+    where: (a, code) => `/h/${code}/purchasing/${a.subject.id}`,
   },
   cash_expense: { label: "Cash expense" },
   stock_adjustment: { label: "Stock adjustment", where: (_a, code) => `/h/${code}/stores` },
