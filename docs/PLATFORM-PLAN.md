@@ -3,7 +3,7 @@
 **Written 27 September 2026** by the platform-plan session, from the code of
 all three systems (read-only) and the owner's answers in this chat.
 **Status: PLAN. Nothing is built and nothing changed in any of the three
-projects.** The owner's page for this plan is linked in § 8.
+projects.** The owner's page for this plan: https://claude.ai/artifact/RucnfMNeQfSBQrJUvYowGa
 
 It builds on `docs/HMS-INTEGRATION-PLAN.md` (15 September) and replaces its
 Phases 2, 5 and 6 where the owner's answers of today differ. Its audits
@@ -234,7 +234,7 @@ database has it and the screen does not.
 | 38 | Check-In button | the walk-in flow exists (`WalkInFlow.tsx`) | **add** "Book and check in" for today's arrivals, through front desk's door |
 | 39 | Reserve button | Confirm the booking ✓ | none |
 
-Twenty-one fields to add, two after the CA, two later. Migrations: one in
+Twenty fields to add, two after the CA, two later. Migrations: one in
 `reservations` (departure time), one in `guests` (title, state, PIN), one for
 the sales-people list and room promotions.
 
