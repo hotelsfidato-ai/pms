@@ -11,6 +11,40 @@ Work that touches the core or several services still goes in the root
 
 ---
 
+## 2026-09-27 · Five bugs in one session (D27-1): two of them the restaurant's
+
+**Asked for:** D27-1 - a GM told "No such order" for an order the group owner
+opened; an outside till's void of a bill already reversed at the hotel
+answering an error. The owner's answers (27 September): a name the reader may
+not see prints "-" ("Served by -"); the void says "Bill {ref} has already been
+taken off the guest's bill at the hotel. Nothing to void."
+
+**Shipped:** `readOrder` in `till.ts` left-joins its three staff reads (opened
+by, a line's added by, a payment's taken by - MEMORY 283); `openedBy`,
+`addedBy`, `takenBy` are `string | null` and `Bill.tsx` and `Terminal.tsx`
+print "-". `pos.ts`'s void refuses a bill whose posting already has its
+reversal, before any write (was a 500 on 021's one-reversal index). Beside
+them, the same session: GUE-2 (guests), the Night audit report's outlet and
+order (reports), and `RequireAccess` naming the page by its menu entry.
+
+**Proved** (cp6 188b504 plus the branch): web tsc exit 0; API tsc exit 0; web
+81 files, 706 tests, exit 0; API 99 files, 1,566 tests, exit 0; database 1,180
+assertions, exit 0; "all 144 migrations are re-runnable", exit 0. Seen failing
+with each fix taken out: `till.test.ts` "a GM reads an order the group owner
+opened" - each of the three joins put back fails it ("No such order", a
+missing dish, a missing payment); `pos.test.ts` "refuses in words a bill the
+hotel already took off" - 500 on cp6's `pos.ts`. On screen as the GM: the
+owner's order 20260825-2 opens and reads "Served by -".
+
+**Found:** the day end's paid-in and paid-out list (`till.ts`, `join staff s on
+s.id = m.recorded_by`) has the same inner join - a movement the owner recorded
+is missing from a GM's list. Not fixed: outside D27-1.
+
+**Left open:** that join; `RequireAccess`'s `resource` prop is no longer read
+and is still passed by every route.
+
+---
+
 ## 2026-09-25 · Restaurant setup: a new hotel's restaurant without the script — D22-6
 
 **Asked for:** D22-6, "a screen to set up a hotel's restaurant till and tables - yes, before the second hotel". Until now the restaurant (the `REST` outlet Tables, the Till and Close restaurant day open) came only from the demo or `npm run pos:outlet`, and sections and tables only from the demo. **The owner's answers** (D25-20 to D25-26): the restaurant's name, its sections and tables, and a ready-to-open list of six ticks; owner, admin and GM only; tables one at a time or a numbered run, seats optional (a dash when blank); taking a table or section away switches it off, refused while a bill is on it; Point of sale → Restaurant setup, last; "Set up tables" on an empty Tables screen for those who may.

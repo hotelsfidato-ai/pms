@@ -384,6 +384,49 @@ describe("an order", () => {
   });
 });
 
+describe("who may read an order", () => {
+  it("a GM reads an order the group owner opened (D27-1, MEMORY 283)", async () => {
+    /* The owner is on no property's roster, so a GM may not read their
+       staff row. The order read's inner joins to staff turned that into
+       "No such order", a dish missing and a payment missing. The owner
+       opens, adds a dish and takes the cash, so all three are asked. */
+    const order = await openOrder("gm reads");
+    const tikka = await menuItem("Paneer Tikka");
+    await post(`/api/hotels/5EL/till/orders/${order.id}/lines`,
+      { itemId: tikka.id, qty: 1 });
+    expect((await post(`/api/hotels/5EL/till/orders/${order.id}/settle`,
+      { method: "cash" })).status).toBe(200);
+    const db = await admin();
+    const gmId = (await db.query<{ id: string }>(
+      `insert into staff (email, full_name, firebase_uid)
+       values ('till-gm@fidato.in', 'TILLTEST Manager', 'test-uid-tillgm')
+       on conflict (email) do update set is_active = true
+       returning id::text`)).rows[0]!.id;
+    await db.query(
+      `insert into staff_hotels (staff_id, hotel_id, role)
+       select $1, id, 'gm' from hotels where code = '5EL'
+       on conflict (staff_id, hotel_id) do update set role = excluded.role`,
+      [gmId]);
+    try {
+      const res = await app.request(`/api/hotels/5EL/till/orders/${order.id}`,
+        { headers: { "x-dev-staff-id": gmId } });
+      expect(res.status, await res.clone().text()).toBe(200);
+      const body = (await res.json()) as {
+        orderNo: string; openedBy: string | null;
+        lines: { addedBy: string | null }[]; tenders: { takenBy: string | null }[];
+      };
+      expect(body.orderNo).toBe(order.orderNo);
+      expect(body.openedBy, "the GM should not see the owner's name").toBeNull();
+      expect(body.lines.map((l) => l.addedBy)).toEqual([null]);
+      expect(body.tenders.map((t) => t.takenBy)).toEqual([null]);
+    } finally {
+      await db.query("delete from staff_hotels where staff_id = $1", [gmId]);
+      await db.query("update staff set is_active = false where id = $1", [gmId]);
+      await db.end();
+    }
+  });
+});
+
 describe("settling to a room", () => {
   it("refuses a room with two open folios and names both guests", async () => {
     /* 25 August on the demo property is a changeover day in 201:
@@ -504,6 +547,34 @@ describe("settling to a room", () => {
     } finally {
       await db.end();
     }
+  });
+
+  it("names its outlet and order on the Night audit report (D27-1)", async () => {
+    /* The report joined pos_orders.id = the posting's source_id, but a
+       till posting's source is its TICKET, so Outlet and Order were never
+       filled. */
+    const order = await openOrder("night audit");
+    const tikka = await menuItem("Paneer Tikka");
+    await post(`/api/hotels/5EL/till/orders/${order.id}/lines`,
+      { itemId: tikka.id, qty: 1 });
+    const rooms = (await (await as("/api/hotels/5EL/till/rooms")).json()) as {
+      rooms: { room: string; folioId: string }[];
+    };
+    const target = rooms.rooms[0]!;
+    const settled = (await (await post(`/api/hotels/5EL/till/orders/${order.id}/settle`,
+      { method: "room", room: target.room, folioId: target.folioId })).json()) as {
+      businessDate: string; outletName: string;
+    };
+
+    const doc = (await (await as(
+      `/api/hotels/5EL/reports/night-audit?asOn=${settled.businessDate}`)).json()) as {
+      sections: { key: string; rows: { cells: Record<string, unknown> }[] }[];
+    };
+    const line = doc.sections.find((s) => s.key === "misc-charges")!.rows
+      .find((r) => String(r.cells["charge"] ?? "").includes(order.orderNo));
+    expect(line, "the till's charge is not on the report").toBeTruthy();
+    expect(line!.cells["remark"])
+      .toBe(`Outlet: ${settled.outletName}, Order ${order.orderNo}`);
   });
 
   it("refuses a room nobody is checked into", async () => {
