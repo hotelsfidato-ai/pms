@@ -184,6 +184,20 @@ export function recordNoOffers(
   return send(`/api/hotels/${hotelId}/crm/no-offers`, "POST", contact);
 }
 
+/** D25-39 (opt-in): the phones and emails that said yes, as keys. */
+export async function getOffersYes(
+  hotelId: string,
+): Promise<{ phones: string[]; emails: string[] }> {
+  return api(`/api/hotels/${hotelId}/crm/offers-yes`);
+}
+
+/** D25-39, recorded by a manager: the guest's yes, which takes away a no. */
+export function recordOffersYes(
+  hotelId: string, contact: { phone: string | null; email: string | null },
+): Promise<Done> {
+  return send(`/api/hotels/${hotelId}/crm/offers-yes`, "POST", contact);
+}
+
 export function clearNoOffers(hotelId: string, id: string): Promise<Done> {
   return send(`/api/hotels/${hotelId}/crm/no-offers/${id}`, "DELETE");
 }

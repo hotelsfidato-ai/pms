@@ -166,6 +166,8 @@ interface CheckInBody {
      reached, and missing from the night audit that closed the real one. */
   businessDate?: string;
   user?: string;
+  /* D25-39: the guest agreed to offers, asked face to face at check-in. */
+  offersAgreed?: boolean;
 }
 
 operations.post("/:code/stays/:id/check-in", async (c) => {
@@ -535,6 +537,12 @@ operations.post("/:code/stays/:id/check-in", async (c) => {
       /* No write to rooms.occupancy_status here: the check-in above and
          the assignment re-read it from app.in_house (129), the one rule. */
 
+      if (body.offersAgreed === true) {
+        await client.query(
+          "select app.record_offers_yes(phone, email::text) from guests where id = $1",
+          [stay.guest_id]);
+      }
+
       void session;
       return { ok: true };
     },
@@ -829,9 +837,10 @@ operations.post("/:code/walk-ins", async (c) => {
        blacklisted one warned of, and the two ticks below kept against
        something. `guestId` is the returning guest the clerk confirmed
        (D21-20), checked again below; `whatsappAgreed` is D21-72;
-       `noOffers` is D21-22, kept against the phone and email themselves. */
+       `offersAgreed` is D25-39 (opt-in), kept against the phone and email
+       themselves as D21-22's "no" is. */
     phone?: string; email?: string; guestId?: string;
-    whatsappAgreed?: boolean; noOffers?: boolean;
+    whatsappAgreed?: boolean; offersAgreed?: boolean;
   };
 
   const result = await withSession(c.get("subject"), async (client): Promise<Outcome | null> => {
@@ -1040,8 +1049,8 @@ operations.post("/:code/walk-ins", async (c) => {
     );
     const stayId = made[0]!.id;
 
-    if (body.noOffers === true) {
-      await client.query("select app.record_no_offers($1, $2)", [phone, email]);
+    if (body.offersAgreed === true) {
+      await client.query("select app.record_offers_yes($1, $2)", [phone, email]);
     }
 
     /* 'arrival', not 'walk_in'. ra_reason_valid does not list the

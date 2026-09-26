@@ -3,6 +3,7 @@ import {
   BookOpen, Banknote,
 } from "lucide-react";
 import type { ServiceNavEntry } from "@/components/app/navigation";
+import { can } from "@/lib/permissions";
 
 /* Reports' menu entries: the Dashboard at the top of the menu, and the
    Reports section after the night audit. Three are listed for everybody;
@@ -46,8 +47,10 @@ export const nav: ServiceNavEntry[] = [
      a screen that does not exist to the person looking for it. */
   { section: "reports", order: 100,
     label: "GST sales register", to: "/reports/gst-sales", icon: ScrollText, resource: "report", listed: false },
+  /* D25-38: passports and visas - the check-in roles only, as the server. */
   { section: "reports", order: 110,
     label: "Form F / C-Form", to: "/reports/c-form", icon: ShieldCheck, resource: "report",
+    canSee: (role) => can(role, "edit", "customer"),
     keywords: ["foreign", "frro"], listed: false },
   { section: "reports", order: 120,
     label: "Guest ledger", to: "/reports/guest-ledger", icon: BookOpen, resource: "report", listed: false },

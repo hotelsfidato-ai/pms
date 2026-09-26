@@ -509,9 +509,14 @@ function SettleDialog({
   const [open, setOpen] = useState(false);
   const [method, setMethod] = useState<PaymentMethod>("Cash");
   const [amount, setAmount] = useState("");
+  const [pan, setPan] = useState("");
+  const [form97, setForm97] = useState(false);
 
   const outstanding = Math.max(balance, 0);
   const value = Number(amount) || 0;
+  /* D25-40 (Rule 159): more than ₹1,00,000 in cash at once needs the PAN or
+     Form 97. The server decides, and refuses cash of ₹2,00,000 or more. */
+  const asksPan = method === "Cash" && value > 100000;
 
   return (
     <Dialog
@@ -564,6 +569,25 @@ function SettleDialog({
             )}
           </Field>
 
+          {asksPan && (
+            <div className="space-y-3">
+              <Field label="Guest's PAN"
+                hint="More than ₹1,00,000 in cash at once needs it (Income-tax Rule 159). Not asked of a guest from abroad.">
+                {({ id }) => (
+                  <Input id={id} value={pan} disabled={form97} maxLength={10}
+                    onChange={(e) => setPan(e.target.value.toUpperCase())}
+                    placeholder="ABCDE1234F" autoComplete="off" />
+                )}
+              </Field>
+              <label className="flex items-center gap-2.5 cursor-pointer select-none">
+                <input type="checkbox" checked={form97}
+                  onChange={(e) => setForm97(e.target.checked)}
+                  className="size-4 rounded-xs accent-brand-orange" />
+                <span className="text-base text-ink-900">No PAN: Form 97 taken</span>
+              </label>
+            </div>
+          )}
+
           <div className="rounded-md bg-grey-50 border border-grey-200 p-3 space-y-1">
             <Row label="Outstanding" value={money(outstanding)} />
             <Row label="Paying" value={money(value)} muted />
@@ -583,6 +607,7 @@ function SettleDialog({
               onClick={async () => {
                 const res = await settle(hotelId, stay.id, {
                   method, amount: value, businessDate,
+                  ...(asksPan ? (form97 ? { form97 } : { pan }) : {}),
                 });
                 if (res.ok) {
                   toast.success(`${money(value)} received`, method);

@@ -4,12 +4,13 @@ import { useParams, Link } from "react-router";
 import { ArrowLeft, UserPlus, KeyRound, ShieldCheck } from "lucide-react";
 import { cn } from "@/lib/cn";
 import { money } from "@/lib/format";
-import { ROLE_LABELS, type Role } from "@/lib/permissions";
+import { ROLE_LABELS, can, type Role } from "@/lib/permissions";
+import { useRole } from "@/lib/session";
 import {
   Page, PageHeader, Card, CardBody, Button, Skeleton, EmptyState, toast,
   Dialog, DialogContent, Field, fieldProps, Input, NativeSelect, StatusPill,
 } from "@/components/ui";
-import { getPropertyDetail, createStaff, revokeAccess, setStaffPassword, setHomeScreen, MIN_PASSWORD, type PropertyTeamMember, type HomeScreen } from "@/modules/admin/data/admin";
+import { getPropertyDetail, createStaff, revokeAccess, setStaffPassword, setHomeScreen, setFssai, MIN_PASSWORD, type PropertyTeamMember, type HomeScreen } from "@/modules/admin/data/admin";
 import { getTodaySnapshot, getPeriodStatistics } from "@/modules/reports";
 import { getHouseNow } from "@/modules/front-desk";
 import { HOME_SCREENS, homeScreenLabel } from "@/lib/homeScreen";
@@ -175,6 +176,8 @@ export default function PropertyPage() {
         </CardBody>
       </Card>
 
+      <FssaiCard code={property.code} value={property.fssaiNumber} onSaved={refresh} />
+
       {/* ── The team ──────────────────────────────────────────── */}
       <section>
         <h2 className="text-md font-semibold text-ink-900 mb-2.5">
@@ -292,6 +295,49 @@ export default function PropertyPage() {
 const label = (role: string) => ROLE_LABELS[role as Role] ?? role;
 
 /** A number, or a dash. Never a zero standing in for "not measured". */
+/* A16 (the owner, 26 September): printed on every restaurant bill and on a
+   stay's tax invoice that carries food; a dash until typed. Offered to the
+   owner, an administrator and the GM - who the server lets set it (the
+   role gate's room-setup grant). */
+function FssaiCard({ code, value, onSaved }: {
+  code: string; value: string | null; onSaved: () => void;
+}) {
+  const mayEdit = can(useRole(), "edit", "room_config");
+  const [typed, setTyped] = useState<string | null>(null);
+  const save = async () => {
+    const res = await setFssai(code, typed ?? "");
+    if (!res.ok) return toast.error("Not saved", res.reason);
+    toast.success("FSSAI licence number saved", "It prints on food bills from now on.");
+    setTyped(null);
+    onSaved();
+  };
+  return (
+    <Card className="mb-5">
+      <CardBody className="flex flex-wrap items-end gap-4">
+        {typed === null ? (
+          <>
+            <Figure label="FSSAI licence number" value={value} />
+            {mayEdit && (
+              <Button variant="secondary" onClick={() => setTyped(value ?? "")}>Change</Button>
+            )}
+          </>
+        ) : (
+          <>
+            <Field label="FSSAI licence number" hint="14 digits, from the licence. Blank for none.">
+              {(f) => (
+                <Input {...fieldProps(f)} value={typed} autoFocus inputMode="numeric"
+                  maxLength={20} onChange={(e) => setTyped(e.target.value)} />
+              )}
+            </Field>
+            <Button variant="primary" onClick={() => void save()}>Save</Button>
+            <Button variant="ghost" onClick={() => setTyped(null)}>Cancel</Button>
+          </>
+        )}
+      </CardBody>
+    </Card>
+  );
+}
+
 function Figure({ label, value }: { label: string; value: string | null }) {
   return (
     <div>

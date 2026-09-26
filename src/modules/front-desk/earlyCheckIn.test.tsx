@@ -74,14 +74,29 @@ async function toRateStep() {
   return next;
 }
 
-async function checkInEarly({ waive }: { waive: boolean }) {
+async function checkInEarly({ waive, offers = false }: { waive: boolean; offers?: boolean }) {
   const next = await toRateStep();
   if (waive) fireEvent.click(screen.getByLabelText(/Waive the charge/));
   next();                                                   // Rate
+  if (offers) fireEvent.click(await screen.findByRole("switch", { name: /Guest agreed to offers/ }));
   const buttons = await screen.findAllByRole("button", { name: /Check in/ });
   fireEvent.click(buttons[buttons.length - 1]!);
   await waitFor(() => expect(sent).not.toBeNull());
 }
+
+/* D25-39 (opt-in, the owner 26 September): asked at check-in, off until the
+   guest says yes, and sent only then. */
+describe("the guest's yes to offers at check-in", () => {
+  it("is not sent as a yes when nobody ticked it", async () => {
+    await checkInEarly({ waive: false });
+    expect(sent).toMatchObject({ offersAgreed: false });
+  });
+
+  it("is sent when the guest said yes", async () => {
+    await checkInEarly({ waive: false, offers: true });
+    expect(sent).toMatchObject({ offersAgreed: true });
+  });
+});
 
 describe("checking in before the property's check-in time", () => {
   it("sends the clerk's reason, and no waive", async () => {

@@ -173,6 +173,7 @@ beforeEach(() => { forgetKnocksForTests(); });
 afterAll(async () => {
   await sql("delete from guest_requests where hotel_id = $1", [hotelId]);
   await sql("delete from guest_detail_submissions where hotel_id = $1", [hotelId]);
+  await sql("delete from offer_opt_ins where kind = 'phone' and value = $1", [phone]);
   await sql(`delete from guest_links where hotel_id = $1
                and (reservation_id = $2 or room_id is not null)`, [hotelId, stayId]);
   await sql("update guests set phone = $2 where id = $1", [guestId, phoneWas]);
@@ -571,6 +572,22 @@ describe("the check-in details wait for a clerk", () => {
     const after = (await sql(
       "select to_jsonb(d) as row from guest_documents d where guest_id = $1", [guestId])).rows[0]?.row;
     expect(after).toEqual(before);
+  });
+
+  it("record the guest's own yes to offers at once, and nothing when it is not ticked (D25-39)", async () => {
+    await sql("delete from offer_opt_ins where kind = 'phone' and value = $1", [phone]);
+    const yes = async () => (await sql(
+      "select recorded_by from offer_opt_ins where kind = 'phone' and value = $1", [phone])).rows;
+    const unlock = await unlockWith(link);
+
+    await asGuest(`/${link}/details`, "POST", { idType: "voter", idNumber: "OFFERS0001" }, unlock);
+    expect(await yes(), "unticked is not a yes").toEqual([]);
+
+    const res = await asGuest(`/${link}/details`, "POST",
+      { idType: "voter", idNumber: "OFFERS0001", offersAgreed: true }, unlock);
+    expect(res.status, await res.clone().text()).toBe(200);
+    expect(await yes(), "the guest's own word: nobody at the hotel recorded it")
+      .toEqual([{ recorded_by: null }]);
   });
 });
 

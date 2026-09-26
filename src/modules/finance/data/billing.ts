@@ -169,6 +169,8 @@ export interface InvoiceDetail {
   supplier: {
     name: string; address: string | null; city: string | null;
     state: string | null; gstin: string | null;
+    /** The hotel's FSSAI licence number (A16), null until typed. */
+    fssai?: string | null;
   };
   recipient: { name: string | null; gstin: string | null; address: string | null };
   /** The PROPERTY's state, always — IGST Act s.12(3)(b). */

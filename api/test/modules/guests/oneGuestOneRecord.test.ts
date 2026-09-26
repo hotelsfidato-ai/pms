@@ -18,7 +18,8 @@ import { closePool } from "../../../src/db.ts";
      3  the blacklist warns the desk with its reason and never refuses a
         booking; only the owner, an administrator or a GM set it (D21-21)
      4  "stayed with the group N times" and nothing more at the desk (D21-13)
-     5  "do not send me offers", against the number itself (D21-22)
+     5  offers only with a yes (D25-39), and "no offers", against the
+        number itself (D21-22); a later answer replaces an earlier one
      6  Guest 360: every stay at every hotel, for the three only (D21-3, -4)
      7  the WhatsApp tick, saved and read back (D21-72)
 
@@ -147,6 +148,7 @@ beforeAll(async () => {
     earlyReason: "CRM fixture - the arrival hour is not what these test",
     identity: { idType: "passport", idNumber: `P${run}CRM`, nationality: "IN",
                 passportExpiry: "2031-04-12", addressLine: "Pune" },
+    offersAgreed: true,
   });
   expect(checkIn.status, await checkIn.clone().text()).toBeLessThan(400);
 
@@ -187,6 +189,7 @@ afterAll(async () => {
       [guests]);
     await db.query("delete from offer_opt_outs where value like $1", [`7${run}%`]);
     await db.query("delete from offer_opt_outs where value = $1", [rohitEmail]);
+    await db.query("delete from offer_opt_ins where value like $1 or value = $2", [`7${run}%`, rohitEmail]);
     await db.query("delete from room_assignments where reservation_id = any($1::uuid[])", [stays]);
     await db.query("alter table folio_postings disable trigger folio_postings_append_only");
     try {
@@ -272,7 +275,7 @@ describe("a returning guest is suggested, and a clerk decides", () => {
       [hotel5el]))[0]!.id;
     const made = await book("5EL", {
       guestName: "Rohit D", phone: spaced(phone(1)), guestId: rohit, ...nights,
-      bookingSourceId: source, whatsappAgreed: true, noOffers: true,
+      bookingSourceId: source, whatsappAgreed: true, offersAgreed: true,
       lines: [{ roomTypeId: type, adults: 1, rooms: 1, agreedRate: 3000 }],
     });
     expect(made.status, JSON.stringify(made.out)).toBe(200);
@@ -331,14 +334,14 @@ describe("a returning guest is suggested, and a clerk decides", () => {
     const res = await call("clerk", "/5EL/walk-ins", "POST", {
       guestName: "Priya D", phone: spaced(phone(2)), guestId: priya,
       roomNumber: room.number, nights: 1, adults: 1, children: 0,
-      ratePlan: "CP", offeredTariff: 3200, whatsappAgreed: true, noOffers: true,
+      ratePlan: "CP", offeredTariff: 3200, whatsappAgreed: true, offersAgreed: true,
     });
     expect(res.status, await res.clone().text()).toBe(200);
     const id = ((await res.json()) as { data: { id: string } }).data.id;
     const rows = await sql<{ guest_id: string; whatsapp_agreed: boolean }>(
       "select guest_id::text, whatsapp_agreed from reservations where id = $1", [id]);
     expect(rows[0]).toEqual({ guest_id: priya, whatsapp_agreed: true });
-    expect(await sql("select 1 from offer_opt_outs where kind = 'phone' and value = $1", [phone(2)]))
+    expect(await sql("select 1 from offer_opt_ins where kind = 'phone' and value = $1", [phone(2)]))
       .toHaveLength(1);
   });
 
@@ -522,24 +525,53 @@ describe("joining two records into one person, and taking it apart", () => {
   });
 });
 
-/* ── 5 · "Do not send me offers" (D21-22) ─────────────────────────── */
+/* ── 5 · Offers only with a yes (D25-39); "no offers" (D21-22) ──────── */
 
-describe("do not send me offers", () => {
-  it("was kept against his number by the desk, and is read by managers only", async () => {
-    expect((await call("clerk", "/5EL/crm/no-offers")).status).toBe(403);
-    const res = await call("admin", "/5EL/crm/no-offers");
-    const list = (await res.json()) as { phones: string[]; emails: string[] };
+type Keys = { phones: string[]; emails: string[] };
+const yesList = async () => (await (await call("owner", "/5EL/crm/offers-yes")).json()) as Keys;
+const noList = async () => (await (await call("owner", "/5EL/crm/no-offers")).json()) as Keys;
+
+describe("offers only with a yes", () => {
+  it("the desk's yes - at the check-in, the booking and the walk-in - is kept against the number and email, read by managers only", async () => {
+    expect((await call("clerk", "/5EL/crm/offers-yes")).status).toBe(403);
+    const res = await call("admin", "/5EL/crm/offers-yes");
+    expect(res.status, await res.clone().text()).toBe(200);
+    const list = (await res.json()) as Keys;
     expect(list.phones).toContain(phone(1));
     expect(list.phones).toContain(phone(2));
+    /* Only Rohit's CHECK-IN carried his email with the yes. */
+    expect(list.emails).toContain(rohitEmail);
   });
 
+  it("is recorded on Guest 360 by a manager and not by the desk", async () => {
+    const res = await call("clerk", "/5EL/crm/offers-yes", "POST", { phone: phone(3) });
+    expect(res.status).toBe(403);
+    expect((await yesList()).phones).not.toContain(phone(3));
+    const refused = await call("gm", "/5EL/crm/offers-yes", "POST", { phone: "12345" });
+    expect(refused.status).toBe(409);
+  });
+
+  it("is taken away by a later no, and a later yes takes the no away", async () => {
+    expect((await call("admin", "/5EL/crm/no-offers", "POST", { phone: phone(2) })).status).toBe(200);
+    expect((await yesList()).phones).not.toContain(phone(2));
+    expect((await noList()).phones).toContain(phone(2));
+
+    expect((await call("owner", "/5EL/crm/no-offers", "POST", { phone: phone(1) })).status).toBe(200);
+    expect((await yesList()).phones).not.toContain(phone(1));
+    expect((await call("gm", "/5EL/crm/offers-yes", "POST", { phone: spaced(phone(1)) })).status).toBe(200);
+    expect((await yesList()).phones).toContain(phone(1));
+    expect((await noList()).phones).not.toContain(phone(1));
+  });
+});
+
+describe("do not send me offers", () => {
   it("is cleared by a manager and nobody else", async () => {
+    expect((await call("owner", "/5EL/crm/no-offers", "POST", { phone: phone(4) })).status).toBe(200);
     const row = (await sql<{ id: string }>(
-      "select id::text from offer_opt_outs where kind = 'phone' and value = $1", [phone(1)]))[0]!;
+      "select id::text from offer_opt_outs where kind = 'phone' and value = $1", [phone(4)]))[0]!;
     expect((await call("clerk", `/5EL/crm/no-offers/${row.id}`, "DELETE")).status).toBe(403);
     expect((await call("owner", `/5EL/crm/no-offers/${row.id}`, "DELETE")).status).toBe(200);
-    const list = (await (await call("owner", "/5EL/crm/no-offers")).json()) as { phones: string[] };
-    expect(list.phones).not.toContain(phone(1));
+    expect((await noList()).phones).not.toContain(phone(4));
   });
 });
 

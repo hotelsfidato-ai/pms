@@ -112,6 +112,8 @@ export interface Details {
   passportExpiry?: string;
   visaNumber?: string;
   visaExpiry?: string;
+  /** The guest's own yes to offers (D25-39, opt-in): recorded at once. */
+  offersAgreed?: boolean;
 }
 
 export interface DetailsState {

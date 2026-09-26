@@ -3,6 +3,7 @@ import { withSession } from "../../auth.ts";
 import type { Client } from "../../db.ts";
 import { resolveDate } from "../../businessDate.ts";
 import { folioFor } from "../../folio.ts";
+import { overCashLimit, panFor } from "./cashLimit.ts";
 
 /* Split out of api/src/routes/operations.ts on 15 September in the
    service-folder move (docs/SERVICE-FOLDERS-PLAN.md). Service: finance.
@@ -29,10 +30,10 @@ type Outcome<T = unknown> =
      day, at which point the way through silently disappears. Most
      refusals have no `needs`: "the room is occupied" is not a form to
      fill in. */
-  | { ok: false; reason: string; needs?: "late-reason" | "early-reason" };
+  | { ok: false; reason: string; needs?: "late-reason" | "early-reason" | "pan" };
 
 const refuse = (
-  reason: string, needs?: "late-reason" | "early-reason",
+  reason: string, needs?: "late-reason" | "early-reason" | "pan",
 ): Outcome => (needs ? { ok: false, reason, needs } : { ok: false, reason });
 
 
@@ -304,6 +305,8 @@ postings.post("/:code/stays/:id/charges/:postingId/reverse", async (c) => {
 postings.post("/:code/stays/:id/payments", async (c) => {
   const body = (await c.req.json().catch(() => ({}))) as {
     method?: string; amount?: number; businessDate?: string;
+    /* D25-40: asked when more than ₹1,00,000 is paid in cash at once. */
+    pan?: string; form97?: boolean;
   };
 
   const result = await withSession(c.get("subject"), async (client): Promise<Outcome | null> => {
@@ -315,6 +318,29 @@ postings.post("/:code/stays/:id/payments", async (c) => {
     }
     const method = PAYMENT_METHOD[body.method ?? "Cash"];
     if (!method) return refuse(`"${body.method}" is not a payment method.`);
+    const amount = Math.round(body.amount * 100) / 100;
+    const businessDate = await resolveDate(client, hotelId, body.businessDate);
+
+    /* D25-40 - asked BEFORE folioFor, which may open a folio (MEMORY 243).
+       ponytail: two clerks taking cash for one guest at the same second can
+       both pass; a lock on the guest if that is ever seen. */
+    let pan: string | null = null;
+    let form97 = false;
+    if (method === "cash") {
+      const { rows: guest } = await client.query<{ taken: string; foreign: boolean }>(
+        `select app.cash_taken(r.id, $3::date)::text as taken, g.nationality <> 'IN' as foreign
+           from reservations r join guests g on g.id = r.guest_id
+          where r.hotel_id = $1 and r.id = $2`,
+        [hotelId, c.req.param("id"), businessDate]);
+      if (guest[0]) {
+        const over = overCashLimit(Number(guest[0].taken), amount,
+          "card, UPI, cheque or bank transfer");
+        if (over) return refuse(over);
+        const kept = panFor(amount, { pan: body.pan, form97: body.form97, foreign: guest[0].foreign });
+        if (!kept.ok) return refuse(kept.reason, "pan");
+        ({ pan, form97 } = kept);
+      }
+    }
 
     const folioId = await folioFor(client, hotelId, c.req.param("id"));
     if (!folioId) return refuse("Reservation not found.");
@@ -329,17 +355,17 @@ postings.post("/:code/stays/:id/payments", async (c) => {
        values ($1,$2,$3,'payment',$4,$5,0,0)
        returning id::text`,
       [hotelId, folioId,
-       await resolveDate(client, hotelId, body.businessDate),
+       businessDate,
        method === "city_ledger"
          ? "Transferred to city ledger"
          : `Received - ${body.method}`,
-       -Math.round(body.amount * 100) / 100],
+       -amount],
     );
 
     await client.query(
-      `insert into payments (hotel_id, posting_id, method, amount)
-       values ($1, $2::bigint, $3, $4)`,
-      [hotelId, made[0]?.id, method, Math.round(body.amount * 100) / 100],
+      `insert into payments (hotel_id, posting_id, method, amount, pan, form_97)
+       values ($1, $2::bigint, $3, $4, $5, $6)`,
+      [hotelId, made[0]?.id, method, amount, pan, form97],
     );
 
     return { ok: true, data: { id: made[0]?.id } };

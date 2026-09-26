@@ -1,5 +1,6 @@
 import { Users, Building2, Plug, ShieldAlert } from "lucide-react";
 import type { ServiceNavEntry } from "@/components/app/navigation";
+import { can } from "@/lib/permissions";
 
 /* Guests and companies — entries in three sections (Guests & CRM,
    Configuration, Finance). Assembled by `navigation.ts`. Guests and
@@ -32,8 +33,11 @@ export const nav: ServiceNavEntry[] = [
   /* Form C is a COMPLIANCE obligation about guests, not a finance
      document — but it is filed by the same person who bills, at the
      same desk, and burying it under Reports is how a 24-hour
-     deadline gets missed. It sits where somebody will see it. */
+     deadline gets missed. It sits where somebody will see it.
+     D25-38: it shows passport numbers, so only the people who check guests in
+     see it - who may record Form C, the server's own rule (roleGate GUEST_ID). */
   { section: "finance", order: 60,
     label: "Form C", to: "/h/:code/form-c", icon: ShieldAlert, resource: "customer",
+    canSee: (role) => can(role, "edit", "customer"),
     keywords: ["foreign", "frro", "passport"] },
 ];

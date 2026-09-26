@@ -7,6 +7,8 @@ import {
 } from "lucide-react";
 import { cn } from "@/lib/cn";
 import { useUi } from "@/lib/ui";
+import { useRole } from "@/lib/session";
+import { mayReach } from "@/components/app/navigation";
 import { Page, PageHeader, Card, CardBody, StatusPill, SearchInput } from "@/components/ui";
 
 /* ══════════════════════════════════════════════════════════════════
@@ -140,17 +142,20 @@ export default function ReportsIndexPage() {
   const favourites = useUi((s) => s.favouriteReports);
   const toggle = useUi((s) => s.toggleFavouriteReport);
 
+  const role = useRole();
   const q = search.trim().toLowerCase();
-  const matches = (r: ReportLink) =>
+  /* A report the menu hides from this role is not offered here either
+     (D25-38: the C-Form's passports are the check-in roles' only). */
+  const matches = (r: ReportLink) => (!r.path || mayReach(role, r.path)) && (
     !q ||
     r.title.toLowerCase().includes(q) ||
-    r.description.toLowerCase().includes(q);
+    r.description.toLowerCase().includes(q));
 
   const groups = GROUPS.map((g) => ({ ...g, reports: g.reports.filter(matches) }))
     .filter((g) => g.reports.length > 0);
 
   const starred = GROUPS.flatMap((g) => g.reports).filter(
-    (r) => r.path && favourites.includes(r.path),
+    (r) => r.path && favourites.includes(r.path) && mayReach(role, r.path),
   );
 
   return (

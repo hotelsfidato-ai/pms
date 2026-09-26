@@ -99,15 +99,16 @@ export function ReturningGuest({
    "Guest agreed to WhatsApp" (D21-72): WhatsApp's own rule is that a
    business may start a conversation only with somebody who agreed, so a
    booking nobody ticked gets email if it has one, else nothing.
-   "Do not send offers" (D21-22): kept against the phone and email
-   themselves, for the whole group - a manager may clear it on Guest 360. */
+   "Guest agreed to offers" (D25-39, opt-in): off until the guest says yes;
+   kept against the phone and email themselves, for the whole group (D21-22)
+   - a manager may take it away on Guest 360. */
 export function ConsentTicks({
-  whatsapp, onWhatsapp, noOffers, onNoOffers,
+  whatsapp, onWhatsapp, offersAgreed, onOffersAgreed,
 }: {
   whatsapp: boolean;
   onWhatsapp: (v: boolean) => void;
-  noOffers: boolean;
-  onNoOffers: (v: boolean) => void;
+  offersAgreed: boolean;
+  onOffersAgreed: (v: boolean) => void;
 }) {
   return (
     <div className="space-y-3">
@@ -118,10 +119,10 @@ export function ConsentTicks({
         description="Ask them. Unticked, messages go by email if there is one, else not at all."
       />
       <Switch
-        checked={noOffers}
-        onCheckedChange={onNoOffers}
-        label="Do not send offers"
-        description="Kept against this phone and email at every hotel of the group."
+        checked={offersAgreed}
+        onCheckedChange={onOffersAgreed}
+        label="Guest agreed to offers"
+        description="Ask them. Unticked, no offers are sent. Kept against this phone and email at every hotel of the group."
       />
     </div>
   );

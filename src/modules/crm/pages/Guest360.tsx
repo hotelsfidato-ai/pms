@@ -10,9 +10,9 @@ import {
 } from "@/components/ui";
 import {
   searchGuests, getGuest360, blacklistGuest, clearBlacklist, recordNoOffers,
-  clearNoOffers, type Guest360,
+  clearNoOffers, getOffersYes, recordOffersYes, type Guest360,
 } from "@/modules/crm/data/crm";
-import { stayedWords } from "@/modules/guests";
+import { agreedToOffers, stayedWords } from "@/modules/guests";
 
 /* ══════════════════════════════════════════════════════════════════
    GUEST 360 — one person, across the whole group (D21-3, D21-4)
@@ -257,10 +257,15 @@ function BlacklistCard({ hotelId, guest: g }: { hotelId: string; guest: Guest360
   );
 }
 
-/* D21-22: against the phone and email themselves, at every hotel. */
+/* D25-39 (opt-in) and D21-22: against the phone and email themselves, at
+   every hotel. Offers go only to a yes; a later answer replaces an earlier one. */
 function NoOffersCard({ hotelId, guest: g }: { hotelId: string; guest: Guest360 }) {
   const qc = useQueryClient();
   const [busy, setBusy] = useState(false);
+  const yes = useQuery({ queryKey: ["crm", "offers-yes", hotelId], queryFn: () => getOffersYes(hotelId) });
+  /* Marketing's own gate (mayBeWrittenTo): a yes, and no "no" beside it. */
+  const agreed = yes.data
+    ? agreedToOffers(yes.data, g.phone, g.email) && g.noOffers.length === 0 : null;
   const act = async (result: Promise<{ ok: true } | { ok: false; reason: string }>) => {
     setBusy(true);
     const r = await result;
@@ -271,13 +276,14 @@ function NoOffersCard({ hotelId, guest: g }: { hotelId: string; guest: Guest360 
 
   return (
     <Card>
-      <CardHeader title="Do not send offers" />
+      <CardHeader title="Offers" />
       <CardBody className="space-y-3">
-        {g.noOffers.length === 0 ? (
-          <p className="text-sm text-grey-600">
-            Offers may be sent to this guest's phone and email. Recording "no offers" covers both, at every hotel.
-          </p>
-        ) : (
+        <p className="text-sm text-grey-600">
+          {agreed === null ? "-"
+            : agreed ? "Agreed to offers. They may be sent to this guest's phone and email, at every hotel."
+            : "No offers are sent: this guest has not said yes."}
+        </p>
+        {g.noOffers.length > 0 && (
           <ul className="space-y-2">
             {g.noOffers.map((o) => (
               <li key={o.id} className="flex items-center gap-2 text-sm">
@@ -293,10 +299,18 @@ function NoOffersCard({ hotelId, guest: g }: { hotelId: string; guest: Guest360 
           </ul>
         )}
         {(g.phone || g.email) && (
-          <Button variant="secondary" disabled={busy}
-            onClick={() => void act(recordNoOffers(hotelId, { phone: g.phone, email: g.email }))}>
-            Record "no offers"
-          </Button>
+          <div className="flex flex-wrap gap-2">
+            {agreed === false && (
+              <Button variant="secondary" disabled={busy}
+                onClick={() => void act(recordOffersYes(hotelId, { phone: g.phone, email: g.email }))}>
+                Record their yes
+              </Button>
+            )}
+            <Button variant="secondary" disabled={busy}
+              onClick={() => void act(recordNoOffers(hotelId, { phone: g.phone, email: g.email }))}>
+              Record "no offers"
+            </Button>
+          </div>
         )}
       </CardBody>
     </Card>

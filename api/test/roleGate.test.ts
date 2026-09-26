@@ -3,7 +3,7 @@ import { Hono } from "hono";
 import { app } from "../src/server.ts";
 import { closePool } from "../src/db.ts";
 import {
-  WRITE_RULES, isDoor, allows, whoMay, refusalFor, roleGate, UNMAPPED, type Rule,
+  WRITE_RULES, READ_RULES, isDoor, allows, whoMay, refusalFor, roleGate, UNMAPPED, type Rule,
 } from "../src/roleGate.ts";
 import * as serverMatrix from "../src/permissions.ts";
 import * as websiteMatrix from "../../src/lib/permissions.ts";
@@ -441,6 +441,65 @@ describe("the owner's answers of 22 September, through the real server", () => {
     ] as const) {
       await refusedByGate(await send(as("revenue_manager"), "POST", path, {}), key);
     }
+  });
+});
+
+/* ── D25-38: guests' ID and Form C details, read by the check-in roles only ── */
+
+describe("the reads that hand out a guest's passport or ID number (D25-38)", () => {
+  const CHECK_IN_ROLES = ["owner", "admin", "gm", "hotel_manager", "front_desk"];
+  const READS: [string, string][] = [
+    ["/form-c", `GET ${H}/form-c`],
+    ["/reports/c-form?from=2026-01-01&to=2026-12-31", `GET ${H}/reports/c-form`],
+  ];
+  const readRule = (key: string): Rule => {
+    const r = READ_RULES[key];
+    if (!r) throw new Error(`no read rule for ${key}`);
+    return r;
+  };
+
+  it("are every mounted read that returns an ID field, and each is mounted", () => {
+    /* The reads that select guest_documents' or a submission's numbers
+       (grep id_number, passport, visa in api/src). A new one goes here. */
+    expect(Object.keys(READ_RULES).sort()).toEqual([
+      `GET ${H}/form-c`, `GET ${H}/online-checkin`, `GET ${H}/reports/c-form`,
+    ]);
+    const mounted = new Set(app.routes.map((r) => `${r.method} ${r.path}`));
+    for (const key of Object.keys(READ_RULES)) expect(mounted.has(key), key).toBe(true);
+  });
+
+  it("let in exactly the owner, an administrator, the GM, the hotel manager and reception", () => {
+    for (const [, key] of READS) expect(whoMay(readRule(key)), key).toEqual(CHECK_IN_ROLES);
+    expect(refusalFor(readRule(`GET ${H}/form-c`))).toBe(
+      "Reading guests' passport and ID details is for the owner, an administrator, "
+      + "the general manager, the hotel manager or reception. Ask one of them.");
+  });
+
+  it("refuse housekeeping, the kitchen, a till operator and the accountant, in the gate's words", async () => {
+    for (const role of ["housekeeping", "kitchen_manager", "chef", "pos", "finance", "read_only"]) {
+      for (const [path, key] of READS) {
+        const res = await send(as(role), "GET", path);
+        expect(res.status, `${role} ${path}: ${await res.clone().text()}`).toBe(403);
+        expect(((await res.json()) as { reason: string }).reason, `${role} ${path}`)
+          .toBe(refusalFor(readRule(key)));
+      }
+    }
+  });
+
+  it("answer reception, the hotel manager and the group administrator", async () => {
+    for (const id of [as("front_desk"), as("hotel_manager"), ownerId]) {
+      for (const [path] of READS) {
+        const res = await send(id, "GET", path);
+        expect(res.status, `${path}: ${await res.clone().text()}`).toBe(200);
+        expect(((await res.json()) as { rows: unknown[] }).rows).toBeInstanceOf(Array);
+      }
+    }
+  });
+
+  it("the guests' own online details stay reception's (their route's own check)", async () => {
+    const res = await send(as("housekeeping"), "GET", "/online-checkin");
+    expect(res.status).toBe(403);
+    expect((await send(as("front_desk"), "GET", "/online-checkin")).status).toBe(200);
   });
 });
 

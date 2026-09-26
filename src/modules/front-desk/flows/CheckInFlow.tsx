@@ -4,7 +4,7 @@ import { Check, LogIn, BedDouble, Users, Sparkle } from "lucide-react";
 import { cn } from "@/lib/cn";
 import { money, dateShort } from "@/lib/format";
 import {
-  Button, Field, Input, NativeSelect, StatusPill, Tooltip, toast,
+  Button, Field, Input, NativeSelect, StatusPill, Switch, Tooltip, toast,
   Dialog, DialogContent, DialogTrigger, Term,
 } from "@/components/ui";
 import { checkIn, assignableRooms, checkInAllowed, earlyArrival } from "@/modules/front-desk/data/operations";
@@ -51,6 +51,9 @@ export function CheckInFlow({
   const [idSkipReason, setIdSkipReason] = useState("");
   const [earlyReason, setEarlyReason] = useState("");
   const [waiveEarly, setWaiveEarly] = useState(false);
+  /* D25-39: offers only to a guest who said yes - asked here, face to face,
+     for a guest booked by phone or a booking site. */
+  const [offersAgreed, setOffersAgreed] = useState(false);
 
   /* Captured means a TYPE and a NUMBER. Derived, never asserted — the
      server derives it the same way and cannot be told otherwise. */
@@ -452,6 +455,14 @@ export function CheckInFlow({
                   </p>
                 )}
               </div>
+              <div className="text-left pt-2">
+                <Switch
+                  checked={offersAgreed}
+                  onCheckedChange={setOffersAgreed}
+                  label="Guest agreed to offers"
+                  description="Ask them. Unticked, no offers are sent. Kept against their phone and email at every hotel of the group."
+                />
+              </div>
             </div>
           )}
         </div>
@@ -501,7 +512,7 @@ export function CheckInFlow({
                   /* Asked for on the Rate step, and never sent until 24
                      September - so the server refused every check-in
                      before the check-in hour. */
-                  earlyReason, waiveEarly,
+                  earlyReason, waiveEarly, offersAgreed,
                 });
                 if (res.ok) {
                   toast.success(

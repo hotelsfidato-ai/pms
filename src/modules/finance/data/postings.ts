@@ -110,7 +110,11 @@ export async function reverseCharge(
 export async function settle(
   hotelId: string,
   stayId: string,
-  input: { method: PaymentMethod; amount: number; businessDate: string },
+  input: {
+    method: PaymentMethod; amount: number; businessDate: string;
+    /** D25-40: more than ₹1,00,000 in cash at once needs one of these. */
+    pan?: string; form97?: boolean;
+  },
 ): Promise<OperationResult<Posting>> {
   try {
     await api(`/api/hotels/${hotelId}/stays/${stayId}/payments`, {

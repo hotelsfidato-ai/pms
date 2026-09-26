@@ -46,7 +46,7 @@ export function WalkInFlow({
   const [email, setEmail] = useState("");
   const [returning, setReturning] = useState<{ id: string; name: string } | null>(null);
   const [whatsapp, setWhatsapp] = useState(false);
-  const [noOffers, setNoOffers] = useState(false);
+  const [offersAgreed, setOffersAgreed] = useState(false);
   const [nights, setNights] = useState(1);
   /* NO GUARD MEANT A DOUBLE PRESS BOOKED TWICE. The button stayed live
      through the request, so two taps sent two walk-ins: the first put
@@ -115,7 +115,7 @@ export function WalkInFlow({
   const reset = () => {
     setGuestName(""); setNights(1); setAdults(2); setChildren(0);
     setPhone(""); setEmail(""); setReturning(null);
-    setWhatsapp(false); setNoOffers(false);
+    setWhatsapp(false); setOffersAgreed(false);
     setRatePlan("CP"); setRate(""); setOverrideReason("");
     /* Cleared too. A source left over from the last walk-in would be
        attributed to the next guest, silently, and nobody would find it. */
@@ -283,7 +283,7 @@ export function WalkInFlow({
           />
 
           <ConsentTicks whatsapp={whatsapp} onWhatsapp={setWhatsapp}
-            noOffers={noOffers} onNoOffers={setNoOffers} />
+            offersAgreed={offersAgreed} onOffersAgreed={setOffersAgreed} />
 
           <Field
             label="Rate per night"
@@ -360,7 +360,7 @@ export function WalkInFlow({
                 isSingleLady: singleLady,
                 phone, email,
                 ...(returning ? { guestId: returning.id } : {}),
-                whatsappAgreed: whatsapp, noOffers,
+                whatsappAgreed: whatsapp, offersAgreed,
               });
               setBusy(false);
               if (res.ok) {

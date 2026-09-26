@@ -316,7 +316,7 @@ admin.get("/admin/hotels/:code", async (c) => {
       city: string | null; state: string | null; gstin: string | null;
       phone: string | null; email: string | null; address_line: string | null;
       is_active: boolean; rooms: string; room_types: string | null;
-      checked_in: string;
+      checked_in: string; fssai_number: string | null;
     }>(
       `select h.id::text, h.code, h.name, h.city, h.state, h.gstin,
               h.phone, h.email::text, h.address_line, h.is_active,
@@ -327,7 +327,8 @@ admin.get("/admin/hotels/:code", async (c) => {
                 where rt.hotel_id = h.id and rt.is_active) as room_types,
               (select count(*) from reservations res
                 where res.hotel_id = h.id
-                  and res.status = 'checked_in')::text as checked_in
+                  and res.status = 'checked_in')::text as checked_in,
+              h.fssai_number
          from hotels h where h.id = $1`, [hotelId]);
 
     /* Everyone rostered HERE, whatever else they can reach. The
@@ -365,6 +366,7 @@ admin.get("/admin/hotels/:code", async (c) => {
         rooms: Number(h.rooms),
         roomTypes: (h.room_types ?? "").split(", ").filter(Boolean),
         checkedIn: Number(h.checked_in),
+        fssaiNumber: h.fssai_number,
       },
       staff: staff.map((r) => ({
         id: r.id, name: r.name, email: r.email, role: r.role,
@@ -385,6 +387,27 @@ admin.get("/admin/hotels/:code", async (c) => {
     if (reason) return c.json(refuse(reason), 403);
     throw error;
   }
+});
+
+/* ── The hotel's FSSAI licence number (A16; the owner, 26 September) ──
+   Typed by the owner, an administrator or the GM (the role gate: room
+   setup). Fourteen digits, spaces allowed while typing; blank clears it
+   and the bills print a dash. */
+admin.put("/hotels/:code/fssai", async (c) => {
+  const { fssai } = await c.req.json<{ fssai?: string | null }>()
+    .catch(() => ({}) as { fssai?: string | null });
+  const digits = (fssai ?? "").replace(/\s/g, "");
+  if (digits !== "" && !/^\d{14}$/.test(digits)) {
+    return c.json(refuse("An FSSAI licence number is 14 digits."), 409);
+  }
+  const done = await withSession(c.get("subject"), async (client) => {
+    const { rowCount } = await client.query(
+      "update hotels set fssai_number = $2 where code = upper($1)",
+      [c.req.param("code"), digits || null]);
+    return rowCount === 1;
+  });
+  return done ? c.json({ ok: true, fssaiNumber: digits || null })
+    : c.json({ error: "No such property." }, 404);
 });
 
 admin.patch("/admin/hotels/:code", async (c) => {

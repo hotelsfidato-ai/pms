@@ -8,17 +8,24 @@
    is kept. See DEFECTS MKT-2.
 
    ⚠ THE RULE THIS SERVICE EXISTS UNDER, and it is not about tidiness:
-   a guest who has asked not to be written to is never on a list that
-   sends. The "No offers" list is `offer_opt_outs` (D21-22: a phone or
-   an email, for the whole group), matched by the guests service's
+   ONLY A GUEST WHO SAID YES is on a list that sends (D25-39, opt-in; a
+   guest nobody asked counts as no). The yes is `offer_opt_ins`, the no
+   `offer_opt_outs` - each a phone or an email, for the whole group
+   (D21-22) - matched by the guests service's `agreedToOffers` and
    `refusesOffers`. ONE gate every list goes through (`mayBeWrittenTo`),
-   and no list can be called without the No offers list to hand it.
+   and no list can be called without both lists to hand it.
 
    NOTHING HERE SENDS AND NOTHING HERE EXPORTS. There is no screen and
    no server route yet (MODULE.md, Requests).
    ══════════════════════════════════════════════════════════════════ */
 
-import { refusesOffers, type NoOffers } from "@/modules/guests";
+import { agreedToOffers, refusesOffers, type NoOffers } from "@/modules/guests";
+
+/** The two answers, as keys: who said yes to offers, and who asked for none. */
+export interface Offers {
+  yes: NoOffers;
+  no: NoOffers;
+}
 
 /**
  * What this service needs to know about a guest.
@@ -56,15 +63,18 @@ export interface Addressable {
  * Every list below goes through it, so the consent condition lives here
  * once and is inherited by all of them - and later by the send.
  *
- * An address to write to, and neither the phone nor the email on the
- * No offers list (MKT-1, D21-22). The phone is compared as the database
- * compares it (`app.phone_key`): "+91 98200 11111" asked once covers
- * "098200 11111" typed at another hotel. `is_blacklisted` is a different
- * thing - a guest refused a room - and is not read here.
+ * An address to write to, a YES on its phone or email (D25-39), and
+ * neither on the No offers list (MKT-1, D21-22) - a later answer replaces
+ * an earlier one in the database, so both at once is a list out of step,
+ * and no wins. The phone is compared as the database compares it
+ * (`app.phone_key`): "+91 98200 11111" said once covers "098200 11111"
+ * typed at another hotel. `is_blacklisted` is a different thing - a guest
+ * refused a room - and is not read here.
  */
-export function mayBeWrittenTo(guest: Addressable, noOffers: NoOffers): boolean {
+export function mayBeWrittenTo(guest: Addressable, offers: Offers): boolean {
   return Boolean(guest.phone?.trim() || guest.email?.trim())
-    && !refusesOffers(noOffers, guest.phone, guest.email);
+    && agreedToOffers(offers.yes, guest.phone, guest.email)
+    && !refusesOffers(offers.no, guest.phone, guest.email);
 }
 
 /**
@@ -84,9 +94,9 @@ export function aYearBefore(isoDate: string): string {
 
 /** Guests who have stayed more than once. */
 export function stayedTwice(
-  guests: readonly Addressable[], noOffers: NoOffers,
+  guests: readonly Addressable[], offers: Offers,
 ): Addressable[] {
-  return guests.filter((g) => mayBeWrittenTo(g, noOffers) && g.stays >= 2);
+  return guests.filter((g) => mayBeWrittenTo(g, offers) && g.stays >= 2);
 }
 
 /**
@@ -98,11 +108,11 @@ export function stayedTwice(
  * wrong thing to send them.
  */
 export function notReturnedInAYear(
-  guests: readonly Addressable[], asOn: string, noOffers: NoOffers,
+  guests: readonly Addressable[], asOn: string, offers: Offers,
 ): Addressable[] {
   const cutoff = aYearBefore(asOn);
   return guests.filter((g) =>
-    mayBeWrittenTo(g, noOffers) && !g.nextStay && g.lastStay !== null && g.lastStay < cutoff);
+    mayBeWrittenTo(g, offers) && !g.nextStay && g.lastStay !== null && g.lastStay < cutoff);
 }
 
 /**
@@ -113,9 +123,9 @@ export function notReturnedInAYear(
  * sixth place that decides what a channel is called.
  */
 export function cameFrom(
-  guests: readonly Addressable[], source: string, noOffers: NoOffers,
+  guests: readonly Addressable[], source: string, offers: Offers,
 ): Addressable[] {
-  return guests.filter((g) => mayBeWrittenTo(g, noOffers) && g.sources.includes(source));
+  return guests.filter((g) => mayBeWrittenTo(g, offers) && g.sources.includes(source));
 }
 
 /* ── The export ───────────────────────────────────────────────────

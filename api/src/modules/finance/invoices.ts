@@ -313,6 +313,7 @@ invoices.get("/:code/invoices/:number{.+}", async (c) => {
               i.folio_id::text,
               h.name as hotel_name, h.address_line as hotel_address,
               h.city as hotel_city, h.state as hotel_state,
+              h.fssai_number as hotel_fssai,
               s.full_name as issued_by
          from invoices i
          join hotels h on h.id = i.hotel_id
@@ -361,6 +362,10 @@ invoices.get("/:code/invoices/:number{.+}", async (c) => {
       supplier: {
         name: i["hotel_name"], address: i["hotel_address"],
         city: i["hotel_city"], state: i["hotel_state"], gstin: i["gstin"],
+        /* A16: printed when the invoice carries food. The hotel's number
+           as it stands - ponytail: not frozen at issue as the GSTIN is;
+           freeze it on the invoice if a hotel's number ever changes. */
+        fssai: i["hotel_fssai"],
       },
       recipient: {
         name: i["recipient_name"], gstin: i["recipient_gstin"],

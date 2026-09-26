@@ -84,7 +84,7 @@ export default function NewBookingPage() {
      email again clears the choice: it was made about what was typed. */
   const [returning, setReturning] = useState<{ id: string; name: string } | null>(null);
   const [whatsapp, setWhatsapp] = useState(false);
-  const [noOffers, setNoOffers] = useState(false);
+  const [offersAgreed, setOffersAgreed] = useState(false);
   /* ⚠ TWO QUESTIONS, TWO FIELDS, because the database has always asked
      two and this form asked one.
 
@@ -195,7 +195,7 @@ export default function NewBookingPage() {
       ...(groupName.trim() ? { groupName: groupName.trim() } : {}),
       ...(returning ? { guestId: returning.id } : {}),
       whatsappAgreed: whatsapp,
-      noOffers,
+      offersAgreed,
       lines: lines.map((l) => ({
         roomTypeId: l.roomTypeId, mealPlan: l.mealPlan,
         adults: l.adults, children: l.children, rooms: l.rooms,
@@ -348,7 +348,7 @@ export default function NewBookingPage() {
               </div>
 
               <ConsentTicks whatsapp={whatsapp} onWhatsapp={setWhatsapp}
-                noOffers={noOffers} onNoOffers={setNoOffers} />
+                offersAgreed={offersAgreed} onOffersAgreed={setOffersAgreed} />
 
               {totalRooms > 1 && (
                 <Field label="Group name"

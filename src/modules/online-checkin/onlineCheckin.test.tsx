@@ -305,6 +305,28 @@ describe("behind the code", () => {
     expect(screen.getByText("Passport ending 4567")).toBeTruthy();
   });
 
+  /* D25-39 (opt-in): the guest's own tick, off until they tick it. */
+  it("sends the guest's yes to offers only when they tick it", async () => {
+    const sent: Record<string, unknown>[] = [];
+    server({
+      [OPEN]: () => unlocked,
+      [`${OPEN}/details`]: (init) => {
+        if (init?.method === "POST") { sent.push(JSON.parse(String(init.body))); return { sent: true }; }
+        return { sent: null };
+      },
+    });
+    open();
+
+    fireEvent.change(await screen.findByLabelText("Your ID"), { target: { value: "voter" } });
+    fireEvent.change(screen.getByLabelText("The number on it"), { target: { value: "ABC1234567" } });
+    const tick = screen.getByRole("checkbox", { name: /Send me offers from/ });
+    expect((tick as HTMLInputElement).checked).toBe(false);
+    fireEvent.click(tick);
+    fireEvent.click(screen.getByRole("button", { name: "Send my details" }));
+    await waitFor(() => expect(sent).toHaveLength(1));
+    expect(sent[0]!.offersAgreed).toBe(true);
+  });
+
   /* D21-10: exactly the bill the desk prints. The page draws finance's own
      BillPrint from what the door sends, and asks for it with this tab's
      unlock like everything behind the code. */
