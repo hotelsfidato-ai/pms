@@ -11,6 +11,12 @@ Work that touches the core or several services still goes in the root
 
 ---
 
+## 2026-09-26 · INV-2 held by tests; the Rate calendar is headed "Rate calendar" (D25-28)
+
+**Asked for:** the owner's D25-27 (a test for each fix built but held by none, then close it; no behaviour changed), in the five-tests session, branch `tests/five-25sep`. And D25-28: the Rate calendar screen is headed "Rate calendar", its menu name. **Shipped:** `pages/Grids.tsx`'s three headings; `inventory.test.tsx` reads the Rate calendar's heading from `nav.ts`, and "Room types is headed with its menu name (INV-2)" reads Room types' in its three states. **Proved:** seen failing with "The house" and "Inventory and rates" put back; pass on the fix. INV-2 moved to Fixed. **Left open:** nothing here. **Commits:** `689f837`.
+
+---
+
 ## 2026-09-24 · INV-7, a wrong id no longer loses the default cancellation policy
 
 **Asked for:** the master, 24 September, with the Store's D22-20 on

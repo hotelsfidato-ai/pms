@@ -230,9 +230,9 @@ describe("purchasing", () => {
   });
 
   it("offers Approve only to somebody the CORE queue says may decide", async () => {
-    /* There is no approvals SCREEN in this system - only the engine and its
-       routes - so a purchase is decided where it is, exactly as equipment
-       decides its own. `mayDecide` is the core's answer, never a copy of its
+    /* A purchase is decided where it is, exactly as equipment decides its
+       own; the Approvals screen (PUR-2, below) is a second view on the same
+       engine. `mayDecide` is the core's answer, never a copy of its
        rule here, so the button and the server cannot disagree. */
     as("stores");
     control.approval = "mine";

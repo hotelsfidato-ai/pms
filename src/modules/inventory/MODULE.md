@@ -260,9 +260,9 @@ reports — every occupancy figure divides by `app.sellable_rooms`
 - **Grep the route table before adding a route** — Hono answers with the
   first registration on a path (MEMORY 70, 118; INV-1).
 - **The menu label, the page heading and the browser tab say the same words**
-  (`HANDOVER.md` § 6) — the Rate calendar does not yet ("Inventory and
-  rates"), and Room types, changed on 17 September, has no test holding it
-  (INV-2).
+  (`HANDOVER.md` § 6) — Room types and the Rate calendar do, each held by
+  `inventory.test.tsx` against its `nav.ts` entry since 26 September (INV-2,
+  D25-28).
 - **Every list draws four states**; **a new dialog declares its main action**
   — `src/components/ui/primaryAction.test.ts`, proved by naming
   `RoomSetup.tsx:385` (CHANGELOG 2026-09-15 step 2).
@@ -301,8 +301,8 @@ From `PENDING.md` and `PROGRESS.md`, as of 15 September:
   (checked 15 September).
 - Found while writing this brief (15 September): **INV-1** — `GET
   /api/hotels/rate-plans` can never run; **INV-2** — Room types is headed "The
-  house" and Rate calendar "Inventory and rates". Both in this folder's
-  `DEFECTS.md`.
+  house" and Rate calendar "Inventory and rates" (fixed 17 and 26 September).
+  Both in this folder's `DEFECTS.md`.
 
 ---
 

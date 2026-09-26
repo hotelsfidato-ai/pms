@@ -282,8 +282,8 @@ From `PENDING.md`, and one found while writing this brief:
   Calendar say "No rooms set up yet. Add them in Room types."
   (`stayViewNoRooms.test.tsx`).
 - **"Today" three pixels past a phone's edge** after paging a week (FD-7) —
-  the row wraps since 17 September (D17-41), but no test holds it, so FD-7
-  stays open.
+  the row wraps since 17 September (D17-41), held since 26 September by
+  `front-desk.test.tsx` (D25-27); FD-7 is fixed.
 - **Two "in house" numbers** — the property page said 11 in house / 9 vacant
   while the Dashboard and Rooms (the stay-view counts) said 10 / 7, same
   minute, 14 September. Needs one definition, the owner's to choose

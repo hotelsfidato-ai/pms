@@ -98,5 +98,6 @@ them at merge. Listed here so none of them is lost.
 - ~~**A shared approvals SCREEN.**~~ Built by the master on 19 September (the
   owner's D18-19): `/h/:code/approvals`, one inbox posting to the core
   endpoint. The owner's answer keeps the service screens' own buttons, so
-  purchasing still decides on the order too. No web test opens it yet
-  (`DEFECTS.md` PUR-2).
+  purchasing still decides on the order too. A web test opens it since 26
+  September (`purchasing.test.tsx`, `DEFECTS.md` PUR-2); its purchase link is
+  wrong (PUR-3, open).

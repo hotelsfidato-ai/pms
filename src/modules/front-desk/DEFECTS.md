@@ -52,7 +52,11 @@ moved out of, not for a check-out.
 **The fix, when it is done** - ask whether anybody is IN the room
 (`app.in_house`, or the column now set from it) instead of whether it is held.
 
-### FD-7 · On a phone, after paging a week, "Today" ends past the screen's edge
+---
+
+## Fixed — the solution is here; do not work it out again
+
+### FD-7 · On a phone, after paging a week, "Today" ends past the screen's edge - FIXED 17 September, held by a test 26 September
 
 **Found** — 16 September, measuring FD-6's strip at 375×812. Not caused by it.
 
@@ -67,18 +71,18 @@ controls), which is not in round 1.
 **Changed 17 September, not yet proved** — the owner's D17-41, commit
 `f7ae0f4`: the week controls' row wraps (`flex flex-wrap`, marked `FD-7` in
 `pages/StayView.tsx`), so Today drops to a second line instead of past the
-edge. **Still open, 25 September, because no test holds it:** nothing measures
-that row at 375px or asserts it wraps, so the class could go with every gate
-green. A test that asserts the wrap (jsdom has no layout, so the class, as
-`Input.test.tsx` holds the kit's touch sizes) and a measurement at 375px would
-close it.
+edge.
+
+**Held by a test, 26 September (D25-27)** — `front-desk.test.tsx`, "puts
+Today, once a week is paged, in a row that wraps (FD-7)": the Calendar, Next
+week, and the row holding Today carries `flex-wrap` (jsdom has no layout, so
+the class, as `Input.test.tsx` holds the kit's touch sizes). Seen failing with
+the class taken out: `expected [ 'flex', 'items-center', 'gap-1' ] to include
+'flex-wrap'`. Not measured at 375px in a browser this time; the class is what
+is held.
 
 **The rule** — MEMORY 167's, again: measure a control's right edge at phone
 width in every state it has, not only the first one.
-
----
-
-## Fixed — the solution is here; do not work it out again
 
 ### FD-18 · A Rooms tile said "Due out" over the arriving guest's name - FIXED 24 September
 
