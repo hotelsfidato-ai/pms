@@ -121,7 +121,8 @@ export interface OrderLine {
    *  second KOT does not re-fire the starters while they are being
    *  eaten. */
   kotStatus: string;
-  addedBy: string;
+  /** Null when the reader may not see that person (staff is row-secured). */
+  addedBy: string | null;
 
   /** Set on an ADD-ON line, naming the dish it belongs to. The bill and
       the kitchen docket both indent on it, exactly as the printed
@@ -175,7 +176,9 @@ export interface Order {
   status: "open" | "settled" | "abandoned";
   businessDate: string;
   paymentMethod: string | null;
-  openedBy: string;
+  /** Null when the reader may not see that person: a GM reading an order
+      the group owner opened (D27-1). Printed as a dash. */
+  openedBy: string | null;
   settledBy: string | null;
   settledAt: string | null;
   abandonedReason: string | null;
@@ -244,7 +247,7 @@ export interface Tender {
       thing that can disagree with the arithmetic. */
   change: number | null;
   reference: string | null;
-  takenBy: string;
+  takenBy: string | null;
 }
 
 export interface OrderSummary {

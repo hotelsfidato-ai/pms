@@ -114,7 +114,7 @@ export default function BillPage() {
           <Line label="Bill" value={o.orderNo} />
           {o.table && <Line label="Table" value={o.table} />}
           <Line label="Date" value={dateLong(o.businessDate)} />
-          <Line label="Served by" value={o.openedBy} />
+          <Line label="Served by" value={o.openedBy ?? "-"} />
           {o.settledBy && <Line label="Settled by" value={o.settledBy} />}
         </div>
 

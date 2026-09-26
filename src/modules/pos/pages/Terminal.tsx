@@ -681,7 +681,7 @@ export default function TerminalPage() {
                   {order.orderNo}
                 </p>
                 <p className="text-2xs text-grey-500">
-                  {order.table ?? "no table"} · {order.openedBy}
+                  {order.table ?? "no table"} · {order.openedBy ?? "-"}
                 </p>
                 {order.status === "open" && (
                   <FunctionPicker

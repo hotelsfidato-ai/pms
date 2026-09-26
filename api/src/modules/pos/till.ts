@@ -1626,7 +1626,7 @@ async function readOrder(client: Client, orderId: string) {
     hotel_name: string; hotel_city: string | null; hotel_gstin: string | null;
     hotel_fssai: string | null;
     table_ref: string | null; status: string; business_date: string;
-    payment_method: string | null; opened_by_name: string;
+    payment_method: string | null; opened_by_name: string | null;
     discount_type: string | null; discount_value: string | null;
     discount_reason: string | null;
     promotion_id: string | null; promotion_name: string | null;
@@ -1664,7 +1664,11 @@ async function readOrder(client: Client, orderId: string) {
        join pos_outlets ou on ou.id = o.outlet_id
        join hotels h on h.id = o.hotel_id
        left join pos_promotions pr on pr.id = o.promotion_id
-       join staff s1 on s1.id = o.opened_by
+       /* LEFT joins, all three staff reads (D27-1, MEMORY 283): staff is
+          row-secured, so an inner join hid an order the group owner opened
+          from the GM - "No such order". A name the reader may not see is
+          null, and the screen prints a dash. */
+       left join staff s1 on s1.id = o.opened_by
        left join staff s2 on s2.id = o.settled_by
        left join staff s3 on s3.id = o.waiter_id
        left join banquet_events e on e.id = o.event_id
@@ -1677,7 +1681,7 @@ async function readOrder(client: Client, orderId: string) {
     id: string; name: string; qty: string; unit_price: string;
     tax_rate: string; tax_scheme: "gst" | "vat"; note: string | null; voided: boolean;
     kot_status: string;
-    added_by_name: string;
+    added_by_name: string | null;
     parent_line_id: string | null;
     variation_id: string | null; addon_id: string | null;
   }>(
@@ -1686,7 +1690,7 @@ async function readOrder(client: Client, orderId: string) {
             s.full_name as added_by_name,
             l.parent_line_id::text, l.variation_id::text, l.addon_id::text
        from pos_order_lines l
-       join staff s on s.id = l.added_by
+       left join staff s on s.id = l.added_by
       where l.order_id = $1
       order by l.id`,
     [orderId],
@@ -1708,12 +1712,12 @@ async function readOrder(client: Client, orderId: string) {
      order is open — nothing has been taken yet. */
   const { rows: tenders } = await client.query<{
     id: string; method: string; amount: string;
-    tendered: string | null; reference: string | null; taken_by_name: string;
+    tendered: string | null; reference: string | null; taken_by_name: string | null;
   }>(
     `select t.id::text, t.method, t.amount::text, t.tendered::text,
             t.reference, s.full_name as taken_by_name
        from pos_order_tenders t
-       join staff s on s.id = t.taken_by
+       left join staff s on s.id = t.taken_by
       where t.order_id = $1
       order by t.id`,
     [orderId],

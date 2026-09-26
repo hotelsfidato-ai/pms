@@ -8,6 +8,17 @@ project, still goes in the root `CHANGELOG.md`.
 
 ---
 
+## 2026-09-27 · GUE-2: the Form C register's missing room is a plain "-" (D27-1)
+
+**Asked for:** D27-1, one of five small bugs in one session
+(`fixes/five-bugs-27sep`). **Shipped:** migration 144 replaces
+`app.form_c_due` with the same signature and return type, `'-'` for a stay
+with no room. **Proved:** `db/tests/modules/guests.sql` - "got —" on 025's
+function, "got -" on 144's; on screen "GB · room -". The six checks: see the
+POS changelog's entry of the same day. **Left open:** nothing here.
+
+---
+
 ## 2026-09-26 · Form C for the check-in roles only (D25-38); the yes to offers (D25-39)
 
 **Asked for / Shipped:** the compliance lane (`compliance/first-fixes-26sep`,

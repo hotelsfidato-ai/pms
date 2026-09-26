@@ -2,7 +2,7 @@ import { Link } from "react-router";
 import { ShieldOff } from "lucide-react";
 import { useRole } from "@/lib/session";
 import { ROLE_LABELS, type Resource } from "@/lib/permissions";
-import { mayReach } from "./navigation";
+import { mayReach, navItemFor } from "./navigation";
 import { Page } from "@/components/ui";
 
 /* ══════════════════════════════════════════════════════════════════
@@ -38,7 +38,6 @@ import { Page } from "@/components/ui";
 
 export function RequireAccess({
   path,
-  resource,
   children,
 }: {
   /** The nav path this route corresponds to. The guard asks the
@@ -47,7 +46,9 @@ export function RequireAccess({
       component asked `canAccess` while the sidebar asked something
       stricter for /admin/properties. */
   path: string;
-  /** Only for the wording of the refusal. */
+  /** Not read since D27-1: the refusal names the page by its menu name,
+      not by this permission ("which does not include customer"). Left on
+      the routes rather than edited out of every service's routes file. */
   resource: Resource;
   children: React.ReactNode;
 }) {
@@ -67,7 +68,7 @@ export function RequireAccess({
         <p className="text-base text-grey-600 mt-2 leading-relaxed">
           You are signed in as{" "}
           <span className="font-medium text-ink-900">{ROLE_LABELS[role]}</span>,
-          which does not include {resource.replace(/_/g, " ")}. If you need it,
+          which does not include {navItemFor(path)?.label ?? "this page"}. If you need it,
           the person who set up your account can change your role.
         </p>
         <Link

@@ -383,8 +383,14 @@ export async function nightAuditReport(
        join folios f on f.id = fp.folio_id
        left join reservations r on r.id = coalesce(fp.reservation_id, f.reservation_id)
        left join guests g on g.id = r.guest_id
-       left join pos_orders o on fp.source_type = 'pos' and o.id = fp.source_id
-       left join pos_outlets ou on ou.id = o.outlet_id
+       /* A restaurant line's source is its TICKET, not the order (D27-1):
+          the outlet comes from the ticket - an outside till's too - and
+          the hotel's own till's order from the ticket's number, which is
+          the order number (with "/rate" on a bill split by tax). */
+       left join pos_tickets t on fp.source_type = 'pos' and t.id = fp.source_id
+       left join pos_outlets ou on ou.id = t.outlet_id
+       left join pos_orders o on o.hotel_id = t.hotel_id and o.outlet_id = t.outlet_id
+                             and o.order_no = split_part(t.ticket_ref, '/', 1)
       where fp.hotel_id = $1 and ${LIVE}
         and fp.category not in ('room', 'payment', 'discount', 'tax', 'refund')
         and fp.business_date = $2::date
