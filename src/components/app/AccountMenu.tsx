@@ -106,7 +106,7 @@ export function AccountMenu() {
           className={cn(
             /* 44 on touch, 36 on the console. */
             "flex items-center gap-2 h-11 lg:h-10 pl-1.5 pr-2.5 rounded-md",
-            "border border-grey-200 bg-white",
+            "sm:border sm:border-grey-200 bg-white",
             "hover:border-grey-300 hover:bg-grey-50",
             "transition-colors duration-150",
           )}
