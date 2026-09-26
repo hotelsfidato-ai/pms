@@ -19,3 +19,9 @@
 | D27-15 | Audit work needing no CA or lawyer answer | **Start now, one session**: backups off the server and a health watch (A9), cyber-security basics under CERT-In (A8), an open-source notices file (A15) |
 | D27-16 | The 5 Elements GM's login details | **Not ready yet** |
 | D27-17 | The new product name (D25-32, D27-14): the owner's picks after a first screen (docs/selling-in-india/product-name.md) | **Tomai, Yadou, Kyado** — an invented, Japanese-sounding word of 4 or 5 letters, standalone (no "Influvate"), easy in any Indian language. To the lawyer's trade mark search (classes 9, 42; 35 optional). Tomai is risky ("TomAI", AI software); Yadou and Kyado screened clean. Not a legal clearance |
+| D27-18 | Where backup copies go off the server (A9, asked by the operations session) | **Oracle Object Storage in Fidato's own account (Mumbai)**, through an upload-only link; only the owner reads them, in the console |
+| D27-19 | How long copies are kept off the server | **30 days** (the server keeps its own 14 as before) |
+| D27-20 | How the owner is told a backup failed or the site is down | **WhatsApp through n8n**, and (the session questioned n8n watching its own box) **a free outside backstop: UptimeRobot by email** for "server or n8n unreachable" |
+| D27-21 | How long logs are kept (A8) | **1 year** (CERT-In 180 days now; DPDP 1 year from 13 May 2027) |
+| D27-22 | The CERT-In point of contact | **The owner, for both Fidato Hotels and Influvate** (two forms) |
+| D27-23 | The n8n alert workflow | **The owner builds it from the written steps**; no import file |
