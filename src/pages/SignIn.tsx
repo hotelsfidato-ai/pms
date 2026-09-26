@@ -80,7 +80,7 @@ export default function SignInPage() {
           {/* A tagline, not the page's heading: the heading is "Sign in",
               which is what this page is for and the only heading a phone
               sees — this panel is hidden there. */}
-          <p className="text-4xl font-semibold tracking-tight text-white">
+          <p className="page-title text-white">
             Property management
           </p>
           <p className="text-md text-white/70 mt-3 leading-relaxed">
@@ -98,7 +98,7 @@ export default function SignInPage() {
       {/* ── The form ───────────────────────────────────────────────── */}
       <div className="flex items-center justify-center px-5 py-10 sm:px-8 bg-white">
         <div className="w-full max-w-sm">
-          <h1 className="text-2xl font-semibold text-ink-900">Sign in</h1>
+          <h1 className="page-title text-ink-900">Sign in</h1>
           <p className="text-base text-grey-600 mt-1.5">
             Use the account your property gave you.
           </p>
