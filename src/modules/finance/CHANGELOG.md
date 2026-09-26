@@ -12,7 +12,8 @@ project, still goes in the root `CHANGELOG.md`.
 
 **Asked for:** the master, branch `compliance/cash-invoice-27sep`, for the
 owner's D27-2 to D27-4 - the three items the compliance lane left open (front
-desk's CHANGELOG, 26 September).
+desk's CHANGELOG, 26 September) - and, added by the master mid-session, D27-9
+(the restaurant's Close day list; POS files, pointer in its CHANGELOG).
 
 **The owner's answers in this chat, 27 September**
 - **The outside till's door** (`/api/pos/tickets`): it only puts a restaurant
@@ -40,14 +41,19 @@ desk's CHANGELOG, 26 September).
   and the tick as soon as the amount is over the bill; Take payment stays off
   until ticked; changing the amount takes the tick off; a refusal re-reads the
   bill.
+- **D · D27-9.** `GET /:code/till/day-end`: the paid-in/paid-out list left-
+  joins `staff`, so cash the group owner recorded is on a GM's list (it was
+  dropped - MEMORY 283's fault, as the five bugs lane fixed in `readOrder`);
+  `recordedBy` is null where the name is hidden and Close restaurant day prints
+  "-" (`pages/DayEnd.tsx`, `data/till.ts`).
 
 **Found**
 - Once taken, an overpaid bill's Check out says "This bill is overpaid. Refund
   the difference first." (as before) - "held as the guest's credit" holds while
   the guest stays; at check-out the desk refunds it. Told to the owner.
 - Other tests that paid more than a bill: `reports.test.ts`'s advance on a
-  future booking now says `heldAsCredit: true`; `cashLimit.test.ts`'s payments
-  on empty bills do too (its own helper).
+  future booking and `businessDate.test.ts`'s ₹100 now say `heldAsCredit:
+  true`; `cashLimit.test.ts`'s payments on empty bills do too (its own helper).
 - A test trap: `pg_stat_activity` read inside an open transaction stays as it
   was first read; the concurrency test polls from another connection.
 
@@ -68,13 +74,20 @@ desk's CHANGELOG, 26 September).
   sentence (₹610.00), the tick, the button off, then taken (Overpaid ₹610); the
   same at 375 wide. An invoice issued with FSSAI 11111111111111, the setting
   then changed to 22222222222222: the invoice page still prints 11111111111111.
-- The six checks on the tree with cp6 `d963239` merged in: see Commits.
+- D: `api/test/modules/pos/till.test.ts` "shows a GM the cash the owner paid
+  in, with no name" - with the inner join back, the movement is missing;
+  `src/modules/pos/functionOrders.test.tsx` "Cash in · - · 20:15" - fails
+  printing the null.
+- The six checks on `de80810` (cp6 `7a65cb1` merged in), 27 September, each
+  exit 0: `tsc -p tsconfig.app.json` clean; `api` tsc clean; web 82 files, 710
+  tests; API 99 files, 1572 tests; database 1180 assertions; the
+  replay "all 145 migrations are re-runnable".
 
 **Left open**
 - Whether a guest's credit should ever carry past check-out (it is refunded
   today) - the owner's.
 
-**Commits:** `4beff57`, merge of cp6 `c70a40a`, and this note.
+**Commits:** `4beff57`, `ccb19c6` (with merges of cp6 `c70a40a`, `de80810`), and this note.
 
 ---
 

@@ -11,6 +11,17 @@ Work that touches the core or several services still goes in the root
 
 ---
 
+## 2026-09-27 · D27-9: the owner's paid-in on a GM's Close restaurant day (from the cash and invoice session)
+
+The master gave the owner's D27-9 to the cash and invoice session
+(`compliance/cash-invoice-27sep`): the day end's paid-in/out list in `till.ts`
+left-joins `staff`, `recordedBy` null where the name is hidden, "-" on
+`pages/DayEnd.tsx`. Tests in `api/test/modules/pos/till.test.ts` and
+`functionOrders.test.tsx`, each seen failing without the fix. The whole entry
+is finance's CHANGELOG of today.
+
+---
+
 ## 2026-09-27 · Five bugs in one session (D27-1): two of them the restaurant's
 
 **Asked for:** D27-1 - a GM told "No such order" for an order the group owner
