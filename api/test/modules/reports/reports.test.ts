@@ -245,7 +245,8 @@ describe("the Manager report adds up the way its own page says", () => {
     } finally { await db.end(); }
 
     const before = await managerDoc("?asOn=2026-08-25");
-    await postPayment(stay, { method: "UPI", amount: 1500 });
+    /* An advance: more than a bill not yet raised, held as credit (D27-4). */
+    await postPayment(stay, { method: "UPI", amount: 1500, heldAsCredit: true });
     const after = await managerDoc("?asOn=2026-08-25");
     const delta = (s: string, l: string) => Math.round(
       ((figure(after, s, l).today as number) - (figure(before, s, l).today as number)) * 100) / 100;

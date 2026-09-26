@@ -3251,13 +3251,15 @@ till.get("/:code/till/day-end", async (c) => {
 
     const { rows: movements } = await client.query<{
       id: string; kind: string; amount: string; reason: string;
-      recorded_by_name: string; recorded_at: string;
+      recorded_by_name: string | null; recorded_at: string;
     }>(
+      /* A LEFT join (D27-9): a name the reader may not see - the group
+         owner's, to a GM (MEMORY 283) - is null, not the whole movement. */
       `select m.id::text, m.kind, m.amount::text, m.reason,
               s.full_name as recorded_by_name,
               to_char(m.recorded_at, 'HH24:MI') as recorded_at
          from pos_cash_movements m
-         join staff s on s.id = m.recorded_by
+         left join staff s on s.id = m.recorded_by
         where m.outlet_id = $1 and m.business_date = $2::date
         order by m.recorded_at`,
       [outlet[0].id, businessDate],

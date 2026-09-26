@@ -7,7 +7,7 @@ import {
 import { cn } from "@/lib/cn";
 import { useRole } from "@/lib/session";
 import { can } from "@/lib/permissions";
-import { money, dateShort } from "@/lib/format";
+import { money, moneyPrecise, dateShort } from "@/lib/format";
 import {
   CHARGE_CATEGORIES, PAYMENT_METHODS,
   type ChargeCategory, type PaymentMethod,
@@ -536,9 +536,13 @@ function SettleDialog({
   const [amount, setAmount] = useState("");
   const [pan, setPan] = useState("");
   const [form97, setForm97] = useState(false);
+  const [asCredit, setAsCredit] = useState(false);
 
   const outstanding = Math.max(balance, 0);
   const value = Number(amount) || 0;
+  /* D27-4: more than the bill is held as the guest's credit, once the desk
+     ticks that it is. The server asks the same (needs "credit"). */
+  const extra = Math.round((value - outstanding) * 100) / 100;
   /* D25-40 (Rule 159): more than ₹1,00,000 in cash at once needs the PAN or
      Form 97. The server decides, and refuses cash of ₹2,00,000 or more. */
   const asksPan = method === "Cash" && value > 100000;
@@ -588,7 +592,7 @@ function SettleDialog({
                 id={id}
                 numeric
                 value={amount}
-                onChange={(e) => setAmount(e.target.value)}
+                onChange={(e) => { setAmount(e.target.value); setAsCredit(false); }}
                 inputMode="decimal"
               />
             )}
@@ -613,6 +617,20 @@ function SettleDialog({
             </div>
           )}
 
+          {extra > 0 && (
+            <div className="rounded-md bg-brand-yellow-50 border border-brand-yellow p-3 space-y-2">
+              <p className="text-sm text-brand-yellow-800" data-credit-warning>
+                This is {moneyPrecise(extra)} more than the bill; it will be held as the guest's credit.
+              </p>
+              <label className="flex items-center gap-2.5 cursor-pointer select-none">
+                <input type="checkbox" checked={asCredit}
+                  onChange={(e) => setAsCredit(e.target.checked)}
+                  className="size-4 rounded-xs accent-brand-orange" />
+                <span className="text-base text-ink-900">Hold it as the guest's credit</span>
+              </label>
+            </div>
+          )}
+
           <div className="rounded-md bg-grey-50 border border-grey-200 p-3 space-y-1">
             <Row label="Outstanding" value={money(outstanding)} />
             <Row label="Paying" value={money(value)} muted />
@@ -628,11 +646,12 @@ function SettleDialog({
           <div className="flex justify-end gap-2 pt-1">
             <Button variant="ghost" onClick={() => setOpen(false)}>Cancel</Button>
             <Button variant="primary"
-              disabled={value <= 0}
+              disabled={value <= 0 || (extra > 0 && !asCredit)}
               onClick={async () => {
                 const res = await settle(hotelId, stay.id, {
                   method, amount: value, businessDate,
                   ...(asksPan ? (form97 ? { form97 } : { pan }) : {}),
+                  ...(extra > 0 ? { heldAsCredit: true } : {}),
                 });
                 if (res.ok) {
                   toast.success(`${money(value)} received`, method);
@@ -640,6 +659,9 @@ function SettleDialog({
                   onDone();
                 } else {
                   toast.error("Could not settle", res.reason);
+                  /* The bill may have moved under the dialog (another
+                     payment): read it again, so the warning shows. */
+                  onDone();
                 }
               }}
             >

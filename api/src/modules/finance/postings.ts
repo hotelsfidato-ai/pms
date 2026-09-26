@@ -3,7 +3,9 @@ import { withSession } from "../../auth.ts";
 import type { Client } from "../../db.ts";
 import { resolveDate } from "../../businessDate.ts";
 import { folioFor } from "../../folio.ts";
+import { inr } from "../../reportRender.ts";
 import { overCashLimit, panFor } from "./cashLimit.ts";
+import { FOLIO_SELECT } from "./folios.ts";
 
 /* Split out of api/src/routes/operations.ts on 15 September in the
    service-folder move (docs/SERVICE-FOLDERS-PLAN.md). Service: finance.
@@ -30,11 +32,11 @@ type Outcome<T = unknown> =
      day, at which point the way through silently disappears. Most
      refusals have no `needs`: "the room is occupied" is not a form to
      fill in. */
-  | { ok: false; reason: string; needs?: "late-reason" | "early-reason" | "pan" };
+  | { ok: false; reason: string; needs?: Needs };
+type Needs = "late-reason" | "early-reason" | "pan" | "credit";
 
-const refuse = (
-  reason: string, needs?: "late-reason" | "early-reason" | "pan",
-): Outcome => (needs ? { ok: false, reason, needs } : { ok: false, reason });
+const refuse = (reason: string, needs?: Needs): Outcome =>
+  (needs ? { ok: false, reason, needs } : { ok: false, reason });
 
 
 /* ══════════════════════════════════════════════════════════════════
@@ -306,6 +308,8 @@ postings.post("/:code/stays/:id/payments", async (c) => {
     method?: string; amount?: number; businessDate?: string;
     /* D25-40: asked when more than ₹1,00,000 is paid in cash at once. */
     pan?: string; form97?: boolean;
+    /* D27-4: the desk confirmed a payment larger than the bill. */
+    heldAsCredit?: boolean;
   };
 
   const result = await withSession(c.get("subject"), async (client): Promise<Outcome | null> => {
@@ -320,25 +324,50 @@ postings.post("/:code/stays/:id/payments", async (c) => {
     const amount = Math.round(body.amount * 100) / 100;
     const businessDate = await resolveDate(client, hotelId, body.businessDate);
 
-    /* D25-40 - asked BEFORE folioFor, which may open a folio (MEMORY 243).
-       ponytail: two clerks taking cash for one guest at the same second can
-       both pass; a lock on the guest if that is ever seen. */
+    const { rows: stay } = await client.query<{
+      guest_id: string; group_id: string | null; foreign: boolean;
+    }>(
+      `select r.guest_id::text, r.group_id::text, g.nationality <> 'IN' as foreign
+         from reservations r join guests g on g.id = r.guest_id
+        where r.hotel_id = $1 and r.id = $2`,
+      [hotelId, c.req.param("id")]);
+    if (!stay[0]) return refuse("Reservation not found.");
+
+    /* ONE GUEST'S PAYMENTS TAKE TURNS (the owner's D27-2): two clerks taking
+       cash for one guest in the same second both read the cash already taken
+       before either wrote, and both passed. The guest's turn, then the
+       group's (always in that order, so two payments never wait on each
+       other), held to the end of this transaction; the counts below are read
+       after it. Every payment waits, not only cash: the bill read for D27-4
+       has the same race. */
+    for (const key of [`payment-guest:${stay[0].guest_id}`,
+                       stay[0].group_id && `payment-group:${stay[0].group_id}`]) {
+      if (key) await client.query("select pg_advisory_xact_lock(hashtextextended($1, 0))", [key]);
+    }
+
+    /* D25-40 - asked BEFORE folioFor, which may open a folio (MEMORY 243). */
     let pan: string | null = null;
     let form97 = false;
     if (method === "cash") {
-      const { rows: guest } = await client.query<{ taken: string; foreign: boolean }>(
-        `select app.cash_taken(r.id, $3::date)::text as taken, g.nationality <> 'IN' as foreign
-           from reservations r join guests g on g.id = r.guest_id
-          where r.hotel_id = $1 and r.id = $2`,
-        [hotelId, c.req.param("id"), businessDate]);
-      if (guest[0]) {
-        const over = overCashLimit(Number(guest[0].taken), amount,
-          "card, UPI, cheque or bank transfer");
-        if (over) return refuse(over);
-        const kept = panFor(amount, { pan: body.pan, form97: body.form97, foreign: guest[0].foreign });
-        if (!kept.ok) return refuse(kept.reason, "pan");
-        ({ pan, form97 } = kept);
-      }
+      const { rows: cash } = await client.query<{ taken: string }>(
+        "select app.cash_taken($1, $2::date)::text as taken",
+        [c.req.param("id"), businessDate]);
+      const over = overCashLimit(Number(cash[0]!.taken), amount,
+        "card, UPI, cheque or bank transfer");
+      if (over) return refuse(over);
+      const kept = panFor(amount, { pan: body.pan, form97: body.form97, foreign: stay[0].foreign });
+      if (!kept.ok) return refuse(kept.reason, "pan");
+      ({ pan, form97 } = kept);
+    }
+
+    /* MORE THAN THE BILL (the owner's D27-4): taken only once the desk has
+       confirmed it is held as the guest's credit. The bill is the one the
+       Settle dialog shows (GET /stays/:id/folio). */
+    const { rows: bill } = await client.query<{ balance: string }>(
+      `${FOLIO_SELECT} having l.reservation_id = $2`, [hotelId, c.req.param("id")]);
+    const extra = Math.round((amount - Math.max(Number(bill[0]?.balance ?? 0), 0)) * 100) / 100;
+    if (extra > 0 && body.heldAsCredit !== true) {
+      return refuse(`This is ₹${inr(extra)} more than the bill; it will be held as the guest's credit.`, "credit");
     }
 
     const folioId = await folioFor(client, hotelId, c.req.param("id"));

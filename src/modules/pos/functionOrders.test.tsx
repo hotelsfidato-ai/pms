@@ -270,3 +270,28 @@ describe("Close restaurant day - a bill on a function", () => {
     expect(screen.queryByText(/^function$/)).toBeNull();
   });
 });
+
+describe("Close restaurant day - cash the owner paid in, read by a GM (D27-9)", () => {
+  it("is listed, with a dash for the name the GM may not see", async () => {
+    const day: DayEnd = {
+      outlet: { code: "REST", name: "Fidato Restaurant" },
+      businessDate: "2026-08-25",
+      summary: {
+        settledOrders: 0, settledValue: 0, abandonedOrders: 0, abandonedValue: 0,
+        compOrders: 0, discountGiven: 0, byMethod: {},
+      },
+      blockers: [],
+      movements: [{ id: "m1", kind: "top_up", amount: 700, reason: "Change from the safe",
+                    recordedBy: null, at: "20:15" }],
+      cash: { opening: 0, expected: 700, counted: null, variance: null,
+              varianceReason: null, denominations: [] },
+      closedAt: null, closedBy: null,
+    };
+    server({ [`GET ${API}/till/day-end`]: () => day });
+    renderAt(`/h/${HOTEL}/till/day-end`, "/h/:code/till/day-end", <DayEndPage />);
+
+    fireEvent.click(await screen.findByText("What is in the tin"));
+    expect(await screen.findByText("Change from the safe")).toBeTruthy();
+    expect(screen.getByText("Cash in · - · 20:15")).toBeTruthy();
+  });
+});

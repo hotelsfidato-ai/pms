@@ -186,7 +186,8 @@ describe("WRITES take the property's day - the 00:40 receipt", () => {
         "content-type": "application/json",
       },
       /* No businessDate. This is the 00:40 clerk. */
-      body: JSON.stringify({ method: "Cash", amount: 100 }),
+      /* Held as credit if the bill is paid already (D27-4): the date is the question. */
+      body: JSON.stringify({ method: "Cash", amount: 100, heldAsCredit: true }),
     });
 
     /* Read once. The first version passed `await res.text()` as the
