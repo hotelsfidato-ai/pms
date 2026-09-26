@@ -35,14 +35,21 @@ what check-in asks; record every portal field; the law's fields required at
 check-in (visa or OCI number and type, phone in India, arrived from,
 purpose, previous place of stay), the rest completed later; "Form III" and
 "Form III register"; a departure needs a number too (the same one if the
-portal gives no new one).
+portal gives no new one). Then, against the owner's reference (another
+system's "Police Inquiry" screen, sent through the master): add the portal's
+other three numbers - mobile in India, phone and mobile outside India; not
+the reference's guardian name, age (the portal asks date of birth, kept) or
+next destination as place, state and city (the portal's check-out asks one
+"Next destination/proceed to"); keep one full name (the clerk splits it on
+the portal). The reference lacks what the law asks: photograph, previous
+place of stay, time of arrival, departure date and time, email, signatures.
 
 **Shipped:**
 - Migration 146: `guest_documents` + gender (the portal's three), date of
   birth, passport and visa issue date, place and country, visa type;
   `form_iii_stays` (one row per stay: arrived from, previous stay, purpose,
-  phone in India, arrival in India, employment, reference address, remarks,
-  next destination; no delete, audited, no cascade from the booking);
+  the portal's four numbers, arrival in India, employment, reference
+  address, remarks, next destination; no delete, audited, no cascade from the booking);
   `form_c_filings.kind` arrival or departure, unique per stay, kind and
   number; `app.form_iii(hotel)` - every field, both deadlines 24 hours from
   the audit log's check-in and check-out instants (the property's midnight

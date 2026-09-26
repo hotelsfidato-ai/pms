@@ -82,14 +82,16 @@ begin
               values (%L, %L, %L, 'V-1', 'visit')$q$, h, r, g), '23514');
 
   -- ---------- the particulars reach the register --------------------------------
-  insert into form_iii_stays (hotel_id, reservation_id, arrived_from, purpose, next_destination)
-  values (h, r, 'Delhi', 'tourism', 'Jaipur');
+  insert into form_iii_stays (hotel_id, reservation_id, arrived_from, purpose, next_destination,
+                              mobile_abroad)
+  values (h, r, 'Delhi', 'tourism', 'Jaipur', '+44 7700 000146');
   insert into guest_documents (guest_id, id_type, id_number, gender, visa_type)
   values (g, 'passport', 'P0000146', 'female', 'e-Tourist');
   select * into f from app.form_iii(h) where reservation_id = r;
   perform test.ok('guests', 'Form III: the visit''s and the person''s particulars reach the register',
     f.arrived_from = 'Delhi' and f.purpose = 'tourism' and f.next_destination = 'Jaipur'
-      and f.gender = 'female' and f.visa_type = 'e-Tourist' and f.passport = 'P0000146',
+      and f.gender = 'female' and f.visa_type = 'e-Tourist' and f.passport = 'P0000146'
+      and f.mobile_abroad = '+44 7700 000146',
     format('%s %s %s %s %s', f.arrived_from, f.purpose, f.next_destination, f.gender, f.visa_type));
 
   perform test.raises('guests', 'Form III: the purpose is one of the form''s seven',

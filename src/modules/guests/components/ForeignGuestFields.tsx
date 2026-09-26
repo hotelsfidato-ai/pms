@@ -39,6 +39,9 @@ const PERSON: Spec[] = [
   ["visaNumber", "Visa or OCI number", "text"],
   ["visaType", "Visa type", "text"],
   ["phoneInIndia", "Phone in India", "tel"],
+  ["mobileInIndia", "Mobile in India", "tel"],
+  ["phoneAbroad", "Phone outside India", "tel"],
+  ["mobileAbroad", "Mobile outside India", "tel"],
   ["gender", "Gender", "gender"],
   ["dateOfBirth", "Date of birth", "date"],
   ["passportIssuedOn", "Passport issued on", "date"],
@@ -67,7 +70,9 @@ const VISIT: Spec[] = [
   ["refPincode", "Reference PIN code", "text"],
   ["remarks", "Remarks", "text"],
 ];
-const IDENTITY_KEYS = PERSON.map(([k]) => k).filter((k) => k !== "phoneInIndia");
+/* The four numbers are this visit's (form_iii_stays), not the document's. */
+const CONTACTS = ["phoneInIndia", "mobileInIndia", "phoneAbroad", "mobileAbroad"];
+const IDENTITY_KEYS = PERSON.map(([k]) => k).filter((k) => !CONTACTS.includes(k));
 
 /** Every answer, as typed. `employedInIndia` is "yes", "no" or "". */
 export type Particulars = Record<string, string>;
@@ -100,7 +105,7 @@ export function formIIIMissing(
 export function particularsPayload(p: Particulars) {
   const pick = (keys: string[]) => Object.fromEntries(
     keys.filter((k) => p[k]?.trim()).map((k) => [k, p[k]!.trim()]));
-  const visitKeys = ["phoneInIndia", "nextDestination",
+  const visitKeys = [...CONTACTS, "nextDestination",
     ...VISIT.map(([k]) => k).filter((k) => k !== "employedInIndia")];
   return {
     identity: pick(IDENTITY_KEYS),

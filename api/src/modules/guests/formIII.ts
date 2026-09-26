@@ -45,6 +45,9 @@ export interface Visit {
   purpose?: string;
   purposeOther?: string;
   phoneInIndia?: string;
+  mobileInIndia?: string;
+  phoneAbroad?: string;
+  mobileAbroad?: string;
   arrivedInIndiaOn?: string;
   arrivalPort?: string;
   employedInIndia?: boolean;
@@ -150,9 +153,10 @@ export async function saveVisit(
        (hotel_id, reservation_id, arrived_from, previous_stay, purpose,
         purpose_other, phone_in_india, arrived_in_india_on, arrival_port,
         employed_in_india, ref_address, ref_city, ref_state, ref_pincode,
-        remarks, next_destination, updated_by)
+        remarks, next_destination, mobile_in_india, phone_abroad,
+        mobile_abroad, updated_by)
      values ($1,$2,$3,$4,$5,$6,$7,$8::date,$9,$10,$11,$12,$13,$14,$15,$16,
-             app.current_user_id())
+             $17,$18,$19, app.current_user_id())
      on conflict (reservation_id) do update set
        arrived_from        = coalesce(excluded.arrived_from, form_iii_stays.arrived_from),
        previous_stay       = coalesce(excluded.previous_stay, form_iii_stays.previous_stay),
@@ -168,11 +172,15 @@ export async function saveVisit(
        ref_pincode         = coalesce(excluded.ref_pincode, form_iii_stays.ref_pincode),
        remarks             = coalesce(excluded.remarks, form_iii_stays.remarks),
        next_destination    = coalesce(excluded.next_destination, form_iii_stays.next_destination),
+       mobile_in_india     = coalesce(excluded.mobile_in_india, form_iii_stays.mobile_in_india),
+       phone_abroad        = coalesce(excluded.phone_abroad, form_iii_stays.phone_abroad),
+       mobile_abroad       = coalesce(excluded.mobile_abroad, form_iii_stays.mobile_abroad),
        updated_by          = excluded.updated_by`,
     [hotelId, reservationId, text(v.arrivedFrom), text(v.previousStay),
      text(v.purpose), text(v.purposeOther), text(v.phoneInIndia),
      text(v.arrivedInIndiaOn), text(v.arrivalPort), v.employedInIndia ?? null,
      text(v.refAddress), text(v.refCity), text(v.refState), text(v.refPincode),
-     text(v.remarks), text(v.nextDestination)],
+     text(v.remarks), text(v.nextDestination), text(v.mobileInIndia),
+     text(v.phoneAbroad), text(v.mobileAbroad)],
   );
 }

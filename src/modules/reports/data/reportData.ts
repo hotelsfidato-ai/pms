@@ -161,6 +161,9 @@ export interface CFormRow {
   visaIssuedOn: string | null;
   visaExpiry: string | null;
   phoneInIndia: string | null;
+  mobileInIndia: string | null;
+  phoneAbroad: string | null;
+  mobileAbroad: string | null;
   email: string | null;
   remarks: string | null;
   arrivedFrom: string | null;

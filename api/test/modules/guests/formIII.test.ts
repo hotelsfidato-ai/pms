@@ -194,7 +194,9 @@ describe("a foreign guest's check-in", () => {
     const res = await call(`/PUN/stays/${a.stay}/check-in`, "POST", {
       roomNumber: a.room, ...CLOCK,
       identity: passport("A", { gender: "female", dateOfBirth: "1990-05-01" }),
-      visit: { ...VISIT, arrivalPort: "Delhi airport", employedInIndia: false },
+      visit: { ...VISIT, arrivalPort: "Delhi airport", employedInIndia: false,
+               mobileInIndia: "+91 98000 00147", phoneAbroad: "+44 20 0000 0146",
+               mobileAbroad: "+44 7700 000146" },
     });
     expect(res.status, await res.text()).toBe(200);
 
@@ -204,6 +206,9 @@ describe("a foreign guest's check-in", () => {
       arrivedFrom: "Delhi", purpose: "tourism", previousStay: "Hotel in Delhi",
       phoneInIndia: "+91 98000 00146", visaType: "e-Tourist", gender: "female",
       dateOfBirth: "1990-05-01", arrivalPort: "Delhi airport", employedInIndia: false,
+      /* The portal's four numbers (the owner, 27 September). */
+      mobileInIndia: "+91 98000 00147", phoneAbroad: "+44 20 0000 0146",
+      mobileAbroad: "+44 7700 000146",
       filed: false, departureDueBy: null,
     });
     /* 24 hours from the moment of check-in, which the register has. */

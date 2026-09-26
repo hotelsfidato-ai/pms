@@ -50,6 +50,8 @@ formC.get("/:code/form-c", async (c) => {
               f.visa_expiry::text as "visaExpiry",
               f.home_address as "homeAddress", f.home_city as "homeCity",
               f.home_country as "homeCountry", f.phone_in_india as "phoneInIndia",
+              f.mobile_in_india as "mobileInIndia", f.phone_abroad as "phoneAbroad",
+              f.mobile_abroad as "mobileAbroad",
               f.email, f.remarks, f.arrived_from as "arrivedFrom",
               f.previous_stay as "previousStay", f.purpose,
               f.purpose_other as "purposeOther",

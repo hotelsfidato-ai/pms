@@ -377,7 +377,9 @@ const CFORM_COLUMNS = [
 const CFORM_CSV: Array<[string, keyof CFormRow]> = [
   ["Name (as in the passport)", "guest"], ["Nationality", "nationality"],
   ["Passport number", "passport"], ["Visa or OCI number", "visaNumber"],
-  ["Visa type", "visaType"], ["Phone in India", "phoneInIndia"], ["Email", "email"],
+  ["Visa type", "visaType"], ["Phone in India", "phoneInIndia"],
+  ["Mobile in India", "mobileInIndia"], ["Phone outside India", "phoneAbroad"],
+  ["Mobile outside India", "mobileAbroad"], ["Email", "email"],
   ["Remarks", "remarks"], ["Arrived from", "arrivedFrom"],
   ["Arrival (date and time)", "arrivedAt"], ["Purpose of visit", "purpose"],
   ["Other purpose", "purposeOther"], ["Previous place of stay", "previousStay"],

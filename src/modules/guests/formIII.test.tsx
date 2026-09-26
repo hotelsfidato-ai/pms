@@ -42,9 +42,10 @@ describe("what Form III needs before check-in", () => {
 
   it("sends only what was typed, and employment as a yes or no", () => {
     expect(particularsPayload({ gender: "female", arrivedFrom: " Delhi ", city: "",
-                                employedInIndia: "no" })).toEqual({
+                                employedInIndia: "no", mobileAbroad: "+44 7700 1" })).toEqual({
       identity: { gender: "female" },
-      visit: { arrivedFrom: "Delhi", employedInIndia: false },
+      /* The four numbers belong to the visit, not the document. */
+      visit: { arrivedFrom: "Delhi", employedInIndia: false, mobileAbroad: "+44 7700 1" },
     });
   });
 });
