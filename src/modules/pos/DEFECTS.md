@@ -14,11 +14,28 @@ entries stay here: they are the reason the fault does not come back.
 
 ## Open — not fixed
 
-Nothing open.
+### POS-18 · A typed address kept the role of the property chosen at sign-in — FIXED 26 September (the shell's)
+
+**Found** — 25 September, proving Restaurant setup end to end. The Reception test sign-in was rostered as a Waiter (`pos`) at a second property and opened `/h/SEC/floor` by its address: the page was that property's (the tab read "Tables · Second Hotel (test)"), but the sidebar was Reception's and Restaurant setup refused them "signed in as Reception". `PropertyScope` sets the property in view (`useUi.hotelId`, the code), while `useRole` reads `useSession.hotelId`, the property chosen at sign-in or in the switcher (`src/lib/session.ts`, `roleFor`). The server asks the role at the property in the address (`roleGate.ts`), so it rang the order as a waiter - nothing wrong was written; the website showed another property's role.
+
+**What was done** — 26 September, by the master with the owner's yes (D26-13): `useRole` in
+`src/lib/session.ts` reads the role at the property in the address (`useUi.hotelId`, the code),
+falling back to the one chosen at sign-in. `src/lib/session.test.ts`: with the old line back it
+fails "expected 'front_desk' to be 'pos'".
+
+---
 
 ---
 
 ## Fixed
+
+### POS-17 · MINE: Restaurant setup's ready-to-open list said "None yet" for a dish on the menu — caught before commit
+
+**Found** — 25 September, on the saved screenshot of the finished setup: "Dishes on the menu - None yet" at a property whose menu held Dal Tadka (the API answered it). The app keeps a read until told otherwise (`staleTime: Infinity`, `src/App.tsx`) and keeps `till-menu` on the device (`PERSISTED`), and the capture's browser had read the menu empty on the "before" screenshot. Any dish added on another device, or by the kitchen manager, would have left the list stale the same way.
+
+**What was done** — Both of the page's reads (`till-setup`, `till-menu`) carry `staleTime: 0`, so they are asked again every time the page opens; the recapture ticked all six (`.local/screenshots/2026-09-25-till-setup/03-setup-DONE-*.png`).
+
+**The rule** — A list that says what is done reads fresh. A cached read is fine for a screen people work in; a checklist people trust must not be older than the page.
 
 ### POS-15 · A dish imported with its GST column blank reads "0%" on the Menu screen and the Terminal — FIXED 22 September
 

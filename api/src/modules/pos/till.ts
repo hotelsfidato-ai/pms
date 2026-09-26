@@ -8,6 +8,8 @@ import type { PoolClient as Client } from "pg";
    (D17-21) — through its front door, never its files. */
 import { whyNotAttachable } from "../banquet/index.ts";
 import { overCashLimit, panFor } from "../finance/index.ts";
+/* The one way an outlet row is made (Restaurant setup, D22-6). */
+import { addOutlet } from "./pos.ts";
 
 /* ══════════════════════════════════════════════════════════════════
    THE TILL — the POS built into the PMS
@@ -4464,6 +4466,355 @@ till.post("/:code/kitchen/lines/:lineId/:to", async (c) => {
       return refuse("That dish is not with the kitchen, or was cancelled.");
     }
     return { ok: true as const, status: to };
+  });
+
+  if (!result) return c.json({ error: "No such property." }, 404);
+  return c.json(result, "ok" in result && result.ok ? 200 : 409);
+});
+
+/* ── Restaurant setup (D22-6, the owner's answers of 25 September) ───
+   The restaurant's name, its sections and its tables, for the owner, an
+   administrator and the GM (roleGate TILL_SETUP). Until this, only the demo
+   loader made a section or a table, and only `npm run pos:outlet` made an
+   outlet - one the till never opened unless somebody typed REST as its code.
+
+   THE RESTAURANT IS `REST`, the outlet Tables, the Till and Close restaurant
+   day already open. It is made by addOutlet, the one way an outlet row is made
+   (the script uses it too), with no key: the people using it sign in as
+   themselves. Its staff_id ("the account it posts as") only matters to an
+   outside till's key, so it is the person who set it up, as the demo's is
+   the owner.
+
+   NOTHING IS DELETED (the owner): a section or a table taken away is switched
+   off, and refused while a bill still sits on it. Adding the same name again
+   switches it back on. Every refusal comes before the first write (MEMORY 243). */
+
+const RESTAURANT = "REST";
+/** Four across, what fits a terminal held in portrait (the demo's floor). */
+const ACROSS = 4;
+/** A longer run is a typing slip, not a room. */
+const LONGEST_RUN = 100;
+
+async function restaurantFor(client: Client, hotelId: string) {
+  const { rows } = await client.query<{ id: string; name: string }>(
+    `select id::text, name from pos_outlets
+      where hotel_id = $1 and code = $2 and is_active`,
+    [hotelId, RESTAURANT],
+  );
+  return rows[0] ?? null;
+}
+
+/** Seats a person typed. A blank is null (a dash), never a number nobody
+    chose; anything that is not a whole number above zero is undefined,
+    and refused. */
+function typedSeats(raw: unknown): number | null | undefined {
+  const text = raw === undefined || raw === null ? "" : String(raw).trim();
+  if (text === "") return null;
+  const n = Number(text);
+  return Number.isInteger(n) && n > 0 && n < 1000 ? n : undefined;
+}
+const BAD_SEATS = "Seats is a whole number, or left blank.";
+
+/** Whatever sits on a table - an open bill, or a paid one not yet cleared -
+    is what Tables shows on it (047's pos_floor), so it cannot go. */
+const TABLE_BUSY = `exists (select 1 from pos_orders o
+                             where o.table_id = t.id and o.cleared_at is null)`;
+
+till.get("/:code/till/setup", async (c) => {
+  const body = await withSession(c.get("subject"), async (client) => {
+    const hotelId = await hotelFor(client, c.req.param("code"));
+    if (!hotelId) return null;
+
+    const restaurant = await restaurantFor(client, hotelId);
+    const { rows } = restaurant ? await client.query<{
+      section_id: string; section: string; table_id: string | null;
+      label: string | null; seats: number | null; busy: boolean;
+    }>(
+      /* LEFT join: a section with no tables yet is exactly what somebody
+         setting up has just made. pos_floor hides it; this must not. */
+      `select s.id::text as section_id, s.name as section,
+              t.id::text as table_id, t.label, t.seats, ${TABLE_BUSY} as busy
+         from pos_sections s
+         left join pos_tables t on t.section_id = s.id and t.is_active
+        where s.outlet_id = $1 and s.is_active
+        order by s.sort_order, s.name, t.row_no, t.col_no, t.label`,
+      [restaurant.id],
+    ) : { rows: [] };
+
+    const sections: {
+      id: string; name: string;
+      tables: { id: string; label: string; seats: number | null; busy: boolean }[];
+    }[] = [];
+    for (const r of rows) {
+      let s = sections.find((x) => x.id === r.section_id);
+      if (!s) sections.push(s = { id: r.section_id, name: r.section, tables: [] });
+      if (r.table_id) {
+        s.tables.push({ id: r.table_id, label: r.label!, seats: r.seats, busy: r.busy });
+      }
+    }
+
+    /* People with the Waiter role here - not an outside till's service
+       account, which pos-outlet.ts gives the same role. */
+    const { rows: w } = await client.query<{ n: number }>(
+      `select count(*)::int as n
+         from staff_hotels sh join staff s on s.id = sh.staff_id
+        where sh.hotel_id = $1 and sh.role = 'pos' and s.is_active
+          and not exists (select 1 from pos_outlets o where o.staff_id = s.id)`,
+      [hotelId],
+    );
+
+    return {
+      restaurant: restaurant ? { name: restaurant.name } : null,
+      sections,
+      waiters: w[0]!.n,
+    };
+  });
+
+  return body ? c.json(body) : c.json({ error: "No such property." }, 404);
+});
+
+till.post("/:code/till/setup/restaurant", async (c) => {
+  const input = await c.req.json<{ name?: string }>().catch(() => ({} as { name?: string }));
+  const name = input.name?.trim();
+  if (!name) {
+    return c.json(refuse("Type the restaurant's name - it is printed on every bill."), 409);
+  }
+
+  const result = await withSession(c.get("subject"), async (client) => {
+    const hotelId = await hotelFor(client, c.req.param("code"));
+    if (!hotelId) return null;
+
+    const { rowCount } = await client.query(
+      "update pos_outlets set name = $3 where hotel_id = $1 and code = $2",
+      [hotelId, RESTAURANT, name],
+    );
+    if (!rowCount) {
+      const { rows } = await client.query<{ id: string }>(
+        "select app.current_user_id()::text as id");
+      await addOutlet(client, {
+        hotelId, code: RESTAURANT, name, category: "food",
+        staffId: rows[0]!.id, keyHash: null,
+      });
+    }
+    return { ok: true as const };
+  });
+
+  if (!result) return c.json({ error: "No such property." }, 404);
+  return c.json(result);
+});
+
+till.post("/:code/till/setup/sections", async (c) => {
+  const input = await c.req.json<{ name?: string }>().catch(() => ({} as { name?: string }));
+  const name = input.name?.trim();
+  if (!name) return c.json(refuse("Type the section's name - A/C, Non A/C, Bar."), 409);
+
+  const result = await withSession(c.get("subject"), async (client) => {
+    const hotelId = await hotelFor(client, c.req.param("code"));
+    if (!hotelId) return null;
+    const restaurant = await restaurantFor(client, hotelId);
+    if (!restaurant) return refuse("Name the restaurant first - its sections sit inside it.");
+
+    const { rows: same } = await client.query<{ is_active: boolean }>(
+      "select is_active from pos_sections where outlet_id = $1 and name = $2",
+      [restaurant.id, name],
+    );
+    if (same[0]?.is_active) return refuse(`There is already a section called ${name}.`);
+
+    await client.query(
+      `insert into pos_sections (hotel_id, outlet_id, name, sort_order)
+       values ($1, $2, $3, (select coalesce(max(sort_order), 0) + 1
+                              from pos_sections where outlet_id = $2))
+       on conflict (outlet_id, name) do update
+         set is_active = true, sort_order = excluded.sort_order`,
+      [hotelId, restaurant.id, name],
+    );
+    return { ok: true as const };
+  });
+
+  if (!result) return c.json({ error: "No such property." }, 404);
+  return c.json(result, "ok" in result && result.ok ? 200 : 409);
+});
+
+till.patch("/:code/till/setup/sections/:id", async (c) => {
+  const input = await c.req.json<{ name?: string }>().catch(() => ({} as { name?: string }));
+  const name = input.name?.trim();
+  if (!name) return c.json(refuse("Type the section's name."), 409);
+
+  const result = await withSession(c.get("subject"), async (client) => {
+    const hotelId = await hotelFor(client, c.req.param("code"));
+    if (!hotelId) return null;
+
+    const { rows: s } = await client.query<{ outlet_id: string }>(
+      `select outlet_id::text from pos_sections
+        where id = $1 and hotel_id = $2 and is_active`,
+      [c.req.param("id"), hotelId],
+    );
+    if (!s[0]) return refuse("No such section.");
+    const { rows: taken } = await client.query(
+      "select 1 from pos_sections where outlet_id = $1 and name = $2 and id <> $3",
+      [s[0].outlet_id, name, c.req.param("id")],
+    );
+    if (taken[0]) return refuse(`There is already a section called ${name}.`);
+
+    await client.query("update pos_sections set name = $2 where id = $1",
+      [c.req.param("id"), name]);
+    return { ok: true as const };
+  });
+
+  if (!result) return c.json({ error: "No such property." }, 404);
+  return c.json(result, "ok" in result && result.ok ? 200 : 409);
+});
+
+till.post("/:code/till/setup/sections/:id/off", async (c) => {
+  const result = await withSession(c.get("subject"), async (client) => {
+    const hotelId = await hotelFor(client, c.req.param("code"));
+    if (!hotelId) return null;
+
+    const { rows } = await client.query<{ name: string; busy: string[] }>(
+      `select s.name,
+              array(select t.label from pos_tables t
+                     where t.section_id = s.id and t.is_active and ${TABLE_BUSY}
+                     order by t.label) as busy
+         from pos_sections s
+        where s.id = $1 and s.hotel_id = $2 and s.is_active`,
+      [c.req.param("id"), hotelId],
+    );
+    if (!rows[0]) return refuse("No such section.");
+    if (rows[0].busy.length) {
+      return refuse(
+        `${rows[0].name} still has a bill on ${rows[0].busy.join(", ")}. `
+        + "Settle or clear those tables first.");
+    }
+
+    await client.query("update pos_sections set is_active = false where id = $1",
+      [c.req.param("id")]);
+    return { ok: true as const };
+  });
+
+  if (!result) return c.json({ error: "No such property." }, 404);
+  return c.json(result, "ok" in result && result.ok ? 200 : 409);
+});
+
+till.post("/:code/till/setup/sections/:id/tables", async (c) => {
+  type Body = { label?: string; prefix?: string; from?: unknown; to?: unknown; seats?: unknown };
+  const input = await c.req.json<Body>().catch(() => ({} as Body));
+
+  const seats = typedSeats(input.seats);
+  if (seats === undefined) return c.json(refuse(BAD_SEATS), 409);
+
+  /* One table, or a numbered run: "AC" from 1 to 10 is AC1 to AC10. A blank
+     from or to is refused, never read as 0 (Number("") is 0). */
+  let labels: string[];
+  if (input.label?.trim()) {
+    labels = [input.label.trim()];
+  } else {
+    const blank = (v: unknown) => v === undefined || v === null || String(v).trim() === "";
+    const from = Number(input.from), to = Number(input.to);
+    if (blank(input.from) || blank(input.to)
+        || !Number.isInteger(from) || !Number.isInteger(to) || from < 0 || to < from) {
+      return c.json(refuse(
+        "Type a table, or a run: a start such as AC, and the numbers from and to."), 409);
+    }
+    if (to - from + 1 > LONGEST_RUN) {
+      return c.json(refuse(`A run is at most ${LONGEST_RUN} tables.`), 409);
+    }
+    const prefix = input.prefix?.trim() ?? "";
+    labels = Array.from({ length: to - from + 1 }, (_, i) => `${prefix}${from + i}`);
+  }
+
+  const result = await withSession(c.get("subject"), async (client) => {
+    const hotelId = await hotelFor(client, c.req.param("code"));
+    if (!hotelId) return null;
+
+    const { rows: s } = await client.query<{ name: string }>(
+      "select name from pos_sections where id = $1 and hotel_id = $2 and is_active",
+      [c.req.param("id"), hotelId],
+    );
+    if (!s[0]) return refuse("No such section.");
+
+    const { rows: there } = await client.query<{ label: string }>(
+      `select label from pos_tables
+        where section_id = $1 and is_active and label = any($2::text[])
+        order by label`,
+      [c.req.param("id"), labels],
+    );
+    if (there.length) {
+      return refuse(`${there.map((t) => t.label).join(", ")} ${
+        there.length === 1 ? "is" : "are"} already in ${s[0].name}.`);
+    }
+
+    /* After the tables already there, in the order typed, ACROSS to a row. */
+    await client.query(
+      `insert into pos_tables (hotel_id, section_id, label, seats, row_no, col_no)
+       select $1, $2, l.label, $4,
+              (n.base + l.i - 1) / ${ACROSS}, (n.base + l.i - 1) % ${ACROSS}
+         from unnest($3::text[]) with ordinality as l(label, i),
+              (select count(*)::int as base from pos_tables
+                where section_id = $2 and is_active) n
+       on conflict (section_id, label) do update
+         set is_active = true, seats = excluded.seats,
+             row_no = excluded.row_no, col_no = excluded.col_no`,
+      [hotelId, c.req.param("id"), labels, seats],
+    );
+    return { ok: true as const, added: labels.length };
+  });
+
+  if (!result) return c.json({ error: "No such property." }, 404);
+  return c.json(result, "ok" in result && result.ok ? 200 : 409);
+});
+
+till.patch("/:code/till/setup/tables/:id", async (c) => {
+  const input = await c.req.json<{ label?: string; seats?: unknown }>()
+    .catch(() => ({} as { label?: string; seats?: unknown }));
+  const label = input.label?.trim();
+  if (!label) return c.json(refuse("Type the table's name, as it is painted on it."), 409);
+  const seats = typedSeats(input.seats);
+  if (seats === undefined) return c.json(refuse(BAD_SEATS), 409);
+
+  const result = await withSession(c.get("subject"), async (client) => {
+    const hotelId = await hotelFor(client, c.req.param("code"));
+    if (!hotelId) return null;
+
+    const { rows: t } = await client.query<{ section_id: string; section: string }>(
+      `select t.section_id::text, s.name as section
+         from pos_tables t join pos_sections s on s.id = t.section_id
+        where t.id = $1 and t.hotel_id = $2 and t.is_active`,
+      [c.req.param("id"), hotelId],
+    );
+    if (!t[0]) return refuse("No such table.");
+    const { rows: taken } = await client.query(
+      "select 1 from pos_tables where section_id = $1 and label = $2 and id <> $3",
+      [t[0].section_id, label, c.req.param("id")],
+    );
+    if (taken[0]) return refuse(`There is already a table ${label} in ${t[0].section}.`);
+
+    await client.query("update pos_tables set label = $2, seats = $3 where id = $1",
+      [c.req.param("id"), label, seats]);
+    return { ok: true as const };
+  });
+
+  if (!result) return c.json({ error: "No such property." }, 404);
+  return c.json(result, "ok" in result && result.ok ? 200 : 409);
+});
+
+till.post("/:code/till/setup/tables/:id/off", async (c) => {
+  const result = await withSession(c.get("subject"), async (client) => {
+    const hotelId = await hotelFor(client, c.req.param("code"));
+    if (!hotelId) return null;
+
+    const { rows } = await client.query<{ label: string; busy: boolean }>(
+      `select t.label, ${TABLE_BUSY} as busy from pos_tables t
+        where t.id = $1 and t.hotel_id = $2 and t.is_active`,
+      [c.req.param("id"), hotelId],
+    );
+    if (!rows[0]) return refuse("No such table.");
+    if (rows[0].busy) {
+      return refuse(`${rows[0].label} has a bill on it. Settle or clear the table first.`);
+    }
+
+    await client.query("update pos_tables set is_active = false where id = $1",
+      [c.req.param("id")]);
+    return { ok: true as const };
   });
 
   if (!result) return c.json({ error: "No such property." }, 404);

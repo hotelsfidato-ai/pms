@@ -12,6 +12,90 @@ exists** (`MODULE.md`).
 
 ---
 
+## 2026-09-25 · Room cards: the QR code, four to a page; the check-in's line here (D21-62, D21-95, D25-1 to D25-4)
+
+**Asked for:** the master, 25 September - finish the room cards as the brief
+and D21-62 describe: a printable sheet per hotel (hotel, room number, the
+card's QR), made on the desk screen only, with `qrcode` kept out of the guest
+page's bundle; reprinting kills the old card; the link read from the server's
+settings. Ask the owner what the brief leaves open. Branch
+`online-checkin/room-cards-25sep`.
+
+**The owner's answers in this chat (recorded by the master as D25-1 to D25-4)**
+- Who prints: **as built** - owner, admin, GM, hotel manager, reception.
+- **Four cards to an A4 page** (about 9 x 13 cm, the QR about 6 cm).
+- **The QR only** - no link as text on the card.
+- **The link from the check-in flow: build it here** - only when this
+  booking's details wait, opening Online check-in **in a new tab**.
+
+**Shipped**
+- `pages/Desk.tsx`, the card sheet: each card the hotel's name (a dash if
+  not loaded), "Room N", the QR of that card's link, "Scan to check in." -
+  the link as text is gone. `qrcode` is loaded with `import()` on this sheet
+  only, so the build puts it in its own chunk. Print stays off until the QR
+  codes are drawn (the old cards are already dead); if they cannot be drawn
+  the sheet says so, with Try again. On paper: four to a page, white, no
+  screen padding.
+- `WaitingDetailsLink.tsx`, exported from the front door: "This guest sent
+  their ID details online - check them on Online check-in", in a new tab,
+  only for THIS booking's waiting details and only for `DESK_ROLES` (anybody
+  else: nothing drawn, nothing asked). Drawn in the check-in's ID step by two
+  lines in front desk's `CheckInFlow.tsx` (the master agreed; front desk's
+  CHANGELOG has its line).
+- No server change and no migration: the link is still `linkFor()`, the
+  server's `CORS_ORIGIN` (D21-60), and a reprint still revokes the old card
+  in the same transaction as the new one (121's one-live-card index).
+
+**Found** - OCI-6 (the sheet printed 2, 4, 4, 4, 4 and a blank page) and
+OCI-7 (a "not this booking" test that could not fail), both in `DEFECTS.md`.
+And for the master: the service worker precaches every JS file, so a guest's
+phone downloads the QR chunk (never runs it) - `vite.config.ts` is theirs.
+
+**Proved**
+- `onlineCheckin.test.tsx`: "prints each room's card with a QR code of
+  exactly that card's link" - the picture on the sheet read back module by
+  module and held against the QR of that card's link and of its neighbour's
+  (fails when the sheet encodes the room number instead); "keeps Print off,
+  and says so, when the QR codes cannot be drawn" (fails with Print not held
+  back); "points the check-in to Online check-in only when this booking's
+  details wait" (fails when any booking's details show it); the non-desk role
+  test now covers the line too (fails with the role gate removed).
+- `front-desk/earlyCheckIn.test.tsx`: the ID step draws the line (fails with
+  the line taken out of the check-in).
+- `api/test/guestDoorBehindTheCode.test.ts`, "stops the old card the moment
+  the desk prints a new one (D21-16)": 6 of 6 card tests pass; with the
+  revoke removed from `newCards` the reprint is refused (500, the one live
+  card index) and the test fails.
+- On screen, this copy's own database `fidato_s9`, API 8825, web 5225, as
+  Reception: 18 rooms' cards drawn; each QR matched to its own room's link
+  from the server's answer; the first print's room 201 card answers 404
+  after a reprint, the new one opens as room 201 with the hotel only; the
+  QR library fetched only when the sheet is drawn. Screens in
+  `.local/screenshots/2026-09-25-room-cards/`.
+- The gates, on the tree with `cp6` merged in (`773f980`), by exit code:
+  web types 0 · server types 0 · `npm test` **665 of 665**, 71 files, 0 ·
+  `cd api; npm test` 93 of 94 files, 1,302 passed, exit 1 - the one file,
+  `stores/stockGrants.test.ts`, lost its database connection in setup
+  ("Connection terminated due to connection timeout", six sessions on one
+  Postgres) and skipped its 161; run alone, **161 of 161**, 0 ·
+  `bash db/tests/run.sh` **1,154 assertions**, 0 · `bash db/tests/rerun.sh`
+  **all 138 migrations re-runnable**, 0 · `npm run build` 0, "no test sign-in
+  in dist": `qrcode` only in `browser-BjcGmAWY.js` (25.7 kB), the main
+  `index-*.js` has none of its strings and reaches it only by `import()`,
+  `index.html` does not preload it.
+- cp6 moved on during those runs; merged again (`c02761f`, front desk's
+  CHANGELOG conflict resolved, both entries kept). On that tree: web types 0,
+  server types 0, `npx vitest run src/modules/online-checkin
+  src/modules/front-desk src/test` **94 of 94**, 13 files, 0 - after
+  "keeps Print off" was given 5 seconds to see the failed import (it timed
+  out at the 1-second default on the loaded machine, still loading).
+
+**Left open** - the service worker's precache of the QR chunk (the
+master's); the ID photo (D21-11), as before.
+
+**Commits:** `e7f5a3a`, `9a30c90`, `530c25a`, `e802007`, `dc7beda`, and the
+merges of `cp6`.
+
 ## 2026-09-24 · The guest sees what they sent the desk (D24-17)
 
 **Asked for:** the owner's D24-17, through the front desk follow-ups session

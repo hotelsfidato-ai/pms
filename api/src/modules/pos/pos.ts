@@ -71,6 +71,27 @@ export const hashKey = (key: string): string =>
 export const issueKey = (): string => `pos_${randomBytes(32).toString("hex")}`;
 
 /**
+ * THE ONE WAY AN OUTLET ROW IS MADE (D22-6, 25 September). By
+ * `npm run pos:outlet`, for an outside till, with its key's digest; and by
+ * Restaurant setup, for the hotel's own till, with none - its people sign in
+ * as themselves.
+ */
+export async function addOutlet(
+  db: { query(text: string, values: unknown[]): Promise<unknown> },
+  o: {
+    hotelId: string; code: string; name: string; category: string;
+    staffId: string; keyHash: string | null;
+  },
+): Promise<void> {
+  await db.query(
+    `insert into pos_outlets (hotel_id, code, name, category, staff_id,
+                              api_key_hash)
+     values ($1,$2,$3,$4,$5,$6)`,
+    [o.hotelId, o.code, o.name, o.category, o.staffId, o.keyHash],
+  );
+}
+
+/**
  * Resolve the caller, or null.
  *
  * Uses its own short-lived connection with no session set, because

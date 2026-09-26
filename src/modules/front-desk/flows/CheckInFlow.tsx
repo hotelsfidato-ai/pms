@@ -10,6 +10,7 @@ import {
 import { checkIn, assignableRooms, checkInAllowed, earlyArrival } from "@/modules/front-desk/data/operations";
 import { type Stay } from "@/data/repositories";
 import { BookingSiteBlacklist } from "@/modules/guests";
+import { WaitingDetailsLink } from "@/modules/online-checkin";
 
 /* ══════════════════════════════════════════════════════════════════
    FLOW A — arrival to in house
@@ -233,6 +234,7 @@ export function CheckInFlow({
                 Indian properties must record a guest's identity document.
                 It can be skipped, but the reason is kept in the stay's note.
               </p>
+              <WaitingDetailsLink reference={stay.reference} />
 
               <Field
                 label="Nationality"

@@ -89,8 +89,23 @@ Coming soon page and its address are gone.
 **The desk's screen:** details waiting to be checked (Confirm against the ID ·
 Not right — take them at the desk), requests (Done · Declined — booked on the
 spa's or laundry's own screen, D21-9), and room cards (print one, or print a
-new card for every room; the sheet is shown once, with the hotel's name, the
-room number and the link).
+new card for every room). **The card sheet (D21-62, D21-95; the owner, 25
+September):** shown once; each card is the hotel's name, the room number, the
+QR code of that card's link and "Scan to check in." - no link as text; four
+to an A4 page (about 9 x 13 cm, the QR 6 cm). Print stays off until the QR
+codes are drawn, because the old cards are already dead. Who may print: as
+built, `DESK_ROLES`.
+
+⚠ **`qrcode` is imported in `pages/Desk.tsx` only, and only with `import()`.**
+The app is one bundle and the guest's page is in it; a static import would
+ship the library to every guest. The build puts it in its own chunk
+(`browser-*.js`); `index-*.js` must contain none of it.
+
+**Inside the check-in (the owner, 25 September):** `WaitingDetailsLink`,
+exported from the front door, draws one line in the check-in's ID step when
+THIS booking has details waiting - "This guest sent their ID details online -
+check them on Online check-in", opening this screen in a new tab so the
+check-in is not lost. Only `DESK_ROLES` are shown it or ask for it.
 
 **A guest's message to the front desk (D23-14)** is not on this screen: it
 is drawn inside Guest messages (`MessagesToTheDesk.tsx`, exported from this
@@ -152,16 +167,19 @@ out has not been checked out yet) and `app.guest_unlocked`.
 
 ## Waiting on the master — answered 21 September
 
-**Still open, and this lane's claim is held for it:**
+**Still open:**
 
-- **The QR code** — the owner approved `qrcode` (MIT, the desk's screen only,
-  D21-95). The master installs it on `cp6` after the live release, because
-  `node_modules` is shared with the release copy. **Do not import it before
-  the master's word.** Until then the card sheet prints the link and says so.
-- **A link into this screen from the check-in flow** — front desk's file; that
-  claim is held by another chat.
+- **The service worker precaches every JS file**, the QR chunk included, so a
+  guest's phone downloads it (never runs it). `vite.config.ts` is the
+  master's: `globIgnores` for `browser-*.js` would stop it.
 
 **Answered:**
+
+- **The QR code** — `qrcode` 1.5.4 installed by the master on `cp6`
+  (`fb7b2e2`, D21-95); drawn on the card sheet, 25 September.
+- **A link into this screen from the check-in flow** — D25-4: the check-in's
+  ID step draws `WaitingDetailsLink` (two lines in front desk's
+  `CheckInFlow.tsx`, with the master's agreement, 25 September).
 
 - **Finance's one definition of a bill** — `app.stay_bill(uuid)` (migration
   123, the master's), wrapped by this lane's `app.guest_bill` (124) and drawn

@@ -1,5 +1,5 @@
 import { closePool } from "../src/db.ts";
-import { hashKey, issueKey } from "../src/modules/pos/index.ts";
+import { addOutlet, hashKey, issueKey } from "../src/modules/pos/index.ts";
 import { databaseForScript } from "./scriptDatabase.ts";
 
 /* ══════════════════════════════════════════════════════════════════
@@ -120,12 +120,9 @@ async function main(): Promise<void> {
     );
 
     const key = issueKey();
-    await admin.query(
-      `insert into pos_outlets (hotel_id, code, name, category, staff_id,
-                                api_key_hash)
-       values ($1,$2,$3,$4,$5,$6)`,
-      [hotelId, code, name, category, staffId, hashKey(key)],
-    );
+    await addOutlet(admin, {
+      hotelId, code, name, category, staffId, keyHash: hashKey(key),
+    });
 
     say("");
     say(`${name}`);

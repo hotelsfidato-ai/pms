@@ -152,6 +152,10 @@ const PASS = grant("payment", "create", "Moving a dish along at the pass", ["che
 /* The menu has its own resource since D22-35 kept the revenue manager out of
    it: the owner, an administrator, the GM and the kitchen manager. */
 const MENU = grant("menu", "edit", "Changing the menu");
+/* Restaurant setup (D22-6): the restaurant's name, its sections and tables -
+   the owner, an administrator and the GM, the people who set the hotel up
+   (the owner's answer, 25 September). `room_config` is exactly those three. */
+const TILL_SETUP = grant("room_config", "edit", "Setting up the restaurant's tables");
 
 /* No screen calls these two yet. A bill photographed for a purchase (§15) is
    purchasing's; where n8n copied a file is an integration's. */
@@ -289,6 +293,14 @@ export const WRITE_RULES: Readonly<Record<string, Rule>> = {
   [`POST ${H}/till/day-end/movements`]: DAY_END,
   [`POST ${H}/till/day-end/count`]: DAY_END,
   [`POST ${H}/till/day-end/close`]: DAY_END,
+  /* pos: restaurant setup */
+  [`POST ${H}/till/setup/restaurant`]: TILL_SETUP,
+  [`POST ${H}/till/setup/sections`]: TILL_SETUP,
+  [`PATCH ${H}/till/setup/sections/:id`]: TILL_SETUP,
+  [`POST ${H}/till/setup/sections/:id/off`]: TILL_SETUP,
+  [`POST ${H}/till/setup/sections/:id/tables`]: TILL_SETUP,
+  [`PATCH ${H}/till/setup/tables/:id`]: TILL_SETUP,
+  [`POST ${H}/till/setup/tables/:id/off`]: TILL_SETUP,
   [`POST ${H}/kitchen/lines/:lineId/:to`]: PASS,
 
   /* admin */

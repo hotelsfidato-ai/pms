@@ -382,8 +382,13 @@ async function load(set: (partial: Partial<SessionState>) => void) {
 
 export const useRole = (): Role => {
   const scope = useSession((s) => s.scope);
-  const hotelId = useSession((s) => s.hotelId);
-  return scope ? roleFor(scope, hotelId) : "read_only";
+  const hotels = useSession((s) => s.hotels);
+  const chosen = useSession((s) => s.hotelId);
+  /* The role at the property IN VIEW (the address's code), as the server
+     asks it (roleGate.ts), not the one chosen at sign-in (POS-18, D26-13). */
+  const code = useUi((s) => s.hotelId);
+  const inView = hotels.find((h) => h.code === code)?.id ?? chosen;
+  return scope ? roleFor(scope, inView) : "read_only";
 };
 
 export const useCurrentHotel = (): ApiHotel | null => {

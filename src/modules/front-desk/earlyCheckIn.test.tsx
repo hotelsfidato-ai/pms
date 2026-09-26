@@ -1,7 +1,7 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from "vitest";
 import { render, screen, cleanup, fireEvent, waitFor } from "@testing-library/react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { MemoryRouter } from "react-router";
+import { MemoryRouter, Routes, Route } from "react-router";
 import * as apiModule from "@/lib/api";
 import * as operations from "@/modules/front-desk/data/operations";
 import { AGRA_HOTEL, signedIn, startSignedIn } from "@/test/app";
@@ -127,5 +127,34 @@ describe("checking in before the property's check-in time", () => {
     await toRateStep();
     expect(screen.getByLabelText(/Why the room is being given early/)).toBeTruthy();
     expect(screen.queryByLabelText(/Waive the charge/)).toBeNull();
+  });
+});
+
+/* D25-4 (the owner, 25 September): the ID step points the desk to Online
+   check-in when THIS guest's details wait there, in a new tab. Drawn by
+   online check-in's WaitingDetailsLink; this proves the check-in draws it. */
+describe("the ID step, when the guest sent their details online", () => {
+  it("points to Online check-in", async () => {
+    vi.mocked(apiModule.api).mockImplementation(async (url: string) => (
+      url === "/api/hotels/5EL/online-checkin"
+        ? { waiting: [{ reference: STAY.reference }], requests: [], rooms: [] }
+        : []) as never);
+    const qc = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+    render(
+      <QueryClientProvider client={qc}>
+        <MemoryRouter initialEntries={["/h/5EL/arrivals"]}>
+          <Routes><Route path="/h/:code/arrivals"
+            element={<CheckInFlow hotelId="5EL" stay={STAY} businessDate="2026-08-25" />} /></Routes>
+        </MemoryRouter>
+      </QueryClientProvider>,
+    );
+    const next = () => fireEvent.click(screen.getByRole("button", { name: "Continue" }));
+    fireEvent.click(await screen.findByRole("button", { name: /Check in/ }));
+    next();                                                   // Guest
+    await screen.findByText("204");
+    next();                                                   // Room
+
+    const link = await screen.findByRole("link", { name: "check them on Online check-in" });
+    expect(link.getAttribute("href")).toBe("/h/5EL/online-checkin");
   });
 });

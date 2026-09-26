@@ -108,10 +108,13 @@ clean; just add nothing to it. Tests and demo data may say Fidato.
 - **Never guess and never invent.** What the code, the briefs and the decisions
   do not settle: ask the owner, or research it (official sources, with dates
   and links).
-- **Headless Edge only with `--inprivate --disable-sync`** and a debugging port
-  of your own: without them a headless Edge on this machine signed itself into
-  the owner's Microsoft account (25 Sep). Search a copy with Grep or `git grep`,
-  never `grep -r` (it walks into the node_modules junction).
+- **Never start Edge (headless or not) from a session.** On this PC Edge signs
+  every new profile into the owner's Microsoft account by itself ("implicit
+  sign-in"), and `--inprivate --disable-sync` does not stop it (25-26 Sep,
+  MEMORY 330). Look at screens in the Claude app's own browser, which is
+  separate from the owner's accounts, and save a picture only when one really
+  matters (D26-12). Search a copy with Grep or `git grep`, never `grep -r` (it
+  walks into the node_modules junction).
 - **Current Indian compliance and tax law** in everything you build:
   `docs/SELLING-IN-INDIA.md` and `docs/selling-in-india/` hold the rules and
   their sources; a rule that has changed since is researched, not assumed.

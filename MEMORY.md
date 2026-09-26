@@ -6539,6 +6539,24 @@ copy will see of theirs.**
 
 ---
 
+### 330 · MINE: two sessions' headless Edge signed into the owner's Microsoft account, and I sent the rule to the brief but not to the sessions
+
+25 and 26 September. The Bill tab session's first headless Edge, then the
+Store session's (its own profile folder, port 9811), launched without
+`--inprivate --disable-sync`, and each signed itself into the owner's
+Microsoft account on this machine (a sync page; a profile holding one
+account). Both stopped them and deleted the profiles. When the first report
+came I added the rule to docs/briefs/README.md (4cde3f9) but did not message
+the sessions already running, so the Store session met the same fault an hour
+later. The owner was told to check the account's recent sign-ins.
+
+**The rule: a rule that protects the owner's accounts or data goes to every
+RUNNING session by message the moment it is written, not only into the brief
+that new sessions read. Every brief's headless-browser line says `--inprivate
+--disable-sync`, an unused port and a throwaway profile inside the copy.**
+
+---
+
 ### 329 · The lane sessions' own lessons, 24 September
 
 Six sessions worked in parallel on 24 September and each reported what went
