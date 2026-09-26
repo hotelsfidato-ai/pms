@@ -199,6 +199,8 @@ begin
     '23514');
 
   perform app.reverse_stock_movement(back, null);
+  perform test.ok('stores cylinders', 'the undo of empties is itself marked empty',
+    (select empty from stock_movements where reverses_id = back));
   perform test.ok('stores cylinders', 'undoing empties takes back empties, not full cylinders',
     app.stock_empties(gas) = 0 and app.stock_on_hand(gas) = 3);
 

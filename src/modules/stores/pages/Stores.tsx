@@ -178,6 +178,7 @@ export default function StoresPage() {
       const store = stores.find((x) => x.id === s);
       return store ? [{ item: i, store }] : [];
     }));
+  const belowItems = new Set(below.map((b) => b.item.id)).size;
   /* Only what has a value. An item nobody has received contributes
      nothing to a total rather than zero — and if EVERYTHING is unpriced
      the total is a dash, not ₹0. */
@@ -361,8 +362,9 @@ export default function StoresPage() {
             <AlertTriangle className="size-4 text-amber-600 shrink-0 mt-0.5" />
             <div className="text-sm text-ink-900 leading-relaxed min-w-0">
               <p className="font-medium">
-                {below.length === 1 ? "One item is" : `${below.length} items are`} at
-                or below the level set for {picked ? picked.name : "their store"}
+                {/* Items, not lines: one item can be low in two stores. */}
+                {belowItems === 1 ? "One item is" : `${belowItems} items are`} at
+                or below the level set for {picked ? picked.name : "a store"}
               </p>
               <ul data-below-list="">
                 {below.map(({ item, store }) => (

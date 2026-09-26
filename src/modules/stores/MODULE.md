@@ -75,6 +75,33 @@ and both stay. A list can be imported from a file.
   starting as above), To (a store switched on, chosen each time), how many.
   History shows a move, and its undo, as **one line** naming both stores; its
   undo asks first and takes both halves back.
+- **Levels per store** (D25-12, D25-13, 25 September): each card says "Warn at
+  Main 20 · Kitchen 10" (only the stores with one), or "No level set"; one store
+  picked says "Warn at 10 kg" or "No level in Kitchen store". **Set levels** in
+  More (`edit`) is one box per store, blank for none. "Add an item" asks
+  "Warn me below, in the Main store" only of `edit` people - the kitchen
+  manager adds without one.
+- **The below-level list** (D25-14) replaces the old one-figure warning at the
+  top: "Basmati rice - Kitchen store: 6 kg, level 10", one line per item and
+  store at or below its level ("none" where the store holds none). It only
+  shows; buying is Purchasing's screen.
+- **Count a store** (D25-15..17, `edit`) replaces the list with the count
+  sheet for one store: every item, and an "- empty" line for a cylinder item.
+  **Print the sheet** prints item, unit and an empty box - no book figure. On
+  screen a line shows "Book 8 kg · 1 fewer" only once a count is typed, and a
+  "Why, if known" box when it differs. **Save the count** writes one
+  correction per difference, as whoever saves it, "Count of Kitchen store -
+  <why>"; a blank line is not sent. If a counted line's book moved since the
+  sheet opened, the save is refused whole, naming it, and that line takes the
+  new book with its count cleared. No lock.
+- **Cylinders** (D25-18, D25-19): an item counted in "cylinder(s)" shows
+  **Full** and **Empty**, and a line "On deposit 5 · ₹1,700 each · ₹8,500 held ·
+  2 in use at the kitchen" (dashes until typed; when the stores hold more than
+  is on deposit it says so rather than a minus). Issue asks "Empties back from
+  the kitchen", Receive "Empties the supplier took back" - required, 0 an
+  answer. **Set levels and deposit** in More holds the two deposit figures.
+  History reads "Empties back from the kitchen", "Empties to the supplier",
+  "Empties counted", and an undo of one "Undo of a record of empties".
 - **No long dash** in anything the page shows (D17-48, D17-60): " - " inside a
   sentence, "-" where nothing is held or nothing is set. `stores.test.tsx`
   fails on one.
@@ -86,7 +113,7 @@ and both stay. A list can be imported from a file.
 
 ---
 
-## Server endpoints — 7
+## Server endpoints — 9
 
 The code is in `api/src/modules/stores/stores.ts` (moved 15 September); the
 door `index.ts` mounts it at `/api/hotels`. There is no module switch for the
@@ -95,25 +122,39 @@ store.
 ```
                                               grant needed (403 otherwise)
 GET    /:code/stores                          view     `stores` (Main first) and items: on hand,
-                                                       value, and `byStore` — what each store holds
+                                                       value, and `byStore` — what each store holds;
+                                                       `levels` and `lowIn` per store (139); for a
+                                                       cylinder item `empties`, `emptiesByStore`, the
+                                                       deposit, `depositHeld` and `inUse`
 GET    /:code/stores/items/:id/movements      view     one item's history; each row's `store`; a move
                                                        (and its undo) as ONE row with `fromStore`,
                                                        `toStore`; `who` named for the Inventory
                                                        Manager too (STO-4); `reversesKind` (STO-6)
 POST   /:code/stores/items                    create   add an item
-                                              + edit   if the name is already there (it overwrites)
+                                              + edit   if the name is already there (it overwrites),
+                                                       or with a level (the Main store's, D25-12/13)
+PATCH  /:code/stores/items/:id                edit     levels per store (null clears one) and, for a
+                                                       cylinder item, the two deposit figures (139)
 POST   /:code/stores/movements                create   receipt · issue · wastage · return
                                               edit     adjustment
                                                        `locationId` REQUIRED — a store at this
                                                        property; nothing received into a switched-off
                                                        one; an out-movement checks THAT store's on hand
+                                                       A cylinder item's issue needs `emptiesBack`, its
+                                                       receipt `emptiesTaken` (no more than that
+                                                       store's empties), each written as its own row
+POST   /:code/stores/counts                   edit     the count sheet: one adjustment per difference,
+                                                       "Count of <store>"; refused whole if a line's
+                                                       `book` is no longer the store's (D25-15)
 POST   /:code/stores/transfers                create   move from one store to another (106): both
                                                        halves in one statement, via app.transfer_stock
 POST   /:code/stores/movements/:id/reverse    edit     undo one movement with its own row, in its own
                                                        store — both halves of a move; refused (409) if
                                                        any store would be left below zero (STO-11)
 POST   /:code/stores/import                   create   items from a file; a row that changes
-                                                       an existing item needs edit, or is rejected
+                                                       an existing item needs edit, or is rejected;
+                                                       "Warn below" is the Main store's level, and
+                                                       needs edit too
 ```
 
 **Names in a history** come through `staff` as before, and for the Inventory
@@ -173,6 +214,22 @@ stock per store, moves between stores 112_stock_held_per_store.sql
   stock recorded before                back-filled into the Main store (D17-2), with the append-
                                        only and staff-scope guards lifted for that one statement
 ```
+
+levels, count, cylinders             139_store_levels_counts_and_cylinders.sql
+  a level per item per store           stock_levels (unique item + store; composite key to the item;
+                                       112's store check; no DELETE for the app); NULL or no row is no
+                                       level. Every item's old reorder_level moved to its Main store
+                                       (D25-12) and the column was emptied - nothing reads it now
+  cylinders                            app.counted_in_cylinders(unit): "cylinder" or "cylinders"
+  empties                              stock_movements.empty: a receipt (back from the kitchen), a
+                                       return (to the supplier) or an adjustment (counted), never a
+                                       cost; only on a cylinder item (trigger)
+  on hand is full only                 app.stock_on_hand (both) leave empties out;
+                                       app.stock_empties(item, store default null) counts them
+  an undo keeps an empty empty         app.reverse_stock_movement copies `empty` (same signature)
+  the deposit                          stock_items.cylinders_on_deposit, deposit_per_cylinder: typed,
+                                       NULL until typed
+  the count                            nothing new: each difference is an `adjustment`
 
 Value stays per item (S4): a store's worth is the item's average cost times
 what that store holds.
@@ -269,6 +326,17 @@ From `PENDING.md` and `PROGRESS.md`, as of 15 September:
     `db/tests/suite.sql`'s `store` group.
   - ~~An issue cannot say which outlet it went to from the screen.~~ It
     must, since 24 September (D22-20; the owner: "must choose each time").
+- Left by the Store's second part (25 September), each small, none decided:
+  - **A delivery through Purchasing does not ask for empties.**
+    `receiveIntoStore` (116's door) writes the full cylinders only; D25-18
+    asks every delivery how many empties the supplier took. Purchasing's
+    screen is not this lane's - a request below.
+  - **Undoing an issue does not undo the empties that came back with it.**
+    They are two rows; each is undone on its own line in History.
+  - **Empties cannot be moved between stores**: they sit in the store the
+    full cylinder was issued from. The count sheet corrects them.
+  - **No "last counted" date per store**, and nothing reminds anybody of the
+    monthly count (S6). Not asked for.
 
 ---
 
@@ -303,6 +371,7 @@ db/tests/modules/stores.sql                   106 in the database: the store che
 src/modules/stores/stores.test.tsx            the page: four states, More, look-only,
                                               undo asks first, a category must be chosen
 src/modules/stores/data/stores.test.ts        a failed read throws, never answers empty (STO-2)
+api/test/modules/stores/levelsCountsCylinders.test.ts  levels, the below list, the count, cylinders (139)
 ```
 
 ⚠ `stores.test.tsx` shares one query cache across the file (App.tsx's): its
@@ -319,6 +388,17 @@ what you need and why — and leave the change to whoever holds this
 service's claim.
 
 ## Requests from this service to the master
+
+- **25 September · the role gate** (`api/src/roleGate.ts`, shared): the two
+  new writes are listed under `/* stores */` as `own("stores/stockGrants.ts")`
+  - `PATCH …/stores/items/:id` and `POST …/stores/counts` - the way the
+  night-audit and finance lanes added theirs. Without them the gate refuses
+  both for everybody.
+- **25 September · Purchasing's delivery and empties (D25-18).** A cylinder
+  item delivered against an order should ask how many empties the supplier
+  took back. The Store's door could take an `emptiesTaken` beside the
+  quantity; Purchasing's screen would ask it. For the purchasing lane, with
+  the owner's word on whether it is wanted there.
 
 - **16 September · STO-9 · the shared dialog kit.** Measured at 375px in the
   Store's three dialogs: `DialogContent`'s Close button is **24×24px**, and

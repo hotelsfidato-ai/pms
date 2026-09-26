@@ -370,7 +370,9 @@ it("D25-14 · the below-level list names the store, what is there and the level 
 
     await screen.findByRole("button", { name: "Save the count" });
     const sheet = document.querySelector("[data-count-sheet]") as HTMLElement;
-    expect(sheet.textContent).not.toContain("Book");
+    /* The paper and a blank line show no book figure, and no verdict (D25-16). */
+    expect(sheet.textContent).not.toMatch(/Book|50/);
+    expect(sheet.querySelectorAll("[role=status]")).toHaveLength(0);
     expect(within(sheet).getByLabelText("Counted, LPG cylinder - empty, in cylinder")).toBeTruthy();
 
     fireEvent.change(within(sheet).getByLabelText("Counted, Bath towel, in piece"), { target: { value: "47" } });

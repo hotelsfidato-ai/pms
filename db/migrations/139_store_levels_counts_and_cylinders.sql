@@ -214,8 +214,9 @@ grant execute on function app.stock_empties(uuid, uuid) to pms_app;
 -- -----------------------------------------------------------------------------
 -- An undo keeps an empty an empty
 -- -----------------------------------------------------------------------------
--- 112's function, copying `empty` onto the undo row - without it, undoing
--- "one empty back" would take a FULL cylinder off the shelf.
+-- 112's function, copying `empty` onto the undo row, so an undo of empties
+-- reads as one in the history. (The sums already leave an undone row and its
+-- undo out, so no count depends on it.)
 create or replace function app.reverse_stock_movement(
   p_id bigint, p_by uuid, p_note text default null
 ) returns bigint

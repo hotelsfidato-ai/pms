@@ -250,6 +250,21 @@ describe("the Store, as every role a person can be given (STO-1)", () => {
         }
       });
 
+      it(`${create && edit ? "may" : "may not"} add a new item with a warning level`, async () => {
+        const name = `${TAG} levelled ${role}`;
+        const res = await call(who(), "POST", "/items", { name, unit: "piece", reorderLevel: 3 });
+        if (create && edit) {
+          await ok(res, "adding with a level");
+          expect(await itemNamed(name)).toBeDefined();
+        } else {
+          /* A level is edit on a new item too (D25-13): the kitchen manager adds
+             without one, and a request with one is refused whole. */
+          await refused(res, "adding with a level");
+          expect(await itemNamed(name), `${role} was refused and the item exists anyway`)
+            .toBeUndefined();
+        }
+      });
+
       /* A LEVEL AND A COUNT ARE `edit` (D25-13; the plan § 6 gives counting to
          the people who correct a count). */
       it(`${edit ? "may" : "may not"} set a store's level`, async () => {
