@@ -25,3 +25,4 @@
 | D27-21 | How long logs are kept (A8) | **1 year** (CERT-In 180 days now; DPDP 1 year from 13 May 2027) |
 | D27-22 | The CERT-In point of contact | **The owner, for both Fidato Hotels and Influvate** (two forms) |
 | D27-23 | The n8n alert workflow | **The owner builds it from the written steps**; no import file |
+| D27-24 | The operations work (backups off the server, logs, clock, notices): in tonight's release or separately | **Separately, after**: tonight's release stays as checked; ops/basics-27sep is merged after the owner has pushed it and has made the Oracle bucket and the n8n alert, then a small second release applies it |
