@@ -133,6 +133,40 @@ alone, and separately with `guest_details_submit` doing the same.
 **The rule** — Two guards in a row test as one unless each is asked on its
 own. Break the inner one with the outer one standing.
 
+### OCI-6 · The card sheet printed two cards on its first page and a blank last page
+
+**Found** — 25 September, by printing the sheet to an A4 PDF in headless Edge
+and counting the rooms on each page. Every test passed; on screen it looked
+right.
+
+Each card is 130 mm tall on paper, two rows to the page's 265 mm. The
+screen's own padding (`Page`'s `py-6`) printed too, so the first page had
+8 mm less and its second row went over: 2, 4, 4, 4, 4 and an empty sixth
+page. The cards also printed on the app's grey.
+
+**What was done** — the sheet drops its padding and grey on paper
+(`print:p-0 print:bg-white`) and the cards are white. 18 rooms now print on
+five pages, four to each, the last holding two.
+
+**The rule** — A printed layout is proved on paper, not on the screen: print
+it to PDF and count what each page holds.
+
+### OCI-7 · A test that said "not this booking" could not fail
+
+**Found** — 25 September, breaking the check-in's line to show on ANY waiting
+details: the test stayed green.
+
+It rendered the line for a booking whose details did not wait, waited until
+the call was MADE, and then asserted no link. The answer had not been drawn
+yet, so "no link" was true whatever the code did.
+
+**What was done** — two bookings on one screen from one answer: the link
+appears for the one that waits (proving the answer was drawn) and exactly one
+link exists. Seen to fail with the fault put back.
+
+**The rule** — A "nothing is shown" assertion needs something in the same
+render that proves the answer arrived.
+
 ---
 
 ## Adding one
