@@ -14,24 +14,6 @@ the reason the fault does not come back.
 
 ## Open — not fixed
 
-### BQ-1 · A restaurant bill cannot be charged to a banquet function — banquet's half DONE, the till's half open
-
-**Found** — 15 September, writing the brief, by reading.
-
-Nothing in the till sets `pos_orders.event_id`, so food ordered for a function cannot land on its bill. `PROGRESS.md` says it can.
-
-**Decided** — the owner, 17 September (D17-21): **build it**, banquet first, then the POS chat. And which functions the till may offer: **confirmed, bill open, running on the business date** (from its first day to its last).
-
-**What was done — banquet's half, 17 September**
-- The function's screen lists every open and settled restaurant order attached to it (outlet, table, time, amount, status), says an open one is not in the total until settled, and leaves abandoned ones out. The money line "From the till" became "Restaurant orders" — the same words as the list.
-- The rule is written once, in `api/src/modules/banquet/attach.ts`: `GET /:code/banquet/attachable` for the till's screen, and `whyNotAttachable` for the till's server, which refuses in a sentence that says which part of the rule failed.
-- Exported through both front doors (MODULE.md, "Front door").
-- `api/test/modules/banquet/attach.test.ts` — seen to fail with the status filter removed (a cancelled function offered), with the midnight rule removed (a function that ended at midnight offered the next day), and with abandoned orders let through.
-
-**Still open** — the till attaching an order (the POS chat). Until it ships, `PROGRESS.md`'s claim is still untrue, and `getAttachableFunctions` has no caller: `repositories.test.ts` Rule 2b fails on it, correctly (MODULE.md, Requests).
-
-**The rule** — A document that claims a feature the code does not have is a defect in the document.
-
 ### BQ-6 · A function's reference has no lock, and cuts long numbers
 
 **Found** — 17 September, by reading the register route while fixing BQ-7. Measured: `select lpad('10000', 4, '0')` is `1000`.
@@ -47,6 +29,28 @@ Nothing in the till sets `pos_orders.event_id`, so food ordered for a function c
 ---
 
 ## Fixed
+
+### BQ-1 · A restaurant bill cannot be charged to a banquet function — FIXED 17 September (both halves)
+
+**Found** — 15 September, writing the brief, by reading.
+
+Nothing in the till sets `pos_orders.event_id`, so food ordered for a function cannot land on its bill. `PROGRESS.md` says it can.
+
+**Decided** — the owner, 17 September (D17-21): **build it**, banquet first, then the POS chat. And which functions the till may offer: **confirmed, bill open, running on the business date** (from its first day to its last).
+
+**What was done — banquet's half, 17 September**
+- The function's screen lists every open and settled restaurant order attached to it (outlet, table, time, amount, status), says an open one is not in the total until settled, and leaves abandoned ones out. The money line "From the till" became "Restaurant orders" — the same words as the list.
+- The rule is written once, in `api/src/modules/banquet/attach.ts`: `GET /:code/banquet/attachable` for the till's screen, and `whyNotAttachable` for the till's server, which refuses in a sentence that says which part of the rule failed.
+- Exported through both front doors (MODULE.md, "Front door").
+- `api/test/modules/banquet/attach.test.ts` — seen to fail with the status filter removed (a cancelled function offered), with the midnight rule removed (a function that ended at midnight offered the next day), and with abandoned orders let through.
+
+**Then still open** — the till attaching an order (the POS chat). Until it ships, `PROGRESS.md`'s claim is still untrue, and `getAttachableFunctions` has no caller: `repositories.test.ts` Rule 2b fails on it, correctly (MODULE.md, Requests).
+
+**The till's half, done the same day** — the POS chat, commit `f671b19` (17 September), on cp6. Tables, the Terminal and the Till attach an order to a function (`components/FunctionPicker.tsx` reads `getAttachableFunctions`, so it has its caller); `till.ts` asks `whyNotAttachable` through banquet's front door before writing the order and again before settling it; an order on a function is paid on the function's bill only (payment "To a function", migration 099) - cash, card, UPI, room and split are refused for it.
+
+**Proved** — `api/test/modules/pos/functionOrders.test.ts` ("attaching an order to a banquet function", "paying for an order on a function - on the function's bill only", which settles one and finds the function's bill counts it once) and `src/modules/pos/functionOrders.test.tsx` (Tables, the Terminal, the Till); the commit records each seen to fail with its fault put back. Moved here 25 September.
+
+**The rule** — A document that claims a feature the code does not have is a defect in the document.
 
 ### BQ-8 · A function's time was stored in the SERVER's time zone — FIXED 18 September
 

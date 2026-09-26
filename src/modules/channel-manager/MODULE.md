@@ -20,9 +20,10 @@ db/tests/modules/channel-manager.sql  the SU tables: ids, uniqueness, grants, au
 
 The brief is `docs/briefs/channel-manager.md` (its 17 September section wins).
 Claim with `npm run claim -- channel-manager "what"`; `npm run lane --
-channel-manager` before a commit. **Do not run** `load-demo`, `demo`,
-`demo-history`, `reset`, `retire-staff` or `pos:outlet` from a copy until the
-master's fix lands (CM-1): each falls back to the master's `fidato` database.
+channel-manager` before a commit. `load-demo`, `demo`, `demo-history`,
+`reset`, `retire-staff` and `pos:outlet` write to this copy's own database or
+refuse (CM-1, fixed 17 September: `api/scripts/scriptDatabase.ts`); each
+prints where it is writing - read that line before it runs.
 
 ---
 
@@ -368,7 +369,8 @@ db      bash db/tests/run.sh    all pass; bash db/tests/rerun.sh re-runnable
 
 1. **17 Sep · the demo loader aims at the main database from a copy** (CM-1).
    Answered 17 Sep: four more scripts share it; the fix goes to the owner first;
-   the master writes the MEMORY lesson. Until then none of them is run from a copy.
+   the master writes the MEMORY lesson. **Done 17 Sep** (`425fd34`): every
+   script asks `scriptDatabase.ts`, and refuses rather than guess.
 2. **17 Sep · SU's settings in `env.ts`.** Answered 17 Sep: leave them in
    `su/config.ts`.
 3. **17 Sep · who may reach the SU connection.** Answered by the owner (D17-85):

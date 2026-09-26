@@ -27,6 +27,23 @@ A housekeeper marks 204 clean on a landing and the supervisor's screen does not 
 - The board polls every 30 seconds, as Tables does. Measured: a room changed from outside the browser moved on the open board 21.5 s later, no reload.
 - **Not done: told the moment it changes.** "Known and small" was right about the size and wrong about whose it is. Reading the live channel showed two of its three halves are the core's: `api/src/realtime.ts` looks a watcher up by the WHOLE payload (so a housekeeping change can only be a bare hotel id — which would wake every till and kitchen in the hotel for a room marked clean — or reach nobody), and `src/lib/useLiveOrders.ts` invalidates a fixed list of POS keys. A request for a topic on the channel is in `MODULE.md`.
 
+**17 September evening — the core's half, done by the master** (commit
+`f4cccf5`): the live channel carries a topic (`<hotel id>:<topic>`, a bare id
+is `orders`), the stream sends it, and the board listens with
+`useLive(hotelId, "housekeeping", …)` in `pages/Housekeeping.tsx`, keeping its
+poll as a floor (30 s, 60 s while the channel is live). The commit records a
+room set dirty in the database appearing on an open board without a reload.
+
+**Still open, 25 September, because only the server half is proved:**
+`api/test/live.test.ts`, "names the topic: a housekeeping change says
+housekeeping, an order says orders (HK-1)", and
+`api/test/modules/housekeeping/live.test.ts`, "the housekeeping board hears a
+change", prove the announcement reaches the channel with its topic. Nothing
+tests the board's own half - that a `housekeeping` event refetches the board's
+queries - so `useLive` could be taken off the board with every gate green. One
+web test (a `housekeeping` event, and the board's rooms asked for again) would
+close it.
+
 **The rule** — A screen two people share needs to say when it last knew. And a fix called small is sized by reading whose files it touches, not how many lines it is.
 
 ---

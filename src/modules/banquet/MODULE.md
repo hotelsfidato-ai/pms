@@ -220,9 +220,10 @@ No Start here card and no glossary line names anything in this service.
 
 ## Open items
 
-- **BQ-1, the till's half** — the POS chat attaches an order to one of
-  `getAttachableFunctions`' functions, and asks `whyNotAttachable` on the
-  server. Until then no order can reach a function.
+- ~~**BQ-1, the till's half**~~ — done by the POS chat on 17 September
+  (`f671b19`): the till attaches an order to one of
+  `getAttachableFunctions`' functions and asks `whyNotAttachable` on the
+  server. `DEFECTS.md` BQ-1, now under Fixed.
 - **BQ-6** — a new function's reference has no lock and cuts past four
   digits (the MEMORY 280 fault). Recorded; the owner chose to fix it later.
 - The general rule in PENDING § 2: refusals after a write have not been
@@ -266,6 +267,9 @@ db/tests/suite.sql                         group `banquet` (frozen)
    it to `KNOWN_UNREACHABLE` at the merge, with D17-21 as the reason (the
    shrink-only test then insists it comes off when POS imports it), or merge
    banquet and the POS half together. Not worked around here.
+   **Answered by the POS half (17 September):** `src/modules/pos/components/
+   FunctionPicker.tsx` calls it, and it is not in `KNOWN_UNREACHABLE`
+   (checked 25 September).
 2. **One `ReadProblem` for everybody.** The owner wanted the banquet screens to
    say a failed read the restaurant's way, so `components/ReadProblem.tsx` is a
    named copy of `src/modules/pos/components/ReadProblem.tsx`. Moving one copy

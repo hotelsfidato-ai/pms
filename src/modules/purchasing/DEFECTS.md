@@ -34,6 +34,21 @@ buttons.
 **Left open for the owner and the master:** whether a shared approvals screen is
 wanted. If it is built, both services drop their buttons and point at it.
 
+**Answered and built** — the owner's D18-19 (18 September): "Build one
+Approvals screen. One inbox, everything waiting on you, decided in place. The
+service screens keep their own buttons." Built by the master on 19 September
+(commit `0b3757f`): `src/pages/Approvals.tsx` at `/h/:code/approvals`, in the
+menu as "Approvals", posting to the same core endpoint as the purchase order
+and the equipment register - a second view, not a second engine. So purchasing
+KEEPS its buttons.
+
+**Still open, 25 September, because no test opens it:** the engine is tested
+(`api/test/approvals.test.ts`), but nothing in the web suite renders the
+Approvals screen or finds its menu entry, so it could lose its route with every
+gate green - the way the brief's claim went wrong the first time. One web test
+(the screen lists a waiting purchase request and decides it through the core
+endpoint) would close it.
+
 **The rule:** "the screen that exists" is checked by opening it, not by reading
 that a brief says so.
 

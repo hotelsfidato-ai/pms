@@ -28,3 +28,17 @@
 | D25-24 | Where it sits in the menu | **Point of sale → "Restaurant setup"**, the last entry |
 | D25-25 | The empty Tables screen | **A "Set up tables" button for owner, admin and GM**; a waiter sees today's sentence only |
 | D25-26 | The ready-to-open list | **Six ticks, each linking to its screen**: restaurant named; at least one table; at least one dish; every dish has a GST rate; at least one person with the Waiter role; restaurant switched on |
+| D25-27 | Five fixes built but held by no test (ADM-4 audit-log links, FD-7 Today on a phone, INV-2 Room types heading, HK-1 the board refreshing itself, PUR-2 the Approvals screen), found by the notes session | **One small test each, then close them**; no behaviour changes |
+| D25-28 | The Rate calendar screen is headed "Inventory and rates" while its menu says "Rate calendar" (INV-2's second half) | **"Rate calendar"** (D17-22: a heading is its menu name); its test updated |
+| D25-29 | The Bill tab (D24-18): who sees the Interim bill print, which the server does not gate; and a line's Reverse and Move (asked by the Bill tab session; found in its commit 4e8722d) | **The Interim bill for whoever may see bills** (invoice view); **Reverse and Move hidden too** from anyone the server refuses |
+| D25-30 | Who sells and hosts the system (asked by the selling-in-India audit) | **Influvate (the owner's company) sells AND hosts every buyer's copy**; Fidato Hotels is one customer with its own copy |
+| D25-31 | Who owns the code | **Influvate** |
+| D25-32 | The product's name | **A new name, not Fidato** (to be chosen) |
+| D25-33 | Influvate's GST registration | **Already GST-registered** |
+| D25-34 | How buyers pay | **A yearly subscription per property** |
+| D25-35 | Where buyers may be | **Anywhere in India** |
+| D25-36 | Online payments | **None for now: guests pay at the desk** |
+| D25-37 | Aadhaar (the audit's A1): the system stores the full number (D21-17); the Aadhaar Act s.8A(4)(b) may forbid it | **Ask the lawyer first**; nothing changes until the lawyer answers |
+| D25-38 | Who may read guests' ID and Form C data (A7: any login could open the Form C report) | **Owner, admin, GM, hotel manager and reception** — the people who check guests in; nobody else sees passport or ID details |
+| D25-39 | Marketing consent (C5): opt-out today (D21-22); the DPDP law asks opt-in from 13 May 2027 | **Opt-in now**: only guests who ticked yes get offers |
+| D25-40 | Cash of ₹2 lakh or more from one guest for one stay or event (A6; Income-tax Act 2025 s.186) | **Refused**, telling the desk to take the rest another way; **above ₹1 lakh the desk is asked for a PAN** (Rule 159) |
