@@ -53,6 +53,7 @@ off (`navigation.ts`, section `point-of-sale`, `receptionNeeds: "reception_pos"`
 | Menu | `/h/:code/menu` | `pages/Menu.tsx` | kitchen manager |
 | Close restaurant day | `/h/:code/till/day-end` | `pages/DayEnd.tsx` | waiter, kitchen manager, Reception |
 | Charges to rooms | `/h/:code/pos` | `pages/Pos.tsx` | none |
+| Restaurant setup | `/h/:code/till/setup` | `pages/Setup.tsx` | none - the owner, an administrator and the GM see it (`room_config` edit; D22-6, D25-20 to D25-26, 25 Sep) |
 | — (not in the menu) kitchen docket | `/h/:code/till/orders/:id/kot/:no` | `pages/Docket.tsx` | opened in a new tab on every send that reaches the kitchen — by the Terminal and, since 17 September, by Tables' order pad; never shows prices |
 | — (not in the menu) printed bill | `/h/:code/till/bill/:id` | `pages/Bill.tsx` | opened from an order |
 
@@ -63,9 +64,11 @@ off (`navigation.ts`, section `point-of-sale`, `receptionNeeds: "reception_pos"`
   `canSee` beside it in `nav.ts` (Tables, Till, Terminal: the `payment` grant
   or the waiter role; Kitchen: `payment`, chef or kitchen manager; Menu: the
   `rate` grant or kitchen manager; Close restaurant day: `payment`, waiter or
-  kitchen manager; Charges to rooms: the `invoice` grant).
+  kitchen manager; Charges to rooms: the `invoice` grant; Restaurant setup:
+  `room_config` edit - owner, admin, GM).
 - `components/PosGate.tsx` wraps Tables, Till, Terminal, Kitchen, Menu and
-  Close restaurant day. It asks the server `GET /till/access` first and shows
+  Close restaurant day, and Restaurant setup (which also sits in
+  `RequireAccess`). It asks the server `GET /till/access` first and shows
   the server's own sentence when the answer is no (MEMORY 251). Docket, Bill
   and Charges to rooms are not wrapped.
 - Dialogs and panels in `flows/`: `OrderPad.tsx` (the pad over the floor),
@@ -82,7 +85,7 @@ off (`navigation.ts`, section `point-of-sale`, `receptionNeeds: "reception_pos"`
 
 ---
 
-## Server endpoints — 63
+## Server endpoints — 71
 
 The code is in `api/src/modules/pos/` (moved 15 September): `till.ts` (the
 till, **3,555 lines** — splitting it into parts is not done yet) and `pos.ts`
@@ -156,6 +159,19 @@ day end     GET    /:code/till/day-end
             POST   /:code/till/day-end/movements
             POST   /:code/till/day-end/count
             POST   /:code/till/day-end/close
+setup       GET    /:code/till/setup                        D22-6 (25 Sep): the restaurant (the REST outlet), its
+                                                            sections - an empty one too - and tables, each table's
+                                                            `busy` (a bill on it), and how many have the Waiter role
+            POST   /:code/till/setup/restaurant             names REST, or makes it through addOutlet, with no key
+            POST   /:code/till/setup/sections               a section of a switched-off name comes back on
+            PATCH  /:code/till/setup/sections/:id           rename
+            POST   /:code/till/setup/sections/:id/off       switched off, never deleted; refused while a bill sits
+                                                            on one of its tables
+            POST   /:code/till/setup/sections/:id/tables    one ({ label }) or a run ({ prefix, from, to }), at most
+                                                            100; seats optional, null when blank; four to a row
+            PATCH  /:code/till/setup/tables/:id             label and seats, both sent
+            POST   /:code/till/setup/tables/:id/off         switched off, never deleted; refused while a bill sits
+                                                            on it (open, or paid and not cleared)
 kitchen     GET    /:code/kitchen
             POST   /:code/kitchen/lines/:lineId/:to
 ```
@@ -179,6 +195,9 @@ GET    /api/hotels/:code/pos/tickets   the Charges to rooms screen
 ```
 
 Outlet keys are issued by `cd api && npm run pos:outlet` (`api/scripts/pos-outlet.ts`).
+The hotel's own restaurant - the `REST` outlet Tables, the Till and Close
+restaurant day open - is made on Restaurant setup (25 Sep), with no key. Both
+make the row through one function, `addOutlet` in `pos.ts`.
 
 ---
 
@@ -291,9 +310,9 @@ Nothing imports it through the door today: `api/test/padTotal.test.ts` imports
 the restaurant's screens (commit `3cd6f51`).
 
 The server's door, `api/src/modules/pos/index.ts`, exports `mounts` and
-`outletFor`, `hashKey`, `issueKey`, `Outlet`. `api/src/server.ts` imports
+`outletFor`, `hashKey`, `issueKey`, `addOutlet`, `Outlet`. `api/src/server.ts` imports
 `outletFor` through it. `api/scripts/pos-outlet.ts` and `api/test/modules/pos/pos.test.ts`
-import `hashKey` and `issueKey` through it as well.
+import `hashKey` and `issueKey` through it as well (the script `addOutlet` too).
 
 ---
 

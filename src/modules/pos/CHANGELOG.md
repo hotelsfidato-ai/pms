@@ -11,6 +11,20 @@ Work that touches the core or several services still goes in the root
 
 ---
 
+## 2026-09-25 · Restaurant setup: a new hotel's restaurant without the script — D22-6
+
+**Asked for:** D22-6, "a screen to set up a hotel's restaurant till and tables - yes, before the second hotel". Until now the restaurant (the `REST` outlet Tables, the Till and Close restaurant day open) came only from the demo or `npm run pos:outlet`, and sections and tables only from the demo. **The owner's answers** (D25-20 to D25-26): the restaurant's name, its sections and tables, and a ready-to-open list of six ticks; owner, admin and GM only; tables one at a time or a numbered run, seats optional (a dash when blank); taking a table or section away switches it off, refused while a bill is on it; Point of sale → Restaurant setup, last; "Set up tables" on an empty Tables screen for those who may.
+
+**Shipped:** `pages/Setup.tsx` at `/h/:code/till/setup` (RequireAccess + PosGate); `GET /till/setup` and seven writes in `till.ts`, behind the till's gates, on roleGate `TILL_SETUP` (`room_config` edit); `addOutlet` in `pos.ts`, the one way an outlet row is made - the screen makes REST with no key (staff_id the person who set it up), `pos-outlet.ts` uses it for keyed outlets. The "Set up tables" button on `Floor.tsx`. No migration.
+
+**Found:** POS-17 (mine, caught before commit: the list read a kept menu); POS-18 (the shell's: a typed address keeps the sign-in property's role - reported to the master).
+
+**Proved** (tree with cp6 3399768 merged): web tsc exit 0; API tsc exit 0; web 666/666; API 1,478/1,479 - the one, `reports.test.ts` "counts available rooms from the day the property first traded", timed out at 20 s under load and passed 30/30 run alone; database 1,154 assertions; 138 migrations re-runnable. New: `api/test/modules/pos/tillSetup.test.ts` (16: a fresh property with no restaurant set up through the routes, then a first order rung on its table) and `tillSetup.test.tsx` (5). Seen failing with the rule taken out: the busy refusal (1 of 16), the GST tick (1 of 5). `npm run pos:outlet` made a keyed outlet through `addOutlet` and listed it. On screen: a new property SEC set up by the GM (name, A/C run AC1-AC6, Non A/C N1), a dish on Menu, then the waiter rang Dal Tadka on AC1 (order 20260825-1, ₹180 at 5%, sent to the kitchen). Screens: `.local/screenshots/2026-09-25-till-setup/` (01-08, desktop and phone). The waiter was rostered by SQL (adding a person needs Firebase).
+
+**Left open:** POS-18 (the master's). A second outlet and an outside till's key on screen were not chosen.
+
+---
+
 ## 2026-09-24 · The heading picker's three questions, answered — D24-10 to D24-12
 
 **Asked for:** the night-audit lane of 24 September put the three questions the

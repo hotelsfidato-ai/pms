@@ -1,5 +1,6 @@
 import { Route } from "react-router";
 import { PropertyScope } from "@/components/app/PropertyScope";
+import { RequireAccess } from "@/components/app/RequireAccess";
 import { PosGate } from "@/modules/pos/components/PosGate";
 import TillPage from "@/modules/pos/pages/Till";
 import FloorPage from "@/modules/pos/pages/Floor";
@@ -10,6 +11,7 @@ import TerminalPage from "@/modules/pos/pages/Terminal";
 import DocketPage from "@/modules/pos/pages/Docket";
 import BillPage from "@/modules/pos/pages/Bill";
 import PosPage from "@/modules/pos/pages/Pos";
+import SetupPage from "@/modules/pos/pages/Setup";
 
 /* The restaurant's screen addresses. Mounted by App.tsx inside the
    signed-in shell. */
@@ -43,6 +45,16 @@ export const routes = (
     <Route
       path="/h/:code/kitchen"
       element={<><PropertyScope /><PosGate><KitchenPage /></PosGate></>}
+    />
+    {/* Restaurant setup (D22-6): the owner, an administrator and the GM,
+        asked of the menu entry itself; the server asks the same. */}
+    <Route
+      path="/h/:code/till/setup"
+      element={
+        <RequireAccess path="/h/:code/till/setup" resource="room_config">
+          <PropertyScope /><PosGate><SetupPage /></PosGate>
+        </RequireAccess>
+      }
     />
     <Route
       path="/h/:code/till/terminal"
