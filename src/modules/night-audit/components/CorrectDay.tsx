@@ -10,15 +10,22 @@ import {
 } from "@/modules/night-audit/data/nightAudit";
 
 /* ══════════════════════════════════════════════════════════════════
-   CORRECTING A CLOSED DAY (D22-18; the owner's D24-1 to D24-8)
+   CORRECTING A CLOSED DAY (D22-18; the owner's D24-1 to D24-8, D25-5 to D25-9)
 
-   A room charge or a no-show charge that landed on a closed day wrong:
-   choose it, give the right figure or take it off, and say why. Nothing is
+   Any charge that landed on a closed day wrong - the room, a no-show, the
+   minibar, a restaurant bill charged to the room (D25-5): choose it, give the right figure or take it off, and say why. Nothing is
    edited - the wrong line stays on the bill and the reversal and the right
    charge sit beside it on the same day, so that day's reports show the
    corrected figure. The owner, an administrator and the GM correct; anybody
    who reads Closed days sees the corrections made.
    ══════════════════════════════════════════════════════════════════ */
+
+/** How a charge is named in the list. The bill's own category otherwise. */
+const KIND: Record<string, string> = {
+  room: "Room charge", "no-show": "No-show charge", restaurant: "Restaurant bill",
+  food: "Food", beverage: "Beverage", spa: "Spa", laundry: "Laundry",
+  minibar: "Minibar", telephone: "Telephone", misc: "Other charge",
+};
 
 export function CorrectDay({ hotelId, day, canCorrect, onClose }: {
   hotelId: string;
@@ -87,7 +94,7 @@ export function CorrectDay({ hotelId, day, canCorrect, onClose }: {
                 <legend className="text-sm font-medium text-ink-900 mb-2">Charge to correct</legend>
                 {data.charges.length === 0 ? (
                   <p className="text-sm text-grey-600">
-                    No room charge or no-show charge on this day is left to correct.
+                    No charge on this day is left to correct.
                   </p>
                 ) : (
                   <div className="grid gap-2">
@@ -98,18 +105,23 @@ export function CorrectDay({ hotelId, day, canCorrect, onClose }: {
                         <input
                           type="radio" name="charge" value={c.id}
                           checked={chosen?.id === c.id}
-                          disabled={c.invoice !== null}
+                          disabled={c.invoice !== null || c.vatBill !== null}
                           onChange={() => setChosen(c)}
                           className="mt-1 size-4 shrink-0"
                         />
                         <span className="min-w-0 flex-1">
                           <span className="block text-base text-ink-900">{c.description}</span>
                           <span className="block text-sm text-grey-600">
-                            {c.kind === "room" ? "Room charge" : "No-show charge"} · {c.guest ?? "-"}
+                            {KIND[c.kind] ?? c.kind} · {c.guest ?? "-"}
                           </span>
                           {c.invoice && (
                             <span className="block text-sm text-brand-yellow-800 mt-1">
                               This bill has tax invoice {c.invoice}. Issue a credit note instead.
+                            </span>
+                          )}
+                          {!c.invoice && c.vatBill && (
+                            <span className="block text-sm text-brand-yellow-800 mt-1">
+                              This bill has VAT bill {c.vatBill}. Cancel the VAT bill instead.
                             </span>
                           )}
                         </span>
@@ -127,7 +139,9 @@ export function CorrectDay({ hotelId, day, canCorrect, onClose }: {
             {canCorrect && chosen && (
               <div className="space-y-4">
                 <Field label="The right figure, before tax" required
-                  hint="The tax is worked out again, as the night audit does.">
+                  hint={chosen.kind === "room"
+                    ? "The tax is worked out again, as the night audit does."
+                    : "The tax stays at the rate it was charged at."}>
                   {(f) => (
                     <Input {...fieldProps(f)} type="number" inputMode="decimal" min={0} step="0.01"
                       value={takeOff ? "" : figure} disabled={takeOff}

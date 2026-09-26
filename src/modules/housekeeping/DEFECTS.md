@@ -14,7 +14,13 @@ entries stay here: they are the reason the fault does not come back.
 
 ## Open — not fixed
 
-### HK-1 · The board never refreshes itself
+Nothing open (26 September).
+
+---
+
+## Fixed — the solution is here; do not work it out again
+
+### HK-1 · The board never refreshes itself - FIXED 17 September, the board's half held by a test 26 September
 
 **Found** — 8 September, measured: five requests, no duplicates, all under 15 ms. It is not slow — it has no refresh at all. Defect 218; **deferred by the owner** ("leave this for now").
 
@@ -34,21 +40,23 @@ is `orders`), the stream sends it, and the board listens with
 poll as a floor (30 s, 60 s while the channel is live). The commit records a
 room set dirty in the database appearing on an open board without a reload.
 
-**Still open, 25 September, because only the server half is proved:**
-`api/test/live.test.ts`, "names the topic: a housekeeping change says
-housekeeping, an order says orders (HK-1)", and
-`api/test/modules/housekeeping/live.test.ts`, "the housekeeping board hears a
-change", prove the announcement reaches the channel with its topic. Nothing
-tests the board's own half - that a `housekeeping` event refetches the board's
-queries - so `useLive` could be taken off the board with every gate green. One
-web test (a `housekeeping` event, and the board's rooms asked for again) would
-close it.
+**Both halves held by tests.** The server's: `api/test/live.test.ts`, "names
+the topic: a housekeeping change says housekeeping, an order says orders
+(HK-1)", and `api/test/modules/housekeeping/live.test.ts`, "the housekeeping
+board hears a change". The board's, from 26 September (D25-27):
+`housekeeping.test.tsx`, "reads the rooms again the moment the live channel
+says housekeeping" - the stream stubbed, one `changed` frame naming
+`housekeeping`, and the board's rooms asked for again. Seen failing with
+`useLive` taken off the board: `the board never opened the live channel`.
 
 **The rule** — A screen two people share needs to say when it last knew. And a fix called small is sized by reading whose files it touches, not how many lines it is.
 
----
+### HK-11 · The room status routes read two GST columns they never used — FIXED 25 September
 
-## Fixed — the solution is here; do not work it out again
+`roomStatus.ts`' `resolve` selected `hotels.cgst_rate` and `sgst_rate` and
+typed them `string`; since 136 they may be null, and nothing here used them.
+Both dropped from the query and the type. No test: nothing read them, and
+the type check proves nothing does now.
 
 ### HK-2 · The board's offline read failed the whole test run
 

@@ -223,9 +223,9 @@ describe("correcting a closed day", TEST_LIMIT, () => {
         return {
           charges: [
             { id: "71", description: "Room 204 · 1 night", kind: "room", guest: "Asha Rao",
-              amount: 3000, tax: 150, invoice: null },
+              amount: 3000, tax: 150, invoice: null, vatBill: null },
             { id: "72", description: "Room 205 · 1 night", kind: "room", guest: "Ravi Iyer",
-              amount: 3000, tax: 150, invoice: "FH/26-27/0042" },
+              amount: 3000, tax: 150, invoice: "FH/26-27/0042", vatBill: null },
           ],
           corrections: [],
         } as never;
@@ -260,5 +260,39 @@ describe("correcting a closed day", TEST_LIMIT, () => {
     await waitFor(() => expect(posted).toEqual([
       { postingId: "71", newAmount: 2500, reason: "Corporate rate" },
     ]), SLOW);
+  });
+
+  it("lists every other charge by its kind; drinks with a VAT bill are refused on sight; their tax is kept (D25-5, D25-7, D25-9)", async () => {
+    asGm();
+    server({ closedDays: [madeByPriya] });
+    const plain = vi.mocked(apiModule.api).getMockImplementation()!;
+    vi.mocked(apiModule.api).mockImplementation(async (url: string, init?: RequestInit) => {
+      if (url === `/api/hotels/${HOTEL}/night-audit/days/${SHOWN}/charges`) {
+        return {
+          charges: [
+            { id: "81", description: "Restaurant - R0012", kind: "restaurant", guest: "Asha Rao",
+              amount: 400, tax: 20, invoice: null, vatBill: null },
+            { id: "82", description: "Restaurant - R0012 (VAT 10%)", kind: "restaurant", guest: "Asha Rao",
+              amount: 500, tax: 50, invoice: null, vatBill: "VAT/AGR/2026-27/0003" },
+            { id: "83", description: "Minibar", kind: "minibar", guest: "Ravi Iyer",
+              amount: 120, tax: 6, invoice: null, vatBill: null },
+          ],
+          corrections: [],
+        } as never;
+      }
+      return plain(url, init);
+    });
+    renderScreen();
+
+    fireEvent.click((await screen.findAllByRole("button", { name: "Correct" }, SLOW))[0]!);
+    await screen.findByText("Restaurant - R0012", {}, SLOW);
+    expect(screen.getAllByText("Restaurant bill · Asha Rao")).toHaveLength(2);
+    expect(screen.getByText("Minibar · Ravi Iyer")).toBeTruthy();
+    expect(screen.getByText("This bill has VAT bill VAT/AGR/2026-27/0003. Cancel the VAT bill instead.")).toBeTruthy();
+    const radios = screen.getAllByRole("radio") as HTMLInputElement[];
+    expect(radios.map((r) => r.disabled)).toEqual([false, true, false]);
+
+    fireEvent.click(radios[0]!);
+    expect(screen.getByText("The tax stays at the rate it was charged at.")).toBeTruthy();
   });
 });

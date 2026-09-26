@@ -270,8 +270,8 @@ From `PENDING.md`:
   Offline. **Done the same evening by the master** (`f4cccf5`): being told the
   moment a room changes — the channel carries a topic and the board listens
   for `housekeeping`. The server half is tested (`api/test/live.test.ts`); the
-  board's own listening is not, so HK-1 stays open in `DEFECTS.md` until a web
-  test holds it.
+  board's own listening is too since 26 September (`housekeeping.test.tsx`,
+  D25-27), so HK-1 is fixed in `DEFECTS.md`.
 - **Worth asking the owner:** the housekeeper's list has no Rooms screen —
   approved as listed, one search away (PENDING § 5a).
 - **Defect 243's shape** — checked on 17 September in the work order routes,

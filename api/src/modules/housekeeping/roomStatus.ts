@@ -31,16 +31,13 @@ interface HotelRow {
   currency: string;
   check_in_time: string;
   check_out_time: string;
-  cgst_rate: string;
-  sgst_rate: string;
 }
 
 async function resolve(client: Client, code: string) {
   const { rows } = await client.query<HotelRow>(
     `select id, code, name, address_line, city, phone, email, gstin, currency,
             to_char(check_in_time,  'HH24:MI') as check_in_time,
-            to_char(check_out_time, 'HH24:MI') as check_out_time,
-            cgst_rate, sgst_rate
+            to_char(check_out_time, 'HH24:MI') as check_out_time
        from hotels
       where code = upper($1) and is_active`,
     [code],

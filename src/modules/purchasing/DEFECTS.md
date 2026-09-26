@@ -14,7 +14,30 @@ the reason the fault does not come back.
 
 ## Open — not fixed
 
-### PUR-2 · There is no approvals screen, and the brief said there was one
+### PUR-3 · The Approvals screen linked a purchase request to an address that does not exist — FIXED 26 September
+
+**Found** — 26 September, writing PUR-2's test (the five-tests session, D25-27).
+On the Approvals screen a purchase request's "Purchase request" link goes to
+`/h/<code>/purchasing/requests/<id>` (`src/data/repositories/approvals.ts:54`,
+`KINDS.purchase.where`). Purchasing's screen for one request is mounted at
+`/h/:code/purchasing/:id` (`routes.tsx`), which is where its own list goes
+(`Purchasing.tsx:198`). Nothing matches the longer address, so `App.tsx`'s
+catch-all sends the person to `/` with no word about why - ADM-4's fault again.
+Read from the code; not yet opened in a browser.
+
+**Fixed** — 26 September, by the master with the owner's yes: the link is
+`/h/${code}/purchasing/${a.subject.id}` (`src/data/repositories/approvals.ts`).
+`purchasing.test.tsx` PUR-2's test now also checks the link's address; with
+the old path put back it fails "expected '/h/PUA/purchasing/requests/waiting'
+to be '/h/PUA/purchasing/waiting'".
+
+**The rule** — ADM-4's: a link is a claim about an address. Open it.
+
+---
+
+## Fixed — the solution is here; do not work it out again
+
+### PUR-2 · There is no approvals screen, and the brief said there was one - BUILT 19 September, held by a test 26 September
 
 `docs/briefs/purchasing.md` says the GM approves "in the approvals inbox that
 exists". The ENGINE exists (076, `api/src/routes/approvals.ts`) and so do its
@@ -42,19 +65,17 @@ menu as "Approvals", posting to the same core endpoint as the purchase order
 and the equipment register - a second view, not a second engine. So purchasing
 KEEPS its buttons.
 
-**Still open, 25 September, because no test opens it:** the engine is tested
-(`api/test/approvals.test.ts`), but nothing in the web suite renders the
-Approvals screen or finds its menu entry, so it could lose its route with every
-gate green - the way the brief's claim went wrong the first time. One web test
-(the screen lists a waiting purchase request and decides it through the core
-endpoint) would close it.
+**Held by a test, 26 September (D25-27)** — the engine was already tested
+(`api/test/approvals.test.ts`); the screen now is too. `purchasing.test.tsx`,
+"lists a waiting purchase on the Approvals screen and decides it through the
+core (PUR-2)": the GM's menu has `/h/:code/approvals`, the address opens the
+screen headed "Approvals", the waiting purchase is listed, and Approve posts to
+`/api/hotels/<code>/approvals/<id>/approved`. Seen failing with the route taken
+out of `App.tsx`: `Unable to find role="heading" and name "Approvals"`. Writing
+it found PUR-3.
 
 **The rule:** "the screen that exists" is checked by opening it, not by reading
 that a brief says so.
-
----
-
-## Fixed — the solution is here; do not work it out again
 
 ### PUR-1 · Housekeeping can be switched on as a requester and still be refused the screen
 

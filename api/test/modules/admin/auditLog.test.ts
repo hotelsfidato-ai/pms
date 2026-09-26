@@ -122,6 +122,27 @@ describe("recorded - the desk's postings say who made them", () => {
   });
 });
 
+/* ADM-4: two links to this log pointed at /h/<code>/admin/audit-log, where
+   nothing is mounted, so the person landed on the Dashboard. The screen is
+   /admin/audit-log (src/modules/admin/routes.tsx). The two reversals above
+   are what put the bell's entry up. */
+describe("the links to it go where the screen is (ADM-4)", () => {
+  it("the night-audit checklist and the bell both link to /admin/audit-log", async () => {
+    const get = async (path: string) => {
+      const res = await app.request(`/api/hotels/${HOTEL}${path}`, {
+        headers: { "x-dev-staff-id": ownerId },
+      });
+      expect(res.status, await res.clone().text()).toBe(200);
+      return res.json();
+    };
+    const { checks } = (await get("/night-audit")) as { checks: { id: string; link?: string }[] };
+    expect(checks.find((c) => c.id === "reversals")?.link).toBe("/admin/audit-log");
+
+    const bell = (await get("/notifications")) as { id: string; link: string }[];
+    expect(bell.find((n) => n.id === "reversals-today")?.link).toBe("/admin/audit-log");
+  });
+});
+
 describe("shown - the audit log names them", () => {
   it.each([
     ["the owner", () => ownerId],

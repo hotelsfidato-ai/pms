@@ -110,6 +110,27 @@ superuser for another machine. Moved here 25 September.
 script that falls back to a default database reaches the master's data from any
 copy, and "it uses my settings file" is a guess until the line says so.
 
+### CM-5 · SU was sent a day the hotel had already closed — FIXED 25 September
+
+**Found** — 24 September, by the front desk's polish (FD-16 found the same
+read at the desk): the push's first date (`firstSellableDate`, `ari/source.ts`)
+and the Availability screen's rack-rate count (`ari/routes.ts`) took
+`greatest(hotels.business_date, today)`. `hotels.business_date` never moves
+once a night audit has run; the hotel's day is `app.business_date`, the day
+after the last closed one. So after an audit run before midnight, the push
+started on the day just closed and the screen counted it as selling.
+
+**Fixed** — `firstSellableDate` reads `app.business_date(h.id)`; the rack
+count asks `firstSellableDate` itself instead of a second copy of the rule.
+
+**Proved** — `suAvailability.test.ts`, "a property whose day is closed": with
+today closed at 5EL, SU's first date and the screen's first rack date are
+tomorrow. Without the source fix: "expected '2026-09-25' to be '2026-09-26'";
+without the route fix, the same, at the count.
+
+**The rule** — the day is `app.business_date` (or `businessDateFor`), never
+the `hotels` column.
+
 ### CM-3 · Part 1 shipped code the production server cannot load — FIXED 17 September
 
 **Found** — 17 September, by the master, after part 1 was merged into cp6:

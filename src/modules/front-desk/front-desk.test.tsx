@@ -73,6 +73,17 @@ describe("the tape chart at /h/:code/stay", () => {
     expect(container.querySelectorAll("[data-date-col]")).toHaveLength(14);
   });
 
+  /* FD-7 (D17-41): at 375px, after paging a week, "Today" ended three pixels
+     past the screen's edge. The row now wraps. jsdom has no layout, so the
+     class is what is held, as Input.test.tsx holds the kit's touch sizes. */
+  it("puts Today, once a week is paged, in a row that wraps (FD-7)", async () => {
+    render(<App />);
+    await showCalendar();
+    fireEvent.click(screen.getByRole("button", { name: "Next week" }));
+    const today = await screen.findByRole("button", { name: "Today" });
+    expect(today.parentElement!.className.split(" ")).toContain("flex-wrap");
+  });
+
   it("renders the seventeen sellable rooms, not the eighteen physical ones", async () => {
     const { container } = render(<App />);
     await showCalendar();
