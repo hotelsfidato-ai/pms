@@ -800,18 +800,40 @@ async function closedDays(
      D24-5  this month and the month before
      D24-8  a guest who has left and paid may be owed money back: allowed
 
+   And of 25 September (docs/briefs/decisions-2026-09-25.md):
+
+     D25-5  every charge, not only the room and no-show ones; never a
+            payment, a refund or a discount
+     D25-6  a restaurant bill charged to a room: the room bill's line only
+     D25-7  drinks whose VAT bill is issued are refused: cancel it instead
+     D25-8  the same limits as a room charge
+     D25-9  a charge that is not the room keeps the tax it was charged at
+
    Nothing is edited. The wrong line stays; a reversal and the right charge
    sit beside it on the same day, both naming the correction row, which the
    database lets onto a closed day and nothing else (134). The reports drop a
    reversed line and its reversal (reports/figures.ts, LIVE), so that day's
    figures move by exactly the difference. */
 
-/** What can be corrected (D24-1): a room charge, or a no-show charge the
-    audit posted (or a correction made of either), still standing. */
+/** What can be corrected (D24-1, D25-5): a charge still standing - the
+    reports' own "not a charge" list (reports/figures.ts) left out. */
 const CORRECTABLE = `
   fp.reverses_id is null and fp.amount > 0
-  and (fp.category = 'room' or fp.source_type in ('night_audit', 'correction'))
+  and fp.category not in ('payment', 'refund', 'discount', 'tax')
   and not exists (select 1 from folio_postings rev where rev.reverses_id = fp.id)`;
+
+/** Where the line first came from, through any corrections of it (139). */
+const ORIGIN = `(case when fp.source_type = 'correction'
+  then (select c.origin from closed_day_corrections c where c.id = fp.source_id)
+  else fp.source_type end)`;
+
+/** The VAT bill standing on a drinks line's bill (D25-7): issued and not
+    cancelled - app.issue_vat_bill's own test (135). */
+const STANDING_VAT_BILL = `(
+  select v.number from vat_bills v
+   where fp.tax_scheme = 'vat' and v.folio_id = fp.folio_id and v.cancels_id is null
+     and not exists (select 1 from vat_bills c where c.cancels_id = v.id)
+   order by v.issued_at desc limit 1)`;
 
 /** The tax invoice standing on the line's bill: issued and not credited -
     finance's own test before it issues another (invoices.ts). */
@@ -830,12 +852,19 @@ nightAudit.get("/:code/night-audit/days/:date/charges", async (c) => {
     if (!hotelId) return null;
 
     const { rows: charges } = await client.query<{
-      id: string; description: string; category: string; amount: string;
-      tax: string; guest: string | null; invoice: string | null;
+      id: string; description: string; kind: string; amount: string;
+      tax: string; guest: string | null; invoice: string | null; vat_bill: string | null;
     }>(
-      `select fp.id::text as id, fp.description, fp.category,
+      /* The kind as the Manager report sorts it: a no-show charge by its
+         words, a restaurant bill by where it came from. */
+      `select fp.id::text as id, fp.description,
+              case when fp.category = 'room' then 'room'
+                   when fp.description like 'Retention%no-show' then 'no-show'
+                   when ${ORIGIN} = 'pos' then 'restaurant'
+                   else fp.category end as kind,
               fp.amount::text as amount, fp.tax_amount::text as tax,
-              g.full_name as guest, ${STANDING_INVOICE} as invoice
+              g.full_name as guest, ${STANDING_INVOICE} as invoice,
+              ${STANDING_VAT_BILL} as vat_bill
          from folio_postings fp
          join folios f on f.id = fp.folio_id
          left join reservations r on r.id = coalesce(fp.reservation_id, f.reservation_id)
@@ -863,11 +892,12 @@ nightAudit.get("/:code/night-audit/days/:date/charges", async (c) => {
       charges: charges.map((r) => ({
         id: r.id,
         description: r.description,
-        kind: r.category === "room" ? "room" : "no-show",
+        kind: r.kind,
         guest: r.guest,
         amount: Number(r.amount),
         tax: Number(r.tax),
         invoice: r.invoice,
+        vatBill: r.vat_bill,
       })),
       corrections: corrections.map((r) => ({
         id: r.id,
@@ -928,11 +958,12 @@ nightAudit.post("/:code/night-audit/days/:date/corrections", async (c) => {
     const { rows: found } = await client.query<{
       folio_id: string; reservation_id: string | null; category: string;
       description: string; amount: string; tax_rate: string; tax_amount: string;
-      invoice: string | null;
+      tax_scheme: string; origin: string | null; invoice: string | null; vat_bill: string | null;
     }>(
       `select fp.folio_id::text, fp.reservation_id::text, fp.category, fp.description,
-              fp.amount::text, fp.tax_rate::text, fp.tax_amount::text,
-              ${STANDING_INVOICE} as invoice
+              fp.amount::text, fp.tax_rate::text, fp.tax_amount::text, fp.tax_scheme,
+              ${ORIGIN} as origin,
+              ${STANDING_INVOICE} as invoice, ${STANDING_VAT_BILL} as vat_bill
          from folio_postings fp
         where fp.hotel_id = $1 and fp.business_date = $2::date and fp.id = $3::bigint
           and ${CORRECTABLE}`,
@@ -940,18 +971,23 @@ nightAudit.post("/:code/night-audit/days/:date/corrections", async (c) => {
     );
     const p = found[0];
     if (!p) {
-      return refuse(`That is not a room charge or a no-show charge still standing on ${dayMonth(day)}.`);
+      return refuse(`That is not a charge still standing on ${dayMonth(day)}. `
+        + "Payments, refunds and discounts are not corrected here.");
     }
     if (p.invoice) {
       return refuse(`This bill has tax invoice ${p.invoice}. Issue a credit note instead.`);
+    }
+    if (p.vat_bill) {
+      return refuse(`This bill has VAT bill ${p.vat_bill}. Cancel the VAT bill instead.`);
     }
     if (amount === Number(p.amount)) {
       return refuse("That is the figure the charge already has.");
     }
 
     /* The GST, as the audit decides it. A room charge's slab follows its own
-       amount, so a new figure can change the rate. A no-show charge's rate was
-       decided by the room it was ancillary to, which has not changed: kept. */
+       amount, so a new figure can change the rate. Every other charge keeps
+       the tax it was charged at (D25-9), as a transfer does: a no-show
+       charge's rate was decided by its room, a drink's VAT by its menu. */
     let rate = Number(p.tax_rate);
     if (amount > 0 && p.category === "room") {
       const { rows } = await client.query<{ rate: string | null }>(
@@ -968,10 +1004,10 @@ nightAudit.post("/:code/night-audit/days/:date/corrections", async (c) => {
 
     const { rows: made } = await client.query<{ id: string }>(
       `insert into closed_day_corrections
-         (hotel_id, business_date, posting_id, old_amount, new_amount, reason)
-       values ($1, $2::date, $3::bigint, $4::numeric, $5::numeric, $6)
+         (hotel_id, business_date, posting_id, old_amount, new_amount, reason, origin)
+       values ($1, $2::date, $3::bigint, $4::numeric, $5::numeric, $6, $7)
        returning id::text`,
-      [hotelId, day, postingId, p.amount, amount, reason],
+      [hotelId, day, postingId, p.amount, amount, reason, p.origin],
     );
     const correction = made[0]!.id;
 
@@ -995,15 +1031,17 @@ nightAudit.post("/:code/night-audit/days/:date/corrections", async (c) => {
       throw error;
     }
 
+    /* The reversal took its tax scheme from the line it reverses (126); the
+       right charge is told: a drink's VAT is still VAT (D21-91). */
     if (amount > 0) {
       await client.query(
         `insert into folio_postings
            (hotel_id, folio_id, reservation_id, business_date, category, description,
-            amount, tax_rate, tax_amount, source_type, source_id)
+            amount, tax_rate, tax_amount, tax_scheme, source_type, source_id)
          values ($1, $2, $3, $4::date, $5, $6, $7::numeric, $8::numeric,
-                 round($7::numeric * $8::numeric / 100.0, 2), 'correction', $9::uuid)`,
+                 round($7::numeric * $8::numeric / 100.0, 2), $10, 'correction', $9::uuid)`,
         [hotelId, p.folio_id, p.reservation_id, day, p.category, p.description,
-         amount, rate, correction],
+         amount, rate, correction, p.tax_scheme],
       );
     }
 

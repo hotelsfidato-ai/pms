@@ -232,13 +232,12 @@ postings.post("/:code/stays/:id/charges/:postingId/reverse", async (c) => {
       id: string; folio_id: string; business_date: string; category: string;
       description: string; amount: string; tax_rate: string; tax_amount: string;
       reverses_id: string | null; already: boolean;
-      source_type: string | null; day_closed: boolean;
+      day_closed: boolean;
     }>(
       `select fp.id::text, fp.folio_id, fp.business_date::text, fp.category,
               fp.description, fp.amount, fp.tax_rate, fp.tax_amount,
               fp.reverses_id::text,
               exists (select 1 from folio_postings r where r.reverses_id = fp.id) as already,
-              fp.source_type,
               exists (select 1 from night_audit_runs na
                        where na.hotel_id = fp.hotel_id
                          and na.business_date = fp.business_date
@@ -255,12 +254,12 @@ postings.post("/:code/stays/:id/charges/:postingId/reverse", async (c) => {
     if (p.reverses_id) return refuse("A reversal cannot itself be reversed.");
     /* A line on a closed day reverses on its own day, which the database
        refuses (012), and this said "Something went wrong". The owner's D24-9
-       and D24-13: say where it is corrected - only a room or no-show charge
-       can be, on Closed days (the night audit's CORRECTABLE). */
+       and D25-11: every charge is corrected on Closed days (the night audit's
+       CORRECTABLE); a payment, refund or discount is not changed at all. */
     if (p.day_closed) {
-      return refuse(p.category === "room" || p.source_type === "night_audit" || p.source_type === "correction"
-        ? "This day is closed - correct it on Closed days."
-        : "This day is closed. Only its room and no-show charges can be corrected, on Closed days.");
+      return refuse(["payment", "refund", "discount", "tax"].includes(p.category)
+        ? "This day is closed. Its payments, refunds and discounts are not changed - put the difference right today."
+        : "This day is closed - correct it on Closed days.");
     }
 
     /* The reversal is its OWN row, pointing at what it undoes. The
