@@ -144,6 +144,34 @@ describe("the board refreshes itself (HK-1, D17-39)", () => {
     }
   });
 
+  /* The live half (f4cccf5): the board is told the moment a room changes.
+     The server's half is api/test/live.test.ts; this is the board's own -
+     a `housekeeping` event on the channel, and the rooms asked for again. */
+  it("reads the rooms again the moment the live channel says housekeeping", async () => {
+    let line: ReadableStreamDefaultController<Uint8Array> | undefined;
+    let atConnect = 0;
+    vi.stubGlobal("fetch", async (url: string) => {
+      if (!String(url).endsWith(`/api/hotels/${HOTEL}/live`)) return new Promise(() => {});
+      atConnect = board.calls;
+      return { ok: true, body: new ReadableStream<Uint8Array>({ start: (c) => { line = c; } }) };
+    });
+    try {
+      board.failing = false;
+      go(`/h/${HOTEL}/housekeeping`);
+      render(<App />);
+      await card("201");
+      await waitFor(() => expect(line, "the board never opened the live channel").toBeDefined());
+      /* Connecting reads everything once; that read lands first. */
+      await waitFor(() => expect(board.calls).toBeGreaterThan(atConnect));
+      const before = board.calls;
+
+      line!.enqueue(new TextEncoder().encode("event: changed\ndata: housekeeping\n\n"));
+      await waitFor(() => expect(board.calls).toBeGreaterThan(before));
+    } finally {
+      vi.unstubAllGlobals();
+    }
+  });
+
   it("still says the rooms did not load when it never had any", async () => {
     board.failing = true;
     try {
