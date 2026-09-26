@@ -224,12 +224,13 @@ invoices.post("/:code/stays/:id/invoice", async (c) => {
 
     const { rows: made } = await client.query<{ id: string }>(
       `insert into invoices
-         (hotel_id, folio_id, fin_year, number, gstin,
+         (hotel_id, folio_id, fin_year, number, gstin, fssai_number,
           recipient_name, recipient_gstin, recipient_address,
           place_of_supply, taxable_value, cgst_total, sgst_total,
           tax_total, total, business_date, issued_by)
        values ($1,$2,$3,$4,
                (select gstin from hotels where id = $1),
+               (select fssai_number from hotels where id = $1),
                $5,$6,$7,$8,$9,$10,$11,$12,$13,$14,
                app.current_user_id())
        returning id::text`,
@@ -313,7 +314,7 @@ invoices.get("/:code/invoices/:number{.+}", async (c) => {
               i.folio_id::text,
               h.name as hotel_name, h.address_line as hotel_address,
               h.city as hotel_city, h.state as hotel_state,
-              h.fssai_number as hotel_fssai,
+              i.fssai_number,
               s.full_name as issued_by
          from invoices i
          join hotels h on h.id = i.hotel_id
@@ -362,10 +363,9 @@ invoices.get("/:code/invoices/:number{.+}", async (c) => {
       supplier: {
         name: i["hotel_name"], address: i["hotel_address"],
         city: i["hotel_city"], state: i["hotel_state"], gstin: i["gstin"],
-        /* A16: printed when the invoice carries food. The hotel's number
-           as it stands - ponytail: not frozen at issue as the GSTIN is;
-           freeze it on the invoice if a hotel's number ever changes. */
-        fssai: i["hotel_fssai"],
+        /* A16: printed when the invoice carries food - the number the
+           invoice was issued with, frozen like the GSTIN (D27-3). */
+        fssai: i["fssai_number"],
       },
       recipient: {
         name: i["recipient_name"], gstin: i["recipient_gstin"],
@@ -554,12 +554,13 @@ invoices.post("/:code/invoices/:number{.+}/credit-note", async (c) => {
        a GST return. */
     await client.query(
       `insert into invoices
-         (hotel_id, folio_id, fin_year, number, gstin,
+         (hotel_id, folio_id, fin_year, number, gstin, fssai_number,
           recipient_name, recipient_gstin, recipient_address,
           place_of_supply, taxable_value, cgst_total, sgst_total,
           tax_total, total, business_date, credits_id, reason, issued_by)
        values ($1,$2,$3,$4,
                (select gstin from hotels where id = $1),
+               (select fssai_number from hotels where id = $1),
                $5,$6,$7,$8,$9,$10,$11,$12,$13,
                app.business_date($1), $14::uuid, $15,
                app.current_user_id())`,

@@ -114,6 +114,8 @@ export async function settle(
     method: PaymentMethod; amount: number; businessDate: string;
     /** D25-40: more than ₹1,00,000 in cash at once needs one of these. */
     pan?: string; form97?: boolean;
+    /** D27-4: the desk confirmed a payment larger than the bill. */
+    heldAsCredit?: boolean;
   },
 ): Promise<OperationResult<Posting>> {
   try {

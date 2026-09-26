@@ -95,7 +95,7 @@ of the old `inventorySetup.ts` (`3ca215d`).
 |---|---|---|
 | POST | `/:code/stays/:id/charges` | post a charge; everything the desk posts carries the room rate of GST (`app.gst_rate`), unless the clerk marks it not taxable |
 | POST | `/:code/stays/:id/charges/:postingId/reverse` | reverse a charge — once (021) |
-| POST | `/:code/stays/:id/payments` | take a payment: a posting and its receipt |
+| POST | `/:code/stays/:id/payments` | take a payment: a posting and its receipt; one guest's (and group's) payments take turns (D27-2); more than the bill only with `heldAsCredit: true`, else refused with `needs: "credit"` (D27-4) |
 
 **`api/src/modules/finance/cashier.ts`** (cut from the old `api/src/routes/operations.ts`)
 
@@ -166,7 +166,7 @@ migrations that made or changed them:
 | `folio_postings` | every charge, reversal and payment line | created `006_folio.sql` (money is `numeric(12,2)`; append-only; `business_date` is a real column); `011_model_additions.sql` (`idempotency_key`), `012_integrity.sql` (no posting onto a closed day), `014_simulation_fixes.sql` (UPDATE and DELETE revoked; same-hotel keys), `015_edge_cases.sql` (the tax must match the one rate on the line; no zero lines), `021_reversal_once.sql` (a line is reversed at most once), `056_group_billing.sql` (`reservation_id`, filled by a trigger) |
 | `payments` | the receipt behind a payment line | created `011_model_additions.sql`; `014_simulation_fixes.sql` (same hotel as its posting), `016_audit_coverage.sql` (never zero; audited) |
 | `vat_bills`, `vat_bill_series` | VAT bills for alcohol and their credit notes (D22-44): their own series per hotel, `VAT/5EL/2026-27/0001`, opened by the year's first bill so it restarts each 1 April | "a separate VAT bill for alcohol" (135 in this branch: `app.next_vat_bill_number`, `app.issue_vat_bill`; 025's immutability trigger) |
-| `invoices`, `invoice_series` | tax invoices and credit notes, numbered from a statutory series | created `011_model_additions.sql` (`app.next_invoice_number`); `013_policies.sql` (numbering protected), `014_simulation_fixes.sql` (the first invoice at a property), `016_audit_coverage.sql` (a series only moves forward), `025_invoices_form_c.sql` (the GST fields, credit notes, never edited, a series opened for each new property) |
+| `invoices`, `invoice_series` | tax invoices and credit notes, numbered from a statutory series | created `011_model_additions.sql` (`app.next_invoice_number`); `013_policies.sql` (numbering protected), `014_simulation_fixes.sql` (the first invoice at a property), `016_audit_coverage.sql` (a series only moves forward), `025_invoices_form_c.sql` (the GST fields, credit notes, never edited, a series opened for each new property); "the FSSAI number on the invoice" (145 in this branch: `fssai_number`, copied from the hotel at issue and printed from there, D27-3) |
 | `cashier_shifts`, `cashier_movements`, `cashier_denominations` | the desk's drawer | created `059_cashier_shift.sql` (`app.cashier_expected_cash`; a closed shift is final) |
 | `tax_rules` | GST as rules, one set for the desk and the till — and VAT on alcohol (kind `alcohol`) | created `067_tax_rules.sql` (`app.gst_rate`; the tax kind on outlets and menu categories); `119_the_spa.sql` (`spa`); "alcohol, a switch per property, and the VAT it is taxed under" (126 in this branch: `alcohol` as a kind and a menu heading, `folio_postings.tax_scheme` and `pos_order_lines.tax_scheme` gst/vat, a reversal takes its original's scheme, `app.pos_order_by_tax`, `app.stay_bill`'s `vat` rows) |
 

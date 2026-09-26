@@ -43,7 +43,7 @@ interface FolioRow {
  * being pointed at. Both are excluded, which is what makes a reversal
  * cancel rather than merely annotate.
  */
-const FOLIO_SELECT = `
+export const FOLIO_SELECT = `
   with live as (
     /* fp.* CARRIES reservation_id SINCE 056, so the folio's own is no longer
        selected alongside it - two columns of one name made every later

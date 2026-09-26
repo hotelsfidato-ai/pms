@@ -16,6 +16,7 @@ const SUPER =
 const TAG = "FSSAITEST";
 const people: Record<"gm" | "desk", string> = { gm: "", desk: "" };
 let was: string | null = null;
+let invoiced = "";
 
 async function sql<T>(text: string, values: unknown[] = []): Promise<T[]> {
   const db = new (await import("pg")).default.Pool({ connectionString: SUPER });
@@ -100,6 +101,7 @@ describe("the FSSAI licence number", () => {
     const issued = await call(people.gm, "POST", `/stays/${stay!.id}/invoice`);
     const { number } = (await issued.json()) as { number: string };
     expect(number, "an invoice was issued").toBeTruthy();
+    invoiced = number;
     const res = await call(people.gm, "GET", `/invoices/${number}`);
     expect(res.status, await res.clone().text()).toBe(200);
     expect(((await res.json()) as { supplier: { fssai: string | null } }).supplier.fssai)
@@ -109,5 +111,11 @@ describe("the FSSAI licence number", () => {
   it("is cleared by a blank, and then nothing is invented", async () => {
     expect((await call(people.gm, "PUT", "/fssai", { fssai: " " })).status).toBe(200);
     expect(await stored()).toBeNull();
+  });
+
+  it("stays on an invoice already issued, as it was issued (D27-3)", async () => {
+    const res = await call(people.gm, "GET", `/invoices/${invoiced}`);
+    expect(((await res.json()) as { supplier: { fssai: string | null } }).supplier.fssai)
+      .toBe("12345678901234");
   });
 });

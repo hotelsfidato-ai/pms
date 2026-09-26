@@ -22,7 +22,8 @@ const run = String(process.pid % 10000).padStart(4, "0");
 let owner = "";
 let source = "";
 let roomType = "";
-const stays: Record<"a" | "b" | "c" | "d" | "e", string> = { a: "", b: "", c: "", d: "", e: "" };
+const stays: Record<"a" | "b" | "c" | "d" | "e" | "f" | "g", string> =
+  { a: "", b: "", c: "", d: "", e: "", f: "", g: "" };
 
 async function sql<T>(text: string, values: unknown[] = []): Promise<T[]> {
   const db = new (await import("pg")).default.Pool({ connectionString: SUPER });
@@ -52,8 +53,11 @@ async function book(name: string, phone: string, guestId?: string): Promise<stri
   return row!.id;
 }
 
+/* These stays have no bill, so every payment here is more than the bill and
+   is held as credit (D27-4) - confirmed, since that is not what most of this
+   file is about. The last describe asks it. */
 const pay = async (stay: string, body: Record<string, unknown>) => {
-  const res = await call(`/stays/${stay}/payments`, body);
+  const res = await call(`/stays/${stay}/payments`, { heldAsCredit: true, ...body });
   return { status: res.status, out: (await res.json()) as { ok: boolean; reason?: string; needs?: string } };
 };
 const payments = (stay: string) => sql<{ amount: string; pan: string | null; form_97: boolean }>(
@@ -80,6 +84,8 @@ beforeAll(async () => {
   stays.c = await book("Form 97 Guest", `6${run}00002`);
   stays.d = await book("Guest From Abroad", `6${run}00003`);
   stays.e = await book("Exactly Two Lakh", `6${run}00004`);
+  stays.f = await book("Two Clerks At Once", `6${run}00005`);
+  stays.g = await book("Pays Too Much", `6${run}00006`);
   await sql(
     "update guests set nationality = 'GB' where id = (select guest_id from reservations where id = $1)",
     [stays.d]);
@@ -179,5 +185,77 @@ describe("cash of ₹2,00,000 or more from one guest (s.186)", () => {
     expect(status).toBe(409);
     expect(out.reason).toMatch(/^Cash of ₹2,00,000 or more from one guest is not allowed.*Take less than ₹2,00,000 in cash\./);
     expect(await payments(stays.e)).toEqual([]);
+  });
+});
+
+describe("one guest's payments take turns (D27-2)", () => {
+  it("lets only one of two same-second cash payments pass the limit", async () => {
+    /* The stay's folio, held by another transaction: each payment's line
+       waits on it, so both requests are in flight together before either can
+       write. Without the turn both read "nothing taken yet" and both land. */
+    const charge = await call(`/stays/${stays.f}/charges`,
+      { category: "Laundry", description: `${tag} laundry`, amount: 100, taxable: false });
+    expect(charge.status, await charge.clone().text()).toBe(200);
+    const db = new (await import("pg")).default.Pool({ connectionString: SUPER });
+    const holder = await db.connect();
+    try {
+      await holder.query("begin");
+      await holder.query("select 1 from folios where reservation_id = $1 for update", [stays.f]);
+      const [{ pid }] = (await holder.query<{ pid: number }>("select pg_backend_pid() as pid")).rows as [{ pid: number }];
+
+      const both = [pay(stays.f, { method: "Cash", amount: 100000 }),
+                    pay(stays.f, { method: "Cash", amount: 100000 })];
+      /* Both waiting: on the held folio, or on the other payment's turn.
+         Asked on another connection - inside the holder's transaction
+         pg_stat_activity stays as it was first read. */
+      for (let waited = 0; ; waited += 50) {
+        const [{ n }] = (await db.query<{ n: number }>(
+          `with first as (select pid from pg_stat_activity where $1 = any(pg_blocking_pids(pid)))
+           select count(*)::int as n from pg_stat_activity a
+            where a.pid in (select pid from first)
+               or exists (select 1 from first f where f.pid = any(pg_blocking_pids(a.pid)))`,
+          [pid])).rows as [{ n: number }];
+        if (n >= 2) break;
+        if (waited > 10_000) throw new Error("the two payments never met");
+        await new Promise((r) => setTimeout(r, 50));
+      }
+      await holder.query("commit");
+
+      const results = await Promise.all(both);
+      expect(results.map((r) => r.status).sort()).toEqual([200, 409]);
+      expect(results.find((r) => r.status === 409)!.out.reason).toMatch(
+        /₹1,00,000.00 has been taken in cash already, so less than ₹1,00,000.00 more can be cash\./);
+      expect(await payments(stays.f)).toEqual([{ amount: "100000.00", pan: null, form_97: false }]);
+    } finally {
+      await holder.query("rollback").catch(() => {});
+      holder.release();
+      await db.end();
+    }
+  });
+});
+
+describe("a payment larger than the bill (D27-4)", () => {
+  const credit = (x: string) => `This is ₹${x} more than the bill; it will be held as the guest's credit.`;
+
+  it("is taken without a question while it is within the bill", async () => {
+    const charge = await call(`/stays/${stays.g}/charges`,
+      { category: "Laundry", description: `${tag} laundry`, amount: 1000, taxable: false });
+    expect(charge.status, await charge.clone().text()).toBe(200);
+    expect((await pay(stays.g, { method: "UPI", amount: 400, heldAsCredit: false })).status).toBe(200);
+  });
+
+  it("names how much more, and writes nothing until the desk confirms", async () => {
+    const { status, out } = await pay(stays.g, { method: "Credit Card", amount: 1100, heldAsCredit: false });
+    expect(status).toBe(409);
+    expect(out).toMatchObject({ ok: false, reason: credit("500.00"), needs: "credit" });
+    expect(await payments(stays.g)).toHaveLength(1);
+  });
+
+  it("takes it once confirmed, and asks again for any more once the bill is paid", async () => {
+    expect((await pay(stays.g, { method: "Credit Card", amount: 1100 })).status).toBe(200);
+    expect(await payments(stays.g)).toHaveLength(2);
+    const { status, out } = await pay(stays.g, { method: "Cash", amount: 100, heldAsCredit: false });
+    expect(status).toBe(409);
+    expect(out.reason).toBe(credit("100.00"));
   });
 });
