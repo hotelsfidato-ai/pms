@@ -28,3 +28,15 @@
 | D27-24 | The operations work (backups off the server, logs, clock, notices): in tonight's release or separately | **Separately, after**: tonight's release stays as checked; ops/basics-27sep is merged after the owner has pushed it and has made the Oracle bucket and the n8n alert, then a small second release applies it |
 | D27-25 | Form C replaced by Form III (Immigration and Foreigners Act 2025, in force 1 Sep 2025; the audit's A3): arrival and departure each within 24 hours, more details | **Start a session now, high effort**; it re-reads the Act and Rules and asks the owner anything unclear |
 | D27-26 | Redesign every screen with the fidato-design skill (the look approved as D22-47 to D22-51) | **Start a session now**: shared parts first, then screen group by group, each shown to the owner before the next; screens keep their words, figures and behaviour; the Form III screens wait until that lane merges |
+| D27-27 | The CRS and the PMS (the platform plan's PL-1) | **The CRS stays a separate app and talks to the PMS through its API** |
+| D27-28 | The leads and WhatsApp history (PL-2) | **Moved into the PMS once, and the old app retired**. Replaces D21-5 "linked, never copied" |
+| D27-29 | WhatsApp numbers (PL-3) | **One number, one inbox for sales and hotels** (keeps D17-89) |
+| D27-30 | What Influvate sells (PL-4) | **Everything, the CRS included** (the master had recommended the CRS stay Fidato's) |
+| D27-31 | The transition (PL-5) | **The old app and its Firestore stay live until the full switch**; the screens are built natively in the PMS; a one-way continuous copy runs Firestore → PMS; on switch day the old app goes read-only |
+| D27-32 | Where the CRS runs (PL-6) | **Moves onto the PMS server and Postgres later, before its first buyer** |
+| D27-33 | The New booking screen (PL-7) | **Takes every recorded field of the owner's Add Reservation screenshot, in our layout** |
+| D27-34 | Order of work (PL-8) | **The booking screen first, then the CRS bridge, then the rest one phase after another**, built by parallel sessions |
+| D27-35 | A CRS booking for an owned hotel (PL-9) | **Arrives WAITING (tentative) with the room held; the hotel confirms; then ONE voucher goes** — the same voucher and template whoever sends it (sales, the CRS, or the desk), recorded so it never goes twice |
+| D27-36 | Room discounts (PL-10) | **The restaurant's rule**: 10% by hand with a reason, more only by a named promotion |
+| D27-37 | Sales person on a booking (PL-11) | **Picked from a list the owner keeps** |
+| D27-38 | The Firestore → PMS copy (PL-12) | **Reads only what changed**, staying on the free plan |
