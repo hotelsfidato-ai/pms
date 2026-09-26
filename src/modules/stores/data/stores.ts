@@ -48,12 +48,25 @@ export interface StockItem {
   name: string;
   unit: string;
   category: string | null;
+  /** For an item counted in cylinders: the FULL ones (D25-18). */
   onHand: number;
-  /** Null means nobody asked to be warned about this one — which is not
-      the same as "warn me when it runs out". */
-  reorderLevel: number | null;
-  /** Derived on the server so a list and a report cannot disagree. */
+  /** The level set in each store, by store id (D25-12). A store with none is
+      absent: a dash, never "below" - which is not "warn me when it runs out". */
+  levels: Record<string, number>;
+  /** The stores switched on where it is at or below its level (D25-14).
+      Derived on the server so a list and a report cannot disagree. */
+  lowIn: string[];
   low: boolean;
+  /** Counted in "cylinder" (D25-18): shows full and empty, and a deposit. */
+  cylinder: boolean;
+  empties: number;
+  emptiesByStore: Record<string, number>;
+  /** Typed on the item (D25-19); null until typed - a dash. */
+  cylindersOnDeposit: number | null;
+  depositPerCylinder: number | null;
+  depositHeld: number | null;
+  /** On deposit, less full and empty in the stores. Null with no deposit. */
+  inUse: number | null;
   /** Null until something has been received. A dash, never a zero. */
   unitCost: number | null;
   value: number | null;
@@ -91,6 +104,8 @@ export interface StockMovement {
   /** This row WAS undone. Different fact, and the history is unreadable
       without both. */
   reversed: boolean;
+  /** Empty cylinders, not full ones (D25-18). */
+  empty: boolean;
 }
 
 type Result<T = unknown> = ({ ok: true } & T) | { ok: false; reason: string };
@@ -144,11 +159,42 @@ export async function recordStockMovement(
     /** Which store. Required (106): the server refuses a movement that does
         not say. */
     locationId: string;
+    /** A cylinder item (D25-18): empties back on an issue, empties the
+        supplier took on a delivery. Required there; 0 is an answer. */
+    emptiesBack?: number;
+    emptiesTaken?: number;
   },
 ): Promise<Result<{
-  id: string; onHand: number; onHandHere: number; store: string; unit: string; name: string;
+  id: string; onHand: number; onHandHere: number; emptiesHere: number | null;
+  store: string; unit: string; name: string;
 }>> {
   return call(`/api/hotels/${hotelId}/stores/movements`, "POST", input);
+}
+
+/** An item's levels per store (null clears one), and a cylinder's deposit
+    (null is "not typed"). Only what is named changes. */
+export async function setStockItem(
+  hotelId: string, itemId: string,
+  input: {
+    levels?: Record<string, number | null>;
+    cylindersOnDeposit?: number | null;
+    depositPerCylinder?: number | null;
+  },
+): Promise<Result> {
+  return call(`/api/hotels/${hotelId}/stores/items/${itemId}`, "PATCH", input);
+}
+
+/** One line of a count: what the sheet showed as the book, and what was
+    counted. A blank line is not sent - never a zero (D25-17). */
+export interface CountLine {
+  itemId: string; empty: boolean; book: number; counted: number; reason?: string;
+}
+
+/** Save a store's count: one correction per difference (D25-15..17). */
+export async function saveStockCount(
+  hotelId: string, input: { locationId: string; lines: CountLine[] },
+): Promise<Result<{ recorded: number; matched: number; store: string }>> {
+  return call(`/api/hotels/${hotelId}/stores/counts`, "POST", input);
 }
 
 /** Move stock from one store to another: one act, both halves (106). */

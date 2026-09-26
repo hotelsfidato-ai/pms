@@ -3,13 +3,15 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useParams } from "react-router";
 import {
   Package, Plus, TrendingDown, TrendingUp, Trash2, Undo2, AlertTriangle,
-  Upload, CornerUpLeft, ClipboardCheck, History, ArrowLeftRight,
+  Upload, CornerUpLeft, ClipboardCheck, History, ArrowLeftRight, Bell,
+  ClipboardList, Printer,
 } from "lucide-react";
 import { cn } from "@/lib/cn";
 import { money, dateShort, timeOnly } from "@/lib/format";
 import { ApiError } from "@/lib/api";
 import { can } from "@/lib/permissions";
 import { useRole } from "@/lib/session";
+import { useDocumentIdentity } from "@/lib/documentIdentity";
 import {
   Page, PageHeader, Card, CardBody, Button, Skeleton, EmptyState, ErrorState,
   Dialog, DialogContent, Field, fieldProps, Input, NativeSelect,
@@ -17,8 +19,9 @@ import {
 } from "@/components/ui";
 import {
   getStore, getStockHistory, addStockItem, recordStockMovement, moveStock,
-  reverseStockMovement, importStockItems,
+  reverseStockMovement, importStockItems, setStockItem, saveStockCount,
   type StockItem, type StockKind, type StockMovement, type MovementKind, type StoreSummary,
+  type CountLine,
 } from "@/modules/stores/data/stores";
 import { ImportDialog } from "@/components/flows/ImportDialog";
 import { STOCK_SPEC } from "@/lib/importSpec";
@@ -83,6 +86,15 @@ const NOUN: Record<MovementKind, string> = {
 };
 const withArticle = (noun: string) => `${/^[aeiou]/.test(noun) ? "an" : "a"} ${noun}`;
 
+/* EMPTY CYLINDERS in the history (D25-18): back from the kitchen on an issue,
+   to the supplier on a delivery, or counted. */
+const EMPTY_LABEL: Partial<Record<MovementKind, string>> = {
+  receipt: "Empties back from the kitchen",
+  return: "Empties to the supplier",
+  adjustment: "Empties counted",
+};
+const nounOf = (m: StockMovement) => (m.empty ? "record of empties" : NOUN[m.kind]);
+
 /* LOOK, OR CHANGE (STO-1). The owner's table: `create` receives, issues,
    wastes, returns, moves and adds; `edit` corrects a count and undoes. A person
    who may only look — housekeeping, the chef, the accountant, a viewer — gets
@@ -127,6 +139,8 @@ export default function StoresPage() {
   const [moving, setMoving] = useState<{ item: StockItem; kind: StockKind } | null>(null);
   const [transferring, setTransferring] = useState<StockItem | null>(null);
   const [history, setHistory] = useState<StockItem | null>(null);
+  const [levelling, setLevelling] = useState<StockItem | null>(null);
+  const [counting, setCounting] = useState(false);
   const [importing, setImporting] = useState(false);
   const [storeId, setStoreId] = useState(ALL_STORES);
 
@@ -155,7 +169,16 @@ export default function StoresPage() {
       ? null : Math.round(here * i.unitCost * 100) / 100;
   };
 
-  const low = items.filter((i) => i.low);
+  /* THE BELOW-LEVEL LIST (D25-14): each item at or below its level, in which
+     store - the picked one only, when one is picked. It only shows; buying is
+     Purchasing's screen. */
+  const below = items.flatMap((i) => i.lowIn
+    .filter((s) => !picked || s === picked.id)
+    .flatMap((s) => {
+      const store = stores.find((x) => x.id === s);
+      return store ? [{ item: i, store }] : [];
+    }));
+  const belowItems = new Set(below.map((b) => b.item.id)).size;
   /* Only what has a value. An item nobody has received contributes
      nothing to a total rather than zero — and if EVERYTHING is unpriced
      the total is a dash, not ₹0. */
@@ -235,12 +258,23 @@ export default function StoresPage() {
               onMove={(kind) => setMoving({ item: i, kind })}
               onTransfer={() => setTransferring(i)}
               onHistory={() => setHistory(i)}
+              onLevels={() => setLevelling(i)}
             />
           ))}
         </ul>
       </section>
     ));
   })();
+
+  /* The count replaces the list, so the sheet prints on its own. */
+  if (counting && q.data !== undefined) {
+    return (
+      <CountSheet code={code} stores={stores} items={items}
+                  startStoreId={picked?.id ?? null}
+                  reload={async () => (await q.refetch()).data?.items ?? items}
+                  onDone={(saved) => { setCounting(false); if (saved) refresh(); }} />
+    );
+  }
 
   return (
     <Page className="max-w-5xl">
@@ -265,6 +299,13 @@ export default function StoresPage() {
                     onClick={() => setImporting(true)}>
               <Upload className="size-4" /> Import
             </Button>
+            {/* THE COUNT (D25-15..17): whoever corrects a count. */}
+            {mayCorrect && items.length > 0 && (
+              <Button variant="secondary" className="h-11" disabled={q.data === undefined}
+                      onClick={() => setCounting(true)}>
+                <ClipboardList className="size-4" /> Count a store
+              </Button>
+            )}
             {/* The Store's one main action (STO-8). */}
             <Button variant="primary" className="h-11" onClick={() => setAdding(true)}>
               <Plus className="size-4" /> Add an item
@@ -315,18 +356,26 @@ export default function StoresPage() {
         </div>
       )}
 
-      {low.length > 0 && (
+      {below.length > 0 && (
         <Card className="border-amber-300 bg-amber-50">
           <CardBody className="flex items-start gap-2.5">
             <AlertTriangle className="size-4 text-amber-600 shrink-0 mt-0.5" />
-            <p className="text-sm text-ink-900 leading-relaxed">
-              <span className="font-medium">
-                {low.length === 1 ? "One item is" : `${low.length} items are`} at
-                or below the level somebody asked to be warned at
-              </span>
-              {" - "}
-              {low.map((i) => `${i.name} (${i.onHand} ${i.unit})`).join(", ")}.
-            </p>
+            <div className="text-sm text-ink-900 leading-relaxed min-w-0">
+              <p className="font-medium">
+                {/* Items, not lines: one item can be low in two stores. */}
+                {belowItems === 1 ? "One item is" : `${belowItems} items are`} at
+                or below the level set for {picked ? picked.name : "a store"}
+              </p>
+              <ul data-below-list="">
+                {below.map(({ item, store }) => (
+                  <li key={`${item.id}:${store.id}`} className="tabular">
+                    {item.name} - {store.name}:{" "}
+                    {item.byStore[store.id] === undefined ? "none" : `${item.byStore[store.id]} ${item.unit}`},
+                    level {item.levels[store.id]}
+                  </li>
+                ))}
+              </ul>
+            </div>
           </CardBody>
         </Card>
       )}
@@ -343,7 +392,7 @@ export default function StoresPage() {
         />
       )}
       {adding && (
-        <AddItemDialog code={code} open
+        <AddItemDialog code={code} open mayLevel={mayCorrect}
                        onOpenChange={(o) => { if (!o) setAdding(false); }}
                        onAdded={() => { setAdding(false); refresh(); }} />
       )}
@@ -365,6 +414,11 @@ export default function StoresPage() {
                        onOpenChange={(o) => { if (!o) setHistory(null); }}
                        onChanged={refresh} />
       )}
+      {levelling && (
+        <LevelsDialog code={code} item={levelling} stores={stores} open
+                      onOpenChange={(o) => { if (!o) setLevelling(null); }}
+                      onDone={() => { setLevelling(null); refresh(); }} />
+      )}
     </Page>
   );
 }
@@ -372,7 +426,7 @@ export default function StoresPage() {
 /* ── One thing on the shelf ───────────────────────────────────────── */
 
 function ItemRow({
-  item, stores, picked, onHand, value, mayChange, mayCorrect, onMove, onTransfer, onHistory,
+  item, stores, picked, onHand, value, mayChange, mayCorrect, onMove, onTransfer, onHistory, onLevels,
 }: {
   item: StockItem;
   stores: StoreSummary[];
@@ -384,14 +438,27 @@ function ItemRow({
   onMove: (kind: StockKind) => void;
   onTransfer: () => void;
   onHistory: () => void;
+  onLevels: () => void;
 }) {
   const empty = onHand === null || onHand <= 0;
   const neverMoved = item.movements === 0;
   const openStores = stores.filter((s) => s.isActive);
+  const low = picked ? item.lowIn.includes(picked.id) : item.low;
+  /* LEVELS PER STORE (D25-12): only the ones set; a store with none is not
+     named, and none set at all says so. */
+  const levelText = picked
+    ? (item.levels[picked.id] === undefined
+        ? `No level in ${picked.name}`
+        : `Warn at ${item.levels[picked.id]} ${item.unit}`)
+    : (Object.keys(item.levels).length === 0
+        ? "No level set"
+        : "Warn at " + stores.filter((s) => item.levels[s.id] !== undefined)
+            .map((s) => `${shortName(s.name)} ${item.levels[s.id]}`).join(" · "));
+  const emptiesShown = picked ? (item.emptiesByStore[picked.id] ?? null) : item.empties;
 
   return (
     <li>
-      <Card className={cn(item.low && "border-amber-300")}>
+      <Card className={cn(low && "border-amber-300")}>
         {/* ON A PHONE THE NAME HAS ITS OWN LINE (STO-3). It shared a row with
             On hand and Worth and got what was left — 69 to 86 pixels, so
             "LPG cylinder 19 kg commercial" took four lines and its card 480. */}
@@ -399,12 +466,10 @@ function ItemRow({
           <div className="min-w-0 basis-full sm:basis-0 sm:flex-1">
             <div className="flex items-baseline gap-2 flex-wrap">
               <p className="text-base font-medium text-ink-900">{item.name}</p>
-              {item.low && <StatusPill tone="warning">Low</StatusPill>}
+              {low && <StatusPill tone="warning">Low</StatusPill>}
             </div>
             <p className="text-sm text-grey-500">
-              {item.reorderLevel === null
-                ? "No reorder level set"
-                : `Warn at ${item.reorderLevel} ${item.unit}`}
+              {levelText}
               {item.lastMovement
                 ? ` · last moved ${dateShort(item.lastMovement)}`
                 : " · never moved"}
@@ -412,13 +477,27 @@ function ItemRow({
           </div>
 
           <div>
-            <p className="text-sm text-grey-500">{picked ? `In ${picked.name}` : "On hand"}</p>
+            <p className="text-sm text-grey-500">
+              {item.cylinder ? (picked ? `Full in ${picked.name}` : "Full") : picked ? `In ${picked.name}` : "On hand"}
+            </p>
             <p className={cn("text-lg font-semibold tabular",
               onHand === null ? "text-grey-500" : "text-ink-900")}>
               {heldText(onHand)}{" "}
               {onHand !== null && <span className="text-sm font-normal text-grey-500">{item.unit}</span>}
             </p>
           </div>
+
+          {/* FULL AND EMPTY (D25-18). */}
+          {item.cylinder && (
+            <div>
+              <p className="text-sm text-grey-500">Empty</p>
+              <p className={cn("text-lg font-semibold tabular",
+                emptiesShown === null ? "text-grey-500" : "text-ink-900")}>
+                {heldText(emptiesShown)}{" "}
+                {emptiesShown !== null && <span className="text-sm font-normal text-grey-500">{item.unit}</span>}
+              </p>
+            </div>
+          )}
 
           <div>
             <p className="text-sm text-grey-500">Worth</p>
@@ -440,6 +519,21 @@ function ItemRow({
           {!picked && stores.length > 1 && (
             <p className="basis-full text-sm text-grey-600 tabular" data-store-line="">
               {stores.map((s) => `${shortName(s.name)} ${heldText(item.byStore[s.id])}`).join(" · ")}
+            </p>
+          )}
+
+          {/* THE DEPOSIT THE SUPPLIER HOLDS (D25-19, D17-4): typed on the item,
+              a dash until it is. At the kitchen is on deposit less full and
+              empty in the stores - and when that is below nothing the figures
+              disagree, which is said rather than printed as a minus. */}
+          {item.cylinder && (
+            <p className="basis-full text-sm text-grey-600 tabular" data-deposit-line="">
+              On deposit {heldText(item.cylindersOnDeposit)}
+              {" · "}{item.depositPerCylinder === null ? "-" : money(item.depositPerCylinder)} each
+              {" · "}{item.depositHeld === null ? "-" : money(item.depositHeld)} held
+              {" · "}{item.inUse !== null && item.inUse < 0
+                ? "more in the stores than on deposit - check the count or the deposit"
+                : `${heldText(item.inUse)} in use at the kitchen`}
             </p>
           )}
 
@@ -484,6 +578,11 @@ function ItemRow({
                       Correct the count
                     </MenuItem>
                   )}
+                  {mayCorrect && (
+                    <MenuItem icon={Bell} onSelect={onLevels}>
+                      {item.cylinder ? "Set levels and deposit" : "Set levels"}
+                    </MenuItem>
+                  )}
                   <MenuSeparator />
                   <MenuItem icon={History} disabled={neverMoved}
                             reason="Nothing has moved yet." onSelect={onHistory}>
@@ -515,8 +614,10 @@ function ItemRow({
 
 /* ── Adding something to keep ─────────────────────────────────────── */
 
-function AddItemDialog({ code, open, onOpenChange, onAdded }: {
+function AddItemDialog({ code, open, mayLevel, onOpenChange, onAdded }: {
   code: string; open: boolean;
+  /** Setting a level is `edit` (D25-13); the kitchen manager adds without one. */
+  mayLevel: boolean;
   onOpenChange: (o: boolean) => void; onAdded: () => void;
 }) {
   const [name, setName] = useState("");
@@ -589,14 +690,16 @@ function AddItemDialog({ code, open, onOpenChange, onAdded }: {
               </NativeSelect>
             )}
           </Field>
-          <Field label="Warn me below"
-                 hint="Leave blank for no warning. Blank is not zero - zero would mean warn me when it has run out, which is much too late.">
-            {(f) => (
-              <Input {...fieldProps(f)} value={reorder} inputMode="decimal"
-                     placeholder="20"
-                     onChange={(e) => setReorder(e.target.value)} />
-            )}
-          </Field>
+          {mayLevel && (
+            <Field label="Warn me below, in the Main store"
+                   hint="Leave blank for no warning. Blank is not zero - zero would mean warn me when it has run out, which is much too late. Other stores' levels are set from the item's More menu.">
+              {(f) => (
+                <Input {...fieldProps(f)} value={reorder} inputMode="decimal"
+                       placeholder="20"
+                       onChange={(e) => setReorder(e.target.value)} />
+              )}
+            </Field>
+          )}
           <p className="text-sm text-grey-600 rounded-md border border-grey-200
                         bg-grey-50 p-3 leading-relaxed">
             No price here. A <em>delivery</em> has a price - the same rice
@@ -684,10 +787,20 @@ function MoveDialog({ code, item, kind, stores, startStoreId, outlets, open, onO
      housekeeping or a floor - nothing is chosen for the person. */
   const needsOutlet = kind === "issue" && outlets.length > 0;
 
+  /* THE SWAP (D25-18): a cylinder issued asks how many empties came back; a
+     delivery, how many empties the supplier took. Typed every time - nothing
+     is filled in for the person, and 0 is an answer. */
+  const asksEmpties = item.cylinder && (kind === "issue" || isReceipt);
+  const [empties, setEmpties] = useState("");
+  const emptiesN = empties.trim() === "" ? null : Number(empties);
+  const emptiesHere = store ? (item.emptiesByStore[store.id] ?? 0) : 0;
+  const emptiesOk = !asksEmpties
+    || (emptiesN !== null && Number.isFinite(emptiesN) && emptiesN >= 0);
+
   const quantity = isCount ? difference : (qty.trim() === "" ? null : Number(qty));
   const ready = store !== null && quantity !== null && Number.isFinite(quantity) && quantity !== 0
     && (isCount ? (counted ?? -1) >= 0 : quantity > 0)
-    && (!needsOutlet || outletId !== "");
+    && (!needsOutlet || outletId !== "") && emptiesOk;
 
   const submit = async () => {
     if (busy || !ready || quantity === null || !store) return;
@@ -705,6 +818,8 @@ function MoveDialog({ code, item, kind, stores, startStoreId, outlets, open, onO
       ...(reference.trim() ? { reference: reference.trim() } : {}),
       ...(note.trim() ? { note: note.trim() } : {}),
       ...(needsOutlet ? { outletId: outletId === NOT_AN_OUTLET ? null : outletId } : {}),
+      ...(asksEmpties && emptiesN !== null
+        ? (isReceipt ? { emptiesTaken: emptiesN } : { emptiesBack: emptiesN }) : {}),
     });
     setBusy(false);
     if (!res.ok) return toast.error("Not recorded", res.reason);
@@ -713,7 +828,9 @@ function MoveDialog({ code, item, kind, stores, startStoreId, outlets, open, onO
       isCount
         ? `Count corrected - ${item.name}`
         : `${KIND_LABEL[kind]} ${qty} ${item.unit} of ${item.name}`,
-      `${res.onHandHere} ${res.unit} in ${res.store}.`);
+      item.cylinder && res.emptiesHere !== null
+        ? `${res.onHandHere} full and ${res.emptiesHere} empty in ${res.store}.`
+        : `${res.onHandHere} ${res.unit} in ${res.store}.`);
     onDone();
   };
 
@@ -766,6 +883,19 @@ function MoveDialog({ code, item, kind, stores, startStoreId, outlets, open, onO
                   {outlets.map((o) => <option key={o.id} value={o.id}>{o.name}</option>)}
                   <option value={NOT_AN_OUTLET}>Not an outlet</option>
                 </NativeSelect>
+              )}
+            </Field>
+          )}
+
+          {asksEmpties && (
+            <Field label={isReceipt ? "Empties the supplier took back" : "Empties back from the kitchen"}
+                   required
+                   hint={isReceipt && store
+                     ? `${emptiesHere} empty in ${store.name}. 0 if none went back.`
+                     : "0 if none came back."}>
+              {(f) => (
+                <Input {...fieldProps(f)} value={empties} inputMode="numeric"
+                       onChange={(e) => setEmpties(e.target.value)} />
               )}
             </Field>
           )}
@@ -998,10 +1128,10 @@ function HistoryDialog({ code, item, open, mayUndo, onOpenChange, onChanged }: {
                     <div className="flex items-baseline gap-2 flex-wrap">
                       <span className="text-base text-ink-900">
                         {m.isReversal && m.reversesKind
-                          ? `Undo of ${withArticle(NOUN[m.reversesKind])}`
+                          ? `Undo of ${m.empty ? "a record of empties" : withArticle(NOUN[m.reversesKind])}`
                           : m.kind === "transfer"
                             ? `Moved from ${m.fromStore} to ${m.toStore}`
-                            : KIND_LABEL[m.kind]}
+                            : (m.empty && EMPTY_LABEL[m.kind]) || KIND_LABEL[m.kind]}
                       </span>
                       <span className={cn("tabular font-medium",
                         !aMove && m.quantity > 0 ? "text-success" : "text-ink-900")}>
@@ -1040,7 +1170,7 @@ function HistoryDialog({ code, item, open, mayUndo, onOpenChange, onChanged }: {
                   {mayUndo && !m.reversed && !m.isReversal && (
                     <button
                       type="button"
-                      aria-label={`Undo this ${NOUN[m.kind]}`}
+                      aria-label={`Undo this ${nounOf(m)}`}
                       onClick={() => setConfirming(m)}
                       className="size-11 grid place-items-center rounded-md
                                  text-grey-500 hover:text-brand-red
@@ -1058,14 +1188,14 @@ function HistoryDialog({ code, item, open, mayUndo, onOpenChange, onChanged }: {
         {confirming && (
           <Dialog open onOpenChange={(o) => { if (!o) setConfirming(null); }}>
             <DialogContent
-              title={`Undo this ${NOUN[confirming.kind]} of ${Math.abs(confirming.quantity)} ${item.unit}?`}
+              title={`Undo this ${nounOf(confirming)} of ${Math.abs(confirming.quantity)} ${item.unit}?`}
               footer={
                 <>
                   <Button variant="secondary" className="h-11"
                           onClick={() => setConfirming(null)}>Cancel</Button>
                   <Button variant="danger" className="h-11" disabled={busy}
                           onClick={() => void undo(confirming)}>
-                    {busy ? "Undoing…" : `Undo ${NOUN[confirming.kind]}`}
+                    {busy ? "Undoing…" : `Undo ${nounOf(confirming)}`}
                   </Button>
                 </>
               }
@@ -1080,5 +1210,255 @@ function HistoryDialog({ code, item, open, mayUndo, onOpenChange, onChanged }: {
         )}
       </DialogContent>
     </Dialog>
+  );
+}
+
+/* ── An item's levels, and a cylinder's deposit ───────────────────── */
+
+/* LEVELS PER STORE (D25-12, D25-13): one box per store, blank for no level -
+   blank is not zero. For a cylinder item the deposit too (D25-19): how many
+   are on deposit and what each one's deposit is, blank until known. Only what
+   changed is sent. The `edit` grant; the menu offers it to nobody else. */
+function LevelsDialog({ code, item, stores, open, onOpenChange, onDone }: {
+  code: string; item: StockItem; stores: StoreSummary[]; open: boolean;
+  onOpenChange: (o: boolean) => void; onDone: () => void;
+}) {
+  const asText = (n: number | null | undefined) => (n === null || n === undefined ? "" : String(n));
+  const [levels, setLevels] = useState<Record<string, string>>(
+    () => Object.fromEntries(stores.map((s) => [s.id, asText(item.levels[s.id])])));
+  const [onDeposit, setOnDeposit] = useState(asText(item.cylindersOnDeposit));
+  const [each, setEach] = useState(asText(item.depositPerCylinder));
+  const [busy, setBusy] = useState(false);
+
+  const parse = (t: string) => (t.trim() === "" ? null : Number(t));
+  const sane = (t: string) => { const n = parse(t); return n === null || (Number.isFinite(n) && n >= 0); };
+  const changedLevels = Object.fromEntries(stores
+    .filter((s) => parse(levels[s.id] ?? "") !== (item.levels[s.id] ?? null))
+    .map((s) => [s.id, parse(levels[s.id] ?? "")]));
+  const depositChanged = item.cylinder
+    && (parse(onDeposit) !== item.cylindersOnDeposit || parse(each) !== item.depositPerCylinder);
+  const wholeDeposit = parse(onDeposit) === null || Number.isInteger(parse(onDeposit));
+  const valid = Object.values(levels).every(sane) && sane(onDeposit) && sane(each) && wholeDeposit;
+  const ready = valid && (Object.keys(changedLevels).length > 0 || depositChanged);
+
+  const submit = async () => {
+    if (busy || !ready) return;
+    setBusy(true);
+    const res = await setStockItem(code, item.id, {
+      ...(Object.keys(changedLevels).length > 0 ? { levels: changedLevels } : {}),
+      ...(depositChanged
+        ? { cylindersOnDeposit: parse(onDeposit), depositPerCylinder: parse(each) } : {}),
+    });
+    setBusy(false);
+    if (!res.ok) return toast.error("Not saved", res.reason);
+    toast.success(`Saved - ${item.name}`);
+    onDone();
+  };
+
+  return (
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent
+        title={`${item.cylinder ? "Levels and deposit" : "Levels"} - ${item.name}`}
+        description={`Warn when a store holds this many ${item.unit} or fewer. Blank is no warning, not zero.`}
+        footer={
+          <>
+            <Button variant="secondary" className="h-11"
+                    onClick={() => onOpenChange(false)}>Cancel</Button>
+            <Button variant="primary" className="h-11" disabled={!ready || busy}
+                    onClick={() => void submit()}>
+              {busy ? "Saving…" : "Save"}
+            </Button>
+          </>
+        }
+      >
+        <div className="space-y-3">
+          {stores.map((s) => (
+            <Field key={s.id} label={`${s.name}, in ${item.unit}`}
+                   error={sane(levels[s.id] ?? "") ? undefined : "Zero or more, or blank."}>
+              {(f) => (
+                <Input {...fieldProps(f)} value={levels[s.id] ?? ""} inputMode="decimal"
+                       onChange={(e) => setLevels({ ...levels, [s.id]: e.target.value })} />
+              )}
+            </Field>
+          ))}
+          {item.cylinder && (
+            <>
+              <Field label="Cylinders on deposit with the supplier"
+                     hint="Full, empty and at the kitchen together. Blank until known."
+                     error={sane(onDeposit) && wholeDeposit ? undefined : "A whole number, or blank."}>
+                {(f) => (
+                  <Input {...fieldProps(f)} value={onDeposit} inputMode="numeric"
+                         onChange={(e) => setOnDeposit(e.target.value)} />
+                )}
+              </Field>
+              <Field label="Deposit per cylinder" hint="As on the supplier's deposit receipt. Blank until known."
+                     error={sane(each) ? undefined : "Zero or more, or blank."}>
+                {(f) => (
+                  <Input {...fieldProps(f)} value={each} inputMode="decimal"
+                         onChange={(e) => setEach(e.target.value)} />
+                )}
+              </Field>
+            </>
+          )}
+        </div>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
+/* ── A store, counted ─────────────────────────────────────────────── */
+
+interface SheetLine { key: string; itemId: string; empty: boolean; name: string; unit: string; book: number }
+
+/* The sheet's lines for one store, with the book AS IT STANDS NOW: every item,
+   and a second line for a cylinder item's empties (D25-18). */
+const sheetFor = (items: StockItem[], storeId: string): SheetLine[] =>
+  items.filter((i) => i.isActive).flatMap((i) => [
+    { key: i.id, itemId: i.id, empty: false, name: i.name, unit: i.unit, book: i.byStore[storeId] ?? 0 },
+    ...(i.cylinder
+      ? [{ key: `${i.id}:empty`, itemId: i.id, empty: true, name: `${i.name} - empty`,
+           unit: i.unit, book: i.emptiesByStore[storeId] ?? 0 }]
+      : []),
+  ]);
+
+/* THE COUNT SHEET (D25-15, D25-16, D25-17).
+   PAPER: item, unit and an empty box - the counter writes what is really on
+   the shelf, not what the book expects.
+   SCREEN: a count typed on a line shows that line's book figure and the
+   difference; a line left blank is not counted and never taken as zero.
+   SAVE: one correction per difference, against whoever saves, with "Count of
+   <store>" and any reason on the line. NO LOCK: the book is taken when the
+   sheet opens; if a line's book has moved by the save, the server refuses the
+   whole save and names it, and this sheet takes the new book for those lines
+   and clears their counts, so only they are counted again. */
+function CountSheet({ code, stores, items, startStoreId, reload, onDone }: {
+  code: string; stores: StoreSummary[]; items: StockItem[]; startStoreId: string | null;
+  reload: () => Promise<StockItem[]>; onDone: (saved: boolean) => void;
+}) {
+  const { property } = useDocumentIdentity();
+  const [storeId, setStoreId] = useState(() => startingStore(stores, startStoreId));
+  const [lines, setLines] = useState(() => sheetFor(items, storeId));
+  const [counts, setCounts] = useState<Record<string, string>>({});
+  const [reasons, setReasons] = useState<Record<string, string>>({});
+  const [busy, setBusy] = useState(false);
+  const store = stores.find((s) => s.id === storeId) ?? null;
+
+  const counted = (key: string): number | null => {
+    const t = (counts[key] ?? "").trim();
+    return t === "" ? null : Number(t);
+  };
+  const typed = lines.filter((l) => counted(l.key) !== null);
+  const bad = typed.filter((l) => { const n = counted(l.key)!; return !Number.isFinite(n) || n < 0; });
+  const ready = store !== null && typed.length > 0 && bad.length === 0;
+
+  const pickStore = (id: string) => {
+    setStoreId(id); setLines(sheetFor(items, id)); setCounts({}); setReasons({});
+  };
+
+  const save = async () => {
+    if (busy || !ready || !store) return;
+    setBusy(true);
+    const sent: CountLine[] = typed.map((l) => ({
+      itemId: l.itemId, empty: l.empty, book: l.book, counted: counted(l.key)!,
+      ...(reasons[l.key]?.trim() ? { reason: reasons[l.key]!.trim() } : {}),
+    }));
+    const res = await saveStockCount(code, { locationId: store.id, lines: sent });
+    if (!res.ok) {
+      /* The lines whose book moved take the new book and lose their count. */
+      const fresh = new Map(sheetFor(await reload(), store.id).map((l) => [l.key, l.book]));
+      const moved = lines.filter((l) => fresh.has(l.key) && fresh.get(l.key) !== l.book).map((l) => l.key);
+      if (moved.length > 0) {
+        setLines(lines.map((l) => (moved.includes(l.key) ? { ...l, book: fresh.get(l.key)! } : l)));
+        setCounts(Object.fromEntries(Object.entries(counts).filter(([k]) => !moved.includes(k))));
+      }
+      setBusy(false);
+      return toast.error("Not saved", res.reason);
+    }
+    setBusy(false);
+    toast.success(`Count saved - ${store.name}`,
+      `${res.recorded} ${res.recorded === 1 ? "difference" : "differences"} recorded`
+      + `, ${res.matched} matched the book.`);
+    onDone(true);
+  };
+
+  return (
+    <Page className="max-w-3xl">
+      <div className="print:hidden space-y-4">
+        <PageHeader
+          title="Store"
+          description="Count a store. Print the sheet, count the shelves, then type the counts in straight away."
+          actions={
+            <div className="flex flex-wrap gap-2">
+              <Button variant="secondary" className="h-11" onClick={() => window.print()}>
+                <Printer className="size-4" /> Print the sheet
+              </Button>
+              <Button variant="secondary" className="h-11" onClick={() => onDone(false)}>Cancel</Button>
+              <Button variant="primary" className="h-11" disabled={!ready || busy}
+                      onClick={() => void save()}>
+                {busy ? "Saving…" : "Save the count"}
+              </Button>
+            </div>
+          }
+        />
+        <div className="flex flex-wrap items-center gap-x-3 gap-y-1.5">
+          <label htmlFor="count-store" className="text-sm font-medium text-ink-900">Store</label>
+          <NativeSelect id="count-store" className="w-auto min-w-52" value={storeId}
+                        onChange={(e) => pickStore(e.target.value)}>
+            {stores.map((s) => <option key={s.id} value={s.id}>{s.name}</option>)}
+          </NativeSelect>
+        </div>
+        <p className="text-sm text-grey-600">
+          A line left blank is not counted. Each difference is saved as a correction with
+          your name and "Count of {store?.name ?? "the store"}".
+        </p>
+      </div>
+
+      <h2 className="hidden print:block text-lg font-semibold text-ink-900">
+        {property ? `${property} - ` : ""}Count of {store?.name}
+      </h2>
+
+      <ul className="space-y-2 print:space-y-0" data-count-sheet="">
+        {lines.map((l) => {
+          const n = counted(l.key);
+          const difference = n === null || !Number.isFinite(n) ? null : Math.round((n - l.book) * 1000) / 1000;
+          return (
+            <li key={l.key}
+                className="rounded-md border border-grey-200 bg-white p-3 break-inside-avoid
+                           print:rounded-none print:border-0 print:border-b print:px-0 print:py-2">
+              <div className="flex items-center gap-3">
+                <div className="min-w-0 flex-1">
+                  <p className="text-base text-ink-900">{l.name}</p>
+                  <p className="text-sm text-grey-500">{l.unit}</p>
+                </div>
+                <Input className="w-28 shrink-0 print:hidden tabular" inputMode="decimal"
+                       aria-label={`Counted, ${l.name}, in ${l.unit}`}
+                       invalid={n !== null && (!Number.isFinite(n) || n < 0)}
+                       value={counts[l.key] ?? ""}
+                       onChange={(e) => setCounts({ ...counts, [l.key]: e.target.value })} />
+                {/* The paper's empty box. */}
+                <span aria-hidden className="hidden print:block w-28 h-8 shrink-0 border border-ink-900" />
+              </div>
+              {/* THE BOOK SHOWS ONCE A COUNT IS TYPED (D25-16). */}
+              {n !== null && (
+                <div className="print:hidden mt-2 space-y-2">
+                  <p className="text-sm text-grey-600 tabular" role="status">
+                    {difference === null || difference + l.book < 0
+                      ? "Not a count - type what is on the shelf, zero or more."
+                      : `Book ${l.book} ${l.unit} · `
+                        + (difference === 0 ? "matches"
+                          : `${Math.abs(difference)} ${difference > 0 ? "more" : "fewer"}`)}
+                  </p>
+                  {difference !== null && difference !== 0 && difference + l.book >= 0 && (
+                    <Input aria-label={`Why, ${l.name}`} placeholder="Why, if known"
+                           value={reasons[l.key] ?? ""}
+                           onChange={(e) => setReasons({ ...reasons, [l.key]: e.target.value })} />
+                  )}
+                </div>
+              )}
+            </li>
+          );
+        })}
+      </ul>
+    </Page>
   );
 }
