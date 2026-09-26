@@ -51,32 +51,43 @@ export interface PageHeaderProps {
   actions?: ReactNode;
   /** Status pill or similar, shown inline beside the title. */
   badge?: ReactNode;
+  /** The small capitals line above the title (the skill's large title):
+      the business date on Dashboard, Rooms and Calendar only (the owner,
+      27 September). */
+  eyebrow?: ReactNode;
   /** Tabs or a filter row that belongs to the header block. */
   children?: ReactNode;
   className?: string;
 }
 
 export function PageHeader({
-  title, description, breadcrumbs, actions, badge, children, className,
+  title, description, breadcrumbs, actions, badge, eyebrow, children, className,
 }: PageHeaderProps) {
   /* The tab says the page's own heading, so the menu, the heading and
      the tab agree. A heading that is not plain text names no tab. */
   useDocumentTitle(typeof title === "string" ? title : null);
 
   return (
-    <header className={cn("mb-6", className)}>
+    <header className={cn("mb-5", className)}>
       {breadcrumbs && breadcrumbs.length > 0 && (
         <Breadcrumbs items={breadcrumbs} className="mb-2.5" />
       )}
 
-      <div className="flex items-start justify-between gap-4 flex-wrap">
+      {/* The fidato-design large title: the title at 28 (26 on a phone),
+          its description under it at 14, the actions level with its foot. */}
+      <div className="flex items-end justify-between gap-4 flex-wrap">
         <div className="min-w-0">
+          {eyebrow && (
+            <p className="text-2xs font-semibold uppercase tracking-[0.03em] text-grey-500 mb-0.5">
+              {eyebrow}
+            </p>
+          )}
           <div className="flex items-center gap-2.5 flex-wrap">
-            <h1 className="text-2xl font-semibold text-ink-900 truncate">{title}</h1>
+            <h1 className="page-title text-ink-900 truncate">{title}</h1>
             {badge}
           </div>
           {description && (
-            <p className="text-base text-grey-500 mt-1.5 max-w-2xl leading-relaxed">
+            <p className="text-sm text-grey-500 mt-0.5 max-w-2xl">
               {description}
             </p>
           )}
@@ -122,9 +133,9 @@ export function Section({
   className?: string;
 }) {
   return (
-    <section className={cn("mb-8 last:mb-0", className)}>
+    <section className={cn("mb-5 last:mb-0", className)}>
       {(title || actions) && (
-        <div className="flex items-end justify-between gap-4 mb-3.5">
+        <div className="flex items-end justify-between gap-4 mb-3">
           <div className="min-w-0">
             {title && <h2 className="text-lg font-semibold text-ink-900">{title}</h2>}
             {description && <p className="text-sm text-grey-500 mt-1">{description}</p>}

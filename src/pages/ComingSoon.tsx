@@ -1,5 +1,5 @@
 import { Info, type LucideIcon } from "lucide-react";
-import { Page, PageHeader, Card, CardBody, StatusPill } from "@/components/ui";
+import { Page, PageHeader, Card, CardBody, StatusPill, IconChip } from "@/components/ui";
 import { COMING_SOON_ROLES, ROLE_LABELS } from "@/lib/permissions";
 
 /* ══════════════════════════════════════════════════════════════════
@@ -53,50 +53,55 @@ export function ComingSoonPage({ content }: { content: ComingSoonContent }) {
         description={summary}
       />
 
-      <Card>
-        <CardBody className="space-y-3">
-          <h2 className="text-md font-semibold text-ink-900">What it will do</h2>
-          <ul className="grid gap-2.5 @2xl:grid-cols-3">
-            {willDo.map((x) => (
-              <li key={x.title} className="rounded-md border border-grey-200 bg-white p-3">
-                <x.icon className="size-4 text-brand-orange mb-1.5" aria-hidden />
-                <p className="text-base font-medium text-ink-900">{x.title}</p>
-                <p className="text-sm text-grey-600 mt-1 leading-relaxed">{x.body}</p>
-              </li>
-            ))}
-          </ul>
-        </CardBody>
-      </Card>
+      {/* 12px between cards (the Rhythm Rule); they touched before. The
+          three tiles go three across on a desktop: `@2xl:` had no
+          container to measure, so they were one long column everywhere. */}
+      <div className="grid gap-3">
+        <Card>
+          <CardBody className="space-y-3">
+            <h2 className="text-md font-semibold text-ink-900">What it will do</h2>
+            <ul className="grid gap-2 lg:grid-cols-3">
+              {willDo.map((x) => (
+                <li key={x.title} className="rounded-lg border border-grey-200 bg-white px-3.5 py-3">
+                  <IconChip className="mb-2"><x.icon /></IconChip>
+                  <p className="text-base font-medium text-ink-900">{x.title}</p>
+                  <p className="text-sm text-grey-600 mt-1 leading-relaxed">{x.body}</p>
+                </li>
+              ))}
+            </ul>
+          </CardBody>
+        </Card>
 
-      <Card>
-        <CardBody className="space-y-2.5">
-          <h2 className="text-md font-semibold text-ink-900">
-            What it needs before it can be built
-          </h2>
-          <ol className="space-y-1.5 text-base text-ink-900">
-            {needs.map((need, i) => (
-              <li key={need} className="flex gap-2">
-                <span className="text-grey-500 tabular">{i + 1}</span>
-                <span>{need}</span>
-              </li>
-            ))}
-          </ol>
-        </CardBody>
-      </Card>
+        <Card>
+          <CardBody className="space-y-3">
+            <h2 className="text-md font-semibold text-ink-900">
+              What it needs before it can be built
+            </h2>
+            <ol className="space-y-1.5 text-base text-ink-900">
+              {needs.map((need, i) => (
+                <li key={need} className="flex gap-2">
+                  <span className="text-grey-500 tabular">{i + 1}</span>
+                  <span>{need}</span>
+                </li>
+              ))}
+            </ol>
+          </CardBody>
+        </Card>
 
-      <Card>
-        <CardBody>
-          <h2 className="text-md font-semibold text-ink-900 mb-1">Where it stands today</h2>
-          <p className="text-base text-ink-900 leading-relaxed max-w-prose">{today}</p>
-          {leansOn && leansOn.length > 0 && (
-            <p className="text-sm text-grey-500 mt-2">
-              It will work with: {leansOn.join(", ")}.
-            </p>
-          )}
-        </CardBody>
-      </Card>
+        <Card>
+          <CardBody>
+            <h2 className="text-md font-semibold text-ink-900 mb-3">Where it stands today</h2>
+            <p className="text-base text-ink-900 leading-relaxed max-w-prose">{today}</p>
+            {leansOn && leansOn.length > 0 && (
+              <p className="text-sm text-grey-500 mt-2">
+                It will work with: {leansOn.join(", ")}.
+              </p>
+            )}
+          </CardBody>
+        </Card>
+      </div>
 
-      <p className="flex items-start gap-2 text-sm text-grey-500 leading-relaxed">
+      <p className="flex items-start gap-2 text-sm text-grey-500 leading-relaxed mt-5">
         <Info className="size-3.5 shrink-0 mt-0.5" aria-hidden />
         <span>
           Nothing on this page works yet. It says what will be built and what

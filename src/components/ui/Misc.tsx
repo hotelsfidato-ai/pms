@@ -16,8 +16,8 @@ export function Avatar({
   className?: string;
 }) {
   const sizes = {
-    xs: "size-5 text-[9px]",
-    sm: "size-6 text-[10px]",
+    xs: "size-5 text-2xs",
+    sm: "size-6 text-2xs",
     md: "size-8 text-xs",
     lg: "size-11 text-base",
   };
@@ -202,7 +202,7 @@ export function Segmented<T extends string>({
   return (
     <div
       role="tablist"
-      className={cn("inline-flex items-center gap-0.5 p-0.5 bg-grey-100 rounded-md", className)}
+      className={cn("inline-flex items-center gap-0.5 p-[3px] bg-grey-100 rounded-md", className)}
     >
       {options.map((opt) => (
         <button
@@ -212,13 +212,14 @@ export function Segmented<T extends string>({
           type="button"
           onClick={() => onChange(opt.value)}
           className={cn(
-            /* 28px is a mouse target. Under a thumb it grows — see
+            /* 30px is a mouse target (the fidato-design segmented control:
+               a 3px track, 7px corners). Under a thumb it grows — see
                Button's SIZES for why this keys off the pointer and
                not the viewport width. */
-            "px-3 h-7 pointer-coarse:min-h-11 rounded-sm text-sm font-medium whitespace-nowrap",
-            "transition-colors duration-150 ease-out",
+            "px-3 h-[30px] pointer-coarse:min-h-11 rounded-[7px] text-sm font-medium whitespace-nowrap",
+            "press-tile",
             value === opt.value
-              ? "bg-white text-ink-900 shadow-raise"
+              ? "bg-white text-ink-900 shadow-[0_1px_2px_rgb(3_23_40/0.08)]"
               /* grey-600: the unselected tab sits on the grey-100 track,
                  where grey-500 measures 4.24:1. */
               : "text-grey-600 hover:text-ink-900",
@@ -274,6 +275,44 @@ export function Stat({
       <p className="text-lg font-semibold text-ink-900 tabular mt-1">{value}</p>
       {hint && <p className="text-xs text-grey-500 mt-0.5">{hint}</p>}
     </div>
+  );
+}
+
+/* ── Icon chip — the tinted square behind a tile's icon ───────────
+   The fidato-design chip: a -50 wash, a -100 inset ring and the ink icon.
+   Colour only when it means something (today's jobs, money to collect,
+   a state); everything else is neutral. `glass` sits on the navy anchor. */
+
+const CHIP_TONES = {
+  neutral: "bg-grey-100 text-grey-600",
+  orange: "bg-brand-orange-50 text-brand-orange-700 ring-1 ring-inset ring-brand-orange-100",
+  yellow: "bg-brand-yellow-50 text-brand-yellow-800 ring-1 ring-inset ring-brand-yellow-100",
+  blue: "bg-info-50 text-info ring-1 ring-inset ring-info-100",
+  green: "bg-success-50 text-success ring-1 ring-inset ring-success-100",
+  glass: "bg-white/10 text-brand-orange",
+} as const;
+
+const CHIP_SIZES = {
+  28: "size-7 rounded-[8px] [&>svg]:size-4",
+  24: "size-6 rounded-[7px] [&>svg]:size-3.5",
+  20: "size-5 rounded-[6px] [&>svg]:size-3",
+} as const;
+
+export function IconChip({
+  tone = "neutral", size = 28, children, className,
+}: {
+  tone?: keyof typeof CHIP_TONES;
+  size?: keyof typeof CHIP_SIZES;
+  children: ReactNode;
+  className?: string;
+}) {
+  return (
+    <span
+      aria-hidden
+      className={cn("grid place-items-center shrink-0", CHIP_SIZES[size], CHIP_TONES[tone], className)}
+    >
+      {children}
+    </span>
   );
 }
 

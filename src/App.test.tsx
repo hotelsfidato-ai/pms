@@ -330,23 +330,16 @@ describe("the type scale", () => {
     }
   });
 
-  it("sets body text at 15px or more", () => {
-    /* `text-base` is used 163 times and is what a folio, a rate and a
-       guest name are set in. 14px was under the guideline for anything
-       read on a phone in a corridor. */
-    expect(size("base")).toBeGreaterThanOrEqual(15);
-  });
-
-  it("keeps every step distinguishable", () => {
-    /* Steps a single pixel apart are not a scale — they are a gradient
-       nobody can use deliberately. */
-    const names = ["2xs", "xs", "sm", "base", "md", "lg"];
-    for (let i = 1; i < names.length; i++) {
-      const step = size(names[i]!) - size(names[i - 1]!);
-      expect(
-        step,
-        `${names[i - 1]} → ${names[i]} is ${step}px apart`,
-      ).toBeGreaterThan(0);
+  /* 27 September: this replaced "body text at 15px or more" and "every
+     step distinguishable". The owner's type ladder (D22-51), applied to
+     the whole app with their yes that day, has no 13, 15 or 18: `xs` is
+     the 12px caption, `base` the 14px label, `lg` the 16px heading. A
+     step may share a size with its neighbour; it may not sit between
+     the ladder's steps. */
+  it("puts every step on the owner's type ladder (D22-51)", () => {
+    const ladder = [12, 14, 16, 20, 24, 28, 30];
+    for (const name of ["2xs", "xs", "sm", "base", "md", "lg", "xl", "2xl", "3xl"]) {
+      expect(ladder, `--text-${name} is ${size(name)}px, off the ladder`).toContain(size(name));
     }
   });
 });
