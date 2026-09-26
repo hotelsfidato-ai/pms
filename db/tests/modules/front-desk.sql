@@ -250,3 +250,101 @@ begin
   select count(*) into n from hotels where code = 'FDM';
   perform test.ok('moved-out room','the fixture does not outlive the test', n = 0, n || ' left behind');
 end $$;
+
+-- =============================================================================
+-- CASH FROM ONE GUEST (the owner's D25-40; Income-tax Act 2025 s.186)
+-- =============================================================================
+-- Refers to its migration by what it does - "cash limit and PAN". What only
+-- the database can promise: app.cash_taken counts "stay, group and day" (the
+-- owner, 26 September) - this stay, its group's stays whoever the guest, and
+-- this guest's other stays on the same business day - and leaves out card,
+-- another day, a payment reversed as a mistake, and never subtracts a refund.
+-- The routes' half is api/test/modules/front-desk/cashLimit.test.ts.
+-- =============================================================================
+do $$
+declare
+  h uuid; t uuid; g1 uuid; g2 uuid; grp uuid;
+  a uuid; b uuid; c uuid; d uuid; e uuid; pid bigint; n int;
+begin
+  h := app.provision_property_unchecked('FDC','Cash Limit Test','Nowhere');
+  perform app.bulk_create_rooms(h, 'STD', 1::smallint, 101, 102);
+  select id into t from room_types where hotel_id = h and code = 'STD';
+  insert into guests (full_name) values ('Cash fixture guest one') returning id into g1;
+  insert into guests (full_name) values ('Cash fixture guest two') returning id into g2;
+  insert into reservation_groups (name, lead_hotel_id) values ('Cash fixture wedding', h)
+  returning id into grp;
+
+  insert into reservations (hotel_id, reference, guest_id, room_type_id, check_in, check_out,
+                            agreed_rate, status, group_id)
+  values (h, 'FDC-A', g1, t, '2027-02-01', '2027-02-02', 1000, 'confirmed', grp) returning id into a;
+  insert into reservations (hotel_id, reference, guest_id, room_type_id, check_in, check_out,
+                            agreed_rate, status, group_id)
+  values (h, 'FDC-B', g2, t, '2027-02-01', '2027-02-02', 1000, 'confirmed', grp) returning id into b;
+  insert into reservations (hotel_id, reference, guest_id, room_type_id, check_in, check_out,
+                            agreed_rate, status)
+  values (h, 'FDC-C', g1, t, '2027-02-01', '2027-02-02', 1000, 'confirmed') returning id into c;
+  insert into reservations (hotel_id, reference, guest_id, room_type_id, check_in, check_out,
+                            agreed_rate, status)
+  values (h, 'FDC-D', g1, t, '2027-01-15', '2027-01-16', 1000, 'confirmed') returning id into d;
+  insert into reservations (hotel_id, reference, guest_id, room_type_id, check_in, check_out,
+                            agreed_rate, status)
+  values (h, 'FDC-E', g2, t, '2027-02-01', '2027-02-02', 1000, 'confirmed') returning id into e;
+  insert into folios (hotel_id, reservation_id)
+  select h, x from unnest(array[a, b, c, d, e]) x;
+
+  -- A payment as the desk writes one: a negative posting and its payments row.
+  create temporary table cash_fixture (stay uuid, day date, method text, amount numeric) on commit drop;
+  insert into cash_fixture values
+    (a, '2027-02-01', 'cash', 50000),      -- this stay
+    (b, '2027-02-01', 'cash', 30000),      -- the group, another guest
+    (c, '2027-02-01', 'cash', 20000),      -- the same guest, another stay, the same day
+    (d, '2027-01-15', 'cash', 40000),      -- the same guest, another day
+    (a, '2027-02-01', 'card', 70000);      -- not cash
+  for pid in
+    with made as (
+      insert into folio_postings (hotel_id, folio_id, business_date, category, description, amount)
+      select h, f.id, x.day, 'payment', 'Cash fixture ' || x.method, -x.amount
+        from cash_fixture x join folios f on f.reservation_id = x.stay
+      returning id, folio_id, amount, description)
+    insert into payments (hotel_id, posting_id, method, amount)
+    select h, m.id, split_part(m.description, ' ', 3), -m.amount from made m
+    returning posting_id
+  loop null; end loop;
+
+  -- A cash payment reversed as a mistake: never received.
+  insert into folio_postings (hotel_id, folio_id, business_date, category, description, amount)
+  select h, f.id, '2027-02-01', 'payment', 'Cash fixture mistake', -10000
+    from folios f where f.reservation_id = a returning id into pid;
+  insert into payments (hotel_id, posting_id, method, amount) values (h, pid, 'cash', 10000);
+  insert into folio_postings (hotel_id, folio_id, business_date, category, description, amount, reverses_id)
+  select h, f.id, '2027-02-01', 'payment', 'Cash fixture mistake reversed', 10000, pid
+    from folios f where f.reservation_id = a;
+  -- A refund: money going back does not undo money received.
+  insert into folio_postings (hotel_id, folio_id, business_date, category, description, amount)
+  select h, f.id, '2027-02-01', 'refund', 'Cash fixture refund', 5000
+    from folios f where f.reservation_id = a;
+
+  perform test.ok('cash limit', 'counts the stay, its group and the guest''s other stay that day',
+    app.cash_taken(a, '2027-02-01') = 100000, app.cash_taken(a, '2027-02-01')::text);
+  perform test.ok('cash limit', 'a group guest''s own stay counts the group they were in that day',
+    app.cash_taken(e, '2027-02-01') = 30000, app.cash_taken(e, '2027-02-01')::text);
+  perform test.ok('cash limit', 'another day counts only its own stay',
+    app.cash_taken(d, '2027-01-15') = 40000, app.cash_taken(d, '2027-01-15')::text);
+
+  perform test.raises('cash limit', 'a PAN is kept only in its own shape',
+    format($q$update payments set pan = 'abcde1234f' where posting_id = %s$q$, pid), '23514');
+
+  update reservations set group_id = null where group_id = grp;
+  delete from reservation_groups where id = grp;
+  alter table folio_postings disable trigger folio_postings_append_only;
+  alter table hotels disable trigger hotels_no_delete;
+  delete from hotels where id = h;
+  alter table hotels enable trigger hotels_no_delete;
+  alter table folio_postings enable trigger folio_postings_append_only;
+  alter table guests disable trigger guests_no_delete;
+  delete from guests where id in (g1, g2);
+  alter table guests enable trigger guests_no_delete;
+
+  select count(*) into n from hotels where code = 'FDC';
+  perform test.ok('cash limit', 'the fixture does not outlive the test', n = 0, n || ' left behind');
+end $$;

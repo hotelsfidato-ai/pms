@@ -169,6 +169,8 @@ export interface Order {
   hotelName: string;
   hotelCity: string | null;
   hotelGstin: string | null;
+  /** The hotel's FSSAI licence number (A16), null until typed. */
+  hotelFssai?: string | null;
   table: string | null;
   status: "open" | "settled" | "abandoned";
   businessDate: string;
@@ -586,15 +588,22 @@ export async function moveKitchenLine(
   }
 }
 
+/** D25-40 (Rule 159): asked when more than ₹1,00,000 of a bill is cash. */
+export interface CashId {
+  pan?: string;
+  form97?: boolean;
+  nonResident?: boolean;
+}
+
 export function settleOrder(
   hotelId: string, orderId: string,
   /** "function" — onto the banquet function the order is on, whole
       (D17-21). The server refuses every other method for such an order. */
   method: "room" | "cash" | "card" | "upi" | "function",
-  room?: string, folioId?: string,
+  room?: string, folioId?: string, cashId: CashId = {},
 ): Promise<TillResult> {
   return write(`/api/hotels/${hotelId}/till/orders/${orderId}/settle`,
-    { method, room, folioId });
+    { method, room, folioId, ...cashId });
 }
 
 /** What the biller is handing the till for one of several payments. */
@@ -619,10 +628,10 @@ export interface TenderInput {
  * defensible way to choose which rate a partial payment settles.
  */
 export function settleSplit(
-  hotelId: string, orderId: string, tenders: TenderInput[],
+  hotelId: string, orderId: string, tenders: TenderInput[], cashId: CashId = {},
 ): Promise<TillResult> {
   return write(`/api/hotels/${hotelId}/till/orders/${orderId}/settle`,
-    { tenders });
+    { tenders, ...cashId });
 }
 
 export function abandonOrder(

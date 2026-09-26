@@ -400,6 +400,8 @@ guestDoor.post("/:token/details", async (c) => {
       passportExpiry: b.passportExpiry ?? null, visaNumber: b.visaNumber ?? null,
       visaExpiry: b.visaExpiry ?? null, addressLine: b.addressLine ?? null,
       city: b.city ?? null, country: b.country ?? null,
+      /* D25-39: the guest's own yes to offers, recorded at once. */
+      offersAgreed: b.offersAgreed === true,
     })]);
   if (!rows[0]?.ok) return refused(c);
   return c.json({ sent: true });

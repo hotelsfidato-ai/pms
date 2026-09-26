@@ -90,7 +90,7 @@ describe("a booking for a returning guest", () => {
 
     await waitFor(() => expect(posted).toHaveLength(1));
     expect(posted[0]!.body).toMatchObject({
-      guestId: "g-rohit", phone: "+91 98765 43210", whatsappAgreed: true, noOffers: false,
+      guestId: "g-rohit", phone: "+91 98765 43210", whatsappAgreed: true, offersAgreed: false,
     });
     await waitFor(() => expect(useToastStore.getState().toasts.map((t) => t.description))
       .toContain("Rohit Deshpande"));

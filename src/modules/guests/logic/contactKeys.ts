@@ -25,20 +25,27 @@ export function emailKey(email: string | null | undefined): string | null {
   return email?.trim().toLowerCase() || null;
 }
 
-/** The numbers and addresses that asked not to be sent offers, as keys
-    (`GET /api/hotels/:code/crm/no-offers`). */
+/** Phones and emails, as keys: the ones that said yes to offers
+    (`GET /api/hotels/:code/crm/offers-yes`, D25-39) or asked for none
+    (`GET /api/hotels/:code/crm/no-offers`, D21-22). */
 export interface NoOffers {
   phones: readonly string[];
   emails: readonly string[];
 }
 
-/** D21-22: an offer may not go to a phone or email that asked for none -
-    whichever booking, hotel or guest record it arrives on. */
-export function refusesOffers(
-  noOffers: NoOffers, phone: string | null | undefined, email: string | null | undefined,
+/** Is this phone or email on the list - whichever booking, hotel or guest
+    record it arrives on? */
+function onList(
+  list: NoOffers, phone: string | null | undefined, email: string | null | undefined,
 ): boolean {
   const p = phoneKey(phone);
   const e = emailKey(email);
-  return (p !== null && noOffers.phones.includes(p))
-    || (e !== null && noOffers.emails.includes(e));
+  return (p !== null && list.phones.includes(p))
+    || (e !== null && list.emails.includes(e));
 }
+
+/** D21-22: an offer may not go to a phone or email that asked for none. */
+export const refusesOffers = onList;
+
+/** D25-39: an offer goes only to a phone or email that said yes. */
+export const agreedToOffers = onList;

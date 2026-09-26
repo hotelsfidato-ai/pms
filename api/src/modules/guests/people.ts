@@ -464,6 +464,47 @@ people.delete("/:code/crm/no-offers/:id", async (c) => {
   return c.json(answer.body as object, answer.status);
 });
 
+/* ── "Agreed to offers" (D25-39: opt-in) ─────────────────────────────
+   The yes, kept as the no is. The desk records it with the booking, the
+   walk-in and the check-in, and the guest on their own page; these are the
+   managers' doors - recording one on Guest 360, and the list marketing's
+   gate reads (no row, no offers). A yes is taken away by recording "no
+   offers" above, which replaces it. */
+people.post("/:code/crm/offers-yes", async (c) => {
+  const input = await c.req.json<{ phone?: string; email?: string }>()
+    .catch(() => ({}) as { phone?: string; email?: string });
+  const answer = await withSession(c.get("subject"), async (client): Promise<Answer> => {
+    if (!await hotelIdFor(client, c.req.param("code"))) return noProperty;
+    if (!await isManager(client)) return managersOnly;
+    const { rows: keys } = await client.query<{ phone: string | null; email: string | null }>(
+      "select app.phone_key($1) as phone, app.email_key($2) as email",
+      [input.phone ?? null, input.email ?? null]);
+    if (!keys[0]?.phone && !keys[0]?.email) {
+      return { status: 409, body: { ok: false, reason: "Give a phone number of ten digits or more, or an email address." } };
+    }
+    await client.query("select app.record_offers_yes($1, $2)", [input.phone ?? null, input.email ?? null]);
+    return { status: 200, body: { ok: true } };
+  });
+  return c.json(answer.body as object, answer.status);
+});
+
+people.get("/:code/crm/offers-yes", async (c) => {
+  const answer = await withSession(c.get("subject"), async (client): Promise<Answer> => {
+    if (!await hotelIdFor(client, c.req.param("code"))) return noProperty;
+    if (!await isManager(client)) return managersOnly;
+    const { rows } = await client.query<{ kind: string; value: string }>(
+      "select kind, value from offer_opt_ins order by kind, value");
+    return {
+      status: 200,
+      body: {
+        phones: rows.filter((r) => r.kind === "phone").map((r) => r.value),
+        emails: rows.filter((r) => r.kind === "email").map((r) => r.value),
+      },
+    };
+  });
+  return c.json(answer.body as object, answer.status);
+});
+
 people.get("/:code/crm/no-offers", async (c) => {
   const answer = await withSession(c.get("subject"), async (client): Promise<Answer> => {
     if (!await hotelIdFor(client, c.req.param("code"))) return noProperty;

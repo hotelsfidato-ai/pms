@@ -431,6 +431,16 @@ function DetailsSection(
           <TextField label="Address" value={d.addressLine} onChange={set("addressLine")} autoComplete="street-address" />
           <TextField label="City" value={d.city} onChange={set("city")} autoComplete="address-level2" />
           <TextField label="Country" value={d.country} onChange={set("country")} autoComplete="country-name" />
+          {/* D25-39: offers only to a guest who said yes. Unticked, none. A
+              plain box: the shared one measures itself inside a form. */}
+          <label className="flex items-center gap-2 text-sm text-ink-900">
+            <input
+              type="checkbox" className="size-4 accent-brand-orange cursor-pointer"
+              checked={d.offersAgreed === true}
+              onChange={(e) => setD((was) => ({ ...was, offersAgreed: e.target.checked }))}
+            />
+            Send me offers from {hotel}
+          </label>
           <Button
             type="submit" variant="primary"
             disabled={send.isPending || !d.idType || !(d.idNumber ?? "").trim()}

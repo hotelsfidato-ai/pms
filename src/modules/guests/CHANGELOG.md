@@ -8,6 +8,20 @@ project, still goes in the root `CHANGELOG.md`.
 
 ---
 
+## 2026-09-26 · Form C for the check-in roles only (D25-38); the yes to offers (D25-39)
+
+**Asked for / Shipped:** the compliance lane (`compliance/first-fixes-26sep`,
+written in full in the front desk's changelog, 26 September). Here: `GET
+/form-c` asks the role (roleGate `READ_RULES`: owner, admin, GM, hotel manager,
+reception), and its menu entry and route guard follow; `GET` and `POST
+/crm/offers-yes` (owner, admin, GM) in `people.ts`; `ConsentTicks` says "Guest
+agreed to offers", off until ticked; `agreedToOffers` beside `refusesOffers`.
+**Proved:** `guestIdReaders.test.ts` (seen failing with the menu rule taken
+out), the role gate's D25-38 tests, `oneGuestOneRecord.test.ts` section 5.
+**Found:** GUE-2. **Left open:** GUE-2.
+
+---
+
 ## 2026-09-22 · CRM-2 and CRM-3's routes and the booking-site warning (D22-8)
 
 **Asked for:** the owner's D22-8, through the master; the whole entry is

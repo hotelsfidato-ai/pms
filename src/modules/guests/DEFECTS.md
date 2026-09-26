@@ -14,7 +14,13 @@ entries stay here: they are the reason the fault does not come back.
 
 ## Open — not fixed
 
-None.
+### GUE-2 · The Form C register prints a long dash for a stay with no room
+
+**Found** - 26 September, in the compliance lane's screenshot of Form C: a
+foreign guest's earlier stays read "GB · room" and a long dash. It comes from
+the database (`app.form_c_due`, migration 025, its `coalesce` for the room),
+not from the screen, so the fix is a migration replacing that function with a
+plain "-" (D17-48). Not fixed here: outside the compliance brief.
 
 ---
 

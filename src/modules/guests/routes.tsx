@@ -1,5 +1,6 @@
 import { Route } from "react-router";
 import { PropertyScope } from "@/components/app/PropertyScope";
+import { RequireAccess } from "@/components/app/RequireAccess";
 import { GuestsPage, CompaniesPage } from "@/modules/guests/pages/Guests";
 import BookingSourcesPage from "@/modules/guests/pages/BookingSources";
 import FormCPage from "@/modules/guests/pages/FormC";
@@ -18,7 +19,11 @@ export const routes = (
     />
     <Route
       path="/h/:code/form-c"
-      element={<><PropertyScope /><FormCPage /></>}
+      element={
+        <RequireAccess path="/h/:code/form-c" resource="customer">
+          <PropertyScope /><FormCPage />
+        </RequireAccess>
+      }
     />
   </>
 );

@@ -1,4 +1,5 @@
 import { Route } from "react-router";
+import { RequireAccess } from "@/components/app/RequireAccess";
 import DashboardPage from "@/modules/reports/pages/Dashboard";
 import ManagerReportPage from "@/modules/reports/pages/ManagerReport";
 import NightAuditReportPage from "@/modules/reports/pages/NightAudit";
@@ -30,7 +31,10 @@ export const routes = (
     <Route path="/reports/guest-ledger" element={<GuestLedgerPage />} />
     <Route path="/reports/cashier-shift" element={<CashierShiftPage />} />
     <Route path="/reports/gst-sales" element={<GstSalesPage />} />
-    <Route path="/reports/c-form" element={<CFormPage />} />
+    <Route
+      path="/reports/c-form"
+      element={<RequireAccess path="/reports/c-form" resource="customer"><CFormPage /></RequireAccess>}
+    />
     <Route path="/reports" element={<ReportsIndexPage />} />
   </>
 );

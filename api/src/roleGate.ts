@@ -81,6 +81,10 @@ const FUNCTION_CANCEL = grant("reservation", "cancel", "Cancelling a function");
 /* Guests: `customer`. */
 const GUEST = grant("customer", "edit", "Changing a guest's record");
 const FORM_C = grant("customer", "edit", "Recording Form C");
+/* D25-38: guests' passport, visa and ID details are READ only by the people
+   who check guests in - the owner, an administrator, the GM, the hotel manager
+   and reception. Exactly who may record Form C, so one grant answers both. */
+const GUEST_ID = grant("customer", "edit", "Reading guests' passport and ID details");
 
 /* Bills: `invoice`. Money taken: `payment`. */
 const CHARGE = grant("invoice", "create", "Adding to a bill");
@@ -113,6 +117,9 @@ const HOUSEKEEPING_ROUNDS = grant("inventory", "edit", "Giving rooms to housekee
 const SETUP_ADD = grant("room_config", "create", "Setting the hotel up");
 const SETUP_CHANGE = grant("room_config", "edit", "Changing the hotel's setup");
 const HALLS = grant("room_config", "edit", "Setting up the banquet halls and packages");
+/* A16, the owner's answer of 26 September: the owner, an administrator or
+   the GM - the people who set the hotel up. */
+const FSSAI = grant("room_config", "edit", "Setting the FSSAI licence number");
 /* GST sits on Room types, so it is setup - and the accountant, who holds no
    setup grant, sets the rate too: "the accountant confirms the rate on the tax
    screen" (D21-91), and "owner, admin, GM and accountant" (D22-32). */
@@ -231,6 +238,7 @@ export const WRITE_RULES: Readonly<Record<string, Rule>> = {
   [`DELETE ${H}/crm/guests/:id/blacklist`]: own("guests/people.ts: app.is_crm_manager"),
   [`POST ${H}/crm/no-offers`]: own("guests/people.ts: app.is_crm_manager"),
   [`DELETE ${H}/crm/no-offers/:id`]: own("guests/people.ts: app.is_crm_manager"),
+  [`POST ${H}/crm/offers-yes`]: own("guests/people.ts: app.is_crm_manager"),
 
   /* night-audit */
   [`POST ${H}/night-audit/run`]: CLOSE_DAY,
@@ -299,6 +307,7 @@ export const WRITE_RULES: Readonly<Record<string, Rule>> = {
   [`POST ${H}/modules/:module`]: own("admin/moduleSwitches.ts: the owner or an administrator"),
   [`POST /api/admin/hotels`]: own("admin/admin.ts: a group administrator, with the provisioning key"),
   [`PATCH /api/admin/hotels/:code`]: own("admin/admin.ts: a group administrator"),
+  [`PUT ${H}/fssai`]: FSSAI,
   [`POST /api/admin/hotels/:code/:state`]: own("admin/admin.ts: a group administrator"),
   [`PATCH /api/admin/staff/:id`]: own("admin/admin.ts: app.manages_person (D22-3)"),
   [`PUT /api/admin/staff/:id/home-screen`]: own("admin/admin.ts: app.set_home_screen asks app.may_manage_person"),
@@ -412,6 +421,19 @@ export const WRITE_RULES: Readonly<Record<string, Rule>> = {
   [`POST ${H}/reviews/:id/ask`]: own("reputation/reputation.ts: its own role lists"),
 };
 
+/* ── The reads that ask the role (D25-38) ────────────────────────────
+   Every other read is answered by row security alone ("which hotel"). These
+   hand out a guest's passport, visa or ID number, so they ask the role too,
+   the same way as a write. A read missing from here is NOT refused: only the
+   ones listed are gated, and api/test/roleGate.test.ts names every read that
+   returns an ID field so a new one cannot slip in unlisted. */
+export const READ_RULES: Readonly<Record<string, Rule>> = {
+  [`GET ${H}/form-c`]: GUEST_ID,
+  [`GET ${H}/reports/c-form`]: GUEST_ID,
+  /* The details guests sent from their own page: asked in the route. */
+  [`GET ${H}/online-checkin`]: own("routes/guestDoor.ts: DESK_ROLES"),
+};
+
 /** The prefixes server.ts lets through with no person behind them. */
 export const DOORS = ["/api/guest", "/api/pos", "/api/channel"] as const;
 
@@ -469,15 +491,17 @@ const WRITES = new Set(["POST", "PUT", "PATCH", "DELETE"]);
 /* ── The gate ──────────────────────────────────────────────────────── */
 
 export const roleGate: MiddlewareHandler<{ Variables: { subject: string } }> = async (c, next) => {
-  if (!WRITES.has(c.req.method)) return next();
+  const write = WRITES.has(c.req.method);
+  if (!write && c.req.method !== "GET") return next();
 
   /* The route that will answer: the first one matched for this method. Hono
      lists middleware too (method ALL), which is why the method is compared. */
   const route = matchedRoutes(c).find((r) => r.method === c.req.method);
   if (!route || isDoor(route.path)) return next();
 
-  const rule = WRITE_RULES[`${route.method} ${route.path}`];
-  if (!rule) return c.json({ ok: false, reason: UNMAPPED }, 403);
+  const key = `${route.method} ${route.path}`;
+  const rule = write ? WRITE_RULES[key] : READ_RULES[key];
+  if (!rule) return write ? c.json({ ok: false, reason: UNMAPPED }, 403) : next();
   if (rule.kind === "own" || rule.kind === "self") return next();
 
   /* Every grant rule is a /api/hotels/:code route (the guard test

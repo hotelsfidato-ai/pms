@@ -111,6 +111,8 @@ asks the navigation (`RequireAccess`), and the server refuses the others
 | POST | `/:code/crm/no-offers` | managers | record "no offers" for a phone and an email |
 | DELETE | `/:code/crm/no-offers/:id` | managers | clear one |
 | GET | `/:code/crm/no-offers` | managers | the keys, for marketing's gate |
+| POST | `/:code/crm/offers-yes` | managers | record the guest's yes (D25-39); takes that phone's and email's "no" away |
+| GET | `/:code/crm/offers-yes` | managers | the yes keys, for marketing's gate (no row, no offers) |
 
 And in front desk (`stayExtras.ts`): `GET /:code/stays/:id/guest-marks`
 (stayed before, not counting this visit; the tick) and

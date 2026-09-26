@@ -8,6 +8,16 @@ project, still goes in the root `CHANGELOG.md`.
 
 ---
 
+## 2026-09-26 · "Guest agreed to offers" on the booking form (D25-39)
+
+**Asked for / Shipped:** the compliance lane (in full in the front desk's
+changelog, 26 September). The booking form and `POST /bookings` send and
+record `offersAgreed` (a yes against the phone and email) in place of
+`noOffers`. **Proved:** `newBookingReturning.test.tsx`,
+`oneGuestOneRecord.test.ts` (the booking's yes on the list).
+
+---
+
 ## 2026-09-24 · A test for the lead button
 
 **Asked for:** the master, through the front desk follow-ups session - the

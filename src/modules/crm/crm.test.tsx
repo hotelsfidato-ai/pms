@@ -35,12 +35,14 @@ const card = (id: string, name: string, hasId: boolean) => ({
 
 let joined = false;
 let apart = false;
+let saidYes = false;
 const posted: Array<{ path: string; method: string; body: unknown }> = [];
 
 beforeEach(() => {
   startSignedIn();
   joined = false;
   apart = false;
+  saidYes = false;
   posted.length = 0;
 });
 
@@ -55,9 +57,13 @@ function answer(path: string, init?: RequestInit): unknown {
     posted.push({ path, method: init.method, body: init.body ? JSON.parse(String(init.body)) : null });
     if (path.endsWith("/crm/joins")) joined = true;
     if (path.endsWith("/crm/not-same")) apart = true;
+    if (path.endsWith("/crm/offers-yes")) saidYes = true;
     if (path.includes("/crm/joins/") && path.endsWith("/undo")) joined = false;
     if (path.includes("/crm/not-same/") && path.endsWith("/undo")) apart = false;
     return { ok: true, joinId: "j-1", id: "n-1" };
+  }
+  if (path.includes("/crm/offers-yes")) {
+    return { phones: saidYes ? ["9876543210"] : [], emails: [] };
   }
   if (path.includes("/crm/not-same")) {
     return { answers: apart ? [{ id: "n-1", aId: "g-a", aName: "R Deshpande",
@@ -222,5 +228,17 @@ describe("Guest 360", () => {
       path: "/api/hotels/5EL/crm/guests/g-b/blacklist", method: "POST",
       body: { reason: "Left without paying" },
     }));
+  });
+
+  /* D25-39 (opt-in): nobody asked is no; a manager records the yes. */
+  it("says a guest who never said yes gets no offers, and records their yes", async () => {
+    renderAt("/crm/guests/g-b", "/crm/guests/:id", <Guest360Page />);
+    expect(await screen.findByText(/No offers are sent: this guest has not said yes/)).toBeTruthy();
+    fireEvent.click(screen.getByRole("button", { name: "Record their yes" }));
+    await waitFor(() => expect(posted.at(-1)).toMatchObject({
+      path: "/api/hotels/5EL/crm/offers-yes", method: "POST", body: { phone: "9876543210" },
+    }));
+    expect(await screen.findByText(/Agreed to offers/)).toBeTruthy();
+    expect(screen.queryByRole("button", { name: "Record their yes" })).toBeNull();
   });
 });

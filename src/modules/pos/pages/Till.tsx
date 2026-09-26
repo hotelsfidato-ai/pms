@@ -17,7 +17,8 @@ import {
   Dialog, DialogContent, Field, fieldProps, Input, NativeSelect,
 } from "@/components/ui";
 import { StartHere } from "@/components/app/StartHere";
-import { getMenu, listOrders, getOrder, listChargeableRooms, openOrder, addLine, voidLine, settleOrder, abandonOrder, applyDiscount, clearDiscount, setRoundOff, settleSplit, listPromotions, applyPromotion, setOrderHeader, type Order, type MenuItem, type OrderSummary, type TenderInput } from "@/modules/pos/data/till";
+import { getMenu, listOrders, getOrder, listChargeableRooms, openOrder, addLine, voidLine, settleOrder, abandonOrder, applyDiscount, clearDiscount, setRoundOff, settleSplit, listPromotions, applyPromotion, setOrderHeader, type Order, type MenuItem, type OrderSummary, type TenderInput, type CashId } from "@/modules/pos/data/till";
+import { CashIdFields } from "@/modules/pos/components/CashIdFields";
 import { BUSINESS_DATE } from "@/data/repositories";
 import { ReadFailed, ReadStale } from "@/components/ui";
 
@@ -717,6 +718,7 @@ function SplitPanel({
   const [rows, setRows] = useState<TenderInput[]>([
     { method: "cash", amount: 0 },
   ]);
+  const [cashId, setCashId] = useState<CashId>({});
 
   const taken = rows.reduce((a, r) => a + (Number(r.amount) || 0), 0);
   const left = Math.round((order.payable - taken) * 100) / 100;
@@ -733,7 +735,7 @@ function SplitPanel({
   const settle = async () => {
     setBusy(true);
     const res = await settleSplit(hotelId, order.id,
-      rows.filter((r) => Number(r.amount) > 0));
+      rows.filter((r) => Number(r.amount) > 0), cashId);
     setBusy(false);
     if (!res.ok) return toast.error("Not settled", res.reason);
     toast.success("Settled", `${money(order.payable)} across ${rows.length}`);
@@ -806,6 +808,8 @@ function SplitPanel({
         Another payment
       </Button>
 
+      {order.payable > 100000 && <CashIdFields value={cashId} onChange={setCashId} />}
+
       <div className="border-t border-grey-200 pt-2.5 space-y-1">
         <Row label="Bill" value={money(order.payable)} />
         <Row label="Taken" value={money(taken)} />
@@ -857,6 +861,7 @@ function OrderPanel({
   const [room, setRoom] = useState("");
   const [discounting, setDiscounting] = useState(false);
   const [splitting, setSplitting] = useState(false);
+  const [cashId, setCashId] = useState<CashId>({});
 
   const rooms = useQuery({
     queryKey: ["till-rooms", hotelId],
@@ -868,7 +873,7 @@ function OrderPanel({
   ) => {
     setBusy(true);
     const res = await settleOrder(hotelId, order.id, method,
-      method === "room" ? room : undefined, folioId);
+      method === "room" ? room : undefined, folioId, cashId);
     setBusy(false);
 
     if (!res.ok) {
@@ -1194,6 +1199,7 @@ function OrderPanel({
               </Button>
             </div>
 
+            {order.payable > 100000 && <CashIdFields value={cashId} onChange={setCashId} />}
             <div className="grid grid-cols-3 gap-2">
               {METHODS.filter((m) => m.key !== "room").map((m) => (
                 <Button

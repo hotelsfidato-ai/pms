@@ -10,7 +10,8 @@ import { cn } from "@/lib/cn";
 import { dateLong, moneyPrecise } from "@/lib/format";
 import { useUi } from "@/lib/ui";
 import { toast } from "@/components/ui";
-import { getMenu, listOrders, getOrder, listChargeableRooms, openOrder, addLine, voidLine, setLineQty, sendToKitchen, settleOrder, abandonOrder, setOrderHeader, type MenuItem } from "@/modules/pos/data/till";
+import { getMenu, listOrders, getOrder, listChargeableRooms, openOrder, addLine, voidLine, setLineQty, sendToKitchen, settleOrder, abandonOrder, setOrderHeader, type MenuItem, type CashId } from "@/modules/pos/data/till";
+import { CashIdFields } from "@/modules/pos/components/CashIdFields";
 import { FunctionPicker } from "@/modules/pos/components/FunctionPicker";
 import { listPosOutlets } from "@/modules/pos/data/posBridge";
 import { BUSINESS_DATE } from "@/data/repositories";
@@ -77,6 +78,7 @@ export default function TerminalPage() {
   const [blockedSlips, setBlockedSlips] = useState<BlockedSlip[]>([]);
   const [settling, setSettling] = useState(false);
   const [room, setRoom] = useState("");
+  const [cashId, setCashId] = useState<CashId>({});
   /* A sixteen-item demo menu fits on a screen. A real card does not, and
      scrolling for "Jeera Rice" while a table waits is how a waiter ends
      up writing on paper instead. */
@@ -243,7 +245,7 @@ export default function TerminalPage() {
     if (!orderId) return;
     setBusy(true);
     const res = await settleOrder(hotelId, orderId, method,
-      method === "room" ? room : undefined, folioId);
+      method === "room" ? room : undefined, folioId, cashId);
     setBusy(false);
 
     if (!res.ok) {
@@ -254,7 +256,7 @@ export default function TerminalPage() {
       res.guest ? `Charged to ${res.guest}`
         : method === "function" ? `On ${res.order.eventTitle ?? "the function"}'s bill`
           : undefined);
-    setOrderId(null); setSettling(false); setRoom(""); setChoices(null);
+    setOrderId(null); setSettling(false); setRoom(""); setChoices(null); setCashId({});
     refresh();
   };
 
@@ -925,6 +927,7 @@ export default function TerminalPage() {
                       <BedDouble className="size-5" />
                       Charge to a room
                     </button>
+                    {order.payable > 100000 && <CashIdFields value={cashId} onChange={setCashId} />}
                     <div className="grid grid-cols-3 gap-2">
                       {METHODS.map((m) => (
                         <button

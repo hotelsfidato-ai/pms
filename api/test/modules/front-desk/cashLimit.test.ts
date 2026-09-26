@@ -1,0 +1,183 @@
+import { describe, it, expect, beforeAll, afterAll } from "vitest";
+import { app } from "../../../src/server.ts";
+import { closePool } from "../../../src/db.ts";
+import { PAN_NEEDED, PAN_SHAPE } from "../../../src/modules/finance/cashLimit.ts";
+
+/* ══════════════════════════════════════════════════════════════════
+   CASH AT THE DESK: ₹2 LAKH REFUSED, A PAN ABOVE ₹1 LAKH (D25-40)
+
+   Income-tax Act 2025 s.186 and Rule 159, as the owner decided them on
+   26 September: counted over the stay, its group and the guest's day;
+   refunds do not bring it down; above ₹1,00,000 at once a PAN, or Form 97,
+   or a guest from abroad. Every refusal is proved to have written nothing -
+   no payment and no line on the bill (root MEMORY 243). The group and a reversed payment are proved in the
+   database (db/tests/modules/front-desk.sql), on app.cash_taken itself.
+   ══════════════════════════════════════════════════════════════════ */
+
+const SUPER =
+  process.env["SUPER_DATABASE_URL"] ?? "postgres://postgres:pw@127.0.0.1:55432/fidato";
+const tag = `CASH-${process.pid}`;
+const run = String(process.pid % 10000).padStart(4, "0");
+
+let owner = "";
+let source = "";
+let roomType = "";
+const stays: Record<"a" | "b" | "c" | "d" | "e", string> = { a: "", b: "", c: "", d: "", e: "" };
+
+async function sql<T>(text: string, values: unknown[] = []): Promise<T[]> {
+  const db = new (await import("pg")).default.Pool({ connectionString: SUPER });
+  try { return (await db.query(text, values)).rows as T[]; } finally { await db.end(); }
+}
+
+const call = (path: string, body: unknown) =>
+  app.request(`/api/hotels/5EL${path}`, {
+    method: "POST",
+    headers: { "x-dev-staff-id": owner, "content-type": "application/json" },
+    body: JSON.stringify(body),
+  });
+
+async function book(name: string, phone: string, guestId?: string): Promise<string> {
+  const [night] = await sql<{ d: string; e: string }>(
+    `select app.business_date(id)::text as d, (app.business_date(id) + 1)::text as e
+       from hotels where code = '5EL'`);
+  const res = await call("/bookings", {
+    guestName: `${tag} ${name}`, phone, checkIn: night!.d, checkOut: night!.e,
+    bookingSourceId: source, ...(guestId ? { guestId } : {}),
+    lines: [{ roomTypeId: roomType, adults: 1, rooms: 1, agreedRate: 3000 }],
+  });
+  const out = (await res.json()) as { bookings?: { reference: string }[]; reason?: string };
+  expect(res.status, JSON.stringify(out)).toBe(200);
+  const [row] = await sql<{ id: string }>(
+    "select id::text from reservations where reference = $1", [out.bookings![0]!.reference]);
+  return row!.id;
+}
+
+const pay = async (stay: string, body: Record<string, unknown>) => {
+  const res = await call(`/stays/${stay}/payments`, body);
+  return { status: res.status, out: (await res.json()) as { ok: boolean; reason?: string; needs?: string } };
+};
+const payments = (stay: string) => sql<{ amount: string; pan: string | null; form_97: boolean }>(
+  `select p.amount::text, p.pan, p.form_97 from payments p
+     join folio_postings fp on fp.id = p.posting_id
+     join folios f on f.id = fp.folio_id
+    where f.reservation_id = $1 order by p.created_at`, [stay]);
+const lines = async (stay: string) => (await sql(
+  `select 1 from folio_postings fp join folios f on f.id = fp.folio_id
+    where f.reservation_id = $1`, [stay])).length;
+
+beforeAll(async () => {
+  owner = (await sql<{ id: string }>("select id::text from staff where email = 'owner@fidato.in'"))[0]!.id;
+  source = (await sql<{ id: string }>(
+    "select id::text from booking_sources where is_active and kind = 'direct' order by name limit 1"))[0]!.id;
+  roomType = (await sql<{ id: string }>(
+    `select rt.id::text from room_types rt join hotels h on h.id = rt.hotel_id
+      where h.code = '5EL' and rt.is_active order by rt.sort_order limit 1`))[0]!.id;
+
+  const phone = `6${run}00001`;
+  stays.a = await book("Meena Joshi", phone);
+  const [guest] = await sql<{ id: string }>("select guest_id::text as id from reservations where id = $1", [stays.a]);
+  stays.b = await book("Meena Joshi", phone, guest!.id);          // her second room, same day
+  stays.c = await book("Form 97 Guest", `6${run}00002`);
+  stays.d = await book("Guest From Abroad", `6${run}00003`);
+  stays.e = await book("Exactly Two Lakh", `6${run}00004`);
+  await sql(
+    "update guests set nationality = 'GB' where id = (select guest_id from reservations where id = $1)",
+    [stays.d]);
+});
+
+afterAll(async () => {
+  const ids = Object.values(stays).filter(Boolean);
+  const guests = (await sql<{ id: string }>(
+    "select id::text from guests where full_name like $1", [`${tag} %`])).map((g) => g.id);
+  await sql(
+    `delete from payments where posting_id in (select fp.id from folio_postings fp
+       join folios f on f.id = fp.folio_id where f.reservation_id = any($1::uuid[]))`, [ids]);
+  const db = new (await import("pg")).default.Pool({ connectionString: SUPER });
+  try {
+    await db.query("alter table folio_postings disable trigger folio_postings_append_only");
+    await db.query(
+      `delete from folio_postings where folio_id in
+         (select id from folios where reservation_id = any($1::uuid[]))`, [ids]);
+  } finally {
+    await db.query("alter table folio_postings enable trigger folio_postings_append_only");
+    await db.end();
+  }
+  await sql("delete from folios where reservation_id = any($1::uuid[])", [ids]);
+  await sql("delete from reservations where id = any($1::uuid[])", [ids]);
+  const db2 = new (await import("pg")).default.Pool({ connectionString: SUPER });
+  try {
+    await db2.query("alter table guests disable trigger guests_no_delete");
+    await db2.query("delete from guests where id = any($1::uuid[])", [guests]);
+  } finally {
+    await db2.query("alter table guests enable trigger guests_no_delete");
+    await db2.end();
+  }
+  await closePool();
+});
+
+describe("more than ₹1,00,000 in cash at once (Rule 159)", () => {
+  it("asks for the PAN, and writes nothing without it", async () => {
+    const { status, out } = await pay(stays.a, { method: "Cash", amount: 150000 });
+    expect(status).toBe(409);
+    expect(out).toMatchObject({ ok: false, reason: PAN_NEEDED, needs: "pan" });
+    expect(await payments(stays.a)).toEqual([]);
+    expect(await lines(stays.a)).toBe(0);
+  });
+
+  it("refuses a PAN that is not one", async () => {
+    const { status, out } = await pay(stays.a, { method: "Cash", amount: 150000, pan: "12345" });
+    expect(status).toBe(409);
+    expect(out.reason).toBe(PAN_SHAPE);
+    expect(await payments(stays.a)).toEqual([]);
+  });
+
+  it("takes it with the PAN, kept in capitals with the payment", async () => {
+    const { status, out } = await pay(stays.a, { method: "Cash", amount: 150000, pan: " abcde1234f " });
+    expect(status, JSON.stringify(out)).toBe(200);
+    expect(await payments(stays.a)).toEqual([{ amount: "150000.00", pan: "ABCDE1234F", form_97: false }]);
+  });
+
+  it("takes Form 97 instead from a guest with no PAN", async () => {
+    const { status } = await pay(stays.c, { method: "Cash", amount: 120000, form97: true });
+    expect(status).toBe(200);
+    expect(await payments(stays.c)).toEqual([{ amount: "120000.00", pan: null, form_97: true }]);
+  });
+
+  it("does not ask a guest from abroad", async () => {
+    const { status } = await pay(stays.d, { method: "Cash", amount: 120000 });
+    expect(status).toBe(200);
+    expect(await payments(stays.d)).toEqual([{ amount: "120000.00", pan: null, form_97: false }]);
+  });
+});
+
+describe("cash of ₹2,00,000 or more from one guest (s.186)", () => {
+  it("is refused on the stay, saying what was taken and how much more can be cash", async () => {
+    const { status, out } = await pay(stays.a, { method: "Cash", amount: 50000 });
+    expect(status).toBe(409);
+    expect(out.reason).toBe(
+      "Cash of ₹2,00,000 or more from one guest is not allowed (Income-tax Act s.186). "
+      + "₹1,50,000.00 has been taken in cash already, so less than ₹50,000.00 more can be cash. "
+      + "Take the rest by card, UPI, cheque or bank transfer.");
+    expect(await payments(stays.a)).toHaveLength(1);
+  });
+
+  it("counts the same guest's other stay on the same day", async () => {
+    const { status, out } = await pay(stays.b, { method: "Cash", amount: 50000 });
+    expect(status).toBe(409);
+    expect(out.reason).toMatch(/₹1,50,000.00 has been taken in cash already/);
+    expect(await payments(stays.b)).toEqual([]);
+    expect(await lines(stays.b)).toBe(0);
+  });
+
+  it("takes less than the rest in cash, and the rest by card", async () => {
+    expect((await pay(stays.b, { method: "Cash", amount: 49999.99 })).status).toBe(200);
+    expect((await pay(stays.b, { method: "Credit Card", amount: 60000 })).status).toBe(200);
+  });
+
+  it("is refused at exactly ₹2,00,000 in one payment, PAN or not", async () => {
+    const { status, out } = await pay(stays.e, { method: "Cash", amount: 200000, pan: "ABCDE1234F" });
+    expect(status).toBe(409);
+    expect(out.reason).toMatch(/^Cash of ₹2,00,000 or more from one guest is not allowed.*Take less than ₹2,00,000 in cash\./);
+    expect(await payments(stays.e)).toEqual([]);
+  });
+});

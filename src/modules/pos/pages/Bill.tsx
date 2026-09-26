@@ -192,6 +192,8 @@ export default function BillPage() {
             issued against the room folio at checkout.
           </p>
           {o.hotelGstin && <p className="tabular">GSTIN {o.hotelGstin}</p>}
+          {/* A16: on every food bill since January 2022; a dash until typed. */}
+          <p className="tabular" data-bill-fssai>FSSAI licence {o.hotelFssai ?? "-"}</p>
         </div>
       </div>
     </div>

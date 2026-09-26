@@ -8,6 +8,97 @@ project, still goes in the root `CHANGELOG.md`.
 
 ---
 
+## 2026-09-26 · Compliance first fixes: ID reads (D25-38), offers opt-in (D25-39), cash of ₹2 lakh and the PAN (D25-40), FSSAI (A16)
+
+**Asked for:** the master, for the owner's D25-38 to D25-40 and the audit's
+A16 (`docs/SELLING-IN-INDIA.md`): branch `compliance/first-fixes-26sep`. The
+whole lane is written here; guests, reports, marketing, crm, reservations and
+admin carry a line each pointing back. Finance, POS and online check-in are
+other lanes' (held at the time): the owner said yes to small separate changes
+there (D26-5), and they are listed below, not in those services' logs.
+
+**The owner's answers, 26 September** (recorded as D26-5 to D26-11; and
+D26-12, no headless Edge from any session - this lane's screenshots were taken
+with it before that, and its profile showed the owner's account: reported to
+the master, profile deleted): small changes in the held services; guests never asked get no offers;
+the yes is asked at booking, walk-in, check-in, the guest's page and Guest 360,
+a later answer replacing an earlier one; cash counted "stay, group and day",
+refunds not subtracted; PAN, or "Form 97 taken", or a foreign guest, else
+refused; the till the same per bill; FSSAI built as a per-hotel setting.
+
+**Shipped**
+- **A · D25-38.** `api/src/roleGate.ts` asks the role on three reads too
+  (`READ_RULES`): `GET /form-c` and `GET /reports/c-form` take `customer: edit`
+  (owner, admin, GM, hotel manager, reception - who may record Form C), and
+  `GET /online-checkin` keeps its own `DESK_ROLES`. Every other read is
+  unchanged. The Form C and C-Form menu entries (`canSee`), their route guards
+  (`RequireAccess`) and the All reports list (`mayReach`) follow.
+- **B · D25-39.** `offer_opt_ins` (migration "offers only with a yes"): a yes
+  against the phone or email for the whole group, as D21-22's no;
+  `app.record_offers_yes` takes that key's no away and `app.record_no_offers`
+  its yes. The booking form, the walk-in (`ConsentTicks`, "Guest agreed to
+  offers", off until ticked), the check-in's last step, the guest's own page
+  (recorded at once, `recorded_by` null) and Guest 360 (`/crm/offers-yes`,
+  owner/admin/GM) record it. Marketing's `mayBeWrittenTo` needs a yes and no no.
+- **C · D25-40.** `app.cash_taken(stay, day)` (migration "cash limit and
+  PAN"): this stay, its group, and the guest's other stays that business day;
+  a reversed payment left out, a refund never subtracted.
+  `api/src/modules/finance/cashLimit.ts` holds the two sentences; the desk's
+  `POST /stays/:id/payments` and the till's settle ask them **before any
+  write**. PAN (capitals, `ABCDE1234F`) or Form 97 kept on `payments` and on
+  `pos_orders` (with `non_resident` at the till). The Settle dialog and both
+  till screens show the PAN box above ₹1,00,000.
+- **D · A16.** `hotels.fssai_number` (14 digits or null), `PUT
+  /hotels/:code/fssai` (owner, admin, GM: room setup), a card on the hotel's
+  page, a line on every restaurant bill, and on a tax invoice with food,
+  drinks or minibar lines.
+
+**Every read that returns an ID field** (grep `id_number|passport|visa` in
+`api/src`): `GET /form-c` (passport) and `GET /reports/c-form` (passport,
+expiry, visa, address) - now gated; `GET /online-checkin` (the guests' own
+details, Aadhaar masked) - gated since 21 September by `DESK_ROLES`; the
+guest's own page (`/api/guest`, link + code, the guest's own data). Not ID:
+the invoice prints the guest's address from `guest_documents` (the issue
+route, a write gated by `invoice: create`). ID photos: not built (D21-11).
+
+**Found**
+- GUE-2 (open): the Form C register prints a long dash for a stay with no room,
+  from `app.form_c_due` (025) - against D17-48.
+- The till's order read hides an order the group owner opened from a GM
+  ("No such order") - pos's, told to the master.
+- The route guard's refusal reads "which does not include customer" - the
+  shared `RequireAccess` names the resource; told to the master.
+- `/api/pos/tickets` (an outside till's door) is not asked the cash rule.
+
+**Proved** - the six checks on `78141bf` (cp6 `995982b` merged in), 26
+September 23:21 to 23:37, every one exit 0: `tsc -p tsconfig.app.json`
+clean; `api` tsc clean; web 80 files, 705 tests; API 99 files, 1562 tests;
+database 1179 assertions (crm 25, cash limit 5, front desk's others as before);
+the replay "all 143 migrations are re-runnable". Each rule was seen failing
+with it taken out and passing with it back: the Form C read rules (housekeeping
+got the register, 200), the Form C menu rule (the accountant and viewer could
+reach it), a yes taking the no away (database), the check-in's yes (Rohit's
+email missing), marketing's yes check (two list tests), the desk's ₹2 lakh
+refusal (three tests), a reversed payment left out (110000 counted, not
+100000), the till's ₹2 lakh refusal, the FSSAI 14-digit check (500, not 409).
+Screens at 1280 and 390 wide in `.local/screenshots/2026-09-26-compliance/`
+(A1-A4 Form C and C-Form refused for housekeeping, shown for reception; B1-B5
+the offers tick at booking and check-in, Guest 360 before and after the GM's
+yes, the guest's page; C1-C4 the PAN box, the PAN refusal, the ₹2 lakh
+refusal, the till; D1-D3 the FSSAI setting and the restaurant bill).
+
+**Left open**
+- The outside till's tickets and the cash rule; a list of PANs and Form 97s
+  for the CA (Form 98) - neither in this brief.
+- The FSSAI number is read live on an invoice, not frozen at issue as the
+  GSTIN is (`ponytail:` note in `invoices.ts`).
+- Two clerks taking cash for one guest in the same second can both pass
+  (`ponytail:` note in `postings.ts`).
+
+**Commits:** `0f5ca78`, `2e2a4f0`, `78141bf` (with merges of cp6 `1cd306c`, `5e963d4`, and the last one), and this note.
+
+---
+
 ## 2026-09-26 · FD-7 held by a test
 
 **Asked for:** the owner's D25-27 (a test for each fix built but held by none, then close it; no behaviour changed), in the five-tests session, branch `tests/five-25sep`. **Shipped:** `front-desk.test.tsx`, "puts Today, once a week is paged, in a row that wraps (FD-7)". **Proved:** seen failing with `flex-wrap` taken out of `StayView.tsx`; passes on the fix. FD-7 moved to Fixed. **Left open:** no 375px browser measurement this time; the class is what is held. **Commits:** `689f837`.

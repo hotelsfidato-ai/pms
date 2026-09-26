@@ -169,8 +169,8 @@ export async function createBooking(
     guestId?: string;
     /** "Guest agreed to WhatsApp" (D21-72). */
     whatsappAgreed?: boolean;
-    /** "Do not send me offers" - kept against the phone and email (D21-22). */
-    noOffers?: boolean;
+    /** "Guest agreed to offers" - kept against the phone and email (D25-39). */
+    offersAgreed?: boolean;
   },
 ): Promise<
   | { ok: true; groupId: string | null; rooms: number; guest: string;

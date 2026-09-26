@@ -146,6 +146,41 @@ begin
   select count(*) into ok_count from offer_opt_outs where value in ('7000012345', 'crm.test@example.com');
   perform test.ok('crm', 'an administrator clears it', ok_count = 0, ok_count || ' left');
 
+  -- ---------- offers only with a yes (D25-39); a later answer replaces -------
+  perform set_config('app.user_id', clerk::text, true);
+  set local role pms_app;
+  n := app.record_offers_yes('+91 70000 12345', 'CRM.Test@Example.com');
+  failed := false;
+  begin
+    insert into offer_opt_ins (kind, value) values ('phone', '7000099999');
+  exception when insufficient_privilege then failed := true;
+  end;
+  reset role;
+  select count(*) into ok_count from offer_opt_ins
+   where value in ('7000012345', 'crm.test@example.com') and recorded_by = clerk;
+  perform test.ok('crm', 'the desk records a yes as its keys, and only through its function',
+    n = 2 and ok_count = 2 and failed, n || ' recorded, ' || ok_count || ' kept, insert refused: ' || failed);
+
+  perform set_config('app.user_id', adm::text, true);
+  set local role pms_app;
+  perform app.record_no_offers('+91 70000 12345', null);
+  reset role;
+  select count(*) into ok_count from offer_opt_ins where value = '7000012345';
+  select count(*) into n from offer_opt_outs where value = '7000012345';
+  perform test.ok('crm', 'a no takes the same phone''s yes away, and leaves the email''s',
+    ok_count = 0 and n = 1
+      and exists (select 1 from offer_opt_ins where value = 'crm.test@example.com'),
+    ok_count || ' yes, ' || n || ' no');
+
+  perform set_config('app.user_id', clerk::text, true);
+  set local role pms_app;
+  perform app.record_offers_yes('7000012345', null);
+  reset role;
+  select count(*) into ok_count from offer_opt_ins where value = '7000012345';
+  select count(*) into n from offer_opt_outs where value = '7000012345';
+  perform test.ok('crm', 'a later yes takes the no away - the desk could not have deleted it',
+    ok_count = 1 and n = 0, ok_count || ' yes, ' || n || ' no');
+
   -- ---------- the WhatsApp tick is unticked unless somebody ticks it ---------
   perform test.ok('crm', 'a booking nobody ticked has not agreed to WhatsApp',
     not (select whatsapp_agreed from reservations where reference = 'CRM-T-5'));
@@ -239,6 +274,7 @@ begin
 
   -- ---------- clean up ------------------------------------------------------
   delete from offer_opt_outs where value in ('7000012345', 'crm.test@example.com');
+  delete from offer_opt_ins where value in ('7000012345', 'crm.test@example.com');
   delete from guest_not_same where a in (w, hb, th) or b in (w, hb, th);
   delete from guest_joins where kept_id in (w, hb, th) or joined_id in (w, hb, th);
   delete from reservations where hotel_id = h;

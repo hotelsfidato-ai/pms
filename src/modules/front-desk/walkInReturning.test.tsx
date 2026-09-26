@@ -94,14 +94,14 @@ describe("the walk-in and a returning guest", () => {
     expect(await screen.findByText(/this booking is theirs/)).toBeTruthy();
 
     fireEvent.click(screen.getByRole("switch", { name: /Guest agreed to WhatsApp/ }));
-    fireEvent.click(screen.getByRole("switch", { name: /Do not send offers/ }));
+    fireEvent.click(screen.getByRole("switch", { name: /Guest agreed to offers/ }));
     type("Rate per night", "3200");
     fireEvent.click(screen.getByRole("button", { name: /Confirm and check in/ }));
 
     await waitFor(() => expect(posted).toHaveLength(1));
     expect(posted[0]!.path).toBe("/api/hotels/5EL/walk-ins");
     expect(posted[0]!.body).toMatchObject({
-      guestId: "g-rohit", phone: "+91 98765 43210", whatsappAgreed: true, noOffers: true,
+      guestId: "g-rohit", phone: "+91 98765 43210", whatsappAgreed: true, offersAgreed: true,
     });
     /* What the clerk reads: the guest as they stand on file. */
     await waitFor(() => expect(useToastStore.getState().toasts.map((t) => t.title))
@@ -119,7 +119,7 @@ describe("the walk-in and a returning guest", () => {
     fireEvent.click(screen.getByRole("button", { name: /Confirm and check in/ }));
     await waitFor(() => expect(posted).toHaveLength(1));
     expect(posted[0]!.body).not.toHaveProperty("guestId");
-    expect(posted[0]!.body).toMatchObject({ whatsappAgreed: false, noOffers: false });
+    expect(posted[0]!.body).toMatchObject({ whatsappAgreed: false, offersAgreed: false });
   });
 
   it("warns of a blacklisted guest with the reason, and still lets the clerk check them in", async () => {

@@ -7,6 +7,7 @@ import type { PoolClient as Client } from "pg";
 /* The banquet service's rule for which functions an order may go on
    (D17-21) — through its front door, never its files. */
 import { whyNotAttachable } from "../banquet/index.ts";
+import { overCashLimit, panFor } from "../finance/index.ts";
 /* The one way an outlet row is made (Restaurant setup, D22-6). */
 import { addOutlet } from "./pos.ts";
 
@@ -1623,6 +1624,7 @@ async function readOrder(client: Client, orderId: string) {
   const { rows: head } = await client.query<{
     id: string; order_no: string; outlet: string; outlet_name: string;
     hotel_name: string; hotel_city: string | null; hotel_gstin: string | null;
+    hotel_fssai: string | null;
     table_ref: string | null; status: string; business_date: string;
     payment_method: string | null; opened_by_name: string;
     discount_type: string | null; discount_value: string | null;
@@ -1643,6 +1645,7 @@ async function readOrder(client: Client, orderId: string) {
        would quietly reprint it with June's address. */
     `select o.id::text, o.order_no, ou.code as outlet, ou.name as outlet_name,
             h.name as hotel_name, h.city as hotel_city, h.gstin as hotel_gstin,
+            h.fssai_number as hotel_fssai,
             o.table_ref, o.status,
             to_char(o.business_date,'YYYY-MM-DD') as business_date,
             o.payment_method,
@@ -1725,6 +1728,8 @@ async function readOrder(client: Client, orderId: string) {
     hotelName: h.hotel_name,
     hotelCity: h.hotel_city,
     hotelGstin: h.hotel_gstin,
+    /* A16: printed on every restaurant bill; null prints a dash. */
+    hotelFssai: h.hotel_fssai,
     table: h.table_ref,
     status: h.status,
     businessDate: h.business_date,
@@ -3526,6 +3531,8 @@ till.post("/:code/till/orders/:id/settle", async (c) => {
   };
   type SettleBody = {
     method?: string; room?: string; folioId?: string; tenders?: Tender[];
+    /* D25-40: asked when more than ₹1,00,000 of the bill is cash. */
+    pan?: string; form97?: boolean; nonResident?: boolean;
   };
   const input = await c.req.json<SettleBody>().catch(() => ({}) as SettleBody);
 
@@ -3700,6 +3707,14 @@ till.post("/:code/till/orders/:id/settle", async (c) => {
           amount: payable, tendered: null, reference: null,
         }];
 
+    /* D25-40: cash on one bill - refused at ₹2,00,000, and a PAN, Form 97 or
+       a guest from abroad above ₹1,00,000. Asked before anything is written. */
+    const cash = rows.filter((t) => t.method === "cash").reduce((a, t) => a + t.amount, 0);
+    const over = overCashLimit(0, cash, "card or UPI, or charge the bill to the room");
+    if (over) return refuse(over);
+    const kept = panFor(cash, { pan: input.pan, form97: input.form97, foreign: input.nonResident === true });
+    if (!kept.ok) return { ok: false as const, reason: kept.reason, needs: "pan" as const };
+
     const writeTenders = async () => {
       for (const t of rows) {
         await client.query(
@@ -3720,9 +3735,9 @@ till.post("/:code/till/orders/:id/settle", async (c) => {
       await client.query(
         `update pos_orders
             set status='settled', settled_by=$1, settled_at=now(),
-                payment_method=$2
+                payment_method=$2, pan=$4, form_97=$5, non_resident=$6
           where id = $3`,
-        [session.staffId, method, orderId],
+        [session.staffId, method, orderId, kept.pan, kept.form97, kept.nonResident],
       );
       await writeTenders();
       /* D22-44: paid here, so its alcohol gets its VAT bill now, in this

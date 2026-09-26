@@ -177,6 +177,8 @@ export async function checkIn(
        early arrival look ordinary. */
     earlyReason?: string;
     waiveEarly?: boolean;
+    /** "Guest agreed to offers", asked face to face (D25-39). */
+    offersAgreed?: boolean;
     businessDate: string;
     /* ⚠ NO `user`. This sent the literal "front desk", and so did the
        walk-in below (FD-2). Neither route ever read it: the server takes
@@ -292,12 +294,12 @@ export async function createWalkIn(
     /* The CRM's (docs/briefs/crm.md). Optional, like the booking form's:
        a phone and an email, the returning guest the clerk confirmed
        (D21-20, checked again by the server), and the two ticks - "guest
-       agreed to WhatsApp" (D21-72) and "do not send offers" (D21-22). */
+       agreed to WhatsApp" (D21-72) and "agreed to offers" (D25-39). */
     phone?: string;
     email?: string;
     guestId?: string;
     whatsappAgreed?: boolean;
-    noOffers?: boolean;
+    offersAgreed?: boolean;
   },
 ): Promise<OperationResult<Stay>> {
   /* This wrote the new stay into the in-memory store while every

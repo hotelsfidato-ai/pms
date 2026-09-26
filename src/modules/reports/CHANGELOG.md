@@ -11,6 +11,19 @@ Work that touches the core or several services still goes in the root
 
 ---
 
+## 2026-09-26 · The C-Form report for the check-in roles only (D25-38)
+
+**Asked for / Shipped:** the compliance lane (in full in the front desk's
+changelog, 26 September). `GET /reports/c-form` asks the role (roleGate
+`READ_RULES`: owner, admin, GM, hotel manager, reception); its menu entry
+(`canSee`), route guard (`RequireAccess`) and the All reports list and starred
+list (`mayReach`) no longer offer it to anybody else. **Proved:** the role
+gate's D25-38 tests (housekeeping, kitchen, chef, till operator, accountant and
+viewer refused in the gate's words; reception, hotel manager, owner answered),
+seen failing with the rule taken out; `guestIdReaders.test.ts`.
+
+---
+
 ## 2026-09-24 · Lodging tax without alcohol (D22-45); no invented GST rate in its heading (D22-9); the outlets' sales counted once (ACC-11)
 
 Done from the finance session (the owner's list for 24 September), in this

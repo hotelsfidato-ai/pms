@@ -34,4 +34,6 @@ export const mounts: readonly Mount[] = [
    (MEMORY 243). `taxKind` is "room" unless the service has its own rule;
    the spa does (D18-21) and laundry does not. */
 export { postCharge } from "./postings.ts";
+/* D25-40: the cash limit and the PAN, for the till's settle as for the desk. */
+export { overCashLimit, panFor } from "./cashLimit.ts";
 export type { ChargeToPost } from "./postings.ts";

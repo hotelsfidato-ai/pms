@@ -40,6 +40,10 @@ import { getInvoice } from "@/modules/finance/data/billing";
    is derived from the stored total.
    ══════════════════════════════════════════════════════════════════ */
 
+/* The categories that are food on a stay's bill (FSS Act: food includes
+   drink; alcohol is on its own VAT bill, never on this invoice). */
+const FOOD = ["food", "beverage", "minibar"];
+
 function useHotel(): string {
   const params = useParams();
   const fallback = useUi((s) => s.hotelId);
@@ -228,6 +232,14 @@ export default function InvoicePage() {
               <span className="text-grey-500">GSTIN </span>
               <span className="tabular">{data.supplier.gstin ?? "-"}</span>
             </p>
+            {/* A16 (the owner, 26 September): on an invoice that carries
+                food - restaurant, drinks or minibar - a dash until typed. */}
+            {data.lines.some((l) => FOOD.includes(l.category)) && (
+              <p className="text-sm" data-invoice-fssai>
+                <span className="text-grey-500">FSSAI licence </span>
+                <span className="tabular">{data.supplier.fssai ?? "-"}</span>
+              </p>
+            )}
           </div>
 
           <div className="text-right shrink-0">

@@ -289,13 +289,20 @@ export interface PropertyTeamMember {
 }
 
 export interface PropertyDetail {
-  property: AdminProperty;
+  /** `fssaiNumber`: the hotel's 14-digit FSSAI licence (A16), null until typed. */
+  property: AdminProperty & { fssaiNumber: string | null };
   staff: PropertyTeamMember[];
   /** What THIS caller may hand out HERE. An owner sees every role; a
       general manager sees everything but `owner`. Sent by the server so
       the picker offers exactly what it will accept, rather than
       offering everything and refusing afterwards. */
   grantableRoles: string[];
+}
+
+/** A16 (the owner, 26 September): the hotel's FSSAI licence number, typed
+    by the owner, an administrator or the GM. Blank clears it. */
+export function setFssai(code: string, fssai: string): Promise<AdminResult<{ fssaiNumber: string | null }>> {
+  return put(`/api/hotels/${code}/fssai`, { fssai });
 }
 
 /** One property, for whoever runs it.
