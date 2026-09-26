@@ -4,6 +4,7 @@ import { maySetUpSuAt, SU_REFUSED } from "../access.ts";
 import { suConnection } from "../su/runtime.ts";
 import { hotelIdFor } from "../content/store.ts";
 import { pushAri, type InSession } from "./push.ts";
+import { firstSellableDate } from "./source.ts";
 import { THE_OWNERS_POLICY } from "./payloads.ts";
 
 /* ══════════════════════════════════════════════════════════════════
@@ -46,14 +47,13 @@ availability.get("/:code/channel-manager/availability", async (c) => {
     /* D17-92: what is selling at the rack rate RIGHT NOW — not what some past
        push counted. It is read from what SU was last sent, for tonight onwards,
        so the owner can see how much is going out at a figure nobody typed for
-       that meal plan. */
+       that meal plan. "Tonight" is the push's own first date, so a closed day
+       is not counted. */
     const { rows: rack } = await client.query<{ nights: number; first_date: string | null }>(
       `select count(*)::int as nights, min(s.for_date)::text as first_date
          from channel_ari_sent s
-         join hotels h on h.id = s.hotel_id
-        where s.hotel_id = $1 and s.price_source = 'rack'
-          and s.for_date >= greatest(h.business_date, (now() at time zone h.timezone)::date)`,
-      [hotelId]);
+        where s.hotel_id = $1 and s.price_source = 'rack' and s.for_date >= $2::date`,
+      [hotelId, await firstSellableDate(client, hotelId)]);
     return {
       pushes: rows.map((r) => ({
         kind: r.kind, from: r.window_from, to: r.window_to, requests: r.requests, dates: r.dates,

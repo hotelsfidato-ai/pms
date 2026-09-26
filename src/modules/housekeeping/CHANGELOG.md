@@ -14,6 +14,20 @@ project, still goes in the root `CHANGELOG.md`.
 
 ---
 
+## 2026-09-25 · Two unused GST columns out of the room status routes — HK-11
+
+**Asked for:** the master, branch `fixes/billtab-date-25sep`: C -
+`roomStatus.ts` selected `hotels.cgst_rate` and `sgst_rate`, typed `string`
+(nullable since 136), and used neither.
+
+**Shipped** - both out of `resolve`'s query and `HotelRow`. No test:
+nothing read them; `cd api && npx tsc --noEmit` exit 0 proves nothing does.
+
+**Proved / commits** - with the channel manager's entry of today (the same
+branch's six checks); `4e8722d`, `696b563`.
+
+---
+
 ## 2026-09-17 (evening) · The board refreshes itself — HK-1, half live
 
 **Asked for:** the owner's second interview, 17 September (D17-39): HK-1, the

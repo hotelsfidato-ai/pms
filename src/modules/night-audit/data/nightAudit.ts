@@ -63,19 +63,24 @@ export async function listClosedDays(hotelId: string): Promise<ClosedDay[]> {
   return fetchOr<ClosedDay[]>(`/api/hotels/${hotelId}/night-audit/runs`, []);
 }
 
-/* ── Correcting a closed day (D22-18; the owner's D24-1 to D24-8) ─── */
+/* ── Correcting a closed day (D22-18; D24-1 to D24-8, D25-5 to D25-9) ── */
 
-/** A room charge or no-show charge still standing on a closed day. */
+/** A charge still standing on a closed day (D25-5). */
 export interface DayCharge {
   id: string;
   description: string;
-  kind: "room" | "no-show";
+  /** "room", "no-show", "restaurant" (a restaurant bill charged to the
+      room), or the bill's own category: "minibar", "laundry", "misc"... */
+  kind: string;
   guest: string | null;
   amount: number;
   tax: number;
   /** The tax invoice standing on its bill: that bill is corrected by a
       credit note, not here (D24-4). */
   invoice: string | null;
+  /** The VAT bill standing on a drinks line's bill: it is cancelled
+      instead (D25-7). */
+  vatBill: string | null;
 }
 
 export interface DayCorrection {

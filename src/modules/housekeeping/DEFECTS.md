@@ -51,6 +51,13 @@ says housekeeping" - the stream stubbed, one `changed` frame naming
 
 **The rule** — A screen two people share needs to say when it last knew. And a fix called small is sized by reading whose files it touches, not how many lines it is.
 
+### HK-11 · The room status routes read two GST columns they never used — FIXED 25 September
+
+`roomStatus.ts`' `resolve` selected `hotels.cgst_rate` and `sgst_rate` and
+typed them `string`; since 136 they may be null, and nothing here used them.
+Both dropped from the query and the type. No test: nothing read them, and
+the type check proves nothing does now.
+
 ### HK-2 · The board's offline read failed the whole test run
 
 **Found** — 15 September, by the agent splitting the tests — every `vitest run` had exited 1 since the Start here commit while the summary said all passed. Root MEMORY 274.

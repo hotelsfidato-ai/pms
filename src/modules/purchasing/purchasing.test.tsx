@@ -283,6 +283,9 @@ describe("purchasing", () => {
 
       expect(await screen.findByRole("heading", { level: 1, name: "Approvals" })).toBeTruthy();
       expect(await screen.findByText("The rice is down to two days")).toBeTruthy();
+      // PUR-3: the link opens the request on purchasing's own page.
+      expect(screen.getByRole("link", { name: "Purchase request" }).getAttribute("href"))
+        .toBe("/h/PUA/purchasing/waiting");
 
       fireEvent.click(screen.getByRole("button", { name: "Approve" }));
       await vi.waitFor(() =>

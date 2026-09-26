@@ -14,7 +14,44 @@ entries stay here: they are the reason the fault does not come back.
 
 ## Open — not fixed
 
+### FIN-10 · An invoice test passes or fails by the order the test files run in — OPEN
+
+**Found** — 25 September, the Bill tab session's full API run on `3d5fa8e`:
+`invoices.test.ts` "refuses a folio with nothing on it" got 200 for 409. It
+passed in the next full run (`bd1bca9`). The test takes any 5EL stay with an
+empty bill (`limit 1`, no order); `POST /stays/:id/invoice` takes the stay's
+first bill (`folio[0]`, no order). A stay another test file left with two
+bills, one of them empty, is picked and invoiced on the other one.
+
+**Not fixed** — the test should pick a stay whose only bill is empty, and
+whether the route should say which bill it invoices when a stay has two is
+a question for the owner. Seen once; not reproduced on demand.
+
 ## Fixed
+
+### FIN-9 · The Bill tab offered housekeeping every act the server refuses — FIXED 25 September
+
+**Found** — 24 September, by the front desk's polish (D24-27): the stay
+panel's Bill tab (`FolioPanel`) drew Add charge, Settle, Interim bill, Split
+the bill, Check out, and a Reverse on every line, for every role. Housekeeping
+pressed any of them and the server's gate (roleGate) said no.
+
+**Fixed** — D24-18: each act asks roleGate's own question of its write, from
+the one matrix (`can(role, ...)`, as `StayView.tsx` and `StayActions.tsx`
+do): Add charge and Split the bill `invoice: create`, Settle `payment:
+create`, a line's Reverse and Move `invoice: edit`, Check out `reservation:
+edit`. The Interim bill is a read the server does not gate; the owner's D25-29:
+whoever may see bills, `invoice: view`; and hide Reverse and Move too. So the accountant keeps everything but Check out, a viewer keeps only the
+print, housekeeping sees the balance and the lines. Who may do what is
+unchanged.
+
+**Proved** — `billTabControls.test.tsx`: reception offered all seven,
+housekeeping none, the accountant all but Check out, a viewer only the
+Interim bill. On the old panel both tests fail (housekeeping and the
+accountant were offered everything).
+
+**The rule** — a button asks the question the server asks of the write it
+makes, from the one matrix; a print the server does not gate asks the owner.
 
 ### FIN-8 · The GST invoice series for a new financial year existed only after a deploy — FIXED 24 September
 

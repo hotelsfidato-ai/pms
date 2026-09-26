@@ -58,7 +58,7 @@ beforeAll(async () => {
     superiorId = types.find((t) => t.code === "SUP")!.id;
     deluxeId = types.find((t) => t.code === "DLX")!.id;
     first = (await db.query<{ d: string }>(
-      "select greatest(business_date, (now() at time zone timezone)::date)::text as d from hotels where id = $1",
+      "select greatest(app.business_date(id), (now() at time zone timezone)::date)::text as d from hotels where id = $1",
       [hotelId])).rows[0]!.d;
 
     const { rows } = await db.query<{ id: string }>(
@@ -454,5 +454,41 @@ describe("what SU was sent, and where the figure came from", () => {
     expect((await push(ownerId, "changes")).status).toBe(200);
     expect(quiet).toHaveLength(0);
     expect((await sourcesFor(deluxeId, addDays(first, 7))).get("EP")).toBe("typed");
+  });
+});
+
+/* FD-16's stale column: `hotels.business_date` never moves once a night audit
+   has run. With today closed (the audit run before midnight), the hotel is on
+   tomorrow - SU must not be sent today, nor the screen count it as selling. */
+describe("a property whose day is closed", () => {
+  it("starts SU's year and the rack-rate count the day after the last closed day", async () => {
+    await onSu();
+    const db = await admin();
+    let today = "";
+    try {
+      today = (await db.query<{ d: string }>(
+        "select (now() at time zone timezone)::date::text as d from hotels where id = $1",
+        [hotelId])).rows[0]!.d;
+      await db.query(
+        `insert into night_audit_runs (hotel_id, business_date, status, completed_at)
+         values ($1, $2::date, 'completed', now())`, [hotelId, today]);
+
+      const calls = pretendSu();
+      expect((await push(ownerId, "all")).status).toBe(200);
+      expect(perDate(calls).map((e) => e.date).sort()[0]).toBe(addDays(today, 1));
+
+      /* What SU still holds for the closed day is not selling any more. */
+      await db.query(
+        `insert into channel_ari_sent (hotel_id, room_type_id, meal_plan, for_date, value, price_source)
+         values ($1, $2, 'EP', $3::date, '{}', 'rack')`, [hotelId, deluxeId, today]);
+      const seen = await app.request("/api/hotels/5EL/channel-manager/availability",
+        { headers: { "x-dev-staff-id": ownerId } });
+      const state = await seen.json() as { atRackRate: { firstDate: string | null } };
+      expect(state.atRackRate.firstDate).toBe(addDays(today, 1));
+    } finally {
+      await db.query("delete from night_audit_runs where hotel_id = $1 and business_date = $2::date",
+        [hotelId, today]);
+      await db.end();
+    }
   });
 });
