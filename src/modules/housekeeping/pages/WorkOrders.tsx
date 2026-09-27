@@ -8,7 +8,7 @@ import { money, dateShort } from "@/lib/format";
 import {
   Page, PageHeader, Card, CardBody, Button, Skeleton, EmptyState, ErrorState, toast,
   Dialog, DialogContent, DialogClose, Field, fieldProps, Textarea,
-  StatusPill, Segmented,
+  StatusPill, Segmented, IconChip,
 } from "@/components/ui";
 import { listWorkOrders, updateWorkOrder, type WorkOrder } from "@/modules/housekeeping/data/housekeeping";
 import { RepairFlow } from "@/modules/housekeeping/flows/RepairFlow";
@@ -97,7 +97,7 @@ export default function WorkOrdersPage() {
       />
 
       <Segmented<View>
-        className="mb-4"
+        className="mb-5"
         value={view}
         onChange={setView}
         options={[
@@ -134,7 +134,7 @@ export default function WorkOrdersPage() {
             : "A repair shows here once it is closed, with what was done."}
         />
       ) : (
-        <div className="space-y-2">
+        <div className="space-y-3">
           {orders.map((o) => (
             <OrderCard
               key={o.id}
@@ -198,8 +198,8 @@ function OrderCard({ hotelId, order: o, mayUpdate, onStart, onClose, onCosts }: 
   const closed = o.status === "done" || o.status === "cancelled";
   return (
     <Card data-work-order={o.id}>
-      <CardBody className="flex flex-wrap items-start gap-3">
-        <Wrench className="size-4 mt-1 shrink-0 text-grey-500" />
+      <CardBody className="flex flex-wrap items-start gap-x-3.5 gap-y-3">
+        <IconChip className="mt-px"><Wrench /></IconChip>
         <div className="min-w-0 flex-1">
           <p className="flex flex-wrap items-center gap-2">
             <span className="text-base font-medium">{o.title}</span>
@@ -261,7 +261,7 @@ function OrderCard({ hotelId, order: o, mayUpdate, onStart, onClose, onCosts }: 
         </div>
         {/* Under the text on a phone, beside it on a desk: one button on the
             right squeezed the sentence to half a 375px card. */}
-        <div className="flex flex-wrap gap-2 w-full pl-7 sm:w-auto sm:pl-0 sm:shrink-0">
+        <div className="flex flex-wrap gap-2 w-full pl-[42px] sm:w-auto sm:pl-0 sm:shrink-0">
           {o.costs !== undefined && (
             <Button variant="secondary" className="h-11" onClick={onCosts}>
               <Receipt className="size-4" /> Costs

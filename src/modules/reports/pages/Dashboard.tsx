@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState, type CSSProperties } from "react";
+import { useState, type CSSProperties } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { Link } from "react-router";
 import {
@@ -13,7 +13,7 @@ import { useUi } from "@/lib/ui";
 import { useSession } from "@/lib/session";
 import {
   Page, PageHeader, Section, Card, CardBody, DataTable, Skeleton, NativeSelect, Term,
-  InfoButton, IconChip, ReadFailed, readError, type Column,
+  InfoButton, IconChip, Rings, AnchorGauge, ReadFailed, readError, type Column,
 } from "@/components/ui";
 import { StartHere } from "@/components/app/StartHere";
 import type { TermKey } from "@/lib/glossary";
@@ -226,7 +226,7 @@ export default function DashboardPage() {
           </div>
           <div className="flex-1 grid gap-4 sm:gap-6 items-center sm:grid-cols-[auto_minmax(0,1fr)]">
             <div className="grid grid-cols-[80px_auto] gap-4 items-center">
-              <Rings size="size-20" arcs={[{ value: occ?.today == null ? null : occ.today / 100, color: "var(--color-brand-orange)", track: "rgb(255 255 255 / 0.12)" }]} />
+              <Rings seenKey="fidato.dashboard.rings" size="size-20" arcs={[{ value: occ?.today == null ? null : occ.today / 100, color: "var(--color-brand-orange)", track: "rgb(255 255 255 / 0.12)" }]} />
               <div>
                 <p className={cn("text-3xl font-semibold tabular tracking-[-0.03em]", occ?.today == null && !loading && "text-white/55")}>
                   {fig(pct(occ?.today), "w-28 bg-white/15")}
@@ -324,6 +324,7 @@ export default function DashboardPage() {
           </div>
           <div className="grid grid-cols-[112px_minmax(0,1fr)] gap-4 items-center sm:grid-cols-[96px_minmax(0,1fr)] sm:gap-6">
             <Rings
+              seenKey="fidato.dashboard.rings"
               size="size-28 sm:size-24"
               arcs={(run ?? []).map((x) => ({ value: x.of ? x.done / x.of : 0, color: x.color, track: x.track }))}
             />
@@ -428,65 +429,15 @@ function CardTitle({ title, info, meta }: { title: string; info: string; meta?: 
   );
 }
 
-/* ── Rings (the Apple activity rings) ───────────────────────────────
-   Concentric, each on its -100 track with round caps, its number written
-   beside it. They close once per session in 600ms (fidato-design-eng § 1:
-   once a day or rarer); otherwise they are drawn at rest, and always
-   under reduced motion (the theme stops every transition). */
-
-const RINGS_SEEN = "fidato.dashboard.rings";
-
-function Rings({ arcs, size }: {
-  arcs: Array<{ value: number | null; color: string; track: string }>;
-  size: string;
-}) {
-  const seen = useRef(sessionStorageGet(RINGS_SEEN) === "1");
-  const has = arcs.some((a) => a.value != null && a.value > 0);
-  useEffect(() => {
-    if (has && !seen.current) sessionStorageSet(RINGS_SEEN, "1");
-  }, [has]);
-  const width = arcs.length > 1 ? 10 : 9;
-  return (
-    <svg viewBox="0 0 100 100" className={cn("-rotate-90 shrink-0", size)} aria-hidden>
-      {arcs.map((a, i) => {
-        const r = 50 - width / 2 - i * (width + 2);
-        const len = 2 * Math.PI * r;
-        const v = Math.max(0, Math.min(1, a.value ?? 0));
-        return (
-          <g key={i}>
-            <circle cx="50" cy="50" r={r} fill="none" stroke={a.track} strokeWidth={width} />
-            {v > 0 && (
-              <circle
-                cx="50" cy="50" r={r} fill="none" stroke={a.color} strokeWidth={width} strokeLinecap="round"
-                strokeDasharray={len} strokeDashoffset={len * (1 - v)}
-                className={seen.current ? undefined : "transition-[stroke-dashoffset] duration-[600ms] ease-[cubic-bezier(0.16,1,0.3,1)] starting:[stroke-dashoffset:var(--len)]"}
-                style={{ "--len": `${len}px` } as CSSProperties}
-              />
-            )}
-          </g>
-        );
-      })}
-    </svg>
-  );
-}
-
-function sessionStorageGet(key: string): string | null {
-  try { return sessionStorage.getItem(key); } catch { return null; }
-}
-function sessionStorageSet(key: string, value: string) {
-  try { sessionStorage.setItem(key, value); } catch { /* private mode: the rings just close again */ }
-}
-
-/** A thin capsule gauge on navy, under its label and figure. */
+/** The Occupancy gauges: the kit's, fed the month and the year. */
 function Gauge({ label, value, loading }: { label: string; value: number | null | undefined; loading: boolean }) {
   return (
-    <div className="grid grid-cols-[1fr_auto] items-baseline gap-y-1.5">
-      <span className="text-sm text-white/60">{label}</span>
-      <span className={cn("text-md font-semibold tabular", value == null && !loading && "text-white/55")}>{loading ? <Skeleton className="h-4 w-14 inline-block bg-white/15" /> : pct(value)}</span>
-      <span className="col-span-2 h-1 rounded-full bg-white/12 overflow-hidden">
-        <i className="block h-full rounded-full bg-brand-orange" style={{ width: `${Math.max(0, Math.min(100, value ?? 0))}%` }} />
-      </span>
-    </div>
+    <AnchorGauge
+      label={label}
+      value={loading ? <Skeleton className="h-4 w-14 inline-block bg-white/15" /> : pct(value)}
+      missing={value == null && !loading}
+      fraction={value == null ? 0 : value / 100}
+    />
   );
 }
 

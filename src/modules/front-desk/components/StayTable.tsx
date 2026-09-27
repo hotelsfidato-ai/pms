@@ -22,9 +22,11 @@ import type { Stay } from "@/data/repositories";
    anything.
    ══════════════════════════════════════════════════════════════════ */
 
+/* One colour per state, everywhere (the owner, 27 September): in house
+   is blue as on Rooms and the Calendar; due in is orange, as Arriving is. */
 const TONE: Record<string, Tone> = {
-  "due-in": "info",
-  "in-house": "success",
+  "due-in": "accent",
+  "in-house": "info",
   "due-out": "warning",
   "checked-out": "neutral",
   "no-show": "danger",
@@ -119,9 +121,9 @@ const ALL_COLUMNS: Record<StayColumn, Column<StayRow>> = {
         <span
           className={cn(
             "font-medium tabular",
-            s.balance > 0 ? "text-brand-red"
+            s.balance > 0 ? "text-brand-red-700"
               : s.balance < 0 ? "text-info"
-              : "text-success",
+              : "text-success-600",
           )}
         >
           {money(Math.abs(s.balance))}
@@ -177,48 +179,40 @@ function StayCards({ rows, columns, onOpen }: {
        September, so "a ul inside a div that hides from sm up" no longer
        identifies THESE cards. A guard that cannot tell the two apart
        passes while the thing it guards is gone. */
-    <ul data-stay-cards className="grid gap-2 @2xl:grid-cols-2 @5xl:grid-cols-3">
+    <ul data-stay-cards className="grid gap-2 sm:gap-2.5 sm:grid-cols-2 xl:grid-cols-3">
       {rows.map((s, i) => (
         <li key={s.id}>
           <button
             type="button"
             onClick={() => onOpen(s.id)}
-            className="w-full text-left rounded-md border border-grey-200
-                       bg-white p-3 cursor-pointer transition-colors
-                       hover:border-brand-orange"
+            className="press-tile w-full text-left rounded-lg bg-white ring-1 ring-inset ring-grey-200
+                       px-3.5 py-3 cursor-pointer hover:ring-grey-400
+                       focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-orange"
           >
-            <div className="flex items-start justify-between gap-2">
-              <div className="min-w-0">
-                <p className="text-base font-medium text-ink-900 truncate">
-                  {s.guest}
-                </p>
-                <p className="text-sm tabular text-grey-500">{s.reference}</p>
-              </div>
-              {columns.includes("room") && (
-                <span className="text-lg tabular font-semibold text-ink-900
-                                 shrink-0">
+            {/* The Rooms tile's lines: the room and its state, then who. */}
+            <div className="flex items-center justify-between gap-2">
+              {columns.includes("room") ? (
+                <span className="text-xl tabular font-semibold tracking-[-0.02em] text-ink-900">
                   {s.roomNumber || <span className="text-grey-500">-</span>}
                 </span>
-              )}
+              ) : <span />}
+              {showsStatus && ALL_COLUMNS["status"].cell(s, i)}
             </div>
+            <p className="mt-1 text-sm font-medium text-ink-900 truncate">{s.guest}</p>
+            <p className="text-xs tabular text-grey-500">{s.reference}</p>
 
-            {showsStatus && (
-              <div className="mt-2">{ALL_COLUMNS["status"].cell(s, i)}</div>
-            )}
-
-            {/* One column on a phone: two 160px columns turn
-                "Booking.com" into "Booking.c…", and a list that hides
-                what it is showing is not a list. */}
+            {/* Labelled values as rows, label left and value right (the
+                Data Rule): two 160px columns turned "Booking.com" into
+                "Booking.c…", and a list that hides what it is showing is
+                not a list. */}
             {rest.length > 0 && (
-              <dl className="grid grid-cols-1 sm:grid-cols-2
-                             gap-x-4 gap-y-1.5 mt-2.5">
+              <dl className="mt-2.5 pt-2 border-t border-grey-100 grid gap-y-1">
                 {rest.map((c) => (
-                  <div key={c} className="min-w-0">
-                    <dt className="text-sm text-grey-500">
+                  <div key={c} className="flex items-baseline justify-between gap-3 min-w-0 text-sm">
+                    <dt className="text-grey-500 shrink-0">
                       {ALL_COLUMNS[c].header}
                     </dt>
-                    <dd className="text-base text-ink-900 min-w-0
-                                   break-words sm:truncate">
+                    <dd className="text-ink-900 min-w-0 text-right break-words">
                       {ALL_COLUMNS[c].cell(s, i)}
                     </dd>
                   </div>
@@ -330,7 +324,7 @@ export function StayTable({
           <button
             type="button"
             onClick={() => setQuery("")}
-            className="inline-flex items-center gap-1 h-9 px-2.5 rounded-md text-sm text-grey-600 hover:bg-grey-100 hover:text-ink-900 transition-colors duration-150"
+            className="inline-flex items-center gap-1 h-9 px-3 rounded-full text-sm text-grey-600 hover:bg-grey-100 hover:text-ink-900 transition-colors duration-150 pointer-coarse:min-h-11"
           >
             <X className="size-3.5" />
             Clear
@@ -346,17 +340,17 @@ export function StayTable({
 
             HIDDEN ON A PHONE, because there the answer is not in doubt:
             the cards render below `sm` whichever way this is set. */}
-        <div className="hidden sm:flex rounded-md border border-grey-200 overflow-hidden">
+        <div className="hidden sm:flex items-center gap-0.5 p-[3px] rounded-md bg-grey-100">
           <button
             type="button"
             onClick={() => chooseView("table")}
             aria-pressed={view === "table"}
             aria-label="Show as a table"
             className={cn(
-              "size-9 grid place-items-center cursor-pointer transition-colors",
+              "size-[30px] grid place-items-center rounded-[7px] cursor-pointer press-tile",
               view === "table"
-                ? "bg-brand-orange-50 text-brand-orange-700"
-                : "text-grey-500 hover:bg-grey-50",
+                ? "bg-white text-ink-900 shadow-[0_1px_2px_rgb(3_23_40/0.08)]"
+                : "text-grey-600 hover:text-ink-900",
             )}
           >
             <Rows3 className="size-4" />
@@ -367,11 +361,10 @@ export function StayTable({
             aria-pressed={view === "cards"}
             aria-label="Show as cards"
             className={cn(
-              "size-9 grid place-items-center cursor-pointer transition-colors",
-              "border-l border-grey-200",
+              "size-[30px] grid place-items-center rounded-[7px] cursor-pointer press-tile",
               view === "cards"
-                ? "bg-brand-orange-50 text-brand-orange-700"
-                : "text-grey-500 hover:bg-grey-50",
+                ? "bg-white text-ink-900 shadow-[0_1px_2px_rgb(3_23_40/0.08)]"
+                : "text-grey-600 hover:text-ink-900",
             )}
           >
             <LayoutGrid className="size-4" />
@@ -411,7 +404,7 @@ export function StayTable({
         empty={
           <div className="text-center">
             <p className="text-md font-semibold text-ink-900">{emptyTitle}</p>
-            <p className="text-base text-grey-500 mt-1.5">{emptyBody}</p>
+            <p className="text-sm text-grey-500 mt-1.5">{emptyBody}</p>
           </div>
         }
       />

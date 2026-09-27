@@ -1,9 +1,8 @@
 import { useQuery } from "@tanstack/react-query";
-import { useParams, useLocation, Link } from "react-router";
-import { cn } from "@/lib/cn";
+import { useParams, useLocation, useNavigate } from "react-router";
 import { dateLong, money } from "@/lib/format";
 import { useUi } from "@/lib/ui";
-import { Page, PageHeader, Card, StatusPill } from "@/components/ui";
+import { Page, PageHeader, Segmented, StatusPill } from "@/components/ui";
 import { StayTable, type StayColumn, type StayRow } from "@/modules/front-desk/components/StayTable";
 import { listInHouse, listDepartures, getHouseNow } from "@/modules/front-desk/data/stays";
 import { queryKeys, BUSINESS_DATE } from "@/data/repositories";
@@ -37,6 +36,7 @@ export default function InHousePage() {
   const hotelId = params.code ?? fallback;
   const { pathname } = useLocation();
   const dueOut = pathname.endsWith("/due-out");
+  const navigate = useNavigate();
 
   const inHouse = useQuery({
     queryKey: queryKeys.inHouse(hotelId, BUSINESS_DATE),
@@ -78,26 +78,28 @@ export default function InHousePage() {
         }
         badge={
           rooms !== undefined ? (
-            <StatusPill tone={dueOut ? "warning" : "success"}>
+            <StatusPill tone={dueOut ? "warning" : "info"}>
               {rooms} room{rooms === 1 ? "" : "s"}
             </StatusPill>
           ) : undefined
         }
+        actions={
+          <Segmented<"now" | "due-out">
+            value={dueOut ? "due-out" : "now"}
+            onChange={(v) => navigate(v === "due-out" ? `/h/${hotelId}/in-house/due-out` : `/h/${hotelId}/in-house`)}
+            className="max-sm:flex max-sm:w-full max-sm:[&>button]:flex-1"
+            options={[
+              { value: "now", label: <>Current stays<Count n={inHouse.data?.length} /></> },
+              { value: "due-out", label: <>Due out<Count n={departures.data?.length} /></> },
+            ]}
+          />
+        }
       />
 
-      <nav className="flex items-center gap-1 border-b border-grey-200 -mb-px mb-5">
-        <Tab to={`/h/${hotelId}/in-house`} active={!dueOut} count={inHouse.data?.length}>
-          Current stays
-        </Tab>
-        <Tab to={`/h/${hotelId}/in-house/due-out`} active={dueOut} count={departures.data?.length}>
-          Due out
-        </Tab>
-      </nav>
-
       {dueOut && outstanding.length > 0 && (
-        <div className="flex items-start gap-3 rounded-md border border-brand-red-100 bg-brand-red-50 p-3.5 mb-4">
+        <div className="flex items-start gap-3 rounded-lg border border-brand-red-100 bg-brand-red-50 px-4 py-3.5 mb-5">
           <div className="min-w-0">
-            <p className="text-base font-medium text-ink-900">
+            <p className="text-sm font-medium text-ink-900">
               {outstanding.length} departure{outstanding.length === 1 ? "" : "s"} still owing{" "}
               <span className="tabular">{money(owed)}</span>
             </p>
@@ -109,52 +111,27 @@ export default function InHousePage() {
         </div>
       )}
 
-      <Card className="p-4">
-        <StayTable
-          hotelId={hotelId}
-          businessDate={BUSINESS_DATE}
-          rows={active.data}
-          isLoading={active.isLoading}
-          error={active.error}
-          onRetry={() => active.refetch()}
-          columns={COLUMNS}
-          defaultTab={dueOut ? "folio" : "stay"}
-          emptyTitle={dueOut ? "Nobody departing today" : "Nobody in house"}
-          emptyBody={
-            dueOut
-              ? "Every room stays another night."
-              : "The house is empty tonight."
-          }
-        />
-      </Card>
+      <StayTable
+        hotelId={hotelId}
+        businessDate={BUSINESS_DATE}
+        rows={active.data}
+        isLoading={active.isLoading}
+        error={active.error}
+        onRetry={() => active.refetch()}
+        columns={COLUMNS}
+        defaultTab={dueOut ? "folio" : "stay"}
+        emptyTitle={dueOut ? "Nobody departing today" : "Nobody in house"}
+        emptyBody={
+          dueOut
+            ? "Every room stays another night."
+            : "The house is empty tonight."
+        }
+      />
     </Page>
   );
 }
 
-function Tab({
-  to, active, count, children,
-}: {
-  to: string;
-  active: boolean;
-  count?: number;
-  children: React.ReactNode;
-}) {
-  return (
-    <Link
-      to={to}
-      className={cn(
-        "relative px-3 py-2.5 text-base font-medium whitespace-nowrap",
-        "pointer-coarse:min-h-11 pointer-coarse:inline-flex pointer-coarse:items-center",
-        "border-b-2 -mb-px transition-colors duration-150",
-        active
-          ? "text-ink-900 border-brand-orange"
-          : "text-grey-500 border-transparent hover:text-ink-900",
-      )}
-    >
-      {children}
-      {count !== undefined && (
-        <span className="ml-1.5 text-2xs text-grey-500 tabular">{count}</span>
-      )}
-    </Link>
-  );
+/** A count beside a switch's words, quiet. */
+function Count({ n }: { n: number | undefined }) {
+  return n === undefined ? null : <span className="ml-1.5 text-xs text-grey-500 tabular">{n}</span>;
 }
