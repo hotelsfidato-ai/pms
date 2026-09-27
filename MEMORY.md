@@ -6539,6 +6539,21 @@ copy will see of theirs.**
 
 ---
 
+### 337 · MINE: the gates are green but the website would not build
+
+28 September. After merging the redesign, every gate step was green (web 726, server
+1,624, database 1,225, 148 re-runnable), yet `npm run build` failed: the one app bundle
+had grown to 2.04 MB and Workbox refuses to precache a file over its 2 MiB default.
+The release copy at 40c9510 was 1.98 MB, so today's merges crossed the line without any
+gate noticing, because no gate builds. Found only because I ran a build after the gates.
+Fixed with a 3 MiB ceiling in vite.config.ts (same behaviour: the whole app is cached
+offline); the upgrade path is lazy() routes.
+
+**The rule:** before saying a tree can be released, build it (`npm run build`) as well
+as running the gates. A gates.sh build step would make this automatic (the owner's call).
+
+---
+
 ### 336 · A regex run on an upload is part of the trust boundary (ADM-10)
 
 27 September, the group logo session. The SVG safety check used `<!--[\s\S]*?-->` inside
