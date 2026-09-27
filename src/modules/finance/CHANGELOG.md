@@ -8,6 +8,13 @@ project, still goes in the root `CHANGELOG.md`.
 
 ---
 
+## 2026-09-27 · Touched by Phase 1, New booking (reservations session)
+
+`getTaxRate` and `listBillingCompanies` on the front door, for New booking's tax beside the rate and its Bill to Company. Nothing else changed.
+See `src/modules/reservations/CHANGELOG.md`, 27 September.
+
+---
+
 ## 2026-09-27 · Cash and invoice follow-ups: payments take turns (D27-2), the FSSAI number frozen on the invoice (D27-3), a payment over the bill (D27-4)
 
 **Asked for:** the master, branch `compliance/cash-invoice-27sep`, for the

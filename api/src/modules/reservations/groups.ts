@@ -3,7 +3,7 @@ import { withSession } from "../../auth.ts";
 import type { Client } from "../../db.ts";
 import {
   makeBooking, alreadyReceived, answerRepeat, fingerprintOf, isUniqueViolation,
-  type BookingRequest, type BookingLineInput,
+  type BookingRequest, type BookingLineInput, type BookingDiscount, type BookingAddress,
 } from "./book.ts";
 
 /* ══════════════════════════════════════════════════════════════════
@@ -318,6 +318,10 @@ groups.post("/:code/bookings", async (c) => {
     guestId?: string;
     whatsappAgreed?: boolean;
     offersAgreed?: boolean;
+    /* The desk's, from Phase 1 (D27-33): each checked in makeBooking. */
+    tentative?: boolean; expectedDeparture?: string; salesPerson?: string;
+    companyId?: string; discount?: BookingDiscount;
+    title?: string; nationality?: string; address?: BookingAddress;
   };
   const input = await c.req.json<Body>().catch(() => ({}) as Body);
 
@@ -357,6 +361,14 @@ groups.post("/:code/bookings", async (c) => {
     lines: input.lines ?? [],
     ...(typeof input.guestId === "string" && input.guestId ? { guestId: input.guestId } : {}),
     whatsappAgreed: input.whatsappAgreed === true,
+    tentative: input.tentative === true,
+    ...(typeof input.expectedDeparture === "string" ? { expectedDeparture: input.expectedDeparture } : {}),
+    ...(typeof input.salesPerson === "string" ? { salesPerson: input.salesPerson } : {}),
+    ...(typeof input.companyId === "string" && input.companyId ? { companyId: input.companyId } : {}),
+    ...(input.discount && typeof input.discount === "object" ? { discount: input.discount } : {}),
+    ...(typeof input.title === "string" ? { title: input.title } : {}),
+    ...(typeof input.nationality === "string" ? { nationality: input.nationality } : {}),
+    ...(input.address && typeof input.address === "object" ? { address: input.address } : {}),
   });
 
   const result = await withSession(c.get("subject"), async (client) => {
@@ -396,12 +408,13 @@ groups.post("/:code/bookings", async (c) => {
 
   if (!result) return c.json({ error: "No such property." }, 404);
 
-  /* ⚠ THE ANSWER A SCREEN ALREADY READS, and nothing more. `makeBooking` also
-     hands back the rows' ids, and `duplicate: false` for a booking made now -
-     both for a caller in process. Sent over HTTP they would be a new shape for
-     every screen and every queued offline booking to cope with, and the ids
-     are nobody's business out here: a booking is named by its reference.
-     `duplicate` still appears, as it always did, only when it is true. */
+  /* ⚠ THE ANSWER A SCREEN ALREADY READS, plus two things only ADDED, so an
+     older screen or a queued offline booking reads it unchanged: each booking's
+     `id` (Phase 1: the Booked card hands the booking to front desk's doors -
+     a room, the check-in, the guest's page, the voucher - and every one of
+     them is addressed by the stay's id) and the `status` it was made with.
+     A repeat answers the same ids as the first time: it IS the first answer
+     (RES-3). `duplicate` still appears, as it always did, only when true. */
   if (!result.ok) return c.json({ ok: false, reason: result.reason }, 409);
   return c.json({
     ok: true as const,
@@ -411,5 +424,6 @@ groups.post("/:code/bookings", async (c) => {
     guest: result.guest,
     bookings: result.bookings,
     nightly: result.nightly,
+    status: result.status,
   }, 200);
 });
