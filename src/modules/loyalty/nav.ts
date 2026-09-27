@@ -2,12 +2,12 @@ import { Award } from "lucide-react";
 import type { ServiceNavEntry } from "@/components/app/navigation";
 import { seesComingSoon } from "@/lib/permissions";
 
-/* Loyalty — not built. Its Coming soon page sits in the section the owner
-   chose on 16 September: one section at the foot of the menu, for the owner,
-   admins and general managers only. Assembled by `navigation.ts`. When the
-   service is built its real screens take their place in a working section. */
+/* Loyalty — not built. Its page sits under Sales and marketing, marked "Not
+   built yet" (D27-87), for the owner, admins and general managers only.
+   Assembled by `navigation.ts`. When the service is built its real screens
+   take its place and the mark goes. */
 export const nav: ServiceNavEntry[] = [
-  { section: "coming-soon", order: 120,
+  { section: "sales-marketing", order: 30, notBuilt: true,
     label: "Loyalty", to: "/coming-soon/loyalty", icon: Award, resource: "integration",
     canSee: seesComingSoon, keywords: ["membership", "points", "repeat guest", "member rate", "rewards"] },
 ];

@@ -219,6 +219,10 @@ export function CommandPalette() {
                     {!entry.listed && (
                       <span className="text-2xs text-grey-500 shrink-0">Not in your menu</span>
                     )}
+                    {/* The sidebar's mark, said here too (D27-87). */}
+                    {entry.item.notBuilt && (
+                      <span className="text-2xs text-grey-500 shrink-0">Not built yet</span>
+                    )}
                     {entry.section && (
                       <span className="text-2xs text-grey-500 shrink-0 hidden sm:inline">
                         {entry.section}

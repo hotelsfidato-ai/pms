@@ -408,8 +408,10 @@ describe("the module switches", () => {
     await screen.findAllByRole("switch");
     /* The copy that went stale. Asserted because the switch and the
        sentence beside it drifted apart, and only one of them was
-       visible in a diff. */
-    expect(screen.queryByText(/not built yet/i)).toBeNull();
+       visible in a diff. The page only: the menu marks the services
+       that are not built yet "Not built yet" (D27-87), and banquet is not
+       one of them. */
+    expect(within(screen.getByRole("main")).queryByText(/not built yet/i)).toBeNull();
   });
 });
 

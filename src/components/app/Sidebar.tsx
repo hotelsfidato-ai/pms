@@ -21,8 +21,10 @@ import { getModules } from "@/data/repositories";
    Their words: keep the main things as default and let the rest be a
    toggle. So the work of running a hotel stays open and everything a
    property may not even have folds away: the spa, the laundry, the
-   banquet, the point of sale, reports, system, and the Coming soon
-   list.
+   banquet, the point of sale, reports and system. So do the two
+   sections that hold only services not built yet, Sales and marketing
+   and Distribution (D27-87, 28 September): take a key out of this list
+   the day its section holds a built screen.
 
    ⚠ NOT A PERMISSION, AND NOT A HIDING PLACE. A folded section is
    still in the menu, still found by "Find a screen", and still reached
@@ -38,7 +40,7 @@ import { getModules } from "@/data/repositories";
    away by a default nobody wrote. */
 const FOLDED_AS_IT_COMES = new Set([
   "point-of-sale", "banquet", "laundry", "spa", "reports", "system",
-  "coming-soon",
+  "sales-marketing", "distribution",
 ]);
 
 export function Sidebar({ onNavigate }: { onNavigate?: () => void }) {
@@ -262,7 +264,10 @@ function SidebarItem({
       to={item.to}
       onClick={onNavigate}
       className={cn(
-        "flex items-center gap-2.5 h-9 rounded-md text-base font-medium",
+        "flex items-center gap-2.5 rounded-md text-base font-medium",
+        /* A service not built yet takes a second line for its mark
+           (D27-87), so its name is never cut to fit it. */
+        item.notBuilt && !collapsed ? "min-h-9 py-1.5" : "h-9",
         "transition-colors duration-150",
         collapsed ? "justify-center px-0" : "px-2.5",
         groupActive
@@ -271,14 +276,21 @@ function SidebarItem({
       )}
     >
       <Icon className="size-[18px] shrink-0" />
-      {!collapsed && <span className="truncate">{item.label}</span>}
+      {!collapsed && (item.notBuilt ? (
+        <span className="min-w-0">
+          <span className="block truncate">{item.label}</span>
+          <span className="block text-xs font-normal text-white/45">Not built yet</span>
+        </span>
+      ) : (
+        <span className="truncate">{item.label}</span>
+      ))}
     </NavLink>
   );
 
   return (
     <li>
       {collapsed ? (
-        <Tooltip content={item.label} side="right">
+        <Tooltip content={item.notBuilt ? `${item.label} · Not built yet` : item.label} side="right">
           {link}
         </Tooltip>
       ) : (
