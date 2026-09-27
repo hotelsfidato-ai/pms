@@ -241,7 +241,9 @@ export function AccountMenu() {
           </DropdownMenuItem>
         )}
 
-        <DropdownMenuItem onSelect={() => void signOut()}>
+        {/* The lists in memory go AFTER the sign-out: cleared while the
+            screens were still signed in, they would fetch it all again. */}
+        <DropdownMenuItem onSelect={() => void signOut().then(() => queryClient.clear())}>
           <span className="flex items-center gap-2 text-ink-900">
             <LogOut className="size-4 text-grey-400" />
             Sign out

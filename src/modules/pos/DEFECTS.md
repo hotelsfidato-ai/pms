@@ -178,6 +178,18 @@ Nine reads in `data/till.ts` ended in `catch { return [] }` (or `null`): the men
 
 **The rule** — A value kept for offline use must never be overwritten by a read that failed. A `catch` that returns a default turns a failure into a fact, and a cache believes facts.
 
+### POS-19 · Two Settle presses on one bill both took the money — FIXED 28 September (release fixes)
+
+**Found** — 28 September, the release review before 40c9510 went live.
+
+`POST /till/orders/:id/settle` read the order with no lock, checked `status = 'open'`, then wrote. Two presses at once both read "open", both set it settled and both wrote tenders: one bill, two payments in the drawer. A room press beside a cash press charged the folio AND the drawer (two room presses were stopped by `pos_tickets`' unique ticket_ref, as a 500).
+
+**Fixed** — the order read is `for update of o` (`api/src/modules/pos/till.ts`), above both branches. The second press waits, reads "settled" and is refused with "This order is already settled." before anything is written (MEMORY 243).
+
+**Proved** — `api/test/modules/pos/settleTwice.test.ts`: two presses sent together give 200 and 409 and ONE tender row. On the old code: `[200, 200]`. ⚠ Its first version passed on the old code: the first press took the only idle database connection and settled before the second had opened one, so they never overlapped. The pool is now warmed first.
+
+**The rule** — A race test proves nothing until it has failed on the code it guards; check that the two requests really overlap.
+
 ---
 
 ## Project-wide entries about this service

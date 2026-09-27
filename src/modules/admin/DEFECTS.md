@@ -217,6 +217,18 @@ navigation knows" covers the path, and the whole suite stayed green
 
 **The rule** — A hidden link is not a guard. The route says who may open it.
 
+### ADM-11 · A GM could reset the password of somebody who is GM or Owner at another hotel - FIXED 28 September (release fixes)
+
+**Found** — 28 September, the release review before 40c9510 went live.
+
+ADM-7's rule asked whether ANY of the person's hotel roles was one the caller could give. Somebody who is front desk at A and GM (or Owner) at B passed for A's GM, and has one password: A's GM reset it (`may_set_password`), renamed them (`manages_person`, and the `staff` update policy through `may_manage_person`), or re-invited the address (`require_claimable_address`, which sets the password) - and then signed in as B's GM.
+
+**Fixed** — the bodies of `may_manage_person` and `manages_person` in migration 133, same signatures (MEMORY 317): the person must be rostered somewhere and hold NO role the caller could not give - the rule `may_switch_person` already used. Every door above goes through those two. The owner approved matching refusals the same day ("the manager of every property they work at"). A GM can still take such a person off their own hotel (the × on the chip).
+
+**Proved** — `db/tests/modules/admin.sql` "every role" (6), each function asked directly and the `staff` row as `pms_app`; with 40c9510's 133 back, 6 checks fail (the rename: "1 renamed"). `api/test/modules/admin/everyRole.test.ts` (4): the password, edit and re-invite routes refused, People's flags, a group administrator still allowed; 3 of 4 fail on the old rule (the password route reached Firebase: a 500 here, a changed password live).
+
+**The rule** — A person has ONE account. A rule about their account asks about every role they hold, not the one at your hotel.
+
 ---
 
 ## Project-wide entries about this service

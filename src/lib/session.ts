@@ -6,9 +6,11 @@ import {
 } from "firebase/auth";
 import { auth } from "./firebase";
 import {
-  getSession, setDevSubject, getDevSubject, devAuth, ApiError,
+  getSession, setDevSubject, getDevSubject, devAuth, ApiError, currentSubject,
   type ApiHotel, type ApiScope,
 } from "./api";
+import { waiting } from "./outbox";
+import { queryPersister } from "./persist";
 import { DEMO } from "./demo";
 import { ROLES, type Role } from "./permissions";
 import { useUi } from "./ui";
@@ -102,6 +104,8 @@ interface SessionState {
   /** The property in view, by database id. Null until one is chosen. */
   hotelId: string | null;
   error: string | null;
+  /** Said on the sign-in screen after a sign-out: changes still waiting. */
+  notice: string | null;
   busy: boolean;
 
   signIn: (email: string, password: string) => Promise<void>;
@@ -129,6 +133,7 @@ export const useSession = create<SessionState>()((set, get) => ({
   hotels: [],
   hotelId: null,
   error: null,
+  notice: null,
   busy: false,
 
   signIn: async (email, password) => {
@@ -136,7 +141,7 @@ export const useSession = create<SessionState>()((set, get) => ({
       set({ error: "Firebase is not configured. See .env.example." });
       return;
     }
-    set({ busy: true, error: null });
+    set({ busy: true, error: null, notice: null });
     try {
       await signInWithEmailAndPassword(auth, email, password);
       await load(set);
@@ -157,7 +162,7 @@ export const useSession = create<SessionState>()((set, get) => ({
 
   signInAsDev: async (subject) => {
     if (!devAuth) return;
-    set({ busy: true, error: null });
+    set({ busy: true, error: null, notice: null });
     setDevSubject(subject);
     try {
       await load(set);
@@ -172,10 +177,27 @@ export const useSession = create<SessionState>()((set, get) => ({
     }
   },
 
+  /* ⚠ A SHARED DESK MACHINE (28 September, the release review). Signing out
+     left the offline copy of the lists and the remembered session behind,
+     so the next person opened on the last one's floor and arrivals. Both go
+     here; the lists in memory are the account menu's to clear, the one
+     place holding the query client. The OUTBOX STAYS (the owner, 28
+     September): unsent changes wait under the name of whoever made them
+     and go when that person signs in here again, and they are told so. */
   signOut: async () => {
+    const me = currentSubject();
+    const kept = (await waiting().catch(() => []))
+      .filter((e) => !e.subject || e.subject === me).length;
     setDevSubject(null);
     if (auth?.currentUser) await firebaseSignOut(auth);
-    set({ status: "signed-out", scope: null, hotels: [], hotelId: null, error: null });
+    forgetSession();
+    await queryPersister.removeClient();
+    set({
+      status: "signed-out", scope: null, hotels: [], hotelId: null, error: null,
+      notice: kept === 0 ? null
+        : `${kept === 1 ? "1 change is" : `${kept} changes are`} kept on this computer `
+          + "and will be sent when you sign in here again.",
+    });
   },
 
   refresh: async () => {

@@ -47,6 +47,20 @@ seam); a test enforces it.
 
 ## 2 · Where it stands
 
+### 28 September — the release waits on four fixes (branch `release/fixes-28sep`)
+
+The owner held the release (`40c9510`, without the redesign) for four fixes,
+built ON 40c9510 in the release-fixes session and committed on
+`release/fixes-28sep`, not pushed. The master merges it into cp6 locally.
+(1) A GM could reset the password of somebody who is GM or Owner at another
+hotel - `may_manage_person` / `manages_person` in 133 now ask EVERY role
+(ADM-11). (2) Two Settle presses both took the money - the order is locked
+(POS-19). (3) Uploads were read-only on the server under `ProtectSystem=strict`
+- the unit now names `UPLOAD_DIR`. (4) Sign-out left the lists and the session
+on a shared machine - cleared; unsent changes stay under their maker's name
+and the sign-in screen says so (the owner's answer, 28 September). CHANGELOG
+has the proof.
+
 ### 24 September — read this first
 
 ```
@@ -296,6 +310,13 @@ npx vitest run          197 passed, 13 files
 ---
 
 ## 3 · What to do next, in order
+
+> **28 September: the release.** (1) The master merges `release/fixes-28sep`
+> and gives the owner the release steps; the release is 40c9510 plus that
+> branch. (2) After the server step, on the server, read-only:
+> `systemctl show fidato-api -p ReadWritePaths` must list
+> `/var/lib/fidato/uploads` beside `/opt/fidato/api` (fix 3 cannot be tested
+> anywhere but the box).
 
 > **24 September: the queue.** (1) The owner's release push and deploy
 > (D22-13), then a read-only look. (2) The CA's answers → rates, VAT, SAC codes

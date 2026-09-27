@@ -420,8 +420,11 @@ describe("D22-3 - People works for the GM, at their own hotel only", () => {
     expect(body.rosterAt[0]!.roles).not.toContain("admin");
     const clerk = body.staff.find((p) => p.id === clerkId)!;
     expect(clerk).toMatchObject({ mayEdit: true, maySwitch: true, maySetPassword: true });
+    /* Also at Pune, which this GM does not run: one account, so neither
+       their name nor their password is Agra's to change (every role, not
+       any - 28 September; everyRole.test.ts). */
     const two = body.staff.find((p) => p.id === twoId)!;
-    expect(two).toMatchObject({ mayEdit: true, maySwitch: false });
+    expect(two).toMatchObject({ mayEdit: false, maySwitch: false, maySetPassword: false });
   });
 
   it("lets the GM correct a name at their hotel, and the change lands", async () => {

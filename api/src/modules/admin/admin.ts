@@ -180,13 +180,13 @@ async function requireGroupAdmin(
    "People works for the GM, for their own hotel only." Each answer is the
    database's (127), asked before anything is written (root MEMORY 243). */
 
-/** Their name and phone: a group administrator, or a manager of a hotel
-    they work at - never a group administrator's (app.manages_person). */
+/** Their name and phone: a group administrator, or the manager of every
+    hotel they work at - never a group administrator's (app.manages_person). */
 async function mayEditPerson(client: Client, staffId: string) {
   const { rows } = await client.query<{ ok: boolean }>(
     "select app.manages_person($1) as ok", [staffId]);
   return rows[0]?.ok === true ? null : refuse(
-    "Only a group administrator, or the manager of a property they work at, "
+    "Only a group administrator, or the manager of every property they work at, "
     + "can change somebody's name or phone.");
 }
 
@@ -949,8 +949,9 @@ admin.post("/admin/staff/:id/password", async (c) => {
     if (!rows[0]) return refuse("No such person.");
     if (!rows[0].allowed) {
       return refuse(
-        "You can set a password for people at a property you manage, and "
-        + "for yourself. Not for a group administrator.");
+        "You can set a password for yourself, and for somebody who works only "
+        + "at properties you manage, in a role you could give. Not for a group "
+        + "administrator.");
     }
 
     /* ⚠ NO ACCOUNT YET IS THE ORDINARY CASE HERE, not an error. Anybody

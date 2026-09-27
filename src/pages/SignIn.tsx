@@ -1,5 +1,5 @@
 import { useState, type FormEvent } from "react";
-import { Eye, EyeOff, LogIn, TriangleAlert } from "lucide-react";
+import { Eye, EyeOff, Info, LogIn, TriangleAlert } from "lucide-react";
 import { cn } from "@/lib/cn";
 import { useSession } from "@/lib/session";
 import { devAuth } from "@/lib/api";
@@ -35,6 +35,7 @@ export default function SignInPage() {
   const signInAsDev = useSession((s) => s.signInAsDev);
   const busy = useSession((s) => s.busy);
   const error = useSession((s) => s.error);
+  const notice = useSession((s) => s.notice);
 
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -151,6 +152,16 @@ export default function SignInPage() {
                 />
               )}
             </Field>
+
+            {notice && !error && (
+              <p
+                role="status"
+                className="flex items-start gap-2 text-sm text-ink-900 bg-info-50 border border-info-100 rounded-md p-2.5"
+              >
+                <Info className="size-4 shrink-0 mt-px text-info" />
+                {notice}
+              </p>
+            )}
 
             {error && (
               <p

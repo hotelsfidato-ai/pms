@@ -552,8 +552,9 @@ fi
 # -----------------------------------------------------------------------------
 say "The service"
 # -----------------------------------------------------------------------------
-sed "s#__APP_DIR__#$APP_DIR#g" "$APP_DIR/deploy/fidato-api.service" \
-  > /etc/systemd/system/fidato-api.service
+# UPLOAD_DIR is the folder made above: the unit lets the API write there.
+sed -e "s#__APP_DIR__#$APP_DIR#g" -e "s#__UPLOAD_DIR__#$UPLOAD_DIR#g" \
+  "$APP_DIR/deploy/fidato-api.service" > /etc/systemd/system/fidato-api.service
 systemctl daemon-reload
 systemctl enable fidato-api
 systemctl restart fidato-api

@@ -3617,6 +3617,12 @@ till.post("/:code/till/orders/:id/settle", async (c) => {
     if (!hotelId) return null;
     const orderId = c.req.param("id");
 
+    /* ⚠ LOCKED, so two Settle presses cannot both take the money. Without
+       it both read "open", both wrote their payments, and a room press
+       beside a cash press charged the folio AND the drawer (28 September,
+       the release review). The second press now waits here, reads
+       "settled", and is refused before anything is written - both
+       branches below sit behind this one line. */
     const { rows: order } = await client.query<{
       status: string; order_no: string; outlet_id: string;
       business_date: string; outlet_name: string; category: string;
@@ -3631,7 +3637,8 @@ till.post("/:code/till/orders/:id/settle", async (c) => {
          from pos_orders o
          join pos_outlets ou on ou.id = o.outlet_id
          left join banquet_events e on e.id = o.event_id
-        where o.id = $1 and o.hotel_id = $2`,
+        where o.id = $1 and o.hotel_id = $2
+          for update of o`,
       [orderId, hotelId],
     );
     if (!order[0]) return refuse("No such order.");
