@@ -35,7 +35,9 @@ import {
 
 /** What a person reads for the state of the ask. */
 function AskState({ row }: { row: Departure }) {
-  if (row.askStatus === null) return <span className="text-ink-400">{NO_DATE}</span>;
+  /* grey-500: the dash of a figure not held (ink-400 is no token, so it
+     drew in the cell's own ink). */
+  if (row.askStatus === null) return <span className="text-grey-500">{NO_DATE}</span>;
   if (row.askStatus === "sent") {
     return <StatusPill tone="success">Asked</StatusPill>;
   }
@@ -79,11 +81,11 @@ export default function ReviewsPage() {
     if (q.data === undefined) {
       if (q.isError) {
         return (
-          <ErrorState
+          <Card><ErrorState
             title="Reviews did not load"
             error={q.error}
             onRetry={() => void q.refetch()}
-          />
+          /></Card>
         );
       }
       return <Skeleton className="h-64" />;
@@ -102,7 +104,7 @@ export default function ReviewsPage() {
         cell: (r) => (
           <div>
             <div className="font-medium text-ink-900">{r.guest}</div>
-            <div className="text-xs text-ink-500">{r.reference}</div>
+            <div className="text-xs text-grey-500 tabular">{r.reference}</div>
           </div>
         ),
       },
@@ -120,10 +122,10 @@ export default function ReviewsPage() {
           <div>
             <AskState row={r} />
             {r.askedAt && (
-              <div className="text-xs text-ink-500 mt-0.5">{dateTime(r.askedAt)}</div>
+              <div className="text-xs text-grey-500 mt-0.5">{dateTime(r.askedAt)}</div>
             )}
             {r.askStatus === "failed" && r.askDetail && (
-              <div className="text-xs text-danger-700 mt-0.5">{r.askDetail}</div>
+              <div className="text-xs text-brand-red-700 mt-0.5">{r.askDetail}</div>
             )}
           </div>
         ),
@@ -134,14 +136,14 @@ export default function ReviewsPage() {
           /* Once per group, at its lead guest's room (D22-10). */
           if (r.leadId && r.leadId !== r.id) {
             return (
-              <p className="text-xs text-ink-500 text-right">
+              <p className="text-xs text-grey-500 sm:text-right">
                 The group is asked once, at {r.leadReference ?? "its lead room"}.
               </p>
             );
           }
           if (!mayActuallySend) return null;
           return (
-            <div className="flex gap-2 justify-end">
+            <div className="flex flex-wrap gap-2 sm:justify-end">
               {/* A way is offered only where the booking carries an address
                   for it. Offering both and refusing one afterwards tells
                   somebody after the press what they could have known
@@ -171,11 +173,12 @@ export default function ReviewsPage() {
     ];
 
     return (
-      <div className="space-y-4">
+      /* Cards 12px apart (the Rhythm Rule). */
+      <div className="space-y-3">
         {/* ── nothing sends at all yet ───────────────────────────── */}
         {!page.canSend && page.notConnected && (
           <Card>
-            <CardBody className="text-sm text-ink-700">{page.notConnected}</CardBody>
+            <CardBody className="text-sm text-grey-700">{page.notConnected}</CardBody>
           </Card>
         )}
 
@@ -187,20 +190,20 @@ export default function ReviewsPage() {
           />
           <CardBody className="space-y-3">
             <dl className="flex flex-wrap items-baseline gap-x-2 gap-y-1 text-sm">
-              <dt className="text-ink-500">This property sends:</dt>
+              <dt className="text-grey-500">This property sends:</dt>
               <dd className="font-medium text-ink-900 break-all">
-                {page.link ?? <span className="text-ink-400">{NO_DATE}</span>}
+                {page.link ?? <span className="text-grey-500">{NO_DATE}</span>}
               </dd>
             </dl>
 
             {page.link === null ? (
-              <p className="text-sm text-ink-700">
+              <p className="text-sm text-grey-700">
                 No review link has been set for this property, so nobody can be
                 asked for a review yet. This hotel's own Google review link has not been given.
                 Nothing is sent until somebody pastes one here.
               </p>
             ) : (
-              <p className="text-xs text-ink-500">
+              <p className="text-xs text-grey-500">
                 Set by {page.linkSetBy ?? NO_DATE}
                 {page.linkSetAt ? ` on ${dateTime(page.linkSetAt)}` : ""}.
               </p>
@@ -208,10 +211,13 @@ export default function ReviewsPage() {
 
             {page.maySetLink ? (
               <div className="flex flex-wrap gap-2 items-end">
-                <div className="min-w-[18rem] flex-1">
+                {/* 18rem was wider than a phone's card, so the box pushed
+                    the page sideways at 390px; it takes the whole line
+                    there and sits beside its buttons from 640px. */}
+                <div className="w-full sm:w-auto sm:min-w-[18rem] sm:flex-1">
                   <label
                     htmlFor="review-link"
-                    className="block text-sm font-medium text-ink-700 mb-1.5"
+                    className="block text-sm font-medium text-grey-700 mb-1.5"
                   >
                     Paste the link
                   </label>
@@ -239,7 +245,7 @@ export default function ReviewsPage() {
                 )}
               </div>
             ) : (
-              <p className="text-sm text-ink-700">
+              <p className="text-sm text-grey-700">
                 Setting this is for the owner or an administrator. Ask one of
                 them.
               </p>
@@ -253,26 +259,27 @@ export default function ReviewsPage() {
             title="Departures"
             description={`Guests who left in the last ${page.daysBack} days. A guest is asked after they have gone, never before.`}
           />
-          <CardBody className="p-0">
-            <DataTable
-              columns={columns}
-              rows={page.departures}
-              rowKey={(r) => r.id}
-              empty={
-                <EmptyState
-                  icon={<Star />}
-                  title="Nobody has left in the last 30 days"
-                  description="A guest can be asked for a review once they have checked out."
-                />
-              }
-            />
-          </CardBody>
+          {/* Straight in the card, which draws the frame: inside a body it
+              drew a second one. */}
+          <DataTable
+            columns={columns}
+            rows={page.departures}
+            rowKey={(r) => r.id}
+            className="border-0 rounded-t-none"
+            empty={
+              <EmptyState
+                icon={<Star />}
+                title="Nobody has left in the last 30 days"
+                description="A guest can be asked for a review once they have checked out."
+              />
+            }
+          />
         </Card>
 
         {/* ── what came back ─────────────────────────────────────── */}
         <Card>
           <CardHeader title="What guests wrote" />
-          <CardBody className="text-sm text-ink-700">
+          <CardBody className="text-sm text-grey-700">
             Reviews left on Google, TripAdvisor and the booking sites are not
             read into this system. Nothing is pulled in from anywhere, so this
             screen can say who was asked and cannot say what they wrote. Open
