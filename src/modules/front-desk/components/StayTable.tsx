@@ -29,8 +29,9 @@ const TONE: Record<string, Tone> = {
   "checked-out": "neutral",
   "no-show": "danger",
   cancelled: "danger",
-  /* Phase 1: a booking held for the hotel to confirm (status 'tentative'). */
-  tentative: "warning",
+  /* Phase 1: a booking held for the hotel to confirm (status 'tentative').
+     Grey - not firm yet - the owner, 27 September. */
+  tentative: "neutral",
 };
 
 const LABEL: Record<string, string> = {

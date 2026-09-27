@@ -81,6 +81,9 @@ const booking = (name: string, over: Record<string, unknown> = {}) => ({
 
 type Made = { ok: true; status: string; bookings: { id: string; reference: string; rate: number }[] };
 
+/** The server's sentence on a refusal. */
+const reasonOf = async (res: Response) => ((await res.json()) as { reason: string }).reason;
+
 const onFile = async (name: string) => {
   const { rows } = await sql(
     `select (select count(*) from guests where full_name = $1)::int as guests,
@@ -169,7 +172,7 @@ describe("a complimentary room", () => {
       lines: [{ roomTypeId: typeId, adults: 2, rooms: 1, complimentary: true }],
     }));
     expect(res.status).toBe(409);
-    expect((await res.json()).reason).toMatch(/owner, an administrator or the general manager/);
+    expect(await reasonOf(res)).toMatch(/owner, an administrator or the general manager/);
     expect(await onFile("Comp refused")).toEqual({ guests: 0, reservations: 0 });
   });
 
@@ -192,7 +195,7 @@ describe("the discount (D27-36)", () => {
     const res = await call(ownerId, "POST", "/bookings", booking("Too much",
       { discount: { percent: 15, reason: "Friend of the owner" } }));
     expect(res.status).toBe(409);
-    expect((await res.json()).reason).toMatch(/named promotion/);
+    expect(await reasonOf(res)).toMatch(/named promotion/);
     expect(await onFile("Too much")).toEqual({ guests: 0, reservations: 0 });
   });
 
@@ -249,7 +252,7 @@ describe("waiting for the hotel (D27-35)", () => {
 
     const voucher = await call(staff.get("front_desk")!, "POST", `/stays/${id}/confirmation`, {});
     expect(voucher.status).toBe(409);
-    expect((await voucher.json()).reason).toMatch(/waiting for the hotel/);
+    expect(await reasonOf(voucher)).toMatch(/waiting for the hotel/);
     expect(received).toHaveLength(0);
     expect(await sentAbout(id)).toHaveLength(0);
 
@@ -267,7 +270,7 @@ describe("the voucher (D27-35)", () => {
     const res = await call(staff.get("front_desk")!, "POST",
       `/stays/${made.bookings[0]!.id}/confirmation`, {});
     expect(res.status).toBe(503);
-    expect((await res.json()).reason).toMatch(/Sending is not set up yet/);
+    expect(await reasonOf(res)).toMatch(/Sending is not set up yet/);
     expect(await sentAbout(made.bookings[0]!.id)).toHaveLength(0);
   });
 
@@ -284,7 +287,7 @@ describe("the voucher (D27-35)", () => {
 
     const second = await call(clerk, "POST", `/stays/${id}/confirmation`, {});
     expect(second.status).toBe(409);
-    expect((await second.json()).reason).toMatch(/sent once/);
+    expect(await reasonOf(second)).toMatch(/sent once/);
 
     /* The sweep's own sender, as the server runs it - nobody signed in. */
     const sweep = await withUser("", (client) => sendIfOwed(client, messageFor({
