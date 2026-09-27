@@ -167,9 +167,8 @@ describe("laundry", () => {
     const sheet = screen.getByLabelText("Price for Bed sheet, wash");
     expect((sheet as HTMLInputElement).value).toBe("0");
 
-    /* And the screen says what an unpriced item costs the hotel - behind
-       the (i) beside the title since D27-82, the same words as its name. */
-    expect(screen.getByRole("button", { name: /One item has no price yet/ })).toBeTruthy();
+    /* And the screen says what an unpriced item costs the hotel. */
+    expect(screen.getByText(/One item has no price yet/)).toBeTruthy();
   });
 
   it("offers NO way to charge the hotel's own linen to anybody (D18-5)", async () => {

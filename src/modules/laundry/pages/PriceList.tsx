@@ -1,12 +1,12 @@
 import { useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useParams } from "react-router";
-import { Plus, Shirt } from "lucide-react";
+import { IndianRupee, Plus, Shirt } from "lucide-react";
 import { money } from "@/lib/format";
 import { ApiError } from "@/lib/api";
 import { cn } from "@/lib/cn";
 import {
-  Page, PageHeader, Card, Button, Skeleton, EmptyState, ErrorState, InfoButton,
+  Page, PageHeader, Card, Button, Skeleton, EmptyState, ErrorState, IconChip,
   Dialog, DialogContent, Field, fieldProps, Input, NativeSelect, toast,
 } from "@/components/ui";
 import {
@@ -143,20 +143,6 @@ export default function LaundryPriceListPage() {
       <PageHeader
         title="Laundry price list"
         description="What this property charges for each thing it launders, item by item and service by service."
-        /* SAID WHERE SOMEBODY WOULD LOOK, not discovered on a docket that
-           will not add up. An unpriced line is legitimate - it is how the
-           hotel's own linen is counted - so this is a count, not a fault.
-           Beside the title behind an (i), the same words (D27-45, D27-82). */
-        badge={unpriced > 0 ? (
-          <InfoButton>
-            {(unpriced === 1
-              ? "One item has no price yet. It reads \"-\", never 0, "
-              : `${unpriced} items have no price yet. They read "-", never 0, `)
-              + "and a guest's bag holding one has no total and cannot be charged to "
-              + "a room until somebody prices it. Leave it blank for the hotel's own "
-              + "linen, which is counted and never charged."}
-          </InfoButton>
-        ) : undefined}
         breadcrumbs={[
           { label: "Laundry", to: `/h/${code}/laundry` },
           { label: "Price list" },
@@ -167,6 +153,25 @@ export default function LaundryPriceListPage() {
           </Button>
         }
       />
+
+      {/* SAID WHERE SOMEBODY WOULD LOOK, not discovered on a docket that
+          will not add up. An unpriced line is legitimate - it is how the
+          hotel's own linen is counted - so this is a count, not a fault.
+          A yellow tile while anything is unpriced, as a purchase's unpriced
+          lines (the owner, 28 September). */}
+      {unpriced > 0 && (
+        <div className="flex items-start gap-3 rounded-lg px-4 py-3.5 mb-5 text-sm bg-brand-yellow-50 ring-1 ring-inset ring-brand-yellow-100 text-ink-900">
+          <IconChip tone="yellow"><IndianRupee /></IconChip>
+          <p className="min-w-0">
+            {unpriced === 1
+              ? "One item has no price yet. It reads \"-\", never 0, "
+              : `${unpriced} items have no price yet. They read "-", never 0, `}
+            and a guest's bag holding one has no total and cannot be charged to
+            a room until somebody prices it. Leave it blank for the hotel's own
+            linen, which is counted and never charged.
+          </p>
+        </div>
+      )}
 
       {body}
 
