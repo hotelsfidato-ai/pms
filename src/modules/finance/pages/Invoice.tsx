@@ -4,6 +4,7 @@ import { Printer, ArrowLeft } from "lucide-react";
 import { cn } from "@/lib/cn";
 import { moneyPrecise, amountInWords, dateLong } from "@/lib/format";
 import { useUi } from "@/lib/ui";
+import { useDocumentTitle } from "@/lib/documentTitle";
 import {
   Button, Skeleton, ErrorState, DocPage, DocMasthead, DocFacts, DocParties, DocLabel,
   DocTotals, DocPanel, DocFooter, DOC_TH, DOC_TD,
@@ -105,6 +106,9 @@ export default function InvoicePage() {
     queryKey: ["invoice", hotelId, number],
     queryFn: () => getInvoice(hotelId, number),
   });
+  /* The tab names the document (the owner, 27 September: each tab its
+     screen's name); it kept the page before's. */
+  useDocumentTitle(data ? (data.creditsInvoiceId !== null ? "Credit note" : "Tax invoice") : null);
 
   if (isLoading) {
     return (

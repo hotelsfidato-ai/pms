@@ -244,6 +244,9 @@ export function StayTable({
   /** Opens the panel on the folio tab rather than the stay tab. */
   defaultTab = "stay",
   onRetry,
+  /** False where the page has its own search over the same rows (All
+      bookings: the owner, 27 September, one search box, not two). */
+  showFilter = true,
 }: {
   hotelId: string;
   businessDate: string;
@@ -256,6 +259,7 @@ export function StayTable({
   offerCheckIn?: boolean;
   defaultTab?: "stay" | "folio";
   onRetry?: () => void;
+  showFilter?: boolean;
 }) {
   const [searchParams, setSearchParams] = useSearchParams();
   const [query, setQuery] = useState("");
@@ -315,7 +319,7 @@ export function StayTable({
   return (
     <>
       <div className="flex items-center gap-2 mb-3">
-        <div className="relative flex-1 max-w-xs">
+        {showFilter && <div className="relative flex-1 max-w-xs">
           <Input
             value={query}
             onChange={(e) => setQuery(e.target.value)}
@@ -323,8 +327,8 @@ export function StayTable({
             leadingIcon={<Search className="size-4" />}
             aria-label="Filter this list"
           />
-        </div>
-        {query && (
+        </div>}
+        {showFilter && query && (
           <button
             type="button"
             onClick={() => setQuery("")}

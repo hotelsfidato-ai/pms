@@ -3,7 +3,7 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useParams } from "react-router";
 import { Wallet, Lock, Check, AlertTriangle, ArrowRightLeft, Plus } from "lucide-react";
 import { cn } from "@/lib/cn";
-import { money, moneyPrecise } from "@/lib/format";
+import { money, moneyPrecise, dateShort } from "@/lib/format";
 import { useUi } from "@/lib/ui";
 import {
   Page, PageHeader, Card, CardBody, CardHeader, Button, Skeleton, toast,
@@ -86,7 +86,7 @@ export default function CashieringPage() {
       <PageHeader
         title="Cashiering"
         description={data
-          ? `Your drawer · ${data.businessDate}`
+          ? `Your drawer · ${dateShort(data.businessDate)}`
           : "Your drawer"}
       />
       {!data || !data.shift ? (

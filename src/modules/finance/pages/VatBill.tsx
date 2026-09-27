@@ -9,6 +9,7 @@ import {
 import { cn } from "@/lib/cn";
 import { CreditNoteFlow } from "@/modules/finance/flows/CreditNoteFlow";
 import { getVatBill } from "@/modules/finance/data/billing";
+import { useDocumentTitle } from "@/lib/documentTitle";
 
 /* ══════════════════════════════════════════════════════════════════
    THE PRINTED VAT BILL FOR ALCOHOL (the owner's D22-44)
@@ -30,6 +31,8 @@ export default function VatBillPage() {
     queryKey: ["vat-bill", hotelId, number],
     queryFn: () => getVatBill(hotelId, number),
   });
+  /* The tab names the document (the owner, 27 September). */
+  useDocumentTitle(data ? (data.cancelsNumber !== null ? "VAT credit note" : "VAT bill") : null);
 
   if (isLoading) {
     return (
