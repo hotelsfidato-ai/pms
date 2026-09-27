@@ -97,13 +97,15 @@ function Row({ approval: a, code, onDone }: {
             {where ? <Link to={where} className="text-brand-orange-700 hover:underline underline-offset-4">{labelFor(a.kind)}</Link>
                    : labelFor(a.kind)}
           </div>
-          <StatusPill tone={a.status === "pending" ? "warning"
+          {/* "Asked for more" waits on the requester, so it is yellow like
+              Waiting, not red like Refused. */}
+          <StatusPill tone={a.status === "pending" || a.status === "clarify" ? "warning"
                           : a.status === "approved" ? "success" : "danger"}>
-            {/* In words (the owner, D27-82); "clarify", the engine's one
-                other state, has no word decided yet and shows as it is. */}
+            {/* In words (the owner, D27-82; "Asked for more", 28 September). */}
             {a.status === "pending" ? "Waiting"
               : a.status === "approved" ? "Approved"
               : a.status === "rejected" ? "Refused"
+              : a.status === "clarify" ? "Asked for more"
               : a.status}
           </StatusPill>
         </div>
