@@ -86,6 +86,11 @@ const FORM_C = grant("customer", "edit", "Recording Form III");
    and reception. Exactly who may record Form C, so one grant answers both. */
 const GUEST_ID = grant("customer", "edit", "Reading guests' passport and ID details");
 
+/* System health (D27-91): the owner and an administrator - exactly `role`
+   view today, and api/test/modules/admin/systemHealth.test.ts fails if that
+   ever changes. The database asks the same two (app.reads_system_health). */
+const SYSTEM_HEALTH = grant("role", "view", "Reading the system's health");
+
 /* Bills: `invoice`. Money taken: `payment`. */
 const CHARGE = grant("invoice", "create", "Adding to a bill");
 const CHANGE_BILL = grant("invoice", "edit", "Changing a bill");
@@ -453,6 +458,8 @@ export const READ_RULES: Readonly<Record<string, Rule>> = {
   [`GET ${H}/reports/c-form`]: GUEST_ID,
   /* The details guests sent from their own page: asked in the route. */
   [`GET ${H}/online-checkin`]: own("routes/guestDoor.ts: DESK_ROLES"),
+  /* D27-91: the server's health, for the owner and an administrator. */
+  [`GET ${H}/system-health`]: SYSTEM_HEALTH,
 };
 
 /** The prefixes server.ts lets through with no person behind them. */

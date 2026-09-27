@@ -4,6 +4,7 @@ import { IS_DEV } from "@/components/app/navigation";
 import PropertyPage from "@/modules/admin/pages/Property";
 import PeoplePage from "@/modules/admin/pages/People";
 import AdminConsolePage from "@/modules/admin/pages/Console";
+import SystemHealthPage from "@/modules/admin/pages/SystemHealth";
 import { PropertiesPage } from "@/modules/admin/pages/Properties";
 import {
   UsersPage, RolesPage, AuditLogPage, IntegrationsPage,
@@ -106,6 +107,14 @@ export const routes = (
         }
       />
     )}
+    <Route
+      path="/admin/system-health"
+      element={
+        <RequireAccess path="/admin/system-health" resource="role">
+          <SystemHealthPage />
+        </RequireAccess>
+      }
+    />
     <Route
       path="/admin/settings"
       element={

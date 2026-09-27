@@ -5,6 +5,7 @@ import { env } from "./env.ts";
 import { healthCheck, closePool } from "./db.ts";
 import { subjectFor, Unauthenticated } from "./auth.ts";
 import { roleGate } from "./roleGate.ts";
+import { telemetry, routeOf, errorKind } from "./telemetry.ts";
 import { hotels } from "./routes/hotels.ts";
 import { property } from "./routes/property.ts";
 /* Every service, through its front door (docs/SERVICE-FOLDERS-PLAN.md). */
@@ -122,6 +123,10 @@ app.use(
     maxAge: 86400,
   }),
 );
+
+/* Every request's time and result, by route PATTERN, for System health
+   (D27-92). After CORS, so a preflight is not a request. See telemetry.ts. */
+app.use("*", telemetry);
 
 /* ── Health ──────────────────────────────────────────────────────
    Unauthenticated on purpose: a load balancer has no token, and a
@@ -300,9 +305,13 @@ app.onError((error, c) => {
     return c.json({ error: error.message }, 401);
   }
 
-  /* The message can name a table, a constraint, or a column. That is
-     for the log; the caller gets the fact that it failed. */
-  console.error("[api]", c.req.method, c.req.path, error);
+  /* The caller gets the fact that it failed. The log gets the route's
+     PATTERN and the error's KIND, never the address or the message: an
+     address can hold the guest's link, a database message a guest's name,
+     and this log is kept a year (D27-92). The stack's frames stay; its
+     first line is the message and goes. */
+  console.error("[api]", c.req.method, routeOf(c), errorKind(error),
+    error instanceof Error ? error.stack?.split("\n").slice(1, 8).join("\n") : "");
   return c.json({ error: "Something went wrong. Nothing was changed." }, 500);
 });
 

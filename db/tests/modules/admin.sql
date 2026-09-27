@@ -586,5 +586,129 @@ begin
   alter table hotels enable trigger hotels_no_delete;
 end $$;
 
+-- =============================================================================
+-- TELEMETRY (D27-91, D27-92) - migration 149, without the route in front of it
+-- =============================================================================
+-- The role gate refuses everybody but the owner and an administrator before
+-- GET /system-health runs (api/test/modules/admin/systemHealth.test.ts). This
+-- is the database's own guard behind it, tested alone (MEMORY 318), and the
+-- one function that writes: a minute in, and anything past 180 days out.
+-- =============================================================================
+do $$
+declare
+  h uuid; clerk uuid; gm uuid; adm uuid; gone uuid; owner uuid;
+  failed boolean; n int; got telemetry_requests;
+begin
+  h := app.provision_property_unchecked('TEL', 'Telemetry Test', 'Nowhere');
+  select id into owner from staff where email = 'owner@fidato.in';
+  insert into staff (email, full_name) values ('tel-clerk@fidato.in', 'Telemetry Clerk')
+  on conflict (email) do update set is_active = true returning id into clerk;
+  insert into staff (email, full_name) values ('tel-gm@fidato.in', 'Telemetry Manager')
+  on conflict (email) do update set is_active = true returning id into gm;
+  insert into staff (email, full_name) values ('tel-admin@fidato.in', 'Telemetry Admin')
+  on conflict (email) do update set is_active = true returning id into adm;
+  insert into staff (email, full_name) values ('tel-gone@fidato.in', 'Telemetry Gone')
+  on conflict (email) do update set is_active = true returning id into gone;
+  delete from staff_hotels where staff_id in (clerk, gm, adm, gone);
+  insert into staff_hotels (staff_id, hotel_id, role) values
+    (clerk, h, 'front_desk'), (gm, h, 'gm'), (adm, h, 'admin'), (gone, h, 'admin');
+  update staff set is_active = false where id = gone;
+  delete from telemetry_requests;
+  delete from telemetry_events;
+
+  -- ---------- who may read ----------
+  perform set_config('app.user_id', adm::text, true);
+  perform test.ok('telemetry', 'an administrator may read it', app.reads_system_health());
+  perform set_config('app.user_id', owner::text, true);
+  perform test.ok('telemetry', 'a group administrator may read it', app.reads_system_health());
+  perform set_config('app.user_id', gm::text, true);
+  perform test.ok('telemetry', 'a GM may not', not app.reads_system_health());
+  perform set_config('app.user_id', clerk::text, true);
+  perform test.ok('telemetry', 'nor reception', not app.reads_system_health());
+  perform set_config('app.user_id', gone::text, true);
+  perform test.ok('telemetry', 'nor an administrator who has been switched off', not app.reads_system_health());
+
+  -- ---------- the 180 days, and a minute in ----------
+  insert into telemetry_requests (minute, method, route, status, count, total_ms, max_ms, buckets) values
+    (date_trunc('minute', now()) - interval '181 days', 'GET', '/old', 200, 1, 5, 5, '{1,0,0,0,0,0,0,0,0,0}'),
+    (date_trunc('minute', now()) - interval '179 days', 'GET', '/kept', 200, 1, 5, 5, '{1,0,0,0,0,0,0,0,0,0}');
+  insert into telemetry_events (minute, kind, place, what, count) values
+    (date_trunc('minute', now()) - interval '181 days', 'error', 'GET /old', '22P02', 1);
+
+  perform set_config('app.user_id', '', true);
+  set local role pms_app;
+  perform app.record_telemetry(
+    jsonb_build_array(jsonb_build_object('minute', date_trunc('minute', now()), 'method', 'GET',
+      'route', '/api/hotels/:code/stays/:id', 'status', 200, 'count', 2, 'total_ms', 300,
+      'max_ms', 200, 'buckets', '[0,0,0,1,1,0,0,0,0,0]'::jsonb)),
+    jsonb_build_array(jsonb_build_object('minute', date_trunc('minute', now()), 'kind', 'slow_query',
+      'place', '', 'what', 'select ?', 'count', 1, 'max_ms', 1500)));
+  -- the same minute again, as a retried flush sends it: it adds
+  perform app.record_telemetry(
+    jsonb_build_array(jsonb_build_object('minute', date_trunc('minute', now()), 'method', 'GET',
+      'route', '/api/hotels/:code/stays/:id', 'status', 200, 'count', 1, 'total_ms', 900,
+      'max_ms', 900, 'buckets', '[0,0,0,0,0,0,1,0,0,0]'::jsonb)),
+    '[]'::jsonb);
+  reset role;
+
+  perform test.ok('telemetry', 'a row older than 180 days is deleted',
+    not exists (select 1 from telemetry_requests where route = '/old')
+    and not exists (select 1 from telemetry_events where place = 'GET /old'));
+  perform test.ok('telemetry', 'a row of 179 days is kept',
+    exists (select 1 from telemetry_requests where route = '/kept'));
+  select * into got from telemetry_requests where route = '/api/hotels/:code/stays/:id';
+  perform test.ok('telemetry', 'a minute written twice adds to itself',
+    got.count = 3 and got.total_ms = 1200 and got.max_ms = 900
+    and got.buckets = '{0,0,0,1,1,0,1,0,0,0}'::int[],
+    format('%s %s %s %s', got.count, got.total_ms, got.max_ms, got.buckets));
+  perform test.ok('telemetry', 'a slow query is kept by its name',
+    exists (select 1 from telemetry_events where kind = 'slow_query' and what = 'select ?' and max_ms = 1500));
+
+  -- ---------- the rows, as the application ----------
+  perform set_config('app.user_id', clerk::text, true);
+  set local role pms_app;
+  select count(*) into n from telemetry_requests;
+  reset role;
+  perform test.ok('telemetry', 'reception reads nothing, whatever the route', n = 0, n || ' rows read');
+  perform set_config('app.user_id', gm::text, true);
+  set local role pms_app;
+  select count(*) into n from telemetry_events;
+  reset role;
+  perform test.ok('telemetry', 'nor does a GM', n = 0, n || ' rows read');
+  perform set_config('app.user_id', adm::text, true);
+  set local role pms_app;
+  select count(*) into n from telemetry_requests;
+  reset role;
+  perform test.ok('telemetry', 'an administrator reads them', n = 2, n || ' rows read');
+
+  set local role pms_app;
+  failed := false;
+  begin
+    delete from telemetry_requests;
+  exception when insufficient_privilege then failed := true;
+  end;
+  reset role;
+  perform test.ok('telemetry', 'and nobody through the application can delete the record',
+    failed and (select count(*) from telemetry_requests) = 2);
+  set local role pms_app;
+  failed := false;
+  begin
+    insert into telemetry_events (minute, kind, place, what, count) values (now(), 'error', '', 'x', 1);
+  exception when insufficient_privilege then failed := true;
+  end;
+  reset role;
+  perform test.ok('telemetry', 'or write a row but through app.record_telemetry', failed);
+
+  -- ---------- and the fixtures go ----------
+  delete from telemetry_requests;
+  delete from telemetry_events;
+  perform set_config('app.user_id', '', true);
+  delete from staff_hotels where staff_id in (clerk, gm, adm, gone);
+  update staff set is_active = false where id in (clerk, gm, adm, gone);
+  alter table hotels disable trigger hotels_no_delete;
+  delete from hotels where id = h;
+  alter table hotels enable trigger hotels_no_delete;
+end $$;
+
 select set_config('app.user_id',
        (select id::text from staff where email = 'owner@fidato.in'), false);

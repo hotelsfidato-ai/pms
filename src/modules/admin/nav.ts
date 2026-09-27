@@ -1,4 +1,4 @@
-import { Hotel, UserCog, Settings, ShieldCheck, Plug, ScrollText, Terminal } from "lucide-react";
+import { Hotel, UserCog, Settings, ShieldCheck, Plug, ScrollText, Terminal, Activity } from "lucide-react";
 import { can } from "@/lib/permissions";
 import type { ServiceNavEntry } from "@/components/app/navigation";
 
@@ -40,4 +40,9 @@ export const nav: ServiceNavEntry[] = [
       },
     ],
   },
+  /* D27-91: what the server is doing, for the owner and an administrator -
+     exactly the roles that hold `role`, as the server asks (roleGate.ts). */
+  { section: "system", order: 25,
+    label: "System health", to: "/admin/system-health", icon: Activity, resource: "role",
+    keywords: ["server", "telemetry", "uptime", "errors", "backup", "disk", "night audit"] },
 ];

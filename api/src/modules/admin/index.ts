@@ -4,6 +4,7 @@ import { adminLists } from "./adminLists.ts";
 import { admin } from "./admin.ts";
 import { commissioning } from "./commissioning.ts";
 import { groupSettings } from "./groupSettings.ts";
+import { systemHealth } from "./systemHealth.ts";
 
 /* The front door of the administration service on the server — the only file
    the core or another service may import (src/test/boundaries.test.ts).
@@ -14,4 +15,5 @@ export const mounts: readonly Mount[] = [
   ["/api", admin],
   ["/api/hotels", commissioning],
   ["/api/hotels", groupSettings],
+  ["/api/hotels", systemHealth],
 ];
