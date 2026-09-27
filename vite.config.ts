@@ -150,6 +150,12 @@ export default defineConfig(({ mode }) => {
            phone (D26-14). ponytail: matches any chunk named browser-*; name
            the chunk if another library ever produces one. */
         globIgnores: ['**/browser-*.js'],
+        /* The one app bundle passed Workbox's 2 MiB default on 27 Sep
+           (1.98 MB at 40c9510, 2.04 MB after Phase 1, Form III and the
+           redesign), and the build refuses a file it cannot precache.
+           ponytail: one bundle, a 3 MiB ceiling; split routes with
+           lazy() when it nears 3 MiB rather than raising this again. */
+        maximumFileSizeToCacheInBytes: 3 * 1024 * 1024,
         /* Every route is client-side, so a hard refresh on
            /h/5EL/banquet must serve index.html rather than 404. The
            same job deploy/nginx.conf does online. */
