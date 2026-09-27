@@ -8,6 +8,14 @@ project, still goes in the root `CHANGELOG.md`.
 
 ---
 
+## 2026-09-27 · Touched by the reservations session: Cancel a waiting booking (D27-64)
+
+`StayActions` shows "Cancel this booking" (reservations' `CancelWaitingFlow`)
+in place of Void on a booking waiting for the hotel. See
+`src/modules/reservations/CHANGELOG.md`.
+
+---
+
 ## 2026-09-27 · Touched by Phase 1, New booking (reservations session)
 
 `assignRoom` on the front door (New booking's room pick); `StayActions` offers "Confirm the booking" on a waiting booking; `StayTable` labels status `tentative` "Waiting for the hotel".

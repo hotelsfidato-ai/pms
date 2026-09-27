@@ -68,3 +68,8 @@
 | D27-64 | Cancelling a waiting booking (RES-5) | **Cancel it directly**: the room frees at once and nothing is sent, for the same people who may cancel a confirmed booking |
 | D27-65 | The bills' masthead | **The property's name, and under it "by <group name>"** (e.g. "5 Elements Akkalkot / by Fidato Hotels"), chosen over a logo above the name. The group's name comes from the same group setting as the logo (D27-53, D21-27); nothing in the code names Fidato |
 | D27-66 | Reviewing the rest of the redesign | **One review at the end, not group by group** ("do the updates, will give all things in one shot"). The redesign session runs helpers, three at a time in their own copies, on screens only; the owner approves everything together |
+| D27-67 | Who may change the group's name and logo (the logo session) | **The owner, an administrator or the GM, at any hotel.** Against the recommendation (group administrators only); the risk was put to the owner: any hotel's GM changes every hotel's bills. Every change is audited |
+| D27-68 | The logo's size limit | **200 KB**, PNG or SVG (an SVG with script refused); the name at most 80 characters, blank clears it |
+| D27-69 | Cancelling a waiting booking: a charge? | **No charge; it was never confirmed** |
+| D27-70 | How much a cancel takes | **Every waiting room of the booking**, as Confirm does |
+| D27-71 | A reason | **A short reason is required and kept on the booking**, with the clerk's name |

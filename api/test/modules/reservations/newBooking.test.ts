@@ -355,3 +355,54 @@ describe("what else New booking records", () => {
     expect(await onFile("Sir")).toEqual({ guests: 0, reservations: 0 });
   });
 });
+
+describe("cancelling a booking waiting for the hotel (D27-64)", () => {
+  /* What the grid says is left of this room type on the booking's first
+     night - the figure New booking and the channel manager read (044). */
+  const left = async () => Number((await sql(
+    `select min(available)::int as n from app.inventory_grid($1, '2029-05-10'::date, '2029-05-10'::date)
+      where room_type_id = $2`, [hotelId, typeId])).rows[0].n);
+
+  it("frees the room at once, charges nothing, sends nothing, and keeps the reason", async () => {
+    const clerk = staff.get("front_desk")!;
+    const made = (await (await call(clerk, "POST", "/bookings", booking("Cancel waiting",
+      { tentative: true, lines: [{ roomTypeId: typeId, adults: 2, rooms: 2, agreedRate: 4000 }] }),
+    )).json()) as Made;
+    const [a, b] = made.bookings.map((x) => x.id);
+    const held = await left();
+
+    const noReason = await call(clerk, "POST", `/stays/${a}/cancel`, {});
+    expect(noReason.status).toBe(409);
+    expect((await row(a!)).status).toBe("tentative");
+
+    const res = await call(clerk, "POST", `/stays/${a}/cancel`, { reason: "Hotel full that week" });
+    expect(res.status, await res.clone().text()).toBe(200);
+    expect(((await res.json()) as { rooms: number }).rooms).toBe(2);
+
+    /* Both rooms of the booking, as Confirm takes both; the grid gives both back. */
+    for (const id of [a!, b!]) expect((await row(id)).status).toBe("cancelled");
+    expect(await left()).toBe(held + 2);
+    const kept = (await sql(
+      "select cancel_reason, cancelled_by::text from reservations where id = $1", [a])).rows[0];
+    expect(kept).toEqual({ cancel_reason: "Hotel full that week", cancelled_by: clerk });
+
+    /* No charge: nothing on either folio. Nothing owed, nothing sent. */
+    expect((await sql(
+      `select count(*)::int as n from folio_postings p join folios f on f.id = p.folio_id
+        where f.reservation_id = any($1::uuid[])`, [[a, b]])).rows[0].n).toBe(0);
+    expect((await sql(
+      `select count(*)::int as n from app.guest_messages_due(null, 3, '10:00', '09:00', '21:00', $1)
+        where reservation_id = any($2::uuid[])`, [hotelId, [a, b]])).rows[0].n).toBe(0);
+    expect(await sentAbout(a!)).toHaveLength(0);
+    expect(received).toHaveLength(0);
+  });
+
+  it("refuses a booking that is not waiting, and changes nothing", async () => {
+    const made = (await (await call(ownerId, "POST", "/bookings", booking("Cancel confirmed"))).json()) as Made;
+    const res = await call(staff.get("front_desk")!, "POST",
+      `/stays/${made.bookings[0]!.id}/cancel`, { reason: "Changed plans" });
+    expect(res.status).toBe(409);
+    expect(await reasonOf(res)).toMatch(/not waiting for the hotel/);
+    expect((await row(made.bookings[0]!.id)).status).toBe("confirmed");
+  });
+});
