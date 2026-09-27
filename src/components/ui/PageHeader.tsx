@@ -100,7 +100,7 @@ export function PageHeader({
             there is room, so nothing wraps. Found by opening the banquet
             diary on a phone, not by a gate. */}
         {actions && (
-          <div className="flex items-center gap-2 shrink-0 max-w-full flex-wrap justify-end">
+          <div className="flex items-center gap-2 shrink-0 max-w-full flex-wrap justify-end max-sm:w-full max-sm:justify-start">
             {actions}
           </div>
         )}

@@ -1,9 +1,8 @@
 import { useQuery } from "@tanstack/react-query";
-import { useParams, useLocation, Link } from "react-router";
-import { cn } from "@/lib/cn";
+import { useParams, useLocation, useNavigate } from "react-router";
 import { dateLong } from "@/lib/format";
 import { useUi } from "@/lib/ui";
-import { Page, PageHeader, Card, StatusPill } from "@/components/ui";
+import { Page, PageHeader, Segmented, StatusPill } from "@/components/ui";
 import { StayTable, type StayColumn } from "@/modules/front-desk/components/StayTable";
 import { listArrivals, listStays } from "@/modules/front-desk/data/stays";
 import { queryKeys, BUSINESS_DATE } from "@/data/repositories";
@@ -29,6 +28,7 @@ export default function ArrivalsPage() {
   const hotelId = params.code ?? fallback;
   const { pathname } = useLocation();
   const upcoming = pathname.endsWith("/upcoming");
+  const navigate = useNavigate();
 
   const today = useQuery({
     queryKey: queryKeys.arrivals(hotelId, BUSINESS_DATE),
@@ -67,71 +67,50 @@ export default function ArrivalsPage() {
             </StatusPill>
           ) : undefined
         }
+        /* Today or the fortnight ahead: a switch in the title row, the
+           same words and counts the tabs had (the owner, 27 September). */
+        actions={
+          <Segmented<"today" | "upcoming">
+            value={upcoming ? "upcoming" : "today"}
+            onChange={(v) => navigate(v === "upcoming" ? `/h/${hotelId}/arrivals/upcoming` : `/h/${hotelId}/arrivals`)}
+            className="max-sm:flex max-sm:w-full max-sm:[&>button]:flex-1"
+            options={[
+              { value: "today", label: <>Today<Count n={today.data?.length} /></> },
+              { value: "upcoming", label: <>Next fourteen days<Count n={ahead.data?.length} /></> },
+            ]}
+          />
+        }
       />
 
-      <nav className="flex items-center gap-1 border-b border-grey-200 -mb-px mb-5">
-        <Tab to={`/h/${hotelId}/arrivals`} active={!upcoming} count={today.data?.length}>
-          Today
-        </Tab>
-        <Tab to={`/h/${hotelId}/arrivals/upcoming`} active={upcoming} count={ahead.data?.length}>
-          Next fourteen days
-        </Tab>
-      </nav>
-
       {/* CRM-3 (D22-8): a booking site's guest on a blacklisted phone or email. */}
-      <div className="mb-4 empty:hidden">
+      <div className="mb-5 empty:hidden">
         <BookingSiteBlacklist hotelId={hotelId}
           from={upcoming ? addDays(BUSINESS_DATE, 1) : BUSINESS_DATE}
           to={upcoming ? addDays(BUSINESS_DATE, 14) : BUSINESS_DATE}
           stayIds={active.data?.map((s) => s.id)} />
       </div>
 
-      <Card className="p-4">
-        <StayTable
-          hotelId={hotelId}
-          businessDate={BUSINESS_DATE}
-          rows={active.data}
-          isLoading={active.isLoading}
-          error={active.error}
-          onRetry={() => active.refetch()}
-          columns={COLUMNS}
-          offerCheckIn={!upcoming}
-          emptyTitle={upcoming ? "Nothing booked in the next fortnight" : "No arrivals today"}
-          emptyBody={
-            upcoming
-              ? "Bookings appear here as they are taken."
-              : "Nobody is expected. A walk-in can be taken from any empty cell in Stay view."
-          }
-        />
-      </Card>
+      <StayTable
+        hotelId={hotelId}
+        businessDate={BUSINESS_DATE}
+        rows={active.data}
+        isLoading={active.isLoading}
+        error={active.error}
+        onRetry={() => active.refetch()}
+        columns={COLUMNS}
+        offerCheckIn={!upcoming}
+        emptyTitle={upcoming ? "Nothing booked in the next fortnight" : "No arrivals today"}
+        emptyBody={
+          upcoming
+            ? "Bookings appear here as they are taken."
+            : "Nobody is expected. A walk-in can be taken from any empty cell on the Calendar."
+        }
+      />
     </Page>
   );
 }
 
-function Tab({
-  to, active, count, children,
-}: {
-  to: string;
-  active: boolean;
-  count?: number;
-  children: React.ReactNode;
-}) {
-  return (
-    <Link
-      to={to}
-      className={cn(
-        "relative px-3 py-2.5 text-base font-medium whitespace-nowrap",
-        "pointer-coarse:min-h-11 pointer-coarse:inline-flex pointer-coarse:items-center",
-        "border-b-2 -mb-px transition-colors duration-150",
-        active
-          ? "text-ink-900 border-brand-orange"
-          : "text-grey-500 border-transparent hover:text-ink-900",
-      )}
-    >
-      {children}
-      {count !== undefined && (
-        <span className="ml-1.5 text-2xs text-grey-500 tabular">{count}</span>
-      )}
-    </Link>
-  );
+/** A count beside a switch's words, quiet. */
+function Count({ n }: { n: number | undefined }) {
+  return n === undefined ? null : <span className="ml-1.5 text-xs text-grey-500 tabular">{n}</span>;
 }
