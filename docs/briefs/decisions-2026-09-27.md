@@ -70,3 +70,6 @@
 | D27-66 | Reviewing the rest of the redesign | **One review at the end, not group by group** ("do the updates, will give all things in one shot"). The redesign session runs helpers, three at a time in their own copies, on screens only; the owner approves everything together |
 | D27-67 | Who may change the group's name and logo (the logo session) | **The owner, an administrator or the GM, at any hotel.** Against the recommendation (group administrators only); the risk was put to the owner: any hotel's GM changes every hotel's bills. Every change is audited |
 | D27-68 | The logo's size limit | **200 KB**, PNG or SVG (an SVG with script refused); the name at most 80 characters, blank clears it |
+| D27-69 | Cancelling a waiting booking: a charge? | **No charge; it was never confirmed** |
+| D27-70 | How much a cancel takes | **Every waiting room of the booking**, as Confirm does |
+| D27-71 | A reason | **A short reason is required and kept on the booking**, with the clerk's name |
