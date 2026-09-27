@@ -26,6 +26,7 @@ import { listStayFolios, openFolio, transferPosting, listBillingCompanies, type 
 import { LateCheckOutFlow } from "@/modules/front-desk";
 import { getStayBill } from "@/modules/finance/data/bill";
 import { BillPrint } from "./BillPrint";
+import { useGroupSettings } from "@/modules/admin";
 
 /* ══════════════════════════════════════════════════════════════════
    FLOWS B AND C — charge, settle, check out
@@ -706,6 +707,7 @@ function InvoiceDialog({ hotelId, stayId }: { hotelId: string; stayId: string })
     queryFn: () => getStayBill(hotelId, stayId),
     enabled: open,
   });
+  const group = useGroupSettings(hotelId);
 
   return (
     <Dialog open={open} onOpenChange={setOpen}>
@@ -717,7 +719,7 @@ function InvoiceDialog({ hotelId, stayId }: { hotelId: string; stayId: string })
       </DialogTrigger>
       <DialogContent title="Interim bill" description="Print preview">
         {bill.data ? (
-          <BillPrint bill={bill.data} title="Interim bill" />
+          <BillPrint bill={bill.data} title="Interim bill" group={group} />
         ) : bill.isError ? (
           <p className="text-sm text-brand-red">The bill could not be read. Try again.</p>
         ) : bill.isFetched ? (

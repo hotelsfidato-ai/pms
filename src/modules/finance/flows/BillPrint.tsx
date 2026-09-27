@@ -2,6 +2,7 @@ import type { ReactNode } from "react";
 import { moneyPrecise, dateShort } from "@/lib/format";
 import { cn } from "@/lib/cn";
 import { DocMasthead, DocFacts, DocTotals, DOC_TH, DOC_TD } from "@/components/ui";
+import type { GroupSettings } from "@/modules/admin";
 import type { StayBill } from "../data/bill";
 
 /* ══════════════════════════════════════════════════════════════════
@@ -24,16 +25,18 @@ import type { StayBill } from "../data/bill";
 /** "2.5" for 5, "9" for 18: half a GST rate, without trailing zeros. */
 const half = (rate: number) => String(Math.round((rate / 2) * 100) / 100);
 
-export function BillPrint({ bill, title }: { bill: StayBill; title: string }) {
+/** `group`: the group's name and logo from Settings (D27-53). The guest's
+    own page has no sign-in to ask for them, so it prints the hotel's name alone. */
+export function BillPrint({ bill, title, group }: { bill: StayBill; title: string; group?: GroupSettings }) {
   const { hotel, stay } = bill;
   const place = [hotel.address, hotel.city, hotel.state].filter(Boolean).join(", ");
 
   /* The CRS voucher's look (the owner, 27 September): the masthead, a
      strip of the stay's facts, the lines on hairlines, the totals under a
-     2px rule. The hotel's name stands where the group's logo will. */
+     2px rule. */
   return (
     <div className="bg-white text-ink-700 border border-grey-200 rounded-lg p-5 sm:p-6 [print-color-adjust:exact]" data-bill-print>
-      <DocMasthead name={hotel.name} title={title} number={stay.reference} />
+      <DocMasthead name={hotel.name} group={group?.name} logo={group?.logo} title={title} number={stay.reference} />
       <p className="-mt-2 mb-4 text-xs text-grey-500">
         {place && <>{place} · </>}GSTIN <span data-bill-gstin>{hotel.gstin ?? "-"}</span>
       </p>
