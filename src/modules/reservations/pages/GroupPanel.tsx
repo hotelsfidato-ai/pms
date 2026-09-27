@@ -3,8 +3,9 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useParams, Link } from "react-router";
 import { Users, Wallet, ArrowRight, Check, Flag } from "lucide-react";
 import { cn } from "@/lib/cn";
-import { money } from "@/lib/format";
+import { money, dateShort } from "@/lib/format";
 import { useUi } from "@/lib/ui";
+import { BUSINESS_DATE } from "@/data/repositories";
 import {
   Page, PageHeader, Card, CardBody, CardHeader, Button, Skeleton,
   EmptyState, StatusPill, FigureRow, FigureTile, toast, type Tone,
@@ -40,15 +41,33 @@ function useHotel(): string {
   return params["code"] ?? fallback;
 }
 
-/* One colour per state, everywhere (D27-48): in house blue, due in
-   (a confirmed booking not yet arrived) orange. */
+/* The lists' words and colours for a room (StayTable's; the owner,
+   27 September): in house blue, due in (a confirmed booking not yet
+   arrived) orange, cancelled and no show red. */
 const STATUS_TONE: Record<string, Tone> = {
   confirmed: "accent",
   checked_in: "info",
+  due_out: "warning",
   checked_out: "neutral",
-  cancelled: "warning",
-  no_show: "warning",
+  cancelled: "danger",
+  no_show: "danger",
+  tentative: "neutral",
 };
+
+const STATUS_WORD: Record<string, string> = {
+  confirmed: "Due in",
+  checked_in: "In house",
+  due_out: "Due out",
+  checked_out: "Checked out",
+  cancelled: "Cancelled",
+  no_show: "No show",
+  tentative: "Waiting for the hotel",
+};
+
+/** Due out is in house and leaving on the business date, as the lists
+    are told it (the server's toStay). */
+const stateOf = (r: GroupRoom) =>
+  r.status === "checked_in" && r.checkOut === BUSINESS_DATE ? "due_out" : r.status;
 
 export default function GroupPanelPage() {
   const hotelId = useHotel();
@@ -137,7 +156,8 @@ export default function GroupPanelPage() {
 
       {/* ── The two balances ─────────────────────────────────────── */}
       {/* The Figure Rule: label with its chip, the figure, its note,
-          level across the row. The host's is warm while the host owes. */}
+          level across the row. Each is warm while that side owes, as
+          Folios' Outstanding is (the owner, 27 September). */}
       <FigureRow className="sm:grid-cols-2">
         <FigureTile
           icon={<Wallet />}
@@ -167,6 +187,7 @@ export default function GroupPanelPage() {
         />
         <FigureTile
           icon={<Users />}
+          tone={g.guestBalance > 0 ? "orange" : "neutral"}
           label="The guests"
           value={money(g.guestBalance)}
           note={`Across ${g.rooms.length} ${g.rooms.length === 1 ? "bill" : "bills"}`}
@@ -234,12 +255,12 @@ export default function GroupPanelPage() {
                     </td>
                     <td className="px-4 py-3">
                       <span className="tabular text-sm whitespace-nowrap">
-                        {r.checkIn} → {r.checkOut}
+                        {dateShort(r.checkIn)} → {dateShort(r.checkOut)}
                       </span>
                       <span className="block text-xs text-grey-500 whitespace-nowrap">
                         {r.nights} {r.nights === 1 ? "night" : "nights"} ·{" "}
-                        <StatusPill tone={STATUS_TONE[r.status] ?? "neutral"}>
-                          {r.status.replace("_", " ")}
+                        <StatusPill tone={STATUS_TONE[stateOf(r)] ?? "neutral"}>
+                          {STATUS_WORD[stateOf(r)] ?? r.status.replace("_", " ")}
                         </StatusPill>
                       </span>
                     </td>
@@ -318,7 +339,7 @@ export default function GroupPanelPage() {
               {g.master.lines.map((l, i) => (
                 <li key={i} className="flex items-center gap-3 py-3 min-h-14">
                   <span className="w-24 shrink-0 tabular text-sm text-grey-500">
-                    {l.date}
+                    {dateShort(l.date)}
                   </span>
                   <span className="flex-1 min-w-0">
                     {l.description}

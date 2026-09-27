@@ -40,12 +40,13 @@ import { getGroup, type GroupRoom } from "@/modules/reservations/data/groups";
 export const GROUP_ROOMS_ID = "group-rooms";
 
 /* One colour per state, everywhere (D27-48): in house blue, due in
-   (confirmed, not yet arrived) orange. */
+   (confirmed, not yet arrived) orange; cancelled and no show red (the
+   owner, 27 September). */
 const STATUS_TONE: Record<string, "accent" | "info" | "neutral" | "danger"> = {
   checked_in: "info",
   confirmed: "accent",
   checked_out: "neutral",
-  cancelled: "neutral",
+  cancelled: "danger",
   no_show: "danger",
 };
 
