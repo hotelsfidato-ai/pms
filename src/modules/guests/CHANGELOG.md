@@ -89,13 +89,15 @@ checked in (nationality "BR" from the booking), the register at 03:45 "due
 by 28 Sep 2026, 03:45", the card, Complete details, check-out with
 "Jaipur", the departure's own clock, the report; the walk-in's fields.
 
-**The six checks** on `bced3b5` (cp6 `de2e98e` merged in): web types exit 0;
-API types exit 0; web 85 files, 717 tests passed, exit 0; API 1585 passed, 1
-failed, exit 1 - `channel-manager/suAvailability.test.ts` ran past its 20 s
-limit (20.4 s) while other copies were building databases; alone on the same
-tree it passes, 12 of 12, that test in 6.5 s; Form III 14 of 14 in the run;
-database 1192 assertions passed (guests 14), exit 0; replay: all 146
-migrations re-runnable, exit 0.
+**The six checks** on `4d70551` (the migration renumbered 147 after Phase 1
+took 146; cp6 `95070a6` merged in; the walk-in's segments now reservations'
+`MARKET_SEGMENTS`, exported from its front door): web types exit 0; API types
+exit 0; web 86 files, 718 tests passed, exit 0; API 101 files, 1599 tests
+passed, exit 0 (run alone once Postgres was quiet - the run inside the six,
+just after the 19:32 crash, took 38 minutes and hit three timeouts, 20 s and
+30 s, in `rateSetters` and `nightAudit`: void, not a result); database 1207
+assertions passed (guests 14), exit 0; replay: all 147 migrations
+re-runnable, exit 0.
 
 **Found on the way:** stopping a background run (TaskStop) killed its wrapper
 and not the script under it, so two check runs went at once and wrote into
