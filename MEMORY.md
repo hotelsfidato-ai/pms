@@ -6539,6 +6539,26 @@ copy will see of theirs.**
 
 ---
 
+### 335 · A check step killed from Windows reads as a pass: the 22-second database step, explained
+
+27 September, found by the gate investigation (tools/gate-db-step-27sep). On this Git
+Bash (MSYS 3.6.3) a bash script killed from Windows (Stop-Process, taskkill /F, WMI
+Terminate) returns **exit 0** to its parent and runs no trap; MSYS `kill` gives 143 or
+137 as it should. Phase 1's first full check run had its `db/tests/run.sh` killed about
+30 s in (most likely by another session stopping "its own" run by process id; every
+copy's command line reads `bash.exe db/tests/run.sh`), so the database step said
+"exit 0" with its log ending at "── migrations ──" and left a half-built
+`fidato_gate_10270`. Nothing bad was merged: the re-run was real.
+
+**The rule:** a check step counts only with its last line. `scripts/gates.sh` now demands
+"all N assertions passed" and "all N migrations are re-runnable" (and, from the same fix,
+the test summary), and reports CUT SHORT otherwise. Stop a stray run from Git Bash with
+`kill`, never Stop-Process, and never stop another copy's run. Separately, the 19:32
+Postgres crash was a backend running a session's `create table` that got 0xC000013A
+when the app closed; the restart then synced for 30 minutes because of scratch databases.
+
+---
+
 ### 334 · The Form III session's lessons, 27 September
 
 - **TaskStop on a background `bash script.sh` kills the wrapper, not the script.** Two
