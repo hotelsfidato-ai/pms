@@ -15,7 +15,8 @@ project, still goes in the root `CHANGELOG.md`.
 recommended): the walk-in's segments; both lists start empty; Mr, Ms, Mrs,
 Dr or none; complimentary and the lists for owner, admin and GM; a Confirm
 action for a waiting booking; the summary shows what the bill will carry;
-typed rates unchanged.
+typed rates unchanged. A ninth, later that day (asked for by the redesign
+session): "Waiting for the hotel" is grey on the booking lists.
 
 **Shipped** (details in MODULE.md, "Phase 1")
 - Migration 146 (renumber at merge if Form III lands first).
