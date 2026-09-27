@@ -88,7 +88,7 @@ Form C was cut out of the old `invoices.ts` (`1dcf9b7`).
 
 | Method | Path | What it does |
 |---|---|---|
-| GET | `/:code/form-c` | every foreign stay with all of Form III, both 24-hour clocks and the numbers filed (`app.form_iii`, 146) |
+| GET | `/:code/form-c` | every foreign stay with all of Form III, both 24-hour clocks and the numbers filed (`app.form_iii`, 147) |
 | POST | `/:code/form-c/:reservationId` | record a filing's portal number, `kind` arrival or departure (a departure only after check-out); one per person |
 | PUT | `/:code/form-c/:reservationId/details` | "Complete details": the portal's other boxes, filled in or corrected later; only what is typed is written |
 
@@ -124,8 +124,8 @@ Tables this service owns, and the migrations that made or changed them:
 | `guests` | one person, belonging to the group — no `hotel_id` | created `004_guests.sql`; `013_policies.sql` (passport and ID fields moved out to `guest_documents`), `015_edge_cases.sql` (a guest is never deleted), `043_indicators.sql` (`is_vip`) |
 | `companies` | corporate accounts, agents | created `004_guests.sql`; no endpoint writes to it (grep of `api/src`, 15 September) |
 | `guest_documents` | passport or ID number, expiry, visa, address | created `013_policies.sql` (read only at a property with a booking); `014_simulation_fixes.sql` (S2 — any active staff may record one), `026_identity_capture.sql` (who recorded it and when; a number must be present) |
-| `form_c_filings` | a Form III filing's portal number, arrival or departure, one per person | created `025_invoices_form_c.sql`; `146_form_iii.sql` (`kind`; unique per stay, kind and number) |
-| `form_iii_stays` | what Form III asks about one visit: arrived from, purpose, previous and next place, reference address in India | created `146_form_iii.sql` (`app.form_iii` reads it with `guest_documents` and the audit log's check-in and check-out instants) |
+| `form_c_filings` | a Form III filing's portal number, arrival or departure, one per person | created `025_invoices_form_c.sql`; `147_form_iii.sql` (`kind`; unique per stay, kind and number) |
+| `form_iii_stays` | what Form III asks about one visit: arrived from, purpose, previous and next place, reference address in India | created `147_form_iii.sql` (`app.form_iii` reads it with `guest_documents` and the audit log's check-in and check-out instants) |
 | `booking_sources`, `booking_source_rates` | the group's list of sources; one commission per source per property | created `082_booking_sources.sql` (kinds, `channel_code`, `app.booking_source_label`); `085_walk_in_channel.sql` (`app.walk_in_source`) |
 
 Others write into these directly in SQL: front desk inserts the walk-in's
@@ -174,7 +174,7 @@ wrong as a picker into anything that wants a company (MEMORY 83).
   reservations and the folio ledger for stay history and revenue; Form III
   reads reservations, room assignments, `guest_documents`, `form_iii_stays` and
   the audit log's check-in and check-out instants through `app.form_iii`
-  (146).
+  (147).
 
 ## Rules that bind it
 

@@ -16,7 +16,7 @@ import type { Client } from "../../db.ts";
    is required" would be four answers.
    ══════════════════════════════════════════════════════════════════ */
 
-/** The person: guest_documents (013, 146). */
+/** The person: guest_documents (013, 147). */
 export interface Identity {
   idType?: string;
   idNumber?: string;
@@ -38,7 +38,7 @@ export interface Identity {
   visaIssueCountry?: string;
 }
 
-/** The visit: form_iii_stays (146). */
+/** The visit: form_iii_stays (147). */
 export interface Visit {
   arrivedFrom?: string;
   previousStay?: string;

@@ -45,7 +45,7 @@ the portal). The reference lacks what the law asks: photograph, previous
 place of stay, time of arrival, departure date and time, email, signatures.
 
 **Shipped:**
-- Migration 146: `guest_documents` + gender (the portal's three), date of
+- Migration 147 (146 until Phase 1 took that number): `guest_documents` + gender (the portal's three), date of
   birth, passport and visa issue date, place and country, visa type;
   `form_iii_stays` (one row per stay: arrived from, previous stay, purpose,
   the portal's four numbers, arrival in India, employment, reference

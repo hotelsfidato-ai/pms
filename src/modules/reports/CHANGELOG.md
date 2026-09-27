@@ -14,7 +14,7 @@ Work that touches the core or several services still goes in the root
 ## 2026-09-27 · Form III at the desk (D27-25) - the guests lane's
 
 The guests lane (`guests/form-iii-27sep`) changed this service's files for
-Form III, written in full in the guests changelog of the same day: `/reports/c-form` reads the guests service's `app.form_iii` (146) and is "Form III register": the screen shows arrival, departure and the portal numbers, and the download every Form III field in the form's order (`reports.ts`, `pages/Compliance.tsx`, `data/reportData.ts`, `nav.ts`, `pages/Index.tsx`).
+Form III, written in full in the guests changelog of the same day: `/reports/c-form` reads the guests service's `app.form_iii` (147) and is "Form III register": the screen shows arrival, departure and the portal numbers, and the download every Form III field in the form's order (`reports.ts`, `pages/Compliance.tsx`, `data/reportData.ts`, `nav.ts`, `pages/Index.tsx`).
 
 ---
 

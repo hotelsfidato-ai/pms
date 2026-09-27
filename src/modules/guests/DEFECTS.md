@@ -74,7 +74,7 @@ check-in DATE, not the moment.
 **What was done** - the dialog starts from the nationality on file and
 always sends it; the server falls back to the recorded nationality when none
 arrives; both Form III deadlines run 24 hours from the audit log's check-in
-and check-out instants (migration 146). `front-desk/formIIICheckIn.test.tsx`,
+and check-out instants (migration 147). `front-desk/formIIICheckIn.test.tsx`,
 `api/test/modules/guests/formIII.test.ts`, `db/tests/modules/guests.sql`,
 each seen failing with its rule broken.
 

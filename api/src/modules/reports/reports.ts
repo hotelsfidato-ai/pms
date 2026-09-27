@@ -391,7 +391,7 @@ reports.get("/:code/reports/c-form", async (c) => {
 
     /* The record an inspection asks to see (Rule 17(2)): every foreign
        arrival in the period, in Form III's order. The guests service's
-       app.form_iii (146) is the one answer, so this and the register
+       app.form_iii (147) is the one answer, so this and the register
        cannot disagree. Blanks stay null - a gap on a form that must be
        filed is somebody's job, and hiding it makes the report look
        complete when it is not. */

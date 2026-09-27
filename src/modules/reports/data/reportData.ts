@@ -148,7 +148,7 @@ export async function getGstSales(
 }
 
 /** One foreign arrival in Form III's fields (the guests service's
-    app.form_iii, 146). Null where nothing was recorded - shown, not hidden. */
+    app.form_iii, 147). Null where nothing was recorded - shown, not hidden. */
 export interface CFormRow {
   guest: string;
   nationality: string;
