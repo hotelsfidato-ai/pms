@@ -46,6 +46,11 @@ async function workDate(client: Client, hotelId: string, asked?: string) {
 }
 
 /* ── Who a room can be given to ───────────────────────────────────── */
+/* WHO WORKS HERE comes from app.hotel_people (149), names and roles only.
+   Read from `staff` and `staff_hotels` it was the caller alone for anybody
+   but the owner, an admin or the GM: row security shows each person only
+   their own roster line, so a Hotel Manager could give rooms to nobody
+   else (the owner, 28 September). */
 housekeeping.get("/:code/housekeepers", async (c) => {
   const body = await withSession(c.get("subject"), async (client) => {
     const hotel = await resolve(client, c.req.param("code"));
@@ -54,11 +59,10 @@ housekeeping.get("/:code/housekeepers", async (c) => {
     const { rows } = await client.query<{
       id: string; name: string; role: string;
     }>(
-      `select s.id::text, s.full_name as name, sh.role
-         from staff s
-         join staff_hotels sh on sh.staff_id = s.id
-        where sh.hotel_id = $1 and s.is_active
-        order by (sh.role <> 'housekeeping'), s.full_name`,
+      `select id::text, full_name as name, role
+         from app.hotel_people($1)
+        where is_active
+        order by (role <> 'housekeeping'), full_name`,
       [hotel.id],
     );
     return rows;
@@ -80,13 +84,11 @@ housekeeping.get("/:code/housekeeping/assignments", async (c) => {
       room: string; staff_id: string; staff_name: string;
       role: string; note: string | null;
     }>(
-      `select r.number as room, a.staff_id::text, s.full_name as staff_name,
-              sh.role, a.note
+      `select r.number as room, a.staff_id::text, p.full_name as staff_name,
+              p.role, a.note
          from housekeeping_assignments a
          join rooms r on r.id = a.room_id
-         join staff s on s.id = a.staff_id
-         left join staff_hotels sh
-                on sh.staff_id = a.staff_id and sh.hotel_id = a.hotel_id
+         join app.hotel_people($1) p on p.id = a.staff_id
         where a.hotel_id = $1 and a.work_date = $2::date
         order by r.number`,
       [hotel.id, date],
@@ -137,10 +139,8 @@ housekeeping.put("/:code/housekeeping/assignments/:number", async (c) => {
        the insert, but a constraint violation is not a sentence anybody
        can read. */
     const { rows: who } = await client.query<{ name: string }>(
-      `select s.full_name as name
-         from staff s
-         join staff_hotels sh on sh.staff_id = s.id
-        where s.id = $1 and sh.hotel_id = $2 and s.is_active`,
+      `select full_name as name from app.hotel_people($2)
+        where id = $1 and is_active`,
       [input.staffId, hotel.id],
     );
     if (!who[0]) {

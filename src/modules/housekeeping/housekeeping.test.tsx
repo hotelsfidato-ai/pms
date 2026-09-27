@@ -24,6 +24,8 @@ beforeEach(startSignedIn);
    on a stairwell with the signal gone. Everything else passes through. */
 const board = vi.hoisted(() => ({
   calls: 0, failing: false,
+  /* When set, the rooms are not answered until it settles. */
+  hold: null as null | Promise<void>,
   /* When set, the Work orders list answers with it (D22-34's test). */
   orders: null as null | { mayUpdate: boolean },
 }));
@@ -34,8 +36,12 @@ vi.mock("@/modules/housekeeping/data/housekeeping", async (importOriginal) => {
     listHousekeeping: async (...args: Parameters<typeof real.listHousekeeping>) => {
       board.calls += 1;
       if (board.failing) throw new Error("Could not reach the server.");
+      if (board.hold) await board.hold;
       return real.listHousekeeping(...args);
     },
+    /* The stub answers no room write; the server's half of marking a room
+       is api/test. Here a mark lands, so the board can say it did. */
+    markRoom: async () => ({ ok: true }),
     listWorkOrders: async (...args: Parameters<typeof real.listWorkOrders>) => {
       if (!board.orders) return real.listWorkOrders(...args);
       return {
@@ -102,6 +108,53 @@ describe("the room card (D17-8)", () => {
       .closest("label")!.querySelector<HTMLElement>("[role='checkbox']")!;
     expect(box.getAttribute("aria-checked")).toBe("false");
     expect(within(dialog).getByRole("button", { name: "Out of service without a repair" })).toBeDefined();
+  });
+
+  /* The owner, 28 September: "I tried to click inspect and that thing is not
+     working". It had marked the room; nothing said so, and the room left the
+     card's place a second later. */
+  it("says at once that a room is inspected - the owner, 28 September", async () => {
+    go(`/h/${HOTEL}/housekeeping`);
+    render(<App />);
+    fireEvent.click(within(await card("202")).getByRole("button", { name: "Mark room 202 inspected" }));
+    expect(await screen.findByText("Room 202 is inspected.")).toBeDefined();
+  });
+
+  it("moves the room the moment it is marked, not when the rooms come back", async () => {
+    let answer!: () => void;
+    try {
+      go(`/h/${HOTEL}/housekeeping`);
+      render(<App />);
+      await card("201");
+      /* An empty clean room: one in house stays under In house. */
+      const el = document.querySelector<HTMLElement>('[data-hk-group="clean"] [data-hk-room]')!;
+      const n = el.dataset.hkRoom!;
+      board.hold = new Promise<void>((r) => { answer = r; });
+      fireEvent.click(within(el).getByRole("button", { name: `Mark room ${n} inspected` }));
+      await waitFor(() =>
+        expect(document.querySelector(`[data-hk-group="inspected"] [data-hk-room="${n}"]`)).not.toBeNull());
+    } finally {
+      answer?.();
+      board.hold = null;
+    }
+  });
+
+  it("jumps from a count at the top to its group; a zero or Due out does not look pressable", async () => {
+    const jumped: string[] = [];
+    const was = Element.prototype.scrollIntoView;
+    Element.prototype.scrollIntoView = function (this: Element) { jumped.push(this.id); };
+    try {
+      go(`/h/${HOTEL}/housekeeping`);
+      render(<App />);
+      await card("201");
+      fireEvent.click(screen.getByRole("button", { name: /^Out of service/ }));
+      expect(jumped).toEqual(["hk-out-of-service"]);
+      /* Nothing needs cleaning in the stub, and Due out has no group here. */
+      expect(screen.queryByRole("button", { name: /^Needs cleaning/ })).toBeNull();
+      expect(screen.queryByRole("button", { name: /^Due out/ })).toBeNull();
+    } finally {
+      Element.prototype.scrollIntoView = was;
+    }
   });
 
   it("says Put back on a room that is already out - the owner, 17 September", async () => {
