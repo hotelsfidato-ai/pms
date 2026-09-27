@@ -4,6 +4,7 @@ import { Plus, Sparkles, UserRound } from "lucide-react";
 import { money } from "@/lib/format";
 import {
   Page, PageHeader, Card, CardHeader, Button, Skeleton, EmptyState, StatusPill, IconChip,
+  InfoButton,
   Dialog, DialogContent, Field, fieldProps, Input, toast,
   ReadFailed, readError,
 } from "@/components/ui";
@@ -82,9 +83,17 @@ export default function SpaSetupPage() {
               </Button>
             }
           >
-            <h2 className="flex items-center gap-2.5 min-w-0 text-md font-semibold text-ink-900">
-              <IconChip><Sparkles /></IconChip> Treatments
-            </h2>
+            {/* The card's note beside its heading, behind an (i) with the
+                same words (D27-45, D27-82). A sibling of the heading, so
+                the heading's own name stays "Treatments". */}
+            <div className="flex items-center gap-1.5 min-w-0">
+              <h2 className="flex items-center gap-2.5 min-w-0 text-md font-semibold text-ink-900">
+                <IconChip><Sparkles /></IconChip> Treatments
+              </h2>
+              <InfoButton>
+                {"Leave the price empty where none has been set. It reads \"-\", never ₹0, and the treatment cannot be closed for money until it has one."}
+              </InfoButton>
+            </div>
           </CardHeader>
 
           {/* A read that failed says so. It never draws "nothing on the
@@ -131,11 +140,6 @@ export default function SpaSetupPage() {
                 ))}
               </ul>
             )}
-
-          <p className="px-4 py-3 border-t border-grey-100 text-sm text-grey-500">
-            Leave the price empty where none has been set. It reads "-", never
-            ₹0, and the treatment cannot be closed for money until it has one.
-          </p>
         </Card>
 
         <Card>
