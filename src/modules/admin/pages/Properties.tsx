@@ -138,7 +138,8 @@ export function PropertiesPage() {
                   to={`/h/${p.id}/stay`}
                   className="inline-flex items-center gap-1.5 min-h-9 pointer-coarse:min-h-11 text-sm font-medium text-brand-orange-700 hover:underline underline-offset-4 mt-2"
                 >
-                  Open stay view
+                  {/* The screen is the Calendar now (the owner, D27-82). */}
+                  Open the Calendar
                   <ArrowRight className="size-3.5" />
                 </Link>
               </CardBody>
@@ -235,7 +236,7 @@ function AdminPropertyCard({ hotel, onEdit, onToggle }: {
               to={`/h/${hotel.code}/stay`}
               className="inline-flex items-center gap-1.5 min-h-9 pointer-coarse:min-h-11 text-sm font-medium text-brand-orange-700 hover:underline underline-offset-4"
             >
-              Stay view
+              Calendar
             </Link>
           )}
           <div className="flex-1" />

@@ -5,8 +5,7 @@ import { CheckCircle2 } from "lucide-react";
 import { money, relative } from "@/lib/format";
 import {
   Page, PageHeader, Card, CardBody, StatusPill, Skeleton, ErrorState,
-  EmptyState, Button, Textarea, Field, fieldProps, toast, Tabs, TabsList,
-  TabsTrigger, TabsContent,
+  EmptyState, Button, Textarea, Field, fieldProps, toast, Segmented,
 } from "@/components/ui";
 import { listApprovals, decide, labelFor, whereFor, type Approval } from "@/data/repositories/approvals";
 import { useUi } from "@/lib/ui";
@@ -50,30 +49,36 @@ export default function ApprovalsPage() {
       <PageHeader
         title="Approvals"
         description="Everything waiting on you, from every part of the system."
+        /* Waiting or everything: a switch in the title row, the same words
+           the tabs had, full width on a phone (the owner, D27-82, as on
+           Arrivals). Only the chosen list is drawn. */
+        actions={
+          <Segmented<"pending" | "all">
+            value={tab}
+            onChange={setTab}
+            className="max-sm:flex max-sm:w-full max-sm:[&>button]:flex-1"
+            options={[
+              { value: "pending", label: "Waiting" },
+              { value: "all", label: "Everything" },
+            ]}
+          />
+        }
       />
-      <Tabs value={tab} onValueChange={(v) => setTab(v as "pending" | "all")}>
-        <TabsList>
-          <TabsTrigger value="pending">Waiting</TabsTrigger>
-          <TabsTrigger value="all">Everything</TabsTrigger>
-        </TabsList>
-        <TabsContent value={tab}>
-          {q.isPending && <Skeleton className="h-40" />}
-          {/* The states sit in a card, as a list's own states do. */}
-          {q.isError && <Card><ErrorState error={q.error} onRetry={() => q.refetch()} /></Card>}
-          {q.data && q.data.rows.length === 0 && (
-            <Card><EmptyState
-              icon={<CheckCircle2 />}
-              title={tab === "pending" ? "Nothing is waiting on you" : "Nothing has been asked for yet"}
-              description={tab === "pending"
-                ? "When somebody raises a purchase request or asks to take equipment out of the store, it appears here."
-                : "Decided requests stay here so you can see what was approved and by whom."}
-            /></Card>
-          )}
-          {q.data?.rows.map((a) => (
-            <Row key={a.id} approval={a} code={code!} onDone={() => q.refetch()} />
-          ))}
-        </TabsContent>
-      </Tabs>
+      {q.isPending && <Skeleton className="h-40" />}
+      {/* The states sit in a card, as a list's own states do. */}
+      {q.isError && <Card><ErrorState error={q.error} onRetry={() => q.refetch()} /></Card>}
+      {q.data && q.data.rows.length === 0 && (
+        <Card><EmptyState
+          icon={<CheckCircle2 />}
+          title={tab === "pending" ? "Nothing is waiting on you" : "Nothing has been asked for yet"}
+          description={tab === "pending"
+            ? "When somebody raises a purchase request or asks to take equipment out of the store, it appears here."
+            : "Decided requests stay here so you can see what was approved and by whom."}
+        /></Card>
+      )}
+      {q.data?.rows.map((a) => (
+        <Row key={a.id} approval={a} code={code!} onDone={() => q.refetch()} />
+      ))}
     </Page>
   );
 }
@@ -94,7 +99,12 @@ function Row({ approval: a, code, onDone }: {
           </div>
           <StatusPill tone={a.status === "pending" ? "warning"
                           : a.status === "approved" ? "success" : "danger"}>
-            {a.status === "pending" ? "Waiting" : a.status}
+            {/* In words (the owner, D27-82); "clarify", the engine's one
+                other state, has no word decided yet and shows as it is. */}
+            {a.status === "pending" ? "Waiting"
+              : a.status === "approved" ? "Approved"
+              : a.status === "rejected" ? "Refused"
+              : a.status}
           </StatusPill>
         </div>
 
