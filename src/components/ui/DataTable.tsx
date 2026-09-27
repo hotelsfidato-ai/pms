@@ -1,5 +1,5 @@
 import { type ReactNode } from "react";
-import { ChevronDown, ChevronUp, ChevronsUpDown } from "lucide-react";
+import { ChevronDown, ChevronRight, ChevronUp, ChevronsUpDown } from "lucide-react";
 import { cn } from "@/lib/cn";
 import { SkeletonTable, NoResultsState, ErrorState, EmptyState } from "./States";
 
@@ -201,12 +201,15 @@ export function DataTable<T>({
                     type="button"
                     onClick={() => onRowClick(row)}
                     className={cn(
-                      "w-full text-left px-4 py-3 min-h-11",
+                      "w-full text-left px-4 py-3 min-h-11 flex items-center gap-3",
                       "hover:bg-grey-50 focus:bg-grey-50 outline-none",
                       "focus-visible:ring-2 focus-visible:ring-brand-orange rounded-sm",
                     )}
                   >
-                    {body}
+                    {/* The arrow says the card opens something (the owner,
+                        27 September: what can be tapped looks tappable). */}
+                    <div className="min-w-0 flex-1">{body}</div>
+                    <ChevronRight className="size-4 shrink-0 text-grey-400" aria-hidden />
                   </button>
                 ) : (
                   <div className="px-4 py-3">{body}</div>
@@ -270,6 +273,7 @@ export function DataTable<T>({
                   </th>
                 );
               })}
+              {onRowClick && <th scope="col" className="w-10"><span className="sr-only">Open</span></th>}
             </tr>
           </thead>
 
@@ -306,6 +310,12 @@ export function DataTable<T>({
                     {col.cell(row, index)}
                   </td>
                 ))}
+                {/* A row that opens something says so with an arrow. */}
+                {onRowClick && (
+                  <td className="w-10 pr-3 align-middle text-grey-400">
+                    <ChevronRight className="size-4" aria-hidden />
+                  </td>
+                )}
               </tr>
             ))}
           </tbody>

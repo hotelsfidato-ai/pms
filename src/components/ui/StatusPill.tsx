@@ -5,6 +5,8 @@ import { cn } from "@/lib/cn";
    STATUS PILL
    Colour carries meaning here and almost nowhere else in the UI.
    Each tone is a soft tint with a readable ink, never a solid block.
+   FLAT: no ring (the owner, 27 September: nothing that cannot be tapped
+   may look like a button, and buttons are outlined capsules now).
    ══════════════════════════════════════════════════════════════════ */
 
 export type Tone =
@@ -47,7 +49,7 @@ export function StatusPill({ tone = "neutral", children, dot = true, className }
     <span
       className={cn(
         "inline-flex items-center gap-1.5 rounded-full px-2 py-0.5",
-        "text-2xs font-medium whitespace-nowrap ring-1 ring-inset",
+        "text-2xs font-medium whitespace-nowrap",
         TONES[tone],
         className,
       )}

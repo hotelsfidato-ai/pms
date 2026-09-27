@@ -187,7 +187,7 @@ function RoomTile({ room, businessDate, stay, onOpenStay, onWalkIn }: {
               important word on the tile. */}
           <span className={cn(
             "inline-flex items-center gap-1.5 h-[21px] rounded-full text-xs font-medium whitespace-nowrap",
-            free ? "text-grey-500" : cn("px-2 bg-white ring-1 ring-inset", PILL[state]),
+            free ? "text-grey-500" : cn("px-2 bg-white", PILL[state]),
           )}>
             {!free && <i className="size-1.5 rounded-full bg-current" aria-hidden />}
             {LABEL[state]}
