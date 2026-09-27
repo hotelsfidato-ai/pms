@@ -7,7 +7,7 @@ import { useUi } from "@/lib/ui";
 import {
   Page, PageHeader, Card, CardBody, Button, Skeleton, EmptyState, toast,
   Dialog, DialogContent, DialogClose, Field, fieldProps, Input,
-  NativeSelect, StatusPill, DataTable, type Column,
+  NativeSelect, StatusPill, DataTable, IconChip, type Column,
 } from "@/components/ui";
 import { listBookingSources, addBookingSource, amendBookingSource, setBookingSourceCommission, SOURCE_KINDS, kindLabel, type BookingSource, type BookingSourceKind } from "@/modules/guests/data/bookingSources";
 
@@ -155,11 +155,11 @@ export default function BookingSourcesPage() {
       width: "w-[220px]",
       cell: (s) => (
         <div className="flex justify-end gap-2">
-          <Button variant="secondary" className="h-11"
+          <Button variant="secondary"
                   onClick={(e) => { e.stopPropagation(); setRating(s); }}>
             <Percent className="size-4" /> Commission
           </Button>
-          <Button variant="ghost" className="h-11"
+          <Button variant="ghost"
                   onClick={(e) => { e.stopPropagation(); setEditing(s); }}>
             Edit
           </Button>
@@ -187,7 +187,7 @@ export default function BookingSourcesPage() {
             : `${live} in use · ${priced} with a commission agreed here`
         }
         actions={
-          <Button variant="primary" className="h-11" onClick={() => setAdding(true)}>
+          <Button variant="primary" onClick={() => setAdding(true)}>
             <Plus className="size-4" /> Add a source
           </Button>
         }
@@ -195,10 +195,10 @@ export default function BookingSourcesPage() {
 
       {/* ── Which half is which ────────────────────────────────────
           Stated, not inferred. See the note at the top of this file. */}
-      <Card>
+      <Card className="mb-5">
         <CardBody className="flex flex-wrap items-start gap-x-10 gap-y-4">
           <div className="flex items-start gap-3">
-            <Globe className="size-5 text-grey-400 mt-0.5 shrink-0" />
+            <IconChip><Globe /></IconChip>
             <div>
               <p className="text-sm font-medium text-ink-900">
                 The list is the group's
@@ -211,7 +211,7 @@ export default function BookingSourcesPage() {
             </div>
           </div>
           <div className="flex items-start gap-3">
-            <Percent className="size-5 text-grey-400 mt-0.5 shrink-0" />
+            <IconChip><Percent /></IconChip>
             <div>
               <p className="text-sm font-medium text-ink-900">
                 The commission is this property's
@@ -313,9 +313,9 @@ function SourceDialog({
         footer={
           <>
             <DialogClose asChild>
-              <Button variant="secondary" className="h-11">Cancel</Button>
+              <Button variant="secondary">Cancel</Button>
             </DialogClose>
-            <Button variant="primary" className="h-11" disabled={!ready || busy}
+            <Button variant="primary" disabled={!ready || busy}
                     onClick={() => void submit()}>
               {busy ? "Saving…" : "Save"}
             </Button>
@@ -419,9 +419,9 @@ function CommissionDialog({
         footer={
           <>
             <DialogClose asChild>
-              <Button variant="secondary" className="h-11">Cancel</Button>
+              <Button variant="secondary">Cancel</Button>
             </DialogClose>
-            <Button variant="primary" className="h-11" disabled={invalid || busy}
+            <Button variant="primary" disabled={invalid || busy}
                     onClick={() => void submit()}>
               {busy ? "Saving…" : "Save"}
             </Button>

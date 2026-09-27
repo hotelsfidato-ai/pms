@@ -10,7 +10,8 @@ import { cn } from "@/lib/cn";
    tax invoice, the VAT bill, the guest's bill and later the restaurant
    bill and the reports all print the same way:
 
-     masthead     the logo (or the property's name) on the left; the
+     masthead     the group's logo, the property's name and "by <group>"
+                  on the left; the
                   document's name and number behind an orange bar on the
                   right; an orange rule and a hairline under both
      facts        a washed strip of small labelled facts
@@ -22,7 +23,7 @@ import { cn } from "@/lib/cn";
 
    Sans, as the voucher (DESIGN.md's Georgia for print is retired by this).
    Sizes stay on the type ladder: 12 for labels, 14 for the body, 16 for
-   names and the total, 20 for a name standing in for a logo. Colours
+   names and the total, 20 for the property's name. Colours
    print: `print-color-adjust: exact` is set on the page.
 
    Presentation only. Every figure and word is the caller's.
@@ -54,7 +55,8 @@ export function DocLabel({ children, className }: { children: ReactNode; classNa
 }
 
 export function DocMasthead({ logo, name, group, title, number, children }: {
-  /** An image source for the group's logo; null prints `name` instead.
+  /** An image source for the group's logo, over the property's name (the
+      owner, 28 September: logo, name, "by" line); null prints the name alone.
       Only ever an <img> (an SVG can carry script; the master, 27 Sep). */
   logo?: string | null;
   name: string;
@@ -64,7 +66,8 @@ export function DocMasthead({ logo, name, group, title, number, children }: {
   group?: string | null;
   /** The document's name, e.g. "Tax invoice". Printed in capitals. */
   title: string;
-  number: string;
+  /** The document's number; a form with none (Form III) leaves it out. */
+  number?: string;
   /** Anything under the number: the date of issue, the business date. */
   children?: ReactNode;
 }) {
@@ -72,16 +75,13 @@ export function DocMasthead({ logo, name, group, title, number, children }: {
     <header>
       <div className="flex items-center justify-between gap-6 max-sm:flex-col max-sm:items-start max-sm:gap-3 print:flex-row print:items-center">
         <div className="min-w-0">
-          {logo ? (
-            <img src={logo} alt={name} className="h-12 w-auto max-w-[200px] object-contain" />
-          ) : (
-            <p className="text-xl font-extrabold tracking-[-0.01em] text-ink-700">{name}</p>
-          )}
+          {logo && <img src={logo} alt={group ?? ""} className="h-12 w-auto max-w-[200px] object-contain mb-2" />}
+          <p className="text-xl font-extrabold tracking-[-0.01em] text-ink-700">{name}</p>
           {group && <p className="text-xs font-semibold text-grey-500 mt-0.5">by {group}</p>}
         </div>
         <div className="shrink-0 border-l-4 border-accent-from pl-2.5">
           <p className="text-md font-extrabold uppercase tracking-[0.06em] text-ink-700">{title}</p>
-          <p className="text-xs text-grey-500 tabular mt-0.5">{number}</p>
+          {number && <p className="text-xs text-grey-500 tabular mt-0.5">{number}</p>}
           {children && <div className="text-xs text-grey-500 mt-0.5">{children}</div>}
         </div>
       </div>

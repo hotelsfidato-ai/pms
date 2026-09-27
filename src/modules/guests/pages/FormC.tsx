@@ -5,9 +5,10 @@ import { ShieldAlert, Globe2, Check, Printer, ArrowLeft } from "lucide-react";
 import { cn } from "@/lib/cn";
 import { dateShort } from "@/lib/format";
 import { useUi } from "@/lib/ui";
+import { useGroupSettings } from "@/modules/admin";
 import {
-  Page, PageHeader, Card, CardBody, DataTable, StatusPill,
-  Button, Input, Dialog, DialogContent, type Column,
+  Page, PageHeader, Card, CardBody, DataTable, StatusPill, EmptyState,
+  Button, Input, Dialog, DialogContent, DocPage, DocMasthead, DocLabel, type Column,
 } from "@/components/ui";
 import { describeError } from "@/components/ui/States";
 import {
@@ -78,7 +79,7 @@ export default function FormCPage() {
   });
 
   if (card) {
-    return <FormIIICard row={card} premises={data?.premises ?? null} onBack={() => setCard(null)} />;
+    return <FormIIICard hotelId={hotelId} row={card} premises={data?.premises ?? null} onBack={() => setCard(null)} />;
   }
 
   /* The portal's number for one filing, typed where the button was. */
@@ -116,7 +117,7 @@ export default function FormCPage() {
           <StatusPill tone="success">filed</StatusPill> {numbers.join(", ")}
         </p>
       ) : (
-        <p className={cn("text-2xs tabular", overdue ? "text-brand-red font-medium" : "text-grey-600")}>
+        <p className={cn("text-2xs tabular", overdue ? "text-danger font-medium" : "text-grey-600")}>
           <StatusPill tone={overdue ? "danger" : "warning"}>{overdue ? "overdue" : "due"}</StatusPill>{" "}
           by {due}
         </p>
@@ -137,7 +138,7 @@ export default function FormCPage() {
           {/* The booking knows only its lead guest; the law counts every
               foreigner (the owner, 27 September: warn). */}
           {r.adults + r.children > 1 && (
-            <p className="text-2xs text-amber-800">
+            <p className="text-2xs text-brand-yellow-800">
               Each foreigner in the room needs their own Form III.
             </p>
           )}
@@ -152,7 +153,7 @@ export default function FormCPage() {
         ) : (
           /* Not hidden and not blank. No passport on record for a guest
              who must be reported is somebody's job this morning. */
-          <span className="text-brand-red text-2xs">not on record</span>
+          <span className="text-danger text-2xs">not on record</span>
         ),
     },
     {
@@ -198,8 +199,8 @@ export default function FormCPage() {
 
       {/* Said on the screen, not only in the code. Somebody reading this
           page must not walk away believing the filing has happened. */}
-      <div className="flex items-start gap-3 rounded-md border border-amber-200 bg-amber-50/60 p-3.5 mb-5">
-        <ShieldAlert className="size-4 text-amber-700 shrink-0 mt-0.5" />
+      <div className="flex items-start gap-3 rounded-lg border border-brand-yellow-100 bg-brand-yellow-50 px-4 py-3.5 mb-5">
+        <ShieldAlert className="size-4 text-brand-yellow-800 shrink-0 mt-0.5" />
         <div className="min-w-0">
           <p className="text-base font-medium text-ink-900">
             This system does not file with the FRRO
@@ -215,9 +216,9 @@ export default function FormCPage() {
       </div>
 
       {record.isError && (
-        <Card className="mb-4 border-red-200 bg-red-50/50">
+        <Card className="mb-5 border-brand-red-100 bg-brand-red-50">
           <CardBody>
-            <p className="text-sm text-red-900">
+            <p className="text-sm text-brand-red-700">
               {describeError(record.error).message ??
                 "The filing was not recorded. Nothing was changed."}
             </p>
@@ -234,23 +235,15 @@ export default function FormCPage() {
           error={error}
           onRetry={() => refetch()}
           empty={
-            <div className="text-center py-10">
-              <Globe2 className="size-6 text-grey-300 mx-auto mb-3" />
-              <p className="text-md font-semibold text-ink-900">
-                No foreign nationals have stayed
-              </p>
-              <p className="text-base text-grey-500 mt-1.5">
-                Nothing is owed to the FRRO. A guest whose nationality is
-                anything other than IN appears here on arrival.
-              </p>
-            </div>
+            <EmptyState compact icon={<Globe2 />} title="No foreign nationals have stayed"
+              description="Nothing is owed to the FRRO. A guest whose nationality is anything other than IN appears here on arrival." />
           }
         />
       </Card>
 
       {data && data.due === 0 && data.rows.length > 0 && (
         <div className="flex items-center gap-2 mt-4 text-sm text-grey-600">
-          <Check className="size-4 text-green-600" />
+          <Check className="size-4 text-success" />
           Every foreign national on record has been filed.
         </div>
       )}
@@ -290,7 +283,7 @@ function CompleteDetails({
           </>
         }>
         {save.isError && (
-          <p className="text-sm text-brand-red mb-3">
+          <p className="text-sm text-brand-red-700 mb-3">
             {describeError(save.error).message ?? "Nothing was saved."}
           </p>
         )}
@@ -308,8 +301,9 @@ function CompleteDetails({
    (Rule 17(1)). A blank is a "-": the desk sees what is still to ask. */
 
 function FormIIICard({
-  row: r, premises, onBack,
-}: { row: FormCRow; premises: FormCRegister["premises"]; onBack: () => void }) {
+  hotelId, row: r, premises, onBack,
+}: { hotelId: string; row: FormCRow; premises: FormCRegister["premises"]; onBack: () => void }) {
+  const group = useGroupSettings(hotelId);
   const v = (x: unknown) => (x === null || x === undefined || x === "" ? "-" : String(x));
   const date = (x: unknown) => (typeof x === "string" && x ? dateShort(x) : "-");
   const [arrivedDate, arrivedTime] = (r.arrivedAt ?? "").split(" ");
@@ -365,36 +359,40 @@ function FormIIICard({
   ];
 
   return (
-    <Page className="max-w-3xl print:p-0 print:bg-white">
-      <div className="print:hidden flex gap-2 mb-5">
-        <Button variant="secondary" onClick={onBack}><ArrowLeft className="size-4" />Back</Button>
-        <Button variant="primary" onClick={() => window.print()}><Printer className="size-4" />Print</Button>
-      </div>
-      <article className="bg-white text-ink-900 border border-grey-200 rounded-md p-6 print:border-0 print:p-0" data-form-iii-card>
-        <h1 className="text-lg font-semibold">Form III</h1>
+    /* The voucher's look, as every document (the owner, 27 September). */
+    <DocPage
+      toolbar={
+        <>
+          <Button variant="secondary" onClick={onBack}><ArrowLeft className="size-4" />Back</Button>
+          <Button variant="primary" onClick={() => window.print()}><Printer className="size-4" />Print</Button>
+        </>
+      }
+    >
+      <div data-form-iii-card>
+        <DocMasthead name={premises?.name ?? "-"} group={group.name} logo={group.logo} title="Form III" />
         <p className="text-sm text-grey-600 mb-4">
           Report on a foreigner accommodated (Immigration and Foreigners Rules
           2025, Rule 17). The photograph is taken on the FRRO portal.
         </p>
         <dl className="text-sm">
           {lines.map((l) => typeof l === "string" ? (
-            <p key={l} className="font-semibold mt-3 mb-1 border-b border-grey-200">{l}</p>
+            <DocLabel key={l} className="mt-4 mb-1 pb-1 border-b-2 border-ink-700">{l}</DocLabel>
           ) : (
-            <div key={l[0]} className="grid grid-cols-[14rem_1fr] gap-3 py-0.5 break-inside-avoid">
-              <dt className="text-grey-600">{l[0]}</dt>
-              <dd className="tabular">{l[1]}</dd>
+            <div key={l[0]} className="grid grid-cols-[14rem_1fr] max-sm:grid-cols-1 gap-x-3 py-1 border-b border-grey-200 break-inside-avoid">
+              <dt className="text-grey-500">{l[0]}</dt>
+              <dd className="tabular text-ink-900">{l[1]}</dd>
             </div>
           ))}
         </dl>
-        <div className="grid grid-cols-2 gap-8 mt-10 text-sm">
-          <p className="border-t border-grey-400 pt-1">Guest's signature on arrival, and date</p>
-          <p className="border-t border-grey-400 pt-1">Guest's signature on departure, and date</p>
+        <div className="grid grid-cols-2 gap-8 mt-12 text-sm">
+          <p className="border-t-2 border-ink-700 pt-1.5">Guest's signature on arrival, and date</p>
+          <p className="border-t-2 border-ink-700 pt-1.5">Guest's signature on departure, and date</p>
         </div>
-        <p className="text-2xs text-grey-500 mt-3">
+        <p className="text-xs text-grey-500 mt-3">
           A guest who cannot write signs with a thumb impression (Rule 17(7)).
           Keep this card; the record is kept for at least a year (Rule 17(1)).
         </p>
-      </article>
-    </Page>
+      </div>
+    </DocPage>
   );
 }
