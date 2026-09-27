@@ -44,3 +44,8 @@
 | D27-40 | Text sizes in the redesign | **15 → 14 and 13 → 12 everywhere, onto the D22-51 type ladder; typing boxes stay 16px on a phone.** Replaces the "body text 15px or more" test |
 | D27-41 | Buttons | **Capsule buttons everywhere, colours unchanged** |
 | D27-42 | The business date line | **"Business date · Tuesday, 25 August 2026" above the title on Dashboard, Rooms and Calendar only** |
+| D27-43 | Dashboard, "Today's run" (redesign group 1) | **Built, and its counts come only from what the system holds**: check-ins of today's arrivals, check-outs of today's departures, clean empty rooms of all empty rooms |
+| D27-44 | Dashboard, the room strip | **Built**, over the six counts |
+| D27-45 | Section notes | **Behind an (i), same words** |
+| D27-46 | Rooms, the group summary line | **Dropped** |
+| D27-47 | Week arrows | **On the Calendar only**, not on Rooms. (Group 1 held for the owner's approval after their audit, 27 Sep) |
