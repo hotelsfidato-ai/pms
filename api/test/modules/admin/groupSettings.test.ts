@@ -4,19 +4,21 @@ import { closePool } from "../../../src/db.ts";
 import { WRITE_RULES, whoMay } from "../../../src/roleGate.ts";
 
 /* ══════════════════════════════════════════════════════════════════
-   THE GROUP'S LOGO (the owner's D27-53, 27 September)
+   THE GROUP'S NAME AND LOGO (the owner's D27-53 and D27-65, 27 September)
 
-   One logo for the whole group, printed on every bill. Changed by the
-   owner, an administrator or the GM (the owner's answer, 27 September);
-   read by everybody who prints a bill. A PNG or an SVG by its CONTENT,
-   200 KB at most, and never an SVG that carries a script. Every refusal
-   leaves what was there. The database's own guard, without this route in
-   front of it, is db/tests/modules/admin.sql ("the group's logo").
+   One setting for the whole group, printed on every bill: "by <group
+   name>" under the property's name, and the logo. Changed by the owner,
+   an administrator or the GM (the owner's answer, 27 September); read by
+   everybody who prints a bill. A name of up to 80 characters; a logo that
+   is a PNG or an SVG by its CONTENT, 200 KB at most, never an SVG that
+   carries a script. Every refusal leaves what was there. The database's
+   own guard, without this route in front of it, is
+   db/tests/modules/admin.sql ("group settings").
    ══════════════════════════════════════════════════════════════════ */
 
 const SUPER =
   process.env["SUPER_DATABASE_URL"] ?? "postgres://postgres:pw@127.0.0.1:55432/fidato";
-const TAG = "LOGOTEST";
+const TAG = "GROUPTEST";
 const people: Record<"gm" | "desk" | "nowhere", string> = { gm: "", desk: "", nowhere: "" };
 
 async function sql<T>(text: string, values: unknown[] = []): Promise<T[]> {
@@ -24,15 +26,21 @@ async function sql<T>(text: string, values: unknown[] = []): Promise<T[]> {
   try { return (await db.query(text, values)).rows as T[]; } finally { await db.end(); }
 }
 
-const call = (who: string, method: string, body?: unknown) =>
-  app.request("/api/hotels/5EL/group-logo", {
+const call = (who: string, method: string, body?: unknown, path = "/group/logo") =>
+  app.request(`/api/hotels/5EL${path}`, {
     method,
     headers: { "x-dev-staff-id": who, "content-type": "application/json" },
     ...(body === undefined ? {} : { body: JSON.stringify(body) }),
   });
 const upload = (who: string, bytes: Buffer) => call(who, "PUT", { data: bytes.toString("base64") });
-const stored = async () =>
-  (await sql<{ image_type: string; image: Buffer }>("select image_type, image from group_logo"))[0] ?? null;
+const read = (who: string) => call(who, "GET", undefined, "/group");
+const stored = async () => {
+  const row = (await sql<{ logo_type: string | null; logo: Buffer | null }>(
+    "select logo_type, logo from group_settings"))[0];
+  return row?.logo ? { image_type: row.logo_type, image: row.logo } : null;
+};
+const storedName = async () =>
+  (await sql<{ name: string | null }>("select name from group_settings"))[0]?.name ?? null;
 const reason = async (res: Response) => ((await res.json()) as { reason: string }).reason;
 
 const PNG = Buffer.concat([
@@ -43,7 +51,7 @@ const SVG = Buffer.from(
   + '<rect width="10" height="10" fill="#FE611F"/></svg>\n');
 
 beforeAll(async () => {
-  await sql("delete from group_logo");
+  await sql("delete from group_settings");
   for (const [who, role] of [["gm", "gm"], ["desk", "front_desk"], ["nowhere", null]] as const) {
     const [row] = await sql<{ id: string }>(
       `insert into staff (email, full_name) values ($1, $2)
@@ -60,23 +68,47 @@ beforeAll(async () => {
 });
 
 afterAll(async () => {
-  await sql("delete from group_logo");
+  await sql("delete from group_settings");
   await sql("delete from staff_hotels where staff_id = any($1::uuid[])", [Object.values(people)]);
   await sql("update staff set is_active = false where id = any($1::uuid[])", [Object.values(people)]);
   await closePool();
 });
 
-describe("the group's logo", () => {
-  it("is changed by exactly the owner, an administrator and the GM (the owner, 27 September)", () => {
-    for (const method of ["PUT", "DELETE"]) {
-      expect(whoMay(WRITE_RULES[`${method} /api/hotels/:code/group-logo`]!)).toEqual(["owner", "admin", "gm"]);
+describe("the group's name and logo", () => {
+  it("are changed by exactly the owner, an administrator and the GM (the owner, 27 September)", () => {
+    for (const route of ["PUT /api/hotels/:code/group/name", "PUT /api/hotels/:code/group/logo",
+                         "DELETE /api/hotels/:code/group/logo"]) {
+      expect(whoMay(WRITE_RULES[route]!), route).toEqual(["owner", "admin", "gm"]);
     }
   });
 
-  it("is none to begin with: a new copy prints the hotel's name", async () => {
-    const res = await call(people.desk, "GET");
+  it("are none to begin with: a new copy prints the hotel's name alone", async () => {
+    const res = await read(people.desk);
     expect(res.status).toBe(200);
-    expect(await res.json()).toEqual({ logo: null });
+    expect(await res.json()).toEqual({ name: null, logo: null });
+  });
+
+  it("take the group's name from the GM, trimmed, and reception reads it", async () => {
+    const res = await call(people.gm, "PUT", { name: "  Fidato Hotels " }, "/group/name");
+    expect(res.status, await res.clone().text()).toBe(200);
+    expect(await storedName()).toBe("Fidato Hotels");
+    expect(await (await read(people.desk)).json()).toEqual({ name: "Fidato Hotels", logo: null });
+  });
+
+  it("refuse the name to reception, in the gate's words, and keep the one there", async () => {
+    const res = await call(people.desk, "PUT", { name: "Somebody Else" }, "/group/name");
+    expect(res.status).toBe(403);
+    expect(await reason(res)).toBe(
+      "Changing the group's name is for the owner, an administrator or the general manager. "
+      + "Ask one of them.");
+    expect(await storedName()).toBe("Fidato Hotels");
+  });
+
+  it("refuse a name over 80 characters, and keep the one there", async () => {
+    const res = await call(people.gm, "PUT", { name: "x".repeat(81) }, "/group/name");
+    expect(res.status).toBe(409);
+    expect(await reason(res)).toBe("The group's name is 81 characters. The most is 80.");
+    expect(await storedName()).toBe("Fidato Hotels");
   });
 
   it("is refused to reception, in the gate's words, and nothing is written", async () => {
@@ -90,7 +122,7 @@ describe("the group's logo", () => {
 
   it("is refused to somebody rostered nowhere, as no such property, and nothing is written", async () => {
     expect((await upload(people.nowhere, PNG)).status).toBe(404);
-    expect((await call(people.nowhere, "GET")).status).toBe(404);
+    expect((await read(people.nowhere)).status).toBe(404);
     expect(await stored()).toBeNull();
   });
 
@@ -98,8 +130,8 @@ describe("the group's logo", () => {
     const res = await upload(people.gm, PNG);
     expect(res.status, await res.clone().text()).toBe(200);
     expect(await stored()).toEqual({ image_type: "image/png", image: PNG });
-    const read = await call(people.desk, "GET");
-    expect(await read.json()).toEqual({ logo: { type: "image/png", data: PNG.toString("base64") } });
+    expect(await (await read(people.desk)).json())
+      .toEqual({ name: "Fidato Hotels", logo: { type: "image/png", data: PNG.toString("base64") } });
   });
 
   it.each([
@@ -111,6 +143,14 @@ describe("the group's logo", () => {
     const res = await upload(people.gm, bytes);
     expect(res.status).toBe(409);
     expect(await reason(res)).toMatch(/^(The logo must be a PNG or an SVG picture\.|No file was sent\.)$/);
+    expect((await stored())?.image).toEqual(PNG);
+  });
+
+  it("answers at once for a file of many comments and no picture (it held the API for minutes)", async () => {
+    const began = Date.now();
+    const res = await upload(people.gm, Buffer.from("<!---->".repeat(40) + "x"));
+    expect(res.status).toBe(409);
+    expect(Date.now() - began).toBeLessThan(2000);
     expect((await stored())?.image).toEqual(PNG);
   });
 
@@ -145,9 +185,14 @@ describe("the group's logo", () => {
     expect((await stored())?.image).toEqual(SVG);
   });
 
-  it("is removed by the GM, and bills go back to the hotel's name", async () => {
+  it("is removed by the GM, and the name stays", async () => {
     expect((await call(people.gm, "DELETE")).status).toBe(200);
     expect(await stored()).toBeNull();
-    expect(await (await call(people.desk, "GET")).json()).toEqual({ logo: null });
+    expect(await (await read(people.desk)).json()).toEqual({ name: "Fidato Hotels", logo: null });
+  });
+
+  it("clears the name with a blank: bills print the hotel's name alone", async () => {
+    expect((await call(people.gm, "PUT", { name: " " }, "/group/name")).status).toBe(200);
+    expect(await storedName()).toBeNull();
   });
 });

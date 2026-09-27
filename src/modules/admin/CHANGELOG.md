@@ -26,7 +26,8 @@ owner, admin, GM); the file read by its bytes (PNG signature, or an SVG root
 with no script, handler, embedded page, `javascript:` or entity) before
 `withSession` opens; `GroupLogoCard` on Settings; `useGroupLogo(hotelCode)` from
 the front door for the documents, a data: URL for an `<img>`. **Found:** ADM-9
-(a long Settings value cut off at phone width). **Proved:** `groupLogo.test.ts`
+(a long Settings value cut off at phone width); ADM-10 (the SVG check's
+pattern backtracked exponentially: 105 s on 211 bytes; fixed and held by a test). **Proved:** `groupLogo.test.ts`
 (API, 18), `db/tests/modules/admin.sql` "group logo" (15), `groupLogo.test.tsx`
 (web, 6); the script check and the insert policy each broken on purpose and
 seen failing; the Fidato artwork (the CRS's `logoMarkup.ts`, 5,316 bytes)

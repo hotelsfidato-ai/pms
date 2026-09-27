@@ -46,7 +46,7 @@ properties and people.
 | Administration → Roles and permissions | `/admin/roles` | `pages/Admin.tsx` (`RolesPage`) | none |
 | Administration → Integrations | `/admin/integrations` | `pages/Admin.tsx` (`IntegrationsPage`) | none |
 | Administration → Audit log | `/admin/audit-log` | `pages/Admin.tsx` (`AuditLogPage`) | none |
-| Administration → Settings | `/admin/settings` | `pages/Admin.tsx` (`SettingsPage`, with `GroupLogoCard` and `ModulesCard`) | none |
+| Administration → Settings | `/admin/settings` | `pages/Admin.tsx` (`SettingsPage`, with `GroupCard` and `ModulesCard`) | none |
 | Administration → Console | `/admin/console` | `pages/Console.tsx` | none — development builds only |
 | — (not in the menu) one property | `/properties/:code` | `pages/Property.tsx` | reached from Properties |
 | — (redirect) | `/admin/properties` → `/properties` | — | an old link, kept working |
@@ -145,20 +145,25 @@ POST   /:code/modules/:module     pos · banquet · reception_pos — owner or a
 GET    /:code/commissioning       CommissioningCard
 ```
 
-`groupLogo.ts` (27 September, D27-53) — 3, at `/api/hotels`. ONE logo for the
-whole group (the hotel in the address is only where the person stands):
+`groupSettings.ts` (27 September, D27-53 and D27-65) — 4, at `/api/hotels`.
+ONE setting for the whole group (the hotel in the address is only where the
+person stands): the group's name, printed "by <name>" under the property's
+name on every bill, and its logo:
 
 ```
-GET    /:code/group-logo          every active member of staff: { logo: { type, data } | null }
-PUT    /:code/group-logo          { data: base64 } - the owner, an admin or the GM (roleGate,
-                                  room setup; the owner, 27 Sep); a PNG or SVG by content,
-                                  200 KB, no script-carrying SVG; refused before withSession
-DELETE /:code/group-logo          the same three
+GET    /:code/group               every active member of staff:
+                                  { name | null, logo: { type, data } | null }
+PUT    /:code/group/name          { name } - blank clears, 80 characters at most
+PUT    /:code/group/logo          { data: base64 } - a PNG or SVG by content, 200 KB,
+                                  no script-carrying SVG; refused before withSession
+DELETE /:code/group/logo          the logo only; the name stays
 ```
 
-The table is `group_logo` (its migration: "one logo for the whole group"),
-one row, FORCE RLS, `app.sets_group_logo()` for writes, audited. It starts
-EMPTY in every copy: the logo is uploaded, never put in a migration.
+Every write: the owner, an admin or the GM (roleGate, room setup; the owner,
+27 Sep). The table is `group_settings` (its migration: "the group's name and
+logo"), one row, FORCE RLS, `app.sets_group_settings()` for writes, audited.
+It starts EMPTY in every copy: the name is typed and the logo uploaded, never
+put in a migration.
 
 `PATCH /:code/front-desk` (the front desk's hours), which the plan gave to
 this service, went to inventory in the server split, beside the Room types
@@ -186,13 +191,15 @@ data/taxInUse.ts       getTaxInUse — finance's GST rules over HTTP, for Settin
                        Properties cards (ADM-2, D17-37).
 components/TaxInUse.tsx   TaxInUseRows and taxLine: the GST in use, one row per kind,
                        "-" where unset, "Could not load" on a failed read.
-data/groupLogo.ts      getGroupLogo, setGroupLogo, removeGroupLogo, logoSrc and
-                       useGroupLogo(hotelCode) - exported from index.ts for every
-                       document: a data: URL for an <img src>, or null (print the
-                       hotel's name). NEVER inline the logo as markup: an SVG can
+data/groupSettings.ts  getGroupSettings, setGroupName, setGroupLogo, removeGroupLogo,
+                       logoSrc and useGroupSettings(hotelCode) -> { name, logo } -
+                       exported from index.ts for every document: the name for
+                       "by <group name>", the logo a data: URL for an <img src>, each
+                       null when not set. NEVER inline the logo as markup: an SVG can
                        carry a script; inside an <img> it runs none of it.
-components/GroupLogoCard.tsx  Settings' Group logo card: the logo, Upload/Replace and
-                       Remove for the owner, an admin and the GM.
+components/GroupCard.tsx  Settings' "Group name and logo" card: the name with Change,
+                       the logo with Upload/Replace and Remove, for the owner, an
+                       admin and the GM.
 moduleSwitchRoles.ts   MODULE_SWITCH_ROLES (owner, admin) — who sees the switches (D17-36);
                        the server's copy is in api/src/modules/admin/grants.ts.
 flows/StaffAdmin.tsx   NewPerson, People, NewProperty.
