@@ -73,3 +73,12 @@
 | D27-69 | Cancelling a waiting booking: a charge? | **No charge; it was never confirmed** |
 | D27-70 | How much a cancel takes | **Every waiting room of the booking**, as Confirm does |
 | D27-71 | A reason | **A short reason is required and kept on the booking**, with the clerk's name |
+| D27-72 | Form III: the guest's photo (the Form III session) | **Taken on the portal, not kept in the PMS** (the lawyer's view on keeping a copy is still asked, with D21-11) |
+| D27-73 | Form III: signatures | **The guest signs a printed card on arrival and on departure** (Rule 17(7)(b): a thumb impression counts) |
+| D27-74 | Form III: next destination | **Asked at check-out** |
+| D27-75 | Form III: companions | **A warning on the register, and one portal number per person** (a companion's own details not built) |
+| D27-76 | Form III: walk-ins | **Asked what check-in asks** |
+| D27-77 | Form III: which fields | **Every portal field is recorded; the law's fields are required at check-in** (visa or OCI number and type, phone in India, arrived from, purpose, previous place of stay); the rest can be completed later |
+| D27-78 | Form III: names on screen | **"Form III" and "Form III register"** |
+| D27-79 | Form III: departure | **A departure also needs a portal number** (the same one if the portal gives no new one) |
+| D27-80 | Form III: the owner's reference screen | **Add the portal's other three numbers** (mobile in India, phone and mobile outside India); **no** guardian name, age, or next destination split into place, state and city; one full name |
