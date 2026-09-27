@@ -199,6 +199,7 @@ describe("a foreign guest's check-in", () => {
                mobileAbroad: "+44 7700 000146" },
     });
     expect(res.status, await res.text()).toBe(200);
+    await release(a.stay);
 
     const mine = (await register()).find((r) => r.reservationId === a.stay);
     expect(mine, "the guest is not on the register").toBeTruthy();
@@ -214,7 +215,6 @@ describe("a foreign guest's check-in", () => {
     /* 24 hours from the moment of check-in, which the register has. */
     expect(mine!["arrivedAt"]).toBeTruthy();
     expect(mine!["dueBy"]).toBeTruthy();
-    await release(a.stay);
   });
 
   it("does not ask a citizen of Nepal for a visa (Exemption Order 2025)", async () => {
@@ -224,8 +224,8 @@ describe("a foreign guest's check-in", () => {
       identity: { idType: "other", idNumber: `NP${process.pid}`, nationality: "NP" },
       visit: VISIT,
     });
-    expect(res.status, await res.text()).toBe(200);
     await release(a.stay);
+    expect(res.status, await res.text()).toBe(200);
   });
 
   it("with the ID skipped, still asks the visit's questions but not the visa", async () => {
@@ -238,8 +238,8 @@ describe("a foreign guest's check-in", () => {
     expect(reason).not.toContain("visa");
 
     const ok = await call(`/PUN/stays/${a.stay}/check-in`, "POST", { ...skip, visit: VISIT });
-    expect(ok.status, await ok.text()).toBe(200);
     await release(a.stay);
+    expect(ok.status, await ok.text()).toBe(200);
   });
 
   it("uses the nationality on file when the screen sends none", async () => {
@@ -279,13 +279,13 @@ describe("a foreign walk-in", () => {
     const text = await res.text();
     expect(res.status, text).toBe(200);
     const { data } = JSON.parse(text) as { data: { id: string } };
+    await release(data.id);
 
     const mine = (await register()).find((r) => r.reservationId === data.id);
     expect(mine, "a foreign walk-in is missing from the register").toBeTruthy();
     expect(mine).toMatchObject({
       nationality: "US", passport: `P${process.pid}W2`, arrivedFrom: "Delhi",
     });
-    await release(data.id);
   });
 
   it("keeps a returning foreign guest foreign when the form says IN", async () => {
