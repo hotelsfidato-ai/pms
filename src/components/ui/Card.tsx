@@ -2,12 +2,18 @@ import type { HTMLAttributes, ReactNode } from "react";
 import { cn } from "@/lib/cn";
 
 /* Surfaces are white on a grey page, separated by a hairline border.
+   12px corners and the Rhythm Rule inside (fidato-design, 27 Sep):
+   16px at the sides, 14px top and bottom. One value at every width:
+   a responsive one would outlive a screen's own `p-0` (twMerge keeps
+   modified classes).
    Shadows are reserved for things that float above the page. */
 
 export function Card({ className, ...props }: HTMLAttributes<HTMLDivElement>) {
   return (
     <div
-      className={cn("bg-white border border-grey-200 rounded-md", className)}
+      /* A table placed straight in a card lets the card draw the frame:
+         both drew one, and fourteen screens showed a doubled hairline. */
+      className={cn("bg-white border border-grey-200 rounded-lg [&>[data-table-frame]]:border-0", className)}
       {...props}
     />
   );
@@ -25,7 +31,7 @@ export function CardHeader({
   return (
     <div
       className={cn(
-        "flex items-start justify-between gap-4 px-5 py-4 border-b border-grey-200",
+        "flex items-start justify-between gap-4 px-4 py-3.5 border-b border-grey-200",
         className,
       )}
       {...props}
@@ -42,14 +48,14 @@ export function CardHeader({
 }
 
 export function CardBody({ className, ...props }: HTMLAttributes<HTMLDivElement>) {
-  return <div className={cn("p-5", className)} {...props} />;
+  return <div className={cn("px-4 py-3.5", className)} {...props} />;
 }
 
 export function CardFooter({ className, ...props }: HTMLAttributes<HTMLDivElement>) {
   return (
     <div
       className={cn(
-        "flex items-center justify-end gap-2 px-5 py-3.5 border-t border-grey-200 bg-grey-50 rounded-b-md",
+        "flex items-center justify-end gap-2 px-4 py-3.5 border-t border-grey-200 bg-grey-50 rounded-b-lg",
         className,
       )}
       {...props}

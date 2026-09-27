@@ -48,14 +48,14 @@ export function TopBar() {
           /* 44 where a finger uses it, 36 on the desktop console where a
              mouse does and the header should stay compact. */
           "flex items-center gap-2.5 h-11 lg:h-9 px-3 rounded-md min-w-0",
-          "border border-grey-200 bg-grey-50 text-grey-500",
-          "hover:bg-white hover:border-grey-300 transition-colors duration-150",
+          "sm:border sm:border-grey-300 bg-white text-grey-500",
+          "hover:border-grey-400 transition-colors duration-150",
           "w-11 sm:w-64 lg:w-80 justify-center sm:justify-start",
         )}
       >
         <Search className="size-4 shrink-0" />
         <span className="hidden sm:block text-base truncate">Find a screen…</span>
-        <kbd className="hidden lg:inline-flex items-center h-5 px-1.5 ml-auto rounded-xs bg-white border border-grey-200 text-2xs font-medium text-grey-500">
+        <kbd className="hidden lg:inline-flex items-center h-5 px-1.5 ml-auto rounded-sm bg-grey-100 text-2xs font-medium text-grey-600">
           {SHORTCUT}
         </kbd>
       </button>

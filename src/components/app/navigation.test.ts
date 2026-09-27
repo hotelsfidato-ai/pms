@@ -34,7 +34,7 @@ function everyLabel(): string[] {
 /* Words that keep their capitals wherever they fall: acronyms, and the
    names of statutory forms. Anything else capitalised after the first
    word is Title Case creeping back. */
-const PROPER = new Set(["GST", "Form", "F", "C", "C-Form", "Fidato", "POS", "CRS", "CRM", "WhatsApp"]);
+const PROPER = new Set(["GST", "Form", "III", "Fidato", "POS", "CRS", "CRM", "WhatsApp"]);
 
 describe("the menu speaks one way", () => {
   it("writes every label in sentence case", () => {
@@ -224,9 +224,13 @@ describe("each person's menu", () => {
     expect(searchable("owner")).toContain("Lodging tax");
   });
 
-  it("lists every service not built yet under Coming soon - for the owner, admins and GMs only", () => {
-    /* The owner's decision, 16 September: one section at the foot of the
-       menu, every service the system does not have yet, alphabetical. */
+  it("puts each service not built yet in its own section, marked - for the owner, admins and GMs only", () => {
+    /* ⚠ NO COMING SOON SECTION SINCE 28 SEPTEMBER (the owner, D27-87). Each
+       service not built yet sits where it will belong, marked "Not built
+       yet": Distribution beside Rooms and rates, Sales and marketing beside
+       Guests & CRM, and one each at the foot of the Front desk, Finance and
+       System. The history below is the Coming soon list's, from the owner's
+       decision of 16 September (one section at the foot of the menu). */
     /* 16 September, the stock-and-equipment plan: "Hotel equipment" became
        "Equipment" (the register), its door-lock content moved to "Room
        systems", and "Purchasing" arrived. Each takes its alphabetical place.
@@ -259,24 +263,38 @@ describe("each person's menu", () => {
        purchasing; the master reviews it at merge. */
     /* ⚠ AND "CENTRAL CRM" LEFT, 21 September — the owner gave it a home:
        the "Guests & CRM" section, which its screens join as they are built. */
-    const SOON = [
-      "Booking engine", "Channel manager", "Contracts",
-      "Fidato CRS", "Guest services", "Leads and WhatsApp", "Loyalty",
-      "Marketing", "Online payments", "Room systems",
-    ];
+    const NOT_BUILT: Record<string, string[]> = {
+      "Front desk": ["Guest services"],
+      "Sales and marketing": ["Leads and WhatsApp", "Marketing", "Loyalty"],
+      "Distribution": ["Channel manager", "Booking engine", "Fidato CRS", "Contracts"],
+      "Finance": ["Online payments"],
+      "System": ["Room systems"],
+    };
     for (const role of COMING_SOON_ROLES) {
       const sections = sidebarFor(role, "5EL", ALL_ON);
-      const last = sections[sections.length - 1];
-      expect(last?.label, `${role}: the section sits at the foot`).toBe("Coming soon");
-      expect(last?.items.map((i) => i.label)).toEqual(SOON);
+      const labels = sections.map((s) => s.label);
+      expect(labels, role).not.toContain("Coming soon");
+      expect(labels.indexOf("Sales and marketing"), role).toBe(labels.indexOf("Guests & CRM") + 1);
+      expect(labels.indexOf("Distribution"), role).toBe(labels.indexOf("Rooms and rates") + 1);
+      const marked = Object.fromEntries(sections
+        .map((s) => [s.label, s.items.filter((i) => i.notBuilt).map((i) => i.label)] as const)
+        .filter(([, items]) => items.length > 0));
+      expect(marked, role).toEqual(NOT_BUILT);
+      /* A section of services not built yet holds nothing else - yet. */
+      for (const key of ["Sales and marketing", "Distribution"]) {
+        expect(sections.find((s) => s.label === key)?.items.every((i) => i.notBuilt), role).toBe(true);
+      }
     }
+    const all = Object.values(NOT_BUILT).flat();
     for (const role of ROLES.filter((r) => !COMING_SOON_ROLES.includes(r))) {
-      expect(navigationFor(role, "5EL", ALL_ON).some((s) => s.label === "Coming soon"), role).toBe(false);
-      for (const label of SOON) expect(searchable(role), `${role} finds ${label}`).not.toContain(label);
+      const labels = navigationFor(role, "5EL", ALL_ON).map((s) => s.label);
+      expect(labels, role).not.toContain("Sales and marketing");
+      expect(labels, role).not.toContain("Distribution");
+      for (const label of all) expect(searchable(role), `${role} finds ${label}`).not.toContain(label);
     }
   });
 
-  it("refuses a Coming soon page to exactly the people the menu hides it from", () => {
+  it("refuses a page of a service not built yet to exactly the people the menu hides it from", () => {
     /* ⚠ THIS USED /coming-soon/spa AND HAD TO MOVE, 19 September. The spa
        and the laundry were built, so their Coming soon pages are gone —
        and `mayReach` answers TRUE for a path the navigation has never

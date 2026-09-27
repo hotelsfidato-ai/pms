@@ -1,4 +1,8 @@
+import type { ReactNode } from "react";
 import { moneyPrecise, dateShort } from "@/lib/format";
+import { cn } from "@/lib/cn";
+import { DocMasthead, DocFacts, DocTotals, DOC_TH, DOC_TD } from "@/components/ui";
+import type { GroupSettings } from "@/modules/admin";
 import type { StayBill } from "../data/bill";
 
 /* ══════════════════════════════════════════════════════════════════
@@ -21,78 +25,71 @@ import type { StayBill } from "../data/bill";
 /** "2.5" for 5, "9" for 18: half a GST rate, without trailing zeros. */
 const half = (rate: number) => String(Math.round((rate / 2) * 100) / 100);
 
-export function BillPrint({ bill, title }: { bill: StayBill; title: string }) {
+/** `group`: the group's name and logo from Settings (D27-53). The guest's
+    own page has no sign-in to ask for them, so it prints the hotel's name alone. */
+export function BillPrint({ bill, title, group }: { bill: StayBill; title: string; group?: GroupSettings }) {
   const { hotel, stay } = bill;
   const place = [hotel.address, hotel.city, hotel.state].filter(Boolean).join(", ");
 
+  /* The CRS voucher's look (the owner, 27 September): the masthead, a
+     strip of the stay's facts, the lines on hairlines, the totals under a
+     2px rule. */
   return (
-    /* Georgia is retained for printed documents, and only there. */
-    <div className="print-serif bg-white border border-grey-200 rounded-md p-6" data-bill-print>
-      <p className="text-xl text-ink-900">{title}</p>
-      <p className="text-base text-grey-600" data-bill-hotel>{hotel.name}</p>
-      <p className="text-xs text-grey-500 mt-1">
+    <div className="bg-white text-ink-700 border border-grey-200 rounded-lg p-5 sm:p-6 [print-color-adjust:exact]" data-bill-print>
+      <DocMasthead name={hotel.name} group={group?.name} logo={group?.logo} title={title} number={stay.reference} />
+      <p className="-mt-2 mb-4 text-xs text-grey-500">
         {place && <>{place} · </>}GSTIN <span data-bill-gstin>{hotel.gstin ?? "-"}</span>
       </p>
 
-      <div className="mt-5 pt-4 border-t border-grey-200 space-y-1 text-base">
-        <Row label="Guest" value={stay.guest} />
-        <Row label="Room" value={stay.room ?? "-"} />
-        <Row label="Stay" value={`${dateShort(stay.checkIn)} – ${dateShort(stay.checkOut)}`} />
-        <Row label="Booking" value={stay.reference} />
+      <DocFacts
+        items={[
+          { label: "Guest", value: stay.guest },
+          { label: "Room", value: stay.room ?? "-" },
+          { label: "Stay", value: `${dateShort(stay.checkIn)} – ${dateShort(stay.checkOut)}` },
+        ]}
+      />
+
+      <table className="w-full mt-5">
+        <thead>
+          <tr>
+            <th className={cn(DOC_TH, "text-left pr-2")}>Description</th>
+            <th className={cn(DOC_TH, "text-right pl-2 w-32")}>Amount</th>
+          </tr>
+        </thead>
+        <tbody>
+          {bill.lines.map((line, i) => (
+            <tr key={i}>
+              <td className={cn(DOC_TD, "pr-2")}>{line.description}</td>
+              <td className={cn(DOC_TD, "pl-2 text-right tabular font-semibold")}>{moneyPrecise(line.amount)}</td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+
+      <div className="mt-4 flex justify-end">
+        <DocTotals
+          className="w-full sm:w-auto"
+          rows={[
+            ["Net", moneyPrecise(bill.net)],
+            ...bill.taxes.flatMap((t): Array<[ReactNode, string]> => [
+              [<span key="c" data-bill-tax-rate={t.rate}>{`CGST ${half(t.rate)}%`}</span>, moneyPrecise(t.cgst)],
+              [`SGST ${half(t.rate)}%`, moneyPrecise(t.sgst)],
+            ]),
+            /* VAT on alcohol (D21-91): ONE line per rate, never halved into
+               CGST and SGST. `?? []` because a bill drawn from an older
+               answer has no such key. */
+            ...(bill.vat ?? []).map((v): [ReactNode, string] => [
+              <span key="v" data-bill-vat-rate={v.rate}>{`VAT ${v.rate}%`}</span>, moneyPrecise(v.vat),
+            ]),
+            ...(bill.roundOff !== 0 ? [["Round off", moneyPrecise(bill.roundOff)] as [ReactNode, string]] : []),
+          ]}
+          total={["Total", moneyPrecise(bill.rounded)]}
+          after={[
+            ["Paid", moneyPrecise(bill.paid)],
+            ["Outstanding", moneyPrecise(bill.balance)],
+          ]}
+        />
       </div>
-
-      <ul className="mt-4 pt-4 border-t border-grey-200 space-y-1.5">
-        {bill.lines.map((line, i) => (
-          <li key={i} className="flex justify-between gap-4 text-base">
-            <span className="text-grey-700 min-w-0">{line.description}</span>
-            <span className="tabular shrink-0">{moneyPrecise(line.amount)}</span>
-          </li>
-        ))}
-      </ul>
-
-      <div className="mt-4 pt-4 border-t border-grey-200 space-y-1">
-        <Row label="Net" value={moneyPrecise(bill.net)} />
-        {bill.taxes.map((t) => (
-          <div key={t.rate} data-bill-tax-rate={t.rate}>
-            <Row label={`CGST ${half(t.rate)}%`} value={moneyPrecise(t.cgst)} muted />
-            <Row label={`SGST ${half(t.rate)}%`} value={moneyPrecise(t.sgst)} muted />
-          </div>
-        ))}
-        {/* VAT on alcohol (D21-91): ONE line per rate, never halved into
-            CGST and SGST. `?? []` because a bill drawn from an older answer
-            has no such key. */}
-        {(bill.vat ?? []).map((v) => (
-          <div key={`vat-${v.rate}`} data-bill-vat-rate={v.rate}>
-            <Row label={`VAT ${v.rate}%`} value={moneyPrecise(v.vat)} muted />
-          </div>
-        ))}
-        {bill.roundOff !== 0 && (
-          <Row label="Round off" value={moneyPrecise(bill.roundOff)} muted />
-        )}
-        <div className="pt-1.5 border-t border-grey-200">
-          <Row label="Total" value={moneyPrecise(bill.rounded)} bold />
-        </div>
-        <Row label="Paid" value={moneyPrecise(bill.paid)} muted />
-        <Row label="Outstanding" value={moneyPrecise(bill.balance)} muted />
-      </div>
-    </div>
-  );
-}
-
-function Row({
-  label, value, muted, bold,
-}: {
-  label: string;
-  value: string;
-  muted?: boolean;
-  bold?: boolean;
-}) {
-  return (
-    <div className="flex justify-between gap-4">
-      <span className={muted ? "text-grey-500" : "text-grey-700"}>{label}</span>
-      <span className={`tabular ${bold ? "font-semibold text-ink-900" : muted ? "text-grey-500" : "text-ink-900"}`}>
-        {value}
-      </span>
     </div>
   );
 }

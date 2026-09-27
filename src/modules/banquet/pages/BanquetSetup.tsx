@@ -5,9 +5,9 @@ import { ArrowLeft, Plus, Building2, UtensilsCrossed } from "lucide-react";
 import { money } from "@/lib/format";
 import { useUi } from "@/lib/ui";
 import {
-  Page, PageHeader, Card, CardBody, Button, Skeleton, toast,
+  Page, PageHeader, Card, CardHeader, Button, Skeleton, toast,
   Dialog, DialogContent, DialogClose, Field, fieldProps, Input, Textarea,
-  StatusPill,
+  StatusPill, IconChip,
 } from "@/components/ui";
 import { getBanquetSetup, addBanquetVenue, amendBanquetVenue, addBanquetPackage, type BanquetVenue } from "@/modules/banquet/data/banquet";
 import { ReadFailed, ReadStale, readError } from "@/components/ui";
@@ -81,43 +81,48 @@ export default function BanquetSetupPage() {
         title="Halls and packages"
         description="Nothing here is created for you, and no price is ever assumed."
         actions={
-          <Button variant="secondary" className="h-11"
+          <Button variant="secondary"
                   onClick={() => navigate(`/h/${hotelId}/banquet`)}>
             <ArrowLeft className="size-4" /> Diary
           </Button>
         }
       />
 
-      <ReadStale error={readError(q)} loadedAt={q.dataUpdatedAt}
+      <ReadStale className="mb-5" error={readError(q)} loadedAt={q.dataUpdatedAt}
                  onRetry={() => void q.refetch()} />
 
-      {/* ── Halls ───────────────────────────────────────────────── */}
-      <Card>
-        <CardBody className="space-y-3">
-          <div className="flex flex-wrap items-center justify-between gap-2">
-            <p className="flex items-center gap-2 text-base font-medium">
-              <Building2 className="size-4 shrink-0 text-grey-500" /> Halls
-            </p>
-            <Button className="h-11" onClick={() => setAddingVenue(true)}>
-              <Plus className="size-4" /> Add a hall
-            </Button>
-          </div>
+      {/* Two cards 12px apart (they touched); each a heading with its
+          chip, then list rows with a hairline between, not boxes. */}
+      <div className="space-y-3">
+        {/* ── Halls ───────────────────────────────────────────────── */}
+        <Card>
+          <CardHeader
+            className="items-center"
+            actions={
+              <Button onClick={() => setAddingVenue(true)}>
+                <Plus className="size-4" /> Add a hall
+              </Button>
+            }
+          >
+            <h2 className="flex items-center gap-2.5 min-w-0 text-md font-semibold text-ink-900">
+              <IconChip><Building2 /></IconChip> Halls
+            </h2>
+          </CardHeader>
 
           {venues.length === 0 ? (
-            <p className="rounded-lg border border-dashed border-grey-200
-                          px-3 py-6 text-center text-sm text-grey-500">
+            <p className="px-4 py-6 text-center text-sm text-grey-500">
               No halls yet. Enter the ones this property actually has.
             </p>
           ) : (
-            <ul className="divide-y divide-grey-200">
+            <ul className="divide-y divide-grey-100">
               {venues.map((v) => (
-                <li key={v.id} className="flex flex-wrap items-center gap-3 py-2.5">
+                <li key={v.id} className="flex items-center gap-3 px-4 py-3 min-h-14">
                   <div className="min-w-0 flex-1">
                     <p className="flex flex-wrap items-center gap-2">
-                      <span className="font-medium">{v.name}</span>
+                      <span className="text-sm font-medium text-ink-900">{v.name}</span>
                       {!v.isActive && <StatusPill tone="neutral">Not in use</StatusPill>}
                     </p>
-                    <p className="text-sm text-grey-500">
+                    <p className="mt-0.5 text-sm text-grey-500">
                       {v.seated !== null ? `Seats ${v.seated}` : "Seating not recorded"}
                       {v.floating !== null ? ` · ${v.floating} standing` : ""}
                       {" · "}
@@ -127,7 +132,7 @@ export default function BanquetSetupPage() {
                         : `usually ${money(v.defaultRate)}`}
                     </p>
                   </div>
-                  <Button variant="secondary" className="h-11 shrink-0"
+                  <Button variant="secondary" size="sm" className="shrink-0"
                           onClick={() => setEditing(v)}>
                     Edit
                   </Button>
@@ -135,37 +140,38 @@ export default function BanquetSetupPage() {
               ))}
             </ul>
           )}
-        </CardBody>
-      </Card>
+        </Card>
 
-      {/* ── Packages ────────────────────────────────────────────── */}
-      <Card>
-        <CardBody className="space-y-3">
-          <div className="flex flex-wrap items-center justify-between gap-2">
-            <p className="flex items-center gap-2 text-base font-medium">
-              <UtensilsCrossed className="size-4 shrink-0 text-grey-500" /> Packages
-            </p>
-            <Button variant="secondary" className="h-11"
-                    onClick={() => setAddingPackage(true)}>
-              <Plus className="size-4" /> Add a package
-            </Button>
-          </div>
+        {/* ── Packages ────────────────────────────────────────────── */}
+        <Card>
+          <CardHeader
+            className="items-center"
+            actions={
+              <Button variant="secondary"
+                      onClick={() => setAddingPackage(true)}>
+                <Plus className="size-4" /> Add a package
+              </Button>
+            }
+          >
+            <h2 className="flex items-center gap-2.5 min-w-0 text-md font-semibold text-ink-900">
+              <IconChip><UtensilsCrossed /></IconChip> Packages
+            </h2>
+          </CardHeader>
 
           {packages.length === 0 ? (
-            <p className="rounded-lg border border-dashed border-grey-200
-                          px-3 py-6 text-center text-sm text-grey-500">
+            <p className="px-4 py-6 text-center text-sm text-grey-500">
               None. Packages are optional - a function can be fed off-menu, or
               from the till, or not at all.
             </p>
           ) : (
-            <ul className="divide-y divide-grey-200">
+            <ul className="divide-y divide-grey-100">
               {packages.map((p) => (
-                <li key={p.id} className="py-2.5">
+                <li key={p.id} className="px-4 py-3 min-h-14">
                   <p className="flex flex-wrap items-center gap-2">
-                    <span className="font-medium">{p.name}</span>
+                    <span className="text-sm font-medium text-ink-900">{p.name}</span>
                     {p.mealType && <StatusPill tone="neutral">{p.mealType}</StatusPill>}
                   </p>
-                  <p className="text-sm text-grey-500">
+                  <p className="mt-0.5 text-sm text-grey-500">
                     {p.ratePerHead === null
                       ? <span className="text-grey-500">no rate - agreed per function</span>
                       : `${money(p.ratePerHead)} a head`}
@@ -175,8 +181,8 @@ export default function BanquetSetupPage() {
               ))}
             </ul>
           )}
-        </CardBody>
-      </Card>
+        </Card>
+      </div>
 
       {addingVenue && (
         <VenueDialog
@@ -246,9 +252,9 @@ function VenueDialog({
         footer={
           <>
             <DialogClose asChild>
-              <Button variant="secondary" className="h-11">Cancel</Button>
+              <Button variant="secondary">Cancel</Button>
             </DialogClose>
-            <Button variant="primary" className="h-11" disabled={!name.trim() || busy}
+            <Button variant="primary" disabled={!name.trim() || busy}
                     onClick={() => void submit()}>
               {busy ? "Saving…" : "Save"}
             </Button>
@@ -343,9 +349,9 @@ function PackageDialog({
         footer={
           <>
             <DialogClose asChild>
-              <Button variant="secondary" className="h-11">Cancel</Button>
+              <Button variant="secondary">Cancel</Button>
             </DialogClose>
-            <Button variant="primary" className="h-11" disabled={!name.trim() || busy}
+            <Button variant="primary" disabled={!name.trim() || busy}
                     onClick={() => void submit()}>
               {busy ? "Adding…" : "Add"}
             </Button>

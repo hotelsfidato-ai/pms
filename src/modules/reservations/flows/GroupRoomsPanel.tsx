@@ -39,11 +39,14 @@ import { getGroup, type GroupRoom } from "@/modules/reservations/data/groups";
 /** The id the group pill scrolls to. One stay panel is open at a time. */
 export const GROUP_ROOMS_ID = "group-rooms";
 
-const STATUS_TONE: Record<string, "success" | "info" | "neutral" | "danger"> = {
-  checked_in: "success",
-  confirmed: "info",
+/* One colour per state, everywhere (D27-48): in house blue, due in
+   (confirmed, not yet arrived) orange; cancelled and no show red (the
+   owner, 27 September). */
+const STATUS_TONE: Record<string, "accent" | "info" | "neutral" | "danger"> = {
+  checked_in: "info",
+  confirmed: "accent",
   checked_out: "neutral",
-  cancelled: "neutral",
+  cancelled: "danger",
   no_show: "danger",
 };
 
@@ -99,8 +102,8 @@ export function GroupRoomsList({
         {group && (
           <Link
             to={`/h/${hotelId}/groups/${groupId}`}
-            className="text-sm font-medium text-brand-orange hover:text-brand-orange-600
-                       hover:underline underline-offset-4 shrink-0"
+            className="text-sm font-medium text-brand-orange-700 hover:underline
+                       underline-offset-4 shrink-0"
           >
             Open the group
           </Link>
@@ -197,9 +200,13 @@ function RoomCard({ room, hotelId, current }: {
             </p>
             <p className="text-sm tabular text-grey-600">{room.reference}</p>
           </div>
-          <StatusPill tone={STATUS_TONE[room.status] ?? "neutral"}>
-            {STATUS_LABEL[room.status] ?? room.status}
-          </StatusPill>
+          <span className="flex items-center gap-2 shrink-0">
+            <StatusPill tone={STATUS_TONE[room.status] ?? "neutral"}>
+              {STATUS_LABEL[room.status] ?? room.status}
+            </StatusPill>
+            {/* It opens the stay: an arrow says so (the Tappable Rule). */}
+            <ChevronRight className="size-4 text-grey-400" aria-hidden />
+          </span>
         </div>
 
         <div className="flex flex-wrap gap-x-8 gap-y-2 mt-3">

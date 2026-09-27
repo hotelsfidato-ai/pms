@@ -175,6 +175,33 @@ Mappings come from the CBDT utility. The text and figures were read on the CBDT'
 - **Later amendments do not touch hotels.** The Immigration and Foreigners (Amendment) Rules, 2026 (G.S.R. 424(E), 1 June 2026, in force immediately) change rule 12 registration timing, child-citizenship intimation and a digital appeals route. Rule 17 and Form III are not reported as changed.
   - Source: BDO alert (https://www.bdo.in/en-gb/insights/alerts-updates/immigration-alert-mha-notifies-immigration-and-foreigners-amendment-rules-2026) and All India Radio News. The Gazette was not read.
   - Confidence: **medium**.
+- **Re-read 27 September 2026 (D27-25), at the MHA's own PDFs.** Rule 17(1),
+  (5), (6), (7) and Form III as above, word for word; Act s.8(1)-(3) and
+  Rule 12(1)(b) (the portal) likewise. Exemption Order cl. 3(1)(c): a citizen
+  of Nepal or Bhutan needs no passport or visa to enter or stay - so no visa
+  number can be demanded of them, but they are still reported. Confidence:
+  **high**.
+- **What the portal asks (27 September 2026).** Read from the public page
+  code of https://indianfrro.gov.in/formIII/ (login needed for the screens;
+  nothing was entered). Confidence: **medium** (the code, not a manual).
+  - Arrival: surname and given name, gender (Female, Male, Transgender),
+    date of birth, nationality, passport number, place, country, date of
+    issue and expiry, visa number, place, country, date of issue, expiry,
+    type and subtype, date and place of arrival in India, date and time of
+    arrival at the hotel, arrived from, previous place of stay, purpose,
+    length of stay, expected check-out, an address outside India (address,
+    city, country), a reference address in India (address, state, city, PIN
+    code), phones and mobiles abroad and in India, email, "employed in
+    India", remarks. Required by the page: given name, gender, date of
+    birth, nationality, date and time of arrival at the hotel, arrived from,
+    previous place of stay, purpose, length of stay, both addresses,
+    employment, phone in India, email.
+  - Photo: a JPEG between 5 KB and 1 MB, cropped, uploaded or taken with a
+    webcam on the page.
+  - Check-out: date of departure, time, next destination (all required),
+    remark; entered against the arrival's application number.
+  - **No upload of guest data and no API**: the page has a "bulk print" of
+    forms already filed, nothing that takes a file of guests.
 - **No public API for Form III was found.** No public API or bulk-upload specification from the Bureau of Immigration exists in the sources reached. PMS vendors advertise "Form C modules", but their method is not documented publicly.
   - Build note: the system should hold every Form III field, the photograph, the arrival and departure signatures and the 24-hour clocks, and keep records for at least a year. It should not assume there is an API. Confidence: **medium**.
 

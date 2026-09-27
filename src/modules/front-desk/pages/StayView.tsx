@@ -6,16 +6,18 @@ import { can } from "@/lib/permissions";
 import {
   ChevronDown, ChevronRight, ChevronLeft, Globe, User, Building2,
   Sparkle, Wrench, AlertTriangle, CloudOff, RotateCw,
+  BedDouble, DoorOpen, Users, LogIn, LogOut, CalendarDays, SprayCan, Check,
 } from "lucide-react";
 import { cn } from "@/lib/cn";
 import { useDocumentTitle } from "@/lib/documentTitle";
 import { HouseFloor } from "@/modules/front-desk/flows/HouseFloor";
-import { money, dateShort, dateTime, timeOnly } from "@/lib/format";
+import { money, dateShort, dateLong, dateTime, timeOnly } from "@/lib/format";
 import { ApiError } from "@/lib/api";
 import { useUi } from "@/lib/ui";
 import { AssignRoomFlow } from "@/modules/front-desk/flows/AssignRoomFlow";
 import {
   Button, Segmented, Tooltip, Skeleton, ErrorState, EmptyState, toast, type Tone,
+  Page, PageHeader, IconChip,
 } from "@/components/ui";
 import { StartHere } from "@/components/app/StartHere";
 import { StayDrawer } from "@/modules/front-desk/flows/StayDrawer";
@@ -39,16 +41,21 @@ import { queryKeys, BUSINESS_DATE, setMyPreferences, type Stay } from "@/data/re
    so it can gain a handle later without being redrawn.
    ══════════════════════════════════════════════════════════════════ */
 
+/* 27 September, the Fidato look: the Calendar speaks the Rooms tiles'
+   colours. In house is solid blue, due out solid yellow, a confirmed
+   booking a pale blue; checked out goes quiet grey (yellow is due out now). */
 const BAR: Record<BarTone, string> = {
-  "in-house": "bg-success text-white",
-  confirmed: "bg-info text-white",
-  departed: "bg-brand-yellow text-ink-900",
+  "in-house": "bg-info text-white",
+  confirmed: "bg-info-50 text-info ring-1 ring-inset ring-info-100",
+  departed: "bg-grey-100 text-grey-600 ring-1 ring-inset ring-grey-200",
   /* The darker steps: white on tangerine was 2.54:1 and on rose 3.85:1,
      and the void bar's red on its own 25% tint was 3.11:1 — the three
      least readable marks on the busiest screen in the product. */
-  "due-out": "bg-brand-tangerine-700 text-white",
+  "due-out": "bg-brand-yellow text-ink-900",
   "no-show": "bg-brand-rose-700 text-white",
   void: "bg-brand-red-50 text-brand-red-700 line-through",
+  /* Grey, as on the booking lists (D27-63). */
+  waiting: "bg-grey-100 text-grey-600 ring-1 ring-inset ring-grey-300 border-dashed",
 };
 
 const BAR_LABEL: Record<BarTone, string> = {
@@ -58,17 +65,21 @@ const BAR_LABEL: Record<BarTone, string> = {
   "due-out": "Due out",
   "no-show": "No show",
   void: "Void",
+  waiting: "Waiting for the hotel",
 };
 
 /* The stay panel's pill, from the bar's DERIVED tone — due-out is a
    status plus a date, which is why the chart passes its own. */
 const BAR_TONE: Record<BarTone, Tone> = {
-  "in-house": "success",
-  confirmed: "info",
+  /* In house blue and a booking still to arrive orange, as on the lists
+     (the owner, 27 September). */
+  "in-house": "info",
+  confirmed: "accent",
   departed: "neutral",
   "due-out": "warning",
   "no-show": "danger",
   void: "danger",
+  waiting: "neutral",
 };
 
 const PILLS = ["All", "Vacant", "Occupied", "Arrivals", "Reserved", "Blocked", "Due Out", "Dirty"] as const;
@@ -107,8 +118,11 @@ const SOURCE_ICON: Record<string, typeof Globe> = {
   "Fidato Hotels": Building2,
 };
 
-/** 14 date columns after a fixed room column. */
-const GRID = "grid-cols-[132px_repeat(14,minmax(0,1fr))]";
+/** 14 date columns after a fixed room column: 136px on a desk, 72 on a
+    phone, where a night is a third of what is left (three and a quarter
+    showing, the fourth peeking). The widths live in CHART_VARS. */
+const GRID = "grid-cols-[var(--room)_repeat(14,minmax(var(--daymin),1fr))]";
+const CHART_VARS = "[--room:136px] [--daymin:44px] max-lg:[--daymin:48px] max-sm:[--room:72px] max-sm:[--daymin:calc((100vw_-_72px)/3.25)]";
 
 /* A tape chart is a wide instrument, and `1fr` columns do not refuse
    to be small — they just get smaller. On a 375px phone the fourteen
@@ -123,7 +137,7 @@ const GRID = "grid-cols-[132px_repeat(14,minmax(0,1fr))]";
 
    132px room column + 14 days at 44px. Above 748px this does nothing:
    `1fr` expands past the minimum and the desktop chart is untouched. */
-const CHART_MIN_W = "min-w-[748px]";
+const CHART_MIN_W = "min-w-[calc(var(--room)_+_14*var(--daymin))]";
 
 /* When the chart pans, the room number must not leave with it —
    scrolling to Friday and losing which room you are reading is worse
@@ -153,6 +167,7 @@ export default function StayViewPage({ view }: {
   const hotelId = params.code ?? fallbackHotel;
   const navigate = useNavigate();
   const scope = useSession((s) => s.scope);
+  const hotels = useSession((s) => s.hotels);
   /* The question the server's gate asks of "Assign room" (roleGate's
      ROOMING: reservation edit, nobody added by name), from the same matrix.
      Housekeeping read Rooms and are refused it, so they are not offered it
@@ -322,6 +337,7 @@ export default function StayViewPage({ view }: {
      Floor view reads two queries: the house, and who is in each room
      today. Either one failing means the tiles are not current. */
   const title = view === "calendar" ? "Calendar" : "Rooms";
+  const hotelName = hotels.find((h) => h.code === hotelId)?.name;
   const reads = view === "floor" ? [chart, stayList] : [chart];
   const failure = reads.find((q) => q.isError)?.error ?? null;
   const paused = reads.some((q) => q.isPaused);
@@ -440,141 +456,103 @@ export default function StayViewPage({ view }: {
     }
   };
 
-  return (
-    <div className="flex flex-col h-full min-h-0">
-      {/* ── Controls ─────────────────────────────────────────────── */}
-      <div className="shrink-0 bg-white border-b border-grey-200 px-4 sm:px-5 py-3 space-y-3">
-        <div className="flex items-center gap-3 flex-wrap">
-          {/* THE PAGE'S NAME. This was one of four screens with no heading
-              at all — and the only one staff spend the day on. A screen
-              reader announced nothing, and a new clerk had only the
-              toggle further along to say where they were. */}
-          <h1 className="text-lg font-semibold text-ink-900">
-            {view === "calendar" ? "Calendar" : "Rooms"}
-          </h1>
-          {/* WRAPS (FD-7, D17-41): on a phone the week's dates and "Today" ran
-              past the right edge of the screen. */}
-          <div className="flex flex-wrap items-center gap-1">
-            <Button
-              variant="secondary" size="sm"
-              onClick={() => setStart(addDays(start, -7))}
-              aria-label="Previous week"
-            >
-              <ChevronLeft className="size-4" />
-            </Button>
-            <Button
-              variant="secondary" size="sm"
-              onClick={() => setStart(addDays(start, 7))}
-              aria-label="Next week"
-            >
-              <ChevronRight className="size-4" />
-            </Button>
-            <span className="ml-2 text-base font-medium text-ink-900 tabular whitespace-nowrap">
-              {dateShort(dates[0]!)} – {dateShort(dates[dates.length - 1]!)}
-            </span>
-            {start !== BUSINESS_DATE && (
-              <Button variant="ghost" size="sm" onClick={() => setStart(BUSINESS_DATE)}>
-                Today
-              </Button>
-            )}
-          </div>
-
-          {/* WRAPS ON A PHONE, and only takes the right-hand side once
-              there is one. `ml-auto` with no wrap pushed this group to
-              461px inside a 343px parent, so "Assign room" sat at x=477
-              in a 375px viewport — present, styled, and unreachable.
-
-              It was already tight with one toggle; the second made it
-              certain. A control that cannot be touched is not a control. */}
-          <div className="flex items-center gap-2 flex-wrap sm:ml-auto">
-            {/* This was `value="Room type"` with `onChange={() => undefined}`
-                — a toggle offering a view it could not produce. Every room
-                already carries its floor, so grouping by it costs nothing
-                but was never wired. */}
-            {/* Which SHAPE, before which grouping — a person picks the
-                view they are working in and then how it is sorted. */}
-            <Segmented<"calendar" | "floor">
-              value={view}
-              onChange={chooseView}
-              options={[
-                { value: "calendar", label: "Calendar" },
-                { value: "floor", label: "Rooms" },
-              ]}
-            />
-            <Segmented<GroupBy>
-              value={groupBy}
-              onChange={setGroupBy}
-              options={[
-                { value: "type", label: "Room type" },
-                { value: "floor", label: "Floor" },
-              ]}
-            />
-            {/* Was a <Button> with no onClick — it looked live and did
-                nothing. The flow it needed did not exist: check-in
-                assigns a room AT arrival, and nothing assigned one
-                before it. */}
-            {mayRoom && <AssignRoomFlow hotelId={hotelId} />}
-          </div>
+  /* The page's head, the same on both screens: the business date, the
+     title, the property; on the right, the view, the grouping and the one
+     action. On a phone the view switch takes the full width. */
+  const head = (
+    <PageHeader
+      eyebrow={`Business date · ${dateLong(BUSINESS_DATE)}`}
+      title={title}
+      description={hotelName}
+      actions={
+        <div className="grid grid-cols-[1fr_auto] gap-2 w-full sm:flex sm:items-center sm:w-auto sm:flex-wrap">
+          {/* Which SHAPE, before which grouping — a person picks the
+              view they are working in and then how it is sorted. */}
+          <Segmented<"calendar" | "floor">
+            value={view}
+            onChange={chooseView}
+            className="col-span-2 flex [&>button]:flex-1 sm:inline-flex"
+            options={[
+              { value: "calendar", label: "Calendar" },
+              { value: "floor", label: "Rooms" },
+            ]}
+          />
+          {/* This was `value="Room type"` with `onChange={() => undefined}`
+              — a toggle offering a view it could not produce. Every room
+              already carries its floor, so grouping by it costs nothing
+              but was never wired. */}
+          <Segmented<GroupBy>
+            value={groupBy}
+            onChange={setGroupBy}
+            className="flex [&>button]:flex-1 sm:inline-flex"
+            options={[
+              { value: "type", label: "Room type" },
+              { value: "floor", label: "Floor" },
+            ]}
+          />
+          {/* Was a <Button> with no onClick — it looked live and did
+              nothing. The flow it needed did not exist: check-in
+              assigns a room AT arrival, and nothing assigned one
+              before it. */}
+          {mayRoom && <AssignRoomFlow hotelId={hotelId} />}
         </div>
+      }
+    />
+  );
 
-        {/* Filter pills with live counts */}
-        <div className="flex items-center gap-1.5 flex-wrap" role="group" aria-label="Filter rooms">
-          {PILLS.map((p) => (
-            <button
-              key={p}
-              type="button"
-              data-filter-pill={p}
-              aria-pressed={pill === p}
-              onClick={() => setPill(p)}
-              className={cn(
-                "inline-flex items-center gap-1.5 h-7 px-2.5 rounded-full text-2xs font-medium",
-                "pointer-coarse:min-h-11",
-                "border transition-colors duration-150",
-                pill === p
-                  ? "bg-ink-900 text-white border-ink-900"
-                  : "bg-white text-grey-600 border-grey-200 hover:border-grey-300 hover:text-ink-900",
-              )}
-            >
-              {PILL_LABEL[p]}
-              <span className={cn("tabular", pill === p ? "text-white/70" : "text-grey-500")}>
-                {counts[p] ?? 0}
-              </span>
-            </button>
-          ))}
-        </div>
-      </div>
+  const staleBanner = stale && (
+    <StaleRooms
+      failure={failure}
+      shownAt={shownAt}
+      missingWindow={showingEarlierWindow ? start : null}
+      refreshing={refreshing}
+      onRetry={paused && !failure ? undefined : retry}
+    />
+  );
 
-      {stale && (
-        <StaleRooms
-          failure={failure}
-          shownAt={shownAt}
-          missingWindow={showingEarlierWindow ? start : null}
-          refreshing={refreshing}
-          onRetry={paused && !failure ? undefined : retry}
+  const drawers = (
+    <>
+      {/* ── Detail panel — the chart stays visible behind it ──────── */}
+      <StayDrawer
+        hotelId={hotelId}
+        stay={selected?.stay ?? null}
+        businessDate={BUSINESS_DATE}
+        status={selected ? { tone: BAR_TONE[selected.tone], label: BAR_LABEL[selected.tone] } : null}
+        onClose={closeStay}
+      />
+
+      {/* ── Walk-in, from an empty cell ───────────────────────────── */}
+      {walkIn && (
+        <WalkInFlow
+          hotelId={hotelId}
+          roomNumber={walkIn.roomNumber}
+          date={walkIn.date}
+          open
+          onOpenChange={(o) => !o && closeStay()}
         />
       )}
+    </>
+  );
 
-      {/* ── The house, as a floor ───────────────────────────────────
-          Today's rooms as tiles, in the POS floor's language because it
-          is the same job: somebody standing up with a phone asking which
-          of these is free and which needs something done to it. It
-          renders the data the chart already loaded — a second query
-          would be a second answer, and the two would differ on the day
-          it mattered.
+  /* ── Rooms: the house as tiles, for today ────────────────────────────
+     Today's rooms as tiles, in the POS floor's language because it is the
+     same job: somebody standing up with a phone asking which of these is
+     free and which needs something done to it. It renders the data the
+     chart already loaded — a second query would be a second answer, and
+     the two would differ on the day it mattered. The SAME filter honours
+     it, so a tile cannot say six here and nine on the chart.
 
-          The SAME filter honours it, so a pill cannot say six here and
-          nine on the chart. */}
-      {/* A new clerk's first jobs (Start here). Placed per view, because
-          above both views it hid the thing it explains: on a phone the
-          controls and five jobs are taller than the screen, and the rooms
-          got 41px until "Got it".
-
-          Rooms: INSIDE the scroll, so it scrolls away above the rooms.
-          Calendar: the chart scrolls both ways and a card inside would
-          scroll off sideways, so it sits above, capped at 45%. */}
-      {view === "floor" ? (
-        <div className="flex-1 min-h-0 overflow-y-auto scrollbar-quiet p-1">
-          <StartHere className="px-3 sm:px-4 pt-2 pb-3" />
+     The whole page scrolls, head and all, so a phone gives the rooms the
+     screen. A new clerk's first jobs (Start here) sit above the rooms and
+     scroll away with the head. */
+  if (view === "floor") {
+    return (
+      <div className="h-full overflow-y-auto scrollbar-quiet">
+        <Page>
+          {head}
+          <FilterTiles pill={pill} onPick={setPill} counts={counts} />
+          {staleBanner}
+          <StartHere className="mb-5" />
           <HouseFloor
             groups={groups.map((g) => ({
               ...g,
@@ -588,35 +566,86 @@ export default function StayViewPage({ view }: {
               setSearchParams(searchParams);
             } : undefined}
           />
+        </Page>
+        {drawers}
+      </div>
+    );
+  }
+
+  /* ── Calendar: one chart card that fills the screen ───────────────────
+     The head and the filters stay put; the chart scrolls inside its card,
+     both ways, with the dates and the footer pinned to it and the room
+     column pinned to its left. On a phone it shows three nights with the
+     fourth peeking and snaps night by night; the page never scrolls
+     sideways. Start here sits above, capped, because a card inside the
+     chart would scroll off sideways. */
+  return (
+    <div className="flex flex-col h-full min-h-0 w-full max-w-[1600px] mx-auto px-5 pt-6 pb-5 sm:px-7 sm:pt-8">
+      <div className="shrink-0">
+        {head}
+        <FilterTiles pill={pill} onPick={setPill} counts={counts} />
+        {staleBanner}
+      </div>
+      <StartHere className="shrink-0 max-h-[45%] overflow-y-auto scrollbar-quiet mb-5" />
+
+      <div className="flex-1 min-h-0 flex flex-col bg-white border border-grey-200 rounded-lg overflow-hidden
+                      max-sm:-mx-5 max-sm:rounded-none max-sm:border-x-0">
+        {/* The chart's own toolbar: the fortnight, and what the bars mean. */}
+        <div className="shrink-0 flex flex-wrap items-center gap-2 px-4 py-3 sm:px-3 sm:py-2.5 border-b border-grey-200">
+          <Button variant="secondary" size="icon" onClick={() => setStart(addDays(start, -7))} aria-label="Previous week">
+            <ChevronLeft className="size-4" />
+          </Button>
+          <Button variant="secondary" size="icon" onClick={() => setStart(addDays(start, 7))} aria-label="Next week">
+            <ChevronRight className="size-4" />
+          </Button>
+          <span className="ml-1.5 text-md font-semibold text-ink-900 tabular whitespace-nowrap">
+            {dateShort(dates[0]!)} – {dateShort(dates[dates.length - 1]!)}
+          </span>
+          {start !== BUSINESS_DATE && (
+            <Button variant="ghost" size="sm" onClick={() => setStart(BUSINESS_DATE)}>
+              Today
+            </Button>
+          )}
+          <p className="flex flex-wrap gap-x-3.5 gap-y-1 text-xs text-grey-600 max-sm:w-full sm:ml-auto" aria-hidden>
+            {(["in-house", "due-out", "confirmed"] as const).map((t) => (
+              <span key={t} className="inline-flex items-center gap-1.5">
+                <i className={cn("w-[18px] h-2.5 rounded-[3px]", BAR[t])} />
+                {BAR_LABEL[t]}
+              </span>
+            ))}
+          </p>
         </div>
-      ) : (
-      <>
-      <StartHere className="shrink-0 max-h-[45%] overflow-y-auto scrollbar-quiet px-4 sm:px-5 pt-3 pb-1" />
-      <div className="flex-1 min-h-0 overflow-auto scrollbar-quiet">
+
+        <div className={cn(
+          "flex-1 min-h-0 overflow-auto overscroll-x-contain scrollbar-quiet",
+          CHART_VARS,
+          "max-sm:snap-x max-sm:snap-mandatory max-sm:scroll-pl-[72px]",
+          "max-sm:[mask-image:linear-gradient(to_right,#000_calc(100%-16px),transparent)]",
+        )}>
         <div className={CHART_MIN_W}>
           {/* Date header */}
-          <div className={cn("grid sticky top-0 z-30 bg-grey-50 border-b border-grey-200", GRID)}>
+          <div className={cn("grid sticky top-0 z-30 bg-white border-b border-grey-200", GRID)}>
             <div className={cn(
-              "px-3 py-2 text-2xs font-semibold uppercase tracking-wide text-grey-500 border-r border-grey-200",
+              "flex items-center px-3.5 max-sm:px-2.5 h-[50px] text-xs font-semibold uppercase tracking-[0.025em] text-grey-500 border-r border-grey-200",
               /* The corner: pinned in both directions, so it outranks
                  the row cells that slide under it AND the date header
                  it sits inside. Opaque, or the chart shows through. */
-              ROOM_COL, "z-10 bg-grey-50",
+              ROOM_COL, "z-10 bg-white",
             )}>
-              Room
+              <span className="max-sm:sr-only">Room</span>
             </div>
             {dates.map((d) => (
               <div
                 key={d}
                 data-date-col={d}
                 className={cn(
-                  "px-1 py-2 text-center border-r border-grey-200 last:border-r-0",
-                  isWeekend(d) && "bg-brand-orange-50",
+                  "grid place-content-center text-center h-[50px] border-r border-grey-100 last:border-r-0 max-sm:snap-start",
+                  isWeekend(d) && "bg-grey-50",
                   d === BUSINESS_DATE && "bg-ink-900 text-white",
                 )}
               >
                 <div className={cn(
-                  "text-2xs font-semibold uppercase",
+                  "text-xs font-semibold uppercase tracking-[0.025em]",
                   d === BUSINESS_DATE ? "text-white/70" : "text-grey-500",
                 )}>
                   {new Date(`${d}T00:00:00Z`).toLocaleDateString("en-IN", {
@@ -624,7 +653,7 @@ export default function StayViewPage({ view }: {
                   })}
                 </div>
                 <div className={cn(
-                  "text-xs font-medium tabular",
+                  "text-md font-semibold tabular",
                   d === BUSINESS_DATE ? "text-white" : "text-ink-900",
                 )}>
                   {d.slice(-2)}
@@ -641,29 +670,30 @@ export default function StayViewPage({ view }: {
 
             return (
               <div key={group.type}>
-                {/* Group row — availability over rate, per date */}
-                <div className={cn("grid bg-grey-100/70 border-b border-grey-200", GRID)}>
+                {/* Group row — availability over rate, per date, on two
+                    levelled lines */}
+                <div className={cn("grid bg-grey-50 border-b border-grey-200", GRID)}>
                   <button
                     type="button"
                     onClick={() =>
                       setCollapsed((c) => ({ ...c, [group.type]: !isCollapsed }))
                     }
                     className={cn(
-                      "flex items-center gap-1.5 px-2.5 py-1.5 text-left border-r border-grey-200",
-                      "hover:bg-grey-200/50 transition-colors duration-150",
-                      ROOM_COL, "z-20 bg-grey-100",
+                      "flex items-center gap-1 px-3 max-sm:px-2.5 h-11 text-left border-r border-grey-200",
+                      "hover:bg-grey-100 transition-colors duration-150",
+                      ROOM_COL, "z-20 bg-grey-50",
                     )}
                     aria-expanded={!isCollapsed}
                   >
                     {isCollapsed ? (
-                      <ChevronRight className="size-3.5 text-grey-500 shrink-0" />
+                      <ChevronRight className="size-3.5 text-grey-500 shrink-0 max-sm:hidden" />
                     ) : (
-                      <ChevronDown className="size-3.5 text-grey-500 shrink-0" />
+                      <ChevronDown className="size-3.5 text-grey-500 shrink-0 max-sm:hidden" />
                     )}
-                    <span className="text-2xs font-semibold uppercase tracking-wide text-ink-900 truncate">
+                    <span className="text-sm max-sm:text-xs font-semibold text-ink-900 truncate">
                       {group.type}
                     </span>
-                    <span className="text-2xs text-grey-500 tabular ml-auto">
+                    <span className="ml-auto h-5 px-[7px] rounded-full bg-white ring-1 ring-inset ring-grey-200 text-xs font-semibold leading-5 text-grey-600 tabular max-sm:hidden">
                       {visibleRooms.length}
                     </span>
                   </button>
@@ -671,18 +701,15 @@ export default function StayViewPage({ view }: {
                   {group.perDate.map((cell) => (
                     <div
                       key={cell.date}
-                      className={cn(
-                        "px-1 py-1 text-center border-r border-grey-200 last:border-r-0 leading-tight",
-                        isWeekend(cell.date) && "bg-brand-orange-50/60",
-                      )}
+                      className="grid grid-rows-[20px_16px] place-content-center text-center border-r border-grey-200 last:border-r-0"
                     >
                       <div className={cn(
-                        "text-2xs font-semibold tabular",
-                        cell.available === 0 ? "text-brand-red" : "text-ink-900",
+                        "text-sm font-semibold tabular",
+                        cell.available === 0 ? "text-brand-red-700" : "text-ink-900",
                       )}>
                         {cell.available}
                       </div>
-                      <div className="text-2xs text-grey-500 tabular">
+                      <div className="text-xs leading-4 text-grey-500 tabular">
                         {/* A dash when the hotel has not priced this type.
                             It used to read "0.0k" for every property whose
                             room types were not called Superior or Deluxe,
@@ -703,7 +730,7 @@ export default function StayViewPage({ view }: {
                     className={cn("grid border-b border-grey-100 group", GRID)}
                   >
                     <div className={cn(
-                      "flex items-center gap-1.5 px-2.5 h-9 border-r border-grey-200",
+                      "flex items-center gap-1.5 px-3.5 max-sm:px-2.5 h-10 border-r border-grey-200",
                       /* bg-white and not transparent: the day cells
                          slide underneath this, not behind the page. */
                       ROOM_COL, "z-20 bg-white",
@@ -737,9 +764,9 @@ export default function StayViewPage({ view }: {
                         anybody else. */}
                     {dates.map((d, i) => {
                       const cell = cn(
-                        "h-9 border-r border-grey-100 last:border-r-0 transition-colors duration-150",
-                        isWeekend(d) && "bg-brand-orange-50/40",
-                        d === BUSINESS_DATE && "bg-ink-900/[0.03]",
+                        "h-10 border-r border-grey-100 last:border-r-0 transition-colors duration-150",
+                        isWeekend(d) && "bg-grey-50",
+                        d === BUSINESS_DATE && "bg-ink-900/[0.035]",
                       );
                       /* gridRow 1, like the bars: with a column alone,
                          auto-placement put every cell under a bar - and
@@ -771,64 +798,115 @@ export default function StayViewPage({ view }: {
             );
           })}
 
-          {/* Pinned footer */}
-          <div className={cn("grid sticky bottom-0 z-30 bg-white border-t-2 border-ink-900", GRID)}>
+          {/* Pinned footer: what is left, and how full, on two levelled lines */}
+          <div className={cn("grid sticky bottom-0 z-30 bg-white border-t border-grey-300", GRID)}>
             <div className={cn(
-              "px-2.5 py-1.5 border-r border-grey-200",
+              "flex flex-col justify-center px-3.5 max-sm:px-2.5 h-[58px] border-r border-grey-200",
               ROOM_COL, "z-10 bg-white",
             )}>
-              <div className="text-2xs font-semibold uppercase tracking-wide text-grey-500 leading-tight">
-                Available
-              </div>
-              <div className="text-2xs text-grey-500 leading-tight">Occupancy</div>
+              <div className="text-sm font-semibold text-ink-900">Available</div>
+              <div className="text-xs text-grey-600 max-sm:hidden">Occupancy</div>
             </div>
             {footer.map((f) => (
               <div
                 key={f.date}
-                className={cn(
-                  "px-1 py-1.5 text-center border-r border-grey-200 last:border-r-0",
-                  isWeekend(f.date) && "bg-brand-orange-50/60",
-                )}
+                className="grid grid-rows-[20px_4px_16px] content-center justify-items-center gap-1 px-2.5 border-r border-grey-100 last:border-r-0"
               >
-                <div className="text-2xs font-semibold text-ink-900 tabular leading-tight">
+                <div className="text-sm font-semibold text-ink-900 tabular">
                   {f.availableInventory}
                 </div>
-                <div className="h-1 rounded-full bg-grey-200 overflow-hidden mt-1">
+                <div className="w-full h-1 rounded-full bg-grey-100 overflow-hidden">
                   <div
-                    className="h-full bg-brand-tangerine rounded-full"
+                    className="h-full bg-brand-orange rounded-full"
                     style={{ width: `${f.occupancyPct}%` }}
                   />
                 </div>
-                <div className="text-2xs text-grey-500 tabular leading-tight mt-0.5">
+                <div className="text-xs leading-4 text-grey-500 tabular">
                   {Math.round(f.occupancyPct)}%
                 </div>
               </div>
             ))}
           </div>
         </div>
+        </div>
       </div>
-      </>
-      )}
 
-      {/* ── Detail panel — the chart stays visible behind it ──────── */}
-      <StayDrawer
-        hotelId={hotelId}
-        stay={selected?.stay ?? null}
-        businessDate={BUSINESS_DATE}
-        status={selected ? { tone: BAR_TONE[selected.tone], label: BAR_LABEL[selected.tone] } : null}
-        onClose={closeStay}
-      />
+      {drawers}
+    </div>
+  );
+}
 
-      {/* ── Walk-in, from an empty cell ───────────────────────────── */}
-      {walkIn && (
-        <WalkInFlow
-          hotelId={hotelId}
-          roomNumber={walkIn.roomNumber}
-          date={walkIn.date}
-          open
-          onOpenChange={(o) => !o && closeStay()}
-        />
-      )}
+/* ── The filters: a row of level count tiles ─────────────────────────
+   They filter, they sum up, and their chips are the key, so there is no
+   separate legend (the fidato-design filter tiles). The chosen one is
+   navy; today's jobs are warm while there is some to do. The label comes
+   first in the markup and sits under the count on screen, so each reads
+   "In house 2". On a phone the row scrolls inside itself, snapping. */
+
+const PILL_ICON: Record<Pill, typeof Globe> = {
+  All: BedDouble, Vacant: DoorOpen, Occupied: Users, Arrivals: LogIn,
+  Reserved: CalendarDays, Blocked: Wrench, "Due Out": LogOut, Dirty: SprayCan,
+};
+const PILL_CHIP: Record<Pill, "neutral" | "orange" | "yellow" | "blue" | "green"> = {
+  All: "neutral", Vacant: "neutral", Occupied: "blue", Arrivals: "orange",
+  Reserved: "neutral", Blocked: "neutral", "Due Out": "yellow", Dirty: "green",
+};
+
+function FilterTiles({ pill, onPick, counts }: {
+  pill: Pill; onPick: (p: Pill) => void; counts: Record<string, number>;
+}) {
+  return (
+    <div
+      role="group"
+      aria-label="Filter rooms"
+      className="mb-5 grid grid-cols-4 xl:grid-cols-8 gap-2
+                 max-sm:flex max-sm:overflow-x-auto max-sm:snap-x max-sm:snap-mandatory max-sm:scroll-px-5
+                 max-sm:-mx-5 max-sm:px-5 max-sm:py-0.5 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden
+                 max-sm:[mask-image:linear-gradient(to_right,#000_calc(100%-24px),transparent)]"
+    >
+      {PILLS.map((p) => {
+        const n = counts[p] ?? 0;
+        const on = pill === p;
+        const Icon = PILL_ICON[p];
+        const job = !on && n > 0 ? (p === "Arrivals" ? "orange" : p === "Due Out" ? "yellow" : null) : null;
+        return (
+          <button
+            key={p}
+            type="button"
+            data-filter-pill={p}
+            aria-pressed={on}
+            onClick={() => onPick(p)}
+            className={cn(
+              "press-tile row-span-2 grid grid-rows-subgrid gap-y-1 rounded-lg px-3 py-2.5 text-left ring-1 ring-inset",
+              "max-sm:shrink-0 max-sm:min-w-[116px] max-sm:snap-start max-sm:px-3.5 max-sm:py-3",
+              "focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-orange",
+              on ? "bg-ink-900 ring-ink-900"
+                : job === "orange" ? "bg-brand-orange-50 ring-brand-orange-100"
+                  : job === "yellow" ? "bg-brand-yellow-50 ring-brand-yellow-100"
+                    : "bg-white ring-grey-200 hover:ring-grey-400",
+            )}
+          >
+            <span className={cn(
+              "row-start-2 text-sm leading-[18px] max-sm:whitespace-nowrap",
+              on ? "text-white/72" : "text-grey-600",
+            )}>
+              {PILL_LABEL[p]}
+            </span>
+            <span className="row-start-1 flex items-center gap-2">
+              <IconChip size={24} tone={on ? "glass" : p === "Dirty" && n > 0 ? "neutral" : PILL_CHIP[p]}><Icon /></IconChip>
+              <b className={cn(
+                "inline-flex items-center gap-1 text-xl leading-6 font-semibold tabular tracking-[-0.02em]",
+                on ? "text-white"
+                  : p === "Blocked" && n > 0 ? "text-brand-orange-700"
+                    : p === "Dirty" && n === 0 ? "text-success-600" : "text-ink-900",
+              )}>
+                {n}
+                {p === "Dirty" && n === 0 && !on && <Check className="size-3.5" aria-hidden />}
+              </b>
+            </span>
+          </button>
+        );
+      })}
     </div>
   );
 }
@@ -851,86 +929,72 @@ function loadedAt(ms: number): string {
     clerk always knows which screen failed. */
 function StayViewFrame({ title, children }: { title: string; children: ReactNode }) {
   return (
-    <div className="flex flex-col h-full min-h-0">
-      <div className="shrink-0 bg-white border-b border-grey-200 px-4 sm:px-5 py-3">
-        <h1 className="text-lg font-semibold text-ink-900">{title}</h1>
-      </div>
-      <div className="flex-1 min-h-0 overflow-y-auto scrollbar-quiet">{children}</div>
+    <div className="h-full overflow-y-auto scrollbar-quiet">
+      <Page>
+        <PageHeader title={title} />
+        {children}
+      </Page>
     </div>
   );
 }
 
-/* SHAPED LIKE WHAT IT STANDS IN FOR. Twelve full-width bars said "a list
-   is coming" over a screen that is tiles on Rooms and a fortnight grid on
-   Calendar, and the swap jumped. These keep the controls' height, the
-   tiles' size and the chart's columns, so the house lands where the grey
-   was. */
+/* SHAPED LIKE WHAT IT STANDS IN FOR: the head, the eight filter tiles, then
+   tiles on Rooms or a fortnight grid on Calendar, so the house lands where
+   the grey was. */
 function StayViewSkeleton({ view, title }: { view: "calendar" | "floor"; title: string }) {
   return (
-    <div className="flex flex-col h-full min-h-0">
-      <div className="shrink-0 bg-white border-b border-grey-200 px-4 sm:px-5 py-3 space-y-3">
-        <div className="flex items-center gap-3 flex-wrap">
-          <h1 className="text-lg font-semibold text-ink-900">{title}</h1>
-          <Skeleton className="h-8 w-44" />
-          <Skeleton className="h-8 w-60 sm:ml-auto" />
-        </div>
-        <div className="flex items-center gap-1.5 flex-wrap">
-          {PILLS.map((p) => <Skeleton key={p} className="h-7 w-20 rounded-full" />)}
-        </div>
-      </div>
-
+    <StayViewFrame title={title}>
       <div
         role="status"
         aria-label={`Loading ${title.toLowerCase()}`}
         data-rooms-skeleton={view}
-        className="flex-1 min-h-0 overflow-hidden"
       >
+        <div className="mb-5 grid grid-cols-4 xl:grid-cols-8 gap-2 max-sm:flex max-sm:overflow-hidden">
+          {PILLS.map((p) => <Skeleton key={p} className="h-[66px] rounded-lg max-sm:min-w-[116px]" />)}
+        </div>
         {view === "floor" ? (
-          <div className="p-1">
-            <div className="flex gap-x-4 gap-y-2 flex-wrap mb-4">
-              {Array.from({ length: 6 }).map((_, i) => <Skeleton key={i} className="h-4 w-20" />)}
-            </div>
-            {[9, 8].map((tiles, s) => (
-              <section key={s} className="mb-6">
-                <Skeleton className="h-3 w-24 mb-2.5" />
-                <div className="grid gap-2 [grid-template-columns:repeat(auto-fill,minmax(7rem,1fr))]">
-                  {Array.from({ length: tiles }).map((_, i) => (
-                    <Skeleton key={i} className="min-h-[5.5rem] rounded-lg" />
-                  ))}
-                </div>
-              </section>
-            ))}
-          </div>
-        ) : (
-          <div className={CHART_MIN_W}>
-            <div className={cn("grid bg-grey-50 border-b border-grey-200", GRID)}>
-              <div className="px-3 py-2 border-r border-grey-200">
-                <Skeleton className="h-3 w-10" />
+          [10, 7].map((tiles, s) => (
+            <section key={s} className="mb-6">
+              <Skeleton className="h-5 w-28 mb-3" />
+              <div className="grid grid-cols-2 lg:grid-cols-4 xl:grid-cols-5 gap-2 sm:gap-2.5">
+                {Array.from({ length: tiles }).map((_, i) => (
+                  <Skeleton key={i} className="h-[92px] rounded-lg" />
+                ))}
               </div>
-              {Array.from({ length: 14 }).map((_, i) => (
-                <div key={i} className="flex flex-col items-center gap-1 px-1 py-2 border-r border-grey-200 last:border-r-0">
-                  <Skeleton className="h-2.5 w-6" />
-                  <Skeleton className="h-3 w-4" />
+            </section>
+          ))
+        ) : (
+          <div className={cn("bg-white border border-grey-200 rounded-lg overflow-hidden", CHART_VARS)}>
+            <div className={CHART_MIN_W}>
+              <div className={cn("grid border-b border-grey-200", GRID)}>
+                <div className="px-3 h-[50px] flex items-center border-r border-grey-200">
+                  <Skeleton className="h-3 w-10" />
+                </div>
+                {Array.from({ length: 14 }).map((_, i) => (
+                  <div key={i} className="flex flex-col items-center justify-center gap-1 h-[50px] border-r border-grey-100 last:border-r-0">
+                    <Skeleton className="h-3 w-6" />
+                    <Skeleton className="h-4 w-4" />
+                  </div>
+                ))}
+              </div>
+              {Array.from({ length: 10 }).map((_, r) => (
+                <div key={r} className={cn("grid border-b border-grey-100", GRID)}>
+                  <div className="flex items-center px-3 h-10 border-r border-grey-200">
+                    <Skeleton className="h-3.5 w-10" />
+                  </div>
+                  <div
+                    className="self-center mx-0.5"
+                    style={{ gridColumn: `${2 + ((r * 5) % 9)} / span ${2 + (r % 4)}`, gridRow: 1 }}
+                  >
+                    <Skeleton className="h-[26px] w-full rounded-[7px]" />
+                  </div>
                 </div>
               ))}
             </div>
-            {Array.from({ length: 10 }).map((_, r) => (
-              <div key={r} className={cn("grid border-b border-grey-100", GRID)}>
-                <div className="flex items-center px-2.5 h-9 border-r border-grey-200">
-                  <Skeleton className="h-3.5 w-10" />
-                </div>
-                <div
-                  className="self-center mx-0.5"
-                  style={{ gridColumn: `${2 + ((r * 5) % 9)} / span ${2 + (r % 4)}`, gridRow: 1 }}
-                >
-                  <Skeleton className="h-6 w-full" />
-                </div>
-              </div>
-            ))}
           </div>
         )}
       </div>
-    </div>
+    </StayViewFrame>
   );
 }
 
@@ -957,7 +1021,7 @@ function StaleRooms({ failure, shownAt, missingWindow, refreshing, onRetry }: {
       role="status"
       data-stale-rooms
       className={cn(
-        "shrink-0 flex flex-wrap items-center gap-x-3 gap-y-2 border-b px-4 sm:px-5 py-2.5",
+        "mb-5 flex flex-wrap items-center gap-x-3 gap-y-2 rounded-lg border px-4 py-3",
         noConnection
           ? "border-brand-yellow-100 bg-brand-yellow-50"
           : "border-brand-red-100 bg-brand-red-50",

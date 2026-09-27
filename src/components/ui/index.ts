@@ -16,3 +16,4 @@ export * from "./FilterBar";
 export * from "./Menu";
 export * from "./Term";
 export * from "./ReadProblem";
+export * from "./Document";

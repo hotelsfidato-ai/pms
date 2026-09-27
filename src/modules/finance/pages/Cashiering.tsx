@@ -3,7 +3,7 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useParams } from "react-router";
 import { Wallet, Lock, Check, AlertTriangle, ArrowRightLeft, Plus } from "lucide-react";
 import { cn } from "@/lib/cn";
-import { money, moneyPrecise } from "@/lib/format";
+import { money, moneyPrecise, dateShort } from "@/lib/format";
 import { useUi } from "@/lib/ui";
 import {
   Page, PageHeader, Card, CardBody, CardHeader, Button, Skeleton, toast,
@@ -86,7 +86,7 @@ export default function CashieringPage() {
       <PageHeader
         title="Cashiering"
         description={data
-          ? `Your drawer · ${data.businessDate}`
+          ? `Your drawer · ${dateShort(data.businessDate)}`
           : "Your drawer"}
       />
       {!data || !data.shift ? (
@@ -395,7 +395,7 @@ function Variance({ amount }: { amount: number | null }) {
   const balanced = Math.abs(amount) < 0.01;
   return (
     <div className={cn("mt-4 rounded-lg border px-4 py-3",
-      balanced ? "bg-green-50 border-success" : "bg-yellow-50 border-brand-yellow")}>
+      balanced ? "bg-success-50 border-success" : "bg-brand-yellow-50 border-brand-yellow")}>
       <p className="flex items-center gap-2 text-base font-medium">
         {balanced
           ? <><Check className="size-4 text-success" /> The drawer balances</>

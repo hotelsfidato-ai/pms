@@ -275,8 +275,8 @@ function StayFacts({ stay: s }: { stay: Stay }) {
       </FactGroup>
 
       {s.voidReason && (
-        <div className="rounded-lg bg-brand-red-50 border border-brand-red-100 p-4">
-          <p className="text-xs font-semibold uppercase tracking-wide text-brand-red mb-1">
+        <div className="rounded-lg bg-brand-red-50 border border-brand-red-100 px-4 py-3.5">
+          <p className="text-xs font-semibold uppercase tracking-wide text-brand-red-700 mb-1">
             Voided
           </p>
           <p className="text-base text-grey-700 leading-relaxed">
@@ -287,7 +287,7 @@ function StayFacts({ stay: s }: { stay: Stay }) {
       )}
 
       {s.notes && (
-        <div className="rounded-lg bg-grey-50 border border-grey-200 p-4">
+        <div className="rounded-lg bg-grey-50 border border-grey-200 px-4 py-3.5">
           <p className="text-xs font-semibold uppercase tracking-wide text-grey-600 mb-1">
             Note
           </p>
@@ -377,9 +377,9 @@ function FolioTotals({ hotelId, stay }: { hotelId: string; stay: Stay }) {
         className={cn(
           "text-right",
           balance === null ? "text-ink-900"
-            : balance > 0 ? "text-brand-red"
+            : balance > 0 ? "text-brand-red-700"
             : balance < 0 ? "text-info"
-            : "text-success",
+            : "text-success-600",
         )}
         emphasis
       />

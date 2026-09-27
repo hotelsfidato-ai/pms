@@ -20,8 +20,11 @@
    A type that production depends on does not live in a fixture.
    ══════════════════════════════════════════════════════════════════ */
 
+/* "tentative" since Phase 1 (27 September): a booking held for the hotel
+   to confirm, which the desk reads as "Waiting for the hotel" (D27-63). */
 export type StayStatus =
-  | "due-in" | "in-house" | "due-out" | "checked-out" | "no-show" | "cancelled";
+  | "due-in" | "in-house" | "due-out" | "checked-out" | "no-show" | "cancelled"
+  | "tentative";
 
 /* ⚠ WAS A CLOSED UNION OF SIX NAMES, and stopped being one the moment
    a manager could add a source. It listed Walk-in, Fidato Hotels,

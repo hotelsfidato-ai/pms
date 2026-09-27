@@ -3,7 +3,7 @@ import { useParams, Link } from "react-router";
 import { ArrowRight } from "lucide-react";
 import { dateLong } from "@/lib/format";
 import { useUi } from "@/lib/ui";
-import { Page, PageHeader, Card, StatusPill } from "@/components/ui";
+import { Page, PageHeader, StatusPill } from "@/components/ui";
 import { StayTable, type StayColumn } from "@/modules/front-desk/components/StayTable";
 import { listStays } from "@/modules/front-desk/data/stays";
 import { queryKeys, BUSINESS_DATE } from "@/data/repositories";
@@ -44,9 +44,9 @@ export default function WalkInsPage() {
         badge={data ? <StatusPill tone="neutral">{data.length} on record</StatusPill> : undefined}
       />
 
-      <div className="flex items-start gap-3 rounded-md border border-grey-200 bg-grey-50 p-3.5 mb-5">
-        <div className="min-w-0 flex-1">
-          <p className="text-base font-medium text-ink-900">Take a walk-in from Stay view</p>
+      <div className="flex flex-wrap items-start gap-x-3 gap-y-1 rounded-lg border border-grey-200 bg-white px-4 py-3.5 mb-5">
+        <div className="min-w-0 flex-1 basis-64">
+          <p className="text-sm font-medium text-ink-900">Take a walk-in from the Calendar</p>
           <p className="text-sm text-grey-600 mt-0.5 leading-relaxed">
             Click any empty cell on the chart. The room and the night are already
             chosen by the time the form opens, which is the order the question
@@ -54,29 +54,27 @@ export default function WalkInsPage() {
           </p>
         </div>
         <Link
-          to={`/h/${hotelId}/stay`}
+          to={`/h/${hotelId}/calendar`}
           className="inline-flex items-center gap-1.5 text-sm text-brand-orange-700 hover:underline shrink-0 mt-0.5
             pointer-coarse:min-h-11"
         >
-          Open Stay view
+          Open Calendar
           <ArrowRight className="size-3.5" />
         </Link>
       </div>
 
-      <Card className="p-4">
-        <StayTable
-          hotelId={hotelId}
-          businessDate={BUSINESS_DATE}
-          rows={data}
-          isLoading={isLoading}
-          error={error}
-          onRetry={() => refetch()}
-          columns={COLUMNS}
-          offerCheckIn
-          emptyTitle="No walk-ins on record"
-          emptyBody="One appears here the moment it is taken from an empty cell in Stay view."
-        />
-      </Card>
+      <StayTable
+        hotelId={hotelId}
+        businessDate={BUSINESS_DATE}
+        rows={data}
+        isLoading={isLoading}
+        error={error}
+        onRetry={() => refetch()}
+        columns={COLUMNS}
+        offerCheckIn
+        emptyTitle="No walk-ins on record"
+        emptyBody="One appears here the moment it is taken from an empty cell on the Calendar."
+      />
     </Page>
   );
 }

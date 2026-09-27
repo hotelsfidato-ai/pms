@@ -42,7 +42,8 @@ beforeEach(() => {
                          sellable: 5, occupied: 0, sold: 0, available: 5 }] } as never;
     }
     if (path.includes("/tariff")) {
-      return { roomType: "Deluxe", nights: [], total: 3000, unpriced: null } as never;
+      return { roomType: "Deluxe", total: 3000, unpriced: null,
+               nights: [{ night: "2026-08-25", total: 3000, unpriced: null }] } as never;
     }
     if (path.includes("/guests/returning")) {
       return { matches: [{ guestId: "g-rohit", visits: 2, name: "Rohit Deshpande",
@@ -72,7 +73,7 @@ describe("a booking for a returning guest", () => {
     );
 
     /* The heading is drawn while the inventory loads; the form after it. */
-    await screen.findByText("Who, and when");
+    await screen.findByText("Who");
     type("Guest or company", "Rohit D");
     type("Phone", "+91 98765 43210");
     expect(await screen.findByText(/Stayed with the group 2 times/))
@@ -92,7 +93,7 @@ describe("a booking for a returning guest", () => {
     expect(posted[0]!.body).toMatchObject({
       guestId: "g-rohit", phone: "+91 98765 43210", whatsappAgreed: true, offersAgreed: false,
     });
-    await waitFor(() => expect(useToastStore.getState().toasts.map((t) => t.description))
-      .toContain("Rohit Deshpande"));
+    /* The Booked card (Phase 1) names whose booking it now is. */
+    expect(await screen.findByText("Rohit Deshpande")).toBeTruthy();
   });
 });

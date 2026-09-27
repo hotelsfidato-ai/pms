@@ -6539,6 +6539,128 @@ copy will see of theirs.**
 
 ---
 
+### 338 · MINE: I tried to recycle a copy a new session had just moved into
+
+28 September. After archiving the redesign session I tried twice to send its folder
+`.claude\worktrees\nice-taussig-74dfdb` to the Recycle Bin. Both attempts failed with
+"in use". In between, the owner had clicked the System health card, and the app had
+started that new session IN THE SAME FOLDER (its cwd; a new branch). Had the first
+attempt gone through, the new session's working copy would have gone to the Recycle
+Bin under it. `git status` there afterwards: clean, nothing deleted.
+
+**The rule:** before recycling a copy, `list_sessions` and confirm no live session's
+`cwd` is that folder, and read `git worktree list` for what branch it holds now. A
+folder name is not the session's; an archived session's folder can be reused at once.
+
+---
+
+### 337 · MINE: the gates are green but the website would not build
+
+28 September. After merging the redesign, every gate step was green (web 726, server
+1,624, database 1,225, 148 re-runnable), yet `npm run build` failed: the one app bundle
+had grown to 2.04 MB and Workbox refuses to precache a file over its 2 MiB default.
+The release copy at 40c9510 was 1.98 MB, so today's merges crossed the line without any
+gate noticing, because no gate builds. Found only because I ran a build after the gates.
+Fixed with a 3 MiB ceiling in vite.config.ts (same behaviour: the whole app is cached
+offline); the upgrade path is lazy() routes.
+
+**The rule:** before saying a tree can be released, build it (`npm run build`) as well
+as running the gates. A gates.sh build step would make this automatic (the owner's call).
+
+---
+
+### 336 · A regex run on an upload is part of the trust boundary (ADM-10)
+
+27 September, the group logo session. The SVG safety check used `<!--[\s\S]*?-->` inside
+a repeated group; on a 211-byte file it took 105 seconds (2^N ways to read it), which
+would have frozen the API for everyone. V8's linear fallback did not save it. Only the
+owner, an admin or a GM could reach it, and it was caught before merge.
+
+**The rule:** any pattern run on something a user sends is timed on the worst input the
+size limit allows, and a test holds the time. Prefer a linear scan or a parser to a
+clever regex.
+
+---
+
+### 335 · A check step killed from Windows reads as a pass: the 22-second database step, explained
+
+27 September, found by the gate investigation (tools/gate-db-step-27sep). On this Git
+Bash (MSYS 3.6.3) a bash script killed from Windows (Stop-Process, taskkill /F, WMI
+Terminate) returns **exit 0** to its parent and runs no trap; MSYS `kill` gives 143 or
+137 as it should. Phase 1's first full check run had its `db/tests/run.sh` killed about
+30 s in (most likely by another session stopping "its own" run by process id; every
+copy's command line reads `bash.exe db/tests/run.sh`), so the database step said
+"exit 0" with its log ending at "── migrations ──" and left a half-built
+`fidato_gate_10270`. Nothing bad was merged: the re-run was real.
+
+**The rule:** a check step counts only with its last line. `scripts/gates.sh` now demands
+"all N assertions passed" and "all N migrations are re-runnable" (and, from the same fix,
+the test summary), and reports CUT SHORT otherwise. Stop a stray run from Git Bash with
+`kill`, never Stop-Process, and never stop another copy's run. Separately, the 19:32
+Postgres crash was a backend running a session's `create table` that got 0xC000013A
+when the app closed; the restart then synced for 30 minutes because of scratch databases.
+
+---
+
+### 334 · The Form III session's lessons, 27 September
+
+- **TaskStop on a background `bash script.sh` kills the wrapper, not the script.** Two
+  check runs went at once and wrote into the same logs, and one loaded `formIII.ts`
+  while it was deliberately broken for a proof. Kill the process tree by id (confirm the
+  command line first), or give the script a lock.
+- **An API test that releases a room assignment gets a DIRTY room back (070).** A test
+  file that hands rooms back must set them clean again, or later tests run out of the
+  test hotel's ten rooms.
+
+### 333 · The Phase 1 session's lessons, 27 September
+
+- **A CHECK whose comparison meets a NULL is unknown, and unknown PASSES.** Write
+  `x is not null and x <= 10`, not `x <= 10` (RES-8, caught by the new database check).
+- **A field added to an answer must be added on the repeat path too.** The booking
+  door's replay of an idempotent request returned the old shape (RES-7, caught by
+  RES-3's tests).
+- **Clicking through a dev server while a test harness runs on the shared Postgres
+  gives "connection timeout" 500s** that look like the app's fault. Look after the
+  harness ends.
+- **Open, not yet explained: a gate run's database step said exit 0 after 22 s with
+  `g-db.log` cut off after the "migrations" header.** The re-run was real (1,195
+  assertions). A half-built `fidato_gate_10270` (17:59, no connections) is probably
+  that run's database; it is kept for whoever looks. Until explained, a database step
+  under a minute is not a pass: read the assertion count in the log.
+
+---
+
+### 332 · MINE: a Windows path in a Python string became control characters in DESIGN.md
+
+27 September. I added the owner's D27-52 rule to DESIGN.md with a Python heredoc. The
+path `D:\fidato crs\src\features\reservations\voucher.ts` sat in an ordinary (not raw)
+Python string, so `\f`, `\r` and `\v` became a form feed, a carriage return and a
+vertical tab, and the committed file read "D:idato crs". Caught by reading the diff
+straight after the commit; fixed in the next commit (c630085).
+
+**The rule:** a Windows path never goes into a Python string literal. Build it with
+`chr(92)`, read it from a file, or write the text with the Write tool; then read the
+committed line back with `cat -A` before saying it is done.
+
+---
+
+### 331 · MINE: a git command I stopped left a lock, and the next merge failed without my noticing until the gates ran on the old tree
+
+27 September. I ran `git status --porcelain --ignored` in the main folder to find
+an untracked `.env`. It walked `.local` (Postgres, gate logs, caches), ran past two
+minutes and went to the background; I stopped it with TaskStop. The stop left
+`.git/index.lock` behind. Ten minutes later `git merge` of redesign group 1 printed
+"could not write index" into a piped command, the merge did not happen, and the
+quick gates I had chained after it ran on the unmerged tree. I saw it only because
+`git log -1` still showed the old head.
+
+**The rule:** never `--ignored` (or any whole-tree walk) in the main folder; ask for
+the one file by name (`ls -a`, `git ls-files`). After stopping any git command, check
+for `.git/index.lock` and remove it only when no git.exe is running. Never chain the
+gates after a merge without first checking the merge's head.
+
+---
+
 ### 330 · MINE: two sessions' headless Edge signed into the owner's Microsoft account, and I sent the rule to the brief but not to the sessions
 
 25 and 26 September. The Bill tab session's first headless Edge, then the

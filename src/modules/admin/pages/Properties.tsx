@@ -92,7 +92,8 @@ export function PropertiesPage() {
         <Skeleton className="h-40 w-full" />
       ) : isAdmin ? (
         <>
-          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+          {/* Cards 12px apart, sections 20px (the Rhythm Rule). */}
+          <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
             {open.map((h) => (
               <AdminPropertyCard key={h.id} hotel={h}
                                  onEdit={() => setEditing(h)}
@@ -101,11 +102,11 @@ export function PropertiesPage() {
           </div>
 
           {closed.length > 0 && (
-            <section className="mt-6">
-              <h2 className="text-2xs font-semibold uppercase tracking-wide text-grey-500 mb-2.5">
+            <section className="mt-5">
+              <h2 className="text-md font-semibold text-ink-900 mb-3">
                 Closed
               </h2>
-              <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+              <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
                 {closed.map((h) => (
                   <AdminPropertyCard key={h.id} hotel={h}
                                      onEdit={() => setEditing(h)}
@@ -116,13 +117,13 @@ export function PropertiesPage() {
           )}
         </>
       ) : (
-        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+        <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
           {(plain.data ?? []).map((p) => (
             <Card key={p.id}>
               <CardBody>
                 <p className="text-md font-semibold text-ink-900">{p.name}</p>
-                <p className="text-sm text-grey-500 mt-1">{p.address}</p>
-                <dl className="mt-3 space-y-1">
+                <p className="text-sm text-grey-500 mt-0.5">{p.address}</p>
+                <dl className="mt-3 border-t border-grey-100 pt-1.5">
                   <Line label="Rooms" value={String(p.rooms)} />
                   <Line label="Types" value={p.roomTypes.join(" · ")} />
                   <Line label="Check in / out" value={`${p.checkInTime} / ${p.checkOutTime}`} />
@@ -135,9 +136,10 @@ export function PropertiesPage() {
                 </dl>
                 <Link
                   to={`/h/${p.id}/stay`}
-                  className="inline-flex items-center gap-1.5 text-sm text-brand-orange-700 hover:underline mt-3.5"
+                  className="inline-flex items-center gap-1.5 min-h-9 pointer-coarse:min-h-11 text-sm font-medium text-brand-orange-700 hover:underline underline-offset-4 mt-2"
                 >
-                  Open stay view
+                  {/* The screen is the Calendar now (the owner, D27-82). */}
+                  Open the Calendar
                   <ArrowRight className="size-3.5" />
                 </Link>
               </CardBody>
@@ -148,11 +150,11 @@ export function PropertiesPage() {
 
       {isAdmin && (
         <>
-          <div className="mt-6">
+          <div className="mt-5">
             <NewProperty onDone={refresh} />
           </div>
 
-          <p className="flex items-start gap-2 text-xs text-grey-500 mt-4 leading-relaxed">
+          <p className="flex items-start gap-2 text-xs text-grey-500 mt-3 leading-relaxed">
             <Info className="size-3.5 shrink-0 mt-0.5" />
             <span>
               Creating a property mints its rooms, its invoice series and its
@@ -184,12 +186,12 @@ function AdminPropertyCard({ hotel, onEdit, onToggle }: {
             <StatusPill tone="neutral">Closed</StatusPill>
           )}
         </div>
-        <p className="text-sm text-grey-500 mt-1">
+        <p className="text-sm text-grey-500 mt-0.5">
           {[hotel.addressLine, hotel.city, hotel.state]
             .filter(Boolean).join(", ") || "-"}
         </p>
 
-        <dl className="mt-3 space-y-1">
+        <dl className="mt-3 border-t border-grey-100 pt-1.5">
           <Line label="Rooms" value={hotel.rooms === 0 ? "-" : String(hotel.rooms)} />
           <Line label="Types"
                 value={hotel.roomTypes.length ? hotel.roomTypes.join(" · ") : "-"} />
@@ -208,13 +210,15 @@ function AdminPropertyCard({ hotel, onEdit, onToggle }: {
           /* ⚠ SAID BEFORE THE BUTTON IS PRESSED. The server refuses to
              close a property with guests in it, and a refusal a person
              reads only after trying is a refusal they did not need. */
-          <p className="text-sm text-grey-500 mt-2.5">
+          <p className="text-sm text-grey-500 mt-3">
             {hotel.checkedIn} booking{hotel.checkedIn === 1 ? "" : "s"} checked in
             - it cannot be closed until they check out.
           </p>
         )}
 
-        <div className="flex items-center gap-2 mt-3.5 flex-wrap">
+        {/* The links are orange text and the actions capsules (the
+            Tappable Rule), under a hairline as the card's rows are. */}
+        <div className="flex items-center gap-x-3 gap-y-2 mt-3 pt-3 border-t border-grey-100 flex-wrap">
           {/* ⚠ THE CARD HAD NOWHERE TO GO EXCEPT THE TAPE CHART. The
               property's own numbers and its team now live one click
               away, which is what the owner asked for on 9 September —
@@ -222,7 +226,7 @@ function AdminPropertyCard({ hotel, onEdit, onToggle }: {
               property and will be used to add property staff". */}
           <Link
             to={`/properties/${hotel.code}`}
-            className="inline-flex items-center gap-1.5 text-sm text-brand-orange-700 hover:underline"
+            className="inline-flex items-center gap-1.5 min-h-9 pointer-coarse:min-h-11 text-sm font-medium text-brand-orange-700 hover:underline underline-offset-4"
           >
             Open
             <ArrowRight className="size-3.5" />
@@ -230,14 +234,14 @@ function AdminPropertyCard({ hotel, onEdit, onToggle }: {
           {hotel.isActive && (
             <Link
               to={`/h/${hotel.code}/stay`}
-              className="inline-flex items-center gap-1.5 text-sm text-grey-600 hover:underline"
+              className="inline-flex items-center gap-1.5 min-h-9 pointer-coarse:min-h-11 text-sm font-medium text-brand-orange-700 hover:underline underline-offset-4"
             >
-              Stay view
+              Calendar
             </Link>
           )}
           <div className="flex-1" />
-          <Button variant="ghost" className="h-11" onClick={onEdit}>Edit</Button>
-          <Button variant="secondary" className="h-11"
+          <Button variant="ghost" onClick={onEdit}>Edit</Button>
+          <Button variant="secondary"
                   disabled={hotel.isActive && hotel.checkedIn > 0}
                   onClick={onToggle}>
             {hotel.isActive ? "Close" : "Reopen"}
@@ -365,10 +369,10 @@ function EditPropertyDialog({ hotel, onClose, onSaved }: {
    charged — found opening the card on 17 September. */
 function Line({ label, value, wrap = false }: { label: string; value: string; wrap?: boolean }) {
   return (
-    <div className="flex justify-between gap-3 text-sm">
+    <div className="flex justify-between gap-3 text-sm leading-[22px]">
       <span className="text-grey-500 shrink-0">{label}</span>
       <span className={cn(
-        "text-ink-900 tabular text-right min-w-0",
+        "font-medium text-grey-700 tabular text-right min-w-0",
         wrap ? "break-words" : "truncate",
       )}>
         {/* Break between rates, never inside one: "18% above" on one line

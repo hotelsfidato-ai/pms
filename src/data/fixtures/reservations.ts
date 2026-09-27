@@ -584,7 +584,10 @@ export interface Reservation {
   groupId?: string;
 }
 
-const STATUS_MAP: Record<StayStatus, Reservation["status"]> = {
+/* The fixture stays never wait for the hotel ("tentative", Phase 1), and
+   this older reservation view has no word for it, so it is not mapped. */
+type FixtureStatus = Exclude<StayStatus, "tentative">;
+const STATUS_MAP: Record<FixtureStatus, Reservation["status"]> = {
   "due-in": "confirmed",
   "in-house": "checked_in",
   "due-out": "due_out",
@@ -610,7 +613,7 @@ function toReservation(s: Stay): Reservation {
     checkOut: s.departure,
     adults: s.adults,
     children: s.children,
-    status: STATUS_MAP[s.status],
+    status: STATUS_MAP[s.status as FixtureStatus],
     createdAt: `${s.arrival}T09:00:00Z`,
     updatedAt: `${s.arrival}T09:00:00Z`,
     createdBy: "admin",

@@ -90,10 +90,10 @@ export default function GuestMessagesPage() {
       key: "to",
       header: "To",
       cell: (m) => (
-        <span className="inline-flex items-center gap-1.5 text-ink-700">
+        <span className="inline-flex items-center gap-1.5 text-ink-900">
           {m.channel === "email"
-            ? <Mail className="h-3.5 w-3.5" aria-hidden />
-            : <Phone className="h-3.5 w-3.5" aria-hidden />}
+            ? <Mail className="size-3.5 text-grey-400 shrink-0" aria-hidden />
+            : <Phone className="size-3.5 text-grey-400 shrink-0" aria-hidden />}
           <span>{wentTo(m)}</span>
         </span>
       ),
@@ -121,7 +121,7 @@ export default function GuestMessagesPage() {
     {
       key: "detail",
       header: "What came back",
-      cell: (m) => <span className="text-ink-600">{m.detail ?? "-"}</span>,
+      cell: (m) => <span className={m.detail ? "text-grey-600" : "text-grey-500"}>{m.detail ?? "-"}</span>,
       hideBelow: "lg",
     },
   ];
@@ -133,22 +133,22 @@ export default function GuestMessagesPage() {
          were both filed for. */
       if (q.isPaused) {
         return (
-          <ErrorState
+          <Card><ErrorState
             title="No connection"
             description="This device is offline, so what was sent cannot load. It loads by itself as soon as the connection is back."
-          />
+          /></Card>
         );
       }
       if (q.isError) {
         return (
-          <ErrorState
+          <Card><ErrorState
             title="What was sent did not load"
             error={q.error}
             description={unreachable(q.error)
               ? "Could not reach the server, and there is nothing from earlier to show in its place. Check the connection, then try again."
               : undefined}
             onRetry={() => void q.refetch()}
-          />
+          /></Card>
         );
       }
       return <Skeleton className="h-64" />;
@@ -158,7 +158,7 @@ export default function GuestMessagesPage() {
       /* TWO DIFFERENT EMPTIES, AND THE SCREEN SAYS WHICH. */
       return data.connected
         ? (
-          <EmptyState
+          <Card><EmptyState
             icon={<MessageSquare />}
             title="Nothing has been sent yet"
             description={
@@ -167,17 +167,17 @@ export default function GuestMessagesPage() {
               + "and the link again the day before they arrive. Each one shows "
               + "up here with what came back."
             }
-          />
+          /></Card>
         )
         : (
-          <EmptyState
+          <Card><EmptyState
             icon={<MessageSquare />}
             title="Nothing has been sent, because nothing can be yet"
             description={
               "This is not a fault and nothing has failed. No message has been "
               + "attempted, so there is nothing to show."
             }
-          />
+          /></Card>
         );
     }
 
@@ -193,15 +193,20 @@ export default function GuestMessagesPage() {
           : "What this system sent guests, and whether it arrived"}
       />
 
-      {/* What guests wrote to the desk from their own page (D23-14). */}
-      <MessagesToTheDesk code={code} reservation={reservation} />
+      {/* What guests wrote to the desk from their own page (D23-14). It
+          draws nothing for a role that is not the desk's, so its 20px go
+          with it. */}
+      <div className="mb-5 empty:hidden">
+        <MessagesToTheDesk code={code} reservation={reservation} />
+      </div>
 
       {/* THE SENDER'S OWN SENTENCE, not a second one written here. One
           wording, so the desk reads the same thing wherever it meets
           this - and it comes from the server, because only the server
           knows whether the workflow and its secret are in place. */}
       {data && !data.connected && data.notConnected && (
-        <Card className="border-amber-300 bg-amber-50">
+        /* The warning wash on the brand's yellow steps (it was stock amber). */
+        <Card className="mb-5 border-brand-yellow-100 bg-brand-yellow-50">
           <CardBody>
             <p className="text-sm text-ink-900 leading-relaxed">
               <span className="font-medium">Nothing is sent yet</span>
@@ -218,7 +223,7 @@ export default function GuestMessagesPage() {
           fixed now is a guest reached on the day it is. A list, not a
           second table - the record below is the table. */}
       {data && data.unreachable.length > 0 && (
-        <Card>
+        <Card className="mb-5">
           <CardHeader
             title={data.unreachable.length === 1
               ? "1 booking no message can reach"
@@ -229,12 +234,13 @@ export default function GuestMessagesPage() {
               + "guest agrees."
             }
           />
-          <CardBody>
-            <ul className="divide-y divide-grey-200 text-sm">
+          {/* List rows: 12px, a hairline between. */}
+          <CardBody className="py-0">
+            <ul className="divide-y divide-grey-100 text-sm">
               {data.unreachable.map((u) => (
-                <li key={u.id} className="flex flex-wrap gap-x-4 gap-y-0.5 py-2">
-                  <span className="font-medium text-ink-900">{u.reference}</span>
-                  <span className="text-ink-700">{u.guest}</span>
+                <li key={u.id} className="flex flex-wrap gap-x-4 gap-y-0.5 py-3">
+                  <span className="font-medium text-ink-900 tabular">{u.reference}</span>
+                  <span className="text-ink-900">{u.guest}</span>
                   <span className="text-grey-600">Arrives {dateShort(u.checkIn)}</span>
                   <span className="text-grey-600">{u.why}</span>
                 </li>

@@ -162,13 +162,11 @@ export async function checkIn(
       idType?: string;
       idNumber?: string;
       nationality?: string;
-      passportExpiry?: string;
-      visaNumber?: string;
-      visaExpiry?: string;
-      addressLine?: string;
-      city?: string;
-      country?: string;
+      /* And Form III's person fields (the guests service's, D27-25). */
+      [field: string]: string | undefined;
     };
+    /** Form III's questions about this visit, for a foreign guest. */
+    visit?: Record<string, string | boolean>;
     idSkipReason?: string;
     /* Why the room was given before the property's check-in time, and
        whether the charge for it was waived. The server decides WHETHER
@@ -233,6 +231,8 @@ export async function checkOut(
 
      A guard that cannot be satisfied is not a guard, it is a wall. */
   late?: { lateReason?: string; waiveLate?: boolean },
+  /** Form III: where a foreign guest goes next (D27-25). */
+  nextDestination?: string,
 ): Promise<OperationResult<Stay>> {
   /* The BALANCE decides, server-side. A guest cannot walk out owing
      money without somebody deciding to let them, and that decision is
@@ -245,7 +245,7 @@ export async function checkOut(
   try {
     await api(`/api/hotels/${hotelId}/stays/${stayId}/check-out`, {
       method: "POST",
-      body: JSON.stringify({ ...late }),
+      body: JSON.stringify({ ...late, ...(nextDestination ? { nextDestination } : {}) }),
     });
   } catch (error) {
     if (error instanceof ApiError) {
@@ -300,6 +300,11 @@ export async function createWalkIn(
     guestId?: string;
     whatsappAgreed?: boolean;
     offersAgreed?: boolean;
+    /* Form III (D27-25): a walk-in is asked what check-in asks. */
+    nationality?: string;
+    identity?: Record<string, string>;
+    visit?: Record<string, string | boolean>;
+    idSkipReason?: string;
   },
 ): Promise<OperationResult<Stay>> {
   /* This wrote the new stay into the in-memory store while every

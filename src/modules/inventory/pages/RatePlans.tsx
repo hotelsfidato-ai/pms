@@ -2,11 +2,11 @@ import { useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useParams } from "react-router";
 import { IndianRupee, Plus, X, CalendarRange } from "lucide-react";
-import { cn } from "@/lib/cn";
 import { moneyPrecise, dateLong } from "@/lib/format";
 import { useUi } from "@/lib/ui";
 import {
-  Page, PageHeader, Card, CardBody, Button, StatusPill, toast,
+  Page, PageHeader, Card, Button, StatusPill, EmptyState, IconChip,
+  Input, NativeSelect, toast,
 } from "@/components/ui";
 import { getRates, setRackRate, addRate, removeRate, type RateRoomType, type RateRule } from "@/modules/inventory/data/rateSetup";
 
@@ -73,8 +73,8 @@ export default function RatePlansPage() {
       />
 
       {data && priced.length < data.roomTypes.length && (
-        <div className="flex items-start gap-3 rounded-md border border-brand-yellow-100 bg-brand-yellow-50 p-3.5 mb-5">
-          <IndianRupee className="size-4 text-brand-yellow shrink-0 mt-0.5" />
+        <div className="flex items-start gap-3 rounded-lg bg-brand-yellow-50 ring-1 ring-inset ring-brand-yellow-100 px-4 py-3.5 mb-5">
+          <IconChip tone="yellow"><IndianRupee /></IconChip>
           <div className="min-w-0">
             <p className="text-base font-medium text-ink-900">
               {data.roomTypes.length - priced.length} room type
@@ -90,18 +90,18 @@ export default function RatePlansPage() {
       )}
 
       {/* ── The rack rate, one per type ─────────────────────────── */}
-      <Card className="mb-6">
+      <Card className="mb-5">
         <div className="px-4 pt-3.5 pb-1">
-          <p className="text-2xs uppercase tracking-wide text-grey-500">
+          <h2 className="text-md font-semibold text-ink-900">
             Rack rate - the standing price
-          </p>
+          </h2>
         </div>
         <ul className="divide-y divide-grey-100">
           {(data?.roomTypes ?? []).map((t) => (
             <RackRow key={t.id} hotelId={hotelId} type={t} onDone={refresh} />
           ))}
           {data?.roomTypes.length === 0 && (
-            <li className="px-4 py-6 text-sm text-grey-500 text-center">
+            <li className="px-4 py-3 text-sm text-grey-500">
               This property has no room types yet.
             </li>
           )}
@@ -117,25 +117,22 @@ export default function RatePlansPage() {
       />
 
       <Card className="mt-5">
-        <div className="px-4 pt-3.5 pb-1 flex items-center gap-2">
-          <CalendarRange className="size-3.5 text-grey-400" />
-          <p className="text-2xs uppercase tracking-wide text-grey-500">
+        <div className="px-4 pt-3.5 pb-1 flex items-center gap-2.5">
+          <IconChip><CalendarRange /></IconChip>
+          <h2 className="text-md font-semibold text-ink-900">
             Seasons and plans
-          </p>
+          </h2>
         </div>
         {(data?.rates ?? []).length === 0 ? (
-          <CardBody>
-            <div className="text-center py-7">
-              <CalendarRange className="size-6 text-grey-300 mx-auto mb-3" />
-              <p className="text-md font-semibold text-ink-900">
-                No season is set
-              </p>
-              <p className="text-base text-grey-500 mt-1.5 max-w-md mx-auto">
-                Every room sells at its rack rate. Add a season above when a
-                period or a meal plan is priced differently.
-              </p>
-            </div>
-          </CardBody>
+          <EmptyState
+            compact
+            icon={<CalendarRange />}
+            title="No season is set"
+            description={
+              "Every room sells at its rack rate. Add a season above when a "
+              + "period or a meal plan is priced differently."
+            }
+          />
         ) : (
           <ul className="divide-y divide-grey-100">
             {(data?.rates ?? []).map((r) => (
@@ -186,30 +183,30 @@ function RackRow({ hotelId, type, onDone }: {
   };
 
   return (
-    <li className="flex flex-wrap items-center gap-3 px-4 py-3 min-h-16">
+    <li className="flex flex-wrap items-center gap-3 px-4 py-3 min-h-14">
       <div className="min-w-0 flex-1">
-        <p className="text-base text-ink-900">{type.name}</p>
+        <p className="text-sm font-medium text-ink-900">{type.name}</p>
         <p className="text-2xs text-grey-500">
           {type.code} · {type.rooms} room{type.rooms === 1 ? "" : "s"} · sleeps{" "}
           {type.maxOccupancy}
           {type.rackRate === null && (
-            <span className="text-brand-yellow"> · no rate set</span>
+            <span className="text-brand-yellow-800"> · no rate set</span>
           )}
         </p>
       </div>
 
       <div className="flex items-center gap-2">
         <span className="text-grey-500">₹</span>
-        <input
+        <Input
           value={value}
           onChange={(e) => setValue(e.target.value)}
           inputMode="decimal"
           placeholder="-"
           aria-label={`Rack rate for ${type.name}`}
-          className="w-28 h-11 px-3 rounded-md border border-grey-300 text-base tabular text-right"
+          numeric
+          className="w-28 text-right"
         />
         <Button
-          size="lg"
           variant={dirty ? "primary" : "secondary"}
           disabled={!dirty}
           loading={busy}
@@ -262,44 +259,37 @@ function NewSeason({ hotelId, types, plans, onDone }: {
   const chosenPlan = plans.find((p) => p.code === plan);
 
   return (
-    <Card>
-      <div className="px-4 pt-3.5 pb-1">
-        <p className="text-2xs uppercase tracking-wide text-grey-500">
-          Price a season, or a meal plan
-        </p>
-      </div>
-      <CardBody>
-        <div className="grid gap-2.5 sm:grid-cols-2 lg:grid-cols-3">
+    <Card className="px-4 py-3.5">
+      <h2 className="text-md font-semibold text-ink-900 mb-3">
+        Price a season, or a meal plan
+      </h2>
+        <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
           <Labelled label="Room type">
-            <select value={typeId} onChange={(e) => setTypeId(e.target.value)}
-              className="w-full h-11 px-2 rounded-md border border-grey-300 text-base">
+            <NativeSelect value={typeId} onChange={(e) => setTypeId(e.target.value)}>
               <option value="">Choose…</option>
               {types.map((t) => (
                 <option key={t.id} value={t.id}>{t.name}</option>
               ))}
-            </select>
+            </NativeSelect>
           </Labelled>
 
           <Labelled label="Meal plan" hint={chosenPlan?.includes}>
-            <select value={plan} onChange={(e) => setPlan(e.target.value)}
-              className="w-full h-11 px-2 rounded-md border border-grey-300 text-base">
+            <NativeSelect value={plan} onChange={(e) => setPlan(e.target.value)}>
               {plans.map((p) => (
                 <option key={p.code} value={p.code}>
                   {p.code} · {p.name}
                 </option>
               ))}
-            </select>
+            </NativeSelect>
           </Labelled>
 
           <Labelled label="Price per night">
-            <input value={price} onChange={(e) => setPrice(e.target.value)}
-              inputMode="decimal" placeholder="0.00"
-              className="w-full h-11 px-3 rounded-md border border-grey-300 text-base tabular" />
+            <Input value={price} onChange={(e) => setPrice(e.target.value)}
+              inputMode="decimal" placeholder="-" numeric />
           </Labelled>
 
           <Labelled label="From">
-            <input type="date" value={from} onChange={(e) => setFrom(e.target.value)}
-              className="w-full h-11 px-3 rounded-md border border-grey-300 text-base" />
+            <Input type="date" value={from} onChange={(e) => setFrom(e.target.value)} />
           </Labelled>
 
           <Labelled
@@ -308,23 +298,20 @@ function NewSeason({ hotelId, types, plans, onDone }: {
                getting it wrong misprices one day and nobody notices. */
             hint="Not included. A season through 31 Dec ends on 1 Jan. Leave blank for no end."
           >
-            <input type="date" value={to} onChange={(e) => setTo(e.target.value)}
-              className="w-full h-11 px-3 rounded-md border border-grey-300 text-base" />
+            <Input type="date" value={to} onChange={(e) => setTo(e.target.value)} />
           </Labelled>
 
           <Labelled label="Name it" hint="Winter, Diwali week - for your own eyes.">
-            <input value={label} onChange={(e) => setLabel(e.target.value)}
-              placeholder="Winter"
-              className="w-full h-11 px-3 rounded-md border border-grey-300 text-base" />
+            <Input value={label} onChange={(e) => setLabel(e.target.value)}
+              placeholder="Winter" />
           </Labelled>
         </div>
 
-        <Button variant="primary" size="lg" className="mt-3.5 w-full sm:w-auto"
+        <Button variant="primary" className="mt-3.5 w-full sm:w-auto"
           disabled={!ready} loading={busy} onClick={() => void submit()}>
           <Plus className="size-4" />
           Add this price
         </Button>
-      </CardBody>
     </Card>
   );
 }
@@ -334,12 +321,13 @@ function Labelled({ label, hint, children }: {
 }) {
   return (
     <label className="block">
-      <span className="block text-2xs uppercase tracking-wide text-grey-500 mb-1">
+      {/* The kit's field label and hint (as Field draws them). */}
+      <span className="block text-sm font-medium text-grey-700 mb-1.5">
         {label}
       </span>
       {children}
       {hint && (
-        <span className="block text-2xs text-grey-500 mt-1 leading-relaxed">
+        <span className="block text-xs text-grey-500 mt-1.5 leading-relaxed">
           {hint}
         </span>
       )}
@@ -365,13 +353,10 @@ function SeasonRow({ hotelId, rate, onDone }: {
   };
 
   return (
-    <li className={cn(
-      "flex flex-wrap items-center gap-3 px-4 py-3 min-h-16",
-      rate.isCurrent && "bg-brand-orange-50/40",
-    )}>
+    <li className="flex flex-wrap items-center gap-3 px-4 py-3 min-h-14">
       <div className="min-w-0 flex-1">
         <div className="flex items-center gap-2 flex-wrap">
-          <span className="text-base text-ink-900">{rate.roomType}</span>
+          <span className="text-sm font-medium text-ink-900">{rate.roomType}</span>
           <StatusPill tone="neutral">{rate.mealPlan}</StatusPill>
           {rate.label && (
             <span className="text-2xs text-grey-600">{rate.label}</span>
@@ -386,7 +371,7 @@ function SeasonRow({ hotelId, rate, onDone }: {
         </p>
       </div>
 
-      <span className="tabular text-base text-ink-900">
+      <span className="tabular text-sm font-medium text-ink-900">
         {moneyPrecise(rate.price)}
       </span>
 

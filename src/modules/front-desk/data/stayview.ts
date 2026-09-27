@@ -26,7 +26,9 @@ import { listOpenFolios } from "@/modules/finance";
    departed guest read "Tentative", which at a front desk means a booking
    nobody has confirmed. Found 14 September, on the rebuilt panel. */
 export type BarTone =
-  | "in-house" | "confirmed" | "departed" | "due-out" | "no-show" | "void";
+  | "in-house" | "confirmed" | "departed" | "due-out" | "no-show" | "void"
+  /* Held for the hotel to confirm (Phase 1): "Waiting for the hotel". */
+  | "waiting";
 
 export interface ChartBar {
   stay: Stay;
@@ -115,6 +117,7 @@ function toneFor(stay: Stay, businessDate: string): BarTone {
   }
   if (stay.status === "due-out") return "due-out";
   if (stay.status === "checked-out") return "departed";
+  if (stay.status === "tentative") return "waiting";
   /* due-in: expected, possibly today, but nobody has arrived yet. */
   return "confirmed";
 }

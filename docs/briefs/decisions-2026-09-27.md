@@ -40,3 +40,58 @@
 | D27-36 | Room discounts (PL-10) | **The restaurant's rule**: 10% by hand with a reason, more only by a named promotion |
 | D27-37 | Sales person on a booking (PL-11) | **Picked from a list the owner keeps** |
 | D27-38 | The Firestore → PMS copy (PL-12) | **Reads only what changed**, staying on the free plan |
+| D27-39 | Redesign order (the redesign session) | **Shared parts, then Dashboard / Rooms / Calendar, front desk, bookings, housekeeping, finance, restaurant, then the rest; the guest page and the Form III screens last.** New booking waits for Phase 1 |
+| D27-40 | Text sizes in the redesign | **15 → 14 and 13 → 12 everywhere, onto the D22-51 type ladder; typing boxes stay 16px on a phone.** Replaces the "body text 15px or more" test |
+| D27-41 | Buttons | **Capsule buttons everywhere, colours unchanged** |
+| D27-42 | The business date line | **"Business date · Tuesday, 25 August 2026" above the title on Dashboard, Rooms and Calendar only** |
+| D27-43 | Dashboard, "Today's run" (redesign group 1) | **Built, and its counts come only from what the system holds**: check-ins of today's arrivals, check-outs of today's departures, clean empty rooms of all empty rooms |
+| D27-44 | Dashboard, the room strip | **Built**, over the six counts |
+| D27-45 | Section notes | **Behind an (i), same words** |
+| D27-46 | Rooms, the group summary line | **Dropped** |
+| D27-47 | Week arrows | **On the Calendar only**, not on Rooms. (Group 1 held for the owner's approval after their audit, 27 Sep) |
+| D27-48 | Stay colours on the lists (redesign group 2) | **In house blue everywhere; Due in orange, like Arriving.** Phase 1 asks the owner the colour of "Waiting for the hotel" |
+| D27-49 | Words on Walk-ins and Arrivals (redesign group 2) | **"Stay view" becomes "the Calendar"** |
+| D27-50 | Arrivals and In house tabs | **A segmented switch in the title row** |
+| D27-51 | Redesign group 2, and what next | **Group 2 approved as it stands; housekeeping next while the bookings screens wait for Phase 1** |
+| D27-52 | Printed documents (redesign, finance group) | **Every bill and document looks like the CRS voucher** (`D:\fidato crs\src\features\reservations\voucher.ts`, renderVoucherHtml): logo masthead, orange-barred title and number, fact strip, two columns, 2px ink rule, totals, orange-edged panels, footer, in its sans. Content unchanged. Finance now (tax invoice and credit note, VAT bill and its credit note, BillPrint); the restaurant bill and reports with their groups. Supersedes DESIGN.md's Georgia print font |
+| D27-53 | The logo on bills | **One logo for the whole group, chosen in Settings, printed on every bill. A setting, not code (D21-27):** this Fidato copy fills it with the Fidato SVG by upload; a buyer's copy starts empty and prints the hotel's name. The logo never goes in a migration |
+| D27-54 | The Tappable Rule (DESIGN.md) | **Keep every screen simple. Anything tappable looks tappable (buttons, orange links, an arrow on a tile or row that opens something); anything not tappable never looks like a button (status pills and counts stay flat)** |
+| D27-55 | Market segments on New booking (Phase 1) | **The walk-in's five, as they are** |
+| D27-56 | The sales people list | **Starts empty; the owner adds the names** |
+| D27-57 | Room promotions | **Start empty** |
+| D27-58 | Guest titles | **Mr, Ms, Mrs, Dr, or none** (a database CHECK) |
+| D27-59 | Who may tick complimentary, and keep the two lists | **Owner, admin and GM; the server refuses anyone else** |
+| D27-60 | Confirming a waiting booking | **A "Confirm the booking" button, for anyone who may make a booking** |
+| D27-61 | The booking summary's tax and due | **What the bill will carry: the first night's price for every night, as the night audit posts it** (the old sum of each night's calendar price, RES-4, fixed) |
+| D27-62 | Typed rates and the discount | **Typed rates stay as today; the 10% rule binds the Discount box** |
+| D27-63 | "Waiting for the hotel" on the booking lists | **Grey (neutral)** |
+| D27-64 | Cancelling a waiting booking (RES-5) | **Cancel it directly**: the room frees at once and nothing is sent, for the same people who may cancel a confirmed booking |
+| D27-65 | The bills' masthead | **The property's name, and under it "by <group name>"** (e.g. "5 Elements Akkalkot / by Fidato Hotels"), chosen over a logo above the name. The group's name comes from the same group setting as the logo (D27-53, D21-27); nothing in the code names Fidato |
+| D27-66 | Reviewing the rest of the redesign | **One review at the end, not group by group** ("do the updates, will give all things in one shot"). The redesign session runs helpers, three at a time in their own copies, on screens only; the owner approves everything together |
+| D27-67 | Who may change the group's name and logo (the logo session) | **The owner, an administrator or the GM, at any hotel.** Against the recommendation (group administrators only); the risk was put to the owner: any hotel's GM changes every hotel's bills. Every change is audited |
+| D27-68 | The logo's size limit | **200 KB**, PNG or SVG (an SVG with script refused); the name at most 80 characters, blank clears it |
+| D27-69 | Cancelling a waiting booking: a charge? | **No charge; it was never confirmed** |
+| D27-70 | How much a cancel takes | **Every waiting room of the booking**, as Confirm does |
+| D27-71 | A reason | **A short reason is required and kept on the booking**, with the clerk's name |
+| D27-72 | Form III: the guest's photo (the Form III session) | **Taken on the portal, not kept in the PMS** (the lawyer's view on keeping a copy is still asked, with D21-11) |
+| D27-73 | Form III: signatures | **The guest signs a printed card on arrival and on departure** (Rule 17(7)(b): a thumb impression counts) |
+| D27-74 | Form III: next destination | **Asked at check-out** |
+| D27-75 | Form III: companions | **A warning on the register, and one portal number per person** (a companion's own details not built) |
+| D27-76 | Form III: walk-ins | **Asked what check-in asks** |
+| D27-77 | Form III: which fields | **Every portal field is recorded; the law's fields are required at check-in** (visa or OCI number and type, phone in India, arrived from, purpose, previous place of stay); the rest can be completed later |
+| D27-78 | Form III: names on screen | **"Form III" and "Form III register"** |
+| D27-79 | Form III: departure | **A departure also needs a portal number** (the same one if the portal gives no new one) |
+| D27-80 | Form III: the owner's reference screen | **Add the portal's other three numbers** (mobile in India, phone and mobile outside India); **no** guardian name, age, or next destination split into place, state and city; one full name |
+| D27-81 | The redesign, the owner's one review (D27-66) | **Approved as a whole: "Approve, take all 21"** |
+| D27-82 | The helpers' 21 recommendations, all taken | (1) long section notes behind an (i), same words; the guest page's instructions and "why a button is missing" notes stay on the page; (2) Properties' "Stay view" becomes "Calendar"; (3) Rate calendar's Inventory/Rates tabs and Approvals' tabs become a segmented switch in the title row; (4) cancelled and no-show red everywhere; (5) one group uses the lists' status words; (6) the Approvals pill says "Approved" / "Refused"; (7) dates in the short form (one group, Cashiering); (8) a long dash on one purchase becomes "-"; (9) All bookings keeps one search box; (10) fix Groups' room type, which never shows; (11) Terminal: "Send to the kitchen" the one orange button, "Charge to a room" outlined; (12) every browser tab shows its screen's name (Charges to rooms' second heading, Invoices' "Issued", the invoice and VAT bill); (13) Rate plans' "0.00" placeholder becomes "-"; (14) a group's money owed turns orange and a purchase's unpriced-line note is a yellow tile while there is something to do; (15) drop Rate plans' current-season wash, Rate performance gets the grey weekend wash; (16) Tables tiles get arrows; (17) Spa "Charge to room" stays the dialog's primary; (18) kitchen wait times in the readable shades; (19) keep the 80mm restaurant bill, New booking's larger boxes, report names in capitals on print, diaries as rows; (20) the laundry docket gets a Print button and a document header (logo and group from the group setting); (21) store categories get a count pill |
+| D27-83 | Approvals: the "clarify" state (redesign) | **"Asked for more"**, yellow like Waiting, not red |
+| D27-84 | Laundry price list: unpriced items | **"N items have no price yet" stays on the page**, a yellow tile while anything is unpriced (like D27-82 item 14) |
+| D27-85 | The store's "Add an item" note | **Stays on the page** |
+| D27-86 | The laundry docket's title | **"Docket"** |
+| D27-87 | The menu's "Coming soon" section (28 Sep) | **Removed; each not-built service goes in its own category**: a new "Distribution" (Channel manager, Booking engine, Fidato CRS, Contracts), a new "Sales and marketing" (Leads and WhatsApp, Marketing, Loyalty); Guest services under front office, Online payments under Finance, Room systems under System. Each marked "Not built yet", seen by the owner, admins and GMs only. Replaces the 16 Sep Coming soon section |
+| D27-88 | The release (28 Sep) | **Hold it; fix the security audit's four confirmed problems first** (a GM taking over another hotel's staff by password reset, a restaurant bill settled twice, uploads on the live server, guest data left at sign-out), on top of 40c9510 without the redesign; then release 40c9510 + the fixes |
+| D27-89 | More fixes before the release (28 Sep, after the compliance and deep audits) | **Add all six to the release fixes, on top of the four**: deploys failing after a bill settled to a banquet function (038's unguarded constraint); other devices keeping yesterday's business date after the night audit; the night audit charging a split-bill stay twice; a double tap posting a charge or payment twice; a company invoice printing the guest's address; a tax invoice issued with no hotel GSTIN |
+| D27-90 | A diagram of the whole system (28 Sep; the owner offered the Archify skill) | **The master draws it as a private page; nothing is installed.** Archify's install runs third-party code (npx, a Node CLI, an update check), which the master may not run |
+| D27-91 | A screen to see what's going on on the server | **A System health screen inside the PMS**, owner and admins only, from our own data; nothing leaves the server |
+| D27-92 | Telemetry | **On our own server**: each request's time and result, errors and slow queries, kept 180 days (CERT-In), shown on System health, with an outside uptime check that alerts the owner. No guest data leaves India |
+| D27-93 | The release | **One release with everything** once the ten fixes are in: the redesign, New booking, Form III, the group logo, the menu, operations basics and the fixes, after one full check. Replaces "40c9510 + fixes" (D27-88) and the separate ops release (D27-24) |

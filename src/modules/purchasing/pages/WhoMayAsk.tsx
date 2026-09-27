@@ -75,53 +75,52 @@ export default function WhoMayAskPage() {
         .localeCompare(ROLE_LABELS[b.role as Role] ?? b.role));
 
     return (
-      <div className="space-y-4">
+      <div className="space-y-3">
         {!mayChange && (
           <Card>
-            <CardBody className="text-sm text-ink-700">
+            <CardBody className="text-sm text-grey-600">
               Changing this is for the owner or an administrator. What it says
               today is below.
             </CardBody>
           </Card>
         )}
 
+        {/* List rows: at least 56px, a hairline between (the Rhythm Rule). */}
         <Card>
-          <CardBody className="p-0">
-            <ul className="divide-y divide-grey-200">
-              {roles.map((r) => (
-                <li
-                  key={r.role}
-                  className="flex items-center justify-between gap-4 px-4 py-3"
-                >
-                  <div>
-                    <p className="text-sm font-medium text-ink-900">
-                      {ROLE_LABELS[r.role as Role] ?? r.role}
-                    </p>
-                    <p className="text-sm text-ink-600">
-                      {r.mayRaise ? "Can raise a request" : "Cannot raise a request"}
-                    </p>
-                  </div>
-                  {mayChange ? (
-                    /* SECONDARY, both ways. `primary` is solid brand orange
-                       and there is ONE per screen (clarity step 2); a switch
-                       per role drew nine of them down one list. The label
-                       says which way it goes and the line above says where
-                       it stands, so nothing is lost by being quiet. */
-                    <Button
-                      variant="secondary"
-                      onClick={() => void flip(r.role, !r.mayRaise)}
-                    >
-                      {r.mayRaise ? "Switch off" : "Switch on"}
-                    </Button>
-                  ) : (
-                    <span className="text-sm text-ink-600">
-                      {r.mayRaise ? "Yes" : "-"}
-                    </span>
-                  )}
-                </li>
-              ))}
-            </ul>
-          </CardBody>
+          <ul className="divide-y divide-grey-100">
+            {roles.map((r) => (
+              <li
+                key={r.role}
+                className="flex items-center justify-between gap-4 px-4 py-3 min-h-14"
+              >
+                <div className="min-w-0">
+                  <p className="text-sm font-medium text-ink-900">
+                    {ROLE_LABELS[r.role as Role] ?? r.role}
+                  </p>
+                  <p className="text-xs text-grey-500 mt-0.5">
+                    {r.mayRaise ? "Can raise a request" : "Cannot raise a request"}
+                  </p>
+                </div>
+                {mayChange ? (
+                  /* SECONDARY, both ways. `primary` is solid brand orange
+                     and there is ONE per screen (clarity step 2); a switch
+                     per role drew nine of them down one list. The label
+                     says which way it goes and the line above says where
+                     it stands, so nothing is lost by being quiet. */
+                  <Button
+                    variant="secondary"
+                    onClick={() => void flip(r.role, !r.mayRaise)}
+                  >
+                    {r.mayRaise ? "Switch off" : "Switch on"}
+                  </Button>
+                ) : (
+                  <span className={r.mayRaise ? "text-sm text-ink-900" : "text-sm text-grey-500"}>
+                    {r.mayRaise ? "Yes" : "-"}
+                  </span>
+                )}
+              </li>
+            ))}
+          </ul>
         </Card>
       </div>
     );
@@ -140,7 +139,7 @@ export default function WhoMayAskPage() {
           { label: "Purchasing", to: `/h/${code}/purchasing` },
           { label: "Who may ask to buy" },
         ]}
-        badge={<ShieldCheck className="size-5 text-ink-500" aria-hidden />}
+        badge={<ShieldCheck className="size-5 text-grey-500" aria-hidden />}
         actions={
           <Button asChild variant="secondary">
             <Link to={`/h/${code}/purchasing`}>Back to purchasing</Link>

@@ -3,11 +3,12 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useParams, Link } from "react-router";
 import { Users, Wallet, ArrowRight, Check, Flag } from "lucide-react";
 import { cn } from "@/lib/cn";
-import { money } from "@/lib/format";
+import { money, dateShort } from "@/lib/format";
 import { useUi } from "@/lib/ui";
+import { BUSINESS_DATE } from "@/data/repositories";
 import {
   Page, PageHeader, Card, CardBody, CardHeader, Button, Skeleton,
-  EmptyState, StatusPill, toast,
+  EmptyState, StatusPill, FigureRow, FigureTile, toast, type Tone,
 } from "@/components/ui";
 import {
   getGroup, openMasterFolio, routeRoomToGroup, setGroupLead, type GroupRoom,
@@ -40,13 +41,33 @@ function useHotel(): string {
   return params["code"] ?? fallback;
 }
 
-const STATUS_TONE: Record<string, "neutral" | "success" | "warning"> = {
-  confirmed: "neutral",
-  checked_in: "success",
+/* The lists' words and colours for a room (StayTable's; the owner,
+   27 September): in house blue, due in (a confirmed booking not yet
+   arrived) orange, cancelled and no show red. */
+const STATUS_TONE: Record<string, Tone> = {
+  confirmed: "accent",
+  checked_in: "info",
+  due_out: "warning",
   checked_out: "neutral",
-  cancelled: "warning",
-  no_show: "warning",
+  cancelled: "danger",
+  no_show: "danger",
+  tentative: "neutral",
 };
+
+const STATUS_WORD: Record<string, string> = {
+  confirmed: "Due in",
+  checked_in: "In house",
+  due_out: "Due out",
+  checked_out: "Checked out",
+  cancelled: "Cancelled",
+  no_show: "No show",
+  tentative: "Waiting for the hotel",
+};
+
+/** Due out is in house and leaving on the business date, as the lists
+    are told it (the server's toStay). */
+const stateOf = (r: GroupRoom) =>
+  r.status === "checked_in" && r.checkOut === BUSINESS_DATE ? "due_out" : r.status;
 
 export default function GroupPanelPage() {
   const hotelId = useHotel();
@@ -134,56 +155,44 @@ export default function GroupPanelPage() {
       />
 
       {/* ── The two balances ─────────────────────────────────────── */}
-      <div className="grid gap-4 sm:grid-cols-2">
-        <Card className={cn(g.master && "border-l-3 border-l-brand-orange")}>
-          <CardBody>
-            <p className="flex items-center gap-2 text-sm text-grey-500">
-              <Wallet className="size-4" /> The host
-            </p>
-            {g.master ? (
-              <>
-                <p className="mt-1 text-2xl font-semibold tabular">
-                  {money(g.master.balance)}
-                </p>
-                <p className="mt-0.5 text-sm text-grey-500">
-                  {routedCount} of {g.rooms.length}{" "}
-                  {routedCount === 1 ? "room routed here" : "rooms routed here"}
-                </p>
-              </>
-            ) : (
-              <>
-                {/* A dash, not a zero. No master folio is not the same as a
-                    host who owes nothing. */}
-                <p className="mt-1 text-2xl font-semibold text-grey-300">-</p>
-                <p className="mt-0.5 text-sm text-grey-500">
-                  No host account. Every room settles its own.
-                </p>
-                <Button
-                  variant="secondary" className="mt-3 h-11"
-                  disabled={busy === "master"}
-                  onClick={() => void openMaster()}
-                >
-                  Open a host account
-                </Button>
-              </>
-            )}
-          </CardBody>
-        </Card>
-
-        <Card>
-          <CardBody>
-            <p className="flex items-center gap-2 text-sm text-grey-500">
-              <Users className="size-4" /> The guests
-            </p>
-            <p className="mt-1 text-2xl font-semibold tabular">
-              {money(g.guestBalance)}
-            </p>
-            <p className="mt-0.5 text-sm text-grey-500">
-              Across {g.rooms.length} {g.rooms.length === 1 ? "bill" : "bills"}
-            </p>
-          </CardBody>
-        </Card>
-      </div>
+      {/* The Figure Rule: label with its chip, the figure, its note,
+          level across the row. Each is warm while that side owes, as
+          Folios' Outstanding is (the owner, 27 September). */}
+      <FigureRow className="sm:grid-cols-2">
+        <FigureTile
+          icon={<Wallet />}
+          tone={g.master && g.master.balance > 0 ? "orange" : "neutral"}
+          label="The host"
+          /* A dash, not a zero. No master folio is not the same as a
+             host who owes nothing. */
+          value={g.master ? money(g.master.balance) : "-"}
+          missing={!g.master}
+          note={g.master ? (
+            <>
+              {routedCount} of {g.rooms.length}{" "}
+              {routedCount === 1 ? "room routed here" : "rooms routed here"}
+            </>
+          ) : (
+            <>
+              <span className="block">No host account. Every room settles its own.</span>
+              <Button
+                variant="secondary" className="mt-2"
+                disabled={busy === "master"}
+                onClick={() => void openMaster()}
+              >
+                Open a host account
+              </Button>
+            </>
+          )}
+        />
+        <FigureTile
+          icon={<Users />}
+          tone={g.guestBalance > 0 ? "orange" : "neutral"}
+          label="The guests"
+          value={money(g.guestBalance)}
+          note={`Across ${g.rooms.length} ${g.rooms.length === 1 ? "bill" : "bills"}`}
+        />
+      </FigureRow>
 
       {/* Said once, plainly, because a combined figure is what somebody
           will otherwise work out for themselves and then quote. */}
@@ -194,32 +203,36 @@ export default function GroupPanelPage() {
       </p>
 
       {/* ── The rooms ────────────────────────────────────────────── */}
-      <Card className="mt-6">
+      <Card className="mt-5">
         <CardHeader
           title="Rooms"
           description="Tick a room to put its accommodation on the host's account."
         />
         <CardBody className="p-0">
-          <div className="overflow-x-auto">
+          {/* The table's look (DESIGN.md, Tables): a 40px grey-50 head in
+              12px capitals, hairlines between rows. On a phone it scrolls
+              inside the card, never the page. */}
+          <div className="overflow-x-auto scrollbar-quiet">
             <table className="w-full text-base border-collapse">
-              <thead>
-                <tr className="border-b border-grey-200">
-                  <th className="px-4 py-2 text-left font-medium">Guest</th>
-                  <th className="px-4 py-2 text-left font-medium">Room</th>
-                  <th className="px-4 py-2 text-left font-medium">Dates</th>
-                  <th className="px-4 py-2 text-right font-medium">Rate</th>
-                  <th className="px-4 py-2 text-right font-medium">Own bill</th>
-                  <th className="px-4 py-2 text-center font-medium">Host pays</th>
-                  <th className="px-4 py-2 text-center font-medium">Lead guest</th>
+              <thead className="bg-grey-50 border-b border-grey-200">
+                <tr className="[&>th]:px-4 [&>th]:h-10 [&>th]:whitespace-nowrap [&>th]:text-2xs [&>th]:font-semibold [&>th]:uppercase [&>th]:tracking-wide [&>th]:text-grey-500">
+                  <th className="text-left">Guest</th>
+                  <th className="text-left">Room</th>
+                  <th className="text-left">Dates</th>
+                  <th className="text-right">Rate</th>
+                  <th className="text-right">Own bill</th>
+                  <th className="text-center">Host pays</th>
+                  <th className="text-center">Lead guest</th>
                 </tr>
               </thead>
               <tbody>
                 {g.rooms.map((r) => (
-                  <tr key={r.reservationId} className="border-b border-grey-200">
+                  <tr key={r.reservationId} className="border-b border-grey-100 last:border-b-0 [&>td]:align-middle">
                     <td className="px-4 py-3">
+                      {/* It opens the stay: a link, so orange (the Tappable Rule). */}
                       <Link
                         to={`/h/${hotelId}/stay?res=${r.reservationId}`}
-                        className="font-medium hover:underline"
+                        className="font-medium text-brand-orange-700 hover:underline underline-offset-4"
                       >
                         {r.guest}
                       </Link>
@@ -234,20 +247,20 @@ export default function GroupPanelPage() {
                       {r.room ? (
                         <span className="tabular">{r.room}</span>
                       ) : (
-                        <span className="text-grey-300">-</span>
+                        <span className="text-grey-500">-</span>
                       )}
                       <span className="block text-xs text-grey-500">
                         {r.roomType}
                       </span>
                     </td>
                     <td className="px-4 py-3">
-                      <span className="tabular text-sm">
-                        {r.checkIn} → {r.checkOut}
+                      <span className="tabular text-sm whitespace-nowrap">
+                        {dateShort(r.checkIn)} → {dateShort(r.checkOut)}
                       </span>
-                      <span className="block text-xs text-grey-500">
+                      <span className="block text-xs text-grey-500 whitespace-nowrap">
                         {r.nights} {r.nights === 1 ? "night" : "nights"} ·{" "}
-                        <StatusPill tone={STATUS_TONE[r.status] ?? "neutral"}>
-                          {r.status.replace("_", " ")}
+                        <StatusPill tone={STATUS_TONE[stateOf(r)] ?? "neutral"}>
+                          {STATUS_WORD[stateOf(r)] ?? r.status.replace("_", " ")}
                         </StatusPill>
                       </span>
                     </td>
@@ -265,8 +278,8 @@ export default function GroupPanelPage() {
                         aria-pressed={r.routed}
                         aria-label={`Host pays for ${r.guest}`}
                         className={cn(
-                          "size-11 rounded-lg border grid place-items-center",
-                          "cursor-pointer transition-colors duration-150",
+                          "press size-11 rounded-lg border inline-grid place-items-center align-middle",
+                          "cursor-pointer",
                           "disabled:opacity-50 disabled:cursor-not-allowed",
                           r.routed
                             ? "bg-ink-900 border-ink-900 text-white"
@@ -286,8 +299,8 @@ export default function GroupPanelPage() {
                         aria-pressed={r.reservationId === g.leadId}
                         aria-label={`${r.guest} leads the group`}
                         className={cn(
-                          "size-11 rounded-lg border grid place-items-center",
-                          "cursor-pointer transition-colors duration-150",
+                          "press size-11 rounded-lg border inline-grid place-items-center align-middle",
+                          "cursor-pointer",
                           "disabled:cursor-not-allowed",
                           r.reservationId === g.leadId
                             ? "bg-ink-900 border-ink-900 text-white"
@@ -307,42 +320,44 @@ export default function GroupPanelPage() {
 
       {/* ── The host's account ───────────────────────────────────── */}
       {g.master && (
-        <Card className="mt-6">
+        <Card className="mt-5">
           <CardHeader
             title="The host's account"
             description="Every line says which room it is for."
           />
-          <CardBody>
-            {g.master.lines.length === 0 ? (
+          {g.master.lines.length === 0 ? (
+            <CardBody>
               <p className="text-grey-500">
                 Nothing has been charged to the host yet. Route a room above,
                 and tonight&rsquo;s audit will post it here.
               </p>
-            ) : (
-              <ul className="divide-y divide-grey-200">
-                {g.master.lines.map((l, i) => (
-                  <li key={i} className="flex items-baseline gap-3 py-2.5">
-                    <span className="w-24 shrink-0 tabular text-sm text-grey-500">
-                      {l.date}
-                    </span>
-                    <span className="flex-1 min-w-0">
-                      {l.description}
-                      {l.room && (
-                        <span className="ml-2 text-sm text-grey-500">
-                          Room {l.room}
-                        </span>
-                      )}
-                    </span>
-                    <span className="tabular font-medium">{money(l.amount)}</span>
-                  </li>
-                ))}
-              </ul>
-            )}
-          </CardBody>
+            </CardBody>
+          ) : (
+            /* List rows (the Rhythm Rule): 12px, at least 56px, a hairline
+               between, every row's words at the same x. */
+            <ul className="divide-y divide-grey-100 px-4">
+              {g.master.lines.map((l, i) => (
+                <li key={i} className="flex items-center gap-3 py-3 min-h-14">
+                  <span className="w-24 shrink-0 tabular text-sm text-grey-500">
+                    {dateShort(l.date)}
+                  </span>
+                  <span className="flex-1 min-w-0">
+                    {l.description}
+                    {l.room && (
+                      <span className="ml-2 text-sm text-grey-500">
+                        Room {l.room}
+                      </span>
+                    )}
+                  </span>
+                  <span className="tabular font-medium">{money(l.amount)}</span>
+                </li>
+              ))}
+            </ul>
+          )}
         </Card>
       )}
 
-      <p className="mt-4 text-sm text-grey-600">
+      <p className="mt-5 text-sm text-grey-600">
         Changing who pays affects nights <b>not yet charged</b>. The audit
         posts one night at a time, so anything already on a folio stays where
         it was posted - moving it is a reversal and a re-post, with a reason

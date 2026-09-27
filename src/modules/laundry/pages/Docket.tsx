@@ -1,13 +1,17 @@
 import { useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useParams } from "react-router";
-import { Ban, IndianRupee, PackageCheck } from "lucide-react";
+import { Ban, IndianRupee, PackageCheck, Printer } from "lucide-react";
 import { money, dateTime, dateShort } from "@/lib/format";
 import { ApiError } from "@/lib/api";
+import { cn } from "@/lib/cn";
+import { useSession } from "@/lib/session";
 import {
   Page, PageHeader, Card, CardBody, Button, Skeleton, ErrorState,
-  Dialog, DialogContent, Input, StatusPill, toast,
+  Dialog, DialogContent, Input, StatusPill, toast, InfoButton,
+  DocMasthead, DocFacts, DOC_TH, DOC_TD,
 } from "@/components/ui";
+import { useGroupSettings } from "@/modules/admin";
 import {
   getDocket, returnDocket, cancelDocket, chargeDocket,
   SERVICE_WORDS, type DocketLine,
@@ -69,6 +73,19 @@ export default function LaundryDocketPage() {
   const d = q.data;
   const lines = d?.lines ?? [];
 
+  /* The masthead (D27-53, the owner's 28 September order): the group's
+     logo, the hotel's name, "by <group>". The hotel's name is the one the
+     session already holds for this address's code - no new read - and the
+     code itself where it has none, because the code is still true. */
+  const group = useGroupSettings(code);
+  const hotelName = useSession((s) => s.hotels.find((h) => h.code === code)?.name) ?? code;
+
+  const state = d && (
+    <StatusPill tone={d.status === "open" ? "info" : d.status === "returned" ? "success" : "danger"}>
+      {d.status === "open" ? "Out" : d.status === "returned" ? "Back" : "Cancelled"}
+    </StatusPill>
+  );
+
   const refresh = () => {
     void qc.invalidateQueries({ queryKey: ["laundry", "docket", code, id] });
     void qc.invalidateQueries({ queryKey: ["laundry", "dockets", code] });
@@ -99,98 +116,125 @@ export default function LaundryDocketPage() {
     if (d === undefined) {
       if (q.isPaused) {
         return (
-          <ErrorState
-            title="No connection"
-            description="This device is offline, so this docket cannot load. It loads by itself as soon as the connection is back."
-          />
+          <Card>
+            <ErrorState
+              title="No connection"
+              description="This device is offline, so this docket cannot load. It loads by itself as soon as the connection is back."
+            />
+          </Card>
         );
       }
       if (q.isError) {
         return (
-          <ErrorState
-            title="This docket did not load"
-            error={q.error}
-            description={unreachable(q.error)
-              ? "Could not reach the server, and there is nothing from earlier to show in its place. Check the connection, then try again."
-              : undefined}
-            onRetry={() => void q.refetch()}
-          />
+          <Card>
+            <ErrorState
+              title="This docket did not load"
+              error={q.error}
+              description={unreachable(q.error)
+                ? "Could not reach the server, and there is nothing from earlier to show in its place. Check the connection, then try again."
+                : undefined}
+              onRetry={() => void q.refetch()}
+            />
+          </Card>
         );
       }
-      return <Skeleton className="h-64" />;
+      return <Skeleton className="h-64 rounded-lg" />;
     }
 
+    const dash = (v: string) => (v === "-" ? <span className="text-grey-500">-</span> : v);
+
     return (
-      <div className="space-y-4">
-        <Card>
-          <CardBody className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-            {/* D18-5 FIRST, because it is the first fact about a docket
-                and it decides everything else on this screen. */}
-            <Fact label="Whose it is" value={whoseWords(d)} />
-            <Fact
-              label="Stay"
-              value={d.belongsTo === "hotel" ? "None - the hotel's own" : d.stayReference ?? "-"}
-            />
-            <Fact label="Collected" value={d.collectedAt ? dateTime(d.collectedAt) : dateShort(d.businessDate)} />
-            <Fact label="Came back" value={d.returnedAt ? dateTime(d.returnedAt) : "-"} />
-            <Fact label="Pieces" value={String(d.pieces)} />
-            <Fact label="Still out" value={String(d.stillOut)} />
-            <Fact label="Total" value={rupees(d.total)} />
-            <Fact label="On a bill" value={d.charged ? "Yes" : "No"} />
-          </CardBody>
-        </Card>
+      <div className="space-y-3">
+        {/* THE DOCKET, in the document's look (D27-52, the CRS voucher's
+            parts): the masthead, its facts in the washed strip, the lines
+            over a 2px ink rule on hairlines. It is what prints: on paper
+            the sheet loses its frame and everything around it goes. */}
+        <section className="bg-white text-ink-700 border border-grey-200 rounded-lg px-4 py-3.5 sm:p-6
+                            print:border-0 print:rounded-none print:p-0">
+          <DocMasthead
+            logo={group.logo}
+            name={hotelName}
+            group={group.name}
+            title="Docket"
+            number={d.number}
+          >
+            {/* The state, on paper only: the screen shows it beside the
+                title, which does not print. */}
+            <div className="hidden print:block mt-1">{state}</div>
+          </DocMasthead>
 
-        {d.notes && (
-          <Card>
-            <CardBody className="text-sm text-ink-700">{d.notes}</CardBody>
-          </Card>
-        )}
+          {/* D18-5 FIRST, because it is the first fact about a docket
+              and it decides everything else on this screen. */}
+          <DocFacts
+            items={[
+              { label: "Whose it is", value: whoseWords(d) },
+              {
+                label: "Stay",
+                value: d.belongsTo === "hotel" ? "None - the hotel's own" : dash(d.stayReference ?? "-"),
+              },
+              { label: "Collected", value: d.collectedAt ? dateTime(d.collectedAt) : dateShort(d.businessDate) },
+              { label: "Came back", value: dash(d.returnedAt ? dateTime(d.returnedAt) : "-") },
+            ]}
+          />
+          <DocFacts
+            className="mt-2"
+            items={[
+              { label: "Pieces", value: String(d.pieces) },
+              { label: "Still out", value: String(d.stillOut) },
+              { label: "Total", value: dash(rupees(d.total)), strong: true },
+              { label: "On a bill", value: d.charged ? "Yes" : "No" },
+            ]}
+          />
 
-        <Card>
-          <CardBody className="p-0">
-            <table className="w-full text-sm">
-              <thead className="border-b border-grey-200 text-ink-600">
+          {d.notes && <p className="mt-4 text-sm text-ink-900">{d.notes}</p>}
+
+          {/* Five columns scroll inside the sheet on a phone rather than
+              squeeze a figure (the Breathing Room Rule). */}
+          <div className="mt-5 overflow-x-auto scrollbar-quiet">
+            <table className="w-full min-w-[480px]">
+              <thead>
                 <tr>
-                  <th className="px-3 py-2 text-left font-medium">What it is</th>
-                  <th className="px-3 py-2 text-right font-medium tabular-nums">Went</th>
-                  <th className="px-3 py-2 text-right font-medium tabular-nums">Back</th>
-                  <th className="px-3 py-2 text-right font-medium tabular-nums">Each</th>
-                  <th className="px-3 py-2 text-right font-medium tabular-nums">Amount</th>
+                  <th className={cn(DOC_TH, "text-left pr-2")}>What it is</th>
+                  <th className={cn(DOC_TH, "text-right px-2 w-16")}>Went</th>
+                  <th className={cn(DOC_TH, "text-right px-2 w-16")}>Back</th>
+                  <th className={cn(DOC_TH, "text-right px-2 w-24")}>Each</th>
+                  <th className={cn(DOC_TH, "text-right pl-2 w-28")}>Amount</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-grey-200">
+              <tbody>
                 {lines.map((l) => (
                   <tr key={l.id}>
-                    <td className="px-3 py-2">
-                      <span className="font-medium text-ink-900">{l.description}</span>
-                      <span className="text-ink-600"> · {SERVICE_WORDS[l.service]}</span>
+                    <td className={cn(DOC_TD, "pr-2")}>
+                      <span className="font-semibold text-ink-900">{l.description}</span>
+                      <span className="text-grey-500"> · {SERVICE_WORDS[l.service]}</span>
                     </td>
-                    <td className="px-3 py-2 text-right tabular-nums">{l.quantity}</td>
-                    <td className="px-3 py-2 text-right tabular-nums">{l.returnedQuantity}</td>
+                    <td className={cn(DOC_TD, "px-2 text-right tabular")}>{l.quantity}</td>
+                    <td className={cn(DOC_TD, "px-2 text-right tabular")}>{l.returnedQuantity}</td>
                     {/* Unpriced at collection stays unpriced here. It is
                         not 0 and it is not left blank - a blank column
                         reads as "nothing to pay". */}
-                    <td className={`px-3 py-2 text-right tabular-nums${l.unitPrice === null ? " text-ink-600" : ""}`}>
+                    <td className={cn(DOC_TD, "px-2 text-right tabular", l.unitPrice === null && "text-grey-500")}>
                       {rupees(l.unitPrice)}
                     </td>
-                    <td className={`px-3 py-2 text-right tabular-nums${l.unitPrice === null ? " text-ink-600" : ""}`}>
+                    <td className={cn(DOC_TD, "pl-2 text-right tabular font-semibold", l.unitPrice === null && "font-normal text-grey-500")}>
                       {l.unitPrice === null ? "-" : money(l.unitPrice * l.quantity)}
                     </td>
                   </tr>
                 ))}
               </tbody>
             </table>
-          </CardBody>
-        </Card>
+          </div>
+        </section>
 
         {/* WHY THERE IS NO CHARGE BUTTON, said where somebody looks for
             one. A control that is simply absent is a question nobody can
-            answer; these are the four reasons it can be. */}
+            answer; these are the four reasons it can be. Screen only: the
+            paper has no buttons to explain. */}
         {d.belongsTo === "hotel" && (
-          <Card>
-            <CardBody className="text-sm text-ink-700">
+          <Card className="no-print">
+            <CardBody className="text-sm text-grey-600">
               <p className="font-medium text-ink-900">The hotel's own linen</p>
-              <p>
+              <p className="mt-0.5">
                 It is counted out and counted back and it is never charged to
                 anybody (D18-5). The table refuses a charge on it, so there is
                 no button here that would ask.
@@ -199,8 +243,8 @@ export default function LaundryDocketPage() {
           </Card>
         )}
         {d.belongsTo === "guest" && d.unpricedLines > 0 && d.status !== "cancelled" && (
-          <Card>
-            <CardBody className="text-sm text-ink-700">
+          <Card className="no-print">
+            <CardBody className="text-sm text-grey-600">
               {d.unpricedLines === 1
                 ? "One thing in this bag has no price yet. "
                 : `${d.unpricedLines} things in this bag have no price yet. `}
@@ -211,10 +255,10 @@ export default function LaundryDocketPage() {
           </Card>
         )}
         {d.charged && (
-          <Card>
-            <CardBody className="text-sm text-ink-700">
+          <Card className="no-print">
+            <CardBody className="text-sm text-grey-600">
               <p className="font-medium text-ink-900">Already on the bill</p>
-              <p>
+              <p className="mt-0.5">
                 It is its own line on the room's folio (D18-7). A charge is
                 reversed on the folio, never by cancelling the docket under it.
               </p>
@@ -224,30 +268,32 @@ export default function LaundryDocketPage() {
 
         {/* The server's refusal, in its own words. */}
         {refusal && (
-          <Card>
-            <CardBody role="alert" className="text-sm text-brand-red">{refusal}</CardBody>
+          <Card className="no-print">
+            <CardBody role="alert" className="text-sm text-brand-red-700">{refusal}</CardBody>
           </Card>
         )}
-
-        <p className="text-sm text-ink-600">
-          Not in this version: linen par levels per room type, an outside
-          laundry's bills, express surcharges, and a guest sending a bag from
-          their own page.
-        </p>
       </div>
     );
   })();
 
   return (
-    <Page>
+    <Page className="print:p-0 print:max-w-none">
+      {/* Screen furniture: none of the head reaches the paper, as the
+          tax invoice's toolbar does not. */}
       <PageHeader
+        className="no-print"
         title={d?.number ?? "Docket"}
         description={d ? whoseWords(d) : undefined}
         badge={d
           ? (
-            <StatusPill tone={d.status === "open" ? "info" : d.status === "returned" ? "success" : "danger"}>
-              {d.status === "open" ? "Out" : d.status === "returned" ? "Back" : "Cancelled"}
-            </StatusPill>
+            <>
+              {state}
+              {/* The note that stood under the docket, behind an (i) with
+                  the same words (D27-45, D27-82). */}
+              <InfoButton>
+                {"Not in this version: linen par levels per room type, an outside laundry's bills, express surcharges, and a guest sending a bag from their own page."}
+              </InfoButton>
+            </>
           )
           : undefined}
         breadcrumbs={[
@@ -255,7 +301,7 @@ export default function LaundryDocketPage() {
           { label: d?.number ?? "Docket" },
         ]}
         actions={d && (
-          <div className="flex flex-wrap items-center gap-2">
+          <>
             {mayReturn && (
               <Button
                 variant="primary"
@@ -275,12 +321,16 @@ export default function LaundryDocketPage() {
                 Charge to the room
               </Button>
             )}
+            <Button variant="secondary" onClick={() => window.print()}>
+              <Printer className="size-4" />
+              Print
+            </Button>
             {mayCancel && (
               <Button variant="danger" leadingIcon={<Ban />} onClick={() => setCancelling(true)}>
                 Cancel
               </Button>
             )}
-          </div>
+          </>
         )}
       />
 
@@ -295,13 +345,10 @@ export default function LaundryDocketPage() {
       )}
       {cancelling && d && (
         <Dialog open onOpenChange={(open) => { if (!open) setCancelling(false); }}>
-          <DialogContent title={`Cancel ${d.number}?`}>
-            <div className="space-y-4">
-              <p className="text-sm text-ink-700">
-                The docket stays on the record as cancelled - nothing is deleted.
-                It cannot be cancelled once it is on a bill.
-              </p>
-              <div className="flex justify-end gap-2">
+          <DialogContent
+            title={`Cancel ${d.number}?`}
+            footer={
+              <>
                 <Button variant="secondary" onClick={() => setCancelling(false)}>
                   Leave it
                 </Button>
@@ -317,21 +364,17 @@ export default function LaundryDocketPage() {
                 >
                   Cancel the docket
                 </Button>
-              </div>
-            </div>
+              </>
+            }
+          >
+            <p className="text-sm text-ink-700">
+              The docket stays on the record as cancelled - nothing is deleted.
+              It cannot be cancelled once it is on a bill.
+            </p>
           </DialogContent>
         </Dialog>
       )}
     </Page>
-  );
-}
-
-function Fact({ label, value }: { label: string; value: string }) {
-  return (
-    <div>
-      <p className="text-sm text-ink-600">{label}</p>
-      <p className="text-sm font-medium text-ink-900">{value}</p>
-    </div>
   );
 }
 
@@ -386,9 +429,20 @@ function ReturnDialog({
 
   return (
     <Dialog open onOpenChange={(open) => { if (!open) onClose(); }}>
-      <DialogContent title="Record what came back" size="lg">
+      <DialogContent
+        title="Record what came back"
+        size="lg"
+        footer={
+          <>
+            <Button variant="secondary" onClick={onClose}>Cancel</Button>
+            <Button variant="primary" loading={saving} onClick={() => void submit()}>
+              Record it
+            </Button>
+          </>
+        }
+      >
         <div className="space-y-4">
-          <p className="text-sm text-ink-600">
+          <p className="text-sm text-grey-600">
             How many of each have come back in total - not how many arrived
             this time. The docket closes itself when nothing is still out.
           </p>
@@ -397,7 +451,7 @@ function ReturnDialog({
             <div key={l.id} className="flex flex-wrap items-end justify-between gap-2">
               <div className="min-w-[160px] flex-1">
                 <p className="text-sm font-medium text-ink-900">{l.description}</p>
-                <p className="text-sm text-ink-600">
+                <p className="text-sm text-grey-500">
                   {SERVICE_WORDS[l.service]} · {l.quantity} went out
                 </p>
               </div>
@@ -414,14 +468,7 @@ function ReturnDialog({
             </div>
           ))}
 
-          {problem && <p role="alert" className="text-sm text-brand-red">{problem}</p>}
-
-          <div className="flex justify-end gap-2">
-            <Button variant="secondary" onClick={onClose}>Cancel</Button>
-            <Button variant="primary" loading={saving} onClick={() => void submit()}>
-              Record it
-            </Button>
-          </div>
+          {problem && <p role="alert" className="text-sm text-brand-red-700">{problem}</p>}
         </div>
       </DialogContent>
     </Dialog>

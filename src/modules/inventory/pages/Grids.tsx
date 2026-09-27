@@ -8,7 +8,7 @@ import { useUi } from "@/lib/ui";
 import {
   Page, PageHeader, Card, Button, Skeleton, EmptyState, toast,
   Dialog, DialogContent, DialogClose, Field, fieldProps, Input,
-  Tabs, TabsList, TabsTrigger, TabsContent,
+  Segmented,
 } from "@/components/ui";
 import { getInventory, getPriceGrid, setRate, setRestriction, type InventoryCell, type PriceCell, type Restriction } from "@/modules/inventory/data/rates";
 
@@ -65,6 +65,9 @@ export default function GridsPage() {
   const hotelId = useHotel();
   const qc = useQueryClient();
   const [from, setFrom] = useState<string | null>(null);
+  /* Which grid shows: a switch in the title row, the tabs' words (the
+     owner, 27 September, as Arrivals and In house). */
+  const [view, setView] = useState<"inventory" | "rates">("inventory");
 
   const inventory = useQuery({
     queryKey: ["inventory", hotelId, from],
@@ -121,58 +124,58 @@ export default function GridsPage() {
         title="Rate calendar"
         description="How many rooms are left, and what they cost."
         actions={
-          <div className="flex items-center gap-1">
+          <>
+          <div className="flex items-center gap-2">
             <Button
-              variant="secondary" className="h-11 w-11 p-0"
+              variant="secondary" size="icon"
               aria-label="Previous two weeks"
               onClick={() => setFrom(addDays(from, -DAYS))}
             >
               <ChevronLeft className="size-4" />
             </Button>
-            <span className="px-2 text-base tabular whitespace-nowrap">
+            <span className="text-sm font-medium text-ink-900 tabular whitespace-nowrap">
               {from} → {addDays(from, DAYS - 1)}
             </span>
             <Button
-              variant="secondary" className="h-11 w-11 p-0"
+              variant="secondary" size="icon"
               aria-label="Next two weeks"
               onClick={() => setFrom(addDays(from, DAYS))}
             >
               <ChevronRight className="size-4" />
             </Button>
           </div>
+          <Segmented<"inventory" | "rates">
+            value={view}
+            onChange={setView}
+            className="max-sm:flex max-sm:w-full max-sm:[&>button]:flex-1"
+            options={[
+              { value: "inventory", label: "Inventory" },
+              { value: "rates", label: "Rates" },
+            ]}
+          />
+          </>
         }
       />
 
-      <Tabs defaultValue="inventory">
-        <TabsList>
-          <TabsTrigger value="inventory">Inventory</TabsTrigger>
-          <TabsTrigger value="rates">Rates</TabsTrigger>
-        </TabsList>
-
-        <TabsContent value="inventory">
-          <InventoryGrid
-            hotelId={hotelId}
-            dates={dates}
-            cells={inventory.data.cells}
-            restrictions={inventory.data.restrictions}
-            onDone={refresh}
-          />
-        </TabsContent>
-
-        <TabsContent value="rates">
-          {prices.isLoading || !prices.data ? (
-            <Skeleton className="h-96" />
-          ) : (
-            <RateGrid
-              hotelId={hotelId}
-              dates={dates}
-              plans={prices.data.plans}
-              cells={prices.data.cells}
-              onDone={refresh}
-            />
-          )}
-        </TabsContent>
-      </Tabs>
+      {view === "inventory" ? (
+        <InventoryGrid
+          hotelId={hotelId}
+          dates={dates}
+          cells={inventory.data.cells}
+          restrictions={inventory.data.restrictions}
+          onDone={refresh}
+        />
+      ) : prices.isLoading || !prices.data ? (
+        <Skeleton className="h-96" />
+      ) : (
+        <RateGrid
+          hotelId={hotelId}
+          dates={dates}
+          plans={prices.data.plans}
+          cells={prices.data.cells}
+          onDone={refresh}
+        />
+      )}
     </Page>
   );
 }
@@ -185,12 +188,12 @@ function GridShell({ dates, children, corner }: {
   dates: string[]; corner: string; children: React.ReactNode;
 }) {
   return (
-    <Card className="mt-4 overflow-hidden">
-      <div className="overflow-x-auto">
+    <Card className="overflow-hidden">
+      <div className="overflow-x-auto scrollbar-quiet">
         <table className="w-full border-collapse text-base">
           <thead>
             <tr>
-              <th className="sticky left-0 z-10 bg-white border-b border-r border-grey-200 px-3 py-2 text-left font-medium min-w-44">
+              <th className="sticky left-0 z-10 bg-white border-b border-r border-grey-200 px-3 py-2 text-left text-2xs font-semibold uppercase tracking-wide text-grey-500 whitespace-nowrap min-w-36">
                 {corner}
               </th>
               {dates.map((d) => {
@@ -199,12 +202,12 @@ function GridShell({ dates, children, corner }: {
                   <th
                     key={d}
                     className={cn(
-                      "border-b border-grey-200 px-2 py-2 text-center font-medium min-w-16",
+                      "border-b border-grey-200 px-2 py-2 text-center font-medium min-w-18",
                       weekend && "bg-grey-50",
                     )}
                   >
                     <span className="block text-xs text-grey-500">{dow}</span>
-                    <span className="block tabular">{day}</span>
+                    <span className="block text-md font-semibold text-ink-900 tabular">{day}</span>
                   </th>
                 );
               })}
@@ -258,7 +261,7 @@ function InventoryGrid({ hotelId, dates, cells, restrictions, onDone }: {
         <tbody>
           {types.map((t) => (
             <tr key={t.id}>
-              <th className="sticky left-0 z-10 bg-white border-b border-r border-grey-200 px-3 py-2 text-left font-medium">
+              <th className="sticky left-0 z-10 bg-white border-b border-r border-grey-200 px-3 py-2 text-left text-sm font-medium text-ink-900">
                 {t.name}
               </th>
               {dates.map((d) => {
@@ -282,8 +285,8 @@ function InventoryGrid({ hotelId, dates, cells, restrictions, onDone }: {
                       className={cn(
                         "w-full min-h-14 px-1 py-1.5 cursor-pointer",
                         "transition-colors duration-150 hover:bg-grey-100",
-                        closed && "bg-red-50",
-                        !closed && none && "bg-yellow-50",
+                        closed && "bg-brand-red-50",
+                        !closed && none && "bg-brand-yellow-50",
                       )}
                       aria-label={`${t.name} on ${d}`}
                     >
@@ -329,7 +332,7 @@ function RuleMarks({ rule }: { rule: Restriction }) {
       {rule.closedArrival && <LogIn className="size-3 text-warning-dark" aria-label="Closed to arrival" />}
       {rule.closedDeparture && <LogOut className="size-3 text-warning-dark" aria-label="Closed to departure" />}
       {(rule.minNights || rule.maxNights) && (
-        <span className="text-[10px] text-grey-600 tabular">
+        <span className="text-xs text-grey-600 tabular">
           {rule.minNights ?? ""}
           {rule.minNights && rule.maxNights ? "–" : ""}
           {rule.maxNights ?? ""}
@@ -341,13 +344,13 @@ function RuleMarks({ rule }: { rule: Restriction }) {
 
 function Legend() {
   return (
-    <div className="mt-3 flex flex-wrap gap-x-6 gap-y-2 text-sm text-grey-600">
+    <div className="mt-3 flex flex-wrap gap-x-6 gap-y-2 text-xs text-grey-600">
       <span className="flex items-center gap-1.5">
-        <span className="inline-block w-6 h-3 rounded bg-red-50 border border-danger" />
+        <span className="inline-block w-6 h-3 rounded-xs bg-brand-red-50 border border-danger" />
         Stop sell
       </span>
       <span className="flex items-center gap-1.5">
-        <span className="inline-block w-6 h-3 rounded bg-yellow-50 border border-brand-yellow" />
+        <span className="inline-block w-6 h-3 rounded-xs bg-brand-yellow-50 border border-brand-yellow" />
         Nothing left
       </span>
       <span className="flex items-center gap-1.5">
@@ -396,7 +399,7 @@ function RateGrid({ hotelId, dates, plans, cells, onDone }: {
         <tbody>
           {plans.map((p) => (
             <tr key={`${p.roomTypeId}/${p.mealPlan}`}>
-              <th className="sticky left-0 z-10 bg-white border-b border-r border-grey-200 px-3 py-2 text-left font-medium">
+              <th className="sticky left-0 z-10 bg-white border-b border-r border-grey-200 px-3 py-2 text-left text-sm font-medium text-ink-900">
                 <span className="block">{p.roomType}</span>
                 <span className="block text-xs text-grey-500 font-normal">
                   {p.mealPlan} · {p.mealPlanName}
@@ -433,7 +436,7 @@ function RateGrid({ hotelId, dates, plans, cells, onDone }: {
                           the room type has no rate of its own — that is not
                           the same as the room being free. */}
                       {cell?.price === null || cell?.price === undefined ? (
-                        <span className="block text-lg text-grey-300">-</span>
+                        <span className="block text-base text-grey-500">-</span>
                       ) : (
                         <span className={cn(
                           "block text-base tabular",
@@ -449,7 +452,7 @@ function RateGrid({ hotelId, dates, plans, cells, onDone }: {
                         </span>
                       )}
                       {cell?.season && (
-                        <span className="block text-[10px] text-grey-500 truncate">
+                        <span className="block text-xs text-grey-500 truncate">
                           {cell.season}
                         </span>
                       )}
@@ -462,10 +465,10 @@ function RateGrid({ hotelId, dates, plans, cells, onDone }: {
         </tbody>
       </GridShell>
 
-      <div className="mt-3 flex flex-wrap gap-x-6 gap-y-2 text-sm text-grey-600">
+      <div className="mt-3 flex flex-wrap gap-x-6 gap-y-2 text-xs text-grey-600">
         <span><b className="text-ink-900">4,099</b> priced for the date</span>
         <span className="text-grey-500 italic">4,099 the room type&rsquo;s own rate, nobody set this date</span>
-        <span className="text-grey-300">- nothing at all</span>
+        <span className="text-grey-500">- nothing at all</span>
       </div>
 
       {editing && (
@@ -541,7 +544,7 @@ function PriceDialog({ hotelId, target, onClose, onDone }: {
                 {...fieldProps(f)} ref={first}
                 type="number" inputMode="decimal" min={0}
                 value={price} onChange={(e) => setPrice(e.target.value)}
-                className="h-12 text-lg tabular"
+                className="text-lg tabular"
               />
             )}
           </Field>
@@ -552,7 +555,6 @@ function PriceDialog({ hotelId, target, onClose, onDone }: {
                 {...fieldProps(f)}
                 type="date" min={target.date}
                 value={until} onChange={(e) => setUntil(e.target.value)}
-                className="h-12 text-base"
               />
             )}
           </Field>
@@ -567,7 +569,7 @@ function PriceDialog({ hotelId, target, onClose, onDone }: {
                   value={extraAdult}
                   onChange={(e) => setExtraAdult(e.target.value)}
                   placeholder="-"
-                  className="h-12 text-base tabular"
+                  numeric
                 />
               )}
             </Field>
@@ -579,7 +581,7 @@ function PriceDialog({ hotelId, target, onClose, onDone }: {
                   value={extraChild}
                   onChange={(e) => setExtraChild(e.target.value)}
                   placeholder="-"
-                  className="h-12 text-base tabular"
+                  numeric
                 />
               )}
             </Field>
@@ -590,7 +592,6 @@ function PriceDialog({ hotelId, target, onClose, onDone }: {
               <Input
                 {...fieldProps(f)}
                 value={label} onChange={(e) => setLabel(e.target.value)}
-                className="h-12 text-base"
               />
             )}
           </Field>
@@ -604,11 +605,11 @@ function PriceDialog({ hotelId, target, onClose, onDone }: {
 
           <div className="flex gap-2">
             <DialogClose asChild>
-              <Button variant="secondary" className="h-12 flex-1">Cancel</Button>
+              <Button variant="secondary" className="flex-1">Cancel</Button>
             </DialogClose>
             {target.price !== null && (
               <Button
-                variant="secondary" className="h-12"
+                variant="secondary"
                 disabled={saving}
                 onClick={() => void save(true)}
               >
@@ -616,7 +617,7 @@ function PriceDialog({ hotelId, target, onClose, onDone }: {
               </Button>
             )}
             <Button variant="primary"
-              className="h-12 flex-1"
+              className="flex-1"
               disabled={saving || price.trim() === ""}
               onClick={() => void save(false)}
             >
@@ -676,20 +677,20 @@ function RestrictionDialog({ hotelId, target, existing, onClose, onDone }: {
       type="button"
       onClick={() => set(!on)}
       className={cn(
-        "w-full min-h-14 px-4 py-2.5 rounded-lg border text-left cursor-pointer",
-        "flex items-center gap-3 transition-colors duration-150",
+        "w-full min-h-14 px-4 py-3 rounded-lg border text-left cursor-pointer",
+        "flex items-center gap-3 press-tile",
         on ? "bg-ink-900 border-ink-900 text-white"
            : "bg-white border-grey-300 hover:border-grey-400",
       )}
     >
       <span className={cn(
-        "size-5 rounded grid place-items-center shrink-0 border",
+        "size-5 rounded-xs grid place-items-center shrink-0 border",
         on ? "bg-white/20 border-white/40" : "border-grey-300",
       )}>
         {on && <Check className="size-3.5" />}
       </span>
       <span className="min-w-0">
-        <span className="block text-base font-medium">{label}</span>
+        <span className="block text-sm font-medium">{label}</span>
         <span className={cn("block text-xs",
           on ? "text-white/70" : "text-grey-500")}>{hint}</span>
       </span>
@@ -713,14 +714,14 @@ function RestrictionDialog({ hotelId, target, existing, onClose, onDone }: {
               {(f) => (
                 <Input {...fieldProps(f)} type="number" inputMode="numeric" min={1}
                   value={min} onChange={(e) => setMin(e.target.value)}
-                  placeholder="-" className="h-12 text-base tabular" />
+                  placeholder="-" numeric />
               )}
             </Field>
             <Field label="Maximum nights">
               {(f) => (
                 <Input {...fieldProps(f)} type="number" inputMode="numeric" min={1}
                   value={max} onChange={(e) => setMax(e.target.value)}
-                  placeholder="-" className="h-12 text-base tabular" />
+                  placeholder="-" numeric />
               )}
             </Field>
           </div>
@@ -728,8 +729,7 @@ function RestrictionDialog({ hotelId, target, existing, onClose, onDone }: {
           <Field label="Through" hint="Apply the same rules to every day up to here.">
             {(f) => (
               <Input {...fieldProps(f)} type="date" min={target.date}
-                value={until} onChange={(e) => setUntil(e.target.value)}
-                className="h-12 text-base" />
+                value={until} onChange={(e) => setUntil(e.target.value)} />
             )}
           </Field>
 
@@ -742,9 +742,9 @@ function RestrictionDialog({ hotelId, target, existing, onClose, onDone }: {
 
           <div className="flex gap-2">
             <DialogClose asChild>
-              <Button variant="secondary" className="h-12 flex-1">Cancel</Button>
+              <Button variant="secondary" className="flex-1">Cancel</Button>
             </DialogClose>
-            <Button variant="primary" className="h-12 flex-1" disabled={saving}
+            <Button variant="primary" className="flex-1" disabled={saving}
                     onClick={() => void save()}>
               {saving ? "Applying…" : "Apply"}
             </Button>

@@ -2,10 +2,11 @@ import { useState } from "react";
 import { Link } from "react-router";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { Users, Undo2 } from "lucide-react";
+import { cn } from "@/lib/cn";
 import { dateShort } from "@/lib/format";
 import { useUi } from "@/lib/ui";
 import {
-  Page, PageHeader, Card, CardBody, Button, StatusPill, EmptyState, ErrorState,
+  Page, PageHeader, Section, Card, CardBody, Button, StatusPill, EmptyState, ErrorState,
   Skeleton, toast,
 } from "@/components/ui";
 import {
@@ -63,9 +64,10 @@ export default function SamePersonPage() {
           : undefined}
       />
 
-      <div className="space-y-4">
+      {/* Cards 12px apart; the three parts of the page 20px (the Rhythm Rule). */}
+      <div className="space-y-3 mb-5">
         {pairs.isLoading && <Skeleton className="h-40" />}
-        {pairs.error && <ErrorState error={pairs.error} onRetry={() => void pairs.refetch()} />}
+        {pairs.error && <Card><ErrorState error={pairs.error} onRetry={() => void pairs.refetch()} /></Card>}
         {pairs.data?.length === 0 && (
           <Card>
             <EmptyState compact icon={<Users />} title="No records share a phone or email"
@@ -77,64 +79,69 @@ export default function SamePersonPage() {
         ))}
       </div>
 
-      <h2 className="text-lg font-semibold text-ink-900 mt-10 mb-3">Joined</h2>
-      {joins.error && <ErrorState error={joins.error} onRetry={() => void joins.refetch()} />}
-      {joins.data?.length === 0 && (
-        <p className="text-grey-500">No joins stand. A join made above appears here, with its undo.</p>
-      )}
-      {!!joins.data?.length && (
-        <Card>
-          <ul className="divide-y divide-grey-100">
-            {joins.data.map((j) => (
-              <li key={j.id} className="flex flex-wrap items-center gap-3 px-4 py-3">
-                <span className="min-w-0 flex-1 text-base text-ink-900">
-                  <span className="font-medium">{j.joinedName}</span> joined into{" "}
-                  <Link to={`/crm/guests/${j.keptId}`} className="font-medium underline underline-offset-4">
-                    {j.keptName}
-                  </Link>
-                  <span className="text-grey-500">
-                    {" "}· {j.stays} {j.stays === 1 ? "stay" : "stays"} moved · by {j.by ?? "-"} · {dateShort(j.at.slice(0, 10))}
+      <Section title="Joined">
+        {joins.error && <Card><ErrorState error={joins.error} onRetry={() => void joins.refetch()} /></Card>}
+        {joins.data?.length === 0 && (
+          <p className="text-sm text-grey-500">No joins stand. A join made above appears here, with its undo.</p>
+        )}
+        {!!joins.data?.length && (
+          <Card>
+            <ul className="divide-y divide-grey-100">
+              {joins.data.map((j) => (
+                <li key={j.id} className="flex flex-wrap items-center gap-3 px-4 py-3 min-h-14">
+                  <span className="min-w-0 flex-1 text-base text-ink-900">
+                    <span className="font-medium">{j.joinedName}</span> joined into{" "}
+                    <Link to={`/crm/guests/${j.keptId}`} className={LINK}>
+                      {j.keptName}
+                    </Link>
+                    <span className="text-grey-500">
+                      {" "}· {j.stays} {j.stays === 1 ? "stay" : "stays"} moved · by {j.by ?? "-"} · {dateShort(j.at.slice(0, 10))}
+                    </span>
                   </span>
-                </span>
-                <UndoButton undo={() => undoJoin(hotelId, j.id)}
-                  said="Every stay is back on the record it came from." />
-              </li>
-            ))}
-          </ul>
-        </Card>
-      )}
+                  <UndoButton undo={() => undoJoin(hotelId, j.id)}
+                    said="Every stay is back on the record it came from." />
+                </li>
+              ))}
+            </ul>
+          </Card>
+        )}
+      </Section>
 
-      <h2 className="text-lg font-semibold text-ink-900 mt-10 mb-3">Not the same person</h2>
-      {apart.error && <ErrorState error={apart.error} onRetry={() => void apart.refetch()} />}
-      {apart.data?.length === 0 && (
-        <p className="text-grey-500">No answers stand. Two records answered "Not the same person" above appear here, with the undo.</p>
-      )}
-      {!!apart.data?.length && (
-        <Card>
-          <ul className="divide-y divide-grey-100">
-            {apart.data.map((n) => (
-              <li key={n.id} className="flex flex-wrap items-center gap-3 px-4 py-3">
-                <span className="min-w-0 flex-1 text-base text-ink-900">
-                  <Link to={`/crm/guests/${n.aId}`} className="font-medium underline underline-offset-4">
-                    {n.aName}
-                  </Link>{" "}and{" "}
-                  <Link to={`/crm/guests/${n.bId}`} className="font-medium underline underline-offset-4">
-                    {n.bName}
-                  </Link>{" "}are two people
-                  <span className="text-grey-500">
-                    {" "}· by {n.by ?? "-"} · {dateShort(n.at.slice(0, 10))}
+      <Section title="Not the same person">
+        {apart.error && <Card><ErrorState error={apart.error} onRetry={() => void apart.refetch()} /></Card>}
+        {apart.data?.length === 0 && (
+          <p className="text-sm text-grey-500">No answers stand. Two records answered "Not the same person" above appear here, with the undo.</p>
+        )}
+        {!!apart.data?.length && (
+          <Card>
+            <ul className="divide-y divide-grey-100">
+              {apart.data.map((n) => (
+                <li key={n.id} className="flex flex-wrap items-center gap-3 px-4 py-3 min-h-14">
+                  <span className="min-w-0 flex-1 text-base text-ink-900">
+                    <Link to={`/crm/guests/${n.aId}`} className={LINK}>
+                      {n.aName}
+                    </Link>{" "}and{" "}
+                    <Link to={`/crm/guests/${n.bId}`} className={LINK}>
+                      {n.bName}
+                    </Link>{" "}are two people
+                    <span className="text-grey-500">
+                      {" "}· by {n.by ?? "-"} · {dateShort(n.at.slice(0, 10))}
+                    </span>
                   </span>
-                </span>
-                <UndoButton undo={() => undoNotSame(hotelId, n.id)}
-                  said="The two records are listed again." />
-              </li>
-            ))}
-          </ul>
-        </Card>
-      )}
+                  <UndoButton undo={() => undoNotSame(hotelId, n.id)}
+                    said="The two records are listed again." />
+                </li>
+              ))}
+            </ul>
+          </Card>
+        )}
+      </Section>
     </Page>
   );
 }
+
+/* A link reads as one (the Tappable Rule): orange, underlined on hover. */
+const LINK = "font-medium text-brand-orange-700 hover:underline underline-offset-4";
 
 function PairCard({ hotelId, pair }: { hotelId: string; pair: SamePersonPair }) {
   const qc = useQueryClient();
@@ -167,7 +174,7 @@ function PairCard({ hotelId, pair }: { hotelId: string; pair: SamePersonPair }) 
 
   return (
     <Card>
-      <CardBody className="space-y-4">
+      <CardBody className="space-y-3">
         <div className="flex flex-wrap items-center gap-3">
           <p className="min-w-0 flex-1 text-sm text-grey-600">Same {shared}.</p>
           <Button variant="secondary" disabled={busy} onClick={() => void apart()}>
@@ -188,7 +195,8 @@ function PairCard({ hotelId, pair }: { hotelId: string; pair: SamePersonPair }) 
           </p>
         )}
         {kept && other && (
-          <div className="flex flex-wrap items-center gap-3 rounded-md bg-grey-50 border border-grey-200 p-3">
+          /* A tinted strip, not a card in the card. */
+          <div className="flex flex-wrap items-center gap-3 rounded-lg bg-grey-50 px-3.5 py-3">
             <span className="min-w-0 flex-1 text-sm text-ink-900">
               {other.name}'s stays move to {kept.name}. Nothing is deleted, and it can be undone.
             </span>
@@ -206,22 +214,23 @@ function Side({ guest: g, chosen, locked, onChoose }: {
   guest: GuestCard; chosen: boolean; locked: boolean; onChoose: () => void;
 }) {
   return (
-    <div className={chosen
-      ? "rounded-md border-2 border-brand-orange p-3 space-y-1.5"
-      : "rounded-md border border-grey-200 p-3 space-y-1.5"}>
+    /* A tile in the card (12 by 14), its hairline inset; the record that
+       stands is ringed in the brand orange, as it was bordered. */
+    <div className={cn("rounded-lg px-3.5 py-3 space-y-1.5 ring-inset",
+      chosen ? "ring-2 ring-brand-orange" : "ring-1 ring-grey-200")}>
       <div className="flex flex-wrap items-center gap-2">
-        <Link to={`/crm/guests/${g.id}`} className="font-medium text-ink-900 underline underline-offset-4">
+        <Link to={`/crm/guests/${g.id}`} className={LINK}>
           {g.name}
         </Link>
         {g.isVip && <StatusPill tone="accent">VIP</StatusPill>}
         {g.isBlacklisted && <StatusPill tone="danger">Blacklisted</StatusPill>}
       </div>
-      <p className="text-sm text-grey-600 tabular">{g.phone ?? "-"} · {g.email ?? "-"}</p>
+      <p className="text-sm text-grey-600 tabular break-words">{g.phone ?? "-"} · {g.email ?? "-"}</p>
       <p className="text-sm text-grey-600">
         {stayedWords(g.visits)} · last {g.lastStay ? dateShort(g.lastStay) : "-"} ·{" "}
         {g.hasId ? "ID on file" : "no ID on file"}
       </p>
-      <Button variant="secondary" disabled={locked || chosen} onClick={onChoose}>
+      <Button variant="secondary" className="mt-1.5" disabled={locked || chosen} onClick={onChoose}>
         {chosen ? "This record stands" : "Keep this record"}
       </Button>
     </div>

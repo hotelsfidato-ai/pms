@@ -1,3 +1,4 @@
+import { ChevronRight } from "lucide-react";
 import { cn } from "@/lib/cn";
 import { dateShort } from "@/lib/format";
 import type { ChartRoom, ChartRoomType } from "@/modules/front-desk/data/stayview";
@@ -49,13 +50,28 @@ function stateOf(room: ChartRoom): RoomState {
   return "free";
 }
 
+
+/* 27 September, the Fidato look (the owner's approved Rooms): a tinted
+   tile for a room with somebody or something in it, white for a free one,
+   the state as a pill on the number's line. No legend: the filter tiles
+   above carry the same words with the same colours. */
 const TILE: Record<RoomState, string> = {
-  free:             "bg-white border-grey-300 hover:border-grey-400",
-  occupied:         "bg-info-50 border-info",
-  arriving:         "bg-orange-50 border-brand-orange",
-  "due-out":        "bg-yellow-50 border-brand-yellow",
-  dirty:            "bg-red-50 border-brand-red/40",
-  "out-of-service": "bg-grey-100 border-grey-300",
+  free:             "bg-white ring-grey-200 hover:ring-grey-400",
+  occupied:         "bg-info-50 ring-info-100 hover:ring-info",
+  arriving:         "bg-brand-orange-50 ring-brand-orange-100 hover:ring-brand-orange",
+  "due-out":        "bg-brand-yellow-50 ring-brand-yellow-100 hover:ring-brand-yellow",
+  dirty:            "bg-brand-red-50 ring-brand-red-100 hover:ring-brand-red",
+  "out-of-service": "bg-grey-100 ring-grey-200",
+};
+
+/* The pill's ink: the readable step of each state's colour. */
+const PILL: Record<RoomState, string> = {
+  free:             "",
+  occupied:         "text-info ring-info-100",
+  arriving:         "text-brand-orange-700 ring-brand-orange-100",
+  "due-out":        "text-brand-yellow-800 ring-brand-yellow-100",
+  dirty:            "text-brand-red-700 ring-brand-red-100",
+  "out-of-service": "text-grey-600 ring-grey-200",
 };
 
 const LABEL: Record<RoomState, string> = {
@@ -66,15 +82,6 @@ const LABEL: Record<RoomState, string> = {
   dirty:            "Needs cleaning",
   "out-of-service": "Out of service",
 };
-
-export const HOUSE_LEGEND: { state: RoomState; label: string }[] = [
-  { state: "free", label: "Free" },
-  { state: "arriving", label: "Arriving" },
-  { state: "occupied", label: "In house" },
-  { state: "due-out", label: "Due out" },
-  { state: "dirty", label: "Needs cleaning" },
-  { state: "out-of-service", label: "Out of service" },
-];
 
 export function HouseFloor({
   groups, businessDate, todaysStays, onOpenStay, onWalkIn,
@@ -102,33 +109,20 @@ export function HouseFloor({
   onWalkIn?: (roomNumber: string, date: string) => void;
 }) {
   return (
-    <div>
-      <div className="flex gap-x-4 gap-y-2 flex-wrap mb-4">
-        {HOUSE_LEGEND.map((l) => (
-          <span key={l.state}
-                className="flex items-center gap-2 text-sm text-grey-600">
-            <i className={cn("size-3.5 rounded border", TILE[l.state])} />
-            {l.label}
-          </span>
-        ))}
-      </div>
-
+    <div className="grid gap-6">
       {groups.map((group) => (
-        <section key={group.type} className="mb-6">
-          <h2 className="text-2xs font-semibold uppercase tracking-wide
-                         text-grey-500 mb-2.5">
+        <section key={group.type}>
+          <h2 className="flex items-center gap-2 mb-3 text-md font-semibold text-ink-900">
             {group.type}
-            <span className="ml-1.5 tabular font-normal text-grey-500">
+            <span className="h-5 px-2 rounded-full bg-grey-100 text-grey-600 text-xs font-semibold leading-5 tabular">
               {group.rooms.length}
             </span>
           </h2>
 
-          {/* auto-fill from 7rem: three across on a phone, and as many as
-              fit on a desk. No breakpoint to get wrong, and no horizontal
-              scroll on any width — which is the failure the tape chart
-              has on a phone and the reason this exists. */}
-          <div className="grid gap-2
-                          [grid-template-columns:repeat(auto-fill,minmax(7rem,1fr))]">
+          {/* Five across on a desk, four below 1280, two on a phone, where
+              an odd last tile takes the row so none sits alone. Each tile's
+              three lines (number, who, when) are levelled across its row. */}
+          <div className="grid grid-cols-2 lg:grid-cols-4 xl:grid-cols-5 gap-2 sm:gap-2.5">
             {group.rooms.map((room) => (
               <RoomTile
                 key={room.number}
@@ -164,6 +158,11 @@ function RoomTile({ room, businessDate, stay, onOpenStay, onWalkIn }: {
   /* Nothing to open and no walk-in to take: the tile only shows the room
      (D24-27), so it is not a control. */
   const Tile = !stay && !onWalkIn && state !== "out-of-service" ? "div" : "button";
+  const free = state === "free";
+  /* A tile that opens a stay or a walk-in says so with an arrow on its
+     last line (the Tappable Rule, the owner, 27 September). */
+  const opens = Tile === "button" && state !== "out-of-service";
+  const arrow = opens ? <ChevronRight className="size-4 shrink-0 text-grey-400" aria-hidden /> : null;
 
   return (
     <Tile
@@ -172,36 +171,34 @@ function RoomTile({ room, businessDate, stay, onOpenStay, onWalkIn }: {
         : {})}
       data-room-tile={room.number}
       className={cn(
-        "rounded-lg border p-2.5 text-left w-full",
-        /* 5.5rem, so three tiles and their labels fit above the fold on
-           a phone. Tall enough for a name to wrap once. */
-        "min-h-[5.5rem] flex flex-col",
-        "transition-colors duration-200",
-        Tile === "div" ? "" : state === "out-of-service" ? "cursor-not-allowed" : "cursor-pointer",
+        "row-span-3 grid grid-rows-subgrid gap-y-0.5 rounded-lg ring-1 ring-inset px-3.5 py-3 text-left w-full min-w-0",
+        "max-sm:[&:last-child:nth-child(odd)]:col-span-2",
+        Tile === "div" ? "" : state === "out-of-service" ? "cursor-not-allowed" : "cursor-pointer press-tile",
         TILE[state],
       )}
     >
-      <div className="flex items-baseline justify-between gap-1">
-        <span className="text-lg tabular font-semibold text-ink-900">
+      <div className="flex items-center justify-between gap-2 min-w-0">
+        <span className={cn("text-xl tabular tracking-[-0.02em]", free ? "font-medium text-grey-700" : "font-semibold text-ink-900")}>
           {room.number}
         </span>
-        {/* The mark housekeeping acts on, on the tile itself. A clean
-            room and a dirty one look identical otherwise, and the whole
-            point of walking the floor with this is to see which. */}
-        {room.state.dirty && state !== "dirty" && (
-          <span className="text-2xs font-semibold uppercase tracking-wide
-                           text-brand-red">
-            dirty
+        <span className="flex items-center gap-1.5 min-w-0">
+          {/* The mark housekeeping acts on, on the tile itself. A clean
+              room and a dirty one look identical otherwise, and the whole
+              point of walking the floor with this is to see which. */}
+          {room.state.dirty && state !== "dirty" && (
+            <span className="text-xs font-semibold text-brand-red-700">dirty</span>
+          )}
+          {/* grey-600 at the least on a tint: the state is the most
+              important word on the tile. */}
+          <span className={cn(
+            "inline-flex items-center gap-1.5 h-[21px] rounded-full text-xs font-medium whitespace-nowrap",
+            free ? "text-grey-500" : cn("px-2 bg-white", PILL[state]),
+          )}>
+            {!free && <i className="size-1.5 rounded-full bg-current" aria-hidden />}
+            {LABEL[state]}
           </span>
-        )}
+        </span>
       </div>
-
-      {/* grey-600, not grey-500: every tile but "free" has a TINTED
-          background, where grey-500 measures 4.24-4.38:1 — and the state
-          is the most important word on the tile. */}
-      <p className="text-2xs uppercase tracking-wide text-grey-600">
-        {LABEL[state]}
-      </p>
 
       {stay ? (
         <>
@@ -211,20 +208,28 @@ function RoomTile({ room, businessDate, stay, onOpenStay, onWalkIn }: {
               "Regeto 25 Aug", and the word boundary the assertion
               relied on was not there. The test passed with the bug
               reintroduced. */}
-          <p data-tile-guest
-             className="text-sm text-ink-900 mt-1 leading-tight line-clamp-2">
+          <p data-tile-guest className="mt-1 text-sm font-medium text-ink-900 leading-5 truncate">
             {stay.guest}
           </p>
-          <p className="text-2xs text-grey-600 tabular mt-auto pt-1">
-            {state === "due-out"
-              ? "out today"
-              : `to ${dateShort(stay.departure)}`}
-          </p>
+          <div className="flex items-center justify-between gap-2">
+            <p className={cn(
+              "text-xs font-medium tabular",
+              state === "due-out" ? "text-brand-yellow-800" : "text-grey-600",
+            )}>
+              {state === "due-out"
+                ? "out today"
+                : `to ${dateShort(stay.departure)}`}
+            </p>
+            {arrow}
+          </div>
         </>
       ) : (
-        <p className="text-2xs text-grey-500 mt-auto pt-1">
-          {state === "out-of-service" ? "-" : room.type}
-        </p>
+        <>
+          <p className="mt-1 text-sm leading-5 text-grey-500 truncate">
+            {state === "out-of-service" ? "-" : room.type}
+          </p>
+          <div className="flex justify-end">{arrow}</div>
+        </>
       )}
     </Tile>
   );

@@ -10,7 +10,11 @@ import {
 } from "@/components/ui";
 import { createWalkIn } from "@/modules/front-desk/data/operations";
 import { getRoom } from "@/data/repositories";
-import { ReturningGuest, ConsentTicks } from "@/modules/guests";
+import { MARKET_SEGMENTS } from "@/modules/reservations";
+import {
+  ReturningGuest, ConsentTicks, ForeignGuestFields, formIIIMissing,
+  particularsPayload, NO_PARTICULARS, ID_TYPES, type Particulars,
+} from "@/modules/guests";
 
 /* ══════════════════════════════════════════════════════════════════
    FLOW D — the walk-in at 23:40
@@ -73,6 +77,20 @@ export function WalkInFlow({
   const [businessSource, setBusinessSource] = useState("");
   const [salesPerson, setSalesPerson] = useState("");
   const [singleLady, setSingleLady] = useState(false);
+  /* Form III (D27-25; the owner, 27 September: what check-in asks). A
+     foreign walk-in never reached the register - this form had no
+     nationality, and a guest defaults to IN. */
+  const [nationality, setNationality] = useState("IN");
+  const [idType, setIdType] = useState("");
+  const [idNumber, setIdNumber] = useState("");
+  const [idSkipReason, setIdSkipReason] = useState("");
+  const [particulars, setParticulars] = useState<Particulars>(NO_PARTICULARS);
+  const isForeign = (nationality.trim().toUpperCase() || "IN") !== "IN";
+  const idCaptured = Boolean(idType && idNumber.trim());
+  const formIIINeeds = isForeign
+    ? [...(!idCaptured && !idSkipReason.trim() ? ["the ID document or a reason for skipping it"] : []),
+       ...formIIIMissing(particulars, nationality, idCaptured)]
+    : [];
 
   /* Derived, never stored. The party is what the two counters say and
      the capacity is what the room type says — neither is a third
@@ -121,6 +139,8 @@ export function WalkInFlow({
        attributed to the next guest, silently, and nobody would find it. */
     setSegment(""); setBusinessSource(""); setSalesPerson("");
     setSingleLady(false);
+    setNationality("IN"); setIdType(""); setIdNumber(""); setIdSkipReason("");
+    setParticulars(NO_PARTICULARS);
   };
 
   return (
@@ -160,6 +180,46 @@ export function WalkInFlow({
           <ReturningGuest hotelId={hotelId} phone={phone} email={email}
             chosen={returning} onChoose={setReturning} />
 
+          <Field label="Nationality"
+            hint="Anything other than IN puts this stay on the Form III register.">
+            {({ id }) => (
+              <Input id={id} value={nationality} placeholder="IN" maxLength={2}
+                className="w-24"
+                onChange={(e) => setNationality(e.target.value.toUpperCase())} />
+            )}
+          </Field>
+          {isForeign && (
+            <>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <Field label="Document">
+                  {({ id }) => (
+                    <NativeSelect id={id} value={idType}
+                      onChange={(e) => setIdType(e.target.value)}>
+                      <option value="">Not recorded</option>
+                      {ID_TYPES.map(([v, l]) => <option key={v} value={v}>{l}</option>)}
+                    </NativeSelect>
+                  )}
+                </Field>
+                <Field label="Number" required={Boolean(idType)}>
+                  {({ id }) => (
+                    <Input id={id} value={idNumber} disabled={!idType}
+                      onChange={(e) => setIdNumber(e.target.value)} />
+                  )}
+                </Field>
+              </div>
+              {!idCaptured && (
+                <Field label="Reason for skipping" required>
+                  {({ id }) => (
+                    <Input id={id} value={idSkipReason}
+                      onChange={(e) => setIdSkipReason(e.target.value)} />
+                  )}
+                </Field>
+              )}
+              <ForeignGuestFields value={particulars} onChange={setParticulars}
+                nationality={nationality} idCaptured={idCaptured} />
+            </>
+          )}
+
           {/* ── WILL THEY FIT ───────────────────────────────────────
               A walk-in is the ONE path where the clerk is looking at
               the actual family and counting them, and it was the one
@@ -173,9 +233,9 @@ export function WalkInFlow({
               refuses independently either way. */}
           {room.data && (
             <div className={cn(
-              "rounded-md border p-3 text-sm",
+              "rounded-lg border p-3 text-sm",
               overCapacity
-                ? "border-brand-red-100 bg-red-50 text-brand-red"
+                ? "border-brand-red-100 bg-brand-red-50 text-brand-red-700"
                 : "border-grey-200 bg-grey-50 text-grey-600",
             )}>
               {overCapacity ? (
@@ -244,8 +304,7 @@ export function WalkInFlow({
                       that turns into a line in a report an owner sets
                       policy from. */}
                   <option value="">-</option>
-                  {["Corporate", "Leisure", "Group", "Crew", "Government"]
-                    .map((m) => <option key={m}>{m}</option>)}
+                  {MARKET_SEGMENTS.map((m) => <option key={m}>{m}</option>)}
                 </NativeSelect>
               )}
             </Field>
@@ -306,7 +365,7 @@ export function WalkInFlow({
 
           {/* An override is allowed — but the reason is kept */}
           {needsReason && (
-            <div className="rounded-md border border-brand-yellow-100 bg-brand-yellow-50 p-3 space-y-2.5">
+            <div className="rounded-lg border border-brand-yellow-100 bg-brand-yellow-50 p-3 space-y-2.5">
               <p className="flex items-start gap-2 text-sm text-[#8a6300]">
                 <AlertTriangle className="size-4 shrink-0 mt-0.5" />
                 <span>
@@ -328,7 +387,7 @@ export function WalkInFlow({
             </div>
           )}
 
-          <div className="rounded-md bg-grey-50 border border-grey-200 p-3 space-y-1">
+          <div className="rounded-lg bg-grey-50 border border-grey-200 p-3 space-y-1">
             <Row label={`${nights} night${nights === 1 ? "" : "s"} × ${money(offered)}`} value={money(offered * nights)} />
             <Row label="Tax 5%" value={money(Math.round(offered * nights * 0.05 * 100) / 100)} muted />
             <div className="pt-1 border-t border-grey-200">
@@ -337,7 +396,13 @@ export function WalkInFlow({
           </div>
 
           {!permitted.allowed && permitted.reason && (
-            <p className="text-xs text-brand-red">{permitted.reason}</p>
+            <p className="text-xs text-brand-red-700">{permitted.reason}</p>
+          )}
+          {/* Rule 6: the button says why it is blocked. */}
+          {formIIINeeds.length > 0 && (
+            <p className="text-xs text-grey-600" data-form-iii-needs>
+              Form III still needs: {formIIINeeds.join(", ")}.
+            </p>
           )}
 
           {/* ONE action. Not "book" then "check in". */}
@@ -347,7 +412,8 @@ export function WalkInFlow({
                independently, but a clerk should find out while the
                family is still standing there and a bigger room can be
                chosen -- not after pressing the one button. */
-            disabled={!permitted.allowed || overCapacity || busy}
+            disabled={!permitted.allowed || overCapacity || busy
+                      || formIIINeeds.length > 0}
             data-walkin-confirm
             onClick={async () => {
               if (busy) return;
@@ -361,6 +427,16 @@ export function WalkInFlow({
                 phone, email,
                 ...(returning ? { guestId: returning.id } : {}),
                 whatsappAgreed: whatsapp, offersAgreed,
+                nationality,
+                ...(isForeign
+                  ? {
+                      ...(idCaptured
+                        ? { identity: { idType, idNumber: idNumber.trim(),
+                                        ...particularsPayload(particulars).identity } }
+                        : { idSkipReason }),
+                      visit: particularsPayload(particulars).visit,
+                    }
+                  : {}),
               });
               setBusy(false);
               if (res.ok) {

@@ -15,15 +15,16 @@
 #     is filling up
 #   · it restores in parallel
 #
+# OFF THE BOX. A backup on the same disk as the database is not a backup — it
+#   is a copy that dies in the same fire. When the server's settings file names
+#   a bucket (BACKUP_UPLOAD_URL, below), every file is also copied there, and a
+#   copy that did not arrive intact fails the backup. Without it, it says so.
+#
 # WHAT THIS SCRIPT DOES NOT DO, AND YOU SHOULD KNOW IT:
 #
-#   It does not put the file anywhere else. A backup on the same disk as the
-#   database is not a backup — it is a copy that dies in the same fire. Copying
-#   it off-box is one line and it depends on where production lives, which is
-#   still an open question (PROGRESS.md, "Still needing a person", item 1).
-#
-#   It does not schedule itself. That is cron, or the managed provider's own
-#   backup, and again depends on the answer to that question.
+#   It does not schedule itself, and it does not tell anyone. Cron runs
+#   db/verify-backup.sh nightly, which runs this, restores the result, and
+#   reports pass or fail to a person (deploy/launch.sh, "Backups").
 #
 #   It is not a backup until db/verify-backup.sh has restored it. Run that.
 # =============================================================================
@@ -136,6 +137,43 @@ if [ "$COUNT" -gt "$KEEP" ]; then
     rm -f "$old"
     echo "    pruned $(basename "$old")"
   done
+fi
+
+# ── Off the box (D27-15, the owner, 27 September) ────────────────────────────
+# Where it goes is the server's own setting, in a file written by root and
+# readable by postgres alone, because the link in it lets whoever holds it
+# write into the bucket:
+#
+#   BACKUP_UPLOAD_URL='https://…/p/<token>/n/<namespace>/b/<bucket>/o/'
+#       an Oracle Object Storage pre-authenticated request on the whole
+#       bucket, "Permit object writes" only. It can add files and cannot
+#       read, list or delete them, so a break-in on this box cannot reach
+#       back and empty the bucket (versioning keeps anything overwritten).
+#
+# Content-MD5 makes Object Storage hash what arrived and refuse it with a 400
+# if it differs from what left, so a success here means the bytes match.
+# Failing to copy FAILS THE BACKUP: the local file is fine, the thing this
+# step exists for is not, and the nightly check must tell a person.
+#
+# ⚠ THE STATUS CODE, NOT curl's EXIT CODE. With --retry and an upload, curl
+# 8.14 exited 0 on a 400 — a refused copy read as a good one, found testing
+# this against a bucket that refuses. Only a 200 is a copy.
+BACKUP_ENV="${BACKUP_ENV:-/etc/fidato-backup.env}"
+[ -r "$BACKUP_ENV" ] && . "$BACKUP_ENV"
+if [ -n "${BACKUP_UPLOAD_URL:-}" ]; then
+  MD5=$(openssl dgst -md5 -binary "$FILE" | base64)
+  CODE=$(curl -sS --retry 3 -m 900 -o /dev/null -w "%{http_code}" \
+           -H "Content-MD5: $MD5" -T "$FILE" \
+           "${BACKUP_UPLOAD_URL%/}/$(basename "$FILE")")
+  if [ "$CODE" = "200" ]; then
+    green "  ✓ copied off the box, checksum matched"
+  else
+    red "  x the copy off the box FAILED (HTTP $CODE). The file on this disk"
+    red "    is fine; the copy that survives this disk does not exist."
+    exit 1
+  fi
+else
+  echo "    (no BACKUP_UPLOAD_URL - this copy is on this disk only)"
 fi
 
 echo "$FILE"

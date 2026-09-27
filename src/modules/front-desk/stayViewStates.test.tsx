@@ -85,7 +85,12 @@ describe("Rooms when the server does not answer", () => {
     expect(screen.queryByText("The rooms did not load")).toBeNull();
   });
 
+  /* On the Calendar since 27 September: the week arrows live in its chart
+     card now; Rooms shows today and lost them (the owner's approved Rooms).
+     The same window and the same fallback; rows stand in for tiles. */
   it("keeps the last good house on screen, with its age, when the next fortnight fails", async () => {
+    go(`/h/${HOTEL}/calendar`);
+    const tiles = () => document.querySelectorAll("[data-room-row]");
     render(<App />);
     await waitFor(() => expect(tiles().length).toBeGreaterThan(0));
     const shown = tiles().length;

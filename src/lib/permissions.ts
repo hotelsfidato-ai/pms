@@ -25,10 +25,11 @@ export const ASSIGNABLE_ROLES: Role[] = ROLES.filter(
 );
 
 /**
- * Who sees the "Coming soon" section — the pages for services the system
- * does not have yet. The owner's decision, 16 September: the owner, admins
- * and general managers, the people deciding what gets built. Reception's
- * menu does not change. Asked by the menu and by each page's route guard
+ * Who sees the services the system does not have yet — their pages, and
+ * their menu entries marked "Not built yet" (the Coming soon section until
+ * 28 September, D27-87). The owner's decision, 16 September: the owner,
+ * admins and general managers, the people deciding what gets built.
+ * Reception's menu does not change. Asked by the menu and by each page's route guard
  * alike, so a hidden link and a refused page cannot disagree.
  */
 /* WHO MAY MOVE A PRICE, as opposed to read one.

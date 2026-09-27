@@ -1,9 +1,9 @@
 import { useQuery } from "@tanstack/react-query";
 import { useParams } from "react-router";
-import { ArrowDown, ArrowUp } from "lucide-react";
+import { ArrowDown, ArrowUp, ReceiptText, Scale } from "lucide-react";
 import { money } from "@/lib/format";
 import { useUi } from "@/lib/ui";
-import { Page, PageHeader, Card, CardBody, Stat, StatusPill, Term } from "@/components/ui";
+import { Page, PageHeader, FigureRow, FigureTile, StatusPill, Term } from "@/components/ui";
 import { StayTable, type StayColumn, type StayRow } from "@/modules/front-desk";
 import { listOpenFolios } from "@/modules/finance/data/folios";
 import { queryKeys, BUSINESS_DATE } from "@/data/repositories";
@@ -57,45 +57,38 @@ export default function FoliosPage() {
         }
       />
 
-      <div className="grid gap-4 sm:grid-cols-3 mb-5">
-        <Card>
-          <CardBody>
-            <Stat
-              label="Outstanding"
-              value={money(owedTotal)}
-              hint={`${owed.length} folio${owed.length === 1 ? "" : "s"} owing`}
-            />
-          </CardBody>
-        </Card>
-        <Card>
-          <CardBody>
-            <Stat
-              label="Overpaid"
-              value={money(overpaidTotal)}
-              hint={
-                overpaid.length
-                  ? `${overpaid.length} refund${overpaid.length === 1 ? "" : "s"} due`
-                  : "Nothing to refund"
-              }
-            />
-          </CardBody>
-        </Card>
-        <Card>
-          <CardBody>
-            <Stat
-              label="Net position"
-              value={money(owedTotal - overpaidTotal)}
-              hint="Owed to the property, less refunds"
-            />
-          </CardBody>
-        </Card>
-      </div>
+      {/* The Figure Rule: label with its chip, the figure, its note; money
+          to collect is warm while there is some. */}
+      <FigureRow className="sm:grid-cols-3 mb-5">
+        <FigureTile
+          icon={<ReceiptText />} tone={owedTotal > 0 ? "orange" : "neutral"}
+          label="Outstanding"
+          value={money(owedTotal)}
+          note={`${owed.length} folio${owed.length === 1 ? "" : "s"} owing`}
+        />
+        <FigureTile
+          icon={<ArrowDown />} tone={overpaidTotal > 0 ? "blue" : "neutral"}
+          label="Overpaid"
+          value={money(overpaidTotal)}
+          note={
+            overpaid.length
+              ? `${overpaid.length} refund${overpaid.length === 1 ? "" : "s"} due`
+              : "Nothing to refund"
+          }
+        />
+        <FigureTile
+          icon={<Scale />}
+          label="Net position"
+          value={money(owedTotal - overpaidTotal)}
+          note="Owed to the property, less refunds"
+        />
+      </FigureRow>
 
       {overpaid.length > 0 && (
-        <div className="flex items-start gap-3 rounded-md border border-info-100 bg-info-50 p-3.5 mb-4">
+        <div className="flex items-start gap-3 rounded-lg border border-info-100 bg-info-50 px-4 py-3.5 mb-5">
           <ArrowDown className="size-4 text-info shrink-0 mt-0.5" />
           <div className="min-w-0">
-            <p className="text-base font-medium text-ink-900">
+            <p className="text-sm font-medium text-ink-900">
               {overpaid.length} guest{overpaid.length === 1 ? "" : "s"} overpaid,{" "}
               <span className="tabular">{money(overpaidTotal)}</span> to return
             </p>
@@ -106,20 +99,18 @@ export default function FoliosPage() {
         </div>
       )}
 
-      <Card className="p-4">
-        <StayTable
-          hotelId={hotelId}
-          businessDate={BUSINESS_DATE}
-          rows={rows}
-          isLoading={folios.isLoading}
-          error={folios.error}
-          onRetry={() => folios.refetch()}
-          columns={COLUMNS}
-          defaultTab="folio"
-          emptyTitle="Every folio is settled"
-          emptyBody="Nothing outstanding, and nothing to refund."
-        />
-      </Card>
+      <StayTable
+        hotelId={hotelId}
+        businessDate={BUSINESS_DATE}
+        rows={rows}
+        isLoading={folios.isLoading}
+        error={folios.error}
+        onRetry={() => folios.refetch()}
+        columns={COLUMNS}
+        defaultTab="folio"
+        emptyTitle="Every folio is settled"
+        emptyBody="Nothing outstanding, and nothing to refund."
+      />
 
       <p className="flex items-start gap-2 text-xs text-grey-500 mt-4 leading-relaxed">
         <ArrowUp className="size-3.5 shrink-0 mt-0.5" />

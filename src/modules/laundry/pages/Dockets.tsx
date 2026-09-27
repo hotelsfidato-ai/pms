@@ -5,7 +5,7 @@ import { IndianRupee, Plus, Shirt, Trash2 } from "lucide-react";
 import { money, dateShort } from "@/lib/format";
 import { ApiError } from "@/lib/api";
 import {
-  Page, PageHeader, Button, Skeleton, EmptyState, ErrorState,
+  Page, PageHeader, Card, Button, Skeleton, EmptyState, ErrorState,
   Dialog, DialogContent, Field, fieldProps, Input, NativeSelect, DataTable,
   Segmented, StatusPill, toast, type Column, type Tone,
 } from "@/components/ui";
@@ -88,7 +88,7 @@ export default function LaundryDocketsPage() {
       key: "whose",
       header: "Whose",
       cell: (d) => (
-        <span className={d.belongsTo === "hotel" ? "text-ink-600" : "text-ink-900"}>
+        <span className={d.belongsTo === "hotel" ? "text-grey-600" : "text-ink-900"}>
           {whoseWords(d)}
         </span>
       ),
@@ -119,7 +119,7 @@ export default function LaundryDocketsPage() {
          linen, which is counted and never priced - it reads a dash for
          the same reason and means the same thing. */
       cell: (d) => (
-        <span className={d.total === null ? "text-ink-600" : undefined}>
+        <span className={d.total === null ? "text-grey-500" : undefined}>
           {rupees(d.total)}
         </span>
       ),
@@ -138,46 +138,53 @@ export default function LaundryDocketsPage() {
       /* FOUR STATES, NOT ONE. A read that failed must never draw
          "nothing has gone to the laundry" - somebody would collect the
          same bag twice on the strength of it. */
+      /* Each state in the list's own frame, where the list would be. */
       if (q.isPaused) {
         return (
-          <ErrorState
-            title="No connection"
-            description="This device is offline, so the dockets cannot load. They load by themselves as soon as the connection is back."
-          />
+          <Card>
+            <ErrorState
+              title="No connection"
+              description="This device is offline, so the dockets cannot load. They load by themselves as soon as the connection is back."
+            />
+          </Card>
         );
       }
       if (q.isError) {
         return (
-          <ErrorState
-            title="The dockets did not load"
-            error={q.error}
-            description={unreachable(q.error)
-              ? "Could not reach the server, and there is nothing from earlier to show in its place. Check the connection, then try again."
-              : undefined}
-            onRetry={() => void q.refetch()}
-          />
+          <Card>
+            <ErrorState
+              title="The dockets did not load"
+              error={q.error}
+              description={unreachable(q.error)
+                ? "Could not reach the server, and there is nothing from earlier to show in its place. Check the connection, then try again."
+                : undefined}
+              onRetry={() => void q.refetch()}
+            />
+          </Card>
         );
       }
-      return <Skeleton className="h-64" />;
+      return <Skeleton className="h-64 rounded-lg" />;
     }
 
     if (dockets.length === 0) {
       return (
-        <EmptyState
-          icon={<Shirt />}
-          title="Nothing has gone to the laundry yet"
-          description={
-            "A docket is one bag: whose it is, what is in it, and what has "
-            + "come back. A guest's charges to their room; the hotel's own "
-            + "linen is counted out and counted back, and never charged to "
-            + "anybody."
-          }
-          action={
-            <Button variant="primary" onClick={() => setCollecting(true)}>
-              Collect a bag
-            </Button>
-          }
-        />
+        <Card>
+          <EmptyState
+            icon={<Shirt />}
+            title="Nothing has gone to the laundry yet"
+            description={
+              "A docket is one bag: whose it is, what is in it, and what has "
+              + "come back. A guest's charges to their room; the hotel's own "
+              + "linen is counted out and counted back, and never charged to "
+              + "anybody."
+            }
+            action={
+              <Button variant="primary" onClick={() => setCollecting(true)}>
+                Collect a bag
+              </Button>
+            }
+          />
+        </Card>
       );
     }
 
@@ -197,21 +204,25 @@ export default function LaundryDocketsPage() {
         title="Laundry"
         description="Every bag that has gone out - a guest's and the hotel's own - and what has come back."
         actions={
-          <div className="flex flex-wrap items-center gap-2">
+          <>
             <Button asChild variant="secondary" leadingIcon={<IndianRupee />}>
               <Link to={`/h/${code}/laundry/price-list`}>Price list</Link>
             </Button>
             <Button variant="primary" leadingIcon={<Plus />} onClick={() => setCollecting(true)}>
               Collect a bag
             </Button>
-          </div>
+          </>
         }
       />
 
-      <div className="mb-4 flex flex-wrap items-center gap-3">
+      {/* The filter row, 20px above the list. On a phone the switch is
+          full width (as on Groups) and scrolls inside itself rather than
+          push the page sideways. */}
+      <div className="mb-5 flex flex-wrap items-center gap-x-3 gap-y-2">
         <Segmented
           value={whose}
           onChange={setWhose}
+          className="max-w-full overflow-x-auto scrollbar-quiet max-sm:flex max-sm:w-full max-sm:[&>button]:flex-1"
           options={[
             { value: "all", label: "Everything" },
             { value: "guest", label: "Guests' bags" },
@@ -219,7 +230,7 @@ export default function LaundryDocketsPage() {
           ]}
         />
         {q.data && (
-          <p className="text-sm text-ink-600">
+          <p className="text-sm text-grey-600">
             {stillOut === 0
               ? "Nothing is still out."
               : stillOut === 1 ? "One bag is still out."
@@ -340,7 +351,18 @@ function CollectDialog({
 
   return (
     <Dialog open onOpenChange={(open) => { if (!open) onClose(); }}>
-      <DialogContent title="Collect a bag" size="lg">
+      <DialogContent
+        title="Collect a bag"
+        size="lg"
+        footer={
+          <>
+            <Button variant="secondary" onClick={onClose}>Cancel</Button>
+            <Button variant="primary" loading={saving} onClick={() => void submit()}>
+              Collect it
+            </Button>
+          </>
+        }
+      >
         <div className="space-y-4">
           <Field
             label="Whose is this"
@@ -389,7 +411,7 @@ function CollectDialog({
           )}
 
           {belongsTo === "guest" && stays.data?.length === 0 && (
-            <p className="text-sm text-ink-700">
+            <p className="text-sm text-grey-600">
               Nobody is in house to charge a bag to. The hotel's own linen does
               not need a stay.
             </p>
@@ -400,10 +422,12 @@ function CollectDialog({
               <p className="text-sm font-medium text-ink-900">What is in the bag</p>
 
               {items.length === 0 ? (
-                <p className="text-sm text-ink-700">
+                <p className="text-sm text-grey-600">
                   Nothing is on this property's price list yet, so there is
                   nothing to put in a bag. Add what it launders on the{" "}
-                  <Link className="underline" to={`/h/${code}/laundry/price-list`}>
+                  {/* A link is orange, so it reads as one (D27-54). */}
+                  <Link className="font-medium text-brand-orange-700 hover:underline underline-offset-4"
+                        to={`/h/${code}/laundry/price-list`}>
                     price list
                   </Link>{" "}
                   first - an item with no price is fine, and is how linen
@@ -436,7 +460,7 @@ function CollectDialog({
                       </div>
                       {lines.length > 1 && (
                         <Button
-                          variant="ghost"
+                          variant="secondary"
                           size="icon"
                           aria-label={`Take line ${i + 1} off`}
                           onClick={() => setLines((all) => all.filter((_, n) => n !== i))}
@@ -452,7 +476,7 @@ function CollectDialog({
                   >
                     Add another thing
                   </Button>
-                  <p className="text-sm text-ink-600">
+                  <p className="text-sm text-grey-500">
                     The description and the price are copied onto the docket as
                     they are now, so re-pricing next month does not rewrite a
                     bag somebody was handed. Anything marked "not priced" leaves
@@ -476,14 +500,7 @@ function CollectDialog({
             </Field>
           )}
 
-          {problem && <p role="alert" className="text-sm text-brand-red">{problem}</p>}
-
-          <div className="flex justify-end gap-2">
-            <Button variant="secondary" onClick={onClose}>Cancel</Button>
-            <Button variant="primary" loading={saving} onClick={() => void submit()}>
-              Collect it
-            </Button>
-          </div>
+          {problem && <p role="alert" className="text-sm text-brand-red-700">{problem}</p>}
         </div>
       </DialogContent>
     </Dialog>

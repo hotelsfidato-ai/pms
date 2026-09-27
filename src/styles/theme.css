@@ -69,6 +69,17 @@
   --color-brand-red-700: #c52a1a;
   --color-brand-red-800: #a82115;   /* the danger button pressed */
   --color-brand-yellow-800: #8a6300;
+  /* The warning ink under the name seven screens already wrote, which was
+     never defined, so their "needs attention" words showed in plain ink
+     (found 27 September by the redesign). One value, the same ink. */
+  --color-warning-dark: #8a6300;
+  /* The same for three more names screens wrote and nobody defined (the
+     redesign, 27 September): a link ("brand", nine places), an alarm
+     ("danger", four) and a warning ("warning", one) all showed in plain
+     ink. Each is the readable step its authors meant. */
+  --color-brand: #a34314;
+  --color-danger: #c52a1a;
+  --color-warning: #8a6300;
 
   /* Tints for surfaces / soft badges */
   --color-brand-orange-50: #fdf1eb;
@@ -127,27 +138,31 @@
      Not larger than that. This is a dense operational tool: a tape
      chart of fourteen day columns and a folio of forty postings are
      read by scanning, and type set for a marketing page would cost
-     more rows than it gains in comfort. */
+     more rows than it gains in comfort.
+
+     27 SEPTEMBER, THE TYPE LADDER (D22-51, applied with the owner's yes):
+     12, 14, 16, 20, 24, 28, 30 and nothing between. So `xs` joins the
+     caption at 12, `base` joins the label at 14, and `lg` joins the
+     heading at 16. The names stay, so no screen needed touching; a
+     typing box still grows to 16px under a finger (Input.tsx). */
   --text-2xs: 0.75rem;
   --text-2xs--line-height: 1.0625rem;
-  --text-xs: 0.8125rem;
-  --text-xs--line-height: 1.1875rem;
+  --text-xs: 0.75rem;
+  --text-xs--line-height: 1.0625rem;
   --text-sm: 0.875rem;
   --text-sm--line-height: 1.3125rem;
-  --text-base: 0.9375rem;
-  --text-base--line-height: 1.4375rem;
+  --text-base: 0.875rem;
+  --text-base--line-height: 1.3125rem;
   --text-md: 1rem;
   --text-md--line-height: 1.5rem;
-  --text-lg: 1.125rem;
-  --text-lg--line-height: 1.6875rem;
+  --text-lg: 1rem;
+  --text-lg--line-height: 1.5rem;
   --text-xl: 1.25rem;
   --text-xl--line-height: 1.75rem;
   --text-2xl: 1.5rem;
   --text-2xl--line-height: 2rem;
   --text-3xl: 1.875rem;
   --text-3xl--line-height: 2.25rem;
-  --text-4xl: 2.25rem;
-  --text-4xl--line-height: 2.5rem;
 
   /* ── Radius — 10px house radius ───────────────────────────────── */
   --radius-xs: 4px;
@@ -242,6 +257,41 @@
   background-color: #fff;
   border: 1px solid var(--color-grey-200);
   border-radius: var(--radius-md);
+}
+
+/* The page title, the fidato-design skill's large title: 28px at 650,
+   26 on a phone. One utility, so every title is the same step. */
+@utility page-title {
+  font-size: 1.75rem;
+  line-height: 2.125rem;
+  font-weight: 650;
+  letter-spacing: -0.022em;
+  @media (width < 40rem) {
+    font-size: 1.625rem;
+    line-height: 2rem;
+  }
+}
+
+/* Press feedback (fidato-design-eng § 2): a press shrinks the control
+   on pointer-down. 0.97 for buttons, `press-tile` 0.98 for big tiles.
+   Transform only, so it never moves the layout; off under reduced motion. */
+@utility press {
+  transition-property: color, background-color, border-color, box-shadow, transform;
+  transition-duration: 120ms;
+  transition-timing-function: var(--ease-out-quiet);
+  &:active:not(:disabled) { transform: scale(0.97); }
+  @media (prefers-reduced-motion: reduce) {
+    &:active:not(:disabled) { transform: none; }
+  }
+}
+@utility press-tile {
+  transition-property: color, background-color, border-color, box-shadow, transform;
+  transition-duration: 120ms;
+  transition-timing-function: var(--ease-out-quiet);
+  &:active { transform: scale(0.98); }
+  @media (prefers-reduced-motion: reduce) {
+    &:active { transform: none; }
+  }
 }
 
 @utility brand-gradient {

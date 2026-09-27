@@ -376,7 +376,7 @@ reports.get("/:code/reports/gst-sales", async (c) => {
   return body ? c.json(body) : c.json({ error: "No such property." }, 404);
 });
 
-/* ── Form C / C-Form ─────────────────────────────────────────────── */
+/* ── The Form III register ────────────────────────────────────────── */
 
 reports.get("/:code/reports/c-form", async (c) => {
   const fromParam = c.req.query("from");
@@ -389,45 +389,43 @@ reports.get("/:code/reports/c-form", async (c) => {
     const from = fromParam ?? monthStart(bd);
     const to = toParam ?? bd;
 
-    /* The printable form of the register. `app.form_c_due()` answers
-       who owes a filing today; this answers what happened across a
-       period, which is what an inspection asks to see.
-
-       Every field the FRRO form wants comes from guest_documents —
-       which nothing wrote to until Phase 1 item 1, and which is why
-       this report carried the note "needs passport capture at
-       check-in" for the whole project. */
-    const { rows } = await client.query<{
-      guest: string; nationality: string; passport: string | null;
-      passport_expiry: string | null; visa_number: string | null;
-      visa_expiry: string | null; address: string | null;
-      room: string | null; arrived: string; departed: string;
-      reference: string | null; filed_at: string | null;
-    }>(
-      `select g.full_name as guest, g.nationality,
-              gd.id_number as passport,
-              to_char(gd.passport_expiry,'YYYY-MM-DD') as passport_expiry,
-              gd.visa_number,
-              to_char(gd.visa_expiry,'YYYY-MM-DD') as visa_expiry,
-              gd.address_line as address,
-              (select rm.number from room_assignments ra
-                 join rooms rm on rm.id = ra.room_id
-                where ra.reservation_id = r.id
-                order by ra.released_at nulls first, ra.from_date desc
-                limit 1) as room,
-              to_char(r.check_in,'YYYY-MM-DD') as arrived,
-              to_char(r.check_out,'YYYY-MM-DD') as departed,
-              f.reference,
-              to_char(f.filed_at, 'YYYY-MM-DD HH24:MI') as filed_at
-         from reservations r
-         join guests g on g.id = r.guest_id
-         left join guest_documents gd on gd.guest_id = g.id
-         left join form_c_filings f on f.reservation_id = r.id
-        where r.hotel_id = $1
-          and g.nationality <> 'IN'
-          and r.status in ('checked_in','checked_out')
-          and r.check_in between $2::date and $3::date
-        order by r.check_in, g.full_name`,
+    /* The record an inspection asks to see (Rule 17(2)): every foreign
+       arrival in the period, in Form III's order. The guests service's
+       app.form_iii (147) is the one answer, so this and the register
+       cannot disagree. Blanks stay null - a gap on a form that must be
+       filed is somebody's job, and hiding it makes the report look
+       complete when it is not. */
+    const { rows } = await client.query<Record<string, string | null>>(
+      `select f.guest_name as guest, f.nationality, f.passport,
+              f.passport_issued_on::text as "passportIssuedOn",
+              f.passport_issue_place as "passportIssuePlace",
+              f.passport_expiry::text as "passportExpiry",
+              f.visa_number as "visaNumber", f.visa_type as "visaType",
+              f.visa_issued_on::text as "visaIssuedOn",
+              f.visa_expiry::text as "visaExpiry",
+              f.phone_in_india as "phoneInIndia", f.mobile_in_india as "mobileInIndia",
+              f.phone_abroad as "phoneAbroad", f.mobile_abroad as "mobileAbroad",
+              f.email, f.remarks,
+              f.arrived_from as "arrivedFrom",
+              to_char(f.arrived_at at time zone h.timezone, 'YYYY-MM-DD HH24:MI') as "arrivedAt",
+              initcap(f.purpose) as purpose, f.purpose_other as "purposeOther",
+              f.previous_stay as "previousStay",
+              to_char(f.departed_at at time zone h.timezone, 'YYYY-MM-DD HH24:MI') as "departedAt",
+              f.next_destination as "nextDestination",
+              initcap(f.gender) as gender, f.date_of_birth::text as "dateOfBirth",
+              f.arrived_in_india_on::text as "arrivedInIndiaOn",
+              f.arrival_port as "arrivalPort",
+              concat_ws(', ', f.home_address, f.home_city, f.home_country) as address,
+              concat_ws(', ', f.ref_address, f.ref_city, f.ref_state, f.ref_pincode) as "refAddress",
+              case f.employed_in_india when true then 'Yes' when false then 'No' end as "employedInIndia",
+              f.room_number as room,
+              f.check_in::text as arrived, f.check_out::text as departed,
+              array_to_string(f.arrival_numbers, ', ') as reference,
+              array_to_string(f.departure_numbers, ', ') as "departureReference"
+         from app.form_iii($1) f
+         join hotels h on h.id = $1
+        where f.check_in between $2::date and $3::date
+        order by f.check_in, f.guest_name`,
       [hotelId, from, to],
     );
 
@@ -436,23 +434,9 @@ reports.get("/:code/reports/c-form", async (c) => {
       note:
         "This system does not file with the FRRO. Filing happens on the " +
         "government portal; this is the record of what was filed.",
-      rows: rows.map((r) => ({
-        guest: r.guest,
-        nationality: r.nationality,
-        /* Null where nothing was captured. A blank on a form that must
-           be filed is somebody's job this morning, and hiding it would
-           make the report look complete when it is not. */
-        passport: r.passport,
-        passportExpiry: r.passport_expiry,
-        visaNumber: r.visa_number,
-        visaExpiry: r.visa_expiry,
-        address: r.address,
-        room: r.room ?? "-",
-        arrived: r.arrived,
-        departed: r.departed,
-        reference: r.reference,
-        filedAt: r.filed_at,
-      })),
+      /* '' from concat_ws or array_to_string is "nothing recorded". */
+      rows: rows.map((r) => Object.fromEntries(
+        Object.entries(r).map(([k, v]) => [k, v === "" ? null : v]))),
     };
   });
 

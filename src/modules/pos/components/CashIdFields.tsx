@@ -22,7 +22,9 @@ export function CashIdFields({ value, onChange }: {
     </label>
   );
   return (
-    <div className="rounded-md border border-grey-200 p-3 space-y-2">
+    /* A washed panel, not a bordered box: it sits inside the order's card
+       (never a card inside a card). */
+    <div className="rounded-lg bg-grey-50 px-3.5 py-3 space-y-2">
       <p className="text-sm text-grey-600">
         More than ₹1,00,000 in cash needs the guest's PAN, Form 97, or a guest from abroad.
       </p>

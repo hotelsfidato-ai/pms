@@ -3,7 +3,7 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { CheckCircle2, AlertTriangle, Send } from "lucide-react";
 import {
   Button, Card, CardBody, Checkbox, Field, fieldProps, Input, NativeSelect, Textarea,
-  StatusPill, ReadFailed, Skeleton, toast,
+  StatusPill, ReadFailed, Skeleton, InfoButton, toast,
 } from "@/components/ui";
 import { money, dateTime, dateShort } from "@/lib/format";
 import {
@@ -45,7 +45,7 @@ export function SuSetup({ code }: { code: string }) {
     return <ReadFailed error={content.error} what="the SU setup" onRetry={() => void content.refetch()} />;
   }
   return (
-    <div className="space-y-4">
+    <div className="space-y-3">
       <SuLogin />
       <HotelOnSu code={code} data={content.data} />
       <RoomTypesOnSu code={code} data={content.data} />
@@ -194,7 +194,7 @@ function HotelOnSu({ code, data }: { code: string; data: SuContent }) {
 function LastSend({ record }: { record: { sentAt: string | null; sentOk: boolean | null; sentResult: string | null } | null }) {
   if (!record?.sentAt) return <span className="text-sm text-grey-500">Not sent yet</span>;
   return (
-    <span className={record.sentOk ? "text-sm text-grey-600" : "text-sm text-brand-red"}>
+    <span className={record.sentOk ? "text-sm text-grey-600" : "text-sm text-brand-red-700"}>
       {dateTime(record.sentAt)}: {record.sentResult}
     </span>
   );
@@ -204,12 +204,10 @@ function RoomTypesOnSu({ code, data }: { code: string; data: SuContent }) {
   return (
     <Card>
       <CardBody className="space-y-3">
-        <div>
+        {/* The section's note behind an (i), the same words (the owner, 27 September). */}
+        <div className="flex items-center gap-1">
           <h2 className="text-md font-semibold text-ink-900">Room types</h2>
-          <p className="text-sm text-grey-500">
-            Each one goes to SU under the id you give it, with its rack rate and its rooms.
-            A room type with no rack rate cannot be listed.
-          </p>
+          <InfoButton>{"Each one goes to SU under the id you give it, with its rack rate and its rooms. A room type with no rack rate cannot be listed."}</InfoButton>
         </div>
         <ul className="divide-y divide-grey-100">
           {data.roomTypes.map((t) => (
@@ -246,9 +244,9 @@ function RoomTypeRow({ code, type, suRoomTypes }: {
 
   const ready = suRoomId.trim() !== "" && suRoomType !== "" && maxChildren.trim() !== "";
   return (
-    <li className="py-3 space-y-2">
+    <li className="py-3 space-y-3">
       <div className="flex flex-wrap items-baseline gap-x-3">
-        <span className="text-base font-medium text-ink-900">{type.name}</span>
+        <span className="text-sm font-medium text-ink-900">{type.name}</span>
         <span className="text-sm text-grey-500">
           sleeps {type.maxOccupancy} · {type.rooms} rooms · rack rate{" "}
           {type.rackRate === null ? "-" : money(Number(type.rackRate))}
@@ -286,12 +284,10 @@ function MealPlansOnSu({ code, data }: { code: string; data: SuContent }) {
   return (
     <Card>
       <CardBody className="space-y-3">
-        <div>
+        {/* The section's note behind an (i), the same words (the owner, 27 September). */}
+        <div className="flex items-center gap-1">
           <h2 className="text-md font-semibold text-ink-900">Meal plans</h2>
-          <p className="text-sm text-grey-500">
-            Each meal plan sold online is a rate plan on SU. Pick what SU should call it:
-            it is what the booking sites show a guest.
-          </p>
+          <InfoButton>{"Each meal plan sold online is a rate plan on SU. Pick what SU should call it: it is what the booking sites show a guest."}</InfoButton>
         </div>
         <ul className="divide-y divide-grey-100">
           {data.mealPlans.map((p) => (
@@ -325,9 +321,9 @@ function MealPlanRow({ code, plan, suMealPlans }: {
 
   const ready = suRatePlanId.trim() !== "" && suMealPlan !== "";
   return (
-    <li className="py-3 space-y-2">
+    <li className="py-3 space-y-3">
       <div className="flex flex-wrap items-baseline gap-x-3">
-        <span className="text-base font-medium text-ink-900">{plan.name}</span>
+        <span className="text-sm font-medium text-ink-900">{plan.name}</span>
         <span className="text-sm text-grey-500">{plan.includes}</span>
         {m?.onSu && <StatusPill tone="neutral">{m.onSu === "active" ? "On SU" : "Taken off SU"}</StatusPill>}
       </div>
@@ -385,13 +381,10 @@ function ChannelBookings({ code }: { code: string }) {
   return (
     <Card>
       <CardBody className="space-y-3">
-        <div>
+        {/* The section's note behind an (i), the same words (the owner, 27 September). */}
+        <div className="flex items-center gap-1">
           <h2 className="text-md font-semibold text-ink-900">Bookings from the booking sites</h2>
-          <p className="text-sm text-grey-500">
-            Every booking SU has sent, as it arrived. A booking for a room that was no longer
-            free is refused and the site is told there is nothing left; somebody then settles
-            it with the site and the guest. Card details are never kept.
-          </p>
+          <InfoButton>{"Every booking SU has sent, as it arrived. A booking for a room that was no longer free is refused and the site is told there is nothing left; somebody then settles it with the site and the guest. Card details are never kept."}</InfoButton>
         </div>
         {list.isError && (
           <ReadFailed compact error={list.error} what="the bookings from SU"
@@ -400,11 +393,11 @@ function ChannelBookings({ code }: { code: string }) {
         {list.data && bookings.length === 0 && (
           <p className="text-base text-grey-600">SU has not sent a booking yet.</p>
         )}
-        <ul className="space-y-2">
+        <ul className="divide-y divide-grey-100">
           {bookings.map((b) => (
-            <li key={b.id} className="rounded-md border border-grey-200 p-3 space-y-1">
-              <div className="flex flex-wrap items-baseline gap-x-3">
-                <span className="text-base font-medium text-ink-900">{b.guestName ?? "-"}</span>
+            <li key={b.id} className="py-3 space-y-1">
+              <div className="flex flex-wrap items-baseline gap-x-3 gap-y-1">
+                <span className="text-sm font-medium text-ink-900">{b.guestName ?? "-"}</span>
                 <span className="text-sm text-grey-500">
                   {b.channel ?? "-"} · {b.arrival ?? "-"} to {b.departure ?? "-"} ·{" "}
                   {b.rooms} room{b.rooms === 1 ? "" : "s"} ·{" "}
@@ -420,7 +413,7 @@ function ChannelBookings({ code }: { code: string }) {
                 {b.cardFieldsRemoved > 0 && " · card details were not kept"}
               </p>
               {!b.handled && b.outcome !== "created" && (
-                <Button variant="secondary" size="sm" onClick={() => done(b.id)}
+                <Button variant="secondary" size="sm" className="mt-2" onClick={() => done(b.id)}
                         disabled={marking === b.id}>
                   {marking === b.id ? "Marking" : "I have dealt with this"}
                 </Button>
@@ -457,15 +450,10 @@ function RoomsAndPrices({ code, data }: { code: string; data: SuContent }) {
   return (
     <Card>
       <CardBody className="space-y-3">
-        <div>
+        {/* The section's note behind an (i), the same words (the owner, 27 September). */}
+        <div className="flex items-center gap-1">
           <h2 className="text-md font-semibold text-ink-900">Rooms left, prices and closures</h2>
-          <p className="text-sm text-grey-500">
-            A year at a time. Send a year when a hotel first goes on SU; after that only what
-            changed is sent, on its own every minute once the hotel is switched on. Where a meal
-            plan has no price of its own, the room type's rack rate goes, so the room keeps
-            selling; where there is no price at all, the date goes to SU closed, so no booking
-            site sells it at an old price.
-          </p>
+          <InfoButton>{"A year at a time. Send a year when a hotel first goes on SU; after that only what changed is sent, on its own every minute once the hotel is switched on. Where a meal plan has no price of its own, the room type's rack rate goes, so the room keeps selling; where there is no price at all, the date goes to SU closed, so no booking site sells it at an old price."}</InfoButton>
         </div>
         {blocked && (
           <p className="text-base text-grey-600">
@@ -499,7 +487,7 @@ function RoomsAndPrices({ code, data }: { code: string; data: SuContent }) {
         {state.data && state.data.pushes.length > 0 && (
           <ul className="space-y-1">
             {state.data.pushes.map((p) => (
-              <li key={p.at} className={p.ok ? "text-sm text-grey-600" : "text-sm text-brand-red"}>
+              <li key={p.at} className={p.ok ? "text-sm text-grey-600" : "text-sm text-brand-red-700"}>
                 {dateTime(p.at)} · {p.kind === "all" ? "a year" : "what changed"} · {p.dates} dates
                 {" "}in {p.requests} request{p.requests === 1 ? "" : "s"} · {p.result}
                 {p.unpricedDates > 0 && ` · ${p.unpricedDates} closed for want of a price`}
@@ -590,7 +578,7 @@ function SendToSu({ code, data }: { code: string; data: SuContent }) {
                 {r.ok
                   ? <CheckCircle2 className="size-4 shrink-0 text-grey-500 mt-0.5" />
                   : <AlertTriangle className="size-4 shrink-0 text-brand-red mt-0.5" />}
-                <span className={r.ok ? "text-grey-700" : "text-brand-red"}>
+                <span className={r.ok ? "text-grey-700" : "text-brand-red-700"}>
                   {r.name} ({r.kind}), {r.action}: {r.ok ? "SU accepted it." : r.reason}
                 </span>
               </li>

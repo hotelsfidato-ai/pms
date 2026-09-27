@@ -3,7 +3,8 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { Plus, Sparkles, UserRound } from "lucide-react";
 import { money } from "@/lib/format";
 import {
-  Page, PageHeader, Card, CardBody, Button, Skeleton, EmptyState, StatusPill,
+  Page, PageHeader, Card, CardHeader, Button, Skeleton, EmptyState, StatusPill, IconChip,
+  InfoButton,
   Dialog, DialogContent, Field, fieldProps, Input, toast,
   ReadFailed, readError,
 } from "@/components/ui";
@@ -69,20 +70,36 @@ export default function SpaSetupPage() {
         }
       />
 
-      <Card className="mb-4">
-        <CardBody className="space-y-3">
-          <div className="flex flex-wrap items-center justify-between gap-2">
-            <p className="text-base font-medium">Treatments</p>
-            <Button variant="primary" className="h-11"
-                    onClick={() => setAddingTreatment(true)}>
-              <Plus className="size-4" /> Add a treatment
-            </Button>
-          </div>
+      {/* Two cards 12px apart; each a heading with its chip, then list
+          rows with a hairline between, not boxes inside the card. */}
+      <div className="space-y-3">
+        <Card>
+          <CardHeader
+            className="items-center"
+            actions={
+              <Button variant="primary"
+                      onClick={() => setAddingTreatment(true)}>
+                <Plus className="size-4" /> Add a treatment
+              </Button>
+            }
+          >
+            {/* The card's note beside its heading, behind an (i) with the
+                same words (D27-45, D27-82). A sibling of the heading, so
+                the heading's own name stays "Treatments". */}
+            <div className="flex items-center gap-1.5 min-w-0">
+              <h2 className="flex items-center gap-2.5 min-w-0 text-md font-semibold text-ink-900">
+                <IconChip><Sparkles /></IconChip> Treatments
+              </h2>
+              <InfoButton>
+                {"Leave the price empty where none has been set. It reads \"-\", never ₹0, and the treatment cannot be closed for money until it has one."}
+              </InfoButton>
+            </div>
+          </CardHeader>
 
           {/* A read that failed says so. It never draws "nothing on the
               list yet", which at a property with thirty treatments is a
               lie somebody would act on. */}
-          {treatments.isLoading ? <Skeleton className="h-24" />
+          {treatments.isLoading ? <div className="px-4 py-3.5"><Skeleton className="h-24" /></div>
             : !treatments.data ? (
               <ReadFailed error={readError(treatments)} what="the treatments"
                           onRetry={() => void treatments.refetch()} />
@@ -96,23 +113,22 @@ export default function SpaSetupPage() {
                 }
               />
             ) : (
-              <ul className="space-y-2">
+              <ul className="divide-y divide-grey-100">
                 {treatments.data.map((t) => (
                   <li key={t.id}
-                      className="flex flex-wrap items-center justify-between gap-x-3 gap-y-1
-                                 rounded-lg border border-grey-200 px-3 py-2.5">
+                      className="flex flex-wrap items-center justify-between gap-x-3 gap-y-2 px-4 py-3 min-h-14">
                     <span className="min-w-0">
-                      <span className="font-medium">{t.name}</span>
-                      <span className="text-sm text-grey-500"> · {t.minutes} min</span>
+                      <span className="text-sm font-medium text-ink-900">{t.name}</span>
+                      <span className="text-sm text-grey-500 tabular"> · {t.minutes} min</span>
                       {!t.isActive && (
                         <StatusPill tone="neutral" className="ml-2">Off the list</StatusPill>
                       )}
                     </span>
-                    <span className="flex items-center gap-3">
+                    <span className="ml-auto flex items-center gap-3 shrink-0">
                       {/* THE DASH, and never ₹0. A treatment shown as free
                           is worse than one shown as unpriced. */}
                       <span className={t.price === null
-                        ? "text-grey-500" : "tabular-nums font-medium"}>
+                        ? "text-sm text-grey-500" : "text-sm font-medium text-ink-900 tabular"}>
                         {t.price === null ? "-" : money(t.price)}
                       </span>
                       <Button variant="secondary" size="sm"
@@ -124,25 +140,24 @@ export default function SpaSetupPage() {
                 ))}
               </ul>
             )}
+        </Card>
 
-          <p className="text-sm text-grey-500">
-            Leave the price empty where none has been set. It reads "-", never
-            ₹0, and the treatment cannot be closed for money until it has one.
-          </p>
-        </CardBody>
-      </Card>
+        <Card>
+          <CardHeader
+            className="items-center"
+            actions={
+              <Button variant="secondary"
+                      onClick={() => setAddingTherapist(true)}>
+                <Plus className="size-4" /> Add a therapist
+              </Button>
+            }
+          >
+            <h2 className="flex items-center gap-2.5 min-w-0 text-md font-semibold text-ink-900">
+              <IconChip><UserRound /></IconChip> Therapists
+            </h2>
+          </CardHeader>
 
-      <Card>
-        <CardBody className="space-y-3">
-          <div className="flex flex-wrap items-center justify-between gap-2">
-            <p className="text-base font-medium">Therapists</p>
-            <Button variant="secondary" className="h-11"
-                    onClick={() => setAddingTherapist(true)}>
-              <Plus className="size-4" /> Add a therapist
-            </Button>
-          </div>
-
-          {therapists.isLoading ? <Skeleton className="h-24" />
+          {therapists.isLoading ? <div className="px-4 py-3.5"><Skeleton className="h-24" /></div>
             : !therapists.data ? (
               <ReadFailed error={readError(therapists)} what="the therapists"
                           onRetry={() => void therapists.refetch()} />
@@ -157,13 +172,12 @@ export default function SpaSetupPage() {
                 }
               />
             ) : (
-              <ul className="space-y-2">
+              <ul className="divide-y divide-grey-100">
                 {therapists.data.map((t) => (
                   <li key={t.id}
-                      className="flex flex-wrap items-center justify-between gap-x-3 gap-y-1
-                                 rounded-lg border border-grey-200 px-3 py-2.5">
-                    <span>
-                      <span className="font-medium">{t.name}</span>
+                      className="flex flex-wrap items-center justify-between gap-x-3 gap-y-2 px-4 py-3 min-h-14">
+                    <span className="min-w-0">
+                      <span className="text-sm font-medium text-ink-900">{t.name}</span>
                       {!t.isActive && (
                         <StatusPill tone="neutral" className="ml-2">
                           Not taking appointments
@@ -175,8 +189,8 @@ export default function SpaSetupPage() {
                 ))}
               </ul>
             )}
-        </CardBody>
-      </Card>
+        </Card>
+      </div>
 
       {addingTreatment && (
         <TreatmentDialog code={code} onClose={() => setAddingTreatment(false)} />
@@ -207,7 +221,7 @@ function TherapistToggle({ code, therapist }: { code: string; therapist: SpaTher
   };
 
   return (
-    <Button variant="secondary" size="sm" loading={saving} onClick={() => void flip()}>
+    <Button variant="secondary" size="sm" className="ml-auto" loading={saving} onClick={() => void flip()}>
       {therapist.isActive ? "Take off the list" : "Put back on the list"}
     </Button>
   );
@@ -274,8 +288,23 @@ function TreatmentDialog({
 
   return (
     <Dialog open onOpenChange={(open) => { if (!open) onClose(); }}>
-      <DialogContent title={treatment ? "Change a treatment" : "Add a treatment"}
-                     className="max-w-md">
+      <DialogContent
+        title={treatment ? "Change a treatment" : "Add a treatment"}
+        className="max-w-md"
+        footer={
+          <>
+            {treatment && (
+              <Button variant="secondary" className="mr-auto" onClick={() => void retire()}>
+                {treatment.isActive ? "Take off the list" : "Put back on the list"}
+              </Button>
+            )}
+            <Button variant="secondary" onClick={onClose}>Cancel</Button>
+            <Button variant="primary" loading={saving} onClick={() => void submit()}>
+              {treatment ? "Save" : "Add it"}
+            </Button>
+          </>
+        }
+      >
         <div className="space-y-4">
           <Field label="Name">
             {(p) => (
@@ -304,20 +333,8 @@ function TreatmentDialog({
           </Field>
 
           {problem && (
-            <p role="alert" className="text-sm text-brand-red">{problem}</p>
+            <p role="alert" className="text-sm text-brand-red-700">{problem}</p>
           )}
-
-          <div className="flex flex-wrap justify-end gap-2">
-            {treatment && (
-              <Button variant="ghost" className="mr-auto" onClick={() => void retire()}>
-                {treatment.isActive ? "Take off the list" : "Put back on the list"}
-              </Button>
-            )}
-            <Button variant="secondary" onClick={onClose}>Cancel</Button>
-            <Button variant="primary" loading={saving} onClick={() => void submit()}>
-              {treatment ? "Save" : "Add it"}
-            </Button>
-          </div>
         </div>
       </DialogContent>
     </Dialog>
@@ -344,7 +361,18 @@ function TherapistDialog({ code, onClose }: { code: string; onClose: () => void 
 
   return (
     <Dialog open onOpenChange={(open) => { if (!open) onClose(); }}>
-      <DialogContent title="Add a therapist" className="max-w-md">
+      <DialogContent
+        title="Add a therapist"
+        className="max-w-md"
+        footer={
+          <>
+            <Button variant="secondary" onClick={onClose}>Cancel</Button>
+            <Button variant="primary" loading={saving} onClick={() => void submit()}>
+              Add them
+            </Button>
+          </>
+        }
+      >
         <div className="space-y-4">
           <Field label="Name"
                  hint="A name the diary books against — not an account. Nobody here signs in.">
@@ -356,15 +384,8 @@ function TherapistDialog({ code, onClose }: { code: string; onClose: () => void 
           </Field>
 
           {problem && (
-            <p role="alert" className="text-sm text-brand-red">{problem}</p>
+            <p role="alert" className="text-sm text-brand-red-700">{problem}</p>
           )}
-
-          <div className="flex justify-end gap-2">
-            <Button variant="secondary" onClick={onClose}>Cancel</Button>
-            <Button variant="primary" loading={saving} onClick={() => void submit()}>
-              Add them
-            </Button>
-          </div>
         </div>
       </DialogContent>
     </Dialog>

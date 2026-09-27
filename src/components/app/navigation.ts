@@ -15,7 +15,8 @@ import { nav as stores } from "@/modules/stores/nav";
 import { nav as reports } from "@/modules/reports/nav";
 import { nav as admin } from "@/modules/admin/nav";
 import { nav as channelManager } from "@/modules/channel-manager/nav";
-/* The services not built yet — each a Coming soon page (16 September). */
+/* The services not built yet: each an explanation page, in the section it
+   will belong to, marked "Not built yet" (D27-87, 28 September). */
 import { nav as accounting } from "@/modules/accounting/nav";
 import { nav as bookingEngine } from "@/modules/booking-engine/nav";
 import { nav as crm } from "@/modules/crm/nav";
@@ -76,6 +77,9 @@ export interface NavItem {
    * the roles without one still see it in the full menu.
    */
   workingMenus?: readonly Role[];
+  /** A service not built yet: its entry opens the page saying what it will
+      do, and the menu and Find a screen mark it "Not built yet" (D27-87). */
+  notBuilt?: true;
 }
 
 /** True in `vite dev` and in the test runner, false in a production build. */
@@ -160,11 +164,11 @@ export interface NavSection {
    ══════════════════════════════════════════════════════════════════ */
 
 export type SectionKey =
-  | "home" | "front-desk" | "bookings" | "guests-crm" | "across-properties" | "configuration"
-  | "inventory" | "store-and-equipment" | "finance" | "point-of-sale" | "banquet"
+  | "home" | "front-desk" | "bookings" | "guests-crm" | "sales-marketing"
+  | "across-properties" | "configuration" | "inventory" | "distribution"
+  | "store-and-equipment" | "finance" | "point-of-sale" | "banquet"
   | "laundry" | "spa"
-  | "reports" | "system"
-  | "coming-soon";
+  | "reports" | "system";
 
 /** A menu entry as a service declares it. */
 export interface ServiceNavEntry extends NavItem {
@@ -185,6 +189,24 @@ const SECTION_LAYOUT: Array<Omit<NavSection, "items"> & { key: SectionKey }> = [
      CRM" left Coming soon the same day, because its home is now here.
      No screen gained or lost a permission; four entries changed section. */
   { key: "guests-crm", label: "Guests & CRM" },
+  /* ══════════════════════════════════════════════════════════════
+     NO "COMING SOON" SECTION — the owner, 28 September (D27-87)
+
+     From 16 September every service not built yet sat in one section at
+     the foot of the menu. Now each sits where it will belong, marked "Not
+     built yet" (`notBuilt`): the channel manager, the booking engine, the
+     CRS and contracts under Distribution; leads, marketing and loyalty
+     under Sales and marketing; guest services in the Front desk, online
+     payments in Finance, room systems in System. Who sees them is
+     unchanged: the owner, admins and GMs (`seesComingSoon`), and
+     marketing's own grant. A section holding only these is absent for
+     everybody else. The pages behind them are the same explanation pages
+     (`src/pages/ComingSoon.tsx`). An entry loses the mark the day its
+     service is built.
+
+     Sales and marketing sits beside Guests & CRM: both are about people.
+     Distribution sits beside Rooms and rates: it sells those rooms. */
+  { key: "sales-marketing", label: "Sales and marketing" },
   /* ══════════════════════════════════════════════════════════════
      WHAT BELONGS TO THE GROUP, AND WHAT BELONGS TO ONE HOTEL
 
@@ -218,6 +240,7 @@ const SECTION_LAYOUT: Array<Omit<NavSection, "items"> & { key: SectionKey }> = [
      and prices here, and stock on shelves. The key stays `inventory` because
      every service's nav.ts names it; only the words a person reads change. */
   { key: "inventory", label: "Rooms and rates" },
+  { key: "distribution", label: "Distribution" },
   /* Stock and durable things — the Store now, Equipment and Purchasing when
      they are built (docs/STOCK-AND-EQUIPMENT-PLAN.md). */
   { key: "store-and-equipment", label: "Store and equipment" },
@@ -268,18 +291,6 @@ const SECTION_LAYOUT: Array<Omit<NavSection, "items"> & { key: SectionKey }> = [
   { key: "spa", label: "Spa", module: "spa" },
   { key: "reports", label: "Reports" },
   { key: "system", label: "System" },
-  /* ══════════════════════════════════════════════════════════════
-     COMING SOON — the owner's decision, 16 September
-
-     Every service the hotel system will have and does not yet: the CRS,
-     the channel manager and sixteen more, each with a page saying what
-     it will do and what it needs (`src/pages/ComingSoon.tsx`). One
-     section at the foot of the menu, alphabetical, seen by the owner,
-     admins and general managers only (`seesComingSoon`), so nothing that
-     does not work sits among the screens that do, and reception's menu
-     is unchanged. A service leaves this section the day it is built.
-     ══════════════════════════════════════════════════════════════ */
-  { key: "coming-soon", label: "Coming soon" },
 ];
 
 /* The entries that belong to no service: where the system talks to a

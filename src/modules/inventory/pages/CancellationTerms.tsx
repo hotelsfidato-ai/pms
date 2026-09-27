@@ -135,7 +135,9 @@ export default function CancellationTermsPage() {
         <div className="space-y-3">
           {list.map((p) => (
             <Card key={p.id}>
-              <div className="flex items-start justify-between gap-4 p-4">
+              {/* The actions go under the terms on a phone, so the name and
+                  the terms keep the card's width (the Breathing Room Rule). */}
+              <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3 px-4 py-3.5">
                 <div className="min-w-0 flex-1">
                   <div className="flex items-center gap-2 flex-wrap">
                     <h2 className="text-md font-semibold text-ink-900">
@@ -151,9 +153,9 @@ export default function CancellationTermsPage() {
                     )}
                   </div>
 
-                  <dl className="grid sm:grid-cols-3 gap-x-6 gap-y-2 mt-3">
+                  <dl className="grid sm:grid-cols-3 gap-x-6 gap-y-2 mt-3 pt-3 border-t border-grey-100">
                     <div>
-                      <dt className="text-2xs uppercase tracking-wide text-grey-500">
+                      <dt className="text-xs font-medium text-grey-500">
                         Free until
                       </dt>
                       <dd className="text-base text-ink-900 tabular">
@@ -165,7 +167,7 @@ export default function CancellationTermsPage() {
                       </dd>
                     </div>
                     <div>
-                      <dt className="text-2xs uppercase tracking-wide text-grey-500">
+                      <dt className="text-xs font-medium text-grey-500">
                         Cancellation
                       </dt>
                       <dd className="text-base text-ink-900">
@@ -173,7 +175,7 @@ export default function CancellationTermsPage() {
                       </dd>
                     </div>
                     <div>
-                      <dt className="text-2xs uppercase tracking-wide text-grey-500">
+                      <dt className="text-xs font-medium text-grey-500">
                         No-show
                       </dt>
                       <dd className="text-base text-ink-900">
@@ -183,13 +185,14 @@ export default function CancellationTermsPage() {
                   </dl>
                 </div>
 
-                <div className="flex items-center gap-1 shrink-0">
+                <div className="flex items-center gap-2 shrink-0">
                   {/* The switch that actually makes terms bite. Without
                       it a policy is a piece of writing: the audit reads
                       what is frozen on the BOOKING, and nothing freezes
                       anything until one policy claims new bookings. */}
+                  {/* A capsule either way: it is a button (the Tappable Rule). */}
                   <Button
-                    variant={p.appliesToNewBookings ? "secondary" : "ghost"}
+                    variant="secondary"
                     size="sm"
                     onClick={() => void makeDefault(p)}
                   >
@@ -197,7 +200,7 @@ export default function CancellationTermsPage() {
                   </Button>
                   <Button
                     variant="ghost"
-                    size="sm"
+                    size="icon"
                     onClick={() => void retire(p)}
                     aria-label={`Retire ${p.name}`}
                   >
@@ -251,7 +254,7 @@ function PolicyForm({ hotelId, onDone, onCancel }: {
 
   return (
     <Card className="mb-5">
-      <div className="p-4 space-y-4">
+      <div className="px-4 py-3.5 space-y-4">
         <Field label="Name" hint="What the front desk will call it" required>
           {({ id }) => (
             <Input
@@ -278,7 +281,7 @@ function PolicyForm({ hotelId, onDone, onCancel }: {
           )}
         </Field>
 
-        <div className="grid sm:grid-cols-2 gap-4">
+        <div className="grid sm:grid-cols-2 gap-x-6 gap-y-4 pt-4 border-t border-grey-100">
           <BasisPicker
             legend="A cancellation retains"
             basis={cancelBasis} onBasis={setCancelBasis}
@@ -293,7 +296,7 @@ function PolicyForm({ hotelId, onDone, onCancel }: {
           />
         </div>
 
-        <div className="flex items-center justify-end gap-3 pt-1">
+        <div className="flex items-center justify-end gap-2 pt-1">
           <Button variant="secondary" onClick={onCancel}>Cancel</Button>
           <Button variant="primary" onClick={() => void save()} disabled={busy || !name.trim()}>
             Save policy
@@ -314,8 +317,10 @@ function BasisPicker({
   amount: string; onAmount: (v: string) => void;
 }) {
   return (
-    <fieldset className="space-y-3 rounded-md border border-grey-200 p-3">
-      <legend className="text-2xs uppercase tracking-wide text-grey-500 px-1">
+    /* No frame of its own: a box inside the form's card was a card in
+       a card. The two pickers sit side by side under one hairline. */
+    <fieldset className="space-y-3 min-w-0">
+      <legend className="text-xs font-semibold uppercase tracking-[0.03em] text-grey-500">
         {legend}
       </legend>
 

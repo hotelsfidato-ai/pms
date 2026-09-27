@@ -4,6 +4,7 @@ import {
   ResponsiveContainer, Legend,
 } from "recharts";
 import { cn } from "@/lib/cn";
+import { DOC_TH } from "@/components/ui";
 import { moneyPrecise, number, percent, dateReport, dateTimeReport, isValidDate } from "@/lib/format";
 import type {
   ReportDoc, ReportSection, ReportColumn, ReportRow, Cell, CellKind, ReportFact,
@@ -16,8 +17,11 @@ import type {
    server as one ReportDoc, and this is the one thing that draws them on
    screen, in the Fidato look (D17-70): sections under a band, a header
    that spans its groups, totals ruled off, negatives in red, a dash for
-   a figure this system does not hold. The master's PDF and .xlsx draw
-   the same object on the server, so what is on screen is what prints.
+   a figure this system does not hold. The header is the printed
+   documents' (D27-52): small capitals over a 2px ink rule, and the
+   table's outer columns sit flush with the masthead above them. The
+   master's PDF and .xlsx draw the same object on the server, so what is
+   on screen is what prints.
    ══════════════════════════════════════════════════════════════════ */
 
 /** A figure nobody holds (D17-49): a short hyphen, never a zero. */
@@ -52,7 +56,7 @@ export function ReportView({ doc }: { doc: ReportDoc }) {
   return (
     <div data-report={doc.report}>
       {runs.map((run) => (
-        <table key={run[0]!.key} className="w-full border-collapse text-sm">
+        <table key={run[0]!.key} className="w-full border-collapse text-sm not-first:mt-6">
           <Head columns={run[0]!.columns} />
           {run.map((section) => (
             <SectionBody key={section.key} section={section} timeZone={doc.property.timezone ?? "Asia/Kolkata"} />
@@ -63,7 +67,7 @@ export function ReportView({ doc }: { doc: ReportDoc }) {
       {doc.chart && <Chart doc={doc} />}
 
       {doc.footnotes.length > 0 && (
-        <div className="px-4 py-4 border-t border-grey-200 space-y-1">
+        <div className="mt-4 pt-3 border-t border-grey-200 space-y-1">
           {doc.footnotes.map((f) => (
             <p key={f} className="text-2xs text-grey-500 leading-relaxed">* {f}</p>
           ))}
@@ -86,16 +90,22 @@ function runsOf(sections: ReportSection[]): ReportSection[][] {
   return runs;
 }
 
-const TH = "text-2xs font-semibold uppercase tracking-wide text-grey-600 px-3 py-2 align-bottom";
+const TH = cn(DOC_TH, "px-3 pt-2 align-bottom");
+
+/** The table's first and last columns lose their outer padding, so the
+    report lines up with the masthead and the footer's rule. */
+const edge = (first: boolean, last: boolean) => cn(first && "pl-0", last && "pr-0");
 
 function Head({ columns }: { columns: ReportColumn[] }) {
   const grouped = columns.some((c) => c.group);
+  const firstKey = columns[0]?.key;
+  const lastKey = columns.at(-1)?.key;
   if (!grouped) {
     return (
-      <thead className="bg-grey-50 border-b border-grey-300">
+      <thead>
         <tr>
-          {columns.map((c) => (
-            <th key={c.key} scope="col" className={cn(TH, numeric(c.kind) ? "text-right" : "text-left")}>
+          {columns.map((c, i) => (
+            <th key={c.key} scope="col" className={cn(TH, numeric(c.kind) ? "text-right" : "text-left", edge(i === 0, i === columns.length - 1))}>
               {c.label}
             </th>
           ))}
@@ -112,9 +122,9 @@ function Head({ columns }: { columns: ReportColumn[] }) {
     else top.push({ label: c.group ?? c.label, span: 1, group: Boolean(c.group), kind: c.kind, key: c.key });
   }
   return (
-    <thead className="bg-grey-50 border-b border-grey-300">
+    <thead>
       <tr>
-        {top.map((t) => (
+        {top.map((t, i) => (
           <th
             key={t.key}
             scope="col"
@@ -122,7 +132,10 @@ function Head({ columns }: { columns: ReportColumn[] }) {
             rowSpan={t.group ? undefined : 2}
             className={cn(
               TH,
+              /* A group's own label sits over a hairline; the ink rule is
+                 under the columns it spans. */
               t.group ? "text-center border-b border-grey-200" : numeric(t.kind) ? "text-right" : "text-left",
+              edge(i === 0, i === top.length - 1),
             )}
           >
             {t.label}
@@ -131,7 +144,7 @@ function Head({ columns }: { columns: ReportColumn[] }) {
       </tr>
       <tr>
         {columns.filter((c) => c.group).map((c) => (
-          <th key={c.key} scope="col" className={cn(TH, numeric(c.kind) ? "text-right" : "text-left")}>
+          <th key={c.key} scope="col" className={cn(TH, numeric(c.kind) ? "text-right" : "text-left", edge(c.key === firstKey, c.key === lastKey))}>
             {c.label}
           </th>
         ))}
@@ -148,14 +161,14 @@ function SectionBody({ section, timeZone }: { section: ReportSection; timeZone: 
         <th
           colSpan={span}
           scope="colgroup"
-          className="px-3 pt-4 pb-1.5 text-left text-sm font-semibold text-brand-orange-700 border-b border-grey-200"
+          className="pl-0 pr-3 pt-4 pb-1.5 text-left text-sm font-semibold text-brand-orange-700 border-b border-grey-200"
         >
           {section.title}
         </th>
       </tr>
       {section.rows.length === 0 ? (
         <tr>
-          <td colSpan={span} className="px-3 py-3 text-sm text-grey-500">
+          <td colSpan={span} className="px-0 py-3 text-sm text-grey-500">
             {section.empty ?? "Nothing to report."}
           </td>
         </tr>
@@ -166,7 +179,7 @@ function SectionBody({ section, timeZone }: { section: ReportSection; timeZone: 
       )}
       {section.note && (
         <tr>
-          <td colSpan={span} className="px-3 pb-3 pt-1 text-2xs text-grey-500 leading-relaxed">
+          <td colSpan={span} className="px-0 pb-3 pt-1 text-2xs text-grey-500 leading-relaxed">
             {section.note}
           </td>
         </tr>
@@ -175,14 +188,15 @@ function SectionBody({ section, timeZone }: { section: ReportSection; timeZone: 
   );
 }
 
-const INDENT = ["", "pl-7", "pl-11", "pl-15"];
+/* Steps of 16px from the flush left edge. */
+const INDENT = ["pl-0", "pl-4", "pl-8", "pl-12"];
 
 function Line({ row, columns, timeZone }: { row: ReportRow; columns: ReportColumn[]; timeZone: string }) {
   if (row.kind === "band") {
     const first = columns[0]!;
     return (
       <tr>
-        <td colSpan={columns.length} className="px-3 pt-3 pb-1 text-sm font-semibold text-ink-900">
+        <td colSpan={columns.length} className="px-0 pt-3 pb-1 text-sm font-semibold text-ink-900">
           {formatCell(row.cells[first.key] ?? null, "text")}
         </td>
       </tr>
@@ -212,6 +226,7 @@ function Line({ row, columns, timeZone }: { row: ReportRow; columns: ReportColum
               isNumber ? "text-right tabular whitespace-nowrap" : "text-left",
               String(value ?? "").length <= 22 ? "whitespace-nowrap" : undefined,
               i === 0 && INDENT[row.indent ?? 0],
+              i === columns.length - 1 && "pr-0",
               value === null && "text-grey-500",
               typeof value === "number" && value < 0 && kind === "money" && "text-brand-red",
             )}
@@ -232,26 +247,28 @@ function Chart({ doc }: { doc: ReportDoc }) {
 
   return (
     <Fragment>
-      <p className="px-4 pt-5 text-center text-md font-semibold text-ink-900">{chart.title}</p>
-      <div className="px-2 sm:px-4 pb-4 h-80" role="img" aria-label={chart.title}>
+      <p className="pt-5 text-center text-md font-semibold text-ink-900">{chart.title}</p>
+      {/* A day's number stays readable: on a narrow screen the chart
+          scrolls inside the report rather than squeezing 31 days. */}
+      <div className="pb-4 h-80 min-w-[40rem]" role="img" aria-label={chart.title}>
         <ResponsiveContainer width="100%" height="100%">
           <BarChart data={data} margin={{ top: 24, right: 8, bottom: 4, left: -12 }}>
             <CartesianGrid strokeDasharray="2 4" stroke="var(--color-grey-200)" />
             <XAxis
               dataKey="x"
               interval={0}
-              tick={{ fontSize: 11, fill: "var(--color-grey-600)" }}
+              tick={{ fontSize: 12, fill: "var(--color-grey-600)" }}
               axisLine={{ stroke: "var(--color-grey-300)" }}
               tickLine={false}
             />
             <YAxis
               domain={chart.unit === "percent" ? [0, 120] : [0, "auto"]}
               ticks={chart.unit === "percent" ? [0, 20, 40, 60, 80, 100, 120] : undefined}
-              tick={{ fontSize: 11, fill: "var(--color-grey-600)" }}
+              tick={{ fontSize: 12, fill: "var(--color-grey-600)" }}
               axisLine={false}
               tickLine={false}
             />
-            <Legend verticalAlign="top" align="right" iconType="square" wrapperStyle={{ fontSize: 13 }} />
+            <Legend verticalAlign="top" align="right" iconType="square" wrapperStyle={{ fontSize: 12 }} />
             <Bar
               dataKey="value"
               name={series.label}
@@ -261,7 +278,7 @@ function Chart({ doc }: { doc: ReportDoc }) {
               <LabelList
                 dataKey="value"
                 position="top"
-                style={{ fontSize: 10, fill: "var(--color-grey-700)" }}
+                style={{ fontSize: 12, fill: "var(--color-grey-700)" }}
                 formatter={(v: unknown) => (typeof v === "number" ? String(v) : "")}
               />
             </Bar>

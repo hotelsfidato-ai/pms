@@ -9,9 +9,9 @@ import type { AriState, ChannelBooking, SuContent, SuStatus } from "./data/su";
 
    The setup (SU login, the hotel on SU, room types, meal plans, Send to SU,
    rooms left and prices) is the owner's and an administrator's, D17-85. A GM
-   still opens the page - it is in their Coming soon section - and sees what the
-   connection is, but not the setup, and the screen never asks the server for
-   it: the server would refuse them anyway.
+   still opens the page - it is under Distribution in their menu, marked "Not
+   built yet" - and sees what the connection is, but not the setup, and the
+   screen never asks the server for it: the server would refuse them anyway.
 
    The data is stood in for: nothing here reaches SU or the API.
    ══════════════════════════════════════════════════════════════════ */

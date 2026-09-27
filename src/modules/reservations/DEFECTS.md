@@ -14,11 +14,59 @@ entries stay here: they are the reason the fault does not come back.
 
 ## Open — not fixed
 
-None, 16 September.
+### RES-6 · A group's lead can be a waiting room
+
+`app.group_lead` (131) picks the room booked first that still stands, a
+waiting one included, and the confirmation sweep asks only confirmed rooms;
+a group whose first room waits while others are confirmed gets no voucher.
+New booking makes every room of one booking waiting or none, and Confirm
+confirms the whole group, so it cannot happen from the desk today.
+**Noted, not fixed.**
 
 ---
 
 ## Fixed
+
+### RES-5 · A booking waiting for the hotel could not be cancelled until it was confirmed — FIXED 27 September
+
+**Found** 27 September, opening a waiting booking's panel (Phase 1): "Void
+this booking" was greyed ("Only a booking that has not arrived can be
+voided") and nothing else took the booking off. **The owner (D27-64): cancel
+it directly** - no charge (it was never confirmed), every waiting room of the
+booking, a short reason kept. **Fixed:** `POST /:code/stays/:id/cancel`
+(`desk.ts`, the gate's reservation-cancel grant), "Cancel this booking" in
+place of Void on a waiting booking's panel (`CancelWaitingFlow`). The room is
+free at once (044 counts no cancelled booking; 073 releases any room given).
+Rule: a new state a booking can be in needs its way out, not only its way in.
+
+
+### RES-7 · Mine: a repeated booking answered without the ids the first answer had — FIXED 27 September
+
+**Found** by the full API suite (RES-3's own tests, `bookings.test.ts`): Phase 1
+added each booking's `id` to the answer by zipping `reservationIds` in the
+route, and a repeat has none, so the repeat was no longer the first answer.
+**Fixed** at the source: `makeBooking` and `answerRepeat` both carry the id in
+`bookings`. Rule: a field added to an answer is added on every path that
+gives that answer.
+
+### RES-8 · Mine: the discount CHECK let a promotion through with no percent — FIXED 27 September
+
+**Found** by the new database check in `db/tests/modules/reservations.sql`
+("a promotion with no percent is refused" — the statement succeeded).
+`discount_percent > 0` on a NULL is unknown, and a CHECK that comes out
+unknown passes. **Fixed** in 146: `discount_percent is not null` spelled out.
+Rule: every branch of a CHECK that means "this must be present" says
+`is not null`; a comparison alone lets NULL through. (For the root MEMORY.)
+
+### RES-4 · The booking summary added each night's calendar price; the booking keeps the first night's — FIXED 27 September
+
+**Found** reading `book.ts` for Phase 1: `makeBooking` stores the FIRST
+night's `app.tariff_for` as `agreed_rate` and the night audit posts it every
+night, while New booking's summary summed `getTariff`'s nights. On a stay
+crossing a price change the screen and the bill disagreed. **The owner, 27
+September: show what the bill will carry.** The line and the summary now use
+the first night's price for every night and say so when the calendar differs
+later. Rule: a figure on a booking screen is the one the posting will use.
 
 ### RES-2 · The booking reference is generated without a lock, in two copies — FIXED 16 September
 

@@ -105,15 +105,15 @@ export function AccountMenu() {
           aria-label={`${scope.fullName}, ${ROLE_LABELS[role]}. Account and property`}
           className={cn(
             /* 44 on touch, 36 on the console. */
-            "flex items-center gap-2.5 h-11 lg:h-9 pl-1.5 pr-2.5 rounded-md",
-            "border border-grey-200 bg-white",
+            "flex items-center gap-2 h-11 lg:h-10 pl-1.5 pr-2.5 rounded-md",
+            "sm:border sm:border-grey-200 bg-white",
             "hover:border-grey-300 hover:bg-grey-50",
             "transition-colors duration-150",
           )}
         >
           <Avatar name={scope.fullName} size="sm" />
           <span className="hidden sm:flex flex-col items-start leading-none min-w-0">
-            <span className="text-xs font-medium text-ink-900 truncate max-w-[130px]">
+            <span className="text-sm font-medium text-ink-900 truncate max-w-[130px]">
               {scope.fullName}
             </span>
             <span className="text-2xs text-grey-500 mt-0.5">{ROLE_LABELS[role]}</span>

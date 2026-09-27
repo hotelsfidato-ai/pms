@@ -1,12 +1,12 @@
 import { useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useParams } from "react-router";
-import { Plus, Layers, BedDouble, Cigarette, Upload } from "lucide-react";
+import { Plus, Layers, BedDouble, Cigarette, Upload, ChevronRight } from "lucide-react";
 import { cn } from "@/lib/cn";
 import { money } from "@/lib/format";
 import { useUi } from "@/lib/ui";
 import {
-  Page, PageHeader, Card, CardBody, Button, Skeleton, EmptyState, toast,
+  Page, PageHeader, Card, Button, Skeleton, EmptyState, toast,
   Dialog, DialogContent, DialogClose, Field, fieldProps, Input,
   NativeSelect, StatusPill,
 } from "@/components/ui";
@@ -104,15 +104,15 @@ export default function RoomSetupPage() {
             {/* A new property needs eighteen rooms before it can sell
                 one, and eighteen visits to a dialog is how somebody
                 gives up halfway and leaves a house half-entered. */}
-            <Button variant="secondary" className="h-11"
+            <Button variant="secondary"
                     onClick={() => setImporting("room-types")}>
               <Upload className="size-4" /> Import
             </Button>
-            <Button variant="secondary" className="h-11"
+            <Button variant="secondary"
                     onClick={() => setAddingType(true)}>
               <Layers className="size-4" /> Add a room type
             </Button>
-            <Button className="h-11" disabled={types.length === 0}
+            <Button disabled={types.length === 0}
                     onClick={() => setAddingRoom(true)}>
               <Plus className="size-4" /> Add a room
             </Button>
@@ -120,6 +120,9 @@ export default function RoomSetupPage() {
         }
       />
 
+      {/* The page's sections, 20px apart (the Rhythm Rule). A gap, not
+          margins: the commissioning card removes itself when done. */}
+      <div className="flex flex-col gap-5">
       {/* ── What is still missing ──────────────────────────
           First on the screen, because a property that cannot take a
           booking should say so before it shows you its room list. It
@@ -133,45 +136,24 @@ export default function RoomSetupPage() {
           and both charges were reachable only through a database
           session, which makes a feature unusable by the people it is
           for. The same hole room types had this morning. */}
-      <Card>
-        <CardBody className="flex flex-wrap items-center gap-x-8 gap-y-3">
-          <div>
-            <p className="text-sm text-grey-500">Rooms ready from</p>
-            <p className="text-lg font-semibold tabular text-ink-900">
-              {frontDesk.checkInTime}
-            </p>
-          </div>
-          <div>
-            <p className="text-sm text-grey-500">Check-out by</p>
-            <p className="text-lg font-semibold tabular text-ink-900">
-              {frontDesk.checkOutTime}
-            </p>
-          </div>
-          <div>
-            <p className="text-sm text-grey-500">Early arrival</p>
-            {/* A DASH, not a zero. "We do not charge for this" is a
-                decision a property makes; zero is a price. */}
-            <p className={cn("text-lg font-semibold tabular",
-                             frontDesk.earlyCheckinCharge === null
-                               ? "text-grey-500" : "text-ink-900")}>
-              {frontDesk.earlyCheckinCharge === null
-                ? "-" : money(frontDesk.earlyCheckinCharge)}
-            </p>
-          </div>
-          <div>
-            <p className="text-sm text-grey-500">Late departure</p>
-            <p className={cn("text-lg font-semibold tabular",
-                             frontDesk.lateCheckoutCharge === null
-                               ? "text-grey-500" : "text-ink-900")}>
-              {frontDesk.lateCheckoutCharge === null
-                ? "-" : money(frontDesk.lateCheckoutCharge)}
-            </p>
-          </div>
-          <Button variant="secondary" className="h-11 ml-auto"
-                  onClick={() => setEditingDesk(true)}>
-            Edit
-          </Button>
-        </CardBody>
+      <Card className="flex flex-wrap items-center gap-x-6 gap-y-3 px-4 py-3.5">
+        {/* Four level columns (label over value), two by two until
+            there is room for four. */}
+        <dl className="grid grid-cols-2 lg:grid-cols-4 gap-x-6 gap-y-3 flex-1 min-w-0">
+          <DeskFigure label="Rooms ready from" value={frontDesk.checkInTime} />
+          <DeskFigure label="Check-out by" value={frontDesk.checkOutTime} />
+          {/* A DASH, not a zero. "We do not charge for this" is a
+              decision a property makes; zero is a price. */}
+          <DeskFigure label="Early arrival" value={
+            frontDesk.earlyCheckinCharge === null
+              ? null : money(frontDesk.earlyCheckinCharge)} />
+          <DeskFigure label="Late departure" value={
+            frontDesk.lateCheckoutCharge === null
+              ? null : money(frontDesk.lateCheckoutCharge)} />
+        </dl>
+        <Button variant="secondary" onClick={() => setEditingDesk(true)}>
+          Edit
+        </Button>
       </Card>
 
       {/* ── GST ────────────────────────────────────
@@ -183,7 +165,7 @@ export default function RoomSetupPage() {
 
       {/* ── Types ────────────────────────────────────────────────── */}
       <section className="@container">
-        <h2 className="text-md font-semibold text-ink-900 mb-2.5">Room types</h2>
+        <h2 className="text-md font-semibold text-ink-900 mb-3">Room types</h2>
         {types.length === 0 ? (
           <EmptyState
             title="No room types yet"
@@ -196,16 +178,19 @@ export default function RoomSetupPage() {
             }
           />
         ) : (
-          <div className="grid gap-2.5 @md:grid-cols-2 @3xl:grid-cols-3">
+          /* Each card spans three rows of the grid through subgrid, so a
+             long name never pushes its figures below its neighbours'
+             (the Level Rule). */
+          <div className="grid gap-3 @md:grid-cols-2 @3xl:grid-cols-3">
             {types.map((t) => (
-              <Card key={t.id}>
-                <CardBody className="space-y-2">
+              <Card key={t.id}
+                    className="row-span-3 grid grid-rows-subgrid gap-y-2.5 px-4 py-3.5">
                   <div className="flex items-baseline gap-2 flex-wrap">
-                    <span className="text-lg font-semibold text-ink-900">{t.name}</span>
+                    <span className="text-md font-semibold text-ink-900">{t.name}</span>
                     <span className="text-sm tabular text-grey-500">{t.code}</span>
                     {!t.isActive && <StatusPill tone="neutral">Off</StatusPill>}
                   </div>
-                  <dl className="grid grid-cols-2 gap-x-4 gap-y-1 text-sm">
+                  <dl className="grid grid-cols-[1fr_auto] gap-x-4 border-t border-grey-100 pt-1.5 text-sm leading-[22px]">
                     <Line label="Sleeps" value={
                       t.baseOccupancy === t.maxOccupancy
                         ? String(t.baseOccupancy)
@@ -219,11 +204,10 @@ export default function RoomSetupPage() {
                     <Line label="Rack rate" value={
                       t.rackRate === null ? "-" : money(t.rackRate)} muted={t.rackRate === null} />
                   </dl>
-                  <Button variant="secondary" className="h-11 w-full"
+                  <Button variant="secondary" className="w-full"
                           onClick={() => setEditingType(t)}>
                     Edit
                   </Button>
-                </CardBody>
               </Card>
             ))}
           </div>
@@ -233,7 +217,7 @@ export default function RoomSetupPage() {
       {/* ── Rooms ────────────────────────────────────────────────── */}
       {rooms.length > 0 && (
         <section className="@container">
-          <h2 className="text-md font-semibold text-ink-900 mb-2.5">Rooms</h2>
+          <h2 className="text-md font-semibold text-ink-900 mb-3">Rooms</h2>
           <div className="grid gap-2 @sm:grid-cols-2 @2xl:grid-cols-3 @4xl:grid-cols-4">
             {rooms.map((r) => (
               <button
@@ -241,33 +225,39 @@ export default function RoomSetupPage() {
                 type="button"
                 onClick={() => setEditingRoom(r)}
                 className={cn(
-                  "w-full text-left rounded-lg border p-3 min-h-20",
-                  "transition-colors duration-150 cursor-pointer",
+                  /* A tile that opens something ends in an arrow (the
+                     Tappable Rule). */
+                  "w-full text-left rounded-lg border px-3.5 py-3 flex items-center gap-2",
+                  "press-tile cursor-pointer",
                   "focus-visible:outline-2 focus-visible:outline-offset-2",
-                  "focus-visible:outline-brand-orange-500",
+                  "focus-visible:outline-brand-orange",
                   r.isActive
-                    ? "border-grey-200 bg-white hover:border-brand-orange-300"
+                    ? "border-grey-200 bg-white hover:border-grey-400"
                     : "border-dashed border-grey-300 bg-grey-50",
                 )}
               >
-                <div className="flex items-baseline gap-2 flex-wrap">
-                  <span className={cn("text-lg font-semibold tabular",
-                                      r.isActive ? "text-ink-900" : "text-grey-500")}>
-                    {r.number}
+                <span className="min-w-0 flex-1">
+                  <span className="flex items-center gap-2 flex-wrap">
+                    <span className={cn("text-xl font-semibold tabular",
+                                        r.isActive ? "text-ink-900" : "text-grey-500")}>
+                      {r.number}
+                    </span>
+                    {r.occupied && <BedDouble className="size-3.5 text-grey-400" />}
+                    {r.smoking && <Cigarette className="size-3.5 text-grey-400" />}
+                    {!r.isActive && <StatusPill tone="neutral">Off</StatusPill>}
                   </span>
-                  {r.occupied && <BedDouble className="size-3.5 text-grey-400" />}
-                  {r.smoking && <Cigarette className="size-3.5 text-grey-400" />}
-                  {!r.isActive && <StatusPill tone="neutral">Off</StatusPill>}
-                </div>
-                <p className="text-sm text-grey-500 mt-1 truncate">
-                  {r.roomType}
-                  {r.floor !== null ? ` · Floor ${r.floor}` : ""}
-                </p>
+                  <span className="block text-sm text-grey-500 mt-0.5 truncate">
+                    {r.roomType}
+                    {r.floor !== null ? ` · Floor ${r.floor}` : ""}
+                  </span>
+                </span>
+                <ChevronRight className="size-4 text-grey-400 shrink-0" aria-hidden />
               </button>
             ))}
           </div>
         </section>
       )}
+      </div>
 
       {editingDesk && (
         <FrontDeskDialog hotelId={hotelId} current={frontDesk}
@@ -322,10 +312,23 @@ function Line({ label, value, muted }: {
   return (
     <>
       <dt className="text-grey-500">{label}</dt>
-      <dd className={cn("tabular text-right", muted ? "text-grey-500" : "text-ink-900")}>
+      <dd className={cn("tabular text-right font-medium", muted ? "text-grey-500" : "text-grey-700")}>
         {value}
       </dd>
     </>
+  );
+}
+
+/** One of the front desk's four figures; null is a grey dash. */
+function DeskFigure({ label, value }: { label: string; value: string | null }) {
+  return (
+    <div className="min-w-0">
+      <dt className="text-sm text-grey-500 whitespace-nowrap">{label}</dt>
+      <dd className={cn("text-md font-semibold tabular",
+                        value === null ? "text-grey-500" : "text-ink-900")}>
+        {value ?? "-"}
+      </dd>
+    </div>
   );
 }
 
@@ -375,9 +378,9 @@ function TypeDialog({
         footer={
           <>
             <DialogClose asChild>
-              <Button variant="secondary" className="h-11">Cancel</Button>
+              <Button variant="secondary">Cancel</Button>
             </DialogClose>
-            <Button variant="primary" className="h-11" disabled={!ready || busy}
+            <Button variant="primary" disabled={!ready || busy}
                     onClick={() => void submit()}>
               {busy ? "Saving…" : "Save"}
             </Button>
@@ -481,9 +484,9 @@ function RoomDialog({
         footer={
           <>
             <DialogClose asChild>
-              <Button variant="secondary" className="h-11">Cancel</Button>
+              <Button variant="secondary">Cancel</Button>
             </DialogClose>
-            <Button variant="primary" className="h-11" disabled={!ready || busy}
+            <Button variant="primary" disabled={!ready || busy}
                     onClick={() => void submit()}>
               {busy ? "Saving…" : "Save"}
             </Button>
@@ -586,9 +589,9 @@ function FrontDeskDialog({
         footer={
           <>
             <DialogClose asChild>
-              <Button variant="secondary" className="h-11">Cancel</Button>
+              <Button variant="secondary">Cancel</Button>
             </DialogClose>
-            <Button variant="primary" className="h-11" disabled={busy}
+            <Button variant="primary" disabled={busy}
                     onClick={() => void submit()}>
               {busy ? "Saving…" : "Save"}
             </Button>

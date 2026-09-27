@@ -304,6 +304,57 @@ that file, not in either caller.
 Still to come: each night at its own price (D17-82, migration and the night
 audit's reading of it), and `amendChannelBooking` for a change SU sends.
 
+## Phase 1 — New booking records every field (27 September, D27-33)
+
+The owner's Add Reservation screenshot, in this layout (docs/PLATFORM-PLAN.md
+§ 3, the "add" rows). The owner's answers of 27 September: the walk-in's five
+market segments; the sales-people list and the room promotions start empty;
+titles Mr, Ms, Mrs, Dr or none; complimentary, and keeping both lists, for the
+owner, an administrator or the GM; a "Confirm the booking" action for a
+waiting booking, for anyone who may make one; the summary shows what the bill
+will carry (the first night's price for every night, as the audit posts it);
+typed rates stay as they are, the 10% rule binds the Discount box.
+
+- **New booking** gains title, address, city, state, PIN, country,
+  nationality (a foreigner's form said to be due at check-in), expected
+  check-out (both hours hint the hotel's own times), Confirmed / Waiting for
+  the hotel, market segment, sales person (the list, or "Other" typed), bill
+  to Guest / Company, a Complimentary tick and an optional room per one-room
+  line, "All n left" per line, the tax beside the rate (finance's tax card,
+  `getTaxRate`; the audit's rounding), a discount (up to 10% with a reason, or
+  a promotion), Room charges / Taxes / Due, and "Book and check in" for one
+  room arriving on the hotel's today (it books, then opens that booking on
+  Arrivals, where front desk's own check-in runs).
+- **The Booked card** (`flows/BookedCard.tsx`) after Confirm: references and
+  rooms (a picked room goes through front desk's `assignRoom`), Confirm the
+  booking (if waiting), the guest's page link (`POST /stays/:id/guest-link`),
+  Send voucher once (guest messages' `POST /stays/:id/confirmation`), Check in
+  now, Open the booking. A waiting booking shows no link and no voucher.
+- **The two lists** (`flows/KeepListDialog.tsx`), opened from beside their
+  pickers, only for the owner, an administrator or the GM.
+- **The stay panel** (front desk's `StayActions`) offers "Confirm the
+  booking" on a waiting booking, and "Cancel this booking" in place of Void
+  (`flows/CancelWaitingFlow.tsx`, D27-64); All bookings labels it "Waiting for the
+  hotel" (front desk's `StayTable`).
+
+| Method | Path | File | What |
+|---|---|---|---|
+| GET / PUT | `/:code/sales-people` | `desk.ts` | the group's list; saved whole, a name left out is switched off |
+| GET / PUT | `/:code/room-promotions` | `desk.ts` | this hotel's list, name and percent |
+| POST | `/:code/stays/:id/confirm` | `desk.ts` | waiting -> confirmed, every waiting room of its group |
+| POST | `/:code/stays/:id/cancel` | `desk.ts` | waiting -> cancelled with a reason, every waiting room of its group; no charge, nothing sent, the room free at once (D27-64); the gate's reservation-cancel grant |
+
+`POST /:code/bookings` now also takes `tentative`, `expectedDeparture`,
+`salesPerson`, `companyId`, `discount {percent, reason | promotionId}`,
+`title`, `nationality`, `address {...}` and a line's `complimentary`, and
+answers each booking's `id` and the `status`. All checked in `book.ts`
+(`deskTerms`) above the first write. Migration 146: `expected_departure`,
+the `discount_*` columns with the rule as a CHECK, `room_promotions`,
+`sales_people`, `guests.title`, `guest_documents.state` and `.pincode`.
+Tests: `api/test/modules/reservations/newBooking.test.ts` (13),
+`db/tests/modules/reservations.sql` (new-booking), and
+`newBookingFields.test.tsx`.
+
 ## Requests from other services
 
 - **18 September, channel manager:** a booking door a machine can call, in
@@ -314,6 +365,12 @@ audit's reading of it), and `amendChannelBooking` for a change SU sends.
   price (their request 7, the owner's D17-82). **Open** - it needs the night
   audit to post from those rows where they exist, so it lands with that
   change, not before.
+
+- **27 September, reservations to the MASTER (core):** the `Stay` type's
+  status union (`src/data/repositories/types.ts`) has no `tentative`, which
+  the stays API does answer for a booking waiting for the hotel. `StayActions`
+  compares it through a cast until the union has it. `StatusPill` and the
+  tape chart (`StayView.tsx`) have no colour or word for it either.
 
 Another service's agent that needs a change here writes it in this list —
 what, why, who asked, the date — and the reservations agent does it.

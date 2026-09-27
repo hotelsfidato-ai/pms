@@ -4,7 +4,7 @@ import { Link, useNavigate, useParams } from "react-router";
 import { ArrowRightLeft, Pencil, Wrench, CheckCircle2, Archive, Clock } from "lucide-react";
 import {
   Page, PageHeader, Card, CardHeader, CardBody, DetailList, DetailRow, Button,
-  StatusPill, Skeleton, ErrorState,
+  StatusPill, Skeleton, ErrorState, IconChip,
 } from "@/components/ui";
 import { useRole, useCurrentHotel } from "@/lib/session";
 import { can } from "@/lib/permissions";
@@ -119,21 +119,21 @@ export default function EquipmentItemPage() {
         description={`${heldText(item)} · ${item.place}${fromStore ? " (a store)" : ""}${item.category ? ` · ${item.category}` : ""}`}
         actions={
           <div className="flex flex-wrap gap-2">
-            <Button variant="secondary" className="h-11" disabled={!mayEdit || locked}
+            <Button variant="secondary" disabled={!mayEdit || locked}
                     onClick={() => setDialog("edit")}>
               <Pencil className="size-4" /> Change details
             </Button>
-            <Button variant="secondary" className="h-11" disabled={!mayMove || locked}
+            <Button variant="secondary" disabled={!mayMove || locked}
                     onClick={() => setDialog("move")}>
               <ArrowRightLeft className="size-4" /> {fromStore && !mayEdit ? "Ask to take out" : "Move"}
             </Button>
-            <Button variant="secondary" className="h-11" disabled={!mayEdit || locked}
+            <Button variant="secondary" disabled={!mayEdit || locked}
                     onClick={() => setDialog("status")}>
               {item.status === "under_repair"
                 ? <><CheckCircle2 className="size-4" /> Back in use</>
                 : <><Wrench className="size-4" /> Under repair</>}
             </Button>
-            <Button variant="secondary" className="h-11" disabled={!mayEdit || locked}
+            <Button variant="secondary" disabled={!mayEdit || locked}
                     onClick={() => setDialog("retire")}>
               <Archive className="size-4" /> Retire
             </Button>
@@ -141,7 +141,7 @@ export default function EquipmentItemPage() {
         }
       >
         {(lockedWhy || !mayEdit) && (
-          <p className="text-sm text-grey-600 mt-3 leading-relaxed">
+          <p className="text-sm text-grey-600 leading-relaxed">
             {lockedWhy ?? (
               `Changing, moving and retiring equipment is for the ${whoMay("edit")}.`
               + (fromStore ? " Anybody who can see it may ask for it to leave the store." : "")
@@ -150,11 +150,14 @@ export default function EquipmentItemPage() {
         )}
       </PageHeader>
 
-      {item.leaving && (
-        <Card className="border-amber-300 bg-amber-50 mb-4">
-          <CardBody>
-            <p className="text-base text-ink-900 flex items-start gap-2">
-              <Clock className="size-4 text-amber-600 shrink-0 mt-1" />
+      {/* The notes about the item: 12px apart, 20px over the details, and
+          gone with their gap when there are none (`empty:`). A request that
+          waits is something to do, so its tile is the warm one. */}
+      <div className="space-y-3 mb-5 empty:hidden">
+        {item.leaving && (
+          <div className="rounded-lg bg-brand-yellow-50 ring-1 ring-inset ring-brand-yellow-100 px-4 py-3.5">
+            <p className="text-sm text-ink-900 flex items-start gap-2.5">
+              <IconChip tone="yellow" className="-mt-1"><Clock /></IconChip>
               <span>
                 <span className="font-medium">Waiting to leave the store</span> for{" "}
                 {item.leaving.to ?? DASH} - asked by {item.leaving.by ?? DASH} on{" "}
@@ -167,30 +170,28 @@ export default function EquipmentItemPage() {
             )}
             <DecideButtons code={code} approval={approvalFor(item.leaving.approvalId)}
                            approveLabel="Approve - let it go" onDone={() => done(item.id)} />
-          </CardBody>
-        </Card>
-      )}
+          </div>
+        )}
 
-      {item.leavingRefused && !item.leaving && (
-        <Card className="mb-4">
-          <CardBody>
-            <p className="text-base text-ink-900">
-              <span className="font-medium">
-                {item.leavingRefused.sentBack ? "Sent back" : "Refused"}
-              </span>{" "}
-              - taking it to {item.leavingRefused.to ?? DASH}
-              {item.leavingRefused.at ? ` (${dateShort(item.leavingRefused.at)})` : ""}
-              {item.leavingRefused.note ? `: ${item.leavingRefused.note}` : "."} It is still here.
-            </p>
-          </CardBody>
-        </Card>
-      )}
+        {item.leavingRefused && !item.leaving && (
+          <Card>
+            <CardBody>
+              <p className="text-sm text-ink-900">
+                <span className="font-medium">
+                  {item.leavingRefused.sentBack ? "Sent back" : "Refused"}
+                </span>{" "}
+                - taking it to {item.leavingRefused.to ?? DASH}
+                {item.leavingRefused.at ? ` (${dateShort(item.leavingRefused.at)})` : ""}
+                {item.leavingRefused.note ? `: ${item.leavingRefused.note}` : "."} It is still here.
+              </p>
+            </CardBody>
+          </Card>
+        )}
 
-      {item.retireRequest && (
-        <Card className="border-amber-300 bg-amber-50 mb-4">
-          <CardBody>
-            <p className="text-base text-ink-900 flex items-start gap-2">
-              <Clock className="size-4 text-amber-600 shrink-0 mt-1" />
+        {item.retireRequest && (
+          <div className="rounded-lg bg-brand-yellow-50 ring-1 ring-inset ring-brand-yellow-100 px-4 py-3.5">
+            <p className="text-sm text-ink-900 flex items-start gap-2.5">
+              <IconChip tone="yellow" className="-mt-1"><Clock /></IconChip>
               <span>
                 <span className="font-medium">Retirement waiting</span> - asked by{" "}
                 {item.retireRequest.by ?? DASH} on {dateShort(item.retireRequest.at)}
@@ -202,38 +203,41 @@ export default function EquipmentItemPage() {
             )}
             <DecideButtons code={code} approval={approvalFor(item.retireRequest.approvalId)}
                            approveLabel="Approve - retire it" onDone={() => done(item.id)} />
-          </CardBody>
-        </Card>
-      )}
+          </div>
+        )}
 
-      {item.retireRefused && !item.retireRequest && !retired && (
-        <Card className="mb-4">
-          <CardBody>
-            <p className="text-base text-ink-900">
-              <span className="font-medium">
-                Retirement {item.retireRefused.sentBack ? "sent back" : "refused"}
-              </span>
-              {item.retireRefused.at ? ` (${dateShort(item.retireRefused.at)})` : ""}
-              {item.retireRefused.note ? `: ${item.retireRefused.note}` : "."}
-            </p>
-          </CardBody>
-        </Card>
-      )}
+        {item.retireRefused && !item.retireRequest && !retired && (
+          <Card>
+            <CardBody>
+              <p className="text-sm text-ink-900">
+                <span className="font-medium">
+                  Retirement {item.retireRefused.sentBack ? "sent back" : "refused"}
+                </span>
+                {item.retireRefused.at ? ` (${dateShort(item.retireRefused.at)})` : ""}
+                {item.retireRefused.note ? `: ${item.retireRefused.note}` : "."}
+              </p>
+            </CardBody>
+          </Card>
+        )}
 
-      {retired && item.retired && (
-        <Card className="mb-4">
-          <CardBody>
-            <p className="text-base text-ink-900">
-              Retired on {dateShort(item.retired.at)} by{" "}
-              <span className="font-medium">{item.retired.by ?? DASH}</span>
-              {item.retired.requestedBy ? `, asked for by ${item.retired.requestedBy}` : ""}
-              {item.retired.reason ? ` - ${item.retired.reason}` : ""}
-            </p>
-          </CardBody>
-        </Card>
-      )}
+        {retired && item.retired && (
+          <Card>
+            <CardBody>
+              <p className="text-sm text-ink-900">
+                Retired on {dateShort(item.retired.at)} by{" "}
+                <span className="font-medium">{item.retired.by ?? DASH}</span>
+                {item.retired.requestedBy ? `, asked for by ${item.retired.requestedBy}` : ""}
+                {item.retired.reason ? ` - ${item.retired.reason}` : ""}
+              </p>
+            </CardBody>
+          </Card>
+        )}
+      </div>
 
-      <div className="grid gap-4 lg:grid-cols-[1fr_1fr]">
+      {/* Each card as tall as what it holds (the No Dead Space Rule): the
+          two sit side by side without being stretched to match. mb-5 so the
+          repairs card below sits 20px off, whatever its own margin. */}
+      <div className="grid gap-3 lg:grid-cols-2 lg:items-start mb-5">
         <Card>
           <CardHeader title="Details" />
           <CardBody>
@@ -250,7 +254,7 @@ export default function EquipmentItemPage() {
               <DetailRow label="Service contract ends">{endsText(item.amcEnds, today)}</DetailRow>
               {item.splitFrom && (
                 <DetailRow label="Came from">
-                  <Link to={`/h/${code}/equipment/${item.splitFrom}`} className="text-brand hover:underline">
+                  <Link to={`/h/${code}/equipment/${item.splitFrom}`} className="text-brand-orange-700 hover:underline underline-offset-4">
                     the line it was taken from
                   </Link>
                 </DetailRow>
@@ -263,18 +267,19 @@ export default function EquipmentItemPage() {
           <CardHeader title="What has happened to it" />
           <CardBody>
             {history.length === 0 ? (
-              <p className="text-base text-grey-600">Nothing is recorded yet.</p>
+              <p className="text-sm text-grey-600">Nothing is recorded yet.</p>
             ) : (
-              <ol className="space-y-3">
+              /* List rows with a hairline between (the Rhythm Rule). */
+              <ol className="divide-y divide-grey-100">
                 {history.map((h) => (
-                  <li key={h.id} className="border-l-2 border-grey-200 pl-3">
-                    <p className="text-base text-ink-900">
+                  <li key={h.id} className="py-3 first:pt-0 last:pb-0">
+                    <p className="text-sm text-ink-900">
                       <HistoryLine entry={h} item={item} code={code} />
                     </p>
                     {h.note && !["retired", "retire_asked"].includes(h.kind) && (
-                      <p className="text-sm text-grey-600">{h.note}</p>
+                      <p className="text-sm text-grey-600 mt-0.5">{h.note}</p>
                     )}
-                    <p className="text-sm text-grey-500">
+                    <p className="text-xs text-grey-500 mt-0.5">
                       {dateTime(h.at)} · {h.who ?? DASH}
                     </p>
                     <DecisionLine entry={h} />
@@ -283,7 +288,7 @@ export default function EquipmentItemPage() {
               </ol>
             )}
             {!mayApprove && (
-              <p className="text-sm text-grey-500 mt-4">
+              <p className="text-xs text-grey-500 mt-3 pt-3 border-t border-grey-100">
                 Who did what is shown to the {whoMay("approve")}.
               </p>
             )}
@@ -344,7 +349,7 @@ function HistoryLine({ entry: h, item, code }: { entry: HistoryEntry; item: Equi
     case "split": {
       const cameFrom = h.related?.id === item.splitFrom;
       const other = h.related
-        ? <Link to={`/h/${code}/equipment/${h.related.id}`} className="text-brand hover:underline">
+        ? <Link to={`/h/${code}/equipment/${h.related.id}`} className="text-brand-orange-700 hover:underline underline-offset-4">
             {cameFrom ? "the line in " : "their own line, now in "}{h.related.place ?? DASH}
           </Link>
         : DASH;
@@ -375,7 +380,7 @@ function DecisionLine({ entry: h }: { entry: HistoryEntry }) {
   const d = h.decision;
   if (!d) return null;
   if (d.status === "pending") {
-    return <p className="text-sm text-amber-700">Waiting in the approvals inbox</p>;
+    return <p className="text-sm text-brand-yellow-800">Waiting in the approvals inbox</p>;
   }
   const word = d.status === "approved" ? "Approved" : d.status === "rejected" ? "Refused" : "Sent back";
   return (

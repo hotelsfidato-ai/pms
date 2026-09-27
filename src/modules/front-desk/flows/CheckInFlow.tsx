@@ -9,7 +9,10 @@ import {
 } from "@/components/ui";
 import { checkIn, assignableRooms, checkInAllowed, earlyArrival } from "@/modules/front-desk/data/operations";
 import { type Stay } from "@/data/repositories";
-import { BookingSiteBlacklist } from "@/modules/guests";
+import {
+  BookingSiteBlacklist, ForeignGuestFields, formIIIMissing, particularsPayload,
+  NO_PARTICULARS, type Particulars,
+} from "@/modules/guests";
 import { WaitingDetailsLink } from "@/modules/online-checkin";
 
 /* ══════════════════════════════════════════════════════════════════
@@ -44,11 +47,12 @@ export function CheckInFlow({
      said a passport had been looked at and stored nothing. */
   const [idType, setIdType] = useState("");
   const [idNumber, setIdNumber] = useState("");
-  const [nationality, setNationality] = useState("IN");
-  const [passportExpiry, setPassportExpiry] = useState("");
-  const [visaNumber, setVisaNumber] = useState("");
-  const [visaExpiry, setVisaExpiry] = useState("");
-  const [addressLine, setAddressLine] = useState("");
+  /* The nationality ON FILE, not "IN": a foreign guest booked as such and
+     checked in with the default would have been sent back as Indian and
+     taken off the Form III register (D27-25). */
+  const [nationality, setNationality] = useState(stay.nationality ?? "IN");
+  /* Form III's questions for a foreign guest (the guests service's). */
+  const [particulars, setParticulars] = useState<Particulars>(NO_PARTICULARS);
   const [idSkipReason, setIdSkipReason] = useState("");
   const [earlyReason, setEarlyReason] = useState("");
   const [waiveEarly, setWaiveEarly] = useState(false);
@@ -60,6 +64,7 @@ export function CheckInFlow({
      server derives it the same way and cannot be told otherwise. */
   const idCaptured = Boolean(idType && idNumber.trim());
   const isForeign = nationality.trim().toUpperCase() !== "IN";
+  const formIIINeeds = formIIIMissing(particulars, nationality, idCaptured);
   const [ratePlan, setRatePlan] = useState(stay.ratePlan);
 
   const permitted = useQuery({
@@ -194,7 +199,7 @@ export function CheckInFlow({
                       disabled={!room.allowed}
                       onClick={() => setRoomNumber(room.number)}
                       className={cn(
-                        "w-full flex items-center gap-2 px-3 h-11 rounded-md border text-left transition-colors duration-150",
+                        "w-full flex items-center gap-2 px-3 h-11 rounded-lg border text-left transition-colors duration-150",
                         selected
                           ? "border-brand-orange bg-brand-orange-50"
                           : room.allowed
@@ -238,7 +243,7 @@ export function CheckInFlow({
 
               <Field
                 label="Nationality"
-                hint={<>Anything other than IN puts this stay on the <Term name="formC">Form C</Term> register.</>}
+                hint={<>Anything other than IN puts this stay on the <Term name="formC">Form III</Term> register.</>}
               >
                 {({ id }) => (
                   <Input
@@ -290,38 +295,13 @@ export function CheckInFlow({
                   visa number is how a form teaches people to leave fields
                   blank. */}
               {isForeign && (
-                <div className="space-y-3 border-l-2 border-brand-yellow pl-3.5">
-                  <p className="text-2xs text-grey-600">
-                    A foreign national must be reported to the FRRO within 24
-                    hours of arrival. These fields go on that filing.
-                  </p>
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                    <Field label="Passport expiry">
-                      {({ id }) => (
-                        <Input id={id} type="date" value={passportExpiry}
-                          onChange={(e) => setPassportExpiry(e.target.value)} />
-                      )}
-                    </Field>
-                    <Field label="Visa number">
-                      {({ id }) => (
-                        <Input id={id} value={visaNumber}
-                          onChange={(e) => setVisaNumber(e.target.value)} />
-                      )}
-                    </Field>
-                    <Field label="Visa expiry">
-                      {({ id }) => (
-                        <Input id={id} type="date" value={visaExpiry}
-                          onChange={(e) => setVisaExpiry(e.target.value)} />
-                      )}
-                    </Field>
-                    <Field label="Address abroad">
-                      {({ id }) => (
-                        <Input id={id} value={addressLine}
-                          onChange={(e) => setAddressLine(e.target.value)} />
-                      )}
-                    </Field>
-                  </div>
-                </div>
+                <ForeignGuestFields value={particulars} onChange={setParticulars}
+                  nationality={nationality} idCaptured={idCaptured} />
+              )}
+              {isForeign && formIIINeeds.length > 0 && (
+                <p className="text-sm text-grey-600" data-form-iii-needs>
+                  Form III still needs: {formIIINeeds.join(", ")}.
+                </p>
               )}
 
                 {!idCaptured && (
@@ -359,7 +339,7 @@ export function CheckInFlow({
                   make an early arrival look like an ordinary one, and
                   the server refuses independently either way. */}
               {isEarly && (
-                <div className="rounded-md border border-brand-yellow-200 bg-brand-yellow-50 p-3 space-y-2.5">
+                <div className="rounded-lg border border-brand-yellow-100 bg-brand-yellow-50 p-3 space-y-2.5">
                   <p className="text-sm text-[#8a6300]">
                     {earlyByDate
                       ? `This booking is for ${dateShort(stay.arrival)}. Checking `
@@ -405,7 +385,7 @@ export function CheckInFlow({
                 </div>
               )}
 
-              <div className="rounded-md bg-grey-50 border border-grey-200 p-3 space-y-1.5">
+              <div className="rounded-lg bg-grey-50 border border-grey-200 p-3 space-y-1.5">
                 {/* A dash when the room type has no rate — never ₹0
                     (defect 246). */}
                 <Line
@@ -452,7 +432,7 @@ export function CheckInFlow({
                     {isForeign ? " · " + nationality : ""}
                   </p>
                 ) : (
-                  <p className="text-brand-yellow">
+                  <p className="text-brand-yellow-800">
                     ID not captured - {idSkipReason}
                   </p>
                 )}
@@ -482,6 +462,7 @@ export function CheckInFlow({
             <Button
               disabled={
                 (step === 2 && !idCaptured && !idSkipReason.trim())
+                || (step === 2 && formIIINeeds.length > 0)
                 /* The server refuses without it anyway. Disabling here
                    too means the clerk finds out on the step that asks,
                    not on the one that finishes. */
@@ -499,17 +480,16 @@ export function CheckInFlow({
                   /* Sent only when there is something to send. An empty
                      object would look like a capture to anything counting
                      keys rather than reading them. */
-                  ...(idCaptured
-                    ? {
-                        identity: {
-                          idType, idNumber: idNumber.trim(), nationality,
-                          ...(passportExpiry ? { passportExpiry } : {}),
-                          ...(visaNumber ? { visaNumber } : {}),
-                          ...(visaExpiry ? { visaExpiry } : {}),
-                          ...(addressLine ? { addressLine } : {}),
-                        },
-                      }
-                    : {}),
+                  /* The nationality always - with the ID skipped too, or a
+                     foreign guest never reached the Form III register. */
+                  identity: {
+                    nationality,
+                    ...(idCaptured
+                      ? { idType, idNumber: idNumber.trim(),
+                          ...particularsPayload(particulars).identity }
+                      : {}),
+                  },
+                  ...(isForeign ? { visit: particularsPayload(particulars).visit } : {}),
                   idSkipReason, businessDate,
                   /* Asked for on the Rate step, and never sent until 24
                      September - so the server refused every check-in

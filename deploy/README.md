@@ -318,18 +318,155 @@ select prefix, fin_year, next_number from invoice_series;
 
 ## Backups
 
-`launch.sh` installs `db/backup.sh` as a nightly cron at 03:00 — after any
-plausible night audit, before anyone arrives.
+Nightly at 03:00, after any plausible night audit and before anyone arrives,
+cron runs `db/verify-backup.sh` as `postgres`. It takes the backup
+(`db/backup.sh`), which keeps the last 14 on this disk and **copies each one
+to an Oracle Object Storage bucket**; restores it into a scratch database and
+compares it with the live one, figure by figure; and **tells the owner, pass
+or fail**, through n8n. Its output is in `/var/log/fidato-backup.log`.
 
-**It writes to the same disk as the database.** That is a copy which dies in
-the same fire, and it is not a backup. The free tier has no managed backups,
-so closing this is a real step and not a formality. Cheapest options:
+The owner's choices, 27 September (D27-15): Oracle storage in Fidato's own
+account, **30 days** kept there, told by **WhatsApp through n8n**, with a free
+outside check as the backstop for the one case n8n cannot see.
 
-- **Oracle Object Storage** — 20 GB free, same account, `oci os object put`
-  in the cron line
-- **rclone** to any remote you already pay for
-- `db/verify-backup.sh` on a schedule, which restores the dump and checks it —
-  an unverified backup is a belief, not a backup
+Where the copy goes and whom to tell are the server's own settings, in
+`/etc/fidato-backup.env` (written empty by `launch.sh`, readable by `postgres`
+alone). Nothing about them is in the repository.
+
+| Setting | What it is |
+|---|---|
+| `BACKUP_UPLOAD_URL` | the bucket's upload-only link (step 1). Empty: the backup stays on this disk, and says so |
+| `ALERT_URL` | the n8n webhook, over loopback: `http://127.0.0.1:5678/webhook/<path>` (step 2) |
+| `ALERT_SECRET` | a long random value; n8n drops any call without it in `x-alert-secret` |
+
+### Setting it up, once
+
+**1 · The bucket:** *the Oracle console, in your browser, signed in to
+Fidato's account*
+
+1. **Storage → Buckets → Create Bucket.** Name `pms-backups`, in the same
+   compartment as the server. Standard tier, Oracle-managed keys, **object
+   versioning off** (step 3 needs it off). It is private by default; leave it.
+2. **The bucket → Retention rules → Create rule.** Name `keep-30-days`,
+   time-bound, **30 days**. Do not lock it. For 30 days nothing (not the
+   server, not a break-in on it, not a mistake) can delete or overwrite a copy.
+3. **Identity & Security → Policies**, in the **root** compartment → Create
+   Policy, named `objectstorage-lifecycle`, with this one statement (Mumbai is
+   `ap-mumbai-1`; use your home region's identifier if it is another):
+   `Allow service objectstorage-ap-mumbai-1 to manage object-family in tenancy`
+   Without it the next step's rule never runs, and nothing says so.
+4. **The bucket → Lifecycle Policy Rules → Create Rule.** Name
+   `delete-after-31-days`, target Objects, action Delete, **31 days** (a day
+   after the retention rule lets go).
+5. **The bucket → Pre-Authenticated Requests → Create.** Name `nightly-upload`,
+   target **Bucket**, access **Permit object writes**, expiry **a year from
+   today**. Copy the URL: it is shown once. It can add files and nothing else:
+   it cannot read, list or delete them. When it expires the nightly backup
+   fails and you are told; make a new one and paste it in.
+
+**2 · The alert:** *n8n, in your browser, n8n.fidatohotels.com*
+
+One workflow, **PMS alerts**, active, with three starts. The wording and the
+WhatsApp account are yours to change there (D17-87). WhatsApp only lets a
+business message someone first with a **template Meta has approved**, so the
+WhatsApp node sends a template, for example `system_alert` with one variable.
+
+- **Backups.** A *Webhook* node: POST, path `pms-backup`, authentication
+  *Header Auth* with the name `x-alert-secret` and your secret. It receives
+  `{"check":"backup","ok":true|false,"server":"…"}`. When `ok` is false: send
+  the WhatsApp ("Last night's backup on {server} FAILED. Look at
+  /var/log/fidato-backup.log"). When true: a *Code* node records the time in
+  `$getWorkflowStaticData('global').lastBackup`.
+- **A night with no report.** A *Schedule* node, daily at 04:30: if
+  `lastBackup` is more than 26 hours old, send the WhatsApp ("No backup report
+  last night"). This catches cron itself having stopped.
+- **The system answering.** A *Schedule* node every 5 minutes: an *HTTP
+  Request* GET to `https://api.fidatohotels.com/health` (timeout 20 s; "Never
+  error" and "Include response headers and status" on). Down is anything but
+  a 200 with `"ok": true`. Keep the last state in static data and send the
+  WhatsApp **only when it changes** ("PMS is DOWN" / "PMS is back"), not every
+  5 minutes.
+
+**3 · The server's settings:** *the server, over ssh as `opc`*
+
+```bash
+sudo test -f /etc/fidato-backup.env || sudo install -m 600 -o postgres -g postgres /dev/null /etc/fidato-backup.env
+sudo dnf -y install nano
+sudo nano /etc/fidato-backup.env
+```
+
+Three lines, the values in single quotes:
+
+```
+BACKUP_UPLOAD_URL='<the URL from step 1.5, ending in /o/>'
+ALERT_URL='http://127.0.0.1:5678/webhook/pms-backup'
+ALERT_SECRET='<the secret from step 2>'
+```
+
+**4 · Prove it:** *the server, over ssh as `opc`, after a `launch.sh` run
+that carries this change*
+
+```bash
+sudo -u postgres env BACKUP_DIR=/var/backups/fidato BACKUP_SH=/usr/local/bin/fidato-backup /usr/local/bin/fidato-verify-backup
+```
+
+It should end *"this backup has been restored and checked. It is a backup."*,
+the file should be in the bucket (Oracle console → the bucket → Objects), and
+the n8n workflow should show the call. Then break it once on purpose: put a
+wrong character in `BACKUP_UPLOAD_URL`, run the line again, and see the
+WhatsApp arrive, and put it back.
+
+### Getting a copy back
+
+*The Oracle console*: the bucket → Objects → the file → Download. *Your PC or
+the server*: `pg_restore -d <empty database> --no-owner --no-acl <file>`, or
+`db/verify-backup.sh <file>` to restore it into a scratch database and check
+it first. Do it once on purpose before it is needed.
+
+## Watching it
+
+Two things watch the system, because n8n runs on the box it watches: if the
+server, its network or n8n itself goes down, n8n cannot say so.
+
+- **n8n** (above, step 2): a WhatsApp when `/health` stops answering or
+  answers wrong, and when a backup fails or does not report.
+- **UptimeRobot**, free, outside (*uptimerobot.com, in your browser*):
+  commercial use is allowed on the free plan (its help centre, 27 Aug 2026).
+  Add two HTTP(s) monitors at 5 minutes, `https://api.fidatohotels.com/health`
+  and `https://n8n.fidatohotels.com/healthz`, alerting your email (and its
+  phone app, if you install it). It sends no personal data anywhere: it only
+  asks those two addresses whether they answer.
+
+## Logs, and the clock
+
+`launch.sh` keeps **a year** of logs (the owner, 27 September: CERT-In asks
+180 days, the DPDP Rules a year from 13 May 2027) and checks the clock. What
+each log is for, and what to do in an incident: `docs/INCIDENT-PLAN.md`.
+
+| Log | Where | Kept |
+|---|---|---|
+| The API, ssh, sudo, n8n, the kernel | the journal: `journalctl -u fidato-api` | a year (`/etc/systemd/journald.conf.d/retention.conf`) |
+| Every request to the API | `/var/log/nginx/` | daily files, 366 kept |
+| The database, with every sign-in | Postgres's `log/` directory, a file a day | 366 days (`/etc/cron.d/fidato-logs`) |
+| The backups | `/var/log/fidato-backup.log` | never emptied |
+
+To check, *the server, over ssh as `opc`*:
+
+```bash
+journalctl --disk-usage
+sudo du -sh /var/log/nginx /var/lib/pgsql/data/log
+sudo podman inspect n8n --format '{{.HostConfig.LogConfig.Type}}'
+chronyc tracking
+```
+
+A week after the change, the first two should be growing by a few MB a day at
+most (a year is then well under a few GB); much more than that, tell the master
+chat.
+
+The second line should say `journald`; if it does not, n8n's own log is not
+in the journal and is not kept a year. `chronyc tracking` should name
+`169.254.169.254` (Oracle's time service, which CERT-In's FAQ Q42 allows)
+and say `Leap status : Normal`.
 
 ---
 

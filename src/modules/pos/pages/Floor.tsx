@@ -1,13 +1,13 @@
 import { useEffect, useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useParams, useNavigate } from "react-router";
-import { Printer, Eye, LayoutGrid, DoorClosed } from "lucide-react";
+import { Printer, Eye, LayoutGrid, DoorClosed, ChevronRight } from "lucide-react";
 import { cn } from "@/lib/cn";
 import { money } from "@/lib/format";
 import { useUi } from "@/lib/ui";
 import { useLiveOrders } from "@/lib/useLiveOrders";
 import {
-  Page, PageHeader, Card, CardBody, Button, Skeleton, toast,
+  Page, PageHeader, Card, CardBody, Button, Skeleton, EmptyState, toast,
   Dialog, DialogContent, Field, fieldProps, Input,
 } from "@/components/ui";
 import { StartHere } from "@/components/app/StartHere";
@@ -57,21 +57,26 @@ const CLOSE_FOR: { key: OffFor; label: string }[] = [
   { key: "next_business_day", label: "Rest of today" },
 ];
 
+/* The fidato-design state tiles, as Rooms has them: a -50 wash and its
+   -100 inset, the full colour on hover. The same meanings as before. */
 const LEGEND: { state: TableState; label: string; swatch: string }[] = [
-  { state: "blank",   label: "Free",    swatch: "bg-white border-grey-300" },
-  { state: "running", label: "Running", swatch: "bg-info-50 border-info" },
-  { state: "kot",     label: "In the kitchen", swatch: "bg-orange-50 border-brand-orange" },
-  { state: "printed", label: "Bill printed",   swatch: "bg-green-50 border-success" },
-  { state: "paid",    label: "Paid - clear it", swatch: "bg-yellow-50 border-brand-yellow" },
+  { state: "blank",   label: "Free",    swatch: "bg-white ring-grey-300" },
+  { state: "running", label: "Running", swatch: "bg-info-50 ring-info" },
+  { state: "kot",     label: "In the kitchen", swatch: "bg-brand-orange-50 ring-brand-orange" },
+  { state: "printed", label: "Bill printed",   swatch: "bg-success-50 ring-success" },
+  { state: "paid",    label: "Paid - clear it", swatch: "bg-brand-yellow-50 ring-brand-yellow" },
 ];
 
 const TILE: Record<TableState, string> = {
-  blank:   "bg-white border-grey-300 hover:border-grey-400",
-  running: "bg-info-50 border-info",
-  kot:     "bg-orange-50 border-brand-orange",
-  printed: "bg-green-50 border-success",
-  paid:    "bg-yellow-50 border-brand-yellow",
+  blank:   "bg-white ring-grey-200 hover:ring-grey-400",
+  running: "bg-info-50 ring-info-100 hover:ring-info",
+  kot:     "bg-brand-orange-50 ring-brand-orange-100 hover:ring-brand-orange",
+  printed: "bg-success-50 ring-success-100 hover:ring-success",
+  paid:    "bg-brand-yellow-50 ring-brand-yellow-100 hover:ring-brand-yellow",
 };
+
+/* The tile's two small actions: 44px capsules, white on the tint. */
+const TILE_ACTION = "press size-11 grid place-items-center rounded-full border border-grey-300 bg-white text-grey-600 hover:text-ink-900 hover:border-grey-400 cursor-pointer";
 
 /** Restaurant setup (D22-6), where tables are laid out. */
 const SETUP = "/h/:code/till/setup";
@@ -185,7 +190,7 @@ export default function FloorPage() {
         )}
       />
 
-      <StartHere className="mb-4" />
+      <StartHere className="mb-5" />
 
       {/* POS-10. One line per slip, because two tables sent on a slow
           line are two slips the kitchen is waiting for. */}
@@ -193,13 +198,13 @@ export default function FloorPage() {
         <SlipNotice
           key={slip.url}
           slip={slip}
-          className="mb-4"
+          className="mb-5"
           onDone={() => setBlockedSlips((s) => s.filter((x) => x.url !== slip.url))}
         />
       ))}
 
       {closed && (
-        <Card className="mb-4">
+        <Card className="mb-5">
           <CardBody>
             <p className="text-sm text-ink-900 font-medium">
               {outlet?.name} is closed{reopens ? ` until ${reopens}` : ""}
@@ -217,10 +222,11 @@ export default function FloorPage() {
         </Card>
       )}
 
-      <div className="flex gap-4 flex-wrap mb-4">
+      {/* The key: a 12px caption, as the Rooms strip's. */}
+      <div className="flex gap-x-4 gap-y-2 flex-wrap mb-5">
         {LEGEND.map((l) => (
-          <span key={l.state} className="flex items-center gap-2 text-sm text-grey-600">
-            <i className={cn("size-3.5 rounded border", l.swatch)} />
+          <span key={l.state} className="flex items-center gap-2 text-xs font-medium text-grey-600 whitespace-nowrap">
+            <i className={cn("size-3 rounded-[4px] ring-1 ring-inset", l.swatch)} />
             {l.label}
           </span>
         ))}
@@ -231,7 +237,7 @@ export default function FloorPage() {
           have been laid out yet". */}
       {floor.error && floor.data !== undefined && (
         <ReadStale
-          className="mb-4"
+          className="mb-5"
           error={floor.error}
           loadedAt={floor.dataUpdatedAt}
           onRetry={() => void floor.refetch()}
@@ -250,51 +256,46 @@ export default function FloorPage() {
         </Card>
       ) : sections.length === 0 ? (
         <Card>
-          <CardBody>
-            <div className="text-center py-8">
-              <LayoutGrid className="size-6 text-grey-300 mx-auto mb-3" />
-              <p className="text-base text-ink-900 font-medium">
-                No tables have been laid out yet.
-              </p>
-              <p className="text-sm text-grey-600 mt-1 max-w-md mx-auto leading-relaxed">
-                A section is a part of the room - A/C, Non A/C, the bar - and
-                tables sit inside one. Until they exist, an order carries
-                whatever the waiter types.
-              </p>
-              {/* D22-6: for the owner, an administrator and the GM, who may set
-                  them up; a waiter reads the sentence above only. */}
-              {mayReach(role, SETUP) && (
-                <Button className="mt-4" onClick={() => navigate(SETUP.replace(":code", hotelId))}>
-                  Set up tables
-                </Button>
-              )}
-            </div>
-          </CardBody>
+          <EmptyState
+            compact
+            icon={<LayoutGrid />}
+            title="No tables have been laid out yet."
+            description="A section is a part of the room - A/C, Non A/C, the bar - and tables sit inside one. Until they exist, an order carries whatever the waiter types."
+            /* D22-6: for the owner, an administrator and the GM, who may set
+               them up; a waiter reads the sentence above only. */
+            action={mayReach(role, SETUP) && (
+              <Button onClick={() => navigate(SETUP.replace(":code", hotelId))}>
+                Set up tables
+              </Button>
+            )}
+          />
         </Card>
       ) : (
+        /* Sections are groups: 24px apart, a 16px heading 12px over its
+           tiles, the tiles 8px apart (the Rhythm Rule). */
         sections.map((section) => (
-          <section key={section.id} className="mb-6">
-            <h2 className="text-2xs font-semibold uppercase tracking-wide text-grey-500 mb-2.5">
+          <section key={section.id} className="mb-6 last:mb-0">
+            <h2 className="text-md font-semibold text-ink-900 mb-3">
               {section.name}
             </h2>
-            <div className="grid gap-2.5 [grid-template-columns:repeat(auto-fill,minmax(9rem,1fr))]">
+            <div className="grid gap-2 [grid-template-columns:repeat(auto-fill,minmax(9rem,1fr))]">
               {section.tables.map((t) => (
                 <div
                   key={t.id}
                   className={cn(
-                    "relative rounded-lg border p-3 min-h-24 flex flex-col",
-                    "transition-colors duration-200",
+                    "relative rounded-lg ring-1 ring-inset px-3.5 py-3 min-h-24 flex flex-col",
+                    "transition-[box-shadow,background-color] duration-150",
                     TILE[t.state],
                     /* An unsent round outranks the tile's own colour.
                        A free-looking table with six dishes on somebody's
                        pad is the one thing this screen would otherwise
                        be wrong about. */
-                    drafted.has(t.id) && "border-brand-orange border-dashed",
+                    drafted.has(t.id) && "ring-0 hover:ring-0 border border-dashed border-brand-orange",
                   )}
                 >
                   {drafted.has(t.id) && (
                     <span
-                      className="absolute top-2 right-2 text-2xs font-medium text-brand-orange-700"
+                      className="absolute top-3 right-3.5 text-2xs font-medium text-brand-orange-700"
                       title="A round is on a pad and has not been sent"
                     >
                       not sent
@@ -307,17 +308,23 @@ export default function FloorPage() {
                       onClick={() => open(t)}
                       className={cn(
                         "flex-1 flex flex-col items-start justify-center text-left",
-                        closed ? "cursor-not-allowed" : "cursor-pointer",
+                        closed ? "cursor-not-allowed" : "cursor-pointer press-tile",
                       )}
                     >
-                      <span className="text-base font-medium text-ink-900">
+                      {/* Free, as on Rooms: the name in grey-700 at 500. */}
+                      <span className="text-xl font-medium text-grey-700 tabular tracking-[-0.02em]">
                         {t.label}
                       </span>
-                      {t.seats && (
-                        <span className="text-sm text-grey-500 tabular">
-                          {t.seats} seats
-                        </span>
-                      )}
+                      {/* The last line ends in the arrow while the tile opens
+                          the pad (the Tappable Rule, as on Rooms). */}
+                      <span className="w-full flex items-center gap-2">
+                        {t.seats && (
+                          <span className="text-sm text-grey-500 tabular">
+                            {t.seats} seats
+                          </span>
+                        )}
+                        {!closed && <ChevronRight className="ml-auto size-4 shrink-0 text-grey-400" aria-hidden />}
+                      </span>
                     </button>
                   ) : (
                     <>
@@ -337,23 +344,31 @@ export default function FloorPage() {
                           "flex-1 flex flex-col items-start text-left w-full",
                           t.state === "paid" || closed
                             ? "cursor-not-allowed"
-                            : "cursor-pointer",
+                            : "cursor-pointer press-tile",
                         )}
                       >
                         {/* Three things, in the order a person reads them
-                            across a room: how long, which table, how much. */}
-                        <span className="tabular text-sm text-grey-600">
+                            across a room: how long, which table, how much.
+                            grey-600 at the least: they sit on a tint. */}
+                        <span className="tabular text-xs font-medium text-grey-600">
                           {t.minutes} min
                         </span>
-                        <span className="text-base font-medium text-ink-900">
+                        <span className="text-xl font-semibold text-ink-900 tabular tracking-[-0.02em]">
                           {t.label}
                         </span>
-                        <span className="tabular text-base font-semibold text-ink-900 mt-auto">
-                          {t.payable === null ? "-" : money(t.payable)}
+                        <span className="mt-auto w-full flex items-center justify-between gap-2">
+                          <span className="tabular text-md font-semibold text-ink-900">
+                            {t.payable === null ? "-" : money(t.payable)}
+                          </span>
+                          {/* It opens the pad for another round: the arrow.
+                              A paid table takes no more, so none. */}
+                          {t.state !== "paid" && !closed && (
+                            <ChevronRight className="size-4 shrink-0 text-grey-400" aria-hidden />
+                          )}
                         </span>
                       </button>
 
-                      <div className="flex gap-1.5 mt-2">
+                      <div className="flex gap-2 mt-2">
                         {t.state === "paid" ? (
                           <Button
                             variant="secondary"
@@ -371,7 +386,7 @@ export default function FloorPage() {
                               aria-label={`Print the bill for ${t.label}`}
                               disabled={busy === t.id}
                               onClick={() => void print(t)}
-                              className="size-11 grid place-items-center rounded-md border border-grey-300 bg-white text-grey-600 hover:text-ink-900 cursor-pointer transition-colors duration-200"
+                              className={TILE_ACTION}
                             >
                               <Printer className="size-4" />
                             </button>
@@ -380,7 +395,7 @@ export default function FloorPage() {
                               aria-label={`Open ${t.label}`}
                               onClick={() => navigate(
                                 `/h/${hotelId}/till?order=${t.orderId}`)}
-                              className="size-11 grid place-items-center rounded-md border border-grey-300 bg-white text-grey-600 hover:text-ink-900 cursor-pointer transition-colors duration-200"
+                              className={TILE_ACTION}
                             >
                               <Eye className="size-4" />
                             </button>

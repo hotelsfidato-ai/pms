@@ -3,8 +3,8 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { Link, useNavigate, useParams } from "react-router";
 import { Armchair, Download, Plus, Upload, AlertTriangle } from "lucide-react";
 import {
-  Page, PageHeader, Card, CardBody, Button, DataTable, EmptyState, NativeSelect,
-  StatusPill, toast, type Column,
+  Page, PageHeader, Button, DataTable, EmptyState, NativeSelect,
+  StatusPill, IconChip, toast, type Column,
 } from "@/components/ui";
 import { ImportDialog } from "@/components/flows/ImportDialog";
 import { useRole, useCurrentHotel } from "@/lib/session";
@@ -190,15 +190,15 @@ export default function EquipmentRegisterPage() {
         }
         actions={
           <div className="flex flex-wrap gap-2">
-            <Button variant="secondary" className="h-11" disabled={!mayExport || exporting || items.length === 0}
+            <Button variant="secondary" disabled={!mayExport || exporting || items.length === 0}
                     onClick={() => void doExport()}>
               <Download className="size-4" /> {exporting ? "Exporting…" : "Export"}
             </Button>
-            <Button variant="secondary" className="h-11" disabled={!mayCreate}
+            <Button variant="secondary" disabled={!mayCreate}
                     onClick={() => setImporting(true)}>
               <Upload className="size-4" /> Import
             </Button>
-            <Button variant="primary" className="h-11" disabled={!mayCreate}
+            <Button variant="primary" disabled={!mayCreate}
                     onClick={() => setAdding(true)}>
               <Plus className="size-4" /> Add an item
             </Button>
@@ -206,58 +206,58 @@ export default function EquipmentRegisterPage() {
         }
       >
         {(!mayCreate || !mayExport) && (
-          <p className="text-sm text-grey-600 mt-3 leading-relaxed">
+          <p className="text-sm text-grey-600 leading-relaxed">
             {!mayCreate && `Adding and changing equipment is for the ${whoMay("create")}. `}
             {!mayExport && `Exporting it is for the ${whoMay("export")}.`}
           </p>
         )}
       </PageHeader>
 
+      {/* Something to do, so the warm tile; each request a row under a
+          hairline inside it, not a box in a box. */}
       {waiting.length > 0 && (
-        <Card className="border-amber-300 bg-amber-50 mb-4">
-          <CardBody>
-            <div className="flex items-start gap-2.5">
-              <AlertTriangle className="size-4 text-amber-600 shrink-0 mt-1" />
-              <p className="text-base font-medium text-ink-900">
-                {waiting.length === 1 ? "One request waits" : `${waiting.length} requests wait`} in the
-                approvals inbox
-              </p>
-            </div>
-            <ul className="mt-3 space-y-3">
-              {waiting.map((w) => (
-                <li key={w.approvalId} className="rounded-md border border-amber-200 bg-white p-3">
-                  <p className="text-base text-ink-900">
-                    <Link to={`/h/${code}/equipment/${w.item.id}`} className="font-medium text-brand hover:underline">
-                      {w.item.name}
-                    </Link>{" "}
-                    ({heldText(w.item)}, {w.item.place}) {w.what}
-                  </p>
-                  <p className="text-sm text-grey-600">
-                    Asked by {w.by ?? "-"}{w.reason ? ` - ${w.reason}` : ""}
-                  </p>
-                  {/* Quiet buttons here: the screen's one main action is Add an item. */}
-                  <DecideButtons code={code} quiet
-                                 approval={inbox.data?.find((a) => a.id === w.approvalId)}
-                                 approveLabel="Approve" onDone={refresh} />
-                </li>
-              ))}
-            </ul>
-          </CardBody>
-        </Card>
+        <div className="mb-5 rounded-lg bg-brand-yellow-50 ring-1 ring-inset ring-brand-yellow-100 px-4 py-3.5">
+          <div className="flex items-center gap-2.5">
+            <IconChip tone="yellow"><AlertTriangle /></IconChip>
+            <p className="text-md font-semibold text-ink-900">
+              {waiting.length === 1 ? "One request waits" : `${waiting.length} requests wait`} in the
+              approvals inbox
+            </p>
+          </div>
+          <ul className="mt-3 divide-y divide-brand-yellow-100 border-t border-brand-yellow-100">
+            {waiting.map((w) => (
+              <li key={w.approvalId} className="py-3 last:pb-0">
+                <p className="text-sm text-ink-900">
+                  <Link to={`/h/${code}/equipment/${w.item.id}`} className="font-medium text-brand-orange-700 hover:underline underline-offset-4">
+                    {w.item.name}
+                  </Link>{" "}
+                  ({heldText(w.item)}, {w.item.place}) {w.what}
+                </p>
+                <p className="text-sm text-grey-600 mt-0.5">
+                  Asked by {w.by ?? "-"}{w.reason ? ` - ${w.reason}` : ""}
+                </p>
+                {/* Quiet buttons here: the screen's one main action is Add an item. */}
+                <DecideButtons code={code} quiet
+                               approval={inbox.data?.find((a) => a.id === w.approvalId)}
+                               approveLabel="Approve" onDone={refresh} />
+              </li>
+            ))}
+          </ul>
+        </div>
       )}
       {items.length > 0 && (
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-4 sm:max-w-xl">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-5 sm:max-w-xl">
           <label className="block">
-            <span className="text-sm text-grey-600">Where</span>
-            <NativeSelect value={place} onChange={(e) => setPlace(e.target.value)} className="mt-1 h-11">
+            <span className="text-sm font-medium text-grey-700">Where</span>
+            <NativeSelect value={place} onChange={(e) => setPlace(e.target.value)} className="mt-1.5">
               <option value="all">Everywhere</option>
               {places.map(([id, label]) => <option key={id} value={id}>{label}</option>)}
             </NativeSelect>
           </label>
           <label className="block">
-            <span className="text-sm text-grey-600">Status</span>
+            <span className="text-sm font-medium text-grey-700">Status</span>
             <NativeSelect value={status} onChange={(e) => setStatus(e.target.value as StatusFilter)}
-                          className="mt-1 h-11">
+                          className="mt-1.5">
               <option value="all">Any status</option>
               <option value="in_use">{STATUS_LABEL.in_use}</option>
               <option value="under_repair">{STATUS_LABEL.under_repair}</option>

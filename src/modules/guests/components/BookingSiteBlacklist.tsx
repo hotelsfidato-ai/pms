@@ -42,7 +42,7 @@ export function BookingSiteBlacklist({
     <div className="space-y-2">
       {warnings.map((w) => (
         <div key={`${w.stayId}-${w.blacklistedName}`} role="alert"
-          className="flex items-start gap-2 rounded-md border border-brand-red-100 bg-brand-red-50 p-3 text-sm text-brand-red-700">
+          className="flex items-start gap-2 rounded-lg border border-brand-red-100 bg-brand-red-50 p-3 text-sm text-brand-red-700">
           <AlertTriangle className="size-4 shrink-0 mt-0.5" />
           <span>
             <span className="font-medium">

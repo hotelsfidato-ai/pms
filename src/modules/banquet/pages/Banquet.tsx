@@ -1,12 +1,12 @@
 import { useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useNavigate, useParams } from "react-router";
-import { CalendarDays, Plus, Settings2, Users, Clock } from "lucide-react";
+import { CalendarDays, ChevronRight, Plus, Settings2, Users, Clock } from "lucide-react";
 import { cn } from "@/lib/cn";
 import { money, dateShort, timeOnly, addDays } from "@/lib/format";
 import { useUi } from "@/lib/ui";
 import {
-  Page, PageHeader, Card, CardBody, Button, Skeleton, EmptyState, toast,
+  Page, PageHeader, Card, Button, Skeleton, EmptyState, toast,
   Dialog, DialogContent, DialogClose, Field, fieldProps, Input, Textarea,
   NativeSelect, StatusPill,
 } from "@/components/ui";
@@ -114,80 +114,83 @@ export default function BanquetPage() {
               + `between ${dateShort(from)} and ${dateShort(to)}.`
         }
         actions={
-          <div className="flex flex-wrap gap-2">
-            <Button variant="secondary" className="h-11"
+          <>
+            <Button variant="secondary"
                     onClick={() => navigate(`/h/${hotelId}/banquet/setup`)}>
               <Settings2 className="size-4" /> Halls and packages
             </Button>
-            <Button variant="primary" className="h-11" onClick={() => setRegistering(true)}>
+            <Button variant="primary" onClick={() => setRegistering(true)}>
               <Plus className="size-4" /> Register a function
             </Button>
-          </div>
+          </>
         }
       />
 
-      <ReadStale error={readError(diary)} loadedAt={diary.dataUpdatedAt}
+      <ReadStale className="mb-5" error={readError(diary)} loadedAt={diary.dataUpdatedAt}
                  onRetry={() => void diary.refetch()} />
 
-      <div className="flex flex-wrap items-center gap-2">
-        <Button variant="secondary" className="h-11" onClick={() => shift(-30)}>
-          ← Earlier
-        </Button>
-        <Button variant="secondary" className="h-11"
-                onClick={() => setWindow({ from: businessDate, to: addDays(businessDate, 30) })}>
-          <CalendarDays className="size-4" /> From today
-        </Button>
-        <Button variant="secondary" className="h-11" onClick={() => shift(30)}>
-          Later →
-        </Button>
-      </div>
-
-      {venues.length === 0 ? (
-        <EmptyState
-          title="No halls yet"
-          description={
-            "A property with a banquet hall has somebody enter it, the same "
-            + "way rooms are entered. Nothing is created for you."
-          }
-          action={
-            <Button onClick={() => navigate(`/h/${hotelId}/banquet/setup`)}>
-              Add a hall
-            </Button>
-          }
-        />
-      ) : (
-        <div className="space-y-4">
-          {venues.map((v) => (
-            <Card key={v.id}>
-              <CardBody className="space-y-3">
-                <p className="flex flex-wrap items-baseline gap-2">
-                  <span className="text-base font-medium">{v.name}</span>
-                  <span className="text-sm text-grey-500">
-                    {v.events.length === 0
-                      ? "nothing booked"
-                      : `${v.events.length} in this window`}
-                  </span>
-                </p>
-
-                {/* An EMPTY hall is drawn, not omitted. It is usually the
-                    answer somebody came to this screen for. */}
-                {v.events.length === 0 ? (
-                  <p className="rounded-lg border border-dashed border-grey-200
-                                px-3 py-6 text-center text-sm text-grey-500">
-                    Free for the whole window.
-                  </p>
-                ) : (
-                  <ul className="space-y-2">
-                    {v.events.map((e) => (
-                      <EventRow key={e.id} event={e} hotelId={hotelId} />
-                    ))}
-                  </ul>
-                )}
-              </CardBody>
-            </Card>
-          ))}
+      {/* One chart card, the Calendar's way (fidato-design § 4, a time
+          grid): its own toolbar moves the window; each hall is a row on
+          the grey-50 of the Calendar's group rows, its functions list
+          rows under it, a hairline between. */}
+      <Card className="overflow-hidden">
+        <div className="flex flex-wrap items-center gap-2 px-4 py-3 border-b border-grey-200">
+          <Button variant="secondary" onClick={() => shift(-30)}>
+            ← Earlier
+          </Button>
+          <Button variant="secondary"
+                  onClick={() => setWindow({ from: businessDate, to: addDays(businessDate, 30) })}>
+            <CalendarDays className="size-4" /> From today
+          </Button>
+          <Button variant="secondary" onClick={() => shift(30)}>
+            Later →
+          </Button>
         </div>
-      )}
+
+        {venues.length === 0 ? (
+          <EmptyState
+            compact
+            title="No halls yet"
+            description={
+              "A property with a banquet hall has somebody enter it, the same "
+              + "way rooms are entered. Nothing is created for you."
+            }
+            action={
+              <Button onClick={() => navigate(`/h/${hotelId}/banquet/setup`)}>
+                Add a hall
+              </Button>
+            }
+          />
+        ) : (
+          venues.map((v) => (
+            <section key={v.id} className="border-b border-grey-200 last:border-b-0">
+              <p className="flex flex-wrap items-baseline gap-x-2 gap-y-0.5 px-4 py-2.5
+                            bg-grey-50 border-b border-grey-200">
+                <span className="text-sm font-semibold text-ink-900">{v.name}</span>
+                <span className="text-xs text-grey-500">
+                  {v.events.length === 0
+                    ? "nothing booked"
+                    : `${v.events.length} in this window`}
+                </span>
+              </p>
+
+              {/* An EMPTY hall is drawn, not omitted. It is usually the
+                  answer somebody came to this screen for. */}
+              {v.events.length === 0 ? (
+                <p className="flex items-center px-4 py-3 min-h-14 text-sm text-grey-500">
+                  Free for the whole window.
+                </p>
+              ) : (
+                <ul className="divide-y divide-grey-100">
+                  {v.events.map((e) => (
+                    <EventRow key={e.id} event={e} hotelId={hotelId} />
+                  ))}
+                </ul>
+              )}
+            </section>
+          ))
+        )}
+      </Card>
 
       {registering && (
         <RegisterDialog
@@ -204,6 +207,8 @@ export default function BanquetPage() {
   );
 }
 
+/* A function is a list row that opens it, so it ends in an arrow (the
+   Tappable Rule). Its amount stands at the right, level down the list. */
 function EventRow({ event, hotelId }: { event: BanquetEventSummary; hotelId: string }) {
   const navigate = useNavigate();
   const s = STATUS[event.status] ?? STATUS["enquiry"]!;
@@ -214,43 +219,43 @@ function EventRow({ event, hotelId }: { event: BanquetEventSummary; hotelId: str
         type="button"
         onClick={() => navigate(`/h/${hotelId}/banquet/${event.id}`)}
         className={cn(
-          "w-full rounded-lg border border-grey-200 px-3 py-2.5 text-left",
-          "hover:border-brand-orange-300 hover:bg-brand-orange-50/40",
-          "focus-visible:outline-2 focus-visible:outline-offset-2",
-          "focus-visible:outline-brand-orange-500 cursor-pointer",
-          "transition-colors min-h-11",
-          event.status === "enquiry" && "border-dashed",
+          "w-full flex items-center gap-3 px-4 py-3 min-h-14 text-left cursor-pointer",
+          "hover:bg-grey-50 transition-colors duration-150",
+          "focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-brand-orange",
         )}
       >
-        <p className="flex flex-wrap items-center gap-2">
-          <span className="font-medium">{event.title}</span>
-          <StatusPill tone={s.tone}>{s.label}</StatusPill>
-          <span className="text-sm text-grey-500">{event.reference}</span>
-        </p>
-        <p className="mt-1 flex flex-wrap items-center gap-x-3 gap-y-1
-                      text-sm text-grey-600">
-          <span className="inline-flex items-center gap-1">
-            <Clock className="size-3.5 shrink-0" />
-            {whenLabel(event.startsAt, event.endsAt)}
-          </span>
-          <span>{event.hostName}</span>
-          {event.pax !== null && (
-            <span className="inline-flex items-center gap-1">
-              <Users className="size-3.5 shrink-0" />{event.pax}
-            </span>
-          )}
-          {/* A DASH, never ₹0. Nobody has priced this yet, and a zero
-              would read as a hall given away. */}
-          <span className={cn("tabular-nums",
-                              event.agreedAmount === null && "text-grey-500")}>
-            {event.agreedAmount === null ? "-" : money(event.agreedAmount)}
-          </span>
-        </p>
-        {event.registeredBy && (
-          <p className="mt-0.5 text-sm text-grey-500">
-            Registered by {event.registeredBy}
+        <div className="min-w-0 flex-1">
+          <p className="flex flex-wrap items-center gap-x-2 gap-y-1">
+            <span className="text-sm font-medium text-ink-900">{event.title}</span>
+            <StatusPill tone={s.tone}>{s.label}</StatusPill>
+            <span className="text-xs text-grey-500 tabular">{event.reference}</span>
           </p>
-        )}
+          <p className="mt-1 flex flex-wrap items-center gap-x-3 gap-y-1
+                        text-sm text-grey-600">
+            <span className="inline-flex items-center gap-1.5">
+              <Clock className="size-3.5 shrink-0 text-grey-400" />
+              {whenLabel(event.startsAt, event.endsAt)}
+            </span>
+            <span>{event.hostName}</span>
+            {event.pax !== null && (
+              <span className="inline-flex items-center gap-1.5 tabular">
+                <Users className="size-3.5 shrink-0 text-grey-400" />{event.pax}
+              </span>
+            )}
+          </p>
+          {event.registeredBy && (
+            <p className="mt-0.5 text-xs text-grey-500">
+              Registered by {event.registeredBy}
+            </p>
+          )}
+        </div>
+        {/* A DASH, never ₹0. Nobody has priced this yet, and a zero
+            would read as a hall given away. */}
+        <span className={cn("shrink-0 text-sm font-medium tabular",
+                            event.agreedAmount === null ? "text-grey-500" : "text-ink-900")}>
+          {event.agreedAmount === null ? "-" : money(event.agreedAmount)}
+        </span>
+        <ChevronRight className="size-4 shrink-0 text-grey-400" aria-hidden />
       </button>
     </li>
   );
@@ -313,9 +318,9 @@ function RegisterDialog({
         footer={
           <>
             <DialogClose asChild>
-              <Button variant="secondary" className="h-11">Cancel</Button>
+              <Button variant="secondary">Cancel</Button>
             </DialogClose>
-            <Button variant="primary" className="h-11" disabled={!ready || busy}
+            <Button variant="primary" disabled={!ready || busy}
                     onClick={() => void submit()}>
               {busy ? "Registering…" : "Register"}
             </Button>
@@ -402,7 +407,7 @@ function RegisterDialog({
                   {/* OFFERED, never applied on its own. The number that
                       gets billed is the one somebody put here. */}
                   {chosen?.defaultRate != null && (
-                    <Button type="button" variant="secondary" className="h-11 shrink-0"
+                    <Button type="button" variant="secondary" className="shrink-0"
                             onClick={() => setAmount(String(chosen.defaultRate))}>
                       Use usual
                     </Button>
