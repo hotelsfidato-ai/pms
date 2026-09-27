@@ -4,6 +4,7 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useParams } from "react-router";
 import {
   Check, CloudOff, RefreshCw, Sparkle, Wrench, BedDouble, UserRound, SprayCan, RotateCcw,
+  DoorOpen, Users, LogOut,
 } from "lucide-react";
 import { cn } from "@/lib/cn";
 import { HeldError } from "@/lib/api";
@@ -13,6 +14,7 @@ import {
 import { useUi } from "@/lib/ui";
 import {
   Page, PageHeader, StatusPill, toast, Button, Card, EmptyState, ErrorState, Skeleton,
+  IconChip, Rings, AnchorGauge,
 } from "@/components/ui";
 import { StartHere } from "@/components/app/StartHere";
 import { listHousekeeping, markRoom, type HousekeepingRoom, listHousekeepers, listRoomAssignments, assignHousekeeper, unassignHousekeeper, type Housekeeper, type RoomAssignment } from "@/modules/housekeeping/data/housekeeping";
@@ -264,39 +266,36 @@ export default function HousekeepingPage() {
       <PageHeader
         title="Housekeeping"
         description="Tap a room to move it on. Clean, then inspected."
+        /* Connectivity, read from the browser rather than asserted: a pill
+           in the title row (the owner, 27 September); the held changes are
+           said under the title while there are some. */
+        actions={
+          <span className={cn(
+            "inline-flex items-center gap-1.5 h-7 px-2.5 rounded-full text-xs font-semibold ring-1 ring-inset",
+            online
+              ? "bg-success-50 text-success-600 ring-success-100"
+              : "bg-brand-yellow-50 text-brand-yellow-800 ring-brand-yellow-100",
+          )}>
+            {online ? <RefreshCw className="size-3.5" aria-hidden /> : <CloudOff className="size-3.5" aria-hidden />}
+            {online ? "Online" : "Offline"}
+          </span>
+        }
       />
+      {held.length > 0 && (
+        <p className="-mt-3 mb-5 text-sm font-medium text-brand-yellow-800 tabular" data-queue-count>
+          {held.length} change{held.length === 1 ? "" : "s"} waiting to sync
+        </p>
+      )}
 
       <StartHere className="mb-5" />
 
-      {/* Connectivity, read from the browser rather than asserted. */}
-      <div
-        className={cn(
-          "flex items-center gap-3 rounded-md border p-3 mb-5",
-          online ? "border-grey-200 bg-white" : "border-brand-yellow-100 bg-brand-yellow-50",
-        )}
-      >
-        {online ? (
-          <RefreshCw className="size-4 text-success shrink-0" />
-        ) : (
-          <CloudOff className="size-4 text-brand-yellow shrink-0" />
-        )}
-        <div className="min-w-0 flex-1">
-          <p className="text-base text-ink-900">
-            {online ? "Online" : "Offline"}
-          </p>
-          {held.length > 0 && (
-            <p className="text-sm text-[#8a6300] tabular" data-queue-count>
-              {held.length} change{held.length === 1 ? "" : "s"} waiting to sync
-            </p>
-          )}
-        </div>
-      </div>
+      {rooms.data && everything.length > 0 && <BoardHead rooms={everything} />}
 
       {/* Whose sheet. Scrolls sideways on a phone rather than wrapping
           into a block that pushes the rooms off the screen. */}
       {(staff.data?.length ?? 0) > 0 && (
-        <div className="-mx-1 mb-5 overflow-x-auto">
-          <div className="flex items-center gap-2 px-1 pb-1 w-max">
+        <div className="-mx-5 px-5 sm:mx-0 sm:px-0 mb-5 overflow-x-auto [scrollbar-width:none] max-sm:[mask-image:linear-gradient(to_right,#000_calc(100%-24px),transparent)]">
+          <div className="flex items-center gap-2 py-0.5 w-max">
             <SheetChip
               label="All rooms"
               count={everything.length}
@@ -379,7 +378,7 @@ export default function HousekeepingPage() {
           if (list.length === 0) return null;
           return (
             <section key={group.key} data-hk-group={group.key} className="@container">
-              <div className="flex items-center gap-2 mb-2.5">
+              <div className="flex items-center gap-2 mb-3">
                 <h2 className="text-md font-semibold text-ink-900">{group.label}</h2>
                 <StatusPill tone={group.tone}>{list.length}</StatusPill>
               </div>
@@ -393,7 +392,7 @@ export default function HousekeepingPage() {
                   Container, not viewport: this page sits beside a 264px
                   sidebar, so the window's width is not this column's —
                   the same trap the till menu had. */}
-              <ul className="grid gap-2.5 @md:grid-cols-2 @3xl:grid-cols-3 @5xl:grid-cols-4">
+              <ul className="grid gap-2 sm:gap-2.5 @md:grid-cols-2 @3xl:grid-cols-3 @5xl:grid-cols-4">
                 {list.map((room) => (
                   <li key={room.number}>
                     <RoomCard
@@ -455,14 +454,17 @@ function RoomCard({
         /* `relative` so this card's own hidden label belongs to it
            rather than to the page. The shell now anchors these anyway;
            this keeps the card correct on its own terms. */
-        "relative h-full flex flex-col gap-2 rounded-lg border bg-white p-3",
+        "relative h-full flex flex-col gap-2 rounded-lg ring-1 ring-inset px-3.5 py-3",
         "transition-colors duration-150",
-        pending ? "border-brand-yellow bg-brand-yellow-50/40" : "border-grey-200",
+        /* Due out is warm, as on Rooms: the room turns over today. A held
+           change is marked as it was. */
+        pending ? "ring-brand-yellow bg-brand-yellow-50/40"
+          : room.dueOut ? "ring-brand-yellow-100 bg-brand-yellow-50" : "ring-grey-200 bg-white",
       )}
     >
       <div className="min-w-0">
         <div className="flex items-baseline gap-2 flex-wrap">
-          <span className="text-xl font-semibold text-ink-900 tabular leading-none">
+          <span className="text-xl font-semibold text-ink-900 tabular tracking-[-0.02em] leading-none">
             {room.number}
           </span>
           <span className="text-sm text-grey-500">{room.type}</span>
@@ -475,7 +477,7 @@ function RoomCard({
           {room.occupied ? room.guest ?? "In house" : `Floor ${room.floor}`}
         </p>
         {pending && (
-          <p className="text-2xs text-[#8a6300] mt-1" data-hk-pending>
+          <p className="text-2xs text-brand-yellow-800 mt-1" data-hk-pending>
             Queued: mark {pending.state}
           </p>
         )}
@@ -486,14 +488,14 @@ function RoomCard({
             gives on the same screen, and it is the same control on the
             desk. */}
         {staff.length > 0 && (
-          <label className="flex items-center gap-1.5 mt-1.5">
+          <label className="relative flex items-center mt-2">
             <span className="sr-only">
               Who is cleaning room {room.number}
             </span>
             <UserRound
               className={cn(
-                "size-3.5 shrink-0",
-                assignment ? "text-grey-500" : "text-grey-300",
+                "absolute left-2.5 size-4 shrink-0 pointer-events-none",
+                assignment ? "text-grey-600" : "text-grey-500",
               )}
             />
             <select
@@ -503,9 +505,9 @@ function RoomCard({
               className={cn(
                 /* 44px, like the buttons below it: measured at 36px on
                     16 September, on the one screen built for a phone. */
-                "min-h-11 -ml-1 pl-1 pr-1 rounded bg-transparent",
-                "text-sm border-0 cursor-pointer",
-                "focus:outline-none focus:ring-2 focus:ring-brand-orange",
+                "w-full h-9 pointer-coarse:min-h-11 pl-8 pr-2 rounded-md bg-white",
+                "text-sm border border-grey-300 hover:border-grey-400 cursor-pointer",
+                "focus:outline-none focus:border-brand-orange focus:ring-2 focus:ring-brand-orange/20",
                 assignment ? "text-ink-900" : "text-grey-500",
               )}
             >
@@ -541,10 +543,9 @@ function RoomCard({
                 onClick={open}
                 data-hk-put-back={room.number}
                 className={cn(
-                  "flex items-center gap-1.5 min-h-11 px-2.5 rounded-md",
-                  "text-sm text-brand-red border border-transparent",
-                  "hover:border-brand-red-100 hover:bg-red-50 cursor-pointer",
-                  "transition-colors duration-150",
+                  "press flex items-center justify-center gap-1.5 w-full min-h-11 px-3.5 rounded-full",
+                  "text-sm font-medium text-brand-red-700 bg-white border border-grey-300",
+                  "hover:border-brand-red-100 hover:bg-brand-red-50 cursor-pointer",
                 )}
               >
                 <RotateCcw className="size-4" />
@@ -676,11 +677,11 @@ function MarkButton({
       data-hk-mark={label}
       onClick={() => (ready ? onPress() : onRefused(reason))}
       className={cn(
-        "flex flex-col items-center justify-center gap-1 min-h-14 w-full px-1",
-        "rounded-md border text-sm leading-none transition-colors duration-150",
+        "press flex flex-col items-center justify-center gap-1 min-h-14 w-full px-1",
+        "rounded-[10px] border text-sm font-medium leading-none",
         ready
           ? cn("border-grey-300 bg-white text-ink-900 cursor-pointer", hover)
-          : "border-grey-200 bg-grey-50 text-grey-500 cursor-not-allowed",
+          : "border-transparent bg-grey-100 text-grey-500 cursor-not-allowed",
       )}
     >
       <Icon className={cn("size-5 shrink-0", !ready && "text-grey-300")} />
@@ -699,23 +700,105 @@ function SheetChip({ label, count, active, onClick }: {
       onClick={onClick}
       aria-pressed={active}
       className={cn(
-        "inline-flex items-center gap-2 shrink-0",
-        "h-11 px-3.5 rounded-full border text-base",
-        "transition-colors duration-150 cursor-pointer",
+        "press inline-flex items-center gap-2 shrink-0",
+        "h-9 pointer-coarse:min-h-11 px-3.5 rounded-full border text-sm font-medium cursor-pointer",
         active
-          ? "border-brand-orange bg-brand-orange-50 text-ink-900"
-          : "border-grey-200 bg-white text-grey-700 hover:border-grey-300",
+          ? "border-ink-900 bg-ink-900 text-white"
+          : "border-grey-300 bg-white text-grey-700 hover:border-grey-400",
       )}
     >
       {label}
       <span
         className={cn(
           "tabular text-sm",
-          active ? "text-brand-orange-700" : "text-grey-500",
+          active ? "text-white/70" : "text-grey-500",
         )}
       >
         {count}
       </span>
     </button>
+  );
+}
+
+/* ── The board's head (the owner, 27 September) ─────────────────────
+   Counted from the same rooms as the groups below, so a count here and
+   a group's pill can never disagree. The navy anchor is how many empty
+   rooms are ready (clean or inspected); the six counts are the board's
+   own groups with Due out, and the warm tiles are today's jobs while
+   there are some. */
+function BoardHead({ rooms }: { rooms: HousekeepingRoom[] }) {
+  const free = rooms.filter((r) => !r.occupied);
+  const n = (key: string) => free.filter((r) => r.housekeeping === key).length;
+  const dirty = n("dirty"), clean = n("clean"), inspected = n("inspected"), out = n("out-of-service");
+  const empty = dirty + clean + inspected;
+  const ready = clean + inspected;
+  const inHouse = rooms.length - free.length;
+  const dueOut = rooms.filter((r) => r.dueOut).length;
+  const of = (x: number) => <>{x}<span className="text-white/55">/{empty}</span></>;
+
+  return (
+    <div className="grid grid-cols-12 gap-3 mb-5">
+      <div className="col-span-12 xl:col-span-5 flex flex-col gap-3 rounded-lg bg-ink-900 text-white px-4 py-3.5 sm:px-[18px] sm:py-4">
+        <p className="flex items-center gap-2.5 text-sm font-medium text-white/72">
+          <IconChip tone="glass"><DoorOpen /></IconChip>
+          Empty rooms
+        </p>
+        <div className="grid gap-4 sm:gap-6 items-center sm:grid-cols-[auto_minmax(0,1fr)]">
+          <div className="grid grid-cols-[80px_auto] gap-4 items-center">
+            <Rings
+              seenKey="fidato.housekeeping.rings"
+              size="size-20"
+              arcs={[{ value: empty ? ready / empty : null, color: "#fff", track: "rgb(255 255 255 / 0.12)" }]}
+            />
+            <div>
+              <p className="text-3xl font-semibold tabular tracking-[-0.03em]">{of(ready)}</p>
+              <p className="text-xs text-white/55 mt-0.5">clean</p>
+            </div>
+          </div>
+          <div className="grid gap-3">
+            <AnchorGauge label="Clean" value={of(ready)} fraction={empty ? ready / empty : 0} />
+            <AnchorGauge label="Inspected" value={of(inspected)} fraction={empty ? inspected / empty : 0} />
+          </div>
+        </div>
+      </div>
+      <div className="col-span-12 xl:col-span-7 grid grid-cols-2 sm:grid-cols-3 gap-2">
+        <HeadCount icon={SprayCan} chip={dirty ? "neutral" : "green"} label="Needs cleaning" n={dirty}
+                   job={dirty > 0 ? "orange" : undefined} goodAtZero />
+        <HeadCount icon={Sparkle} chip="blue" label="Clean" n={clean} />
+        <HeadCount icon={Check} label="Inspected" n={inspected} />
+        <HeadCount icon={Users} label="In house" n={inHouse} />
+        <HeadCount icon={LogOut} chip="yellow" label="Due out" n={dueOut} job={dueOut > 0 ? "yellow" : undefined} />
+        <HeadCount icon={Wrench} label="Out of service" n={out} warn={out > 0} />
+      </div>
+    </div>
+  );
+}
+
+function HeadCount({ icon: Icon, chip = "neutral", label, n, job, warn, goodAtZero }: {
+  icon: React.ComponentType<{ className?: string }>;
+  chip?: "neutral" | "green" | "blue" | "yellow";
+  label: string; n: number;
+  job?: "orange" | "yellow"; warn?: boolean; goodAtZero?: boolean;
+}) {
+  return (
+    <div className={cn(
+      "grid grid-rows-[auto_auto] gap-y-1 rounded-lg ring-1 ring-inset px-3.5 py-3",
+      job === "orange" ? "bg-brand-orange-50 ring-brand-orange-100"
+        : job === "yellow" ? "bg-brand-yellow-50 ring-brand-yellow-100"
+          : "bg-white ring-grey-200",
+    )}>
+      <p className="row-start-2 text-sm leading-[18px] text-grey-600 whitespace-nowrap">{label}</p>
+      <p className="row-start-1 flex items-center gap-2">
+        <IconChip size={24} tone={chip}><Icon /></IconChip>
+        <b className={cn(
+          "inline-flex items-center gap-1 text-xl leading-6 font-semibold tabular tracking-[-0.02em]",
+          warn || job === "orange" ? "text-brand-orange-700"
+            : goodAtZero && n === 0 ? "text-success-600" : "text-ink-900",
+        )}>
+          {n}
+          {goodAtZero && n === 0 && <Check className="size-3.5" aria-hidden />}
+        </b>
+      </p>
+    </div>
   );
 }
