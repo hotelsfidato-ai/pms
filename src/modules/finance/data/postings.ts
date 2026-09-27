@@ -44,6 +44,8 @@ export async function postCharge(
     taxable: boolean;
     businessDate: string;
   },
+  /** One per press of Post charge, kept until it lands: a repeat posts once. */
+  idempotencyKey?: string,
 ): Promise<OperationResult<Posting>> {
   /* The tax rate comes from the PROPERTY, server-side — `taxOn()` in
      src/lib/rules.ts still shows the clerk what will be charged, but
@@ -65,6 +67,7 @@ export async function postCharge(
     await api(`/api/hotels/${hotelId}/stays/${stayId}/charges`, {
       method: "POST",
       body: JSON.stringify(input),
+      ...(idempotencyKey ? { headers: { "idempotency-key": idempotencyKey } } : {}),
     });
   } catch (error) {
     if (error instanceof ApiError) return refuse(error.message);
@@ -117,11 +120,14 @@ export async function settle(
     /** D27-4: the desk confirmed a payment larger than the bill. */
     heldAsCredit?: boolean;
   },
+  /** One per press of Take payment, kept until it lands. */
+  idempotencyKey?: string,
 ): Promise<OperationResult<Posting>> {
   try {
     await api(`/api/hotels/${hotelId}/stays/${stayId}/payments`, {
       method: "POST",
       body: JSON.stringify(input),
+      ...(idempotencyKey ? { headers: { "idempotency-key": idempotencyKey } } : {}),
     });
   } catch (error) {
     if (error instanceof ApiError) return refuse(error.message);

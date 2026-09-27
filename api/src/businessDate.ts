@@ -61,17 +61,22 @@ export async function businessDateFor(
 }
 
 /**
- * The supplied date, or the property's own if none was supplied.
+ * The date a WRITE is dated by: the property's own, always.
  *
- * Every route that took `?asOn=` or `body.businessDate` used to fall
- * back to a literal. This is that fallback, once.
+ * ⚠ THE DEVICE'S DATE IS NOT USED (28 September, the release review). It
+ * returned `supplied ?? …`, and a device learns the date once, at sign-in:
+ * after the night audit on another desk it still sent yesterday. A charge
+ * then hit the closed-day trigger as a 500, and an early check-in moved the
+ * arrival back onto a closed day. The argument stays so the five writers
+ * (a charge, a payment, a check-in, a walk-in, a laundry docket) need no
+ * change; nothing reads it.
  */
 export async function resolveDate(
   client: Client,
   hotelId: string,
-  supplied: string | undefined,
+  _fromTheDevice: string | undefined,
 ): Promise<string> {
-  return supplied ?? businessDateFor(client, hotelId);
+  return businessDateFor(client, hotelId);
 }
 
 /* ── Windows anchored to the business date ───────────────────────── */

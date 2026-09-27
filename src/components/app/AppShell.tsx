@@ -2,8 +2,10 @@ import { Eye } from "lucide-react";
 import { DEMO } from "@/lib/demo";
 import { useEffect } from "react";
 import { Outlet, useLocation } from "react-router";
+import { useQueryClient } from "@tanstack/react-query";
 import * as DialogPrimitive from "@radix-ui/react-dialog";
 import { useUi } from "@/lib/ui";
+import { useSession } from "@/lib/session";
 import { Sidebar } from "./Sidebar";
 import { TopBar } from "./TopBar";
 import { OfflineBar } from "./OfflineBar";
@@ -32,6 +34,17 @@ export function AppShell() {
     }
     document.body.removeAttribute("data-scroll-locked");
   }, [pathname]);
+
+  /* THE BUSINESS DATE, re-read each time a screen opens (the owner, 28
+     September). A device learned it at sign-in, so after the night audit
+     on another desk this one went on showing yesterday. When it has moved,
+     every list was computed for the old day: read them again. */
+  const queryClient = useQueryClient();
+  useEffect(() => {
+    void useSession.getState().refreshDates().then((moved) => {
+      if (moved) void queryClient.invalidateQueries();
+    });
+  }, [pathname, queryClient]);
 
   return (
     <TooltipProvider delayDuration={400}>

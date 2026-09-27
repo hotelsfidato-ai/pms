@@ -123,6 +123,12 @@ interface SessionState {
    * simply never been told.
    */
   refresh: () => Promise<void>;
+  /**
+   * Re-read every property's date, and nothing else. True when one has
+   * MOVED - a day closed on another device. Asked each time a screen is
+   * opened (the owner, 28 September).
+   */
+  refreshDates: () => Promise<boolean>;
   /** Called once at start-up to restore a session Firebase already holds. */
   restore: () => void;
 }
@@ -202,6 +208,27 @@ export const useSession = create<SessionState>()((set, get) => ({
 
   refresh: async () => {
     await load(set);
+  },
+
+  /* ⚠ NOT `refresh`: that also puts the session back on its first property.
+     Only a date this device already knows, and that has changed, counts -
+     an unreachable server or a property it has not seen changes nothing. */
+  refreshDates: async () => {
+    try {
+      const { hotels } = await getSession();
+      const was = new Map(get().hotels.map((h) => [h.id, h.businessDate]));
+      const moved = hotels.some((h) =>
+        h.businessDate && was.has(h.id) && was.get(h.id) !== h.businessDate);
+      if (!moved) return false;
+      registerBusinessDates(hotels);
+      const id = get().hotelId;
+      if (id) selectProperty(id);
+      selectProperty(useUi.getState().hotelId);
+      set({ hotels });
+      return true;
+    } catch {
+      return false;
+    }
   },
 
   setHotelId: (id) => {

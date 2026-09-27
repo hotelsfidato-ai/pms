@@ -1411,3 +1411,39 @@ describe("leaving after check-out time", () => {
     expect(await lateCharges(id), "a waived charge still posted").toBe(before);
   });
 });
+
+/* ── A split bill: one stay, two open folios (28 September) ───────── */
+
+describe("a stay with a second folio", () => {
+  it("is charged one room night, on the folio it opened first", async () => {
+    /* The audit JOINED every open folio, so a stay with two came back as
+       two rows, the "already charged" check ran for both before either
+       insert, and the night was charged twice. */
+    await clearDueOuts();
+    const stay = await checkInAtPune(3, 1800);
+    const bd = await businessDate();
+    const db = await admin();
+    try {
+      await db.query(
+        `insert into folios (hotel_id, reservation_id, status, opened_at)
+         values ($1, $2, 'open', now() + interval '1 minute')`,
+        [puneId, stay.reservationId]);
+    } finally {
+      await db.end();
+    }
+
+    const res = await closeDay();
+    expect(res.status, await res.clone().text()).toBe(200);
+
+    const db2 = await admin();
+    try {
+      const { rows } = await db2.query<{ folio_id: string }>(
+        `select folio_id::text from folio_postings
+          where reservation_id = $1 and category = 'room' and business_date = $2::date`,
+        [stay.reservationId, bd]);
+      expect(rows.map((r) => r.folio_id)).toEqual([stay.folioId]);
+    } finally {
+      await db2.end();
+    }
+  });
+});

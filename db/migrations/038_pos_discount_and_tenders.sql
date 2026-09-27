@@ -123,10 +123,22 @@ comment on table pos_order_tenders is
 -- -----------------------------------------------------------------------------
 -- 'split' becomes a payment method the order may carry
 -- -----------------------------------------------------------------------------
-alter table pos_orders drop constraint if exists pos_orders_payment_valid;
-alter table pos_orders add constraint pos_orders_payment_valid
-  check (payment_method is null or payment_method in
-    ('room', 'cash', 'card', 'upi', 'split'));
+-- ⚠ REPLAYED ON EVERY DEPLOY (MEMORY 284). Replaced only while the check
+-- does not know 'split' yet. Unguarded, a replay put back this narrower check
+-- over 099's, which knows 'function', and the first bill ever settled to a
+-- banquet function failed it: the whole migration rolled back and the deploy
+-- stopped (28 September, the release review).
+do $$
+begin
+  if not exists (select 1 from pg_constraint
+                  where conname = 'pos_orders_payment_valid'
+                    and pg_get_constraintdef(oid) like '%split%') then
+    alter table pos_orders drop constraint if exists pos_orders_payment_valid;
+    alter table pos_orders add constraint pos_orders_payment_valid
+      check (payment_method is null or payment_method in
+        ('room', 'cash', 'card', 'upi', 'split'));
+  end if;
+end $$;
 
 
 -- -----------------------------------------------------------------------------

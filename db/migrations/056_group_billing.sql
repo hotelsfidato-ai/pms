@@ -202,8 +202,12 @@ language sql stable as $$
       where r.id = p_reservation
         and r.route_room_to_group
         and r.group_id is not null),
+    -- The FIRST folio the stay opened. `limit 1` alone let Postgres pick
+    -- either of a split bill's two, and not always the same one (28
+    -- September, the release review). Same signature, corrected in place.
     (select f.id from folios f
       where f.reservation_id = p_reservation and f.status = 'open'
+      order by f.opened_at, f.id
       limit 1)
   );
 $$;
