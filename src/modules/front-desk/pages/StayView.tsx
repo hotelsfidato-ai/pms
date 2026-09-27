@@ -68,8 +68,10 @@ const BAR_LABEL: Record<BarTone, string> = {
 /* The stay panel's pill, from the bar's DERIVED tone — due-out is a
    status plus a date, which is why the chart passes its own. */
 const BAR_TONE: Record<BarTone, Tone> = {
-  "in-house": "success",
-  confirmed: "info",
+  /* In house blue and a booking still to arrive orange, as on the lists
+     (the owner, 27 September). */
+  "in-house": "info",
+  confirmed: "accent",
   departed: "neutral",
   "due-out": "warning",
   "no-show": "danger",
