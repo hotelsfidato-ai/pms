@@ -4,7 +4,7 @@ import { useParams } from "react-router";
 import { Link2, Mail, MessageCircle, Star } from "lucide-react";
 import { dateShort, dateTime, NO_DATE } from "@/lib/format";
 import {
-  Page, PageHeader, Card, CardBody, CardHeader, Button, Input,
+  Page, PageHeader, Card, CardBody, CardHeader, Button, Input, InfoButton,
   DataTable, type Column, StatusPill, Skeleton, ErrorState, EmptyState, toast,
 } from "@/components/ui";
 import {
@@ -184,10 +184,13 @@ export default function ReviewsPage() {
 
         {/* ── the link ───────────────────────────────────────────── */}
         <Card>
-          <CardHeader
-            title="The review link"
-            description="The address a guest is sent to leave their review."
-          />
+          {/* The section's note behind an (i), the same words (the owner, D27-82). */}
+          <CardHeader>
+            <div className="flex items-center gap-1 min-w-0">
+              <h3 className="text-md font-semibold text-ink-900">The review link</h3>
+              <InfoButton>{"The address a guest is sent to leave their review."}</InfoButton>
+            </div>
+          </CardHeader>
           <CardBody className="space-y-3">
             <dl className="flex flex-wrap items-baseline gap-x-2 gap-y-1 text-sm">
               <dt className="text-grey-500">This property sends:</dt>
@@ -255,10 +258,12 @@ export default function ReviewsPage() {
 
         {/* ── who was asked, who has not been ────────────────────── */}
         <Card>
-          <CardHeader
-            title="Departures"
-            description={`Guests who left in the last ${page.daysBack} days. A guest is asked after they have gone, never before.`}
-          />
+          <CardHeader>
+            <div className="flex items-center gap-1 min-w-0">
+              <h3 className="text-md font-semibold text-ink-900">Departures</h3>
+              <InfoButton>{`Guests who left in the last ${page.daysBack} days. A guest is asked after they have gone, never before.`}</InfoButton>
+            </div>
+          </CardHeader>
           {/* Straight in the card, which draws the frame: inside a body it
               drew a second one. */}
           <DataTable
