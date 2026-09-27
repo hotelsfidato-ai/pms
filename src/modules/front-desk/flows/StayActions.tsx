@@ -1,6 +1,8 @@
 import { useState } from "react";
-import { CalendarRange, ArrowLeftRight, Ban, Repeat, Gift } from "lucide-react";
-import { Menu, MenuItem, MenuLabel, MenuSeparator } from "@/components/ui";
+import { useQueryClient } from "@tanstack/react-query";
+import { CalendarRange, ArrowLeftRight, Ban, Repeat, Gift, Check } from "lucide-react";
+import { Menu, MenuItem, MenuLabel, MenuSeparator, toast } from "@/components/ui";
+import { confirmWaiting } from "@/modules/reservations";
 import { AmendStayFlow } from "@/modules/front-desk/flows/AmendStayFlow";
 import { MoveRoomFlow } from "@/modules/front-desk/flows/MoveRoomFlow";
 import { VoidFlow } from "@/modules/front-desk/flows/VoidFlow";
@@ -36,6 +38,10 @@ export function StayActions({ hotelId, stay, businessDate }: {
      due-out and no-show, and a comparison against a value outside that
      union is a condition that can never be true. */
   const over = stay.status === "no-show";
+  /* Waiting for the hotel (Phase 1): the server answers "tentative", which
+     the Stay type does not list yet - a request to the master (core types). */
+  const waiting = (stay.status as string) === "tentative";
+  const qc = useQueryClient();
 
   /* D24-27: the server's own questions (roleGate). Dates, moves, the swap
      and the inclusions are all `reservation: edit`; the void is `cancel`.
@@ -49,6 +55,18 @@ export function StayActions({ hotelId, stay, businessDate }: {
       <div className="flex flex-wrap gap-2">
         <Menu>
           <MenuLabel>The booking</MenuLabel>
+          {/* The owner, 27 September: whoever may make a booking confirms
+              one that was waiting; then its voucher may go. */}
+          {waiting && (
+            <MenuItem icon={Check} onSelect={() => void confirmWaiting(hotelId, stay.id)
+              .then((r) => {
+                if (!r.ok) return toast.error("Not confirmed", r.reason);
+                toast.success("Confirmed", `${stay.reference}: the voucher can go now.`);
+                void qc.invalidateQueries();
+              })}>
+              Confirm the booking
+            </MenuItem>
+          )}
           <MenuItem
             icon={CalendarRange}
             onSelect={() => setAmend(true)}

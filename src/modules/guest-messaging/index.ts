@@ -1,6 +1,4 @@
-/* Guest messages — NOT BUILT. A Coming soon page only (the owner's decision,
-   16 September): `pages/GuestMessaging.tsx`, its menu entry (`nav.ts`) and its address
-   (`routes.tsx`). No other service uses anything from here yet, so this
-   front door exports nothing. What the service will be, and what it needs,
-   is in MODULE.md beside this file. */
-export {};
+/* The front door of Guest messages. New booking's Booked card (Phase 1)
+   reads what was sent about a booking - the voucher, when and by whom -
+   the same way this service's own screen does. */
+export { getGuestMessages, type GuestMessages, type SentMessage } from "./data/guestMessages";

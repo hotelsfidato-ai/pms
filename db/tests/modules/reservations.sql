@@ -108,3 +108,99 @@ begin
   perform test.ok('repeat-booking','the fixture does not outlive the test',
     n = 0 and not exists (select 1 from guests where id = g), n || ' left behind');
 end $$;
+
+
+-- =============================================================================
+-- NEW BOOKING: THE DISCOUNT, THE TITLE AND WAITING (146; D27-35, D27-36)
+-- =============================================================================
+-- The API refuses each of these first, in words. These are the database's own
+-- guards, tested here on their own with the API not standing in front of them
+-- (MEMORY 318):
+--
+--   1. a discount by hand is at most the restaurant's cap (10) and has a reason;
+--   2. more is only through a named promotion, and a promotion names a percent;
+--   3. a promotion is worth more than 0% and at most 100%;
+--   4. a title is one of the owner's four, or none;
+--   5. a booking waiting for the hotel is owed no message - the confirmation
+--      sweep and the desk's Send voucher both read app.guest_messages_due.
+-- =============================================================================
+do $$
+declare
+  h uuid; dlx uuid; g uuid; src uuid; promo uuid; waiting uuid; firm uuid; n int;
+  base text := $b$insert into reservations
+      (hotel_id, reference, guest_id, room_type_id, check_in, check_out,
+       agreed_rate, booking_source_id, discount_percent, discount_reason,
+       room_promotion_id)
+    values (%L, %L, %L, %L, current_date + 30, current_date + 32, 3000, %L,
+            %s, %s, %s)$b$;
+begin
+  h := app.provision_property_unchecked('NBX','New Booking Test','Nowhere');
+  select id into dlx from room_types where hotel_id = h and code = 'DLX';
+  insert into guests (full_name, email) values ('NBX fixture guest', 'nbx@example.test')
+    returning id into g;
+  select id into src from booking_sources where is_active order by created_at, id limit 1;
+  insert into room_promotions (hotel_id, name, percent) values (h, 'Owner''s guests', 25)
+    returning id into promo;
+
+  -- ---------- 1 · by hand ----------
+  perform test.allows('new-booking','10% by hand with a reason is kept',
+    format(base, h, 'NBX-1', g, dlx, src, '10', quote_literal('Returning family'), 'null'));
+  perform test.raises('new-booking','a discount by hand with no reason is refused',
+    format(base, h, 'NBX-2', g, dlx, src, '5', 'null', 'null'), '23514');
+  perform test.raises('new-booking','a blank reason is no reason',
+    format(base, h, 'NBX-3', g, dlx, src, '5', quote_literal('   '), 'null'), '23514');
+  perform test.raises('new-booking','11% by hand, with a reason, is refused',
+    format(base, h, 'NBX-4', g, dlx, src, '11', quote_literal('Asked nicely'), 'null'), '23514');
+  perform test.raises('new-booking','a discount of 0% is refused',
+    format(base, h, 'NBX-5', g, dlx, src, '0', quote_literal('None'), 'null'), '23514');
+
+  -- ---------- 2 · a promotion ----------
+  perform test.allows('new-booking','25% through a named promotion is kept, no reason needed',
+    format(base, h, 'NBX-6', g, dlx, src, '25', 'null', quote_literal(promo)));
+  perform test.raises('new-booking','a promotion with no percent is refused',
+    format(base, h, 'NBX-7', g, dlx, src, 'null', 'null', quote_literal(promo)), '23514');
+  perform test.allows('new-booking','no discount at all is the ordinary booking',
+    format(base, h, 'NBX-8', g, dlx, src, 'null', 'null', 'null'));
+
+  -- ---------- 3 · what a promotion may be worth ----------
+  perform test.raises('new-booking','a promotion worth 0% is refused',
+    format('insert into room_promotions (hotel_id, name, percent) values (%L, %L, 0)', h, 'Zero'),
+    '23514');
+  perform test.raises('new-booking','a promotion worth 101% is refused',
+    format('insert into room_promotions (hotel_id, name, percent) values (%L, %L, 101)', h, 'Refund'),
+    '23514');
+
+  -- ---------- 4 · the title ----------
+  perform test.raises('new-booking','a title not on the owner''s list is refused',
+    format('update guests set title = %L where id = %L', 'Sir', g), '23514');
+  perform test.allows('new-booking','Dr is a title',
+    format('update guests set title = %L where id = %L', 'Dr', g));
+
+  -- ---------- 5 · waiting for the hotel sends nothing ----------
+  insert into reservations (hotel_id, reference, guest_id, room_type_id, check_in, check_out,
+                            agreed_rate, booking_source_id, status)
+  values (h, 'NBX-W', g, dlx, current_date + 40, current_date + 41, 3000, src, 'tentative')
+  returning id into waiting;
+  insert into reservations (hotel_id, reference, guest_id, room_type_id, check_in, check_out,
+                            agreed_rate, booking_source_id, status)
+  values (h, 'NBX-C', g, dlx, current_date + 50, current_date + 51, 3000, src, 'confirmed')
+  returning id into firm;
+  perform test.ok('new-booking','a booking waiting for the hotel is owed no confirmation',
+    not exists (select 1 from app.guest_messages_due(null, 3, '10:00', '09:00', '21:00', h)
+                 where reservation_id = waiting));
+  perform test.ok('new-booking','the same booking confirmed is owed one - the check can see one',
+    exists (select 1 from app.guest_messages_due(null, 3, '10:00', '09:00', '21:00', h)
+             where reservation_id = firm and kind = 'booking-confirmation'));
+
+  -- ---------- and the fixture goes ----------
+  alter table hotels disable trigger hotels_no_delete;
+  delete from hotels where id = h;
+  alter table hotels enable trigger hotels_no_delete;
+  alter table guests disable trigger guests_no_delete;
+  delete from guests where id = g;
+  alter table guests enable trigger guests_no_delete;
+
+  select count(*) into n from hotels where code = 'NBX';
+  perform test.ok('new-booking','the fixture does not outlive the test',
+    n = 0 and not exists (select 1 from guests where id = g), n || ' left behind');
+end $$;
