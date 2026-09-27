@@ -1,13 +1,13 @@
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { useParams } from "react-router";
-import { Download } from "lucide-react";
+import { Download, TriangleAlert, ReceiptText, Landmark, Wallet } from "lucide-react";
 import { useUi } from "@/lib/ui";
 import { moneyPrecise, dateShort } from "@/lib/format";
 import { BUSINESS_DATE, PTD_FROM } from "@/data/repositories";
 import {
   Page, PageHeader, Card, CardBody, CardHeader, Button, Field, Input, fieldProps,
-  DataTable, ReadFailed, readError, EmptyState, toast, type Column,
+  DataTable, ReadFailed, readError, EmptyState, toast, FigureRow, FigureTile, type Column,
 } from "@/components/ui";
 import { ApiError } from "@/lib/api";
 import {
@@ -113,19 +113,21 @@ export default function AccountingPage() {
               {FORMATS.map((f) => (
                 <label
                   key={f.key}
-                  className="flex gap-3 items-start p-3 min-h-11 rounded-md border border-grey-300 cursor-pointer"
+                  /* A choice to tap: a small tile on a hairline that darkens
+                     under the pointer; the chosen one is ringed in ink. */
+                  className="flex gap-3 items-start px-3.5 py-3 min-h-11 rounded-lg bg-white ring-1 ring-inset ring-grey-200 hover:ring-grey-400 has-[:checked]:ring-ink-900 cursor-pointer press-tile"
                 >
                   <input
                     type="radio" name="format" value={f.key}
                     checked={format === f.key}
                     onChange={() => setFormat(f.key)}
-                    className="mt-1 size-4 shrink-0"
+                    className="mt-0.5 size-4 shrink-0 accent-brand-orange-600"
                   />
                   <span className="min-w-0">
-                    <span className="block text-base text-ink-900">{f.label}</span>
-                    <span className="block text-sm text-grey-600 mt-0.5">{f.what}</span>
+                    <span className="block text-sm font-medium text-ink-900">{f.label}</span>
+                    <span className="block text-sm text-grey-500 mt-0.5">{f.what}</span>
                     {f.blocked && (
-                      <span className="block text-sm text-amber-700 mt-1">{f.blocked}</span>
+                      <span className="block text-sm text-brand-yellow-800 mt-1">{f.blocked}</span>
                     )}
                   </span>
                 </label>
@@ -194,12 +196,15 @@ function DayBookTable({ book, loading }: { book: DayBook | null; loading: boolea
   return (
     <>
       {book && book.openDays.length > 0 && (
-        <p className="text-sm text-amber-700 mb-3">
-          {book.openDays.length === 1
-            ? `The night audit has not run for ${dateShort(book.openDays[0]!)}. Its figures are here and may still change.`
-            : `The night audit has not run for ${book.openDays.length} of these days, from ${dateShort(book.openDays[0]!)}. Their figures are here and may still change.`}
-          {" "}Today is {dateShort(book.businessDate)} at this property.
-        </p>
+        <div className="flex items-start gap-3 rounded-lg border border-brand-yellow-100 bg-brand-yellow-50 px-4 py-3.5 mb-3">
+          <TriangleAlert className="size-4 text-brand-yellow-800 shrink-0 mt-0.5" />
+          <p className="min-w-0 text-sm text-brand-yellow-800">
+            {book.openDays.length === 1
+              ? `The night audit has not run for ${dateShort(book.openDays[0]!)}. Its figures are here and may still change.`
+              : `The night audit has not run for ${book.openDays.length} of these days, from ${dateShort(book.openDays[0]!)}. Their figures are here and may still change.`}
+            {" "}Today is {dateShort(book.businessDate)} at this property.
+          </p>
+        </div>
       )}
 
       {/* A range where nothing was charged and nothing was received is a
@@ -238,20 +243,14 @@ function DayBookTable({ book, loading }: { book: DayBook | null; loading: boolea
         </p>
       )}
 
+      {/* The range's totals, on the Figure Rule: level tiles, label with
+          its chip over the figure. */}
       {book && book.days.length > 0 && (
-        <Card className="mt-3">
-          <CardBody className="flex flex-wrap gap-x-8 gap-y-2 justify-end tabular">
-            <span className="text-base text-grey-600">
-              Sales <span className="text-ink-900 font-semibold ml-1.5">{cash(book.total.sales)}</span>
-            </span>
-            <span className="text-base text-grey-600">
-              Tax <span className="text-ink-900 font-semibold ml-1.5">{cash(book.total.tax)}</span>
-            </span>
-            <span className="text-base text-grey-600">
-              Receipts <span className="text-ink-900 font-semibold ml-1.5">{cash(book.total.receipt)}</span>
-            </span>
-          </CardBody>
-        </Card>
+        <FigureRow className="sm:grid-cols-3 mt-3">
+          <FigureTile icon={<ReceiptText />} label="Sales" value={cash(book.total.sales)} />
+          <FigureTile icon={<Landmark />} label="Tax" value={cash(book.total.tax)} />
+          <FigureTile icon={<Wallet />} label="Receipts" value={cash(book.total.receipt)} />
+        </FigureRow>
       )}
     </>
   );
