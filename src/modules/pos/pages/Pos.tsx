@@ -255,19 +255,22 @@ export default function PosPage() {
         />
       </Card>
 
-      <PageHeader
-        title="Bills"
-        description={
-          tickets.data
-            ? `${dateLong(tickets.data.from)} to ${dateLong(tickets.data.to)}. Refused bills are kept - they are how a dispute is settled.`
-            : "Every bill sent, whatever became of it."
-        }
-        badge={
-          onFolio.length ? (
+      {/* A section of this page, not a second page title (the owner,
+          27 September): the page has one title, and the tab says
+          "Charges to rooms". */}
+      <div className="mb-3">
+        <div className="flex items-center gap-2.5 flex-wrap">
+          <h2 className="text-md font-semibold text-ink-900">Bills</h2>
+          {onFolio.length ? (
             <StatusPill tone="neutral">{money(takings)} on folios</StatusPill>
-          ) : undefined
-        }
-      />
+          ) : null}
+        </div>
+        <p className="text-sm text-grey-500 mt-0.5 max-w-2xl">
+          {tickets.data
+            ? `${dateLong(tickets.data.from)} to ${dateLong(tickets.data.to)}. Refused bills are kept - they are how a dispute is settled.`
+            : "Every bill sent, whatever became of it."}
+        </p>
+      </div>
 
       <Card>
         <DataTable<PosTicket>
