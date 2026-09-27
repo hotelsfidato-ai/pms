@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useParams, useNavigate } from "react-router";
-import { Printer, Eye, LayoutGrid, DoorClosed } from "lucide-react";
+import { Printer, Eye, LayoutGrid, DoorClosed, ChevronRight } from "lucide-react";
 import { cn } from "@/lib/cn";
 import { money } from "@/lib/format";
 import { useUi } from "@/lib/ui";
@@ -315,11 +315,16 @@ export default function FloorPage() {
                       <span className="text-xl font-medium text-grey-700 tabular tracking-[-0.02em]">
                         {t.label}
                       </span>
-                      {t.seats && (
-                        <span className="text-sm text-grey-500 tabular">
-                          {t.seats} seats
-                        </span>
-                      )}
+                      {/* The last line ends in the arrow while the tile opens
+                          the pad (the Tappable Rule, as on Rooms). */}
+                      <span className="w-full flex items-center gap-2">
+                        {t.seats && (
+                          <span className="text-sm text-grey-500 tabular">
+                            {t.seats} seats
+                          </span>
+                        )}
+                        {!closed && <ChevronRight className="ml-auto size-4 shrink-0 text-grey-400" aria-hidden />}
+                      </span>
                     </button>
                   ) : (
                     <>
@@ -351,8 +356,15 @@ export default function FloorPage() {
                         <span className="text-xl font-semibold text-ink-900 tabular tracking-[-0.02em]">
                           {t.label}
                         </span>
-                        <span className="tabular text-md font-semibold text-ink-900 mt-auto">
-                          {t.payable === null ? "-" : money(t.payable)}
+                        <span className="mt-auto w-full flex items-center justify-between gap-2">
+                          <span className="tabular text-md font-semibold text-ink-900">
+                            {t.payable === null ? "-" : money(t.payable)}
+                          </span>
+                          {/* It opens the pad for another round: the arrow.
+                              A paid table takes no more, so none. */}
+                          {t.state !== "paid" && !closed && (
+                            <ChevronRight className="size-4 shrink-0 text-grey-400" aria-hidden />
+                          )}
                         </span>
                       </button>
 
