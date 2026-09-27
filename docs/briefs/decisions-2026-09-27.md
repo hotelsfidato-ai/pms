@@ -88,3 +88,5 @@
 | D27-84 | Laundry price list: unpriced items | **"N items have no price yet" stays on the page**, a yellow tile while anything is unpriced (like D27-82 item 14) |
 | D27-85 | The store's "Add an item" note | **Stays on the page** |
 | D27-86 | The laundry docket's title | **"Docket"** |
+| D27-87 | The menu's "Coming soon" section (28 Sep) | **Removed; each not-built service goes in its own category**: a new "Distribution" (Channel manager, Booking engine, Fidato CRS, Contracts), a new "Sales and marketing" (Leads and WhatsApp, Marketing, Loyalty); Guest services under front office, Online payments under Finance, Room systems under System. Each marked "Not built yet", seen by the owner, admins and GMs only. Replaces the 16 Sep Coming soon section |
+| D27-88 | The release (28 Sep) | **Hold it; fix the security audit's four confirmed problems first** (a GM taking over another hotel's staff by password reset, a restaurant bill settled twice, uploads on the live server, guest data left at sign-out), on top of 40c9510 without the redesign; then release 40c9510 + the fixes |
