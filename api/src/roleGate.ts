@@ -120,6 +120,12 @@ const HALLS = grant("room_config", "edit", "Setting up the banquet halls and pac
 /* A16, the owner's answer of 26 September: the owner, an administrator or
    the GM - the people who set the hotel up. */
 const FSSAI = grant("room_config", "edit", "Setting the FSSAI licence number");
+/* The group's name and logo (D27-53, D27-65): the owner, an administrator or
+   the GM, the owner's answer of 27 September - exactly `room_config` edit
+   today, and api/test/modules/admin/groupSettings.test.ts fails if that ever
+   changes. The database asks the same three (app.sets_group_settings). */
+const GROUP_NAME = grant("room_config", "edit", "Changing the group's name");
+const GROUP_LOGO = grant("room_config", "edit", "Changing the group's logo");
 /* GST sits on Room types, so it is setup - and the accountant, who holds no
    setup grant, sets the rate too: "the accountant confirms the rate on the tax
    screen" (D21-91), and "owner, admin, GM and accountant" (D22-32). */
@@ -320,6 +326,9 @@ export const WRITE_RULES: Readonly<Record<string, Rule>> = {
   [`POST /api/admin/hotels`]: own("admin/admin.ts: a group administrator, with the provisioning key"),
   [`PATCH /api/admin/hotels/:code`]: own("admin/admin.ts: a group administrator"),
   [`PUT ${H}/fssai`]: FSSAI,
+  [`PUT ${H}/group/name`]: GROUP_NAME,
+  [`PUT ${H}/group/logo`]: GROUP_LOGO,
+  [`DELETE ${H}/group/logo`]: GROUP_LOGO,
   [`POST /api/admin/hotels/:code/:state`]: own("admin/admin.ts: a group administrator"),
   [`PATCH /api/admin/staff/:id`]: own("admin/admin.ts: app.manages_person (D22-3)"),
   [`PUT /api/admin/staff/:id/home-screen`]: own("admin/admin.ts: app.set_home_screen asks app.may_manage_person"),

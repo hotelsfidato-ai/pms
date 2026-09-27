@@ -474,3 +474,117 @@ select count(*) as adm3_placeholders from staff where email = 'REPLACE@fidato.in
 rollback;
 select test.ok('placeholder', 'a replay of the seed does not re-create the placeholder administrator (ADM-3)',
   :adm3_placeholders = 0, :adm3_placeholders || ' placeholder rows after a replay');
+
+
+-- =============================================================================
+-- GROUP SETTINGS: THE GROUP'S NAME AND LOGO (the owner's D27-53 and D27-65)
+-- =============================================================================
+-- The database's own guard, asked directly, with no route in front of it
+-- (MEMORY 318): the owner, an administrator or a GM at any hotel, or a group
+-- administrator, may change it; everybody else active reads it; somebody who
+-- is not active staff of this group reads nothing. One copy is one group
+-- (D21-1), so "another group" is nobody signed in here. The route's own
+-- refusals are api/test/modules/admin/groupSettings.test.ts.
+-- =============================================================================
+do $$
+declare
+  h uuid; clerk uuid; gm uuid; adm uuid; gone uuid; owner uuid;
+  failed boolean; n int;
+begin
+  h := app.provision_property_unchecked('ADL', 'Group Test', 'Nowhere');
+  select id into owner from staff where email = 'owner@fidato.in';
+  insert into staff (email, full_name) values ('adl-clerk@fidato.in', 'Group Test Clerk')
+  on conflict (email) do update set is_active = true returning id into clerk;
+  insert into staff (email, full_name) values ('adl-gm@fidato.in', 'Group Test Manager')
+  on conflict (email) do update set is_active = true returning id into gm;
+  insert into staff (email, full_name) values ('adl-admin@fidato.in', 'Group Test Admin')
+  on conflict (email) do update set is_active = true returning id into adm;
+  insert into staff (email, full_name) values ('adl-gone@fidato.in', 'Group Test Gone')
+  on conflict (email) do update set is_active = true returning id into gone;
+  delete from staff_hotels where staff_id in (clerk, gm, adm, gone);
+  insert into staff_hotels (staff_id, hotel_id, role) values
+    (clerk, h, 'front_desk'), (gm, h, 'gm'), (adm, h, 'admin'), (gone, h, 'gm');
+  update staff set is_active = false where id = gone;
+  delete from group_settings;
+
+  -- ---------- who, asked of the function itself ----------
+  perform set_config('app.user_id', gm::text, true);
+  perform test.ok('group settings', 'a GM may change them', app.sets_group_settings());
+  perform set_config('app.user_id', adm::text, true);
+  perform test.ok('group settings', 'an administrator may change them', app.sets_group_settings());
+  perform set_config('app.user_id', owner::text, true);
+  perform test.ok('group settings', 'a group administrator may change them', app.sets_group_settings());
+  perform set_config('app.user_id', clerk::text, true);
+  perform test.ok('group settings', 'reception may not', not app.sets_group_settings());
+  perform set_config('app.user_id', gone::text, true);
+  perform test.ok('group settings', 'nor a GM who has been switched off', not app.sets_group_settings());
+
+  -- ---------- the row, as the application ----------
+  perform set_config('app.user_id', clerk::text, true);
+  set local role pms_app;
+  failed := false;
+  begin
+    insert into group_settings (name) values ('Reception''s Group');
+  exception when insufficient_privilege then failed := true;
+  end;
+  reset role;
+  perform test.ok('group settings', 'the database refuses reception''s, whatever the route',
+    failed and not exists (select 1 from group_settings));
+  delete from group_settings;   -- so a broken policy fails the line above, not the next insert
+
+  perform set_config('app.user_id', gm::text, true);
+  set local role pms_app;
+  insert into group_settings (name, logo_type, logo, changed_by)
+  values ('Fidato Hotels', 'image/png', '\x89504e470d0a1a0a'::bytea, gm);
+  reset role;
+  perform test.ok('group settings', 'and takes the GM''s', exists (select 1 from group_settings where changed_by = gm));
+  perform test.ok('group settings', 'and the audit log records who',
+    exists (select 1 from audit_log where table_name = 'group_settings' and actor = gm and action = 'INSERT'));
+
+  perform set_config('app.user_id', clerk::text, true);
+  set local role pms_app;
+  select count(*) into n from group_settings;
+  update group_settings set name = 'Somebody Else', logo_type = null, logo = null;
+  delete from group_settings;
+  reset role;
+  perform test.ok('group settings', 'reception reads them - they print bills', n = 1, n || ' rows read');
+  perform test.ok('group settings', 'and can neither change nor remove them',
+    (select name = 'Fidato Hotels' and logo_type = 'image/png' from group_settings));
+
+  perform set_config('app.user_id', gone::text, true);
+  set local role pms_app;
+  select count(*) into n from group_settings;
+  reset role;
+  perform test.ok('group settings', 'somebody switched off reads nothing', n = 0, n || ' rows read');
+  perform set_config('app.user_id', '', true);
+  set local role pms_app;
+  select count(*) into n from group_settings;
+  reset role;
+  perform test.ok('group settings', 'nor does nobody signed in: no other group reads them', n = 0, n || ' rows read');
+
+  -- ---------- what may be stored ----------
+  perform test.raises('group settings', 'one setting for the group, never two',
+    $q$insert into group_settings (id, name) values (2, 'Two')$q$, '23514');
+  perform test.raises('group settings', 'a name of 80 characters at most',
+    $q$update group_settings set name = repeat('x', 81)$q$, '23514');
+  perform test.raises('group settings', 'and no blank or untrimmed name - none is null',
+    $q$update group_settings set name = ' Fidato '$q$, '23514');
+  perform test.raises('group settings', 'a logo is a PNG or an SVG, nothing else',
+    $q$update group_settings set logo_type = 'text/html'$q$, '23514');
+  perform test.raises('group settings', 'never a type without its file',
+    $q$update group_settings set logo = null$q$, '23514');
+  perform test.raises('group settings', 'and 200 KB at most',
+    $q$update group_settings set logo = decode(repeat('00', 204801), 'hex')$q$, '23514');
+
+  -- ---------- and the fixtures go ----------
+  delete from group_settings;
+  perform set_config('app.user_id', '', true);
+  delete from staff_hotels where staff_id in (clerk, gm, adm, gone);
+  update staff set is_active = false where id in (clerk, gm, adm, gone);
+  alter table hotels disable trigger hotels_no_delete;
+  delete from hotels where id = h;
+  alter table hotels enable trigger hotels_no_delete;
+end $$;
+
+select set_config('app.user_id',
+       (select id::text from staff where email = 'owner@fidato.in'), false);

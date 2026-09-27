@@ -14,11 +14,43 @@ entries stay here: they are the reason the fault does not come back.
 
 ## Open — not fixed
 
-Nothing open (26 September).
+### ADM-9 · At phone width Settings cuts a long value off at the card's edge - OPEN
+
+**Found** — 27 September, opening Settings at 375 px while proving the group
+group card (the group-logo session). The GSTIN `27AAAAA0000A1Z5` needs 131 px
+and its `<dd>` gets 86: it runs past the card's right edge and is cut. The
+page itself does not scroll sideways, so nothing flags it.
+
+**Not fixed** — not in that session's brief, and how a long value wraps is a
+look decision. The row is `SettingRow` in `pages/Admin.tsx`
+(`grid-cols-[minmax(130px,200px)_1fr]`); `break-words` on the `<dd>`, or one
+column below `sm`, would do. Passed to the master with the group logo.
+
+**The rule** — measure a row at phone width with its longest real value, not
+the demo's shortest.
 
 ---
 
 ## Fixed — the solution is here; do not work it out again
+
+### ADM-10 · The group logo's SVG check could hold the API for minutes on a 211-byte file - FIXED 27 September, before merge
+
+**Found** — 27 September, re-reading `api/src/modules/admin/groupSettings.ts`
+while the gates ran. The pattern that allows comments before `<svg` was
+`<!--[\s\S]*?-->` inside a repeated group: one comment could also swallow the
+next, so N empty comments had 2^N readings. Measured in Node: thirty
+`<!---->` and an `x` took **105 seconds**; each comment doubles it. Only the
+owner, an admin or a GM reach it (the role gate runs first), but one such
+upload stops every screen at every hotel, because the API has one thread.
+
+**Fixed** — a comment's body may not contain `-->`, so each has one reading:
+0-4 ms for every 200 KB worst case tried (comments, unclosed comment, long
+tails, ` on` runs). **Held by** `groupSettings.test.ts`, "answers at once for a
+file of many comments": forty comments, refused inside two seconds.
+
+**The rule** — a pattern run on an upload is part of the trust boundary.
+Time it on the worst input the size limit allows, not the file you expect.
+Node falls back to a linear engine only for some patterns; do not count on it.
 
 ### ADM-4 · Two "audit log" links point at an address that does not exist - FIXED 17 September, held by a test 25 September
 
