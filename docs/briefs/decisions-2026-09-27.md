@@ -98,3 +98,4 @@
 | D27-94 | Housekeeping: after Inspected or Clean (HK-12) | **A message at once, e.g. "Room 210 is inspected." / "Room 210 is clean."**, and the card moves immediately |
 | D27-95 | Housekeeping: the head's count boxes (HK-13) | **Each count jumps to its group, with an arrow** (the Tappable Rule); Due out and zero counts stay flat |
 | D27-96 | Who sees the hotel's staff in Housekeeping (HK-14) | **Everyone sees their own hotel's staff: names and roles only**, through app.hotel_people (migration 149); staff_hotels itself stays closed |
+| D27-97 | The same staff-list fault elsewhere (HK-14's cause) | **Fix both now**: the cashier's drawer hand-over list and the restaurant's waiters list, names and roles only, through app.hotel_people; in the one release |
