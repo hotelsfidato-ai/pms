@@ -95,3 +95,6 @@
 | D27-91 | A screen to see what's going on on the server | **A System health screen inside the PMS**, owner and admins only, from our own data; nothing leaves the server |
 | D27-92 | Telemetry | **On our own server**: each request's time and result, errors and slow queries, kept 180 days (CERT-In), shown on System health, with an outside uptime check that alerts the owner. No guest data leaves India |
 | D27-93 | The release | **One release with everything** once the ten fixes are in: the redesign, New booking, Form III, the group logo, the menu, operations basics and the fixes, after one full check. Replaces "40c9510 + fixes" (D27-88) and the separate ops release (D27-24) |
+| D27-94 | Housekeeping: after Inspected or Clean (HK-12) | **A message at once, e.g. "Room 210 is inspected." / "Room 210 is clean."**, and the card moves immediately |
+| D27-95 | Housekeeping: the head's count boxes (HK-13) | **Each count jumps to its group, with an arrow** (the Tappable Rule); Due out and zero counts stay flat |
+| D27-96 | Who sees the hotel's staff in Housekeeping (HK-14) | **Everyone sees their own hotel's staff: names and roles only**, through app.hotel_people (migration 149); staff_hotels itself stays closed |
