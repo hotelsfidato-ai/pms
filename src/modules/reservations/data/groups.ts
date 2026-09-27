@@ -145,6 +145,8 @@ export interface BookingLine {
       the server refuses rather than guessing when the calendar has no
       price for the party. */
   agreedRate?: number;
+  /** ₹0 and nothing posted; the owner, an administrator or the GM only. */
+  complimentary?: boolean;
 }
 
 export async function createBooking(
@@ -171,11 +173,26 @@ export async function createBooking(
     whatsappAgreed?: boolean;
     /** "Guest agreed to offers" - kept against the phone and email (D25-39). */
     offersAgreed?: boolean;
+    /* Phase 1 (D27-33), each checked on the server. */
+    /** Waiting for the hotel: holds the room, sends nothing. */
+    tentative?: boolean;
+    expectedDeparture?: string;
+    salesPerson?: string;
+    /** Bill to this company. */
+    companyId?: string;
+    discount?: { percent?: number; reason?: string; promotionId?: string };
+    title?: string;
+    nationality?: string;
+    address?: {
+      addressLine?: string; city?: string; state?: string;
+      pincode?: string; country?: string;
+    };
   },
 ): Promise<
   | { ok: true; groupId: string | null; rooms: number; guest: string;
-      bookings: { reference: string; roomType: string; rate: number }[];
-      nightly: number }
+      /** `id` is the stay's, for front desk's doors; absent on a repeat. */
+      bookings: { id?: string; reference: string; roomType: string; rate: number }[];
+      nightly: number; status?: "confirmed" | "tentative" }
   | { ok: false; reason: string }
 > {
   try {

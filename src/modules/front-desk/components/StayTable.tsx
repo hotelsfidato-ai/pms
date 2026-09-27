@@ -29,6 +29,8 @@ const TONE: Record<string, Tone> = {
   "checked-out": "neutral",
   "no-show": "danger",
   cancelled: "danger",
+  /* Phase 1: a booking held for the hotel to confirm (status 'tentative'). */
+  tentative: "warning",
 };
 
 const LABEL: Record<string, string> = {
@@ -38,6 +40,7 @@ const LABEL: Record<string, string> = {
   "checked-out": "Checked out",
   "no-show": "No show",
   cancelled: "Cancelled",
+  tentative: "Waiting for the hotel",
 };
 
 /* One key for every list. Somebody who works from cards works from

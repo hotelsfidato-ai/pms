@@ -1,5 +1,6 @@
 import type { Mount } from "../../mount.ts";
 import { guestMessages } from "./messages.ts";
+import { voucher } from "./voucher.ts";
 
 /* The front door of this service on the server - the only file the core or
    another service may import (src/test/boundaries.test.ts).
@@ -12,6 +13,8 @@ import { guestMessages } from "./messages.ts";
    reached into that same day because its door did not exist yet. */
 export const mounts: readonly Mount[] = [
   ["/api/hotels", guestMessages],
+  /* Send voucher (D27-35): the booking confirmation, now, from the desk. */
+  ["/api/hotels", voucher],
 ];
 
 /* THE SWEEP, and it is NOT started here. `server.ts` (the master's file)

@@ -1,0 +1,73 @@
+import { api, ApiError } from "@/lib/api";
+
+/* ══════════════════════════════════════════════════════════════════
+   NEW BOOKING'S LISTS AND ITS "BOOKED" CARD (Phase 1, D27-33)
+
+   The owner's two lists (sales people, D27-37; room promotions, D27-36),
+   confirming a booking that was waiting for the hotel, the guest's page
+   link, and the voucher. Every rule is the server's; this only carries the
+   answer, the reason included.
+   ══════════════════════════════════════════════════════════════════ */
+
+/** The walk-in's market segments (WalkInFlow.tsx), the owner's choice of
+    27 September. Stored as the words themselves.
+    ponytail: a second copy of the walk-in's inline list; one list once the
+    Form III session has merged its WalkInFlow changes. */
+export const MARKET_SEGMENTS = ["Corporate", "Leisure", "Group", "Crew", "Government"] as const;
+
+/** The owner's titles (27 September); none leaves it blank. The server and
+    migration 146 hold the same four. */
+export const TITLES = ["Mr", "Ms", "Mrs", "Dr"] as const;
+
+/** The restaurant's free-hand cap (083's app.pos_freehand_discount_cap),
+    shown before the server refuses above it (D27-36). */
+export const FREEHAND_CAP = 10;
+
+/** Who may give a complimentary room and keep the two lists (27 Sep). */
+export const LIST_KEEPERS = ["owner", "admin", "gm"] as const;
+
+type Answer<T = object> = ({ ok: true } & T) | { ok: false; reason: string };
+
+async function send<T>(path: string, method: string, body: unknown): Promise<Answer<T>> {
+  try {
+    return await api(path, { method, body: JSON.stringify(body) });
+  } catch (error) {
+    if (error instanceof ApiError) {
+      const p = error.body as { reason?: string } | undefined;
+      return { ok: false, reason: p?.reason ?? error.message };
+    }
+    throw error;
+  }
+}
+
+export interface SalesPerson { id: string; name: string }
+export interface RoomPromotion { id: string; name: string; percent: number }
+
+export const listSalesPeople = (hotelId: string): Promise<SalesPerson[]> =>
+  api<SalesPerson[]>(`/api/hotels/${hotelId}/sales-people`);
+
+/** The whole list, as the dialog shows it. A name left out is switched off. */
+export const saveSalesPeople = (hotelId: string, names: string[]) =>
+  send(`/api/hotels/${hotelId}/sales-people`, "PUT", { names });
+
+export const listRoomPromotions = (hotelId: string): Promise<RoomPromotion[]> =>
+  api<RoomPromotion[]>(`/api/hotels/${hotelId}/room-promotions`);
+
+export const saveRoomPromotions = (
+  hotelId: string, promotions: { name: string; percent: number }[],
+) => send(`/api/hotels/${hotelId}/room-promotions`, "PUT", { promotions });
+
+/** Waiting for the hotel -> confirmed, for every room booked with it. */
+export const confirmWaiting = (hotelId: string, stayId: string) =>
+  send<{ rooms: number; reference: string }>(
+    `/api/hotels/${hotelId}/stays/${stayId}/confirm`, "POST", {});
+
+/** A new link to the guest's own page (114). Only its hash is kept, so each
+    press makes a new one; the old ones keep working. */
+export const makeGuestLink = (hotelId: string, stayId: string) =>
+  send<{ link: string }>(`/api/hotels/${hotelId}/stays/${stayId}/guest-link`, "POST",
+    { origin: "desk" });
+
+/** The booking's one voucher, now (D27-35). Refused if it went already. */
+export const sendVoucher = (hotelId: string, stayId: string) =>
+  send(`/api/hotels/${hotelId}/stays/${stayId}/confirmation`, "POST", {});
