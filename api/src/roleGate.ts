@@ -212,6 +212,14 @@ export const WRITE_RULES: Readonly<Record<string, Rule>> = {
   [`POST ${H}/groups/:id/lead`]: CHANGE_BOOKING,
   [`POST ${H}/stays/:id/routing`]: CHANGE_BILL,
   [`POST ${H}/bookings`]: BOOK,
+  /* Phase 1 (the owner, 27 Sep): whoever may make a booking confirms one that
+     was waiting for the hotel, and sends its one voucher (D27-35). The two
+     lists are kept by the owner, an administrator or the GM - asked in
+     reservations/desk.ts. */
+  [`POST ${H}/stays/:id/confirm`]: grant("reservation", "create", "Confirming a booking"),
+  [`POST ${H}/stays/:id/confirmation`]: grant("reservation", "create", "Sending a booking's voucher"),
+  [`PUT ${H}/sales-people`]: own("reservations/desk.ts: owner, admin, GM"),
+  [`PUT ${H}/room-promotions`]: own("reservations/desk.ts: owner, admin, GM"),
 
   /* finance */
   [`POST ${H}/stays/:id/folios`]: CHARGE,

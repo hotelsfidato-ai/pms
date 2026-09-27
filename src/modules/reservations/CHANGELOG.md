@@ -8,6 +8,51 @@ project, still goes in the root `CHANGELOG.md`.
 
 ---
 
+## 2026-09-27 · Phase 1: New booking records every field of the owner's screenshot (D27-33)
+
+**Asked for:** the owner, "start Phase 1" - docs/PLATFORM-PLAN.md § 3's
+"add" rows, in our layout. Eight answers from the owner the same day (all as
+recommended): the walk-in's segments; both lists start empty; Mr, Ms, Mrs,
+Dr or none; complimentary and the lists for owner, admin and GM; a Confirm
+action for a waiting booking; the summary shows what the bill will carry;
+typed rates unchanged. A ninth, later that day (asked for by the redesign
+session): "Waiting for the hotel" is grey on the booking lists.
+
+**Shipped** (details in MODULE.md, "Phase 1")
+- Migration 146 (renumber at merge if Form III lands first).
+- `book.ts`: Waiting, complimentary (refused for other roles), the discount
+  (10% by hand with a reason, more by a promotion; lowers `agreed_rate`),
+  company billed, title, nationality, address, expected check-out, sales
+  person - every refusal above the first write.
+- `desk.ts`: the two lists and Confirm. `groups.ts`: the answer carries each
+  booking's id and its status.
+- Guest messages: `POST /:code/stays/:id/confirmation` (Send voucher) and one
+  turn per booking that the sweep's sender takes too, so a voucher never goes
+  twice (D27-35).
+- The screen, the Booked card, the list dialog; "Confirm the booking" on the
+  stay panel; "Waiting for the hotel" in All bookings.
+
+**Found** RES-4 (fixed), RES-5 and RES-6 (open), in DEFECTS.md.
+
+**Proved** - `newBooking.test.ts` 13 of 13; guards broken on purpose and
+seen to fail: the complimentary role check, the 10% cap (the CHECK then
+refused it: 500), the sweep's "already sent", the voucher's second press and
+the waiting refusal. The screen opened at 1280 and 375 wide as owner and
+reception: booked with 10% off and room 307 assigned, the Booked card, a
+waiting booking held and then confirmed from its panel, the sales-people
+list saved; after the last cp6 merge, a waiting booking grey on the lists
+and confirmed from the restyled panel. The full suite found two of mine,
+RES-7 and RES-8, both fixed. Full gates on 40b2617 (cp6 de2e98e merged in),
+1,159 s, every step exit 0: web types, API types, strip (145 files), web
+710 of 710, API 1,585 of 1,585, database 1,195 assertions (new-booking 15)
+on 146 migrations, all 146 re-runnable.
+
+**Left open** - advance and tax exempt (the CA, O8); the registration card
+(O7); contract rates (O11); the Sales/Marketing roles (Phase 4); RES-5,
+RES-6; the master's requests in MODULE.md.
+
+---
+
 ## 2026-09-26 · "Guest agreed to offers" on the booking form (D25-39)
 
 **Asked for / Shipped:** the compliance lane (in full in the front desk's
