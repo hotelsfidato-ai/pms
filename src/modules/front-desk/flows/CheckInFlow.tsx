@@ -199,7 +199,7 @@ export function CheckInFlow({
                       disabled={!room.allowed}
                       onClick={() => setRoomNumber(room.number)}
                       className={cn(
-                        "w-full flex items-center gap-2 px-3 h-11 rounded-md border text-left transition-colors duration-150",
+                        "w-full flex items-center gap-2 px-3 h-11 rounded-lg border text-left transition-colors duration-150",
                         selected
                           ? "border-brand-orange bg-brand-orange-50"
                           : room.allowed
@@ -339,7 +339,7 @@ export function CheckInFlow({
                   make an early arrival look like an ordinary one, and
                   the server refuses independently either way. */}
               {isEarly && (
-                <div className="rounded-md border border-brand-yellow-200 bg-brand-yellow-50 p-3 space-y-2.5">
+                <div className="rounded-lg border border-brand-yellow-100 bg-brand-yellow-50 p-3 space-y-2.5">
                   <p className="text-sm text-[#8a6300]">
                     {earlyByDate
                       ? `This booking is for ${dateShort(stay.arrival)}. Checking `
@@ -385,7 +385,7 @@ export function CheckInFlow({
                 </div>
               )}
 
-              <div className="rounded-md bg-grey-50 border border-grey-200 p-3 space-y-1.5">
+              <div className="rounded-lg bg-grey-50 border border-grey-200 p-3 space-y-1.5">
                 {/* A dash when the room type has no rate — never ₹0
                     (defect 246). */}
                 <Line
@@ -432,7 +432,7 @@ export function CheckInFlow({
                     {isForeign ? " · " + nationality : ""}
                   </p>
                 ) : (
-                  <p className="text-brand-yellow">
+                  <p className="text-brand-yellow-800">
                     ID not captured - {idSkipReason}
                   </p>
                 )}
