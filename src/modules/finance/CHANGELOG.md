@@ -8,6 +8,13 @@ project, still goes in the root `CHANGELOG.md`.
 
 ---
 
+## 2026-09-27 · Touched by Phase 1, New booking (reservations session)
+
+`getTaxRate` and `listBillingCompanies` on the front door, for New booking's tax beside the rate and its Bill to Company. Nothing else changed.
+See `src/modules/reservations/CHANGELOG.md`, 27 September.
+
+---
+
 ## 2026-09-27 · Form III at the desk (D27-25) - the guests lane's
 
 The guests lane (`guests/form-iii-27sep`) changed this service's files for

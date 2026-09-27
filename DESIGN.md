@@ -345,7 +345,8 @@ zero; an orange zero every morning is a false alarm.
 **Body Font:** Inter Variable (self-hosted via `@fontsource-variable/inter`),
 falling back to Inter, -apple-system, Segoe UI, Roboto, sans-serif.
 **Print Font:** Georgia (with ITC Charter, Times New Roman) for printed
-invoices and report covers.
+invoices and report covers. *Superseded 27 September (D27-52): printed documents take the CRS
+voucher's look and its sans; see Printed documents below.*
 **Mono:** ui-monospace, SF Mono, Cascadia Mono, Menlo.
 
 **Character:** one neutral, highly legible family carries every role, with
@@ -525,6 +526,24 @@ of its colour; a tap or Enter opens one plain sentence saying what it means.
 A4 with 16mm by 14mm margins, 10.5pt, Georgia. Rows never split across
 pages, table headers repeat, backgrounds print (a cancelled banner must
 survive), and the signature block sits at the foot of the last page.
+
+**27 September, the owner (D27-52): every document looks like the CRS voucher.**
+"This is the main reference design; all my branding needs to come from this."
+The reference is `D:\fidato crs\src\features\reservations\voucher.ts`,
+`renderVoucherHtml` (read it; never edit the CRS). Every bill and document takes
+its layout: the logo masthead, the orange-barred title and number, the fact
+strip, two columns, a table with a 2px ink rule, the totals, orange-edged panels
+and the footer, in the voucher's sans instead of Georgia. A document keeps its
+content, words and figures; only the look changes. The page-break rules above
+(rows never split, headers repeat, backgrounds print, the signature at the foot)
+still hold. The logo comes from one group setting (D27-53); the code holds no
+logo, and with none set the hotel's name prints in its place.
+
+### Named Rules (the owner, 27 September, D27-54)
+**The Tappable Rule.** Keep every screen simple. Anything you can tap must look
+tappable: buttons look like buttons, links are orange, and a tile or row that
+opens something shows an arrow. Anything you cannot tap must never look like a
+button: status pills and counts stay flat.
 
 ## Do's and Don'ts
 

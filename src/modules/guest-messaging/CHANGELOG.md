@@ -11,6 +11,13 @@ Work that touches the core or several services still goes in the root
 
 ---
 
+## 2026-09-27 · Touched by Phase 1, New booking (reservations session)
+
+`POST /:code/stays/:id/confirmation` (`voucher.ts`): Send voucher from New booking's Booked card, the sweep's own confirmation now, with the clerk's name. `claimTurn` / `sendIfOwed` in `jobs.ts`: the sweep's sender takes the same per-booking turn and asks again, so a voucher never goes twice (D27-35). `getGuestMessages` on the web front door.
+See `src/modules/reservations/CHANGELOG.md`, 27 September.
+
+---
+
 ## 2026-09-24 · a group's lead, decided once (D22-52, D22-53)
 
 **Asked for:** the owner's D22-52 - a group's lead guest is, by default, the

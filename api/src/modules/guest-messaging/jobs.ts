@@ -277,6 +277,30 @@ export async function linkFromDatabase(client: Client, due: Due): Promise<string
   return `${env.corsOrigins[0] ?? "http://localhost:5173"}/g/${token}`;
 }
 
+/* ── One message, one sender (D27-35: never twice) ─────────────────
+   The sweep and the desk's Send voucher can reach one booking in the same
+   minute. Each takes this booking's turn for the kind of message - a lock
+   held until its transaction ends - and asks the database again, inside
+   it, whether the message is still owed. The second one waits, then finds
+   the first one's 'sent' row and sends nothing. */
+export async function claimTurn(
+  client: Client, kind: MessageKind | string, reservationId: string,
+): Promise<void> {
+  await client.query("select pg_advisory_xact_lock(hashtext($1))",
+    [`guest-message:${kind}:${reservationId}`]);
+}
+
+export const NOT_OWED = "It was sent already, so it is not sent again.";
+
+/** The sweep's sender: the turn, the question again, then the one door out. */
+export async function sendIfOwed(client: Client, message: Message): Promise<SendResult> {
+  const id = message.about?.id ?? "";
+  await claimTurn(client, message.kind, id);
+  const owed = (await dueFromDatabase(client, LIMITS, message.hotel.id))
+    .some((d) => d.kind === message.kind && d.reservationId === id);
+  return owed ? send(client, message) : { ok: false, reason: NOT_OWED };
+}
+
 export interface SweepResult {
   /** Bookings the database said were owed a message. */
   due: number;
@@ -306,7 +330,7 @@ export async function runOnce(
   run: Run,
   listDue: ListDue = owedNow,
   makeLink: MakeLink = linkFromDatabase,
-  sender: (client: Client, message: Message) => Promise<SendResult> = send,
+  sender: (client: Client, message: Message) => Promise<SendResult> = sendIfOwed,
 ): Promise<SweepResult> {
   const result: SweepResult = { due: 0, attempted: 0, sent: 0, nowhereToSend: 0, waiting: 0 };
   const pace = perSweep();

@@ -8,6 +8,13 @@ project, still goes in the root `CHANGELOG.md`.
 
 ---
 
+## 2026-09-27 · Touched by Phase 1, New booking (reservations session)
+
+`assignRoom` on the front door (New booking's room pick); `StayActions` offers "Confirm the booking" on a waiting booking; `StayTable` labels status `tentative` "Waiting for the hotel".
+See `src/modules/reservations/CHANGELOG.md`, 27 September.
+
+---
+
 ## 2026-09-27 · Form III at the desk (D27-25) - the guests lane's
 
 The guests lane (`guests/form-iii-27sep`) changed this service's files for

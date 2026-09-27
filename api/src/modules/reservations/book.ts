@@ -27,6 +27,33 @@ export interface BookingLineInput {
   children?: number;
   rooms?: number;
   agreedRate?: number;
+  /** A complimentary room (020): booked at ₹0, and the night audit posts
+      nothing for it. Only COMP_ROLES may give one (the owner, 27 Sep). */
+  complimentary?: boolean;
+}
+
+/** Who may give a complimentary room (the owner, 27 September). A group
+    administrator is the owner everywhere, as throughout this system. */
+export const COMP_ROLES = ["owner", "admin", "gm"] as const;
+
+/** The guest's title (the owner, 27 September). 146 holds the same list. */
+export const TITLES = ["Mr", "Ms", "Mrs", "Dr"] as const;
+
+/** A discount on every night of the booking (D27-36, the restaurant's rule):
+    up to the free-hand cap with a reason, or a named promotion. */
+export interface BookingDiscount {
+  percent?: number;
+  reason?: string;
+  promotionId?: string;
+}
+
+/** Where the guest lives, at booking (plan § 3 rows 25-28). */
+export interface BookingAddress {
+  addressLine?: string;
+  city?: string;
+  state?: string;
+  pincode?: string;
+  country?: string;
 }
 
 export interface BookingRequest {
@@ -59,6 +86,23 @@ export interface BookingRequest {
   /** "Guest agreed to WhatsApp" (D21-72). A booking from a channel arrives
       unticked; the desk asks on phone and walk-in bookings. */
   whatsappAgreed?: boolean;
+
+  /* ── The desk's, from Phase 1 (D27-33). Left out of the fingerprint like
+     guestId: a sender's retry is judged on what a sender sends. ── */
+  /** Waiting for the hotel: status 'tentative'. Holds a room of its type
+      (044) and is sent nothing (126, 131) until somebody confirms it. */
+  tentative?: boolean;
+  /** The hour they said they would leave. Absent is "did not say". */
+  expectedDeparture?: string;
+  /** A name from the owner's list, or one typed under "Other" (D27-37). */
+  salesPerson?: string;
+  /** Bill to a company: reservations.company_id (CRS-12). */
+  companyId?: string;
+  discount?: BookingDiscount;
+  title?: string;
+  /** Two letters, IN for India - the check-in's own shape. */
+  nationality?: string;
+  address?: BookingAddress;
 }
 
 export interface BookingMade {
@@ -67,8 +111,12 @@ export interface BookingMade {
   groupId: string | null;
   rooms: number;
   guest: string;
-  bookings: Array<{ reference: string; roomType: string; rate: number }>;
+  /** `id` is the stay's: New booking hands it to front desk's doors (Phase 1).
+      A repeat answers the same ids as the first time (RES-3). */
+  bookings: Array<{ id: string; reference: string; roomType: string; rate: number }>;
   nightly: number;
+  /** 'tentative' when the desk booked it as Waiting. */
+  status: "confirmed" | "tentative";
   /** The rows, for a caller in process. Empty on a repeat: nothing was made
       this time, and the references above say which booking it already is. */
   reservationIds: string[];
@@ -90,12 +138,14 @@ const refuse = (reason: string): BookingRefused => ({ ok: false, kind: "refused"
 /* ── A booking this channel already sent (RES-3) ──────────────────── */
 
 type Received = {
+  id: string;
   reference: string;
   room_type: string;
   agreed_rate: string;
   group_id: string | null;
   guest: string;
   ota_fingerprint: string | null;
+  status: string;
 };
 
 export async function alreadyReceived(
@@ -103,8 +153,8 @@ export async function alreadyReceived(
   externalRef: string,
 ): Promise<Received[]> {
   const { rows } = await client.query<Received>(
-    `select r.reference, rt.name as room_type, r.agreed_rate::text,
-            r.group_id::text, g.full_name as guest, r.ota_fingerprint
+    `select r.id::text, r.reference, rt.name as room_type, r.agreed_rate::text,
+            r.group_id::text, g.full_name as guest, r.ota_fingerprint, r.status
        from reservations r
        join room_types rt on rt.id = r.room_type_id
        join guests g on g.id = r.guest_id
@@ -131,7 +181,7 @@ export function answerRepeat(
       + "booking is not taken this way - it is made on the booking, at the desk.");
   }
   const bookings = earlier.map((r) => ({
-    reference: r.reference, roomType: r.room_type, rate: Number(r.agreed_rate),
+    id: r.id, reference: r.reference, roomType: r.room_type, rate: Number(r.agreed_rate),
   }));
   return {
     ok: true,
@@ -141,6 +191,7 @@ export function answerRepeat(
     guest: earlier[0]!.guest,
     bookings,
     nightly: bookings.reduce((sum, b) => sum + b.rate, 0),
+    status: earlier[0]!.status === "tentative" ? "tentative" : "confirmed",
     reservationIds: [],
     folioIds: [],
     guestId: null,
@@ -209,6 +260,97 @@ async function noRoomFor(client: Client, request: BookingRequest): Promise<strin
     }
   }
   return null;
+}
+
+/* ── The desk's fields, checked (Phase 1, D27-33) ───────────────────
+   Every one of these refuses BEFORE the first write (MEMORY 243), and the
+   screen only reflects what is decided here: a complimentary room, the
+   discount and the company are money. */
+
+interface DeskTerms {
+  /** The percent taken off every paid night, and how it was allowed. */
+  discount: { percent: number; reason: string | null; promotionId: string | null } | null;
+  companyId: string | null;
+  title: string | null;
+  nationality: string | null;
+}
+
+const text = (v: string | undefined): string | null => v?.trim() || null;
+
+/** Does the signed-in person hold one of these roles at THIS hotel? A group
+    administrator is the owner everywhere.
+    ponytail: the fifth copy (reputation, purchasing, guest messages and
+    equipment keep one each); one shared helper when the core offers it. */
+export async function holdsRoleAt(
+  client: Client, hotelId: string, roles: readonly string[],
+): Promise<boolean> {
+  const { rows } = await client.query<{ may: boolean }>(
+    `select exists (select 1 from staff s
+                     where s.id = app.current_user_id() and s.is_active and s.is_group_admin)
+         or exists (select 1 from staff_hotels sh join staff s on s.id = sh.staff_id
+                     where sh.staff_id = app.current_user_id() and sh.hotel_id = $1
+                       and s.is_active and sh.role = any($2::text[])) as may`,
+    [hotelId, roles]);
+  return rows[0]?.may === true;
+}
+
+async function deskTerms(
+  client: Client, request: BookingRequest, lines: BookingLineInput[],
+): Promise<DeskTerms | BookingRefused> {
+  const hotelId = request.hotelId;
+
+  if (lines.some((l) => l.complimentary === true)) {
+    if (!(await holdsRoleAt(client, hotelId, COMP_ROLES))) {
+      return refuse(
+        "A complimentary room is given by the owner, an administrator or the "
+        + "general manager. Ask one of them.");
+    }
+  }
+
+  let discount: DeskTerms["discount"] = null;
+  const d = request.discount;
+  if (d?.promotionId) {
+    const { rows } = await client.query<{ percent: string }>(
+      `select percent::text from room_promotions
+        where id = $1 and hotel_id = $2 and is_active`,
+      [d.promotionId, hotelId]);
+    if (!rows[0]) return refuse("That promotion is not on this hotel's list any more.");
+    discount = { percent: Number(rows[0].percent), reason: text(d.reason), promotionId: d.promotionId };
+  } else if (d?.percent !== undefined && d.percent !== null) {
+    const percent = Number(d.percent);
+    const { rows } = await client.query<{ cap: string }>(
+      "select app.pos_freehand_discount_cap()::text as cap");
+    const cap = Number(rows[0]!.cap);
+    if (!Number.isFinite(percent) || percent <= 0) {
+      return refuse("A discount is a percentage above 0.");
+    }
+    if (percent > cap) {
+      return refuse(
+        `A discount over ${cap}% is given only through a named promotion. `
+        + `Up to ${cap}% can be given here with a reason.`);
+    }
+    if (!text(d.reason)) return refuse("Say why the discount is given.");
+    discount = { percent, reason: text(d.reason), promotionId: null };
+  }
+
+  let companyId: string | null = null;
+  if (request.companyId) {
+    const { rows } = await client.query(
+      "select 1 from companies where id = $1 and is_active", [request.companyId]);
+    if (!rows[0]) return refuse("That company is not on the list any more.");
+    companyId = request.companyId;
+  }
+
+  const title = text(request.title);
+  if (title !== null && !(TITLES as readonly string[]).includes(title)) {
+    return refuse(`A title is ${TITLES.join(", ")} or none.`);
+  }
+  const nationality = text(request.nationality)?.toUpperCase() ?? null;
+  if (nationality !== null && !/^[A-Z]{2}$/.test(nationality)) {
+    return refuse("Nationality is the country's two-letter code - IN for India.");
+  }
+
+  return { discount, companyId, title, nationality };
 }
 
 /* ── The booking itself ───────────────────────────────────────────── */
@@ -302,6 +444,9 @@ export async function makeBooking(
     }
     const commission = src[0].commission_pct;
 
+    const terms = await deskTerms(client, request, lines);
+    if ("ok" in terms) return terms;
+
     /* EVERY LINE IS PRICED AND FITTED BEFORE ANY IS BOOKED. A refusal on
        the second room type must find nothing of the first on file. */
     const planned: {
@@ -329,7 +474,9 @@ export async function makeBooking(
          night — that is what "snapshotted at booking" means — so a stay
          crossing a season is charged what was agreed, not what the calendar
          says on night four. */
-      let rate = line.agreedRate ?? null;
+      /* A COMPLIMENTARY ROOM IS ₹0 AND NEEDS NO PRICE: the night audit posts
+         nothing for it (020), and an unpriced calendar does not stop a gift. */
+      let rate = line.complimentary === true ? 0 : line.agreedRate ?? null;
       if (rate === null) {
         const { rows: t } = await client.query<{
           total: string | null; unpriced: string | null;
@@ -349,6 +496,16 @@ export async function makeBooking(
           };
         }
         rate = Number(t[0].total);
+      }
+
+      /* THE DISCOUNT LOWERS THE ONE FIGURE THE BOOKING KEEPS, rounded to the
+         paisa by Postgres, so the audit, the tax slab and finance's bill
+         (app.stay_bill) all follow from it with no second sum (D27-36). */
+      if (terms.discount && rate > 0) {
+        const { rows: after } = await client.query<{ rate: string }>(
+          "select round($1::numeric * (100 - $2::numeric) / 100, 2)::text as rate",
+          [rate, terms.discount.percent]);
+        rate = Number(after[0]!.rate);
       }
 
       planned.push({ line, typeName: rt[0].name, adults, children, rate });
@@ -384,11 +541,18 @@ export async function makeBooking(
        usually days later and often never for a wedding. */
     if (!guestId) {
       const { rows: guest } = await client.query<{ id: string }>(
-        `insert into guests (full_name, phone, email)
-         values ($1, nullif($2,''), nullif($3,''))
+        `insert into guests (full_name, phone, email, title, nationality)
+         values ($1, nullif($2,''), nullif($3,''), $4, coalesce($5, 'IN'))
          returning id::text`,
-        [request.guestName, request.phone?.trim() ?? "", request.email?.trim() ?? ""]);
+        [request.guestName, request.phone?.trim() ?? "", request.email?.trim() ?? "",
+         terms.title, terms.nationality]);
       guestId = guest[0]!.id;
+    } else if (terms.title) {
+      /* A returning guest's record is filled, never overwritten: the title
+         only where none is on file, as the phone and email are. */
+      await client.query(
+        "update guests set title = $2 where id = $1 and title is null",
+        [guestId, terms.title]);
     }
 
     let groupId: string | null = null;
@@ -401,7 +565,7 @@ export async function makeBooking(
       groupId = g[0]!.id;
     }
 
-    const made: { reference: string; roomType: string; rate: number }[] = [];
+    const made: { id: string; reference: string; roomType: string; rate: number }[] = [];
     /* The rows themselves, for a caller in process: the channel manager
        records which reservations a pushed booking became, so the inbox can
        say what happened to it (D17-79). Over HTTP they are not sent - a
@@ -432,10 +596,13 @@ export async function makeBooking(
               adults, children, occupancy, agreed_rate, status, source,
               meal_plan, group_id, business_source, market_segment,
               expected_arrival, booking_source_id, commission_pct,
-              ota_reference, ota_line, ota_fingerprint, whatsapp_agreed)
-           values ($1,$2,$3,$4,$5::date,$6::date,$7,$8,$9,$10,'confirmed',$11,
+              ota_reference, ota_line, ota_fingerprint, whatsapp_agreed,
+              is_complimentary, expected_departure, sales_person, company_id,
+              discount_percent, discount_reason, room_promotion_id)
+           values ($1,$2,$3,$4,$5::date,$6::date,$7,$8,$9,$10,$30,$11,
                    $12,$13,$14,$15,$16::time,$17,$18::numeric,
-                   $19,$20,$21,$22)
+                   $19,$20,$21,$22,
+                   $23,$24::time,$25,$26,$27::numeric,$28,$29)
            returning id::text`,
           [hotelId, ref[0]!.reference, guestId, line.roomTypeId,
            request.checkIn, request.checkOut, adults, children, adults + children,
@@ -459,7 +626,16 @@ export async function makeBooking(
               racing copies collide on (091). */
            externalRef, externalRef ? made.length + 1 : null, fingerprint,
            /* Every room of the booking carries the guest's answer. */
-           request.whatsappAgreed === true],
+           request.whatsappAgreed === true,
+           line.complimentary === true,
+           request.expectedDeparture?.trim() || null,
+           request.salesPerson?.trim() || null,
+           terms.companyId,
+           /* A gift is not discounted - there is nothing to take off. */
+           line.complimentary === true || rate === 0 ? null : terms.discount?.percent ?? null,
+           line.complimentary === true || rate === 0 ? null : terms.discount?.reason ?? null,
+           line.complimentary === true || rate === 0 ? null : terms.discount?.promotionId ?? null,
+           request.tentative === true ? "tentative" : "confirmed"],
         );
 
         /* A BOOKING NEEDS SOMEWHERE TO PUT MONEY, from the moment it
@@ -477,17 +653,38 @@ export async function makeBooking(
           `insert into folios (hotel_id, reservation_id, status)
            values ($1, $2, 'open') returning id::text`,
           [hotelId, booked[0]!.id]);
-        made.push({ reference: ref[0]!.reference, roomType: typeName,
+        made.push({ id: booked[0]!.id, reference: ref[0]!.reference, roomType: typeName,
                     rate: Number(rate) });
         reservationIds.push(booked[0]!.id);
         folioIds.push(folio[0]!.id);
       }
     }
 
+    /* WHERE THEY LIVE, beside the ID documents where 013 keeps an address.
+       After the rooms, because updating a returning guest's row needs a
+       booking at this property (026). Blanks on file are filled; nothing
+       on file is overwritten - the check-in is where it is corrected. */
+    const a = request.address ?? {};
+    const address = [a.addressLine, a.city, a.state, a.pincode, a.country].map(text);
+    if (address.some((v) => v !== null)) {
+      await client.query(
+        `insert into guest_documents (guest_id, address_line, city, state, pincode, country)
+         values ($1, $2, $3, $4, $5, $6)
+         on conflict (guest_id) do update set
+           address_line = coalesce(guest_documents.address_line, excluded.address_line),
+           city         = coalesce(guest_documents.city,         excluded.city),
+           state        = coalesce(guest_documents.state,        excluded.state),
+           pincode      = coalesce(guest_documents.pincode,      excluded.pincode),
+           country      = coalesce(guest_documents.country,      excluded.country),
+           updated_at   = now()`,
+        [guestId, ...address]);
+    }
+
     return {
       ok: true as const,
       /* Made here and now, not found already made (RES-3). */
       duplicate: false,
+      status: request.tentative === true ? "tentative" : "confirmed",
       groupId,
       rooms: made.length,
       /* The returning guest's name as it stands on file, when the clerk

@@ -1,11 +1,14 @@
 import type { Mount } from "../../mount.ts";
 import { groups } from "./groups.ts";
+import { desk } from "./desk.ts";
 
 /* The front door of the reservations service on the server — the only file
    the core or another service may import (src/test/boundaries.test.ts).
    Its routers, and where each is mounted (see ../../mount.ts). */
 export const mounts: readonly Mount[] = [
   ["/api/hotels", groups],
+  /* New booking's two lists, and confirming a waiting booking (Phase 1). */
+  ["/api/hotels", desk],
 ];
 
 /* ── For a machine, in process ─────────────────────────────────────
