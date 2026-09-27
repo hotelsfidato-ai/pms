@@ -3,6 +3,9 @@ import { withSession, type Session } from "../../auth.ts";
 import type { Client } from "../../db.ts";
 import { resolveDate, businessDateFor } from "../../businessDate.ts";
 import { folioFor } from "../../folio.ts";
+import {
+  formIIIRefusal, isForeign, saveIdentity, saveVisit, type Identity, type Visit,
+} from "../guests/index.ts";
 
 /* ══════════════════════════════════════════════════════════════════
    THE FLOWS THAT WRITE
@@ -148,17 +151,9 @@ interface CheckInBody {
      since migration 013 — was never written to. Capture is now derived
      from whether a document actually arrived, which is not something a
      client can lie about. */
-  identity?: {
-    idType?: string;
-    idNumber?: string;
-    nationality?: string;
-    passportExpiry?: string;
-    visaNumber?: string;
-    visaExpiry?: string;
-    addressLine?: string;
-    city?: string;
-    country?: string;
-  };
+  identity?: Identity;
+  /* Form III's questions about this visit, for a foreign guest (D27-25). */
+  visit?: Visit;
   idSkipReason?: string;
   /* Absent means "the property's own operating day", resolved from the
      database. It used to mean the server's wall clock, which dated a
@@ -193,9 +188,11 @@ operations.post("/:code/stays/:id/check-in", async (c) => {
         room_type_id: string;
         notes: string | null;
         guest_id: string;
+        nationality: string;
       }>(
         `select id, status, check_in::text, check_out::text, room_type_id,
-                notes, guest_id
+                notes, guest_id,
+                (select g.nationality from guests g where g.id = guest_id) as nationality
            from reservations
           where hotel_id = $1 and id = $2
           for update`,
@@ -274,6 +271,12 @@ operations.post("/:code/stays/:id/check-in", async (c) => {
       if (identity?.idType && !identity.idNumber?.trim()) {
         return refuse(`A ${identity.idType} needs its number.`);
       }
+      /* Form III's own fields, before the first write (MEMORY 243). The
+         nationality typed, else the one on file: leaving the field out must
+         not be a way past the rule. */
+      const nationality = identity?.nationality?.trim() || stay.nationality;
+      const formIII = formIIIRefusal({ ...identity, nationality }, body.visit, captured);
+      if (formIII) return refuse(formIII);
 
       /* ── ARRIVING EARLY ───────────────────────────────────────
          The property sells the night from its check-in time. Before
@@ -477,33 +480,7 @@ operations.post("/:code/stays/:id/check-in", async (c) => {
          today must not blank the address somebody recorded last year.
          Only what was actually typed is written. */
       if (captured && identity) {
-        await client.query(
-          `insert into guest_documents
-             (guest_id, id_type, id_number, passport_expiry, visa_number,
-              visa_expiry, address_line, city, country,
-              captured_by, captured_at)
-           values ($1,$2,$3,$4::date,$5,$6::date,$7,$8,$9,
-                   app.current_user_id(), now())
-           on conflict (guest_id) do update set
-             id_type         = excluded.id_type,
-             id_number       = excluded.id_number,
-             passport_expiry = coalesce(excluded.passport_expiry,
-                                        guest_documents.passport_expiry),
-             visa_number     = coalesce(excluded.visa_number,
-                                        guest_documents.visa_number),
-             visa_expiry     = coalesce(excluded.visa_expiry,
-                                        guest_documents.visa_expiry),
-             address_line    = coalesce(excluded.address_line,
-                                        guest_documents.address_line),
-             city            = coalesce(excluded.city, guest_documents.city),
-             country         = coalesce(excluded.country, guest_documents.country),
-             captured_by     = excluded.captured_by,
-             captured_at     = excluded.captured_at`,
-          [stay.guest_id, identity.idType, identity.idNumber!.trim(),
-           identity.passportExpiry || null, identity.visaNumber || null,
-           identity.visaExpiry || null, identity.addressLine || null,
-           identity.city || null, identity.country || null],
-        );
+        await saveIdentity(client, stay.guest_id, identity);
       }
 
       /* Nationality lives on the GUEST, not the document — it is a fact
@@ -517,6 +494,9 @@ operations.post("/:code/stays/:id/check-in", async (c) => {
           "update guests set nationality = $2 where id = $1",
           [stay.guest_id, identity.nationality.trim().toUpperCase()],
         );
+      }
+      if (isForeign(nationality)) {
+        await saveVisit(client, hotelId, stayId, body.visit ?? {});
       }
 
       /* Replace rather than add. A booking pre-assigned to one room and
@@ -599,6 +579,8 @@ operations.post("/:code/stays/:id/check-out", async (c) => {
        was waived. 063 refuses the record without the reason. */
     lateReason?: string;
     waiveLate?: boolean;
+    /* Form III: where a foreign guest goes next (D27-25). */
+    nextDestination?: string;
   };
   const body = (await c.req.json().catch(() => ({}))) as CheckOutBody;
 
@@ -608,15 +590,29 @@ operations.post("/:code/stays/:id/check-out", async (c) => {
 
     const stayId = c.req.param("id");
 
-    const { rows } = await client.query<{ status: string }>(
-      `select status from reservations
-        where hotel_id = $1 and id = $2 for update`,
+    const { rows } = await client.query<{ status: string; nationality: string }>(
+      `select r.status, g.nationality
+         from reservations r join guests g on g.id = r.guest_id
+        where r.hotel_id = $1 and r.id = $2 for update of r`,
       [hotelId, stayId],
     );
     const stay = rows[0];
     if (!stay) return refuse("Reservation not found.");
     if (stay.status === "checked_out") return refuse("This stay has already departed.");
     if (stay.status !== "checked_in") return refuse("Only a checked-in guest can check out.");
+
+    /* ── WHERE A FOREIGN GUEST GOES NEXT ─────────────────────────────
+       Rule 17(1): at departure the foreigner gives the address they are
+       going to, and Form III's departure carries it. Asked here, while
+       they are still at the desk (the owner, 27 September) - and above
+       the late charge, the first write (MEMORY 243). */
+    const nextDestination = body.nextDestination?.trim();
+    if (isForeign(stay.nationality) && !nextDestination) {
+      return refuse(
+        "Form III asks where a foreign guest is going next. Enter the next "
+        + "destination to check them out.",
+      );
+    }
 
     /* ── LEAVING LATE ───────────────────────────────────────────────
        The mirror of arriving early, and the same shape: allowed, never
@@ -776,6 +772,9 @@ operations.post("/:code/stays/:id/check-out", async (c) => {
       "update reservations set status = 'checked_out' where hotel_id = $1 and id = $2",
       [hotelId, stayId],
     );
+    if (isForeign(stay.nationality)) {
+      await saveVisit(client, hotelId, stayId, { nextDestination: nextDestination! });
+    }
     await client.query(
       "update folios set status = 'closed', closed_at = now() where hotel_id = $1 and reservation_id = $2",
       [hotelId, stayId],
@@ -841,6 +840,11 @@ operations.post("/:code/walk-ins", async (c) => {
        themselves as D21-22's "no" is. */
     phone?: string; email?: string; guestId?: string;
     whatsappAgreed?: boolean; offersAgreed?: boolean;
+    /* Form III (D27-25; the owner, 27 September: a walk-in is asked what
+       check-in asks). A foreign walk-in never reached the register: the
+       form had no nationality, and a guest defaults to IN. */
+    nationality?: string; identity?: Identity; visit?: Visit;
+    idSkipReason?: string;
   };
 
   const result = await withSession(c.get("subject"), async (client): Promise<Outcome | null> => {
@@ -854,6 +858,30 @@ operations.post("/:code/walk-ins", async (c) => {
 
     const nights = body.nights ?? 1;
     if (nights < 1) return refuse("A stay is at least one night.");
+
+    /* The nationality typed; for a returning guest typed as Indian, the one
+       on file - the form's default must not take a foreigner off the
+       register. Refused here, above the first write (MEMORY 243). */
+    const typed = body.nationality?.trim().toUpperCase();
+    const onFile = body.guestId && (!typed || typed === "IN")
+      ? (await client.query<{ n: string }>(
+          "select nationality as n from guests where id = $1::uuid", [body.guestId])).rows[0]?.n
+      : undefined;
+    const nationality = onFile ?? typed ?? "IN";
+    const identity: Identity = { ...body.identity, nationality };
+    const idCaptured = Boolean(identity.idType && identity.idNumber?.trim());
+    if (isForeign(nationality)) {
+      if (!idCaptured && !body.idSkipReason?.trim()) {
+        return refuse(
+          "Record a foreign guest's ID document - type and number - or give a "
+          + "reason for skipping it.");
+      }
+      if (identity.idType && !identity.idNumber?.trim()) {
+        return refuse(`A ${identity.idType} needs its number.`);
+      }
+      const formIII = formIIIRefusal(identity, body.visit, idCaptured);
+      if (formIII) return refuse(formIII);
+    }
 
     const roomNumber = body.roomNumber?.trim();
     if (!roomNumber) return refuse("Choose a room.");
@@ -955,9 +983,12 @@ operations.post("/:code/walk-ins", async (c) => {
         `for the room type first.`,
       );
     }
-    const notes = body.overrideReason?.trim()
-      ? `Rate override - ${body.overrideReason.trim()}`
-      : null;
+    /* A foreign walk-in's skipped ID is kept in the note, as check-in keeps it. */
+    const notes = [
+      body.overrideReason?.trim() ? `Rate override - ${body.overrideReason.trim()}` : null,
+      isForeign(nationality) && !idCaptured
+        ? `ID not captured - ${body.idSkipReason!.trim()}` : null,
+    ].filter(Boolean).join(" · ") || null;
 
     /* ⚠ THE CHANNEL. The booking form has required one since 082 and
        this route never set it, so a walk-in read "Walk-in" on the stay
@@ -1048,6 +1079,16 @@ operations.post("/:code/walk-ins", async (c) => {
        body.whatsappAgreed === true],
     );
     const stayId = made[0]!.id;
+
+    /* Form III: the guest's nationality, document and visit, in the same
+       transaction as the stay. */
+    if (isForeign(nationality)) {
+      await client.query(
+        "update guests set nationality = $2 where id = $1 and nationality <> $2",
+        [guestId, nationality]);
+      if (idCaptured) await saveIdentity(client, guestId!, identity);
+      await saveVisit(client, hotelId, stayId, body.visit ?? {});
+    }
 
     if (body.offersAgreed === true) {
       await client.query("select app.record_offers_yes($1, $2)", [phone, email]);

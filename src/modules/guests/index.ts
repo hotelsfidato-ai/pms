@@ -15,3 +15,9 @@ export {
 /* CRM-3 (D22-8): Arrivals and the check-in warn of a booking site's guest
    whose phone or email is a blacklisted guest's. Placed by front desk. */
 export { BookingSiteBlacklist } from "./components/BookingSiteBlacklist";
+/* Form III (D27-25): what the desk asks a foreign guest - one set of
+   fields for check-in and the walk-in (front desk) and the register. */
+export {
+  ForeignGuestFields, formIIIMissing, particularsPayload, NO_PARTICULARS,
+  ID_TYPES, PURPOSES, type Particulars,
+} from "./components/ForeignGuestFields";

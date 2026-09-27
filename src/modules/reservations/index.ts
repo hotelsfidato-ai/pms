@@ -4,6 +4,7 @@
 export { listGroupMembers, listGroups } from "./data/groups";
 export { GROUP_ROOMS_ID, GroupRoomsList } from "./flows/GroupRoomsPanel";
 /* A booking waiting for the hotel is confirmed from its panel (Phase 1), or
-   cancelled there with no charge (D27-64). */
-export { confirmWaiting } from "./data/booking";
+   cancelled there with no charge (D27-64). The market segments are one
+   list, the walk-in's too (the master, 27 Sep). */
+export { confirmWaiting, MARKET_SEGMENTS } from "./data/booking";
 export { CancelWaitingFlow } from "./flows/CancelWaitingFlow";

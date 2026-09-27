@@ -23,6 +23,13 @@ See `src/modules/reservations/CHANGELOG.md`, 27 September.
 
 ---
 
+## 2026-09-27 · Form III at the desk (D27-25) - the guests lane's
+
+The guests lane (`guests/form-iii-27sep`) changed this service's files for
+Form III, written in full in the guests changelog of the same day: the check-in starts from the nationality on file and always sends it; its ID step takes the guests service's `ForeignGuestFields`; the walk-in asks nationality and, for a foreigner, the document and the fields, and takes its market segments from reservations' `MARKET_SEGMENTS` (Phase 1's one list; exported from reservations' front door) rather than its own inline copy; the late check-out passes on the next destination; the server's check-in, walk-in and check-out apply the guests service's rule before their first write (`api/src/modules/front-desk/operations.ts`). Test: `formIIICheckIn.test.tsx`.
+
+---
+
 ## 2026-09-26 · Compliance first fixes: ID reads (D25-38), offers opt-in (D25-39), cash of ₹2 lakh and the PAN (D25-40), FSSAI (A16)
 
 **Asked for:** the master, for the owner's D25-38 to D25-40 and the audit's
