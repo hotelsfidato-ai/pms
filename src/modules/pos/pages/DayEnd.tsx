@@ -3,7 +3,7 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useParams } from "react-router";
 import {
   Check, Lock, AlertTriangle, Banknote, ArrowDownLeft, ArrowUpRight,
-  Wallet, HandCoins, Plus,
+  Wallet, HandCoins, Plus, Receipt, DoorOpen, Percent, Gift,
 } from "lucide-react";
 import { cn } from "@/lib/cn";
 import { dateLong, money, moneyPrecise } from "@/lib/format";
@@ -12,7 +12,7 @@ import { useSession } from "@/lib/session";
 import {
   Page, PageHeader, Card, CardBody, CardHeader, Button, Field, fieldProps, Input,
   NativeSelect, Textarea, Skeleton, EmptyState, toast,
-  Dialog, DialogContent, DialogClose,
+  Dialog, DialogContent, DialogClose, StatusPill, FigureRow, FigureTile,
 } from "@/components/ui";
 import { getDayEnd, recordMovement, countDrawer, closeDay, type DayEnd, type MovementKind } from "@/modules/pos/data/till";
 import { ReadFailed, ReadStale } from "@/components/ui";
@@ -156,11 +156,12 @@ export default function DayEndPage() {
       <PageHeader
         title="Close restaurant day"
         description={`${hotelName} · ${d.outlet.name} · ${dateLong(d.businessDate)}`}
+        /* A state, so a flat pill (the Tappable Rule): it cannot be tapped. */
         badge={d.closedAt ? (
-          <span className="inline-flex items-center gap-1.5 rounded-full bg-green-50 border border-success px-3 py-1 text-sm text-success-dark">
-            <Lock className="size-3.5" />
+          <StatusPill tone="success" dot={false}>
+            <Lock className="size-3" />
             Closed {d.closedAt}{d.closedBy ? ` by ${d.closedBy}` : ""}
-          </span>
+          </StatusPill>
         ) : undefined}
       />
 
@@ -168,7 +169,7 @@ export default function DayEndPage() {
           cashier about to close must know they may be out of date. */}
       {day.error && (
         <ReadStale
-          className="mb-4"
+          className="mb-5"
           error={day.error}
           loadedAt={day.dataUpdatedAt}
           onRetry={() => void day.refetch()}
@@ -196,7 +197,7 @@ function Steps({ current, onPick, blockers }: {
   current: Step; onPick: (s: Step) => void; blockers: number;
 }) {
   return (
-    <div className="grid grid-cols-3 gap-2 mb-6">
+    <div className="grid grid-cols-3 gap-2 mb-5">
       {STEPS.map((s, i) => {
         const active = s.id === current;
         return (
@@ -205,8 +206,7 @@ function Steps({ current, onPick, blockers }: {
             type="button"
             onClick={() => onPick(s.id)}
             className={cn(
-              "min-h-14 px-4 py-2.5 rounded-lg border text-left cursor-pointer",
-              "transition-colors duration-150",
+              "press-tile min-h-14 px-3.5 py-3 rounded-lg border text-left cursor-pointer",
               active
                 ? "bg-ink-900 border-ink-900 text-white"
                 : "bg-white border-grey-300 hover:border-grey-400",
@@ -248,20 +248,25 @@ function Overview({ day }: { day: DayEnd }) {
     .sort(([, a], [, b]) => b - a);
 
   return (
-    <div className="space-y-6">
-      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-        <Figure label="Settled" value={money(s.settledValue)}
-                sub={`${s.settledOrders} ${s.settledOrders === 1 ? "bill" : "bills"}`} />
+    <div className="space-y-5">
+      {/* The Figure Rule: label with its chip, the figure, its note;
+          level across the row. */}
+      <FigureRow className="sm:grid-cols-2 lg:grid-cols-4">
+        <FigureTile icon={<Receipt />} label="Settled" value={money(s.settledValue)}
+                    note={`${s.settledOrders} ${s.settledOrders === 1 ? "bill" : "bills"}`} />
         {/* Not "cancelled and forgotten" — every one carries a reason,
             and the total is what walked out of the door. */}
-        <Figure label="Walked out" value={money(s.abandonedValue)}
-                sub={`${s.abandonedOrders} abandoned`}
-                tone={s.abandonedOrders > 0 ? "warn" : undefined} />
-        <Figure label="Discount given" value={money(s.discountGiven)}
-                sub="Off the settled bills" />
-        <Figure label="Complimentary" value={String(s.compOrders)}
-                sub={s.compOrders === 1 ? "bill, nothing to pay" : "bills, nothing to pay"} />
-      </div>
+        <FigureTile icon={<DoorOpen />} tone={s.abandonedOrders > 0 ? "yellow" : "neutral"}
+                    label="Walked out"
+                    value={s.abandonedOrders > 0
+                      ? <span className="text-warning-dark">{money(s.abandonedValue)}</span>
+                      : money(s.abandonedValue)}
+                    note={`${s.abandonedOrders} abandoned`} />
+        <FigureTile icon={<Percent />} label="Discount given" value={money(s.discountGiven)}
+                    note="Off the settled bills" />
+        <FigureTile icon={<Gift />} label="Complimentary" value={String(s.compOrders)}
+                    note={s.compOrders === 1 ? "bill, nothing to pay" : "bills, nothing to pay"} />
+      </FigureRow>
 
       <Card>
         <CardHeader title="How the money arrived" />
@@ -288,25 +293,6 @@ function Overview({ day }: { day: DayEnd }) {
         </CardBody>
       </Card>
     </div>
-  );
-}
-
-function Figure({ label, value, sub, tone }: {
-  label: string; value: string; sub: string; tone?: "warn";
-}) {
-  return (
-    <Card>
-      <CardBody>
-        <p className="text-sm text-grey-500">{label}</p>
-        <p className={cn(
-          "mt-1 text-2xl font-semibold tabular",
-          tone === "warn" ? "text-warning-dark" : "text-ink-900",
-        )}>
-          {value}
-        </p>
-        <p className="mt-0.5 text-sm text-grey-500">{sub}</p>
-      </CardBody>
-    </Card>
   );
 }
 
@@ -356,8 +342,8 @@ function CashStep({ hotelId, day, onDone }: {
   };
 
   return (
-    <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_360px]">
-      <div className="space-y-6">
+    <div className="grid gap-5 lg:grid-cols-[minmax(0,1fr)_360px]">
+      <div className="space-y-3">
         <Card>
           <CardHeader
             title="Count the drawer"
@@ -382,7 +368,7 @@ function CashStep({ hotelId, day, onDone }: {
                 const n = Number(counts[value]) || 0;
                 return (
                   <div key={value}
-                       className="flex items-center gap-3 rounded-lg border border-grey-200 px-3 py-2">
+                       className="flex items-center gap-3 rounded-lg border border-grey-200 px-3.5 py-2">
                     <span className="w-14 text-base font-medium tabular shrink-0">
                       ₹{value}
                     </span>
@@ -416,7 +402,7 @@ function CashStep({ hotelId, day, onDone }: {
         <Movements hotelId={hotelId} day={day} onDone={onDone} />
       </div>
 
-      <div className="space-y-4">
+      <div className="space-y-3">
         <Card>
           <CardHeader title="The sum" />
           <CardBody>
@@ -484,8 +470,8 @@ function Variance({ amount }: { amount: number | null }) {
   return (
     <div className={cn(
       "mt-4 rounded-lg border px-4 py-3",
-      balanced ? "bg-green-50 border-success"
-               : "bg-yellow-50 border-brand-yellow",
+      balanced ? "bg-success-50 border-success"
+               : "bg-brand-yellow-50 border-brand-yellow",
     )}>
       <p className="flex items-center gap-2 text-base font-medium">
         {balanced
@@ -682,7 +668,7 @@ function Finalize({ hotelId, hotelName, day, onDone, onBack }: {
   };
 
   return (
-    <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_360px]">
+    <div className="grid gap-5 lg:grid-cols-[minmax(0,1fr)_360px]">
       <Card>
         <CardHeader
           title="Before it closes"
@@ -698,7 +684,7 @@ function Finalize({ hotelId, hotelName, day, onDone, onBack }: {
             <ul className="space-y-3">
               {day.blockers.map((b) => (
                 <li key={b.id}
-                    className="rounded-lg border border-brand-yellow bg-yellow-50 px-4 py-3">
+                    className="rounded-lg border border-brand-yellow bg-brand-yellow-50 px-4 py-3">
                   <p className="flex items-start gap-2 text-base">
                     <AlertTriangle className="size-4 mt-0.5 shrink-0 text-warning-dark" />
                     {b.reason}
@@ -748,7 +734,7 @@ function Finalize({ hotelId, hotelName, day, onDone, onBack }: {
             <p className="mt-4 text-base text-grey-600">
               The drawer has not been counted.{" "}
               <button type="button" onClick={onBack}
-                      className="underline cursor-pointer">
+                      className="font-medium text-brand-orange-700 hover:underline underline-offset-4 cursor-pointer">
                 Count it
               </button>{" "}
               first.

@@ -2,7 +2,7 @@ import { useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useParams, useSearchParams } from "react-router";
 import {
-  UtensilsCrossed, Plus, X, Receipt, BedDouble, Banknote,
+  UtensilsCrossed, Plus, X, Receipt, BedDouble, Banknote, ChevronRight,
   CreditCard, Smartphone, Printer, Percent, Split, CalendarHeart,
 } from "lucide-react";
 import { DishDialog } from "@/modules/pos/flows/DishDialog";
@@ -13,8 +13,8 @@ import { money } from "@/lib/format";
 import { useUi } from "@/lib/ui";
 import { useLiveOrders } from "@/lib/useLiveOrders";
 import {
-  Page, PageHeader, Card, CardBody, StatusPill, Button, toast,
-  Dialog, DialogContent, Field, fieldProps, Input, NativeSelect,
+  Page, PageHeader, Card, CardHeader, CardBody, StatusPill, Button, toast,
+  Dialog, DialogContent, Field, fieldProps, Input, NativeSelect, IconChip,
 } from "@/components/ui";
 import { StartHere } from "@/components/app/StartHere";
 import { getMenu, listOrders, getOrder, listChargeableRooms, openOrder, addLine, voidLine, settleOrder, abandonOrder, applyDiscount, clearDiscount, setRoundOff, settleSplit, listPromotions, applyPromotion, setOrderHeader, type Order, type MenuItem, type OrderSummary, type TenderInput, type CashId } from "@/modules/pos/data/till";
@@ -226,7 +226,7 @@ export default function TillPage() {
       {menu.data?.length === 0 && (
         <Card className="mb-5">
           <CardBody>
-            <p className="text-base font-medium text-ink-900">
+            <p className="text-md font-semibold text-ink-900">
               There is no menu yet
             </p>
             <p className="text-sm text-grey-600 mt-1 leading-relaxed">
@@ -243,7 +243,7 @@ export default function TillPage() {
           {!openId ? (
             <Card>
               <CardBody>
-                <p className="text-base font-medium text-ink-900 mb-1">
+                <p className="text-md font-semibold text-ink-900 mb-1">
                   Start an order
                 </p>
                 <p className="text-sm text-grey-600 mb-3 leading-relaxed">
@@ -265,10 +265,10 @@ export default function TillPage() {
               </CardBody>
             </Card>
           ) : (
-            <div className="space-y-5">
+            <div className="space-y-6">
               {menu.data?.map((cat) => (
                 <section key={cat.id}>
-                  <h2 className="text-md font-semibold text-ink-900 mb-2.5">
+                  <h2 className="text-md font-semibold text-ink-900 mb-3">
                     {cat.name}
                   </h2>
                   <div className="grid gap-2 sm:grid-cols-2">
@@ -280,10 +280,10 @@ export default function TillPage() {
                         disabled={!item.isActive || order?.status !== "open"}
                         className={cn(
                           "flex items-center justify-between gap-3 text-left",
-                          "rounded-md border p-3 min-h-14 transition-colors duration-150",
+                          "rounded-lg ring-1 ring-inset ring-grey-200 px-3.5 py-3 min-h-14",
                           item.isActive
-                            ? "border-grey-200 bg-white hover:border-brand-orange hover:bg-brand-orange-50"
-                            : "border-grey-200 bg-grey-50 text-grey-500 cursor-not-allowed",
+                            ? "bg-white press-tile hover:ring-grey-400 hover:bg-grey-50 disabled:cursor-not-allowed"
+                            : "bg-grey-50 text-grey-500 cursor-not-allowed",
                         )}
                       >
                         <span className="min-w-0">
@@ -320,7 +320,7 @@ export default function TillPage() {
         </div>
 
         {/* ── The bill ─────────────────────────────────────────── */}
-        <div className="space-y-4">
+        <div className="space-y-3">
           {openId && current.data === undefined && current.error && (
             <Card>
               <ReadFailed
@@ -359,12 +359,8 @@ export default function TillPage() {
           )}
 
           {openOrders.length > 0 && (
-            <Card>
-              <div className="px-4 pt-3.5 pb-1">
-                <p className="text-2xs uppercase tracking-wide text-grey-500">
-                  Open orders
-                </p>
-              </div>
+            <Card className="overflow-hidden">
+              <CardHeader title="Open orders" />
               <ul className="divide-y divide-grey-100">
                 {openOrders.map((o) => (
                   <OrderRow key={o.id} order={o}
@@ -376,12 +372,8 @@ export default function TillPage() {
           )}
 
           {done.length > 0 && (
-            <Card>
-              <div className="px-4 pt-3.5 pb-1">
-                <p className="text-2xs uppercase tracking-wide text-grey-500">
-                  Settled today
-                </p>
-              </div>
+            <Card className="overflow-hidden">
+              <CardHeader title="Settled today" />
               <ul className="divide-y divide-grey-100">
                 {done.slice(0, 12).map((o) => (
                   <OrderRow key={o.id} order={o}
@@ -414,16 +406,16 @@ function OrderRow({ order, active, onOpen }: {
         type="button"
         onClick={onOpen}
         className={cn(
-          "w-full flex items-center gap-3 px-4 py-3 text-left min-h-14",
+          "w-full flex items-center gap-3 px-4 py-3 text-left min-h-14 cursor-pointer",
           "transition-colors duration-150",
           active ? "bg-brand-orange-50" : "hover:bg-grey-50",
         )}
       >
         <div className="min-w-0 flex-1">
-          <p className="text-base text-ink-900 tabular truncate">
+          <p className="text-base font-medium text-ink-900 tabular truncate">
             {order.orderNo}
             {order.table && (
-              <span className="text-grey-500"> · {order.table}</span>
+              <span className="font-normal text-grey-500"> · {order.table}</span>
             )}
           </p>
           <p className="text-2xs text-grey-500">
@@ -431,9 +423,11 @@ function OrderRow({ order, active, onOpen }: {
             {order.paymentMethod && ` · ${order.paymentMethod}`}
           </p>
         </div>
-        <span className="tabular text-base text-ink-900 shrink-0">
+        <span className="tabular text-base font-medium text-ink-900 shrink-0">
           {money(order.gross)}
         </span>
+        {/* It opens the order: the Tappable Rule's arrow. */}
+        <ChevronRight className="size-4 text-grey-400 shrink-0" aria-hidden />
       </button>
     </li>
   );
@@ -615,11 +609,10 @@ function DiscountDialog({
                 type="button"
                 onClick={() => setType(t)}
                 className={cn(
-                  "flex-1 h-11 rounded-md border text-base font-medium cursor-pointer",
-                  "transition-colors duration-200",
+                  "press flex-1 h-11 rounded-full border text-base font-medium cursor-pointer",
                   type === t
-                    ? "border-brand-orange bg-orange-50 text-brand-orange-700"
-                    : "border-grey-300 text-grey-600 hover:bg-grey-50",
+                    ? "border-brand-orange bg-brand-orange-50 text-brand-orange-700"
+                    : "border-grey-300 bg-white text-grey-600 hover:border-grey-400 hover:bg-grey-50",
                 )}
               >
                 {t === "percent" ? "Percentage" : "Fixed amount"}
@@ -652,7 +645,7 @@ function DiscountDialog({
             </p>
           )}
           {tooMuch && (
-            <p className="text-sm text-brand-red">
+            <p className="text-sm text-brand-red-700">
               That is more than the bill. A discount cannot make it negative.
             </p>
           )}
@@ -660,7 +653,7 @@ function DiscountDialog({
               is arithmetic a biller has to do while a guest waits, and
               this bill's ceiling is the number they actually need. */}
           {overCap && !tooMuch && (
-            <p className="text-sm text-brand-red">
+            <p className="text-sm text-brand-red-700">
               A biller may take off up to {cap}% - {money(ceiling!)} on this
               bill. {live.length > 0
                 ? "Anything larger goes on as one of the promotions above."
@@ -773,7 +766,7 @@ function SplitPanel({
               type="button"
               onClick={() => setRows((rs) => rs.filter((_, n) => n !== i))}
               aria-label="Remove this payment"
-              className="size-11 grid place-items-center rounded-md text-grey-400 hover:text-brand-red hover:bg-red-50 shrink-0 cursor-pointer"
+              className="press size-11 grid place-items-center rounded-full text-grey-500 hover:text-brand-red-700 hover:bg-brand-red-50 shrink-0 cursor-pointer"
             >
               <X className="size-4" />
             </button>
@@ -941,9 +934,10 @@ function OrderPanel({
 
   return (
     <Card>
-      <div className="px-4 pt-3.5 pb-2 flex items-center gap-2">
-        <Receipt className="size-3.5 text-grey-400" />
-        <p className="text-2xs uppercase tracking-wide text-grey-500 flex-1">
+      {/* The order's number is the card's heading (16px, the ladder). */}
+      <div className="px-4 py-3.5 flex items-center gap-2.5 border-b border-grey-200">
+        <IconChip size={24}><Receipt /></IconChip>
+        <p className="text-md font-semibold text-ink-900 tabular flex-1 min-w-0 truncate">
           {order.orderNo}
           {order.table && ` · ${order.table}`}
         </p>
@@ -968,7 +962,7 @@ function OrderPanel({
         />
         {!settled && (
           <FunctionPicker
-            className="px-4 pb-3"
+            className="pb-3"
             hotelId={hotelId}
             value={order.eventId}
             currentTitle={order.eventTitle}
@@ -1023,7 +1017,7 @@ function OrderPanel({
                     type="button"
                     onClick={() => onStrike(line.id)}
                     aria-label={`Strike ${line.name}`}
-                    className="size-11 grid place-items-center rounded-md text-grey-400 hover:text-brand-red hover:bg-red-50 shrink-0"
+                    className="press size-11 grid place-items-center rounded-full text-grey-500 hover:text-brand-red-700 hover:bg-brand-red-50 shrink-0 cursor-pointer"
                   >
                     <X className="size-4" />
                   </button>

@@ -132,7 +132,7 @@ export function DishDialog({
         <div className="space-y-5">
           {needsVariation && (
             <section>
-              <h4 className="text-2xs font-semibold uppercase tracking-wide text-grey-500 mb-2">
+              <h4 className="text-2xs font-semibold uppercase tracking-wide text-grey-500 mb-3">
                 Variation
               </h4>
               <div className="flex gap-2 flex-wrap">
@@ -142,11 +142,10 @@ export function DishDialog({
                     type="button"
                     onClick={() => setVariationId(v.id)}
                     className={cn(
-                      "min-w-24 min-h-16 px-4 rounded-md border text-left cursor-pointer",
-                      "transition-colors duration-200",
+                      "press-tile min-w-24 min-h-16 px-4 rounded-lg border text-left cursor-pointer",
                       variationId === v.id
-                        ? "border-brand-orange bg-orange-50"
-                        : "border-grey-300 hover:bg-grey-50",
+                        ? "border-brand-orange bg-brand-orange-50"
+                        : "border-grey-300 bg-white hover:border-grey-400 hover:bg-grey-50",
                     )}
                   >
                     <span className={cn(
@@ -186,10 +185,10 @@ export function DishDialog({
                 if (!shown.length) return null;
                 return (
                   <div key={g.id} className="mb-4 last:mb-0">
-                    <h4 className="text-2xs font-semibold uppercase tracking-wide text-grey-500 mb-2">
+                    <h4 className="text-2xs font-semibold uppercase tracking-wide text-grey-500 mb-3">
                       {g.label}
                       <span className={cn("ml-1 normal-case tracking-normal",
-                        countIn(g) < g.minSelect ? "text-brand-red" : "text-grey-500")}>
+                        countIn(g) < g.minSelect ? "text-brand-red-700" : "text-grey-500")}>
                         {chooseRule(g.minSelect, g.maxSelect)}
                       </span>
                     </h4>
@@ -208,15 +207,14 @@ export function DishDialog({
                             disabled={Boolean(off) || full}
                             onClick={() => toggle(a.id, g)}
                             className={cn(
-                              "min-h-16 px-3 rounded-md border text-left",
-                              "transition-colors duration-200",
+                              "min-h-16 px-3.5 rounded-lg border text-left",
                               full && "opacity-50",
                               off
                                 ? "border-grey-200 bg-grey-50 cursor-not-allowed"
-                                : "cursor-pointer",
+                                : "cursor-pointer press-tile",
                               !off && chosen.has(a.id)
-                                ? "border-success bg-green-50"
-                                : !off && "border-grey-300 hover:bg-grey-50",
+                                ? "border-success bg-success-50"
+                                : !off && "border-grey-300 bg-white hover:border-grey-400 hover:bg-grey-50",
                             )}
                           >
                             <span className={cn(
@@ -239,7 +237,7 @@ export function DishDialog({
           )}
 
           <section>
-            <h4 className="text-2xs font-semibold uppercase tracking-wide text-grey-500 mb-2">
+            <h4 className="text-2xs font-semibold uppercase tracking-wide text-grey-500 mb-3">
               Note for the kitchen
             </h4>
             {/* The list first, because it is what gets used, and because a
@@ -252,11 +250,10 @@ export function DishDialog({
                   type="button"
                   onClick={() => setNote(note === n ? "" : n)}
                   className={cn(
-                    "min-h-11 px-3 rounded-md border text-base cursor-pointer",
-                    "transition-colors duration-200",
+                    "press min-h-11 px-3.5 rounded-full border text-base font-medium cursor-pointer",
                     note === n
-                      ? "border-brand-orange bg-orange-50 text-brand-orange-700"
-                      : "border-grey-300 text-grey-700 hover:bg-grey-50",
+                      ? "border-brand-orange bg-brand-orange-50 text-brand-orange-700"
+                      : "border-grey-300 bg-white text-grey-700 hover:border-grey-400 hover:bg-grey-50",
                   )}
                 >
                   {n}
