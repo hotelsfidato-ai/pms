@@ -8,7 +8,7 @@ import { cn } from "@/lib/cn";
 import { money, dateTime } from "@/lib/format";
 import { useUi } from "@/lib/ui";
 import {
-  Page, PageHeader, Card, CardBody, Button, Skeleton, toast,
+  Page, PageHeader, Card, CardHeader, CardBody, Button, Skeleton, toast,
   Dialog, DialogContent, DialogClose, Field, fieldProps, Input, Textarea,
   NativeSelect, StatusPill,
 } from "@/components/ui";
@@ -94,7 +94,7 @@ export default function BanquetEventPage() {
         <PageHeader
           title="Function"
           actions={
-            <Button variant="secondary" className="h-11"
+            <Button variant="secondary"
                     onClick={() => navigate(`/h/${hotelId}/banquet`)}>
               <ArrowLeft className="size-4" /> Diary
             </Button>
@@ -127,157 +127,174 @@ export default function BanquetEventPage() {
         title={e.title}
         description={`${e.reference} · ${e.venue.name}`}
         actions={
-          <div className="flex flex-wrap gap-2">
-            <Button variant="secondary" className="h-11"
+          <>
+            <Button variant="secondary"
                     onClick={() => navigate(`/h/${hotelId}/banquet`)}>
               <ArrowLeft className="size-4" /> Diary
             </Button>
             {e.status === "enquiry" && (
-              <Button variant="primary" className="h-11" onClick={() => void confirm()}>
+              <Button variant="primary" onClick={() => void confirm()}>
                 <Check className="size-4" /> Confirm and hold the hall
               </Button>
             )}
             {e.status !== "cancelled" && (
-              <Button variant="secondary" className="h-11"
+              <Button variant="secondary"
                       onClick={() => setCancelling(true)}>
                 Cancel
               </Button>
             )}
-          </div>
+          </>
         }
       />
 
-      <ReadStale error={readError(q)} loadedAt={q.dataUpdatedAt}
+      <ReadStale className="mb-5" error={readError(q)} loadedAt={q.dataUpdatedAt}
                  onRetry={() => void q.refetch()} />
 
-      {e.status === "cancelled" && e.cancelReason && (
-        <Card>
-          <CardBody className="flex items-start gap-3">
-            <AlertTriangle className="size-4 mt-0.5 shrink-0 text-brand-red" />
-            <p className="text-sm">
-              <span className="font-medium">Cancelled.</span> {e.cancelReason}
-            </p>
-          </CardBody>
-        </Card>
-      )}
+      {/* Cards 12px apart (the Rhythm Rule); they touched before. */}
+      <div className="space-y-3">
+        {e.status === "cancelled" && e.cancelReason && (
+          <Card>
+            <CardBody className="flex items-start gap-3">
+              <AlertTriangle className="size-4 mt-0.5 shrink-0 text-brand-red" />
+              <p className="text-sm text-ink-900">
+                <span className="font-medium">Cancelled.</span> {e.cancelReason}
+              </p>
+            </CardBody>
+          </Card>
+        )}
 
-      <div className="grid gap-4 lg:grid-cols-3">
-        {/* ── What and when ─────────────────────────────────────── */}
-        <Card className="lg:col-span-2">
-          <CardBody className="space-y-3">
-            <p className="flex flex-wrap items-center gap-2">
-              <StatusPill tone={s.tone}>{s.label}</StatusPill>
-              {e.status === "enquiry" && (
-                <span className="text-sm text-grey-600">
-                  This holds nothing. Confirming takes the hall.
-                </span>
-              )}
-            </p>
-
-            <dl className="grid gap-x-6 gap-y-3 sm:grid-cols-2">
-              <Detail label="From">
-                <span className="inline-flex items-center gap-1.5">
-                  <Clock className="size-3.5 shrink-0 text-grey-500" />
-                  {when(e.startsAt)}
-                </span>
-              </Detail>
-              <Detail label="Until">{when(e.endsAt)}</Detail>
-              <Detail label="Host">{e.hostName}</Detail>
-              <Detail label="Telephone">{e.hostPhone ?? "-"}</Detail>
-              <Detail label="Expected guests">
-                <span className="inline-flex items-center gap-1.5">
-                  <Users className="size-3.5 shrink-0 text-grey-500" />
-                  {e.pax ?? "-"}
-                </span>
-              </Detail>
-              <Detail label="Guaranteed">{e.paxGuaranteed ?? "-"}</Detail>
-              <Detail label="Hall">
-                {e.venue.name}
-                {e.venue.seated !== null && (
-                  <span className="text-grey-500"> · seats {e.venue.seated}</span>
+        {/* Each card as tall as what it holds (No Dead Space): the money
+            card is not stretched to the details beside it. */}
+        <div className="grid gap-3 lg:grid-cols-3 lg:items-start">
+          {/* ── What and when ─────────────────────────────────────── */}
+          <Card className="lg:col-span-2">
+            <CardBody className="space-y-3">
+              <p className="flex flex-wrap items-center gap-2">
+                <StatusPill tone={s.tone}>{s.label}</StatusPill>
+                {e.status === "enquiry" && (
+                  <span className="text-sm text-grey-600">
+                    This holds nothing. Confirming takes the hall.
+                  </span>
                 )}
-              </Detail>
-              <Detail label="Registered by">
-                {e.registeredBy ?? "-"}
-                <span className="block text-sm text-grey-500">{when(e.registeredAt)}</span>
-              </Detail>
-            </dl>
+              </p>
 
-            {e.notes && (
-              <p className="rounded-lg bg-grey-50 px-3 py-2 text-sm">{e.notes}</p>
-            )}
-          </CardBody>
-        </Card>
+              <dl className="grid gap-x-6 gap-y-3 sm:grid-cols-2">
+                <Detail label="From">
+                  <span className="inline-flex items-center gap-1.5">
+                    <Clock className="size-3.5 shrink-0 text-grey-400" />
+                    {when(e.startsAt)}
+                  </span>
+                </Detail>
+                <Detail label="Until">{when(e.endsAt)}</Detail>
+                <Detail label="Host">{e.hostName}</Detail>
+                <Detail label="Telephone">
+                  <span className={cn("tabular", e.hostPhone === null && "text-grey-500")}>
+                    {e.hostPhone ?? "-"}
+                  </span>
+                </Detail>
+                <Detail label="Expected guests">
+                  <span className={cn("inline-flex items-center gap-1.5 tabular",
+                                      e.pax === null && "text-grey-500")}>
+                    <Users className="size-3.5 shrink-0 text-grey-400" />
+                    {e.pax ?? "-"}
+                  </span>
+                </Detail>
+                <Detail label="Guaranteed">
+                  <span className={cn("tabular", e.paxGuaranteed === null && "text-grey-500")}>
+                    {e.paxGuaranteed ?? "-"}
+                  </span>
+                </Detail>
+                <Detail label="Hall">
+                  {e.venue.name}
+                  {e.venue.seated !== null && (
+                    <span className="font-normal text-grey-500"> · seats {e.venue.seated}</span>
+                  )}
+                </Detail>
+                <Detail label="Registered by">
+                  {e.registeredBy ?? "-"}
+                  <span className="block text-xs font-normal text-grey-500 mt-0.5">{when(e.registeredAt)}</span>
+                </Detail>
+              </dl>
 
-        {/* ── The money ─────────────────────────────────────────── */}
-        <Card>
-          <CardBody className="space-y-3">
-            <p className="text-base font-medium">The money</p>
+              {e.notes && (
+                <p className="rounded-lg bg-grey-50 px-3.5 py-3 text-sm text-ink-900">{e.notes}</p>
+              )}
+            </CardBody>
+          </Card>
 
-            <dl className="space-y-2 text-sm">
-              <Line label="Hall" value={rupees(e.money.venue)} />
-              <Line label="Catering" value={rupees(e.money.food)} />
-              {/* Settled restaurant orders only; each one is listed below. */}
-              <Line label="Restaurant orders" value={rupees(e.money.pos)} />
-            </dl>
+          {/* ── The money ─────────────────────────────────────────────
+              The Figure Rule's rows: label left, value right; the total on
+              the ladder's figure step under a hairline. */}
+          <Card>
+            <CardHeader title="The money" />
+            <CardBody className="space-y-3">
+              <dl>
+                <Line label="Hall" value={rupees(e.money.venue)} />
+                <Line label="Catering" value={rupees(e.money.food)} />
+                {/* Settled restaurant orders only; each one is listed below. */}
+                <Line label="Restaurant orders" value={rupees(e.money.pos)} />
+              </dl>
 
-            <div className="border-t border-grey-200 pt-3">
-              {/* NULL when anything is unpriced. The sentence beneath
-                  says which, so the gap is fixable rather than hidden. */}
-              <div className="flex items-baseline justify-between gap-3">
-                <span className="font-medium">Total</span>
-                <span className={cn("text-lg font-medium tabular-nums",
-                                    e.money.total === null && "text-grey-500")}>
-                  {rupees(e.money.total)}
-                </span>
+              <div className="border-t border-grey-100 pt-3">
+                {/* NULL when anything is unpriced. The sentence beneath
+                    says which, so the gap is fixable rather than hidden. */}
+                <div className="flex items-baseline justify-between gap-3">
+                  <span className="text-sm font-medium text-grey-600">Total</span>
+                  <span className={cn("text-xl sm:text-2xl font-semibold tabular tracking-[-0.022em]",
+                                      e.money.total === null ? "text-grey-500" : "text-ink-900")}>
+                    {rupees(e.money.total)}
+                  </span>
+                </div>
+                {e.money.unpriced && (
+                  <p className="mt-1.5 text-sm text-warning-dark">
+                    {e.money.unpriced}
+                  </p>
+                )}
               </div>
-              {e.money.unpriced && (
-                <p className="mt-1.5 text-sm text-warning-dark">
-                  {e.money.unpriced}
+
+              <Button variant="secondary" className="w-full"
+                      onClick={() => setPricing(true)}>
+                {e.agreedAmount === null ? "Set the hall price" : "Change the hall price"}
+              </Button>
+
+              {e.folioId && (
+                <p className="flex items-center gap-1.5 text-sm text-grey-600">
+                  <Receipt className="size-3.5 shrink-0 text-grey-400" />
+                  A bill is open for this function.
                 </p>
               )}
-            </div>
+            </CardBody>
+          </Card>
+        </div>
 
-            <Button variant="secondary" className="h-11 w-full"
-                    onClick={() => setPricing(true)}>
-              {e.agreedAmount === null ? "Set the hall price" : "Change the hall price"}
-            </Button>
-
-            {e.folioId && (
-              <p className="flex items-center gap-1.5 text-sm text-grey-600">
-                <Receipt className="size-3.5 shrink-0" />
-                A bill is open for this function.
-              </p>
-            )}
-          </CardBody>
-        </Card>
-      </div>
-
-      {/* ── Catering ────────────────────────────────────────────── */}
-      <Card>
-        <CardBody className="space-y-3">
-          <div className="flex flex-wrap items-center justify-between gap-2">
-            <p className="text-base font-medium">Catering</p>
-            <Button variant="secondary" className="h-11"
-                    onClick={() => setAddingFood(true)}>
-              <Plus className="size-4" /> Add a course
-            </Button>
-          </div>
+        {/* ── Catering ──────────────────────────────────────────────
+            A course is a list row, a hairline between (not a box in the
+            card); its amount level at the right. */}
+        <Card>
+          <CardHeader
+            title="Catering"
+            className="items-center"
+            actions={
+              <Button variant="secondary"
+                      onClick={() => setAddingFood(true)}>
+                <Plus className="size-4" /> Add a course
+              </Button>
+            }
+          />
 
           {e.catering.length === 0 ? (
             /* Not a nag. A hall let for a meeting feeds nobody, and
                that is a complete booking. */
-            <p className="rounded-lg border border-dashed border-grey-200
-                          px-3 py-6 text-center text-sm text-grey-500">
+            <p className="px-4 py-6 text-center text-sm text-grey-500">
               Nothing is being served. That is a complete booking - add a
               course only if food is part of it.
             </p>
           ) : (
-            <ul className="divide-y divide-grey-200">
+            <ul className="divide-y divide-grey-100">
               {e.catering.map((c) => (
-                <li key={c.id} className="flex flex-wrap items-center gap-3 py-2.5">
+                <li key={c.id} className="flex items-center gap-3 px-4 py-3 min-h-14">
                   <div className="min-w-0 flex-1">
-                    <p className="font-medium">{c.name}</p>
+                    <p className="text-sm font-medium text-ink-900">{c.name}</p>
                     <p className="text-sm text-grey-500">
                       {c.pax} {c.pax === 1 ? "plate" : "plates"}
                       {" · "}
@@ -287,12 +304,12 @@ export default function BanquetEventPage() {
                       {c.notes ? ` · ${c.notes}` : ""}
                     </p>
                   </div>
-                  <span className={cn("tabular-nums font-medium",
-                                      c.ratePerHead === null && "text-grey-500")}>
+                  <span className={cn("shrink-0 text-sm font-medium tabular",
+                                      c.ratePerHead === null ? "text-grey-500" : "text-ink-900")}>
                     {c.ratePerHead === null ? "-" : money(c.pax * c.ratePerHead)}
                   </span>
                   <Button
-                    variant="secondary" className="h-11 shrink-0"
+                    variant="secondary" size="icon" className="shrink-0"
                     aria-label={`Remove ${c.name}`}
                     onClick={async () => {
                       const res = await removeBanquetCourse(hotelId, e.id, c.id);
@@ -306,58 +323,55 @@ export default function BanquetEventPage() {
               ))}
             </ul>
           )}
-        </CardBody>
-      </Card>
+        </Card>
 
-      {/* ── Restaurant orders ─────────────────────────────────────
-          The orders the restaurant charged to this function (D17-21).
-          An open one is listed, because it is real food, and said to be
-          outside the total — the total counts a bill once it is settled,
-          so it does not move while somebody is still ordering. */}
-      <Card>
-        <CardBody className="space-y-3">
-          <p className="text-base font-medium">Restaurant orders</p>
+        {/* ── Restaurant orders ─────────────────────────────────────
+            The orders the restaurant charged to this function (D17-21).
+            An open one is listed, because it is real food, and said to be
+            outside the total — the total counts a bill once it is settled,
+            so it does not move while somebody is still ordering. */}
+        <Card>
+          <CardHeader title="Restaurant orders" />
 
           {e.restaurantOrders.length === 0 ? (
-            <p className="rounded-lg border border-dashed border-grey-200
-                          px-3 py-6 text-center text-sm text-grey-500">
+            <p className="px-4 py-6 text-center text-sm text-grey-500">
               No restaurant orders are charged to this function.
             </p>
           ) : (
             <>
-              <ul className="divide-y divide-grey-200">
+              <ul className="divide-y divide-grey-100">
                 {e.restaurantOrders.map((o) => (
-                  <li key={o.id} className="flex flex-wrap items-center gap-3 py-2.5">
+                  <li key={o.id} className="flex items-center gap-3 px-4 py-3 min-h-14">
                     <div className="min-w-0 flex-1">
                       <p className="flex flex-wrap items-center gap-2">
-                        <span className="font-medium">{o.orderNo}</span>
+                        <span className="text-sm font-medium text-ink-900 tabular">{o.orderNo}</span>
                         <StatusPill tone={o.status === "settled" ? "success" : "neutral"}>
                           {o.status === "settled" ? "Settled" : "Open"}
                         </StatusPill>
                       </p>
-                      <p className="text-sm text-grey-500">
+                      <p className="mt-0.5 text-sm text-grey-500">
                         {o.outlet ?? "-"}
                         {o.table ? ` · Table ${o.table}` : ""}
                         {" · "}
                         {when(o.openedAt)}
                       </p>
                     </div>
-                    <span className={cn("tabular-nums font-medium",
-                                        o.amount === null && "text-grey-500")}>
+                    <span className={cn("shrink-0 text-sm font-medium tabular",
+                                        o.amount === null ? "text-grey-500" : "text-ink-900")}>
                       {rupees(o.amount)}
                     </span>
                   </li>
                 ))}
               </ul>
               {e.restaurantOrders.some((o) => o.status !== "settled") && (
-                <p className="text-sm text-grey-600">
+                <p className="px-4 py-3 border-t border-grey-100 text-sm text-grey-600">
                   An open order is not in the total until it is settled.
                 </p>
               )}
             </>
           )}
-        </CardBody>
-      </Card>
+        </Card>
+      </div>
 
       {pricing && (
         <PriceDialog
@@ -388,18 +402,18 @@ export default function BanquetEventPage() {
 
 function Detail({ label, children }: { label: string; children: React.ReactNode }) {
   return (
-    <div>
+    <div className="min-w-0">
       <dt className="text-sm text-grey-500">{label}</dt>
-      <dd className="mt-0.5">{children}</dd>
+      <dd className="mt-0.5 text-sm font-medium text-ink-900">{children}</dd>
     </div>
   );
 }
 
 function Line({ label, value }: { label: string; value: string }) {
   return (
-    <div className="flex items-baseline justify-between gap-3">
-      <dt className="text-grey-600">{label}</dt>
-      <dd className={cn("tabular-nums", value === "-" && "text-grey-500")}>
+    <div className="flex items-baseline justify-between gap-3 text-sm leading-[22px]">
+      <dt className="text-grey-500">{label}</dt>
+      <dd className={cn("font-medium tabular", value === "-" ? "text-grey-500" : "text-grey-700")}>
         {value}
       </dd>
     </div>
@@ -437,9 +451,9 @@ function PriceDialog({
         footer={
           <>
             <DialogClose asChild>
-              <Button variant="secondary" className="h-11">Cancel</Button>
+              <Button variant="secondary">Cancel</Button>
             </DialogClose>
-            <Button variant="primary" className="h-11" disabled={busy} onClick={() => void save()}>
+            <Button variant="primary" disabled={busy} onClick={() => void save()}>
               {busy ? "Saving…" : "Save"}
             </Button>
           </>
@@ -460,7 +474,7 @@ function PriceDialog({
                        placeholder="-"
                        onChange={(ev) => setAmount(ev.target.value)} />
                 {event.venue.defaultRate != null && (
-                  <Button type="button" variant="secondary" className="h-11 shrink-0"
+                  <Button type="button" variant="secondary" className="shrink-0"
                           onClick={() => setAmount(String(event.venue.defaultRate))}>
                     Use usual
                   </Button>
@@ -529,9 +543,9 @@ function CourseDialog({
         footer={
           <>
             <DialogClose asChild>
-              <Button variant="secondary" className="h-11">Cancel</Button>
+              <Button variant="secondary">Cancel</Button>
             </DialogClose>
-            <Button variant="primary" className="h-11" disabled={!ready || busy}
+            <Button variant="primary" disabled={!ready || busy}
                     onClick={() => void submit()}>
               {busy ? "Adding…" : "Add"}
             </Button>
@@ -621,9 +635,9 @@ function CancelDialog({
         footer={
           <>
             <DialogClose asChild>
-              <Button variant="secondary" className="h-11">Keep it</Button>
+              <Button variant="secondary">Keep it</Button>
             </DialogClose>
-            <Button variant="danger" className="h-11" disabled={!reason.trim() || busy}
+            <Button variant="danger" disabled={!reason.trim() || busy}
                     onClick={() => void submit()}>
               {busy ? "Cancelling…" : "Cancel the function"}
             </Button>
