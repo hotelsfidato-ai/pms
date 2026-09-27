@@ -1,10 +1,11 @@
 import { useQuery } from "@tanstack/react-query";
 import { useParams } from "react-router";
 import { Lightbulb, TrendingUp } from "lucide-react";
+import { cn } from "@/lib/cn";
 import { dateShort, percent } from "@/lib/format";
 import {
   Page, PageHeader, Card, CardBody, DataTable, EmptyState, ErrorState,
-  Skeleton, StatusPill, type Column,
+  IconChip, Skeleton, StatusPill, type Column,
 } from "@/components/ui";
 import { getOutlook, getPace, getPickup } from "@/modules/revenue-management/data/outlook";
 import {
@@ -130,15 +131,15 @@ export default function OutlookPage() {
       />
 
       {/* Pace - this month, against the same month last year. */}
-      <Card className="mb-6">
+      <Card className="mb-5">
         <CardBody>
-          <h2 className="text-sm font-semibold text-ink-900 flex items-center gap-2">
-            <TrendingUp className="size-4 text-grey-500" />
+          <h2 className="text-md font-semibold text-ink-900 flex items-center gap-2.5">
+            <IconChip><TrendingUp /></IconChip>
             This month, on the books
           </h2>
 
           {pace.isLoading || outlook.isLoading ? (
-            <Skeleton className="h-16 mt-4" />
+            <Skeleton className="h-16 mt-3" />
           ) : !pace.data ? (
             <p className="text-sm text-grey-600 mt-3">
               No figures for this property yet.
@@ -154,31 +155,31 @@ export default function OutlookPage() {
       </Card>
 
       {/* What it would suggest: a sentence, and its reason. */}
-      <Card className="mb-6">
+      <Card className="mb-5">
         <CardBody>
-          <h2 className="text-sm font-semibold text-ink-900 flex items-center gap-2">
-            <Lightbulb className="size-4 text-grey-500" />
+          <h2 className="text-md font-semibold text-ink-900 flex items-center gap-2.5">
+            <IconChip><Lightbulb /></IconChip>
             What to consider
           </h2>
 
           {outlook.isLoading ? (
-            <Skeleton className="h-16 mt-4" />
+            <Skeleton className="h-16 mt-3" />
           ) : suggestions.length === 0 ? (
             <p className="text-sm text-grey-600 mt-3">
               Nothing stands out in the next ninety nights.
             </p>
           ) : (
-            <ul className="mt-3 space-y-3">
+            <ul className="mt-3 divide-y divide-grey-100">
               {suggestions.slice(0, 5).map((s) => (
-                <li key={s.date} className="flex flex-col gap-0.5">
-                  <span className="text-base text-ink-900">{s.text}</span>
+                <li key={s.date} className="flex flex-col gap-0.5 py-3 first:pt-0">
+                  <span className="text-sm font-medium text-ink-900">{s.text}</span>
                   <span className="text-sm text-grey-600">{s.reason}</span>
                 </li>
               ))}
             </ul>
           )}
 
-          <p className="text-2xs text-grey-500 mt-4">
+          <p className="text-2xs text-grey-500 mt-3">
             A suggestion never names a price, and nothing here sets one.
             The Rate calendar is where a rate is changed.
           </p>
@@ -186,10 +187,10 @@ export default function OutlookPage() {
       </Card>
 
       {/* Which dates are soft. */}
-      <h2 className="text-sm font-semibold text-ink-900 mb-1">
+      <h2 className="text-md font-semibold text-ink-900">
         Dates worth a look
       </h2>
-      <p className="text-2xs text-grey-500 mb-3">
+      <p className="text-2xs text-grey-500 mt-0.5 mb-3">
         New 1 day, 7 days and 30 days: how many of the rooms sold for that
         night were booked in that long{today
           ? `, counted back from ${dateShort(today)}, the property's own day`
@@ -228,7 +229,7 @@ function Pace({
   weekAgo: number | null;
 }) {
   return (
-    <div className="mt-4 grid grid-cols-2 sm:grid-cols-3 gap-5">
+    <div className="mt-3 grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-x-4 gap-y-4">
       <Figure label="Occupancy" value={percent(now.occupancyPct)} />
       <Figure label="Rooms sold" value={String(now.roomsSold)} />
       <Figure label="Room nights" value={String(now.availableRoomNights)} />
@@ -243,6 +244,7 @@ function Pace({
           differ by exactly the week's cancellations. */}
       <Figure
         label="A week ago"
+        className="max-sm:col-span-2"
         value={orDash(weekAgo, String)}
         {...(weekAgo === null
           ? { note: "The records do not reach back a week." }
@@ -252,12 +254,15 @@ function Pace({
   );
 }
 
-function Figure({ label, value, note }: { label: string; value: string; note?: string }) {
+function Figure({ label, value, note, className }: {
+  label: string; value: string; note?: string; className?: string;
+}) {
   return (
-    <div>
-      <div className="text-2xs uppercase tracking-wide text-grey-500">{label}</div>
-      <div className="text-lg font-semibold text-ink-900 tabular-nums mt-0.5">{value}</div>
-      {note ? <div className="text-2xs text-grey-500 mt-0.5">{note}</div> : null}
+    <div className={cn("row-span-3 grid grid-rows-subgrid gap-y-0.5 min-w-0", className)}>
+      <div className="text-sm font-medium text-grey-600 whitespace-nowrap">{label}</div>
+      <div className={cn("text-xl sm:text-2xl font-semibold tabular-nums",
+                         value === "-" ? "text-grey-500" : "text-ink-900")}>{value}</div>
+      <div className="text-2xs text-grey-500">{note}</div>
     </div>
   );
 }
