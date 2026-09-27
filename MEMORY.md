@@ -6539,6 +6539,20 @@ copy will see of theirs.**
 
 ---
 
+### 332 · MINE: a Windows path in a Python string became control characters in DESIGN.md
+
+27 September. I added the owner's D27-52 rule to DESIGN.md with a Python heredoc. The
+path `D:\fidato crs\src\features\reservations\voucher.ts` sat in an ordinary (not raw)
+Python string, so `\f`, `\r` and `\v` became a form feed, a carriage return and a
+vertical tab, and the committed file read "D:idato crs". Caught by reading the diff
+straight after the commit; fixed in the next commit (c630085).
+
+**The rule:** a Windows path never goes into a Python string literal. Build it with
+`chr(92)`, read it from a file, or write the text with the Write tool; then read the
+committed line back with `cat -A` before saying it is done.
+
+---
+
 ### 331 · MINE: a git command I stopped left a lock, and the next merge failed without my noticing until the gates ran on the old tree
 
 27 September. I ran `git status --porcelain --ignored` in the main folder to find
