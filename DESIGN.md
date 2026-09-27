@@ -529,7 +529,7 @@ survive), and the signature block sits at the foot of the last page.
 
 **27 September, the owner (D27-52): every document looks like the CRS voucher.**
 "This is the main reference design; all my branding needs to come from this."
-The reference is `D:idato crs\srceatureseservationsoucher.ts`,
+The reference is `D:\fidato crs\src\features\reservations\voucher.ts`,
 `renderVoucherHtml` (read it; never edit the CRS). Every bill and document takes
 its layout: the logo masthead, the orange-barred title and number, the fact
 strip, two columns, a table with a 2px ink rule, the totals, orange-edged panels
