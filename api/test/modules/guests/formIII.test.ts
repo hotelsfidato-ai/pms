@@ -145,13 +145,19 @@ async function arrival(nationality: string) {
 }
 
 /** Pune has ten rooms and later files need them: a check-in proven here
-    gives its room straight back. */
+    gives its room straight back. Releasing marks it dirty (070, a room
+    somebody slept in), and nobody slept in it - so it is clean again, or
+    the next test finds no room once earlier files have used Pune's. */
 async function release(stay: string): Promise<void> {
   const db = await admin();
   try {
     await db.query(
       `update room_assignments set released_at = now()
         where reservation_id = $1 and released_at is null`, [stay]);
+    await db.query(
+      `update rooms set housekeeping_status = 'clean'
+        where id in (select room_id from room_assignments where reservation_id = $1)`,
+      [stay]);
   } finally {
     await db.end();
   }
