@@ -2,7 +2,7 @@ import { useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import { CalendarRange, ArrowLeftRight, Ban, Repeat, Gift, Check } from "lucide-react";
 import { Menu, MenuItem, MenuLabel, MenuSeparator, toast } from "@/components/ui";
-import { confirmWaiting } from "@/modules/reservations";
+import { confirmWaiting, CancelWaitingFlow } from "@/modules/reservations";
 import { AmendStayFlow } from "@/modules/front-desk/flows/AmendStayFlow";
 import { MoveRoomFlow } from "@/modules/front-desk/flows/MoveRoomFlow";
 import { VoidFlow } from "@/modules/front-desk/flows/VoidFlow";
@@ -31,6 +31,7 @@ export function StayActions({ hotelId, stay, businessDate }: {
   const [voiding, setVoiding] = useState(false);
   const [swap, setSwap] = useState(false);
   const [inclusions, setInclusions] = useState(false);
+  const [cancelling, setCancelling] = useState(false);
 
   const arrived = stay.status === "in-house" || stay.status === "due-out";
   /* The statuses this type actually has. `void` is a BAR TONE on the
@@ -113,7 +114,15 @@ export function StayActions({ hotelId, stay, businessDate }: {
             What this booking includes
           </MenuItem>
 
-          {mayVoid && <>
+          {/* A booking waiting for the hotel is CANCELLED, never voided: it
+              was never confirmed, so no charge and nothing sent (D27-64). */}
+          {mayVoid && waiting && <>
+            <MenuSeparator />
+            <MenuItem icon={Ban} danger onSelect={() => setCancelling(true)}>
+              Cancel this booking
+            </MenuItem>
+          </>}
+          {mayVoid && !waiting && <>
             <MenuSeparator />
             <MenuItem
               icon={Ban}
@@ -139,6 +148,12 @@ export function StayActions({ hotelId, stay, businessDate }: {
         hotelId={hotelId} stay={stay}
         open={voiding} onOpenChange={setVoiding}
       />
+      {waiting && (
+        <CancelWaitingFlow
+          hotelId={hotelId} stayId={stay.id} reference={stay.reference}
+          open={cancelling} onOpenChange={setCancelling}
+        />
+      )}
       {arrived && (
         <ExchangeRoomFlow
           hotelId={hotelId} stay={stay} businessDate={businessDate}

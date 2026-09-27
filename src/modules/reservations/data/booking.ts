@@ -62,6 +62,12 @@ export const confirmWaiting = (hotelId: string, stayId: string) =>
   send<{ rooms: number; reference: string }>(
     `/api/hotels/${hotelId}/stays/${stayId}/confirm`, "POST", {});
 
+/** Waiting for the hotel -> cancelled, every waiting room booked with it,
+    with no charge and nothing sent (D27-64). */
+export const cancelWaiting = (hotelId: string, stayId: string, reason: string) =>
+  send<{ rooms: number; reference: string }>(
+    `/api/hotels/${hotelId}/stays/${stayId}/cancel`, "POST", { reason });
+
 /** A new link to the guest's own page (114). Only its hash is kept, so each
     press makes a new one; the old ones keep working. */
 export const makeGuestLink = (hotelId: string, stayId: string) =>

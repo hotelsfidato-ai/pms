@@ -212,6 +212,9 @@ export const WRITE_RULES: Readonly<Record<string, Rule>> = {
      lists are kept by the owner, an administrator or the GM - asked in
      reservations/desk.ts. */
   [`POST ${H}/stays/:id/confirm`]: grant("reservation", "create", "Confirming a booking"),
+  /* D27-64: a booking waiting for the hotel is cancelled by whoever may
+     cancel a booking - the same grant as the void. */
+  [`POST ${H}/stays/:id/cancel`]: grant("reservation", "cancel", "Cancelling a booking"),
   [`POST ${H}/stays/:id/confirmation`]: grant("reservation", "create", "Sending a booking's voucher"),
   [`PUT ${H}/sales-people`]: own("reservations/desk.ts: owner, admin, GM"),
   [`PUT ${H}/room-promotions`]: own("reservations/desk.ts: owner, admin, GM"),

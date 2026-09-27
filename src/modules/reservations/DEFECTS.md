@@ -14,15 +14,6 @@ entries stay here: they are the reason the fault does not come back.
 
 ## Open — not fixed
 
-### RES-5 · A booking waiting for the hotel cannot be voided until it is confirmed
-
-**Found** 27 September, opening a waiting booking's panel (Phase 1): "Void
-this booking" is greyed with "Only a booking that has not arrived can be
-voided", because `StayActions` offers it only to `due-in`, and a waiting
-booking's status is `tentative`. **Not fixed**: it is front desk's menu and
-its void route; confirm first, then void. The owner to say whether a waiting
-booking should be voidable as it is.
-
 ### RES-6 · A group's lead can be a waiting room
 
 `app.group_lead` (131) picks the room booked first that still stands, a
@@ -35,6 +26,19 @@ confirms the whole group, so it cannot happen from the desk today.
 ---
 
 ## Fixed
+
+### RES-5 · A booking waiting for the hotel could not be cancelled until it was confirmed — FIXED 27 September
+
+**Found** 27 September, opening a waiting booking's panel (Phase 1): "Void
+this booking" was greyed ("Only a booking that has not arrived can be
+voided") and nothing else took the booking off. **The owner (D27-64): cancel
+it directly** - no charge (it was never confirmed), every waiting room of the
+booking, a short reason kept. **Fixed:** `POST /:code/stays/:id/cancel`
+(`desk.ts`, the gate's reservation-cancel grant), "Cancel this booking" in
+place of Void on a waiting booking's panel (`CancelWaitingFlow`). The room is
+free at once (044 counts no cancelled booking; 073 releases any room given).
+Rule: a new state a booking can be in needs its way out, not only its way in.
+
 
 ### RES-7 · Mine: a repeated booking answered without the ids the first answer had — FIXED 27 September
 
