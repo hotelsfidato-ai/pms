@@ -56,3 +56,15 @@
 | D27-52 | Printed documents (redesign, finance group) | **Every bill and document looks like the CRS voucher** (`D:\fidato crs\src\features\reservations\voucher.ts`, renderVoucherHtml): logo masthead, orange-barred title and number, fact strip, two columns, 2px ink rule, totals, orange-edged panels, footer, in its sans. Content unchanged. Finance now (tax invoice and credit note, VAT bill and its credit note, BillPrint); the restaurant bill and reports with their groups. Supersedes DESIGN.md's Georgia print font |
 | D27-53 | The logo on bills | **One logo for the whole group, chosen in Settings, printed on every bill. A setting, not code (D21-27):** this Fidato copy fills it with the Fidato SVG by upload; a buyer's copy starts empty and prints the hotel's name. The logo never goes in a migration |
 | D27-54 | The Tappable Rule (DESIGN.md) | **Keep every screen simple. Anything tappable looks tappable (buttons, orange links, an arrow on a tile or row that opens something); anything not tappable never looks like a button (status pills and counts stay flat)** |
+| D27-55 | Market segments on New booking (Phase 1) | **The walk-in's five, as they are** |
+| D27-56 | The sales people list | **Starts empty; the owner adds the names** |
+| D27-57 | Room promotions | **Start empty** |
+| D27-58 | Guest titles | **Mr, Ms, Mrs, Dr, or none** (a database CHECK) |
+| D27-59 | Who may tick complimentary, and keep the two lists | **Owner, admin and GM; the server refuses anyone else** |
+| D27-60 | Confirming a waiting booking | **A "Confirm the booking" button, for anyone who may make a booking** |
+| D27-61 | The booking summary's tax and due | **What the bill will carry: the first night's price for every night, as the night audit posts it** (the old sum of each night's calendar price, RES-4, fixed) |
+| D27-62 | Typed rates and the discount | **Typed rates stay as today; the 10% rule binds the Discount box** |
+| D27-63 | "Waiting for the hotel" on the booking lists | **Grey (neutral)** |
+| D27-64 | Cancelling a waiting booking (RES-5) | **Cancel it directly**: the room frees at once and nothing is sent, for the same people who may cancel a confirmed booking |
+| D27-65 | The bills' masthead | **The property's name, and under it "by <group name>"** (e.g. "5 Elements Akkalkot / by Fidato Hotels"), chosen over a logo above the name. The group's name comes from the same group setting as the logo (D27-53, D21-27); nothing in the code names Fidato |
+| D27-66 | Reviewing the rest of the redesign | **One review at the end, not group by group** ("do the updates, will give all things in one shot"). The redesign session runs helpers, three at a time in their own copies, on screens only; the owner approves everything together |

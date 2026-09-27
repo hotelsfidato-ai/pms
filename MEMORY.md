@@ -6539,6 +6539,34 @@ copy will see of theirs.**
 
 ---
 
+### 334 · The Form III session's lessons, 27 September
+
+- **TaskStop on a background `bash script.sh` kills the wrapper, not the script.** Two
+  check runs went at once and wrote into the same logs, and one loaded `formIII.ts`
+  while it was deliberately broken for a proof. Kill the process tree by id (confirm the
+  command line first), or give the script a lock.
+- **An API test that releases a room assignment gets a DIRTY room back (070).** A test
+  file that hands rooms back must set them clean again, or later tests run out of the
+  test hotel's ten rooms.
+
+### 333 · The Phase 1 session's lessons, 27 September
+
+- **A CHECK whose comparison meets a NULL is unknown, and unknown PASSES.** Write
+  `x is not null and x <= 10`, not `x <= 10` (RES-8, caught by the new database check).
+- **A field added to an answer must be added on the repeat path too.** The booking
+  door's replay of an idempotent request returned the old shape (RES-7, caught by
+  RES-3's tests).
+- **Clicking through a dev server while a test harness runs on the shared Postgres
+  gives "connection timeout" 500s** that look like the app's fault. Look after the
+  harness ends.
+- **Open, not yet explained: a gate run's database step said exit 0 after 22 s with
+  `g-db.log` cut off after the "migrations" header.** The re-run was real (1,195
+  assertions). A half-built `fidato_gate_10270` (17:59, no connections) is probably
+  that run's database; it is kept for whoever looks. Until explained, a database step
+  under a minute is not a pass: read the assertion count in the log.
+
+---
+
 ### 332 · MINE: a Windows path in a Python string became control characters in DESIGN.md
 
 27 September. I added the owner's D27-52 rule to DESIGN.md with a Python heredoc. The
