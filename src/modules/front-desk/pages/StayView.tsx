@@ -54,6 +54,8 @@ const BAR: Record<BarTone, string> = {
   "due-out": "bg-brand-yellow text-ink-900",
   "no-show": "bg-brand-rose-700 text-white",
   void: "bg-brand-red-50 text-brand-red-700 line-through",
+  /* Grey, as on the booking lists (D27-63). */
+  waiting: "bg-grey-100 text-grey-600 ring-1 ring-inset ring-grey-300 border-dashed",
 };
 
 const BAR_LABEL: Record<BarTone, string> = {
@@ -63,6 +65,7 @@ const BAR_LABEL: Record<BarTone, string> = {
   "due-out": "Due out",
   "no-show": "No show",
   void: "Void",
+  waiting: "Waiting for the hotel",
 };
 
 /* The stay panel's pill, from the bar's DERIVED tone — due-out is a
@@ -76,6 +79,7 @@ const BAR_TONE: Record<BarTone, Tone> = {
   "due-out": "warning",
   "no-show": "danger",
   void: "danger",
+  waiting: "neutral",
 };
 
 const PILLS = ["All", "Vacant", "Occupied", "Arrivals", "Reserved", "Blocked", "Due Out", "Dirty"] as const;

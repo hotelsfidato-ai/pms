@@ -72,6 +72,8 @@ export const RESERVATION_TONES: Record<string, Tone> = {
   completed: "neutral",
   cancelled: "danger",
   no_show: "danger",
+  /* Waiting for the hotel (Phase 1): grey, the owner's D27-63. */
+  tentative: "neutral",
 };
 
 export const INVOICE_TONES: Record<string, Tone> = {

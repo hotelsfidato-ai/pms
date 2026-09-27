@@ -53,10 +53,15 @@ export function DocLabel({ children, className }: { children: ReactNode; classNa
   );
 }
 
-export function DocMasthead({ logo, name, title, number, children }: {
-  /** An image source for the group's logo; null prints `name` instead. */
+export function DocMasthead({ logo, name, group, title, number, children }: {
+  /** An image source for the group's logo; null prints `name` instead.
+      Only ever an <img> (an SVG can carry script; the master, 27 Sep). */
   logo?: string | null;
   name: string;
+  /** The group's name from its setting, printed "by <group>" under the
+      property's name (the owner, 27 September). Null prints nothing:
+      no group is named in the code (D21-27). */
+  group?: string | null;
   /** The document's name, e.g. "Tax invoice". Printed in capitals. */
   title: string;
   number: string;
@@ -72,6 +77,7 @@ export function DocMasthead({ logo, name, title, number, children }: {
           ) : (
             <p className="text-xl font-extrabold tracking-[-0.01em] text-ink-700">{name}</p>
           )}
+          {group && <p className="text-xs font-semibold text-grey-500 mt-0.5">by {group}</p>}
         </div>
         <div className="shrink-0 border-l-4 border-accent-from pl-2.5">
           <p className="text-md font-extrabold uppercase tracking-[0.06em] text-ink-700">{title}</p>
