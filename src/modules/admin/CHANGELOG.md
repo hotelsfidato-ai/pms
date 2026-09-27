@@ -11,30 +11,41 @@ Work that touches the core or several services still goes in the root
 
 ---
 
-## 2026-09-27 · One group logo, set in Settings, for every bill (D27-53)
+## 2026-09-27 · The group's name and logo, one setting for every bill (D27-53, D27-65)
 
-**Asked for:** the owner's D27-53: one logo for the whole group, chosen in
-Settings, printed on every bill; a setting, not code (D21-27). Branch
-`admin/group-logo-27sep`. **The owner decided (27 Sep):** the owner, an
-administrator or the GM may change it (against the recommendation of group
-administrators only, with the risk put to them: any hotel's GM changes every
-hotel's bills); 200 KB at most. **Shipped:** migration "one logo for the whole
-group" (`group_logo`, one row, FORCE RLS: active staff read, `app.sets_group_logo()`
-writes, audited, empty in every copy); `groupLogo.ts` GET/PUT/DELETE
-`/:code/group-logo`, the two writes in roleGate's WRITE_RULES (room setup:
-owner, admin, GM); the file read by its bytes (PNG signature, or an SVG root
-with no script, handler, embedded page, `javascript:` or entity) before
-`withSession` opens; `GroupLogoCard` on Settings; `useGroupLogo(hotelCode)` from
-the front door for the documents, a data: URL for an `<img>`. **Found:** ADM-9
-(a long Settings value cut off at phone width); ADM-10 (the SVG check's
-pattern backtracked exponentially: 105 s on 211 bytes; fixed and held by a test). **Proved:** `groupLogo.test.ts`
-(API, 18), `db/tests/modules/admin.sql` "group logo" (15), `groupLogo.test.tsx`
-(web, 6); the script check and the insert policy each broken on purpose and
-seen failing; the Fidato artwork (the CRS's `logoMarkup.ts`, 5,316 bytes)
-uploaded through the card as the GM on fidato_s19, stored byte for byte, shown
-as an `<img>` at desktop and 375 px. **Left open:** the documents' logo slot
-(the redesign session wires `useGroupLogo`); the guest's own page does not
-show it (not asked); ADM-9.
+**Asked for:** the owner's D27-53 (one logo for the whole group, chosen in
+Settings, printed on every bill; a setting, not code, D21-27) and D27-65 (the
+masthead is the property's name and "by <group name>", the name from the same
+group setting). Branch `admin/group-logo-27sep`. **The owner decided (27 Sep):**
+the owner, an administrator or the GM may change it (against the
+recommendation of group administrators only, with the risk put to them: any
+hotel's GM changes every hotel's bills); the logo 200 KB at most.
+**Shipped:** migration 148 "the group's name and logo" (`group_settings`, one
+row: name, logo_type, logo; FORCE RLS: active staff read,
+`app.sets_group_settings()` writes; audited; EMPTY in every copy);
+`groupSettings.ts`: GET `/:code/group` (both), PUT `/:code/group/name`, PUT and
+DELETE `/:code/group/logo`, the three writes in roleGate's WRITE_RULES (room
+setup: owner, admin, GM); the name trimmed, 80 characters at most, blank
+clears; the logo read by its bytes (PNG signature, or an SVG root with no
+script, handler, embedded page, `javascript:` or entity) before `withSession`
+opens; `GroupCard` ("Group name and logo") on Settings;
+`useGroupSettings(hotelCode)` -> `{ name, logo }` from the front door for the
+documents, the logo a data: URL for an `<img>`. **Found:** ADM-9 (a long
+Settings value cut off at phone width, open); ADM-10 (the SVG check's pattern
+backtracked exponentially, 105 s on 211 bytes; fixed and held by a test).
+**Proved** (gates on `49355e2`, cp6 `95070a6` merged, 2,801 s): web types 0,
+api types 0, strip 0; web 716 of 717 - the one failure is "migrations are
+numbered with no gaps", because 148 waits for Form III's 147; API 1,595 passed,
+13 skipped, `groupSettings.test.ts` 23 of 23, and `front-desk/cashLimit.test.ts`
+timed out in its hooks at 30 s under the machine's load (see Left open);
+database 1,213 assertions, "group settings" 18 of them; replay: all 147
+migrations re-runnable. The script check and the insert policy each broken on
+purpose and seen failing. On fidato_s19 as the GM: "Fidato Hotels" typed and
+the Fidato artwork (the CRS's `logoMarkup.ts`, 5,316 bytes) uploaded through
+the card, stored byte for byte (same md5), audited, shown as an `<img>` at
+desktop and 375 px. **Left open:** the documents' masthead (the redesign
+session wires `useGroupSettings`); the guest's own page does not show them (not
+asked); ADM-9; the gap test until 147 merges.
 
 ---
 
