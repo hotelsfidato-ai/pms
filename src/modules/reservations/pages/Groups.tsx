@@ -166,7 +166,7 @@ function GroupRow({ group, code, open, onToggle }: {
                   0 departed" says nothing. */}
               <div className="flex flex-wrap gap-1.5 mt-2">
                 {/* One colour per state, everywhere (D27-48): in house
-                    blue, due in orange. */}
+                    blue, due in orange, cancelled red. */}
                 {group.inHouse > 0 && (
                   <StatusPill tone="info">{group.inHouse} in house</StatusPill>
                 )}
@@ -177,7 +177,7 @@ function GroupRow({ group, code, open, onToggle }: {
                   <StatusPill tone="neutral">{group.departed} departed</StatusPill>
                 )}
                 {group.cancelled > 0 && (
-                  <StatusPill tone="neutral">{group.cancelled} cancelled</StatusPill>
+                  <StatusPill tone="danger">{group.cancelled} cancelled</StatusPill>
                 )}
                 {group.routedRooms > 0 && (
                   <StatusPill tone="neutral">
@@ -216,7 +216,10 @@ function GroupRow({ group, code, open, onToggle }: {
                   {/* List rows, not boxes in the card (the Rhythm Rule's
                       row: 12px, a hairline between); each opens its stay,
                       so each ends in an arrow. */}
-                  <ul className="-mt-3 divide-y divide-grey-100">
+                  {/* `@container`: the room type below shows from a medium
+                      list width up (448px); with no container it never
+                      showed (the owner, 27 September). */}
+                  <ul className="@container -mt-3 divide-y divide-grey-100">
                     {detail.data.rooms.map((r) => (
                       <li key={r.reservationId}>
                         <Link
