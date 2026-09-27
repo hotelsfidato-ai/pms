@@ -4,6 +4,7 @@ import { useParams } from "react-router";
 import { Plus, Shirt } from "lucide-react";
 import { money } from "@/lib/format";
 import { ApiError } from "@/lib/api";
+import { cn } from "@/lib/cn";
 import {
   Page, PageHeader, Card, CardBody, Button, Skeleton, EmptyState, ErrorState,
   Dialog, DialogContent, Field, fieldProps, Input, NativeSelect, toast,
@@ -39,6 +40,9 @@ const unreachable = (e: unknown) => e instanceof ApiError && e.status === 0;
     a price and prints as one. */
 const rupees = (value: number | null) => (value === null ? "-" : money(value));
 
+/** DESIGN.md's table head: 40px, caption capitals in grey-500. */
+const TH = "px-4 h-10 text-2xs font-semibold uppercase tracking-wide text-grey-500 whitespace-nowrap";
+
 export default function LaundryPriceListPage() {
   const { code = "" } = useParams<{ code: string }>();
   const qc = useQueryClient();
@@ -60,67 +64,76 @@ export default function LaundryPriceListPage() {
       /* FOUR STATES, NOT ONE. A read that could not reach the server
          must never draw "nothing is on the list yet" - a price list that
          looks empty is a price list somebody types again. */
+      /* Each state in the list's own frame, where the list would be. */
       if (q.isPaused) {
         return (
-          <ErrorState
-            title="No connection"
-            description="This device is offline, so the price list cannot load. It loads by itself as soon as the connection is back."
-          />
+          <Card>
+            <ErrorState
+              title="No connection"
+              description="This device is offline, so the price list cannot load. It loads by itself as soon as the connection is back."
+            />
+          </Card>
         );
       }
       if (q.isError) {
         return (
-          <ErrorState
-            title="The price list did not load"
-            error={q.error}
-            description={unreachable(q.error)
-              ? "Could not reach the server, and there is nothing from earlier to show in its place. Check the connection, then try again."
-              : undefined}
-            onRetry={() => void q.refetch()}
-          />
+          <Card>
+            <ErrorState
+              title="The price list did not load"
+              error={q.error}
+              description={unreachable(q.error)
+                ? "Could not reach the server, and there is nothing from earlier to show in its place. Check the connection, then try again."
+                : undefined}
+              onRetry={() => void q.refetch()}
+            />
+          </Card>
         );
       }
-      return <Skeleton className="h-64" />;
+      return <Skeleton className="h-64 rounded-lg" />;
     }
 
     if (items.length === 0) {
       return (
-        <EmptyState
-          icon={<Shirt />}
-          title="Nothing is on the price list yet"
-          description={
-            "A line is one thing and one service - a shirt washed, a saree "
-            + "dry-cleaned. Put the price in if this property has decided one; "
-            + "leave it blank if it has not, and it reads a dash until somebody "
-            + "does."
-          }
-          action={
-            <Button variant="primary" onClick={() => setAdding(true)}>
-              Add the first item
-            </Button>
-          }
-        />
+        <Card>
+          <EmptyState
+            icon={<Shirt />}
+            title="Nothing is on the price list yet"
+            description={
+              "A line is one thing and one service - a shirt washed, a saree "
+              + "dry-cleaned. Put the price in if this property has decided one; "
+              + "leave it blank if it has not, and it reads a dash until somebody "
+              + "does."
+            }
+            action={
+              <Button variant="primary" onClick={() => setAdding(true)}>
+                Add the first item
+              </Button>
+            }
+          />
+        </Card>
       );
     }
 
+    /* The table head and hairlines of DESIGN.md (as the kit's DataTable
+       draws them); three columns, so it stays a table on a phone. */
     return (
-      <Card>
-        <CardBody className="p-0">
+      <Card className="overflow-hidden">
+        <div className="overflow-x-auto scrollbar-quiet">
           <table className="w-full text-sm">
-            <thead className="border-b border-grey-200 text-ink-600">
+            <thead className="bg-grey-50 border-b border-grey-200">
               <tr>
-                <th className="px-3 py-2 text-left font-medium">Item</th>
-                <th className="px-3 py-2 text-right font-medium tabular-nums">Price</th>
-                <th className="px-3 py-2 text-right font-medium">On the list</th>
+                <th className={cn(TH, "text-left")}>Item</th>
+                <th className={cn(TH, "text-right")}>Price</th>
+                <th className={cn(TH, "text-right")}>On the list</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-grey-200">
+            <tbody className="divide-y divide-grey-100">
               {items.map((item) => (
                 <ItemRow key={item.id} code={code} item={item} onSaved={refresh} />
               ))}
             </tbody>
           </table>
-        </CardBody>
+        </div>
       </Card>
     );
   })();
@@ -145,8 +158,8 @@ export default function LaundryPriceListPage() {
           will not add up. An unpriced line is legitimate - it is how the
           hotel's own linen is counted - so this is a count, not a fault. */}
       {unpriced > 0 && (
-        <Card className="mb-4">
-          <CardBody className="text-sm text-ink-700">
+        <Card className="mb-5">
+          <CardBody className="text-sm text-grey-600">
             {unpriced === 1
               ? "One item has no price yet. It reads \"-\", never 0, "
               : `${unpriced} items have no price yet. They read "-", never 0, `}
@@ -212,12 +225,12 @@ function ItemRow({
   };
 
   return (
-    <tr className={item.isActive ? undefined : "text-ink-600"}>
-      <td className="px-3 py-2">
+    <tr className={item.isActive ? "text-ink-900" : "text-grey-600"}>
+      <td className="px-4 py-3 min-w-0">
         <span className="font-medium text-ink-900">{item.name}</span>
-        <span className="text-ink-600"> · {SERVICE_WORDS[item.service]}</span>
+        <span className="text-grey-500"> · {SERVICE_WORDS[item.service]}</span>
       </td>
-      <td className="px-3 py-2 text-right tabular-nums">
+      <td className="px-4 py-3 text-right tabular">
         {item.isActive ? (
           <Input
             aria-label={`Price for ${item.name}, ${SERVICE_WORDS[item.service].toLowerCase()}`}
@@ -230,14 +243,14 @@ function ItemRow({
             onBlur={() => void save()}
           />
         ) : (
-          <span className={item.price === null ? "text-ink-600" : undefined}>
+          <span className={item.price === null ? "text-grey-500" : undefined}>
             {rupees(item.price)}
           </span>
         )}
       </td>
-      <td className="px-3 py-2 text-right">
+      <td className="px-4 py-3 text-right">
         <Button
-          variant="ghost"
+          variant="secondary"
           size="sm"
           onClick={() => void retire()}
         >
@@ -292,7 +305,17 @@ function AddDialog({
 
   return (
     <Dialog open onOpenChange={(open) => { if (!open) onClose(); }}>
-      <DialogContent title="Add an item to the price list">
+      <DialogContent
+        title="Add an item to the price list"
+        footer={
+          <>
+            <Button variant="secondary" onClick={onClose}>Cancel</Button>
+            <Button variant="primary" loading={saving} onClick={() => void submit()}>
+              Add it
+            </Button>
+          </>
+        }
+      >
         <div className="space-y-4">
           <Field label="What is it">
             {(p) => (
@@ -334,14 +357,7 @@ function AddDialog({
             )}
           </Field>
 
-          {problem && <p role="alert" className="text-sm text-brand-red">{problem}</p>}
-
-          <div className="flex justify-end gap-2">
-            <Button variant="secondary" onClick={onClose}>Cancel</Button>
-            <Button variant="primary" loading={saving} onClick={() => void submit()}>
-              Add it
-            </Button>
-          </div>
+          {problem && <p role="alert" className="text-sm text-brand-red-700">{problem}</p>}
         </div>
       </DialogContent>
     </Dialog>

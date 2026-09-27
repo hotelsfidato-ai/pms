@@ -117,47 +117,31 @@ export default function SpaDiaryPage() {
             : `${booked} ${booked === 1 ? "treatment" : "treatments"} on ${clockDate(from)}.`
         }
         actions={
-          <div className="flex flex-wrap gap-2">
+          <>
             {SETS_THE_LIST.includes(role) && (
-              <Button variant="secondary" className="h-11"
+              <Button variant="secondary"
                       onClick={() => void navigate(`/h/${code}/spa/setup`)}>
                 <Settings2 className="size-4" /> Treatments and therapists
               </Button>
             )}
             {mayBook && (
-              <Button variant="primary" className="h-11" onClick={() => setBooking(true)}>
+              <Button variant="primary" onClick={() => setBooking(true)}>
                 <Plus className="size-4" /> Book a treatment
               </Button>
             )}
-          </div>
+          </>
         }
       />
 
-      <ReadStale error={readError(diary)} loadedAt={diary.dataUpdatedAt}
+      <ReadStale className="mb-5" error={readError(diary)} loadedAt={diary.dataUpdatedAt}
                  onRetry={() => void diary.refetch()} />
-
-      {/* The day, one at a time. "Today" is the PROPERTY's operating day,
-          which the server sent — not this laptop's date. */}
-      <div className="mb-4 flex flex-wrap items-center gap-2">
-        <Button variant="secondary" className="h-11"
-                onClick={() => setDay(shiftDay(from, -1))}>
-          ← Day before
-        </Button>
-        <Button variant="secondary" className="h-11" onClick={() => setDay(businessDate)}>
-          <CalendarDays className="size-4" /> Today
-        </Button>
-        <Button variant="secondary" className="h-11"
-                onClick={() => setDay(shiftDay(from, 1))}>
-          Day after →
-        </Button>
-      </div>
 
       {/* RULE 6: somebody who may only look is told so, rather than left
           hunting for a button that is not there. D18-21: housekeeping
           sees the diary and reception books. */}
       {!mayBook && (
-        <Card className="mb-4">
-          <CardBody className="text-sm text-ink-700">
+        <Card className="mb-5">
+          <CardBody className="text-sm text-grey-600">
             Your role sees the diary and does not book. Taking or cancelling a
             treatment is reception's, the manager's, an administrator's or the
             owner's — ask one of them.
@@ -165,32 +149,53 @@ export default function SpaDiaryPage() {
         </Card>
       )}
 
-      {therapists.length === 0 ? (
-        <EmptyState
-          icon={<Flower2 />}
-          title="No therapists yet"
-          description={
-            "A booking is against a person, not a room, so the diary has "
-            + "nothing to draw until somebody enters who gives the treatments. "
-            + "Nothing is created for you."
-          }
-          action={SETS_THE_LIST.includes(role)
-            ? <Button onClick={() => void navigate(`/h/${code}/spa/setup`)}>
-                Add a therapist
-              </Button>
-            : undefined}
-        />
-      ) : (
-        <div className="space-y-4">
-          {therapists.map((t) => (
+      {/* One chart card, the Calendar's way (fidato-design § 4, a time
+          grid): its own toolbar moves the day; each therapist is a row on
+          the grey-50 of the Calendar's group rows, the treatments list
+          rows under them, a hairline between. */}
+      <Card className="overflow-hidden">
+        {/* The day, one at a time. "Today" is the PROPERTY's operating day,
+            which the server sent — not this laptop's date. */}
+        <div className="flex flex-wrap items-center gap-2 px-4 py-3 border-b border-grey-200">
+          <Button variant="secondary"
+                  onClick={() => setDay(shiftDay(from, -1))}>
+            ← Day before
+          </Button>
+          <Button variant="secondary" onClick={() => setDay(businessDate)}>
+            <CalendarDays className="size-4" /> Today
+          </Button>
+          <Button variant="secondary"
+                  onClick={() => setDay(shiftDay(from, 1))}>
+            Day after →
+          </Button>
+        </div>
+
+        {therapists.length === 0 ? (
+          <EmptyState
+            compact
+            icon={<Flower2 />}
+            title="No therapists yet"
+            description={
+              "A booking is against a person, not a room, so the diary has "
+              + "nothing to draw until somebody enters who gives the treatments. "
+              + "Nothing is created for you."
+            }
+            action={SETS_THE_LIST.includes(role)
+              ? <Button onClick={() => void navigate(`/h/${code}/spa/setup`)}>
+                  Add a therapist
+                </Button>
+              : undefined}
+          />
+        ) : (
+          therapists.map((t) => (
             <TherapistDay
               key={t.id} therapist={t} mayBook={mayBook}
               onCancel={(a) => setCancelling(a)}
               onClose={(a) => setClosing(a)}
             />
-          ))}
-        </div>
-      )}
+          ))
+        )}
+      </Card>
 
       {booking && (
         <BookDialog code={code} day={from} onClose={() => setBooking(false)} />
@@ -219,83 +224,85 @@ function TherapistDay({
   onCancel: (appointment: SpaAppointment) => void;
   onClose: (appointment: SpaAppointment) => void;
 }) {
+  const free = therapist.appointments.length === 0;
   return (
-    <Card>
-      <CardBody className="space-y-3">
-        <p className="flex flex-wrap items-baseline gap-2">
-          <span className="text-base font-medium">{therapist.name}</span>
-          <span className="text-sm text-grey-500">
-            {therapist.appointments.length === 0
-              ? "nothing booked"
-              : `${therapist.appointments.length} today`}
-          </span>
-        </p>
+    <section className="border-b border-grey-200 last:border-b-0">
+      <p className="flex flex-wrap items-baseline gap-x-2 gap-y-0.5 px-4 py-2.5
+                    bg-grey-50 border-b border-grey-200">
+        <span className="text-sm font-semibold text-ink-900">{therapist.name}</span>
+        <span className="text-xs text-grey-500">
+          {free
+            ? "nothing booked"
+            : `${therapist.appointments.length} today`}
+        </span>
+      </p>
 
-        {therapist.appointments.length === 0 ? (
-          <p className="rounded-lg border border-dashed border-grey-200
-                        px-3 py-6 text-center text-sm text-grey-500">
-            Free all day.
-          </p>
-        ) : (
-          <ul className="space-y-2">
-            {therapist.appointments.map((a) => (
-              <li key={a.id}
-                  className="rounded-lg border border-grey-200 px-3 py-2.5">
-                <div className="flex flex-wrap items-baseline justify-between gap-x-3 gap-y-1">
-                  <span className="font-medium tabular-nums">
-                    {clockTime(a.startsAt)} → {clockTime(a.endsAt)}
+      {free ? (
+        <p className="flex items-center px-4 py-3 min-h-14 text-sm text-grey-500">
+          Free all day.
+        </p>
+      ) : (
+        <ul className="divide-y divide-grey-100">
+          {therapist.appointments.map((a) => (
+            <li key={a.id} className="px-4 py-3 min-h-14">
+              {/* The hour first and the amount level at the right, the
+                  way a diary is read down the day. */}
+              <div className="flex items-baseline justify-between gap-x-3 gap-y-1">
+                <span className="text-sm font-semibold text-ink-900 tabular">
+                  {clockTime(a.startsAt)} → {clockTime(a.endsAt)}
+                </span>
+                <span className={a.amount === null
+                  ? "text-sm text-grey-500"
+                  : "text-sm font-medium text-ink-900 tabular"}>
+                  {rupees(a.amount)}
+                </span>
+              </div>
+              <p className="mt-0.5 text-sm text-ink-900">
+                {a.treatment ?? "-"}
+              </p>
+              <p className="mt-0.5 text-sm text-grey-500">
+                {a.guestName ?? "-"}
+                {/* The room comes from the stay, and a guest with no room
+                    assigned yet is a dash — never a blank that reads as
+                    "no room needed". */}
+                {a.room ? ` · Room ${a.room}` : ""}
+              </p>
+              <div className="mt-2 flex flex-wrap items-center gap-2 empty:hidden">
+                {a.settlement && SETTLEMENT[a.settlement] && (
+                  <StatusPill tone={SETTLEMENT[a.settlement]!.tone}>
+                    {SETTLEMENT[a.settlement]!.label}
+                  </StatusPill>
+                )}
+                {a.amount === null && (
+                  <span className="text-xs text-grey-500">
+                    Unpriced — it cannot be closed for money until the
+                    treatment has a price.
                   </span>
-                  <span className={a.amount === null ? "text-grey-500" : "tabular-nums"}>
-                    {rupees(a.amount)}
-                  </span>
-                </div>
-                <p className="mt-0.5 text-sm text-ink-700">
-                  {a.treatment ?? "-"}
-                </p>
-                <p className="mt-0.5 text-sm text-grey-500">
-                  {a.guestName ?? "-"}
-                  {/* The room comes from the stay, and a guest with no room
-                      assigned yet is a dash — never a blank that reads as
-                      "no room needed". */}
-                  {a.room ? ` · Room ${a.room}` : ""}
-                </p>
-                <div className="mt-1.5 flex flex-wrap items-center gap-2">
-                  {a.settlement && SETTLEMENT[a.settlement] && (
-                    <StatusPill tone={SETTLEMENT[a.settlement]!.tone}>
-                      {SETTLEMENT[a.settlement]!.label}
-                    </StatusPill>
-                  )}
-                  {a.amount === null && (
-                    <span className="text-xs text-grey-500">
-                      Unpriced — it cannot be closed for money until the
-                      treatment has a price.
-                    </span>
-                  )}
-                  {mayBook && a.status === "booked" && (
-                    <span className="ml-auto flex gap-1">
-                      <Button variant="ghost" size="sm"
-                              onClick={() => onCancel(a)}>
-                        Cancel
+                )}
+                {mayBook && a.status === "booked" && (
+                  <span className="ml-auto flex gap-2">
+                    <Button variant="secondary" size="sm"
+                            onClick={() => onCancel(a)}>
+                      Cancel
+                    </Button>
+                    {/* The treatment was given: it goes on the room bill
+                        (D18-22). Not offered while it is unpriced — the
+                        line above already says why, and a button that is
+                        refused is worse than no button. */}
+                    {a.amount !== null && (
+                      <Button variant="secondary" size="sm"
+                              onClick={() => onClose(a)}>
+                        Charge to room
                       </Button>
-                      {/* The treatment was given: it goes on the room bill
-                          (D18-22). Not offered while it is unpriced — the
-                          line above already says why, and a button that is
-                          refused is worse than no button. */}
-                      {a.amount !== null && (
-                        <Button variant="secondary" size="sm"
-                                onClick={() => onClose(a)}>
-                          Charge to room
-                        </Button>
-                      )}
-                    </span>
-                  )}
-                </div>
-              </li>
-            ))}
-          </ul>
-        )}
-      </CardBody>
-    </Card>
+                    )}
+                  </span>
+                )}
+              </div>
+            </li>
+          ))}
+        </ul>
+      )}
+    </section>
   );
 }
 
@@ -388,7 +395,18 @@ function BookDialog({
 
   return (
     <Dialog open onOpenChange={(open) => { if (!open) onClose(); }}>
-      <DialogContent title="Book a treatment" className="max-w-lg">
+      <DialogContent
+        title="Book a treatment"
+        className="max-w-lg"
+        footer={
+          <>
+            <Button variant="secondary" onClick={onClose}>Cancel</Button>
+            <Button variant="primary" loading={saving} onClick={() => void submit()}>
+              Book it
+            </Button>
+          </>
+        }
+      >
         <div className="space-y-4">
           <p className="text-sm text-grey-500">
             On {clockDate(day)}, at this property's own clock.
@@ -468,15 +486,8 @@ function BookDialog({
           </Field>
 
           {problem && (
-            <p role="alert" className="text-sm text-brand-red">{problem}</p>
+            <p role="alert" className="text-sm text-brand-red-700">{problem}</p>
           )}
-
-          <div className="flex justify-end gap-2">
-            <Button variant="secondary" onClick={onClose}>Cancel</Button>
-            <Button variant="primary" loading={saving} onClick={() => void submit()}>
-              Book it
-            </Button>
-          </div>
         </div>
       </DialogContent>
     </Dialog>
@@ -508,7 +519,18 @@ function CancelDialog({
 
   return (
     <Dialog open onOpenChange={(open) => { if (!open) onClose(); }}>
-      <DialogContent title="Cancel this treatment" className="max-w-md">
+      <DialogContent
+        title="Cancel this treatment"
+        className="max-w-md"
+        footer={
+          <>
+            <Button variant="secondary" onClick={onClose}>Keep it</Button>
+            <Button variant="danger" loading={saving} onClick={() => void submit()}>
+              Cancel the treatment
+            </Button>
+          </>
+        }
+      >
         <div className="space-y-4">
           <p className="text-sm text-ink-700">
             {appointment.treatment ?? "The treatment"} for{" "}
@@ -528,15 +550,8 @@ function CancelDialog({
           </Field>
 
           {problem && (
-            <p role="alert" className="text-sm text-brand-red">{problem}</p>
+            <p role="alert" className="text-sm text-brand-red-700">{problem}</p>
           )}
-
-          <div className="flex justify-end gap-2">
-            <Button variant="secondary" onClick={onClose}>Keep it</Button>
-            <Button variant="danger" loading={saving} onClick={() => void submit()}>
-              Cancel the treatment
-            </Button>
-          </div>
         </div>
       </DialogContent>
     </Dialog>
@@ -581,7 +596,19 @@ function CloseDialog({
 
   return (
     <Dialog open onOpenChange={(open) => { if (!open) onClose(); }}>
-      <DialogContent title="Charge this treatment to the room" className="max-w-md">
+      <DialogContent
+        title="Charge this treatment to the room"
+        className="max-w-md"
+        footer={
+          <>
+            <Button variant="secondary" onClick={onClose}>Not yet</Button>
+            {/* The act of this dialog, so it is its one primary. */}
+            <Button variant="primary" loading={saving} onClick={() => void submit()}>
+              Charge to room
+            </Button>
+          </>
+        }
+      >
         <div className="space-y-4">
           <p className="text-sm text-ink-700">
             {appointment.treatment ?? "The treatment"} for{" "}
@@ -595,15 +622,8 @@ function CloseDialog({
           </p>
 
           {problem && (
-            <p role="alert" className="text-sm text-brand-red">{problem}</p>
+            <p role="alert" className="text-sm text-brand-red-700">{problem}</p>
           )}
-
-          <div className="flex justify-end gap-2">
-            <Button variant="secondary" onClick={onClose}>Not yet</Button>
-            <Button loading={saving} onClick={() => void submit()}>
-              Charge to room
-            </Button>
-          </div>
         </div>
       </DialogContent>
     </Dialog>
