@@ -89,15 +89,14 @@ checked in (nationality "BR" from the booking), the register at 03:45 "due
 by 28 Sep 2026, 03:45", the card, Complete details, check-out with
 "Jaipur", the departure's own clock, the report; the walk-in's fields.
 
-**The six checks** on `4d70551` (the migration renumbered 147 after Phase 1
-took 146; cp6 `95070a6` merged in; the walk-in's segments now reservations'
-`MARKET_SEGMENTS`, exported from its front door): web types exit 0; API types
-exit 0; web 86 files, 718 tests passed, exit 0; API 101 files, 1599 tests
-passed, exit 0 (run alone once Postgres was quiet - the run inside the six,
-just after the 19:32 crash, took 38 minutes and hit three timeouts, 20 s and
-30 s, in `rateSetters` and `nightAudit`: void, not a result); database 1207
-assertions passed (guests 14), exit 0; replay: all 147 migrations
-re-runnable, exit 0.
+**The six checks** on `c5a192d` (the migration renumbered 147 after Phase 1
+took 146; cp6 `628b9cc` merged in, its reservations front door joined with
+this lane's `MARKET_SEGMENTS` export; the walk-in's segments now that one
+list), one run, API suite once Postgres was quiet: web types exit 0; API
+types exit 0; web 87 files, 719 tests passed, exit 0; API 101 files, 1601
+tests passed, exit 0; database 1207 assertions passed (guests 14), exit 0;
+replay: all 147 migrations re-runnable, exit 0. (An earlier run just after
+the 19:32 crash took 38 minutes and hit three timeouts - void.)
 
 **Found on the way:** stopping a background run (TaskStop) killed its wrapper
 and not the script under it, so two check runs went at once and wrote into
