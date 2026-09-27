@@ -2,6 +2,7 @@ import { useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useParams } from "react-router";
 import { FileDown, Truck, Send, Ban } from "lucide-react";
+import { cn } from "@/lib/cn";
 import { money, dateTime } from "@/lib/format";
 import { ApiError } from "@/lib/api";
 import {
@@ -104,9 +105,9 @@ export default function PurchaseRequestPage() {
     if (!r) return null;
 
     return (
-      <div className="space-y-4">
+      <div className="space-y-3">
         <Card>
-          <CardBody className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+          <CardBody className="grid gap-x-6 gap-y-3 grid-cols-2 lg:grid-cols-4">
             <Fact label="What it is for" value={r.reason} />
             <Fact label="Deliver to" value={r.store.name} />
             <Fact label="Supplier" value={r.supplier?.name ?? "-"} />
@@ -122,8 +123,8 @@ export default function PurchaseRequestPage() {
             second Approve button: one inbox, one engine. */}
         {r.state === "waiting" && (
           <Card>
-            <CardBody className="text-sm text-ink-700">
-              <p className="font-medium text-ink-900">
+            <CardBody className="text-sm text-grey-600">
+              <p className="text-md font-semibold text-ink-900 mb-1">
                 Waiting for the general manager
               </p>
               <p>
@@ -137,8 +138,8 @@ export default function PurchaseRequestPage() {
         )}
         {(r.state === "refused" || r.state === "sent_back") && (
           <Card>
-            <CardBody className="text-sm text-ink-700">
-              <p className="font-medium text-ink-900">
+            <CardBody className="text-sm text-grey-600">
+              <p className="text-md font-semibold text-ink-900 mb-1">
                 {r.state === "refused" ? "Refused" : "Sent back for something to be cleared up"}
                 {r.decidedBy ? ` by ${r.decidedBy}` : ""}
               </p>
@@ -152,16 +153,16 @@ export default function PurchaseRequestPage() {
         )}
         {r.state === "cancelled" && (
           <Card>
-            <CardBody className="text-sm text-ink-700">
-              <p className="font-medium text-ink-900">Cancelled</p>
+            <CardBody className="text-sm text-grey-600">
+              <p className="text-md font-semibold text-ink-900 mb-1">Cancelled</p>
               <p>{r.cancelledReason ?? "-"}</p>
             </CardBody>
           </Card>
         )}
         {r.state === "received" && (
           <Card>
-            <CardBody className="text-sm text-ink-700">
-              <p className="font-medium text-ink-900">
+            <CardBody className="text-sm text-grey-600">
+              <p className="text-md font-semibold text-ink-900 mb-1">
                 Delivered{r.receivedBy ? ` — received by ${r.receivedBy}` : ""}
                 {r.receivedAt ? ` on ${dateTime(r.receivedAt)}` : ""}
               </p>
@@ -170,39 +171,40 @@ export default function PurchaseRequestPage() {
           </Card>
         )}
 
-        <Card>
-          <CardBody className="p-0">
-            <table className="w-full text-sm">
-              <thead className="border-b border-grey-200 text-ink-600">
-                <tr>
-                  <th className="px-4 py-2 text-left font-medium">Item</th>
-                  <th className="px-4 py-2 text-right font-medium tabular-nums">Ordered</th>
-                  <th className="px-4 py-2 text-right font-medium tabular-nums">Agreed price</th>
-                  <th className="px-4 py-2 text-right font-medium tabular-nums">Amount</th>
-                  <th className="px-4 py-2 text-right font-medium tabular-nums">Came</th>
-                  <th className="px-4 py-2 text-right font-medium tabular-nums">Cost</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-grey-200">
-                {lines.map((l) => (
-                  <LineRow
-                    key={l.id}
-                    code={code}
-                    requestId={id}
-                    line={l}
-                    mayPrice={mayAct && r.state !== "ordered" && r.state !== "received"
-                      && r.state !== "cancelled"}
-                    onSaved={refresh}
-                  />
-                ))}
-              </tbody>
-            </table>
-          </CardBody>
+        {/* The table scrolls inside its card on a phone: six columns and a
+            price box do not fit 390px, and the page never scrolls sideways
+            (the Breathing Room Rule). The head is DESIGN.md's table head. */}
+        <Card className="overflow-x-auto">
+          <table className="w-full text-sm">
+            <thead className="bg-grey-50 border-b border-grey-200 text-2xs font-semibold uppercase tracking-[0.025em] text-grey-500 whitespace-nowrap">
+              <tr>
+                <th className="h-10 px-4 text-left">Item</th>
+                <th className="h-10 px-4 text-right">Ordered</th>
+                <th className="h-10 px-4 text-right">Agreed price</th>
+                <th className="h-10 px-4 text-right">Amount</th>
+                <th className="h-10 px-4 text-right">Came</th>
+                <th className="h-10 px-4 text-right">Cost</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-grey-100">
+              {lines.map((l) => (
+                <LineRow
+                  key={l.id}
+                  code={code}
+                  requestId={id}
+                  line={l}
+                  mayPrice={mayAct && r.state !== "ordered" && r.state !== "received"
+                    && r.state !== "cancelled"}
+                  onSaved={refresh}
+                />
+              ))}
+            </tbody>
+          </table>
         </Card>
 
         {r.unpriced > 0 && r.state !== "cancelled" && r.state !== "received" && (
           <Card>
-            <CardBody className="text-sm text-ink-700">
+            <CardBody className="text-sm text-grey-600">
               {r.unpriced === 1
                 ? "One line has no agreed price. "
                 : `${r.unpriced} lines have no agreed price. `}
@@ -304,8 +306,8 @@ async function download(code: string, id: string) {
 function Fact({ label, value }: { label: string; value: string }) {
   return (
     <div>
-      <p className="text-sm text-ink-600">{label}</p>
-      <p className="text-sm font-medium text-ink-900">{value}</p>
+      <p className="text-xs font-medium text-grey-500">{label}</p>
+      <p className={cn("text-sm font-medium mt-0.5", value === "-" ? "text-grey-500" : "text-ink-900")}>{value}</p>
     </div>
   );
 }
@@ -345,13 +347,13 @@ function LineRow({
 
   return (
     <tr>
-      <td className="px-4 py-2">
+      <td className="px-4 py-3">
         <span className="font-medium text-ink-900">{line.item}</span>
-        <span className="text-ink-600"> · {line.unit}</span>
-        {line.note && <p className="text-sm text-ink-600">{line.note}</p>}
+        <span className="text-grey-500"> · {line.unit}</span>
+        {line.note && <p className="text-sm text-grey-600">{line.note}</p>}
       </td>
-      <td className="px-4 py-2 text-right tabular-nums">{figure(line.quantity)}</td>
-      <td className="px-4 py-2 text-right tabular-nums">
+      <td className="px-4 py-3 text-right tabular-nums">{figure(line.quantity)}</td>
+      <td className={cn("px-4 py-3 text-right tabular-nums", !mayPrice && line.unitPrice === null && "text-grey-500")}>
         {mayPrice ? (
           <Input
             aria-label={`Agreed price for ${line.item}`}
@@ -367,11 +369,11 @@ function LineRow({
           rupees(line.unitPrice)
         )}
       </td>
-      <td className="px-4 py-2 text-right tabular-nums">
+      <td className={cn("px-4 py-3 text-right tabular-nums", amount === null && "text-grey-500")}>
         {amount === null ? "-" : money(amount)}
       </td>
-      <td className="px-4 py-2 text-right tabular-nums">{figure(line.receivedQuantity)}</td>
-      <td className="px-4 py-2 text-right tabular-nums">{rupees(line.receivedUnitCost)}</td>
+      <td className={cn("px-4 py-3 text-right tabular-nums", line.receivedQuantity === null && "text-grey-500")}>{figure(line.receivedQuantity)}</td>
+      <td className={cn("px-4 py-3 text-right tabular-nums", line.receivedUnitCost === null && "text-grey-500")}>{rupees(line.receivedUnitCost)}</td>
     </tr>
   );
 }
@@ -402,10 +404,25 @@ function SendDialog({
 
   return (
     <Dialog open onOpenChange={(open) => { if (!open) onClose(); }}>
-      <DialogContent title="Send the order">
+      <DialogContent
+        title="Send the order"
+        footer={
+          <>
+            <Button variant="secondary" onClick={onClose}>Cancel</Button>
+            <Button
+              variant="primary"
+              loading={saving}
+              disabled={suppliers.length === 0}
+              onClick={() => void submit()}
+            >
+              Send the order
+            </Button>
+          </>
+        }
+      >
         <div className="space-y-4">
           {suppliers.length === 0 ? (
-            <p className="text-sm text-ink-700">
+            <p className="text-sm text-grey-600">
               This property has no supplier entered yet. Add one in Places and
               suppliers first - an order has to say who it is to.
             </p>
@@ -424,23 +441,12 @@ function SendDialog({
               )}
             </Field>
           )}
-          <p className="text-sm text-ink-600">
+          <p className="text-sm text-grey-600">
             This records the order and produces it as a PDF in the group's
             layout. It is sent BY HAND - printed, or attached to a message by
             whoever orders.
           </p>
-          {problem && <p role="alert" className="text-sm text-brand-red">{problem}</p>}
-          <div className="flex justify-end gap-2">
-            <Button variant="secondary" onClick={onClose}>Cancel</Button>
-            <Button
-              variant="primary"
-              loading={saving}
-              disabled={suppliers.length === 0}
-              onClick={() => void submit()}
-            >
-              Send the order
-            </Button>
-          </div>
+          {problem && <p role="alert" className="text-sm text-brand-red-700">{problem}</p>}
         </div>
       </DialogContent>
     </Dialog>
@@ -505,51 +511,66 @@ function DeliveryDialog({
 
   return (
     <Dialog open onOpenChange={(open) => { if (!open) onClose(); }}>
-      <DialogContent title="Record the delivery" className="max-w-2xl">
+      <DialogContent
+        title="Record the delivery"
+        className="max-w-2xl"
+        footer={
+          <>
+            <Button variant="secondary" onClick={onClose}>Cancel</Button>
+            <Button variant="primary" loading={saving} onClick={() => void submit()}>
+              Record the delivery
+            </Button>
+          </>
+        }
+      >
         <div className="space-y-4">
-          <p className="text-sm text-ink-700">
+          <p className="text-sm text-grey-600">
             What actually came, and what it actually cost. It may differ from
             what was ordered - both stay on the record. The stock lands in{" "}
             <span className="font-medium text-ink-900">{store}</span>.
           </p>
 
-          <table className="w-full text-sm">
-            <thead className="text-ink-600">
-              <tr>
-                <th className="py-1 text-left font-medium">Item</th>
-                <th className="py-1 text-right font-medium">Ordered</th>
-                <th className="py-1 text-right font-medium">Came</th>
-                <th className="py-1 text-right font-medium">Cost each</th>
-              </tr>
-            </thead>
-            <tbody>
-              {lines.map((l) => (
-                <tr key={l.id}>
-                  <td className="py-1.5">{l.item} · {l.unit}</td>
-                  <td className="py-1.5 text-right tabular-nums">{Number(l.quantity)}</td>
-                  <td className="py-1.5 pl-2">
-                    <Input
-                      aria-label={`How much of the ${l.item} came`}
-                      inputMode="decimal"
-                      className="w-[100px] text-right"
-                      value={came[l.id] ?? ""}
-                      onChange={(e) => setCame((all) => ({ ...all, [l.id]: e.target.value }))}
-                    />
-                  </td>
-                  <td className="py-1.5 pl-2">
-                    <Input
-                      aria-label={`What the ${l.item} cost each`}
-                      inputMode="decimal"
-                      className="w-[110px] text-right"
-                      value={cost[l.id] ?? ""}
-                      onChange={(e) => setCost((all) => ({ ...all, [l.id]: e.target.value }))}
-                      placeholder="-"
-                    />
-                  </td>
+          {/* Scrolls inside itself on a phone: two boxes a line do not fit
+              the dialog at 390px, and nothing scrolls sideways but this. */}
+          <div className="overflow-x-auto">
+            <table className="w-full text-sm">
+              <thead className="border-b border-grey-200 text-2xs font-semibold uppercase tracking-[0.025em] text-grey-500 whitespace-nowrap">
+                <tr>
+                  <th className="h-10 text-left">Item</th>
+                  <th className="h-10 text-right">Ordered</th>
+                  <th className="h-10 text-right">Came</th>
+                  <th className="h-10 text-right">Cost each</th>
                 </tr>
-              ))}
-            </tbody>
-          </table>
+              </thead>
+              <tbody className="divide-y divide-grey-100">
+                {lines.map((l) => (
+                  <tr key={l.id}>
+                    <td className="py-2">{l.item} · {l.unit}</td>
+                    <td className="py-2 text-right tabular-nums">{Number(l.quantity)}</td>
+                    <td className="py-2 pl-2">
+                      <Input
+                        aria-label={`How much of the ${l.item} came`}
+                        inputMode="decimal"
+                        className="w-[100px] text-right"
+                        value={came[l.id] ?? ""}
+                        onChange={(e) => setCame((all) => ({ ...all, [l.id]: e.target.value }))}
+                      />
+                    </td>
+                    <td className="py-2 pl-2">
+                      <Input
+                        aria-label={`What the ${l.item} cost each`}
+                        inputMode="decimal"
+                        className="w-[110px] text-right"
+                        value={cost[l.id] ?? ""}
+                        onChange={(e) => setCost((all) => ({ ...all, [l.id]: e.target.value }))}
+                        placeholder="-"
+                      />
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
 
           <Field
             label="Anything to note"
@@ -564,14 +585,7 @@ function DeliveryDialog({
             )}
           </Field>
 
-          {problem && <p role="alert" className="text-sm text-brand-red">{problem}</p>}
-
-          <div className="flex justify-end gap-2">
-            <Button variant="secondary" onClick={onClose}>Cancel</Button>
-            <Button variant="primary" loading={saving} onClick={() => void submit()}>
-              Record the delivery
-            </Button>
-          </div>
+          {problem && <p role="alert" className="text-sm text-brand-red-700">{problem}</p>}
         </div>
       </DialogContent>
     </Dialog>
@@ -605,9 +619,19 @@ function CancelDialog({
 
   return (
     <Dialog open onOpenChange={(open) => { if (!open) onClose(); }}>
-      <DialogContent title={`Cancel ${reference}?`}>
+      <DialogContent
+        title={`Cancel ${reference}?`}
+        footer={
+          <>
+            <Button variant="secondary" onClick={onClose}>Keep it</Button>
+            <Button variant="danger" loading={saving} onClick={() => void submit()}>
+              Cancel the order
+            </Button>
+          </>
+        }
+      >
         <div className="space-y-4">
-          <p className="text-sm text-ink-700">
+          <p className="text-sm text-grey-600">
             It stays on the record, cancelled, with the reason. Nothing is
             removed.
           </p>
@@ -621,13 +645,7 @@ function CancelDialog({
               />
             )}
           </Field>
-          {problem && <p role="alert" className="text-sm text-brand-red">{problem}</p>}
-          <div className="flex justify-end gap-2">
-            <Button variant="secondary" onClick={onClose}>Keep it</Button>
-            <Button variant="danger" loading={saving} onClick={() => void submit()}>
-              Cancel the order
-            </Button>
-          </div>
+          {problem && <p role="alert" className="text-sm text-brand-red-700">{problem}</p>}
         </div>
       </DialogContent>
     </Dialog>
@@ -656,7 +674,7 @@ function Decide({
   if (!approval || approval.status !== "pending") return null;
   if (!approval.mayDecide) {
     return approval.blockedBecause
-      ? <p className="mt-1.5 text-ink-600">{approval.blockedBecause}</p>
+      ? <p className="mt-1.5 text-grey-600">{approval.blockedBecause}</p>
       : null;
   }
 
@@ -701,9 +719,23 @@ function Decide({
 
       {refusing && (
         <Dialog open onOpenChange={(open) => { if (!open) setRefusing(null); }}>
-          <DialogContent title={refusing === "rejected" ? "Refuse this purchase" : "Send it back"}>
+          <DialogContent
+            title={refusing === "rejected" ? "Refuse this purchase" : "Send it back"}
+            footer={
+              <>
+                <Button variant="secondary" onClick={() => setRefusing(null)}>Cancel</Button>
+                <Button
+                  variant={refusing === "rejected" ? "danger" : "primary"}
+                  loading={busy}
+                  onClick={() => void decide(refusing)}
+                >
+                  {refusing === "rejected" ? "Refuse it" : "Send it back"}
+                </Button>
+              </>
+            }
+          >
             <div className="space-y-4">
-              <p className="text-sm text-ink-700">
+              <p className="text-sm text-grey-600">
                 {refusing === "rejected"
                   ? "Say why. The person who asked has to know what to do next - buy it elsewhere, buy it cheaper, or not buy it."
                   : "Say what you need cleared up."}
@@ -719,16 +751,6 @@ function Decide({
                   />
                 )}
               </Field>
-              <div className="flex justify-end gap-2">
-                <Button variant="secondary" onClick={() => setRefusing(null)}>Cancel</Button>
-                <Button
-                  variant={refusing === "rejected" ? "danger" : "primary"}
-                  loading={busy}
-                  onClick={() => void decide(refusing)}
-                >
-                  {refusing === "rejected" ? "Refuse it" : "Send it back"}
-                </Button>
-              </div>
             </div>
           </DialogContent>
         </Dialog>

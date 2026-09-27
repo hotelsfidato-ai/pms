@@ -104,8 +104,8 @@ export function EditItemDialog({ code, item, open, onOpenChange, onDone }: Props
         description={item.name}
         footer={
           <>
-            <Button variant="secondary" className="h-11" onClick={() => onOpenChange(false)}>Cancel</Button>
-            <Button variant="primary" className="h-11" disabled={busy || !name.trim()}
+            <Button variant="secondary" onClick={() => onOpenChange(false)}>Cancel</Button>
+            <Button variant="primary" disabled={busy || !name.trim()}
                     onClick={() => void submit()}>
               {busy ? "Saving…" : "Save"}
             </Button>
@@ -228,8 +228,8 @@ export function MoveItemDialog({ code, item, open, onOpenChange, onDone, mayEdit
         description={`${item.name} · now in ${item.place}`}
         footer={
           <>
-            <Button variant="secondary" className="h-11" onClick={() => onOpenChange(false)}>Cancel</Button>
-            <Button variant="primary" className="h-11" disabled={busy || !ready}
+            <Button variant="secondary" onClick={() => onOpenChange(false)}>Cancel</Button>
+            <Button variant="primary" disabled={busy || !ready}
                     onClick={() => void submit()}>
               {busy ? "Sending…" : leaves ? "Ask" : "Move"}
             </Button>
@@ -244,7 +244,7 @@ export function MoveItemDialog({ code, item, open, onOpenChange, onDone, mayEdit
               options={[{ value: "room", label: "To a room" }, { value: "place", label: "To another place" }]}
             />
             {whereKind === "room" ? (
-              <NativeSelect aria-label="Room" value={roomId} className="h-11"
+              <NativeSelect aria-label="Room" value={roomId}
                             onChange={(e) => setRoomId(e.target.value)}>
                 <option value="">Choose a room</option>
                 {o?.rooms.filter((r) => r.id !== item.roomId)
@@ -257,7 +257,7 @@ export function MoveItemDialog({ code, item, open, onOpenChange, onDone, mayEdit
                   : "There is no other place this can go from here."}
               </p>
             ) : (
-              <NativeSelect aria-label="Place" value={locationId} className="h-11"
+              <NativeSelect aria-label="Place" value={locationId}
                             onChange={(e) => setLocationId(e.target.value)}>
                 <option value="">Choose a place</option>
                 {places.map((p) => (
@@ -267,7 +267,7 @@ export function MoveItemDialog({ code, item, open, onOpenChange, onDone, mayEdit
             )}
             <CountField item={item} value={count} onChange={setCount} what={leaves ? "asks for" : "moves"} />
             {leaves && (
-              <p className="text-sm text-ink-900 rounded-md border border-amber-300 bg-amber-50 p-3 leading-relaxed">
+              <p className="text-sm text-ink-900 rounded-lg bg-brand-yellow-50 ring-1 ring-inset ring-brand-yellow-100 px-3.5 py-3 leading-relaxed">
                 This takes it out of the store, so it is <strong>asked for</strong>. It stays in the
                 store until the Inventory Manager approves it - or the owner, an administrator or the
                 general manager when they are away.
@@ -312,8 +312,8 @@ export function StatusDialog({ code, item, open, onOpenChange, onDone }: Props) 
         description={item.name}
         footer={
           <>
-            <Button variant="secondary" className="h-11" onClick={() => onOpenChange(false)}>Cancel</Button>
-            <Button variant="primary" className="h-11" disabled={busy} onClick={() => void submit()}>
+            <Button variant="secondary" onClick={() => onOpenChange(false)}>Cancel</Button>
+            <Button variant="primary" disabled={busy} onClick={() => void submit()}>
               {busy ? "Saving…" : to === "under_repair" ? "Under repair" : "Back in use"}
             </Button>
           </>
@@ -364,8 +364,8 @@ export function RetireDialog({ code, item, open, onOpenChange, onDone, waitsForA
         }
         footer={
           <>
-            <Button variant="secondary" className="h-11" onClick={() => onOpenChange(false)}>Cancel</Button>
-            <Button variant="danger" className="h-11" disabled={busy || !reason.trim()}
+            <Button variant="secondary" onClick={() => onOpenChange(false)}>Cancel</Button>
+            <Button variant="danger" disabled={busy || !reason.trim()}
                     onClick={() => void submit()}>
               {busy ? "Sending…" : waitsForApproval ? "Ask to retire" : "Retire"}
             </Button>
