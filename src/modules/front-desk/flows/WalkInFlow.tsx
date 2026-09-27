@@ -10,6 +10,7 @@ import {
 } from "@/components/ui";
 import { createWalkIn } from "@/modules/front-desk/data/operations";
 import { getRoom } from "@/data/repositories";
+import { MARKET_SEGMENTS } from "@/modules/reservations";
 import {
   ReturningGuest, ConsentTicks, ForeignGuestFields, formIIIMissing,
   particularsPayload, NO_PARTICULARS, ID_TYPES, type Particulars,
@@ -303,8 +304,7 @@ export function WalkInFlow({
                       that turns into a line in a report an owner sets
                       policy from. */}
                   <option value="">-</option>
-                  {["Corporate", "Leisure", "Group", "Crew", "Government"]
-                    .map((m) => <option key={m}>{m}</option>)}
+                  {MARKET_SEGMENTS.map((m) => <option key={m}>{m}</option>)}
                 </NativeSelect>
               )}
             </Field>
