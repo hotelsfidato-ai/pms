@@ -155,3 +155,42 @@ desk.post("/:code/stays/:id/confirm", async (c) => {
   if (!result) return c.json({ error: "No such property." }, 404);
   return c.json(result, result.ok ? 200 : 409);
 });
+
+/* ── Cancelling a booking that was waiting for the hotel (D27-64) ─────
+   The owner, 27 September: "cancel it directly". It was never confirmed,
+   so NO CHARGE (the terms are not applied) and nothing is sent; the room
+   it held on the grid is free the moment the status changes (044 counts
+   no cancelled booking), and any room given to it is released by 073's
+   trigger. The whole booking, as Confirm does, with a short reason kept
+   on it. For the people who may cancel a booking (the gate: reservation
+   cancel). A confirmed booking is not cancelled here. */
+desk.post("/:code/stays/:id/cancel", async (c) => {
+  const input = await c.req.json<{ reason?: unknown }>().catch(() => ({}) as { reason?: unknown });
+  const reason = typeof input.reason === "string" ? input.reason.trim() : "";
+  if (!reason) {
+    return c.json(refuse("Why is it cancelled? It stays on the booking, e.g. “Hotel full that week”."), 409);
+  }
+
+  const result = await withSession(c.get("subject"), async (client, session) => {
+    const hotelId = await hotelFor(client, c.req.param("code"));
+    if (!hotelId) return null;
+    const { rows } = await client.query<{ reference: string; status: string }>(
+      "select reference, status from reservations where id = $1 and hotel_id = $2",
+      [c.req.param("id"), hotelId]);
+    const stay = rows[0];
+    if (!stay) return refuse("No such booking.");
+    if (stay.status !== "tentative") {
+      return refuse(`${stay.reference} is not waiting for the hotel, so it is not cancelled here.`);
+    }
+    const { rowCount } = await client.query(
+      `update reservations
+          set status = 'cancelled', cancelled_at = now(), cancelled_by = $3,
+              cancel_reason = $4
+        where hotel_id = $2 and status = 'tentative'
+          and (id = $1 or group_id = (select group_id from reservations where id = $1))`,
+      [c.req.param("id"), hotelId, session.staffId, reason]);
+    return { ok: true as const, rooms: rowCount ?? 0, reference: stay.reference };
+  });
+  if (!result) return c.json({ error: "No such property." }, 404);
+  return c.json(result, result.ok ? 200 : 409);
+});
