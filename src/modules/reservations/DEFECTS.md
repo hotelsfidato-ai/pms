@@ -14,11 +14,37 @@ entries stay here: they are the reason the fault does not come back.
 
 ## Open — not fixed
 
-None, 16 September.
+### RES-5 · A booking waiting for the hotel cannot be voided until it is confirmed
+
+**Found** 27 September, opening a waiting booking's panel (Phase 1): "Void
+this booking" is greyed with "Only a booking that has not arrived can be
+voided", because `StayActions` offers it only to `due-in`, and a waiting
+booking's status is `tentative`. **Not fixed**: it is front desk's menu and
+its void route; confirm first, then void. The owner to say whether a waiting
+booking should be voidable as it is.
+
+### RES-6 · A group's lead can be a waiting room
+
+`app.group_lead` (131) picks the room booked first that still stands, a
+waiting one included, and the confirmation sweep asks only confirmed rooms;
+a group whose first room waits while others are confirmed gets no voucher.
+New booking makes every room of one booking waiting or none, and Confirm
+confirms the whole group, so it cannot happen from the desk today.
+**Noted, not fixed.**
 
 ---
 
 ## Fixed
+
+### RES-4 · The booking summary added each night's calendar price; the booking keeps the first night's — FIXED 27 September
+
+**Found** reading `book.ts` for Phase 1: `makeBooking` stores the FIRST
+night's `app.tariff_for` as `agreed_rate` and the night audit posts it every
+night, while New booking's summary summed `getTariff`'s nights. On a stay
+crossing a price change the screen and the bill disagreed. **The owner, 27
+September: show what the bill will carry.** The line and the summary now use
+the first night's price for every night and say so when the calendar differs
+later. Rule: a figure on a booking screen is the one the posting will use.
 
 ### RES-2 · The booking reference is generated without a lock, in two copies — FIXED 16 September
 

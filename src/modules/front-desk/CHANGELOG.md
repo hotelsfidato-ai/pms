@@ -8,6 +8,13 @@ project, still goes in the root `CHANGELOG.md`.
 
 ---
 
+## 2026-09-27 · Touched by Phase 1, New booking (reservations session)
+
+`assignRoom` on the front door (New booking's room pick); `StayActions` offers "Confirm the booking" on a waiting booking; `StayTable` labels status `tentative` "Waiting for the hotel".
+See `src/modules/reservations/CHANGELOG.md`, 27 September.
+
+---
+
 ## 2026-09-26 · Compliance first fixes: ID reads (D25-38), offers opt-in (D25-39), cash of ₹2 lakh and the PAN (D25-40), FSSAI (A16)
 
 **Asked for:** the master, for the owner's D25-38 to D25-40 and the audit's
