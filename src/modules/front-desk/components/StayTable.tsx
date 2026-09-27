@@ -1,6 +1,6 @@
 import { useState, useMemo } from "react";
 import { useSearchParams } from "react-router";
-import { Search, X, Rows3, LayoutGrid } from "lucide-react";
+import { Search, X, Rows3, LayoutGrid, ChevronRight } from "lucide-react";
 import { cn } from "@/lib/cn";
 import { money, dateShort } from "@/lib/format";
 import {
@@ -196,7 +196,11 @@ function StayCards({ rows, columns, onOpen }: {
                   {s.roomNumber || <span className="text-grey-500">-</span>}
                 </span>
               ) : <span />}
-              {showsStatus && ALL_COLUMNS["status"].cell(s, i)}
+              <span className="flex items-center gap-2">
+                {showsStatus && ALL_COLUMNS["status"].cell(s, i)}
+                {/* It opens the stay: an arrow says so (the owner, 27 Sep). */}
+                <ChevronRight className="size-4 text-grey-400 shrink-0" aria-hidden />
+              </span>
             </div>
             <p className="mt-1 text-sm font-medium text-ink-900 truncate">{s.guest}</p>
             <p className="text-xs tabular text-grey-500">{s.reference}</p>

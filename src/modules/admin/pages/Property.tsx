@@ -108,7 +108,8 @@ export default function PropertyPage() {
             "You can see a property here if you are its manager, or a group "
             + "administrator. Nothing was changed."
           }
-          action={<Link to="/properties"><Button>Back to properties</Button></Link>}
+          /* One element: a link drawn as the button it is. */
+          action={<Button asChild><Link to="/properties">Back to properties</Link></Button>}
         />
       </Page>
     );
@@ -119,10 +120,11 @@ export default function PropertyPage() {
 
   return (
     <Page className="max-w-5xl">
+      {/* A text link is orange (the Tappable Rule), as Invoice's is. */}
       <Link to="/properties"
-            className="inline-flex items-center gap-1.5 text-sm text-grey-600
-                       hover:text-ink-900 mb-2">
-        <ArrowLeft className="size-3.5" /> Properties
+            className="inline-flex items-center gap-1.5 min-h-9 pointer-coarse:min-h-11 mb-1
+                       text-sm font-medium text-brand-orange-700 hover:underline underline-offset-4">
+        <ArrowLeft className="size-4" /> Properties
       </Link>
 
       <PageHeader
@@ -138,7 +140,7 @@ export default function PropertyPage() {
         }
         actions={
           grantableRoles.length > 0 && (
-            <Button variant="primary" className="h-11" onClick={() => setAdding(true)}>
+            <Button variant="primary" onClick={() => setAdding(true)}>
               <UserPlus className="size-4" /> Add somebody here
             </Button>
           )
@@ -146,8 +148,11 @@ export default function PropertyPage() {
       />
 
       {/* ── Today ─────────────────────────────────────────────── */}
-      <Card className="mb-5">
-        <CardBody className="grid gap-x-8 gap-y-4 grid-cols-2 @md:grid-cols-4">
+      {/* The figures level across each card (the Level Rule): every one
+          spans two rows of the card's grid, so a label on two lines never
+          pushes its figure below its neighbours'. Cards 12px apart. */}
+      <Card className="mb-3">
+        <CardBody className={FIGURES}>
           <Figure label="Rooms sold today"
                   value={today.data ? String(today.data.sold) : null} />
           <Figure label="Occupancy"
@@ -159,8 +164,8 @@ export default function PropertyPage() {
         </CardBody>
       </Card>
 
-      <Card className="mb-5">
-        <CardBody className="grid gap-x-8 gap-y-4 grid-cols-2 @md:grid-cols-4">
+      <Card className="mb-3">
+        <CardBody className={FIGURES}>
           {/* Period to date, from the property's own audit. A dash when
               the period has no closed days yet — which is the ordinary
               state of a property in its first week, and reads better
@@ -180,7 +185,7 @@ export default function PropertyPage() {
 
       {/* ── The team ──────────────────────────────────────────── */}
       <section>
-        <h2 className="text-md font-semibold text-ink-900 mb-2.5">
+        <h2 className="text-md font-semibold text-ink-900 mb-3">
           Who works here
         </h2>
 
@@ -197,79 +202,80 @@ export default function PropertyPage() {
           />
         ) : (
           <Card>
-            <CardBody>
-              <ul className="divide-y divide-grey-100">
-                {team.map((p) => (
-                  <li key={p.id} className="flex items-center gap-3 py-3 first:pt-0">
-                    <div className="min-w-0 flex-1">
-                      <div className="flex items-baseline gap-2 flex-wrap">
-                        <p className="text-base font-medium text-ink-900">
-                          {p.name}
-                        </p>
-                        {p.isGroupAdmin && (
-                          <StatusPill tone="warning">
-                            <ShieldCheck className="size-3" /> Every property
-                          </StatusPill>
-                        )}
-                        {/* ⚠ THE STATE NOBODY COULD SEE. Rostered, with a
-                            role, and no Firebase account — so they reach
-                            a sign-in page that will never accept them.
-                            Until the API created accounts this was every
-                            person added through a screen. */}
-                        {!p.canSignIn && (
-                          <StatusPill tone="danger">No password yet</StatusPill>
-                        )}
-                      </div>
-                      <p className="text-sm text-grey-500 truncate">
-                        {p.email}
+            {/* List rows. On a phone a row stacks: the person on its own
+                line, their role and controls wrapping under it, so the
+                page never scrolls sideways (it did at 390px). */}
+            <ul className="divide-y divide-grey-100">
+              {team.map((p) => (
+                <li key={p.id} className="flex flex-wrap items-center gap-x-3 gap-y-2 px-4 py-3 min-h-14">
+                  <div className="min-w-0 basis-full sm:basis-0 sm:flex-1">
+                    <div className="flex items-baseline gap-2 flex-wrap">
+                      <p className="text-base font-medium text-ink-900">
+                        {p.name}
                       </p>
+                      {p.isGroupAdmin && (
+                        <StatusPill tone="warning">
+                          <ShieldCheck className="size-3" /> Every property
+                        </StatusPill>
+                      )}
+                      {/* ⚠ THE STATE NOBODY COULD SEE. Rostered, with a
+                          role, and no Firebase account — so they reach
+                          a sign-in page that will never accept them.
+                          Until the API created accounts this was every
+                          person added through a screen. */}
+                      {!p.canSignIn && (
+                        <StatusPill tone="danger">No password yet</StatusPill>
+                      )}
                     </div>
+                    <p className="text-sm text-grey-500 truncate">
+                      {p.email}
+                    </p>
+                  </div>
 
-                    <span className="text-sm text-grey-600 shrink-0">
-                      {label(p.role)}
-                    </span>
+                  <span className="text-sm text-grey-600 shrink-0">
+                    {label(p.role)}
+                  </span>
 
-                    {/* WHERE THEY START (087). The owner's decision of 14
-                        September: the GM sets it per person, and the
-                        person can change their own from their account
-                        menu. Offered only where the server would accept
-                        it — a manager here, never on a group admin. */}
-                    {grantableRoles.length > 0 && !p.isGroupAdmin && (
-                      <label className="flex items-center gap-1.5 shrink-0 text-sm text-grey-600">
-                        <span className="hidden sm:inline">Starts on</span>
-                        <NativeSelect
-                          aria-label={`${p.name} starts on`}
-                          value={p.homeScreen}
-                          onChange={(e) => void startOn(
-                            p, e.currentTarget.value as HomeScreen, refresh)}
-                          className="w-auto"
-                        >
-                          {HOME_SCREENS.map((s) => (
-                            <option key={s.value} value={s.value}>{s.label}</option>
-                          ))}
-                        </NativeSelect>
-                      </label>
-                    )}
+                  {/* WHERE THEY START (087). The owner's decision of 14
+                      September: the GM sets it per person, and the
+                      person can change their own from their account
+                      menu. Offered only where the server would accept
+                      it — a manager here, never on a group admin. */}
+                  {grantableRoles.length > 0 && !p.isGroupAdmin && (
+                    <label className="flex items-center gap-1.5 shrink-0 text-sm text-grey-600">
+                      <span className="hidden sm:inline">Starts on</span>
+                      <NativeSelect
+                        aria-label={`${p.name} starts on`}
+                        value={p.homeScreen}
+                        onChange={(e) => void startOn(
+                          p, e.currentTarget.value as HomeScreen, refresh)}
+                        className="w-auto"
+                      >
+                        {HOME_SCREENS.map((s) => (
+                          <option key={s.value} value={s.value}>{s.label}</option>
+                        ))}
+                      </NativeSelect>
+                    </label>
+                  )}
 
-                    {grantableRoles.length > 0 && !p.isGroupAdmin && (
-                      <div className="flex gap-1.5 shrink-0">
-                        <Button variant="ghost" className="h-11"
-                                onClick={() => setPassword(p)}>
-                          <KeyRound className="size-4" />
-                          <span className="sr-only">
-                            Set a password for {p.name}
-                          </span>
-                        </Button>
-                        <Button variant="ghost" className="h-11"
-                                onClick={() => void remove(p, code, refresh)}>
-                          Remove
-                        </Button>
-                      </div>
-                    )}
-                  </li>
-                ))}
-              </ul>
-            </CardBody>
+                  {grantableRoles.length > 0 && !p.isGroupAdmin && (
+                    <div className="flex gap-1.5 shrink-0 max-sm:ml-auto">
+                      <Button variant="ghost" size="icon"
+                              onClick={() => setPassword(p)}>
+                        <KeyRound className="size-4" />
+                        <span className="sr-only">
+                          Set a password for {p.name}
+                        </span>
+                      </Button>
+                      <Button variant="ghost"
+                              onClick={() => void remove(p, code, refresh)}>
+                        Remove
+                      </Button>
+                    </div>
+                  )}
+                </li>
+              ))}
+            </ul>
           </Card>
         )}
       </section>
@@ -313,7 +319,7 @@ function FssaiCard({ code, value, onSaved }: {
   };
   return (
     <Card className="mb-5">
-      <CardBody className="flex flex-wrap items-end gap-4">
+      <CardBody className="flex flex-wrap items-end gap-3">
         {typed === null ? (
           <>
             <Figure label="FSSAI licence number" value={value} />
@@ -338,11 +344,17 @@ function FssaiCard({ code, value, onSaved }: {
   );
 }
 
+/* Four across on a desktop, two on a phone; each figure two rows of it. */
+const FIGURES = "grid grid-cols-2 sm:grid-cols-4 gap-x-4 gap-y-4";
+
+/* The Figure Rule: the label, then the figure on the ladder (24, 20 on a
+   phone). The label and the figure stay siblings: the FSSAI test reads
+   the one after the other. */
 function Figure({ label, value }: { label: string; value: string | null }) {
   return (
-    <div>
-      <p className="text-sm text-grey-500">{label}</p>
-      <p className={cn("text-lg font-semibold tabular",
+    <div className="row-span-2 grid grid-rows-subgrid gap-y-0.5 min-w-0">
+      <p className="text-sm font-medium text-grey-600">{label}</p>
+      <p className={cn("self-end text-xl sm:text-2xl font-semibold tabular tracking-[-0.022em]",
                        value === null ? "text-grey-500" : "text-ink-900")}>
         {value ?? "-"}
       </p>

@@ -395,7 +395,7 @@ function Variance({ amount }: { amount: number | null }) {
   const balanced = Math.abs(amount) < 0.01;
   return (
     <div className={cn("mt-4 rounded-lg border px-4 py-3",
-      balanced ? "bg-green-50 border-success" : "bg-yellow-50 border-brand-yellow")}>
+      balanced ? "bg-success-50 border-success" : "bg-brand-yellow-50 border-brand-yellow")}>
       <p className="flex items-center gap-2 text-base font-medium">
         {balanced
           ? <><Check className="size-4 text-success" /> The drawer balances</>

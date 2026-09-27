@@ -1,8 +1,12 @@
 import { useQuery } from "@tanstack/react-query";
 import { useParams } from "react-router";
+import { Printer } from "lucide-react";
+import { cn } from "@/lib/cn";
 import { moneyPrecise, dateLong } from "@/lib/format";
 import { getOrder } from "@/modules/pos/data/till";
-import { ReadFailed } from "@/components/ui";
+import {
+  ReadFailed, Button, DocMasthead, DocFacts, DocTotals, DocPanel, DocFooter, DOC_TD,
+} from "@/components/ui";
 
 /* ══════════════════════════════════════════════════════════════════
    THE BILL — what the guest is handed
@@ -16,6 +20,11 @@ import { ReadFailed } from "@/components/ui";
    CGST Rules governs the invoice, and /h/:code/invoices issues it
    against the folio. This is the docket that goes on the table.
    Saying so on the page is cheaper than being asked.
+
+   THE CRS VOUCHER'S LOOK (the owner, 27 September, D27-52), on the
+   restaurant's own paper: the roll stays (D17-64: A4 for hotel bills
+   and tax invoices, the restaurant keeps its thermal slips), so the
+   voucher's parts are laid on an 80mm sheet rather than DocPage's A4.
    ══════════════════════════════════════════════════════════════════ */
 
 export default function BillPage() {
@@ -72,7 +81,7 @@ export default function BillPage() {
   }
 
   return (
-    <div className="bg-white text-ink-900 min-h-screen">
+    <div className="bg-grey-100 print:bg-white min-h-screen py-6 print:py-0 [print-color-adjust:exact] [-webkit-print-color-adjust:exact]">
       <style>{`
         @media print {
           .no-print { display: none !important; }
@@ -80,58 +89,45 @@ export default function BillPage() {
         }
       `}</style>
 
-      <div className="no-print p-4 border-b border-grey-200 flex gap-2">
-        <button
-          type="button"
-          onClick={() => window.print()}
-          className="h-11 px-4 rounded-md bg-ink-900 text-white text-base font-medium"
-        >
+      <div className="no-print mx-auto mb-4 flex gap-2 px-3" style={{ maxWidth: "80mm" }}>
+        <Button onClick={() => window.print()}>
+          <Printer className="size-4" />
           Print
-        </button>
-        <button
-          type="button"
-          onClick={() => window.close()}
-          className="h-11 px-4 rounded-md border border-grey-300 text-base"
-        >
+        </Button>
+        <Button onClick={() => window.close()}>
           Close
-        </button>
+        </Button>
       </div>
 
-      <div className="mx-auto px-3 py-4" style={{ maxWidth: "80mm" }}>
-        <div className="text-center">
-          <p className="text-md font-semibold uppercase tracking-wide">
-            {o.hotelName}
-          </p>
-          <p className="text-2xs text-grey-600">{o.outletName}</p>
-          {o.hotelCity && (
-            <p className="text-2xs text-grey-600">{o.hotelCity}</p>
-          )}
-        </div>
+      <article className="mx-auto bg-white text-ink-700 px-3 py-4" style={{ maxWidth: "80mm" }}>
+        <DocMasthead name={o.hotelName} title="Bill" number={o.orderNo} />
+        <p className="-mt-2 mb-3 text-xs text-grey-500">
+          {o.outletName}{o.hotelCity && ` · ${o.hotelCity}`}
+        </p>
 
-        <div className="border-t border-dashed border-grey-400 my-2.5" />
+        {/* Two across: the roll has no room for four. */}
+        <DocFacts
+          className="grid-cols-2 print:grid-cols-2 divide-x-0 print:divide-x-0"
+          items={[
+            ...(o.table ? [{ label: "Table", value: o.table }] : []),
+            { label: "Date", value: dateLong(o.businessDate) },
+            { label: "Served by", value: o.openedBy ?? "-" },
+            ...(o.settledBy ? [{ label: "Settled by", value: o.settledBy }] : []),
+          ]}
+        />
 
-        <div className="text-2xs space-y-0.5">
-          <Line label="Bill" value={o.orderNo} />
-          {o.table && <Line label="Table" value={o.table} />}
-          <Line label="Date" value={dateLong(o.businessDate)} />
-          <Line label="Served by" value={o.openedBy ?? "-"} />
-          {o.settledBy && <Line label="Settled by" value={o.settledBy} />}
-        </div>
-
-        <div className="border-t border-dashed border-grey-400 my-2.5" />
-
-        <table className="w-full text-2xs">
+        <table className="w-full mt-4 border-t-2 border-ink-700">
           <tbody>
             {live.map((l) => (
               <tr key={l.id}>
-                <td className="align-top tabular pr-1.5 w-6">{l.qty}×</td>
-                <td className="align-top">
+                <td className={cn(DOC_TD, "tabular pr-1.5 w-6 whitespace-nowrap")}>{l.qty}×</td>
+                <td className={DOC_TD}>
                   {l.name}
                   {l.note && (
-                    <span className="block text-grey-600">{l.note}</span>
+                    <span className="block text-xs text-grey-500">{l.note}</span>
                   )}
                 </td>
-                <td className="align-top text-right tabular whitespace-nowrap">
+                <td className={cn(DOC_TD, "pl-2 text-right tabular font-semibold whitespace-nowrap")}>
                   {moneyPrecise(l.qty * l.unitPrice)}
                 </td>
               </tr>
@@ -139,34 +135,25 @@ export default function BillPage() {
           </tbody>
         </table>
 
-        <div className="border-t border-dashed border-grey-400 my-2.5" />
-
-        <div className="text-2xs space-y-0.5">
-          <Line label="Net" value={moneyPrecise(o.net)} />
-          {[...byRate.entries()].sort((a, b) => a[0] - b[0]).map(([rate, v]) => (
+        <DocTotals
+          className="w-full min-w-0 mt-3"
+          rows={[
+            ["Net", moneyPrecise(o.net)],
             /* CGST and SGST each carry half. Accommodation and
                restaurant supply within the state is never IGST — the
                place of supply is where the property is. */
-            <div key={rate}>
-              <Line label={`CGST ${rate / 2}%`} value={moneyPrecise(v.tax / 2)} />
-              <Line label={`SGST ${rate / 2}%`} value={moneyPrecise(v.tax / 2)} />
-            </div>
-          ))}
-          {[...vatByRate.entries()].sort((a, b) => a[0] - b[0]).map(([rate, v]) => (
-            <Line key={`vat-${rate}`} label={`VAT ${rate}%`} value={moneyPrecise(v.tax)} />
-          ))}
-        </div>
+            ...[...byRate.entries()].sort((a, b) => a[0] - b[0]).flatMap(
+              ([rate, v]): Array<[string, string]> => [
+                [`CGST ${rate / 2}%`, moneyPrecise(v.tax / 2)],
+                [`SGST ${rate / 2}%`, moneyPrecise(v.tax / 2)],
+              ]),
+            ...[...vatByRate.entries()].sort((a, b) => a[0] - b[0]).map(
+              ([rate, v]): [string, string] => [`VAT ${rate}%`, moneyPrecise(v.tax)]),
+          ]}
+          total={["TOTAL", moneyPrecise(o.gross)]}
+        />
 
-        <div className="border-t border-grey-900 mt-2 pt-1.5">
-          <div className="flex items-center justify-between">
-            <span className="text-sm font-semibold">TOTAL</span>
-            <span className="text-sm font-semibold tabular">
-              {moneyPrecise(o.gross)}
-            </span>
-          </div>
-        </div>
-
-        <div className="text-center mt-3 text-2xs text-grey-600 space-y-1">
+        <DocPanel className="mt-4">
           {o.status === "settled" ? (
             <p>
               {/* D17-21: nothing was paid at the till — it went on the
@@ -177,34 +164,30 @@ export default function BillPage() {
                     {o.paymentMethod === "room" && " - charged to the guest's bill"}</>}
             </p>
           ) : (
-            <p className="font-medium">NOT PAID</p>
+            <p className="font-semibold">NOT PAID</p>
           )}
           {/* D22-44: the alcohol's own VAT bill, issued when this was paid,
               and it names this bill back. */}
           {o.vatBill && (
-            <p data-bill-vat-bill>
+            <p className="mt-0.5" data-bill-vat-bill>
               Alcohol billed under VAT: VAT bill <span className="tabular">{o.vatBill}</span>
             </p>
           )}
-          {/* Cheaper to say than to be asked. */}
-          <p>
-            This is a restaurant bill, not a tax invoice. A GST invoice is
-            issued against the room folio at checkout.
-          </p>
-          {o.hotelGstin && <p className="tabular">GSTIN {o.hotelGstin}</p>}
-          {/* A16: on every food bill since January 2022; a dash until typed. */}
-          <p className="tabular" data-bill-fssai>FSSAI licence {o.hotelFssai ?? "-"}</p>
-        </div>
-      </div>
-    </div>
-  );
-}
+        </DocPanel>
 
-function Line({ label, value }: { label: string; value: string }) {
-  return (
-    <div className="flex items-center justify-between gap-2">
-      <span className="text-grey-600">{label}</span>
-      <span className="tabular">{value}</span>
+        <DocFooter
+          name={o.hotelName}
+          left={
+            <>
+              {o.hotelGstin && <p className="tabular">GSTIN {o.hotelGstin}</p>}
+              {/* A16: on every food bill since January 2022; a dash until typed. */}
+              <p className="tabular" data-bill-fssai>FSSAI licence {o.hotelFssai ?? "-"}</p>
+            </>
+          }
+          /* Cheaper to say than to be asked. */
+          note="This is a restaurant bill, not a tax invoice. A GST invoice is issued against the room folio at checkout."
+        />
+      </article>
     </div>
   );
 }

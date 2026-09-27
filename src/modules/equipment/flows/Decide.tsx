@@ -50,10 +50,10 @@ export function DecideButtons({ code, approval, approveLabel, onDone, quiet = fa
   return (
     <>
       <div className="flex flex-wrap gap-2 mt-3">
-        <Button variant={quiet ? "secondary" : "primary"} className="h-11" disabled={busy} onClick={() => void decide("approved")}>
+        <Button variant={quiet ? "secondary" : "primary"} disabled={busy} onClick={() => void decide("approved")}>
           {approveLabel}
         </Button>
-        <Button variant="secondary" className="h-11" disabled={busy} onClick={() => setRefusing(true)}>
+        <Button variant="secondary" disabled={busy} onClick={() => setRefusing(true)}>
           Refuse
         </Button>
       </div>
@@ -64,8 +64,8 @@ export function DecideButtons({ code, approval, approveLabel, onDone, quiet = fa
             description="Say why. The person who asked has to know what to do next."
             footer={
               <>
-                <Button variant="secondary" className="h-11" onClick={() => setRefusing(false)}>Cancel</Button>
-                <Button variant="danger" className="h-11" disabled={busy || !note.trim()}
+                <Button variant="secondary" onClick={() => setRefusing(false)}>Cancel</Button>
+                <Button variant="danger" disabled={busy || !note.trim()}
                         onClick={() => void decide("rejected")}>
                   {busy ? "Refusing…" : "Refuse"}
                 </Button>

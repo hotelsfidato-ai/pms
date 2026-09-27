@@ -2,12 +2,13 @@ import { useState, type ReactNode } from "react";
 import { Printer, FileSpreadsheet, FileText, Table2 } from "lucide-react";
 import { cn } from "@/lib/cn";
 import { dateShort } from "@/lib/format";
-import { Button, Card, Term, toast } from "@/components/ui";
+import {
+  Button, Card, Page, PageHeader, Term, toast, DocMasthead, DOC_TH,
+} from "@/components/ui";
 import { downloadFile, ApiError } from "@/lib/api";
 import type { TermKey } from "@/lib/glossary";
 import { toCsv, downloadCsv, reportFilename } from "@/lib/csv";
 import { useDocumentIdentity } from "@/lib/documentIdentity";
-import { useDocumentTitle } from "@/lib/documentTitle";
 
 /* ══════════════════════════════════════════════════════════════════
    REPORT SHELL
@@ -19,7 +20,10 @@ import { useDocumentTitle } from "@/lib/documentTitle";
    reads that line.
 
    Print styling lives here too — `no-print` on the chrome, so what
-   reaches paper is the report and nothing else.
+   reaches paper is the report and nothing else. On paper and on screen
+   the report wears the printed documents' look (the CRS voucher, D27-52):
+   the masthead with the property, the title and the period, and a 2px
+   ink rule over who printed it.
    ══════════════════════════════════════════════════════════════════ */
 
 const DASH = "-";
@@ -66,7 +70,6 @@ export function ReportShell({
   download?: { path: (kind: "pdf" | "xlsx" | "csv") => string; ready: boolean };
 }) {
   const identity = useDocumentIdentity();
-  useDocumentTitle(title);
   const propertyName = property ?? identity.property ?? DASH;
   /* WHO RAN IT. The footer said "front desk" whoever was signed in. An
      accountant reading a stamp needs the person, and the session has
@@ -79,74 +82,71 @@ export function ReportShell({
   });
 
   return (
-    <div className="px-5 py-6 sm:px-7 sm:py-8 max-w-[1400px] mx-auto">
-      {/* Chrome — never printed */}
-      <div className="no-print flex items-start justify-between gap-4 flex-wrap mb-5">
-        <div className="min-w-0">
-          <h1 className="text-2xl font-semibold text-ink-900">{title}</h1>
-          <p className="text-base text-grey-500 mt-1.5">{period}</p>
-        </div>
-        <div className="flex items-center gap-2">
-          <Button variant="secondary" size="sm" onClick={() => window.print()}>
-            <Printer className="size-4" />
-            Print
-          </Button>
-          {onExportPdf && (
-            <Button variant="secondary" size="sm" onClick={onExportPdf}>
-              <FileText className="size-4" />
-              PDF
+    <Page className="max-w-[1400px] print:p-0">
+      {/* Chrome — never printed. The header names the tab too. */}
+      <PageHeader
+        className="no-print"
+        title={title}
+        description={period}
+        actions={
+          <>
+            <Button variant="secondary" size="sm" onClick={() => window.print()}>
+              <Printer className="size-4" />
+              Print
             </Button>
-          )}
-          {download && <Downloads download={download} />}
-          {csv && !download && (
-            <Button
-              variant="secondary"
-              size="sm"
-              onClick={() => {
-                const { headers, rows } = csv();
-                downloadCsv(
-                  reportFilename(propertyName, title, period),
-                  toCsv(headers, rows),
-                );
-              }}
-            >
-              <FileSpreadsheet className="size-4" />
-              {/* CSV and not "Excel". It writes a .csv, Excel opens it,
-                  and a label naming a product the file is not is the
-                  same lie in a smaller font. */}
-              CSV
-            </Button>
-          )}
-        </div>
-      </div>
+            {onExportPdf && (
+              <Button variant="secondary" size="sm" onClick={onExportPdf}>
+                <FileText className="size-4" />
+                PDF
+              </Button>
+            )}
+            {download && <Downloads download={download} />}
+            {csv && !download && (
+              <Button
+                variant="secondary"
+                size="sm"
+                onClick={() => {
+                  const { headers, rows } = csv();
+                  downloadCsv(
+                    reportFilename(propertyName, title, period),
+                    toCsv(headers, rows),
+                  );
+                }}
+              >
+                <FileSpreadsheet className="size-4" />
+                {/* CSV and not "Excel". It writes a .csv, Excel opens it,
+                    and a label naming a product the file is not is the
+                    same lie in a smaller font. */}
+                CSV
+              </Button>
+            )}
+          </>
+        }
+      />
 
       {controls && (
-        <div className="no-print flex flex-wrap items-center gap-4 mb-4">{controls}</div>
+        <div className="no-print flex flex-wrap items-center gap-4 mb-5">{controls}</div>
       )}
 
-      <Card className="overflow-hidden">
-        {/* The report's own header, as the exports carry it */}
-        <div className="px-5 py-4 border-b border-grey-200">
-          <div className="flex items-baseline justify-between gap-4 flex-wrap">
-            <p className="text-md font-semibold text-ink-900">{propertyName}</p>
-            <p className="text-md font-semibold text-ink-900">{title}</p>
-          </div>
-          {meta && (
-            <p className="text-sm text-grey-600 tabular mt-1.5">{meta}</p>
-          )}
-        </div>
+      <Card className="px-4 py-4 sm:px-6 sm:py-5 print:border-0 print:p-0">
+        {/* The report's own header, as the exports carry it: the property,
+            then the report and its period behind the orange bar. */}
+        <DocMasthead name={propertyName} title={title} number={period} />
+        {meta && (
+          <p className="text-sm text-grey-600 tabular mb-4">{meta}</p>
+        )}
 
         <div className="overflow-x-auto scrollbar-quiet">{children}</div>
 
-        <div className="px-5 py-3 border-t border-grey-200 flex items-center justify-between gap-4 flex-wrap">
+        <footer className="mt-6 border-t-2 border-ink-700 pt-2.5 flex items-center justify-between gap-4 flex-wrap">
           {/* Labelled: a bare date and time under a report headed "As on
               25 Aug 2026" reads as a second report date. It is when this
               copy was produced. */}
-          <p className="text-2xs text-grey-500 tabular">Printed {stamp}</p>
-          <p className="text-2xs text-grey-500">{ranBy}</p>
-        </div>
+          <p className="text-xs text-grey-500 tabular">Printed {stamp}</p>
+          <p className="text-xs text-grey-500">{ranBy}</p>
+        </footer>
       </Card>
-    </div>
+    </Page>
   );
 }
 
@@ -212,15 +212,16 @@ export function ReportHead({ columns }: {
   columns: Array<{ label: string; numeric?: boolean; width?: string; term?: TermKey }>;
 }) {
   return (
-    <thead className="bg-grey-50 border-b border-grey-200">
+    <thead>
       <tr>
         {columns.map((c) => (
           <th
             key={c.label}
             scope="col"
+            /* The printed documents' header: small capitals over a 2px ink rule. */
             className={cn(
-              "text-2xs font-semibold uppercase tracking-wide text-grey-500",
-              "px-4 h-10 whitespace-nowrap",
+              DOC_TH,
+              "px-4 pt-2 align-bottom whitespace-nowrap",
               c.numeric ? "text-right" : "text-left",
               c.width,
             )}

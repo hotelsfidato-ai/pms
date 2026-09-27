@@ -41,7 +41,7 @@ export function StayActions({ hotelId, stay, businessDate }: {
   const over = stay.status === "no-show";
   /* Waiting for the hotel (Phase 1): the server answers "tentative", which
      the Stay type does not list yet - a request to the master (core types). */
-  const waiting = (stay.status as string) === "tentative";
+  const waiting = stay.status === "tentative";
   const qc = useQueryClient();
 
   /* D24-27: the server's own questions (roleGate). Dates, moves, the swap

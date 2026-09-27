@@ -96,7 +96,7 @@ export default function PurchasingPage() {
     {
       key: "reason",
       header: "What for",
-      cell: (r) => <span className="text-ink-700">{r.reason}</span>,
+      cell: (r) => <span className="text-grey-600">{r.reason}</span>,
       hideBelow: "lg",
     },
     {
@@ -124,7 +124,7 @@ export default function PurchasingPage() {
       key: "total",
       header: "Total",
       cell: (r) => (
-        <span className={r.total === null ? "text-ink-600" : undefined}>
+        <span className={r.total === null ? "text-grey-500" : undefined}>
           {rupees(r.total)}
         </span>
       ),
@@ -226,29 +226,33 @@ export default function PurchasingPage() {
 
       {/* RULE 6: SOMEBODY REFUSED IS TOLD, AND TOLD WHOM TO ASK. Not a
           greyed button with no explanation, and not a hidden one. */}
-      {data && !data.me.mayRaise && (
-        <Card className="mb-4">
-          <CardBody className="text-sm text-ink-700">
-            Your role cannot raise a purchase request at this property. Who may
-            is a setting the owner or an administrator changes at any time - ask
-            one of them, or the Inventory Manager or general manager to raise it
-            for you.
-          </CardBody>
-        </Card>
-      )}
+      {/* The notes: 12px apart, 20px over the list; hidden when there are
+          none, so they leave no gap (`empty:`). */}
+      <div className="space-y-3 mb-5 empty:hidden">
+        {data && !data.me.mayRaise && (
+          <Card>
+            <CardBody className="text-sm text-grey-600">
+              Your role cannot raise a purchase request at this property. Who may
+              is a setting the owner or an administrator changes at any time - ask
+              one of them, or the Inventory Manager or general manager to raise it
+              for you.
+            </CardBody>
+          </Card>
+        )}
 
-      {/* Supplier and store lists come from Places and suppliers. Without a
-          store nothing can be delivered anywhere, so it is said here rather
-          than discovered inside the dialog. */}
-      {data && data.stores.length === 0 && (
-        <Card className="mb-4">
-          <CardBody className="text-sm text-ink-700">
-            This property has no store switched on, so there is nowhere for a
-            delivery to land. Add or switch one on in Places and suppliers
-            first.
-          </CardBody>
-        </Card>
-      )}
+        {/* Supplier and store lists come from Places and suppliers. Without a
+            store nothing can be delivered anywhere, so it is said here rather
+            than discovered inside the dialog. */}
+        {data && data.stores.length === 0 && (
+          <Card>
+            <CardBody className="text-sm text-grey-600">
+              This property has no store switched on, so there is nowhere for a
+              delivery to land. Add or switch one on in Places and suppliers
+              first.
+            </CardBody>
+          </Card>
+        )}
+      </div>
 
       {body}
 
@@ -335,7 +339,18 @@ function AskDialog({
 
   return (
     <Dialog open onOpenChange={(open) => { if (!open) onClose(); }}>
-      <DialogContent title="Ask to buy something" className="max-w-2xl">
+      <DialogContent
+        title="Ask to buy something"
+        className="max-w-2xl"
+        footer={
+          <>
+            <Button variant="secondary" onClick={onClose}>Cancel</Button>
+            <Button variant="primary" loading={saving} onClick={() => void submit()}>
+              Send for approval
+            </Button>
+          </>
+        }
+      >
         <div className="space-y-4">
           <Field label="Which store is it for">
             {(p) => (
@@ -366,7 +381,7 @@ function AskDialog({
           </Field>
 
           <div className="space-y-2">
-            <p className="text-sm font-medium text-ink-900">What is needed</p>
+            <p className="text-sm font-medium text-grey-700">What is needed</p>
             {lines.map((l, i) => (
               <div key={i} className="flex flex-wrap items-end gap-2">
                 <div className="min-w-[180px] flex-1">
@@ -416,22 +431,15 @@ function AskDialog({
             <Button variant="secondary" onClick={() => setLines((all) => [...all, { ...EMPTY }])}>
               Add another item
             </Button>
-            <p className="text-sm text-ink-600">
+            <p className="text-xs text-grey-500">
               Leave the price blank where nothing has been agreed. It reads "-",
               never 0, and the order cannot be sent until every line has one.
             </p>
           </div>
 
           {problem && (
-            <p role="alert" className="text-sm text-brand-red">{problem}</p>
+            <p role="alert" className="text-sm text-brand-red-700">{problem}</p>
           )}
-
-          <div className="flex justify-end gap-2">
-            <Button variant="secondary" onClick={onClose}>Cancel</Button>
-            <Button variant="primary" loading={saving} onClick={() => void submit()}>
-              Send for approval
-            </Button>
-          </div>
         </div>
       </DialogContent>
     </Dialog>

@@ -54,9 +54,10 @@ export default function DeskPage() {
       {desk.isLoading ? (
         <Skeleton className="h-64" />
       ) : desk.error ? (
-        <ErrorState error={desk.error} onRetry={() => void desk.refetch()} />
+        <Card><ErrorState error={desk.error} onRetry={() => void desk.refetch()} /></Card>
       ) : (
-        <div className="flex flex-col gap-8">
+        /* Sections 20px apart (the Rhythm Rule). */
+        <div className="flex flex-col gap-5">
           <Waiting code={code} rows={desk.data!.waiting} onChanged={refresh} />
           <Requests code={code} rows={desk.data!.requests} onChanged={refresh} />
           <RoomCards code={code} rooms={desk.data!.rooms} onPrinted={setPrinted} />
@@ -77,10 +78,10 @@ function Waiting(
     <section>
       <h2 className="text-md font-semibold text-ink-900 mb-3">Details waiting to be checked</h2>
       {rows.length === 0 ? (
-        <Card><CardBody>
+        <Card>
           <EmptyState compact title="Nothing waiting"
             description="When a guest sends their ID and address from their own page, it waits here until somebody checks it against the ID." />
-        </CardBody></Card>
+        </Card>
       ) : (
         <ul className="flex flex-col gap-3">
           {rows.map((d) => (
@@ -90,17 +91,18 @@ function Waiting(
                   <p className="text-base font-medium text-ink-900">{d.guest}</p>
                   <p className="text-sm text-grey-600 tabular">{d.reference} · sent {dateTime(d.submittedAt)}</p>
                 </div>
-                <dl className="mt-3 grid grid-cols-[auto_1fr] gap-x-4 gap-y-1.5 text-sm">
-                  <dt className="text-grey-600">{ID_LABEL[d.idType] ?? d.idType}</dt>
-                  <dd className="text-ink-900 tabular">{d.idNumber}</dd>
-                  {d.passportExpiry && <><dt className="text-grey-600">Passport expires</dt>
-                    <dd className="tabular">{dateShort(d.passportExpiry)}</dd></>}
-                  {d.visaNumber && <><dt className="text-grey-600">Visa</dt>
-                    <dd className="tabular">{d.visaNumber}{d.visaExpiry ? `, expires ${dateShort(d.visaExpiry)}` : ""}</dd></>}
-                  {(d.addressLine || d.city || d.country) && <><dt className="text-grey-600">Address</dt>
-                    <dd>{[d.addressLine, d.city, d.country].filter(Boolean).join(", ")}</dd></>}
+                {/* What they typed, under a hairline: label, then value. */}
+                <dl className="mt-3 border-t border-grey-100 pt-2.5 grid grid-cols-[auto_minmax(0,1fr)] gap-x-4 gap-y-1.5 text-sm">
+                  <dt className="text-grey-500">{ID_LABEL[d.idType] ?? d.idType}</dt>
+                  <dd className="font-medium text-ink-900 tabular">{d.idNumber}</dd>
+                  {d.passportExpiry && <><dt className="text-grey-500">Passport expires</dt>
+                    <dd className="font-medium text-ink-900 tabular">{dateShort(d.passportExpiry)}</dd></>}
+                  {d.visaNumber && <><dt className="text-grey-500">Visa</dt>
+                    <dd className="font-medium text-ink-900 tabular">{d.visaNumber}{d.visaExpiry ? `, expires ${dateShort(d.visaExpiry)}` : ""}</dd></>}
+                  {(d.addressLine || d.city || d.country) && <><dt className="text-grey-500">Address</dt>
+                    <dd className="font-medium text-ink-900 break-words">{[d.addressLine, d.city, d.country].filter(Boolean).join(", ")}</dd></>}
                 </dl>
-                <div className="mt-4 flex flex-wrap gap-2">
+                <div className="mt-3.5 flex flex-wrap gap-2">
                   <Button variant="secondary" disabled={busy} onClick={() => confirm.mutate(d.id)}>
                     Confirm against the ID
                   </Button>
@@ -114,7 +116,7 @@ function Waiting(
         </ul>
       )}
       {(confirm.error || aside.error) && (
-        <p className="text-sm text-brand-red mt-2">{((confirm.error ?? aside.error) as Error).message}</p>
+        <p className="text-sm text-brand-red-700 mt-3">{((confirm.error ?? aside.error) as Error).message}</p>
       )}
     </section>
   );
@@ -134,15 +136,15 @@ function Requests(
 
   return (
     <section>
-      <h2 className="text-md font-semibold text-ink-900 mb-1">Requests</h2>
-      <p className="text-sm text-grey-600 mb-3">
+      <h2 className="text-md font-semibold text-ink-900">Requests</h2>
+      <p className="text-sm text-grey-500 mt-0.5 mb-3">
         Book them on the spa's or the laundry's own screen, then mark them done here.
       </p>
       {rows.length === 0 ? (
-        <Card><CardBody>
+        <Card>
           <EmptyState compact title="No requests"
             description="A guest can ask for the spa or laundry from their own page, where this property has them switched on." />
-        </CardBody></Card>
+        </Card>
       ) : (
         <ul className="flex flex-col gap-3">
           {rows.map((q) => (
@@ -154,7 +156,7 @@ function Requests(
                 <p className="text-sm text-grey-600 mt-0.5">
                   {q.guest} · {q.reference}{q.wanted ? ` · wanted ${q.wanted}` : ""} · asked {dateTime(q.createdAt)}
                 </p>
-                <div className="mt-3 flex gap-2">
+                <div className="mt-3 flex flex-wrap gap-2">
                   <Button variant="secondary" disabled={handle.isPending}
                     onClick={() => handle.mutate({ id: q.id, status: "done" })}>
                     Done
@@ -185,20 +187,23 @@ function RoomCards(
 
   return (
     <section>
-      <div className="flex flex-wrap items-baseline justify-between gap-2 mb-1">
-        <h2 className="text-md font-semibold text-ink-900">Room cards</h2>
+      <div className="flex flex-wrap items-end justify-between gap-x-4 gap-y-2 mb-3">
+        <div className="min-w-0">
+          <h2 className="text-md font-semibold text-ink-900">Room cards</h2>
+          <p className="text-sm text-grey-500 mt-0.5">
+            One card per room. A guest scans it and a code goes to the phone on their booking.
+            Printing a new card stops the old one at once.
+          </p>
+        </div>
         <Button variant="secondary" onClick={() => setAskEvery(true)}>Print cards for every room</Button>
       </div>
-      <p className="text-sm text-grey-600 mb-3">
-        One card per room. A guest scans it and a code goes to the phone on their booking.
-        Printing a new card stops the old one at once.
-      </p>
       <Card>
-        <ul className="divide-y divide-grey-200">
+        {/* List rows: 12px, a hairline between, at least 56px. */}
+        <ul className="divide-y divide-grey-100">
           {rooms.map((r) => (
-            <li key={r.id} className="flex items-center justify-between gap-3 px-4 py-2.5">
-              <div>
-                <p className="text-base text-ink-900">Room {r.number}</p>
+            <li key={r.id} className="flex items-center justify-between gap-3 px-4 py-3 min-h-14">
+              <div className="min-w-0">
+                <p className="text-base font-medium text-ink-900 tabular">Room {r.number}</p>
                 <p className="text-sm text-grey-600">
                   {r.cardSince ? `Card printed ${dateShort(r.cardSince)}` : "No card yet"}
                 </p>
@@ -274,16 +279,16 @@ function CardSheet({ cards, onDone }: { cards: PrintedCard[]; onDone: () => void
           <Button variant="secondary" onClick={onDone}>Done</Button>
         </div>
         {qr.error && (
-          <p className="text-sm text-brand-red mb-4">
+          <p className="text-sm text-brand-red-700 mb-5">
             The QR codes could not be drawn. {(qr.error as Error).message}{" "}
             <Button variant="ghost" onClick={() => void qr.refetch()}>Try again</Button>
           </p>
         )}
       </div>
-      <div className="grid gap-4 sm:grid-cols-2 print:grid-cols-2 print:gap-0">
+      <div className="grid gap-3 sm:grid-cols-2 print:grid-cols-2 print:gap-0">
         {cards.map((c, i) => (
           <div key={c.room} data-room-card
-            className="flex flex-col items-center justify-center gap-3 rounded-md border border-grey-300 bg-white p-5 text-center break-inside-avoid print:h-[130mm] print:rounded-none">
+            className="flex flex-col items-center justify-center gap-3 rounded-lg border border-grey-200 bg-white p-5 text-center break-inside-avoid print:h-[130mm] print:rounded-none print:border-grey-300">
             <p className="text-sm text-grey-600">{property ?? "-"}</p>
             <p className="text-2xl font-semibold text-ink-900">Room {c.room}</p>
             {qr.data ? (

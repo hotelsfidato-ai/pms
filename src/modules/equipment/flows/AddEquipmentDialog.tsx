@@ -94,10 +94,10 @@ export function AddEquipmentDialog({ code, open, onOpenChange, onAdded }: {
         description="Something durable the property owns."
         footer={
           <>
-            <Button variant="secondary" className="h-11" onClick={() => onOpenChange(false)}>
+            <Button variant="secondary" onClick={() => onOpenChange(false)}>
               Cancel
             </Button>
-            <Button variant="primary" className="h-11" disabled={!ready || busy}
+            <Button variant="primary" disabled={!ready || busy}
                     onClick={() => void submit()}>
               {busy ? "Adding…" : "Add"}
             </Button>
@@ -135,7 +135,7 @@ export function AddEquipmentDialog({ code, open, onOpenChange, onAdded }: {
             </Field>
 
             <div>
-              <p className="text-sm font-medium text-ink-900 mb-1.5">How is it kept track of</p>
+              <p className="text-sm font-medium text-grey-700 mb-1.5">How is it kept track of</p>
               <Segmented<HeldAs>
                 value={heldAs}
                 onChange={setHeldAs}
@@ -164,7 +164,7 @@ export function AddEquipmentDialog({ code, open, onOpenChange, onAdded }: {
             )}
 
             <div>
-              <p className="text-sm font-medium text-ink-900 mb-1.5">
+              <p className="text-sm font-medium text-grey-700 mb-1.5">
                 Where is it <span className="text-brand-red-700">*</span>
               </p>
               <Segmented<"room" | "place">

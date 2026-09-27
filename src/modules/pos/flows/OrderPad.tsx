@@ -43,6 +43,9 @@ import { openSlip, type BlockedSlip } from "@/modules/pos/components/SlipNotice"
    it, and this screen must never imply otherwise.
    ══════════════════════════════════════════════════════════════════ */
 
+/** A line's one-less / one-more: a 44px capsule (the fidato-design look). */
+const STEP = "press size-11 grid place-items-center rounded-full border border-grey-300 bg-white text-grey-600 hover:text-ink-900 hover:border-grey-400 cursor-pointer";
+
 export function OrderPad({
   hotelId, outlet, tableId, tableLabel, orderId, open, onOpenChange, onSent,
   onSlipBlocked,
@@ -371,10 +374,10 @@ export function OrderPad({
                 </p>
               )}
 
-              <div className="space-y-4">
+              <div className="space-y-5">
                 {filtered.map((cat) => (
                   <section key={cat.id}>
-                    <h3 className="text-2xs font-semibold uppercase tracking-wide text-grey-500 mb-2">
+                    <h3 className="text-md font-semibold text-ink-900 mb-3">
                       {cat.name}
                     </h3>
                     <div className="grid gap-2 sm:grid-cols-2">
@@ -388,11 +391,10 @@ export function OrderPad({
                             onClick={() => tap(item)}
                             className={cn(
                               "flex items-center justify-between gap-3 text-left",
-                              "rounded-md border p-3 min-h-14",
-                              "transition-colors duration-200",
+                              "rounded-lg ring-1 ring-inset px-3.5 py-3 min-h-14",
                               off
-                                ? "border-grey-200 bg-grey-50 text-grey-500 cursor-not-allowed"
-                                : "border-grey-200 bg-white cursor-pointer hover:border-brand-orange hover:bg-brand-orange-50",
+                                ? "ring-grey-200 bg-grey-50 text-grey-500 cursor-not-allowed"
+                                : "ring-grey-200 bg-white cursor-pointer press-tile hover:ring-grey-400 hover:bg-grey-50",
                             )}
                           >
                             <span className="min-w-0">
@@ -423,8 +425,8 @@ export function OrderPad({
 
             {/* ── The round ──────────────────────────────────── */}
             <div className="min-w-0 order-1 lg:order-2">
-              <div className="flex items-center justify-between gap-2 mb-2">
-                <h3 className="text-2xs font-semibold uppercase tracking-wide text-grey-500">
+              <div className="flex items-center justify-between gap-2 mb-3">
+                <h3 className="text-md font-semibold text-ink-900">
                   This round
                 </h3>
                 {!canKeep && (
@@ -456,7 +458,7 @@ export function OrderPad({
               ) : (
                 <ul className="divide-y divide-grey-100 border-y border-grey-100">
                   {lines.map((l) => (
-                    <li key={l.uid} className="py-2.5">
+                    <li key={l.uid} className="py-3">
                       <div className="flex items-start gap-2">
                         <div className="min-w-0 flex-1">
                           <span className="block text-base text-ink-900">
@@ -479,12 +481,12 @@ export function OrderPad({
                         </span>
                       </div>
 
-                      <div className="flex items-center gap-1.5 mt-1.5">
+                      <div className="flex items-center gap-1.5 mt-2">
                         <button
                           type="button"
                           aria-label={`One less ${l.name}`}
                           onClick={() => bump(l.uid, -1)}
-                          className="size-11 grid place-items-center rounded-md border border-grey-300 text-grey-600 hover:text-ink-900 cursor-pointer transition-colors duration-200"
+                          className={STEP}
                         >
                           <Minus className="size-4" />
                         </button>
@@ -495,7 +497,7 @@ export function OrderPad({
                           type="button"
                           aria-label={`One more ${l.name}`}
                           onClick={() => bump(l.uid, 1)}
-                          className="size-11 grid place-items-center rounded-md border border-grey-300 text-grey-600 hover:text-ink-900 cursor-pointer transition-colors duration-200"
+                          className={STEP}
                         >
                           <Plus className="size-4" />
                         </button>
@@ -504,7 +506,7 @@ export function OrderPad({
                           type="button"
                           aria-label={`Take ${l.name} off the pad`}
                           onClick={() => drop(l.uid)}
-                          className="size-11 grid place-items-center rounded-md border border-grey-300 text-grey-500 hover:text-brand-red hover:border-brand-red cursor-pointer transition-colors duration-200"
+                          className="press size-11 grid place-items-center rounded-full border border-grey-300 bg-white text-grey-500 hover:text-brand-red-700 hover:border-brand-red-100 hover:bg-brand-red-50 cursor-pointer"
                         >
                           <Trash2 className="size-4" />
                         </button>

@@ -44,13 +44,13 @@ export function SlipNotice({ slip, onDone, className }: {
       role="alert"
       data-slip-notice=""
       className={cn(
-        "flex flex-wrap items-center gap-x-3 gap-y-2 rounded-md border px-3.5 py-2",
+        "flex flex-wrap items-center gap-x-3 gap-y-2 rounded-lg border px-3.5 py-2",
         "border-brand-yellow-100 bg-brand-yellow-50",
         className,
       )}
     >
-      <Printer className="size-4 shrink-0 text-[#8a6300]" />
-      <p className="text-sm text-[#8a6300] min-w-0 flex-1">
+      <Printer className="size-4 shrink-0 text-brand-yellow-800" />
+      <p className="text-sm text-brand-yellow-800 min-w-0 flex-1">
         {slip.what} is with the kitchen, but its slip did not open - the
         browser blocked the new tab.
         {/* Refused on a fresh tap too: the browser is blocking this site
@@ -68,7 +68,7 @@ export function SlipNotice({ slip, onDone, className }: {
         type="button"
         onClick={onDone}
         aria-label={`Close the notice about ${slip.what}`}
-        className="size-11 grid place-items-center rounded-md text-[#8a6300] hover:bg-brand-yellow-100 cursor-pointer"
+        className="press size-11 grid place-items-center rounded-full text-brand-yellow-800 hover:bg-brand-yellow-100 cursor-pointer"
       >
         <X className="size-4" />
       </button>

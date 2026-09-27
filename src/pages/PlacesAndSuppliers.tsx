@@ -3,7 +3,7 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useParams } from "react-router";
 import { MapPin, Plus, Truck } from "lucide-react";
 import {
-  Page, PageHeader, Card, CardBody, Button, DataTable, EmptyState, StatusPill,
+  Page, PageHeader, Section, Button, DataTable, EmptyState, StatusPill,
   Dialog, DialogContent, Field, fieldProps, Input, NativeSelect, Textarea, toast,
   type Column,
 } from "@/components/ui";
@@ -132,67 +132,69 @@ export default function PlacesAndSuppliersPage() {
         description="Where stock is kept and equipment stands, and who it comes from."
       >
         {q.data && !may && q.data.whoMay && (
-          <p className="text-sm text-grey-600 mt-3 leading-relaxed">{q.data.whoMay}</p>
+          <p className="text-sm text-grey-600 leading-relaxed">{q.data.whoMay}</p>
         )}
       </PageHeader>
 
-      <Card className="mb-6">
-        <CardBody>
-          <div className="flex flex-wrap items-center justify-between gap-3 mb-3">
-            <h2 className="text-lg font-semibold text-ink-900">Places</h2>
-            <Button variant="primary" className="h-11" disabled={!may} onClick={() => setPlace("new")}>
-              <Plus className="size-4" /> Add a place
-            </Button>
-          </div>
-          <DataTable
-            columns={placeColumns}
-            rows={q.data?.places ?? []}
-            rowKey={(p) => p.id}
-            loading={q.isLoading}
-            error={q.error}
-            onRetry={() => void q.refetch()}
-            onRowClick={may ? (p) => setPlace(p) : undefined}
-            empty={
-              <EmptyState
-                icon={<MapPin />}
-                title="No places yet"
-                description={
-                  "Add where stock is kept - a main store, a kitchen store, a bar store - "
-                  + "and the other places equipment stands, like the lobby or the office. "
-                  + "Rooms are already known; they are not added here."
-                }
-              />
-            }
-          />
-        </CardBody>
-      </Card>
+      {/* Two sections, each a heading with its action and the list under it.
+          The list draws its own frame; inside a padded card it was a card in
+          a card. A row that opens something ends in an arrow, and only for
+          somebody who may change it (the Tappable Rule, both ways). */}
+      <Section
+        title="Places"
+        actions={
+          <Button variant="primary" disabled={!may} onClick={() => setPlace("new")}>
+            <Plus className="size-4" /> Add a place
+          </Button>
+        }
+      >
+        <DataTable
+          columns={placeColumns}
+          rows={q.data?.places ?? []}
+          rowKey={(p) => p.id}
+          loading={q.isLoading}
+          error={q.error}
+          onRetry={() => void q.refetch()}
+          onRowClick={may ? (p) => setPlace(p) : undefined}
+          empty={
+            <EmptyState
+              icon={<MapPin />}
+              title="No places yet"
+              description={
+                "Add where stock is kept - a main store, a kitchen store, a bar store - "
+                + "and the other places equipment stands, like the lobby or the office. "
+                + "Rooms are already known; they are not added here."
+              }
+            />
+          }
+        />
+      </Section>
 
-      <Card>
-        <CardBody>
-          <div className="flex flex-wrap items-center justify-between gap-3 mb-3">
-            <h2 className="text-lg font-semibold text-ink-900">Suppliers</h2>
-            <Button variant="secondary" className="h-11" disabled={!may} onClick={() => setSupplier("new")}>
-              <Plus className="size-4" /> Add a supplier
-            </Button>
-          </div>
-          <DataTable
-            columns={supplierColumns}
-            rows={q.data?.suppliers ?? []}
-            rowKey={(s) => s.id}
-            loading={q.isLoading}
-            error={q.error}
-            onRetry={() => void q.refetch()}
-            onRowClick={may ? (s) => setSupplier(s) : undefined}
-            empty={
-              <EmptyState
-                icon={<Truck />}
-                title="No suppliers yet"
-                description="Who the property buys stock and equipment from. Only a name is needed; the rest can be added later."
-              />
-            }
-          />
-        </CardBody>
-      </Card>
+      <Section
+        title="Suppliers"
+        actions={
+          <Button variant="secondary" disabled={!may} onClick={() => setSupplier("new")}>
+            <Plus className="size-4" /> Add a supplier
+          </Button>
+        }
+      >
+        <DataTable
+          columns={supplierColumns}
+          rows={q.data?.suppliers ?? []}
+          rowKey={(s) => s.id}
+          loading={q.isLoading}
+          error={q.error}
+          onRetry={() => void q.refetch()}
+          onRowClick={may ? (s) => setSupplier(s) : undefined}
+          empty={
+            <EmptyState
+              icon={<Truck />}
+              title="No suppliers yet"
+              description="Who the property buys stock and equipment from. Only a name is needed; the rest can be added later."
+            />
+          }
+        />
+      </Section>
 
       {place !== null && (
         <PlaceDialog code={code} place={place === "new" ? null : place}
@@ -237,13 +239,13 @@ function PlaceDialog({ code, place, onClose, onSaved }: {
         footer={
           <>
             {place && (
-              <Button variant="secondary" className="h-11 mr-auto" disabled={busy}
+              <Button variant="secondary" className="mr-auto" disabled={busy}
                       onClick={() => void submit(!place.isActive)}>
                 {place.isActive ? "Switch off" : "Switch on"}
               </Button>
             )}
-            <Button variant="secondary" className="h-11" onClick={onClose}>Cancel</Button>
-            <Button variant="primary" className="h-11" disabled={!ready || busy} onClick={() => void submit()}>
+            <Button variant="secondary" onClick={onClose}>Cancel</Button>
+            <Button variant="primary" disabled={!ready || busy} onClick={() => void submit()}>
               {busy ? "Saving…" : place ? "Save" : "Add"}
             </Button>
           </>
@@ -310,13 +312,13 @@ function SupplierDialog({ code, supplier, onClose, onSaved }: {
         footer={
           <>
             {supplier && (
-              <Button variant="secondary" className="h-11 mr-auto" disabled={busy}
+              <Button variant="secondary" className="mr-auto" disabled={busy}
                       onClick={() => void submit(!supplier.isActive)}>
                 {supplier.isActive ? "Switch off" : "Switch on"}
               </Button>
             )}
-            <Button variant="secondary" className="h-11" onClick={onClose}>Cancel</Button>
-            <Button variant="primary" className="h-11" disabled={!ready || busy} onClick={() => void submit()}>
+            <Button variant="secondary" onClick={onClose}>Cancel</Button>
+            <Button variant="primary" disabled={!ready || busy} onClick={() => void submit()}>
               {busy ? "Saving…" : supplier ? "Save" : "Add"}
             </Button>
           </>

@@ -1,3 +1,4 @@
+import { ChevronRight } from "lucide-react";
 import { cn } from "@/lib/cn";
 import { dateShort } from "@/lib/format";
 import type { ChartRoom, ChartRoomType } from "@/modules/front-desk/data/stayview";
@@ -158,6 +159,10 @@ function RoomTile({ room, businessDate, stay, onOpenStay, onWalkIn }: {
      (D24-27), so it is not a control. */
   const Tile = !stay && !onWalkIn && state !== "out-of-service" ? "div" : "button";
   const free = state === "free";
+  /* A tile that opens a stay or a walk-in says so with an arrow on its
+     last line (the Tappable Rule, the owner, 27 September). */
+  const opens = Tile === "button" && state !== "out-of-service";
+  const arrow = opens ? <ChevronRight className="size-4 shrink-0 text-grey-400" aria-hidden /> : null;
 
   return (
     <Tile
@@ -187,7 +192,7 @@ function RoomTile({ room, businessDate, stay, onOpenStay, onWalkIn }: {
               important word on the tile. */}
           <span className={cn(
             "inline-flex items-center gap-1.5 h-[21px] rounded-full text-xs font-medium whitespace-nowrap",
-            free ? "text-grey-500" : cn("px-2 bg-white ring-1 ring-inset", PILL[state]),
+            free ? "text-grey-500" : cn("px-2 bg-white", PILL[state]),
           )}>
             {!free && <i className="size-1.5 rounded-full bg-current" aria-hidden />}
             {LABEL[state]}
@@ -206,21 +211,24 @@ function RoomTile({ room, businessDate, stay, onOpenStay, onWalkIn }: {
           <p data-tile-guest className="mt-1 text-sm font-medium text-ink-900 leading-5 truncate">
             {stay.guest}
           </p>
-          <p className={cn(
-            "text-xs font-medium tabular",
-            state === "due-out" ? "text-brand-yellow-800" : "text-grey-600",
-          )}>
-            {state === "due-out"
-              ? "out today"
-              : `to ${dateShort(stay.departure)}`}
-          </p>
+          <div className="flex items-center justify-between gap-2">
+            <p className={cn(
+              "text-xs font-medium tabular",
+              state === "due-out" ? "text-brand-yellow-800" : "text-grey-600",
+            )}>
+              {state === "due-out"
+                ? "out today"
+                : `to ${dateShort(stay.departure)}`}
+            </p>
+            {arrow}
+          </div>
         </>
       ) : (
         <>
           <p className="mt-1 text-sm leading-5 text-grey-500 truncate">
             {state === "out-of-service" ? "-" : room.type}
           </p>
-          <span aria-hidden />
+          <div className="flex justify-end">{arrow}</div>
         </>
       )}
     </Tile>

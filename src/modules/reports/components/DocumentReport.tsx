@@ -69,7 +69,7 @@ export function DocumentReport({
       }}
     >
       {q.isLoading ? (
-        <div className="p-5 space-y-2">
+        <div className="py-4 space-y-2">
           {Array.from({ length: 10 }).map((_, i) => <Skeleton key={i} className="h-7 w-full" />)}
         </div>
       ) : readError(q) ? (
@@ -77,7 +77,7 @@ export function DocumentReport({
       ) : doc ? (
         <ReportView doc={doc} />
       ) : (
-        <p className="px-4 py-10 text-center text-base text-grey-500">
+        <p className="py-10 text-center text-sm text-grey-500">
           This property has no report to show.
         </p>
       )}

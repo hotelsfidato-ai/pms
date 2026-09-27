@@ -2,7 +2,7 @@ import { useState, type CSSProperties } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { Link } from "react-router";
 import {
-  ArrowRight, Check, BedDouble, IndianRupee, TrendingUp, Banknote,
+  ArrowRight, Check, ChevronRight, BedDouble, IndianRupee, TrendingUp, Banknote,
   LogIn, LogOut, Users, DoorOpen, SprayCan, Wrench, Wallet, ReceiptText,
   Building2, UserX, ClipboardList, ChartColumn, Landmark,
   type LucideIcon,
@@ -452,8 +452,10 @@ function MoneyItem({ icon: Icon, tone = "neutral", label, term, value, note, loa
     <>
       <span className="flex items-center gap-2.5 max-sm:contents">
         <IconChip tone={tone} className="max-sm:row-span-2 max-sm:self-center"><Icon /></IconChip>
-        <span className="text-sm font-medium leading-5 text-grey-600 max-sm:col-span-2 max-sm:self-end">
+        <span className="inline-flex items-center gap-1 text-sm font-medium leading-5 text-grey-600 max-sm:col-span-2 max-sm:self-end">
           {term && !to ? <Term name={term}>{label}</Term> : label}
+          {/* It opens its report: an arrow says so (the Tappable Rule). */}
+          {to && <ChevronRight className="size-4 text-grey-400" aria-hidden />}
         </span>
       </span>
       <span className={cn(
@@ -581,6 +583,8 @@ function CountTile({ icon: Icon, chip = "neutral", label, n, loading, to, job, w
           {count(value)}
           {goodAtZero && value === 0 && <Check className="size-4" aria-hidden />}
         </b>
+        {/* Each count opens its list (the Tappable Rule). */}
+        <ChevronRight className="ml-auto size-4 text-grey-400 shrink-0" aria-hidden />
       </span>
     </Link>
   );

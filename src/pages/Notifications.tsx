@@ -2,7 +2,7 @@ import { useQuery } from "@tanstack/react-query";
 import { Link, useParams } from "react-router";
 import { Bell } from "lucide-react";
 import { relative } from "@/lib/format";
-import { Page, PageHeader, Card, CardBody, StatusPill, Skeleton, ErrorState, type Tone } from "@/components/ui";
+import { Page, PageHeader, Card, CardBody, StatusPill, Skeleton, ErrorState, EmptyState, type Tone } from "@/components/ui";
 import { notificationsRepo } from "@/data/repositories";
 import { useUi } from "@/lib/ui";
 
@@ -54,33 +54,33 @@ export function NotificationsPage() {
       ) : isLoading ? (
         <Skeleton className="h-48 w-full" />
       ) : (data ?? []).length === 0 ? (
+        /* The kit's empty state, the same words. */
         <Card>
-          <CardBody>
-            <div className="text-center py-10">
-              <Bell className="size-6 text-grey-300 mx-auto mb-3" />
-              <p className="text-md font-semibold text-ink-900">Nothing needs attention</p>
-              <p className="text-base text-grey-500 mt-1.5">
-                No arrivals outstanding, no balances carrying into departure, no refunds due.
-              </p>
-            </div>
-          </CardBody>
+          <EmptyState
+            compact
+            icon={<Bell />}
+            title="Nothing needs attention"
+            description="No arrivals outstanding, no balances carrying into departure, no refunds due."
+          />
         </Card>
       ) : (
-        <div className="space-y-2.5">
+        <div className="space-y-3">
           {(data ?? []).map((n) => (
             <Card key={n.id}>
-              <CardBody className="flex items-start gap-3">
+              {/* On a phone the words take the card's width under the pill
+                  and the time, rather than a column squeezed between them. */}
+              <CardBody className="flex flex-wrap items-start gap-x-3 gap-y-1.5">
                 <StatusPill tone={NOTE_TONE[n.category] ?? "neutral"} dot>
                   {n.category}
                 </StatusPill>
-                <div className="min-w-0 flex-1">
+                <div className="min-w-0 flex-1 max-sm:order-last max-sm:basis-full">
                   <p className="text-base font-medium text-ink-900">{n.title}</p>
                   <p className="text-sm text-grey-600 mt-0.5">{n.body}</p>
                 </div>
-                <div className="shrink-0 text-right">
-                  <p className="text-2xs text-grey-500 tabular">{relative(n.at)}</p>
+                <div className="shrink-0 text-right max-sm:ml-auto max-sm:flex max-sm:items-baseline max-sm:gap-3">
+                  <p className="text-xs text-grey-500 tabular">{relative(n.at)}</p>
                   {n.link && (
-                    <Link to={n.link} className="text-sm text-brand-orange-700 hover:underline">
+                    <Link to={n.link} className="text-sm font-medium text-brand-orange-700 hover:underline underline-offset-4">
                       Open
                     </Link>
                   )}

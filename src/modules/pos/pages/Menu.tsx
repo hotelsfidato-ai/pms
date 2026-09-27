@@ -6,7 +6,7 @@ import { cn } from "@/lib/cn";
 import { money, moneyPrecise } from "@/lib/format";
 import { useUi } from "@/lib/ui";
 import {
-  Page, PageHeader, Card, CardBody, Button, StatusPill, Skeleton, toast,
+  Page, PageHeader, Card, CardBody, Button, StatusPill, Skeleton, EmptyState, toast,
   Dialog, DialogContent, Field, fieldProps, Input, NativeSelect,
 } from "@/components/ui";
 import { getModules } from "@/data/repositories";
@@ -123,7 +123,7 @@ export default function MenuPage() {
         }
       />
 
-      <div className="flex items-start gap-3 rounded-md border border-grey-200 bg-grey-50 p-3.5 mb-5">
+      <div className="flex items-start gap-3 rounded-lg border border-grey-200 bg-grey-50 px-4 py-3.5 mb-5">
         <UtensilsCrossed className="size-4 text-grey-400 shrink-0 mt-0.5" />
         <div className="min-w-0">
           <p className="text-base font-medium text-ink-900">
@@ -139,7 +139,7 @@ export default function MenuPage() {
 
       <Card className="mb-5">
         <CardBody>
-          <p className="text-base font-medium text-ink-900 mb-1">
+          <p className="text-md font-semibold text-ink-900 mb-1">
             Add a part of the menu
           </p>
           <p className="text-sm text-grey-600 mb-3">
@@ -187,21 +187,15 @@ export default function MenuPage() {
         )
       ) : cats.length === 0 ? (
         <Card>
-          <CardBody>
-            <div className="text-center py-8">
-              <UtensilsCrossed className="size-6 text-grey-300 mx-auto mb-3" />
-              <p className="text-md font-semibold text-ink-900">
-                The menu is empty
-              </p>
-              <p className="text-base text-grey-500 mt-1.5 max-w-md mx-auto">
-                Add a part of the menu above, then put items in it. Until then
-                the till has nothing to sell.
-              </p>
-            </div>
-          </CardBody>
+          <EmptyState
+            compact
+            icon={<UtensilsCrossed />}
+            title="The menu is empty"
+            description="Add a part of the menu above, then put items in it. Until then the till has nothing to sell."
+          />
         </Card>
       ) : (
-        <div className="space-y-5">
+        <div className="space-y-3">
           {cats.map((cat) => (
             <CategoryCard
               key={cat.id}
@@ -282,7 +276,7 @@ function Promotions({ hotelId }: { hotelId: string }) {
 
   return (
     <section className="mt-5">
-      <div className="flex items-center justify-between mb-2.5">
+      <div className="flex items-center justify-between gap-3 flex-wrap mb-3">
         <h2 className="text-md font-semibold text-ink-900">Promotions</h2>
         <Button variant="secondary" className="h-11"
                 onClick={() => setAdding(true)}>
@@ -334,13 +328,13 @@ function Promotions({ hotelId }: { hotelId: string }) {
             <ul className="divide-y divide-grey-100">
               {list.map((p) => (
                 <li key={p.id}
-                    className="flex items-center gap-3 py-2.5 first:pt-0">
+                    className="flex items-center gap-3 py-3 first:pt-0 last:pb-0">
                   <span className={cn(
-                    "shrink-0 rounded px-1.5 py-0.5 text-2xs font-semibold",
+                    "shrink-0 rounded-full px-2 py-0.5 text-2xs font-semibold",
                     "tabular tracking-wide",
                     p.isActive
-                      ? "bg-orange-50 text-brand-orange-700"
-                      : "bg-grey-100 text-grey-500")}>
+                      ? "bg-brand-orange-50 text-brand-orange-700"
+                      : "bg-grey-100 text-grey-600")}>
                     {p.code}
                   </span>
                   <span className={cn("min-w-0 flex-1 truncate text-base",
@@ -467,11 +461,10 @@ function PromotionDialog({
               {(["percent", "fixed"] as const).map((t) => (
                 <button key={t} type="button" onClick={() => setKind(t)}
                   className={cn(
-                    "flex-1 h-11 rounded-md border text-base font-medium",
-                    "cursor-pointer transition-colors duration-200",
+                    "press flex-1 h-11 rounded-full border text-base font-medium cursor-pointer",
                     kind === t
-                      ? "border-brand-orange bg-orange-50 text-brand-orange-700"
-                      : "border-grey-300 text-grey-600 hover:bg-grey-50")}>
+                      ? "border-brand-orange bg-brand-orange-50 text-brand-orange-700"
+                      : "border-grey-300 bg-white text-grey-600 hover:border-grey-400 hover:bg-grey-50")}>
                   {t === "percent" ? "Percentage" : "Fixed amount"}
                 </button>
               ))}
@@ -732,10 +725,11 @@ function CategoryCard({ category, hotelId, servesAlcohol, dishesByGroup, onChang
     <Card>
       {/* Wraps on a phone: the heading picker goes under the name rather
           than squeezing it (D22-49). */}
-      <div className="flex flex-wrap items-center gap-x-3 gap-y-2 px-4 pt-3.5 pb-1">
-        <p className="text-2xs uppercase tracking-wide text-grey-500 flex-1 min-w-32">
+      <div className="flex flex-wrap items-center gap-x-3 gap-y-2 px-4 py-3.5 border-b border-grey-200">
+        {/* The section's name is the card's heading (16px, the ladder). */}
+        <h2 className="text-md font-semibold text-ink-900 flex-1 min-w-32">
           {category.name}
-        </p>
+        </h2>
         {/* The default every dish in here inherits. Set once for two
             hundred dishes rather than timed one at a time — which is
             the whole reason the fallback exists. */}
@@ -788,7 +782,7 @@ function CategoryCard({ category, hotelId, servesAlcohol, dishesByGroup, onChang
 
       <ul className="divide-y divide-grey-100">
         {category.items.map((item) => (
-          <li key={item.id} className="px-4 py-2.5">
+          <li key={item.id} className="px-4 py-3">
             <div className="flex flex-wrap items-center gap-x-3 gap-y-1 min-h-9">
               <span
                 className={cn(
@@ -952,7 +946,7 @@ function CategoryCard({ category, hotelId, servesAlcohol, dishesByGroup, onChang
           </li>
         ))}
         {category.items.length === 0 && (
-          <li className="px-4 py-4 text-sm text-grey-500">
+          <li className="px-4 py-3.5 text-sm text-grey-500">
             Nothing in here yet.
           </li>
         )}
@@ -1164,7 +1158,7 @@ function AddonGroups({ hotelId, categories, onChanged }: {
 
   return (
     <section className="mt-5">
-      <div className="flex items-center justify-between mb-2.5">
+      <div className="flex items-center justify-between gap-3 flex-wrap mb-3">
         <h2 className="text-md font-semibold text-ink-900">Add-on groups</h2>
         <Button variant="secondary" className="h-11"
                 onClick={() => setEditing("new")}>
@@ -1204,7 +1198,7 @@ function AddonGroups({ hotelId, categories, onChanged }: {
             return (
               <Card key={g.id}>
                 <div className="flex flex-wrap items-center gap-x-3 gap-y-1 px-4 pt-3.5">
-                  <p className="flex-1 min-w-32 text-base font-medium text-ink-900">
+                  <p className="flex-1 min-w-32 text-md font-semibold text-ink-900">
                     {g.label}
                     <span className="ml-2 text-sm font-normal text-grey-500">
                       {rule ? rule[0]!.toUpperCase() + rule.slice(1) : "Any number, or none"}
@@ -1226,10 +1220,10 @@ function AddonGroups({ hotelId, categories, onChanged }: {
                 <p className="px-4 text-sm text-grey-600">
                   {on.length > 0 ? `On ${on.join(", ")}` : "Not on any dish yet."}
                 </p>
-                <ul className="divide-y divide-grey-100 mt-1">
+                <ul className="divide-y divide-grey-100 mt-2">
                   {g.addons.map((a) => (
                     <li key={a.id}
-                        className="flex flex-wrap items-center gap-x-3 px-4 min-h-11 py-0.5">
+                        className="flex flex-wrap items-center gap-x-3 px-4 min-h-11 py-1">
                       <span className="flex-1 min-w-28 text-base text-ink-900 truncate">
                         {a.label}
                       </span>
@@ -1527,9 +1521,8 @@ function PrepControl({ minutes, own, label, onSet }: {
         setEditing(true);
       }}
       className={cn(
-        "w-16 h-11 rounded-md border text-base tabular shrink-0",
-        "cursor-pointer transition-colors duration-200",
-        "border-grey-300 hover:border-brand-orange hover:bg-brand-orange-50",
+        "press w-16 h-11 rounded-full border text-base tabular shrink-0 cursor-pointer",
+        "bg-white border-grey-300 hover:border-grey-400 hover:bg-grey-50",
         unset ? "text-grey-500" : "text-ink-900",
       )}
       title={
@@ -1621,9 +1614,8 @@ function CourseControl({ course, own, label, onSet }: {
         setEditing(true);
       }}
       className={cn(
-        "w-14 h-11 rounded-md border text-base tabular shrink-0",
-        "cursor-pointer transition-colors duration-200",
-        "border-grey-300 hover:border-brand-orange hover:bg-brand-orange-50",
+        "press w-14 h-11 rounded-full border text-base tabular shrink-0 cursor-pointer",
+        "bg-white border-grey-300 hover:border-grey-400 hover:bg-grey-50",
         unset ? "text-grey-500" : "text-ink-900",
       )}
       title={

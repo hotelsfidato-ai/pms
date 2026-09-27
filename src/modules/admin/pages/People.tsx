@@ -134,7 +134,7 @@ export default function PeoplePage() {
             : "")
         }
         actions={
-          <Button variant="primary" className="h-11" disabled={!mayAdd}
+          <Button variant="primary" disabled={!mayAdd}
                   onClick={() => setAdding(true)}>
             <UserPlus className="size-4" /> Add somebody
           </Button>
@@ -142,7 +142,9 @@ export default function PeoplePage() {
       />
 
       {stranded.length > 0 && (
-        <Card className="border-amber-300 bg-amber-50">
+        /* The warning wash on the brand's yellow steps (it was stock
+           Tailwind amber), 20px above the list. */
+        <Card className="mb-5 border-brand-yellow-100 bg-brand-yellow-50">
           <CardBody>
             <p className="text-sm text-ink-900 leading-relaxed">
               <span className="font-medium">
@@ -173,7 +175,7 @@ export default function PeoplePage() {
             : undefined}
         />
       ) : (
-        <ul className="space-y-2">
+        <ul className="space-y-3">
           {rows.map((s) => (
             <PersonCard key={s.id} person={s} places={places}
                         onGrant={() => setGranting(s)}
@@ -182,7 +184,7 @@ export default function PeoplePage() {
         </ul>
       )}
 
-      <p className="flex items-start gap-2 text-sm text-grey-500 mt-4 leading-relaxed">
+      <p className="flex items-start gap-2 text-sm text-grey-500 mt-3 leading-relaxed">
         <Info className="size-3.5 shrink-0 mt-0.5" />
         <span>
           {/* ⚠ THIS SAID "ADDING SOMEBODY HERE DOES NOT SET A PASSWORD"
@@ -269,8 +271,8 @@ function PersonCard({ person, places, onGrant, onChanged }: {
   return (
     <li>
       <Card className={cn(!person.isActive && "opacity-60")}>
-        <CardBody className="space-y-2.5">
-          <div className="flex items-start gap-2 flex-wrap">
+        <CardBody className="space-y-3">
+          <div className="flex items-start gap-x-3 gap-y-2 flex-wrap">
             <div className="min-w-0 flex-1">
               <div className="flex items-baseline gap-2 flex-wrap">
                 <p className="text-base font-medium text-ink-900">
@@ -301,24 +303,24 @@ function PersonCard({ person, places, onGrant, onChanged }: {
             {person.isActive ? (
               <div className="flex gap-2 flex-wrap">
                 {mayGrant && (
-                  <Button variant="secondary" className="h-11" onClick={onGrant}>
+                  <Button variant="secondary" onClick={onGrant}>
                     <Building2 className="size-4" /> Give a property
                   </Button>
                 )}
                 {person.maySetPassword && (
-                  <Button variant="ghost" className="h-11"
+                  <Button variant="ghost"
                           onClick={() => setPassword(true)}>
                     {person.canSignIn ? "Password" : "Set a password"}
                   </Button>
                 )}
                 {person.mayEdit && (
-                  <Button variant="ghost" className="h-11"
+                  <Button variant="ghost"
                           onClick={() => setEditing(true)}>
                     Edit
                   </Button>
                 )}
                 {person.maySwitch && (
-                  <Button variant="secondary" className="h-11" disabled={busy}
+                  <Button variant="secondary" disabled={busy}
                           onClick={() => void deactivate()}>
                     {busy ? "…" : "Deactivate"}
                   </Button>
@@ -331,7 +333,7 @@ function PersonCard({ person, places, onGrant, onChanged }: {
                  switched off by mistake needed somebody with database
                  access to undo it" — and then the fix was itself
                  unreachable, so they still did. */
-              <Button variant="secondary" className="h-11" disabled={busy}
+              <Button variant="secondary" disabled={busy}
                       onClick={() => void bringBack()}>
                 {busy ? "…" : "Bring them back"}
               </Button>
@@ -346,7 +348,7 @@ function PersonCard({ person, places, onGrant, onChanged }: {
           ) : person.isActive && !person.canSignIn ? (
             /* Said here rather than left to be discovered. The pill
                above is the flag; this is what to do about it. */
-            <p className="text-sm text-brand-red leading-relaxed">
+            <p className="text-sm text-brand-red-700 leading-relaxed">
               No sign-in account yet - they cannot get in at all. Set a
               password and they can.
             </p>
@@ -359,9 +361,11 @@ function PersonCard({ person, places, onGrant, onChanged }: {
           ) : (
             <ul className="flex flex-wrap gap-1.5">
               {person.access.map((a) => (
+                /* Flat, as a pill is: only the ✕ can be pressed (the
+                   Tappable Rule), so only the ✕ looks like a control. */
                 <li key={a.code}
-                    className="flex items-center gap-1.5 rounded-md border
-                               border-grey-200 bg-grey-50 pl-2.5 pr-1 py-1">
+                    className={cn("flex items-center gap-1 rounded-full bg-grey-100 pl-2.5 min-h-7",
+                                  mayTake(a) ? "pr-0.5" : "pr-2.5")}>
                   <span className="text-sm text-ink-900">
                     <span className="tabular font-medium">{a.code}</span>
                     <span className="text-grey-500"> · {roleLabel(a.role)}</span>
@@ -370,9 +374,9 @@ function PersonCard({ person, places, onGrant, onChanged }: {
                     type="button"
                     aria-label={`Remove ${a.code} from ${person.name}`}
                     onClick={() => void revoke(a.code)}
-                    className="size-7 grid place-items-center rounded
-                               text-grey-500 hover:text-brand-red
-                               hover:bg-red-50 cursor-pointer"
+                    className="press size-6 pointer-coarse:size-11 grid place-items-center rounded-full
+                               text-grey-500 hover:text-brand-red-700
+                               hover:bg-brand-red-50 cursor-pointer"
                   >
                     <X className="size-3.5" />
                   </button>}
@@ -626,9 +630,9 @@ function AddPersonDialog({ open, places, placeRequired, onOpenChange, onAdded }:
         description="Set them a password and they can sign in straight away. What they can SEE comes next."
         footer={
           <>
-            <Button variant="secondary" className="h-11"
+            <Button variant="secondary" size="lg"
                     onClick={() => onOpenChange(false)}>Cancel</Button>
-            <Button variant="primary" className="h-11" disabled={!ready || busy}
+            <Button variant="primary" size="lg" disabled={!ready || busy}
                     onClick={() => void submit()}>
               {busy ? "Adding…" : "Add"}
             </Button>
@@ -693,8 +697,7 @@ function AddPersonDialog({ open, places, placeRequired, onOpenChange, onAdded }:
               </Field>
             </>
           )}
-          <p className="text-sm text-grey-600 rounded-md border border-grey-200
-                        bg-grey-50 p-3 leading-relaxed">
+          <p className="text-sm text-grey-600 rounded-lg bg-grey-50 px-3.5 py-3 leading-relaxed">
             {placeRequired
               /* D22-2: the picker holds no Admin for a GM, and the server
                  refuses one in the same words. */
@@ -758,9 +761,9 @@ function GrantDialog({ person, open, places, onOpenChange, onGranted }: {
         description="Access is per property. This is what stops one hotel seeing another's guests."
         footer={
           <>
-            <Button variant="secondary" className="h-11"
+            <Button variant="secondary" size="lg"
                     onClick={() => onOpenChange(false)}>Cancel</Button>
-            <Button variant="primary" className="h-11" disabled={!code || !role || busy}
+            <Button variant="primary" size="lg" disabled={!code || !role || busy}
                     onClick={() => void submit()}>
               {busy ? "Saving…" : "Give access"}
             </Button>
@@ -802,8 +805,7 @@ function GrantDialog({ person, open, places, onOpenChange, onGranted }: {
               )}
             </Field>
             {chosen && (
-              <p className="text-sm text-grey-600 rounded-md border
-                            border-grey-200 bg-grey-50 p-3 leading-relaxed">
+              <p className="text-sm text-grey-600 rounded-lg bg-grey-50 px-3.5 py-3 leading-relaxed">
                 {chosen.what}.
               </p>
             )}

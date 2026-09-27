@@ -73,6 +73,13 @@
      never defined, so their "needs attention" words showed in plain ink
      (found 27 September by the redesign). One value, the same ink. */
   --color-warning-dark: #8a6300;
+  /* The same for three more names screens wrote and nobody defined (the
+     redesign, 27 September): a link ("brand", nine places), an alarm
+     ("danger", four) and a warning ("warning", one) all showed in plain
+     ink. Each is the readable step its authors meant. */
+  --color-brand: #a34314;
+  --color-danger: #c52a1a;
+  --color-warning: #8a6300;
 
   /* Tints for surfaces / soft badges */
   --color-brand-orange-50: #fdf1eb;

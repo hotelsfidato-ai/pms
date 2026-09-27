@@ -1,6 +1,6 @@
 import { useQuery } from "@tanstack/react-query";
 import { Link } from "react-router";
-import { Check, AlertCircle, Circle, ArrowRight } from "lucide-react";
+import { Check, AlertCircle, Circle, ChevronRight } from "lucide-react";
 import { cn } from "@/lib/cn";
 import { Card, CardBody, StatusPill } from "@/components/ui";
 import { getCommissioning, type CommissioningCheck } from "@/modules/admin/data/commissioning";
@@ -48,8 +48,9 @@ export function CommissioningCard({ hotelId }: { hotelId: string }) {
   const blocking = outstanding.filter((c) => c.blocking);
 
   return (
+    /* The warning wash on the brand's yellow steps (it was stock amber). */
     <Card className={cn(
-      blocking.length > 0 ? "border-amber-300 bg-amber-50/60" : "",
+      blocking.length > 0 ? "border-brand-yellow-100 bg-brand-yellow-50" : "",
     )}>
       <CardBody className="space-y-3">
         <div className="flex items-baseline gap-2 flex-wrap">
@@ -70,7 +71,9 @@ export function CommissioningCard({ hotelId }: { hotelId: string }) {
               + "night audit will refuse and say so."}
         </p>
 
-        <ul className="space-y-1.5">
+        {/* List rows under a hairline, not boxes inside the card. */}
+        <ul className={cn("-mx-4 border-y divide-y",
+          blocking.length > 0 ? "border-brand-yellow-100 divide-brand-yellow-100" : "border-grey-100 divide-grey-100")}>
           {outstanding.map((c) => (
             <Row key={c.id} check={c} hotelId={hotelId} />
           ))}
@@ -94,7 +97,7 @@ function Row({ check, hotelId }: {
   const body = (
     <>
       <Icon className={cn("size-4 shrink-0 mt-0.5",
-        check.blocking ? "text-amber-600" : "text-grey-500")} />
+        check.blocking ? "text-brand-yellow-800" : "text-grey-500")} />
       <div className="min-w-0 flex-1">
         <p className="text-base text-ink-900">
           {check.label}
@@ -112,20 +115,21 @@ function Row({ check, hotelId }: {
           </p>
         )}
       </div>
+      {/* It opens the screen that settles it: an arrow says so. */}
       {check.to && (
-        <ArrowRight className="size-4 text-grey-400 shrink-0 mt-0.5" />
+        <ChevronRight className="size-4 text-grey-400 shrink-0 mt-0.5" aria-hidden />
       )}
     </>
   );
 
-  const shell = "flex items-start gap-2.5 rounded-md border border-grey-200 "
-              + "bg-white px-3 py-2.5";
+  const shell = "flex items-start gap-2.5 px-4 py-3";
 
   return (
     <li>
       {check.to ? (
         <Link to={`/h/${hotelId}${check.to}`}
-              className={cn(shell, "hover:border-brand-orange transition-colors cursor-pointer")}>
+              className={cn(shell, "hover:bg-white/60 transition-colors duration-150 cursor-pointer",
+                "focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-brand-orange")}>
           {body}
         </Link>
       ) : (

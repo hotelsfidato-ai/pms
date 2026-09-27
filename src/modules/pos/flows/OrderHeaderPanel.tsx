@@ -98,17 +98,19 @@ export function OrderHeaderPanel({
 
   return (
     <>
-      <div className="flex items-center gap-2 flex-wrap px-4 pb-2">
+      {/* Inside the order's card, which already holds the 16px sides. */}
+      <div className="flex items-center gap-2 flex-wrap pb-3">
         <button
           type="button"
           disabled={settled}
           onClick={() => setOpen(true)}
           className={cn(
-            "flex items-center gap-2 text-sm rounded-md px-2 py-1 -ml-2",
-            "transition-colors duration-200",
+            /* It opens the order's details, so it reads as a link (the
+               Tappable Rule); once settled it is plain grey text. */
+            "flex items-center gap-2 text-sm font-medium min-h-8 pointer-coarse:min-h-11 text-left",
             settled
               ? "text-grey-500 cursor-not-allowed"
-              : "text-grey-600 hover:bg-grey-50 cursor-pointer",
+              : "text-brand-orange-700 hover:underline underline-offset-4 cursor-pointer",
           )}
         >
           <Users className="size-3.5" />
@@ -155,7 +157,7 @@ export function OrderHeaderPanel({
         >
           <div className="space-y-4">
             <div>
-              <h4 className="text-2xs font-semibold uppercase tracking-wide text-grey-500 mb-2">
+              <h4 className="text-2xs font-semibold uppercase tracking-wide text-grey-500 mb-3">
                 Where it is going
               </h4>
               <div className="grid grid-cols-2 gap-2">
@@ -165,11 +167,10 @@ export function OrderHeaderPanel({
                     type="button"
                     onClick={() => setChannel(c.key)}
                     className={cn(
-                      "min-h-12 rounded-md border text-base cursor-pointer",
-                      "transition-colors duration-200",
+                      "press min-h-12 rounded-full border text-base font-medium cursor-pointer",
                       channel === c.key
-                        ? "border-brand-orange bg-orange-50 text-brand-orange-700"
-                        : "border-grey-300 text-grey-700 hover:bg-grey-50",
+                        ? "border-brand-orange bg-brand-orange-50 text-brand-orange-700"
+                        : "border-grey-300 bg-white text-grey-700 hover:border-grey-400 hover:bg-grey-50",
                     )}
                   >
                     {c.label}
@@ -217,14 +218,14 @@ export function OrderHeaderPanel({
             </div>
 
             <div>
-              <h4 className="text-2xs font-semibold uppercase tracking-wide text-grey-500 mb-2">
+              <h4 className="text-2xs font-semibold uppercase tracking-wide text-grey-500 mb-3">
                 Customer
               </h4>
               {channel === "delivery" && !phone.trim() && (
                 /* Said BEFORE the bill is cooked. The server refuses at
                    settlement, by which point the kitchen has already
                    made it. */
-                <p className="flex items-start gap-2 text-sm text-[#8a6300] mb-2">
+                <p className="flex items-start gap-2 text-sm text-brand-yellow-800 mb-2">
                   <Phone className="size-4 shrink-0 mt-0.5" />
                   <span>
                     A delivery needs a phone number, or it gets cooked and

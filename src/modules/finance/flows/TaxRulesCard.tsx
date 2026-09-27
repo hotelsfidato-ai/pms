@@ -98,8 +98,8 @@ export function TaxRulesCard({ hotelId }: { hotelId: string }) {
 
           {orphaned.length > 0 && (
             <div className="flex items-start gap-2.5 rounded-md border
-                            border-amber-300 bg-amber-50 p-3">
-              <AlertTriangle className="size-4 text-amber-600 shrink-0 mt-0.5" />
+                            border-brand-yellow-100 bg-brand-yellow-50 p-3">
+              <AlertTriangle className="size-4 text-brand-yellow-800 shrink-0 mt-0.5" />
               <p className="text-sm text-ink-900 leading-relaxed">
                 {orphaned.length === 1 ? "One menu category sells" : `${orphaned.length} menu categories sell`}
                 {" "}under a heading with no rate set - {" "}
@@ -313,7 +313,7 @@ function SlabsDialog({ hotelId, rules, open, onOpenChange, onSaved }: {
                     aria-label="Remove this rate"
                     onClick={() => setRows((x) => x.filter((_, j) => j !== i))}
                     className="size-11 grid place-items-center rounded-md
-                               text-grey-500 hover:text-brand-red hover:bg-red-50
+                               text-grey-500 hover:text-brand-red-700 hover:bg-brand-red-50
                                cursor-pointer shrink-0"
                   >
                     <X className="size-4" />
