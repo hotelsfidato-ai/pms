@@ -129,11 +129,14 @@ cashier.get("/:code/cashier-shift", async (c) => {
     const { rows: expected } = await client.query<{ amount: string }>(
       `select app.cashier_expected_cash($1)::text as amount`, [shiftId]);
 
+    /* From app.hotel_people (149, the owner's D27-97): read from `staff` and
+       `staff_hotels` it was nobody for anyone who does not run the hotel -
+       row security shows each person only their own roster line. */
     const { rows: mates } = await client.query<{ id: string; name: string }>(
-      `select s.id::text, s.full_name as name
-         from staff s join staff_hotels sh on sh.staff_id = s.id
-        where sh.hotel_id = $1 and s.is_active and s.id <> $2
-        order by s.full_name`,
+      `select id::text, full_name as name
+         from app.hotel_people($1)
+        where is_active and id <> $2
+        order by full_name`,
       [hotelId, session.staffId]);
 
     const counted = open[0].counted;

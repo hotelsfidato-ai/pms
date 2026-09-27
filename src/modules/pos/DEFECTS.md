@@ -29,6 +29,10 @@ fails "expected 'front_desk' to be 'pos'".
 
 ## Fixed
 
+### POS-19 · the waiters list (till.ts) showed nobody but the caller - FIXED 28 September (D27-97)
+
+Read from `staff` joined to `staff_hotels`, whose row security shows each person only their own line unless they run the hotel (housekeeping HK-14). Now reads `app.hotel_people` (149), names only. `api/test/modules/pos/waitersList.test.ts` - failed on the old code, passes now.
+
 ### POS-17 · MINE: Restaurant setup's ready-to-open list said "None yet" for a dish on the menu — caught before commit
 
 **Found** — 25 September, on the saved screenshot of the finished setup: "Dishes on the menu - None yet" at a property whose menu held Dal Tadka (the API answered it). The app keeps a read until told otherwise (`staleTime: Infinity`, `src/App.tsx`) and keeps `till-menu` on the device (`PERSISTED`), and the capture's browser had read the menu empty on the "before" screenshot. Any dish added on another device, or by the kitchen manager, would have left the list stale the same way.

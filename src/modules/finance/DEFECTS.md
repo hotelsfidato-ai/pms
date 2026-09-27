@@ -29,6 +29,10 @@ a question for the owner. Seen once; not reproduced on demand.
 
 ## Fixed
 
+### FIN-11 · the drawer hand-over list (cashier.ts) showed nobody but the caller - FIXED 28 September (D27-97)
+
+Read from `staff` joined to `staff_hotels`, whose row security shows each person only their own line unless they run the hotel (housekeeping HK-14). Now reads `app.hotel_people` (149), names only. `api/test/modules/finance/drawerColleagues.test.ts` - failed on the old code, passes now.
+
 ### FIN-9 · The Bill tab offered housekeeping every act the server refuses — FIXED 25 September
 
 **Found** — 24 September, by the front desk's polish (D24-27): the stay
