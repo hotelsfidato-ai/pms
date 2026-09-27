@@ -3,6 +3,7 @@ import { moduleSwitches } from "./moduleSwitches.ts";
 import { adminLists } from "./adminLists.ts";
 import { admin } from "./admin.ts";
 import { commissioning } from "./commissioning.ts";
+import { groupLogo } from "./groupLogo.ts";
 
 /* The front door of the administration service on the server — the only file
    the core or another service may import (src/test/boundaries.test.ts).
@@ -12,4 +13,5 @@ export const mounts: readonly Mount[] = [
   ["/api/hotels", adminLists],
   ["/api", admin],
   ["/api/hotels", commissioning],
+  ["/api/hotels", groupLogo],
 ];

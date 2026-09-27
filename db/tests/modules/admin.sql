@@ -474,3 +474,111 @@ select count(*) as adm3_placeholders from staff where email = 'REPLACE@fidato.in
 rollback;
 select test.ok('placeholder', 'a replay of the seed does not re-create the placeholder administrator (ADM-3)',
   :adm3_placeholders = 0, :adm3_placeholders || ' placeholder rows after a replay');
+
+
+-- =============================================================================
+-- THE GROUP'S LOGO (the owner's D27-53, 27 September)
+-- =============================================================================
+-- The database's own guard, asked directly, with no route in front of it
+-- (MEMORY 318): the owner, an administrator or a GM at any hotel, or a group
+-- administrator, may change it; everybody else active reads it; somebody who
+-- is not active staff of this group reads nothing. One copy is one group
+-- (D21-1), so "another group" is nobody signed in here. The route's own
+-- refusals are api/test/modules/admin/groupLogo.test.ts.
+-- =============================================================================
+do $$
+declare
+  h uuid; clerk uuid; gm uuid; adm uuid; gone uuid; owner uuid;
+  failed boolean; n int;
+begin
+  h := app.provision_property_unchecked('ADL', 'Logo Test', 'Nowhere');
+  select id into owner from staff where email = 'owner@fidato.in';
+  insert into staff (email, full_name) values ('adl-clerk@fidato.in', 'Logo Test Clerk')
+  on conflict (email) do update set is_active = true returning id into clerk;
+  insert into staff (email, full_name) values ('adl-gm@fidato.in', 'Logo Test Manager')
+  on conflict (email) do update set is_active = true returning id into gm;
+  insert into staff (email, full_name) values ('adl-admin@fidato.in', 'Logo Test Admin')
+  on conflict (email) do update set is_active = true returning id into adm;
+  insert into staff (email, full_name) values ('adl-gone@fidato.in', 'Logo Test Gone')
+  on conflict (email) do update set is_active = true returning id into gone;
+  delete from staff_hotels where staff_id in (clerk, gm, adm, gone);
+  insert into staff_hotels (staff_id, hotel_id, role) values
+    (clerk, h, 'front_desk'), (gm, h, 'gm'), (adm, h, 'admin'), (gone, h, 'gm');
+  update staff set is_active = false where id = gone;
+  delete from group_logo;
+
+  -- ---------- who, asked of the function itself ----------
+  perform set_config('app.user_id', gm::text, true);
+  perform test.ok('group logo', 'a GM may change it', app.sets_group_logo());
+  perform set_config('app.user_id', adm::text, true);
+  perform test.ok('group logo', 'an administrator may change it', app.sets_group_logo());
+  perform set_config('app.user_id', owner::text, true);
+  perform test.ok('group logo', 'a group administrator may change it', app.sets_group_logo());
+  perform set_config('app.user_id', clerk::text, true);
+  perform test.ok('group logo', 'reception may not', not app.sets_group_logo());
+  perform set_config('app.user_id', gone::text, true);
+  perform test.ok('group logo', 'nor a GM who has been switched off', not app.sets_group_logo());
+
+  -- ---------- the row, as the application ----------
+  perform set_config('app.user_id', clerk::text, true);
+  set local role pms_app;
+  failed := false;
+  begin
+    insert into group_logo (image_type, image) values ('image/png', '\x89504e470d0a1a0a'::bytea);
+  exception when insufficient_privilege then failed := true;
+  end;
+  reset role;
+  perform test.ok('group logo', 'the database refuses reception''s logo, whatever the route',
+    failed and not exists (select 1 from group_logo));
+  delete from group_logo;   -- so a broken policy fails the line above, not the next insert
+
+  perform set_config('app.user_id', gm::text, true);
+  set local role pms_app;
+  insert into group_logo (image_type, image, changed_by)
+  values ('image/png', '\x89504e470d0a1a0a'::bytea, gm);
+  reset role;
+  perform test.ok('group logo', 'and takes the GM''s', exists (select 1 from group_logo where changed_by = gm));
+  perform test.ok('group logo', 'and the audit log records who',
+    exists (select 1 from audit_log where table_name = 'group_logo' and actor = gm and action = 'INSERT'));
+
+  perform set_config('app.user_id', clerk::text, true);
+  set local role pms_app;
+  select count(*) into n from group_logo;
+  update group_logo set image_type = 'image/svg+xml';
+  delete from group_logo;
+  reset role;
+  perform test.ok('group logo', 'reception reads it - they print bills', n = 1, n || ' rows read');
+  perform test.ok('group logo', 'and can neither change nor remove it',
+    (select image_type from group_logo) = 'image/png');
+
+  perform set_config('app.user_id', gone::text, true);
+  set local role pms_app;
+  select count(*) into n from group_logo;
+  reset role;
+  perform test.ok('group logo', 'somebody switched off reads nothing', n = 0, n || ' rows read');
+  perform set_config('app.user_id', '', true);
+  set local role pms_app;
+  select count(*) into n from group_logo;
+  reset role;
+  perform test.ok('group logo', 'nor does nobody signed in: no other group reads it', n = 0, n || ' rows read');
+
+  -- ---------- what may be stored: one row, a PNG or an SVG, 200 KB ----------
+  perform test.raises('group logo', 'one logo for the group, never two',
+    $q$insert into group_logo (id, image_type, image) values (2, 'image/png', '\x89'::bytea)$q$, '23514');
+  perform test.raises('group logo', 'a PNG or an SVG, nothing else',
+    $q$update group_logo set image_type = 'text/html'$q$, '23514');
+  perform test.raises('group logo', 'and 200 KB at most',
+    $q$update group_logo set image = decode(repeat('00', 204801), 'hex')$q$, '23514');
+
+  -- ---------- and the fixtures go ----------
+  delete from group_logo;
+  perform set_config('app.user_id', '', true);
+  delete from staff_hotels where staff_id in (clerk, gm, adm, gone);
+  update staff set is_active = false where id in (clerk, gm, adm, gone);
+  alter table hotels disable trigger hotels_no_delete;
+  delete from hotels where id = h;
+  alter table hotels enable trigger hotels_no_delete;
+end $$;
+
+select set_config('app.user_id',
+       (select id::text from staff where email = 'owner@fidato.in'), false);

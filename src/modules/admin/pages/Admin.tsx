@@ -19,6 +19,7 @@ import { getModules, setModule } from "@/data/repositories";
 import { useRole } from "@/lib/session";
 import { switchesModules } from "@/modules/admin/moduleSwitchRoles";
 import { TaxInUseRows } from "@/modules/admin/components/TaxInUse";
+import { GroupLogoCard } from "@/modules/admin/components/GroupLogoCard";
 
 /* ══════════════════════════════════════════════════════════════════
    ADMINISTRATION
@@ -558,6 +559,7 @@ export function SettingsPage() {
         <Skeleton className="h-96 w-full" />
       ) : (
         <div className="space-y-4">
+          <GroupLogoCard hotelCode={hotelId} />
           {/* D17-36, 17 September: the GM may open Settings, and the
               switches stay with the owner and an administrator. Hidden,
               not disabled — they are not the GM's to ask about, and the
