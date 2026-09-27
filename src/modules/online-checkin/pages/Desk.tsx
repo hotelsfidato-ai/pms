@@ -4,7 +4,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { dateShort, dateTime } from "@/lib/format";
 import { useDocumentIdentity } from "@/lib/documentIdentity";
 import {
-  Button, Card, CardBody, Dialog, DialogContent, EmptyState, ErrorState, Page, PageHeader,
+  Button, Card, CardBody, Dialog, DialogContent, EmptyState, ErrorState, InfoButton, Page, PageHeader,
   Skeleton,
 } from "@/components/ui";
 import {
@@ -136,10 +136,11 @@ function Requests(
 
   return (
     <section>
-      <h2 className="text-md font-semibold text-ink-900">Requests</h2>
-      <p className="text-sm text-grey-500 mt-0.5 mb-3">
-        Book them on the spa's or the laundry's own screen, then mark them done here.
-      </p>
+      {/* The section's note behind an (i), the same words (the owner, D27-82). */}
+      <div className="flex items-center gap-1 mb-3">
+        <h2 className="text-md font-semibold text-ink-900">Requests</h2>
+        <InfoButton>{"Book them on the spa's or the laundry's own screen, then mark them done here."}</InfoButton>
+      </div>
       {rows.length === 0 ? (
         <Card>
           <EmptyState compact title="No requests"
@@ -187,13 +188,11 @@ function RoomCards(
 
   return (
     <section>
-      <div className="flex flex-wrap items-end justify-between gap-x-4 gap-y-2 mb-3">
-        <div className="min-w-0">
+      <div className="flex flex-wrap items-center justify-between gap-x-4 gap-y-2 mb-3">
+        {/* The section's note behind an (i), the same words (the owner, D27-82). */}
+        <div className="flex items-center gap-1 min-w-0">
           <h2 className="text-md font-semibold text-ink-900">Room cards</h2>
-          <p className="text-sm text-grey-500 mt-0.5">
-            One card per room. A guest scans it and a code goes to the phone on their booking.
-            Printing a new card stops the old one at once.
-          </p>
+          <InfoButton>{"One card per room. A guest scans it and a code goes to the phone on their booking. Printing a new card stops the old one at once."}</InfoButton>
         </div>
         <Button variant="secondary" onClick={() => setAskEvery(true)}>Print cards for every room</Button>
       </div>

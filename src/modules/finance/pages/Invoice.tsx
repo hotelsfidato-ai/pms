@@ -4,6 +4,8 @@ import { Printer, ArrowLeft } from "lucide-react";
 import { cn } from "@/lib/cn";
 import { moneyPrecise, amountInWords, dateLong } from "@/lib/format";
 import { useUi } from "@/lib/ui";
+import { useDocumentTitle } from "@/lib/documentTitle";
+import { useGroupSettings } from "@/modules/admin";
 import {
   Button, Skeleton, ErrorState, DocPage, DocMasthead, DocFacts, DocParties, DocLabel,
   DocTotals, DocPanel, DocFooter, DOC_TH, DOC_TD,
@@ -105,6 +107,12 @@ export default function InvoicePage() {
     queryKey: ["invoice", hotelId, number],
     queryFn: () => getInvoice(hotelId, number),
   });
+  /* The tab names the document (the owner, 27 September: each tab its
+     screen's name); it kept the page before's. */
+  useDocumentTitle(data ? (data.creditsInvoiceId !== null ? "Credit note" : "Tax invoice") : null);
+  /* The group's name and logo from Settings (D27-53): "by <group>" under
+     the property's name, the logo as a picture; nothing while unset. */
+  const group = useGroupSettings(hotelId);
 
   if (isLoading) {
     return (
@@ -185,6 +193,8 @@ export default function InvoicePage() {
           the property's name until then; the document and its number ── */}
       <DocMasthead
         name={data.supplier.name}
+        group={group.name}
+        logo={group.logo}
         title={isCreditNote ? "Credit Note" : "Tax Invoice"}
         number={data.number}
       >

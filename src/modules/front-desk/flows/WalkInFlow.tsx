@@ -233,9 +233,9 @@ export function WalkInFlow({
               refuses independently either way. */}
           {room.data && (
             <div className={cn(
-              "rounded-md border p-3 text-sm",
+              "rounded-lg border p-3 text-sm",
               overCapacity
-                ? "border-brand-red-100 bg-red-50 text-brand-red"
+                ? "border-brand-red-100 bg-brand-red-50 text-brand-red-700"
                 : "border-grey-200 bg-grey-50 text-grey-600",
             )}>
               {overCapacity ? (
@@ -365,7 +365,7 @@ export function WalkInFlow({
 
           {/* An override is allowed — but the reason is kept */}
           {needsReason && (
-            <div className="rounded-md border border-brand-yellow-100 bg-brand-yellow-50 p-3 space-y-2.5">
+            <div className="rounded-lg border border-brand-yellow-100 bg-brand-yellow-50 p-3 space-y-2.5">
               <p className="flex items-start gap-2 text-sm text-[#8a6300]">
                 <AlertTriangle className="size-4 shrink-0 mt-0.5" />
                 <span>
@@ -387,7 +387,7 @@ export function WalkInFlow({
             </div>
           )}
 
-          <div className="rounded-md bg-grey-50 border border-grey-200 p-3 space-y-1">
+          <div className="rounded-lg bg-grey-50 border border-grey-200 p-3 space-y-1">
             <Row label={`${nights} night${nights === 1 ? "" : "s"} × ${money(offered)}`} value={money(offered * nights)} />
             <Row label="Tax 5%" value={money(Math.round(offered * nights * 0.05 * 100) / 100)} muted />
             <div className="pt-1 border-t border-grey-200">
@@ -396,7 +396,7 @@ export function WalkInFlow({
           </div>
 
           {!permitted.allowed && permitted.reason && (
-            <p className="text-xs text-brand-red">{permitted.reason}</p>
+            <p className="text-xs text-brand-red-700">{permitted.reason}</p>
           )}
           {/* Rule 6: the button says why it is blocked. */}
           {formIIINeeds.length > 0 && (

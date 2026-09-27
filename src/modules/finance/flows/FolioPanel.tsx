@@ -26,6 +26,7 @@ import { listStayFolios, openFolio, transferPosting, listBillingCompanies, type 
 import { LateCheckOutFlow } from "@/modules/front-desk";
 import { getStayBill } from "@/modules/finance/data/bill";
 import { BillPrint } from "./BillPrint";
+import { useGroupSettings } from "@/modules/admin";
 
 /* ══════════════════════════════════════════════════════════════════
    FLOWS B AND C — charge, settle, check out
@@ -210,10 +211,10 @@ function BalanceHeader({ stay, balance }: { stay: Stay; balance: number | null }
     return (
       <div className="flex items-baseline justify-between gap-4 flex-wrap">
         <div>
-          <p className="text-2xs font-semibold uppercase tracking-wide text-grey-500">
+          <p className="text-sm font-medium text-grey-600">
             Balance
           </p>
-          <p className="text-2xl font-semibold tabular mt-0.5 text-grey-500">{DASH_MARK}</p>
+          <p className="text-2xl font-semibold tabular tracking-[-0.022em] mt-0.5 text-grey-500">{DASH_MARK}</p>
         </div>
         <div className="text-right">
           <StatusPill tone="neutral" dot>No bill yet</StatusPill>
@@ -229,13 +230,13 @@ function BalanceHeader({ stay, balance }: { stay: Stay; balance: number | null }
   return (
     <div className="flex items-baseline justify-between gap-4 flex-wrap">
       <div>
-        <p className="text-2xs font-semibold uppercase tracking-wide text-grey-500">
+        <p className="text-sm font-medium text-grey-600">
           Balance
         </p>
         <p
           className={cn(
-            "text-2xl font-semibold tabular mt-0.5",
-            balance > 0 ? "text-brand-red" : balance < 0 ? "text-info" : "text-success",
+            "text-2xl font-semibold tabular tracking-[-0.022em] mt-0.5",
+            balance > 0 ? "text-danger" : balance < 0 ? "text-info" : "text-success",
           )}
         >
           {money(Math.abs(balance))}
@@ -272,7 +273,7 @@ function LedgerList({
   let running = 0;
 
   return (
-    <div className="border border-grey-200 rounded-md overflow-hidden">
+    <div className="border border-grey-200 rounded-lg overflow-hidden">
       <div className="bg-grey-50 border-b border-grey-200 px-3 py-2">
         <p className="text-2xs font-semibold uppercase tracking-wide text-grey-500">
           Postings - append only
@@ -377,13 +378,13 @@ function ReverseButton({
       }}
       aria-label={`Reverse ${posting.description}`}
       className={cn(
-        "shrink-0 p-1.5 rounded-sm transition-colors duration-150",
+        "shrink-0 grid place-items-center size-9 pointer-coarse:size-11 rounded-full transition-colors duration-150",
         allowed
           ? "text-grey-500 hover:text-brand-rose hover:bg-brand-rose-50"
           : "text-grey-300 cursor-not-allowed",
       )}
     >
-      <Undo2 className="size-3.5" />
+      <Undo2 className="size-4" />
     </button>
   );
 
@@ -494,7 +495,7 @@ function AddChargeDialog({
           </label>
 
           {value > 0 && (
-            <div className="rounded-md bg-grey-50 border border-grey-200 p-3 space-y-1">
+            <div className="rounded-lg bg-grey-50 border border-grey-200 p-3 space-y-1">
               <Row label="Charge" value={money(value)} />
               {taxable && (
                 <>
@@ -633,7 +634,7 @@ function SettleDialog({
           )}
 
           {extra > 0 && (
-            <div className="rounded-md bg-brand-yellow-50 border border-brand-yellow p-3 space-y-2">
+            <div className="rounded-lg bg-brand-yellow-50 border border-brand-yellow-100 p-3 space-y-2">
               <p className="text-sm text-brand-yellow-800" data-credit-warning>
                 This is {moneyPrecise(extra)} more than the bill; it will be held as the guest's credit.
               </p>
@@ -646,7 +647,7 @@ function SettleDialog({
             </div>
           )}
 
-          <div className="rounded-md bg-grey-50 border border-grey-200 p-3 space-y-1">
+          <div className="rounded-lg bg-grey-50 border border-grey-200 p-3 space-y-1">
             <Row label="Outstanding" value={money(outstanding)} />
             <Row label="Paying" value={money(value)} muted />
             <div className="pt-1 border-t border-grey-200">
@@ -706,6 +707,7 @@ function InvoiceDialog({ hotelId, stayId }: { hotelId: string; stayId: string })
     queryFn: () => getStayBill(hotelId, stayId),
     enabled: open,
   });
+  const group = useGroupSettings(hotelId);
 
   return (
     <Dialog open={open} onOpenChange={setOpen}>
@@ -717,9 +719,9 @@ function InvoiceDialog({ hotelId, stayId }: { hotelId: string; stayId: string })
       </DialogTrigger>
       <DialogContent title="Interim bill" description="Print preview">
         {bill.data ? (
-          <BillPrint bill={bill.data} title="Interim bill" />
+          <BillPrint bill={bill.data} title="Interim bill" group={group} />
         ) : bill.isError ? (
-          <p className="text-sm text-brand-red">The bill could not be read. Try again.</p>
+          <p className="text-sm text-brand-red-700">The bill could not be read. Try again.</p>
         ) : bill.isFetched ? (
           <p className="text-sm text-grey-600">This stay has no bill yet.</p>
         ) : (
@@ -756,7 +758,7 @@ function CheckOutButton({
     <div className="space-y-2">
       {reason ? <Tooltip content={reason}>{button}</Tooltip> : button}
       {reason && (
-        <p className="text-xs text-brand-red text-center" data-checkout-reason>
+        <p className="text-xs text-brand-red-700 text-center" data-checkout-reason>
           {reason}
         </p>
       )}
@@ -843,7 +845,7 @@ function FolioTab({ label, balance, active, onClick }: {
       onClick={onClick}
       aria-pressed={active}
       className={cn(
-        "shrink-0 min-h-11 px-3.5 rounded-md border text-left",
+        "shrink-0 min-h-11 px-3.5 rounded-lg border text-left",
         "transition-colors duration-150 cursor-pointer",
         active
           ? "border-brand-orange bg-brand-orange-50"
@@ -987,7 +989,7 @@ function TransferButton({
           disabled={busy}
           aria-label={`Move ${posting.description} to another bill`}
           className={cn(
-            "shrink-0 flex items-center justify-center size-9 rounded-md",
+            "shrink-0 flex items-center justify-center size-9 pointer-coarse:size-11 rounded-full",
             "text-grey-500 hover:text-ink-900 hover:bg-grey-50",
             "cursor-pointer transition-colors duration-150",
           )}

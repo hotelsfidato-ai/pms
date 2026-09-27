@@ -59,7 +59,7 @@ export function ReturningGuest({
     <div className="space-y-2" data-returning-guest>
       {warnings.map((m) => (
         <div key={`w-${m.guestId ?? m.name}`} role="alert"
-          className="flex items-start gap-2 rounded-md border border-brand-red-100 bg-red-50 p-3 text-sm text-brand-red">
+          className="flex items-start gap-2 rounded-lg border border-brand-red-100 bg-brand-red-50 p-3 text-sm text-brand-red-700">
           <AlertTriangle className="size-4 shrink-0 mt-0.5" />
           <span>
             <span className="font-medium">{m.name} is blacklisted.</span>{" "}
@@ -72,7 +72,7 @@ export function ReturningGuest({
         const isChosen = chosen?.id === m.guestId;
         return (
           <div key={m.guestId}
-            className="flex flex-wrap items-center gap-3 rounded-md border border-grey-200 bg-grey-50 p-3">
+            className="flex flex-wrap items-center gap-3 rounded-lg border border-grey-200 bg-grey-50 p-3">
             <UserCheck className="size-4 shrink-0 text-grey-500" />
             <span className="min-w-0 flex-1 text-sm text-ink-900">
               <span className="font-medium">{m.name}</span>

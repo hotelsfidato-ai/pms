@@ -147,6 +147,9 @@ export default function ReservationsPage() {
         onRetry={() => refetch()}
         columns={COLUMNS}
         offerCheckIn
+        /* One search on this screen, the one in the title row (the owner,
+           27 September). */
+        showFilter={false}
         emptyTitle={q ? "Nothing matches that" : "No bookings in this state"}
         emptyBody={
           q

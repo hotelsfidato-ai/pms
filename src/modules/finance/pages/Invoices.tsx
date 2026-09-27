@@ -396,10 +396,13 @@ export default function InvoicesPage() {
         />
       </Card>
 
-      <PageHeader
-        title="Issued"
-        description="Every number allocated at this property, newest first. A credit note sits beside the invoice it cancels."
-      />
+      {/* A section, not a second page title: a PageHeader here named the
+          browser tab "Issued" (the owner, 27 September: each tab its
+          screen's name). */}
+      <div className="mt-5 mb-3">
+        <h2 className="text-md font-semibold text-ink-900">Issued</h2>
+        <p className="text-sm text-grey-500 mt-0.5">Every number allocated at this property, newest first. A credit note sits beside the invoice it cancels.</p>
+      </div>
 
       <Card>
         <DataTable<IssuedInvoice>
@@ -427,11 +430,9 @@ export default function InvoicesPage() {
           alcohol has none, and an empty table would be noise. */}
       {(vatBills.data?.length ?? 0) > 0 && (
         <>
-          <div className="mt-7">
-            <PageHeader
-              title="VAT bills"
-              description="Alcohol, billed under VAT from its own series, each beside the GST document of the same sale."
-            />
+          <div className="mt-5 mb-3">
+            <h2 className="text-md font-semibold text-ink-900">VAT bills</h2>
+            <p className="text-sm text-grey-500 mt-0.5">Alcohol, billed under VAT from its own series, each beside the GST document of the same sale.</p>
           </div>
           <Card>
             <DataTable<IssuedVatBill>

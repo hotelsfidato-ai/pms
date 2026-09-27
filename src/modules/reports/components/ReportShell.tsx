@@ -9,6 +9,8 @@ import { downloadFile, ApiError } from "@/lib/api";
 import type { TermKey } from "@/lib/glossary";
 import { toCsv, downloadCsv, reportFilename } from "@/lib/csv";
 import { useDocumentIdentity } from "@/lib/documentIdentity";
+import { useUi } from "@/lib/ui";
+import { useGroupSettings } from "@/modules/admin";
 
 /* ══════════════════════════════════════════════════════════════════
    REPORT SHELL
@@ -71,6 +73,8 @@ export function ReportShell({
 }) {
   const identity = useDocumentIdentity();
   const propertyName = property ?? identity.property ?? DASH;
+  /* The group's name and logo on every printed document (D27-53). */
+  const group = useGroupSettings(useUi((s) => s.hotelId) ?? "");
   /* WHO RAN IT. The footer said "front desk" whoever was signed in. An
      accountant reading a stamp needs the person, and the session has
      had their name all along. */
@@ -131,7 +135,7 @@ export function ReportShell({
       <Card className="px-4 py-4 sm:px-6 sm:py-5 print:border-0 print:p-0">
         {/* The report's own header, as the exports carry it: the property,
             then the report and its period behind the orange bar. */}
-        <DocMasthead name={propertyName} title={title} number={period} />
+        <DocMasthead name={propertyName} group={group.name} logo={group.logo} title={title} number={period} />
         {meta && (
           <p className="text-sm text-grey-600 tabular mb-4">{meta}</p>
         )}

@@ -1,14 +1,17 @@
 import { useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useParams } from "react-router";
-import { Ban, IndianRupee, PackageCheck } from "lucide-react";
+import { Ban, IndianRupee, PackageCheck, Printer } from "lucide-react";
 import { money, dateTime, dateShort } from "@/lib/format";
 import { ApiError } from "@/lib/api";
 import { cn } from "@/lib/cn";
+import { useSession } from "@/lib/session";
 import {
   Page, PageHeader, Card, CardBody, Button, Skeleton, ErrorState,
-  Dialog, DialogContent, Input, StatusPill, toast, DocFacts, DOC_TH, DOC_TD,
+  Dialog, DialogContent, Input, StatusPill, toast, InfoButton,
+  DocMasthead, DocFacts, DOC_TH, DOC_TD,
 } from "@/components/ui";
+import { useGroupSettings } from "@/modules/admin";
 import {
   getDocket, returnDocket, cancelDocket, chargeDocket,
   SERVICE_WORDS, type DocketLine,
@@ -70,6 +73,19 @@ export default function LaundryDocketPage() {
   const d = q.data;
   const lines = d?.lines ?? [];
 
+  /* The masthead (D27-53, the owner's 28 September order): the group's
+     logo, the hotel's name, "by <group>". The hotel's name is the one the
+     session already holds for this address's code - no new read - and the
+     code itself where it has none, because the code is still true. */
+  const group = useGroupSettings(code);
+  const hotelName = useSession((s) => s.hotels.find((h) => h.code === code)?.name) ?? code;
+
+  const state = d && (
+    <StatusPill tone={d.status === "open" ? "info" : d.status === "returned" ? "success" : "danger"}>
+      {d.status === "open" ? "Out" : d.status === "returned" ? "Back" : "Cancelled"}
+    </StatusPill>
+  );
+
   const refresh = () => {
     void qc.invalidateQueries({ queryKey: ["laundry", "docket", code, id] });
     void qc.invalidateQueries({ queryKey: ["laundry", "dockets", code] });
@@ -130,10 +146,23 @@ export default function LaundryDocketPage() {
     return (
       <div className="space-y-3">
         {/* THE DOCKET, in the document's look (D27-52, the CRS voucher's
-            parts): its facts in the washed strip, the lines over a 2px ink
-            rule on hairlines. The number and the state stay in the head
-            above, which is where the screen's actions are. */}
-        <section className="bg-white text-ink-700 border border-grey-200 rounded-lg px-4 py-3.5 sm:p-6">
+            parts): the masthead, its facts in the washed strip, the lines
+            over a 2px ink rule on hairlines. It is what prints: on paper
+            the sheet loses its frame and everything around it goes. */}
+        <section className="bg-white text-ink-700 border border-grey-200 rounded-lg px-4 py-3.5 sm:p-6
+                            print:border-0 print:rounded-none print:p-0">
+          <DocMasthead
+            logo={group.logo}
+            name={hotelName}
+            group={group.name}
+            title="Docket"
+            number={d.number}
+          >
+            {/* The state, on paper only: the screen shows it beside the
+                title, which does not print. */}
+            <div className="hidden print:block mt-1">{state}</div>
+          </DocMasthead>
+
           {/* D18-5 FIRST, because it is the first fact about a docket
               and it decides everything else on this screen. */}
           <DocFacts
@@ -199,9 +228,10 @@ export default function LaundryDocketPage() {
 
         {/* WHY THERE IS NO CHARGE BUTTON, said where somebody looks for
             one. A control that is simply absent is a question nobody can
-            answer; these are the four reasons it can be. */}
+            answer; these are the four reasons it can be. Screen only: the
+            paper has no buttons to explain. */}
         {d.belongsTo === "hotel" && (
-          <Card>
+          <Card className="no-print">
             <CardBody className="text-sm text-grey-600">
               <p className="font-medium text-ink-900">The hotel's own linen</p>
               <p className="mt-0.5">
@@ -213,7 +243,7 @@ export default function LaundryDocketPage() {
           </Card>
         )}
         {d.belongsTo === "guest" && d.unpricedLines > 0 && d.status !== "cancelled" && (
-          <Card>
+          <Card className="no-print">
             <CardBody className="text-sm text-grey-600">
               {d.unpricedLines === 1
                 ? "One thing in this bag has no price yet. "
@@ -225,7 +255,7 @@ export default function LaundryDocketPage() {
           </Card>
         )}
         {d.charged && (
-          <Card>
+          <Card className="no-print">
             <CardBody className="text-sm text-grey-600">
               <p className="font-medium text-ink-900">Already on the bill</p>
               <p className="mt-0.5">
@@ -238,30 +268,32 @@ export default function LaundryDocketPage() {
 
         {/* The server's refusal, in its own words. */}
         {refusal && (
-          <Card>
+          <Card className="no-print">
             <CardBody role="alert" className="text-sm text-brand-red-700">{refusal}</CardBody>
           </Card>
         )}
-
-        <p className="pt-2 text-sm text-grey-500">
-          Not in this version: linen par levels per room type, an outside
-          laundry's bills, express surcharges, and a guest sending a bag from
-          their own page.
-        </p>
       </div>
     );
   })();
 
   return (
-    <Page>
+    <Page className="print:p-0 print:max-w-none">
+      {/* Screen furniture: none of the head reaches the paper, as the
+          tax invoice's toolbar does not. */}
       <PageHeader
+        className="no-print"
         title={d?.number ?? "Docket"}
         description={d ? whoseWords(d) : undefined}
         badge={d
           ? (
-            <StatusPill tone={d.status === "open" ? "info" : d.status === "returned" ? "success" : "danger"}>
-              {d.status === "open" ? "Out" : d.status === "returned" ? "Back" : "Cancelled"}
-            </StatusPill>
+            <>
+              {state}
+              {/* The note that stood under the docket, behind an (i) with
+                  the same words (D27-45, D27-82). */}
+              <InfoButton>
+                {"Not in this version: linen par levels per room type, an outside laundry's bills, express surcharges, and a guest sending a bag from their own page."}
+              </InfoButton>
+            </>
           )
           : undefined}
         breadcrumbs={[
@@ -289,6 +321,10 @@ export default function LaundryDocketPage() {
                 Charge to the room
               </Button>
             )}
+            <Button variant="secondary" onClick={() => window.print()}>
+              <Printer className="size-4" />
+              Print
+            </Button>
             {mayCancel && (
               <Button variant="danger" leadingIcon={<Ban />} onClick={() => setCancelling(true)}>
                 Cancel

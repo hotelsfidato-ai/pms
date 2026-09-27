@@ -120,11 +120,11 @@ export function LateCheckOutFlow({
         description={`${stay.guest} · Room ${stay.roomNumber}`}
         footer={
           <>
-            <Button variant="secondary" className="h-11"
+            <Button variant="secondary"
                     onClick={() => onOpenChange(false)}>
               Cancel
             </Button>
-            <Button variant="primary" className="h-11" disabled={!reason.trim() || busy}
+            <Button variant="primary" disabled={!reason.trim() || busy}
                     onClick={() => void submit()}>
               {busy ? "Checking out…" : "Check out"}
             </Button>
@@ -132,9 +132,9 @@ export function LateCheckOutFlow({
         }
       >
         <div className="space-y-4">
-          <div className="flex items-start gap-2.5 rounded-md border
-                          border-amber-300 bg-amber-50 p-3">
-            <Clock className="size-4 text-amber-600 shrink-0 mt-0.5" />
+          <div className="flex items-start gap-2.5 rounded-lg border
+                          border-brand-yellow-100 bg-brand-yellow-50 p-3">
+            <Clock className="size-4 text-brand-yellow-800 shrink-0 mt-0.5" />
             <p className="text-sm text-ink-900 leading-relaxed">
               Check-out here is <span className="tabular">{checkOutTime}</span>.
               A room still occupied after it has been kept out of tonight's
@@ -157,13 +157,13 @@ export function LateCheckOutFlow({
 
           {/* THE CHARGE, and who may set it aside. */}
           {charge === null ? (
-            <p className="text-sm text-grey-600 rounded-md border border-grey-200
+            <p className="text-sm text-grey-600 rounded-lg border border-grey-200
                           bg-grey-50 p-3 leading-relaxed">
               This property does not charge for a late departure, so nothing
               will be added. It is still recorded.
             </p>
           ) : mayWaive ? (
-            <label className="flex items-start gap-2.5 rounded-md border
+            <label className="flex items-start gap-2.5 rounded-lg border
                               border-grey-200 bg-grey-50 p-3 cursor-pointer">
               <input
                 type="checkbox"
@@ -184,7 +184,7 @@ export function LateCheckOutFlow({
               </span>
             </label>
           ) : (
-            <p className="text-sm text-grey-600 rounded-md border border-grey-200
+            <p className="text-sm text-grey-600 rounded-lg border border-grey-200
                           bg-grey-50 p-3 leading-relaxed">
               {money(charge)} will be added to the folio. A manager can waive
               it - that is a decision about money and it is theirs to make.

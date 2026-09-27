@@ -9,7 +9,7 @@ import {
 import { cn } from "@/lib/cn";
 import { dateLong, moneyPrecise } from "@/lib/format";
 import { useUi } from "@/lib/ui";
-import { toast } from "@/components/ui";
+import { toast, Button } from "@/components/ui";
 import { getMenu, listOrders, getOrder, listChargeableRooms, openOrder, addLine, voidLine, setLineQty, sendToKitchen, settleOrder, abandonOrder, setOrderHeader, type MenuItem, type CashId } from "@/modules/pos/data/till";
 import { CashIdFields } from "@/modules/pos/components/CashIdFields";
 import { FunctionPicker } from "@/modules/pos/components/FunctionPicker";
@@ -890,19 +890,22 @@ export default function TerminalPage() {
                         is the act that happens several times per table
                         while settling happens once. A till that offered
                         only "pay" taught waiters to bill early. */}
-                    <button
-                      type="button"
+                    {/* THE ONE ORANGE ACTION on the bill (the owner, 27
+                        September): the kit's primary, at the terminal's
+                        64px. Every settle way below is outlined. */}
+                    <Button
+                      variant="primary"
                       disabled={busy || !order.lines.some(
                         (l) => !l.voided && l.kotStatus === "pending")}
                       onClick={() => void kot()}
-                      className="press w-full h-16 rounded-full bg-ink-900 hover:bg-ink-800 text-white text-lg font-semibold inline-flex items-center justify-center gap-2 disabled:opacity-40"
+                      className="w-full h-16 text-lg font-semibold"
                     >
                       <Flame className="size-5" />
                       {order.lines.some(
                         (l) => !l.voided && l.kotStatus === "pending")
                         ? "Send to the kitchen"
                         : "Kitchen has it all"}
-                    </button>
+                    </Button>
                     {/* ON A FUNCTION'S BILL (D17-21): paid there and
                         nowhere else, so that is the one way offered — the
                         others stay in sight, switched off, with the reason
@@ -914,7 +917,7 @@ export default function TerminalPage() {
                           disabled={busy
                             || order.lines.filter((l) => !l.voided).length === 0}
                           onClick={() => void settle("function")}
-                          className="press w-full h-16 rounded-full bg-brand-orange-600 hover:bg-brand-orange-700 text-white text-lg font-semibold inline-flex items-center justify-center gap-2 px-5 disabled:opacity-40"
+                          className={cn(OUTLINE, "w-full h-16 text-lg font-semibold inline-flex items-center justify-center gap-2 px-5 disabled:opacity-40")}
                         >
                           <CalendarHeart className="size-5 shrink-0" />
                           <span className="truncate">
@@ -934,12 +937,9 @@ export default function TerminalPage() {
                       disabled={Boolean(order.eventId)
                         || order.lines.filter((l) => !l.voided).length === 0}
                       onClick={() => setSettling(true)}
-                      className={cn(
-                        "press w-full h-16 rounded-full text-lg font-semibold inline-flex items-center justify-center gap-2 disabled:opacity-40",
-                        order.eventId
-                          ? "border border-grey-300 bg-white text-ink-900"
-                          : "bg-brand-orange-600 hover:bg-brand-orange-700 text-white",
-                      )}
+                      /* Outlined, like Cash, Card and UPI (the owner, 27
+                         September): a way to settle, not the next act. */
+                      className={cn(OUTLINE, "w-full h-16 text-lg font-semibold inline-flex items-center justify-center gap-2 disabled:opacity-40")}
                     >
                       <BedDouble className="size-5" />
                       Charge to a room

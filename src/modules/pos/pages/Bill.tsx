@@ -4,6 +4,7 @@ import { Printer } from "lucide-react";
 import { cn } from "@/lib/cn";
 import { moneyPrecise, dateLong } from "@/lib/format";
 import { getOrder } from "@/modules/pos/data/till";
+import { useGroupSettings } from "@/modules/admin";
 import {
   ReadFailed, Button, DocMasthead, DocFacts, DocTotals, DocPanel, DocFooter, DOC_TD,
 } from "@/components/ui";
@@ -30,6 +31,8 @@ import {
 export default function BillPage() {
   const { code, id } = useParams();
   const hotelId = code ?? "";
+  /* The group's name and logo, as on every bill (D27-53). */
+  const group = useGroupSettings(hotelId);
 
   const order = useQuery({
     queryKey: ["bill", hotelId, id],
@@ -100,7 +103,7 @@ export default function BillPage() {
       </div>
 
       <article className="mx-auto bg-white text-ink-700 px-3 py-4" style={{ maxWidth: "80mm" }}>
-        <DocMasthead name={o.hotelName} title="Bill" number={o.orderNo} />
+        <DocMasthead name={o.hotelName} group={group.name} logo={group.logo} title="Bill" number={o.orderNo} />
         <p className="-mt-2 mb-3 text-xs text-grey-500">
           {o.outletName}{o.hotelCity && ` · ${o.hotelCity}`}
         </p>

@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { useQuery, useQueryClient, type UseQueryResult } from "@tanstack/react-query";
 import { Link, useParams } from "react-router";
-import { CheckCircle2, Circle, Plus } from "lucide-react";
+import { CheckCircle2, Circle, Plus, ChevronRight } from "lucide-react";
 import { cn } from "@/lib/cn";
 import { useUi } from "@/lib/ui";
 import { useRole } from "@/lib/session";
@@ -272,8 +272,12 @@ function SectionCard({ hotelId, section, run }: {
                         "hover:ring-grey-400 cursor-pointer",
                       )}>
                 <span className="block text-base font-semibold text-ink-900">{t.label}</span>
-                <span className="block text-sm text-grey-600 tabular">
-                  {t.seats === null ? "-" : `${t.seats} seats`}
+                {/* It opens the table: its last line ends in the arrow. */}
+                <span className="flex items-center justify-between gap-2">
+                  <span className="text-sm text-grey-600 tabular">
+                    {t.seats === null ? "-" : `${t.seats} seats`}
+                  </span>
+                  <ChevronRight className="size-4 shrink-0 text-grey-400" aria-hidden />
                 </span>
               </button>
             ))}

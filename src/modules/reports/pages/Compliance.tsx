@@ -45,7 +45,7 @@ function Loading() {
 /** A value nobody recorded. Never a zero, never an invented placeholder. */
 function Unknown({ what }: { what: string }) {
   return (
-    <span className="text-brand-red text-2xs" title={what}>
+    <span className="text-danger text-2xs" title={what}>
       not on record
     </span>
   );
@@ -312,7 +312,7 @@ export function GstSalesPage() {
                   <td className="px-4 py-2 tabular text-ink-900">
                     {r.number}
                     {r.creditsInvoice && (
-                      <span className="block text-2xs text-brand-red">
+                      <span className="block text-2xs text-danger">
                         credits {r.creditsInvoice}
                       </span>
                     )}
@@ -426,7 +426,7 @@ export function CFormPage() {
         <>
           {/* Said on the page, not only in the code. Somebody reading
               this must not walk away believing the filing has happened. */}
-          <p className="px-4 py-3 text-2xs text-amber-900 bg-amber-50 border-b border-amber-200 leading-relaxed">
+          <p className="px-4 py-3 text-2xs text-ink-900 bg-brand-yellow-50 border-b border-brand-yellow-100 leading-relaxed">
             {data?.note ??
               "This system does not file with the FRRO. Filing happens on the government portal."}
           </p>
@@ -464,12 +464,12 @@ export function CFormPage() {
                   <td className="px-4 py-2 tabular text-2xs">
                     {r.reference
                       ? <span className="text-ink-900">{r.reference}</span>
-                      : <span className="text-brand-red">not filed</span>}
+                      : <span className="text-danger">not filed</span>}
                     {r.departedAt && (
                       <span className="block">
                         {r.departureReference
                           ? <span className="text-ink-900">{r.departureReference}</span>
-                          : <span className="text-brand-red">departure not filed</span>}
+                          : <span className="text-danger">departure not filed</span>}
                       </span>
                     )}
                   </td>

@@ -1,14 +1,14 @@
 import { useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useParams } from "react-router";
-import { FileDown, Truck, Send, Ban } from "lucide-react";
+import { FileDown, Truck, Send, Ban, IndianRupee } from "lucide-react";
 import { cn } from "@/lib/cn";
 import { money, dateTime } from "@/lib/format";
 import { ApiError } from "@/lib/api";
 import {
   Page, PageHeader, Card, CardBody, Button, Skeleton, ErrorState,
   Dialog, DialogContent, Field, fieldProps, Input, NativeSelect,
-  StatusPill, toast,
+  StatusPill, IconChip, toast,
 } from "@/components/ui";
 import {
   getPurchasing, getPurchaseRequest, priceLine, sendOrder, cancelRequest,
@@ -103,6 +103,8 @@ export default function PurchaseRequestPage() {
       return <Skeleton className="h-64" />;
     }
     if (!r) return null;
+    /* An order still on its way to a supplier: an unpriced line is work. */
+    const toPrice = r.state === "waiting" || r.state === "ready";
 
     return (
       <div className="space-y-3">
@@ -163,7 +165,7 @@ export default function PurchaseRequestPage() {
           <Card>
             <CardBody className="text-sm text-grey-600">
               <p className="text-md font-semibold text-ink-900 mb-1">
-                Delivered{r.receivedBy ? ` — received by ${r.receivedBy}` : ""}
+                Delivered{r.receivedBy ? ` - received by ${r.receivedBy}` : ""}
                 {r.receivedAt ? ` on ${dateTime(r.receivedAt)}` : ""}
               </p>
               <p>{r.deliveryNote ?? "Nothing was noted about the delivery."}</p>
@@ -202,17 +204,26 @@ export default function PurchaseRequestPage() {
           </table>
         </Card>
 
+        {/* THE WARM TILE WHILE THERE IS SOMETHING TO DO (D27-82): the order
+            waits for a price before it can go. Refused or sent back, nothing
+            more happens to it, so the plain card as before. */}
         {r.unpriced > 0 && r.state !== "cancelled" && r.state !== "received" && (
-          <Card>
-            <CardBody className="text-sm text-grey-600">
+          <div className={cn(
+            "flex items-start gap-3 rounded-lg px-4 py-3.5 text-sm",
+            toPrice
+              ? "bg-brand-yellow-50 ring-1 ring-inset ring-brand-yellow-100 text-ink-900"
+              : "bg-white border border-grey-200 text-grey-600",
+          )}>
+            {toPrice && <IconChip tone="yellow"><IndianRupee /></IconChip>}
+            <p className="min-w-0">
               {r.unpriced === 1
                 ? "One line has no agreed price. "
                 : `${r.unpriced} lines have no agreed price. `}
               It reads "-", never 0, and this order cannot be sent to a supplier
               until every line has one - a blank on an order is a price the
               supplier sets.
-            </CardBody>
-          </Card>
+            </p>
+          </div>
         )}
       </div>
     );

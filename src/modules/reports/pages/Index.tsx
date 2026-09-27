@@ -9,7 +9,7 @@ import { cn } from "@/lib/cn";
 import { useUi } from "@/lib/ui";
 import { useRole } from "@/lib/session";
 import { mayReach } from "@/components/app/navigation";
-import { Page, PageHeader, Card, CardBody, StatusPill, SearchInput } from "@/components/ui";
+import { Page, PageHeader, Card, CardBody, StatusPill, SearchInput, EmptyState, IconChip } from "@/components/ui";
 
 /* ══════════════════════════════════════════════════════════════════
    REPORTS INDEX
@@ -169,7 +169,7 @@ export default function ReportsIndexPage() {
         badge={<StatusPill tone="neutral">{BUILT} of {TOTAL} built</StatusPill>}
       />
 
-      <div className="max-w-sm mb-6">
+      <div className="max-w-sm mb-5">
         <SearchInput
           value={search}
           onChange={(e) => setSearch(e.currentTarget.value)}
@@ -179,8 +179,8 @@ export default function ReportsIndexPage() {
       </div>
 
       {starred.length > 0 && !q && (
-        <section className="mb-8">
-          <h2 className="text-sm font-semibold text-grey-500 uppercase tracking-wide mb-3">
+        <section className="mb-6">
+          <h2 className="text-md font-semibold text-ink-900 mb-3">
             Starred
           </h2>
           <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
@@ -198,18 +198,11 @@ export default function ReportsIndexPage() {
 
       {groups.length === 0 ? (
         <Card>
-          <CardBody>
-            <div className="text-center py-10">
-              <Search className="size-6 text-grey-300 mx-auto mb-3" />
-              <p className="text-md font-semibold text-ink-900">No report matches that</p>
-              <p className="text-base text-grey-500 mt-1.5">
-                Try the name of a column instead — the descriptions carry them.
-              </p>
-            </div>
-          </CardBody>
+          <EmptyState compact icon={<Search />} title="No report matches that"
+            description="Try the name of a column instead — the descriptions carry them." />
         </Card>
       ) : (
-        <div className="space-y-8">
+        <div className="space-y-6">
           {groups.map((g) => (
             <section key={g.title}>
               <h2 className="text-md font-semibold text-ink-900">{g.title}</h2>
@@ -243,14 +236,9 @@ function ReportCard({
     <>
       <div className="flex items-start justify-between gap-2">
         <div className="flex items-center gap-2.5 min-w-0">
-          <span
-            className={cn(
-              "grid place-items-center size-8 rounded-md shrink-0",
-              report.path ? "bg-grey-100 text-grey-500" : "bg-grey-50 text-grey-300",
-            )}
-          >
-            <report.icon className="size-4" aria-hidden />
-          </span>
+          <IconChip className={cn(!report.path && "text-grey-400")}>
+            <report.icon />
+          </IconChip>
           <p className={cn("text-base font-semibold", report.path ? "text-ink-900" : "text-grey-500")}>
             {report.title}
           </p>
@@ -264,7 +252,7 @@ function ReportCard({
             }}
             aria-label={starred ? `Unstar ${report.title}` : `Star ${report.title}`}
             aria-pressed={starred}
-            className="p-1 -m-1 rounded text-grey-300 hover:text-brand-yellow transition-colors duration-150 shrink-0"
+            className="p-2 -m-2 rounded-full text-grey-400 hover:text-brand-yellow transition-colors duration-150 shrink-0"
           >
             <Star className={cn("size-4", starred && "fill-brand-yellow text-brand-yellow")} />
           </button>
@@ -274,7 +262,7 @@ function ReportCard({
       </div>
       <p className="text-sm text-grey-600 mt-1.5 leading-relaxed">{report.description}</p>
       {report.path && (
-        <span className="inline-flex items-center gap-1.5 text-sm text-brand-orange-700 mt-3">
+        <span className="mt-auto pt-3 inline-flex items-center gap-1.5 text-sm font-medium text-brand-orange-700">
           Open
           <ArrowRight className="size-3.5" />
         </span>
@@ -284,16 +272,16 @@ function ReportCard({
 
   if (!report.path) {
     return (
-      <Card className="border-dashed">
-        <CardBody>{body}</CardBody>
+      <Card className="border-dashed h-full">
+        <CardBody className="flex flex-col h-full">{body}</CardBody>
       </Card>
     );
   }
 
   return (
-    <Card className="transition-colors duration-150 hover:border-grey-300">
-      <Link to={report.path} className="block">
-        <CardBody>{body}</CardBody>
+    <Card className="h-full press-tile transition-colors duration-150 hover:border-grey-300">
+      <Link to={report.path} className="block h-full">
+        <CardBody className="flex flex-col h-full">{body}</CardBody>
       </Link>
     </Card>
   );

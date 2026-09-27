@@ -6,7 +6,7 @@ import { money } from "@/lib/format";
 import { ApiError } from "@/lib/api";
 import { cn } from "@/lib/cn";
 import {
-  Page, PageHeader, Card, CardBody, Button, Skeleton, EmptyState, ErrorState,
+  Page, PageHeader, Card, Button, Skeleton, EmptyState, ErrorState, InfoButton,
   Dialog, DialogContent, Field, fieldProps, Input, NativeSelect, toast,
 } from "@/components/ui";
 import {
@@ -143,6 +143,20 @@ export default function LaundryPriceListPage() {
       <PageHeader
         title="Laundry price list"
         description="What this property charges for each thing it launders, item by item and service by service."
+        /* SAID WHERE SOMEBODY WOULD LOOK, not discovered on a docket that
+           will not add up. An unpriced line is legitimate - it is how the
+           hotel's own linen is counted - so this is a count, not a fault.
+           Beside the title behind an (i), the same words (D27-45, D27-82). */
+        badge={unpriced > 0 ? (
+          <InfoButton>
+            {(unpriced === 1
+              ? "One item has no price yet. It reads \"-\", never 0, "
+              : `${unpriced} items have no price yet. They read "-", never 0, `)
+              + "and a guest's bag holding one has no total and cannot be charged to "
+              + "a room until somebody prices it. Leave it blank for the hotel's own "
+              + "linen, which is counted and never charged."}
+          </InfoButton>
+        ) : undefined}
         breadcrumbs={[
           { label: "Laundry", to: `/h/${code}/laundry` },
           { label: "Price list" },
@@ -153,22 +167,6 @@ export default function LaundryPriceListPage() {
           </Button>
         }
       />
-
-      {/* SAID WHERE SOMEBODY WOULD LOOK, not discovered on a docket that
-          will not add up. An unpriced line is legitimate - it is how the
-          hotel's own linen is counted - so this is a count, not a fault. */}
-      {unpriced > 0 && (
-        <Card className="mb-5">
-          <CardBody className="text-sm text-grey-600">
-            {unpriced === 1
-              ? "One item has no price yet. It reads \"-\", never 0, "
-              : `${unpriced} items have no price yet. They read "-", never 0, `}
-            and a guest's bag holding one has no total and cannot be charged to
-            a room until somebody prices it. Leave it blank for the hotel's own
-            linen, which is counted and never charged.
-          </CardBody>
-        </Card>
-      )}
 
       {body}
 

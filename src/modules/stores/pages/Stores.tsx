@@ -15,7 +15,7 @@ import { useDocumentIdentity } from "@/lib/documentIdentity";
 import {
   Page, PageHeader, Card, Button, Skeleton, EmptyState, ErrorState,
   Dialog, DialogContent, Field, fieldProps, Input, NativeSelect,
-  StatusPill, IconChip, toast, Menu, MenuItem, MenuSeparator,
+  StatusPill, IconChip, InfoButton, toast, Menu, MenuItem, MenuSeparator,
 } from "@/components/ui";
 import {
   getStore, getStockHistory, addStockItem, recordStockMovement, moveStock,
@@ -243,8 +243,12 @@ export default function StoresPage() {
        (the fidato-design Rhythm Rule). */
     return [...byCategory.entries()].map(([category, group]) => (
       <section key={category} className="mb-6 last:mb-0">
-        <h2 className="text-md font-semibold text-ink-900 mb-3">
+        {/* A flat count pill, as Rooms' group headings have (D27-82). */}
+        <h2 className="flex items-center gap-2 mb-3 text-md font-semibold text-ink-900">
           {category}
+          <span className="h-5 px-2 rounded-full bg-grey-100 text-grey-600 text-xs font-semibold leading-5 tabular">
+            {group.length}
+          </span>
         </h2>
         <ul className="space-y-3">
           {group.map((i) => (
@@ -1403,6 +1407,12 @@ function CountSheet({ code, stores, items, startStoreId, reload, onDone }: {
         <PageHeader
           title="Store"
           description="Count a store. Print the sheet, count the shelves, then type the counts in straight away."
+          /* The sheet's long note, one tap away, same words (D27-82). */
+          badge={
+            <InfoButton>
+              {`A line left blank is not counted. Each difference is saved as a correction with your name and "Count of ${store?.name ?? "the store"}".`}
+            </InfoButton>
+          }
           actions={
             <div className="flex flex-wrap gap-2">
               <Button variant="secondary" onClick={() => window.print()}>
@@ -1423,10 +1433,6 @@ function CountSheet({ code, stores, items, startStoreId, reload, onDone }: {
             {stores.map((s) => <option key={s.id} value={s.id}>{s.name}</option>)}
           </NativeSelect>
         </div>
-        <p className="text-sm text-grey-600">
-          A line left blank is not counted. Each difference is saved as a correction with
-          your name and "Count of {store?.name ?? "the store"}".
-        </p>
       </div>
 
       <h2 className="hidden print:block mb-3 text-lg font-semibold text-ink-900">

@@ -1,10 +1,10 @@
 import { useQuery } from "@tanstack/react-query";
 import { useParams } from "react-router";
-import { AlertTriangle, Building2, Users } from "lucide-react";
+import { AlertTriangle, Building2, Handshake, Home, Users, Wallet } from "lucide-react";
 import { cn } from "@/lib/cn";
 import { money, dateShort } from "@/lib/format";
 import { useUi } from "@/lib/ui";
-import { Page, PageHeader, Card, CardBody, DataTable, StatusPill, Avatar, EmptyState, type Column, type Tone } from "@/components/ui";
+import { Page, PageHeader, Card, FigureRow, FigureTile, DataTable, StatusPill, Avatar, EmptyState, type Column, type Tone } from "@/components/ui";
 import { listGuests, listCompanies, type GuestRecord, type CompanyRecord } from "@/modules/guests/data/directory";
 
 /* Split out of Directory.tsx on 15 September in the service-folder move
@@ -37,8 +37,8 @@ const GUEST_COLUMNS: Column<GuestRecord>[] = [
         <div className="min-w-0">
           <p className="truncate">{g.name}</p>
           {g.possibleDuplicate && (
-            <p className="text-2xs text-brand-yellow flex items-center gap-1 mt-0.5">
-              <AlertTriangle className="size-3" />
+            <p className="text-xs text-brand-yellow-800 flex items-center gap-1 mt-0.5">
+              <AlertTriangle className="size-3 text-brand-yellow" />
               overlapping stays
             </p>
           )}
@@ -51,12 +51,12 @@ const GUEST_COLUMNS: Column<GuestRecord>[] = [
   {
     key: "last", header: "Last stay", hideBelow: "md",
     cell: (g) => (
-      <div>
+      <div className="whitespace-nowrap">
         <p className="tabular text-grey-600">
           {g.lastStay ? dateShort(g.lastStay) : <span className="text-grey-500">first visit</span>}
         </p>
         {g.nextStay && (
-          <p className="text-2xs text-info tabular mt-0.5">back {dateShort(g.nextStay)}</p>
+          <p className="text-xs text-info tabular mt-0.5">back {dateShort(g.nextStay)}</p>
         )}
       </div>
     ),
@@ -69,7 +69,7 @@ const GUEST_COLUMNS: Column<GuestRecord>[] = [
   {
     key: "balance", header: "Balance", numeric: true,
     cell: (g) => (
-      <span className={cn("tabular font-medium", g.openBalance > 0 ? "text-brand-red" : g.openBalance < 0 ? "text-info" : "text-grey-500")}>
+      <span className={cn("tabular font-medium", g.openBalance > 0 ? "text-danger" : g.openBalance < 0 ? "text-info" : "text-grey-500")}>
         {g.openBalance === 0 ? "-" : money(Math.abs(g.openBalance))}
       </span>
     ),
@@ -94,7 +94,7 @@ export function GuestsPage() {
       />
 
       {dupes.length > 0 && (
-        <div className="flex items-start gap-3 rounded-md border border-brand-yellow-100 bg-brand-yellow-50 p-3.5 mb-4">
+        <div className="flex items-start gap-3 rounded-lg border border-brand-yellow-100 bg-brand-yellow-50 px-4 py-3.5 mb-5">
           <AlertTriangle className="size-4 text-brand-yellow shrink-0 mt-0.5" />
           <div className="min-w-0">
             <p className="text-base font-medium text-ink-900">
@@ -186,7 +186,7 @@ const SOURCE_COLUMNS: Column<CompanyRecord>[] = [
   {
     key: "balance", header: "Owed", numeric: true,
     cell: (c) => (
-      <span className={cn("tabular font-medium", c.openBalance > 0 ? "text-brand-red" : c.openBalance < 0 ? "text-info" : "text-grey-500")}>
+      <span className={cn("tabular font-medium", c.openBalance > 0 ? "text-danger" : c.openBalance < 0 ? "text-info" : "text-grey-500")}>
         {c.openBalance === 0 ? "-" : money(Math.abs(c.openBalance))}
       </span>
     ),
@@ -229,41 +229,26 @@ export function CompaniesPage() {
           Percentages are of revenue that HAS a source; nothing is
           invented when the list is empty. */}
       {!isLoading && !error && total > 0 && (
-        <div className="grid gap-3 sm:grid-cols-3">
-          <Card>
-            <CardBody>
-              <p className="text-sm text-grey-500">Through an agent</p>
-              <p className="text-xl font-semibold tabular text-ink-900 mt-1">
-                {money(otaRevenue)}
-              </p>
-              <p className="text-sm text-grey-500 mt-0.5 tabular">
-                {Math.round((otaRevenue / total) * 100)}% of the revenue
-              </p>
-            </CardBody>
-          </Card>
-          <Card>
-            <CardBody>
-              <p className="text-sm text-grey-500">Direct</p>
-              <p className="text-xl font-semibold tabular text-ink-900 mt-1">
-                {money(directRevenue)}
-              </p>
-              <p className="text-sm text-grey-500 mt-0.5 tabular">
-                {Math.round((directRevenue / total) * 100)}% of the revenue
-              </p>
-            </CardBody>
-          </Card>
-          <Card>
-            <CardBody>
-              <p className="text-sm text-grey-500">Owed to the property</p>
-              <p className="text-xl font-semibold tabular text-ink-900 mt-1">
-                {money(sum(rows, (r) => Math.max(r.openBalance, 0)))}
-              </p>
-              <p className="text-sm text-grey-500 mt-0.5">
-                Across every source that owes anything
-              </p>
-            </CardBody>
-          </Card>
-        </div>
+        <FigureRow className="sm:grid-cols-3 mb-6">
+          <FigureTile
+            icon={<Handshake />} tone="orange"
+            label="Through an agent"
+            value={money(otaRevenue)}
+            note={`${Math.round((otaRevenue / total) * 100)}% of the revenue`}
+          />
+          <FigureTile
+            icon={<Home />} tone="blue"
+            label="Direct"
+            value={money(directRevenue)}
+            note={`${Math.round((directRevenue / total) * 100)}% of the revenue`}
+          />
+          <FigureTile
+            icon={<Wallet />}
+            label="Owed to the property"
+            value={money(sum(rows, (r) => Math.max(r.openBalance, 0)))}
+            note="Across every source that owes anything"
+          />
+        </FigureRow>
       )}
 
       {error || isLoading || groups.length === 0 ? (
@@ -285,7 +270,7 @@ export function CompaniesPage() {
         <div className="space-y-6">
           {groups.map((g) => (
             <section key={g.kind}>
-              <div className="flex flex-wrap items-baseline gap-x-2.5 gap-y-1 mb-2.5">
+              <div className="flex flex-wrap items-baseline gap-x-2.5 gap-y-1 mb-3">
                 <h2 className="text-md font-semibold text-ink-900">
                   {KIND_COPY[g.kind].title}
                 </h2>
