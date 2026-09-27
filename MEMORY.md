@@ -6539,6 +6539,19 @@ copy will see of theirs.**
 
 ---
 
+### 336 · A regex run on an upload is part of the trust boundary (ADM-10)
+
+27 September, the group logo session. The SVG safety check used `<!--[\s\S]*?-->` inside
+a repeated group; on a 211-byte file it took 105 seconds (2^N ways to read it), which
+would have frozen the API for everyone. V8's linear fallback did not save it. Only the
+owner, an admin or a GM could reach it, and it was caught before merge.
+
+**The rule:** any pattern run on something a user sends is timed on the worst input the
+size limit allows, and a test holds the time. Prefer a linear scan or a parser to a
+clever regex.
+
+---
+
 ### 335 · A check step killed from Windows reads as a pass: the 22-second database step, explained
 
 27 September, found by the gate investigation (tools/gate-db-step-27sep). On this Git
