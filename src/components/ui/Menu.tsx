@@ -40,14 +40,14 @@ export function Menu({
         <button
           type="button"
           className={cn(
-            /* 44px. This sits on a tablet at the front desk. */
-            "inline-flex items-center justify-center gap-1.5 h-11 px-3.5",
-            "rounded-md border border-grey-300 bg-white",
-            "text-base text-ink-900 cursor-pointer",
+            /* A capsule like every button (the owner, 27 September), 44px
+               under a finger: it sits on a tablet at the front desk. */
+            "press inline-flex items-center justify-center gap-1.5 h-9 pointer-coarse:min-h-11 px-3.5",
+            "rounded-full border border-grey-300 bg-white",
+            "text-base font-medium text-ink-900 cursor-pointer",
             "hover:bg-grey-50 hover:border-grey-400",
             "focus-visible:outline-2 focus-visible:outline-offset-2",
-            "focus-visible:outline-brand-orange-500",
-            "transition-colors duration-150",
+            "focus-visible:outline-brand-orange",
             "data-[state=open]:bg-grey-50",
           )}
         >

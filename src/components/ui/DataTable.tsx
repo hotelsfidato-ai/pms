@@ -72,7 +72,7 @@ export function DataTable<T>({
 }: DataTableProps<T>) {
   if (error) {
     return (
-      <div className={cn("bg-white border border-grey-200 rounded-md", className)}>
+      <div data-table-frame className={cn("bg-white border border-grey-200 rounded-lg", className)}>
         <ErrorState error={error} onRetry={onRetry} />
       </div>
     );
@@ -80,7 +80,7 @@ export function DataTable<T>({
 
   if (loading) {
     return (
-      <div className={cn("bg-white border border-grey-200 rounded-md overflow-hidden", className)}>
+      <div data-table-frame className={cn("bg-white border border-grey-200 rounded-lg overflow-hidden", className)}>
         <SkeletonTable columns={columns.length} />
       </div>
     );
@@ -88,7 +88,7 @@ export function DataTable<T>({
 
   if (!rows.length) {
     return (
-      <div className={cn("bg-white border border-grey-200 rounded-md", className)}>
+      <div data-table-frame className={cn("bg-white border border-grey-200 rounded-lg", className)}>
         {hasFilters ? (
           <NoResultsState onClear={onClearFilters} />
         ) : (
