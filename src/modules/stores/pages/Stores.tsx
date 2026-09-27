@@ -13,9 +13,9 @@ import { can } from "@/lib/permissions";
 import { useRole } from "@/lib/session";
 import { useDocumentIdentity } from "@/lib/documentIdentity";
 import {
-  Page, PageHeader, Card, CardBody, Button, Skeleton, EmptyState, ErrorState,
+  Page, PageHeader, Card, Button, Skeleton, EmptyState, ErrorState,
   Dialog, DialogContent, Field, fieldProps, Input, NativeSelect,
-  StatusPill, toast, Menu, MenuItem, MenuSeparator,
+  StatusPill, IconChip, toast, Menu, MenuItem, MenuSeparator,
 } from "@/components/ui";
 import {
   getStore, getStockHistory, addStockItem, recordStockMovement, moveStock,
@@ -239,12 +239,14 @@ export default function StoresPage() {
       );
     }
 
+    /* Groups 24px apart, a heading 12px over its cards, cards 12px apart
+       (the fidato-design Rhythm Rule). */
     return [...byCategory.entries()].map(([category, group]) => (
-      <section key={category}>
-        <h2 className="text-md font-semibold text-ink-900 mb-2.5">
+      <section key={category} className="mb-6 last:mb-0">
+        <h2 className="text-md font-semibold text-ink-900 mb-3">
           {category}
         </h2>
-        <ul className="space-y-2">
+        <ul className="space-y-3">
           {group.map((i) => (
             <ItemRow
               key={i.id}
@@ -295,19 +297,19 @@ export default function StoresPage() {
           <div className="flex flex-wrap gap-2">
             {/* A store is a hundred lines long. The same argument the
                 menu import is built on. */}
-            <Button variant="secondary" className="h-11"
+            <Button variant="secondary"
                     onClick={() => setImporting(true)}>
               <Upload className="size-4" /> Import
             </Button>
             {/* THE COUNT (D25-15..17): whoever corrects a count. */}
             {mayCorrect && items.length > 0 && (
-              <Button variant="secondary" className="h-11" disabled={q.data === undefined}
+              <Button variant="secondary" disabled={q.data === undefined}
                       onClick={() => setCounting(true)}>
                 <ClipboardList className="size-4" /> Count a store
               </Button>
             )}
             {/* The Store's one main action (STO-8). */}
-            <Button variant="primary" className="h-11" onClick={() => setAdding(true)}>
+            <Button variant="primary" onClick={() => setAdding(true)}>
               <Plus className="size-4" /> Add an item
             </Button>
           </div>
@@ -315,15 +317,15 @@ export default function StoresPage() {
       />
 
       {!mayChange && (
-        <p className="text-sm text-grey-600">{LOOK_ONLY}</p>
+        <p className="text-sm text-grey-600 mb-5">{LOOK_ONLY}</p>
       )}
 
       {/* WHICH STORE (the owner's layout, 17 September). "All stores" shows
           each item's total and what each store holds; one store shows only
           what is in it, and its dialogs start there. */}
       {stores.length > 0 && (
-        <div className="flex flex-wrap items-center gap-x-3 gap-y-1.5">
-          <label htmlFor="store-picker" className="text-sm font-medium text-ink-900">
+        <div className="flex flex-wrap items-center gap-x-3 gap-y-1.5 mb-5">
+          <label htmlFor="store-picker" className="text-sm font-medium text-grey-700">
             Store
           </label>
           <NativeSelect id="store-picker" className="w-auto min-w-52"
@@ -341,43 +343,45 @@ export default function StoresPage() {
 
       {q.data !== undefined && q.isError && (
         <div role="status"
-             className="flex flex-wrap items-center gap-x-3 gap-y-1 rounded-md border
-                        border-amber-300 bg-amber-50 px-3.5 py-2">
-          <AlertTriangle className="size-4 shrink-0 text-amber-600" />
+             className="flex flex-wrap items-center gap-x-3 gap-y-1 mb-5 rounded-lg
+                        bg-brand-yellow-50 ring-1 ring-inset ring-brand-yellow-100 px-4 py-3">
+          <AlertTriangle className="size-4 shrink-0 text-brand-yellow-800" />
           <p className="text-sm text-ink-900 min-w-0">
             Not up to date: {unreachable(q.error) ? "no connection" : "the store did not refresh"}.
             {q.dataUpdatedAt > 0 && ` Showing what loaded at ${timeOnly(new Date(q.dataUpdatedAt))}.`}
           </p>
+          {/* A text link is orange (the Tappable Rule). */}
           <button type="button" onClick={() => void q.refetch()}
-                  className="text-sm font-medium text-ink-900 underline underline-offset-2
-                             hover:no-underline cursor-pointer">
+                  className="text-sm font-medium text-brand-orange-700 hover:underline
+                             underline-offset-4 cursor-pointer">
             Try again
           </button>
         </div>
       )}
 
+      {/* Something to do (buy it), so the warm tile: the yellow wash, its
+          chip, and the list under the heading. */}
       {below.length > 0 && (
-        <Card className="border-amber-300 bg-amber-50">
-          <CardBody className="flex items-start gap-2.5">
-            <AlertTriangle className="size-4 text-amber-600 shrink-0 mt-0.5" />
-            <div className="text-sm text-ink-900 leading-relaxed min-w-0">
-              <p className="font-medium">
-                {/* Items, not lines: one item can be low in two stores. */}
-                {belowItems === 1 ? "One item is" : `${belowItems} items are`} at
-                or below the level set for {picked ? picked.name : "a store"}
-              </p>
-              <ul data-below-list="">
-                {below.map(({ item, store }) => (
-                  <li key={`${item.id}:${store.id}`} className="tabular">
-                    {item.name} - {store.name}:{" "}
-                    {item.byStore[store.id] === undefined ? "none" : `${item.byStore[store.id]} ${item.unit}`},
-                    level {item.levels[store.id]}
-                  </li>
-                ))}
-              </ul>
-            </div>
-          </CardBody>
-        </Card>
+        <div className="flex items-start gap-3 mb-5 rounded-lg bg-brand-yellow-50
+                        ring-1 ring-inset ring-brand-yellow-100 px-4 py-3.5">
+          <IconChip tone="yellow"><AlertTriangle /></IconChip>
+          <div className="text-sm text-ink-900 leading-relaxed min-w-0">
+            <p className="font-medium">
+              {/* Items, not lines: one item can be low in two stores. */}
+              {belowItems === 1 ? "One item is" : `${belowItems} items are`} at
+              or below the level set for {picked ? picked.name : "a store"}
+            </p>
+            <ul data-below-list="" className="mt-1 text-grey-600">
+              {below.map(({ item, store }) => (
+                <li key={`${item.id}:${store.id}`} className="tabular">
+                  {item.name} - {store.name}:{" "}
+                  {item.byStore[store.id] === undefined ? "none" : `${item.byStore[store.id]} ${item.unit}`},
+                  level {item.levels[store.id]}
+                </li>
+              ))}
+            </ul>
+          </div>
+        </div>
       )}
 
       {body}
@@ -458,17 +462,19 @@ function ItemRow({
 
   return (
     <li>
-      <Card className={cn(low && "border-amber-300")}>
+      <Card className={cn(low && "border-brand-yellow")}>
         {/* ON A PHONE THE NAME HAS ITS OWN LINE (STO-3). It shared a row with
             On hand and Worth and got what was left — 69 to 86 pixels, so
-            "LPG cylinder 19 kg commercial" took four lines and its card 480. */}
-        <CardBody className="flex flex-wrap items-center gap-x-6 gap-y-3">
+            "LPG cylinder 19 kg commercial" took four lines and its card 480.
+            TOP-ALIGNED, so every figure sits on one line under its one-line
+            label whatever the note under Worth adds (the Level Rule). */}
+        <div className="flex flex-wrap items-start gap-x-6 gap-y-3 px-4 py-3.5">
           <div className="min-w-0 basis-full sm:basis-0 sm:flex-1">
-            <div className="flex items-baseline gap-2 flex-wrap">
-              <p className="text-base font-medium text-ink-900">{item.name}</p>
+            <div className="flex items-center gap-2 flex-wrap">
+              <p className="text-md font-semibold text-ink-900">{item.name}</p>
               {low && <StatusPill tone="warning">Low</StatusPill>}
             </div>
-            <p className="text-sm text-grey-500">
+            <p className="text-sm text-grey-500 mt-0.5">
               {levelText}
               {item.lastMovement
                 ? ` · last moved ${dateShort(item.lastMovement)}`
@@ -480,7 +486,7 @@ function ItemRow({
             <p className="text-sm text-grey-500">
               {item.cylinder ? (picked ? `Full in ${picked.name}` : "Full") : picked ? `In ${picked.name}` : "On hand"}
             </p>
-            <p className={cn("text-lg font-semibold tabular",
+            <p className={cn("text-xl leading-7 font-semibold tabular",
               onHand === null ? "text-grey-500" : "text-ink-900")}>
               {heldText(onHand)}{" "}
               {onHand !== null && <span className="text-sm font-normal text-grey-500">{item.unit}</span>}
@@ -491,7 +497,7 @@ function ItemRow({
           {item.cylinder && (
             <div>
               <p className="text-sm text-grey-500">Empty</p>
-              <p className={cn("text-lg font-semibold tabular",
+              <p className={cn("text-xl leading-7 font-semibold tabular",
                 emptiesShown === null ? "text-grey-500" : "text-ink-900")}>
                 {heldText(emptiesShown)}{" "}
                 {emptiesShown !== null && <span className="text-sm font-normal text-grey-500">{item.unit}</span>}
@@ -503,39 +509,16 @@ function ItemRow({
             <p className="text-sm text-grey-500">Worth</p>
             {/* A DASH. Nothing has been received, so nothing has been
                 paid, and zero would say it is worthless. */}
-            <p className={cn("text-lg font-semibold tabular",
+            <p className={cn("text-xl leading-7 font-semibold tabular",
               value === null ? "text-grey-500" : "text-ink-900")}>
               {value === null ? "-" : money(value)}
             </p>
             {item.unitCost !== null && (
-              <p className="text-sm text-grey-500 tabular">
+              <p className="text-xs text-grey-500 tabular">
                 {money(item.unitCost)}/{item.unit} average
               </p>
             )}
           </div>
-
-          {/* WHAT EACH STORE HOLDS, on "All stores" — the owner's layout:
-              "Main 30 · Kitchen 8 · Bar -". */}
-          {!picked && stores.length > 1 && (
-            <p className="basis-full text-sm text-grey-600 tabular" data-store-line="">
-              {stores.map((s) => `${shortName(s.name)} ${heldText(item.byStore[s.id])}`).join(" · ")}
-            </p>
-          )}
-
-          {/* THE DEPOSIT THE SUPPLIER HOLDS (D25-19, D17-4): typed on the item,
-              a dash until it is. At the kitchen is on deposit less full and
-              empty in the stores - and when that is below nothing the figures
-              disagree, which is said rather than printed as a minus. */}
-          {item.cylinder && (
-            <p className="basis-full text-sm text-grey-600 tabular" data-deposit-line="">
-              On deposit {heldText(item.cylindersOnDeposit)}
-              {" · "}{item.depositPerCylinder === null ? "-" : money(item.depositPerCylinder)} each
-              {" · "}{item.depositHeld === null ? "-" : money(item.depositHeld)} held
-              {" · "}{item.inUse !== null && item.inUse < 0
-                ? "more in the stores than on deposit - check the count or the deposit"
-                : `${heldText(item.inUse)} in use at the kitchen`}
-            </p>
-          )}
 
           {/* RECEIVE · ISSUE · MORE (STO-5 and STO-7, the owner's layout).
               The rare acts go in the menu, each with a word — the bin had
@@ -545,8 +528,12 @@ function ItemRow({
               ONE ROW ON A PHONE. With their arrows the three need 305px and
               the card gives 294 at 375 wide — less on a 360px phone — so More
               wrapped under the other two. The arrows show from `sm` up; the
-              words are what is read. */}
-          <div className="flex flex-wrap gap-2 basis-full xl:basis-auto">
+              words are what is read.
+
+              44px, not the capsule's 36: they sit beside the menu's trigger,
+              which is 44 (the kit's Menu), and a row of buttons shares a
+              height. */}
+          <div className="flex flex-wrap gap-2 basis-full xl:basis-auto xl:self-center">
             {mayChange ? (
               <>
                 <Button variant="secondary" className="h-11"
@@ -591,22 +578,51 @@ function ItemRow({
                 </Menu>
               </>
             ) : (
-              <Button variant="secondary" className="h-11"
+              <Button variant="secondary"
                       disabled={neverMoved}
                       onClick={onHistory}>
                 History
               </Button>
             )}
           </div>
+        </div>
 
-          {mayChange && empty && (
-            <p className="basis-full text-sm text-grey-600">
-              {picked
-                ? `Nothing in ${picked.name} to issue - receive a delivery first.`
-                : "Nothing on hand to issue - receive a delivery first."}
-            </p>
-          )}
-        </CardBody>
+        {/* THE ITEM'S ROWS, under one hairline (the Figure Rule): what each
+            store holds, the deposit, and why Issue is grey. */}
+        {((!picked && stores.length > 1) || item.cylinder || (mayChange && empty)) && (
+          <div className="border-t border-grey-100 px-4 py-3 space-y-1">
+            {/* WHAT EACH STORE HOLDS, on "All stores" — the owner's layout:
+                "Main 30 · Kitchen 8 · Bar -". */}
+            {!picked && stores.length > 1 && (
+              <p className="text-sm text-grey-600 tabular" data-store-line="">
+                {stores.map((s) => `${shortName(s.name)} ${heldText(item.byStore[s.id])}`).join(" · ")}
+              </p>
+            )}
+
+            {/* THE DEPOSIT THE SUPPLIER HOLDS (D25-19, D17-4): typed on the item,
+                a dash until it is. At the kitchen is on deposit less full and
+                empty in the stores - and when that is below nothing the figures
+                disagree, which is said rather than printed as a minus. */}
+            {item.cylinder && (
+              <p className="text-sm text-grey-600 tabular" data-deposit-line="">
+                On deposit {heldText(item.cylindersOnDeposit)}
+                {" · "}{item.depositPerCylinder === null ? "-" : money(item.depositPerCylinder)} each
+                {" · "}{item.depositHeld === null ? "-" : money(item.depositHeld)} held
+                {" · "}{item.inUse !== null && item.inUse < 0
+                  ? "more in the stores than on deposit - check the count or the deposit"
+                  : `${heldText(item.inUse)} in use at the kitchen`}
+              </p>
+            )}
+
+            {mayChange && empty && (
+              <p className="text-sm text-grey-600">
+                {picked
+                  ? `Nothing in ${picked.name} to issue - receive a delivery first.`
+                  : "Nothing on hand to issue - receive a delivery first."}
+              </p>
+            )}
+          </div>
+        )}
       </Card>
     </li>
   );
@@ -652,9 +668,9 @@ function AddItemDialog({ code, open, mayLevel, onOpenChange, onAdded }: {
         description="Something the property keeps and counts."
         footer={
           <>
-            <Button variant="secondary" className="h-11"
+            <Button variant="secondary"
                     onClick={() => onOpenChange(false)}>Cancel</Button>
-            <Button variant="primary" className="h-11"
+            <Button variant="primary"
                     disabled={!ready || busy}
                     onClick={() => void submit()}>
               {busy ? "Adding…" : "Add"}
@@ -700,8 +716,8 @@ function AddItemDialog({ code, open, mayLevel, onOpenChange, onAdded }: {
               )}
             </Field>
           )}
-          <p className="text-sm text-grey-600 rounded-md border border-grey-200
-                        bg-grey-50 p-3 leading-relaxed">
+          <p className="text-sm text-grey-600 rounded-lg border border-grey-200
+                        bg-grey-50 px-3.5 py-3 leading-relaxed">
             No price here. A <em>delivery</em> has a price - the same rice
             costs differently in June and October - so the cost is recorded
             when it arrives, and what the shelf is worth is the average of
@@ -847,9 +863,9 @@ function MoveDialog({ code, item, kind, stores, startStoreId, outlets, open, onO
             : `${here} ${item.unit} in ${store.name}`}
         footer={
           <>
-            <Button variant="secondary" className="h-11"
+            <Button variant="secondary"
                     onClick={() => onOpenChange(false)}>Cancel</Button>
-            <Button variant="primary" className="h-11" disabled={!ready || busy}
+            <Button variant="primary" disabled={!ready || busy}
                     onClick={() => void submit()}>
               {busy ? "Recording…" : ACTION_LABEL[kind]}
             </Button>
@@ -1011,9 +1027,9 @@ function TransferDialog({ code, item, stores, startFromId, open, onOpenChange, o
         description={from ? `${have} ${item.unit} in ${from.name}` : "Choose a store"}
         footer={
           <>
-            <Button variant="secondary" className="h-11"
+            <Button variant="secondary"
                     onClick={() => onOpenChange(false)}>Cancel</Button>
-            <Button variant="primary" className="h-11" disabled={!ready || busy}
+            <Button variant="primary" disabled={!ready || busy}
                     onClick={() => void submit()}>
               {busy ? "Moving…" : "Move"}
             </Button>
@@ -1080,12 +1096,12 @@ function HistoryDialog({ code, item, open, mayUndo, onOpenChange, onChanged }: {
         title={item.name}
         description={`${item.onHand} ${item.unit} on hand · every movement`}
         footer={
-          <Button variant="secondary" className="h-11"
+          <Button variant="secondary"
                   onClick={() => onOpenChange(false)}>Close</Button>
         }
       >
         {!mayUndo && (
-          <p className="text-sm text-grey-600 mb-2">{UNDO_NOT_YOURS}</p>
+          <p className="text-sm text-grey-600 mb-3">{UNDO_NOT_YOURS}</p>
         )}
         {q.data === undefined && q.isError ? (
           <ErrorState
@@ -1104,7 +1120,7 @@ function HistoryDialog({ code, item, open, mayUndo, onOpenChange, onChanged }: {
                       title="Nothing has moved yet"
                       description="A delivery, an issue or a count will show here." />
         ) : (
-          <ul className="space-y-1.5">
+          <ul className="space-y-2">
             {rows.map((m) => {
               /* A MOVE, or the undo of one, is one line with both stores; its
                  quantity is what moved, with no sign — nothing came in or went
@@ -1113,7 +1129,7 @@ function HistoryDialog({ code, item, open, mayUndo, onOpenChange, onChanged }: {
               return (
                 <li key={m.id}
                     className={cn(
-                      "flex items-start gap-2.5 rounded-md border p-3",
+                      "flex items-start gap-2.5 rounded-lg border px-3.5 py-3",
                       /* A row that was UNDONE and a row that DID the
                          undoing are different facts, and the history is
                          unreadable if either looks like an ordinary
@@ -1172,9 +1188,9 @@ function HistoryDialog({ code, item, open, mayUndo, onOpenChange, onChanged }: {
                       type="button"
                       aria-label={`Undo this ${nounOf(m)}`}
                       onClick={() => setConfirming(m)}
-                      className="size-11 grid place-items-center rounded-md
-                                 text-grey-500 hover:text-brand-red
-                                 hover:bg-red-50 cursor-pointer shrink-0"
+                      className="size-9 pointer-coarse:size-11 grid place-items-center rounded-full press
+                                 text-grey-500 hover:text-brand-red-700
+                                 hover:bg-brand-red-50 cursor-pointer shrink-0"
                     >
                       <Undo2 className="size-4" />
                     </button>
@@ -1191,9 +1207,9 @@ function HistoryDialog({ code, item, open, mayUndo, onOpenChange, onChanged }: {
               title={`Undo this ${nounOf(confirming)} of ${Math.abs(confirming.quantity)} ${item.unit}?`}
               footer={
                 <>
-                  <Button variant="secondary" className="h-11"
+                  <Button variant="secondary"
                           onClick={() => setConfirming(null)}>Cancel</Button>
-                  <Button variant="danger" className="h-11" disabled={busy}
+                  <Button variant="danger" disabled={busy}
                           onClick={() => void undo(confirming)}>
                     {busy ? "Undoing…" : `Undo ${nounOf(confirming)}`}
                   </Button>
@@ -1262,9 +1278,9 @@ function LevelsDialog({ code, item, stores, open, onOpenChange, onDone }: {
         description={`Warn when a store holds this many ${item.unit} or fewer. Blank is no warning, not zero.`}
         footer={
           <>
-            <Button variant="secondary" className="h-11"
+            <Button variant="secondary"
                     onClick={() => onOpenChange(false)}>Cancel</Button>
-            <Button variant="primary" className="h-11" disabled={!ready || busy}
+            <Button variant="primary" disabled={!ready || busy}
                     onClick={() => void submit()}>
               {busy ? "Saving…" : "Save"}
             </Button>
@@ -1383,17 +1399,17 @@ function CountSheet({ code, stores, items, startStoreId, reload, onDone }: {
 
   return (
     <Page className="max-w-3xl">
-      <div className="print:hidden space-y-4">
+      <div className="print:hidden mb-5 space-y-3">
         <PageHeader
           title="Store"
           description="Count a store. Print the sheet, count the shelves, then type the counts in straight away."
           actions={
             <div className="flex flex-wrap gap-2">
-              <Button variant="secondary" className="h-11" onClick={() => window.print()}>
+              <Button variant="secondary" onClick={() => window.print()}>
                 <Printer className="size-4" /> Print the sheet
               </Button>
-              <Button variant="secondary" className="h-11" onClick={() => onDone(false)}>Cancel</Button>
-              <Button variant="primary" className="h-11" disabled={!ready || busy}
+              <Button variant="secondary" onClick={() => onDone(false)}>Cancel</Button>
+              <Button variant="primary" disabled={!ready || busy}
                       onClick={() => void save()}>
                 {busy ? "Saving…" : "Save the count"}
               </Button>
@@ -1401,7 +1417,7 @@ function CountSheet({ code, stores, items, startStoreId, reload, onDone }: {
           }
         />
         <div className="flex flex-wrap items-center gap-x-3 gap-y-1.5">
-          <label htmlFor="count-store" className="text-sm font-medium text-ink-900">Store</label>
+          <label htmlFor="count-store" className="text-sm font-medium text-grey-700">Store</label>
           <NativeSelect id="count-store" className="w-auto min-w-52" value={storeId}
                         onChange={(e) => pickStore(e.target.value)}>
             {stores.map((s) => <option key={s.id} value={s.id}>{s.name}</option>)}
@@ -1413,22 +1429,22 @@ function CountSheet({ code, stores, items, startStoreId, reload, onDone }: {
         </p>
       </div>
 
-      <h2 className="hidden print:block text-lg font-semibold text-ink-900">
+      <h2 className="hidden print:block mb-3 text-lg font-semibold text-ink-900">
         {property ? `${property} - ` : ""}Count of {store?.name}
       </h2>
 
-      <ul className="space-y-2 print:space-y-0" data-count-sheet="">
+      <ul className="bg-white rounded-lg border border-grey-200 divide-y divide-grey-100 print:border-0 print:rounded-none print:divide-grey-200" data-count-sheet="">
         {lines.map((l) => {
           const n = counted(l.key);
           const difference = n === null || !Number.isFinite(n) ? null : Math.round((n - l.book) * 1000) / 1000;
           return (
             <li key={l.key}
-                className="rounded-md border border-grey-200 bg-white p-3 break-inside-avoid
-                           print:rounded-none print:border-0 print:border-b print:px-0 print:py-2">
+                className="px-4 py-3 min-h-14 break-inside-avoid
+                           print:px-0 print:py-2">
               <div className="flex items-center gap-3">
                 <div className="min-w-0 flex-1">
-                  <p className="text-base text-ink-900">{l.name}</p>
-                  <p className="text-sm text-grey-500">{l.unit}</p>
+                  <p className="text-sm font-medium text-ink-900">{l.name}</p>
+                  <p className="text-xs text-grey-500">{l.unit}</p>
                 </div>
                 <Input className="w-28 shrink-0 print:hidden tabular" inputMode="decimal"
                        aria-label={`Counted, ${l.name}, in ${l.unit}`}
