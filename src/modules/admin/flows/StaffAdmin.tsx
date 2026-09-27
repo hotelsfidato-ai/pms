@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { UserPlus, Building2, KeyRound } from "lucide-react";
 import { cn } from "@/lib/cn";
-import { Card, CardBody, Button, StatusPill, toast } from "@/components/ui";
+import { Card, CardBody, Button, StatusPill, IconChip, Input, NativeSelect, toast } from "@/components/ui";
 import { ASSIGNABLE_ROLES, ROLE_LABELS } from "@/lib/permissions";
 import { createStaff, grantAccess, revokeAccess, deactivateStaff, createProperty, type AdminStaff, MIN_PASSWORD } from "@/modules/admin/data/admin";
 
@@ -44,21 +44,20 @@ function Field({ label, value, onChange, placeholder, hint, mono }: {
   mono?: boolean;
 }) {
   return (
+    /* The kit's field look (label 14/500 over the box, the hint 12 under
+       it); the markup stays this one, a label around its box. */
     <label className="block">
-      <span className="block text-2xs uppercase tracking-wide text-grey-500 mb-1">
+      <span className="block text-sm font-medium text-grey-700 mb-1.5">
         {label}
       </span>
-      <input
+      <Input
         value={value}
         onChange={(e) => onChange(e.target.value)}
         placeholder={placeholder}
-        className={cn(
-          "w-full h-11 px-3 rounded-md border border-grey-300 text-base",
-          mono && "tabular",
-        )}
+        numeric={mono}
       />
       {hint && (
-        <span className="block text-2xs text-grey-500 mt-1 leading-relaxed">
+        <span className="block text-xs text-grey-500 mt-1.5 leading-relaxed">
           {hint}
         </span>
       )}
@@ -118,14 +117,14 @@ export function NewPerson({ onDone }: { onDone: () => void }) {
 
   return (
     <Card>
-      <div className="px-4 pt-3.5 pb-1 flex items-center gap-2">
-        <UserPlus className="size-3.5 text-grey-400" />
-        <p className="text-2xs uppercase tracking-wide text-grey-500">
+      <div className="px-4 pt-3.5 flex items-center gap-2.5">
+        <IconChip><UserPlus /></IconChip>
+        <p className="text-md font-semibold text-ink-900">
           Add a person
         </p>
       </div>
       <CardBody>
-        <div className="space-y-2.5">
+        <div className="space-y-3">
           <Field label="Email" value={email} onChange={setEmail}
             placeholder="clerk@fidato.in"
             hint="How they sign in. It cannot be changed here afterwards." />
@@ -148,7 +147,7 @@ export function NewPerson({ onDone }: { onDone: () => void }) {
               <span className="block text-base text-ink-900">
                 Group administrator
               </span>
-              <span className="block text-2xs text-grey-600 leading-relaxed">
+              <span className="block text-xs text-grey-600 leading-relaxed">
                 Reaches every property, present and future, and can create more
                 people. Takes the provisioning key.
               </span>
@@ -156,12 +155,11 @@ export function NewPerson({ onDone }: { onDone: () => void }) {
           </label>
 
           {isAdmin && (
-            <input
+            <Input
               type="password"
               value={key}
               onChange={(e) => setKey(e.target.value)}
               placeholder="provisioning key"
-              className="w-full h-11 px-3 rounded-md border border-grey-300 text-base"
             />
           )}
 
@@ -181,7 +179,7 @@ export function NewPerson({ onDone }: { onDone: () => void }) {
 
               A toast is gone in four seconds, so the standing text stays
               — but it now says the thing that is still true. */}
-          <p className="text-2xs text-grey-600 leading-relaxed pt-1">
+          <p className="text-xs text-grey-600 leading-relaxed">
             This creates their sign-in account too. Give them a property
             below, or they sign in to an empty application with no error - 
             which reads as a fault rather than as a setting.
@@ -198,9 +196,9 @@ export function People({ staff, codes, onDone }: {
   staff: AdminStaff[]; codes: string[]; onDone: () => void;
 }) {
   return (
-    <Card className="mt-6">
+    <Card className="mt-5">
       <div className="px-4 pt-3.5 pb-1">
-        <p className="text-2xs uppercase tracking-wide text-grey-500">
+        <p className="text-md font-semibold text-ink-900">
           People, and the properties they reach
         </p>
       </div>
@@ -210,7 +208,7 @@ export function People({ staff, codes, onDone }: {
             onDone={onDone} />
         ))}
         {staff.length === 0 && (
-          <li className="px-4 py-6 text-sm text-grey-500 text-center">
+          <li className="px-4 py-5 text-sm text-grey-500 text-center">
             Nobody yet.
           </li>
         )}
@@ -253,15 +251,15 @@ function Person({ person, codes, onDone }: {
   const free = codes.filter((c) => !person.access.some((a) => a.code === c));
 
   return (
-    <li className="px-4 py-3">
-      <div className="flex flex-wrap items-center gap-2 mb-1.5">
+    <li className="px-4 py-3 min-h-14">
+      <div className="flex flex-wrap items-center gap-2 mb-2">
         <span className={cn(
           "text-base font-medium",
           person.isActive ? "text-ink-900" : "text-grey-500 line-through",
         )}>
           {person.name}
         </span>
-        <span className="text-2xs text-grey-500">{person.email}</span>
+        <span className="text-xs text-grey-500">{person.email}</span>
         {person.isGroupAdmin && (
           <StatusPill tone="info">every property</StatusPill>
         )}
@@ -280,7 +278,8 @@ function Person({ person, codes, onDone }: {
               type="button"
               onClick={() => void revoke(a.code)}
               title={`Remove ${a.code}`}
-              className="inline-flex items-center gap-1.5 h-8 px-2.5 rounded-md border border-grey-200 bg-white text-2xs hover:border-brand-red hover:text-brand-red pointer-coarse:min-h-11"
+              /* A control, so a capsule (the Tappable Rule). */
+              className="press inline-flex items-center gap-1.5 h-8 px-3 rounded-full border border-grey-300 bg-white text-xs hover:border-brand-red-700 hover:text-brand-red-700 pointer-coarse:min-h-11"
             >
               <span className="tabular font-medium">{a.code}</span>
               <span className="text-grey-500">
@@ -290,30 +289,30 @@ function Person({ person, codes, onDone }: {
             </button>
           ))}
           {person.access.length === 0 && (
-            <span className="text-2xs text-grey-500">No property yet.</span>
+            <span className="text-xs text-grey-500">No property yet.</span>
           )}
         </div>
       )}
 
       {person.isActive && !person.isGroupAdmin && free.length > 0 && (
         <div className="flex flex-wrap gap-2">
-          <select value={code} onChange={(e) => setCode(e.target.value)}
-            className="h-11 px-2 rounded-md border border-grey-300 text-base">
+          <NativeSelect value={code} onChange={(e) => setCode(e.target.value)}
+            className="w-auto">
             <option value="">Property…</option>
             {free.map((c) => <option key={c} value={c}>{c}</option>)}
-          </select>
-          <select value={role} onChange={(e) => setRole(e.target.value)}
-            className="h-11 px-2 rounded-md border border-grey-300 text-base">
+          </NativeSelect>
+          <NativeSelect value={role} onChange={(e) => setRole(e.target.value)}
+            className="w-auto">
             {ASSIGNABLE_ROLES.map((r) => (
               <option key={r} value={r}>{ROLE_LABELS[r]}</option>
             ))}
-          </select>
-          <Button variant="secondary" size="lg" loading={busy}
+          </NativeSelect>
+          <Button variant="secondary" loading={busy}
             disabled={!code} onClick={() => void grant()}>
             Give access
           </Button>
           {person.isActive && (
-            <Button variant="ghost" size="lg" onClick={() => void deactivate()}>
+            <Button variant="ghost" onClick={() => void deactivate()}>
               Deactivate
             </Button>
           )}
@@ -381,14 +380,14 @@ export function NewProperty({ onDone }: { onDone: () => void }) {
 
   return (
     <Card>
-      <div className="px-4 pt-3.5 pb-1 flex items-center gap-2">
-        <Building2 className="size-3.5 text-grey-400" />
-        <p className="text-2xs uppercase tracking-wide text-grey-500">
+      <div className="px-4 pt-3.5 flex items-center gap-2.5">
+        <IconChip><Building2 /></IconChip>
+        <p className="text-md font-semibold text-ink-900">
           Add a property
         </p>
       </div>
       <CardBody>
-        <div className="space-y-2.5">
+        <div className="space-y-3">
           <Field label="Code" value={code} onChange={setCode}
             placeholder="NSK" mono
             hint="2–8 letters or digits. It appears in every URL and every invoice number, and it cannot be changed later." />
@@ -396,31 +395,31 @@ export function NewProperty({ onDone }: { onDone: () => void }) {
             placeholder="Fidato Nashik" />
           <Field label="City" value={city} onChange={setCity}
             placeholder="Nashik" />
-          <div className="grid grid-cols-2 gap-2.5">
+          <div className="grid grid-cols-2 gap-3">
             <Field label="State" value={state} onChange={setState}
               placeholder="MH" />
             <Field label="GSTIN" value={gstin} onChange={setGstin}
               placeholder="27AAAAA0000A1Z5" mono />
           </div>
 
-          <div className="rounded-md border border-brand-yellow-100 bg-brand-yellow-50 p-3">
+          {/* A tinted tile, not a card in the card. */}
+          <div className="rounded-lg bg-brand-yellow-50 ring-1 ring-inset ring-brand-yellow-100 px-3.5 py-3">
             <div className="flex items-start gap-2.5">
-              <KeyRound className="size-4 text-brand-yellow shrink-0 mt-0.5" />
+              <KeyRound className="size-4 text-brand-yellow-800 shrink-0 mt-0.5" />
               <div className="min-w-0 flex-1">
                 <p className="text-sm font-medium text-ink-900">
                   Provisioning key
                 </p>
-                <p className="text-2xs text-grey-600 mt-0.5 leading-relaxed mb-2">
+                <p className="text-xs text-grey-600 mt-0.5 leading-relaxed mb-2">
                   Creating a property manufactures a whole tenant - rooms, an
                   invoice series, a folio namespace. Being signed in as an
                   administrator is not enough on its own.
                 </p>
-                <input
+                <Input
                   type="password"
                   value={key}
                   onChange={(e) => setKey(e.target.value)}
                   placeholder="the key for this deployment"
-                  className="w-full h-11 px-3 rounded-md border border-grey-300 text-base"
                 />
               </div>
             </div>

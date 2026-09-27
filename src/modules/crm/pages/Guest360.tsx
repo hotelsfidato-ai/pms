@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { Link, useParams } from "react-router";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { Search, UserX, ShieldAlert } from "lucide-react";
+import { Search, UserX, ShieldAlert, ChevronRight } from "lucide-react";
 import { money, dateShort } from "@/lib/format";
 import { useUi } from "@/lib/ui";
 import {
@@ -52,13 +52,14 @@ export function Guest360SearchPage() {
         description="Find a guest by name, phone or email, and see every stay at every hotel of the group."
       />
       <SearchInput value={q} onChange={(e) => setQ(e.target.value)}
-        placeholder="Name, phone or email" aria-label="Find a guest" autoFocus />
+        placeholder="Name, phone or email" aria-label="Find a guest" autoFocus
+        className="max-w-xl" />
 
-      <div className="mt-4">
+      <div className="mt-5">
         {q.trim().length < 2 && (
-          <p className="text-grey-500">Type two letters of a name, or a whole phone number or email.</p>
+          <p className="text-sm text-grey-500">Type two letters of a name, or a whole phone number or email.</p>
         )}
-        {found.error && <ErrorState error={found.error} onRetry={() => void found.refetch()} />}
+        {found.error && <Card><ErrorState error={found.error} onRetry={() => void found.refetch()} /></Card>}
         {found.data?.length === 0 && (
           <Card><EmptyState compact icon={<Search />} title="Nobody found"
             description="No guest record has that name, phone or email." /></Card>
@@ -68,12 +69,18 @@ export function Guest360SearchPage() {
             <ul className="divide-y divide-grey-100">
               {found.data.map((g) => (
                 <li key={g.id}>
+                  {/* A row that opens the guest: list-row rhythm, and an
+                      arrow at its end (the Tappable Rule). */}
                   <Link to={`/crm/guests/${g.id}`}
-                    className="flex flex-wrap items-center gap-3 px-4 py-3 hover:bg-grey-50">
-                    <span className="font-medium text-ink-900">{g.name}</span>
-                    {g.isBlacklisted && <StatusPill tone="danger">Blacklisted</StatusPill>}
-                    <span className="text-sm text-grey-600 tabular">{g.phone ?? DASH} · {g.email ?? DASH}</span>
-                    <span className="ml-auto text-sm text-grey-500">{stayedWords(g.visits)}</span>
+                    className="flex items-center gap-3 px-4 py-3 min-h-14 hover:bg-grey-50 transition-colors duration-150
+                               focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-brand-orange">
+                    <span className="min-w-0 flex-1 flex flex-wrap items-center gap-x-3 gap-y-1">
+                      <span className="font-medium text-ink-900">{g.name}</span>
+                      {g.isBlacklisted && <StatusPill tone="danger">Blacklisted</StatusPill>}
+                      <span className="text-sm text-grey-600 tabular min-w-0 break-words">{g.phone ?? DASH} · {g.email ?? DASH}</span>
+                      <span className="sm:ml-auto text-sm text-grey-500">{stayedWords(g.visits)}</span>
+                    </span>
+                    <ChevronRight className="size-4 text-grey-400 shrink-0" aria-hidden />
                   </Link>
                 </li>
               ))}
@@ -112,7 +119,7 @@ export function Guest360Page() {
   }
   if (whole.error) {
     return <Page><PageHeader title="Guest 360" />
-      <ErrorState error={whole.error} onRetry={() => void whole.refetch()} /></Page>;
+      <Card><ErrorState error={whole.error} onRetry={() => void whole.refetch()} /></Card></Page>;
   }
   if (!g) {
     return <Page><PageHeader title="Guest 360" />
@@ -129,9 +136,9 @@ export function Guest360Page() {
       />
 
       {/* The stays get the page's whole width: seven columns beside a side
-          column wrapped every date onto three lines. */}
-      <div className="space-y-6">
-        <div className="grid gap-6 lg:grid-cols-[minmax(0,2fr)_minmax(0,1fr)]">
+          column wrapped every date onto three lines. Cards 12px apart. */}
+      <div className="space-y-3">
+        <div className="grid gap-3 lg:grid-cols-[minmax(0,2fr)_minmax(0,1fr)]">
           <Card>
             <CardHeader title="Who they are" />
             <CardBody className="space-y-2">
@@ -140,7 +147,7 @@ export function Guest360Page() {
                 {g.isVip && <StatusPill tone="accent">VIP</StatusPill>}
                 {g.isBlacklisted && <StatusPill tone="danger">Blacklisted</StatusPill>}
               </div>
-              <p className="text-grey-600 tabular">{g.phone ?? DASH} · {g.email ?? DASH}</p>
+              <p className="text-grey-600 tabular break-words">{g.phone ?? DASH} · {g.email ?? DASH}</p>
               <p className="text-grey-600">
                 Nationality {g.nationality ?? DASH} · {g.hasId ? "an ID is on file" : "no ID on file"}
                 {g.companies.length > 0 && ` · books under ${g.companies.join(", ")}`}
@@ -148,7 +155,7 @@ export function Guest360Page() {
               {g.joined.length > 0 && (
                 <p className="text-sm text-grey-500">
                   Joined into this record: {g.joined.map((j) => j.name).join(", ")}.{" "}
-                  <Link to="/crm/same-person" className="underline underline-offset-4">Undo a join</Link>
+                  <Link to="/crm/same-person" className="font-medium text-brand-orange-700 hover:underline underline-offset-4">Undo a join</Link>
                 </p>
               )}
             </CardBody>
@@ -156,7 +163,8 @@ export function Guest360Page() {
 
           <Card>
             <CardHeader title="What they are worth" />
-            <CardBody className="space-y-1.5 text-base">
+            {/* Labelled figures as rows: label left, value right. */}
+            <CardBody className="py-2 divide-y divide-grey-100">
               <Row label="Visits" value={String(g.visits)} />
               <Row label="Nights" value={String(g.nights)} />
               <Row label="Charged" value={money(g.charged)} />
@@ -166,24 +174,25 @@ export function Guest360Page() {
           </Card>
         </div>
 
-          <Card>
-            <CardHeader title="Every stay, at every hotel" />
-            <DataTable<StayRow> rows={g.stays} columns={STAY_COLUMNS} rowKey={(s) => s.id}
-              empty={<EmptyState compact title="No stays"
-                description="A booking made for this guest appears here, whichever hotel it is at." />} />
-          </Card>
+        {/* The card draws the frame; the table draws none of its own. */}
+        <Card>
+          <CardHeader title="Every stay, at every hotel" />
+          <DataTable<StayRow> rows={g.stays} columns={STAY_COLUMNS} rowKey={(s) => s.id}
+            className="border-0 rounded-t-none"
+            empty={<EmptyState compact title="No stays"
+              description="A booking made for this guest appears here, whichever hotel it is at." />} />
+        </Card>
 
-
-        <div className="grid gap-6 lg:grid-cols-3">
+        <div className="grid gap-3 lg:grid-cols-3">
           <Card>
             <CardHeader title="What was sent to them" />
             <CardBody>
               {g.sent.length === 0 ? (
-                <p className="text-grey-500">Nothing has been sent to this guest from any hotel.</p>
+                <p className="text-sm text-grey-500">Nothing has been sent to this guest from any hotel.</p>
               ) : (
-                <ul className="divide-y divide-grey-100">
+                <ul className="-my-3.5 divide-y divide-grey-100">
                   {g.sent.map((m, i) => (
-                    <li key={`${m.at}-${i}`} className="flex flex-wrap gap-x-3 py-2 text-sm">
+                    <li key={`${m.at}-${i}`} className="flex flex-wrap gap-x-3 gap-y-0.5 py-3 text-sm">
                       <span className="tabular text-grey-600">{dateShort(m.at.slice(0, 10))}</span>
                       <span className="text-ink-900">{m.kind.replace(/_/g, " ")}</span>
                       <span className="text-grey-600">by {m.channel} · {m.status} · {m.hotelName}</span>
@@ -203,9 +212,9 @@ export function Guest360Page() {
 
 function Row({ label, value }: { label: string; value: string }) {
   return (
-    <div className="flex justify-between gap-4">
+    <div className="flex items-baseline justify-between gap-4 py-2">
       <span className="text-grey-600">{label}</span>
-      <span className="tabular text-ink-900">{value}</span>
+      <span className="tabular font-medium text-ink-900">{value}</span>
     </div>
   );
 }
@@ -232,7 +241,7 @@ function BlacklistCard({ hotelId, guest: g }: { hotelId: string; guest: Guest360
       <CardBody className="space-y-3">
         {g.isBlacklisted ? (
           <>
-            <p className="flex items-start gap-2 text-sm text-brand-red">
+            <p className="flex items-start gap-2 text-sm text-brand-red-700">
               <ShieldAlert className="size-4 shrink-0 mt-0.5" />
               <span>Reason: {g.blacklistReason ?? DASH}. The desk is warned when they book; it is not refused.</span>
             </p>
@@ -284,9 +293,9 @@ function NoOffersCard({ hotelId, guest: g }: { hotelId: string; guest: Guest360 
             : "No offers are sent: this guest has not said yes."}
         </p>
         {g.noOffers.length > 0 && (
-          <ul className="space-y-2">
+          <ul className="border-y border-grey-100 divide-y divide-grey-100">
             {g.noOffers.map((o) => (
-              <li key={o.id} className="flex items-center gap-2 text-sm">
+              <li key={o.id} className="flex items-center gap-3 py-3 text-sm">
                 <span className="min-w-0 flex-1 tabular text-ink-900">
                   No offers to {o.kind === "phone" ? "phone" : "email"} {o.value}
                 </span>

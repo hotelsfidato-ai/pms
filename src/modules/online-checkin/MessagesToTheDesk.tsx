@@ -39,7 +39,7 @@ export default function MessagesToTheDesk(
   if (q.isError) {
     return (
       <Card><CardBody>
-        <p className="text-sm text-brand-red">
+        <p className="text-sm text-brand-red-700">
           Messages from guests did not load. {(q.error as Error).message}
         </p>
       </CardBody></Card>
@@ -55,10 +55,11 @@ export default function MessagesToTheDesk(
         title={reservation ? "Messages from the guest" : "Messages from guests"}
         actions={unread > 0 && <StatusPill tone="warning">{unread} unread</StatusPill>}
       />
-      <ul className="divide-y divide-grey-200">
+      {/* List rows: 16px sides as the card's, 12px top and bottom. */}
+      <ul className="divide-y divide-grey-100">
         {messages.map((m) => (
-          <li key={m.id} className="flex flex-wrap items-start justify-between gap-3 px-5 py-3">
-            <div className="min-w-0">
+          <li key={m.id} className="flex flex-wrap items-center justify-between gap-3 px-4 py-3 min-h-14">
+            <div className="min-w-0 flex-1">
               <p className="text-base text-ink-900 whitespace-pre-line break-words">{m.what}</p>
               <p className="text-sm text-grey-600 mt-0.5">
                 {m.guest} · {m.reference} · {dateTime(m.createdAt)}
@@ -78,7 +79,7 @@ export default function MessagesToTheDesk(
         ))}
       </ul>
       {handle.error && (
-        <p className="px-5 pb-3 text-sm text-brand-red">{(handle.error as Error).message}</p>
+        <p className="px-4 pb-3.5 text-sm text-brand-red-700">{(handle.error as Error).message}</p>
       )}
     </Card>
   );
