@@ -8,7 +8,7 @@ import { money, dateShort } from "@/lib/format";
 import { useUi } from "@/lib/ui";
 import {
   Page, PageHeader, Card, Skeleton, ErrorState, Button, Input, Field,
-  fieldProps, NativeSelect, Segmented, StatusPill, toast,
+  fieldProps, NativeSelect, Segmented, StatusPill, InfoButton, toast,
 } from "@/components/ui";
 import {
   getPricing, setBasis, setBasePrice, setOffset,
@@ -224,17 +224,15 @@ function ChooseTheBase({
 
   return (
     <Card className="mb-5 px-4 py-3.5">
-      <h2 className="text-md font-semibold text-ink-900">
-        {again ? "Which room is the base?" : "Start by choosing the base room"}
-      </h2>
-      <p className="text-base text-grey-500 mt-1 max-w-2xl leading-relaxed">
-        The cheapest thing this property sells, for one person, with no meals.
-        Every other price is built from it, so nothing else can be priced until
-        this is set. It does not change how many people a room is sold for - 
-        that stays on the room type.
-      </p>
+      {/* The section's note behind an (i), the same words (the owner, 27 September). */}
+      <div className="flex items-center gap-1">
+        <h2 className="text-md font-semibold text-ink-900">
+          {again ? "Which room is the base?" : "Start by choosing the base room"}
+        </h2>
+        <InfoButton>{"The cheapest thing this property sells, for one person, with no meals. Every other price is built from it, so nothing else can be priced until this is set. It does not change how many people a room is sold for - that stays on the room type."}</InfoButton>
+      </div>
 
-      <div className="flex flex-wrap items-end gap-3 mt-4">
+      <div className="flex flex-wrap items-end gap-3 mt-3">
         <Field label="Room type" required>
           {(f) => (
             <NativeSelect
@@ -501,12 +499,10 @@ function Differences({
 
   return (
     <div className="border-t border-grey-100 pt-4 mt-4">
-      <h3 className="text-md font-semibold text-ink-900">The differences</h3>
-      <p className="text-base text-grey-500 mt-1 mb-3 max-w-2xl leading-relaxed">
-        In rupees, above the base. Where nothing is set, the base applies - 
-        which is a dash here, not a zero. A meal plan is priced per person; a
-        room type, per room.
-      </p>
+      <div className="flex items-center gap-1 mb-3">
+        <h3 className="text-md font-semibold text-ink-900">The differences</h3>
+        <InfoButton>{"In rupees, above the base. Where nothing is set, the base applies - which is a dash here, not a zero. A meal plan is priced per person; a room type, per room."}</InfoButton>
+      </div>
 
       {/* Rows under a hairline, two columns once there is room: they
           were bordered boxes inside the card (a card in a card). */}
@@ -625,15 +621,12 @@ function WhatItComesTo({ data, date }: { data: Pricing; date: string }) {
 
   return (
     <Card className="mt-5 px-4 py-3.5">
-      <h3 className="text-md font-semibold text-ink-900">
-        What a room costs on {dateShort(date)}
-      </h3>
-      <p className="text-base text-grey-500 mt-1 mb-3 max-w-2xl leading-relaxed">
-        Read back from the database, not worked out on this screen - this is the
-        figure a booking would be quoted. Each says where it came from, because
-        a price somebody typed and a price built from the base look identical
-        otherwise.
-      </p>
+      <div className="flex items-center gap-1 mb-3">
+        <h3 className="text-md font-semibold text-ink-900">
+          What a room costs on {dateShort(date)}
+        </h3>
+        <InfoButton>{"Read back from the database, not worked out on this screen - this is the figure a booking would be quoted. Each says where it came from, because a price somebody typed and a price built from the base look identical otherwise."}</InfoButton>
+      </div>
 
       <div className="overflow-x-auto scrollbar-quiet">
         <table className="w-full text-base">

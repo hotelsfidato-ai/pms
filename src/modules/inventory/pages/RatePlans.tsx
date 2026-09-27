@@ -2,7 +2,6 @@ import { useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useParams } from "react-router";
 import { IndianRupee, Plus, X, CalendarRange } from "lucide-react";
-import { cn } from "@/lib/cn";
 import { moneyPrecise, dateLong } from "@/lib/format";
 import { useUi } from "@/lib/ui";
 import {
@@ -286,7 +285,7 @@ function NewSeason({ hotelId, types, plans, onDone }: {
 
           <Labelled label="Price per night">
             <Input value={price} onChange={(e) => setPrice(e.target.value)}
-              inputMode="decimal" placeholder="0.00" numeric />
+              inputMode="decimal" placeholder="-" numeric />
           </Labelled>
 
           <Labelled label="From">
@@ -354,10 +353,7 @@ function SeasonRow({ hotelId, rate, onDone }: {
   };
 
   return (
-    <li className={cn(
-      "flex flex-wrap items-center gap-3 px-4 py-3 min-h-14",
-      rate.isCurrent && "bg-brand-orange-50/40",
-    )}>
+    <li className="flex flex-wrap items-center gap-3 px-4 py-3 min-h-14">
       <div className="min-w-0 flex-1">
         <div className="flex items-center gap-2 flex-wrap">
           <span className="text-sm font-medium text-ink-900">{rate.roomType}</span>

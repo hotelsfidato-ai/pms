@@ -72,8 +72,8 @@ export default function RatesPage() {
           <div className="overflow-x-auto scrollbar-quiet">
             <table className="w-full text-sm border-collapse">
               <thead>
-                <tr className="border-b border-grey-200 bg-grey-50">
-                  <th className="sticky left-0 z-10 bg-grey-50 px-4 py-2.5 text-left text-2xs font-semibold uppercase tracking-wide text-grey-500 whitespace-nowrap">
+                <tr className="border-b border-grey-200">
+                  <th className="sticky left-0 z-10 bg-white px-4 py-2.5 text-left text-2xs font-semibold uppercase tracking-wide text-grey-500 whitespace-nowrap">
                     Room type
                   </th>
                   {dates.map((d) => {
@@ -82,8 +82,8 @@ export default function RatesPage() {
                       <th
                         key={d}
                         className={cn(
-                          "px-3 py-2.5 text-right text-2xs font-semibold uppercase tracking-wide whitespace-nowrap",
-                          weekend ? "text-ink-900" : "text-grey-500",
+                          "px-3 py-2.5 text-right text-2xs font-semibold uppercase tracking-wide whitespace-nowrap text-grey-500",
+                          weekend && "bg-grey-50",
                         )}
                       >
                         {dateShort(d)}
@@ -108,7 +108,10 @@ export default function RatesPage() {
                       const below = c.soldAdr !== null && c.rackRate !== null
                         && c.soldAdr < c.rackRate;
                       return (
-                        <td key={c.date} className="px-3 py-3 text-right align-middle whitespace-nowrap">
+                        <td key={c.date} className={cn(
+                          "px-3 py-3 text-right align-middle whitespace-nowrap",
+                          WEEKEND.has(new Date(`${c.date}T00:00:00Z`).getUTCDay()) && "bg-grey-50",
+                        )}>
                           {c.soldAdr === null ? (
                             <Tooltip content={`Nothing sold - ${c.sellable} ${row.roomType} rooms open`}>
                               <span className="text-grey-500">-</span>

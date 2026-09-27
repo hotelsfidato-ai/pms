@@ -8,7 +8,7 @@ import { useUi } from "@/lib/ui";
 import {
   Page, PageHeader, Card, Button, Skeleton, EmptyState, toast,
   Dialog, DialogContent, DialogClose, Field, fieldProps, Input,
-  Tabs, TabsList, TabsTrigger, TabsContent,
+  Segmented,
 } from "@/components/ui";
 import { getInventory, getPriceGrid, setRate, setRestriction, type InventoryCell, type PriceCell, type Restriction } from "@/modules/inventory/data/rates";
 
@@ -65,6 +65,9 @@ export default function GridsPage() {
   const hotelId = useHotel();
   const qc = useQueryClient();
   const [from, setFrom] = useState<string | null>(null);
+  /* Which grid shows: a switch in the title row, the tabs' words (the
+     owner, 27 September, as Arrivals and In house). */
+  const [view, setView] = useState<"inventory" | "rates">("inventory");
 
   const inventory = useQuery({
     queryKey: ["inventory", hotelId, from],
@@ -121,6 +124,7 @@ export default function GridsPage() {
         title="Rate calendar"
         description="How many rooms are left, and what they cost."
         actions={
+          <>
           <div className="flex items-center gap-2">
             <Button
               variant="secondary" size="icon"
@@ -140,39 +144,38 @@ export default function GridsPage() {
               <ChevronRight className="size-4" />
             </Button>
           </div>
+          <Segmented<"inventory" | "rates">
+            value={view}
+            onChange={setView}
+            className="max-sm:flex max-sm:w-full max-sm:[&>button]:flex-1"
+            options={[
+              { value: "inventory", label: "Inventory" },
+              { value: "rates", label: "Rates" },
+            ]}
+          />
+          </>
         }
       />
 
-      <Tabs defaultValue="inventory">
-        <TabsList>
-          <TabsTrigger value="inventory">Inventory</TabsTrigger>
-          <TabsTrigger value="rates">Rates</TabsTrigger>
-        </TabsList>
-
-        <TabsContent value="inventory">
-          <InventoryGrid
-            hotelId={hotelId}
-            dates={dates}
-            cells={inventory.data.cells}
-            restrictions={inventory.data.restrictions}
-            onDone={refresh}
-          />
-        </TabsContent>
-
-        <TabsContent value="rates">
-          {prices.isLoading || !prices.data ? (
-            <Skeleton className="h-96" />
-          ) : (
-            <RateGrid
-              hotelId={hotelId}
-              dates={dates}
-              plans={prices.data.plans}
-              cells={prices.data.cells}
-              onDone={refresh}
-            />
-          )}
-        </TabsContent>
-      </Tabs>
+      {view === "inventory" ? (
+        <InventoryGrid
+          hotelId={hotelId}
+          dates={dates}
+          cells={inventory.data.cells}
+          restrictions={inventory.data.restrictions}
+          onDone={refresh}
+        />
+      ) : prices.isLoading || !prices.data ? (
+        <Skeleton className="h-96" />
+      ) : (
+        <RateGrid
+          hotelId={hotelId}
+          dates={dates}
+          plans={prices.data.plans}
+          cells={prices.data.cells}
+          onDone={refresh}
+        />
+      )}
     </Page>
   );
 }
