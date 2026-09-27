@@ -83,9 +83,12 @@ alter table reservations
   add column if not exists room_promotion_id uuid references room_promotions(id);
 
 alter table reservations drop constraint if exists reservations_discount_rule;
+-- ⚠ `discount_percent is not null` is spelled out: a NULL compared to 0 is
+-- unknown, and a CHECK that comes out unknown PASSES - so a promotion with no
+-- percent was let in until the suite's own test refused to be refused.
 alter table reservations add constraint reservations_discount_rule check (
   (discount_percent is null and room_promotion_id is null)
-  or (discount_percent > 0 and discount_percent <= 100
+  or (discount_percent is not null and discount_percent > 0 and discount_percent <= 100
       and (room_promotion_id is not null
            or (discount_percent <= app.pos_freehand_discount_cap()
                and nullif(btrim(discount_reason), '') is not null)))

@@ -36,6 +36,24 @@ confirms the whole group, so it cannot happen from the desk today.
 
 ## Fixed
 
+### RES-7 · Mine: a repeated booking answered without the ids the first answer had — FIXED 27 September
+
+**Found** by the full API suite (RES-3's own tests, `bookings.test.ts`): Phase 1
+added each booking's `id` to the answer by zipping `reservationIds` in the
+route, and a repeat has none, so the repeat was no longer the first answer.
+**Fixed** at the source: `makeBooking` and `answerRepeat` both carry the id in
+`bookings`. Rule: a field added to an answer is added on every path that
+gives that answer.
+
+### RES-8 · Mine: the discount CHECK let a promotion through with no percent — FIXED 27 September
+
+**Found** by the new database check in `db/tests/modules/reservations.sql`
+("a promotion with no percent is refused" — the statement succeeded).
+`discount_percent > 0` on a NULL is unknown, and a CHECK that comes out
+unknown passes. **Fixed** in 146: `discount_percent is not null` spelled out.
+Rule: every branch of a CHECK that means "this must be present" says
+`is not null`; a comparison alone lets NULL through. (For the root MEMORY.)
+
 ### RES-4 · The booking summary added each night's calendar price; the booking keeps the first night's — FIXED 27 September
 
 **Found** reading `book.ts` for Phase 1: `makeBooking` stores the FIRST

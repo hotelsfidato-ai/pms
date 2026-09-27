@@ -413,8 +413,8 @@ groups.post("/:code/bookings", async (c) => {
      `id` (Phase 1: the Booked card hands the booking to front desk's doors -
      a room, the check-in, the guest's page, the voucher - and every one of
      them is addressed by the stay's id) and the `status` it was made with.
-     The ids are absent on a repeat, which made nothing. `duplicate` still
-     appears, as it always did, only when it is true. */
+     A repeat answers the same ids as the first time: it IS the first answer
+     (RES-3). `duplicate` still appears, as it always did, only when true. */
   if (!result.ok) return c.json({ ok: false, reason: result.reason }, 409);
   return c.json({
     ok: true as const,
@@ -422,9 +422,7 @@ groups.post("/:code/bookings", async (c) => {
     groupId: result.groupId,
     rooms: result.rooms,
     guest: result.guest,
-    bookings: result.bookings.map((b, i) => ({
-      ...b, ...(result.reservationIds[i] ? { id: result.reservationIds[i] } : {}),
-    })),
+    bookings: result.bookings,
     nightly: result.nightly,
     status: result.status,
   }, 200);

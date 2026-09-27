@@ -111,7 +111,9 @@ export interface BookingMade {
   groupId: string | null;
   rooms: number;
   guest: string;
-  bookings: Array<{ reference: string; roomType: string; rate: number }>;
+  /** `id` is the stay's: New booking hands it to front desk's doors (Phase 1).
+      A repeat answers the same ids as the first time (RES-3). */
+  bookings: Array<{ id: string; reference: string; roomType: string; rate: number }>;
   nightly: number;
   /** 'tentative' when the desk booked it as Waiting. */
   status: "confirmed" | "tentative";
@@ -136,6 +138,7 @@ const refuse = (reason: string): BookingRefused => ({ ok: false, kind: "refused"
 /* ── A booking this channel already sent (RES-3) ──────────────────── */
 
 type Received = {
+  id: string;
   reference: string;
   room_type: string;
   agreed_rate: string;
@@ -150,7 +153,7 @@ export async function alreadyReceived(
   externalRef: string,
 ): Promise<Received[]> {
   const { rows } = await client.query<Received>(
-    `select r.reference, rt.name as room_type, r.agreed_rate::text,
+    `select r.id::text, r.reference, rt.name as room_type, r.agreed_rate::text,
             r.group_id::text, g.full_name as guest, r.ota_fingerprint, r.status
        from reservations r
        join room_types rt on rt.id = r.room_type_id
@@ -178,7 +181,7 @@ export function answerRepeat(
       + "booking is not taken this way - it is made on the booking, at the desk.");
   }
   const bookings = earlier.map((r) => ({
-    reference: r.reference, roomType: r.room_type, rate: Number(r.agreed_rate),
+    id: r.id, reference: r.reference, roomType: r.room_type, rate: Number(r.agreed_rate),
   }));
   return {
     ok: true,
@@ -562,7 +565,7 @@ export async function makeBooking(
       groupId = g[0]!.id;
     }
 
-    const made: { reference: string; roomType: string; rate: number }[] = [];
+    const made: { id: string; reference: string; roomType: string; rate: number }[] = [];
     /* The rows themselves, for a caller in process: the channel manager
        records which reservations a pushed booking became, so the inbox can
        say what happened to it (D17-79). Over HTTP they are not sent - a
@@ -650,7 +653,7 @@ export async function makeBooking(
           `insert into folios (hotel_id, reservation_id, status)
            values ($1, $2, 'open') returning id::text`,
           [hotelId, booked[0]!.id]);
-        made.push({ reference: ref[0]!.reference, roomType: typeName,
+        made.push({ id: booked[0]!.id, reference: ref[0]!.reference, roomType: typeName,
                     rate: Number(rate) });
         reservationIds.push(booked[0]!.id);
         folioIds.push(folio[0]!.id);

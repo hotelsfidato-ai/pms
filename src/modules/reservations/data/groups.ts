@@ -190,7 +190,8 @@ export async function createBooking(
   },
 ): Promise<
   | { ok: true; groupId: string | null; rooms: number; guest: string;
-      /** `id` is the stay's, for front desk's doors; absent on a repeat. */
+      /** `id` is the stay's, for front desk's doors. Optional: a booking
+          queued offline before Phase 1 was answered without one. */
       bookings: { id?: string; reference: string; roomType: string; rate: number }[];
       nightly: number; status?: "confirmed" | "tentative" }
   | { ok: false; reason: string }
