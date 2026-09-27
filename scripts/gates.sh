@@ -25,6 +25,8 @@ mode="${2:-full}"
 P="$S/progress.txt"
 : > "$P"
 
+strip() { sed -e 's/\x1b\[[0-9;]*m//g' "$1"; }
+
 step() {                       # step <name> <logfile> [<last line>] -- <command...>
   local name="$1" log="$2" last=""; shift 2
   [ "$1" = "--" ] || { last="$1"; shift; }; shift
@@ -34,9 +36,10 @@ step() {                       # step <name> <logfile> [<last line>] -- <command
   # A script killed from Windows (Stop-Process, taskkill, WMI Terminate: how a
   # stray run gets cleaned up) hands Git Bash exit 0 with its log cut short.
   # A database step "passed" in 22 s that way on 27 September (MEMORY 333).
-  # Where a step names its last line, exit 0 without that line is a failure.
-  if [ $code -eq 0 ] && [ -n "$last" ] && ! grep -qE "$last" "$log"; then
-    echo "  x CUT SHORT: exit 0 before its last line - killed from outside?" >> "$log"
+  # Where a step names its passing last line, exit 0 without it is a failure
+  # (for vitest, "Test Files  1 failed | 99 passed" is not the passing line).
+  if [ $code -eq 0 ] && [ -n "$last" ] && ! strip "$log" | grep -qE "$last"; then
+    echo "  x CUT SHORT: exit 0 without its passing last line - killed from outside?" >> "$log"
     code=1
   fi
   printf '  %-10s exit %s  %3ds\n' "$name" "$code" "$((SECONDS - began))" >> "$P"
@@ -47,20 +50,22 @@ began_all=$SECONDS
 step "web types" "$S/g-webtypes.log" -- npx tsc -p tsconfig.app.json --noEmit; wt=$?
 step "api types" "$S/g-apitypes.log" -- bash -c 'cd api && npx tsc --noEmit -p tsconfig.json'; at=$?
 step "strip"     "$S/g-strip.log"    -- bash -c 'cd api && npm run strip-check'; sc=$?
-step "web tests" "$S/g-web.log"      -- npx vitest run; w=$?
+step "web tests" "$S/g-web.log"      "Test Files +[0-9]+ passed" -- npx vitest run; w=$?
 
 if [ "$mode" = "quick" ]; then
   a=0; d=0; r=0
   echo "  (quick: the API suite, the database and the replay were not run)" >> "$P"
 else
-  step "api tests" "$S/g-api.log"   -- bash -c 'cd api && npm test'; a=$?
+  step "api tests" "$S/g-api.log"   "Test Files +[0-9]+ passed" -- bash -c 'cd api && npm test'; a=$?
   step "database"  "$S/g-db.log"    "all [0-9]+ assertions passed" -- bash db/tests/run.sh; d=$?
   step "replay"    "$S/g-rerun.log" "all [0-9]+ migrations are re-runnable" -- bash db/tests/rerun.sh; r=$?
 fi
 
-strip() { sed -e 's/\x1b\[[0-9;]*m//g' "$1"; }
-webline=$(strip "$S/g-web.log" | grep -E "^\s+Tests " | tail -1 | xargs)
-apiline=$(strip "$S/g-api.log" | grep -E "^\s+Tests " | tail -1 | xargs)
+vline() {                      # vitest's own counts, the failed ones included
+  strip "$1" | grep -E "^\s+(Test Files|Tests) |CUT SHORT" | tail -3 | tr '\n' ' ' | xargs
+}
+webline=$(vline "$S/g-web.log")
+apiline=$(vline "$S/g-api.log")
 dbline=$(strip "$S/g-db.log" | grep -E "assertions passed|FAILED|migrations applied|x the|CUT SHORT" | tr '\n' ' ' | xargs)
 
 echo "── $label ($mode, $((SECONDS - began_all))s) ──"
