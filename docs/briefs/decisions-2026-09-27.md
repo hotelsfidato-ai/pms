@@ -107,3 +107,6 @@
 | D27-103 | Read-only logins for the bridges | **Yes: the owner creates them** (the CRS "automation" login; a read-only Google login for the market-to-revenue project); their keys go only into the PMS server's settings |
 | D27-104 | A guest's reply to a PMS message | **Into the sales inbox as a booked guest**, so the greeting bot stays quiet |
 | D27-105 | Online check-in's code | **Sent straight to the booking's phone when the link opens** (last digits shown); plus a **development-only** switch that shows the code on screen for testing, never in the live build |
+| D27-106 | Where the salesperson sees the hotel's answer (settles D27-102) | **The CRS's Register screen is enough**: the new n8n workflow writes Confirmed/Cancelled and the hotel's confirmation number into the register; no CRS app or rules change |
+| D27-107 | 5 Elements' availability in the market-to-revenue app | **Yes, fed one-way by the PMS after the other bridges** (PMS wins; 18 rooms; room types matched first) |
+| D27-108 | A guest erased in the market-to-revenue app | **Erased from the PMS's view of leads and conversations too**; their stays and bills stay, as tax law requires |
