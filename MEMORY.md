@@ -6539,6 +6539,23 @@ copy will see of theirs.**
 
 ---
 
+### 331 · MINE: a git command I stopped left a lock, and the next merge failed without my noticing until the gates ran on the old tree
+
+27 September. I ran `git status --porcelain --ignored` in the main folder to find
+an untracked `.env`. It walked `.local` (Postgres, gate logs, caches), ran past two
+minutes and went to the background; I stopped it with TaskStop. The stop left
+`.git/index.lock` behind. Ten minutes later `git merge` of redesign group 1 printed
+"could not write index" into a piped command, the merge did not happen, and the
+quick gates I had chained after it ran on the unmerged tree. I saw it only because
+`git log -1` still showed the old head.
+
+**The rule:** never `--ignored` (or any whole-tree walk) in the main folder; ask for
+the one file by name (`ls -a`, `git ls-files`). After stopping any git command, check
+for `.git/index.lock` and remove it only when no git.exe is running. Never chain the
+gates after a merge without first checking the merge's head.
+
+---
+
 ### 330 · MINE: two sessions' headless Edge signed into the owner's Microsoft account, and I sent the rule to the brief but not to the sessions
 
 25 and 26 September. The Bill tab session's first headless Edge, then the

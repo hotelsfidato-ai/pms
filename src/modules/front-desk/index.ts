@@ -7,5 +7,6 @@ export { assignRoom, checkOut, checkOutAllowed, earlyArrival } from "./data/oper
 export type { Posting } from "./data/operations";
 export { fetchStays, getHouseNow, getStay, listArrivals, listArrivalsOutstanding, listDepartures, listInHouse, listStays } from "./data/stays";
 export type { HouseNow, HouseNowRoom } from "./data/stays";
-export { getStayViewCounts } from "./data/stayview";
+export { getStayView, getStayViewCounts } from "./data/stayview";
+export type { ChartRoom } from "./data/stayview";
 export { LateCheckOutFlow } from "./flows/LateCheckOutFlow";

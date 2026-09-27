@@ -49,3 +49,4 @@
 | D27-45 | Section notes | **Behind an (i), same words** |
 | D27-46 | Rooms, the group summary line | **Dropped** |
 | D27-47 | Week arrows | **On the Calendar only**, not on Rooms. (Group 1 held for the owner's approval after their audit, 27 Sep) |
+| D27-48 | Stay colours on the lists (redesign group 2) | **In house blue everywhere; Due in orange, like Arriving.** Phase 1 asks the owner the colour of "Waiting for the hotel" |

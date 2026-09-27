@@ -1,24 +1,26 @@
-import { useState, type ReactNode } from "react";
+import { useEffect, useRef, useState, type CSSProperties } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { Link } from "react-router";
 import {
-  ArrowRight, ChevronRight, BedDouble, IndianRupee, TrendingUp, Banknote,
+  ArrowRight, Check, BedDouble, IndianRupee, TrendingUp, Banknote,
   LogIn, LogOut, Users, DoorOpen, SprayCan, Wrench, Wallet, ReceiptText,
   Building2, UserX, ClipboardList, ChartColumn, Landmark,
   type LucideIcon,
 } from "lucide-react";
 import { cn } from "@/lib/cn";
-import { money, dateShort } from "@/lib/format";
+import { money, dateShort, dateLong } from "@/lib/format";
 import { useUi } from "@/lib/ui";
 import { useSession } from "@/lib/session";
 import {
   Page, PageHeader, Section, Card, CardBody, DataTable, Skeleton, NativeSelect, Term,
-  ReadFailed, readError, type Column,
+  InfoButton, IconChip, ReadFailed, readError, type Column,
 } from "@/components/ui";
 import { StartHere } from "@/components/app/StartHere";
 import type { TermKey } from "@/lib/glossary";
 import { listProperties, BUSINESS_DATE, type Property } from "@/data/repositories";
-import { listArrivalsOutstanding, getStayViewCounts } from "@/modules/front-desk";
+import {
+  listArrivalsOutstanding, getStayViewCounts, getStayView, fetchStays, type ChartRoom,
+} from "@/modules/front-desk";
 import { getPeriodStatistics } from "@/modules/reports/data/statistics";
 import { getReport, type ReportDoc } from "@/modules/reports/data/document";
 
@@ -36,6 +38,13 @@ import { getReport, type ReportDoc } from "@/modules/reports/data/document";
    period, so the Dashboard and the report an owner prints cannot
    disagree by a rupee. Where the report prints a dash — a figure this
    system cannot derive yet — the tile prints the same dash, never a 0.
+
+   27 SEPTEMBER, THE FIDATO LOOK (D22-47 to D22-51, the owner's yes to
+   each piece that day): the navy Occupancy beside the three figures,
+   Money, Today's run, the house as a strip of rooms over its six counts,
+   then the quick reports. The section notes moved behind an (i), same
+   words. Today's run and the strip count only what the system holds:
+   today's bookings, and the Rooms board's own room states.
    ══════════════════════════════════════════════════════════════════ */
 
 const DASH = "-";
@@ -59,6 +68,17 @@ function pick(doc: ReportDoc | null | undefined, section: string, label: string)
 
 const pct = (n: number | null | undefined) => (n == null ? DASH : `${n}%`);
 const cash = (n: number | null | undefined) => (n == null ? DASH : money(n));
+
+/** A count is a real zero when nothing is there — unlike money, where an
+    unknown is a dash. Unknown here (still loading, or it failed) is a dash. */
+const count = (n: number | null | undefined) => (n == null ? DASH : String(n));
+
+/* The section notes, word for word as they stood under the headings. */
+const NOTES = {
+  today: "Today, then the month so far and the year so far. The year runs from 1 April.",
+  house: "Counts for the business date. Each opens the list behind it.",
+  money: "From the same figures as the Manager Report. A dash is a figure this system does not hold yet, never a zero.",
+};
 
 export default function DashboardPage() {
   const hotels = useSession((s) => s.hotels);
@@ -90,9 +110,16 @@ export default function DashboardPage() {
     queryFn: () => getReport(code, "manager", { asOn: date }),
     enabled: Boolean(code),
   });
-  const counts = useQuery({
-    queryKey: ["dashboard-counts", code, date],
-    queryFn: () => getStayViewCounts(code, date),
+  /* The Rooms board's own view of the business date: its counts are the
+     six below, its rooms are the strip, so the three can never disagree. */
+  const view = useQuery({
+    queryKey: ["dashboard-house", code, date],
+    queryFn: () => getStayView(code, date, date, 1),
+    enabled: Boolean(code),
+  });
+  const stays = useQuery({
+    queryKey: ["dashboard-stays", code],
+    queryFn: () => fetchStays(code),
     enabled: Boolean(code),
   });
 
@@ -108,17 +135,47 @@ export default function DashboardPage() {
   const noShow = pick(r, "room-summary", "No Show Rooms");
   const owedByGuests = pick(r, "guest-ledger", "Closing Balance*");
   const cityLedger = pick(r, "city-ledger", "Closing Balance");
-  const c = counts.data;
+  const c = view.data?.counts;
+  const rooms = (view.data?.roomTypes ?? []).flatMap((t) => t.rooms)
+    .sort((a, b) => a.number.localeCompare(b.number, undefined, { numeric: true }));
 
-  const loading = report.isLoading || counts.isLoading;
+  const loading = report.isLoading || view.isLoading;
   /* A read that failed prints dashes too, and a dash here means "a figure
      this system does not hold yet" — so a failure has to say so, or the
      page tells the owner the business has no figures. */
-  const failed = readError(report) ?? readError(counts);
+  const failed = readError(report) ?? readError(view) ?? readError(stays);
+
+  /* TODAY'S RUN — the owner's yes, 27 September: only counts the system
+     holds. Check-ins: today's arrivals checked in, of today's arrivals
+     (no-shows and cancellations are not work). Check-outs: today's
+     departures checked out, of today's departures. Rooms ready: empty
+     rooms not waiting to be cleaned, of the empty rooms. */
+  const run = (() => {
+    if (!stays.data || !view.data) return null;
+    const all = stays.data;
+    const arriving = all.filter((s) => s.arrival === date && s.status !== "cancelled" && s.status !== "no-show");
+    const leaving = all.filter((s) => s.departure === date
+      && (s.status === "in-house" || s.status === "due-out" || s.status === "checked-out"));
+    const empty = rooms.filter((x) => !x.outOfService && !x.state.occupied);
+    return [
+      { key: "in", label: "Check-ins", done: arriving.filter((s) => s.status !== "due-in").length, of: arriving.length, color: "var(--color-brand-orange)", track: "var(--color-brand-orange-100)", dot: "bg-brand-orange" },
+      { key: "out", label: "Check-outs", done: leaving.filter((s) => s.status === "checked-out").length, of: leaving.length, color: "var(--color-brand-yellow)", track: "var(--color-brand-yellow-100)", dot: "bg-brand-yellow" },
+      { key: "ready", label: "Rooms ready", done: empty.filter((x) => !x.state.dirty).length, of: empty.length, color: "var(--color-success)", track: "var(--color-success-100)", dot: "bg-success" },
+    ];
+  })();
+  const toGo = run?.reduce((n, x) => n + (x.of - x.done), 0);
+
+  const figures: Array<{ icon: LucideIcon; label: string; term?: TermKey; f?: Figure }> = [
+    { icon: IndianRupee, label: "Average rate (ADR)", term: "adr", f: adr },
+    { icon: TrendingUp, label: "RevPAR", term: "revpar", f: revpar },
+    { icon: Banknote, label: "Room revenue", f: roomRev },
+  ];
+  const fig = (value: string, wide = "w-24") => (loading ? <Skeleton className={cn("h-7", wide)} /> : value);
 
   return (
     <Page>
       <PageHeader
+        eyebrow={`Business date · ${dateLong(date)}`}
         title="Dashboard"
         /* Each part stays whole and carries its dot at its END, so a phone
            wraps between parts and never starts a line with a dot. */
@@ -126,7 +183,6 @@ export default function DashboardPage() {
           ? (
             <>
               <span className="whitespace-nowrap">{hotel?.name ?? code} ·</span>{" "}
-              <span className="whitespace-nowrap">business date {dateShort(date)} ·</span>{" "}
               <span className="whitespace-nowrap">month so far from {dateShort(monthStart(date))}</span>
             </>
           )
@@ -148,94 +204,203 @@ export default function DashboardPage() {
         ) : undefined}
       />
 
-      <StartHere className="mb-6" />
+      <StartHere className="mb-5" />
 
       {failed ? (
         <ReadFailed
           compact
-          className="mb-8"
+          className="mb-5"
           error={failed}
           what="today's figures"
-          onRetry={() => { void report.refetch(); void counts.refetch(); }}
+          onRetry={() => { void report.refetch(); void view.refetch(); void stays.refetch(); }}
         />
       ) : null}
 
-      <div>
-        {/* ── The numbers a hotel lives by ─────────────────────────── */}
-        <TileGroup title="Today" note="Today, then the month so far and the year so far. The year runs from 1 April.">
-          <Tile icon={BedDouble} lead label="Occupancy" term="occupancy" value={pct(occ?.today)} loading={loading}
-                rows={[["Month so far", pct(occ?.ptd)], ["Year so far", pct(occ?.ytd)]]} />
-          <Tile icon={IndianRupee} lead label="Average rate (ADR)" term="adr" value={cash(adr?.today)} loading={loading}
-                rows={[["Month so far", cash(adr?.ptd)], ["Year so far", cash(adr?.ytd)]]} />
-          <Tile icon={TrendingUp} lead label="RevPAR" term="revpar" value={cash(revpar?.today)} loading={loading}
-                rows={[["Month so far", cash(revpar?.ptd)], ["Year so far", cash(revpar?.ytd)]]} />
-          <Tile icon={Banknote} lead label="Room revenue" value={cash(roomRev?.today)} loading={loading}
-                rows={[["Month so far", cash(roomRev?.ptd)], ["Year so far", cash(roomRev?.ytd)]]} />
-        </TileGroup>
+      <div className="grid grid-cols-12 gap-3">
+        {/* ── The anchor: Occupancy, in navy ───────────────────────── */}
+        <div className="col-span-12 xl:col-span-5 flex flex-col gap-3 rounded-lg bg-ink-900 text-white px-4 py-3.5 sm:px-[18px] sm:py-4">
+          <div className="flex items-center gap-2.5 text-sm font-medium text-white/72">
+            <IconChip tone="glass"><BedDouble /></IconChip>
+            <Term name="occupancy" className="decoration-white/35">Occupancy</Term>
+            <InfoButton className="ml-auto text-white/60 hover:bg-white/10 hover:text-white">{NOTES.today}</InfoButton>
+          </div>
+          <div className="flex-1 grid gap-4 sm:gap-6 items-center sm:grid-cols-[auto_minmax(0,1fr)]">
+            <div className="grid grid-cols-[80px_auto] gap-4 items-center">
+              <Rings size="size-20" arcs={[{ value: occ?.today == null ? null : occ.today / 100, color: "var(--color-brand-orange)", track: "rgb(255 255 255 / 0.12)" }]} />
+              <div>
+                <p className={cn("text-3xl font-semibold tabular tracking-[-0.03em]", occ?.today == null && !loading && "text-white/55")}>
+                  {fig(pct(occ?.today), "w-28 bg-white/15")}
+                </p>
+                <p className="text-xs text-white/55 mt-0.5">Today</p>
+              </div>
+            </div>
+            <div className="grid gap-3">
+              <Gauge label="Month so far" value={occ?.ptd} loading={loading} />
+              <Gauge label="Year so far" value={occ?.ytd} loading={loading} />
+            </div>
+          </div>
+        </div>
 
-        {/* ── The house, now ───────────────────────────────────────── */}
-        <TileGroup wide title="The house now" note="Counts for the business date. Each opens the list behind it.">
-          <Tile icon={LogIn} label="Arrivals" value={count(c?.["Arrivals"])} loading={loading}
-                to={`/h/${code}/arrivals`} />
-          <Tile icon={Users} label="In house" value={count(c?.["Occupied"])} loading={loading}
-                to={`/h/${code}/in-house`} />
-          <Tile icon={LogOut} label="Due out" value={count(c?.["Due Out"])} loading={loading}
-                to={`/h/${code}/in-house/due-out`} />
-          <Tile icon={DoorOpen} label="Empty" value={count(c?.["Vacant"])} loading={loading}
-                to={`/h/${code}/stay`} />
-          {/* Warm only when there is something to do about it. A zero
-              dirty count in orange is a false alarm every morning. */}
-          <Tile icon={SprayCan} label="Needs cleaning" value={count(c?.["Dirty"])} loading={loading}
-                tone={(c?.["Dirty"] ?? 0) > 0 ? "warning" : undefined}
-                to={`/h/${code}/housekeeping`} />
-          <Tile icon={Wrench} label="Out of service" value={count(c?.["Blocked"])} loading={loading}
-                tone={(c?.["Blocked"] ?? 0) > 0 ? "warning" : undefined}
-                to={`/h/${code}/stay`} />
-        </TileGroup>
+        {/* ── The figures: three tiles levelled by subgrid; on a phone,
+            one card of blocks (the Data Rule) ─────────────────────── */}
+        <div className="col-span-12 xl:col-span-7 grid gap-3 sm:grid-cols-3 sm:grid-rows-[auto_auto_auto]
+                        max-sm:gap-0 max-sm:bg-white max-sm:border max-sm:border-grey-200 max-sm:rounded-lg max-sm:divide-y max-sm:divide-grey-200">
+          {figures.map(({ icon: Icon, label, term, f }) => (
+            <div
+              key={label}
+              className="grid grid-cols-[minmax(0,1fr)_auto] items-baseline gap-x-3 px-4 py-3.5
+                         sm:row-span-3 sm:grid-cols-1 sm:grid-rows-subgrid sm:items-start sm:gap-y-2.5
+                         sm:bg-white sm:border sm:border-grey-200 sm:rounded-lg sm:px-[18px] sm:py-4"
+            >
+              <p className="flex items-start gap-2.5 text-sm font-medium leading-5 text-grey-600 min-w-0">
+                <IconChip className="-mt-1 max-sm:hidden"><Icon /></IconChip>
+                <span className="min-w-0">{term ? <Term name={term}>{label}</Term> : label}</span>
+              </p>
+              <p className={cn(
+                "text-xl sm:text-2xl leading-[30px] font-semibold tabular tracking-[-0.022em] text-right sm:text-left",
+                f?.today == null && !loading ? "text-grey-500" : "text-ink-900",
+              )}>
+                {fig(cash(f?.today))}
+              </p>
+              <dl className="col-span-2 mt-2 grid grid-cols-2 gap-x-4 sm:col-span-1 sm:mt-0 sm:grid-cols-1 sm:border-t sm:border-grey-100 sm:pt-1.5">
+                {([["Month so far", f?.ptd], ["Year so far", f?.ytd]] as const).map(([name, v]) => (
+                  <div key={name} className="flex flex-col gap-0.5 sm:flex-row sm:justify-between sm:gap-3 sm:leading-[22px]">
+                    <dt className="text-xs sm:text-sm text-grey-500">{name}</dt>
+                    <dd className={cn("text-sm font-medium tabular", v == null ? "text-grey-500" : "text-grey-700")}>
+                      {loading ? <Skeleton className="h-4 w-16 inline-block" /> : cash(v)}
+                    </dd>
+                  </div>
+                ))}
+              </dl>
+            </div>
+          ))}
+        </div>
 
         {/* ── Money ────────────────────────────────────────────────── */}
-        <TileGroup title="Money" note="From the same figures as the Manager Report. A dash is a figure this system does not hold yet, never a zero.">
-          {/* One row per way of paying, like the month and year under the
-              figures above — packed behind middle dots they ran together
-              once a second method arrived. */}
-          <Tile icon={Wallet} label="Collected today" value={cash(payToday?.today)} loading={loading}
-                {...(methods.length
-                  ? { rows: methods.map((m): [string, string] => [m.label, money(m.today)]) }
-                  : { note: "Nothing taken yet today" })} />
-          <Tile icon={ReceiptText} label="Owed by guests, less refunds" term="guestLedger" value={cash(owedByGuests?.today)}
-                loading={loading} note="Every guest bill still open" />
-          <Tile icon={Building2} label="City ledger" term="cityLedger" value={cash(cityLedger?.today)}
-                loading={loading} note="Shows a dash until company payments are recorded." />
-          <Tile icon={UserX} label="No-shows" value={count(noShow?.today)} loading={loading}
-                tone={(noShow?.today ?? 0) > 0 ? "warning" : undefined}
-                rows={[["Month so far", count(noShow?.ptd)]]} to="/reports/no-show" />
-        </TileGroup>
+        <Card className="col-span-12">
+          <CardBody className="sm:px-[18px] sm:py-4">
+            <CardTitle title="Money" info={NOTES.money} />
+            <div className="grid max-sm:divide-y max-sm:divide-grey-100 sm:grid-cols-2 sm:grid-rows-[repeat(6,auto)] xl:grid-cols-4 xl:grid-rows-[repeat(3,auto)]">
+              <MoneyItem
+                icon={Wallet} tone="green" label="Collected today" loading={loading}
+                value={cash(payToday?.today)}
+                note={methods.length ? methods.map((m) => `${m.label} ${money(m.today)}`) : ["Nothing taken yet today"]}
+              />
+              <MoneyItem
+                icon={ReceiptText} tone={(owedByGuests?.today ?? 0) > 0 ? "orange" : "neutral"}
+                label="Owed by guests, less refunds" term="guestLedger" loading={loading}
+                value={cash(owedByGuests?.today)} note={["Every guest bill still open"]}
+              />
+              <MoneyItem
+                icon={Building2} label="City ledger" term="cityLedger" loading={loading}
+                value={cash(cityLedger?.today)} note={["Shows a dash until company payments are recorded."]}
+              />
+              <MoneyItem
+                icon={UserX} tone={(noShow?.today ?? 0) > 0 ? "orange" : "neutral"}
+                label="No-shows" loading={loading} warn={(noShow?.today ?? 0) > 0}
+                value={count(noShow?.today)} note={[`Month so far ${count(noShow?.ptd)}`]}
+                to="/reports/no-show"
+              />
+            </div>
+          </CardBody>
+        </Card>
 
-        {/* ── Quick reports ────────────────────────────────────────── */}
-        <Section title="Quick reports">
-          <div className="flex flex-wrap gap-2">
-            {QUICK_REPORTS.map((q) => (
-              <Link
-                key={q.to}
-                to={q.to}
-                className="group inline-flex items-center gap-2 min-h-11 px-3.5 rounded-md
-                           border border-grey-300 bg-white text-base text-ink-900
-                           hover:border-grey-400 hover:bg-grey-50 transition-colors duration-150
-                           focus-visible:outline-2 focus-visible:outline-brand-orange"
-              >
-                <q.icon
-                  className="size-4 text-grey-500 group-hover:text-brand-orange transition-colors duration-150"
-                  aria-hidden
-                />
-                {q.label}
-              </Link>
-            ))}
+        {/* ── Today's run: the day's jobs, from today's own bookings ─── */}
+        <section
+          aria-label="Today's run"
+          className="col-span-12 rounded-lg bg-brand-orange-50 border border-brand-orange-100 px-4 py-3.5 sm:px-[18px] sm:py-4"
+        >
+          <div className="flex items-center justify-between gap-3 mb-3 sm:mb-2">
+            <h2 className="text-md font-semibold text-ink-900">Today's run</h2>
+            {toGo == null ? null : toGo > 0 ? (
+              <span className="inline-flex items-center h-6 px-2.5 rounded-full bg-brand-orange-600 text-white text-xs font-semibold tabular">
+                {toGo} to go
+              </span>
+            ) : (
+              <span className="inline-flex items-center gap-1 h-6 px-2.5 rounded-full bg-success-50 ring-1 ring-inset ring-success-100 text-success-600 text-xs font-semibold">
+                <Check className="size-3.5" aria-hidden /> Done
+              </span>
+            )}
           </div>
-        </Section>
+          <div className="grid grid-cols-[112px_minmax(0,1fr)] gap-4 items-center sm:grid-cols-[96px_minmax(0,1fr)] sm:gap-6">
+            <Rings
+              size="size-28 sm:size-24"
+              arcs={(run ?? []).map((x) => ({ value: x.of ? x.done / x.of : 0, color: x.color, track: x.track }))}
+            />
+            <dl className="grid divide-y divide-brand-orange-100 sm:grid-cols-3 sm:divide-y-0 sm:divide-x">
+              {(run ?? [{ key: "in", label: "Check-ins" }, { key: "out", label: "Check-outs" }, { key: "ready", label: "Rooms ready" }]
+              ).map((x) => {
+                const done = "done" in x ? x.done : null;
+                const of = "of" in x ? x.of : null;
+                const complete = done != null && of != null && of > 0 && done === of;
+                return (
+                  <div key={x.key} className="flex items-center justify-between gap-2 min-h-10 sm:flex-col sm:items-start sm:justify-center sm:gap-1 sm:px-6 sm:first:pl-0">
+                    <dt className="inline-flex items-center gap-2 text-sm text-grey-700">
+                      <i className={cn("size-2 rounded-full", "dot" in x ? x.dot : "bg-grey-300")} aria-hidden />
+                      {x.label}
+                    </dt>
+                    <dd className={cn("text-md sm:text-xl font-semibold tabular", complete ? "text-success-600 inline-flex items-center gap-1" : "text-ink-900")}>
+                      {complete && <Check className="size-3.5 sm:size-4" aria-hidden />}
+                      {done == null ? <span className="text-grey-500">{DASH}</span> : (
+                        <span>{done}<span className="text-grey-500 font-medium">/{of}</span></span>
+                      )}
+                    </dd>
+                  </div>
+                );
+              })}
+            </dl>
+          </div>
+        </section>
 
-        {/* ── Every hotel, for somebody who reads more than one ───── */}
-        {hotels.length > 1 && <EveryHotel />}
+        {/* ── The house, now: one square per room, then the six counts ── */}
+        <Card className="col-span-12">
+          <CardBody className="sm:px-[18px] sm:py-4">
+            <CardTitle
+              title="The house now"
+              info={NOTES.house}
+              meta={rooms.length ? `${rooms.length} rooms` : undefined}
+            />
+            {rooms.length > 0 && <RoomStrip rooms={rooms} />}
+            <div className="grid grid-cols-2 sm:grid-cols-3 xl:grid-cols-6 gap-2 mt-3.5">
+              <CountTile icon={LogIn} chip="orange" label="Arrivals" n={c?.["Arrivals"]} loading={loading}
+                         job="orange" to={`/h/${code}/arrivals`} />
+              <CountTile icon={Users} chip="blue" label="In house" n={c?.["Occupied"]} loading={loading}
+                         to={`/h/${code}/in-house`} />
+              <CountTile icon={LogOut} chip="yellow" label="Due out" n={c?.["Due Out"]} loading={loading}
+                         job="yellow" to={`/h/${code}/in-house/due-out`} />
+              <CountTile icon={DoorOpen} label="Empty" n={c?.["Vacant"]} loading={loading}
+                         to={`/h/${code}/stay`} />
+              {/* Warm only when there is something to do about it; a zero
+                  here is good news, so it is green with a check. */}
+              <CountTile icon={SprayCan} chip="green" label="Needs cleaning" n={c?.["Dirty"]} loading={loading}
+                         warn goodAtZero to={`/h/${code}/housekeeping`} />
+              <CountTile icon={Wrench} label="Out of service" n={c?.["Blocked"]} loading={loading}
+                         warn to={`/h/${code}/stay`} />
+            </div>
+          </CardBody>
+        </Card>
       </div>
+
+      {/* ── Quick reports ────────────────────────────────────────── */}
+      <div className="mt-5 flex flex-wrap items-center gap-x-3 gap-y-2">
+        <h2 className="text-md font-semibold text-ink-900 mr-1 max-sm:w-full">Quick reports</h2>
+        {QUICK_REPORTS.map((q) => (
+          <Link
+            key={q.to}
+            to={q.to}
+            className="press inline-flex items-center gap-2 h-[34px] pointer-coarse:min-h-11 px-3.5 rounded-full
+                       border border-grey-300 bg-white text-sm font-medium text-grey-700
+                       hover:border-grey-400 hover:bg-grey-50
+                       focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-orange"
+          >
+            <q.icon className="size-4 text-grey-500" aria-hidden />
+            {q.label}
+          </Link>
+        ))}
+      </div>
+
+      {/* ── Every hotel, for somebody who reads more than one ───── */}
+      {hotels.length > 1 && <div className="mt-5"><EveryHotel /></div>}
     </Page>
   );
 }
@@ -251,142 +416,221 @@ const QUICK_REPORTS: Array<{ label: string; to: string; icon: LucideIcon }> = [
   { label: "No show", to: "/reports/no-show", icon: UserX },
 ];
 
-/** A count is a real zero when nothing is there — unlike money, where an
-    unknown is a dash. Unknown here (still loading, or it failed) is a dash. */
-const count = (n: number | null | undefined) => (n == null ? DASH : String(n));
-
-function TileGroup({ title, note, children, wide }: {
-  title: string; note: string; children: ReactNode;
-  /** Six short counts read as one row, not a row of four and an orphan
-      pair. The groups are different shapes because they hold different
-      things — which is also what stops the page reading as one wall. */
-  wide?: boolean;
-}) {
-  /* The design system's own Section: the note sits UNDER its heading. It
-     used to float at the far right of the heading's line, a screen's
-     width from the word it explains.
-
-     Four tiles are two rows of two below xl — three columns left the
-     fourth alone on a row of its own on every 1024 desk screen. On a
-     phone the four lead with the figure and a column of their own, where
-     two across wrapped "Month so far" away from its number. */
+function CardTitle({ title, info, meta }: { title: string; info: string; meta?: string }) {
   return (
-    <Section title={title} description={note}>
-      <div className={cn(
-        "grid gap-3",
-        wide ? "grid-cols-2 sm:grid-cols-3 xl:grid-cols-6" : "grid-cols-1 sm:grid-cols-2 xl:grid-cols-4",
-      )}>
-        {children}
-      </div>
-    </Section>
+    <div className="flex items-center gap-2 mb-3">
+      <h2 className="text-md font-semibold text-ink-900">{title}</h2>
+      <span className="ml-auto flex items-center gap-2">
+        {meta && <span className="text-xs text-grey-500 tabular">{meta}</span>}
+        <InfoButton className="-mr-1.5">{info}</InfoButton>
+      </span>
+    </div>
   );
 }
 
-/* A tile carries its own icon, and the icon is the fastest thing on the
-   screen to find: a clerk looking for "how many are dirty" recognises
-   the spray can a beat before they have read the word. One family
-   (lucide), one size, one stroke — a second icon set on this page would
-   cost more than it adds.
+/* ── Rings (the Apple activity rings) ───────────────────────────────
+   Concentric, each on its -100 track with round caps, its number written
+   beside it. They close once per session in 600ms (fidato-design-eng § 1:
+   once a day or rarer); otherwise they are drawn at rest, and always
+   under reduced motion (the theme stops every transition). */
 
-   `lead` is the only size difference, and it is deliberate. Fourteen
-   identically-weighted tiles are a wall: nothing on it is the headline,
-   so the eye starts at the top left and reads all of them. The four
-   figures a hotel is actually judged by are set larger, and the rest sit
-   below them. */
-function Tile({ icon: Icon, label, value, rows, note, to, tone, loading, lead, term }: {
-  icon: LucideIcon;
-  label: string; value: string;
-  /** Makes the label tappable for its meaning. Ignored on a linked tile:
-      a button inside the link would be invalid, and the tap would follow
-      the link instead of explaining anything. */
-  term?: TermKey;
-  /** The figure's breakdown, a label and its value per row — the month
-      and the year, or each way of paying. The values sit in one column on
-      the right, so the eye runs down the numbers instead of reading a
-      sentence to find them. */
-  rows?: Array<[string, string]>;
-  /** A line of words under the figure, where there is nothing to break
-      it down into. */
-  note?: string;
-  to?: string;
-  tone?: "warning"; loading?: boolean; lead?: boolean;
+const RINGS_SEEN = "fidato.dashboard.rings";
+
+function Rings({ arcs, size }: {
+  arcs: Array<{ value: number | null; color: string; track: string }>;
+  size: string;
 }) {
-  const below = rows?.length || note;
-  /* A dash is "not held yet", not a figure: it keeps the figure's size
-     so the tiles line up, but not the ink that says "read me". */
-  const missing = value === DASH;
-  const body = (
-    <CardBody className="p-4 h-full flex flex-col">
-      <div className="flex items-center gap-2.5">
-        <span
-          className={cn(
-            "grid place-items-center size-8 rounded-md shrink-0",
-            tone === "warning"
-              ? "bg-brand-orange-50 text-brand-orange-700"
-              : "bg-grey-100 text-grey-500",
-          )}
-        >
-          <Icon className="size-4" aria-hidden />
-        </span>
-        <p className="text-sm text-grey-600 min-w-0">
-          {term && !to ? <Term name={term}>{label}</Term> : label}
-        </p>
-      </div>
-
-      {/* A count with nothing under it sits at the foot of its tile, so a
-          row of six lines up on its numbers even where a label ran to two
-          lines. The chevron rides with the number, which gives the label
-          the width it wraps without. */}
-      <div className={cn("flex items-center justify-between gap-2 mt-2.5", !below && "mt-auto pt-2.5")}>
-        {loading ? (
-          <Skeleton className={cn("w-24", lead ? "h-9" : "h-8")} />
-        ) : (
-          <p className={cn(
-            "font-semibold tabular",
-            lead ? "text-3xl" : "text-2xl",
-            missing ? "text-grey-500"
-              : tone === "warning" ? "text-brand-orange-700" : "text-ink-900",
-          )}>
-            {value}
-          </p>
-        )}
-        {to && (
-          <ChevronRight
-            className="size-4 shrink-0 text-grey-300 transition-all duration-150
-                       group-hover:text-grey-500 group-hover:translate-x-0.5"
-            aria-hidden
-          />
-        )}
-      </div>
-
-      {below && (loading ? (
-        <Skeleton className="h-4 w-32 mt-3" />
-      ) : rows?.length ? (
-        <dl className="mt-3 pt-3 border-t border-grey-100 space-y-1">
-          {rows.map(([name, figure]) => (
-            <div key={name} className="flex items-baseline justify-between gap-3 text-sm">
-              <dt className="text-grey-600">{name}</dt>
-              <dd className={cn("tabular", figure === DASH ? "text-grey-500" : "text-ink-900")}>{figure}</dd>
-            </div>
-          ))}
-        </dl>
-      ) : (
-        <p className="text-sm text-grey-600 mt-1 leading-snug">{note}</p>
-      ))}
-    </CardBody>
-  );
-
-  if (!to) return <Card className="h-full">{body}</Card>;
+  const seen = useRef(sessionStorageGet(RINGS_SEEN) === "1");
+  const has = arcs.some((a) => a.value != null && a.value > 0);
+  useEffect(() => {
+    if (has && !seen.current) sessionStorageSet(RINGS_SEEN, "1");
+  }, [has]);
+  const width = arcs.length > 1 ? 10 : 9;
   return (
-    /* The focus ring follows the card's own corner (radius-md), not a
-       larger one drawn around it. */
+    <svg viewBox="0 0 100 100" className={cn("-rotate-90 shrink-0", size)} aria-hidden>
+      {arcs.map((a, i) => {
+        const r = 50 - width / 2 - i * (width + 2);
+        const len = 2 * Math.PI * r;
+        const v = Math.max(0, Math.min(1, a.value ?? 0));
+        return (
+          <g key={i}>
+            <circle cx="50" cy="50" r={r} fill="none" stroke={a.track} strokeWidth={width} />
+            {v > 0 && (
+              <circle
+                cx="50" cy="50" r={r} fill="none" stroke={a.color} strokeWidth={width} strokeLinecap="round"
+                strokeDasharray={len} strokeDashoffset={len * (1 - v)}
+                className={seen.current ? undefined : "transition-[stroke-dashoffset] duration-[600ms] ease-[cubic-bezier(0.16,1,0.3,1)] starting:[stroke-dashoffset:var(--len)]"}
+                style={{ "--len": `${len}px` } as CSSProperties}
+              />
+            )}
+          </g>
+        );
+      })}
+    </svg>
+  );
+}
+
+function sessionStorageGet(key: string): string | null {
+  try { return sessionStorage.getItem(key); } catch { return null; }
+}
+function sessionStorageSet(key: string, value: string) {
+  try { sessionStorage.setItem(key, value); } catch { /* private mode: the rings just close again */ }
+}
+
+/** A thin capsule gauge on navy, under its label and figure. */
+function Gauge({ label, value, loading }: { label: string; value: number | null | undefined; loading: boolean }) {
+  return (
+    <div className="grid grid-cols-[1fr_auto] items-baseline gap-y-1.5">
+      <span className="text-sm text-white/60">{label}</span>
+      <span className={cn("text-md font-semibold tabular", value == null && !loading && "text-white/55")}>{loading ? <Skeleton className="h-4 w-14 inline-block bg-white/15" /> : pct(value)}</span>
+      <span className="col-span-2 h-1 rounded-full bg-white/12 overflow-hidden">
+        <i className="block h-full rounded-full bg-brand-orange" style={{ width: `${Math.max(0, Math.min(100, value ?? 0))}%` }} />
+      </span>
+    </div>
+  );
+}
+
+/* ── Money: four levelled columns on a desktop, rows on a phone ──── */
+
+function MoneyItem({ icon: Icon, tone = "neutral", label, term, value, note, loading, warn, to }: {
+  icon: LucideIcon; tone?: "neutral" | "orange" | "green";
+  label: string; term?: TermKey; value: string; note: string[]; loading: boolean;
+  warn?: boolean; to?: string;
+}) {
+  const body = (
+    <>
+      <span className="flex items-center gap-2.5 max-sm:contents">
+        <IconChip tone={tone} className="max-sm:row-span-2 max-sm:self-center"><Icon /></IconChip>
+        <span className="text-sm font-medium leading-5 text-grey-600 max-sm:col-span-2 max-sm:self-end">
+          {term && !to ? <Term name={term}>{label}</Term> : label}
+        </span>
+      </span>
+      <span className={cn(
+        "text-xl sm:text-2xl leading-[30px] font-semibold tabular tracking-[-0.02em] sm:self-end",
+        "max-sm:col-start-3 max-sm:row-start-2 max-sm:text-right",
+        value === DASH && !loading ? "text-grey-500" : warn ? "text-brand-orange-700" : "text-ink-900",
+      )}>
+        {loading ? <Skeleton className="h-7 w-24 inline-block" /> : value}
+      </span>
+      <span className="text-xs leading-[17px] text-grey-500 max-sm:col-start-2 max-sm:row-start-2 max-sm:self-start">
+        {note.map((line) => <span key={line} className="block">{line}</span>)}
+      </span>
+    </>
+  );
+  const cls = cn(
+    "grid grid-cols-[auto_minmax(0,1fr)_auto] gap-x-3.5 gap-y-0.5 py-3 max-sm:first:pt-0 max-sm:last:pb-0",
+    "sm:row-span-3 sm:grid-cols-1 sm:grid-rows-subgrid sm:gap-y-1.5 sm:py-0",
+    "sm:[&:nth-child(-n+2)]:pb-4 xl:[&:nth-child(-n+2)]:pb-0",
+    "sm:even:pl-4 sm:even:border-l sm:even:border-grey-100",
+    "xl:px-4 xl:first:pl-0 xl:last:pr-0 xl:border-l xl:first:border-l-0 xl:border-grey-100",
+  );
+  if (!to) return <div className={cls}>{body}</div>;
+  return (
     <Link
       to={to}
-      className="group block rounded-md focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-orange"
+      className={cn(cls, "rounded-md hover:bg-grey-50 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-orange")}
     >
-      <Card className="h-full transition-colors duration-150 group-hover:border-grey-400">
-        {body}
-      </Card>
+      {body}
+    </Link>
+  );
+}
+
+/* ── The strip: one square per room, in the Rooms board's colours ─── */
+
+type StripState = "in" | "due" | "arr" | "free" | "oos";
+const STRIP: Record<StripState, { label: string; cls: string; key: string }> = {
+  in: { label: "In house", cls: "bg-info text-white", key: "bg-info" },
+  due: { label: "Due out", cls: "bg-brand-yellow text-ink-900", key: "bg-brand-yellow" },
+  /* orange-600, not the brand orange: white 12px numbers on #df6128 are
+     3.57:1 (the Readable Step Rule). */
+  arr: { label: "Arriving", cls: "bg-brand-orange-600 text-white", key: "bg-brand-orange-600" },
+  free: { label: "Free", cls: "bg-grey-50 text-grey-500 ring-1 ring-inset ring-grey-200", key: "bg-grey-50 ring-1 ring-inset ring-grey-200" },
+  oos: { label: "Out of service", cls: "bg-grey-200 text-grey-600", key: "bg-grey-200" },
+};
+
+function stateOf(room: ChartRoom): StripState {
+  if (room.outOfService) return "oos";
+  if (room.state.occupied) return room.state.dueOut ? "due" : "in";
+  if (room.state.arriving) return "arr";
+  return "free";
+}
+
+function RoomStrip({ rooms }: { rooms: ChartRoom[] }) {
+  const across = Math.min(rooms.length, 18);
+  return (
+    <>
+      <ul
+        className="grid grid-cols-6 sm:grid-cols-9 xl:grid-cols-[repeat(var(--across),minmax(0,1fr))] gap-1"
+        style={{ "--across": across } as CSSProperties}
+        aria-label="Every room, by its state now"
+      >
+        {rooms.map((room) => {
+          const s = stateOf(room);
+          return (
+            <li
+              key={room.number}
+              aria-label={`${room.number}, ${STRIP[s].label}`}
+              className={cn("h-7 rounded-[6px] grid place-items-center text-xs font-semibold tabular", STRIP[s].cls)}
+            >
+              {room.number}
+            </li>
+          );
+        })}
+      </ul>
+      <p className="flex flex-wrap gap-x-3.5 gap-y-1 mt-2 text-xs text-grey-500" aria-hidden>
+        {(Object.keys(STRIP) as StripState[]).map((s) => (
+          <span key={s} className="inline-flex items-center gap-1.5">
+            <i className={cn("size-2 rounded-[2px]", STRIP[s].key)} />
+            {STRIP[s].label}
+          </span>
+        ))}
+      </p>
+    </>
+  );
+}
+
+/* ── A count that opens its list ───────────────────────────────────
+   The label comes first in the markup and sits under the count on the
+   screen: a link reads "In house 2", its words then its figure. */
+
+function CountTile({ icon: Icon, chip = "neutral", label, n, loading, to, job, warn, goodAtZero }: {
+  icon: LucideIcon; chip?: "neutral" | "orange" | "yellow" | "blue" | "green";
+  label: string; n: number | undefined; loading: boolean; to: string;
+  /** Today's job: a warm tile while there is some of it to do. */
+  job?: "orange" | "yellow";
+  /** Orange above zero (the Signal Rule). */
+  warn?: boolean;
+  /** Zero is good news: green, with a check. */
+  goodAtZero?: boolean;
+}) {
+  const value = loading ? undefined : n;
+  const busy = (value ?? 0) > 0;
+  return (
+    <Link
+      to={to}
+      className={cn(
+        "press-tile grid grid-rows-[auto_auto] gap-y-1.5 rounded-[10px] px-3.5 py-3 sm:p-2.5",
+        "focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-orange",
+        job && busy
+          ? job === "orange"
+            ? "bg-brand-orange-50 ring-1 ring-inset ring-brand-orange-100"
+            : "bg-brand-yellow-50 ring-1 ring-inset ring-brand-yellow-100"
+          : "hover:bg-grey-50",
+      )}
+    >
+      <span className="row-start-2 text-sm leading-[18px] text-grey-600 whitespace-nowrap">{label}</span>
+      <span className="row-start-1 flex items-center gap-2">
+        <IconChip size={24} tone={chip === "green" && busy ? "neutral" : chip}><Icon /></IconChip>
+        <b className={cn(
+          "inline-flex items-center gap-1 text-xl leading-[26px] font-semibold tabular tracking-[-0.02em]",
+          value == null ? "text-grey-500"
+            : warn && busy ? "text-brand-orange-700"
+              : goodAtZero && value === 0 ? "text-success-600" : "text-ink-900",
+        )}>
+          {count(value)}
+          {goodAtZero && value === 0 && <Check className="size-4" aria-hidden />}
+        </b>
+      </span>
     </Link>
   );
 }
