@@ -14,7 +14,20 @@ entries stay here: they are the reason the fault does not come back.
 
 ## Open — not fixed
 
-Nothing open (26 September).
+### ADM-9 · At phone width Settings cuts a long value off at the card's edge - OPEN
+
+**Found** — 27 September, opening Settings at 375 px while proving the group
+logo card (the group-logo session). The GSTIN `27AAAAA0000A1Z5` needs 131 px
+and its `<dd>` gets 86: it runs past the card's right edge and is cut. The
+page itself does not scroll sideways, so nothing flags it.
+
+**Not fixed** — not in that session's brief, and how a long value wraps is a
+look decision. The row is `SettingRow` in `pages/Admin.tsx`
+(`grid-cols-[minmax(130px,200px)_1fr]`); `break-words` on the `<dd>`, or one
+column below `sm`, would do. Passed to the master with the group logo.
+
+**The rule** — measure a row at phone width with its longest real value, not
+the demo's shortest.
 
 ---
 

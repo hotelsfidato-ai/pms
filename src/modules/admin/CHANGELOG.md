@@ -11,6 +11,32 @@ Work that touches the core or several services still goes in the root
 
 ---
 
+## 2026-09-27 · One group logo, set in Settings, for every bill (D27-53)
+
+**Asked for:** the owner's D27-53: one logo for the whole group, chosen in
+Settings, printed on every bill; a setting, not code (D21-27). Branch
+`admin/group-logo-27sep`. **The owner decided (27 Sep):** the owner, an
+administrator or the GM may change it (against the recommendation of group
+administrators only, with the risk put to them: any hotel's GM changes every
+hotel's bills); 200 KB at most. **Shipped:** migration "one logo for the whole
+group" (`group_logo`, one row, FORCE RLS: active staff read, `app.sets_group_logo()`
+writes, audited, empty in every copy); `groupLogo.ts` GET/PUT/DELETE
+`/:code/group-logo`, the two writes in roleGate's WRITE_RULES (room setup:
+owner, admin, GM); the file read by its bytes (PNG signature, or an SVG root
+with no script, handler, embedded page, `javascript:` or entity) before
+`withSession` opens; `GroupLogoCard` on Settings; `useGroupLogo(hotelCode)` from
+the front door for the documents, a data: URL for an `<img>`. **Found:** ADM-9
+(a long Settings value cut off at phone width). **Proved:** `groupLogo.test.ts`
+(API, 18), `db/tests/modules/admin.sql` "group logo" (15), `groupLogo.test.tsx`
+(web, 6); the script check and the insert policy each broken on purpose and
+seen failing; the Fidato artwork (the CRS's `logoMarkup.ts`, 5,316 bytes)
+uploaded through the card as the GM on fidato_s19, stored byte for byte, shown
+as an `<img>` at desktop and 375 px. **Left open:** the documents' logo slot
+(the redesign session wires `useGroupLogo`); the guest's own page does not
+show it (not asked); ADM-9.
+
+---
+
 ## 2026-09-26 · The hotel's FSSAI licence number (the audit's A16)
 
 **Asked for / Shipped:** the compliance lane (in full in the front desk's
