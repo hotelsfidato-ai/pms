@@ -2,7 +2,7 @@ import { Globe, ArrowRightLeft, CalendarClock, IndianRupee, Info } from "lucide-
 import { useQuery } from "@tanstack/react-query";
 import { useParams } from "react-router";
 import {
-  Page, PageHeader, Card, CardBody, StatusPill,
+  Page, PageHeader, Card, CardBody, StatusPill, IconChip,
 } from "@/components/ui";
 import { listCompanies } from "@/modules/guests";
 import { useRole } from "@/lib/session";
@@ -86,12 +86,14 @@ export default function ChannelManagerPage() {
         }
       />
 
+      <div className="flex flex-col gap-5">
       {maySetUp && code && <SuSetup code={code} />}
 
+      <div className="space-y-3">
       <Card>
         <CardBody className="space-y-4">
-          <div className="flex items-start gap-2.5">
-            <Globe className="size-5 text-grey-400 shrink-0 mt-0.5" />
+          <div className="flex items-start gap-3">
+            <IconChip><Globe /></IconChip>
             <p className="text-base text-ink-900 leading-relaxed max-w-prose">
               Until this exists, every OTA booking is typed in by hand and
               every OTA closure is remembered by a person. That is the
@@ -101,13 +103,14 @@ export default function ChannelManagerPage() {
             </p>
           </div>
 
-          <ul className="grid gap-2.5 @2xl:grid-cols-3">
+          <ul className="grid gap-x-6 gap-y-3 md:grid-cols-3 border-t border-grey-100 pt-3.5">
             {WHAT_IT_WILL_DO.map((x) => (
-              <li key={x.title}
-                  className="rounded-md border border-grey-200 bg-white p-3">
-                <x.icon className="size-4 text-brand-orange mb-1.5" />
-                <p className="text-base font-medium text-ink-900">{x.title}</p>
-                <p className="text-sm text-grey-600 mt-1 leading-relaxed">
+              <li key={x.title}>
+                <p className="flex items-center gap-2.5 text-sm font-medium text-ink-900">
+                  <IconChip size={24}><x.icon /></IconChip>
+                  {x.title}
+                </p>
+                <p className="text-sm text-grey-600 mt-2 leading-relaxed">
                   {x.body}
                 </p>
               </li>
@@ -117,13 +120,13 @@ export default function ChannelManagerPage() {
       </Card>
 
       <Card>
-        <CardBody className="space-y-2.5">
+        <CardBody className="space-y-3">
           <h2 className="text-md font-semibold text-ink-900">
             What it still needs before it goes live
           </h2>
-          <ul className="space-y-1.5 text-base text-ink-900">
+          <ul className="space-y-2 text-base text-ink-900">
             <li className="flex gap-2">
-              <span className="text-grey-500 tabular">1</span>
+              <span className="w-3 shrink-0 text-grey-500 tabular">1</span>
               <span>
                 SU's test account.
                 <span className="text-grey-500">
@@ -133,14 +136,14 @@ export default function ChannelManagerPage() {
               </span>
             </li>
             <li className="flex gap-2">
-              <span className="text-grey-500 tabular">2</span>
+              <span className="w-3 shrink-0 text-grey-500 tabular">2</span>
               <span>
                 SU's certification: SU's test cases, then a live session with
                 SU, before the live account is opened.
               </span>
             </li>
             <li className="flex gap-2">
-              <span className="text-grey-500 tabular">3</span>
+              <span className="w-3 shrink-0 text-grey-500 tabular">3</span>
               <span>
                 A mapping of room types and meal plans. What an OTA calls your
                 Superior is rarely what you call it, and a wrong mapping
@@ -148,14 +151,14 @@ export default function ChannelManagerPage() {
               </span>
             </li>
             <li className="flex gap-2">
-              <span className="text-grey-500 tabular">4</span>
+              <span className="w-3 shrink-0 text-grey-500 tabular">4</span>
               <span>
                 Each hotel switched on by itself. None is connected until
                 somebody switches it on.
               </span>
             </li>
             <li className="flex gap-2">
-              <span className="text-grey-500 tabular">5</span>
+              <span className="w-3 shrink-0 text-grey-500 tabular">5</span>
               <span>
                 One rate everywhere, or a rate per channel. Still to be
                 decided, and it shapes the rate calendar.
@@ -177,7 +180,7 @@ export default function ChannelManagerPage() {
             </p>
           ) : (
             <>
-              <p className="text-sm text-grey-500 mb-2">
+              <p className="text-sm text-grey-500 mb-3">
                 Bookings can already be attributed to these by hand, and the
                 Companies and agents screen reports on them. The channel manager
                 is what stops the typing, not what makes the reporting
@@ -186,8 +189,7 @@ export default function ChannelManagerPage() {
               <ul className="flex flex-wrap gap-1.5">
                 {otas.map((c) => (
                   <li key={c.id}
-                      className="rounded-md border border-grey-200 bg-grey-50
-                                 px-2.5 py-1 text-sm text-ink-900">
+                      className="rounded-full bg-grey-100 px-2.5 py-0.5 text-sm text-ink-900">
                     {c.name}
                   </li>
                 ))}
@@ -205,6 +207,8 @@ export default function ChannelManagerPage() {
           between them and the OTAs.
         </span>
       </p>
+      </div>
+      </div>
     </Page>
   );
 }

@@ -127,7 +127,7 @@ export default function PricingPage() {
             onSelect={(d) => { setSelected(d); if (!until) setUntil(d); }}
           />
 
-          <Card className="mt-4">
+          <Card className="mt-5 px-4 py-3.5">
             <div className="flex flex-wrap items-end gap-3 mb-4">
               <div>
                 <p className="text-2xs uppercase tracking-wide text-grey-500">
@@ -155,7 +155,6 @@ export default function PricingPage() {
                       value={until}
                       min={selected}
                       onChange={(e) => setUntil(e.target.value)}
-                      className="min-h-11"
                     />
                   )}
                 </Field>
@@ -207,7 +206,7 @@ function ChooseTheBase({
 
   if (again && !open) {
     return (
-      <Card className="mb-4">
+      <Card className="mb-5 px-4 py-3.5">
         <div className="flex flex-wrap items-center gap-3">
           <StatusPill tone="info">The base</StatusPill>
           <p className="text-base text-ink-900">
@@ -215,7 +214,7 @@ function ChooseTheBase({
             {" · "}{data.basis!.mealPlanName}
             {" · "}one person
           </p>
-          <Button variant="ghost" size="sm" className="ml-auto" onClick={() => setOpen(true)}>
+          <Button variant="secondary" size="sm" className="ml-auto" onClick={() => setOpen(true)}>
             Change which room is the base
           </Button>
         </div>
@@ -224,11 +223,11 @@ function ChooseTheBase({
   }
 
   return (
-    <Card className="mb-4">
+    <Card className="mb-5 px-4 py-3.5">
       <h2 className="text-md font-semibold text-ink-900">
         {again ? "Which room is the base?" : "Start by choosing the base room"}
       </h2>
-      <p className="text-base text-grey-500 mt-1.5 max-w-2xl leading-relaxed">
+      <p className="text-base text-grey-500 mt-1 max-w-2xl leading-relaxed">
         The cheapest thing this property sells, for one person, with no meals.
         Every other price is built from it, so nothing else can be priced until
         this is set. It does not change how many people a room is sold for - 
@@ -242,7 +241,6 @@ function ChooseTheBase({
               {...fieldProps(f)}
               value={roomTypeId}
               onChange={(e) => setRoomTypeId(e.target.value)}
-              className="min-h-11"
             >
               <option value="">Choose…</option>
               {data.roomTypes.map((t) => (
@@ -259,7 +257,6 @@ function ChooseTheBase({
               {...fieldProps(f)}
               value={mealPlan}
               onChange={(e) => setMealPlan(e.target.value)}
-              className="min-h-11"
             >
               {data.mealPlans.map((p) => (
                 <option key={p.code} value={p.code}>{p.name}</option>
@@ -275,7 +272,7 @@ function ChooseTheBase({
           {again ? "Make this the base" : "Set the base room"}
         </Button>
         {again && (
-          <Button variant="ghost" onClick={() => setOpen(false)}>Cancel</Button>
+          <Button variant="secondary" onClick={() => setOpen(false)}>Cancel</Button>
         )}
       </div>
     </Card>
@@ -310,21 +307,20 @@ function Calendar({
   const total = getDaysInMonth(month);
 
   return (
-    <Card>
-      <div className="flex items-center gap-2 mb-3">
+    <Card className="px-4 py-3.5">
+      {/* The month arrows as the Calendar's week arrows: capsule icons. */}
+      <div className="flex flex-wrap items-center gap-2 mb-3">
         <Button
-          variant="ghost" size="sm"
+          variant="secondary" size="icon"
           aria-label="The month before"
-          className="size-11 justify-center px-0"
           onClick={() => onMonth(addMonths(month, -1))}
         >
           <ChevronLeft className="size-4" />
         </Button>
         <h2 className="text-md font-semibold text-ink-900">{fmt(month, "MMMM yyyy")}</h2>
         <Button
-          variant="ghost" size="sm"
+          variant="secondary" size="icon"
           aria-label="The month after"
-          className="size-11 justify-center px-0"
           onClick={() => onMonth(addMonths(month, 1))}
         >
           <ChevronRight className="size-4" />
@@ -332,7 +328,10 @@ function Calendar({
         <p className="ml-auto text-sm text-grey-500">The base on each date</p>
       </div>
 
-      <div className="grid grid-cols-7 gap-1">
+      {/* On a phone the month scrolls inside its card, so every figure
+          stays whole (the Breathing Room Rule); the page never does. */}
+      <div className="overflow-x-auto scrollbar-quiet">
+      <div className="grid grid-cols-7 gap-2 min-w-[36rem]">
         {WEEKDAYS.map((d) => (
           <div key={d} className="text-2xs uppercase tracking-wide text-grey-500 text-center pb-1">
             {d}
@@ -360,8 +359,7 @@ function Calendar({
                  buttons to anybody not looking at the screen. */
               aria-label={`${dateShort(date)}${set ? `, base ${money(cell!.price!)}` : ", no base set"}`}
               className={cn(
-                "min-h-14 rounded-md border p-1.5 text-left cursor-pointer",
-                "transition-colors",
+                "min-h-14 rounded-lg border px-2 py-1.5 text-left cursor-pointer press-tile",
                 isSelected
                   ? "border-brand-orange bg-brand-orange-50"
                   : "border-grey-200 hover:bg-grey-50",
@@ -382,6 +380,7 @@ function Calendar({
             </button>
           );
         })}
+      </div>
       </div>
     </Card>
   );
@@ -451,7 +450,7 @@ function TheBaseFigure({
               placeholder="₹"
               value={value}
               onChange={(e) => setValue(e.target.value)}
-              className="min-h-11 w-36"
+              className="w-36"
             />
           )}
         </Field>
@@ -471,7 +470,7 @@ function TheBaseFigure({
         </Button>
         {base != null && (
           <Button
-            variant="ghost"
+            variant="secondary"
             disabled={save.isPending}
             onClick={() => save.mutate(null)}
           >
@@ -509,7 +508,9 @@ function Differences({
         room type, per room.
       </p>
 
-      <div className="grid gap-2 sm:grid-cols-2">
+      {/* Rows under a hairline, two columns once there is room: they
+          were bordered boxes inside the card (a card in a card). */}
+      <div className="grid lg:grid-cols-2 gap-x-6">
         {data.roomTypes
           .filter((t) => t.id !== data.basis?.roomTypeId)
           .map((t) => (
@@ -574,9 +575,9 @@ function OneDifference({
   });
 
   return (
-    <div className="flex items-end gap-2 border border-grey-200 rounded-md p-2.5">
-      <div className="min-w-0 flex-1">
-        <p className="text-base text-ink-900 truncate">{name}</p>
+    <div className="flex flex-wrap items-end gap-2 py-3 border-t border-grey-100">
+      <div className="min-w-36 flex-1">
+        <p className="text-sm font-medium text-ink-900 truncate">{name}</p>
         <p className="text-2xs text-grey-500">{note}</p>
         <p className="text-md tabular mt-1">
           {offset ? money(offset.amount) : <span className="text-grey-500">-</span>}
@@ -588,12 +589,10 @@ function OneDifference({
         aria-label={`Difference for ${name}`}
         value={value}
         onChange={(e) => setValue(e.target.value)}
-        className="min-h-11 w-24"
+        className="w-24"
       />
       <Button
-        size="sm"
         variant="secondary"
-        className="min-h-11"
         disabled={value.trim() === "" || save.isPending}
         onClick={() => {
           const n = Number(value);
@@ -608,9 +607,7 @@ function OneDifference({
       </Button>
       {offset && (
         <Button
-          size="sm"
-          variant="ghost"
-          className="min-h-11"
+          variant="secondary"
           disabled={save.isPending}
           onClick={() => save.mutate(null)}
         >
@@ -627,7 +624,7 @@ function WhatItComesTo({ data, date }: { data: Pricing; date: string }) {
   const cells = data.cells.filter((c) => c.date === date);
 
   return (
-    <Card className="mt-4">
+    <Card className="mt-5 px-4 py-3.5">
       <h3 className="text-md font-semibold text-ink-900">
         What a room costs on {dateShort(date)}
       </h3>
@@ -642,16 +639,16 @@ function WhatItComesTo({ data, date }: { data: Pricing; date: string }) {
         <table className="w-full text-base">
           <thead>
             <tr className="text-2xs uppercase tracking-wide text-grey-500">
-              <th className="text-left font-medium py-1.5 pr-3">Room type</th>
+              <th className="text-left font-semibold py-1.5 pr-3 whitespace-nowrap">Room type</th>
               {data.mealPlans.map((p) => (
-                <th key={p.code} className="text-right font-medium py-1.5 px-3">{p.name}</th>
+                <th key={p.code} className="text-right font-semibold py-1.5 px-3 whitespace-nowrap">{p.name}</th>
               ))}
             </tr>
           </thead>
           <tbody>
             {data.roomTypes.map((t) => (
               <tr key={t.id} className="border-t border-grey-100">
-                <td className="py-2 pr-3">
+                <td className="py-2.5 pr-3">
                   <span className="text-ink-900">{t.name}</span>
                   {t.category && (
                     <span className="text-2xs text-grey-500 block">{t.category}</span>
@@ -662,7 +659,7 @@ function WhatItComesTo({ data, date }: { data: Pricing; date: string }) {
                     (c) => c.roomTypeId === t.id && c.mealPlan === p.code,
                   );
                   return (
-                    <td key={p.code} className="py-2 px-3 text-right">
+                    <td key={p.code} className="py-2.5 px-3 text-right whitespace-nowrap">
                       <span className={cn("tabular", cell?.price == null && "text-grey-500")}>
                         {cell?.price == null ? "-" : money(cell.price)}
                       </span>
