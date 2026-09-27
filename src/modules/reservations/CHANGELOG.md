@@ -40,7 +40,12 @@ refused it: 500), the sweep's "already sent", the voucher's second press and
 the waiting refusal. The screen opened at 1280 and 375 wide as owner and
 reception: booked with 10% off and room 307 assigned, the Booked card, a
 waiting booking held and then confirmed from its panel, the sales-people
-list saved. The full gate numbers are in the report to the master.
+list saved; after the last cp6 merge, a waiting booking grey on the lists
+and confirmed from the restyled panel. The full suite found two of mine,
+RES-7 and RES-8, both fixed. Full gates on 40b2617 (cp6 de2e98e merged in),
+1,159 s, every step exit 0: web types, API types, strip (145 files), web
+710 of 710, API 1,585 of 1,585, database 1,195 assertions (new-booking 15)
+on 146 migrations, all 146 re-runnable.
 
 **Left open** - advance and tax exempt (the CA, O8); the registration card
 (O7); contract rates (O11); the Sales/Marketing roles (Phase 4); RES-5,
