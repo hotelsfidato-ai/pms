@@ -65,11 +65,12 @@ export function BookedCard({ hotelId, booked, onAnother }: {
       <CardHeader title={waiting ? "Held, waiting for the hotel" : "Booked"}
         description={booked.guest} />
       <CardBody className="space-y-4">
-        <ul className="divide-y divide-grey-200">
+        {/* List rows: 12px, a hairline between (the Rhythm Rule). */}
+        <ul className="-mt-3 divide-y divide-grey-100">
           {booked.bookings.map((b) => {
             const a = booked.assigned[b.reference];
             return (
-              <li key={b.reference} className="py-2 flex flex-wrap justify-between gap-x-4 text-base">
+              <li key={b.reference} className="py-3 flex flex-wrap justify-between gap-x-4 text-base">
                 <span className="font-medium tabular">{b.reference}</span>
                 <span className="text-grey-600">
                   {b.roomType}
