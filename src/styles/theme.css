@@ -69,6 +69,10 @@
   --color-brand-red-700: #c52a1a;
   --color-brand-red-800: #a82115;   /* the danger button pressed */
   --color-brand-yellow-800: #8a6300;
+  /* The warning ink under the name seven screens already wrote, which was
+     never defined, so their "needs attention" words showed in plain ink
+     (found 27 September by the redesign). One value, the same ink. */
+  --color-warning-dark: #8a6300;
 
   /* Tints for surfaces / soft badges */
   --color-brand-orange-50: #fdf1eb;
