@@ -4,7 +4,7 @@ import { useParams, Link } from "react-router";
 import {
   UtensilsCrossed, X, BedDouble, Banknote, CreditCard, Smartphone,
   ArrowLeft, Printer, Lock, Search, Minus, Plus, MessageSquare, Flame,
-  CalendarHeart,
+  CalendarHeart, ChevronRight,
 } from "lucide-react";
 import { cn } from "@/lib/cn";
 import { dateLong, moneyPrecise } from "@/lib/format";
@@ -59,6 +59,14 @@ const METHODS = [
   { key: "card" as const, label: "Card", icon: CreditCard },
   { key: "upi" as const, label: "UPI", icon: Smartphone },
 ];
+
+/* The kit's looks at the terminal's sizes (every control 44px or more;
+   the raw buttons stay, for their thumb heights). Capsules, as every
+   button in the app (the owner, 27 September). */
+const FIELD = "w-full rounded-lg border border-grey-300 bg-white hover:border-grey-400 focus:border-brand-orange focus:outline-none focus:ring-2 focus:ring-brand-orange/20";
+const OUTLINE = "press rounded-full border border-grey-300 bg-white text-ink-900 hover:bg-grey-50 hover:border-grey-400";
+const GHOST = "press rounded-full text-base font-medium text-grey-600 hover:bg-grey-100 hover:text-ink-900";
+const STEP = "press size-11 grid place-items-center rounded-full border border-grey-300 bg-white text-grey-600 hover:text-ink-900 hover:border-grey-400 cursor-pointer";
 
 export default function TerminalPage() {
   const hotelId = useHotel();
@@ -306,7 +314,7 @@ export default function TerminalPage() {
           <p className="text-2xs uppercase tracking-wide text-grey-500 mb-2">
             Terminal setup
           </p>
-          <h1 className="text-2xl font-semibold text-ink-900 mb-2">
+          <h1 className="page-title text-ink-900 mb-2">
             Which outlet is this terminal in?
           </h1>
           <p className="text-base text-grey-600 mb-8 leading-relaxed">
@@ -318,7 +326,7 @@ export default function TerminalPage() {
           {/* "No outlet is configured" used to show while the list was
               still loading, and for good when it failed. */}
           {outlets.data === undefined ? (
-            <div className="rounded-md border border-grey-200 bg-white">
+            <div className="rounded-lg border border-grey-200 bg-white">
               {outlets.error ? (
                 <ReadFailed
                   compact
@@ -333,7 +341,7 @@ export default function TerminalPage() {
               )}
             </div>
           ) : active.length === 0 ? (
-            <div className="rounded-md border border-grey-200 bg-white p-6 text-center">
+            <div className="rounded-lg border border-grey-200 bg-white p-6 text-center">
               <UtensilsCrossed className="size-6 text-grey-300 mx-auto mb-3" />
               <p className="text-md font-semibold text-ink-900">
                 No outlet is configured
@@ -350,10 +358,14 @@ export default function TerminalPage() {
                   key={o.code}
                   type="button"
                   onClick={() => chooseOutlet(o.code)}
-                  className="w-full text-left rounded-lg border border-grey-300 bg-white p-5 min-h-20 hover:border-brand-orange hover:bg-brand-orange-50 transition-colors duration-150"
+                  className="press-tile w-full flex items-center gap-3 text-left rounded-lg border border-grey-200 bg-white p-5 min-h-20 hover:border-grey-400 cursor-pointer"
                 >
-                  <p className="text-lg font-semibold text-ink-900">{o.name}</p>
-                  <p className="text-base text-grey-500 tabular">{o.code}</p>
+                  <span className="min-w-0 flex-1">
+                    <span className="block text-lg font-semibold text-ink-900">{o.name}</span>
+                    <span className="block text-base text-grey-500 tabular">{o.code}</span>
+                  </span>
+                  {/* It chooses the outlet and opens the till: the arrow. */}
+                  <ChevronRight className="size-5 text-grey-400 shrink-0" aria-hidden />
                 </button>
               ))}
             </div>
@@ -361,7 +373,7 @@ export default function TerminalPage() {
 
           <Link
             to={`/h/${hotelId}/till`}
-            className="inline-block mt-8 text-base text-brand hover:underline"
+            className="inline-flex items-center mt-8 min-h-11 text-base font-medium text-brand-orange-700 hover:underline underline-offset-4"
           >
             ← Back to the console
           </Link>
@@ -388,7 +400,7 @@ export default function TerminalPage() {
         </div>
         <Link
           to={`/h/${hotelId}/till`}
-          className="inline-flex items-center gap-2 h-12 px-4 rounded-md border border-grey-300 text-base text-grey-700 hover:border-grey-400"
+          className="press inline-flex items-center gap-2 h-12 px-4 rounded-full border border-grey-300 bg-white text-base font-medium text-ink-900 hover:bg-grey-50 hover:border-grey-400"
         >
           <ArrowLeft className="size-4" />
           Console
@@ -433,13 +445,13 @@ export default function TerminalPage() {
                 value={table}
                 onChange={(e) => setTable(e.target.value)}
                 placeholder="Table 4"
-                className="w-full h-16 px-4 rounded-lg border border-grey-300 text-lg mb-3"
+                className={cn(FIELD, "h-16 px-4 text-lg mb-3")}
               />
               <button
                 type="button"
                 onClick={() => void start()}
                 disabled={busy}
-                className="w-full h-16 rounded-lg bg-brand-orange-600 text-white text-lg font-semibold disabled:opacity-50"
+                className="press w-full h-16 rounded-full bg-brand-orange-600 hover:bg-brand-orange-700 text-white text-lg font-semibold disabled:opacity-50"
               >
                 Open the order
               </button>
@@ -466,10 +478,10 @@ export default function TerminalPage() {
                         key={o.id}
                         type="button"
                         onClick={() => setOrderId(o.id)}
-                        className="w-full flex items-center gap-3 text-left rounded-lg border border-grey-200 bg-white p-4 min-h-16 hover:border-brand-orange"
+                        className="press-tile w-full flex items-center gap-3 text-left rounded-lg border border-grey-200 bg-white p-4 min-h-16 hover:border-grey-400 cursor-pointer"
                       >
                         <span className="min-w-0 flex-1">
-                          <span className="block text-base text-ink-900 tabular">
+                          <span className="block text-base font-medium text-ink-900 tabular">
                             {o.orderNo}
                           </span>
                           <span className="block text-2xs text-grey-500">
@@ -477,9 +489,11 @@ export default function TerminalPage() {
                             {o.lines === 1 ? "" : "s"}
                           </span>
                         </span>
-                        <span className="tabular text-base text-ink-900">
+                        <span className="tabular text-base font-medium text-ink-900">
                           {moneyPrecise(o.gross)}
                         </span>
+                        {/* It opens the order: the Tappable Rule's arrow. */}
+                        <ChevronRight className="size-5 text-grey-400 shrink-0" aria-hidden />
                       </button>
                     ))}
                   </div>
@@ -495,7 +509,7 @@ export default function TerminalPage() {
                   onChange={(e) => setFind(e.target.value)}
                   placeholder="Find a dish"
                   aria-label="Find a dish"
-                  className="w-full h-14 pl-11 pr-4 rounded-lg border border-grey-300 text-base"
+                  className={cn(FIELD, "h-14 pl-11 pr-4 text-base")}
                 />
               </div>
               {(menu.data ?? []).map((cat) => (
@@ -504,7 +518,7 @@ export default function TerminalPage() {
                   cat.items.some((i) => i.name.toLowerCase()
                     .includes(find.trim().toLowerCase())) ? "" : "hidden",
                 )}>
-                  <h2 className="text-md font-semibold text-ink-900 mb-2.5">
+                  <h2 className="text-md font-semibold text-ink-900 mb-3">
                     {cat.name}
                   </h2>
                   {/* Columns by the PANEL's width, not the window's.
@@ -513,7 +527,7 @@ export default function TerminalPage() {
                       single readable column, a portrait tablet two, and
                       a 1366px till four instead of three cards nearly
                       200px wide holding two words and a price. */}
-                  <div className="grid gap-2.5 @sm:grid-cols-2 @2xl:grid-cols-3 @4xl:grid-cols-4">
+                  <div className="grid gap-2 @sm:grid-cols-2 @2xl:grid-cols-3 @4xl:grid-cols-4">
                     {cat.items
                       .filter((i) => i.name.toLowerCase()
                         .includes(find.trim().toLowerCase()))
@@ -537,9 +551,8 @@ export default function TerminalPage() {
                              across a counter by somebody holding plates. */
                           "w-full flex flex-col justify-between text-left",
                           "rounded-lg border p-4 min-h-20",
-                          "transition-colors duration-150",
                           item.isActive
-                            ? "border-grey-200 bg-white hover:border-brand-orange hover:bg-brand-orange-50 active:bg-brand-orange-100"
+                            ? "press-tile border-grey-200 bg-white hover:border-grey-400 active:bg-grey-50 cursor-pointer disabled:cursor-not-allowed"
                             : "border-grey-200 bg-grey-50 text-grey-500 cursor-not-allowed",
                         )}
                       >
@@ -581,11 +594,13 @@ export default function TerminalPage() {
                         aria-label={`Add ${item.name} with a note`}
                         title="Add with a note"
                         className={cn(
-                          "absolute top-1 right-1 size-11 grid place-items-center",
-                          "rounded-md text-grey-300 transition-colors duration-150",
-                          "hover:text-brand-orange-700 hover:bg-brand-orange-50",
+                          /* grey-500, not grey-300: an icon a waiter must
+                             find on a first shift (the Tappable Rule). */
+                          "press absolute top-1 right-1 size-11 grid place-items-center",
+                          "rounded-full text-grey-500 cursor-pointer",
+                          "hover:text-ink-900 hover:bg-grey-100",
                           "focus-visible:outline-2 focus-visible:outline-offset-2",
-                          "focus-visible:outline-brand-orange-500",
+                          "focus-visible:outline-brand-orange",
                           "disabled:opacity-0 disabled:pointer-events-none",
                         )}
                       >
@@ -639,7 +654,9 @@ export default function TerminalPage() {
              position and any half-typed room number survive being
              closed — a waiter who taps away mid-charge and comes back
              should not start again. */
-          "fixed inset-y-0 right-0 z-50 w-[min(22rem,100vw)] border-l shadow-xl",
+          /* A shadow only while it floats as a sheet; docked beside the
+             menu it is a surface, drawn by its hairline. */
+          "fixed inset-y-0 right-0 z-50 w-[min(22rem,100vw)] border-l shadow-overlay lg:shadow-none",
           "transition-transform duration-200 ease-out",
           billOpen ? "translate-x-0" : "translate-x-full lg:translate-x-0",
         )}>
@@ -648,7 +665,7 @@ export default function TerminalPage() {
             <button
               type="button"
               onClick={() => setBillOpen(false)}
-              className="size-11 grid place-items-center rounded-md text-grey-500 hover:bg-grey-100"
+              className="press size-11 grid place-items-center rounded-full text-grey-500 hover:text-ink-900 hover:bg-grey-100"
               aria-label="Back to the menu"
             >
               <X className="size-5" />
@@ -676,8 +693,8 @@ export default function TerminalPage() {
             </div>
           ) : (
             <>
-              <div className="px-4 py-3 border-b border-grey-200 shrink-0">
-                <p className="text-base font-semibold text-ink-900 tabular">
+              <div className="px-4 py-3.5 border-b border-grey-200 shrink-0">
+                <p className="text-md font-semibold text-ink-900 tabular">
                   {order.orderNo}
                 </p>
                 <p className="text-2xs text-grey-500">
@@ -742,7 +759,7 @@ export default function TerminalPage() {
                           type="button"
                           onClick={() => void setQty(l.id, l.qty - 1)}
                           aria-label={`One fewer ${l.name}`}
-                          className="size-11 grid place-items-center rounded-md border border-grey-200 text-grey-600 hover:border-grey-400"
+                          className={STEP}
                         >
                           <Minus className="size-4" />
                         </button>
@@ -753,7 +770,7 @@ export default function TerminalPage() {
                           type="button"
                           onClick={() => void setQty(l.id, l.qty + 1)}
                           aria-label={`One more ${l.name}`}
-                          className="size-11 grid place-items-center rounded-md border border-grey-200 text-grey-600 hover:border-grey-400"
+                          className={STEP}
                         >
                           <Plus className="size-4" />
                         </button>
@@ -761,7 +778,7 @@ export default function TerminalPage() {
                           type="button"
                           onClick={() => void strike(l.id)}
                           aria-label={`Strike ${l.name}`}
-                          className="size-11 grid place-items-center rounded-md text-grey-400 hover:text-brand-red hover:bg-red-50 ml-auto"
+                          className="press size-11 grid place-items-center rounded-full text-grey-500 hover:text-brand-red-700 hover:bg-brand-red-50 ml-auto cursor-pointer"
                         >
                           <X className="size-4" />
                         </button>
@@ -803,7 +820,7 @@ export default function TerminalPage() {
                         onClick={() => window.open(
                           `/h/${hotelId}/till/bill/${order.id}`, "_blank",
                         )}
-                        className="w-full h-14 rounded-lg border border-grey-300 text-base font-medium inline-flex items-center justify-center gap-2"
+                        className={cn(OUTLINE, "w-full h-14 text-base font-medium inline-flex items-center justify-center gap-2")}
                       >
                         <Printer className="size-4" />
                         Print the bill
@@ -812,7 +829,7 @@ export default function TerminalPage() {
                     <button
                       type="button"
                       onClick={() => setOrderId(null)}
-                      className="w-full h-14 rounded-lg bg-ink-900 text-white text-base font-semibold"
+                      className="press w-full h-14 rounded-full bg-ink-900 hover:bg-ink-800 text-white text-base font-semibold"
                     >
                       Next order
                     </button>
@@ -830,13 +847,13 @@ export default function TerminalPage() {
                         key={ch.folioId}
                         type="button"
                         onClick={() => void settle("room", ch.folioId)}
-                        className="w-full h-14 rounded-lg border border-grey-300 text-base text-left px-4"
+                        className={cn(OUTLINE, "w-full h-14 text-base font-medium text-left px-5")}
                       >
                         {ch.guest}
                       </button>
                     ))}
                     <button type="button" onClick={() => setChoices(null)}
-                      className="w-full h-12 text-base text-grey-600">
+                      className={cn(GHOST, "w-full h-12")}>
                       Cancel
                     </button>
                   </div>
@@ -847,7 +864,7 @@ export default function TerminalPage() {
                       value={room}
                       onChange={(e) => setRoom(e.target.value)}
                       placeholder="Room number"
-                      className="w-full h-14 px-4 rounded-lg border border-grey-300 text-base tabular"
+                      className={cn(FIELD, "h-14 px-4 text-base tabular")}
                     />
                     <datalist id="terminal-rooms">
                       {(rooms.data ?? []).map((r) => (
@@ -858,12 +875,12 @@ export default function TerminalPage() {
                       type="button"
                       disabled={!room.trim() || busy}
                       onClick={() => void settle("room")}
-                      className="w-full h-14 rounded-lg bg-brand-orange text-white text-base font-semibold disabled:opacity-50"
+                      className="press w-full h-14 rounded-full bg-brand-orange-600 hover:bg-brand-orange-700 text-white text-base font-semibold disabled:opacity-50"
                     >
                       Charge to the room
                     </button>
                     <button type="button" onClick={() => setSettling(false)}
-                      className="w-full h-12 text-base text-grey-600">
+                      className={cn(GHOST, "w-full h-12")}>
                       Back
                     </button>
                   </div>
@@ -878,7 +895,7 @@ export default function TerminalPage() {
                       disabled={busy || !order.lines.some(
                         (l) => !l.voided && l.kotStatus === "pending")}
                       onClick={() => void kot()}
-                      className="w-full h-16 rounded-lg bg-ink-900 text-white text-lg font-semibold inline-flex items-center justify-center gap-2 disabled:opacity-40"
+                      className="press w-full h-16 rounded-full bg-ink-900 hover:bg-ink-800 text-white text-lg font-semibold inline-flex items-center justify-center gap-2 disabled:opacity-40"
                     >
                       <Flame className="size-5" />
                       {order.lines.some(
@@ -897,7 +914,7 @@ export default function TerminalPage() {
                           disabled={busy
                             || order.lines.filter((l) => !l.voided).length === 0}
                           onClick={() => void settle("function")}
-                          className="w-full h-16 rounded-lg bg-brand-orange text-white text-lg font-semibold inline-flex items-center justify-center gap-2 disabled:opacity-40"
+                          className="press w-full h-16 rounded-full bg-brand-orange-600 hover:bg-brand-orange-700 text-white text-lg font-semibold inline-flex items-center justify-center gap-2 px-5 disabled:opacity-40"
                         >
                           <CalendarHeart className="size-5 shrink-0" />
                           <span className="truncate">
@@ -918,10 +935,10 @@ export default function TerminalPage() {
                         || order.lines.filter((l) => !l.voided).length === 0}
                       onClick={() => setSettling(true)}
                       className={cn(
-                        "w-full h-16 rounded-lg text-lg font-semibold inline-flex items-center justify-center gap-2 disabled:opacity-40",
+                        "press w-full h-16 rounded-full text-lg font-semibold inline-flex items-center justify-center gap-2 disabled:opacity-40",
                         order.eventId
-                          ? "border border-grey-300 text-ink-900"
-                          : "bg-brand-orange text-white",
+                          ? "border border-grey-300 bg-white text-ink-900"
+                          : "bg-brand-orange-600 hover:bg-brand-orange-700 text-white",
                       )}
                     >
                       <BedDouble className="size-5" />
@@ -936,7 +953,9 @@ export default function TerminalPage() {
                           disabled={busy || Boolean(order.eventId)
                             || order.lines.filter((l) => !l.voided).length === 0}
                           onClick={() => void settle(m.key)}
-                          className="h-16 rounded-lg border border-grey-300 text-base font-medium inline-flex flex-col items-center justify-center gap-1 disabled:opacity-40"
+                          /* Icon over label: the house's stacked button
+                             (Housekeeping's marks), 10px corners. */
+                          className="press h-16 rounded-[10px] border border-grey-300 bg-white hover:bg-grey-50 hover:border-grey-400 text-base font-medium inline-flex flex-col items-center justify-center gap-1 disabled:opacity-40"
                         >
                           <m.icon className="size-5" />
                           {m.label}
@@ -944,7 +963,7 @@ export default function TerminalPage() {
                       ))}
                     </div>
                     <button type="button" onClick={() => void abandon()}
-                      className="w-full h-12 text-base text-grey-600">
+                      className={cn(GHOST, "w-full h-12")}>
                       Close unpaid
                     </button>
                   </div>
@@ -995,7 +1014,7 @@ export default function TerminalPage() {
             try { localStorage.removeItem(OUTLET_KEY); } catch { /* ignore */ }
             setOutlet(null); setOrderId(null);
           }}
-          className="text-2xs text-grey-500 underline ml-auto"
+          className="text-2xs font-medium text-brand-orange-700 hover:underline underline-offset-4 ml-auto cursor-pointer"
         >
           Change outlet
         </button>

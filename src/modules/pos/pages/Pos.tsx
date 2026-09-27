@@ -5,7 +5,7 @@ import { cn } from "@/lib/cn";
 import { money, dateLong } from "@/lib/format";
 import { useUi } from "@/lib/ui";
 import {
-  Page, PageHeader, Card, CardBody, DataTable, StatusPill, Tooltip,
+  Page, PageHeader, Card, CardBody, DataTable, StatusPill, Tooltip, IconChip,
   type Column,
 } from "@/components/ui";
 import { listPosOutlets, listPosTickets, type PosOutlet, type PosTicket } from "@/modules/pos/data/posBridge";
@@ -171,7 +171,7 @@ export default function PosPage() {
         }
       />
 
-      <div className="flex items-start gap-3 rounded-md border border-grey-200 bg-grey-50 p-3.5 mb-5">
+      <div className="flex items-start gap-3 rounded-lg border border-grey-200 bg-grey-50 px-4 py-3.5 mb-5">
         <UtensilsCrossed className="size-4 text-grey-400 shrink-0 mt-0.5" />
         <div className="min-w-0">
           <p className="text-base font-medium text-ink-900">
@@ -182,7 +182,7 @@ export default function PosPage() {
             here - a retry after a timeout returns the original posting rather
             than charging twice, and a void reverses rather than deleting. The
             PMS has its own till on the{" "}
-            <Link to="../till" relative="path" className="text-brand hover:underline">
+            <Link to="../till" relative="path" className="font-medium text-brand-orange-700 hover:underline underline-offset-4">
               Till
             </Link>{" "}
             screen, and it comes through this same door.
@@ -194,10 +194,10 @@ export default function PosPage() {
           that somebody has to act on. A charge that landed is already
           on the guest's folio. */}
       {refused.length > 0 && (
-        <Card className="mb-5 border-red-200 bg-red-50/40">
+        <Card className="mb-5 border-brand-red-100 bg-brand-red-50">
           <CardBody>
             <div className="flex items-start gap-2.5">
-              <AlertTriangle className="size-4 text-brand-red shrink-0 mt-0.5" />
+              <AlertTriangle className="size-4 text-brand-red-700 shrink-0 mt-0.5" />
               <div className="min-w-0">
                 <p className="text-sm font-medium text-ink-900">
                   {refused.length} bill{refused.length === 1 ? "" : "s"} did not
@@ -226,12 +226,12 @@ export default function PosPage() {
         </Card>
       )}
 
-      <Card className="mb-7">
-        <div className="px-4 pt-3.5 pb-1 flex items-center gap-2">
-          <KeyRound className="size-3.5 text-grey-400" />
-          <p className="text-2xs uppercase tracking-wide text-grey-500">
+      <Card className="mb-5">
+        <div className="px-4 py-3.5 flex items-center gap-2.5 border-b border-grey-200">
+          <IconChip size={24}><KeyRound /></IconChip>
+          <h2 className="text-md font-semibold text-ink-900">
             Outlets
-          </p>
+          </h2>
         </div>
         <DataTable<PosOutlet>
           rows={outlets.data ?? []}

@@ -62,6 +62,11 @@ const EMPTY_COLUMN: Record<(typeof COLUMNS)[number]["key"], string> = {
   ready: "Nothing at the pass.",
 };
 
+/* The wait's alarm in words: red when late, yellow when warm - the same
+   meanings, in each colour's readable step (yellow itself is 1.7:1 on
+   white, the kit's warning ink is its text). The edges stay full colour. */
+const WAIT_INK = { late: "text-brand-red-700", warm: "text-brand-yellow-800" } as const;
+
 /** Minutes and seconds, because a kitchen counts in both. */
 function waited(seconds: number): string {
   const m = Math.floor(seconds / 60);
@@ -176,7 +181,10 @@ export default function KitchenPage() {
             </span>
           </p>
         </div>
-        <div className="flex items-center gap-1 p-1 rounded-md bg-grey-100 shrink-0">
+        {/* The kit's segmented control, at a wall screen's height: a
+            grey-100 track, the pressed option white with the one small
+            lift the look allows. */}
+        <div className="flex items-center gap-0.5 p-[3px] rounded-md bg-grey-100 shrink-0">
           {([["stage", "By stage"], ["table", "By table"]] as const).map(
             ([v, label]) => (
               <button
@@ -185,10 +193,9 @@ export default function KitchenPage() {
                 onClick={() => setBy(v)}
                 aria-pressed={byTable === (v === "table")}
                 className={cn(
-                  "h-10 px-3.5 rounded text-base cursor-pointer",
-                  "transition-colors duration-200",
+                  "press-tile h-10 pointer-coarse:min-h-11 px-3.5 rounded-[7px] text-base font-medium whitespace-nowrap cursor-pointer",
                   byTable === (v === "table")
-                    ? "bg-white text-ink-900 font-medium shadow-sm"
+                    ? "bg-white text-ink-900 shadow-[0_1px_2px_rgb(3_23_40/0.08)]"
                     : "text-grey-600 hover:text-ink-900",
                 )}
               >
@@ -198,7 +205,7 @@ export default function KitchenPage() {
         </div>
         <Link
           to={`/h/${hotelId}/till`}
-          className="inline-flex items-center gap-2 h-12 px-4 rounded-md border border-grey-300 text-base text-grey-700"
+          className="press inline-flex items-center gap-2 h-12 px-4 rounded-full border border-grey-300 bg-white text-base font-medium text-ink-900 hover:bg-grey-50 hover:border-grey-400"
         >
           <ArrowLeft className="size-4" />
           Console
@@ -249,12 +256,13 @@ export default function KitchenPage() {
                 <h2 className="text-md font-semibold text-ink-900">
                   {col.label}
                 </h2>
-                <span className="text-base tabular text-grey-500">
+                {/* A flat count pill, as Rooms' group headings have. */}
+                <span className="h-5 px-2 rounded-full bg-grey-100 text-grey-600 text-xs font-semibold leading-5 tabular">
                   {mine.length}
                 </span>
               </div>
 
-              <div className="flex-1 min-h-0 overflow-y-auto p-3 space-y-2.5">
+              <div className="flex-1 min-h-0 overflow-y-auto p-3 space-y-3">
                 {mine.map((l) => (
                   <Ticket
                     key={l.id}
@@ -349,7 +357,7 @@ function ByTable({ lines, busy, onMove }: {
                   : warm ? "border-brand-yellow" : "border-grey-200",
               )}
             >
-              <header className="flex items-baseline gap-2 px-3.5 py-2.5 border-b border-grey-200">
+              <header className="flex items-baseline gap-2 px-3.5 py-3 border-b border-grey-200">
                 <h2 className="text-lg font-semibold text-ink-900 flex-1 min-w-0 truncate">
                   {ls[0]!.table ?? ls[0]!.orderType.replace(/_/g, " ")}
                 </h2>
@@ -358,8 +366,7 @@ function ByTable({ lines, busy, onMove }: {
                 </span>
                 <span className={cn(
                   "tabular text-base font-semibold",
-                  late ? "text-brand-red"
-                    : warm ? "text-brand-yellow" : "text-grey-500",
+                  late ? WAIT_INK.late : warm ? WAIT_INK.warm : "text-grey-500",
                 )}>
                   {waited(wait)}
                 </span>
@@ -424,10 +431,10 @@ function Ticket({ line, action, busy, onMove }: {
 
   if (line.cancelled) {
     return (
-      <article className="rounded-lg border-2 border-brand-red bg-red-50 p-3.5">
+      <article className="rounded-lg border-2 border-brand-red bg-brand-red-50 px-3.5 py-3">
         <div className="flex items-center gap-2">
           <Ban className="size-5 text-brand-red shrink-0" />
-          <p className="text-md font-semibold text-brand-red">CANCELLED</p>
+          <p className="text-md font-semibold text-brand-red-700">CANCELLED</p>
         </div>
         <p className="text-lg text-ink-900 mt-1.5 line-through">
           {line.qty} × {line.name}
@@ -442,7 +449,8 @@ function Ticket({ line, action, busy, onMove }: {
 
   return (
     <article className={cn(
-      "rounded-lg border-2 bg-white p-3.5",
+      /* 2px on every ticket, so one turning warm does not shift the board. */
+      "rounded-lg border-2 bg-white px-3.5 py-3",
       late ? "border-brand-red" : warm ? "border-brand-yellow" : "border-grey-200",
     )}>
       <div className="flex items-start justify-between gap-3">
@@ -464,7 +472,7 @@ function Ticket({ line, action, busy, onMove }: {
         <span className="shrink-0 text-right">
           <span className={cn(
             "block tabular text-lg font-semibold",
-            late ? "text-brand-red" : warm ? "text-brand-yellow" : "text-grey-500",
+            late ? WAIT_INK.late : warm ? WAIT_INK.warm : "text-grey-500",
           )}>
             {waited(atPass ?? line.waitedSeconds)}
           </span>
@@ -486,9 +494,9 @@ function Ticket({ line, action, busy, onMove }: {
         onClick={onMove}
         disabled={busy}
         className={cn(
-          "w-full h-14 mt-3 rounded-md text-base font-semibold",
-          "inline-flex items-center justify-center gap-2",
-          "bg-ink-900 text-white disabled:opacity-50",
+          "press w-full h-14 mt-3 rounded-full text-base font-semibold",
+          "inline-flex items-center justify-center gap-2 cursor-pointer",
+          "bg-ink-900 hover:bg-ink-800 text-white disabled:opacity-50",
         )}
       >
         <Check className="size-4" />
