@@ -456,8 +456,10 @@ export default function NewBookingPage() {
         description="One guest, one set of nights, as many rooms as they need."
       />
 
-      <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_340px]">
-        <div className="space-y-6">
+      {/* Cards 12px apart (the Rhythm Rule); the booking's summary beside
+          them on a desk, under them on a phone. */}
+      <div className="grid gap-3 lg:grid-cols-[minmax(0,1fr)_340px]">
+        <div className="space-y-3">
           <Card>
             <CardHeader title="Who" />
             <CardBody className="space-y-4">
@@ -761,6 +763,10 @@ export default function NewBookingPage() {
                   )}
                 </Field>
               )}
+              {/* Each room a section of this card, a hairline between -
+                  never a box inside the card. */}
+              {lines.length > 0 && (
+              <div className="divide-y divide-grey-100">
               {lines.map((line, i) => (
                 <RoomLine
                   key={line.key}
@@ -781,6 +787,8 @@ export default function NewBookingPage() {
                     ls.filter((l) => l.key !== line.key))}
                 />
               ))}
+              </div>
+              )}
             </CardBody>
           </Card>
         </div>
@@ -858,7 +866,7 @@ function RoomLine({
   const over = left !== null && line.rooms > left;
 
   return (
-    <div className="rounded-lg border border-grey-200 p-3 space-y-3">
+    <div className="py-3.5 first:pt-0 last:pb-0 space-y-3">
       <div className="grid gap-2 sm:grid-cols-[minmax(0,2fr)_minmax(0,2fr)_auto]">
         <NativeSelect
           value={line.roomTypeId} aria-label="Room type"
@@ -1113,7 +1121,7 @@ function Summary({
           <Row label="Taxes" value={tax === null ? "-" : moneyPrecise(tax)} />
           <div className="flex items-baseline justify-between py-2">
             <dt className="text-base font-medium text-ink-900">Due</dt>
-            <dd className={cn("text-2xl font-semibold tabular", due === null && "text-grey-300")}>
+            <dd className={cn("text-2xl font-semibold tabular", due === null && "text-grey-500")}>
               {due === null ? "-" : moneyPrecise(due)}
             </dd>
           </div>

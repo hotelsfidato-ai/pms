@@ -67,6 +67,7 @@ export default function GroupsPage() {
           <Segmented<"current" | "all">
             value={scope}
             onChange={setScope}
+            className="max-sm:flex max-sm:w-full max-sm:[&>button]:flex-1"
             options={[
               { value: "current", label: "Here and coming" },
               { value: "all", label: "All" },
@@ -90,7 +91,7 @@ export default function GroupsPage() {
           }
         />
       ) : (
-        <ul className="space-y-2">
+        <ul className="space-y-3">
           {groups.map((g) => (
             <GroupRow
               key={g.id}
@@ -127,9 +128,12 @@ function GroupRow({ group, code, open, onToggle }: {
             type="button"
             onClick={onToggle}
             aria-expanded={open}
-            className="w-full flex items-start gap-2.5 text-left px-3.5 py-3
-                       cursor-pointer hover:bg-grey-50 transition-colors
-                       rounded-md"
+            className={cn(
+              "w-full flex items-start gap-2.5 text-left px-4 py-3.5",
+              "cursor-pointer hover:bg-grey-50 transition-colors duration-150",
+              "focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-orange",
+              open ? "rounded-t-lg" : "rounded-lg",
+            )}
           >
             <Chevron className="size-4 text-grey-400 shrink-0 mt-1" />
 
@@ -160,12 +164,14 @@ function GroupRow({ group, code, open, onToggle }: {
                   opening this list is asking. Only the states that are
                   actually there — a row reading "0 in house, 0 due in,
                   0 departed" says nothing. */}
-              <div className="flex flex-wrap gap-1.5 mt-1.5">
+              <div className="flex flex-wrap gap-1.5 mt-2">
+                {/* One colour per state, everywhere (D27-48): in house
+                    blue, due in orange. */}
                 {group.inHouse > 0 && (
-                  <StatusPill tone="success">{group.inHouse} in house</StatusPill>
+                  <StatusPill tone="info">{group.inHouse} in house</StatusPill>
                 )}
                 {group.dueIn > 0 && (
-                  <StatusPill tone="warning">{group.dueIn} due in</StatusPill>
+                  <StatusPill tone="accent">{group.dueIn} due in</StatusPill>
                 )}
                 {group.departed > 0 && (
                   <StatusPill tone="neutral">{group.departed} departed</StatusPill>
@@ -198,7 +204,7 @@ function GroupRow({ group, code, open, onToggle }: {
           </button>
 
           {open && (
-            <div className="border-t border-grey-200 px-3.5 py-3">
+            <div className="border-t border-grey-200 px-4 py-3.5">
               {detail.isLoading ? (
                 <Skeleton className="h-24" />
               ) : !detail.data ? (
@@ -207,7 +213,10 @@ function GroupRow({ group, code, open, onToggle }: {
                 </p>
               ) : (
                 <>
-                  <ul className="space-y-1.5">
+                  {/* List rows, not boxes in the card (the Rhythm Rule's
+                      row: 12px, a hairline between); each opens its stay,
+                      so each ends in an arrow. */}
+                  <ul className="-mt-3 divide-y divide-grey-100">
                     {detail.data.rooms.map((r) => (
                       <li key={r.reservationId}>
                         <Link
@@ -216,9 +225,9 @@ function GroupRow({ group, code, open, onToggle }: {
                              standalone stay route, and inventing one here
                              would make two ways to look at a booking. */
                           to={`/h/${code}/stay?res=${r.reservationId}`}
-                          className="flex items-center gap-2.5 rounded-md border
-                                     border-grey-200 bg-white px-3 py-2
-                                     hover:border-brand-orange transition-colors"
+                          className="flex items-center gap-2.5 -mx-4 px-4 py-3 min-h-14
+                                     hover:bg-grey-50 transition-colors duration-150
+                                     focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-brand-orange"
                         >
                           <BedDouble className="size-4 text-grey-400 shrink-0" />
                           <span className="tabular font-medium text-ink-900 w-14 shrink-0">
@@ -239,17 +248,18 @@ function GroupRow({ group, code, open, onToggle }: {
                           <span className="text-sm tabular text-ink-900 shrink-0 w-20 text-right">
                             {money(r.balance)}
                           </span>
+                          <ChevronRight className="size-4 text-grey-400 shrink-0" aria-hidden />
                         </Link>
                       </li>
                     ))}
                   </ul>
 
-                  <div className="flex justify-end mt-2.5">
-                    <Link to={`/h/${code}/groups/${group.id}`}>
-                      <Button variant="secondary" className="h-11">
-                        Open the group
-                      </Button>
-                    </Link>
+                  <div className="flex justify-end pt-3.5 border-t border-grey-100">
+                    {/* A link that looks like the button it is (one element,
+                        not a button inside a link). */}
+                    <Button asChild variant="secondary">
+                      <Link to={`/h/${code}/groups/${group.id}`}>Open the group</Link>
+                    </Button>
                   </div>
                 </>
               )}
