@@ -42,10 +42,12 @@ import { type Stay } from "@/data/repositories";
    ══════════════════════════════════════════════════════════════════ */
 
 export function LateCheckOutFlow({
-  hotelId, stay, checkOutTime, charge, open, onOpenChange, onDone,
+  hotelId, stay, checkOutTime, charge, nextDestination, open, onOpenChange, onDone,
 }: {
   hotelId: string;
   stay: Stay;
+  /** Form III: a foreign guest's next destination, asked before this opens. */
+  nextDestination?: string;
   /** The hour the property sells the night until, e.g. "11:00". */
   checkOutTime: string;
   /** What a late departure costs here. Null means the property does
@@ -75,7 +77,7 @@ export function LateCheckOutFlow({
     const res = await checkOut(hotelId, stay.id, {
       lateReason: reason.trim(),
       waiveLate: mayWaive && waive,
-    });
+    }, nextDestination);
     setBusy(false);
 
     if (!res.ok) {

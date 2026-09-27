@@ -25,7 +25,7 @@ import { closePool } from "../src/db.ts";
      · capture is DERIVED from a document arriving, not asserted
      · a document type with no number is refused, in a sentence
      · what was captured actually reaches guest_documents
-     · nationality reaches the GUEST, and the Form C register sees it
+     · nationality reaches the GUEST, and the Form III register sees it
      · a returning guest's document can be CORRECTED — 013 had no
        UPDATE policy, so a renewed visa could not be recorded at all
      · a later capture does not blank fields an earlier one recorded
@@ -93,6 +93,9 @@ afterAll(async () => {
          select id from reservations where reference like $1)`, [mine]);
     await db.query("delete from guest_documents where guest_id in (select id from guests where full_name like $1)", [guests])
       .catch(() => undefined);
+    await db.query(
+      `delete from form_iii_stays where reservation_id in (
+         select id from reservations where reference like $1)`, [mine]);
     await db.query("delete from reservations where reference like $1", [mine]);
 
     await db.query("alter table guests disable trigger guests_no_delete");
@@ -189,6 +192,13 @@ async function arrivalAndRoom(): Promise<{ stay: string; room: string; guest: st
    early arrival, and `test/frontDesk.test.ts` is where that is proved. */
 const EARLY = "Identity fixture - arrival hour is not what these test";
 
+/* A foreign guest is checked in only with Form III's own questions
+   answered (D27-25) - they are not what this file tests. */
+const FORM_III_VISIT = {
+  phoneInIndia: "+91 98000 00000", arrivedFrom: "Mumbai",
+  purpose: "business", previousStay: "Hotel in Mumbai",
+};
+
 describe("check-in will not accept a claim in place of a document", () => {
   it("refuses a document type with no number", async () => {
     const { stay, room } = await arrivalAndRoom();
@@ -260,7 +270,9 @@ describe("a captured document reaches the database", () => {
         visaNumber: `V-${process.pid}`,
         visaExpiry: "2027-01-05",
         addressLine: "14 Cranmer Road, London",
+        visaType: "e-Tourist",
       },
+      visit: FORM_III_VISIT,
     });
     expect(res.status, await res.text().catch(() => "")).toBeLessThan(400);
 
@@ -294,14 +306,14 @@ describe("a captured document reaches the database", () => {
       expect(d!.captured_at).toBeTruthy();
 
       /* Nationality is a fact about the PERSON, so it lands on the
-         guest — and it is what the Form C register filters on. */
+         guest — and it is what the Form III register filters on. */
       expect(d!.nationality).toBe("GB");
     } finally {
       await db.end();
     }
   });
 
-  it("puts that guest on the Form C register with a real passport", async () => {
+  it("puts that guest on the Form III register with a real passport", async () => {
     /* The register printed "not on record" for every foreign national
        for the whole project, because nothing wrote a passport. */
     const body = (await (await call("/PUN/form-c")).json()) as {
@@ -311,7 +323,7 @@ describe("a captured document reaches the database", () => {
     const mine = body.rows.find((r) => r.passport === `P${process.pid}`);
     expect(
       mine,
-      "the guest checked in above is not on the Form C register",
+      "the guest checked in above is not on the Form III register",
     ).toBeTruthy();
     expect(mine!.nationality).toBe("GB");
   });
@@ -334,8 +346,9 @@ describe("a document can be corrected", () => {
       identity: {
         idType: "passport", idNumber: `R${process.pid}`,
         nationality: "US", visaNumber: "OLD-VISA",
-        addressLine: "First address recorded",
+        addressLine: "First address recorded", visaType: "Business",
       },
+      visit: FORM_III_VISIT,
     });
 
     const db = await admin();

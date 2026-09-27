@@ -30,14 +30,14 @@ export const nav: ServiceNavEntry[] = [
   { section: "configuration", order: 40,
     label: "Booking sources", to: "/h/:code/booking-sources", icon: Plug, resource: "commission",
     keywords: ["channel", "ota", "commission", "source"] },
-  /* Form C is a COMPLIANCE obligation about guests, not a finance
+  /* Form III (Form C until the 2025 Act, D27-25) is a COMPLIANCE obligation about guests, not a finance
      document — but it is filed by the same person who bills, at the
      same desk, and burying it under Reports is how a 24-hour
      deadline gets missed. It sits where somebody will see it.
      D25-38: it shows passport numbers, so only the people who check guests in
      see it - who may record Form C, the server's own rule (roleGate GUEST_ID). */
   { section: "finance", order: 60,
-    label: "Form C", to: "/h/:code/form-c", icon: ShieldAlert, resource: "customer",
+    label: "Form III", to: "/h/:code/form-c", icon: ShieldAlert, resource: "customer",
     canSee: (role) => can(role, "edit", "customer"),
-    keywords: ["foreign", "frro", "passport"] },
+    keywords: ["foreign", "frro", "passport", "form c"] },
 ];

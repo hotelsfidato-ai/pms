@@ -8,6 +8,29 @@ project, still goes in the root `CHANGELOG.md`.
 
 ---
 
+## 2026-09-27 · Cancel a booking waiting for the hotel (D27-64, RES-5)
+
+**Asked for:** the owner, through the master: "Cancel it directly". Three
+answers the same day, all as recommended: no charge (it was never
+confirmed), every waiting room of the booking, and a short reason.
+
+**Shipped** - `POST /:code/stays/:id/cancel` in `desk.ts`: refuses with no
+reason and refuses a booking that is not waiting, both before the one write;
+sets cancelled, when, by whom and why on every waiting room of the booking.
+The gate: the same reservation-cancel grant as the void. "Cancel this
+booking" replaces Void on a waiting booking's panel (`StayActions`), through
+`CancelWaitingFlow`. No database function changed: 044 already counts no
+cancelled booking and 073 already releases a cancelled booking's room.
+
+**Proved** - `newBooking.test.ts` 15 of 15, two new: a waiting booking of two
+rooms cancels whole, the grid gains both rooms back, nothing on either
+folio, nothing owed by `app.guest_messages_due`, nothing sent, the reason
+and the clerk kept; a confirmed booking refused and unchanged. Both refusals
+broken on purpose and seen to fail. `cancelWaiting.test.tsx`: the button
+sends the reason to that booking.
+
+---
+
 ## 2026-09-27 · Phase 1: New booking records every field of the owner's screenshot (D27-33)
 
 **Asked for:** the owner, "start Phase 1" - docs/PLATFORM-PLAN.md § 3's

@@ -14,11 +14,74 @@ entries stay here: they are the reason the fault does not come back.
 
 ## Open — not fixed
 
-Nothing open.
+### GUE-5 · A passport skipped at check-in has nowhere to be recorded later
+
+**Found** - 27 September, building Form III (D27-25). Check-in lets the ID be
+skipped for a reason ("scanner offline"), and nothing afterwards records the
+document number: "Complete details" on the Form III register records every
+other field, not the document's type and number. The register shows "not on
+record" for as long as it lasts.
+
+**Why not fixed** - outside what the owner asked on 27 September; the
+server's `PUT .../details` already takes a type and number, so it is the
+screen's two fields. The owner's to decide.
+
+---
+
+### GUE-6 · A companion in the room is never on the register
+
+**Found** - 27 September (D27-25). A booking knows its lead guest only; Rule
+17 counts every foreigner. The owner chose a warning on the register and a
+portal number per person, not each companion's own details - so their
+particulars are typed on the portal from their passports and are not kept
+here.
+
+**Why not fixed** - the owner's answer, 27 September. Recording companions
+is a bigger change across bookings and check-in.
 
 ---
 
 ## Fixed
+
+### GUE-4 · A foreign walk-in never reached the register
+
+**Found** - 27 September (D27-25). The walk-in form had no nationality, and
+a guest's nationality defaults to IN, so every foreign walk-in was invisible
+to Form C / Form III.
+
+**What was done** - the walk-in asks nationality and, for a foreigner, the
+document (or a reason to skip it) and Form III's fields; the server applies
+the same rule as check-in before its first write, and a returning guest
+typed "IN" keeps the nationality on file.
+`api/test/modules/guests/formIII.test.ts` ("a foreign walk-in"), seen
+failing with the rule broken.
+
+**The rule** - every door that puts a guest in a room asks the same
+questions; a default that removes someone from a legal register is a bug,
+not a convenience.
+
+---
+
+### GUE-3 · A foreign guest checked in with the ID skipped stayed Indian
+
+**Found** - 27 September (D27-25). The check-in dialog started at "IN"
+whatever the booking said, and sent the nationality only together with a
+document - so a foreign guest whose ID was skipped for a reason was never
+marked foreign, and a guest booked as foreign and checked in with the
+default could be sent back as Indian. The Form C deadline also ran from the
+check-in DATE, not the moment.
+
+**What was done** - the dialog starts from the nationality on file and
+always sends it; the server falls back to the recorded nationality when none
+arrives; both Form III deadlines run 24 hours from the audit log's check-in
+and check-out instants (migration 147). `front-desk/formIIICheckIn.test.tsx`,
+`api/test/modules/guests/formIII.test.ts`, `db/tests/modules/guests.sql`,
+each seen failing with its rule broken.
+
+**The rule** - a legal clock runs from what happened, and the system already
+records what happened (the audit log); a date is a fallback, never the rule.
+
+---
 
 ### GUE-2 · The Form C register prints a long dash for a stay with no room
 

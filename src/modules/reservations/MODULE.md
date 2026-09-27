@@ -333,7 +333,8 @@ typed rates stay as they are, the 10% rule binds the Discount box.
 - **The two lists** (`flows/KeepListDialog.tsx`), opened from beside their
   pickers, only for the owner, an administrator or the GM.
 - **The stay panel** (front desk's `StayActions`) offers "Confirm the
-  booking" on a waiting booking; All bookings labels it "Waiting for the
+  booking" on a waiting booking, and "Cancel this booking" in place of Void
+  (`flows/CancelWaitingFlow.tsx`, D27-64); All bookings labels it "Waiting for the
   hotel" (front desk's `StayTable`).
 
 | Method | Path | File | What |
@@ -341,6 +342,7 @@ typed rates stay as they are, the 10% rule binds the Discount box.
 | GET / PUT | `/:code/sales-people` | `desk.ts` | the group's list; saved whole, a name left out is switched off |
 | GET / PUT | `/:code/room-promotions` | `desk.ts` | this hotel's list, name and percent |
 | POST | `/:code/stays/:id/confirm` | `desk.ts` | waiting -> confirmed, every waiting room of its group |
+| POST | `/:code/stays/:id/cancel` | `desk.ts` | waiting -> cancelled with a reason, every waiting room of its group; no charge, nothing sent, the room free at once (D27-64); the gate's reservation-cancel grant |
 
 `POST /:code/bookings` now also takes `tentative`, `expectedDeparture`,
 `salesPerson`, `companyId`, `discount {percent, reason | promotionId}`,
