@@ -50,3 +50,6 @@
 | D27-46 | Rooms, the group summary line | **Dropped** |
 | D27-47 | Week arrows | **On the Calendar only**, not on Rooms. (Group 1 held for the owner's approval after their audit, 27 Sep) |
 | D27-48 | Stay colours on the lists (redesign group 2) | **In house blue everywhere; Due in orange, like Arriving.** Phase 1 asks the owner the colour of "Waiting for the hotel" |
+| D27-49 | Words on Walk-ins and Arrivals (redesign group 2) | **"Stay view" becomes "the Calendar"** |
+| D27-50 | Arrivals and In house tabs | **A segmented switch in the title row** |
+| D27-51 | Redesign group 2, and what next | **Group 2 approved as it stands; housekeeping next while the bookings screens wait for Phase 1** |
