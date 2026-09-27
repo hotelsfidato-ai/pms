@@ -390,3 +390,59 @@ export function AnchorGauge({ label, value, fraction, missing }: {
     </div>
   );
 }
+
+/* ── Figure tile (the fidato-design Figure Rule) ─────────────────────
+   Every figure reads the same way: its label with its chip, the figure,
+   then a note or its comparisons as label-left, value-right rows under a
+   hairline. Put tiles in a `FigureRow`: they span three rows of it through
+   subgrid, so a long label never pushes one figure below its neighbours'
+   (the Level Rule). A figure not held is a grey "-" (`missing`). */
+
+export function FigureRow({ className, children }: { className?: string; children: ReactNode }) {
+  return <div className={cn("grid gap-3", className)}>{children}</div>;
+}
+
+export function FigureTile({
+  icon, tone = "neutral", label, value, note, rows, missing, className,
+}: {
+  /** A lucide icon element, e.g. <Wallet />. */
+  icon?: ReactNode;
+  tone?: keyof typeof CHIP_TONES;
+  label: ReactNode;
+  value: ReactNode;
+  note?: ReactNode;
+  rows?: Array<[ReactNode, ReactNode]>;
+  missing?: boolean;
+  className?: string;
+}) {
+  return (
+    <div className={cn(
+      "row-span-3 grid grid-rows-subgrid gap-y-2 min-w-0 rounded-lg bg-white ring-1 ring-inset ring-grey-200",
+      "px-4 py-3.5 sm:px-[18px] sm:py-4",
+      className,
+    )}>
+      <p className="flex items-start gap-2.5 text-sm font-medium leading-5 text-grey-600 min-w-0">
+        {icon && <IconChip tone={tone} className="-mt-1">{icon}</IconChip>}
+        <span className="min-w-0">{label}</span>
+      </p>
+      <p className={cn(
+        "self-end text-xl sm:text-2xl leading-[30px] font-semibold tabular tracking-[-0.022em]",
+        missing ? "text-grey-500" : "text-ink-900",
+      )}>
+        {value}
+      </p>
+      {rows ? (
+        <dl className="border-t border-grey-100 pt-1.5">
+          {rows.map(([name, v], i) => (
+            <div key={i} className="flex justify-between gap-3 text-sm leading-[22px]">
+              <dt className="text-grey-500">{name}</dt>
+              <dd className="font-medium text-grey-700 tabular">{v}</dd>
+            </div>
+          ))}
+        </dl>
+      ) : (
+        <p className="text-xs leading-[17px] text-grey-500">{note}</p>
+      )}
+    </div>
+  );
+}

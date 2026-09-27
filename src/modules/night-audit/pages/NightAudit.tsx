@@ -10,7 +10,7 @@ import { useSession, useRole } from "@/lib/session";
 import { can } from "@/lib/permissions";
 import {
   Page, PageHeader, Card, CardHeader, CardBody, Button, StatusPill, Skeleton, Tooltip,
-  ErrorState, EmptyState, DataTable, Term, type Column,
+  ErrorState, EmptyState, DataTable, Term, IconChip, type Column,
 } from "@/components/ui";
 import { describeError } from "@/components/ui/States";
 import {
@@ -132,28 +132,24 @@ export default function NightAuditPage() {
         <Skeleton className="h-72 w-full" />
       ) : (
         <>
-          <div className="space-y-2.5 mb-6">
+          {/* One card of rows (the Rhythm Rule's list row: 12px top and
+              bottom, a hairline between, every row's words at the same x). */}
+          <Card className="mb-5">
+          <ul className="divide-y divide-grey-100 px-4">
             {data.checks.map((c) => (
-              <Card key={c.id}>
-                <CardBody className="flex items-start gap-3.5">
-                  <span
-                    className={cn(
-                      "flex items-center justify-center size-7 rounded-full shrink-0 mt-0.5",
-                      c.state === "ok" ? "bg-success-50 text-success" : "bg-brand-yellow-50 text-brand-yellow",
-                    )}
-                  >
-                    {c.state === "ok"
-                      ? <Check className="size-4" />
-                      : <AlertTriangle className="size-4" />}
-                  </span>
+              <li key={c.id}>
+                <div className="flex items-start gap-3.5 py-3 min-h-14">
+                  <IconChip tone={c.state === "ok" ? "green" : "yellow"} className="mt-0.5">
+                    {c.state === "ok" ? <Check /> : <AlertTriangle />}
+                  </IconChip>
 
                   <div className="min-w-0 flex-1">
                     <div className="flex items-baseline gap-2">
-                      <p className="text-base font-medium text-ink-900">{c.label}</p>
+                      <p className="text-sm font-medium text-ink-900">{c.label}</p>
                       <span
                         className={cn(
-                          "text-base tabular font-semibold",
-                          c.state === "ok" ? "text-grey-500" : "text-brand-yellow",
+                          "text-sm tabular font-semibold",
+                          c.state === "ok" ? "text-grey-500" : "text-brand-yellow-800",
                         )}
                       >
                         {c.count}
@@ -177,16 +173,17 @@ export default function NightAuditPage() {
                       <ArrowRight className="size-3.5" />
                     </Link>
                   )}
-                </CardBody>
-              </Card>
+                </div>
+              </li>
             ))}
-          </div>
+          </ul>
+          </Card>
 
           <Card>
             <CardBody className="flex flex-col sm:flex-row sm:items-center gap-4">
-              <MoonStar className="size-5 text-grey-400 shrink-0" />
+              <IconChip><MoonStar /></IconChip>
               <div className="min-w-0 flex-1">
-                <p className="text-base font-medium text-ink-900">
+                <p className="text-sm font-medium text-ink-900">
                   Run the audit and roll to {dateLong(data.nextBusinessDate)}
                 </p>
                 <p className="text-sm text-grey-600 mt-0.5 leading-relaxed">
@@ -230,9 +227,9 @@ export default function NightAuditPage() {
               </CardBody>
             </Card>
           ) : run.isError && (
-            <Card className="mt-4 border-red-200 bg-red-50/50">
+            <Card className="mt-4 border-brand-red-100 bg-brand-red-50">
               <CardBody>
-                <p className="text-sm text-red-900">
+                <p className="text-sm text-brand-red-700">
                   {describeError(run.error).message ??
                     "The day was not closed. Nothing was changed."}
                 </p>
@@ -241,15 +238,15 @@ export default function NightAuditPage() {
           )}
 
           {result?.ok && (
-            <Card className="mt-4 border-green-200 bg-green-50/50">
+            <Card className="mt-4 border-success-100 bg-success-50">
               <CardBody className="space-y-1.5">
-                <p className="text-sm font-medium text-green-900">
+                <p className="text-sm font-medium text-success-600">
                   {dateLong(result.businessDate)} is closed.
                   {result.nextBusinessDate
                     ? ` The property is now operating in ${dateLong(result.nextBusinessDate)}.`
                     : ""}
                 </p>
-                <p className="text-2xs text-green-800">
+                <p className="text-2xs text-success-600">
                   {result.roomsPosted ?? 0} room
                   {result.roomsPosted === 1 ? "" : "s"} posted
                   {typeof result.revenuePosted === "number"
@@ -269,19 +266,19 @@ export default function NightAuditPage() {
                     audit states the day rather than adding to it. A
                     second copy would double the takings. */}
                 {result.restaurant && result.restaurant.orders > 0 && (
-                  <div className="pt-2 mt-2 border-t border-green-200">
-                    <p className="text-2xs text-green-800">
+                  <div className="pt-2 mt-2 border-t border-success-100">
+                    <p className="text-2xs text-success-600">
                       Restaurant · {result.restaurant.orders} order
                       {result.restaurant.orders === 1 ? "" : "s"}
                       {result.restaurant.covers > 0
                         ? `, ${result.restaurant.covers} covers` : ""}
                       {" · "}{money(result.restaurant.gross)}
-                      <span className="text-green-700">
+                      <span className="text-success-600">
                         {" "}({money(result.restaurant.net)} + {money(result.restaurant.tax)} tax)
                       </span>
                     </p>
                     {result.restaurant.byTender.length > 0 && (
-                      <p className="text-2xs text-green-700 mt-0.5">
+                      <p className="text-2xs text-success-600 mt-0.5">
                         {result.restaurant.byTender
                           .map((t) => `${t.method} ${money(t.amount)}`)
                           .join(" · ")}
@@ -295,7 +292,7 @@ export default function NightAuditPage() {
                     by different people at different times, and adding
                     them would hide which one is short. */}
                 {result.drawers && (
-                  <div className="pt-2 mt-2 border-t border-green-200
+                  <div className="pt-2 mt-2 border-t border-success-100
                                   grid gap-2 @sm:grid-cols-2">
                     <Drawer label="Front desk"
                             unit="shift" d={result.drawers.frontDesk}
@@ -416,16 +413,16 @@ function Drawer({ label, unit, d, count }: {
 }) {
   return (
     <div>
-      <p className="text-2xs font-medium text-green-900">
+      <p className="text-2xs font-medium text-success-600">
         {label}
-        <span className="font-normal text-green-700">
+        <span className="font-normal text-success-600">
           {" · "}{count} {unit}{count === 1 ? "" : "s"} closed
         </span>
       </p>
       {count === 0 ? (
-        <p className="text-2xs text-green-700">Not used today.</p>
+        <p className="text-2xs text-success-600">Not used today.</p>
       ) : (
-        <p className="text-2xs text-green-800 tabular">
+        <p className="text-2xs text-success-600 tabular">
           Opened {money(d.opening)} · counted {money(d.counted)}
           {d.variances > 0
             ? ` · ${d.variances} explained variance${d.variances === 1 ? "" : "s"}`

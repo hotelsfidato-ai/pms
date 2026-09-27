@@ -259,7 +259,7 @@ export default function InvoicePage() {
         {/* A credit note says, on its face, what it cancels and why.
             An auditor reads this line first. */}
         {isCreditNote && (
-          <div className="mt-4 border border-amber-300 bg-amber-50 px-4 py-2.5">
+          <div className="mt-4 border border-brand-yellow bg-brand-yellow-50 px-4 py-2.5">
             <p className="text-sm">
               <span className="font-semibold">This is a credit note.</span>{" "}
               It cancels tax invoice{" "}
@@ -277,7 +277,7 @@ export default function InvoicePage() {
         {/* Equally, an invoice that has been credited must not read as
             live. Somebody holding this page needs to know. */}
         {!isCreditNote && data.creditedBy && (
-          <div className="mt-4 border border-amber-300 bg-amber-50 px-4 py-2.5">
+          <div className="mt-4 border border-brand-yellow bg-brand-yellow-50 px-4 py-2.5">
             <p className="text-sm">
               <span className="font-semibold">Cancelled.</span> Credit note{" "}
               <span className="tabular">{data.creditedBy}</span> was issued

@@ -91,7 +91,7 @@ export default function VatBillPage() {
         </header>
 
         {isCancellation && (
-          <div className="mt-4 border border-amber-300 bg-amber-50 px-4 py-2.5">
+          <div className="mt-4 border border-brand-yellow bg-brand-yellow-50 px-4 py-2.5">
             <p className="text-sm">
               <span className="font-semibold">This is a credit note.</span> It cancels VAT bill{" "}
               <span className="tabular font-medium">{data.cancelsNumber}</span>.
@@ -100,7 +100,7 @@ export default function VatBillPage() {
           </div>
         )}
         {!isCancellation && data.cancelledBy && (
-          <div className="mt-4 border border-amber-300 bg-amber-50 px-4 py-2.5">
+          <div className="mt-4 border border-brand-yellow bg-brand-yellow-50 px-4 py-2.5">
             <p className="text-sm">
               <span className="font-semibold">Cancelled.</span> Credit note{" "}
               <span className="tabular">{data.cancelledBy}</span> was issued against this VAT bill.

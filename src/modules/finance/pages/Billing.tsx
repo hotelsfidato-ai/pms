@@ -5,7 +5,7 @@ import { cn } from "@/lib/cn";
 import { money, dateTime, dateLong } from "@/lib/format";
 import { useUi } from "@/lib/ui";
 import {
-  Page, PageHeader, Card, CardBody, DataTable, StatusPill, Skeleton, EmptyState,
+  Page, PageHeader, Card, DataTable, StatusPill, Skeleton, EmptyState, FigureRow, FigureTile,
   type Column,
 } from "@/components/ui";
 import { listPayments, paymentsByMethod, type PaymentRow } from "@/modules/finance/data/billing";
@@ -91,26 +91,25 @@ export function PaymentsPage() {
       {byMethod.isLoading ? (
         <Skeleton className="h-24 w-full mb-5" />
       ) : (
-        <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4 mb-5">
+        /* One tile per way of paying, then the total, on the Figure Rule. */
+        <FigureRow className="sm:grid-cols-2 lg:grid-cols-4 mb-5">
           {(byMethod.data ?? []).map((m) => (
-            <Card key={m.method}>
-              <CardBody>
-                <p className="text-sm text-grey-500">{m.method}</p>
-                <p className="text-lg font-semibold text-ink-900 tabular mt-1">{money(m.amount)}</p>
-                <p className="text-2xs text-grey-500 tabular mt-0.5">
-                  {m.count} receipt{m.count === 1 ? "" : "s"}
-                </p>
-              </CardBody>
-            </Card>
+            <FigureTile
+              key={m.method}
+              icon={<Wallet />}
+              label={m.method}
+              value={money(m.amount)}
+              note={`${m.count} receipt${m.count === 1 ? "" : "s"}`}
+            />
           ))}
-          <Card className="bg-grey-50">
-            <CardBody>
-              <p className="text-sm text-grey-500">Total received</p>
-              <p className="text-lg font-semibold text-ink-900 tabular mt-1">{money(total)}</p>
-              <p className="text-2xs text-grey-500 mt-0.5">Reversals excluded</p>
-            </CardBody>
-          </Card>
-        </div>
+          <FigureTile
+            icon={<Wallet />} tone="green"
+            label="Total received"
+            value={money(total)}
+            note="Reversals excluded"
+            className="bg-grey-50"
+          />
+        </FigureRow>
       )}
 
       <Card>

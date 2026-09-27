@@ -11,7 +11,9 @@ import { cn } from "@/lib/cn";
 export function Card({ className, ...props }: HTMLAttributes<HTMLDivElement>) {
   return (
     <div
-      className={cn("bg-white border border-grey-200 rounded-lg", className)}
+      /* A table placed straight in a card lets the card draw the frame:
+         both drew one, and fourteen screens showed a doubled hairline. */
+      className={cn("bg-white border border-grey-200 rounded-lg [&>[data-table-frame]]:border-0", className)}
       {...props}
     />
   );

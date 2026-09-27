@@ -9,7 +9,7 @@ import { useRole } from "@/lib/session";
 import { can } from "@/lib/permissions";
 import {
   Page, PageHeader, Card, CardBody, DataTable, StatusPill,
-  Button, Tooltip, type Column,
+  Button, Tooltip, IconChip, type Column,
 } from "@/components/ui";
 import { describeError } from "@/components/ui/States";
 import { listBillable, getInvoiceSeries, listInvoices, issueInvoice, listVatBills, type BillableRow, type IssuedInvoice, type IssuedVatBill } from "@/modules/finance/data/billing";
@@ -91,7 +91,7 @@ function issuedColumns(hotelId: string): Column<IssuedInvoice>[] {
         >
           {i.number}
         </Link>
-        {i.isCreditNote && <p className="text-2xs text-brand-red">credit note</p>}
+        {i.isCreditNote && <p className="text-2xs text-brand-red-700">credit note</p>}
       </div>
     ),
   },
@@ -148,7 +148,7 @@ function vatColumns(hotelId: string): Column<IssuedVatBill>[] {
           >
             {v.number}
           </Link>
-          {v.isCancellation && <p className="text-2xs text-brand-red">credit note</p>}
+          {v.isCancellation && <p className="text-2xs text-brand-red-700">credit note</p>}
         </div>
       ),
     },
@@ -297,11 +297,11 @@ export default function InvoicesPage() {
           its reason, and with the condition that would change the
           answer. That condition is a number the owner will know before
           anybody else does. */}
-      <div className="flex items-start gap-3 rounded-md border border-grey-200
-                      bg-grey-50 p-3.5 mb-3">
-        <Clock className="size-4 text-grey-400 shrink-0 mt-0.5" />
+      <div className="flex items-start gap-3 rounded-lg border border-grey-200
+                      bg-white px-4 py-3.5 mb-3">
+        <IconChip className="mt-px"><Clock /></IconChip>
         <div className="min-w-0">
-          <p className="text-base font-medium text-ink-900">
+          <p className="text-sm font-medium text-ink-900">
             E-invoicing (IRN and signed QR) - coming soon
           </p>
           <p className="text-sm text-grey-600 mt-0.5 leading-relaxed">
@@ -318,10 +318,10 @@ export default function InvoicesPage() {
         </div>
       </div>
 
-      <div className="flex items-start gap-3 rounded-md border border-grey-200 bg-grey-50 p-3.5 mb-5">
-        <FileText className="size-4 text-grey-400 shrink-0 mt-0.5" />
+      <div className="flex items-start gap-3 rounded-lg border border-grey-200 bg-white px-4 py-3.5 mb-5">
+        <IconChip className="mt-px"><FileText /></IconChip>
         <div className="min-w-0">
-          <p className="text-base font-medium text-ink-900">
+          <p className="text-sm font-medium text-ink-900">
             Numbers come from the database, in sequence
           </p>
           <p className="text-sm text-grey-600 mt-0.5 leading-relaxed">
@@ -349,9 +349,9 @@ export default function InvoicesPage() {
       </div>
 
       {issue.isError && (
-        <Card className="mb-4 border-red-200 bg-red-50/50">
+        <Card className="mb-4 border-brand-red-100 bg-brand-red-50">
           <CardBody>
-            <p className="text-sm text-red-900">
+            <p className="text-sm text-brand-red-700">
               {describeError(issue.error).message ??
                 "The invoice was not issued. Nothing was changed."}
             </p>
@@ -360,10 +360,10 @@ export default function InvoicesPage() {
       )}
 
       {issued && (
-        <Card className="mb-4 border-green-200 bg-green-50/50">
+        <Card className="mb-4 border-success-100 bg-success-50">
           <CardBody className="flex items-center gap-2.5">
-            <FileCheck2 className="size-4 text-green-700 shrink-0" />
-            <p className="text-sm text-green-900">
+            <FileCheck2 className="size-4 text-success shrink-0" />
+            <p className="text-sm text-success-600">
               Issued <span className="tabular font-medium">{issued.number}</span>
               {issued.vatBill && (
                 <>, and VAT bill <span className="tabular font-medium">{issued.vatBill}</span> for the alcohol</>
