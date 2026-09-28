@@ -192,3 +192,15 @@ describe("counting the drawer (QA FI-10)", () => {
     expect(Number(shift!.counted)).toBe(100);
   });
 });
+
+describe("a figure too large to keep (QA FI-12)", () => {
+  it("is a plain refusal, not a server error, and nothing is written", async () => {
+    const before = await lines();
+    const res = await call(deskId, "/charges",
+      { category: "Food", description: "Too much", amount: 99999999999, taxable: true });
+    const body = await res.json() as { ok: boolean; reason?: string };
+    expect(res.status, JSON.stringify(body)).toBe(400);
+    expect(body.reason).toMatch(/too large/);
+    expect(await lines()).toBe(before);
+  });
+});

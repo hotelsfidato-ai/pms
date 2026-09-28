@@ -305,6 +305,14 @@ app.onError((error, c) => {
     return c.json({ error: error.message }, 401);
   }
 
+  /* A NUMBER THE DATABASE CANNOT HOLD (22003, QA FI-12 and X-3): ₹99,999,999,999
+     on a charge, a rack rate or a count answered "Something went wrong". It is
+     the person's figure, not the server's fault, and the transaction rolled
+     back - so a plain refusal, once, for every route. */
+  if ((error as { code?: string }).code === "22003") {
+    return c.json({ ok: false, reason: "That number is too large. Nothing was changed." }, 400);
+  }
+
   /* The caller gets the fact that it failed. The log gets the route's
      PATTERN and the error's KIND, never the address or the message: an
      address can hold the guest's link, a database message a guest's name,
