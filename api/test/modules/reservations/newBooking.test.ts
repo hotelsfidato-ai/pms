@@ -354,6 +354,21 @@ describe("what else New booking records", () => {
     expect(res.status).toBe(409);
     expect(await onFile("Sir")).toEqual({ guests: 0, reservations: 0 });
   });
+
+  /* The QA of 28 September, round D: BK-4 "ZZ" fed Form III; BK-3 a booking
+     that "arrived" five days ago was confirmed; X-2 a phone "abc" and an
+     email "not-an-email" were saved. 5EL's business date is 25 Aug 2026. */
+  it.each([
+    ["ZZ", { nationality: "ZZ" }, /"ZZ" is not a country code/],
+    ["Past", { checkIn: "2026-08-20", checkOut: "2026-08-30" }, /before the hotel's business date, 2026-08-25/],
+    ["Phone", { phone: "abc" }, /not a phone number/],
+    ["Email", { email: "not-an-email" }, /not an email address/],
+  ])("refuses %s, and writes nothing", async (name, over, why) => {
+    const res = await call(ownerId, "POST", "/bookings", booking(name, over));
+    expect(res.status).toBe(409);
+    expect(await reasonOf(res)).toMatch(why);
+    expect(await onFile(name)).toEqual({ guests: 0, reservations: 0 });
+  });
 });
 
 describe("cancelling a booking waiting for the hotel (D27-64)", () => {
@@ -397,12 +412,16 @@ describe("cancelling a booking waiting for the hotel (D27-64)", () => {
     expect(received).toHaveLength(0);
   });
 
-  it("refuses a booking that is not waiting, and changes nothing", async () => {
-    const made = (await (await call(ownerId, "POST", "/bookings", booking("Cancel confirmed"))).json()) as Made;
-    const res = await call(staff.get("front_desk")!, "POST",
-      `/stays/${made.bookings[0]!.id}/cancel`, { reason: "Changed plans" });
-    expect(res.status).toBe(409);
-    expect(await reasonOf(res)).toMatch(/not waiting for the hotel/);
-    expect((await row(made.bookings[0]!.id)).status).toBe("confirmed");
+  /* A CONFIRMED booking is cancelled too since BK-1 (28 September) - one
+     room, under its terms (cancelConfirmed.test.ts) - never its whole group
+     as a waiting one is. */
+  it("cancels one room of a confirmed booking, and leaves the other", async () => {
+    const made = (await (await call(ownerId, "POST", "/bookings", booking("Cancel confirmed",
+      { lines: [{ roomTypeId: typeId, adults: 2, rooms: 2, agreedRate: 4000 }] }))).json()) as Made;
+    const [a, b] = made.bookings.map((x) => x.id);
+    const res = await call(staff.get("front_desk")!, "POST", `/stays/${a}/cancel`, { reason: "Changed plans" });
+    expect(res.status, await res.clone().text()).toBe(200);
+    expect((await row(a!)).status).toBe("cancelled");
+    expect((await row(b!)).status).toBe("confirmed");
   });
 });

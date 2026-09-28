@@ -1,6 +1,7 @@
 import { Hono } from "hono";
 import { withSession } from "../../auth.ts";
 import type { Client } from "../../db.ts";
+import { emailProblem, phoneProblem } from "../../validate.ts";
 import {
   makeBooking, alreadyReceived, answerRepeat, fingerprintOf, isUniqueViolation,
   type BookingRequest, type BookingLineInput, type BookingDiscount, type BookingAddress,
@@ -324,6 +325,12 @@ groups.post("/:code/bookings", async (c) => {
     title?: string; nationality?: string; address?: BookingAddress;
   };
   const input = await c.req.json<Body>().catch(() => ({}) as Body);
+
+  /* X-2 (the owner, 28 September): an impossible phone or email is refused
+     where a person types it. Here, not in makeBooking: a booking site's
+     masked phone must not turn a real booking into a refusal. */
+  const contact = phoneProblem(input.phone) ?? emailProblem(input.email);
+  if (contact) return c.json({ ok: false, reason: contact }, 409);
 
   /* ⚠ THE BOOKING ITSELF IS `makeBooking` (book.ts), and it holds every
      refusal. This route's whole job is to turn a request body into what that

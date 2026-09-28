@@ -82,15 +82,26 @@ afterAll(async () => {
 });
 
 describe("a booking reference", () => {
-  it("is FH, the hotel's code, the month on the hotel's own clock, and a number", async () => {
-    const { rows } = await pool.query<{ ref: string; yymm: string }>(
-      `select app.next_reference($1) as ref,
-              to_char(now() at time zone h.timezone, 'YYMM') as yymm
-         from hotels h where h.id = $1`, [pun]);
-    const { ref, yymm } = rows[0]!;
+  /* BK-12, the owner's D27-123: the month is the hotel's BUSINESS date,
+     not the wall clock. The QA made FH-5EL-2609-5032 in September while
+     the hotel was still working 25 August. Moved inside a transaction
+     that is rolled back, to a month no clock is in. */
+  it("is FH, the hotel's code, the month of the hotel's business date, and a number", async () => {
+    const c = await pool.connect();
+    try {
+      await c.query("begin");
+      await c.query("update hotels set business_date = '2031-03-15' where id = $1", [pun]);
+      const { rows } = await c.query<{ ref: string; today: string }>(
+        "select app.next_reference($1) as ref, app.business_date($1)::text as today", [pun]);
+      const { ref, today } = rows[0]!;
 
-    expect(ref).toMatch(/^FH-PUN-\d{4}-\d{4,}$/);
-    expect(ref.split("-")[2], "the month is the hotel's, not UTC's").toBe(yymm);
+      expect(today, "PUN has no closed day, so its column is its date").toBe("2031-03-15");
+      expect(ref).toMatch(/^FH-PUN-\d{4}-\d{4,}$/);
+      expect(ref.split("-")[2], "the business month, not the clock's").toBe("3103");
+    } finally {
+      await c.query("rollback");
+      c.release();
+    }
   });
 
   it("continues the hotel's own count, so no reference repeats across the change", async () => {

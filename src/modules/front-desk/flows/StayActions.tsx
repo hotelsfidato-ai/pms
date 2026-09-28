@@ -2,7 +2,7 @@ import { useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import { CalendarRange, ArrowLeftRight, Ban, Repeat, Gift, Check } from "lucide-react";
 import { Menu, MenuItem, MenuLabel, MenuSeparator, toast } from "@/components/ui";
-import { confirmWaiting, CancelWaitingFlow } from "@/modules/reservations";
+import { confirmWaiting, CancelWaitingFlow, CancelConfirmedFlow } from "@/modules/reservations";
 import { AmendStayFlow } from "@/modules/front-desk/flows/AmendStayFlow";
 import { MoveRoomFlow } from "@/modules/front-desk/flows/MoveRoomFlow";
 import { VoidFlow } from "@/modules/front-desk/flows/VoidFlow";
@@ -124,6 +124,21 @@ export function StayActions({ hotelId, stay, businessDate }: {
           </>}
           {mayVoid && !waiting && <>
             <MenuSeparator />
+            {/* BK-1 (the owner, 28 September): the guest cancelled - the
+                booking's terms decide the charge. Void stays for a booking
+                that should never have existed. */}
+            <MenuItem
+              icon={Ban}
+              danger
+              onSelect={() => setCancelling(true)}
+              disabled={stay.status !== "due-in"}
+              reason={
+                arrived ? "They have arrived. Check them out instead."
+                        : "Only a booking that has not arrived can be cancelled."
+              }
+            >
+              Cancel this booking
+            </MenuItem>
             <MenuItem
               icon={Ban}
               danger
@@ -150,6 +165,12 @@ export function StayActions({ hotelId, stay, businessDate }: {
       />
       {waiting && (
         <CancelWaitingFlow
+          hotelId={hotelId} stayId={stay.id} reference={stay.reference}
+          open={cancelling} onOpenChange={setCancelling}
+        />
+      )}
+      {stay.status === "due-in" && (
+        <CancelConfirmedFlow
           hotelId={hotelId} stayId={stay.id} reference={stay.reference}
           open={cancelling} onOpenChange={setCancelling}
         />
