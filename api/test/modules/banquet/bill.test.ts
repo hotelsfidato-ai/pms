@@ -1,6 +1,7 @@
 import { describe, it, expect, beforeAll, afterAll } from "vitest";
 import { app } from "../../../src/server.ts";
 import { closePool } from "../../../src/db.ts";
+import { withDrawer } from "../../drawer.ts";
 
 /* ══════════════════════════════════════════════════════════════════
    A FUNCTION'S BILL (BQ-1, QA 28 September; the owner's D27-132 to
@@ -138,7 +139,9 @@ describe("an advance, before the function is billed", () => {
   });
 
   it("refuses cash of ₹2,00,000 or more for the function (s.186)", async () => {
-    const r = await owner("POST", `/banquet/events/${eventId}/payments`, { method: "Cash", amount: 200000, pan: "ABCDE1234F" });
+    /* D27-118: cash only into an open drawer - the owner's, for this one try. */
+    const r = await withDrawer("5EL", ownerId, () =>
+      owner("POST", `/banquet/events/${eventId}/payments`, { method: "Cash", amount: 200000, pan: "ABCDE1234F" }));
     expect(r.status).toBe(409);
     expect(await reason(r)).toContain("₹2,00,000");
   });

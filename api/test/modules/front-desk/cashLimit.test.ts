@@ -2,6 +2,7 @@ import { describe, it, expect, beforeAll, afterAll } from "vitest";
 import { app } from "../../../src/server.ts";
 import { closePool } from "../../../src/db.ts";
 import { PAN_NEEDED, PAN_SHAPE } from "../../../src/modules/finance/cashLimit.ts";
+import { openDrawer } from "../../drawer.ts";
 
 /* ══════════════════════════════════════════════════════════════════
    CASH AT THE DESK: ₹2 LAKH REFUSED, A PAN ABOVE ₹1 LAKH (D25-40)
@@ -20,6 +21,7 @@ const tag = `CASH-${process.pid}`;
 const run = String(process.pid % 10000).padStart(4, "0");
 
 let owner = "";
+let closeDrawer: () => Promise<void> = async () => {};
 let source = "";
 let roomType = "";
 const stays: Record<"a" | "b" | "c" | "d" | "e" | "f" | "g", string> =
@@ -89,9 +91,12 @@ beforeAll(async () => {
   await sql(
     "update guests set nationality = 'GB' where id = (select guest_id from reservations where id = $1)",
     [stays.d]);
+  /* D27-118: cash goes only into an open drawer - the owner's, for this file. */
+  closeDrawer = await openDrawer("5EL", owner);
 });
 
 afterAll(async () => {
+  await closeDrawer();
   const ids = Object.values(stays).filter(Boolean);
   const guests = (await sql<{ id: string }>(
     "select id::text from guests where full_name like $1", [`${tag} %`])).map((g) => g.id);

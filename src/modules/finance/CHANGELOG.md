@@ -8,6 +8,28 @@ project, still goes in the root `CHANGELOG.md`.
 
 ---
 
+## 2026-09-28 · QA fix round A: money and bills (branch `fix/money-28sep`)
+
+**Asked for:** the owner's D27-116 - every BLOCKS WORK and WRONG RESULT in the QA's finance table (docs/qa/qa-2026-09-28.md) before the release - with D27-117 ("Are you sure?" before reversing, issuing an invoice number, check-out) and D27-118 (cash only into an open drawer). The owner answered three more here (D27-125 to D27-127): a payment is reversed only by the owner, an administrator, the GM or the accountant; the interim bill prints the exact figure, no round-off; Company accounts shows the City ledger report's figures.
+
+**Shipped** (each with a test seen failing on the old code, and the screen used):
+- FI-1, FI-2, FI-3, FI-7, FI-15 - one bill at a time: payments and invoices by `folioId`, one Invoices row per bill with "Billed to", Settle on the open tab's bill, "Issue this tax invoice?" naming the party and the number. The per-bill door for round E's function bills: `takeFolioPayment`, `postFolioCharge`, `issueFolioInvoice` (with `sac`), `folioBalance` (FIN-15).
+- FI-4, FI-5, FI-6, FI-11 - no minus charges; reversal with a required reason, payments for the four managers; the running balance; the charge preview and toast (FIN-16).
+- D27-118, FI-10, FI-12 - cash only into an open drawer; whole-note counts; 22003 → a plain 400 for every route (FIN-17).
+- FI-8, FI-9, FI-16 - the interim bill's Print page, its exact total, the place once (also the VAT bill); s.12(3)(c) on a function's invoice (FIN-18).
+- FI-2 / D27-127 - Company accounts reads the City ledger report (`getReport`); `getCityLedger` removed.
+- FD-16 / D27-117 - Check out asks first.
+
+**Found:** FI-7 does not happen on a one-bill stay (issued, credited, Issue came back); it was the split-bill confusion. FIN-10 is settled by the same change. `roleGate.test.ts` (READ_RULES vs telemetry's system-health) fails on cp6 without this branch - the master's.
+
+**Proved:** API on a fresh scratch DB at `149e6cf` - night audit, finance, front desk, admin's auditLog, businessDate, concurrency, laundry, spa: 210/210. Whole web suite 750/750 at `198c75c`; finance + front desk + guards 130/130 at `aeebfad`. Full gates: not run yet (the master's go).
+
+**Left open:** FI-14 (credit notes' own series) waits for the CA (Q-2). The cosmetic rows (FI-17 to FI-19) after the pilot. `/reports/balances-by-source` on the server has no caller now - reports' to retire.
+
+**Commits:** `3b1fb63`, `62c24a4`, `a8bd685`, `149e6cf`, `99a48f1`, `198c75c`, `1162baa`, `aeebfad`.
+
+---
+
 ## 2026-09-28 · FIN-11: the drawer hand-over list (`cashier.ts`) lists the hotel's people (D27-97)
 
 **Asked for:** the owner's D27-97, through the master: the same fault as housekeeping's HK-14. **Shipped:** the read uses `app.hotel_people` (migration 149), names only; branch `housekeeping/staff-lists-28sep`. **Proved:** `api/test/modules/finance/drawerColleagues.test.ts` failed on the old code (1 failed) and passed on the fix; `cd api && npx tsc --noEmit` exit 0. Full gates: the master's combined run.

@@ -14,7 +14,7 @@ import {
 } from "@/lib/rules";
 import { getTaxRate } from "@/modules/finance/data/tax";
 import {
-  Button, Field, Input, NativeSelect, StatusPill, Tooltip, toast,
+  Button, Field, Input, NativeSelect, StatusPill, Tooltip, toast, Textarea, fieldProps,
   Dialog, DialogContent, DialogTrigger,
   DropdownMenu, DropdownMenuTrigger, DropdownMenuContent,
   DropdownMenuItem, DropdownMenuLabel,
@@ -141,6 +141,8 @@ export function FolioPanel({
             hotelId={hotelId}
             stay={stay}
             balance={due}
+            folios={folios}
+            active={only}
             businessDate={businessDate}
             onDone={refresh}
           />
@@ -177,6 +179,8 @@ export function FolioPanel({
           allowed={(checkoutPermitted.data?.allowed ?? false)
                    && (!foreign || Boolean(nextDestination.trim()))}
           reason={checkoutPermitted.data?.reason}
+          guest={stay.guest}
+          room={stay.roomNumber}
           onCheckOut={async () => {
             const res = await checkOut(hotelId, stay.id, undefined, nextDestination.trim());
             if (res.ok) {
@@ -281,7 +285,10 @@ function LedgerList({
       </div>
       <ul className="divide-y divide-grey-100">
         {lines.map((p) => {
-          if (!p.reversed) running += p.amount + p.tax;
+          /* EVERY LINE COUNTS (QA FI-6): an original and its reversal cancel
+             each other. It left the reversed original out and added its
+             reversal, so the last "bal" read ₹1,000 over the Balance. */
+          running += p.amount + p.tax;
           const isReversal = p.kind === "reversal";
           return (
             <li
@@ -361,21 +368,39 @@ function ReverseButton({
     queryKey: ["reverse-allowed", hotelId, stayId, posting.id, posting.reversed],
     queryFn: () => reverseChargeAllowed(hotelId, stayId, posting.id),
   });
-  const allowed = permitted.data?.allowed ?? false;
+  /* D27-125: a payment is reversed by the owner, an administrator, the GM or
+     the accountant - `approve` on an invoice, the server's own question. */
+  const role = useRole();
+  const payment = posting.kind === "payment";
+  const managerOnly = payment && !can(role, "approve", "invoice")
+    ? "Reversing a payment is for the owner, an administrator, the general manager or the accountant."
+    : null;
+  const allowed = (permitted.data?.allowed ?? false) && !managerOnly;
+  const why = managerOnly ?? permitted.data?.reason;
+
+  /* D27-117: "Are you sure?", with a required reason (QA FI-5). It went at
+     once on one click. */
+  const [open, setOpen] = useState(false);
+  const [reason, setReason] = useState("");
+  const [busy, setBusy] = useState(false);
+  const reverse = async () => {
+    setBusy(true);
+    const res = await reverseCharge(hotelId, stayId, posting.id, reason.trim());
+    setBusy(false);
+    if (res.ok) {
+      toast.success("Posting reversed", "The reversal is its own line - nothing was edited.");
+      setOpen(false); setReason("");
+      onDone();
+    } else {
+      toast.error("Could not reverse", res.reason);
+    }
+  };
 
   const button = (
     <button
       type="button"
       disabled={!allowed}
-      onClick={async () => {
-        const res = await reverseCharge(hotelId, stayId, posting.id);
-        if (res.ok) {
-          toast.success("Posting reversed", "The reversal is its own line - nothing was edited.");
-          onDone();
-        } else {
-          toast.error("Could not reverse", res.reason);
-        }
-      }}
+      onClick={() => setOpen(true)}
       aria-label={`Reverse ${posting.description}`}
       className={cn(
         "shrink-0 grid place-items-center size-9 pointer-coarse:size-11 rounded-full transition-colors duration-150",
@@ -389,10 +414,42 @@ function ReverseButton({
   );
 
   /* Disabled WITH a reason, never hidden. */
-  return permitted.data?.reason ? (
-    <Tooltip content={permitted.data.reason}>{button}</Tooltip>
-  ) : (
-    button
+  return (
+    <>
+      {why ? <Tooltip content={why}>{button}</Tooltip> : button}
+      <Dialog open={open} onOpenChange={setOpen}>
+        <DialogContent
+          title={payment ? "Reverse this payment?" : "Reverse this charge?"}
+          description={`${posting.description} · ${moneyPrecise(Math.abs(posting.amount + posting.tax))}`}
+          size="sm"
+          footer={
+            <div className="flex gap-2 w-full justify-end">
+              <Button variant="secondary" onClick={() => setOpen(false)}>Keep it</Button>
+              <Button variant="danger" loading={busy} disabled={!reason.trim()}
+                onClick={() => void reverse()}>
+                Reverse
+              </Button>
+            </div>
+          }
+        >
+          <div className="space-y-4">
+            <p className="text-sm text-grey-700 leading-relaxed">
+              {payment
+                ? "The receipt stays on the bill, struck through, and the money is owed again."
+                : "The charge stays on the bill, struck through, and comes off the balance."}
+              {" "}Nothing is deleted - the reversal is its own line.
+            </p>
+            <Field label="Why" required hint="Kept on the reversal's line. The guest's bill never shows it.">
+              {(f) => (
+                <Textarea {...fieldProps(f)} rows={2} value={reason}
+                  onChange={(e) => setReason(e.target.value)}
+                  placeholder="Posted to the wrong room" />
+              )}
+            </Field>
+          </div>
+        </DialogContent>
+      </Dialog>
+    </>
   );
 }
 
@@ -428,7 +485,10 @@ function AddChargeDialog({
     enabled: open && taxable && !!hotelId,
     placeholderData: keepPreviousData,
   });
-  const rate = rateQuery.data ? rateQuery.data.rate : undefined;
+  /* The previous amount's rate is not this amount's (QA FI-11): ₹8,000 then
+     ₹150 pasted kept 18% on screen while 5% was stored. While it asks,
+     "…", and Post waits. */
+  const rate = rateQuery.data && !rateQuery.isPlaceholderData ? rateQuery.data.rate : undefined;
   const rateText = rateQuery.isError ? "not loaded"
     : rate === undefined ? "…"
     : rate === null ? "-" : `${rate}%`;
@@ -518,7 +578,8 @@ function AddChargeDialog({
           <div className="flex justify-end gap-2 pt-1">
             <Button variant="ghost" onClick={() => setOpen(false)}>Cancel</Button>
             <Button variant="primary"
-              disabled={!description.trim() || value === 0}
+              /* More than zero (QA FI-4, FI-20). */
+              disabled={!description.trim() || !(value > 0)}
               loading={saving}
               onClick={async () => {
                 setSaving(true);
@@ -528,7 +589,9 @@ function AddChargeDialog({
                   }, pressKey);
                   if (res.ok) {
                     setPressKey(crypto.randomUUID());
-                    toast.success("Charge posted", `${money(value + (tax ?? 0))} on room ${stay.roomNumber}`);
+                    /* What was STORED, not the preview (FI-11). */
+                    toast.success("Charge posted", `${res.data
+                      ? money(res.data.amount + res.data.tax) : money(value + (tax ?? 0))} on room ${stay.roomNumber}`);
                     setDescription(""); setAmount("");
                     setOpen(false);
                     onDone();
@@ -550,15 +613,27 @@ function AddChargeDialog({
 }
 
 function SettleDialog({
-  hotelId, stay, balance, businessDate, onDone,
+  hotelId, stay, balance, folios, active, businessDate, onDone,
 }: {
   hotelId: string;
   stay: Stay;
   balance: number;
+  /** The stay's bills, and the one whose tab is open (null: Everything). */
+  folios: StayFolio[];
+  active: string | null;
   businessDate: string;
   onDone: () => void;
 }) {
   const [open, setOpen] = useState(false);
+  /* A SPLIT BILL IS SETTLED ONE BILL AT A TIME (QA FI-2, FI-3): the dialog
+     asked for the whole stay and the payment landed on the guest's bill
+     whichever tab was open. Now it works on the bill whose tab is open -
+     or, on Everything, the first that owes - and says which. */
+  const split = folios.length > 1;
+  const [folioId, setFolioId] = useState<string | null>(null);
+  const owedOn = (id: string | null) =>
+    Math.max(split ? folios.find((f) => f.id === id)?.balance ?? 0 : balance, 0);
+  const pick = () => (split ? active ?? folios.find((f) => f.balance > 0)?.id ?? folios[0]!.id : null);
   const [method, setMethod] = useState<PaymentMethod>("Cash");
   const [amount, setAmount] = useState("");
   const [pan, setPan] = useState("");
@@ -568,7 +643,7 @@ function SettleDialog({
   const [saving, setSaving] = useState(false);
   const [pressKey, setPressKey] = useState(() => crypto.randomUUID());
 
-  const outstanding = Math.max(balance, 0);
+  const outstanding = owedOn(folioId);
   const value = Number(amount) || 0;
   /* D27-4: more than the bill is held as the guest's credit, once the desk
      ticks that it is. The server asks the same (needs "credit"). */
@@ -580,7 +655,10 @@ function SettleDialog({
   return (
     <Dialog
       open={open}
-      onOpenChange={(o) => { setOpen(o); if (o) setAmount(String(outstanding)); }}
+      onOpenChange={(o) => {
+        setOpen(o);
+        if (o) { const id = pick(); setFolioId(id); setAmount(String(owedOn(id))); }
+      }}
     >
       <DialogTrigger asChild>
         {/* THE BILL'S ONE MAIN ACTION is the next step: settle while money
@@ -590,7 +668,7 @@ function SettleDialog({
         <Button
           variant={balance > 0 && stay.status !== "due-in" ? "primary" : "secondary"}
           size="sm"
-          disabled={balance <= 0}
+          disabled={split ? !folios.some((f) => f.balance > 0) : balance <= 0}
         >
           <Receipt className="size-4" />
           Settle
@@ -598,9 +676,29 @@ function SettleDialog({
       </DialogTrigger>
       <DialogContent
         title="Settle bill"
-        description={`${money(outstanding)} outstanding · ${stay.guest}`}
+        description={`${money(outstanding)} outstanding · ${
+          split ? billName(folios.find((f) => f.id === folioId)) : stay.guest}`}
       >
         <div className="space-y-4">
+          {split && (
+            <Field label="Which bill">
+              {({ id }) => (
+                <NativeSelect
+                  id={id}
+                  value={folioId ?? ""}
+                  onChange={(e) => {
+                    setFolioId(e.target.value);
+                    setAmount(String(owedOn(e.target.value)));
+                    setAsCredit(false);
+                  }}
+                >
+                  {folios.map((f) => (
+                    <option key={f.id} value={f.id}>{billName(f)} - {money(f.balance)}</option>
+                  ))}
+                </NativeSelect>
+              )}
+            </Field>
+          )}
           <Field label="Method">
             {({ id }) => (
               <NativeSelect
@@ -685,6 +783,7 @@ function SettleDialog({
                     method, amount: value, businessDate,
                     ...(asksPan ? (form97 ? { form97 } : { pan }) : {}),
                     ...(extra > 0 ? { heldAsCredit: true } : {}),
+                    ...(split && folioId ? { folioId } : {}),
                   }, pressKey);
                   if (res.ok) {
                     setPressKey(crypto.randomUUID());
@@ -739,6 +838,15 @@ function InvoiceDialog({ hotelId, stayId }: { hotelId: string; stayId: string })
         </Button>
       </DialogTrigger>
       <DialogContent title="Interim bill" description="Print preview">
+        {/* QA FI-8: a Print, as the invoice and the restaurant bill have. The
+            print is its own page, so the screen behind stays off the paper. */}
+        <div className="flex justify-end mb-3">
+          <Button variant="primary" size="sm" disabled={!bill.data}
+            onClick={() => window.open(`/h/${hotelId}/stays/${stayId}/bill`, "_blank", "noopener")}>
+            <Printer className="size-4" />
+            Print
+          </Button>
+        </div>
         {bill.data ? (
           <BillPrint bill={bill.data} title="Interim bill" group={group} />
         ) : bill.isError ? (
@@ -754,12 +862,18 @@ function InvoiceDialog({ hotelId, stayId }: { hotelId: string; stayId: string })
 }
 
 function CheckOutButton({
-  allowed, reason, onCheckOut,
+  allowed, reason, guest, room, onCheckOut,
 }: {
   allowed: boolean;
   reason?: string;
-  onCheckOut: () => void;
+  guest: string;
+  room: string;
+  onCheckOut: () => Promise<void>;
 }) {
+  /* D27-117 (QA FD-16): "Are you sure?" first - a check-out closes the bill
+     and sends the room to housekeeping, and it went on one click. */
+  const [open, setOpen] = useState(false);
+  const [busy, setBusy] = useState(false);
   const button = (
     <Button
       /* Primary only once it may happen — while it is blocked, Settle
@@ -767,7 +881,7 @@ function CheckOutButton({
       variant={allowed ? "primary" : "secondary"}
       className="w-full"
       disabled={!allowed}
-      onClick={onCheckOut}
+      onClick={() => setOpen(true)}
       data-checkout
     >
       <LogOut className="size-4" />
@@ -783,6 +897,29 @@ function CheckOutButton({
           {reason}
         </p>
       )}
+      <Dialog open={open} onOpenChange={setOpen}>
+        <DialogContent
+          title={`Check ${guest} out?`}
+          description={`Room ${room}`}
+          size="sm"
+          footer={
+            <div className="flex gap-2 w-full justify-end">
+              <Button variant="secondary" onClick={() => setOpen(false)}>Not yet</Button>
+              <Button variant="primary" loading={busy} data-checkout-confirm
+                onClick={async () => {
+                  setBusy(true);
+                  try { await onCheckOut(); } finally { setBusy(false); setOpen(false); }
+                }}>
+                Check out
+              </Button>
+            </div>
+          }
+        >
+          <p className="text-sm text-grey-700 leading-relaxed">
+            The bill closes and the room goes to housekeeping as dirty.
+          </p>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
@@ -826,6 +963,11 @@ function Row({
    so the strip appears when a second folio exists and the button that
    creates one sits with the other actions.
    ══════════════════════════════════════════════════════════════════ */
+/** A bill's name at the desk: its company, or "Guest" - a guest's bill has
+    no company and that is not a gap. */
+const billName = (f: StayFolio | undefined) =>
+  !f ? "-" : f.billTo === "company" ? f.company ?? "Company" : "Guest";
+
 function FolioStrip({
   folios, active, onPick,
 }: {

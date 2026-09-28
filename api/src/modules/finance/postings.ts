@@ -6,6 +6,7 @@ import { folioFor } from "../../folio.ts";
 import { inr } from "../../reportRender.ts";
 import { overCashLimit, panFor } from "./cashLimit.ts";
 import { FOLIO_SELECT, folioBalance } from "./folios.ts";
+import { can, type Role } from "../../permissions.ts";
 
 /* Split out of api/src/routes/operations.ts on 15 September in the
    service-folder move (docs/SERVICE-FOLDERS-PLAN.md). Service: finance.
@@ -34,6 +35,9 @@ type Outcome<T = unknown> =
      fill in. */
   | { ok: false; reason: string; needs?: Needs };
 type Needs = "late-reason" | "early-reason" | "pan" | "credit";
+
+const PAYMENT_REVERSAL_WHO =
+  "Reversing a payment is for the owner, an administrator, the general manager or the accountant. Ask one of them.";
 
 const refuse = (reason: string, needs?: Needs): Outcome =>
   (needs ? { ok: false, reason, needs } : { ok: false, reason });
@@ -164,6 +168,11 @@ async function chargeRefused(
   const description = input.description?.trim();
   if (!description) return "A charge needs a description.";
   if (!input.amount) return "A charge of zero is not a charge.";
+  /* NO MONEY OFF A BILL BY A MINUS SIGN (QA FI-4): a −₹50 "charge" was a
+     discount nobody approved, outside the reversal and its reason. */
+  if (!(input.amount > 0)) {
+    return "A charge is more than zero. To take money off a bill, reverse the charge it corrects.";
+  }
   /* THE RATE COMES FROM THE RULE, AND ZERO IS STILL A DECISION.
      This read `(cgst_rate + sgst_rate) ?? 5` — a property rate with a
      hardcoded 5% behind it, which is a shipped price in a project
@@ -277,6 +286,10 @@ postings.post("/:code/stays/:id/charges", async (c) => {
 /* ── Reverse one ─────────────────────────────────────────────────── */
 
 postings.post("/:code/stays/:id/charges/:postingId/reverse", async (c) => {
+  /* D27-117: "Are you sure?", with a REQUIRED reason - asked here too, not
+     only by the dialog. It went at once on one click (QA FI-5). */
+  const reason = ((await c.req.json().catch(() => ({}))) as { reason?: string }).reason?.trim();
+
   const result = await withSession(c.get("subject"), async (client): Promise<Outcome | null> => {
     const hotelId = await hotelIdFor(client, c.req.param("code"));
     if (!hotelId) return null;
@@ -317,6 +330,23 @@ postings.post("/:code/stays/:id/charges/:postingId/reverse", async (c) => {
         : "This day is closed - correct it on Closed days.");
     }
 
+    if (!reason) return refuse("Say why it is being reversed. The reason stays on the line.");
+    /* A PAYMENT IS UNDONE BY A MANAGER (the owner's D27-125, QA FI-5): a
+       clerk could take cash and reverse the receipt. The owner, an
+       administrator, the GM or the accountant - `approve` on an invoice,
+       the four who cancel an invoice. A charge stays reception's. */
+    if (p.category === "payment") {
+      const { rows: me } = await client.query<{ role: string | null }>(
+        `select case when exists (select 1 from staff s
+                                   where s.id = app.current_user_id() and s.is_group_admin)
+                     then 'owner'
+                     else (select sh.role from staff_hotels sh
+                            where sh.staff_id = app.current_user_id() and sh.hotel_id = $1)
+                end as role`, [hotelId]);
+      if (!can((me[0]?.role ?? "") as Role, "approve", "invoice")) {
+        return refuse(PAYMENT_REVERSAL_WHO);
+      }
+    }
     /* The reversal is its OWN row, pointing at what it undoes. The
        original stays exactly as it was — that is the whole point of an
        append-only ledger, and it is why the posting count goes UP.
@@ -334,7 +364,10 @@ postings.post("/:code/stays/:id/charges/:postingId/reverse", async (c) => {
          values ($1,$2,$3,$4,$5,$6,$7,$8,$9::bigint)
          returning id::text`,
         [hotelId, p.folio_id, p.business_date, p.category,
-         `Reversal - ${p.description}`,
+         /* The reason rides on the reversal's own line, which the desk
+            reads and the guest's bill and invoice never print (both
+            leave a reversed pair out). */
+         `Reversal - ${p.description} (why: ${reason})`,
          -Number(p.amount), p.tax_rate, -Number(p.tax_amount), postingId],
       );
       return { ok: true, data: { id: made[0]?.id } };
@@ -434,6 +467,20 @@ export async function takeFolioPayment(
   let pan: string | null = null;
   let form97 = false;
   if (method === "cash") {
+    /* EVERY RUPEE BELONGS TO A SHIFT (the owner's D27-118, QA FI-13): cash
+       taken with no drawer open showed "Cash taken ₹0" on the drawer opened
+       later. The person taking it must hold an open drawer here - the drawer
+       counts what its holder took (app.cashier_expected_cash). */
+    const { rows: drawer } = await client.query(
+      `select 1 from cashier_shifts
+        where hotel_id = $1 and staff_id = app.current_user_id() and closed_at is null`,
+      [hotelId]);
+    if (!drawer.length) {
+      return {
+        ok: false,
+        reason: "Open your cash drawer first (Cashiering): cash is taken only into an open drawer, so every rupee belongs to a shift. Card, UPI and the rest need no drawer.",
+      };
+    }
     const over = overCashLimit(await payer.cashTaken(), amount,
       "card, UPI, cheque or bank transfer");
     if (over) return { ok: false, reason: over };

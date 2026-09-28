@@ -250,6 +250,13 @@ cashier.post("/:code/cashier-shift/movements", async (c) => {
 cashier.post("/:code/cashier-shift/count", async (c) => {
   type Body = { denominations?: { value: number; count: number }[] };
   const input = await c.req.json<Body>().catch(() => ({}) as Body);
+  /* A COUNT IS NOTES IN A DRAWER (QA FI-10): "₹500 × −3" was dropped on the
+     way and saved as nothing counted, and the close then said short by the
+     lot. Refused whole, before anything is replaced. */
+  if ((input.denominations ?? []).some((d) =>
+    !Number.isFinite(d.value) || d.value <= 0 || !Number.isInteger(d.count) || d.count < 0)) {
+    return c.json(refuse("A count is a whole number of notes or coins - zero or more."), 409);
+  }
 
   const result = await withSession(c.get("subject"), async (client, session) => {
     const hotelId = await hotelIdFor(client, c.req.param("code"));

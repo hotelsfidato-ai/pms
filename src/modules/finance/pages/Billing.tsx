@@ -10,7 +10,7 @@ import {
 } from "@/components/ui";
 import { listPayments, paymentsByMethod, type PaymentRow } from "@/modules/finance/data/billing";
 import { BUSINESS_DATE, PTD_FROM } from "@/data/repositories";
-import { getCityLedger, type CityLedgerRow } from "@/modules/reports";
+import { getReport } from "@/modules/reports";
 
 /* ══════════════════════════════════════════════════════════════════
    PAYMENTS · INVOICES · CITY LEDGER
@@ -149,26 +149,21 @@ export function PaymentsPage() {
 
 /* ── City ledger, at the property ────────────────────────────────── */
 
-const LEDGER_COLUMNS: Column<CityLedgerRow>[] = [
+/* ONE FIGURE FOR A COMPANY, EVERYWHERE (the owner's D27-127, QA FI-2): this
+   screen showed each booking source's whole stays - every charge less every
+   payment, the guest's own included - so Agoda owed ₹0 here while the City
+   ledger report said ₹5,999.70 had been sent to it "Bill to company". It now
+   shows that report's own figures, read through reports' door: what was sent
+   to each company or booking site in the period. What each has paid back is
+   not recorded by this system yet, so Received and Balance are a dash - the
+   report's rule, never a zero. */
+interface LedgerRow { account: string; debit: number }
+
+const LEDGER_COLUMNS: Column<LedgerRow>[] = [
   { key: "account", header: "Account", cell: (r) => <span className="font-medium">{r.account}</span> },
-  {
-    key: "opening", header: "Opening", numeric: true, hideBelow: "md",
-    cell: (r) =>
-      r.opening === null
-        ? <span className="text-grey-500" title="Nothing predates this window">-</span>
-        : <span className="tabular">{money(r.opening)}</span>,
-  },
-  { key: "debit", header: "Charged", numeric: true, cell: (r) => <span className="tabular">{money(r.debit)}</span> },
-  { key: "credit", header: "Received", numeric: true, cell: (r) => <span className="tabular">{money(r.credit)}</span> },
-  {
-    key: "closing", header: "Balance", numeric: true,
-    cell: (r) =>
-      r.closing === null ? <span className="text-grey-500">-</span> : (
-        <span className={cn("tabular font-medium", r.closing > 0 ? "text-brand-red" : r.closing < 0 ? "text-info" : "text-grey-500")}>
-          {r.closing === 0 ? "-" : money(Math.abs(r.closing))}
-        </span>
-      ),
-  },
+  { key: "debit", header: "Sent to the account", numeric: true, cell: (r) => <span className="tabular">{money(r.debit)}</span> },
+  { key: "credit", header: "Received", numeric: true, cell: () => <span className="text-grey-500">-</span> },
+  { key: "closing", header: "Balance", numeric: true, cell: () => <span className="text-grey-500">-</span> },
 ];
 
 export function PropertyCityLedgerPage() {
@@ -176,36 +171,39 @@ export function PropertyCityLedgerPage() {
 
   const { data, isLoading, error, refetch } = useQuery({
     queryKey: ["city-ledger", hotelId, PTD_FROM, BUSINESS_DATE],
-    queryFn: () => getCityLedger(hotelId, PTD_FROM, BUSINESS_DATE),
+    queryFn: () => getReport(hotelId, "city-ledger", { from: PTD_FROM, asOn: BUSINESS_DATE }),
   });
 
-  const owed = (data ?? []).reduce((t, r) => t + Math.max(r.closing ?? 0, 0), 0);
+  const section = data?.sections.find((s) => s.key === "accounts");
+  const rows: LedgerRow[] = (section?.rows ?? [])
+    .filter((r) => r.kind === "row")
+    .map((r) => ({ account: String(r.cells["account"] ?? "-"), debit: Number(r.cells["debit"] ?? 0) }));
+  const sent = rows.reduce((t, r) => t + r.debit, 0);
 
   return (
     <Page>
       <PageHeader
         title="Company accounts"
-        description={`Balances by booking source, ${dateLong(PTD_FROM)} to ${dateLong(BUSINESS_DATE)}.`}
-        badge={data ? <StatusPill tone={owed ? "warning" : "success"}>{money(owed)} outstanding</StatusPill> : undefined}
+        description={`Bills sent to a company or booking site, ${dateLong(PTD_FROM)} to ${dateLong(BUSINESS_DATE)}.`}
+        badge={data ? <StatusPill tone={sent ? "warning" : "success"}>{money(sent)} sent to accounts</StatusPill> : undefined}
       />
       <Card>
-        <DataTable<CityLedgerRow>
-          rows={data ?? []}
+        <DataTable<LedgerRow>
+          rows={rows}
           columns={LEDGER_COLUMNS}
           rowKey={(r) => r.account}
           loading={isLoading}
           error={error}
           empty={
-            <EmptyState compact icon={<Building2 />} title="Nothing posted yet"
-              description="Each company, agent and booking site shows here once a stay booked through it has a charge or a payment." />
+            <EmptyState compact icon={<Building2 />} title="Nothing sent to an account yet"
+              description={"Each company, agent and booking site shows here once a bill is settled \"Bill to company\"."} />
           }
           onRetry={() => refetch()}
         />
       </Card>
       <p className="text-xs text-grey-500 mt-4 leading-relaxed">
-        A negative balance means the account is in credit - the source has paid ahead
-        of what it has been charged. That is normal for an OTA and is shown as it is,
-        not flattened to zero. The printable version lives under Reports.
+        The same figures as the City ledger report under Reports. Received and Balance
+        show "-": this system does not record a company's payment yet.
       </p>
     </Page>
   );

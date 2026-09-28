@@ -2,6 +2,7 @@ import { describe, it, expect, beforeAll, afterAll } from "vitest";
 import { randomUUID } from "node:crypto";
 import { app } from "../../../src/server.ts";
 import { closePool } from "../../../src/db.ts";
+import { withDrawer } from "../../drawer.ts";
 
 /* ══════════════════════════════════════════════════════════════════
    ONE PRESS, ONE LINE (28 September, the release review)
@@ -73,8 +74,10 @@ describe("the same press, sent twice", () => {
   it("takes one payment", async () => {
     /* heldAsCredit: whatever that stay owes, the question here is the key. */
     const payment = { method: "Cash", amount: 10, heldAsCredit: true };
-    expect((await press("payments", payment, keys[1]!)).status).toBe(200);
-    expect((await press("payments", payment, keys[1]!)).status).toBe(200);
+    await withDrawer("5EL", owner, async () => {
+      expect((await press("payments", payment, keys[1]!)).status).toBe(200);
+      expect((await press("payments", payment, keys[1]!)).status).toBe(200);
+    });
     expect(await lines(keys[1]!)).toHaveLength(1);
   });
 });

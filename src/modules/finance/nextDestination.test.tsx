@@ -70,6 +70,14 @@ describe("checking out a foreign guest", () => {
 
     where("Jaipur");
     fireEvent.click(out());
+    /* D27-117 (QA FD-16): it asks first - one click checks nobody out. */
+    const confirm = await waitFor(() => {
+      const b = document.querySelector("[data-checkout-confirm]") as HTMLButtonElement | null;
+      expect(b).toBeTruthy();
+      return b!;
+    });
+    expect(args, "checked out on one click").toBeNull();
+    fireEvent.click(confirm);
     await waitFor(() => expect(args).toEqual(["5EL", "stay-1", undefined, "Jaipur"]));
   });
 });
