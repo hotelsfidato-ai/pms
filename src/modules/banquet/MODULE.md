@@ -65,7 +65,7 @@ date" line. The words are the restaurant's (POS-4), from
 
 ---
 
-## Server endpoints — 13
+## Server endpoints — 16
 
 The code is in `api/src/modules/banquet/banquet.ts` and `attach.ts`; the door
 `index.ts` mounts it at `/api/hotels`. Every route passes the module gate first
@@ -81,6 +81,9 @@ function   GET    /:code/banquet/events/:id                   includes restauran
            POST   /:code/banquet/events/:id/confirm           takes the hall; opens the bill
            POST   /:code/banquet/events/:id/cancel            needs a reason
            PATCH  /:code/banquet/events/:id                   amend, including the agreed price
+bill       POST   /:code/banquet/events/:id/bill              the hall and courses onto the bill (banquet GST); function Completed
+           POST   /:code/banquet/events/:id/payments          an advance, or settling (idempotency-key)
+           POST   /:code/banquet/events/:id/invoice           finance's tax invoice, SAC 996334 / 997212
 catering   POST   /:code/banquet/events/:id/catering          a package or a named course, per head
            DELETE /:code/banquet/events/:id/catering/:lineId
 setup      GET    /:code/banquet/setup                        halls and packages
@@ -99,6 +102,14 @@ the row-secured `staff` table — the join made a function the owner registered
 open as "No such function" for the GM.
 
 ---
+
+**The function's bill (BQ-9, 28 September; D27-132 to D27-138).** The three
+bill routes go through finance's per-bill door (`postFolioCharge`,
+`takeFolioPayment`, `issueFolioInvoice`, `folioBalance`); banquet adds no tax
+up. Who: `api/src/roleGate.ts` - owner, admin and GM (`reservation` approve);
+the invoice also the accountant (`invoice` approve). The function's GET
+carries `taxWarning` (D27-124), `bill` and `invoice`. Once billed (status
+`completed`) the price, courses, times and cancelling are refused.
 
 ## Data
 
@@ -172,7 +183,11 @@ with the sentence.
 ## Leans on
 
 - **finance**: confirming opens a bill for the function (`folios.event_id`,
-  060), and a `banquet` tax kind is finance's (067).
+  060), and a `banquet` tax kind is finance's (067). The bill's charges,
+  payments, figures and tax invoice are finance's per-bill door (round A,
+  28 September).
+- **pos**: since D27-133 an order settled to a function is posted onto the
+  function's bill by the till, as a room charge is.
 - **pos**: the function's screen reads `pos_orders` (by `event_id`),
   `pos_outlets` (the name, a left join) and `app.pos_order_total` — the same
   database link 061's total already had. No POS code is imported. Setting
@@ -224,8 +239,9 @@ No Start here card and no glossary line names anything in this service.
   (`f671b19`): the till attaches an order to one of
   `getAttachableFunctions`' functions and asks `whyNotAttachable` on the
   server. `DEFECTS.md` BQ-1, now under Fixed.
-- **BQ-6** — a new function's reference has no lock and cuts past four
-  digits (the MEMORY 280 fault). Recorded; the owner chose to fix it later.
+- ~~BQ-6~~ — fixed 28 September (round E): a per-property lock and no cut.
+- Correcting a billed function's figures after a credit note, and refunding
+  a cancelled function's advance: not built (DEFECTS BQ-9, "Left open").
 - The general rule in PENDING § 2: refusals after a write have not been
   audited in this service's routes.
 

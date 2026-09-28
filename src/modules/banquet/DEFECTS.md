@@ -14,7 +14,43 @@ the reason the fault does not come back.
 
 ## Open — not fixed
 
-### BQ-6 · A function's reference has no lock, and cuts long numbers
+None, 28 September.
+
+---
+
+## Fixed
+
+### BQ-9 · A function's bill could not be reached: no advance, no settle, no invoice — FIXED 28 September (round E)
+
+**Found** — the QA of 28 September (QA BQ-1, BLOCKS WORK): after Confirm the page said "A bill is open for this function." and nothing more; the bill was on no screen, and every finance path (charge, payment, invoice) was keyed to a stay, which a function does not have.
+
+**Decided** — the owner, 28 September (D27-132 to D27-138): everything on the function's own page; Owner, Admin and GM take an advance, bill it and settle it, the Accountant also issues the invoice; an advance is a payment on the bill, as a room's is, with no GST receipt voucher until the CA answers (B5); restaurant orders settled to a function go onto its bill as a room charge does; SAC 996334 with food, 997212 for a hall alone (CA to confirm); a function with an advance may be cancelled (the advance stays as credit), a billed one may not; not listed on Folios; "Bill the function" any time after Confirm.
+
+**What was done** — a Bill card (`components/FunctionBill.tsx`): Take an advance, Bill the function, Settle, Issue tax invoice, and a link to the invoice, whose page carries the credit note. Three routes in `banquet.ts` (`/bill`, `/payments`, `/invoice`) call finance's per-bill door (round A: `postFolioCharge`, `takeFolioPayment`, `issueFolioInvoice`, `folioBalance`) - no tax is added up in banquet. Billing is refused, before any write, while anything is unpriced, while the banquet GST rule is not set, or while a restaurant order on it is open; it posts the hall and each course under the `banquet` rule and marks the function Completed, after which its price, courses, times and cancelling are refused. The cash limit counts the function's own bill (s.186's one event). The till posts an order settled to a function onto its bill the way a room is charged (`pos/till.ts`), and the day book leaves 'function' out of the till's side as it does 'room' (`reports/figures.ts`). Write rules in `api/src/roleGate.ts`.
+
+**Proved** — `api/test/modules/banquet/bill.test.ts` (8), `api/test/modules/pos/functionOrders.test.ts` (on the folio, counted once), `src/modules/banquet/banquet.test.tsx` (the card by role). On screen in the copy, as the GM: a function registered, confirmed, ₹25,000 advance, billed (₹1,27,500 + ₹22,950 GST), settled, invoice 5EL/2026-27/00001 (SAC 996334, CGST 9% + SGST 9%), credit note 00002, "Issue tax invoice" offered again.
+
+**Left open** — (1) correcting a billed function's figures: a credit note cancels the invoice, but nothing yet reverses the hall or a course on the bill so a corrected invoice can differ; (2) refunding an advance on a cancelled function (waits for the CA's refund voucher, C2); (3) the invoice page's place-of-supply sentence names s.12(3)(b) until round A keys it on the SAC. Questions for the owner, not built.
+
+**The rule** — a bill that has no stay still goes through finance's doors, by the folio.
+
+### BQ-10 · A function showed no GST and nothing said the banquet tax was unset — FIXED 28 September (round E)
+
+**Found** — the QA of 28 September (QA BQ-3): Total ₹1,95,000 with no GST line; the Banquet GST heading "Not set", and nothing warned.
+
+**Fixed** — the owner's D27-124: registering a function while the property has no banquet GST rule says "Banquet tax is not set: ask the GM to set it before the bill." (beside any clash warning), and the function's page shows the same line; billing is refused with it. Asked with finance's `app.gst_rate_or_null`.
+
+**Proved** — `api/test/modules/banquet/qaFixes.test.ts` "banquet tax not set"; `banquet.test.tsx` "warns while the banquet tax is not set"; on screen.
+
+### BQ-11 · A hall price of 0 was saved as a free hall without anybody saying so — FIXED 28 September (round E)
+
+**Found** — the QA of 28 September (QA BQ-8, the owner's question Q-8).
+
+**Fixed** — the owner's D27-120: a 0 is kept only when ticked "Free" - a function's hall price, a hall's usual rate, a package's and a course's rate a head. Round D's `priceProblem` (api/src/validate.ts) on the server; a Free tick beside each box that puts 0 in it and locks it. A host telephone that is not one is refused as well (X-2, `phoneProblem`, `emailProblem`).
+
+**Proved** — `qaFixes.test.ts`; `banquet.test.tsx` "sends a hall price of 0 only with Free ticked"; on screen (a usual rate of 0 refused with the sentence, "abc" refused as a telephone).
+
+### BQ-6 · A function's reference had no lock, and cut long numbers — FIXED 28 September (round E)
 
 **Found** — 17 September, by reading the register route while fixing BQ-7. Measured: `select lpad('10000', 4, '0')` is `1000`.
 
@@ -28,7 +64,7 @@ the reason the fault does not come back.
 
 ---
 
-## Fixed
+**Fixed** — round E, 28 September, in the register route itself (no migration): a per-property advisory lock for the transaction, and the number padded only when it is shorter than four digits. `qaFixes.test.ts`: two registrations at once after BQ-0000-9999 get 10000 and 10001.
 
 ### BQ-1 · A restaurant bill cannot be charged to a banquet function — FIXED 17 September (both halves)
 

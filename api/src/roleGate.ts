@@ -77,6 +77,13 @@ const GUEST_PAGE = grant("reservation", "edit", "Making a guest's own page");
 const FUNCTION_BOOK = grant("reservation", "create", "Booking a function");
 const FUNCTION_CHANGE = grant("reservation", "edit", "Changing a function");
 const FUNCTION_CANCEL = grant("reservation", "cancel", "Cancelling a function");
+/* ── Round E (BQ-1, 28 September): a function's bill ─────────────────
+   The owner's D27-132: the owner, an administrator and the GM take an
+   advance, bill the function and settle it - `approve` on a booking is
+   exactly those three; the tax invoice also the accountant - `approve` on
+   an invoice is exactly those four (D22-33). */
+const FUNCTION_MONEY = grant("reservation", "approve", "Taking money for a function, or billing it");
+const FUNCTION_INVOICE = grant("invoice", "approve", "Issuing a function's tax invoice");
 
 /* Guests: `customer`. */
 const GUEST = grant("customer", "edit", "Changing a guest's record");
@@ -373,6 +380,10 @@ export const WRITE_RULES: Readonly<Record<string, Rule>> = {
   [`PATCH ${H}/banquet/events/:id`]: FUNCTION_CHANGE,
   [`POST ${H}/banquet/events/:id/catering`]: FUNCTION_CHANGE,
   [`DELETE ${H}/banquet/events/:id/catering/:lineId`]: FUNCTION_CHANGE,
+  /* Round E (BQ-1): a function's bill. */
+  [`POST ${H}/banquet/events/:id/bill`]: FUNCTION_MONEY,
+  [`POST ${H}/banquet/events/:id/payments`]: FUNCTION_MONEY,
+  [`POST ${H}/banquet/events/:id/invoice`]: FUNCTION_INVOICE,
   [`POST ${H}/banquet/venues`]: HALLS,
   [`PATCH ${H}/banquet/venues/:id`]: HALLS,
   [`POST ${H}/banquet/packages`]: HALLS,

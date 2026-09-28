@@ -3873,10 +3873,8 @@ till.post("/:code/till/orders/:id/settle", async (c) => {
       }
     };
 
-    /* ── Cash, card, upi — and a function: nothing touches a folio ──
-       A function's bill is the banquet service's sum, which counts this
-       order once it is settled (099). */
-    if (method !== "room") {
+    /* ── Cash, card, upi: nothing touches a folio ─────────────────── */
+    if (method !== "room" && method !== "function") {
       await client.query(
         `update pos_orders
             set status='settled', settled_by=$1, settled_at=now(),
@@ -3888,52 +3886,68 @@ till.post("/:code/till/orders/:id/settle", async (c) => {
       );
       await writeTenders();
       /* D22-44: paid here, so its alcohol gets its VAT bill now, in this
-         transaction (none when there is no VAT on it). On a function's bill
-         nothing is settled here, so nothing is issued. */
-      if (method !== "function") {
-        await client.query("select app.issue_vat_bill(null, $1)", [orderId]);
-      }
+         transaction (none when there is no VAT on it). */
+      await client.query("select app.issue_vat_bill(null, $1)", [orderId]);
       return { ok: true as const, ...(await readOrder(client, orderId))! };
     }
 
-    /* ── To a room: through the bridge, not around it ────────────── */
-    const room = input.room?.trim();
-    if (!room) return refuse("Which room is this bill for?");
+    /* ── To a function: onto its bill, the way a room is charged ────
+       The owner's D27-133 (28 September): an order settled to a function
+       reaches the function's folio as the room branch below posts it -
+       one line per tax rate, with the till's own tax - so it is on the
+       function's tax invoice and the day book counts it once, from the
+       folio (reports' posSales leaves 'function' out, as it does 'room').
+       whyNotAttachable above has already said the bill is open. */
+    let target: { folio_id: string; guest_name: string } | undefined;
+    let room: string | undefined;
+    if (method === "function") {
+      const { rows: bill } = await client.query<{ folio_id: string; guest_name: string }>(
+        `select id::text as folio_id, $2::text as guest_name from folios
+          where event_id = $1 and status = 'open'`,
+        [onFunction, order[0].event_title]);
+      target = bill[0];
+      if (!target) return refuse(`The bill for ${order[0].event_title ?? "this function"} is closed.`);
+    } else {
 
-    const { rows: chargeable } = await client.query<{
-      folio_id: string; guest_name: string;
-    }>(
-      `select folio_id::text, guest_name from app.pos_chargeable_rooms($1)
-        where room_number = $2`,
-      [hotelId, room],
-    );
+      /* ── To a room: through the bridge, not around it ────────────── */
+      room = input.room?.trim();
+      if (!room) return refuse("Which room is this bill for?");
 
-    /* ONE ROOM, TWO GUESTS. A same-day changeover leaves both folios
-       open. The bridge refuses and names both rather than charging
-       whoever the database returned first; the till must do the same,
-       and here it can actually ask the person standing at it. */
-    const candidates = input.folioId
-      ? chargeable.filter((r) => r.folio_id === input.folioId)
-      : chargeable;
-
-    if (candidates.length > 1) {
-      return {
-        ok: false as const,
-        reason:
-          `Room ${room} has ${candidates.length} open folios - a changeover ` +
-          `day. Choose the guest who ate.`,
-        choices: candidates.map((r) => ({
-          folioId: r.folio_id, guest: r.guest_name,
-        })),
-      };
-    }
-
-    const target = candidates[0];
-    if (!target) {
-      return refuse(
-        `Room ${room} cannot be charged: nobody is checked in there, or the ` +
-          `folio is closed. Take payment another way.`,
+      const { rows: chargeable } = await client.query<{
+        folio_id: string; guest_name: string;
+      }>(
+        `select folio_id::text, guest_name from app.pos_chargeable_rooms($1)
+          where room_number = $2`,
+        [hotelId, room],
       );
+
+      /* ONE ROOM, TWO GUESTS. A same-day changeover leaves both folios
+         open. The bridge refuses and names both rather than charging
+         whoever the database returned first; the till must do the same,
+         and here it can actually ask the person standing at it. */
+      const candidates = input.folioId
+        ? chargeable.filter((r) => r.folio_id === input.folioId)
+        : chargeable;
+
+      if (candidates.length > 1) {
+        return {
+          ok: false as const,
+          reason:
+            `Room ${room} has ${candidates.length} open folios - a changeover ` +
+            `day. Choose the guest who ate.`,
+          choices: candidates.map((r) => ({
+            folioId: r.folio_id, guest: r.guest_name,
+          })),
+        };
+      }
+
+      target = candidates[0];
+      if (!target) {
+        return refuse(
+          `Room ${room} cannot be charged: nobody is checked in there, or the ` +
+            `folio is closed. Take payment another way.`,
+        );
+      }
     }
 
     const businessDate = await businessDateFor(client, hotelId);
@@ -4030,12 +4044,12 @@ till.post("/:code/till/orders/:id/settle", async (c) => {
     await client.query(
       `update pos_orders
           set status='settled', settled_by=$1, settled_at=now(),
-              payment_method='room', ticket_id=$2
+              payment_method=$4, ticket_id=$2
         where id = $3`,
       /* The first ticket, when a bill split across rates. The order is
          the record of the whole sale; pos_tickets is the record of what
          reached the folio, and a split bill reached it twice. */
-      [session.staffId, tickets[0], orderId],
+      [session.staffId, tickets[0], orderId, method],
     );
 
     /* After the ticket exists. The room-tender trigger is deferred so the
@@ -4046,7 +4060,7 @@ till.post("/:code/till/orders/:id/settle", async (c) => {
     return {
       ok: true as const,
       guest: target.guest_name,
-      room,
+      ...(room ? { room } : {}),
       ...(await readOrder(client, orderId))!,
     };
   });

@@ -11,7 +11,7 @@ import {
   NativeSelect, StatusPill,
 } from "@/components/ui";
 import { getBanquetDiary, getBanquetSetup, registerBanquetEvent, type BanquetEventSummary } from "@/modules/banquet/data/banquet";
-import { ReadFailed, ReadStale, readError } from "@/components/ui";
+import { Checkbox, ReadFailed, ReadStale, readError } from "@/components/ui";
 import { queryKeys } from "@/data/repositories";
 
 /* ══════════════════════════════════════════════════════════════════
@@ -281,6 +281,8 @@ function RegisterDialog({
   const [endsAt, setEndsAt] = useState("");
   const [pax, setPax] = useState("");
   const [amount, setAmount] = useState("");
+  /* D27-120: 0 is kept only when ticked Free; blank is unpriced. */
+  const [free, setFree] = useState(false);
   const [notes, setNotes] = useState("");
   const [busy, setBusy] = useState(false);
 
@@ -297,6 +299,7 @@ function RegisterDialog({
       /* Only what was typed. Leaving it blank means UNPRICED — the
          venue's default is OFFERED below and never assumed. */
       agreedAmount: amount === "" ? null : Number(amount),
+      free,
       notes: notes || undefined,
     });
     setBusy(false);
@@ -402,16 +405,18 @@ function RegisterDialog({
               {(f) => (
                 <div className="flex gap-2">
                   <Input {...fieldProps(f)} value={amount} inputMode="decimal"
-                         placeholder="-"
+                         placeholder="-" disabled={free}
                          onChange={(e) => setAmount(e.target.value)} />
                   {/* OFFERED, never applied on its own. The number that
                       gets billed is the one somebody put here. */}
-                  {chosen?.defaultRate != null && (
+                  {chosen?.defaultRate != null && !free && (
                     <Button type="button" variant="secondary" className="shrink-0"
                             onClick={() => setAmount(String(chosen.defaultRate))}>
                       Use usual
                     </Button>
                   )}
+                  <Checkbox label="Free" checked={free}
+                            onCheckedChange={(on) => { setFree(on); setAmount(on ? "0" : ""); }} />
                 </div>
               )}
             </Field>
