@@ -1,6 +1,7 @@
 import { describe, it, expect, beforeAll, afterAll } from "vitest";
 import { app } from "../../../src/server.ts";
 import { closePool } from "../../../src/db.ts";
+import { withDrawer } from "../../drawer.ts";
 
 /* ══════════════════════════════════════════════════════════════════
    TWO OF THE THREE FINANCE RULE-BREAKERS (D22-9)
@@ -132,9 +133,9 @@ describe("a bill line", () => {
 
 describe("a payment on the Payments list", () => {
   it("names the person who took it, not \"admin\"", async () => {
-    const res = await call(`/${CODE}/stays/${stayId}/payments`, "POST", {
+    const res = await withDrawer(CODE, "dev-owner", () => call(`/${CODE}/stays/${stayId}/payments`, "POST", {
       method: "Cash", amount: 250,
-    });
+    }));
     expect(res.status, await res.clone().text()).toBe(200);
     const id = (await res.json() as { data: { id: string } }).data.id;
 

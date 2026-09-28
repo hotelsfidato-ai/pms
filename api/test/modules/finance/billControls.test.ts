@@ -149,3 +149,46 @@ describe("a reversal (FI-5)", () => {
     expect(res.status, await res.clone().text()).toBe(200);
   });
 });
+
+describe("cash (D27-118, QA FI-13)", () => {
+  it("is refused while the person taking it has no drawer open, and nothing is written", async () => {
+    const before = await lines();
+    const res = await call(deskId, "/payments", { method: "Cash", amount: 100, heldAsCredit: true });
+    const body = await res.json() as { ok: boolean; reason?: string };
+    expect(res.status, JSON.stringify(body)).toBe(409);
+    expect(body.reason).toMatch(/Open your cash drawer first/);
+    expect(await lines()).toBe(before);
+  });
+
+  it("is taken into the drawer once it is open, and the drawer counts it", async () => {
+    const open = await app.request(`/api/hotels/${CODE}/cashier-shift/open`, {
+      method: "POST",
+      headers: { "x-dev-staff-id": deskId, "content-type": "application/json" },
+      body: JSON.stringify({ opening: 0 }),
+    });
+    expect(open.status, await open.clone().text()).toBe(200);
+    const res = await call(deskId, "/payments", { method: "Cash", amount: 100, heldAsCredit: true });
+    expect(res.status, await res.clone().text()).toBe(200);
+    const [drawer] = await sql<{ expected: string }>(
+      `select app.cashier_expected_cash(id)::text as expected from cashier_shifts
+        where staff_id = $1 and closed_at is null`, [deskId]);
+    expect(Number(drawer!.expected)).toBe(100);
+  });
+});
+
+describe("counting the drawer (QA FI-10)", () => {
+  it("refuses a negative count whole, and keeps the count it had", async () => {
+    const count = (denominations: unknown) => app.request(`/api/hotels/${CODE}/cashier-shift/count`, {
+      method: "POST",
+      headers: { "x-dev-staff-id": deskId, "content-type": "application/json" },
+      body: JSON.stringify({ denominations }),
+    });
+    expect((await count([{ value: 100, count: 1 }])).status).toBe(200);
+    const res = await count([{ value: 500, count: -3 }, { value: 100, count: 2 }]);
+    expect(res.status, await res.clone().text()).toBe(409);
+    const [shift] = await sql<{ counted: string }>(
+      "select counted_cash::text as counted from cashier_shifts where staff_id = $1 and closed_at is null",
+      [deskId]);
+    expect(Number(shift!.counted)).toBe(100);
+  });
+});

@@ -1,6 +1,7 @@
 import { describe, it, expect, beforeAll, afterAll } from "vitest";
 import { app } from "../../../src/server.ts";
 import { closePool } from "../../../src/db.ts";
+import { withDrawer } from "../../drawer.ts";
 
 /* ══════════════════════════════════════════════════════════════════
    THE AUDIT LOG NAMES THE PERSON — ADM-1, D17-14
@@ -92,7 +93,7 @@ beforeAll(async () => {
   /* The desk's three acts, as the clerk, through finance's own routes. */
   const charge = await post(clerkId, "/charges",
     { category: "Laundry", description: "ADM1TEST laundry", amount: 150, taxable: false });
-  const payment = await post(clerkId, "/payments", { method: "Cash", amount: 150 });
+  const payment = await withDrawer(HOTEL, clerkId, () => post(clerkId, "/payments", { method: "Cash", amount: 150 }));
   const chargeBack = await post(clerkId, `/charges/${charge}/reverse`, { reason: "ADM1TEST" });
   const paymentBack = await post(clerkId, `/charges/${payment}/reverse`, { reason: "ADM1TEST" });
   made.push(charge, payment, chargeBack, paymentBack);

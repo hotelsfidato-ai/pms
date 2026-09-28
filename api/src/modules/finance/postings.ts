@@ -318,6 +318,18 @@ postings.post("/:code/stays/:id/charges/:postingId/reverse", async (c) => {
 
     const p = rows[0];
     if (!p) return refuse("Posting not found.");
+    if (p.already) return refuse("That posting has already been reversed.");
+    if (p.reverses_id) return refuse("A reversal cannot itself be reversed.");
+    /* A line on a closed day reverses on its own day, which the database
+       refuses (012), and this said "Something went wrong". The owner's D24-9
+       and D25-11: every charge is corrected on Closed days (the night audit's
+       CORRECTABLE); a payment, refund or discount is not changed at all. */
+    if (p.day_closed) {
+      return refuse(["payment", "refund", "discount", "tax"].includes(p.category)
+        ? "This day is closed. Its payments, refunds and discounts are not changed - put the difference right today."
+        : "This day is closed - correct it on Closed days.");
+    }
+
     if (!reason) return refuse("Say why it is being reversed. The reason stays on the line.");
     /* A PAYMENT IS UNDONE BY A MANAGER (the owner's D27-125, QA FI-5): a
        clerk could take cash and reverse the receipt. The owner, an
@@ -335,18 +347,6 @@ postings.post("/:code/stays/:id/charges/:postingId/reverse", async (c) => {
         return refuse(PAYMENT_REVERSAL_WHO);
       }
     }
-    if (p.already) return refuse("That posting has already been reversed.");
-    if (p.reverses_id) return refuse("A reversal cannot itself be reversed.");
-    /* A line on a closed day reverses on its own day, which the database
-       refuses (012), and this said "Something went wrong". The owner's D24-9
-       and D25-11: every charge is corrected on Closed days (the night audit's
-       CORRECTABLE); a payment, refund or discount is not changed at all. */
-    if (p.day_closed) {
-      return refuse(["payment", "refund", "discount", "tax"].includes(p.category)
-        ? "This day is closed. Its payments, refunds and discounts are not changed - put the difference right today."
-        : "This day is closed - correct it on Closed days.");
-    }
-
     /* The reversal is its OWN row, pointing at what it undoes. The
        original stays exactly as it was — that is the whole point of an
        append-only ledger, and it is why the posting count goes UP.
@@ -467,6 +467,20 @@ export async function takeFolioPayment(
   let pan: string | null = null;
   let form97 = false;
   if (method === "cash") {
+    /* EVERY RUPEE BELONGS TO A SHIFT (the owner's D27-118, QA FI-13): cash
+       taken with no drawer open showed "Cash taken ₹0" on the drawer opened
+       later. The person taking it must hold an open drawer here - the drawer
+       counts what its holder took (app.cashier_expected_cash). */
+    const { rows: drawer } = await client.query(
+      `select 1 from cashier_shifts
+        where hotel_id = $1 and staff_id = app.current_user_id() and closed_at is null`,
+      [hotelId]);
+    if (!drawer.length) {
+      return {
+        ok: false,
+        reason: "Open your cash drawer first (Cashiering): cash is taken only into an open drawer, so every rupee belongs to a shift. Card, UPI and the rest need no drawer.",
+      };
+    }
     const over = overCashLimit(await payer.cashTaken(), amount,
       "card, UPI, cheque or bank transfer");
     if (over) return { ok: false, reason: over };
