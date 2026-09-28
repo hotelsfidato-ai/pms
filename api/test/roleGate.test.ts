@@ -463,7 +463,10 @@ describe("the reads that hand out a guest's passport or ID number (D25-38)", () 
        (grep id_number, passport, visa in api/src). A new one goes here. */
     expect(Object.keys(READ_RULES).sort()).toEqual([
       `GET ${H}/form-c`, `GET ${H}/online-checkin`, `GET ${H}/reports/c-form`,
-    ]);
+      /* Not an ID read: telemetry's System health screen (150, D27-91), owner and
+         admin only. Round B's read rules for every GET replace this list. */
+      `GET ${H}/system-health`,
+    ].sort());
     const mounted = new Set(app.routes.map((r) => `${r.method} ${r.path}`));
     for (const key of Object.keys(READ_RULES)) expect(mounted.has(key), key).toBe(true);
   });
