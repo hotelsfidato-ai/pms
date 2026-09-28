@@ -11,7 +11,36 @@ Work that touches the core or several services still goes in the root
 
 ---
 
-## 2026-09-27 · The group's name and logo, one setting for every bill (D27-53, D27-65)
+## 2026-09-28 · System health and telemetry on our own server (D27-91, D27-92)
+
+**Asked for:** the owner's "a GUI for the server so that I understand what is
+going on" and "telemetry to measure all the things": a System health screen
+for the owner and admins, from our own data, telemetry kept 180 days
+(CERT-In), no guest data ever. Branch `ops/health-telemetry-28sep`.
+**The owner decided (28 Sep):** the plan as shown; a hotel's day amber when
+yesterday is not closed yet, red at two days or more; the backup read from the
+nightly log; no check on the live server.
+**Shipped:** `api/src/telemetry.ts` (core, the master's yes): one middleware
+after CORS counting every request by route PATTERN, method and status per
+minute with a 10-step time histogram; 5xx by error KIND (SQLSTATE and
+constraint, or class name); pool queries over 1 s by SQL name with literals
+stripped; written once a minute through `app.record_telemetry()`, which also
+deletes rows past 180 days. The server's error log line now writes the route
+pattern and error kind with the stack frames, never the address or message.
+Migration 150 "telemetry" (two tables, RLS read by
+`app.reads_system_health()`, no direct writes). `GET /:code/system-health`,
+roleGate READ_RULES (`role` view: owner, admin). The screen: server, database,
+disk, last backup tiles; requests, errors and 95% time for hour/day/week with
+sparklines; hotels' days; slowest routes; errors and slow queries. System
+section, order 25.
+**Found:** ADM-14 (the default privileges; first numbered ADM-11, renumbered at merge), ADM-12 (phone header), ADM-13 (query names); `pg_database_size` takes 0.77 s on
+this Windows Postgres (walks every file), fine for a screen opened now and then.
+**Proved:** see the root report to the master (gates, build, screens).
+**Left open:** the owner sets up UptimeRobot on `/health`; the live server's
+backup log readability is seen only after the release (the owner chose no
+server check); the last minute's counts are lost on a restart (ponytail note
+in telemetry.ts).
+, one setting for every bill (D27-53, D27-65)
 
 **Asked for:** the owner's D27-53 (one logo for the whole group, chosen in
 Settings, printed on every bill; a setting, not code, D21-27) and D27-65 (the

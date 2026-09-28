@@ -33,6 +33,48 @@ the demo's shortest.
 
 ## Fixed — the solution is here; do not work it out again
 
+### ADM-13 · A slow query's name was mangled by an apostrophe in a SQL comment - FIXED 28 September, before merge
+
+**Found** — 28 September, opening System health with real traffic. A query
+commented "A group member's plus its room" showed as "member?s plus its room.
+The guest was quoted the GROUP?S NAME...": the `'` in the comment opened a
+"string", and the strip ran to the next `'`. Nothing leaked (it over-strips),
+but the name was unreadable.
+
+**Fixed** — `queryName` takes out `/* */` and `--` comments before literals;
+a test in api/test/modules/admin/systemHealth.test.ts holds it.
+
+**The rule** — strip comments before literals when naming SQL.
+
+### ADM-12 · System health's period switch crushed the Requests heading at phone width - FIXED 28 September, before merge
+
+**Found** — 28 September, the screen at 390 px: the switch sat in the card
+header's actions, and the title and description wrapped one word per line.
+
+**Fixed** — the switch sits in the card's body, above the tiles.
+
+**The rule** — a card header's actions take only a button; a control as wide
+as a segmented switch goes in the body.
+
+### ADM-14 · The telemetry tables were writable by the API although the migration "revoked" it - FIXED 28 September, before merge
+
+**Found** — 28 September, by the database test's "nobody through the
+application can delete the record": it FAILED. The migration said
+`revoke all ... from public; grant select ... to pms_app`, meaning read only.
+But 010's `alter default privileges` gives `pms_app` select, insert, update and
+delete on every new table in `public`, and a revoke from `public` does not
+touch a grant made to `pms_app` by name. Row security happened to stop the
+delete (no delete policy, so 0 rows), which is why nothing was lost - but the
+grant was there.
+
+**Fixed** — `revoke all ... from public, pms_app`, then grant select. The test
+now proves `pms_app` cannot delete or insert.
+
+**The rule** — a table meant to be read-only for the API must revoke from
+`pms_app` by name; `from public` is not enough in this schema. Check with
+`information_schema.role_table_grants`, not by reading the migration.
+
+
 ### ADM-10 · The group logo's SVG check could hold the API for minutes on a 211-byte file - FIXED 27 September, before merge
 
 **Found** — 27 September, re-reading `api/src/modules/admin/groupSettings.ts`
