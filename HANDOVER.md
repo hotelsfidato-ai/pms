@@ -76,6 +76,8 @@ in flight (28 Sep)   release/fixes-28sep: ten fixes (GM takeover of a two-hotel 
                      a fix round is needed before the pilot.
                      ops/health-telemetry: System health screen + telemetry kept on our
                      server (D27-91, D27-92), migration 150.
+                     tools/print-samples-28sep: `npm run print-samples` (D27-110..112) -
+                     31 PDFs + index in .local\print-samples\<date_time>\; to merge.
 planned, not started The one face plan (https://claude.ai/artifact/EzrcpNGQudWLYVV7zMtZLH,
                      D27-98..108): the CRS and the market-to-revenue app stay unchanged;
                      the PMS reads them; vouchers and email through the CRS's n8n, other

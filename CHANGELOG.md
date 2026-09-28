@@ -50,6 +50,44 @@ Write it **as you go**, not at the end from memory. Copy this shape:
 
 ---
 
+## 2026-09-28 · Print samples: every document and report as a PDF, one command (D27-110..112)
+
+**Asked for:** "all the demo receipts, invoices and reports ... every report or
+print output" as PDFs for the owner's approval, in `.local\print-samples\`,
+demo data only, made by headless Chrome on a throwaway profile, one command.
+Plan approved by the owner ("yes to all"): skip the interim bill (no Print
+button), sample round figures on the scratch database, reports printed both
+ways. Plan: `docs/briefs/print-samples-plan.md`.
+
+**Shipped**
+- `scripts/print-samples.mjs` + `npm run print-samples`. There is no new dependency: Chrome is driven through its DevTools Protocol with Node's own WebSocket and fetch.
+- What one run does:
+  - builds a scratch database, `fidato_print_samples` (migrations, demo, demo history, test sign-ins)
+  - starts the API with Firebase, n8n and SU blanked, plus Vite in-process, on free ports
+  - makes the missing states through the API: invoice, credit note, VAT bill and VAT credit note, a restaurant order (KOT, settled), a Form III check-in, a laundry docket, a stock item, an approved purchase order, room cards
+  - prints the screens in headless Chrome (a `.local` profile, `--host-resolver-rules` so nothing but this PC resolves) and fetches the server's PDFs, with three tries each
+  - writes a dated folder with `index.html` and `log.txt`
+  - drops the database and deletes the profile and cache, even on failure
+- No app code changed.
+
+**Proved**
+- The full run `2026-09-28_1200`: **31 printed, 8 not printed**. All 8 are the planned "no print exists" list: interim bill, booking voucher, spa bill, banquet bill, payment receipt, registration card, night audit run/close day/cashiering, and day book.
+- Read back: tax invoice, credit note, VAT credit note, 80mm bill, Form III, room cards, count sheet, laundry docket, purchase order and manager report.
+- Clean-up: no database, profile, cache, lock or process left. `node --check` passes; `tsc` does not cover `.mjs`.
+
+**Found** (for the owner / the lanes, not fixed here)
+- The VAT credit note's footer repeats the place: "Akkalkot, Solapur District, Maharashtra 413216, Akkalkot, MH".
+- A check-in into an occupied or unready room answered "Record the guest's ID document…" although the ID was given. The same body succeeded on a free room, so the refusal names the wrong reason.
+- Form III prints the arrival as the wall clock (28 Sep), not the business date (25 Aug). This only shows because the demo's business date is in the past.
+- Under load (another chat's gates) the API needed over 90 s to start, and one database connection timed out. That is why the script now waits 5 min for the API and retries each document.
+
+**Left open**
+- The interim bill has no Print button: finance's to add, then one line in the script's list.
+
+**Commits:** see `git log tools/print-samples-28sep`
+
+---
+
 ## 2026-09-25/28 · The master: Phase 1, Form III, the logo, the whole redesign, the audits, and the release held for ten fixes
 
 **Asked for:** start Phase 1 of the platform plan; bring Form C up to Form III;
