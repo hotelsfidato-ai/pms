@@ -150,3 +150,5 @@
 | D27-146 | The Viewer | **Keeps reading everything its row allows** |
 | D27-147 | The revenue manager and the money reports (round B) | **Loses the City ledger, Guest ledger and Cashier shift reports; keeps the Manager report**, occupancy, ADR, pickup and the statistics reports |
 | D27-148 | More of a dish the kitchen already has (round C) | **Fix now: tapping a sent dish again adds a new line for the next KOT**, instead of silently adding to the sent line the kitchen never sees |
+| D27-149 | QA's leftovers (28 Sep) | **Round F before the release**: the 7 wrong results no round covers (RP-1 to RP-4, AD-1, AD-2, GP-2) and the 37 cosmetic rows; its check runs last, after round D |
+| D27-150 | Correcting a billed banquet function (round E's question a) | **Reopen the bill, only while no tax invoice stands on it**; once invoiced, only a credit note corrects it |
