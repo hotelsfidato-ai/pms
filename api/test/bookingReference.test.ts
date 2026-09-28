@@ -87,16 +87,24 @@ describe("a booking reference", () => {
      the hotel was still working 25 August. Moved inside a transaction
      that is rolled back, to a month no clock is in. */
   it("is FH, the hotel's code, the month of the hotel's business date, and a number", async () => {
+    /* A hotel of its own, made and gone inside one rolled-back transaction:
+       in the full suite PUN has closed days, and a closed day overrides the
+       column (app.business_date, 023). */
     const c = await pool.connect();
     try {
       await c.query("begin");
-      await c.query("update hotels set business_date = '2031-03-15' where id = $1", [pun]);
+      await c.query(
+        "select set_config('app.user_id', (select id::text from staff where email = 'owner@fidato.in'), true)");
+      const { rows: made } = await c.query<{ id: string }>(
+        "select app.provision_property_unchecked('BKR','Reference Month Test','Nowhere')::text as id");
+      const bkr = made[0]!.id;
+      await c.query("update hotels set business_date = '2031-03-15' where id = $1", [bkr]);
       const { rows } = await c.query<{ ref: string; today: string }>(
-        "select app.next_reference($1) as ref, app.business_date($1)::text as today", [pun]);
+        "select app.next_reference($1) as ref, app.business_date($1)::text as today", [bkr]);
       const { ref, today } = rows[0]!;
 
-      expect(today, "PUN has no closed day, so its column is its date").toBe("2031-03-15");
-      expect(ref).toMatch(/^FH-PUN-\d{4}-\d{4,}$/);
+      expect(today, "a hotel with no closed day is on its column's date").toBe("2031-03-15");
+      expect(ref).toMatch(/^FH-BKR-\d{4}-\d{4,}$/);
       expect(ref.split("-")[2], "the business month, not the clock's").toBe("3103");
     } finally {
       await c.query("rollback");

@@ -67,6 +67,7 @@ const walkIn = (roomNumber: string, nights: number) =>
   call(`/${CODE}/walk-ins`, "POST", {
     guestName: `Walk-in ${roomNumber} ${process.pid}`, roomNumber, nights,
     adults: 1, offeredTariff: 2000,
+    idSkipReason: "Test fixture - FD-1 asks every walk-in for an ID or a reason",
   });
 
 async function heldBooking(reference: string, from: string, to: string, roomNumber: string) {

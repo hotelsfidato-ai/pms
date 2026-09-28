@@ -104,7 +104,8 @@ describe("GU-1 · Edit guest", () => {
   /* A bare GET /guests/:id, mounted before people.ts, answered its
      /guests/returning as "No such guest here" - caught at the merge. */
   it("leaves the returning-guest and blacklist lookups theirs", async () => {
-    for (const path of ["returning?phone=9811100000", "blacklist-warnings?phone=9811100000"]) {
+    for (const path of ["returning?phone=9811100000",
+                        "blacklist-warnings?from=2029-05-10&to=2029-05-12"]) {
       const res = await app.request(`/api/hotels/5EL/guests/${path}`,
         { headers: { "x-dev-staff-id": uid("front_desk") } });
       expect(res.status, `${path}: ${await res.clone().text()}`).toBe(200);
