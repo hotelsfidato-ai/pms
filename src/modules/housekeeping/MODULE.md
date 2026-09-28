@@ -55,7 +55,12 @@ Two addresses, two page files. Menu gates (`nav.ts`): Housekeeping needs
   `disabled`, so a tap reaches it and the card says why in one grey line
   (`role="status"`): "Room 202 is already inspected.", "Room 209 needs
   cleaning first.", "… on this phone, waiting to sync" for a held tap. A room
-  already out of service shows one button, **Put back**.
+  already out of service shows one button, **Put back**. A tap that lands
+  moves the card at once and says so - "Room 210 is inspected." (the owner,
+  28 September, HK-12).
+- **The head** (27 September): six counts under Empty rooms. Each jumps to its
+  group with the Dashboard's arrow; Due out (no group here) and a zero stay
+  flat (the owner, 28 September, HK-13).
 - `flows/RepairFlow.tsx` — **Report a repair**, one dialog wherever a repair
   starts: the board's Repair (room fixed), Work orders' Raise one, and an
   equipment item's page (item fixed). What needs fixing, room, a tagged piece
@@ -93,7 +98,7 @@ cut out of the core's `api/src/routes/property.ts`, as the plan said.
 
 | Method | Path | What it does |
 |---|---|---|
-| GET | `/:code/housekeepers` | who can be given rooms — everyone with access to the property, housekeepers first |
+| GET | `/:code/housekeepers` | who can be given rooms — everyone with access to the property, housekeepers first, from `app.hotel_people` (149): names and roles, for any role at the property (HK-14) |
 | GET | `/:code/housekeeping/assignments` | whose rooms are whose, for a date (the business date if none is asked) |
 | PUT | `/:code/housekeeping/assignments/:number` | give a room to a person |
 | DELETE | `/:code/housekeeping/assignments/:number` | take it off them |
@@ -161,6 +166,12 @@ migrations that made or changed them:
 | `attachments` | the proof photo of a cost (`subject_table = 'work_order_costs'`) | `077_attachments.sql` (the core's) |
 | — (announces) | `rooms` (cleaning state, occupancy), `room_blocks`, `housekeeping_assignments`, `work_orders`: each change raises `<hotel id>:housekeeping` on the live channel `pos_changed` | **housekeeping changes are announced** (`103_…`, 17 September, HK-1) |
 
+**Who works here** (`149_who_works_here.sql`, 28 September, HK-14):
+`app.hotel_people(hotel)` - id, name, role, active of the people rostered at a
+hotel the caller works at. The roster, the sheet and the check on giving a room
+read it, because row security shows each person only their own `staff_hotels`
+line.
+
 The migration is `db/migrations/102_repairs_on_equipment.sql` — **refer to it by
 what it does**; renumbered 102 by the master at merge (099 to 101 were taken). Its
 database checks: `db/tests/modules/housekeeping.sql` (18). It replays (rerun.sh).
@@ -200,6 +211,10 @@ when another service needs one, and only through this file.
   on the master (Requests from this service). **D17-40: the assignee dropdown
   on each card stays as it is.** **D17-38: closing a repair while its item's
   request waits is refused, as built.**
+- **The owner's answers of 28 September** (this chat, "the buttons are not
+  working"): a marked room says so at once ("Room 210 is inspected."); a
+  count at the top jumps to its group, with an arrow; everyone sees their
+  own hotel's staff, names and roles, so a Hotel Manager can give rooms out.
 - **The owner's answers of 17 September** (`docs/briefs/decisions-2026-09-17.md`,
   and the questions asked the same morning) — build to them, do not re-ask:
   - **D17-8** the room card's words are **Clean · Inspected · Repair**, and a
@@ -331,6 +346,9 @@ The guards this service must respect:
 - `api/test/modules/housekeeping/repairs.test.ts` — every role at every repair
   door; Under repair / In use; costs with proof (seen to fail, 19 red).
 - `db/tests/modules/housekeeping.sql` — what the database refuses.
+- `api/test/modules/housekeeping/roster.test.ts` — a Hotel Manager and a
+  housekeeper see each other and not another hotel's; the Hotel Manager gives
+  a room out (seen to fail, 2 red).
 - `api/test/modules/housekeeping/live.test.ts` — every change the board shows
   announces `<hotel>:housekeeping`, never a bare hotel id (seen to fail, 5 red).
 - `housekeeping.test.tsx` "the board refreshes itself" — it reads the rooms

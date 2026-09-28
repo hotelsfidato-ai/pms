@@ -1,10 +1,11 @@
 import { useState, useEffect, useCallback } from "react";
+import { flushSync } from "react-dom";
 import { useLive } from "@/lib/useLiveOrders";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useParams } from "react-router";
 import {
   Check, CloudOff, RefreshCw, Sparkle, Wrench, BedDouble, UserRound, SprayCan, RotateCcw,
-  DoorOpen, Users, LogOut,
+  DoorOpen, Users, LogOut, ChevronRight,
 } from "lucide-react";
 import { cn } from "@/lib/cn";
 import { HeldError } from "@/lib/api";
@@ -220,8 +221,17 @@ export default function HousekeepingPage() {
        held, or it is refused with a reason. */
     try {
       const res = await markRoom(hotelId, room.number, state);
-      if (res.ok) qc.invalidateQueries();
-      else toast.error("Could not update", res.reason);
+      /* SAID, AND SHOWN, AT ONCE (the owner, 28 September: "I tried to click
+         inspect and that thing is not working"). It had worked, but the card
+         waited a second for every screen's data to come back: until then it
+         sat where it was, saying "needs cleaning first" of a room just
+         cleaned, and then the next room slid under the finger. */
+      if (res.ok) {
+        qc.setQueryData<HousekeepingRoom[]>(["housekeeping", hotelId, BUSINESS_DATE], (list) =>
+          list?.map((r) => (r.number === room.number ? { ...r, housekeeping: state } : r)));
+        toast.success(`Room ${room.number} is ${state}.`);
+        qc.invalidateQueries();
+      } else toast.error("Could not update", res.reason);
     } catch (error) {
       /* HeldError only — a refusal comes back through `res.ok` above,
          because the repository converts an ApiError into a reason. */
@@ -252,6 +262,14 @@ export default function HousekeepingPage() {
       : all.filter((r) => !r.occupied && r.housekeeping === key);
 
   const queuedFor = (number: string) => held.filter((q) => q.roomNumber === number);
+
+  /* A count at the top jumps to its group (the owner, 28 September). The
+     counts are of every room, so a name's sheet is let go first, or the
+     group may not be on the page to jump to. */
+  const jump = (key: string) => {
+    flushSync(() => setOnly(null));
+    document.getElementById(`hk-${key}`)?.scrollIntoView({ block: "start" });
+  };
 
   /* WAS max-w-2xl. That was right when every room was a full-width row
      and the page was read top to bottom on a phone — 672px keeps a line
@@ -289,7 +307,7 @@ export default function HousekeepingPage() {
 
       <StartHere className="mb-5" />
 
-      {rooms.data && everything.length > 0 && <BoardHead rooms={everything} />}
+      {rooms.data && everything.length > 0 && <BoardHead rooms={everything} onJump={jump} />}
 
       {/* Whose sheet. Scrolls sideways on a phone rather than wrapping
           into a block that pushes the rooms off the screen. */}
@@ -377,7 +395,7 @@ export default function HousekeepingPage() {
           const list = bucket(group.key);
           if (list.length === 0) return null;
           return (
-            <section key={group.key} data-hk-group={group.key} className="@container">
+            <section key={group.key} id={`hk-${group.key}`} data-hk-group={group.key} className="@container scroll-mt-4">
               <div className="flex items-center gap-2 mb-3">
                 <h2 className="text-md font-semibold text-ink-900">{group.label}</h2>
                 <StatusPill tone={group.tone}>{list.length}</StatusPill>
@@ -726,7 +744,7 @@ function SheetChip({ label, count, active, onClick }: {
    rooms are ready (clean or inspected); the six counts are the board's
    own groups with Due out, and the warm tiles are today's jobs while
    there are some. */
-function BoardHead({ rooms }: { rooms: HousekeepingRoom[] }) {
+function BoardHead({ rooms, onJump }: { rooms: HousekeepingRoom[]; onJump: (group: string) => void }) {
   const free = rooms.filter((r) => !r.occupied);
   const n = (key: string) => free.filter((r) => r.housekeeping === key).length;
   const dirty = n("dirty"), clean = n("clean"), inspected = n("inspected"), out = n("out-of-service");
@@ -763,32 +781,40 @@ function BoardHead({ rooms }: { rooms: HousekeepingRoom[] }) {
       </div>
       <div className="col-span-12 xl:col-span-7 grid grid-cols-2 sm:grid-cols-3 gap-2">
         <HeadCount icon={SprayCan} chip={dirty ? "neutral" : "green"} label="Needs cleaning" n={dirty}
-                   job={dirty > 0 ? "orange" : undefined} goodAtZero />
-        <HeadCount icon={Sparkle} chip="blue" label="Clean" n={clean} />
-        <HeadCount icon={Check} label="Inspected" n={inspected} />
-        <HeadCount icon={Users} label="In house" n={inHouse} />
+                   job={dirty > 0 ? "orange" : undefined} goodAtZero onPress={() => onJump("dirty")} />
+        <HeadCount icon={Sparkle} chip="blue" label="Clean" n={clean} onPress={() => onJump("clean")} />
+        <HeadCount icon={Check} label="Inspected" n={inspected} onPress={() => onJump("inspected")} />
+        <HeadCount icon={Users} label="In house" n={inHouse} onPress={() => onJump("occupied")} />
+        {/* No group of its own on this board, so it stays flat. */}
         <HeadCount icon={LogOut} chip="yellow" label="Due out" n={dueOut} job={dueOut > 0 ? "yellow" : undefined} />
-        <HeadCount icon={Wrench} label="Out of service" n={out} warn={out > 0} />
+        <HeadCount icon={Wrench} label="Out of service" n={out} warn={out > 0} onPress={() => onJump("out-of-service")} />
       </div>
     </div>
   );
 }
 
-function HeadCount({ icon: Icon, chip = "neutral", label, n, job, warn, goodAtZero }: {
+/* A count that jumps to its group has an arrow and presses, as the
+   Dashboard's do (the Tappable Rule, D27-54). They looked the same and did
+   nothing. A zero has no group to jump to, so it stays flat. */
+function HeadCount({ icon: Icon, chip = "neutral", label, n, job, warn, goodAtZero, onPress }: {
   icon: React.ComponentType<{ className?: string }>;
   chip?: "neutral" | "green" | "blue" | "yellow";
   label: string; n: number;
   job?: "orange" | "yellow"; warn?: boolean; goodAtZero?: boolean;
+  onPress?: () => void;
 }) {
-  return (
-    <div className={cn(
-      "grid grid-rows-[auto_auto] gap-y-1 rounded-lg ring-1 ring-inset px-3.5 py-3",
-      job === "orange" ? "bg-brand-orange-50 ring-brand-orange-100"
-        : job === "yellow" ? "bg-brand-yellow-50 ring-brand-yellow-100"
-          : "bg-white ring-grey-200",
-    )}>
-      <p className="row-start-2 text-sm leading-[18px] text-grey-600 whitespace-nowrap">{label}</p>
-      <p className="row-start-1 flex items-center gap-2">
+  const tappable = !!onPress && n > 0;
+  const className = cn(
+    "grid grid-rows-[auto_auto] gap-y-1 rounded-lg ring-1 ring-inset px-3.5 py-3 text-left",
+    job === "orange" ? "bg-brand-orange-50 ring-brand-orange-100"
+      : job === "yellow" ? "bg-brand-yellow-50 ring-brand-yellow-100"
+        : cn("bg-white ring-grey-200", tappable && "hover:bg-grey-50"),
+    tappable && "press-tile cursor-pointer focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-orange",
+  );
+  const body = (
+    <>
+      <span className="row-start-2 text-sm leading-[18px] text-grey-600 whitespace-nowrap">{label}</span>
+      <span className="row-start-1 flex items-center gap-2">
         <IconChip size={24} tone={chip}><Icon /></IconChip>
         <b className={cn(
           "inline-flex items-center gap-1 text-xl leading-6 font-semibold tabular tracking-[-0.02em]",
@@ -798,7 +824,11 @@ function HeadCount({ icon: Icon, chip = "neutral", label, n, job, warn, goodAtZe
           {n}
           {goodAtZero && n === 0 && <Check className="size-3.5" aria-hidden />}
         </b>
-      </p>
-    </div>
+        {tappable && <ChevronRight className="ml-auto size-4 text-grey-400 shrink-0" aria-hidden />}
+      </span>
+    </>
   );
+  return tappable
+    ? <button type="button" onClick={onPress} className={className}>{body}</button>
+    : <div className={className}>{body}</div>;
 }

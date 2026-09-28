@@ -14,7 +14,7 @@ entries stay here: they are the reason the fault does not come back.
 
 ## Open — not fixed
 
-Nothing open (26 September).
+Nothing open (28 September). HK-14's twins in finance and POS are the master's (below).
 
 ---
 
@@ -131,6 +131,38 @@ Two tests open the board in a browser with no IndexedDB; the board's read of the
 **Prevented** — the error state is drawn only when there is nothing to show (`rooms.error && rooms.data === undefined`); the Offline line says the signal has gone. Measured: API stopped, a poll failed (`ERR_CONNECTION_REFUSED`), 18 rooms stayed. `housekeeping.test.tsx` "keeps them when that read fails" — seen to fail with the old condition.
 
 **The rule** — Adding a poll changes what "failed" means for every branch that reads the query's error. Read them all before the first interval fires.
+
+### HK-12 · Inspected looked as if it did nothing - FIXED 28 September
+
+**Found** - the owner, 28 September, on the redesign's local copy, as the owner, desk and phone: "I tried to click inspect and that thing is not working." Measured: the tap WAS saved (PUT 200 in about 30 ms), but nothing said so, and the card stayed where it was until every query in the app came back (`qc.invalidateQueries()`), 1.2 s later; then it jumped to the Inspected group and the next room, looking just like it, slid under the finger. In that second the card still said "Room 304 needs cleaning first." beside a toast saying it was clean. The live code (`0b4766e`) has the same.
+
+**Fixed** - `pages/Housekeeping.tsx` `apply`: on success the board writes the accepted state into its own rooms at once (`setQueryData`), then says "Room 210 is inspected." / "Room 210 is clean." (the owner's words, 28 September), then refreshes as before. `housekeeping.test.tsx`: "says at once that a room is inspected" and "moves the room the moment it is marked" - each seen failing on the old page.
+
+**The rule** - A write the server has accepted is shown at once and said at once. Waiting for a refetch to prove it looks exactly like a button that does nothing.
+
+### HK-13 · The board's six counts looked like the Dashboard's and did nothing - FIXED 28 September
+
+**Found** - 28 September, pressing every control while chasing HK-12. The redesign's head (27 September) drew six count tiles the same shape as the Dashboard's, which open their lists; these opened nothing - the Tappable Rule broken the other way (D27-54).
+
+**Fixed** - the owner's answer: a count jumps to its group, with the Dashboard's arrow; Due out has no group on this board and stays flat, and so does a zero (nothing to jump to). A person's sheet is let go first, since the counts are of every room. Test: "jumps from a count at the top to its group" - seen failing on the old page.
+
+**The rule** - A tile that looks like one that opens something must open something, or stop looking like it.
+
+### HK-14 · A Hotel Manager could give rooms to nobody but themselves - FIXED 28 September
+
+**Found** - 28 September, the same round, as the Hotel Manager: the assignee list held only themselves, the name chips only themselves and Unassigned 18, and every room read Unassigned although three were Test Housekeeper's. A Hotel Manager giving a room through the API was refused "That person does not work at this property." A housekeeper saw only themselves. The owner, an admin and the GM saw everyone. Live code the same.
+
+**Why** - the routes read `staff` joined to `staff_hotels`, and row security shows each person only their own `staff_hotels` line unless they run the hotel (018, 084, 133). 027's "anyone reads the staff they share a property with" looks the colleague up in that same table, under its row security, so it has never let anybody through. Measured as the Hotel Manager in `pms_app`: 1 of 10 roster lines, 1 staff row.
+
+**Fixed** - the owner's answer, "Everyone sees their hotel's staff" (names and roles, at their own hotel): migration **who works here** (149), `app.hotel_people(hotel)` - SECURITY DEFINER, id, name, role and active only, for a hotel in `app.auth_hotel_ids()`. The three reads in `housekeeping.ts` (who can be given rooms, the sheet, the check on giving one) use it. The tables' own rules are unchanged: opening `staff_hotels` would have brought 027 to life for every column of `staff` (email, phone) through any route that lists people, which is more than the owner said. `api/test/modules/housekeeping/roster.test.ts` (4) - 2 failed on the old routes.
+
+**Left for the master** - the same read, and so the same fault, in `finance/cashier.ts` (whom to hand the drawer to) and `pos/till.ts` (the waiters list): read, not run - for anyone who does not run the hotel they can find no colleague. Not this service's files; `app.hotel_people` is there for them. One assignment for a person no longer rostered at the hotel now drops off the sheet (the owner used to see it with no role).
+
+**The rule** - A policy that looks something up in another row-secured table is evaluated under THAT table's rules too (root MEMORY 068's lesson). Test a colleague rule as the colleague, never as the owner.
+
+### Seen once, not reproduced - 28 September
+
+A room given to somebody from the picker, as the owner, sent its PUT and nothing came back for more than 5 s; the same call from outside the browser answered in 0.1 s, and eight later picks in the browser answered in 25-270 ms. Not reproduced, so not fixed. If it comes back: the network log and `pg_stat_activity` at that moment.
 
 ---
 
