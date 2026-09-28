@@ -3184,12 +3184,14 @@ till.get("/:code/till/waiters", async (c) => {
     const hotelId = await hotelFor(client, c.req.param("code"));
     if (!hotelId) return null;
 
+    /* From app.hotel_people (149, the owner's D27-97): read from `staff` and
+       `staff_hotels` it was the caller alone for anyone who does not run the
+       hotel - row security shows each person only their own roster line. */
     const { rows } = await client.query<{ id: string; name: string }>(
-      `select s.id::text, s.full_name as name
-         from staff s
-         join staff_hotels sh on sh.staff_id = s.id
-        where sh.hotel_id = $1 and s.is_active
-        order by s.full_name`,
+      `select id::text, full_name as name
+         from app.hotel_people($1)
+        where is_active
+        order by full_name`,
       [hotelId],
     );
     return { waiters: rows };
