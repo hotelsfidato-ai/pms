@@ -148,3 +148,4 @@
 | D27-144 | Guest messages (RO-3) | **Follow `customer` view**; the revenue manager, housekeeping, kitchen manager and till lose them |
 | D27-145 | The revenue manager | **Loses Company accounts (money owed); keeps Booking sources (commission)** |
 | D27-146 | The Viewer | **Keeps reading everything its row allows** |
+| D27-147 | The revenue manager and the money reports (round B) | **Loses the City ledger, Guest ledger and Cashier shift reports; keeps the Manager report**, occupancy, ADR, pickup and the statistics reports |
