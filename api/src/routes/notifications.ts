@@ -2,6 +2,7 @@ import { Hono } from "hono";
 import { withSession } from "../auth.ts";
 import type { Client } from "../db.ts";
 import { businessDateFor } from "../businessDate.ts";
+import { can, type Role } from "../permissions.ts";
 
 /* Split out of billing.ts on 15 September in the service-folder move
    (docs/SERVICE-FOLDERS-PLAN.md). The core's: the bell reads arrivals,
@@ -35,11 +36,21 @@ notifications.get("/:code/notifications", async (c) => {
   const asOnParam = c.req.query("asOn");
   const code = c.req.param("code");
 
-  const body = await withSession(c.get("subject"), async (client) => {
+  const body = await withSession(c.get("subject"), async (client, session) => {
     const hotelId = await hotelIdFor(client, code);
     if (!hotelId) return null;
     const bd = await businessDateFor(client, hotelId);
     const asOn = asOnParam ?? bd;
+
+    /* THE BELL FOLLOWS THE READ RULES (D27-153): a guest's name only for a
+       role holding `customer`, a balance only for one holding `invoice`.
+       Everybody else still gets the alert, without those details. */
+    const role: Role | null = session.isGroupAdmin ? "owner"
+      : ((await client.query<{ role: Role }>(
+          "select role from staff_hotels where staff_id = $1 and hotel_id = $2",
+          [session.staffId, hotelId])).rows[0]?.role ?? null);
+    const names = role !== null && can(role, "view", "customer");
+    const sums = role !== null && can(role, "view", "invoice");
 
     const { rows } = await client.query<{
       kind: string; id: string; label: string; detail: string; amount: string | null;
@@ -108,7 +119,7 @@ notifications.get("/:code/notifications", async (c) => {
       out.push({
         id: "arrivals-outstanding", hotelId: code, category: "reservation",
         title: `${arrivals.length} arrival${arrivals.length === 1 ? "" : "s"} not yet checked in`,
-        body: arrivals.slice(0, 3).map((a) => `${a.label} · room ${a.detail}`).join(", ")
+        body: arrivals.slice(0, 3).map((a) => (names ? `${a.label} · room ${a.detail}` : `room ${a.detail}`)).join(", ")
           + (arrivals.length > 3 ? ` and ${arrivals.length - 3} more` : ""),
         isRead: false, at, link: `/h/${code}/arrivals`, actionRequired: true,
       });
@@ -117,8 +128,8 @@ notifications.get("/:code/notifications", async (c) => {
     for (const o of by("owing")) {
       out.push({
         id: `balance-${o.id}`, hotelId: code, category: "payment",
-        title: `${money(Number(o.amount))} outstanding on room ${o.detail}`,
-        body: `${o.label} is due out today. Settle the folio before the room releases.`,
+        title: sums ? `${money(Number(o.amount))} outstanding on room ${o.detail}` : `A balance is outstanding on room ${o.detail}`,
+        body: `${names ? o.label : "The guest"} is due out today. Settle the folio before the room releases.`,
         isRead: false, at, link: `/h/${code}/folios`, actionRequired: true,
       });
     }
@@ -126,7 +137,7 @@ notifications.get("/:code/notifications", async (c) => {
     for (const r of by("refund")) {
       out.push({
         id: `refund-${r.id}`, hotelId: code, category: "payment",
-        title: `${money(Number(r.amount))} to refund - ${r.label}`,
+        title: `${sums ? `${money(Number(r.amount))} to refund` : "Money to refund"} - ${names ? r.label : `room ${r.detail}`}`,
         body: `Room ${r.detail} is paid beyond its charges. The hotel is holding money that is not its own.`,
         isRead: false, at, link: `/h/${code}/folios`, actionRequired: true,
       });
@@ -140,6 +151,23 @@ notifications.get("/:code/notifications", async (c) => {
         body: `Room ${blocked.map((b) => b.label).join(", ")}. Occupancy divides by the sellable house, not the physical one.`,
         isRead: false, at, link: `/h/${code}/housekeeping`, actionRequired: false,
       });
+    }
+
+    /* A guest's message to the desk (QA GP-5): it waited in Guest messages
+       and nothing told the desk. Only for the roles that read guests'
+       messages (D27-144). */
+    if (names) {
+      const { rows: [waiting] } = await client.query<{ n: number }>(
+        `select count(*)::int as n from guest_requests
+          where hotel_id = $1 and kind = 'desk' and status = 'open'`, [hotelId]);
+      if (waiting!.n) {
+        out.push({
+          id: "guest-messages-waiting", hotelId: code, category: "customer",
+          title: `${waiting!.n} guest message${waiting!.n === 1 ? "" : "s"} waiting`,
+          body: "Written to the front desk from the guest's own page. Read it and mark it handled.",
+          isRead: false, at, link: `/h/${code}/guest-messages`, actionRequired: true,
+        });
+      }
     }
 
     const reversals = by("reversal");
