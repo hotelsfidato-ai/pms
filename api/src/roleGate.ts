@@ -642,12 +642,14 @@ export const READ_RULES: Readonly<Record<string, Rule>> = {
   [`GET ${H}/equipment`]: own("equipment/grants.ts"),
   [`GET ${H}/equipment/items/:id`]: own("equipment/grants.ts"),
   [`GET ${H}/equipment/export`]: own("equipment/grants.ts"),
-  [`GET ${H}/equipment/options`]: see("equipment", "the equipment register"),
+  [`GET ${H}/equipment/options`]: own("equipment/grants.ts"),
   [`GET ${H}/purchasing`]: own("purchasing/purchasingGrants.ts: VIEW_ROLES"),
   [`GET ${H}/purchasing/requests/:id`]: own("purchasing/purchasingGrants.ts: VIEW_ROLES"),
   [`GET ${H}/purchasing/requesters`]: own("purchasing/purchasingGrants.ts: VIEW_ROLES"),
   [`GET ${H}/purchasing/orders/:file{[0-9a-f-]+\\.pdf}`]: own("purchasing/purchasingGrants.ts: VIEW_ROLES"),
-  [`GET ${H}/places`]: see(["stock", "equipment", "purchasing"], "places and suppliers"),
+  /* D17-1: anybody rostered may read them (api/test/places.test.ts); a
+     place or a supplier is neither a guest nor money. */
+  [`GET ${H}/places`]: anyone("places and suppliers, which several screens pick from"),
   [`GET ${H}/approvals`]: see(["notification", "equipment", "purchasing"], "approvals"),
   [`GET ${H}/approval-rules`]: see("setting", "who approves what"),
   [`GET ${H}/attachments`]: see(["purchasing", "equipment", "room_config"], "attached files"),

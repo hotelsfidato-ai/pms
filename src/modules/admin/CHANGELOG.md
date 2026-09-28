@@ -37,6 +37,7 @@ Bill tab and totals, the Rooms board and group screens show a dash where a
 balance is withheld, `getFolio` treats a refusal as no figure; People and the
 property page ask "Remove X from 5EL?" first.
 After round E merged (af8acbf) the function page carries its bill (BQ-1): `WITHHELD` drops its `folioId`, `bill` and `invoice` for the same roles, so no Bill card is drawn for them.
+The full gates found five older tests that pinned the old answers: the Dashboard for every role (now "at least one screen", D27-141), a hotel's Admin making an Admin (D27-140), the till reading approvals, places read by anybody rostered (kept: `anyone`), and the equipment options' own sentence (kept: `own`).
 **Found:** cp6 631ce1f's own roleGate test was red: System health added a
 READ_RULES line and the D25-38 test listed READ_RULES whole (fixed here).
 **Proved:** see DEFECTS ADM-15 and ADM-16 and the round's report.

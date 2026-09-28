@@ -12,6 +12,10 @@ own check (rule `own`) · anything else: the gate let them in.
 
 **1,833 requests, 0 disagreements with the rules.**
 
+Changed after this sweep, from the full gates: `/places` is `anyone` (D17-1: anybody
+rostered may read places and suppliers; its test says so) and `/equipment/options`
+is `own` (the register's own check, in its own words). The table shows them as swept.
+
 | GET | rule | owner | admin | gm | hotel_manager | revenue_manager | front_desk | housekeeping | kitchen_manager | chef | pos | stores | finance | read_only |
 |---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|
 | `/api/admin/hotels` | own | 200 | 403r | 403r | 403r | 403r | 403r | 403r | 403r | 403r | 403r | 403r | 403r | 403r |
