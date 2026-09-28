@@ -29,7 +29,7 @@ a question for the owner. Seen once; not reproduced on demand.
 
 ## Fixed
 
-### FIN-13 · A tax invoice or credit note went out with no hotel GSTIN — FIXED 28 September (release fixes)
+### FIN-14 · A tax invoice or credit note went out with no hotel GSTIN — FIXED 28 September (release fixes)
 
 **Found** — 28 September, the compliance check before the one release (D27-89). `invoices.ts` copied `hotels.gstin` into the invoice even when it was null, and the document printed "-" as the supplier's GSTIN (CGST Rule 46(a); a credit note, Rule 53).
 
@@ -39,7 +39,7 @@ a question for the owner. Seen once; not reproduced on demand.
 
 **The rule** — A statutory field that can be empty is a refusal before the number, not a dash on the document.
 
-### FIN-12 · A company's tax invoice printed the guest's home address — FIXED 28 September (release fixes)
+### FIN-13 · A company's tax invoice printed the guest's home address — FIXED 28 September (release fixes)
 
 **Found** — 28 September, the same check. `recipient_name` was the company, `recipient_address` the guest's `guest_documents.address_line`; `companies.address_line` was never read (CGST Rule 46(e)).
 
@@ -49,7 +49,7 @@ a question for the owner. Seen once; not reproduced on demand.
 
 **The rule** — The recipient's name and address come from the same party.
 
-### FIN-11 · A double tap on Post charge or Take payment posted twice — FIXED 28 September (release fixes)
+### FIN-12 · A double tap on Post charge or Take payment posted twice — FIXED 28 September (release fixes)
 
 **Found** — 28 September, the deep audit. Neither button was disabled while its request was on the way, and neither route read an idempotency key, though `folio_postings.idempotency_key` and its unique index exist since 011.
 

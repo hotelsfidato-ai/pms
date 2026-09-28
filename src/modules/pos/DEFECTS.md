@@ -178,7 +178,7 @@ Nine reads in `data/till.ts` ended in `catch { return [] }` (or `null`): the men
 
 **The rule** — A value kept for offline use must never be overwritten by a read that failed. A `catch` that returns a default turns a failure into a fact, and a cache believes facts.
 
-### POS-19 · Two Settle presses on one bill both took the money — FIXED 28 September (release fixes)
+### POS-20 · Two Settle presses on one bill both took the money — FIXED 28 September (release fixes)
 
 **Found** — 28 September, the release review before 40c9510 went live.
 
@@ -190,7 +190,7 @@ Nine reads in `data/till.ts` ended in `catch { return [] }` (or `null`): the men
 
 **The rule** — A race test proves nothing until it has failed on the code it guards; check that the two requests really overlap.
 
-### POS-20 · The first bill settled to a banquet function would have stopped every deploy after it — FIXED 28 September (release fixes)
+### POS-21 · The first bill settled to a banquet function would have stopped every deploy after it — FIXED 28 September (release fixes)
 
 **Found** — 28 September, the deep audit (D27-89). `038` dropped and re-added `pos_orders_payment_valid` without 'function', unguarded; `099` widens it, guarded. On every replay 038 put the narrow check back, a settled-to-a-function row failed it, and the one migration transaction rolled back: `launch.sh` stops.
 

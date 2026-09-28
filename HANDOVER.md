@@ -47,23 +47,48 @@ seam); a test enforces it.
 
 ## 2 · Where it stands
 
-### 28 September — the release waits on ten fixes (branch `release/fixes-28sep`)
+### 28 September — read this first
 
-The owner held the release for four fixes, then added six (D27-89), then made
-it ONE release with everything (D27-93): `release/fixes-28sep` is cp6 merged
-with all ten, committed here, not pushed; the master merges it. Fixes 5-10:
-POS-20 (a deploy after a bill settled to a function), NA-8 (other desks dated
-writes yesterday), NA-9 (a split-bill stay charged twice), FIN-11 (a double tap
-posted twice), FIN-12 (a company invoice with the guest's address), FIN-13 (no
-GSTIN, no invoice). The first four:
-(1) A GM could reset the password of somebody who is GM or Owner at another
-hotel - `may_manage_person` / `manages_person` in 133 now ask EVERY role
-(ADM-11). (2) Two Settle presses both took the money - the order is locked
-(POS-19). (3) Uploads were read-only on the server under `ProtectSystem=strict`
-- the unit now names `UPLOAD_DIR`. (4) Sign-out left the lists and the session
-on a shared machine - cleared; unsent changes stay under their maker's name
-and the sign-in screen says so (the owner's answer, 28 September). CHANGELOG
-has the proof.
+```
+HOW WORK RUNS NOW    Unchanged since 24 Sep: one master chat, lane SESSIONS started from
+                     the master's cards, each in its own copy under .claude\worktrees\,
+                     reporting by message; the master merges and runs the full gates.
+                     scripts/gates.sh now demands each step's passing last line (a
+                     Windows kill read as exit 0: MEMORY 335). Build the website too
+                     before calling a tree releasable (MEMORY 337).
+cp6 now              everything from 25-28 Sep: New booking with every recorded field
+                     (146), cancel a waiting booking, Form III (147), the group name and
+                     logo (148), the whole redesign and the owner's 21 changes, Coming
+                     soon replaced by Distribution / Sales and marketing, operations
+                     basics (backups off the box, a year of logs, notices), the
+                     Housekeeping fix (149). Decisions to D27-108.
+live                 still 0b4766e (about 22 Sep). The release is HELD (D27-88, D27-89,
+                     D27-93): one release with everything, after the ten release fixes.
+in flight (28 Sep)   release/fixes-28sep: ten fixes (GM takeover of a two-hotel person,
+                     a bill settled twice, uploads on the box, sign-out, the 038 deploy
+                     blocker, the device's stale business date, the night audit's double
+                     charge on split bills, the double tap, a company invoice's address,
+                     no GSTIN) - full gates and build pending.
+                     housekeeping/staff-lists-28sep: the cashier's and waiters' lists
+                     (D27-97) - to merge, then one full gates run on the combined tree.
+                     qa/buttons-28sep: QA of every button, 134 findings so far
+                     (docs/qa/qa-2026-09-28.md): 9 block work, ~54 wrong results -
+                     a fix round is needed before the pilot.
+                     ops/health-telemetry: System health screen + telemetry kept on our
+                     server (D27-91, D27-92), migration 150.
+planned, not started The one face plan (https://claude.ai/artifact/EzrcpNGQudWLYVV7zMtZLH,
+                     D27-98..108): the CRS and the market-to-revenue app stay unchanged;
+                     the PMS reads them; vouchers and email through the CRS's n8n, other
+                     WhatsApp through the market-to-revenue n8n; online check-in's code
+                     straight to the booking's phone. Waits for the owner's "go" and the
+                     two apps' n8n addresses.
+the owner owes       the release push after the fixes; Firebase key rotation; demo@ off;
+                     CRS repo private; the Oracle bucket, UptimeRobot, n8n alert, CERT-In
+                     forms; one real WhatsApp number and Meta templates; the two read-only
+                     logins (steps given 28 Sep); the CA (57) and lawyer (18) answers.
+maps                 system map https://claude.ai/artifact/8cfWjLCXYppt7oRgjkC38P;
+                     tracker https://claude.ai/artifact/QJ31A1BLSMSmaB3uANDDLR
+```
 
 ### 24 September — read this first
 
@@ -315,12 +340,16 @@ npx vitest run          197 passed, 13 files
 
 ## 3 · What to do next, in order
 
-> **28 September: the release.** (1) The master merges `release/fixes-28sep`
-> and gives the owner the release steps; the release is cp6 plus that
-> branch (D27-93). (2) After the server step, on the server, read-only:
-> `systemctl show fidato-api -p ReadWritePaths` must list
-> `/var/lib/fidato/uploads` beside `/opt/fidato/api` (fix 3 cannot be tested
-> anywhere but the box).
+> **28 September: the queue.** (1) Merge release/fixes-28sep and
+> housekeeping/staff-lists-28sep after their checks; one full gates run and a
+> build on the combined cp6. (2) A fix round for QA's worst findings (split-bill
+> invoices and settle, negative charges and one-click reversals, confirmed
+> bookings that can only be voided, the banquet bill no screen reaches, zero
+> prices, guest ID validation, the guest page link). (3) The ONE release with
+> everything (D27-93), the owner's steps, then operations setup and the pilot at
+> 5 Elements with tax invoices in parallel until the CA's answers are built.
+> (4) After the owner's go: the one face plan, in order: messaging senders and
+> online check-in, the CRS bridge, the leads view, availability out.
 
 > **24 September: the queue.** (1) The owner's release push and deploy
 > (D22-13), then a read-only look. (2) The CA's answers → rates, VAT, SAC codes
