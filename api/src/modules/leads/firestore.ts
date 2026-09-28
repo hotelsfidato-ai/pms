@@ -69,7 +69,7 @@ export function makeReader(o: {
   projectId: string;
   token: () => Promise<string>;
   counted: (reads: number) => void;
-  fetch?: typeof fetch;
+  fetch?: typeof fetch | undefined;
 }): Reader {
   const root = `projects/${o.projectId}/databases/(default)/documents`;
   const base = `https://firestore.googleapis.com/v1/${root}`;
