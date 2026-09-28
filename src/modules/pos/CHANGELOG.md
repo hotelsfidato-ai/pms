@@ -11,6 +11,12 @@ Work that touches the core or several services still goes in the root
 
 ---
 
+## 2026-09-28 · POS-19: the waiters list (`till.ts`, the read only) lists the hotel's people (D27-97)
+
+**Asked for:** the owner's D27-97, through the master: the same fault as housekeeping's HK-14. **Shipped:** the read uses `app.hotel_people` (migration 149), names only; branch `housekeeping/staff-lists-28sep`. **Proved:** `api/test/modules/pos/waitersList.test.ts` failed on the old code (1 failed) and passed on the fix; `cd api && npx tsc --noEmit` exit 0. Full gates: the master's combined run.
+
+---
+
 ## 2026-09-27 · D27-9: the owner's paid-in on a GM's Close restaurant day (from the cash and invoice session)
 
 The master gave the owner's D27-9 to the cash and invoice session
