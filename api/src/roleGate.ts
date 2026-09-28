@@ -31,6 +31,8 @@ import { ROLES, can, type Action, type Resource, type Role } from "./permissions
    A refusal is 403, one sentence naming who may, and nothing is written:
    the gate runs before the route does (root MEMORY 243 cannot bite here).
 
+   AND SINCE 28 SEPTEMBER EVERY READ TOO (READ_RULES, below; RO-1, A7).
+
    ⚠ A WRITE ROUTE MISSING FROM WRITE_RULES IS REFUSED FOR EVERYBODY. A new
    route cannot slip past by being new, and api/test/roleGate.test.ts fails
    before it gets that far: it lists every write the server mounts and names
@@ -44,7 +46,9 @@ import { ROLES, can, type Action, type Resource, type Role } from "./permissions
 
 type Grant = {
   readonly kind: "grant";
-  readonly resource: Resource;
+  /** One resource, or - for a read several screens share - any of several:
+      the role needs the action on one of them. */
+  readonly resource: Resource | readonly Resource[];
   readonly action: Action;
   /** Roles let in by name beyond the matrix. Every use says why. */
   readonly also: readonly Role[];
@@ -55,13 +59,19 @@ type Grant = {
 export type Rule =
   | Grant
   | { readonly kind: "own"; readonly where: string }
-  | { readonly kind: "self" };
+  | { readonly kind: "self" }
+  /* A read every person rostered here needs, whatever their role: the
+     property's name, the room list. Row security still answers "which
+     hotel"; `why` says why it is nobody's in particular. */
+  | { readonly kind: "anyone"; readonly why: string };
 
 const grant = (
-  resource: Resource, action: Action, doing: string, also: readonly Role[] = [],
+  resource: Resource | readonly Resource[], action: Action, doing: string,
+  also: readonly Role[] = [],
 ): Grant => ({ kind: "grant", resource, action, also, doing });
 const own = (where: string): Rule => ({ kind: "own", where });
 const SELF: Rule = { kind: "self" };
+const anyone = (why: string): Rule => ({ kind: "anyone", why });
 
 /* ── The rules, one per kind of act ────────────────────────────────── */
 
@@ -77,6 +87,13 @@ const GUEST_PAGE = grant("reservation", "edit", "Making a guest's own page");
 const FUNCTION_BOOK = grant("reservation", "create", "Booking a function");
 const FUNCTION_CHANGE = grant("reservation", "edit", "Changing a function");
 const FUNCTION_CANCEL = grant("reservation", "cancel", "Cancelling a function");
+/* ── Round E (BQ-1, 28 September): a function's bill ─────────────────
+   The owner's D27-132: the owner, an administrator and the GM take an
+   advance, bill the function and settle it - `approve` on a booking is
+   exactly those three; the tax invoice also the accountant - `approve` on
+   an invoice is exactly those four (D22-33). */
+const FUNCTION_MONEY = grant("reservation", "approve", "Taking money for a function, or billing it");
+const FUNCTION_INVOICE = grant("invoice", "approve", "Issuing a function's tax invoice");
 
 /* Guests: `customer`. */
 const GUEST = grant("customer", "edit", "Changing a guest's record");
@@ -375,6 +392,10 @@ export const WRITE_RULES: Readonly<Record<string, Rule>> = {
   [`PATCH ${H}/banquet/events/:id`]: FUNCTION_CHANGE,
   [`POST ${H}/banquet/events/:id/catering`]: FUNCTION_CHANGE,
   [`DELETE ${H}/banquet/events/:id/catering/:lineId`]: FUNCTION_CHANGE,
+  /* Round E (BQ-1): a function's bill. */
+  [`POST ${H}/banquet/events/:id/bill`]: FUNCTION_MONEY,
+  [`POST ${H}/banquet/events/:id/payments`]: FUNCTION_MONEY,
+  [`POST ${H}/banquet/events/:id/invoice`]: FUNCTION_INVOICE,
   [`POST ${H}/banquet/venues`]: HALLS,
   [`PATCH ${H}/banquet/venues/:id`]: HALLS,
   [`POST ${H}/banquet/packages`]: HALLS,
@@ -449,22 +470,247 @@ export const WRITE_RULES: Readonly<Record<string, Rule>> = {
   [`POST ${H}/reviews/:id/ask`]: own("reputation/reputation.ts: its own role lists"),
 };
 
-/* ── The reads that ask the role (D25-38) ────────────────────────────
-   Every other read is answered by row security alone ("which hotel"). These
-   hand out a guest's passport, visa or ID number, so they ask the role too,
-   the same way as a write. A read missing from here is NOT refused: only the
-   ones listed are gated, and api/test/roleGate.test.ts names every read that
-   returns an ID field so a new one cannot slip in unlisted. */
+/* ══════════════════════════════════════════════════════════════════
+   WHO MAY READ — EVERY READ ASKS THE ROLE TOO (RO-1, A7; 28 September)
+
+   Until 28 September only Form III and online check-in asked: row security
+   answered "which hotel", and nothing answered "which role", so the chef
+   read the Manager report, every stay and every bill by address, and the
+   owner's rules on money and guests held only because the menu hid the
+   screens (QA RO-1 to RO-3; docs/SELLING-IN-INDIA.md A7).
+
+   Now every read the server mounts has a rule, from the same matrix the
+   screens use - the resource of the screens that call it, and where several
+   screens share one read, any of their resources. A READ MISSING FROM HERE
+   IS REFUSED FOR EVERYBODY, as a write is, and api/test/roleGate.test.ts
+   names any mounted read that is not here.
+
+   What a read gives is the matrix's own words: a stay is `reservation`, a
+   bill `invoice`, money taken `payment`, a guest `customer`, a report
+   `report`. The owner's answers of 28 September (D27-140 to D27-147) are
+   in the matrix itself; the two that are about FIELDS rather than whole
+   reads are WITHHELD, below.
+   ══════════════════════════════════════════════════════════════════ */
+
+const see = (resource: Resource | readonly Resource[], what: string, also: readonly Role[] = []) =>
+  grant(resource, "view", `Reading ${what}`, also);
+
+const STAYS = see("reservation", "bookings");
+const BILLS = see("invoice", "bills");
+/* D27-147: the City ledger, Guest ledger and Cashier shift reports are money
+   owed and money taken, so they ask `invoice` as a bill does - the revenue
+   manager, who keeps `report`, is not let in. D27-145: Company accounts'
+   balances the same. */
+const MONEY_REPORT = see("invoice", "money owed and taken");
+const MONEY = see("payment", "payments and the cash drawer");
+const GUESTS = see("customer", "guests");
+const REPORTS = see("report", "reports");
+const PRICES = see("rate", "prices");
+const SETUP = see("room_config", "the hotel's setup");
+const LAUNDRY = see("laundry", "laundry");
+/* The restaurant's screens are a grant plus the till by name (pos/nav.ts). */
+const TILL_READ = see("payment", "the restaurant's orders", ["pos"]);
+const MENU_READ = see(["menu", "payment"], "the menu", ["pos"]);
+/* The Housekeeping board, Work orders and an item's page share these. */
+const REPAIRS = see(["room_config", "equipment", "inventory"], "repairs");
+
 export const READ_RULES: Readonly<Record<string, Rule>> = {
-  /* GU-1 (round D): the record Edit guest shows, for those who may correct it. */
-  [`GET ${H}/guests/:id`]: GUEST,
+  /* ── Every person rostered here: the shell and the room list ── */
+  [`GET /api/hotels`]: own("routes/hotels.ts: the hotels this person works at"),
+  [`GET ${H}`]: anyone("the property's name and business date, on every screen"),
+  [`GET ${H}/modules`]: anyone("which services are on: the menu itself"),
+  [`GET ${H}/live`]: anyone("a ping that something changed, with no data in it"),
+  [`GET ${H}/rooms`]: anyone("room numbers and their states: nearly every screen"),
+  [`GET ${H}/house-now`]: anyone("which rooms are occupied, blocked or empty - no guest"),
+  [`GET ${H}/group`]: anyone("the group's name and logo, on every document"),
+  [`GET ${H}/tax`]: anyone("the GST rates in use: neither a guest nor money taken"),
+  [`GET ${H}/tax/:kind/rate`]: anyone("the GST rate for an amount"),
+  [`GET ${H}/till/access`]: anyone("what the till lets this person do"),
+  [`GET ${H}/notifications`]: see("notification", "notifications"),
+  [`GET /api/admin/overview`]: anyone("counts of people and hotels, under row security"),
+
+  /* ── Bookings and stays ── */
+  [`GET ${H}/stays`]: STAYS,
+  [`GET ${H}/stays/:id`]: STAYS,
+  [`GET ${H}/stays/:id/exchangeable`]: STAYS,
+  [`GET ${H}/stays/:id/inclusions`]: STAYS,
+  [`GET ${H}/stays/:id/guest-marks`]: STAYS,
+  [`GET ${H}/inclusions`]: STAYS,
+  [`GET ${H}/early-arrival`]: STAYS,
+  [`GET ${H}/groups`]: STAYS,
+  [`GET ${H}/groups/:id`]: STAYS,
+  [`GET ${H}/guests/blacklist-warnings`]: STAYS,
+  [`GET ${H}/sales-people`]: STAYS,
+  [`GET ${H}/room-promotions`]: STAYS,
+  [`GET ${H}/banquet`]: STAYS,
+  [`GET ${H}/banquet/events/:id`]: STAYS,
+  [`GET ${H}/banquet/setup`]: see(["reservation", "room_config"], "the banquet halls"),
+  [`GET ${H}/tariff`]: see(["reservation", "rate"], "a stay's price"),
+  [`GET ${H}/inventory`]: see(["inventory", "reservation"], "availability"),
+  [`GET ${H}/booking-sources`]: see(["reservation", "commission"], "booking sources"),
+  [`GET ${H}/companies`]: see("company", "companies"),
+
+  /* ── Guests (D25-38 for their ID details; D27-144 for their messages) ── */
+  [`GET ${H}/guests`]: GUESTS,
+  [`GET ${H}/guests/returning`]: GUESTS,
+  [`GET ${H}/crm/guests`]: GUESTS,
+  [`GET ${H}/crm/guests/:id`]: GUESTS,
+  [`GET ${H}/crm/same-person`]: GUESTS,
+  [`GET ${H}/crm/joins`]: GUESTS,
+  [`GET ${H}/crm/not-same`]: GUESTS,
+  [`GET ${H}/crm/offers-yes`]: GUESTS,
+  [`GET ${H}/crm/no-offers`]: GUESTS,
+  /* GU-1 (round D): the record Edit guest shows, for those who may correct it
+     (customer:edit, as the change itself). */
+  [`GET ${H}/guests/:id/record`]: GUEST,
   [`GET ${H}/form-c`]: GUEST_ID,
   [`GET ${H}/reports/c-form`]: GUEST_ID,
   /* The details guests sent from their own page: asked in the route. */
   [`GET ${H}/online-checkin`]: own("routes/guestDoor.ts: DESK_ROLES"),
+  [`GET ${H}/online-checkin/messages`]: own("routes/guestDoor.ts: DESK_ROLES"),
+  [`GET ${H}/guest-messages`]: own("guest-messaging/messages.ts: VIEW_ROLES, `customer` view (D27-144)"),
+  [`GET ${H}/reviews`]: own("reputation/reputation.ts: VIEW_ROLES"),
+
+  /* ── Bills and money (D27-143) ── */
+  [`GET ${H}/folios`]: BILLS,
+  [`GET ${H}/stays/:id/bill`]: BILLS,
+  [`GET ${H}/stays/:id/folio`]: BILLS,
+  [`GET ${H}/stays/:id/folios`]: BILLS,
+  [`GET ${H}/stays/:id/postings`]: BILLS,
+  [`GET ${H}/billable`]: BILLS,
+  [`GET ${H}/billing-companies`]: BILLS,
+  [`GET ${H}/invoices`]: BILLS,
+  [`GET ${H}/invoices/:number{.+}`]: BILLS,
+  [`GET ${H}/vat-bills`]: BILLS,
+  [`GET ${H}/vat-bills/:number{.+}`]: BILLS,
+  [`GET ${H}/invoice-series`]: see(["invoice", "setting"], "the invoice numbers"),
+  [`GET ${H}/pos/tickets`]: BILLS,
+  [`GET ${H}/pos/outlets`]: see(["payment", "invoice", "setting"], "the restaurant's outlets", ["pos"]),
+  [`GET ${H}/payments`]: MONEY,
+  [`GET ${H}/cashier-shift`]: MONEY,
+  [`GET ${H}/accounting/:file{day-book(?:\\.xlsx)?}`]: own("accounting/routes.ts: MAY_EXPORT (D27-122)"),
+
+  /* ── Reports ── */
+  [`GET ${H}/reports/manager`]: REPORTS,
+  [`GET ${H}/reports/night-audit`]: REPORTS,
+  [`GET ${H}/reports/no-show`]: REPORTS,
+  [`GET ${H}/reports/monthly-occupancy`]: REPORTS,
+  [`GET ${H}/reports/monthly-statistics`]: REPORTS,
+  [`GET ${H}/reports/yearly-statistics`]: REPORTS,
+  [`GET ${H}/reports/lodging-tax`]: REPORTS,
+  [`GET ${H}/reports/gst-sales`]: REPORTS,
+  [`GET ${H}/reports/city-ledger`]: MONEY_REPORT,
+  [`GET ${H}/reports/guest-ledger`]: MONEY_REPORT,
+  [`GET ${H}/reports/cashier-shift`]: MONEY_REPORT,
+  [`GET ${H}/reports/balances-by-source`]: MONEY_REPORT,
+  [`GET ${H}/reports/:file{[a-z0-9-]+\\.(?:pdf|xlsx|csv)}`]: own("routes/reportFiles.ts: REPORT_EXPORTERS, and `invoice` for the money reports"),
+  [`GET ${H}/statistics/daily`]: see(["report", "rate"], "occupancy and ADR"),
+  [`GET ${H}/statistics/period`]: see(["report", "rate"], "occupancy and ADR"),
+  [`GET ${H}/statistics/snapshot`]: see(["report", "rate"], "occupancy and ADR"),
+  [`GET ${H}/revenue/pickup`]: PRICES,
+  [`GET ${H}/night-audit`]: REPORTS,
+  [`GET ${H}/night-audit/runs`]: REPORTS,
+  [`GET ${H}/night-audit/days/:date/charges`]: REPORTS,
+
+  /* ── Rooms, rates and setup ── */
+  [`GET ${H}/pricing`]: PRICES,
+  [`GET ${H}/rates`]: PRICES,
+  [`GET ${H}/rate-grid`]: PRICES,
+  [`GET ${H}/rate-plans`]: PRICES,
+  [`GET ${H}/cancellation-policies`]: PRICES,
+  [`GET ${H}/room-types`]: see(["room_config", "rate", "reservation"], "room types"),
+  [`GET ${H}/room-setup`]: SETUP,
+  [`GET ${H}/commissioning`]: SETUP,
+  [`GET ${H}/till/setup`]: SETUP,
+  [`GET ${H}/housekeepers`]: see("inventory", "who cleans which room"),
+  [`GET ${H}/housekeeping/assignments`]: see("inventory", "who cleans which room"),
+  [`GET ${H}/work-orders`]: REPAIRS,
+  [`GET ${H}/repairable-equipment`]: REPAIRS,
+
+  /* ── The restaurant ── */
+  [`GET ${H}/till/menu`]: MENU_READ,
+  [`GET ${H}/till/menu/addon-groups`]: MENU_READ,
+  [`GET ${H}/till/promotions`]: MENU_READ,
+  [`GET ${H}/till/orders`]: TILL_READ,
+  [`GET ${H}/till/orders/:id`]: TILL_READ,
+  [`GET ${H}/till/orders/:id/kot/:no`]: TILL_READ,
+  [`GET ${H}/till/floor`]: TILL_READ,
+  [`GET ${H}/till/rooms`]: TILL_READ,
+  [`GET ${H}/till/waiters`]: TILL_READ,
+  [`GET ${H}/banquet/attachable`]: TILL_READ,
+  [`GET ${H}/till/day-end`]: see("payment", "the restaurant's day", ["pos", "kitchen_manager"]),
+  [`GET ${H}/kitchen`]: see("payment", "the kitchen's queue", ["chef", "kitchen_manager"]),
+
+  /* ── Store, equipment, purchasing, places ── */
+  [`GET ${H}/stores`]: own("stores/stockGrants.ts: mayStock"),
+  [`GET ${H}/stores/items/:id/movements`]: own("stores/stockGrants.ts: mayStock"),
+  [`GET ${H}/equipment`]: own("equipment/grants.ts"),
+  [`GET ${H}/equipment/items/:id`]: own("equipment/grants.ts"),
+  [`GET ${H}/equipment/export`]: own("equipment/grants.ts"),
+  [`GET ${H}/equipment/options`]: own("equipment/grants.ts"),
+  [`GET ${H}/purchasing`]: own("purchasing/purchasingGrants.ts: VIEW_ROLES"),
+  [`GET ${H}/purchasing/requests/:id`]: own("purchasing/purchasingGrants.ts: VIEW_ROLES"),
+  [`GET ${H}/purchasing/requesters`]: own("purchasing/purchasingGrants.ts: VIEW_ROLES"),
+  [`GET ${H}/purchasing/orders/:file{[0-9a-f-]+\\.pdf}`]: own("purchasing/purchasingGrants.ts: VIEW_ROLES"),
+  /* D17-1: anybody rostered may read them (api/test/places.test.ts); a
+     place or a supplier is neither a guest nor money. */
+  [`GET ${H}/places`]: anyone("places and suppliers, which several screens pick from"),
+  [`GET ${H}/approvals`]: see(["notification", "equipment", "purchasing"], "approvals"),
+  [`GET ${H}/approval-rules`]: see("setting", "who approves what"),
+  [`GET ${H}/attachments`]: see(["purchasing", "equipment", "room_config"], "attached files"),
+  [`GET ${H}/attachments/:id/file`]: see(["purchasing", "equipment", "room_config"], "attached files"),
+  /* n8n's queue of bills to copy: an integration's. */
+  [`GET ${H}/attachments/awaiting-mirror`]: see("integration", "the files waiting to be copied"),
+
+  /* ── Laundry and spa ── */
+  [`GET ${H}/laundry/dockets`]: LAUNDRY,
+  [`GET ${H}/laundry/dockets/:id`]: LAUNDRY,
+  [`GET ${H}/laundry/price-list`]: LAUNDRY,
+  [`GET ${H}/spa`]: own("spa/spa.ts: SPA_READ_ROLES"),
+  [`GET ${H}/spa/treatments`]: own("spa/spa.ts: SPA_READ_ROLES"),
+  [`GET ${H}/spa/therapists`]: own("spa/spa.ts: SPA_READ_ROLES"),
+
+  /* ── Channel manager ── */
+  [`GET /api/channel-manager/su`]: own("channel-manager/connection.ts: maySetUpSu"),
+  [`GET ${H}/channel-manager/content`]: own("channel-manager/access.ts"),
+  [`GET ${H}/channel-manager/availability`]: own("channel-manager/access.ts"),
+  [`GET ${H}/channel-manager/bookings`]: own("channel-manager/access.ts"),
+
+  /* ── Administration ── */
+  [`GET /api/admin/hotels`]: own("admin/admin.ts: a group administrator"),
+  [`GET /api/admin/hotels/:code`]: own("admin/admin.ts: app.require_hotel_admin"),
+  [`GET /api/admin/staff`]: own("admin/admin.ts: row security on staff, app.may_manage_person"),
+  [`GET ${H}/staff`]: see("user", "the staff list"),
+  [`GET ${H}/audit-log`]: own("admin/adminLists.ts: mayRead"),
+  [`GET ${H}/settings`]: own("admin/adminLists.ts: mayRead"),
   /* D27-91: the server's health, for the owner and an administrator. */
   [`GET ${H}/system-health`]: SYSTEM_HEALTH,
 };
+
+/* ── What a read withholds (D27-143) ─────────────────────────────────
+   The owner's answer for the roles that read bookings but not bills or
+   guests (the revenue manager, housekeeping, the kitchen manager, the till):
+   they still see bookings, rooms and dates, but a guest's phone and email
+   come back blank and a group's balances are not sent. The route answers as
+   it always did; the gate blanks these keys, at any depth, for a role
+   without `view` on `unless`. Null, not absent: null is what these fields
+   already say when there is nothing to show. */
+export const WITHHELD: Readonly<Record<string, { keys: readonly string[]; unless: Resource }>> = {
+  [`GET ${H}/stays`]: { keys: ["phone", "email"], unless: "customer" },
+  [`GET ${H}/stays/:id`]: { keys: ["phone", "email"], unless: "customer" },
+  [`GET ${H}/groups`]: { keys: ["masterBalance", "guestBalance"], unless: "invoice" },
+  [`GET ${H}/groups/:id`]: { keys: ["balance", "guestBalance", "master"], unless: "invoice" },
+  /* A function's bill (round E, BQ-1): with no folioId the page draws no
+     Bill card at all (banquet/pages/BanquetEvent.tsx). */
+  [`GET ${H}/banquet/events/:id`]: { keys: ["folioId", "bill", "invoice"], unless: "invoice" },
+};
+
+const blank = (value: unknown, keys: readonly string[]): unknown =>
+  Array.isArray(value) ? value.map((v) => blank(v, keys))
+    : value !== null && typeof value === "object"
+      ? Object.fromEntries(Object.entries(value).map(([k, v]) =>
+        [k, keys.includes(k) ? null : blank(v, keys)]))
+      : value;
 
 /** The prefixes server.ts lets through with no person behind them. */
 export const DOORS = ["/api/guest", "/api/pos", "/api/channel"] as const;
@@ -496,8 +742,10 @@ const WHO: Readonly<Record<Role, string>> = {
 /** May this role do what the rule says? */
 export function allows(rule: Rule, role: Role): boolean {
   switch (rule.kind) {
-    case "grant": return can(role, rule.action, rule.resource) || rule.also.includes(role);
-    case "own": case "self": return true;
+    case "grant":
+      return ([] as Resource[]).concat(rule.resource).some((r) => can(role, rule.action, r))
+        || rule.also.includes(role);
+    case "own": case "self": case "anyone": return true;
   }
 }
 
@@ -533,8 +781,9 @@ export const roleGate: MiddlewareHandler<{ Variables: { subject: string } }> = a
 
   const key = `${route.method} ${route.path}`;
   const rule = write ? WRITE_RULES[key] : READ_RULES[key];
-  if (!rule) return write ? c.json({ ok: false, reason: UNMAPPED }, 403) : next();
-  if (rule.kind === "own" || rule.kind === "self") return next();
+  /* A read nobody mapped is refused too, since 28 September (RO-1). */
+  if (!rule) return c.json({ ok: false, reason: UNMAPPED }, 403);
+  if (rule.kind !== "grant") return next();
 
   /* Every grant rule is a /api/hotels/:code route (the guard test
      holds them to it), so the fourth segment is the hotel. */
@@ -552,6 +801,18 @@ export const roleGate: MiddlewareHandler<{ Variables: { subject: string } }> = a
   /* Not rostered here, or no such hotel: the route says "No such property",
      as it always has. */
   if (role === null) return next();
-  if (allows(rule, role as Role)) return next();
-  return c.json({ ok: false, reason: refusalFor(rule) }, 403);
+  if (!allows(rule, role as Role)) return c.json({ ok: false, reason: refusalFor(rule) }, 403);
+
+  const withheld = write ? undefined : WITHHELD[key];
+  if (!withheld || can(role as Role, "view", withheld.unless)) return next();
+  await next();
+  if (!c.res.headers.get("content-type")?.includes("application/json")) return;
+  const { status } = c.res;
+  const headers = new Headers(c.res.headers);
+  headers.delete("content-length");
+  const body = blank(await c.res.json(), withheld.keys);
+  /* Undefined first: Hono copies the old response's headers onto a new
+     one, and the old content-length would cut the new body short. */
+  c.res = undefined;
+  c.res = new Response(JSON.stringify(body), { status, headers });
 };

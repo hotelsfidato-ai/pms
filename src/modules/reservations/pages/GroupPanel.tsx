@@ -69,6 +69,11 @@ const STATUS_WORD: Record<string, string> = {
 const stateOf = (r: GroupRoom) =>
   r.status === "checked_in" && r.checkOut === BUSINESS_DATE ? "due_out" : r.status;
 
+
+/* The server sends no balances to a role that reads bookings but not
+   bills (D27-143): null there is "not yours to see" - a dash, never ₹0. */
+const owed = (v: number | null | undefined): string => (v == null ? "-" : money(v));
+
 export default function GroupPanelPage() {
   const hotelId = useHotel();
   const { id } = useParams();
@@ -158,6 +163,7 @@ export default function GroupPanelPage() {
       {/* The Figure Rule: label with its chip, the figure, its note,
           level across the row. Each is warm while that side owes, as
           Folios' Outstanding is (the owner, 27 September). */}
+      {g.guestBalance != null && (
       <FigureRow className="sm:grid-cols-2">
         <FigureTile
           icon={<Wallet />}
@@ -193,6 +199,7 @@ export default function GroupPanelPage() {
           note={`Across ${g.rooms.length} ${g.rooms.length === 1 ? "bill" : "bills"}`}
         />
       </FigureRow>
+      )}
 
       {/* Said once, plainly, because a combined figure is what somebody
           will otherwise work out for themselves and then quote. */}
@@ -268,7 +275,7 @@ export default function GroupPanelPage() {
                       {money(r.agreedRate)}
                     </td>
                     <td className="px-4 py-3 text-right tabular">
-                      {money(r.balance)}
+                      {owed(r.balance)}
                     </td>
                     <td className="px-4 py-3 text-center">
                       <button

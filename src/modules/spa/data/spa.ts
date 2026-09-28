@@ -191,14 +191,14 @@ export type Result<T> = ({ ok: true } & T) | { ok: false; reason: string };
     booked for money. `price: null` takes a priced one back to unpriced. */
 export async function addTreatment(
   code: string,
-  input: { name: string; minutes: number; price?: number | null; notes?: string },
+  input: { name: string; minutes: number; price?: number | null; free?: boolean; notes?: string },
 ): Promise<Result<{ id: string }>> {
   return call(`/api/hotels/${code}/spa/treatments`, "POST", input);
 }
 
 export async function changeTreatment(
   code: string, id: string,
-  input: { name?: string; minutes?: number; price?: number | null; isActive?: boolean },
+  input: { name?: string; minutes?: number; price?: number | null; free?: boolean; isActive?: boolean },
 ): Promise<Result<{ id: string }>> {
   return call(`/api/hotels/${code}/spa/treatments/${id}`, "PATCH", input);
 }

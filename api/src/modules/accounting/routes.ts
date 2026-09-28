@@ -27,8 +27,9 @@ import { dayBook, dayBookXlsx } from "./dayBook.ts";
     else. This is the brief's line, and `src/lib/permissions.ts` - the
     master's file - already grants those three everything the ledgers
     need, so no new resource was invented to say it. The menu hides the
-    screen from everyone else and this refuses them. */
-const MAY_EXPORT = ["owner", "admin", "gm"];
+    screen from everyone else and this refuses them.
+    28 September (D27-122): and the accountant, who the export is for. */
+const MAY_EXPORT = ["owner", "admin", "gm", "finance"];
 
 /** The caller's role at this property, or "owner" for a group admin.
 
@@ -94,7 +95,7 @@ accounting.get("/:code/accounting/:file{day-book(?:\\.xlsx)?}", async (c) => {
     if (!role || !MAY_EXPORT.includes(role)) {
       return {
         status: 403 as const,
-        body: { error: "The accounting export is the owner's, an administrator's and the general manager's." },
+        body: { error: "The accounting export is the owner's, an administrator's, the general manager's and the accountant's." },
       };
     }
 

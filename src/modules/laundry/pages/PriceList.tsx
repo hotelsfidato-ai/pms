@@ -7,7 +7,8 @@ import { ApiError } from "@/lib/api";
 import { cn } from "@/lib/cn";
 import {
   Page, PageHeader, Card, Button, Skeleton, EmptyState, ErrorState, IconChip,
-  Dialog, DialogContent, Field, fieldProps, Input, NativeSelect, Checkbox, toast,
+  Dialog, DialogContent, Field, fieldProps, Input, NativeSelect, toast,
+  Checkbox,
 } from "@/components/ui";
 import {
   getPriceList, addPriceItem, setPriceItem,
@@ -196,10 +197,11 @@ function ItemRow({
   code: string; item: PriceItem; onSaved: () => void;
 }) {
   const [price, setPrice] = useState(item.price === null ? "" : String(item.price));
+  /* D27-120: 0 is kept only when ticked Free. */
+  const [free, setFree] = useState(item.price === 0);
   const [saving, setSaving] = useState(false);
 
-  const save = async () => {
-    const typed = price.trim();
+  const save = async (typed = price.trim(), isFree = free) => {
     if (typed !== "" && (!Number.isFinite(Number(typed)) || Number(typed) < 0)) {
       toast.error("A price is zero or more, or nothing at all.");
       return;
@@ -211,22 +213,10 @@ function ItemRow({
        decided it is free. The two are different answers and the server
        stores them differently. */
     const out = await setPriceItem(code, item.id, {
-      price: typed === "" ? null : Number(typed),
+      price: typed === "" ? null : Number(typed), free: isFree,
     });
     setSaving(false);
     if (!out.ok) { toast.error(out.reason); return; }
-    onSaved();
-  };
-
-  /* X-1 (the owner's D27-120): 0 only when ticked Free - the tick is
-     where somebody deciding it is free says so. */
-  const free = item.price === 0;
-  const tickFree = async (v: boolean) => {
-    setSaving(true);
-    const out = await setPriceItem(code, item.id, v ? { price: 0, free: true } : { price: null });
-    setSaving(false);
-    if (!out.ok) { toast.error(out.reason); return; }
-    setPrice(v ? "0" : "");
     onSaved();
   };
 
@@ -247,7 +237,7 @@ function ItemRow({
       </td>
       <td className="px-4 py-3 text-right tabular">
         {item.isActive ? (
-          <span className="inline-flex items-center gap-2">
+          <div className="flex items-center justify-end gap-3">
             <Input
               aria-label={`Price for ${item.name}, ${SERVICE_WORDS[item.service].toLowerCase()}`}
               inputMode="decimal"
@@ -258,9 +248,13 @@ function ItemRow({
               onChange={(e) => setPrice(e.target.value)}
               onBlur={() => void save()}
             />
+            {/* D27-120: 0 is kept only when ticked Free. */}
             <Checkbox label="Free" checked={free} disabled={saving}
-              onCheckedChange={(v) => void tickFree(v)} />
-          </span>
+                      onCheckedChange={(on) => {
+                        setFree(on); setPrice(on ? "0" : "");
+                        void save(on ? "0" : "", on);
+                      }} />
+          </div>
         ) : (
           <span className={item.price === null ? "text-grey-500" : undefined}>
             {rupees(item.price)}
@@ -310,10 +304,8 @@ function AddDialog({
     const out = await addPriceItem(code, {
       name: name.trim(),
       service,
-      /* BLANK IS NOT ZERO. Nobody has priced it, so none is sent; and 0
-         only ticked Free (D27-120). */
-      price: free ? 0 : typed === "" ? null : Number(typed),
-      ...(free ? { free } : {}),
+      /* BLANK IS NOT ZERO. Nobody has priced it, so none is sent. */
+      price: typed === "" ? null : Number(typed), free,
     });
     setSaving(false);
 
@@ -369,17 +361,20 @@ function AddDialog({
             hint={"Leave it blank if this property has not decided one. It reads \"-\", never 0, and a guest's bag holding it cannot be charged. Tick Free only where the answer really is free."}
           >
             {(p) => (
-              <Input
-                {...fieldProps(p)}
-                inputMode="decimal"
-                value={free ? "0" : price}
-                onChange={(e) => setPrice(e.target.value)}
-                disabled={free}
-                placeholder="Leave blank if nobody has priced it"
-              />
+              <div className="flex items-center gap-3">
+                <Input
+                  {...fieldProps(p)}
+                  inputMode="decimal"
+                  value={price}
+                  disabled={free}
+                  onChange={(e) => setPrice(e.target.value)}
+                  placeholder="Leave blank if nobody has priced it"
+                />
+                <Checkbox label="Free" checked={free}
+                          onCheckedChange={(on) => { setFree(on); setPrice(on ? "0" : ""); }} />
+              </div>
             )}
           </Field>
-          <Checkbox label="Free" checked={free} onCheckedChange={setFree} />
 
           {problem && <p role="alert" className="text-sm text-brand-red-700">{problem}</p>}
         </div>

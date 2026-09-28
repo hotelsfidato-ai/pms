@@ -3,8 +3,8 @@ import type { Context, Next } from "hono";
 import { withSession } from "../../auth.ts";
 import { businessDateFor, resolveDate } from "../../businessDate.ts";
 import { postCharge } from "../finance/index.ts";
-import type { PoolClient as Client } from "pg";
 import { priceProblem } from "../../validate.ts";
+import type { PoolClient as Client } from "pg";
 
 /* ══════════════════════════════════════════════════════════════════
    THE LAUNDRY
@@ -142,7 +142,8 @@ laundry.post("/:code/laundry/price-list", async (c) => {
 
     const price = priceOf(input.price ?? null);
     if (price === undefined) return refuse("That price is not a number.");
-    const zero = priceProblem(price, input.free === true);   /* X-1, D27-120 */
+    /* D27-120: 0 only when ticked Free (round D's rule). */
+    const zero = priceProblem(price, input.free === true);
     if (zero) return refuse(zero);
 
     try {
@@ -169,7 +170,7 @@ laundry.post("/:code/laundry/price-list", async (c) => {
    already written keeps its own copy of the description and the price. */
 laundry.post("/:code/laundry/price-list/:id", async (c) => {
   const input = (await c.req.json().catch(() => ({}))) as {
-    price?: unknown; isActive?: boolean; free?: boolean;
+    price?: unknown; free?: boolean; isActive?: boolean;
   };
 
   const result = await withSession(c.get("subject"), async (client) => {
@@ -180,7 +181,7 @@ laundry.post("/:code/laundry/price-list/:id", async (c) => {
     if (price === undefined && input.price !== undefined) {
       return refuse("That price is not a number.");
     }
-    const zero = priceProblem(price, input.free === true);   /* X-1, D27-120 */
+    const zero = priceProblem(price, input.free === true);
     if (zero) return refuse(zero);
 
     const { rows } = await client.query<{ id: string }>(
@@ -243,7 +244,7 @@ const DOCKET_JOINS = `
       from room_assignments ra
       join rooms rm2 on rm2.id = ra.room_id
      where ra.reservation_id = r.id
-     order by ra.released_at desc nulls first, ra.from_date desc
+     order by ra.released_at nulls first, ra.from_date desc
      limit 1
   ) rm on true`;
 
@@ -396,6 +397,12 @@ laundry.post("/:code/laundry/dockets", async (c) => {
       if (stay.status === "cancelled") return refuse("That booking was cancelled.");
       if (stay.status === "checked_out") {
         return refuse("That guest has checked out. Reopen the stay to charge to it.");
+      }
+      /* BQ-2 (QA, 28 September): a bag is collected from a guest in the
+         house - checked in (D21-36's one rule). A booking still to arrive
+         was charged, and its ₹80 counted as today's revenue. */
+      if (stay.status !== "checked_in") {
+        return refuse("That guest has not checked in yet. Collect a bag only from a guest in the house.");
       }
     }
 
@@ -582,10 +589,11 @@ laundry.post("/:code/laundry/dockets/:id/charge", async (c) => {
 
     const { rows } = await client.query<{
       belongs_to: string; status: string; charged: boolean; total: string | null;
-      reservation_id: string | null; number: string;
+      reservation_id: string | null; number: string; stay_status: string | null;
     }>(
       `select d.belongs_to, d.status, d.number,
               d.reservation_id::text as reservation_id,
+              (select r.status from reservations r where r.id = d.reservation_id) as stay_status,
               d.charge_posting_id is not null as charged,
               app.laundry_docket_total(d.id)::text as total
          from laundry_dockets d
@@ -605,6 +613,11 @@ laundry.post("/:code/laundry/dockets/:id/charge", async (c) => {
     if (docket.charged) return refuse("That docket is already on the bill.");
     if (docket.total === null) {
       return refuse("Something in this bag has no price yet. Price it first.");
+    }
+    /* BQ-2: onto the bill of a guest in the house only. A checked-out stay
+       keeps finance's own sentence (postCharge). */
+    if (!["checked_in", "checked_out", "cancelled"].includes(docket.stay_status ?? "")) {
+      return refuse("That guest has not checked in yet, so the bag cannot go on their bill.");
     }
 
     /* WHAT THE GUEST READS ON THE BILL: the docket number and what was

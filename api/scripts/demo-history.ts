@@ -425,10 +425,10 @@ async function fillRestaurant(client: pg.Client) {
       order by name`, [hotelId]);
   if (items.length === 0) return { orders: 0, onThePass: 0 };
 
-  const { rows: tables } = await client.query<{ label: string }>(
-    `select t.label from pos_tables t
+  const { rows: tables } = await client.query<{ id: string; label: string }>(
+    `select t.id, t.label from pos_tables t
        join pos_sections sec on sec.id = t.section_id
-      where sec.outlet_id = $1 order by t.label limit 12`, [outlet[0].id]);
+      where sec.outlet_id = $1`, [outlet[0].id]);
 
   /* label, how many lines, and what the kitchen has done with them. */
   const PLAN: [string, number, "pending" | "sent" | "preparing" | "ready"][] = [
@@ -443,18 +443,21 @@ async function fillRestaurant(client: pg.Client) {
   let made = 0, onThePass = 0;
 
   for (const [fallbackLabel, count, state] of PLAN) {
-    const label = tables.find((t) => t.label === fallbackLabel)?.label
-      ?? fallbackLabel;
+    /* ON the floor's table, not only named after it (QA POS-3): a bill
+       with the label and no table_id showed its table Free on Tables. */
+    const table = tables.find((t) => t.label === fallbackLabel);
+    const label = table?.label ?? fallbackLabel;
     made += 1;
 
     const { rows: order } = await client.query<{ id: string }>(
       `insert into pos_orders
-         (hotel_id, outlet_id, order_no, table_ref, business_date,
+         (hotel_id, outlet_id, order_no, table_ref, table_id, business_date,
           status, order_type, opened_by, covers)
-       values ($1,$2,$3,$4,$5::date,'open','dine_in',$6,$7)
+       values ($1,$2,$3,$4,$8,$5::date,'open','dine_in',$6,$7)
        returning id`,
       [hotelId, outlet[0].id, `${TAG}-${String(made).padStart(3, "0")}`,
-       label, hotel[0].bd, staff[0].id, 2 + Math.floor(rand() * 4)]);
+       label, hotel[0].bd, staff[0].id, 2 + Math.floor(rand() * 4),
+       table?.id ?? null]);
 
     for (let i = 0; i < count; i += 1) {
       const item = items[Math.floor(rand() * items.length)]!;

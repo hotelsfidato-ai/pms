@@ -23,8 +23,9 @@ let guestId = "";
 let stranger = "";
 const uid = (role: string) => `test-uid-gu1-${role}`;
 
+/* The record is read at /record and changed at the guest's own address. */
 const call = (who: string, method: string, id: string, body?: unknown) =>
-  app.request(`/api/hotels/5EL/guests/${id}`, {
+  app.request(`/api/hotels/5EL/guests/${id}${method === "GET" ? "/record" : ""}`, {
     method,
     headers: { "x-dev-staff-id": who, "content-type": "application/json" },
     ...(body === undefined ? {} : { body: JSON.stringify(body) }),
@@ -98,6 +99,16 @@ describe("GU-1 · Edit guest", () => {
   it("is refused to housekeeping, both the record and the change", async () => {
     expect((await call(uid("housekeeping"), "GET", guestId)).status).toBe(403);
     expect((await call(uid("housekeeping"), "PATCH", guestId, { phone: "9811100002" })).status).toBe(403);
+  });
+
+  /* A bare GET /guests/:id, mounted before people.ts, answered its
+     /guests/returning as "No such guest here" - caught at the merge. */
+  it("leaves the returning-guest and blacklist lookups theirs", async () => {
+    for (const path of ["returning?phone=9811100000", "blacklist-warnings?phone=9811100000"]) {
+      const res = await app.request(`/api/hotels/5EL/guests/${path}`,
+        { headers: { "x-dev-staff-id": uid("front_desk") } });
+      expect(res.status, `${path}: ${await res.clone().text()}`).toBe(200);
+    }
   });
 
   it("finds no guest who never stayed here", async () => {

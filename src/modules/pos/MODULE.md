@@ -313,6 +313,8 @@ The server's door, `api/src/modules/pos/index.ts`, exports `mounts` and
 `outletFor`, `hashKey`, `issueKey`, `addOutlet`, `Outlet`. `api/src/server.ts` imports
 `outletFor` through it. `api/scripts/pos-outlet.ts` and `api/test/modules/pos/pos.test.ts`
 import `hashKey` and `issueKey` through it as well (the script `addOutlet` too).
+It also exports `struckAfterKitchen` (28 September), which the night audit reads
+for its restaurant figures - the same list Close restaurant day shows.
 
 ---
 
@@ -339,6 +341,19 @@ One other service's door is imported by this folder (17 September):
 
 ## Rules that bind it
 
+- **Food the kitchen has comes off only for a manager, with a reason** (D27-119
+  and the owner's round C answers, 28 September): the owner, an administrator,
+  the GM, the hotel manager or the kitchen manager - striking a sent dish,
+  lowering its quantity, or closing unpaid a bill any of which was sent
+  (`sentStrikeRefusal`, `till.ts`). The reason is `void_reason` (151) and shows
+  on the docket, the Kitchen screen, Close restaurant day and the night audit
+  (`app.pos_struck_after_kitchen`). More of a sent dish is a NEW line for the
+  next docket, never a bigger sent one.
+- **Cash is whole rupees; a closed day is closed** (the owner, 28 September): a
+  bill paid wholly in cash is rounded at the settle; once Close restaurant day
+  has counted the drawer, new bills and payments wait for the night audit.
+- **The pass shows paid food** until it is served (QA POS-1); 151 lets only the
+  kitchen status change on a settled order.
 - **No default prices** (`HANDOVER.md` § 5). The schema ships no dish and no
   price — the hotel types them (`028_pos_till.sql`, header and the comment on
   `pos_menu_items`). A dish with variations has no price of its own; the

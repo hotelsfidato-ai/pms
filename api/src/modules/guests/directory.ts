@@ -209,7 +209,10 @@ const RECORD = `
 
 const A_UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
-directory.get("/:code/guests/:id", async (c) => {
+/* /record, not /:id alone: people.ts's /guests/returning and
+   /guests/blacklist-warnings are mounted after this router, and a bare
+   /guests/:id would answer them first. */
+directory.get("/:code/guests/:id/record", async (c) => {
   const body = await withSession(c.get("subject"), async (client) => {
     const hotelId = await hotelIdFor(client, c.req.param("code"));
     if (!hotelId || !A_UUID.test(c.req.param("id"))) return null;

@@ -21,6 +21,7 @@ import { getMenu, listOrders, getOrder, listChargeableRooms, openOrder, addLine,
 import { CashIdFields } from "@/modules/pos/components/CashIdFields";
 import { BUSINESS_DATE } from "@/data/repositories";
 import { ReadFailed, ReadStale } from "@/components/ui";
+import { AskDialog, SENT_STRIKE, type Ask } from "@/modules/pos/components/AskDialog";
 
 /* ══════════════════════════════════════════════════════════════════
    THE TILL
@@ -161,11 +162,22 @@ export default function TillPage() {
     applyOrder(res.order);
   };
 
-  const strike = async (lineId: string) => {
+  const [ask, setAsk] = useState<Ask | null>(null);
+  const strike = async (lineId: string, reason?: string) => {
     if (!openId) return;
-    const res = await voidLine(hotelId, openId, lineId);
+    const res = await voidLine(hotelId, openId, lineId, reason);
     if (!res.ok) return toast.error("Could not strike that line", res.reason);
     applyOrder(res.order);
+  };
+  /* Once the kitchen has it, a manager's, with a reason (D27-119). */
+  const askStrike = (lineId: string) => {
+    const line = current.data?.lines.find((l) => l.id === lineId);
+    if (!line || line.kotStatus === "pending") return void strike(lineId);
+    setAsk({
+      title: `Take off ${line.name}?`, body: SENT_STRIKE,
+      field: { label: "Why is it coming off?", required: true },
+      confirm: "Take it off", onConfirm: (why) => strike(lineId, why),
+    });
   };
 
   const order = current.data ?? null;
@@ -187,6 +199,7 @@ export default function TillPage() {
 
   return (
     <Page>
+      <AskDialog ask={ask} onClose={() => setAsk(null)} />
       <PageHeader
         title="Till"
         description="Open an order, add to it, settle it. Charges reach a guest's bill the same way an outside point of sale would."
@@ -349,7 +362,7 @@ export default function TillPage() {
               hotelId={hotelId}
               busy={busy}
               setBusy={setBusy}
-              onStrike={strike}
+              onStrike={askStrike}
               /* Settling or abandoning FINISHES a bill, so the panel
                  closes. Discounting it does not — the biller is still
                  standing at the same order and about to take payment. */
@@ -713,8 +726,12 @@ function SplitPanel({
   ]);
   const [cashId, setCashId] = useState<CashId>({});
 
+  /* Paid wholly in cash, the bill is whole rupees (NA-2): the server
+     rounds it the same way at the settle. */
+  const bill = rows.every((r) => r.method === "cash")
+    ? Math.round(order.payable) : order.payable;
   const taken = rows.reduce((a, r) => a + (Number(r.amount) || 0), 0);
-  const left = Math.round((order.payable - taken) * 100) / 100;
+  const left = Math.round((bill - taken) * 100) / 100;
   const balanced = Math.abs(left) < 0.005;
 
   const cash = rows.find((r) => r.method === "cash");
@@ -731,7 +748,7 @@ function SplitPanel({
       rows.filter((r) => Number(r.amount) > 0), cashId);
     setBusy(false);
     if (!res.ok) return toast.error("Not settled", res.reason);
-    toast.success("Settled", `${money(order.payable)} across ${rows.length}`);
+    toast.success("Settled", `${money(res.order.payable)} across ${rows.length}`);
     onDone();
   };
 
@@ -804,7 +821,7 @@ function SplitPanel({
       {order.payable > 100000 && <CashIdFields value={cashId} onChange={setCashId} />}
 
       <div className="border-t border-grey-200 pt-2.5 space-y-1">
-        <Row label="Bill" value={money(order.payable)} />
+        <Row label="Bill" value={money(bill)} />
         <Row label="Taken" value={money(taken)} />
         {!balanced && (
           <Row
@@ -855,11 +872,24 @@ function OrderPanel({
   const [discounting, setDiscounting] = useState(false);
   const [splitting, setSplitting] = useState(false);
   const [cashId, setCashId] = useState<CashId>({});
+  const [ask, setAsk] = useState<Ask | null>(null);
 
   const rooms = useQuery({
     queryKey: ["till-rooms", hotelId],
     queryFn: () => listChargeableRooms(hotelId),
   });
+
+  /* D27-117: charging a restaurant bill to a room asks first, naming the
+     guest - the name used to appear only in the toast afterwards (POS-8). */
+  const askRoom = () => {
+    const guests = (rooms.data ?? []).filter((r) => r.room === room.trim()).map((r) => r.guest);
+    if (guests.length === 0) return void settle("room");   // the server says why not
+    setAsk({
+      title: `Charge ${money(order.gross)} to room ${room.trim()}?`,
+      body: `${guests.join(" or ")} will see it on their room bill.`,
+      confirm: "Charge to room", onConfirm: () => settle("room"),
+    });
+  };
 
   const settle = async (
     method: "room" | "cash" | "card" | "upi" | "function", folioId?: string,
@@ -885,7 +915,7 @@ function OrderPanel({
       res.guest ? `${money(order.gross)} to ${res.guest}`
         : method === "function"
           ? `${money(order.gross)} on ${order.eventTitle ?? "the function"}'s bill`
-          : money(order.gross),
+          : money(res.order.payable),
     );
     onDone();
   };
@@ -915,19 +945,23 @@ function OrderPanel({
     onChanged();
   };
 
-  const abandon = async () => {
-    const reason = window.prompt(
-      "Why is this order being closed unpaid?\n\n" +
-        "It stays on the record with this reason - a walkout and a " +
-        "duplicate are different things at the end of a shift.",
-    );
-    if (!reason?.trim()) return;
-    setBusy(true);
-    const res = await abandonOrder(hotelId, order.id, reason.trim());
-    setBusy(false);
-    if (!res.ok) return toast.error("Not closed", res.reason);
-    onDone();
-  };
+  /* A dialog, not window.prompt(), which the app's window refuses (POS-2). */
+  const abandon = () => setAsk({
+    title: "Close this bill unpaid?",
+    body: "It stays on the record with this reason - a walkout and a duplicate "
+      + "are different things at the end of a shift."
+      + (order.lines.some((l) => !l.voided && l.kotStatus !== "pending")
+        ? ` ${SENT_STRIKE}` : ""),
+    field: { label: "Why is it being closed unpaid?", required: true },
+    confirm: "Close unpaid",
+    onConfirm: async (reason) => {
+      setBusy(true);
+      const res = await abandonOrder(hotelId, order.id, reason);
+      setBusy(false);
+      if (!res.ok) return void toast.error("Not closed", res.reason);
+      onDone();
+    },
+  });
 
   const live = order.lines.filter((l) => !l.voided);
   const settled = order.status !== "open";
@@ -1186,7 +1220,7 @@ function OrderPanel({
                 className="flex-1"
                 loading={busy}
                 disabled={onFunction || !room.trim() || live.length === 0}
-                onClick={() => void settle("room")}
+                onClick={askRoom}
               >
                 <BedDouble className="size-4" />
                 Charge to room
@@ -1222,13 +1256,14 @@ function OrderPanel({
             </Button>
 
             <Button variant="ghost" size="lg" className="w-full"
-              onClick={() => void abandon()} loading={busy}>
+              onClick={abandon} loading={busy}>
               Close unpaid
             </Button>
           </div>
         )}
       </CardBody>
 
+      <AskDialog ask={ask} onClose={() => setAsk(null)} />
       <DiscountDialog
         order={order}
         hotelId={hotelId}

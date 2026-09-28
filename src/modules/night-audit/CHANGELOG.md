@@ -8,6 +8,14 @@ project, still goes in the root `CHANGELOG.md`.
 
 ---
 
+## 2026-09-28 · Fix round C: the audit asks first; the restaurant's struck dishes in its figures
+
+**Asked for:** the owner's D27-116/117 through the master: QA NA-1 (Run night audit on one click); D27-119's reason "in the day's report" - the owner chose the night audit as well (fix round C, answer 4). Branch `fix/restaurant-audit-28sep` from cp6 `631ce1f`.
+**Shipped:** the confirm on Run (`pages/NightAudit.tsx`); `restaurant.struck` in the run's result (`nightAudit.ts`, through `../pos/index.ts`). Nothing the audit posts, marks or moves changed.
+**Proved:** see DEFECTS NA-10. **Left open:** nothing of this round. **Commits:** on the branch.
+
+---
+
 ## 2026-09-25/26 · Correcting a closed day's other charges (D24-13, D25-5 to D25-11)
 
 **Asked for:** the master's lane brief of 25 September: D24-13, left open on

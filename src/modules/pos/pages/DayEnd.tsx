@@ -292,6 +292,28 @@ function Overview({ day }: { day: DayEnd }) {
           </p>
         </CardBody>
       </Card>
+
+      {/* D27-119: food taken off after the kitchen had it - who, and why. */}
+      {(day.struck ?? []).length > 0 && (
+        <Card>
+          <CardHeader title="Struck after it reached the kitchen" />
+          <CardBody>
+            <ul className="divide-y divide-grey-200">
+              {day.struck!.map((x, i) => (
+                <li key={i} className="flex items-start gap-3 py-3">
+                  <div className="min-w-0 flex-1">
+                    <p className="text-base">{x.qty} × {x.name} - {x.reason ?? "-"}</p>
+                    <p className="text-sm text-grey-500">
+                      {x.orderNo}{x.table ? ` · ${x.table}` : ""} · {x.by ?? "-"} · {x.at}
+                    </p>
+                  </div>
+                  <span className="text-base font-medium tabular shrink-0">{money(x.value)}</span>
+                </li>
+              ))}
+            </ul>
+          </CardBody>
+        </Card>
+      )}
     </div>
   );
 }

@@ -5,7 +5,7 @@ import { money } from "@/lib/format";
 import {
   Page, PageHeader, Card, CardHeader, Button, Skeleton, EmptyState, StatusPill, IconChip,
   InfoButton,
-  Dialog, DialogContent, Field, fieldProps, Input, toast,
+  Dialog, DialogContent, Field, fieldProps, Input, toast, Checkbox,
   ReadFailed, readError,
 } from "@/components/ui";
 import { useParams } from "react-router";
@@ -244,6 +244,8 @@ function TreatmentDialog({
      unpriced rather than to zero. */
   const [price, setPrice] = useState(
     treatment?.price === null || treatment?.price === undefined ? "" : String(treatment.price));
+  /* D27-120: 0 is kept only when ticked Free. */
+  const [free, setFree] = useState(treatment?.price === 0);
   const [saving, setSaving] = useState(false);
   const [problem, setProblem] = useState<string | null>(null);
 
@@ -264,6 +266,7 @@ function TreatmentDialog({
       name: name.trim(),
       minutes: Number(minutes),
       price: price.trim() === "" ? null : Number(price),
+      free,
     };
     const out = treatment
       ? await changeTreatment(code, treatment.id, asked)
@@ -326,9 +329,14 @@ function TreatmentDialog({
           <Field label="Price"
                  hint="Leave it empty where none has been set. Empty reads as a dash, never as ₹0.">
             {(p) => (
-              <Input {...fieldProps(p)} inputMode="decimal" value={price}
-                     onChange={(e) => setPrice(e.target.value)}
-                     placeholder="Not priced yet" />
+              <div className="flex items-center gap-3">
+                <Input {...fieldProps(p)} inputMode="decimal" value={price}
+                       disabled={free}
+                       onChange={(e) => setPrice(e.target.value)}
+                       placeholder="Not priced yet" />
+                <Checkbox label="Free" checked={free}
+                          onCheckedChange={(on) => { setFree(on); setPrice(on ? "0" : ""); }} />
+              </div>
             )}
           </Field>
 

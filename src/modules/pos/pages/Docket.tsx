@@ -138,10 +138,30 @@ export default function DocketPage() {
           })}
         </ul>
 
-        {d.lines.length === 0 && (
+        {d.lines.length === 0 && (d.struck ?? []).length === 0 && (
           <p className="mt-2 italic">
             Everything on this docket was struck before it printed.
           </p>
+        )}
+
+        {/* Taken off after the kitchen had it, with the manager's reason
+            (D27-119): a reprint tells the kitchen to stop, and why. */}
+        {(d.struck ?? []).length > 0 && (
+          <>
+            <div className="my-2 border-t border-dashed border-ink-900" />
+            <p className="font-bold">STOP - TAKEN OFF</p>
+            <ul className="mt-1">
+              {d.struck!.map((s, i) => (
+                <li key={i} className="mb-1.5">
+                  <div className="flex">
+                    <span className="flex-1 font-bold line-through">{s.name}</span>
+                    <span className="w-10 text-right font-bold tabular">{s.qty}</span>
+                  </div>
+                  {s.reason && <div className="pl-4 italic">[Why] {s.reason}</div>}
+                </li>
+              ))}
+            </ul>
+          </>
         )}
 
         <p className="mt-3 text-center text-[11px]">

@@ -80,6 +80,32 @@ export const FOLIO_SELECT = `
    group by l.reservation_id
 `;
 
+/** ONE BILL'S FIGURES, by the folio rather than the stay (28 September, for
+    the split bill's Settle and for a banquet function's bill, which has no
+    stay). The live postings, as FOLIO_SELECT counts them; null when nothing
+    live is posted - no bill is not a bill of zeros (FIN-2). */
+export async function folioBalance(client: Client, folioId: string): Promise<{
+  charges: number; tax: number; paid: number; balance: number;
+} | null> {
+  const { rows } = await client.query<{
+    n: string; charges: string; tax: string; paid: string; balance: string;
+  }>(
+    `select count(*)::text as n,
+            coalesce(sum(amount) filter (where category <> 'payment'), 0)::text as charges,
+            coalesce(sum(tax_amount), 0)::text                                 as tax,
+            coalesce(-sum(amount) filter (where category = 'payment'), 0)::text as paid,
+            coalesce(sum(amount + tax_amount), 0)::text                        as balance
+       from folio_postings fp
+      where fp.folio_id = $1
+        and fp.reverses_id is null
+        and not exists (select 1 from folio_postings rev where rev.reverses_id = fp.id)`,
+    [folioId]);
+  const r = rows[0]!;
+  if (r.n === "0") return null;
+  const two = (s: string) => Math.round(Number(s) * 100) / 100;
+  return { charges: two(r.charges), tax: two(r.tax), paid: two(r.paid), balance: two(r.balance) };
+}
+
 const toFolio = (r: FolioRow) => {
   const balance = Math.round(Number(r.balance) * 100) / 100;
   return {
@@ -139,7 +165,9 @@ folios.get("/:code/folios", async (c) => {
        owed, so it is the balance most easily lost. */
     return rows
       .map(toFolio)
-      .filter((f) => f.balance !== 0)
+      /* A banquet function's bill has no stay; it is not listed here
+         (round E, 28 September). */
+      .filter((f) => f.balance !== 0 && f.stayId !== null)
       .sort((a, b) => a.balance - b.balance);
   });
 

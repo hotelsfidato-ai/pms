@@ -158,6 +158,8 @@ export interface KitchenLine {
   atPassSeconds: number | null;
   /** Struck after the kitchen already had it — stop cooking. */
   cancelled: boolean;
+  /** Why, in the manager's words (D27-119). */
+  cancelReason?: string | null;
 }
 
 export interface Order {
@@ -411,12 +413,29 @@ export function addLine(
     { itemId, qty, note, variationId, addonIds });
 }
 
+/** `reason` is required once the kitchen has the dish, and only a manager
+    may strike it then (D27-119); the server says so if not. */
 export function voidLine(
-  hotelId: string, orderId: string, lineId: string,
+  hotelId: string, orderId: string, lineId: string, reason?: string,
 ): Promise<TillResult> {
   return write(
     `/api/hotels/${hotelId}/till/orders/${orderId}/lines/${lineId}/void`,
+    reason ? { reason } : undefined,
   );
+}
+
+/** A dish taken off after the kitchen had it (D27-119): Close restaurant
+    day and the night audit list these. */
+export interface StruckDish {
+  orderNo: string;
+  table: string | null;
+  name: string;
+  qty: number;
+  /** Before tax, what it was sold at. */
+  value: number;
+  reason: string | null;
+  by: string | null;
+  at: string;
 }
 
 /**
@@ -427,10 +446,13 @@ export function voidLine(
  */
 export function setLineQty(
   hotelId: string, orderId: string, lineId: string, qty: number,
+  /** Fewer of a dish the kitchen has is a strike: a manager's, with a
+      reason (D27-119). */
+  reason?: string,
 ): Promise<TillResult> {
   return write(
     `/api/hotels/${hotelId}/till/orders/${orderId}/lines/${lineId}/qty`,
-    { qty },
+    { qty, ...(reason ? { reason } : {}) },
   );
 }
 
@@ -1202,6 +1224,8 @@ export interface Docket {
     note: string | null;
     isAddon: boolean;
   }[];
+  /** Taken off this docket after it was sent, and why (D27-119). */
+  struck?: { name: string; qty: number; reason: string | null }[];
 }
 
 export async function getDocket(
@@ -1246,6 +1270,8 @@ export interface DayEnd {
   /** What a PERSON must decide before this can close. Empty is the
       only state in which the Finalize button does anything. */
   blockers: { id: string; reason: string; detail: string | null }[];
+  /** Food struck after the kitchen had it, with who and why (D27-119). */
+  struck?: StruckDish[];
   movements: {
     id: string; kind: MovementKind; amount: number;
     /** null: a name the reader may not see (the owner's, to a GM; D27-9). */

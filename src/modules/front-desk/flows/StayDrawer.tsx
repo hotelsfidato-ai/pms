@@ -66,6 +66,10 @@ export function StayDrawer({
   defaultTab?: "stay" | "folio";
   offerCheckIn?: boolean;
 }) {
+  /* The bill is `invoice` view (D27-143): the revenue manager, housekeeping,
+     the kitchen manager and the till read the booking and not its bill, so
+     no Bill tab and no totals - the server refuses them anyway. */
+  const seesBills = can(useRole(), "view", "invoice");
   return (
     <Drawer open={!!stay} onOpenChange={(open) => !open && onClose()}>
       {stay && (
@@ -73,7 +77,7 @@ export function StayDrawer({
           title={<span className="text-lg font-semibold">{stay.guest}</span>}
           description={<HeaderLine stay={stay} />}
           width={stay.group ? "xl" : "lg"}
-          footer={<FolioTotals hotelId={hotelId} stay={stay} />}
+          footer={seesBills ? <FolioTotals hotelId={hotelId} stay={stay} /> : undefined}
         >
           {/* Keyed, so opening another room of the group starts on its
               own first tab rather than wherever the last one was left. */}
@@ -137,7 +141,9 @@ function StayBody({
   status: StayPill | null; defaultTab: "stay" | "folio";
   offerCheckIn: boolean;
 }) {
-  const [tab, setTab] = useState<"stay" | "folio">(defaultTab);
+  /* No Bill tab without bills (D27-143), so never open on it. */
+  const [tab, setTab] = useState<"stay" | "folio">(
+    can(useRole(), "view", "invoice") ? defaultTab : "stay");
   const arrived = stay.status === "in-house" || stay.status === "due-out";
   /* D24-27: each act offered only to a role the server's gate lets do it
      (roleGate, from the one matrix). Check-in is reservation edit; the VIP
@@ -145,6 +151,7 @@ function StayBody({
      to both a payment (payment create) and the check-out (reservation edit),
      so it is for whoever may do either (the owner, 24 September). */
   const role = useRole();
+  const seesBills = can(role, "view", "invoice");
   const mayEdit = can(role, "edit", "reservation");
   const maySettle = can(role, "create", "payment") || mayEdit;
 
@@ -201,14 +208,16 @@ function StayBody({
         <Tabs value={tab} onValueChange={(v) => setTab(v === "folio" ? "folio" : "stay")}>
           <TabsList>
             <TabsTrigger value="stay">Stay</TabsTrigger>
-            <TabsTrigger value="folio">Bill</TabsTrigger>
+            {seesBills && <TabsTrigger value="folio">Bill</TabsTrigger>}
           </TabsList>
           <TabsContent value="stay">
             <StayFacts stay={stay} />
           </TabsContent>
-          <TabsContent value="folio">
-            <FolioPanel hotelId={hotelId} stay={stay} businessDate={businessDate} />
-          </TabsContent>
+          {seesBills && (
+            <TabsContent value="folio">
+              <FolioPanel hotelId={hotelId} stay={stay} businessDate={businessDate} />
+            </TabsContent>
+          )}
         </Tabs>
       </div>
 

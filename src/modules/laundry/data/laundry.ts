@@ -131,7 +131,8 @@ export async function getDocket(code: string, id: string): Promise<DocketDetail>
 export async function getStaysToChargeTo(code: string): Promise<Stay[]> {
   const rows = await api<Stay[]>(`/api/hotels/${code}/stays`);
   return rows
-    .filter((s) => s.status === "in-house" || s.status === "due-out" || s.status === "due-in")
+    /* BQ-2: guests in the house only - a booking still to arrive is refused. */
+    .filter((s) => s.status === "in-house" || s.status === "due-out")
     .sort((a, b) => a.roomNumber.localeCompare(b.roomNumber, undefined, { numeric: true }));
 }
 
@@ -147,7 +148,7 @@ export async function addPriceItem(
     has set one", which is a dash and a docket that cannot be charged —
     a different fact from free, which is 0. */
 export async function setPriceItem(
-  code: string, id: string, input: { price?: number | null; isActive?: boolean; free?: boolean },
+  code: string, id: string, input: { price?: number | null; free?: boolean; isActive?: boolean },
 ): Promise<Result<unknown>> {
   return call(`/api/hotels/${code}/laundry/price-list/${id}`, "POST", input);
 }

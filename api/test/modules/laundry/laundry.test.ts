@@ -153,13 +153,11 @@ describe("the price list", () => {
     expect((await res.json() as { reason: string }).reason).toMatch(/already on the list/i);
   });
 
-  /* The owner's D27-120 (28 September): 0 only when ticked Free - somebody
-     deciding it is free is a decision, and the tick is where it is made. */
-  it("takes 0 only when it is ticked Free", async () => {
-    const unticked = await post(`/${CODE}/laundry/price-list`,
+  it("0 is kept only when it is ticked Free (D27-120)", async () => {
+    const bare = await post(`/${CODE}/laundry/price-list`,
       { name: "Napkin", service: "wash", price: 0 });
-    expect(unticked.status).toBe(409);
-    expect((await unticked.json() as { reason: string }).reason).toMatch(/ticked Free/);
+    expect(bare.status).toBe(409);
+    expect((await bare.json() as { reason: string }).reason).toMatch(/ticked Free/);
     expect((await post(`/${CODE}/laundry/price-list`,
       { name: "Napkin", service: "wash", price: 0, free: true })).status).toBe(200);
     const body = await (await get(`/${CODE}/laundry/price-list`)).json() as
@@ -459,5 +457,42 @@ describe("a guest's bag, charged to the room", () => {
     expect(again.status).toBe(409);
     expect((await again.json() as { reason: string }).reason)
       .toMatch(/already on the bill/i);
+  });
+});
+
+describe("only a guest in the house (BQ-2, QA 28 September)", () => {
+  let arriving: string;
+
+  beforeAll(async () => {
+    await setLaundry(true);
+    const db = await admin();
+    const guest = (await db.query<{ id: string }>(
+      "insert into guests (full_name) values ('Laundry Arriving') returning id")).rows[0]!.id;
+    arriving = (await db.query<{ id: string }>(
+      `insert into reservations (hotel_id, reference, guest_id, room_type_id,
+                                 check_in, check_out, agreed_rate, status)
+       values ($1, app.next_reference($1), $2,
+               (select id from room_types where hotel_id = $1 limit 1),
+               current_date + 5, current_date + 6, 2000, 'confirmed')
+       returning id`, [hotelId, guest])).rows[0]!.id;
+    await db.end();
+  });
+
+  it("refuses a bag for a booking still to arrive, and writes no docket", async () => {
+    const list = await (await get(`/${CODE}/laundry/price-list`)).json() as
+      { items: Array<{ id: string; name: string; price: number | null }> };
+    const shirt = list.items.find((i) => i.name === "Shirt")!;
+    const res = await post(`/${CODE}/laundry/dockets`, {
+      belongsTo: "guest", stayId: arriving,
+      lines: [{ priceItemId: shirt.id, quantity: 1 }],
+    });
+    expect(res.status).toBe(409);
+    expect((await res.json() as { reason: string }).reason).toMatch(/not checked in yet/);
+
+    const db = await admin();
+    const { rows } = await db.query(
+      "select 1 from laundry_dockets where reservation_id = $1", [arriving]);
+    await db.end();
+    expect(rows).toHaveLength(0);
   });
 });

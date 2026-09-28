@@ -20,6 +20,16 @@ None, 25 September.
 
 ## Fixed — the solution is here; do not work it out again
 
+### SPA-3 · A treatment booked for a day the guest is not here, and "Charge to room" before they arrive — FIXED 28 September (round E)
+
+**Found** — the QA of 28 September (QA BQ-2): a treatment booked today for a guest arriving tomorrow, and Charge to room offered for it.
+
+**Fixed** — the owner's D27-136: a treatment is booked for a day from the guest's arrival to their departure, on the property's clock (tomorrow's arrival may still be booked for tomorrow); "Charge to room" is refused until the guest is checked in. A treatment's price of 0 is kept only when ticked Free (D27-120).
+
+**Proved** — `api/test/modules/spa/spa.test.ts` "a guest still to arrive (BQ-2)"; the file's own bookings now fall on the stay's own days. On screen: Vikram Desai, arriving 26 Aug, booked for 25 Aug, refused with the sentence.
+
+**The rule** — a room charge needs a guest in the room, and a booking needs a day the guest is here.
+
 ### SPA-1 · The Spa switch is on the Settings screen and the server refuses it — FIXED 19 September
 
 **The entry is admin's now** - `src/modules/admin/DEFECTS.md`, under Fixed,

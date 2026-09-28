@@ -1,5 +1,6 @@
 import { Route } from "react-router";
 import { PropertyScope } from "@/components/app/PropertyScope";
+import { RequireAccess } from "@/components/app/RequireAccess";
 import StayViewPage from "@/modules/front-desk/pages/StayView";
 import ArrivalsPage from "@/modules/front-desk/pages/Arrivals";
 import InHousePage from "@/modules/front-desk/pages/InHouse";
@@ -15,7 +16,8 @@ export const routes = (
         deep link to a booking (?res=) already points there. */}
     <Route
       path="/h/:code/stay"
-      element={<><PropertyScope /><StayViewPage view="floor" /></>}
+      /* Guarded since Rooms asks for bookings (D27-142). */
+      element={<RequireAccess path="/h/:code/stay" resource="reservation"><PropertyScope /><StayViewPage view="floor" /></RequireAccess>}
     />
     <Route
       path="/h/:code/calendar"

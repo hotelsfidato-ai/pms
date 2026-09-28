@@ -107,7 +107,7 @@ export interface GuestContact {
 }
 
 export const getGuestContact = (hotelId: string, guestId: string): Promise<GuestContact> =>
-  api<GuestContact>(`/api/hotels/${hotelId}/guests/${guestId}`);
+  api<GuestContact>(`/api/hotels/${hotelId}/guests/${guestId}/record`);
 
 /** Only what changed is sent; blank clears (the server keeps the name and
     nationality). The server's sentence on a refusal. */

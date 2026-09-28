@@ -6539,6 +6539,51 @@ copy will see of theirs.**
 
 ---
 
+### 344 · A role test green on its own run, red in the full suite (fix round B)
+
+28 September. Round B added a READ_RULES entry for every GET and a test that walks them all.
+That test passed on its first scoped run. The full API suite then failed 7 older tests that
+pinned the old answers: "every role reaches the Dashboard", "a hotel's Admin makes an Admin",
+the till reading approvals. Two of them were right and kept (/places is `anyone`,
+/equipment/options is `own`). **The rule:** after changing who may read or write anything,
+run the WHOLE API suite once before the gates, and decide each old test: an owner's decision
+changed it (update it), or it was right (keep it and fix the rule).
+
+### 343 · MINE: five lane cards didn't say "leave the root HANDOVER, CHANGELOG and MEMORY alone"
+
+28 September. The print-samples, release-fixes and fix-round cards left out the line the
+redesign card had: lanes don't edit the root HANDOVER.md, CHANGELOG.md or MEMORY.md. Three
+lanes edited them. The owner's design chat keeps uncommitted edits in those files, so a merge
+that touches them is refused in the main folder, and each lane had to add a commit restoring
+them from cp6. **The rule:** every lane card carries that line; the master alone writes those
+three, through the index (MEMORY 324's way), in both the blob and the working copy.
+
+### 342 · A race test that passes on the broken code proves nothing (the release fixes)
+
+The settle-twice test passed on the unfixed till: the first press took the only idle pool
+connection and finished while the second was still connecting, so they never overlapped.
+Warming the pool first made them overlap and the test failed as it should. **The rule:** a race
+test must first be seen failing on the broken code; warm the pool before firing the pair.
+
+### 341 · Two copies migrating at once collide on the shared roles (fix round C)
+
+`DB=fidato_s27 bash db/migrate.sh` failed twice at 029 with "tuple concurrently updated" on
+`alter role pms_provisioner nologin bypassrls` and rolled back. Roles belong to the whole
+Postgres server, so every copy's migrations and every gate run's scratch database alter the
+same role rows; two at once collide. **The rule:** that error during a migration is another
+copy migrating at the same time. Wait and run it again; don't edit the migration.
+
+### 340 · A read widened to show what it hid found a second guard in the write (fix round C)
+
+The Kitchen screen read only OPEN orders, so food paid or charged to a room before it was
+cooked vanished. Widening the read to settled orders would have put those dishes on the pass
+where the chef could never move them: 028's pos_order_lines_frozen refused every change to a
+settled order's lines, the kitchen status included. Migration 151 lets the kitchen status, and
+nothing else, change. **The rule:** when a screen starts showing rows it used to hide, press
+every button it has on one of the new rows before calling it fixed.
+
+---
+
 ### 339 · The local Postgres dies when sessions are stopped
 
 Twice in two days a Postgres server process was "terminated by exception 0xC000013A"
